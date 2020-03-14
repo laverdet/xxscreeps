@@ -1,0 +1,14 @@
+{
+  "name": "xxscreeps",
+  "version": "0.0.1",
+  "author": "laverdet",
+  "dependencies": {
+    "source-map-support": "^0.5.16"
+  },
+  "devDependencies": {
+    "@types/node": "^13.7.7",
+    "kexec": "github:meteor/node-kexec#update-for-node-12",
+    "ts-node": "^8.6.2",
+    "typescript": "^3.8.3"
+  }
+}

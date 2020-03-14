@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"strict": true,
+
+		"target": "esnext",
+		"downlevelIteration": true,
+		"noEmitOnError": true,
+		"resolveJsonModule": true,
+		"sourceMap": true,
+
+		"baseUrl": ".",
+		"paths": {
+			"~/*": [ "*" ]
+		}
+	}
+}
