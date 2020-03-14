@@ -1,18 +1,45 @@
-import { kPointerSize, getTraits, Integral, Layout, StructLayout, Traits } from './layout';
+import { kPointerSize, alignTo, getTraits, Integral, Layout, StructLayout, Traits } from './layout';
+const { isArray } = Array;
 const { entries } = Object;
 
+// Format used to specify basic fields and types. `getLayout` will generate a stable binary layout
+// from this information.
 type StructFormat = {
 	[key: string]: Format;
 }
-
 type ArrayFormat = [ 'array', number, Format ];
 type VectorFormat = [ 'vector', Format ];
 
 type Format = Integral | StructFormat | ArrayFormat | VectorFormat;
 
-const Tuple = <Args extends any[]>(...args: Args): Args => args;
+// Generates types for `getLayout`
+type ArrayFormatToLayout<Type extends ArrayFormat> = [ 'array', number, FormatToLayout<Type[2]> ];
+type VectorFormatToLayout<Type extends VectorFormat> = [ 'vector', FormatToLayout<Type[1]> ];
+type StructFormatToLayout<Type extends StructFormat> = {
+	[Key in keyof Type]: {
+		layout: FormatToLayout<Type[Key]>;
+		offset: number;
+		pointer?: true;
+	};
+};
+type FormatToLayout<Type extends Format> =
+	Type extends Integral ? Type :
+	Type extends ArrayFormat ? ArrayFormatToLayout<Type> :
+	Type extends VectorFormat ? VectorFormatToLayout<Type> :
+	Type extends StructFormat ? StructFormatToLayout<Type> :
+	never;
 
-function getStructLayout<Type extends StructFormat>(format: Type) {
+export function makeArray<Type extends Format>(length: number, format: Type):
+		[ 'array', number, Type ] {
+	return [ 'array', length, format ];
+}
+
+export function makeVector<Type extends Format>(format: Type):
+		[ 'vector', Type ] {
+	return [ 'vector', format ];
+}
+
+function getStructLayout(format: StructFormat): Layout {
 	// Fetch memory layout for each member
 	type WithTraits = { traits: Traits };
 	const members: (WithTraits & { key: string, layout: Layout })[] = [];
@@ -29,7 +56,7 @@ function getStructLayout<Type extends StructFormat>(format: Type) {
 	const isPointer = (member: WithTraits) => member.traits.stride === undefined;
 	members.sort((left, right) => {
 		const size = (member: WithTraits) => isPointer(member) ? kPointerSize : member.traits.size;
-		const elementSize = (member: WithTraits) => isPointer(member) ? member.traits.size : 0;
+		const elementSize = (member: WithTraits) => isPointer(member) ? member.traits.size : Infinity;
 		return (
 			size(right) - size(left) ||
 			elementSize(right) - elementSize(left) ||
@@ -42,9 +69,7 @@ function getStructLayout<Type extends StructFormat>(format: Type) {
 	let offset = 0;
 	for (const member of members) {
 		const pointer = isPointer(member);
-		const align = pointer ? kPointerSize : member.traits.align;
-		const remainder = offset % align;
-		offset += remainder ? align - remainder : 0;
+		offset = alignTo(offset, pointer ? kPointerSize : member.traits.align);
 		layout[member.key] = {
 			layout: member.layout,
 			offset,
@@ -55,17 +80,19 @@ function getStructLayout<Type extends StructFormat>(format: Type) {
 	return layout as RequiredAndNonNullable<typeof layout>;
 }
 
-function getLayout(format: Format): Layout {
+// This crashes TypeScript =o
+// export function getLayout<Type extends Format>(format: Type): FormatToLayout<Type>;
+export function getLayout(format: Format): Layout {
 	if (typeof format === 'string') {
 		// Integral types
 		return format;
 
-	} else if (Array.isArray(format)) {
+	} else if (isArray(format)) {
 		// Arrays (fixed size) & vectors (dynamic size)
 		if (format[0] === 'array') {
-			return Tuple('array' as const, format[1], getLayout(format[2]));
+			return [ 'array', format[1], getLayout(format[2]) ];
 		} else if (format[0] === 'vector') {
-			return Tuple('vector' as const, getLayout(format[1]));
+			return [ 'vector', getLayout(format[1]) ];
 		}
 		throw TypeError(`Invalid array type: ${format[0]}`);
 

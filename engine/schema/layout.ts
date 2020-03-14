@@ -40,7 +40,12 @@ type Shape<Type extends Layout> =
 
 export const kPointerSize = 4;
 
-export function getTraits<Type extends Layout>(layout: Type): Traits {
+export function alignTo(address: number, align: number) {
+	const remainder = address % align;
+	return address + (remainder === 0 ? 0 : align - remainder);
+}
+
+export function getTraits(layout: Layout): Traits {
 	if (typeof layout === 'string') {
 		// Integral types
 		const integerTraits = (sizeof: number) =>
@@ -56,11 +61,33 @@ export function getTraits<Type extends Layout>(layout: Type): Traits {
 
 			default: throw TypeError(`Invalid literal layout: ${layout}`);
 		}
+
 	} else if (isArray(layout)) {
-		throw new TypeError;
+		if (layout[0] === 'array') {
+			// Fixed size array
+			const length = layout[1];
+			const traits = getTraits(layout[2]);
+			return {
+				align: traits.align,
+				size: traits.size * length,
+				...traits.stride && {
+					stride: traits.stride * (length - 1) + traits.size,
+				},
+			};
+
+		} else if (layout[0] === 'vector') {
+			// Dynamic vector
+			const traits = getTraits(layout[1]);
+			return {
+				align: Math.max(kPointerSize, traits.align),
+				size: kPointerSize,
+			};
+		}
+		throw TypeError(`Invalid array type: ${layout[0]}`);
+
 	} else {
 		// Structures
-		const members = values(layout as StructLayout).map(member => ({
+		const members = values(layout).map(member => ({
 			...member,
 			traits: getTraits(member.layout),
 		}));
@@ -74,49 +101,115 @@ export function getTraits<Type extends Layout>(layout: Type): Traits {
 		};
 		const hasPointerElement = members.some(member => member.pointer);
 		if (!hasPointerElement) {
-			const remainder = traits.size % traits.align;
-			traits.stride = traits.size + (remainder ? traits.align - remainder : 0);
+			traits.stride = alignTo(traits.size, traits.size);
 		}
 		return traits;
 	}
 }
 
-export function getWriter<Type extends Layout>(layout: Type, base: number):
-		(value: Shape<Type>, view: BufferView, offset: number) => void {
+export function getWriter<Type extends Layout>(layout: Type):
+		(value: Shape<Type>, view: BufferView, offset: number) => number
+export function getWriter(layout: Layout):
+		(value: any, view: BufferView, offset: number) => number {
 
 	if (typeof layout === 'string') {
 		// Integral types
 		switch (layout) {
-			case 'int8': return (value, view, offset) => { view.int8[base + offset] = value as number };
-			case 'int16': return (value, view, offset) => { view.int16[(base + offset) >>> 1] = value as number };
-			case 'int32': return (value, view, offset) => { view.int32[(base + offset) >>> 2] = value as number };
+			case 'int8': return (value, view, offset) => (view.int8[offset] = value, 1);
+			case 'int16': return (value, view, offset) => (view.int16[offset >>> 1] = value, 2);
+			case 'int32': return (value, view, offset) => (view.int32[offset >>> 2] = value, 4);
 
-			case 'uint8': return (value, view, offset) => { view.uint8[base + offset] = value as number };
-			case 'uint16': return (value, view, offset) => { view.uint16[(base + offset) >>> 1] = value as number };
-			case 'uint32': return (value, view, offset) => { view.uint32[(base + offset) >>> 2] = value as number };
+			case 'uint8': return (value, view, offset) => (view.uint8[offset] = value, 1);
+			case 'uint16': return (value, view, offset) => (view.uint16[offset >>> 1] = value, 2);
+			case 'uint32': return (value, view, offset) => (view.uint32[offset >>> 2] = value, 4);
 
 			default: throw TypeError(`Invalid literal layout: ${layout}`);
 		}
+
 	} else if (isArray(layout)) {
+		// Array types
+		if (layout[0] === 'array') {
+			const elementLayout = layout[2];
+			const write = getWriter(elementLayout);
+			const { size, stride } = getTraits(elementLayout);
+			if (stride === undefined) {
+				throw new TypeError('Unimplemented');
+
+			} else {
+				// Array with fixed element size
+				const length = layout[1];
+				return (value, view, offset) => {
+					let currentOffset = offset;
+					write(value[0], view, currentOffset);
+					for (let ii = 1; ii < length; ++ii) {
+						currentOffset += stride;
+						write(value[ii], view, currentOffset);
+					}
+					return currentOffset + size - offset;
+				};
+			}
+
+		} else if (layout[0] === 'vector') {
+			const elementLayout = layout[1];
+			const write = getWriter(elementLayout);
+			const { align, size, stride } = getTraits(elementLayout);
+			if (stride === undefined) {
+				throw new TypeError('Unimplemented');
+
+			} else {
+				// Vector with fixed element size
+				return (value, view, offset) => {
+					const length: number = value.length;
+					let currentOffset = alignTo(offset, kPointerSize);
+					view.uint32[currentOffset >>> 2] = length; // write total length of vector
+					currentOffset += kPointerSize;
+					if (length !== 0) {
+						currentOffset = alignTo(currentOffset, align);
+						write(value[0], view, currentOffset);
+						for (let ii = 1; ii < length; ++ii) {
+							currentOffset += stride;
+							write(value[ii], view, currentOffset);
+						}
+						currentOffset += size;
+					}
+					return currentOffset - offset;
+				};
+			}
+		}
 		throw new TypeError('Invalid layout');
+
 	} else {
 		// Structures
-		let writer: ((value: any, view: BufferView, offset: number) => void) | undefined;
-		entries(layout as StructLayout).map(([ key, prop ]) => {
-			const next = function(): typeof writer {
-				const writer = getWriter(prop.layout, base + prop.offset);
-				return (value: any, view, offset) => writer(value[key], view, offset);
+		let memberWriter: ((value: any, view: BufferView, offset: number, locals: number) => any) | undefined;
+		const members = entries(layout);
+		members.forEach(([ key, member ]) => {
+			// Make writer for single field. Extra parameter is offset to dynamic memory.
+			const next = function(): NonNullable<typeof memberWriter> {
+				const write = getWriter(member.layout);
+				const { offset, pointer } = member;
+				if (pointer) {
+					const { align } = getTraits(layout);
+					return (value, view, instanceOffset, locals) => {
+						const addr = alignTo(locals, align);
+						view.uint32[(offset + instanceOffset) >>> 2] = addr;
+						return locals + write(value[key], view, locals);
+					};
+				} else {
+					return (value, view, instanceOffset, locals) =>
+						(write(value[key], view, offset + instanceOffset), locals);
+				}
 			}();
-			const prev = writer;
+			// Combine member writers
+			const prev = memberWriter;
 			if (prev) {
-				writer = (value, view, offset) => {
-					prev(value, view, offset);
-					next(value, view, offset);
-				};
+				memberWriter = (value, view, offset, locals) =>
+					next(value, view, offset, prev(value, view, offset, locals));
 			} else {
-				writer = next;
+				memberWriter = next;
 			}
 		});
-		return writer!;
+		// Wrap member writers into struct writer
+		const { size } = getTraits(layout);
+		return (value, view, offset) => memberWriter!(value, view, offset, size);
 	}
 }
