@@ -65,19 +65,19 @@ function getStructLayout(format: StructFormat): Layout {
 	});
 
 	// Build layout
-	const layout: Partial<StructLayout> = {};
+	const layout: StructLayout = { struct: {} };
 	let offset = 0;
 	for (const member of members) {
 		const pointer = isPointer(member);
 		offset = alignTo(offset, pointer ? kPointerSize : member.traits.align);
-		layout[member.key] = {
+		layout.struct[member.key] = {
 			layout: member.layout,
 			offset,
 			...pointer && { pointer: true as const },
 		};
 		offset += pointer ? kPointerSize : member.traits.size;
 	}
-	return layout as RequiredAndNonNullable<typeof layout>;
+	return layout;
 }
 
 // This crashes TypeScript =o
@@ -90,9 +90,14 @@ export function getLayout(format: Format): Layout {
 	} else if (isArray(format)) {
 		// Arrays (fixed size) & vectors (dynamic size)
 		if (format[0] === 'array') {
-			return [ 'array', format[1], getLayout(format[2]) ];
+			return {
+				array: getLayout(format[2]),
+				size: format[1],
+			};
 		} else if (format[0] === 'vector') {
-			return [ 'vector', getLayout(format[1]) ];
+			return {
+				vector: getLayout(format[1]),
+			};
 		}
 		throw TypeError(`Invalid array type: ${format[0]}`);
 

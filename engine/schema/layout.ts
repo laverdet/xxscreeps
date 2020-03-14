@@ -5,18 +5,24 @@ const { entries, values } = Object;
 // This specifies memory layout in a hopefully stable format
 export type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
 
-type StructMember = {
-	layout: Layout;
-	offset: number;
-	pointer?: true;
-};
-
 export type StructLayout = {
-	[key: string]: StructMember;
+	struct: {
+		[key: string]: {
+			layout: Layout;
+			offset: number;
+			pointer?: true;
+		};
+	};
 };
 
-type ArrayLayout = [ 'array', number, Layout ];
-type VectorLayout = [ 'vector', Layout ];
+type ArrayLayout = {
+	array: Layout;
+	size: number;
+};
+
+type VectorLayout = {
+	vector: Layout;
+};
 
 export type Layout = Integral | StructLayout | ArrayLayout | VectorLayout;
 
@@ -27,10 +33,10 @@ export type Traits = {
 };
 
 // Convert a memory layout declaration to the corresponding data type
-type ArrayShape<Type extends ArrayLayout> = Shape<Type[2]>[];
-type VectorShape<Type extends VectorLayout> = Shape<Type[1]>[];
+type ArrayShape<Type extends ArrayLayout> = Shape<Type['array']>[];
+type VectorShape<Type extends VectorLayout> = Shape<Type['vector']>[];
 type StructShape<Type extends StructLayout> = {
-	[Key in keyof Type]: Shape<Type[Key]['layout']>;
+	[Key in keyof Type['struct']]: Shape<Type['struct'][Key]['layout']>;
 };
 type Shape<Type extends Layout> =
 	Type extends Integral ? number :
@@ -62,32 +68,30 @@ export function getTraits(layout: Layout): Traits {
 			default: throw TypeError(`Invalid literal layout: ${layout}`);
 		}
 
-	} else if (isArray(layout)) {
-		if (layout[0] === 'array') {
-			// Fixed size array
-			const length = layout[1];
-			const traits = getTraits(layout[2]);
-			return {
-				align: traits.align,
-				size: traits.size * length,
-				...traits.stride && {
-					stride: traits.stride * (length - 1) + traits.size,
-				},
-			};
+	} else if ('array' in layout) {
+		// Fixed size array
+		const arraySize = layout.size;
+		const elementLayout = layout.array;
+		const { align, size, stride } = getTraits(elementLayout);
+		return {
+			align: align,
+			size: size * arraySize,
+			...stride && {
+				stride: stride * (arraySize - 1) + size,
+			},
+		};
 
-		} else if (layout[0] === 'vector') {
-			// Dynamic vector
-			const traits = getTraits(layout[1]);
-			return {
-				align: Math.max(kPointerSize, traits.align),
-				size: kPointerSize,
-			};
-		}
-		throw TypeError(`Invalid array type: ${layout[0]}`);
+	} else if ('vector' in layout) {
+		// Dynamic vector
+		const { align } = getTraits(layout.vector);
+		return {
+			align: Math.max(kPointerSize, align),
+			size: kPointerSize,
+		};
 
 	} else {
 		// Structures
-		const members = values(layout).map(member => ({
+		const members = values(layout.struct).map(member => ({
 			...member,
 			traits: getTraits(member.layout),
 		}));
@@ -126,62 +130,59 @@ export function getWriter(layout: Layout):
 			default: throw TypeError(`Invalid literal layout: ${layout}`);
 		}
 
-	} else if (isArray(layout)) {
+	} else if ('array' in layout) {
 		// Array types
-		if (layout[0] === 'array') {
-			const elementLayout = layout[2];
-			const write = getWriter(elementLayout);
-			const { size, stride } = getTraits(elementLayout);
-			if (stride === undefined) {
-				throw new TypeError('Unimplemented');
+		const arraySize = layout.size;
+		const elementLayout = layout.array;
+		const write = getWriter(elementLayout);
+		const { size, stride } = getTraits(elementLayout);
+		if (stride === undefined) {
+			throw new TypeError('Unimplemented');
 
-			} else {
-				// Array with fixed element size
-				const length = layout[1];
-				return (value, view, offset) => {
-					let currentOffset = offset;
+		} else {
+			// Array with fixed element size
+			return (value, view, offset) => {
+				let currentOffset = offset;
+				write(value[0], view, currentOffset);
+				for (let ii = 1; ii < arraySize; ++ii) {
+					currentOffset += stride;
+					write(value[ii], view, currentOffset);
+				}
+				return currentOffset + size - offset;
+			};
+		}
+
+	} else if ('vector' in layout) {
+		const elementLayout = layout.vector;
+		const write = getWriter(elementLayout);
+		const { align, size, stride } = getTraits(elementLayout);
+		if (stride === undefined) {
+			throw new TypeError('Unimplemented');
+
+		} else {
+			// Vector with fixed element size
+			return (value, view, offset) => {
+				const length: number = value.length;
+				let currentOffset = alignTo(offset, kPointerSize);
+				view.uint32[currentOffset >>> 2] = length; // write total length of vector
+				currentOffset += kPointerSize;
+				if (length !== 0) {
+					currentOffset = alignTo(currentOffset, align);
 					write(value[0], view, currentOffset);
 					for (let ii = 1; ii < length; ++ii) {
 						currentOffset += stride;
 						write(value[ii], view, currentOffset);
 					}
-					return currentOffset + size - offset;
-				};
-			}
-
-		} else if (layout[0] === 'vector') {
-			const elementLayout = layout[1];
-			const write = getWriter(elementLayout);
-			const { align, size, stride } = getTraits(elementLayout);
-			if (stride === undefined) {
-				throw new TypeError('Unimplemented');
-
-			} else {
-				// Vector with fixed element size
-				return (value, view, offset) => {
-					const length: number = value.length;
-					let currentOffset = alignTo(offset, kPointerSize);
-					view.uint32[currentOffset >>> 2] = length; // write total length of vector
-					currentOffset += kPointerSize;
-					if (length !== 0) {
-						currentOffset = alignTo(currentOffset, align);
-						write(value[0], view, currentOffset);
-						for (let ii = 1; ii < length; ++ii) {
-							currentOffset += stride;
-							write(value[ii], view, currentOffset);
-						}
-						currentOffset += size;
-					}
-					return currentOffset - offset;
-				};
-			}
+					currentOffset += size;
+				}
+				return currentOffset - offset;
+			};
 		}
-		throw new TypeError('Invalid layout');
 
 	} else {
 		// Structures
 		let memberWriter: ((value: any, view: BufferView, offset: number, locals: number) => any) | undefined;
-		const members = entries(layout);
+		const members = entries(layout.struct);
 		members.forEach(([ key, member ]) => {
 			// Make writer for single field. Extra parameter is offset to dynamic memory.
 			const next = function(): NonNullable<typeof memberWriter> {
