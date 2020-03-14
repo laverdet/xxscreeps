@@ -1,15 +1,17 @@
 {
 	"compilerOptions": {
-		"moduleResolution": "node",
-		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": true,
 		"strict": true,
 
+		"inlineSourceMap": true,
+
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"moduleResolution": "node",
 		"target": "esnext",
+
 		"downlevelIteration": true,
-		"noEmitOnError": true,
+		"noEmitOnError": false,
 		"resolveJsonModule": true,
-		"sourceMap": true,
 
 		"baseUrl": ".",
 		"paths": {
