@@ -4,13 +4,15 @@ const { entries } = Object;
 
 // Format used to specify basic fields and types. `getLayout` will generate a stable binary layout
 // from this information.
-type StructFormat = {
-	[key: string]: Format;
-}
 type ArrayFormat = [ 'array', number, Format ];
 type VectorFormat = [ 'vector', Format ];
 
-type Format = Integral | StructFormat | ArrayFormat | VectorFormat;
+type StructFormat = {
+	[key: string]: Format;
+}
+type InheritFormat = [ 'inherit', StructFormat, StructFormat ];
+
+type Format = Integral | StructFormat | InheritFormat | ArrayFormat | VectorFormat;
 
 // Generates types for `getLayout`
 type ArrayFormatToLayout<Type extends ArrayFormat> = [ 'array', number, FormatToLayout<Type[2]> ];
@@ -34,12 +36,17 @@ export function makeArray<Type extends Format>(length: number, format: Type):
 	return [ 'array', length, format ];
 }
 
+export function makeInherit<Base extends StructFormat, Extension extends StructFormat>
+		(base: Base, extension: Extension) : [ 'inherit', Base, Extension ] {
+	return [ 'inherit', base, extension ];
+}
+
 export function makeVector<Type extends Format>(format: Type):
 		[ 'vector', Type ] {
 	return [ 'vector', format ];
 }
 
-function getStructLayout(format: StructFormat): Layout {
+function getStructLayout(format: StructFormat, startOffset = 0): StructLayout {
 	// Fetch memory layout for each member
 	type WithTraits = { traits: Traits };
 	const members: (WithTraits & { key: string, layout: Layout })[] = [];
@@ -66,7 +73,7 @@ function getStructLayout(format: StructFormat): Layout {
 
 	// Build layout
 	const layout: StructLayout = { struct: {} };
-	let offset = 0;
+	let offset = startOffset;
 	for (const member of members) {
 		const pointer = isPointer(member);
 		offset = alignTo(offset, pointer ? kPointerSize : member.traits.align);
@@ -88,18 +95,31 @@ export function getLayout(format: Format): Layout {
 		return format;
 
 	} else if (isArray(format)) {
-		// Arrays (fixed size) & vectors (dynamic size)
-		if (format[0] === 'array') {
-			return {
-				array: getLayout(format[2]),
-				size: format[1],
+		switch (format[0]) {
+			// Arrays (fixed size)
+			case 'array':
+				return {
+					array: getLayout(format[2]),
+					size: format[1],
+				};
+
+			// Vectors (dynamic size)
+			case 'vector':
+				return {
+					vector: getLayout(format[1]),
+				};
+
+			// Struct inheritance
+			case 'inherit': {
+				const baseLayout = getStructLayout(format[1]);
+				const layout = getStructLayout(format[2], getTraits(baseLayout).size);
+				layout.inherit = baseLayout;
+				return layout;
 			};
-		} else if (format[0] === 'vector') {
-			return {
-				vector: getLayout(format[1]),
-			};
+
+			default:
+				throw TypeError(`Invalid format specifier: ${format[0]}`);
 		}
-		throw TypeError(`Invalid array type: ${format[0]}`);
 
 	} else {
 		// Structures

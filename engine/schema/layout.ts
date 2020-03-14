@@ -1,5 +1,4 @@
 import { BufferView } from './buffer-view';
-const { isArray } = Array;
 const { entries, values } = Object;
 
 // This specifies memory layout in a hopefully stable format
@@ -13,6 +12,7 @@ export type StructLayout = {
 			pointer?: true;
 		};
 	};
+	inherit?: StructLayout;
 };
 
 type ArrayLayout = {
@@ -104,11 +104,50 @@ export function getTraits(layout: Layout): Traits {
 			)),
 		};
 		const hasPointerElement = members.some(member => member.pointer);
-		if (!hasPointerElement) {
-			traits.stride = alignTo(traits.size, traits.size);
+		let isFixedSize = !hasPointerElement;
+		if (layout.inherit) {
+			const baseTraits = getTraits(layout.inherit);
+			traits.align = Math.max(traits.align, baseTraits.align);
+			isFixedSize = isFixedSize && baseTraits.stride !== undefined;
+		}
+		if (isFixedSize) {
+			traits.stride = alignTo(traits.size, traits.align);
 		}
 		return traits;
 	}
+}
+
+function getMemberWriter(layout: StructLayout):
+		(value: Record<string, any>, view: BufferView, offset: number, locals: number) => number {
+	let memberWriter: ReturnType<typeof getMemberWriter> | undefined;
+	const members = entries(layout.struct);
+	members.forEach(([ key, member ]) => {
+		// Make writer for single field. Extra parameter is offset to dynamic memory.
+		const next = function(): NonNullable<typeof memberWriter> {
+			const write = getWriter(member.layout);
+			const { offset, pointer } = member;
+			if (pointer) {
+				const { align } = getTraits(layout);
+				return (value, view, instanceOffset, locals) => {
+					const addr = alignTo(locals, align);
+					view.uint32[(offset + instanceOffset) >>> 2] = addr;
+					return locals + write(value[key], view, locals);
+				};
+			} else {
+				return (value, view, instanceOffset, locals) =>
+					(write(value[key], view, offset + instanceOffset), locals);
+			}
+		}();
+		// Combine member writers
+		const prev = memberWriter;
+		if (prev) {
+			memberWriter = (value, view, offset, locals) =>
+				next(value, view, offset, prev(value, view, offset, locals));
+		} else {
+			memberWriter = next;
+		}
+	});
+	return memberWriter!;
 }
 
 export function getWriter<Type extends Layout>(layout: Type):
@@ -181,36 +220,14 @@ export function getWriter(layout: Layout):
 
 	} else {
 		// Structures
-		let memberWriter: ((value: any, view: BufferView, offset: number, locals: number) => any) | undefined;
-		const members = entries(layout.struct);
-		members.forEach(([ key, member ]) => {
-			// Make writer for single field. Extra parameter is offset to dynamic memory.
-			const next = function(): NonNullable<typeof memberWriter> {
-				const write = getWriter(member.layout);
-				const { offset, pointer } = member;
-				if (pointer) {
-					const { align } = getTraits(layout);
-					return (value, view, instanceOffset, locals) => {
-						const addr = alignTo(locals, align);
-						view.uint32[(offset + instanceOffset) >>> 2] = addr;
-						return locals + write(value[key], view, locals);
-					};
-				} else {
-					return (value, view, instanceOffset, locals) =>
-						(write(value[key], view, offset + instanceOffset), locals);
-				}
-			}();
-			// Combine member writers
-			const prev = memberWriter;
-			if (prev) {
-				memberWriter = (value, view, offset, locals) =>
-					next(value, view, offset, prev(value, view, offset, locals));
-			} else {
-				memberWriter = next;
-			}
-		});
-		// Wrap member writers into struct writer
+		const write = getMemberWriter(layout);
 		const { size } = getTraits(layout);
-		return (value, view, offset) => memberWriter!(value, view, offset, size);
+		if (layout.inherit) {
+			const writeBase = getMemberWriter(layout.inherit);
+			return (value, view, offset) =>
+				write(value, view, offset, writeBase(value, view, offset, size));
+		} else {
+			return (value, view, offset) => write(value, view, offset, size);
+		}
 	}
 }
