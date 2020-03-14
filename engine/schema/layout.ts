@@ -1,4 +1,4 @@
-import { BufferView } from './buffer-view';
+import type { BufferView } from './buffer-view';
 const { entries, values } = Object;
 
 // This specifies memory layout in a hopefully stable format

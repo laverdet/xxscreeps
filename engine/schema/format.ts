@@ -1,6 +1,5 @@
+import type { Schema, SchemaFormat } from '.';
 import { kPointerSize, alignTo, getTraits, Integral, Layout, StructLayout, Traits } from './layout';
-const { isArray } = Array;
-const { entries } = Object;
 
 // Format used to specify basic fields and types. `getLayout` will generate a stable binary layout
 // from this information.
@@ -12,7 +11,7 @@ type StructFormat = {
 }
 type InheritFormat = [ 'inherit', StructFormat, StructFormat ];
 
-type Format = Integral | StructFormat | InheritFormat | ArrayFormat | VectorFormat;
+export type Format = Integral | StructFormat | InheritFormat | ArrayFormat | VectorFormat;
 
 // Generates types for `getLayout`
 type ArrayFormatToLayout<Type extends ArrayFormat> = [ 'array', number, FormatToLayout<Type[2]> ];
@@ -46,11 +45,19 @@ export function makeVector<Type extends Format>(format: Type):
 	return [ 'vector', format ];
 }
 
+// Struct layouts are saved to ensure that `inherit` layouts don't duplicate the base class
+const savedStructLayouts = new WeakMap<StructFormat, StructLayout>();
 function getStructLayout(format: StructFormat, startOffset = 0): StructLayout {
+	// Check existing layouts.
+	const existingLayout = savedStructLayouts.get(format);
+	if (existingLayout !== undefined) {
+		return existingLayout;
+	}
+
 	// Fetch memory layout for each member
 	type WithTraits = { traits: Traits };
 	const members: (WithTraits & { key: string, layout: Layout })[] = [];
-	for (const [ key, memberFormat ] of entries(format)) {
+	for (const [ key, memberFormat ] of Object.entries(format)) {
 		const layout = getLayout(memberFormat);
 		members.push({
 			key,
@@ -84,17 +91,18 @@ function getStructLayout(format: StructFormat, startOffset = 0): StructLayout {
 		};
 		offset += pointer ? kPointerSize : member.traits.size;
 	}
+	savedStructLayouts.set(format, layout);
 	return layout;
 }
 
 // This crashes TypeScript =o
-// export function getLayout<Type extends Format>(format: Type): FormatToLayout<Type>;
-export function getLayout(format: Format): Layout {
+// function getLayout<Type extends Format>(format: Type): FormatToLayout<Type>;
+function getLayout(format: Format): Layout {
 	if (typeof format === 'string') {
 		// Integral types
 		return format;
 
-	} else if (isArray(format)) {
+	} else if (Array.isArray(format)) {
 		switch (format[0]) {
 			// Arrays (fixed size)
 			case 'array':
@@ -125,4 +133,12 @@ export function getLayout(format: Format): Layout {
 		// Structures
 		return getStructLayout(format);
 	}
+}
+
+export function getSchema(schemaFormat: SchemaFormat): Schema {
+	const schema: Schema = {};
+	for (const [ key, format ] of Object.entries(schemaFormat)) {
+		schema[key] = getLayout(format);
+	}
+	return schema;
 }
