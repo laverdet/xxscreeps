@@ -4,8 +4,7 @@ import type { BufferView } from './buffer-view';
 function getMemberWriter(layout: StructLayout):
 		(value: Record<string, any>, view: BufferView, offset: number, locals: number) => number {
 	let memberWriter: ReturnType<typeof getMemberWriter> | undefined;
-	const members = Object.entries(layout.struct);
-	members.forEach(([ key, member ]) => {
+	for (const [ key, member ] of Object.entries(layout.struct)) {
 		// Make writer for single field. Extra parameter is offset to dynamic memory.
 		const next = function(): NonNullable<typeof memberWriter> {
 			const write = getWriter(member.layout);
@@ -30,7 +29,7 @@ function getMemberWriter(layout: StructLayout):
 		} else {
 			memberWriter = next;
 		}
-	});
+	}
 	return memberWriter!;
 }
 
