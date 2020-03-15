@@ -135,6 +135,9 @@ function getLayout(format: Format): Layout {
 	}
 }
 
+export function getSchema<Type extends SchemaFormat>(schemaFormat: Type): {
+	[Key in keyof Type]: Layout;
+};
 export function getSchema(schemaFormat: SchemaFormat): Schema {
 	const schema: Schema = {};
 	for (const [ key, format ] of Object.entries(schemaFormat)) {

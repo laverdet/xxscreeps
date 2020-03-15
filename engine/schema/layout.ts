@@ -2,13 +2,11 @@
 export type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
 
 export type StructLayout = {
-	struct: {
-		[key: string]: {
-			layout: Layout;
-			offset: number;
-			pointer?: true;
-		};
-	};
+	struct: Record<string, {
+		layout: Layout;
+		offset: number;
+		pointer?: true;
+	}>;
 	inherit?: StructLayout;
 };
 
