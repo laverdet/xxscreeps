@@ -10,7 +10,6 @@
   },
   "devDependencies": {
     "@types/node": "^13.7.7",
-    "kexec": "github:meteor/node-kexec#update-for-node-12",
     "ts-node": "^8.6.2",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^3.8.3"
