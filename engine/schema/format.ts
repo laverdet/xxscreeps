@@ -8,7 +8,7 @@ type VectorFormat = [ 'vector', Format ];
 
 type StructFormat = {
 	[key: string]: Format;
-}
+};
 type InheritFormat = [ 'inherit', StructFormat, StructFormat ];
 
 export type Format = Integral | StructFormat | InheritFormat | ArrayFormat | VectorFormat;
@@ -35,8 +35,9 @@ export function makeArray<Type extends Format>(length: number, format: Type):
 	return [ 'array', length, format ];
 }
 
-export function makeInherit<Base extends StructFormat, Extension extends StructFormat>
-		(base: Base, extension: Extension) : [ 'inherit', Base, Extension ] {
+export function makeInherit<Base extends StructFormat, Extension extends StructFormat>(
+	base: Base, extension: Extension,
+): [ 'inherit', Base, Extension ] {
 	return [ 'inherit', base, extension ];
 }
 
@@ -56,7 +57,7 @@ function getStructLayout(format: StructFormat, startOffset = 0): StructLayout {
 
 	// Fetch memory layout for each member
 	type WithTraits = { traits: Traits };
-	const members: (WithTraits & { key: string, layout: Layout })[] = [];
+	const members: (WithTraits & { key: string; layout: Layout })[] = [];
 	for (const [ key, memberFormat ] of Object.entries(format)) {
 		const layout = getLayout(memberFormat);
 		members.push({
@@ -72,6 +73,7 @@ function getStructLayout(format: StructFormat, startOffset = 0): StructLayout {
 		const size = (member: WithTraits) => isPointer(member) ? kPointerSize : member.traits.size;
 		const elementSize = (member: WithTraits) => isPointer(member) ? member.traits.size : Infinity;
 		return (
+			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 			size(right) - size(left) ||
 			elementSize(right) - elementSize(left) ||
 			left.key.localeCompare(right.key)
@@ -123,7 +125,7 @@ function getLayout(format: Format): Layout {
 				const layout = getStructLayout(format[2], getTraits(baseLayout).size);
 				layout.inherit = baseLayout;
 				return layout;
-			};
+			}
 
 			default:
 				throw TypeError(`Invalid format specifier: ${format[0]}`);

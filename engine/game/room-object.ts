@@ -22,7 +22,7 @@ export const readInterceptors: ReadInterceptors = {
 
 export const writeInterceptors: WriteInterceptors = {
 	id: {
-		decompose: (id: string) => id.match(/(.{8})/g)!.map(str => parseInt(str, 16))
+		decompose: (id: string) => id.match(/.{8}/g)!.map(str => parseInt(str, 16)),
 	},
 };
 

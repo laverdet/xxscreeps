@@ -14,7 +14,7 @@ function archiveLayout(schema: Schema, layout: Layout, depth = 1): string {
 	} else {
 		const indent = '\n' + '\t'.repeat(depth);
 		let code = '{';
-		if (layout.inherit) {
+		if (layout.inherit !== undefined) {
 			let didFind = false;
 			for (const [ name, format ] of Object.entries(schema)) {
 				if (format === layout.inherit) {
@@ -29,7 +29,7 @@ function archiveLayout(schema: Schema, layout: Layout, depth = 1): string {
 		code += `${indent}struct: {`;
 		for (const [ key, member ] of Object.entries(layout.struct)) {
 			code += `${indent}\t${key}: { offset: ${member.offset}, `;
-			if (member.pointer) {
+			if (member.pointer === true) {
 				code += 'pointer: true as const, ';
 			}
 			code += `layout: ${archiveLayout(schema, member.layout, depth + 1)} }`;

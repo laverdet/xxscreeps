@@ -22,7 +22,7 @@ export function RecursiveWeakMemoize(indices: number[], generator: (...args: any
 
 		// Return cached result, or generate and save
 		const arg = args[indices[last]];
-		if (typeof arg === 'object' && result?.has(arg)) {
+		if (typeof arg === 'object' && result?.has(arg) === true) {
 			return result.get(arg);
 		}
 		const value = Reflect.apply(generator, this, args);

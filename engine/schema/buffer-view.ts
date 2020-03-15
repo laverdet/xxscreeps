@@ -3,7 +3,7 @@ import assert from 'assert';
 /**
  * TypeArray holder for a chunk of serialized game state. Probably holds a room at time.
  */
- export class BufferView {
+export class BufferView {
 	readonly uint8: Uint8Array;
 	readonly uint16: Uint16Array;
 	readonly uint32: Uint32Array;
@@ -22,4 +22,4 @@ import assert from 'assert';
 		this.int16 = new Int16Array(buffer, offset, byteLength >>> 1);
 		this.int32 = new Int32Array(buffer, offset, byteLength >>> 2);
 	}
-};
+}

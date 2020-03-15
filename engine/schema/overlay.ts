@@ -18,7 +18,7 @@ export function injectGetters(
 		// Make getter
 		let get: (this: BufferObject) => any = function() {
 			const read = getReader(layout, interceptorSchema);
-			if (pointer) {
+			if (pointer === true) {
 				return function(this: BufferObject) {
 					const buffer = getBuffer(this);
 					const localOffset = getOffset(this);
@@ -33,7 +33,7 @@ export function injectGetters(
 
 		// Possible compose interceptor
 		const composer = interceptors?.[key]?.compose;
-		if (composer) {
+		if (composer !== undefined) {
 			const prev = get;
 			get = function() {
 				const value = composer(apply(prev, this, []));
@@ -49,7 +49,7 @@ export function injectGetters(
 		Object.defineProperty(prototype, symbol, {
 			enumerable: true,
 			get,
-			set: function(value) {
+			set(value) {
 				defineProperty(this, symbol, {
 					enumerable: true,
 					value,

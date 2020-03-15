@@ -3,8 +3,8 @@ import type { BufferView } from './buffer-view';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
 
 export type ReadInterceptor = {
-	compose?: (value: any) => any,
-	symbol?: symbol,
+	compose?: (value: any) => any;
+	symbol?: symbol;
 };
 export type ReadInterceptors = Dictionary<ReadInterceptor>;
 export type ReadInterceptorSchema = Dictionary<ReadInterceptors>;
@@ -24,34 +24,34 @@ const memoizeGetMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 			// Get reader for this member
 			let read = getReader(member.layout, interceptorSchema);
 			const compose = interceptors?.[key]?.compose;
-			if (compose) {
+			if (compose !== undefined) {
 				const realRead = read;
 				read = (view, offset) => compose(realRead(view, offset));
 			}
 
 			// Wrap to read this field from reserved address
 			const { offset, pointer } = member;
-			if (pointer) {
+			if (pointer === true) {
 				return (value, view, instanceOffset) => {
-					const addr = view.uint32[(offset + instanceOffset) >>> 2];
+					const addr = view.uint32[offset + instanceOffset >>> 2];
 					value[symbol] = read(view, offset + addr);
 				};
 			} else {
 				return (value, view, instanceOffset) => {
 					value[symbol] = read(view, offset + instanceOffset);
-				}
+				};
 			}
 		}();
 
 		// Combine member readers
 		const prev = memberReader;
-		if (prev) {
+		if (prev === undefined) {
+			memberReader = next;
+		} else {
 			memberReader = (value, view, offset) => {
 				prev(value, view, offset);
 				next(value, view, offset);
 			};
-		} else {
-			memberReader = next;
 		}
 	}
 	return memberReader!;
@@ -131,17 +131,17 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 	} else {
 		// Structures
 		const read = getMemberReader(layout, interceptorSchema);
-		if (layout.inherit) {
-			const readBase = getMemberReader(layout.inherit, interceptorSchema);
+		if (layout.inherit === undefined) {
 			return (view, offset) => {
 				const value = {};
-				readBase(value, view, offset);
 				read(value, view, offset);
 				return value;
 			};
 		} else {
+			const readBase = getMemberReader(layout.inherit, interceptorSchema);
 			return (view, offset) => {
 				const value = {};
+				readBase(value, view, offset);
 				read(value, view, offset);
 				return value;
 			};

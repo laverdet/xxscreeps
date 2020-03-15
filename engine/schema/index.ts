@@ -1,7 +1,7 @@
 import type { Format } from './format';
-import type { Layout, StructLayout } from './layout';
-import type { BoundReadInterceptorSchema, ReadInterceptor, ReadInterceptorSchema } from './read';
-import type { BoundWriteInterceptorSchema, WriteInterceptor, WriteInterceptorSchema } from './write';
+import type { Layout } from './layout';
+import type { BoundReadInterceptorSchema, ReadInterceptorSchema } from './read';
+import type { BoundWriteInterceptorSchema, WriteInterceptorSchema } from './write';
 export type { ReadInterceptors } from './read';
 export type { WriteInterceptors } from './write';
 
@@ -16,7 +16,7 @@ export type Schema = {
 export function bindInterceptorsToSchema(schema: Schema, interceptors: ReadInterceptorSchema): BoundReadInterceptorSchema;
 export function bindInterceptorsToSchema(schema: Schema, interceptors: WriteInterceptorSchema): BoundWriteInterceptorSchema;
 export function bindInterceptorsToSchema(schema: Schema, interceptors: ReadInterceptorSchema | WriteInterceptorSchema) {
-	const map = new WeakMap<object, any>();
+	const map = new WeakMap();
 	for (const [ key, interceptorsByKey ] of Object.entries(interceptors)) {
 		map.set(schema[key] as any, interceptorsByKey);
 	}

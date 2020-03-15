@@ -69,9 +69,9 @@ export function getTraits(layout: Layout): Traits {
 		const elementLayout = layout.array;
 		const { align, size, stride } = getTraits(elementLayout);
 		return {
-			align: align,
+			align,
 			size: size * arraySize,
-			...stride && {
+			...stride !== undefined && {
 				stride: stride * (arraySize - 1) + size,
 			},
 		};
@@ -92,15 +92,15 @@ export function getTraits(layout: Layout): Traits {
 		}));
 		const traits: Traits = {
 			align: Math.max(...members.map(member =>
-				Math.max(member.pointer ? kPointerSize : 0, member.traits.align)
+				Math.max(member.pointer === true ? kPointerSize : 0, member.traits.align),
 			)),
 			size: Math.max(...members.map(member =>
-				member.offset + (member.pointer ? kPointerSize : member.traits.size)
+				member.offset + (member.pointer === true ? kPointerSize : member.traits.size),
 			)),
 		};
 		const hasPointerElement = members.some(member => member.pointer);
 		let isFixedSize = !hasPointerElement;
-		if (layout.inherit) {
+		if (layout.inherit !== undefined) {
 			const baseTraits = getTraits(layout.inherit);
 			traits.align = Math.max(traits.align, baseTraits.align);
 			isFixedSize = isFixedSize && baseTraits.stride !== undefined;
