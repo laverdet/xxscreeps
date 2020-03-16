@@ -1,6 +1,7 @@
-import { kPointerSize, alignTo, getTraits, Layout, Shape, StructLayout } from './layout';
+import { kPointerSize, getTraits, Layout, Shape, StructLayout } from './layout';
 import type { BufferView } from './buffer-view';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
+const { fromCharCode } = String;
 
 export type ReadInterceptor = {
 	compose?: (value: any) => any;
@@ -33,12 +34,12 @@ const memoizeGetMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 			const { offset, pointer } = member;
 			if (pointer === true) {
 				return (value, view, instanceOffset) => {
-					const addr = view.uint32[offset + instanceOffset >>> 2];
-					value[symbol] = read(view, offset + addr);
+					const addr = view.uint32[instanceOffset + offset >>> 2];
+					value[symbol] = read(view, addr);
 				};
 			} else {
 				return (value, view, instanceOffset) => {
-					value[symbol] = read(view, offset + instanceOffset);
+					value[symbol] = read(view, instanceOffset + offset);
 				};
 			}
 		}();
@@ -76,6 +77,11 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 			case 'uint16': return (view, offset) => view.uint16[offset >>> 1];
 			case 'uint32': return (view, offset) => view.uint32[offset >>> 2];
 
+			case 'string': return (view, offset) => {
+				const stringOffset = offset + kPointerSize >>> 1;
+				return fromCharCode(...view.uint16.slice(stringOffset, stringOffset + view.uint32[offset >>> 2]));
+			};
+
 			default: throw TypeError(`Invalid literal layout: ${layout}`);
 		}
 
@@ -105,26 +111,26 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 	} else if ('vector' in layout) {
 		const elementLayout = layout.vector;
 		const read = getReader(elementLayout, interceptorSchema);
-		const { align, stride } = getTraits(elementLayout);
+		const { stride } = getTraits(elementLayout);
 		if (stride === undefined) {
 			throw new TypeError('Unimplemented');
 
 		} else {
 			// Vector with fixed element size
 			return (view, offset) => {
-				const value: any[] = [];
-				let currentOffset = alignTo(offset, kPointerSize);
-				const length = view.uint32[currentOffset >>> 2];
-				currentOffset += kPointerSize;
-				if (length !== 0) {
-					currentOffset = alignTo(currentOffset, align);
+				const length = view.uint32[offset >>> 2];
+				if (length === 0) {
+					return [];
+				} else {
+					const value: any[] = [];
+					let currentOffset = offset + kPointerSize;
 					value.push(read(view, currentOffset));
 					for (let ii = 1; ii < length; ++ii) {
 						currentOffset += stride;
 						value.push(read(view, currentOffset));
 					}
+					return value;
 				}
-				return value;
 			};
 		}
 

@@ -1,5 +1,6 @@
 // This specifies memory layout in a hopefully stable format
 export type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
+export type Primitive = Integral | 'string';
 
 export type StructLayout = {
 	struct: Record<string, {
@@ -19,7 +20,7 @@ type VectorLayout = {
 	vector: Layout;
 };
 
-export type Layout = Integral | StructLayout | ArrayLayout | VectorLayout;
+export type Layout = Primitive | StructLayout | ArrayLayout | VectorLayout;
 
 export type Traits = {
 	align: number;
@@ -35,6 +36,7 @@ type StructShape<Type extends StructLayout> = {
 };
 export type Shape<Type extends Layout> =
 	Type extends Integral ? number :
+	Type extends 'string' ? string :
 	Type extends ArrayLayout ? ArrayShape<Type> :
 	Type extends VectorLayout ? VectorShape<Type> :
 	Type extends StructLayout ? StructShape<Type> : never;
@@ -60,6 +62,11 @@ export function getTraits(layout: Layout): Traits {
 			case 'uint16': return integerTraits(2);
 			case 'uint32': return integerTraits(4);
 
+			case 'string': return {
+				align: kPointerSize,
+				size: kPointerSize,
+			};
+
 			default: throw TypeError(`Invalid literal layout: ${layout}`);
 		}
 
@@ -78,9 +85,8 @@ export function getTraits(layout: Layout): Traits {
 
 	} else if ('vector' in layout) {
 		// Dynamic vector
-		const { align } = getTraits(layout.vector);
 		return {
-			align: Math.max(kPointerSize, align),
+			align: kPointerSize,
 			size: kPointerSize,
 		};
 
@@ -92,7 +98,7 @@ export function getTraits(layout: Layout): Traits {
 		}));
 		const traits: Traits = {
 			align: Math.max(...members.map(member =>
-				Math.max(member.pointer === true ? kPointerSize : 0, member.traits.align),
+				member.pointer === true ? kPointerSize : member.traits.align,
 			)),
 			size: Math.max(...members.map(member =>
 				member.offset + (member.pointer === true ? kPointerSize : member.traits.size),

@@ -1,5 +1,5 @@
 import type { Schema, SchemaFormat } from '.';
-import { kPointerSize, alignTo, getTraits, Integral, Layout, StructLayout, Traits } from './layout';
+import { kPointerSize, alignTo, getTraits, Layout, Primitive, StructLayout, Traits } from './layout';
 
 // Format used to specify basic fields and types. `getLayout` will generate a stable binary layout
 // from this information.
@@ -11,7 +11,7 @@ type StructFormat = {
 };
 type InheritFormat = [ 'inherit', StructFormat, StructFormat ];
 
-export type Format = Integral | StructFormat | InheritFormat | ArrayFormat | VectorFormat;
+export type Format = Primitive | StructFormat | InheritFormat | ArrayFormat | VectorFormat;
 
 // Generates types for `getLayout`
 type ArrayFormatToLayout<Type extends ArrayFormat> = [ 'array', number, FormatToLayout<Type[2]> ];
@@ -24,7 +24,7 @@ type StructFormatToLayout<Type extends StructFormat> = {
 	};
 };
 type FormatToLayout<Type extends Format> =
-	Type extends Integral ? Type :
+	Type extends Primitive ? Type :
 	Type extends ArrayFormat ? ArrayFormatToLayout<Type> :
 	Type extends VectorFormat ? VectorFormatToLayout<Type> :
 	Type extends StructFormat ? StructFormatToLayout<Type> :
@@ -101,7 +101,7 @@ function getStructLayout(format: StructFormat, startOffset = 0): StructLayout {
 // function getLayout<Type extends Format>(format: Type): FormatToLayout<Type>;
 function getLayout(format: Format): Layout {
 	if (typeof format === 'string') {
-		// Integral types
+		// Primitive types
 		return format;
 
 	} else if (Array.isArray(format)) {
