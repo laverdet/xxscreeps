@@ -5,14 +5,42 @@ const { fromCharCode } = String;
 
 export type ReadInterceptor = {
 	compose?: (value: any) => any;
+	composeFromBuffer?: (view: BufferView, offset: number) => any;
 	symbol?: symbol;
 };
 export type ReadInterceptors = Dictionary<ReadInterceptor>;
 export type ReadInterceptorSchema = Dictionary<ReadInterceptors>;
 export type BoundReadInterceptorSchema = WeakMap<StructLayout, ReadInterceptors>;
 
+export type Reader<Type = any> = (view: BufferView, offset: number) => Type;
 type MemberReader = (value: any, view: BufferView, offset: number) => void;
-const memoizeGetMemberReader = RecursiveWeakMemoize([ 0, 1 ],
+
+export const getSingleMemberReader = RecursiveWeakMemoize([ 0, 1 ],
+		(
+			key: string,
+			layout: Layout,
+			interceptors: ReadInterceptors | undefined,
+			interceptorSchema: BoundReadInterceptorSchema,
+		): Reader => {
+
+	// Make underlying reader
+	const read = getReader(layout, interceptorSchema);
+
+	// Has composer?
+	const compose = interceptors?.[key]?.compose;
+	if (compose !== undefined) {
+		return (view, offset) => compose(read(view, offset));
+	}
+	const composeFromBuffer = interceptors?.[key]?.composeFromBuffer;
+	if (composeFromBuffer !== undefined) {
+		return (view, offset) => composeFromBuffer(view, offset);
+	}
+
+	// Plain reader
+	return read;
+});
+
+const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 		(layout: StructLayout, interceptorSchema: BoundReadInterceptorSchema): MemberReader => {
 
 	let memberReader: MemberReader | undefined;
@@ -23,12 +51,7 @@ const memoizeGetMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 		// Make reader for single field
 		const next = function(): MemberReader {
 			// Get reader for this member
-			let read = getReader(member.layout, interceptorSchema);
-			const compose = interceptors?.[key]?.compose;
-			if (compose !== undefined) {
-				const realRead = read;
-				read = (view, offset) => compose(realRead(view, offset));
-			}
+			const read = getSingleMemberReader(key, member.layout, interceptors, interceptorSchema);
 
 			// Wrap to read this field from reserved address
 			const { offset, pointer } = member;
@@ -58,13 +81,8 @@ const memoizeGetMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 	return memberReader!;
 });
 
-function getMemberReader(layout: StructLayout, interceptorSchema: BoundReadInterceptorSchema) {
-	return memoizeGetMemberReader(layout, interceptorSchema);
-}
-
 const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
-		(layout: Layout, interceptorSchema: BoundReadInterceptorSchema):
-			((view: BufferView, offset: number) => any) => {
+		(layout: Layout, interceptorSchema: BoundReadInterceptorSchema): Reader => {
 
 	if (typeof layout === 'string') {
 		// Integral types
@@ -113,7 +131,23 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 		const read = getReader(elementLayout, interceptorSchema);
 		const { stride } = getTraits(elementLayout);
 		if (stride === undefined) {
-			throw new TypeError('Unimplemented');
+			// Vector with dynamic element size
+			return (view, offset) => {
+				const length = view.uint32[offset >>> 2];
+				if (length === 0) {
+					return 0;
+				} else {
+					const value: any[] = [];
+					const lengthMinusOne = length - 1;
+					let currentOffset = offset + kPointerSize;
+					for (let ii = 0; ii < lengthMinusOne; ++ii) {
+						value.push(read(view, currentOffset + kPointerSize));
+						currentOffset = view.uint32[currentOffset >>> 2];
+					}
+					value.push(read(view, currentOffset));
+					return value;
+				}
+			};
 
 		} else {
 			// Vector with fixed element size
@@ -155,8 +189,9 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 	}
 });
 
-export function getReader<Type extends Layout>(layout: Type, interceptorSchema: BoundReadInterceptorSchema):
-	(view: BufferView, offset: number) => Shape<Type>;
+export function getReader<Type extends Layout>(
+	layout: Type, interceptorSchema: BoundReadInterceptorSchema
+): Reader<Shape<Type>>;
 export function getReader(layout: Layout, interceptorSchema: BoundReadInterceptorSchema) {
 	return memoizeGetReader(layout, interceptorSchema);
 }

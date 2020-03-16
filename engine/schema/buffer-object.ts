@@ -5,12 +5,12 @@ const GetBufferSymbol = Symbol();
 const GetOffsetSymbol = Symbol();
 
 /**
- * Any object that is backed by an ArrayBuffer. All objects must inherit from this one.
+ * Any object that is backed by a secret ArrayBuffer. All schema objects must inherit from this one.
  */
 export class BufferObject {
 	#buffer: BufferView;
 	#offset: number;
-	constructor(buffer: BufferView, offset: number) {
+	constructor(buffer: BufferView, offset = 0) {
 		this.#buffer = buffer;
 		this.#offset = offset;
 	}
@@ -31,5 +31,5 @@ export const getOffset = BufferObject[GetOffsetSymbol];
 delete BufferObject[GetOffsetSymbol];
 
 // Closed for business
-Object.seal(BufferObject);
-Object.seal(BufferObject.prototype);
+Object.freeze(BufferObject);
+Object.freeze(BufferObject.prototype);

@@ -11,7 +11,7 @@ export class BufferView {
 	readonly int16: Int16Array;
 	readonly int32: Int32Array;
 
-	constructor(buffer: ArrayBuffer, offset = 0) {
+	constructor(buffer: ArrayBuffer | SharedArrayBuffer, offset = 0) {
 		assert.equal(offset % 4, 0);
 		let { byteLength } = buffer;
 		byteLength -= offset;
