@@ -1,0 +1,7 @@
+{
+	"eslint.options": {
+		"configFile": "./.vscode/.eslintrc.yaml"
+	},
+	"eslint.validate": [ "typescript" ],
+	"typescript.tsdk": "./node_modules/typescript/lib"
+}
