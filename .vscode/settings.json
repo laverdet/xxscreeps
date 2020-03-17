@@ -3,5 +3,8 @@
 		"configFile": "./.vscode/.eslintrc.yaml"
 	},
 	"eslint.validate": [ "typescript" ],
-	"typescript.tsdk": "./node_modules/typescript/lib"
-}
+	"yaml.schemas": {
+		"./engine/config/config.schema.json": "*/.screepsrc.yaml"
+	},
+	"yaml.validate": true,
+	"typescript.tsdk": "./node_modules/typescript/lib"}

@@ -1,0 +1,20 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"description": "Screeps configuration for this server",
+	"type": "object",
+	"required": [ "storage" ],
+	"properties": {
+		"storage": {
+			"type": "object",
+			"description": "Configuration for local storage",
+			"required": [ "path" ],
+			"properties": {
+				"path": {
+					"type": "string",
+					"description": "Path to save game state, relative to this configuration file.",
+					"default": "./data"
+				}
+			}
+		}
+	}
+}
