@@ -58,6 +58,10 @@ export const getBuffer = Terrain[GetBufferSymbol];
 delete Terrain[GetBufferSymbol];
 
 export class TerrainWriter extends Terrain {
+	constructor(buffer = new Uint8Array(625)) {
+		super(buffer);
+	}
+
 	set(xx: number, yy: number, value: number) {
 		const buffer = getBuffer(this);
 		const index = xx * 50 + yy;

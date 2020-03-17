@@ -1,4 +1,4 @@
-import { kPointerSize, alignTo, getTraits, Layout, Shape, StructLayout } from './layout';
+import { kPointerSize, alignTo, getTraits, Layout, StructLayout } from './layout';
 import type { BufferView } from './buffer-view';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
 
@@ -47,7 +47,7 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 			if (pointer === true) {
 				const { align } = getTraits(layout);
 				return (value, view, instanceOffset, locals) => {
-					const addr = alignTo(instanceOffset + locals, align);
+					const addr = alignTo(locals, align);
 					view.uint32[instanceOffset + offset >>> 2] = addr;
 					return addr + write(value[symbol], view, addr);
 				};
@@ -178,18 +178,18 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 		const write = getMemberWriter(layout, interceptorSchema);
 		const { size } = getTraits(layout);
 		if (layout.inherit === undefined) {
-			return (value, view, offset) => write(value, view, offset, offset + size);
+			return (value, view, offset) => write(value, view, offset, offset + size) - offset;
 		} else {
 			const writeBase = getMemberWriter(layout.inherit, interceptorSchema);
 			return (value, view, offset) =>
-				write(value, view, offset, writeBase(value, view, offset, offset + size));
+				write(value, view, offset, writeBase(value, view, offset, offset + size)) - offset;
 		}
 	}
 });
 
-export function getWriter<Type extends Layout>(
+/*export function getWriter<Type extends Layout>(
 	layout: Type, interceptorSchema: BoundWriteInterceptorSchema
-): Writer<Shape<Type>>;
+): Writer<Shape<Type>>;*/
 export function getWriter(layout: Layout, interceptorSchema: BoundWriteInterceptorSchema) {
 	return memoizeGetWriter(layout, interceptorSchema);
 }
