@@ -27,7 +27,6 @@ rules:
   no-empty-character-class: 'warn'
   no-ex-assign: 'error'
   no-extra-boolean-cast: 'warn'
-  '@typescript-eslint/no-extra-parens': 'warn'
   '@typescript-eslint/no-extra-semi': 'warn'
   no-func-assign: 'warn'
   no-import-assign: 'warn'
@@ -65,7 +64,6 @@ rules:
   no-loop-func: 'error'
   no-multi-spaces: 'warn'
   no-multi-str: 'warn'
-  no-new: 'warn'
   no-new-wrappers: 'warn'
   no-octal: 'error'
   no-octal-escape: 'error'
@@ -97,7 +95,6 @@ rules:
   no-undef-init: 'warn'
   '@typescript-eslint/no-unused-vars': 'warn'
 
-  callback-return: 'warn'
   handle-callback-err: 'warn'
   no-buffer-constructor: 'warn'
   no-mixed-requires: 'warn'
@@ -106,14 +103,14 @@ rules:
   array-bracket-newline: [ 'warn', 'consistent' ]
   array-bracket-spacing: [ 'warn', 'always', { arraysInArrays: false } ]
   block-spacing: 'warn'
-  '@typescript-eslint/brace-style': 'warn'
+  '@typescript-eslint/brace-style': [ 'warn', '1tbs', { allowSingleLine: true } ]
   camelcase: 'warn'
   comma-dangle: [ 'warn', 'always-multiline' ]
   '@typescript-eslint/comma-spacing': 'warn'
   comma-style: 'warn'
   computed-property-spacing: 'warn'
   eol-last: 'warn'
-  func-call-spacing: 'warn'
+  '@typescript-eslint/func-call-spacing': 'warn'
   func-name-matching: 'warn'
   key-spacing: [ 'warn', { mode: 'strict' } ]
   keyword-spacing: 'warn'
