@@ -9,28 +9,29 @@ type Subscription<Message> = {
 };
 
 type ChannelNotification = {
-	type: 'message';
+	type: 'channelMessage';
 	name: string;
 	payload: any;
 	publisher?: string;
 };
 type SubscriptionRequest = {
-	type: 'subscribe';
+	type: 'channelSubscribe';
 	name: string;
 	id: string;
 };
 type UnsubscribeRequest = {
-	type: 'unsubscribe';
+	type: 'channelUnsubscribe';
 	name: string;
 	id: string;
 };
 type SubscriptionConfirmation = {
-	type: 'subscribed';
+	type: 'channelSubscribed';
 	id: string;
 };
 
-type MasterMessage = ChannelNotification | SubscriptionConfirmation;
-type WorkerMessage = ChannelNotification | SubscriptionRequest | UnsubscribeRequest;
+type UnknownMessage = { type: null };
+type MasterMessage = ChannelNotification | SubscriptionConfirmation | UnknownMessage;
+type WorkerMessage = ChannelNotification | SubscriptionRequest | UnsubscribeRequest | UnknownMessage;
 
 /**
  * Utility functions to manage channels in a single isolate
@@ -78,25 +79,11 @@ export abstract class Channel<Message> {
 	}
 
 	static connect<Message>(name: string, listener: Listener<Message>): Promise<Channel<Message>> {
-		this.connect = function() {
-			if (isMainThread) {
-				return LocalChannel.connect;
-			} else {
-				return WorkerChannel.connect;
-			}
-		}();
-		return this.connect(name, listener);
+		return (isMainThread ? LocalChannel.connect : WorkerChannel.connect)(name, listener);
 	}
 
 	static publish<Message>(name: string, message: Message): void {
-		this.publish = function() {
-			if (isMainThread) {
-				return LocalChannel.publish;
-			} else {
-				return WorkerChannel.publish;
-			}
-		}();
-		return this.publish(name, message);
+		return (isMainThread ? LocalChannel.publish : WorkerChannel.publish)(name, message);
 	}
 
 	static initializeWorker(worker: Worker) {
@@ -118,17 +105,17 @@ class LocalChannel<Message> extends Channel<Message> {
 		const localChannelInstances = new Map<string, Subscription<any>>();
 		worker.on('message', (message: WorkerMessage) => {
 			switch (message.type) {
-				case 'message':
+				case 'channelMessage':
 					return publish(message.name, message.publisher, message.payload);
 
-				case 'subscribe': {
+				case 'channelSubscribe': {
 					const channelIds = channelsIdsByName.get(message.name);
 					if (channelIds === undefined) {
 						const { name } = message;
 						const channel: Subscription<any> = {
 							name,
 							listener: (message: any, id?: string) => worker.postMessage(staticCast<MasterMessage>({
-								type: 'message',
+								type: 'channelMessage',
 								name,
 								payload: message,
 								publisher: id,
@@ -141,13 +128,13 @@ class LocalChannel<Message> extends Channel<Message> {
 						channelIds.add(message.id);
 					}
 					worker.postMessage(staticCast<MasterMessage>({
-						type: 'subscribed',
+						type: 'channelSubscribed',
 						id: message.id,
 					}));
 					break;
 				}
 
-				case 'unsubscribe': {
+				case 'channelUnsubscribe': {
 					const channelIds = channelsIdsByName.get(message.name)!;
 					channelIds.delete(message.id);
 					if (channelIds.size === 0) {
@@ -157,6 +144,8 @@ class LocalChannel<Message> extends Channel<Message> {
 					}
 					break;
 				}
+
+				default:
 			}
 		});
 
@@ -203,7 +192,7 @@ class WorkerChannel<Message> extends Channel<Message> {
 		}
 		this.didInit = true;
 		parentPort!.on('message', (message: MasterMessage) => {
-			if (message.type === 'message') {
+			if (message.type === 'channelMessage') {
 				publish(message.name, message.publisher, message.payload);
 			}
 		});
@@ -214,15 +203,15 @@ class WorkerChannel<Message> extends Channel<Message> {
 		return new Promise<WorkerChannel<Message>>(resolve => {
 			const channel = new WorkerChannel<Message>(name, listener);
 			const subscribeListener = (message: any) => {
-				if (message.type === 'subscribed' && message.id === channel.id) {
-					parentPort!.removeListener('message', subscribeListener);
+				if (message.type === 'channelSubscribed' && message.id === channel.id) {
+					parentPort!.removeListener('channelMessage', subscribeListener);
 					connect(channel);
 					resolve(channel);
 				}
 			};
 			parentPort!.on('message', subscribeListener);
 			parentPort!.postMessage(staticCast<WorkerMessage>({
-				type: 'subscribe',
+				type: 'channelSubscribe',
 				name,
 				id: channel.id,
 			}));
@@ -231,7 +220,7 @@ class WorkerChannel<Message> extends Channel<Message> {
 
 	static publish<Message>(name: string, message: Message) {
 		parentPort!.postMessage(staticCast<WorkerMessage>({
-			type: 'message',
+			type: 'channelMessage',
 			name,
 			payload: message,
 		}));
@@ -240,7 +229,7 @@ class WorkerChannel<Message> extends Channel<Message> {
 	disconnect() {
 		disconnect(this);
 		parentPort!.postMessage(staticCast<WorkerMessage>({
-			type: 'unsubscribe',
+			type: 'channelUnsubscribe',
 			name: this.name,
 			id: this.id,
 		}));
@@ -248,7 +237,7 @@ class WorkerChannel<Message> extends Channel<Message> {
 
 	publish(message: Message) {
 		parentPort!.postMessage(staticCast<WorkerMessage>({
-			type: 'message',
+			type: 'channelMessage',
 			name: this.name,
 			payload: message,
 			publisher: this.id,
