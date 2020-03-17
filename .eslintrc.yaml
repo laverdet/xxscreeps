@@ -5,207 +5,207 @@ env:
 parser: '@typescript-eslint/parser'
 parserOptions:
   ecmaVersion: 2020
-  project: './tsconfig.json'
-  sourceType: 'module'
+  project: ./tsconfig.json
+  sourceType: module
 
 plugins: [ '@typescript-eslint' ]
 
 rules:
-  for-direction: 'warn'
-  getter-return: 'warn'
-  no-async-promise-executor: 'error'
-  no-compare-neg-zero: 'error'
-  no-cond-assign: 'warn'
-  no-constant-condition: 'warn'
-  no-control-regex: 'warn'
-  no-debugger: 'warn'
-  no-dupe-args: 'error'
-  no-dupe-else-if: 'warn'
-  no-dupe-keys: 'error'
-  no-duplicate-case: 'warn'
-  no-empty: 'warn'
-  no-empty-character-class: 'warn'
-  no-ex-assign: 'error'
-  no-extra-boolean-cast: 'warn'
-  '@typescript-eslint/no-extra-semi': 'warn'
-  no-func-assign: 'warn'
-  no-import-assign: 'warn'
-  no-inner-declarations: 'error'
-  no-invalid-regexp: 'error'
-  no-irregular-whitespace: 'error'
-  no-misleading-character-class: 'error'
-  no-obj-calls: 'error'
-  no-prototype-builtins: 'error'
-  no-regex-spaces: 'warn'
-  no-setter-return: 'error'
-  no-sparse-arrays: 'error'
-  no-template-curly-in-string: 'error'
-  no-unexpected-multiline: 'error'
-  no-unreachable: 'warn'
-  no-unsafe-finally: 'error'
-  no-unsafe-negation: 'error'
-  require-atomic-updates: 'warn'
-  use-isnan: 'warn'
-  valid-typeof: 'error'
+  for-direction: warn
+  getter-return: warn
+  no-async-promise-executor: error
+  no-compare-neg-zero: error
+  no-cond-assign: warn
+  no-constant-condition: warn
+  no-control-regex: warn
+  no-debugger: warn
+  no-dupe-args: error
+  no-dupe-else-if: warn
+  no-dupe-keys: error
+  no-duplicate-case: warn
+  no-empty: warn
+  no-empty-character-class: warn
+  no-ex-assign: error
+  no-extra-boolean-cast: warn
+  '@typescript-eslint/no-extra-semi': warn
+  no-func-assign: warn
+  no-import-assign: warn
+  no-inner-declarations: error
+  no-invalid-regexp: error
+  no-irregular-whitespace: error
+  no-misleading-character-class: error
+  no-obj-calls: error
+  no-prototype-builtins: error
+  no-regex-spaces: warn
+  no-setter-return: error
+  no-sparse-arrays: error
+  no-template-curly-in-string: error
+  no-unexpected-multiline: error
+  no-unreachable: warn
+  no-unsafe-finally: error
+  no-unsafe-negation: error
+  require-atomic-updates: warn
+  use-isnan: warn
+  valid-typeof: error
 
-  accessor-pairs: 'warn'
-  curly: [ 'warn', 'multi-line', 'consistent' ]
-  '@typescript-eslint/default-param-last': 'error'
-  dot-location: [ 'warn', 'property' ]
-  dot-notation: 'warn'
-  grouped-accessor-pairs: 'warn'
-  no-case-declarations: 'warn'
-  no-constructor-return: 'error'
-  no-empty-pattern: 'warn'
-  no-extra-bind: 'warn'
-  no-extra-label: 'warn'
-  no-fallthrough: 'warn'
-  no-lone-blocks: 'warn'
-  no-loop-func: 'error'
-  no-multi-spaces: 'warn'
-  no-multi-str: 'warn'
-  no-new-wrappers: 'warn'
-  no-octal: 'error'
-  no-octal-escape: 'error'
-  no-param-reassign: 'warn'
-  no-redeclare: 'error'
-  '@typescript-eslint/return-await': 'warn'
-  no-self-assign: 'warn'
-  no-self-compare: 'warn'
-  no-sequences: 'warn'
-  no-throw-literal: 'warn'
-  no-unmodified-loop-condition: 'warn'
-  '@typescript-eslint/no-unused-expressions': [ 'warn', { allowShortCircuit: true, allowTernary: true } ]
-  no-unused-labels: 'warn'
-  no-useless-call: 'warn'
-  no-useless-catch: 'warn'
-  no-useless-concat: 'warn'
-  no-useless-escape: 'warn'
-  no-useless-return: 'warn'
-  no-with: 'warn'
-  prefer-named-capture-group: 'warn'
-  prefer-promise-reject-errors: 'warn'
-  prefer-regex-literals: 'warn'
-  radix: 'warn'
-  '@typescript-eslint/require-await': 'warn'
-  yoda: 'warn'
+  accessor-pairs: warn
+  curly: [ warn, multi-line, consistent ]
+  '@typescript-eslint/default-param-last': error
+  dot-location: [ warn, property ]
+  dot-notation: warn
+  grouped-accessor-pairs: warn
+  no-case-declarations: warn
+  no-constructor-return: error
+  no-empty-pattern: warn
+  no-extra-bind: warn
+  no-extra-label: warn
+  no-fallthrough: warn
+  no-lone-blocks: warn
+  no-loop-func: error
+  no-multi-spaces: warn
+  no-multi-str: warn
+  no-new-wrappers: warn
+  no-octal: error
+  no-octal-escape: error
+  no-param-reassign: warn
+  no-redeclare: error
+  '@typescript-eslint/return-await': warn
+  no-self-assign: warn
+  no-self-compare: warn
+  no-sequences: warn
+  no-throw-literal: warn
+  no-unmodified-loop-condition: warn
+  '@typescript-eslint/no-unused-expressions': [ warn, { allowShortCircuit: true, allowTernary: true } ]
+  no-unused-labels: warn
+  no-useless-call: warn
+  no-useless-catch: warn
+  no-useless-concat: warn
+  no-useless-escape: warn
+  no-useless-return: warn
+  no-with: warn
+  prefer-named-capture-group: warn
+  prefer-promise-reject-errors: warn
+  prefer-regex-literals: warn
+  radix: warn
+  '@typescript-eslint/require-await': warn
+  yoda: warn
 
-  no-delete-var: 'warn'
-  no-label-var: 'warn'
-  no-undef-init: 'warn'
-  '@typescript-eslint/no-unused-vars': 'warn'
+  no-delete-var: warn
+  no-label-var: warn
+  no-undef-init: warn
+  '@typescript-eslint/no-unused-vars': warn
 
-  handle-callback-err: 'warn'
-  no-buffer-constructor: 'warn'
-  no-mixed-requires: 'warn'
-  no-new-require: 'warn'
+  handle-callback-err: warn
+  no-buffer-constructor: warn
+  no-mixed-requires: warn
+  no-new-require: warn
 
-  array-bracket-newline: [ 'warn', 'consistent' ]
-  array-bracket-spacing: [ 'warn', 'always', { arraysInArrays: false } ]
-  block-spacing: 'warn'
-  '@typescript-eslint/brace-style': [ 'warn', '1tbs', { allowSingleLine: true } ]
-  camelcase: 'warn'
-  comma-dangle: [ 'warn', 'always-multiline' ]
-  '@typescript-eslint/comma-spacing': 'warn'
-  comma-style: 'warn'
-  computed-property-spacing: 'warn'
-  eol-last: 'warn'
-  '@typescript-eslint/func-call-spacing': 'warn'
-  func-name-matching: 'warn'
-  key-spacing: [ 'warn', { mode: 'strict' } ]
-  keyword-spacing: 'warn'
-  linebreak-style: 'warn'
-  new-cap: [ 'warn', { capIsNew: false } ]
-  no-lonely-if: 'warn'
-  no-mixed-spaces-and-tabs: [ 'warn', 'smart-tabs' ]
-  no-negated-condition: 'warn'
-  no-new-object: 'warn'
-  no-trailing-spaces: 'warn'
-  no-unneeded-ternary: 'warn'
-  no-whitespace-before-property: 'warn'
-  nonblock-statement-body-position: 'warn'
-  object-curly-newline: [ 'warn', { consistent: true } ]
-  object-curly-spacing: [ 'warn', 'always' ]
-  operator-assignment: 'warn'
-  prefer-exponentiation-operator: 'warn'
-  prefer-object-spread: 'warn'
-  '@typescript-eslint/quotes': [ 'warn', 'single', { avoidEscape: true } ]
-  '@typescript-eslint/semi': [ 'warn', 'always', { omitLastInOneLineBlock: true } ]
-  semi-spacing: 'warn'
-  space-before-blocks: 'warn'
-  '@typescript-eslint/space-before-function-paren': [ 'warn', {
-    anonymous: 'never',
-    named: 'never',
-    asyncArrow: 'never'
+  array-bracket-newline: [ warn, consistent ]
+  array-bracket-spacing: [ warn, always, { arraysInArrays: false } ]
+  block-spacing: warn
+  '@typescript-eslint/brace-style': [ warn, 1tbs, { allowSingleLine: true } ]
+  camelcase: warn
+  comma-dangle: [ warn, always-multiline ]
+  '@typescript-eslint/comma-spacing': warn
+  comma-style: warn
+  computed-property-spacing: warn
+  eol-last: warn
+  '@typescript-eslint/func-call-spacing': warn
+  func-name-matching: warn
+  key-spacing: [ warn, { mode: strict } ]
+  keyword-spacing: warn
+  linebreak-style: warn
+  new-cap: [ warn, { capIsNew: false } ]
+  no-lonely-if: warn
+  no-mixed-spaces-and-tabs: [ warn, smart-tabs ]
+  no-negated-condition: warn
+  no-new-object: warn
+  no-trailing-spaces: warn
+  no-unneeded-ternary: warn
+  no-whitespace-before-property: warn
+  nonblock-statement-body-position: warn
+  object-curly-newline: [ warn, { consistent: true } ]
+  object-curly-spacing: [ warn, always ]
+  operator-assignment: warn
+  prefer-exponentiation-operator: warn
+  prefer-object-spread: warn
+  '@typescript-eslint/quotes': [ warn, single, { avoidEscape: true } ]
+  '@typescript-eslint/semi': [ warn, always, { omitLastInOneLineBlock: true } ]
+  semi-spacing: warn
+  space-before-blocks: warn
+  '@typescript-eslint/space-before-function-paren': [ warn, {
+    anonymous: never,
+    named: never,
+    asyncArrow: never,
   } ]
-  space-in-parens: 'warn'
-  space-infix-ops: 'warn'
-  space-unary-ops: 'warn'
-  switch-colon-spacing: 'warn'
-  template-tag-spacing: 'warn'
-  unicode-bom: 'warn'
+  space-in-parens: warn
+  space-infix-ops: warn
+  space-unary-ops: warn
+  switch-colon-spacing: warn
+  template-tag-spacing: warn
+  unicode-bom: warn
 
-  arrow-body-style: 'warn'
-  arrow-parens: [ 'warn', 'as-needed' ]
-  arrow-spacing: 'warn'
-  constructor-super: 'error'
-  generator-star-spacing: 'warn'
-  no-class-assign: 'warn'
-  no-const-assign: 'error'
-  '@typescript-eslint/no-dupe-class-members': 'error'
-  no-duplicate-imports: 'warn'
-  no-new-symbol: 'warn'
-  no-this-before-super: 'warn'
-  no-useless-computed-key: 'warn'
-  '@typescript-eslint/no-useless-constructor': 'warn'
-  no-useless-rename: 'warn'
-  no-var: 'warn'
-  object-shorthand: 'warn'
-  prefer-arrow-callback: 'warn'
-  prefer-const: 'warn'
-  prefer-destructuring: 'warn'
-  prefer-numeric-literals: 'warn'
-  prefer-rest-params: 'warn'
-  prefer-spread: 'warn'
-  require-yield: 'warn'
-  rest-spread-spacing: 'warn'
-  template-curly-spacing: 'warn'
-  yield-star-spacing: 'warn'
+  arrow-body-style: warn
+  arrow-parens: [ warn, as-needed ]
+  arrow-spacing: warn
+  constructor-super: error
+  generator-star-spacing: warn
+  no-class-assign: warn
+  no-const-assign: error
+  '@typescript-eslint/no-dupe-class-members': error
+  no-duplicate-imports: warn
+  no-new-symbol: warn
+  no-this-before-super: warn
+  no-useless-computed-key: warn
+  '@typescript-eslint/no-useless-constructor': warn
+  no-useless-rename: warn
+  no-var: warn
+  object-shorthand: warn
+  prefer-arrow-callback: warn
+  prefer-const: warn
+  prefer-destructuring: warn
+  prefer-numeric-literals: warn
+  prefer-rest-params: warn
+  prefer-spread: warn
+  require-yield: warn
+  rest-spread-spacing: warn
+  template-curly-spacing: warn
+  yield-star-spacing: warn
 
-  '@typescript-eslint/adjacent-overload-signatures': 'warn'
-  '@typescript-eslint/array-type': 'warn'
-  '@typescript-eslint/await-thenable': 'warn'
-  '@typescript-eslint/ban-ts-comment': 'error'
-  '@typescript-eslint/consistent-type-assertions': 'warn'
-  '@typescript-eslint/consistent-type-definitions': [ 'warn', 'type' ]
-  '@typescript-eslint/member-delimiter-style': 'warn'
-  '@typescript-eslint/no-base-to-string': 'warn'
-  '@typescript-eslint/no-empty-interface': 'warn'
-  '@typescript-eslint/no-extra-non-null-assertion': 'warn'
-  '@typescript-eslint/no-floating-promises': 'warn'
-  '@typescript-eslint/no-for-in-array': 'warn'
-  '@typescript-eslint/no-inferrable-types': 'warn'
-  '@typescript-eslint/no-misused-new': 'warn'
-  '@typescript-eslint/no-misused-promises': 'warn'
-  '@typescript-eslint/no-namespace': 'warn'
-  '@typescript-eslint/no-non-null-asserted-optional-chain': 'warn'
-  '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'warn'
-  '@typescript-eslint/no-unnecessary-condition': [ 'warn', { ignoreRhs: true } ]
-  '@typescript-eslint/no-unnecessary-qualifier': 'warn'
-  '@typescript-eslint/no-unnecessary-type-arguments': 'warn'
-  '@typescript-eslint/no-unnecessary-type-assertion': 'warn'
-  '@typescript-eslint/no-unused-vars-experimental': 'warn'
-  '@typescript-eslint/prefer-as-const': 'warn'
-  '@typescript-eslint/prefer-for-of': 'warn'
-  '@typescript-eslint/prefer-function-type': 'warn'
-  '@typescript-eslint/prefer-includes': 'warn'
-  '@typescript-eslint/prefer-nullish-coalescing': 'warn'
-  '@typescript-eslint/prefer-optional-chain': 'warn'
-  '@typescript-eslint/prefer-readonly': 'warn'
-  '@typescript-eslint/prefer-regexp-exec': 'warn'
-  '@typescript-eslint/prefer-string-starts-ends-with': 'warn'
-  '@typescript-eslint/restrict-plus-operands': 'warn'
-  '@typescript-eslint/strict-boolean-expressions': [ 'warn', { ignoreRhs: true } ]
-  '@typescript-eslint/switch-exhaustiveness-check': 'warn'
-  '@typescript-eslint/type-annotation-spacing': 'warn'
-  '@typescript-eslint/unified-signatures': 'warn'
+  '@typescript-eslint/adjacent-overload-signatures': warn
+  '@typescript-eslint/array-type': warn
+  '@typescript-eslint/await-thenable': warn
+  '@typescript-eslint/ban-ts-comment': error
+  '@typescript-eslint/consistent-type-assertions': warn
+  '@typescript-eslint/consistent-type-definitions': [ warn, type ]
+  '@typescript-eslint/member-delimiter-style': warn
+  '@typescript-eslint/no-base-to-string': warn
+  '@typescript-eslint/no-empty-interface': warn
+  '@typescript-eslint/no-extra-non-null-assertion': warn
+  '@typescript-eslint/no-floating-promises': warn
+  '@typescript-eslint/no-for-in-array': warn
+  '@typescript-eslint/no-inferrable-types': warn
+  '@typescript-eslint/no-misused-new': warn
+  '@typescript-eslint/no-misused-promises': warn
+  '@typescript-eslint/no-namespace': warn
+  '@typescript-eslint/no-non-null-asserted-optional-chain': warn
+  '@typescript-eslint/no-unnecessary-boolean-literal-compare': warn
+  '@typescript-eslint/no-unnecessary-condition': [ warn, { ignoreRhs: true } ]
+  '@typescript-eslint/no-unnecessary-qualifier': warn
+  '@typescript-eslint/no-unnecessary-type-arguments': warn
+  '@typescript-eslint/no-unnecessary-type-assertion': warn
+  '@typescript-eslint/no-unused-vars-experimental': warn
+  '@typescript-eslint/prefer-as-const': warn
+  '@typescript-eslint/prefer-for-of': warn
+  '@typescript-eslint/prefer-function-type': warn
+  '@typescript-eslint/prefer-includes': warn
+  '@typescript-eslint/prefer-nullish-coalescing': warn
+  '@typescript-eslint/prefer-optional-chain': warn
+  '@typescript-eslint/prefer-readonly': warn
+  '@typescript-eslint/prefer-regexp-exec': warn
+  '@typescript-eslint/prefer-string-starts-ends-with': warn
+  '@typescript-eslint/restrict-plus-operands': warn
+  '@typescript-eslint/strict-boolean-expressions': [ warn, { ignoreRhs: true } ]
+  '@typescript-eslint/switch-exhaustiveness-check': warn
+  '@typescript-eslint/type-annotation-spacing': warn
+  '@typescript-eslint/unified-signatures': warn
