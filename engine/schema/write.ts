@@ -134,15 +134,13 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 					return kPointerSize;
 				} else {
 					let currentOffset = offset + kPointerSize;
-					let totalSize = 0;
-					const lengthMinusOne = length - 1;
-					for (let ii = 0; ii < lengthMinusOne; ++ii) {
+					let totalSize = kPointerSize;
+					for (let ii = 0; ii < length; ++ii) {
 						const elementOffset = currentOffset + kPointerSize;
 						const size = alignTo(write(value[ii], view, elementOffset), kPointerSize);
-						totalSize += size;
+						totalSize += size + kPointerSize;
 						currentOffset = view.uint32[currentOffset >>> 2] = elementOffset + size;
 					}
-					totalSize += write(value[lengthMinusOne], view, currentOffset);
 					return totalSize;
 				}
 			};

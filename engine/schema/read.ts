@@ -138,13 +138,11 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 					return 0;
 				} else {
 					const value: any[] = [];
-					const lengthMinusOne = length - 1;
 					let currentOffset = offset + kPointerSize;
-					for (let ii = 0; ii < lengthMinusOne; ++ii) {
+					for (let ii = 0; ii < length; ++ii) {
 						value.push(read(view, currentOffset + kPointerSize));
 						currentOffset = view.uint32[currentOffset >>> 2];
 					}
-					value.push(read(view, currentOffset));
 					return value;
 				}
 			};
