@@ -17,4 +17,4 @@ if [[ -z "$SCRIPT_ARGS" ]]; then
 	NODE_ARGS=()
 fi
 
-exec node "${NODE_ARGS[@]}" --harmony -r $(dirname "$0")/env.js "${SCRIPT_ARGS[@]}"
+exec node "${NODE_ARGS[@]}" --harmony --experimental-repl-await -r $(dirname "$0")/env.js "${SCRIPT_ARGS[@]}"
