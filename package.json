@@ -8,13 +8,21 @@
   },
   "dependencies": {
     "ajv": "^6.12.0",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
     "js-yaml": "^3.13.1",
     "json-schema": "^0.2.5",
+    "pngjs": "^3.4.0",
+    "sockjs": "^0.3.20",
     "source-map-support": "^0.5.16"
   },
   "devDependencies": {
+    "@types/body-parser": "^1.19.0",
+    "@types/express": "^4.17.3",
     "@types/js-yaml": "^3.12.2",
     "@types/node": "^13.7.7",
+    "@types/pngjs": "^3.4.1",
+    "@types/sockjs": "^0.3.31",
     "@typescript-eslint/eslint-plugin": "^2.23.0",
     "@typescript-eslint/parser": "^2.23.0",
     "eslint": "^6.8.0",

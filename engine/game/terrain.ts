@@ -5,6 +5,9 @@ const { apply } = Reflect;
 const { Uint8Array } = global;
 const { set } = Uint8Array.prototype;
 
+export const kTerrainWall = 1;
+export const kTerrainSwamp = 2;
+
 export const format = {
 	roomName: 'string' as const,
 	terrain: makeArray(625, 'uint8'),
@@ -71,4 +74,8 @@ export class TerrainWriter extends Terrain {
 			buffer[byte] = buffer[byte] & ~(0x03 << shift) | (value & 0x03) << shift;
 		}
 	}
+}
+
+export function isBorder(xx: number, yy: number) {
+	return xx === 0 || xx === 49 || yy === 0 || yy === 49;
 }
