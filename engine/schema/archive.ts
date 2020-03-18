@@ -1,30 +1,52 @@
 import type { Schema } from '.';
+import { Variant } from './format';
 import type { Layout } from './layout';
 
-function archiveLayout(schema: Schema, layout: Layout, depth = 1): string {
+function requireIdentifier(code: string) {
+	if (!/^[a-zA-Z$_][a-zA-Z0-9$_]+$/.test(code)) {
+		throw new Error(`Layout must be named: ${code}`);
+	}
+	return code;
+}
+
+type LayoutToNames = Map<Layout, string>;
+function archiveLayout(
+	schema: Schema,
+	layout: Layout,
+	layoutToNames: LayoutToNames,
+	depth = 1,
+): string {
+
+	// Subsequent calls shouldn't rerender the result, messing up references
+	const identifierName = layoutToNames.get(layout);
+	if (identifierName !== undefined) {
+		return identifierName;
+	}
+
+	// Render layout to TypeScript
 	if (typeof layout === 'string') {
 		return `'${layout}' as const`;
 
 	} else if ('array' in layout) {
-		return `{ array: ${archiveLayout(schema, layout.array, depth + 1)}, size: ${layout.size} }`;
+		return `{ array: ${archiveLayout(schema, layout.array, layoutToNames, depth + 1)}, size: ${layout.size} }`;
+
+	} else if ('variant' in layout) {
+		return '{ variant: [ ' +
+			layout.variant.map(layout =>
+				requireIdentifier(archiveLayout(schema, layout, layoutToNames, depth + 1))).join(', ') +
+		'] }';
 
 	} else if ('vector' in layout) {
-		return `{ vector: ${archiveLayout(schema, layout.vector, depth + 1)} }`;
+		return `{ vector: ${archiveLayout(schema, layout.vector, layoutToNames, depth + 1)} }`;
 
 	} else {
 		const indent = '\n' + '\t'.repeat(depth);
 		let code = '{';
+		if (layout[Variant] !== undefined) {
+			code += `${indent}[Variant]: '${layout[Variant]}',`;
+		}
 		if (layout.inherit !== undefined) {
-			let didFind = false;
-			for (const [ name, format ] of Object.entries(schema)) {
-				if (format === layout.inherit) {
-					didFind = true;
-					code += `${indent}inherit: ${name}`;
-				}
-			}
-			if (!didFind) {
-				throw new Error('Missing dependent struct in schema');
-			}
+			code += `${indent}inherit: ${requireIdentifier(archiveLayout(schema, layout.inherit, layoutToNames))},`;
 		}
 		code += `${indent}struct: {`;
 		for (const [ key, member ] of Object.entries(layout.struct)) {
@@ -32,7 +54,7 @@ function archiveLayout(schema: Schema, layout: Layout, depth = 1): string {
 			if (member.pointer === true) {
 				code += 'pointer: true as const, ';
 			}
-			code += `layout: ${archiveLayout(schema, member.layout, depth + 1)} }`;
+			code += `layout: ${archiveLayout(schema, member.layout, layoutToNames, depth + 1)} },`;
 		}
 		code += `\n${'\t'.repeat(depth - 1)}} }`;
 		return code;
@@ -40,6 +62,11 @@ function archiveLayout(schema: Schema, layout: Layout, depth = 1): string {
 }
 
 export function archiveSchema(schema: Schema): string {
-	return Object.entries(schema).map(([ name, format ]) =>
-		`const ${name} = ${archiveLayout(schema, format)};\n`).join('');
+	const layoutToNames: LayoutToNames = new Map();
+	const prelude = "import { Variant } from '~/engine/schema/format';\n";
+	return prelude + Object.entries(schema).map(([ name, layout ]) => {
+		const archived = `const ${name} = ${archiveLayout(schema, layout, layoutToNames)};\n`;
+		layoutToNames.set(layout, name);
+		return archived;
+	}).join('');
 }

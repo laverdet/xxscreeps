@@ -1,40 +1,37 @@
-import { kPointerSize, alignTo, getTraits, Layout, StructLayout } from './layout';
 import type { BufferView } from './buffer-view';
+import { Variant } from './format';
+import type { BoundInterceptorSchema } from './interceptor';
+import { kPointerSize, alignTo, getTraits, Layout, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
-
-export type WriteInterceptor = {
-	decompose?: (value: any) => any;
-	decomposeIntoBuffer?: (value: any, view: BufferView, offset: number) => number;
-	symbol?: symbol;
-};
-export type WriteInterceptors = Dictionary<WriteInterceptor>;
-export type WriteInterceptorSchema = Dictionary<WriteInterceptors>;
-export type BoundWriteInterceptorSchema = WeakMap<StructLayout, WriteInterceptors>;
 
 type Writer<Type = any> = (value: Type, view: BufferView, offset: number) => number;
 type MemberWriter = (value: any, view: BufferView, offset: number, locals: number) => number;
 
 const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
-		(layout: StructLayout, interceptorSchema: BoundWriteInterceptorSchema): MemberWriter => {
+		(layout: StructLayout, interceptorSchema: BoundInterceptorSchema): MemberWriter => {
 
 	let memberWriter: MemberWriter | undefined;
 	const interceptors = interceptorSchema.get(layout);
 	for (const [ key, member ] of Object.entries(layout.struct)) {
-		const symbol = interceptors?.[key]?.symbol ?? key;
+		const symbol = interceptors?.members?.[key]?.symbol ?? key;
 
 		// Make writer for single field. `locals` parameter is offset to dynamic memory.
 		const next = function(): MemberWriter {
 			// Get writer for this member
+			const { offset, pointer } = member;
 			const write = function(): Writer {
 				const write = getWriter(member.layout, interceptorSchema);
 
 				// Has decomposer?
-				const decompose = interceptors?.[key]?.decompose;
+				const decompose = interceptors?.members?.[key]?.decompose;
 				if (decompose !== undefined) {
 					return (value, view, offset) => write(decompose(value), view, offset);
 				}
-				const decomposeIntoBuffer = interceptors?.[key]?.decomposeIntoBuffer;
+				const decomposeIntoBuffer = interceptors?.members?.[key]?.decomposeIntoBuffer;
 				if (decomposeIntoBuffer !== undefined) {
+					if (pointer === true) {
+						throw new Error('Pointer to raw decomposer is not supported');
+					}
 					return (value, view, offset) => decomposeIntoBuffer(value, view, offset);
 				}
 
@@ -43,7 +40,6 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 			}();
 
 			// Wrap to write this field at reserved address
-			const { offset, pointer } = member;
 			if (pointer === true) {
 				const { align } = getTraits(layout);
 				return (value, view, instanceOffset, locals) => {
@@ -70,7 +66,7 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 });
 
 const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
-		(layout: Layout, interceptorSchema: BoundWriteInterceptorSchema): Writer => {
+		(layout: Layout, interceptorSchema: BoundInterceptorSchema): Writer => {
 
 	if (typeof layout === 'string') {
 		// Integral types
@@ -120,6 +116,22 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 				return size;
 			};
 		}
+
+	} else if ('variant' in layout) {
+		// Variant types
+		const variantMap = new Map<string, Writer>();
+		for (let ii = 0; ii < layout.variant.length; ++ii) {
+			const elementLayout = layout.variant[ii];
+			const write = getWriter(elementLayout, interceptorSchema);
+			variantMap.set(
+				elementLayout[Variant]!,
+				(value, view, offset) => {
+					view.uint32[offset >>> 2] = ii;
+					return kPointerSize + write(value, view, offset + kPointerSize);
+				},
+			);
+		}
+		return (value, view, offset) => variantMap.get(value[Variant])!(value, view, offset);
 
 	} else if ('vector' in layout) {
 		const elementLayout = layout.vector;
@@ -188,6 +200,6 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 /*export function getWriter<Type extends Layout>(
 	layout: Type, interceptorSchema: BoundWriteInterceptorSchema
 ): Writer<Shape<Type>>;*/
-export function getWriter(layout: Layout, interceptorSchema: BoundWriteInterceptorSchema) {
+export function getWriter(layout: Layout, interceptorSchema: BoundInterceptorSchema) {
 	return memoizeGetWriter(layout, interceptorSchema);
 }

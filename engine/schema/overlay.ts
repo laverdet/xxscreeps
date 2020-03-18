@@ -1,6 +1,7 @@
 import type { StructLayout } from './layout';
 import { getBuffer, getOffset, BufferObject } from './buffer-object';
-import { getSingleMemberReader, BoundReadInterceptorSchema } from './read';
+import type { BoundInterceptorSchema } from './interceptor';
+import { getSingleMemberReader } from './read';
 
 const { defineProperty } = Object;
 const { apply } = Reflect;
@@ -10,19 +11,20 @@ type GetterReader = (this: BufferObject) => any;
 export function injectGetters(
 	layout: StructLayout,
 	prototype: object,
-	interceptorSchema: BoundReadInterceptorSchema,
+	interceptorSchema: BoundInterceptorSchema,
 ) {
 	const interceptors = interceptorSchema.get(layout);
 	for (const [ key, member ] of Object.entries(layout.struct)) {
 		const { layout, offset, pointer } = member;
-		const symbol = interceptors?.[key]?.symbol ?? key;
+		const memberInterceptors = interceptors?.members?.[key];
+		const symbol = memberInterceptors?.symbol ?? key;
 
 		// Make getter
 		const get = function(): GetterReader {
 
 			// Get reader for this member
 			const get = function(): GetterReader {
-				const read = getSingleMemberReader(key, layout, interceptors, interceptorSchema);
+				const read = getSingleMemberReader(layout, interceptorSchema, memberInterceptors);
 				if (pointer === true) {
 					return function() {
 						const buffer = getBuffer(this);
@@ -39,8 +41,8 @@ export function injectGetters(
 			// Memoize?
 			if (
 				layout === 'string' ||
-				interceptors?.[key]?.compose !== undefined ||
-				interceptors?.[key]?.composeFromBuffer !== undefined
+				interceptors?.members?.[key]?.compose !== undefined ||
+				interceptors?.members?.[key]?.composeFromBuffer !== undefined
 			) {
 				return function() {
 					const value = apply(get, this, []);

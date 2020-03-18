@@ -1,8 +1,8 @@
 import type { BufferView } from './buffer-view';
 
 // Symbols used to keep these functions from littering Typescript types
-const GetBufferSymbol = Symbol();
-const GetOffsetSymbol = Symbol();
+const GetBufferSymbol: unique symbol = Symbol();
+const GetOffsetSymbol: unique symbol = Symbol();
 
 /**
  * Any object that is backed by a secret ArrayBuffer. All schema objects must inherit from this one.

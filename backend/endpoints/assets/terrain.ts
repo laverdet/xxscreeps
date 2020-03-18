@@ -10,7 +10,7 @@ const worldTerrain = (async function() {
 	const blobStorage = await BlobStorage.connect('/');
 	const buffer = await blobStorage.load('world');
 	const view = new BufferView(buffer.buffer, buffer.byteOffset);
-	const read = getReader(MapSchema.schema.World, MapSchema.readInterceptorSchema);
+	const read = getReader(MapSchema.schema.World, MapSchema.interceptorSchema);
 	return read(view, 0) as any[];
 })();
 

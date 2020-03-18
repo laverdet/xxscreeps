@@ -1,6 +1,6 @@
 import { makeArray } from '~/engine/schema/format';
-import type { ReadInterceptors, WriteInterceptors } from '~/engine/schema';
 import type { BufferView } from '~/engine/schema/buffer-view';
+import type { Interceptors } from '~/engine/schema/interceptor';
 const { apply } = Reflect;
 const { Uint8Array } = global;
 const { set } = Uint8Array.prototype;
@@ -13,22 +13,7 @@ export const format = {
 	terrain: makeArray(625, 'uint8'),
 };
 
-export const readInterceptors: ReadInterceptors = {
-	terrain: {
-		composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),
-	},
-};
-
-export const writeInterceptors: WriteInterceptors = {
-	terrain: {
-		decomposeIntoBuffer: (value: Terrain, view: BufferView, offset: number) => {
-			value.getRawBuffer(view.uint8.subarray(offset));
-			return 625;
-		},
-	},
-};
-
-const GetBufferSymbol = Symbol();
+const GetBufferSymbol: unique symbol = Symbol();
 
 export class Terrain {
 	#buffer: Uint8Array;
@@ -79,3 +64,15 @@ export class TerrainWriter extends Terrain {
 export function isBorder(xx: number, yy: number) {
 	return xx === 0 || xx === 49 || yy === 0 || yy === 49;
 }
+
+export const interceptors: Interceptors = {
+	members: {
+		terrain: {
+			composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),
+			decomposeIntoBuffer: (value: Terrain, view: BufferView, offset: number) => {
+				value.getRawBuffer(view.uint8.subarray(offset));
+				return 625;
+			},
+		},
+	},
+};

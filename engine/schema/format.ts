@@ -1,20 +1,30 @@
+import { RecursiveWeakMemoize } from '~/lib/memoize';
 import type { Schema, SchemaFormat } from '.';
 import { kPointerSize, alignTo, getTraits, Layout, Primitive, StructLayout, Traits } from './layout';
+
+// Special key used to detect which instance of a variant an object belongs to
+export const Variant: unique symbol = Symbol('schemaVariant');
 
 // Format used to specify basic fields and types. `getLayout` will generate a stable binary layout
 // from this information.
 type ArrayFormat = [ 'array', number, Format ];
+type InheritFormat = [ 'inherit', StructFormat, StructFormat ];
+type VariantFormat = [ 'variant', (
+	{ [Variant]: string } |
+	[ 'inherit', any, { [Variant]: string } ]
+)[] ];
 type VectorFormat = [ 'vector', Format ];
 
 type StructFormat = {
+	[Variant]?: string;
 	[key: string]: Format;
 };
-type InheritFormat = [ 'inherit', StructFormat, StructFormat ];
 
-export type Format = Primitive | StructFormat | InheritFormat | ArrayFormat | VectorFormat;
+export type Format = ArrayFormat | Primitive | InheritFormat | StructFormat | VariantFormat | VectorFormat;
 
 // Generates types for `getLayout`
 type ArrayFormatToLayout<Type extends ArrayFormat> = [ 'array', number, FormatToLayout<Type[2]> ];
+type VariantFormatToLayout<Type extends VariantFormat> = [ 'variant', FormatToLayout<Type[1][number]> ];
 type VectorFormatToLayout<Type extends VectorFormat> = [ 'vector', FormatToLayout<Type[1]> ];
 type StructFormatToLayout<Type extends StructFormat> = {
 	[Key in keyof Type]: {
@@ -26,6 +36,7 @@ type StructFormatToLayout<Type extends StructFormat> = {
 type FormatToLayout<Type extends Format> =
 	Type extends Primitive ? Type :
 	Type extends ArrayFormat ? ArrayFormatToLayout<Type> :
+	Type extends VariantFormat ? VariantFormatToLayout<Type> :
 	Type extends VectorFormat ? VectorFormatToLayout<Type> :
 	Type extends StructFormat ? StructFormatToLayout<Type> :
 	never;
@@ -41,19 +52,18 @@ export function makeInherit<Base extends StructFormat, Extension extends StructF
 	return [ 'inherit', base, extension ];
 }
 
+export function makeVariant<Type extends Format[]>(...format: Type):
+		[ 'variant', Type ] {
+	return [ 'variant', format ];
+}
+
 export function makeVector<Type extends Format>(format: Type):
 		[ 'vector', Type ] {
 	return [ 'vector', format ];
 }
 
-// Struct layouts are saved to ensure that `inherit` layouts don't duplicate the base class
-const savedStructLayouts = new WeakMap<StructFormat, StructLayout>();
-function getStructLayout(format: StructFormat, startOffset = 0): StructLayout {
-	// Check existing layouts.
-	const existingLayout = savedStructLayouts.get(format);
-	if (existingLayout !== undefined) {
-		return existingLayout;
-	}
+// Struct layouts are memoized to ensure that `inherit` layouts don't duplicate the base class
+const getStructLayout = RecursiveWeakMemoize([ 0 ], (format: StructFormat, startOffset = 0): StructLayout => {
 
 	// Fetch memory layout for each member
 	type WithTraits = { traits: Traits };
@@ -93,9 +103,14 @@ function getStructLayout(format: StructFormat, startOffset = 0): StructLayout {
 		};
 		offset += pointer ? kPointerSize : member.traits.size;
 	}
-	savedStructLayouts.set(format, layout);
+
+	// Variant type defined?
+	if (format[Variant] !== undefined) {
+		layout[Variant] = format[Variant];
+	}
+
 	return layout;
-}
+});
 
 // This crashes TypeScript =o
 // function getLayout<Type extends Format>(format: Type): FormatToLayout<Type>;
@@ -111,6 +126,12 @@ function getLayout(format: Format): Layout {
 				return {
 					array: getLayout(format[2]),
 					size: format[1],
+				};
+
+			// Variant
+			case 'variant':
+				return {
+					variant: format[1].map(getLayout),
 				};
 
 			// Vectors (dynamic size)

@@ -1,3 +1,5 @@
+import { Variant } from './format';
+
 // This specifies memory layout in a hopefully stable format
 export type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
 export type Primitive = Integral | 'string';
@@ -9,6 +11,7 @@ export type StructLayout = {
 		pointer?: true;
 	}>;
 	inherit?: StructLayout;
+	[Variant]?: string;
 };
 
 type ArrayLayout = {
@@ -16,11 +19,15 @@ type ArrayLayout = {
 	size: number;
 };
 
+type VariantLayout = {
+	variant: StructLayout[];
+};
+
 type VectorLayout = {
 	vector: Layout;
 };
 
-export type Layout = Primitive | StructLayout | ArrayLayout | VectorLayout;
+export type Layout = ArrayLayout | Primitive | StructLayout | VariantLayout | VectorLayout;
 
 export type Traits = {
 	align: number;
@@ -30,6 +37,8 @@ export type Traits = {
 
 // Convert a memory layout declaration to the corresponding data type
 type ArrayShape<Type extends ArrayLayout> = Shape<Type['array']>[];
+// Somehow this one creates a circular type but none of the others do.
+// type VariantShape<Type extends VariantLayout> = Shape<Type['variant'][number]>;
 type VectorShape<Type extends VectorLayout> = Shape<Type['vector']>[];
 type StructShape<Type extends StructLayout> = {
 	[Key in keyof Type['struct']]: Shape<Type['struct'][Key]['layout']>;
@@ -38,14 +47,15 @@ export type Shape<Type extends Layout> =
 	Type extends Integral ? number :
 	Type extends 'string' ? string :
 	Type extends ArrayLayout ? ArrayShape<Type> :
+	Type extends VariantLayout ? any :
 	Type extends VectorLayout ? VectorShape<Type> :
 	Type extends StructLayout ? StructShape<Type> : never;
 
 export const kPointerSize = 4;
 
 export function alignTo(address: number, align: number) {
-	const remainder = address % align;
-	return address + (remainder === 0 ? 0 : align - remainder);
+	const alignMinusOne = align - 1;
+	return ~alignMinusOne & (address + alignMinusOne);
 }
 
 export function getTraits(layout: Layout): Traits {
@@ -83,8 +93,8 @@ export function getTraits(layout: Layout): Traits {
 			},
 		};
 
-	} else if ('vector' in layout) {
-		// Dynamic vector
+	} else if ('variant' in layout || 'vector' in layout) {
+		// Variant & vector just store a uint32 in static memory, the rest is dynamic
 		return {
 			align: kPointerSize,
 			size: kPointerSize,

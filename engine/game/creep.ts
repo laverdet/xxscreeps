@@ -1,16 +1,18 @@
 import * as RoomObject from './room-object';
-import { makeInherit } from '~/engine/schema/format';
+import { makeInherit, Variant } from '~/engine/schema/format';
 
+export const type = 'creep';
 export const format = makeInherit(RoomObject.format, {
+	[Variant]: 'creep',
 	// body: makeVector({ boost: 'uint8', type: 'uint8', hits: 'uint8' })
-	fatigue: 'uint16' as const,
-	hits: 'uint16' as const,
+	fatigue: 'int16' as const,
+	hits: 'int16' as const,
 	name: 'string' as const,
 	// owner: 'int32' as const,
 	// saying: ...
 	// spawning?
 	// store: !!!
-	oldAgeTime: 'uint32' as const,
+	ageTime: 'int32' as const,
 });
 
 export class Creep extends RoomObject.RoomObject {
