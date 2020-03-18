@@ -1,6 +1,6 @@
 import { RecursiveWeakMemoize } from '~/lib/memoize';
 import type { Schema, SchemaFormat } from '.';
-import { kPointerSize, alignTo, getTraits, Layout, Primitive, StructLayout, Traits } from './layout';
+import { kPointerSize, alignTo, getTraits, Integral, Layout, Primitive, StructLayout, Traits } from './layout';
 
 // Special key used to detect which instance of a variant an object belongs to
 export const Variant: unique symbol = Symbol('schemaVariant');
@@ -9,16 +9,15 @@ export const Variant: unique symbol = Symbol('schemaVariant');
 // from this information.
 type ArrayFormat = [ 'array', number, Format ];
 type InheritFormat = [ 'inherit', StructFormat, StructFormat ];
-type VariantFormat = [ 'variant', (
-	{ [Variant]: string } |
-	[ 'inherit', any, { [Variant]: string } ]
-)[] ];
-type VectorFormat = [ 'vector', Format ];
-
 type StructFormat = {
 	[Variant]?: string;
 	[key: string]: Format;
 };
+type VariantFormat = [ 'variant', (
+	(StructFormat & { [Variant]: string }) |
+	(InheritFormat & [ 'inherit', any, { [Variant]: string } ])
+)[] ];
+type VectorFormat = [ 'vector', Format ];
 
 export type Format = ArrayFormat | Primitive | InheritFormat | StructFormat | VariantFormat | VectorFormat;
 
@@ -40,6 +39,27 @@ type FormatToLayout<Type extends Format> =
 	Type extends VectorFormat ? VectorFormatToLayout<Type> :
 	Type extends StructFormat ? StructFormatToLayout<Type> :
 	never;
+
+// These types are mostly useless. They describe the underlying data structure which ends up being
+// way different than what the code sees once you throw in interceptors.
+type ArrayShape<Type extends ArrayFormat> = Shape<Type[2]>[];
+type InheritShape<Type extends InheritFormat> = StructShape<Type[1]> & StructShape<Type[2]>;
+type VariantShape<Type extends VariantFormat> = VariantElementShape<Type[1][number]>;
+type VariantElementShape<Type extends Format> =
+	Type extends InheritFormat ? InheritShape<Type> :
+	Type extends StructFormat ? StructShape<Type> : never;
+type VectorShape<Type extends VectorFormat> = Shape<Type[1]>[];
+type StructShape<Type extends StructFormat> = {
+	[Key in keyof Type]: Shape<Type[Key]>;
+};
+export type Shape<Type extends Format> =
+	Type extends Integral ? number :
+	Type extends 'string' ? string :
+	Type extends ArrayFormat ? ArrayShape<Type> :
+	Type extends InheritFormat ? InheritShape<Type> :
+	Type extends VariantFormat ? VariantShape<Type> :
+	Type extends VectorFormat ? VectorShape<Type> :
+	Type extends StructFormat ? StructShape<Type> : never;
 
 export function makeArray<Type extends Format>(length: number, format: Type):
 		[ 'array', number, Type ] {
@@ -114,6 +134,8 @@ const getStructLayout = RecursiveWeakMemoize([ 0 ], (format: StructFormat, start
 
 // This crashes TypeScript =o
 // function getLayout<Type extends Format>(format: Type): FormatToLayout<Type>;
+function getLayout(format: Format): Layout;
+function getLayout(format: InheritFormat | StructFormat): StructLayout;
 function getLayout(format: Format): Layout {
 	if (typeof format === 'string') {
 		// Primitive types

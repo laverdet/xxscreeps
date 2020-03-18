@@ -31,7 +31,7 @@ if (jsonSource === undefined || blobDestination === undefined) {
 			rooms.sort((left, right) => left.roomName.localeCompare(right.roomName));
 
 			// Make writer and save
-			const write = getWriter(MapSchema.schema.World, MapSchema.writeInterceptorSchema);
+			const write = getWriter(MapSchema.schema.World, MapSchema.interceptorSchema);
 			const view = new BufferView(new ArrayBuffer(1024 * 1024 * 32));
 			const length = write(rooms, view, 0);
 			await fs.writeFile(blobDestination, view.uint8.subarray(0, length));

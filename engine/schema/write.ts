@@ -140,46 +140,32 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 		if (stride === undefined) {
 			// Vector with dynamic element size
 			return (value, view, offset) => {
-				const { length } = value;
-				view.uint32[offset >>> 2] = length;
-				if (length === 0) {
-					return kPointerSize;
-				} else {
-					let currentOffset = offset + kPointerSize;
-					let totalSize = kPointerSize;
-					for (let ii = 0; ii < length; ++ii) {
-						const elementOffset = currentOffset + kPointerSize;
-						const size = alignTo(write(value[ii], view, elementOffset), kPointerSize);
-						totalSize += size + kPointerSize;
-						currentOffset = view.uint32[currentOffset >>> 2] = elementOffset + size;
-					}
-					return totalSize;
+				let length = 0;
+				let currentOffset = offset + kPointerSize;
+				for (const element of value) {
+					++length;
+					const elementOffset = currentOffset + kPointerSize;
+					const size = alignTo(write(element, view, elementOffset), kPointerSize);
+					currentOffset = view.uint32[currentOffset >>> 2] = elementOffset + size;
 				}
+				view.uint32[offset >>> 2] = length;
+				return currentOffset - offset;
 			};
 
 		} else {
 			// Vector with fixed element size
 			return (value, view, offset) => {
-				// Write length header
-				const { length } = value;
-				view.uint32[offset >>> 2] = length;
-				if (length === 0) {
-					return kPointerSize;
-				} else {
-					// Write vector data
-					let currentOffset = offset + kPointerSize;
-					// Note: no need to align because max alignment is already `kPointerSize`. Theoretically
-					// this would need to be implemented if 64-bit data types were added.
-					// currentOffset = alignTo(currentOffset, align);
-					write(value[0], view, currentOffset);
-					for (let ii = 1; ii < length; ++ii) {
-						currentOffset += stride;
-						write(value[ii], view, currentOffset);
-					}
-					// Final element is `size` instead of `stride` because we don't need to align the next
-					// element
-					return currentOffset - offset + size;
+				let length = 0;
+				let currentOffset = offset + kPointerSize;
+				for (const element of value) {
+					++length;
+					write(element, view, currentOffset);
+					currentOffset += stride;
 				}
+				view.uint32[offset >>> 2] = length;
+				// Final element is `size` instead of `stride` because we don't need to align the next
+				// element
+				return currentOffset - offset + size - stride;
 			};
 		}
 

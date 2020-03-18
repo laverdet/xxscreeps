@@ -15,6 +15,7 @@ export const schemaFormat = {
 export const schema = getSchema(schemaFormat);
 
 export const interceptorSchema = bindInterceptorsToSchema(schema, {
+	Room: Room.interceptors,
 	RoomObject: RoomObject.interceptors,
 	Source: Source.interceptors,
 });
