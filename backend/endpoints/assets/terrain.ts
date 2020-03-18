@@ -8,7 +8,7 @@ import { BlobStorage } from '~/storage/blob';
 
 const worldTerrain = (async function() {
 	const blobStorage = await BlobStorage.connect('/');
-	const buffer = await blobStorage.load('world');
+	const buffer = await blobStorage.load('terrain');
 	const view = new BufferView(buffer.buffer, buffer.byteOffset);
 	const read = getReader(MapSchema.schema.World, MapSchema.interceptorSchema);
 	return read(view, 0) as any[];

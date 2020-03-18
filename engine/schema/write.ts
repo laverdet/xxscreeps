@@ -171,15 +171,30 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 
 	} else {
 		// Structures
-		const write = getMemberWriter(layout, interceptorSchema);
 		const { size } = getTraits(layout);
-		if (layout.inherit === undefined) {
-			return (value, view, offset) => write(value, view, offset, offset + size) - offset;
-		} else {
-			const writeBase = getMemberWriter(layout.inherit, interceptorSchema);
-			return (value, view, offset) =>
-				write(value, view, offset, writeBase(value, view, offset, offset + size)) - offset;
+		const write = function(): Writer {
+			const { inherit } = layout;
+			const write = getMemberWriter(layout, interceptorSchema);
+			if (inherit === undefined) {
+				return (value, view, offset) => write(value, view, offset, offset + size) - offset;
+			} else {
+				const writeBase = getMemberWriter(inherit, interceptorSchema);
+				return (value, view, offset) =>
+					write(value, view, offset, writeBase(value, view, offset, offset + size)) - offset;
+			}
+		}();
+
+		// Has composer?
+		const interceptors = interceptorSchema.get(layout)?.instance;
+		const decompose = interceptors?.decompose;
+		if (decompose !== undefined) {
+			return (value, view, offset) => write(decompose(value), view, offset);
 		}
+		const decomposeIntoBuffer = interceptors?.decomposeIntoBuffer;
+		if (decomposeIntoBuffer !== undefined) {
+			return (value, view, offset) => decomposeIntoBuffer(value, view, offset);
+		}
+		return write;
 	}
 });
 

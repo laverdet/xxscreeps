@@ -69,7 +69,7 @@ export const interceptors: Interceptors = {
 	members: {
 		terrain: {
 			composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),
-			decomposeIntoBuffer: (value: Terrain, view: BufferView, offset: number) => {
+			decomposeIntoBuffer(value: Terrain, view: BufferView, offset: number) {
 				value.getRawBuffer(view.uint8.subarray(offset));
 				return 625;
 			},

@@ -25,7 +25,7 @@ export class Room extends BufferObject {
 export const interceptors: Interceptors = {
 	members: {
 		objects: {
-			compose: (objects: RoomObject[]) => {
+			compose(objects: RoomObject[]) {
 				const map: RoomObjectMap = new Map;
 				for (const object of objects) {
 					map.set(object.id, object);

@@ -166,20 +166,34 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 		}
 
 	} else {
-		// Structures
-		const { inherit } = layout;
-		const read = getMemberReader(layout, interceptorSchema);
-		const readBase = inherit === undefined ?
-			undefined : getMemberReader(inherit, interceptorSchema);
+		// Structures / object
 		const variant = layout[Variant];
-		return (view, offset) => {
-			const value = variant === undefined ? {} : { [Variant]: variant };
-			if (readBase !== undefined) {
-				readBase(value, view, offset);
-			}
-			read(value, view, offset);
-			return value;
-		};
+		const read = function(): Reader {
+			const { inherit } = layout;
+			const readBase = inherit === undefined ?
+				undefined : getMemberReader(inherit, interceptorSchema);
+			const read = getMemberReader(layout, interceptorSchema);
+			return (view, offset) => {
+				const value = variant === undefined ? {} : { [Variant]: variant };
+				if (readBase !== undefined) {
+					readBase(value, view, offset);
+				}
+				read(value, view, offset);
+				return value;
+			};
+		}();
+
+		// Has composer?
+		const interceptors = interceptorSchema.get(layout)?.instance;
+		const compose = interceptors?.compose;
+		if (compose !== undefined) {
+			return (view, offset) => compose(read(view, offset));
+		}
+		const composeFromBuffer = interceptors?.composeFromBuffer;
+		if (composeFromBuffer !== undefined) {
+			return (view, offset) => composeFromBuffer(view, offset);
+		}
+		return read;
 	}
 });
 
