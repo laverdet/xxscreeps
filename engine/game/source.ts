@@ -1,4 +1,5 @@
 import * as RoomObject from './room-object';
+import { gameTime } from '~/engine/runtime';
 import { makeInherit, Variant } from '~/engine/schema/format';
 import { Interceptors } from '~/engine/schema/interceptor';
 
@@ -16,11 +17,12 @@ export class Source extends RoomObject.RoomObject {
 	energyCapacity!: number;
 	[nextRegenerationTime]!: number;
 
-	get ticksToRegeneration() { return this[nextRegenerationTime] }
+	get ticksToRegeneration() { return this[nextRegenerationTime] - gameTime }
 }
 
 export const interceptors: Interceptors = {
 	members: {
 		nextRegenerationTime: { symbol: nextRegenerationTime },
 	},
+	overlay: Source,
 };

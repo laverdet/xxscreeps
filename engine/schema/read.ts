@@ -5,8 +5,8 @@ import { kPointerSize, getTraits, Layout, Shape, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
 const { fromCharCode } = String;
 
-export type Reader<Type = any> = (view: BufferView, offset: number) => Type;
-type MemberReader = (value: any, view: BufferView, offset: number) => void;
+export type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
+type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
 
 export const getSingleMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 		(
@@ -134,7 +134,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 			return (view, offset) => {
 				const length = view.uint32[offset >>> 2];
 				if (length === 0) {
-					return 0;
+					return [];
 				} else {
 					const value: any[] = [];
 					let currentOffset = offset + kPointerSize;
@@ -184,7 +184,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 		}();
 
 		// Has composer?
-		const interceptors = interceptorSchema.get(layout)?.instance;
+		const interceptors = interceptorSchema.get(layout);
 		const compose = interceptors?.compose;
 		if (compose !== undefined) {
 			return (view, offset) => compose(read(view, offset));
@@ -192,6 +192,10 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 		const composeFromBuffer = interceptors?.composeFromBuffer;
 		if (composeFromBuffer !== undefined) {
 			return (view, offset) => composeFromBuffer(view, offset);
+		}
+		const Overlay = interceptors?.overlay;
+		if (Overlay !== undefined) {
+			return (view, offset) => new Overlay(view, offset);
 		}
 		return read;
 	}

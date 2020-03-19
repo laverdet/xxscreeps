@@ -1,4 +1,5 @@
 import { Worker, isMainThread, parentPort } from 'worker_threads';
+import { makeResolver } from '~/lib/resolver';
 import { staticCast } from '~/lib/static-cast';
 
 type Listener<Message> = (message: Message, fromThisChannel: boolean) => void;
@@ -70,15 +71,21 @@ function publish(name: string, id: string | undefined, message: any) {
 export abstract class Channel<Message> {
 	protected readonly id = `${Math.floor(Math.random() * 2 ** 52)}`;
 	readonly listener: InternalListener<Message>;
+	protected readonly extraListeners = new Set<(message: Message) => void>();
 
 	constructor(
 		readonly name: string,
-		listener: Listener<Message>,
+		listener?: Listener<Message>,
 	) {
-		this.listener = (message, id) => listener(message, this.id === id);
+		this.listener = (message, id) => {
+			listener?.(message, this.id === id);
+			for (const listener of this.extraListeners) {
+				listener(message);
+			}
+		};
 	}
 
-	static connect<Message>(name: string, listener: Listener<Message>): Promise<Channel<Message>> {
+	static connect<Message>(name: string, listener?: Listener<Message>): Promise<Channel<Message>> {
 		return (isMainThread ? LocalChannel.connect : WorkerChannel.connect)(name, listener);
 	}
 
@@ -92,6 +99,44 @@ export abstract class Channel<Message> {
 
 	abstract disconnect(): void;
 	abstract publish(message: Message): void;
+
+	async *[Symbol.asyncIterator](): AsyncGenerator<Message> {
+		// Create listener to save incoming messages
+		let resolver: Resolver<Message> | undefined;
+		let promise: Promise<Message> | undefined;
+		const queue: Message[] = [];
+		const listener = (message: Message) => {
+			if (resolver === undefined) {
+				queue.push(message);
+			} else {
+				resolver.resolve(message);
+			}
+		};
+		this.extraListeners.add(listener);
+		try {
+			do {
+				// Immediately yield any queued messages
+				while (queue.length !== 0) {
+					yield queue.shift()!;
+				}
+				// Make resolver to await on
+				[ promise, resolver ] = makeResolver<Message>();
+				// eslint-disable-next-line no-loop-func
+				resolver.resolve = function(resolve) {
+					return (message: Message) => {
+						resolver = undefined;
+						resolve(message);
+					};
+				}(resolver.resolve);
+				// Wait for new messages
+				yield await promise;
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			} while (true);
+		} finally {
+			// Clean up listeners when it's all done
+			this.extraListeners.delete(listener);
+		}
+	}
 }
 
 /**
@@ -160,7 +205,7 @@ class LocalChannel<Message> extends Channel<Message> {
 		return worker;
 	}
 
-	static connect<Message>(name: string, listener: Listener<Message>) {
+	static connect<Message>(name: string, listener?: Listener<Message>) {
 		const channel = new LocalChannel<Message>(name, listener);
 		connect(channel);
 		return Promise.resolve(channel);
@@ -198,7 +243,7 @@ class WorkerChannel<Message> extends Channel<Message> {
 		});
 	}
 
-	static connect<Message>(name: string, listener: Listener<Message>) {
+	static connect<Message>(name: string, listener?: Listener<Message>) {
 		WorkerChannel.init();
 		return new Promise<WorkerChannel<Message>>(resolve => {
 			const channel = new WorkerChannel<Message>(name, listener);

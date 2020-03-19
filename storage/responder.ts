@@ -38,43 +38,45 @@ type UnknownMessage = { type: null };
 type ParentMessage = ResponseMessage | ConnectedMessage | ConnectionFailedMessage | UnknownMessage;
 type WorkerMessage = RequestMessage | ConnectMessage | DisconnectMessage | UnknownMessage;
 
-type Optionals<Type> = {
-  [Key in keyof Type]: undefined extends Type[Key] ? Key : never;
-}[keyof Type];
-
 /**
- * Generalize the client/server request/response model for inter-thread/process communication.
+ * Generalize the client/server request/response model for inter-thread/process communication. The
+ * types in this class are a mess but at least it's contained to this file and doesn't leak out into
+ * the rest of the project.
  */
-const respondersByName = new Map<string, ResponderHost>();
+const respondersByName = new Map<string, Responder>();
 const respondersByClientId = new Map<string, Responder>();
 const unlistenByClientId = new Map<string, () => void>();
+type HasResponder = {
+	request(method: string, payload?: any): Promise<any>;
+};
 export abstract class Responder {
-	// eslint-disable-next-line @typescript-eslint/unified-signatures
-	abstract request(method: string, payload: any): Promise<any>;
-	abstract request(method: string): Promise<any>;
+	abstract disconnect(): void;
+	abstract request(method: string, payload?: any): Promise<any>;
 
-	static connect<Host extends ResponderHost, Client extends ResponderClient>(
+	static connect<Host extends HasResponder, Client extends HasResponder>(
 		name: string,
 		constructor: new() => Client,
-	): Promise<Client | Host> {
+	): Promise<Responder & (Client | Host)> {
 		if (isMainThread) {
-			return ResponderHost.hostConnect<Host>();
+			return ResponderHost.hostConnect<Host>(name) as any;
 		} else {
-			return ResponderClient.clientConnect(name, constructor);
+			return ResponderClient.clientConnect(name, constructor) as any;
 		}
 	}
 
-	static create<Type extends ResponderHost>(
-		name: string,
-		constructor: new(name: string) => Type,
-	) {
+	static create<Type extends HasResponder>(name: string,	constructor: new() => Type): Promise<Type & Responder> {
 		assert(isMainThread);
+		// Only one responder per name should exist
 		if (respondersByName.has(name)) {
 			return Promise.reject(new Error(`Responder: ${name} already exists`));
 		}
-		const responder = new constructor(name);
-		respondersByName.set(name, responder);
-		return Promise.resolve(responder);
+		// Instantiate a new ResponderHost instance.. violates `abstract`!
+		const responder = new (ResponderHost as any)(name) as ResponderHost;
+		const instance = new constructor();
+		// Link up methods from both classes
+		(instance as any).disconnect = responder.disconnect.bind(responder);
+		responder.request = instance.request.bind(instance);
+		return Promise.resolve(instance as any);
 	}
 
 	static initializeWorker(worker: Worker) {
@@ -156,12 +158,12 @@ export abstract class ResponderHost extends Responder {
 		respondersByName.set(name, this);
 	}
 
-	static hostConnect<Type extends ResponderHost>(): Promise<Type> {
-		const responder = respondersByName.get(name);
+	static hostConnect<Type extends HasResponder>(name: string): Promise<Type> {
+		const responder = respondersByName.get(name) as any;
 		if (responder === undefined) {
 			return Promise.reject(new Error(`Responder: ${name} does not exist`));
 		} else {
-			return Promise.resolve(responder as Type);
+			return Promise.resolve(responder);
 		}
 	}
 
@@ -170,11 +172,7 @@ export abstract class ResponderHost extends Responder {
 	}
 }
 
-type Resolver = {
-	resolve: (payload: any) => void;
-	reject: (payload: any) => void;
-};
-export class ResponderClient<Requests = any, Responses = any> extends Responder {
+export class ResponderClient extends Responder {
 	private readonly clientId = `${Math.floor(Math.random() * 2 ** 52)}`;
 	private requestId = 0;
 	private readonly requests = new Map<number, Resolver>();
@@ -209,18 +207,21 @@ export class ResponderClient<Requests = any, Responses = any> extends Responder 
 		respondersByClientId.set(this.clientId, this as Responder);
 	}
 
-	static clientConnect<Type extends ResponderClient>(name: string, constructor: new() => Type) {
+	static clientConnect<Type extends HasResponder>(name: string, constructor: new() => Type) {
 
 		// Check with main thread that this responder is ready (no retries)
 		assert(!isMainThread);
 		return new Promise<Type>((resolve, reject) => {
 			// Set up connection ack handler
-			const responder = new constructor();
+			const responder = new ResponderClient;
 			const listener = (message: ParentMessage) => {
 				if ((message as any).clientId === responder.clientId) {
 					parentPort!.removeListener('message', listener);
 					if (message.type === 'responderConnected') {
-						resolve(responder);
+						const instance = new constructor;
+						(instance as any).disconnect = responder.disconnect.bind(responder);
+						instance.request = responder.request.bind(responder);
+						resolve(instance);
 					} else {
 						assert(message.type === 'responderConnectionFailed');
 						reject(new Error(`Responder ${name} does not exist`));
@@ -249,11 +250,6 @@ export class ResponderClient<Requests = any, Responses = any> extends Responder 
 		}));
 	}
 
-	request<Method extends keyof Requests & keyof Responses>(
-		// eslint-disable-next-line @typescript-eslint/unified-signatures
-		method: Method, payload: Requests[Method]): Promise<Responses[Method]>;
-	request<Method extends Optionals<Requests> & keyof Responses>(
-		method: Method): Promise<Responses[Method]>;
 	request(method: string, payload?: any) {
 		return new Promise((resolve, reject) => {
 			const requestId = ++this.requestId;

@@ -1,6 +1,7 @@
-import type { StructLayout } from './layout';
 import { getBuffer, getOffset, BufferObject } from './buffer-object';
+import { Variant } from './format';
 import type { BoundInterceptorSchema } from './interceptor';
+import type { StructLayout } from './layout';
 import { getSingleMemberReader } from './read';
 
 const { defineProperty } = Object;
@@ -65,6 +66,14 @@ export function injectGetters(
 					value,
 				});
 			},
+		});
+	}
+
+	// Add Variant key
+	const variant = layout[Variant];
+	if (variant !== undefined) {
+		Object.defineProperty(prototype, Variant, {
+			value: variant,
 		});
 	}
 }

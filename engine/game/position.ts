@@ -138,10 +138,8 @@ export class RoomPosition {
 }
 
 export const interceptors: Interceptors = {
-	instance: {
-		composeFromBuffer: (view: BufferView, offset: number) =>
-			new (RoomPosition as any)(view.int32[offset >>> 2]),
-		decomposeIntoBuffer: (value: any, view: BufferView, offset: number) =>
-			((view.int32[offset >>> 2] = value[PositionInteger], 4)),
-	},
+	composeFromBuffer: (view: BufferView, offset: number) =>
+		new (RoomPosition as any)(view.int32[offset >>> 2]),
+	decomposeIntoBuffer: (value: any, view: BufferView, offset: number) =>
+		((view.int32[offset >>> 2] = value[PositionInteger], 4)),
 };

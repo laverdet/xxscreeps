@@ -14,12 +14,12 @@ export const format = {
 	)),
 };
 
-export const objects = Symbol('objects');
+export const Objects = Symbol('objects');
 type RoomObjectMap = Map<string, RoomObject>;
 
 export class Room extends BufferObject {
 	name!: string;
-	[objects]!: RoomObjectMap;
+	[Objects]!: RoomObjectMap;
 }
 
 export const interceptors: Interceptors = {
@@ -33,7 +33,7 @@ export const interceptors: Interceptors = {
 				return map;
 			},
 			decompose: (map: RoomObjectMap) => map.values(),
-			symbol: objects,
+			symbol: Objects,
 		},
 	},
 };

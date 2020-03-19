@@ -185,7 +185,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 		}();
 
 		// Has composer?
-		const interceptors = interceptorSchema.get(layout)?.instance;
+		const interceptors = interceptorSchema.get(layout);
 		const decompose = interceptors?.decompose;
 		if (decompose !== undefined) {
 			return (value, view, offset) => write(decompose(value), view, offset);

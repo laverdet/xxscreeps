@@ -1,40 +1,31 @@
 import type { Schema } from '.';
+import type { BufferObject } from './buffer-object';
 import type { BufferView } from './buffer-view';
 import type { StructLayout } from './layout';
 
 type CompositionInterceptor = {
-	compose: (value: any) => any;
-	decompose: (value: any) => any;
-	composeFromBuffer?: never;
-	decomposeIntoBuffer?: never;
-	symbol?: any;
+	compose?: (value: any) => any;
+	decompose?: (value: any) => any;
 };
 
 type RawCompositionInterceptor = {
-	compose?: never;
-	decompose?: never;
-	composeFromBuffer: (view: BufferView, offset: number) => any;
-	decomposeIntoBuffer: (value: any, view: BufferView, offset: number) => number;
-	symbol?: any;
+	composeFromBuffer?: (view: BufferView, offset: number) => any;
+	decomposeIntoBuffer?: (value: any, view: BufferView, offset: number) => number;
+};
+
+type OverlayInterceptor = {
+	overlay?: Constructor<BufferObject>;
 };
 
 type SymbolInterceptor = {
-	compose?: any;
-	decompose?: any;
-	composeFromBuffer?: any;
-	decomposeIntoBuffer?: any;
-	symbol: symbol;
+	symbol?: symbol;
 };
 
-type ObjectInterceptor = CompositionInterceptor | RawCompositionInterceptor;
-export type MemberInterceptor = ObjectInterceptor | SymbolInterceptor;
+type ObjectInterceptor = CompositionInterceptor & RawCompositionInterceptor & OverlayInterceptor;
+export type MemberInterceptor = ObjectInterceptor & SymbolInterceptor;
 
-export type Interceptors = {
-	instance: ObjectInterceptor;
-	members?: undefined;
-} | {
-	instance?: undefined;
-	members: Dictionary<MemberInterceptor>;
+export type Interceptors = ObjectInterceptor & {
+	members?: Dictionary<MemberInterceptor>;
 };
 export type InterceptorSchema = Dictionary<Interceptors>;
 export type BoundInterceptorSchema = WeakMap<StructLayout, Interceptors>;

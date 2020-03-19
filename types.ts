@@ -11,4 +11,10 @@ declare global {
 	type Dictionary<Type> = {
 		[key in string]?: Type;
 	};
+
+	// Public Promise
+	type Resolver<Type = unknown> = {
+		resolve: (payload: Type) => void;
+		reject: (payload: Error) => void;
+	};
 }

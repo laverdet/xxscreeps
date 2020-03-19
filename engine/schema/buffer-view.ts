@@ -22,4 +22,10 @@ export class BufferView {
 		this.int16 = new Int16Array(buffer, offset, byteLength >>> 1);
 		this.int32 = new Int32Array(buffer, offset, byteLength >>> 2);
 	}
+
+	static fromTypedArray(buffer: Uint8Array): BufferView;
+	static fromTypedArray(buffer: Readonly<Uint8Array>): Readonly<BufferView>
+	static fromTypedArray(buffer: Uint8Array) {
+		return new BufferView(buffer.buffer, buffer.byteOffset);
+	}
 }

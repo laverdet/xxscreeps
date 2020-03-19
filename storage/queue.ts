@@ -1,32 +1,18 @@
-import { Responder, ResponderClient, ResponderHost } from './responder';
-
-type Requests = {
-	pop: undefined;
-	push: string[];
-};
-type Responses = {
-	pop: string | undefined;
-	push: void;
-};
+import { Responder } from './responder';
 
 export abstract class Queue {
 	abstract pop(): Promise<string | undefined>;
 	abstract push(entries: string[]): Promise<void>;
 
-	static connect(name: string): Promise<Queue> {
+	static connect(name: string) {
 		return Responder.connect<QueueHost, QueueClient>(name, QueueClient);
 	}
 
 	static create(name: string) {
-		return ResponderHost.create(name, QueueHost);
+		return Responder.create(name, QueueHost);
 	}
-}
 
-class QueueHost extends ResponderHost implements Queue {
-	readonly queue: string[] = [];
-
-	request(method: string): any;
-	request(method: string, payload?: any) {
+	request(method: string, payload?: any): any {
 		if (method === 'pop') {
 			return this.pop();
 		} else if (method === 'push') {
@@ -35,6 +21,20 @@ class QueueHost extends ResponderHost implements Queue {
 			return Promise.reject(new Error(`Unknown method: ${method}`));
 		}
 	}
+
+	async *[Symbol.asyncIterator]() {
+		for (
+			let value = await this.pop();
+			value !== undefined;
+			value = await this.pop()
+		) {
+			yield value;
+		}
+	}
+}
+
+class QueueHost extends Queue {
+	readonly queue: string[] = [];
 
 	pop() {
 		return Promise.resolve(this.queue.shift());
@@ -46,7 +46,7 @@ class QueueHost extends ResponderHost implements Queue {
 	}
 }
 
-class QueueClient extends ResponderClient<Requests, Responses> implements Queue {
-	pop() { return this.request('pop') }
-	push(entries: string[]) { return this.request('push', entries) }
+class QueueClient extends Queue {
+	pop(): Promise<string | undefined> { return this.request('pop') }
+	push(entries: string[]): Promise<void> { return this.request('push', entries) }
 }

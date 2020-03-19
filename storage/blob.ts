@@ -18,6 +18,8 @@ export class BlobStorage {
 		return new BlobStorage(path);
 	}
 
+	disconnect() {}
+
 	async load(fragment: string): Promise<Readonly<Uint8Array>> {
 		const path = Path.join(this.path, fragment);
 		const handle = await fs.open(path, 'r');
