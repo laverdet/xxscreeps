@@ -31,6 +31,11 @@ topLevelTask(async() => {
 	const blobStorage = await BlobStorage.create();
 	const view = new BufferView(new ArrayBuffer(1024 * 1024 * 32));
 
+	// Save helper
+	function save(blob: string, length: number) {
+		return blobStorage.save(blob, view.uint8.subarray(0, length));
+	}
+
 	// Collect initial room data
 	const rooms = new Map(collections.rooms.map(room => ({
 		name: room._id,
@@ -45,6 +50,13 @@ topLevelTask(async() => {
 			effects: [],
 		};
 		switch (object.type) {
+			case 'spawn':
+				return {
+					...roomObject,
+					[Variant]: 'spawn',
+					name: object.name,
+				};
+
 			case 'source':
 				return {
 					...roomObject,
@@ -64,8 +76,7 @@ topLevelTask(async() => {
 	// Save rooms
 	const writeRoom = getWriter(Schema.schema.Room, Schema.interceptorSchema);
 	for (const [ roomName, room ] of rooms) {
-		const length = writeRoom(room, view, 0);
-		await blobStorage.save(`ticks/${gameTime}/${roomName}`, view.uint8.subarray(0, length));
+		await save(`ticks/${gameTime}/${roomName}`, writeRoom(room, view, 0));
 	}
 
 	// Read room data from rooms.terrain collection
@@ -85,25 +96,41 @@ topLevelTask(async() => {
 
 	// Make writer and save terrain
 	const writeWorld = getWriter(MapSchema.schema.World, MapSchema.interceptorSchema);
-	{
-		const length = writeWorld(roomsTerrain, view, 0);
-		await blobStorage.save('terrain', view.uint8.subarray(0, length));
-	}
+	await save('terrain', writeWorld(roomsTerrain, view, 0));
+
+	// Collect users
+	const users = collections.users.map(user => ({
+		id: user._id,
+		username: user.username,
+		registeredDate: +new Date(user.registeredDate),
+		active: user.active,
+		cpu: user.cpu,
+		cpuAvailable: user.cpuAvailable,
+		gcl: user.gcl,
+		badge: user.badge === undefined ? '{}' : JSON.stringify(user.badge),
+	}));
 
 	// Save Game object
 	const game = {
 		time: gameTime,
 		accessibleRooms: new Set([ ...rooms.values() ].map(room => room.name)),
 		activeRooms: new Set([ ...rooms.values() ].map(room => room.name)),
-		users: [],
+		users,
 	};
 	const writeGame = getWriter(GameSchema.schema.Game, GameSchema.interceptorSchema);
-	{
-		const length = writeGame(game, view, 0);
-		await blobStorage.save('game', view.uint8.subarray(0, length));
+	await save('game', writeGame(game, view, 0));
+
+	// Collect user code
+	const writeCode = getWriter(GameSchema.schema.Code, GameSchema.interceptorSchema);
+	for (const row of collections['users.code']) {
+		const modules: any[] = [];
+		for (const [ key, data ] of Object.entries(row.modules)) {
+			const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
+			modules.push({ name, data });
+		}
+		await save(`code/${row.user}`, writeCode({ modules }, view, 0));
 	}
 
 	// Flush everything to disk
 	await blobStorage.flush();
-
 });

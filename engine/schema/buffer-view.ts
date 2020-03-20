@@ -1,5 +1,3 @@
-import assert from 'assert';
-
 /**
  * TypeArray holder for a chunk of serialized game state. Probably holds a room at time.
  */
@@ -12,7 +10,6 @@ export class BufferView {
 	readonly int32: Int32Array;
 
 	constructor(buffer: ArrayBuffer | SharedArrayBuffer, offset = 0) {
-		assert.equal(offset % 4, 0);
 		let { byteLength } = buffer;
 		byteLength -= offset;
 		this.uint8 = new Uint8Array(buffer, offset, byteLength);

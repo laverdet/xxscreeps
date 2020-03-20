@@ -1,8 +1,8 @@
 import * as Schema from '~/engine/game/schema';
 import { getReader, getWriter } from '~/engine/schema';
 import { BufferView } from '~/engine/schema/buffer-view';
-import * as Iterable from '~/lib/iterable';
 import { topLevelTask } from '~/lib/task';
+import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
 import { setCurrentGameTime } from '~/engine/runtime';
@@ -29,10 +29,10 @@ topLevelTask(async() => {
 	const blobStorage = await BlobStorage.connect();
 	const roomsQueue = await Queue.connect('processRooms');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
-	processorChannel.publish({ type: 'processorConnected' });
 
 	// Start the processing loop
 	let gameTime = -1;
+	processorChannel.publish({ type: 'processorConnected' });
 	try {
 		for await (const message of processorChannel) {
 
@@ -58,7 +58,7 @@ topLevelTask(async() => {
 				// Run second phase of processing. This must wait until *all* player code and first phase
 				// processing has run
 				const nextGameTime = gameTime + 1;
-				await Promise.all(Iterable.map(processedRooms, ([ roomName, context ]) => {
+				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) => {
 					const length = writeRoom(context.room, writeBuffer, 0);
 					return blobStorage.save(
 						`ticks/${nextGameTime}/${roomName}`,

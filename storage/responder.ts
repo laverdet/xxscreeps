@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { Worker, isMainThread, parentPort } from 'worker_threads';
-import { staticCast } from '~/lib/static-cast';
+import { staticCast } from '~/lib/utility';
 
 type ConnectMessage = {
 	type: 'responderConnect';

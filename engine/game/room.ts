@@ -2,15 +2,18 @@ import { BufferObject } from '~/engine/schema/buffer-object';
 import { makeVariant, makeVector } from '~/engine/schema/format';
 import type { Interceptors } from '~/engine/schema/interceptor';
 
-import { RoomObject } from '~/engine/game/room-object';
-import * as Creep from '~/engine/game/creep';
-import * as Source from '~/engine/game/source';
+import { RoomObject } from './room-object';
+import * as Creep from './creep';
+import * as Source from './source';
+
+import * as StructureSpawn from './structures/spawn';
 
 export const format = {
 	name: 'string' as const,
 	objects: makeVector(makeVariant(
 		Creep.format,
 		Source.format,
+		StructureSpawn.format,
 	)),
 };
 
@@ -36,4 +39,5 @@ export const interceptors: Interceptors = {
 			symbol: Objects,
 		},
 	},
+	overlay: Room,
 };

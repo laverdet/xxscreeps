@@ -30,7 +30,7 @@ export function injectGetters(
 					return function() {
 						const buffer = getBuffer(this);
 						const localOffset = getOffset(this);
-						return read(buffer, offset + buffer.uint32[offset + localOffset]);
+						return read(buffer, buffer.uint32[(offset + localOffset) >>> 2]);
 					};
 				} else {
 					return function() {

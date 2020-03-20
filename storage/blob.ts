@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import * as Path from 'path';
-import * as Iterables from '~/lib/iterable';
+import { mapInPlace } from '~/lib/utility';
 import Config from '~/engine/config';
 import { Responder } from './responder';
 
@@ -59,7 +59,7 @@ class BlobStorageHost extends BlobStorage {
 		await Promise.all([
 
 			// Saves all buffered data to disk
-			await Promise.all(Iterables.map(blobs.entries(), async([ fragment, blob ]) => {
+			await Promise.all(mapInPlace(blobs.entries(), async([ fragment, blob ]) => {
 				const path = Path.join(this.path, fragment);
 				const dirname = Path.dirname(path);
 				if (!this.knownPaths.has(dirname)) {
@@ -76,7 +76,7 @@ class BlobStorageHost extends BlobStorage {
 			})),
 
 			// Dispatches buffered deletes
-			await Promise.all(Iterables.map(deletes.values(), async fragment => {
+			await Promise.all(mapInPlace(deletes.values(), async fragment => {
 				const path = Path.join(this.path, fragment);
 				await fs.unlink(path);
 			})),
@@ -84,7 +84,7 @@ class BlobStorageHost extends BlobStorage {
 
 		// Also remove empty directories after everything has flushed
 		const unlinkedDirectories = new Set<string>();
-		await Promise.all(Iterables.map(deletes.values(), async fragment => {
+		await Promise.all(mapInPlace(deletes.values(), async fragment => {
 			const path = Path.join(this.path, fragment);
 			for (let dir = Path.dirname(path); dir !== this.path; dir = Path.dirname(dir)) {
 				if (unlinkedDirectories.has(dir)) {

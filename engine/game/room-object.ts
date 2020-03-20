@@ -1,4 +1,5 @@
-import * as RoomPosition from '~/engine/game/position';
+import * as RoomPosition from './position';
+import type { Room } from './room';
 import { Process, ProcessorSpecification } from '~/engine/processor/bind';
 import { BufferObject } from '~/engine/schema/buffer-object';
 import { makeVector } from '~/engine/schema/format';
@@ -19,9 +20,11 @@ export class RoomObject extends BufferObject {
 	id!: string;
 	pos!: any;
 	effects!: any[];
+	room!: Room;
 	[Process]: ProcessorSpecification<this>['process'] | undefined;
 }
 
 export const interceptors: Interceptors = {
 	members: { id: Id.interceptors },
+	overlay: RoomObject,
 };

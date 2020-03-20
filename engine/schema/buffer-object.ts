@@ -1,3 +1,4 @@
+import { exchange } from '~/lib/utility';
 import type { BufferView } from './buffer-view';
 
 // Symbols used to keep these functions from littering Typescript types
@@ -25,10 +26,8 @@ export class BufferObject {
 }
 
 // Make accessors only available to internal code
-export const getBuffer = BufferObject[GetBufferSymbol];
-delete BufferObject[GetBufferSymbol];
-export const getOffset = BufferObject[GetOffsetSymbol];
-delete BufferObject[GetOffsetSymbol];
+export const getBuffer = exchange(BufferObject, GetBufferSymbol);
+export const getOffset = exchange(BufferObject, GetOffsetSymbol);
 
 // Closed for business
 Object.freeze(BufferObject);
