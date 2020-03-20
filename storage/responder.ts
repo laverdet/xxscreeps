@@ -64,7 +64,8 @@ export abstract class Responder {
 		}
 	}
 
-	static create<Type extends HasResponder>(name: string,	constructor: new() => Type): Promise<Type & Responder> {
+	static async create<Type extends HasResponder>(name: string, factory: () => Promise<Type>):
+			Promise<Type & Responder> {
 		assert(isMainThread);
 		// Only one responder per name should exist
 		if (respondersByName.has(name)) {
@@ -72,7 +73,7 @@ export abstract class Responder {
 		}
 		// Instantiate a new ResponderHost instance.. violates `abstract`!
 		const responder = new (ResponderHost as any)(name) as ResponderHost;
-		const instance = new constructor();
+		const instance = await factory();
 		// Link up methods from both classes
 		(instance as any).disconnect = responder.disconnect.bind(responder);
 		responder.request = instance.request.bind(instance);

@@ -1,6 +1,7 @@
 import * as Path from 'path';
 import * as DatabaseSchema from '~/engine/metabase';
 import { BufferView, getReader } from '~/engine/schema';
+import * as Iterables from '~/lib/iterable';
 import { topLevelTask } from '~/lib/task';
 import { Worker } from '~/lib/worker-threads';
 import { BlobStorage } from '~/storage/blob';
@@ -10,7 +11,7 @@ import { ProcessorMessage } from '.';
 
 topLevelTask(async() => {
 	// Open channels and connect to storage
-	const blobStorage = await BlobStorage.connect('/');
+	const blobStorage = await BlobStorage.create();
 	const roomsQueue = await Queue.create('processRooms');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 
@@ -50,11 +51,17 @@ topLevelTask(async() => {
 				}
 			}
 
+			// Delete old tick data
+			// eslint-disable-next-line no-loop-func
+			await Promise.all(Iterables.map(gameMetadata.activeRooms, (roomName: string) =>
+				blobStorage.delete(`ticks/${gameTime}/${roomName}`)));
+
 			// Set up for next tick
 			processedRooms.clear();
 			flushedRooms.clear();
 			console.log(gameTime);
 			++gameTime;
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		} while (true);
 
 	} finally {

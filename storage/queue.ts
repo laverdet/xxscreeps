@@ -9,7 +9,7 @@ export abstract class Queue {
 	}
 
 	static create(name: string) {
-		return Responder.create(name, QueueHost);
+		return Responder.create(name, () => Promise.resolve(new QueueHost));
 	}
 
 	request(method: string, payload?: any): any {

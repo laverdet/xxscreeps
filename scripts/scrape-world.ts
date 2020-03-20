@@ -28,7 +28,7 @@ topLevelTask(async() => {
 	}
 	const envData = collections.env[0].data;
 	const { gameTime }: { gameTime: number } = envData;
-	const blobStorage = await BlobStorage.connect('/');
+	const blobStorage = await BlobStorage.create();
 	const view = new BufferView(new ArrayBuffer(1024 * 1024 * 32));
 
 	// Collect initial room data
@@ -102,5 +102,8 @@ topLevelTask(async() => {
 		const length = writeGame(game, view, 0);
 		await blobStorage.save('game', view.uint8.subarray(0, length));
 	}
+
+	// Flush everything to disk
+	await blobStorage.flush();
 
 });

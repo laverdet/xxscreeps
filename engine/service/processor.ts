@@ -25,7 +25,7 @@ topLevelTask(async() => {
 	const processedRooms = new Map<string, ProcessorContext>();
 
 	// Connect to main & storage
-	const blobStorage = await BlobStorage.connect('/');
+	const blobStorage = await BlobStorage.connect();
 	const roomsQueue = await Queue.connect('processRooms');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 	processorChannel.publish({ type: 'processorConnected' });
