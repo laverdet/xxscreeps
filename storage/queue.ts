@@ -3,6 +3,7 @@ import { Responder } from './responder';
 export abstract class Queue {
 	abstract pop(): Promise<string | undefined>;
 	abstract push(entries: string[]): Promise<void>;
+	protected currentVersion: any;
 
 	static connect(name: string) {
 		return Responder.connect<QueueHost, QueueClient>(name, QueueClient);
@@ -13,6 +14,9 @@ export abstract class Queue {
 	}
 
 	request(method: string, payload?: any): any {
+		if (payload.version !== this.currentVersion) {
+			return Promise.resolve();
+		}
 		if (method === 'pop') {
 			return this.pop();
 		} else if (method === 'push') {
@@ -44,9 +48,23 @@ class QueueHost extends Queue {
 		this.queue.push(...entries);
 		return Promise.resolve();
 	}
+
+	version(version: any) {
+		this.currentVersion = version;
+		this.queue.splice(0, this.queue.length);
+	}
 }
 
 class QueueClient extends Queue {
-	pop(): Promise<string | undefined> { return this.request('pop') }
-	push(entries: string[]): Promise<void> { return this.request('push', entries) }
+	pop(): Promise<string | undefined> {
+		return this.request('pop', { version: this.currentVersion });
+	}
+
+	push(entries: string[]): Promise<void> {
+		return this.request('push', { version: this.currentVersion, entries });
+	}
+
+	version(version: any) {
+		this.currentVersion = version;
+	}
 }

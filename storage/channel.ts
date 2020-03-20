@@ -103,13 +103,13 @@ export abstract class Channel<Message> {
 	async *[Symbol.asyncIterator](): AsyncGenerator<Message> {
 		// Create listener to save incoming messages
 		let resolver: Resolver<Message> | undefined;
-		let promise: Promise<Message> | undefined;
 		const queue: Message[] = [];
 		const listener = (message: Message) => {
 			if (resolver === undefined) {
 				queue.push(message);
 			} else {
 				resolver.resolve(message);
+				resolver = undefined;
 			}
 		};
 		this.extraListeners.add(listener);
@@ -120,14 +120,8 @@ export abstract class Channel<Message> {
 					yield queue.shift()!;
 				}
 				// Make resolver to await on
+				let promise;
 				[ promise, resolver ] = makeResolver<Message>();
-				// eslint-disable-next-line no-loop-func
-				resolver.resolve = function(resolve) {
-					return (message: Message) => {
-						resolver = undefined;
-						resolve(message);
-					};
-				}(resolver.resolve);
 				// Wait for new messages
 				yield await promise;
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

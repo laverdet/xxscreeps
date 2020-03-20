@@ -20,6 +20,7 @@ topLevelTask(async() => {
 	// Initialize binary room schema
 	const readRoom = getReader(Schema.schema.Room, Schema.interceptorSchema);
 	const writeRoom = getWriter(Schema.schema.Room, Schema.interceptorSchema);
+	const writeBuffer = new BufferView(new ArrayBuffer(1024 * 1024));
 
 	// Keep track of rooms this thread ran. Global room processing must also happen here.
 	const processedRooms = new Map<string, ProcessorContext>();
@@ -39,6 +40,7 @@ topLevelTask(async() => {
 				// First processing phase. Can start as soon as all players with visibility into this room
 				// have run their code
 				gameTime = message.time;
+				roomsQueue.version(gameTime);
 				for await (const roomName of roomsQueue) {
 					// Read room from storage
 					const roomBlob = await blobStorage.load(`ticks/${gameTime}/${roomName}`);
@@ -57,9 +59,10 @@ topLevelTask(async() => {
 				// processing has run
 				const nextGameTime = gameTime + 1;
 				await Promise.all(Iterable.map(processedRooms, ([ roomName, context ]) => {
-					const view = new BufferView(new ArrayBuffer(1024 * 1024));
-					const length = writeRoom(context.room, view, 0);
-					return blobStorage.save(`ticks/${nextGameTime}/${roomName}`, new Uint8Array(view.uint8.buffer, 0, length));
+					const length = writeRoom(context.room, writeBuffer, 0);
+					return blobStorage.save(
+						`ticks/${nextGameTime}/${roomName}`,
+						new Uint8Array(writeBuffer.uint8.buffer, 0, length));
 				}));
 				processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
 				processedRooms.clear();

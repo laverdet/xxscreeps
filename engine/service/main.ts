@@ -20,7 +20,7 @@ topLevelTask(async() => {
 	const gameMetadata = gameReader(BufferView.fromTypedArray(await blobStorage.load('game')), 0);
 
 	// Start worker threads
-	new Worker(Path.join(__dirname, 'processor.ts'));
+	const processorWorkers = Array(4).fill(null).map(() => new Worker(Path.join(__dirname, 'processor.ts')));
 
 	let gameTime = 1;
 	const processedRooms = new Set<string>();
@@ -29,6 +29,7 @@ topLevelTask(async() => {
 
 		do {
 			// Add rooms to queue and notify processors
+			roomsQueue.version(gameTime);
 			await roomsQueue.push([ ...gameMetadata.activeRooms.values() ]);
 			processorChannel.publish({ type: 'processRooms', time: gameTime });
 
@@ -68,7 +69,8 @@ topLevelTask(async() => {
 		blobStorage.disconnect();
 		roomsQueue.disconnect();
 		processorChannel.disconnect();
+		for (const processor of processorWorkers) {
+			await processor.terminate();
+		}
 	}
-
-
 });
