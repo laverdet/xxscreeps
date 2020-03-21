@@ -5,7 +5,7 @@ export const format = {
 		name: 'string' as const,
 		data: 'string' as const,
 	}),
-/*	binaries: makeVector({
+/* binaries: makeVector({
 		name: 'string' as const,
 		data: makeVector('uint8' as const),
 	}),*/

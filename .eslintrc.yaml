@@ -112,6 +112,10 @@ rules:
   eol-last: warn
   '@typescript-eslint/func-call-spacing': warn
   func-name-matching: warn
+  indent: [ warn, tab, {
+    FunctionDeclaration: { parameters: off },
+    SwitchCase: 1,
+  } ]
   key-spacing: [ warn, { mode: strict } ]
   keyword-spacing: warn
   linebreak-style: warn
@@ -120,6 +124,7 @@ rules:
   no-mixed-spaces-and-tabs: [ warn, smart-tabs ]
   no-negated-condition: warn
   no-new-object: warn
+  no-tabs: [ warn, { allowIndentationTabs: true } ]
   no-trailing-spaces: warn
   no-unneeded-ternary: warn
   no-whitespace-before-property: warn
