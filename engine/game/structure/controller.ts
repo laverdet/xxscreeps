@@ -1,18 +1,18 @@
 import * as Structure from '.';
 import * as C from '~/engine/game/constants';
-import { gameTime } from '~/engine/runtime';
+import { gameContext } from '~/engine/game/context';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 
-const DowngradeTime = Symbol('downgradeTime');
-const Progress = Symbol('progress');
-const UpgradeBlockedTime = Symbol('upgradeBlockedTime');
+export const DowngradeTime = Symbol('downgradeTime');
+export const Progress = Symbol('progress');
+export const UpgradeBlockedTime = Symbol('upgradeBlockedTime');
 
 export const format = withType<StructureController>(checkCast<Format>()({
 	[Inherit]: Structure.format,
 	[Variant]: 'controller',
 
 	downgradeTime: 'int32',
-	isPowerEnabledboolean: 'int8',
+	isPowerEnabledboolean: 'bool',
 	level: 'int32',
 	progress: 'int32',
 	// reservation: { username, ticksToEnd }
@@ -37,12 +37,12 @@ export class StructureController extends Structure.Structure {
 	get progress() { return this.level > 0 ? this[Progress] : undefined }
 	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
 	get structureType() { return C.STRUCTURE_CONTROLLER }
-	get ticksToDowngrade() { return this[DowngradeTime] === 0 ? undefined : this[DowngradeTime] - gameTime }
+	get ticksToDowngrade() { return this[DowngradeTime] === 0 ? undefined : this[DowngradeTime] - gameContext.gameTime }
 	get upgradeBlocked() {
-		if (this[UpgradeBlockedTime] === 0 || this[UpgradeBlockedTime] > gameTime) {
+		if (this[UpgradeBlockedTime] === 0 || this[UpgradeBlockedTime] > gameContext.gameTime) {
 			return undefined;
 		} else {
-			return gameTime - this[UpgradeBlockedTime];
+			return gameContext.gameTime - this[UpgradeBlockedTime];
 		}
 	}
 }

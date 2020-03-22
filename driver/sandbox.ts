@@ -1,5 +1,5 @@
 import ivm from 'isolated-vm';
-import type { UserCode } from '~/engine/runtime';
+import type { UserCode } from '~/engine/metabase/code';
 import { compile } from './webpack';
 
 let runtimeSourceData: Promise<string>;
@@ -11,9 +11,11 @@ function getRuntimeSource() {
 }
 
 export class Sandbox {
-	constructor(private runtime: any) {}
+	constructor(
+		private readonly tick: ivm.Reference<Function>,
+	) {}
 
-	static async create(userCode: UserCode) {
+	static async create(userId: string, userCode: UserCode) {
 		const isolate = new ivm.Isolate({ memoryLimit: 128 });
 		const [ context, script ] = await Promise.all([
 			isolate.createContext(),
@@ -33,14 +35,14 @@ export class Sandbox {
 			runtime.get('tick'),
 			async function() {
 				const initialize = await runtime.get('initialize') as ivm.Reference<any>;
-				await initialize.apply(undefined, [ isolate, context, userCode ], { arguments: { copy: true } });
+				await initialize.apply(undefined, [ isolate, context, userId, userCode ], { arguments: { copy: true } });
 			}(),
 		]);
 
-		return new Sandbox({ tick });
+		return new Sandbox(tick as ivm.Reference<any>);
 	}
 
 	async run(roomBlobs: Readonly<Uint8Array>[]) {
-		await this.runtime.tick.apply(undefined, [ roomBlobs ], { arguments: { copy: true } });
+		await this.tick.apply(undefined, [ roomBlobs ], { arguments: { copy: true } });
 	}
 }

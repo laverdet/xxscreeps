@@ -2,7 +2,7 @@ import { Variant } from './format';
 
 // This specifies memory layout in a hopefully stable format
 export type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
-export type Primitive = Integral | 'string';
+export type Primitive = Integral | 'string' | 'bool';
 
 export type StructLayout = {
 	inherit?: StructLayout;
@@ -45,6 +45,7 @@ type StructShape<Type extends StructLayout> = {
 };
 export type Shape<Type extends Layout> =
 	Type extends Integral ? number :
+	Type extends 'bool' ? boolean :
 	Type extends 'string' ? string :
 	Type extends ArrayLayout ? ArrayShape<Type> :
 	Type extends VariantLayout ? any :
@@ -71,6 +72,8 @@ export function getTraits(layout: Layout): Traits {
 			case 'uint8': return integerTraits(1);
 			case 'uint16': return integerTraits(2);
 			case 'uint32': return integerTraits(4);
+
+			case 'bool': return integerTraits(1);
 
 			case 'string': return {
 				align: kPointerSize,

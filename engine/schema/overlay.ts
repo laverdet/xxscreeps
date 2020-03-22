@@ -42,7 +42,8 @@ export function injectGetters(
 			// Memoize everything except integer access
 			if (!(
 				layout === 'int8' || layout === 'int16' || layout === 'int32' ||
-				layout === 'uint8' || layout === 'uint16' || layout === 'uint32'
+				layout === 'uint8' || layout === 'uint16' || layout === 'uint32' ||
+				layout === 'bool'
 			)) {
 				return function() {
 					const value = apply(get, this, []);

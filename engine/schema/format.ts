@@ -38,7 +38,7 @@ type StructShape2<Type> = Type extends StructFormat ? StructMemberShape<Type> & 
 type StructShape3<Type> = Type extends StructFormat ? StructMemberShape<Type> & StructShape4<Type[typeof Inherit]> : unknown;
 type StructShape4<Type> = Type extends StructFormat ? StructMemberShape<Type> : unknown;
 
-type FormatShape<Type extends Format> =
+export type FormatShape<Type extends Format> =
 	Type extends Integral ? number :
 	Type extends 'string' ? string :
 	Type extends ArrayFormat ? ArrayShape<Type> :

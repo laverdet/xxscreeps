@@ -3,12 +3,14 @@ import { RoomObject } from './room-object';
 import { StructureSpawn } from './structure/spawn';
 
 export class Game {
+	rooms: Dictionary<Room> = Object.create(null);
 	spawns: Dictionary<StructureSpawn> = Object.create(null);
 
 	#objects = new Map<string, RoomObject>();
 
 	constructor(rooms: Room[]) {
 		for (const room of rooms) {
+			this.rooms[room.name] = room;
 			for (const object of room[Objects]) {
 				this.#objects.set(object.id, object);
 				if (object instanceof StructureSpawn) {

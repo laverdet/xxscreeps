@@ -8,7 +8,7 @@ export const format = checkCast<Format>()({
 	gcl: 'int32',
 	cpuAvailable: 'int32',
 	registeredDate: 'int32',
-	active: 'int8',
+	active: 'bool',
 	badge: 'string',
 });
 

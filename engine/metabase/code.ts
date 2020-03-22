@@ -1,4 +1,4 @@
-import { checkCast, makeVector, Format } from '~/engine/schema';
+import { checkCast, makeVector, Format, FormatShape } from '~/engine/schema';
 
 export const format = checkCast<Format>()({
 	modules: makeVector({
@@ -10,3 +10,5 @@ export const format = checkCast<Format>()({
 		data: makeVector('uint8'),
 	}),*/
 });
+
+export type UserCode = FormatShape<typeof format>;

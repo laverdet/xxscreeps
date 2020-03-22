@@ -3,9 +3,12 @@ import { topLevelTask } from '~/lib/task';
 
 import * as MapSchema from '~/engine/game/map';
 import { RoomPosition } from '~/engine/game/position';
+import * as Creep from '~/engine/game/creep';
 import * as Room from '~/engine/game/room';
 import * as Schema from '~/engine/game/schema';
 import * as Source from '~/engine/game/source';
+import * as Structure from '~/engine/game/structure';
+import * as StructureController from '~/engine/game/structure/controller';
 import { TerrainWriter } from '~/engine/game/terrain';
 import * as GameSchema from '~/engine/metabase';
 
@@ -48,20 +51,22 @@ topLevelTask(async() => {
 			id: object._id,
 			pos: new RoomPosition(object.x, object.y, object.room),
 			effects: [],
+			[Creep.Owner]: object.user,
+			[Structure.Owner]: object.user,
 		};
 		switch (object.type) {
 			case 'controller':
 				return {
 					...roomObject,
 					[Variant]: 'controller',
-					downgradeTime: object.downgradeTime,
+					[StructureController.DowngradeTime]: object.downgradeTime,
 					isPowerEnabled: object.isPowerEnabled,
 					level: object.level,
-					progress: object.progress,
+					[StructureController.Progress]: object.progress,
 					safeMode: object.safeMode,
 					safeModeAvailable: object.safeModeAvailable,
 					safeModeCooldown: object.safeModeCooldown,
-					upgradeBlockedTime: object.upgradeBlocked,
+					[StructureController.UpgradeBlockedTime]: object.upgradeBlocked,
 				};
 
 			case 'spawn':

@@ -8,8 +8,9 @@ import { Room } from '~/engine/game/room';
 import { Source } from '~/engine/game/source';
 
 import * as Constants from '~/engine/game/constants';
+import { gameContext } from '~/engine/game/context';
 import { finalizePrototypeGetters } from '~/engine/game/schema';
-import { UserCode } from '~/engine/runtime';
+import { UserCode } from '~/engine/metabase/code';
 import { BufferView } from '~/engine/schema/buffer-view';
 
 declare let global: any;
@@ -31,7 +32,8 @@ for (const [ identifier, value ] of Object.entries(Constants)) {
 }
 
 let require: (name: string) => any;
-export function initialize(isolate: ivm.Isolate, context: ivm.Context, userCode: UserCode) {
+export function initialize(isolate: ivm.Isolate, context: ivm.Context, userId: string, userCode: UserCode) {
+	gameContext.userId = userId;
 	// Index code by name
 	const modulesCode = Object.create(null);
 	for (const { name, data } of userCode.modules) {

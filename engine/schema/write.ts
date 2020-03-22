@@ -88,6 +88,8 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 				case 'uint16': return (value, view, offset) => ((view.uint16[offset >>> 1] = value, 2));
 				case 'uint32': return (value, view, offset) => ((view.uint32[offset >>> 2] = value, 4));
 
+				case 'bool': return (value: boolean, view, offset) => ((view.int8[offset] = value ? 1 : 0, 1));
+
 				case 'string': return (value: string, view, offset) => {
 					// Write string length
 					const { length } = value;

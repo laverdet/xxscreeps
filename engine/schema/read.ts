@@ -91,6 +91,8 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 				case 'uint16': return (view, offset) => view.uint16[offset >>> 1];
 				case 'uint32': return (view, offset) => view.uint32[offset >>> 2];
 
+				case 'bool': return (view, offset) => view.int8[offset] !== 0;
+
 				case 'string': return (view, offset) => {
 					const stringOffset = offset + kPointerSize >>> 1;
 					return fromCharCode(...view.uint16.slice(stringOffset, stringOffset + view.uint32[offset >>> 2]));

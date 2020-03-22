@@ -10,7 +10,8 @@ export const interceptors = checkCast<MemberInterceptor>()({
 		// into 4 bytes. This could be increased to 30 characters if needed by putting more in the
 		// front.
 		const offset32 = offset >>> 2;
-		return (
+		const length = view.int8[offset];
+		return length === 0 ? undefined : (
 			view.uint32[offset32 + 1].toString(16).padStart(8, '0') +
 			view.uint32[offset32 + 2].toString(16).padStart(8, '0') +
 			view.uint32[offset32 + 3].toString(16).padStart(8, '0')
@@ -20,6 +21,13 @@ export const interceptors = checkCast<MemberInterceptor>()({
 	decomposeIntoBuffer(value: string, view: BufferView, offset: number) {
 		// Write from the end of the string in chunks of 8
 		let offset32 = (offset >>> 2) + 3;
+		if (value === undefined) {
+			view.uint32[offset32] =
+			view.uint32[offset32 + 1] =
+			view.uint32[offset32 + 2] =
+			view.uint32[offset32 + 3] = 0;
+			return 16;
+		}
 		const { length } = value;
 		for (let ii = length; ii >= 8; ii -= 8) {
 			view.uint32[offset32--] = parseInt(value.substr(ii - 8, 8), 16);
