@@ -3,7 +3,6 @@ import { topLevelTask } from '~/lib/task';
 
 import * as MapSchema from '~/engine/game/map';
 import { RoomPosition } from '~/engine/game/position';
-import * as Creep from '~/engine/game/creep';
 import * as Room from '~/engine/game/room';
 import * as Schema from '~/engine/game/schema';
 import * as Source from '~/engine/game/source';
@@ -11,6 +10,8 @@ import * as Structure from '~/engine/game/structure';
 import * as StructureController from '~/engine/game/structure/controller';
 import { TerrainWriter } from '~/engine/game/terrain';
 import * as GameSchema from '~/engine/metabase';
+
+import * as StoreIntents from '~/engine/processor/intents/store';
 
 import { Variant } from '~/engine/schema/format';
 import { getWriter } from '~/engine/schema/write';
@@ -51,13 +52,18 @@ topLevelTask(async() => {
 			id: object._id,
 			pos: new RoomPosition(object.x, object.y, object.room),
 			effects: [],
-			[Creep.Owner]: object.user,
-			[Structure.Owner]: object.user,
+		};
+		const withStructure = () => ({ ...roomObject, [Structure.Owner]: object.user });
+		const withStore = () => {
+			const capacity = object.storeCapacityResource === undefined ?
+				object.storeCapacity :
+				Object.values<number>(object.storeCapacityResource).reduce((sum, value) => sum + value, 0);
+			return { store: StoreIntents.create(object.store, capacity, object.storeCapacityResource) };
 		};
 		switch (object.type) {
 			case 'controller':
 				return {
-					...roomObject,
+					...withStructure(),
 					[Variant]: 'controller',
 					[StructureController.DowngradeTime]: object.downgradeTime,
 					isPowerEnabled: object.isPowerEnabled,
@@ -71,7 +77,8 @@ topLevelTask(async() => {
 
 			case 'spawn':
 				return {
-					...roomObject,
+					...withStructure(),
+					...withStore(),
 					[Variant]: 'spawn',
 					name: object.name,
 				};

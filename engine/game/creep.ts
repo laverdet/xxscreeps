@@ -1,7 +1,8 @@
-import * as RoomObject from './room-object';
 import { gameContext } from '~/engine/game/context';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
+
+import * as RoomObject from './room-object';
 
 export const AgeTime = Symbol('ageTime');
 export const Owner = Symbol('owner');
@@ -23,7 +24,7 @@ export const format = withType<Creep>(checkCast<Format>()({
 export class Creep extends RoomObject.RoomObject {
 	get [Variant]() { return 'creep' }
 	get my() { return this[Owner] === gameContext.userId }
-	get ticksToLive() { return gameContext.gameTime - this[AgeTime] }
+	get ticksToLive() { return Game.time - this[AgeTime] }
 
 	fatigue!: number;
 	hits!: number;

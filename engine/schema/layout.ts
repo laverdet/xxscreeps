@@ -19,6 +19,10 @@ type ArrayLayout = {
 	size: number;
 };
 
+type EnumLayout = {
+	enum: any[];
+};
+
 export type VariantLayout = {
 	variant: StructLayout[];
 };
@@ -27,7 +31,7 @@ type VectorLayout = {
 	vector: Layout;
 };
 
-export type Layout = ArrayLayout | Primitive | StructLayout | VariantLayout | VectorLayout;
+export type Layout = ArrayLayout | EnumLayout | Primitive | StructLayout | VariantLayout | VectorLayout;
 
 export type Traits = {
 	align: number;
@@ -36,7 +40,8 @@ export type Traits = {
 };
 
 // Convert a memory layout declaration to the corresponding data type
-type ArrayShape<Type extends ArrayLayout> = Shape<Type['array']>[];
+/*type ArrayShape<Type extends ArrayLayout> = Shape<Type['array']>[];
+type EnumShape<Type extends EnumLayout> = Type['enum'][number];
 // Somehow this one creates a circular type but none of the others do.
 // type VariantShape<Type extends VariantLayout> = Shape<Type['variant'][number]>;
 type VectorShape<Type extends VectorLayout> = Shape<Type['vector']>[];
@@ -48,9 +53,10 @@ export type Shape<Type extends Layout> =
 	Type extends 'bool' ? boolean :
 	Type extends 'string' ? string :
 	Type extends ArrayLayout ? ArrayShape<Type> :
+	Type extends EnumLayout ? EnumShape<Type> :
 	Type extends VariantLayout ? any :
 	Type extends VectorLayout ? VectorShape<Type> :
-	Type extends StructLayout ? StructShape<Type> : never;
+	Type extends StructLayout ? StructShape<Type> : never;*/
 
 export const kPointerSize = 4;
 
@@ -95,6 +101,10 @@ export function getTraits(layout: Layout): Traits {
 				stride: stride * (arraySize - 1) + size,
 			},
 		};
+
+	} else if ('enum' in layout) {
+		// Enum is just a byte
+		return { align: 1, size: 1, stride: 1 };
 
 	} else if ('variant' in layout || 'vector' in layout) {
 		// Variant & vector just store a uint32 in static memory, the rest is dynamic

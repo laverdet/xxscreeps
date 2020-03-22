@@ -1,3 +1,21 @@
+export type ErrorCode =
+	typeof OK |
+	typeof ERR_NOT_OWNER |
+	typeof ERR_NO_PATH |
+	typeof ERR_NAME_EXISTS |
+	typeof ERR_BUSY |
+	typeof ERR_NOT_FOUND |
+	typeof ERR_NOT_ENOUGH_ENERGY |
+	typeof ERR_NOT_ENOUGH_RESOURCES |
+	typeof ERR_INVALID_TARGET |
+	typeof ERR_FULL |
+	typeof ERR_NOT_IN_RANGE |
+	typeof ERR_INVALID_ARGS |
+	typeof ERR_TIRED |
+	typeof ERR_NO_BODYPART |
+	typeof ERR_NOT_ENOUGH_EXTENSIONS |
+	typeof ERR_RCL_NOT_ENOUGH |
+	typeof ERR_GCL_NOT_ENOUGH;
 export const OK = 0;
 export const ERR_NOT_OWNER = -1;
 export const ERR_NO_PATH = -2;

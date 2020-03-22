@@ -42,7 +42,7 @@ export class Sandbox {
 		return new Sandbox(tick as ivm.Reference<any>);
 	}
 
-	async run(roomBlobs: Readonly<Uint8Array>[]) {
-		await this.tick.apply(undefined, [ roomBlobs ], { arguments: { copy: true } });
+	async run(time: number, roomBlobs: Readonly<Uint8Array>[]) {
+		await this.tick.apply(undefined, [ time, roomBlobs ], { arguments: { copy: true } });
 	}
 }

@@ -16,7 +16,7 @@ rules:
   no-async-promise-executor: error
   no-compare-neg-zero: error
   no-cond-assign: warn
-  '@typescript-eslint/no-unnecessary-condition': [ warn, { ignoreRhs: true } ]
+  '@typescript-eslint/no-unnecessary-condition': [ warn, { allowConstantLoopConditions: true, ignoreRhs: true } ]
   no-control-regex: warn
   no-debugger: warn
   no-dupe-args: error

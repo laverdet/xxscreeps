@@ -1,5 +1,4 @@
 import * as RoomObject from './room-object';
-import { gameContext } from '~/engine/game/context';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 
 export const format = withType<Source>(checkCast<Format>()({
@@ -19,7 +18,7 @@ export class Source extends RoomObject.RoomObject {
 	energyCapacity!: number;
 	[nextRegenerationTime]!: number;
 
-	get ticksToRegeneration() { return this[nextRegenerationTime] - gameContext.gameTime }
+	get ticksToRegeneration() { return this[nextRegenerationTime] - Game.time }
 }
 
 export const interceptors = checkCast<Interceptor>()({

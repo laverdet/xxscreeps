@@ -124,7 +124,6 @@ export abstract class Channel<Message> {
 				[ promise, resolver ] = makeResolver<Message>();
 				// Wait for new messages
 				yield await promise;
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			} while (true);
 		} finally {
 			// Clean up listeners when it's all done

@@ -1,5 +1,5 @@
 export { BufferView } from './buffer-view';
-export { makeArray, makeVariant, makeVector, withType, Inherit, Variant } from './format';
+export { makeArray, makeEnum, makeVariant, makeVector, withType, Inherit, Variant } from './format';
 export type { Format, FormatShape } from './format';
 export type { Interceptor } from './interceptor';
 export { getReader } from './read';

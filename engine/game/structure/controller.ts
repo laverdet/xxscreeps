@@ -1,6 +1,5 @@
 import * as Structure from '.';
 import * as C from '~/engine/game/constants';
-import { gameContext } from '~/engine/game/context';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 
 export const DowngradeTime = Symbol('downgradeTime');
@@ -37,12 +36,12 @@ export class StructureController extends Structure.Structure {
 	get progress() { return this.level > 0 ? this[Progress] : undefined }
 	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
 	get structureType() { return C.STRUCTURE_CONTROLLER }
-	get ticksToDowngrade() { return this[DowngradeTime] === 0 ? undefined : this[DowngradeTime] - gameContext.gameTime }
+	get ticksToDowngrade() { return this[DowngradeTime] === 0 ? undefined : this[DowngradeTime] - Game.time }
 	get upgradeBlocked() {
-		if (this[UpgradeBlockedTime] === 0 || this[UpgradeBlockedTime] > gameContext.gameTime) {
+		if (this[UpgradeBlockedTime] === 0 || this[UpgradeBlockedTime] > Game.time) {
 			return undefined;
 		} else {
-			return gameContext.gameTime - this[UpgradeBlockedTime];
+			return Game.time - this[UpgradeBlockedTime];
 		}
 	}
 }

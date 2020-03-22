@@ -9,6 +9,7 @@ export const Variant: unique symbol = Symbol('schemaVariant');
 // Format used to specify basic fields and types. `getLayout` will generate a stable binary layout
 // from this information.
 type ArrayFormat = [ 'array', number, Format ];
+type EnumFormat = [ 'enum', any[] ];
 type VectorFormat = [ 'vector', Format ];
 type VariantFormat = [ 'variant', ((StructFormat | TypedFormat) & WithVariant)[] ];
 type StructFormat = {
@@ -19,10 +20,11 @@ type StructFormat = {
 type TypedFormat = [ 'typed', any ]; // Doesn't actually exist
 type WithVariant = { [Variant]: string };
 
-export type Format = ArrayFormat | Primitive | StructFormat | TypedFormat | (TypedFormat & WithVariant) | VariantFormat | VectorFormat;
+export type Format = ArrayFormat | EnumFormat | Primitive | StructFormat | TypedFormat | (TypedFormat & WithVariant) | VariantFormat | VectorFormat;
 
 // Types which convert format to data
 type ArrayShape<Type extends ArrayFormat> = FormatShape<Type[2]>[];
+type EnumShape<Type extends EnumFormat> = Type[1][number];
 type VariantShapeHelp<Type> = Type extends StructFormat ? StructShape<Type> :
 	Type extends TypedFormat ? Type[1] : never;
 type VariantShape<Type extends VariantFormat> = VariantShapeHelp<Type[1][number]>;
@@ -42,24 +44,26 @@ export type FormatShape<Type extends Format> =
 	Type extends Integral ? number :
 	Type extends 'string' ? string :
 	Type extends ArrayFormat ? ArrayShape<Type> :
+	Type extends EnumFormat ? EnumShape<Type> :
 	Type extends TypedFormat ? Type[1] :
 	Type extends VariantFormat ? VariantShape<Type> :
 	Type extends VectorFormat ? VectorShape<Type> :
 	Type extends StructFormat ? StructShape<Type> : never;
 
 // Constructors for type formats
-export function makeArray<Type extends Format>(length: number, format: Type):
-		[ 'array', number, Type ] {
+export function makeArray<Type extends Format>(length: number, format: Type): [ 'array', number, Type ] {
 	return [ 'array', length, format ];
 }
 
-export function makeVariant<Type extends WithVariant[]>(...format: Type):
-		[ 'variant', Type ] {
+export function makeEnum<Type extends any[]>(...values: Type): [ 'enum', Type ] {
+	return [ 'enum', values ];
+}
+
+export function makeVariant<Type extends WithVariant[]>(...format: Type): [ 'variant', Type ] {
 	return [ 'variant', format ];
 }
 
-export function makeVector<Type extends Format>(format: Type):
-		[ 'vector', Type ] {
+export function makeVector<Type extends Format>(format: Type): [ 'vector', Type ] {
 	return [ 'vector', format ];
 }
 
@@ -141,6 +145,12 @@ function getLayout(format: Format): Layout {
 				return {
 					array: getLayout(format[2]),
 					size: format[1],
+				};
+
+			// Enums
+			case 'enum':
+				return {
+					enum: format[1],
 				};
 
 			// Variant

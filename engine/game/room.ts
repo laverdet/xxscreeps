@@ -10,9 +10,9 @@ import { Creep } from './creep';
 import { Source } from './source';
 import { Structure } from './structure';
 import { StructureController } from './structure/controller';
+import { StructureSpawn } from './structure/spawn';
 
 import * as C from './constants';
-
 
 export const format = withType<Room>(checkCast<Format>()({
 	name: 'string',
@@ -26,6 +26,9 @@ export class Room extends BufferObject {
 	name!: string;
 	[Objects]!: RoomObject[];
 
+	energyAvailable = 0;
+	energyCapacityAvailable = 0;
+
 	#creeps: Creep[] = [];
 	#sources: Source[] = [];
 	#structures: Structure[] = [];
@@ -38,6 +41,9 @@ export class Room extends BufferObject {
 				this.#structures.push(object);
 				if (object instanceof StructureController) {
 					this.controller = object;
+				} else if (object instanceof StructureSpawn) {
+					this.energyAvailable += object.store[C.RESOURCE_ENERGY];
+					this.energyCapacityAvailable += object.store.getCapacity(C.RESOURCE_ENERGY);
 				}
 			} else if (object instanceof Creep) {
 				this.#creeps.push(object);

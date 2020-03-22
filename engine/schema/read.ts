@@ -124,6 +124,11 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 				};
 			}
 
+		} else if ('enum' in layout) {
+			// Enumerated types
+			const { enum: values } = layout;
+			return (view, offset) => values[view.uint8[offset]];
+
 		} else if ('variant' in layout) {
 			// Variant types
 			const variantReaders = layout.variant.map(elementLayout =>

@@ -128,6 +128,11 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 				};
 			}
 
+		} else if ('enum' in layout) {
+			// Enumerated types
+			const enumMap = new Map(layout.enum.map((value, ii) => [ value, ii ]));
+			return (value, view, offset) => ((view.uint8[offset] = enumMap.get(value)!, 1));
+
 		} else if ('variant' in layout) {
 			// Variant types
 			const variantMap = new Map<string, Writer>();
@@ -135,11 +140,11 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 				const elementLayout = layout.variant[ii];
 				const write = getWriter(elementLayout, interceptorSchema);
 				variantMap.set(
-				elementLayout[Variant]!,
-				(value, view, offset) => {
-					view.uint32[offset >>> 2] = ii;
-					return kPointerSize + write(value, view, offset + kPointerSize);
-				},
+					elementLayout[Variant]!,
+					(value, view, offset) => {
+						view.uint32[offset >>> 2] = ii;
+						return kPointerSize + write(value, view, offset + kPointerSize);
+					},
 				);
 			}
 			return (value, view, offset) => variantMap.get(value[Variant])!(value, view, offset);

@@ -5,7 +5,7 @@ import { topLevelTask } from '~/lib/task';
 import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
-import { gameContext } from '~/engine/game/context';
+import { Game } from '~/engine/game/game';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
@@ -46,7 +46,7 @@ topLevelTask(async() => {
 					const roomBlob = await blobStorage.load(`ticks/${gameTime}/${roomName}`);
 					const room = readRoom(BufferView.fromTypedArray(roomBlob), 0);
 					// Process
-					gameContext.gameTime = gameTime;
+					(global as any).Game = new Game(gameTime, [ room ]);
 					const context = new ProcessorContext(gameTime, room);
 					context.process();
 					// Save and notify main service of completion

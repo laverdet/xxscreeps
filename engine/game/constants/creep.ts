@@ -1,23 +1,25 @@
-export const MOVE = 'move';
-export const WORK = 'work';
-export const CARRY = 'carry';
-export const ATTACK = 'attack';
-export const RANGED_ATTACK = 'ranged_attack';
-export const TOUGH = 'tough';
-export const HEAL = 'heal';
-export const CLAIM = 'claim';
+export type BodyPart = (typeof BODYPARTS_ALL)[number];
+
+export const MOVE = 'move' as const;
+export const WORK = 'work' as const;
+export const CARRY = 'carry' as const;
+export const ATTACK = 'attack' as const;
+export const RANGED_ATTACK = 'ranged_attack' as const;
+export const TOUGH = 'tough' as const;
+export const HEAL = 'heal' as const;
+export const CLAIM = 'claim' as const;
 
 export const MAX_CREEP_SIZE = 50;
 
 export const BODYPART_COST = {
-	'move': 50 as const,
-	'work': 100 as const,
-	'attack': 80 as const,
-	'carry': 50 as const,
-	'heal': 250 as const,
-	'ranged_attack': 150 as const,
-	'tough': 10 as const,
-	'claim': 600 as const,
+	'move': 50,
+	'work': 100,
+	'attack': 80,
+	'carry': 50,
+	'heal': 250,
+	'ranged_attack': 150,
+	'tough': 10,
+	'claim': 600,
 };
 export const BODYPARTS_ALL = [ MOVE, WORK, CARRY, ATTACK, RANGED_ATTACK, TOUGH, HEAL, CLAIM ];
 

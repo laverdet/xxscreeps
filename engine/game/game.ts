@@ -1,14 +1,23 @@
+import { Creep } from './creep';
 import { Room, Objects } from './room';
 import { RoomObject } from './room-object';
 import { StructureSpawn } from './structure/spawn';
 
+declare global {
+	let Game: Game;
+}
+
 export class Game {
+	creeps: Dictionary<Creep> = Object.create(null);
 	rooms: Dictionary<Room> = Object.create(null);
 	spawns: Dictionary<StructureSpawn> = Object.create(null);
 
 	#objects = new Map<string, RoomObject>();
 
-	constructor(rooms: Room[]) {
+	constructor(
+		public time: number,
+		rooms: Room[],
+	) {
 		for (const room of rooms) {
 			this.rooms[room.name] = room;
 			for (const object of room[Objects]) {

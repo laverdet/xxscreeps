@@ -29,6 +29,11 @@ function archiveLayout(
 	} else if ('array' in layout) {
 		return `{ array: ${archiveLayout(schema, layout.array, layoutToNames, depth + 1)}, size: ${layout.size} }`;
 
+	} else if ('enum' in layout) {
+		return '{ enum: [ ' +
+			layout.enum.map(value => `${JSON.stringify(value)} as const`).join(', ') +
+		'] }';
+
 	} else if ('variant' in layout) {
 		return '{ variant: [ ' +
 			layout.variant.map(layout =>

@@ -91,7 +91,6 @@ topLevelTask(async() => {
 			flushedRooms.clear();
 			console.log(gameTime);
 			++gameTime;
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		} while (true);
 
 	} finally {

@@ -41,8 +41,8 @@ topLevelTask(async() => {
 					const roomBlobs = await Promise.all(mapInPlace(gameMetadata.activeRooms, (roomName: string) =>
 						blobStorage.load(`ticks/${gameTime}/${roomName}`)));
 
-					const sandbox = await Sandbox.create(userCode);
-					await sandbox.run(roomBlobs);
+					const sandbox = await Sandbox.create(userId, userCode);
+					await sandbox.run(gameTime, roomBlobs);
 					runnerChannel.publish({ type: 'processedUser', id: userId });
 				}
 			}

@@ -8,12 +8,14 @@ import { Room } from '~/engine/game/room';
 import { Source } from '~/engine/game/source';
 
 import * as Constants from '~/engine/game/constants';
-import { gameContext } from '~/engine/game/context';
+import { gameContext, IntentManager } from '~/engine/game/context';
 import { finalizePrototypeGetters } from '~/engine/game/schema';
 import { UserCode } from '~/engine/metabase/code';
 import { BufferView } from '~/engine/schema/buffer-view';
 
-declare let global: any;
+const { stringify } = JSON;
+
+declare const global: any;
 
 // Global lodash compatibility
 global._ = lodash;
@@ -78,9 +80,16 @@ export function initialize(isolate: ivm.Isolate, context: ivm.Context, userId: s
 	};
 }
 
-export function tick(roomBlobs: Readonly<Uint8Array>[]) {
+export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
+	// Reset context
+	gameContext.createdCreepNames = new Set;
+	gameContext.intents = new IntentManager;
+	// Build game object
 	const rooms = roomBlobs.map(buffer =>
 		new Room(new BufferView(buffer.buffer, buffer.byteOffset)));
-	global.Game = new Game(rooms);
+	global.Game = new Game(time, rooms);
+	// Run player loop
 	require('main').loop();
+	// Return JSON'd intents
+	return stringify(gameContext.intents);
 }
