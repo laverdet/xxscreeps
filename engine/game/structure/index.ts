@@ -6,8 +6,11 @@ export const format = withType<Structure>(checkCast<Format>()({
 	hits: 'int32',
 }));
 
-export class Structure extends RoomObject.RoomObject {
+export abstract class Structure extends RoomObject.RoomObject {
 	hits!: number;
+	my!: boolean;
+
+	abstract get structureType(): string;
 }
 
 export const interceptors = checkCast<Interceptor>()({

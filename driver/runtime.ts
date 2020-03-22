@@ -1,4 +1,5 @@
 import type ivm from 'isolated-vm';
+import lodash from 'lodash';
 
 import { Creep } from '~/engine/game/creep';
 import { Game } from '~/engine/game/game';
@@ -12,6 +13,9 @@ import { UserCode } from '~/engine/runtime';
 import { BufferView } from '~/engine/schema/buffer-view';
 
 declare let global: any;
+
+// Global lodash compatibility
+global._ = lodash;
 
 // Export prototypes
 global.Creep = Creep;

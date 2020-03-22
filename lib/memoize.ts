@@ -22,11 +22,15 @@ export function RecursiveWeakMemoize(indices: number[], generator: (...args: any
 
 		// Return cached result, or generate and save
 		const arg = args[indices[last]];
-		if (typeof arg === 'object' && result?.has(arg) === true) {
-			return result.get(arg);
+		if (typeof arg === 'object') {
+			const cached = result?.get(arg);
+			if (cached !== undefined) {
+				return cached;
+			}
+			const value = Reflect.apply(generator, this, args);
+			result?.set(arg, value);
+			return value;
 		}
-		const value = Reflect.apply(generator, this, args);
-		result?.set(arg, value);
-		return value;
+		return Reflect.apply(generator, this, args);
 	};
 }

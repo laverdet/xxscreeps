@@ -14,7 +14,7 @@ export async function compile(moduleName: string) {
 			devtool: 'inline-source-map',
 
 			resolve: {
-				extensions: [ '.ts' ],
+				extensions: [ '.js', '.ts' ],
 				alias: {
 					'~': Path.join(__dirname, '..'),
 				},
@@ -22,6 +22,7 @@ export async function compile(moduleName: string) {
 
 			module: {
 				rules: [ {
+					test: /\.ts$/,
 					loader: 'babel-loader',
 					options: {
 						plugins: [

@@ -2,7 +2,7 @@ import * as RoomPosition from './position';
 import type { Room } from './room';
 import { Process, ProcessorSpecification } from '~/engine/processor/bind';
 import { BufferObject } from '~/engine/schema/buffer-object';
-import { checkCast, makeVector, withType, Format, Interceptor } from '~/engine/schema';
+import { checkCast, makeVector, withType, Format, Interceptor, Variant } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
 
 export const format = withType<RoomObject>(checkCast<Format>()({
@@ -15,11 +15,13 @@ export const format = withType<RoomObject>(checkCast<Format>()({
 	}),
 }));
 
-export class RoomObject extends BufferObject {
+export abstract class RoomObject extends BufferObject {
 	id!: string;
 	pos!: any;
 	effects!: any[];
 	room!: Room;
+
+	abstract get [Variant](): string;
 	[Process]: ProcessorSpecification<this>['process'] | undefined;
 }
 

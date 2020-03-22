@@ -1,3 +1,4 @@
+import type { BufferObject } from './buffer-object';
 import type { BufferView } from './buffer-view';
 import { Variant } from './format';
 import type { BoundInterceptorSchema, MemberInterceptor } from './interceptor';
@@ -197,7 +198,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 			}
 			const Overlay = interceptors?.overlay;
 			if (Overlay !== undefined) {
-				return (view, offset) => new Overlay(view, offset);
+				return (view, offset) => new (Overlay as Constructor<BufferObject>)(view, offset);
 			}
 			return read;
 		}

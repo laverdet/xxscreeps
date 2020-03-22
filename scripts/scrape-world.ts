@@ -39,7 +39,7 @@ topLevelTask(async() => {
 	// Collect initial room data
 	const rooms = new Map(collections.rooms.map(room => ({
 		name: room._id,
-		[Room.Objects]: new Map,
+		[Room.Objects]: [] as any[],
 	})).map(room => [ room.name, room ]));
 
 	// Load room objects
@@ -50,6 +50,20 @@ topLevelTask(async() => {
 			effects: [],
 		};
 		switch (object.type) {
+			case 'controller':
+				return {
+					...roomObject,
+					[Variant]: 'controller',
+					downgradeTime: object.downgradeTime,
+					isPowerEnabled: object.isPowerEnabled,
+					level: object.level,
+					progress: object.progress,
+					safeMode: object.safeMode,
+					safeModeAvailable: object.safeModeAvailable,
+					safeModeCooldown: object.safeModeCooldown,
+					upgradeBlockedTime: object.upgradeBlocked,
+				};
+
 			case 'spawn':
 				return {
 					...roomObject,
@@ -69,7 +83,7 @@ topLevelTask(async() => {
 		}
 	}).forEach(roomObject => {
 		if (roomObject !== undefined) {
-			rooms.get(roomObject.pos.roomName)![Room.Objects].set(roomObject.id, roomObject);
+			rooms.get(roomObject.pos.roomName)![Room.Objects].push(roomObject);
 		}
 	});
 

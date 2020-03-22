@@ -1,4 +1,5 @@
-import * as Structure from './structure';
+import * as Structure from '.';
+import * as C from '~/engine/game/constants';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 
 export const format = withType<StructureSpawn>(checkCast<Format>()({
@@ -9,6 +10,7 @@ export const format = withType<StructureSpawn>(checkCast<Format>()({
 
 export class StructureSpawn extends Structure.Structure {
 	get [Variant]() { return 'spawn' }
+	get structureType() { return C.STRUCTURE_SPAWN }
 
 	name!: string;
 }

@@ -39,12 +39,11 @@ export function injectGetters(
 				}
 			}();
 
-			// Memoize?
-			if (
-				layout === 'string' ||
-				interceptors?.members?.[key]?.compose !== undefined ||
-				interceptors?.members?.[key]?.composeFromBuffer !== undefined
-			) {
+			// Memoize everything except integer access
+			if (!(
+				layout === 'int8' || layout === 'int16' || layout === 'int32' ||
+				layout === 'uint8' || layout === 'uint16' || layout === 'uint32'
+			)) {
 				return function() {
 					const value = apply(get, this, []);
 					defineProperty(this, symbol, { value });

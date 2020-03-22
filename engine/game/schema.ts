@@ -6,7 +6,9 @@ import * as RoomPosition from './position';
 import * as Room from './room';
 import * as RoomObject from './room-object';
 import * as Source from './source';
-import * as StructureSpawn from './structures/spawn';
+import * as Structure from './structure';
+import * as StructureController from './structure/controller';
+import * as StructureSpawn from './structure/spawn';
 
 const schemaObjects = {
 	RoomPosition,
@@ -14,6 +16,8 @@ const schemaObjects = {
 	Creep,
 	Source,
 
+	Structure,
+	StructureController,
 	StructureSpawn,
 
 	Room,

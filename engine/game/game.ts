@@ -1,15 +1,15 @@
 import { Room, Objects } from './room';
 import { RoomObject } from './room-object';
-import { StructureSpawn } from './structures/spawn';
+import { StructureSpawn } from './structure/spawn';
 
 export class Game {
-	#objects = new Map<string, RoomObject>();
 	spawns: Dictionary<StructureSpawn> = Object.create(null);
+
+	#objects = new Map<string, RoomObject>();
 
 	constructor(rooms: Room[]) {
 		for (const room of rooms) {
 			for (const object of room[Objects]) {
-				object.room = room;
 				this.#objects.set(object.id, object);
 				if (object instanceof StructureSpawn) {
 					this.spawns[object.name] = object;

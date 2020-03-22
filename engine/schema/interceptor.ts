@@ -12,7 +12,7 @@ type RawCompositionInterceptor = {
 };
 
 type OverlayInterceptor = {
-	overlay?: Constructor<BufferObject>;
+	overlay?: { prototype: typeof BufferObject.prototype };
 };
 
 type SymbolInterceptor = {
