@@ -1,5 +1,5 @@
 import { bindProcessor } from '~/engine/processor/bind';
-import { Source, nextRegenerationTime } from '~/engine/game/source';
+import { Source, nextRegenerationTime } from '~/engine/game/objects/source';
 
 function process(this: Source) {
 	if (this.energy < this.energyCapacity) {

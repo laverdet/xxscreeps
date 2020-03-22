@@ -1,11 +1,11 @@
 import type ivm from 'isolated-vm';
 import lodash from 'lodash';
 
-import { Creep } from '~/engine/game/creep';
+import { Creep } from '~/engine/game/objects/creep';
 import { Game } from '~/engine/game/game';
 import { RoomPosition } from '~/engine/game/position';
 import { Room } from '~/engine/game/room';
-import { Source } from '~/engine/game/source';
+import { Source } from '~/engine/game/objects/source';
 
 import * as Constants from '~/engine/game/constants';
 import { gameContext, IntentManager } from '~/engine/game/context';

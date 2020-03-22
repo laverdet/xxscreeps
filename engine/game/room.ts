@@ -2,15 +2,15 @@ import { BufferObject } from '~/engine/schema/buffer-object';
 import type { BufferView } from '~/engine/schema/buffer-view';
 import { checkCast, makeVector, withType, Format, Interceptor } from '~/engine/schema';
 import { iteratee } from '~/engine/util/iteratee';
-import { variantFormat } from './room-object-variant';
+import { variantFormat } from './objects/room-object-variant';
 
-import { RoomObject } from './room-object';
+import { RoomObject } from './objects/room-object';
 
-import { Creep } from './creep';
-import { Source } from './source';
-import { Structure } from './structure';
-import { StructureController } from './structure/controller';
-import { StructureSpawn } from './structure/spawn';
+import { Creep } from './objects/creep';
+import { Source } from './objects/source';
+import { Structure } from './objects/structures';
+import { StructureController } from './objects/structures/controller';
+import { StructureSpawn } from './objects/structures/spawn';
 
 import * as C from './constants';
 

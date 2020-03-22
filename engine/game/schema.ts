@@ -1,15 +1,15 @@
 import { getSchema } from '~/engine/schema/format';
 import { bindInterceptorsToSchema } from '~/engine/schema/interceptor';
 import { injectGetters } from '~/engine/schema/overlay';
-import * as Creep from './creep';
+import * as Creep from './objects/creep';
 import * as RoomPosition from './position';
 import * as Room from './room';
-import * as RoomObject from './room-object';
-import * as Source from './source';
+import * as RoomObject from './objects/room-object';
+import * as Source from './objects/source';
 import * as Store from './store';
-import * as Structure from './structure';
-import * as StructureController from './structure/controller';
-import * as StructureSpawn from './structure/spawn';
+import * as Structure from './objects/structures';
+import * as StructureController from './objects/structures/controller';
+import * as StructureSpawn from './objects/structures/spawn';
 
 const schemaObjects = {
 	RoomPosition,

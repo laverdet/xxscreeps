@@ -1,7 +1,7 @@
-import { Creep } from './creep';
+import { Creep } from './objects/creep';
 import { Room, Objects } from './room';
-import { RoomObject } from './room-object';
-import { StructureSpawn } from './structure/spawn';
+import { RoomObject } from './objects/room-object';
+import { StructureSpawn } from './objects/structures/spawn';
 
 declare global {
 	let Game: Game;

@@ -1,9 +1,9 @@
 import * as Structure from '.';
 import * as C from '~/engine/game/constants';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
-import { gameContext } from '../context';
-import { calcCreepCost, getUniqueName } from '../helpers';
-import * as Store from '../store';
+import { gameContext } from '~/engine/game/context';
+import { calcCreepCost, getUniqueName } from '~/engine/game/helpers';
+import * as Store from '~/engine/game/store';
 
 export const format = withType<StructureSpawn>(checkCast<Format>()({
 	[Inherit]: Structure.format,

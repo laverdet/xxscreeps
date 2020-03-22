@@ -1,5 +1,5 @@
-import * as RoomPosition from './position';
-import type { Room } from './room';
+import * as RoomPosition from '../position';
+import type { Room } from '../room';
 import { Process, ProcessorSpecification } from '~/engine/processor/bind';
 import { BufferObject } from '~/engine/schema/buffer-object';
 import { checkCast, makeVector, withType, Format, Interceptor, Variant } from '~/engine/schema';

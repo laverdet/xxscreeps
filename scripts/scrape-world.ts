@@ -5,9 +5,9 @@ import * as MapSchema from '~/engine/game/map';
 import { RoomPosition } from '~/engine/game/position';
 import * as Room from '~/engine/game/room';
 import * as Schema from '~/engine/game/schema';
-import * as Source from '~/engine/game/source';
-import * as Structure from '~/engine/game/structure';
-import * as StructureController from '~/engine/game/structure/controller';
+import * as Source from '~/engine/game/objects/source';
+import * as Structure from '~/engine/game/objects/structures';
+import * as StructureController from '~/engine/game/objects/structures/controller';
 import { TerrainWriter } from '~/engine/game/terrain';
 import * as GameSchema from '~/engine/metabase';
 

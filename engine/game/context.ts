@@ -1,4 +1,4 @@
-import type { RoomObject } from '~/engine/game/room-object';
+import type { RoomObject } from '~/engine/game/objects/room-object';
 const { create } = Object;
 
 const kCpuCost = 0.2;
