@@ -1,16 +1,18 @@
-import * as RoomObject from '../room-object';
-import { makeInherit, Variant } from '~/engine/schema/format';
-import { Interceptors } from '~/engine/schema/interceptor';
+import * as Structure from './structure';
+import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 
-export const format = makeInherit(RoomObject.format, {
+export const format = withType<StructureSpawn>(checkCast<Format>()({
+	[Inherit]: Structure.format,
 	[Variant]: 'spawn',
-	name: 'string' as const,
-});
+	name: 'string',
+}));
 
-export class StructureSpawn extends RoomObject.RoomObject {
+export class StructureSpawn extends Structure.Structure {
+	get [Variant]() { return 'spawn' }
+
 	name!: string;
 }
 
-export const interceptors: Interceptors = {
+export const interceptors = checkCast<Interceptor>()({
 	overlay: StructureSpawn,
-};
+});

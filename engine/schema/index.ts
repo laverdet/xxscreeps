@@ -1,13 +1,10 @@
-import type { Format } from './format';
-import type { Layout } from './layout';
 export { BufferView } from './buffer-view';
+export { makeArray, makeVariant, makeVector, withType, Format, Inherit, Variant } from './format';
+export { Interceptor } from './interceptor';
 export { getReader } from './read';
 export { getWriter } from './write';
 
-export type SchemaFormat = {
-	[key: string]: Format;
-};
+//export type Shape<Layout, Interceptors> = ReturnType<getReader<Layout, Interceptors>>;
 
-export type Schema = {
-	[key: string]: Layout;
-};
+// Exported for convenience
+export { checkCast } from '~/lib/utility';

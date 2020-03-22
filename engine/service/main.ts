@@ -1,6 +1,6 @@
 import * as Path from 'path';
 import * as DatabaseSchema from '~/engine/metabase';
-import { BufferView, getReader } from '~/engine/schema';
+import { getReader, BufferView } from '~/engine/schema';
 import { topLevelTask } from '~/lib/task';
 import { mapInPlace } from '~/lib/utility';
 import { Worker } from '~/lib/worker-threads';
@@ -27,7 +27,7 @@ topLevelTask(async() => {
 
 	// Run main game processing loop
 	let gameTime = 1;
-	const activeUsers = (gameMetadata.users as any[]).filter(user => {
+	const activeUsers = gameMetadata.users.filter(user => {
 		if (user.id === '2' || user.id === '3') {
 			return false;
 		}

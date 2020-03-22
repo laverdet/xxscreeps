@@ -5,12 +5,12 @@ export type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32
 export type Primitive = Integral | 'string';
 
 export type StructLayout = {
+	inherit?: StructLayout;
 	struct: Record<string, {
 		layout: Layout;
 		offset: number;
 		pointer?: true;
 	}>;
-	inherit?: StructLayout;
 	[Variant]?: string;
 };
 
@@ -19,7 +19,7 @@ type ArrayLayout = {
 	size: number;
 };
 
-type VariantLayout = {
+export type VariantLayout = {
 	variant: StructLayout[];
 };
 

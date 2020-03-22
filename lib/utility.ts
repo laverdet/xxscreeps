@@ -1,3 +1,9 @@
+// Checks that a value can be casted to a type, but returns the original type. The curry thing here
+// is needed because TypeScript doesn't support optional generic parameters
+export function checkCast<Type>() {
+	return <Value extends Type>(value: Value) => value;
+}
+
 // Replace a value on an object with a new one, and returns the old one.
 export function exchange<Target extends object, Name extends keyof Target>(
 		target: Target, name: Name, newValue?: Target[Name]) {

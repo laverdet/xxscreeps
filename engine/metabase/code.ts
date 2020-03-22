@@ -1,12 +1,12 @@
-import { makeVector } from '~/engine/schema/format';
+import { checkCast, makeVector, Format } from '~/engine/schema';
 
-export const format = {
+export const format = checkCast<Format>()({
 	modules: makeVector({
-		name: 'string' as const,
-		data: 'string' as const,
+		name: 'string',
+		data: 'string',
 	}),
 /* binaries: makeVector({
-		name: 'string' as const,
-		data: makeVector('uint8' as const),
+		name: 'string',
+		data: makeVector('uint8'),
 	}),*/
-};
+});

@@ -8,7 +8,7 @@ export class ProcessorContext {
 	) {}
 
 	process() {
-		for (const object of this.room[Objects].values()) {
+		for (const object of this.room[Objects]) {
 			object[Process]?.(this);
 		}
 	}

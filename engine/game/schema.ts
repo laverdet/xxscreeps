@@ -1,6 +1,5 @@
-import { getSchema, Format } from '~/engine/schema/format';
-import { bindInterceptorsToSchema, Interceptors } from '~/engine/schema/interceptor';
-import { StructLayout } from '~/engine/schema/layout';
+import { getSchema } from '~/engine/schema/format';
+import { bindInterceptorsToSchema } from '~/engine/schema/interceptor';
 import { injectGetters } from '~/engine/schema/overlay';
 import * as Creep from './creep';
 import * as RoomPosition from './position';
@@ -20,33 +19,35 @@ const schemaObjects = {
 	Room,
 };
 
-export const schemaFormat: {
-	[name in keyof typeof schemaObjects]: typeof schemaObjects[name]['format'];
-} = function(): any {
-	const format: Dictionary<Format> = {};
+const schemaFormat = function() {
+	const format: any = {};
 	for (const [ name, imports ] of Object.entries(schemaObjects)) {
 		format[name] = imports.format;
 	}
-	return format;
+	return format as {
+		[name in keyof typeof schemaObjects]: typeof schemaObjects[name]['format']
+	};
 }();
 
 export const schema = getSchema(schemaFormat);
 
 export const interceptorSchema = bindInterceptorsToSchema(schema, function() {
-	const interceptors: Dictionary<Interceptors> = {};
+	const interceptors: any = {};
 	for (const [ name, imports ] of Object.entries(schemaObjects)) {
 		if ('interceptors' in imports) {
 			interceptors[name] = imports.interceptors;
 		}
 	}
-	return interceptors;
+	return interceptors as {
+		[name in keyof typeof schemaObjects]: typeof schemaObjects[name]['interceptors']
+	};
 }());
 
 export function finalizePrototypeGetters() {
 	for (const [ name, imports ] of Object.entries(schemaObjects)) {
 		injectGetters(
-			(schema as Dictionary<StructLayout>)[name]!,
-			(imports as any)[name]!.prototype,
+			(schema as any)[name],
+			(imports as any)[name].prototype,
 			interceptorSchema);
 	}
 }

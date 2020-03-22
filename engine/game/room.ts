@@ -1,43 +1,25 @@
 import { BufferObject } from '~/engine/schema/buffer-object';
-import { makeVariant, makeVector } from '~/engine/schema/format';
-import type { Interceptors } from '~/engine/schema/interceptor';
+import { checkCast, makeVector, withType, Format, Interceptor } from '~/engine/schema';
+import { variantFormat } from './room-object-variant';
 
+import * as C from './constants';
 import { RoomObject } from './room-object';
-import * as Creep from './creep';
-import * as Source from './source';
 
-import * as StructureSpawn from './structures/spawn';
-
-export const format = {
-	name: 'string' as const,
-	objects: makeVector(makeVariant(
-		Creep.format,
-		Source.format,
-		StructureSpawn.format,
-	)),
-};
+export const format = withType<Room>(checkCast<Format>()({
+	name: 'string',
+	objects: makeVector(variantFormat),
+}));
 
 export const Objects = Symbol('objects');
-type RoomObjectMap = Map<string, RoomObject>;
 
 export class Room extends BufferObject {
 	name!: string;
-	[Objects]!: RoomObjectMap;
+	[Objects]!: RoomObject[];
 }
 
-export const interceptors: Interceptors = {
+export const interceptors = checkCast<Interceptor>()({
 	members: {
-		objects: {
-			compose(objects: RoomObject[]) {
-				const map: RoomObjectMap = new Map;
-				for (const object of objects) {
-					map.set(object.id, object);
-				}
-				return map;
-			},
-			decompose: (map: RoomObjectMap) => map.values(),
-			symbol: Objects,
-		},
+		objects: { symbol: Objects },
 	},
 	overlay: Room,
-};
+});

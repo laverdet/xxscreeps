@@ -2,19 +2,18 @@ import * as RoomPosition from './position';
 import type { Room } from './room';
 import { Process, ProcessorSpecification } from '~/engine/processor/bind';
 import { BufferObject } from '~/engine/schema/buffer-object';
-import { makeVector } from '~/engine/schema/format';
-import type { Interceptors } from '~/engine/schema/interceptor';
+import { checkCast, makeVector, withType, Format, Interceptor } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
 
-export const format = {
+export const format = withType<RoomObject>(checkCast<Format>()({
 	id: Id.format,
 	pos: RoomPosition.format,
 	effects: makeVector({
-		effect: 'uint16' as const,
-		expireTime: 'uint32' as const,
-		level: 'uint16' as const,
+		effect: 'uint16',
+		expireTime: 'uint32',
+		level: 'uint16',
 	}),
-};
+}));
 
 export class RoomObject extends BufferObject {
 	id!: string;
@@ -24,7 +23,7 @@ export class RoomObject extends BufferObject {
 	[Process]: ProcessorSpecification<this>['process'] | undefined;
 }
 
-export const interceptors: Interceptors = {
+export const interceptors = checkCast<Interceptor>()({
 	members: { id: Id.interceptors },
 	overlay: RoomObject,
-};
+});

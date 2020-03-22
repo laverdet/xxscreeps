@@ -1,4 +1,3 @@
-import type { Schema } from '.';
 import { Variant } from './format';
 import type { Layout } from './layout';
 
@@ -11,7 +10,7 @@ function requireIdentifier(code: string) {
 
 type LayoutToNames = Map<Layout, string>;
 function archiveLayout(
-	schema: Schema,
+	schema: Dictionary<any>,
 	layout: Layout,
 	layoutToNames: LayoutToNames,
 	depth = 1,
@@ -61,7 +60,7 @@ function archiveLayout(
 	}
 }
 
-export function archiveSchema(schema: Schema): string {
+export function archiveSchema(schema: Dictionary<any>): string {
 	const layoutToNames: LayoutToNames = new Map();
 	const prelude = "import { Variant } from '~/engine/schema/format';\n";
 	return prelude + Object.entries(schema).map(([ name, layout ]) => {

@@ -1,7 +1,5 @@
-import type { Schema } from '.';
 import type { BufferObject } from './buffer-object';
 import type { BufferView } from './buffer-view';
-import type { StructLayout } from './layout';
 
 type CompositionInterceptor = {
 	compose?: (value: any) => any;
@@ -21,19 +19,24 @@ type SymbolInterceptor = {
 	symbol?: symbol;
 };
 
+type MembersInterceptor = {
+	members?: Dictionary<MemberInterceptor>;
+};
+
 type ObjectInterceptor = CompositionInterceptor & RawCompositionInterceptor & OverlayInterceptor;
 export type MemberInterceptor = ObjectInterceptor & SymbolInterceptor;
 
-export type Interceptors = ObjectInterceptor & {
-	members?: Dictionary<MemberInterceptor>;
-};
-export type InterceptorSchema = Dictionary<Interceptors>;
-export type BoundInterceptorSchema = WeakMap<StructLayout, Interceptors>;
+export type Interceptor = ObjectInterceptor & MembersInterceptor;
+export type InterceptorSchema = Record<string, Interceptor>;
 
-export function bindInterceptorsToSchema(schema: Schema, interceptorSchema: InterceptorSchema): BoundInterceptorSchema {
-	const map = new WeakMap();
+export type BoundInterceptorSchema = WeakMap<object, Interceptor>;
+export function bindInterceptorsToSchema(
+	schema: Record<string, object>,
+	interceptorSchema: InterceptorSchema,
+): BoundInterceptorSchema {
+	const map: BoundInterceptorSchema = new WeakMap();
 	for (const [ key, interceptor ] of Object.entries(interceptorSchema)) {
-		map.set(schema[key] as any, interceptor);
+		map.set(schema[key]!, interceptor);
 	}
 	return map;
 }

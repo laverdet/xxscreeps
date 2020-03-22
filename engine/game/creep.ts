@@ -1,25 +1,29 @@
 import * as RoomObject from './room-object';
-import { makeInherit, Variant } from '~/engine/schema/format';
-import { Interceptors } from '~/engine/schema/interceptor';
+import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 
-export const format = makeInherit(RoomObject.format, {
+export const format = withType<Creep>(checkCast<Format>()({
+	[Inherit]: RoomObject.format,
 	[Variant]: 'creep',
 	// body: makeVector({ boost: 'uint8', type: 'uint8', hits: 'uint8' })
-	fatigue: 'int16' as const,
-	hits: 'int16' as const,
-	name: 'string' as const,
-	// owner: 'int32' as const,
+	fatigue: 'int16',
+	hits: 'int16',
+	name: 'string',
+	// owner: 'int32',
 	// saying: ...
 	// spawning?
 	// store: !!!
-	ageTime: 'int32' as const,
-});
+	ageTime: 'int32',
+}));
 
 export class Creep extends RoomObject.RoomObject {
+	get [Variant]() { return 'creep' }
+
 	fatigue!: number;
 	hits!: number;
+	my!: boolean;
+	spawning!: boolean;
 }
 
-export const interceptors: Interceptors = {
+export const interceptors = checkCast<Interceptor>()({
 	overlay: Creep,
-};
+});

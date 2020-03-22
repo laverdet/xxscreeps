@@ -8,7 +8,7 @@ export class Game {
 
 	constructor(rooms: Room[]) {
 		for (const room of rooms) {
-			for (const object of room[Objects].values()) {
+			for (const object of room[Objects]) {
 				object.room = room;
 				this.#objects.set(object.id, object);
 				if (object instanceof StructureSpawn) {

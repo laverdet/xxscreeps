@@ -1,9 +1,8 @@
-import type { BufferView } from '~/engine/schema/buffer-view';
-import type { Interceptors } from '~/engine/schema/interceptor';
+import { checkCast, withType, BufferView, Format, Interceptor } from '~/engine/schema';
 
-export const format = {
-	position: 'int32' as const,
-};
+export const format = withType<RoomPosition>(checkCast<Format>()({
+	position: 'int32',
+}));
 
 const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
@@ -137,9 +136,9 @@ export class RoomPosition {
 	}
 }
 
-export const interceptors: Interceptors = {
+export const interceptors = checkCast<Interceptor>()({
 	composeFromBuffer: (view: BufferView, offset: number) =>
-		new (RoomPosition as any)(view.int32[offset >>> 2]),
+		new (RoomPosition as any)(view.int32[offset >>> 2]) as RoomPosition,
 	decomposeIntoBuffer: (value: any, view: BufferView, offset: number) =>
 		((view.int32[offset >>> 2] = value[PositionInteger], 4)),
-};
+});

@@ -1,7 +1,7 @@
 import type { BufferView } from './buffer-view';
 import { Variant } from './format';
 import type { BoundInterceptorSchema, MemberInterceptor } from './interceptor';
-import { kPointerSize, getTraits, Layout, Shape, StructLayout } from './layout';
+import { kPointerSize, getTraits, Layout, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
 const { fromCharCode } = String;
 
@@ -36,7 +36,7 @@ export const getSingleMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 	(layout: StructLayout, interceptorSchema: BoundInterceptorSchema): MemberReader => {
 
-		let memberReader: MemberReader | undefined;
+		let readMembers: MemberReader | undefined;
 		const interceptors = interceptorSchema.get(layout);
 		for (const [ key, member ] of Object.entries(layout.struct)) {
 			const memberInterceptors = interceptors?.members?.[key];
@@ -44,7 +44,7 @@ const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 
 			// Make reader for single field
 			const next = function(): MemberReader {
-			// Get reader for this member
+				// Get reader for this member
 				const read = getSingleMemberReader(member.layout, interceptorSchema, memberInterceptors);
 
 				// Wrap to read this field from reserved address
@@ -62,17 +62,17 @@ const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 			}();
 
 			// Combine member readers
-			const prev = memberReader;
+			const prev = readMembers;
 			if (prev === undefined) {
-				memberReader = next;
+				readMembers = next;
 			} else {
-				memberReader = (value, view, offset) => {
+				readMembers = (value, view, offset) => {
 					prev(value, view, offset);
 					next(value, view, offset);
 				};
 			}
 		}
-		return memberReader!;
+		return readMembers!;
 	},
 );
 
@@ -80,7 +80,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 	(layout: Layout, interceptorSchema: BoundInterceptorSchema): Reader => {
 
 		if (typeof layout === 'string') {
-		// Integral types
+			// Integral types
 			switch (layout) {
 				case 'int8': return (view, offset) => view.int8[offset];
 				case 'int16': return (view, offset) => view.int16[offset >>> 1];
@@ -99,7 +99,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 			}
 
 		} else if ('array' in layout) {
-		// Array types
+			// Array types
 			const arraySize = layout.size;
 			const elementLayout = layout.array;
 			const read = getReader(elementLayout, interceptorSchema);
@@ -108,7 +108,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 				throw new TypeError('Unimplemented');
 
 			} else {
-			// Array with fixed element size
+				// Array with fixed element size
 				return (view, offset) => {
 					const value: any[] = [];
 					let currentOffset = offset;
@@ -122,7 +122,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 			}
 
 		} else if ('variant' in layout) {
-		// Variant types
+			// Variant types
 			const variantReaders = layout.variant.map(elementLayout =>
 				getReader(elementLayout, interceptorSchema));
 			return (view, offset) => variantReaders[view.uint32[offset >>> 2]](view, offset + kPointerSize);
@@ -132,7 +132,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 			const read = getReader(elementLayout, interceptorSchema);
 			const { stride } = getTraits(elementLayout);
 			if (stride === undefined) {
-			// Vector with dynamic element size
+				// Vector with dynamic element size
 				return (view, offset) => {
 					const length = view.uint32[offset >>> 2];
 					if (length === 0) {
@@ -149,7 +149,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 				};
 
 			} else {
-			// Vector with fixed element size
+				// Vector with fixed element size
 				return (view, offset) => {
 					const length = view.uint32[offset >>> 2];
 					if (length === 0) {
@@ -168,7 +168,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 			}
 
 		} else {
-		// Structures / object
+			// Structures / object
 			const variant = layout[Variant];
 			const read = function(): Reader {
 				const { inherit } = layout;
@@ -204,9 +204,6 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 	},
 );
 
-export function getReader<Type extends Layout>(
-	layout: Type, interceptorSchema: BoundInterceptorSchema
-): Reader<Shape<Type>>;
-export function getReader(layout: Layout, interceptorSchema: BoundInterceptorSchema) {
-	return memoizeGetReader(layout, interceptorSchema);
+export function getReader<Layout>(layout: Layout, interceptorSchema: BoundInterceptorSchema): Reader<Layout> {
+	return memoizeGetReader(layout as any, interceptorSchema);
 }

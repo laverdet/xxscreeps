@@ -1,17 +1,17 @@
-import { Interceptors } from '~/engine/schema/interceptor';
+import { checkCast, Format, Interceptor } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
 
-export const format = {
+export const format = checkCast<Format>()({
 	id: Id.format,
-	username: 'string' as const,
-	cpu: 'int32' as const,
-	gcl: 'int32' as const,
-	cpuAvailable: 'int32' as const,
-	registeredDate: 'int32' as const,
-	active: 'int8' as const,
-	badge: 'string' as const,
-};
+	username: 'string',
+	cpu: 'int32',
+	gcl: 'int32',
+	cpuAvailable: 'int32',
+	registeredDate: 'int32',
+	active: 'int8',
+	badge: 'string',
+});
 
-export const interceptors: Interceptors = {
+export const interceptors = checkCast<Interceptor>()({
 	members: { id: Id.interceptors },
-};
+});

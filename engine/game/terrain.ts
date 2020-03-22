@@ -1,6 +1,4 @@
-import { makeArray } from '~/engine/schema/format';
-import type { BufferView } from '~/engine/schema/buffer-view';
-import type { Interceptors } from '~/engine/schema/interceptor';
+import { checkCast, makeArray, withType, BufferView, Format, Interceptor } from '~/engine/schema';
 const { apply } = Reflect;
 const { Uint8Array } = global;
 const { set } = Uint8Array.prototype;
@@ -8,10 +6,10 @@ const { set } = Uint8Array.prototype;
 export const kTerrainWall = 1;
 export const kTerrainSwamp = 2;
 
-export const format = {
-	roomName: 'string' as const,
-	terrain: makeArray(625, 'uint8'),
-};
+export const format = checkCast<Format>()({
+	roomName: 'string',
+	terrain: withType<Readonly<Uint8Array>>(makeArray(625, 'uint8')),
+});
 
 const GetBufferSymbol: unique symbol = Symbol();
 
@@ -65,7 +63,7 @@ export function isBorder(xx: number, yy: number) {
 	return xx === 0 || xx === 49 || yy === 0 || yy === 49;
 }
 
-export const interceptors: Interceptors = {
+export const interceptors = checkCast<Interceptor>()({
 	members: {
 		terrain: {
 			composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),
@@ -75,4 +73,4 @@ export const interceptors: Interceptors = {
 			},
 		},
 	},
-};
+});

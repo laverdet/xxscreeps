@@ -1,18 +1,20 @@
 import * as RoomObject from './room-object';
 import { gameTime } from '~/engine/runtime';
-import { makeInherit, Variant } from '~/engine/schema/format';
-import { Interceptors } from '~/engine/schema/interceptor';
+import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 
-export const format = makeInherit(RoomObject.format, {
+export const format = withType<Source>(checkCast<Format>()({
+	[Inherit]: RoomObject.format,
 	[Variant]: 'source',
-	energy: 'int32' as const,
-	energyCapacity: 'int32' as const,
-	nextRegenerationTime: 'int32' as const,
-});
+	energy: 'int32',
+	energyCapacity: 'int32',
+	nextRegenerationTime: 'int32',
+}));
 
 export const nextRegenerationTime = Symbol('nextRegenerationTime');
 
 export class Source extends RoomObject.RoomObject {
+	get [Variant]() { return 'source' }
+
 	energy!: number;
 	energyCapacity!: number;
 	[nextRegenerationTime]!: number;
@@ -20,9 +22,9 @@ export class Source extends RoomObject.RoomObject {
 	get ticksToRegeneration() { return this[nextRegenerationTime] - gameTime }
 }
 
-export const interceptors: Interceptors = {
+export const interceptors = checkCast<Interceptor>()({
 	members: {
 		nextRegenerationTime: { symbol: nextRegenerationTime },
 	},
 	overlay: Source,
-};
+});

@@ -10,14 +10,14 @@ type MemberWriter = (value: any, view: BufferView, offset: number, locals: numbe
 const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 	(layout: StructLayout, interceptorSchema: BoundInterceptorSchema): MemberWriter => {
 
-		let memberWriter: MemberWriter | undefined;
+		let writeMembers: MemberWriter | undefined;
 		const interceptors = interceptorSchema.get(layout);
 		for (const [ key, member ] of Object.entries(layout.struct)) {
 			const symbol = interceptors?.members?.[key]?.symbol ?? key;
 
 			// Make writer for single field. `locals` parameter is offset to dynamic memory.
 			const next = function(): MemberWriter {
-			// Get writer for this member
+				// Get writer for this member
 				const { offset, pointer } = member;
 				const write = function(): Writer {
 					const write = getWriter(member.layout, interceptorSchema);
@@ -54,22 +54,31 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 			}();
 
 			// Combine member writers
-			const prev = memberWriter;
+			const prev = writeMembers;
 			if (prev === undefined) {
-				memberWriter = next;
+				writeMembers = next;
 			} else {
-				memberWriter = (value, view, offset, locals) =>
+				writeMembers = (value, view, offset, locals) =>
 					next(value, view, offset, prev(value, view, offset, locals));
 			}
 		}
-		return memberWriter!;
+
+		// Run inheritance recursively
+		const { inherit } = layout;
+		if (inherit === undefined) {
+			return writeMembers!;
+		} else {
+			const writeBase = getMemberWriter(inherit, interceptorSchema);
+			return (value, view, offset, locals) =>
+				writeMembers!(value, view, offset, writeBase(value, view, offset, locals));
+		}
 	});
 
 const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 	(layout: Layout, interceptorSchema: BoundInterceptorSchema): Writer => {
 
 		if (typeof layout === 'string') {
-		// Integral types
+			// Integral types
 			switch (layout) {
 				case 'int8': return (value, view, offset) => ((view.int8[offset] = value, 1));
 				case 'int16': return (value, view, offset) => ((view.int16[offset >>> 1] = value, 2));
@@ -80,7 +89,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 				case 'uint32': return (value, view, offset) => ((view.uint32[offset >>> 2] = value, 4));
 
 				case 'string': return (value: string, view, offset) => {
-				// Write string length
+					// Write string length
 					const { length } = value;
 					view.uint32[offset >>> 2] = length;
 					// Write string data
@@ -96,7 +105,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 			}
 
 		} else if ('array' in layout) {
-		// Array types
+			// Array types
 			const arraySize = layout.size;
 			const elementLayout = layout.array;
 			const write = getWriter(elementLayout, interceptorSchema);
@@ -105,7 +114,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 				throw new TypeError('Unimplemented');
 
 			} else {
-			// Array with fixed element size
+				// Array with fixed element size
 				return (value, view, offset) => {
 					let currentOffset = offset;
 					write(value[0], view, currentOffset);
@@ -118,7 +127,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 			}
 
 		} else if ('variant' in layout) {
-		// Variant types
+			// Variant types
 			const variantMap = new Map<string, Writer>();
 			for (let ii = 0; ii < layout.variant.length; ++ii) {
 				const elementLayout = layout.variant[ii];
@@ -138,7 +147,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 			const write = getWriter(elementLayout, interceptorSchema);
 			const { size, stride } = getTraits(elementLayout);
 			if (stride === undefined) {
-			// Vector with dynamic element size
+				// Vector with dynamic element size
 				return (value, view, offset) => {
 					let length = 0;
 					let currentOffset = offset + kPointerSize;
@@ -153,7 +162,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 				};
 
 			} else {
-			// Vector with fixed element size
+				// Vector with fixed element size
 				return (value, view, offset) => {
 					let length = 0;
 					let currentOffset = offset + kPointerSize;
@@ -170,18 +179,11 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 			}
 
 		} else {
-		// Structures
+			// Structures
 			const { size } = getTraits(layout);
 			const write = function(): Writer {
-				const { inherit } = layout;
-				const write = getMemberWriter(layout, interceptorSchema);
-				if (inherit === undefined) {
-					return (value, view, offset) => write(value, view, offset, offset + size) - offset;
-				} else {
-					const writeBase = getMemberWriter(inherit, interceptorSchema);
-					return (value, view, offset) =>
-						write(value, view, offset, writeBase(value, view, offset, offset + size)) - offset;
-				}
+				const writeMembers = getMemberWriter(layout, interceptorSchema);
+				return (value, view, offset) => writeMembers(value, view, offset, offset + size) - offset;
 			}();
 
 			// Has composer?
@@ -198,9 +200,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 		}
 	});
 
-/*export function getWriter<Type extends Layout>(
-	layout: Type, interceptorSchema: BoundWriteInterceptorSchema
-): Writer<Shape<Type>>;*/
-export function getWriter(layout: Layout, interceptorSchema: BoundInterceptorSchema) {
-	return memoizeGetWriter(layout, interceptorSchema);
+/*export function getWriter<Layout>(layout: Layout, interceptorSchema: BoundInterceptorSchema): Writer<Layout> */
+export function getWriter<Layout>(layout: Layout, interceptorSchema: BoundInterceptorSchema): Writer {
+	return memoizeGetWriter(layout as any, interceptorSchema);
 }

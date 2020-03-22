@@ -1,10 +1,10 @@
 import type { BufferView } from '~/engine/schema/buffer-view';
-import { makeArray } from '~/engine/schema/format';
+import { checkCast, makeArray, withType } from '~/engine/schema';
 import type { MemberInterceptor } from '~/engine/schema/interceptor';
 
-export const format = makeArray(4, 'uint32' as const);
+export const format = withType<string>(makeArray(4, 'uint32'));
 
-export const interceptors: MemberInterceptor = {
+export const interceptors = checkCast<MemberInterceptor>()({
 	composeFromBuffer(view: BufferView, offset: number) {
 		// First byte is length, remaining bytes are the hex string id. Fits up to 24 characters
 		// into 4 bytes. This could be increased to 30 characters if needed by putting more in the
@@ -34,4 +34,4 @@ export const interceptors: MemberInterceptor = {
 		view.uint8[offset] = value.length;
 		return 16;
 	},
-};
+});
