@@ -26,6 +26,17 @@ export function filterInPlace(iterable: Iterable<any>, callback: (value: any) =>
 	}();
 }
 
+// Gets a key on a map and if it doesn't exist it inserts a new value, then returns the value.
+export function getOrSet<Key, Value>(map: Map<Key, Value>, key: Key, fn: () => Value): Value {
+	const value = map.get(key);
+	if (value === undefined) {
+		const insert = fn();
+		map.set(key, insert);
+		return insert;
+	}
+	return value;
+}
+
 // Creates a new instance of a class without calling the constructor, then copies the given
 // properties on to it
 export function instantiate<Type>(ctor: new(...params: any) => Type, properties: any): Type {
@@ -41,15 +52,16 @@ export function mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (va
 	}();
 }
 
-// Gets a key on a map and if it doesn't exist it inserts a new value, then returns the value.
-export function getOrSet<Key, Value>(map: Map<Key, Value>, key: Key, fn: () => Value): Value {
-	const value = map.get(key);
-	if (value === undefined) {
-		const insert = fn();
-		map.set(key, insert);
-		return insert;
+// Object.assign but it throws if there's any key collisions
+export function safeAssign(target: any, ...sources: any[]) {
+	for (const source of sources) {
+		for (const key of Object.keys(source)) {
+			if (key in target) {
+				throw new Error(`Key '${key}' already exists on object`);
+			}
+			target[key] = source[key];
+		}
 	}
-	return value;
 }
 
 // Used to inline upcast a value to another Type. This is *more* restrictive than `as Type`

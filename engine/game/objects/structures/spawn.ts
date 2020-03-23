@@ -110,6 +110,10 @@ export class StructureSpawn extends Structure.Structure {
 	}
 }
 
-export const interceptors = checkCast<Interceptor>()({
-	overlay: StructureSpawn,
-});
+export const interceptors = {
+	StructureSpawn: checkCast<Interceptor>()({
+		overlay: StructureSpawn,
+	}),
+};
+
+export const schemaFormat = { StructureSpawn: format };

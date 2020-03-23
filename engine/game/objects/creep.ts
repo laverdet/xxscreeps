@@ -40,10 +40,14 @@ export class Creep extends RoomObject.RoomObject {
 	protected [Owner]!: string;
 }
 
-export const interceptors = checkCast<Interceptor>()({
-	overlay: Creep,
-	members: {
-		ageTime: { symbol: AgeTime },
-		owner: { symbol: Owner, ...Id.interceptors },
-	},
-});
+export const interceptors = {
+	Creep: checkCast<Interceptor>()({
+		overlay: Creep,
+		members: {
+			ageTime: { symbol: AgeTime },
+			owner: { symbol: Owner, ...Id.interceptors },
+		},
+	}),
+};
+
+export const schemaFormat = { Creep: format };

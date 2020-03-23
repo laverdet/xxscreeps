@@ -1,6 +1,7 @@
 import { getSchema } from '~/engine/schema/format';
 import { bindInterceptorsToSchema } from '~/engine/schema/interceptor';
 import { injectGetters } from '~/engine/schema/overlay';
+import { safeAssign } from '~/lib/utility';
 import * as Creep from './objects/creep';
 import * as RoomPosition from './position';
 import * as Room from './room';
@@ -11,7 +12,7 @@ import * as Structure from './objects/structures';
 import * as StructureController from './objects/structures/controller';
 import * as StructureSpawn from './objects/structures/spawn';
 
-const schemaObjects = {
+const schemaDeclarations = [
 	RoomPosition,
 	RoomObject,
 	Store,
@@ -24,37 +25,40 @@ const schemaObjects = {
 	StructureSpawn,
 
 	Room,
-};
+];
 
 const schemaFormat = function() {
 	const format: any = {};
-	for (const [ name, imports ] of Object.entries(schemaObjects)) {
-		format[name] = imports.format;
+	for (const imports of schemaDeclarations) {
+		safeAssign(format, imports.schemaFormat);
 	}
-	return format as {
-		[name in keyof typeof schemaObjects]: typeof schemaObjects[name]['format']
-	};
+	return format as UnionToIntersection<typeof schemaDeclarations[number]['schemaFormat']>;
 }();
 
 export const schema = getSchema(schemaFormat);
 
 export const interceptorSchema = bindInterceptorsToSchema(schema, function() {
 	const interceptors: any = {};
-	for (const [ name, imports ] of Object.entries(schemaObjects)) {
-		if ('interceptors' in imports) {
-			interceptors[name] = imports.interceptors;
-		}
+	for (const imports of schemaDeclarations) {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		safeAssign(interceptors, imports.interceptors ?? {});
 	}
-	return interceptors as {
-		[name in keyof typeof schemaObjects]: typeof schemaObjects[name]['interceptors']
-	};
+	return interceptors as UnionToIntersection<typeof schemaDeclarations[number]['interceptors']>;
 }());
 
 export function finalizePrototypeGetters() {
-	for (const [ name, imports ] of Object.entries(schemaObjects)) {
-		injectGetters(
-			(schema as any)[name],
-			(imports as any)[name].prototype,
-			interceptorSchema);
+	for (const imports of schemaDeclarations) {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		for (const name of Object.keys(imports.interceptors ?? {})) {
+			if (!(name in schema)) {
+				throw new Error(`Schema error with identifier: ${name}`);
+			} else if (!(name in imports)) {
+				continue;
+			}
+			injectGetters(
+				schema[name as keyof typeof schema] as any,
+				(imports as any)[name as keyof typeof imports].prototype,
+				interceptorSchema);
+		}
 	}
 }

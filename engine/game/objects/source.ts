@@ -21,9 +21,13 @@ export class Source extends RoomObject.RoomObject {
 	get ticksToRegeneration() { return this[nextRegenerationTime] - Game.time }
 }
 
-export const interceptors = checkCast<Interceptor>()({
-	members: {
-		nextRegenerationTime: { symbol: nextRegenerationTime },
-	},
-	overlay: Source,
-});
+export const interceptors = {
+	Source: checkCast<Interceptor>()({
+		members: {
+			nextRegenerationTime: { symbol: nextRegenerationTime },
+		},
+		overlay: Source,
+	}),
+};
+
+export const schemaFormat = { Source: format };

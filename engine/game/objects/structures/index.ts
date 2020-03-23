@@ -19,9 +19,13 @@ export abstract class Structure extends RoomObject.RoomObject {
 	[Owner]!: string;
 }
 
-export const interceptors = checkCast<Interceptor>()({
-	overlay: Structure,
-	members: {
-		owner: { symbol: Owner, ...Id.interceptors },
-	},
-});
+export const interceptors = {
+	Structure: checkCast<Interceptor>()({
+		overlay: Structure,
+		members: {
+			owner: { symbol: Owner, ...Id.interceptors },
+		},
+	}),
+};
+
+export const schemaFormat = { Structure: format };

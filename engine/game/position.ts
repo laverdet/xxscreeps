@@ -136,9 +136,13 @@ export class RoomPosition {
 	}
 }
 
-export const interceptors = checkCast<Interceptor>()({
-	composeFromBuffer: (view: BufferView, offset: number) =>
-		new (RoomPosition as any)(view.int32[offset >>> 2]) as RoomPosition,
-	decomposeIntoBuffer: (value: any, view: BufferView, offset: number) =>
-		((view.int32[offset >>> 2] = value[PositionInteger], 4)),
-});
+export const interceptors = {
+	RoomPosition: checkCast<Interceptor>()({
+		composeFromBuffer: (view: BufferView, offset: number) =>
+			new (RoomPosition as any)(view.int32[offset >>> 2]) as RoomPosition,
+		decomposeIntoBuffer: (value: any, view: BufferView, offset: number) =>
+			((view.int32[offset >>> 2] = value[PositionInteger], 4)),
+	}),
+};
+
+export const schemaFormat = { RoomPosition: format };

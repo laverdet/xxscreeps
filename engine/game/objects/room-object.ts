@@ -26,7 +26,11 @@ export abstract class RoomObject extends BufferObject {
 	[Tick]?: ProcessorSpecification<this>['tick'];
 }
 
-export const interceptors = checkCast<Interceptor>()({
-	members: { id: Id.interceptors },
-	overlay: RoomObject,
-});
+export const interceptors = {
+	RoomObject: checkCast<Interceptor>()({
+		members: { id: Id.interceptors },
+		overlay: RoomObject,
+	}),
+};
+
+export const schemaFormat = { RoomObject: format };

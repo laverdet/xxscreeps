@@ -46,11 +46,15 @@ export class StructureController extends Structure.Structure {
 	}
 }
 
-export const interceptors = checkCast<Interceptor>()({
-	overlay: StructureController,
-	members: {
-		downgradeTime: { symbol: DowngradeTime },
-		progress: { symbol: Progress },
-		upgradeBlockedTime: { symbol: UpgradeBlockedTime },
-	},
-});
+export const interceptors = {
+	StructureController: checkCast<Interceptor>()({
+		overlay: StructureController,
+		members: {
+			downgradeTime: { symbol: DowngradeTime },
+			progress: { symbol: Progress },
+			upgradeBlockedTime: { symbol: UpgradeBlockedTime },
+		},
+	}),
+};
+
+export const schemaFormat = { StructureController: format };

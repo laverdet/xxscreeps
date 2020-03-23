@@ -14,6 +14,9 @@ declare global {
 		[key in string]?: Type;
 	};
 
+	type UnionToIntersection<Union> =
+		(Union extends any ? (key: Union) => void : never) extends ((key: infer Intersection) => void) ? Intersection : never;
+
 	// Type that's safe to loosely compare to true/false without weirdness like '' or NaN or 0
 	type LooseBoolean = boolean | object | null | undefined;
 

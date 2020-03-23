@@ -36,6 +36,9 @@ export function bindInterceptorsToSchema(
 ): BoundInterceptorSchema {
 	const map: BoundInterceptorSchema = new WeakMap();
 	for (const [ key, interceptor ] of Object.entries(interceptorSchema)) {
+		if (!(key in schema)) {
+			throw new Error(`Schema error with key: ${key}`);
+		}
 		map.set(schema[key]!, interceptor);
 	}
 	return map;

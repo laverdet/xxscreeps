@@ -93,9 +93,13 @@ export class Room extends BufferObject {
 	}
 }
 
-export const interceptors = checkCast<Interceptor>()({
-	members: {
-		objects: { symbol: Objects },
-	},
-	overlay: Room,
-});
+export const interceptors = {
+	Room: checkCast<Interceptor>()({
+		members: {
+			objects: { symbol: Objects },
+		},
+		overlay: Room,
+	}),
+};
+
+export const schemaFormat = { Room: format };

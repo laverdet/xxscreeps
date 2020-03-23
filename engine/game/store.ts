@@ -132,13 +132,17 @@ export abstract class Store extends BufferObjectWithResourcesType {
 	[CapacityByResource]?: Map<ResourceType, number>;
 }
 
-export const interceptors = checkCast<Interceptor>()({
-	members: {
-		amount: { symbol: Amount },
-		capacity: { symbol: Capacity },
-		resources: { symbol: Resources },
-		restricted: { symbol: Restricted },
-		singleResource: { symbol: SingleResource },
-	},
-	overlay: Store,
-});
+export const interceptors = {
+	Store: checkCast<Interceptor>()({
+		members: {
+			amount: { symbol: Amount },
+			capacity: { symbol: Capacity },
+			resources: { symbol: Resources },
+			restricted: { symbol: Restricted },
+			singleResource: { symbol: SingleResource },
+		},
+		overlay: Store,
+	}),
+};
+
+export const schemaFormat = { Store: format };
