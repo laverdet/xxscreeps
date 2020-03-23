@@ -12,10 +12,10 @@ export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owne
 		id: generateId(),
 		pos,
 		effects: [],
+		carry: Store.create(carryCapacity),
 		fatigue: 0,
 		hits: body.length,
 		name,
-		store: Store.create(carryCapacity),
 		[Creep.AgeTime]: 0,
 		[Creep.Owner]: owner,
 	});

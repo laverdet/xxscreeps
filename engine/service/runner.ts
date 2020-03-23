@@ -27,14 +27,26 @@ export default async function() {
 	let gameTime = -1;
 	runnerChannel.publish({ type: 'runnerConnected' });
 	try {
+		const sandboxes = new Map<string, Sandbox>();
 		for await (const message of runnerChannel) {
 
 			if (message.type === 'processUsers') {
 				gameTime = message.time;
 				usersQueue.version(gameTime);
 				for await (const userId of usersQueue) {
-					const codeBlob = await blobStorage.load(`code/${userId}`);
-					const userCode = readCode(BufferView.fromTypedArray(codeBlob), 0);
+					const sandbox = await async function() {
+						// Use cached sandbox
+						const existing = sandboxes.get(userId);
+						if (existing) {
+							return existing;
+						}
+						// Generate a new one
+						const codeBlob = await blobStorage.load(`code/${userId}`);
+						const userCode = readCode(BufferView.fromTypedArray(codeBlob), 0);
+						const sandbox = await Sandbox.create(userId, userCode);
+						sandboxes.set(userId, sandbox);
+						return sandbox;
+					}();
 
 					// Load visible rooms for this user
 					const { visibleRooms } = gameMetadata.users.get(userId)!;
@@ -42,8 +54,7 @@ export default async function() {
 						blobStorage.load(`ticks/${gameTime}/${roomName}`),
 					));
 
-					// Create sandbox and run code
-					const sandbox = await Sandbox.create(userId, userCode);
+					// Run user code
 					const result = await sandbox.run(gameTime, roomBlobs);
 
 					// Save intent blobs

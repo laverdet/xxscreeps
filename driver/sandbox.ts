@@ -45,7 +45,6 @@ export class Sandbox {
 
 	async run(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 		const result = await this.tick.apply(undefined, [ time, roomBlobs ], { arguments: { copy: true }, result: { copy: true } });
-		this.isolate.dispose(); // obviously temporary
 		return {
 			intents: result[0] as Dictionary<SharedArrayBuffer>,
 		};

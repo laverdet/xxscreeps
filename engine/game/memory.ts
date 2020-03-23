@@ -1,4 +1,9 @@
 declare const globalThis: any;
+declare global {
+	let Memory: any;
+	let RawMemory: { get: typeof get; set: typeof set };
+}
+
 const kMemoryGrowthSize = 1024;
 const kMemoryMaxLength = 2 * 1024 * 1024;
 
@@ -40,7 +45,7 @@ export function flush() {
 				}
 				// Leave a little wiggle room
 				const size = Math.min(kMemoryMaxLength, string.length + kMemoryGrowthSize);
-				memory = new Uint16Array(new SharedArrayBuffer(size));
+				memory = new Uint16Array(new SharedArrayBuffer(size + 1 & ~1));
 			}
 			// Copy string into buffer
 			for (let ii = 0; ii < string.length; ++ii) {
@@ -57,13 +62,9 @@ export function initialize(value: Uint16Array) {
 	setMemoryHook();
 }
 
-const memoryConfig = {
-	configurable: true,
-	enumerable: true,
-};
 function setMemoryHook() {
 	Object.defineProperty(globalThis, 'Memory', {
-		...memoryConfig,
+		configurable: true,
 		get() {
 			let value = lastJson;
 			if (value === undefined) {
@@ -74,7 +75,7 @@ function setMemoryHook() {
 				}
 			}
 			Object.defineProperty(globalThis, 'Memory', {
-				...memoryConfig,
+				configurable: true,
 				value,
 			});
 			json = value;

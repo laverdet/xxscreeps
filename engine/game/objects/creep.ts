@@ -14,12 +14,12 @@ export const format = withType<Creep>(checkCast<Format>()({
 	[Variant]: 'creep',
 	ageTime: 'int32',
 	// body: makeVector({ boost: 'uint8', type: 'uint8', hits: 'uint8' })
+	carry: Store.format,
 	fatigue: 'int16',
 	hits: 'int16',
 	name: 'string',
 	owner: Id.format,
 	// saying: ...
-	store: Store.format,
 }));
 
 export class Creep extends RoomObject.RoomObject {

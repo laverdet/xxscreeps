@@ -48,10 +48,10 @@ export class StructureSpawn extends Structure.Structure {
 		);
 	}
 
-	spawnCreep(body: any, name: any, options: SpawnCreepOptions = {}) {
+	spawnCreep(body: any, name: string, options: SpawnCreepOptions = {}) {
 
 		// Check name is valid and does not already exist
-		if (name == false || typeof options !== 'object') {
+		if (typeof name !== 'string' || name === '' || typeof options !== 'object') {
 			return C.ERR_INVALID_ARGS;
 		}
 		if (Game.creeps[name] !== undefined || gameContext.createdCreepNames.has(name)) {
@@ -96,7 +96,9 @@ export class StructureSpawn extends Structure.Structure {
 
 		gameContext.createdCreepNames.add(name);
 
-		// TODO: memory
+		if (options.memory !== undefined) {
+			(Memory.creeps ?? (Memory.creeps = {}))[name] = options.memory;
+		}
 
 		// TODO: fake creep object
 

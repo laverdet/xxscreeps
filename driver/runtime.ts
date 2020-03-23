@@ -82,7 +82,7 @@ export function initialize(isolate: ivm.Isolate, context: ivm.Context, userId: s
 			module.exports.loop = () => module.exports.loop = loop;
 		}
 		// Cache executed module and release code string (maybe it frees memory?)
-		cache[name] = module;
+		cache[name] = module.exports;
 		delete modulesCode[name];
 		return module.exports;
 	};
@@ -98,6 +98,7 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 	global.Game = new Game(time, rooms);
 	// Run player loop
 	require('main').loop();
+	const memoryString = Memory.flush();
 	// Return JSON'd intents
 	const intents = function() {
 		const intents = Object.create(null);
