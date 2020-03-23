@@ -4,13 +4,12 @@ import { getReader } from '~/engine/schema/read';
 import { Sandbox } from '~/driver/sandbox';
 import { BufferView } from '~/engine/schema/buffer-view';
 import { mapInPlace, filterInPlace } from '~/lib/utility';
-import { topLevelTask } from '~/lib/task';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
 import { RunnerMessage } from '.';
 
-topLevelTask(async() => {
+export default async function() {
 
 	// Connect to main & storage
 	const blobStorage = await BlobStorage.connect();
@@ -68,4 +67,4 @@ topLevelTask(async() => {
 		usersQueue.disconnect();
 		runnerChannel.disconnect();
 	}
-});
+}

@@ -43,6 +43,7 @@ type WorkerMessage = RequestMessage | ConnectMessage | DisconnectMessage | Unkno
  * types in this class are a mess but at least it's contained to this file and doesn't leak out into
  * the rest of the project.
  */
+const instancesByName = new Map<string, any>();
 const respondersByName = new Map<string, Responder>();
 const respondersByClientId = new Map<string, Responder>();
 const unlistenByClientId = new Map<string, () => void>();
@@ -74,6 +75,7 @@ export abstract class Responder {
 		// Instantiate a new ResponderHost instance.. violates `abstract`!
 		const responder = new (ResponderHost as any)(name) as ResponderHost;
 		const instance = await factory();
+		instancesByName.set(name, instance);
 		// Link up methods from both classes
 		(instance as any).disconnect = responder.disconnect.bind(responder);
 		responder.request = instance.request.bind(instance);
@@ -150,6 +152,7 @@ export abstract class Responder {
 }
 
 export abstract class ResponderHost extends Responder {
+	refs = 1;
 	constructor(protected name: string) {
 		super();
 		assert(isMainThread);
@@ -164,12 +167,17 @@ export abstract class ResponderHost extends Responder {
 		if (responder === undefined) {
 			return Promise.reject(new Error(`Responder: ${name} does not exist`));
 		} else {
-			return Promise.resolve(responder);
+			++responder.refs;
+			const instance = instancesByName.get(name);
+			return Promise.resolve(instance);
 		}
 	}
 
 	disconnect() {
-		respondersByName.delete(this.name);
+		if (--this.refs === 0) {
+			respondersByName.delete(this.name);
+			instancesByName.delete(this.name);
+		}
 	}
 }
 

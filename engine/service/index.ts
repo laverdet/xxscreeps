@@ -1,3 +1,5 @@
+export type ServiceMessage = { type: 'mainConnected' };
+
 type RunnerConnectedMessage = { type: 'runnerConnected' };
 type RunnerProcessUsers = { type: 'processUsers'; time: number };
 type RunnerProcessedUser = { type: 'processedUser'; userId: string; roomNames: string[] };

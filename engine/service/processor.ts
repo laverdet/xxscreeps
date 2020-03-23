@@ -2,7 +2,6 @@ import assert from 'assert';
 import * as Schema from '~/engine/game/schema';
 import { getReader, getWriter } from '~/engine/schema';
 import { BufferView } from '~/engine/schema/buffer-view';
-import { topLevelTask } from '~/lib/task';
 import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
@@ -12,7 +11,7 @@ import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
 import { ProcessorMessage, ProcessorQueueElement } from '.';
 
-topLevelTask(async() => {
+export default async function() {
 	// Bind all the processor intent methods to game objec prototpyes.
 	// For example Creep.prototype[Process] = () => ...
 	bindAllProcessorIntents();
@@ -90,4 +89,4 @@ topLevelTask(async() => {
 		processorChannel.disconnect();
 		roomsQueue.disconnect();
 	}
-});
+}

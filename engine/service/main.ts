@@ -1,29 +1,23 @@
-import * as Path from 'path';
 import * as DatabaseSchema from '~/engine/metabase';
 import { getReader, BufferView } from '~/engine/schema';
-import { topLevelTask } from '~/lib/task';
 import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
-import { Worker } from '~/lib/worker-threads';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
-import { RunnerMessage, ProcessorMessage, ProcessorQueueElement } from '.';
+import { RunnerMessage, ProcessorMessage, ProcessorQueueElement, ServiceMessage } from '.';
 
-topLevelTask(async() => {
+export default async function() {
 	// Open channels and connect to storage
 	const blobStorage = await BlobStorage.create();
 	const roomsQueue = await Queue.create<ProcessorQueueElement>('processRooms');
 	const usersQueue = await Queue.create('runnerUsers');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
+	Channel.publish<ServiceMessage>('service', { type: 'mainConnected' });
 
 	// Load current game state
 	const gameReader = getReader(DatabaseSchema.schema.Game, DatabaseSchema.interceptorSchema);
 	const gameMetadata = gameReader(BufferView.fromTypedArray(await blobStorage.load('game')), 0);
-
-	// Start worker threads
-	const processorWorkers = Array(1).fill(null).map(() => new Worker(Path.join(__dirname, 'processor.ts')));
-	const runnerWorkers = Array(1).fill(null).map(() => new Worker(Path.join(__dirname, 'runner.ts')));
 
 	// Run main game processing loop
 	let gameTime = 1;
@@ -102,11 +96,5 @@ topLevelTask(async() => {
 		blobStorage.disconnect();
 		roomsQueue.disconnect();
 		processorChannel.disconnect();
-		for (const processor of processorWorkers) {
-			await processor.terminate();
-		}
-		for (const runner of runnerWorkers) {
-			await runner.terminate();
-		}
 	}
-});
+}

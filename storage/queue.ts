@@ -50,8 +50,10 @@ class QueueHost<Type> extends Queue<Type> {
 	}
 
 	version(version: any) {
-		this.currentVersion = version;
-		this.queue.splice(0, this.queue.length);
+		if (this.currentVersion !== version) {
+			this.currentVersion = version;
+			this.queue.splice(0, this.queue.length);
+		}
 	}
 }
 
