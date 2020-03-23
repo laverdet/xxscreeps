@@ -12,6 +12,7 @@ function getRuntimeSource() {
 
 export class Sandbox {
 	constructor(
+		private readonly isolate: ivm.Isolate,
 		private readonly tick: ivm.Reference<Function>,
 	) {}
 
@@ -39,10 +40,14 @@ export class Sandbox {
 			}(),
 		]);
 
-		return new Sandbox(tick as ivm.Reference<any>);
+		return new Sandbox(isolate, tick as ivm.Reference<any>);
 	}
 
 	async run(time: number, roomBlobs: Readonly<Uint8Array>[]) {
-		await this.tick.apply(undefined, [ time, roomBlobs ], { arguments: { copy: true } });
+		const result = await this.tick.apply(undefined, [ time, roomBlobs ], { arguments: { copy: true }, result: { copy: true } });
+		this.isolate.dispose(); // obviously temporary
+		return {
+			intents: result[0] as Dictionary<SharedArrayBuffer>,
+		};
 	}
 }

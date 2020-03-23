@@ -1,4 +1,4 @@
-import { checkCast, Format, Interceptor } from '~/engine/schema';
+import { checkCast, makeVector, withType, Format, FormatShape, Interceptor } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
 
 export const format = checkCast<Format>()({
@@ -10,8 +10,17 @@ export const format = checkCast<Format>()({
 	registeredDate: 'int32',
 	active: 'bool',
 	badge: 'string',
+	visibleRooms: withType<Set<string>>((makeVector('string'))),
 });
 
+export type User = FormatShape<typeof format>;
+
 export const interceptors = checkCast<Interceptor>()({
-	members: { id: Id.interceptors },
+	members: {
+		id: Id.interceptors,
+		visibleRooms: {
+			compose: (roomNames: string[]) => new Set(roomNames),
+			decompose: (roomNames: Set<string>) => roomNames.values(),
+		},
+	},
 });

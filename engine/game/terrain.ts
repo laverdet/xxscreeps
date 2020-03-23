@@ -1,6 +1,6 @@
 import { checkCast, makeArray, withType, BufferView, Format, Interceptor } from '~/engine/schema';
 const { apply } = Reflect;
-const { Uint8Array } = global;
+const { Uint8Array } = globalThis;
 const { set } = Uint8Array.prototype;
 
 export const kTerrainWall = 1;

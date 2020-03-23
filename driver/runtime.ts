@@ -13,8 +13,6 @@ import { finalizePrototypeGetters } from '~/engine/game/schema';
 import { UserCode } from '~/engine/metabase/code';
 import { BufferView } from '~/engine/schema/buffer-view';
 
-const { stringify } = JSON;
-
 declare const global: any;
 
 // Global lodash compatibility
@@ -91,5 +89,24 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 	// Run player loop
 	require('main').loop();
 	// Return JSON'd intents
-	return stringify(gameContext.intents);
+	const intents = function() {
+		const intents = Object.create(null);
+		const { intentsByRoom } = gameContext.intents;
+		const roomNames = Object.keys(intentsByRoom);
+		const { length } = roomNames;
+		for (let ii = 0; ii < length; ++ii) {
+			const roomName = roomNames[ii];
+			const json = JSON.stringify(intentsByRoom[roomName]);
+			const buffer = new ArrayBuffer(json.length * 2);
+			const uint16 = new Uint16Array(buffer);
+			for (let ii = 0; ii < json.length; ++ii) {
+				uint16[ii] = json.charCodeAt(ii);
+			}
+			intents[roomName] = buffer;
+		}
+		return intents;
+	}();
+	return [
+		intents,
+	];
 }

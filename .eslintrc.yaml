@@ -61,7 +61,6 @@ rules:
   no-extra-label: warn
   no-fallthrough: warn
   no-lone-blocks: warn
-  no-loop-func: error
   no-multi-spaces: warn
   no-multi-str: warn
   no-new-wrappers: warn
@@ -208,7 +207,7 @@ rules:
   '@typescript-eslint/prefer-regexp-exec': warn
   '@typescript-eslint/prefer-string-starts-ends-with': warn
   '@typescript-eslint/restrict-plus-operands': warn
-  '@typescript-eslint/strict-boolean-expressions': [ warn, { ignoreRhs: true } ]
+  '@typescript-eslint/strict-boolean-expressions': [ warn, { allowNullable: true, allowSafe: true, ignoreRhs: true } ]
   '@typescript-eslint/switch-exhaustiveness-check': warn
   '@typescript-eslint/type-annotation-spacing': warn
   '@typescript-eslint/unified-signatures': warn

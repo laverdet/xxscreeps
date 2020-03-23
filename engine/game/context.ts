@@ -5,13 +5,13 @@ const kCpuCost = 0.2;
 
 export class IntentManager {
 	cpu = 0;
-	intentsById = create(null);
+	intentsByRoom = create(null);
 
 	save<Type extends RoomObject>(object: Type, action: string, meta: any) {
-		let intents = this.intentsById[object.id];
-		if (intents === undefined) {
-			intents = this.intentsById[object.id] = Object.create(null);
-		}
+		const { id } = object;
+		const { roomName } = object.pos;
+		const intentsForRoom = this.intentsByRoom[roomName] ?? (this.intentsByRoom[roomName] = create(null));
+		const intents = intentsForRoom[id] ?? (intentsForRoom[id] = create(null));
 		if (intents[action] === undefined) {
 			this.cpu += kCpuCost;
 		}

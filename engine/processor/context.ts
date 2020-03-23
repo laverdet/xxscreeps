@@ -1,5 +1,6 @@
+import { gameContext } from '~/engine/game/context';
 import { Room, Objects } from '~/engine/game/room';
-import { Process } from './bind';
+import { Process, Tick } from './bind';
 
 export class ProcessorContext {
 	constructor(
@@ -7,9 +8,20 @@ export class ProcessorContext {
 		public room: Room,
 	) {}
 
-	process() {
+	intents(user: string, intentsById: Dictionary<Dictionary<object>>) {
+		gameContext.createdCreepNames = new Set;
+		gameContext.userId = user;
 		for (const object of this.room[Objects]) {
-			object[Process]?.(this);
+			const intents = intentsById[object.id];
+			if (intents !== undefined) {
+				object[Process]?.call(object, intents, this);
+			}
+		}
+	}
+
+	tick() {
+		for (const object of this.room[Objects]) {
+			object[Tick]?.call(object, this);
 		}
 	}
 }

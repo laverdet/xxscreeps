@@ -1,3 +1,4 @@
+import assert from 'assert';
 import * as Schema from '~/engine/game/schema';
 import { getReader, getWriter } from '~/engine/schema';
 import { BufferView } from '~/engine/schema/buffer-view';
@@ -9,7 +10,7 @@ import { Game } from '~/engine/game/game';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
-import { ProcessorMessage } from '.';
+import { ProcessorMessage, ProcessorQueueElement } from '.';
 
 topLevelTask(async() => {
 	// Bind all the processor intent methods to game objec prototpyes.
@@ -27,7 +28,7 @@ topLevelTask(async() => {
 
 	// Connect to main & storage
 	const blobStorage = await BlobStorage.connect();
-	const roomsQueue = await Queue.connect('processRooms');
+	const roomsQueue = await Queue.connect<ProcessorQueueElement>('processRooms');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 
 	// Start the processing loop
@@ -41,17 +42,32 @@ topLevelTask(async() => {
 				// have run their code
 				gameTime = message.time;
 				roomsQueue.version(gameTime);
-				for await (const roomName of roomsQueue) {
-					// Read room from storage
-					const roomBlob = await blobStorage.load(`ticks/${gameTime}/${roomName}`);
-					const room = readRoom(BufferView.fromTypedArray(roomBlob), 0);
-					// Process
-					(global as any).Game = new Game(gameTime, [ room ]);
-					const context = new ProcessorContext(gameTime, room);
-					context.process();
+				for await (const { room, users } of roomsQueue) {
+					// Read room data and intents from storage
+					const [ roomBlob, intents ] = await Promise.all([
+						await blobStorage.load(`ticks/${gameTime}/${room}`),
+						Promise.all(mapInPlace(users, async user => ({
+							user,
+							intents: await blobStorage.load(`intents/${room}/${user}`),
+						}))),
+					]);
+					const deleteIntentBlobs = Promise.all(mapInPlace(intents, ({ user }) =>
+						blobStorage.delete(`intents/${room}/${user}`)));
+					// Process the room
+					const roomInstance = readRoom(BufferView.fromTypedArray(roomBlob), 0);
+					(global as any).Game = new Game(gameTime, [ roomInstance ]);
+					const context = new ProcessorContext(gameTime, roomInstance);
+					for (const intentInfo of intents) {
+						assert.equal(intentInfo.intents.byteOffset, 0);
+						const uint16 = new Uint16Array(intentInfo.intents.buffer);
+						const intents = JSON.parse(String.fromCharCode(...uint16));
+						context.intents(intentInfo.user, intents);
+					}
+					context.tick();
 					// Save and notify main service of completion
-					processedRooms.set(roomName, context);
-					processorChannel.publish({ type: 'processedRoom', roomName });
+					await deleteIntentBlobs;
+					processedRooms.set(room, context);
+					processorChannel.publish({ type: 'processedRoom', roomName: room });
 				}
 
 			} else if (message.type === 'flushRooms') {

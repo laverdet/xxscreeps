@@ -3,7 +3,7 @@ import * as DatabaseSchema from '~/engine/metabase';
 import { getReader } from '~/engine/schema/read';
 import { Sandbox } from '~/driver/sandbox';
 import { BufferView } from '~/engine/schema/buffer-view';
-import { mapInPlace } from '~/lib/utility';
+import { mapInPlace, filterInPlace } from '~/lib/utility';
 import { topLevelTask } from '~/lib/task';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
@@ -37,13 +37,28 @@ topLevelTask(async() => {
 					const codeBlob = await blobStorage.load(`code/${userId}`);
 					const userCode = readCode(BufferView.fromTypedArray(codeBlob), 0);
 
-					// eslint-disable-next-line no-loop-func
-					const roomBlobs = await Promise.all(mapInPlace(gameMetadata.activeRooms, (roomName: string) =>
-						blobStorage.load(`ticks/${gameTime}/${roomName}`)));
+					// Load visible rooms for this user
+					const { visibleRooms } = gameMetadata.users.get(userId)!;
+					const roomBlobs = await Promise.all(mapInPlace(visibleRooms, roomName =>
+						blobStorage.load(`ticks/${gameTime}/${roomName}`),
+					));
 
+					// Create sandbox and run code
 					const sandbox = await Sandbox.create(userId, userCode);
-					await sandbox.run(gameTime, roomBlobs);
-					runnerChannel.publish({ type: 'processedUser', id: userId });
+					const result = await sandbox.run(gameTime, roomBlobs);
+
+					// Save intent blobs
+					const savedRoomNames = mapInPlace(Object.entries(result.intents), async([ roomName, intents ]) => {
+						if (visibleRooms.has(roomName)) {
+							await blobStorage.save(`intents/${roomName}/${userId}`, new Uint8Array(intents!));
+							return roomName;
+						} else {
+							console.error(`Runtime sent intent for non-visible room. User: ${userId}; Room: ${roomName}; Tick: ${gameTime}`);
+						}
+					});
+					const roomNames = [ ...filterInPlace(await Promise.all(savedRoomNames),
+						(roomName): roomName is string => roomName !== undefined) ];
+					runnerChannel.publish({ type: 'processedUser', userId, roomNames });
 				}
 			}
 		}

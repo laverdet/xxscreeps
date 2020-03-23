@@ -41,6 +41,7 @@ topLevelTask(async() => {
 	}
 
 	// Collect initial room data
+	const roomsByUser: Dictionary<Set<string>> = {};
 	const rooms = new Map(collections.rooms.map(room => ({
 		name: room._id,
 		[Room.Objects]: [] as any[],
@@ -95,6 +96,11 @@ topLevelTask(async() => {
 		}
 	}).forEach(roomObject => {
 		if (roomObject !== undefined) {
+			const owner: string = (roomObject as any)[Structure.Owner];
+			if (owner !== undefined && owner.length > 1) {
+				const rooms = roomsByUser[owner] ?? (roomsByUser[owner] = new Set);
+				rooms.add(roomObject.pos.roomName);
+			}
 			rooms.get(roomObject.pos.roomName)![Room.Objects].push(roomObject);
 		}
 	});
@@ -134,6 +140,7 @@ topLevelTask(async() => {
 		cpuAvailable: user.cpuAvailable,
 		gcl: user.gcl,
 		badge: user.badge === undefined ? '{}' : JSON.stringify(user.badge),
+		visibleRooms: (roomsByUser[user._id] ?? []),
 	}));
 
 	// Save Game object

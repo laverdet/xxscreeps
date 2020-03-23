@@ -7,6 +7,7 @@ export type StorageRecord = Record<ResourceType, number>;
 
 export const Amount = Symbol('amount');
 export const Capacity = Symbol('capacity');
+export const CapacityByResource: unique symbol = Symbol('capacityByResource');
 export const Resources = Symbol('resources');
 export const Restricted = Symbol('restricted');
 export const SingleResource = Symbol('singleResource');
@@ -26,6 +27,11 @@ export const format = withType<Store>(checkCast<Format>()({
 	restricted: 'bool',
 	singleResource: enumFormat,
 }));
+
+// Adds resource types information to `Store` class. No changes from `extends BufferObject` as far
+// as JS is concerned
+const BufferObjectWithResourcesType = BufferObject as any as new (view: BufferView, offset: number) =>
+	(BufferObject & ({ energy: number } & Partial<Record<ResourceType, number>>));
 
 /**
  * An object that can contain resources in its cargo.
@@ -47,7 +53,7 @@ export const format = withType<Store>(checkCast<Format>()({
  * console.log(creep.store[RESOURCE_ENERGY]);
  * ```
  */
-export abstract class Store extends BufferObject {
+export abstract class Store extends BufferObjectWithResourcesType {
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
 
@@ -55,20 +61,20 @@ export abstract class Store extends BufferObject {
 		if (singleResource === undefined) {
 			// Create capacity record
 			if (this[Restricted]) {
-				this.#capacityByResource = new Map;
+				this[CapacityByResource] = new Map;
 			}
 
 			// Load up resources onto this object as properties
 			for (const resource of this[Resources]) {
-				this.#capacityByResource?.set(resource.type!, resource.capacity);
+				this[CapacityByResource]?.set(resource.type!, resource.capacity);
 				if (resource.amount !== 0) {
-					(this as any as StorageRecord)[resource.type!] = resource.amount;
+					this[resource.type!] = resource.amount;
 				}
 			}
 		} else {
 			// This store can only ever hold one type of resource so we can skip the above mess. This is
 			// true for spawns, extensions and a bunch of others.
-			(this as any as StorageRecord)[singleResource] = this[Amount];
+			this[singleResource] = this[Amount];
 		}
 	}
 
@@ -81,10 +87,10 @@ export abstract class Store extends BufferObject {
 	getCapacity(resourceType: typeof C.RESOURCE_ENERGY): number;
 	getCapacity(resourceType?: ResourceType): number | null;
 	getCapacity(resourceType?: ResourceType) {
-		if (resourceType === undefined || this.#capacityByResource === undefined) {
+		if (resourceType === undefined || this[CapacityByResource] === undefined) {
 			return this[Capacity];
 		} else {
-			return this.#capacityByResource.get(resourceType) ?? null;
+			return this[CapacityByResource]!.get(resourceType) ?? null;
 		}
 	}
 
@@ -104,26 +110,26 @@ export abstract class Store extends BufferObject {
 	 */
 	getUsedCapacity(resourceType?: ResourceType) {
 		if (resourceType === undefined) {
-			if (this.#capacityByResource === undefined) {
+			if (this[CapacityByResource] === undefined) {
 				return this[Amount];
 			} else {
 				return null;
 			}
-		} else if (this.#capacityByResource === undefined) {
+		} else if (this[CapacityByResource] === undefined) {
 			return this[Capacity];
 		} else {
-			return this.#capacityByResource.get(resourceType) ?? 0;
+			return this[CapacityByResource]!.get(resourceType) ?? 0;
 		}
 	}
 
-	[C.RESOURCE_ENERGY] = 0;
+	energy = 0;
 
-	private [Amount]!: number;
-	private [Capacity]!: number;
-	private [Resources]!: FormatShape<typeof storedResourceFormat>;
-	private [Restricted]: boolean;
-	private [SingleResource]?: ResourceType;
-	#capacityByResource?: Map<ResourceType, number>;
+	protected [Amount]!: number;
+	protected [Capacity]!: number;
+	protected [Resources]!: FormatShape<typeof storedResourceFormat>;
+	protected [Restricted]: boolean;
+	protected [SingleResource]?: ResourceType;
+	[CapacityByResource]?: Map<ResourceType, number>;
 }
 
 export const interceptors = checkCast<Interceptor>()({

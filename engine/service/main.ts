@@ -2,17 +2,17 @@ import * as Path from 'path';
 import * as DatabaseSchema from '~/engine/metabase';
 import { getReader, BufferView } from '~/engine/schema';
 import { topLevelTask } from '~/lib/task';
-import { mapInPlace } from '~/lib/utility';
+import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
 import { Worker } from '~/lib/worker-threads';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
-import { RunnerMessage, ProcessorMessage } from '.';
+import { RunnerMessage, ProcessorMessage, ProcessorQueueElement } from '.';
 
 topLevelTask(async() => {
 	// Open channels and connect to storage
 	const blobStorage = await BlobStorage.create();
-	const roomsQueue = await Queue.create('processRooms');
+	const roomsQueue = await Queue.create<ProcessorQueueElement>('processRooms');
 	const usersQueue = await Queue.create('runnerUsers');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
@@ -27,15 +27,12 @@ topLevelTask(async() => {
 
 	// Run main game processing loop
 	let gameTime = 1;
-	const activeUsers = gameMetadata.users.filter(user => {
+	const activeUsers = [ ...mapInPlace(filterInPlace(gameMetadata.users.values(), user => {
 		if (user.id === '2' || user.id === '3') {
 			return false;
 		}
 		return user.active;
-	}).map(user => user.id);
-	const processedRooms = new Set<string>();
-	const flushedRooms = new Set<string>();
-	const processedUsers = new Set<string>();
+	}), user => user.id) ];
 	try {
 
 		do {
@@ -45,13 +42,18 @@ topLevelTask(async() => {
 			runnerChannel.publish({ type: 'processUsers', time: gameTime });
 
 			// Wait for runners to finish
+			const processedUsers = new Set<string>();
+			const intentsByRoom = new Map<string, Set<string>>();
 			for await (const message of runnerChannel) {
 				if (message.type === 'runnerConnected') {
 					runnerChannel.publish({ type: 'processUsers', time: gameTime });
 
 				} else if (message.type === 'processedUser') {
-					processedUsers.add(message.id);
-					if (gameMetadata.activeRooms.size === processedUsers.size) {
+					processedUsers.add(message.userId);
+					for (const roomName of message.roomNames) {
+						getOrSet(intentsByRoom, roomName, () => new Set).add(message.userId);
+					}
+					if (activeUsers.length === processedUsers.size) {
 						break;
 					}
 				}
@@ -59,10 +61,15 @@ topLevelTask(async() => {
 
 			// Add rooms to queue and notify processors
 			roomsQueue.version(gameTime);
-			await roomsQueue.push([ ...gameMetadata.activeRooms.values() ]);
+			await roomsQueue.push([ ...mapInPlace(gameMetadata.activeRooms.values(), room => ({
+				room,
+				users: [ ...intentsByRoom.get(room) ?? [] ],
+			})) ]);
 			processorChannel.publish({ type: 'processRooms', time: gameTime });
 
 			// Handle incoming processor messages
+			const processedRooms = new Set<string>();
+			const flushedRooms = new Set<string>();
 			for await (const message of processorChannel) {
 				if (message.type === 'processorConnected') {
 					processorChannel.publish({ type: 'processRooms', time: gameTime });
@@ -87,8 +94,6 @@ topLevelTask(async() => {
 				blobStorage.delete(`ticks/${gameTime}/${roomName}`)));
 
 			// Set up for next tick
-			processedRooms.clear();
-			flushedRooms.clear();
 			console.log(gameTime);
 			++gameTime;
 		} while (true);

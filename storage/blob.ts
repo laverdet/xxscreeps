@@ -4,13 +4,18 @@ import { mapInPlace } from '~/lib/utility';
 import Config from '~/engine/config';
 import { Responder } from './responder';
 
+const fragmentNameWhitelist = /^[a-zA-Z0-9/-]+$/;
+
 function copy(buffer: Readonly<Uint8Array>) {
-	const copy = new Uint8Array(new SharedArrayBuffer(buffer.length));
+	// TODO: SharedArrayBuffer is crashing nodejs. Either switch to explicitly transeferred buffers or
+	// figure something out.
+	const copy = new Uint8Array(new ArrayBuffer(buffer.length));
 	copy.set(buffer);
 	return copy;
 }
 
 export abstract class BlobStorage {
+	abstract delete(fragment: string): Promise<void>;
 	abstract load(fragment: string): Promise<Readonly<Uint8Array>>;
 	abstract save(fragment: string, blob: Uint8Array): Promise<void>;
 
@@ -29,7 +34,9 @@ export abstract class BlobStorage {
 	}
 
 	request(method: string, payload?: any): any {
-		if (method === 'load') {
+		if (method === 'delete') {
+			return this.delete(payload);
+		} else if (method === 'load') {
 			return this.load(payload);
 		} else if (method === 'save') {
 			return this.save(payload.fragment, payload.blob);
@@ -46,6 +53,13 @@ class BlobStorageHost extends BlobStorage {
 
 	constructor(private readonly path: string) {
 		super();
+	}
+
+	check(fragment: string) {
+		// Safety check before writing random file names based on user input
+		if (!fragmentNameWhitelist.test(fragment)) {
+			throw new Error(`Unsafe blob id: ${fragment}`);
+		}
 	}
 
 	async flush() {
@@ -102,6 +116,7 @@ class BlobStorageHost extends BlobStorage {
 	}
 
 	async delete(fragment: string) {
+		this.check(fragment);
 		// If it hasn't been written to disk yet it will just be removed from the buffer
 		if (this.bufferedBlobs.has(fragment)) {
 			this.bufferedBlobs.delete(fragment);
@@ -112,6 +127,7 @@ class BlobStorageHost extends BlobStorage {
 	}
 
 	async load(fragment: string): Promise<Readonly<Uint8Array>> {
+		this.check(fragment);
 		// Check in-memory buffer
 		const buffered = this.bufferedBlobs.get(fragment);
 		if (buffered !== undefined) {
@@ -133,12 +149,17 @@ class BlobStorageHost extends BlobStorage {
 	}
 
 	save(fragment: string, blob: Uint8Array) {
+		this.check(fragment);
 		this.bufferedBlobs.set(fragment, blob.buffer instanceof SharedArrayBuffer ? blob : copy(blob));
 		return Promise.resolve();
 	}
 }
 
 class BlobStorageClient extends BlobStorage {
+	delete(fragment: string): Promise<void> {
+		return this.request('delete', fragment);
+	}
+
 	load(fragment: string): Promise<Readonly<Uint8Array>> {
 		return this.request('load', fragment);
 	}

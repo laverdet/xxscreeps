@@ -14,6 +14,9 @@ declare global {
 		[key in string]?: Type;
 	};
 
+	// Type that's safe to loosely compare to true/false without weirdness like '' or NaN or 0
+	type LooseBoolean = boolean | object | null | undefined;
+
 	// Public Promise
 	type Resolver<Type = unknown> = {
 		resolve: (payload: Type) => void;

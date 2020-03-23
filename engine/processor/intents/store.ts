@@ -1,46 +1,93 @@
 import * as C from '~/engine/game/constants';
-import { Amount, Capacity, Resources, ResourceType, Restricted, SingleResource, StorageRecord } from '~/engine/game/store';
+import { Amount, Capacity, Resources, ResourceType, Restricted, SingleResource, StorageRecord, Store } from '~/engine/game/store';
+import { instantiate } from '~/lib/utility';
 
-export function create(store: StorageRecord, capacity?: number, restriction?: StorageRecord) {
-	// First determine if this is a single resource store
-	const storeEntries = Object.entries(store);
-	const restrictionEntries = restriction === undefined ? undefined : Object.entries(restriction);
-	const isSingleResource = function() {
-		if (restrictionEntries === undefined) {
-			return storeEntries.length <= 1;
-		} else if (restrictionEntries.length === 1) {
-			if (storeEntries.length > 1) {
-				return false;
-			} else if (storeEntries.length === 0) {
-				return true;
+export function subtract(this: Store, resourceType: ResourceType, amount: number) {
+
+	// Confirm there's enough resource
+	if (!(this[resourceType]! >= amount)) {
+		return false;
+	}
+
+	// Withdraw resource
+	this[resourceType] -= amount;
+	this[Amount] -= amount;
+
+	// Handle resource vector if needed
+	if (this[SingleResource] !== resourceType) {
+
+		if (this[resourceType] === 0) {
+			// Last of the resource.. maybe this can become a single resource store
+			if (resourceType !== C.RESOURCE_ENERGY) {
+				delete this[resourceType];
+			}
+			const store = this[Resources].filter(resource => resource.type !== resourceType || resource.capacity);
+			if (store.length <= 1) {
+				// Simplify memory layout
+				this[SingleResource] = store.length === 0 ? C.RESOURCE_ENERGY : store[0].type;
+				this[Resources] = [];
 			} else {
-				return storeEntries[0][0] === restrictionEntries[0][0];
+				// Remains multi-resource store
+				this[Resources] = store;
 			}
 		} else {
-			return false;
+			// Just reduce the stored resource in place
+			for (const resource of this[Resources]) {
+				if (resource.type === resourceType) {
+					resource.amount -= amount;
+					break;
+				}
+			}
 		}
-	}();
+	}
+	return true;
+}
 
-	// Generate store vector
-	const resources = isSingleResource ? [] : storeEntries.map(([ type, amount ]) =>
-		({ amount, capacity: restriction?.[type as ResourceType] ?? 0, type }),
-	);
-	if (restrictionEntries !== undefined) {
-		for (const [ type, capacity ] of restrictionEntries) {
-			if (store[type as ResourceType] === undefined) {
-				resources.push({ amount: 0, capacity, type });
+export function create(capacity: number | null, capacityByResource?: StorageRecord, store?: StorageRecord) {
+	// Build resource vector
+	const resources: { type: string; amount: number; capacity: number }[] = [];
+	if (capacityByResource) {
+		for (const [ type, capacity ] of Object.entries(capacityByResource)) {
+			resources.push({ type, amount: store?.[type as ResourceType] ?? 0, capacity });
+		}
+	}
+	if (store) {
+		for (const [ type, amount ] of Object.entries(store)) {
+			if (capacityByResource?.[type as ResourceType] === undefined) {
+				resources.push({ type, amount, capacity: capacityByResource?.[type as ResourceType] ?? 0 });
 			}
 		}
 	}
 
+	// Is single resource?
+	const singleResource =
+		resources.length === 0 ? C.RESOURCE_ENERGY :
+			resources.length === 1 ? resources[0].type :
+				undefined;
+
+	// Is restricted?
+	const isRestricted = resources.some(resource => resource.capacity !== 0);
+
+	// Calculate capacity
+	const calculatedCapacity = function() {
+		if (capacity === null) {
+			if (isRestricted) {
+				return resources.reduce((capacity, info) => info.capacity + capacity, 0);
+			} else {
+				throw new Error('`Store` missing capacity');
+			}
+		} else {
+			return capacity;
+		}
+	}();
+
 	// Return data to save
-	return {
-		[Amount]: Object.values(store).reduce((sum, amount) => sum + amount, 0),
-		[Capacity]: capacity,
-		[Resources]: resources,
-		[Restricted]: restriction !== undefined,
-		[SingleResource]: isSingleResource ?
-			(restrictionEntries?.length === 1 ? restrictionEntries[0][0] :
-				storeEntries.length === 1 ? storeEntries[0][0] : C.RESOURCE_ENERGY) : undefined,
-	};
+	return instantiate(Store, {
+		...store,
+		[Amount]: store ? Object.values(store).reduce((sum, amount) => sum + amount, 0) : 0,
+		[Capacity]: calculatedCapacity,
+		[Resources]: singleResource,
+		[Restricted]: isRestricted,
+		[SingleResource]: singleResource,
+	});
 }
