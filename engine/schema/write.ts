@@ -133,6 +133,26 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 			const enumMap = new Map(layout.enum.map((value, ii) => [ value, ii ]));
 			return (value, view, offset) => ((view.uint8[offset] = enumMap.get(value)!, 1));
 
+		} else if ('optional' in layout) {
+			// Optional types
+			const elementLayout = layout.optional;
+			const write = getWriter(elementLayout, interceptorSchema);
+			const { size } = getTraits(elementLayout);
+			const sizePlusOne = size + 1;
+			return (value, view, offset) => {
+				if (value === undefined) {
+					// Zero out the memory, including the flag
+					const end = offset + sizePlusOne;
+					for (let ii = offset; ii < end; ++ii) {
+						view.uint8[ii] = 0;
+					}
+					return sizePlusOne;
+				} else {
+					view.uint8[offset + size] = 1;
+					return write(value, view, offset) + 1;
+				}
+			};
+
 		} else if ('variant' in layout) {
 			// Variant types
 			const variantMap = new Map<string, Writer>();

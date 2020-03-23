@@ -1,8 +1,11 @@
 import * as C from '~/engine/game/constants';
+import { gameContext } from '~/engine/game/context';
 import { calcCreepCost } from '~/engine/game/helpers';
+import * as Room from '~/engine/game/room';
 import { bindProcessor } from '~/engine/processor/bind';
 import { StructureSpawn } from '~/engine/game/objects/structures/spawn';
-import * as Store from './store';
+import * as CreepProcessor from './creep';
+import * as StoreProcessor from './store';
 
 function createCreep(this: StructureSpawn, intent: any) {
 
@@ -14,9 +17,13 @@ function createCreep(this: StructureSpawn, intent: any) {
 
 	// Withdraw energy
 	const cost = calcCreepCost(intent.body);
-	if (!Store.subtract.call(this.store, C.RESOURCE_ENERGY, cost)) {
+	if (!StoreProcessor.subtract.call(this.store, C.RESOURCE_ENERGY, cost)) {
 		return false;
 	}
+
+	// Spawn it!
+	const creep = CreepProcessor.create(intent.body, this.pos, intent.name, gameContext.userId);
+	this.room[Room.Objects].push(creep);
 
 	return true;
 }

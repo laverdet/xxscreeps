@@ -24,6 +24,8 @@ export class Game {
 				this.#objects.set(object.id, object);
 				if (object instanceof StructureSpawn) {
 					this.spawns[object.name] = object;
+				} else if (object instanceof Creep) {
+					this.creeps[object.name] = object;
 				}
 			}
 		}

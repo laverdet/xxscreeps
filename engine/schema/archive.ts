@@ -34,6 +34,9 @@ function archiveLayout(
 			layout.enum.map(value => `${JSON.stringify(value)} as const`).join(', ') +
 		'] }';
 
+	} else if ('optional' in layout) {
+		return `{ optional: ${archiveLayout(schema, layout.optional, layoutToNames, depth + 1)} }`;
+
 	} else if ('variant' in layout) {
 		return '{ variant: [ ' +
 			layout.variant.map(layout =>

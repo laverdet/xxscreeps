@@ -1,8 +1,10 @@
 import { gameContext } from '~/engine/game/context';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
-
 import * as RoomObject from './room-object';
+import * as Store from '../store';
+
+declare const Memory: any;
 
 export const AgeTime = Symbol('ageTime');
 export const Owner = Symbol('owner');
@@ -17,20 +19,25 @@ export const format = withType<Creep>(checkCast<Format>()({
 	name: 'string',
 	owner: Id.format,
 	// saying: ...
-	// spawning?
-	// store: !!!
+	store: Store.format,
 }));
 
 export class Creep extends RoomObject.RoomObject {
 	get [Variant]() { return 'creep' }
+	get memory() {
+		const creeps = Memory.creeps ?? (Memory.creeps = {});
+		return creeps[this.name] ?? (creeps[this.name] = {});
+	}
 	get my() { return this[Owner] === gameContext.userId }
-	get ticksToLive() { return Game.time - this[AgeTime] }
+	get spawning() { return this[AgeTime] === 0 }
+	get ticksToLive() { return this[AgeTime] === 0 ? undefined : Game.time - this[AgeTime] }
 
 	fatigue!: number;
 	hits!: number;
 	name!: string;
-	[AgeTime]!: number;
-	[Owner]!: string;
+	store!: Store.Store;
+	protected [AgeTime]!: number;
+	protected [Owner]!: string;
 }
 
 export const interceptors = checkCast<Interceptor>()({

@@ -28,7 +28,7 @@ export function filterInPlace(iterable: Iterable<any>, callback: (value: any) =>
 
 // Creates a new instance of a class without calling the constructor, then copies the given
 // properties on to it
-export function instantiate<Type extends { prototype: any }>(ctor: Type, properties: any): Type {
+export function instantiate<Type>(ctor: new(...params: any) => Type, properties: any): Type {
 	return Object.assign(Object.create(ctor.prototype), properties);
 }
 

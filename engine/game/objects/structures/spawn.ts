@@ -1,14 +1,21 @@
 import * as Structure from '.';
 import * as C from '~/engine/game/constants';
-import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
+import { checkCast, makeOptional, makeVector, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 import { gameContext } from '~/engine/game/context';
 import { calcCreepCost, getUniqueName } from '~/engine/game/helpers';
 import * as Store from '~/engine/game/store';
+import * as Id from '~/engine/util/id';
 
 export const format = withType<StructureSpawn>(checkCast<Format>()({
 	[Inherit]: Structure.format,
 	[Variant]: 'spawn',
 	name: 'string',
+	spawning: makeOptional({
+		birthTime: 'int32',
+		creep: Id.format,
+		directions: makeVector('int8'),
+		needTime: 'int32',
+	}),
 	store: Store.format,
 }));
 

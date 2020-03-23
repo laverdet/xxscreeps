@@ -43,3 +43,11 @@ export const interceptors = checkCast<MemberInterceptor>()({
 		return 16;
 	},
 });
+
+export function generateId() {
+	let id = '';
+	for (let ii = 0; ii < 3; ++ii) {
+		id += Math.floor(Math.random() * 2 ** 32).toString(16).padStart(8, '0');
+	}
+	return id;
+}

@@ -129,6 +129,20 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 			const { enum: values } = layout;
 			return (view, offset) => values[view.uint8[offset]];
 
+		} else if ('optional' in layout) {
+			// Optional types
+			const elementLayout = layout.optional;
+			const read = getReader(elementLayout, interceptorSchema);
+			const { size } = getTraits(elementLayout);
+			return (view, offset) => {
+				const flag = view.int8[offset + size];
+				if (flag === 0) {
+					return undefined;
+				} else {
+					return read(view, offset);
+				}
+			};
+
 		} else if ('variant' in layout) {
 			// Variant types
 			const variantReaders = layout.variant.map(elementLayout =>

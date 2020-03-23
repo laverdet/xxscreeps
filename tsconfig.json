@@ -2,6 +2,7 @@
 	"compilerOptions": {
 		"strict": true,
 		"skipLibCheck": true,
+		"strictFunctionTypes": false,
 
 		"inlineSourceMap": true,
 

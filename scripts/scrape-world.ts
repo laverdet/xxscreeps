@@ -52,7 +52,6 @@ topLevelTask(async() => {
 		const roomObject = {
 			id: object._id,
 			pos: new RoomPosition(object.x, object.y, object.room),
-			effects: [],
 		};
 		const withStructure = () => ({ ...roomObject, [Structure.Owner]: object.user });
 		const withStore = () => {

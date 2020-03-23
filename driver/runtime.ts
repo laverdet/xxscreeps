@@ -9,6 +9,7 @@ import { Source } from '~/engine/game/objects/source';
 
 import * as Constants from '~/engine/game/constants';
 import { gameContext, IntentManager } from '~/engine/game/context';
+import * as Memory from '~/engine/game/memory';
 import { finalizePrototypeGetters } from '~/engine/game/schema';
 import { UserCode } from '~/engine/metabase/code';
 import { BufferView } from '~/engine/schema/buffer-view';
@@ -22,9 +23,18 @@ global._ = lodash;
 global.Creep = Creep;
 global.RoomPosition = RoomPosition;
 global.Source = Source;
+Memory.initialize(new Uint16Array(1));
 
 // Set up lazy schema getters
 finalizePrototypeGetters();
+
+/**
+ * TODO: lock these
+ * JSON - stringify/parse
+ * Math - max/min
+ * global - Object, Array, TypedArrays, ArrayBuffer, SharedArrayBuffer
+ * Symbol.iterator
+ */
 
 // Export constants
 for (const [ identifier, value ] of Object.entries(Constants)) {
