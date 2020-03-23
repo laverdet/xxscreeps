@@ -20,23 +20,23 @@ export const interceptors = checkCast<MemberInterceptor>()({
 
 	decomposeIntoBuffer(value: string, view: BufferView, offset: number) {
 		// Write from the end of the string in chunks of 8
-		let offset32 = (offset >>> 2) + 3;
+		let offset32 = (offset >>> 2) + 4;
 		if (value === undefined) {
-			view.uint32[offset32] =
-			view.uint32[offset32 + 1] =
-			view.uint32[offset32 + 2] =
-			view.uint32[offset32 + 3] = 0;
+			view.uint32[offset32 - 1] =
+			view.uint32[offset32 - 2] =
+			view.uint32[offset32 - 3] =
+			view.uint32[offset32 - 4] = 0;
 			return 16;
 		}
 		const { length } = value;
 		for (let ii = length; ii >= 8; ii -= 8) {
-			view.uint32[offset32--] = parseInt(value.substr(ii - 8, 8), 16);
+			view.uint32[--offset32] = parseInt(value.substr(ii - 8, 8), 16);
 		}
 		// Leaves the front of the string with length < 8 for this part
-		view.uint32[offset32--] = parseInt(value.substr(0, length % 8), 16);
+		view.uint32[--offset32] = parseInt(value.substr(0, length % 8), 16);
 		// Fill remaining memory with 0's
-		for (let ii = ((length - 1) >>> 3) + 1; ii < 4; ++ii) {
-			view.uint32[offset32--] = 0;
+		for (let ii = (length - 1) >>> 3; ii < 2; ++ii) {
+			view.uint32[--offset32] = 0;
 		}
 		// And write the length
 		view.uint8[offset] = value.length;

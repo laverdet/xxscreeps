@@ -113,13 +113,21 @@ export function getTraits(layout: Layout): Traits {
 		return { align: 1, size: 1, stride: 1 };
 
 	} else if ('optional' in layout) {
-		// Optional adds a single byte to the end of a layout
+		// Optional puts a flag at the beginning or end of a layout. End is better but can only be use
+		// for constant size elements.
 		const { align, size, stride } = getTraits(layout.optional);
-		const traits: Traits = { align, size: size + 1 };
-		if (stride !== undefined) {
-			traits.stride = alignTo(size + 1, align);
+		if (stride === undefined) {
+			return {
+				align: Math.max(kPointerSize, align),
+				size: alignTo(size + kPointerSize, align),
+			};
+		} else {
+			return {
+				align,
+				size: size + 1,
+				stride: alignTo(size + 1, align),
+			};
 		}
-		return traits;
 
 	} else if ('variant' in layout || 'vector' in layout) {
 		// Variant & vector just store a uint32 in static memory, the rest is dynamic

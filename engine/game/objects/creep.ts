@@ -30,7 +30,7 @@ export class Creep extends RoomObject.RoomObject {
 	}
 	get my() { return this[Owner] === gameContext.userId }
 	get spawning() { return this[AgeTime] === 0 }
-	get ticksToLive() { return this[AgeTime] === 0 ? undefined : Game.time - this[AgeTime] }
+	get ticksToLive() { return this[AgeTime] === 0 ? undefined : this[AgeTime] - Game.time }
 
 	fatigue!: number;
 	hits!: number;

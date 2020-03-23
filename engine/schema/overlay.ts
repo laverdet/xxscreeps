@@ -47,7 +47,10 @@ export function injectGetters(
 			)) {
 				return function() {
 					const value = apply(get, this, []);
-					defineProperty(this, symbol, { value });
+					defineProperty(this, symbol, {
+						value,
+						writable: true,
+					});
 					return value;
 				};
 			}
@@ -58,7 +61,6 @@ export function injectGetters(
 
 		// Define getter on proto
 		Object.defineProperty(prototype, symbol, {
-			enumerable: true,
 			get,
 			set(value) {
 				defineProperty(this, symbol, {

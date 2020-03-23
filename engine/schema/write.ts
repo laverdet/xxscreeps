@@ -137,21 +137,35 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 			// Optional types
 			const elementLayout = layout.optional;
 			const write = getWriter(elementLayout, interceptorSchema);
-			const { size } = getTraits(elementLayout);
-			const sizePlusOne = size + 1;
-			return (value, view, offset) => {
-				if (value === undefined) {
-					// Zero out the memory, including the flag
-					const end = offset + sizePlusOne;
-					for (let ii = offset; ii < end; ++ii) {
-						view.uint8[ii] = 0;
+			const { align, size, stride } = getTraits(elementLayout);
+			if (stride === undefined) {
+				// Dynamic size element. Flag is pointer to memory (just 4 bytes ahead)
+				return (value, view, offset) => {
+					if (value === undefined) {
+						view.uint32[offset >>> 2] = 0;
+						return kPointerSize;
+					} else {
+						const addr = view.uint32[offset >>> 2] = alignTo(offset + kPointerSize, align);
+						return write(value, view, addr) + kPointerSize;
 					}
-					return sizePlusOne;
-				} else {
-					view.uint8[offset + size] = 1;
-					return write(value, view, offset) + 1;
-				}
-			};
+				};
+			} else {
+				// Fixed size element. Flag is 1 byte at end of structure.
+				const sizePlusOne = size + 1;
+				return (value, view, offset) => {
+					if (value === undefined) {
+						// Zero out the memory, including the flag
+						const end = offset + sizePlusOne;
+						for (let ii = offset; ii < end; ++ii) {
+							view.int8[ii] = 0;
+						}
+						return sizePlusOne;
+					} else {
+						view.uint8[size] = 1;
+						return write(value, view, offset) + 1;
+					}
+				};
+			}
 
 		} else if ('variant' in layout) {
 			// Variant types

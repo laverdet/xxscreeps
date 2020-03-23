@@ -133,15 +133,28 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 			// Optional types
 			const elementLayout = layout.optional;
 			const read = getReader(elementLayout, interceptorSchema);
-			const { size } = getTraits(elementLayout);
-			return (view, offset) => {
-				const flag = view.int8[offset + size];
-				if (flag === 0) {
-					return undefined;
-				} else {
-					return read(view, offset);
-				}
-			};
+			const { size, stride } = getTraits(elementLayout);
+
+			if (stride === undefined) {
+				// Dynamic size element. Flag is pointer to memory (just 4 bytes ahead)
+				return (view, offset) => {
+					const addr = view.uint32[offset >>> 2];
+					if (addr === 0) {
+						return undefined;
+					} else {
+						return read(view, addr);
+					}
+				};
+			} else {
+				// Fixed size element. Flag is 1 byte at end of structure.
+				return (view, offset) => {
+					if (view.int8[offset + size] === 0) {
+						return undefined;
+					} else {
+						return read(view, offset);
+					}
+				};
+			}
 
 		} else if ('variant' in layout) {
 			// Variant types

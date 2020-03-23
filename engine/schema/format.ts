@@ -28,7 +28,7 @@ export type Format =
 // Types which convert format to data
 type ArrayShape<Type extends ArrayFormat> = FormatShape<Type[2]>[];
 type EnumShape<Type extends EnumFormat> = Type[1][number];
-type OptionalShape<Type extends OptionalFormat> = Type[1] | undefined;
+type OptionalShape<Type extends OptionalFormat> = FormatShapeNoOptional<Type[1]> | undefined;
 type VariantShapeHelp<Type> = Type extends StructFormat ? StructShape<Type> :
 	Type extends TypedFormat ? Type[1] : never;
 type VariantShape<Type extends VariantFormat> = VariantShapeHelp<Type[1][number]>;
@@ -43,6 +43,16 @@ type StructShape<Type extends StructFormat> = StructMemberShape<Type> & StructSh
 type StructShape2<Type> = Type extends StructFormat ? StructMemberShape<Type> & StructShape3<Type[typeof Inherit]> : unknown;
 type StructShape3<Type> = Type extends StructFormat ? StructMemberShape<Type> & StructShape4<Type[typeof Inherit]> : unknown;
 type StructShape4<Type> = Type extends StructFormat ? StructMemberShape<Type> : unknown;
+
+type FormatShapeNoOptional<Type extends Format> =
+	Type extends Integral ? number :
+	Type extends 'string' ? string :
+	Type extends ArrayFormat ? ArrayShape<Type> :
+	Type extends EnumFormat ? EnumShape<Type> :
+	Type extends TypedFormat ? Type[1] :
+	Type extends VariantFormat ? VariantShape<Type> :
+	Type extends VectorFormat ? VectorShape<Type> :
+	Type extends StructFormat ? StructShape<Type> : never;
 
 export type FormatShape<Type extends Format> =
 	Type extends Integral ? number :

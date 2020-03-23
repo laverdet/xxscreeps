@@ -1,3 +1,4 @@
+import * as C from '~/engine/game/constants';
 import { checkCast, withType, BufferView, Format, Interceptor } from '~/engine/schema';
 
 export const format = withType<RoomPosition>(checkCast<Format>()({
@@ -133,6 +134,21 @@ export class RoomPosition {
 
 	[Symbol.for('nodejs.util.inspect.custom')]() {
 		return `${this}`;
+	}
+}
+
+export function getPositonInDirection(position: RoomPosition, direction: number) {
+	const { x, y, roomName } = position;
+	switch (direction) {
+		case C.TOP: return new RoomPosition(x, y - 1, roomName);
+		case C.TOP_RIGHT: return new RoomPosition(x + 1, y - 1, roomName);
+		case C.RIGHT: return new RoomPosition(x + 1, y, roomName);
+		case C.BOTTOM_RIGHT: return new RoomPosition(x + 1, y + 1, roomName);
+		case C.BOTTOM: return new RoomPosition(x, y + 1, roomName);
+		case C.BOTTOM_LEFT: return new RoomPosition(x - 1, y + 1, roomName);
+		case C.LEFT: return new RoomPosition(x - 1, y, roomName);
+		case C.TOP_LEFT: return new RoomPosition(x - 1, y - 1, roomName);
+		default: throw new Error('Invalid direction');
 	}
 }
 
