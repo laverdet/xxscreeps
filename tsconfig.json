@@ -10,6 +10,7 @@
 		"esModuleInterop": true,
 		"moduleResolution": "node",
 		"target": "esnext",
+		"lib": [ "esnext" ],
 
 		"downlevelIteration": true,
 		"noEmitOnError": false,
