@@ -13,10 +13,17 @@ export async function compile(moduleName: string) {
 			mode: 'development',
 			devtool: 'inline-source-map',
 
+			externals({ context, request }: { context: string; request: string }, callback: any) {
+				if (request.endsWith('.node')) {
+					return callback(null, Path.join(context, request).replace(/[/\\.]/g, '_'));
+				}
+				callback();
+			},
 			resolve: {
 				extensions: [ '.js', '.ts' ],
 				alias: {
 					'~': Path.join(__dirname, '..'),
+					'path$': false as any,
 				},
 			},
 

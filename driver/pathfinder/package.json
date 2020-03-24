@@ -1,0 +1,9 @@
+  {
+  "name": "pf",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "install": "node-gyp rebuild -j 8"
+  },
+  "gypfile": true
+}

@@ -8,7 +8,7 @@ export const kTerrainSwamp = 2;
 
 export const format = checkCast<Format>()({
 	roomName: 'string',
-	terrain: withType<Readonly<Uint8Array>>(makeArray(625, 'uint8')),
+	terrain: withType<Terrain>(makeArray(625, 'uint8')),
 });
 
 const GetBufferSymbol: unique symbol = Symbol();
@@ -25,7 +25,7 @@ export class Terrain {
 	}
 
 	get(xx: number, yy: number) {
-		const index = xx * 50 + yy;
+		const index = yy * 50 + xx;
 		if (index >= 0 && index < 2500) {
 			return this.#buffer[index >>> 2] >>> ((index & 0x03) << 1) & 0x03;
 		}
@@ -50,7 +50,7 @@ export class TerrainWriter extends Terrain {
 
 	set(xx: number, yy: number, value: number) {
 		const buffer = getBuffer(this);
-		const index = xx * 50 + yy;
+		const index = yy * 50 + xx;
 		if (index >= 0 && index < 2500) {
 			const byte = index >>> 2;
 			const shift = (index & 0x03) << 1;

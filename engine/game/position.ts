@@ -1,5 +1,8 @@
+import * as PathFinder from '~/driver/pathfinder';
 import * as C from '~/engine/game/constants';
 import { checkCast, withType, BufferView, Format, Interceptor } from '~/engine/schema';
+import { firstMatching } from '~/lib/utility';
+import { RoomObject } from './objects/room-object';
 
 export const format = withType<RoomPosition>(checkCast<Format>()({
 	position: 'int32',
@@ -9,7 +12,7 @@ const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
 
 const roomNames = new Map<number, string>();
-function generateRoomName(posBits: number) {
+export function generateRoomName(posBits: number) {
 	// Check cache
 	let roomName = roomNames.get(posBits);
 	if (roomName !== undefined) {
@@ -25,7 +28,7 @@ function generateRoomName(posBits: number) {
 	return roomName;
 }
 
-function parseRoomName(name: string): [ number, number ] {
+export function parseRoomName(name: string): [ number, number ] {
 	// Parse X and calculate str position of Y
 	const xx = parseInt(name.substr(1), 10);
 	let verticalPos = 2;
@@ -48,7 +51,27 @@ function parseRoomName(name: string): [ number, number ] {
 	];
 }
 
-const PositionInteger: unique symbol = Symbol('positionInteger');
+function fetchArguments(arg1?: any, arg2?: any, arg3?: any) {
+	if (typeof arg1 === 'object') {
+		const int = arg1[PositionInteger] ?? arg1?.pos?.[PositionInteger];
+		if (int !== undefined) {
+			return {
+				xx: (int >>> 16) & 0xff,
+				yy: (int >>> 24) & 0xff,
+				room: int & 0xffff,
+				extra: arg2,
+			};
+		}
+	}
+	return {
+		xx: arg1 as number,
+		yy: arg2 as number,
+		room: 0,
+		extra: arg3,
+	};
+}
+
+export const PositionInteger: unique symbol = Symbol('positionInteger');
 
 /**
  * An object representing the specified position in the room. Every `RoomObject` in a room contains
@@ -64,6 +87,7 @@ export class RoomPosition {
 	 * @param yy Y position in the room.
 	 * @param roomName The room name.
 	 */
+	constructor(bits: number);
 	constructor(xx: number, yy: number, roomName: string);
 	constructor(...args: any[]) {
 		if (args.length === 1) {
@@ -128,12 +152,69 @@ export class RoomPosition {
 		this[PositionInteger] = this[PositionInteger] & ~(0xff << 24) | yy << 24;
 	}
 
-	toString() {
-		return `[room ${this.roomName} pos ${this.x},${this.y}]`;
+	/**
+	 * Get linear range to the specified position
+	 */
+	getRangeTo(x: number, y: number): number;
+	getRangeTo(pos: RoomObject | RoomPosition): number;
+	getRangeTo(...args: any) {
+		const { xx, yy, room } = fetchArguments(...args);
+		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
+			return Infinity;
+		}
+		return Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
 	}
 
-	[Symbol.for('nodejs.util.inspect.custom')]() {
-		return `${this}`;
+	/**
+	 * Check whether this position is on the adjacent square to the specified position. The same as
+	 * `position.inRangeTo(target, 1)`
+	 */
+	isNearTo(x: number, y: number): boolean;
+	isNearTo(pos: RoomObject | RoomPosition): boolean;
+	isNearTo(...args: [any]) {
+		return this.getRangeTo(...args) <= 1;
+	}
+
+	inRangeTo(x: number, y: number, range: number): boolean;
+	inRangeTo(pos: RoomObject | RoomPosition, range: number): boolean;
+	inRangeTo(...args: [any]) {
+		const { xx, yy, room, extra } = fetchArguments(...args);
+		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
+			return false;
+		}
+		const range = Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
+		return range <= extra;
+	}
+
+	findClosestByPath(type: number) {
+
+		// Get this room
+		const room = Game.rooms[this.roomName];
+		if (room === undefined) {
+			throw new Error(`Could not access room ${this.roomName}`);
+		}
+
+		// Find objects to search
+		const objects = room.find(type);
+		const goals = objects.map(({ pos }) => ({ pos, range: 1 }));
+
+		// Invoke pathfinder
+		const path = PathFinder.search(this, goals);
+		if (path.incomplete) {
+			return;
+		}
+		const last = path.path[path.path.length - 1];
+
+		// Match position to object
+		return firstMatching(objects, object => object.pos.isNearTo(last));
+	}
+
+	toJSON() {
+		return { x: this.x, y: this.y, roomName: this.roomName };
+	}
+
+	toString() {
+		return `[room ${this.roomName} pos ${this.x},${this.y}]`;
 	}
 }
 

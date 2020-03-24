@@ -1,6 +1,8 @@
 import * as Schema from '~/engine/metabase/index';
 import * as DatabaseSchema from '~/engine/metabase';
+import * as MapSchema from '~/engine/game/map';
 import { getReader } from '~/engine/schema/read';
+import { loadTerrain } from '~/driver/pathfinder';
 import { Sandbox } from '~/driver/sandbox';
 import { BufferView } from '~/engine/schema/buffer-view';
 import { mapInPlace, filterInPlace } from '~/lib/utility';
@@ -19,6 +21,12 @@ export default async function() {
 	// Placeholder
 	const gameReader = getReader(DatabaseSchema.schema.Game, DatabaseSchema.interceptorSchema);
 	const gameMetadata = gameReader(BufferView.fromTypedArray(await blobStorage.load('game')), 0);
+
+	// Load shared terrain data
+	const terrainBuffer = await blobStorage.load('terrain');
+	const terrainBufferView = new BufferView(terrainBuffer.buffer, terrainBuffer.byteOffset);
+	const readTerrain = getReader(MapSchema.schema.World, MapSchema.interceptorSchema);
+	loadTerrain(readTerrain(terrainBufferView, 0));
 
 	// Initialize binary schemas
 	const readCode = getReader(Schema.schema.Code, Schema.interceptorSchema);

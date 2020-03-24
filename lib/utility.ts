@@ -4,6 +4,11 @@ export function checkCast<Type>() {
 	return <Value extends Type>(value: Value) => value;
 }
 
+// Clamps a number to a given range
+export function clamp(min: number, max: number, value: number) {
+	return Math.max(min, Math.min(max, value));
+}
+
 // Replace a value on an object with a new one, and returns the old one.
 export function exchange<Target extends object, Name extends keyof Target>(
 		target: Target, name: Name, newValue?: Target[Name]) {
@@ -24,6 +29,19 @@ export function filterInPlace(iterable: Iterable<any>, callback: (value: any) =>
 			}
 		}
 	}();
+}
+
+// Similar to [].some but it returns the matched element
+export function firstMatching<Type, Matched extends Type>(
+	iterable: Iterable<Type>, callback: (value: Type) => value is Matched): Matched | undefined;
+export function firstMatching<Type>(
+	iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean): Type | undefined;
+export function firstMatching(iterable: Iterable<any>, callback: (value: any) => LooseBoolean) {
+	for (const value of iterable) {
+		if (callback(value)) {
+			return value;
+		}
+	}
 }
 
 // Gets a key on a map and if it doesn't exist it inserts a new value, then returns the value.

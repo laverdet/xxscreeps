@@ -3,7 +3,7 @@
 		'default_configuration': 'Release',
 		'configurations': {
 			'Common': {
-				'cflags_cc': [ '-std=c++14', '-g' ],
+				'cflags_cc': [ '-std=c++14', '-g', '-Wall', '-Wextra' ],
 				'cflags_cc!': [ '-fno-exceptions' ],
 				'xcode_settings': {
 					'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
@@ -39,8 +39,8 @@
 				'inherit_from': [ 'Common' ],
 				'cflags_cc': [
 					'-O3',
-					'-fprofile-use=build/Profile/obj.target/native/src/pf.gcda',
-					'-fprofile-use=build/Profile/obj.target/native/src/main.gcda',
+					'-fprofile-use=build/Profile/obj.target/pf/src/pf.gcda',
+					'-fprofile-use=build/Profile/obj.target/pf/src/main.gcda',
 				],
 				'xcode_settings': {
 					'OTHER_CPLUSPLUSFLAGS': [ '-fprofile-use=../_clangprof.profdata' ],
@@ -50,7 +50,7 @@
 	},
 	'targets': [
 		{
-			'target_name': 'native',
+			'target_name': 'pf',
 			'include_dirs': [
 				'<!(node -e "require(\'nan\')")',
 				'<!(node -e "require(\'isolated-vm/include\')")',

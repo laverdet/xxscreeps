@@ -29,11 +29,11 @@ namespace screeps {
 		}
 
 		// Get the values from v8 and run the search
-		cost_t plain_cost = Nan::To<uint32_t>(info[3]).FromJust();
-		cost_t swamp_cost = Nan::To<uint32_t>(info[4]).FromJust();
-		uint8_t max_rooms = Nan::To<uint32_t>(info[5]).FromJust();
-		uint32_t max_ops = Nan::To<uint32_t>(info[6]).FromJust();
-		uint32_t max_cost = Nan::To<uint32_t>(info[7]).FromJust();
+		cost_t plain_cost = Nan::To<int32_t>(info[3]).FromJust();
+		cost_t swamp_cost = Nan::To<int32_t>(info[4]).FromJust();
+		int max_rooms = Nan::To<int32_t>(info[5]).FromJust();
+		int max_ops = Nan::To<int32_t>(info[6]).FromJust();
+		unsigned max_cost = Nan::To<uint32_t>(info[7]).FromJust();
 		bool flee = Nan::To<bool>(info[8]).FromJust();
 		double heuristic_weight = Nan::To<double>(info[9]).FromJust();
 		info.GetReturnValue().Set(pf->search(

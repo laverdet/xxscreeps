@@ -1,8 +1,10 @@
+import * as C from '~/engine/game/constants';
 import { gameContext } from '~/engine/game/context';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
 import * as RoomObject from './room-object';
 import * as Store from '../store';
+import type { Source } from './source';
 
 declare const Memory: any;
 
@@ -14,16 +16,18 @@ export const format = withType<Creep>(checkCast<Format>()({
 	[Variant]: 'creep',
 	ageTime: 'int32',
 	// body: makeVector({ boost: 'uint8', type: 'uint8', hits: 'uint8' })
-	carry: Store.format,
 	fatigue: 'int16',
 	hits: 'int16',
 	name: 'string',
 	owner: Id.format,
 	// saying: ...
+	store: Store.format,
 }));
 
 export class Creep extends RoomObject.RoomObject {
 	get [Variant]() { return 'creep' }
+	get carry() { return this.store }
+	get carryCapacity() { return this.store.getCapacity() }
 	get memory() {
 		const creeps = Memory.creeps ?? (Memory.creeps = {});
 		return creeps[this.name] ?? (creeps[this.name] = {});
@@ -31,6 +35,10 @@ export class Creep extends RoomObject.RoomObject {
 	get my() { return this[Owner] === gameContext.userId }
 	get spawning() { return this[AgeTime] === 0 }
 	get ticksToLive() { return this[AgeTime] === 0 ? undefined : this[AgeTime] - Game.time }
+
+	harvest(source: Source) {
+		return C.OK;
+	}
 
 	fatigue!: number;
 	hits!: number;
