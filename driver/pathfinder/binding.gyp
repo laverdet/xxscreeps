@@ -2,12 +2,31 @@
 	'target_defaults': {
 		'default_configuration': 'Release',
 		'configurations': {
+			'Common': {
+				'cflags_cc': [ '-std=c++14', '-g' ],
+				'cflags_cc!': [ '-fno-exceptions' ],
+				'xcode_settings': {
+					'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
+					'GCC_GENERATE_DEBUGGING_SYMBOLS': 'YES',
+					'CLANG_CXX_LANGUAGE_STANDARD': 'c++14',
+				},
+				'msvs_settings': {
+					'VCCLCompilerTool': {
+						'ExceptionHandling': '1',
+					},
+				},
+				'conditions': [
+					[ 'OS == "win"', { 'defines': [ 'NOMSG', 'NOMINMAX', 'WIN32_LEAN_AND_MEAN' ] } ],
+				],
+			},
 			'Release': {
+				'inherit_from': [ 'Common' ],
 				'xcode_settings': {
 					'GCC_OPTIMIZATION_LEVEL': '3',
 				},
 			},
 			'Profile': {
+				'inherit_from': [ 'Common' ],
 				'cflags_cc': [ '-O3', '-fprofile-generate' ],
 				'ldflags': [ '-fprofile-generate' ],
 				'xcode_settings': {
@@ -17,6 +36,7 @@
 				},
 			},
 			'Optimized': {
+				'inherit_from': [ 'Common' ],
 				'cflags_cc': [
 					'-O3',
 					'-fprofile-use=build/Profile/obj.target/native/src/pf.gcda',
@@ -31,33 +51,13 @@
 	'targets': [
 		{
 			'target_name': 'native',
-			'cflags_cc': [ '-std=c++14', '-g' ],
-			'cflags_cc!': [ '-fno-exceptions' ],
-			'xcode_settings': {
-				'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
-				'GCC_GENERATE_DEBUGGING_SYMBOLS': 'YES',
-				'CLANG_CXX_LANGUAGE_STANDARD': 'c++14',
-			},
-			'msvs_settings': {
-				'VCCLCompilerTool': {
-					'ExceptionHandling': '1',
-				},
-			},
 			'include_dirs': [
 				'<!(node -e "require(\'nan\')")',
-			],
-			'cflags!': [ '-fno-exceptions' ],
-			'cflags_cc!': [ '-fno-exceptions' ],
-			'conditions': [
-				[ 'OS == "win"', { 'defines': ['NOMINMAX'] } ],
-				[ 'OS == "win"',
-						{ 'defines': [ 'IVM_DLLEXPORT=__declspec(dllexport)' ] },
-						{ 'defines': [ 'IVM_DLLEXPORT=' ] },
-				],
+				'<!(node -e "require(\'isolated-vm/include\')")',
 			],
 			'sources': [
-				'src/main.cc',
-				'src/pf.cc',
+				'main.cc',
+				'pf.cc',
 			],
 		},
 	],
