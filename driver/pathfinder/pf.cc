@@ -6,20 +6,20 @@
 
 using namespace screeps;
 
-template <typename T>
-constexpr bool is_border_pos(T val) {
+template <class Integral>
+constexpr auto is_border_pos(Integral val) -> bool {
 	return (val + 1) % 50 < 2;
 }
 
-template <typename T>
-constexpr bool is_near_border_pos(T val) {
+template <class Integral>
+constexpr auto is_near_border_pos(Integral val) -> bool {
 	return (val + 2) % 50 < 4;
 }
 
 decltype(path_finder_t::terrain) path_finder_t::terrain = {{ nullptr }};
 
 // Return room index from a map position, allocates a new room index if needed and possible
-room_index_t path_finder_t::room_index_from_pos(const map_position_t map_pos) {
+auto path_finder_t::room_index_from_pos(const map_position_t map_pos) -> room_index_t {
 	room_index_t room_index = reverse_room_table[map_pos.id];
 	if (room_index == 0) {
 		if (room_table_size >= max_rooms) {
@@ -31,7 +31,7 @@ room_index_t path_finder_t::room_index_from_pos(const map_position_t map_pos) {
 		uint8_t* terrain_ptr = terrain[map_pos.id];
 		if (terrain_ptr == nullptr) {
 			Nan::ThrowError("Could not load terrain data");
-			throw js_error();
+			throw js_error{};
 		}
 		uint8_t* cost_matrix = nullptr;
 		if (room_callback != nullptr) {
@@ -42,7 +42,7 @@ room_index_t path_finder_t::room_index_from_pos(const map_position_t map_pos) {
 			Nan::MaybeLocal<v8::Value> ret = Nan::Call(*room_callback, v8::Local<v8::Object>::Cast(Nan::Undefined()), 2, argv);
 			if (try_catch.HasCaught()) {
 				try_catch.ReThrow();
-				throw js_error();
+				throw js_error{};
 			}
 			if (!ret.IsEmpty()) {
 				v8::Local<v8::Value> ret_local = ret.ToLocalChecked();
@@ -64,7 +64,7 @@ room_index_t path_finder_t::room_index_from_pos(const map_position_t map_pos) {
 }
 
 // Conversions to/from index & world_position_t
-pos_index_t path_finder_t::index_from_pos(const world_position_t pos) {
+auto path_finder_t::index_from_pos(const world_position_t pos) -> pos_index_t {
 	room_index_t room_index = room_index_from_pos(pos.map_position());
 	if (room_index == 0) {
 		throw std::runtime_error("Invalid invocation of index_from_pos");
@@ -72,11 +72,11 @@ pos_index_t path_finder_t::index_from_pos(const world_position_t pos) {
 	return pos_index_t(room_index - 1) * 50 * 50 + pos.xx % 50 * 50 + pos.yy % 50;
 }
 
-world_position_t path_finder_t::pos_from_index(pos_index_t index) const {
+auto path_finder_t::pos_from_index(pos_index_t index) const -> world_position_t {
 	room_index_t room_index = index / (50 * 50);
 	const room_info_t& terrain = room_table[room_index];
 	unsigned int coord = index - room_index * 50 * 50;
-	return world_position_t(coord / 50 + terrain.pos.xx * 50, coord % 50 + terrain.pos.yy * 50);
+	return {coord / 50 + terrain.pos.xx * 50, coord % 50 + terrain.pos.yy * 50};
 }
 
 // Push a new node to the heap, or update its cost if it already exists
@@ -103,7 +103,7 @@ void path_finder_t::push_node(pos_index_t parent_index, world_position_t node, c
 }
 
 // Return cost of moving to a node
-cost_t path_finder_t::look(const world_position_t pos) {
+auto path_finder_t::look(const world_position_t pos) -> cost_t {
 	room_index_t room_index = room_index_from_pos(pos.map_position());
 	if (room_index == 0) {
 		return obstacle;
@@ -123,7 +123,7 @@ cost_t path_finder_t::look(const world_position_t pos) {
 }
 
 // Returns the minimum Chebyshev distance to a goal
-cost_t path_finder_t::heuristic(const world_position_t pos) const {
+auto path_finder_t::heuristic(const world_position_t pos) const -> cost_t {
 	if (flee) {
 		cost_t ret = 0;
 		for (size_t ii = 0; ii < goals.size(); ++ii) {
@@ -154,27 +154,31 @@ void path_finder_t::astar(pos_index_t index, world_position_t pos, cost_t g_cost
 
 		// If this is a portal node there are some moves which will be impossible, and should be discarded
 		if (pos.xx % 50 == 0) {
-			if (neighbor.xx % 50 == 49 && pos.yy != neighbor.yy) {
-				continue;
-			} else if (pos.xx == neighbor.xx) {
+			if (
+				(neighbor.xx % 50 == 49 && pos.yy != neighbor.yy) ||
+				pos.xx == neighbor.xx
+			) {
 				continue;
 			}
 		} else if (pos.xx % 50 == 49) {
-			if (neighbor.xx % 50 == 0 && pos.yy != neighbor.yy) {
-				continue;
-			} else if (pos.xx == neighbor.xx) {
+			if (
+				(neighbor.xx % 50 == 0 && pos.yy != neighbor.yy) ||
+				pos.xx == neighbor.xx
+			) {
 				continue;
 			}
 		} else if (pos.yy % 50 == 0) {
-			if (neighbor.yy % 50 == 49 && pos.xx != neighbor.xx) {
-				continue;
-			} else if (pos.yy == neighbor.yy) {
+			if (
+				(neighbor.yy % 50 == 49 && pos.xx != neighbor.xx) ||
+				pos.yy == neighbor.yy
+			) {
 				continue;
 			}
 		} else if (pos.yy % 50 == 49) {
-			if (neighbor.yy % 50 == 0 && pos.xx != neighbor.xx) {
-				continue;
-			} else if (pos.yy == neighbor.yy) {
+			if (
+				(neighbor.yy % 50 == 0 && pos.xx != neighbor.xx) ||
+				pos.yy == neighbor.yy
+			) {
 				continue;
 			}
 		}
@@ -190,7 +194,7 @@ void path_finder_t::astar(pos_index_t index, world_position_t pos, cost_t g_cost
 }
 
 // JPS dragons
-world_position_t path_finder_t::jump_x(cost_t cost, world_position_t pos, int dx) {
+auto path_finder_t::jump_x(cost_t cost, world_position_t pos, int dx) -> world_position_t {
 	cost_t prev_cost_u = look(world_position_t(pos.xx, pos.yy - 1));
 	cost_t prev_cost_d = look(world_position_t(pos.xx, pos.yy + 1));
 	while (true) {
@@ -221,7 +225,7 @@ world_position_t path_finder_t::jump_x(cost_t cost, world_position_t pos, int dx
 	return pos;
 }
 
-world_position_t path_finder_t::jump_y(cost_t cost, world_position_t pos, int dy) {
+auto path_finder_t::jump_y(cost_t cost, world_position_t pos, int dy) -> world_position_t {
 	cost_t prev_cost_l = look(world_position_t(pos.xx - 1, pos.yy));
 	cost_t prev_cost_r = look(world_position_t(pos.xx + 1, pos.yy));
 	while (true) {
@@ -252,7 +256,7 @@ world_position_t path_finder_t::jump_y(cost_t cost, world_position_t pos, int dy
 	return pos;
 }
 
-world_position_t path_finder_t::jump_xy(cost_t cost, world_position_t pos, int dx, int dy) {
+auto path_finder_t::jump_xy(cost_t cost, world_position_t pos, int dx, int dy) -> world_position_t {
 	cost_t prev_cost_x = look(world_position_t(pos.xx - dx, pos.yy));
 	cost_t prev_cost_y = look(world_position_t(pos.xx, pos.yy - dy));
 	while (true) {
@@ -289,7 +293,7 @@ world_position_t path_finder_t::jump_xy(cost_t cost, world_position_t pos, int d
 	return pos;
 }
 
-world_position_t path_finder_t::jump(cost_t cost, world_position_t pos, int dx, int dy) {
+auto path_finder_t::jump(cost_t cost, world_position_t pos, int dx, int dy) -> world_position_t {
 	if (dx != 0) {
 		if (dy != 0) {
 			return jump_xy(cost, pos, dx, dy);
@@ -453,7 +457,7 @@ void path_finder_t::jump_neighbor(world_position_t pos, pos_index_t index, world
 	push_node(index, neighbor, g_cost);
 }
 
-v8::Local<v8::Value> path_finder_t::search(
+auto path_finder_t::search(
 	v8::Local<v8::Value> origin_js,
 	v8::Local<v8::Array> goals_js,
 	v8::Local<v8::Function> room_callback,
@@ -464,7 +468,7 @@ v8::Local<v8::Value> path_finder_t::search(
 	uint32_t max_cost,
 	bool flee,
 	double heuristic_weight
-) {
+) -> v8::Local<v8::Value> {
 
 	// Clean up from previous iteration
 	for (size_t ii = 0; ii < room_table_size; ++ii) {
@@ -478,7 +482,7 @@ v8::Local<v8::Value> path_finder_t::search(
 
 	// Construct goal objects
 	for (uint32_t ii = 0; ii < goals_js->Length(); ++ii) {
-		goals.push_back(goal_t(Nan::Get(goals_js, ii).ToLocalChecked()));
+		goals.emplace_back(Nan::Get(goals_js, ii).ToLocalChecked());
 	}
 
 	// These aren't ever accessed, this is just a place to put the handles for the CostMatrix data
@@ -560,7 +564,7 @@ v8::Local<v8::Value> path_finder_t::search(
 				return Nan::Undefined();
 			}
 		}
-	} catch (js_error) {
+	} catch (const js_error&) {
 		// Whoever threw the `js_error` should set the exception for v8
 		_is_in_use = false;
 		return Nan::Undefined();
@@ -603,10 +607,10 @@ v8::Local<v8::Value> path_finder_t::search(
 
 // Loads static terrain data into module upfront
 void path_finder_t::load_terrain(v8::Local<v8::Array> terrain) {
-	uint8_t* data = new uint8_t[terrain->Length() * 625];
+	auto data = new uint8_t[terrain->Length() * 625];
 	for (uint32_t ii = 0; ii < terrain->Length(); ++ii) {
 		v8::Local<v8::Object> terrain_info = Nan::To<v8::Object>(Nan::Get(terrain, ii).ToLocalChecked()).ToLocalChecked();
-		map_position_t pos = Nan::Get(terrain_info, Nan::New("room").ToLocalChecked()).ToLocalChecked();
+		auto pos = map_position_t{Nan::Get(terrain_info, Nan::New("room").ToLocalChecked()).ToLocalChecked()};
 		memcpy(data + ii * 625, *Nan::TypedArrayContents<uint8_t>(Nan::Get(terrain_info, Nan::New("bits").ToLocalChecked()).ToLocalChecked()), 625);
 		path_finder_t::terrain[pos.id] = data + ii * 625;
 	}

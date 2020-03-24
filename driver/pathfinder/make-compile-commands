@@ -12,8 +12,5 @@ for FLAG in $CXXFLAGS; do
 	mv .json.tmp $JSON
 done
 mv $JSON ./
-rm -rf Common
-rm -rf Debug
-rm -rf Optimized
-rm -rf Profile
+rm -rf Common Debug Optimized Profile
 rmdir Release

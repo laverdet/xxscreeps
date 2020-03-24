@@ -1,0 +1,9 @@
+---
+Checks: 'bugprone-*,clang-*,hicpp-*,misc-*,modernize-*,performance-*,readability-*,-hicpp-avoid-c-arrays,-hicpp-no-array-decay,-hicpp-no-malloc,-hicpp-signed-bitwise,-hicpp-use-override,-hicpp-vararg,-misc-non-private-member-variables-in-classes,-modernize-avoid-c-arrays,-modernize-loop-convert,-readability-else-after-return'
+HeaderFilterRegex: 'src/*'
+CheckOptions:
+  - key:             hicpp-special-member-functions.AllowMissingMoveFunctions
+    value:           '1'
+  - key:             hicpp-special-member-functions.AllowSoleDefaultDtor
+    value:           '1'
+...
