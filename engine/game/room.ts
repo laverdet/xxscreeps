@@ -5,6 +5,8 @@ import { iteratee } from '~/engine/util/iteratee';
 import { variantFormat } from './objects/room-object-variant';
 
 import { RoomObject } from './objects/room-object';
+import type { RoomPosition } from './position';
+import * as PathFinder from './path-finder';
 
 import { Creep } from './objects/creep';
 import { Source } from './objects/source';
@@ -90,6 +92,26 @@ export class Room extends BufferObject {
 
 		// Copy or filter result
 		return opts.filter === undefined ? results.slice() : results.filter(iteratee(opts.filter));
+	}
+
+	findPath(fromPos: RoomPosition, toPos: RoomPosition) {
+		const result = PathFinder.search(fromPos, { pos: toPos, range: 1 });
+		const path: any[] = [];
+		let previous = fromPos;
+		for (const pos of result.path) {
+			if (pos.roomName !== this.name) {
+				break;
+			}
+			path.push({
+				x: pos.x,
+				y: pos.y,
+				dx: pos.x - previous.x,
+				dy: pos.y - previous.y,
+				direction: previous.getDirectionTo(pos),
+			});
+			previous = pos;
+		}
+		return path;
 	}
 }
 

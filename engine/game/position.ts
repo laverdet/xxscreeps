@@ -51,7 +51,7 @@ export function parseRoomName(name: string): [ number, number ] {
 	];
 }
 
-function fetchArguments(arg1?: any, arg2?: any, arg3?: any) {
+export function fetchArguments(arg1?: any, arg2?: any, arg3?: any) {
 	if (typeof arg1 === 'object') {
 		const int = arg1[PositionInteger] ?? arg1?.pos?.[PositionInteger];
 		if (int !== undefined) {
@@ -69,6 +69,29 @@ function fetchArguments(arg1?: any, arg2?: any, arg3?: any) {
 		room: 0,
 		extra: arg3,
 	};
+}
+
+export function fetchPositionArgument(
+	fromPos: RoomPosition, arg1?: any, arg2?: any, arg3?: any,
+): { pos?: RoomPosition; extra: any } {
+	if (typeof arg1 === 'object') {
+		if (arg1 instanceof RoomPosition) {
+			return { pos: arg1, extra: arg2 };
+		} else if (arg1.pos instanceof RoomPosition) {
+			return { pos: arg1.pos, extra: arg2 };
+		}
+	}
+	try {
+		return {
+			pos: new RoomPosition(arg1, arg2, fromPos.roomName),
+			extra: arg3,
+		};
+	} catch (err) {
+		return {
+			pos: undefined,
+			extra: undefined,
+		};
+	}
 }
 
 export const PositionInteger: unique symbol = Symbol('positionInteger');
@@ -152,6 +175,16 @@ export class RoomPosition {
 		this[PositionInteger] = this[PositionInteger] & ~(0xff << 24) | yy << 24;
 	}
 
+	getDirectionTo(x: number, y: number): number;
+	getDirectionTo(pos: RoomObject | RoomPosition): number;
+	getDirectionTo(...args: any): number | undefined {
+		const { xx, yy, room } = fetchArguments(...args);
+		if ((this[PositionInteger] & 0xffff) === room) {
+			return getDirection(xx - this.x, yy - this.y);
+		}
+		// TODO: Multi-room distance
+	}
+
 	/**
 	 * Get linear range to the specified position
 	 */
@@ -163,6 +196,12 @@ export class RoomPosition {
 			return Infinity;
 		}
 		return Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
+	}
+
+	isEqualTo(x: number, y: number): boolean;
+	isEqualTo(pos: RoomObject | RoomPosition): boolean;
+	isEqualTo(...args: [any]) {
+		return this.getRangeTo(...args) === 1;
 	}
 
 	/**
@@ -177,7 +216,7 @@ export class RoomPosition {
 
 	inRangeTo(x: number, y: number, range: number): boolean;
 	inRangeTo(pos: RoomObject | RoomPosition, range: number): boolean;
-	inRangeTo(...args: [any]) {
+	inRangeTo(...args: any) {
 		const { xx, yy, room, extra } = fetchArguments(...args);
 		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
 			return false;
@@ -209,12 +248,57 @@ export class RoomPosition {
 		return firstMatching(objects, object => object.pos.isNearTo(last));
 	}
 
+	findPathTo(x: number, y: number): any;
+	findPathTo(pos: RoomObject | RoomPosition): any;
+	findPathTo(...args: any) {
+		const { pos } = fetchPositionArgument(this, ...args);
+		const room = Game.rooms[this.roomName];
+		if (!room) {
+			throw new Error(`Could not access room ${this.roomName}`);
+		}
+		return room.findPath(this, pos!);
+	}
+
+	[Symbol.for('nodejs.util.inspect.custom')]() {
+		return `${this}`;
+	}
+
 	toJSON() {
 		return { x: this.x, y: this.y, roomName: this.roomName };
 	}
 
 	toString() {
 		return `[room ${this.roomName} pos ${this.x},${this.y}]`;
+	}
+}
+
+function getDirection(dx: number, dy: number) {
+	const adx = Math.abs(dx);
+	const ady = Math.abs(dy);
+	if (adx > ady * 2) {
+		if (dx > 0) {
+			return C.RIGHT;
+		} else {
+			return C.LEFT;
+		}
+	} else if (ady > adx * 2) {
+		if (dy > 0) {
+			return C.BOTTOM;
+		} else {
+			return C.TOP;
+		}
+	} else if (dx > 0) {
+		if (dy > 0) {
+			return C.BOTTOM_RIGHT;
+		} else if (dy < 0) {
+			return C.TOP_RIGHT;
+		}
+	} else if (dx < 0) {
+		if (dy > 0) {
+			return C.BOTTOM_LEFT;
+		} else if (dy < 0) {
+			return C.TOP_LEFT;
+		}
 	}
 }
 
