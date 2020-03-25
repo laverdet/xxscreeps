@@ -9,7 +9,10 @@ export const VersionEndpoint: Endpoint = {
 			ok: 1,
 			protocol: 14,
 			package: 160,
-			useNativeAuth: false,
+			useNativeAuth: true,
+			serverData: {
+				shards: [],
+			},
 		};
 	},
 };

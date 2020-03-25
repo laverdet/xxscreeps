@@ -6,13 +6,19 @@ import { BufferView } from '~/engine/schema/buffer-view';
 import { getReader } from '~/engine/schema/read';
 import { BlobStorage } from '~/storage/blob';
 
-const worldTerrain = (async function() {
-	const blobStorage = await BlobStorage.connect();
-	const buffer = await blobStorage.load('terrain');
-	const view = new BufferView(buffer.buffer, buffer.byteOffset);
-	const read = getReader(MapSchema.schema.World, MapSchema.interceptorSchema);
-	return read(view, 0) as any[];
-})();
+let worldTerrainPromise: Promise<MapSchema.World> | undefined;
+export function worldTerrain() {
+	if (worldTerrainPromise) {
+		return worldTerrainPromise;
+	}
+	return worldTerrainPromise = async function() {
+		const blobStorage = await BlobStorage.connect();
+		const buffer = await blobStorage.load('terrain');
+		const view = new BufferView(buffer.buffer, buffer.byteOffset);
+		const read = getReader(MapSchema.schema.World, MapSchema.interceptorSchema);
+		return read(view, 0);
+	}();
+}
 
 function generate(terrain: Terrain, zoom = 1) {
 	const png = new PNG({
@@ -47,7 +53,7 @@ export const TerrainEndpoint: Endpoint = {
 	path: '/map/:room.png',
 
 	async execute(req, res) {
-		for (const room of await worldTerrain) {
+		for (const room of await worldTerrain()) {
 			if (room.roomName === req.params.room) {
 				res.set('Content-Type', 'image/png');
 				res.writeHead(200);

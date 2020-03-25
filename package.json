@@ -5,7 +5,8 @@
   "scripts": {
     "clean": "git ls-files | egrep '.ts$' | sed 's/\\.ts/.js/' | xargs rm -f",
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
-    "tslint": "tsc --noEmit"
+    "tslint": "tsc --noEmit",
+    "start": "./ts engine/service/launcher.ts"
   },
   "dependencies": {
     "@babel/core": "^7.9.0",

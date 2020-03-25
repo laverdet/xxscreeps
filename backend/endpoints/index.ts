@@ -8,7 +8,16 @@ import { TerrainEndpoint } from './assets/terrain';
 import { MeEndpoint } from './auth/me';
 import { SteamTicketEndpoint } from './auth/steam-ticket';
 
+import { MapStatsEndpoint } from './game/map-stats';
+import { RoomStatusEndpoint } from './game/room-status';
+import { RoomTerrainEndpoint } from './game/room-terrain';
+import { TimeEndpoint } from './game/time';
+
+import { CheckEmailEndpoint, CheckUsernameEndpoint, SubmitRegistrationEndpoint } from './register';
+
 import { BranchesEndpoint } from './user/branches';
+import { CodeEndpoint } from './user/code';
+import { RespawnProhibitedRoomsEndpoint } from './user/respawn-prohibited-rooms';
 import { UnreadCountEndpoint } from './user/unread-count';
 import { WorldStartRoomEndpoint } from './user/world-start-room';
 import { WorldStatusEndpoint } from './user/world-status';
@@ -41,8 +50,21 @@ export function installEndpointHandlers(express: Express) {
 		MeEndpoint,
 		SteamTicketEndpoint,
 	]));
+	apiRouter.use('/game', bindRoutes(Router(), [
+		MapStatsEndpoint,
+		RoomStatusEndpoint,
+		RoomTerrainEndpoint,
+		TimeEndpoint,
+	]));
+	apiRouter.use('/register', bindRoutes(Router(), [
+		CheckEmailEndpoint,
+		CheckUsernameEndpoint,
+		SubmitRegistrationEndpoint,
+	]));
 	apiRouter.use('/user', bindRoutes(Router(), [
 		BranchesEndpoint,
+		CodeEndpoint,
+		RespawnProhibitedRoomsEndpoint,
 		UnreadCountEndpoint,
 		WorldStartRoomEndpoint,
 		WorldStatusEndpoint,

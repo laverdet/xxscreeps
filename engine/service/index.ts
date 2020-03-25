@@ -1,4 +1,4 @@
-export type ServiceMessage = { type: 'mainConnected' };
+export type MainMessage = { type: 'mainConnected' } | { type: 'tick'; time: number };
 
 type RunnerConnectedMessage = { type: 'runnerConnected' };
 type RunnerProcessUsers = { type: 'processUsers'; time: number };

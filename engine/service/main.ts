@@ -4,7 +4,7 @@ import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
-import { RunnerMessage, ProcessorMessage, ProcessorQueueElement, ServiceMessage } from '.';
+import { RunnerMessage, ProcessorMessage, ProcessorQueueElement, MainMessage } from '.';
 
 export default async function() {
 	// Open channels and connect to storage
@@ -13,7 +13,7 @@ export default async function() {
 	const usersQueue = await Queue.create('runnerUsers');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
-	Channel.publish<ServiceMessage>('service', { type: 'mainConnected' });
+	Channel.publish<MainMessage>('main', { type: 'mainConnected' });
 
 	// Load current game state
 	const gameReader = getReader(DatabaseSchema.schema.Game, DatabaseSchema.interceptorSchema);
@@ -90,6 +90,8 @@ export default async function() {
 			// Set up for next tick
 			console.log(gameTime);
 			++gameTime;
+			Channel.publish<MainMessage>('main', { type: 'tick', time: gameTime });
+			await new Promise(resolve => setTimeout(resolve, 100));
 		} while (true);
 
 	} finally {

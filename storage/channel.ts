@@ -100,6 +100,11 @@ export abstract class Channel<Message> {
 	abstract disconnect(): void;
 	abstract publish(message: Message): void;
 
+	listen(listener: (message: Message) => void) {
+		this.extraListeners.add(listener);
+		return () => this.extraListeners.delete(listener);
+	}
+
 	async *[Symbol.asyncIterator](): AsyncGenerator<Message> {
 		// Create listener to save incoming messages
 		let resolver: Resolver<Message> | undefined;
