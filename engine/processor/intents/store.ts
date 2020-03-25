@@ -1,6 +1,50 @@
-import * as C from '~/engine/game/constants';
 import { Amount, Capacity, Resources, ResourceType, Restricted, SingleResource, StorageRecord, Store } from '~/engine/game/store';
 import { instantiate } from '~/lib/utility';
+
+export function add(this: Store, resourceType: ResourceType, amount: number) {
+
+	// Confirm there's enough capacity
+	if (this.getFreeCapacity(resourceType) < amount) {
+		return false;
+	}
+
+	// Add resource
+	const didCreate = !(this[resourceType]! > 0);
+	this[resourceType] = (this[resourceType] ?? 0) + amount;
+	this[Amount] += amount;
+
+	// Handle resource vector if needed
+	const singleResourceType = this[SingleResource];
+	if (singleResourceType !== resourceType) {
+
+		if (singleResourceType === undefined) {
+			if (didCreate) {
+				// Update in place
+				for (const resource of this[Resources]) {
+					if (resource.type === resourceType) {
+						resource.amount += amount;
+						break;
+					}
+				}
+			} else {
+				// Add new element for this resource
+				this[Resources].push({ type: resourceType, amount, capacity: 0 });
+			}
+
+		} else if (!(this[singleResourceType]! > 0)) {
+			// In this case the single resource flag represents a resource with nothing
+			this[SingleResource] = resourceType;
+
+		} else if (didCreate) {
+			// Will need to promoted this single resource to a vector
+			this[Resources] = [
+				{ type: singleResourceType, amount: this[singleResourceType]!, capacity: 0 },
+				{ type: resourceType, amount, capacity: 0 },
+			];
+		}
+	}
+	return true;
+}
 
 export function subtract(this: Store, resourceType: ResourceType, amount: number) {
 
@@ -18,13 +62,13 @@ export function subtract(this: Store, resourceType: ResourceType, amount: number
 
 		if (this[resourceType] === 0) {
 			// Last of the resource.. maybe this can become a single resource store
-			if (resourceType !== C.RESOURCE_ENERGY) {
+			if (resourceType !== 'energy') {
 				delete this[resourceType];
 			}
 			const store = this[Resources].filter(resource => resource.type !== resourceType || resource.capacity);
 			if (store.length <= 1) {
 				// Simplify memory layout
-				this[SingleResource] = store.length === 0 ? C.RESOURCE_ENERGY : store[0].type;
+				this[SingleResource] = store.length === 0 ? 'energy' : store[0].type;
 				this[Resources] = [];
 			} else {
 				// Remains multi-resource store
@@ -61,7 +105,7 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 
 	// Is single resource?
 	const singleResource =
-		resources.length === 0 ? C.RESOURCE_ENERGY :
+		resources.length === 0 ? 'energy' :
 			resources.length === 1 ? resources[0].type :
 				undefined;
 

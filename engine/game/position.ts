@@ -238,13 +238,14 @@ export class RoomPosition {
 		const goals = objects.map(({ pos }) => ({ pos, range: 1 }));
 
 		// Invoke pathfinder
-		const path = PathFinder.search(this, goals);
-		if (path.incomplete) {
+		const result = PathFinder.search(this, goals);
+		if (result.incomplete) {
 			return;
 		}
-		const last = path.path[path.path.length - 1];
 
 		// Match position to object
+		const { path } = result;
+		const last = path[path.length - 1] ?? this;
 		return firstMatching(objects, object => object.pos.isNearTo(last));
 	}
 

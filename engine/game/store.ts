@@ -53,7 +53,7 @@ const BufferObjectWithResourcesType = BufferObject as any as new (view: BufferVi
  * console.log(creep.store[RESOURCE_ENERGY]);
  * ```
  */
-export abstract class Store extends BufferObjectWithResourcesType {
+export class Store extends BufferObjectWithResourcesType {
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
 
@@ -116,7 +116,7 @@ export abstract class Store extends BufferObjectWithResourcesType {
 				return null;
 			}
 		} else if (this[CapacityByResource] === undefined) {
-			return this[Capacity];
+			return this[Amount];
 		} else {
 			return this[CapacityByResource]!.get(resourceType) ?? 0;
 		}

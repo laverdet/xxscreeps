@@ -38,7 +38,12 @@ export class Creep extends RoomObject {
 	get ticksToLive() { return this[AgeTime] === 0 ? undefined : this[AgeTime] - Game.time }
 
 	harvest(source: Source) {
-		return C.ERR_NOT_IN_RANGE;
+		if (!this.pos.isNearTo(source.pos)) {
+			return C.ERR_NOT_IN_RANGE;
+		} else if (source.energy <= 0) {
+			return C.ERR_NOT_ENOUGH_RESOURCES;
+		}
+		gameContext.intents.save(this, 'harvest', { id: source.id });
 	}
 
 	move(target: number) {
@@ -87,6 +92,15 @@ export class Creep extends RoomObject {
 
 		// And move one tile
 		return this.move(path[0].direction);
+	}
+
+	transfer(target: RoomObject) {
+		if (!this.pos.isNearTo(target.pos)) {
+			return C.ERR_NOT_IN_RANGE;
+		} else if (this.carry.energy <= 0) {
+			return C.ERR_NOT_ENOUGH_RESOURCES;
+		}
+		gameContext.intents.save(this, 'transfer', { id: target.id });
 	}
 
 	fatigue!: number;

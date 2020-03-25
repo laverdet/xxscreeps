@@ -24,11 +24,16 @@ export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owne
 
 export default () => bindProcessor(Creep.Creep, {
 	process(this: Creep.Creep, intent) {
+		if (intent.harvest) {
+			Store.add.call(this.store, 'energy', 2);
+		}
 		if (intent.move) {
 			this.pos = getPositonInDirection(this.pos, (intent.move as any).direction);
 			return true;
 		}
-
+		if (intent.transfer) {
+			Store.subtract.call(this.store, 'energy', this.store.energy);
+		}
 		return false;
 	},
 });

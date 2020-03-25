@@ -1,4 +1,5 @@
 import { Creep } from '~/engine/game/objects/creep';
+import * as Store from './store';
 import { bindRenderer } from '.';
 
 export default function() {
@@ -9,9 +10,8 @@ export default function() {
 			x: this.pos.x,
 			y: this.pos.y,
 			name: this.name,
-			body: [ { type: 'move', hits: 100 } ],
-			store: { energy: 0 },
-			storeCapacity: 0,
+			body: [ { type: 'move', hits: 100 }, { type: 'carry', hits: 100 } ],
+			...Store.render.call(this.store),
 			user: '123',
 			hits: this.hits,
 			hitsMax: 100,
