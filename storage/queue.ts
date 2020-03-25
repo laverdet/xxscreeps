@@ -1,16 +1,18 @@
-import { Responder } from './responder';
+import { connect, create, ResponderClient, ResponderHost } from './responder';
 
 export abstract class Queue<Type> {
+	disconnect!: () => void;
 	abstract pop(): Promise<Type | undefined>;
 	abstract push(entries: Type[]): Promise<void>;
+	abstract version(version: any): void;
 	protected currentVersion: any;
 
-	static connect<Type = string>(name: string) {
-		return Responder.connect<QueueHost<Type>, QueueClient<Type>>(name, QueueClient);
+	static connect<Type = string>(name: string): Promise<Queue<Type>> {
+		return connect(name, QueueClient, QueueHost);
 	}
 
-	static create<Type = string>(name: string) {
-		return Responder.create(name, () => Promise.resolve(new QueueHost));
+	static create<Type = string>(name: string): Promise<Queue<Type>> {
+		return Promise.resolve(create(name, QueueHost));
 	}
 
 	request(method: string, payload?: any): any {
@@ -37,14 +39,14 @@ export abstract class Queue<Type> {
 	}
 }
 
-class QueueHost<Type> extends Queue<Type> {
-	readonly queue: Type[] = [];
+const QueueHost = ResponderHost(class QueueHost extends Queue<any> {
+	readonly queue: any[] = [];
 
 	pop() {
 		return Promise.resolve(this.queue.shift());
 	}
 
-	push(entries: Type[]) {
+	push(entries: any[]) {
 		this.queue.push(...entries);
 		return Promise.resolve();
 	}
@@ -55,18 +57,18 @@ class QueueHost<Type> extends Queue<Type> {
 			this.queue.splice(0, this.queue.length);
 		}
 	}
-}
+});
 
-class QueueClient<Type> extends Queue<Type> {
-	pop(): Promise<Type | undefined> {
+const QueueClient = ResponderClient(class QueueClient extends Queue<any> {
+	pop(): Promise<any> {
 		return this.request('pop', { version: this.currentVersion });
 	}
 
-	push(entries: Type[]): Promise<void> {
+	push(entries: any[]): Promise<void> {
 		return this.request('push', { version: this.currentVersion, entries });
 	}
 
 	version(version: any) {
 		this.currentVersion = version;
 	}
-}
+});

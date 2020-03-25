@@ -118,7 +118,6 @@ rules:
   key-spacing: [ warn, { mode: strict } ]
   keyword-spacing: warn
   linebreak-style: warn
-  new-cap: [ warn, { capIsNew: false } ]
   no-lonely-if: warn
   no-mixed-spaces-and-tabs: [ warn, smart-tabs ]
   no-negated-condition: warn

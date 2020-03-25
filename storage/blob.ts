@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import * as Path from 'path';
 import { mapInPlace } from '~/lib/utility';
 import Config from '~/engine/config';
-import { Responder } from './responder';
+import { create, connect, ResponderClient, ResponderHost } from './responder';
 
 const fragmentNameWhitelist = /^[a-zA-Z0-9/-]+$/;
 
@@ -19,18 +19,16 @@ export abstract class BlobStorage {
 	abstract load(fragment: string): Promise<Readonly<Uint8Array>>;
 	abstract save(fragment: string, blob: Uint8Array): Promise<void>;
 
-	static async connect() {
-		return Responder.connect<BlobStorageHost, BlobStorageClient>('blobStorage', BlobStorageClient);
+	static connect() {
+		return connect('blobStorage', BlobStorageClient, BlobStorageHost);
 	}
 
 	static async create() {
-		return Responder.create('blobStorage', async() => {
-			const config = await Config;
-			const path = Path.join(Path.dirname(config.file), config.config.storage.path);
-			const dir = await fs.opendir(path);
-			await dir.close();
-			return new BlobStorageHost(path);
-		});
+		const config = await Config;
+		const path = Path.join(Path.dirname(config.file), config.config.storage.path);
+		const dir = await fs.opendir(path);
+		await dir.close();
+		return create('blobStorage', BlobStorageHost, path);
 	}
 
 	request(method: string, payload?: any): any {
@@ -46,7 +44,7 @@ export abstract class BlobStorage {
 	}
 }
 
-class BlobStorageHost extends BlobStorage {
+const BlobStorageHost = ResponderHost(class BlobStorageHost extends BlobStorage {
 	private bufferedBlobs = new Map<string, Readonly<Uint8Array>>();
 	private bufferedDeletes = new Set<string>();
 	private readonly knownPaths = new Set<string>();
@@ -55,7 +53,7 @@ class BlobStorageHost extends BlobStorage {
 		super();
 	}
 
-	check(fragment: string) {
+	private check(fragment: string) {
 		// Safety check before writing random file names based on user input
 		if (!fragmentNameWhitelist.test(fragment)) {
 			throw new Error(`Unsafe blob id: ${fragment}`);
@@ -153,9 +151,9 @@ class BlobStorageHost extends BlobStorage {
 		this.bufferedBlobs.set(fragment, blob.buffer instanceof SharedArrayBuffer ? blob : copy(blob));
 		return Promise.resolve();
 	}
-}
+});
 
-class BlobStorageClient extends BlobStorage {
+const BlobStorageClient = ResponderClient(class BlobStorageClient extends BlobStorage {
 	delete(fragment: string): Promise<void> {
 		return this.request('delete', fragment);
 	}
@@ -167,4 +165,4 @@ class BlobStorageClient extends BlobStorage {
 	save(fragment: string, blob: Uint8Array) {
 		return this.request('save', { fragment, blob: copy(blob) });
 	}
-}
+});

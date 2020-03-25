@@ -2,6 +2,11 @@ import assert from 'assert';
 import { Worker, isMainThread, parentPort } from 'worker_threads';
 import { staticCast } from '~/lib/utility';
 
+/**
+ * Responders generalizes the client/server request/response model for inter-thread/process
+ * communication.
+ */
+
 type ConnectMessage = {
 	type: 'responderConnect';
 	clientId: string;
@@ -38,199 +43,52 @@ type UnknownMessage = { type: null };
 type ParentMessage = ResponseMessage | ConnectedMessage | ConnectionFailedMessage | UnknownMessage;
 type WorkerMessage = RequestMessage | ConnectMessage | DisconnectMessage | UnknownMessage;
 
-/**
- * Generalize the client/server request/response model for inter-thread/process communication. The
- * types in this class are a mess but at least it's contained to this file and doesn't leak out into
- * the rest of the project.
- */
-const instancesByName = new Map<string, any>();
-const respondersByName = new Map<string, Responder>();
-const respondersByClientId = new Map<string, Responder>();
-const unlistenByClientId = new Map<string, () => void>();
 type HasResponder = {
 	request(method: string, payload?: any): Promise<any>;
 };
-export abstract class Responder {
-	abstract disconnect(): void;
-	abstract request(method: string, payload?: any): Promise<any>;
 
-	static connect<Host extends HasResponder, Client extends HasResponder>(
-		name: string,
-		constructor: new() => Client,
-	): Promise<Responder & (Client | Host)> {
-		if (isMainThread) {
-			return ResponderHost.hostConnect<Host>(name) as any;
+type AbstractResponder = { disconnect(): void };
+type AbstractResponderHost = HasResponder & { _refs: number };
+type AbstractResponderClient = HasResponder & { _clientId: string; _requests: Map<number, Resolver> };
+
+// Used in host isolate
+const responderHostsByClientId = new Map<string, HasResponder>();
+const responderHostsByName = new Map<string, AbstractResponderHost>();
+
+// User in client isolate
+let didInitializeWorker = false;
+const responderClientsById = new Map<string, HasResponder>();
+const unlistenByClientId = new Map<string, () => void>();
+
+// Connect to an existing responder
+export function connect<Host extends AbstractResponderHost, Client extends AbstractResponderClient>(
+	name: string,
+	clientConstructor: Constructor<Client>,
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	hostConstructor: Constructor<Host>,
+): Promise<Client | Host> {
+	if (isMainThread) {
+		// Connecting to a responder from the parent just returnse
+		const responder = responderHostsByName.get(name) as Host | undefined;
+		if (responder) {
+			++responder._refs;
+			return Promise.resolve(responder);
 		} else {
-			return ResponderClient.clientConnect(name, constructor) as any;
-		}
-	}
-
-	static async create<Type extends HasResponder>(name: string, factory: () => Promise<Type>):
-			Promise<Type & Responder> {
-		assert(isMainThread);
-		// Only one responder per name should exist
-		if (respondersByName.has(name)) {
-			return Promise.reject(new Error(`Responder: ${name} already exists`));
-		}
-		// Instantiate a new ResponderHost instance.. violates `abstract`!
-		const responder = new (ResponderHost as any)(name) as ResponderHost;
-		const instance = await factory();
-		instancesByName.set(name, instance);
-		// Link up methods from both classes
-		(instance as any).disconnect = responder.disconnect.bind(responder);
-		responder.request = instance.request.bind(instance);
-		return Promise.resolve(instance as any);
-	}
-
-	static initializeWorker(worker: Worker) {
-		worker.on('message', (message: WorkerMessage) => {
-			switch (message.type) {
-				// Child worker is connecting to parent
-				case 'responderConnect': {
-					// Check that this responder exists
-					const responder = respondersByName.get(message.name);
-					const { clientId } = message;
-					if (responder === undefined) {
-						worker.postMessage(staticCast<ParentMessage>({
-							type: 'responderConnectionFailed',
-							clientId,
-						}));
-					} else {
-						// Save parent by client id for responses
-						respondersByClientId.set(clientId, responder);
-						worker.postMessage(staticCast<ParentMessage>({
-							type: 'responderConnected',
-							clientId,
-						}));
-						// Sudden disconnect listener
-						const exitListener = () => respondersByClientId.delete(clientId);
-						worker.on('exit', exitListener);
-						unlistenByClientId.set(clientId, () => worker.removeListener('exit', exitListener));
-					}
-					break;
-				}
-
-				// Child worker is disconnecting
-				case 'responderDisconnect': {
-					const { clientId } = message;
-					respondersByClientId.delete(clientId);
-					unlistenByClientId.get(clientId)!();
-					unlistenByClientId.delete(clientId);
-					break;
-				}
-
-				// Incoming request from child
-				case 'responderRequest': {
-					const { clientId, requestId } = message;
-					const server = respondersByClientId.get(clientId)!;
-					const request = server === undefined ?
-						Promise.reject(new Error('Responder has gone away')) :
-						server.request(message.method, message.payload);
-					request.then(payload => {
-						worker.postMessage(staticCast<ParentMessage>({
-							type: 'responderResponse',
-							clientId,
-							requestId,
-							payload,
-						}));
-					}, (error: Error) => {
-						worker.postMessage(staticCast<ParentMessage>({
-							type: 'responderResponse',
-							clientId,
-							requestId,
-							payload: error.message,
-							rejection: true,
-						}));
-					});
-					break;
-				}
-
-				default:
-			}
-		});
-	}
-}
-
-export abstract class ResponderHost extends Responder {
-	refs = 1;
-	constructor(protected name: string) {
-		super();
-		assert(isMainThread);
-		if (respondersByName.has(name)) {
-			throw new Error(`Responder: ${name} already exists`);
-		}
-		respondersByName.set(name, this);
-	}
-
-	static hostConnect<Type extends HasResponder>(name: string): Promise<Type> {
-		const responder = respondersByName.get(name) as any;
-		if (responder === undefined) {
 			return Promise.reject(new Error(`Responder: ${name} does not exist`));
-		} else {
-			++responder.refs;
-			const instance = instancesByName.get(name);
-			return Promise.resolve(instance);
 		}
-	}
 
-	disconnect() {
-		if (--this.refs === 0) {
-			respondersByName.delete(this.name);
-			instancesByName.delete(this.name);
-		}
-	}
-}
-
-export class ResponderClient extends Responder {
-	private readonly clientId = `${Math.floor(Math.random() * 2 ** 52)}`;
-	private requestId = 0;
-	private readonly requests = new Map<number, Resolver>();
-
-	// Single listener for all clients in a worker
-	static didInit = false;
-	private static init() {
-		if (this.didInit) {
-			return;
-		}
-		this.didInit = true;
-		parentPort!.on('message', (message: ParentMessage) => {
-			if (message.type === 'responderResponse') {
-				const client = respondersByClientId.get(message.clientId);
-				if (client !== undefined) {
-					const { requests } = client as ResponderClient;
-					const request = requests.get(message.requestId);
-					requests.delete(message.requestId);
-					if (message.rejection === true) {
-						request?.reject(new Error(message.payload));
-					} else {
-						request?.resolve(message.payload);
-					}
-				}
-			}
-		});
-	}
-
-	constructor() {
-		super();
-		ResponderClient.init();
-		respondersByClientId.set(this.clientId, this as Responder);
-	}
-
-	static clientConnect<Type extends HasResponder>(name: string, constructor: new() => Type) {
-
-		// Check with main thread that this responder is ready (no retries)
-		assert(!isMainThread);
-		return new Promise<Type>((resolve, reject) => {
+	} else {
+		// Check with main thread that this responder is ready
+		initializeThisWorker();
+		return new Promise<Client>((resolve, reject) => {
 			// Set up connection ack handler
-			const responder = new ResponderClient;
+			const responder = new clientConstructor as Client;
 			const listener = (message: ParentMessage) => {
-				if ((message as any).clientId === responder.clientId) {
+				if ((message as any).clientId === responder._clientId) {
 					parentPort!.removeListener('message', listener);
 					if (message.type === 'responderConnected') {
-						const instance = new constructor;
-						(instance as any).disconnect = responder.disconnect.bind(responder);
-						instance.request = responder.request.bind(responder);
-						resolve(instance);
+						responderClientsById.set(responder._clientId, responder);
+						resolve(responder);
 					} else {
 						assert(message.type === 'responderConnectionFailed');
 						reject(new Error(`Responder ${name} does not exist`));
@@ -242,34 +100,176 @@ export class ResponderClient extends Responder {
 			// Send "connection" request to main thread
 			parentPort!.postMessage(staticCast<WorkerMessage>({
 				type: 'responderConnect',
-				clientId: responder.clientId,
+				clientId: responder._clientId,
 				name,
 			}));
 		});
 	}
+}
 
-	disconnect() {
-		for (const resolver of this.requests.values()) {
-			resolver.reject(new Error('Disconnected from responder'));
-		}
-		this.requests.clear();
-		parentPort!.postMessage(staticCast<WorkerMessage>({
-			type: 'responderDisconnect',
-			clientId: this.clientId,
-		}));
+// Create a responder on the parent thread
+export function create<Host extends AbstractResponderHost, Args>(
+	name: string,
+	hostConstructor: new(name: string, ...args: Args[]) => Host,
+	...args: Args[]
+) {
+	assert(isMainThread);
+	// Only one responder per name should exist
+	if (responderHostsByName.has(name)) {
+		throw new Error(`Responder: ${name} already exists`);
 	}
-
-	request(method: string, payload?: any) {
-		return new Promise((resolve, reject) => {
-			const requestId = ++this.requestId;
-			this.requests.set(requestId, { resolve, reject });
-			parentPort!.postMessage(staticCast<WorkerMessage>({
-				type: 'responderRequest',
-				clientId: this.clientId,
-				requestId,
-				method,
-				payload,
-			}));
-		});
+	responderHostsByName.set(name, undefined as any);
+	// Instantiate a new Responder
+	try {
+		const instance = new hostConstructor(name, ...args);
+		responderHostsByName.set(name, instance);
+		return instance;
+	} catch (err) {
+		responderHostsByName.delete(name);
+		throw err;
 	}
 }
+
+// Single listener for all clients in a worker
+function initializeThisWorker() {
+	if (didInitializeWorker) {
+		return;
+	}
+	didInitializeWorker = true;
+	parentPort!.on('message', (message: ParentMessage) => {
+		if (message.type === 'responderResponse') {
+			const client = responderClientsById.get(message.clientId);
+			if (client) {
+				const { _requests } = client as AbstractResponderClient;
+				const request = _requests.get(message.requestId)!;
+				_requests.delete(message.requestId);
+				if (message.rejection) {
+					request.reject(new Error(message.payload));
+				} else {
+					request.resolve(message.payload);
+				}
+			}
+		}
+	});
+}
+
+// Called on the parent thread, once per worker created
+export function initializeWorker(worker: Worker) {
+	worker.on('message', (message: WorkerMessage) => {
+		switch (message.type) {
+			// Child worker is connecting to parent
+			case 'responderConnect': {
+				// Check that this responder exists
+				const responder = responderHostsByName.get(message.name);
+				const { clientId } = message;
+				if (responder) {
+					// Save parent by client id for responses
+					responderHostsByClientId.set(clientId, responder);
+					worker.postMessage(staticCast<ParentMessage>({
+						type: 'responderConnected',
+						clientId,
+					}));
+					// Sudden disconnect listener
+					const exitListener = () => {
+						responderHostsByClientId.delete(clientId);
+						worker.removeListener('exit', exitListener);
+					};
+					worker.on('exit', exitListener);
+					unlistenByClientId.set(clientId, exitListener);
+				} else {
+					worker.postMessage(staticCast<ParentMessage>({
+						type: 'responderConnectionFailed',
+						clientId,
+					}));
+				}
+				break;
+			}
+
+			// Child worker is disconnecting
+			case 'responderDisconnect': {
+				const { clientId } = message;
+				responderHostsByClientId.delete(clientId);
+				unlistenByClientId.get(clientId)!();
+				break;
+			}
+
+			// Incoming request from child
+			case 'responderRequest': {
+				const { clientId, method, payload, requestId } = message;
+				const host = responderHostsByClientId.get(clientId)!;
+				const request = host === undefined ?
+					Promise.reject(new Error('Responder has gone away')) :
+					host.request(method, payload);
+				request.then(payload => {
+					worker.postMessage(staticCast<ParentMessage>({
+						type: 'responderResponse',
+						clientId,
+						requestId,
+						payload,
+					}));
+				}, (error: Error) => {
+					worker.postMessage(staticCast<ParentMessage>({
+						type: 'responderResponse',
+						clientId,
+						requestId,
+						payload: error.message,
+						rejection: true,
+					}));
+				});
+				break;
+			}
+
+			default:
+		}
+	});
+}
+
+export const ResponderHost = <Type extends HasResponder, Args>(baseClass: new(...args: Args[]) => Type):
+new(...args: Args[]) => Type & AbstractResponder & AbstractResponderHost =>
+	class extends (baseClass as any) {
+		_refs = 1;
+
+		constructor(private readonly _name: string, ...args: Args[]) {
+			// eslint-disable-next-line constructor-super
+			super(...args);
+		}
+
+		disconnect() {
+			if (--this._refs === 0) {
+				responderHostsByName.delete(this._name);
+			}
+		}
+	} as any;
+
+export const ResponderClient = <Type, Args>(baseClass: new(...args: Args[]) => Type):
+new(...args: Args[]) => Type & AbstractResponder & AbstractResponderClient =>
+	class extends (baseClass as any) {
+		private _requestId = 0;
+		readonly _clientId = `${Math.floor(Math.random() * 2 ** 52)}`;
+		readonly _requests = new Map<number, Resolver>();
+
+		disconnect() {
+			for (const resolver of this._requests.values()) {
+				resolver.reject(new Error('Disconnected from responder'));
+			}
+			this._requests.clear();
+			parentPort!.postMessage(staticCast<WorkerMessage>({
+				type: 'responderDisconnect',
+				clientId: this._clientId,
+			}));
+		}
+
+		request(method: string, payload?: any) {
+			return new Promise((resolve, reject) => {
+				const requestId = ++this._requestId;
+				this._requests.set(requestId, { resolve, reject });
+				parentPort!.postMessage(staticCast<WorkerMessage>({
+					type: 'responderRequest',
+					clientId: this._clientId,
+					requestId,
+					method,
+					payload,
+				}));
+			});
+		}
+	} as any;
