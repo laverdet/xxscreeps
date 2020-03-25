@@ -20,7 +20,7 @@ export default async function() {
 	// Initialize binary room schema
 	const readRoom = getReader(Schema.schema.Room, Schema.interceptorSchema);
 	const writeRoom = getWriter(Schema.schema.Room, Schema.interceptorSchema);
-	const writeBuffer = new BufferView(new ArrayBuffer(1024 * 1024));
+	const writeBuffer = new Uint8Array(1024 * 1024);
 
 	// Keep track of rooms this thread ran. Global room processing must also happen here.
 	const processedRooms = new Map<string, ProcessorContext>();
@@ -53,7 +53,7 @@ export default async function() {
 					const deleteIntentBlobs = Promise.all(mapInPlace(intents, ({ user }) =>
 						blobStorage.delete(`intents/${room}/${user}`)));
 					// Process the room
-					const roomInstance = readRoom(BufferView.fromTypedArray(roomBlob), 0);
+					const roomInstance = readRoom(roomBlob);
 					(global as any).Game = new Game(gameTime, [ roomInstance ]);
 					const context = new ProcessorContext(gameTime, roomInstance);
 					for (const intentInfo of intents) {
@@ -74,10 +74,8 @@ export default async function() {
 				// processing has run
 				const nextGameTime = gameTime + 1;
 				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) => {
-					const length = writeRoom(context.room, writeBuffer, 0);
-					return blobStorage.save(
-						`ticks/${nextGameTime}/${roomName}`,
-						new Uint8Array(writeBuffer.uint8.buffer, 0, length));
+					writeRoom(context.room, writeBuffer);
+					return blobStorage.save(`ticks/${nextGameTime}/${roomName}`, writeBuffer);
 				}));
 				processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
 				processedRooms.clear();

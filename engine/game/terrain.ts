@@ -1,4 +1,6 @@
 import { checkCast, makeArray, withType, BufferView, Format, Interceptor } from '~/engine/schema';
+import { exchange } from '~/lib/utility';
+
 const { apply } = Reflect;
 const { Uint8Array } = globalThis;
 const { set } = Uint8Array.prototype;
@@ -7,7 +9,7 @@ export const kTerrainWall = 1;
 export const kTerrainSwamp = 2;
 
 export const format = checkCast<Format>()({
-	roomName: 'string',
+	name: 'string',
 	terrain: withType<Terrain>(makeArray(625, 'uint8')),
 });
 
@@ -40,8 +42,7 @@ export class Terrain {
 	}
 }
 
-export const getBuffer = Terrain[GetBufferSymbol];
-delete Terrain[GetBufferSymbol];
+export const getBuffer = exchange(Terrain, GetBufferSymbol);
 
 export class TerrainWriter extends Terrain {
 	constructor(buffer = new Uint8Array(625)) {

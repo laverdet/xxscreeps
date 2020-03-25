@@ -15,7 +15,6 @@ import * as StoreIntents from '~/engine/processor/intents/store';
 
 import { Variant } from '~/engine/schema/format';
 import { getWriter } from '~/engine/schema/write';
-import { BufferView } from '~/engine/schema/buffer-view';
 import { BlobStorage } from '~/storage/blob';
 
 const [ jsonSource ] = process.argv.slice(2);
@@ -33,11 +32,11 @@ topLevelTask(async() => {
 	const envData = collections.env[0].data;
 	const { gameTime }: { gameTime: number } = envData;
 	const blobStorage = await BlobStorage.create();
-	const view = new BufferView(new ArrayBuffer(1024 * 1024 * 32));
+	const buffer = new Uint8Array(1024 * 1024 * 32);
 
 	// Save helper
 	function save(blob: string, length: number) {
-		return blobStorage.save(blob, view.uint8.subarray(0, length));
+		return blobStorage.save(blob, buffer.subarray(0, length));
 	}
 
 	// Collect initial room data
@@ -107,40 +106,39 @@ topLevelTask(async() => {
 	// Save rooms
 	const writeRoom = getWriter(Schema.schema.Room, Schema.interceptorSchema);
 	for (const [ roomName, room ] of rooms) {
-		await save(`ticks/${gameTime}/${roomName}`, writeRoom(room, view, 0));
+		await save(`ticks/${gameTime}/${roomName}`, writeRoom(room as Room.Room, buffer));
 	}
 
 	// Read room data from rooms.terrain collection
-	const roomsTerrain = collections['rooms.terrain'].map((room: { room: string; terrain: string }) => {
+	const roomsTerrain = new Map(collections['rooms.terrain'].map((room: { room: string; terrain: string }) => {
 		const terrain = new TerrainWriter;
 		for (let xx = 0; xx < 50; ++xx) {
 			for (let yy = 0; yy < 50; ++yy) {
 				terrain.set(xx, yy, Number(room.terrain[yy * 50 + xx]));
 			}
 		}
-		return {
-			roomName: room.room,
-			terrain,
-		};
-	});
-	roomsTerrain.sort((left, right) => left.roomName.localeCompare(right.roomName));
+		return [ room.room, terrain ];
+	}));
 
 	// Make writer and save terrain
 	const writeWorld = getWriter(MapSchema.schema.World, MapSchema.interceptorSchema);
-	await save('terrain', writeWorld(roomsTerrain, view, 0));
+	await save('terrain', writeWorld(roomsTerrain, buffer));
 
 	// Collect users
-	const users = collections.users.map(user => ({
-		id: user._id,
-		username: user.username,
-		registeredDate: +new Date(user.registeredDate),
-		active: user.active,
-		cpu: user.cpu,
-		cpuAvailable: user.cpuAvailable,
-		gcl: user.gcl,
-		badge: user.badge === undefined ? '{}' : JSON.stringify(user.badge),
-		visibleRooms: (roomsByUser[user._id] ?? []),
-	}));
+	const users = new Map(collections.users.map(user => [
+		user._id,
+		{
+			id: user._id,
+			username: user.username,
+			registeredDate: +new Date(user.registeredDate),
+			active: user.active,
+			cpu: user.cpu,
+			cpuAvailable: user.cpuAvailable,
+			gcl: user.gcl,
+			badge: user.badge === undefined ? '{}' : JSON.stringify(user.badge),
+			visibleRooms: (roomsByUser[user._id] ?? new Set<string>()),
+		},
+	]));
 
 	// Save Game object
 	const game = {
@@ -150,7 +148,7 @@ topLevelTask(async() => {
 		users,
 	};
 	const writeGame = getWriter(GameSchema.schema.Game, GameSchema.interceptorSchema);
-	await save('game', writeGame(game, view, 0));
+	await save('game', writeGame(game, buffer));
 
 	// Collect user code
 	const writeCode = getWriter(GameSchema.schema.Code, GameSchema.interceptorSchema);
@@ -160,7 +158,7 @@ topLevelTask(async() => {
 			const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
 			modules.push({ name, data });
 		}
-		await save(`code/${row.user}`, writeCode({ modules }, view, 0));
+		await save(`code/${row.user}`, writeCode({ modules }, buffer));
 	}
 
 	// Flush everything to disk

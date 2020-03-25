@@ -1,4 +1,4 @@
-import type { BufferView } from './buffer-view';
+import { BufferView } from './buffer-view';
 import { Variant } from './format';
 import type { BoundInterceptorSchema } from './interceptor';
 import { kPointerSize, alignTo, getTraits, Layout, StructLayout } from './layout';
@@ -20,7 +20,7 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 				// Get writer for this member
 				const { offset, pointer } = member;
 				const write = function(): Writer {
-					const write = getWriter(member.layout, interceptorSchema);
+					const write = getTypeWriter(member.layout, interceptorSchema);
 
 					// Has decomposer?
 					const decompose = interceptors?.members?.[key]?.decompose;
@@ -74,43 +74,45 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 		}
 	});
 
-const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
-	(layout: Layout, interceptorSchema: BoundInterceptorSchema): Writer => {
+const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, interceptorSchema: BoundInterceptorSchema): Writer => {
 
-		if (typeof layout === 'string') {
-			// Integral types
-			switch (layout) {
-				case 'int8': return (value, view, offset) => ((view.int8[offset] = value, 1));
-				case 'int16': return (value, view, offset) => ((view.int16[offset >>> 1] = value, 2));
-				case 'int32': return (value, view, offset) => ((view.int32[offset >>> 2] = value, 4));
+	if (typeof layout === 'string') {
+		// Integral types
+		switch (layout) {
+			case 'int8': return (value, view, offset) => ((view.int8[offset] = value, 1));
+			case 'int16': return (value, view, offset) => ((view.int16[offset >>> 1] = value, 2));
+			case 'int32': return (value, view, offset) => ((view.int32[offset >>> 2] = value, 4));
 
-				case 'uint8': return (value, view, offset) => ((view.uint8[offset] = value, 1));
-				case 'uint16': return (value, view, offset) => ((view.uint16[offset >>> 1] = value, 2));
-				case 'uint32': return (value, view, offset) => ((view.uint32[offset >>> 2] = value, 4));
+			case 'uint8': return (value, view, offset) => ((view.uint8[offset] = value, 1));
+			case 'uint16': return (value, view, offset) => ((view.uint16[offset >>> 1] = value, 2));
+			case 'uint32': return (value, view, offset) => ((view.uint32[offset >>> 2] = value, 4));
 
-				case 'bool': return (value: boolean, view, offset) => ((view.int8[offset] = value ? 1 : 0, 1));
+			case 'bool': return (value: boolean, view, offset) => ((view.int8[offset] = value ? 1 : 0, 1));
 
-				case 'string': return (value: string, view, offset) => {
-					// Write string length
-					const { length } = value;
-					view.uint32[offset >>> 2] = length;
-					// Write string data
-					const stringOffset = offset + kPointerSize >>> 1;
-					const { uint16 } = view;
-					for (let ii = 0; ii < length; ++ii) {
-						uint16[stringOffset + ii] = value.charCodeAt(ii);
-					}
-					return (length << 1) + kPointerSize;
-				};
+			case 'string': return (value: string, view, offset) => {
+				// Write string length
+				const { length } = value;
+				view.uint32[offset >>> 2] = length;
+				// Write string data
+				const stringOffset = offset + kPointerSize >>> 1;
+				const { uint16 } = view;
+				for (let ii = 0; ii < length; ++ii) {
+					uint16[stringOffset + ii] = value.charCodeAt(ii);
+				}
+				return (length << 1) + kPointerSize;
+			};
 
-				default: throw TypeError(`Invalid literal layout: ${layout}`);
-			}
+			default: throw TypeError(`Invalid literal layout: ${layout}`);
+		}
+	}
 
-		} else if ('array' in layout) {
+	// Fetch reader for non-literal type
+	const write = function(): Writer {
+		if ('array' in layout) {
 			// Array types
 			const arraySize = layout.size;
 			const elementLayout = layout.array;
-			const write = getWriter(elementLayout, interceptorSchema);
+			const write = getTypeWriter(elementLayout, interceptorSchema);
 			const { size, stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				throw new TypeError('Unimplemented');
@@ -136,7 +138,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 		} else if ('optional' in layout) {
 			// Optional types
 			const elementLayout = layout.optional;
-			const write = getWriter(elementLayout, interceptorSchema);
+			const write = getTypeWriter(elementLayout, interceptorSchema);
 			const { align, size, stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				// Dynamic size element. Flag is pointer to memory (just 4 bytes ahead)
@@ -172,7 +174,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 			const variantMap = new Map<string, Writer>();
 			for (let ii = 0; ii < layout.variant.length; ++ii) {
 				const elementLayout = layout.variant[ii];
-				const write = getWriter(elementLayout, interceptorSchema);
+				const write = getTypeWriter(elementLayout, interceptorSchema);
 				variantMap.set(
 					elementLayout[Variant]!,
 					(value, view, offset) => {
@@ -185,7 +187,7 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 
 		} else if ('vector' in layout) {
 			const elementLayout = layout.vector;
-			const write = getWriter(elementLayout, interceptorSchema);
+			const write = getTypeWriter(elementLayout, interceptorSchema);
 			const { size, stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				// Vector with dynamic element size
@@ -222,26 +224,28 @@ const memoizeGetWriter = RecursiveWeakMemoize([ 0, 1 ],
 		} else {
 			// Structures
 			const { size } = getTraits(layout);
-			const write = function(): Writer {
-				const writeMembers = getMemberWriter(layout, interceptorSchema);
-				return (value, view, offset) => writeMembers(value, view, offset, offset + size) - offset;
-			}();
-
-			// Has composer?
-			const interceptors = interceptorSchema.get(layout);
-			const decompose = interceptors?.decompose;
-			if (decompose !== undefined) {
-				return (value, view, offset) => write(decompose(value), view, offset);
-			}
-			const decomposeIntoBuffer = interceptors?.decomposeIntoBuffer;
-			if (decomposeIntoBuffer !== undefined) {
-				return (value, view, offset) => decomposeIntoBuffer(value, view, offset);
-			}
-			return write;
+			const writeMembers = getMemberWriter(layout, interceptorSchema);
+			return (value, view, offset) => writeMembers(value, view, offset, offset + size) - offset;
 		}
-	});
+	}();
 
-/*export function getWriter<Layout>(layout: Layout, interceptorSchema: BoundInterceptorSchema): Writer<Layout> */
-export function getWriter<Layout>(layout: Layout, interceptorSchema: BoundInterceptorSchema): Writer {
-	return memoizeGetWriter(layout as any, interceptorSchema);
+	// Has decomposer?
+	const interceptors = interceptorSchema.get(layout);
+	const decompose = interceptors?.decompose;
+	if (decompose !== undefined) {
+		return (value, view, offset) => write(decompose(value), view, offset);
+	}
+	const decomposeIntoBuffer = interceptors?.decomposeIntoBuffer;
+	if (decomposeIntoBuffer !== undefined) {
+		return (value, view, offset) => decomposeIntoBuffer(value, view, offset);
+	}
+	return write;
+});
+
+export function getWriter<Layout>(layout: Layout, interceptorSchema: BoundInterceptorSchema) {
+	const write = getTypeWriter(layout as any, interceptorSchema);
+	return (value: Layout, buffer: Uint8Array) => {
+		const view = BufferView.fromTypedArray(buffer);
+		return write(value, view, 0);
+	};
 }

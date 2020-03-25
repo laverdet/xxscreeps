@@ -1,6 +1,6 @@
 import { Endpoint } from '~/backend/endpoint';
 import * as DatabaseSchema from '~/engine/metabase';
-import { getReader, BufferView } from '~/engine/schema';
+import { getReader } from '~/engine/schema';
 import { BlobStorage } from '~/storage/blob';
 
 export const MapStatsEndpoint: Endpoint = {
@@ -10,7 +10,7 @@ export const MapStatsEndpoint: Endpoint = {
 	async execute() {
 		const blobStorage = await BlobStorage.connect();
 		const gameReader = getReader(DatabaseSchema.schema.Game, DatabaseSchema.interceptorSchema);
-		const gameMetadata = gameReader(BufferView.fromTypedArray(await blobStorage.load('game')), 0);
+		const gameMetadata = gameReader(await blobStorage.load('game'));
 		blobStorage.disconnect();
 		const stats: Dictionary<{ status: string }> = {};
 		for (const room of gameMetadata.activeRooms) {

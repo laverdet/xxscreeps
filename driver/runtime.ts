@@ -94,7 +94,7 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 	gameContext.intents = new IntentManager;
 	// Build game object
 	const rooms = roomBlobs.map(buffer =>
-		new Room(new BufferView(buffer.buffer, buffer.byteOffset)));
+		new Room(BufferView.fromTypedArray(buffer)));
 	global.Game = new Game(time, rooms);
 	// Run player loop
 	require('main').loop();

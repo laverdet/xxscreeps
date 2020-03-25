@@ -1,5 +1,5 @@
 import * as DatabaseSchema from '~/engine/metabase';
-import { getReader, BufferView } from '~/engine/schema';
+import { getReader } from '~/engine/schema';
 import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
@@ -17,7 +17,7 @@ export default async function() {
 
 	// Load current game state
 	const gameReader = getReader(DatabaseSchema.schema.Game, DatabaseSchema.interceptorSchema);
-	const gameMetadata = gameReader(BufferView.fromTypedArray(await blobStorage.load('game')), 0);
+	const gameMetadata = gameReader(await blobStorage.load('game'));
 
 	// Run main game processing loop
 	let gameTime = 1;

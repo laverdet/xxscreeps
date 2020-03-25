@@ -2,7 +2,6 @@ import { PNG } from 'pngjs';
 import { Endpoint } from '~/backend/endpoint';
 import * as MapSchema from '~/engine/game/map';
 import { Terrain, isBorder, kTerrainWall, kTerrainSwamp } from '~/engine/game/terrain';
-import { BufferView } from '~/engine/schema/buffer-view';
 import { getReader } from '~/engine/schema/read';
 import { BlobStorage } from '~/storage/blob';
 
@@ -14,9 +13,8 @@ export function worldTerrain() {
 	return worldTerrainPromise = async function() {
 		const blobStorage = await BlobStorage.connect();
 		const buffer = await blobStorage.load('terrain');
-		const view = new BufferView(buffer.buffer, buffer.byteOffset);
 		const read = getReader(MapSchema.schema.World, MapSchema.interceptorSchema);
-		return read(view, 0);
+		return read(buffer);
 	}();
 }
 
@@ -53,13 +51,12 @@ export const TerrainEndpoint: Endpoint = {
 	path: '/map/:room.png',
 
 	async execute(req, res) {
-		for (const room of await worldTerrain()) {
-			if (room.roomName === req.params.room) {
-				res.set('Content-Type', 'image/png');
-				res.writeHead(200);
-				generate(room.terrain, 3).pipe(res);
-				return false;
-			}
+		const terrain = (await worldTerrain()).get(req.params.room);
+		if (terrain) {
+			res.set('Content-Type', 'image/png');
+			res.writeHead(200);
+			generate(terrain, 3).pipe(res);
+			return false;
 		}
 	},
 };

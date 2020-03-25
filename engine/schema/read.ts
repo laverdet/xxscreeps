@@ -1,12 +1,12 @@
 import type { BufferObject } from './buffer-object';
-import type { BufferView } from './buffer-view';
+import { BufferView } from './buffer-view';
 import { Variant } from './format';
 import type { BoundInterceptorSchema, MemberInterceptor } from './interceptor';
 import { kPointerSize, getTraits, Layout, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
 const { fromCharCode } = String;
 
-export type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
+type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
 
 export const getSingleMemberReader = RecursiveWeakMemoize([ 0, 1 ],
@@ -17,7 +17,7 @@ export const getSingleMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 	): Reader => {
 
 		// Make underlying reader
-		const read = getReader(layout, interceptorSchema);
+		const read = getTypeReader(layout, interceptorSchema);
 
 		// Has composer?
 		const compose = memberInterceptors?.compose;
@@ -77,35 +77,37 @@ const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 	},
 );
 
-const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
-	(layout: Layout, interceptorSchema: BoundInterceptorSchema): Reader => {
+const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, interceptorSchema: BoundInterceptorSchema): Reader => {
 
-		if (typeof layout === 'string') {
-			// Integral types
-			switch (layout) {
-				case 'int8': return (view, offset) => view.int8[offset];
-				case 'int16': return (view, offset) => view.int16[offset >>> 1];
-				case 'int32': return (view, offset) => view.int32[offset >>> 2];
+	if (typeof layout === 'string') {
+		// Integral types
+		switch (layout) {
+			case 'int8': return (view, offset) => view.int8[offset];
+			case 'int16': return (view, offset) => view.int16[offset >>> 1];
+			case 'int32': return (view, offset) => view.int32[offset >>> 2];
 
-				case 'uint8': return (view, offset) => view.uint8[offset];
-				case 'uint16': return (view, offset) => view.uint16[offset >>> 1];
-				case 'uint32': return (view, offset) => view.uint32[offset >>> 2];
+			case 'uint8': return (view, offset) => view.uint8[offset];
+			case 'uint16': return (view, offset) => view.uint16[offset >>> 1];
+			case 'uint32': return (view, offset) => view.uint32[offset >>> 2];
 
-				case 'bool': return (view, offset) => view.int8[offset] !== 0;
+			case 'bool': return (view, offset) => view.int8[offset] !== 0;
 
-				case 'string': return (view, offset) => {
-					const stringOffset = offset + kPointerSize >>> 1;
-					return fromCharCode(...view.uint16.slice(stringOffset, stringOffset + view.uint32[offset >>> 2]));
-				};
+			case 'string': return (view, offset) => {
+				const stringOffset = offset + kPointerSize >>> 1;
+				return fromCharCode(...view.uint16.slice(stringOffset, stringOffset + view.uint32[offset >>> 2]));
+			};
 
-				default: throw TypeError(`Invalid literal layout: ${layout}`);
-			}
+			default: throw TypeError(`Invalid literal layout: ${layout}`);
+		}
+	}
 
-		} else if ('array' in layout) {
+	// Fetch reader for non-literal type
+	const read = function(): Reader {
+		if ('array' in layout) {
 			// Array types
 			const arraySize = layout.size;
 			const elementLayout = layout.array;
-			const read = getReader(elementLayout, interceptorSchema);
+			const read = getTypeReader(elementLayout, interceptorSchema);
 			const { stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				throw new TypeError('Unimplemented');
@@ -132,7 +134,7 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 		} else if ('optional' in layout) {
 			// Optional types
 			const elementLayout = layout.optional;
-			const read = getReader(elementLayout, interceptorSchema);
+			const read = getTypeReader(elementLayout, interceptorSchema);
 			const { size, stride } = getTraits(elementLayout);
 
 			if (stride === undefined) {
@@ -159,12 +161,12 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 		} else if ('variant' in layout) {
 			// Variant types
 			const variantReaders = layout.variant.map(elementLayout =>
-				getReader(elementLayout, interceptorSchema));
+				getTypeReader(elementLayout, interceptorSchema));
 			return (view, offset) => variantReaders[view.uint32[offset >>> 2]](view, offset + kPointerSize);
 
 		} else if ('vector' in layout) {
 			const elementLayout = layout.vector;
-			const read = getReader(elementLayout, interceptorSchema);
+			const read = getTypeReader(elementLayout, interceptorSchema);
 			const { stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				// Vector with dynamic element size
@@ -205,40 +207,42 @@ const memoizeGetReader = RecursiveWeakMemoize([ 0, 1 ],
 		} else {
 			// Structures / object
 			const variant = layout[Variant];
-			const read = function(): Reader {
-				const { inherit } = layout;
-				const readBase = inherit === undefined ?
-					undefined : getMemberReader(inherit, interceptorSchema);
-				const read = getMemberReader(layout, interceptorSchema);
-				return (view, offset) => {
-					const value = variant === undefined ? {} : { [Variant]: variant };
-					if (readBase !== undefined) {
-						readBase(value, view, offset);
-					}
-					read(value, view, offset);
-					return value;
-				};
-			}();
-
-			// Has composer?
-			const interceptors = interceptorSchema.get(layout);
-			const compose = interceptors?.compose;
-			if (compose !== undefined) {
-				return (view, offset) => compose(read(view, offset));
-			}
-			const composeFromBuffer = interceptors?.composeFromBuffer;
-			if (composeFromBuffer !== undefined) {
-				return (view, offset) => composeFromBuffer(view, offset);
-			}
-			const Overlay = interceptors?.overlay;
-			if (Overlay !== undefined) {
-				return (view, offset) => new (Overlay as Constructor<BufferObject>)(view, offset);
-			}
-			return read;
+			const { inherit } = layout;
+			const readBase = inherit === undefined ?
+				undefined : getMemberReader(inherit, interceptorSchema);
+			const read = getMemberReader(layout, interceptorSchema);
+			return (view, offset) => {
+				const value = variant === undefined ? {} : { [Variant]: variant };
+				if (readBase !== undefined) {
+					readBase(value, view, offset);
+				}
+				read(value, view, offset);
+				return value;
+			};
 		}
-	},
-);
+	}();
 
-export function getReader<Layout>(layout: Layout, interceptorSchema: BoundInterceptorSchema): Reader<Layout> {
-	return memoizeGetReader(layout as any, interceptorSchema);
+	// Has composer?
+	const interceptors = interceptorSchema.get(layout);
+	const compose = interceptors?.compose;
+	if (compose !== undefined) {
+		return (view, offset) => compose(read(view, offset));
+	}
+	const composeFromBuffer = interceptors?.composeFromBuffer;
+	if (composeFromBuffer !== undefined) {
+		return (view, offset) => composeFromBuffer(view, offset);
+	}
+	const Overlay = interceptors?.overlay;
+	if (Overlay !== undefined) {
+		return (view, offset) => new (Overlay as Constructor<BufferObject>)(view, offset);
+	}
+	return read;
+});
+
+export function getReader<Type>(layout: Type, interceptorSchema: BoundInterceptorSchema) {
+	const read = getTypeReader(layout as any, interceptorSchema);
+	return (buffer: Readonly<Uint8Array>): Type => {
+		const view = BufferView.fromTypedArray(buffer);
+		return read(view, 0);
+	};
 }

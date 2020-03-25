@@ -46,6 +46,7 @@ type StructShape4<Type> = Type extends StructFormat ? StructMemberShape<Type> : 
 
 type FormatShapeNoOptional<Type extends Format> =
 	Type extends Integral ? number :
+	Type extends 'bool' ? boolean :
 	Type extends 'string' ? string :
 	Type extends ArrayFormat ? ArrayShape<Type> :
 	Type extends EnumFormat ? EnumShape<Type> :
@@ -56,6 +57,7 @@ type FormatShapeNoOptional<Type extends Format> =
 
 export type FormatShape<Type extends Format> =
 	Type extends Integral ? number :
+	Type extends 'bool' ? boolean :
 	Type extends 'string' ? string :
 	Type extends ArrayFormat ? ArrayShape<Type> :
 	Type extends EnumFormat ? EnumShape<Type> :

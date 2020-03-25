@@ -1,10 +1,9 @@
 import * as Schema from '~/engine/metabase/index';
 import * as DatabaseSchema from '~/engine/metabase';
-import * as MapSchema from '~/engine/game/map';
+import { readWorld } from '~/engine/game/map';
 import { getReader } from '~/engine/schema/read';
 import { loadTerrain } from '~/driver/pathfinder';
 import { Sandbox } from '~/driver/sandbox';
-import { BufferView } from '~/engine/schema/buffer-view';
 import { mapInPlace, filterInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
@@ -20,13 +19,11 @@ export default async function() {
 
 	// Placeholder
 	const gameReader = getReader(DatabaseSchema.schema.Game, DatabaseSchema.interceptorSchema);
-	const gameMetadata = gameReader(BufferView.fromTypedArray(await blobStorage.load('game')), 0);
+	const gameMetadata = gameReader(await blobStorage.load('game'));
 
 	// Load shared terrain data
 	const terrainBuffer = await blobStorage.load('terrain');
-	const terrainBufferView = new BufferView(terrainBuffer.buffer, terrainBuffer.byteOffset);
-	const readTerrain = getReader(MapSchema.schema.World, MapSchema.interceptorSchema);
-	loadTerrain(readTerrain(terrainBufferView, 0));
+	loadTerrain(readWorld(terrainBuffer));
 
 	// Initialize binary schemas
 	const readCode = getReader(Schema.schema.Code, Schema.interceptorSchema);
@@ -49,8 +46,7 @@ export default async function() {
 							return existing;
 						}
 						// Generate a new one
-						const codeBlob = await blobStorage.load(`code/${userId}`);
-						const userCode = readCode(BufferView.fromTypedArray(codeBlob), 0);
+						const userCode = readCode(await blobStorage.load(`code/${userId}`));
 						const sandbox = await Sandbox.create(userId, userCode);
 						sandboxes.set(userId, sandbox);
 						return sandbox;

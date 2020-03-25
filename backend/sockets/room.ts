@@ -4,7 +4,6 @@ import { MainMessage } from '~/engine/service';
 import { getReader } from '~/engine/schema';
 import * as Schema from '~/engine/game/schema';
 import { Objects } from '~/engine/game/room';
-import { BufferView } from '~/engine/schema/buffer-view';
 import { Subscription } from '../socket';
 import { Render } from '../render';
 
@@ -24,7 +23,7 @@ export const roomSubscription: Subscription = {
 				if (event.type === 'tick' && now > lastTick + 250) {
 					lastTick = now;
 					const roomBlob = await blobStorage.load(`ticks/${event.time}/${parameters.room}`);
-					const room = readRoom(BufferView.fromTypedArray(roomBlob), 0);
+					const room = readRoom(roomBlob);
 					const response: any = {
 						objects: {},
 						info: { mode: 'world' },
