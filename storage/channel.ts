@@ -2,11 +2,11 @@ import { Worker, isMainThread, parentPort } from 'worker_threads';
 import { makeResolver } from '~/lib/resolver';
 import { staticCast } from '~/lib/utility';
 
-type Listener<Message> = (message: Message, fromThisChannel: boolean) => void;
+type Listener<Message> = (message: Message) => void;
 type InternalListener<Message> = (message: Message, id?: string) => void;
-type Subscription<Message> = {
+type Subscription<Message = any> = {
 	readonly name: string;
-	readonly listener: InternalListener<Message>;
+	readonly subscription: InternalListener<Message>;
 };
 
 type ChannelNotification = {
@@ -37,18 +37,18 @@ type WorkerMessage = ChannelNotification | SubscriptionRequest | UnsubscribeRequ
 /**
  * Utility functions to manage channels in a single isolate
  */
-const channelsByName = new Map<string, Set<Subscription<any>>>();
+const channelsByName = new Map<string, Set<Subscription>>();
 
-function connect(channel: Subscription<any>) {
+function connect(channel: Subscription) {
 	const channels = channelsByName.get(channel.name);
-	if (channels === undefined) {
-		channelsByName.set(channel.name, new Set([ channel ]));
-	} else {
+	if (channels) {
 		channels.add(channel);
+	} else {
+		channelsByName.set(channel.name, new Set([ channel ]));
 	}
 }
 
-function disconnect(channel: Subscription<any>) {
+function disconnect(channel: Subscription) {
 	const channels = channelsByName.get(channel.name)!;
 	channels.delete(channel);
 	if (channels.size === 0) {
@@ -60,7 +60,7 @@ function publish(name: string, id: string | undefined, message: any) {
 	const channels = channelsByName.get(name);
 	if (channels !== undefined) {
 		for (const channel of channels) {
-			channel.listener(message, id);
+			channel.subscription(message, id);
 		}
 	}
 }
@@ -69,70 +69,100 @@ function publish(name: string, id: string | undefined, message: any) {
  * Communication channels. This would probably be implemented in redis or something.
  */
 export abstract class Channel<Message> {
+	readonly subscription: InternalListener<Message>;
 	protected readonly id = `${Math.floor(Math.random() * 2 ** 52)}`;
-	readonly listener: InternalListener<Message>;
-	protected readonly extraListeners = new Set<(message: Message) => void>();
+	private didDisconnect = false;
+	private readonly listeners = new Set<(message: Message) => void>();
+	private readonly onDisconnect: () => void;
+	private readonly waitForDisconnect: Promise<void>;
 
-	constructor(
-		readonly name: string,
-		listener?: Listener<Message>,
-	) {
-		this.listener = (message, id) => {
-			listener?.(message, this.id === id);
-			for (const listener of this.extraListeners) {
-				listener(message);
+	abstract publish(message: Message): void;
+
+	protected constructor(readonly name: string) {
+		this.subscription = (message, id) => {
+			if (this.id !== id) {
+				for (const listener of this.listeners) {
+					listener(message);
+				}
 			}
 		};
+		// Setup disconnect handler
+		const [ promise, resolver ] = makeResolver<void>();
+		this.waitForDisconnect = promise;
+		this.onDisconnect = resolver.resolve as any;
 	}
 
-	static connect<Message>(name: string, listener?: Listener<Message>): Promise<Channel<Message>> {
-		return (isMainThread ? LocalChannel.connect : WorkerChannel.connect)(name, listener);
+	// Connect to a message channel
+	static connect<Message>(name: string): Promise<Channel<Message>> {
+		return (isMainThread ? LocalChannel.connect : WorkerChannel.connect)(name);
 	}
 
+	// Publish to a message channel without subscribing to it
 	static publish<Message>(name: string, message: Message): void {
 		return (isMainThread ? LocalChannel.publish : WorkerChannel.publish)(name, message);
 	}
 
+	// Called once per worker on start up
 	static initializeWorker(worker: Worker) {
 		return LocalChannel.initializeWorker(worker);
 	}
 
-	abstract disconnect(): void;
-	abstract publish(message: Message): void;
-
-	listen(listener: (message: Message) => void) {
-		this.extraListeners.add(listener);
-		return () => this.extraListeners.delete(listener);
+	// This should also be overridden
+	disconnect() {
+		this.listeners.clear();
+		this.onDisconnect();
+		this.didDisconnect = true;
 	}
 
+	// Add a new listener to this channel
+	listen(listener: Listener<Message>) {
+		if (this.listeners.has(listener)) {
+			throw new Error('Duplicate listener');
+		}
+		this.listeners.add(listener);
+		return () => {
+			if (!this.listeners.has(listener)) {
+				throw new Error('Unlisten called more than once');
+			}
+			this.listeners.delete(listener);
+		};
+	}
+
+	// Iterates over all messages in a `for await` loop
 	async *[Symbol.asyncIterator](): AsyncGenerator<Message> {
 		// Create listener to save incoming messages
 		let resolver: Resolver<Message> | undefined;
 		const queue: Message[] = [];
-		const listener = (message: Message) => {
+		const unlisten = this.listen(message => {
 			if (resolver === undefined) {
 				queue.push(message);
 			} else {
 				resolver.resolve(message);
 				resolver = undefined;
 			}
-		};
-		this.extraListeners.add(listener);
+		});
 		try {
 			do {
 				// Immediately yield any queued messages
 				while (queue.length !== 0) {
 					yield queue.shift()!;
+					if (this.didDisconnect) {
+						return;
+					}
 				}
 				// Make resolver to await on
 				let promise;
 				[ promise, resolver ] = makeResolver<Message>();
 				// Wait for new messages
-				yield await promise;
+				const value = await Promise.race([ promise, this.waitForDisconnect ]);
+				if (this.didDisconnect) {
+					return;
+				}
+				yield value as Message;
 			} while (true);
 		} finally {
 			// Clean up listeners when it's all done
-			this.extraListeners.delete(listener);
+			unlisten();
 		}
 	}
 }
@@ -142,34 +172,49 @@ export abstract class Channel<Message> {
  */
 class LocalChannel<Message> extends Channel<Message> {
 
-	// Install listener for channels in worker threads
+	static connect<Message>(name: string) {
+		const channel = new LocalChannel<Message>(name);
+		connect(channel);
+		return Promise.resolve(channel);
+	}
+
+	// Install listener on newly created workers. Called from the host/parent thread.
 	static initializeWorker(worker: Worker) {
 		const channelsIdsByName = new Map<string, Set<string>>();
-		const localChannelInstances = new Map<string, Subscription<any>>();
+		const localChannelInstances = new Map<string, Subscription>();
 		worker.on('message', (message: WorkerMessage) => {
 			switch (message.type) {
 				case 'channelMessage':
+					// Child is send message to the main thread
 					return publish(message.name, message.publisher, message.payload);
 
 				case 'channelSubscribe': {
 					const channelIds = channelsIdsByName.get(message.name);
-					if (channelIds === undefined) {
+					if (channelIds) {
+						// This worker is already subscribed to this channel.. just add another local reference
+						channelIds.add(message.id);
+					} else {
+						// Set up a new subscription for this worker
 						const { name } = message;
-						const channel: Subscription<any> = {
+						const channelIds = new Set([ message.id ]);
+						channelsIdsByName.set(name, channelIds);
+						const channel: Subscription = {
 							name,
-							listener: (message: any, id?: string) => worker.postMessage(staticCast<MasterMessage>({
-								type: 'channelMessage',
-								name,
-								payload: message,
-								publisher: id,
-							})),
+							subscription: (message, id) => {
+								if (id === undefined || channelIds.size > 1 || !channelIds.has(id)) {
+									worker.postMessage(staticCast<MasterMessage>({
+										type: 'channelMessage',
+										name,
+										payload: message,
+										publisher: id,
+									}));
+								}
+							},
 						};
 						connect(channel);
-						localChannelInstances.set(message.name, channel);
-						channelsIdsByName.set(message.name, new Set([ message.id ]));
-					} else {
-						channelIds.add(message.id);
+						localChannelInstances.set(name, channel);
 					}
+					// Send notification to child that the subscription is ready
 					worker.postMessage(staticCast<MasterMessage>({
 						type: 'channelSubscribed',
 						id: message.id,
@@ -178,11 +223,12 @@ class LocalChannel<Message> extends Channel<Message> {
 				}
 
 				case 'channelUnsubscribe': {
-					const channelIds = channelsIdsByName.get(message.name)!;
+					const { name } = message;
+					const channelIds = channelsIdsByName.get(name)!;
 					channelIds.delete(message.id);
 					if (channelIds.size === 0) {
-						const channel = localChannelInstances.get(message.name)!;
-						localChannelInstances.delete(message.name);
+						const channel = localChannelInstances.get(name)!;
+						localChannelInstances.delete(name);
 						disconnect(channel);
 					}
 					break;
@@ -192,9 +238,10 @@ class LocalChannel<Message> extends Channel<Message> {
 			}
 		});
 
+		// If the worker exits ungracefully then clean up all dangling subscriptions
 		worker.on('exit', () => {
-			for (const channels of localChannelInstances.values()) {
-				disconnect(channels);
+			for (const channel of localChannelInstances.values()) {
+				disconnect(channel);
 			}
 			channelsIdsByName.clear();
 			localChannelInstances.clear();
@@ -203,17 +250,12 @@ class LocalChannel<Message> extends Channel<Message> {
 		return worker;
 	}
 
-	static connect<Message>(name: string, listener?: Listener<Message>) {
-		const channel = new LocalChannel<Message>(name, listener);
-		connect(channel);
-		return Promise.resolve(channel);
-	}
-
 	static publish<Message>(name: string, message: Message) {
 		publish(name, undefined, message);
 	}
 
 	disconnect() {
+		super.disconnect();
 		disconnect(this);
 	}
 
@@ -226,14 +268,16 @@ class LocalChannel<Message> extends Channel<Message> {
  * Channels within a worker_thread
  */
 class WorkerChannel<Message> extends Channel<Message> {
+	private static didInit = false;
+	private static readonly subscribedChannels =
+		new Map<string, { count: number; connected: Promise<any> }>();
 
 	// Install listener for all channels in this thread
-	static didInit = false;
-	private static init() {
-		if (this.didInit) {
+	private static initializeThisWorker() {
+		if (WorkerChannel.didInit) {
 			return;
 		}
-		this.didInit = true;
+		WorkerChannel.didInit = true;
 		parentPort!.on('message', (message: MasterMessage) => {
 			if (message.type === 'channelMessage') {
 				publish(message.name, message.publisher, message.payload);
@@ -241,11 +285,20 @@ class WorkerChannel<Message> extends Channel<Message> {
 		});
 	}
 
-	static connect<Message>(name: string, listener?: Listener<Message>) {
-		WorkerChannel.init();
-		return new Promise<WorkerChannel<Message>>(resolve => {
-			const channel = new WorkerChannel<Message>(name, listener);
-			const subscribeListener = (message: any) => {
+	static async connect<Message>(name: string) {
+		WorkerChannel.initializeThisWorker();
+		// If there's already a channel connected there's no need to send another notification to the
+		// parent thread
+		const channel = new WorkerChannel<Message>(name);
+		const existing = WorkerChannel.subscribedChannels.get(name);
+		if (existing) {
+			++existing.count;
+			await existing.connected;
+			return channel;
+		}
+		// Send connection notification to parent
+		const channelPromise = new Promise<WorkerChannel<Message>>(resolve => {
+			const subscribeListener = (message: MasterMessage) => {
 				if (message.type === 'channelSubscribed' && message.id === channel.id) {
 					parentPort!.removeListener('channelMessage', subscribeListener);
 					connect(channel);
@@ -259,6 +312,8 @@ class WorkerChannel<Message> extends Channel<Message> {
 				id: channel.id,
 			}));
 		});
+		WorkerChannel.subscribedChannels.set(name, { count: 1, connected: channelPromise });
+		return channelPromise;
 	}
 
 	static publish<Message>(name: string, message: Message) {
@@ -270,12 +325,18 @@ class WorkerChannel<Message> extends Channel<Message> {
 	}
 
 	disconnect() {
-		disconnect(this);
-		parentPort!.postMessage(staticCast<WorkerMessage>({
-			type: 'channelUnsubscribe',
-			name: this.name,
-			id: this.id,
-		}));
+		super.disconnect();
+		// I think this is free of race conditions?
+		const existing = WorkerChannel.subscribedChannels.get(this.name)!;
+		if (--existing.count === 0) {
+			WorkerChannel.subscribedChannels.delete(this.name);
+			disconnect(this);
+			parentPort!.postMessage(staticCast<WorkerMessage>({
+				type: 'channelUnsubscribe',
+				name: this.name,
+				id: this.id,
+			}));
+		}
 	}
 
 	publish(message: Message) {

@@ -17,7 +17,8 @@ export const roomSubscription: Subscription = {
 		const blobStorage = await BlobStorage.connect();
 
 		let lastTick = 0;
-		const channel = await Channel.connect<MainMessage>('main', event => {
+		const channel = await Channel.connect<MainMessage>('main');
+		channel.listen(event => {
 			(async function() {
 				const now = Date.now();
 				if (event.type === 'tick' && now > lastTick + 250) {
