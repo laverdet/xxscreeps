@@ -30,6 +30,8 @@ export default async function() {
 	try {
 
 		do {
+			const timeStartedLoop = Date.now();
+
 			// Add users to runner queue
 			usersQueue.version(gameTime);
 			await usersQueue.push(activeUsers);
@@ -88,7 +90,7 @@ export default async function() {
 				blobStorage.delete(`ticks/${gameTime}/${roomName}`)));
 
 			// Set up for next tick
-			console.log(gameTime);
+			console.log(`Tick ${gameTime} ran in ${Date.now() - timeStartedLoop}ms`);
 			++gameTime;
 			Channel.publish<MainMessage>('main', { type: 'tick', time: gameTime });
 			await new Promise(resolve => setTimeout(resolve, 100));

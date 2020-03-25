@@ -57,8 +57,9 @@ ISOLATED_VM_MODULE void InitForContext(v8::Isolate*  /*isolate*/, v8::Local<v8::
 	Nan::Set(target, Nan::New("version").ToLocalChecked(), Nan::New<v8::Number>(11));
 }
 
-NAN_MODULE_INIT(init) {
+void init(v8::Local<v8::Object> target) {
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	InitForContext(isolate, isolate->GetCurrentContext(), target);
 }
-NODE_MODULE(native, init);
+
+NAN_MODULE_WORKER_ENABLED(pf, init)
