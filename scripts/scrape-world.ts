@@ -58,7 +58,7 @@ topLevelTask(async() => {
 			const capacity = object.storeCapacityResource === undefined ?
 				object.storeCapacity :
 				Object.values<number>(object.storeCapacityResource).reduce((sum, value) => sum + value, 0);
-			return { store: StoreIntents.create(object.store, capacity, object.storeCapacityResource) };
+			return { store: StoreIntents.create(capacity, object.storeCapacityResource, object.store) };
 		};
 		switch (object.type) {
 			case 'controller':

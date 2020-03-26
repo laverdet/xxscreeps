@@ -1,3 +1,4 @@
+import * as C from '~/engine/game/constants';
 import type { RoomObject } from '~/engine/game/objects/room-object';
 const { create } = Object;
 
@@ -16,6 +17,7 @@ export class IntentManager {
 			this.cpu += kCpuCost;
 		}
 		intents[action] = meta;
+		return C.OK;
 	}
 }
 

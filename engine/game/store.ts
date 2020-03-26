@@ -1,6 +1,7 @@
 import * as C from '~/engine/game/constants';
 import { BufferObject } from '~/engine/schema/buffer-object';
 import { checkCast, makeEnum, makeVector, withType, BufferView, Format, FormatShape, Interceptor } from '~/engine/schema';
+import { RoomObject } from './objects/room-object';
 
 export type ResourceType = (typeof C.RESOURCES_ALL)[number];
 export type StorageRecord = Record<ResourceType, number>;
@@ -27,6 +28,10 @@ export const format = withType<Store>(checkCast<Format>()({
 	restricted: 'bool',
 	singleResource: resourceEnumFormat,
 }));
+
+export type RoomObjectWithStore = RoomObject & {
+	store: Store;
+};
 
 // Adds resource types information to `Store` class. No changes from `extends BufferObject` as far
 // as JS is concerned

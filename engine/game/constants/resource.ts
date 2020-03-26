@@ -272,6 +272,7 @@ export const REACTION_TIME = {
 	XGHO2: 150,
 };
 
+export type ResourceType = typeof RESOURCES_ALL[number];
 export const RESOURCES_ALL = [
 	RESOURCE_ENERGY,
 	RESOURCE_POWER,

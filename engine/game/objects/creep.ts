@@ -5,8 +5,8 @@ import { checkCast, makeEnum, makeVector, withType, Format, FormatShape, Inherit
 import * as Id from '~/engine/util/id';
 import { fetchPositionArgument, RoomPosition } from '../position';
 import { format as roomObjectFormat, Owner, RoomObject } from './room-object';
-import { format as storeFormat, resourceEnumFormat, Store } from '../store';
-import type { Source } from './source';
+import { format as storeFormat, resourceEnumFormat, RoomObjectWithStore, Store } from '../store';
+import { Source } from './source';
 export { Owner };
 
 const bodyFormat = makeVector({
@@ -30,6 +30,127 @@ export const format = withType<Creep>(checkCast<Format>()({
 
 export const AgeTime: unique symbol = Symbol('ageTime');
 
+function chainChecks(...checks: (() => number)[]) {
+	for (const check of checks) {
+		const result = check();
+		if (result !== C.OK) {
+			return result;
+		}
+	}
+	return C.OK;
+}
+
+function checkCommon(creep: Creep) {
+	if (!creep.my) {
+		return C.ERR_NOT_OWNER;
+	} else if (creep.spawning) {
+		return C.ERR_BUSY;
+	}
+	return C.OK;
+}
+
+export function checkHarvest(creep: Creep, target: RoomObject) {
+	return chainChecks(
+		() => checkCommon(creep),
+		() => {
+			if (creep.getActiveBodyparts(C.WORK) <= 0) {
+				return C.ERR_NO_BODYPART;
+			} else if (!(target instanceof RoomObject)) {
+				return C.ERR_INVALID_TARGET;
+			} else if (!creep.pos.isNearTo(target.pos)) {
+				return C.ERR_NOT_IN_RANGE;
+			}
+
+			if (target instanceof Source) {
+				if (target.energy <= 0) {
+					return C.ERR_NOT_ENOUGH_RESOURCES;
+				}
+				return C.OK;
+			}
+			return C.ERR_INVALID_TARGET;
+		});
+}
+
+export function checkMove(creep: Creep, direction: number) {
+	return chainChecks(
+		() => checkMoveCommon(creep),
+		() => {
+			if (!(direction >= 1 && direction <= 8)) {
+				return C.ERR_INVALID_ARGS;
+			}
+			return C.OK;
+		},
+	);
+}
+
+function checkMoveCommon(creep: Creep) {
+	return chainChecks(
+		() => checkCommon(creep),
+		() => {
+			if (creep.fatigue > 0) {
+				return C.ERR_TIRED;
+			} else if (creep.getActiveBodyparts(C.MOVE) <= 0) {
+				return C.ERR_NO_BODYPART;
+			}
+			return C.OK;
+		});
+}
+
+function checkTransfer(creep: Creep, target: RoomObject | RoomObjectWithStore, resourceType: C.ResourceType, amount?: number) {
+	return chainChecks(
+		() => checkCommon(creep),
+		() => {
+			if (amount! < 0) {
+				return C.ERR_INVALID_ARGS;
+
+			} else if (!C.RESOURCES_ALL.includes(resourceType)) {
+				return C.ERR_INVALID_ARGS;
+
+			} else if (!(target instanceof RoomObject)) {
+				return C.ERR_INVALID_TARGET;
+
+			} else if (target instanceof Creep && target.spawning) {
+				return C.ERR_INVALID_TARGET;
+
+			} else if (!('store' in target)) {
+				return C.ERR_INVALID_TARGET;
+			}
+
+			const targetCapacity = target.store.getCapacity(resourceType);
+			if (targetCapacity === null) {
+				return C.ERR_INVALID_TARGET;
+			}
+
+			if (!creep.pos.isNearTo(target.pos)) {
+				return C.ERR_NOT_IN_RANGE;
+
+			} else if (!(creep.store[resourceType]! >= 0)) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+			}
+
+			const targetFreeCapacity = target.store.getFreeCapacity(resourceType);
+			if (!(targetFreeCapacity > 0)) {
+				return C.ERR_FULL;
+			}
+
+			let tryAmount = amount;
+			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+			if (!tryAmount) {
+				tryAmount = Math.min(creep.store[resourceType]!, targetFreeCapacity);
+			}
+
+			if (!(tryAmount >= creep.store[resourceType]!)) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+			}
+
+			if (!(tryAmount <= targetFreeCapacity)) {
+				return C.ERR_FULL;
+			}
+
+			return C.OK;
+		});
+}
+
 export class Creep extends RoomObject {
 	get [Variant]() { return 'creep' }
 	get carry() { return this.store }
@@ -43,70 +164,53 @@ export class Creep extends RoomObject {
 	get spawning() { return this[AgeTime] === 0 }
 	get ticksToLive() { return this[AgeTime] === 0 ? undefined : this[AgeTime] - Game.time }
 
-	harvest(source: Source) {
-		if (!this.pos.isNearTo(source.pos)) {
-			return C.ERR_NOT_IN_RANGE;
-		} else if (source.energy <= 0) {
-			return C.ERR_NOT_ENOUGH_RESOURCES;
-		}
-		gameContext.intents.save(this, 'harvest', { id: source.id });
+	getActiveBodyparts(type: C.BodyPart) {
+		return this.body.reduce((count, part) =>
+			count + (part.type === type && part.hits > 0 ? 1 : 0), 0);
 	}
 
-	move(target: number) {
-		if (!this.my) {
-			return C.ERR_NOT_OWNER;
-		} else if (this.spawning) {
-			return C.ERR_BUSY;
-		} else if (this.fatigue > 0) {
-			return C.ERR_TIRED;
-		}
-		// TODO: body parts
-		const dir = target | 0;
-		if (!(dir >= 1 && dir <= 8)) {
-			return C.ERR_INVALID_ARGS;
-		}
-		gameContext.intents.save(this, 'move', { direction: dir });
-		return C.OK;
+	harvest(target: Source) {
+		return chainChecks(
+			() => checkHarvest(this, target),
+			() => gameContext.intents.save(this, 'harvest', { id: target.id }));
+	}
+
+	move(direction: number) {
+		return chainChecks(
+			() => checkMove(this, direction),
+			() => gameContext.intents.save(this, 'move', { direction: direction | 0 }));
 	}
 
 	moveTo(x: number, y: number): number;
 	moveTo(pos: RoomObject | RoomPosition): number;
 	moveTo(...args: [any]) {
+		return chainChecks(
+			() => checkMoveCommon(this),
+			() => {
+				// Parse target
+				const { pos } = fetchPositionArgument(this.pos, ...args);
+				if (pos === undefined) {
+					return C.ERR_INVALID_TARGET;
+				} else if (pos.isNearTo(this.pos)) {
+					return C.OK;
+				}
 
-		// Basic checks
-		if (!this.my) {
-			return C.ERR_NOT_OWNER;
-		} else if (this.spawning) {
-			return C.ERR_BUSY;
-		} else if (this.fatigue > 0) {
-			return C.ERR_TIRED;
-		}
+				// Find a path
+				const path = this.pos.findPathTo(pos);
+				if (path.length === 0) {
+					return C.ERR_NO_PATH;
+				}
 
-		// Parse target
-		const { pos } = fetchPositionArgument(this.pos, ...args);
-		if (pos === undefined) {
-			return C.ERR_INVALID_TARGET;
-		} else if (pos.isNearTo(this.pos)) {
-			return C.OK;
-		}
-
-		// Find a path
-		const path = this.pos.findPathTo(pos);
-		if (path.length === 0) {
-			return C.ERR_NO_PATH;
-		}
-
-		// And move one tile
-		return this.move(path[0].direction);
+				// And move one tile
+				return this.move(path[0].direction);
+			});
 	}
 
-	transfer(target: RoomObject) {
-		if (!this.pos.isNearTo(target.pos)) {
-			return C.ERR_NOT_IN_RANGE;
-		} else if (this.carry.energy <= 0) {
-			return C.ERR_NOT_ENOUGH_RESOURCES;
-		}
-		gameContext.intents.save(this, 'transfer', { id: target.id });
+	transfer(target: RoomObject | RoomObjectWithStore, resourceType: C.ResourceType, amount?: number) {
+		return chainChecks(
+			() => checkTransfer(this, target, resourceType, amount),
+			() => gameContext.intents.save(this, 'transfer', { id: target.id }),
+		);
 	}
 
 	body!: FormatShape<typeof bodyFormat>;

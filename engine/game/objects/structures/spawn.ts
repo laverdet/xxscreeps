@@ -1,5 +1,6 @@
 import * as Structure from '.';
 import * as C from '~/engine/game/constants';
+import * as Memory from '~/engine/game/memory';
 import { checkCast, makeOptional, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 import { gameContext } from '~/engine/game/context';
 import { calcCreepCost, getUniqueName } from '~/engine/game/helpers';
@@ -97,7 +98,8 @@ export class StructureSpawn extends Structure.Structure {
 		gameContext.createdCreepNames.add(name);
 
 		if (options.memory !== undefined) {
-			(Memory.creeps ?? (Memory.creeps = {}))[name] = options.memory;
+			const memory = Memory.get();
+			(memory.creeps ?? (memory.creeps = {}))[name] = options.memory;
 		}
 
 		// TODO: fake creep object
