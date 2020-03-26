@@ -74,8 +74,9 @@ export default async function() {
 				// processing has run
 				const nextGameTime = gameTime + 1;
 				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) => {
-					writeRoom(context.room, writeBuffer);
-					return blobStorage.save(`ticks/${nextGameTime}/${roomName}`, writeBuffer);
+					const length = writeRoom(context.room, writeBuffer);
+					return blobStorage.save(
+						`ticks/${nextGameTime}/${roomName}`, writeBuffer.subarray(0, length));
 				}));
 				processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
 				processedRooms.clear();
