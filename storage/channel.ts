@@ -1,6 +1,5 @@
 import { Worker, isMainThread, parentPort } from 'worker_threads';
-import { makeResolver } from '~/lib/resolver';
-import { staticCast } from '~/lib/utility';
+import { makeResolver, staticCast } from '~/lib/utility';
 
 type Listener<Message> = (message: Message) => void;
 type InternalListener<Message> = (message: Message, id?: string) => void;

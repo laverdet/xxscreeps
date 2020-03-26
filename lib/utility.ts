@@ -61,6 +61,13 @@ export function instantiate<Type>(ctor: new(...params: any) => Type, properties:
 	return Object.assign(Object.create(ctor.prototype), properties);
 }
 
+// Returns a promise and resolver functions in one
+export function makeResolver<Type>(): [ Promise<Type>, Resolver<Type> ] {
+	let resolver: Resolver<Type>;
+	const promise = new Promise<Type>((resolve, reject) => resolver = { resolve, reject });
+	return [ promise, resolver! ];
+}
+
 // It's like [].map except you can use it on iterables, also it doesn't generate a temporary array.
 export function mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (value: Type) => Result) {
 	return function *() {
