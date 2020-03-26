@@ -2,97 +2,14 @@ import * as PathFinder from '~/driver/pathfinder';
 import * as C from '~/game/constants';
 import { checkCast, withType, BufferView, Format, Interceptor } from '~/lib/schema';
 import { firstMatching } from '~/lib/utility';
-import { RoomObject } from './objects/room-object';
-
-export const format = withType<RoomPosition>(checkCast<Format>()({
-	position: 'int32',
-}));
+import type { RoomObject } from './objects/room-object';
 
 const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
-
-const roomNames = new Map<number, string>();
-export function generateRoomName(posBits: number) {
-	// Check cache
-	let roomName = roomNames.get(posBits);
-	if (roomName !== undefined) {
-		return roomName;
-	}
-	// Need to generate the room name
-	const xx = (posBits & 0xff) - kMaxWorldSize2;
-	const yy = (posBits >>> 8) - kMaxWorldSize2;
-	roomName =
-		(xx < 0 ? `W${-xx - 1}` : `E${xx}`) +
-		(yy < 0 ? `N${-yy - 1}` : `S${yy}`);
-	roomNames.set(posBits, roomName);
-	return roomName;
-}
-
-export function parseRoomName(name: string): [ number, number ] {
-	// Parse X and calculate str position of Y
-	const xx = parseInt(name.substr(1), 10);
-	let verticalPos = 2;
-	if (xx >= 100) {
-		verticalPos = 4;
-	} else if (xx >= 10) {
-		verticalPos = 3;
-	}
-	// Parse Y and return adjusted coordinates
-	const yy = parseInt(name.substr(verticalPos + 1), 10);
-	const horizontalDir = name.charAt(0);
-	const verticalDir = name.charAt(verticalPos);
-	return [
-		(horizontalDir === 'W' || horizontalDir === 'w') ?
-			kMaxWorldSize2 - xx - 1 :
-			kMaxWorldSize2 + xx,
-		(verticalDir === 'N' || verticalDir === 'n') ?
-			kMaxWorldSize2 - yy - 1 :
-			kMaxWorldSize2 + yy,
-	];
-}
-
-export function fetchArguments(arg1?: any, arg2?: any, arg3?: any) {
-	if (typeof arg1 === 'object') {
-		const int = arg1[PositionInteger] ?? arg1?.pos?.[PositionInteger];
-		if (int !== undefined) {
-			return {
-				xx: (int >>> 16) & 0xff,
-				yy: (int >>> 24) & 0xff,
-				room: int & 0xffff,
-				extra: arg2,
-			};
-		}
-	}
-	return {
-		xx: arg1 as number,
-		yy: arg2 as number,
-		room: 0,
-		extra: arg3,
-	};
-}
-
-export function fetchPositionArgument(
-	fromPos: RoomPosition, arg1?: any, arg2?: any, arg3?: any,
-): { pos?: RoomPosition; extra: any } {
-	if (typeof arg1 === 'object') {
-		if (arg1 instanceof RoomPosition) {
-			return { pos: arg1, extra: arg2 };
-		} else if (arg1.pos instanceof RoomPosition) {
-			return { pos: arg1.pos, extra: arg2 };
-		}
-	}
-	try {
-		return {
-			pos: new RoomPosition(arg1, arg2, fromPos.roomName),
-			extra: arg3,
-		};
-	} catch (err) {
-		return {
-			pos: undefined,
-			extra: undefined,
-		};
-	}
-}
+export type Direction =
+	typeof C.TOP | typeof C.TOP_RIGHT | typeof C.RIGHT |
+	typeof C.BOTTOM_RIGHT | typeof C.BOTTOM | typeof C.BOTTOM_LEFT |
+	typeof C.LEFT | typeof C.TOP_LEFT;
 
 export const PositionInteger: unique symbol = Symbol('positionInteger');
 
@@ -102,8 +19,6 @@ export const PositionInteger: unique symbol = Symbol('positionInteger');
  * using the `Room.getPositionAt` method or using the constructor.
  */
 export class RoomPosition {
-	[PositionInteger]!: number;
-
 	/**
 	 * You can create new RoomPosition object using its constructor.
 	 * @param xx X position in the room.
@@ -136,7 +51,7 @@ export class RoomPosition {
 	 * The name of the room.
 	 */
 	 get roomName() {
-		return generateRoomName(this[PositionInteger] & 0xffff);
+		return generateRoomNameFromId(this[PositionInteger] & 0xffff);
 	}
 	set roomName(roomName: string) {
 		const [ rx, ry ] = parseRoomName(roomName);
@@ -175,9 +90,9 @@ export class RoomPosition {
 		this[PositionInteger] = this[PositionInteger] & ~(0xff << 24) | yy << 24;
 	}
 
-	getDirectionTo(x: number, y: number): number;
-	getDirectionTo(pos: RoomObject | RoomPosition): number;
-	getDirectionTo(...args: any): number | undefined {
+	getDirectionTo(x: number, y: number): Direction;
+	getDirectionTo(pos: RoomObject | RoomPosition): Direction;
+	getDirectionTo(...args: any) {
 		const { xx, yy, room } = fetchArguments(...args);
 		if ((this[PositionInteger] & 0xffff) === room) {
 			return getDirection(xx - this.x, yy - this.y);
@@ -225,7 +140,7 @@ export class RoomPosition {
 		return range <= extra;
 	}
 
-	findClosestByPath(type: number) {
+	findClosestByPath(type: number): RoomObject | undefined {
 
 		// Get this room
 		const room = Game.rooms[this.roomName];
@@ -271,8 +186,58 @@ export class RoomPosition {
 	toString() {
 		return `[room ${this.roomName} pos ${this.x},${this.y}]`;
 	}
+
+	[PositionInteger]!: number;
 }
 
+//
+// Function argument handlers
+export function fetchArguments(arg1?: any, arg2?: any, arg3?: any) {
+	if (typeof arg1 === 'object') {
+		const int = arg1[PositionInteger] ?? arg1?.pos?.[PositionInteger];
+		if (int !== undefined) {
+			return {
+				xx: (int >>> 16) & 0xff,
+				yy: (int >>> 24) & 0xff,
+				room: int & 0xffff,
+				extra: arg2,
+			};
+		}
+	}
+	return {
+		xx: arg1 as number,
+		yy: arg2 as number,
+		room: 0,
+		extra: arg3,
+	};
+}
+
+export function fetchPositionArgument(
+	fromPos: RoomPosition, arg1?: any, arg2?: any, arg3?: any,
+): { pos?: RoomPosition; extra: any } {
+	if (typeof arg1 === 'object') {
+		if (arg1 instanceof RoomPosition) {
+			return { pos: arg1, extra: arg2 };
+		} else if (arg1.pos instanceof RoomPosition) {
+			return { pos: arg1.pos, extra: arg2 };
+		}
+	}
+	try {
+		return {
+			pos: new RoomPosition(arg1, arg2, fromPos.roomName),
+			extra: arg3,
+		};
+	} catch (err) {
+		return {
+			pos: undefined,
+			extra: undefined,
+		};
+	}
+}
+
+//
+// Directional utilities
+function getDirection(dx: number, dy: number): Direction;
 function getDirection(dx: number, dy: number) {
 	const adx = Math.abs(dx);
 	const ady = Math.abs(dy);
@@ -303,7 +268,7 @@ function getDirection(dx: number, dy: number) {
 	}
 }
 
-export function getPositonInDirection(position: RoomPosition, direction: number) {
+export function getPositonInDirection(position: RoomPosition, direction: Direction) {
 	const { x, y, roomName } = position;
 	switch (direction) {
 		case C.TOP: return new RoomPosition(x, y - 1, roomName);
@@ -317,6 +282,63 @@ export function getPositonInDirection(position: RoomPosition, direction: number)
 		default: throw new Error('Invalid direction');
 	}
 }
+
+//
+// Room name parsing
+export function generateRoomName(xx: number, yy: number) {
+	return generateRoomNameFromId(yy << 8 | xx);
+}
+
+const roomNames = new Map<number, string>();
+export function generateRoomNameFromId(id: number) {
+	// Check cache
+	let roomName = roomNames.get(id);
+	if (roomName !== undefined) {
+		return roomName;
+	}
+	// Need to generate the room name
+	const xx = (id & 0xff) - kMaxWorldSize2;
+	const yy = (id >>> 8) - kMaxWorldSize2;
+	roomName =
+		(xx < 0 ? `W${-xx - 1}` : `E${xx}`) +
+		(yy < 0 ? `N${-yy - 1}` : `S${yy}`);
+	roomNames.set(id, roomName);
+	return roomName;
+}
+
+export function parseRoomName(name: string): [ number, number ] {
+	// Parse X and calculate str position of Y
+	const xx = parseInt(name.substr(1), 10);
+	let verticalPos = 2;
+	if (xx >= 100) {
+		verticalPos = 4;
+	} else if (xx >= 10) {
+		verticalPos = 3;
+	}
+	// Parse Y and return adjusted coordinates
+	const yy = parseInt(name.substr(verticalPos + 1), 10);
+	const horizontalDir = name.charAt(0);
+	const verticalDir = name.charAt(verticalPos);
+	return [
+		(horizontalDir === 'W' || horizontalDir === 'w') ?
+			kMaxWorldSize2 - xx - 1 :
+			kMaxWorldSize2 + xx,
+		(verticalDir === 'N' || verticalDir === 'n') ?
+			kMaxWorldSize2 - yy - 1 :
+			kMaxWorldSize2 + yy,
+	];
+}
+
+export function parseRoomNameToId(name: string) {
+	const [ xx, yy ] = parseRoomName(name);
+	return yy << 8 | xx;
+}
+
+//
+// Schema
+export const format = withType<RoomPosition>(checkCast<Format>()({
+	position: 'int32',
+}));
 
 export const interceptors = {
 	RoomPosition: checkCast<Interceptor>()({

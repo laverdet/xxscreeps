@@ -1,6 +1,6 @@
 import { Goal, SearchOptions } from '~/game/path-finder';
 import { World } from '~/game/map';
-import { generateRoomName, parseRoomName, PositionInteger, RoomPosition } from '~/game/position';
+import { generateRoomNameFromId, parseRoomNameToId, PositionInteger, RoomPosition } from '~/game/position';
 import { getBuffer } from '~/game/terrain';
 import { clamp } from '~/lib/utility';
 import pf from './pf';
@@ -64,7 +64,7 @@ export function search(origin: RoomPosition, goal: Goal | Goal[], userOptions: S
 	// Setup room callback
 	const { roomCallback } = options;
 	const callback = roomCallback === undefined ? undefined : (roomId: number) => {
-		const ret = roomCallback(generateRoomName(roomId));
+		const ret = roomCallback(generateRoomNameFromId(roomId));
 		if (ret === false) {
 			return ret;
 		} else {
@@ -95,9 +95,7 @@ export function search(origin: RoomPosition, goal: Goal | Goal[], userOptions: S
 export function loadTerrain(world: World) {
 	const rooms: Record<string, Readonly<Uint8Array>> = {};
 	for (const [ name, terrain ] of world.entries()) {
-		const [ rx, ry ] = parseRoomName(name);
-		const id = ry << 8 | rx;
-		rooms[id] = getBuffer(terrain);
+		rooms[parseRoomNameToId(name)] = getBuffer(terrain);
 	}
 	pf.loadTerrain(rooms);
 }

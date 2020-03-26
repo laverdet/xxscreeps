@@ -93,7 +93,7 @@ export const TerrainZoomEndpoint: Endpoint = {
 					grid.push([]);
 					const row = grid[grid.length - 1];
 					for (let xx = left; xx < left + 4; ++xx) {
-						const terrain = this.context.world.get(generateRoomName(yy << 8 | xx));
+						const terrain = this.context.world.get(generateRoomName(xx, yy));
 						didFindRoom = didFindRoom || terrain !== undefined;
 						row.push(terrain);
 					}
