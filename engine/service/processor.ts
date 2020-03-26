@@ -1,11 +1,11 @@
 import assert from 'assert';
-import * as Schema from '~/engine/game/schema';
+import * as Schema from '~/game/schema';
 import { getReader, getWriter } from '~/engine/schema';
 import { BufferView } from '~/engine/schema/buffer-view';
 import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
-import { Game } from '~/engine/game/game';
+import { Game } from '~/game/game';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';

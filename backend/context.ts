@@ -1,5 +1,5 @@
 import { readGame } from '~/engine/metabase';
-import { readWorld, World } from '~/engine/game/map';
+import { readWorld, World } from '~/game/map';
 import type { MainMessage } from '~/engine/service';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';

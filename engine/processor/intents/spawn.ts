@@ -1,11 +1,11 @@
-import * as C from '~/engine/game/constants';
-import { gameContext } from '~/engine/game/context';
-import { calcCreepCost } from '~/engine/game/helpers';
-import { getPositonInDirection } from '~/engine/game/position';
-import * as Creep from '~/engine/game/objects/creep';
-import * as Room from '~/engine/game/room';
+import * as C from '~/game/constants';
+import { gameContext } from '~/game/context';
+import { calcCreepCost } from '~/game/helpers';
+import { getPositonInDirection } from '~/game/position';
+import * as Creep from '~/game/objects/creep';
+import * as Room from '~/game/room';
 import { bindProcessor } from '~/engine/processor/bind';
-import { StructureSpawn } from '~/engine/game/objects/structures/spawn';
+import { StructureSpawn } from '~/game/objects/structures/spawn';
 import * as CreepProcessor from './creep';
 import * as StoreProcessor from './store';
 

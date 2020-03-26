@@ -1,6 +1,6 @@
-import * as C from '~/engine/game/constants';
-import * as Creep from '~/engine/game/objects/creep';
-import { getPositonInDirection, RoomPosition } from '~/engine/game/position';
+import * as C from '~/game/constants';
+import * as Creep from '~/game/objects/creep';
+import { getPositonInDirection, RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
 import { generateId } from '~/engine/util/id';
 import { instantiate } from '~/lib/utility';

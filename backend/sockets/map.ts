@@ -1,9 +1,9 @@
-import { readRoom } from '~/engine/game/schema';
-import { Objects } from '~/engine/game/room';
-import { Owner } from '~/engine/game/objects/room-object';
-import { Creep } from '~/engine/game/objects/creep';
-import { Source } from '~/engine/game/objects/source';
-import { Structure } from '~/engine/game/objects/structures';
+import { readRoom } from '~/game/schema';
+import { Objects } from '~/game/room';
+import { Owner } from '~/game/objects/room-object';
+import { Creep } from '~/game/objects/creep';
+import { Source } from '~/game/objects/source';
+import { Structure } from '~/game/objects/structures';
 import { mapToKeys } from '~/lib/utility';
 import { SubscriptionEndpoint } from '../socket';
 

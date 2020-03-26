@@ -1,4 +1,4 @@
-import * as TerrainSchema from '~/engine/game/terrain';
+import * as TerrainSchema from '~/game/terrain';
 import { getReader, getSchema, makeVector, withType, FormatShape } from '~/engine/schema';
 import { bindInterceptorsToSchema } from '~/engine/schema/interceptor';
 import { mapInPlace } from '~/lib/utility';

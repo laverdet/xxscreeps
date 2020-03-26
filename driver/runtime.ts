@@ -1,16 +1,16 @@
 import type ivm from 'isolated-vm';
 import lodash from 'lodash';
 
-import { Creep } from '~/engine/game/objects/creep';
-import { Game } from '~/engine/game/game';
-import { RoomPosition } from '~/engine/game/position';
-import { Room } from '~/engine/game/room';
-import { Source } from '~/engine/game/objects/source';
+import { Creep } from '~/game/objects/creep';
+import { Game } from '~/game/game';
+import { RoomPosition } from '~/game/position';
+import { Room } from '~/game/room';
+import { Source } from '~/game/objects/source';
 
-import * as Constants from '~/engine/game/constants';
-import { gameContext, IntentManager } from '~/engine/game/context';
-import * as Memory from '~/engine/game/memory';
-import { finalizePrototypeGetters } from '~/engine/game/schema';
+import * as Constants from '~/game/constants';
+import { gameContext, IntentManager } from '~/game/context';
+import * as Memory from '~/game/memory';
+import { finalizePrototypeGetters } from '~/game/schema';
 import { UserCode } from '~/engine/metabase/code';
 import { BufferView } from '~/engine/schema/buffer-view';
 

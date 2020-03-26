@@ -1,5 +1,5 @@
 import * as Structure from '.';
-import * as C from '~/engine/game/constants';
+import * as C from '~/game/constants';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 
 export const DowngradeTime = Symbol('downgradeTime');

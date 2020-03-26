@@ -1,8 +1,8 @@
-import { RoomObject } from '~/engine/game/objects/room-object';
-import { Creep } from '~/engine/game/objects/creep';
-import { Structure } from '~/engine/game/objects/structures';
-import { StructureSpawn } from '~/engine/game/objects/structures/spawn';
-import { Store, CapacityByResource } from '~/engine/game/store';
+import { RoomObject } from '~/game/objects/room-object';
+import { Creep } from '~/game/objects/creep';
+import { Structure } from '~/game/objects/structures';
+import { StructureSpawn } from '~/game/objects/structures/spawn';
+import { Store, CapacityByResource } from '~/game/store';
 import { Variant } from '~/engine/schema';
 
 export const Render: unique symbol = Symbol('render');

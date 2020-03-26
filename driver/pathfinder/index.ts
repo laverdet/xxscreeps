@@ -1,7 +1,7 @@
-import { Goal, SearchOptions } from '~/engine/game/path-finder';
-import { World } from '~/engine/game/map';
-import { generateRoomName, parseRoomName, PositionInteger, RoomPosition } from '~/engine/game/position';
-import { getBuffer } from '~/engine/game/terrain';
+import { Goal, SearchOptions } from '~/game/path-finder';
+import { World } from '~/game/map';
+import { generateRoomName, parseRoomName, PositionInteger, RoomPosition } from '~/game/position';
+import { getBuffer } from '~/game/terrain';
 import { clamp } from '~/lib/utility';
 import pf from './pf';
 import * as Path from 'path';

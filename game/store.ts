@@ -1,4 +1,4 @@
-import * as C from '~/engine/game/constants';
+import * as C from '~/game/constants';
 import { BufferObject } from '~/engine/schema/buffer-object';
 import { checkCast, makeEnum, makeVector, withType, BufferView, Format, FormatShape, Interceptor } from '~/engine/schema';
 import { RoomObject } from './objects/room-object';

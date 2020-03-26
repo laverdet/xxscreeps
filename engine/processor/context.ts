@@ -1,5 +1,5 @@
-import { gameContext } from '~/engine/game/context';
-import { Room, Objects } from '~/engine/game/room';
+import { gameContext } from '~/game/context';
+import { Room, Objects } from '~/game/room';
 import { Process, Tick } from './bind';
 
 export class ProcessorContext {

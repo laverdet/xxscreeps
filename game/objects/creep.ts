@@ -1,6 +1,6 @@
-import * as C from '~/engine/game/constants';
-import { gameContext } from '~/engine/game/context';
-import * as Memory from '~/engine/game/memory';
+import * as C from '~/game/constants';
+import { gameContext } from '~/game/context';
+import * as Memory from '~/game/memory';
 import { checkCast, makeEnum, makeVector, withType, Format, FormatShape, Inherit, Interceptor, Variant } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
 import { fetchPositionArgument, RoomPosition } from '../position';

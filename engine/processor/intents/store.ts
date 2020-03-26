@@ -1,4 +1,4 @@
-import { Amount, Capacity, Resources, ResourceType, Restricted, SingleResource, StorageRecord, Store } from '~/engine/game/store';
+import { Amount, Capacity, Resources, ResourceType, Restricted, SingleResource, StorageRecord, Store } from '~/game/store';
 import { instantiate } from '~/lib/utility';
 
 export function add(this: Store, resourceType: ResourceType, amount: number) {

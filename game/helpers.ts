@@ -1,4 +1,4 @@
-import * as C from '~/engine/game/constants';
+import * as C from '~/game/constants';
 
 export function calcCreepCost(body: (C.BodyPart | { type: C.BodyPart })[]) {
 	return body.reduce((cost, part) => cost +

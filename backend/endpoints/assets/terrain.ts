@@ -1,8 +1,8 @@
 import streamToPromise from 'stream-to-promise';
 import { PNG } from 'pngjs';
 import { Endpoint } from '~/backend/endpoint';
-import { generateRoomName, parseRoomName } from '~/engine/game/position';
-import { Terrain, isBorder, kTerrainWall, kTerrainSwamp } from '~/engine/game/terrain';
+import { generateRoomName, parseRoomName } from '~/game/position';
+import { Terrain, isBorder, kTerrainWall, kTerrainSwamp } from '~/game/terrain';
 
 function generate(grid: (Terrain | undefined)[][], zoom = 1) {
 	// Most of the time we don't need transparency. It's only needed for zoom2 images near the edges,

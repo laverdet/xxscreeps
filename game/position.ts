@@ -1,5 +1,5 @@
 import * as PathFinder from '~/driver/pathfinder';
-import * as C from '~/engine/game/constants';
+import * as C from '~/game/constants';
 import { checkCast, withType, BufferView, Format, Interceptor } from '~/engine/schema';
 import { firstMatching } from '~/lib/utility';
 import { RoomObject } from './objects/room-object';

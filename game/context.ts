@@ -1,5 +1,5 @@
-import * as C from '~/engine/game/constants';
-import type { RoomObject } from '~/engine/game/objects/room-object';
+import * as C from '~/game/constants';
+import type { RoomObject } from '~/game/objects/room-object';
 const { create } = Object;
 
 const kCpuCost = 0.2;

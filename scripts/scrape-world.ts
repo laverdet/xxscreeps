@@ -1,14 +1,14 @@
 import { promises as fs } from 'fs';
 import { topLevelTask } from '~/lib/task';
 
-import * as MapSchema from '~/engine/game/map';
-import { RoomPosition } from '~/engine/game/position';
-import * as Room from '~/engine/game/room';
-import * as Schema from '~/engine/game/schema';
-import { Owner } from '~/engine/game/objects/room-object';
-import * as Source from '~/engine/game/objects/source';
-import * as StructureController from '~/engine/game/objects/structures/controller';
-import { TerrainWriter } from '~/engine/game/terrain';
+import * as MapSchema from '~/game/map';
+import { RoomPosition } from '~/game/position';
+import * as Room from '~/game/room';
+import * as Schema from '~/game/schema';
+import { Owner } from '~/game/objects/room-object';
+import * as Source from '~/game/objects/source';
+import * as StructureController from '~/game/objects/structures/controller';
+import { TerrainWriter } from '~/game/terrain';
 import * as GameSchema from '~/engine/metabase';
 
 import * as StoreIntents from '~/engine/processor/intents/store';
