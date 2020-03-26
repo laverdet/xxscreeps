@@ -31,7 +31,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			this.send(JSON.stringify(response));
 		};
 		return this.context.mainChannel.listen(event => {
-			if (event.type === 'tick' && Date.now() > lastTickTime + 250) {
+			if (event.type === 'tick' && Date.now() > lastTickTime + 50) {
 				update(event.time).catch(error => console.error(error));
 			}
 		});

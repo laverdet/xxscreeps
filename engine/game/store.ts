@@ -12,12 +12,12 @@ export const Resources = Symbol('resources');
 export const Restricted = Symbol('restricted');
 export const SingleResource = Symbol('singleResource');
 
-const enumFormat = makeEnum(undefined, ...C.RESOURCES_ALL);
+export const resourceEnumFormat = makeEnum(undefined, ...C.RESOURCES_ALL);
 
 const storedResourceFormat = checkCast<Format>()(makeVector({
 	amount: 'int32',
 	capacity: 'int32',
-	type: enumFormat,
+	type: resourceEnumFormat,
 }));
 
 export const format = withType<Store>(checkCast<Format>()({
@@ -25,7 +25,7 @@ export const format = withType<Store>(checkCast<Format>()({
 	capacity: 'int32',
 	resources: storedResourceFormat,
 	restricted: 'bool',
-	singleResource: enumFormat,
+	singleResource: resourceEnumFormat,
 }));
 
 // Adds resource types information to `Store` class. No changes from `extends BufferObject` as far

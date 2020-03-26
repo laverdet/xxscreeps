@@ -1,22 +1,25 @@
 import * as C from '~/engine/game/constants';
 import { gameContext } from '~/engine/game/context';
-import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
+import * as Memory from '~/engine/game/memory';
+import { checkCast, makeEnum, makeVector, withType, Format, FormatShape, Inherit, Interceptor, Variant } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
 import { fetchPositionArgument, RoomPosition } from '../position';
 import { format as roomObjectFormat, Owner, RoomObject } from './room-object';
-import { format as storeFormat, Store } from '../store';
+import { format as storeFormat, resourceEnumFormat, Store } from '../store';
 import type { Source } from './source';
 export { Owner };
 
-declare const Memory: any;
-
-export const AgeTime = Symbol('ageTime');
+const bodyFormat = makeVector({
+	boost: resourceEnumFormat,
+	hits: 'uint8',
+	type: makeEnum(...C.BODYPARTS_ALL),
+});
 
 export const format = withType<Creep>(checkCast<Format>()({
 	[Inherit]: roomObjectFormat,
 	[Variant]: 'creep',
 	ageTime: 'int32',
-	// body: makeVector({ boost: 'uint8', type: 'uint8', hits: 'uint8' })
+	body: bodyFormat,
 	fatigue: 'int16',
 	hits: 'int16',
 	name: 'string',
@@ -25,12 +28,15 @@ export const format = withType<Creep>(checkCast<Format>()({
 	store: storeFormat,
 }));
 
+export const AgeTime: unique symbol = Symbol('ageTime');
+
 export class Creep extends RoomObject {
 	get [Variant]() { return 'creep' }
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
 	get memory() {
-		const creeps = Memory.creeps ?? (Memory.creeps = {});
+		const memory = Memory.get();
+		const creeps = memory.creeps ?? (memory.creeps = {});
 		return creeps[this.name] ?? (creeps[this.name] = {});
 	}
 	get my() { return this[Owner] === gameContext.userId }
@@ -103,6 +109,7 @@ export class Creep extends RoomObject {
 		gameContext.intents.save(this, 'transfer', { id: target.id });
 	}
 
+	body!: FormatShape<typeof bodyFormat>;
 	fatigue!: number;
 	hits!: number;
 	name!: string;

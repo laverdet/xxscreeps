@@ -1,38 +1,47 @@
 declare const globalThis: any;
-declare global {
-	let Memory: any;
-	let RawMemory: { get: typeof get; set: typeof set };
-}
 
 const kMemoryGrowthSize = 1024;
 const kMemoryMaxLength = 2 * 1024 * 1024;
 
 let memory: Uint16Array;
 let string: string | undefined;
-let json: any;
-let lastJson: any;
+let json: object | undefined;
 let isBufferOutOfDate = false;
 
-function get() {
-	if (string === undefined) {
-		string = String.fromCharCode(...memory);
-	}
-	return string;
-}
+const RawMemory = {
+	get() {
+		if (string === undefined) {
+			string = String.fromCharCode(...memory);
+		}
+		return string;
+	},
 
-function set(value: string) {
-	string = value;
-	isBufferOutOfDate = true;
+	set(value: string) {
+		json = undefined;
+		string = value;
+		isBufferOutOfDate = true;
+	},
+};
+
+export function get(): any {
+	if (json) {
+		return json;
+	}
+	try {
+		json = JSON.parse(RawMemory.get());
+	} catch (err) {
+		json = {};
+	}
+	return json!;
 }
 
 export function flush() {
-	lastJson = undefined;
 	if (string !== undefined) {
 		// Check for JSON-based `Memory` object
-		if (json !== undefined) {
-			set(JSON.stringify(json));
-			lastJson = json;
-			setMemoryHook();
+		if (json) {
+			const value = json;
+			RawMemory.set(JSON.stringify(json));
+			json = value;
 		}
 
 		// Update the uint16 buffer
@@ -58,28 +67,14 @@ export function flush() {
 
 export function initialize(value: Uint16Array) {
 	memory = value;
-	globalThis.RawMemory = { get, set };
-	setMemoryHook();
-}
-
-function setMemoryHook() {
+	globalThis.RawMemory = RawMemory;
 	Object.defineProperty(globalThis, 'Memory', {
 		configurable: true,
-		get() {
-			let value = lastJson;
-			if (value === undefined) {
-				try {
-					value = JSON.parse(get());
-				} catch (err) {
-					value = {};
-				}
+		get,
+		set: (value: any) => {
+			if (typeof value === 'object') {
+				json = value;
 			}
-			Object.defineProperty(globalThis, 'Memory', {
-				configurable: true,
-				value,
-			});
-			json = value;
-			return value;
 		},
 	});
 }

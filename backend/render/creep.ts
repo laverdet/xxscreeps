@@ -10,7 +10,7 @@ export default function() {
 			x: this.pos.x,
 			y: this.pos.y,
 			name: this.name,
-			body: [ { type: 'move', hits: 100 }, { type: 'carry', hits: 100 } ],
+			body: this.body,
 			...Store.render.call(this.store),
 			user: '123',
 			hits: this.hits,

@@ -7,11 +7,12 @@ import { instantiate } from '~/lib/utility';
 import * as Store from './store';
 
 export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owner: string) {
-	const carryCapacity = body.reduce((sum, part) =>
-		(part === C.CARRY ? sum + C.CARRY_CAPACITY : sum), 0);
+	const carryCapacity = body.reduce((energy, type) =>
+		(type === C.CARRY ? energy + C.CARRY_CAPACITY : energy), 0);
 	return instantiate(Creep.Creep, {
 		id: generateId(),
 		pos,
+		body: body.map(type => ({ type, hits: 100, boost: undefined })),
 		effects: [],
 		fatigue: 0,
 		hits: body.length,
