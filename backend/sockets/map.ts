@@ -1,9 +1,9 @@
-import { Subscription } from '../socket';
+import { SubscriptionEndpoint } from '../socket';
 
-export const mapSubscription: Subscription = {
+export const mapSubscription: SubscriptionEndpoint = {
 	pattern: /^roomMap2:(?<room>[A-Z0-9]+)$/,
 
-	subscribe: (connection, user, parameters) => {
+	subscribe() {
 		// w: constructedWall
 		// r: road
 		// pb: powerBank
@@ -14,7 +14,7 @@ export const mapSubscription: Subscription = {
 		// c: controller
 		// k: keeperLair
 		// e: energy | power
-		connection.write(`["roomMap2:${parameters.room}",{"w":[],"r":[],"pb":[],"p":[],"s":[],"c":[],"m":[],"k":[]}]`);
+		this.send('{"w":[],"r":[],"pb":[],"p":[],"s":[],"c":[],"m":[],"k":[]}');
 		return () => {};
 	},
 };

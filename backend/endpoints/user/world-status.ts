@@ -7,7 +7,7 @@ export const WorldStatusEndpoint: Endpoint = {
 	execute() {
 		return {
 			ok: 1,
-			status: 'lost',
+			status: 'normal',
 		};
 	},
 };

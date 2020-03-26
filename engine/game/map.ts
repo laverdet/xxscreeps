@@ -23,7 +23,4 @@ export const interceptorSchema = bindInterceptorsToSchema(schema, {
 	},
 });
 
-const worldReader = getReader(schema.World, interceptorSchema);
-export function readWorld(blob: Readonly<Uint8Array>) {
-	return worldReader(blob);
-}
+export const readWorld = getReader(schema.World, interceptorSchema);

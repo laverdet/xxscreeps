@@ -1,4 +1,4 @@
-import { getSchema } from '~/engine/schema/format';
+import { getReader, getSchema } from '~/engine/schema';
 import { bindInterceptorsToSchema } from '~/engine/schema/interceptor';
 import * as Code from './code';
 import * as Game from './game';
@@ -16,3 +16,5 @@ export const interceptorSchema = bindInterceptorsToSchema(schema, {
 	Game: Game.interceptors,
 	User: User.interceptors,
 });
+
+export const readGame = getReader(schema.Game, interceptorSchema);

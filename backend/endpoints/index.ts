@@ -1,4 +1,5 @@
 import { Express, Router } from 'express';
+import { BackendContext } from '../context';
 import { Endpoint } from '../endpoint';
 
 import { VersionEndpoint } from './version';
@@ -22,13 +23,13 @@ import { UnreadCountEndpoint } from './user/unread-count';
 import { WorldStartRoomEndpoint } from './user/world-start-room';
 import { WorldStatusEndpoint } from './user/world-status';
 
-function bindRoutes(router: Router, endpoints: Endpoint[]) {
+function bindRoutes(context: BackendContext, router: Router, endpoints: Endpoint[]) {
 	for (const endpoint of endpoints) {
 		router[endpoint.method](endpoint.path, (req, res, next) => {
-			Promise.resolve(endpoint.execute(req, res)).then(value => {
+			Promise.resolve(endpoint.execute.call({ context }, req, res)).then(value => {
 				if (value === undefined) {
 					next();
-				} else if (value !== false) {
+				} else if (value !== true) {
 					res.set('Content-Type', 'text/json');
 					res.writeHead(200);
 					res.end(JSON.stringify(value));
@@ -43,25 +44,25 @@ function bindRoutes(router: Router, endpoints: Endpoint[]) {
 	return router;
 }
 
-export function installEndpointHandlers(express: Express) {
+export function installEndpointHandlers(express: Express, context: BackendContext) {
 	const apiRouter = Router();
-	bindRoutes(apiRouter, [ VersionEndpoint ]);
-	apiRouter.use('/auth', bindRoutes(Router(), [
+	bindRoutes(context, apiRouter, [ VersionEndpoint ]);
+	apiRouter.use('/auth', bindRoutes(context, Router(), [
 		MeEndpoint,
 		SteamTicketEndpoint,
 	]));
-	apiRouter.use('/game', bindRoutes(Router(), [
+	apiRouter.use('/game', bindRoutes(context, Router(), [
 		MapStatsEndpoint,
 		RoomStatusEndpoint,
 		RoomTerrainEndpoint,
 		TimeEndpoint,
 	]));
-	apiRouter.use('/register', bindRoutes(Router(), [
+	apiRouter.use('/register', bindRoutes(context, Router(), [
 		CheckEmailEndpoint,
 		CheckUsernameEndpoint,
 		SubmitRegistrationEndpoint,
 	]));
-	apiRouter.use('/user', bindRoutes(Router(), [
+	apiRouter.use('/user', bindRoutes(context, Router(), [
 		BranchesEndpoint,
 		CodeEndpoint,
 		RespawnProhibitedRoomsEndpoint,
@@ -71,5 +72,5 @@ export function installEndpointHandlers(express: Express) {
 	]));
 
 	express.use('/api', apiRouter);
-	express.use('/assets', bindRoutes(Router(), [ TerrainEndpoint ]));
+	express.use('/assets', bindRoutes(context, Router(), [ TerrainEndpoint ]));
 }

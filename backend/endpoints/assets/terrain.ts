@@ -1,22 +1,7 @@
+import streamToPromise from 'stream-to-promise';
 import { PNG } from 'pngjs';
 import { Endpoint } from '~/backend/endpoint';
-import * as MapSchema from '~/engine/game/map';
 import { Terrain, isBorder, kTerrainWall, kTerrainSwamp } from '~/engine/game/terrain';
-import { getReader } from '~/engine/schema/read';
-import { BlobStorage } from '~/storage/blob';
-
-let worldTerrainPromise: Promise<MapSchema.World> | undefined;
-export function worldTerrain() {
-	if (worldTerrainPromise) {
-		return worldTerrainPromise;
-	}
-	return worldTerrainPromise = async function() {
-		const blobStorage = await BlobStorage.connect();
-		const buffer = await blobStorage.load('terrain');
-		const read = getReader(MapSchema.schema.World, MapSchema.interceptorSchema);
-		return read(buffer);
-	}();
-}
 
 function generate(terrain: Terrain, zoom = 1) {
 	const png = new PNG({
@@ -43,20 +28,30 @@ function generate(terrain: Terrain, zoom = 1) {
 			}
 		}
 	}
-	return png.pack();
+	return streamToPromise(png.pack());
 }
 
+const cache = new Map<string, Buffer>();
 export const TerrainEndpoint: Endpoint = {
 	method: 'get',
 	path: '/map/:room.png',
 
 	async execute(req, res) {
-		const terrain = (await worldTerrain()).get(req.params.room);
-		if (terrain) {
+		const { room } = req.params;
+		let png = cache.get(room);
+		if (!png) {
+			const terrain = this.context.world.get(room);
+			if (terrain) {
+				png = await generate(terrain, 3);
+				cache.set(room, png);
+			}
+		}
+		if (png) {
+			res.set('Cache-Control', 'public,max-age=31536000,immutable');
 			res.set('Content-Type', 'image/png');
 			res.writeHead(200);
-			generate(terrain, 3).pipe(res);
-			return false;
+			res.end(png);
+			return true;
 		}
 	},
 };

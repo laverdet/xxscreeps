@@ -1,19 +1,27 @@
 import { Endpoint } from '~/backend/endpoint';
-import { worldTerrain } from '../assets/terrain';
 
+const cache = new Map<string, string>();
 export const RoomTerrainEndpoint: Endpoint = {
 	method: 'get',
 	path: '/room-terrain',
 
-	async execute(req) {
-		const terrain = (await worldTerrain()).get(req.query.room);
-		if (terrain) {
-			let terrainString = '';
-			for (let yy = 0; yy < 50; ++yy) {
-				for (let xx = 0; xx < 50; ++xx) {
-					terrainString += terrain.get(xx, yy);
+	execute(req, res) {
+		const { room } = req.query;
+		let terrainString = cache.get(room);
+		if (terrainString === undefined) {
+			const terrain = this.context.world.get(room);
+			if (terrain) {
+				terrainString = '';
+				for (let yy = 0; yy < 50; ++yy) {
+					for (let xx = 0; xx < 50; ++xx) {
+						terrainString += terrain.get(xx, yy);
+					}
 				}
+				cache.set(room, terrainString);
 			}
+		}
+		if (terrainString !== undefined) {
+			res.set('Cache-Control', 'public,max-age=31536000,immutable');
 			return {
 				ok: 1,
 				terrain: [ {

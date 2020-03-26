@@ -2,11 +2,13 @@ import bodyParser from 'body-parser';
 import Express from 'express';
 import http from 'http';
 
+import { BackendContext } from './context';
 import { installEndpointHandlers } from './endpoints';
 import { installSocketHandlers } from './socket';
 import { bindRenderers } from './render';
 
-export default function() {
+export default async function() {
+	const context = await BackendContext.connect();
 	const express = Express();
 	const httpServer = http.createServer(express);
 	express.use(bodyParser.urlencoded({
@@ -15,8 +17,8 @@ export default function() {
 	}));
 	express.use(bodyParser.json({ limit: '8mb' }));
 
-	installEndpointHandlers(express);
-	installSocketHandlers(httpServer);
+	installEndpointHandlers(express, context);
+	installSocketHandlers(httpServer, context);
 	bindRenderers();
 
 	httpServer.listen(21025, () => console.log('🌎 Listening'));

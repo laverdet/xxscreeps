@@ -1,5 +1,6 @@
 import type { Server } from 'http';
 import sockjs from 'sockjs';
+import { BackendContext } from './context';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
 
@@ -10,12 +11,16 @@ const socketServer = sockjs.createServer({
 const handlers = [ mapSubscription, roomSubscription ];
 
 type Unlistener = () => void;
-export type Subscription = {
+type SubscriptionInstance = {
+	context: BackendContext;
+	send: (jsonEncodedMessage: string) => void;
+};
+export type SubscriptionEndpoint = {
 	pattern: RegExp;
-	subscribe: (connection: sockjs.Connection, user: string, parameters: any) => Promise<Unlistener> | Unlistener;
+	subscribe: (this: SubscriptionInstance, parameters: Record<string, string>) => Promise<Unlistener> | Unlistener;
 };
 
-export function installSocketHandlers(httpServer: Server) {
+export function installSocketHandlers(httpServer: Server, context: BackendContext) {
 	socketServer.installHandlers(httpServer);
 	socketServer.on('connection', connection => {
 		const subscriptions = new Map<string, Promise<Unlistener>>();
@@ -43,7 +48,12 @@ export function installSocketHandlers(httpServer: Server) {
 							if (subscriptions.has(name)) {
 								return;
 							}
-							const subscription = Promise.resolve(handler.subscribe(connection, '', result.groups!));
+							const encodedName = JSON.stringify(name);
+							const instance: SubscriptionInstance = {
+								context,
+								send: jsonEncodedMessage => connection.write(`[${encodedName},${jsonEncodedMessage}]`),
+							};
+							const subscription = Promise.resolve(handler.subscribe.call(instance, result.groups!));
 							subscriptions.set(name, subscription);
 							subscription.catch(error => {
 								console.error(error);

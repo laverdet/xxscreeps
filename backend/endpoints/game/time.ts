@@ -7,7 +7,7 @@ export const TimeEndpoint: Endpoint = {
 	execute() {
 		return {
 			ok: 1,
-			time: 1,
+			time: this.context.time,
 		};
 	},
 };
