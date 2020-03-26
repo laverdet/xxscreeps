@@ -70,6 +70,18 @@ export function mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (va
 	}();
 }
 
+// It's like the constructor for `Map` except it returns a plain Object
+export function mapToKeys<Type, Key extends string | number | symbol, Value>(
+	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ],
+) {
+	const result: Record<Key, Value> = Object.create(null);
+	for (const entry of iterable) {
+		const [ key, value ] = callback(entry);
+		result[key] = value;
+	}
+	return result;
+}
+
 // Object.assign but it throws if there's any key collisions
 export function safeAssign(target: any, ...sources: any[]) {
 	for (const source of sources) {

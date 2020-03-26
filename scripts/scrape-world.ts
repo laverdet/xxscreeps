@@ -5,8 +5,8 @@ import * as MapSchema from '~/engine/game/map';
 import { RoomPosition } from '~/engine/game/position';
 import * as Room from '~/engine/game/room';
 import * as Schema from '~/engine/game/schema';
+import { Owner } from '~/engine/game/objects/room-object';
 import * as Source from '~/engine/game/objects/source';
-import * as Structure from '~/engine/game/objects/structures';
 import * as StructureController from '~/engine/game/objects/structures/controller';
 import { TerrainWriter } from '~/engine/game/terrain';
 import * as GameSchema from '~/engine/metabase';
@@ -51,8 +51,9 @@ topLevelTask(async() => {
 		const roomObject = {
 			id: object._id,
 			pos: new RoomPosition(object.x, object.y, object.room),
+			[Owner]: object.user,
 		};
-		const withStructure = () => ({ ...roomObject, [Structure.Owner]: object.user });
+		const withStructure = () => ({ ...roomObject });
 		const withStore = () => {
 			const capacity = object.storeCapacityResource === undefined ?
 				object.storeCapacity :
@@ -94,7 +95,7 @@ topLevelTask(async() => {
 		}
 	}).forEach(roomObject => {
 		if (roomObject !== undefined) {
-			const owner: string = (roomObject as any)[Structure.Owner];
+			const owner: string = (roomObject as any)[Owner];
 			if (owner !== undefined && owner.length > 1) {
 				const rooms = roomsByUser[owner] ?? (roomsByUser[owner] = new Set);
 				rooms.add(roomObject.pos.roomName);

@@ -1,4 +1,4 @@
-import { getSchema } from '~/engine/schema/format';
+import { getReader, getSchema } from '~/engine/schema';
 import { bindInterceptorsToSchema } from '~/engine/schema/interceptor';
 import { injectGetters } from '~/engine/schema/overlay';
 import { safeAssign } from '~/lib/utility';
@@ -62,3 +62,5 @@ export function finalizePrototypeGetters() {
 		}
 	}
 }
+
+export const readRoom = getReader(schema.Room, interceptorSchema);

@@ -4,7 +4,7 @@ import { Endpoint } from '../endpoint';
 
 import { VersionEndpoint } from './version';
 
-import { TerrainEndpoint } from './assets/terrain';
+import { TerrainEndpoint, TerrainZoomEndpoint } from './assets/terrain';
 
 import { MeEndpoint } from './auth/me';
 import { SteamTicketEndpoint } from './auth/steam-ticket';
@@ -72,5 +72,8 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 	]));
 
 	express.use('/api', apiRouter);
-	express.use('/assets', bindRoutes(context, Router(), [ TerrainEndpoint ]));
+	express.use('/assets', bindRoutes(context, Router(), [
+		TerrainEndpoint,
+		TerrainZoomEndpoint,
+	]));
 }

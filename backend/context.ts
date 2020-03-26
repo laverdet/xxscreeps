@@ -9,6 +9,7 @@ export class BackendContext {
 		public readonly blobStorage: BlobStorage,
 		public readonly mainChannel: Channel<MainMessage>,
 		public readonly world: World,
+		public readonly accessibleRooms: Set<string>,
 		public time: number,
 	) {
 		// Keep current time up to date
@@ -25,6 +26,6 @@ export class BackendContext {
 		const mainChannel = await Channel.connect<MainMessage>('main');
 		const world = readWorld(await blobStorage.load('terrain'));
 		const game = readGame(await blobStorage.load('game'));
-		return new BackendContext(blobStorage, mainChannel, world, game.time);
+		return new BackendContext(blobStorage, mainChannel, world, game.accessibleRooms, game.time);
 	}
 }

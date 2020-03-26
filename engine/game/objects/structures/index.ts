@@ -1,17 +1,16 @@
-import * as RoomObject from '../room-object';
+import { format as roomObjectFormat, Owner, RoomObject } from '../room-object';
 import { gameContext } from '~/engine/game/context';
 import { checkCast, withType, Format, Inherit, Interceptor } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
-
-export const Owner = Symbol('owner');
+export { Owner };
 
 export const format = withType<Structure>(checkCast<Format>()({
-	[Inherit]: RoomObject.format,
+	[Inherit]: roomObjectFormat,
 	hits: 'int32',
 	owner: Id.format,
 }));
 
-export abstract class Structure extends RoomObject.RoomObject {
+export abstract class Structure extends RoomObject {
 	abstract get structureType(): string;
 	get my() { return this[Owner] === gameContext.userId }
 

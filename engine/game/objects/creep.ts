@@ -3,14 +3,14 @@ import { gameContext } from '~/engine/game/context';
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
 import { fetchPositionArgument, RoomPosition } from '../position';
-import { format as roomObjectFormat, RoomObject } from './room-object';
+import { format as roomObjectFormat, Owner, RoomObject } from './room-object';
 import { format as storeFormat, Store } from '../store';
 import type { Source } from './source';
+export { Owner };
 
 declare const Memory: any;
 
 export const AgeTime = Symbol('ageTime');
-export const Owner = Symbol('owner');
 
 export const format = withType<Creep>(checkCast<Format>()({
 	[Inherit]: roomObjectFormat,

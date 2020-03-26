@@ -5,6 +5,8 @@ import { BufferObject } from '~/engine/schema/buffer-object';
 import { checkCast, makeOptional, makeVector, withType, Format, Interceptor, Variant } from '~/engine/schema';
 import * as Id from '~/engine/util/id';
 
+export const Owner: unique symbol = Symbol('owner');
+
 export const format = withType<RoomObject>(checkCast<Format>()({
 	id: Id.format,
 	pos: withType<RoomPosition.RoomPosition>(RoomPosition.format),
