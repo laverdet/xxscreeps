@@ -2,8 +2,20 @@
 	"$schema": "http://json-schema.org/draft-07/schema",
 	"description": "Screeps configuration for this server",
 	"type": "object",
-	"required": [ "storage" ],
+	"required": [ "game", "storage" ],
 	"properties": {
+		"game": {
+			"type": "object",
+			"description": "Game settings",
+			"required": [ "tickSpeed" ],
+			"properties": {
+				"tickSpeed": {
+					"type": "integer",
+					"description": "Minimum length of a game tick in milliseconds.",
+					"default": 250
+				}
+			}
+		},
 		"storage": {
 			"type": "object",
 			"description": "Configuration for local storage",

@@ -1,3 +1,4 @@
+import configPromise from '~/engine/config';
 import * as DatabaseSchema from '~/engine/metabase';
 import { getReader } from '~/engine/schema';
 import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
@@ -8,6 +9,7 @@ import { RunnerMessage, ProcessorMessage, ProcessorQueueElement, MainMessage } f
 
 export default async function() {
 	// Open channels and connect to storage
+	const config = await configPromise;
 	const blobStorage = await BlobStorage.create();
 	const roomsQueue = await Queue.create<ProcessorQueueElement>('processRooms');
 	const usersQueue = await Queue.create('runnerUsers');
@@ -90,10 +92,14 @@ export default async function() {
 				blobStorage.delete(`ticks/${gameTime}/${roomName}`)));
 
 			// Set up for next tick
-			console.log(`Tick ${gameTime} ran in ${Date.now() - timeStartedLoop}ms`);
+			const timeTaken = Date.now() - timeStartedLoop;
+			console.log(`Tick ${gameTime} ran in ${timeTaken}ms`);
 			++gameTime;
 			Channel.publish<MainMessage>('main', { type: 'tick', time: gameTime });
-			await new Promise(resolve => setTimeout(resolve, 100));
+			const delay = config.config.game.tickSpeed - timeTaken;
+			if (delay > 0) {
+				await new Promise(resolve => setTimeout(resolve, delay));
+			}
 		} while (true);
 
 	} finally {
