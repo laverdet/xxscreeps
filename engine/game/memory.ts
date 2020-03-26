@@ -45,7 +45,7 @@ export function flush() {
 				}
 				// Leave a little wiggle room
 				const size = Math.min(kMemoryMaxLength, string.length + kMemoryGrowthSize);
-				memory = new Uint16Array(new SharedArrayBuffer(size + 1 & ~1));
+				memory = new Uint16Array(new ArrayBuffer(size + 1 & ~1));
 			}
 			// Copy string into buffer
 			for (let ii = 0; ii < string.length; ++ii) {
