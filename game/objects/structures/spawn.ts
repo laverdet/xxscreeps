@@ -1,7 +1,7 @@
 import * as Structure from '.';
 import * as C from '~/game/constants';
 import * as Memory from '~/game/memory';
-import { checkCast, makeOptional, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
+import { checkCast, makeOptional, withType, Format, Inherit, Interceptor, Variant } from '~/lib/schema';
 import { gameContext } from '~/game/context';
 import { calcCreepCost, getUniqueName } from '~/game/helpers';
 import * as Store from '~/game/store';

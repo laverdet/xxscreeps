@@ -1,8 +1,8 @@
 import * as RoomPosition from '../position';
 import type { Room } from '../room';
 import { Process, ProcessorSpecification, Tick } from '~/engine/processor/bind';
-import { BufferObject } from '~/engine/schema/buffer-object';
-import { checkCast, makeOptional, makeVector, withType, Format, Interceptor, Variant } from '~/engine/schema';
+import { BufferObject } from '~/lib/schema/buffer-object';
+import { checkCast, makeOptional, makeVector, withType, Format, Interceptor, Variant } from '~/lib/schema';
 import * as Id from '~/engine/util/id';
 
 export const Owner: unique symbol = Symbol('owner');

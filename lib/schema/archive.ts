@@ -70,7 +70,7 @@ function archiveLayout(
 
 export function archiveSchema(schema: Dictionary<any>): string {
 	const layoutToNames: LayoutToNames = new Map();
-	const prelude = "import { Variant } from '~/engine/schema/format';\n";
+	const prelude = "import { Variant } from '~/lib/schema/format';\n";
 	return prelude + Object.entries(schema).map(([ name, layout ]) => {
 		const archived = `const ${name} = ${archiveLayout(schema, layout, layoutToNames)};\n`;
 		layoutToNames.set(layout, name);

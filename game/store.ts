@@ -1,6 +1,6 @@
 import * as C from '~/game/constants';
-import { BufferObject } from '~/engine/schema/buffer-object';
-import { checkCast, makeEnum, makeVector, withType, BufferView, Format, FormatShape, Interceptor } from '~/engine/schema';
+import { BufferObject } from '~/lib/schema/buffer-object';
+import { checkCast, makeEnum, makeVector, withType, BufferView, Format, FormatShape, Interceptor } from '~/lib/schema';
 import { RoomObject } from './objects/room-object';
 
 export type ResourceType = (typeof C.RESOURCES_ALL)[number];

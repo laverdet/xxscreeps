@@ -1,6 +1,6 @@
-import type { BufferView } from '~/engine/schema/buffer-view';
-import { checkCast, makeArray, withType } from '~/engine/schema';
-import type { MemberInterceptor } from '~/engine/schema/interceptor';
+import type { BufferView } from '~/lib/schema/buffer-view';
+import { checkCast, makeArray, withType } from '~/lib/schema';
+import type { MemberInterceptor } from '~/lib/schema/interceptor';
 
 export const format = withType<string>(makeArray(4, 'uint32'));
 

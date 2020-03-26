@@ -1,4 +1,4 @@
-import { makeVariant } from '~/engine/schema';
+import { makeVariant } from '~/lib/schema';
 import * as Creep from './creep';
 import * as Source from './source';
 import * as StructureController from './structures/controller';

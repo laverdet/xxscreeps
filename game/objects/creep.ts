@@ -1,7 +1,7 @@
 import * as C from '~/game/constants';
 import { gameContext } from '~/game/context';
 import * as Memory from '~/game/memory';
-import { checkCast, makeEnum, makeVector, withType, Format, FormatShape, Inherit, Interceptor, Variant } from '~/engine/schema';
+import { checkCast, makeEnum, makeVector, withType, Format, FormatShape, Inherit, Interceptor, Variant } from '~/lib/schema';
 import * as Id from '~/engine/util/id';
 import { fetchPositionArgument, RoomPosition } from '../position';
 import { format as roomObjectFormat, Owner, RoomObject } from './room-object';

@@ -1,7 +1,7 @@
 import assert from 'assert';
 import * as Schema from '~/game/schema';
-import { getReader, getWriter } from '~/engine/schema';
-import { BufferView } from '~/engine/schema/buffer-view';
+import { getReader, getWriter } from '~/lib/schema';
+import { BufferView } from '~/lib/schema/buffer-view';
 import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';

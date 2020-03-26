@@ -1,6 +1,6 @@
-import { BufferObject } from '~/engine/schema/buffer-object';
-import type { BufferView } from '~/engine/schema/buffer-view';
-import { checkCast, makeVector, withType, Format, Interceptor } from '~/engine/schema';
+import { BufferObject } from '~/lib/schema/buffer-object';
+import type { BufferView } from '~/lib/schema/buffer-view';
+import { checkCast, makeVector, withType, Format, Interceptor } from '~/lib/schema';
 import { iteratee } from '~/engine/util/iteratee';
 import { variantFormat } from './objects/room-object-variant';
 

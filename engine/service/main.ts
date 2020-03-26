@@ -1,6 +1,6 @@
 import configPromise from '~/engine/config';
 import * as DatabaseSchema from '~/engine/metabase';
-import { getReader } from '~/engine/schema';
+import { getReader } from '~/lib/schema';
 import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';

@@ -1,6 +1,6 @@
 import { format as roomObjectFormat, Owner, RoomObject } from '../room-object';
 import { gameContext } from '~/game/context';
-import { checkCast, withType, Format, Inherit, Interceptor } from '~/engine/schema';
+import { checkCast, withType, Format, Inherit, Interceptor } from '~/lib/schema';
 import * as Id from '~/engine/util/id';
 export { Owner };
 

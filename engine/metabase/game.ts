@@ -1,4 +1,4 @@
-import { checkCast, makeVector, withType, Format, Interceptor } from '~/engine/schema';
+import { checkCast, makeVector, withType, Format, Interceptor } from '~/lib/schema';
 import { mapInPlace } from '~/lib/utility';
 import * as User from './user';
 

@@ -1,4 +1,4 @@
-import { checkCast, makeVector, Format, FormatShape } from '~/engine/schema';
+import { checkCast, makeVector, Format, FormatShape } from '~/lib/schema';
 
 export const format = checkCast<Format>()({
 	modules: makeVector({

@@ -1,6 +1,6 @@
-import { getReader, getSchema } from '~/engine/schema';
-import { bindInterceptorsToSchema } from '~/engine/schema/interceptor';
-import { injectGetters } from '~/engine/schema/overlay';
+import { getReader, getSchema } from '~/lib/schema';
+import { bindInterceptorsToSchema } from '~/lib/schema/interceptor';
+import { injectGetters } from '~/lib/schema/overlay';
 import { safeAssign } from '~/lib/utility';
 import * as Creep from './objects/creep';
 import * as RoomPosition from './position';

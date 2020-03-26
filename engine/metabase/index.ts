@@ -1,5 +1,5 @@
-import { getReader, getSchema } from '~/engine/schema';
-import { bindInterceptorsToSchema } from '~/engine/schema/interceptor';
+import { getReader, getSchema } from '~/lib/schema';
+import { bindInterceptorsToSchema } from '~/lib/schema/interceptor';
 import * as Code from './code';
 import * as Game from './game';
 import * as User from './user';

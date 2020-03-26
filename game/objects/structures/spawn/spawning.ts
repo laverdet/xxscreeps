@@ -1,4 +1,4 @@
-import { checkCast, makeVector, Format, FormatShape, Interceptor } from '~/engine/schema';
+import { checkCast, makeVector, Format, FormatShape, Interceptor } from '~/lib/schema';
 import * as Id from '~/engine/util/id';
 
 export const format = checkCast<Format>()({

@@ -3,7 +3,7 @@ import { Creep } from '~/game/objects/creep';
 import { Structure } from '~/game/objects/structures';
 import { StructureSpawn } from '~/game/objects/structures/spawn';
 import { Store, CapacityByResource } from '~/game/store';
-import { Variant } from '~/engine/schema';
+import { Variant } from '~/lib/schema';
 
 export const Render: unique symbol = Symbol('render');
 function bindRenderer<Type>(impl: Constructor<Type>, renderer: (this: Type) => object) {

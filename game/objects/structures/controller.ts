@@ -1,6 +1,6 @@
 import * as Structure from '.';
 import * as C from '~/game/constants';
-import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
+import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/lib/schema';
 
 export const DowngradeTime = Symbol('downgradeTime');
 export const Progress = Symbol('progress');

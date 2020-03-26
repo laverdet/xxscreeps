@@ -1,4 +1,4 @@
-import { checkCast, makeArray, withType, BufferView, Format, Interceptor } from '~/engine/schema';
+import { checkCast, makeArray, withType, BufferView, Format, Interceptor } from '~/lib/schema';
 import { exchange } from '~/lib/utility';
 
 const { apply } = Reflect;

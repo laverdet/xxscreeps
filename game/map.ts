@@ -1,6 +1,6 @@
 import * as TerrainSchema from '~/game/terrain';
-import { getReader, getSchema, makeVector, withType, FormatShape } from '~/engine/schema';
-import { bindInterceptorsToSchema } from '~/engine/schema/interceptor';
+import { getReader, getSchema, makeVector, withType, FormatShape } from '~/lib/schema';
+import { bindInterceptorsToSchema } from '~/lib/schema/interceptor';
 import { mapInPlace } from '~/lib/utility';
 
 export type World = Map<string, TerrainSchema.Terrain>;

@@ -12,7 +12,7 @@ import { gameContext, IntentManager } from '~/game/context';
 import * as Memory from '~/game/memory';
 import { finalizePrototypeGetters } from '~/game/schema';
 import { UserCode } from '~/engine/metabase/code';
-import { BufferView } from '~/engine/schema/buffer-view';
+import { BufferView } from '~/lib/schema/buffer-view';
 
 declare const global: any;
 

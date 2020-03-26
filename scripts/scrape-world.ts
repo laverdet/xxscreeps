@@ -13,8 +13,8 @@ import * as GameSchema from '~/engine/metabase';
 
 import * as StoreIntents from '~/engine/processor/intents/store';
 
-import { Variant } from '~/engine/schema/format';
-import { getWriter } from '~/engine/schema/write';
+import { Variant } from '~/lib/schema/format';
+import { getWriter } from '~/lib/schema/write';
 import { BlobStorage } from '~/storage/blob';
 
 const [ jsonSource ] = process.argv.slice(2);

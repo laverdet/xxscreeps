@@ -1,5 +1,5 @@
 import * as RoomObject from './room-object';
-import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/engine/schema';
+import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/lib/schema';
 
 export const format = withType<Source>(checkCast<Format>()({
 	[Inherit]: RoomObject.format,

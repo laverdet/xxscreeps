@@ -1,6 +1,6 @@
 import { Endpoint } from '~/backend/endpoint';
 import * as DatabaseSchema from '~/engine/metabase';
-import { getReader } from '~/engine/schema';
+import { getReader } from '~/lib/schema';
 import { BlobStorage } from '~/storage/blob';
 
 export const MapStatsEndpoint: Endpoint = {
