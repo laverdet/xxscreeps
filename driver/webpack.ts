@@ -32,6 +32,8 @@ export async function compile(moduleName: string) {
 					test: /\.ts$/,
 					loader: 'babel-loader',
 					options: {
+						cacheCompression: false,
+						cacheDirectory: true,
 						plugins: [
 							'@babel/plugin-transform-typescript',
 							// These are needed because Webpack parses the code again and it doesn't yet support

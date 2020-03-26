@@ -27,6 +27,7 @@
     "sockjs": "^0.3.20",
     "source-map-support": "^0.5.16",
     "stream-to-promise": "^2.2.0",
+    "typescript-cached-transpile": "0.0.6",
     "webpack": "^5.0.0-beta.13"
   },
   "devDependencies": {
