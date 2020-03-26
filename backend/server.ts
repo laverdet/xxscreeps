@@ -5,7 +5,6 @@ import http from 'http';
 import { BackendContext } from './context';
 import { installEndpointHandlers } from './endpoints';
 import { installSocketHandlers } from './socket';
-import { bindRenderers } from './render';
 
 export default async function() {
 	const context = await BackendContext.connect();
@@ -19,7 +18,6 @@ export default async function() {
 
 	installEndpointHandlers(express, context);
 	installSocketHandlers(httpServer, context);
-	bindRenderers();
 
 	httpServer.listen(21025, () => console.log('🌎 Listening'));
 }

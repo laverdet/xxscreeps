@@ -1,7 +1,7 @@
 import { readRoom } from '~/engine/game/schema';
 import { Objects } from '~/engine/game/room';
 import { SubscriptionEndpoint } from '../socket';
-import { Render } from '../render';
+import { Render } from './render';
 
 export const roomSubscription: SubscriptionEndpoint = {
 	pattern: /^room:(?<room>[A-Z0-9]+)$/,
