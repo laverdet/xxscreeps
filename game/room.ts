@@ -1,8 +1,9 @@
 import { BufferObject } from '~/lib/schema/buffer-object';
 import type { BufferView } from '~/lib/schema/buffer-view';
-import { checkCast, makeVector, withType, Format, Interceptor } from '~/lib/schema';
+import type { FormatShape } from '~/lib/schema';
 import { iteratee } from '~/engine/util/iteratee';
-import { variantFormat } from './objects/room-object-variant';
+import type { variantFormat } from '~/engine/schema/variant';
+import * as C from './constants';
 
 import { RoomObject } from './objects/room-object';
 import type { RoomPosition } from './position';
@@ -14,19 +15,12 @@ import { Structure } from './objects/structures';
 import { StructureController } from './objects/structures/controller';
 import { StructureSpawn } from './objects/structures/spawn';
 
-import * as C from './constants';
-
-export const format = withType<Room>(checkCast<Format>()({
-	name: 'string',
-	objects: makeVector(variantFormat),
-}));
-
 export const Objects = Symbol('objects');
 
 export class Room extends BufferObject {
 	controller?: StructureController;
 	name!: string;
-	[Objects]!: RoomObject[];
+	[Objects]!: FormatShape<typeof variantFormat>[];
 
 	energyAvailable = 0;
 	energyCapacityAvailable = 0;
@@ -114,14 +108,3 @@ export class Room extends BufferObject {
 		return path;
 	}
 }
-
-export const interceptors = {
-	Room: checkCast<Interceptor>()({
-		members: {
-			objects: { symbol: Objects },
-		},
-		overlay: Room,
-	}),
-};
-
-export const schemaFormat = { Room: format };

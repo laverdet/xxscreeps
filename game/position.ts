@@ -1,6 +1,5 @@
 import * as PathFinder from '~/driver/pathfinder';
 import * as C from '~/game/constants';
-import { checkCast, withType, BufferView, Format, Interceptor } from '~/lib/schema';
 import { firstMatching } from '~/lib/utility';
 import type { RoomObject } from './objects/room-object';
 
@@ -335,20 +334,3 @@ export function parseRoomNameToId(name: string) {
 	const [ xx, yy ] = parseRoomName(name);
 	return yy << 8 | xx;
 }
-
-//
-// Schema
-export const format = withType<RoomPosition>(checkCast<Format>()({
-	position: 'int32',
-}));
-
-export const interceptors = {
-	RoomPosition: checkCast<Interceptor>()({
-		composeFromBuffer: (view: BufferView, offset: number) =>
-			new (RoomPosition as any)(view.int32[offset >>> 2]) as RoomPosition,
-		decomposeIntoBuffer: (value: any, view: BufferView, offset: number) =>
-			((view.int32[offset >>> 2] = value[PositionInteger], 4)),
-	}),
-};
-
-export const schemaFormat = { RoomPosition: format };

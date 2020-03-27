@@ -1,11 +1,11 @@
 import * as C from '~/game/constants';
 import { gameContext } from '~/game/context';
 import * as Memory from '~/game/memory';
-import { checkCast, makeEnum, makeVector, withType, Format, FormatShape, Inherit, Interceptor, Variant } from '~/lib/schema';
-import * as Id from '~/engine/util/id';
+import type { bodyFormat } from '~/engine/schema/creep';
+import { FormatShape, Variant } from '~/lib/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
-import { format as roomObjectFormat, Owner, RoomObject } from './room-object';
-import { format as storeFormat, resourceEnumFormat, RoomObjectWithStore, Store } from '../store';
+import { Owner, RoomObject } from './room-object';
+import { RoomObjectWithStore, Store } from '../store';
 import { Source } from './source';
 import { StructureController } from './structures/controller';
 export { Owner };
@@ -247,36 +247,3 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 			return C.OK;
 		});
 }
-
-//
-// Schema
-const bodyFormat = makeVector({
-	boost: resourceEnumFormat,
-	hits: 'uint8',
-	type: makeEnum(...C.BODYPARTS_ALL),
-});
-
-export const format = withType<Creep>(checkCast<Format>()({
-	[Inherit]: roomObjectFormat,
-	[Variant]: 'creep',
-	ageTime: 'int32',
-	body: bodyFormat,
-	fatigue: 'int16',
-	hits: 'int16',
-	name: 'string',
-	owner: Id.format,
-	// saying: ...
-	store: storeFormat,
-}));
-
-export const interceptors = {
-	Creep: checkCast<Interceptor>()({
-		overlay: Creep,
-		members: {
-			ageTime: { symbol: AgeTime },
-			owner: { symbol: Owner, ...Id.interceptors },
-		},
-	}),
-};
-
-export const schemaFormat = { Creep: format };

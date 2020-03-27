@@ -11,7 +11,7 @@ import * as Constants from '~/game/constants';
 import { gameContext, IntentManager } from '~/game/context';
 import * as Memory from '~/game/memory';
 import { importWorldTerrain } from '~/game/map';
-import { finalizePrototypeGetters } from '~/game/schema';
+import { finalizePrototypeGetters } from '~/engine/schema';
 import { UserCode } from '~/engine/metabase/code';
 import { BufferView } from '~/lib/schema/buffer-view';
 

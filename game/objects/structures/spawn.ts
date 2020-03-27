@@ -1,20 +1,12 @@
 import * as Structure from '.';
 import * as C from '~/game/constants';
 import * as Memory from '~/game/memory';
-import { checkCast, makeOptional, withType, Format, Inherit, Interceptor, Variant } from '~/lib/schema';
+import { FormatShape, Variant } from '~/lib/schema';
 import { gameContext } from '~/game/context';
 import { calcCreepCost, getUniqueName } from '~/game/helpers';
 import { Direction } from '~/game/position';
 import * as Store from '~/game/store';
-import * as Spawning from './spawn/spawning';
-
-export const format = withType<StructureSpawn>(checkCast<Format>()({
-	[Inherit]: Structure.format,
-	[Variant]: 'spawn',
-	name: 'string',
-	spawning: makeOptional(Spawning.format),
-	store: Store.format,
-}));
+import type { spawningFormat } from '~/engine/schema/spawn';
 
 type SpawnCreepOptions = {
 	body?: C.BodyPart[];
@@ -31,7 +23,7 @@ export class StructureSpawn extends Structure.Structure {
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 
 	name!: string;
-	spawning?: Spawning.Spawning;
+	spawning?: FormatShape<typeof spawningFormat>;
 	store!: Store.Store;
 
 	canCreateCreep(body: any, name?: any) {
@@ -109,12 +101,3 @@ export class StructureSpawn extends Structure.Structure {
 		return C.OK;
 	}
 }
-
-export const interceptors = {
-	...Spawning.interceptors,
-	StructureSpawn: checkCast<Interceptor>()({
-		overlay: StructureSpawn,
-	}),
-};
-
-export const schemaFormat = { ...Spawning.schemaFormat, StructureSpawn: format };

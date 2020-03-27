@@ -1,4 +1,4 @@
-import { readRoom } from '~/game/schema';
+import { readRoom } from '~/engine/schema';
 import { Objects } from '~/game/room';
 import { SubscriptionEndpoint } from '../socket';
 import { Render } from './render';

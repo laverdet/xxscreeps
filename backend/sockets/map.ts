@@ -1,4 +1,4 @@
-import { readRoom } from '~/game/schema';
+import { readRoom } from '~/engine/schema';
 import { Objects } from '~/game/room';
 import { Owner } from '~/game/objects/room-object';
 import { Creep } from '~/game/objects/creep';

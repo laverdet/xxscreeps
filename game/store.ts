@@ -1,6 +1,7 @@
 import * as C from '~/game/constants';
 import { BufferObject } from '~/lib/schema/buffer-object';
-import { checkCast, makeEnum, makeVector, withType, BufferView, Format, FormatShape, Interceptor } from '~/lib/schema';
+import { BufferView, FormatShape } from '~/lib/schema';
+import type { storedResourceFormat } from '~/engine/schema/store';
 import type { Creep } from './objects/creep';
 import type { StructureSpawn } from './objects/structures/spawn';
 
@@ -119,36 +120,3 @@ export class Store extends BufferObjectWithResourcesType {
 	[Restricted]: boolean;
 	[SingleResource]?: ResourceType;
 }
-
-//
-// Schema
-export const resourceEnumFormat = makeEnum(undefined, ...C.RESOURCES_ALL);
-
-const storedResourceFormat = checkCast<Format>()(makeVector({
-	amount: 'int32',
-	capacity: 'int32',
-	type: resourceEnumFormat,
-}));
-
-export const format = withType<Store>(checkCast<Format>()({
-	amount: 'int32',
-	capacity: 'int32',
-	resources: storedResourceFormat,
-	restricted: 'bool',
-	singleResource: resourceEnumFormat,
-}));
-
-export const interceptors = {
-	Store: checkCast<Interceptor>()({
-		members: {
-			amount: { symbol: Amount },
-			capacity: { symbol: Capacity },
-			resources: { symbol: Resources },
-			restricted: { symbol: Restricted },
-			singleResource: { symbol: SingleResource },
-		},
-		overlay: Store,
-	}),
-};
-
-export const schemaFormat = { Store: format };

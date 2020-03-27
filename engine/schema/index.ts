@@ -2,15 +2,15 @@ import { getReader, getSchema } from '~/lib/schema';
 import { bindInterceptorsToSchema } from '~/lib/schema/interceptor';
 import { injectGetters } from '~/lib/schema/overlay';
 import { safeAssign } from '~/lib/utility';
-import * as Creep from './objects/creep';
+import * as Creep from './creep';
 import * as RoomPosition from './position';
 import * as Room from './room';
-import * as RoomObject from './objects/room-object';
-import * as Source from './objects/source';
+import * as RoomObject from './room-object';
+import * as Source from './source';
 import * as Store from './store';
-import * as Structure from './objects/structures';
-import * as StructureController from './objects/structures/controller';
-import * as StructureSpawn from './objects/structures/spawn';
+import * as Structure from './structure';
+import * as StructureController from './controller';
+import * as StructureSpawn from './spawn';
 
 const schemaDeclarations = [
 	RoomPosition,
@@ -53,6 +53,9 @@ export function finalizePrototypeGetters() {
 			if (!(name in schema)) {
 				throw new Error(`Schema error with identifier: ${name}`);
 			} else if (!(name in imports)) {
+				if ((imports as any).interceptors?.[name].overlay !== undefined) {
+					throw new Error(`Schema ${name} is missing overlay export`);
+				}
 				continue;
 			}
 			injectGetters(

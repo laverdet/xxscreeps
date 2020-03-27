@@ -4,7 +4,7 @@ import { topLevelTask } from '~/lib/task';
 import * as MapSchema from '~/game/map';
 import { RoomPosition } from '~/game/position';
 import * as Room from '~/game/room';
-import * as Schema from '~/game/schema';
+import * as Schema from '~/engine/schema';
 import { Owner } from '~/game/objects/room-object';
 import * as Source from '~/game/objects/source';
 import * as StructureController from '~/game/objects/structures/controller';
