@@ -65,6 +65,7 @@ export function injectGetters(
 			set(value) {
 				defineProperty(this, symbol, {
 					enumerable: true,
+					writable: true,
 					value,
 				});
 			},

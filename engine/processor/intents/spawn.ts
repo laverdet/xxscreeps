@@ -1,7 +1,7 @@
 import * as C from '~/game/constants';
 import { gameContext } from '~/game/context';
 import { calcCreepCost } from '~/game/helpers';
-import { getPositonInDirection } from '~/game/position';
+import { getPositonInDirection, Direction } from '~/game/position';
 import * as Creep from '~/game/objects/creep';
 import * as Room from '~/game/room';
 import { bindProcessor } from '~/engine/processor/bind';
@@ -9,27 +9,40 @@ import { StructureSpawn } from '~/game/objects/structures/spawn';
 import * as CreepProcessor from './creep';
 import * as StoreProcessor from './store';
 
-function createCreep(this: StructureSpawn, intent: any) {
+type Parameters = {
+	spawn: {
+		body: C.BodyPart[];
+		name: string;
+		directions?: Direction[];
+	};
+};
+
+export type Intents = {
+	receiver: StructureSpawn;
+	parameters: Parameters;
+};
+
+function createCreep(spawn: StructureSpawn, intent: Parameters['spawn']) {
 
 	// Is this intent valid?
-	const canBuild = this.spawnCreep(intent.body, intent.name, { dryRun: true, directions: intent.directions }) === C.OK;
+	const canBuild = spawn.spawnCreep(intent.body, intent.name, { dryRun: true, directions: intent.directions }) === C.OK;
 	if (!canBuild) {
 		return false;
 	}
 
 	// Withdraw energy
 	const cost = calcCreepCost(intent.body);
-	if (!StoreProcessor.subtract.call(this.store, C.RESOURCE_ENERGY, cost)) {
+	if (!StoreProcessor.subtract(spawn.store, C.RESOURCE_ENERGY, cost)) {
 		return false;
 	}
 
 	// Add new creep to room objects
-	const creep = CreepProcessor.create(intent.body, this.pos, intent.name, gameContext.userId);
-	this.room[Room.Objects].push(creep);
+	const creep = CreepProcessor.create(intent.body, spawn.pos, intent.name, gameContext.userId);
+	spawn.room[Room.Objects].push(creep);
 
 	// Set spawning information
 	const needTime = intent.body.length * C.CREEP_SPAWN_TIME;
-	this.spawning = {
+	spawn.spawning = {
 		creep: creep.id,
 		directions: intent.directions ?? [],
 		endTime: Game.time + needTime,
@@ -40,15 +53,15 @@ function createCreep(this: StructureSpawn, intent: any) {
 }
 
 export default () => bindProcessor(StructureSpawn, {
-	process(this: StructureSpawn, intent) {
-		if (intent.createCreep) {
-			return createCreep.call(this, intent.createCreep);
+	process(intents: Partial<Parameters>) {
+		if (intents.spawn) {
+			return createCreep(this, intents.spawn);
 		}
 
 		return false;
 	},
 
-	tick(this: StructureSpawn) {
+	tick() {
 		if (this.spawning && this.spawning.endTime <= Game.time) {
 			const creep = Game.getObjectById(this.spawning.creep);
 			if (creep && creep instanceof Creep.Creep) {

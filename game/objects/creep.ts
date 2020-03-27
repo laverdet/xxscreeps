@@ -3,33 +3,90 @@ import { gameContext } from '~/game/context';
 import * as Memory from '~/game/memory';
 import { checkCast, makeEnum, makeVector, withType, Format, FormatShape, Inherit, Interceptor, Variant } from '~/lib/schema';
 import * as Id from '~/engine/util/id';
-import { fetchPositionArgument, RoomPosition } from '../position';
+import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { format as roomObjectFormat, Owner, RoomObject } from './room-object';
 import { format as storeFormat, resourceEnumFormat, RoomObjectWithStore, Store } from '../store';
 import { Source } from './source';
 export { Owner };
 
-const bodyFormat = makeVector({
-	boost: resourceEnumFormat,
-	hits: 'uint8',
-	type: makeEnum(...C.BODYPARTS_ALL),
-});
-
-export const format = withType<Creep>(checkCast<Format>()({
-	[Inherit]: roomObjectFormat,
-	[Variant]: 'creep',
-	ageTime: 'int32',
-	body: bodyFormat,
-	fatigue: 'int16',
-	hits: 'int16',
-	name: 'string',
-	owner: Id.format,
-	// saying: ...
-	store: storeFormat,
-}));
-
 export const AgeTime: unique symbol = Symbol('ageTime');
 
+export class Creep extends RoomObject {
+	get [Variant]() { return 'creep' }
+	get carry() { return this.store }
+	get carryCapacity() { return this.store.getCapacity() }
+	get memory() {
+		const memory = Memory.get();
+		const creeps = memory.creeps ?? (memory.creeps = {});
+		return creeps[this.name] ?? (creeps[this.name] = {});
+	}
+	get my() { return this[Owner] === gameContext.userId }
+	get spawning() { return this[AgeTime] === 0 }
+	get ticksToLive() { return this[AgeTime] === 0 ? undefined : this[AgeTime] - Game.time }
+
+	getActiveBodyparts(type: C.BodyPart) {
+		return this.body.reduce((count, part) =>
+			count + (part.type === type && part.hits > 0 ? 1 : 0), 0);
+	}
+
+	harvest(target: Source) {
+		return chainChecks(
+			() => checkHarvest(this, target),
+			() => gameContext.intents.save(this, 'harvest', { target: target.id }));
+	}
+
+	move(direction: Direction) {
+		return chainChecks(
+			() => checkMove(this, direction),
+			() => gameContext.intents.save(this, 'move', { direction }));
+	}
+
+	moveTo(x: number, y: number): number;
+	moveTo(pos: RoomObject | RoomPosition): number;
+	moveTo(...args: [any]) {
+		return chainChecks(
+			() => checkMoveCommon(this),
+			() => {
+				// Parse target
+				const { pos } = fetchPositionArgument(this.pos, ...args);
+				if (pos === undefined) {
+					return C.ERR_INVALID_TARGET;
+				} else if (pos.isNearTo(this.pos)) {
+					return C.OK;
+				}
+
+				// Find a path
+				const path = this.pos.findPathTo(pos);
+				if (path.length === 0) {
+					return C.ERR_NO_PATH;
+				}
+
+				// And move one tile
+				return this.move(path[0].direction);
+			});
+	}
+
+	transfer(target: RoomObjectWithStore, resourceType: C.ResourceType, amount?: number) {
+		return chainChecks(
+			() => checkTransfer(this, target, resourceType, amount),
+			() => gameContext.intents.save(this, 'transfer', { amount, resourceType, target: target.id }),
+		);
+	}
+
+	say() {}
+	upgradeController() {}
+
+	body!: FormatShape<typeof bodyFormat>;
+	fatigue!: number;
+	hits!: number;
+	name!: string;
+	store!: Store;
+	protected [AgeTime]!: number;
+	protected [Owner]!: string;
+}
+
+//
+// Intent checks
 function chainChecks(...checks: (() => number)[]) {
 	for (const check of checks) {
 		const result = check();
@@ -96,7 +153,12 @@ function checkMoveCommon(creep: Creep) {
 		});
 }
 
-function checkTransfer(creep: Creep, target: RoomObject | RoomObjectWithStore, resourceType: C.ResourceType, amount?: number) {
+export function checkTransfer(
+	creep: Creep,
+	target: RoomObject & Partial<RoomObjectWithStore> | undefined,
+	resourceType: C.ResourceType,
+	amount?: number,
+) {
 	return chainChecks(
 		() => checkCommon(creep),
 		() => {
@@ -106,13 +168,13 @@ function checkTransfer(creep: Creep, target: RoomObject | RoomObjectWithStore, r
 			} else if (!C.RESOURCES_ALL.includes(resourceType)) {
 				return C.ERR_INVALID_ARGS;
 
-			} else if (!(target instanceof RoomObject)) {
+			} else if (!(creep instanceof Creep) || !(target instanceof RoomObject)) {
 				return C.ERR_INVALID_TARGET;
 
 			} else if (target instanceof Creep && target.spawning) {
 				return C.ERR_INVALID_TARGET;
 
-			} else if (!('store' in target)) {
+			} else if (!target.store) {
 				return C.ERR_INVALID_TARGET;
 			}
 
@@ -151,76 +213,27 @@ function checkTransfer(creep: Creep, target: RoomObject | RoomObjectWithStore, r
 		});
 }
 
-export class Creep extends RoomObject {
-	get [Variant]() { return 'creep' }
-	get carry() { return this.store }
-	get carryCapacity() { return this.store.getCapacity() }
-	get memory() {
-		const memory = Memory.get();
-		const creeps = memory.creeps ?? (memory.creeps = {});
-		return creeps[this.name] ?? (creeps[this.name] = {});
-	}
-	get my() { return this[Owner] === gameContext.userId }
-	get spawning() { return this[AgeTime] === 0 }
-	get ticksToLive() { return this[AgeTime] === 0 ? undefined : this[AgeTime] - Game.time }
 
-	getActiveBodyparts(type: C.BodyPart) {
-		return this.body.reduce((count, part) =>
-			count + (part.type === type && part.hits > 0 ? 1 : 0), 0);
-	}
+//
+// Schema
+const bodyFormat = makeVector({
+	boost: resourceEnumFormat,
+	hits: 'uint8',
+	type: makeEnum(...C.BODYPARTS_ALL),
+});
 
-	harvest(target: Source) {
-		return chainChecks(
-			() => checkHarvest(this, target),
-			() => gameContext.intents.save(this, 'harvest', { id: target.id }));
-	}
-
-	move(direction: number) {
-		return chainChecks(
-			() => checkMove(this, direction),
-			() => gameContext.intents.save(this, 'move', { direction: direction | 0 }));
-	}
-
-	moveTo(x: number, y: number): number;
-	moveTo(pos: RoomObject | RoomPosition): number;
-	moveTo(...args: [any]) {
-		return chainChecks(
-			() => checkMoveCommon(this),
-			() => {
-				// Parse target
-				const { pos } = fetchPositionArgument(this.pos, ...args);
-				if (pos === undefined) {
-					return C.ERR_INVALID_TARGET;
-				} else if (pos.isNearTo(this.pos)) {
-					return C.OK;
-				}
-
-				// Find a path
-				const path = this.pos.findPathTo(pos);
-				if (path.length === 0) {
-					return C.ERR_NO_PATH;
-				}
-
-				// And move one tile
-				return this.move(path[0].direction);
-			});
-	}
-
-	transfer(target: RoomObject | RoomObjectWithStore, resourceType: C.ResourceType, amount?: number) {
-		return chainChecks(
-			() => checkTransfer(this, target, resourceType, amount),
-			() => gameContext.intents.save(this, 'transfer', { id: target.id }),
-		);
-	}
-
-	body!: FormatShape<typeof bodyFormat>;
-	fatigue!: number;
-	hits!: number;
-	name!: string;
-	store!: Store;
-	protected [AgeTime]!: number;
-	protected [Owner]!: string;
-}
+export const format = withType<Creep>(checkCast<Format>()({
+	[Inherit]: roomObjectFormat,
+	[Variant]: 'creep',
+	ageTime: 'int32',
+	body: bodyFormat,
+	fatigue: 'int16',
+	hits: 'int16',
+	name: 'string',
+	owner: Id.format,
+	// saying: ...
+	store: storeFormat,
+}));
 
 export const interceptors = {
 	Creep: checkCast<Interceptor>()({

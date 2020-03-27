@@ -1,26 +1,26 @@
 import { Amount, Capacity, Resources, ResourceType, Restricted, SingleResource, StorageRecord, Store } from '~/game/store';
 import { instantiate } from '~/lib/utility';
 
-export function add(this: Store, resourceType: ResourceType, amount: number) {
+export function add(store: Store, resourceType: ResourceType, amount: number) {
 
 	// Confirm there's enough capacity
-	if (this.getFreeCapacity(resourceType) < amount) {
+	if (store.getFreeCapacity(resourceType) < amount) {
 		return false;
 	}
 
 	// Add resource
-	const didCreate = !(this[resourceType]! > 0);
-	this[resourceType] = (this[resourceType] ?? 0) + amount;
-	this[Amount] += amount;
+	const didCreate = !(store[resourceType]! > 0);
+	store[resourceType] = (store[resourceType] ?? 0) + amount;
+	store[Amount] += amount;
 
 	// Handle resource vector if needed
-	const singleResourceType = this[SingleResource];
+	const singleResourceType = store[SingleResource];
 	if (singleResourceType !== resourceType) {
 
 		if (singleResourceType === undefined) {
 			if (didCreate) {
 				// Update in place
-				for (const resource of this[Resources]) {
+				for (const resource of store[Resources]) {
 					if (resource.type === resourceType) {
 						resource.amount += amount;
 						break;
@@ -28,17 +28,17 @@ export function add(this: Store, resourceType: ResourceType, amount: number) {
 				}
 			} else {
 				// Add new element for this resource
-				this[Resources].push({ type: resourceType, amount, capacity: 0 });
+				store[Resources].push({ type: resourceType, amount, capacity: 0 });
 			}
 
-		} else if (!(this[singleResourceType]! > 0)) {
+		} else if (!(store[singleResourceType]! > 0)) {
 			// In this case the single resource flag represents a resource with nothing
-			this[SingleResource] = resourceType;
+			store[SingleResource] = resourceType;
 
 		} else if (didCreate) {
 			// Will need to promoted this single resource to a vector
-			this[Resources] = [
-				{ type: singleResourceType, amount: this[singleResourceType]!, capacity: 0 },
+			store[Resources] = [
+				{ type: singleResourceType, amount: store[singleResourceType]!, capacity: 0 },
 				{ type: resourceType, amount, capacity: 0 },
 			];
 		}
@@ -46,37 +46,37 @@ export function add(this: Store, resourceType: ResourceType, amount: number) {
 	return true;
 }
 
-export function subtract(this: Store, resourceType: ResourceType, amount: number) {
+export function subtract(store: Store, resourceType: ResourceType, amount: number) {
 
 	// Confirm there's enough resource
-	if (!(this[resourceType]! >= amount)) {
+	if (!(store[resourceType]! >= amount)) {
 		return false;
 	}
 
 	// Withdraw resource
-	this[resourceType] -= amount;
-	this[Amount] -= amount;
+	store[resourceType] -= amount;
+	store[Amount] -= amount;
 
 	// Handle resource vector if needed
-	if (this[SingleResource] !== resourceType) {
+	if (store[SingleResource] !== resourceType) {
 
-		if (this[resourceType] === 0) {
+		if (store[resourceType] === 0) {
 			// Last of the resource.. maybe this can become a single resource store
 			if (resourceType !== 'energy') {
-				delete this[resourceType];
+				delete store[resourceType];
 			}
-			const store = this[Resources].filter(resource => resource.type !== resourceType || resource.capacity);
-			if (store.length <= 1) {
+			const resources = store[Resources].filter(resource => resource.type !== resourceType || resource.capacity);
+			if (resources.length <= 1) {
 				// Simplify memory layout
-				this[SingleResource] = store.length === 0 ? 'energy' : store[0].type;
-				this[Resources] = [];
+				store[SingleResource] = resources.length === 0 ? 'energy' : resources[0].type;
+				store[Resources] = [];
 			} else {
 				// Remains multi-resource store
-				this[Resources] = store;
+				store[Resources] = resources;
 			}
 		} else {
 			// Just reduce the stored resource in place
-			for (const resource of this[Resources]) {
+			for (const resource of store[Resources]) {
 				if (resource.type === resourceType) {
 					resource.amount -= amount;
 					break;
@@ -130,7 +130,7 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 		...store,
 		[Amount]: store ? Object.values(store).reduce((sum, amount) => sum + amount, 0) : 0,
 		[Capacity]: calculatedCapacity,
-		[Resources]: singleResource,
+		[Resources]: singleResource === undefined ? resources : [],
 		[Restricted]: isRestricted,
 		[SingleResource]: singleResource,
 	});

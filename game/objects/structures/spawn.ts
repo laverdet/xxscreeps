@@ -4,6 +4,7 @@ import * as Memory from '~/game/memory';
 import { checkCast, makeOptional, withType, Format, Inherit, Interceptor, Variant } from '~/lib/schema';
 import { gameContext } from '~/game/context';
 import { calcCreepCost, getUniqueName } from '~/game/helpers';
+import { Direction } from '~/game/position';
 import * as Store from '~/game/store';
 import * as Spawning from './spawn/spawning';
 
@@ -17,7 +18,7 @@ export const format = withType<StructureSpawn>(checkCast<Format>()({
 
 type SpawnCreepOptions = {
 	body?: C.BodyPart[];
-	directions?: number[];
+	directions?: Direction[];
 	dryRun?: boolean;
 	memory?: any;
 };
@@ -66,7 +67,7 @@ export class StructureSpawn extends Structure.Structure {
 				return C.ERR_INVALID_ARGS;
 			}
 			// Convert to numbers, filter duplicates
-			directions = Array.from(new Set(directions.map(direction => +direction)));
+			directions = Array.from(new Set(directions.map(direction => +direction as Direction)));
 			// Bail if out of range
 			if (directions.length === 0 || directions.some(dir => dir < 1 || dir > 8 || !Number.isInteger(dir))) {
 				return C.ERR_INVALID_ARGS;
@@ -104,7 +105,7 @@ export class StructureSpawn extends Structure.Structure {
 
 		// TODO: fake creep object
 
-		gameContext.intents.save(this, 'createCreep', { name, body, directions });
+		gameContext.intents.save(this, 'spawn', { name, body, directions });
 		return C.OK;
 	}
 }

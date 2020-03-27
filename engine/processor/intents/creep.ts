@@ -1,10 +1,26 @@
 import * as C from '~/game/constants';
 import * as Creep from '~/game/objects/creep';
-import { getPositonInDirection, RoomPosition } from '~/game/position';
+import { getPositonInDirection, Direction, RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
 import { generateId } from '~/engine/util/id';
+import { ResourceType, RoomObjectWithStore } from '~/game/store';
 import { instantiate } from '~/lib/utility';
 import * as Store from './store';
+
+type Parameters = {
+	harvest: { target: string };
+	move: { direction: Direction };
+	transfer: {
+		amount?: number;
+		resourceType: ResourceType;
+		target: string;
+	};
+};
+
+export type Intents = {
+	receiver: Creep.Creep;
+	parameters: Parameters;
+};
 
 export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owner: string) {
 	const carryCapacity = body.reduce((energy, type) =>
@@ -24,16 +40,23 @@ export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owne
 }
 
 export default () => bindProcessor(Creep.Creep, {
-	process(this: Creep.Creep, intent) {
+	process(intent: Partial<Parameters>) {
 		if (intent.harvest) {
-			Store.add.call(this.store, 'energy', 2);
+			Store.add(this.store, 'energy', 25);
 		}
 		if (intent.move) {
-			this.pos = getPositonInDirection(this.pos, (intent.move as any).direction);
+			this.pos = getPositonInDirection(this.pos, intent.move.direction);
 			return true;
 		}
 		if (intent.transfer) {
-			Store.subtract.call(this.store, 'energy', this.store.energy);
+			const { amount, resourceType, target: id } = intent.transfer;
+			const target = Game.getObjectById(id) as RoomObjectWithStore | undefined;
+			if (Creep.checkTransfer(this, target, resourceType, amount) !== C.OK) {
+				return false;
+			}
+			const transferAmount = Math.min(this.store[resourceType]!, target!.store.getFreeCapacity(resourceType));
+			Store.subtract(this.store, resourceType, transferAmount);
+			Store.add(target!.store, resourceType, transferAmount);
 		}
 		return false;
 	},

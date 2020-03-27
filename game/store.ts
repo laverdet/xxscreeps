@@ -1,7 +1,8 @@
 import * as C from '~/game/constants';
 import { BufferObject } from '~/lib/schema/buffer-object';
 import { checkCast, makeEnum, makeVector, withType, BufferView, Format, FormatShape, Interceptor } from '~/lib/schema';
-import { RoomObject } from './objects/room-object';
+import type { Creep } from './objects/creep';
+import type { StructureSpawn } from './objects/structures/spawn';
 
 export type ResourceType = (typeof C.RESOURCES_ALL)[number];
 export type StorageRecord = Record<ResourceType, number>;
@@ -13,25 +14,7 @@ export const Resources = Symbol('resources');
 export const Restricted = Symbol('restricted');
 export const SingleResource = Symbol('singleResource');
 
-export const resourceEnumFormat = makeEnum(undefined, ...C.RESOURCES_ALL);
-
-const storedResourceFormat = checkCast<Format>()(makeVector({
-	amount: 'int32',
-	capacity: 'int32',
-	type: resourceEnumFormat,
-}));
-
-export const format = withType<Store>(checkCast<Format>()({
-	amount: 'int32',
-	capacity: 'int32',
-	resources: storedResourceFormat,
-	restricted: 'bool',
-	singleResource: resourceEnumFormat,
-}));
-
-export type RoomObjectWithStore = RoomObject & {
-	store: Store;
-};
+export type RoomObjectWithStore = Creep | StructureSpawn;
 
 // Adds resource types information to `Store` class. No changes from `extends BufferObject` as far
 // as JS is concerned
@@ -129,13 +112,31 @@ export class Store extends BufferObjectWithResourcesType {
 
 	energy = 0;
 
-	protected [Amount]!: number;
-	protected [Capacity]!: number;
-	protected [Resources]!: FormatShape<typeof storedResourceFormat>;
-	protected [Restricted]: boolean;
-	protected [SingleResource]?: ResourceType;
+	[Amount]!: number;
+	[Capacity]!: number;
 	[CapacityByResource]?: Map<ResourceType, number>;
+	[Resources]!: FormatShape<typeof storedResourceFormat>;
+	[Restricted]: boolean;
+	[SingleResource]?: ResourceType;
 }
+
+//
+// Schema
+export const resourceEnumFormat = makeEnum(undefined, ...C.RESOURCES_ALL);
+
+const storedResourceFormat = checkCast<Format>()(makeVector({
+	amount: 'int32',
+	capacity: 'int32',
+	type: resourceEnumFormat,
+}));
+
+export const format = withType<Store>(checkCast<Format>()({
+	amount: 'int32',
+	capacity: 'int32',
+	resources: storedResourceFormat,
+	restricted: 'bool',
+	singleResource: resourceEnumFormat,
+}));
 
 export const interceptors = {
 	Store: checkCast<Interceptor>()({
