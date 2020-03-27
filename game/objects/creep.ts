@@ -7,6 +7,7 @@ import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { format as roomObjectFormat, Owner, RoomObject } from './room-object';
 import { format as storeFormat, resourceEnumFormat, RoomObjectWithStore, Store } from '../store';
 import { Source } from './source';
+import { StructureController } from './structures/controller';
 export { Owner };
 
 export const AgeTime: unique symbol = Symbol('ageTime');
@@ -74,7 +75,12 @@ export class Creep extends RoomObject {
 	}
 
 	say() {}
-	upgradeController() {}
+	upgradeController(target: StructureController) {
+		return chainChecks(
+			() => checkUpgradeController(this, target),
+			() => gameContext.intents.save(this, 'upgradeController', { target: target.id }),
+		);
+	}
 
 	body!: FormatShape<typeof bodyFormat>;
 	fatigue!: number;
@@ -112,8 +118,10 @@ export function checkHarvest(creep: Creep, target: RoomObject) {
 		() => {
 			if (creep.getActiveBodyparts(C.WORK) <= 0) {
 				return C.ERR_NO_BODYPART;
+
 			} else if (!(target instanceof RoomObject)) {
 				return C.ERR_INVALID_TARGET;
+
 			} else if (!creep.pos.isNearTo(target.pos)) {
 				return C.ERR_NOT_IN_RANGE;
 			}
@@ -213,6 +221,32 @@ export function checkTransfer(
 		});
 }
 
+export function checkUpgradeController(creep: Creep, target: StructureController) {
+	return chainChecks(
+		() => checkCommon(creep),
+		() => {
+			if (creep.getActiveBodyparts(C.WORK) <= 0) {
+				return C.ERR_NO_BODYPART;
+
+			} else if (creep.store.energy <= 0) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+
+			} else if (!(target instanceof StructureController)) {
+				return C.ERR_INVALID_TARGET;
+
+			} else if (target.upgradeBlocked! > 0) {
+				return C.ERR_INVALID_TARGET;
+
+			} else if (!creep.pos.inRangeTo(target.pos, 3)) {
+				return C.ERR_NOT_IN_RANGE;
+
+			} else if (!target.my) {
+				return C.ERR_NOT_OWNER;
+			}
+
+			return C.OK;
+		});
+}
 
 //
 // Schema

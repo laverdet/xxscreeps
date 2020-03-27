@@ -15,10 +15,10 @@ export function getPathFinderInfo() {
 
 export const getRuntimeSource = runOnce(() => compile('~/driver/runtime.ts'));
 
-export async function createSandbox(userId: string, userCode: UserCode) {
+export async function createSandbox(userId: string, userCode: UserCode, terrain: Readonly<Uint8Array>) {
 	if ((await configPromise).config?.processor?.unsafeSandbox === true) {
-		return NodejsSandbox.create(userId, userCode);
+		return NodejsSandbox.create(userId, userCode, terrain);
 	} else {
-		return IsolatedSandbox.create(userId, userCode);
+		return IsolatedSandbox.create(userId, userCode, terrain);
 	}
 }

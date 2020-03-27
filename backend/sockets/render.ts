@@ -2,6 +2,7 @@ import { RoomObject } from '~/game/objects/room-object';
 import { Creep } from '~/game/objects/creep';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
+import { StructureController } from '~/game/objects/structures/controller';
 import { StructureSpawn } from '~/game/objects/structures/spawn';
 import { Store, CapacityByResource } from '~/game/store';
 import { Variant } from '~/lib/schema';
@@ -82,6 +83,17 @@ bindRenderer(Source, function render() {
 		energy: this.energy,
 		energyCapacity: this.energyCapacity,
 		ticksToRegeneration: this.ticksToRegeneration,
+	};
+});
+
+bindRenderer(StructureController, function render() {
+	return {
+		...renderStructure(this),
+		type: 'controller',
+		level: this.level,
+		progress: this.progress,
+		downgradeTime: this.ticksToDowngrade,
+		safeMode: 0,
 	};
 });
 

@@ -14,7 +14,7 @@ export class IsolatedSandbox {
 		private readonly tick: ivm.Reference<Function>,
 	) {}
 
-	static async create(userId: string, userCode: UserCode) {
+	static async create(userId: string, userCode: UserCode, terrain: Readonly<Uint8Array>) {
 		// Generate new isolate and context
 		const isolate = new ivm.Isolate({ memoryLimit: 128 });
 		const [ context, script ] = await Promise.all([
@@ -47,7 +47,7 @@ export class IsolatedSandbox {
 			runtime.get('initializeIsolated', { reference: true }),
 			context.global.delete(identifier),
 		]);
-		await initialize.apply(undefined, [ isolate, context, userId, userCode ], { arguments: { copy: true } });
+		await initialize.apply(undefined, [ isolate, context, userId, userCode, terrain ], { arguments: { copy: true } });
 		return new IsolatedSandbox(tick);
 	}
 

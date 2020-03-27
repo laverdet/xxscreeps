@@ -10,6 +10,7 @@ import { Source } from '~/game/objects/source';
 import * as Constants from '~/game/constants';
 import { gameContext, IntentManager } from '~/game/context';
 import * as Memory from '~/game/memory';
+import { importWorldTerrain } from '~/game/map';
 import { finalizePrototypeGetters } from '~/game/schema';
 import { UserCode } from '~/engine/metabase/code';
 import { BufferView } from '~/lib/schema/buffer-view';
@@ -45,7 +46,9 @@ let require: (name: string) => any;
 export function initialize(
 	compileModule: (source: string, filename: string) => ((...args: any[]) => any),
 	userId: string, userCode: UserCode,
+	terrain: Readonly<Uint8Array>,
 ) {
+	importWorldTerrain(terrain);
 	gameContext.userId = userId;
 	// Index code by name
 	const modulesCode = Object.create(null);
@@ -89,12 +92,18 @@ export function initialize(
 	};
 }
 
-export function initializeIsolated(isolate: ivm.Isolate, context: ivm.Context, userId: string, userCode: UserCode) {
+export function initializeIsolated(
+	isolate: ivm.Isolate,
+	context: ivm.Context,
+	userId: string,
+	userCode: UserCode,
+	terrain: Readonly<Uint8Array>,
+) {
 	const compileModule = (source: string, filename: string) => {
 		const script = isolate.compileScriptSync(source, { filename });
 		return script.runSync(context, { reference: true }).deref();
 	};
-	return initialize(compileModule, userId, userCode);
+	return initialize(compileModule, userId, userCode, terrain);
 }
 
 export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {

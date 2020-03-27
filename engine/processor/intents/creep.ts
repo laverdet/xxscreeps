@@ -1,10 +1,12 @@
 import * as C from '~/game/constants';
 import * as Creep from '~/game/objects/creep';
+import { StructureController } from '~/game/objects/structures/controller';
 import { getPositonInDirection, Direction, RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
 import { generateId } from '~/engine/util/id';
 import { ResourceType, RoomObjectWithStore } from '~/game/store';
 import { instantiate } from '~/lib/utility';
+import * as Controller from './controller';
 import * as Store from './store';
 
 type Parameters = {
@@ -15,6 +17,7 @@ type Parameters = {
 		resourceType: ResourceType;
 		target: string;
 	};
+	upgradeController: { target: string };
 };
 
 export type Intents = {
@@ -57,6 +60,13 @@ export default () => bindProcessor(Creep.Creep, {
 			const transferAmount = Math.min(this.store[resourceType]!, target!.store.getFreeCapacity(resourceType));
 			Store.subtract(this.store, resourceType, transferAmount);
 			Store.add(target!.store, resourceType, transferAmount);
+		}
+		if (intent.upgradeController) {
+			const target = Game.getObjectById(intent.upgradeController.target) as StructureController;
+			if (Creep.checkUpgradeController(this, target) === C.OK) {
+				Store.subtract(this.store, 'energy', 2);
+				Controller.upgrade(target, 2);
+			}
 		}
 		return false;
 	},

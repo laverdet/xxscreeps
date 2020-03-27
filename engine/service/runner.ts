@@ -47,7 +47,7 @@ export default async function() {
 						}
 						// Generate a new one
 						const userCode = readCode(await blobStorage.load(`code/${userId}`));
-						const sandbox = await createSandbox(userId, userCode);
+						const sandbox = await createSandbox(userId, userCode, terrainBuffer);
 						sandboxes.set(userId, sandbox);
 						return sandbox;
 					}();

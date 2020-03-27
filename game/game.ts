@@ -1,4 +1,7 @@
+import { runOnce } from '~/lib/memoize';
+
 import { Creep } from './objects/creep';
+import { GameMap } from './map';
 import { Room, Objects } from './room';
 import { RoomObject } from './objects/room-object';
 import { StructureSpawn } from './objects/structures/spawn';
@@ -7,7 +10,11 @@ declare global {
 	let Game: Game;
 }
 
+const map = runOnce(() => new GameMap);
+
 export class Game {
+	map = map();
+
 	creeps: Dictionary<Creep> = Object.create(null);
 	rooms: Dictionary<Room> = Object.create(null);
 	spawns: Dictionary<StructureSpawn> = Object.create(null);

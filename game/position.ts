@@ -175,6 +175,8 @@ export class RoomPosition {
 		return room.findPath(this, pos!);
 	}
 
+	createConstructionSite() {}
+
 	[Symbol.for('nodejs.util.inspect.custom')]() {
 		return `${this}`;
 	}
