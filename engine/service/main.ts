@@ -9,7 +9,7 @@ import { RunnerMessage, ProcessorMessage, ProcessorQueueElement, MainMessage } f
 
 export default async function() {
 	// Open channels and connect to storage
-	const config = await configPromise;
+	const { config } = await configPromise;
 	const blobStorage = await BlobStorage.create();
 	const roomsQueue = await Queue.create<ProcessorQueueElement>('processRooms');
 	const usersQueue = await Queue.create('runnerUsers');
@@ -96,7 +96,7 @@ export default async function() {
 			console.log(`Tick ${gameTime} ran in ${timeTaken}ms`);
 			++gameTime;
 			Channel.publish<MainMessage>('main', { type: 'tick', time: gameTime });
-			const delay = config.config.game.tickSpeed - timeTaken;
+			const delay = config.game.tickSpeed ?? 250 - timeTaken;
 			if (delay > 0) {
 				await new Promise(resolve => setTimeout(resolve, delay));
 			}

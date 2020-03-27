@@ -1,22 +1,16 @@
 import ivm from 'isolated-vm';
+import { runOnce } from '~/lib/memoize';
 import type { UserCode } from '~/engine/metabase/code';
-import { compile } from './webpack';
-import { locateModule } from './pathfinder';
+import { getPathFinderInfo, getRuntimeSource } from '.';
 
-const pathFinderModulePath = locateModule();
-const pathFinderModule = new ivm.NativeModule(pathFinderModulePath);
+const getPathFinderModule = runOnce(() => {
+	const { identifier, path } = getPathFinderInfo();
+	const module = new ivm.NativeModule(path);
+	return { identifier, module };
+});
 
-let runtimeSourceData: Promise<string>;
-function getRuntimeSource() {
-	if (runtimeSourceData === undefined) {
-		runtimeSourceData = compile('~/driver/runtime.ts');
-	}
-	return runtimeSourceData;
-}
-
-export class Sandbox {
-	constructor(
-		private readonly isolate: ivm.Isolate,
+export class IsolatedSandbox {
+	private constructor(
 		private readonly tick: ivm.Reference<Function>,
 	) {}
 
@@ -29,11 +23,11 @@ export class Sandbox {
 		]);
 
 		// Set up required globals before running ./runtime.ts
-		const pfIdentifier = pathFinderModulePath.replace(/[/\\.]/g, '_');
+		const { identifier, module } = getPathFinderModule();
 		await Promise.all([
 			async function() {
-				const pf = await pathFinderModule.create(context);
-				await context.global.set(pfIdentifier, pf.derefInto());
+				const instance = await module.create(context);
+				await context.global.set(identifier, instance.derefInto());
 			}(),
 			async function() {
 				await context.global.set('global', context.global.derefInto());
@@ -48,17 +42,13 @@ export class Sandbox {
 
 		// Initialize runtime.ts and load player code + memory
 		const runtime = await script.run(context, { reference: true });
-		const [ tick ] = await Promise.all([
-			runtime.get('tick'),
-			// TODO: would be nice to delete this from global
-			context.global.set(pfIdentifier, undefined),
-			async function() {
-				const initialize = await runtime.get('initialize') as ivm.Reference<any>;
-				await initialize.apply(undefined, [ isolate, context, userId, userCode ], { arguments: { copy: true } });
-			}(),
+		const [ tick, initialize ] = await Promise.all([
+			runtime.get('tick', { reference: true }),
+			runtime.get('initializeIsolated', { reference: true }),
+			context.global.delete(identifier),
 		]);
-
-		return new Sandbox(isolate, tick as ivm.Reference<any>);
+		await initialize.apply(undefined, [ isolate, context, userId, userCode ], { arguments: { copy: true } });
+		return new IsolatedSandbox(tick);
 	}
 
 	async run(time: number, roomBlobs: Readonly<Uint8Array>[]) {

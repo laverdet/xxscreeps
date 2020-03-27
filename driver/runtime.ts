@@ -42,7 +42,10 @@ for (const [ identifier, value ] of Object.entries(Constants)) {
 }
 
 let require: (name: string) => any;
-export function initialize(isolate: ivm.Isolate, context: ivm.Context, userId: string, userCode: UserCode) {
+export function initialize(
+	compileModule: (source: string, filename: string) => ((...args: any[]) => any),
+	userId: string, userCode: UserCode,
+) {
 	gameContext.userId = userId;
 	// Index code by name
 	const modulesCode = Object.create(null);
@@ -70,9 +73,7 @@ export function initialize(isolate: ivm.Isolate, context: ivm.Context, userId: s
 		const module = {
 			exports: {} as any,
 		};
-		const script = isolate.compileScriptSync(
-			`(function(module,exports){${code}})`, { filename: `${name}.js` });
-		const moduleFunction = script.runSync(context, { reference: true }).deref();
+		const moduleFunction = compileModule(`(function(module,exports){${code}})`, `${name}.js`);
 		const run = () => moduleFunction.apply(module, [ module, module.exports ]);
 		run();
 		if (name === 'main' && module.exports.loop === undefined) {
@@ -86,6 +87,14 @@ export function initialize(isolate: ivm.Isolate, context: ivm.Context, userId: s
 		delete modulesCode[name];
 		return module.exports;
 	};
+}
+
+export function initializeIsolated(isolate: ivm.Isolate, context: ivm.Context, userId: string, userCode: UserCode) {
+	const compileModule = (source: string, filename: string) => {
+		const script = isolate.compileScriptSync(source, { filename });
+		return script.runSync(context, { reference: true }).deref();
+	};
+	return initialize(compileModule, userId, userCode);
 }
 
 export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {

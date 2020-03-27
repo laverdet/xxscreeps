@@ -4,6 +4,7 @@
 	"type": "object",
 	"required": [ "game", "storage" ],
 	"properties": {
+
 		"game": {
 			"type": "object",
 			"description": "Game settings",
@@ -16,6 +17,45 @@
 				}
 			}
 		},
+
+		"launcher": {
+			"type": "object",
+			"description": "Launcher settings",
+			"properties": {
+
+				"processorWorkers": {
+					"type": "integer",
+					"description": "Total number of processors to create.",
+					"default": 2
+				},
+
+				"runnerWorkers": {
+					"type": "integer",
+					"description": "Total number of runners to create. It's best to leave this at 1 because runner will create its own threads.",
+					"default": 1
+				},
+
+				"singleThreaded": {
+					"type": "boolean",
+					"description": "Set true to run all services in a single nodejs isolate. This does *not* affect the runner's isolates.",
+					"default": false
+				}
+			}
+		},
+
+		"processor": {
+			"type": "object",
+			"description": "Processor settings",
+			"properties": {
+				"unsafeSandbox": {
+					"type": "boolean",
+					"description": "Setting this to true will run user code using the nodejs `vm` module instead of `isolated-vm`. Do not enable this on public servers!",
+					"default": false
+				}
+			}
+
+		},
+
 		"storage": {
 			"type": "object",
 			"description": "Configuration for local storage",

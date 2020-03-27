@@ -3,7 +3,7 @@ import * as DatabaseSchema from '~/engine/metabase';
 import { readWorld } from '~/game/map';
 import { getReader } from '~/lib/schema/read';
 import { loadTerrain } from '~/driver/pathfinder';
-import { Sandbox } from '~/driver/sandbox';
+import { createSandbox, Sandbox } from '~/driver/sandbox';
 import { mapInPlace, filterInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
@@ -47,7 +47,7 @@ export default async function() {
 						}
 						// Generate a new one
 						const userCode = readCode(await blobStorage.load(`code/${userId}`));
-						const sandbox = await Sandbox.create(userId, userCode);
+						const sandbox = await createSandbox(userId, userCode);
 						sandboxes.set(userId, sandbox);
 						return sandbox;
 					}();
