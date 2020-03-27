@@ -7,9 +7,7 @@ import { create, connect, ResponderClient, ResponderHost } from './responder';
 const fragmentNameWhitelist = /^[a-zA-Z0-9/-]+$/;
 
 function copy(buffer: Readonly<Uint8Array>) {
-	// TODO: SharedArrayBuffer is crashing nodejs. Either switch to explicitly transeferred buffers or
-	// figure something out.
-	const copy = new Uint8Array(new ArrayBuffer(buffer.length));
+	const copy = new Uint8Array(new SharedArrayBuffer(buffer.length));
 	copy.set(buffer);
 	return copy;
 }

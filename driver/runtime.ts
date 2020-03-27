@@ -126,7 +126,7 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 		for (let ii = 0; ii < length; ++ii) {
 			const roomName = roomNames[ii];
 			const json = JSON.stringify(intentsByRoom[roomName]);
-			const buffer = new ArrayBuffer(json.length * 2);
+			const buffer = new SharedArrayBuffer(json.length * 2);
 			const uint16 = new Uint16Array(buffer);
 			for (let ii = 0; ii < json.length; ++ii) {
 				uint16[ii] = json.charCodeAt(ii);

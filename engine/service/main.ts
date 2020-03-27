@@ -1,6 +1,7 @@
 import configPromise from '~/engine/config';
 import * as DatabaseSchema from '~/engine/metabase';
 import { getReader } from '~/lib/schema';
+import { AveragingTimer } from '~/lib/averaging-timer';
 import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
@@ -23,6 +24,7 @@ export default async function() {
 
 	// Run main game processing loop
 	let gameTime = 1;
+	const performanceTimer = new AveragingTimer(1000);
 	const activeUsers = [ ...mapInPlace(filterInPlace(gameMetadata.users.values(), user => {
 		if (user.id === '2' || user.id === '3') {
 			return false;
@@ -32,6 +34,7 @@ export default async function() {
 	try {
 
 		do {
+			performanceTimer.start();
 			const timeStartedLoop = Date.now();
 
 			// Add users to runner queue
@@ -93,7 +96,8 @@ export default async function() {
 
 			// Set up for next tick
 			const timeTaken = Date.now() - timeStartedLoop;
-			console.log(`Tick ${gameTime} ran in ${timeTaken}ms`);
+			const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
+			console.log(`Tick ${gameTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
 			++gameTime;
 			Channel.publish<MainMessage>('main', { type: 'tick', time: gameTime });
 			const delay = config.game.tickSpeed ?? 250 - timeTaken;
