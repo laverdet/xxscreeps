@@ -71,9 +71,8 @@ export abstract class Channel<Message> {
 	readonly subscription: InternalListener<Message>;
 	protected readonly id = `${Math.floor(Math.random() * 2 ** 52)}`;
 	private didDisconnect = false;
+	private readonly disconnectListeners = new Set<() => void>();
 	private readonly listeners = new Set<(message: Message) => void>();
-	private readonly onDisconnect: () => void;
-	private readonly waitForDisconnect: Promise<void>;
 
 	abstract publish(message: Message): void;
 
@@ -85,10 +84,6 @@ export abstract class Channel<Message> {
 				}
 			}
 		};
-		// Setup disconnect handler
-		const [ promise, resolver ] = makeResolver<void>();
-		this.waitForDisconnect = promise;
-		this.onDisconnect = resolver.resolve as any;
 	}
 
 	// Connect to a message channel
@@ -109,7 +104,9 @@ export abstract class Channel<Message> {
 	// This should also be overridden
 	disconnect() {
 		this.listeners.clear();
-		this.onDisconnect();
+		for (const listener of this.disconnectListeners) {
+			listener();
+		}
 		this.didDisconnect = true;
 	}
 
@@ -130,14 +127,14 @@ export abstract class Channel<Message> {
 	// Iterates over all messages in a `for await` loop
 	async *[Symbol.asyncIterator](): AsyncGenerator<Message> {
 		// Create listener to save incoming messages
-		let resolver: Resolver<Message> | undefined;
+		let resolver: Resolver<Message | undefined> | undefined;
 		const queue: Message[] = [];
 		const unlisten = this.listen(message => {
-			if (resolver === undefined) {
-				queue.push(message);
-			} else {
+			if (resolver) {
 				resolver.resolve(message);
 				resolver = undefined;
+			} else {
+				queue.push(message);
 			}
 		});
 		try {
@@ -150,14 +147,22 @@ export abstract class Channel<Message> {
 					}
 				}
 				// Make resolver to await on
-				let promise;
-				[ promise, resolver ] = makeResolver<Message>();
+				let promise: Promise<Message | undefined>;
+				[ promise, resolver ] = makeResolver<Message | undefined>();
+				const disconnectListener = () => resolver!.resolve(undefined);
+				this.disconnectListeners.add(disconnectListener);
 				// Wait for new messages
-				const value = await Promise.race([ promise, this.waitForDisconnect ]);
+				const value = await promise;
+				this.disconnectListeners.delete(disconnectListener);
+				// Check for `undefined` from disconnect listener
+				if (value === undefined) {
+					return;
+				}
+				// Yield back to loop
+				yield value;
 				if (this.didDisconnect) {
 					return;
 				}
-				yield value as Message;
 			} while (true);
 		} finally {
 			// Clean up listeners when it's all done
