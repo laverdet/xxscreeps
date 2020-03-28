@@ -60,6 +60,9 @@ export function search(origin: RoomPosition, goal: Goal | Goal[], userOptions: S
 			};
 		}
 	});
+	if (goals.length === 0) {
+		return { path: [], ops: 0, cost: 0, incomplete: true };
+	}
 
 	// Setup room callback
 	const { roomCallback } = options;

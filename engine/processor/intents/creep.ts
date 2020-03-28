@@ -1,15 +1,18 @@
 import * as C from '~/game/constants';
 import * as Creep from '~/game/objects/creep';
-import { StructureController } from '~/game/objects/structures/controller';
+import type { ConstructionSite } from '~/game/objects/construction-site';
+import type { StructureController } from '~/game/objects/structures/controller';
 import { getPositonInDirection, Direction, RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
-import { generateId } from '~/engine/util/id';
-import { ResourceType, RoomObjectWithStore } from '~/game/store';
+import type { ResourceType, RoomObjectWithStore } from '~/game/store';
 import { instantiate } from '~/lib/utility';
-import * as Controller from './controller';
-import * as Store from './store';
+import * as ConstructionSiteIntent from './construction-site';
+import * as StructureControllerIntent from './controller';
+import { newRoomObject } from './room-object';
+import * as StoreIntent from './store';
 
 type Parameters = {
+	build: { target: string };
 	harvest: { target: string };
 	move: { direction: Direction };
 	transfer: {
@@ -29,14 +32,12 @@ export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owne
 	const carryCapacity = body.reduce((energy, type) =>
 		(type === C.CARRY ? energy + C.CARRY_CAPACITY : energy), 0);
 	return instantiate(Creep.Creep, {
-		id: generateId(),
-		pos,
-		effects: undefined,
+		...newRoomObject(pos),
 		body: body.map(type => ({ type, hits: 100, boost: undefined })),
 		fatigue: 0,
 		hits: body.length,
 		name,
-		store: Store.create(carryCapacity),
+		store: StoreIntent.create(carryCapacity),
 		[Creep.AgeTime]: 0,
 		[Creep.Owner]: owner,
 	});
@@ -44,28 +45,41 @@ export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owne
 
 export default () => bindProcessor(Creep.Creep, {
 	process(intent: Partial<Parameters>) {
-		if (intent.harvest) {
-			Store.add(this.store, 'energy', 25);
+		if (intent.build) {
+			const { target: id } = intent.build;
+			const target = Game.getObjectById(id) as ConstructionSite | undefined;
+			if (Creep.checkBuild(this, target) === C.OK) {
+				StoreIntent.subtract(this.store, 'energy', 2);
+				ConstructionSiteIntent.build(target!, 2);
+			}
+
+		} else if (intent.harvest) {
+			StoreIntent.add(this.store, 'energy', 25);
+			return true;
 		}
 		if (intent.move) {
-			this.pos = getPositonInDirection(this.pos, intent.move.direction);
-			return true;
+			const { direction } = intent.move;
+			if (Creep.checkMove(this, direction) === C.OK) {
+				this.pos = getPositonInDirection(this.pos, direction);
+				return true;
+			}
 		}
 		if (intent.transfer) {
 			const { amount, resourceType, target: id } = intent.transfer;
 			const target = Game.getObjectById(id) as RoomObjectWithStore | undefined;
-			if (Creep.checkTransfer(this, target, resourceType, amount) !== C.OK) {
-				return false;
+			if (Creep.checkTransfer(this, target, resourceType, amount) === C.OK) {
+				const transferAmount = Math.min(this.store[resourceType]!, target!.store.getFreeCapacity(resourceType));
+				StoreIntent.subtract(this.store, resourceType, transferAmount);
+				StoreIntent.add(target!.store, resourceType, transferAmount);
+				return true;
 			}
-			const transferAmount = Math.min(this.store[resourceType]!, target!.store.getFreeCapacity(resourceType));
-			Store.subtract(this.store, resourceType, transferAmount);
-			Store.add(target!.store, resourceType, transferAmount);
 		}
 		if (intent.upgradeController) {
 			const target = Game.getObjectById(intent.upgradeController.target) as StructureController;
 			if (Creep.checkUpgradeController(this, target) === C.OK) {
-				Store.subtract(this.store, 'energy', 2);
-				Controller.upgrade(target, 2);
+				StoreIntent.subtract(this.store, 'energy', 2);
+				StructureControllerIntent.upgrade(target, 2);
+				return true;
 			}
 		}
 		return false;

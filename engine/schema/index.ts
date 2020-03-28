@@ -11,6 +11,7 @@ import * as Source from './source';
 import * as Store from './store';
 import * as Structure from './structure';
 import * as StructureController from './controller';
+import * as StructureExtension from './extension';
 import * as StructureSpawn from './spawn';
 
 const schemaDeclarations = [
@@ -23,6 +24,7 @@ const schemaDeclarations = [
 
 	Structure,
 	StructureController,
+	StructureExtension,
 	StructureSpawn,
 
 	ConstructionSite,

@@ -4,8 +4,9 @@ import { Creep } from '~/game/objects/creep';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
 import { StructureController } from '~/game/objects/structures/controller';
+import { StructureExtension } from '~/game/objects/structures/extension';
 import { StructureSpawn } from '~/game/objects/structures/spawn';
-import { Store, CapacityByResource } from '~/game/store';
+import { Capacity, CapacityByResource, Restricted, SingleResource, Store } from '~/game/store';
 import { Variant } from '~/lib/schema';
 
 export const Render: unique symbol = Symbol('render');
@@ -28,6 +29,8 @@ function renderStructure(structure: Structure) {
 	return {
 		...renderObject(structure),
 		structureType: structure.structureType,
+		hits: structure.hits,
+		hitsMax: structure.hitsMax,
 	};
 }
 
@@ -36,12 +39,16 @@ function renderStore(store: Store) {
 		store: { ...store },
 		storeCapacity: store.getCapacity(),
 	};
-	if (store[CapacityByResource]) {
-		const capacityByResource: any = {};
-		for (const [ resourceType, value ] of store[CapacityByResource]!.entries()) {
-			capacityByResource[resourceType] = value;
+	if (store[Restricted]) {
+		if (store[CapacityByResource]) {
+			const capacityByResource: any = {};
+			for (const [ resourceType, value ] of store[CapacityByResource]!.entries()) {
+				capacityByResource[resourceType] = value;
+			}
+			result.storeCapacityResource = capacityByResource;
+		} else {
+			result.storeCapacityResource = { [store[SingleResource]!]: store[Capacity] };
 		}
-		result.storeCapacityResource = capacityByResource;
 	}
 	return result;
 }
@@ -107,12 +114,17 @@ bindRenderer(StructureController, function render() {
 	};
 });
 
+bindRenderer(StructureExtension, function render() {
+	return {
+		...renderStructure(this),
+		...renderStore(this.store),
+	};
+});
+
 bindRenderer(StructureSpawn, function render() {
 	return {
 		...renderStructure(this),
 		...renderStore(this.store),
 		name: this.name,
-		hits: this.hits,
-		hitsMax: 100,
 	};
 });

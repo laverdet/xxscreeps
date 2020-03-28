@@ -8,6 +8,7 @@ import { ConstructionSite } from './construction-site';
 import { chainIntentChecks, Owner, RoomObject } from './room-object';
 import { Source } from './source';
 import { StructureController } from './structures/controller';
+import { Objects } from '../room';
 import type { RoomObjectWithStore, Store } from '../store';
 export { Owner };
 
@@ -27,6 +28,9 @@ export class Creep extends RoomObject {
 	get ticksToLive() { return this[AgeTime] === 0 ? undefined : this[AgeTime] - Game.time }
 
 	build(target: ConstructionSite) {
+		return chainIntentChecks(
+			() => checkBuild(this, target),
+			() => gameContext.intents.save(this, 'build', { target: target.id }));
 	}
 
 	getActiveBodyparts(type: C.BodyPart) {
@@ -106,6 +110,41 @@ function checkCommon(creep: Creep) {
 	return C.OK;
 }
 
+export function checkBuild(creep: Creep, target?: ConstructionSite) {
+	return chainIntentChecks(
+		() => checkCommon(creep),
+		() => {
+			if (creep.getActiveBodyparts(C.WORK) <= 0) {
+				return C.ERR_NO_BODYPART;
+
+			} else if (creep.carry.energy <= 0) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+
+			} else if (!(target instanceof ConstructionSite)) {
+				return C.ERR_INVALID_TARGET;
+
+			} else if (!creep.pos.inRangeTo(target, 3)) {
+				return C.ERR_NOT_IN_RANGE;
+			}
+
+			// You're not allowed to build if the structure that would be created would be an obstacle
+			const { room } = target;
+			if (C.OBSTACLE_OBJECT_TYPES.some(obstacleType => obstacleType === target.structureType)) {
+				const creepFilter = room.controller?.safeMode === undefined ? () => true : (creep: Creep) => creep.my;
+				for (const object of room[Objects]) {
+					if (
+						target.pos.isEqualTo(object.pos) && (
+							(object instanceof Creep && creepFilter(creep)) ||
+							(C.OBSTACLE_OBJECT_TYPES.includes(object[Variant])))
+					) {
+						return C.ERR_INVALID_TARGET;
+					}
+				}
+			}
+			return C.OK;
+		});
+}
+
 export function checkHarvest(creep: Creep, target: RoomObject) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
@@ -134,7 +173,7 @@ export function checkMove(creep: Creep, direction: number) {
 	return chainIntentChecks(
 		() => checkMoveCommon(creep),
 		() => {
-			if (!(direction >= 1 && direction <= 8)) {
+			if (!(direction >= 1 && direction <= 8) && Number.isInteger(direction)) {
 				return C.ERR_INVALID_ARGS;
 			}
 			return C.OK;

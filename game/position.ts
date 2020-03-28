@@ -3,6 +3,7 @@ import * as C from '~/game/constants';
 import type { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { firstMatching } from '~/lib/utility';
 import type { RoomObject } from './objects/room-object';
+import { RoomFindOptions } from './room';
 
 const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
@@ -140,11 +141,16 @@ export class RoomPosition {
 		return range <= rest[0];
 	}
 
-	findClosestByPath(type: number): RoomObject | undefined {
+	/**
+	 * Find an object with the shortest path from the given position
+	 * @param type One of the `FIND_*` constants
+	 * @param options
+	 */
+	findClosestByPath(type: number, options?: RoomFindOptions): RoomObject | undefined {
 
 		// Find objects to search
 		const room = fetchRoom(this.roomName);
-		const objects = room.find(type);
+		const objects = room.find(type, options);
 		const goals = objects.map(({ pos }) => ({ pos, range: 1 }));
 
 		// Invoke pathfinder

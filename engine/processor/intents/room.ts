@@ -2,7 +2,7 @@ import { gameContext } from '~/game/context';
 import { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
-import { Objects, Room } from '~/game/room';
+import { AnyRoomObject, Objects, Room } from '~/game/room';
 import { create as createConstructionSite } from './construction-site';
 
 type Parameters = {
@@ -18,6 +18,18 @@ export type Intents = {
 	receiver: Room;
 	parameters: Parameters;
 };
+
+export function insertObject(room: Room, object: AnyRoomObject) {
+	room[Objects].push(object);
+}
+
+export function removeObject(room: Room, id: string) {
+	for (let ii = 0; ii < room[Objects].length; ++ii) {
+		if (room[Objects][ii].id === id) {
+			room[Objects].splice(ii, 1);
+		}
+	}
+}
 
 export default () => bindProcessor(Room, {
 	process(intent: Partial<Parameters>) {

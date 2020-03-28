@@ -7,5 +7,6 @@ export abstract class Structure extends RoomObject {
 	get my() { return this[Owner] === gameContext.userId }
 
 	hits!: number;
+	hitsMax!: number;
 	[Owner]!: string;
 }

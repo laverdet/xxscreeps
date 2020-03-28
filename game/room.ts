@@ -23,11 +23,15 @@ import { StructureController } from './objects/structures/controller';
 import { StructureSpawn } from './objects/structures/spawn';
 
 export const Objects = Symbol('objects');
+export type AnyRoomObject = FormatShape<typeof variantFormat>;
+export type RoomFindOptions = {
+	filter?: string | object | ((object: RoomObject) => boolean);
+};
 
 export class Room extends BufferObject {
 	controller?: StructureController;
 	name!: string;
-	[Objects]!: FormatShape<typeof variantFormat>[];
+	[Objects]!: AnyRoomObject[];
 	[Process]?: ProcessorSpecification<this>['process'];
 	[Tick]?: ProcessorSpecification<this>['tick'];
 
@@ -69,7 +73,7 @@ export class Room extends BufferObject {
 	 * @param opts
 	 */
 	#findCache = new Map<number, RoomObject[]>();
-	find(type: number, opts: { filter?: any } = {}) {
+	find(type: number, options: RoomFindOptions = {}) {
 		// Check find cache
 		let results = this.#findCache.get(type);
 		if (results === undefined) {
@@ -101,7 +105,7 @@ export class Room extends BufferObject {
 		}
 
 		// Copy or filter result
-		return opts.filter === undefined ? results.slice() : results.filter(iteratee(opts.filter));
+		return options.filter === undefined ? results.slice() : results.filter(iteratee(options.filter));
 	}
 
 	findPath(fromPos: RoomPosition, toPos: RoomPosition) {

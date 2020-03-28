@@ -1,5 +1,5 @@
 import { Amount, Capacity, Resources, ResourceType, Restricted, SingleResource, StorageRecord, Store } from '~/game/store';
-import { instantiate } from '~/lib/utility';
+import { accumulate, instantiate } from '~/lib/utility';
 
 export function add(store: Store, resourceType: ResourceType, amount: number) {
 
@@ -92,13 +92,13 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 	const resources: { type: string; amount: number; capacity: number }[] = [];
 	if (capacityByResource) {
 		for (const [ type, capacity ] of Object.entries(capacityByResource)) {
-			resources.push({ type, amount: store?.[type as ResourceType] ?? 0, capacity });
+			resources.push({ type, amount: store?.[type as ResourceType] ?? 0, capacity: capacity! });
 		}
 	}
 	if (store) {
 		for (const [ type, amount ] of Object.entries(store)) {
 			if (capacityByResource?.[type as ResourceType] === undefined) {
-				resources.push({ type, amount, capacity: capacityByResource?.[type as ResourceType] ?? 0 });
+				resources.push({ type, amount: amount!, capacity: capacityByResource?.[type as ResourceType] ?? 0 });
 			}
 		}
 	}
@@ -128,7 +128,7 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 	// Return data to save
 	return instantiate(Store, {
 		...store,
-		[Amount]: store ? Object.values(store).reduce((sum, amount) => sum + amount, 0) : 0,
+		[Amount]: store ? accumulate(Object.values(store), amount => amount!) : 0,
 		[Capacity]: calculatedCapacity,
 		[Resources]: singleResource === undefined ? resources : [],
 		[Restricted]: isRestricted,

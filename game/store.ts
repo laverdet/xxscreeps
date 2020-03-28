@@ -6,7 +6,7 @@ import type { Creep } from './objects/creep';
 import type { StructureSpawn } from './objects/structures/spawn';
 
 export type ResourceType = (typeof C.RESOURCES_ALL)[number];
-export type StorageRecord = Record<ResourceType, number>;
+export type StorageRecord = Partial<Record<ResourceType, number>>;
 
 export const Amount = Symbol('amount');
 export const Capacity = Symbol('capacity');
@@ -107,7 +107,7 @@ export class Store extends BufferObjectWithResourcesType {
 		} else if (this[CapacityByResource] === undefined) {
 			return this[Amount];
 		} else {
-			return this[CapacityByResource]!.get(resourceType) ?? 0;
+			return (this[CapacityByResource]!.get(resourceType) ?? 0) - (this[resourceType] ?? 0);
 		}
 	}
 
