@@ -1,9 +1,9 @@
-import * as PathFinder from '~/driver/pathfinder';
+import * as PathFinder from '~/game/path-finder';
 import * as C from '~/game/constants';
 import type { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { firstMatching } from '~/lib/utility';
 import type { RoomObject } from './objects/room-object';
-import { RoomFindOptions } from './room';
+import { FindPathOptions, RoomFindOptions } from './room';
 
 const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
@@ -11,6 +11,7 @@ const ALL_DIRECTIONS = [
 	C.TOP, C.TOP_RIGHT, C.RIGHT, C.BOTTOM_RIGHT, C.BOTTOM, C.BOTTOM_LEFT, C.LEFT, C.TOP_LEFT,
 ];
 export type Direction = typeof ALL_DIRECTIONS[number];
+type FindClosestByPathOptions = RoomFindOptions & Omit<PathFinder.RoomSearchOptions, 'range'>;
 
 export const PositionInteger: unique symbol = Symbol('positionInteger');
 
@@ -143,18 +144,30 @@ export class RoomPosition {
 
 	/**
 	 * Find an object with the shortest path from the given position
-	 * @param type One of the `FIND_*` constants
-	 * @param options
+	 * @param search One of the `FIND_*` constants. Or an array of room's objects or RoomPosition
+	 * objects that the search should be
+	 * executed against.
 	 */
-	findClosestByPath(type: number, options?: RoomFindOptions): RoomObject | undefined {
+	findClosestByPath(search: number | RoomObject[], options: FindClosestByPathOptions): RoomObject | undefined;
+	findClosestByPath(search: RoomPosition[], options: FindClosestByPathOptions): RoomPosition;
+	findClosestByPath(
+		search: number | RoomObject[] | RoomPosition[],
+		options: FindClosestByPathOptions = {},
+	): RoomObject | RoomPosition | undefined {
 
 		// Find objects to search
 		const room = fetchRoom(this.roomName);
-		const objects = room.find(type, options);
-		const goals = objects.map(({ pos }) => ({ pos, range: 1 }));
+		const objects = function(): (RoomObject | RoomPosition)[] {
+			if (typeof search === 'number') {
+				return room.find(search, options);
+			} else {
+				return search;
+			}
+		}();
+		const goals = objects.map(object => 'pos' in object ? object.pos : object);
 
 		// Invoke pathfinder
-		const result = PathFinder.search(this, goals);
+		const result = PathFinder.roomSearch(this, goals/*, { ...options, maxRooms: 1 }*/);
 		if (result.incomplete) {
 			return;
 		}
@@ -162,14 +175,22 @@ export class RoomPosition {
 		// Match position to object
 		const { path } = result;
 		const last = path[path.length - 1] ?? this;
-		return firstMatching(objects, object => object.pos.isNearTo(last));
+		return firstMatching(objects, object => last.isNearTo(object));
 	}
 
-	findPathTo(x: number, y: number): any;
-	findPathTo(pos: RoomObject | RoomPosition): any;
+	/**
+	 * Find an optimal path to the specified position using Jump Point Search algorithm. This method
+	 * is a shorthand for Room.findPath. If the target is in another room, then the corresponding exit
+	 * will be used as a target.
+	 * @param x X position in the room
+	 * @param y Y position in the room
+	 * @param pos Can be a RoomPosition object or any object containing RoomPosition
+	 */
+	findPathTo(x: number, y: number, options?: FindPathOptions): any;
+	findPathTo(pos: RoomObject | RoomPosition, options?: FindPathOptions): any;
 	findPathTo(...args: any) {
-		const { pos } = fetchPositionArgument(this, ...args);
-		return fetchRoom(this.roomName).findPath(this, pos!);
+		const { pos, extra } = fetchPositionArgument(this, ...args);
+		return fetchRoom(this.roomName).findPath(this, pos!, extra);
 	}
 
 	/**

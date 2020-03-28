@@ -24,6 +24,9 @@ import { StructureSpawn } from './objects/structures/spawn';
 
 export const Objects = Symbol('objects');
 export type AnyRoomObject = FormatShape<typeof variantFormat>;
+export type FindPathOptions = PathFinder.RoomSearchOptions & {
+	serialize?: boolean;
+};
 export type RoomFindOptions = {
 	filter?: string | object | ((object: RoomObject) => boolean);
 };
@@ -108,10 +111,20 @@ export class Room extends BufferObject {
 		return options.filter === undefined ? results.slice() : results.filter(iteratee(options.filter));
 	}
 
-	findPath(fromPos: RoomPosition, toPos: RoomPosition) {
-		const result = PathFinder.search(fromPos, { pos: toPos, range: 1 });
+	/**
+	 * Find an optimal path inside the room between fromPos and toPos using Jump Point Search algorithm.
+	 * @param origin The start position
+	 * @param goal The end position
+	 * @param options
+	 */
+	findPath(
+		origin: RoomPosition, goal: RoomPosition,
+		options: FindPathOptions & { serialize?: boolean } = {},
+	) {
+		// Delegate to `PathFinder` and convert the result
+		const result = PathFinder.roomSearch(origin, [ goal ], options);
 		const path: any[] = [];
-		let previous = fromPos;
+		let previous = origin;
 		for (const pos of result.path) {
 			if (pos.roomName !== this.name) {
 				break;

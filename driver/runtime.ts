@@ -11,6 +11,7 @@ import * as Constants from '~/game/constants';
 import { gameContext, IntentManager } from '~/game/context';
 import * as Memory from '~/game/memory';
 import { importWorldTerrain } from '~/game/map';
+import * as PathFinder from '~/game/path-finder';
 import { finalizePrototypeGetters } from '~/engine/schema';
 import { UserCode } from '~/engine/metabase/code';
 import { BufferView } from '~/lib/schema/buffer-view';
@@ -117,6 +118,7 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 	// Run player loop
 	require('main').loop();
 	const memoryString = Memory.flush();
+	PathFinder.flush();
 	// Return JSON'd intents
 	const intents = function() {
 		const intents = Object.create(null);

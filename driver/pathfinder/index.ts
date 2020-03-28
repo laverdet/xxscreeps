@@ -28,13 +28,12 @@ export function search(origin: RoomPosition, goal: Goal | Goal[], userOptions: S
 
 	// Inject defaults
 	const options = {
-		plainCost: 1,
-		swampCost: 5,
-		heuristicWeight: 1,
-		maxOps: 2000,
-		maxCost: 0xffffffff,
-		maxRooms: 64,
-		...userOptions,
+		plainCost: userOptions.plainCost ?? 1,
+		swampCost: userOptions.swampCost ?? 5,
+		heuristicWeight: userOptions.heuristicWeight ?? 1,
+		maxOps: userOptions.maxOps ?? 2000,
+		maxCost: userOptions.maxCost ?? 0xffffffff,
+		maxRooms: userOptions.maxRooms ?? 64,
 	};
 
 	const plainCost = clamp(1, 254, options.plainCost | 0);
@@ -44,7 +43,7 @@ export function search(origin: RoomPosition, goal: Goal | Goal[], userOptions: S
 	const maxOps = clamp(1, 2000, options.maxOps | 0);
 	const maxCost = clamp(1, 0xffffffff, options.maxCost >>> 0);
 	const maxRooms = clamp(1, 64, options.maxRooms | 0);
-	const flee = !!options.flee;
+	const flee = !!userOptions.flee;
 
 	// Convert one-or-many goal into standard format for native extension
 	const goals = (Array.isArray(goal) ? goal : [ goal ]).map(goal => {
@@ -65,12 +64,12 @@ export function search(origin: RoomPosition, goal: Goal | Goal[], userOptions: S
 	}
 
 	// Setup room callback
-	const { roomCallback } = options;
+	const { roomCallback } = userOptions;
 	const callback = roomCallback === undefined ? undefined : (roomId: number) => {
 		const ret = roomCallback(generateRoomNameFromId(roomId));
 		if (ret === false) {
 			return ret;
-		} else {
+		} else if (ret) {
 			return ret._bits;
 		}
 	};
