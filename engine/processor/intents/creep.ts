@@ -2,12 +2,13 @@ import * as C from '~/game/constants';
 import * as Creep from '~/game/objects/creep';
 import type { ConstructionSite } from '~/game/objects/construction-site';
 import type { StructureController } from '~/game/objects/structures/controller';
-import { getPositonInDirection, Direction, RoomPosition } from '~/game/position';
+import { Direction, RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
 import type { ResourceType, RoomObjectWithStore } from '~/game/store';
 import { instantiate } from '~/lib/utility';
 import * as ConstructionSiteIntent from './construction-site';
 import * as StructureControllerIntent from './controller';
+import * as Movement from './movement';
 import { newRoomObject } from './room-object';
 import * as StoreIntent from './store';
 
@@ -60,7 +61,7 @@ export default () => bindProcessor(Creep.Creep, {
 		if (intent.move) {
 			const { direction } = intent.move;
 			if (Creep.checkMove(this, direction) === C.OK) {
-				this.pos = getPositonInDirection(this.pos, direction);
+				Movement.add(this, direction);
 				return true;
 			}
 		}
@@ -81,6 +82,15 @@ export default () => bindProcessor(Creep.Creep, {
 				StructureControllerIntent.upgrade(target, 2);
 				return true;
 			}
+		}
+		return false;
+	},
+
+	tick() {
+		const nextPosition = Movement.get(this);
+		if (nextPosition) {
+			this.pos = nextPosition;
+			return true;
 		}
 		return false;
 	},

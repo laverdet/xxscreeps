@@ -1,7 +1,7 @@
 import configPromise from '~/engine/config';
 import { UserCode } from '~/engine/metabase/code';
 import { runOnce } from '~/lib/memoize';
-import { locateModule } from '../pathfinder';
+import { locateModule } from '../path-finder';
 import { compile } from '../webpack';
 import { IsolatedSandbox } from './isolated';
 import { NodejsSandbox } from './nodejs';
@@ -10,7 +10,7 @@ export type Sandbox = IsolatedSandbox | NodejsSandbox;
 
 export function getPathFinderInfo() {
 	const path = locateModule();
-	return { path, identifier: path.replace(/[/\\.]/g, '_') };
+	return { path, identifier: path.replace(/[/\\.-]/g, '_') };
 }
 
 export const getRuntimeSource = runOnce(() => compile('~/driver/runtime.ts'));

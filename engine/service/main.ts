@@ -62,7 +62,7 @@ export default async function() {
 
 			// Add rooms to queue and notify processors
 			roomsQueue.version(gameTime);
-			await roomsQueue.push([ ...mapInPlace(gameMetadata.activeRooms.values(), room => ({
+			await roomsQueue.push([ ...mapInPlace(gameMetadata.activeRooms, room => ({
 				room,
 				users: [ ...intentsByRoom.get(room) ?? [] ],
 			})) ]);

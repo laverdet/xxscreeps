@@ -1,5 +1,6 @@
 import { gameContext } from '~/game/context';
 import { Room, Objects } from '~/game/room';
+import * as Movement from './intents/movement';
 import { Process, Tick } from './bind';
 
 export class ProcessorContext {
@@ -26,6 +27,7 @@ export class ProcessorContext {
 	}
 
 	tick() {
+		Movement.dispatch(this.room);
 		for (const object of this.room[Objects]) {
 			object[Tick]?.call(object, this);
 		}

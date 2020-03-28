@@ -1,6 +1,8 @@
 // Like half the use cases of `reduce` are to sum an array, so this just does that with less
 // boilerplate
-export function accumulate<Type>(iterable: Iterable<Type>, callback: (value: Type) => number): number {
+export function accumulate(iterable: Iterable<number>, callback?: (value: number) => number): number;
+export function accumulate<Type>(iterable: Iterable<Type>, callback: (value: Type) => number): number;
+export function accumulate(iterable: Iterable<any>, callback: (value: any) => number = value => value) {
 	let sum = 0;
 	for (const value of iterable) {
 		sum += callback(value);
@@ -97,6 +99,22 @@ export function mapToKeys<Type, Key extends string | number | symbol, Value>(
 		result[key] = value;
 	}
 	return result;
+}
+
+// If you just want the smallest element of an array it's senseless to sort the whole thing and take
+// array[0]. You can just run through once and find that element in linear time
+export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, right: Type) => number) {
+	let first = true;
+	let minimum: Type;
+	for (const value of iterable) {
+		if (first) {
+			first = false;
+			minimum = value;
+		} else if (callback(minimum!, value) > 0) {
+			minimum = value;
+		}
+	}
+	return minimum!;
 }
 
 // Object.assign but it throws if there's any key collisions

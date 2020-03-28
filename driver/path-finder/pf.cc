@@ -34,10 +34,9 @@ auto path_finder_t::room_index_from_pos(const room_location_t map_pos) -> room_i
 		uint8_t* cost_matrix = nullptr;
 		if (room_callback != nullptr) {
 			Nan::TryCatch try_catch;
-			v8::Local<v8::Value> argv[2];
-			argv[0] = Nan::New(map_pos.xx);
-			argv[1] = Nan::New(map_pos.yy);
-			Nan::MaybeLocal<v8::Value> ret = Nan::Call(*room_callback, v8::Local<v8::Object>::Cast(Nan::Undefined()), 2, argv);
+			v8::Local<v8::Value> argv[1];
+			argv[0] = Nan::New(flatten(map_pos));
+			Nan::MaybeLocal<v8::Value> ret = Nan::Call(*room_callback, v8::Local<v8::Object>::Cast(Nan::Undefined()), 1, argv);
 			if (try_catch.HasCaught()) {
 				try_catch.ReThrow();
 				throw js_error{};

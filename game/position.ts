@@ -94,7 +94,7 @@ export class RoomPosition {
 
 	getDirectionTo(x: number, y: number): Direction;
 	getDirectionTo(pos: RoomObject | RoomPosition): Direction;
-	getDirectionTo(...args: any) {
+	getDirectionTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { xx, yy, room } = fetchArguments(...args);
 		if ((this[PositionInteger] & 0xffff) === room) {
 			return getDirection(xx - this.x, yy - this.y);
@@ -107,7 +107,7 @@ export class RoomPosition {
 	 */
 	getRangeTo(x: number, y: number): number;
 	getRangeTo(pos: RoomObject | RoomPosition): number;
-	getRangeTo(...args: any) {
+	getRangeTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { xx, yy, room } = fetchArguments(...args);
 		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
 			return Infinity;
@@ -117,8 +117,9 @@ export class RoomPosition {
 
 	isEqualTo(x: number, y: number): boolean;
 	isEqualTo(pos: RoomObject | RoomPosition): boolean;
-	isEqualTo(...args: [any]) {
-		return this.getRangeTo(...args) === 1;
+	isEqualTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
+		const { pos } = fetchPositionArgument(this, ...args);
+		return this[PositionInteger] === pos?.[PositionInteger];
 	}
 
 	/**
@@ -133,7 +134,7 @@ export class RoomPosition {
 
 	inRangeTo(x: number, y: number, range: number): boolean;
 	inRangeTo(pos: RoomObject | RoomPosition, range: number): boolean;
-	inRangeTo(...args: any) {
+	inRangeTo(...args: [ number, number, number ] | [ RoomObject | RoomPosition, number ]) {
 		const { xx, yy, room, rest } = fetchArguments(...args);
 		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
 			return false;

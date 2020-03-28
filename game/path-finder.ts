@@ -1,21 +1,31 @@
-import { search } from '~/driver/pathfinder';
+import { search } from '~/driver/path-finder';
 import * as C from '~/game/constants';
 import { Variant } from '~/lib/schema';
 import { getOrSet, instantiate } from '~/lib/utility';
 import { RoomPosition } from './position';
-import { Objects } from './room';
+import { Objects, Room } from './room';
+import { ConstructionSite } from './objects/construction-site';
 import { Creep } from './objects/creep';
+import { Owner, RoomObject } from './objects/room-object';
+import { Structure } from './objects/structures';
+import { gameContext } from './context';
+
 export { search };
+
+export const obstacleTypes = Object.freeze(new Set(C.OBSTACLE_OBJECT_TYPES));
+const destructibleStructureTypes = Object.freeze(new Set(Object.keys(C.CONSTRUCTION_COST)));
+const permanentObstacleTypes = Object.freeze(new Set(C.OBSTACLE_OBJECT_TYPES.filter(type =>
+	type !== 'creep' && type !== 'powerCreep' && !destructibleStructureTypes.has(type))));
 
 export class CostMatrix {
 	_bits = new Uint8Array(2500);
 
 	set(xx: number, yy: number, value: number) {
-		this._bits[yy * 50 + xx] = value;
+		this._bits[xx * 50 + yy] = value;
 	}
 
 	get(xx: number, yy: number) {
-		return this._bits[yy * 50 + xx];
+		return this._bits[xx * 50 + yy];
 	}
 
 	clone() {
@@ -57,20 +67,6 @@ export type RoomSearchOptions = CommonSearchOptions & {
 	range?: number;
 };
 
-const destructibleStructures = [
-	'constructedWall',
-	'extension',
-	'lab',
-	'link',
-	'observer',
-	'powerBank',
-	'powerSpawn',
-	'spawn',
-	'storage',
-	'terminal',
-	'tower',
-];
-
 const cachedCostMatrices = new Map<string, CostMatrix | undefined>();
 
 export function flush() {
@@ -101,34 +97,14 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 				}
 				const costMatrix = new CostMatrix;
 
-				// Set up obstacle types
-				const obstacleTypes = new Set(C.OBSTACLE_OBJECT_TYPES);
-				obstacleTypes.add('portal');
-				if (ignoreDestructibleStructures) {
-					for (const type of destructibleStructures) {
-						obstacleTypes.delete(type);
-					}
-				}
-
-				// TODO: roads & ramparts
-
-				const creepFilter = function() {
-					if (ignoreCreeps) {
-						return () => false;
-					} else if (room.controller?.my && room.controller.safeMode !== undefined) {
-						return (creep: Creep) => creep.my;
-					} else {
-						return () => true;
-					}
-				}();
-
 				// Mark obstacles
+				const check = obstacleChecker(room, gameContext.userId, {
+					ignoreCreeps,
+					ignoreDestructibleStructures,
+					pathing: true,
+				});
 				for (const object of room[Objects]) {
-					if (object instanceof Creep) {
-						if (creepFilter(object)) {
-							costMatrix.set(object.pos.x, object.pos.y, 0xff);
-						}
-					} else if (obstacleTypes.has(object[Variant])) {
+					if (check(object)) {
 						costMatrix.set(object.pos.x, object.pos.y, 0xff);
 					}
 				}
@@ -175,3 +151,44 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 }
 
 export function use() {}
+
+type ObstacleCheckerOptions = {
+	ignoreCreeps?: boolean;
+	ignoreDestructibleStructures?: boolean;
+	pathing?: boolean;
+};
+export function obstacleChecker(room: Room, user: string, options: ObstacleCheckerOptions = {}) {
+	type Filter = (object: RoomObject) => boolean;
+	const { controller } = room;
+	const { pathing } = options;
+	const creepFilter = function(): Filter {
+		if (options.ignoreCreeps) {
+			return () => false;
+		} else if (controller?.safeMode === undefined) {
+			return object => object instanceof Creep;
+		} else {
+			const safeUser = controller[Owner];
+			return object => object instanceof Creep && (object[Owner] === safeUser || user !== safeUser);
+		}
+	}();
+	const structureFilter = function(): Filter {
+		if (options.ignoreDestructibleStructures) {
+			return object => object instanceof Structure && !destructibleStructureTypes.has(object.structureType);
+		} else {
+			return object => object instanceof Structure && (
+				obstacleTypes.has(object.structureType) ||
+				(pathing === true && object.structureType === 'portal'));
+		}
+	}();
+	const constructionSiteFilter = function(): Filter {
+		if (pathing) {
+			return object => object instanceof ConstructionSite &&
+				object[Owner] === user && obstacleTypes.has(object.structureType);
+		} else {
+			return () => false;
+		}
+	}();
+	return (object: RoomObject) =>
+		creepFilter(object) || structureFilter(object) || constructionSiteFilter(object) ||
+		permanentObstacleTypes.has(object[Variant]);
+}

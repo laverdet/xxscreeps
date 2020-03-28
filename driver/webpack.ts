@@ -15,7 +15,7 @@ export async function compile(moduleName: string) {
 
 			externals({ context, request }: { context: string; request: string }, callback: any) {
 				if (request.endsWith('.node')) {
-					return callback(null, Path.join(context, request).replace(/[/\\.]/g, '_'));
+					return callback(null, Path.join(context, request).replace(/[/\\.-]/g, '_'));
 				}
 				callback();
 			},

@@ -10,7 +10,7 @@ import { Source } from '~/game/objects/source';
 import * as Constants from '~/game/constants';
 import { gameContext, IntentManager } from '~/game/context';
 import * as Memory from '~/game/memory';
-import { importWorldTerrain } from '~/game/map';
+import { loadTerrainFromBuffer } from '~/game/map';
 import * as PathFinder from '~/game/path-finder';
 import { finalizePrototypeGetters } from '~/engine/schema';
 import { UserCode } from '~/engine/metabase/code';
@@ -49,7 +49,7 @@ export function initialize(
 	userId: string, userCode: UserCode,
 	terrain: Readonly<Uint8Array>,
 ) {
-	importWorldTerrain(terrain);
+	loadTerrainFromBuffer(terrain);
 	gameContext.userId = userId;
 	// Index code by name
 	const modulesCode = Object.create(null);

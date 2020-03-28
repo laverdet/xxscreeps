@@ -3,6 +3,7 @@ import { RoomPosition } from '~/game/position';
 import { getReader, getSchema, makeVector, withType, FormatShape } from '~/lib/schema';
 import { bindInterceptorsToSchema } from '~/lib/schema/interceptor';
 import { mapInPlace } from '~/lib/utility';
+import type { BlobStorage } from '~/storage/blob';
 
 export type World = Map<string, TerrainSchema.Terrain>;
 let world: World;
@@ -28,8 +29,16 @@ export function getTerrainForRoom(room: string) {
 	return world.get(room);
 }
 
-export function importWorldTerrain(worldTerrainBlob: Readonly<Uint8Array>) {
-	world = readWorld(worldTerrainBlob);
+export async function loadTerrain(blobStorage: BlobStorage) {
+	loadTerrainFromBuffer(await blobStorage.load('terrain'));
+}
+
+export function loadTerrainFromBuffer(worldTerrainBlob: Readonly<Uint8Array>) {
+	loadTerrainFromWorld(readWorld(worldTerrainBlob));
+}
+
+export function loadTerrainFromWorld(loadedWorld: World) {
+	world = loadedWorld;
 }
 
 //

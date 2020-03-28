@@ -5,6 +5,7 @@ import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
 import { Game } from '~/game/game';
+import { loadTerrain } from '~/game/map';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
@@ -28,6 +29,9 @@ export default async function() {
 	const blobStorage = await BlobStorage.connect();
 	const roomsQueue = await Queue.connect<ProcessorQueueElement>('processRooms');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
+
+	// Initialize world terrain
+	await loadTerrain(blobStorage);
 
 	// Start the processing loop
 	let gameTime = -1;

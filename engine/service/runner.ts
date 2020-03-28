@@ -1,8 +1,8 @@
 import * as Schema from '~/engine/metabase/index';
 import * as DatabaseSchema from '~/engine/metabase';
-import { readWorld } from '~/game/map';
+import { loadTerrainFromWorld, readWorld } from '~/game/map';
 import { getReader } from '~/lib/schema/read';
-import { loadTerrain } from '~/driver/pathfinder';
+import { loadTerrain } from '~/driver/path-finder';
 import { createSandbox, Sandbox } from '~/driver/sandbox';
 import { mapInPlace, filterInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
@@ -23,7 +23,9 @@ export default async function() {
 
 	// Load shared terrain data
 	const terrainBuffer = await blobStorage.load('terrain');
-	loadTerrain(readWorld(terrainBuffer));
+	const world = readWorld(terrainBuffer);
+	loadTerrain(world); // pathfinder
+	loadTerrainFromWorld(world); // game
 
 	// Initialize binary schemas
 	const readCode = getReader(Schema.schema.Code, Schema.interceptorSchema);
