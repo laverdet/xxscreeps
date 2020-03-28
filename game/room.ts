@@ -1,14 +1,21 @@
+import * as C from './constants';
+
 import { BufferObject } from '~/lib/schema/buffer-object';
 import type { BufferView } from '~/lib/schema/buffer-view';
 import type { FormatShape } from '~/lib/schema';
+import { accumulate } from '~/lib/utility';
+import { Process, ProcessorSpecification, Tick } from '~/engine/processor/bind';
 import { iteratee } from '~/engine/util/iteratee';
 import type { variantFormat } from '~/engine/schema/variant';
-import * as C from './constants';
 
-import { RoomObject } from './objects/room-object';
-import type { RoomPosition } from './position';
+import { gameContext } from './context';
+import { chainIntentChecks, RoomObject } from './objects/room-object';
+import { fetchArguments, iterateNeighbors, RoomPosition } from './position';
 import * as PathFinder from './path-finder';
+import { getTerrainForRoom } from './map';
+import { isBorder, isNearBorder } from './terrain';
 
+import { ConstructionSite, ConstructibleStructureType } from './objects/construction-site';
 import { Creep } from './objects/creep';
 import { Source } from './objects/source';
 import { Structure } from './objects/structures';
@@ -21,10 +28,13 @@ export class Room extends BufferObject {
 	controller?: StructureController;
 	name!: string;
 	[Objects]!: FormatShape<typeof variantFormat>[];
+	[Process]?: ProcessorSpecification<this>['process'];
+	[Tick]?: ProcessorSpecification<this>['tick'];
 
 	energyAvailable = 0;
 	energyCapacityAvailable = 0;
 
+	#constructionSites: ConstructionSite[] = [];
 	#creeps: Creep[] = [];
 	#sources: Source[] = [];
 	#structures: Structure[] = [];
@@ -45,6 +55,8 @@ export class Room extends BufferObject {
 				this.#creeps.push(object);
 			} else if (object instanceof Source) {
 				this.#sources.push(object);
+			} else if (object instanceof ConstructionSite) {
+				this.#constructionSites.push(object);
 			}
 		}
 	}
@@ -65,6 +77,10 @@ export class Room extends BufferObject {
 			// Generate list
 			results = (() => {
 				switch (type) {
+					case C.FIND_CONSTRUCTION_SITES: return this.#constructionSites;
+					case C.FIND_MY_CONSTRUCTION_SITES: return this.#constructionSites.filter(constructionSite => constructionSite.my);
+					case C.FIND_HOSTILE_CONSTRUCTION_SITES: return this.#constructionSites.filter(constructionSite => !constructionSite.my);
+
 					case C.FIND_CREEPS: return this.#creeps;
 					case C.FIND_MY_CREEPS: return this.#creeps.filter(creep => creep.my);
 					case C.FIND_HOSTILE_CREEPS: return this.#creeps.filter(creep => !creep.my);
@@ -107,4 +123,116 @@ export class Room extends BufferObject {
 		}
 		return path;
 	}
+
+	/**
+	 * Get a Room.Terrain object which provides fast access to static terrain data. This method works
+	 * for any room in the world even if you have no access to it.
+	 */
+	getTerrain() {
+		return getTerrainForRoom(this.name)!;
+	}
+
+	/**
+	 * Create new `ConstructionSite` at the specified location.
+	 * @param structureType One of the `STRUCTURE_*` constants.
+	 * @param name The name of the structure, for structures that support it (currently only spawns).
+	 */
+	 createConstructionSite(x: number, y: number, structureType: ConstructibleStructureType, name?: string): number;
+	 createConstructionSite(pos: RoomPosition, structureType: ConstructibleStructureType, name?: string): number;
+	 createConstructionSite(...args: any[]) {
+
+		// Extract overloaded parameters
+		const { xx, yy, rest } = fetchArguments(...args);
+		if (args[0] instanceof RoomPosition && args[0].roomName !== this.name) {
+			return C.ERR_INVALID_ARGS;
+		}
+		const pos = new RoomPosition(xx, yy, this.name);
+		const [ structureType, name ] = rest;
+
+		// Send it off
+		return chainIntentChecks(
+			() => checkCreateConstructionSite(this, pos, structureType, name),
+			() => gameContext.intents.save(this, 'createConstructionSite', { name, structureType, xx, yy }));
+	}
+}
+
+//
+// Intent checks
+export function checkCreateConstructionSite(room: Room, pos: RoomPosition, structureType: ConstructibleStructureType, name?: string) {
+	// Check `structureType` is buildable
+	if (!(C.CONSTRUCTION_COST[structureType] > 0)) {
+		return C.ERR_INVALID_ARGS;
+	}
+
+	if (structureType === 'spawn' && typeof name === 'string') {
+		// TODO: Check newly created spawns too
+		if (Game.spawns[name]) {
+			return C.ERR_INVALID_ARGS;
+		}
+	}
+
+	// Can't build in someone else's room
+	if (room.controller) {
+		if (!room.controller.my) {
+			return C.ERR_RCL_NOT_ENOUGH;
+		}
+	}
+
+	// Check structure count for this RCL
+	const rcl = room.controller?.level ?? 0;
+	const existingCount = accumulate(room[Objects], object =>
+		(object instanceof ConstructionSite || object instanceof Structure) && object.structureType === structureType ? 1 : 0);
+	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][rcl]) {
+		// TODO: Check constructions sites made this tick too
+		return C.ERR_RCL_NOT_ENOUGH;
+	}
+
+	// No structures on borders
+	if (isNearBorder(pos.x, pos.y)) {
+		return C.ERR_INVALID_TARGET;
+	}
+
+	// No structures next to borders unless it's against a wall, or it's a road/container
+	const terrain = room.getTerrain();
+	if (structureType !== 'road' && structureType !== 'container' && isNearBorder(pos.x, pos.y)) {
+		for (const neighbor of iterateNeighbors(pos)) {
+			if (
+				isBorder(neighbor.x, neighbor.y) &&
+				terrain.get(neighbor.x, neighbor.y) !== C.TERRAIN_MASK_WALL
+			) {
+				return C.ERR_INVALID_TARGET;
+			}
+		}
+	}
+
+	// No structures on walls except for roads and extractors
+	if (
+		structureType !== 'extractor' && structureType !== 'road' &&
+		terrain.get(pos.x, pos.y) === C.TERRAIN_MASK_WALL
+	) {
+		return C.ERR_INVALID_TARGET;
+	}
+
+	// No structures on top of others
+	for (const object of room[Objects]) {
+		if (
+			object.pos.isEqualTo(pos) &&
+			(object instanceof ConstructionSite || object instanceof Structure)
+		) {
+			if (object.structureType === structureType) {
+				return C.ERR_INVALID_TARGET;
+			}
+			if (
+				structureType !== 'rampart' && structureType !== 'road' &&
+				object.structureType !== 'rampart' && object.structureType !== 'road'
+			) {
+				return C.ERR_INVALID_TARGET;
+			}
+		}
+	}
+
+	// TODO: Extractors must be built on mineral
+	// TODO: Limit total construction sites built
+
+	return C.OK;
 }

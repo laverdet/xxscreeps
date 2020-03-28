@@ -2,6 +2,7 @@ import { getReader, getSchema } from '~/lib/schema';
 import { bindInterceptorsToSchema } from '~/lib/schema/interceptor';
 import { injectGetters } from '~/lib/schema/overlay';
 import { safeAssign } from '~/lib/utility';
+import * as ConstructionSite from './construction-site';
 import * as Creep from './creep';
 import * as RoomPosition from './position';
 import * as Room from './room';
@@ -24,6 +25,7 @@ const schemaDeclarations = [
 	StructureController,
 	StructureSpawn,
 
+	ConstructionSite,
 	Room,
 ];
 

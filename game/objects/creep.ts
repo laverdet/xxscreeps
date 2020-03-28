@@ -4,10 +4,11 @@ import * as Memory from '~/game/memory';
 import type { bodyFormat } from '~/engine/schema/creep';
 import { FormatShape, Variant } from '~/lib/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
-import { Owner, RoomObject } from './room-object';
-import { RoomObjectWithStore, Store } from '../store';
+import { ConstructionSite } from './construction-site';
+import { chainIntentChecks, Owner, RoomObject } from './room-object';
 import { Source } from './source';
 import { StructureController } from './structures/controller';
+import type { RoomObjectWithStore, Store } from '../store';
 export { Owner };
 
 export const AgeTime: unique symbol = Symbol('ageTime');
@@ -25,19 +26,22 @@ export class Creep extends RoomObject {
 	get spawning() { return this[AgeTime] === 0 }
 	get ticksToLive() { return this[AgeTime] === 0 ? undefined : this[AgeTime] - Game.time }
 
+	build(target: ConstructionSite) {
+	}
+
 	getActiveBodyparts(type: C.BodyPart) {
 		return this.body.reduce((count, part) =>
 			count + (part.type === type && part.hits > 0 ? 1 : 0), 0);
 	}
 
 	harvest(target: Source) {
-		return chainChecks(
+		return chainIntentChecks(
 			() => checkHarvest(this, target),
 			() => gameContext.intents.save(this, 'harvest', { target: target.id }));
 	}
 
 	move(direction: Direction) {
-		return chainChecks(
+		return chainIntentChecks(
 			() => checkMove(this, direction),
 			() => gameContext.intents.save(this, 'move', { direction }));
 	}
@@ -45,7 +49,7 @@ export class Creep extends RoomObject {
 	moveTo(x: number, y: number): number;
 	moveTo(pos: RoomObject | RoomPosition): number;
 	moveTo(...args: [any]) {
-		return chainChecks(
+		return chainIntentChecks(
 			() => checkMoveCommon(this),
 			() => {
 				// Parse target
@@ -68,7 +72,7 @@ export class Creep extends RoomObject {
 	}
 
 	transfer(target: RoomObjectWithStore, resourceType: C.ResourceType, amount?: number) {
-		return chainChecks(
+		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),
 			() => gameContext.intents.save(this, 'transfer', { amount, resourceType, target: target.id }),
 		);
@@ -76,7 +80,7 @@ export class Creep extends RoomObject {
 
 	say() {}
 	upgradeController(target: StructureController) {
-		return chainChecks(
+		return chainIntentChecks(
 			() => checkUpgradeController(this, target),
 			() => gameContext.intents.save(this, 'upgradeController', { target: target.id }),
 		);
@@ -93,16 +97,6 @@ export class Creep extends RoomObject {
 
 //
 // Intent checks
-function chainChecks(...checks: (() => number)[]) {
-	for (const check of checks) {
-		const result = check();
-		if (result !== C.OK) {
-			return result;
-		}
-	}
-	return C.OK;
-}
-
 function checkCommon(creep: Creep) {
 	if (!creep.my) {
 		return C.ERR_NOT_OWNER;
@@ -113,7 +107,7 @@ function checkCommon(creep: Creep) {
 }
 
 export function checkHarvest(creep: Creep, target: RoomObject) {
-	return chainChecks(
+	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => {
 			if (creep.getActiveBodyparts(C.WORK) <= 0) {
@@ -137,7 +131,7 @@ export function checkHarvest(creep: Creep, target: RoomObject) {
 }
 
 export function checkMove(creep: Creep, direction: number) {
-	return chainChecks(
+	return chainIntentChecks(
 		() => checkMoveCommon(creep),
 		() => {
 			if (!(direction >= 1 && direction <= 8)) {
@@ -149,7 +143,7 @@ export function checkMove(creep: Creep, direction: number) {
 }
 
 function checkMoveCommon(creep: Creep) {
-	return chainChecks(
+	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => {
 			if (creep.fatigue > 0) {
@@ -167,7 +161,7 @@ export function checkTransfer(
 	resourceType: C.ResourceType,
 	amount?: number,
 ) {
-	return chainChecks(
+	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => {
 			if (amount! < 0) {
@@ -222,7 +216,7 @@ export function checkTransfer(
 }
 
 export function checkUpgradeController(creep: Creep, target: StructureController) {
-	return chainChecks(
+	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => {
 			if (creep.getActiveBodyparts(C.WORK) <= 0) {

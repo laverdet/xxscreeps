@@ -64,6 +64,10 @@ export function isBorder(xx: number, yy: number) {
 	return xx === 0 || xx === 49 || yy === 0 || yy === 49;
 }
 
+export function isNearBorder(xx: number, yy: number) {
+	return (xx + 2) % 50 < 4 || (yy + 2) % 50 < 4;
+}
+
 export const interceptors = checkCast<Interceptor>()({
 	members: {
 		terrain: {

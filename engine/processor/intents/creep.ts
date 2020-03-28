@@ -31,8 +31,8 @@ export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owne
 	return instantiate(Creep.Creep, {
 		id: generateId(),
 		pos,
+		effects: undefined,
 		body: body.map(type => ({ type, hits: 100, boost: undefined })),
-		effects: [],
 		fatigue: 0,
 		hits: body.length,
 		name,

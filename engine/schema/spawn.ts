@@ -31,6 +31,6 @@ export const interceptors = {
 };
 
 export const schemaFormat = {
-	Spawning: format,
+	Spawning: spawningFormat,
 	StructureSpawn: format,
 };

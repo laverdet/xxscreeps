@@ -11,6 +11,12 @@ export class ProcessorContext {
 	intents(user: string, intentsById: Dictionary<Dictionary<object>>) {
 		gameContext.createdCreepNames = new Set;
 		gameContext.userId = user;
+
+		const roomIntents = intentsById[this.room.name];
+		if (roomIntents) {
+			this.room[Process]!(roomIntents, this);
+		}
+
 		for (const object of this.room[Objects]) {
 			const intents = intentsById[object.id];
 			if (intents !== undefined) {

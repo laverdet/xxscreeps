@@ -1,7 +1,9 @@
 import * as C from '~/game/constants';
-import type { RoomObject } from '~/game/objects/room-object';
-import type * as Creep from '~/engine/processor/intents/creep';
-import type * as Spawn from '~/engine/processor/intents/spawn';
+import { RoomObject } from '~/game/objects/room-object';
+import { Room } from '~/game/room';
+import type { Intents as CreepIntents } from '~/engine/processor/intents/creep';
+import type { Intents as RoomIntents } from '~/engine/processor/intents/room';
+import type { Intents as SpawnIntents } from '~/engine/processor/intents/spawn';
 const { create } = Object;
 
 const kCpuCost = 0.2;
@@ -10,15 +12,27 @@ export class IntentManager {
 	cpu = 0;
 	intentsByRoom = create(null);
 
-	save<Intent extends keyof Creep.Intents['parameters']>(
-		receiver: Creep.Intents['receiver'], intent: Intent, parameters: Creep.Intents['parameters'][Intent]): typeof C.OK;
-	save<Intent extends keyof Spawn.Intents['parameters']>(
-		receiver: Spawn.Intents['receiver'], intent: Intent, parameters: Spawn.Intents['parameters'][Intent]): typeof C.OK;
-	save<Type extends RoomObject>(object: Type, action: string, meta: any) {
-		const { id } = object;
-		const { roomName } = object.pos;
-		const intentsForRoom = this.intentsByRoom[roomName] ?? (this.intentsByRoom[roomName] = create(null));
-		const intents = intentsForRoom[id] ?? (intentsForRoom[id] = create(null));
+	getIntentsForRoomAndId(room: string, id: string) {
+		const intentsForRoom = this.intentsByRoom[room] ?? (this.intentsByRoom[room] = create(null));
+		return intentsForRoom[id] ?? (intentsForRoom[id] = create(null));
+	}
+
+	save<Intent extends keyof CreepIntents['parameters']>(
+		receiver: CreepIntents['receiver'], intent: Intent, parameters: CreepIntents['parameters'][Intent]): typeof C.OK;
+	save<Intent extends keyof RoomIntents['parameters']>(
+		receiver: RoomIntents['receiver'], intent: Intent, parameters: RoomIntents['parameters'][Intent]): typeof C.OK;
+	save<Intent extends keyof SpawnIntents['parameters']>(
+		receiver: SpawnIntents['receiver'], intent: Intent, parameters: SpawnIntents['parameters'][Intent]): typeof C.OK;
+	save(object: RoomObject | Room, action: string, meta: any) {
+		const intents = (() => {
+			if (object instanceof Room) {
+				return this.getIntentsForRoomAndId(object.name, object.name);
+			} else if (object instanceof RoomObject) {
+				return this.getIntentsForRoomAndId(object.pos.roomName, object.id);
+			} else {
+				throw new Error('Invalid object');
+			}
+		})();
 		if (intents[action] === undefined) {
 			this.cpu += kCpuCost;
 		}

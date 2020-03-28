@@ -1,14 +1,15 @@
 import * as PathFinder from '~/driver/pathfinder';
 import * as C from '~/game/constants';
+import type { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { firstMatching } from '~/lib/utility';
 import type { RoomObject } from './objects/room-object';
 
 const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
-export type Direction =
-	typeof C.TOP | typeof C.TOP_RIGHT | typeof C.RIGHT |
-	typeof C.BOTTOM_RIGHT | typeof C.BOTTOM | typeof C.BOTTOM_LEFT |
-	typeof C.LEFT | typeof C.TOP_LEFT;
+const ALL_DIRECTIONS = [
+	C.TOP, C.TOP_RIGHT, C.RIGHT, C.BOTTOM_RIGHT, C.BOTTOM, C.BOTTOM_LEFT, C.LEFT, C.TOP_LEFT,
+];
+export type Direction = typeof ALL_DIRECTIONS[number];
 
 export const PositionInteger: unique symbol = Symbol('positionInteger');
 
@@ -131,23 +132,18 @@ export class RoomPosition {
 	inRangeTo(x: number, y: number, range: number): boolean;
 	inRangeTo(pos: RoomObject | RoomPosition, range: number): boolean;
 	inRangeTo(...args: any) {
-		const { xx, yy, room, extra } = fetchArguments(...args);
+		const { xx, yy, room, rest } = fetchArguments(...args);
 		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
 			return false;
 		}
 		const range = Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
-		return range <= extra;
+		return range <= rest[0];
 	}
 
 	findClosestByPath(type: number): RoomObject | undefined {
 
-		// Get this room
-		const room = Game.rooms[this.roomName];
-		if (room === undefined) {
-			throw new Error(`Could not access room ${this.roomName}`);
-		}
-
 		// Find objects to search
+		const room = fetchRoom(this.roomName);
 		const objects = room.find(type);
 		const goals = objects.map(({ pos }) => ({ pos, range: 1 }));
 
@@ -167,14 +163,17 @@ export class RoomPosition {
 	findPathTo(pos: RoomObject | RoomPosition): any;
 	findPathTo(...args: any) {
 		const { pos } = fetchPositionArgument(this, ...args);
-		const room = Game.rooms[this.roomName];
-		if (!room) {
-			throw new Error(`Could not access room ${this.roomName}`);
-		}
-		return room.findPath(this, pos!);
+		return fetchRoom(this.roomName).findPath(this, pos!);
 	}
 
-	createConstructionSite() {}
+	/**
+	 * Create new `ConstructionSite` at the specified location.
+	 * @param structureType One of the `STRUCTURE_*` constants.
+	 * @param name The name of the structure, for structures that support it (currently only spawns).
+	 */
+	createConstructionSite(structureType: ConstructibleStructureType, name?: string) {
+		return fetchRoom(this.roomName).createConstructionSite(this, structureType, name);
+	}
 
 	[Symbol.for('nodejs.util.inspect.custom')]() {
 		return `${this}`;
@@ -193,7 +192,7 @@ export class RoomPosition {
 
 //
 // Function argument handlers
-export function fetchArguments(arg1?: any, arg2?: any, arg3?: any) {
+export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any) {
 	if (typeof arg1 === 'object') {
 		const int = arg1[PositionInteger] ?? arg1?.pos?.[PositionInteger];
 		if (int !== undefined) {
@@ -201,7 +200,7 @@ export function fetchArguments(arg1?: any, arg2?: any, arg3?: any) {
 				xx: (int >>> 16) & 0xff,
 				yy: (int >>> 24) & 0xff,
 				room: int & 0xffff,
-				extra: arg2,
+				rest: [ arg2, arg3, ...rest ],
 			};
 		}
 	}
@@ -209,7 +208,7 @@ export function fetchArguments(arg1?: any, arg2?: any, arg3?: any) {
 		xx: arg1 as number,
 		yy: arg2 as number,
 		room: 0,
-		extra: arg3,
+		rest: [ arg3, ...rest ],
 	};
 }
 
@@ -234,6 +233,14 @@ export function fetchPositionArgument(
 			extra: undefined,
 		};
 	}
+}
+
+function fetchRoom(roomName: string) {
+	const room = Game.rooms[roomName];
+	if (room === undefined) {
+		throw new Error(`Could not access room ${roomName}`);
+	}
+	return room;
 }
 
 //
@@ -269,19 +276,38 @@ function getDirection(dx: number, dy: number) {
 	}
 }
 
-export function getPositonInDirection(position: RoomPosition, direction: Direction) {
-	const { x, y, roomName } = position;
+export function getOffsetsFromDirection(direction: Direction) {
 	switch (direction) {
-		case C.TOP: return new RoomPosition(x, y - 1, roomName);
-		case C.TOP_RIGHT: return new RoomPosition(x + 1, y - 1, roomName);
-		case C.RIGHT: return new RoomPosition(x + 1, y, roomName);
-		case C.BOTTOM_RIGHT: return new RoomPosition(x + 1, y + 1, roomName);
-		case C.BOTTOM: return new RoomPosition(x, y + 1, roomName);
-		case C.BOTTOM_LEFT: return new RoomPosition(x - 1, y + 1, roomName);
-		case C.LEFT: return new RoomPosition(x - 1, y, roomName);
-		case C.TOP_LEFT: return new RoomPosition(x - 1, y - 1, roomName);
+		case C.TOP: return { dx: 0, dy: -1 };
+		case C.TOP_RIGHT: return { dx: 1, dy: -1 };
+		case C.RIGHT: return { dx: 1, dy: 0 };
+		case C.BOTTOM_RIGHT: return { dx: 1, dy: 1 };
+		case C.BOTTOM: return { dx: 0, dy: 1 };
+		case C.BOTTOM_LEFT: return { dx: -1, dy: 1 };
+		case C.LEFT: return { dx: -1, dy: 0 };
+		case C.TOP_LEFT: return { dx: -1, dy: -1 };
 		default: throw new Error('Invalid direction');
 	}
+}
+
+export function getPositonInDirection(position: RoomPosition, direction: Direction) {
+	const { x, y, roomName } = position;
+	const { dx, dy } = getOffsetsFromDirection(direction);
+	return new RoomPosition(x + dx, y + dy, roomName);
+}
+
+export function iterateNeighbors(position: RoomPosition) {
+	return function *() {
+		const { x, y, roomName } = position;
+		for (const direction of ALL_DIRECTIONS) {
+			const { dx, dy } = getOffsetsFromDirection(direction);
+			const posX = x + dx;
+			const posY = y + dy;
+			if (posX >= 0 && posX < 50 && posY >= 0 && posY < 50) {
+				yield new RoomPosition(posX, posY, roomName);
+			}
+		}
+	}();
 }
 
 //

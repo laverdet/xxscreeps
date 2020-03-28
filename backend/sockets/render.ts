@@ -1,4 +1,5 @@
 import { RoomObject } from '~/game/objects/room-object';
+import { ConstructionSite } from '~/game/objects/construction-site';
 import { Creep } from '~/game/objects/creep';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
@@ -44,6 +45,15 @@ function renderStore(store: Store) {
 	}
 	return result;
 }
+
+bindRenderer(ConstructionSite, function render() {
+	return {
+		...renderObject(this),
+		progress: this.progress,
+		progressTotal: this.progressTotal,
+		structureType: this.structureType,
+	};
+});
 
 bindRenderer(Creep, function render() {
 	return {

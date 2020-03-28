@@ -1,3 +1,13 @@
+// Like half the use cases of `reduce` are to sum an array, so this just does that with less
+// boilerplate
+export function accumulate<Type>(iterable: Iterable<Type>, callback: (value: Type) => number): number {
+	let sum = 0;
+	for (const value of iterable) {
+		sum += callback(value);
+	}
+	return sum;
+}
+
 // Checks that a value can be casted to a type, but returns the original type. The curry thing here
 // is needed because TypeScript doesn't support optional generic parameters
 export function checkCast<Type>() {

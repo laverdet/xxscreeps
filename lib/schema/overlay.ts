@@ -72,6 +72,15 @@ export function injectGetters(
 		});
 	}
 
+	// Check for interceptors that don't match the layout
+	if (interceptors?.members) {
+		for (const key of Object.keys(interceptors.members)) {
+			if (!(key in layout.struct)) {
+				throw new Error(`Interceptor found for ${key} but does not exist in layout`);
+			}
+		}
+	}
+
 	// Add Variant key
 	const variant = layout[Variant];
 	if (variant !== undefined) {

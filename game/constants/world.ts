@@ -34,14 +34,14 @@ export const ERR_NOT_ENOUGH_EXTENSIONS = -6;
 export const ERR_RCL_NOT_ENOUGH = -14;
 export const ERR_GCL_NOT_ENOUGH = -15;
 
-export const TOP = 1;
-export const TOP_RIGHT = 2;
-export const RIGHT = 3;
-export const BOTTOM_RIGHT = 4;
-export const BOTTOM = 5;
-export const BOTTOM_LEFT = 6;
-export const LEFT = 7;
-export const TOP_LEFT = 8;
+export const TOP = 1 as const;
+export const TOP_RIGHT = 2 as const;
+export const RIGHT = 3 as const;
+export const BOTTOM_RIGHT = 4 as const;
+export const BOTTOM = 5 as const;
+export const BOTTOM_LEFT = 6 as const;
+export const LEFT = 7 as const;
+export const TOP_LEFT = 8 as const;
 
 export const OBSTACLE_OBJECT_TYPES = [
 	'spawn',

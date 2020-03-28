@@ -24,10 +24,16 @@ export class GameMap {
 	}
 }
 
+export function getTerrainForRoom(room: string) {
+	return world.get(room);
+}
+
 export function importWorldTerrain(worldTerrainBlob: Readonly<Uint8Array>) {
 	world = readWorld(worldTerrainBlob);
 }
 
+//
+// Schema
 export const schema = getSchema({
 	Terrain: TerrainSchema.format,
 	World: withType<World>(makeVector(TerrainSchema.format)),
