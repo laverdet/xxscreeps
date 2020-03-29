@@ -12,7 +12,7 @@ import { SteamTicketEndpoint } from './auth/steam-ticket';
 import { MapStatsEndpoint } from './game/map-stats';
 import { RoomStatusEndpoint } from './game/room-status';
 import { RoomTerrainEndpoint } from './game/room-terrain';
-import { TimeEndpoint } from './game/time';
+import { TickEndpoint, TimeEndpoint } from './game/time';
 
 import { CheckEmailEndpoint, CheckUsernameEndpoint, SubmitRegistrationEndpoint } from './register';
 
@@ -55,6 +55,7 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 		MapStatsEndpoint,
 		RoomStatusEndpoint,
 		RoomTerrainEndpoint,
+		TickEndpoint,
 		TimeEndpoint,
 	]));
 	apiRouter.use('/register', bindRoutes(context, Router(), [

@@ -26,7 +26,7 @@ export class Creep extends RoomObject {
 	}
 	get my() { return this[Owner] === gameContext.userId }
 	get spawning() { return this[AgeTime] === 0 }
-	get ticksToLive() { return this[AgeTime] === 0 ? undefined : this[AgeTime] - Game.time }
+	get ticksToLive() { return this[AgeTime] - Game.time }
 
 	build(target: ConstructionSite) {
 		return chainIntentChecks(
@@ -147,7 +147,7 @@ export function checkBuild(creep: Creep, target?: ConstructionSite) {
 		});
 }
 
-export function checkHarvest(creep: Creep, target: RoomObject) {
+export function checkHarvest(creep: Creep, target?: RoomObject) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => {

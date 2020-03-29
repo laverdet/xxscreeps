@@ -1,6 +1,7 @@
 import * as C from '~/game/constants';
 import * as Creep from '~/game/objects/creep';
 import type { ConstructionSite } from '~/game/objects/construction-site';
+import type { Source } from '~/game/objects/source';
 import type { StructureController } from '~/game/objects/structures/controller';
 import { Direction, RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
@@ -10,6 +11,7 @@ import * as ConstructionSiteIntent from './construction-site';
 import * as StructureControllerIntent from './controller';
 import * as Movement from './movement';
 import { newRoomObject } from './room-object';
+import * as RoomIntent from './room';
 import * as StoreIntent from './store';
 
 type Parameters = {
@@ -32,6 +34,7 @@ export type Intents = {
 export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owner: string) {
 	const carryCapacity = body.reduce((energy, type) =>
 		(type === C.CARRY ? energy + C.CARRY_CAPACITY : energy), 0);
+	const hasClaim = body.some(type => type === 'claim');
 	return instantiate(Creep.Creep, {
 		...newRoomObject(pos),
 		body: body.map(type => ({ type, hits: 100, boost: undefined })),
@@ -39,7 +42,7 @@ export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owne
 		hits: body.length,
 		name,
 		store: StoreIntent.create(carryCapacity),
-		[Creep.AgeTime]: 0,
+		[Creep.AgeTime]: Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME),
 		[Creep.Owner]: owner,
 	});
 }
@@ -55,7 +58,13 @@ export default () => bindProcessor(Creep.Creep, {
 			}
 
 		} else if (intent.harvest) {
-			StoreIntent.add(this.store, 'energy', 25);
+			const { target: id } = intent.harvest;
+			const target = Game.getObjectById(id) as Source | undefined;
+			if (Creep.checkHarvest(this, target) === C.OK) {
+				const amount = Math.min(target!.energy, 25);
+				StoreIntent.add(this.store, 'energy', 25);
+				target!.energy -= amount;
+			}
 			return true;
 		}
 		if (intent.move) {
@@ -87,6 +96,10 @@ export default () => bindProcessor(Creep.Creep, {
 	},
 
 	tick() {
+		if (Game.time >= this[Creep.AgeTime]) {
+			RoomIntent.removeObject(this.room, this.id);
+			return true;
+		}
 		const nextPosition = Movement.get(this);
 		if (nextPosition) {
 			this.pos = nextPosition;

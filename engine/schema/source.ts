@@ -1,5 +1,5 @@
 import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/lib/schema';
-import { nextRegenerationTime, Source } from '~/game/objects/source';
+import { NextRegenerationTime, Source } from '~/game/objects/source';
 import * as RoomObject from './room-object';
 
 export { Source };
@@ -15,7 +15,7 @@ export const format = withType<Source>(checkCast<Format>()({
 export const interceptors = {
 	Source: checkCast<Interceptor>()({
 		members: {
-			nextRegenerationTime: { symbol: nextRegenerationTime },
+			nextRegenerationTime: { symbol: NextRegenerationTime },
 		},
 		overlay: Source,
 	}),

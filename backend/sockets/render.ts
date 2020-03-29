@@ -10,7 +10,7 @@ import { Capacity, CapacityByResource, Restricted, SingleResource, Store } from 
 import { Variant } from '~/lib/schema';
 
 export const Render: unique symbol = Symbol('render');
-function bindRenderer<Type>(impl: Constructor<Type>, renderer: (this: Type) => object) {
+function bindRenderer<Type>(impl: Constructor<Type>, renderer: (this: Type, time: number) => object) {
 	impl.prototype[Render] = renderer;
 }
 
@@ -62,7 +62,7 @@ bindRenderer(ConstructionSite, function render() {
 	};
 });
 
-bindRenderer(Creep, function render() {
+bindRenderer(Creep, function render(time) {
 	return {
 		...renderObject(this),
 		...renderStore(this.store),
@@ -72,7 +72,7 @@ bindRenderer(Creep, function render() {
 		hitsMax: 100,
 		spawning: false,
 		fatigue: 0,
-		ageTime: 0,
+		ageTime: this.ticksToLive + time,
 		actionLog: {
 			attacked: null,
 			healed: null,
@@ -91,7 +91,7 @@ bindRenderer(Creep, function render() {
 	};
 });
 
-bindRenderer(Source, function render() {
+bindRenderer(Source, function render(time) {
 	return {
 		_id: this.id,
 		type: 'source',
@@ -99,17 +99,19 @@ bindRenderer(Source, function render() {
 		y: this.pos.y,
 		energy: this.energy,
 		energyCapacity: this.energyCapacity,
-		ticksToRegeneration: this.ticksToRegeneration,
+		nextRegenerationTime: this.ticksToRegeneration === undefined ?
+			undefined : this.ticksToRegeneration + time,
 	};
 });
 
-bindRenderer(StructureController, function render() {
+bindRenderer(StructureController, function render(time) {
 	return {
 		...renderStructure(this),
 		type: 'controller',
 		level: this.level,
 		progress: this.progress,
-		downgradeTime: this.ticksToDowngrade,
+		downgradeTime: this.ticksToDowngrade === undefined ?
+			undefined : this.ticksToDowngrade + time,
 		safeMode: 0,
 	};
 });

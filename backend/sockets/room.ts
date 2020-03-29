@@ -38,7 +38,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			// Render current room state
 			const objects: any = {};
 			for (const object of room[Objects]) {
-				const value = (object as any)[Render]?.();
+				const value = (object as any)[Render]?.(time);
 				if (value !== undefined) {
 					objects[value._id] = value;
 				}
@@ -48,6 +48,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			const response: any = {
 				objects: dval,
 				info: { mode: 'world' },
+				gameTime: time,
 				users: {
 					'123': {
 						username: 'test',
@@ -55,7 +56,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 					},
 				},
 			};
-			this.send(JSON.stringify(diff(previous, response)));
+			this.send(JSON.stringify(response));
 			previous = objects;
 		};
 		return this.context.mainChannel.listen(event => {

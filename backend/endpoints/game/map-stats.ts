@@ -18,7 +18,7 @@ export const MapStatsEndpoint: Endpoint = {
 		}
 		return {
 			ok: 1,
-			gameTime: 1,
+			gameTime: this.context.time,
 			stats,
 			users: {},
 		};

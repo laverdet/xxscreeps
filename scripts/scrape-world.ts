@@ -90,7 +90,7 @@ topLevelTask(async() => {
 					room: object.room,
 					energy: object.energy,
 					energyCapacity: object.energyCapacity,
-					[Source.nextRegenerationTime]: gameTime + (object.ticksToRegeneration as number),
+					[Source.NextRegenerationTime]: gameTime + (object.ticksToRegeneration as number),
 				};
 		}
 	}).forEach(roomObject => {

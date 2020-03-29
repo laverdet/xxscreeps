@@ -1,14 +1,16 @@
 import { Variant } from '~/lib/schema';
 import * as RoomObject from './room-object';
 
-export const nextRegenerationTime = Symbol('nextRegenerationTime');
+export const NextRegenerationTime = Symbol('nextRegenerationTime');
 
 export class Source extends RoomObject.RoomObject {
 	get [Variant]() { return 'source' }
 
 	energy!: number;
 	energyCapacity!: number;
-	[nextRegenerationTime]!: number;
+	[NextRegenerationTime]!: number;
 
-	get ticksToRegeneration() { return this[nextRegenerationTime] - Game.time }
+	get ticksToRegeneration() {
+		return this[NextRegenerationTime] === 0 ? undefined : this[NextRegenerationTime] - Game.time;
+	}
 }

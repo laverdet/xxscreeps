@@ -1,4 +1,17 @@
 import { Endpoint } from '~/backend/endpoint';
+import config from '~/engine/config';
+
+export const TickEndpoint: Endpoint = {
+	method: 'get',
+	path: '/tick',
+
+	async execute() {
+		return {
+			ok: 1,
+			tick: (await config).config.game.tickSpeed,
+		};
+	},
+};
 
 export const TimeEndpoint: Endpoint = {
 	method: 'get',
