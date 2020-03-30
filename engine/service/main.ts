@@ -100,7 +100,7 @@ export default async function() {
 			console.log(`Tick ${gameTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
 			++gameTime;
 			Channel.publish<MainMessage>('main', { type: 'tick', time: gameTime });
-			const delay = config.game.tickSpeed ?? 250 - timeTaken;
+			const delay = config.game?.tickSpeed ?? 250 - timeTaken;
 			if (delay > 0) {
 				await new Promise(resolve => setTimeout(resolve, delay));
 			}

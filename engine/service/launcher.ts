@@ -33,9 +33,9 @@ topLevelTask(async() => {
 		await Promise.all([ main, backend, processor, runner ]);
 	} else {
 		const backend = new Worker('~/backend/server', { runDefault: true });
-		const processors = Array(config?.processorWorkers).fill(undefined).map(() =>
+		const processors = Array(config?.processorWorkers ?? 2).fill(undefined).map(() =>
 			new Worker('~/engine/service/processor', { runDefault: true }));
-		const runners = Array(config?.runnerWorkers).fill(undefined).map(() =>
+		const runners = Array(config?.runnerWorkers ?? 1).fill(undefined).map(() =>
 			new Worker('~/engine/service/runner', { runDefault: true }));
 		await Promise.all([
 			main,

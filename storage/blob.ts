@@ -23,7 +23,7 @@ export abstract class BlobStorage {
 
 	static async create() {
 		const config = await Config;
-		const path = Path.join(Path.dirname(config.file), config.config.storage.path);
+		const path = Path.join(Path.dirname(config.file), config.config.storage?.path ?? './data');
 		const dir = await fs.opendir(path);
 		await dir.close();
 		return create('blobStorage', BlobStorageHost, path);

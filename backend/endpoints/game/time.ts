@@ -8,7 +8,7 @@ export const TickEndpoint: Endpoint = {
 	async execute() {
 		return {
 			ok: 1,
-			tick: (await config).config.game.tickSpeed,
+			tick: (await config).config.game?.tickSpeed ?? 250,
 		};
 	},
 };

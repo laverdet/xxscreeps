@@ -1,72 +1,89 @@
 {
-	"$schema": "http://json-schema.org/draft-07/schema",
-	"description": "Screeps configuration for this server",
-	"type": "object",
-	"required": [ "game", "storage" ],
-	"properties": {
-
-		"game": {
-			"type": "object",
-			"description": "Game settings",
-			"required": [ "tickSpeed" ],
-			"properties": {
-				"tickSpeed": {
-					"type": "integer",
-					"description": "Minimum length of a game tick in milliseconds.",
-					"default": 250
-				}
-			}
-		},
-
-		"launcher": {
-			"type": "object",
-			"description": "Launcher settings",
-			"properties": {
-
-				"processorWorkers": {
-					"type": "integer",
-					"description": "Total number of processors to create.",
-					"default": 2
-				},
-
-				"runnerWorkers": {
-					"type": "integer",
-					"description": "Total number of runners to create. It's best to leave this at 1 because runner will create its own threads.",
-					"default": 1
-				},
-
-				"singleThreaded": {
-					"type": "boolean",
-					"description": "Set true to run all services in a single nodejs isolate. This does *not* affect the runner's isolates.",
-					"default": false
-				}
-			}
-		},
-
-		"processor": {
-			"type": "object",
-			"description": "Processor settings",
-			"properties": {
-				"unsafeSandbox": {
-					"type": "boolean",
-					"description": "Setting this to true will run user code using the nodejs `vm` module instead of `isolated-vm`. Do not enable this on public servers!",
-					"default": false
-				}
-			}
-
-		},
-
-		"storage": {
-			"type": "object",
-			"description": "Configuration for local storage",
-			"required": [ "path" ],
-			"properties": {
-				"path": {
-					"type": "string",
-					"description": "Path to save game state, relative to this configuration file.",
-					"default": "./data"
-				}
-			}
-		}
-	}
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "defaultProperties": [
+    ],
+    "properties": {
+        "backend": {
+            "defaultProperties": [
+            ],
+            "description": "Backend server settings",
+            "properties": {
+                "steamApiKey": {
+                    "description": "Steam Web API key used to authenticate users. You can get a key here:\nhttp://steamcommunity.com/dev/apikey",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "steamApiKey"
+            ],
+            "type": "object"
+        },
+        "game": {
+            "defaultProperties": [
+            ],
+            "description": "Game settings",
+            "properties": {
+                "tickSpeed": {
+                    "default": 250,
+                    "description": "Minimum length of a game tick in milliseconds.",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
+        "launcher": {
+            "defaultProperties": [
+            ],
+            "description": "Launcher settings",
+            "properties": {
+                "processorWorkers": {
+                    "default": 2,
+                    "description": "Total number of processors to create.",
+                    "type": "number"
+                },
+                "runnerWorkers": {
+                    "default": 1,
+                    "description": "Total number of runners to create. It's best to leave this at 1 because runner will create\nits own threads.",
+                    "type": "number"
+                },
+                "singleThreaded": {
+                    "default": false,
+                    "description": "Set true to run all services in a single nodejs isolate. This does *not* affect the runner's\nisolates.",
+                    "type": "boolean"
+                }
+            },
+            "type": "object"
+        },
+        "runner": {
+            "defaultProperties": [
+            ],
+            "description": "Runner settings",
+            "properties": {
+                "unsafeSandbox": {
+                    "default": false,
+                    "description": "Setting this to true will run user code using the nodejs `vm` module instead\nof `isolated-vm`. Do not enable this on public servers!",
+                    "type": "boolean"
+                }
+            },
+            "type": "object"
+        },
+        "storage": {
+            "defaultProperties": [
+            ],
+            "description": "Configuration for local storage",
+            "properties": {
+                "path": {
+                    "default": ": ./data",
+                    "description": "Path to save game state, relative to this configuration file.",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "required": [
+        "backend"
+    ],
+    "type": "object"
 }
+
