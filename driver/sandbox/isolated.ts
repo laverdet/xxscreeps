@@ -1,6 +1,7 @@
 import ivm from 'isolated-vm';
 import { runOnce } from '~/lib/memoize';
 import type { UserCode } from '~/engine/metabase/code';
+import type * as Runtime from '~/driver/runtime';
 import { getPathFinderInfo, getRuntimeSource } from '.';
 
 const getPathFinderModule = runOnce(() => {
@@ -11,7 +12,7 @@ const getPathFinderModule = runOnce(() => {
 
 export class IsolatedSandbox {
 	private constructor(
-		private readonly tick: ivm.Reference<Function>,
+		private readonly tick: ivm.Reference<typeof Runtime.tick>,
 	) {}
 
 	static async create(userId: string, userCode: UserCode, terrain: Readonly<Uint8Array>) {
@@ -41,7 +42,7 @@ export class IsolatedSandbox {
 		]);
 
 		// Initialize runtime.ts and load player code + memory
-		const runtime = await script.run(context, { reference: true });
+		const runtime: ivm.Reference<typeof Runtime> = await script.run(context, { reference: true });
 		const [ tick, initialize ] = await Promise.all([
 			runtime.get('tick', { reference: true }),
 			runtime.get('initializeIsolated', { reference: true }),

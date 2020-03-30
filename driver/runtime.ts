@@ -120,7 +120,7 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 	PathFinder.flush();
 	// Return JSON'd intents
 	const intents = function() {
-		const intents = Object.create(null);
+		const intents: Dictionary<SharedArrayBuffer> = Object.create(null);
 		const { intentsByRoom } = gameContext.intents;
 		const roomNames = Object.keys(intentsByRoom);
 		const { length } = roomNames;
