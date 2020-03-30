@@ -107,8 +107,8 @@ export function get(creep: Creep) {
 
 	// Final check for obstructing creeps
 	const { room } = creep;
-	for (const object of room[Objects]) {
-		if (object instanceof Creep && !object.nextPosition && nextPosition.isEqualTo(object)) {
+	for (const creep of room.find(C.FIND_CREEPS)) {
+		if (!creep.nextPosition && nextPosition.isEqualTo(creep)) {
 			delete creep.nextPosition;
 			return undefined;
 		}

@@ -109,7 +109,6 @@ export function initializeIsolated(
 
 export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 	// Reset context
-	gameContext.createdCreepNames = new Set;
 	gameContext.intents = new IntentManager;
 	// Build game object
 	const rooms = roomBlobs.map(buffer =>

@@ -42,7 +42,6 @@ export class IntentManager {
 }
 
 type GameContext = {
-	createdCreepNames: Set<string>;
 	intents: IntentManager;
 	userId: string;
 };

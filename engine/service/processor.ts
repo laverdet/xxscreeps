@@ -63,9 +63,9 @@ export default async function() {
 						assert.equal(intentInfo.intents.byteOffset, 0);
 						const uint16 = new Uint16Array(intentInfo.intents.buffer);
 						const intents = JSON.parse(String.fromCharCode(...uint16));
-						context.intents(intentInfo.user, intents);
+						context.processIntents(intentInfo.user, intents);
 					}
-					context.tick();
+					context.processTick();
 					// Save and notify main service of completion
 					await deleteIntentBlobs;
 					processedRooms.set(room, context);

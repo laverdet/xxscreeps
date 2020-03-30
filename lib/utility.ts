@@ -21,6 +21,19 @@ export function clamp(min: number, max: number, value: number) {
 	return Math.max(min, Math.min(max, value));
 }
 
+// Appends several iterators together
+export function concatInPlace<Type>(...iterators: Iterable<Type>[]): Iterable<Type>;
+export function concatInPlace<T1, T2>(i1: Iterable<T1>, i2: Iterable<T2>): Iterable<T1 | T2>;
+export function concatInPlace<T1, T2, T3>(i1: Iterable<T1>, i2: Iterable<T2>, i3: Iterable<T3>): Iterable<T1 | T2 | T3>;
+export function concatInPlace<T1, T2, T3, T4>(i1: Iterable<T1>, i2: Iterable<T2>, i3: Iterable<T3>, i4: Iterable<T4>): Iterable<T1 | T2 | T3 | T4>;
+export function *concatInPlace(...iterators: Iterable<any>[]) {
+	for (const iterator of iterators) {
+		for (const element of iterator) {
+			yield element;
+		}
+	}
+}
+
 // Replace a value on an object with a new one, and returns the old one.
 export function exchange<Target extends object, Name extends keyof Target>(
 		target: Target, name: Name, newValue?: Target[Name]) {
@@ -33,14 +46,12 @@ export function filterInPlace<Type, Filtered extends Type>(
 	iterable: Iterable<Type>, callback: (value: Type) => value is Filtered): Generator<Filtered>;
 export function filterInPlace<Type>(
 	iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean): Generator<Type>;
-export function filterInPlace(iterable: Iterable<any>, callback: (value: any) => LooseBoolean) {
-	return function *() {
-		for (const value of iterable) {
-			if (callback(value)) {
-				yield value;
-			}
+export function *filterInPlace(iterable: Iterable<any>, callback: (value: any) => LooseBoolean) {
+	for (const value of iterable) {
+		if (callback(value)) {
+			yield value;
 		}
-	}();
+	}
 }
 
 // Similar to [].some but it returns the matched element
@@ -81,12 +92,10 @@ export function makeResolver<Type>(): [ Promise<Type>, Resolver<Type> ] {
 }
 
 // It's like [].map except you can use it on iterables, also it doesn't generate a temporary array.
-export function mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (value: Type) => Result) {
-	return function *() {
-		for (const value of iterable) {
-			yield callback(value);
-		}
-	}();
+export function *mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (value: Type) => Result) {
+	for (const value of iterable) {
+		yield callback(value);
+	}
 }
 
 // It's like the constructor for `Map` except it returns a plain Object

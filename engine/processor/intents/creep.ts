@@ -34,7 +34,6 @@ export type Intents = {
 export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owner: string) {
 	const carryCapacity = body.reduce((energy, type) =>
 		(type === C.CARRY ? energy + C.CARRY_CAPACITY : energy), 0);
-	const hasClaim = body.some(type => type === 'claim');
 	return instantiate(Creep.Creep, {
 		...newRoomObject(pos),
 		body: body.map(type => ({ type, hits: 100, boost: undefined })),
@@ -42,7 +41,7 @@ export function create(body: C.BodyPart[], pos: RoomPosition, name: string, owne
 		hits: body.length,
 		name,
 		store: StoreIntent.create(carryCapacity),
-		[Creep.AgeTime]: Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME),
+		[Creep.AgeTime]: 0,
 		[Creep.Owner]: owner,
 	});
 }
@@ -96,7 +95,7 @@ export default () => bindProcessor(Creep.Creep, {
 	},
 
 	tick() {
-		if (Game.time >= this[Creep.AgeTime]) {
+		if (Game.time >= this[Creep.AgeTime] && this[Creep.AgeTime] !== 0) {
 			RoomIntent.removeObject(this.room, this.id);
 			return true;
 		}

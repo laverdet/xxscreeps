@@ -3,7 +3,7 @@ import * as C from './constants';
 import { BufferObject } from '~/lib/schema/buffer-object';
 import type { BufferView } from '~/lib/schema/buffer-view';
 import type { FormatShape } from '~/lib/schema';
-import { accumulate } from '~/lib/utility';
+import { accumulate, concatInPlace } from '~/lib/utility';
 import { Process, ProcessorSpecification, Tick } from '~/engine/processor/bind';
 import { iteratee } from '~/engine/util/iteratee';
 import type { variantFormat } from '~/engine/schema/variant';
@@ -20,6 +20,7 @@ import { Creep } from './objects/creep';
 import { Source } from './objects/source';
 import { Structure } from './objects/structures';
 import { StructureController } from './objects/structures/controller';
+import { StructureExtension } from './objects/structures/extension';
 import { StructureSpawn } from './objects/structures/spawn';
 
 export const Objects = Symbol('objects');
@@ -54,7 +55,7 @@ export class Room extends BufferObject {
 				this.#structures.push(object);
 				if (object instanceof StructureController) {
 					this.controller = object;
-				} else if (object instanceof StructureSpawn) {
+				} else if (object instanceof StructureExtension || object instanceof StructureSpawn) {
 					this.energyAvailable += object.store[C.RESOURCE_ENERGY];
 					this.energyCapacityAvailable += object.store.getCapacity(C.RESOURCE_ENERGY);
 				}
@@ -76,6 +77,18 @@ export class Room extends BufferObject {
 	 * @param opts
 	 */
 	#findCache = new Map<number, RoomObject[]>();
+	find(
+		type: typeof C.FIND_CREEPS | typeof C.FIND_MY_CREEPS | typeof C.FIND_HOSTILE_CREEPS,
+		options?: RoomFindOptions): Creep[];
+	find(
+		type: typeof C.FIND_STRUCTURES | typeof C.FIND_MY_STRUCTURES | typeof C.FIND_HOSTILE_STRUCTURES,
+		options?: RoomFindOptions): Structure[];
+	find(
+		type: typeof C.FIND_CONSTRUCTION_SITES | typeof C.FIND_MY_CONSTRUCTION_SITES | typeof C.FIND_HOSTILE_CONSTRUCTION_SITES,
+		options?: RoomFindOptions): ConstructionSite[];
+	find(
+		type: typeof C.FIND_SOURCES | typeof C.FIND_SOURCES_ACTIVE,
+		options?: RoomFindOptions): Source[];
 	find(type: number, options: RoomFindOptions = {}) {
 		// Check find cache
 		let results = this.#findCache.get(type);
@@ -231,20 +244,17 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 	}
 
 	// No structures on top of others
-	for (const object of room[Objects]) {
+	for (const object of concatInPlace(
+		room.find(C.FIND_CONSTRUCTION_SITES),
+		room.find(C.FIND_STRUCTURES),
+	)) {
 		if (
 			object.pos.isEqualTo(pos) &&
-			(object instanceof ConstructionSite || object instanceof Structure)
+			(object.structureType === structureType ||
+				(structureType !== 'rampart' && structureType !== 'road' &&
+				object.structureType !== 'rampart' && object.structureType !== 'road'))
 		) {
-			if (object.structureType === structureType) {
-				return C.ERR_INVALID_TARGET;
-			}
-			if (
-				structureType !== 'rampart' && structureType !== 'road' &&
-				object.structureType !== 'rampart' && object.structureType !== 'road'
-			) {
-				return C.ERR_INVALID_TARGET;
-			}
+			return C.ERR_INVALID_TARGET;
 		}
 	}
 

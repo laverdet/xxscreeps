@@ -1,17 +1,21 @@
 import * as Structure from '.';
 import * as C from '~/game/constants';
 import * as Memory from '~/game/memory';
-import { FormatShape, Variant } from '~/lib/schema';
 import { gameContext } from '~/game/context';
-import { calcCreepCost, getUniqueName } from '~/game/helpers';
+import { accumulate } from '~/lib/utility';
+import { FormatShape, Variant } from '~/lib/schema';
+
 import { Direction } from '~/game/position';
 import * as Store from '~/game/store';
 import type { spawningFormat } from '~/engine/schema/spawn';
+import { create as createCreep } from '~/engine/processor/intents/creep';
+import { StructureExtension } from './extension';
+import { chainIntentChecks } from '../room-object';
 
 type SpawnCreepOptions = {
-	body?: C.BodyPart[];
 	directions?: Direction[];
 	dryRun?: boolean;
+	energyStructures?: (StructureExtension | StructureSpawn)[];
 	memory?: any;
 };
 
@@ -27,11 +31,7 @@ export class StructureSpawn extends Structure.Structure {
 	store!: Store.Store;
 
 	canCreateCreep(body: any, name?: any) {
-		return this.spawnCreep(
-			body,
-			name ?? getUniqueName(name => Game.creeps[name] !== undefined),
-			{ dryRun: true },
-		);
+		return checkSpawnCreep(this, body, name ?? getUniqueName(name => Game.creeps[name] !== undefined));
 	}
 
 	createCreep(body: any, name: any, memory: any) {
@@ -42,62 +42,129 @@ export class StructureSpawn extends Structure.Structure {
 		);
 	}
 
-	spawnCreep(body: any, name: string, options: SpawnCreepOptions = {}) {
+	spawnCreep(body: C.BodyPart[], name: string, options: SpawnCreepOptions = {}) {
+		return chainIntentChecks(
+			() => checkSpawnCreep(this, body, name, options.directions, options.energyStructures),
+			() => {
+				if (options.dryRun == true) {
+					return C.OK;
+				}
 
-		// Check name is valid and does not already exist
-		if (typeof name !== 'string' || name === '' || typeof options !== 'object') {
+				// Save memory option to Memory
+				if (options.memory !== undefined) {
+					const memory = Memory.get();
+					(memory.creeps ?? (memory.creeps = {}))[name] = options.memory;
+				}
+
+				// Save intent
+				gameContext.intents.save(this, 'spawn', {
+					name,
+					body,
+					directions: options.directions,
+					energyStructures: options.energyStructures?.map(structure => structure.id),
+				});
+
+				// Fake creep
+				const creep = createCreep(body, this.pos, name, this[Structure.Owner]);
+				Game.creeps[name] = creep;
+				return C.OK;
+			});
+	}
+}
+
+//
+// Intent checks
+export function checkSpawnCreep(
+	spawn: StructureSpawn,
+	body: C.BodyPart[],
+	name: string,
+	directions?: Direction[],
+	energyStructures?: (StructureExtension | StructureSpawn)[],
+) {
+
+	// Check name is valid and does not already exist
+	if (typeof name !== 'string' || name === '') {
+		return C.ERR_INVALID_ARGS;
+
+	} else if (Game.creeps[name] !== undefined) {
+		return C.ERR_NAME_EXISTS;
+	}
+
+	// Check direction sanity
+	if (directions !== undefined) {
+		if (!Array.isArray(directions)) {
 			return C.ERR_INVALID_ARGS;
 		}
-		if (Game.creeps[name] !== undefined || gameContext.createdCreepNames.has(name)) {
-			return C.ERR_NAME_EXISTS;
-		}
-
-		// Check direction sanity
-		let { directions } = options;
-		if (directions !== undefined) {
-			if (!Array.isArray(directions)) {
-				return C.ERR_INVALID_ARGS;
-			}
-			// Convert to numbers, filter duplicates
-			directions = Array.from(new Set(directions.map(direction => +direction as Direction)));
-			// Bail if out of range
-			if (directions.length === 0 || directions.some(dir => dir < 1 || dir > 8 || !Number.isInteger(dir))) {
-				return C.ERR_INVALID_ARGS;
-			}
-		}
-
-		if (!this.my) {
-			return C.ERR_NOT_OWNER;
-		}
-
-		// TODO: spawning, RCL
-
-		if (!Array.isArray(body) || body.length === 0 || body.length > C.MAX_CREEP_SIZE) {
+		// Bail if out of range
+		if (directions.length === 0 || directions.some(dir => !Number.isInteger(dir) || dir < 1 || dir > 8)) {
 			return C.ERR_INVALID_ARGS;
 		}
-		if (!body.every(part => C.BODYPARTS_ALL.includes(part))) {
-			return C.ERR_INVALID_ARGS;
-		}
+	}
 
-		// TODO: energyStructures
+	if (!spawn.my) {
+		return C.ERR_NOT_OWNER;
+	} else if (spawn.spawning) {
+		return C.ERR_BUSY;
+	}
 
-		if (this.room.energyAvailable < calcCreepCost(body)) {
+	// TODO: RCL
+
+	if (!Array.isArray(body) || body.length === 0 || body.length > C.MAX_CREEP_SIZE) {
+		return C.ERR_INVALID_ARGS;
+
+	} else if (!body.every(part => C.BODYPARTS_ALL.includes(part))) {
+		return C.ERR_INVALID_ARGS;
+	}
+
+	// Check body cost
+	const creepCost = accumulate(body, part => C.BODYPART_COST[part]);
+	if (energyStructures) {
+		const totalEnergy = accumulate(new Set(energyStructures), structure => structure.energy);
+		if (totalEnergy < creepCost) {
 			return C.ERR_NOT_ENOUGH_ENERGY;
 		}
-		if (options.dryRun == true) {
-			return C.OK;
-		}
-
-		gameContext.createdCreepNames.add(name);
-
-		if (options.memory !== undefined) {
-			const memory = Memory.get();
-			(memory.creeps ?? (memory.creeps = {}))[name] = options.memory;
-		}
-
-		// TODO: fake creep object
-
-		gameContext.intents.save(this, 'spawn', { name, body, directions });
-		return C.OK;
+	} else if (spawn.room.energyAvailable < creepCost) {
+		return C.ERR_NOT_ENOUGH_ENERGY;
 	}
+
+	return C.OK;
+}
+
+//
+// Helpers
+const names = [
+	'Aaliyah', 'Aaron', 'Abigail', 'Adalyn', 'Adam', 'Addison', 'Adeline', 'Adrian', 'Aiden',
+	'Alaina', 'Alex', 'Alexander', 'Alexandra', 'Alexis', 'Alice', 'Allison', 'Alyssa', 'Amelia',
+	'Andrew', 'Anna', 'Annabelle', 'Anthony', 'Aria', 'Arianna', 'Asher', 'Aubrey', 'Audrey',
+	'Austin', 'Ava', 'Avery', 'Bailey', 'Bella', 'Benjamin', 'Bentley', 'Blake', 'Brayden', 'Brody',
+	'Brooklyn', 'Caden', 'Caleb', 'Callie', 'Camden', 'Cameron', 'Camilla', 'Caroline', 'Carson',
+	'Carter', 'Charlie', 'Charlotte', 'Chase', 'Chloe', 'Christian', 'Christopher', 'Claire', 'Cole',
+	'Colin', 'Colton', 'Connor', 'Cooper', 'Daniel', 'David', 'Declan', 'Dominic', 'Dylan', 'Elena',
+	'Eli', 'Eliana', 'Elijah', 'Elizabeth', 'Ella', 'Ellie', 'Elliot', 'Emily', 'Emma', 'Ethan',
+	'Eva', 'Evan', 'Evelyn', 'Gabriel', 'Gabriella', 'Gavin', 'Gianna', 'Grace', 'Grayson', 'Hailey',
+	'Hannah', 'Harper', 'Henry', 'Hudson', 'Hunter', 'Ian', 'Isaac', 'Isabella', 'Isabelle', 'Isaiah',
+	'Jack', 'Jackson', 'Jacob', 'Jake', 'James', 'Jasmine', 'Jason', 'Jayce', 'Jayden', 'Jeremiah',
+	'John', 'Jonathan', 'Jordan', 'Jordyn', 'Joseph', 'Joshua', 'Josiah', 'Julia', 'Julian',
+	'Juliana', 'Kaelyn', 'Kaitlyn', 'Katherine', 'Kayla', 'Kaylee', 'Keira', 'Kennedy', 'Kylie',
+	'Landon', 'Lauren', 'Layla', 'Leah', 'Leo', 'Levi', 'Liam', 'Lila', 'Liliana', 'Lillian', 'Lily',
+	'Lincoln', 'Logan', 'London', 'Lucas', 'Lucy', 'Luke', 'Mackenzie', 'Madelyn', 'Madison',
+	'Makayla', 'Maria', 'Mason', 'Mateo', 'Matthew', 'Max', 'Maya', 'Mia', 'Micah', 'Michael', 'Mila',
+	'Miles', 'Molly', 'Muhammad', 'Natalie', 'Nathan', 'Nathaniel', 'Nicholas', 'Noah', 'Nolan',
+	'Nora', 'Oliver', 'Olivia', 'Owen', 'Parker', 'Penelope', 'Peyton', 'Reagan', 'Riley', 'Ruby',
+	'Ryan', 'Sadie', 'Samantha', 'Samuel', 'Sarah', 'Savannah', 'Scarlett', 'Sebastian', 'Skyler',
+	'Sophia', 'Sophie', 'Stella', 'Sydney', 'Taylor', 'Thomas', 'Tristan', 'Tyler', 'Victoria',
+	'Violet', 'Vivian', 'William', 'Wyatt', 'Xavier', 'Zachary', 'Zoe',
+];
+
+function getUniqueName(exists: (name: string) => boolean) {
+	let ii = 0;
+	do {
+		let name = names[Math.floor(Math.random() * names.length)];
+		if (++ii > 4) {
+			name += names[Math.floor(Math.random() * names.length)];
+		}
+		if (!exists(name)) {
+			return name;
+		}
+	} while (true);
 }

@@ -9,8 +9,7 @@ export class ProcessorContext {
 		public room: Room,
 	) {}
 
-	intents(user: string, intentsById: Dictionary<Dictionary<object>>) {
-		gameContext.createdCreepNames = new Set;
+	processIntents(user: string, intentsById: Dictionary<Dictionary<object>>) {
 		gameContext.userId = user;
 
 		const roomIntents = intentsById[this.room.name];
@@ -26,7 +25,7 @@ export class ProcessorContext {
 		}
 	}
 
-	tick() {
+	processTick() {
 		Movement.dispatch(this.room);
 		for (const object of this.room[Objects]) {
 			object[Tick]?.call(object, this);

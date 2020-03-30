@@ -20,6 +20,7 @@ export type Intents = {
 };
 
 export function insertObject(room: Room, object: AnyRoomObject) {
+	object.room = room;
 	room[Objects].push(object);
 }
 
@@ -37,7 +38,7 @@ export default () => bindProcessor(Room, {
 			const params = intent.createConstructionSite;
 			const pos = new RoomPosition(params.xx, params.yy, this.name);
 			const site = createConstructionSite(pos, params.structureType, params.name, gameContext.userId);
-			this[Objects].push(site);
+			insertObject(this, site);
 			return true;
 		}
 		return false;

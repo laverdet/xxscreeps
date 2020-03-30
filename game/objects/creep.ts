@@ -9,7 +9,6 @@ import { chainIntentChecks, Owner, RoomObject } from './room-object';
 import { Source } from './source';
 import { StructureController } from './structures/controller';
 import { obstacleTypes } from '../path-finder';
-import { Objects } from '../room';
 import type { RoomObjectWithStore, Store } from '../store';
 export { Owner };
 
@@ -129,16 +128,13 @@ export function checkBuild(creep: Creep, target?: ConstructionSite) {
 				return C.ERR_NOT_IN_RANGE;
 			}
 
-			// You're not allowed to build if the structure that would be created would be an obstacle
+			// A friendly creep sitting on top of a construction site for an obstacle structure prevents
+			// `build`
 			const { room } = target;
 			if (obstacleTypes.has(target.structureType)) {
 				const creepFilter = room.controller?.safeMode === undefined ? () => true : (creep: Creep) => creep.my;
-				for (const object of room[Objects]) {
-					if (
-						target.pos.isEqualTo(object.pos) && (
-							(object instanceof Creep && creepFilter(creep)) ||
-							(obstacleTypes.has(object[Variant])))
-					) {
+				for (const creep of room.find(C.FIND_CREEPS)) {
+					if (target.pos.isEqualTo(creep) && creepFilter(creep)) {
 						return C.ERR_INVALID_TARGET;
 					}
 				}
