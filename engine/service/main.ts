@@ -5,17 +5,19 @@ import { AveragingTimer } from '~/lib/averaging-timer';
 import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
+import { Mutex } from '~/storage/mutex';
 import { Queue } from '~/storage/queue';
-import { RunnerMessage, ProcessorMessage, ProcessorQueueElement, MainMessage } from '.';
+import type { RunnerMessage, ProcessorMessage, ProcessorQueueElement, MainMessage } from '.';
 
 export default async function() {
-	// Open channels and connect to storage
+	// Open channels
 	const { config } = await configPromise;
 	const blobStorage = await BlobStorage.create();
 	const roomsQueue = await Queue.create<ProcessorQueueElement>('processRooms');
 	const usersQueue = await Queue.create('runnerUsers');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
+	const gameMutex = await Mutex.create('game');
 	Channel.publish<MainMessage>('main', { type: 'mainConnected' });
 
 	// Load current game state
@@ -31,9 +33,9 @@ export default async function() {
 		}
 		return user.active;
 	}), user => user.id) ];
-	try {
 
-		do {
+	do {
+		await gameMutex.scope(async() => {
 			performanceTimer.start();
 			const timeStartedLoop = Date.now();
 
@@ -100,15 +102,12 @@ export default async function() {
 			console.log(`Tick ${gameTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
 			++gameTime;
 			Channel.publish<MainMessage>('main', { type: 'tick', time: gameTime });
-			const delay = config.game?.tickSpeed ?? 250 - timeTaken;
-			if (delay > 0) {
-				await new Promise(resolve => setTimeout(resolve, delay));
-			}
-		} while (true);
+		});
 
-	} finally {
-		blobStorage.disconnect();
-		roomsQueue.disconnect();
-		processorChannel.disconnect();
-	}
+		// Add delay
+		const delay = config.game?.tickSpeed ?? 250 - Date.now();
+		if (delay > 0) {
+			await new Promise(resolve => setTimeout(resolve, delay));
+		}
+	} while (true);
 }
