@@ -1,6 +1,6 @@
-import { connect, create, ResponderClient, ResponderHost } from './responder';
+import { connect, create, Responder, ResponderClient, ResponderHost } from './responder';
 
-export abstract class Queue<Type> {
+export abstract class Queue<Type> extends Responder {
 	disconnect!: () => void;
 	abstract pop(): Promise<Type | undefined>;
 	abstract push(entries: Type[]): Promise<void>;
@@ -15,7 +15,9 @@ export abstract class Queue<Type> {
 		return Promise.resolve(create(name, QueueHost));
 	}
 
-	request(method: string, payload?: any): any {
+	request(method: 'pop', payload: { version: any }): Promise<Type | undefined>;
+	request(method: 'push', payload: { version: any; entries: Type[] }): Promise<void>;
+	request(method: string, payload?: any) {
 		if (payload.version !== this.currentVersion) {
 			return Promise.resolve();
 		}
@@ -60,11 +62,11 @@ const QueueHost = ResponderHost(class QueueHost extends Queue<any> {
 });
 
 const QueueClient = ResponderClient(class QueueClient extends Queue<any> {
-	pop(): Promise<any> {
+	pop() {
 		return this.request('pop', { version: this.currentVersion });
 	}
 
-	push(entries: any[]): Promise<void> {
+	push(entries: any[]) {
 		return this.request('push', { version: this.currentVersion, entries });
 	}
 

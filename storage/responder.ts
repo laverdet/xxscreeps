@@ -43,21 +43,16 @@ type UnknownMessage = { type: null };
 type ParentMessage = ResponseMessage | ConnectedMessage | ConnectionFailedMessage | UnknownMessage;
 type WorkerMessage = RequestMessage | ConnectMessage | DisconnectMessage | UnknownMessage;
 
-type HasResponder = {
-	request(method: string, payload?: any): Promise<any>;
-};
-
-type AbstractResponder = { disconnect(): void };
-type AbstractResponderHost = HasResponder & { _refs: number };
-type AbstractResponderClient = HasResponder & { _clientId: string; _requests: Map<number, Resolver> };
+type AbstractResponderHost = Responder & { _refs: number };
+type AbstractResponderClient = Responder & { _clientId: string; _requests: Map<number, Resolver> };
 
 // Used in host isolate
-const responderHostsByClientId = new Map<string, HasResponder>();
+const responderHostsByClientId = new Map<string, Responder>();
 const responderHostsByName = new Map<string, AbstractResponderHost>();
 
 // User in client isolate
 let didInitializeWorker = false;
-const responderClientsById = new Map<string, HasResponder>();
+const responderClientsById = new Map<string, Responder>();
 const unlistenByClientId = new Map<string, () => void>();
 
 // Connect to an existing responder
@@ -224,8 +219,13 @@ export function initializeWorker(worker: Worker) {
 	});
 }
 
-export const ResponderHost = <Type extends HasResponder, Args>(baseClass: new(...args: Args[]) => Type):
-new(...args: Args[]) => Type & AbstractResponder & AbstractResponderHost =>
+export abstract class Responder {
+	disconnect() {}
+	abstract request(method: string, payload?: any): Promise<any>;
+}
+
+export const ResponderHost = <Type extends Responder, Args>(baseClass: new(...args: Args[]) => Type):
+new(...args: Args[]) => Type & Responder & AbstractResponderHost =>
 	class extends (baseClass as any) {
 		_refs = 1;
 
@@ -238,11 +238,12 @@ new(...args: Args[]) => Type & AbstractResponder & AbstractResponderHost =>
 			if (--this._refs === 0) {
 				responderHostsByName.delete(this._name);
 			}
+			super.disconnect();
 		}
 	} as any;
 
 export const ResponderClient = <Type, Args>(baseClass: new(...args: Args[]) => Type):
-new(...args: Args[]) => Type & AbstractResponder & AbstractResponderClient =>
+new(...args: Args[]) => Type & Responder & AbstractResponderClient =>
 	class extends (baseClass as any) {
 		private _requestId = 0;
 		readonly _clientId = `${Math.floor(Math.random() * 2 ** 52)}`;

@@ -1,6 +1,6 @@
 import { makeResolver } from '~/lib/utility';
 import { Channel } from '~/storage/channel';
-import { connect, create, ResponderClient, ResponderHost } from '~/storage/responder';
+import { connect, create, Responder, ResponderClient, ResponderHost } from '~/storage/responder';
 
 type Message = 'waiting' | 'unlocked';
 
@@ -126,7 +126,7 @@ export class Mutex {
 	}
 }
 
-abstract class Lock {
+abstract class Lock extends Responder {
 	abstract lock(): Promise<boolean>;
 	abstract unlock(): Promise<void>;
 
@@ -138,7 +138,9 @@ abstract class Lock {
 		return Promise.resolve(create(name, LockHost));
 	}
 
-	request(method: string): any {
+	request(method: 'lock'): Promise<boolean>;
+	request(method: 'unlock'): Promise<void>;
+	request(method: string) {
 		if (method === 'lock') {
 			return this.lock();
 		} else if (method === 'unlock') {
@@ -166,11 +168,11 @@ const LockHost = ResponderHost(class LockHost extends Lock {
 });
 
 const LockClient = ResponderClient(class LockClient extends Lock {
-	lock(): Promise<boolean> {
+	lock() {
 		return this.request('lock');
 	}
 
-	unlock(): Promise<void> {
+	unlock() {
 		return this.request('unlock');
 	}
 });

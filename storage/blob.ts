@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import * as Path from 'path';
 import { mapInPlace } from '~/lib/utility';
 import Config from '~/engine/config';
-import { create, connect, ResponderClient, ResponderHost } from './responder';
+import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
 
 const fragmentNameWhitelist = /^[a-zA-Z0-9/-]+$/;
 
@@ -12,7 +12,7 @@ function copy(buffer: Readonly<Uint8Array>) {
 	return copy;
 }
 
-export abstract class BlobStorage {
+export abstract class BlobStorage extends Responder {
 	abstract delete(fragment: string): Promise<void>;
 	abstract load(fragment: string): Promise<Readonly<Uint8Array>>;
 	abstract save(fragment: string, blob: Uint8Array): Promise<void>;
@@ -29,7 +29,10 @@ export abstract class BlobStorage {
 		return create('blobStorage', BlobStorageHost, path);
 	}
 
-	request(method: string, payload?: any): any {
+	request(method: 'delete', fragment: string): Promise<void>;
+	request(method: 'load', fragment: string): Promise<Readonly<Uint8Array>>;
+	request(method: 'save', payload: { fragment: string; blob: Uint8Array }): Promise<void>;
+	request(method: string, payload?: any) {
 		if (method === 'delete') {
 			return this.delete(payload);
 		} else if (method === 'load') {
@@ -46,16 +49,14 @@ const BlobStorageHost = ResponderHost(class BlobStorageHost extends BlobStorage 
 	private bufferedBlobs = new Map<string, Readonly<Uint8Array>>();
 	private bufferedDeletes = new Set<string>();
 	private readonly knownPaths = new Set<string>();
+	private readonly processUnlistener = (() => {
+		const listener = () => this.checkMissingFlush();
+		process.on('exit', listener);
+		return () => process.removeListener('exit', listener);
+	})();
 
 	constructor(private readonly path: string) {
 		super();
-	}
-
-	private check(fragment: string) {
-		// Safety check before writing random file names based on user input
-		if (!fragmentNameWhitelist.test(fragment)) {
-			throw new Error(`Unsafe blob id: ${fragment}`);
-		}
 	}
 
 	async flush() {
@@ -122,6 +123,10 @@ const BlobStorageHost = ResponderHost(class BlobStorageHost extends BlobStorage 
 		return Promise.resolve();
 	}
 
+	disconnect() {
+		this.processUnlistener();
+	}
+
 	async load(fragment: string): Promise<Readonly<Uint8Array>> {
 		this.check(fragment);
 		// Check in-memory buffer
@@ -149,14 +154,28 @@ const BlobStorageHost = ResponderHost(class BlobStorageHost extends BlobStorage 
 		this.bufferedBlobs.set(fragment, blob.buffer instanceof SharedArrayBuffer ? blob : copy(blob));
 		return Promise.resolve();
 	}
+
+	private check(fragment: string) {
+		// Safety check before writing random file names based on user input
+		if (!fragmentNameWhitelist.test(fragment)) {
+			throw new Error(`Unsafe blob id: ${fragment}`);
+		}
+	}
+
+	private checkMissingFlush() {
+		const size = this.bufferedBlobs.size + this.bufferedDeletes.size;
+		if (size !== 0) {
+			console.warn(`Blob storage shut down with ${size} pending write(s)`);
+		}
+	}
 });
 
 const BlobStorageClient = ResponderClient(class BlobStorageClient extends BlobStorage {
-	delete(fragment: string): Promise<void> {
+	delete(fragment: string) {
 		return this.request('delete', fragment);
 	}
 
-	load(fragment: string): Promise<Readonly<Uint8Array>> {
+	load(fragment: string) {
 		return this.request('load', fragment);
 	}
 
