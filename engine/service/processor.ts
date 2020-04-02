@@ -15,9 +15,6 @@ export default async function() {
 	// For example Creep.prototype[Process] = () => ...
 	bindAllProcessorIntents();
 
-	// Initialize binary room schema
-	const writeBuffer = new Uint8Array(1024 * 1024);
-
 	// Keep track of rooms this thread ran. Global room processing must also happen here.
 	const processedRooms = new Map<string, ProcessorContext>();
 
@@ -73,9 +70,7 @@ export default async function() {
 				// processing has run
 				const nextGameTime = gameTime + 1;
 				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) => {
-					const length = writeRoom(context.room, writeBuffer);
-					return blobStorage.save(
-						`ticks/${nextGameTime}/${roomName}`, writeBuffer.subarray(0, length));
+					return blobStorage.save(`ticks/${nextGameTime}/${roomName}`, writeRoom(context.room));
 				}));
 				processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
 				processedRooms.clear();

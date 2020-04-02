@@ -18,13 +18,13 @@ export type StructFormat = {
 	[key: string]: Format;
 };
 
-export type Shape<Format> =
+export type FormatShape<Format> =
 	Format extends WithShape<infer Type> ? Type :
 	Format extends Integral ? number :
 	Format extends 'bool' ? boolean :
 	Format extends 'string' ? string :
 	Format extends StructFormat ? {
-		[Key in Exclude<keyof Format, symbol>]: Shape<Format[Key]>;
+		[Key in Exclude<keyof Format, symbol>]: FormatShape<Format[Key]>;
 	} :
 	never;
 
@@ -33,8 +33,18 @@ export function withType<Type>(format: Format): WithShape<Type> {
 	return format as any;
 }
 
+// Recursively unpacks holder formats created by bindInterceptor
+export function unpackHolderFormat(format: Format) {
+	let unpacked: any = format;
+	while (unpacked[0] === 'holder') {
+		// eslint-disable-next-line prefer-destructuring
+		unpacked = unpacked[1];
+	}
+	return unpacked;
+}
+
 // Constructors for type formats
-export function makeArray<Type extends Format>(length: number, format: Type): WithShape<Shape<Type>[]> {
+export function makeArray<Type extends Format>(length: number, format: Type): WithShape<FormatShape<Type>[]> {
 	return [ 'array', length, format ] as any;
 }
 
@@ -42,15 +52,15 @@ export function makeEnum<Type extends (undefined | string)[]>(...values: Type): 
 	return [ 'enum', values ] as any;
 }
 
-export function makeOptional<Type extends Format>(format: Type): WithShape<Shape<Type> | undefined> {
+export function makeOptional<Type extends Format>(format: Type): WithShape<FormatShape<Type> | undefined> {
 	return [ 'optional', format ] as any;
 }
 
-export function makeVariant<Type extends Format[]>(...format: Type): WithShape<Shape<Type[number]>> {
+export function makeVariant<Type extends Format[]>(...format: Type): WithShape<FormatShape<Type[number]>> {
 	return [ 'variant', format ] as any;
 }
 
-export function makeVector<Type extends Format>(format: Type): WithShape<Shape<Type>[]> {
+export function makeVector<Type extends Format>(format: Type): WithShape<FormatShape<Type>[]> {
 	return [ 'vector', format ] as any;
 }
 
@@ -72,16 +82,16 @@ const getBoundLayout = RecursiveWeakMemoize([ 0 ], (format: any): Layout => {
 						enum: format[1],
 					};
 
+				// Holder for another type so bindInterceptor can reference it
+				case 'holder':
+					return {
+						holder: getLayout(format[1]),
+					};
+
 				// Optionals
 				case 'optional':
 					return {
 						optional: getLayout(format[1]),
-					};
-
-				// Primitive used to create an object so bindInterceptor can reference it
-				case 'primitive':
-					return {
-						primitive: format[1],
 					};
 
 				// Variant
@@ -132,7 +142,7 @@ const getBoundLayout = RecursiveWeakMemoize([ 0 ], (format: any): Layout => {
 			const layout: StructLayout = { struct: {} };
 			let offset = 0;
 			if (format[Inherit] !== undefined) {
-				const baseLayout = getLayout(format[Inherit]!) as StructLayout;
+				const baseLayout = getLayout(unpackHolderFormat(format[Inherit]!)) as StructLayout;
 				layout.inherit = baseLayout;
 				offset = getTraits(baseLayout).size;
 			}

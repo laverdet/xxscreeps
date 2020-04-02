@@ -1,6 +1,6 @@
 import type { BufferObject } from './buffer-object';
 import { BufferView } from './buffer-view';
-import { getLayout, Format, Shape, Variant } from './format';
+import { getLayout, Format, FormatShape, Variant } from './format';
 import { defaultInterceptorLookup, InterceptorLookup, MemberInterceptor } from './interceptor';
 import { kPointerSize, getTraits, Layout, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
@@ -127,6 +127,10 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 			const { enum: values } = layout;
 			return (view, offset) => values[view.uint8[offset]];
 
+		} else if ('holder' in layout) {
+			// Pass through to underlying type
+			return getTypeReader(layout.holder, lookup);
+
 		} else if ('optional' in layout) {
 			// Optional types
 			const elementLayout = layout.optional;
@@ -153,10 +157,6 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 					}
 				};
 			}
-
-		} else if ('primitive' in layout) {
-			// Pass through to underlying primitive
-			return getTypeReader(layout.primitive, lookup);
 
 		} else if ('variant' in layout) {
 			// Variant types
@@ -242,7 +242,7 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 export function getReader<Type extends Format>(format: Type, lookup = defaultInterceptorLookup) {
 	const layout = getLayout(format);
 	const read = getTypeReader(layout, lookup);
-	return (buffer: Readonly<Uint8Array>): Shape<Type> => {
+	return (buffer: Readonly<Uint8Array>): FormatShape<Type> => {
 		const view = BufferView.fromTypedArray(buffer);
 		return read(view, 0);
 	};

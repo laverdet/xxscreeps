@@ -28,11 +28,11 @@ function archiveLayoutImpl(renderer: Renderer, layout: Layout, depth = 1): strin
 			layout.enum.map(value => value === undefined ? 'undefined' : JSON.stringify(value)).join(', ') +
 		' ] }';
 
+	} else if ('holder' in layout) {
+		return archiveLayoutImpl(renderer, layout.holder, depth);
+
 	} else if ('optional' in layout) {
 		return `{ optional: ${archiveNamedLayout(renderer, layout.optional, depth + 1)} }`;
-
-	} else if ('primitive' in layout) {
-		return `{ primitive: ${archiveLayoutImpl(renderer, layout.primitive, depth)} }`;
 
 	} else if ('variant' in layout) {
 		return '{ variant: [ ' +

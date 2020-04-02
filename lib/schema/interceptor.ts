@@ -1,12 +1,12 @@
 import type { BufferView } from './buffer-view';
-import { getLayout, Format, Shape, StructFormat, WithShape } from './format';
+import { getLayout, unpackHolderFormat, Format, FormatShape, StructFormat, WithShape } from './format';
 import type { Layout, StructLayout } from './layout';
 import { injectGetters } from './overlay';
 
 // Interceptor types
 type CompositionInterceptor<Layout = any, Type = any> = {
-	compose: (value: Layout) => Type;
-	decompose: (value: Type) => Layout;
+	compose: (value: Layout) => any;
+	decompose: (value: Type) => Layout extends any[] ? Layout | Iterable<Layout[number]> : Layout;
 };
 
 type RawCompositionInterceptor<Type = any> = {
@@ -73,10 +73,10 @@ type MemberSymbolLookupValue<Type, Symbol> = Symbol extends keyof Type ? Type[Sy
 	{ [Key in keyof Type]: Type[Key] extends { symbol: Symbol } ? Type[Key] : never }[keyof Type];
 
 // Create Shape information from Format and Interceptors
-type ShapeForKey<Format extends StructFormat, Key> = Shape<Key extends keyof Format ? Format[Key] : never>;
+type ShapeForKey<Format extends StructFormat, Key> = FormatShape<Key extends keyof Format ? Format[Key] : never>;
 
 type InterceptorResolvedMembersShape<Format extends StructFormat, Interceptors extends MembersInterceptor['members']> =
-	Omit<Shape<Format>, keyof Interceptors> & {
+	Omit<FormatShape<Format>, keyof Interceptors> & {
 		[Key in MemberSymbolKeys<Interceptors>]: CompositionType<MemberSymbolLookupValue<Interceptors, Key>> extends never ?
 			ShapeForKey<Format, MemberSymbolLookupKey<Interceptors, Key>> :
 			CompositionType<MemberSymbolLookupValue<Interceptors, Key>>;
@@ -90,13 +90,13 @@ type InterceptorResolvedShape<Format extends StructFormat, Interceptors> =
 // compose / decompose or composeFromBuffer / decomposeIntoBuffer
 export function bindInterceptors<Type extends Format, Result>(
 	format: Type,
-	interceptor: CompositionInterceptor<Shape<Type>, Result> | RawCompositionInterceptor<Result>,
+	interceptor: CompositionInterceptor<FormatShape<Type>, Result> | RawCompositionInterceptor<Result>,
 ): WithShape<Result>;
 
 export function bindInterceptors<Type extends Format, Result>(
 	name: string,
 	format: Type,
-	interceptor: CompositionInterceptor<Shape<Type>, Result> | RawCompositionInterceptor<Result>,
+	interceptor: CompositionInterceptor<FormatShape<Type>, Result> | RawCompositionInterceptor<Result>,
 ): WithShape<Result>;
 
 // Overlay or member interceptor
@@ -108,7 +108,7 @@ export function bindInterceptors<Type extends StructFormat, InterceptorFormat ex
 	name: string, format: Type, interceptor: InterceptorFormat,
 ): WithShape<InterceptorResolvedShape<Type, InterceptorFormat>>;
 
-export function bindInterceptors(...args: any[]) {
+export function bindInterceptors(...args: any[]): any {
 	const { name, format, interceptor } = function() {
 		if (args.length === 2) {
 			return { format: args[0] as Format, interceptor: args[1] as Interceptor };
@@ -118,13 +118,14 @@ export function bindInterceptors(...args: any[]) {
 	}();
 	if (typeof format === 'string') {
 		// Create a placeholder object for this format to distinguish it from others of the same type
-		return bindInterceptors(name!, [ 'primitive', format ] as any, interceptor);
+		return bindInterceptors(name!, [ 'holder', format ] as any, interceptor);
 	}
 
 	// Combine interceptors with existing interceptors
 	const withBound = format as WithBoundInterceptor;
 	const bound = withBound[BoundInterceptor];
-	withBound[BoundInterceptor] = {
+	const result = (bound ? [ 'holder', format ] : format) as WithBoundInterceptor;
+	result[BoundInterceptor] = {
 		name: name ?? bound?.name,
 		interceptor: {
 			...bound?.interceptor,
@@ -139,15 +140,15 @@ export function bindInterceptors(...args: any[]) {
 	// Inject getters
 	const { overlay } = interceptor as Partial<OverlayInterceptor>;
 	if (overlay) {
-		const layout = getLayout(format) as StructLayout;
+		const layout = getLayout(unpackHolderFormat(format)) as StructLayout;
 		injectGetters(layout, overlay.prototype, defaultInterceptorLookup);
 	}
 
-	return format;
+	return result;
 }
 
 // Just makes the archived output nicer
-export function bindName<Type extends Exclude<Format, string>>(name: string, format: Type): WithShape<Shape<Type>> {
+export function bindName<Type extends Exclude<Format, string>>(name: string, format: Type): WithShape<FormatShape<Type>> {
 	(format as WithBoundInterceptor)[BoundInterceptor] = { name };
 	return format as any;
 }
@@ -156,5 +157,5 @@ export function bindName<Type extends Exclude<Format, string>>(name: string, for
 export function withOverlay<Format extends WithShape>() {
 	return <Type extends { prototype: object }>(classDeclaration: Type) =>
 		classDeclaration as any as new (view: BufferView, offset: number) =>
-			Type['prototype'] & Format[typeof Shape];
+			Type['prototype'] & FormatShape<Format>;
 }

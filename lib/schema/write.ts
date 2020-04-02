@@ -1,8 +1,8 @@
 import { BufferView } from './buffer-view';
-import { getLayout, Format, Shape, Variant } from './format';
+import { getLayout, Format, FormatShape, Variant } from './format';
 import { defaultInterceptorLookup, InterceptorLookup } from './interceptor';
-import { kPointerSize, alignTo, getTraits, Layout, StructLayout } from './layout';
-import { RecursiveWeakMemoize } from '~/lib/memoize';
+import { kPointerSize, alignTo, getTraits, unpackHolder, Layout, StructLayout } from './layout';
+import { runOnce, RecursiveWeakMemoize } from '~/lib/memoize';
 
 type Writer<Type = any> = (value: Type, view: BufferView, offset: number) => number;
 type MemberWriter = (value: any, view: BufferView, offset: number, locals: number) => number;
@@ -135,6 +135,10 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 			const enumMap = new Map(layout.enum.map((value, ii) => [ value, ii ]));
 			return (value, view, offset) => ((view.uint8[offset] = enumMap.get(value)!, 1));
 
+		} else if ('holder' in layout) {
+			// Pass through to underlying reference
+			return getTypeWriter(layout.holder, lookup);
+
 		} else if ('optional' in layout) {
 			// Optional types
 			const elementLayout = layout.optional;
@@ -169,15 +173,11 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 				};
 			}
 
-		} else if ('primitive' in layout) {
-			// Pass through to underlying primitive
-			return getTypeWriter(layout.primitive, lookup);
-
 		} else if ('variant' in layout) {
 			// Variant types
 			const variantMap = new Map<string, Writer>();
 			for (let ii = 0; ii < layout.variant.length; ++ii) {
-				const elementLayout = layout.variant[ii];
+				const elementLayout = unpackHolder(layout.variant[ii]);
 				const write = getTypeWriter(elementLayout, lookup);
 				variantMap.set(
 					elementLayout['variant!']!,
@@ -246,11 +246,19 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 	return write;
 });
 
-export function getWriter<Type extends Format>(format: Format, lookup = defaultInterceptorLookup) {
+const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 * 1024 * 2)));
+
+export function getWriter<Type extends Format>(format: Type, lookup = defaultInterceptorLookup) {
 	const layout = getLayout(format);
 	const write = getTypeWriter(layout, lookup);
-	return (value: Shape<Type>, buffer: Uint8Array) => {
-		const view = BufferView.fromTypedArray(buffer);
-		return write(value, view, 0);
+	return (value: FormatShape<Type>): Readonly<Uint8Array> => {
+		const view = bufferCache();
+		const length = write(value, view, 0);
+		if (length > view.int8.length) {
+			throw new Error('Exceeded memory write buffer');
+		}
+		const copy = new Uint8Array(new SharedArrayBuffer(length));
+		copy.set(view.uint8.subarray(0, length));
+		return copy;
 	};
 }

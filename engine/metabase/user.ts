@@ -1,4 +1,4 @@
-import { bindInterceptors, makeVector, withType, Shape } from '~/lib/schema';
+import { bindInterceptors, makeVector, withType, FormatShape } from '~/lib/schema';
 import * as Id from '~/engine/util/id';
 
 export const format = bindInterceptors('User', {
@@ -20,4 +20,4 @@ export const format = bindInterceptors('User', {
 	},
 });
 
-export type User = Shape<typeof format>;
+export type User = FormatShape<typeof format>;

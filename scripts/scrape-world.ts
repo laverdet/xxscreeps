@@ -35,11 +35,6 @@ topLevelTask(async() => {
 	const blobStorage = await BlobStorage.create();
 	const buffer = new Uint8Array(1024 * 1024 * 32);
 
-	// Save helper
-	function save(blob: string, length: number) {
-		return blobStorage.save(blob, buffer.subarray(0, length));
-	}
-
 	// Collect initial room data
 	const roomsByUser: Dictionary<Set<string>> = {};
 	const rooms = new Map(collections.rooms.map(room => ({
@@ -106,9 +101,9 @@ topLevelTask(async() => {
 	});
 
 	// Save rooms
-	const writeRoom = getWriter(RoomSchema.format);
+	const writeRoom = getWriter(RoomSchema.shape);
 	for (const [ roomName, room ] of rooms) {
-		await save(`ticks/${gameTime}/${roomName}`, writeRoom(room as Room.Room, buffer));
+		await blobStorage.save(`ticks/${gameTime}/${roomName}`, writeRoom(room));
 	}
 
 	// Read room data from rooms.terrain collection
@@ -124,7 +119,7 @@ topLevelTask(async() => {
 
 	// Make writer and save terrain
 	const writeWorld = getWriter(MapSchema.format);
-	await save('terrain', writeWorld(roomsTerrain, buffer));
+	await blobStorage.save('terrain', writeWorld(roomsTerrain));
 
 	// Collect users
 	const users = new Map(collections.users.map(user => [
@@ -149,17 +144,17 @@ topLevelTask(async() => {
 		activeRooms: new Set([ ...rooms.values() ].map(room => room.name)),
 		users,
 	};
-	await save('game', writeGame(game, buffer));
+	await blobStorage.save('game', writeGame(game));
 
 	// Collect user code
 	const writeCode = getWriter(CodeSchema.format);
 	for (const row of collections['users.code']) {
-		const modules: any[] = [];
+		const modules = new Map<string, string>();
 		for (const [ key, data ] of Object.entries(row.modules)) {
 			const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
-			modules.push({ name, data });
+			modules.set(name, data as string);
 		}
-		await save(`code/${row.user}`, writeCode({ modules }, buffer));
+		await blobStorage.save(`code/${row.user}`, writeCode(modules));
 	}
 
 	// Flush everything to disk

@@ -23,12 +23,12 @@ type EnumLayout = {
 	enum: any[];
 };
 
-type OptionalLayout = {
-	optional: Layout;
+type HolderLayout = {
+	holder: Layout;
 };
 
-type PrimitiveLayout = {
-	primitive: Primitive;
+type OptionalLayout = {
+	optional: Layout;
 };
 
 type VariantLayout = {
@@ -40,7 +40,7 @@ type VectorLayout = {
 };
 
 export type Layout = Primitive | WithBoundInterceptor & (
-	ArrayLayout | EnumLayout | OptionalLayout | PrimitiveLayout | StructLayout | VariantLayout | VectorLayout
+	ArrayLayout | EnumLayout | HolderLayout | OptionalLayout | StructLayout | VariantLayout | VectorLayout
 );
 
 export type Traits = {
@@ -48,25 +48,6 @@ export type Traits = {
 	size: number;
 	stride?: number;
 };
-
-// Convert a memory layout declaration to the corresponding data type
-/*type ArrayShape<Type extends ArrayLayout> = Shape<Type['array']>[];
-type EnumShape<Type extends EnumLayout> = Type['enum'][number];
-// Somehow this one creates a circular type but none of the others do.
-// type VariantShape<Type extends VariantLayout> = Shape<Type['variant'][number]>;
-type VectorShape<Type extends VectorLayout> = Shape<Type['vector']>[];
-type StructShape<Type extends StructLayout> = {
-	[Key in keyof Type['struct']]: Shape<Type['struct'][Key]['layout']>;
-};
-export type Shape<Type extends Layout> =
-	Type extends Integral ? number :
-	Type extends 'bool' ? boolean :
-	Type extends 'string' ? string :
-	Type extends ArrayLayout ? ArrayShape<Type> :
-	Type extends EnumLayout ? EnumShape<Type> :
-	Type extends VariantLayout ? any :
-	Type extends VectorLayout ? VectorShape<Type> :
-	Type extends StructLayout ? StructShape<Type> : never;*/
 
 export const kPointerSize = 4;
 
@@ -116,6 +97,10 @@ export function getTraits(layout: Layout): Traits {
 		// Enum is just a byte
 		return { align: 1, size: 1, stride: 1 };
 
+	} else if ('holder' in layout) {
+		// Pass through to underlying primitive
+		return getTraits(layout.holder);
+
 	} else if ('optional' in layout) {
 		// Optional puts a flag at the beginning or end of a layout. End is better but can only be use
 		// for constant size elements.
@@ -132,10 +117,6 @@ export function getTraits(layout: Layout): Traits {
 				stride: alignTo(size + 1, align),
 			};
 		}
-
-	} else if ('primitive' in layout) {
-		// Pass through to underlying primitive
-		return getTraits(layout.primitive);
 
 	} else if ('variant' in layout || 'vector' in layout) {
 		// Variant & vector just store a uint32 in static memory, the rest is dynamic
@@ -170,4 +151,13 @@ export function getTraits(layout: Layout): Traits {
 		}
 		return traits;
 	}
+}
+
+// Recursively unpacks holder layout created by bindInterceptor
+export function unpackHolder(layout: Layout) {
+	let unpacked: any = layout;
+	while (unpacked.holder !== undefined) {
+		unpacked = unpacked.holder;
+	}
+	return unpacked;
 }

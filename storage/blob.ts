@@ -15,7 +15,7 @@ function copy(buffer: Readonly<Uint8Array>) {
 export abstract class BlobStorage extends Responder {
 	abstract delete(fragment: string): Promise<void>;
 	abstract load(fragment: string): Promise<Readonly<Uint8Array>>;
-	abstract save(fragment: string, blob: Uint8Array): Promise<void>;
+	abstract save(fragment: string, blob: Readonly<Uint8Array>): Promise<void>;
 
 	static connect() {
 		return connect('blobStorage', BlobStorageClient, BlobStorageHost);
@@ -149,7 +149,7 @@ const BlobStorageHost = ResponderHost(class BlobStorageHost extends BlobStorage 
 		}
 	}
 
-	save(fragment: string, blob: Uint8Array) {
+	save(fragment: string, blob: Readonly<Uint8Array>) {
 		this.check(fragment);
 		this.bufferedBlobs.set(fragment, blob.buffer instanceof SharedArrayBuffer ? blob : copy(blob));
 		return Promise.resolve();
@@ -179,7 +179,7 @@ const BlobStorageClient = ResponderClient(class BlobStorageClient extends BlobSt
 		return this.request('load', fragment);
 	}
 
-	save(fragment: string, blob: Uint8Array) {
+	save(fragment: string, blob: Readonly<Uint8Array>) {
 		return this.request('save', { fragment, blob: copy(blob) });
 	}
 });
