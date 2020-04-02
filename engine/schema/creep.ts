@@ -1,40 +1,30 @@
-import { checkCast, makeEnum, makeVector, withType, Format, Inherit, Interceptor, Variant } from '~/lib/schema';
+import { bindInterceptors, makeEnum, makeVector, withSymbol, Inherit, Variant } from '~/lib/schema';
 import * as Id from '~/engine/util/id';
 import * as C from '~/game/constants';
-import { AgeTime, Creep } from '~/game/objects/creep';
-import { Owner } from '~/game/objects/room-object';
+import { AgeTime, Creep, Owner } from '~/game/objects/creep';
 import * as RoomObject from './room-object';
 import * as Store from './store';
 
-export { Creep };
-
-export const bodyFormat = makeVector({
-	boost: Store.resourceEnumFormat,
-	hits: 'uint8',
-	type: makeEnum(...C.BODYPARTS_ALL),
-});
-
-export const format = withType<Creep>(checkCast<Format>()({
+export const shape = bindInterceptors('Creep', {
 	[Inherit]: RoomObject.format,
 	[Variant]: 'creep',
 	ageTime: 'int32',
-	body: bodyFormat,
+	body: makeVector({
+		boost: Store.resourceEnumFormat,
+		hits: 'uint8',
+		type: makeEnum(...C.BODYPARTS_ALL),
+	}),
 	fatigue: 'int16',
 	hits: 'int16',
 	name: 'string',
 	owner: Id.format,
 	// saying: ...
 	store: Store.format,
-}));
+}, {
+	members: {
+		ageTime: withSymbol(AgeTime),
+		owner: withSymbol(Owner),
+	},
+});
 
-export const interceptors = {
-	Creep: checkCast<Interceptor>()({
-		overlay: Creep,
-		members: {
-			ageTime: { symbol: AgeTime },
-			owner: { symbol: Owner, ...Id.interceptors },
-		},
-	}),
-};
-
-export const schemaFormat = { Creep: format };
+export const format = bindInterceptors(shape, { overlay: Creep });

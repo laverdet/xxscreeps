@@ -1,10 +1,8 @@
-import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/lib/schema';
+import { bindInterceptors, withSymbol, Inherit, Variant } from '~/lib/schema';
 import { DowngradeTime, Progress, StructureController, UpgradeBlockedTime } from '~/game/objects/structures/controller';
 import * as Structure from './structure';
 
-export { StructureController };
-
-export const format = withType<StructureController>(checkCast<Format>()({
+export const shape = bindInterceptors('Controller', {
 	[Inherit]: Structure.format,
 	[Variant]: 'controller',
 
@@ -18,17 +16,12 @@ export const format = withType<StructureController>(checkCast<Format>()({
 	safeModeCooldown: 'int32',
 	// sign: { username, text, time, datetime }
 	upgradeBlockedTime: 'int32',
-}));
+}, {
+	members: {
+		downgradeTime: withSymbol(DowngradeTime),
+		progress: withSymbol(Progress),
+		upgradeBlockedTime: withSymbol(UpgradeBlockedTime),
+	},
+});
 
-export const interceptors = {
-	StructureController: checkCast<Interceptor>()({
-		overlay: StructureController,
-		members: {
-			downgradeTime: { symbol: DowngradeTime },
-			progress: { symbol: Progress },
-			upgradeBlockedTime: { symbol: UpgradeBlockedTime },
-		},
-	}),
-};
-
-export const schemaFormat = { StructureController: format };
+export const format = bindInterceptors(shape, { overlay: StructureController });

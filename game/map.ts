@@ -1,7 +1,6 @@
 import * as TerrainSchema from '~/game/terrain';
 import { RoomPosition } from '~/game/position';
-import { getReader, getSchema, makeVector, withType, FormatShape } from '~/lib/schema';
-import { bindInterceptorsToSchema } from '~/lib/schema/interceptor';
+import { bindInterceptors, getReader, makeVector } from '~/lib/schema';
 import { mapInPlace } from '~/lib/utility';
 import type { BlobStorage } from '~/storage/blob';
 
@@ -43,22 +42,14 @@ export function loadTerrainFromWorld(loadedWorld: World) {
 
 //
 // Schema
-export const schema = getSchema({
-	Terrain: TerrainSchema.format,
-	World: withType<World>(makeVector(TerrainSchema.format)),
-});
-
-export const interceptorSchema = bindInterceptorsToSchema(schema, {
-	Terrain: TerrainSchema.interceptors,
-	World: {
-		compose: (world: FormatShape<typeof TerrainSchema.format>[]) =>
-			new Map(world.map(room => [ room.name, room.terrain ])),
-		decompose: (world: World) => {
-			const vector = [ ...mapInPlace(world.entries(), ([ name, terrain ]) => ({ name, terrain })) ];
-			vector.sort((left, right) => left.name.localeCompare(right.name));
-			return vector;
-		},
+export const format = bindInterceptors('World', makeVector(TerrainSchema.format), {
+	compose: world =>
+		new Map<string, TerrainSchema.Terrain>(world.map(room => [ room.name, room.terrain ])),
+	decompose: (world: World) => {
+		const vector = [ ...mapInPlace(world.entries(), ([ name, terrain ]) => ({ name, terrain })) ];
+		vector.sort((left, right) => left.name.localeCompare(right.name));
+		return vector;
 	},
 });
 
-export const readWorld = getReader(schema.World, interceptorSchema);
+export const readWorld = getReader(format);

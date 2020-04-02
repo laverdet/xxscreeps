@@ -1,6 +1,5 @@
 import configPromise from '~/engine/config';
-import * as DatabaseSchema from '~/engine/metabase';
-import { getReader } from '~/lib/schema';
+import { readGame } from '~/engine/metabase/game';
 import { AveragingTimer } from '~/lib/averaging-timer';
 import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
@@ -21,8 +20,7 @@ export default async function() {
 	Channel.publish<MainMessage>('main', { type: 'mainConnected' });
 
 	// Load current game state
-	const gameReader = getReader(DatabaseSchema.schema.Game, DatabaseSchema.interceptorSchema);
-	const gameMetadata = gameReader(await blobStorage.load('game'));
+	const gameMetadata = readGame(await blobStorage.load('game'));
 
 	// Run main game processing loop
 	let gameTime = 1;

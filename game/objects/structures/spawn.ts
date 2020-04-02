@@ -1,13 +1,13 @@
-import * as Structure from '.';
+import { Owner, Structure } from '.';
 import * as C from '~/game/constants';
 import * as Memory from '~/game/memory';
 import { gameContext } from '~/game/context';
+import type { shape } from '~/engine/schema/extension';
+import { withOverlay } from '~/lib/schema';
 import { accumulate } from '~/lib/utility';
-import { FormatShape, Variant } from '~/lib/schema';
 
 import { Direction } from '~/game/position';
 import * as Store from '~/game/store';
-import type { spawningFormat } from '~/engine/schema/spawn';
 import { create as createCreep } from '~/engine/processor/intents/creep';
 import { StructureExtension } from './extension';
 import { chainIntentChecks } from '../room-object';
@@ -19,15 +19,14 @@ type SpawnCreepOptions = {
 	memory?: any;
 };
 
-export class StructureSpawn extends Structure.Structure {
-	get [Variant]() { return 'spawn' }
+export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
 	get structureType() { return C.STRUCTURE_SPAWN }
 
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 
 	name!: string;
-	spawning?: FormatShape<typeof spawningFormat>;
+	spawning?: { creep: string; directions: Direction[]; endTime: number; needTime: number };
 	store!: Store.Store;
 
 	canCreateCreep(body: any, name?: any) {
@@ -65,7 +64,7 @@ export class StructureSpawn extends Structure.Structure {
 				});
 
 				// Fake creep
-				const creep = createCreep(body, this.pos, name, this[Structure.Owner]);
+				const creep = createCreep(body, this.pos, name, this[Owner]!);
 				Game.creeps[name] = creep;
 				return C.OK;
 			});

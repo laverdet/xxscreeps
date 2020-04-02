@@ -1,4 +1,4 @@
-import { checkCast, makeArray, withType, BufferView, Format, Interceptor } from '~/lib/schema';
+import { bindInterceptors, makeArray, withType, BufferView } from '~/lib/schema';
 import { exchange } from '~/lib/utility';
 
 const { apply } = Reflect;
@@ -7,11 +7,6 @@ const { set } = Uint8Array.prototype;
 
 export const kTerrainWall = 1;
 export const kTerrainSwamp = 2;
-
-export const format = checkCast<Format>()({
-	name: 'string',
-	terrain: withType<Terrain>(makeArray(625, 'uint8')),
-});
 
 const GetBufferSymbol: unique symbol = Symbol();
 
@@ -68,7 +63,10 @@ export function isNearBorder(xx: number, yy: number) {
 	return (xx + 2) % 50 < 4 || (yy + 2) % 50 < 4;
 }
 
-export const interceptors = checkCast<Interceptor>()({
+export const format = bindInterceptors('Terrain', {
+	name: 'string',
+	terrain: withType<Terrain>(makeArray(625, 'uint8')),
+}, {
 	members: {
 		terrain: {
 			composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),

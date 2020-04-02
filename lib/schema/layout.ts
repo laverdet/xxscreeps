@@ -1,4 +1,4 @@
-import { Variant } from './format';
+import { WithBoundInterceptor } from './interceptor';
 
 // This specifies memory layout in a hopefully stable format
 export type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
@@ -6,12 +6,12 @@ export type Primitive = Integral | 'string' | 'bool';
 
 export type StructLayout = {
 	inherit?: StructLayout;
+	'variant!'?: string;
 	struct: Record<string, {
 		layout: Layout;
 		offset: number;
 		pointer?: true;
 	}>;
-	[Variant]?: string;
 };
 
 type ArrayLayout = {
@@ -27,7 +27,11 @@ type OptionalLayout = {
 	optional: Layout;
 };
 
-export type VariantLayout = {
+type PrimitiveLayout = {
+	primitive: Primitive;
+};
+
+type VariantLayout = {
 	variant: StructLayout[];
 };
 
@@ -35,9 +39,9 @@ type VectorLayout = {
 	vector: Layout;
 };
 
-export type Layout =
-	ArrayLayout | EnumLayout | OptionalLayout |
-	Primitive | StructLayout | VariantLayout | VectorLayout;
+export type Layout = Primitive | WithBoundInterceptor & (
+	ArrayLayout | EnumLayout | OptionalLayout | PrimitiveLayout | StructLayout | VariantLayout | VectorLayout
+);
 
 export type Traits = {
 	align: number;
@@ -128,6 +132,10 @@ export function getTraits(layout: Layout): Traits {
 				stride: alignTo(size + 1, align),
 			};
 		}
+
+	} else if ('primitive' in layout) {
+		// Pass through to underlying primitive
+		return getTraits(layout.primitive);
 
 	} else if ('variant' in layout || 'vector' in layout) {
 		// Variant & vector just store a uint32 in static memory, the rest is dynamic

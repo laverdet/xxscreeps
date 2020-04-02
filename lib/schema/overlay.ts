@@ -1,6 +1,6 @@
 import { getBuffer, getOffset, BufferObject } from './buffer-object';
 import { Variant } from './format';
-import type { BoundInterceptorSchema } from './interceptor';
+import { InterceptorLookup } from './interceptor';
 import type { StructLayout } from './layout';
 import { getSingleMemberReader } from './read';
 
@@ -9,15 +9,11 @@ const { apply } = Reflect;
 
 type GetterReader = (this: BufferObject) => any;
 
-export function injectGetters(
-	layout: StructLayout,
-	prototype: object,
-	interceptorSchema: BoundInterceptorSchema,
-) {
-	const interceptors = interceptorSchema.get(layout);
+export function injectGetters(layout: StructLayout, prototype: object, lookup: InterceptorLookup) {
+	const interceptors = lookup(layout)?.members;
 	for (const [ key, member ] of Object.entries(layout.struct)) {
 		const { layout, offset, pointer } = member;
-		const memberInterceptors = interceptors?.members?.[key];
+		const memberInterceptors = interceptors?.[key];
 		const symbol = memberInterceptors?.symbol ?? key;
 
 		// Make getter
@@ -25,7 +21,7 @@ export function injectGetters(
 
 			// Get reader for this member
 			const get = function(): GetterReader {
-				const read = getSingleMemberReader(layout, interceptorSchema, memberInterceptors);
+				const read = getSingleMemberReader(layout, lookup, memberInterceptors);
 				if (pointer === true) {
 					return function() {
 						const buffer = getBuffer(this);
@@ -73,8 +69,8 @@ export function injectGetters(
 	}
 
 	// Check for interceptors that don't match the layout
-	if (interceptors?.members) {
-		for (const key of Object.keys(interceptors.members)) {
+	if (interceptors) {
+		for (const key of Object.keys(interceptors)) {
 			if (!(key in layout.struct)) {
 				throw new Error(`Interceptor found for ${key} but does not exist in layout`);
 			}
@@ -82,7 +78,7 @@ export function injectGetters(
 	}
 
 	// Add Variant key
-	const variant = layout[Variant];
+	const variant = layout['variant!'];
 	if (variant !== undefined) {
 		Object.defineProperty(prototype, Variant, {
 			value: variant,

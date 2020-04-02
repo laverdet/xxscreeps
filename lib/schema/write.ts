@@ -1,6 +1,6 @@
 import { BufferView } from './buffer-view';
-import { Variant } from './format';
-import type { BoundInterceptorSchema } from './interceptor';
+import { getLayout, Format, Shape, Variant } from './format';
+import { defaultInterceptorLookup, InterceptorLookup } from './interceptor';
 import { kPointerSize, alignTo, getTraits, Layout, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
 
@@ -8,10 +8,10 @@ type Writer<Type = any> = (value: Type, view: BufferView, offset: number) => num
 type MemberWriter = (value: any, view: BufferView, offset: number, locals: number) => number;
 
 const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
-	(layout: StructLayout, interceptorSchema: BoundInterceptorSchema): MemberWriter => {
+	(layout: StructLayout, lookup: InterceptorLookup): MemberWriter => {
 
 		let writeMembers: MemberWriter | undefined;
-		const interceptors = interceptorSchema.get(layout);
+		const interceptors = lookup(layout);
 		for (const [ key, member ] of Object.entries(layout.struct)) {
 			const symbol = interceptors?.members?.[key]?.symbol ?? key;
 
@@ -20,7 +20,7 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 				// Get writer for this member
 				const { offset, pointer } = member;
 				const write = function(): Writer {
-					const write = getTypeWriter(member.layout, interceptorSchema);
+					const write = getTypeWriter(member.layout, lookup);
 
 					// Has decomposer?
 					const decompose = interceptors?.members?.[key]?.decompose;
@@ -68,13 +68,13 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 		if (inherit === undefined) {
 			return writeMembers!;
 		} else {
-			const writeBase = getMemberWriter(inherit, interceptorSchema);
+			const writeBase = getMemberWriter(inherit, lookup);
 			return (value, view, offset, locals) =>
 				writeMembers!(value, view, offset, writeBase(value, view, offset, locals));
 		}
 	});
 
-const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, interceptorSchema: BoundInterceptorSchema): Writer => {
+const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: InterceptorLookup): Writer => {
 
 	if (typeof layout === 'string') {
 		// Integral types
@@ -112,7 +112,7 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 			// Array types
 			const arraySize = layout.size;
 			const elementLayout = layout.array;
-			const write = getTypeWriter(elementLayout, interceptorSchema);
+			const write = getTypeWriter(elementLayout, lookup);
 			const { size, stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				throw new TypeError('Unimplemented');
@@ -138,7 +138,7 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 		} else if ('optional' in layout) {
 			// Optional types
 			const elementLayout = layout.optional;
-			const write = getTypeWriter(elementLayout, interceptorSchema);
+			const write = getTypeWriter(elementLayout, lookup);
 			const { align, size, stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				// Dynamic size element. Flag is pointer to memory (just 4 bytes ahead)
@@ -169,14 +169,18 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 				};
 			}
 
+		} else if ('primitive' in layout) {
+			// Pass through to underlying primitive
+			return getTypeWriter(layout.primitive, lookup);
+
 		} else if ('variant' in layout) {
 			// Variant types
 			const variantMap = new Map<string, Writer>();
 			for (let ii = 0; ii < layout.variant.length; ++ii) {
 				const elementLayout = layout.variant[ii];
-				const write = getTypeWriter(elementLayout, interceptorSchema);
+				const write = getTypeWriter(elementLayout, lookup);
 				variantMap.set(
-					elementLayout[Variant]!,
+					elementLayout['variant!']!,
 					(value, view, offset) => {
 						view.uint32[offset >>> 2] = ii;
 						return kPointerSize + write(value, view, offset + kPointerSize);
@@ -187,7 +191,7 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 
 		} else if ('vector' in layout) {
 			const elementLayout = layout.vector;
-			const write = getTypeWriter(elementLayout, interceptorSchema);
+			const write = getTypeWriter(elementLayout, lookup);
 			const { size, stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				// Vector with dynamic element size
@@ -224,13 +228,13 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 		} else {
 			// Structures
 			const { size } = getTraits(layout);
-			const writeMembers = getMemberWriter(layout, interceptorSchema);
+			const writeMembers = getMemberWriter(layout, lookup);
 			return (value, view, offset) => writeMembers(value, view, offset, offset + size) - offset;
 		}
 	}();
 
 	// Has decomposer?
-	const interceptors = interceptorSchema.get(layout);
+	const interceptors = lookup(layout);
 	const decompose = interceptors?.decompose;
 	if (decompose !== undefined) {
 		return (value, view, offset) => write(decompose(value), view, offset);
@@ -242,9 +246,10 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 	return write;
 });
 
-export function getWriter<Layout>(layout: Layout, interceptorSchema: BoundInterceptorSchema) {
-	const write = getTypeWriter(layout as any, interceptorSchema);
-	return (value: Layout, buffer: Uint8Array) => {
+export function getWriter<Type extends Format>(format: Format, lookup = defaultInterceptorLookup) {
+	const layout = getLayout(format);
+	const write = getTypeWriter(layout, lookup);
+	return (value: Shape<Type>, buffer: Uint8Array) => {
 		const view = BufferView.fromTypedArray(buffer);
 		return write(value, view, 0);
 	};

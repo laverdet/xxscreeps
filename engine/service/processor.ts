@@ -1,6 +1,5 @@
 import assert from 'assert';
-import * as Schema from '~/engine/schema';
-import { getReader, getWriter } from '~/lib/schema';
+import { readRoom, writeRoom } from '~/engine/schema';
 import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
@@ -15,11 +14,8 @@ export default async function() {
 	// Bind all the processor intent methods to game objec prototpyes.
 	// For example Creep.prototype[Process] = () => ...
 	bindAllProcessorIntents();
-	Schema.finalizePrototypeGetters();
 
 	// Initialize binary room schema
-	const readRoom = getReader(Schema.schema.Room, Schema.interceptorSchema);
-	const writeRoom = getWriter(Schema.schema.Room, Schema.interceptorSchema);
 	const writeBuffer = new Uint8Array(1024 * 1024);
 
 	// Keep track of rooms this thread ran. Global room processing must also happen here.

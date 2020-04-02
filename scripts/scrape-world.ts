@@ -4,12 +4,13 @@ import { topLevelTask } from '~/lib/task';
 import * as MapSchema from '~/game/map';
 import { RoomPosition } from '~/game/position';
 import * as Room from '~/game/room';
-import * as Schema from '~/engine/schema';
+import * as RoomSchema from '~/engine/schema/room';
 import { Owner } from '~/game/objects/room-object';
 import * as Source from '~/game/objects/source';
 import * as StructureController from '~/game/objects/structures/controller';
 import { TerrainWriter } from '~/game/terrain';
-import * as GameSchema from '~/engine/metabase';
+import * as CodeSchema from '~/engine/metabase/code';
+import { writeGame } from '~/engine/metabase/game';
 
 import * as StoreIntents from '~/engine/processor/intents/store';
 
@@ -105,7 +106,7 @@ topLevelTask(async() => {
 	});
 
 	// Save rooms
-	const writeRoom = getWriter(Schema.schema.Room, Schema.interceptorSchema);
+	const writeRoom = getWriter(RoomSchema.format);
 	for (const [ roomName, room ] of rooms) {
 		await save(`ticks/${gameTime}/${roomName}`, writeRoom(room as Room.Room, buffer));
 	}
@@ -122,7 +123,7 @@ topLevelTask(async() => {
 	}));
 
 	// Make writer and save terrain
-	const writeWorld = getWriter(MapSchema.schema.World, MapSchema.interceptorSchema);
+	const writeWorld = getWriter(MapSchema.format);
 	await save('terrain', writeWorld(roomsTerrain, buffer));
 
 	// Collect users
@@ -148,11 +149,10 @@ topLevelTask(async() => {
 		activeRooms: new Set([ ...rooms.values() ].map(room => room.name)),
 		users,
 	};
-	const writeGame = getWriter(GameSchema.schema.Game, GameSchema.interceptorSchema);
 	await save('game', writeGame(game, buffer));
 
 	// Collect user code
-	const writeCode = getWriter(GameSchema.schema.Code, GameSchema.interceptorSchema);
+	const writeCode = getWriter(CodeSchema.format);
 	for (const row of collections['users.code']) {
 		const modules: any[] = [];
 		for (const [ key, data ] of Object.entries(row.modules)) {

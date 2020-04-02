@@ -1,10 +1,7 @@
 import type { BufferView } from '~/lib/schema/buffer-view';
-import { checkCast, makeArray, withType } from '~/lib/schema';
-import type { MemberInterceptor } from '~/lib/schema/interceptor';
+import { bindInterceptors, makeArray, withType } from '~/lib/schema';
 
-export const format = withType<string>(makeArray(4, 'uint32'));
-
-export const interceptors = checkCast<MemberInterceptor>()({
+export const optionalFormat = bindInterceptors('Id', makeArray(4, 'uint32'), {
 	composeFromBuffer(view: BufferView, offset: number) {
 		// First byte is length, remaining bytes are the hex string id. Fits up to 24 characters
 		// into 4 bytes. This could be increased to 30 characters if needed by putting more in the
@@ -43,6 +40,9 @@ export const interceptors = checkCast<MemberInterceptor>()({
 		return 16;
 	},
 });
+
+// Most of the time id strings are required so this type is just more convenient
+export const format = withType<string>(optionalFormat);
 
 export function generateId() {
 	let id = '';

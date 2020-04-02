@@ -1,7 +1,7 @@
 import type { BufferObject } from './buffer-object';
 import { BufferView } from './buffer-view';
-import { Variant } from './format';
-import type { BoundInterceptorSchema, MemberInterceptor } from './interceptor';
+import { getLayout, Format, Shape, Variant } from './format';
+import { defaultInterceptorLookup, InterceptorLookup, MemberInterceptor } from './interceptor';
 import { kPointerSize, getTraits, Layout, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
 const { fromCharCode } = String;
@@ -10,21 +10,17 @@ type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
 
 export const getSingleMemberReader = RecursiveWeakMemoize([ 0, 1 ],
-	(
-		layout: Layout,
-		interceptorSchema: BoundInterceptorSchema,
-		memberInterceptors?: MemberInterceptor,
-	): Reader => {
+	(layout: Layout, lookup: InterceptorLookup, interceptors?: MemberInterceptor): Reader => {
 
 		// Make underlying reader
-		const read = getTypeReader(layout, interceptorSchema);
+		const read = getTypeReader(layout, lookup);
 
 		// Has composer?
-		const compose = memberInterceptors?.compose;
+		const compose = interceptors?.compose;
 		if (compose !== undefined) {
 			return (view, offset) => compose(read(view, offset));
 		}
-		const composeFromBuffer = memberInterceptors?.composeFromBuffer;
+		const composeFromBuffer = interceptors?.composeFromBuffer;
 		if (composeFromBuffer !== undefined) {
 			return (view, offset) => composeFromBuffer(view, offset);
 		}
@@ -35,10 +31,10 @@ export const getSingleMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 );
 
 const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
-	(layout: StructLayout, interceptorSchema: BoundInterceptorSchema): MemberReader => {
+	(layout: StructLayout, lookup: InterceptorLookup): MemberReader => {
 
 		let readMembers: MemberReader | undefined;
-		const interceptors = interceptorSchema.get(layout);
+		const interceptors = lookup(layout);
 		for (const [ key, member ] of Object.entries(layout.struct)) {
 			const memberInterceptors = interceptors?.members?.[key];
 			const symbol = memberInterceptors?.symbol ?? key;
@@ -46,7 +42,7 @@ const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 			// Make reader for single field
 			const next = function(): MemberReader {
 				// Get reader for this member
-				const read = getSingleMemberReader(member.layout, interceptorSchema, memberInterceptors);
+				const read = getSingleMemberReader(member.layout, lookup, memberInterceptors);
 
 				// Wrap to read this field from reserved address
 				const { offset, pointer } = member;
@@ -77,7 +73,7 @@ const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 	},
 );
 
-const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, interceptorSchema: BoundInterceptorSchema): Reader => {
+const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: InterceptorLookup): Reader => {
 
 	if (typeof layout === 'string') {
 		// Integral types
@@ -107,7 +103,7 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 			// Array types
 			const arraySize = layout.size;
 			const elementLayout = layout.array;
-			const read = getTypeReader(elementLayout, interceptorSchema);
+			const read = getTypeReader(elementLayout, lookup);
 			const { stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				throw new TypeError('Unimplemented');
@@ -134,7 +130,7 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 		} else if ('optional' in layout) {
 			// Optional types
 			const elementLayout = layout.optional;
-			const read = getTypeReader(elementLayout, interceptorSchema);
+			const read = getTypeReader(elementLayout, lookup);
 			const { size, stride } = getTraits(elementLayout);
 
 			if (stride === undefined) {
@@ -158,15 +154,19 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 				};
 			}
 
+		} else if ('primitive' in layout) {
+			// Pass through to underlying primitive
+			return getTypeReader(layout.primitive, lookup);
+
 		} else if ('variant' in layout) {
 			// Variant types
 			const variantReaders = layout.variant.map(elementLayout =>
-				getTypeReader(elementLayout, interceptorSchema));
+				getTypeReader(elementLayout, lookup));
 			return (view, offset) => variantReaders[view.uint32[offset >>> 2]](view, offset + kPointerSize);
 
 		} else if ('vector' in layout) {
 			const elementLayout = layout.vector;
-			const read = getTypeReader(elementLayout, interceptorSchema);
+			const read = getTypeReader(elementLayout, lookup);
 			const { stride } = getTraits(elementLayout);
 			if (stride === undefined) {
 				// Vector with dynamic element size
@@ -206,11 +206,11 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 
 		} else {
 			// Structures / object
-			const variant = layout[Variant];
+			const variant = layout['variant!'];
 			const { inherit } = layout;
 			const readBase = inherit === undefined ?
-				undefined : getMemberReader(inherit, interceptorSchema);
-			const read = getMemberReader(layout, interceptorSchema);
+				undefined : getMemberReader(inherit, lookup);
+			const read = getMemberReader(layout, lookup);
 			return (view, offset) => {
 				const value = variant === undefined ? {} : { [Variant]: variant };
 				if (readBase !== undefined) {
@@ -223,7 +223,7 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 	}();
 
 	// Has composer?
-	const interceptors = interceptorSchema.get(layout);
+	const interceptors = lookup(layout);
 	const compose = interceptors?.compose;
 	if (compose !== undefined) {
 		return (view, offset) => compose(read(view, offset));
@@ -232,16 +232,17 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, intercepto
 	if (composeFromBuffer !== undefined) {
 		return (view, offset) => composeFromBuffer(view, offset);
 	}
-	const Overlay = interceptors?.overlay;
-	if (Overlay !== undefined) {
-		return (view, offset) => new (Overlay as Constructor<BufferObject>)(view, offset);
+	const overlay = interceptors?.overlay;
+	if (overlay !== undefined) {
+		return (view, offset) => new (overlay as Constructor<BufferObject>)(view, offset);
 	}
 	return read;
 });
 
-export function getReader<Type>(layout: Type, interceptorSchema: BoundInterceptorSchema) {
-	const read = getTypeReader(layout as any, interceptorSchema);
-	return (buffer: Readonly<Uint8Array>): Type => {
+export function getReader<Type extends Format>(format: Type, lookup = defaultInterceptorLookup) {
+	const layout = getLayout(format);
+	const read = getTypeReader(layout, lookup);
+	return (buffer: Readonly<Uint8Array>): Shape<Type> => {
 		const view = BufferView.fromTypedArray(buffer);
 		return read(view, 0);
 	};

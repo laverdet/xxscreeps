@@ -215,7 +215,7 @@ export class RoomPosition {
 		return `[room ${this.roomName} pos ${this.x},${this.y}]`;
 	}
 
-	[PositionInteger]!: number;
+	[PositionInteger]: number;
 }
 
 //

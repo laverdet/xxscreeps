@@ -1,5 +1,5 @@
-import * as Schema from '~/engine/metabase/index';
-import * as DatabaseSchema from '~/engine/metabase';
+import { readGame } from '~/engine/metabase/game';
+import * as Code from '~/engine/metabase/code';
 import { loadTerrainFromWorld, readWorld } from '~/game/map';
 import { getReader } from '~/lib/schema/read';
 import { loadTerrain } from '~/driver/path-finder';
@@ -18,8 +18,7 @@ export default async function() {
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
 
 	// Placeholder
-	const gameReader = getReader(DatabaseSchema.schema.Game, DatabaseSchema.interceptorSchema);
-	const gameMetadata = gameReader(await blobStorage.load('game'));
+	const gameMetadata = readGame(await blobStorage.load('game'));
 
 	// Load shared terrain data
 	const terrainBuffer = await blobStorage.load('terrain');
@@ -28,7 +27,7 @@ export default async function() {
 	loadTerrainFromWorld(world); // game
 
 	// Initialize binary schemas
-	const readCode = getReader(Schema.schema.Code, Schema.interceptorSchema);
+	const readCode = getReader(Code.format);
 
 	// Start the runner loop
 	let gameTime = -1;

@@ -1,21 +1,20 @@
 import * as C from '~/game/constants';
 import { gameContext } from '~/game/context';
 import * as Memory from '~/game/memory';
-import type { bodyFormat } from '~/engine/schema/creep';
-import { FormatShape, Variant } from '~/lib/schema';
+import { withOverlay } from '~/lib/schema';
+import type { shape } from '~/engine/schema/creep';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { ConstructionSite } from './construction-site';
 import { chainIntentChecks, Owner, RoomObject } from './room-object';
 import { Source } from './source';
 import { StructureController } from './structures/controller';
 import { obstacleTypes } from '../path-finder';
-import type { RoomObjectWithStore, Store } from '../store';
+import type { RoomObjectWithStore } from '../store';
 export { Owner };
 
-export const AgeTime: unique symbol = Symbol('ageTime');
+export const AgeTime = Symbol('ageTime');
 
-export class Creep extends RoomObject {
-	get [Variant]() { return 'creep' }
+export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
 	get memory() {
@@ -90,14 +89,7 @@ export class Creep extends RoomObject {
 		);
 	}
 
-	body!: FormatShape<typeof bodyFormat>;
-	fatigue!: number;
-	hits!: number;
-	name!: string;
 	nextPosition?: RoomPosition; // processor temporary
-	store!: Store;
-	protected [AgeTime]!: number;
-	protected [Owner]!: string;
 }
 
 //

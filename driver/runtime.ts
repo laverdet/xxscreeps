@@ -12,9 +12,11 @@ import { gameContext, IntentManager } from '~/game/context';
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
 import * as PathFinder from '~/game/path-finder';
-import { finalizePrototypeGetters } from '~/engine/schema';
 import { UserCode } from '~/engine/metabase/code';
 import { BufferView } from '~/lib/schema/buffer-view';
+
+// Sets up prototype overlays
+import '~/engine/schema/room';
 
 declare const global: any;
 
@@ -26,9 +28,6 @@ global.Creep = Creep;
 global.RoomPosition = RoomPosition;
 global.Source = Source;
 Memory.initialize(new Uint16Array(1));
-
-// Set up lazy schema getters
-finalizePrototypeGetters();
 
 /**
  * TODO: lock these
@@ -46,17 +45,11 @@ for (const [ identifier, value ] of Object.entries(Constants)) {
 let require: (name: string) => any;
 export function initialize(
 	compileModule: (source: string, filename: string) => ((...args: any[]) => any),
-	userId: string, userCode: UserCode,
+	userId: string, modulesCode: UserCode,
 	terrain: Readonly<Uint8Array>,
 ) {
 	loadTerrainFromBuffer(terrain);
 	gameContext.userId = userId;
-	// Index code by name
-	const modulesCode = Object.create(null);
-	for (const { name, data } of userCode.modules) {
-		modulesCode[name] = data;
-	}
-	delete userCode.modules;
 	// Set up global `require`
 	const cache = Object.create(null);
 	global.require = require = name => {
@@ -68,7 +61,7 @@ export function initialize(
 			}
 			return cached;
 		}
-		const code = modulesCode[name];
+		const code = modulesCode.get(name);
 		if (code === undefined) {
 			throw new Error(`Unknown module: ${name}`);
 		}
@@ -88,7 +81,7 @@ export function initialize(
 		}
 		// Cache executed module and release code string (maybe it frees memory?)
 		cache[name] = module.exports;
-		delete modulesCode[name];
+		modulesCode.delete(name);
 		return module.exports;
 	};
 }

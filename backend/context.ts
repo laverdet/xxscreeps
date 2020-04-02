@@ -1,4 +1,4 @@
-import { readGame } from '~/engine/metabase';
+import { readGame } from '~/engine/metabase/game';
 import { readWorld, World } from '~/game/map';
 import type { MainMessage } from '~/engine/service';
 import { BlobStorage } from '~/storage/blob';

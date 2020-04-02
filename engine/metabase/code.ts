@@ -1,6 +1,6 @@
-import { checkCast, makeVector, Format, FormatShape } from '~/lib/schema';
+import { bindInterceptors, makeVector, Shape } from '~/lib/schema';
 
-export const format = checkCast<Format>()({
+export const format = bindInterceptors('Code', {
 	modules: makeVector({
 		name: 'string',
 		data: 'string',
@@ -9,6 +9,11 @@ export const format = checkCast<Format>()({
 		name: 'string',
 		data: makeVector('uint8'),
 	}),*/
+}, {
+	compose: value => new Map<string, string>(value.modules.map(entry => [ entry.name, entry.data ])),
+	decompose: (value: Map<string, string>) => ({
+		modules: [ ...value.entries() ].map(([ name, data ]) => ({ name, data })),
+	}),
 });
 
-export type UserCode = FormatShape<typeof format>;
+export type UserCode = Shape<typeof format>;

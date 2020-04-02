@@ -1,24 +1,17 @@
-import { checkCast, withType, Format, Inherit, Interceptor } from '~/lib/schema';
+import { bindInterceptors, withSymbol, Inherit } from '~/lib/schema';
 import * as Id from '~/engine/util/id';
 import { Owner } from '~/game/objects/room-object';
 import { Structure } from '~/game/objects/structures';
 import * as RoomObject from './room-object';
 
-export { Structure };
-
-export const format = withType<Structure>(checkCast<Format>()({
+export const shape = bindInterceptors('Structure', {
 	[Inherit]: RoomObject.format,
 	hits: 'int32',
 	owner: Id.format,
-}));
+}, {
+	members: {
+		owner: withSymbol(Owner),
+	},
+});
 
-export const interceptors = {
-	Structure: checkCast<Interceptor>()({
-		overlay: Structure,
-		members: {
-			owner: { symbol: Owner, ...Id.interceptors },
-		},
-	}),
-};
-
-export const schemaFormat = { Structure: format };
+export const format = bindInterceptors(shape, { overlay: Structure });

@@ -1,14 +1,14 @@
-import * as Structure from '.';
 import * as C from '~/game/constants';
-import { Variant } from '~/lib/schema';
+import type { shape } from '~/engine/schema/controller';
+import { withOverlay } from '~/lib/schema';
+import { Structure } from '.';
 
 export const DowngradeTime = Symbol('downgradeTime');
 export const Progress = Symbol('progress');
 export const UpgradeBlockedTime = Symbol('upgradeBlockedTime');
 export const UpgradePowerThisTick = Symbol('UpgradePowerThisTick');
 
-export class StructureController extends Structure.Structure {
-	get [Variant]() { return 'controller' }
+export class StructureController extends withOverlay<typeof shape>()(Structure) {
 	get progress() { return this.level > 0 ? this[Progress] : undefined }
 	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
 	get structureType() { return C.STRUCTURE_CONTROLLER }
@@ -21,14 +21,5 @@ export class StructureController extends Structure.Structure {
 		}
 	}
 
-	isPowerEnabledboolean!: number;
-	level!: number;
-	safeMode!: number;
-	safeModeAvailable!: number;
-	safeModeCooldown!: number;
-
-	[DowngradeTime]: number;
-	[Progress]!: number;
-	[UpgradeBlockedTime]!: number;
 	[UpgradePowerThisTick]?: number; // used by processor only. not saved in schema.
 }

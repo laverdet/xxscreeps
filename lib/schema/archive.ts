@@ -1,79 +1,85 @@
-import { Variant } from './format';
+import { BoundInterceptor } from './interceptor';
 import type { Layout } from './layout';
 
-function requireIdentifier(code: string) {
-	if (!/^[a-zA-Z$_][a-zA-Z0-9$_]+$/.test(code)) {
-		throw new Error(`Layout must be named: ${code}`);
+class Renderer {
+	readonly identifiers = new Set<string>();
+	rendered = '';
+
+	withIdentifier(name: string, layout: Layout) {
+		if (!this.identifiers.has(name)) {
+			this.identifiers.add(name);
+			const archived = `export const ${name} = ${archiveLayoutImpl(this, layout)};\n`;
+			this.rendered += archived;
+		}
+		return name;
 	}
-	return code;
 }
 
-type LayoutToNames = Map<Layout, string>;
-function archiveLayout(
-	schema: Dictionary<any>,
-	layout: Layout,
-	layoutToNames: LayoutToNames,
-	depth = 1,
-): string {
+function archiveLayoutImpl(renderer: Renderer, layout: Layout, depth = 1): string {
 
-	// Subsequent calls shouldn't rerender the result, messing up references
-	const identifierName = layoutToNames.get(layout);
-	if (identifierName !== undefined) {
-		return identifierName;
-	}
-
-	// Render layout to TypeScript
 	if (typeof layout === 'string') {
-		return `'${layout}' as const`;
+		return JSON.stringify(layout);
 
 	} else if ('array' in layout) {
-		return `{ array: ${archiveLayout(schema, layout.array, layoutToNames, depth + 1)}, size: ${layout.size} }`;
+		return `{ array: ${archiveNamedLayout(renderer, layout.array, depth + 1)}, size: ${layout.size} }`;
 
 	} else if ('enum' in layout) {
 		return '{ enum: [ ' +
-			layout.enum.map(value => `${JSON.stringify(value)} as const`).join(', ') +
-		'] }';
+			layout.enum.map(value => value === undefined ? 'undefined' : JSON.stringify(value)).join(', ') +
+		' ] }';
 
 	} else if ('optional' in layout) {
-		return `{ optional: ${archiveLayout(schema, layout.optional, layoutToNames, depth + 1)} }`;
+		return `{ optional: ${archiveNamedLayout(renderer, layout.optional, depth + 1)} }`;
+
+	} else if ('primitive' in layout) {
+		return `{ primitive: ${archiveLayoutImpl(renderer, layout.primitive, depth)} }`;
 
 	} else if ('variant' in layout) {
 		return '{ variant: [ ' +
-			layout.variant.map(layout =>
-				requireIdentifier(archiveLayout(schema, layout, layoutToNames, depth + 1))).join(', ') +
-		'] }';
+			layout.variant.map(layout => archiveNamedLayout(renderer, layout, depth + 1)).join(', ') +
+		' ] }';
 
 	} else if ('vector' in layout) {
-		return `{ vector: ${archiveLayout(schema, layout.vector, layoutToNames, depth + 1)} }`;
+		return `{ vector: ${archiveNamedLayout(renderer, layout.vector, depth + 1)} }`;
 
 	} else {
 		const indent = '\n' + '\t'.repeat(depth);
 		let code = '{';
-		if (layout[Variant] !== undefined) {
-			code += `${indent}[Variant]: '${layout[Variant]}',`;
+		if (layout['variant!'] !== undefined) {
+			code += `${indent}"variant!": ${JSON.stringify(layout['variant!'])},`;
 		}
 		if (layout.inherit !== undefined) {
-			code += `${indent}inherit: ${requireIdentifier(archiveLayout(schema, layout.inherit, layoutToNames))},`;
+			code += `${indent}inherit: ${archiveNamedLayout(renderer, layout.inherit, depth + 1)},`;
 		}
 		code += `${indent}struct: {`;
 		for (const [ key, member ] of Object.entries(layout.struct)) {
 			code += `${indent}\t${key}: { offset: ${member.offset}, `;
 			if (member.pointer === true) {
-				code += 'pointer: true as const, ';
+				code += 'pointer: true, ';
 			}
-			code += `layout: ${archiveLayout(schema, member.layout, layoutToNames, depth + 1)} },`;
+			code += `layout: ${archiveNamedLayout(renderer, member.layout, depth + 1)} },`;
 		}
 		code += `\n${'\t'.repeat(depth - 1)}} }`;
 		return code;
 	}
 }
 
-export function archiveSchema(schema: Dictionary<any>): string {
-	const layoutToNames: LayoutToNames = new Map();
-	const prelude = "import { Variant } from '~/lib/schema/format';\n";
-	return prelude + Object.entries(schema).map(([ name, layout ]) => {
-		const archived = `const ${name} = ${archiveLayout(schema, layout, layoutToNames)};\n`;
-		layoutToNames.set(layout, name);
-		return archived;
-	}).join('');
+function archiveNamedLayout(renderer: Renderer, layout: Layout, depth = 1) {
+
+	// Check for bound name
+	if (typeof layout !== 'string') {
+		const bound = layout[BoundInterceptor];
+		if (bound?.name !== undefined) {
+			return renderer.withIdentifier(bound.name, layout);
+		}
+	}
+
+	// Render archived layout
+	return archiveLayoutImpl(renderer, layout, depth);
+}
+
+export function archiveLayout(layout: Layout): string {
+	const renderer = new Renderer;
+	const name = archiveNamedLayout(renderer, layout);
+	return renderer.rendered + `export default ${name};\n`;
 }

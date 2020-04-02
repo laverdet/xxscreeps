@@ -2,11 +2,11 @@ import * as C from './constants';
 
 import { BufferObject } from '~/lib/schema/buffer-object';
 import type { BufferView } from '~/lib/schema/buffer-view';
-import type { FormatShape } from '~/lib/schema';
+import { withOverlay } from '~/lib/schema';
 import { accumulate, concatInPlace } from '~/lib/utility';
 import { Process, ProcessorSpecification, Tick } from '~/engine/processor/bind';
+import type { shape } from '~/engine/schema/room';
 import { iteratee } from '~/engine/util/iteratee';
-import type { variantFormat } from '~/engine/schema/variant';
 
 import { gameContext } from './context';
 import { chainIntentChecks, RoomObject } from './objects/room-object';
@@ -24,7 +24,7 @@ import { StructureExtension } from './objects/structures/extension';
 import { StructureSpawn } from './objects/structures/spawn';
 
 export const Objects = Symbol('objects');
-export type AnyRoomObject = FormatShape<typeof variantFormat>;
+export type AnyRoomObject = InstanceType<typeof Room>[typeof Objects][number];
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
 	serialize?: boolean;
 };
@@ -32,10 +32,8 @@ export type RoomFindOptions = {
 	filter?: string | object | ((object: RoomObject) => boolean);
 };
 
-export class Room extends BufferObject {
+export class Room extends withOverlay<typeof shape>()(BufferObject) {
 	controller?: StructureController;
-	name!: string;
-	[Objects]!: AnyRoomObject[];
 	[Process]?: ProcessorSpecification<this>['process'];
 	[Tick]?: ProcessorSpecification<this>['tick'];
 

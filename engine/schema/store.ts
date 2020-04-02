@@ -1,36 +1,27 @@
-import { checkCast, makeEnum, makeVector, withType, Format, Interceptor } from '~/lib/schema';
+import { bindInterceptors, bindName, makeEnum, makeVector, withSymbol } from '~/lib/schema';
 import * as C from '~/game/constants';
 import { Amount, Capacity, Resources, Restricted, SingleResource, Store } from '~/game/store';
 
-export { Store };
+export const resourceEnumFormat = bindName('ResourceType', makeEnum(undefined, ...C.RESOURCES_ALL));
 
-export const resourceEnumFormat = makeEnum(undefined, ...C.RESOURCES_ALL);
-
-export const storedResourceFormat = checkCast<Format>()(makeVector({
+export const shape = bindInterceptors('Store', {
 	amount: 'int32',
 	capacity: 'int32',
-	type: resourceEnumFormat,
-}));
-
-export const format = withType<Store>(checkCast<Format>()({
-	amount: 'int32',
-	capacity: 'int32',
-	resources: storedResourceFormat,
+	resources: makeVector({
+		amount: 'int32',
+		capacity: 'int32',
+		type: resourceEnumFormat,
+	}),
 	restricted: 'bool',
 	singleResource: resourceEnumFormat,
-}));
+}, {
+	members: {
+		amount: withSymbol(Amount),
+		capacity: withSymbol(Capacity),
+		resources: withSymbol(Resources),
+		restricted: withSymbol(Restricted),
+		singleResource: withSymbol(SingleResource),
+	},
+});
 
-export const interceptors = {
-	Store: checkCast<Interceptor>()({
-		members: {
-			amount: { symbol: Amount },
-			capacity: { symbol: Capacity },
-			resources: { symbol: Resources },
-			restricted: { symbol: Restricted },
-			singleResource: { symbol: SingleResource },
-		},
-		overlay: Store,
-	}),
-};
-
-export const schemaFormat = { Store: format };
+export const format = bindInterceptors(shape, { overlay: Store });

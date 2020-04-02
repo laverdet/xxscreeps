@@ -1,15 +1,13 @@
-import { checkCast, makeVector, withType, Format, Interceptor } from '~/lib/schema';
+import { bindInterceptors, getReader, getWriter, makeVector, withType } from '~/lib/schema';
 import { mapInPlace } from '~/lib/utility';
 import * as User from './user';
 
-export const format = checkCast<Format>()({
+const format = bindInterceptors('Game', {
 	time: 'int32',
 	accessibleRooms: withType<Set<string>>(makeVector('string')),
 	activeRooms: withType<Set<string>>(makeVector('string')),
 	users: withType<Map<string, User.User>>(makeVector(User.format)),
-});
-
-export const interceptors = checkCast<Interceptor>()({
+}, {
 	members: {
 		accessibleRooms: {
 			compose: (roomNames: string[]) => new Set(roomNames),
@@ -25,3 +23,6 @@ export const interceptors = checkCast<Interceptor>()({
 		},
 	},
 });
+
+export const readGame = getReader(format);
+export const writeGame = getWriter(format);

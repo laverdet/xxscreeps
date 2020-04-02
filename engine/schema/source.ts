@@ -1,24 +1,17 @@
-import { checkCast, withType, Format, Inherit, Interceptor, Variant } from '~/lib/schema';
+import { bindInterceptors, withSymbol, Inherit, Variant } from '~/lib/schema';
 import { NextRegenerationTime, Source } from '~/game/objects/source';
 import * as RoomObject from './room-object';
 
-export { Source };
-
-export const format = withType<Source>(checkCast<Format>()({
+export const shape = bindInterceptors('Source', {
 	[Inherit]: RoomObject.format,
 	[Variant]: 'source',
 	energy: 'int32',
 	energyCapacity: 'int32',
 	nextRegenerationTime: 'int32',
-}));
+}, {
+	members: {
+		nextRegenerationTime: withSymbol(NextRegenerationTime),
+	},
+});
 
-export const interceptors = {
-	Source: checkCast<Interceptor>()({
-		members: {
-			nextRegenerationTime: { symbol: NextRegenerationTime },
-		},
-		overlay: Source,
-	}),
-};
-
-export const schemaFormat = { Source: format };
+export const format = bindInterceptors(shape, { overlay: Source });

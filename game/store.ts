@@ -1,7 +1,7 @@
 import * as C from '~/game/constants';
 import { BufferObject } from '~/lib/schema/buffer-object';
-import { BufferView, FormatShape } from '~/lib/schema';
-import type { storedResourceFormat } from '~/engine/schema/store';
+import { withOverlay, BufferView } from '~/lib/schema';
+import type { shape } from '~/engine/schema/store';
 import type { Creep } from './objects/creep';
 import type { StructureSpawn } from './objects/structures/spawn';
 
@@ -10,7 +10,7 @@ export type StorageRecord = Partial<Record<ResourceType, number>>;
 
 export const Amount = Symbol('amount');
 export const Capacity = Symbol('capacity');
-export const CapacityByResource: unique symbol = Symbol('capacityByResource');
+export const CapacityByResource = Symbol('capacityByResource');
 export const Resources = Symbol('resources');
 export const Restricted = Symbol('restricted');
 export const SingleResource = Symbol('singleResource');
@@ -19,8 +19,9 @@ export type RoomObjectWithStore = Creep | StructureSpawn;
 
 // Adds resource types information to `Store` class. No changes from `extends BufferObject` as far
 // as JS is concerned
-const BufferObjectWithResourcesType = BufferObject as any as new (view: BufferView, offset: number) =>
-	(BufferObject & ({ energy: number } & Partial<Record<ResourceType, number>>));
+const BufferObjectWithResourcesType = BufferObject as any as {
+	prototype: Partial<Record<ResourceType, number>>;
+};
 
 /**
  * An object that can contain resources in its cargo.
@@ -42,7 +43,7 @@ const BufferObjectWithResourcesType = BufferObject as any as new (view: BufferVi
  * console.log(creep.store[RESOURCE_ENERGY]);
  * ```
  */
-export class Store extends BufferObjectWithResourcesType {
+export class Store extends withOverlay<typeof shape>()(BufferObjectWithResourcesType) {
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
 
@@ -112,11 +113,5 @@ export class Store extends BufferObjectWithResourcesType {
 	}
 
 	energy = 0;
-
-	[Amount]!: number;
-	[Capacity]!: number;
 	[CapacityByResource]?: Map<ResourceType, number>;
-	[Resources]!: FormatShape<typeof storedResourceFormat>;
-	[Restricted]: boolean;
-	[SingleResource]?: ResourceType;
 }
