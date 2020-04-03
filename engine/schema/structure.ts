@@ -1,5 +1,5 @@
 import { bindInterceptors, withSymbol, Inherit } from '~/lib/schema';
-import * as Id from '~/engine/util/id';
+import * as Id from '~/engine/util/schema/id';
 import { Owner } from '~/game/objects/room-object';
 import { Structure } from '~/game/objects/structures';
 import * as RoomObject from './room-object';

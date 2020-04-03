@@ -1,5 +1,5 @@
 import configPromise from '~/engine/config';
-import { UserCode } from '~/engine/metabase/code';
+import { UserCode } from '~/engine/metadata/code';
 import { runOnce } from '~/lib/memoize';
 import { locateModule } from '../path-finder';
 import { compile } from '../webpack';

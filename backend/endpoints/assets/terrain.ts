@@ -52,7 +52,6 @@ function generate(grid: (Terrain | undefined)[][], zoom = 1) {
 
 const cache = new Map<string, Buffer>();
 export const TerrainEndpoint: Endpoint = {
-	method: 'get',
 	path: '/map/:room.png',
 
 	async execute(req, res) {
@@ -77,7 +76,6 @@ export const TerrainEndpoint: Endpoint = {
 
 const cacheZoom = new Map<string, Buffer>();
 export const TerrainZoomEndpoint: Endpoint = {
-	method: 'get',
 	path: '/map/zoom2/:room.png',
 
 	async execute(req, res) {

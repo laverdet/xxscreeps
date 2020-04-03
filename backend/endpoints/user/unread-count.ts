@@ -1,7 +1,6 @@
 import { Endpoint } from '~/backend/endpoint';
 
 export const UnreadCountEndpoint: Endpoint = {
-	method: 'get',
 	path: '/messages/unread-count',
 
 	execute() {

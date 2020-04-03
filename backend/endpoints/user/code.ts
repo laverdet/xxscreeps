@@ -1,7 +1,6 @@
 import { Endpoint } from '~/backend/endpoint';
 
 export const CodeEndpoint: Endpoint = {
-	method: 'get',
 	path: '/code',
 
 	execute() {

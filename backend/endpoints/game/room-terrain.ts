@@ -2,7 +2,6 @@ import { Endpoint } from '~/backend/endpoint';
 
 const cache = new Map<string, string>();
 export const RoomTerrainEndpoint: Endpoint = {
-	method: 'get',
 	path: '/room-terrain',
 
 	execute(req, res) {

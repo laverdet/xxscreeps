@@ -5,9 +5,10 @@ import { connect, create, Responder, ResponderClient, ResponderHost } from '~/st
 type Message = 'waiting' | 'unlocked';
 
 export class Mutex {
-	private locked = false;
+	private lockedOrPending = false;
 	private yieldPromise?: Promise<void>;
 	private waitingListener?: () => void;
+	private readonly localQueue: (() => void)[] = [];
 	constructor(
 		private readonly channel: Channel<Message>,
 		private readonly lockable: Lock,
@@ -29,22 +30,34 @@ export class Mutex {
 		return new Mutex(channel, lock);
 	}
 
+	disconnect() {
+		this.channel.disconnect();
+		this.lockable.disconnect();
+	}
+
 	async lock() {
-		if (this.locked) {
-			// Double lock means a bug
-			throw new Error('Already locked');
+		if (this.lockedOrPending) {
+			// Already locked locally
+			const [ locked, lockedResolver ] = makeResolver<void>();
+			this.localQueue.push(lockedResolver.resolve);
+			return locked;
 		} else if (this.waitingListener) {
 			// If the listener is still attached it means no one else wanted the lock
-			this.locked = true;
+			this.lockedOrPending = true;
 			return;
 		}
+		this.lockedOrPending = true;
+		// If we're yielding send message that we want the lock back
+		if (this.yieldPromise) {
+			this.channel.publish('waiting');
+			await this.yieldPromise;
+		}
 		// Listen for peers who want the lock
-		await this.yieldPromise;
 		this.waitingListener = this.channel.listen(message => {
 			if (message === 'waiting') {
 				this.waitingListener!();
 				this.waitingListener = undefined;
-				if (!this.locked) {
+				if (!this.lockedOrPending) {
 					// If a peer is waiting while this is soft locked then yield next time we try to lock
 					this.yieldLock().catch(console.error);
 				}
@@ -52,7 +65,6 @@ export class Mutex {
 		});
 		if (await this.lockable.lock()) {
 			// Lock with no contention
-			this.locked = true;
 			return;
 		}
 		// Must wait for lock
@@ -60,7 +72,6 @@ export class Mutex {
 		const tryLock = () => {
 			this.lockable.lock().then(locked => {
 				if (locked) {
-					this.locked = true;
 					lockedResolver.resolve();
 				} else {
 					this.channel.publish('waiting');
@@ -86,8 +97,14 @@ export class Mutex {
 	}
 
 	async unlock() {
-		if (this.locked) {
-			this.locked = false;
+		if (this.lockedOrPending) {
+			// If there's more waiting locally then run them
+			if (this.localQueue.length !== 0) {
+				const next = this.localQueue.shift();
+				next!();
+				return;
+			}
+			this.lockedOrPending = false;
 			if (!this.waitingListener) {
 				// If there's a peer waiting for the lock then give them a chance to get it
 				await this.yieldLock();
@@ -97,10 +114,10 @@ export class Mutex {
 		}
 	}
 
-	async scope(callback: () => Promise<void>) {
+	async scope<Type>(callback: () => Promise<Type>): Promise<Type> {
 		await this.lock();
 		try {
-			await callback();
+			return await callback();
 		} finally {
 			await this.unlock();
 		}

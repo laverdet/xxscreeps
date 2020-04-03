@@ -1,6 +1,6 @@
 import ivm from 'isolated-vm';
 import { runOnce } from '~/lib/memoize';
-import type { UserCode } from '~/engine/metabase/code';
+import type { UserCode } from '~/engine/metadata/code';
 import type * as Runtime from '~/driver/runtime';
 import { getPathFinderInfo, getRuntimeSource } from '.';
 

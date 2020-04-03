@@ -12,7 +12,7 @@ import { gameContext, IntentManager } from '~/game/context';
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
 import * as PathFinder from '~/game/path-finder';
-import { UserCode } from '~/engine/metabase/code';
+import { UserCode } from '~/engine/metadata/code';
 import { BufferView } from '~/lib/schema/buffer-view';
 
 // Sets up prototype overlays

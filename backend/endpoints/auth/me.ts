@@ -1,42 +1,51 @@
 import { Endpoint } from '~/backend/endpoint';
+import { checkToken, makeToken } from '~/backend/auth/token';
 
 export const MeEndpoint: Endpoint = {
-	method: 'get',
 	path: '/me',
 
-	execute() {
-		return {
+	async execute(req, res) {
+		const tokenValue = await checkToken(req.get('x-token')!);
+		if (tokenValue === undefined) {
+			return;
+		}
+		let userId: string | undefined;
+
+		// Check for steam provider
+		const steam = /^steam:(?<id>[0-9]+)$/.exec(tokenValue);
+		if (steam) {
+			userId = this.context.lookupUserByProvider(tokenValue);
+			if (userId === undefined) {
+				// Unregistered steam user
+				res.set('x-token', await makeToken(tokenValue));
+				return { ok: 1 };
+			}
+		}
+
+		// Check for logged in user
+		if (/^[a-f0-9]+$/.test(tokenValue)) {
+			userId = tokenValue;
+		}
+
+		// User not logged in
+		if (userId === undefined) {
+			return;
+		}
+
+		// Real user
+		const user = await this.context.loadUser(userId);
+		return Object.assign({
 			ok: 1,
-			_id: '123',
-			email: 'webmaster@example.com',
-			username: 'The_General',
-			password: true,
-			cpu: 100,
-			gcl: 1,
-			money: 0,
-			power: 0,
-			badge: {
-				type: 15,
-				color1: 67,
-				color2: 26,
-				color3: 67,
-				param: 100,
-				flip: true,
-			},
-			lastChargeTime: 0,
-			lastRespawnDate: 0,
-			blocked: false,
-			steam: {
-				id: '123',
-			},
-			notifyPrefs: {
-				disabled: true,
-				disabledOnMessages: true,
-				errorsInterval: 100000,
-				sendOnline: true,
-			},
-			powerExperimentations: 30,
-			powerExperimentationTime: 0,
-		};
+			_id: user.id,
+			username: user.username,
+			badge: user.badge === '' ? undefined : JSON.parse(user.badge),
+		}, ...this.context.getProvidersForUser(userId).map(provider => {
+			const steam = /^steam:(?<id>[0-9]+)$/.exec(provider);
+			if (steam) {
+				return {
+					steam: { id: steam.groups!.id },
+				};
+			}
+		}));
 	},
 };

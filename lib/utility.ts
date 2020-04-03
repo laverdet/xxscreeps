@@ -84,6 +84,20 @@ export function instantiate<Type>(ctor: new(...params: any) => Type, properties:
 	return Object.assign(Object.create(ctor.prototype), properties);
 }
 
+// Attaches a listener to an EventEmitter and returns a lambda which removes the listener
+type Emitter<Message, Listener> = {
+	on: (message: Message, listener: Listener) => void;
+	removeListener: (message: Message, listener: Listener) => void;
+};
+export function listen<
+	Message extends string,
+	Listener extends (...params: any[]) => void,
+	Type extends Emitter<Message, Listener>,
+>(emitter: Type, message: Message, listener: Listener) {
+	emitter.on(message, listener);
+	return () => emitter.removeListener(message, listener);
+}
+
 // Returns a promise and resolver functions in one
 export function makeResolver<Type>(): [ Promise<Type>, Resolver<Type> ] {
 	let resolver: Resolver<Type>;

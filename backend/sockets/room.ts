@@ -59,7 +59,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			this.send(JSON.stringify(response));
 			previous = objects;
 		};
-		return this.context.mainChannel.listen(event => {
+		return this.context.gameChannel.listen(event => {
 			if (event.type === 'tick' && Date.now() > lastTickTime + 50) {
 				update(event.time).catch(error => console.error(error));
 			}

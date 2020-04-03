@@ -1,6 +1,6 @@
 import vm from 'vm';
 import { runOnce } from '~/lib/memoize';
-import type { UserCode } from '~/engine/metabase/code';
+import type { UserCode } from '~/engine/metadata/code';
 import { getPathFinderInfo, getRuntimeSource } from '.';
 
 const getPathFinderModule = runOnce(() => {

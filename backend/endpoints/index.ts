@@ -1,6 +1,7 @@
 import { Express, Router } from 'express';
+import { authenticateMiddleware } from '../auth';
 import { BackendContext } from '../context';
-import { Endpoint } from '../endpoint';
+import { AbstractResponse, Endpoint } from '../endpoint';
 
 import { VersionEndpoint } from './version';
 
@@ -14,8 +15,9 @@ import { RoomStatusEndpoint } from './game/room-status';
 import { RoomTerrainEndpoint } from './game/room-terrain';
 import { TickEndpoint, TimeEndpoint } from './game/time';
 
-import { CheckEmailEndpoint, CheckUsernameEndpoint, SubmitRegistrationEndpoint } from './register';
+import { CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint, SubmitRegistrationEndpoint } from './register';
 
+import { BadgeEndpoint } from './user/badge';
 import { BranchesEndpoint } from './user/branches';
 import { CodeEndpoint } from './user/code';
 import { RespawnProhibitedRoomsEndpoint } from './user/respawn-prohibited-rooms';
@@ -25,10 +27,12 @@ import { WorldStatusEndpoint } from './user/world-status';
 
 function bindRoutes(context: BackendContext, router: Router, endpoints: Endpoint[]) {
 	for (const endpoint of endpoints) {
-		router[endpoint.method](endpoint.path, (req, res, next) => {
+		router[endpoint.method ?? 'get'](endpoint.path, (req, res, next) => {
 			Promise.resolve(endpoint.execute.call({ context }, req, res)).then(value => {
 				if (value === undefined) {
 					next();
+				} else if (value instanceof AbstractResponse) {
+					value.send(res);
 				} else if (value !== true) {
 					res.set('Content-Type', 'text/json');
 					res.writeHead(200);
@@ -61,16 +65,18 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 	apiRouter.use('/register', bindRoutes(context, Router(), [
 		CheckEmailEndpoint,
 		CheckUsernameEndpoint,
+		SetUsernameEndpoint,
 		SubmitRegistrationEndpoint,
 	]));
-	apiRouter.use('/user', bindRoutes(context, Router(), [
+	apiRouter.use('/user', authenticateMiddleware(bindRoutes(context, Router(), [
+		BadgeEndpoint,
 		BranchesEndpoint,
 		CodeEndpoint,
 		RespawnProhibitedRoomsEndpoint,
 		UnreadCountEndpoint,
 		WorldStartRoomEndpoint,
 		WorldStatusEndpoint,
-	]));
+	])));
 
 	express.use('/api', apiRouter);
 	express.use('/assets', bindRoutes(context, Router(), [

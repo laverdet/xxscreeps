@@ -1,7 +1,6 @@
 import { Endpoint } from '~/backend/endpoint';
 
 export const BranchesEndpoint: Endpoint = {
-	method: 'get',
 	path: '/branches',
 
 	execute() {

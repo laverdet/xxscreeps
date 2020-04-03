@@ -51,7 +51,7 @@ export const mapSubscription: SubscriptionEndpoint = {
 			}
 			this.send(JSON.stringify(response));
 		};
-		return this.context.mainChannel.listen(event => {
+		return this.context.gameChannel.listen(event => {
 			if (event.type === 'tick' && Date.now() > lastTickTime + 250) {
 				update(event.time).catch(error => console.error(error));
 			}

@@ -22,7 +22,7 @@ declare global {
 
 	// Public Promise
 	type Resolver<Type = unknown> = {
-		resolve: (payload: Type) => void;
+		resolve: (payload?: Type | Promise<Type>) => void;
 		reject: (payload: Error) => void;
 	};
 

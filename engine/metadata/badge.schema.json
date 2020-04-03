@@ -1,0 +1,42 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "defaultProperties": [
+    ],
+    "properties": {
+        "color1": {
+            "pattern": "^#[a-f0-9]{6}$",
+            "type": "string"
+        },
+        "color2": {
+            "pattern": "^#[a-f0-9]{6}$",
+            "type": "string"
+        },
+        "color3": {
+            "pattern": "^#[a-f0-9]{6}$",
+            "type": "string"
+        },
+        "flip": {
+            "type": "boolean"
+        },
+        "param": {
+            "maximum": 100,
+            "minimum": -100,
+            "type": "number"
+        },
+        "type": {
+            "maximum": 24,
+            "minimum": 1,
+            "type": "number"
+        }
+    },
+    "required": [
+        "color1",
+        "color2",
+        "color3",
+        "flip",
+        "param",
+        "type"
+    ],
+    "type": "object"
+}
+

@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import * as Path from 'path';
-import { mapInPlace } from '~/lib/utility';
+import { listen, mapInPlace } from '~/lib/utility';
 import Config from '~/engine/config';
 import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
 
@@ -49,11 +49,7 @@ const BlobStorageHost = ResponderHost(class BlobStorageHost extends BlobStorage 
 	private bufferedBlobs = new Map<string, Readonly<Uint8Array>>();
 	private bufferedDeletes = new Set<string>();
 	private readonly knownPaths = new Set<string>();
-	private readonly processUnlistener = (() => {
-		const listener = () => this.checkMissingFlush();
-		process.on('exit', listener);
-		return () => process.removeListener('exit', listener);
-	})();
+	private readonly processUnlistener = listen(process, 'exit', () => this.checkMissingFlush());
 
 	constructor(private readonly path: string) {
 		super();
@@ -125,6 +121,7 @@ const BlobStorageHost = ResponderHost(class BlobStorageHost extends BlobStorage 
 
 	disconnect() {
 		this.processUnlistener();
+		this.checkMissingFlush();
 	}
 
 	async load(fragment: string): Promise<Readonly<Uint8Array>> {

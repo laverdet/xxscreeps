@@ -1,5 +1,6 @@
 import type { Server } from 'http';
 import sockjs from 'sockjs';
+import { checkToken, makeToken } from './auth/token';
 import { BackendContext } from './context';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
@@ -23,6 +24,7 @@ export type SubscriptionEndpoint = {
 export function installSocketHandlers(httpServer: Server, context: BackendContext) {
 	socketServer.installHandlers(httpServer);
 	socketServer.on('connection', connection => {
+		let user: string;
 		const subscriptions = new Map<string, Promise<Unlistener>>();
 		function close() {
 			for (const [ name, unlistener ] of subscriptions) {
@@ -34,12 +36,36 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 		connection.write(`time ${Date.now()}`);
 		connection.write('protocol 14');
 		connection.on('data', message => {
-			if (/^auth /.exec(message)) {
-				connection.write('auth ok 123');
+			const authMessage = /^auth (?<token>.+)$/.exec(message);
+
+			if (authMessage) {
+				(async() => {
+					const { token } = authMessage.groups!;
+					const id = await checkToken(token);
+					if (id !== undefined && /^[a-f0-9]+$/.test(id)) {
+						// Token for a real user
+						if (user !== undefined && id !== user) {
+							close();
+							return;
+						}
+						user = id;
+						connection.write(`auth ok ${await makeToken(id)}`);
+					} else {
+						// Some other auth token
+						connection.write('auth failed');
+					}
+				})().catch(console.error);
 			} else {
 				// Subscription to channel
 				const subscriptionRequest = /^subscribe (?<name>.+)$/.exec(message);
 				if (subscriptionRequest) {
+					// Can't subscribe if you're not logged in
+					if (user === undefined) {
+						close();
+						return;
+					}
+
+					// Execute subscription request
 					const { name } = subscriptionRequest.groups!;
 					for (const handler of handlers) {
 						const result = handler.pattern.exec(name);

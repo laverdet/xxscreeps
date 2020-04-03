@@ -1,5 +1,5 @@
 import { bindInterceptors, bindName, makeOptional, makeVector, Inherit, Variant } from '~/lib/schema';
-import * as Id from '~/engine/util/id';
+import * as Id from '~/engine/util/schema/id';
 import { StructureSpawn } from '~/game/objects/structures/spawn';
 import * as Store from './store';
 import * as Structure from './structure';

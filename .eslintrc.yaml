@@ -44,7 +44,6 @@ rules:
   no-unreachable: warn
   no-unsafe-finally: error
   no-unsafe-negation: error
-  require-atomic-updates: warn
   use-isnan: warn
   valid-typeof: error
 

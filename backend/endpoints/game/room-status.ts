@@ -1,7 +1,6 @@
 import { Endpoint } from '~/backend/endpoint';
 
 export const RoomStatusEndpoint: Endpoint = {
-	method: 'get',
 	path: '/room-status',
 
 	execute(req) {

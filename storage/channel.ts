@@ -149,7 +149,7 @@ export abstract class Channel<Message> {
 				// Make resolver to await on
 				let promise: Promise<Message | undefined>;
 				[ promise, resolver ] = makeResolver<Message | undefined>();
-				const disconnectListener = () => resolver!.resolve(undefined);
+				const disconnectListener = () => resolver!.resolve();
 				this.disconnectListeners.add(disconnectListener);
 				// Wait for new messages
 				const value = await promise;

@@ -1,5 +1,5 @@
 import { Endpoint } from '~/backend/endpoint';
-import { readGame } from '~/engine/metabase/game';
+import { readGame } from '~/engine/metadata/game';
 import { BlobStorage } from '~/storage/blob';
 
 export const MapStatsEndpoint: Endpoint = {

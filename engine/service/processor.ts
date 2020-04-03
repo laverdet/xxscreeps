@@ -32,7 +32,10 @@ export default async function() {
 	try {
 		for await (const message of processorChannel) {
 
-			if (message.type === 'processRooms') {
+			if (message.type === 'shutdown') {
+				break;
+
+			} else if (message.type === 'processRooms') {
 				// First processing phase. Can start as soon as all players with visibility into this room
 				// have run their code
 				gameTime = message.time;
@@ -69,9 +72,9 @@ export default async function() {
 				// Run second phase of processing. This must wait until *all* player code and first phase
 				// processing has run
 				const nextGameTime = gameTime + 1;
-				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) => {
-					return blobStorage.save(`ticks/${nextGameTime}/${roomName}`, writeRoom(context.room));
-				}));
+				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) =>
+					blobStorage.save(`ticks/${nextGameTime}/${roomName}`, writeRoom(context.room)),
+				));
 				processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
 				processedRooms.clear();
 			}

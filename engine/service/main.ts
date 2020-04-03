@@ -1,111 +1,142 @@
 import configPromise from '~/engine/config';
-import { readGame } from '~/engine/metabase/game';
+import { readGame, writeGame } from '~/engine/metadata/game';
 import { AveragingTimer } from '~/lib/averaging-timer';
-import { getOrSet, filterInPlace, mapInPlace } from '~/lib/utility';
+import { getOrSet, mapInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Mutex } from '~/storage/mutex';
 import { Queue } from '~/storage/queue';
-import type { RunnerMessage, ProcessorMessage, ProcessorQueueElement, MainMessage } from '.';
+import type { GameMessage, ProcessorMessage, ProcessorQueueElement, RunnerMessage, ServiceMessage } from '.';
 
 export default async function() {
 	// Open channels
 	const { config } = await configPromise;
-	const blobStorage = await BlobStorage.create();
-	const roomsQueue = await Queue.create<ProcessorQueueElement>('processRooms');
-	const usersQueue = await Queue.create('runnerUsers');
-	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
-	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
-	const gameMutex = await Mutex.create('game');
-	Channel.publish<MainMessage>('main', { type: 'mainConnected' });
+	const [
+		blobStorage, roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
+	] = await Promise.all([
+		BlobStorage.connect(),
+		Queue.create<ProcessorQueueElement>('processRooms'),
+		Queue.create('runnerUsers'),
+		Channel.connect<ProcessorMessage>('processor'),
+		Channel.connect<RunnerMessage>('runner'),
+		Channel.connect<ServiceMessage>('service'),
+		Mutex.create('game'),
+	]);
+	serviceChannel.publish({ type: 'mainConnected' });
 
 	// Load current game state
 	const gameMetadata = readGame(await blobStorage.load('game'));
+	const flushGame = async() => {
+		await blobStorage.save('game', writeGame(gameMetadata));
+	};
 
 	// Run main game processing loop
-	let gameTime = 1;
 	const performanceTimer = new AveragingTimer(1000);
-	const activeUsers = [ ...mapInPlace(filterInPlace(gameMetadata.users.values(), user => {
-		if (user.id === '2' || user.id === '3') {
-			return false;
+	const activeUsers = [ ...gameMetadata.users ];
+
+	// Ctrl+C handler
+	let terminated = false;
+	serviceChannel.listen(message => {
+		if (message.type === 'shutdown') {
+			terminated = true;
 		}
-		return user.active;
-	}), user => user.id) ];
+	});
+	const didTerminate = () => terminated;
 
-	do {
-		await gameMutex.scope(async() => {
-			performanceTimer.start();
-			const timeStartedLoop = Date.now();
+	try {
+		do {
+			await gameMutex.scope(async() => {
+				performanceTimer.start();
+				const timeStartedLoop = Date.now();
 
-			// Add users to runner queue
-			usersQueue.version(gameTime);
-			await usersQueue.push(activeUsers);
-			runnerChannel.publish({ type: 'processUsers', time: gameTime });
+				// Add users to runner queue
+				usersQueue.version(gameMetadata.time);
+				await usersQueue.push(activeUsers);
+				runnerChannel.publish({ type: 'processUsers', time: gameMetadata.time });
 
-			// Wait for runners to finish
-			const processedUsers = new Set<string>();
-			const intentsByRoom = new Map<string, Set<string>>();
-			for await (const message of runnerChannel) {
-				if (message.type === 'runnerConnected') {
-					runnerChannel.publish({ type: 'processUsers', time: gameTime });
+				// Wait for runners to finish
+				const processedUsers = new Set<string>();
+				const intentsByRoom = new Map<string, Set<string>>();
+				for await (const message of runnerChannel) {
+					if (message.type === 'runnerConnected') {
+						runnerChannel.publish({ type: 'processUsers', time: gameMetadata.time });
 
-				} else if (message.type === 'processedUser') {
-					processedUsers.add(message.userId);
-					for (const roomName of message.roomNames) {
-						getOrSet(intentsByRoom, roomName, () => new Set).add(message.userId);
-					}
-					if (activeUsers.length === processedUsers.size) {
-						break;
+					} else if (message.type === 'processedUser') {
+						processedUsers.add(message.userId);
+						for (const roomName of message.roomNames) {
+							getOrSet(intentsByRoom, roomName, () => new Set).add(message.userId);
+						}
+						if (activeUsers.length === processedUsers.size) {
+							break;
+						}
 					}
 				}
-			}
 
-			// Add rooms to queue and notify processors
-			roomsQueue.version(gameTime);
-			await roomsQueue.push([ ...mapInPlace(gameMetadata.activeRooms, room => ({
-				room,
-				users: [ ...intentsByRoom.get(room) ?? [] ],
-			})) ]);
-			processorChannel.publish({ type: 'processRooms', time: gameTime });
+				// Add rooms to queue and notify processors
+				roomsQueue.version(gameMetadata.time);
+				await roomsQueue.push([ ...mapInPlace(gameMetadata.activeRooms, room => ({
+					room,
+					users: [ ...intentsByRoom.get(room) ?? [] ],
+				})) ]);
+				processorChannel.publish({ type: 'processRooms', time: gameMetadata.time });
 
-			// Handle incoming processor messages
-			const processedRooms = new Set<string>();
-			const flushedRooms = new Set<string>();
-			for await (const message of processorChannel) {
-				if (message.type === 'processorConnected') {
-					processorChannel.publish({ type: 'processRooms', time: gameTime });
+				// Handle incoming processor messages
+				const processedRooms = new Set<string>();
+				const flushedRooms = new Set<string>();
+				for await (const message of processorChannel) {
+					if (message.type === 'processorConnected') {
+						processorChannel.publish({ type: 'processRooms', time: gameMetadata.time });
 
-				} else if (message.type === 'processedRoom') {
-					processedRooms.add(message.roomName);
-					if (gameMetadata.activeRooms.size === processedRooms.size) {
-						processorChannel.publish({ type: 'flushRooms' });
-					}
+					} else if (message.type === 'processedRoom') {
+						processedRooms.add(message.roomName);
+						if (gameMetadata.activeRooms.size === processedRooms.size) {
+							processorChannel.publish({ type: 'flushRooms' });
+						}
 
-				} else if (message.type === 'flushedRooms') {
-					message.roomNames.forEach(roomName => flushedRooms.add(roomName));
-					if (gameMetadata.activeRooms.size === flushedRooms.size) {
-						break;
+					} else if (message.type === 'flushedRooms') {
+						message.roomNames.forEach(roomName => flushedRooms.add(roomName));
+						if (gameMetadata.activeRooms.size === flushedRooms.size) {
+							break;
+						}
 					}
 				}
+
+				// Delete old tick data
+				// eslint-disable-next-line no-loop-func
+				await Promise.all(mapInPlace(gameMetadata.activeRooms, (roomName: string) =>
+					blobStorage.delete(`ticks/${gameMetadata.time}/${roomName}`)));
+
+				// Set up for next tick
+				const now = Date.now();
+				const timeTaken = now - timeStartedLoop;
+				const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
+				console.log(`Tick ${gameMetadata.time} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
+				++gameMetadata.time;
+				Channel.publish<GameMessage>('main', { type: 'tick', time: gameMetadata.time });
+			});
+
+			// Add delay
+			if (didTerminate()) {
+				break;
 			}
+			const delay = config.game?.tickSpeed ?? 250 - Date.now();
+			if (delay > 0) {
+				await new Promise(resolve => setTimeout(resolve, delay));
+			}
+			if (didTerminate()) {
+				break;
+			}
+		} while (true);
 
-			// Delete old tick data
-			// eslint-disable-next-line no-loop-func
-			await Promise.all(mapInPlace(gameMetadata.activeRooms, (roomName: string) =>
-				blobStorage.delete(`ticks/${gameTime}/${roomName}`)));
-
-			// Set up for next tick
-			const timeTaken = Date.now() - timeStartedLoop;
-			const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
-			console.log(`Tick ${gameTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
-			++gameTime;
-			Channel.publish<MainMessage>('main', { type: 'tick', time: gameTime });
-		});
-
-		// Add delay
-		const delay = config.game?.tickSpeed ?? 250 - Date.now();
-		if (delay > 0) {
-			await new Promise(resolve => setTimeout(resolve, delay));
-		}
-	} while (true);
+	} finally {
+		// Clean up
+		await flushGame();
+		blobStorage.disconnect();
+		roomsQueue.disconnect();
+		usersQueue.disconnect();
+		processorChannel.disconnect();
+		runnerChannel.disconnect();
+		serviceChannel.disconnect();
+		gameMutex.disconnect();
+	}
 }

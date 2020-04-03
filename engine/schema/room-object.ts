@@ -1,5 +1,5 @@
 import { bindInterceptors, bindName, makeOptional, makeVector } from '~/lib/schema';
-import * as Id from '~/engine/util/id';
+import * as Id from '~/engine/util/schema/id';
 import { RoomObject } from '~/game/objects/room-object';
 import * as RoomPosition from './position';
 

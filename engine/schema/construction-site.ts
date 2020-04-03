@@ -1,5 +1,5 @@
 import { bindInterceptors, makeEnum, withSymbol, Inherit, Variant } from '~/lib/schema';
-import * as Id from '~/engine/util/id';
+import * as Id from '~/engine/util/schema/id';
 import * as C from '~/game/constants';
 import { ConstructionSite, Name } from '~/game/objects/construction-site';
 import { Owner } from '~/game/objects/room-object';

@@ -237,8 +237,8 @@ new(...args: Args[]) => Type & Responder & AbstractResponderHost =>
 		disconnect() {
 			if (--this._refs === 0) {
 				responderHostsByName.delete(this._name);
+				super.disconnect();
 			}
-			super.disconnect();
 		}
 	} as any;
 

@@ -9,8 +9,10 @@ import { Owner } from '~/game/objects/room-object';
 import * as Source from '~/game/objects/source';
 import * as StructureController from '~/game/objects/structures/controller';
 import { TerrainWriter } from '~/game/terrain';
-import * as CodeSchema from '~/engine/metabase/code';
-import { writeGame } from '~/engine/metabase/game';
+import * as CodeSchema from '~/engine/metadata/code';
+import { writeGame } from '~/engine/metadata/game';
+import * as User from '~/engine/metadata/user';
+import * as Authentication from '~/backend/auth';
 
 import * as StoreIntents from '~/engine/processor/intents/store';
 
@@ -33,7 +35,6 @@ topLevelTask(async() => {
 	const envData = collections.env[0].data;
 	const { gameTime }: { gameTime: number } = envData;
 	const blobStorage = await BlobStorage.create();
-	const buffer = new Uint8Array(1024 * 1024 * 32);
 
 	// Collect initial room data
 	const roomsByUser: Dictionary<Set<string>> = {};
@@ -122,29 +123,38 @@ topLevelTask(async() => {
 	await blobStorage.save('terrain', writeWorld(roomsTerrain));
 
 	// Collect users
-	const users = new Map(collections.users.map(user => [
-		user._id,
-		{
+	const userIds = new Set<string>();
+	const writeUser = getWriter(User.format);
+	for (const user of collections.users) {
+		const active: boolean = ![ '2', '3' ].includes(user._id) && user.active;
+		const info = {
 			id: user._id,
 			username: user.username,
 			registeredDate: +new Date(user.registeredDate),
-			active: user.active,
+			active,
 			cpu: user.cpu,
 			cpuAvailable: user.cpuAvailable,
 			gcl: user.gcl,
-			badge: user.badge === undefined ? '{}' : JSON.stringify(user.badge),
+			badge: user.badge === undefined ? '' : JSON.stringify(user.badge),
 			visibleRooms: (roomsByUser[user._id] ?? new Set<string>()),
-		},
-	]));
+		};
+		if (active) {
+			userIds.add(user._id);
+		}
+		await blobStorage.save(`user/${user._id}`, writeUser(info));
+	}
 
 	// Save Game object
 	const game = {
 		time: gameTime,
 		accessibleRooms: new Set([ ...rooms.values() ].map(room => room.name)),
 		activeRooms: new Set([ ...rooms.values() ].map(room => room.name)),
-		users,
+		users: userIds,
 	};
 	await blobStorage.save('game', writeGame(game));
+
+	const writeAuth = getWriter(Authentication.format);
+	await blobStorage.save('auth', writeAuth([]));
 
 	// Collect user code
 	const writeCode = getWriter(CodeSchema.format);

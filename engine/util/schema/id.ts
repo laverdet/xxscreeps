@@ -44,10 +44,14 @@ export const optionalFormat = bindInterceptors('Id', makeArray(4, 'uint32'), {
 // Most of the time id strings are required so this type is just more convenient
 export const format = withType<string>(optionalFormat);
 
-export function generateId() {
-	let id = '';
-	for (let ii = 0; ii < 3; ++ii) {
-		id += Math.floor(Math.random() * 2 ** 32).toString(16).padStart(8, '0');
+function randomChunk8() {
+	return Math.floor(Math.random() * 2 ** 32).toString(16).padStart(8, '0');
+}
+
+export function generateId(length = 24) {
+	let id = length % 8 === 0 ? '' : randomChunk8().substr(0, length % 8);
+	for (let ii = length >> 3; ii > 0; --ii) {
+		id += randomChunk8();
 	}
 	return id;
 }

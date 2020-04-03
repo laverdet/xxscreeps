@@ -1,5 +1,5 @@
 import { bindInterceptors, makeEnum, makeVector, withSymbol, Inherit, Variant } from '~/lib/schema';
-import * as Id from '~/engine/util/id';
+import * as Id from '~/engine/util/schema/id';
 import * as C from '~/game/constants';
 import { AgeTime, Creep, Owner } from '~/game/objects/creep';
 import * as RoomObject from './room-object';
