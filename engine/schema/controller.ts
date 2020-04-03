@@ -7,7 +7,7 @@ export const shape = bindInterceptors('Controller', {
 	[Variant]: 'controller',
 
 	downgradeTime: 'int32',
-	isPowerEnabledboolean: 'bool',
+	isPowerEnabled: 'bool',
 	level: 'int32',
 	progress: 'int32',
 	// reservation: { username, ticksToEnd }

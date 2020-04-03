@@ -1,4 +1,4 @@
-import { bindInterceptors, makeVector, FormatType } from '~/lib/schema';
+import { bindInterceptors, getReader, getWriter, makeVector, FormatType } from '~/lib/schema';
 
 export const format = bindInterceptors('Code', {
 	modules: makeVector({
@@ -15,5 +15,8 @@ export const format = bindInterceptors('Code', {
 		modules: [ ...value.entries() ].map(([ name, data ]) => ({ name, data })),
 	}),
 });
+
+export const read = getReader(format);
+export const write = getWriter(format);
 
 export type UserCode = FormatType<typeof format>;

@@ -43,10 +43,12 @@ export function exchange<Target extends object, Name extends keyof Target>(
 }
 
 export function filterInPlace<Type, Filtered extends Type>(
-	iterable: Iterable<Type>, callback: (value: Type) => value is Filtered): Generator<Filtered>;
+	iterable: Iterable<Type>): Iterable<NonNullOrVoidable<Filtered>>;
+export function filterInPlace<Type, Filtered extends Type>(
+	iterable: Iterable<Type>, callback: (value: Type) => value is Filtered): Iterable<Filtered>;
 export function filterInPlace<Type>(
-	iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean): Generator<Type>;
-export function *filterInPlace(iterable: Iterable<any>, callback: (value: any) => LooseBoolean) {
+	iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean): Iterable<Type>;
+export function *filterInPlace(iterable: Iterable<any>, callback: (value: any) => LooseBoolean = nonNullable) {
 	for (const value of iterable) {
 		if (callback(value)) {
 			yield value;
@@ -106,7 +108,7 @@ export function makeResolver<Type>(): [ Promise<Type>, Resolver<Type> ] {
 }
 
 // It's like [].map except you can use it on iterables, also it doesn't generate a temporary array.
-export function *mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (value: Type) => Result) {
+export function *mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (value: Type) => Result): Iterable<Result> {
 	for (const value of iterable) {
 		yield callback(value);
 	}

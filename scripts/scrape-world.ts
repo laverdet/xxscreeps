@@ -1,24 +1,26 @@
-import { promises as fs } from 'fs';
+import Loki from 'lokijs';
 import { topLevelTask } from '~/lib/task';
 
-import * as MapSchema from '~/game/map';
 import { RoomPosition } from '~/game/position';
 import * as Room from '~/game/room';
-import * as RoomSchema from '~/engine/schema/room';
 import { Owner } from '~/game/objects/room-object';
 import * as Source from '~/game/objects/source';
 import * as StructureController from '~/game/objects/structures/controller';
 import { TerrainWriter } from '~/game/terrain';
-import * as CodeSchema from '~/engine/metadata/code';
-import { writeGame } from '~/engine/metadata/game';
-import * as User from '~/engine/metadata/user';
-import * as Authentication from '~/backend/auth';
-
 import * as StoreIntents from '~/engine/processor/intents/store';
+
+// Schemas
+import * as Auth from '~/backend/auth';
+import * as CodeSchema from '~/engine/metadata/code';
+import * as Game from '~/engine/metadata/game';
+import * as MapSchema from '~/game/map';
+import * as RoomSchema from '~/engine/schema/room';
+import * as User from '~/engine/metadata/user';
 
 import { Variant } from '~/lib/schema/format';
 import { getWriter } from '~/lib/schema/write';
 import { BlobStorage } from '~/storage/blob';
+import { accumulate, filterInPlace, getOrSet, mapInPlace } from '~/lib/utility';
 
 const [ jsonSource ] = process.argv.slice(2);
 if (jsonSource === undefined) {
@@ -26,108 +28,112 @@ if (jsonSource === undefined) {
 	process.exit(1);
 }
 
+function withRoomObject(object: any) {
+	return {
+		id: object._id,
+		pos: new RoomPosition(object.x, object.y, object.room),
+		[Variant]: object.type,
+		effects: undefined,
+	};
+}
+
+function withStructure(object: any) {
+	return {
+		...withRoomObject(object),
+		[Owner]: object.user,
+		hits: 0,
+	};
+}
+
+function withStore(object: any) {
+	const capacity = object.storeCapacityResource === undefined ?
+		object.storeCapacity :
+		accumulate(Object.values<number>(object.storeCapacityResource));
+	return {
+		store: StoreIntents.create(capacity, object.storeCapacityResource, object.store),
+	};
+}
+
 topLevelTask(async() => {
 	// Load JSON data and connect to blob storage
-	const collections: Record<string, any[]> = {};
-	for (const collection of JSON.parse(await fs.readFile(jsonSource, 'utf8')).collections) {
-		collections[collection.name] = collection.data;
-	}
-	const envData = collections.env[0].data;
-	const { gameTime }: { gameTime: number } = envData;
+	const db = new Loki(jsonSource);
+	db.loadDatabase();
 	const blobStorage = await BlobStorage.create();
 
-	// Collect initial room data
-	const roomsByUser: Dictionary<Set<string>> = {};
-	const rooms = new Map(collections.rooms.map(room => ({
+	// Collect env data
+	const { gameTime }: { gameTime: number } = db.getCollection('env').findOne().data;
+
+	// Collect room data
+	const roomObjects = db.getCollection('rooms.objects');
+	const rooms = db.getCollection('rooms').find().map(room => ({
 		name: room._id,
-		[Room.Objects]: [] as any[],
-	})).map(room => [ room.name, room ]));
+		[Room.Objects]: [ ...filterInPlace(roomObjects.find({ room: room._id }).map(object => {
+			switch (object.type) {
+				case 'controller':
+					return {
+						...withStructure(object),
+						[StructureController.DowngradeTime]: object.downgradeTime,
+						isPowerEnabled: object.isPowerEnabled,
+						level: object.level,
+						[StructureController.Progress]: object.progress,
+						safeMode: object.safeMode,
+						safeModeAvailable: object.safeModeAvailable,
+						safeModeCooldown: object.safeModeCooldown,
+						[StructureController.UpgradeBlockedTime]: object.upgradeBlocked,
+					};
 
-	// Load room objects
-	collections['rooms.objects'].map(object => {
-		const roomObject = {
-			id: object._id,
-			pos: new RoomPosition(object.x, object.y, object.room),
-			[Owner]: object.user,
-		};
-		const withStructure = () => ({ ...roomObject });
-		const withStore = () => {
-			const capacity = object.storeCapacityResource === undefined ?
-				object.storeCapacity :
-				Object.values<number>(object.storeCapacityResource).reduce((sum, value) => sum + value, 0);
-			return { store: StoreIntents.create(capacity, object.storeCapacityResource, object.store) };
-		};
-		switch (object.type) {
-			case 'controller':
-				return {
-					...withStructure(),
-					[Variant]: 'controller',
-					[StructureController.DowngradeTime]: object.downgradeTime,
-					isPowerEnabled: object.isPowerEnabled,
-					level: object.level,
-					[StructureController.Progress]: object.progress,
-					safeMode: object.safeMode,
-					safeModeAvailable: object.safeModeAvailable,
-					safeModeCooldown: object.safeModeCooldown,
-					[StructureController.UpgradeBlockedTime]: object.upgradeBlocked,
-				};
+				case 'source':
+					return {
+						...withRoomObject(object),
+						energy: object.energy,
+						energyCapacity: object.energyCapacity,
+						[Source.NextRegenerationTime]: gameTime + (object.ticksToRegeneration as number),
+					};
 
-			case 'spawn':
-				return {
-					...withStructure(),
-					...withStore(),
-					[Variant]: 'spawn',
-					name: object.name,
-				};
-
-			case 'source':
-				return {
-					...roomObject,
-					[Variant]: 'source',
-					room: object.room,
-					energy: object.energy,
-					energyCapacity: object.energyCapacity,
-					[Source.NextRegenerationTime]: gameTime + (object.ticksToRegeneration as number),
-				};
-		}
-	}).forEach(roomObject => {
-		if (roomObject !== undefined) {
-			const owner: string = (roomObject as any)[Owner];
-			if (owner !== undefined && owner.length > 1) {
-				const rooms = roomsByUser[owner] ?? (roomsByUser[owner] = new Set);
-				rooms.add(roomObject.pos.roomName);
+				case 'spawn':
+					return {
+						...withStructure(object),
+						...withStore(object),
+						name: object.name,
+					};
 			}
-			rooms.get(roomObject.pos.roomName)![Room.Objects].push(roomObject);
-		}
-	});
-
-	// Save rooms
-	const writeRoom = getWriter(RoomSchema.shape);
-	for (const [ roomName, room ] of rooms) {
-		await blobStorage.save(`ticks/${gameTime}/${roomName}`, writeRoom(room));
-	}
-
-	// Read room data from rooms.terrain collection
-	const roomsTerrain = new Map(collections['rooms.terrain'].map((room: { room: string; terrain: string }) => {
-		const terrain = new TerrainWriter;
-		for (let xx = 0; xx < 50; ++xx) {
-			for (let yy = 0; yy < 50; ++yy) {
-				terrain.set(xx, yy, Number(room.terrain[yy * 50 + xx]));
-			}
-		}
-		return [ room.room, terrain ];
+		})) ],
 	}));
 
-	// Make writer and save terrain
-	const writeWorld = getWriter(MapSchema.format);
-	await blobStorage.save('terrain', writeWorld(roomsTerrain));
+	// Save rooms
+	for (const room of rooms) {
+		await blobStorage.save(`ticks/${gameTime}/${room.name}`, RoomSchema.write(room));
+	}
+
+	// Collect terrain data
+	const roomsTerrain = new Map(db.getCollection('rooms.terrain').find().map(({ room, terrain }) => {
+		const writer = new TerrainWriter;
+		for (let xx = 0; xx < 50; ++xx) {
+			for (let yy = 0; yy < 50; ++yy) {
+				writer.set(xx, yy, Number(terrain[yy * 50 + xx]));
+			}
+		}
+		return [ room as string, writer ];
+	}));
+
+	// Write terrain data
+	await blobStorage.save('terrain', getWriter(MapSchema.format)(roomsTerrain));
+
+	// Get visible rooms for users
+	const roomsByUser = new Map<string, Set<string>>();
+	for (const room of rooms) {
+		for (const object of room[Room.Objects]) {
+			const owner: string | undefined = (object as any)[Owner];
+			if (owner !== undefined) {
+				getOrSet(roomsByUser, owner, () => new Set).add(room.name);
+			}
+		}
+	}
 
 	// Collect users
-	const userIds = new Set<string>();
-	const writeUser = getWriter(User.format);
-	for (const user of collections.users) {
+	const users = db.getCollection('users').find().map(user => {
 		const active: boolean = ![ '2', '3' ].includes(user._id) && user.active;
-		const info = {
+		return {
 			id: user._id,
 			username: user.username,
 			registeredDate: +new Date(user.registeredDate),
@@ -136,36 +142,37 @@ topLevelTask(async() => {
 			cpuAvailable: user.cpuAvailable,
 			gcl: user.gcl,
 			badge: user.badge === undefined ? '' : JSON.stringify(user.badge),
-			visibleRooms: (roomsByUser[user._id] ?? new Set<string>()),
+			visibleRooms: (roomsByUser.get(user._id) ?? new Set),
 		};
-		if (active) {
-			userIds.add(user._id);
-		}
-		await blobStorage.save(`user/${user._id}`, writeUser(info));
+	});
+
+	// Save users
+	for (const user of users) {
+		await blobStorage.save(`user/${user.id}`, User.write(user));
 	}
 
 	// Save Game object
+	const roomNames = new Set(mapInPlace(rooms, room => room.name));
+	const userIds = new Set(users.filter(user => user.active).map(user => user.id));
 	const game = {
 		time: gameTime,
-		accessibleRooms: new Set([ ...rooms.values() ].map(room => room.name)),
-		activeRooms: new Set([ ...rooms.values() ].map(room => room.name)),
+		accessibleRooms: roomNames,
+		activeRooms: roomNames,
 		users: userIds,
 	};
-	await blobStorage.save('game', writeGame(game));
+	await blobStorage.save('game', Game.writeGame(game));
 
-	const writeAuth = getWriter(Authentication.format);
-	await blobStorage.save('auth', writeAuth([]));
+	// Write placeholder authentication data
+	await blobStorage.save('auth', Auth.write([]));
 
-	// Collect user code
-	const writeCode = getWriter(CodeSchema.format);
-	for (const row of collections['users.code']) {
-		const modules = new Map<string, string>();
-		for (const [ key, data ] of Object.entries(row.modules)) {
+	// Save user code
+	await Promise.all(db.getCollection('users.code').find().map(async row => {
+		const modules = new Map(Object.entries(row.modules).map(([ key, data ]) => {
 			const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
-			modules.set(name, data as string);
-		}
-		await blobStorage.save(`code/${row.user}`, writeCode(modules));
-	}
+			return [ name, data as string ];
+		}));
+		await blobStorage.save(`code/${row.user}`, CodeSchema.write(modules));
+	}));
 
 	// Flush everything to disk
 	await blobStorage.flush();
