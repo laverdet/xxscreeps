@@ -1,7 +1,7 @@
 import configPromise from '~/engine/config';
 import { readGame, writeGame } from '~/engine/metadata/game';
 import { AveragingTimer } from '~/lib/averaging-timer';
-import { getOrSet, mapInPlace } from '~/lib/utility';
+import { getOrSet, makeResolver, mapInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 import { Mutex } from '~/storage/mutex';
@@ -35,13 +35,12 @@ export default async function() {
 	const activeUsers = [ ...gameMetadata.users ];
 
 	// Ctrl+C handler
-	let terminated = false;
+	let delayResolve: Resolver<boolean> | undefined;
 	serviceChannel.listen(message => {
 		if (message.type === 'shutdown') {
-			terminated = true;
+			delayResolve?.resolve?.(false);
 		}
 	});
-	const didTerminate = () => terminated;
 
 	try {
 		do {
@@ -116,14 +115,11 @@ export default async function() {
 			});
 
 			// Add delay
-			if (didTerminate()) {
-				break;
-			}
 			const delay = config.game?.tickSpeed ?? 250 - Date.now();
-			if (delay > 0) {
-				await new Promise(resolve => setTimeout(resolve, delay));
-			}
-			if (didTerminate()) {
+			let delayPromise: Promise<boolean>;
+			[ delayPromise, delayResolve ] = makeResolver();
+			setTimeout(() => delayResolve!.resolve(true), delay);
+			if (!await delayPromise) {
 				break;
 			}
 		} while (true);

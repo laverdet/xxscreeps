@@ -1,6 +1,7 @@
 import configPromise from '~/engine/config';
 import { Worker, waitForWorker } from '~/lib/worker-threads';
 import { topLevelTask } from '~/lib/task';
+import { listen } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
 
@@ -29,7 +30,15 @@ topLevelTask(async() => {
 		await Promise.race([ main, waitForMain ]);
 
 		// Ctrl+C listener
-		process.once('SIGINT', () => {
+		let terminating = false;
+		const killListener = listen(process, 'SIGINT', () => {
+			// `npm run` will send two interrupts, so we have to swallow the extra
+			if (terminating) {
+				return;
+			}
+			terminating = true;
+			const timeout = setTimeout(killListener, 250);
+			timeout.unref();
 			Channel.publish<ProcessorMessage>('processor', { type: 'shutdown' });
 			Channel.publish<RunnerMessage>('runner', { type: 'shutdown' });
 			serviceChannel.publish({ type: 'shutdown' });

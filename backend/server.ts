@@ -17,9 +17,12 @@ export default async function() {
 
 	// Shutdown handler
 	const serviceChannel = await Channel.connect<ServiceMessage>('service');
-	serviceChannel.listen(() => {
-		httpServer.close();
-		context.disconnect();
+	const serviceUnlistener = serviceChannel.listen(message => {
+		if (message.type === 'shutdown') {
+			serviceUnlistener();
+			httpServer.close();
+			context.disconnect();
+		}
 	});
 
 	// Set up endpoints
