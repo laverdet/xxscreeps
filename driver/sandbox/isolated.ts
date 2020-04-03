@@ -55,7 +55,7 @@ export class IsolatedSandbox {
 	async run(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 		const result = await this.tick.apply(undefined, [ time, roomBlobs ], { arguments: { copy: true }, result: { copy: true } });
 		return {
-			intents: result[0] as Dictionary<SharedArrayBuffer>,
+			intents: result[0],
 		};
 	}
 }

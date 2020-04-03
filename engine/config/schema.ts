@@ -67,5 +67,5 @@ export type Schema = {
 		 * @default: ./data
 		 */
 		path?: string;
-	}
+	};
 };
