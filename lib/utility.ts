@@ -140,6 +140,12 @@ export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, r
 	return minimum!;
 }
 
+// Not nullable TS predicate
+type NonNullOrVoidable<Type> = Type extends null | undefined | void ? never : Type;
+export function nonNullable<Type>(value: Type): value is NonNullOrVoidable<Type> {
+	return value != null;
+}
+
 // Object.assign but it throws if there's any key collisions
 export function safeAssign(target: any, ...sources: any[]) {
 	for (const source of sources) {

@@ -17,9 +17,11 @@ export const MeEndpoint: Endpoint = {
 			userId = this.context.lookupUserByProvider(tokenValue);
 			if (userId === undefined) {
 				// Unregistered steam user
-				res.set('x-token', await makeToken(tokenValue));
+				res.set('X-Token', await makeToken(tokenValue));
 				return { ok: 1 };
 			}
+			// Upgrade to user token
+			res.set('X-Token', await makeToken(userId));
 		}
 
 		// Check for logged in user
