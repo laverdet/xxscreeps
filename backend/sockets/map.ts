@@ -12,7 +12,7 @@ type Position = [ number, number ];
 export const mapSubscription: SubscriptionEndpoint = {
 	pattern: /^roomMap2:(?<room>[A-Z0-9]+)$/,
 
-	subscribe(parameters) {
+	async subscribe(parameters) {
 		const roomName = parameters.room;
 		if (!this.context.accessibleRooms.has(roomName)) {
 			// The client sends subscription requests for rooms that don't exist. Filter those out here to
@@ -51,6 +51,7 @@ export const mapSubscription: SubscriptionEndpoint = {
 			}
 			this.send(JSON.stringify(response));
 		};
+		await update(this.context.time);
 		return this.context.gameChannel.listen(event => {
 			if (event.type === 'tick' && Date.now() > lastTickTime + 250) {
 				update(event.time).catch(error => console.error(error));
