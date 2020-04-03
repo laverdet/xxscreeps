@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { readRoom, writeRoom } from '~/engine/schema';
+import * as Room from '~/engine/schema/room';
 import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
@@ -52,7 +52,7 @@ export default async function() {
 					const deleteIntentBlobs = Promise.all(mapInPlace(intents, ({ user }) =>
 						blobStorage.delete(`intents/${room}/${user}`)));
 					// Process the room
-					const roomInstance = readRoom(roomBlob);
+					const roomInstance = Room.read(roomBlob);
 					(global as any).Game = new Game(gameTime, [ roomInstance ]);
 					const context = new ProcessorContext(gameTime, roomInstance);
 					for (const intentInfo of intents) {
@@ -73,7 +73,7 @@ export default async function() {
 				// processing has run
 				const nextGameTime = gameTime + 1;
 				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) =>
-					blobStorage.save(`ticks/${nextGameTime}/${roomName}`, writeRoom(context.room)),
+					blobStorage.save(`ticks/${nextGameTime}/${roomName}`, Room.write(context.room)),
 				));
 				processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
 				processedRooms.clear();

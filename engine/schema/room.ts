@@ -1,4 +1,4 @@
-import { bindInterceptors, makeVariant, makeVector, withSymbol } from '~/lib/schema';
+import { bindInterceptors, getReader, getWriter, makeVariant, makeVector, withSymbol } from '~/lib/schema';
 import { Objects, Room } from '~/game/room';
 
 import * as Controller from './controller';
@@ -25,3 +25,6 @@ export const shape = bindInterceptors('Room', {
 });
 
 export const format = bindInterceptors(shape, { overlay: Room });
+
+export const read = getReader(format);
+export const write = getWriter(format);

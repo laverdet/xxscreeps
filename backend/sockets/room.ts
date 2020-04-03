@@ -1,4 +1,4 @@
-import { readRoom } from '~/engine/schema';
+import * as Room from '~/engine/schema/room';
 import { Objects } from '~/game/room';
 import { SubscriptionEndpoint } from '../socket';
 import { Render } from './render';
@@ -34,7 +34,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		const update = async(time: number) => {
 			lastTickTime = Date.now();
 			const roomBlob = await this.context.blobStorage.load(`ticks/${time}/${parameters.room}`);
-			const room = readRoom(roomBlob);
+			const room = Room.read(roomBlob);
 			// Render current room state
 			const objects: any = {};
 			for (const object of room[Objects]) {

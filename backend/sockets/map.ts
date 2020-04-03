@@ -1,4 +1,4 @@
-import { readRoom } from '~/engine/schema';
+import * as Room from '~/engine/schema/room';
 import { Objects } from '~/game/room';
 import { Owner } from '~/game/objects/room-object';
 import { Creep } from '~/game/objects/creep';
@@ -23,7 +23,7 @@ export const mapSubscription: SubscriptionEndpoint = {
 		const update = async(time: number) => {
 			lastTickTime = Date.now();
 			const roomBlob = await this.context.blobStorage.load(`ticks/${time}/${roomName}`);
-			const room = readRoom(roomBlob);
+			const room = Room.read(roomBlob);
 			// w: constructedWall
 			// r: road
 			// pb: powerBank
