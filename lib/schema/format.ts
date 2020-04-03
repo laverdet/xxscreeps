@@ -9,27 +9,40 @@ export const Variant = Symbol('schemaVariant');
 
 // Only used to carry type information
 export const Shape = Symbol('withShape');
-export type WithShape<Type = any> = { [Shape]: Type };
+export type WithShape<Shape = any> = { [Shape]: Shape };
+export const Type = Symbol('withType');
+export type WithType<Type = any> = { [Type]: Type };
+export type WithShapeAndType<Type> = WithShape<Type> & WithType<Type>;
 
-export type Format = WithShape | Primitive | StructFormat;
+export type Format = WithShape | WithType | Primitive | StructFormat;
 export type StructFormat = {
-	[Inherit]?: WithShape;
+	[Inherit]?: WithType;
 	[Variant]?: string;
 	[key: string]: Format;
 };
 
-export type FormatShape<Format> =
-	Format extends WithShape<infer Type> ? Type :
+type CommonShape<Format> =
 	Format extends Integral ? number :
 	Format extends 'bool' ? boolean :
 	Format extends 'string' ? string :
-	Format extends StructFormat ? {
-		[Key in Exclude<keyof Format, symbol>]: FormatShape<Format[Key]>;
-	} :
 	never;
 
+export type FormatShape<Format> =
+	Format extends WithShape<infer Type> ? Type :
+	Format extends StructFormat ? {
+		[Key in Exclude<keyof Format, symbol>]: FormatShape<Format[Key]>;
+	} & (Format[typeof Inherit] extends WithShape<infer Type> ? Type : unknown) :
+	CommonShape<Format>;
+
+export type FormatType<Format> =
+	Format extends WithType<infer Type> ? Type :
+	Format extends StructFormat ? {
+		[Key in Exclude<keyof Format, symbol>]: FormatType<Format[Key]>;
+	} :
+	CommonShape<Format>;
+
 // Override detected shape
-export function withType<Type>(format: Format): WithShape<Type> {
+export function withType<Type>(format: Format): WithShapeAndType<Type> {
 	return format as any;
 }
 
@@ -44,23 +57,28 @@ export function unpackHolderFormat(format: Format) {
 }
 
 // Constructors for type formats
-export function makeArray<Type extends Format>(length: number, format: Type): WithShape<FormatShape<Type>[]> {
+export function makeArray<Type extends Format>(length: number, format: Type):
+WithShapeAndType<FormatType<Type>[]> {
 	return [ 'array', length, format ] as any;
 }
 
-export function makeEnum<Type extends (undefined | string)[]>(...values: Type): WithShape<Type[number]> {
+export function makeEnum<Type extends (undefined | string)[]>(...values: Type):
+WithShapeAndType<Type[number]> {
 	return [ 'enum', values ] as any;
 }
 
-export function makeOptional<Type extends Format>(format: Type): WithShape<FormatShape<Type> | undefined> {
+export function makeOptional<Type extends Format>(format: Type):
+WithShape<FormatType<Type> | undefined> & WithType<FormatType<Type> | undefined> {
 	return [ 'optional', format ] as any;
 }
 
-export function makeVariant<Type extends Format[]>(...format: Type): WithShape<FormatShape<Type[number]>> {
+export function makeVariant<Type extends Format[]>(...format: Type):
+WithShape<FormatShape<Type[number]>> & WithType<FormatType<Type[number]>> {
 	return [ 'variant', format ] as any;
 }
 
-export function makeVector<Type extends Format>(format: Type): WithShape<FormatShape<Type>[]> {
+export function makeVector<Type extends Format>(format: Type):
+WithShape<Iterable<FormatShape<Type>>> & WithType<FormatType<Type>[]> {
 	return [ 'vector', format ] as any;
 }
 

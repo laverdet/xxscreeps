@@ -1,4 +1,4 @@
-import { bindName, getReader, getWriter, FormatShape } from '~/lib/schema';
+import { bindName, getReader, getWriter, FormatType } from '~/lib/schema';
 import * as StringSet from '~/engine/util/schema/string-set';
 import * as Id from '~/engine/util/schema/id';
 
@@ -28,7 +28,7 @@ export function create(username: string) {
 	};
 }
 
-export type User = FormatShape<typeof format>;
+export type User = FormatType<typeof format>;
 
 export const read = getReader(format);
 export const write = getWriter(format);

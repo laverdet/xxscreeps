@@ -1,4 +1,4 @@
-import { bindInterceptors, makeVector, FormatShape } from '~/lib/schema';
+import { bindInterceptors, makeVector, FormatType } from '~/lib/schema';
 
 export const format = bindInterceptors('Code', {
 	modules: makeVector({
@@ -16,4 +16,4 @@ export const format = bindInterceptors('Code', {
 	}),
 });
 
-export type UserCode = FormatShape<typeof format>;
+export type UserCode = FormatType<typeof format>;

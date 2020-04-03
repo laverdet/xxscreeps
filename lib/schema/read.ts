@@ -1,6 +1,6 @@
 import type { BufferObject } from './buffer-object';
 import { BufferView } from './buffer-view';
-import { getLayout, Format, FormatShape, Variant } from './format';
+import { getLayout, Format, FormatType, Variant } from './format';
 import { defaultInterceptorLookup, InterceptorLookup, MemberInterceptor } from './interceptor';
 import { kPointerSize, getTraits, Layout, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
@@ -242,7 +242,7 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 export function getReader<Type extends Format>(format: Type, lookup = defaultInterceptorLookup) {
 	const layout = getLayout(format);
 	const read = getTypeReader(layout, lookup);
-	return (buffer: Readonly<Uint8Array>): FormatShape<Type> => {
+	return (buffer: Readonly<Uint8Array>): FormatType<Type> => {
 		const view = BufferView.fromTypedArray(buffer);
 		return read(view, 0);
 	};

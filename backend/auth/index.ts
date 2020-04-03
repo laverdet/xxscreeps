@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { bindName, getReader, getWriter, makeVector, FormatShape } from '~/lib/schema';
+import { bindName, getReader, getWriter, makeVector, FormatType } from '~/lib/schema';
 import * as Id from '~/engine/util/schema/id';
 import { checkToken } from './token';
 
@@ -41,7 +41,7 @@ export const format = bindName('Entries', makeVector({
 	user: Id.format,
 }));
 
-export type Shape = FormatShape<typeof format>;
+export type Shape = FormatType<typeof format>;
 
 export const read = getReader(format);
 export const write = getWriter(format);
