@@ -36,8 +36,10 @@ export default async function() {
 
 	// Ctrl+C handler
 	let delayResolve: Resolver<boolean> | undefined;
+	let shuttingDown = false;
 	serviceChannel.listen(message => {
 		if (message.type === 'shutdown') {
+			shuttingDown = true;
 			delayResolve?.resolve?.(false);
 		}
 	});
@@ -114,11 +116,17 @@ export default async function() {
 				Channel.publish<GameMessage>('main', { type: 'tick', time: gameMetadata.time });
 			});
 
+			// Shutdown request came in during game loop
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (shuttingDown) {
+				break;
+			}
+
 			// Add delay
 			const delay = config.game?.tickSpeed ?? 250 - Date.now();
 			let delayPromise: Promise<boolean>;
 			[ delayPromise, delayResolve ] = makeResolver();
-			setTimeout(() => delayResolve!.resolve(true), delay);
+			setTimeout(() => delayResolve!.resolve(true), delay).unref();
 			if (!await delayPromise) {
 				break;
 			}
@@ -132,7 +140,8 @@ export default async function() {
 		usersQueue.disconnect();
 		processorChannel.disconnect();
 		runnerChannel.disconnect();
-		serviceChannel.disconnect();
 		gameMutex.disconnect();
+		serviceChannel.publish({ type: 'mainDisconnected' });
+		serviceChannel.disconnect();
 	}
 }

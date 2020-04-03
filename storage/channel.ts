@@ -103,7 +103,6 @@ export abstract class Channel<Message> {
 
 	// This should also be overridden
 	disconnect() {
-		this.listeners.clear();
 		for (const listener of this.disconnectListeners) {
 			listener();
 		}

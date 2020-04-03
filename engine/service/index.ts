@@ -16,7 +16,7 @@ export type ProcessorMessage =
 	FlushRoomsMessage | FlushedRoomMessage;
 
 type ShutdownMessage = { type: 'shutdown' };
-export type ServiceMessage = { type: 'mainConnected' } | ShutdownMessage;
+export type ServiceMessage = { type: 'mainConnected' } | { type: 'mainDisconnected' } | ShutdownMessage;
 
 export type ProcessorQueueElement = {
 	room: string;

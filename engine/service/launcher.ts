@@ -39,15 +39,22 @@ topLevelTask(async() => {
 			terminating = true;
 			const timeout = setTimeout(killListener, 250);
 			timeout.unref();
-			Channel.publish<ProcessorMessage>('processor', { type: 'shutdown' });
-			Channel.publish<RunnerMessage>('runner', { type: 'shutdown' });
-			serviceChannel.publish({ type: 'shutdown' });
 			console.log('Shutting down...');
+
+			// Send shutdown message to main. Once main shuts down send shutdown message to processor and
+			// runner
+			const shutdownUnlisten = serviceChannel.listen(message => {
+				shutdownUnlisten();
+				if (message.type === 'mainDisconnected') {
+					Channel.publish<ProcessorMessage>('processor', { type: 'shutdown' });
+					Channel.publish<RunnerMessage>('runner', { type: 'shutdown' });
+				}
+			});
+			serviceChannel.publish({ type: 'shutdown' });
 		});
 
 		// Start workers
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (config?.singleThreaded === true) {
+		if (config?.singleThreaded) {
 			const backend = Backend();
 			const processor = Processor();
 			const runner = Runner();
