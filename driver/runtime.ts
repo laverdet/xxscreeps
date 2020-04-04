@@ -12,7 +12,7 @@ import { gameContext, IntentManager } from '~/game/context';
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
 import * as PathFinder from '~/game/path-finder';
-import { UserCode } from '~/engine/metadata/code';
+import * as UserCode from '~/engine/metadata/code';
 import { BufferView } from '~/lib/schema/buffer-view';
 
 // Sets up prototype overlays
@@ -45,10 +45,12 @@ for (const [ identifier, value ] of Object.entries(Constants)) {
 let require: (name: string) => any;
 export function initialize(
 	compileModule: (source: string, filename: string) => ((...args: any[]) => any),
-	userId: string, modulesCode: UserCode,
+	userId: string,
+	codeBlob: Readonly<Uint8Array>,
 	terrain: Readonly<Uint8Array>,
 ) {
 	loadTerrainFromBuffer(terrain);
+	const { modules } = UserCode.read(codeBlob);
 	gameContext.userId = userId;
 	// Set up global `require`
 	const cache = Object.create(null);
@@ -61,7 +63,7 @@ export function initialize(
 			}
 			return cached;
 		}
-		const code = modulesCode.get(name);
+		const code = modules.get(name);
 		if (code === undefined) {
 			throw new Error(`Unknown module: ${name}`);
 		}
@@ -81,7 +83,7 @@ export function initialize(
 		}
 		// Cache executed module and release code string (maybe it frees memory?)
 		cache[name] = module.exports;
-		modulesCode.delete(name);
+		modules.delete(name);
 		return module.exports;
 	};
 }
@@ -90,14 +92,14 @@ export function initializeIsolated(
 	isolate: ivm.Isolate,
 	context: ivm.Context,
 	userId: string,
-	userCode: UserCode,
+	codeBlob: Readonly<Uint8Array>,
 	terrain: Readonly<Uint8Array>,
 ) {
 	const compileModule = (source: string, filename: string) => {
 		const script = isolate.compileScriptSync(source, { filename });
 		return script.runSync(context, { reference: true }).deref();
 	};
-	return initialize(compileModule, userId, userCode, terrain);
+	return initialize(compileModule, userId, codeBlob, terrain);
 }
 
 export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {

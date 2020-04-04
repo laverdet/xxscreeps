@@ -1,4 +1,5 @@
 import Loki from 'lokijs';
+import { execSync } from 'child_process';
 import { topLevelTask } from '~/lib/task';
 
 import { RoomPosition } from '~/game/position';
@@ -20,7 +21,7 @@ import * as User from '~/engine/metadata/user';
 import { Variant } from '~/lib/schema/format';
 import { getWriter } from '~/lib/schema/write';
 import { BlobStorage } from '~/storage/blob';
-import { accumulate, filterInPlace, getOrSet, mapInPlace } from '~/lib/utility';
+import { accumulate, filterInPlace, getOrSet, mapInPlace, firstMatching } from '~/lib/utility';
 
 const [ jsonSource ] = process.argv.slice(2);
 if (jsonSource === undefined) {
@@ -58,6 +59,7 @@ topLevelTask(async() => {
 	// Load JSON data and connect to blob storage
 	const db = new Loki(jsonSource);
 	db.loadDatabase();
+	execSync('rm -rf ./data/*');
 	const blobStorage = await BlobStorage.create();
 
 	// Collect env data
@@ -131,7 +133,9 @@ topLevelTask(async() => {
 	}
 
 	// Collect users
+	const usersCode = db.getCollection('users.code');
 	const users = db.getCollection('users').find().map(user => {
+		const code = usersCode.find({ user: user._id });
 		const active: boolean = ![ '2', '3' ].includes(user._id) && user.active;
 		return {
 			id: user._id,
@@ -143,12 +147,20 @@ topLevelTask(async() => {
 			gcl: user.gcl,
 			badge: user.badge === undefined ? '' : JSON.stringify(user.badge),
 			visibleRooms: (roomsByUser.get(user._id) ?? new Set),
+			code: {
+				activeSim: firstMatching(code, code => code.activeSim)?._id,
+				activeWorld: firstMatching(code, code => code.activeWorld)?._id,
+				branches: code.map(row => ({
+					id: row._id,
+					name: row.branch,
+				})),
+			},
 		};
 	});
 
 	// Save users
 	for (const user of users) {
-		await blobStorage.save(`user/${user.id}`, User.write(user));
+		await blobStorage.save(`user/${user.id}/info`, User.write(user));
 	}
 
 	// Save Game object
@@ -171,7 +183,11 @@ topLevelTask(async() => {
 			const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
 			return [ name, data as string ];
 		}));
-		await blobStorage.save(`code/${row.user}`, CodeSchema.write(modules));
+		await blobStorage.save(`user/${row.user}/${row._id}`, CodeSchema.write({
+			modules,
+			timeCreated: row.meta.created / 1000,
+			timeModified: row.meta.modified / 1000,
+		}));
 	}));
 
 	// Flush everything to disk

@@ -70,7 +70,7 @@ export class BackendContext {
 	}
 
 	async loadUser(id: string) {
-		return User.read(await this.blobStorage.load(`user/${id}`));
+		return User.read(await this.blobStorage.load(`user/${id}/info`));
 	}
 
 	async save() {

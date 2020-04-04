@@ -1,6 +1,5 @@
 import vm from 'vm';
 import { runOnce } from '~/lib/memoize';
-import type { UserCode } from '~/engine/metadata/code';
 import { getPathFinderInfo, getRuntimeSource } from '.';
 
 const getPathFinderModule = runOnce(() => {
@@ -17,7 +16,8 @@ export class NodejsSandbox {
 		private readonly tick: (...args: any[]) => any,
 	) {}
 
-	static async create(userId: string, userCode: UserCode, terrain: Readonly<Uint8Array>) {
+	static async create(userId: string, codeBlob: Readonly<Uint8Array>, terrain: Readonly<Uint8Array>) {
+
 		// Generate new vm context, set up globals
 		const context = vm.createContext();
 		context.console = console;
@@ -30,7 +30,7 @@ export class NodejsSandbox {
 		delete context[identifier];
 		runtime.initialize(
 			(source: string, filename: string) => (new vm.Script(source, { filename })).runInContext(context),
-			userId, userCode,
+			userId, codeBlob,
 			terrain,
 		);
 		return new NodejsSandbox(tick);

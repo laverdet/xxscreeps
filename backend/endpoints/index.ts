@@ -1,5 +1,5 @@
 import { Express, Router } from 'express';
-import { authenticateMiddleware } from '../auth';
+import { useAuth, useToken } from '../auth';
 import { BackendContext } from '../context';
 import { AbstractResponse, Endpoint } from '../endpoint';
 
@@ -55,20 +55,20 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 		MeEndpoint,
 		SteamTicketEndpoint,
 	]));
-	apiRouter.use('/game', bindRoutes(context, Router(), [
+	apiRouter.use('/game', useAuth(bindRoutes(context, Router(), [
 		MapStatsEndpoint,
 		RoomStatusEndpoint,
 		RoomTerrainEndpoint,
 		TickEndpoint,
 		TimeEndpoint,
-	]));
-	apiRouter.use('/register', bindRoutes(context, Router(), [
+	])));
+	apiRouter.use('/register', useToken(bindRoutes(context, Router(), [
 		CheckEmailEndpoint,
 		CheckUsernameEndpoint,
 		SetUsernameEndpoint,
 		SubmitRegistrationEndpoint,
-	]));
-	apiRouter.use('/user', authenticateMiddleware(bindRoutes(context, Router(), [
+	])));
+	apiRouter.use('/user', useToken(bindRoutes(context, Router(), [
 		BadgeEndpoint,
 		BranchesEndpoint,
 		CodeEndpoint,
@@ -77,7 +77,6 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 		WorldStartRoomEndpoint,
 		WorldStatusEndpoint,
 	])));
-
 	express.use('/api', apiRouter);
 	express.use('/assets', bindRoutes(context, Router(), [
 		TerrainEndpoint,

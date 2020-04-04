@@ -1,19 +1,15 @@
-import { bindInterceptors, getReader, getWriter, makeVector, FormatType } from '~/lib/schema';
+import { bindName, bindInterceptors, getReader, getWriter, makeVector, FormatType } from '~/lib/schema';
 
-export const format = bindInterceptors('Code', {
-	modules: makeVector({
+export const format = bindName('CodeBranch', {
+	modules: bindInterceptors(makeVector({
 		name: 'string',
 		data: 'string',
+	}), {
+		compose: value => new Map<string, string>(value.map(entry => [ entry.name, entry.data ])),
+		decompose: (value: Map<string, string>) => [ ...value.entries() ].map(([ name, data ]) => ({ name, data })),
 	}),
-/* binaries: makeVector({
-		name: 'string',
-		data: makeVector('uint8'),
-	}),*/
-}, {
-	compose: value => new Map<string, string>(value.modules.map(entry => [ entry.name, entry.data ])),
-	decompose: (value: Map<string, string>) => ({
-		modules: [ ...value.entries() ].map(([ name, data ]) => ({ name, data })),
-	}),
+	timeCreated: 'int32',
+	timeModified: 'int32',
 });
 
 export const read = getReader(format);

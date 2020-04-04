@@ -40,7 +40,11 @@ export default async function() {
 				gameTime = message.time;
 				usersQueue.version(gameTime);
 				for await (const userId of usersQueue) {
-					const [ sandbox, { roomBlobs, visibleRooms } ] = await Promise.all([
+					// Load user data
+					const userInfo = User.read(await blobStorage.load(`user/${userId}/info`));
+					const { visibleRooms } = userInfo;
+
+					const [ sandbox, roomBlobs ] = await Promise.all([
 						// Get user sandbox
 						async function() {
 							// Use cached sandbox
@@ -49,20 +53,15 @@ export default async function() {
 								return existing;
 							}
 							// Generate a new one
-							const userCode = readCode(await blobStorage.load(`code/${userId}`));
-							const sandbox = await createSandbox(userId, userCode, terrainBuffer);
+							const codeBlob = await blobStorage.load(`user/${userId}/${userInfo.code.activeWorld}`);
+							const sandbox = await createSandbox(userId, codeBlob, terrainBuffer);
 							sandboxes.set(userId, sandbox);
 							return sandbox;
 						}(),
 						// Load visible rooms for this user
-						async function() {
-							const userInfo = User.read(await blobStorage.load(`user/${userId}`));
-							const { visibleRooms } = userInfo;
-							const roomBlobs = await Promise.all(mapInPlace(visibleRooms, roomName =>
-								blobStorage.load(`ticks/${gameTime}/${roomName}`),
-							));
-							return { roomBlobs, visibleRooms };
-						}(),
+						Promise.all(mapInPlace(visibleRooms, roomName =>
+							blobStorage.load(`ticks/${gameTime}/${roomName}`),
+						)),
 					]);
 
 					// Run user code

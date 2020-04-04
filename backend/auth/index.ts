@@ -3,7 +3,17 @@ import { bindName, getReader, getWriter, makeVector, FormatType } from '~/lib/sc
 import * as Id from '~/engine/util/schema/id';
 import { checkToken } from './token';
 
-export function authenticateMiddleware(handler: RequestHandler): RequestHandler {
+export function useAuth(handler: RequestHandler) {
+	return useToken((req, res, next) => {
+		if (req.userid === undefined) {
+			next();
+		} else {
+			handler(req, res, next);
+		}
+	});
+}
+
+export function useToken(handler: RequestHandler): RequestHandler {
 	return (req, res, next) => {
 		(async() => {
 			const token = req.get('x-token');

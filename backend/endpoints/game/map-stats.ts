@@ -51,7 +51,7 @@ export const MapStatsEndpoint: Endpoint = {
 		// Read users
 		const userObjects = await Promise.all(
 			mapInPlace(userIds, async id =>
-				User.read(await this.context.blobStorage.load(`user/${id}`))));
+				User.read(await this.context.blobStorage.load(`user/${id}/info`))));
 		const users = mapToKeys(userObjects, user => [
 			user.id, {
 				_id: user.id,

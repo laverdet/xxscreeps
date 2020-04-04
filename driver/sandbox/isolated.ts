@@ -1,6 +1,5 @@
 import ivm from 'isolated-vm';
 import { runOnce } from '~/lib/memoize';
-import type { UserCode } from '~/engine/metadata/code';
 import type * as Runtime from '~/driver/runtime';
 import { getPathFinderInfo, getRuntimeSource } from '.';
 
@@ -15,7 +14,7 @@ export class IsolatedSandbox {
 		private readonly tick: ivm.Reference<typeof Runtime.tick>,
 	) {}
 
-	static async create(userId: string, userCode: UserCode, terrain: Readonly<Uint8Array>) {
+	static async create(userId: string, codeBlob: Readonly<Uint8Array>, terrain: Readonly<Uint8Array>) {
 		// Generate new isolate and context
 		const isolate = new ivm.Isolate({ memoryLimit: 128 });
 		const [ context, script ] = await Promise.all([
@@ -48,7 +47,7 @@ export class IsolatedSandbox {
 			runtime.get('initializeIsolated', { reference: true }),
 			context.global.delete(identifier),
 		]);
-		await initialize.apply(undefined, [ isolate, context, userId, userCode, terrain ], { arguments: { copy: true } });
+		await initialize.apply(undefined, [ isolate, context, userId, codeBlob, terrain ], { arguments: { copy: true } });
 		return new IsolatedSandbox(tick);
 	}
 

@@ -64,7 +64,7 @@ export const SetUsernameEndpoint: Endpoint = {
 			this.context.associateUser(tokenValue, user.id);
 			await Promise.all([
 				this.context.save(),
-				this.context.blobStorage.save(`user/${user.id}`, userBlob),
+				this.context.blobStorage.save(`user/${user.id}/info`, userBlob),
 			]);
 			// Update auth token
 			res.set('X-Token', await makeToken(user.id));

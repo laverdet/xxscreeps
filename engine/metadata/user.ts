@@ -1,4 +1,4 @@
-import { bindName, getReader, getWriter, FormatType } from '~/lib/schema';
+import { bindName, getReader, getWriter, makeVector, FormatType } from '~/lib/schema';
 import * as StringSet from '~/engine/util/schema/string-set';
 import * as Id from '~/engine/util/schema/id';
 
@@ -12,6 +12,14 @@ export const format = bindName('User', {
 	active: 'bool',
 	badge: 'string',
 	visibleRooms: StringSet.format,
+	code: {
+		activeSim: Id.format,
+		activeWorld: Id.format,
+		branches: makeVector({
+			id: Id.format,
+			name: 'string',
+		}),
+	},
 });
 
 export function create(username: string) {
@@ -25,6 +33,11 @@ export function create(username: string) {
 		active: false,
 		badge: '',
 		visibleRooms: new Set<string>(),
+		code: {
+			activeSim: '',
+			activeWorld: '',
+			branches: [],
+		},
 	};
 }
 

@@ -1,5 +1,4 @@
 import configPromise from '~/engine/config';
-import { UserCode } from '~/engine/metadata/code';
 import { runOnce } from '~/lib/memoize';
 import { locateModule } from '../path-finder';
 import { compile } from '../webpack';
@@ -15,10 +14,10 @@ export function getPathFinderInfo() {
 
 export const getRuntimeSource = runOnce(() => compile('~/driver/runtime.ts'));
 
-export async function createSandbox(userId: string, userCode: UserCode, terrain: Readonly<Uint8Array>) {
+export async function createSandbox(userId: string, codeBlob: Readonly<Uint8Array>, terrain: Readonly<Uint8Array>) {
 	if ((await configPromise).config?.runner?.unsafeSandbox === true) {
-		return NodejsSandbox.create(userId, userCode, terrain);
+		return NodejsSandbox.create(userId, codeBlob, terrain);
 	} else {
-		return IsolatedSandbox.create(userId, userCode, terrain);
+		return IsolatedSandbox.create(userId, codeBlob, terrain);
 	}
 }
