@@ -1,4 +1,4 @@
-import { bindInterceptors, makeArray, withType, BufferView } from '~/lib/schema';
+import { declare, array, BufferView } from '~/lib/schema';
 import { exchange } from '~/lib/utility';
 
 const { apply } = Reflect;
@@ -63,17 +63,13 @@ export function isNearBorder(xx: number, yy: number) {
 	return (xx + 2) % 50 < 4 || (yy + 2) % 50 < 4;
 }
 
-export const format = bindInterceptors('Terrain', {
+export const format = declare('Terrain', {
 	name: 'string',
-	terrain: withType<Terrain>(makeArray(625, 'uint8')),
-}, {
-	members: {
-		terrain: {
-			composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),
-			decomposeIntoBuffer(value: Terrain, view: BufferView, offset: number) {
-				value.getRawBuffer(view.uint8.subarray(offset));
-				return 625;
-			},
+	terrain: declare(array(625, 'uint8'), {
+		composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),
+		decomposeIntoBuffer(value: Terrain, view: BufferView, offset: number) {
+			value.getRawBuffer(view.uint8.subarray(offset));
+			return 625;
 		},
-	},
+	}),
 });

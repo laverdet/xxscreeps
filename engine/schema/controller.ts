@@ -1,27 +1,21 @@
-import { bindInterceptors, withSymbol, Inherit, Variant } from '~/lib/schema';
+import { declare, inherit, variant, withSymbol } from '~/lib/schema';
 import { DowngradeTime, Progress, StructureController, UpgradeBlockedTime } from '~/game/objects/structures/controller';
 import * as Structure from './structure';
 
-export const shape = bindInterceptors('Controller', {
-	[Inherit]: Structure.format,
-	[Variant]: 'controller',
+export const shape = declare('Controller', {
+	...inherit(Structure.format),
+	...variant('controller'),
 
-	downgradeTime: 'int32',
+	downgradeTime: withSymbol(DowngradeTime, 'int32'),
 	isPowerEnabled: 'bool',
 	level: 'int32',
-	progress: 'int32',
+	progress: withSymbol(Progress, 'int32'),
 	// reservation: { username, ticksToEnd }
 	safeMode: 'int32',
 	safeModeAvailable: 'int32',
 	safeModeCooldown: 'int32',
 	// sign: { username, text, time, datetime }
-	upgradeBlockedTime: 'int32',
-}, {
-	members: {
-		downgradeTime: withSymbol(DowngradeTime),
-		progress: withSymbol(Progress),
-		upgradeBlockedTime: withSymbol(UpgradeBlockedTime),
-	},
+	upgradeBlockedTime: withSymbol(UpgradeBlockedTime, 'int32'),
 });
 
-export const format = bindInterceptors(shape, { overlay: StructureController });
+export const format = declare(shape, { overlay: StructureController });

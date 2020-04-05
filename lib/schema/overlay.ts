@@ -1,8 +1,10 @@
 import { getBuffer, getOffset, BufferObject } from './buffer-object';
-import { Variant } from './format';
-import { InterceptorLookup } from './interceptor';
+import type { BufferView } from './buffer-view';
+import { Variant, TypeOf, WithType } from './format';
+import type { InterceptorLookup } from './interceptor';
 import type { StructLayout } from './layout';
-import { getSingleMemberReader } from './read';
+import { getTypeReader } from './read';
+
 
 const { defineProperty } = Object;
 const { apply } = Reflect;
@@ -10,18 +12,16 @@ const { apply } = Reflect;
 type GetterReader = (this: BufferObject) => any;
 
 export function injectGetters(layout: StructLayout, prototype: object, lookup: InterceptorLookup) {
-	const interceptors = lookup(layout)?.members;
 	for (const [ key, member ] of Object.entries(layout.struct)) {
 		const { layout, offset, pointer } = member;
-		const memberInterceptors = interceptors?.[key];
-		const symbol = memberInterceptors?.symbol ?? key;
+		const symbol = lookup.symbol(layout) ?? key;
 
 		// Make getter
 		const get = function(): GetterReader {
 
 			// Get reader for this member
 			const get = function(): GetterReader {
-				const read = getSingleMemberReader(layout, lookup, memberInterceptors);
+				const read = getTypeReader(layout, lookup);
 				if (pointer === true) {
 					return function() {
 						const buffer = getBuffer(this);
@@ -68,15 +68,6 @@ export function injectGetters(layout: StructLayout, prototype: object, lookup: I
 		});
 	}
 
-	// Check for interceptors that don't match the layout
-	if (interceptors) {
-		for (const key of Object.keys(interceptors)) {
-			if (!(key in layout.struct)) {
-				throw new Error(`Interceptor found for ${key} but does not exist in layout`);
-			}
-		}
-	}
-
 	// Add Variant key
 	const variant = layout['variant!'];
 	if (variant !== undefined) {
@@ -84,4 +75,11 @@ export function injectGetters(layout: StructLayout, prototype: object, lookup: I
 			value: variant,
 		});
 	}
+}
+
+// Injects types from format and interceptors into class prototype
+export function withOverlay<Format extends WithType>() {
+	return <Type extends { prototype: object }>(classDeclaration: Type) =>
+		classDeclaration as any as new (view: BufferView, offset: number) =>
+			Type['prototype'] & TypeOf<Format>;
 }

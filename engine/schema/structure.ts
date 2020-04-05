@@ -1,17 +1,13 @@
-import { bindInterceptors, withSymbol, Inherit } from '~/lib/schema';
+import { declare, inherit, withSymbol } from '~/lib/schema';
 import * as Id from '~/engine/util/schema/id';
 import { Owner } from '~/game/objects/room-object';
 import { Structure } from '~/game/objects/structures';
 import * as RoomObject from './room-object';
 
-export const shape = bindInterceptors('Structure', {
-	[Inherit]: RoomObject.format,
+export const shape = declare('Structure', {
+	...inherit(RoomObject.format),
 	hits: 'int32',
-	owner: Id.format,
-}, {
-	members: {
-		owner: withSymbol(Owner),
-	},
+	owner: withSymbol(Owner, Id.format),
 });
 
-export const format = bindInterceptors(shape, { overlay: Structure });
+export const format = declare(shape, { overlay: Structure });

@@ -1,4 +1,4 @@
-import { WithBoundInterceptor } from './interceptor';
+import { BoundSchema } from './interceptor';
 
 // This specifies memory layout in a hopefully stable format
 export type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
@@ -39,7 +39,7 @@ type VectorLayout = {
 	vector: Layout;
 };
 
-export type Layout = Primitive | WithBoundInterceptor & (
+export type Layout = Primitive | BoundSchema & (
 	ArrayLayout | EnumLayout | HolderLayout | OptionalLayout | StructLayout | VariantLayout | VectorLayout
 );
 
@@ -153,7 +153,7 @@ export function getTraits(layout: Layout): Traits {
 	}
 }
 
-// Recursively unpacks holder layout created by bindInterceptor
+// Recursively unpacks holder layout created by `declare`
 export function unpackHolder(layout: Layout) {
 	let unpacked: any = layout;
 	while (unpacked.holder !== undefined) {

@@ -1,6 +1,6 @@
-import { bindInterceptors, makeVector } from '~/lib/schema';
+import { declare, vector } from '~/lib/schema';
 
-export const format = bindInterceptors(makeVector('string'), {
+export const format = declare(vector('string'), {
 	compose: strings => new Set(strings),
 	decompose: (set: Set<string>) => set,
 });

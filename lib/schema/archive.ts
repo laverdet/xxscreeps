@@ -1,4 +1,4 @@
-import { BoundInterceptor } from './interceptor';
+import { defaultInterceptorLookup } from './interceptor';
 import type { Layout } from './layout';
 
 class Renderer {
@@ -68,9 +68,9 @@ function archiveNamedLayout(renderer: Renderer, layout: Layout, depth = 1) {
 
 	// Check for bound name
 	if (typeof layout !== 'string') {
-		const bound = layout[BoundInterceptor];
-		if (bound?.name !== undefined) {
-			return renderer.withIdentifier(bound.name, layout);
+		const name = defaultInterceptorLookup.name(layout);
+		if (name !== undefined) {
+			return renderer.withIdentifier(name, layout);
 		}
 	}
 

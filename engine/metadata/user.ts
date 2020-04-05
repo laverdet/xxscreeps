@@ -1,8 +1,8 @@
-import { bindName, getReader, getWriter, makeVector, FormatType } from '~/lib/schema';
+import { declare, getReader, getWriter, vector, TypeOf } from '~/lib/schema';
 import * as StringSet from '~/engine/util/schema/string-set';
 import * as Id from '~/engine/util/schema/id';
 
-export const format = bindName('User', {
+export const format = declare('User', {
 	id: Id.format,
 	username: 'string',
 	cpu: 'int32',
@@ -15,7 +15,7 @@ export const format = bindName('User', {
 	code: {
 		activeSim: Id.format,
 		activeWorld: Id.format,
-		branches: makeVector({
+		branches: vector({
 			id: Id.format,
 			name: 'string',
 		}),
@@ -41,7 +41,7 @@ export function create(username: string) {
 	};
 }
 
-export type User = FormatType<typeof format>;
+export type User = TypeOf<typeof format>;
 
 export const read = getReader(format);
 export const write = getWriter(format);

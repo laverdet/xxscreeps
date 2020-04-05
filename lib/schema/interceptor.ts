@@ -1,12 +1,11 @@
 import type { BufferView } from './buffer-view';
-import { getLayout, unpackHolderFormat, Format, FormatShape, FormatType, StructFormat, WithShape, WithType, WithShapeAndType } from './format';
-import type { Layout, StructLayout } from './layout';
-import { injectGetters } from './overlay';
+import type { ShapeOf, TypeOf, WithShapeAndType } from './format';
+import type { Layout } from './layout';
 
 // Interceptor types
-type CompositionInterceptor<Layout = any, Type = any> = {
-	compose: (value: Layout) => any;
-	decompose: (value: Type) => Layout extends any[] ? Layout | Iterable<Layout[number]> : Layout;
+type CompositionInterceptor<Shape = any, Type = any, Result = any> = {
+	compose: (value: Type) => Result;
+	decompose: (value: Result) => Shape | (Shape extends any[] ? Iterable<Shape[number]> : never);
 };
 
 type RawCompositionInterceptor<Type = any> = {
@@ -14,163 +13,50 @@ type RawCompositionInterceptor<Type = any> = {
 	decomposeIntoBuffer: (value: Type, view: BufferView, offset: number) => number;
 };
 
-type OverlayInterceptor = {
-	overlay: { prototype: any };
+type OverlayInterceptor<Type = any> = {
+	overlay: { prototype: Type };
 };
 
-type SymbolInterceptor = {
-	symbol: string | symbol;
+export type Interceptor<Format = any> =
+	CompositionInterceptor<ShapeOf<Format>, TypeOf<Format>> |
+	RawCompositionInterceptor |
+	OverlayInterceptor;
+
+export type InterceptorResult<Format, In extends Interceptor> =
+	In extends CompositionInterceptor<ShapeOf<Format>, TypeOf<Format>, infer Type> ? WithShapeAndType<Type> :
+	In extends RawCompositionInterceptor<infer Type> ? WithShapeAndType<Type> :
+	In extends OverlayInterceptor<infer Type> ? WithShapeAndType<ShapeOf<Format>, Type> :
+	never;
+
+// Interceptors bound to format or layout
+export const FormatName = Symbol('formatName');
+export const BoundInterceptor = Symbol('schemaInterceptor');
+export const BoundSymbol = Symbol('schemaSymbol');
+export type BoundSchema = {
+	[FormatName]?: string;
+	[BoundInterceptor]?: Interceptor;
+	[BoundSymbol]?: string | symbol;
 };
-
-type MembersInterceptor = {
-	members: Dictionary<MemberInterceptor>;
-};
-
-// Various combinations of interceptors
-type ObjectInterceptor = CompositionInterceptor & RawCompositionInterceptor & OverlayInterceptor;
-export type MemberInterceptor = Partial<ObjectInterceptor & SymbolInterceptor>;
-type Interceptor = Partial<MembersInterceptor & ObjectInterceptor>;
-
-// Needed to correctly save the type of symbols
-export function withSymbol<Symbol extends symbol>(symbol: Symbol): { symbol: Symbol } {
-	return { symbol };
-}
-
-// Formats and Layouts are casted to this and the symbol is used to attach interceptors
-export const BoundInterceptor = Symbol('boundInterceptor');
-export type WithBoundInterceptor = {
-	[BoundInterceptor]?: {
-		name?: string;
-		interceptor?: Interceptor;
-	};
-};
+export type WithSymbol<Symbol extends string | symbol> = { [BoundSymbol]: Symbol };
 
 // Interceptor lookup function used by getReader and getWriter
-export type InterceptorLookup = (layout: Layout) => Interceptor | undefined;
-export const defaultInterceptorLookup: InterceptorLookup = layout =>
-	typeof layout === 'string' ? undefined : layout[BoundInterceptor]?.interceptor;
+export type InterceptorLookup = typeof defaultInterceptorLookup;
+export const defaultInterceptorLookup = {
+	interceptor: (layout: Layout) => recursiveLookup(layout, BoundInterceptor),
+	name: (layout: Layout) => recursiveLookup(layout, FormatName),
+	symbol: (layout: Layout) => recursiveLookup(layout, BoundSymbol),
+};
 
-// Helpers to extract resulting data type from interceptors
-type OverlayType<Type> = Type extends { prototype: any } ? Type['prototype'] : never;
-
-type CompositionType<Type> =
-	Type extends CompositionInterceptor ? ReturnType<Type['compose']> :
-	Type extends RawCompositionInterceptor ? ReturnType<Type['composeFromBuffer']> :
-	never;
-
-// This maps { symbol: ... } interceptors to either the symbol or the member key if no symbol
-// interceptor specified
-export type MemberSymbolKeys<Type> = {
-	[Key in keyof Type]: Type[Key] extends SymbolInterceptor ? Type[Key]['symbol'] : Key;
-}[keyof Type];
-
-// Returns the original key from `MemberSymbolKeys`
-type MemberSymbolLookupKey<Type, Symbol> = Symbol extends keyof Type ? Symbol :
-	{ [Key in keyof Type]: Type[Key] extends { symbol: Symbol } ? Key : never }[keyof Type];
-
-// And this maps the symbol returned by `MemberSymbolKeys` back to the value it references
-type MemberSymbolLookupValue<Type, Symbol> = Symbol extends keyof Type ? Type[Symbol] :
-	{ [Key in keyof Type]: Type[Key] extends { symbol: Symbol } ? Type[Key] : never }[keyof Type];
-
-// Create Shape information from Format and Interceptors
-type ShapeForKey<Format extends StructFormat, Key> = FormatShape<Key extends keyof Format ? Format[Key] : never>;
-type TypeForKey<Format extends StructFormat, Key> = FormatType<Key extends keyof Format ? Format[Key] : never>;
-
-type InterceptorResolvedMembersShape<Format extends StructFormat, Interceptors extends MembersInterceptor['members']> =
-	Omit<FormatShape<Format>, keyof Interceptors> & {
-		[Key in MemberSymbolKeys<Interceptors>]: CompositionType<MemberSymbolLookupValue<Interceptors, Key>> extends never ?
-			ShapeForKey<Format, MemberSymbolLookupKey<Interceptors, Key>> :
-			CompositionType<MemberSymbolLookupValue<Interceptors, Key>>;
-	};
-
-type InterceptorResolvedMembersType<Format extends StructFormat, Interceptors extends MembersInterceptor['members']> =
-	Omit<FormatType<Format>, keyof Interceptors> & {
-		[Key in MemberSymbolKeys<Interceptors>]: CompositionType<MemberSymbolLookupValue<Interceptors, Key>> extends never ?
-			TypeForKey<Format, MemberSymbolLookupKey<Interceptors, Key>> :
-			CompositionType<MemberSymbolLookupValue<Interceptors, Key>>;
-	};
-
-type InterceptorResolvedShape<Format extends StructFormat, Interceptors> =
-	Interceptors extends MembersInterceptor ? InterceptorResolvedMembersShape<Format, Interceptors['members']> :
-	FormatShape<Format>;
-
-type InterceptorResolvedType<Format extends StructFormat, Interceptors> =
-	Interceptors extends OverlayInterceptor ? OverlayType<Interceptors['overlay']> :
-	Interceptors extends MembersInterceptor ? InterceptorResolvedMembersType<Format, Interceptors['members']> :
-	never;
-
-// compose / decompose or composeFromBuffer / decomposeIntoBuffer
-export function bindInterceptors<Type extends Format, Result>(
-	format: Type,
-	interceptor: CompositionInterceptor<FormatType<Type>, Result> | RawCompositionInterceptor<Result>,
-): WithShapeAndType<Result>;
-
-export function bindInterceptors<Type extends Format, Result>(
-	name: string,
-	format: Type,
-	interceptor: CompositionInterceptor<FormatType<Type>, Result> | RawCompositionInterceptor<Result>,
-): WithShapeAndType<Result>;
-
-// Overlay or member interceptor
-export function bindInterceptors<Type extends StructFormat, InterceptorFormat extends Interceptor>(
-	format: Type, interceptor: InterceptorFormat,
-): WithShape<InterceptorResolvedShape<Type, InterceptorFormat>> &
-	WithType<InterceptorResolvedType<Type, InterceptorFormat>>;
-
-export function bindInterceptors<Type extends StructFormat, InterceptorFormat extends Interceptor>(
-	name: string, format: Type, interceptor: InterceptorFormat,
-): WithShape<InterceptorResolvedShape<Type, InterceptorFormat>> &
-	WithType<InterceptorResolvedType<Type, InterceptorFormat>>;
-
-export function bindInterceptors(...args: any[]): any {
-	const { name, format, interceptor } = function() {
-		if (args.length === 2) {
-			return { format: args[0] as Format, interceptor: args[1] as Interceptor };
-		} else {
-			return { name: args[0] as string, format: args[1] as Format, interceptor: args[2] as Interceptor };
+function recursiveLookup(layout: Layout, symbol: typeof BoundInterceptor): UnionToIntersection<Interceptor> | undefined;
+function recursiveLookup(layout: Layout, symbol: typeof BoundSymbol): string | symbol | undefined;
+function recursiveLookup(layout: Layout, symbol: typeof FormatName): string | undefined;
+function recursiveLookup(layout: Layout, symbol: keyof Layout): any {
+	if (typeof layout !== 'string') {
+		if (layout[symbol] !== undefined) {
+			return layout[symbol];
 		}
-	}();
-	if (typeof format === 'string') {
-		// Create a placeholder object for this format to distinguish it from others of the same type
-		return bindInterceptors(name!, [ 'holder', format ] as any, interceptor);
+		if ('holder' in layout) {
+			return recursiveLookup(layout.holder, symbol);
+		}
 	}
-
-	// Combine interceptors with existing interceptors
-	const withBound = format as WithBoundInterceptor;
-	const bound = withBound[BoundInterceptor];
-	const result = (bound ? [ 'holder', format ] : format) as WithBoundInterceptor;
-	result[BoundInterceptor] = {
-		name: name ?? bound?.name,
-		interceptor: {
-			...bound?.interceptor,
-			...interceptor,
-			members: {
-				...bound?.interceptor?.members,
-				...interceptor.members,
-			},
-		},
-	};
-
-	// Inject getters
-	const { overlay } = interceptor as Partial<OverlayInterceptor>;
-	if (overlay) {
-		const layout = getLayout(unpackHolderFormat(format)) as StructLayout;
-		injectGetters(layout, overlay.prototype, defaultInterceptorLookup);
-	}
-
-	return result;
-}
-
-// Just makes the archived output nicer
-export function bindName<Type extends Format>(name: string, format: Type):
-WithShape<FormatShape<Type>> & WithType<FormatType<Type>> {
-	(format as WithBoundInterceptor)[BoundInterceptor] = { name };
-	return format as any;
-}
-
-// Injects types from format and interceptors into class prototype
-export function withOverlay<Format extends WithType>() {
-	return <Type extends { prototype: object }>(classDeclaration: Type) =>
-		classDeclaration as any as new (view: BufferView, offset: number) =>
-			Type['prototype'] & FormatType<Format>;
 }

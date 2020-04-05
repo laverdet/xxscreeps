@@ -1,12 +1,12 @@
-import { bindInterceptors, bindName, Inherit, Variant } from '~/lib/schema';
+import { declare, inherit, variant } from '~/lib/schema';
 import { StructureExtension } from '~/game/objects/structures/extension';
 import * as Store from './store';
 import * as Structure from './structure';
 
-export const shape = bindName('Extension', {
-	[Inherit]: Structure.format,
-	[Variant]: 'extension',
+export const shape = declare('Extension', {
+	...inherit(Structure.format),
+	...variant('extension'),
 	store: Store.format,
 });
 
-export const format = bindInterceptors(shape, { overlay: StructureExtension });
+export const format = declare(shape, { overlay: StructureExtension });

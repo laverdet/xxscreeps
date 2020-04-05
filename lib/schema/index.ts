@@ -1,6 +1,6 @@
 export { BufferView } from './buffer-view';
-export { makeArray, makeEnum, makeOptional, makeVariant, makeVector, withType, Inherit, Variant } from './format';
-export type { FormatType } from './format';
-export { bindInterceptors, bindName, withOverlay, withSymbol } from './interceptor';
+export { array, declare, enumerated, inherit, optional, variant, vector, withSymbol, withType, Variant } from './format';
+export type { TypeOf } from './format';
+export { withOverlay } from './overlay';
 export { getReader } from './read';
 export { getWriter } from './write';

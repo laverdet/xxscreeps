@@ -1,48 +1,25 @@
 import type { BufferObject } from './buffer-object';
 import { BufferView } from './buffer-view';
-import { getLayout, Format, FormatType, Variant } from './format';
-import { defaultInterceptorLookup, InterceptorLookup, MemberInterceptor } from './interceptor';
-import { kPointerSize, getTraits, Layout, StructLayout } from './layout';
+import { getLayout, Format, TypeOf, Variant } from './format';
+import { defaultInterceptorLookup, InterceptorLookup } from './interceptor';
+import { kPointerSize, getTraits, unpackHolder, Layout, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
 const { fromCharCode } = String;
 
 type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
 
-export const getSingleMemberReader = RecursiveWeakMemoize([ 0, 1 ],
-	(layout: Layout, lookup: InterceptorLookup, interceptors?: MemberInterceptor): Reader => {
-
-		// Make underlying reader
-		const read = getTypeReader(layout, lookup);
-
-		// Has composer?
-		const compose = interceptors?.compose;
-		if (compose !== undefined) {
-			return (view, offset) => compose(read(view, offset));
-		}
-		const composeFromBuffer = interceptors?.composeFromBuffer;
-		if (composeFromBuffer !== undefined) {
-			return (view, offset) => composeFromBuffer(view, offset);
-		}
-
-		// Plain reader
-		return read;
-	},
-);
-
 const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 	(layout: StructLayout, lookup: InterceptorLookup): MemberReader => {
 
 		let readMembers: MemberReader | undefined;
-		const interceptors = lookup(layout);
 		for (const [ key, member ] of Object.entries(layout.struct)) {
-			const memberInterceptors = interceptors?.members?.[key];
-			const symbol = memberInterceptors?.symbol ?? key;
+			const symbol = lookup.symbol(member.layout) ?? key;
 
 			// Make reader for single field
 			const next = function(): MemberReader {
 				// Get reader for this member
-				const read = getSingleMemberReader(member.layout, lookup, memberInterceptors);
+				const read = getTypeReader(member.layout, lookup);
 
 				// Wrap to read this field from reserved address
 				const { offset, pointer } = member;
@@ -73,7 +50,7 @@ const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
 	},
 );
 
-const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: InterceptorLookup): Reader => {
+export const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: InterceptorLookup): Reader => {
 
 	if (typeof layout === 'string') {
 		// Integral types
@@ -209,7 +186,7 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 			const variant = layout['variant!'];
 			const { inherit } = layout;
 			const readBase = inherit === undefined ?
-				undefined : getMemberReader(inherit, lookup);
+				undefined : getMemberReader(unpackHolder(inherit), lookup);
 			const read = getMemberReader(layout, lookup);
 			return (view, offset) => {
 				const value = variant === undefined ? {} : { [Variant]: variant };
@@ -223,7 +200,7 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 	}();
 
 	// Has composer?
-	const interceptors = lookup(layout);
+	const interceptors = lookup.interceptor(layout);
 	const compose = interceptors?.compose;
 	if (compose !== undefined) {
 		return (view, offset) => compose(read(view, offset));
@@ -242,7 +219,7 @@ const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 export function getReader<Type extends Format>(format: Type, lookup = defaultInterceptorLookup) {
 	const layout = getLayout(format);
 	const read = getTypeReader(layout, lookup);
-	return (buffer: Readonly<Uint8Array>): FormatType<Type> => {
+	return (buffer: Readonly<Uint8Array>): TypeOf<Type> => {
 		const view = BufferView.fromTypedArray(buffer);
 		return read(view, 0);
 	};

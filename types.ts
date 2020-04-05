@@ -14,9 +14,6 @@ declare global {
 		[key in string]?: Type;
 	};
 
-	type UnionToIntersection<Union> =
-		(Union extends any ? (key: Union) => void : never) extends ((key: infer Intersection) => void) ? Intersection : never;
-
 	// Type that's safe to loosely compare to true/false without weirdness like '' or NaN or 0
 	type LooseBoolean = boolean | object | null | undefined;
 
@@ -25,6 +22,10 @@ declare global {
 		resolve: (payload?: Type | Promise<Type>) => void;
 		reject: (payload: Error) => void;
 	};
+
+	// Converts T | U to T & U
+	type UnionToIntersection<Union> =
+		(Union extends any ? (key: Union) => void : never) extends ((key: infer Intersection) => void) ? Intersection : never;
 
 	// Make all array buffers strongly typed
 	interface ArrayBuffer { [BufferType]?: 'arrayBuffer' }

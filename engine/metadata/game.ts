@@ -1,7 +1,7 @@
-import { bindName, getReader, getWriter } from '~/lib/schema';
+import { declare, getReader, getWriter } from '~/lib/schema';
 import * as StringSet from '~/engine/util/schema/string-set';
 
-const format = bindName('Game', {
+const format = declare('Game', {
 	time: 'int32',
 	accessibleRooms: StringSet.format,
 	activeRooms: StringSet.format,

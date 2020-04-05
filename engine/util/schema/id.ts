@@ -1,7 +1,7 @@
 import type { BufferView } from '~/lib/schema/buffer-view';
-import { bindInterceptors, makeArray, withType } from '~/lib/schema';
+import { array, declare, withType } from '~/lib/schema';
 
-export const optionalFormat = bindInterceptors('Id', makeArray(4, 'uint32'), {
+export const optionalFormat = declare('Id', array(4, 'uint32'), {
 	composeFromBuffer(view: BufferView, offset: number) {
 		// First byte is length, remaining bytes are the hex string id. Fits up to 24 characters
 		// into 4 bytes. This could be increased to 30 characters if needed by putting more in the

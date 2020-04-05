@@ -1,5 +1,5 @@
 import { BufferView } from './buffer-view';
-import { getLayout, Format, FormatShape, Variant } from './format';
+import { getLayout, Format, ShapeOf, Variant } from './format';
 import { defaultInterceptorLookup, InterceptorLookup } from './interceptor';
 import { kPointerSize, alignTo, getTraits, unpackHolder, Layout, StructLayout } from './layout';
 import { runOnce, RecursiveWeakMemoize } from '~/lib/memoize';
@@ -11,35 +11,16 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 	(layout: StructLayout, lookup: InterceptorLookup): MemberWriter => {
 
 		let writeMembers: MemberWriter | undefined;
-		const interceptors = lookup(layout);
 		for (const [ key, member ] of Object.entries(layout.struct)) {
-			const symbol = interceptors?.members?.[key]?.symbol ?? key;
+			const symbol = lookup.symbol(member.layout) ?? key;
 
 			// Make writer for single field. `locals` parameter is offset to dynamic memory.
 			const next = function(): MemberWriter {
 				// Get writer for this member
-				const { offset, pointer } = member;
-				const write = function(): Writer {
-					const write = getTypeWriter(member.layout, lookup);
-
-					// Has decomposer?
-					const decompose = interceptors?.members?.[key]?.decompose;
-					if (decompose !== undefined) {
-						return (value, view, offset) => write(decompose(value), view, offset);
-					}
-					const decomposeIntoBuffer = interceptors?.members?.[key]?.decomposeIntoBuffer;
-					if (decomposeIntoBuffer !== undefined) {
-						if (pointer === true) {
-							throw new Error('Pointer to raw decomposer is not supported');
-						}
-						return (value, view, offset) => decomposeIntoBuffer(value, view, offset);
-					}
-
-					// Plain writer
-					return write;
-				}();
+				const write = getTypeWriter(member.layout, lookup);
 
 				// Wrap to write this field at reserved address
+				const { offset, pointer } = member;
 				if (pointer === true) {
 					const { align } = getTraits(layout);
 					return (value, view, instanceOffset, locals) => {
@@ -68,7 +49,7 @@ const getMemberWriter = RecursiveWeakMemoize([ 0, 1 ],
 		if (inherit === undefined) {
 			return writeMembers!;
 		} else {
-			const writeBase = getMemberWriter(inherit, lookup);
+			const writeBase = getMemberWriter(unpackHolder(inherit), lookup);
 			return (value, view, offset, locals) =>
 				writeMembers!(value, view, offset, writeBase(value, view, offset, locals));
 		}
@@ -234,7 +215,7 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 	}();
 
 	// Has decomposer?
-	const interceptors = lookup(layout);
+	const interceptors = lookup.interceptor(layout);
 	const decompose = interceptors?.decompose;
 	if (decompose !== undefined) {
 		return (value, view, offset) => write(decompose(value), view, offset);
@@ -251,7 +232,7 @@ const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 
 export function getWriter<Type extends Format>(format: Type, lookup = defaultInterceptorLookup) {
 	const layout = getLayout(format);
 	const write = getTypeWriter(layout, lookup);
-	return (value: FormatShape<Type>): Readonly<Uint8Array> => {
+	return (value: ShapeOf<Type>): Readonly<Uint8Array> => {
 		const view = bufferCache();
 		const length = write(value, view, 0);
 		if (length > view.int8.length) {

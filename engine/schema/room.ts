@@ -1,4 +1,4 @@
-import { bindInterceptors, getReader, getWriter, makeVariant, makeVector, withSymbol } from '~/lib/schema';
+import { declare, getReader, getWriter, variant, vector, withSymbol } from '~/lib/schema';
 import { Objects, Room } from '~/game/room';
 
 import * as Controller from './controller';
@@ -8,23 +8,19 @@ import * as Extension from './extension';
 import * as Source from './source';
 import * as Spawn from './spawn';
 
-export const shape = bindInterceptors('Room', {
+export const shape = declare('Room', {
 	name: 'string',
-	objects: makeVector(makeVariant(
+	objects: withSymbol(Objects, vector(variant(
 		ConstructionSite.format,
 		Controller.format,
 		Creep.format,
 		Extension.format,
 		Source.format,
 		Spawn.format,
-	)),
-}, {
-	members: {
-		objects: withSymbol(Objects),
-	},
+	))),
 });
 
-export const format = bindInterceptors(shape, { overlay: Room });
+export const format = declare(shape, { overlay: Room });
 
 export const read = getReader(format);
 export const write = getWriter(format);

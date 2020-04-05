@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { bindName, getReader, getWriter, makeVector, FormatType } from '~/lib/schema';
+import { declare, getReader, getWriter, vector, TypeOf } from '~/lib/schema';
 import * as Id from '~/engine/util/schema/id';
 import { checkToken } from './token';
 
@@ -46,12 +46,12 @@ export function flattenUsername(username: string) {
 
 //
 // Schema
-export const format = bindName('Entries', makeVector({
+export const format = declare('Entries', vector({
 	key: 'string',
 	user: Id.format,
 }));
 
-export type Shape = FormatType<typeof format>;
+export type Shape = TypeOf<typeof format>;
 
 export const read = getReader(format);
 export const write = getWriter(format);

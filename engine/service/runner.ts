@@ -1,7 +1,5 @@
-import * as Code from '~/engine/metadata/code';
 import * as User from '~/engine/metadata/user';
 import { loadTerrainFromWorld, readWorld } from '~/game/map';
-import { getReader } from '~/lib/schema/read';
 import { loadTerrain } from '~/driver/path-finder';
 import { createSandbox, Sandbox } from '~/driver/sandbox';
 import { mapInPlace, filterInPlace } from '~/lib/utility';
@@ -22,9 +20,6 @@ export default async function() {
 	const world = readWorld(terrainBuffer);
 	loadTerrain(world); // pathfinder
 	loadTerrainFromWorld(world); // game
-
-	// Initialize binary schemas
-	const readCode = getReader(Code.format);
 
 	// Start the runner loop
 	let gameTime = -1;

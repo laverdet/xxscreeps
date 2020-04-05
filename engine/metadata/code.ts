@@ -1,12 +1,13 @@
-import { bindName, bindInterceptors, getReader, getWriter, makeVector, FormatType } from '~/lib/schema';
+import { declare, getReader, getWriter, vector, TypeOf } from '~/lib/schema';
+import { mapInPlace } from '~/lib/utility';
 
-export const format = bindName('CodeBranch', {
-	modules: bindInterceptors(makeVector({
+export const format = declare('CodeBranch', {
+	modules: declare(vector({
 		name: 'string',
 		data: 'string',
 	}), {
 		compose: value => new Map<string, string>(value.map(entry => [ entry.name, entry.data ])),
-		decompose: (value: Map<string, string>) => [ ...value.entries() ].map(([ name, data ]) => ({ name, data })),
+		decompose: (value: Map<string, string>) => mapInPlace(value.entries(), ([ name, data ]) => ({ name, data })),
 	}),
 	timeCreated: 'int32',
 	timeModified: 'int32',
@@ -15,4 +16,4 @@ export const format = bindName('CodeBranch', {
 export const read = getReader(format);
 export const write = getWriter(format);
 
-export type UserCode = FormatType<typeof format>;
+export type UserCode = TypeOf<typeof format>;

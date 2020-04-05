@@ -1,6 +1,6 @@
 import * as TerrainSchema from '~/game/terrain';
 import { RoomPosition } from '~/game/position';
-import { bindInterceptors, getReader, makeVector } from '~/lib/schema';
+import { declare, getReader, vector } from '~/lib/schema';
 import { mapInPlace } from '~/lib/utility';
 import type { BlobStorage } from '~/storage/blob';
 
@@ -42,7 +42,7 @@ export function loadTerrainFromWorld(loadedWorld: World) {
 
 //
 // Schema
-export const format = bindInterceptors('World', makeVector(TerrainSchema.format), {
+export const format = declare('World', vector(TerrainSchema.format), {
 	compose: world =>
 		new Map<string, TerrainSchema.Terrain>(world.map(room => [ room.name, room.terrain ])),
 	decompose: (world: World) => {
