@@ -71,16 +71,26 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 			case 'bool': return (value: boolean, view, offset) => ((view.int8[offset] = value ? 1 : 0, 1));
 
 			case 'string': return (value: string, view, offset) => {
-				// Write string length
+				// Attempt to write as latin1 and fall back to utf-16 if needed
 				const { length } = value;
-				view.uint32[offset >>> 2] = length;
-				// Write string data
-				const stringOffset = offset + kPointerSize >>> 1;
-				const { uint16 } = view;
 				for (let ii = 0; ii < length; ++ii) {
-					uint16[stringOffset + ii] = value.charCodeAt(ii);
+					const code = value.charCodeAt(ii);
+					const stringOffset = offset + kPointerSize;
+					if (code < 0x80) {
+						view.int8[stringOffset + ii] = code;
+					} else {
+						// UTF-16 wide characters
+						const stringOffset16 = stringOffset >>> 1;
+						for (let ii = 0; ii < length; ++ii) {
+							view.uint16[stringOffset16 + ii] = value.charCodeAt(ii);
+						}
+						view.int32[stringOffset16 >>> 1] = -length;
+						return (length << 1) + kPointerSize;
+					}
 				}
-				return (length << 1) + kPointerSize;
+				// Succeeded writing latin1
+				view.int32[offset >>> 2] = length;
+				return length + kPointerSize;
 			};
 
 			default: throw TypeError(`Invalid literal layout: ${layout}`);

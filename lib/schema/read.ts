@@ -66,8 +66,16 @@ export const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, loo
 			case 'bool': return (view, offset) => view.int8[offset] !== 0;
 
 			case 'string': return (view, offset) => {
-				const stringOffset = offset + kPointerSize >>> 1;
-				return fromCharCode(...view.uint16.slice(stringOffset, stringOffset + view.uint32[offset >>> 2]));
+				const length = view.int32[offset >>> 2];
+				if (length > 0) {
+					const stringOffset = offset + kPointerSize;
+					return fromCharCode(...view.int8.slice(stringOffset, stringOffset + length));
+				} else if (length < 0) {
+					const stringOffset16 = offset + kPointerSize >>> 1;
+					return fromCharCode(...view.uint16.slice(stringOffset16, stringOffset16 - length));
+				} else {
+					return '';
+				}
 			};
 
 			default: throw TypeError(`Invalid literal layout: ${layout}`);
