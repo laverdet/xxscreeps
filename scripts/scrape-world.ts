@@ -148,8 +148,7 @@ topLevelTask(async() => {
 			badge: user.badge === undefined ? '' : JSON.stringify(user.badge),
 			visibleRooms: (roomsByUser.get(user._id) ?? new Set),
 			code: {
-				activeSim: firstMatching(code, code => code.activeSim)?._id,
-				activeWorld: firstMatching(code, code => code.activeWorld)?._id,
+				branch: firstMatching(code, code => code.activeWorld)?._id,
 				branches: code.map(row => ({
 					id: row._id,
 					name: row.branch,

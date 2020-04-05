@@ -2,6 +2,7 @@ import type { Server } from 'http';
 import sockjs from 'sockjs';
 import { checkToken, makeToken } from './auth/token';
 import { BackendContext } from './context';
+import { CodeSubscriptions } from './sockets/code';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
 
@@ -9,11 +10,12 @@ const socketServer = sockjs.createServer({
 	prefix: '/socket',
 	log: () => {},
 });
-const handlers = [ mapSubscription, roomSubscription ];
+const handlers = [ ...CodeSubscriptions, mapSubscription, roomSubscription ];
 
 type Unlistener = () => void;
 type SubscriptionInstance = {
 	context: BackendContext;
+	user: string;
 	send: (jsonEncodedMessage: string) => void;
 };
 export type SubscriptionEndpoint = {
@@ -61,7 +63,6 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 				if (subscriptionRequest) {
 					// Can't subscribe if you're not logged in
 					if (user === undefined) {
-						close();
 						return;
 					}
 
@@ -77,6 +78,7 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 							const encodedName = JSON.stringify(name);
 							const instance: SubscriptionInstance = {
 								context,
+								user,
 								send: jsonEncodedMessage => connection.write(`[${encodedName},${jsonEncodedMessage}]`),
 							};
 							const subscription = Promise.resolve(handler.subscribe.call(instance, result.groups!));

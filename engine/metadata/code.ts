@@ -9,11 +9,11 @@ export const format = declare('CodeBranch', {
 		compose: value => new Map<string, string>(value.map(entry => [ entry.name, entry.data ])),
 		decompose: (value: Map<string, string>) => mapInPlace(value.entries(), ([ name, data ]) => ({ name, data })),
 	}),
-	timeCreated: 'int32',
-	timeModified: 'int32',
 });
 
 export const read = getReader(format);
 export const write = getWriter(format);
 
 export type UserCode = TypeOf<typeof format>;
+
+export type Message = { type: 'branch'; id: string; name: string } | { type: null };

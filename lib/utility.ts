@@ -74,6 +74,10 @@ export function getOrSet<Key, Value>(map: Map<Key, Value>, key: Key, fn: () => V
 	return value;
 }
 
+function identity<Type>(any: Type) {
+	return any;
+}
+
 // Creates a new instance of a class without calling the constructor, then copies the given
 // properties on to it
 export function instantiate<Type>(ctor: new(...params: any) => Type, properties: any): Type {
@@ -110,7 +114,11 @@ export function *mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (v
 
 // It's like the constructor for `Map` except it returns a plain Object
 export function mapToKeys<Type, Key extends string | number | symbol, Value>(
-	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ],
+	iterable: Iterable<[ Key, Type ]>): Record<Key, Type>;
+export function mapToKeys<Type, Key extends string | number | symbol, Value>(
+	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ]): Record<Key, Type>;
+export function mapToKeys<Type, Key extends string | number | symbol, Value>(
+	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ] = identity as any,
 ) {
 	const result: Record<Key, Value> = Object.create(null);
 	for (const entry of iterable) {

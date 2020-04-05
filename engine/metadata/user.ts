@@ -13,11 +13,11 @@ export const format = declare('User', {
 	badge: 'string',
 	visibleRooms: StringSet.format,
 	code: {
-		activeSim: Id.format,
-		activeWorld: Id.format,
+		branch: Id.format,
 		branches: vector({
 			id: Id.format,
 			name: 'string',
+			timestamp: 'int32',
 		}),
 	},
 });
@@ -34,8 +34,7 @@ export function create(username: string) {
 		badge: '',
 		visibleRooms: new Set<string>(),
 		code: {
-			activeSim: '',
-			activeWorld: '',
+			branch: undefined,
 			branches: [],
 		},
 	};

@@ -18,8 +18,7 @@ import { TickEndpoint, TimeEndpoint } from './game/time';
 import { CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint, SubmitRegistrationEndpoint } from './register';
 
 import { BadgeEndpoint } from './user/badge';
-import { BranchesEndpoint } from './user/branches';
-import { CodeEndpoint } from './user/code';
+import { BranchesEndpoint, BranchCloneEndpoint, BranchSetEndpoint, CodeEndpoint, CodePostEndpoint } from './user/code';
 import { RespawnProhibitedRoomsEndpoint } from './user/respawn-prohibited-rooms';
 import { UnreadCountEndpoint } from './user/unread-count';
 import { WorldStartRoomEndpoint } from './user/world-start-room';
@@ -71,7 +70,10 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 	apiRouter.use('/user', useToken(bindRoutes(context, Router(), [
 		BadgeEndpoint,
 		BranchesEndpoint,
+		BranchCloneEndpoint,
+		BranchSetEndpoint,
 		CodeEndpoint,
+		CodePostEndpoint,
 		RespawnProhibitedRoomsEndpoint,
 		UnreadCountEndpoint,
 		WorldStartRoomEndpoint,

@@ -48,7 +48,7 @@ export default async function() {
 								return existing;
 							}
 							// Generate a new one
-							const codeBlob = await blobStorage.load(`user/${userId}/${userInfo.code.activeWorld}`);
+							const codeBlob = await blobStorage.load(`user/${userId}/${userInfo.code.branch}`);
 							const sandbox = await createSandbox(userId, codeBlob, terrainBuffer);
 							sandboxes.set(userId, sandbox);
 							return sandbox;
