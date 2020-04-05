@@ -42,7 +42,7 @@ function getBranchIdFromQuery(branch: any, user: User.User, create = false) {
 	};
 }
 
-export const BranchesEndpoint: Endpoint = {
+const BranchesEndpoint: Endpoint = {
 	path: '/branches',
 
 	async execute(req) {
@@ -84,7 +84,7 @@ export const BranchesEndpoint: Endpoint = {
 	},
 };
 
-export const BranchCloneEndpoint: Endpoint = {
+const BranchCloneEndpoint: Endpoint = {
 	path: '/clone-branch',
 	method: 'post',
 
@@ -131,7 +131,7 @@ export const BranchCloneEndpoint: Endpoint = {
 	},
 };
 
-export const BranchSetEndpoint: Endpoint = {
+const BranchSetEndpoint: Endpoint = {
 	path: '/set-active-branch',
 	method: 'post',
 
@@ -157,7 +157,7 @@ export const BranchSetEndpoint: Endpoint = {
 	},
 };
 
-export const CodeEndpoint: Endpoint = {
+const CodeEndpoint: Endpoint = {
 	path: '/code',
 
 	async execute(req) {
@@ -178,7 +178,7 @@ export const CodeEndpoint: Endpoint = {
 	},
 };
 
-export const CodePostEndpoint: Endpoint = {
+const CodePostEndpoint: Endpoint = {
 	path: '/code',
 	method: 'post',
 
@@ -226,3 +226,5 @@ export const CodePostEndpoint: Endpoint = {
 		return { ok: 1, timestamp: timestamp * 1000 };
 	},
 };
+
+export default [ BranchesEndpoint, BranchCloneEndpoint, BranchSetEndpoint, BranchSetEndpoint, CodeEndpoint, CodePostEndpoint ];

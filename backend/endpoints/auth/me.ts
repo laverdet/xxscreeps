@@ -5,7 +5,7 @@ export const MeEndpoint: Endpoint = {
 	path: '/me',
 
 	async execute(req, res) {
-		const tokenValue = await checkToken(req.get('x-token')!);
+		const tokenValue = await checkToken(req.get('x-token'));
 		if (tokenValue === undefined) {
 			return;
 		}

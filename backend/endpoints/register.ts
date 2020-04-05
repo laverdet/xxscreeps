@@ -3,7 +3,7 @@ import { checkUsername, flattenUsername } from '~/backend/auth';
 import { checkToken, makeToken } from '~/backend/auth/token';
 import * as User from '~/engine/metadata/user';
 
-export const CheckEmailEndpoint: Endpoint = {
+const CheckEmailEndpoint: Endpoint = {
 	path: '/check-email',
 
 	execute(req) {
@@ -14,7 +14,7 @@ export const CheckEmailEndpoint: Endpoint = {
 	},
 };
 
-export const CheckUsernameEndpoint: Endpoint = {
+const CheckUsernameEndpoint: Endpoint = {
 	path: '/check-username',
 
 	execute(req) {
@@ -30,7 +30,7 @@ export const CheckUsernameEndpoint: Endpoint = {
 	},
 };
 
-export const SetUsernameEndpoint: Endpoint = {
+const SetUsernameEndpoint: Endpoint = {
 	method: 'post',
 	path: '/set-username',
 
@@ -42,7 +42,7 @@ export const SetUsernameEndpoint: Endpoint = {
 		}
 
 		// Check for steam provider
-		const tokenValue = (await checkToken(req.get('x-token')!))!;
+		const tokenValue = (await checkToken(req.get('x-token')))!;
 		if (!/^steam:[0-9]+$/.test(tokenValue)) {
 			return Response(400, undefined);
 		}
@@ -73,7 +73,7 @@ export const SetUsernameEndpoint: Endpoint = {
 	},
 };
 
-export const SubmitRegistrationEndpoint: Endpoint = {
+const SubmitRegistrationEndpoint: Endpoint = {
 	method: 'post',
 	path: '/submit',
 
@@ -81,3 +81,5 @@ export const SubmitRegistrationEndpoint: Endpoint = {
 		return Response(500, {});
 	},
 };
+
+export default [ CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint, SubmitRegistrationEndpoint ];

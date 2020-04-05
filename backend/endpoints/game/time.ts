@@ -1,7 +1,7 @@
 import { Endpoint } from '~/backend/endpoint';
 import config from '~/engine/config';
 
-export const TickEndpoint: Endpoint = {
+const TickEndpoint: Endpoint = {
 	path: '/tick',
 
 	async execute() {
@@ -12,7 +12,7 @@ export const TickEndpoint: Endpoint = {
 	},
 };
 
-export const TimeEndpoint: Endpoint = {
+const TimeEndpoint: Endpoint = {
 	path: '/time',
 
 	execute() {
@@ -22,3 +22,5 @@ export const TimeEndpoint: Endpoint = {
 		};
 	},
 };
+
+export default [ TickEndpoint, TimeEndpoint ];

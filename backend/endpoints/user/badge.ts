@@ -2,7 +2,7 @@ import { Endpoint } from '~/backend/endpoint';
 import * as Badge from '~/engine/metadata/badge';
 import * as User from '~/engine/metadata/user';
 
-export const BadgeEndpoint: Endpoint = {
+const BadgeEndpoint: Endpoint = {
 	path: '/badge',
 	method: 'post',
 
@@ -21,3 +21,5 @@ export const BadgeEndpoint: Endpoint = {
 		return { ok: 1 };
 	},
 };
+
+export default [ BadgeEndpoint ];

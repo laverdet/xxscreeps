@@ -10,19 +10,9 @@ import { TerrainEndpoint, TerrainZoomEndpoint } from './assets/terrain';
 import { MeEndpoint } from './auth/me';
 import { SteamTicketEndpoint } from './auth/steam-ticket';
 
-import { MapStatsEndpoint } from './game/map-stats';
-import { RoomStatusEndpoint } from './game/room-status';
-import { RoomTerrainEndpoint } from './game/room-terrain';
-import { TickEndpoint, TimeEndpoint } from './game/time';
-
-import { CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint, SubmitRegistrationEndpoint } from './register';
-
-import { BadgeEndpoint } from './user/badge';
-import { BranchesEndpoint, BranchCloneEndpoint, BranchSetEndpoint, CodeEndpoint, CodePostEndpoint } from './user/code';
-import { RespawnProhibitedRoomsEndpoint } from './user/respawn-prohibited-rooms';
-import { UnreadCountEndpoint } from './user/unread-count';
-import { WorldStartRoomEndpoint } from './user/world-start-room';
-import { WorldStatusEndpoint } from './user/world-status';
+import gameEndpoints from './game';
+import registrationEndpoints from './register';
+import userEndpoints from './user';
 
 function bindRoutes(context: BackendContext, router: Router, endpoints: Endpoint[]) {
 	for (const endpoint of endpoints) {
@@ -54,31 +44,10 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 		MeEndpoint,
 		SteamTicketEndpoint,
 	]));
-	apiRouter.use('/game', useAuth(bindRoutes(context, Router(), [
-		MapStatsEndpoint,
-		RoomStatusEndpoint,
-		RoomTerrainEndpoint,
-		TickEndpoint,
-		TimeEndpoint,
-	])));
-	apiRouter.use('/register', useToken(bindRoutes(context, Router(), [
-		CheckEmailEndpoint,
-		CheckUsernameEndpoint,
-		SetUsernameEndpoint,
-		SubmitRegistrationEndpoint,
-	])));
-	apiRouter.use('/user', useToken(bindRoutes(context, Router(), [
-		BadgeEndpoint,
-		BranchesEndpoint,
-		BranchCloneEndpoint,
-		BranchSetEndpoint,
-		CodeEndpoint,
-		CodePostEndpoint,
-		RespawnProhibitedRoomsEndpoint,
-		UnreadCountEndpoint,
-		WorldStartRoomEndpoint,
-		WorldStatusEndpoint,
-	])));
+	apiRouter.use('/game', useAuth(bindRoutes(context, Router(), gameEndpoints)));
+	apiRouter.use('/register', useToken(bindRoutes(context, Router(), registrationEndpoints)));
+	apiRouter.use('/user', useToken(bindRoutes(context, Router(), userEndpoints)));
+
 	express.use('/api', apiRouter);
 	express.use('/assets', bindRoutes(context, Router(), [
 		TerrainEndpoint,

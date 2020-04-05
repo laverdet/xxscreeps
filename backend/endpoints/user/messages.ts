@@ -1,6 +1,6 @@
 import { Endpoint } from '~/backend/endpoint';
 
-export const UnreadCountEndpoint: Endpoint = {
+const UnreadCountEndpoint: Endpoint = {
 	path: '/messages/unread-count',
 
 	execute() {
@@ -10,3 +10,5 @@ export const UnreadCountEndpoint: Endpoint = {
 		};
 	},
 };
+
+export default [ UnreadCountEndpoint ];
