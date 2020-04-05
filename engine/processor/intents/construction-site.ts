@@ -1,5 +1,4 @@
-import { ConstructionSite, ConstructibleStructureType, Name } from '~/game/objects/construction-site';
-import { Owner } from '~/game/objects/room-object';
+import { ConstructionSite, ConstructibleStructureType } from '~/game/objects/construction-site';
 import { RoomPosition } from '~/game/position';
 import { instantiate } from '~/lib/utility';
 import * as ExtensionIntent from './extension';
@@ -13,7 +12,7 @@ export function build(site: ConstructionSite, energy: number) {
 		const level = site.room.controller?.level ?? 0;
 		RoomIntent.removeObject(room, site.id);
 		if (structureType === 'extension') {
-			RoomIntent.insertObject(room, ExtensionIntent.create(pos, level, site[Owner]));
+			RoomIntent.insertObject(room, ExtensionIntent.create(pos, level, site._owner));
 		}
 	}
 }
@@ -29,7 +28,7 @@ export function create(
 		effects: undefined,
 		progress: 0,
 		structureType,
-		[Name]: name ?? '',
-		[Owner]: owner,
+		name: name ?? '',
+		_owner: owner,
 	});
 }

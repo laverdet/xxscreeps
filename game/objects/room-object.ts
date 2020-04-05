@@ -5,11 +5,9 @@ import { BufferObject } from '~/lib/schema/buffer-object';
 import { withOverlay, Variant } from '~/lib/schema';
 import type { shape } from '~/engine/schema/room-object';
 
-export const Owner = Symbol('owner');
-
 export abstract class RoomObject extends withOverlay<typeof shape>()(BufferObject) {
 	room!: Room;
-	[Owner]?: string;
+	_owner?: string;
 	[Process]?: ProcessorSpecification<this>['process'];
 	[Tick]?: ProcessorSpecification<this>['tick'];
 	[Variant]: string;

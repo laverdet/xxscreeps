@@ -8,13 +8,6 @@ import type { StructureSpawn } from './objects/structures/spawn';
 export type ResourceType = (typeof C.RESOURCES_ALL)[number];
 export type StorageRecord = Partial<Record<ResourceType, number>>;
 
-export const Amount = Symbol('amount');
-export const Capacity = Symbol('capacity');
-export const CapacityByResource = Symbol('capacityByResource');
-export const Resources = Symbol('resources');
-export const Restricted = Symbol('restricted');
-export const SingleResource = Symbol('singleResource');
-
 export type RoomObjectWithStore = Creep | StructureSpawn;
 
 // Adds resource types information to `Store` class. No changes from `extends BufferObject` as far
@@ -47,16 +40,16 @@ export class Store extends withOverlay<typeof shape>()(BufferObjectWithResources
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
 
-		const singleResource = this[SingleResource];
+		const singleResource = this._singleResource;
 		if (singleResource === undefined) {
 			// Create capacity record
-			if (this[Restricted]) {
-				this[CapacityByResource] = new Map;
+			if (this._restricted) {
+				this._capacityByResource = new Map;
 			}
 
 			// Load up resources onto this object as properties
-			for (const resource of this[Resources]) {
-				this[CapacityByResource]?.set(resource.type!, resource.capacity);
+			for (const resource of this._resources) {
+				this._capacityByResource?.set(resource.type!, resource.capacity);
 				if (resource.amount !== 0) {
 					this[resource.type!] = resource.amount;
 				}
@@ -64,7 +57,7 @@ export class Store extends withOverlay<typeof shape>()(BufferObjectWithResources
 		} else {
 			// This store can only ever hold one type of resource so we can skip the above mess. This is
 			// true for spawns, extensions and a bunch of others.
-			this[singleResource] = this[Amount];
+			this[singleResource] = this._amount;
 		}
 	}
 
@@ -77,10 +70,10 @@ export class Store extends withOverlay<typeof shape>()(BufferObjectWithResources
 	getCapacity(resourceType: typeof C.RESOURCE_ENERGY): number;
 	getCapacity(resourceType?: ResourceType): number | null;
 	getCapacity(resourceType?: ResourceType) {
-		if (resourceType === undefined || this[CapacityByResource] === undefined) {
-			return this[Capacity];
+		if (resourceType === undefined || this._capacityByResource === undefined) {
+			return this._capacity;
 		} else {
-			return this[CapacityByResource]!.get(resourceType) ?? null;
+			return this._capacityByResource.get(resourceType) ?? null;
 		}
 	}
 
@@ -100,18 +93,18 @@ export class Store extends withOverlay<typeof shape>()(BufferObjectWithResources
 	 */
 	getUsedCapacity(resourceType?: ResourceType) {
 		if (resourceType === undefined) {
-			if (this[CapacityByResource] === undefined) {
-				return this[Amount];
+			if (this._capacityByResource === undefined) {
+				return this._amount;
 			} else {
 				return null;
 			}
-		} else if (this[CapacityByResource] === undefined) {
-			return this[Amount];
+		} else if (this._capacityByResource === undefined) {
+			return this._amount;
 		} else {
-			return (this[CapacityByResource]!.get(resourceType) ?? 0) - (this[resourceType] ?? 0);
+			return (this._capacityByResource.get(resourceType) ?? 0) - (this[resourceType] ?? 0);
 		}
 	}
 
 	energy = 0;
-	[CapacityByResource]?: Map<ResourceType, number>;
+	_capacityByResource?: Map<ResourceType, number>;
 }

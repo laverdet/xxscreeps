@@ -1,9 +1,8 @@
 import * as C from '~/game/constants';
-import { Creep, Owner } from '~/game/objects/creep';
+import { Creep } from '~/game/objects/creep';
 import { obstacleChecker } from '~/game/path-finder';
 import { getOffsetsFromDirection, Direction, RoomPosition } from '~/game/position';
-import { Objects, Room } from '~/game/room';
-import { Amount } from '~/game/store';
+import { Room } from '~/game/room';
 import { accumulate, exchange, minimum } from '~/lib/utility';
 
 // Saves list of creeps all trying to move onto the same cell
@@ -38,7 +37,7 @@ export function dispatch(room: Room) {
 
 		// In the common case whree this move isn't contested then finish early
 		if (creeps.length === 1) {
-			creeps[0].nextPosition = nextPosition;
+			creeps[0]._nextPosition = nextPosition;
 			movingCreeps.push(creeps[0]);
 			continue;
 		}
@@ -48,7 +47,7 @@ export function dispatch(room: Room) {
 			// This differs from the original Screeps movement algorithm in that it counts a creep
 			// carrying 50 energy as heavier than a creep carrying 0.
 			const weight = 1 + Math.max(0,
-				Math.ceil(creep.carry[Amount] / C.CARRY_CAPACITY) -
+				Math.ceil(creep.carry._amount / C.CARRY_CAPACITY) -
 				accumulate(creep.body, part => part.type === 'carry' ? 1 : 0),
 			);
 			return {
@@ -67,7 +66,7 @@ export function dispatch(room: Room) {
 			right.movingInto - left.movingInto ||
 			right.weightRatio - left.weightRatio
 		));
-		first.creep.nextPosition = nextPosition;
+		first.creep._nextPosition = nextPosition;
 		movingCreeps.push(first.creep);
 	}
 
@@ -78,20 +77,20 @@ export function dispatch(room: Room) {
 	// After conflict resolution check for non-moving-creep obstacles
 	const terrain = room.getTerrain();
 	for (const creep of movingCreeps) {
-		const { nextPosition } = creep;
-		const check = obstacleChecker(room, creep[Owner]);
-		for (const object of room[Objects]) {
+		const { _nextPosition: nextPosition } = creep;
+		const check = obstacleChecker(room, creep._owner);
+		for (const object of room._objects) {
 			if (
 				nextPosition!.isEqualTo(object) &&
-				!(object as Creep).nextPosition &&
+				!(object as Creep)._nextPosition &&
 				check(object)
 			) {
-				delete creep.nextPosition;
+				delete creep._nextPosition;
 			}
 		}
 		// Also check terrain
 		if (terrain.get(nextPosition!.x, nextPosition!.y) === C.TERRAIN_MASK_WALL) {
-			delete creep.nextPosition;
+			delete creep._nextPosition;
 		}
 	}
 
@@ -100,7 +99,7 @@ export function dispatch(room: Room) {
 }
 
 export function get(creep: Creep) {
-	const nextPosition = exchange(creep, 'nextPosition');
+	const nextPosition = exchange(creep, '_nextPosition');
 	if (!nextPosition) {
 		return;
 	}
@@ -108,8 +107,8 @@ export function get(creep: Creep) {
 	// Final check for obstructing creeps
 	const { room } = creep;
 	for (const creep of room.find(C.FIND_CREEPS)) {
-		if (!creep.nextPosition && nextPosition.isEqualTo(creep)) {
-			delete creep.nextPosition;
+		if (!creep._nextPosition && nextPosition.isEqualTo(creep)) {
+			delete creep._nextPosition;
 			return undefined;
 		}
 	}

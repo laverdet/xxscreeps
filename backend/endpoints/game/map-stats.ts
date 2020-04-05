@@ -2,7 +2,6 @@ import { Endpoint } from '~/backend/endpoint';
 import { filterInPlace, mapInPlace, mapToKeys, nonNullable } from '~/lib/utility';
 import * as User from '~/engine/metadata/user';
 import * as Room from '~/engine/schema/room';
-import { Owner } from '~/game/objects/structures';
 
 export const MapStatsEndpoint: Endpoint = {
 	method: 'post',
@@ -28,7 +27,7 @@ export const MapStatsEndpoint: Endpoint = {
 			// Get room owner information
 			const owner = function() {
 				if (room.controller) {
-					const user = room.controller[Owner];
+					const user = room.controller._owner;
 					if (user !== undefined) {
 						userIds.add(user);
 						return {

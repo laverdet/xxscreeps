@@ -1,5 +1,5 @@
-import { declare, inherit, variant, withSymbol } from '~/lib/schema';
-import { NextRegenerationTime, Source } from '~/game/objects/source';
+import { declare, inherit, variant } from '~/lib/schema';
+import { Source } from '~/game/objects/source';
 import * as RoomObject from './room-object';
 
 export const shape = declare('Source', {
@@ -7,7 +7,7 @@ export const shape = declare('Source', {
 	...variant('source'),
 	energy: 'int32',
 	energyCapacity: 'int32',
-	nextRegenerationTime: withSymbol(NextRegenerationTime, 'int32'),
+	_nextRegenerationTime: 'int32',
 });
 
 export const format = declare(shape, { overlay: Source });

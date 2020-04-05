@@ -2,7 +2,7 @@ import { runOnce } from '~/lib/memoize';
 
 import { Creep } from './objects/creep';
 import { GameMap } from './map';
-import { Room, Objects } from './room';
+import { Room } from './room';
 import { RoomObject } from './objects/room-object';
 import { StructureSpawn } from './objects/structures/spawn';
 
@@ -27,7 +27,7 @@ export class Game {
 	) {
 		for (const room of rooms) {
 			this.rooms[room.name] = room;
-			for (const object of room[Objects]) {
+			for (const object of room._objects) {
 				this.#objects.set(object.id, object);
 				if (object instanceof StructureSpawn) {
 					this.spawns[object.name] = object;

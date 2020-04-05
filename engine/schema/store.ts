@@ -1,19 +1,19 @@
-import { declare, enumerated, vector, withSymbol } from '~/lib/schema';
+import { declare, enumerated, vector } from '~/lib/schema';
 import * as C from '~/game/constants';
-import { Amount, Capacity, Resources, Restricted, SingleResource, Store } from '~/game/store';
+import { Store } from '~/game/store';
 
 export const resourceEnumFormat = declare('ResourceType', enumerated(undefined, ...C.RESOURCES_ALL));
 
 export const shape = declare('Store', {
-	amount: withSymbol(Amount, 'int32'),
-	capacity: withSymbol(Capacity, 'int32'),
-	resources: withSymbol(Resources, vector({
+	_amount: 'int32',
+	_capacity: 'int32',
+	_resources: vector({
 		amount: 'int32',
 		capacity: 'int32',
 		type: resourceEnumFormat,
-	})),
-	restricted: withSymbol(Restricted, 'bool'),
-	singleResource: withSymbol(SingleResource, resourceEnumFormat),
+	}),
+	_restricted: 'bool',
+	_singleResource: resourceEnumFormat,
 });
 
 export const format = declare(shape, { overlay: Store });

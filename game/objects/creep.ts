@@ -5,14 +5,11 @@ import { withOverlay } from '~/lib/schema';
 import type { shape } from '~/engine/schema/creep';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { ConstructionSite } from './construction-site';
-import { chainIntentChecks, Owner, RoomObject } from './room-object';
+import { chainIntentChecks, RoomObject } from './room-object';
 import { Source } from './source';
 import { StructureController } from './structures/controller';
 import { obstacleTypes } from '../path-finder';
 import type { RoomObjectWithStore } from '../store';
-export { Owner };
-
-export const AgeTime = Symbol('ageTime');
 
 export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 	get carry() { return this.store }
@@ -22,9 +19,9 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 		const creeps = memory.creeps ?? (memory.creeps = {});
 		return creeps[this.name] ?? (creeps[this.name] = {});
 	}
-	get my() { return this[Owner] === gameContext.userId }
-	get spawning() { return this[AgeTime] === 0 }
-	get ticksToLive() { return this[AgeTime] - Game.time }
+	get my() { return this._owner === gameContext.userId }
+	get spawning() { return this._ageTime === 0 }
+	get ticksToLive() { return this._ageTime - Game.time }
 
 	build(target: ConstructionSite) {
 		return chainIntentChecks(
@@ -89,7 +86,7 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 		);
 	}
 
-	nextPosition?: RoomPosition; // processor temporary
+	_nextPosition?: RoomPosition; // processor temporary
 }
 
 //

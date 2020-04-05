@@ -1,11 +1,8 @@
 import * as C from '~/game/constants';
 import { Endpoint } from '~/backend/endpoint';
 import * as RoomSchema from '~/engine/schema/room';
-import * as Room from '~/game/room';
 import * as RoomIntents from '~/engine/processor/intents/room';
 import * as SpawnIntents from '~/engine/processor/intents/spawn';
-import * as Controller from '~/game/objects/structures/controller';
-import { Owner } from '~/game/objects/room-object';
 import { RoomPosition } from '~/game/position';
 
 const CheckUniqueNameEndpoint: Endpoint = {
@@ -45,9 +42,9 @@ const PlaceSpawnEndpoint: Endpoint = {
 			RoomIntents.insertObject(room, SpawnIntents.create(pos, userid!, name));
 			// Take controller
 			const controller = room.controller!;
-			controller[Owner] = userid!;
-			controller[Controller.DowngradeTime] = 0;
-			controller[Controller.Progress] = 0;
+			controller._owner = userid!;
+			controller._downgradeTime = 0;
+			controller._progress = 0;
 			controller.safeMode = Game.time + C.SAFE_MODE_DURATION;
 			controller.level = 1;
 			// Save room data

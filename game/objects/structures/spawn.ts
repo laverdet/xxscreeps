@@ -1,4 +1,4 @@
-import { Owner, Structure } from '.';
+import { Structure } from '.';
 import * as C from '~/game/constants';
 import * as Memory from '~/game/memory';
 import { gameContext } from '~/game/context';
@@ -59,7 +59,7 @@ export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
 				});
 
 				// Fake creep
-				const creep = createCreep(body, this.pos, name, this[Owner]!);
+				const creep = createCreep(body, this.pos, name, this._owner);
 				Game.creeps[name] = creep;
 				return C.OK;
 			});

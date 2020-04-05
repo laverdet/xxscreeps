@@ -138,7 +138,7 @@ export function declare(...args:
 }
 
 // Convenience wrapper for member symbol interceptor
-export function withSymbol<Type extends Format, Symbol extends symbol>(symbol: Symbol, format: Type) {
+export function withSymbol<Type extends Format, Symbol extends string | symbol>(symbol: Symbol, format: Type) {
 	return declare(undefined, format, symbol);
 }
 

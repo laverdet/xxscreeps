@@ -1,4 +1,4 @@
-import { Owner, RoomObject } from '~/game/objects/room-object';
+import { RoomObject } from '~/game/objects/room-object';
 import { ConstructionSite } from '~/game/objects/construction-site';
 import { Creep } from '~/game/objects/creep';
 import { Source } from '~/game/objects/source';
@@ -6,7 +6,7 @@ import { Structure } from '~/game/objects/structures';
 import { StructureController } from '~/game/objects/structures/controller';
 import { StructureExtension } from '~/game/objects/structures/extension';
 import { StructureSpawn } from '~/game/objects/structures/spawn';
-import { Capacity, CapacityByResource, Restricted, SingleResource, Store } from '~/game/store';
+import { Store } from '~/game/store';
 import { Variant } from '~/lib/schema';
 
 export const Render: unique symbol = Symbol('render');
@@ -28,8 +28,8 @@ function renderStructure(structure: Structure) {
 		...renderObject(structure),
 		structureType: structure.structureType,
 		hits: structure.hits,
-		hitsMax: structure.hitsMax,
-		user: structure[Owner],
+		hitsMax: 100, //structure.hitsMax,
+		user: structure._owner,
 	};
 }
 
@@ -38,15 +38,15 @@ function renderStore(store: Store) {
 		store: { ...store },
 		storeCapacity: store.getCapacity(),
 	};
-	if (store[Restricted]) {
-		if (store[CapacityByResource]) {
+	if (store._restricted) {
+		if (store._capacityByResource) {
 			const capacityByResource: any = {};
-			for (const [ resourceType, value ] of store[CapacityByResource]!.entries()) {
+			for (const [ resourceType, value ] of store._capacityByResource.entries()) {
 				capacityByResource[resourceType] = value;
 			}
 			result.storeCapacityResource = capacityByResource;
 		} else {
-			result.storeCapacityResource = { [store[SingleResource]!]: store[Capacity] };
+			result.storeCapacityResource = { [store._singleResource!]: store._capacity };
 		}
 	}
 	return result;
@@ -72,7 +72,7 @@ bindRenderer(Creep, function render(time) {
 		spawning: false,
 		fatigue: 0,
 		ageTime: this.ticksToLive + time,
-		user: this[Owner],
+		user: this._owner,
 		actionLog: {
 			attacked: null,
 			healed: null,

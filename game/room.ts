@@ -23,8 +23,7 @@ import { StructureController } from './objects/structures/controller';
 import { StructureExtension } from './objects/structures/extension';
 import { StructureSpawn } from './objects/structures/spawn';
 
-export const Objects = Symbol('objects');
-export type AnyRoomObject = InstanceType<typeof Room>[typeof Objects][number];
+export type AnyRoomObject = InstanceType<typeof Room>['_objects'][number];
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
 	serialize?: boolean;
 };
@@ -47,7 +46,7 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
-		for (const object of this[Objects]) {
+		for (const object of this._objects) {
 			object.room = this;
 			if (object instanceof Structure) {
 				this.#structures.push(object);
@@ -208,7 +207,7 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 
 	// Check structure count for this RCL
 	const rcl = room.controller?.level ?? 0;
-	const existingCount = accumulate(room[Objects], object =>
+	const existingCount = accumulate(room._objects, object =>
 		(object instanceof ConstructionSite || object instanceof Structure) && object.structureType === structureType ? 1 : 0);
 	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][rcl]) {
 		// TODO: Check constructions sites made this tick too

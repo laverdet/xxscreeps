@@ -1,6 +1,4 @@
 import * as Room from '~/engine/schema/room';
-import { Objects } from '~/game/room';
-import { Owner } from '~/game/objects/room-object';
 import { Creep } from '~/game/objects/creep';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
@@ -38,10 +36,10 @@ export const mapSubscription: SubscriptionEndpoint = {
 				[ 'w', 'r', 'pb', 'p', 's', 'm', 'd', 'c', 'k', 'e' ],
 				key => [ key, [] as Position[] ],
 			);
-			for (const object of room[Objects]) {
+			for (const object of room._objects) {
 
 				if (object instanceof Creep || object instanceof Structure) {
-					const owner = (object as any)[Owner]; // is this a typescript bug?
+					const owner = (object as any)._owner; // is this a typescript bug?
 					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 					const userObjects = response[owner] ?? (response[owner] = []);
 					userObjects.push([ object.pos.x, object.pos.y ]);

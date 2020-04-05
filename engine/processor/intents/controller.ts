@@ -1,23 +1,23 @@
 import * as C from '~/game/constants';
-import { DowngradeTime, Progress, StructureController, UpgradePowerThisTick } from '~/game/objects/structures/controller';
+import { StructureController } from '~/game/objects/structures/controller';
 import { bindProcessor } from '~/engine/processor/bind';
 import { exchange } from '~/lib/utility';
 
 export function upgrade(controller: StructureController, energy: number) {
 
-	controller[Progress] += energy;
-	controller[UpgradePowerThisTick] = (controller[UpgradePowerThisTick] ?? 0) + energy;
+	controller._progress += energy;
+	controller._upgradePowerThisTick = (controller._upgradePowerThisTick ?? 0) + energy;
 
 	if (controller.level < 8) {
 		const nextLevel = C.CONTROLLER_LEVELS[controller.level]!;
-		if (controller[Progress] >= nextLevel) {
+		if (controller._progress >= nextLevel) {
 			++controller.level;
 			if (controller.level === 8) {
-				controller[Progress] = 0;
+				controller._progress = 0;
 			} else {
-				controller[Progress] -= nextLevel;
+				controller._progress -= nextLevel;
 			}
-			controller[DowngradeTime] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!;
+			controller._downgradeTime = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!;
 			++controller.safeModeAvailable;
 		}
 	}
@@ -25,10 +25,10 @@ export function upgrade(controller: StructureController, energy: number) {
 
 export default () => bindProcessor(StructureController, {
 	tick() {
-		const upgradePower = exchange(this, UpgradePowerThisTick);
+		const upgradePower = exchange(this, '_upgradePowerThisTick');
 		if (upgradePower !== undefined) {
-			this[DowngradeTime] = 1 + Math.min(
-				this[DowngradeTime] + C.CONTROLLER_DOWNGRADE_RESTORE,
+			this._downgradeTime = 1 + Math.min(
+				this._downgradeTime + C.CONTROLLER_DOWNGRADE_RESTORE,
 				Game.time + C.CONTROLLER_DOWNGRADE[this.level]!);
 			return true;
 		}

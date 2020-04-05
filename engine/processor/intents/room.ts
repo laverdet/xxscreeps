@@ -2,7 +2,7 @@ import { gameContext } from '~/game/context';
 import { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
-import { AnyRoomObject, Objects, Room } from '~/game/room';
+import { AnyRoomObject, Room } from '~/game/room';
 import { create as createConstructionSite } from './construction-site';
 
 type Parameters = {
@@ -21,13 +21,13 @@ export type Intents = {
 
 export function insertObject(room: Room, object: AnyRoomObject) {
 	object.room = room;
-	room[Objects].push(object);
+	room._objects.push(object);
 }
 
 export function removeObject(room: Room, id: string) {
-	for (let ii = 0; ii < room[Objects].length; ++ii) {
-		if (room[Objects][ii].id === id) {
-			room[Objects].splice(ii, 1);
+	for (let ii = 0; ii < room._objects.length; ++ii) {
+		if (room._objects[ii].id === id) {
+			room._objects.splice(ii, 1);
 		}
 	}
 }

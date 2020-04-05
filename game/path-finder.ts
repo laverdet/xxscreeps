@@ -3,10 +3,10 @@ import * as C from '~/game/constants';
 import { Variant } from '~/lib/schema';
 import { getOrSet, instantiate } from '~/lib/utility';
 import { RoomPosition } from './position';
-import { Objects, Room } from './room';
+import { Room } from './room';
 import { ConstructionSite } from './objects/construction-site';
 import { Creep } from './objects/creep';
-import { Owner, RoomObject } from './objects/room-object';
+import { RoomObject } from './objects/room-object';
 import { Structure } from './objects/structures';
 import { gameContext } from './context';
 
@@ -103,7 +103,7 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 					ignoreDestructibleStructures,
 					pathing: true,
 				});
-				for (const object of room[Objects]) {
+				for (const object of room._objects) {
 					if (check(object)) {
 						costMatrix.set(object.pos.x, object.pos.y, 0xff);
 					}
@@ -167,8 +167,8 @@ export function obstacleChecker(room: Room, user: string, options: ObstacleCheck
 		} else if (controller?.safeMode === undefined) {
 			return object => object instanceof Creep;
 		} else {
-			const safeUser = controller[Owner];
-			return object => object instanceof Creep && (object[Owner] === safeUser || user !== safeUser);
+			const safeUser = controller._owner;
+			return object => object instanceof Creep && (object._owner === safeUser || user !== safeUser);
 		}
 	}();
 	const structureFilter = function(): Filter {
@@ -183,7 +183,7 @@ export function obstacleChecker(room: Room, user: string, options: ObstacleCheck
 	const constructionSiteFilter = function(): Filter {
 		if (pathing) {
 			return object => object instanceof ConstructionSite &&
-				object[Owner] === user && obstacleTypes.has(object.structureType);
+				object._owner === user && obstacleTypes.has(object.structureType);
 		} else {
 			return () => false;
 		}

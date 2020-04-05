@@ -1,7 +1,5 @@
 import * as Room from '~/engine/schema/room';
 import * as User from '~/engine/metadata/user';
-import { Owner } from '~/game/objects/room-object';
-import { Objects } from '~/game/room';
 import { SubscriptionEndpoint } from '../socket';
 import { Render } from './render';
 import { mapInPlace, mapToKeys } from '~/lib/utility';
@@ -43,12 +41,12 @@ export const roomSubscription: SubscriptionEndpoint = {
 			// Render current room state
 			const objects: any = {};
 			const visibleUsers = new Set<string>();
-			for (const object of room[Objects]) {
+			for (const object of room._objects) {
 				const value = (object as any)[Render]?.(time);
 				if (value !== undefined) {
 					objects[value._id] = value;
 				}
-				const owner = object[Owner];
+				const owner = object._owner;
 				if (owner !== undefined && !seenUsers.has(owner)) {
 					visibleUsers.add(owner);
 				}

@@ -3,10 +3,6 @@ import { execSync } from 'child_process';
 import { topLevelTask } from '~/lib/task';
 
 import { RoomPosition } from '~/game/position';
-import * as Room from '~/game/room';
-import { Owner } from '~/game/objects/room-object';
-import * as Source from '~/game/objects/source';
-import * as StructureController from '~/game/objects/structures/controller';
 import { TerrainWriter } from '~/game/terrain';
 import * as StoreIntents from '~/engine/processor/intents/store';
 
@@ -41,7 +37,7 @@ function withRoomObject(object: any) {
 function withStructure(object: any) {
 	return {
 		...withRoomObject(object),
-		[Owner]: object.user,
+		_owner: object.user,
 		hits: 0,
 	};
 }
@@ -69,19 +65,20 @@ topLevelTask(async() => {
 	const roomObjects = db.getCollection('rooms.objects');
 	const rooms = db.getCollection('rooms').find().map(room => ({
 		name: room._id,
-		[Room.Objects]: [ ...filterInPlace(roomObjects.find({ room: room._id }).map(object => {
+		_objects: [ ...filterInPlace(roomObjects.find({ room: room._id }).map(object => {
 			switch (object.type) {
 				case 'controller':
 					return {
 						...withStructure(object),
-						[StructureController.DowngradeTime]: object.downgradeTime,
+
 						isPowerEnabled: object.isPowerEnabled,
 						level: object.level,
-						[StructureController.Progress]: object.progress,
 						safeMode: object.safeMode,
 						safeModeAvailable: object.safeModeAvailable,
 						safeModeCooldown: object.safeModeCooldown,
-						[StructureController.UpgradeBlockedTime]: object.upgradeBlocked,
+						_downgradeTime: object.downgradeTime,
+						_progress: object.progress,
+						_upgradeBlockedTime: object.upgradeBlocked,
 					};
 
 				case 'source':
@@ -89,7 +86,7 @@ topLevelTask(async() => {
 						...withRoomObject(object),
 						energy: object.energy,
 						energyCapacity: object.energyCapacity,
-						[Source.NextRegenerationTime]: gameTime + (object.ticksToRegeneration as number),
+						_nextRegenerationTime: gameTime + (object.ticksToRegeneration as number),
 					};
 
 				case 'spawn':
@@ -124,8 +121,8 @@ topLevelTask(async() => {
 	// Get visible rooms for users
 	const roomsByUser = new Map<string, Set<string>>();
 	for (const room of rooms) {
-		for (const object of room[Room.Objects]) {
-			const owner: string | undefined = (object as any)[Owner];
+		for (const object of room._objects) {
+			const owner: string | undefined = (object as any)._owner;
 			if (owner !== undefined) {
 				getOrSet(roomsByUser, owner, () => new Set).add(room.name);
 			}
