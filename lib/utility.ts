@@ -10,12 +10,6 @@ export function accumulate(iterable: Iterable<any>, callback: (value: any) => nu
 	return sum;
 }
 
-// Checks that a value can be casted to a type, but returns the original type. The curry thing here
-// is needed because TypeScript doesn't support optional generic parameters
-export function checkCast<Type>() {
-	return <Value extends Type>(value: Value) => value;
-}
-
 // Clamps a number to a given range
 export function clamp(min: number, max: number, value: number) {
 	return Math.max(min, Math.min(max, value));
@@ -146,18 +140,6 @@ export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, r
 type NonNullOrVoidable<Type> = Type extends null | undefined | void ? never : Type;
 export function nonNullable<Type>(value: Type): value is NonNullOrVoidable<Type> {
 	return value != null;
-}
-
-// Object.assign but it throws if there's any key collisions
-export function safeAssign(target: any, ...sources: any[]) {
-	for (const source of sources) {
-		for (const key of Object.keys(source)) {
-			if (key in target) {
-				throw new Error(`Key '${key}' already exists on object`);
-			}
-			target[key] = source[key];
-		}
-	}
 }
 
 // Used to inline upcast a value to another Type. This is *more* restrictive than `as Type`

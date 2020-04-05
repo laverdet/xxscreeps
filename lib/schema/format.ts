@@ -13,7 +13,7 @@ export const Variant = Symbol('schemaVariant');
 // A format describes the initial general types of data then is enriched with type information from
 // interceptors and eventually converted to layouts
 export type Format = WithShape | WithType | Primitive | StructFormat;
-export type StructFormat = {
+type StructFormat = {
 	[Inherit]?: WithType;
 	[Variant]?: string;
 	[key: string]: Format;
@@ -32,9 +32,9 @@ type Definition =
 	StructFormat;
 
 // Only used to carry type information
-export const Shape = Symbol('withShape');
-export type WithShape<Shape = any> = { [Shape]: Shape };
-export const Type = Symbol('withType');
+const Shape = Symbol('withShape');
+type WithShape<Shape = any> = { [Shape]: Shape };
+const Type = Symbol('withType');
 export type WithType<Type = any> = { [Type]: Type };
 export type WithShapeAndType<Shape, Type = Shape> = WithShape<Shape> & WithType<Type>;
 
@@ -148,7 +148,7 @@ export function withType<Type>(format: Format): WithShapeAndType<Type> {
 }
 
 // Recursively unpacks holder formats
-export function unpackHolderFormat(format: Definition) {
+function unpackHolderFormat(format: Definition) {
 	let unpacked: any = format;
 	while (unpacked[0] === 'holder') {
 		// eslint-disable-next-line prefer-destructuring

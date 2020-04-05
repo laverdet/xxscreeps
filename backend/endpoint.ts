@@ -1,7 +1,7 @@
 import express from 'express';
 import { BackendContext } from './context';
 export type Method = 'delete' | 'get' | 'post' | 'put';
-export type RequestContext = { context: BackendContext };
+type RequestContext = { context: BackendContext };
 
 export type Endpoint = {
 	path: string;
