@@ -52,6 +52,8 @@ export default async function() {
 	// Initialize services
 	const context = await BackendContext.connect();
 	const express = Express();
+	express.disable('x-powered-by');
+
 	const httpServer = http.createServer(express);
 	const shutdownServer = graceful(httpServer);
 
