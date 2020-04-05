@@ -1,7 +1,10 @@
 import * as Room from '~/engine/schema/room';
+import * as User from '~/engine/metadata/user';
+import { Owner } from '~/game/objects/room-object';
 import { Objects } from '~/game/room';
 import { SubscriptionEndpoint } from '../socket';
 import { Render } from './render';
+import { mapInPlace, mapToKeys } from '~/lib/utility';
 
 function diff(previous: any, next: any) {
 	if (previous === next) {
@@ -28,37 +31,50 @@ function diff(previous: any, next: any) {
 export const roomSubscription: SubscriptionEndpoint = {
 	pattern: /^room:(?<room>[A-Z0-9]+)$/,
 
-	subscribe(parameters) {
+	async subscribe(parameters) {
 		let lastTickTime = 0;
 		let previous: any;
+		const seenUsers = new Set<string>();
 		const update = async(time: number) => {
 			lastTickTime = Date.now();
 			const roomBlob = await this.context.blobStorage.load(`ticks/${time}/${parameters.room}`);
 			const room = Room.read(roomBlob);
+
 			// Render current room state
 			const objects: any = {};
+			const visibleUsers = new Set<string>();
 			for (const object of room[Objects]) {
 				const value = (object as any)[Render]?.(time);
 				if (value !== undefined) {
 					objects[value._id] = value;
 				}
+				const owner = object[Owner];
+				if (owner !== undefined && !seenUsers.has(owner)) {
+					visibleUsers.add(owner);
+				}
 			}
+
+			// Get users not yet seen
+			const users = mapToKeys(await Promise.all(mapInPlace(visibleUsers, async(id): Promise<[ string, any ]> => {
+				const user = User.read(await this.context.blobStorage.load(`user/${id}/info`));
+				return [ user.id, {
+					username: user.username,
+					badge: JSON.parse(user.badge),
+				} ];
+			})));
+
 			// Diff with previous room state and return response
 			const dval = diff(previous, objects);
 			const response: any = {
 				objects: dval,
 				info: { mode: 'world' },
 				gameTime: time,
-				users: {
-					'123': {
-						username: 'test',
-						badge: {},
-					},
-				},
+				users,
 			};
 			this.send(JSON.stringify(response));
 			previous = objects;
 		};
+		await update(this.context.time);
 		return this.context.gameChannel.listen(event => {
 			if (event.type === 'tick' && Date.now() > lastTickTime + 50) {
 				update(event.time).catch(error => console.error(error));

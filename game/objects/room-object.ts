@@ -9,6 +9,7 @@ export const Owner = Symbol('owner');
 
 export abstract class RoomObject extends withOverlay<typeof shape>()(BufferObject) {
 	room!: Room;
+	[Owner]?: string;
 	[Process]?: ProcessorSpecification<this>['process'];
 	[Tick]?: ProcessorSpecification<this>['tick'];
 	[Variant]: string;

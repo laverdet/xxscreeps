@@ -34,7 +34,7 @@ export function create(username: string) {
 		badge: '',
 		visibleRooms: new Set<string>(),
 		code: {
-			branch: undefined,
+			branch: undefined as any as string,
 			branches: [],
 		},
 	};

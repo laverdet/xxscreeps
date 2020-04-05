@@ -1,14 +1,15 @@
 import * as C from '~/game/constants';
 import { gameContext } from '~/game/context';
-import { getPositonInDirection, Direction } from '~/game/position';
+import { getPositonInDirection, Direction, RoomPosition } from '~/game/position';
 import * as Creep from '~/game/objects/creep';
 import { bindProcessor } from '~/engine/processor/bind';
-import type { RoomObject } from '~/game/objects/room-object';
+import { RoomObject, Owner } from '~/game/objects/room-object';
 import { StructureExtension } from '~/game/objects/structures/extension';
 import { checkSpawnCreep, StructureSpawn } from '~/game/objects/structures/spawn';
-import { accumulate } from '~/lib/utility';
+import { accumulate, instantiate } from '~/lib/utility';
 import * as CreepIntent from './creep';
 import * as RoomIntent from './room';
+import { newRoomObject } from './room-object';
 import * as StoreIntent from './store';
 
 type Parameters = {
@@ -24,6 +25,17 @@ export type Intents = {
 	receiver: StructureSpawn;
 	parameters: Parameters;
 };
+
+export function create(pos: RoomPosition, owner: string, name: string) {
+	return instantiate(StructureSpawn, {
+		...newRoomObject(pos),
+		hits: C.SPAWN_HITS,
+		name,
+		store: StoreIntent.create(null, { energy: C.SPAWN_ENERGY_CAPACITY }, { energy: C.SPAWN_ENERGY_START }),
+		spawning: undefined,
+		[Owner]: owner,
+	});
+}
 
 function createCreep(spawn: StructureSpawn, intent: Parameters['spawn']) {
 

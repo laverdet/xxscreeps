@@ -1,4 +1,5 @@
 import { Endpoint } from '~/backend/endpoint';
+import * as User from '~/engine/metadata/user';
 
 const RespawnProhibitedRoomsEndpoint: Endpoint = {
 	path: '/respawn-prohibited-rooms',
@@ -17,7 +18,7 @@ const WorldStartRoomEndpoint: Endpoint = {
 	execute() {
 		return {
 			ok: 1,
-			room: [ 'W0N0' ],
+			room: [ 'W5N5' ],
 		};
 	},
 };
@@ -25,10 +26,15 @@ const WorldStartRoomEndpoint: Endpoint = {
 const WorldStatusEndpoint: Endpoint = {
 	path: '/world-status',
 
-	execute() {
+	async execute(req) {
+		const { userid } = req;
+		if (userid === undefined) {
+			return { ok: 1 };
+		}
+		const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
 		return {
 			ok: 1,
-			status: 'normal',
+			status: user.active ? 'normal' : 'empty',
 		};
 	},
 };

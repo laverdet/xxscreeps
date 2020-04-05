@@ -2,12 +2,11 @@ import { Owner, Structure } from '.';
 import * as C from '~/game/constants';
 import * as Memory from '~/game/memory';
 import { gameContext } from '~/game/context';
-import type { shape } from '~/engine/schema/extension';
+import type { shape } from '~/engine/schema/spawn';
 import { withOverlay } from '~/lib/schema';
 import { accumulate } from '~/lib/utility';
 
 import { Direction } from '~/game/position';
-import * as Store from '~/game/store';
 import { create as createCreep } from '~/engine/processor/intents/creep';
 import { StructureExtension } from './extension';
 import { chainIntentChecks } from '../room-object';
@@ -24,10 +23,6 @@ export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
 
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
-
-	name!: string;
-	spawning?: { creep: string; directions: Direction[]; endTime: number; needTime: number };
-	store!: Store.Store;
 
 	canCreateCreep(body: any, name?: any) {
 		return checkSpawnCreep(this, body, name ?? getUniqueName(name => Game.creeps[name] !== undefined));

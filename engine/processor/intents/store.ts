@@ -98,7 +98,7 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 	if (store) {
 		for (const [ type, amount ] of Object.entries(store)) {
 			if (capacityByResource?.[type as ResourceType] === undefined) {
-				resources.push({ type, amount: amount!, capacity: capacityByResource?.[type as ResourceType] ?? 0 });
+				resources.push({ type, amount: amount!, capacity: 0 });
 			}
 		}
 	}

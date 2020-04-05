@@ -116,7 +116,7 @@ export function *mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (v
 export function mapToKeys<Type, Key extends string | number | symbol, Value>(
 	iterable: Iterable<[ Key, Type ]>): Record<Key, Type>;
 export function mapToKeys<Type, Key extends string | number | symbol, Value>(
-	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ]): Record<Key, Type>;
+	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ]): Record<Key, Value>;
 export function mapToKeys<Type, Key extends string | number | symbol, Value>(
 	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ] = identity as any,
 ) {

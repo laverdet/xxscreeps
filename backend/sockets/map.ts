@@ -20,6 +20,7 @@ export const mapSubscription: SubscriptionEndpoint = {
 			return () => {};
 		}
 		let lastTickTime = 0;
+		let previous = '';
 		const update = async(time: number) => {
 			lastTickTime = Date.now();
 			const roomBlob = await this.context.blobStorage.load(`ticks/${time}/${roomName}`);
@@ -49,7 +50,11 @@ export const mapSubscription: SubscriptionEndpoint = {
 					response.s.push([ object.pos.x, object.pos.y ]);
 				}
 			}
-			this.send(JSON.stringify(response));
+			const payload = JSON.stringify(response);
+			if (payload !== previous) {
+				previous = payload;
+				this.send(payload);
+			}
 		};
 		await update(this.context.time);
 		return this.context.gameChannel.listen(event => {

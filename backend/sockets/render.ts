@@ -1,4 +1,4 @@
-import { RoomObject } from '~/game/objects/room-object';
+import { Owner, RoomObject } from '~/game/objects/room-object';
 import { ConstructionSite } from '~/game/objects/construction-site';
 import { Creep } from '~/game/objects/creep';
 import { Source } from '~/game/objects/source';
@@ -20,8 +20,6 @@ function renderObject(object: RoomObject) {
 		type: object[Variant],
 		x: object.pos.x,
 		y: object.pos.y,
-		user: '123',
-		//user: (object as any)[Owner],
 	};
 }
 
@@ -31,6 +29,7 @@ function renderStructure(structure: Structure) {
 		structureType: structure.structureType,
 		hits: structure.hits,
 		hitsMax: structure.hitsMax,
+		user: structure[Owner],
 	};
 }
 
@@ -73,6 +72,7 @@ bindRenderer(Creep, function render(time) {
 		spawning: false,
 		fatigue: 0,
 		ageTime: this.ticksToLive + time,
+		user: this[Owner],
 		actionLog: {
 			attacked: null,
 			healed: null,
@@ -93,10 +93,7 @@ bindRenderer(Creep, function render(time) {
 
 bindRenderer(Source, function render(time) {
 	return {
-		_id: this.id,
-		type: 'source',
-		x: this.pos.x,
-		y: this.pos.y,
+		...renderObject(this),
 		energy: this.energy,
 		energyCapacity: this.energyCapacity,
 		nextRegenerationTime: this.ticksToRegeneration === undefined ?
@@ -107,7 +104,6 @@ bindRenderer(Source, function render(time) {
 bindRenderer(StructureController, function render(time) {
 	return {
 		...renderStructure(this),
-		type: 'controller',
 		level: this.level,
 		progress: this.progress,
 		downgradeTime: this.ticksToDowngrade === undefined ?

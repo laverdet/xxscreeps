@@ -152,6 +152,7 @@ topLevelTask(async() => {
 				branches: code.map(row => ({
 					id: row._id,
 					name: row.branch,
+					timestamp: row.timestamp,
 				})),
 			},
 		};
@@ -184,8 +185,6 @@ topLevelTask(async() => {
 		}));
 		await blobStorage.save(`user/${row.user}/${row._id}`, CodeSchema.write({
 			modules,
-			timeCreated: row.meta.created / 1000,
-			timeModified: row.meta.modified / 1000,
 		}));
 	}));
 
