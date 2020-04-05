@@ -8,6 +8,10 @@
             ],
             "description": "Backend server settings",
             "properties": {
+                "secret": {
+                    "description": "Secret used for session authentication. If not specified a new secret will be generated each\nrestart.",
+                    "type": "string"
+                },
                 "steamApiKey": {
                     "description": "Steam Web API key used to authenticate users. You can get a key here:\nhttp://steamcommunity.com/dev/apikey",
                     "type": "string"

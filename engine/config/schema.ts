@@ -4,6 +4,12 @@ export type Schema = {
 	 */
 	backend: {
 		/**
+		 * Secret used for session authentication. If not specified a new secret will be generated each
+		 * restart.
+		 */
+		secret?: string;
+
+		/**
 		 * Steam Web API key used to authenticate users. You can get a key here:
 		 * http://steamcommunity.com/dev/apikey
 		 */
