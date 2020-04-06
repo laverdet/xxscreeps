@@ -1,4 +1,4 @@
-import { declare, getReader, getWriter, variant, vector } from '~/lib/schema';
+import { declare, getReader, getWriter, variant, vector, ShapeOf } from '~/lib/schema';
 import { Room } from '~/game/room';
 
 import * as Controller from './controller';
@@ -19,6 +19,7 @@ export const shape = declare('Room', {
 		Spawn.format,
 	)),
 });
+export type Shape = ShapeOf<typeof shape>;
 
 export const format = declare(shape, { overlay: Room });
 

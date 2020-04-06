@@ -39,6 +39,7 @@ export const MeEndpoint: Endpoint = {
 		return Object.assign({
 			ok: 1,
 			_id: user.id,
+			cpu: 100,
 			username: user.username,
 			badge: user.badge === '' ? undefined : JSON.parse(user.badge),
 		}, ...this.context.getProvidersForUser(userId).map(provider => {

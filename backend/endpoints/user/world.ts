@@ -1,5 +1,5 @@
 import { Endpoint } from '~/backend/endpoint';
-import * as User from '~/engine/metadata/user';
+import { loadUser } from '~/backend/model/user';
 
 const RespawnProhibitedRoomsEndpoint: Endpoint = {
 	path: '/respawn-prohibited-rooms',
@@ -31,11 +31,16 @@ const WorldStatusEndpoint: Endpoint = {
 		if (userid === undefined) {
 			return { ok: 1 };
 		}
-		const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
-		return {
-			ok: 1,
-			status: user.active ? 'normal' : 'empty',
-		};
+		const user = await loadUser(this.context, userid);
+		if (user.roomsControlled.size === 0) {
+			if (user.roomsPresent.size === 0) {
+				return { ok: 1, status: 'empty' };
+			} else {
+				return { ok: 1, status: 'lost' };
+			}
+		} else {
+			return { ok: 1, status: 'normal' };
+		}
 	},
 };
 

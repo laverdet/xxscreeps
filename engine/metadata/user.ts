@@ -11,7 +11,9 @@ export const format = declare('User', {
 	registeredDate: 'int32',
 	active: 'bool',
 	badge: 'string',
-	visibleRooms: StringSet.format,
+	roomsControlled: StringSet.format,
+	roomsPresent: StringSet.format,
+	roomsVisible: StringSet.format,
 	code: {
 		branch: Id.format,
 		branches: vector({
@@ -26,13 +28,15 @@ export function create(username: string) {
 	return {
 		id: Id.generateId(12),
 		username,
-		cpu: 0,
-		cpuAvailable: 0,
+		cpu: 100,
+		cpuAvailable: 100,
 		gcl: 1,
 		registeredDate: Date.now(),
 		active: false,
 		badge: '',
-		visibleRooms: new Set<string>(),
+		roomsControlled: new Set<string>(),
+		roomsPresent: new Set<string>(),
+		roomsVisible: new Set<string>(),
 		code: {
 			branch: undefined as any as string,
 			branches: [],

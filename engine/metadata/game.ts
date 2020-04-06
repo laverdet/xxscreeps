@@ -1,4 +1,4 @@
-import { declare, getReader, getWriter } from '~/lib/schema';
+import { declare, getReader, getWriter, TypeOf } from '~/lib/schema';
 import * as StringSet from '~/engine/util/schema/string-set';
 
 const format = declare('Game', {
@@ -7,6 +7,7 @@ const format = declare('Game', {
 	activeRooms: StringSet.format,
 	users: StringSet.format,
 });
+export type Type = TypeOf<typeof format>;
 
-export const readGame = getReader(format);
-export const writeGame = getWriter(format);
+export const read = getReader(format);
+export const write = getWriter(format);

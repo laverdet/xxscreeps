@@ -37,7 +37,7 @@ export default async function() {
 				for await (const userId of usersQueue) {
 					// Load user data
 					const userInfo = User.read(await blobStorage.load(`user/${userId}/info`));
-					const { visibleRooms } = userInfo;
+					const { roomsVisible } = userInfo;
 
 					const [ sandbox, roomBlobs ] = await Promise.all([
 						// Get user sandbox
@@ -54,17 +54,24 @@ export default async function() {
 							return sandbox;
 						}(),
 						// Load visible rooms for this user
-						Promise.all(mapInPlace(visibleRooms, roomName =>
+						Promise.all(mapInPlace(roomsVisible, roomName =>
 							blobStorage.load(`ticks/${gameTime}/${roomName}`),
 						)),
 					]);
 
 					// Run user code
-					const result = await sandbox.run(gameTime, roomBlobs);
+					const result = await async function() {
+						try {
+							return await sandbox.run(gameTime, roomBlobs);
+						} catch (err) {
+							console.log(err);
+							return { intents: {} };
+						}
+					}();
 
 					// Save intent blobs
 					const savedRoomNames = mapInPlace(Object.entries(result.intents), async([ roomName, intents ]) => {
-						if (visibleRooms.has(roomName)) {
+						if (roomsVisible.has(roomName)) {
 							await blobStorage.save(`intents/${roomName}/${userId}`, new Uint8Array(intents!));
 							return roomName;
 						} else {

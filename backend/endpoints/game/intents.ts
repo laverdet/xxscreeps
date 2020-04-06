@@ -1,18 +1,40 @@
 import * as C from '~/game/constants';
 import { Endpoint } from '~/backend/endpoint';
-import * as RoomSchema from '~/engine/schema/room';
+import { loadRoom, loadRooms, saveRoom } from '~/backend/model/room';
+import { loadUser, saveUser } from '~/backend/model/user';
+import * as GameSchema from '~/engine/metadata/game';
+import * as ControllerIntents from '~/engine/processor/intents/controller';
 import * as RoomIntents from '~/engine/processor/intents/room';
 import * as SpawnIntents from '~/engine/processor/intents/spawn';
+import { runAsUser } from '~/game/context';
+import * as Room from '~/game/room';
 import { RoomPosition } from '~/game/position';
+import { concatInPlace } from '~/lib/utility';
+import { ServiceMessage } from '~/engine/service'
+import { Channel } from '~/storage/channel';
 
 const CheckUniqueNameEndpoint: Endpoint = {
 	path: '/check-unique-object-name',
 	method: 'post',
 
-	execute(req) {
-		if (req.body.type === 'spawn') {
-			return { ok: 1 };
+	async execute(req) {
+		if (req.body.type !== 'spawn') {
+			return;
 		}
+		const { userid } = req;
+		const user = await loadUser(this.context, userid!);
+		for (const room of await loadRooms(this.context, user.roomsPresent)) {
+			for (const structure of room.find(C.FIND_STRUCTURES)) {
+				if (
+					structure.structureType === 'spawn' &&
+					structure._owner === userid &&
+					structure.name === req.body.name
+				) {
+					return { error: 'exists' };
+				}
+			}
+		}
+		return { ok: 1 };
 	},
 };
 
@@ -20,10 +42,27 @@ const GenNameEndpoint: Endpoint = {
 	path: '/gen-unique-object-name',
 	method: 'post',
 
-	execute(req) {
-		if (req.body.type === 'spawn') {
-			return { ok: 1, name: 'Spawn1' };
+	async execute(req) {
+		if (req.body.type !== 'spawn') {
+			return;
 		}
+		const { userid } = req;
+		const user = await loadUser(this.context, userid!);
+		let max = 0;
+		for (const room of await loadRooms(this.context, user.roomsPresent)) {
+			for (const structure of concatInPlace(
+				room.find(C.FIND_STRUCTURES),
+				room.find(C.FIND_CONSTRUCTION_SITES),
+			)) {
+				if (structure.structureType === 'spawn' && structure._owner === userid) {
+					const number = Number(/^Spawn(?<count>[0-9]+)$/.exec(structure.name)?.groups?.number);
+					if (number > max) {
+						max = number;
+					}
+				}
+			}
+		}
+		return { ok: 1, name: `Spawn${max + 1}` };
 	},
 };
 
@@ -36,19 +75,37 @@ const PlaceSpawnEndpoint: Endpoint = {
 		const { name, room, x, y } = req.body;
 		const pos = new RoomPosition(x, y, room);
 		await this.context.gameMutex.scope(async() => {
-			const fragment = `ticks/${this.context.time}/${pos.roomName}`;
-			// Insert spawn
-			const room = RoomSchema.read(await this.context.blobStorage.load(fragment));
-			RoomIntents.insertObject(room, SpawnIntents.create(pos, userid!, name));
-			// Take controller
-			const controller = room.controller!;
-			controller._owner = userid!;
-			controller._downgradeTime = 0;
-			controller._progress = 0;
-			controller.safeMode = Game.time + C.SAFE_MODE_DURATION;
-			controller.level = 1;
-			// Save room data
-			await this.context.blobStorage.save(fragment, RoomSchema.write(room));
+			// Ensure user has no objects
+			const user = await loadUser(this.context, userid!);
+			if (user.roomsPresent.size !== 0) {
+				throw new Error('User has presence');
+			}
+			const room = await loadRoom(this.context, pos.roomName);
+			runAsUser(user.id, this.context.time, () => {
+				// Check room eligibility
+				if (Room.checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
+					throw new Error('Invalid intent');
+				}
+				// Add spawn
+				RoomIntents.insertObject(room, SpawnIntents.create(pos, userid!, name));
+				ControllerIntents.claim(room.controller!, user.id);
+				user.roomsControlled.add(room.name);
+				user.roomsPresent.add(room.name);
+				user.roomsVisible.add(room.name);
+			});
+
+			// Make room & user active
+			const game = GameSchema.read(await this.context.blobStorage.load('game'));
+			game.activeRooms.add(pos.roomName);
+			game.users.add(user.id);
+
+			// Save
+			await Promise.all([
+				this.context.blobStorage.save('game', GameSchema.write(game)),
+				saveUser(this.context, user),
+				saveRoom(this.context, room),
+			]);
+			Channel.publish<ServiceMessage>('service', { type: 'gameModified' });
 		});
 		return { ok: 1 };
 	},

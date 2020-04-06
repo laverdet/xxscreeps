@@ -22,9 +22,10 @@ export class Game {
 	#objects = new Map<string, RoomObject>();
 
 	constructor(
-		public time: number,
+		time: number,
 		rooms: Room[],
 	) {
+		setTime(time);
 		for (const room of rooms) {
 			this.rooms[room.name] = room;
 			for (const object of room._objects) {
@@ -38,6 +39,10 @@ export class Game {
 		}
 	}
 
+	get time() {
+		return time;
+	}
+
 	/**
 	 * Get an object with the specified unique ID. It may be a game object of any type. Only objects
 	 * from the rooms which are visible to you can be accessed.
@@ -46,4 +51,9 @@ export class Game {
 	getObjectById(id: string) {
 		return this.#objects.get(id);
 	}
+}
+
+export let time = NaN;
+export function setTime(currentTime: number) {
+	time = currentTime;
 }

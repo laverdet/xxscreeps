@@ -1,4 +1,4 @@
-import { readGame } from '~/engine/metadata/game';
+import * as GameSchema from '~/engine/metadata/game';
 import type { GameMessage } from '~/engine/service';
 import { readWorld, World } from '~/game/map';
 import { getOrSet } from '~/lib/utility';
@@ -39,7 +39,7 @@ export class BackendContext {
 		const blobStorage = await BlobStorage.connect();
 		const gameChannel = await Channel.connect<GameMessage>('main');
 		const world = readWorld(await blobStorage.load('terrain'));
-		const game = readGame(await blobStorage.load('game'));
+		const game = GameSchema.read(await blobStorage.load('game'));
 		const gameMutex = await Mutex.connect('game');
 		const auth = Auth.read(await blobStorage.load('auth'));
 		const context = new BackendContext(blobStorage, gameChannel, world, game.accessibleRooms, gameMutex, auth, game.time);

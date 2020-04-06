@@ -1,7 +1,17 @@
 import * as C from '~/game/constants';
+import * as Game from '~/game/game';
 import { StructureController } from '~/game/objects/structures/controller';
 import { bindProcessor } from '~/engine/processor/bind';
 import { exchange } from '~/lib/utility';
+
+export function claim(controller: StructureController, user: string) {
+	// Take controller
+	controller._owner = user;
+	controller._downgradeTime = 0;
+	controller._progress = 0;
+	controller.safeMode = Game.time + C.SAFE_MODE_DURATION;
+	controller.level = 1;
+}
 
 export function upgrade(controller: StructureController, energy: number) {
 

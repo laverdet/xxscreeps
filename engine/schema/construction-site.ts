@@ -7,9 +7,9 @@ import * as RoomObject from './room-object';
 export const shape = declare('ConstructionSite', {
 	...inherit(RoomObject.format),
 	...variant('constructionSite'),
+	name: 'string',
 	progress: 'int32',
 	structureType: enumerated(...Object.keys(C.CONSTRUCTION_COST) as (keyof typeof C.CONSTRUCTION_COST)[]),
-	_name: 'string',
 	_owner: Id.format,
 });
 

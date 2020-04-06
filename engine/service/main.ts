@@ -1,5 +1,5 @@
 import configPromise from '~/engine/config';
-import { readGame, writeGame } from '~/engine/metadata/game';
+import * as GameSchema from '~/engine/metadata/game';
 import { AveragingTimer } from '~/lib/averaging-timer';
 import { getOrSet, makeResolver, mapInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
@@ -24,21 +24,21 @@ export default async function() {
 	]);
 	serviceChannel.publish({ type: 'mainConnected' });
 
-	// Load current game state
-	const gameMetadata = readGame(await blobStorage.load('game'));
-	const flushGame = async() => {
-		await blobStorage.save('game', writeGame(gameMetadata));
-	};
-
 	// Run main game processing loop
+	let gameMetadata: GameSchema.Type | undefined;
+	let activeRooms: string[] = [];
+	let activeUsers: string[] = [];
 	const performanceTimer = new AveragingTimer(1000);
-	const activeUsers = [ ...gameMetadata.users ];
 
 	// Ctrl+C handler
 	let delayResolve: Resolver<boolean> | undefined;
 	let shuttingDown = false;
+
+	// Listen for service updates
 	serviceChannel.listen(message => {
-		if (message.type === 'shutdown') {
+		if (message.type === 'gameModified') {
+			gameMetadata = undefined;
+		} else if (message.type === 'shutdown') {
 			shuttingDown = true;
 			delayResolve?.resolve?.(false);
 		}
@@ -47,8 +47,16 @@ export default async function() {
 	try {
 		do {
 			await gameMutex.scope(async() => {
+				// Start timer
 				performanceTimer.start();
 				const timeStartedLoop = Date.now();
+
+				// Refresh current game status
+				if (!gameMetadata) {
+					gameMetadata = GameSchema.read(await blobStorage.load('game'));
+					activeRooms = [ ...gameMetadata.activeRooms ];
+					activeUsers = [ ...gameMetadata.users ];
+				}
 
 				// Add users to runner queue
 				usersQueue.version(gameMetadata.time);
@@ -75,7 +83,7 @@ export default async function() {
 
 				// Add rooms to queue and notify processors
 				roomsQueue.version(gameMetadata.time);
-				await roomsQueue.push([ ...mapInPlace(gameMetadata.activeRooms, room => ({
+				await roomsQueue.push([ ...mapInPlace(activeRooms, room => ({
 					room,
 					users: [ ...intentsByRoom.get(room) ?? [] ],
 				})) ]);
@@ -90,29 +98,31 @@ export default async function() {
 
 					} else if (message.type === 'processedRoom') {
 						processedRooms.add(message.roomName);
-						if (gameMetadata.activeRooms.size === processedRooms.size) {
+						if (activeRooms.length === processedRooms.size) {
 							processorChannel.publish({ type: 'flushRooms' });
 						}
 
 					} else if (message.type === 'flushedRooms') {
 						message.roomNames.forEach(roomName => flushedRooms.add(roomName));
-						if (gameMetadata.activeRooms.size === flushedRooms.size) {
+						if (activeRooms.length === flushedRooms.size) {
 							break;
 						}
 					}
 				}
 
-				// Delete old tick data
-				// eslint-disable-next-line no-loop-func
-				await Promise.all(mapInPlace(gameMetadata.activeRooms, (roomName: string) =>
-					blobStorage.delete(`ticks/${gameMetadata.time}/${roomName}`)));
+				// Update game state
+				const previousTime = gameMetadata.time++;
+				await Promise.all([
+					...mapInPlace(gameMetadata.activeRooms, (roomName: string) =>
+						blobStorage.delete(`ticks/${previousTime}/${roomName}`)),
+					blobStorage.save('game', GameSchema.write(gameMetadata)),
+				]);
 
-				// Set up for next tick
+				// Finish up
 				const now = Date.now();
 				const timeTaken = now - timeStartedLoop;
 				const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
-				console.log(`Tick ${gameMetadata.time} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
-				++gameMetadata.time;
+				console.log(`Tick ${previousTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
 				Channel.publish<GameMessage>('main', { type: 'tick', time: gameMetadata.time });
 			});
 
@@ -134,7 +144,6 @@ export default async function() {
 
 	} finally {
 		// Clean up
-		await flushGame();
 		blobStorage.disconnect();
 		roomsQueue.disconnect();
 		usersQueue.disconnect();

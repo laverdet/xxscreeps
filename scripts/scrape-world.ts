@@ -9,7 +9,7 @@ import * as StoreIntents from '~/engine/processor/intents/store';
 // Schemas
 import * as Auth from '~/backend/auth';
 import * as CodeSchema from '~/engine/metadata/code';
-import * as Game from '~/engine/metadata/game';
+import * as GameSchema from '~/engine/metadata/game';
 import * as MapSchema from '~/game/map';
 import * as RoomSchema from '~/engine/schema/room';
 import * as User from '~/engine/metadata/user';
@@ -119,12 +119,18 @@ topLevelTask(async() => {
 	await blobStorage.save('terrain', getWriter(MapSchema.format)(roomsTerrain));
 
 	// Get visible rooms for users
-	const roomsByUser = new Map<string, Set<string>>();
+	const roomsControlled = new Map<string, Set<string>>();
+	const roomsPresent = new Map<string, Set<string>>();
+	const roomsVisible = new Map<string, Set<string>>();
 	for (const room of rooms) {
 		for (const object of room._objects) {
 			const owner: string | undefined = (object as any)._owner;
 			if (owner !== undefined) {
-				getOrSet(roomsByUser, owner, () => new Set).add(room.name);
+				if (object[Variant] === 'controller') {
+					getOrSet(roomsControlled, owner, () => new Set).add(room.name);
+				}
+				getOrSet(roomsPresent, owner, () => new Set).add(room.name);
+				getOrSet(roomsVisible, owner, () => new Set).add(room.name);
 			}
 		}
 	}
@@ -143,7 +149,9 @@ topLevelTask(async() => {
 			cpuAvailable: user.cpuAvailable,
 			gcl: user.gcl,
 			badge: user.badge === undefined ? '' : JSON.stringify(user.badge),
-			visibleRooms: (roomsByUser.get(user._id) ?? new Set),
+			roomsControlled: (roomsControlled.get(user._id) ?? new Set),
+			roomsPresent: (roomsPresent.get(user._id) ?? new Set),
+			roomsVisible: (roomsVisible.get(user._id) ?? new Set),
 			code: {
 				branch: firstMatching(code, code => code.activeWorld)?._id,
 				branches: code.map(row => ({
@@ -169,7 +177,7 @@ topLevelTask(async() => {
 		activeRooms: roomNames,
 		users: userIds,
 	};
-	await blobStorage.save('game', Game.writeGame(game));
+	await blobStorage.save('game', GameSchema.write(game));
 
 	// Write placeholder authentication data
 	await blobStorage.save('auth', Auth.write([]));

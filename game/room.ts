@@ -79,7 +79,7 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 		options?: RoomFindOptions): Creep[];
 	find(
 		type: typeof C.FIND_STRUCTURES | typeof C.FIND_MY_STRUCTURES | typeof C.FIND_HOSTILE_STRUCTURES,
-		options?: RoomFindOptions): Structure[];
+		options?: RoomFindOptions): Extract<AnyRoomObject, Structure>[];
 	find(
 		type: typeof C.FIND_CONSTRUCTION_SITES | typeof C.FIND_MY_CONSTRUCTION_SITES | typeof C.FIND_HOSTILE_CONSTRUCTION_SITES,
 		options?: RoomFindOptions): ConstructionSite[];
@@ -178,40 +178,51 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 
 		// Send it off
 		return chainIntentChecks(
-			() => checkCreateConstructionSite(this, pos, structureType, name),
+			() => {
+				if (structureType === 'spawn' && typeof name === 'string') {
+					// TODO: Check newly created spawns too
+					if (Game.spawns[name]) {
+						return C.ERR_INVALID_ARGS;
+					}
+				}
+				return C.OK;
+			},
+			() => checkCreateConstructionSite(this, pos, structureType),
 			() => gameContext.intents.save(this, 'createConstructionSite', { name, structureType, xx, yy }));
 	}
 }
 
 //
 // Intent checks
-export function checkCreateConstructionSite(room: Room, pos: RoomPosition, structureType: ConstructibleStructureType, name?: string) {
+export function checkCreateConstructionSite(room: Room, pos: RoomPosition, structureType: ConstructibleStructureType) {
 	// Check `structureType` is buildable
 	if (!(C.CONSTRUCTION_COST[structureType] > 0)) {
 		return C.ERR_INVALID_ARGS;
 	}
 
-	if (structureType === 'spawn' && typeof name === 'string') {
-		// TODO: Check newly created spawns too
-		if (Game.spawns[name]) {
-			return C.ERR_INVALID_ARGS;
-		}
-	}
-
 	// Can't build in someone else's room
 	if (room.controller) {
-		if (!room.controller.my) {
+		if (room.controller._owner !== undefined && !room.controller.my) {
 			return C.ERR_RCL_NOT_ENOUGH;
 		}
 	}
 
 	// Check structure count for this RCL
 	const rcl = room.controller?.level ?? 0;
-	const existingCount = accumulate(room._objects, object =>
-		(object instanceof ConstructionSite || object instanceof Structure) && object.structureType === structureType ? 1 : 0);
-	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][rcl]) {
-		// TODO: Check constructions sites made this tick too
-		return C.ERR_RCL_NOT_ENOUGH;
+	if (rcl === 0 && structureType === 'spawn') {
+		// TODO: GCL check here
+		if (!room.controller) {
+			return C.ERR_RCL_NOT_ENOUGH;
+		}
+	} else {
+		const existingCount = accumulate(concatInPlace(
+			room.find(C.FIND_STRUCTURES),
+			room.find(C.FIND_CONSTRUCTION_SITES),
+		), object => object.structureType === structureType ? 1 : 0);
+		if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][rcl]) {
+			// TODO: Check constructions sites made this tick too
+			return C.ERR_RCL_NOT_ENOUGH;
+		}
 	}
 
 	// No structures on borders
