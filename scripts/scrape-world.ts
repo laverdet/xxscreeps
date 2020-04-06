@@ -180,7 +180,10 @@ topLevelTask(async() => {
 	await blobStorage.save('game', GameSchema.write(game));
 
 	// Write placeholder authentication data
-	await blobStorage.save('auth', Auth.write([]));
+	await blobStorage.save('auth', Auth.write(users.map(user => ({
+		key: `username:${Auth.flattenUsername(user.username)}`,
+		user: user.id,
+	}))));
 
 	// Save user code
 	await Promise.all(db.getCollection('users.code').find().map(async row => {
