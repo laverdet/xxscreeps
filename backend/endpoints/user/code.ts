@@ -9,6 +9,8 @@ const kCodeSizeLimit = 5 * 1024 * 1024;
 const kDefaultBranch = 'master';
 const kMaxBranches = 30;
 
+function getBranchIdFromQuery(branch: any, user: User.User, create: true): { id: string; name: string };
+function getBranchIdFromQuery(branch: any, user: User.User, create?: false): { id?: string; name: string };
 function getBranchIdFromQuery(branch: any, user: User.User, create = false) {
 	// Get branch id
 	let id = function() {
@@ -150,7 +152,7 @@ const BranchSetEndpoint: Endpoint = {
 			}
 			user.code.branch = id;
 			await this.context.blobStorage.save(`user/${userid}/info`, User.write(user));
-			Channel.publish<Code.Message>(`code/${userid}`, { type: 'branch', id, name });
+			Channel.publish<Code.Message>(`user/${userid}/code`, { type: 'push', id, name });
 		});
 
 		return { ok: 1 };
@@ -205,7 +207,7 @@ const CodePostEndpoint: Endpoint = {
 		await this.context.gameMutex.scope(async() => {
 			// Load user branch manifest
 			const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
-			const { id } = getBranchIdFromQuery(branch, user, true);
+			const { id, name } = getBranchIdFromQuery(branch, user, true);
 
 			// Update manifest timestamp
 			for (const branch of user.code.branches) {
@@ -222,9 +224,36 @@ const CodePostEndpoint: Endpoint = {
 					modules: new Map(Object.entries(modules)),
 				})),
 			]);
+			Channel.publish<Code.Message>(`user/${userid}/code`, { type: 'push', id, name });
 		});
 		return { ok: 1, timestamp: timestamp * 1000 };
 	},
 };
 
-export default [ BranchesEndpoint, BranchCloneEndpoint, BranchSetEndpoint, BranchSetEndpoint, CodeEndpoint, CodePostEndpoint ];
+const ConsoleEndpoint: Endpoint = {
+	path: '/console',
+	method: 'post',
+
+	execute(req) {
+		const { userid } = req;
+		if (userid === undefined) {
+			return;
+		}
+		const { expression } = req.body;
+		if (typeof expression !== 'string') {
+			throw new TypeError('Invalid expression');
+		}
+		try {
+			// Try to parse it
+			new Function(expression);
+			Channel.publish<Code.Message>(`user/${userid}/code`, { type: 'eval', expr: req.body.expression });
+		} catch (err) {
+			Channel.publish<Code.ConsoleMessage>(
+				`user/${userid}/console`,
+				{ type: 'console', result: `💥${err.message}` });
+		}
+		return { ok: 1 };
+	},
+};
+
+export default [ BranchesEndpoint, BranchCloneEndpoint, BranchSetEndpoint, BranchSetEndpoint, CodeEndpoint, CodePostEndpoint, ConsoleEndpoint ];

@@ -20,6 +20,7 @@ const getRuntimeSource = runOnce(async() =>
 
 export class IsolatedSandbox {
 	private constructor(
+		private readonly isolate: ivm.Isolate,
 		private readonly tick: ivm.Reference<typeof Runtime.tick>,
 	) {}
 
@@ -58,13 +59,14 @@ export class IsolatedSandbox {
 		]);
 		const writeConsoleRef = new ivm.Reference(writeConsole);
 		await initialize.apply(undefined, [ isolate, context, userId, codeBlob, terrain, writeConsoleRef ], { arguments: { copy: true } });
-		return new IsolatedSandbox(tick);
+		return new IsolatedSandbox(isolate, tick);
 	}
 
-	async run(time: number, roomBlobs: Readonly<Uint8Array>[]) {
-		const result = await this.tick.apply(undefined, [ time, roomBlobs ], { arguments: { copy: true }, result: { copy: true } });
-		return {
-			intents: result[0],
-		};
+	dispose() {
+		this.isolate.dispose();
+	}
+
+	run(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEval?: string[]) {
+		return this.tick.apply(undefined, [ time, roomBlobs, consoleEval ], { arguments: { copy: true }, result: { copy: true } });
 	}
 }

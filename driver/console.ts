@@ -1,8 +1,7 @@
 import { formatWithOptions, inspect } from 'util';
+export type Writer = (fd: number, payload: string, evalResult?: boolean) => void;
 
-export function setupConsole(
-	write: (fd: number, payload: string) => void,
-) {
+export function setupConsole(write: Writer) {
 	const format = (args: any[]) =>
 		formatWithOptions({ colors: true }, ...(args as [any]));
 
@@ -12,11 +11,21 @@ export function setupConsole(
 		},
 
 		warn(...args: any[]) {
+			if (typeof args[0] === 'string') {
+				args[0] = `⚠️${args[0]}`;
+			} else {
+				args.unshift('⚠️');
+			}
 			write(2, format(args));
 		},
 
 		error(...args: any[]) {
-			this.warn(...args);
+			if (typeof args[0] === 'string') {
+				args[0] = `💥${args[0]}`;
+			} else {
+				args.unshift('💥');
+			}
+			write(2, format(args));
 		},
 
 		dir(object: any, options: any) {

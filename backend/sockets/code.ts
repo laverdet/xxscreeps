@@ -29,9 +29,9 @@ const SetActiveBranchSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/set-active-branch$/,
 
 	async subscribe() {
-		const channel = await Channel.connect<Code.Message>(`code/${this.user}`);
+		const channel = await Channel.connect<Code.Message>(`user/${this.user}/code`);
 		return channel.listen(message => {
-			if (message.type === 'branch') {
+			if (message.type === 'push') {
 				this.send(JSON.stringify({ activeName: 'activeWorld', branch: message.name }));
 			}
 		});

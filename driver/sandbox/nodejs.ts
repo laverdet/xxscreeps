@@ -1,6 +1,7 @@
 import vm from 'vm';
 import { runOnce } from '~/lib/memoize';
 import { compileRuntimeSource, getPathFinderInfo, Options } from '.';
+type Runtime = typeof import('../runtime');
 
 const getPathFinderModule = runOnce(() => {
 	const { identifier, path } = getPathFinderInfo();
@@ -18,7 +19,7 @@ const getCompiledRuntime = runOnce(async() =>
 
 export class NodejsSandbox {
 	private constructor(
-		private readonly tick: (...args: any[]) => any,
+		private readonly tick: Runtime['tick'],
 	) {}
 
 	static async create({ userId, codeBlob, terrain, writeConsole }: Options) {
@@ -30,7 +31,7 @@ export class NodejsSandbox {
 		context[identifier] = module;
 
 		// Initialize runtime.ts and load player code + memory
-		const runtime = (await getCompiledRuntime()).runInContext(context);
+		const runtime: Runtime = (await getCompiledRuntime()).runInContext(context);
 		delete context.nodeUtilImport;
 		delete context[identifier];
 		const { tick } = runtime;
@@ -43,10 +44,9 @@ export class NodejsSandbox {
 		return new NodejsSandbox(tick);
 	}
 
-	run(time: number, roomBlobs: Readonly<Uint8Array>[]) {
-		const result = this.tick(time, roomBlobs);
-		return Promise.resolve({
-			intents: result[0] as Dictionary<SharedArrayBuffer>,
-		});
+	dispose() {}
+
+	run(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEval?: string[]) {
+		return Promise.resolve(this.tick(time, roomBlobs, consoleEval));
 	}
 }

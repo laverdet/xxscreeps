@@ -1,5 +1,6 @@
 import type ivm from 'isolated-vm';
 import lodash from 'lodash';
+import { inspect } from 'util';
 
 import { Creep } from '~/game/objects/creep';
 import { Game } from '~/game/game';
@@ -15,7 +16,7 @@ import * as PathFinder from '~/game/path-finder';
 import * as UserCode from '~/engine/metadata/code';
 import { BufferView } from '~/lib/schema/buffer-view';
 
-import { setupConsole } from './sandbox/console';
+import { setupConsole, Writer } from './console';
 
 // Sets up prototype overlays
 import '~/engine/schema/room';
@@ -45,15 +46,16 @@ for (const [ identifier, value ] of Object.entries(Constants)) {
 }
 
 let require: (name: string) => any;
+let writeConsole: Writer;
 export function initialize(
 	compileModule: (source: string, filename: string) => ((...args: any[]) => any),
 	userId: string,
 	codeBlob: Readonly<Uint8Array>,
 	terrain: Readonly<Uint8Array>,
-	writeConsole: (fd: number, payload: string) => void,
+	_writeConsole: Writer,
 ) {
 	// Set up console
-	setupConsole(writeConsole);
+	setupConsole(writeConsole = _writeConsole);
 	// Load terrain
 	loadTerrainFromBuffer(terrain);
 	// Set up user information
@@ -79,9 +81,14 @@ export function initialize(
 		const module = {
 			exports: {} as any,
 		};
-		const moduleFunction = compileModule(`(function(module,exports){${code}})`, `${name}.js`);
+		const moduleFunction = compileModule(`(function(module,exports){${code}\n})`, `${name}.js`);
 		const run = () => moduleFunction.apply(module, [ module, module.exports ]);
-		run();
+		try {
+			run();
+		} catch (err) {
+			Object.defineProperty(cache, name, { get: () => { throw err } });
+			throw err;
+		}
 		if (name === 'main' && module.exports.loop === undefined) {
 			// If user doesn't have `loop` it means the first tick already run. Simulate a proper `loop`
 			// method which runs the second time this is called.
@@ -112,7 +119,7 @@ export function initializeIsolated(
 	return initialize(compileModule, userId, codeBlob, terrain, writeConsole);
 }
 
-export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
+export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEval?: string[]) {
 	// Reset context
 	gameContext.intents = new IntentManager;
 	// Build game object
@@ -121,6 +128,15 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 	global.Game = new Game(time, rooms);
 	// Run player loop
 	require('main').loop();
+	// Run console expressions
+	const consoleResults = consoleEval?.map(expr => {
+		try {
+			writeConsole(1, inspect(new Function('expr', 'return eval(expr)')(expr), { colors: true }), true);
+		} catch (err) {
+			writeConsole(2, err.stack, true);
+		}
+	});
+
 	const memoryString = Memory.flush();
 	PathFinder.flush();
 	// Return JSON'd intents
@@ -141,7 +157,5 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {
 		}
 		return intents;
 	}();
-	return [
-		intents,
-	];
+	return { intents, consoleResults };
 }
