@@ -8,6 +8,8 @@ import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
 import { RunnerMessage } from '.';
 
+export type UserConsoleMessage = { type: 'console'; payload: string } | { type: null };
+
 export default async function() {
 
 	// Connect to main & storage
@@ -16,8 +18,8 @@ export default async function() {
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
 
 	// Load shared terrain data
-	const terrainBuffer = await blobStorage.load('terrain');
-	const world = readWorld(terrainBuffer);
+	const terrain = await blobStorage.load('terrain');
+	const world = readWorld(terrain);
 	loadTerrain(world); // pathfinder
 	loadTerrainFromWorld(world); // game
 
@@ -47,9 +49,14 @@ export default async function() {
 							if (existing) {
 								return existing;
 							}
-							// Generate a new one
+							// Generate a new sandbox
+							const writeConsole = (fd: number, payload: string) => {
+								Channel.publish<UserConsoleMessage>(
+									`user/console/${userId}`,
+									{ type: 'console', payload });
+							};
 							const codeBlob = await blobStorage.load(`user/${userId}/${userInfo.code.branch}`);
-							const sandbox = await createSandbox(userId, codeBlob, terrainBuffer);
+							const sandbox = await createSandbox({ userId, codeBlob, terrain, writeConsole });
 							sandboxes.set(userId, sandbox);
 							return sandbox;
 						}(),

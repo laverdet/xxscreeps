@@ -1,7 +1,8 @@
 import ivm from 'isolated-vm';
+import * as ivmInspect from 'ivm-inspect';
 import { runOnce } from '~/lib/memoize';
 import type * as Runtime from '~/driver/runtime';
-import { getPathFinderInfo, getRuntimeSource } from '.';
+import { compileRuntimeSource, getPathFinderInfo, Options } from '.';
 
 const getPathFinderModule = runOnce(() => {
 	const { identifier, path } = getPathFinderInfo();
@@ -9,12 +10,20 @@ const getPathFinderModule = runOnce(() => {
 	return { identifier, module };
 });
 
+const getRuntimeSource = runOnce(async() =>
+	compileRuntimeSource(({ request }, callback) => {
+		if (request === 'util') {
+			return callback(null, 'nodeUtilImport');
+		}
+		callback();
+	}));
+
 export class IsolatedSandbox {
 	private constructor(
 		private readonly tick: ivm.Reference<typeof Runtime.tick>,
 	) {}
 
-	static async create(userId: string, codeBlob: Readonly<Uint8Array>, terrain: Readonly<Uint8Array>) {
+	static async create({ userId, codeBlob, terrain, writeConsole }: Options) {
 		// Generate new isolate and context
 		const isolate = new ivm.Isolate({ memoryLimit: 128 });
 		const [ context, script ] = await Promise.all([
@@ -23,20 +32,19 @@ export class IsolatedSandbox {
 		]);
 
 		// Set up required globals before running ./runtime.ts
-		const { identifier, module } = getPathFinderModule();
+		const { identifier: pfIdentifier, module } = getPathFinderModule();
 		await Promise.all([
 			async function() {
 				const instance = await module.create(context);
-				await context.global.set(identifier, instance.derefInto());
+				await context.global.set(pfIdentifier, instance.derefInto());
 			}(),
 			async function() {
-				await context.global.set('global', context.global.derefInto());
-				await context.evalClosure(
-					'global.print = (...args) => $0.applySync(undefined, ' +
-						'args.map(arg => typeof arg === "string" ? arg : JSON.stringify(arg)))',
-					[ (...messages: string[]) => console.log(...messages) ],
-					{ arguments: { reference: true } },
-				);
+				const util = await ivmInspect.create(isolate, context);
+				const deref = {
+					formatWithOptions: util.formatWithOptions.derefInto({ release: true }),
+					inspect: util.inspect.derefInto({ release: true }),
+				};
+				await context.global.set('nodeUtilImport', deref, { copy: true });
 			}(),
 		]);
 
@@ -45,9 +53,11 @@ export class IsolatedSandbox {
 		const [ tick, initialize ] = await Promise.all([
 			runtime.get('tick', { reference: true }),
 			runtime.get('initializeIsolated', { reference: true }),
-			context.global.delete(identifier),
+			context.global.delete(pfIdentifier),
+			context.global.delete('nodeUtilImport'),
 		]);
-		await initialize.apply(undefined, [ isolate, context, userId, codeBlob, terrain ], { arguments: { copy: true } });
+		const writeConsoleRef = new ivm.Reference(writeConsole);
+		await initialize.apply(undefined, [ isolate, context, userId, codeBlob, terrain, writeConsoleRef ], { arguments: { copy: true } });
 		return new IsolatedSandbox(tick);
 	}
 

@@ -3,6 +3,7 @@ import sockjs from 'sockjs';
 import { checkToken, makeToken } from './auth/token';
 import { BackendContext } from './context';
 import { CodeSubscriptions } from './sockets/code';
+import { ConsoleSubscription } from './sockets/console';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
 
@@ -10,7 +11,7 @@ const socketServer = sockjs.createServer({
 	prefix: '/socket',
 	log: () => {},
 });
-const handlers = [ ...CodeSubscriptions, mapSubscription, roomSubscription ];
+const handlers = [ ...CodeSubscriptions, ConsoleSubscription, mapSubscription, roomSubscription ];
 
 type Unlistener = () => void;
 type SubscriptionInstance = {

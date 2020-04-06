@@ -15,6 +15,8 @@ import * as PathFinder from '~/game/path-finder';
 import * as UserCode from '~/engine/metadata/code';
 import { BufferView } from '~/lib/schema/buffer-view';
 
+import { setupConsole } from './sandbox/console';
+
 // Sets up prototype overlays
 import '~/engine/schema/room';
 
@@ -48,8 +50,13 @@ export function initialize(
 	userId: string,
 	codeBlob: Readonly<Uint8Array>,
 	terrain: Readonly<Uint8Array>,
+	writeConsole: (fd: number, payload: string) => void,
 ) {
+	// Set up console
+	setupConsole(writeConsole);
+	// Load terrain
 	loadTerrainFromBuffer(terrain);
+	// Set up user information
 	const { modules } = UserCode.read(codeBlob);
 	gameContext.userId = userId;
 	// Set up global `require`
@@ -94,12 +101,15 @@ export function initializeIsolated(
 	userId: string,
 	codeBlob: Readonly<Uint8Array>,
 	terrain: Readonly<Uint8Array>,
+	writeConsoleRef: ivm.Reference<(fd: number, payload: string) => void>,
 ) {
 	const compileModule = (source: string, filename: string) => {
 		const script = isolate.compileScriptSync(source, { filename });
 		return script.runSync(context, { reference: true }).deref();
 	};
-	return initialize(compileModule, userId, codeBlob, terrain);
+	const writeConsole = (fd: number, payload: string) =>
+		writeConsoleRef.applySync(undefined, [ fd, payload ]);
+	return initialize(compileModule, userId, codeBlob, terrain, writeConsole);
 }
 
 export function tick(time: number, roomBlobs: Readonly<Uint8Array>[]) {

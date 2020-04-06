@@ -1,6 +1,6 @@
 import vm from 'vm';
 import { runOnce } from '~/lib/memoize';
-import { getPathFinderInfo, getRuntimeSource } from '.';
+import { compileRuntimeSource, getPathFinderInfo, Options } from '.';
 
 const getPathFinderModule = runOnce(() => {
 	const { identifier, path } = getPathFinderInfo();
@@ -9,29 +9,36 @@ const getPathFinderModule = runOnce(() => {
 });
 
 const getCompiledRuntime = runOnce(async() =>
-	new vm.Script(await getRuntimeSource(), { filename: 'runtime.js' }));
+	new vm.Script(await compileRuntimeSource(({ request }, callback) => {
+		if (request === 'util') {
+			return callback(null, 'nodeUtilImport');
+		}
+		callback();
+	}), { filename: 'runtime.js' }));
 
 export class NodejsSandbox {
 	private constructor(
 		private readonly tick: (...args: any[]) => any,
 	) {}
 
-	static async create(userId: string, codeBlob: Readonly<Uint8Array>, terrain: Readonly<Uint8Array>) {
+	static async create({ userId, codeBlob, terrain, writeConsole }: Options) {
 
 		// Generate new vm context, set up globals
 		const context = vm.createContext();
-		context.console = console;
+		context.nodeUtilImport = require('util');
 		const { identifier, module } = getPathFinderModule();
 		context[identifier] = module;
 
 		// Initialize runtime.ts and load player code + memory
 		const runtime = (await getCompiledRuntime()).runInContext(context);
-		const { tick } = runtime;
+		delete context.nodeUtilImport;
 		delete context[identifier];
+		const { tick } = runtime;
 		runtime.initialize(
 			(source: string, filename: string) => (new vm.Script(source, { filename })).runInContext(context),
 			userId, codeBlob,
 			terrain,
+			writeConsole,
 		);
 		return new NodejsSandbox(tick);
 	}

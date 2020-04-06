@@ -2,7 +2,13 @@ import { promises as fs } from 'fs';
 import * as Path from 'path';
 import Webpack from 'webpack';
 
-export async function compile(moduleName: string) {
+export type ExternalsFunctionElement =
+	(
+		request: { context: string; request: string },
+		callback: (error?: Error | null, result?: string) => void,
+	) => void;
+
+export async function compile(moduleName: string, externals: ExternalsFunctionElement) {
 	const baseName = Path.basename(moduleName);
 	const output = Path.join(__dirname, `${baseName}.webpack.js`);
 	await new Promise<Webpack.Stats.ToJsonOutput>((resolve, reject) => {
@@ -12,13 +18,8 @@ export async function compile(moduleName: string) {
 			},
 			mode: 'development',
 			devtool: 'inline-source-map',
+			externals,
 
-			externals({ context, request }: { context: string; request: string }, callback: any) {
-				if (request.endsWith('.node')) {
-					return callback(null, Path.join(context, request).replace(/[/\\.-]/g, '_'));
-				}
-				callback();
-			},
 			resolve: {
 				extensions: [ '.js', '.ts' ],
 				alias: {
