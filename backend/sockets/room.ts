@@ -1,5 +1,6 @@
 import * as Room from '~/engine/schema/room';
 import * as User from '~/engine/metadata/user';
+import { runAsUser } from '~/game/context';
 import { SubscriptionEndpoint } from '../socket';
 import { Render } from './render';
 import { mapInPlace, mapToKeys } from '~/lib/utility';
@@ -41,16 +42,18 @@ export const roomSubscription: SubscriptionEndpoint = {
 			// Render current room state
 			const objects: any = {};
 			const visibleUsers = new Set<string>();
-			for (const object of room._objects) {
-				const value = (object as any)[Render]?.(time);
-				if (value !== undefined) {
-					objects[value._id] = value;
+			runAsUser(this.user, time, () => {
+				for (const object of room._objects) {
+					const value = (object as any)[Render]?.(time);
+					if (value !== undefined) {
+						objects[value._id] = value;
+					}
+					const owner = object._owner;
+					if (owner !== undefined && !seenUsers.has(owner)) {
+						visibleUsers.add(owner);
+					}
 				}
-				const owner = object._owner;
-				if (owner !== undefined && !seenUsers.has(owner)) {
-					visibleUsers.add(owner);
-				}
-			}
+			});
 
 			// Get users not yet seen
 			const users = mapToKeys(await Promise.all(mapInPlace(visibleUsers, async(id): Promise<[ string, any ]> => {

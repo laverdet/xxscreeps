@@ -31,7 +31,7 @@ export function setupConsole(write: Writer) {
 		dir(object: any, options: any) {
 			write(1, inspect(object, {
 				customInspect: false,
-				color: true,
+				colors: true,
 				...options,
 			}));
 		},

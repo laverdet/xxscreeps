@@ -34,6 +34,7 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 				subscriptions.delete(name);
 				unlistener.then(unlistener => unlistener(), () => {});
 			}
+			connection.close();
 		}
 
 		connection.write(`time ${Date.now()}`);

@@ -1,3 +1,4 @@
+import * as Game from '~/game/game';
 import type { shape } from '~/engine/schema/source';
 import { withOverlay } from '~/lib/schema';
 import { RoomObject } from './room-object';

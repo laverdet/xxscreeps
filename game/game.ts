@@ -6,10 +6,6 @@ import { Room } from './room';
 import { RoomObject } from './objects/room-object';
 import { StructureSpawn } from './objects/structures/spawn';
 
-declare global {
-	let Game: Game;
-}
-
 const map = runOnce(() => new GameMap);
 
 export class Game {
