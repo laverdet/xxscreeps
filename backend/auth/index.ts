@@ -6,7 +6,7 @@ import { checkToken } from './token';
 export function useAuth(handler: RequestHandler) {
 	return useToken((req, res, next) => {
 		if (req.userid === undefined) {
-			next();
+			res.status(401).send({ error: 'unauthorized' });
 		} else {
 			handler(req, res, next);
 		}
@@ -19,7 +19,7 @@ export function useToken(handler: RequestHandler): RequestHandler {
 			const token = req.get('x-token');
 			const tokenValue = token === undefined ? undefined : await checkToken(token);
 			if (tokenValue === undefined) {
-				next();
+				res.status(401).send({ error: 'unauthorized' });
 				return;
 			}
 			if (/^[a-f0-9]+$/.test(tokenValue)) {
