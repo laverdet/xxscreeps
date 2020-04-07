@@ -27,6 +27,11 @@ export type SubscriptionEndpoint = {
 export function installSocketHandlers(httpServer: Server, context: BackendContext) {
 	socketServer.installHandlers(httpServer);
 	socketServer.on('connection', connection => {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		if (!connection) {
+			// Sometimes Sockjs gives us dead connections on restart..
+			return;
+		}
 		let user: string;
 		const subscriptions = new Map<string, Promise<Unlistener>>();
 		function close() {
