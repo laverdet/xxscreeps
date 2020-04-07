@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import { declare, getReader, getWriter, vector, TypeOf } from '~/lib/schema';
 import * as Id from '~/engine/util/schema/id';
-import { checkToken } from './token';
+import { checkToken, makeToken } from './token';
 
 export function useAuth(handler: RequestHandler) {
 	return useToken((req, res, next) => {
@@ -22,10 +22,17 @@ export function useToken(handler: RequestHandler): RequestHandler {
 				res.status(401).send({ error: 'unauthorized' });
 				return;
 			}
+			res.set('X-Token', await makeToken(tokenValue));
 			if (/^[a-f0-9]+$/.test(tokenValue)) {
 				req.userid = tokenValue;
 			} else {
-				req.provider = tokenValue;
+				const newReg = /^new:(?<id>[^:]+):(?<provider>.+)$/.exec(tokenValue);
+				if (newReg) {
+					req.token = newReg.groups!.provider;
+					req.userid = newReg.groups!.id;
+				} else {
+					req.token = tokenValue;
+				}
 			}
 			handler(req, res, next);
 		})().catch(error => next(error));

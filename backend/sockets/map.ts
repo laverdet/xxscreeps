@@ -2,6 +2,7 @@ import * as Room from '~/engine/schema/room';
 import { Creep } from '~/game/objects/creep';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
+import { StructureController } from '~/game/objects/structures/controller';
 import { mapToKeys } from '~/lib/utility';
 import { SubscriptionEndpoint } from '../socket';
 
@@ -37,17 +38,20 @@ export const mapSubscription: SubscriptionEndpoint = {
 				key => [ key, [] as Position[] ],
 			);
 			for (const object of room._objects) {
-
-				if (object instanceof Creep || object instanceof Structure) {
-					const owner = (object as any)._owner; // is this a typescript bug?
-					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-					const userObjects = response[owner] ?? (response[owner] = []);
-					userObjects.push([ object.pos.x, object.pos.y ]);
-
-				} else if (object instanceof Source) {
-					response.s.push([ object.pos.x, object.pos.y ]);
-				}
+				const record = function() {
+					if (object instanceof StructureController) {
+						return response.c;
+					} else if (object instanceof Creep || object instanceof Structure) {
+						const owner: string = object._owner;
+						// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+						return response[owner] ?? (response[owner] = []);
+					} else if (object instanceof Source) {
+						return response.s;
+					}
+				}();
+				record?.push([ object.pos.x, object.pos.y ]);
 			}
+
 			const payload = JSON.stringify(response);
 			if (payload !== previous) {
 				previous = payload;

@@ -1,6 +1,7 @@
 import { Endpoint, Response } from '~/backend/endpoint';
 import { checkUsername, flattenUsername } from '~/backend/auth';
-import { checkToken, makeToken } from '~/backend/auth/token';
+import { makeToken } from '~/backend/auth/token';
+import { loadUser } from '~/backend/model/user';
 import * as User from '~/engine/metadata/user';
 
 const CheckEmailEndpoint: Endpoint = {
@@ -35,33 +36,36 @@ const SetUsernameEndpoint: Endpoint = {
 	path: '/set-username',
 
 	async execute(req, res) {
-		// Sanity check
-		const { username } = req.body;
-		if (!checkUsername(username)) {
-			return Response(500, undefined);
+
+		// Check for new reg provider
+		const { token, userid, body: { username } } = req;
+		if (token === undefined) {
+			return { error: 'username already set' };
 		}
 
-		// Check for steam provider
-		const tokenValue = (await checkToken(req.get('x-token')))!;
-		if (!/^steam:[0-9]+$/.test(tokenValue)) {
-			return Response(400, undefined);
+		// Sanity check
+		if (!checkUsername(username)) {
+			return { error: 'invalid' };
 		}
 
 		// Register
 		return this.context.gameMutex.scope(async() => {
 			// Ensure account or steam reference doesn't already exist
-			if (this.context.lookupUserByProvider(tokenValue) !== undefined) {
-				throw new Error('Steam account already exists');
+			if (this.context.lookupUserByProvider(token) !== undefined) {
+				throw new Error(`Account already exists: ${token}`);
+			}
+			if (await loadUser(this.context, userid!).catch(() => {})) {
+				throw new Error(`Username already set: ${userid}`);
 			}
 			const usernameKey = `username:${flattenUsername(username)}`;
 			if (this.context.lookupUserByProvider(usernameKey) !== undefined) {
-				throw new Error('User already exists');
+				throw new Error(`User already exists: ${username}`);
 			}
 			// Create user
-			const user = User.create(username);
+			const user = User.create(username, userid);
 			const userBlob = User.write(user);
 			this.context.associateUser(usernameKey, user.id);
-			this.context.associateUser(tokenValue, user.id);
+			this.context.associateUser(token, user.id);
 			await Promise.all([
 				this.context.save(),
 				this.context.blobStorage.save(`user/${user.id}/info`, userBlob),

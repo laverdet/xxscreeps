@@ -46,7 +46,7 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 	]));
 	apiRouter.use('/game', useAuth(bindRoutes(context, Router(), gameEndpoints)));
 	apiRouter.use('/register', useToken(bindRoutes(context, Router(), registrationEndpoints)));
-	apiRouter.use('/user', useToken(bindRoutes(context, Router(), userEndpoints)));
+	apiRouter.use('/user', useAuth(bindRoutes(context, Router(), userEndpoints)));
 
 	express.use('/api', apiRouter);
 	express.use('/assets', bindRoutes(context, Router(), [

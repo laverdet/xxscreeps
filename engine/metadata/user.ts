@@ -24,9 +24,9 @@ export const format = declare('User', {
 	},
 });
 
-export function create(username: string) {
+export function create(username: string, id?: string) {
 	return {
-		id: Id.generateId(12),
+		id: id ?? Id.generateId(12),
 		username,
 		cpu: 100,
 		cpuAvailable: 100,

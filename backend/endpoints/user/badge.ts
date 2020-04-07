@@ -10,9 +10,6 @@ const BadgeEndpoint: Endpoint = {
 
 	async execute(req) {
 		const { userid } = req;
-		if (userid === undefined) {
-			return { ok: 1 };
-		}
 		const badge = Badge.validate(req.body.badge);
 		await this.context.gameMutex.scope(async() => {
 			const fragment = `user/${userid}/info`;

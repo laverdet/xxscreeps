@@ -28,11 +28,10 @@ const WorldStatusEndpoint: Endpoint = {
 
 	async execute(req) {
 		const { userid } = req;
-		if (userid === undefined) {
-			return { ok: 1 };
-		}
-		const user = await loadUser(this.context, userid);
-		if (user.roomsControlled.size === 0) {
+		const user = await loadUser(this.context, userid!).catch(() => {});
+		if (!user) {
+			return { ok: 1, status: 'empty' };
+		} else if (user.roomsControlled.size === 0) {
 			if (user.roomsPresent.size === 0) {
 				return { ok: 1, status: 'empty' };
 			} else {

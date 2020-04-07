@@ -60,6 +60,9 @@ export function initialize(
 	loadTerrainFromBuffer(terrain);
 	// Set up user information
 	const { modules } = UserCode.read(codeBlob);
+	if (!modules.has('main')) {
+		modules.set('main', '');
+	}
 	gameContext.userId = userId;
 	// Set up global `require`
 	const cache = Object.create(null);

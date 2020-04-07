@@ -1,5 +1,6 @@
 import { Endpoint } from '~/backend/endpoint';
 import { checkToken, makeToken } from '~/backend/auth/token';
+import * as Id from '~/engine/util/schema/id';
 
 export const MeEndpoint: Endpoint = {
 	path: '/me',
@@ -11,17 +12,26 @@ export const MeEndpoint: Endpoint = {
 		}
 		let userId: string | undefined;
 
+		// Check for new user
+		const newReg = /^new:(?<id>[^:]+):(?<provider>.+)$/.exec(tokenValue);
+		if (newReg) {
+			userId = this.context.lookupUserByProvider(newReg.groups!.provider);
+			if (userId === undefined) {
+				res.set('X-Token', await makeToken(tokenValue));
+				return { ok: 1, id: newReg.groups!.id };
+			}
+		}
+
 		// Check for steam provider
 		const steam = /^steam:(?<id>[0-9]+)$/.exec(tokenValue);
 		if (steam) {
 			userId = this.context.lookupUserByProvider(tokenValue);
 			if (userId === undefined) {
 				// Unregistered steam user
-				res.set('X-Token', await makeToken(tokenValue));
-				return { ok: 1 };
+				const id = Id.generateId(12);
+				res.set('X-Token', await makeToken(`new:${id}:${tokenValue}`));
+				return { ok: 1, id };
 			}
-			// Upgrade to user token
-			res.set('X-Token', await makeToken(userId));
 		}
 
 		// Check for logged in user
@@ -33,6 +43,7 @@ export const MeEndpoint: Endpoint = {
 		if (userId === undefined) {
 			return;
 		}
+		res.set('X-Token', await makeToken(userId));
 
 		// Real user
 		const user = await this.context.loadUser(userId);

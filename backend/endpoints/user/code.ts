@@ -49,12 +49,10 @@ const BranchesEndpoint: Endpoint = {
 
 	async execute(req) {
 		const { userid } = req;
-		if (userid === undefined) {
-			return { ok: 1 };
-		}
-		const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
-		const { branches } = user.code;
-		if (branches.length === 0) {
+		const userBlob = await this.context.blobStorage.load(`user/${userid}/info`).catch(() => {});
+		const user = userBlob && User.read(userBlob);
+
+		if (!user || user.code.branches.length === 0) {
 			// Fake module list. `default` will be created on save
 			return {
 				ok: 1,
@@ -69,6 +67,7 @@ const BranchesEndpoint: Endpoint = {
 				],
 			};
 		}
+
 		// First save has occurred
 		return {
 			ok: 1,
@@ -91,12 +90,7 @@ const BranchCloneEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid } = req;
-		if (userid === undefined) {
-			return;
-		}
-
-		const { branch, newName } = req.body;
+		const { userid, body: { branch, newName } } = req;
 		if (typeof newName !== 'string' || !/^[-_.a-zA-Z0-9]+$/.test(newName)) {
 			throw new Error('Invalid branch name');
 		}
@@ -138,12 +132,7 @@ const BranchSetEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid } = req;
-		if (userid === undefined) {
-			return;
-		}
-
-		const { branch } = req.body;
+		const { userid, body: { branch } } = req;
 		await this.context.gameMutex.scope(async() => {
 			const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
 			const { id, name } = getBranchIdFromQuery(branch, user);
@@ -163,12 +152,7 @@ const CodeEndpoint: Endpoint = {
 	path: '/code',
 
 	async execute(req) {
-		const { userid } = req;
-		if (userid === undefined) {
-			return;
-		}
-
-		const { branch } = req.body;
+		const { userid, body: { branch } } = req;
 		const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
 		const { id, name } = getBranchIdFromQuery(branch, user);
 		if (id === undefined) {
@@ -185,12 +169,8 @@ const CodePostEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid } = req;
-		if (userid === undefined) {
-			return;
-		}
 		// Validate this code payload
-		const { branch, modules } = req.body;
+		const { userid, body: { branch, modules } } = req;
 		let size = 0;
 		for (const module of Object.values(modules)) {
 			if (typeof module !== 'string') {
@@ -235,11 +215,7 @@ const ConsoleEndpoint: Endpoint = {
 	method: 'post',
 
 	execute(req) {
-		const { userid } = req;
-		if (userid === undefined) {
-			return;
-		}
-		const { expression } = req.body;
+		const { userid, body: { expression } } = req;
 		if (typeof expression !== 'string') {
 			throw new TypeError('Invalid expression');
 		}
