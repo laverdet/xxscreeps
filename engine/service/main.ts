@@ -112,11 +112,7 @@ export default async function() {
 
 				// Update game state
 				const previousTime = gameMetadata.time++;
-				await Promise.all([
-					...mapInPlace(gameMetadata.activeRooms, (roomName: string) =>
-						blobStorage.delete(`ticks/${previousTime}/${roomName}`)),
-					blobStorage.save('game', GameSchema.write(gameMetadata)),
-				]);
+				await blobStorage.save('game', GameSchema.write(gameMetadata));
 
 				// Finish up
 				const now = Date.now();

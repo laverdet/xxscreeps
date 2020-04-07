@@ -15,9 +15,8 @@ export const MapStatsEndpoint: Endpoint = {
 
 		// Read current room status
 		// TODO: A room status blob that doesn't change very tick would be good
-		const { time } = this.context;
 		const roomBlobs = await Promise.all(rooms.map(room =>
-			this.context.blobStorage.load(`ticks/${time}/${room}`).catch(() => {}),
+			this.context.blobStorage.load(`room/${room}`).catch(() => {}),
 		));
 
 		// Build rooms payload

@@ -36,7 +36,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		const seenUsers = new Set<string>();
 		const update = async(time: number) => {
 			lastTickTime = Date.now();
-			const roomBlob = await this.context.blobStorage.load(`ticks/${time}/${parameters.room}`);
+			const roomBlob = await this.context.blobStorage.load(`room/${parameters.room}`);
 			const room = Room.read(roomBlob);
 
 			// Render current room state

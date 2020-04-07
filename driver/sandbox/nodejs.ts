@@ -22,7 +22,7 @@ export class NodejsSandbox {
 		private readonly tick: Runtime['tick'],
 	) {}
 
-	static async create({ userId, codeBlob, terrain, writeConsole }: Options) {
+	static async create({ userId, codeBlob, memoryBlob, terrain, writeConsole }: Options) {
 
 		// Generate new vm context, set up globals
 		const context = vm.createContext();
@@ -37,9 +37,8 @@ export class NodejsSandbox {
 		const { tick } = runtime;
 		runtime.initialize(
 			(source: string, filename: string) => (new vm.Script(source, { filename })).runInContext(context),
-			userId, codeBlob,
-			terrain,
 			writeConsole,
+			{ userId, codeBlob, memoryBlob, terrain },
 		);
 		return new NodejsSandbox(tick);
 	}

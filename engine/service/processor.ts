@@ -43,7 +43,7 @@ export default async function() {
 				for await (const { room, users } of roomsQueue) {
 					// Read room data and intents from storage
 					const [ roomBlob, intents ] = await Promise.all([
-						await blobStorage.load(`ticks/${gameTime}/${room}`),
+						await blobStorage.load(`room/${room}`),
 						Promise.all(mapInPlace(users, async user => ({
 							user,
 							intents: await blobStorage.load(`intents/${room}/${user}`),
@@ -71,9 +71,8 @@ export default async function() {
 			} else if (message.type === 'flushRooms') {
 				// Run second phase of processing. This must wait until *all* player code and first phase
 				// processing has run
-				const nextGameTime = gameTime + 1;
 				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) =>
-					blobStorage.save(`ticks/${nextGameTime}/${roomName}`, Room.write(context.room)),
+					blobStorage.save(`room/${roomName}`, Room.write(context.room)),
 				));
 				processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
 				processedRooms.clear();

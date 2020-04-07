@@ -20,9 +20,9 @@ export const mapSubscription: SubscriptionEndpoint = {
 		}
 		let lastTickTime = 0;
 		let previous = '';
-		const update = async(time: number) => {
+		const update = async() => {
 			lastTickTime = Date.now();
-			const roomBlob = await this.context.blobStorage.load(`ticks/${time}/${roomName}`);
+			const roomBlob = await this.context.blobStorage.load(`room/${roomName}`);
 			const room = Room.read(roomBlob);
 			// w: constructedWall
 			// r: road
@@ -58,10 +58,10 @@ export const mapSubscription: SubscriptionEndpoint = {
 				this.send(payload);
 			}
 		};
-		await update(this.context.time);
+		await update();
 		return this.context.gameChannel.listen(event => {
 			if (event.type === 'tick' && Date.now() > lastTickTime + 250) {
-				update(event.time).catch(error => console.error(error));
+				update().catch(error => console.error(error));
 			}
 		});
 	},

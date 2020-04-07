@@ -93,7 +93,7 @@ export default async function() {
 					const [ roomBlobs, sandbox ] = await Promise.all([
 						// Load visible rooms for this user
 						Promise.all(mapInPlace(instance.roomsVisible, roomName =>
-							blobStorage.load(`ticks/${gameTime}/${roomName}`))),
+							blobStorage.load(`room/${roomName}`))),
 						// Load sandbox
 						async function() {
 							if (instance.stale) {
@@ -101,8 +101,12 @@ export default async function() {
 								instance.sandbox = undefined;
 							}
 							if (!instance.sandbox) {
-								const codeBlob = await blobStorage.load(`user/${userId}/${instance.branch}`);
-								instance.sandbox = await createSandbox({ userId, codeBlob, terrain, writeConsole: instance.writeConsole });
+								const [ codeBlob, memoryBlob ] = await Promise.all([
+									blobStorage.load(`user/${userId}/${instance.branch}`),
+									// TODO: delete this undefined hack for TS types
+									blobStorage.load(`memory/${userId}`).catch(() => undefined as any as Readonly<Uint8Array>),
+								]);
+								instance.sandbox = await createSandbox({ userId, codeBlob, memoryBlob, terrain, writeConsole: instance.writeConsole });
 							}
 							return instance.sandbox;
 						}(),
@@ -118,17 +122,20 @@ export default async function() {
 						}
 					}();
 
-					// Save intent blobs
-					const savedRoomNames = mapInPlace(Object.entries(result.intents), async([ roomName, intents ]) => {
-						if (instance.roomsVisible.has(roomName)) {
-							await blobStorage.save(`intents/${roomName}/${userId}`, new Uint8Array(intents!));
-							return roomName;
-						} else {
-							console.error(`Runtime sent intent for non-visible room. User: ${userId}; Room: ${roomName}; Tick: ${gameTime}`);
-						}
-					});
-					const roomNames = [ ...filterInPlace(await Promise.all(savedRoomNames),
-						(roomName): roomName is string => roomName !== undefined) ];
+					const [ savedRoomNames ] = await Promise.all([
+						// Save intent blobs
+						mapInPlace(Object.entries(result.intents), async([ roomName, intents ]) => {
+							if (instance.roomsVisible.has(roomName)) {
+								await blobStorage.save(`intents/${roomName}/${userId}`, new Uint8Array(intents!));
+								return roomName;
+							} else {
+								console.error(`Runtime sent intent for non-visible room. User: ${userId}; Room: ${roomName}; Tick: ${gameTime}`);
+							}
+						}),
+						// Save memory
+						('memory' in result ? blobStorage.save(`memory/${userId}`, result.memory) : undefined),
+					]);
+					const roomNames = [ ...filterInPlace(await Promise.all(savedRoomNames)) ];
 					runnerChannel.publish({ type: 'processedUser', userId, roomNames });
 				}
 			}

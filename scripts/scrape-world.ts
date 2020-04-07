@@ -59,7 +59,8 @@ topLevelTask(async() => {
 	const blobStorage = await BlobStorage.create();
 
 	// Collect env data
-	const { gameTime }: { gameTime: number } = db.getCollection('env').findOne().data;
+	const env = db.getCollection('env').findOne().data;
+	const { gameTime }: { gameTime: number } = env;
 
 	// Collect room data
 	const roomObjects = db.getCollection('rooms.objects');
@@ -101,7 +102,7 @@ topLevelTask(async() => {
 
 	// Save rooms
 	for (const room of rooms) {
-		await blobStorage.save(`ticks/${gameTime}/${room.name}`, RoomSchema.write(room));
+		await blobStorage.save(`room/${room.name}`, RoomSchema.write(room));
 	}
 
 	// Collect terrain data
@@ -166,6 +167,18 @@ topLevelTask(async() => {
 	// Save users
 	for (const user of users) {
 		await blobStorage.save(`user/${user.id}/info`, User.write(user));
+	}
+
+	// Save user memory
+	for (const user of users) {
+		const memory: string | undefined = env[`memory:${user.id}`];
+		if (memory !== undefined) {
+			const data = new Uint16Array(memory.length);
+			for (let ii = 0; ii < data.length; ++ii) {
+				data[ii] = memory.charCodeAt(ii);
+			}
+			await blobStorage.save(`memory/${user.id}`, new Uint8Array(data.buffer));
+		}
 	}
 
 	// Save Game object

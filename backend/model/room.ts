@@ -3,7 +3,7 @@ import * as Room from '~/engine/schema/room';
 import { mapInPlace } from '~/lib/utility';
 
 export async function loadRoom(context: BackendContext, room: string) {
-	return Room.read(await context.blobStorage.load(`ticks/${context.time}/${room}`));
+	return Room.read(await context.blobStorage.load(`room/${room}`));
 }
 
 export async function loadRooms(context: BackendContext, roomNames: Iterable<string>) {
@@ -11,5 +11,5 @@ export async function loadRooms(context: BackendContext, roomNames: Iterable<str
 }
 
 export function saveRoom(context: BackendContext, room: Room.Shape) {
-	return context.blobStorage.save(`ticks/${context.time}/${room.name}`, Room.write(room));
+	return context.blobStorage.save(`room/${room.name}`, Room.write(room));
 }

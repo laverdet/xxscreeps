@@ -30,7 +30,6 @@ global._ = lodash;
 global.Creep = Creep;
 global.RoomPosition = RoomPosition;
 global.Source = Source;
-Memory.initialize(new Uint16Array(1));
 
 /**
  * TODO: lock these
@@ -47,23 +46,34 @@ for (const [ identifier, value ] of Object.entries(Constants)) {
 
 let require: (name: string) => any;
 let writeConsole: Writer;
+
+// This is the common data between `isolated-vm` and `vm` that doesn't need any special casing
+type InitializationData = {
+	userId: string;
+	codeBlob: Readonly<Uint8Array>;
+	memoryBlob?: Readonly<Uint8Array>;
+	terrain: Readonly<Uint8Array>;
+};
+
 export function initialize(
 	compileModule: (source: string, filename: string) => ((...args: any[]) => any),
-	userId: string,
-	codeBlob: Readonly<Uint8Array>,
-	terrain: Readonly<Uint8Array>,
 	_writeConsole: Writer,
+	data: InitializationData,
 ) {
 	// Set up console
 	setupConsole(writeConsole = _writeConsole);
+
 	// Load terrain
-	loadTerrainFromBuffer(terrain);
+	loadTerrainFromBuffer(data.terrain);
+
 	// Set up user information
-	const { modules } = UserCode.read(codeBlob);
+	const { modules } = UserCode.read(data.codeBlob);
 	if (!modules.has('main')) {
 		modules.set('main', '');
 	}
-	gameContext.userId = userId;
+	gameContext.userId = data.userId;
+	Memory.initialize(data.memoryBlob);
+
 	// Set up global `require`
 	const cache = Object.create(null);
 	global.require = require = name => {
@@ -108,10 +118,8 @@ export function initialize(
 export function initializeIsolated(
 	isolate: ivm.Isolate,
 	context: ivm.Context,
-	userId: string,
-	codeBlob: Readonly<Uint8Array>,
-	terrain: Readonly<Uint8Array>,
 	writeConsoleRef: ivm.Reference<(fd: number, payload: string) => void>,
+	data: InitializationData,
 ) {
 	const compileModule = (source: string, filename: string) => {
 		const script = isolate.compileScriptSync(source, { filename });
@@ -119,18 +127,21 @@ export function initializeIsolated(
 	};
 	const writeConsole = (fd: number, payload: string) =>
 		writeConsoleRef.applySync(undefined, [ fd, payload ]);
-	return initialize(compileModule, userId, codeBlob, terrain, writeConsole);
+	return initialize(compileModule, writeConsole, data);
 }
 
 export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEval?: string[]) {
 	// Reset context
 	gameContext.intents = new IntentManager;
+
 	// Build game object
 	const rooms = roomBlobs.map(buffer =>
 		new Room(BufferView.fromTypedArray(buffer)));
 	global.Game = new Game(time, rooms);
+
 	// Run player loop
 	require('main').loop();
+
 	// Run console expressions
 	const consoleResults = consoleEval?.map(expr => {
 		try {
@@ -140,8 +151,10 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEva
 		}
 	});
 
-	const memoryString = Memory.flush();
+	// Post-tick tasks
+	const memory = Memory.flush();
 	PathFinder.flush();
+
 	// Return JSON'd intents
 	const intents = function() {
 		const intents: Dictionary<SharedArrayBuffer> = Object.create(null);
@@ -160,5 +173,5 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEva
 		}
 		return intents;
 	}();
-	return { intents, consoleResults };
+	return { consoleResults, intents, memory };
 }
