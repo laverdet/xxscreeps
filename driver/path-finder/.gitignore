@@ -1,2 +1,3 @@
+_clangprof.profdata
+_clangprof.profraw
 build
-compile_commands.json

@@ -1,0 +1,29 @@
+#!/bin/bash
+# Runs GCC or Clang (OS X) profiling instrumentation and compiles w/ profile-guided optimizations
+set -e
+node-gyp configure
+
+rm -f build/Release/pf.node
+make V=1 BUILDTYPE=Release -C build
+echo -e "\nTesting Release build now..."
+time_o3=$(PATH_FINDER=./build/Release/pf.node ../../ts profile.ts)
+
+make V=1 BUILDTYPE=Profile -C build
+echo -e "\nRunning instrumentation now..."
+PATH_FINDER=./build/Profile/pf.node ../../ts profile.ts >/dev/null
+if [[ "$OSTYPE" == "darwin"* ]]; then
+	xcrun llvm-profdata merge -output _clangprof.profdata _clangprof.profraw
+fi
+
+make V=1 BUILDTYPE=Optimized -C build
+echo -e "\nRe-running..."
+time_optimized=$(PATH_FINDER=./build/Optimized/pf.node ../../ts profile.ts)
+
+if [[ $(echo "$time_o3 > $time_optimized" | bc) -eq 1 ]]; then
+	echo "Looks good. Replacing release with optimized. "
+	echo "Improvement: $(echo "scale=2; $time_o3 * 100 / $time_optimized - 100" | bc)%"
+	cp build/Optimized/pf.node build/Release/pf.node
+else
+	echo "Optimized build is slower! Leaving Release in place"
+	echo "Regression: $(echo "scale=2; $time_optimized * 100 / $time_o3 - 100" | bc)%"
+fi

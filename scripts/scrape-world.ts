@@ -54,7 +54,8 @@ function withStore(object: any) {
 topLevelTask(async() => {
 	// Load JSON data and connect to blob storage
 	const db = new Loki(jsonSource);
-	db.loadDatabase();
+	await new Promise((resolve, reject) =>
+		db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve()));
 	execSync('rm -rf ./data/*');
 	const blobStorage = await BlobStorage.create();
 
