@@ -24,7 +24,7 @@ type SearchReturn = {
 	incomplete: boolean;
 };
 
-export function search(origin: RoomPosition, goal: Goal | Goal[], userOptions: SearchOptions = {}): SearchReturn {
+export function search(origin: RoomPosition, goal: OneOrMany<Goal>[], userOptions: SearchOptions = {}): SearchReturn {
 
 	// Inject defaults
 	const options = {

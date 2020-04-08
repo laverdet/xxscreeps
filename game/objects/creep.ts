@@ -71,6 +71,10 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 			});
 	}
 
+	repair() {
+		return C.ERR_INVALID_TARGET;
+	}
+
 	transfer(target: RoomObjectWithStore, resourceType: C.ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),

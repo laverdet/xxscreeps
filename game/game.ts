@@ -13,6 +13,22 @@ import { flush as flushPathFinder } from '~/game/path-finder';
  */
 class Game {
 	constructionSites = constructionSites;
+	cpu = {
+		getUsed: () => 0,
+		getHeapStatistics: () => 0,
+	};
+	gcl = {
+		level: 1,
+	};
+	flags = {};
+	market = {
+		orders: [],
+		getAllOrders: () => [],
+		incomingTransactions: [],
+		outgoingTransactions: [],
+
+	};
+	shard = {};
 	creeps = creeps;
 	map = map;
 	rooms = rooms;

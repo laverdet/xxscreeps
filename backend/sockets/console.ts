@@ -4,6 +4,8 @@ import { Channel } from '~/storage/channel';
 import { SubscriptionEndpoint } from '../socket';
 
 const au = new AnsiUp();
+// eslint-disable-next-line camelcase
+au.escape_for_html = false;
 // Stupid hack to override client's CSS padding on console eval results
 const colorize = (payload: string) => au.ansi_to_html(payload).replace(
 	/<span style="(?<color>color:rgb\(\d+,\d+,\d+\))">/g,

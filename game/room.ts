@@ -9,6 +9,7 @@ import type { shape } from '~/engine/schema/room';
 import { iteratee } from '~/engine/util/iteratee';
 
 import * as Game from './game';
+import * as Memory from './memory';
 import { fetchArguments, iterateNeighbors, RoomPosition } from './position';
 import * as PathFinder from './path-finder';
 import { getTerrainForRoom } from './map';
@@ -22,6 +23,7 @@ import { Structure } from './objects/structures';
 import { StructureController } from './objects/structures/controller';
 import { StructureExtension } from './objects/structures/extension';
 import { StructureSpawn } from './objects/structures/spawn';
+import { RoomVisual } from './visual';
 
 export type AnyRoomObject = InstanceType<typeof Room>['_objects'][number];
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
@@ -31,7 +33,35 @@ export type RoomFindOptions = {
 	filter?: string | object | ((object: RoomObject) => boolean);
 };
 
+export type RoomFindObjectType<Type extends number> =
+	Type extends
+		typeof C.FIND_CREEPS |
+		typeof C.FIND_MY_CREEPS |
+		typeof C.FIND_HOSTILE_CREEPS ?
+	Creep :
+	Type extends
+		typeof C.FIND_STRUCTURES |
+		typeof C.FIND_MY_STRUCTURES |
+		typeof C.FIND_HOSTILE_STRUCTURES ?
+	Extract<AnyRoomObject, Structure> :
+	Type extends
+		typeof C.FIND_CONSTRUCTION_SITES |
+		typeof C.FIND_MY_CONSTRUCTION_SITES |
+		typeof C.FIND_HOSTILE_CONSTRUCTION_SITES ?
+	ConstructionSite :
+	Type extends
+		typeof C.FIND_SOURCES |
+		typeof C.FIND_SOURCES_ACTIVE ?
+	Source :
+	RoomObject;
+
 export class Room extends withOverlay<typeof shape>()(BufferObject) {
+	get memory() {
+		const memory = Memory.get();
+		const rooms = memory.rooms ?? (memory.rooms = {});
+		return rooms[this.name] ?? (rooms[this.name] = {});
+	}
+
 	controller?: StructureController;
 	[Process]?: ProcessorSpecification<this>['process'];
 	[Tick]?: ProcessorSpecification<this>['tick'];
@@ -74,19 +104,7 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 	 * @param opts
 	 */
 	#findCache = new Map<number, RoomObject[]>();
-	find(
-		type: typeof C.FIND_CREEPS | typeof C.FIND_MY_CREEPS | typeof C.FIND_HOSTILE_CREEPS,
-		options?: RoomFindOptions): Creep[];
-	find(
-		type: typeof C.FIND_STRUCTURES | typeof C.FIND_MY_STRUCTURES | typeof C.FIND_HOSTILE_STRUCTURES,
-		options?: RoomFindOptions): Extract<AnyRoomObject, Structure>[];
-	find(
-		type: typeof C.FIND_CONSTRUCTION_SITES | typeof C.FIND_MY_CONSTRUCTION_SITES | typeof C.FIND_HOSTILE_CONSTRUCTION_SITES,
-		options?: RoomFindOptions): ConstructionSite[];
-	find(
-		type: typeof C.FIND_SOURCES | typeof C.FIND_SOURCES_ACTIVE,
-		options?: RoomFindOptions): Source[];
-	find(type: number, options: RoomFindOptions = {}) {
+	find<Type extends number>(type: Type, options: RoomFindOptions = {}): RoomFindObjectType<Type>[] {
 		// Check find cache
 		let results = this.#findCache.get(type);
 		if (results === undefined) {
@@ -111,14 +129,14 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 
 					default: return [];
 				}
-			})() as RoomObject[];
+			})();
 
 			// Add to cache
 			this.#findCache.set(type, results);
 		}
 
 		// Copy or filter result
-		return options.filter === undefined ? results.slice() : results.filter(iteratee(options.filter));
+		return options.filter === undefined ? results.slice() : results.filter(iteratee(options.filter)) as any[];
 	}
 
 	/**
@@ -189,6 +207,10 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 			},
 			() => checkCreateConstructionSite(this, pos, structureType),
 			() => Game.intents.save(this, 'createConstructionSite', { name, structureType, xx, yy }));
+	}
+
+	get visual() {
+		return new RoomVisual;
 	}
 }
 

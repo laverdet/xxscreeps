@@ -1,3 +1,4 @@
+import { typedArrayToString } from '~/lib/string';
 declare const globalThis: any;
 
 const kMemoryGrowthSize = 4096;
@@ -9,10 +10,10 @@ let string: string | undefined;
 let json: object | undefined;
 let isBufferOutOfDate = false;
 
-const RawMemory = {
+export const RawMemory = {
 	get() {
 		if (string === undefined) {
-			string = String.fromCharCode(...memory.subarray(0, memoryLength));
+			string = typedArrayToString(memory.subarray(0, memoryLength));
 		}
 		return string;
 	},
@@ -25,6 +26,10 @@ const RawMemory = {
 		string = value;
 		isBufferOutOfDate = true;
 	},
+
+	setActiveSegments() {},
+	setActiveForeignSegment() {},
+	setPublicSegments() {},
 };
 
 function align(address: number) {

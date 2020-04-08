@@ -36,6 +36,10 @@ export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
 		);
 	}
 
+	isActive() {
+		return true;
+	}
+
 	spawnCreep(body: C.BodyPart[], name: string, options: SpawnCreepOptions = {}) {
 		return chainIntentChecks(
 			() => checkSpawnCreep(this, body, name, options.directions, options.energyStructures),

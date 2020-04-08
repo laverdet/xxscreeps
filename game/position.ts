@@ -1,10 +1,11 @@
+import { iteratee } from '~/engine/util/iteratee';
 import * as PathFinder from '~/game/path-finder';
 import * as C from '~/game/constants';
 import * as Game from '~/game/game';
 import type { ConstructibleStructureType } from '~/game/objects/construction-site';
-import { firstMatching } from '~/lib/utility';
+import { firstMatching, minimum } from '~/lib/utility';
 import type { RoomObject } from './objects/room-object';
-import { FindPathOptions, RoomFindOptions } from './room';
+import { FindPathOptions, RoomFindObjectType, RoomFindOptions } from './room';
 
 const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
@@ -15,6 +16,11 @@ export type Direction = typeof ALL_DIRECTIONS[number];
 type FindClosestByPathOptions = RoomFindOptions & Omit<PathFinder.RoomSearchOptions, 'range'>;
 
 export const PositionInteger: unique symbol = Symbol('positionInteger');
+type PositionFindType<Type> =
+	Type extends RoomObject[] ? Type :
+	Type extends RoomPosition ? RoomPosition :
+	Type extends number ? RoomFindObjectType<Type> :
+	never;
 
 /**
  * An object representing the specified position in the room. Every `RoomObject` in a room contains
@@ -105,9 +111,12 @@ export class RoomPosition {
 
 	/**
 	 * Get linear range to the specified position
+	 * @param x X position in the same room
+	 * @param y Y position in the same room
+	 * @param target Can be a RoomObject or RoomPosition
 	 */
 	getRangeTo(x: number, y: number): number;
-	getRangeTo(pos: RoomObject | RoomPosition): number;
+	getRangeTo(target: RoomObject | RoomPosition): number;
 	getRangeTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { xx, yy, room } = fetchArguments(...args);
 		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
@@ -116,8 +125,14 @@ export class RoomPosition {
 		return Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
 	}
 
+	/**
+	 * Check whether this position is the same as the specified position
+	 * @param x X position in the same room
+	 * @param y Y position in the same room
+	 * @param target Can be a RoomObject or RoomPosition
+	 */
 	isEqualTo(x: number, y: number): boolean;
-	isEqualTo(pos: RoomObject | RoomPosition): boolean;
+	isEqualTo(target: RoomObject | RoomPosition): boolean;
 	isEqualTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { pos } = fetchPositionArgument(this, ...args);
 		return this[PositionInteger] === pos?.[PositionInteger];
@@ -126,15 +141,25 @@ export class RoomPosition {
 	/**
 	 * Check whether this position is on the adjacent square to the specified position. The same as
 	 * `position.inRangeTo(target, 1)`
+	 * @param x X position in the same room
+	 * @param y Y position in the same room
+	 * @param target Can be a RoomObject or RoomPosition
 	 */
 	isNearTo(x: number, y: number): boolean;
-	isNearTo(pos: RoomObject | RoomPosition): boolean;
+	isNearTo(target: RoomObject | RoomPosition): boolean;
 	isNearTo(...args: [any]) {
 		return this.getRangeTo(...args) <= 1;
 	}
 
+	/**
+	 * Check whether this position is in the given range of another position.
+	 * @param x X position in the same room
+	 * @param y Y position in the same room
+	 * @param target Can be a RoomObject or RoomPosition
+	 * @param range The range distance
+	 */
 	inRangeTo(x: number, y: number, range: number): boolean;
-	inRangeTo(pos: RoomObject | RoomPosition, range: number): boolean;
+	inRangeTo(target: RoomObject | RoomPosition, range: number): boolean;
 	inRangeTo(...args: [ number, number, number ] | [ RoomObject | RoomPosition, number ]) {
 		const { xx, yy, room, rest } = fetchArguments(...args);
 		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
@@ -146,30 +171,28 @@ export class RoomPosition {
 
 	/**
 	 * Find an object with the shortest path from the given position
-	 * @param search One of the `FIND_*` constants. Or an array of room's objects or RoomPosition
-	 * objects that the search should be
+	 * @param search One of the `FIND_*` constants. See `Room.find`.
+	 * @param search An array of RoomObjects or RoomPosition objects that the search should be
 	 * executed against.
+	 * @params options See `Room.find`
 	 */
-	findClosestByPath(search: number | RoomObject[], options: FindClosestByPathOptions): RoomObject | undefined;
-	findClosestByPath(search: RoomPosition[], options: FindClosestByPathOptions): RoomPosition;
+	findClosestByPath<Type extends number | (RoomObject | RoomPosition)[]>(
+		search: Type, options?: FindClosestByPathOptions
+	): PositionFindType<Type> | undefined;
 	findClosestByPath(
-		search: number | RoomObject[] | RoomPosition[],
+		search: number | (RoomObject | RoomPosition)[],
 		options: FindClosestByPathOptions = {},
 	): RoomObject | RoomPosition | undefined {
 
 		// Find objects to search
-		const room = fetchRoom(this.roomName);
-		const objects = function(): (RoomObject | RoomPosition)[] {
-			if (typeof search === 'number') {
-				return room.find(search, options);
-			} else {
-				return search;
-			}
-		}();
-		const goals = objects.map(object => 'pos' in object ? object.pos : object);
+		const objects = typeof search === 'number' ?
+			fetchRoom(this.roomName).find(search) : search;
+		const filtered = options?.filter === undefined ? objects :
+			objects.filter(iteratee(options.filter));
+		const goals = filtered.map(object => 'pos' in object ? object.pos : object);
 
 		// Invoke pathfinder
-		const result = PathFinder.roomSearch(this, goals/*, { ...options, maxRooms: 1 }*/);
+		const result = PathFinder.roomSearch(this, goals, { ...options, maxRooms: 1 });
 		if (result.incomplete) {
 			return;
 		}
@@ -181,6 +204,57 @@ export class RoomPosition {
 	}
 
 	/**
+	 * Find an object with the shortest linear distance from the given position
+	 * @param search One of the `FIND_*` constants. See `Room.find`.
+	 * @param search An array of RoomObjects or RoomPosition objects that the search should be
+	 * executed against.
+	 * @param options See `Room.find`
+	 */
+	findClosestByRange<Type extends number | (RoomObject | RoomPosition)[]>(
+		search: Type, options?: RoomFindOptions,
+	): PositionFindType<Type> | undefined;
+	findClosestByRange(
+		search: number | (RoomObject | RoomPosition)[], options?: RoomFindOptions,
+	) {
+
+		// Find objects to search
+		const objects = typeof search === 'number' ?
+			fetchRoom(this.roomName).find(search) : search;
+		const filtered = options?.filter === undefined ? objects :
+			objects.filter(iteratee(options.filter));
+		return minimum(filtered, (left, right) =>
+			this.getRangeTo(left) - this.getRangeTo(right));
+	}
+
+	/**
+	 * Find all objects in the specified linear range
+	 * @param search One of the `FIND_*` constants. See `Room.find`.
+	 * @param search An array of RoomObjects or RoomPosition objects that the search should be
+	 * executed against.
+	 * @param range The range distance
+	 * @param options See `Room.find`
+	 */
+	findInRange<Type extends number | (RoomObject | RoomPosition)[]>(
+		search: Type, range: number, options?: RoomFindOptions,
+	): PositionFindType<Type>[] | undefined;
+	findInRange(
+		search: number | RoomObject[] | RoomPosition[],
+		range: number,
+		options?: FindClosestByPathOptions,
+	) {
+
+		// Find objects to search
+		const objects: (RoomObject | RoomPosition)[] = typeof search === 'number' ?
+			fetchRoom(this.roomName).find(search) : search;
+
+		// Filter out in range & matching
+		const inRange = objects.filter(object => this.inRangeTo(object, range));
+		return options?.filter === undefined ? inRange :
+			inRange.filter(iteratee(options.filter));
+	}
+
+
+	/**
 	 * Find an optimal path to the specified position using Jump Point Search algorithm. This method
 	 * is a shorthand for Room.findPath. If the target is in another room, then the corresponding exit
 	 * will be used as a target.
@@ -189,10 +263,13 @@ export class RoomPosition {
 	 * @param pos Can be a RoomPosition object or any object containing RoomPosition
 	 */
 	findPathTo(x: number, y: number, options?: FindPathOptions): any;
-	findPathTo(pos: RoomObject | RoomPosition, options?: FindPathOptions): any;
+	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions): any;
 	findPathTo(...args: any) {
 		const { pos, extra } = fetchPositionArgument(this, ...args);
 		return fetchRoom(this.roomName).findPath(this, pos!, extra);
+	}
+
+	lookFor() {
 	}
 
 	/**
@@ -202,6 +279,10 @@ export class RoomPosition {
 	 */
 	createConstructionSite(structureType: ConstructibleStructureType, name?: string) {
 		return fetchRoom(this.roomName).createConstructionSite(this, structureType, name);
+	}
+
+	createFlag(name) {
+		Memory.flags = {};
 	}
 
 	[Symbol.for('nodejs.util.inspect.custom')]() {

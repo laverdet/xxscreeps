@@ -1,32 +1,20 @@
 import type ivm from 'isolated-vm';
-import lodash from 'lodash';
 import { inspect } from 'util';
 
-import { Creep } from '~/game/objects/creep';
-import { RoomPosition } from '~/game/position';
-import { Room } from '~/game/room';
-import { Source } from '~/game/objects/source';
-import * as C from '~/game/constants';
 import { initializeIntents, flushIntents, runForUser } from '~/game/game';
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
+import { Room } from '~/game/room';
 import * as UserCode from '~/engine/metadata/code';
 import { BufferView } from '~/lib/schema/buffer-view';
 
 import { setupConsole, Writer } from './console';
+import { setupGlobals } from './globals';
 
 // Sets up prototype overlays
 import '~/engine/schema/room';
-
+setupGlobals();
 declare const globalThis: any;
-
-// Global lodash compatibility
-globalThis._ = lodash;
-
-// Export prototypes
-globalThis.Creep = Creep;
-globalThis.RoomPosition = RoomPosition;
-globalThis.Source = Source;
 
 /**
  * TODO: lock these
@@ -35,11 +23,6 @@ globalThis.Source = Source;
  * global - Object, Array, TypedArrays, ArrayBuffer, SharedArrayBuffer
  * Symbol.iterator
  */
-
-// Export constants
-for (const [ identifier, value ] of Object.entries(C)) {
-	globalThis[identifier] = value;
-}
 
 let me: string;
 let require: (name: string) => any;
@@ -133,10 +116,14 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEva
 	initializeIntents();
 	const rooms = roomBlobs.map(buffer =>
 		new Room(BufferView.fromTypedArray(buffer)));
-	runForUser(me, time, rooms, Game => {
-		globalThis.Game = Game;
-		require('main').loop();
-	});
+	try {
+		runForUser(me, time, rooms, Game => {
+			globalThis.Game = Game;
+			require('main').loop();
+		});
+	} catch (err) {
+		writeConsole(2, err.stack);
+	}
 
 	// Run console expressions
 	const consoleResults = consoleEval?.map(expr => {

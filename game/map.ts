@@ -7,6 +7,18 @@ import type { BlobStorage } from '~/storage/blob';
 export type World = Map<string, TerrainSchema.Terrain>;
 let world: World;
 
+function describeExits() {
+	return [];
+}
+
+function findRoute() {
+	return [];
+}
+
+function getRoomLinearDistance() {
+	return Infinity;
+}
+
 export function getTerrainAt(position: RoomPosition): string | undefined;
 export function getTerrainAt(xx: number, yy: number, roomName: string): string | undefined;
 export function getTerrainAt(...args: [ RoomPosition ] | [ number, number, string ]) {
@@ -38,7 +50,7 @@ export function loadTerrainFromWorld(loadedWorld: World) {
 	world = loadedWorld;
 }
 
-export default { getTerrainAt };
+export default { describeExits, findRoute, getRoomLinearDistance, getTerrainAt };
 
 //
 // Schema

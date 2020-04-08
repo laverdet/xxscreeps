@@ -26,6 +26,7 @@ export class NodejsSandbox {
 
 		// Generate new vm context, set up globals
 		const context = vm.createContext();
+		context.global = context;
 		context.nodeUtilImport = require('util');
 		const { identifier, module } = getPathFinderModule();
 		context[identifier] = module;

@@ -47,6 +47,7 @@ export class IsolatedSandbox {
 				};
 				await context.global.set('nodeUtilImport', deref, { copy: true });
 			}(),
+			context.global.set('global', context.global.derefInto()),
 		]);
 
 		// Initialize runtime.ts and load player code + memory

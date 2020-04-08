@@ -17,6 +17,9 @@ declare global {
 	// Type that's safe to loosely compare to true/false without weirdness like '' or NaN or 0
 	type LooseBoolean = boolean | object | null | undefined;
 
+	// For functions that accept an array or just one element
+	type OneOrMany<Type> = Type | Type[];
+
 	// Public Promise
 	type Resolver<Type = unknown> = {
 		resolve: (payload?: Type | Promise<Type>) => void;

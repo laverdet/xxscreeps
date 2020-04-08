@@ -192,3 +192,5 @@ export function obstacleChecker(room: Room, user: string, options: ObstacleCheck
 		creepFilter(object) || structureFilter(object) || constructionSiteFilter(object) ||
 		permanentObstacleTypes.has(object[Variant]);
 }
+
+export default { CostMatrix, search, use };
