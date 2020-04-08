@@ -11,7 +11,24 @@ import * as Room from '~/game/room';
 import { RoomPosition } from '~/game/position';
 import { concatInPlace } from '~/lib/utility';
 import { ServiceMessage } from '~/engine/service';
+import { RunnerUserMessage } from '~/engine/service/runner';
 import { Channel } from '~/storage/channel';
+
+const AddObjectIntentEndpoint: Endpoint = {
+	path: '/add-object-intent',
+	method: 'post',
+
+	execute(req) {
+		const { userid } = req;
+		const { room, name, intent: { id } } = req.body;
+		if (typeof room !== 'string' || typeof name !== 'string' || typeof id !== 'string') {
+			throw new TypeError('Invalid parameters');
+		}
+		Channel.publish<RunnerUserMessage>(
+			`user/${userid}/runner`, { type: 'intent', intent: name, id, room });
+		return { ok: 1 };
+	},
+};
 
 const CheckUniqueNameEndpoint: Endpoint = {
 	path: '/check-unique-object-name',
@@ -111,4 +128,4 @@ const PlaceSpawnEndpoint: Endpoint = {
 	},
 };
 
-export default [ CheckUniqueNameEndpoint, GenNameEndpoint, PlaceSpawnEndpoint ];
+export default [ AddObjectIntentEndpoint, CheckUniqueNameEndpoint, GenNameEndpoint, PlaceSpawnEndpoint ];

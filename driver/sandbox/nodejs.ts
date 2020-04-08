@@ -1,5 +1,6 @@
 import vm from 'vm';
 import { runOnce } from '~/lib/memoize';
+import type { TickArguments } from '../runtime';
 import { compileRuntimeSource, getPathFinderInfo, Options } from '.';
 type Runtime = typeof import('../runtime');
 
@@ -46,7 +47,7 @@ export class NodejsSandbox {
 
 	dispose() {}
 
-	run(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEval?: string[]) {
-		return Promise.resolve(this.tick(time, roomBlobs, consoleEval));
+	run(args: TickArguments) {
+		return Promise.resolve(this.tick(args));
 	}
 }

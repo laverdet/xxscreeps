@@ -1,7 +1,8 @@
 import type ivm from 'isolated-vm';
 import { inspect } from 'util';
 
-import { initializeIntents, flushIntents, runForUser } from '~/game/game';
+import type { UserIntent } from '~/engine/service/runner';
+import { flushIntents, initializeIntents, intents, runForUser } from '~/game/game';
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
 import { Room } from '~/game/room';
@@ -111,7 +112,14 @@ export function initializeIsolated(
 	return initialize(compileModule, writeConsole, data);
 }
 
-export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEval?: string[]) {
+export type TickArguments = {
+	time: number;
+	roomBlobs: Readonly<Uint8Array>[];
+	consoleEval?: string[];
+	userIntents?: UserIntent[];
+};
+
+export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArguments) {
 	// Run player loop
 	initializeIntents();
 	const rooms = roomBlobs.map(buffer =>
@@ -134,11 +142,18 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEva
 		}
 	});
 
+	// Run user intents
+	if (userIntents) {
+		for (const intent of userIntents) {
+			intents.getIntentsForRoomAndId(intent.room, intent.id)[intent.intent] = true;
+		}
+	}
+
 	// Post-tick tasks
 	const memory = Memory.flush();
 
 	// Return JSON'd intents
-	const intents = function() {
+	const intentsBlobs = function() {
 		const intents: Dictionary<SharedArrayBuffer> = Object.create(null);
 		const { intentsByRoom } = flushIntents();
 		const roomNames = Object.keys(intentsByRoom);
@@ -155,5 +170,5 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEva
 		}
 		return intents;
 	}();
-	return { consoleResults, intents, memory };
+	return { consoleResults, intents: intentsBlobs, memory };
 }

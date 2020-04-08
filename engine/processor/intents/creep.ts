@@ -24,6 +24,7 @@ type Parameters = {
 		resourceType: ResourceType;
 		target: string;
 	};
+	suicide: boolean;
 	upgradeController: { target: string };
 };
 
@@ -65,15 +66,15 @@ export default () => bindProcessor(Creep.Creep, {
 				StoreIntent.add(this.store, 'energy', 25);
 				target!.energy -= amount;
 			}
-			return true;
 		}
+
 		if (intent.move) {
 			const { direction } = intent.move;
 			if (Creep.checkMove(this, direction) === C.OK) {
 				Movement.add(this, direction);
-				return true;
 			}
 		}
+
 		if (intent.transfer) {
 			const { amount, resourceType, target: id } = intent.transfer;
 			const target = Game.getObjectById(id) as RoomObjectWithStore | undefined;
@@ -81,15 +82,20 @@ export default () => bindProcessor(Creep.Creep, {
 				const transferAmount = Math.min(this.store[resourceType]!, target!.store.getFreeCapacity(resourceType));
 				StoreIntent.subtract(this.store, resourceType, transferAmount);
 				StoreIntent.add(target!.store, resourceType, transferAmount);
-				return true;
 			}
 		}
+
 		if (intent.upgradeController) {
 			const target = Game.getObjectById(intent.upgradeController.target) as StructureController;
 			if (Creep.checkUpgradeController(this, target) === C.OK) {
 				StoreIntent.subtract(this.store, 'energy', 2);
 				StructureControllerIntent.upgrade(target, 2);
-				return true;
+			}
+		}
+
+		if (intent.suicide) {
+			if (this.my) {
+				RoomIntent.removeObject(this.room, this.id);
 			}
 		}
 		return false;

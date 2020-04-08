@@ -15,5 +15,4 @@ export const read = getReader(format);
 export const write = getWriter(format);
 
 export type UserCode = TypeOf<typeof format>;
-export type Message = { type: 'eval'; expr: string } | { type: 'push'; id: string; name: string } | { type: null };
 export type ConsoleMessage = { type: 'console'; log?: string; result?: string } | { type: null };

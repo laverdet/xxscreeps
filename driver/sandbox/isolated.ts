@@ -2,6 +2,7 @@ import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
 import { runOnce } from '~/lib/memoize';
 import type * as Runtime from '~/driver/runtime';
+import type { TickArguments } from '../runtime';
 import { compileRuntimeSource, getPathFinderInfo, Options } from '.';
 
 const getPathFinderModule = runOnce(() => {
@@ -68,7 +69,7 @@ export class IsolatedSandbox {
 		this.isolate.dispose();
 	}
 
-	run(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEval?: string[]) {
-		return this.tick.apply(undefined, [ time, roomBlobs, consoleEval ], { arguments: { copy: true }, result: { copy: true } });
+	run(args: TickArguments) {
+		return this.tick.apply(undefined, [ args ], { arguments: { copy: true }, result: { copy: true } });
 	}
 }

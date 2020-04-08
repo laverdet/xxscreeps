@@ -11,13 +11,21 @@ import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
 import { RunnerMessage } from '.';
 
+export type UserIntent = { id: string; intent: string; room: string };
+export type RunnerUserMessage =
+	{ type: 'eval'; expr: string } |
+	{ type: 'push'; id: string; name: string } |
+	({ type: 'intent' } & UserIntent) |
+	{ type: null };
+
 type PlayerInstance = {
 	branch: string;
-	codeChannel: Channel<Code.Message>;
+	codeChannel: Channel<RunnerUserMessage>;
 	consoleEval?: string[];
 	sandbox?: Sandbox;
 	stale: boolean;
 	roomsVisible: Set<string>;
+	userIntents?: UserIntent[];
 	writeConsole: (fd: number, payload: string, evalResult?: boolean) => void;
 };
 
@@ -64,7 +72,7 @@ export default async function() {
 
 							// Connect to channel, load user
 							const [ codeChannel, userBlob ] = await Promise.all([
-								Channel.connect<Code.Message>(`user/${userId}/code`),
+								Channel.connect<RunnerUserMessage>(`user/${userId}/runner`),
 								blobStorage.load(`user/${userId}/info`),
 							]);
 							const user = User.read(userBlob);
@@ -90,6 +98,9 @@ export default async function() {
 								} else if (message.type === 'push') {
 									instance.branch = message.id;
 									instance.stale = true;
+								} else if (message.type === 'intent') {
+									const intents = instance.userIntents ?? (instance.userIntents = []);
+									intents.push(message);
 								}
 							});
 
@@ -126,8 +137,14 @@ export default async function() {
 						// Run user code
 						const result = await async function() {
 							try {
-								return await sandbox.run(gameTime, roomBlobs, exchange(instance, 'consoleEval'));
+								return await sandbox.run({
+									time: gameTime,
+									roomBlobs,
+									consoleEval: exchange(instance, 'consoleEval'),
+									userIntents: exchange(instance, 'userIntents'),
+								});
 							} catch (err) {
+								console.error(err.stack);
 								return { intents: {} };
 							}
 						}();

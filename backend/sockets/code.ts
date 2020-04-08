@@ -1,4 +1,4 @@
-import * as Code from '~/engine/metadata/code';
+import { RunnerUserMessage } from '~/engine/service/runner';
 // import { mapToKeys } from '~/lib/utility';
 import { Channel } from '~/storage/channel';
 import { SubscriptionEndpoint } from '../socket';
@@ -29,7 +29,7 @@ const SetActiveBranchSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/set-active-branch$/,
 
 	async subscribe() {
-		const channel = await Channel.connect<Code.Message>(`user/${this.user}/code`);
+		const channel = await Channel.connect<RunnerUserMessage>(`user/${this.user}/runner`);
 		return channel.listen(message => {
 			if (message.type === 'push') {
 				this.send(JSON.stringify({ activeName: 'activeWorld', branch: message.name }));

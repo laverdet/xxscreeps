@@ -2,6 +2,7 @@ import { Endpoint } from '~/backend/endpoint';
 import * as Code from '~/engine/metadata/code';
 import * as User from '~/engine/metadata/user';
 import * as Id from '~/engine/util/schema/id';
+import { RunnerUserMessage } from '~/engine/service/runner';
 import { firstMatching, mapToKeys } from '~/lib/utility';
 import { Channel } from '~/storage/channel';
 
@@ -141,7 +142,7 @@ const BranchSetEndpoint: Endpoint = {
 			}
 			user.code.branch = id;
 			await this.context.blobStorage.save(`user/${userid}/info`, User.write(user));
-			Channel.publish<Code.Message>(`user/${userid}/code`, { type: 'push', id, name });
+			Channel.publish<RunnerUserMessage>(`user/${userid}/runner`, { type: 'push', id, name });
 		});
 
 		return { ok: 1 };
@@ -204,7 +205,7 @@ const CodePostEndpoint: Endpoint = {
 					modules: new Map(Object.entries(modules)),
 				})),
 			]);
-			Channel.publish<Code.Message>(`user/${userid}/code`, { type: 'push', id, name });
+			Channel.publish<RunnerUserMessage>(`user/${userid}/runner`, { type: 'push', id, name });
 		});
 		return { ok: 1, timestamp: timestamp * 1000 };
 	},
@@ -222,7 +223,7 @@ const ConsoleEndpoint: Endpoint = {
 		try {
 			// Try to parse it
 			new Function(expression);
-			Channel.publish<Code.Message>(`user/${userid}/code`, { type: 'eval', expr: req.body.expression });
+			Channel.publish<RunnerUserMessage>(`user/${userid}/runner`, { type: 'eval', expr: req.body.expression });
 		} catch (err) {
 			Channel.publish<Code.ConsoleMessage>(
 				`user/${userid}/console`,
