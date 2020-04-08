@@ -1,4 +1,5 @@
 import * as C from '~/game/constants';
+import * as Game from '~/game/game';
 import { gameContext } from '~/game/context';
 import * as Memory from '~/game/memory';
 import { withOverlay } from '~/lib/schema';

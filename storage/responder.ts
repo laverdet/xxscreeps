@@ -56,6 +56,7 @@ const responderClientsById = new Map<string, Responder>();
 const unlistenByClientId = new Map<string, () => void>();
 
 // Connect to an existing responder
+let parentRefs = 0;
 export function connect<Host extends AbstractResponderHost, Client extends AbstractResponderClient>(
 	name: string,
 	clientConstructor: Constructor<Client>,
@@ -75,6 +76,9 @@ export function connect<Host extends AbstractResponderHost, Client extends Abstr
 	} else {
 		// Check with main thread that this responder is ready
 		initializeThisWorker();
+		if (++parentRefs === 1) {
+			parentPort!.ref();
+		}
 		return new Promise<Client>((resolve, reject) => {
 			// Set up connection ack handler
 			const responder = new clientConstructor as Client;
@@ -258,6 +262,9 @@ new(...args: Args[]) => Type & Responder & AbstractResponderClient =>
 				type: 'responderDisconnect',
 				clientId: this._clientId,
 			}));
+			if (--parentRefs === 0) {
+				parentPort!.unref();
+			}
 		}
 
 		request(method: string, payload?: any) {

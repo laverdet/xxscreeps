@@ -63,6 +63,10 @@
             ],
             "description": "Runner settings",
             "properties": {
+                "concurrency": {
+                    "description": "Total number of runner tasks to run at a time. The default is `os.cpus().length + 1`.",
+                    "type": "number"
+                },
                 "unsafeSandbox": {
                     "default": false,
                     "description": "Setting this to true will run user code using the nodejs `vm` module instead\nof `isolated-vm`. Do not enable this on public servers!",

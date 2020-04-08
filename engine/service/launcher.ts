@@ -1,3 +1,4 @@
+import os from 'os';
 import configPromise from '~/engine/config';
 import { Worker, waitForWorker } from '~/lib/worker-threads';
 import { topLevelTask } from '~/lib/task';
@@ -60,10 +61,12 @@ topLevelTask(async() => {
 			const runner = Runner();
 			await Promise.all([ main, backend, processor, runner ]);
 		} else {
+			const processorWorkers = config?.processorWorkers ?? (os.cpus().length >> 1) + 1;
+			const runnerWorkers = config?.runnerWorkers ?? 1;
 			const backend = new Worker('~/backend/server', { runDefault: true });
-			const processors = Array(config?.processorWorkers ?? 2).fill(undefined).map(() =>
+			const processors = Array(processorWorkers).fill(undefined).map(() =>
 				new Worker('~/engine/service/processor', { runDefault: true }));
-			const runners = Array(config?.runnerWorkers ?? 1).fill(undefined).map(() =>
+			const runners = Array(runnerWorkers).fill(undefined).map(() =>
 				new Worker('~/engine/service/runner', { runDefault: true }));
 			await Promise.all([
 				main,

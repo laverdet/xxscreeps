@@ -270,6 +270,7 @@ class LocalChannel<Message> extends Channel<Message> {
 /**
  * Channels within a worker_thread
  */
+let parentRefs = 0;
 class WorkerChannel<Message> extends Channel<Message> {
 	private static didInit = false;
 	private static readonly subscribedChannels =
@@ -298,6 +299,9 @@ class WorkerChannel<Message> extends Channel<Message> {
 			++existing.count;
 			await existing.connected;
 			return channel;
+		}
+		if (++parentRefs === 1) {
+			parentPort!.ref();
 		}
 		// Send connection notification to parent
 		const channelPromise = new Promise<WorkerChannel<Message>>(resolve => {
@@ -339,6 +343,9 @@ class WorkerChannel<Message> extends Channel<Message> {
 				name: this.name,
 				id: this.id,
 			}));
+			if (--parentRefs === 0) {
+				parentPort!.unref();
+			}
 		}
 	}
 

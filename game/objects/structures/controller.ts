@@ -1,4 +1,5 @@
 import * as C from '~/game/constants';
+import * as Game from '~/game/game';
 import type { shape } from '~/engine/schema/controller';
 import { withOverlay } from '~/lib/schema';
 import { Structure } from '.';

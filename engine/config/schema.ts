@@ -57,6 +57,11 @@ export type Schema = {
 	 */
 	runner?: {
 		/**
+		 * Total number of runner tasks to run at a time. The default is `os.cpus().length + 1`.
+		 */
+		concurrency?: number;
+
+		/**
 		 * Setting this to true will run user code using the nodejs `vm` module instead
 		 * of `isolated-vm`. Do not enable this on public servers!
 		 * @default false
