@@ -1,4 +1,5 @@
 import * as C from '~/game/constants';
+import * as Game from '~/game/game';
 import * as Creep from '~/game/objects/creep';
 import type { ConstructionSite } from '~/game/objects/construction-site';
 import type { Source } from '~/game/objects/source';

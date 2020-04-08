@@ -1,15 +1,15 @@
-import { Structure } from '.';
 import * as C from '~/game/constants';
+import * as Game from '~/game/game';
 import * as Memory from '~/game/memory';
-import { gameContext } from '~/game/context';
 import type { shape } from '~/engine/schema/spawn';
 import { withOverlay } from '~/lib/schema';
 import { accumulate } from '~/lib/utility';
 
 import { Direction } from '~/game/position';
 import { create as createCreep } from '~/engine/processor/intents/creep';
-import { StructureExtension } from './extension';
 import { chainIntentChecks } from '../room-object';
+import { StructureExtension } from './extension';
+import { Structure } from '.';
 
 type SpawnCreepOptions = {
 	directions?: Direction[];
@@ -51,7 +51,7 @@ export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
 				}
 
 				// Save intent
-				gameContext.intents.save(this, 'spawn', {
+				Game.intents.save(this, 'spawn', {
 					name,
 					body,
 					directions: options.directions,

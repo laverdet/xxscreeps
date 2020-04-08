@@ -1,4 +1,4 @@
-import { gameContext } from '~/game/context';
+import { me } from '~/game/game';
 import { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
@@ -37,7 +37,7 @@ export default () => bindProcessor(Room, {
 		if (intent.createConstructionSite) {
 			const params = intent.createConstructionSite;
 			const pos = new RoomPosition(params.xx, params.yy, this.name);
-			const site = createConstructionSite(pos, params.structureType, params.name, gameContext.userId);
+			const site = createConstructionSite(pos, params.structureType, params.name, me);
 			insertObject(this, site);
 			return true;
 		}

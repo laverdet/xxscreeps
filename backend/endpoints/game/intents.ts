@@ -1,4 +1,5 @@
 import * as C from '~/game/constants';
+import { runAsUser } from '~/game/game';
 import { Endpoint } from '~/backend/endpoint';
 import { loadRoom, loadRooms, saveRoom } from '~/backend/model/room';
 import { loadUser, saveUser } from '~/backend/model/user';
@@ -6,11 +7,10 @@ import * as GameSchema from '~/engine/metadata/game';
 import * as ControllerIntents from '~/engine/processor/intents/controller';
 import * as RoomIntents from '~/engine/processor/intents/room';
 import * as SpawnIntents from '~/engine/processor/intents/spawn';
-import { runAsUser } from '~/game/context';
 import * as Room from '~/game/room';
 import { RoomPosition } from '~/game/position';
 import { concatInPlace } from '~/lib/utility';
-import { ServiceMessage } from '~/engine/service'
+import { ServiceMessage } from '~/engine/service';
 import { Channel } from '~/storage/channel';
 
 const CheckUniqueNameEndpoint: Endpoint = {

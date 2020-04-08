@@ -3,16 +3,13 @@ import lodash from 'lodash';
 import { inspect } from 'util';
 
 import { Creep } from '~/game/objects/creep';
-import { Game } from '~/game/game';
 import { RoomPosition } from '~/game/position';
 import { Room } from '~/game/room';
 import { Source } from '~/game/objects/source';
-
-import * as Constants from '~/game/constants';
-import { gameContext, IntentManager } from '~/game/context';
+import * as C from '~/game/constants';
+import { initializeIntents, flushIntents, runForUser } from '~/game/game';
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
-import * as PathFinder from '~/game/path-finder';
 import * as UserCode from '~/engine/metadata/code';
 import { BufferView } from '~/lib/schema/buffer-view';
 
@@ -21,15 +18,15 @@ import { setupConsole, Writer } from './console';
 // Sets up prototype overlays
 import '~/engine/schema/room';
 
-declare const global: any;
+declare const globalThis: any;
 
 // Global lodash compatibility
-global._ = lodash;
+globalThis._ = lodash;
 
 // Export prototypes
-global.Creep = Creep;
-global.RoomPosition = RoomPosition;
-global.Source = Source;
+globalThis.Creep = Creep;
+globalThis.RoomPosition = RoomPosition;
+globalThis.Source = Source;
 
 /**
  * TODO: lock these
@@ -40,10 +37,11 @@ global.Source = Source;
  */
 
 // Export constants
-for (const [ identifier, value ] of Object.entries(Constants)) {
-	global[identifier] = value;
+for (const [ identifier, value ] of Object.entries(C)) {
+	globalThis[identifier] = value;
 }
 
+let me: string;
 let require: (name: string) => any;
 let writeConsole: Writer;
 
@@ -71,12 +69,12 @@ export function initialize(
 	if (!modules.has('main')) {
 		modules.set('main', '');
 	}
-	gameContext.userId = data.userId;
+	me = data.userId;
 	Memory.initialize(data.memoryBlob);
 
 	// Set up global `require`
 	const cache = Object.create(null);
-	global.require = require = name => {
+	globalThis.require = require = name => {
 		// Check cache
 		const cached = cache[name];
 		if (cached !== undefined) {
@@ -131,16 +129,14 @@ export function initializeIsolated(
 }
 
 export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEval?: string[]) {
-	// Reset context
-	gameContext.intents = new IntentManager;
-
-	// Build game object
+	// Run player loop
+	initializeIntents();
 	const rooms = roomBlobs.map(buffer =>
 		new Room(BufferView.fromTypedArray(buffer)));
-	global.Game = new Game(time, rooms);
-
-	// Run player loop
-	require('main').loop();
+	runForUser(me, time, rooms, Game => {
+		globalThis.Game = Game;
+		require('main').loop();
+	});
 
 	// Run console expressions
 	const consoleResults = consoleEval?.map(expr => {
@@ -153,12 +149,11 @@ export function tick(time: number, roomBlobs: Readonly<Uint8Array>[], consoleEva
 
 	// Post-tick tasks
 	const memory = Memory.flush();
-	PathFinder.flush();
 
 	// Return JSON'd intents
 	const intents = function() {
 		const intents: Dictionary<SharedArrayBuffer> = Object.create(null);
-		const { intentsByRoom } = gameContext.intents;
+		const { intentsByRoom } = flushIntents();
 		const roomNames = Object.keys(intentsByRoom);
 		const { length } = roomNames;
 		for (let ii = 0; ii < length; ++ii) {

@@ -1,5 +1,6 @@
 import * as PathFinder from '~/game/path-finder';
 import * as C from '~/game/constants';
+import * as Game from '~/game/game';
 import type { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { firstMatching } from '~/lib/utility';
 import type { RoomObject } from './objects/room-object';

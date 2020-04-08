@@ -1,5 +1,5 @@
 import * as C from '~/game/constants';
-import { gameContext } from '~/game/context';
+import * as Game from '~/game/game';
 import { getPositonInDirection, Direction, RoomPosition } from '~/game/position';
 import * as Creep from '~/game/objects/creep';
 import { bindProcessor } from '~/engine/processor/bind';
@@ -74,7 +74,7 @@ function createCreep(spawn: StructureSpawn, intent: Parameters['spawn']) {
 	}
 
 	// Add new creep to room objects
-	const creep = CreepIntent.create(intent.body, spawn.pos, intent.name, gameContext.userId);
+	const creep = CreepIntent.create(intent.body, spawn.pos, intent.name, Game.me);
 	RoomIntent.insertObject(spawn.room, creep);
 
 	// Set spawning information

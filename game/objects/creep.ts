@@ -1,6 +1,5 @@
 import * as C from '~/game/constants';
 import * as Game from '~/game/game';
-import { gameContext } from '~/game/context';
 import * as Memory from '~/game/memory';
 import { withOverlay } from '~/lib/schema';
 import type { shape } from '~/engine/schema/creep';
@@ -20,14 +19,14 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 		const creeps = memory.creeps ?? (memory.creeps = {});
 		return creeps[this.name] ?? (creeps[this.name] = {});
 	}
-	get my() { return this._owner === gameContext.userId }
+	get my() { return this._owner === Game.me }
 	get spawning() { return this._ageTime === 0 }
 	get ticksToLive() { return this._ageTime - Game.time }
 
 	build(target: ConstructionSite) {
 		return chainIntentChecks(
 			() => checkBuild(this, target),
-			() => gameContext.intents.save(this, 'build', { target: target.id }));
+			() => Game.intents.save(this, 'build', { target: target.id }));
 	}
 
 	getActiveBodyparts(type: C.BodyPart) {
@@ -38,13 +37,13 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 	harvest(target: Source) {
 		return chainIntentChecks(
 			() => checkHarvest(this, target),
-			() => gameContext.intents.save(this, 'harvest', { target: target.id }));
+			() => Game.intents.save(this, 'harvest', { target: target.id }));
 	}
 
 	move(direction: Direction) {
 		return chainIntentChecks(
 			() => checkMove(this, direction),
-			() => gameContext.intents.save(this, 'move', { direction }));
+			() => Game.intents.save(this, 'move', { direction }));
 	}
 
 	moveTo(x: number, y: number): number;
@@ -75,7 +74,7 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 	transfer(target: RoomObjectWithStore, resourceType: C.ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),
-			() => gameContext.intents.save(this, 'transfer', { amount, resourceType, target: target.id }),
+			() => Game.intents.save(this, 'transfer', { amount, resourceType, target: target.id }),
 		);
 	}
 
@@ -83,7 +82,7 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 	upgradeController(target: StructureController) {
 		return chainIntentChecks(
 			() => checkUpgradeController(this, target),
-			() => gameContext.intents.save(this, 'upgradeController', { target: target.id }),
+			() => Game.intents.save(this, 'upgradeController', { target: target.id }),
 		);
 	}
 

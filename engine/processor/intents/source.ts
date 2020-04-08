@@ -1,6 +1,7 @@
 import * as C from '~/game/constants';
-import { bindProcessor } from '~/engine/processor/bind';
+import * as Game from '~/game/game';
 import { Source } from '~/game/objects/source';
+import { bindProcessor } from '~/engine/processor/bind';
 
 export default () => bindProcessor(Source, {
 	tick() {

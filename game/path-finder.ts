@@ -1,14 +1,14 @@
-import { search } from '~/driver/path-finder';
 import * as C from '~/game/constants';
+import { search } from '~/driver/path-finder';
 import { Variant } from '~/lib/schema';
 import { getOrSet, instantiate } from '~/lib/utility';
-import { RoomPosition } from './position';
-import { Room } from './room';
-import { ConstructionSite } from './objects/construction-site';
+import * as Game from './game';
+import type { RoomPosition } from './position';
+import type { Room } from './room';
+import type { RoomObject } from './objects/room-object';
 import { Creep } from './objects/creep';
-import { RoomObject } from './objects/room-object';
 import { Structure } from './objects/structures';
-import { gameContext } from './context';
+import { ConstructionSite } from './objects/construction-site';
 
 export { search };
 
@@ -98,7 +98,7 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 				const costMatrix = new CostMatrix;
 
 				// Mark obstacles
-				const check = obstacleChecker(room, gameContext.userId, {
+				const check = obstacleChecker(room, Game.me, {
 					ignoreCreeps,
 					ignoreDestructibleStructures,
 					pathing: true,

@@ -3,7 +3,7 @@ import * as Room from '~/engine/schema/room';
 import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
-import { Game } from '~/game/game';
+import { runWithState } from '~/game/game';
 import { loadTerrain } from '~/game/map';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
@@ -53,15 +53,16 @@ export default async function() {
 						blobStorage.delete(`intents/${room}/${user}`)));
 					// Process the room
 					const roomInstance = Room.read(roomBlob);
-					(global as any).Game = new Game(gameTime, [ roomInstance ]);
 					const context = new ProcessorContext(gameTime, roomInstance);
-					for (const intentInfo of intents) {
-						assert.equal(intentInfo.intents.byteOffset, 0);
-						const uint16 = new Uint16Array(intentInfo.intents.buffer);
-						const intents = JSON.parse(String.fromCharCode(...uint16));
-						context.processIntents(intentInfo.user, intents);
-					}
-					context.processTick();
+					runWithState([ roomInstance ], () => {
+						for (const intentInfo of intents) {
+							assert.equal(intentInfo.intents.byteOffset, 0);
+							const uint16 = new Uint16Array(intentInfo.intents.buffer);
+							const intents = JSON.parse(String.fromCharCode(...uint16));
+							context.processIntents(intentInfo.user, intents);
+						}
+						context.processTick();
+					});
 					// Save and notify main service of completion
 					await deleteIntentBlobs;
 					processedRooms.set(room, context);

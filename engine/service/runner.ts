@@ -128,7 +128,6 @@ export default async function() {
 							try {
 								return await sandbox.run(gameTime, roomBlobs, exchange(instance, 'consoleEval'));
 							} catch (err) {
-								// console.log(err);
 								return { intents: {} };
 							}
 						}();

@@ -4,13 +4,12 @@ import { Room } from '~/game/room';
 import type { Intents as CreepIntents } from '~/engine/processor/intents/creep';
 import type { Intents as RoomIntents } from '~/engine/processor/intents/room';
 import type { Intents as SpawnIntents } from '~/engine/processor/intents/spawn';
-import { setTime } from './game';
 
 const kCpuCost = 0.2;
 
 export class IntentManager {
 	cpu = 0;
-	intentsByRoom = Object.create(null);
+	intentsByRoom: Dictionary<Record<string, any>> = Object.create(null);
 
 	getIntentsForRoomAndId(room: string, id: string) {
 		const intentsForRoom = this.intentsByRoom[room] ?? (this.intentsByRoom[room] = Object.create(null));
@@ -38,23 +37,5 @@ export class IntentManager {
 		}
 		intents[action] = meta;
 		return C.OK;
-	}
-}
-
-type GameContext = {
-	intents: IntentManager;
-	userId: string;
-};
-
-export const gameContext: GameContext = {} as any;
-
-export function runAsUser(user: string, time: number, fn: () => void) {
-	setTime(time);
-	gameContext.userId = user;
-	try {
-		fn();
-	} finally {
-		setTime(NaN);
-		gameContext.userId = undefined as any;
 	}
 }

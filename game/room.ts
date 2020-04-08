@@ -8,8 +8,7 @@ import { Process, ProcessorSpecification, Tick } from '~/engine/processor/bind';
 import type { shape } from '~/engine/schema/room';
 import { iteratee } from '~/engine/util/iteratee';
 
-import { gameContext } from './context';
-import { chainIntentChecks, RoomObject } from './objects/room-object';
+import * as Game from './game';
 import { fetchArguments, iterateNeighbors, RoomPosition } from './position';
 import * as PathFinder from './path-finder';
 import { getTerrainForRoom } from './map';
@@ -17,6 +16,7 @@ import { isBorder, isNearBorder } from './terrain';
 
 import { ConstructionSite, ConstructibleStructureType } from './objects/construction-site';
 import { Creep } from './objects/creep';
+import { chainIntentChecks, RoomObject } from './objects/room-object';
 import { Source } from './objects/source';
 import { Structure } from './objects/structures';
 import { StructureController } from './objects/structures/controller';
@@ -188,7 +188,7 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 				return C.OK;
 			},
 			() => checkCreateConstructionSite(this, pos, structureType),
-			() => gameContext.intents.save(this, 'createConstructionSite', { name, structureType, xx, yy }));
+			() => Game.intents.save(this, 'createConstructionSite', { name, structureType, xx, yy }));
 	}
 }
 

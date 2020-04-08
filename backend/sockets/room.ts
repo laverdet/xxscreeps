@@ -1,6 +1,6 @@
 import * as Room from '~/engine/schema/room';
 import * as User from '~/engine/metadata/user';
-import { runAsUser } from '~/game/context';
+import { runAsUser } from '~/game/game';
 import { SubscriptionEndpoint } from '../socket';
 import { Render } from './render';
 import { mapInPlace, mapToKeys } from '~/lib/utility';
