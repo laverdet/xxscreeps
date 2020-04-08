@@ -84,7 +84,7 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 						for (let ii = 0; ii < length; ++ii) {
 							view.uint16[stringOffset16 + ii] = value.charCodeAt(ii);
 						}
-						view.int32[stringOffset16 >>> 1] = -length;
+						view.int32[offset >>> 2] = -length;
 						return (length << 1) + kPointerSize;
 					}
 				}
@@ -237,7 +237,7 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 	return write;
 });
 
-const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 * 1024 * 2)));
+const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 * 1024 * 16)));
 
 export function getWriter<Type extends Format>(format: Type, lookup = defaultInterceptorLookup) {
 	const layout = getLayout(format);

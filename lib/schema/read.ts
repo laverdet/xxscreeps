@@ -4,7 +4,7 @@ import { getLayout, Format, TypeOf, Variant } from './format';
 import { defaultInterceptorLookup, InterceptorLookup } from './interceptor';
 import { kPointerSize, getTraits, unpackHolder, Layout, StructLayout } from './layout';
 import { RecursiveWeakMemoize } from '~/lib/memoize';
-const { fromCharCode } = String;
+import { typedArrayToString } from '~/lib/string';
 
 type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
@@ -69,10 +69,10 @@ export const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, loo
 				const length = view.int32[offset >>> 2];
 				if (length > 0) {
 					const stringOffset = offset + kPointerSize;
-					return fromCharCode(...view.int8.slice(stringOffset, stringOffset + length));
+					return typedArrayToString(view.int8.slice(stringOffset, stringOffset + length));
 				} else if (length < 0) {
 					const stringOffset16 = offset + kPointerSize >>> 1;
-					return fromCharCode(...view.uint16.slice(stringOffset16, stringOffset16 - length));
+					return typedArrayToString(view.uint16.slice(stringOffset16, stringOffset16 - length));
 				} else {
 					return '';
 				}
