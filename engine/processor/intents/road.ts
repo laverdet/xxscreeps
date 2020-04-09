@@ -11,7 +11,7 @@ export function create(pos: RoomPosition) {
 	return instantiate(StructureRoad, {
 		...newRoomObject(pos),
 		hits: C.ROAD_HITS,
-		nextDecayTime: Game.time + C.ROAD_DECAY_TIME,
+		_nextDecayTime: Game.time + C.ROAD_DECAY_TIME,
 		_owner: undefined,
 	});
 }
@@ -26,7 +26,7 @@ export default () => bindProcessor(StructureRoad, {
 				terrain === C.TERRAIN_MASK_SWAMP ? C.CONSTRUCTION_COST_ROAD_SWAMP_RATIO :
 				1;
 			this.hits -= C.ROAD_DECAY_AMOUNT * decayMultiplier;
-			this.nextDecayTime = Game.time + C.ROAD_DECAY_TIME;
+			this._nextDecayTime = Game.time + C.ROAD_DECAY_TIME;
 		}
 		return true;
 	},

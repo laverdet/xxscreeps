@@ -3,6 +3,7 @@ import { ConstructionSite } from '~/game/objects/construction-site';
 import { Creep } from '~/game/objects/creep';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
+import { StructureContainer } from '~/game/objects/structures/container';
 import { StructureController } from '~/game/objects/structures/controller';
 import { StructureExtension } from '~/game/objects/structures/extension';
 import { StructureRoad } from '~/game/objects/structures/road';
@@ -11,7 +12,7 @@ import { Store } from '~/game/store';
 import { Variant } from '~/lib/schema';
 
 export const Render: unique symbol = Symbol('render');
-function bindRenderer<Type>(impl: { prototype: Type }, renderer: (this: Type, time: number) => object) {
+function bindRenderer<Type>(impl: { prototype: Type }, renderer: (this: Type) => object) {
 	(impl.prototype as any)[Render] = renderer;
 }
 
@@ -63,7 +64,7 @@ bindRenderer(ConstructionSite, function render() {
 	};
 });
 
-bindRenderer(Creep, function render(time) {
+bindRenderer(Creep, function render() {
 	return {
 		...renderObject(this),
 		...renderStore(this.store),
@@ -73,7 +74,7 @@ bindRenderer(Creep, function render(time) {
 		hitsMax: 100,
 		spawning: false,
 		fatigue: 0,
-		ageTime: this.ticksToLive + time,
+		ageTime: this._ageTime,
 		user: this._owner,
 		actionLog: {
 			attacked: null,
@@ -93,13 +94,12 @@ bindRenderer(Creep, function render(time) {
 	};
 });
 
-bindRenderer(Source, function render(time) {
+bindRenderer(Source, function render() {
 	return {
 		...renderObject(this),
 		energy: this.energy,
 		energyCapacity: this.energyCapacity,
-		nextRegenerationTime: this.ticksToRegeneration === undefined ?
-			undefined : this.ticksToRegeneration + time,
+		nextRegenerationTime: this._nextRegenerationTime,
 	};
 });
 
@@ -109,13 +109,20 @@ bindRenderer(Structure, function render() {
 	};
 });
 
-bindRenderer(StructureController, function render(time) {
+bindRenderer(StructureContainer, function render() {
+	return {
+		...renderStructure(this),
+		...renderStore(this.store),
+		nextDecayTime: this._nextDecayTime,
+	};
+});
+
+bindRenderer(StructureController, function render() {
 	return {
 		...renderStructure(this),
 		level: this.level,
 		progress: this.progress,
-		downgradeTime: this.ticksToDowngrade === undefined ?
-			undefined : this.ticksToDowngrade + time,
+		downgradeTime: this._downgradeTime,
 		safeMode: 0,
 	};
 });
@@ -130,7 +137,7 @@ bindRenderer(StructureExtension, function render() {
 bindRenderer(StructureRoad, function render() {
 	return {
 		...renderStructure(this),
-		nextDecayTime: this.nextDecayTime,
+		nextDecayTime: this._nextDecayTime,
 	};
 });
 

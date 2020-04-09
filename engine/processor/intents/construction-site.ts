@@ -2,6 +2,7 @@ import { bindProcessor } from '~/engine/processor/bind';
 import { ConstructionSite, ConstructibleStructureType } from '~/game/objects/construction-site';
 import { RoomPosition } from '~/game/position';
 import { instantiate } from '~/lib/utility';
+import * as ContainerIntent from './container';
 import * as ExtensionIntent from './extension';
 import * as RoadIntent from './road';
 import * as RoomIntent from './room';
@@ -31,6 +32,7 @@ export default () => bindProcessor(ConstructionSite, {
 			RoomIntent.removeObject(room, this);
 			const structure = function() {
 				switch (structureType) {
+					case 'container': return ContainerIntent.create(pos);
 					case 'extension': return ExtensionIntent.create(pos, level, _owner);
 					case 'road': return RoadIntent.create(pos);
 					default:

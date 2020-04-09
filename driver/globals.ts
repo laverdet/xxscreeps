@@ -9,6 +9,7 @@ import { Room } from '~/game/room';
 import { RoomObject } from '~/game/objects/room-object';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
+import { StructureContainer } from '~/game/objects/structures/container';
 import { StructureController } from '~/game/objects/structures/controller';
 import { StructureExtension } from '~/game/objects/structures/extension';
 import { StructureRoad } from '~/game/objects/structures/road';
@@ -31,7 +32,6 @@ export function setupGlobals() {
 	globalThis.RawMemory = RawMemory;
 
 	// Not implemented
-	globalThis.StructureContainer = function() {};
 	globalThis.StructureLink = function() {};
 	globalThis.StructureStorage = function() {};
 	globalThis.StructureTerminal = function() {};
@@ -50,6 +50,7 @@ export function setupGlobals() {
 		RoomVisual,
 		Source,
 		Structure,
+		StructureContainer,
 		StructureController,
 		StructureExtension,
 		StructureRoad,

@@ -278,13 +278,13 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 		return `[Room ${this.name}]`;
 	}
 
-	[Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
+	[Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
 		// Every object has a `room` property so flatten this reference out unless it's a direct
 		// inspection
-		if (depth === 0) {
+		if (depth === options.depth) {
 			return this;
 		} else {
-			return `[Room ${stylize(this.name, 'string')}]`;
+			return `[Room ${options.stylize(this.name, 'string')}]`;
 		}
 	}
 }

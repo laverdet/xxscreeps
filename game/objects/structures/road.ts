@@ -6,7 +6,5 @@ import { Structure } from '.';
 
 export class StructureRoad extends withOverlay<typeof shape>()(Structure) {
 	get structureType() { return C.STRUCTURE_ROAD }
-	get ticksToDecay() {
-		return Math.max(0, this.nextDecayTime - Game.time);
-	}
+	get ticksToDecay() { return Math.max(0, this._nextDecayTime - Game.time) }
 }
