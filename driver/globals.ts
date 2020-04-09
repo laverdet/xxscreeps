@@ -11,6 +11,7 @@ import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
 import { StructureController } from '~/game/objects/structures/controller';
 import { StructureExtension } from '~/game/objects/structures/extension';
+import { StructureRoad } from '~/game/objects/structures/road';
 import { StructureSpawn } from '~/game/objects/structures/spawn';
 import { RoomVisual } from '~/game/visual';
 
@@ -51,6 +52,7 @@ export function setupGlobals() {
 		Structure,
 		StructureController,
 		StructureExtension,
+		StructureRoad,
 		StructureSpawn,
 	})) {
 		globalThis[key] = object;

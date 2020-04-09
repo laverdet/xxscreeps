@@ -26,6 +26,7 @@ export class Terrain {
 		if (index >= 0 && index < 2500) {
 			return this.#buffer[index >>> 2] >>> ((index & 0x03) << 1) & 0x03;
 		}
+		return NaN;
 	}
 
 	getRawBuffer(destinationArray?: Uint8Array): Uint8Array {

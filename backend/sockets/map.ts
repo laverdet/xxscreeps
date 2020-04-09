@@ -3,6 +3,7 @@ import { Creep } from '~/game/objects/creep';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
 import { StructureController } from '~/game/objects/structures/controller';
+import { StructureRoad } from '~/game/objects/structures/road';
 import { mapToKeys } from '~/lib/utility';
 import { SubscriptionEndpoint } from '../socket';
 
@@ -41,6 +42,8 @@ export const mapSubscription: SubscriptionEndpoint = {
 				const record = function() {
 					if (object instanceof StructureController) {
 						return response.c;
+					} else if (object instanceof StructureRoad) {
+						return response.r;
 					} else if (object instanceof Creep || object instanceof Structure) {
 						const owner: string = object._owner;
 						// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

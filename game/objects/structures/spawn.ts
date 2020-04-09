@@ -19,10 +19,16 @@ type SpawnCreepOptions = {
 };
 
 export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
-	get structureType() { return C.STRUCTURE_SPAWN }
-
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
+
+	get memory() {
+		const memory = Memory.get();
+		const spawns = memory.spawns ?? (memory.spawns = {});
+		return spawns[this.name] ?? (spawns[this.name] = {});
+	}
+
+	get structureType() { return C.STRUCTURE_SPAWN }
 
 	canCreateCreep(body: any, name?: any) {
 		return checkSpawnCreep(this, body, name ?? getUniqueName(name => Game.creeps[name] !== undefined));

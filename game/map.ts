@@ -35,7 +35,7 @@ export function getTerrainAt(...args: [ RoomPosition ] | [ number, number, strin
 }
 
 export function getTerrainForRoom(room: string) {
-	return world.get(room);
+	return world.get(room)!;
 }
 
 export async function loadTerrain(blobStorage: BlobStorage) {

@@ -1,9 +1,10 @@
+import * as C from '~/game/constants';
 import { me } from '~/game/game';
 import { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
-import { AnyRoomObject, Room } from '~/game/room';
-import { create as createConstructionSite } from './construction-site';
+import { AnyRoomObject, Room, checkCreateConstructionSite } from '~/game/room';
+import * as ConstructionIntents from './construction-site';
 
 type Parameters = {
 	createConstructionSite: {
@@ -20,16 +21,25 @@ export type Intents = {
 };
 
 export function insertObject(room: Room, object: AnyRoomObject) {
-	object.room = room;
 	room._objects.push(object);
+	(function(this: Room) {
+		this._wasInserted(object);
+	}).apply(room);
 }
 
-export function removeObject(room: Room, id: string) {
-	for (let ii = 0; ii < room._objects.length; ++ii) {
-		if (room._objects[ii].id === id) {
-			room._objects.splice(ii, 1);
+export function removeObject(room: Room, object: AnyRoomObject) {
+	(function() {
+		for (let ii = 0; ii < room._objects.length; ++ii) {
+			if (room._objects[ii].id === object.id) {
+				room._objects.splice(ii, 1);
+				return;
+			}
 		}
-	}
+		throw new Error('Removed object was not found');
+	})();
+	(function(this: Room) {
+		this._wasRemoved(object);
+	}).apply(room);
 }
 
 export default () => bindProcessor(Room, {
@@ -37,9 +47,10 @@ export default () => bindProcessor(Room, {
 		if (intent.createConstructionSite) {
 			const params = intent.createConstructionSite;
 			const pos = new RoomPosition(params.xx, params.yy, this.name);
-			const site = createConstructionSite(pos, params.structureType, params.name, me);
-			insertObject(this, site);
-			return true;
+			if (checkCreateConstructionSite(this, pos, params.structureType) === C.OK) {
+				const site = ConstructionIntents.create(pos, params.structureType, params.name, me);
+				insertObject(this, site);
+			}
 		}
 		return false;
 	},

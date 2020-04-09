@@ -5,6 +5,7 @@ import * as Controller from './controller';
 import * as ConstructionSite from './construction-site';
 import * as Creep from './creep';
 import * as Extension from './extension';
+import * as Road from './road';
 import * as Source from './source';
 import * as Spawn from './spawn';
 
@@ -15,6 +16,7 @@ export const shape = declare('Room', {
 		Controller.format,
 		Creep.format,
 		Extension.format,
+		Road.format,
 		Source.format,
 		Spawn.format,
 	)),

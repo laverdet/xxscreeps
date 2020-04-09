@@ -5,13 +5,14 @@ import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
 import { StructureController } from '~/game/objects/structures/controller';
 import { StructureExtension } from '~/game/objects/structures/extension';
+import { StructureRoad } from '~/game/objects/structures/road';
 import { StructureSpawn } from '~/game/objects/structures/spawn';
 import { Store } from '~/game/store';
 import { Variant } from '~/lib/schema';
 
 export const Render: unique symbol = Symbol('render');
-function bindRenderer<Type>(impl: Constructor<Type>, renderer: (this: Type, time: number) => object) {
-	impl.prototype[Render] = renderer;
+function bindRenderer<Type>(impl: { prototype: Type }, renderer: (this: Type, time: number) => object) {
+	(impl.prototype as any)[Render] = renderer;
 }
 
 function renderObject(object: RoomObject) {
@@ -58,6 +59,7 @@ bindRenderer(ConstructionSite, function render() {
 		progress: this.progress,
 		progressTotal: this.progressTotal,
 		structureType: this.structureType,
+		user: this._owner,
 	};
 });
 
@@ -101,6 +103,12 @@ bindRenderer(Source, function render(time) {
 	};
 });
 
+bindRenderer(Structure, function render() {
+	return {
+		...renderStructure(this),
+	};
+});
+
 bindRenderer(StructureController, function render(time) {
 	return {
 		...renderStructure(this),
@@ -116,6 +124,13 @@ bindRenderer(StructureExtension, function render() {
 	return {
 		...renderStructure(this),
 		...renderStore(this.store),
+	};
+});
+
+bindRenderer(StructureRoad, function render() {
+	return {
+		...renderStructure(this),
+		nextDecayTime: this.nextDecayTime,
 	};
 });
 

@@ -70,7 +70,7 @@ export function flush(): Readonly<Uint8Array> {
 				throw new Error(`Reached maximum \`Memory\` limit. Requested: ${length} out of ${kMemoryMaxLength}`);
 			}
 			// Leave a little wiggle room
-			memory = new Uint16Array(new SharedArrayBuffer(align(length)));
+			memory = new Uint16Array(new SharedArrayBuffer(align(length) << 1));
 		}
 		// Copy string into buffer
 		for (let ii = 0; ii < length; ++ii) {
@@ -84,7 +84,7 @@ export function flush(): Readonly<Uint8Array> {
 export function initialize(value?: Readonly<Uint8Array>) {
 	if (value) {
 		memoryLength = value.length >>> 1;
-		memory = new Uint16Array(new SharedArrayBuffer(align(memoryLength)));
+		memory = new Uint16Array(new SharedArrayBuffer(align(value.length)));
 		memory.set(new Uint16Array(value.buffer, value.byteOffset, memoryLength));
 	} else {
 		memoryLength = 0;

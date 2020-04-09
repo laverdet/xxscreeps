@@ -16,23 +16,23 @@ export type ErrorCode =
 	typeof ERR_NOT_ENOUGH_EXTENSIONS |
 	typeof ERR_RCL_NOT_ENOUGH |
 	typeof ERR_GCL_NOT_ENOUGH;
-export const OK = 0;
-export const ERR_NOT_OWNER = -1;
-export const ERR_NO_PATH = -2;
-export const ERR_NAME_EXISTS = -3;
-export const ERR_BUSY = -4;
-export const ERR_NOT_FOUND = -5;
-export const ERR_NOT_ENOUGH_ENERGY = -6;
-export const ERR_NOT_ENOUGH_RESOURCES = -6;
-export const ERR_INVALID_TARGET = -7;
-export const ERR_FULL = -8;
-export const ERR_NOT_IN_RANGE = -9;
-export const ERR_INVALID_ARGS = -10;
-export const ERR_TIRED = -11;
-export const ERR_NO_BODYPART = -12;
-export const ERR_NOT_ENOUGH_EXTENSIONS = -6;
-export const ERR_RCL_NOT_ENOUGH = -14;
-export const ERR_GCL_NOT_ENOUGH = -15;
+export const OK = 0 as const;
+export const ERR_NOT_OWNER = -1 as const;
+export const ERR_NO_PATH = -2 as const;
+export const ERR_NAME_EXISTS = -3 as const;
+export const ERR_BUSY = -4 as const;
+export const ERR_NOT_FOUND = -5 as const;
+export const ERR_NOT_ENOUGH_ENERGY = -6 as const;
+export const ERR_NOT_ENOUGH_RESOURCES = -6 as const;
+export const ERR_INVALID_TARGET = -7 as const;
+export const ERR_FULL = -8 as const;
+export const ERR_NOT_IN_RANGE = -9 as const;
+export const ERR_INVALID_ARGS = -10 as const;
+export const ERR_TIRED = -11 as const;
+export const ERR_NO_BODYPART = -12 as const;
+export const ERR_NOT_ENOUGH_EXTENSIONS = -6 as const;
+export const ERR_RCL_NOT_ENOUGH = -14 as const;
+export const ERR_GCL_NOT_ENOUGH = -15 as const;
 
 export const TOP = 1 as const;
 export const TOP_RIGHT = 2 as const;

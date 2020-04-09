@@ -1,21 +1,11 @@
+import { bindProcessor } from '~/engine/processor/bind';
 import { ConstructionSite, ConstructibleStructureType } from '~/game/objects/construction-site';
 import { RoomPosition } from '~/game/position';
 import { instantiate } from '~/lib/utility';
 import * as ExtensionIntent from './extension';
+import * as RoadIntent from './road';
 import * as RoomIntent from './room';
 import { newRoomObject } from './room-object';
-
-export function build(site: ConstructionSite, energy: number) {
-	site.progress += energy;
-	if (site.progress >= site.progressTotal) {
-		const { pos, room, structureType } = site;
-		const level = site.room.controller?.level ?? 0;
-		RoomIntent.removeObject(room, site.id);
-		if (structureType === 'extension') {
-			RoomIntent.insertObject(room, ExtensionIntent.create(pos, level, site._owner));
-		}
-	}
-}
 
 export function create(
 	pos: RoomPosition,
@@ -32,3 +22,24 @@ export function create(
 		_owner: owner,
 	});
 }
+
+export default () => bindProcessor(ConstructionSite, {
+	tick() {
+		if (this.progress >= this.progressTotal) {
+			const { pos, room, structureType, _owner } = this;
+			const level = this.room.controller?.level ?? 0;
+			RoomIntent.removeObject(room, this);
+			const structure = function() {
+				switch (structureType) {
+					case 'extension': return ExtensionIntent.create(pos, level, _owner);
+					case 'road': return RoadIntent.create(pos);
+					default:
+				}
+			}();
+			if (structure) {
+				RoomIntent.insertObject(room, structure);
+			}
+		}
+		return true;
+	},
+});

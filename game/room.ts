@@ -27,6 +27,12 @@ import { StructureSpawn } from './objects/structures/spawn';
 import { RoomVisual } from './visual';
 
 export type AnyRoomObject = InstanceType<typeof Room>['_objects'][number];
+type ExitDirection =
+	typeof C.FIND_EXIT_TOP |
+	typeof C.FIND_EXIT_RIGHT |
+	typeof C.FIND_EXIT_BOTTOM |
+	typeof C.FIND_EXIT_LEFT;
+
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
 	serialize?: boolean;
 };
@@ -79,21 +85,7 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 		super(view, offset);
 		for (const object of this._objects) {
 			object.room = this;
-			if (object instanceof Structure) {
-				this.#structures.push(object);
-				if (object instanceof StructureController) {
-					this.controller = object;
-				} else if (object instanceof StructureExtension || object instanceof StructureSpawn) {
-					this.energyAvailable += object.store[C.RESOURCE_ENERGY];
-					this.energyCapacityAvailable += object.store.getCapacity(C.RESOURCE_ENERGY);
-				}
-			} else if (object instanceof Creep) {
-				this.#creeps.push(object);
-			} else if (object instanceof Source) {
-				this.#sources.push(object);
-			} else if (object instanceof ConstructionSite) {
-				this.#constructionSites.push(object);
-			}
+			this._afterInsertion(object);
 		}
 	}
 
@@ -138,6 +130,16 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 
 		// Copy or filter result
 		return options.filter === undefined ? results.slice() : results.filter(iteratee(options.filter)) as any[];
+	}
+
+	/**
+	 * Find the exit direction en route to another room. Please note that this method is not required
+	 * for inter-room movement, you can simply pass the target in another room into Creep.moveTo
+	 * method.
+	 * @param room Another room name or room object
+	 */
+	findExitTo(/*room: Room | string*/): ExitDirection | typeof C.ERR_NO_PATH | typeof C.ERR_INVALID_ARGS {
+		return C.ERR_NO_PATH;
 	}
 
 	/**
@@ -214,6 +216,64 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 		return new RoomVisual;
 	}
 
+	// `_wasInserted` and `_wasRemoved` are called "externally" from intent processors to notify the
+	// class that `._objects` has been changed. This clears the `.find` caches
+	protected _wasInserted(object: AnyRoomObject) {
+		this._afterInsertion(object);
+		for (const find of getFindConstantsForObject(object)) {
+			this.#findCache.delete(find);
+		}
+	}
+
+	protected _wasRemoved(object: AnyRoomObject) {
+		this._afterRemoval(object);
+		for (const find of getFindConstantsForObject(object)) {
+			this.#findCache.delete(find);
+		}
+	}
+
+	// `_afterInsertion` and `_afterRemoval` should only be called from this file to add or remove
+	// objects from the type-based list manifests
+	private _afterInsertion(object: AnyRoomObject) {
+		object.room = this;
+		if (object instanceof Structure) {
+			this.#structures.push(object);
+			if (object instanceof StructureController) {
+				this.controller = object;
+			} else if (object instanceof StructureExtension || object instanceof StructureSpawn) {
+				this.energyAvailable += object.store[C.RESOURCE_ENERGY];
+				this.energyCapacityAvailable += object.store.getCapacity(C.RESOURCE_ENERGY);
+			}
+		} else if (object instanceof Creep) {
+			this.#creeps.push(object);
+		} else if (object instanceof Source) {
+			this.#sources.push(object);
+		} else if (object instanceof ConstructionSite) {
+			this.#constructionSites.push(object);
+		}
+	}
+
+	private _afterRemoval(object: AnyRoomObject) {
+		object.room = null as any as Room;
+		if (object instanceof Structure) {
+			removeOne(this.#structures, object);
+			if (object instanceof StructureController) {
+				this.controller = undefined;
+			} else if (object instanceof StructureExtension || object instanceof StructureSpawn) {
+				this.energyAvailable -= object.store[C.RESOURCE_ENERGY];
+				this.energyCapacityAvailable -= object.store.getCapacity(C.RESOURCE_ENERGY);
+			}
+		} else if (object instanceof Creep) {
+			removeOne(this.#creeps, object);
+		} else if (object instanceof Source) {
+			removeOne(this.#sources, object);
+		} else if (object instanceof ConstructionSite) {
+			removeOne(this.#constructionSites, object);
+		}
+	}
+
+	//
+	// Debug utilities
 	toString() {
 		return `[Room ${this.name}]`;
 	}
@@ -307,4 +367,30 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 	// TODO: Limit total construction sites built
 
 	return C.OK;
+}
+
+//
+// Utilities
+function getFindConstantsForObject(object: RoomObject) {
+	if (object instanceof Structure) {
+		return [ C.FIND_STRUCTURES, C.FIND_MY_STRUCTURES, C.FIND_HOSTILE_STRUCTURES ];
+
+	} else if (object instanceof Creep) {
+		return [ C.FIND_CREEPS, C.FIND_MY_CREEPS, C.FIND_HOSTILE_CREEPS ];
+
+	} else if (object instanceof ConstructionSite) {
+		return [ C.FIND_CONSTRUCTION_SITES, C.FIND_MY_CONSTRUCTION_SITES, C.FIND_HOSTILE_CONSTRUCTION_SITES ];
+
+	} else if (object instanceof Source) {
+		return [ C.FIND_SOURCES, C.FIND_SOURCES_ACTIVE ];
+	}
+	return [];
+}
+
+function removeOne<Type>(list: Type[], element: Type) {
+	const index = list.indexOf(element);
+	if (index === -1) {
+		throw new Error('Removed object was not found');
+	}
+	list.splice(index, 1);
 }

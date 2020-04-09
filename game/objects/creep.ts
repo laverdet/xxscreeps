@@ -233,7 +233,7 @@ export function checkTransfer(
 				tryAmount = Math.min(creep.store[resourceType]!, targetFreeCapacity);
 			}
 
-			if (!(tryAmount >= creep.store[resourceType]!)) {
+			if (!(tryAmount <= creep.store[resourceType]!)) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
 

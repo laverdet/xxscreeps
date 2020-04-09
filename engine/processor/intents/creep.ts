@@ -8,7 +8,6 @@ import { Direction, RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
 import type { ResourceType, RoomObjectWithStore } from '~/game/store';
 import { instantiate } from '~/lib/utility';
-import * as ConstructionSiteIntent from './construction-site';
 import * as StructureControllerIntent from './controller';
 import * as Movement from './movement';
 import { newRoomObject } from './room-object';
@@ -52,10 +51,18 @@ export default () => bindProcessor(Creep.Creep, {
 	process(intent: Partial<Parameters>) {
 		if (intent.build) {
 			const { target: id } = intent.build;
-			const target = Game.getObjectById(id) as ConstructionSite | undefined;
+			const target = Game.getObjectById(id) as ConstructionSite;
 			if (Creep.checkBuild(this, target) === C.OK) {
-				StoreIntent.subtract(this.store, 'energy', 2);
-				ConstructionSiteIntent.build(target!, 2);
+				const power = 2;
+				const energy = Math.min(
+					target.progressTotal - target.progress,
+					this.store.energy,
+					power,
+				);
+				if (energy > 0) {
+					StoreIntent.subtract(this.store, 'energy', energy);
+					target.progress += energy;
+				}
 			}
 
 		} else if (intent.harvest) {
@@ -95,7 +102,7 @@ export default () => bindProcessor(Creep.Creep, {
 
 		if (intent.suicide) {
 			if (this.my) {
-				RoomIntent.removeObject(this.room, this.id);
+				RoomIntent.removeObject(this.room, this);
 			}
 		}
 		return false;
@@ -103,7 +110,7 @@ export default () => bindProcessor(Creep.Creep, {
 
 	tick() {
 		if (Game.time >= this._ageTime && this._ageTime !== 0) {
-			RoomIntent.removeObject(this.room, this.id);
+			RoomIntent.removeObject(this.room, this);
 			return true;
 		}
 		const nextPosition = Movement.get(this);
