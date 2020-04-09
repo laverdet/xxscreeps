@@ -120,29 +120,29 @@ export type TickArguments = {
 };
 
 export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArguments) {
-	// Run player loop
 	initializeIntents();
 	const rooms = roomBlobs.map(buffer =>
 		new Room(BufferView.fromTypedArray(buffer)));
-	try {
-		runForUser(me, time, rooms, Game => {
-			globalThis.Game = Game;
-			require('main').loop();
-		});
-	} catch (err) {
-		writeConsole(2, err.stack);
-	}
-
-	// Run console expressions
-	const consoleResults = consoleEval?.map(expr => {
+	runForUser(me, time, rooms, Game => {
+		globalThis.Game = Game;
+		// Run player loop
 		try {
-			writeConsole(1, inspect(new Function('expr', 'return eval(expr)')(expr), { colors: true }), true);
+			require('main').loop();
 		} catch (err) {
-			writeConsole(2, err.stack, true);
+			writeConsole(2, err.stack);
 		}
+
+		// Run console expressions
+		consoleEval?.map(expr => {
+			try {
+				writeConsole(1, inspect(new Function('expr', 'return eval(expr)')(expr), { colors: true }), true);
+			} catch (err) {
+				writeConsole(2, err.stack, true);
+			}
+		});
 	});
 
-	// Run user intents
+	// Inject user intents
 	if (userIntents) {
 		for (const intent of userIntents) {
 			intents.getIntentsForRoomAndId(intent.room, intent.id)[intent.intent] = true;
@@ -170,5 +170,5 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 		}
 		return intents;
 	}();
-	return { consoleResults, intents: intentsBlobs, memory };
+	return { intents: intentsBlobs, memory };
 }

@@ -145,7 +145,7 @@ export function runWithState<Type>(rooms_: Room[], task: () => Type) {
  * Used by the runtime, sets up everything the user's script needs and invokes the callback with a
  * fresh `Game` object
  */
-export function runForUser(userId: string, time_: number, rooms: Room[], task: (game: Game) => void) {
-	runAsUser(userId, time_, () =>
+export function runForUser<Type>(userId: string, time_: number, rooms: Room[], task: (game: Game) => Type) {
+	return runAsUser(userId, time_, () =>
 		runWithState(rooms, () => task(new Game)));
 }
