@@ -1,3 +1,4 @@
+import type { InspectOptionsStylized } from 'util';
 import { iteratee } from '~/engine/util/iteratee';
 import * as PathFinder from '~/game/path-finder';
 import * as C from '~/game/constants';
@@ -285,16 +286,16 @@ export class RoomPosition {
 		Memory.flags = {};
 	}
 
-	[Symbol.for('nodejs.util.inspect.custom')]() {
-		return `${this}`;
-	}
-
 	toJSON() {
 		return { x: this.x, y: this.y, roomName: this.roomName };
 	}
 
 	toString() {
 		return `[room ${this.roomName} pos ${this.x},${this.y}]`;
+	}
+
+	[Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
+		return `[RoomPosition ${stylize(this.roomName, 'string')} {${stylize(`${this.x}`, 'number')}, ${stylize(`${this.y}`, 'number')}}]`;
 	}
 
 	[PositionInteger]: number;

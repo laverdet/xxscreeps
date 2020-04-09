@@ -1,4 +1,5 @@
 import * as C from './constants';
+import type { InspectOptionsStylized } from 'util';
 
 import { BufferObject } from '~/lib/schema/buffer-object';
 import type { BufferView } from '~/lib/schema/buffer-view';
@@ -211,6 +212,20 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 
 	get visual() {
 		return new RoomVisual;
+	}
+
+	toString() {
+		return `[Room ${this.name}]`;
+	}
+
+	[Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
+		// Every object has a `room` property so flatten this reference out unless it's a direct
+		// inspection
+		if (depth === 0) {
+			return this;
+		} else {
+			return `[Room ${stylize(this.name, 'string')}]`;
+		}
 	}
 }
 

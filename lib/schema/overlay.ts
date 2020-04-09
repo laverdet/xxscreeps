@@ -56,7 +56,9 @@ export function injectGetters(layout: StructLayout, prototype: object, lookup: I
 		}();
 
 		// Define getter on proto
+		const isPrivate = typeof symbol === 'symbol' || symbol.startsWith('_');
 		Object.defineProperty(prototype, symbol, {
+			configurable: !isPrivate,
 			get,
 			set(value) {
 				defineProperty(this, symbol, {
