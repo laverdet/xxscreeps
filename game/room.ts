@@ -68,9 +68,10 @@ type FindExitDirection =
 	typeof C.FIND_EXIT_BOTTOM |
 	typeof C.FIND_EXIT_LEFT;
 
+type FindExitConstants = FindExitDirection | typeof C.FIND_EXIT;
+
 export type FindConstants =
-	FindExitDirection |
-	typeof C.FIND_EXIT |
+	FindExitConstants |
 	keyof typeof findToLook;
 
 export type LookConstants = typeof findToLook extends Record<string, infer Look> ? Look : never;
@@ -82,6 +83,7 @@ type LookToFind = {
 };
 
 export type RoomFindType<Type extends FindConstants> =
+	Type extends FindExitConstants ? RoomPosition :
 	Type extends typeof C.FIND_MY_SPAWNS | typeof C.FIND_HOSTILE_SPAWNS ? StructureSpawn :
 	Type extends keyof typeof findToLook ? RoomLookType<typeof findToLook[Type]> :
 	never;
@@ -109,8 +111,8 @@ export type LookType<Type extends RoomObject> = {
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
 	serialize?: boolean;
 };
-export type RoomFindOptions = {
-	filter?: string | object | ((object: RoomObject) => boolean);
+export type RoomFindOptions<Type = any> = {
+	filter?: string | object | ((object: Type) => LooseBoolean);
 };
 
 // Methods which will be extracted and exported
@@ -146,7 +148,10 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 	 * @param type One of the FIND_* constants
 	 * @param opts
 	 */
-	find<Type extends FindConstants>(type: Type, options: RoomFindOptions = {}): RoomFindType<Type>[] {
+	find<Type extends FindConstants>(
+		type: Type,
+		options: RoomFindOptions<RoomFindType<Type>> = {},
+	): RoomFindType<Type>[] {
 		// Check find cache
 		let results = this.#findCache.get(type);
 		if (results === undefined) {
@@ -154,6 +159,39 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 			// Generate list
 			results = (() => {
 				switch (type) {
+					// Exits
+					case C.FIND_EXIT:
+						return [
+							...this.find(C.FIND_EXIT_TOP),
+							...this.find(C.FIND_EXIT_RIGHT),
+							...this.find(C.FIND_EXIT_BOTTOM),
+							...this.find(C.FIND_EXIT_LEFT),
+						];
+
+					case C.FIND_EXIT_TOP:
+					case C.FIND_EXIT_RIGHT:
+					case C.FIND_EXIT_BOTTOM:
+					case C.FIND_EXIT_LEFT: {
+						const generators: {
+							[key in FindExitDirection]: (ii: number) => RoomPosition
+						} = {
+							[C.FIND_EXIT_TOP]: ii => new RoomPosition(ii, 0, this.name),
+							[C.FIND_EXIT_RIGHT]: ii => new RoomPosition(49, ii, this.name),
+							[C.FIND_EXIT_BOTTOM]: ii => new RoomPosition(ii, 49, this.name),
+							[C.FIND_EXIT_LEFT]: ii => new RoomPosition(0, ii, this.name),
+						};
+						const generator = generators[type as FindExitDirection];
+						const results: RoomPosition[] = [];
+						const terrain = this.getTerrain();
+						for (let ii = 1; ii < 49; ++ii) {
+							const pos = generator(ii);
+							if (terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL) {
+								results.push(pos);
+							}
+						}
+						return results;
+					}
+
 					// Construction sites
 					case C.FIND_CONSTRUCTION_SITES:
 						return this.#lookIndex.get(C.LOOK_CONSTRUCTION_SITES)!;
@@ -451,7 +489,7 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 		}
 	}
 
-	#findCache = new Map<number, RoomObject[]>();
+	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
 	#lookIndex = new Map<LookConstants, RoomObject[]>(
 		mapInPlace(lookConstants, look => [ look, []]));
 	#lookSpatialIndex = new Map<LookConstants, Map<number, RoomObject[]>>();

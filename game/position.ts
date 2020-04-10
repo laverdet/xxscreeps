@@ -212,7 +212,8 @@ export class RoomPosition {
 	 * @param options See `Room.find`
 	 */
 	findClosestByRange<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
-		search: Type, options?: RoomFindOptions,
+		search: Type,
+		options?: RoomFindOptions<PositionFindType<Type>>,
 	): PositionFindType<Type> | undefined;
 	findClosestByRange(
 		search: FindConstants | (RoomObject | RoomPosition)[], options?: RoomFindOptions,
@@ -236,7 +237,9 @@ export class RoomPosition {
 	 * @param options See `Room.find`
 	 */
 	findInRange<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
-		search: Type, range: FindConstants, options?: RoomFindOptions,
+		search: Type,
+		range: FindConstants,
+		options?: RoomFindOptions<PositionFindType<Type>>,
 	): PositionFindType<Type>[] | undefined;
 	findInRange(
 		search: FindConstants | RoomObject[] | RoomPosition[],
@@ -253,7 +256,6 @@ export class RoomPosition {
 		return options?.filter === undefined ? inRange :
 			inRange.filter(iteratee(options.filter));
 	}
-
 
 	/**
 	 * Find an optimal path to the specified position using Jump Point Search algorithm. This method
