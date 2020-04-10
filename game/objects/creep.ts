@@ -13,6 +13,8 @@ import type { RoomObjectWithStore } from '../store';
 import { Resource, ResourceType } from './resource';
 import { Structure } from './structures';
 
+export type PartType = typeof C.BODYPARTS_ALL[number];
+
 export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
@@ -32,7 +34,7 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 			() => Game.intents.save(this, 'build', { target: target.id }));
 	}
 
-	getActiveBodyparts(type: C.BodyPart) {
+	getActiveBodyparts(type: PartType) {
 		return this.body.reduce((count, part) =>
 			count + (part.type === type && part.hits > 0 ? 1 : 0), 0);
 	}

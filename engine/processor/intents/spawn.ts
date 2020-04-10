@@ -14,7 +14,7 @@ import * as StoreIntent from './store';
 
 type Parameters = {
 	spawn: {
-		body: C.BodyPart[];
+		body: Creep.PartType[];
 		name: string;
 		energyStructures?: string[];
 		directions?: Direction[];

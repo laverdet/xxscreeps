@@ -6,9 +6,10 @@ import * as Game from './game';
 import type { RoomPosition } from './position';
 import type { Room } from './room';
 import type { RoomObject } from './objects/room-object';
+import { ConstructionSite } from './objects/construction-site';
 import { Creep } from './objects/creep';
 import { Structure } from './objects/structures';
-import { ConstructionSite } from './objects/construction-site';
+import { StructureRoad } from './objects/structures/road';
 
 export { search };
 
@@ -84,8 +85,8 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 		heuristicWeight: options.heuristicWeight,
 		maxOps: options.maxOps ?? 20000,
 		maxRooms: options.maxRooms,
-		plainCost: options.plainCost ?? (ignoreRoads ? 2 : undefined),
-		swampCost: options.swampCost ?? (ignoreRoads ? 10 : undefined),
+		plainCost: options.plainCost ?? (ignoreRoads ? 1 : 2),
+		swampCost: options.swampCost ?? (ignoreRoads ? 5 : 10),
 
 		roomCallback(roomName) {
 			// Get cost matrix for this room
@@ -104,8 +105,11 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 					pathing: true,
 				});
 				for (const object of room._objects) {
+					const { pos: { x, y } } = object;
 					if (check(object)) {
-						costMatrix.set(object.pos.x, object.pos.y, 0xff);
+						costMatrix.set(x, y, 0xff);
+					} else if (!ignoreRoads && object instanceof StructureRoad) {
+						costMatrix.set(x, y, Math.max(1, costMatrix.get(x, y)));
 					}
 				}
 				return costMatrix;

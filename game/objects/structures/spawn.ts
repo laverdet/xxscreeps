@@ -6,6 +6,7 @@ import { withOverlay } from '~/lib/schema';
 import { accumulate } from '~/lib/utility';
 
 import { Direction } from '~/game/position';
+import type { PartType } from '~/game/objects/creep';
 import { create as createCreep } from '~/engine/processor/intents/creep';
 import { chainIntentChecks } from '../room-object';
 import { StructureExtension } from './extension';
@@ -46,7 +47,7 @@ export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
 		return true;
 	}
 
-	spawnCreep(body: C.BodyPart[], name: string, options: SpawnCreepOptions = {}) {
+	spawnCreep(body: PartType[], name: string, options: SpawnCreepOptions = {}) {
 		return chainIntentChecks(
 			() => checkSpawnCreep(this, body, name, options.directions, options.energyStructures),
 			() => {
@@ -69,7 +70,7 @@ export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
 				});
 
 				// Fake creep
-				const creep = createCreep(body, this.pos, name, this._owner);
+				const creep = createCreep(body, this.pos, name, this._owner!);
 				Game.creeps[name] = creep;
 				return C.OK;
 			});
@@ -80,7 +81,7 @@ export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
 // Intent checks
 export function checkSpawnCreep(
 	spawn: StructureSpawn,
-	body: C.BodyPart[],
+	body: PartType[],
 	name: string,
 	directions?: Direction[],
 	energyStructures?: (StructureExtension | StructureSpawn)[],

@@ -14,7 +14,7 @@ export const shape = declare('Spawn', {
 		endTime: 'int32',
 		needTime: 'int32',
 	}),
-	store: Store.format,
+	store: Store.restricted<'energy'>(),
 });
 
 export const format = declare(shape, { overlay: StructureSpawn });

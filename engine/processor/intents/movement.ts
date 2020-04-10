@@ -3,7 +3,8 @@ import { Creep } from '~/game/objects/creep';
 import { obstacleChecker } from '~/game/path-finder';
 import { getOffsetsFromDirection, Direction, RoomPosition } from '~/game/position';
 import { Room } from '~/game/room';
-import { accumulate, exchange, minimum } from '~/lib/utility';
+import { accumulate, exchange, minimum, concatInPlace } from '~/lib/utility';
+import { calculatePower } from './creep';
 
 // Saves list of creeps all trying to move onto the same cell
 const moves = new Map<number, Creep[]>();
@@ -43,13 +44,10 @@ export function dispatch(room: Room) {
 		}
 
 		const objects = creeps.map(creep => {
-			const move = accumulate(creep.body, part => part.type === 'move' ? 1 : 0);
+			const move = calculatePower(creep, C.MOVE, 2);
 			// This differs from the original Screeps movement algorithm in that it counts a creep
 			// carrying 50 energy as heavier than a creep carrying 0.
-			const weight = 1 + Math.max(0,
-				Math.ceil(creep.carry._amount / C.CARRY_CAPACITY) -
-				accumulate(creep.body, part => part.type === 'carry' ? 1 : 0),
-			);
+			const weight = 1 + calculateWeight(creep);
 			return {
 				creep,
 				// First priority is moving creeps who are *currently* on cells where more creeps want to
@@ -70,26 +68,30 @@ export function dispatch(room: Room) {
 		movingCreeps.push(first.creep);
 	}
 
-	// Note: I think there's an issue with the safe mode algorithm part of this algorithm. If safe
-	// mode is activated enemy creeps shouldn't obstruct, but they could still win a movement battle.
-	// So theoretically you could surround a base with constantly moving creeps in order to obstruct.
+	// Note: I think there's an issue with the safe mode part of this algorithm. If safe mode is
+	// activated enemy creeps shouldn't obstruct, but they could still win a movement battle. So
+	// theoretically you could surround a base with constantly moving creeps in order to obstruct.
 
 	// After conflict resolution check for non-moving-creep obstacles
 	const terrain = room.getTerrain();
-	for (const creep of movingCreeps) {
-		const { _nextPosition: nextPosition } = creep;
+	check: for (const creep of movingCreeps) {
+		const { _nextPosition } = creep;
 		const check = obstacleChecker(room, creep._owner);
-		for (const object of room._objects) {
+		for (const look of concatInPlace(
+			room.lookForAt(C.LOOK_CREEPS, _nextPosition!),
+			room.lookForAt(C.LOOK_STRUCTURES, _nextPosition!),
+		)) {
+			const object = look[look.type];
 			if (
-				nextPosition!.isEqualTo(object) &&
 				!(object as Creep)._nextPosition &&
 				check(object)
 			) {
 				delete creep._nextPosition;
+				continue check;
 			}
 		}
 		// Also check terrain
-		if (terrain.get(nextPosition!.x, nextPosition!.y) === C.TERRAIN_MASK_WALL) {
+		if (terrain.get(_nextPosition!.x, _nextPosition!.y) === C.TERRAIN_MASK_WALL) {
 			delete creep._nextPosition;
 		}
 	}
@@ -106,13 +108,19 @@ export function get(creep: Creep) {
 
 	// Final check for obstructing creeps
 	const { room } = creep;
-	for (const creep of room.find(C.FIND_CREEPS)) {
-		if (!creep._nextPosition && nextPosition.isEqualTo(creep)) {
-			delete creep._nextPosition;
+	for (const look of room.lookForAt(C.LOOK_CREEPS, nextPosition)) {
+		if (!look.creep._nextPosition) {
 			return undefined;
 		}
 	}
 	return nextPosition;
+}
+
+export function calculateWeight(creep: Creep) {
+	let weight = accumulate(creep.body, part =>
+		(part.type === C.CARRY || part.type === C.MOVE) ? 0 : 1);
+	weight += Math.ceil(creep.carry.getUsedCapacity() / C.CARRY_CAPACITY);
+	return weight;
 }
 
 function fromId(id: number) {

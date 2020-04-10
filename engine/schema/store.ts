@@ -1,5 +1,5 @@
-import { declare, vector } from '~/lib/schema';
-import { Store } from '~/game/store';
+import { declare, vector, withType } from '~/lib/schema';
+import { ResourceType, Store } from '~/game/store';
 import { optionalResourceEnumFormat } from './resource';
 
 export const shape = declare('Store', {
@@ -14,4 +14,9 @@ export const shape = declare('Store', {
 	_singleResource: optionalResourceEnumFormat,
 });
 
-export const format = declare(shape, { overlay: Store });
+export const format = withType<Store<ResourceType>>(
+	declare(shape, { overlay: Store }));
+
+export function restricted<Resource extends ResourceType>() {
+	return withType<Store<Resource>>(format);
+}

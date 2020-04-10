@@ -6,7 +6,7 @@ import * as Structure from './structure';
 export const shape = declare('Extension', {
 	...inherit(Structure.format),
 	...variant('extension'),
-	store: Store.format,
+	store: Store.restricted<'energy'>(),
 });
 
 export const format = declare(shape, { overlay: StructureExtension });

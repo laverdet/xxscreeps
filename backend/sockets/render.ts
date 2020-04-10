@@ -73,8 +73,8 @@ bindRenderer(Creep, function render() {
 		body: this.body,
 		hits: this.hits,
 		hitsMax: 100,
-		spawning: false,
-		fatigue: 0,
+		spawning: this.spawning,
+		fatigue: this.fatigue,
 		ageTime: this._ageTime,
 		user: this._owner,
 		actionLog: {

@@ -97,13 +97,13 @@ type RoomLookType<Type extends LookConstants> =
 	never;
 
 type RoomLookResult<Type extends LookConstants> = {
-	[key in Type]: RoomLookType<Type>;
+	[key in LookConstants]: RoomLookType<Type>;
 } & {
 	type: Type;
 };
 
 export type LookType<Type extends RoomObject> = {
-	[key in Type['_lookType']]: Type;
+	[key in LookConstants]: Type extends RoomLookType<key> ? Type : never;
 } & {
 	type: Type['_lookType'];
 };

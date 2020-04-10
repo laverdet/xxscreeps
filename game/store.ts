@@ -1,4 +1,3 @@
-import * as C from '~/game/constants';
 import { BufferObject } from '~/lib/schema/buffer-object';
 import { withOverlay, BufferView } from '~/lib/schema';
 import type { shape } from '~/engine/schema/store';
@@ -36,7 +35,8 @@ const BufferObjectWithResourcesType = BufferObject as any as {
  * console.log(creep.store[RESOURCE_ENERGY]);
  * ```
  */
-export class Store extends withOverlay<typeof shape>()(BufferObjectWithResourcesType) {
+export class Store<Resources extends ResourceType = any> extends
+	withOverlay<typeof shape>()(BufferObjectWithResourcesType) {
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
 
@@ -67,13 +67,18 @@ export class Store extends withOverlay<typeof shape>()(BufferObjectWithResources
 	 * @param resourceType The type of resource
 	 * @returns Capacity, or null in case of a not valid resource for this store type
 	 */
-	getCapacity(resourceType: typeof C.RESOURCE_ENERGY): number;
+	getCapacity(): Resources extends ResourceType ? number : null;
+	getCapacity(resourceType: Exclude<ResourceType, Resources>): number | null;
+	getCapacity(resourceType?: Resources): number;
 	getCapacity(resourceType?: ResourceType): number | null;
 	getCapacity(resourceType?: ResourceType) {
-		if (resourceType === undefined || this._capacityByResource === undefined) {
+		if (this._capacityByResource === undefined) {
 			return this._capacity;
-		} else {
+		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+		} else if (resourceType) {
 			return this._capacityByResource.get(resourceType) ?? null;
+		} else {
+			return null;
 		}
 	}
 
@@ -91,17 +96,18 @@ export class Store extends withOverlay<typeof shape>()(BufferObjectWithResources
 	 * @param resourceType The type of resource
 	 * @returns Used capacity, or null in case of a not valid resource for this store type
 	 */
+	getUsedCapacity(): Resources extends ResourceType ? number : null;
+	getUsedCapacity(resourceType: Exclude<ResourceType, Resources>): number | null;
+	getUsedCapacity(resourceType: Resources): number;
+	getUsedCapacity(resourceType?: ResourceType): number | null;
 	getUsedCapacity(resourceType?: ResourceType) {
-		if (resourceType === undefined) {
-			if (this._capacityByResource === undefined) {
-				return this._amount;
-			} else {
-				return null;
-			}
+		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+		if (resourceType) {
+			return this[resourceType] ?? 0;
 		} else if (this._capacityByResource === undefined) {
 			return this._amount;
 		} else {
-			return (this._capacityByResource.get(resourceType) ?? 0) - (this[resourceType] ?? 0);
+			return null;
 		}
 	}
 

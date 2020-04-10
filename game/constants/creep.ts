@@ -1,5 +1,3 @@
-export type BodyPart = (typeof BODYPARTS_ALL)[number];
-
 export const MOVE = 'move' as const;
 export const WORK = 'work' as const;
 export const CARRY = 'carry' as const;
