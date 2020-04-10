@@ -6,7 +6,7 @@ import * as RoomObject from './room-object';
 export const shape = declare('Structure', {
 	...inherit(RoomObject.format),
 	hits: 'int32',
-	_owner: Id.format,
+	_owner: Id.optionalFormat,
 });
 
 export const format = declare(shape, { overlay: Structure });

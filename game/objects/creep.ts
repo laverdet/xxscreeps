@@ -10,6 +10,8 @@ import { Source } from './source';
 import { StructureController } from './structures/controller';
 import { obstacleTypes } from '../path-finder';
 import type { RoomObjectWithStore } from '../store';
+import { Resource, ResourceType } from './resource';
+import { Structure } from './structures';
 
 export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 	get carry() { return this.store }
@@ -72,11 +74,17 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 			});
 	}
 
+	pickup(resource: Resource) {
+		return chainIntentChecks(
+			() => checkPickup(this, resource),
+			() => Game.intents.save(this, 'pickup', resource.id));
+	}
+
 	repair() {
 		return C.ERR_INVALID_TARGET;
 	}
 
-	transfer(target: RoomObjectWithStore, resourceType: C.ResourceType, amount?: number) {
+	transfer(target: RoomObjectWithStore, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),
 			() => Game.intents.save(this, 'transfer', { amount, resourceType, target: target.id }),
@@ -88,6 +96,13 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 		return chainIntentChecks(
 			() => checkUpgradeController(this, target),
 			() => Game.intents.save(this, 'upgradeController', { target: target.id }),
+		);
+	}
+
+	withdraw(target: Extract<RoomObjectWithStore, Structure>, resourceType: ResourceType, amount?: number) {
+		return chainIntentChecks(
+			() => checkWithdraw(this, target, resourceType, amount),
+			() => Game.intents.save(this, 'withdraw', { amount, resourceType, target: target.id }),
 		);
 	}
 
@@ -105,7 +120,7 @@ function checkCommon(creep: Creep) {
 	return C.OK;
 }
 
-export function checkBuild(creep: Creep, target?: ConstructionSite) {
+export function checkBuild(creep: Creep, target: ConstructionSite) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => {
@@ -137,7 +152,7 @@ export function checkBuild(creep: Creep, target?: ConstructionSite) {
 		});
 }
 
-export function checkHarvest(creep: Creep, target?: RoomObject) {
+export function checkHarvest(creep: Creep, target: Source) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => {
@@ -186,10 +201,25 @@ function checkMoveCommon(creep: Creep) {
 		});
 }
 
-export function checkTransfer(
+export function checkPickup(creep: Creep, target: Resource) {
+	return chainIntentChecks(
+		() => checkCommon(creep),
+		() => {
+			if (!(target instanceof Resource)) {
+				return C.ERR_INVALID_TARGET;
+			} else if (creep.store.getFreeCapacity(target.resourceType) === 0) {
+				return C.ERR_FULL;
+			} else if (!creep.pos.isNearTo(target)) {
+				return C.ERR_NOT_IN_RANGE;
+			}
+			return C.OK;
+		});
+}
+
+function checkTransferOrWithdraw(
 	creep: Creep,
-	target: RoomObject & Partial<RoomObjectWithStore> | undefined,
-	resourceType: C.ResourceType,
+	target: RoomObjectWithStore,
+	resourceType: ResourceType,
 	amount?: number,
 ) {
 	return chainIntentChecks(
@@ -201,44 +231,54 @@ export function checkTransfer(
 			} else if (!C.RESOURCES_ALL.includes(resourceType)) {
 				return C.ERR_INVALID_ARGS;
 
-			} else if (!(creep instanceof Creep) || !(target instanceof RoomObject)) {
+			} else if (!creep.pos.isNearTo(target.pos)) {
+				return C.ERR_NOT_IN_RANGE;
+			}
+
+			return C.OK;
+		},
+	);
+}
+
+export function checkTransfer(
+	creep: Creep,
+	target: RoomObjectWithStore,
+	resourceType: ResourceType,
+	amount?: number,
+) {
+	return chainIntentChecks(
+		() => checkTransferOrWithdraw(creep, target, resourceType, amount),
+		() => {
+			if (!(target instanceof RoomObject)) {
 				return C.ERR_INVALID_TARGET;
 
 			} else if (target instanceof Creep && target.spawning) {
 				return C.ERR_INVALID_TARGET;
 
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			} else if (!target.store) {
 				return C.ERR_INVALID_TARGET;
 			}
 
-			const targetCapacity = target.store.getCapacity(resourceType);
-			if (targetCapacity === null) {
-				return C.ERR_INVALID_TARGET;
-			}
-
-			if (!creep.pos.isNearTo(target.pos)) {
-				return C.ERR_NOT_IN_RANGE;
-
-			} else if (!(creep.store[resourceType]! >= 0)) {
+			const creepAmount = creep.store[resourceType];
+			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+			if (!creepAmount) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
 
 			const targetFreeCapacity = target.store.getFreeCapacity(resourceType);
-			if (!(targetFreeCapacity > 0)) {
+			if (Number.isNaN(targetFreeCapacity)) {
+				return C.ERR_INVALID_TARGET;
+			} else if (targetFreeCapacity <= 0) {
 				return C.ERR_FULL;
 			}
 
-			let tryAmount = amount;
 			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-			if (!tryAmount) {
-				tryAmount = Math.min(creep.store[resourceType]!, targetFreeCapacity);
-			}
-
-			if (!(tryAmount <= creep.store[resourceType]!)) {
+			const tryAmount = amount ? amount : Math.min(creepAmount, targetFreeCapacity);
+			if (tryAmount > creepAmount) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
-			}
 
-			if (!(tryAmount <= targetFreeCapacity)) {
+			} else if (tryAmount > targetFreeCapacity) {
 				return C.ERR_FULL;
 			}
 
@@ -267,6 +307,51 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 
 			} else if (!target.my) {
 				return C.ERR_NOT_OWNER;
+			}
+
+			return C.OK;
+		});
+}
+
+export function checkWithdraw(
+	creep: Creep,
+	target: Extract<RoomObjectWithStore, Structure>,
+	resourceType: ResourceType,
+	amount?: number,
+) {
+	return chainIntentChecks(
+		() => checkTransferOrWithdraw(creep, target, resourceType, amount),
+		() => {
+			if (!(target instanceof Structure) || !('store' in target)) {
+				return C.ERR_INVALID_TARGET;
+
+				/* } else if (target.my === false) {
+				// TODO: Rampart
+				return C.ERR_NOT_OWNER */
+
+			// eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+			} else if (!creep.room.controller?.my && creep.room.controller?.safeMode! > 0) {
+				return C.ERR_NOT_OWNER;
+
+				/* } else if (target.structureType === 'nuker' || target.structureType === 'powerBank') {
+				return C.ERR_INVALID_TARGET; */
+
+			} else if (target.store.getCapacity(resourceType) === null /* && !(target instanceof Tombstone) */) {
+				return C.ERR_INVALID_TARGET;
+			}
+
+			const capacity = creep.store.getFreeCapacity(resourceType);
+			if (capacity <= 0) {
+				return C.ERR_FULL;
+			}
+
+			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+			const tryAmount = amount ? amount : Math.min(capacity, target.store[resourceType] ?? 0);
+			if (tryAmount > capacity) {
+				return C.ERR_FULL;
+
+			} else if (tryAmount === 0 || (target.store[resourceType] ?? 0) < tryAmount) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
 
 			return C.OK;

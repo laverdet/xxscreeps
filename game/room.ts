@@ -19,8 +19,9 @@ import { isBorder, isNearBorder } from './terrain';
 import { ConstructionSite, ConstructibleStructureType } from './objects/construction-site';
 import { Creep } from './objects/creep';
 import { chainIntentChecks, RoomObject } from './objects/room-object';
-import { Source } from './objects/source';
-import { Structure } from './objects/structures';
+import type { Resource } from './objects/resource';
+import type { Source } from './objects/source';
+import type { Structure } from './objects/structures';
 import { StructureController } from './objects/structures/controller';
 import { StructureExtension } from './objects/structures/extension';
 import { StructureSpawn } from './objects/structures/spawn';
@@ -88,6 +89,7 @@ export type RoomFindType<Type extends FindConstants> =
 type RoomLookType<Type extends LookConstants> =
 	Type extends typeof C.LOOK_CONSTRUCTION_SITES ? ConstructionSite :
 	Type extends typeof C.LOOK_CREEPS ? Creep :
+	Type extends typeof C.LOOK_RESOURCES ? Resource :
 	Type extends typeof C.LOOK_SOURCES ? Source :
 	Type extends typeof C.LOOK_STRUCTURES ? Extract<AnyRoomObject, Structure> :
 	never;
@@ -96,6 +98,12 @@ type RoomLookResult<Type extends LookConstants> = {
 	[key in Type]: RoomLookType<Type>;
 } & {
 	type: Type;
+};
+
+export type LookType<Type extends RoomObject> = {
+	[key in Type['_lookType']]: Type;
+} & {
+	type: Type['_lookType'];
 };
 
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
@@ -392,9 +400,6 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 	}
 
 	private _afterRemoval(object: RoomObject) {
-		if (object.room !== this) {
-			throw new Error('Object does not belong to this room');
-		}
 		object.room = null as any;
 		const lookType = object._lookType;
 		const list = this.#lookIndex.get(lookType)!;
@@ -548,8 +553,8 @@ export function insertObject(room: Room, object: RoomObject) {
 }
 
 const _removeObject = uncurryThis(exchange(Room.prototype, RemoveObject));
-export function removeObject(room: Room, object: RoomObject) {
-	return _removeObject(room, object);
+export function removeObject(object: RoomObject) {
+	return _removeObject(object.room, object);
 }
 
 //

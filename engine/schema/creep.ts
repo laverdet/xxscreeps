@@ -2,6 +2,7 @@ import { declare, enumerated, inherit, variant, vector } from '~/lib/schema';
 import * as Id from '~/engine/util/schema/id';
 import * as C from '~/game/constants';
 import { Creep } from '~/game/objects/creep';
+import { optionalResourceEnumFormat } from './resource';
 import * as RoomObject from './room-object';
 import * as Store from './store';
 
@@ -10,7 +11,7 @@ export const shape = declare('Creep', {
 	...variant('creep'),
 
 	body: vector({
-		boost: Store.resourceEnumFormat,
+		boost: optionalResourceEnumFormat,
 		hits: 'uint8',
 		type: enumerated(...C.BODYPARTS_ALL),
 	}),

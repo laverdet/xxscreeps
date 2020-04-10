@@ -1,6 +1,7 @@
 import { RoomObject } from '~/game/objects/room-object';
 import { ConstructionSite } from '~/game/objects/construction-site';
 import { Creep } from '~/game/objects/creep';
+import { Resource } from '~/game/objects/resource';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
 import { StructureContainer } from '~/game/objects/structures/container';
@@ -91,6 +92,15 @@ bindRenderer(Creep, function render() {
 			upgradeController: null,
 			reserveController: null,
 		},
+	};
+});
+
+bindRenderer(Resource, function render() {
+	return {
+		...renderObject(this),
+		type: 'energy',
+		resourceType: this.resourceType,
+		[this.resourceType]: this.amount,
 	};
 });
 

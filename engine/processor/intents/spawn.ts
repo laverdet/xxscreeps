@@ -65,11 +65,10 @@ function createCreep(spawn: StructureSpawn, intent: Parameters['spawn']) {
 	// Withdraw energy
 	for (const structure of energyStructures) {
 		const energyToSpend = Math.min(cost, structure.energy);
-		if (StoreIntent.subtract(structure.store, 'energy', energyToSpend)) {
-			cost -= energyToSpend;
-			if (cost === 0) {
-				break;
-			}
+		StoreIntent.subtract(structure.store, 'energy', energyToSpend);
+		cost -= energyToSpend;
+		if (cost === 0) {
+			break;
 		}
 	}
 

@@ -2,10 +2,12 @@ import lodash from 'lodash';
 import * as C from '~/game/constants';
 import { RawMemory } from '~/game/memory';
 import PathFinder from '~/game/path-finder';
-import { ConstructionSite } from '~/game/objects/construction-site';
-import { Creep } from '~/game/objects/creep';
 import { RoomPosition } from '~/game/position';
 import { Room } from '~/game/room';
+
+import { ConstructionSite } from '~/game/objects/construction-site';
+import { Creep } from '~/game/objects/creep';
+import { Resource } from '~/game/objects/resource';
 import { RoomObject } from '~/game/objects/room-object';
 import { Source } from '~/game/objects/source';
 import { Structure } from '~/game/objects/structures';
@@ -32,6 +34,7 @@ export function setupGlobals() {
 	globalThis.RawMemory = RawMemory;
 
 	// Not implemented
+	globalThis.Mineral = function() {};
 	globalThis.StructureLink = function() {};
 	globalThis.StructureStorage = function() {};
 	globalThis.StructureTerminal = function() {};
@@ -39,11 +42,10 @@ export function setupGlobals() {
 	globalThis.Tombstone = function() {};
 
 	// Export prototypes
-	const Mineral = function(){};
 	for (const [ key, object ] of Object.entries({
 		ConstructionSite,
 		Creep,
-		Mineral,
+		Resource,
 		Room,
 		RoomObject,
 		RoomPosition,

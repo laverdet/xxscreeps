@@ -4,7 +4,7 @@ import { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
 import { Room, checkCreateConstructionSite, insertObject } from '~/game/room';
-import * as ConstructionIntents from './construction-site';
+import * as ConstructionIntent from './construction-site';
 
 type Parameters = {
 	createConstructionSite: {
@@ -26,7 +26,7 @@ export default () => bindProcessor(Room, {
 			const params = intent.createConstructionSite;
 			const pos = new RoomPosition(params.xx, params.yy, this.name);
 			if (checkCreateConstructionSite(this, pos, params.structureType) === C.OK) {
-				const site = ConstructionIntents.create(pos, params.structureType, params.name, me);
+				const site = ConstructionIntent.create(pos, params.structureType, params.name, me);
 				insertObject(this, site);
 			}
 		}

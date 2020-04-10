@@ -1,6 +1,6 @@
 import { IntentManager } from './intents';
 import map from './map';
-import { Room } from './room';
+import type { AnyRoomObject, Room } from './room';
 import { Creep } from './objects/creep';
 import { ConstructionSite } from './objects/construction-site';
 import { RoomObject } from './objects/room-object';
@@ -54,8 +54,8 @@ const objects = new Map<string, RoomObject>();
  * from the rooms which are visible to you can be accessed.
  * @param id The unique identifier
  */
-export function getObjectById(id: string) {
-	return objects.get(id);
+export function getObjectById<Type extends AnyRoomObject>(id: string) {
+	return objects.get(id) as Type | undefined;
 }
 
 // Intents

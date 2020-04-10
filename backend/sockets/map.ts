@@ -44,7 +44,10 @@ export const mapSubscription: SubscriptionEndpoint = {
 						return response.c;
 					} else if (object instanceof StructureRoad) {
 						return response.r;
-					} else if (object instanceof Creep || object instanceof Structure) {
+					} else if (
+						(object instanceof Creep || object instanceof Structure) &&
+						object._owner !== undefined
+					) {
 						const owner: string = object._owner;
 						// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 						return response[owner] ?? (response[owner] = []);

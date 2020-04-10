@@ -29,7 +29,7 @@ export default () => bindProcessor(ConstructionSite, {
 		if (this.progress >= this.progressTotal) {
 			const { pos, room, structureType, _owner } = this;
 			const level = this.room.controller?.level ?? 0;
-			Room.removeObject(room, this);
+			Room.removeObject(this);
 			const structure = function() {
 				switch (structureType) {
 					case 'container': return ContainerIntent.create(pos);

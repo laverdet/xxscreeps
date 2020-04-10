@@ -4,10 +4,10 @@ import { withOverlay, BufferView } from '~/lib/schema';
 import type { shape } from '~/engine/schema/store';
 import type { Creep } from './objects/creep';
 import type { StructureSpawn } from './objects/structures/spawn';
+import type { ResourceType } from './objects/resource';
+export type { ResourceType };
 
-export type ResourceType = (typeof C.RESOURCES_ALL)[number];
 export type StorageRecord = Partial<Record<ResourceType, number>>;
-
 export type RoomObjectWithStore = Creep | StructureSpawn;
 
 // Adds resource types information to `Store` class. No changes from `extends BufferObject` as far

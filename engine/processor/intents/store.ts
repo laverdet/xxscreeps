@@ -5,7 +5,7 @@ export function add(store: Store, resourceType: ResourceType, amount: number) {
 
 	// Confirm there's enough capacity
 	if (store.getFreeCapacity(resourceType) < amount) {
-		return false;
+		throw new Error('Store does not have enough capacity');
 	}
 
 	// Add resource
@@ -43,14 +43,13 @@ export function add(store: Store, resourceType: ResourceType, amount: number) {
 			];
 		}
 	}
-	return true;
 }
 
 export function subtract(store: Store, resourceType: ResourceType, amount: number) {
 
 	// Confirm there's enough resource
 	if (!(store[resourceType]! >= amount)) {
-		return false;
+		throw new Error('Store does not have enough resource');
 	}
 
 	// Withdraw resource
@@ -84,7 +83,6 @@ export function subtract(store: Store, resourceType: ResourceType, amount: numbe
 			}
 		}
 	}
-	return true;
 }
 
 export function create(capacity: number | null, capacityByResource?: StorageRecord, store?: StorageRecord) {
@@ -106,8 +104,8 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 	// Is single resource?
 	const singleResource =
 		resources.length === 0 ? 'energy' :
-			resources.length === 1 ? resources[0].type :
-				undefined;
+		resources.length === 1 ? resources[0].type :
+		undefined;
 
 	// Is restricted?
 	const isRestricted = resources.some(resource => resource.capacity !== 0);
