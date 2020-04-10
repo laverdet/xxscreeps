@@ -4,14 +4,14 @@ import type { InspectOptionsStylized } from 'util';
 import { BufferObject } from '~/lib/schema/buffer-object';
 import type { BufferView } from '~/lib/schema/buffer-view';
 import { withOverlay } from '~/lib/schema';
-import { accumulate, concatInPlace } from '~/lib/utility';
+import { accumulate, concatInPlace, exchange, mapInPlace, mapToKeys, uncurryThis } from '~/lib/utility';
 import { Process, ProcessorSpecification, Tick } from '~/engine/processor/bind';
 import type { shape } from '~/engine/schema/room';
 import { iteratee } from '~/engine/util/iteratee';
 
 import * as Game from './game';
 import * as Memory from './memory';
-import { fetchArguments, iterateNeighbors, RoomPosition } from './position';
+import { fetchArguments, fetchPositionArgument, iterateNeighbors, RoomPosition, PositionInteger } from './position';
 import * as PathFinder from './path-finder';
 import { getTerrainForRoom } from './map';
 import { isBorder, isNearBorder } from './terrain';
@@ -27,11 +27,76 @@ import { StructureSpawn } from './objects/structures/spawn';
 import { RoomVisual } from './visual';
 
 export type AnyRoomObject = InstanceType<typeof Room>['_objects'][number];
-type ExitDirection =
+
+const findToLook = Object.freeze({
+	[C.FIND_CREEPS]: C.LOOK_CREEPS,
+	[C.FIND_MY_CREEPS]: C.LOOK_CREEPS,
+	[C.FIND_HOSTILE_CREEPS]: C.LOOK_CREEPS,
+	[C.FIND_SOURCES_ACTIVE]: C.LOOK_SOURCES,
+	[C.FIND_SOURCES]: C.LOOK_SOURCES,
+	[C.FIND_DROPPED_RESOURCES]: C.LOOK_RESOURCES,
+	[C.FIND_STRUCTURES]: C.LOOK_STRUCTURES,
+	[C.FIND_MY_STRUCTURES]: C.LOOK_STRUCTURES,
+	[C.FIND_HOSTILE_STRUCTURES]: C.LOOK_STRUCTURES,
+	[C.FIND_FLAGS]: C.LOOK_FLAGS,
+	[C.FIND_CONSTRUCTION_SITES]: C.LOOK_CONSTRUCTION_SITES,
+	[C.FIND_MY_SPAWNS]: C.LOOK_STRUCTURES,
+	[C.FIND_HOSTILE_SPAWNS]: C.LOOK_STRUCTURES,
+	[C.FIND_MY_CONSTRUCTION_SITES]: C.LOOK_CONSTRUCTION_SITES,
+	[C.FIND_HOSTILE_CONSTRUCTION_SITES]: C.LOOK_CONSTRUCTION_SITES,
+	[C.FIND_MINERALS]: C.LOOK_MINERALS,
+	[C.FIND_NUKES]: C.LOOK_NUKES,
+	[C.FIND_TOMBSTONES]: C.LOOK_TOMBSTONES,
+	[C.FIND_POWER_CREEPS]: C.LOOK_POWER_CREEPS,
+	[C.FIND_MY_POWER_CREEPS]: C.LOOK_POWER_CREEPS,
+	[C.FIND_HOSTILE_POWER_CREEPS]: C.LOOK_POWER_CREEPS,
+	[C.FIND_DEPOSITS]: C.LOOK_DEPOSITS,
+	[C.FIND_RUINS]: C.LOOK_RUINS,
+});
+
+// Does not include LOOK_ENERGY
+const lookConstants = new Set(Object.values(findToLook));
+Object.freeze(lookConstants); // stupid typescript thing, must be frozen out of line to iterate
+
+// LOOK_* constant to array of FIND_* constants
+const lookToFind: LookToFind = Object.freeze(mapToKeys(lookConstants, look => [ look, []]));
+
+type FindExitDirection =
 	typeof C.FIND_EXIT_TOP |
 	typeof C.FIND_EXIT_RIGHT |
 	typeof C.FIND_EXIT_BOTTOM |
 	typeof C.FIND_EXIT_LEFT;
+
+export type FindConstants =
+	FindExitDirection |
+	typeof C.FIND_EXIT |
+	keyof typeof findToLook;
+
+export type LookConstants = typeof findToLook extends Record<string, infer Look> ? Look : never;
+
+type LookToFind = {
+	[look in LookConstants]: {
+		[find in keyof typeof findToLook]: typeof findToLook[find] extends look ? find : never;
+	}[keyof typeof findToLook][];
+};
+
+export type RoomFindType<Type extends FindConstants> =
+	Type extends typeof C.FIND_MY_SPAWNS | typeof C.FIND_HOSTILE_SPAWNS ? StructureSpawn :
+	Type extends keyof typeof findToLook ? RoomLookType<typeof findToLook[Type]> :
+	never;
+
+type RoomLookType<Type extends LookConstants> =
+	Type extends typeof C.LOOK_CONSTRUCTION_SITES ? ConstructionSite :
+	Type extends typeof C.LOOK_CREEPS ? Creep :
+	Type extends typeof C.LOOK_SOURCES ? Source :
+	Type extends typeof C.LOOK_STRUCTURES ? Extract<AnyRoomObject, Structure> :
+	never;
+
+type RoomLookResult<Type extends LookConstants> = {
+	[key in Type]: RoomLookType<Type>;
+} & {
+	type: Type;
+};
 
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
 	serialize?: boolean;
@@ -40,27 +105,10 @@ export type RoomFindOptions = {
 	filter?: string | object | ((object: RoomObject) => boolean);
 };
 
-export type RoomFindObjectType<Type extends number> =
-	Type extends
-		typeof C.FIND_CREEPS |
-		typeof C.FIND_MY_CREEPS |
-		typeof C.FIND_HOSTILE_CREEPS ?
-	Creep :
-	Type extends
-		typeof C.FIND_STRUCTURES |
-		typeof C.FIND_MY_STRUCTURES |
-		typeof C.FIND_HOSTILE_STRUCTURES ?
-	Extract<AnyRoomObject, Structure> :
-	Type extends
-		typeof C.FIND_CONSTRUCTION_SITES |
-		typeof C.FIND_MY_CONSTRUCTION_SITES |
-		typeof C.FIND_HOSTILE_CONSTRUCTION_SITES ?
-	ConstructionSite :
-	Type extends
-		typeof C.FIND_SOURCES |
-		typeof C.FIND_SOURCES_ACTIVE ?
-	Source :
-	RoomObject;
+// Methods which will be extracted and exported
+const MoveObject = Symbol('moveObject');
+const InsertObject = Symbol('insertObject');
+const RemoveObject = Symbol('removeObject');
 
 export class Room extends withOverlay<typeof shape>()(BufferObject) {
 	get memory() {
@@ -76,15 +124,9 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 	energyAvailable = 0;
 	energyCapacityAvailable = 0;
 
-	#constructionSites: ConstructionSite[] = [];
-	#creeps: Creep[] = [];
-	#sources: Source[] = [];
-	#structures: Structure[] = [];
-
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
 		for (const object of this._objects) {
-			object.room = this;
 			this._afterInsertion(object);
 		}
 	}
@@ -96,8 +138,7 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 	 * @param type One of the FIND_* constants
 	 * @param opts
 	 */
-	#findCache = new Map<number, RoomObject[]>();
-	find<Type extends number>(type: Type, options: RoomFindOptions = {}): RoomFindObjectType<Type>[] {
+	find<Type extends FindConstants>(type: Type, options: RoomFindOptions = {}): RoomFindType<Type>[] {
 		// Check find cache
 		let results = this.#findCache.get(type);
 		if (results === undefined) {
@@ -105,20 +146,43 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 			// Generate list
 			results = (() => {
 				switch (type) {
-					case C.FIND_CONSTRUCTION_SITES: return this.#constructionSites;
-					case C.FIND_MY_CONSTRUCTION_SITES: return this.#constructionSites.filter(constructionSite => constructionSite.my);
-					case C.FIND_HOSTILE_CONSTRUCTION_SITES: return this.#constructionSites.filter(constructionSite => !constructionSite.my);
+					// Construction sites
+					case C.FIND_CONSTRUCTION_SITES:
+						return this.#lookIndex.get(C.LOOK_CONSTRUCTION_SITES)!;
+					case C.FIND_MY_CONSTRUCTION_SITES:
+						return this.find(C.FIND_CONSTRUCTION_SITES).filter(constructionSite => constructionSite.my);
+					case C.FIND_HOSTILE_CONSTRUCTION_SITES:
+						return this.find(C.FIND_CONSTRUCTION_SITES).filter(constructionSite => !constructionSite.my);
 
-					case C.FIND_CREEPS: return this.#creeps;
-					case C.FIND_MY_CREEPS: return this.#creeps.filter(creep => creep.my);
-					case C.FIND_HOSTILE_CREEPS: return this.#creeps.filter(creep => !creep.my);
+					// Creeps
+					case C.FIND_CREEPS:
+						return this.#lookIndex.get(C.LOOK_CREEPS)!;
+					case C.FIND_MY_CREEPS:
+						return this.find(C.FIND_CREEPS).filter(creep => creep.my);
+					case C.FIND_HOSTILE_CREEPS:
+						return this.find(C.FIND_CREEPS).filter(creep => !creep.my);
 
-					case C.FIND_SOURCES: return this.#sources;
-					case C.FIND_SOURCES_ACTIVE: return this.#sources.filter(source => source.energy > 0);
+					// Sources
+					case C.FIND_SOURCES:
+						return this.#lookIndex.get(C.LOOK_SOURCES)!;
+					case C.FIND_SOURCES_ACTIVE:
+						return this.find(C.FIND_SOURCES).filter(source => source.energy > 0);
 
-					case C.FIND_STRUCTURES: return this.#structures;
-					case C.FIND_MY_STRUCTURES: return this.#structures.filter(structure => structure.my);
-					case C.FIND_HOSTILE_STRUCTURES: return this.#structures.filter(structure => !structure.my);
+					// Spawns
+					case C.FIND_MY_SPAWNS:
+						return this.#lookIndex.get(C.LOOK_STRUCTURES)!.filter((structure: Structure) =>
+							structure.structureType === 'spawn' && structure.my);
+					case C.FIND_HOSTILE_SPAWNS:
+						return this.#lookIndex.get(C.LOOK_STRUCTURES)!.filter((structure: Structure) =>
+							structure.structureType === 'spawn' && !structure.my);
+
+					// Structures
+					case C.FIND_STRUCTURES:
+						return this.#lookIndex.get(C.LOOK_STRUCTURES)!;
+					case C.FIND_MY_STRUCTURES:
+						return this.find(C.FIND_STRUCTURES).filter(structure => structure.my);
+					case C.FIND_HOSTILE_STRUCTURES:
+						return this.find(C.FIND_STRUCTURES).filter(structure => !structure.my);
 
 					default: return [];
 				}
@@ -138,7 +202,7 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 	 * method.
 	 * @param room Another room name or room object
 	 */
-	findExitTo(/*room: Room | string*/): ExitDirection | typeof C.ERR_NO_PATH | typeof C.ERR_INVALID_ARGS {
+	findExitTo(/*room: Room | string*/): FindExitDirection | typeof C.ERR_NO_PATH | typeof C.ERR_INVALID_ARGS {
 		return C.ERR_NO_PATH;
 	}
 
@@ -181,6 +245,32 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 	}
 
 	/**
+	 * Get an object with the given type at the specified room position.
+	 * @param type One of the `LOOK_*` constants
+	 * @param x X position in the room
+	 * @param y Y position in the room
+	 * @param target Can be a RoomObject or RoomPosition
+	 */
+	lookForAt<Type extends LookConstants>(type: Type, x: number, y: number): RoomLookResult<Type>[];
+	lookForAt<Type extends LookConstants>(type: Type, target: RoomObject | RoomPosition): RoomLookResult<Type>[];
+	lookForAt<Type extends LookConstants>(
+		type: Type, ...rest: [ number, number ] | [ RoomObject | RoomPosition ]
+	) {
+		const { pos } = fetchPositionArgument(this.name, ...rest);
+		if (!pos || pos.roomName !== this.name) {
+			return [];
+		}
+		if (!lookConstants.has(type)) {
+			return C.ERR_INVALID_ARGS as any;
+		}
+		const objects = this._getSpatialIndex(type);
+		return (objects.get(pos[PositionInteger]) ?? []).map(object => {
+			const type = object._lookType;
+			return { type, [type]: object };
+		});
+	}
+
+	/**
 	 * Create new `ConstructionSite` at the specified location.
 	 * @param structureType One of the `STRUCTURE_*` constants.
 	 * @param name The name of the structure, for structures that support it (currently only spawns).
@@ -216,60 +306,128 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 		return new RoomVisual;
 	}
 
-	// `_wasInserted` and `_wasRemoved` are called "externally" from intent processors to notify the
-	// class that `._objects` has been changed. This clears the `.find` caches
-	protected _wasInserted(object: AnyRoomObject) {
-		this._afterInsertion(object);
-		for (const find of getFindConstantsForObject(object)) {
+	//
+	// Private mutation functions
+	[InsertObject](this: this, object: RoomObject) {
+		// Add to objects & look index then flush find caches
+		this._objects.push(object as AnyRoomObject);
+		const lookType = this._afterInsertion(object);
+		const findTypes = lookToFind[lookType];
+		for (const find of findTypes) {
 			this.#findCache.delete(find);
+		}
+		// Update spatial look cache if it exists
+		const spatial = this.#lookSpatialIndex.get(lookType);
+		if (spatial) {
+			const pos = object.pos[PositionInteger];
+			const list = spatial.get(pos);
+			if (list) {
+				list.push(object);
+			} else {
+				spatial.set(pos, [ object ]);
+			}
 		}
 	}
 
-	protected _wasRemoved(object: AnyRoomObject) {
-		this._afterRemoval(object);
-		for (const find of getFindConstantsForObject(object)) {
+	[RemoveObject](this: this, object: RoomObject) {
+		// Remove from objects & look index then flush find caches
+		removeOne(this._objects, object);
+		const lookType = this._afterRemoval(object);
+		const findTypes = lookToFind[lookType];
+		for (const find of findTypes) {
 			this.#findCache.delete(find);
+		}
+		// Update spatial look cache if it exists
+		const spatial = this.#lookSpatialIndex.get(lookType);
+		if (spatial) {
+			const pos = object.pos[PositionInteger];
+			const list = spatial.get(pos);
+			if (list) {
+				removeOne(list, object);
+				if (list.length === 0) {
+					spatial.delete(pos);
+				}
+			}
 		}
 	}
 
-	// `_afterInsertion` and `_afterRemoval` should only be called from this file to add or remove
-	// objects from the type-based list manifests
-	private _afterInsertion(object: AnyRoomObject) {
+	[MoveObject](this: this, object: RoomObject, pos: RoomPosition) {
+		const spatial = this.#lookSpatialIndex.get(object._lookType);
+		if (spatial) {
+			const oldPosition = object.pos[PositionInteger];
+			const oldList = spatial.get(oldPosition)!;
+			removeOne(oldList, object);
+			if (oldList.length === 0) {
+				spatial.delete(oldPosition);
+			}
+			object.pos = pos;
+			const posInteger = pos[PositionInteger];
+			const newList = spatial.get(posInteger);
+			if (newList) {
+				newList.push(object);
+			} else {
+				spatial.set(posInteger, [ object ]);
+			}
+		} else {
+			object.pos = pos;
+		}
+	}
+
+	// `_afterInsertion` is called on Room construction per object to batch add objects. It skips the
+	// find cache and spatial indices because those will be clean anyway
+	private _afterInsertion(object: RoomObject) {
 		object.room = this;
-		if (object instanceof Structure) {
-			this.#structures.push(object);
+		const lookType = object._lookType;
+		const list = this.#lookIndex.get(lookType)!;
+		list.push(object);
+		if (lookType === C.LOOK_STRUCTURES) {
 			if (object instanceof StructureController) {
 				this.controller = object;
 			} else if (object instanceof StructureExtension || object instanceof StructureSpawn) {
 				this.energyAvailable += object.store[C.RESOURCE_ENERGY];
 				this.energyCapacityAvailable += object.store.getCapacity(C.RESOURCE_ENERGY);
 			}
-		} else if (object instanceof Creep) {
-			this.#creeps.push(object);
-		} else if (object instanceof Source) {
-			this.#sources.push(object);
-		} else if (object instanceof ConstructionSite) {
-			this.#constructionSites.push(object);
 		}
+		return lookType;
 	}
 
-	private _afterRemoval(object: AnyRoomObject) {
-		object.room = null as any as Room;
-		if (object instanceof Structure) {
-			removeOne(this.#structures, object);
+	private _afterRemoval(object: RoomObject) {
+		if (object.room !== this) {
+			throw new Error('Object does not belong to this room');
+		}
+		object.room = null as any;
+		const lookType = object._lookType;
+		const list = this.#lookIndex.get(lookType)!;
+		removeOne(list, object);
+		if (lookType === C.LOOK_STRUCTURES) {
 			if (object instanceof StructureController) {
-				this.controller = undefined;
+				this.controller = object;
 			} else if (object instanceof StructureExtension || object instanceof StructureSpawn) {
 				this.energyAvailable -= object.store[C.RESOURCE_ENERGY];
 				this.energyCapacityAvailable -= object.store.getCapacity(C.RESOURCE_ENERGY);
 			}
-		} else if (object instanceof Creep) {
-			removeOne(this.#creeps, object);
-		} else if (object instanceof Source) {
-			removeOne(this.#sources, object);
-		} else if (object instanceof ConstructionSite) {
-			removeOne(this.#constructionSites, object);
 		}
+		return lookType;
+	}
+
+	// Returns objects indexed by type and position
+	private _getSpatialIndex(look: LookConstants) {
+		const cached = this.#lookSpatialIndex.get(look);
+		if (cached) {
+			return cached;
+		}
+		const spatial = new Map<number, RoomObject[]>();
+		this.#lookSpatialIndex.set(look, spatial);
+		for (const object of this.#lookIndex.get(look)!) {
+			const pos = object.pos[PositionInteger];
+			const list = spatial.get(pos);
+			if (list) {
+				list.push(object);
+			} else {
+				spatial.set(pos, [ object ]);
+			}
+		}
+		return spatial;
 	}
 
 	//
@@ -287,6 +445,11 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 			return `[Room ${options.stylize(this.name, 'string')}]`;
 		}
 	}
+
+	#findCache = new Map<number, RoomObject[]>();
+	#lookIndex = new Map<LookConstants, RoomObject[]>(
+		mapInPlace(lookConstants, look => [ look, []]));
+	#lookSpatialIndex = new Map<LookConstants, Map<number, RoomObject[]>>();
 }
 
 //
@@ -370,23 +533,27 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 }
 
 //
-// Utilities
-function getFindConstantsForObject(object: RoomObject) {
-	if (object instanceof Structure) {
-		return [ C.FIND_STRUCTURES, C.FIND_MY_STRUCTURES, C.FIND_HOSTILE_STRUCTURES ];
+// Extracted private functions
 
-	} else if (object instanceof Creep) {
-		return [ C.FIND_CREEPS, C.FIND_MY_CREEPS, C.FIND_HOSTILE_CREEPS ];
-
-	} else if (object instanceof ConstructionSite) {
-		return [ C.FIND_CONSTRUCTION_SITES, C.FIND_MY_CONSTRUCTION_SITES, C.FIND_HOSTILE_CONSTRUCTION_SITES ];
-
-	} else if (object instanceof Source) {
-		return [ C.FIND_SOURCES, C.FIND_SOURCES_ACTIVE ];
-	}
-	return [];
+// These must be functions in order to get hoisting. This shouldn't be needed after I can get real
+// ES Module functionality working
+const _moveObject = uncurryThis(exchange(Room.prototype, MoveObject));
+export function moveObject(object: RoomObject, pos: RoomPosition) {
+	return _moveObject(object.room, object, pos);
 }
 
+const _insertObject = uncurryThis(exchange(Room.prototype, InsertObject));
+export function insertObject(room: Room, object: RoomObject) {
+	return _insertObject(room, object);
+}
+
+const _removeObject = uncurryThis(exchange(Room.prototype, RemoveObject));
+export function removeObject(room: Room, object: RoomObject) {
+	return _removeObject(room, object);
+}
+
+//
+// Utilities
 function removeOne<Type>(list: Type[], element: Type) {
 	const index = list.indexOf(element);
 	if (index === -1) {

@@ -5,7 +5,6 @@ import { loadRoom, loadRooms, saveRoom } from '~/backend/model/room';
 import { loadUser, saveUser } from '~/backend/model/user';
 import * as GameSchema from '~/engine/metadata/game';
 import * as ControllerIntents from '~/engine/processor/intents/controller';
-import * as RoomIntents from '~/engine/processor/intents/room';
 import * as SpawnIntents from '~/engine/processor/intents/spawn';
 import * as Room from '~/game/room';
 import { RoomPosition } from '~/game/position';
@@ -104,7 +103,7 @@ const PlaceSpawnEndpoint: Endpoint = {
 					throw new Error('Invalid intent');
 				}
 				// Add spawn
-				RoomIntents.insertObject(room, SpawnIntents.create(pos, userid!, name));
+				Room.insertObject(room, SpawnIntents.create(pos, userid!, name));
 				ControllerIntents.claim(room.controller!, user.id);
 				user.roomsControlled.add(room.name);
 				user.roomsPresent.add(room.name);

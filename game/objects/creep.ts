@@ -22,6 +22,7 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 	get my() { return this._owner === Game.me }
 	get spawning() { return this._ageTime === 0 }
 	get ticksToLive() { return this._ageTime - Game.time }
+	get _lookType() { return C.LOOK_CREEPS }
 
 	build(target: ConstructionSite) {
 		return chainIntentChecks(
@@ -53,7 +54,7 @@ export class Creep extends withOverlay<typeof shape>()(RoomObject) {
 			() => checkMoveCommon(this),
 			() => {
 				// Parse target
-				const { pos } = fetchPositionArgument(this.pos, ...args);
+				const { pos } = fetchPositionArgument(this.pos.roomName, ...args);
 				if (pos === undefined) {
 					return C.ERR_INVALID_TARGET;
 				} else if (pos.isNearTo(this.pos)) {

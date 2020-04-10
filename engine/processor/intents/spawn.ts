@@ -1,6 +1,7 @@
 import * as C from '~/game/constants';
 import * as Game from '~/game/game';
 import { getPositonInDirection, Direction, RoomPosition } from '~/game/position';
+import * as Room from '~/game/room';
 import * as Creep from '~/game/objects/creep';
 import { bindProcessor } from '~/engine/processor/bind';
 import { RoomObject } from '~/game/objects/room-object';
@@ -8,7 +9,6 @@ import { StructureExtension } from '~/game/objects/structures/extension';
 import { checkSpawnCreep, StructureSpawn } from '~/game/objects/structures/spawn';
 import { accumulate, instantiate } from '~/lib/utility';
 import * as CreepIntent from './creep';
-import * as RoomIntent from './room';
 import { newRoomObject } from './room-object';
 import * as StoreIntent from './store';
 
@@ -75,7 +75,7 @@ function createCreep(spawn: StructureSpawn, intent: Parameters['spawn']) {
 
 	// Add new creep to room objects
 	const creep = CreepIntent.create(intent.body, spawn.pos, intent.name, Game.me);
-	RoomIntent.insertObject(spawn.room, creep);
+	Room.insertObject(spawn.room, creep);
 
 	// Set spawning information
 	const needTime = intent.body.length * C.CREEP_SPAWN_TIME;
@@ -104,7 +104,7 @@ export default () => bindProcessor(StructureSpawn, {
 			if (creep && creep instanceof Creep.Creep) {
 				const hasClaim = creep.body.some(part => part.type === 'claim');
 				creep._ageTime = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME);
-				creep.pos = getPositonInDirection(creep.pos, C.TOP);
+				Room.moveObject(creep, getPositonInDirection(creep.pos, C.TOP));
 			}
 			this.spawning = undefined;
 		}

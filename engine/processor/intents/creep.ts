@@ -5,13 +5,13 @@ import type { ConstructionSite } from '~/game/objects/construction-site';
 import type { Source } from '~/game/objects/source';
 import type { StructureController } from '~/game/objects/structures/controller';
 import { Direction, RoomPosition } from '~/game/position';
+import * as Room from '~/game/room';
 import { bindProcessor } from '~/engine/processor/bind';
 import type { ResourceType, RoomObjectWithStore } from '~/game/store';
 import { instantiate } from '~/lib/utility';
 import * as StructureControllerIntent from './controller';
 import * as Movement from './movement';
 import { newRoomObject } from './room-object';
-import * as RoomIntent from './room';
 import * as StoreIntent from './store';
 
 type Parameters = {
@@ -69,8 +69,8 @@ export default () => bindProcessor(Creep.Creep, {
 			const { target: id } = intent.harvest;
 			const target = Game.getObjectById(id) as Source | undefined;
 			if (Creep.checkHarvest(this, target) === C.OK) {
-				const amount = Math.min(target!.energy, 25);
-				StoreIntent.add(this.store, 'energy', 25);
+				const amount = Math.min(target!.energy, this.store.getFreeCapacity('energy'), 25);
+				StoreIntent.add(this.store, 'energy', amount);
 				target!.energy -= amount;
 			}
 		}
@@ -102,7 +102,7 @@ export default () => bindProcessor(Creep.Creep, {
 
 		if (intent.suicide) {
 			if (this.my) {
-				RoomIntent.removeObject(this.room, this);
+				Room.removeObject(this.room, this);
 			}
 		}
 		return false;
@@ -110,12 +110,12 @@ export default () => bindProcessor(Creep.Creep, {
 
 	tick() {
 		if (Game.time >= this._ageTime && this._ageTime !== 0) {
-			RoomIntent.removeObject(this.room, this);
+			Room.removeObject(this.room, this);
 			return true;
 		}
 		const nextPosition = Movement.get(this);
 		if (nextPosition) {
-			this.pos = nextPosition;
+			Room.moveObject(this, nextPosition);
 			return true;
 		}
 		return false;

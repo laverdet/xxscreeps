@@ -154,3 +154,8 @@ export function nonNullable<Type>(value: Type): value is NonNullOrVoidable<Type>
 export function staticCast<Type>(value: Type) {
 	return value;
 }
+
+// Accepts an instance function an returns a free function where the first argument becomes `this`
+export function uncurryThis<This, Args extends any[], Return>(callback: (this: This, ...args: Args) => Return) {
+	return (that: This, ...args: Args): Return => Reflect.apply(callback, that, args);
+}

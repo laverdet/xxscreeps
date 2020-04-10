@@ -3,7 +3,7 @@ import { me } from '~/game/game';
 import { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { RoomPosition } from '~/game/position';
 import { bindProcessor } from '~/engine/processor/bind';
-import { AnyRoomObject, Room, checkCreateConstructionSite } from '~/game/room';
+import { Room, checkCreateConstructionSite, insertObject } from '~/game/room';
 import * as ConstructionIntents from './construction-site';
 
 type Parameters = {
@@ -19,28 +19,6 @@ export type Intents = {
 	receiver: Room;
 	parameters: Parameters;
 };
-
-export function insertObject(room: Room, object: AnyRoomObject) {
-	room._objects.push(object);
-	(function(this: Room) {
-		this._wasInserted(object);
-	}).apply(room);
-}
-
-export function removeObject(room: Room, object: AnyRoomObject) {
-	(function() {
-		for (let ii = 0; ii < room._objects.length; ++ii) {
-			if (room._objects[ii].id === object.id) {
-				room._objects.splice(ii, 1);
-				return;
-			}
-		}
-		throw new Error('Removed object was not found');
-	})();
-	(function(this: Room) {
-		this._wasRemoved(object);
-	}).apply(room);
-}
 
 export default () => bindProcessor(Room, {
 	process(intent: Partial<Parameters>) {

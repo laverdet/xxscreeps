@@ -6,7 +6,7 @@ import * as Game from '~/game/game';
 import type { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { firstMatching, minimum } from '~/lib/utility';
 import type { RoomObject } from './objects/room-object';
-import { FindPathOptions, RoomFindObjectType, RoomFindOptions } from './room';
+import { FindConstants, FindPathOptions, RoomFindType, RoomFindOptions } from './room';
 
 const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
@@ -20,7 +20,7 @@ export const PositionInteger: unique symbol = Symbol('positionInteger');
 type PositionFindType<Type> =
 	Type extends RoomObject[] ? Type :
 	Type extends RoomPosition ? RoomPosition :
-	Type extends number ? RoomFindObjectType<Type> :
+	Type extends FindConstants ? RoomFindType<Type> :
 	never;
 
 /**
@@ -135,7 +135,7 @@ export class RoomPosition {
 	isEqualTo(x: number, y: number): boolean;
 	isEqualTo(target: RoomObject | RoomPosition): boolean;
 	isEqualTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
-		const { pos } = fetchPositionArgument(this, ...args);
+		const { pos } = fetchPositionArgument(this.roomName, ...args);
 		return this[PositionInteger] === pos?.[PositionInteger];
 	}
 
@@ -177,11 +177,11 @@ export class RoomPosition {
 	 * executed against.
 	 * @params options See `Room.find`
 	 */
-	findClosestByPath<Type extends number | (RoomObject | RoomPosition)[]>(
+	findClosestByPath<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
 		search: Type, options?: FindClosestByPathOptions
 	): PositionFindType<Type> | undefined;
 	findClosestByPath(
-		search: number | (RoomObject | RoomPosition)[],
+		search: FindConstants | (RoomObject | RoomPosition)[],
 		options: FindClosestByPathOptions = {},
 	): RoomObject | RoomPosition | undefined {
 
@@ -201,7 +201,7 @@ export class RoomPosition {
 		// Match position to object
 		const { path } = result;
 		const last = path[path.length - 1] ?? this;
-		return firstMatching(objects, object => last.isNearTo(object));
+		return firstMatching(filtered, object => last.isNearTo(object));
 	}
 
 	/**
@@ -211,11 +211,11 @@ export class RoomPosition {
 	 * executed against.
 	 * @param options See `Room.find`
 	 */
-	findClosestByRange<Type extends number | (RoomObject | RoomPosition)[]>(
+	findClosestByRange<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
 		search: Type, options?: RoomFindOptions,
 	): PositionFindType<Type> | undefined;
 	findClosestByRange(
-		search: number | (RoomObject | RoomPosition)[], options?: RoomFindOptions,
+		search: FindConstants | (RoomObject | RoomPosition)[], options?: RoomFindOptions,
 	) {
 
 		// Find objects to search
@@ -235,11 +235,11 @@ export class RoomPosition {
 	 * @param range The range distance
 	 * @param options See `Room.find`
 	 */
-	findInRange<Type extends number | (RoomObject | RoomPosition)[]>(
-		search: Type, range: number, options?: RoomFindOptions,
+	findInRange<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
+		search: Type, range: FindConstants, options?: RoomFindOptions,
 	): PositionFindType<Type>[] | undefined;
 	findInRange(
-		search: number | RoomObject[] | RoomPosition[],
+		search: FindConstants | RoomObject[] | RoomPosition[],
 		range: number,
 		options?: FindClosestByPathOptions,
 	) {
@@ -266,7 +266,7 @@ export class RoomPosition {
 	findPathTo(x: number, y: number, options?: FindPathOptions): any;
 	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions): any;
 	findPathTo(...args: any) {
-		const { pos, extra } = fetchPositionArgument(this, ...args);
+		const { pos, extra } = fetchPositionArgument(this.roomName, ...args);
 		return fetchRoom(this.roomName).findPath(this, pos!, extra);
 	}
 
@@ -282,8 +282,8 @@ export class RoomPosition {
 		return fetchRoom(this.roomName).createConstructionSite(this, structureType, name);
 	}
 
-	createFlag(name) {
-		Memory.flags = {};
+	createFlag(/*name: string*/) {
+		(globalThis as any).Memory.flags = {};
 	}
 
 	toJSON() {
@@ -324,7 +324,7 @@ export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any)
 }
 
 export function fetchPositionArgument(
-	fromPos: RoomPosition, arg1?: any, arg2?: any, arg3?: any,
+	fromRoom: string, arg1?: any, arg2?: any, arg3?: any,
 ): { pos?: RoomPosition; extra: any } {
 	if (typeof arg1 === 'object') {
 		if (arg1 instanceof RoomPosition) {
@@ -335,7 +335,7 @@ export function fetchPositionArgument(
 	}
 	try {
 		return {
-			pos: new RoomPosition(arg1, arg2, fromPos.roomName),
+			pos: new RoomPosition(arg1, arg2, fromRoom),
 			extra: arg3,
 		};
 	} catch (err) {

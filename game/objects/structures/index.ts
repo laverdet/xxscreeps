@@ -1,3 +1,4 @@
+import * as C from '~/game/constants';
 import * as Game from '~/game/game';
 import type { AnyRoomObject } from '~/game/room';
 import { RoomObject } from '../room-object';
@@ -11,4 +12,5 @@ export abstract class Structure extends withOverlay<typeof shape>()(RoomObject) 
 	get hitsMax() { return this.hits }
 	get my() { return this._owner === Game.me }
 	get owner() { return {} }
+	get _lookType() { return C.LOOK_STRUCTURES }
 }

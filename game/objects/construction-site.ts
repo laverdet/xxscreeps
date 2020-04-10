@@ -9,4 +9,5 @@ export type ConstructibleStructureType = InstanceType<typeof ConstructionSite>['
 export class ConstructionSite extends withOverlay<typeof shape>()(RoomObject) {
 	get my() { return this._owner === Game.me }
 	get progressTotal() { return C.CONSTRUCTION_COST[this.structureType] }
+	get _lookType() { return C.LOOK_CONSTRUCTION_SITES }
 }
