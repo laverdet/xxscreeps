@@ -6,6 +6,8 @@ import { instantiate } from '~/lib/utility';
 import * as ContainerIntent from './container';
 import * as ExtensionIntent from './extension';
 import * as RoadIntent from './road';
+import * as StorageIntent from './storage';
+import * as TowerIntent from './tower';
 import { newRoomObject } from './room-object';
 
 export function create(
@@ -35,6 +37,8 @@ export default () => bindProcessor(ConstructionSite, {
 					case 'container': return ContainerIntent.create(pos);
 					case 'extension': return ExtensionIntent.create(pos, level, _owner);
 					case 'road': return RoadIntent.create(pos);
+					case 'storage': return StorageIntent.create(pos, _owner);
+					case 'tower': return TowerIntent.create(pos, _owner);
 					default:
 				}
 			}();

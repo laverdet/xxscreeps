@@ -10,6 +10,8 @@ import * as Resource from './resource';
 import * as Road from './road';
 import * as Source from './source';
 import * as Spawn from './spawn';
+import * as Storage from './storage';
+import * as Tower from './tower';
 
 export const shape = declare('Room', {
 	name: 'string',
@@ -23,6 +25,8 @@ export const shape = declare('Room', {
 		Road.format,
 		Source.format,
 		Spawn.format,
+		Storage.format,
+		Tower.format,
 	)),
 });
 export type Shape = ShapeOf<typeof shape>;

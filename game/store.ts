@@ -1,13 +1,14 @@
 import { BufferObject } from '~/lib/schema/buffer-object';
 import { withOverlay, BufferView } from '~/lib/schema';
 import type { shape } from '~/engine/schema/store';
+import type { AnyRoomObject } from './room';
 import type { Creep } from './objects/creep';
 import type { StructureSpawn } from './objects/structures/spawn';
 import type { ResourceType } from './objects/resource';
 export type { ResourceType };
 
 export type StorageRecord = Partial<Record<ResourceType, number>>;
-export type RoomObjectWithStore = Creep | StructureSpawn;
+export type RoomObjectWithStore = Extract<AnyRoomObject, { store: any }>;
 
 // Adds resource types information to `Store` class. No changes from `extends BufferObject` as far
 // as JS is concerned

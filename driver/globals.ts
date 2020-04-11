@@ -16,6 +16,8 @@ import { StructureController } from '~/game/objects/structures/controller';
 import { StructureExtension } from '~/game/objects/structures/extension';
 import { StructureRoad } from '~/game/objects/structures/road';
 import { StructureSpawn } from '~/game/objects/structures/spawn';
+import { StructureStorage } from '~/game/objects/structures/storage';
+import { StructureTower } from '~/game/objects/structures/tower';
 import { RoomVisual } from '~/game/visual';
 
 declare const globalThis: any;
@@ -36,9 +38,7 @@ export function setupGlobals() {
 	// Not implemented
 	globalThis.Mineral = function() {};
 	globalThis.StructureLink = function() {};
-	globalThis.StructureStorage = function() {};
 	globalThis.StructureTerminal = function() {};
-	globalThis.StructureTower = function() {};
 	globalThis.Tombstone = function() {};
 
 	// Export prototypes
@@ -57,6 +57,8 @@ export function setupGlobals() {
 		StructureExtension,
 		StructureRoad,
 		StructureSpawn,
+		StructureStorage,
+		StructureTower,
 	})) {
 		globalThis[key] = object;
 	}

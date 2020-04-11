@@ -9,6 +9,8 @@ import { StructureController } from '~/game/objects/structures/controller';
 import { StructureExtension } from '~/game/objects/structures/extension';
 import { StructureRoad } from '~/game/objects/structures/road';
 import { StructureSpawn } from '~/game/objects/structures/spawn';
+import { StructureStorage } from '~/game/objects/structures/storage';
+import { StructureTower } from '~/game/objects/structures/tower';
 import { Store } from '~/game/store';
 import { Variant } from '~/lib/schema';
 
@@ -156,5 +158,19 @@ bindRenderer(StructureSpawn, function render() {
 		...renderStructure(this),
 		...renderStore(this.store),
 		name: this.name,
+	};
+});
+
+bindRenderer(StructureStorage, function render() {
+	return {
+		...renderStructure(this),
+		...renderStore(this.store),
+	};
+});
+
+bindRenderer(StructureTower, function render() {
+	return {
+		...renderStructure(this),
+		...renderStore(this.store),
 	};
 });
