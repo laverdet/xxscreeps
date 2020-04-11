@@ -12,7 +12,7 @@ type Parameters = {
 		structureType: ConstructibleStructureType;
 		xx: number;
 		yy: number;
-	};
+	}[];
 };
 
 export type Intents = {
@@ -23,11 +23,12 @@ export type Intents = {
 export default () => bindProcessor(Room, {
 	process(intent: Partial<Parameters>) {
 		if (intent.createConstructionSite) {
-			const params = intent.createConstructionSite;
-			const pos = new RoomPosition(params.xx, params.yy, this.name);
-			if (checkCreateConstructionSite(this, pos, params.structureType) === C.OK) {
-				const site = ConstructionIntent.create(pos, params.structureType, params.name, me);
-				insertObject(this, site);
+			for (const params of intent.createConstructionSite) {
+				const pos = new RoomPosition(params.xx, params.yy, this.name);
+				if (checkCreateConstructionSite(this, pos, params.structureType) === C.OK) {
+					const site = ConstructionIntent.create(pos, params.structureType, params.name, me);
+					insertObject(this, site);
+				}
 			}
 		}
 		return false;

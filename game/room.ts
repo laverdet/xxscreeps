@@ -345,7 +345,7 @@ export class Room extends withOverlay<typeof shape>()(BufferObject) {
 				return C.OK;
 			},
 			() => checkCreateConstructionSite(this, pos, structureType),
-			() => Game.intents.save(this, 'createConstructionSite', { name, structureType, xx, yy }));
+			() => Game.intents.push(this, 'createConstructionSite', { name, structureType, xx, yy }));
 	}
 
 	get visual() {

@@ -2,6 +2,8 @@ import type ivm from 'isolated-vm';
 import { inspect } from 'util';
 
 import type { UserIntent } from '~/engine/service/runner';
+import * as Game from '~/game/game';
+// eslint-disable-next-line no-duplicate-imports
 import { flushIntents, initializeIntents, intents, runForUser } from '~/game/game';
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
@@ -145,7 +147,10 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 	// Inject user intents
 	if (userIntents) {
 		for (const intent of userIntents) {
-			intents.getIntentsForRoomAndId(intent.room, intent.id)[intent.intent] = true;
+			const room = Game.rooms[intent.room];
+			if (room) {
+				intents.getIntentsForReceiver(room)[intent.intent] = true;
+			}
 		}
 	}
 
