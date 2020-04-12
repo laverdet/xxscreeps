@@ -1,8 +1,9 @@
-import { declare, vector, withType } from '~/lib/schema';
+import { declare, vector, withType, TypeOf } from '~/lib/schema';
 import { ResourceType, Store } from '~/game/store';
 import { optionalResourceEnumFormat } from './resource';
 
-export const shape = declare('Store', {
+export type Shape = TypeOf<typeof shape>;
+const shape = declare('Store', {
 	_amount: 'int32',
 	_capacity: 'int32',
 	_resources: vector({

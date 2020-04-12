@@ -4,9 +4,9 @@ import { Process, ProcessorSpecification, Tick } from '~/engine/processor/bind';
 import { expandGetters } from '~/engine/util/inspect';
 import { BufferObject } from '~/lib/schema/buffer-object';
 import { withOverlay, Variant } from '~/lib/schema';
-import type { shape } from '~/engine/schema/room-object';
+import type { Shape } from '~/engine/schema/room-object';
 
-export abstract class RoomObject extends withOverlay<typeof shape>()(BufferObject) {
+export abstract class RoomObject extends withOverlay<Shape>()(BufferObject) {
 	abstract _lookType: LookConstants;
 
 	[Symbol.for('nodejs.util.inspect.custom')]() {

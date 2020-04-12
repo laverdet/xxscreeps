@@ -6,7 +6,7 @@ import type { BufferView } from '~/lib/schema/buffer-view';
 import { withOverlay } from '~/lib/schema';
 import { accumulate, concatInPlace, exchange, mapInPlace, mapToKeys, uncurryThis } from '~/lib/utility';
 import { Process, ProcessorSpecification, Tick } from '~/engine/processor/bind';
-import type { shape } from '~/engine/schema/room';
+import type { Shape } from '~/engine/schema/room';
 import { iteratee } from '~/engine/util/iteratee';
 
 import * as Game from './game';
@@ -120,7 +120,7 @@ const MoveObject = Symbol('moveObject');
 const InsertObject = Symbol('insertObject');
 const RemoveObject = Symbol('removeObject');
 
-export class Room extends withOverlay<typeof shape>()(BufferObject) {
+export class Room extends withOverlay<Shape>()(BufferObject) {
 	get memory() {
 		const memory = Memory.get();
 		const rooms = memory.rooms ?? (memory.rooms = {});

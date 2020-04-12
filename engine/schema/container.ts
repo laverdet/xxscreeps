@@ -1,9 +1,10 @@
-import { declare, inherit, variant } from '~/lib/schema';
+import { declare, inherit, variant, TypeOf } from '~/lib/schema';
 import { StructureContainer } from '~/game/objects/structures/container';
 import * as Store from './store';
 import * as Structure from './structure';
 
-export const shape = declare('Container', {
+export type Shape = TypeOf<typeof shape>;
+const shape = declare('Container', {
 	...inherit(Structure.format),
 	...variant('container'),
 	store: Store.format,

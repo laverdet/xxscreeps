@@ -1,8 +1,9 @@
-import { declare, inherit, variant } from '~/lib/schema';
+import { declare, inherit, variant, TypeOf } from '~/lib/schema';
 import { StructureRoad } from '~/game/objects/structures/road';
 import * as Structure from './structure';
 
-export const shape = declare('Road', {
+export type Shape = TypeOf<typeof shape>;
+const shape = declare('Road', {
 	...inherit(Structure.format),
 	...variant('road'),
 	_nextDecayTime: 'int32',

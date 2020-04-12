@@ -2,7 +2,7 @@ import * as C from '~/game/constants';
 import * as Game from '~/game/game';
 import * as Memory from '~/game/memory';
 import { withOverlay } from '~/lib/schema';
-import type { shape } from '~/engine/schema/creep';
+import type { Shape } from '~/engine/schema/creep';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { ConstructionSite } from './construction-site';
 import { chainIntentChecks, RoomObject } from './room-object';
@@ -15,7 +15,7 @@ import { Structure } from './structures';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 
-export class Creep extends withOverlay<typeof shape>()(RoomObject) {
+export class Creep extends withOverlay<Shape>()(RoomObject) {
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
 	get memory() {

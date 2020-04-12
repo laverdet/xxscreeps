@@ -1,8 +1,9 @@
-import { declare, inherit, variant } from '~/lib/schema';
+import { declare, inherit, variant, TypeOf } from '~/lib/schema';
 import { Source } from '~/game/objects/source';
 import * as RoomObject from './room-object';
 
-export const shape = declare('Source', {
+export type Shape = TypeOf<typeof shape>;
+const shape = declare('Source', {
 	...inherit(RoomObject.format),
 	...variant('source'),
 	energy: 'int32',

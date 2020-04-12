@@ -1,10 +1,10 @@
 import * as C from '~/game/constants';
 import * as Game from '~/game/game';
-import type { shape } from '~/engine/schema/controller';
+import type { Shape } from '~/engine/schema/controller';
 import { withOverlay } from '~/lib/schema';
 import { Structure } from '.';
 
-export class StructureController extends withOverlay<typeof shape>()(Structure) {
+export class StructureController extends withOverlay<Shape>()(Structure) {
 	get progress() { return this.level > 0 ? this._progress : undefined }
 	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
 	get structureType() { return C.STRUCTURE_CONTROLLER }

@@ -1,7 +1,7 @@
 import * as C from '~/game/constants';
 import * as Game from '~/game/game';
 import * as Memory from '~/game/memory';
-import type { shape } from '~/engine/schema/spawn';
+import type { Shape } from '~/engine/schema/spawn';
 import { withOverlay } from '~/lib/schema';
 import { accumulate } from '~/lib/utility';
 
@@ -19,7 +19,7 @@ type SpawnCreepOptions = {
 	memory?: any;
 };
 
-export class StructureSpawn extends withOverlay<typeof shape>()(Structure) {
+export class StructureSpawn extends withOverlay<Shape>()(Structure) {
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 

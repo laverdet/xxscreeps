@@ -1,10 +1,11 @@
-import { declare, enumerated, inherit, variant } from '~/lib/schema';
+import { declare, enumerated, inherit, variant, TypeOf } from '~/lib/schema';
 import * as Id from '~/engine/util/schema/id';
 import * as C from '~/game/constants';
 import { ConstructionSite } from '~/game/objects/construction-site';
 import * as RoomObject from './room-object';
 
-export const shape = declare('ConstructionSite', {
+export type Shape = TypeOf<typeof shape>;
+const shape = declare('ConstructionSite', {
 	...inherit(RoomObject.format),
 	...variant('constructionSite'),
 	name: 'string',

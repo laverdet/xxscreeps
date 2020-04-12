@@ -1,13 +1,12 @@
-import { getReader, getWriter, declare, inherit, vector, withType, ShapeOf } from '~/lib/schema';
+import { getReader, getWriter, declare, inherit, vector, withType, TypeOf } from '~/lib/schema';
 import { mapToKeys } from '~/lib/utility';
 import { Color, Flag } from '~/game/flag';
 import * as RoomObject from './room-object';
 
-export type Shape = ShapeOf<typeof shape>;
-
 const colorFormat = withType<Color>('int8');
 
-export const shape = declare('Flag', {
+export type Shape = TypeOf<typeof shape>;
+const shape = declare('Flag', {
 	...inherit(RoomObject.format),
 	name: 'string',
 	color: colorFormat,

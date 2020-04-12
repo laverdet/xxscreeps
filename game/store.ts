@@ -1,9 +1,7 @@
 import { BufferObject } from '~/lib/schema/buffer-object';
 import { withOverlay, BufferView } from '~/lib/schema';
-import type { shape } from '~/engine/schema/store';
+import type { Shape } from '~/engine/schema/store';
 import type { AnyRoomObject } from './room';
-import type { Creep } from './objects/creep';
-import type { StructureSpawn } from './objects/structures/spawn';
 import type { ResourceType } from './objects/resource';
 export type { ResourceType };
 
@@ -37,7 +35,7 @@ const BufferObjectWithResourcesType = BufferObject as any as {
  * ```
  */
 export class Store<Resources extends ResourceType = any> extends
-	withOverlay<typeof shape>()(BufferObjectWithResourcesType) {
+	withOverlay<Shape>()(BufferObjectWithResourcesType) {
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
 

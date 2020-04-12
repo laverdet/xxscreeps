@@ -1,4 +1,4 @@
-import { declare, getReader, getWriter, variant, vector, ShapeOf } from '~/lib/schema';
+import { declare, getReader, getWriter, variant, vector, TypeOf } from '~/lib/schema';
 import { Room } from '~/game/room';
 
 import * as Container from './container';
@@ -13,7 +13,8 @@ import * as Spawn from './spawn';
 import * as Storage from './storage';
 import * as Tower from './tower';
 
-export const shape = declare('Room', {
+export type Shape = TypeOf<typeof shape>;
+const shape = declare('Room', {
 	name: 'string',
 	_objects: vector(variant(
 		Container.format,
@@ -29,7 +30,6 @@ export const shape = declare('Room', {
 		Tower.format,
 	)),
 });
-export type Shape = ShapeOf<typeof shape>;
 
 export const format = declare(shape, { overlay: Room });
 

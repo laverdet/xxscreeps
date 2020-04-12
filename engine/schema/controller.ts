@@ -1,8 +1,9 @@
-import { declare, inherit, variant } from '~/lib/schema';
+import { declare, inherit, variant, TypeOf } from '~/lib/schema';
 import { StructureController } from '~/game/objects/structures/controller';
 import * as Structure from './structure';
 
-export const shape = declare('Controller', {
+export type Shape = TypeOf<typeof shape>;
+const shape = declare('Controller', {
 	...inherit(Structure.format),
 	...variant('controller'),
 	isPowerEnabled: 'bool',

@@ -8,7 +8,8 @@ export const resourceEnumFormat = withType<
 	Exclude<TypeOf<typeof optionalResourceEnumFormat>, undefined>
 >(optionalResourceEnumFormat);
 
-export const shape = declare('Resource', {
+export type Shape = TypeOf<typeof shape>;
+const shape = declare('Resource', {
 	...inherit(RoomObject.format),
 	...variant('resource'),
 	amount: 'int32',

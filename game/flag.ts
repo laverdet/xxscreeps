@@ -4,11 +4,11 @@ import * as Memory from './memory';
 import { extractPositionId, fetchPositionArgument, RoomPosition } from './position';
 import { chainIntentChecks, RoomObject } from './objects/room-object';
 import { withOverlay } from '~/lib/schema';
-import type { shape, Shape } from '~/engine/schema/flag';
+import type { Shape } from '~/engine/schema/flag';
 
 export type Color = typeof C.COLORS_ALL[number];
 
-export class Flag extends withOverlay<typeof shape>()(RoomObject) {
+export class Flag extends withOverlay<Shape>()(RoomObject) {
 	get memory() {
 		const memory = Memory.get();
 		const flags = memory.flags ?? (memory.flags = {});

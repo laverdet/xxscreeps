@@ -80,8 +80,8 @@ export function injectGetters(layout: StructLayout, prototype: object, lookup: I
 }
 
 // Injects types from format and interceptors into class prototype
-export function withOverlay<Format extends WithType>() {
+export function withOverlay<Shape>() {
 	return <Type extends { prototype: object }>(classDeclaration: Type) =>
 		classDeclaration as any as new (view: BufferView, offset: number) =>
-			Type['prototype'] & TypeOf<Format>;
+			Type['prototype'] & Shape;
 }
