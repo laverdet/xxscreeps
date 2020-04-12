@@ -19,14 +19,15 @@ export class AveragingTimer {
 	}
 
 	stop() {
-		const ii = (++this.index) % this.size;
 		const duration = process.hrtime.bigint() - this.started!;
-		if (ii <= this.ignoreFirst) {
+		if (++this.index <= this.ignoreFirst) {
 			return Number(duration * bigAccuracy) / accuracy;
 		}
+		const ii = this.index % this.size;
 		const previous = this.samples[ii];
 		this.samples[ii] = duration;
 		this.sum += duration - previous;
-		return Number(this.sum * bigAccuracy / BigInt(Math.min(this.size, this.index))) / accuracy;
+		const samplesCount = BigInt(Math.min(this.size, this.index - this.ignoreFirst));
+		return Number(this.sum * bigAccuracy / samplesCount) / accuracy;
 	}
 }
