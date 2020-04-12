@@ -1,9 +1,9 @@
 import * as Crypto from 'crypto';
-import configPromise from '~/engine/config';
+import config from '~/engine/config';
 import { runOnce } from '~/lib/memoize';
 
-const secret = runOnce(async() => {
-	const { secret } = (await configPromise).config.backend;
+const secret = runOnce(() => {
+	const { secret } = config.backend;
 	if (secret === undefined) {
 		return Crypto.randomBytes(16);
 	}
@@ -13,7 +13,7 @@ const secret = runOnce(async() => {
 const kTokenExpiry = 120;
 
 async function encrypt(data: string | Buffer) {
-	const key = await secret();
+	const key = secret();
 	const hmac = Crypto.createHmac('sha3-224', key);
 	const iv = Crypto.randomBytes(16);
 	hmac.update(iv);
@@ -36,7 +36,7 @@ async function encrypt(data: string | Buffer) {
 }
 
 async function decrypt(data: string) {
-	const key = await secret();
+	const key = secret();
 	const buffer = Buffer.from(data.replace(/-/g, '+').replace('_', '/'), 'base64');
 	const hmac = Crypto.createHmac('sha3-224', key);
 	hmac.update(buffer.subarray(8));

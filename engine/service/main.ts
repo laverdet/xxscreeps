@@ -1,4 +1,4 @@
-import configPromise from '~/engine/config';
+import config from '~/engine/config';
 import * as GameSchema from '~/engine/metadata/game';
 import { AveragingTimer } from '~/lib/averaging-timer';
 import { getOrSet, makeResolver, mapInPlace } from '~/lib/utility';
@@ -10,7 +10,6 @@ import type { GameMessage, ProcessorMessage, ProcessorQueueElement, RunnerMessag
 
 export default async function() {
 	// Open channels
-	const { config } = await configPromise;
 	const [
 		blobStorage, roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
 	] = await Promise.all([

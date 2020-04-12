@@ -1,5 +1,5 @@
 import os from 'os';
-import configPromise from '~/engine/config';
+import config from '~/engine/config';
 import { Worker, waitForWorker } from '~/lib/worker-threads';
 import { topLevelTask } from '~/lib/task';
 import { listen } from '~/lib/utility';
@@ -19,7 +19,6 @@ topLevelTask(async() => {
 
 	try {
 		// Start main service
-		const config = (await configPromise).config?.launcher;
 		const waitForMain = async function() {
 			for await (const message of serviceChannel) {
 				if (message.type === 'mainConnected') {
@@ -55,18 +54,19 @@ topLevelTask(async() => {
 		});
 
 		// Start workers
-		if (config?.singleThreaded) {
+		const { processorWorkers, runnerWorkers, singleThreaded } = config.launcher ?? {};
+		if (singleThreaded) {
 			const backend = Backend();
 			const processor = Processor();
 			const runner = Runner();
 			await Promise.all([ main, backend, processor, runner ]);
 		} else {
-			const processorWorkers = config?.processorWorkers ?? (os.cpus().length >> 1) + 1;
-			const runnerWorkers = config?.runnerWorkers ?? 1;
+			const processorCount = processorWorkers ?? (os.cpus().length >> 1) + 1;
+			const runnerCount = runnerWorkers ?? 1;
 			const backend = new Worker('~/backend/server', { runDefault: true });
-			const processors = Array(processorWorkers).fill(undefined).map(() =>
+			const processors = Array(processorCount).fill(undefined).map(() =>
 				new Worker('~/engine/service/processor', { runDefault: true }));
-			const runners = Array(runnerWorkers).fill(undefined).map(() =>
+			const runners = Array(runnerCount).fill(undefined).map(() =>
 				new Worker('~/engine/service/runner', { runDefault: true }));
 			await Promise.all([
 				main,

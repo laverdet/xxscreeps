@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import * as Path from 'path';
 import { listen, mapInPlace } from '~/lib/utility';
-import Config from '~/engine/config';
+import config, { configPath } from '~/engine/config';
 import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
 
 const fragmentNameWhitelist = /^[a-zA-Z0-9/-]+$/;
@@ -22,8 +22,7 @@ export abstract class BlobStorage extends Responder {
 	}
 
 	static async create() {
-		const config = await Config;
-		const path = Path.join(Path.dirname(config.file), config.config.storage?.path ?? './data');
+		const path = Path.join(Path.dirname(configPath), config.storage?.path ?? './data');
 		const dir = await fs.opendir(path);
 		await dir.close();
 		return create('blobStorage', BlobStorageHost, path);

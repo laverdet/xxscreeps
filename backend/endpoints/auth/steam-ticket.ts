@@ -1,7 +1,7 @@
 import request from 'request-promise-native';
 import { makeToken } from '~/backend/auth/token';
 import { Endpoint } from '~/backend/endpoint';
-import configPromise from '~/engine/config';
+import config from '~/engine/config';
 
 export const SteamTicketEndpoint: Endpoint = {
 	method: 'post',
@@ -18,7 +18,7 @@ export const SteamTicketEndpoint: Endpoint = {
 		// Get user id from Steam
 		const result = JSON.parse(await request('https://api.steampowered.com/ISteamUserAuth/AuthenticateUserTicket/v1/', {
 			qs: {
-				key: (await configPromise).config.backend.steamApiKey,
+				key: config.backend.steamApiKey,
 				appid: 464350,
 				ticket: req.body.ticket,
 			},

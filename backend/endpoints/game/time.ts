@@ -4,10 +4,10 @@ import config from '~/engine/config';
 const TickEndpoint: Endpoint = {
 	path: '/tick',
 
-	async execute() {
+	execute() {
 		return {
 			ok: 1,
-			tick: (await config).config.game?.tickSpeed ?? 250,
+			tick: config.game?.tickSpeed ?? 250,
 		};
 	},
 };

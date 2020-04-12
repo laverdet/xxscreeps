@@ -1,5 +1,5 @@
 import * as Path from 'path';
-import configPromise from '~/engine/config';
+import config from '~/engine/config';
 import { locateModule } from '../path-finder';
 import { compile, ExternalsFunctionElement } from '../webpack';
 import { IsolatedSandbox } from './isolated';
@@ -33,7 +33,7 @@ export function getPathFinderInfo() {
 }
 
 export async function createSandbox(options: Options) {
-	if ((await configPromise).config?.runner?.unsafeSandbox === true) {
+	if (config.runner?.unsafeSandbox === true) {
 		return NodejsSandbox.create(options);
 	} else {
 		return IsolatedSandbox.create(options);

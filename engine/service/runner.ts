@@ -1,5 +1,5 @@
 import os from 'os';
-import configPromise from '~/engine/config';
+import config from '~/engine/config';
 import * as Code from '~/engine/metadata/code';
 import * as User from '~/engine/metadata/user';
 import { loadTerrainFromWorld, readWorld } from '~/game/map';
@@ -38,7 +38,6 @@ type PlayerInstance = {
 export default async function() {
 
 	// Connect to main & storage
-	const { config } = await configPromise;
 	const blobStorage = await BlobStorage.connect();
 	const usersQueue = await Queue.connect('runnerUsers');
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
