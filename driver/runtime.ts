@@ -5,6 +5,7 @@ import type { UserIntent } from '~/engine/service/runner';
 import * as Game from '~/game/game';
 // eslint-disable-next-line no-duplicate-imports
 import { flushIntents, initializeIntents, intents, runForUser } from '~/game/game';
+import { setupGlobals } from '~/game/globals';
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
 import { Room } from '~/game/room';
@@ -14,12 +15,11 @@ import * as FlagIntent from '~/engine/processor/intents/flag';
 import { BufferView } from '~/lib/schema/buffer-view';
 
 import { setupConsole, Writer } from './console';
-import { setupGlobals } from './globals';
 
 // Sets up prototype overlays
 import '~/engine/schema/room';
-setupGlobals();
 declare const globalThis: any;
+setupGlobals(globalThis);
 
 /**
  * TODO: lock these
