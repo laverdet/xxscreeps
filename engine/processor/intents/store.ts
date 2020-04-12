@@ -87,16 +87,16 @@ export function subtract(store: Store, resourceType: ResourceType, amount: numbe
 
 export function create(capacity: number | null, capacityByResource?: StorageRecord, store?: StorageRecord) {
 	// Build resource vector
-	const resources: { type: string; amount: number; capacity: number }[] = [];
+	const resources: { type: ResourceType; amount: number; capacity: number }[] = [];
 	if (capacityByResource) {
-		for (const [ type, capacity ] of Object.entries(capacityByResource)) {
-			resources.push({ type, amount: store?.[type as ResourceType] ?? 0, capacity: capacity! });
+		for (const [ type, capacity ] of Object.entries(capacityByResource) as [ ResourceType, number ][]) {
+			resources.push({ type, amount: store?.[type] ?? 0, capacity });
 		}
 	}
 	if (store) {
-		for (const [ type, amount ] of Object.entries(store)) {
-			if (capacityByResource?.[type as ResourceType] === undefined) {
-				resources.push({ type, amount: amount!, capacity: 0 });
+		for (const [ type, amount ] of Object.entries(store) as [ ResourceType, number ][]) {
+			if (capacityByResource?.[type] === undefined) {
+				resources.push({ type, amount, capacity: 0 });
 			}
 		}
 	}

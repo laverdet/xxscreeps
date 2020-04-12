@@ -1,11 +1,12 @@
 import type { InspectOptionsStylized } from 'util';
 import { iteratee } from '~/engine/util/iteratee';
 import * as PathFinder from '~/game/path-finder';
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
+import * as C from './/constants';
+import * as Game from './game';
+import * as Flag from './flag';
 import type { ConstructibleStructureType } from '~/game/objects/construction-site';
-import { firstMatching, minimum } from '~/lib/utility';
-import type { RoomObject } from './objects/room-object';
+import { firstMatching, instantiate, minimum } from '~/lib/utility';
+import { RoomObject, chainIntentChecks } from './objects/room-object';
 import { FindConstants, FindPathOptions, RoomFindType, RoomFindOptions } from './room';
 
 const kMaxWorldSize = 0x100;
@@ -284,8 +285,36 @@ export class RoomPosition {
 		return fetchRoom(this.roomName).createConstructionSite(this, structureType, name);
 	}
 
-	createFlag(/*name: string*/) {
-		(globalThis as any).Memory.flags = {};
+	/**
+	 * Create new `Flag` at the specified location
+	 * @param name The name of a new flag. It should be unique, i.e. the `Game.flags` object should
+	 * not contain another flag with the same name (hash key). If not defined, a random name will be
+	 * generated.
+	 * @param color The color of a new flag. Should be one of the `COLOR_*` constants. The default
+	 * value is `COLOR_WHITE`.
+	 * @param secondaryColor The secondary color of a new flag. Should be one of the `COLOR_*`
+	 * constants. The default value is equal to `color`.
+	 */
+	createFlag(name: string, color: Flag.Color, secondaryColor: Flag.Color = color) {
+		return chainIntentChecks(
+			() => Flag.checkCreateFlag(Game.flags, this, name, color, secondaryColor),
+			() => {
+				// Save creation intent
+				Game.intents.push('flags', 'create', {
+					name,
+					pos: extractPositionId(this),
+					color, secondaryColor,
+				});
+				// Create local flag immediately
+				Game.flags[name] = instantiate(Flag.Flag, {
+					name,
+					id: undefined,
+					pos: this,
+					color, secondaryColor,
+				});
+				return C.OK;
+			},
+		);
 	}
 
 	toJSON() {
@@ -444,6 +473,28 @@ export function generateRoomNameFromId(id: number) {
 		(yy < 0 ? `N${-yy - 1}` : `S${yy}`);
 	roomNames.set(id, roomName);
 	return roomName;
+}
+
+export function extractPositionId(pos: RoomPosition) {
+	return pos[PositionInteger];
+}
+
+export function fromPositionId(id: number) {
+	const rx = id & 0xff;
+	const ry = (id >>> 8) & 0xff;
+	const xx = (id >>> 16) & 0xff;
+	const yy = id >>> 24;
+	if (
+		!(rx >= 0 && rx < kMaxWorldSize) ||
+		!(ry >= 0 && ry < kMaxWorldSize) ||
+		!(xx >= 0 && xx < 50) ||
+		!(yy >= 0 && yy < 50)
+	) {
+		return;
+	}
+	return instantiate(RoomPosition, {
+		[PositionInteger]: id,
+	});
 }
 
 export function parseRoomName(name: string): [ number, number ] {

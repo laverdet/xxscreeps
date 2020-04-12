@@ -99,7 +99,7 @@ rules:
   no-new-require: warn
 
   array-bracket-newline: [ warn, consistent ]
-  array-bracket-spacing: [ warn, always, { arraysInArrays: false } ]
+  array-bracket-spacing: [ warn, always ]
   block-spacing: warn
   '@typescript-eslint/brace-style': [ warn, 1tbs, { allowSingleLine: true } ]
   camelcase: warn

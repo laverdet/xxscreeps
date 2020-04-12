@@ -1,33 +1,40 @@
 import * as C from '~/game/constants';
-import { RoomObject } from '~/game/objects/room-object';
 import { Room } from '~/game/room';
 import type { Intents as CreepIntents } from '~/engine/processor/intents/creep';
+import type { Intents as FlagIntents } from '~/engine/processor/intents/flag';
 import type { Intents as RoomIntents } from '~/engine/processor/intents/room';
 import type { Intents as SpawnIntents } from '~/engine/processor/intents/spawn';
 
 const kCpuCost = 0.2;
 
+type AnyIntents = CreepIntents | FlagIntents | RoomIntents | SpawnIntents;
+type AnyReceiver = AnyIntents['receiver'];
+
 export class IntentManager {
 	cpu = 0;
-	intentsByRoom: Dictionary<Record<string, any>> = Object.create(null);
+	intentsByGroup: Dictionary<Record<string, any>> = Object.create(null);
 
-	getIntentsForReceiver(object: RoomObject | Room) {
-		const { room, id } = function() {
-			if (object instanceof Room) {
-				return { room: object.name, id: object.name };
+	getIntentsForReceiver(object: AnyReceiver) {
+		const { group, id } = function() {
+			if (object === 'flags') {
+				return { group: 'flags', id: 'flags' };
+			} else if (object instanceof Room) {
+				return { group: object.name, id: object.name };
 			} else {
-				return { room: object.pos.roomName, id: object.id };
+				return { group: object.pos.roomName, id: object.id };
 			}
 		}();
-		const intentsForRoom = this.intentsByRoom[room] ?? (this.intentsByRoom[room] = Object.create(null));
-		return intentsForRoom[id] ?? (intentsForRoom[id] = Object.create(null))
+		const intentsForRoom = this.intentsByGroup[group] ?? (this.intentsByGroup[group] = Object.create(null));
+		return intentsForRoom[id] ?? (intentsForRoom[id] = Object.create(null));
 	}
 
+	push<Intent extends keyof FlagIntents['parameters']>(
+		receiver: FlagIntents['receiver'], intent: Intent, parameters: FlagIntents['parameters'][Intent][number]): typeof C.OK;
 	push<Intent extends keyof RoomIntents['parameters']>(
 		receiver: RoomIntents['receiver'], intent: Intent, parameters: RoomIntents['parameters'][Intent][number]): typeof C.OK;
-	push(object: Room, action: string, parameters: any) {
-		const intents = this.getIntentsForReceiver(object);
-		const list = intents[action] ?? (intents[action] = []);
+	push(receiver: AnyReceiver, intent: string, parameters: any) {
+		const intents = this.getIntentsForReceiver(receiver);
+		const list = intents[intent] ?? (intents[intent] = []);
 		list.push(parameters);
 		this.cpu += kCpuCost;
 		return C.OK;
@@ -37,12 +44,12 @@ export class IntentManager {
 		receiver: CreepIntents['receiver'], intent: Intent, parameters: CreepIntents['parameters'][Intent]): typeof C.OK;
 	save<Intent extends keyof SpawnIntents['parameters']>(
 		receiver: SpawnIntents['receiver'], intent: Intent, parameters: SpawnIntents['parameters'][Intent]): typeof C.OK;
-	save(object: RoomObject | Room, action: string, parameters: any) {
-		const intents = this.getIntentsForReceiver(object);
-		if (intents[action] === undefined) {
+	save(receiver: AnyReceiver, intent: string, parameters: any) {
+		const intents = this.getIntentsForReceiver(receiver);
+		if (intents[intent] === undefined) {
 			this.cpu += kCpuCost;
 		}
-		intents[action] = parameters;
+		intents[intent] = parameters;
 		return C.OK;
 	}
 }

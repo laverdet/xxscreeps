@@ -8,7 +8,9 @@ import { flushIntents, initializeIntents, intents, runForUser } from '~/game/gam
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
 import { Room } from '~/game/room';
+import * as FlagSchema from '~/engine/schema/flag';
 import * as UserCode from '~/engine/metadata/code';
+import * as FlagIntent from '~/engine/processor/intents/flag';
 import { BufferView } from '~/lib/schema/buffer-view';
 
 import { setupConsole, Writer } from './console';
@@ -116,16 +118,22 @@ export function initializeIsolated(
 
 export type TickArguments = {
 	time: number;
+	flagsBlob?: Readonly<Uint8Array>;
 	roomBlobs: Readonly<Uint8Array>[];
 	consoleEval?: string[];
 	userIntents?: UserIntent[];
 };
 
-export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArguments) {
+let flags = {};
+export function tick({ time, flagsBlob, roomBlobs, consoleEval, userIntents }: TickArguments) {
+	if (flagsBlob) {
+		flags = FlagSchema.read(flagsBlob);
+	}
+
 	initializeIntents();
 	const rooms = roomBlobs.map(buffer =>
 		new Room(BufferView.fromTypedArray(buffer)));
-	runForUser(me, time, rooms, Game => {
+	runForUser(me, time, rooms, flags, Game => {
 		globalThis.Game = Game;
 		// Run player loop
 		try {
@@ -157,23 +165,22 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 	// Post-tick tasks
 	const memory = Memory.flush();
 
-	// Return JSON'd intents
-	const intentsBlobs = function() {
-		const intents: Dictionary<SharedArrayBuffer> = Object.create(null);
-		const { intentsByRoom } = flushIntents();
-		const roomNames = Object.keys(intentsByRoom);
-		const { length } = roomNames;
-		for (let ii = 0; ii < length; ++ii) {
-			const roomName = roomNames[ii];
-			const json = JSON.stringify(intentsByRoom[roomName]);
-			const buffer = new SharedArrayBuffer(json.length * 2);
-			const uint16 = new Uint16Array(buffer);
-			for (let ii = 0; ii < json.length; ++ii) {
-				uint16[ii] = json.charCodeAt(ii);
-			}
-			intents[roomName] = buffer;
+	// Split flag intents and write processor intents into blobs
+	const { intentsByGroup } = flushIntents();
+	const flagIntents: FlagIntent.Intents['parameters'] | undefined = intentsByGroup?.flags?.flags;
+	const intentBlobs: Dictionary<SharedArrayBuffer> = Object.create(null);
+	const roomNames = Object.keys(intentsByGroup);
+	const { length } = roomNames;
+	for (let ii = 0; ii < length; ++ii) {
+		const roomName = roomNames[ii];
+		const json = JSON.stringify(intentsByGroup[roomName]);
+		const buffer = new SharedArrayBuffer(json.length * 2);
+		const uint16 = new Uint16Array(buffer);
+		for (let ii = 0; ii < json.length; ++ii) {
+			uint16[ii] = json.charCodeAt(ii);
 		}
-		return intents;
-	}();
-	return { intents: intentsBlobs, memory };
+		intentBlobs[roomName] = buffer;
+	}
+
+	return { flagIntents, intentBlobs, memory };
 }

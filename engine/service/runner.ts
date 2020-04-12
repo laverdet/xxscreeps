@@ -5,6 +5,8 @@ import * as User from '~/engine/metadata/user';
 import { loadTerrainFromWorld, readWorld } from '~/game/map';
 import { loadTerrain } from '~/driver/path-finder';
 import { createSandbox, Sandbox } from '~/driver/sandbox';
+import * as FlagIntents from '~/engine/processor/intents/flag';
+import * as FlagSchema from '~/engine/schema/flag';
 import { exchange, mapInPlace, filterInPlace } from '~/lib/utility';
 import { BlobStorage } from '~/storage/blob';
 import { Channel } from '~/storage/channel';
@@ -14,6 +16,7 @@ import { RunnerMessage } from '.';
 export type UserIntent = { id: string; intent: string; room: string };
 export type RunnerUserMessage =
 	{ type: 'eval'; expr: string } |
+	{ type: 'flag'; intent: FlagIntents.OneIntent } |
 	{ type: 'push'; id: string; name: string } |
 	({ type: 'intent' } & UserIntent) |
 	{ type: null };
@@ -22,9 +25,12 @@ type PlayerInstance = {
 	branch: string;
 	codeChannel: Channel<RunnerUserMessage>;
 	consoleEval?: string[];
+	flagsBlob: Readonly<Uint8Array> | undefined;
+	flagsOutOfDate: boolean;
 	sandbox?: Sandbox;
 	stale: boolean;
 	roomsVisible: Set<string>;
+	userFlagIntents?: FlagIntents.OneIntent[];
 	userIntents?: UserIntent[];
 	writeConsole: (fd: number, payload: string, evalResult?: boolean) => void;
 };
@@ -71,8 +77,10 @@ export default async function() {
 							}
 
 							// Connect to channel, load user
-							const [ codeChannel, userBlob ] = await Promise.all([
+							const [ codeChannel, [ flagsBlob ], userBlob ] = await Promise.all([
 								Channel.connect<RunnerUserMessage>(`user/${userId}/runner`),
+								// TODO: remove nested array hack after the typescript bug is fixed
+								Promise.all([ blobStorage.load(`user/${userId}/flags`).catch(() => undefined) ]),
 								blobStorage.load(`user/${userId}/info`),
 							]);
 							const user = User.read(userBlob);
@@ -81,6 +89,8 @@ export default async function() {
 							const instance: PlayerInstance = {
 								branch: user.code.branch,
 								codeChannel,
+								flagsBlob,
+								flagsOutOfDate: true,
 								stale: false,
 								roomsVisible: user.roomsVisible,
 								writeConsole(fd, payload, evalResult?) {
@@ -89,15 +99,23 @@ export default async function() {
 										{ type: 'console', [evalResult ? 'result' : 'log']: payload });
 								},
 							};
+
+							// Listen for various messages to the runner
 							codeChannel.listen(message => {
 								if (message.type === 'eval') {
 									if (!instance.consoleEval) {
 										instance.consoleEval = [];
 									}
 									instance.consoleEval.push(message.expr);
+
+								} else if (message.type === 'flag') {
+									const intents = instance.userFlagIntents ?? (instance.userFlagIntents = []);
+									intents.push(message.intent);
+
 								} else if (message.type === 'push') {
 									instance.branch = message.id;
 									instance.stale = true;
+
 								} else if (message.type === 'intent') {
 									const intents = instance.userIntents ?? (instance.userIntents = []);
 									intents.push(message);
@@ -116,6 +134,7 @@ export default async function() {
 									return blob;
 								}),
 							)),
+
 							// Load sandbox
 							async function() {
 								if (instance.stale) {
@@ -137,21 +156,23 @@ export default async function() {
 						// Run user code
 						const result = await async function() {
 							try {
+								const flagsOutOfDate = exchange(instance, 'flagsOutOfDate', false);
 								return await sandbox.run({
 									time: gameTime,
+									flagsBlob: flagsOutOfDate ? instance.flagsBlob : undefined,
 									roomBlobs,
 									consoleEval: exchange(instance, 'consoleEval'),
 									userIntents: exchange(instance, 'userIntents'),
 								});
 							} catch (err) {
 								console.error(err.stack);
-								return { intents: {} };
+								return { flagIntents: undefined, intentBlobs: {} };
 							}
 						}();
 
 						const [ savedRoomNames ] = await Promise.all([
 							// Save intent blobs
-							mapInPlace(Object.entries(result.intents), async([ roomName, intents ]) => {
+							mapInPlace(Object.entries(result.intentBlobs), async([ roomName, intents ]) => {
 								if (instance.roomsVisible.has(roomName)) {
 									await blobStorage.save(`intents/${roomName}/${userId}`, new Uint8Array(intents!));
 									return roomName;
@@ -159,6 +180,37 @@ export default async function() {
 									console.error(`Runtime sent intent for non-visible room. User: ${userId}; Room: ${roomName}; Tick: ${gameTime}`);
 								}
 							}),
+
+							// Save flags
+							async function() {
+								if (result.flagIntents || instance.userFlagIntents) {
+									const flags = instance.flagsBlob ? FlagSchema.read(instance.flagsBlob) : {};
+									if (result.flagIntents) {
+										FlagIntents.execute(flags, result.flagIntents);
+									}
+									if (instance.userFlagIntents) {
+										instance.flagsOutOfDate = true;
+										const userFlagIntents = exchange(instance, 'userFlagIntents')!;
+										const intents: FlagIntents.Parameters = {
+											create: [],
+											remove: [],
+										};
+										for (const intent of userFlagIntents) {
+											if (intent.create) {
+												intents.create.push(intent.create);
+											}
+											if (intent.remove) {
+												intents.remove.push(intent.remove);
+											}
+										}
+										FlagIntents.execute(flags, intents);
+									}
+									instance.flagsBlob = FlagSchema.write(flags);
+									await blobStorage.save(`user/${userId}/flags`, instance.flagsBlob);
+									Channel.publish<FlagIntents.UserFlagMessage>(`user/${userId}/flags`, { type: 'updated' });
+								}
+							}(),
+
 							// Save memory
 							('memory' in result ? blobStorage.save(`memory/${userId}`, result.memory) : undefined),
 						]);

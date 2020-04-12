@@ -1,5 +1,6 @@
 import { IntentManager } from './intents';
 import map from './map';
+import type { Flag } from './flag';
 import type { AnyRoomObject, Room } from './room';
 import { Creep } from './objects/creep';
 import { ConstructionSite } from './objects/construction-site';
@@ -20,7 +21,7 @@ class Game {
 	gcl = {
 		level: 1,
 	};
-	flags = {};
+	flags = flags;
 	market = {
 		orders: [],
 		getAllOrders: () => [],
@@ -40,6 +41,7 @@ class Game {
 
 export let constructionSites: Dictionary<ConstructionSite> = Object.create(null);
 export let creeps: Dictionary<Creep> = Object.create(null);
+export let flags: Dictionary<Flag> = Object.create(null);
 export let rooms: Dictionary<Room> = Object.create(null);
 export let spawns: Dictionary<StructureSpawn> = Object.create(null);
 export let structures: Dictionary<AnyStructure> = Object.create(null);
@@ -145,7 +147,19 @@ export function runWithState<Type>(rooms_: Room[], task: () => Type) {
  * Used by the runtime, sets up everything the user's script needs and invokes the callback with a
  * fresh `Game` object
  */
-export function runForUser<Type>(userId: string, time_: number, rooms: Room[], task: (game: Game) => Type) {
-	return runAsUser(userId, time_, () =>
-		runWithState(rooms, () => task(new Game)));
+export function runForUser<Type>(
+	userId: string,
+	time_: number,
+	rooms: Room[],
+	flags_: Dictionary<Flag>,
+	task: (game: Game) => Type,
+) {
+	return runAsUser(userId, time_, () => runWithState(rooms, () => {
+		try {
+			flags = flags_;
+			task(new Game);
+		} finally {
+			flags = {};
+		}
+	}));
 }

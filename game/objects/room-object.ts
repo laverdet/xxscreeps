@@ -20,12 +20,13 @@ export abstract class RoomObject extends withOverlay<typeof shape>()(BufferObjec
 	[Variant]: string;
 }
 
-export function chainIntentChecks(...checks: (() => number)[]) {
+export function chainIntentChecks<Checks extends (() => C.ErrorCode)[]>(...checks: Checks):
+Checks extends (() => infer Codes)[] ? Codes | typeof C.OK : C.ErrorCode {
 	for (const check of checks) {
 		const result = check();
 		if (result !== C.OK) {
-			return result;
+			return result as any;
 		}
 	}
-	return C.OK;
+	return C.OK as any;
 }

@@ -2,6 +2,7 @@ import lodash from 'lodash';
 import * as C from '~/game/constants';
 import { RawMemory } from '~/game/memory';
 import PathFinder from '~/game/path-finder';
+import { Flag } from '~/game/flag';
 import { RoomPosition } from '~/game/position';
 import { Room } from '~/game/room';
 
@@ -38,6 +39,7 @@ export function setupGlobals() {
 	// Not implemented
 	globalThis.Mineral = function() {};
 	globalThis.StructureLink = function() {};
+	globalThis.StructureObserver = function() {};
 	globalThis.StructureTerminal = function() {};
 	globalThis.Tombstone = function() {};
 
@@ -45,6 +47,7 @@ export function setupGlobals() {
 	for (const [ key, object ] of Object.entries({
 		ConstructionSite,
 		Creep,
+		Flag,
 		Resource,
 		Room,
 		RoomObject,
