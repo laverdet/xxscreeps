@@ -1,14 +1,9 @@
 import { declare, array, BufferView } from '~/lib/schema';
-import { exchange } from '~/lib/utility';
+import { exchange, uncurryThis } from '~/lib/utility';
+export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants';
 
-const { apply } = Reflect;
-const { Uint8Array } = globalThis;
-const { set } = Uint8Array.prototype;
-
-export const kTerrainWall = 1;
-export const kTerrainSwamp = 2;
-
-const GetBufferSymbol: unique symbol = Symbol();
+const set = uncurryThis(Uint8Array.prototype.set);
+const GetBufferSymbol = Symbol();
 
 export class Terrain {
 	#buffer: Uint8Array;
@@ -33,7 +28,8 @@ export class Terrain {
 		if (destinationArray === undefined) {
 			return this.getRawBuffer(new Uint8Array(625));
 		} else {
-			return apply(set, destinationArray, [ getBuffer(this) ]);
+			set(destinationArray, getBuffer(this));
+			return destinationArray;
 		}
 	}
 }

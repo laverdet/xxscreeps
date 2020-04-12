@@ -2,7 +2,7 @@ import streamToPromise from 'stream-to-promise';
 import { PNG } from 'pngjs';
 import { Endpoint } from '~/backend/endpoint';
 import { generateRoomName, parseRoomName } from '~/game/position';
-import { Terrain, isBorder, kTerrainWall, kTerrainSwamp } from '~/game/terrain';
+import { Terrain, isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from '~/game/terrain';
 
 function generate(grid: (Terrain | undefined)[][], zoom = 1) {
 	// Most of the time we don't need transparency. It's only needed for zoom2 images near the edges,
@@ -25,8 +25,8 @@ function generate(grid: (Terrain | undefined)[][], zoom = 1) {
 					const color = function() {
 						if (terrain) {
 							switch (terrain.get(xx, yy)) {
-								case kTerrainWall: return [ 0x00, 0x00, 0x00, 0xff ];
-								case kTerrainSwamp: return [ 0x23, 0x25, 0x13, 0xff ];
+								case TERRAIN_MASK_WALL: return [ 0x00, 0x00, 0x00, 0xff ];
+								case TERRAIN_MASK_SWAMP: return [ 0x23, 0x25, 0x13, 0xff ];
 								default: return isBorder(xx, yy) ?
 									[ 0x32, 0x32, 0x32, 0xff ] : [ 0x2b, 0x2b, 0x2b, 0xff ];
 							}
@@ -60,7 +60,7 @@ export const TerrainEndpoint: Endpoint = {
 		if (!png) {
 			const terrain = this.context.world.get(room);
 			if (terrain) {
-				png = await generate([[ terrain ]], 3);
+				png = await generate([ [ terrain ] ], 3);
 				cache.set(room, png);
 			}
 		}
