@@ -2,7 +2,7 @@ import config from '~/engine/config';
 import * as GameSchema from '~/engine/metadata/game';
 import { AveragingTimer } from '~/lib/averaging-timer';
 import { getOrSet, makeResolver, mapInPlace } from '~/lib/utility';
-import { BlobStorage } from '~/storage/blob';
+import * as Storage from '~/storage';
 import { Channel } from '~/storage/channel';
 import { Mutex } from '~/storage/mutex';
 import { Queue } from '~/storage/queue';
@@ -11,9 +11,9 @@ import type { GameMessage, ProcessorMessage, ProcessorQueueElement, RunnerMessag
 export default async function() {
 	// Open channels
 	const [
-		blobStorage, roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
+		persistence, roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
 	] = await Promise.all([
-		BlobStorage.connect(),
+		Storage.connect('shard0'),
 		Queue.create<ProcessorQueueElement>('processRooms'),
 		Queue.create('runnerUsers'),
 		Channel.connect<ProcessorMessage>('processor'),
@@ -52,7 +52,7 @@ export default async function() {
 
 				// Refresh current game status
 				if (!gameMetadata) {
-					gameMetadata = GameSchema.read(await blobStorage.load('game'));
+					gameMetadata = GameSchema.read(await persistence.get('game'));
 					activeRooms = [ ...gameMetadata.activeRooms ];
 					activeUsers = [ ...gameMetadata.users ];
 				}
@@ -111,7 +111,7 @@ export default async function() {
 
 				// Update game state
 				const previousTime = gameMetadata.time++;
-				await blobStorage.save('game', GameSchema.write(gameMetadata));
+				await persistence.set('game', GameSchema.write(gameMetadata));
 
 				// Finish up
 				const now = Date.now();
@@ -137,9 +137,12 @@ export default async function() {
 			}
 		} while (true);
 
+		// Save on graceful exit
+		await persistence.save();
+
 	} finally {
 		// Clean up
-		blobStorage.disconnect();
+		persistence.disconnect();
 		roomsQueue.disconnect();
 		usersQueue.disconnect();
 		processorChannel.disconnect();

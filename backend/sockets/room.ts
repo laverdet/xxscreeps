@@ -38,7 +38,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		let flagString = '';
 		const updateFlags = async() => {
 			// TODO: This should also only update every 250ms
-			const flagsBlob = await this.context.blobStorage.load(`user/${this.user}/flags`).catch(() => undefined);
+			const flagsBlob = await this.context.persistence.get(`user/${this.user}/flags`).catch(() => undefined);
 			if (flagsBlob) {
 				const flagsInThisRoom = (Object.values(FlagSchema.read(flagsBlob)) as Flag[]).filter(
 					flag => flag.pos.roomName === parameters.room);
@@ -54,7 +54,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		const seenUsers = new Set<string>();
 		const update = async(time: number) => {
 			lastTickTime = Date.now();
-			const roomBlob = await this.context.blobStorage.load(`room/${parameters.room}`);
+			const roomBlob = await this.context.persistence.get(`room/${parameters.room}`);
 			const room = Room.read(roomBlob);
 
 			// Render current room state
@@ -75,7 +75,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 
 			// Get users not yet seen
 			const users = mapToKeys(await Promise.all(mapInPlace(visibleUsers, async(id): Promise<[ string, any ]> => {
-				const user = User.read(await this.context.blobStorage.load(`user/${id}/info`));
+				const user = User.read(await this.context.persistence.get(`user/${id}/info`));
 				return [ user.id, {
 					username: user.username,
 					badge: JSON.parse(user.badge),

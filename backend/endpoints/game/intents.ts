@@ -111,13 +111,13 @@ const PlaceSpawnEndpoint: Endpoint = {
 			});
 
 			// Make room & user active
-			const game = GameSchema.read(await this.context.blobStorage.load('game'));
+			const game = GameSchema.read(await this.context.persistence.get('game'));
 			game.activeRooms.add(pos.roomName);
 			game.users.add(user.id);
 
 			// Save
 			await Promise.all([
-				this.context.blobStorage.save('game', GameSchema.write(game)),
+				this.context.persistence.set('game', GameSchema.write(game)),
 				saveUser(this.context, user),
 				saveRoom(this.context, room),
 			]);

@@ -1,7 +1,7 @@
 import * as workerThreads from 'worker_threads';
 export * from 'worker_threads';
 import { Channel } from '~/storage/channel';
-import * as Responder from '~/storage/responder';
+import * as Responder from '~/storage/local/responder';
 
 type WorkerOptions = workerThreads.WorkerOptions & {
 	runDefault?: true;

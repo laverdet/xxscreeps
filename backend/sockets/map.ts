@@ -23,7 +23,7 @@ export const mapSubscription: SubscriptionEndpoint = {
 		let previous = '';
 		const update = async() => {
 			lastTickTime = Date.now();
-			const roomBlob = await this.context.blobStorage.load(`room/${roomName}`);
+			const roomBlob = await this.context.persistence.get(`room/${roomName}`);
 			const room = Room.read(roomBlob);
 			// w: constructedWall
 			// r: road

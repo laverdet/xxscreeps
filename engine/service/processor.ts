@@ -5,7 +5,7 @@ import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
 import { runWithState } from '~/game/game';
 import { loadTerrain } from '~/game/map';
-import { BlobStorage } from '~/storage/blob';
+import * as Storage from '~/storage';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
 import { ProcessorMessage, ProcessorQueueElement } from '.';
@@ -19,12 +19,12 @@ export default async function() {
 	const processedRooms = new Map<string, ProcessorContext>();
 
 	// Connect to main & storage
-	const blobStorage = await BlobStorage.connect();
+	const persistence = await Storage.connect('shard0');
 	const roomsQueue = await Queue.connect<ProcessorQueueElement>('processRooms');
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 
 	// Initialize world terrain
-	await loadTerrain(blobStorage);
+	await loadTerrain(persistence);
 
 	// Start the processing loop
 	let gameTime = -1;
@@ -43,14 +43,14 @@ export default async function() {
 				for await (const { room, users } of roomsQueue) {
 					// Read room data and intents from storage
 					const [ roomBlob, intents ] = await Promise.all([
-						await blobStorage.load(`room/${room}`),
+						persistence.get(`room/${room}`),
 						Promise.all(mapInPlace(users, async user => ({
 							user,
-							intents: await blobStorage.load(`intents/${room}/${user}`),
+							intents: await persistence.get(`intents/${room}/${user}`),
 						}))),
 					]);
 					const deleteIntentBlobs = Promise.all(mapInPlace(intents, ({ user }) =>
-						blobStorage.delete(`intents/${room}/${user}`)));
+						persistence.del(`intents/${room}/${user}`)));
 					// Process the room
 					const roomInstance = Room.read(roomBlob);
 					const context = new ProcessorContext(gameTime, roomInstance);
@@ -73,7 +73,7 @@ export default async function() {
 				// Run second phase of processing. This must wait until *all* player code and first phase
 				// processing has run
 				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) =>
-					blobStorage.save(`room/${roomName}`, Room.write(context.room)),
+					persistence.set(`room/${roomName}`, Room.write(context.room)),
 				));
 				processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
 				processedRooms.clear();
@@ -81,7 +81,7 @@ export default async function() {
 		}
 
 	} finally {
-		blobStorage.disconnect();
+		persistence.disconnect();
 		processorChannel.disconnect();
 		roomsQueue.disconnect();
 	}

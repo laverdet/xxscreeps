@@ -13,9 +13,9 @@ const BadgeEndpoint: Endpoint = {
 		const badge = Badge.validate(req.body.badge);
 		await this.context.gameMutex.scope(async() => {
 			const fragment = `user/${userid}/info`;
-			const user = User.read(await this.context.blobStorage.load(fragment));
+			const user = User.read(await this.context.persistence.get(fragment));
 			user.badge = JSON.stringify(badge);
-			await this.context.blobStorage.save(fragment, User.write(user));
+			await this.context.persistence.set(fragment, User.write(user));
 		});
 		return { ok: 1 };
 	},

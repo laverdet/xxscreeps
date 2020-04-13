@@ -8,7 +8,7 @@ import { createSandbox, Sandbox } from '~/driver/sandbox';
 import * as FlagIntents from '~/engine/processor/intents/flag';
 import * as FlagSchema from '~/engine/schema/flag';
 import { exchange, mapInPlace, filterInPlace } from '~/lib/utility';
-import { BlobStorage } from '~/storage/blob';
+import * as Storage from '~/storage';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
 import { RunnerMessage } from '.';
@@ -38,14 +38,14 @@ type PlayerInstance = {
 export default async function() {
 
 	// Connect to main & storage
-	const blobStorage = await BlobStorage.connect();
+	const persistence = await Storage.connect('shard0');
 	const usersQueue = await Queue.connect('runnerUsers');
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
 	const concurrency = config.runner?.unsafeSandbox ? 1 :
 		config.runner?.concurrency ?? (os.cpus().length >> 1) + 1;
 
 	// Load shared terrain data
-	const terrain = await blobStorage.load('terrain');
+	const terrain = await persistence.get('terrain');
 	const world = readWorld(terrain);
 	loadTerrain(world); // pathfinder
 	loadTerrainFromWorld(world); // game
@@ -79,8 +79,8 @@ export default async function() {
 							const [ codeChannel, [ flagsBlob ], userBlob ] = await Promise.all([
 								Channel.connect<RunnerUserMessage>(`user/${userId}/runner`),
 								// TODO: remove nested array hack after the typescript bug is fixed
-								Promise.all([ blobStorage.load(`user/${userId}/flags`).catch(() => undefined) ]),
-								blobStorage.load(`user/${userId}/info`),
+								Promise.all([ persistence.get(`user/${userId}/flags`).catch(() => undefined) ]),
+								persistence.get(`user/${userId}/info`),
 							]);
 							const user = User.read(userBlob);
 
@@ -128,7 +128,7 @@ export default async function() {
 						const [ roomBlobs, sandbox ] = await Promise.all([
 							// Load visible rooms for this user
 							Promise.all(mapInPlace(instance.roomsVisible, async roomName =>
-								roomBlobCache.get(roomName) ?? blobStorage.load(`room/${roomName}`).then(blob => {
+								roomBlobCache.get(roomName) ?? persistence.get(`room/${roomName}`).then(blob => {
 									roomBlobCache.set(roomName, blob);
 									return blob;
 								}),
@@ -142,9 +142,9 @@ export default async function() {
 								}
 								if (!instance.sandbox) {
 									const [ codeBlob, memoryBlob ] = await Promise.all([
-										blobStorage.load(`user/${userId}/${instance.branch}`),
+										persistence.get(`user/${userId}/${instance.branch}`),
 										// TODO: delete this undefined hack for TS types
-										blobStorage.load(`memory/${userId}`).catch(() => undefined as any as Readonly<Uint8Array>),
+										persistence.get(`memory/${userId}`).catch(() => undefined as any as Readonly<Uint8Array>),
 									]);
 									instance.sandbox = await createSandbox({ userId, codeBlob, memoryBlob, terrain, writeConsole: instance.writeConsole });
 								}
@@ -173,7 +173,7 @@ export default async function() {
 							// Save intent blobs
 							mapInPlace(Object.entries(result.intentBlobs), async([ roomName, intents ]) => {
 								if (instance.roomsVisible.has(roomName)) {
-									await blobStorage.save(`intents/${roomName}/${userId}`, new Uint8Array(intents!));
+									await persistence.set(`intents/${roomName}/${userId}`, new Uint8Array(intents!));
 									return roomName;
 								} else {
 									console.error(`Runtime sent intent for non-visible room. User: ${userId}; Room: ${roomName}; Tick: ${gameTime}`);
@@ -205,13 +205,13 @@ export default async function() {
 										FlagIntents.execute(flags, intents);
 									}
 									instance.flagsBlob = FlagSchema.write(flags);
-									await blobStorage.save(`user/${userId}/flags`, instance.flagsBlob);
+									await persistence.set(`user/${userId}/flags`, instance.flagsBlob);
 									Channel.publish<FlagIntents.UserFlagMessage>(`user/${userId}/flags`, { type: 'updated' });
 								}
 							}(),
 
 							// Save memory
-							('memory' in result ? blobStorage.save(`memory/${userId}`, result.memory) : undefined),
+							('memory' in result ? persistence.set(`memory/${userId}`, result.memory) : undefined),
 						]);
 						const roomNames = [ ...filterInPlace(await Promise.all(savedRoomNames)) ];
 						runnerChannel.publish({ type: 'processedUser', userId, roomNames });
@@ -225,7 +225,7 @@ export default async function() {
 			instance.codeChannel.disconnect();
 			instance.sandbox?.dispose();
 		}
-		blobStorage.disconnect();
+		persistence.disconnect();
 		usersQueue.disconnect();
 		runnerChannel.disconnect();
 	}

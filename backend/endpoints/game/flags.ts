@@ -43,7 +43,7 @@ const GenUniqueFlagNameEndpoint: Endpoint = {
 
 	async execute(req) {
 		const { userid } = req;
-		const flagsBlob = await this.context.blobStorage.load(`user/${userid}/flags`).catch(() => {});
+		const flagsBlob = await this.context.persistence.get(`user/${userid}/flags`).catch(() => {});
 		if (flagsBlob) {
 			const flags = FlagSchema.read(flagsBlob);
 			for (let ii = 0; ii < 100; ++ii) {

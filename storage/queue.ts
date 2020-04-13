@@ -1,4 +1,10 @@
-import { connect, create, Responder, ResponderClient, ResponderHost } from './responder';
+import { connect, create, Responder, ResponderClient, ResponderHost } from './local/responder';
+
+const QueueHandle = Symbol();
+type QueueReference<Type> = { [QueueHandle]: Type };
+export function reference<Type>(name: string): QueueReference<Type> {
+	return name as any;
+}
 
 export abstract class Queue<Type> extends Responder {
 	disconnect!: () => void;
@@ -7,11 +13,13 @@ export abstract class Queue<Type> extends Responder {
 	abstract version(version: any): void;
 	protected currentVersion: any;
 
-	static connect<Type = string>(name: string): Promise<Queue<Type>> {
+	static connect<Type = string>(reference: QueueReference<Type> | string): Promise<Queue<Type>>;
+	static connect(name: string): Promise<Queue<any>> {
 		return connect(name, QueueClient, QueueHost);
 	}
 
-	static create<Type = string>(name: string): Promise<Queue<Type>> {
+	static create<Type = string>(reference: QueueReference<Type> | string): Promise<Queue<Type>>
+	static create(name: string): Promise<Queue<any>> {
 		return Promise.resolve(create(name, QueueHost));
 	}
 

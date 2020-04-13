@@ -16,7 +16,7 @@ import * as User from '~/engine/metadata/user';
 
 import { Variant } from '~/lib/schema/format';
 import { getWriter } from '~/lib/schema/write';
-import { BlobStorage } from '~/storage/blob';
+import * as Storage from '~/storage';
 import { accumulate, filterInPlace, getOrSet, mapInPlace, firstMatching } from '~/lib/utility';
 
 const [ jsonSource ] = process.argv.slice(2);
@@ -56,8 +56,9 @@ topLevelTask(async() => {
 	const db = new Loki(jsonSource);
 	await new Promise((resolve, reject) =>
 		db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve()));
+	await Storage.initialize();
+	const persistence = await Storage.connect('shard0');
 	execSync('rm -rf ./data/*');
-	const blobStorage = await BlobStorage.create();
 
 	// Collect env data
 	const env = db.getCollection('env').findOne().data;
@@ -103,7 +104,7 @@ topLevelTask(async() => {
 
 	// Save rooms
 	for (const room of rooms) {
-		await blobStorage.save(`room/${room.name}`, RoomSchema.write(room));
+		await persistence.set(`room/${room.name}`, RoomSchema.write(room));
 	}
 
 	// Collect terrain data
@@ -118,7 +119,7 @@ topLevelTask(async() => {
 	}));
 
 	// Write terrain data
-	await blobStorage.save('terrain', getWriter(MapSchema.format)(roomsTerrain));
+	await persistence.set('terrain', getWriter(MapSchema.format)(roomsTerrain));
 
 	// Get visible rooms for users
 	const roomsControlled = new Map<string, Set<string>>();
@@ -167,7 +168,7 @@ topLevelTask(async() => {
 
 	// Save users
 	for (const user of users) {
-		await blobStorage.save(`user/${user.id}/info`, User.write(user));
+		await persistence.set(`user/${user.id}/info`, User.write(user));
 	}
 
 	// Save user memory
@@ -178,7 +179,7 @@ topLevelTask(async() => {
 			for (let ii = 0; ii < data.length; ++ii) {
 				data[ii] = memory.charCodeAt(ii);
 			}
-			await blobStorage.save(`memory/${user.id}`, new Uint8Array(data.buffer));
+			await persistence.set(`memory/${user.id}`, new Uint8Array(data.buffer));
 		}
 	}
 
@@ -191,10 +192,10 @@ topLevelTask(async() => {
 		activeRooms: roomNames,
 		users: userIds,
 	};
-	await blobStorage.save('game', GameSchema.write(game));
+	await persistence.set('game', GameSchema.write(game));
 
 	// Write placeholder authentication data
-	await blobStorage.save('auth', Auth.write(users.map(user => ({
+	await persistence.set('auth', Auth.write(users.map(user => ({
 		key: `username:${Auth.flattenUsername(user.username)}`,
 		user: user.id,
 	}))));
@@ -205,11 +206,13 @@ topLevelTask(async() => {
 			const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
 			return [ name, data as string ];
 		}));
-		await blobStorage.save(`user/${row.user}/${row._id}`, CodeSchema.write({
+		await persistence.set(`user/${row.user}/${row._id}`, CodeSchema.write({
 			modules,
 		}));
 	}));
 
 	// Flush everything to disk
-	await blobStorage.flush();
+	await persistence.save();
+	persistence.disconnect();
+	Storage.terminate();
 });

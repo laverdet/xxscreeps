@@ -12,7 +12,7 @@ const CodeSubscription: SubscriptionEndpoint = {
 		return channel.listen(message => {
 			 (async() => {
 				if (message.type === 'branch') {
-					const code = Code.read(await this.context.blobStorage.load(`user/${this.user}/${message.id}`));
+					const code = Code.read(await this.context.persistence.load(`user/${this.user}/${message.id}`));
 					this.send(JSON.stringify({
 						branch: message.name,
 						modules: mapToKeys(code.modules),

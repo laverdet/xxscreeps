@@ -1,6 +1,6 @@
 import { makeResolver } from '~/lib/utility';
 import { Channel } from '~/storage/channel';
-import { connect, create, Responder, ResponderClient, ResponderHost } from '~/storage/responder';
+import { connect, create, Responder, ResponderClient, ResponderHost } from '~/storage/local/responder';
 
 type Message = 'waiting' | 'unlocked';
 

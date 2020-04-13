@@ -50,7 +50,7 @@ const BranchesEndpoint: Endpoint = {
 
 	async execute(req) {
 		const { userid } = req;
-		const userBlob = await this.context.blobStorage.load(`user/${userid}/info`).catch(() => {});
+		const userBlob = await this.context.persistence.get(`user/${userid}/info`).catch(() => {});
 		const user = userBlob && User.read(userBlob);
 
 		if (!user || user.code.branches.length === 0) {
@@ -73,7 +73,7 @@ const BranchesEndpoint: Endpoint = {
 		return {
 			ok: 1,
 			list: await Promise.all(user.code.branches.map(async branch => {
-				const code = Code.read(await this.context.blobStorage.load(`user/${userid}/${branch.id}`));
+				const code = Code.read(await this.context.persistence.get(`user/${userid}/${branch.id}`));
 				return {
 					activeWorld: branch.id === user.code.branch,
 					branch: branch.name,
@@ -98,7 +98,7 @@ const BranchCloneEndpoint: Endpoint = {
 		const timestamp = Math.floor(Date.now() / 1000);
 
 		await this.context.gameMutex.scope(async() => {
-			const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
+			const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
 			// Validity checks
 			if (user.code.branches.length > kMaxBranches) {
 				throw new Error('Too many branches');
@@ -118,9 +118,9 @@ const BranchCloneEndpoint: Endpoint = {
 			});
 			// Save blobs
 			await Promise.all([
-				this.context.blobStorage.save(`user/${userid}/info`, User.write(user)),
-				this.context.blobStorage.save(`user/${userid}/${newId}`,
-					await this.context.blobStorage.load(`user/${userid}/${branchId}`)),
+				this.context.persistence.set(`user/${userid}/info`, User.write(user)),
+				this.context.persistence.set(`user/${userid}/${newId}`,
+					await this.context.persistence.get(`user/${userid}/${branchId}`)),
 			]);
 		});
 
@@ -135,13 +135,13 @@ const BranchSetEndpoint: Endpoint = {
 	async execute(req) {
 		const { userid, body: { branch } } = req;
 		await this.context.gameMutex.scope(async() => {
-			const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
+			const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
 			const { id, name } = getBranchIdFromQuery(branch, user);
 			if (id === undefined) {
 				throw new Error('Invalid branch');
 			}
 			user.code.branch = id;
-			await this.context.blobStorage.save(`user/${userid}/info`, User.write(user));
+			await this.context.persistence.set(`user/${userid}/info`, User.write(user));
 			Channel.publish<RunnerUserMessage>(`user/${userid}/runner`, { type: 'push', id, name });
 		});
 
@@ -154,13 +154,13 @@ const CodeEndpoint: Endpoint = {
 
 	async execute(req) {
 		const { userid, body: { branch } } = req;
-		const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
+		const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
 		const { id, name } = getBranchIdFromQuery(branch, user);
 		if (id === undefined) {
 			return { ok: 1, branch: name, modules: { main: '' } };
 		}
 
-		const code = Code.read(await this.context.blobStorage.load(`user/${userid}/${id}`));
+		const code = Code.read(await this.context.persistence.get(`user/${userid}/${id}`));
 		return { ok: 1, branch: name, modules: mapToKeys(code.modules) };
 	},
 };
@@ -187,7 +187,7 @@ const CodePostEndpoint: Endpoint = {
 		const timestamp = Math.floor(Date.now() / 1000);
 		await this.context.gameMutex.scope(async() => {
 			// Load user branch manifest
-			const user = User.read(await this.context.blobStorage.load(`user/${userid}/info`));
+			const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
 			const { id, name } = getBranchIdFromQuery(branch, user, true);
 
 			// Update manifest timestamp
@@ -200,8 +200,8 @@ const CodePostEndpoint: Endpoint = {
 
 			// Save blobs
 			await Promise.all([
-				this.context.blobStorage.save(`user/${userid}/info`, User.write(user)),
-				this.context.blobStorage.save(`user/${userid}/${id}`, Code.write({
+				this.context.persistence.set(`user/${userid}/info`, User.write(user)),
+				this.context.persistence.set(`user/${userid}/${id}`, Code.write({
 					modules: new Map(Object.entries(modules)),
 				})),
 			]);

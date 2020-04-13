@@ -2,7 +2,7 @@ import * as TerrainSchema from '~/game/terrain';
 import { RoomPosition } from '~/game/position';
 import { declare, getReader, vector } from '~/lib/schema';
 import { mapInPlace } from '~/lib/utility';
-import type { BlobStorage } from '~/storage/blob';
+import type { PersistenceProvider } from '~/storage/provider';
 
 export type World = Map<string, TerrainSchema.Terrain>;
 let world: World;
@@ -38,8 +38,8 @@ export function getTerrainForRoom(room: string) {
 	return world.get(room)!;
 }
 
-export async function loadTerrain(blobStorage: BlobStorage) {
-	loadTerrainFromBuffer(await blobStorage.load('terrain'));
+export async function loadTerrain(persistence: PersistenceProvider) {
+	loadTerrainFromBuffer(await persistence.get('terrain'));
 }
 
 export function loadTerrainFromBuffer(worldTerrainBlob: Readonly<Uint8Array>) {

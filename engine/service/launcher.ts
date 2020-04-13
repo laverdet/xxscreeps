@@ -3,7 +3,7 @@ import config from '~/engine/config';
 import { Worker, waitForWorker } from '~/lib/worker-threads';
 import { topLevelTask } from '~/lib/task';
 import { listen } from '~/lib/utility';
-import { BlobStorage } from '~/storage/blob';
+import * as Storage from '~/storage';
 import { Channel } from '~/storage/channel';
 
 import Backend from '~/backend/server';
@@ -14,7 +14,7 @@ import { ProcessorMessage, RunnerMessage, ServiceMessage } from '.';
 
 topLevelTask(async() => {
 	// Start shared blob service
-	const blobStorage = await BlobStorage.create();
+	await Storage.initialize();
 	const serviceChannel = await Channel.connect<ServiceMessage>('service');
 
 	try {
@@ -78,8 +78,7 @@ topLevelTask(async() => {
 
 	} finally {
 		// Shut down shared services
-		await blobStorage.flush();
-		blobStorage.disconnect();
+		Storage.terminate();
 		serviceChannel.disconnect();
 	}
 });

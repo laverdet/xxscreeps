@@ -16,7 +16,7 @@ export const MapStatsEndpoint: Endpoint = {
 		// Read current room status
 		// TODO: A room status blob that doesn't change very tick would be good
 		const roomBlobs = await Promise.all(rooms.map(room =>
-			this.context.blobStorage.load(`room/${room}`).catch(() => {}),
+			this.context.persistence.get(`room/${room}`).catch(() => {}),
 		));
 
 		// Build rooms payload
@@ -49,7 +49,7 @@ export const MapStatsEndpoint: Endpoint = {
 		// Read users
 		const userObjects = await Promise.all(
 			mapInPlace(userIds, async id =>
-				User.read(await this.context.blobStorage.load(`user/${id}/info`))));
+				User.read(await this.context.persistence.get(`user/${id}/info`))));
 		const users = mapToKeys(userObjects, user => [
 			user.id, {
 				_id: user.id,
