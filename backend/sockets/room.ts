@@ -1,13 +1,10 @@
-import type { Flag } from '~/game/flag';
-import * as FlagSchema from '~/engine/schema/flag';
 import * as Room from '~/engine/schema/room';
 import * as User from '~/engine/metadata/user';
+import { getFlagChannel, loadUserFlags } from '~/engine/model/user';
 import { runAsUser } from '~/game/game';
-import { UserFlagMessage } from '~/engine/processor/intents/flag';
-import { Channel } from '~/storage/channel';
 import { SubscriptionEndpoint } from '../socket';
 import { Render } from './render';
-import { mapInPlace, mapToKeys } from '~/lib/utility';
+import { acquire, mapInPlace, mapToKeys } from '~/lib/utility';
 
 function diff(previous: any, next: any) {
 	if (previous === next) {
@@ -35,27 +32,31 @@ export const roomSubscription: SubscriptionEndpoint = {
 	pattern: /^room:(?<room>[A-Z0-9]+)$/,
 
 	async subscribe(parameters) {
+		let flagsStale = true;
 		let flagString = '';
-		const updateFlags = async() => {
-			// TODO: This should also only update every 250ms
-			const flagsBlob = await this.context.persistence.get(`user/${this.user}/flags`).catch(() => undefined);
-			if (flagsBlob) {
-				const flagsInThisRoom = (Object.values(FlagSchema.read(flagsBlob)) as Flag[]).filter(
-					flag => flag.pos.roomName === parameters.room);
-				flagString = flagsInThisRoom.map(
-					flag => `${flag.name}~${flag.color}~${flag.secondaryColor}~${flag.pos.x}~${flag.pos.y}`).join('|');
-			} else {
-				flagString = '';
-			}
-		};
-
 		let lastTickTime = 0;
 		let previous: any;
 		const seenUsers = new Set<string>();
+
 		const update = async(time: number) => {
 			lastTickTime = Date.now();
-			const roomBlob = await this.context.persistence.get(`room/${parameters.room}`);
-			const room = Room.read(roomBlob);
+			const [ room ] = await Promise.all([
+				// Update room objects
+				(async() => {
+					const roomBlob = await this.context.persistence.get(`room/${parameters.room}`);
+					return Room.read(roomBlob);
+				})(),
+				// Update user flags
+				(async() => {
+					if (flagsStale) {
+						flagsStale = false;
+						const flags = await loadUserFlags(this.context.shard, this.user);
+						const flagsInThisRoom = Object.values(flags).filter(flag => flag.pos.roomName === parameters.room);
+						flagString = flagsInThisRoom.map(
+							flag => `${flag.name}~${flag.color}~${flag.secondaryColor}~${flag.pos.x}~${flag.pos.y}`).join('|');
+					}
+				})(),
+			]);
 
 			// Render current room state
 			const objects: any = {};
@@ -94,27 +95,27 @@ export const roomSubscription: SubscriptionEndpoint = {
 			this.send(JSON.stringify(response));
 			previous = objects;
 		};
-		await updateFlags();
-		await update(this.context.time);
 
-		const unlistener = (async() => {
-			const gameListener = this.context.gameChannel.listen(event => {
+		// Listen for updates
+		const [ effect ] = await acquire(
+			// Room updates
+			this.context.gameChannel.listen(event => {
 				if (event.type === 'tick' && Date.now() > lastTickTime + 50) {
 					update(event.time).catch(error => console.error(error));
 				}
-			});
-			// TODO: This is sloppy and a potential dangling listener
-			const flagChannel = await new Channel<UserFlagMessage>(this.context.storage, `user/${this.user}/flags`).subscribe();
-			flagChannel.listen(event => {
+			}),
+			// Flag updates
+			getFlagChannel(this.context.shard, this.user).listen(event => {
 				if (event.type === 'updated') {
-					updateFlags().catch(console.error);
+					flagsStale = true;
 				}
-			});
-			return () => {
-				gameListener();
-				flagChannel.disconnect();
-			};
-		})();
-		return unlistener;
+			}),
+		);
+
+		// Fire off first update immediately
+		await update(this.context.time);
+
+		// Disconnect on socket hangup
+		return effect;
 	},
 };

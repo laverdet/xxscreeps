@@ -1,7 +1,8 @@
 import { makeResolver } from '~/lib/utility';
 import { Provider, PubsubProvider, PubsubSubscription } from './provider';
 
-type Listener<Message> = (message: Message) => void;
+type MessageType<Message> = Message | (Message extends string ? null : { type: null });
+type Listener<Message> = (message: MessageType<Message>) => void;
 
 export class Channel<Message = string> {
 	private readonly pubsub: PubsubProvider;
@@ -14,6 +15,12 @@ export class Channel<Message = string> {
 		private readonly json = false,
 	) {
 		this.pubsub = storage.pubsub;
+	}
+
+	async listen(listener: Listener<Message>) {
+		const subscription = await this.subscribe();
+		subscription.listen(listener);
+		return () => subscription.disconnect();
 	}
 
 	publish(message: Message) {
@@ -75,10 +82,10 @@ export class Subscription<Message> {
 	}
 
 	// Iterates over all messages in a `for await` loop
-	async *[Symbol.asyncIterator](): AsyncGenerator<Message> {
+	async *[Symbol.asyncIterator](): AsyncGenerator<MessageType<Message>> {
 		// Create listener to save incoming messages
-		let resolver: Resolver<Message | undefined> | undefined;
-		const queue: Message[] = [];
+		let resolver: Resolver<MessageType<Message> | undefined> | undefined;
+		const queue: MessageType<Message>[] = [];
 		const unlisten = this.listen(message => {
 			if (resolver) {
 				resolver.resolve(message);

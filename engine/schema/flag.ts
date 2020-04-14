@@ -16,8 +16,8 @@ const shape = declare('Flag', {
 const format = declare(shape, { overlay: Flag });
 
 const schema = declare('Flags', vector(format), {
-	compose: (flags): Dictionary<Flag> => mapToKeys(flags, flag => [ flag.name, flag ]),
-	decompose: (flags: Dictionary<Flag>) => Object.values(flags) as Flag[],
+	compose: (flags): Record<string, Flag> => mapToKeys(flags, flag => [ flag.name, flag ]),
+	decompose: (flags: Record<string, Flag>) => Object.values(flags),
 });
 
 export const read = getReader(schema);

@@ -10,6 +10,63 @@ export function accumulate(iterable: Iterable<any>, callback: (value: any) => nu
 	return sum;
 }
 
+// Given a series of effect-returning promises this waits for them all to resolve and returns a
+// single effect that owns all the underlying effects. In the case that one throws the successful
+// effects are destroyed.
+type ActionResult<Result = any> = void | Cleanup | [ Cleanup | void, Result ];
+type Cleanup = () => void;
+type ARes<Type> =
+	Type extends Promise<ActionResult<infer Result>> ? Result :
+	Type extends ActionResult<infer Result> ? Result :
+	void;
+export function acquire<T1>(a1: T1): Promise<[ Effect, [ ARes<T1> ] ]>;
+export function acquire<T1, T2>(a1: T1, a2: T2):
+Promise<[ Effect, [ ARes<T1>, ARes<T2> ] ]>;
+export function acquire<T1, T2, T3>(a1: T1, a2: T2, a3: T3):
+Promise<[ Effect, [ ARes<T1>, ARes<T2>, ARes<T3> ] ]>;
+export function acquire<T1, T2, T3, T4>(a1: T1, a2: T2, a3: T3, a4: T4):
+Promise<[ Effect, [ ARes<T1>, ARes<T2>, ARes<T3>, ARes<T4> ] ]>;
+export function acquire<Args extends Promise<ActionResult>[]>(...args: Args) {
+	// Not implemented as an async function to keep original stack traces
+	return new Promise((resolve, reject) => {
+		// eslint-disable-next-line @typescript-eslint/no-floating-promises
+		Promise.allSettled(args).then(settled => {
+			const effects: Effect[] = [];
+			const results: any[] = [];
+			let rejected = false;
+			for (const result of settled) {
+				if (result.status === 'fulfilled') {
+					const { value } = result;
+					if (Array.isArray(value)) {
+						// Returned `[ effect, result ]`
+						const effect = value[0];
+						if (effect) {
+							effects.push(effect);
+						}
+						results.push(value[1]);
+					} else {
+						// Returned `effect`
+						if (value) {
+							effects.push(value);
+						}
+						results.push(undefined);
+					}
+				} else if (!rejected) {
+					// Reject with first error found
+					rejected = true;
+					reject(result.reason);
+				}
+			}
+			const effect = () => effects.forEach(effect => effect());
+			if (rejected) {
+				effect();
+			} else {
+				resolve([ effect, results ]);
+			}
+		});
+	});
+}
+
 // Clamps a number to a given range
 export function clamp(min: number, max: number, value: number) {
 	return Math.max(min, Math.min(max, value));
@@ -82,7 +139,7 @@ function identity<Type>(any: Type) {
 // properties on to it
 export function instantiate<Type>(
 	ctor: new(...params: any) => Type,
-	properties: { [Key in keyof Type]?: Type[Key] }
+	properties: { [Key in keyof Type]?: Type[Key] },
 ): Type {
 	return Object.assign(Object.create(ctor.prototype), properties);
 }
@@ -92,11 +149,12 @@ type Emitter<Message, Listener> = {
 	on: (message: Message, listener: Listener) => void;
 	removeListener: (message: Message, listener: Listener) => void;
 };
+type Effect = () => void;
 export function listen<
 	Message extends string,
 	Listener extends (...params: any[]) => void,
 	Type extends Emitter<Message, Listener>,
->(emitter: Type, message: Message, listener: Listener) {
+>(emitter: Type, message: Message, listener: Listener): Effect {
 	emitter.on(message, listener);
 	return () => emitter.removeListener(message, listener);
 }

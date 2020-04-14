@@ -166,7 +166,7 @@ rules:
   object-shorthand: warn
   prefer-arrow-callback: warn
   prefer-const: warn
-  prefer-destructuring: warn
+  prefer-destructuring: [ warn, { array: false } ]
   prefer-numeric-literals: warn
   prefer-rest-params: warn
   prefer-spread: warn

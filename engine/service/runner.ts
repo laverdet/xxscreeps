@@ -2,6 +2,8 @@ import os from 'os';
 import config from '~/engine/config';
 import * as Code from '~/engine/metadata/code';
 import * as User from '~/engine/metadata/user';
+import { loadUserFlagBlob, saveUserFlagBlobForNextTick } from '~/engine/model/user';
+import { Shard } from '~/engine/model/shard';
 import { loadTerrainFromWorld, readWorld } from '~/game/map';
 import { loadTerrain } from '~/driver/path-finder';
 import { createSandbox, Sandbox } from '~/driver/sandbox';
@@ -38,6 +40,7 @@ type PlayerInstance = {
 export default async function() {
 
 	// Connect to main & storage
+	const shard = await Shard.connect('shard0');
 	const storage = await Storage.connect('shard0');
 	const { persistence } = storage;
 	const usersQueue = Queue.connect(storage, 'runnerUsers');
@@ -77,10 +80,9 @@ export default async function() {
 							}
 
 							// Connect to channel, load user
-							const [ codeChannel, [ flagsBlob ], userBlob ] = await Promise.all([
+							const [ codeChannel, flagsBlob, userBlob ] = await Promise.all([
 								new Channel<RunnerUserMessage>(storage, `user/${userId}/runner`).subscribe(),
-								// TODO: remove nested array hack after the typescript bug is fixed
-								Promise.all([ persistence.get(`user/${userId}/flags`).catch(() => undefined) ]),
+								loadUserFlagBlob(shard, userId),
 								persistence.get(`user/${userId}/info`),
 							]);
 							const user = User.read(userBlob);
@@ -206,8 +208,7 @@ export default async function() {
 										FlagIntents.execute(flags, intents);
 									}
 									instance.flagsBlob = FlagSchema.write(flags);
-									await persistence.set(`user/${userId}/flags`, instance.flagsBlob);
-									await new Channel<FlagIntents.UserFlagMessage>(storage, `user/${userId}/flags`).publish({ type: 'updated' });
+									await saveUserFlagBlobForNextTick(shard, userId, instance.flagsBlob);
 								}
 							}(),
 

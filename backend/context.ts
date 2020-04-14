@@ -1,4 +1,5 @@
 import * as GameSchema from '~/engine/metadata/game';
+import { Shard } from '~/engine/model/shard';
 import type { GameMessage } from '~/engine/service';
 import { readWorld, World } from '~/game/map';
 import { getOrSet } from '~/lib/utility';
@@ -13,6 +14,7 @@ export class BackendContext {
 	private readonly userToProvider = new Map<string, string[]>();
 
 	private constructor(
+		public readonly shard: Shard,
 		public readonly storage: Storage.Provider,
 		public readonly persistence: Storage.PersistenceProvider,
 		public readonly gameChannel: Subscription<GameMessage>,
@@ -37,6 +39,7 @@ export class BackendContext {
 
 	static async connect() {
 		// Connect to services
+		const shard = await Shard.connect('shard0');
 		const storage = await Storage.connect('shard0');
 		const { persistence } = storage;
 		const gameChannel = await new Channel<GameMessage>(storage, 'main').subscribe();
@@ -44,7 +47,7 @@ export class BackendContext {
 		const game = GameSchema.read(await persistence.get('game'));
 		const gameMutex = await Mutex.connect(storage, 'game');
 		const auth = Auth.read(await persistence.get('auth'));
-		const context = new BackendContext(storage, storage.persistence, gameChannel, world, game.accessibleRooms, gameMutex, auth, game.time);
+		const context = new BackendContext(shard, storage, storage.persistence, gameChannel, world, game.accessibleRooms, gameMutex, auth, game.time);
 		return context;
 	}
 
