@@ -38,8 +38,11 @@ type PlayerInstance = {
 export default async function() {
 
 	// Connect to main & storage
-	const persistence = await Storage.connect('shard0');
-	const usersQueue = await Queue.connect('runnerUsers');
+	const [ ephemeral, persistence ] = await Promise.all([
+		Storage.connectToEphemeral('shard0'),
+		Storage.connectToPersistence('shard0'),
+	]);
+	const usersQueue = Queue.connect(ephemeral, 'runnerUsers');
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
 	const concurrency = config.runner?.unsafeSandbox ? 1 :
 		config.runner?.concurrency ?? (os.cpus().length >> 1) + 1;
@@ -65,7 +68,7 @@ export default async function() {
 			} else if (message.type === 'processUsers') {
 				const roomBlobCache = new Map<string, Readonly<Uint8Array>>();
 				gameTime = message.time;
-				usersQueue.version(gameTime);
+				usersQueue.version(`${gameTime}`);
 				await Promise.all(Array(concurrency).fill(undefined).map(async() => {
 					for await (const userId of usersQueue) {
 						const instance = await async function() {
@@ -225,8 +228,8 @@ export default async function() {
 			instance.codeChannel.disconnect();
 			instance.sandbox?.dispose();
 		}
+		ephemeral.disconnect();
 		persistence.disconnect();
-		usersQueue.disconnect();
 		runnerChannel.disconnect();
 	}
 }

@@ -57,7 +57,7 @@ topLevelTask(async() => {
 	await new Promise((resolve, reject) =>
 		db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve()));
 	await Storage.initialize();
-	const persistence = await Storage.connect('shard0');
+	const persistence = await Storage.connectToPersistence('shard0');
 	execSync('rm -rf ./data/*');
 
 	// Collect env data

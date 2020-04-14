@@ -10,12 +10,15 @@ import type { GameMessage, ProcessorMessage, ProcessorQueueElement, RunnerMessag
 
 export default async function() {
 	// Open channels
+	const [ ephemeral, persistence ] = await Promise.all([
+		Storage.connectToEphemeral('shard0'),
+		Storage.connectToPersistence('shard0'),
+	]);
 	const [
-		persistence, roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
+		roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
 	] = await Promise.all([
-		Storage.connect('shard0'),
-		Queue.create<ProcessorQueueElement>('processRooms'),
-		Queue.create('runnerUsers'),
+		Queue.connect<ProcessorQueueElement>(ephemeral, 'processRooms', true),
+		Queue.connect(ephemeral, 'runnerUsers'),
 		Channel.connect<ProcessorMessage>('processor'),
 		Channel.connect<RunnerMessage>('runner'),
 		Channel.connect<ServiceMessage>('service'),
@@ -58,8 +61,8 @@ export default async function() {
 				}
 
 				// Add users to runner queue
-				usersQueue.version(gameMetadata.time);
-				await usersQueue.push(activeUsers);
+				usersQueue.version(`${gameMetadata.time}`);
+				await Promise.all([ usersQueue.clear(), usersQueue.push(activeUsers) ]);
 				runnerChannel.publish({ type: 'processUsers', time: gameMetadata.time });
 
 				// Wait for runners to finish
@@ -81,11 +84,12 @@ export default async function() {
 				}
 
 				// Add rooms to queue and notify processors
-				roomsQueue.version(gameMetadata.time);
-				await roomsQueue.push([ ...mapInPlace(activeRooms, room => ({
+				roomsQueue.version(`${gameMetadata.time}`);
+				const roomsQueueElements = [ ...mapInPlace(activeRooms, room => ({
 					room,
 					users: [ ...intentsByRoom.get(room) ?? [] ],
-				})) ]);
+				})) ];
+				await Promise.all([ roomsQueue.clear(), roomsQueue.push(roomsQueueElements) ]);
 				processorChannel.publish({ type: 'processRooms', time: gameMetadata.time });
 
 				// Handle incoming processor messages
@@ -142,9 +146,8 @@ export default async function() {
 
 	} finally {
 		// Clean up
+		ephemeral.disconnect();
 		persistence.disconnect();
-		roomsQueue.disconnect();
-		usersQueue.disconnect();
 		processorChannel.disconnect();
 		runnerChannel.disconnect();
 		gameMutex.disconnect();

@@ -19,8 +19,11 @@ export default async function() {
 	const processedRooms = new Map<string, ProcessorContext>();
 
 	// Connect to main & storage
-	const persistence = await Storage.connect('shard0');
-	const roomsQueue = await Queue.connect<ProcessorQueueElement>('processRooms');
+	const [ ephemeral, persistence ] = await Promise.all([
+		Storage.connectToEphemeral('shard0'),
+		Storage.connectToPersistence('shard0'),
+	]);
+	const roomsQueue = Queue.connect<ProcessorQueueElement>(ephemeral, 'processRooms', true);
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 
 	// Initialize world terrain
@@ -39,7 +42,7 @@ export default async function() {
 				// First processing phase. Can start as soon as all players with visibility into this room
 				// have run their code
 				gameTime = message.time;
-				roomsQueue.version(gameTime);
+				roomsQueue.version(`${gameTime}`);
 				for await (const { room, users } of roomsQueue) {
 					// Read room data and intents from storage
 					const [ roomBlob, intents ] = await Promise.all([
@@ -81,8 +84,8 @@ export default async function() {
 		}
 
 	} finally {
+		ephemeral.disconnect();
 		persistence.disconnect();
 		processorChannel.disconnect();
-		roomsQueue.disconnect();
 	}
 }

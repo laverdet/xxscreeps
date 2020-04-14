@@ -1,3 +1,11 @@
+export type EphemeralProvider = {
+	// queues & rudimentary locks
+	sadd(key: string, values: string[]): Promise<number>;
+	spop(key: string): Promise<string | undefined>;
+	sflush(key: string): Promise<void>;
+	disconnect(): void;
+};
+
 export type PersistenceProvider = {
 	// key/val
 	del(key: string): Promise<void>;
@@ -7,12 +15,7 @@ export type PersistenceProvider = {
 	disconnect(): void;
 };
 
-export type MemoryProvider = {
-	// queues & rudimentary locks
-	sadd(key: string, values: string[]): Promise<number>;
-	spop(key: string): Promise<string | undefined>;
-	sflush(key: string): Promise<void>;
-
+export type PubsubProvider = {
 	// pub/sub
 	publish(key: string, message: string): Promise<void>;
 	subscribe(key: string, listener: (message: string) => void): Promise<() => void>;

@@ -1,41 +1,39 @@
-import { connect, create, Responder, ResponderClient, ResponderHost } from './local/responder';
+import type { EphemeralProvider } from './provider';
 
-const QueueHandle = Symbol();
-type QueueReference<Type> = { [QueueHandle]: Type };
-export function reference<Type>(name: string): QueueReference<Type> {
-	return name as any;
-}
+export class Queue<Type> {
+	private currentVersion = 'initial';
+	constructor(
+		private readonly provider: EphemeralProvider,
+		private readonly key: string,
+		private readonly json: boolean,
+	) {}
 
-export abstract class Queue<Type> extends Responder {
-	disconnect!: () => void;
-	abstract pop(): Promise<Type | undefined>;
-	abstract push(entries: Type[]): Promise<void>;
-	abstract version(version: any): void;
-	protected currentVersion: any;
-
-	static connect<Type = string>(reference: QueueReference<Type> | string): Promise<Queue<Type>>;
-	static connect(name: string): Promise<Queue<any>> {
-		return connect(name, QueueClient, QueueHost);
+	static connect<Type extends string = string>(provider: EphemeralProvider, key: string, json?: false): Queue<Type>;
+	static connect<Type>(provider: EphemeralProvider, key: string, json: true): Queue<Type>;
+	static connect(provider: EphemeralProvider, key: string, json = false) {
+		return new Queue<any>(provider, key, json);
 	}
 
-	static create<Type = string>(reference: QueueReference<Type> | string): Promise<Queue<Type>>
-	static create(name: string): Promise<Queue<any>> {
-		return Promise.resolve(create(name, QueueHost));
+	async clear() {
+		return this.provider.sflush(this.getKey());
 	}
 
-	request(method: 'pop', payload: { version: any }): Promise<Type | undefined>;
-	request(method: 'push', payload: { version: any; entries: Type[] }): Promise<void>;
-	request(method: string, payload?: any) {
-		if (payload.version !== this.currentVersion) {
-			return Promise.resolve();
-		}
-		if (method === 'pop') {
-			return this.pop();
-		} else if (method === 'push') {
-			return this.push(payload);
+	async pop(): Promise<Type | undefined> {
+		const value = await this.provider.spop(this.getKey());
+		if (this.json) {
+			return value === undefined ? undefined : JSON.parse(value);
 		} else {
-			return Promise.reject(new Error(`Unknown method: ${method}`));
+			return value as any;
 		}
+	}
+
+	push(entries: Type[]): Promise<unknown> {
+		const values = this.json ? entries.map(value => JSON.stringify(value)) : entries;
+		return this.provider.sadd(this.getKey(), values as string[]);
+	}
+
+	version(version: string) {
+		this.currentVersion = version;
 	}
 
 	async *[Symbol.asyncIterator]() {
@@ -47,38 +45,8 @@ export abstract class Queue<Type> extends Responder {
 			yield value;
 		}
 	}
+
+	private getKey() {
+		return `queue/${this.key}/${this.currentVersion}`;
+	}
 }
-
-const QueueHost = ResponderHost(class QueueHost extends Queue<any> {
-	readonly queue: any[] = [];
-
-	pop() {
-		return Promise.resolve(this.queue.shift());
-	}
-
-	push(entries: any[]) {
-		this.queue.push(...entries);
-		return Promise.resolve();
-	}
-
-	version(version: any) {
-		if (this.currentVersion !== version) {
-			this.currentVersion = version;
-			this.queue.splice(0, this.queue.length);
-		}
-	}
-});
-
-const QueueClient = ResponderClient(class QueueClient extends Queue<any> {
-	pop() {
-		return this.request('pop', { version: this.currentVersion });
-	}
-
-	push(entries: any[]) {
-		return this.request('push', { version: this.currentVersion, entries });
-	}
-
-	version(version: any) {
-		this.currentVersion = version;
-	}
-});

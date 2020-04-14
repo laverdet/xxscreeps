@@ -36,7 +36,7 @@ export class BackendContext {
 
 	static async connect() {
 		// Connect to services
-		const persistence = await Storage.connect('shard0');
+		const persistence = await Storage.connectToPersistence('shard0');
 		const gameChannel = await Channel.connect<GameMessage>('main');
 		const world = readWorld(await persistence.get('terrain'));
 		const game = GameSchema.read(await persistence.get('game'));
