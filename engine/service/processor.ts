@@ -19,11 +19,9 @@ export default async function() {
 	const processedRooms = new Map<string, ProcessorContext>();
 
 	// Connect to main & storage
-	const [ ephemeral, persistence ] = await Promise.all([
-		Storage.connectToEphemeral('shard0'),
-		Storage.connectToPersistence('shard0'),
-	]);
-	const roomsQueue = Queue.connect<ProcessorQueueElement>(ephemeral, 'processRooms', true);
+	const database = await Storage.connect('shard0');
+	const { persistence } = database;
+	const roomsQueue = Queue.connect<ProcessorQueueElement>(database, 'processRooms', true);
 	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
 
 	// Initialize world terrain
@@ -84,8 +82,7 @@ export default async function() {
 		}
 
 	} finally {
-		ephemeral.disconnect();
-		persistence.disconnect();
+		database.disconnect();
 		processorChannel.disconnect();
 	}
 }

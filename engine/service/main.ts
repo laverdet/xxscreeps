@@ -10,15 +10,13 @@ import type { GameMessage, ProcessorMessage, ProcessorQueueElement, RunnerMessag
 
 export default async function() {
 	// Open channels
-	const [ ephemeral, persistence ] = await Promise.all([
-		Storage.connectToEphemeral('shard0'),
-		Storage.connectToPersistence('shard0'),
-	]);
+	const storage = await Storage.connect('shard0');
+	const { persistence } = storage;
 	const [
 		roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
 	] = await Promise.all([
-		Queue.connect<ProcessorQueueElement>(ephemeral, 'processRooms', true),
-		Queue.connect(ephemeral, 'runnerUsers'),
+		Queue.connect<ProcessorQueueElement>(storage, 'processRooms', true),
+		Queue.connect(storage, 'runnerUsers'),
 		Channel.connect<ProcessorMessage>('processor'),
 		Channel.connect<RunnerMessage>('runner'),
 		Channel.connect<ServiceMessage>('service'),
@@ -146,8 +144,7 @@ export default async function() {
 
 	} finally {
 		// Clean up
-		ephemeral.disconnect();
-		persistence.disconnect();
+		storage.disconnect();
 		processorChannel.disconnect();
 		runnerChannel.disconnect();
 		gameMutex.disconnect();

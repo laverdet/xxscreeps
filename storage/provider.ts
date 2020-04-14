@@ -20,3 +20,15 @@ export type PubsubProvider = {
 	publish(key: string, message: string): Promise<void>;
 	subscribe(key: string, listener: (message: string) => void): Promise<() => void>;
 };
+
+export class Provider {
+	constructor(
+		public readonly ephemeral: EphemeralProvider,
+		public readonly persistence: PersistenceProvider,
+	) {}
+
+	disconnect() {
+		this.ephemeral.disconnect();
+		this.persistence.disconnect();
+	}
+}

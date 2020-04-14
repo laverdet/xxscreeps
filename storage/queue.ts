@@ -1,4 +1,4 @@
-import type { EphemeralProvider } from './provider';
+import type { EphemeralProvider, Provider } from './provider';
 
 export class Queue<Type> {
 	private currentVersion = 'initial';
@@ -8,10 +8,10 @@ export class Queue<Type> {
 		private readonly json: boolean,
 	) {}
 
-	static connect<Type extends string = string>(provider: EphemeralProvider, key: string, json?: false): Queue<Type>;
-	static connect<Type>(provider: EphemeralProvider, key: string, json: true): Queue<Type>;
-	static connect(provider: EphemeralProvider, key: string, json = false) {
-		return new Queue<any>(provider, key, json);
+	static connect<Type extends string = string>(provider: Provider, key: string, json?: false): Queue<Type>;
+	static connect<Type>(provider: Provider, key: string, json: true): Queue<Type>;
+	static connect(provider: Provider, key: string, json = false) {
+		return new Queue<any>(provider.ephemeral, key, json);
 	}
 
 	async clear() {

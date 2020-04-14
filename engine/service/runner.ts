@@ -38,11 +38,9 @@ type PlayerInstance = {
 export default async function() {
 
 	// Connect to main & storage
-	const [ ephemeral, persistence ] = await Promise.all([
-		Storage.connectToEphemeral('shard0'),
-		Storage.connectToPersistence('shard0'),
-	]);
-	const usersQueue = Queue.connect(ephemeral, 'runnerUsers');
+	const storage = await Storage.connect('shard0');
+	const { persistence } = storage;
+	const usersQueue = Queue.connect(storage, 'runnerUsers');
 	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
 	const concurrency = config.runner?.unsafeSandbox ? 1 :
 		config.runner?.concurrency ?? (os.cpus().length >> 1) + 1;
@@ -228,8 +226,7 @@ export default async function() {
 			instance.codeChannel.disconnect();
 			instance.sandbox?.dispose();
 		}
-		ephemeral.disconnect();
-		persistence.disconnect();
+		storage.disconnect();
 		runnerChannel.disconnect();
 	}
 }
