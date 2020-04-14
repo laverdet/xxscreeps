@@ -142,7 +142,7 @@ const BranchSetEndpoint: Endpoint = {
 			}
 			user.code.branch = id;
 			await this.context.persistence.set(`user/${userid}/info`, User.write(user));
-			Channel.publish<RunnerUserMessage>(`user/${userid}/runner`, { type: 'push', id, name });
+			await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`).publish({ type: 'push', id, name });
 		});
 
 		return { ok: 1 };
@@ -205,7 +205,7 @@ const CodePostEndpoint: Endpoint = {
 					modules: new Map(Object.entries(modules)),
 				})),
 			]);
-			Channel.publish<RunnerUserMessage>(`user/${userid}/runner`, { type: 'push', id, name });
+			await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`).publish({ type: 'push', id, name });
 		});
 		return { ok: 1, timestamp: timestamp * 1000 };
 	},
@@ -215,7 +215,7 @@ const ConsoleEndpoint: Endpoint = {
 	path: '/console',
 	method: 'post',
 
-	execute(req) {
+	async execute(req) {
 		const { userid, body: { expression } } = req;
 		if (typeof expression !== 'string') {
 			throw new TypeError('Invalid expression');
@@ -223,11 +223,10 @@ const ConsoleEndpoint: Endpoint = {
 		try {
 			// Try to parse it
 			new Function(expression);
-			Channel.publish<RunnerUserMessage>(`user/${userid}/runner`, { type: 'eval', expr: req.body.expression });
+			await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`).publish({ type: 'eval', expr: req.body.expression });
 		} catch (err) {
-			Channel.publish<Code.ConsoleMessage>(
-				`user/${userid}/console`,
-				{ type: 'console', result: `💥${err.message}` });
+			await new Channel<Code.ConsoleMessage>(this.context.storage, `user/${userid}/console`)
+				.publish({ type: 'console', result: `💥${err.message}` });
 		}
 		return { ok: 1 };
 	},

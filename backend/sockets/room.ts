@@ -104,15 +104,15 @@ export const roomSubscription: SubscriptionEndpoint = {
 				}
 			});
 			// TODO: This is sloppy and a potential dangling listener
-			const flagChannel = await Channel.connect<UserFlagMessage>(`user/${this.user}/flags`);
-			const flagListener = flagChannel.listen(event => {
+			const flagChannel = await new Channel<UserFlagMessage>(this.context.storage, `user/${this.user}/flags`).subscribe();
+			flagChannel.listen(event => {
 				if (event.type === 'updated') {
 					updateFlags().catch(console.error);
 				}
 			});
 			return () => {
 				gameListener();
-				flagListener();
+				flagChannel.disconnect();
 			};
 		})();
 		return unlistener;

@@ -11,25 +11,22 @@ const CreateFlagEndpoint: Endpoint = {
 	path: '/create-flag',
 	method: 'post',
 
-	execute(req) {
+	async execute(req) {
 		const { userid } = req;
 		const { name, color, secondaryColor, room, x, y } = req.body;
 		const pos = new RoomPosition(x, y, room);
 		if (checkCreateFlag({}, pos, name, color, secondaryColor) === C.OK) {
-			Channel.publish<RunnerUserMessage>(
-				`user/${userid}/runner`,
-				{
-					type: 'flag',
-					intent: {
-						create: {
-							name: name as string,
-							pos: extractPositionId(pos),
-							color: color as Color,
-							secondaryColor: secondaryColor as Color,
-						},
+			await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`).publish({
+				type: 'flag',
+				intent: {
+					create: {
+						name: name as string,
+						pos: extractPositionId(pos),
+						color: color as Color,
+						secondaryColor: secondaryColor as Color,
 					},
 				},
-			);
+			});
 			return { ok: 1 };
 		} else {
 			return { error: 'Invalid intent' };
@@ -63,18 +60,16 @@ const RemoveFlagEndpoint: Endpoint = {
 	path: '/remove-flag',
 	method: 'post',
 
-	execute(req) {
+	async execute(req) {
 		const { userid } = req;
 		const { name } = req.body;
-		Channel.publish<RunnerUserMessage>(
-			`user/${userid}/runner`,
-			{
+		await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`)
+			.publish({
 				type: 'flag',
 				intent: {
 					remove: { name: name as string },
 				},
-			},
-		);
+			});
 		return { ok: 1 };
 	},
 };

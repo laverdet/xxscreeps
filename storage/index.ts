@@ -1,8 +1,9 @@
 import * as Path from 'path';
 import config, { configPath } from '~/engine/config';
-import { EphemeralProvider, PersistenceProvider, Provider } from './provider';
 import { LocalEphemeralProvider } from './local/ephemeral';
 import { LocalPersistenceProvider } from './local/persistence';
+import { LocalPubsubProvider } from './local/pubsub';
+import { EphemeralProvider, PersistenceProvider, Provider } from './provider';
 export { EphemeralProvider, PersistenceProvider, Provider };
 
 let provider: Provider;
@@ -12,6 +13,7 @@ export async function initialize() {
 	provider = new Provider(
 		await LocalEphemeralProvider.create('shard0'),
 		await LocalPersistenceProvider.create(path),
+		LocalPubsubProvider.connect('shard0'),
 	);
 }
 
@@ -22,6 +24,7 @@ export async function connect(name: string) {
 	return new Provider(
 		await LocalEphemeralProvider.connect('shard0'),
 		await LocalPersistenceProvider.connect(path),
+		LocalPubsubProvider.connect('shard0'),
 	);
 }
 

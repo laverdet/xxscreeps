@@ -17,14 +17,14 @@ const AddObjectIntentEndpoint: Endpoint = {
 	path: '/add-object-intent',
 	method: 'post',
 
-	execute(req) {
+	async execute(req) {
 		const { userid } = req;
 		const { room, name, intent: { id } } = req.body;
 		if (typeof room !== 'string' || typeof name !== 'string' || typeof id !== 'string') {
 			throw new TypeError('Invalid parameters');
 		}
-		Channel.publish<RunnerUserMessage>(
-			`user/${userid}/runner`, { type: 'intent', intent: name, id, room });
+		await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`)
+			.publish({ type: 'intent', intent: name, id, room });
 		return { ok: 1 };
 	},
 };
@@ -121,7 +121,7 @@ const PlaceSpawnEndpoint: Endpoint = {
 				saveUser(this.context, user),
 				saveRoom(this.context, room),
 			]);
-			Channel.publish<ServiceMessage>('service', { type: 'gameModified' });
+			await new Channel<ServiceMessage>(this.context.storage, 'service').publish({ type: 'gameModified' });
 		});
 		return { ok: 1 };
 	},

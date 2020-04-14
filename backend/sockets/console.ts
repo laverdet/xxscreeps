@@ -16,8 +16,8 @@ export const ConsoleSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/console$/,
 
 	async subscribe() {
-		const channel = await Channel.connect<Code.ConsoleMessage>(`user/${this.user}/console`);
-		return channel.listen(message => {
+		const channel = await new Channel<Code.ConsoleMessage>(this.context.storage, `user/${this.user}/console`).subscribe();
+		channel.listen(message => {
 			if (message.type === 'console') {
 				this.send(JSON.stringify({ messages: {
 					log: message.log === undefined ? [] : [ colorize(message.log) ],
@@ -25,5 +25,6 @@ export const ConsoleSubscription: SubscriptionEndpoint = {
 				} }));
 			}
 		});
+		return () => channel.disconnect();
 	},
 };

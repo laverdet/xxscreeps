@@ -19,17 +19,17 @@ export default async function() {
 	const processedRooms = new Map<string, ProcessorContext>();
 
 	// Connect to main & storage
-	const database = await Storage.connect('shard0');
-	const { persistence } = database;
-	const roomsQueue = Queue.connect<ProcessorQueueElement>(database, 'processRooms', true);
-	const processorChannel = await Channel.connect<ProcessorMessage>('processor');
+	const storage = await Storage.connect('shard0');
+	const { persistence } = storage;
+	const roomsQueue = Queue.connect<ProcessorQueueElement>(storage, 'processRooms', true);
+	const processorChannel = await new Channel<ProcessorMessage>(storage, 'processor').subscribe();
 
 	// Initialize world terrain
 	await loadTerrain(persistence);
 
 	// Start the processing loop
 	let gameTime = -1;
-	processorChannel.publish({ type: 'processorConnected' });
+	await processorChannel.publish({ type: 'processorConnected' });
 	try {
 		for await (const message of processorChannel) {
 
@@ -67,7 +67,7 @@ export default async function() {
 					// Save and notify main service of completion
 					await deleteIntentBlobs;
 					processedRooms.set(room, context);
-					processorChannel.publish({ type: 'processedRoom', roomName: room });
+					await processorChannel.publish({ type: 'processedRoom', roomName: room });
 				}
 
 			} else if (message.type === 'flushRooms') {
@@ -76,13 +76,13 @@ export default async function() {
 				await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) =>
 					persistence.set(`room/${roomName}`, Room.write(context.room)),
 				));
-				processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
+				await processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
 				processedRooms.clear();
 			}
 		}
 
 	} finally {
-		database.disconnect();
+		storage.disconnect();
 		processorChannel.disconnect();
 	}
 }

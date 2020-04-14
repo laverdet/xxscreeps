@@ -29,12 +29,13 @@ const SetActiveBranchSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/set-active-branch$/,
 
 	async subscribe() {
-		const channel = await Channel.connect<RunnerUserMessage>(`user/${this.user}/runner`);
-		return channel.listen(message => {
+		const channel = await new Channel<RunnerUserMessage>(this.context.storage, `user/${this.user}/runner`).subscribe();
+		channel.listen(message => {
 			if (message.type === 'push') {
 				this.send(JSON.stringify({ activeName: 'activeWorld', branch: message.name }));
 			}
 		});
+		return () => channel.disconnect();
 	},
 };
 

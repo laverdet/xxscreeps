@@ -9,7 +9,7 @@ import * as FlagIntents from '~/engine/processor/intents/flag';
 import * as FlagSchema from '~/engine/schema/flag';
 import { exchange, mapInPlace, filterInPlace } from '~/lib/utility';
 import * as Storage from '~/storage';
-import { Channel } from '~/storage/channel';
+import { Channel, Subscription } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
 import { RunnerMessage } from '.';
 
@@ -23,7 +23,7 @@ export type RunnerUserMessage =
 
 type PlayerInstance = {
 	branch: string;
-	codeChannel: Channel<RunnerUserMessage>;
+	codeChannel: Subscription<RunnerUserMessage>;
 	consoleEval?: string[];
 	flagsBlob: Readonly<Uint8Array> | undefined;
 	flagsOutOfDate: boolean;
@@ -41,7 +41,7 @@ export default async function() {
 	const storage = await Storage.connect('shard0');
 	const { persistence } = storage;
 	const usersQueue = Queue.connect(storage, 'runnerUsers');
-	const runnerChannel = await Channel.connect<RunnerMessage>('runner');
+	const runnerChannel = await new Channel<RunnerMessage>(storage, 'runner').subscribe();
 	const concurrency = config.runner?.unsafeSandbox ? 1 :
 		config.runner?.concurrency ?? (os.cpus().length >> 1) + 1;
 
@@ -56,7 +56,7 @@ export default async function() {
 
 	// Start the runner loop
 	let gameTime = -1;
-	runnerChannel.publish({ type: 'runnerConnected' });
+	await runnerChannel.publish({ type: 'runnerConnected' });
 	try {
 		for await (const message of runnerChannel) {
 
@@ -78,7 +78,7 @@ export default async function() {
 
 							// Connect to channel, load user
 							const [ codeChannel, [ flagsBlob ], userBlob ] = await Promise.all([
-								Channel.connect<RunnerUserMessage>(`user/${userId}/runner`),
+								new Channel<RunnerUserMessage>(storage, `user/${userId}/runner`).subscribe(),
 								// TODO: remove nested array hack after the typescript bug is fixed
 								Promise.all([ persistence.get(`user/${userId}/flags`).catch(() => undefined) ]),
 								persistence.get(`user/${userId}/info`),
@@ -94,9 +94,9 @@ export default async function() {
 								stale: false,
 								roomsVisible: user.roomsVisible,
 								writeConsole(fd, payload, evalResult?) {
-									Channel.publish<Code.ConsoleMessage>(
-										`user/${userId}/console`,
-										{ type: 'console', [evalResult ? 'result' : 'log']: payload });
+									new Channel<Code.ConsoleMessage>(storage, `user/${userId}/console`)
+										.publish({ type: 'console', [evalResult ? 'result' : 'log']: payload })
+										.catch(console.error);
 								},
 							};
 
@@ -207,7 +207,7 @@ export default async function() {
 									}
 									instance.flagsBlob = FlagSchema.write(flags);
 									await persistence.set(`user/${userId}/flags`, instance.flagsBlob);
-									Channel.publish<FlagIntents.UserFlagMessage>(`user/${userId}/flags`, { type: 'updated' });
+									await new Channel<FlagIntents.UserFlagMessage>(storage, `user/${userId}/flags`).publish({ type: 'updated' });
 								}
 							}(),
 
@@ -215,7 +215,7 @@ export default async function() {
 							('memory' in result ? persistence.set(`memory/${userId}`, result.memory) : undefined),
 						]);
 						const roomNames = [ ...filterInPlace(await Promise.all(savedRoomNames)) ];
-						runnerChannel.publish({ type: 'processedUser', userId, roomNames });
+						await runnerChannel.publish({ type: 'processedUser', userId, roomNames });
 					}
 				}));
 			}

@@ -15,7 +15,8 @@ import { ProcessorMessage, RunnerMessage, ServiceMessage } from '.';
 topLevelTask(async() => {
 	// Start shared blob service
 	await Storage.initialize();
-	const serviceChannel = await Channel.connect<ServiceMessage>('service');
+	const storage = await Storage.connect('shard0');
+	const serviceChannel = await new Channel<ServiceMessage>(storage, 'service').subscribe();
 
 	try {
 		// Start main service
@@ -46,11 +47,13 @@ topLevelTask(async() => {
 			const shutdownUnlisten = serviceChannel.listen(message => {
 				shutdownUnlisten();
 				if (message.type === 'mainDisconnected') {
-					Channel.publish<ProcessorMessage>('processor', { type: 'shutdown' });
-					Channel.publish<RunnerMessage>('runner', { type: 'shutdown' });
+					Promise.all([
+						new Channel<ProcessorMessage>(storage, 'processor').publish({ type: 'shutdown' }),
+						new Channel<RunnerMessage>(storage, 'runner').publish({ type: 'shutdown' }),
+					]).catch(console.error);
 				}
 			});
-			serviceChannel.publish({ type: 'shutdown' });
+			serviceChannel.publish({ type: 'shutdown' }).catch(console.error);
 		});
 
 		// Start workers
@@ -78,6 +81,7 @@ topLevelTask(async() => {
 
 	} finally {
 		// Shut down shared services
+		storage.disconnect();
 		Storage.terminate();
 		serviceChannel.disconnect();
 	}

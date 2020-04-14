@@ -17,12 +17,12 @@ export default async function() {
 	] = await Promise.all([
 		Queue.connect<ProcessorQueueElement>(storage, 'processRooms', true),
 		Queue.connect(storage, 'runnerUsers'),
-		Channel.connect<ProcessorMessage>('processor'),
-		Channel.connect<RunnerMessage>('runner'),
-		Channel.connect<ServiceMessage>('service'),
-		Mutex.create('game'),
+		new Channel<ProcessorMessage>(storage, 'processor').subscribe(),
+		new Channel<RunnerMessage>(storage, 'runner').subscribe(),
+		new Channel<ServiceMessage>(storage, 'service').subscribe(),
+		Mutex.connect(storage, 'game'),
 	]);
-	serviceChannel.publish({ type: 'mainConnected' });
+	await serviceChannel.publish({ type: 'mainConnected' });
 
 	// Run main game processing loop
 	let gameMetadata: GameSchema.Type | undefined;
@@ -61,14 +61,14 @@ export default async function() {
 				// Add users to runner queue
 				usersQueue.version(`${gameMetadata.time}`);
 				await Promise.all([ usersQueue.clear(), usersQueue.push(activeUsers) ]);
-				runnerChannel.publish({ type: 'processUsers', time: gameMetadata.time });
+				await runnerChannel.publish({ type: 'processUsers', time: gameMetadata.time });
 
 				// Wait for runners to finish
 				const processedUsers = new Set<string>();
 				const intentsByRoom = new Map<string, Set<string>>();
 				for await (const message of runnerChannel) {
 					if (message.type === 'runnerConnected') {
-						runnerChannel.publish({ type: 'processUsers', time: gameMetadata.time });
+						await runnerChannel.publish({ type: 'processUsers', time: gameMetadata.time });
 
 					} else if (message.type === 'processedUser') {
 						processedUsers.add(message.userId);
@@ -88,19 +88,19 @@ export default async function() {
 					users: [ ...intentsByRoom.get(room) ?? [] ],
 				})) ];
 				await Promise.all([ roomsQueue.clear(), roomsQueue.push(roomsQueueElements) ]);
-				processorChannel.publish({ type: 'processRooms', time: gameMetadata.time });
+				await processorChannel.publish({ type: 'processRooms', time: gameMetadata.time });
 
 				// Handle incoming processor messages
 				const processedRooms = new Set<string>();
 				const flushedRooms = new Set<string>();
 				for await (const message of processorChannel) {
 					if (message.type === 'processorConnected') {
-						processorChannel.publish({ type: 'processRooms', time: gameMetadata.time });
+						await processorChannel.publish({ type: 'processRooms', time: gameMetadata.time });
 
 					} else if (message.type === 'processedRoom') {
 						processedRooms.add(message.roomName);
 						if (activeRooms.length === processedRooms.size) {
-							processorChannel.publish({ type: 'flushRooms' });
+							await processorChannel.publish({ type: 'flushRooms' });
 						}
 
 					} else if (message.type === 'flushedRooms') {
@@ -120,7 +120,7 @@ export default async function() {
 				const timeTaken = now - timeStartedLoop;
 				const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
 				console.log(`Tick ${previousTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
-				Channel.publish<GameMessage>('main', { type: 'tick', time: gameMetadata.time });
+				await new Channel<GameMessage>(storage, 'main').publish({ type: 'tick', time: gameMetadata.time });
 			});
 
 			// Shutdown request came in during game loop
@@ -148,7 +148,7 @@ export default async function() {
 		processorChannel.disconnect();
 		runnerChannel.disconnect();
 		gameMutex.disconnect();
-		serviceChannel.publish({ type: 'mainDisconnected' });
+		await serviceChannel.publish({ type: 'mainDisconnected' });
 		serviceChannel.disconnect();
 	}
 }

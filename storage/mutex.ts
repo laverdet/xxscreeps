@@ -1,6 +1,6 @@
 import { makeResolver } from '~/lib/utility';
-import { Channel } from '~/storage/channel';
-import { connect, create, Responder, ResponderClient, ResponderHost } from '~/storage/local/responder';
+import { Channel, Subscription } from '~/storage/channel';
+import { EphemeralProvider, Provider } from './provider';
 
 type Message = 'waiting' | 'unlocked';
 
@@ -10,29 +10,18 @@ export class Mutex {
 	private waitingListener?: () => void;
 	private readonly localQueue: (() => void)[] = [];
 	constructor(
-		private readonly channel: Channel<Message>,
+		private readonly channel: Subscription<Message>,
 		private readonly lockable: Lock,
 	) {}
 
-	static async connect(name: string) {
-		const [ channel, lock ] = await Promise.all([
-			Channel.connect<Message>(`mutex:channel:${name}`),
-			Lock.connect(`mutex:${name}`),
-		]);
-		return new Mutex(channel, lock);
-	}
-
-	static async create(name: string) {
-		const [ channel, lock ] = await Promise.all([
-			Channel.connect<Message>(`mutex:channel:${name}`),
-			Lock.create(`mutex:${name}`),
-		]);
+	static async connect(storage: Provider, name: string) {
+		const channel = await new Channel<Message>(storage, `mutex/channel/${name}`).subscribe();
+		const lock = new Lock(storage, `mutex/${name}`);
 		return new Mutex(channel, lock);
 	}
 
 	disconnect() {
 		this.channel.disconnect();
-		this.lockable.disconnect();
 	}
 
 	async lock() {
@@ -49,7 +38,7 @@ export class Mutex {
 		this.lockedOrPending = true;
 		// If we're yielding send message that we want the lock back
 		if (this.yieldPromise) {
-			this.channel.publish('waiting');
+			await this.channel.publish('waiting');
 			await this.yieldPromise;
 		}
 		// Listen for peers who want the lock
@@ -74,7 +63,7 @@ export class Mutex {
 				if (locked) {
 					lockedResolver.resolve();
 				} else {
-					this.channel.publish('waiting');
+					this.channel.publish('waiting').catch(lockedResolver.reject);
 				}
 			}, lockedResolver.reject);
 		};
@@ -139,57 +128,24 @@ export class Mutex {
 			});
 		});
 		await this.lockable.unlock();
-		this.channel.publish('unlocked');
+		await this.channel.publish('unlocked');
 	}
 }
 
-abstract class Lock extends Responder {
-	abstract lock(): Promise<boolean>;
-	abstract unlock(): Promise<void>;
-
-	static connect(name: string): Promise<Lock> {
-		return connect(name, LockClient, LockHost);
+class Lock {
+	private readonly ephemeral: EphemeralProvider;
+	constructor(
+		storage: Provider,
+		private readonly name: string,
+	) {
+		this.ephemeral = storage.ephemeral;
 	}
 
-	static create(name: string): Promise<Lock> {
-		return Promise.resolve(create(name, LockHost));
+	async lock() {
+		return (await this.ephemeral.sadd('locks', [ this.name ])) === 1;
 	}
 
-	request(method: 'lock'): Promise<boolean>;
-	request(method: 'unlock'): Promise<void>;
-	request(method: string) {
-		if (method === 'lock') {
-			return this.lock();
-		} else if (method === 'unlock') {
-			return this.unlock();
-		} else {
-			return Promise.reject(new Error(`Unknown method: ${method}`));
-		}
+	unlock() {
+		return this.ephemeral.srem('locks', [ this.name ]);
 	}
 }
-
-const LockHost = ResponderHost(class LockHost extends Lock {
-	private locked = false;
-
-	lock() {
-		if (this.locked) {
-			return Promise.resolve(false);
-		}
-		return Promise.resolve(this.locked = true);
-	}
-
-	unlock() {
-		this.locked = false;
-		return Promise.resolve();
-	}
-});
-
-const LockClient = ResponderClient(class LockClient extends Lock {
-	lock() {
-		return this.request('lock');
-	}
-
-	unlock() {
-		return this.request('unlock');
-	}
-});

@@ -1,6 +1,6 @@
 import * as workerThreads from 'worker_threads';
 export * from 'worker_threads';
-import { Channel } from '~/storage/channel';
+import { LocalPubsubProvider } from '~/storage/local/pubsub';
 import * as Responder from '~/storage/local/responder';
 
 type WorkerOptions = workerThreads.WorkerOptions & {
@@ -16,7 +16,7 @@ export class Worker extends workerThreads.Worker {
 				runDefault: options.runDefault,
 			},
 		});
-		Channel.initializeWorker(this);
+		LocalPubsubProvider.initializeWorker(this);
 		Responder.initializeWorker(this);
 	}
 }

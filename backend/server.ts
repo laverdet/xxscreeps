@@ -58,7 +58,7 @@ export default async function() {
 	const shutdownServer = graceful(httpServer);
 
 	// Shutdown handler
-	const serviceChannel = await Channel.connect<ServiceMessage>('service');
+	const serviceChannel = await new Channel<ServiceMessage>(context.storage, 'service').subscribe();
 	const serviceUnlistener = serviceChannel.listen(message => {
 		if (message.type === 'shutdown') {
 			serviceUnlistener();
