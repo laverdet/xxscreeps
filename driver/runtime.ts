@@ -41,7 +41,7 @@ type InitializationData = {
 	codeBlob: Readonly<Uint8Array>;
 	flagBlob?: Readonly<Uint8Array>;
 	memoryBlob?: Readonly<Uint8Array>;
-	terrain: Readonly<Uint8Array>;
+	terrainBlob: Readonly<Uint8Array>;
 };
 
 export function initialize(
@@ -53,7 +53,7 @@ export function initialize(
 	setupConsole(writeConsole = _writeConsole);
 
 	// Load terrain
-	loadTerrainFromBuffer(data.terrain);
+	loadTerrainFromBuffer(data.terrainBlob);
 
 	// Set up user information
 	const { modules } = UserCode.read(data.codeBlob);

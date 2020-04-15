@@ -1,6 +1,11 @@
 import type { Shard } from './shard';
 import { Channel } from '~/storage/channel';
+import type { ConsoleMessage } from '~/engine/metadata/code';
 import * as FlagSchema from '~/engine/schema/flag';
+
+export function getConsoleChannel(shard: Shard, user: string) {
+	return new Channel<ConsoleMessage>(shard.storage, `user/${user}/console`);
+}
 
 /**
  * Load the unparsed flag blob for a user
@@ -37,4 +42,10 @@ export async function saveUserFlagBlobForNextTick(shard: Shard, user: string, fl
 type UserFlagMessage = { type: 'updated' };
 export function getFlagChannel(shard: Shard, user: string) {
 	return new Channel<UserFlagMessage>(shard.storage, `user/${user}/flags`);
+}
+
+//
+// User memory functions
+export async function loadUserMemoryBlob(shard: Shard, user: string) {
+	return shard.storage.persistence.get(`memory/${user}`).catch(() => undefined);
 }

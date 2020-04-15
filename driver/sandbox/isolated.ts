@@ -25,7 +25,7 @@ export class IsolatedSandbox {
 		private readonly tick: ivm.Reference<typeof Runtime.tick>,
 	) {}
 
-	static async create({ userId, codeBlob, flagBlob, memoryBlob, terrain, writeConsole }: Options) {
+	static async create({ userId, codeBlob, flagBlob, memoryBlob, terrainBlob, writeConsole }: Options) {
 		// Generate new isolate and context
 		const isolate = new ivm.Isolate({ memoryLimit: 128 });
 		const [ context, script ] = await Promise.all([
@@ -60,7 +60,7 @@ export class IsolatedSandbox {
 			context.global.delete('nodeUtilImport'),
 		]);
 		const writeConsoleRef = new ivm.Reference(writeConsole);
-		const data = { userId, codeBlob, flagBlob, memoryBlob, terrain };
+		const data = { userId, codeBlob, flagBlob, memoryBlob, terrainBlob };
 		await initialize.apply(undefined, [ isolate, context, writeConsoleRef, data ], { arguments: { copy: true } });
 		return new IsolatedSandbox(isolate, tick);
 	}

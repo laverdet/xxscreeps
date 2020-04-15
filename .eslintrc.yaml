@@ -23,7 +23,7 @@ rules:
   no-dupe-else-if: warn
   no-dupe-keys: error
   no-duplicate-case: warn
-  no-empty: warn
+  no-empty: [ warn, { allowEmptyCatch: true } ]
   no-empty-character-class: warn
   no-ex-assign: error
   no-extra-boolean-cast: warn
