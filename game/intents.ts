@@ -1,7 +1,7 @@
 import * as C from '~/game/constants';
 import { Room } from '~/game/room';
 import type { Intents as CreepIntents } from '~/engine/processor/intents/creep';
-import type { Intents as FlagIntents } from '~/engine/processor/intents/flag';
+import type { Intents as FlagIntents } from '~/engine/runner/flag';
 import type { Intents as RoomIntents } from '~/engine/processor/intents/room';
 import type { Intents as SpawnIntents } from '~/engine/processor/intents/spawn';
 

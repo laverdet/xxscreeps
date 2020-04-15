@@ -2,7 +2,7 @@ import { Endpoint } from '~/backend/endpoint';
 import * as Code from '~/engine/metadata/code';
 import * as User from '~/engine/metadata/user';
 import * as Id from '~/engine/util/schema/id';
-import { RunnerUserMessage } from '~/engine/service/runner';
+import { getRunnerUserChannel } from '~/engine/runner/channel';
 import { firstMatching, mapToKeys } from '~/lib/utility';
 import { Channel } from '~/storage/channel';
 
@@ -142,7 +142,7 @@ const BranchSetEndpoint: Endpoint = {
 			}
 			user.code.branch = id;
 			await this.context.persistence.set(`user/${userid}/info`, User.write(user));
-			await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`).publish({ type: 'push', id, name });
+			await getRunnerUserChannel(this.context.shard, userid!).publish({ type: 'code', id, name });
 		});
 
 		return { ok: 1 };
@@ -205,7 +205,7 @@ const CodePostEndpoint: Endpoint = {
 					modules: new Map(Object.entries(modules)),
 				})),
 			]);
-			await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`).publish({ type: 'push', id, name });
+			await getRunnerUserChannel(this.context.shard, userid!).publish({ type: 'code', id, name });
 		});
 		return { ok: 1, timestamp: timestamp * 1000 };
 	},
@@ -223,7 +223,7 @@ const ConsoleEndpoint: Endpoint = {
 		try {
 			// Try to parse it
 			new Function(expression);
-			await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`).publish({ type: 'eval', expr: req.body.expression });
+			await getRunnerUserChannel(this.context.shard, userid!).publish({ type: 'eval', expr: req.body.expression });
 		} catch (err) {
 			await new Channel<Code.ConsoleMessage>(this.context.storage, `user/${userid}/console`)
 				.publish({ type: 'console', result: `💥${err.message}` });

@@ -1,11 +1,10 @@
 import { Endpoint } from '~/backend/endpoint';
 import * as FlagSchema from '~/engine/schema/flag';
-import { RunnerUserMessage } from '~/engine/service/runner';
+import { getRunnerUserChannel } from '~/engine/runner/channel';
 import * as Id from '~/engine/util/schema/id';
 import * as C from '~/game/constants';
-import { checkCreateFlag, Color } from '~/game/flag';
+import { checkCreateFlag } from '~/game/flag';
 import { extractPositionId, RoomPosition } from '~/game/position';
-import { Channel } from '~/storage/channel';
 
 const CreateFlagEndpoint: Endpoint = {
 	path: '/create-flag',
@@ -16,14 +15,16 @@ const CreateFlagEndpoint: Endpoint = {
 		const { name, color, secondaryColor, room, x, y } = req.body;
 		const pos = new RoomPosition(x, y, room);
 		if (checkCreateFlag({}, pos, name, color, secondaryColor) === C.OK) {
-			await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`).publish({
-				type: 'flag',
+			await getRunnerUserChannel(this.context.shard, userid!).publish({
+				type: 'intent',
 				intent: {
-					create: {
-						name: name as string,
+					receiver: 'flags',
+					intent: 'create',
+					params: {
+						name,
 						pos: extractPositionId(pos),
-						color: color as Color,
-						secondaryColor: secondaryColor as Color,
+						color,
+						secondaryColor,
 					},
 				},
 			});
@@ -40,11 +41,12 @@ const GenUniqueFlagNameEndpoint: Endpoint = {
 
 	async execute(req) {
 		const { userid } = req;
-		const flagsBlob = await this.context.persistence.get(`user/${userid}/flags`).catch(() => {});
-		if (flagsBlob) {
-			const flags = FlagSchema.read(flagsBlob);
+		const flagBlob = await this.context.persistence.get(`user/${userid}/flags`).catch(() => {});
+		if (flagBlob) {
+			const flags = FlagSchema.read(flagBlob);
 			for (let ii = 0; ii < 100; ++ii) {
 				const name = `Flag${ii}`;
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 				if (!flags[name]) {
 					return { ok: 1, name };
 				}
@@ -63,11 +65,13 @@ const RemoveFlagEndpoint: Endpoint = {
 	async execute(req) {
 		const { userid } = req;
 		const { name } = req.body;
-		await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`)
+		await getRunnerUserChannel(this.context.shard, userid!)
 			.publish({
-				type: 'flag',
+				type: 'intent',
 				intent: {
-					remove: { name: name as string },
+					receiver: 'flags',
+					intent: 'remove',
+					params: { name },
 				},
 			});
 		return { ok: 1 };

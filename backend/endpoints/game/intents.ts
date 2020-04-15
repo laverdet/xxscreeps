@@ -10,7 +10,7 @@ import * as Room from '~/game/room';
 import { RoomPosition } from '~/game/position';
 import { concatInPlace } from '~/lib/utility';
 import { ServiceMessage } from '~/engine/service';
-import { RunnerUserMessage } from '~/engine/service/runner';
+import { getRunnerUserChannel } from '~/engine/runner/channel';
 import { Channel } from '~/storage/channel';
 
 const AddObjectIntentEndpoint: Endpoint = {
@@ -23,8 +23,8 @@ const AddObjectIntentEndpoint: Endpoint = {
 		if (typeof room !== 'string' || typeof name !== 'string' || typeof id !== 'string') {
 			throw new TypeError('Invalid parameters');
 		}
-		await new Channel<RunnerUserMessage>(this.context.storage, `user/${userid}/runner`)
-			.publish({ type: 'intent', intent: name, id, room });
+		await getRunnerUserChannel(this.context.shard, userid!)
+			.publish({ type: 'intent', intent: { receiver: id, intent: name, params: true } });
 		return { ok: 1 };
 	},
 };

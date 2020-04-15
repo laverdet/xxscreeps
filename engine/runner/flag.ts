@@ -22,8 +22,6 @@ export type OneIntent = Partial<{
 	[Key in keyof Parameters]: Parameters[Key][number];
 }>;
 
-export type UserFlagMessage = { type: null } | { type: 'updated' };
-
 // Flag intents are handled on the runners so this stuff doesn't fit into the regular intent
 // pipeline
 export function execute(flags: Dictionary<Flag>, intents: Partial<Parameters>) {

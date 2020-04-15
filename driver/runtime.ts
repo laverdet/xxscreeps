@@ -1,7 +1,6 @@
 import type ivm from 'isolated-vm';
 import { inspect } from 'util';
 
-import type { UserIntent } from '~/engine/service/runner';
 import * as Game from '~/game/game';
 // eslint-disable-next-line no-duplicate-imports
 import { flushIntents, initializeIntents, intents, runForUser } from '~/game/game';
@@ -9,9 +8,11 @@ import { setupGlobals } from '~/game/globals';
 import * as Memory from '~/game/memory';
 import { loadTerrainFromBuffer } from '~/game/map';
 import { Room } from '~/game/room';
+import { RoomObject } from '~/game/objects/room-object';
+import type { RunnerIntent } from '~/engine/runner/channel';
+import * as FlagIntent from '~/engine/runner/flag';
 import * as FlagSchema from '~/engine/schema/flag';
 import * as UserCode from '~/engine/metadata/code';
-import * as FlagIntent from '~/engine/processor/intents/flag';
 import { BufferView } from '~/lib/schema/buffer-view';
 
 import { setupConsole, Writer } from './console';
@@ -30,6 +31,7 @@ setupGlobals(globalThis);
  */
 
 let me: string;
+let flags = {};
 let require: (name: string) => any;
 let writeConsole: Writer;
 
@@ -37,6 +39,7 @@ let writeConsole: Writer;
 type InitializationData = {
 	userId: string;
 	codeBlob: Readonly<Uint8Array>;
+	flagBlob?: Readonly<Uint8Array>;
 	memoryBlob?: Readonly<Uint8Array>;
 	terrain: Readonly<Uint8Array>;
 };
@@ -59,6 +62,9 @@ export function initialize(
 	}
 	me = data.userId;
 	Memory.initialize(data.memoryBlob);
+	if (data.flagBlob) {
+		flags = FlagSchema.read(data.flagBlob);
+	}
 
 	// Set up global `require`
 	const cache = Object.create(null);
@@ -118,17 +124,12 @@ export function initializeIsolated(
 
 export type TickArguments = {
 	time: number;
-	flagsBlob?: Readonly<Uint8Array>;
 	roomBlobs: Readonly<Uint8Array>[];
 	consoleEval?: string[];
-	userIntents?: UserIntent[];
+	userIntents?: RunnerIntent[];
 };
 
-let flags = {};
-export function tick({ time, flagsBlob, roomBlobs, consoleEval, userIntents }: TickArguments) {
-	if (flagsBlob) {
-		flags = FlagSchema.read(flagsBlob);
-	}
+export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArguments) {
 
 	initializeIntents();
 	const rooms = roomBlobs.map(buffer =>
@@ -155,9 +156,15 @@ export function tick({ time, flagsBlob, roomBlobs, consoleEval, userIntents }: T
 	// Inject user intents
 	if (userIntents) {
 		for (const intent of userIntents) {
-			const room = Game.rooms[intent.room];
-			if (room) {
-				intents.getIntentsForReceiver(room)[intent.intent] = true;
+			const receiver: any =
+				intent.receiver === 'flags' ? 'flags' :
+				Game.getObjectById(intent.receiver);
+			if (receiver !== undefined) {
+				if (receiver instanceof RoomObject) {
+					intents.save(receiver as any, intent.intent as any, intent.params);
+				} else {
+					intents.push(receiver, intent.intent as any, intent.params);
+				}
 			}
 		}
 	}
@@ -165,9 +172,16 @@ export function tick({ time, flagsBlob, roomBlobs, consoleEval, userIntents }: T
 	// Post-tick tasks
 	const memory = Memory.flush();
 
-	// Split flag intents and write processor intents into blobs
+	// Execute flag intents and write other processor intents into blobs
 	const { intentsByGroup } = flushIntents();
-	const flagIntents: FlagIntent.Intents['parameters'] | undefined = intentsByGroup?.flags?.flags;
+	const flagIntents = intentsByGroup.flags?.flags;
+	let flagBlob: undefined | Readonly<Uint8Array>;
+	if (flagIntents !== undefined) {
+		console.log(flags);
+		delete intentsByGroup.flags;
+		FlagIntent.execute(flags, flagIntents);
+		flagBlob = FlagSchema.write(flags);
+	}
 	const intentBlobs: Dictionary<SharedArrayBuffer> = Object.create(null);
 	const roomNames = Object.keys(intentsByGroup);
 	const { length } = roomNames;
@@ -182,5 +196,5 @@ export function tick({ time, flagsBlob, roomBlobs, consoleEval, userIntents }: T
 		intentBlobs[roomName] = buffer;
 	}
 
-	return { flagIntents, intentBlobs, memory };
+	return { flagBlob, intentBlobs, memory };
 }
