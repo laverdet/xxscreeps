@@ -8,12 +8,20 @@ import { ConstructionSite } from './construction-site';
 import { chainIntentChecks, RoomObject } from './room-object';
 import { Source } from './source';
 import { StructureController } from './structures/controller';
-import { obstacleTypes } from '../path-finder';
+import { obstacleTypes, SearchReturn } from '../path-finder';
+import type { RoomPath } from '../room';
 import type { RoomObjectWithStore } from '../store';
 import { Resource, ResourceType } from './resource';
 import { Structure } from './structures';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
+
+type MoveToOptions = {
+	noPathFinding?: boolean;
+	reusePath?: number;
+	serializeMemory?: boolean;
+	visualizePathStyle?: boolean;
+};
 
 export class Creep extends withOverlay<Shape>()(RoomObject) {
 	get carry() { return this.store }
@@ -45,33 +53,133 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 			() => Game.intents.save(this, 'harvest', { target: target.id }));
 	}
 
+	/**
+	 * Move the creep one square in the specified direction. Requires the `MOVE` body part, or another
+	 * creep nearby pulling the creep. In case if you call move on a creep nearby, the `ERR_TIRED` and
+	 * the `ERR_NO_BODYPART` checks will be bypassed; otherwise, the `ERR_NOT_IN_RANGE` check will be
+	 * bypassed.
+	 */
 	move(direction: Direction) {
 		return chainIntentChecks(
 			() => checkMove(this, direction),
 			() => Game.intents.save(this, 'move', { direction }));
 	}
 
-	moveTo(x: number, y: number): number;
-	moveTo(pos: RoomObject | RoomPosition): number;
+	/**
+	 * Move the creep using the specified predefined path. Requires the `MOVE` body part.
+	 * @param path A path value as returned from `Room.findPath`, `RoomPosition.findPathTo`, or
+	 * `PathFinder.search` methods. Both array form and serialized string form are accepted.
+	 */
+	moveByPath(path: RoomPath | SearchReturn['path'] | string): C.ErrorCode {
+		// Parse serialized path
+		if (typeof path === 'string') {
+			return this.moveByPath(this.room.deserializePath(path));
+		} else if (!Array.isArray(path)) {
+			return C.ERR_INVALID_ARGS;
+		}
+
+		// Find current position
+		type AnyPosition = RoomPosition | RoomPath[number];
+		const convert = (entry: AnyPosition) =>
+			entry instanceof RoomPosition ? entry :
+			new RoomPosition(entry.x, entry.y, this.pos.roomName);
+		let ii = path.findIndex((pos: AnyPosition) => this.pos.isEqualTo(convert(pos)));
+		if (ii === -1 && !this.pos.isNearTo(convert(path[0]))) {
+			return C.ERR_NOT_FOUND;
+		}
+
+		// Get next position
+		if (++ii >= path.length) {
+			return C.ERR_NOT_FOUND;
+		}
+		return this.move(this.pos.getDirectionTo(convert(path[ii])));
+	}
+
+	/**
+	 * Find the optimal path to the target within the same room and move to it. A shorthand to
+	 * consequent calls of `pos.findPathTo()` and `move()` methods. If the target is in another room,
+	 * then the corresponding exit will be used as a target. Requires the `MOVE` body part.
+	 * @param x X position in the same room
+	 * @param y Y position in the same room
+	 * @param target Can be a RoomObject or RoomPosition
+	 */
+	moveTo(x: number, y: number, opts?: MoveToOptions): number;
+	moveTo(target: RoomObject | RoomPosition, opts?: MoveToOptions): number;
 	moveTo(...args: [any]) {
 		return chainIntentChecks(
 			() => checkMoveCommon(this),
 			() => {
 				// Parse target
-				const { pos } = fetchPositionArgument(this.pos.roomName, ...args);
+				const { pos, extra } = fetchPositionArgument<MoveToOptions>(this.pos.roomName, ...args);
 				if (pos === undefined) {
 					return C.ERR_INVALID_TARGET;
 				} else if (pos.isNearTo(this.pos)) {
 					return C.OK;
 				}
 
+				// Reuse saved path
+				const reusePath = extra?.reusePath ?? 5;
+				const serializeMemory = extra?.serializeMemory ?? true;
+				type SavedMove = {
+					dest: {
+						room: string;
+						x: number;
+						y: number;
+					};
+					path: string | RoomPath;
+					room: string;
+					time: number;
+				};
+				if (reusePath > 0) {
+					const { _move }: { _move: SavedMove } = this.memory;
+					if (_move !== undefined) {
+						if (Game.time > _move.time + reusePath || _move.room !== this.pos.roomName) {
+							delete this.memory._move;
+
+						} else if (_move.dest.room === pos.roomName && _move.dest.x == pos.x && _move.dest.y == pos.y) {
+
+							const path = typeof _move.path === 'string' ? this.room.deserializePath(_move.path) : _move.path;
+							const ii = path.findIndex(pos => this.pos.x === pos.x && this.pos.y === pos.y);
+							if (ii !== -1) {
+								path.splice(0, ii + 1);
+								_move.path = serializeMemory ? this.room.serializePath(path) : path;
+							}
+							if (path.length == 0) {
+								return this.pos.isNearTo(pos) ? C.OK : C.ERR_NO_PATH;
+							}
+							const result = this.moveByPath(path);
+							if (result === C.OK) {
+								return C.OK;
+							}
+						}
+					}
+				}
+
 				// Find a path
+				if (extra?.noPathFinding) {
+					return C.ERR_NOT_FOUND;
+				}
 				const path = this.pos.findPathTo(pos);
-				if (path.length === 0) {
-					return C.ERR_NO_PATH;
+
+				// Cache path in memory
+				if (reusePath > 0) {
+					const _move: SavedMove = {
+						dest: {
+							x: pos.x,
+							y: pos.y,
+							room: pos.roomName,
+						},
+						time: Game.time,
+						path: serializeMemory ? this.room.serializePath(path) : path,
+						room: this.pos.roomName,
+					};
+					this.memory._move = _move;
 				}
 
 				// And move one tile
+				if (path.length === 0) {
+					return C.ERR_NO_PATH;
+				}
 				return this.move(path[0].direction);
 			});
 	}

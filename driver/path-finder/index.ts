@@ -17,7 +17,7 @@ function flattenPosition(pos: any): number {
 	return flattenPosition(new RoomPosition(pos.x, pos.y, pos.roomName));
 }
 
-type SearchReturn = {
+export type SearchReturn = {
 	path: RoomPosition[];
 	ops: number;
 	cost: number;

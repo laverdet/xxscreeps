@@ -11,7 +11,13 @@ import { iteratee } from '~/engine/util/iteratee';
 
 import * as Game from './game';
 import * as Memory from './memory';
-import { fetchArguments, fetchPositionArgument, iterateNeighbors, RoomPosition, PositionInteger } from './position';
+import {
+	extractPositionId,
+	fetchArguments, fetchPositionArgument,
+	getOffsetsFromDirection,
+	iterateNeighbors,
+	Direction, RoomPosition,
+} from './position';
 import * as PathFinder from './path-finder';
 import { getTerrainForRoom } from './map';
 import { isBorder, isNearBorder } from './terrain';
@@ -60,7 +66,7 @@ const lookConstants = new Set(Object.values(findToLook));
 Object.freeze(lookConstants); // stupid typescript thing, must be frozen out of line to iterate
 
 // LOOK_* constant to array of FIND_* constants
-const lookToFind: LookToFind = Object.freeze(mapToKeys(lookConstants, look => [ look, []]));
+const lookToFind: LookToFind = Object.freeze(mapToKeys(lookConstants, look => [ look, [] ]));
 
 type FindExitDirection =
 	typeof C.FIND_EXIT_TOP |
@@ -114,6 +120,14 @@ export type FindPathOptions = PathFinder.RoomSearchOptions & {
 export type RoomFindOptions<Type = any> = {
 	filter?: string | object | ((object: Type) => LooseBoolean);
 };
+
+export type RoomPath = {
+	x: number;
+	y: number;
+	dx: -1 | 0 | 1;
+	dy: -1 | 0 | 1;
+	direction: Direction;
+}[];
 
 // Methods which will be extracted and exported
 const MoveObject = Symbol('moveObject');
@@ -258,10 +272,10 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	 * @param goal The end position
 	 * @param options
 	 */
-	findPath(
-		origin: RoomPosition, goal: RoomPosition,
-		options: FindPathOptions & { serialize?: boolean } = {},
-	) {
+	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize: true }): string;
+	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize?: boolean }): RoomPath;
+	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize?: boolean } = {}) {
+
 		// Delegate to `PathFinder` and convert the result
 		const result = PathFinder.roomSearch(origin, [ goal ], options);
 		const path: any[] = [];
@@ -279,7 +293,65 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 			});
 			previous = pos;
 		}
+		if (options.serialize) {
+			return this.serializePath(path);
+		}
 		return path;
+	}
+
+	/**
+	 * Serialize a path array into a short string representation, which is suitable to store in memory
+	 * @param path A path array retrieved from Room.findPath
+	 */
+	serializePath(path: RoomPath) {
+		if (!Array.isArray(path)) {
+			throw new Error('`path` is not an array');
+		}
+		if (path.length === 0) {
+			return '';
+		}
+		if (path[0].x < 0 || path[0].y < 0) {
+			throw new Error('path coordinates cannot be negative');
+		}
+		let result = `${path[0].x}`.padStart(2, '0') + `${path[0].y}`.padStart(2, '0');
+		for (const step of path) {
+			result += step.direction;
+		}
+		return result;
+	}
+
+	/**
+	 * Deserialize a short string path representation into an array form
+	 * @param path A serialized path string
+	 */
+	deserializePath(path: string) {
+		if (typeof path !== 'string') {
+			throw new Error('`path` is not a string');
+		}
+		const result: RoomPath = [];
+		if (path.length === 0) {
+			return result;
+		}
+
+		let x = Number(path.substr(0, 2));
+		let y = Number(path.substr(2, 2));
+		if (Number.isNaN(x) || Number.isNaN(y)) {
+			throw new Error('`path` is not a valid serialized path string');
+		}
+		for (let ii = 4; ii < path.length; ++ii) {
+			const direction = Number(path[ii]) as Direction;
+			const { dx, dy } = getOffsetsFromDirection(direction);
+			if (ii > 4) {
+				x += dx;
+				y += dy;
+			}
+			result.push({
+				x, y,
+				dx, dy,
+				direction,
+			});
+		}
+		return result;
 	}
 
 	/**
@@ -310,7 +382,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 			return C.ERR_INVALID_ARGS as any;
 		}
 		const objects = this._getSpatialIndex(type);
-		return (objects.get(pos[PositionInteger]) ?? []).map(object => {
+		return (objects.get(extractPositionId(pos)) ?? []).map(object => {
 			const type = object._lookType;
 			return { type, [type]: object };
 		});
@@ -365,7 +437,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 		// Update spatial look cache if it exists
 		const spatial = this.#lookSpatialIndex.get(lookType);
 		if (spatial) {
-			const pos = object.pos[PositionInteger];
+			const pos = extractPositionId(object.pos);
 			const list = spatial.get(pos);
 			if (list) {
 				list.push(object);
@@ -386,7 +458,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 		// Update spatial look cache if it exists
 		const spatial = this.#lookSpatialIndex.get(lookType);
 		if (spatial) {
-			const pos = object.pos[PositionInteger];
+			const pos = extractPositionId(object.pos);
 			const list = spatial.get(pos);
 			if (list) {
 				removeOne(list, object);
@@ -400,14 +472,14 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	[MoveObject](this: this, object: RoomObject, pos: RoomPosition) {
 		const spatial = this.#lookSpatialIndex.get(object._lookType);
 		if (spatial) {
-			const oldPosition = object.pos[PositionInteger];
+			const oldPosition = extractPositionId(object.pos);
 			const oldList = spatial.get(oldPosition)!;
 			removeOne(oldList, object);
 			if (oldList.length === 0) {
 				spatial.delete(oldPosition);
 			}
 			object.pos = pos;
-			const posInteger = pos[PositionInteger];
+			const posInteger = extractPositionId(pos);
 			const newList = spatial.get(posInteger);
 			if (newList) {
 				newList.push(object);
@@ -462,7 +534,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 		const spatial = new Map<number, RoomObject[]>();
 		this.#lookSpatialIndex.set(look, spatial);
 		for (const object of this.#lookIndex.get(look)!) {
-			const pos = object.pos[PositionInteger];
+			const pos = extractPositionId(object.pos);
 			const list = spatial.get(pos);
 			if (list) {
 				list.push(object);
@@ -491,7 +563,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 
 	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
 	#lookIndex = new Map<LookConstants, RoomObject[]>(
-		mapInPlace(lookConstants, look => [ look, []]));
+		mapInPlace(lookConstants, look => [ look, [] ]));
 	#lookSpatialIndex = new Map<LookConstants, Map<number, RoomObject[]>>();
 }
 

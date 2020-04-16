@@ -10,6 +10,7 @@ import { ConstructionSite } from './objects/construction-site';
 import { Creep } from './objects/creep';
 import { Structure } from './objects/structures';
 import { StructureRoad } from './objects/structures/road';
+export type { SearchReturn } from '~/driver/path-finder';
 
 export { search };
 
@@ -74,7 +75,7 @@ export function flush() {
 	cachedCostMatrices.clear();
 }
 
-export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options: RoomSearchOptions = {}) {
+export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options: RoomSearchOptions) {
 	// Convert room search options to PathFinder options
 	const { costCallback, ignoreCreeps, ignoreDestructibleStructures, ignoreRoads } = options;
 	const costMatrixKey =
@@ -133,25 +134,6 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 
 	// Invoke the big boy pathfinder
 	return search(origin, goalsWithRange, internalOptions);
-/*
-	// Convert to room path
-	const path: any[] = [];
-	const { roomName } = origin;
-	let previous = origin;
-	for (const pos of result.path) {
-		if (pos.roomName !== roomName) {
-			break;
-		}
-		path.push({
-			x: pos.x,
-			y: pos.y,
-			dx: pos.x - previous.x,
-			dy: pos.y - previous.y,
-			direction: previous.getDirectionTo(pos),
-		});
-		previous = pos;
-	}
-	return path;*/
 }
 
 export function use() {}
@@ -197,4 +179,5 @@ export function obstacleChecker(room: Room, user: string, options: ObstacleCheck
 		permanentObstacleTypes.has(object[Variant]);
 }
 
+// Exported Game namespace
 export default { CostMatrix, search, use };

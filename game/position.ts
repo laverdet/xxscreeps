@@ -354,9 +354,9 @@ export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any)
 	};
 }
 
-export function fetchPositionArgument(
+export function fetchPositionArgument<Extra = any>(
 	fromRoom: string, arg1?: any, arg2?: any, arg3?: any,
-): { pos?: RoomPosition; extra: any } {
+): { pos?: RoomPosition; extra?: Extra } {
 	if (typeof arg1 === 'object') {
 		if (arg1 instanceof RoomPosition) {
 			return { pos: arg1, extra: arg2 };
@@ -420,14 +420,14 @@ function getDirection(dx: number, dy: number) {
 
 export function getOffsetsFromDirection(direction: Direction) {
 	switch (direction) {
-		case C.TOP: return { dx: 0, dy: -1 };
-		case C.TOP_RIGHT: return { dx: 1, dy: -1 };
-		case C.RIGHT: return { dx: 1, dy: 0 };
-		case C.BOTTOM_RIGHT: return { dx: 1, dy: 1 };
-		case C.BOTTOM: return { dx: 0, dy: 1 };
-		case C.BOTTOM_LEFT: return { dx: -1, dy: 1 };
-		case C.LEFT: return { dx: -1, dy: 0 };
-		case C.TOP_LEFT: return { dx: -1, dy: -1 };
+		case C.TOP: return { dx: 0, dy: -1 } as const;
+		case C.TOP_RIGHT: return { dx: 1, dy: -1 } as const;
+		case C.RIGHT: return { dx: 1, dy: 0 } as const;
+		case C.BOTTOM_RIGHT: return { dx: 1, dy: 1 } as const;
+		case C.BOTTOM: return { dx: 0, dy: 1 } as const;
+		case C.BOTTOM_LEFT: return { dx: -1, dy: 1 } as const;
+		case C.LEFT: return { dx: -1, dy: 0 } as const;
+		case C.TOP_LEFT: return { dx: -1, dy: -1 } as const;
 		default: throw new Error('Invalid direction');
 	}
 }
