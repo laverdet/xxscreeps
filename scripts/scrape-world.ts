@@ -17,7 +17,7 @@ import * as User from '~/engine/metadata/user';
 import { Variant } from '~/lib/schema/format';
 import { getWriter } from '~/lib/schema/write';
 import * as Storage from '~/storage';
-import { accumulate, filterInPlace, getOrSet, mapInPlace, firstMatching } from '~/lib/utility';
+import { accumulate, clamp, filterInPlace, getOrSet, mapInPlace, firstMatching } from '~/lib/utility';
 
 const [ jsonSource ] = process.argv.slice(2);
 if (jsonSource === undefined) {
@@ -113,7 +113,7 @@ topLevelTask(async() => {
 		const writer = new TerrainWriter;
 		for (let xx = 0; xx < 50; ++xx) {
 			for (let yy = 0; yy < 50; ++yy) {
-				writer.set(xx, yy, Number(terrain[yy * 50 + xx]));
+				writer.set(xx, yy, clamp(0, 2, Number(terrain[yy * 50 + xx])));
 			}
 		}
 		return [ room as string, writer ];
