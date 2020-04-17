@@ -70,6 +70,13 @@ const getTypeWriter = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: In
 
 			case 'bool': return (value: boolean, view, offset) => ((view.int8[offset] = value ? 1 : 0, 1));
 
+			case 'buffer': return (value: Uint8Array, view, offset) => {
+				const { length } = value;
+				view.int32[offset >>> 2] = length;
+				view.uint8.set(value, offset + kPointerSize);
+				return length + kPointerSize;
+			};
+
 			case 'string': return (value: string, view, offset) => {
 				// Attempt to write as latin1 and fall back to utf-16 if needed
 				const { length } = value;

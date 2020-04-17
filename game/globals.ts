@@ -1,6 +1,6 @@
 import lodash from 'lodash';
 import * as C from './constants';
-import { RawMemory } from './memory';
+import * as Memory from './memory';
 import PathFinder from './path-finder';
 import { Flag } from './flag';
 import { RoomPosition } from './position';
@@ -33,7 +33,14 @@ export function setupGlobals(globalThis: any) {
 
 	// Namespaces
 	globalThis.PathFinder = PathFinder;
-	globalThis.RawMemory = RawMemory;
+
+	// Memory
+	globalThis.RawMemory = Memory.RawMemory;
+	Object.defineProperty(globalThis, 'Memory', {
+		enumerable: true,
+		get: Memory.get,
+		set: Memory.set,
+	});
 
 	// Not implemented
 	globalThis.Mineral = function() {};

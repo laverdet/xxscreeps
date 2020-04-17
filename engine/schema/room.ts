@@ -1,5 +1,6 @@
 import { declare, getReader, getWriter, variant, vector, TypeOf } from '~/lib/schema';
 import { Room } from '~/game/room';
+import * as Id from '~/engine/util/schema/id';
 
 import * as Container from './container';
 import * as Controller from './controller';
@@ -12,10 +13,22 @@ import * as Source from './source';
 import * as Spawn from './spawn';
 import * as Storage from './storage';
 import * as Tower from './tower';
+import { mapInPlace } from '~/lib/utility';
 
 export type Shape = TypeOf<typeof shape>;
 const shape = declare('Room', {
 	name: 'string',
+	_npcs: declare(vector(Id.format), {
+		compose: value => new Set(value),
+		decompose: (value: Set<string>) => value.values(),
+	}),
+	_npcMemory: declare(vector({
+		id: Id.format,
+		memory: 'buffer',
+	}), {
+		compose: values => new Map(values.map(value => [ value.id, value.memory ])),
+		decompose: (map: Map<string, Readonly<Uint8Array>>) => mapInPlace(map, ([ id, memory ]) => ({ id, memory })),
+	}),
 	_objects: vector(variant(
 		Container.format,
 		ConstructionSite.format,

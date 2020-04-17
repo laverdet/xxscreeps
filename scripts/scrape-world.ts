@@ -69,6 +69,8 @@ topLevelTask(async() => {
 	const roomObjects = db.getCollection('rooms.objects');
 	const rooms = db.getCollection('rooms').find().map(room => ({
 		name: room._id,
+		_npcs: new Set,
+		_npcMemory: new Map,
 		_objects: [ ...filterInPlace(roomObjects.find({ room: room._id }).map(object => {
 			switch (object.type) {
 				case 'controller':

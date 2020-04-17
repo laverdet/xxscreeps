@@ -49,6 +49,13 @@ export function get(): any {
 	return json;
 }
 
+export function set(value: any) {
+	if (typeof value !== 'object' || value === null) {
+		throw new Error('`Memory` must be an object');
+	}
+	json = value;
+}
+
 export function flush(): Readonly<Uint8Array> {
 	if (string === undefined) {
 		return new Uint8Array(0);
@@ -90,15 +97,4 @@ export function initialize(value?: Readonly<Uint8Array>) {
 		memoryLength = 0;
 		memory = new Uint16Array(new SharedArrayBuffer(kMemoryGrowthSize));
 	}
-	globalThis.RawMemory = RawMemory;
-	Object.defineProperty(globalThis, 'Memory', {
-		enumerable: true,
-		get,
-		set: (value: any) => {
-			if (typeof value !== 'object' || value === null) {
-				throw new Error('`Memory` must be an object');
-			}
-			json = value;
-		},
-	});
 }

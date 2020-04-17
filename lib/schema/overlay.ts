@@ -1,6 +1,6 @@
 import { getBuffer, getOffset, BufferObject } from './buffer-object';
 import type { BufferView } from './buffer-view';
-import { Variant, TypeOf, WithType } from './format';
+import { Variant } from './format';
 import type { InterceptorLookup } from './interceptor';
 import type { StructLayout } from './layout';
 import { getTypeReader } from './read';

@@ -7,7 +7,7 @@ import * as Flag from './flag';
 import type { ConstructibleStructureType } from '~/game/objects/construction-site';
 import { firstMatching, instantiate, minimum } from '~/lib/utility';
 import { RoomObject, chainIntentChecks } from './objects/room-object';
-import { FindConstants, FindPathOptions, RoomFindType, RoomFindOptions } from './room';
+import { FindConstants, FindPathOptions, LookConstants, RoomFindType, RoomFindOptions, RoomPath } from './room';
 
 const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
@@ -15,12 +15,12 @@ const ALL_DIRECTIONS = [
 	C.TOP, C.TOP_RIGHT, C.RIGHT, C.BOTTOM_RIGHT, C.BOTTOM, C.BOTTOM_LEFT, C.LEFT, C.TOP_LEFT,
 ];
 export type Direction = typeof ALL_DIRECTIONS[number];
-type FindClosestByPathOptions = RoomFindOptions & Omit<PathFinder.RoomSearchOptions, 'range'>;
+type FindClosestByPathOptions<Type> =
+	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;
 
 export const PositionInteger: unique symbol = Symbol('positionInteger');
 type PositionFindType<Type> =
-	Type extends RoomObject[] ? Type :
-	Type extends RoomPosition ? RoomPosition :
+	Type extends (infer Result)[] ? Result :
 	Type extends FindConstants ? RoomFindType<Type> :
 	never;
 
@@ -179,11 +179,11 @@ export class RoomPosition {
 	 * @params options See `Room.find`
 	 */
 	findClosestByPath<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
-		search: Type, options?: FindClosestByPathOptions
+		search: Type, options?: FindClosestByPathOptions<PositionFindType<Type>>
 	): PositionFindType<Type> | undefined;
 	findClosestByPath(
 		search: FindConstants | (RoomObject | RoomPosition)[],
-		options: FindClosestByPathOptions = {},
+		options: FindClosestByPathOptions<any> = {},
 	): RoomObject | RoomPosition | undefined {
 
 		// Find objects to search
@@ -239,13 +239,13 @@ export class RoomPosition {
 	 */
 	findInRange<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
 		search: Type,
-		range: FindConstants,
+		range: number,
 		options?: RoomFindOptions<PositionFindType<Type>>,
-	): PositionFindType<Type>[] | undefined;
+	): PositionFindType<Type>[];
 	findInRange(
 		search: FindConstants | RoomObject[] | RoomPosition[],
 		range: number,
-		options?: FindClosestByPathOptions,
+		options?: FindClosestByPathOptions<any>,
 	) {
 
 		// Find objects to search
@@ -266,14 +266,23 @@ export class RoomPosition {
 	 * @param y Y position in the room
 	 * @param pos Can be a RoomPosition object or any object containing RoomPosition
 	 */
-	findPathTo(x: number, y: number, options?: FindPathOptions): any;
-	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions): any;
-	findPathTo(...args: any) {
+	findPathTo(x: number, y: number, options: FindPathOptions & { serialize?: false }): RoomPath;
+	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions & { serialize?: false }): RoomPath;
+	findPathTo(x: number, y: number, options: FindPathOptions & { serialize: true }): string;
+	findPathTo(target: RoomObject | RoomPosition, options: FindPathOptions & { serialize: true }): string;
+	findPathTo(x: number, y: number, options: FindPathOptions & { serialize?: boolean }): RoomPath | string;
+	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions & { serialize?: boolean }): RoomPath | string;
+	findPathTo(...args: any): RoomPath | string {
 		const { pos, extra } = fetchPositionArgument(this.roomName, ...args);
 		return fetchRoom(this.roomName).findPath(this, pos!, extra);
 	}
 
-	lookFor() {
+	/**
+	 * Get an object with the given type at the specified room position
+	 * @param type One of the `LOOK_*` constants
+	 */
+	lookFor(type: LookConstants) {
+		return fetchRoom(this.roomName).lookForAt(type, this);
 	}
 
 	/**

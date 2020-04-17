@@ -32,7 +32,7 @@ type Parameters = {
 		resourceType: ResourceType;
 		target: string;
 	};
-	suicide: boolean;
+	suicide: true;
 	upgradeController: { target: string };
 	withdraw: {
 		amount?: number;
@@ -53,7 +53,7 @@ export function create(body: PartType[], pos: RoomPosition, name: string, owner:
 		...newRoomObject(pos),
 		body: body.map(type => ({ type, hits: 100, boost: undefined })),
 		fatigue: 0,
-		hits: body.length,
+		hits: body.length * 100,
 		name,
 		store: StoreIntent.create(carryCapacity),
 		_ageTime: 0,

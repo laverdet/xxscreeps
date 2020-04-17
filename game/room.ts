@@ -272,8 +272,9 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	 * @param goal The end position
 	 * @param options
 	 */
-	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize: true }): string;
-	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize?: boolean }): RoomPath;
+	findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize?: false }): RoomPath;
+	findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize: true }): string;
+	findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize?: boolean }): RoomPath | string;
 	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize?: boolean } = {}) {
 
 		// Delegate to `PathFinder` and convert the result

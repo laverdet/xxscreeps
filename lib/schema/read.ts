@@ -65,6 +65,11 @@ export const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, loo
 
 			case 'bool': return (view, offset) => view.int8[offset] !== 0;
 
+			case 'buffer': return (view, offset) => {
+				const length = view.int32[offset >>> 2];
+				return view.uint8.subarray(offset + kPointerSize, length);
+			};
+
 			case 'string': return (view, offset) => {
 				const length = view.int32[offset >>> 2];
 				if (length > 0) {

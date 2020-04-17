@@ -42,6 +42,7 @@ export type WithShapeAndType<Shape, Type = Shape> = WithShape<Shape> & WithType<
 type CommonShape<Format> =
 	Format extends Integral ? number :
 	Format extends 'bool' ? boolean :
+	Format extends 'buffer' ? Readonly<Uint8Array> :
 	Format extends 'string' ? string :
 	never;
 

@@ -8,7 +8,7 @@ import { ConstructionSite } from './construction-site';
 import { chainIntentChecks, RoomObject } from './room-object';
 import { Source } from './source';
 import { StructureController } from './structures/controller';
-import { obstacleTypes, SearchReturn } from '../path-finder';
+import { obstacleTypes, RoomSearchOptions, SearchReturn } from '../path-finder';
 import type { RoomPath } from '../room';
 import type { RoomObjectWithStore } from '../store';
 import { Resource, ResourceType } from './resource';
@@ -26,6 +26,7 @@ type MoveToOptions = {
 export class Creep extends withOverlay<Shape>()(RoomObject) {
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
+	get hitsMax() { return this.body.length * 100 }
 	get memory() {
 		const memory = Memory.get();
 		const creeps = memory.creeps ?? (memory.creeps = {});
@@ -103,8 +104,8 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 	 * @param y Y position in the same room
 	 * @param target Can be a RoomObject or RoomPosition
 	 */
-	moveTo(x: number, y: number, opts?: MoveToOptions): number;
-	moveTo(target: RoomObject | RoomPosition, opts?: MoveToOptions): number;
+	moveTo(x: number, y: number, opts?: MoveToOptions & RoomSearchOptions): number;
+	moveTo(target: RoomObject | RoomPosition, opts?: MoveToOptions & RoomSearchOptions): number;
 	moveTo(...args: [any]) {
 		return chainIntentChecks(
 			() => checkMoveCommon(this),
@@ -113,7 +114,7 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 				const { pos, extra } = fetchPositionArgument<MoveToOptions>(this.pos.roomName, ...args);
 				if (pos === undefined) {
 					return C.ERR_INVALID_TARGET;
-				} else if (pos.isNearTo(this.pos)) {
+				} else if (pos.isEqualTo(this.pos)) {
 					return C.OK;
 				}
 
@@ -194,6 +195,16 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 		return C.ERR_INVALID_TARGET;
 	}
 
+	/**
+	 * Kill the creep immediately
+	 */
+	suicide() {
+		return chainIntentChecks(
+			() => checkCommon(this),
+			() => Game.intents.save(this, 'suicide', true),
+		);
+	}
+
 	transfer(target: RoomObjectWithStore, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),
@@ -201,7 +212,8 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 		);
 	}
 
-	say() {}
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	say(message: string) {}
 	upgradeController(target: StructureController) {
 		return chainIntentChecks(
 			() => checkUpgradeController(this, target),

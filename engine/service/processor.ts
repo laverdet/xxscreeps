@@ -3,8 +3,10 @@ import * as Room from '~/engine/schema/room';
 import { mapInPlace } from '~/lib/utility';
 import { ProcessorContext } from '~/engine/processor/context';
 import { bindAllProcessorIntents } from '~/engine/processor/intents';
-import { runWithState } from '~/game/game';
+import * as Invader from '~/engine/processor/intents/invader/main';
+import * as Game from '~/game/game';
 import { loadTerrain } from '~/game/map';
+import * as Memory from '~/game/memory';
 import * as Storage from '~/storage';
 import { Channel } from '~/storage/channel';
 import { Queue } from '~/storage/queue';
@@ -52,10 +54,33 @@ export default async function() {
 					]);
 					const deleteIntentBlobs = Promise.all(mapInPlace(intents, ({ user }) =>
 						persistence.del(`intents/${room}/${user}`)));
-					// Process the room
 					const roomInstance = Room.read(roomBlob);
+
+					// Run NPC scripts
+					const npcIntents = Array.from(roomInstance._npcs).map(npc => {
+						const memory = roomInstance._npcMemory.get(npc) ?? new Uint8Array(0);
+						Memory.initialize(memory);
+						Game.initializeIntents();
+						const result = Game.runAsUser(npc, gameTime, () =>
+							Game.runWithState([ roomInstance ], () => Invader.loop()));
+						if (result) {
+							roomInstance._npcMemory.set(npc, Memory.flush());
+						} else {
+							roomInstance._npcs.delete(npc);
+							roomInstance._npcMemory.delete(npc);
+						}
+						return {
+							user: npc,
+							intents: Game.flushIntents().intentsByGroup,
+						};
+					});
+
+					// Process intents
 					const context = new ProcessorContext(gameTime, roomInstance);
-					runWithState([ roomInstance ], () => {
+					Game.runWithState([ roomInstance ], () => {
+						for (const { user, intents } of npcIntents) {
+							context.processIntents(user, intents[room] ?? {});
+						}
 						for (const intentInfo of intents) {
 							assert.equal(intentInfo.intents.byteOffset, 0);
 							const uint16 = new Uint16Array(intentInfo.intents.buffer);

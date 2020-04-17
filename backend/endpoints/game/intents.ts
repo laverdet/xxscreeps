@@ -5,10 +5,12 @@ import { loadRoom, loadRooms, saveRoom } from '~/backend/model/room';
 import { loadUser, saveUser } from '~/backend/model/user';
 import * as GameSchema from '~/engine/metadata/game';
 import * as ControllerIntents from '~/engine/processor/intents/controller';
+import * as CreepIntents from '~/engine/processor/intents/creep';
 import * as SpawnIntents from '~/engine/processor/intents/spawn';
 import * as Room from '~/game/room';
 import { RoomPosition } from '~/game/position';
-import { concatInPlace } from '~/lib/utility';
+import type { PartType } from '~/game/objects/creep';
+import { concatInPlace, accumulate } from '~/lib/utility';
 import { ServiceMessage } from '~/engine/service';
 import { getRunnerUserChannel } from '~/engine/runner/channel';
 import { Channel } from '~/storage/channel';
@@ -127,4 +129,58 @@ const PlaceSpawnEndpoint: Endpoint = {
 	},
 };
 
-export default [ AddObjectIntentEndpoint, CheckUniqueNameEndpoint, GenNameEndpoint, PlaceSpawnEndpoint ];
+function createInvaderBody(parts: { [Type in PartType]?: number }) {
+	const size = accumulate(Object.values(parts) as number[]);
+	return [
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		...Array(parts[C.TOUGH] ?? 0).fill(C.TOUGH),
+		...Array(size - 1).fill(C.MOVE),
+		...Object.entries(parts).map(([ type, count ]) => {
+			if (type === C.TOUGH) {
+				return [];
+			} else {
+				return Array(count).fill(type);
+			}
+		}).flat(),
+		C.MOVE,
+	];
+}
+
+const CreateInvaderEndpoint: Endpoint = {
+	path: '/create-invader',
+	method: 'post',
+
+	async execute(req) {
+		const { userid, body: { room: roomName, x, y, size, type } } = req;
+		const pos = new RoomPosition(x, y, roomName);
+		const bodies = {
+			bigHealer: () => createInvaderBody({ [C.HEAL]: 25 }),
+			bigRanged: () => createInvaderBody({ [C.TOUGH]: 6, [C.RANGED_ATTACK]: 18, [C.WORK]: 1 }),
+			bigMelee: () => createInvaderBody({ [C.TOUGH]: 16, [C.RANGED_ATTACK]: 3, [C.WORK]: 4, [C.ATTACK]: 2 }),
+			smallHealer: () => createInvaderBody({ [C.HEAL]: 5 }),
+			smallRanged: () => createInvaderBody({ [C.TOUGH]: 2, [C.RANGED_ATTACK]: 3 }),
+			smallMelee: () => createInvaderBody({ [C.TOUGH]: 2, [C.RANGED_ATTACK]: 1, [C.WORK]: 1, [C.ATTACK]: 1 }),
+		};
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		const body = bodies[`${size}${type}` as keyof typeof bodies]?.();
+		if (body === undefined) {
+			return;
+		}
+
+		// Modify room state
+		await this.context.gameMutex.scope(async() => {
+			const room = await loadRoom(this.context, pos.roomName);
+			if (room.controller?._owner !== userid) {
+				return;
+			}
+			room._npcs.add('2');
+			const creep = CreepIntents.create(body, pos, `Invader_${Math.floor(Math.random() * 1000)}`, '2');
+			creep._ageTime = this.context.time + 200;
+			Room.insertObject(room, creep);
+			await saveRoom(this.context, room);
+		});
+		return { ok: 1 };
+	},
+};
+
+export default [ AddObjectIntentEndpoint, CheckUniqueNameEndpoint, CreateInvaderEndpoint, GenNameEndpoint, PlaceSpawnEndpoint ];

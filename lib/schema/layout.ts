@@ -2,7 +2,7 @@ import { BoundSchema } from './interceptor';
 
 // This specifies memory layout in a hopefully stable format
 export type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
-export type Primitive = Integral | 'string' | 'bool';
+export type Primitive = Integral | 'bool' | 'buffer' | 'string';
 
 export type StructLayout = {
 	inherit?: StructLayout;
@@ -72,6 +72,7 @@ export function getTraits(layout: Layout): Traits {
 
 			case 'bool': return integerTraits(1);
 
+			case 'buffer': // same as string
 			case 'string': return {
 				align: kPointerSize,
 				size: kPointerSize,

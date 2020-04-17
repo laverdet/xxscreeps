@@ -39,12 +39,12 @@ class Game {
 	getObjectById = getObjectById;
 }
 
-export let constructionSites: Dictionary<ConstructionSite> = Object.create(null);
-export let creeps: Dictionary<Creep> = Object.create(null);
-export let flags: Dictionary<Flag> = Object.create(null);
-export let rooms: Dictionary<Room> = Object.create(null);
-export let spawns: Dictionary<StructureSpawn> = Object.create(null);
-export let structures: Dictionary<AnyStructure> = Object.create(null);
+export let constructionSites: Record<string, ConstructionSite> = Object.create(null);
+export let creeps: Record<string, Creep> = Object.create(null);
+export let flags: Record<string, Flag> = Object.create(null);
+export let rooms: Record<string, Room> = Object.create(null);
+export let spawns: Record<string, StructureSpawn> = Object.create(null);
+export let structures: Record<string, AnyStructure> = Object.create(null);
 
 export let me = '';
 export let time = NaN;
@@ -151,7 +151,7 @@ export function runForUser<Type>(
 	userId: string,
 	time_: number,
 	rooms: Room[],
-	flags_: Dictionary<Flag>,
+	flags_: Record<string, Flag>,
 	task: (game: Game) => Type,
 ) {
 	return runAsUser(userId, time_, () => runWithState(rooms, () => {
