@@ -1,20 +1,19 @@
 import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
-import { runOnce } from '~/lib/memoize';
-import type * as Runtime from '~/driver/runtime';
+import { runOnce } from 'xxscreeps/util/memoize';
+import type * as Runtime from 'xxscreeps/driver/runtime';
 import type { TickArguments } from '../runtime';
-import { compileRuntimeSource, getPathFinderInfo, Options } from '.';
+import { compileRuntimeSource, pathFinderBinaryPath, Options } from '.';
 
 const getPathFinderModule = runOnce(() => {
-	const { identifier, path } = getPathFinderInfo();
-	const module = new ivm.NativeModule(path);
-	return { identifier, module };
+	const module = new ivm.NativeModule(pathFinderBinaryPath);
+	return { identifier: pathFinderBinaryPath, module };
 });
 
 const getRuntimeSource = runOnce(async() =>
 	compileRuntimeSource(({ request }, callback) => {
 		if (request === 'util') {
-			return callback(null, 'nodeUtilImport');
+			return callback(undefined, 'nodeUtilImport');
 		}
 		callback();
 	}));
@@ -34,11 +33,11 @@ export class IsolatedSandbox {
 		]);
 
 		// Set up required globals before running ./runtime.ts
-		const { identifier: pfIdentifier, module } = getPathFinderModule();
+		const pf = getPathFinderModule();
 		await Promise.all([
 			async function() {
-				const instance = await module.create(context);
-				await context.global.set(pfIdentifier, instance.derefInto());
+				const instance = await pf.module.create(context);
+				await context.global.set(pf.identifier, instance.derefInto());
 			}(),
 			async function() {
 				const util = await ivmInspect.create(isolate, context);
@@ -56,7 +55,7 @@ export class IsolatedSandbox {
 		const [ tick, initialize ] = await Promise.all([
 			runtime.get('tick', { reference: true }),
 			runtime.get('initializeIsolated', { reference: true }),
-			context.global.delete(pfIdentifier),
+			context.global.delete(pf.identifier),
 			context.global.delete('nodeUtilImport'),
 		]);
 		const writeConsoleRef = new ivm.Reference(writeConsole);

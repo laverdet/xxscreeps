@@ -1,4 +1,4 @@
-import { Endpoint } from '~/backend/endpoint';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
 
 export const RoomStatusEndpoint: Endpoint = {
 	path: '/room-status',

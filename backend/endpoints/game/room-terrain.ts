@@ -1,4 +1,4 @@
-import { Endpoint } from '~/backend/endpoint';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
 
 const cache = new Map<string, string>();
 export const RoomTerrainEndpoint: Endpoint = {

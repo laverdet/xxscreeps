@@ -7,7 +7,7 @@ import { ConstructionSite } from './objects/construction-site';
 import { RoomObject } from './objects/room-object';
 import { StructureSpawn } from './objects/structures/spawn';
 import { AnyStructure, Structure } from './objects/structures';
-import { flush as flushPathFinder } from '~/game/path-finder';
+import { flush as flushPathFinder } from 'xxscreeps/game/path-finder';
 
 /**
  * The main global game object containing all the game play information.

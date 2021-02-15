@@ -1,81 +1,78 @@
 import os from 'os';
-import config from '~/engine/config';
-import { Shard } from '~/engine/model/shard';
-import { loadTerrainFromWorld, readWorld } from '~/game/map';
-import { loadTerrain } from '~/driver/path-finder';
-import { PlayerInstance } from '~/engine/runner/instance';
-import { mapInPlace } from '~/lib/utility';
-import * as Storage from '~/storage';
-import { Channel } from '~/storage/channel';
-import { Queue } from '~/storage/queue';
+import config from 'xxscreeps/engine/config';
+import { Shard } from 'xxscreeps/engine/model/shard';
+import { loadTerrainFromWorld, readWorld } from 'xxscreeps/game/map';
+import { loadTerrain } from 'xxscreeps/driver/path-finder';
+import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
+import { mapInPlace } from 'xxscreeps/util/utility';
+import * as Storage from 'xxscreeps/storage';
+import { Channel } from 'xxscreeps/storage/channel';
+import { Queue } from 'xxscreeps/storage/queue';
 import { RunnerMessage } from '.';
 
-export default async function() {
+// Connect to main & storage
+const shard = await Shard.connect('shard0');
+const storage = await Storage.connect('shard0');
+const { persistence } = storage;
+const usersQueue = Queue.connect(storage, 'runnerUsers');
+const runnerChannel = await new Channel<RunnerMessage>(storage, 'runner').subscribe();
+const concurrency = config.runner?.unsafeSandbox ? 1 :
+	config.runner?.concurrency ?? (os.cpus().length >> 1) + 1;
 
-	// Connect to main & storage
-	const shard = await Shard.connect('shard0');
-	const storage = await Storage.connect('shard0');
-	const { persistence } = storage;
-	const usersQueue = Queue.connect(storage, 'runnerUsers');
-	const runnerChannel = await new Channel<RunnerMessage>(storage, 'runner').subscribe();
-	const concurrency = config.runner?.unsafeSandbox ? 1 :
-		config.runner?.concurrency ?? (os.cpus().length >> 1) + 1;
+// Load shared terrain data
+const world = readWorld(shard.terrainBlob);
+loadTerrain(world); // pathfinder
+loadTerrainFromWorld(world); // game
 
-	// Load shared terrain data
-	const world = readWorld(shard.terrainBlob);
-	loadTerrain(world); // pathfinder
-	loadTerrainFromWorld(world); // game
+// Persistent player instances
+const playerInstances = new Map<string, PlayerInstance>();
 
-	// Persistent player instances
-	const playerInstances = new Map<string, PlayerInstance>();
+// Start the runner loop
+let gameTime = -1;
+await runnerChannel.publish({ type: 'runnerConnected' });
+try {
+	for await (const message of runnerChannel) {
 
-	// Start the runner loop
-	let gameTime = -1;
-	await runnerChannel.publish({ type: 'runnerConnected' });
-	try {
-		for await (const message of runnerChannel) {
+		if (message.type === 'shutdown') {
+			break;
 
-			if (message.type === 'shutdown') {
-				break;
+		} else if (message.type === 'processUsers') {
+			const roomBlobCache = new Map<string, Readonly<Uint8Array>>();
+			gameTime = message.time;
+			usersQueue.version(`${gameTime}`);
+			await Promise.all(Array(concurrency).fill(undefined).map(async() => {
+				for await (const userId of usersQueue) {
+					const instance = await async function() {
+						// Get existing instance
+						const current = playerInstances.get(userId);
+						if (current) {
+							return current;
+						}
+						// Create new instance
+						const instance = await PlayerInstance.create(shard, userId);
+						playerInstances.set(userId, instance);
+						return instance;
+					}();
 
-			} else if (message.type === 'processUsers') {
-				const roomBlobCache = new Map<string, Readonly<Uint8Array>>();
-				gameTime = message.time;
-				usersQueue.version(`${gameTime}`);
-				await Promise.all(Array(concurrency).fill(undefined).map(async() => {
-					for await (const userId of usersQueue) {
-						const instance = await async function() {
-							// Get existing instance
-							const current = playerInstances.get(userId);
-							if (current) {
-								return current;
-							}
-							// Create new instance
-							const instance = await PlayerInstance.create(shard, userId);
-							playerInstances.set(userId, instance);
-							return instance;
-						}();
+					// Load visible rooms for this user
+					const roomBlobs = await Promise.all(mapInPlace(instance.roomsVisible, async roomName =>
+						roomBlobCache.get(roomName) ?? persistence.get(`room/${roomName}`).then(blob => {
+							roomBlobCache.set(roomName, blob);
+							return blob;
+						})));
 
-						// Load visible rooms for this user
-						const roomBlobs = await Promise.all(mapInPlace(instance.roomsVisible, async roomName =>
-							roomBlobCache.get(roomName) ?? persistence.get(`room/${roomName}`).then(blob => {
-								roomBlobCache.set(roomName, blob);
-								return blob;
-							})));
-
-						// Run user code
-						const roomNames = await instance.run(gameTime, roomBlobs);
-						await runnerChannel.publish({ type: 'processedUser', userId, roomNames });
-					}
-				}));
-			}
+					// Run user code
+					const roomNames = await instance.run(gameTime, roomBlobs);
+					await runnerChannel.publish({ type: 'processedUser', userId, roomNames });
+				}
+			}));
 		}
-
-	} finally {
-		for (const instance of playerInstances.values()) {
-			instance.disconnect();
-		}
-		storage.disconnect();
-		runnerChannel.disconnect();
 	}
+
+} finally {
+	for (const instance of playerInstances.values()) {
+		instance.disconnect();
+	}
+	storage.disconnect();
+	runnerChannel.disconnect();
 }

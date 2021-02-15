@@ -1,8 +1,8 @@
-import { bindProcessor } from '~/engine/processor/bind';
-import { ConstructionSite, ConstructibleStructureType } from '~/game/objects/construction-site';
-import { RoomPosition } from '~/game/position';
-import * as Room from '~/game/room';
-import { instantiate } from '~/lib/utility';
+import { bindProcessor } from 'xxscreeps/engine/processor/bind';
+import { ConstructionSite, ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
+import { RoomPosition } from 'xxscreeps/game/position';
+import * as Room from 'xxscreeps/game/room';
+import { instantiate } from 'xxscreeps/util/utility';
 import * as ContainerIntent from './container';
 import * as ExtensionIntent from './extension';
 import * as RoadIntent from './road';

@@ -1,11 +1,11 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import * as Map from '~/game/map';
-import type { RoomPosition } from '~/game/position';
-import { bindProcessor } from '~/engine/processor/bind';
-import { instantiate } from '~/lib/utility';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import * as Map from 'xxscreeps/game/map';
+import type { RoomPosition } from 'xxscreeps/game/position';
+import { bindProcessor } from 'xxscreeps/engine/processor/bind';
+import { instantiate } from 'xxscreeps/util/utility';
 import { newRoomObject } from './room-object';
-import { StructureRoad } from '~/game/objects/structures/road';
+import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
 
 export function create(pos: RoomPosition) {
 	return instantiate(StructureRoad, {

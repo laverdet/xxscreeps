@@ -1,7 +1,7 @@
 import request from 'request-promise-native';
-import { makeToken } from '~/backend/auth/token';
-import { Endpoint } from '~/backend/endpoint';
-import config from '~/engine/config';
+import { makeToken } from 'xxscreeps/backend/auth/token';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
+import config from 'xxscreeps/engine/config';
 
 export const SteamTicketEndpoint: Endpoint = {
 	method: 'post',

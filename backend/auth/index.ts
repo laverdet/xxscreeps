@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
-import { declare, getReader, getWriter, vector, TypeOf } from '~/lib/schema';
-import * as Id from '~/engine/util/schema/id';
+import { declare, getReader, getWriter, vector, TypeOf } from 'xxscreeps/schema';
+import * as Id from 'xxscreeps/engine/util/schema/id';
 import { checkToken, makeToken } from './token';
 
 export function useAuth(handler: RequestHandler) {

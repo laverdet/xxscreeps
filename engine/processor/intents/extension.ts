@@ -1,7 +1,7 @@
-import * as C from '~/game/constants';
-import type { RoomPosition } from '~/game/position';
-import { instantiate } from '~/lib/utility';
-import { StructureExtension } from '~/game/objects/structures/extension';
+import * as C from 'xxscreeps/game/constants';
+import type { RoomPosition } from 'xxscreeps/game/position';
+import { instantiate } from 'xxscreeps/util/utility';
+import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
 import { newRoomObject } from './room-object';
 import * as StoreIntent from './store';
 

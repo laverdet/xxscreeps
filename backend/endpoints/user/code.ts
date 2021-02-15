@@ -1,10 +1,10 @@
-import { Endpoint } from '~/backend/endpoint';
-import * as Code from '~/engine/metadata/code';
-import * as User from '~/engine/metadata/user';
-import * as Id from '~/engine/util/schema/id';
-import { getRunnerUserChannel } from '~/engine/runner/channel';
-import { firstMatching, mapToKeys } from '~/lib/utility';
-import { Channel } from '~/storage/channel';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
+import * as Code from 'xxscreeps/engine/metadata/code';
+import * as User from 'xxscreeps/engine/metadata/user';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
+import { firstMatching, mapToKeys } from 'xxscreeps/util/utility';
+import { Channel } from 'xxscreeps/storage/channel';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;
 const kDefaultBranch = 'master';

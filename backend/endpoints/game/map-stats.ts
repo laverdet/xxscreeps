@@ -1,7 +1,7 @@
-import { Endpoint } from '~/backend/endpoint';
-import { filterInPlace, mapInPlace, mapToKeys, nonNullable } from '~/lib/utility';
-import * as User from '~/engine/metadata/user';
-import * as Room from '~/engine/schema/room';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
+import { filterInPlace, mapInPlace, mapToKeys, nonNullable } from 'xxscreeps/util/utility';
+import * as User from 'xxscreeps/engine/metadata/user';
+import * as Room from 'xxscreeps/engine/schema/room';
 
 export const MapStatsEndpoint: Endpoint = {
 	method: 'post',

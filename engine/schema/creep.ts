@@ -1,7 +1,7 @@
-import { declare, enumerated, inherit, variant, vector, TypeOf } from '~/lib/schema';
-import * as Id from '~/engine/util/schema/id';
-import * as C from '~/game/constants';
-import { Creep } from '~/game/objects/creep';
+import { declare, enumerated, inherit, variant, vector, TypeOf } from 'xxscreeps/schema';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as C from 'xxscreeps/game/constants';
+import { Creep } from 'xxscreeps/game/objects/creep';
 import { optionalResourceEnumFormat } from './resource';
 import * as RoomObject from './room-object';
 import * as Store from './store';

@@ -1,10 +1,10 @@
-import * as Room from '~/engine/schema/room';
-import * as User from '~/engine/metadata/user';
-import { getFlagChannel, loadUserFlags } from '~/engine/model/user';
-import { runAsUser } from '~/game/game';
+import * as Room from 'xxscreeps/engine/schema/room';
+import * as User from 'xxscreeps/engine/metadata/user';
+import { getFlagChannel, loadUserFlags } from 'xxscreeps/engine/model/user';
+import { runAsUser } from 'xxscreeps/game/game';
 import { SubscriptionEndpoint } from '../socket';
 import { Render } from './render';
-import { acquire, mapInPlace, mapToKeys } from '~/lib/utility';
+import { acquire, mapInPlace, mapToKeys } from 'xxscreeps/util/utility';
 
 function diff(previous: any, next: any) {
 	if (previous === next) {

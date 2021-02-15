@@ -1,5 +1,5 @@
-import { declare, inherit, variant, TypeOf } from '~/lib/schema';
-import { StructureContainer } from '~/game/objects/structures/container';
+import { declare, inherit, variant, TypeOf } from 'xxscreeps/schema';
+import { StructureContainer } from 'xxscreeps/game/objects/structures/container';
 import * as Store from './store';
 import * as Structure from './structure';
 

@@ -1,6 +1,6 @@
-import { declare, getReader, getWriter, variant, vector, TypeOf } from '~/lib/schema';
-import { Room } from '~/game/room';
-import * as Id from '~/engine/util/schema/id';
+import { declare, getReader, getWriter, variant, vector, TypeOf } from 'xxscreeps/schema';
+import { Room } from 'xxscreeps/game/room';
+import * as Id from 'xxscreeps/engine/util/schema/id';
 
 import * as Container from './container';
 import * as Controller from './controller';
@@ -13,7 +13,7 @@ import * as Source from './source';
 import * as Spawn from './spawn';
 import * as Storage from './storage';
 import * as Tower from './tower';
-import { mapInPlace } from '~/lib/utility';
+import { mapInPlace } from 'xxscreeps/util/utility';
 
 export type Shape = TypeOf<typeof shape>;
 const shape = declare('Room', {

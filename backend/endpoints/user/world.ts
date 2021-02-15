@@ -1,5 +1,5 @@
-import { Endpoint } from '~/backend/endpoint';
-import { loadUser } from '~/backend/model/user';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
+import { loadUser } from 'xxscreeps/backend/model/user';
 
 const RespawnProhibitedRoomsEndpoint: Endpoint = {
 	path: '/respawn-prohibited-rooms',

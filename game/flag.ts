@@ -3,8 +3,8 @@ import * as Game from './game';
 import * as Memory from './memory';
 import { extractPositionId, fetchPositionArgument, RoomPosition } from './position';
 import { chainIntentChecks, RoomObject } from './objects/room-object';
-import { withOverlay } from '~/lib/schema';
-import type { Shape } from '~/engine/schema/flag';
+import { withOverlay } from 'xxscreeps/schema';
+import type { Shape } from 'xxscreeps/engine/schema/flag';
 
 export type Color = typeof C.COLORS_ALL[number];
 

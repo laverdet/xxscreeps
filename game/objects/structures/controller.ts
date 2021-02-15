@@ -1,7 +1,7 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import type { Shape } from '~/engine/schema/controller';
-import { withOverlay } from '~/lib/schema';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import type { Shape } from 'xxscreeps/engine/schema/controller';
+import { withOverlay } from 'xxscreeps/schema';
 import { Structure } from '.';
 
 export class StructureController extends withOverlay<Shape>()(Structure) {

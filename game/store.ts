@@ -1,6 +1,6 @@
-import { BufferObject } from '~/lib/schema/buffer-object';
-import { withOverlay, BufferView } from '~/lib/schema';
-import type { Shape } from '~/engine/schema/store';
+import { BufferObject } from 'xxscreeps/schema/buffer-object';
+import { withOverlay, BufferView } from 'xxscreeps/schema';
+import type { Shape } from 'xxscreeps/engine/schema/store';
 import type { AnyRoomObject } from './room';
 import type { ResourceType } from './objects/resource';
 export type { ResourceType };

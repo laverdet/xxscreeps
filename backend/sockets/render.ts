@@ -1,18 +1,18 @@
-import { RoomObject } from '~/game/objects/room-object';
-import { ConstructionSite } from '~/game/objects/construction-site';
-import { Creep } from '~/game/objects/creep';
-import { Resource } from '~/game/objects/resource';
-import { Source } from '~/game/objects/source';
-import { Structure } from '~/game/objects/structures';
-import { StructureContainer } from '~/game/objects/structures/container';
-import { StructureController } from '~/game/objects/structures/controller';
-import { StructureExtension } from '~/game/objects/structures/extension';
-import { StructureRoad } from '~/game/objects/structures/road';
-import { StructureSpawn } from '~/game/objects/structures/spawn';
-import { StructureStorage } from '~/game/objects/structures/storage';
-import { StructureTower } from '~/game/objects/structures/tower';
-import { Store } from '~/game/store';
-import { Variant } from '~/lib/schema';
+import { RoomObject } from 'xxscreeps/game/objects/room-object';
+import { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
+import { Creep } from 'xxscreeps/game/objects/creep';
+import { Resource } from 'xxscreeps/game/objects/resource';
+import { Source } from 'xxscreeps/game/objects/source';
+import { Structure } from 'xxscreeps/game/objects/structures';
+import { StructureContainer } from 'xxscreeps/game/objects/structures/container';
+import { StructureController } from 'xxscreeps/game/objects/structures/controller';
+import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
+import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
+import { StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
+import { StructureStorage } from 'xxscreeps/game/objects/structures/storage';
+import { StructureTower } from 'xxscreeps/game/objects/structures/tower';
+import { Store } from 'xxscreeps/game/store';
+import { Variant } from 'xxscreeps/schema';
 
 export const Render: unique symbol = Symbol('render');
 function bindRenderer<Type>(impl: { prototype: Type }, renderer: (this: Type) => object) {

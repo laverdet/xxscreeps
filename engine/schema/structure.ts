@@ -1,6 +1,6 @@
-import { declare, inherit, TypeOf } from '~/lib/schema';
-import * as Id from '~/engine/util/schema/id';
-import { Structure } from '~/game/objects/structures';
+import { declare, inherit, TypeOf } from 'xxscreeps/schema';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import { Structure } from 'xxscreeps/game/objects/structures';
 import * as RoomObject from './room-object';
 
 export type Shape = TypeOf<typeof shape>;

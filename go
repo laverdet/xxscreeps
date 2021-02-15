@@ -17,4 +17,4 @@ if [[ -z "$SCRIPT_ARGS" ]]; then
 	NODE_ARGS=()
 fi
 
-exec node "${NODE_ARGS[@]}" --harmony --experimental-repl-await --stack-trace-limit=20 -r $(dirname "$0")/lib/environment.js "${SCRIPT_ARGS[@]}"
+exec node "${NODE_ARGS[@]}" --enable-source-maps --experimental-specifier-resolution=node --experimental-repl-await --stack-trace-limit=20 "${SCRIPT_ARGS[@]}"

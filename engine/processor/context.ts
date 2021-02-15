@@ -1,5 +1,5 @@
-import { Room } from '~/game/room';
-import { runAsUser, runWithTime } from '~/game/game';
+import { Room } from 'xxscreeps/game/room';
+import { runAsUser, runWithTime } from 'xxscreeps/game/game';
 import * as Movement from './intents/movement';
 import { Process, Tick } from './bind';
 

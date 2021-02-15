@@ -1,5 +1,5 @@
-import { declare, getReader, getWriter, TypeOf } from '~/lib/schema';
-import * as StringSet from '~/engine/util/schema/string-set';
+import { declare, getReader, getWriter, TypeOf } from 'xxscreeps/schema';
+import * as StringSet from 'xxscreeps/engine/util/schema/string-set';
 
 const format = declare('Game', {
 	time: 'int32',

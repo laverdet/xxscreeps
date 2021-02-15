@@ -1,6 +1,6 @@
-import { declare, optional, inherit, variant, vector, TypeOf } from '~/lib/schema';
-import * as Id from '~/engine/util/schema/id';
-import { StructureSpawn } from '~/game/objects/structures/spawn';
+import { declare, optional, inherit, variant, vector, TypeOf } from 'xxscreeps/schema';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import { StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
 import * as Store from './store';
 import * as Structure from './structure';
 

@@ -1,7 +1,7 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import { withOverlay } from '~/lib/schema';
-import type { Shape } from '~/engine/schema/construction-site';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import { withOverlay } from 'xxscreeps/schema';
+import type { Shape } from 'xxscreeps/engine/schema/construction-site';
 import { RoomObject } from './room-object';
 
 export type ConstructibleStructureType = InstanceType<typeof ConstructionSite>['structureType'];

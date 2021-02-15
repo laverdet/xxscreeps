@@ -1,19 +1,19 @@
-import * as C from '~/game/constants';
-import { runAsUser } from '~/game/game';
-import { Endpoint } from '~/backend/endpoint';
-import { loadRoom, loadRooms, saveRoom } from '~/backend/model/room';
-import { loadUser, saveUser } from '~/backend/model/user';
-import * as GameSchema from '~/engine/metadata/game';
-import * as ControllerIntents from '~/engine/processor/intents/controller';
-import * as CreepIntents from '~/engine/processor/intents/creep';
-import * as SpawnIntents from '~/engine/processor/intents/spawn';
-import * as Room from '~/game/room';
-import { RoomPosition } from '~/game/position';
-import type { PartType } from '~/game/objects/creep';
-import { concatInPlace, accumulate } from '~/lib/utility';
-import { ServiceMessage } from '~/engine/service';
-import { getRunnerUserChannel } from '~/engine/runner/channel';
-import { Channel } from '~/storage/channel';
+import * as C from 'xxscreeps/game/constants';
+import { runAsUser } from 'xxscreeps/game/game';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
+import { loadRoom, loadRooms, saveRoom } from 'xxscreeps/backend/model/room';
+import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
+import * as GameSchema from 'xxscreeps/engine/metadata/game';
+import * as ControllerIntents from 'xxscreeps/engine/processor/intents/controller';
+import * as CreepIntents from 'xxscreeps/engine/processor/intents/creep';
+import * as SpawnIntents from 'xxscreeps/engine/processor/intents/spawn';
+import * as Room from 'xxscreeps/game/room';
+import { RoomPosition } from 'xxscreeps/game/position';
+import type { PartType } from 'xxscreeps/game/objects/creep';
+import { concatInPlace, accumulate } from 'xxscreeps/util/utility';
+import { ServiceMessage } from 'xxscreeps/engine/service';
+import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
+import { Channel } from 'xxscreeps/storage/channel';
 
 const AddObjectIntentEndpoint: Endpoint = {
 	path: '/add-object-intent',

@@ -1,4 +1,4 @@
-import { RecursiveWeakMemoize } from '~/lib/memoize';
+import { RecursiveWeakMemoize } from 'xxscreeps/util/memoize';
 import { defaultInterceptorLookup, BoundInterceptor, BoundSchema, BoundSymbol, FormatName, Interceptor, InterceptorResult, WithSymbol } from './interceptor';
 import { kPointerSize, alignTo, getTraits, Integral, Layout, Primitive, StructLayout, Traits } from './layout';
 import { injectGetters } from './overlay';

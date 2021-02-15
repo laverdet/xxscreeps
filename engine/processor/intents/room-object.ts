@@ -1,5 +1,5 @@
-import type { RoomPosition } from '~/game/position';
-import { generateId } from '~/engine/util/schema/id';
+import type { RoomPosition } from 'xxscreeps/game/position';
+import { generateId } from 'xxscreeps/engine/util/schema/id';
 
 export function newRoomObject(pos: RoomPosition) {
 	return {

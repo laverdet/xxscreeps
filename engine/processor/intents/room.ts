@@ -1,9 +1,9 @@
-import * as C from '~/game/constants';
-import { me } from '~/game/game';
-import { ConstructibleStructureType } from '~/game/objects/construction-site';
-import { RoomPosition } from '~/game/position';
-import { bindProcessor } from '~/engine/processor/bind';
-import { Room, checkCreateConstructionSite, insertObject } from '~/game/room';
+import * as C from 'xxscreeps/game/constants';
+import { me } from 'xxscreeps/game/game';
+import { ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
+import { RoomPosition } from 'xxscreeps/game/position';
+import { bindProcessor } from 'xxscreeps/engine/processor/bind';
+import { Room, checkCreateConstructionSite, insertObject } from 'xxscreeps/game/room';
 import * as ConstructionIntent from './construction-site';
 
 type Parameters = {

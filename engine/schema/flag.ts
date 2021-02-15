@@ -1,6 +1,6 @@
-import { getReader, getWriter, declare, inherit, vector, withType, TypeOf } from '~/lib/schema';
-import { mapToKeys } from '~/lib/utility';
-import { Color, Flag } from '~/game/flag';
+import { getReader, getWriter, declare, inherit, vector, withType, TypeOf } from 'xxscreeps/schema';
+import { mapToKeys } from 'xxscreeps/util/utility';
+import { Color, Flag } from 'xxscreeps/game/flag';
 import * as RoomObject from './room-object';
 
 const colorFormat = withType<Color>('int8');

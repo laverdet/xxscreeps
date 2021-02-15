@@ -1,8 +1,8 @@
-import { flattenUsername } from '~/backend/auth';
-import { Endpoint } from '~/backend/endpoint';
-import { loadUser } from '~/backend/model/user';
-import * as Badge from '~/engine/metadata/badge';
-import * as User from '~/engine/metadata/user';
+import { flattenUsername } from 'xxscreeps/backend/auth';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
+import { loadUser } from 'xxscreeps/backend/model/user';
+import * as Badge from 'xxscreeps/engine/metadata/badge';
+import * as User from 'xxscreeps/engine/metadata/user';
 
 const BadgeEndpoint: Endpoint = {
 	path: '/badge',

@@ -1,4 +1,4 @@
-import { Endpoint } from '~/backend/endpoint';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
 
 const UnreadCountEndpoint: Endpoint = {
 	path: '/messages/unread-count',

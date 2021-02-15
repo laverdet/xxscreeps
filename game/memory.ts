@@ -1,4 +1,4 @@
-import { typedArrayToString } from '~/lib/string';
+import { typedArrayToString } from 'xxscreeps/util/string';
 declare const globalThis: any;
 
 const kMemoryGrowthSize = 4096;

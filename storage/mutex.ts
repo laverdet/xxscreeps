@@ -1,5 +1,5 @@
-import { makeResolver } from '~/lib/utility';
-import { Channel, Subscription } from '~/storage/channel';
+import { makeResolver } from 'xxscreeps/util/utility';
+import { Channel, Subscription } from 'xxscreeps/storage/channel';
 import { EphemeralProvider, Provider } from './provider';
 
 type Message = 'waiting' | 'unlocked';

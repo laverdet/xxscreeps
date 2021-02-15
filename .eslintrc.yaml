@@ -16,7 +16,7 @@ rules:
   no-async-promise-executor: error
   no-compare-neg-zero: error
   no-cond-assign: warn
-  '@typescript-eslint/no-unnecessary-condition': [ warn, { allowConstantLoopConditions: true, ignoreRhs: true } ]
+  '@typescript-eslint/no-unnecessary-condition': [ warn, { allowConstantLoopConditions: true } ]
   no-control-regex: warn
   no-debugger: warn
   no-dupe-args: error
@@ -66,7 +66,7 @@ rules:
   no-octal: error
   no-octal-escape: error
   no-param-reassign: warn
-  no-redeclare: error
+  '@typescript-eslint/no-redeclare': error
   '@typescript-eslint/return-await': warn
   no-self-assign: warn
   no-self-compare: warn
@@ -205,7 +205,7 @@ rules:
   '@typescript-eslint/prefer-regexp-exec': warn
   '@typescript-eslint/prefer-string-starts-ends-with': warn
   '@typescript-eslint/restrict-plus-operands': warn
-  '@typescript-eslint/strict-boolean-expressions': [ warn, { allowNullable: true, allowSafe: true, ignoreRhs: true } ]
+  '@typescript-eslint/strict-boolean-expressions': [ warn, { allowNullableObject: true } ]
   '@typescript-eslint/switch-exhaustiveness-check': warn
   '@typescript-eslint/type-annotation-spacing': warn
   '@typescript-eslint/unified-signatures': warn

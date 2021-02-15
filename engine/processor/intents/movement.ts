@@ -1,9 +1,9 @@
-import * as C from '~/game/constants';
-import { Creep } from '~/game/objects/creep';
-import { obstacleChecker } from '~/game/path-finder';
-import { getOffsetsFromDirection, Direction, RoomPosition } from '~/game/position';
-import { Room } from '~/game/room';
-import { accumulate, exchange, minimum, concatInPlace } from '~/lib/utility';
+import * as C from 'xxscreeps/game/constants';
+import { Creep } from 'xxscreeps/game/objects/creep';
+import { obstacleChecker } from 'xxscreeps/game/path-finder';
+import { getOffsetsFromDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
+import { Room } from 'xxscreeps/game/room';
+import { accumulate, exchange, minimum, concatInPlace } from 'xxscreeps/util/utility';
 import { calculatePower } from './creep';
 
 // Saves list of creeps all trying to move onto the same cell

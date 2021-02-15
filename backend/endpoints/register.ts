@@ -1,8 +1,8 @@
-import { Endpoint, Response } from '~/backend/endpoint';
-import { checkUsername, flattenUsername } from '~/backend/auth';
-import { makeToken } from '~/backend/auth/token';
-import { loadUser } from '~/backend/model/user';
-import * as User from '~/engine/metadata/user';
+import { Endpoint, Response } from 'xxscreeps/backend/endpoint';
+import { checkUsername, flattenUsername } from 'xxscreeps/backend/auth';
+import { makeToken } from 'xxscreeps/backend/auth/token';
+import { loadUser } from 'xxscreeps/backend/model/user';
+import * as User from 'xxscreeps/engine/metadata/user';
 
 const CheckEmailEndpoint: Endpoint = {
 	path: '/check-email',

@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "dependencies": {
+    "acorn": "^8.0.5",
+    "acorn-class-fields": "^1.0.0",
+    "isolated-vm": "^3.3.10",
+    "ivm-inspect": "^1.1.0",
+    "webpack": "^5.21.2"
+  }
+}

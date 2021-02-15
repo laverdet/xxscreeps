@@ -1,13 +1,13 @@
-import * as GameSchema from '~/engine/metadata/game';
-import { Shard } from '~/engine/model/shard';
-import type { GameMessage } from '~/engine/service';
-import { readWorld, World } from '~/game/map';
-import { getOrSet } from '~/lib/utility';
-import * as Storage from '~/storage';
-import { Channel, Subscription } from '~/storage/channel';
-import { Mutex } from '~/storage/mutex';
+import * as GameSchema from 'xxscreeps/engine/metadata/game';
+import { Shard } from 'xxscreeps/engine/model/shard';
+import type { GameMessage } from 'xxscreeps/engine/service';
+import { readWorld, World } from 'xxscreeps/game/map';
+import { getOrSet } from 'xxscreeps/util/utility';
+import * as Storage from 'xxscreeps/storage';
+import { Channel, Subscription } from 'xxscreeps/storage/channel';
+import { Mutex } from 'xxscreeps/storage/mutex';
 import * as Auth from './auth';
-import * as User from '~/engine/metadata/user';
+import * as User from 'xxscreeps/engine/metadata/user';
 
 export class BackendContext {
 	private readonly providerToUser = new Map<string, string>();

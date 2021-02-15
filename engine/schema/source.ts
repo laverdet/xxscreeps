@@ -1,5 +1,5 @@
-import { declare, inherit, variant, TypeOf } from '~/lib/schema';
-import { Source } from '~/game/objects/source';
+import { declare, inherit, variant, TypeOf } from 'xxscreeps/schema';
+import { Source } from 'xxscreeps/game/objects/source';
 import * as RoomObject from './room-object';
 
 export type Shape = TypeOf<typeof shape>;

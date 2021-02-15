@@ -1,7 +1,7 @@
 import type { Shard } from './shard';
-import { Channel } from '~/storage/channel';
-import type { ConsoleMessage } from '~/engine/metadata/code';
-import * as FlagSchema from '~/engine/schema/flag';
+import { Channel } from 'xxscreeps/storage/channel';
+import type { ConsoleMessage } from 'xxscreeps/engine/metadata/code';
+import * as FlagSchema from 'xxscreeps/engine/schema/flag';
 
 export function getConsoleChannel(shard: Shard, user: string) {
 	return new Channel<ConsoleMessage>(shard.storage, `user/${user}/console`);

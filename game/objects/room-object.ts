@@ -1,10 +1,10 @@
-import * as C from '~/game/constants';
-import type { LookConstants, Room } from '~/game/room';
-import { Process, ProcessorSpecification, Tick } from '~/engine/processor/bind';
-import { expandGetters } from '~/engine/util/inspect';
-import { BufferObject } from '~/lib/schema/buffer-object';
-import { withOverlay, Variant } from '~/lib/schema';
-import type { Shape } from '~/engine/schema/room-object';
+import * as C from 'xxscreeps/game/constants';
+import type { LookConstants, Room } from 'xxscreeps/game/room';
+import { Process, ProcessorSpecification, Tick } from 'xxscreeps/engine/processor/bind';
+import { expandGetters } from 'xxscreeps/engine/util/inspect';
+import { BufferObject } from 'xxscreeps/schema/buffer-object';
+import { withOverlay, Variant } from 'xxscreeps/schema';
+import type { Shape } from 'xxscreeps/engine/schema/room-object';
 
 export abstract class RoomObject extends withOverlay<Shape>()(BufferObject) {
 	abstract _lookType: LookConstants;

@@ -1,7 +1,7 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import { Source } from '~/game/objects/source';
-import { bindProcessor } from '~/engine/processor/bind';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import { Source } from 'xxscreeps/game/objects/source';
+import { bindProcessor } from 'xxscreeps/engine/processor/bind';
 
 export default () => bindProcessor(Source, {
 	tick() {

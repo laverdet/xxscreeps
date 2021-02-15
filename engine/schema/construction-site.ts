@@ -1,7 +1,7 @@
-import { declare, enumerated, inherit, variant, TypeOf } from '~/lib/schema';
-import * as Id from '~/engine/util/schema/id';
-import * as C from '~/game/constants';
-import { ConstructionSite } from '~/game/objects/construction-site';
+import { declare, enumerated, inherit, variant, TypeOf } from 'xxscreeps/schema';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as C from 'xxscreeps/game/constants';
+import { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
 import * as RoomObject from './room-object';
 
 export type Shape = TypeOf<typeof shape>;

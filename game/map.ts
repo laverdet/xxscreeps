@@ -1,8 +1,8 @@
-import * as TerrainSchema from '~/game/terrain';
-import { RoomPosition } from '~/game/position';
-import { declare, getReader, vector } from '~/lib/schema';
-import { mapInPlace } from '~/lib/utility';
-import type { PersistenceProvider } from '~/storage/provider';
+import * as TerrainSchema from 'xxscreeps/game/terrain';
+import { RoomPosition } from 'xxscreeps/game/position';
+import { declare, getReader, vector } from 'xxscreeps/schema';
+import { mapInPlace } from 'xxscreeps/util/utility';
+import type { PersistenceProvider } from 'xxscreeps/storage/provider';
 
 export type World = Map<string, TerrainSchema.Terrain>;
 let world: World;

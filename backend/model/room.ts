@@ -1,6 +1,6 @@
-import { BackendContext } from '~/backend/context';
-import * as Room from '~/engine/schema/room';
-import { mapInPlace } from '~/lib/utility';
+import { BackendContext } from 'xxscreeps/backend/context';
+import * as Room from 'xxscreeps/engine/schema/room';
+import { mapInPlace } from 'xxscreeps/util/utility';
 
 export async function loadRoom(context: BackendContext, room: string) {
 	return Room.read(await context.persistence.get(`room/${room}`));

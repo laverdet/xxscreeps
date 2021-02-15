@@ -1,5 +1,5 @@
 import * as Path from 'path';
-import config from '~/engine/config';
+import config from 'xxscreeps/engine/config';
 import { locateModule } from '../path-finder';
 import { compile, ExternalsFunctionElement } from '../webpack';
 import { IsolatedSandbox } from './isolated';
@@ -16,9 +16,9 @@ export type Options = {
 };
 
 export function compileRuntimeSource(externals?: ExternalsFunctionElement) {
-	return compile('~/driver/runtime.ts', ({ context, request }, callback) => {
+	return compile('xxscreeps/driver/runtime.js', ({ context, request }, callback) => {
 		if (request.endsWith('.node')) {
-			return callback(null, Path.join(context, request).replace(/[/\\.-]/g, '_'));
+			return callback(undefined, `globalThis[${JSON.stringify(Path.join(context, request))}]`);
 		}
 		if (externals) {
 			externals({ context, request }, callback);
@@ -28,11 +28,6 @@ export function compileRuntimeSource(externals?: ExternalsFunctionElement) {
 	});
 }
 
-export function getPathFinderInfo() {
-	const path = locateModule();
-	return { path, identifier: path.replace(/[/\\.-]/g, '_') };
-}
-
 export async function createSandbox(options: Options) {
 	if (config.runner?.unsafeSandbox === true) {
 		return NodejsSandbox.create(options);
@@ -40,3 +35,5 @@ export async function createSandbox(options: Options) {
 		return IsolatedSandbox.create(options);
 	}
 }
+
+export const pathFinderBinaryPath = locateModule();

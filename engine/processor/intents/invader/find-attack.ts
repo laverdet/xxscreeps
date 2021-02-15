@@ -1,8 +1,8 @@
-import * as C from '~/game/constants';
-import * as PathFinder from '~/game/path-finder';
-import type { RoomPosition } from '~/game/position';
-import type { Creep } from '~/game/objects/creep';
-import type { Structure } from '~/game/objects/structures';
+import * as C from 'xxscreeps/game/constants';
+import * as PathFinder from 'xxscreeps/game/path-finder';
+import type { RoomPosition } from 'xxscreeps/game/position';
+import type { Creep } from 'xxscreeps/game/objects/creep';
+import type { Structure } from 'xxscreeps/game/objects/structures';
 import flee from './flee';
 
 function checkPath(pos1: RoomPosition, pos2: RoomPosition) {

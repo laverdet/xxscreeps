@@ -1,7 +1,7 @@
-import * as C from '~/game/constants';
-import { search } from '~/driver/path-finder';
-import { Variant } from '~/lib/schema';
-import { getOrSet, instantiate } from '~/lib/utility';
+import * as C from 'xxscreeps/game/constants';
+import { search } from 'xxscreeps/driver/path-finder';
+import { Variant } from 'xxscreeps/schema';
+import { getOrSet, instantiate } from 'xxscreeps/util/utility';
 import * as Game from './game';
 import type { RoomPosition } from './position';
 import type { Room } from './room';
@@ -10,7 +10,7 @@ import { ConstructionSite } from './objects/construction-site';
 import { Creep } from './objects/creep';
 import { Structure } from './objects/structures';
 import { StructureRoad } from './objects/structures/road';
-export type { SearchReturn } from '~/driver/path-finder';
+export type { SearchReturn } from 'xxscreeps/driver/path-finder';
 
 export { search };
 

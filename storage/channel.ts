@@ -1,4 +1,4 @@
-import { makeResolver } from '~/lib/utility';
+import { makeResolver } from 'xxscreeps/util/utility';
 import { Provider, PubsubProvider, PubsubSubscription } from './provider';
 
 type MessageType<Message> = Message | (Message extends string ? null : { type: null });

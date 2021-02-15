@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { Worker, isMainThread, parentPort } from 'worker_threads';
-import { staticCast } from '~/lib/utility';
+import { staticCast } from 'xxscreeps/util/utility';
 
 /**
  * Responders generalizes the client/server request/response model for inter-thread/process

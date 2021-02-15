@@ -1,5 +1,5 @@
-import { getRunnerUserChannel } from '~/engine/runner/channel';
-// import { mapToKeys } from '~/lib/utility';
+import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
+// import { mapToKeys } from 'xxscreeps/util/utility';
 import { SubscriptionEndpoint } from '../socket';
 
 /*

@@ -1,4 +1,4 @@
-export const relativePath: string;
+export const path: string;
 
 export function loadTerrain(world: Record<string, Readonly<Uint8Array>>): void;
 

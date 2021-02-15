@@ -1,8 +1,8 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import { StructureController } from '~/game/objects/structures/controller';
-import { bindProcessor } from '~/engine/processor/bind';
-import { exchange } from '~/lib/utility';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import { StructureController } from 'xxscreeps/game/objects/structures/controller';
+import { bindProcessor } from 'xxscreeps/engine/processor/bind';
+import { exchange } from 'xxscreeps/util/utility';
 
 export function claim(controller: StructureController, user: string) {
 	// Take controller

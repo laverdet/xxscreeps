@@ -1,13 +1,13 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import * as Memory from '~/game/memory';
-import type { Shape } from '~/engine/schema/spawn';
-import { withOverlay } from '~/lib/schema';
-import { accumulate } from '~/lib/utility';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import * as Memory from 'xxscreeps/game/memory';
+import type { Shape } from 'xxscreeps/engine/schema/spawn';
+import { withOverlay } from 'xxscreeps/schema';
+import { accumulate } from 'xxscreeps/util/utility';
 
-import { Direction } from '~/game/position';
-import type { PartType } from '~/game/objects/creep';
-import { create as createCreep } from '~/engine/processor/intents/creep';
+import { Direction } from 'xxscreeps/game/position';
+import type { PartType } from 'xxscreeps/game/objects/creep';
+import { create as createCreep } from 'xxscreeps/engine/processor/intents/creep';
 import { chainIntentChecks } from '../room-object';
 import { StructureExtension } from './extension';
 import { Structure } from '.';

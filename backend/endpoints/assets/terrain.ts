@@ -1,8 +1,8 @@
 import streamToPromise from 'stream-to-promise';
 import { PNG } from 'pngjs';
-import { Endpoint } from '~/backend/endpoint';
-import { generateRoomName, parseRoomName } from '~/game/position';
-import { Terrain, isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from '~/game/terrain';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
+import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
+import { Terrain, isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/terrain';
 
 function generate(grid: (Terrain | undefined)[][], zoom = 1) {
 	// Most of the time we don't need transparency. It's only needed for zoom2 images near the edges,

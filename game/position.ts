@@ -1,11 +1,11 @@
 import type { InspectOptionsStylized } from 'util';
-import { iteratee } from '~/engine/util/iteratee';
-import * as PathFinder from '~/game/path-finder';
+import { iteratee } from 'xxscreeps/engine/util/iteratee';
+import * as PathFinder from 'xxscreeps/game/path-finder';
 import * as C from './/constants';
 import * as Game from './game';
 import * as Flag from './flag';
-import type { ConstructibleStructureType } from '~/game/objects/construction-site';
-import { firstMatching, instantiate, minimum } from '~/lib/utility';
+import type { ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
+import { firstMatching, instantiate, minimum } from 'xxscreeps/util/utility';
 import { RoomObject, chainIntentChecks } from './objects/room-object';
 import { FindConstants, FindPathOptions, LookConstants, RoomFindType, RoomFindOptions, RoomPath } from './room';
 

@@ -1,6 +1,6 @@
-import { declare, getReader, getWriter, vector, TypeOf } from '~/lib/schema';
-import * as StringSet from '~/engine/util/schema/string-set';
-import * as Id from '~/engine/util/schema/id';
+import { declare, getReader, getWriter, vector, TypeOf } from 'xxscreeps/schema';
+import * as StringSet from 'xxscreeps/engine/util/schema/string-set';
+import * as Id from 'xxscreeps/engine/util/schema/id';
 
 export const format = declare('User', {
 	id: Id.format,

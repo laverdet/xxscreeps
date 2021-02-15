@@ -1,6 +1,6 @@
 import { Worker, isMainThread, parentPort } from 'worker_threads';
 import { PubsubListener, PubsubProvider, PubsubSubscription } from '../provider';
-import { listen, staticCast } from '~/lib/utility';
+import { listen, staticCast } from 'xxscreeps/util/utility';
 
 type Listener = (message: string, id?: string) => void;
 type Subscription = {

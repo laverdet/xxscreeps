@@ -1,6 +1,6 @@
-import { declare, optional, vector, ShapeOf } from '~/lib/schema';
-import * as Id from '~/engine/util/schema/id';
-import { RoomObject } from '~/game/objects/room-object';
+import { declare, optional, vector, ShapeOf } from 'xxscreeps/schema';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import * as RoomPosition from './position';
 
 export type Shape = ShapeOf<typeof shape>;

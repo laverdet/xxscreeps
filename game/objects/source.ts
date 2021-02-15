@@ -1,7 +1,7 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import type { Shape } from '~/engine/schema/source';
-import { withOverlay } from '~/lib/schema';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import type { Shape } from 'xxscreeps/engine/schema/source';
+import { withOverlay } from 'xxscreeps/schema';
 import { RoomObject } from './room-object';
 
 export class Source extends withOverlay<Shape>()(RoomObject) {

@@ -1,5 +1,5 @@
-import { ResourceType, StorageRecord, Store } from '~/game/store';
-import { accumulate, instantiate } from '~/lib/utility';
+import { ResourceType, StorageRecord, Store } from 'xxscreeps/game/store';
+import { accumulate, instantiate } from 'xxscreeps/util/utility';
 
 export function add(store: Store, resourceType: ResourceType, amount: number) {
 

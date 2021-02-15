@@ -1,4 +1,4 @@
-import { Endpoint } from '~/backend/endpoint';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
 
 export const VersionEndpoint: Endpoint = {
 	path: '/version',

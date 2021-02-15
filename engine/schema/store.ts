@@ -1,5 +1,5 @@
-import { declare, vector, withType, TypeOf } from '~/lib/schema';
-import { ResourceType, Store } from '~/game/store';
+import { declare, vector, withType, TypeOf } from 'xxscreeps/schema';
+import { ResourceType, Store } from 'xxscreeps/game/store';
 import { optionalResourceEnumFormat } from './resource';
 
 export type Shape = TypeOf<typeof shape>;

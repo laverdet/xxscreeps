@@ -1,5 +1,5 @@
-import { declare, inherit, variant, TypeOf } from '~/lib/schema';
-import { StructureRoad } from '~/game/objects/structures/road';
+import { declare, inherit, variant, TypeOf } from 'xxscreeps/schema';
+import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
 import * as Structure from './structure';
 
 export type Shape = TypeOf<typeof shape>;

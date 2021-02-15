@@ -1,10 +1,9 @@
-import { Goal, SearchOptions } from '~/game/path-finder';
-import { World } from '~/game/map';
-import { generateRoomNameFromId, parseRoomNameToId, PositionInteger, RoomPosition } from '~/game/position';
-import { getBuffer } from '~/game/terrain';
-import { clamp } from '~/lib/utility';
-import pf from './pf';
-import * as Path from 'path';
+import { Goal, SearchOptions } from 'xxscreeps/game/path-finder';
+import { World } from 'xxscreeps/game/map';
+import { generateRoomNameFromId, parseRoomNameToId, PositionInteger, RoomPosition } from 'xxscreeps/game/position';
+import { getBuffer } from 'xxscreeps/game/terrain';
+import { clamp } from 'xxscreeps/util/utility';
+import pf from '@xxscreeps/path-finder';
 
 function flattenPosition(pos: any): number {
 	// Internal position bits
@@ -103,5 +102,5 @@ export function loadTerrain(world: World) {
 }
 
 export function locateModule() {
-	return Path.join(__dirname, pf.relativePath);
+	return pf.path;
 }

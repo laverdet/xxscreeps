@@ -1,3 +1,5 @@
+declare const URL: typeof import('url').URL;
+declare module 'acorn-class-fields';
 declare module 'stream-to-promise' {
 	import * as Stream from 'stream';
 

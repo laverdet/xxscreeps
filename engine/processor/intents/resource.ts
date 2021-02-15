@@ -1,11 +1,11 @@
-import { bindProcessor } from '~/engine/processor/bind';
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import type { RoomPosition } from '~/game/position';
-import * as Room from '~/game/room';
-import { instantiate } from '~/lib/utility';
-import { Resource, ResourceType } from '~/game/objects/resource';
-import type { StructureContainer } from '~/game/objects/structures/container';
+import { bindProcessor } from 'xxscreeps/engine/processor/bind';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import type { RoomPosition } from 'xxscreeps/game/position';
+import * as Room from 'xxscreeps/game/room';
+import { instantiate } from 'xxscreeps/util/utility';
+import { Resource, ResourceType } from 'xxscreeps/game/objects/resource';
+import type { StructureContainer } from 'xxscreeps/game/objects/structures/container';
 import { newRoomObject } from './room-object';
 import * as StoreIntent from './store';
 

@@ -1,5 +1,5 @@
-import { BackendContext } from '~/backend/context';
-import * as User from '~/engine/metadata/user';
+import { BackendContext } from 'xxscreeps/backend/context';
+import * as User from 'xxscreeps/engine/metadata/user';
 
 export async function loadUser(context: BackendContext, user: string) {
 	return User.read(await context.persistence.get(`user/${user}/info`));

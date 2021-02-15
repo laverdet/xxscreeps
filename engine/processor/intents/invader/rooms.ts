@@ -1,6 +1,6 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import { CostMatrix } from '~/game/path-finder';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import { CostMatrix } from 'xxscreeps/game/path-finder';
 
 let cached: undefined | {
 	costMatrix: CostMatrix;

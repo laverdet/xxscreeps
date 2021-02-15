@@ -1,5 +1,5 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
 import healer from './healer';
 import findAttack from './find-attack';
 import shootAtWill from './shoot-at-will';

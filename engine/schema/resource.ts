@@ -1,6 +1,6 @@
-import * as C from '~/game/constants';
-import { declare, enumerated, inherit, variant, withType, TypeOf } from '~/lib/schema';
-import { Resource } from '~/game/objects/resource';
+import * as C from 'xxscreeps/game/constants';
+import { declare, enumerated, inherit, variant, withType, TypeOf } from 'xxscreeps/schema';
+import { Resource } from 'xxscreeps/game/objects/resource';
 import * as RoomObject from './room-object';
 
 export const optionalResourceEnumFormat = declare('ResourceType', enumerated(undefined, ...C.RESOURCES_ALL));

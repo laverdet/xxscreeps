@@ -1,19 +1,19 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import { Creep, PartType } from '~/game/objects/creep';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import { Creep, PartType } from 'xxscreeps/game/objects/creep';
 // eslint-disable-next-line no-duplicate-imports
-import * as CreepLib from '~/game/objects/creep';
-import type { ConstructionSite } from '~/game/objects/construction-site';
-import type { Source } from '~/game/objects/source';
-import type { Resource } from '~/game/objects/resource';
-import type { Structure } from '~/game/objects/structures';
-import type { StructureController } from '~/game/objects/structures/controller';
-import { StructureRoad } from '~/game/objects/structures/road';
-import type { Direction, RoomPosition } from '~/game/position';
-import * as Room from '~/game/room';
-import { bindProcessor } from '~/engine/processor/bind';
-import type { ResourceType, RoomObjectWithStore } from '~/game/store';
-import { accumulate, instantiate, firstMatching } from '~/lib/utility';
+import * as CreepLib from 'xxscreeps/game/objects/creep';
+import type { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
+import type { Source } from 'xxscreeps/game/objects/source';
+import type { Resource } from 'xxscreeps/game/objects/resource';
+import type { Structure } from 'xxscreeps/game/objects/structures';
+import type { StructureController } from 'xxscreeps/game/objects/structures/controller';
+import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
+import type { Direction, RoomPosition } from 'xxscreeps/game/position';
+import * as Room from 'xxscreeps/game/room';
+import { bindProcessor } from 'xxscreeps/engine/processor/bind';
+import type { ResourceType, RoomObjectWithStore } from 'xxscreeps/game/store';
+import { accumulate, instantiate, firstMatching } from 'xxscreeps/util/utility';
 import * as StructureControllerIntent from './controller';
 import * as Movement from './movement';
 // eslint-disable-next-line no-duplicate-imports

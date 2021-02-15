@@ -1,4 +1,4 @@
-import { connect, Provider } from '~/storage';
+import { connect, Provider } from 'xxscreeps/storage';
 
 export class Shard {
 	private constructor(

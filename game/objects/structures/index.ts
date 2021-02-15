@@ -1,9 +1,9 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import type { AnyRoomObject } from '~/game/room';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import type { AnyRoomObject } from 'xxscreeps/game/room';
 import { RoomObject } from '../room-object';
-import type { Shape } from '~/engine/schema/structure';
-import { withOverlay } from '~/lib/schema';
+import type { Shape } from 'xxscreeps/engine/schema/structure';
+import { withOverlay } from 'xxscreeps/schema';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
 

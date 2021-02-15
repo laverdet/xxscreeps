@@ -1,24 +1,20 @@
 {
 	"compilerOptions": {
+		"inlineSourceMap": true,
+		"outDir": "dist",
+
+		"allowSyntheticDefaultImports": true,
+		"moduleResolution": "node",
+		"module": "esnext",
+		"target": "esnext",
+		"lib": [ "esnext" ],
+
 		"strict": true,
 		"skipLibCheck": true,
 		"strictFunctionTypes": false,
 
-		"inlineSourceMap": true,
-
-		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": true,
-		"moduleResolution": "node",
-		"target": "esnext",
-		"lib": [ "esnext" ],
-
 		"downlevelIteration": true,
 		"noEmitOnError": false,
-		"resolveJsonModule": true,
-
-		"baseUrl": ".",
-		"paths": {
-			"~/*": [ "*" ]
-		}
+		"resolveJsonModule": true
 	}
 }

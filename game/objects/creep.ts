@@ -1,8 +1,8 @@
-import * as C from '~/game/constants';
-import * as Game from '~/game/game';
-import * as Memory from '~/game/memory';
-import { withOverlay } from '~/lib/schema';
-import type { Shape } from '~/engine/schema/creep';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import * as Memory from 'xxscreeps/game/memory';
+import { withOverlay } from 'xxscreeps/schema';
+import type { Shape } from 'xxscreeps/engine/schema/creep';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { ConstructionSite } from './construction-site';
 import { chainIntentChecks, RoomObject } from './room-object';

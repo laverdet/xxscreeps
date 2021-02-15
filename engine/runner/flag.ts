@@ -1,7 +1,7 @@
-import * as C from '~/game/constants';
-import { checkCreateFlag, Color, Flag } from '~/game/flag';
-import { fromPositionId } from '~/game/position';
-import { instantiate } from '~/lib/utility';
+import * as C from 'xxscreeps/game/constants';
+import { checkCreateFlag, Color, Flag } from 'xxscreeps/game/flag';
+import { fromPositionId } from 'xxscreeps/game/position';
+import { instantiate } from 'xxscreeps/util/utility';
 
 export type Parameters = {
 	create: {

@@ -1,9 +1,9 @@
-import { createSandbox, Sandbox } from '~/driver/sandbox';
-import * as User from '~/engine/metadata/user';
-import type { Shard } from '~/engine/model/shard';
-import { getConsoleChannel, loadUserFlagBlob, loadUserMemoryBlob, saveUserFlagBlobForNextTick } from '~/engine/model/user';
-import { exchange, filterInPlace, mapInPlace } from '~/lib/utility';
-import type { Subscription } from '~/storage/channel';
+import { createSandbox, Sandbox } from 'xxscreeps/driver/sandbox';
+import * as User from 'xxscreeps/engine/metadata/user';
+import type { Shard } from 'xxscreeps/engine/model/shard';
+import { getConsoleChannel, loadUserFlagBlob, loadUserMemoryBlob, saveUserFlagBlobForNextTick } from 'xxscreeps/engine/model/user';
+import { exchange, filterInPlace, mapInPlace } from 'xxscreeps/util/utility';
+import type { Subscription } from 'xxscreeps/storage/channel';
 import { getRunnerUserChannel, RunnerIntent, RunnerUserMessage } from './channel';
 
 export class PlayerInstance {

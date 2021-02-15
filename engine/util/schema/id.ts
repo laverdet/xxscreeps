@@ -1,5 +1,5 @@
-import type { BufferView } from '~/lib/schema/buffer-view';
-import { array, declare, withType } from '~/lib/schema';
+import type { BufferView } from 'xxscreeps/schema/buffer-view';
+import { array, declare, withType } from 'xxscreeps/schema';
 
 export const optionalFormat = declare('Id', array(4, 'uint32'), {
 	composeFromBuffer(view: BufferView, offset: number) {

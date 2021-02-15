@@ -1,5 +1,5 @@
-import { declare, getReader, getWriter, vector, TypeOf } from '~/lib/schema';
-import { mapInPlace } from '~/lib/utility';
+import { declare, getReader, getWriter, vector, TypeOf } from 'xxscreeps/schema';
+import { mapInPlace } from 'xxscreeps/util/utility';
 
 export const format = declare('CodeBranch', {
 	modules: declare(vector({

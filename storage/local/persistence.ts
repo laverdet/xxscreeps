@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import * as Path from 'path';
-import { listen, mapInPlace } from '~/lib/utility';
+import { listen, mapInPlace } from 'xxscreeps/util/utility';
 import type { PersistenceProvider } from '../provider';
 import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
 

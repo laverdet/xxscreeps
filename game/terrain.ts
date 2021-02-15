@@ -1,5 +1,5 @@
-import { declare, array, BufferView } from '~/lib/schema';
-import { exchange, uncurryThis } from '~/lib/utility';
+import { declare, array, BufferView } from 'xxscreeps/schema';
+import { exchange, uncurryThis } from 'xxscreeps/util/utility';
 export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants';
 
 const set = uncurryThis(Uint8Array.prototype.set);

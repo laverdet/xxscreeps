@@ -1,10 +1,10 @@
-import * as Room from '~/engine/schema/room';
-import { Creep } from '~/game/objects/creep';
-import { Source } from '~/game/objects/source';
-import { Structure } from '~/game/objects/structures';
-import { StructureController } from '~/game/objects/structures/controller';
-import { StructureRoad } from '~/game/objects/structures/road';
-import { mapToKeys } from '~/lib/utility';
+import * as Room from 'xxscreeps/engine/schema/room';
+import { Creep } from 'xxscreeps/game/objects/creep';
+import { Source } from 'xxscreeps/game/objects/source';
+import { Structure } from 'xxscreeps/game/objects/structures';
+import { StructureController } from 'xxscreeps/game/objects/structures/controller';
+import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
+import { mapToKeys } from 'xxscreeps/util/utility';
 import { SubscriptionEndpoint } from '../socket';
 
 type Position = [ number, number ];

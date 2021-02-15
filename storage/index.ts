@@ -1,5 +1,5 @@
 import * as Path from 'path';
-import config, { configPath } from '~/engine/config';
+import config, { configPath } from 'xxscreeps/engine/config';
 import { LocalEphemeralProvider } from './local/ephemeral';
 import { LocalPersistenceProvider } from './local/persistence';
 import { LocalPubsubProvider } from './local/pubsub';

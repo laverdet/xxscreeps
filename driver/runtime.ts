@@ -1,24 +1,24 @@
 import type ivm from 'isolated-vm';
 import { inspect } from 'util';
 
-import * as Game from '~/game/game';
+import * as Game from 'xxscreeps/game/game';
 // eslint-disable-next-line no-duplicate-imports
-import { flushIntents, initializeIntents, intents, runForUser } from '~/game/game';
-import { setupGlobals } from '~/game/globals';
-import * as Memory from '~/game/memory';
-import { loadTerrainFromBuffer } from '~/game/map';
-import { Room } from '~/game/room';
-import { RoomObject } from '~/game/objects/room-object';
-import type { RunnerIntent } from '~/engine/runner/channel';
-import * as FlagIntent from '~/engine/runner/flag';
-import * as FlagSchema from '~/engine/schema/flag';
-import * as UserCode from '~/engine/metadata/code';
-import { BufferView } from '~/lib/schema/buffer-view';
+import { flushIntents, initializeIntents, intents, runForUser } from 'xxscreeps/game/game';
+import { setupGlobals } from 'xxscreeps/game/globals';
+import * as Memory from 'xxscreeps/game/memory';
+import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
+import { Room } from 'xxscreeps/game/room';
+import { RoomObject } from 'xxscreeps/game/objects/room-object';
+import type { RunnerIntent } from 'xxscreeps/engine/runner/channel';
+import * as FlagIntent from 'xxscreeps/engine/runner/flag';
+import * as FlagSchema from 'xxscreeps/engine/schema/flag';
+import * as UserCode from 'xxscreeps/engine/metadata/code';
+import { BufferView } from 'xxscreeps/schema/buffer-view';
 
 import { setupConsole, Writer } from './console';
 
 // Sets up prototype overlays
-import '~/engine/schema/room';
+import 'xxscreeps/engine/schema/room';
 declare const globalThis: any;
 setupGlobals(globalThis);
 

@@ -3,8 +3,8 @@ import { BufferView } from './buffer-view';
 import { getLayout, Format, TypeOf, Variant } from './format';
 import { defaultInterceptorLookup, InterceptorLookup } from './interceptor';
 import { kPointerSize, getTraits, unpackHolder, Layout, StructLayout } from './layout';
-import { RecursiveWeakMemoize } from '~/lib/memoize';
-import { typedArrayToString } from '~/lib/string';
+import { RecursiveWeakMemoize } from 'xxscreeps/util/memoize';
+import { typedArrayToString } from 'xxscreeps/util/string';
 
 type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;

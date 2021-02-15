@@ -1,7 +1,7 @@
-import * as C from '~/game/constants';
-import type { Creep } from '~/game/objects/creep';
-import type { Structure } from '~/game/objects/structures';
-import { minimum } from '~/lib/utility';
+import * as C from 'xxscreeps/game/constants';
+import type { Creep } from 'xxscreeps/game/objects/creep';
+import type { Structure } from 'xxscreeps/game/objects/structures';
+import { minimum } from 'xxscreeps/util/utility';
 
 export default function(creep: Creep) {
 	if (creep.getActiveBodyparts(C.RANGED_ATTACK) === 0) {

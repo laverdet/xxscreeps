@@ -1,10 +1,10 @@
-import { Endpoint } from '~/backend/endpoint';
-import * as FlagSchema from '~/engine/schema/flag';
-import { getRunnerUserChannel } from '~/engine/runner/channel';
-import * as Id from '~/engine/util/schema/id';
-import * as C from '~/game/constants';
-import { checkCreateFlag } from '~/game/flag';
-import { extractPositionId, RoomPosition } from '~/game/position';
+import { Endpoint } from 'xxscreeps/backend/endpoint';
+import * as FlagSchema from 'xxscreeps/engine/schema/flag';
+import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as C from 'xxscreeps/game/constants';
+import { checkCreateFlag } from 'xxscreeps/game/flag';
+import { extractPositionId, RoomPosition } from 'xxscreeps/game/position';
 
 const CreateFlagEndpoint: Endpoint = {
 	path: '/create-flag',

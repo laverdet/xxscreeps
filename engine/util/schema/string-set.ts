@@ -1,4 +1,4 @@
-import { declare, vector } from '~/lib/schema';
+import { declare, vector } from 'xxscreeps/schema';
 
 export const format = declare(vector('string'), {
 	compose: strings => new Set(strings),
