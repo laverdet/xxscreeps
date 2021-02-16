@@ -110,7 +110,7 @@ rules:
   eol-last: warn
   '@typescript-eslint/func-call-spacing': warn
   func-name-matching: warn
-  indent: [ warn, tab, {
+  '@typescript-eslint/indent': [ warn, tab, {
     flatTernaryExpressions: true,
     FunctionDeclaration: { parameters: off },
     SwitchCase: 1,
