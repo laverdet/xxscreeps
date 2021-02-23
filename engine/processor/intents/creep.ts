@@ -4,7 +4,6 @@ import { Creep, PartType } from 'xxscreeps/game/objects/creep';
 // eslint-disable-next-line no-duplicate-imports
 import * as CreepLib from 'xxscreeps/game/objects/creep';
 import type { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
-import type { Source } from 'xxscreeps/game/objects/source';
 import type { Resource } from 'xxscreeps/game/objects/resource';
 import type { Structure } from 'xxscreeps/game/objects/structures';
 import type { StructureController } from 'xxscreeps/game/objects/structures/controller';
@@ -76,20 +75,6 @@ export default () => bindProcessor(Creep, {
 				if (energy > 0) {
 					StoreIntent.subtract(this.store, 'energy', energy);
 					target.progress += energy;
-				}
-			}
-
-		} else if (intent.harvest) {
-			const { target: id } = intent.harvest;
-			const target = Game.getObjectById<Source>(id)!;
-			if (CreepLib.checkHarvest(this, target) === C.OK) {
-				const power = calculatePower(this, C.WORK, C.HARVEST_POWER);
-				const energy = Math.min(target.energy, power);
-				const overflow = Math.max(energy - this.store.getFreeCapacity('energy'), 0);
-				StoreIntent.add(this.store, 'energy', energy - overflow);
-				target.energy -= energy;
-				if (overflow > 0) {
-					ResourceIntent.drop(this.pos, 'energy', overflow);
 				}
 			}
 		}
@@ -168,7 +153,7 @@ export default () => bindProcessor(Creep, {
 			const fatigue = (() => {
 				const road = firstMatching(
 					this.room.lookForAt(C.LOOK_STRUCTURES, nextPosition),
-					(look): look is Room.LookType<StructureRoad> => look.structure.structureType === 'road');
+					(look): look is Room.LookForType<StructureRoad> => look.structure.structureType === 'road');
 				if (road) {
 					// Update road decay
 					road.structure._nextDecayTime -= C.ROAD_WEAROUT * this.body.length;

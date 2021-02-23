@@ -110,11 +110,6 @@ rules:
   eol-last: warn
   '@typescript-eslint/func-call-spacing': warn
   func-name-matching: warn
-  '@typescript-eslint/indent': [ warn, tab, {
-    flatTernaryExpressions: true,
-    FunctionDeclaration: { parameters: off },
-    SwitchCase: 1,
-  } ]
   key-spacing: [ warn, { mode: strict } ]
   keyword-spacing: warn
   linebreak-style: warn
@@ -179,10 +174,8 @@ rules:
   '@typescript-eslint/array-type': warn
   '@typescript-eslint/await-thenable': warn
   '@typescript-eslint/consistent-type-assertions': warn
-  '@typescript-eslint/consistent-type-definitions': [ warn, type ]
   '@typescript-eslint/member-delimiter-style': warn
   '@typescript-eslint/no-base-to-string': warn
-  '@typescript-eslint/no-empty-interface': warn
   '@typescript-eslint/no-extra-non-null-assertion': warn
   '@typescript-eslint/no-floating-promises': warn
   '@typescript-eslint/no-for-in-array': warn
@@ -197,7 +190,6 @@ rules:
   '@typescript-eslint/no-unnecessary-type-assertion': warn
   '@typescript-eslint/prefer-as-const': warn
   '@typescript-eslint/prefer-for-of': warn
-  '@typescript-eslint/prefer-function-type': warn
   '@typescript-eslint/prefer-includes': warn
   '@typescript-eslint/prefer-nullish-coalescing': warn
   '@typescript-eslint/prefer-optional-chain': warn

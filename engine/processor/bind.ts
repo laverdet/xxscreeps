@@ -1,13 +1,13 @@
 import type { ProcessorContext } from './context';
-export const Process: unique symbol = Symbol('process');
-export const Tick: unique symbol = Symbol('tick');
+export const Process = Symbol('process');
+export const Tick = Symbol('tick');
 
 export type ProcessorSpecification<Type> = {
 	process?: (this: Type, intents: Dictionary<object>, context: ProcessorContext) => boolean;
 	tick?: (this: Type, context: ProcessorContext) => boolean;
 };
 
-export function bindProcessor<Type>(impl: Constructor<Type>, processor: ProcessorSpecification<Type>) {
-	impl.prototype[Process] = processor.process;
-	impl.prototype[Tick] = processor.tick;
+export function bindProcessor<Type>(impl: { prototype: Type }, processor: ProcessorSpecification<Type>) {
+	(impl.prototype as any)[Process] = processor.process;
+	(impl.prototype as any)[Tick] = processor.tick;
 }

@@ -2,7 +2,7 @@ import { bindProcessor } from 'xxscreeps/engine/processor/bind';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import type { RoomPosition } from 'xxscreeps/game/position';
-import * as Room from 'xxscreeps/game/room';
+import * as Room from 'xxscreeps/game/room/room';
 import { instantiate } from 'xxscreeps/util/utility';
 import { Resource, ResourceType } from 'xxscreeps/game/objects/resource';
 import type { StructureContainer } from 'xxscreeps/game/objects/structures/container';
@@ -23,7 +23,7 @@ export function drop(pos: RoomPosition, resourceType: ResourceType, amount: numb
 
 	// Is there a container to catch the resource?
 	const containers = room.lookForAt(C.LOOK_STRUCTURES, pos).filter(
-		(look): look is Room.LookType<StructureContainer> => look.structure.structureType === 'container');
+		(look): look is Room.LookForType<StructureContainer> => look.structure.structureType === 'container');
 	for (const { structure } of containers) {
 		const capacity = structure.store.getFreeCapacity(resourceType);
 		if (capacity > 0) {

@@ -7,7 +7,9 @@ import * as Flag from './flag';
 import type { ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
 import { firstMatching, instantiate, minimum } from 'xxscreeps/util/utility';
 import { RoomObject, chainIntentChecks } from './objects/room-object';
-import { FindConstants, FindPathOptions, LookConstants, RoomFindType, RoomFindOptions, RoomPath } from './room';
+import type { FindConstants, FindType } from './room/find';
+import type { LookConstants } from './room/look';
+import { FindPathOptions, RoomFindOptions, RoomPath } from './room/room';
 
 const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
@@ -18,10 +20,10 @@ export type Direction = typeof ALL_DIRECTIONS[number];
 type FindClosestByPathOptions<Type> =
 	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;
 
-export const PositionInteger: unique symbol = Symbol('positionInteger');
+export const PositionInteger = Symbol('positionInteger');
 type PositionFindType<Type> =
 	Type extends (infer Result)[] ? Result :
-	Type extends FindConstants ? RoomFindType<Type> :
+	Type extends FindConstants ? FindType<Type> :
 	never;
 
 /**
@@ -189,7 +191,7 @@ export class RoomPosition {
 		// Find objects to search
 		const objects = typeof search === 'number' ?
 			fetchRoom(this.roomName).find(search) : search;
-		const filtered = options?.filter === undefined ? objects :
+		const filtered = options.filter === undefined ? objects :
 			objects.filter(iteratee(options.filter));
 		const goals = filtered.map(object => 'pos' in object ? object.pos : object);
 

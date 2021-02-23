@@ -2,7 +2,6 @@ import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { Resource } from 'xxscreeps/game/objects/resource';
-import { Source } from 'xxscreeps/game/objects/source';
 import { Structure } from 'xxscreeps/game/objects/structures';
 import { StructureContainer } from 'xxscreeps/game/objects/structures/container';
 import { StructureController } from 'xxscreeps/game/objects/structures/controller';
@@ -13,13 +12,10 @@ import { StructureStorage } from 'xxscreeps/game/objects/structures/storage';
 import { StructureTower } from 'xxscreeps/game/objects/structures/tower';
 import { Store } from 'xxscreeps/game/store';
 import { Variant } from 'xxscreeps/schema';
+import { bindRenderer } from './room';
+export { bindRenderer };
 
-export const Render: unique symbol = Symbol('render');
-function bindRenderer<Type>(impl: { prototype: Type }, renderer: (this: Type) => object) {
-	(impl.prototype as any)[Render] = renderer;
-}
-
-function renderObject(object: RoomObject) {
+export function renderObject(object: RoomObject) {
 	return {
 		_id: object.id,
 		type: object[Variant],
@@ -103,15 +99,6 @@ bindRenderer(Resource, function render() {
 		type: 'energy',
 		resourceType: this.resourceType,
 		[this.resourceType]: this.amount,
-	};
-});
-
-bindRenderer(Source, function render() {
-	return {
-		...renderObject(this),
-		energy: this.energy,
-		energyCapacity: this.energyCapacity,
-		nextRegenerationTime: this._nextRegenerationTime,
 	};
 });
 

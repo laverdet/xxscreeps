@@ -6,10 +6,9 @@ import type { Shape } from 'xxscreeps/engine/schema/creep';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { ConstructionSite } from './construction-site';
 import { chainIntentChecks, RoomObject } from './room-object';
-import { Source } from './source';
 import { StructureController } from './structures/controller';
 import { obstacleTypes, RoomSearchOptions, SearchReturn } from '../path-finder';
-import type { RoomPath } from '../room';
+import type { RoomPath } from '../room/room';
 import type { RoomObjectWithStore } from '../store';
 import { Resource, ResourceType } from './resource';
 import { Structure } from './structures';
@@ -46,12 +45,6 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 	getActiveBodyparts(type: PartType) {
 		return this.body.reduce((count, part) =>
 			count + (part.type === type && part.hits > 0 ? 1 : 0), 0);
-	}
-
-	harvest(target: Source) {
-		return chainIntentChecks(
-			() => checkHarvest(this, target),
-			() => Game.intents.save(this, 'harvest', { target: target.id }));
 	}
 
 	/**
@@ -233,7 +226,7 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 
 //
 // Intent checks
-function checkCommon(creep: Creep) {
+export function checkCommon(creep: Creep) {
 	if (!creep.my) {
 		return C.ERR_NOT_OWNER;
 	} else if (creep.spawning) {
@@ -271,30 +264,6 @@ export function checkBuild(creep: Creep, target: ConstructionSite) {
 				}
 			}
 			return C.OK;
-		});
-}
-
-export function checkHarvest(creep: Creep, target: Source) {
-	return chainIntentChecks(
-		() => checkCommon(creep),
-		() => {
-			if (creep.getActiveBodyparts(C.WORK) <= 0) {
-				return C.ERR_NO_BODYPART;
-
-			} else if (!(target instanceof RoomObject)) {
-				return C.ERR_INVALID_TARGET;
-
-			} else if (!creep.pos.isNearTo(target.pos)) {
-				return C.ERR_NOT_IN_RANGE;
-			}
-
-			if (target instanceof Source) {
-				if (target.energy <= 0) {
-					return C.ERR_NOT_ENOUGH_RESOURCES;
-				}
-				return C.OK;
-			}
-			return C.ERR_INVALID_TARGET;
 		});
 }
 

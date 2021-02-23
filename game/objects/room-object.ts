@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
-import type { LookConstants, Room } from 'xxscreeps/game/room';
-import { Process, ProcessorSpecification, Tick } from 'xxscreeps/engine/processor/bind';
+import type { Room } from 'xxscreeps/game/room';
+import type { LookConstants } from 'xxscreeps/game/room/look';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { withOverlay, Variant } from 'xxscreeps/schema';
@@ -15,13 +15,11 @@ export abstract class RoomObject extends withOverlay<Shape>()(BufferObject) {
 
 	room!: Room;
 	_owner?: string;
-	[Process]?: ProcessorSpecification<this>['process'];
-	[Tick]?: ProcessorSpecification<this>['tick'];
 	[Variant]: string;
 }
 
 export function chainIntentChecks<Checks extends (() => C.ErrorCode)[]>(...checks: Checks):
-Checks extends (() => infer Codes)[] ? Codes | typeof C.OK : C.ErrorCode {
+Checks extends (() => infer Codes)[] ? Codes : C.ErrorCode {
 	for (const check of checks) {
 		const result = check();
 		if (result !== C.OK) {

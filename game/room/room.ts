@@ -1,4 +1,4 @@
-import * as C from './constants';
+import * as C from '../constants';
 import type { InspectOptionsStylized } from 'util';
 
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
@@ -9,109 +9,43 @@ import { Process, ProcessorSpecification, Tick } from 'xxscreeps/engine/processo
 import type { Shape } from 'xxscreeps/engine/schema/room';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 
-import * as Game from './game';
-import * as Memory from './memory';
+import * as Game from '../game';
+import * as Memory from '../memory';
 import {
 	extractPositionId,
 	fetchArguments, fetchPositionArgument,
 	getOffsetsFromDirection,
 	iterateNeighbors,
 	Direction, RoomPosition,
-} from './position';
-import * as PathFinder from './path-finder';
-import { getTerrainForRoom } from './map';
-import { isBorder, isNearBorder } from './terrain';
+} from '../position';
+import * as PathFinder from '../path-finder';
+import { getTerrainForRoom } from '../map';
+import { isBorder, isNearBorder } from '../terrain';
 
-import { ConstructionSite, ConstructibleStructureType } from './objects/construction-site';
-import { Creep } from './objects/creep';
-import { chainIntentChecks, RoomObject } from './objects/room-object';
-import type { Resource } from './objects/resource';
-import type { Source } from './objects/source';
-import type { Structure } from './objects/structures';
-import { StructureController } from './objects/structures/controller';
-import { StructureExtension } from './objects/structures/extension';
-import { StructureSpawn } from './objects/structures/spawn';
-import { RoomVisual } from './visual';
+import { ConstructibleStructureType } from '../objects/construction-site';
+import { chainIntentChecks, RoomObject } from '../objects/room-object';
+import { StructureController } from '../objects/structures/controller';
+import { StructureExtension } from '../objects/structures/extension';
+import { StructureSpawn } from '../objects/structures/spawn';
+import { RoomVisual } from '../visual';
 
-export type AnyRoomObject = InstanceType<typeof Room>['_objects'][number];
+import { FindConstants, FindType, findHandlers } from './find';
+import { LookConstants, LookType, lookConstants } from './look';
 
-const findToLook = Object.freeze({
-	[C.FIND_CREEPS]: C.LOOK_CREEPS,
-	[C.FIND_MY_CREEPS]: C.LOOK_CREEPS,
-	[C.FIND_HOSTILE_CREEPS]: C.LOOK_CREEPS,
-	[C.FIND_SOURCES_ACTIVE]: C.LOOK_SOURCES,
-	[C.FIND_SOURCES]: C.LOOK_SOURCES,
-	[C.FIND_DROPPED_RESOURCES]: C.LOOK_RESOURCES,
-	[C.FIND_STRUCTURES]: C.LOOK_STRUCTURES,
-	[C.FIND_MY_STRUCTURES]: C.LOOK_STRUCTURES,
-	[C.FIND_HOSTILE_STRUCTURES]: C.LOOK_STRUCTURES,
-	[C.FIND_FLAGS]: C.LOOK_FLAGS,
-	[C.FIND_CONSTRUCTION_SITES]: C.LOOK_CONSTRUCTION_SITES,
-	[C.FIND_MY_SPAWNS]: C.LOOK_STRUCTURES,
-	[C.FIND_HOSTILE_SPAWNS]: C.LOOK_STRUCTURES,
-	[C.FIND_MY_CONSTRUCTION_SITES]: C.LOOK_CONSTRUCTION_SITES,
-	[C.FIND_HOSTILE_CONSTRUCTION_SITES]: C.LOOK_CONSTRUCTION_SITES,
-	[C.FIND_MINERALS]: C.LOOK_MINERALS,
-	[C.FIND_NUKES]: C.LOOK_NUKES,
-	[C.FIND_TOMBSTONES]: C.LOOK_TOMBSTONES,
-	[C.FIND_POWER_CREEPS]: C.LOOK_POWER_CREEPS,
-	[C.FIND_MY_POWER_CREEPS]: C.LOOK_POWER_CREEPS,
-	[C.FIND_HOSTILE_POWER_CREEPS]: C.LOOK_POWER_CREEPS,
-	[C.FIND_DEPOSITS]: C.LOOK_DEPOSITS,
-	[C.FIND_RUINS]: C.LOOK_RUINS,
-});
+export type AnyRoomObject = RoomObject | InstanceType<typeof Room>['_objects'][number];
 
-// Does not include LOOK_ENERGY
-const lookConstants = new Set(Object.values(findToLook));
-Object.freeze(lookConstants); // stupid typescript thing, must be frozen out of line to iterate
+export { LookConstants };
 
-// LOOK_* constant to array of FIND_* constants
-const lookToFind: LookToFind = Object.freeze(mapToKeys(lookConstants, look => [ look, [] ]));
-
-type FindExitDirection =
-	typeof C.FIND_EXIT_TOP |
-	typeof C.FIND_EXIT_RIGHT |
-	typeof C.FIND_EXIT_BOTTOM |
-	typeof C.FIND_EXIT_LEFT;
-
-type FindExitConstants = FindExitDirection | typeof C.FIND_EXIT;
-
-export type FindConstants =
-	FindExitConstants |
-	keyof typeof findToLook;
-
-export type LookConstants = typeof findToLook extends Record<string, infer Look> ? Look : never;
-
-type LookToFind = {
-	[look in LookConstants]: {
-		[find in keyof typeof findToLook]: typeof findToLook[find] extends look ? find : never;
-	}[keyof typeof findToLook][];
-};
-
-export type RoomFindType<Type extends FindConstants> =
-	Type extends FindExitConstants ? RoomPosition :
-	Type extends typeof C.FIND_MY_SPAWNS | typeof C.FIND_HOSTILE_SPAWNS ? StructureSpawn :
-	Type extends keyof typeof findToLook ? RoomLookType<typeof findToLook[Type]> :
-	never;
-
-type RoomLookType<Type extends LookConstants> =
-	Type extends typeof C.LOOK_CONSTRUCTION_SITES ? ConstructionSite :
-	Type extends typeof C.LOOK_CREEPS ? Creep :
-	Type extends typeof C.LOOK_RESOURCES ? Resource :
-	Type extends typeof C.LOOK_SOURCES ? Source :
-	Type extends typeof C.LOOK_STRUCTURES ? Extract<AnyRoomObject, Structure> :
-	never;
-
-type RoomLookResult<Type extends LookConstants> = {
-	[key in LookConstants]: RoomLookType<Type>;
+type LookForTypeInitial<Type extends LookConstants> = {
+	[key in LookConstants]: LookType<Type>;
 } & {
 	type: Type;
 };
 
-export type LookType<Type extends RoomObject> = {
-	[key in LookConstants]: Type extends RoomLookType<key> ? Type : never;
+export type LookForType<Type extends RoomObject> = {
+	[key in LookConstants]: Type extends LookType<key> ? Type : never;
 } & {
-	type: Type['_lookType'];
+	type: never;
 };
 
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
@@ -130,6 +64,7 @@ export type RoomPath = {
 }[];
 
 // Methods which will be extracted and exported
+const LookFor = Symbol('lookFor');
 const MoveObject = Symbol('moveObject');
 const InsertObject = Symbol('insertObject');
 const RemoveObject = Symbol('removeObject');
@@ -164,96 +99,16 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	 */
 	find<Type extends FindConstants>(
 		type: Type,
-		options: RoomFindOptions<RoomFindType<Type>> = {},
-	): RoomFindType<Type>[] {
+		options: RoomFindOptions<FindType<Type>> = {},
+	): FindType<Type> {
 		// Check find cache
 		let results = this.#findCache.get(type);
 		if (results === undefined) {
-
-			// Generate list
-			results = (() => {
-				switch (type) {
-					// Exits
-					case C.FIND_EXIT:
-						return [
-							...this.find(C.FIND_EXIT_TOP),
-							...this.find(C.FIND_EXIT_RIGHT),
-							...this.find(C.FIND_EXIT_BOTTOM),
-							...this.find(C.FIND_EXIT_LEFT),
-						];
-
-					case C.FIND_EXIT_TOP:
-					case C.FIND_EXIT_RIGHT:
-					case C.FIND_EXIT_BOTTOM:
-					case C.FIND_EXIT_LEFT: {
-						const generators: {
-							[key in FindExitDirection]: (ii: number) => RoomPosition
-						} = {
-							[C.FIND_EXIT_TOP]: ii => new RoomPosition(ii, 0, this.name),
-							[C.FIND_EXIT_RIGHT]: ii => new RoomPosition(49, ii, this.name),
-							[C.FIND_EXIT_BOTTOM]: ii => new RoomPosition(ii, 49, this.name),
-							[C.FIND_EXIT_LEFT]: ii => new RoomPosition(0, ii, this.name),
-						};
-						const generator = generators[type as FindExitDirection];
-						const results: RoomPosition[] = [];
-						const terrain = this.getTerrain();
-						for (let ii = 1; ii < 49; ++ii) {
-							const pos = generator(ii);
-							if (terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL) {
-								results.push(pos);
-							}
-						}
-						return results;
-					}
-
-					// Construction sites
-					case C.FIND_CONSTRUCTION_SITES:
-						return this.#lookIndex.get(C.LOOK_CONSTRUCTION_SITES)!;
-					case C.FIND_MY_CONSTRUCTION_SITES:
-						return this.find(C.FIND_CONSTRUCTION_SITES).filter(constructionSite => constructionSite.my);
-					case C.FIND_HOSTILE_CONSTRUCTION_SITES:
-						return this.find(C.FIND_CONSTRUCTION_SITES).filter(constructionSite => !constructionSite.my);
-
-					// Creeps
-					case C.FIND_CREEPS:
-						return this.#lookIndex.get(C.LOOK_CREEPS)!;
-					case C.FIND_MY_CREEPS:
-						return this.find(C.FIND_CREEPS).filter(creep => creep.my);
-					case C.FIND_HOSTILE_CREEPS:
-						return this.find(C.FIND_CREEPS).filter(creep => !creep.my);
-
-					// Sources
-					case C.FIND_SOURCES:
-						return this.#lookIndex.get(C.LOOK_SOURCES)!;
-					case C.FIND_SOURCES_ACTIVE:
-						return this.find(C.FIND_SOURCES).filter(source => source.energy > 0);
-
-					// Spawns
-					case C.FIND_MY_SPAWNS:
-						return this.#lookIndex.get(C.LOOK_STRUCTURES)!.filter((structure: Structure) =>
-							structure.structureType === 'spawn' && structure.my);
-					case C.FIND_HOSTILE_SPAWNS:
-						return this.#lookIndex.get(C.LOOK_STRUCTURES)!.filter((structure: Structure) =>
-							structure.structureType === 'spawn' && !structure.my);
-
-					// Structures
-					case C.FIND_STRUCTURES:
-						return this.#lookIndex.get(C.LOOK_STRUCTURES)!;
-					case C.FIND_MY_STRUCTURES:
-						return this.find(C.FIND_STRUCTURES).filter(structure => structure.my);
-					case C.FIND_HOSTILE_STRUCTURES:
-						return this.find(C.FIND_STRUCTURES).filter(structure => !structure.my);
-
-					default: return [];
-				}
-			})();
-
-			// Add to cache
-			this.#findCache.set(type, results);
+			this.#findCache.set(type, results = findHandlers.get(type)?.(this) ?? []);
 		}
 
 		// Copy or filter result
-		return options.filter === undefined ? results.slice() : results.filter(iteratee(options.filter)) as any[];
+		return (options.filter === undefined ? results.slice() : results.filter(iteratee(options.filter))) as never;
 	}
 
 	/**
@@ -262,7 +117,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	 * method.
 	 * @param room Another room name or room object
 	 */
-	findExitTo(/*room: Room | string*/): FindExitDirection | typeof C.ERR_NO_PATH | typeof C.ERR_INVALID_ARGS {
+	findExitTo(/*room: Room | string*/): /*FindExitDirection | */typeof C.ERR_NO_PATH | typeof C.ERR_INVALID_ARGS {
 		return C.ERR_NO_PATH;
 	}
 
@@ -370,8 +225,8 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	 * @param y Y position in the room
 	 * @param target Can be a RoomObject or RoomPosition
 	 */
-	lookForAt<Type extends LookConstants>(type: Type, x: number, y: number): RoomLookResult<Type>[];
-	lookForAt<Type extends LookConstants>(type: Type, target: RoomObject | RoomPosition): RoomLookResult<Type>[];
+	lookForAt<Type extends LookConstants>(type: Type, x: number, y: number): LookForTypeInitial<Type>[];
+	lookForAt<Type extends LookConstants>(type: Type, target: RoomObject | RoomPosition): LookForTypeInitial<Type>[];
 	lookForAt<Type extends LookConstants>(
 		type: Type, ...rest: [ number, number ] | [ RoomObject | RoomPosition ]
 	) {
@@ -384,7 +239,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 		}
 		const objects = this._getSpatialIndex(type);
 		return (objects.get(extractPositionId(pos)) ?? []).map(object => {
-			const type = object._lookType;
+			const type = 'arst';//object._lookType;
 			return { type, [type]: object };
 		});
 	}
@@ -426,15 +281,22 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	}
 
 	//
+	// Private functions
+	[LookFor]<Look extends LookConstants>(this: this, type: Look): LookType<Look>[] {
+		return this.#lookIndex.get(type)! as never[];
+	}
+
+	//
 	// Private mutation functions
 	[InsertObject](this: this, object: RoomObject) {
 		// Add to objects & look index then flush find caches
-		this._objects.push(object as AnyRoomObject);
+		this._objects.push(object as never);
 		const lookType = this._afterInsertion(object);
-		const findTypes = lookToFind[lookType];
+		/* const findTypes = lookToFind[lookType];
 		for (const find of findTypes) {
 			this.#findCache.delete(find);
-		}
+		} */
+		this.#findCache.clear();
 		// Update spatial look cache if it exists
 		const spatial = this.#lookSpatialIndex.get(lookType);
 		if (spatial) {
@@ -452,10 +314,11 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 		// Remove from objects & look index then flush find caches
 		removeOne(this._objects, object);
 		const lookType = this._afterRemoval(object);
-		const findTypes = lookToFind[lookType];
+		/* const findTypes = lookToFind[lookType];
 		for (const find of findTypes) {
 			this.#findCache.delete(find);
-		}
+		} */
+		this.#findCache.clear();
 		// Update spatial look cache if it exists
 		const spatial = this.#lookSpatialIndex.get(lookType);
 		if (spatial) {
@@ -650,23 +513,17 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 
 //
 // Extracted private functions
+export const lookFor = uncurryThis(exchange(Room.prototype, LookFor));
 
-// These must be functions in order to get hoisting. This shouldn't be needed after I can get real
-// ES Module functionality working
-const _moveObject = uncurryThis(exchange(Room.prototype, MoveObject));
-export function moveObject(object: RoomObject, pos: RoomPosition) {
-	return _moveObject(object.room, object, pos);
-}
+export const moveObject = (moveObject => (object: RoomObject, pos: RoomPosition) =>
+	moveObject(object.room, object, pos)
+)(uncurryThis(exchange(Room.prototype, MoveObject)));
 
-const _insertObject = uncurryThis(exchange(Room.prototype, InsertObject));
-export function insertObject(room: Room, object: RoomObject) {
-	return _insertObject(room, object);
-}
+export const insertObject = uncurryThis(exchange(Room.prototype, InsertObject));
 
-const _removeObject = uncurryThis(exchange(Room.prototype, RemoveObject));
-export function removeObject(object: RoomObject) {
-	return _removeObject(object.room, object);
-}
+export const removeObject = (removeObject => (object: RoomObject) =>
+	removeObject(object.room, object)
+)(uncurryThis(exchange(Room.prototype, RemoveObject)));
 
 //
 // Utilities

@@ -1,19 +1,11 @@
 {
+	"extends": "./tsconfig.base",
 	"compilerOptions": {
-		"inlineSourceMap": true,
-		"outDir": "dist",
-
-		"allowSyntheticDefaultImports": true,
-		"moduleResolution": "node",
-		"module": "esnext",
-		"target": "esnext",
-		"lib": [ "esnext" ],
-
-		"strict": true,
-		"skipLibCheck": true,
-
-		"downlevelIteration": true,
-		"noEmitOnError": false,
-		"resolveJsonModule": true
-	}
+		"composite": false,
+		"outDir": "dist"
+	},
+	"references": [
+		{ "path": "./mods/harvestable" },
+		{ "path": "./mods/source" },
+	]
 }

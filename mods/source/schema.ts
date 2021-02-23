@@ -1,6 +1,6 @@
 import { declare, inherit, variant, TypeOf } from 'xxscreeps/schema';
-import { Source } from 'xxscreeps/game/objects/source';
-import * as RoomObject from './room-object';
+import * as RoomObject from 'xxscreeps/engine/schema/room-object';
+import { Source } from './source';
 
 export type Shape = TypeOf<typeof shape>;
 const shape = declare('Source', {
@@ -12,3 +12,4 @@ const shape = declare('Source', {
 });
 
 export const format = declare(shape, { overlay: Source });
+export const objects = [ format ];

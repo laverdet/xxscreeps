@@ -1,13 +1,29 @@
 import * as Room from 'xxscreeps/engine/schema/room';
+import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { Creep } from 'xxscreeps/game/objects/creep';
-import { Source } from 'xxscreeps/game/objects/source';
 import { Structure } from 'xxscreeps/game/objects/structures';
 import { StructureController } from 'xxscreeps/game/objects/structures/controller';
 import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
-import { mapToKeys } from 'xxscreeps/util/utility';
+import { getOrSet } from 'xxscreeps/util/utility';
 import { SubscriptionEndpoint } from '../socket';
 
 type Position = [ number, number ];
+
+// Register a map renderer on a `RoomObject` type
+const MapRender = Symbol('mapRender');
+declare module 'xxscreeps/game/objects/room-object' {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+	interface RoomObject {
+		[MapRender]?: (object: RoomObject) => string | undefined;
+	}
+}
+export function bindMapRenderer<Type extends RoomObject>(object: { prototype: Type }, render: (object: Type) => string | undefined) {
+	object.prototype[MapRender] = render;
+}
+bindMapRenderer(Creep, creep => creep._owner);
+bindMapRenderer(Structure, structure => structure._owner);
+bindMapRenderer(StructureController, () => 'c');
+bindMapRenderer(StructureRoad, () => 'r');
 
 export const mapSubscription: SubscriptionEndpoint = {
 	pattern: /^roomMap2:(?<room>[A-Z0-9]+)$/,
@@ -25,34 +41,12 @@ export const mapSubscription: SubscriptionEndpoint = {
 			lastTickTime = Date.now();
 			const roomBlob = await this.context.persistence.get(`room/${roomName}`);
 			const room = Room.read(roomBlob);
-			// w: constructedWall
-			// r: road
-			// pb: powerBank
-			// p: portal
-			// m: mineral
-			// d: deposit
-			// c: controller
-			// k: keeperLair
-			// e: energy | power
-			const response = mapToKeys(
-				[ 'w', 'r', 'pb', 'p', 's', 'm', 'd', 'c', 'k', 'e' ],
-				key => [ key, [] as Position[] ],
-			);
+			const response = new Map<string, Position[]>();
 			for (const object of room._objects) {
 				const record = function() {
-					if (object instanceof StructureController) {
-						return response.c;
-					} else if (object instanceof StructureRoad) {
-						return response.r;
-					} else if (
-						(object instanceof Creep || object instanceof Structure) &&
-						object._owner !== undefined
-					) {
-						const owner: string = object._owner;
-						// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-						return response[owner] ?? (response[owner] = []);
-					} else if (object instanceof Source) {
-						return response.s;
+					const key = object[MapRender]?.(object);
+					if (key !== undefined) {
+						return getOrSet(response, key, () => []);
 					}
 				}();
 				record?.push([ object.pos.x, object.pos.y ]);

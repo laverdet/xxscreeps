@@ -3,7 +3,8 @@ import { me } from 'xxscreeps/game/game';
 import { ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { bindProcessor } from 'xxscreeps/engine/processor/bind';
-import { Room, checkCreateConstructionSite, insertObject } from 'xxscreeps/game/room';
+import { Room, insertObject } from 'xxscreeps/game/room';
+import { checkCreateConstructionSite } from 'xxscreeps/game/room/room';
 import * as ConstructionIntent from './construction-site';
 
 type Parameters = {

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions */
 export {}; // fake module
-const BufferType: unique symbol = Symbol();
+const BufferType = Symbol();
 
 declare global {
 	// Converts a type to a newable type
@@ -22,7 +22,7 @@ declare global {
 
 	// Public Promise
 	type Resolver<Type = unknown> = {
-		resolve: (payload?: Type | Promise<Type>) => void;
+		resolve: Type extends void ? () => void : (payload: Type | Promise<Type>) => void;
 		reject: (payload: Error) => void;
 	};
 

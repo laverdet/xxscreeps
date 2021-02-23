@@ -1,0 +1,18 @@
+{
+	"compilerOptions": {
+		"composite": true,
+		"inlineSourceMap": true,
+		"noEmitOnError": false,
+
+		"allowSyntheticDefaultImports": true,
+		"resolveJsonModule": true,
+		"moduleResolution": "node",
+		"module": "esnext",
+		"target": "esnext",
+		"lib": [ "esnext" ],
+
+		"strict": true,
+
+		"downlevelIteration": true
+	}
+}

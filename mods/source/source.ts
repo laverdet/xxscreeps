@@ -1,8 +1,8 @@
-import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
-import type { Shape } from 'xxscreeps/engine/schema/source';
 import { withOverlay } from 'xxscreeps/schema';
-import { RoomObject } from './room-object';
+import { RoomObject } from 'xxscreeps/game/objects/room-object';
+import * as C from './constants';
+import type { Shape } from './schema';
 
 export class Source extends withOverlay<Shape>()(RoomObject) {
 	get ticksToRegeneration() {

@@ -1,0 +1,7 @@
+{
+	"extends": "xxscreeps/tsconfig.base",
+	"compilerOptions": {
+		"composite": true,
+		"outDir": "dist"
+	}
+}

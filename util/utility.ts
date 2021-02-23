@@ -162,7 +162,7 @@ export function listen<
 // Returns a promise and resolver functions in one
 export function makeResolver<Type>(): [ Promise<Type>, Resolver<Type> ] {
 	let resolver: Resolver<Type>;
-	const promise = new Promise<Type>((resolve, reject) => resolver = { resolve, reject });
+	const promise = new Promise<Type>((resolve, reject) => resolver = { resolve: resolve as any, reject });
 	return [ promise, resolver! ];
 }
 
@@ -174,19 +174,14 @@ export function *mapInPlace<Type, Result>(iterable: Iterable<Type>, callback: (v
 }
 
 // It's like the constructor for `Map` except it returns a plain Object
-export function mapToKeys<Type, Key extends string | number | symbol, Value>(
+export function mapToKeys<Type, Key extends string | number | symbol>(
 	iterable: Iterable<[ Key, Type ]>): Record<Key, Type>;
 export function mapToKeys<Type, Key extends string | number | symbol, Value>(
 	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ]): Record<Key, Value>;
 export function mapToKeys<Type, Key extends string | number | symbol, Value>(
 	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ] = identity as any,
 ) {
-	const result: Record<Key, Value> = Object.create(null);
-	for (const entry of iterable) {
-		const [ key, value ] = callback(entry);
-		result[key] = value;
-	}
-	return result;
+	return Object.fromEntries(mapInPlace(iterable, callback));
 }
 
 // If you just want the smallest element of an array it's senseless to sort the whole thing and take

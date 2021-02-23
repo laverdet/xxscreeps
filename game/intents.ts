@@ -40,10 +40,10 @@ export class IntentManager {
 		return C.OK;
 	}
 
-	save<Intent extends keyof CreepIntents['parameters']>(
+/*	save<Intent extends keyof CreepIntents['parameters']>(
 		receiver: CreepIntents['receiver'], intent: Intent, parameters: CreepIntents['parameters'][Intent]): typeof C.OK;
 	save<Intent extends keyof SpawnIntents['parameters']>(
-		receiver: SpawnIntents['receiver'], intent: Intent, parameters: SpawnIntents['parameters'][Intent]): typeof C.OK;
+		receiver: SpawnIntents['receiver'], intent: Intent, parameters: SpawnIntents['parameters'][Intent]): typeof C.OK;*/
 	save(receiver: AnyReceiver, intent: string, parameters: any) {
 		const intents = this.getIntentsForReceiver(receiver);
 		if (intents[intent] === undefined) {

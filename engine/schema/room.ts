@@ -9,10 +9,10 @@ import * as Creep from './creep';
 import * as Extension from './extension';
 import * as Resource from './resource';
 import * as Road from './road';
-import * as Source from './source';
 import * as Spawn from './spawn';
 import * as Storage from './storage';
 import * as Tower from './tower';
+import * as Mods from 'xxscreeps/config/mods/schema';
 import { mapInPlace } from 'xxscreeps/util/utility';
 
 export type Shape = TypeOf<typeof shape>;
@@ -30,6 +30,7 @@ const shape = declare('Room', {
 		decompose: (map: Map<string, Readonly<Uint8Array>>) => mapInPlace(map, ([ id, memory ]) => ({ id, memory })),
 	}),
 	_objects: vector(variant(
+		...Mods.objects,
 		Container.format,
 		ConstructionSite.format,
 		Controller.format,
@@ -37,7 +38,6 @@ const shape = declare('Room', {
 		Extension.format,
 		Resource.format,
 		Road.format,
-		Source.format,
 		Spawn.format,
 		Storage.format,
 		Tower.format,

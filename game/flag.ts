@@ -15,6 +15,8 @@ export class Flag extends withOverlay<Shape>()(RoomObject) {
 		return flags[this.name] ?? (flags[this.name] = {});
 	}
 
+	// `room` is defined as a property on `RoomObject` but is implemented here instead as a getter
+	// @ts-ignore
 	get room() { return Game.rooms[this.pos.roomName]! }
 
 	/**

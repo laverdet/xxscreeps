@@ -42,7 +42,7 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>[], userOption
 	const maxOps = clamp(1, 2000, options.maxOps | 0);
 	const maxCost = clamp(1, 0xffffffff, options.maxCost >>> 0);
 	const maxRooms = clamp(1, 64, options.maxRooms | 0);
-	const flee = !!userOptions.flee;
+	const flee = userOptions.flee ?? false;
 
 	// Convert one-or-many goal into standard format for native extension
 	const goals = (Array.isArray(goal) ? goal : [ goal ]).map(goal => {
@@ -89,8 +89,10 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>[], userOption
 	} else if (ret === -1) {
 		return { path: [], ops: 0, cost: 0, incomplete: true };
 	}
-	ret.path = ret.path.map((pos: number) => new RoomPosition(pos)).reverse();
-	return ret;
+	return {
+		...ret,
+		path: ret.path.map(pos => new RoomPosition(pos)).reverse(),
+	};
 }
 
 export function loadTerrain(world: World) {
