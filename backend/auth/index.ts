@@ -3,9 +3,16 @@ import { declare, getReader, getWriter, vector, TypeOf } from 'xxscreeps/schema'
 import * as Id from 'xxscreeps/engine/util/schema/id';
 import { checkToken, makeToken } from './token';
 
+declare module 'xxscreeps/backend/endpoint' {
+	interface Locals {
+		token?: string;
+		userid?: string;
+	}
+}
+
 export function useAuth(handler: RequestHandler) {
 	return useToken((req, res, next) => {
-		if (req.userid === undefined) {
+		if (req.locals.userid === undefined) {
 			res.status(401).send({ error: 'unauthorized' });
 		} else {
 			handler(req, res, next);
@@ -24,14 +31,14 @@ export function useToken(handler: RequestHandler): RequestHandler {
 			}
 			res.set('X-Token', await makeToken(tokenValue));
 			if (/^[a-f0-9]+$/.test(tokenValue)) {
-				req.userid = tokenValue;
+				req.locals.userid = tokenValue;
 			} else {
 				const newReg = /^new:(?<id>[^:]+):(?<provider>.+)$/.exec(tokenValue);
 				if (newReg) {
-					req.token = newReg.groups!.provider;
-					req.userid = newReg.groups!.id;
+					req.locals.token = newReg.groups!.provider;
+					req.locals.userid = newReg.groups!.id;
 				} else {
-					req.token = tokenValue;
+					req.locals.token = tokenValue;
 				}
 			}
 			handler(req, res, next);

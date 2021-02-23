@@ -1,4 +1,4 @@
-import { makeResolver } from 'xxscreeps/util/utility';
+import { Deferred } from 'xxscreeps/util/deferred';
 import { Provider, PubsubProvider, PubsubSubscription } from './provider';
 
 type MessageType<Message> = Message | (Message extends string ? null : { type: null });
@@ -84,12 +84,12 @@ export class Subscription<Message> {
 	// Iterates over all messages in a `for await` loop
 	async *[Symbol.asyncIterator](): AsyncGenerator<MessageType<Message>> {
 		// Create listener to save incoming messages
-		let resolver: Resolver<MessageType<Message> | undefined> | undefined;
+		let deferred: Deferred<MessageType<Message> | void> | undefined;
 		const queue: MessageType<Message>[] = [];
 		const unlisten = this.listen(message => {
-			if (resolver) {
-				resolver.resolve(message);
-				resolver = undefined;
+			if (deferred) {
+				deferred.resolve(message);
+				deferred = undefined;
 			} else {
 				queue.push(message);
 			}
@@ -103,10 +103,10 @@ export class Subscription<Message> {
 						return;
 					}
 				}
-				// Make resolver to await on
-				let promise: Promise<Message | undefined>;
-				[ promise, resolver ] = makeResolver<Message | undefined>();
-				const disconnectListener = () => resolver!.resolve();
+				// Make promise to await on
+				deferred = new Deferred;
+				const { promise } = deferred;
+				const disconnectListener = () => deferred!.resolve();
 				this.disconnectListeners.add(disconnectListener);
 				// Wait for new messages
 				const value = await promise;

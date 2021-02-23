@@ -1,4 +1,4 @@
-import { makeResolver } from 'xxscreeps/util/utility';
+import { Deferred } from 'xxscreeps/util/deferred';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
 import { EphemeralProvider, Provider } from './provider';
 
@@ -27,9 +27,9 @@ export class Mutex {
 	async lock() {
 		if (this.lockedOrPending) {
 			// Already locked locally
-			const [ locked, lockedResolver ] = makeResolver<void>();
-			this.localQueue.push(lockedResolver.resolve);
-			return locked;
+			const lockDefer = new Deferred();
+			this.localQueue.push(lockDefer.resolve);
+			return lockDefer.promise;
 		} else if (this.waitingListener) {
 			// If the listener is still attached it means no one else wanted the lock
 			this.lockedOrPending = true;
@@ -57,15 +57,15 @@ export class Mutex {
 			return;
 		}
 		// Must wait for lock
-		const [ locked, lockedResolver ] = makeResolver<void>();
+		const lockDefer = new Deferred;
 		const tryLock = () => {
 			this.lockable.lock().then(locked => {
 				if (locked) {
-					lockedResolver.resolve();
+					lockDefer.resolve();
 				} else {
-					this.channel.publish('waiting').catch(lockedResolver.reject);
+					this.channel.publish('waiting').catch(lockDefer.reject);
 				}
-			}, lockedResolver.reject);
+			}, lockDefer.reject);
 		};
 		// Listen for unlock messages and try to lock again
 		const unlisten = this.channel.listen(message => {
@@ -78,7 +78,7 @@ export class Mutex {
 		// Wait on the lock
 		try {
 			tryLock();
-			await locked;
+			await lockDefer.promise;
 		} finally {
 			clearInterval(timer);
 			unlisten();

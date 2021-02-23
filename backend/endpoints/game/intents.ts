@@ -8,6 +8,7 @@ import * as ControllerIntents from 'xxscreeps/engine/processor/intents/controlle
 import * as CreepIntents from 'xxscreeps/engine/processor/intents/creep';
 import * as SpawnIntents from 'xxscreeps/engine/processor/intents/spawn';
 import * as Room from 'xxscreeps/game/room';
+import { checkCreateConstructionSite } from 'xxscreeps/game/room/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import type { PartType } from 'xxscreeps/game/objects/creep';
 import { concatInPlace, accumulate } from 'xxscreeps/util/utility';
@@ -20,7 +21,7 @@ const AddObjectIntentEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid } = req;
+		const { userid } = req.locals;
 		const { room, name, intent: { id } } = req.body;
 		if (typeof room !== 'string' || typeof name !== 'string' || typeof id !== 'string') {
 			throw new TypeError('Invalid parameters');
@@ -39,7 +40,7 @@ const CheckUniqueNameEndpoint: Endpoint = {
 		if (req.body.type !== 'spawn') {
 			return;
 		}
-		const { userid } = req;
+		const { userid } = req.locals;
 		const user = await loadUser(this.context, userid!);
 		for (const room of await loadRooms(this.context, user.roomsPresent)) {
 			for (const structure of room.find(C.FIND_STRUCTURES)) {
@@ -64,7 +65,7 @@ const GenNameEndpoint: Endpoint = {
 		if (req.body.type !== 'spawn') {
 			return;
 		}
-		const { userid } = req;
+		const { userid } = req.locals;
 		const user = await loadUser(this.context, userid!);
 		let max = 0;
 		for (const room of await loadRooms(this.context, user.roomsPresent)) {
@@ -89,7 +90,7 @@ const PlaceSpawnEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid } = req;
+		const { userid } = req.locals;
 		const { name, room, x, y } = req.body;
 		const pos = new RoomPosition(x, y, room);
 		await this.context.gameMutex.scope(async() => {
@@ -101,7 +102,7 @@ const PlaceSpawnEndpoint: Endpoint = {
 			const room = await loadRoom(this.context, pos.roomName);
 			runAsUser(user.id, this.context.time, () => {
 				// Check room eligibility
-				if (Room.checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
+				if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
 					throw new Error('Invalid intent');
 				}
 				// Add spawn
@@ -151,7 +152,8 @@ const CreateInvaderEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid, body: { room: roomName, x, y, size, type } } = req;
+		const { userid } = req.locals;
+		const { room: roomName, x, y, size, type } = req.body;
 		const pos = new RoomPosition(x, y, roomName);
 		const bodies = {
 			bigHealer: () => createInvaderBody({ [C.HEAL]: 25 }),

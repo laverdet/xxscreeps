@@ -1,3 +1,4 @@
+import type { Dictionary } from 'xxscreeps/util/types';
 import * as C from 'xxscreeps/game/constants';
 import { Room } from 'xxscreeps/game/room';
 import type { Intents as CreepIntents } from 'xxscreeps/engine/processor/intents/creep';

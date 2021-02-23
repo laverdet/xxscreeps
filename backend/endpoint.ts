@@ -1,7 +1,18 @@
-import express from 'express';
+import type express from 'express';
 import { BackendContext } from './context';
+
 export type Method = 'delete' | 'get' | 'post' | 'put';
+export interface Locals {}
 type RequestContext = { context: BackendContext };
+
+declare global {
+	// eslint-disable-next-line @typescript-eslint/no-namespace
+	namespace Express {
+		interface Request {
+			locals: Locals;
+		}
+	}
+}
 
 export type Endpoint = {
 	path: string;

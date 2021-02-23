@@ -9,7 +9,7 @@ const BadgeEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid } = req;
+		const { userid } = req.locals;
 		const badge = Badge.validate(req.body.badge);
 		await this.context.gameMutex.scope(async() => {
 			const fragment = `user/${userid}/info`;
@@ -26,7 +26,7 @@ const BadgeSvgEndpoint: Endpoint = {
 
 	async execute(req, res) {
 		// Look up userid
-		const { username } = req.query;
+		const username = `${req.query.username}`;
 		const userid = this.context.lookupUserByProvider(`username:${flattenUsername(username)}`);
 		if (userid === undefined) {
 			return;

@@ -1,3 +1,4 @@
+import type { Constructor } from 'xxscreeps/util/types';
 import type { BufferObject } from './buffer-object';
 import { BufferView } from './buffer-view';
 import { getLayout, Format, TypeOf, Variant } from './format';

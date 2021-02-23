@@ -19,7 +19,7 @@ const CheckUsernameEndpoint: Endpoint = {
 	path: '/check-username',
 
 	execute(req) {
-		const { username } = req.query;
+		const username = `${req.query.username}`;
 		if (!checkUsername(username)) {
 			return { error: 'invalid' };
 		}
@@ -38,7 +38,8 @@ const SetUsernameEndpoint: Endpoint = {
 	async execute(req, res) {
 
 		// Check for new reg provider
-		const { token, userid, body: { username } } = req;
+		const { token, userid } = req.locals;
+		const { username } = req.body;
 		if (token === undefined) {
 			return { error: 'username already set' };
 		}

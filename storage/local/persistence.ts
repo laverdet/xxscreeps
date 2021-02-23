@@ -169,7 +169,7 @@ const LocalPersistenceHost = ResponderHost(class LocalPersistenceHost extends Lo
 					}
 					this.knownPaths.add(dirname);
 				}
-				await fs.writeFile(path, blob);
+				await fs.writeFile(path, blob as Uint8Array);
 			})),
 
 			// Dispatches buffered deletes

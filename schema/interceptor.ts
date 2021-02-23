@@ -1,3 +1,4 @@
+import type { UnionToIntersection } from 'xxscreeps/util/types';
 import type { BufferView } from './buffer-view';
 import type { ShapeOf, TypeOf, WithShapeAndType } from './format';
 import type { Layout } from './layout';

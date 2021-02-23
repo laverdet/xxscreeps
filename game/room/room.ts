@@ -4,7 +4,8 @@ import type { InspectOptionsStylized } from 'util';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import type { BufferView } from 'xxscreeps/schema/buffer-view';
 import { withOverlay } from 'xxscreeps/schema';
-import { accumulate, concatInPlace, exchange, mapInPlace, mapToKeys, uncurryThis } from 'xxscreeps/util/utility';
+import type { LooseBoolean } from 'xxscreeps/util/types';
+import { accumulate, concatInPlace, exchange, mapInPlace, uncurryThis } from 'xxscreeps/util/utility';
 import { Process, ProcessorSpecification, Tick } from 'xxscreeps/engine/processor/bind';
 import type { Shape } from 'xxscreeps/engine/schema/room';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
@@ -100,7 +101,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	find<Type extends FindConstants>(
 		type: Type,
 		options: RoomFindOptions<FindType<Type>> = {},
-	): FindType<Type> {
+	): FindType<Type>[] {
 		// Check find cache
 		let results = this.#findCache.get(type);
 		if (results === undefined) {

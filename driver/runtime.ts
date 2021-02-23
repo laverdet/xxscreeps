@@ -1,6 +1,7 @@
 import type ivm from 'isolated-vm';
 import { inspect } from 'util';
 
+import type { Dictionary } from 'xxscreeps/util/types';
 import * as Game from 'xxscreeps/game/game';
 // eslint-disable-next-line no-duplicate-imports
 import { flushIntents, initializeIntents, intents, runForUser } from 'xxscreeps/game/game';

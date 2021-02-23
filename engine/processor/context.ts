@@ -1,3 +1,4 @@
+import type { Dictionary } from 'xxscreeps/util/types';
 import { Room } from 'xxscreeps/game/room';
 import { runAsUser, runWithTime } from 'xxscreeps/game/game';
 import * as Movement from './intents/movement';
@@ -19,7 +20,7 @@ export class ProcessorContext {
 			for (const object of this.room._objects) {
 				const intents = intentsById[object.id];
 				if (intents !== undefined) {
-					object[Process]?.call(object, intents, this);
+					// object[Process]?.call(object, intents, this);
 				}
 			}
 		});
@@ -29,7 +30,7 @@ export class ProcessorContext {
 		runWithTime(this.time, () => {
 			Movement.dispatch(this.room);
 			for (const object of this.room._objects) {
-				object[Tick]?.call(object, this);
+				// object[Tick]?.call(object, this);
 			}
 		});
 	}

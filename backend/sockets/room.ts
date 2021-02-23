@@ -15,9 +15,8 @@ type RenderedRoomObject = {
 	y: number;
 };
 declare module 'xxscreeps/game/objects/room-object' {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface RoomObject {
-		[Render]?: (this: RoomObject, object: RoomObject) => RenderedRoomObject;
+		[Render]?: (this: any, object: any) => RenderedRoomObject;
 	}
 }
 export function bindRenderer<Type extends RoomObject>(impl: { prototype: Type }, renderer: (this: Type, object: Type) => RenderedRoomObject) {

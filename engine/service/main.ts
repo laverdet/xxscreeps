@@ -1,7 +1,8 @@
 import config from 'xxscreeps/engine/config';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import { AveragingTimer } from 'xxscreeps/util/averaging-timer';
-import { getOrSet, makeResolver, mapInPlace } from 'xxscreeps/util/utility';
+import { Deferred } from 'xxscreeps/util/deferred';
+import { getOrSet, mapInPlace } from 'xxscreeps/util/utility';
 import * as Storage from 'xxscreeps/storage';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';
@@ -30,7 +31,7 @@ let activeUsers: string[] = [];
 const performanceTimer = new AveragingTimer(1000);
 
 // Ctrl+C handler
-let delayResolve: Resolver<boolean> | undefined;
+let delayShutdown: Deferred<boolean> | undefined;
 let shuttingDown = false;
 
 // Listen for service updates
@@ -39,7 +40,7 @@ serviceChannel.listen(message => {
 		gameMetadata = undefined;
 	} else if (message.type === 'shutdown') {
 		shuttingDown = true;
-		delayResolve?.resolve?.(false);
+		delayShutdown?.resolve(false);
 	}
 });
 
@@ -130,10 +131,10 @@ try {
 
 		// Add delay
 		const delay = config.game?.tickSpeed ?? 250 - Date.now();
-		let delayPromise: Promise<boolean>;
-		[ delayPromise, delayResolve ] = makeResolver();
-		setTimeout(() => delayResolve!.resolve(true), delay).unref();
-		if (!await delayPromise) {
+		delayShutdown = new Deferred;
+		const { promise } = delayShutdown;
+		setTimeout(() => delayShutdown!.resolve(true), delay).unref();
+		if (!await promise) {
 			break;
 		}
 	} while (true);

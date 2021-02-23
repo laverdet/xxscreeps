@@ -10,11 +10,7 @@ const Acorn = require('acorn');
 import AcornClassFields from 'acorn-class-fields';
 Acorn.Parser = Acorn.Parser.extend(AcornClassFields);
 
-export type ExternalsFunctionElement =
-	(
-		request: { context: string; request: string },
-		callback: (error?: Error | undefined, result?: string) => void,
-	) => void;
+export type ExternalsFunctionElement = Parameters<typeof Webpack>[0][0]['externals'];
 
 export async function compile(moduleName: string, externals: ExternalsFunctionElement) {
 	const baseName = Path.basename(moduleName);

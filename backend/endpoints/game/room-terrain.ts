@@ -5,7 +5,7 @@ export const RoomTerrainEndpoint: Endpoint = {
 	path: '/room-terrain',
 
 	execute(req, res) {
-		const { room } = req.query;
+		const room = `${req.query.room}`;
 		let terrainString = cache.get(room);
 		if (terrainString === undefined) {
 			const terrain = this.context.world.get(room);

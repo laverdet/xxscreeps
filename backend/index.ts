@@ -1,3 +1,4 @@
+import type { Constructor } from 'xxscreeps/util/types';
 import { bindRenderer } from './sockets/render';
 
 type MapPosition = [ number, number ];
@@ -12,7 +13,7 @@ export function bindMapSerializer<Type>(impl: Constructor<Type>, serializer: (ob
 	};
 }
 
-export function bindRoomSerializer<Type>(impl: Constructor<Type>, serializer: (object: Type) => object) {
+export function bindRoomSerializer<Type>(impl: Constructor<Type>, serializer: (object: Type) => any) {
 	bindRenderer(impl, function() {
 		return serializer(this);
 	});

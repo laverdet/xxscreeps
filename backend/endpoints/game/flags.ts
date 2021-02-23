@@ -11,7 +11,7 @@ const CreateFlagEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid } = req;
+		const { userid } = req.locals;
 		const { name, color, secondaryColor, room, x, y } = req.body;
 		const pos = new RoomPosition(x, y, room);
 		if (checkCreateFlag({}, pos, name, color, secondaryColor) === C.OK) {
@@ -40,7 +40,7 @@ const GenUniqueFlagNameEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid } = req;
+		const { userid } = req.locals;
 		const flagBlob = await this.context.persistence.get(`user/${userid}/flags`).catch(() => {});
 		if (flagBlob) {
 			const flags = FlagSchema.read(flagBlob);
@@ -63,7 +63,7 @@ const RemoveFlagEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid } = req;
+		const { userid } = req.locals;
 		const { name } = req.body;
 		await getRunnerUserChannel(this.context.shard, userid!)
 			.publish({

@@ -17,11 +17,11 @@ export type Options = {
 
 export function compileRuntimeSource(externals?: ExternalsFunctionElement) {
 	return compile('xxscreeps/driver/runtime.js', ({ context, request }, callback) => {
-		if (request.endsWith('.node')) {
-			return callback(undefined, `globalThis[${JSON.stringify(Path.join(context, request))}]`);
+		if (request?.endsWith('.node')) {
+			return callback(undefined, `globalThis[${JSON.stringify(Path.join(context!, request))}]`);
 		}
-		if (externals) {
-			externals({ context, request }, callback);
+		if (externals as any as boolean) {
+			(externals as any)({ context, request }, callback);
 		} else {
 			callback();
 		}

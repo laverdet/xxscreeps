@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc",
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
     "tslint": "tsc --noEmit",
     "start": "./go dist/engine/service/launcher.js"

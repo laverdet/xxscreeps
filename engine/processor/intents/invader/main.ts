@@ -16,6 +16,7 @@ export function loop() {
 	const fortifications = room.find(C.FIND_HOSTILE_STRUCTURES).filter(structure =>
 		// @ts-expect-error
 		structure.structureType === C.STRUCTURE_RAMPART ||
+		// @ts-expect-error
 		structure.structureType === C.STRUCTURE_WALL);
 	// TODO: Filter SK
 	const hostiles = room.find(C.FIND_HOSTILE_CREEPS);

@@ -17,6 +17,7 @@ import userEndpoints from './user';
 function bindRoutes(context: BackendContext, router: Router, endpoints: Endpoint[]) {
 	for (const endpoint of endpoints) {
 		router[endpoint.method ?? 'get'](endpoint.path, (req, res, next) => {
+			req.locals = res.locals;
 			Promise.resolve(endpoint.execute.call({ context }, req, res)).then(value => {
 				if (value === undefined) {
 					next();

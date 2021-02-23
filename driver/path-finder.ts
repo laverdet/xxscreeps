@@ -1,3 +1,4 @@
+import type { OneOrMany } from 'xxscreeps/util/types';
 import { Goal, SearchOptions } from 'xxscreeps/game/path-finder';
 import { World } from 'xxscreeps/game/map';
 import { generateRoomNameFromId, parseRoomNameToId, PositionInteger, RoomPosition } from 'xxscreeps/game/position';

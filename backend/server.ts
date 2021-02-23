@@ -29,9 +29,9 @@ function graceful(server: Server) {
 	server.on('request', (req: IncomingMessage, res: ServerResponse) => {
 		const { connection } = res;
 		if (!req.url?.startsWith('/socket/')) {
-			connections.delete(connection);
+			connections.delete(connection!);
 		}
-		res.on('finish', () => isIdle(connection));
+		res.on('finish', () => isIdle(connection!));
 	});
 
 	// Shutdown callback

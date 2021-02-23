@@ -1,3 +1,4 @@
+import type { Constructor } from 'xxscreeps/util/types';
 import assert from 'assert';
 import { Worker, isMainThread, parentPort } from 'worker_threads';
 import { staticCast } from 'xxscreeps/util/utility';
@@ -39,6 +40,10 @@ type ResponseMessage = {
 	rejection?: true;
 };
 
+type Resolver = {
+	resolve(payload: any): void;
+	reject(error: Error): void;
+};
 type UnknownMessage = { type: null };
 type ParentMessage = ResponseMessage | ConnectedMessage | ConnectionFailedMessage | UnknownMessage;
 type WorkerMessage = RequestMessage | ConnectMessage | DisconnectMessage | UnknownMessage;
@@ -195,7 +200,7 @@ export function initializeWorker(worker: Worker) {
 			// Incoming request from child
 			case 'responderRequest': {
 				const { clientId, method, payload, requestId } = message;
-				const host = responderHostsByClientId.get(clientId)!;
+				const host = responderHostsByClientId.get(clientId);
 				const request = host === undefined ?
 					Promise.reject(new Error('Responder has gone away')) :
 					host.request(method, payload);
@@ -228,12 +233,12 @@ export abstract class Responder {
 	abstract request(method: string, payload?: any): Promise<any>;
 }
 
-export const ResponderHost = <Type extends Responder, Args>(baseClass: new(...args: Args[]) => Type):
-new(...args: Args[]) => Type & Responder & AbstractResponderHost =>
+export const ResponderHost = <Type extends Responder, Args extends any[]>(baseClass: new(...args: Args) => Type):
+new(name: string, ...args: Args) => Type & AbstractResponderHost =>
 	class extends (baseClass as any) {
 		_refs = 1;
 
-		constructor(private readonly _name: string, ...args: Args[]) {
+		constructor(private readonly _name: string, ...args: Args) {
 			// eslint-disable-next-line constructor-super
 			super(...args);
 		}
@@ -246,8 +251,8 @@ new(...args: Args[]) => Type & Responder & AbstractResponderHost =>
 		}
 	} as any;
 
-export const ResponderClient = <Type, Args>(baseClass: new(...args: Args[]) => Type):
-new(...args: Args[]) => Type & Responder & AbstractResponderClient =>
+export const ResponderClient = <Type, Args extends any[]>(baseClass: new(...args: Args) => Type):
+new(...args: Args) => Type & Responder & AbstractResponderClient =>
 	class extends (baseClass as any) {
 		private _requestId = 0;
 		readonly _clientId = `${Math.floor(Math.random() * 2 ** 52)}`;

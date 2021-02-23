@@ -1,11 +1,10 @@
 env:
-  es2020: true
+  es2021: true
   node: true
 
 parser: '@typescript-eslint/parser'
 parserOptions:
-  ecmaVersion: 2020
-  project: ./tsconfig.json
+  project: ./tsconfig.base.json
   sourceType: module
 
 plugins: [ '@typescript-eslint' ]
@@ -197,7 +196,7 @@ rules:
   '@typescript-eslint/prefer-regexp-exec': warn
   '@typescript-eslint/prefer-string-starts-ends-with': warn
   '@typescript-eslint/restrict-plus-operands': warn
-  '@typescript-eslint/strict-boolean-expressions': [ warn, { allowNullableObject: true } ]
+  '@typescript-eslint/strict-boolean-expressions': [ off, { allowNullableBoolean: true, allowNullableObject: true } ]
   '@typescript-eslint/switch-exhaustiveness-check': warn
   '@typescript-eslint/type-annotation-spacing': warn
   '@typescript-eslint/unified-signatures': warn

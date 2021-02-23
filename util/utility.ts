@@ -1,3 +1,5 @@
+import type { LooseBoolean } from './types';
+
 // Like half the use cases of `reduce` are to sum an array, so this just does that with less
 // boilerplate
 export function accumulate(iterable: Iterable<number>, callback?: (value: number) => number): number;
@@ -101,7 +103,7 @@ export function filterInPlace<Type>(
 	iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean): Iterable<Type>;
 export function *filterInPlace(iterable: Iterable<any>, callback: (value: any) => LooseBoolean = nonNullable) {
 	for (const value of iterable) {
-		if (callback(value)) {
+		if (callback(value) as boolean) {
 			yield value;
 		}
 	}
@@ -114,7 +116,7 @@ export function firstMatching<Type>(
 	iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean): Type | undefined;
 export function firstMatching(iterable: Iterable<any>, callback: (value: any) => LooseBoolean) {
 	for (const value of iterable) {
-		if (callback(value)) {
+		if (callback(value) as boolean) {
 			return value;
 		}
 	}
@@ -157,13 +159,6 @@ export function listen<
 >(emitter: Type, message: Message, listener: Listener): Effect {
 	emitter.on(message, listener);
 	return () => emitter.removeListener(message, listener);
-}
-
-// Returns a promise and resolver functions in one
-export function makeResolver<Type>(): [ Promise<Type>, Resolver<Type> ] {
-	let resolver: Resolver<Type>;
-	const promise = new Promise<Type>((resolve, reject) => resolver = { resolve: resolve as any, reject });
-	return [ promise, resolver! ];
 }
 
 // It's like [].map except you can use it on iterables, also it doesn't generate a temporary array.

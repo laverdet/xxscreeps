@@ -49,7 +49,7 @@ const BranchesEndpoint: Endpoint = {
 	path: '/branches',
 
 	async execute(req) {
-		const { userid } = req;
+		const { userid } = req.locals;
 		const userBlob = await this.context.persistence.get(`user/${userid}/info`).catch(() => {});
 		const user = userBlob && User.read(userBlob);
 
@@ -91,7 +91,8 @@ const BranchCloneEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid, body: { branch, newName } } = req;
+		const { userid } = req.locals;
+		const { branch, newName } = req.body;
 		if (typeof newName !== 'string' || !/^[-_.a-zA-Z0-9]+$/.test(newName)) {
 			throw new Error('Invalid branch name');
 		}
@@ -133,7 +134,8 @@ const BranchSetEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid, body: { branch } } = req;
+		const { userid } = req.locals;
+		const { branch } = req.body;
 		await this.context.gameMutex.scope(async() => {
 			const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
 			const { id, name } = getBranchIdFromQuery(branch, user);
@@ -153,7 +155,8 @@ const CodeEndpoint: Endpoint = {
 	path: '/code',
 
 	async execute(req) {
-		const { userid, body: { branch } } = req;
+		const { userid } = req.locals;
+		const { branch } = req.body;
 		const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
 		const { id, name } = getBranchIdFromQuery(branch, user);
 		if (id === undefined) {
@@ -171,7 +174,8 @@ const CodePostEndpoint: Endpoint = {
 
 	async execute(req) {
 		// Validate this code payload
-		const { userid, body: { branch, modules } } = req;
+		const { userid } = req.locals;
+		const { branch, modules } = req.body;
 		let size = 0;
 		for (const module of Object.values(modules)) {
 			if (typeof module !== 'string') {
@@ -216,7 +220,8 @@ const ConsoleEndpoint: Endpoint = {
 	method: 'post',
 
 	async execute(req) {
-		const { userid, body: { expression } } = req;
+		const { userid } = req.locals;
+		const { expression } = req.body;
 		if (typeof expression !== 'string') {
 			throw new TypeError('Invalid expression');
 		}

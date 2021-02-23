@@ -2,6 +2,7 @@ import { declare, getReader, getWriter, variant, vector, TypeOf } from 'xxscreep
 import { Room } from 'xxscreeps/game/room';
 import * as Id from 'xxscreeps/engine/util/schema/id';
 
+import { _objectFormats } from '.';
 import * as Container from './container';
 import * as Controller from './controller';
 import * as ConstructionSite from './construction-site';
@@ -12,7 +13,6 @@ import * as Road from './road';
 import * as Spawn from './spawn';
 import * as Storage from './storage';
 import * as Tower from './tower';
-import * as Mods from 'xxscreeps/config/mods/schema';
 import { mapInPlace } from 'xxscreeps/util/utility';
 
 export type Shape = TypeOf<typeof shape>;
@@ -30,7 +30,7 @@ const shape = declare('Room', {
 		decompose: (map: Map<string, Readonly<Uint8Array>>) => mapInPlace(map, ([ id, memory ]) => ({ id, memory })),
 	}),
 	_objects: vector(variant(
-		...Mods.objects,
+		..._objectFormats,
 		Container.format,
 		ConstructionSite.format,
 		Controller.format,

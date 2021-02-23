@@ -11,5 +11,7 @@ const shape = declare('Source', {
 	_nextRegenerationTime: 'int32',
 });
 
-export const format = declare(shape, { overlay: Source });
-export const objects = [ format ];
+const format = declare(shape, { overlay: Source });
+declare module 'xxscreeps/engine/schema' {
+	interface RoomObjectFormats { source: typeof format }
+}

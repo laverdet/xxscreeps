@@ -11,7 +11,6 @@ import { ConstructionSite } from './objects/construction-site';
 import { Creep } from './objects/creep';
 import { Resource } from './objects/resource';
 import { RoomObject } from './objects/room-object';
-import { Source } from './objects/source';
 import { Structure } from './objects/structures';
 import { StructureContainer } from './objects/structures/container';
 import { StructureController } from './objects/structures/controller';
@@ -59,7 +58,6 @@ export function setupGlobals(globalThis: any) {
 		RoomObject,
 		RoomPosition,
 		RoomVisual,
-		Source,
 		Structure,
 		StructureContainer,
 		StructureController,

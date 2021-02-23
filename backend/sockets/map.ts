@@ -1,3 +1,4 @@
+import type { Implementation } from 'xxscreeps/util/types';
 import * as Room from 'xxscreeps/engine/schema/room';
 import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { Creep } from 'xxscreeps/game/objects/creep';
@@ -12,12 +13,11 @@ type Position = [ number, number ];
 // Register a map renderer on a `RoomObject` type
 const MapRender = Symbol('mapRender');
 declare module 'xxscreeps/game/objects/room-object' {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface RoomObject {
-		[MapRender]?: (object: RoomObject) => string | undefined;
+		[MapRender]?: (object: any) => string | undefined;
 	}
 }
-export function bindMapRenderer<Type extends RoomObject>(object: { prototype: Type }, render: (object: Type) => string | undefined) {
+export function bindMapRenderer<Type extends RoomObject>(object: Implementation<Type>, render: (object: Type) => string | undefined) {
 	object.prototype[MapRender] = render;
 }
 bindMapRenderer(Creep, creep => creep._owner);

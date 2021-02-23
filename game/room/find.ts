@@ -43,4 +43,4 @@ const builtinFind = registerFindHandlers({
 export interface Find { builtin: typeof builtinFind }
 
 // Convert a FIND_ constant to result type
-export type FindType<Find extends FindConstants> = ReturnType<KeyFor<FindHandlers, Find>>;
+export type FindType<Find extends FindConstants> = ReturnType<KeyFor<FindHandlers, Find>>[number];

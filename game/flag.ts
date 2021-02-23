@@ -1,3 +1,4 @@
+import type { Dictionary } from 'xxscreeps/util/types';
 import * as C from './constants';
 import * as Game from './game';
 import * as Memory from './memory';

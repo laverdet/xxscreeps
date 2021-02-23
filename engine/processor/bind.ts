@@ -1,3 +1,4 @@
+import type { Dictionary } from 'xxscreeps/util/types';
 import type { ProcessorContext } from './context';
 export const Process = Symbol('process');
 export const Tick = Symbol('tick');

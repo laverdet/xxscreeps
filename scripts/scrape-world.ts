@@ -52,7 +52,7 @@ function withStore(object: any) {
 
 // Load JSON data and connect to blob storage
 const db = new Loki(jsonSource);
-await new Promise((resolve, reject) =>
+await new Promise<void>((resolve, reject) =>
 	db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve()));
 await Storage.initialize();
 const storage = await Storage.connect('shard0');
@@ -67,7 +67,7 @@ const { gameTime }: { gameTime: number } = env;
 const roomObjects = db.getCollection('rooms.objects');
 const rooms = db.getCollection('rooms').find().map(room => ({
 	name: room._id,
-	_npcs: new Set,
+	_npcs: new Set<string>(),
 	_npcMemory: new Map,
 	_objects: [ ...filterInPlace(roomObjects.find({ room: room._id }).map(object => {
 		switch (object.type) {

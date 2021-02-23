@@ -1,3 +1,4 @@
+import type { Dictionary } from 'xxscreeps/util/types';
 import * as C from 'xxscreeps/game/constants';
 import { checkCreateFlag, Color, Flag } from 'xxscreeps/game/flag';
 import { fromPositionId } from 'xxscreeps/game/position';
