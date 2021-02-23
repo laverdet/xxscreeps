@@ -15,7 +15,7 @@ export const optionalFormat = declare('Id', array(4, 'uint32'), {
 		).substr(24 - view.int8[offset]);
 	},
 
-	decomposeIntoBuffer(value: string, view: BufferView, offset: number) {
+	decomposeIntoBuffer(value: string | undefined, view: BufferView, offset: number) {
 		// Write from the end of the string in chunks of 8
 		let offset32 = (offset >>> 2) + 4;
 		if (value === undefined) {

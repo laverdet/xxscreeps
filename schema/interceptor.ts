@@ -22,7 +22,7 @@ export type Interceptor<Format = any> =
 	RawCompositionInterceptor |
 	OverlayInterceptor;
 
-export type InterceptorResult<Format, In extends Interceptor> =
+export type InterceptorResult<Format, In> =
 	In extends CompositionInterceptor<ShapeOf<Format>, TypeOf<Format>, infer Type> ? WithShapeAndType<Type> :
 	In extends RawCompositionInterceptor<infer Type> ? WithShapeAndType<Type> :
 	In extends OverlayInterceptor<infer Type> ? WithShapeAndType<ShapeOf<Format>, Type> :
@@ -50,13 +50,13 @@ export const defaultInterceptorLookup = {
 function recursiveLookup(layout: Layout, symbol: typeof BoundInterceptor): UnionToIntersection<Interceptor> | undefined;
 function recursiveLookup(layout: Layout, symbol: typeof BoundSymbol): string | symbol | undefined;
 function recursiveLookup(layout: Layout, symbol: typeof FormatName): string | undefined;
-function recursiveLookup(layout: Layout, symbol: keyof Layout): any {
+function recursiveLookup(layout: Layout, symbol: typeof BoundInterceptor | typeof BoundSymbol | typeof FormatName): any {
 	if (typeof layout !== 'string') {
 		if (layout[symbol] !== undefined) {
 			return layout[symbol];
 		}
 		if ('holder' in layout) {
-			return recursiveLookup(layout.holder, symbol);
+			return recursiveLookup(layout.holder, symbol as never);
 		}
 	}
 }

@@ -71,6 +71,12 @@ type StructLookup<Type extends StructFormat, Symbol extends string | symbol> =
 	Symbol extends keyof Type ? Type[Symbol] :
 	{ [Key in keyof Type]: Type[Key] extends WithSymbol<Symbol> ? Type[Key] : never }[keyof Type];
 
+type DeclareOverloads =
+	[ Definition ] |
+	[ string, Definition ] |
+	[ Definition, Interceptor | symbol ] |
+	[ string | undefined, Definition, Interceptor | symbol | string ];
+
 export function declare<Type extends Format>(format: Type):
 WithShapeAndType<ShapeOf<Type>, TypeOf<Type>>;
 export function declare<Type extends Format>(name: string, format: Type):
@@ -86,12 +92,7 @@ WithShapeAndType<ShapeOf<Type>, TypeOf<Type>> & WithSymbol<Symbol>;
 export function declare<Type extends Format, Symbol extends string | symbol>(name: string | undefined, format: Type, symbol: Symbol):
 WithShapeAndType<ShapeOf<Type>, TypeOf<Type>> & WithSymbol<Symbol>;
 
-export function declare(...args:
-	[ Definition ] |
-	[ string, Definition ] |
-	[ Definition, Interceptor | symbol ] |
-	[ string | undefined, Definition, Interceptor | symbol | string ]
-) {
+export function declare(...args: DeclareOverloads) {
 	// Extract argument overloads
 	const { name, format, interceptor, symbol } = function() {
 		if (args.length === 1) {
@@ -103,9 +104,10 @@ export function declare(...args:
 				return { format: args[0], interceptor: args[1] as Interceptor };
 			}
 		} else {
-			const { interceptor = undefined, symbol = undefined } =
+			const { interceptor, symbol } =
 				(typeof args[2] === 'string' || typeof args[2] === 'symbol') ?
-					{ symbol: args[2] } : { interceptor: args[2] };
+					{ interceptor: undefined, symbol: args[2] } :
+					{ interceptor: args[2], symbol: undefined };
 			return { name: args[0], format: args[1], interceptor, symbol };
 		}
 	}();
