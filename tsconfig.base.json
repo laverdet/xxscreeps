@@ -1,9 +1,10 @@
 {
 	"compilerOptions": {
 		"composite": true,
-		"noEmitOnError": false,
 		"sourceMap": true,
+		"outDir": "dist",
 
+		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
 		"resolveJsonModule": true,
 		"moduleResolution": "node",
@@ -12,5 +13,7 @@
 		"lib": [ "esnext" ],
 
 		"strict": true,
-	}
+	},
+	"exclude": [ "**/dist", "**/package.json", "**/package-lock.json", "**/tsconfig.json" ],
+	"include": [ "**/*", "**/*.json" ],
 }

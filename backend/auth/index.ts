@@ -3,6 +3,7 @@ import { declare, getReader, getWriter, vector, TypeOf } from 'xxscreeps/schema'
 import * as Id from 'xxscreeps/engine/util/schema/id';
 import { checkToken, makeToken } from './token';
 
+import type {} from 'xxscreeps/backend/endpoint';
 declare module 'xxscreeps/backend/endpoint' {
 	interface Locals {
 		token?: string;

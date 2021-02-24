@@ -2,7 +2,7 @@
 	"extends": "./tsconfig.base",
 	"compilerOptions": {
 		"composite": false,
-		"outDir": "dist"
+		"rootDir": ".",
 	},
 	"references UNUSED": [
 		{ "path": "./mods/harvestable" },
