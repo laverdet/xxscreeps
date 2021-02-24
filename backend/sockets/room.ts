@@ -4,7 +4,7 @@ import { getFlagChannel, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser } from 'xxscreeps/game/game';
 import { SubscriptionEndpoint } from '../socket';
 import { acquire, mapInPlace, mapToKeys } from 'xxscreeps/util/utility';
-import { Render } from './symbols';
+import { Render } from 'xxscreeps/backend/symbols';
 import './render';
 
 function diff(previous: any, next: any) {
@@ -64,8 +64,8 @@ export const roomSubscription: SubscriptionEndpoint = {
 			const visibleUsers = new Set<string>();
 			runAsUser(this.user, time, () => {
 				for (const object of room._objects) {
-					const value = object[Render]?.(object);
-					if (value !== undefined) {
+					const value = object[Render]();
+					if (value._id) {
 						objects[value._id] = value;
 					}
 					const owner = object._owner;

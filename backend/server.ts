@@ -1,3 +1,4 @@
+import {} from 'xxscreeps/config/mods/backend';
 import bodyParser from 'body-parser';
 import Express from 'express';
 import http, { IncomingMessage, Server, ServerResponse } from 'http';

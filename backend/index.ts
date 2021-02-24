@@ -1,20 +1,33 @@
-import type { Constructor } from 'xxscreeps/util/types';
-import { bindRenderer } from './sockets/render';
+import type { Implementation } from 'xxscreeps/util/types';
+import type { RoomObject } from 'xxscreeps/game/objects/room-object';
+import { MapRender, Render } from './symbols';
 
-type MapPosition = [ number, number ];
-type MapResult = {
-	[Key: string]: MapPosition[];
+// `RoomObject` render symbols
+type RenderedRoomObject = {
+	_id: string;
+	type: string;
+	x: number;
+	y: number;
 };
+declare module 'xxscreeps/game/objects/room-object' {
+	interface RoomObject {
+		[Render]: () => RenderedRoomObject;
+		[MapRender]: (object: any) => string | undefined;
+	}
+}
 
-export const MapSerializer = Symbol('mapSerializer');
-export function bindMapSerializer<Type>(impl: Constructor<Type>, serializer: (object: Type, map: MapResult) => void) {
-	impl.prototype[MapSerializer] = function(map: MapResult) {
-		return serializer(this, map);
+// Backend render hooks
+export function bindRenderer<Type extends RoomObject>(
+	object: Implementation<Type>,
+	render: (object: Type, next: () => RenderedRoomObject) => RenderedRoomObject,
+) {
+	const { prototype } = object;
+	const parent = Object.getPrototypeOf(prototype);
+	prototype[Render] = function() {
+		return render(this, () => parent[Render].call(this));
 	};
 }
 
-export function bindRoomSerializer<Type>(impl: Constructor<Type>, serializer: (object: Type) => any) {
-	bindRenderer(impl, function() {
-		return serializer(this);
-	});
+export function bindMapRenderer<Type extends RoomObject>(object: Implementation<Type>, render: (object: Type) => string | undefined) {
+	object.prototype[MapRender] = render;
 }

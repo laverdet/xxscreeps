@@ -1,3 +1,4 @@
+import { bindRenderer } from 'xxscreeps/backend';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
 import { Creep } from 'xxscreeps/game/objects/creep';
@@ -12,45 +13,24 @@ import { StructureStorage } from 'xxscreeps/game/objects/structures/storage';
 import { StructureTower } from 'xxscreeps/game/objects/structures/tower';
 import { Store } from 'xxscreeps/game/store';
 import { Variant } from 'xxscreeps/schema';
-import { Render } from './symbols';
 
-// Register a room renderer on a `RoomObject` type
-type RenderedRoomObject = {
-	_id: string;
-	type: string;
-	x: number;
-	y: number;
-};
-declare module 'xxscreeps/game/objects/room-object' {
-	interface RoomObject {
-		[Render]?: (this: any, object: any) => RenderedRoomObject;
-	}
-}
+// Base object renderers
+bindRenderer(RoomObject, object => ({
+	_id: object.id,
+	type: object[Variant],
+	x: object.pos.x,
+	y: object.pos.y,
+}));
 
-export function bindRenderer<Type extends RoomObject>(impl: { prototype: Type }, renderer: (this: Type, object: Type) => RenderedRoomObject) {
-	impl.prototype[Render] = renderer;
-}
+bindRenderer(Structure, (structure, next) => ({
+	...next(),
+	structureType: structure.structureType,
+	hits: structure.hits,
+	hitsMax: 100, //structure.hitsMax,
+	user: structure._owner,
+}));
 
-// Default object renderers
-export function renderObject(object: RoomObject) {
-	return {
-		_id: object.id,
-		type: object[Variant],
-		x: object.pos.x,
-		y: object.pos.y,
-	};
-}
-
-function renderStructure(structure: Structure) {
-	return {
-		...renderObject(structure),
-		structureType: structure.structureType,
-		hits: structure.hits,
-		hitsMax: 100, //structure.hitsMax,
-		user: structure._owner,
-	};
-}
-
+// Store renderer
 function renderStore(store: Store) {
 	const result: any = {
 		store: { ...store },
@@ -70,111 +50,86 @@ function renderStore(store: Store) {
 	return result;
 }
 
-bindRenderer(ConstructionSite, function render() {
-	return {
-		...renderObject(this),
-		progress: this.progress,
-		progressTotal: this.progressTotal,
-		structureType: this.structureType,
-		user: this._owner,
-	};
-});
+// Builtin renderers
+bindRenderer(ConstructionSite, (constructionSite, next) => ({
+	...next(),
+	progress: constructionSite.progress,
+	progressTotal: constructionSite.progressTotal,
+	structureType: constructionSite.structureType,
+	user: constructionSite._owner,
+}));
 
-bindRenderer(Creep, function render() {
-	return {
-		...renderObject(this),
-		...renderStore(this.store),
-		name: this.name,
-		body: this.body,
-		hits: this.hits,
-		hitsMax: 100,
-		spawning: this.spawning,
-		fatigue: this.fatigue,
-		ageTime: this._ageTime,
-		user: this._owner,
-		actionLog: {
-			attacked: null,
-			healed: null,
-			attack: null,
-			rangedAttack: null,
-			rangedMassAttack: null,
-			rangedHeal: null,
-			harvest: null,
-			heal: null,
-			repair: null,
-			build: null,
-			say: null,
-			upgradeController: null,
-			reserveController: null,
-		},
-	};
-});
+bindRenderer(Creep, (creep, next) => ({
+	...next(),
+	...renderStore(creep.store),
+	name: creep.name,
+	body: creep.body,
+	hits: creep.hits,
+	hitsMax: 100,
+	spawning: creep.spawning,
+	fatigue: creep.fatigue,
+	ageTime: creep._ageTime,
+	user: creep._owner,
+	actionLog: {
+		attacked: null,
+		healed: null,
+		attack: null,
+		rangedAttack: null,
+		rangedMassAttack: null,
+		rangedHeal: null,
+		harvest: null,
+		heal: null,
+		repair: null,
+		build: null,
+		say: null,
+		upgradeController: null,
+		reserveController: null,
+	},
+}));
 
-bindRenderer(Resource, function render() {
-	return {
-		...renderObject(this),
-		type: 'energy',
-		resourceType: this.resourceType,
-		[this.resourceType]: this.amount,
-	};
-});
+bindRenderer(Resource, (resource, next) => ({
+	...next(),
+	type: 'energy',
+	resourceType: resource.resourceType,
+	[resource.resourceType]: resource.amount,
+}));
 
-bindRenderer(Structure, function render() {
-	return {
-		...renderStructure(this),
-	};
-});
+bindRenderer(StructureContainer, (container, next) => ({
+	...next(),
+	...renderStore(container.store),
+	nextDecayTime: container._nextDecayTime,
+}));
 
-bindRenderer(StructureContainer, function render() {
-	return {
-		...renderStructure(this),
-		...renderStore(this.store),
-		nextDecayTime: this._nextDecayTime,
-	};
-});
+bindRenderer(StructureController, (controller, next) => ({
+	...next(),
+	level: controller.level,
+	progress: controller.progress,
+	downgradeTime: controller._downgradeTime,
+	safeMode: 0,
+}));
 
-bindRenderer(StructureController, function render() {
-	return {
-		...renderStructure(this),
-		level: this.level,
-		progress: this.progress,
-		downgradeTime: this._downgradeTime,
-		safeMode: 0,
-	};
-});
+bindRenderer(StructureExtension, (extension, next) => ({
+	...next(),
+	...renderStore(extension.store),
+}));
 
-bindRenderer(StructureExtension, function render() {
-	return {
-		...renderStructure(this),
-		...renderStore(this.store),
-	};
-});
+bindRenderer(StructureRoad, (road, next) => ({
+	...next(),
+	nextDecayTime: road._nextDecayTime,
+}));
 
-bindRenderer(StructureRoad, function render() {
-	return {
-		...renderStructure(this),
-		nextDecayTime: this._nextDecayTime,
-	};
-});
+bindRenderer(StructureSpawn, (spawn, next) => ({
+	...next(),
+	...renderStore(spawn.store),
+	name: spawn.name,
+}));
 
-bindRenderer(StructureSpawn, function render() {
-	return {
-		...renderStructure(this),
-		...renderStore(this.store),
-		name: this.name,
-	};
-});
+bindRenderer(StructureStorage, (storage, next) => ({
+	...next(),
+	...renderStore(storage.store),
+}));
 
-bindRenderer(StructureStorage, function render() {
-	return {
-		...renderStructure(this),
-		...renderStore(this.store),
-	};
-});
-
-bindRenderer(StructureTower, function render() {
-	return {
-		...renderStructure(this),
-		...renderStore(this.store),
-	};
-});
+bindRenderer(StructureTower, (tower, next) => ({
+	...next(),
+	...renderStore(tower.store),
+}));

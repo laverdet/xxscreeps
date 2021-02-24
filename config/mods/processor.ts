@@ -1,1 +1,1 @@
-export * from 'xxscreeps/mods/harvestable/processor';
+import 'xxscreeps/mods/harvestable/processor';

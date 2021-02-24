@@ -1,2 +1,2 @@
-export * from 'xxscreeps/mods/harvestable/game';
-export * from 'xxscreeps/mods/source/game';
+import 'xxscreeps/mods/harvestable/game';
+import 'xxscreeps/mods/source/game';
