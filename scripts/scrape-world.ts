@@ -18,7 +18,7 @@ import { getWriter } from 'xxscreeps/schema/write';
 import * as Storage from 'xxscreeps/storage';
 import { accumulate, clamp, filterInPlace, getOrSet, mapInPlace, firstMatching } from 'xxscreeps/util/utility';
 
-const [ jsonSource ] = process.argv.slice(2);
+const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
 if (jsonSource === undefined) {
 	console.error(`Usage: ${process.argv[1]} db.json`);
 	process.exit(1);
@@ -36,7 +36,7 @@ function withRoomObject(object: any) {
 function withStructure(object: any) {
 	return {
 		...withRoomObject(object),
-		_owner: object.user,
+		_owner: object.user ?? null,
 		hits: 0,
 	};
 }
@@ -157,7 +157,7 @@ const users = db.getCollection('users').find().map(user => {
 		roomsPresent: (roomsPresent.get(user._id) ?? new Set),
 		roomsVisible: (roomsVisible.get(user._id) ?? new Set),
 		code: {
-			branch: firstMatching(code, code => code.activeWorld)?._id,
+			branch: firstMatching(code, code => code.activeWorld)?._id ?? null,
 			branches: code.map(row => ({
 				id: row._id,
 				name: row.branch,

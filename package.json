@@ -19,6 +19,7 @@
   "dependencies": {
     "@xxscreeps/path-finder": "file:path-finder",
     "acorn": "^8.0.5",
+    "isolated-vm": "github:laverdet/isolated-vm",
     "lodash": "^3.10.1",
     "lokijs": "^1.5.11"
   },

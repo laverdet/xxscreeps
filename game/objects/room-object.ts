@@ -14,7 +14,7 @@ export abstract class RoomObject extends withOverlay<Shape>()(BufferObject) {
 	}
 
 	room!: Room;
-	_owner?: string;
+	_owner?: string | null;
 	[Variant]: string;
 }
 

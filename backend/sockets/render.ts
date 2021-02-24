@@ -12,9 +12,26 @@ import { StructureStorage } from 'xxscreeps/game/objects/structures/storage';
 import { StructureTower } from 'xxscreeps/game/objects/structures/tower';
 import { Store } from 'xxscreeps/game/store';
 import { Variant } from 'xxscreeps/schema';
-import { bindRenderer } from './room';
-export { bindRenderer };
+import { Render } from './symbols';
 
+// Register a room renderer on a `RoomObject` type
+type RenderedRoomObject = {
+	_id: string;
+	type: string;
+	x: number;
+	y: number;
+};
+declare module 'xxscreeps/game/objects/room-object' {
+	interface RoomObject {
+		[Render]?: (this: any, object: any) => RenderedRoomObject;
+	}
+}
+
+export function bindRenderer<Type extends RoomObject>(impl: { prototype: Type }, renderer: (this: Type, object: Type) => RenderedRoomObject) {
+	impl.prototype[Render] = renderer;
+}
+
+// Default object renderers
 export function renderObject(object: RoomObject) {
 	return {
 		_id: object.id,

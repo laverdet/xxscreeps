@@ -28,7 +28,7 @@ const WorldStatusEndpoint: Endpoint = {
 
 	async execute(req) {
 		const { userid } = req.locals;
-		const user = await loadUser(this.context, userid!).catch(() => {});
+		const user = userid && await loadUser(this.context, userid).catch(() => {});
 		if (!user) {
 			return { ok: 1, status: 'empty' };
 		} else if (user.roomsControlled.size === 0) {

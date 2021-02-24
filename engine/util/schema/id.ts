@@ -8,17 +8,17 @@ export const optionalFormat = declare('Id', array(4, 'uint32'), {
 		// front.
 		const offset32 = offset >>> 2;
 		const length = view.int8[offset];
-		return length === 0 ? undefined : (
+		return length === 0 ? null : (
 			view.uint32[offset32 + 1].toString(16).padStart(8, '0') +
 			view.uint32[offset32 + 2].toString(16).padStart(8, '0') +
 			view.uint32[offset32 + 3].toString(16).padStart(8, '0')
 		).substr(24 - view.int8[offset]);
 	},
 
-	decomposeIntoBuffer(value: string | undefined, view: BufferView, offset: number) {
+	decomposeIntoBuffer(value: string | null, view: BufferView, offset: number) {
 		// Write from the end of the string in chunks of 8
 		let offset32 = (offset >>> 2) + 4;
-		if (value === undefined) {
+		if (value === null) {
 			view.uint32[offset32 - 1] =
 			view.uint32[offset32 - 2] =
 			view.uint32[offset32 - 3] =

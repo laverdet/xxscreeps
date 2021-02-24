@@ -1,3 +1,4 @@
+import 'xxscreeps/config/mods/schema';
 import { declare, getReader, getWriter, variant, vector, TypeOf } from 'xxscreeps/schema';
 import { Room } from 'xxscreeps/game/room';
 import * as Id from 'xxscreeps/engine/util/schema/id';

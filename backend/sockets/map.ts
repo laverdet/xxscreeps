@@ -21,7 +21,7 @@ export function bindMapRenderer<Type extends RoomObject>(object: Implementation<
 	object.prototype[MapRender] = render;
 }
 bindMapRenderer(Creep, creep => creep._owner);
-bindMapRenderer(Structure, structure => structure._owner);
+bindMapRenderer(Structure, structure => structure._owner ?? undefined);
 bindMapRenderer(StructureController, () => 'c');
 bindMapRenderer(StructureRoad, () => 'r');
 

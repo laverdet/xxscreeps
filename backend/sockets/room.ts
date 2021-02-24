@@ -1,27 +1,11 @@
 import * as Room from 'xxscreeps/engine/schema/room';
 import * as User from 'xxscreeps/engine/metadata/user';
-import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { getFlagChannel, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser } from 'xxscreeps/game/game';
 import { SubscriptionEndpoint } from '../socket';
 import { acquire, mapInPlace, mapToKeys } from 'xxscreeps/util/utility';
-
-// Register a room renderer on a `RoomObject` type
-const Render = Symbol('render');
-type RenderedRoomObject = {
-	_id: string;
-	type: string;
-	x: number;
-	y: number;
-};
-declare module 'xxscreeps/game/objects/room-object' {
-	interface RoomObject {
-		[Render]?: (this: any, object: any) => RenderedRoomObject;
-	}
-}
-export function bindRenderer<Type extends RoomObject>(impl: { prototype: Type }, renderer: (this: Type, object: Type) => RenderedRoomObject) {
-	impl.prototype[Render] = renderer;
-}
+import { Render } from './symbols';
+import './render';
 
 function diff(previous: any, next: any) {
 	if (previous === next) {
@@ -85,7 +69,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 						objects[value._id] = value;
 					}
 					const owner = object._owner;
-					if (owner !== undefined && !seenUsers.has(owner)) {
+					if (owner != null && !seenUsers.has(owner)) {
 						visibleUsers.add(owner);
 					}
 				}

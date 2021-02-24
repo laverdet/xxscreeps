@@ -15,7 +15,7 @@ export const format = declare('User', {
 	roomsPresent: StringSet.format,
 	roomsVisible: StringSet.format,
 	code: {
-		branch: Id.format,
+		branch: Id.optionalFormat,
 		branches: vector({
 			id: Id.format,
 			name: 'string',
@@ -38,7 +38,7 @@ export function create(username: string, id?: string) {
 		roomsPresent: new Set<string>(),
 		roomsVisible: new Set<string>(),
 		code: {
-			branch: undefined as any as string,
+			branch: null,
 			branches: [],
 		},
 	};

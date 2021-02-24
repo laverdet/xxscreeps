@@ -1,6 +1,7 @@
 import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import type { Implementation } from 'xxscreeps/util/types';
 
+// `RoomObject` type definitions
 const Processors = Symbol('processors');
 const Tick = Symbol('tick');
 declare module 'xxscreeps/game/objects/room-object' {
@@ -13,7 +14,7 @@ declare module 'xxscreeps/game/objects/room-object' {
 }
 
 // Register RoomObject intent processor
-export function registerActionProcessor<Type extends RoomObject, Action extends string, Data = undefined>(
+export function registerActionProcessor<Type extends RoomObject, Action extends string, Data = void>(
 	receiver: Implementation<Type>,
 	action: Action,
 	process: (receiver: Type, data: Data) => boolean,

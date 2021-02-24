@@ -1,12 +1,15 @@
+import { findHandlers } from './symbols';
+
+import 'xxscreeps/config/mods/game';
 import type { KeysOf, KeyFor } from 'xxscreeps/util/types';
 import * as C from 'xxscreeps/game/constants';
 import { lookFor, Room } from './room';
 
 // Registers a FIND_ constant and its respective handler
-type FindHandler = (room: Room) => any[];
+export type FindHandler = (room: Room) => any[];
 type FindHandlers = Exclude<Find[keyof Find], void>;
 export type FindConstants = KeysOf<FindHandlers>;
-export const findHandlers = new Map<number, FindHandler>();
+export { findHandlers };
 export function registerFindHandlers<Find extends { [find: number]: FindHandler }>(handlers: Find): void | Find {
 	for (const key in handlers) {
 		findHandlers.set(Number(key), handlers[key]);

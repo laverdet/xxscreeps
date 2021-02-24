@@ -1,3 +1,6 @@
+import { lookConstants } from './symbols';
+
+import 'xxscreeps/config/mods/game';
 import * as C from 'xxscreeps/game/constants';
 import type { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
 import type { Creep } from 'xxscreeps/game/objects/creep';
@@ -6,7 +9,7 @@ import type { Resource } from 'xxscreeps/game/objects/resource';
 import type { AnyStructure } from 'xxscreeps/game/objects/structures';
 
 // Registers a LOOK_ constant and returns type information
-export const lookConstants = new Set<LookConstants>();
+export { lookConstants };
 export function registerLook<Type>() {
 	return <Look extends string>(key: Look): void | ((key: Look) => Type) => {
 		lookConstants.add(key as never);

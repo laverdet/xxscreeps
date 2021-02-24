@@ -27,7 +27,7 @@ export const MapStatsEndpoint: Endpoint = {
 			const owner = function() {
 				if (room.controller) {
 					const user = room.controller._owner;
-					if (user !== undefined) {
+					if (user !== null) {
 						userIds.add(user);
 						return {
 							own: {

@@ -17,7 +17,6 @@ import userEndpoints from './user';
 function bindRoutes(context: BackendContext, router: Router, endpoints: Endpoint[]) {
 	for (const endpoint of endpoints) {
 		router[endpoint.method ?? 'get'](endpoint.path, (req, res, next) => {
-			req.locals = res.locals;
 			Promise.resolve(endpoint.execute.call({ context }, req, res)).then(value => {
 				if (value === undefined) {
 					next();
@@ -29,7 +28,7 @@ function bindRoutes(context: BackendContext, router: Router, endpoints: Endpoint
 					res.end(JSON.stringify(value));
 				}
 			}, err => {
-				console.error('Unhandled error', err);
+				console.error(`Unhandled error. Endpoint: ${req.url}\n`, err);
 				res.writeHead(500);
 				res.end();
 			});
@@ -40,6 +39,10 @@ function bindRoutes(context: BackendContext, router: Router, endpoints: Endpoint
 
 export function installEndpointHandlers(express: Express, context: BackendContext) {
 	const apiRouter = Router();
+	apiRouter.use((req, res, next) => {
+		req.locals = {};
+		next();
+	});
 	bindRoutes(context, apiRouter, [ VersionEndpoint ]);
 	apiRouter.use('/auth', bindRoutes(context, Router(), [
 		MeEndpoint,

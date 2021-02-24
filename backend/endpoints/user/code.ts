@@ -22,7 +22,7 @@ function getBranchIdFromQuery(branch: any, user: User.User, create = false) {
 		}
 	}();
 	// Possibly need to create the default branch
-	if (id === undefined) {
+	if (id == null) {
 		if (create) {
 			if (branch != null && branch[0] !== '$' && branch !== kDefaultBranch) {
 				throw new Error('Branch does not exist');

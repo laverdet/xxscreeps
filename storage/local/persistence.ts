@@ -126,6 +126,7 @@ const LocalPersistenceHost = ResponderHost(class LocalPersistenceHost extends Lo
 		// Load from file system
 		const path = Path.join(this.path, key);
 		const handle = await fs.open(path, 'r');
+
 		try {
 			const { size } = await handle.stat();
 			const buffer = new Uint8Array(new SharedArrayBuffer(size));

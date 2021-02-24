@@ -1,4 +1,5 @@
 import { declare, inherit, variant, TypeOf } from 'xxscreeps/schema';
+import { registerRoomObjectFormat } from 'xxscreeps/engine/schema';
 import * as RoomObject from 'xxscreeps/engine/schema/room-object';
 import { Source } from './source';
 
@@ -12,6 +13,7 @@ const shape = declare('Source', {
 });
 
 const format = declare(shape, { overlay: Source });
+registerRoomObjectFormat(format);
 declare module 'xxscreeps/engine/schema' {
 	interface RoomObjectFormats { source: typeof format }
 }
