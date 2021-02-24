@@ -20,7 +20,14 @@ export class Mutex {
 		return new Mutex(channel, lock);
 	}
 
-	disconnect() {
+	async disconnect() {
+		if (this.lockedOrPending) {
+			throw new Error('Can\'t disconnect while mutex locked');
+		} else if (this.waitingListener) {
+			await this.lockable.unlock();
+			await this.channel.publish('unlocked');
+			this.waitingListener = undefined;
+		}
 		this.channel.disconnect();
 	}
 
@@ -89,8 +96,7 @@ export class Mutex {
 		if (this.lockedOrPending) {
 			// If there's more waiting locally then run them
 			if (this.localQueue.length !== 0) {
-				const next = this.localQueue.shift();
-				next!();
+				this.localQueue.shift()!();
 				return;
 			}
 			this.lockedOrPending = false;

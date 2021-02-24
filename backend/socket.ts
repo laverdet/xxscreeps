@@ -32,7 +32,7 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 			// Sometimes Sockjs gives us dead connections on restart..
 			return;
 		}
-		let user: string;
+		let user: string | undefined;
 		const subscriptions = new Map<string, Promise<Unlistener>>();
 		function close() {
 			for (const [ name, unlistener ] of subscriptions) {

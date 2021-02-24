@@ -147,7 +147,7 @@ try {
 	storage.disconnect();
 	processorChannel.disconnect();
 	runnerChannel.disconnect();
-	gameMutex.disconnect();
+	await gameMutex.disconnect();
 	await serviceChannel.publish({ type: 'mainDisconnected' });
 	serviceChannel.disconnect();
 }

@@ -125,7 +125,7 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 					time: number;
 				};
 				if (reusePath > 0) {
-					const { _move }: { _move: SavedMove } = this.memory;
+					const { _move }: { _move?: SavedMove } = this.memory;
 					if (_move !== undefined) {
 						if (Game.time > _move.time + reusePath || _move.room !== this.pos.roomName) {
 							delete this.memory._move;

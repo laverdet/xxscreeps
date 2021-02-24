@@ -1,9 +1,14 @@
 import os from 'os';
 import config from 'xxscreeps/engine/config';
+import argv from 'xxscreeps/config/arguments';
 import { Worker, waitForWorker } from 'xxscreeps/util/worker';
 import { listen } from 'xxscreeps/util/utility';
+import { ConsoleMessage } from 'xxscreeps/engine/metadata/code';
+import * as GameSchema from 'xxscreeps/engine/metadata/game';
+import * as UserSchema from 'xxscreeps/engine/metadata/user';
 import * as Storage from 'xxscreeps/storage';
 import { Channel } from 'xxscreeps/storage/channel';
+import { Mutex } from 'xxscreeps/storage/mutex';
 
 import { ProcessorMessage, RunnerMessage, ServiceMessage } from '.';
 
@@ -13,6 +18,34 @@ const storage = await Storage.connect('shard0');
 const serviceChannel = await new Channel<ServiceMessage>(storage, 'service').subscribe();
 
 try {
+
+	// Attach console for given user
+	if (argv['attach-console']) {
+		const attachTo = argv['attach-console'];
+		const gameMutex = await Mutex.connect(storage, 'game');
+		try {
+			const id = await gameMutex.scope(async() => {
+				const { persistence } = storage;
+				const userIds = GameSchema.read(await persistence.get('game')).users;
+				for (const userId of userIds) {
+					const user = UserSchema.read(await persistence.get(`user/${userId}/info`));
+					if (user.username === attachTo) {
+						return userId;
+					}
+				}
+				throw new Error(`User: ${attachTo} not found`);
+			});
+			const channel = await new Channel<ConsoleMessage>(storage, `user/${id}/console`).subscribe();
+			channel.listen(message => {
+				if (message.type === 'console') {
+					console.log(message.log);
+				}
+			});
+		} finally {
+			await gameMutex.disconnect();
+		}
+	}
+
 	// Start main service
 	const waitForMain = async function() {
 		for await (const message of serviceChannel) {
@@ -72,6 +105,11 @@ try {
 			waitForWorker(backend),
 		]);
 	}
+
+} catch (err) {
+	// Show error now, before waiting for shut down
+	console.error('Uncaught exception ', err);
+	serviceChannel.publish({ type: 'shutdown' }).catch(console.error);
 
 } finally {
 	// Shut down shared services

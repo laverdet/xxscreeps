@@ -7,7 +7,7 @@ import type { Subscription } from 'xxscreeps/storage/channel';
 import { getRunnerUserChannel, RunnerIntent, RunnerUserMessage } from './channel';
 
 export class PlayerInstance {
-	private branch: string;
+	private branch: string | null;
 	private readonly consoleChannel: ReturnType<typeof getConsoleChannel>;
 	public consoleEval?: string[];
 	public intents?: RunnerIntent[];
@@ -21,7 +21,7 @@ export class PlayerInstance {
 		user: User.User,
 		private readonly channel: Subscription<RunnerUserMessage>,
 	) {
-		this.branch = user.code.branch!;
+		this.branch = user.code.branch;
 		this.roomsVisible = user.roomsVisible;
 		this.userId = user.id;
 		this.consoleChannel = getConsoleChannel(this.shard, this.userId);
