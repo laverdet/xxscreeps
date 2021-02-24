@@ -18,17 +18,18 @@
   ],
   "dependencies": {
     "@xxscreeps/path-finder": "file:path-finder",
+    "acorn": "^8.0.5",
     "lodash": "^3.10.1",
     "lokijs": "^1.5.11"
   },
   "devDependencies": {
     "@types/lodash": "4.14.168",
     "@types/lokijs": "^1.5.3",
-    "@types/node": "^14.14.28",
-    "@typescript-eslint/eslint-plugin": "^4.15.0",
-    "@typescript-eslint/parser": "^4.15.0",
+    "@types/node": "^14.14.31",
+    "@typescript-eslint/eslint-plugin": "^4.15.2",
+    "@typescript-eslint/parser": "^4.15.2",
     "eslint": "^7.20.0",
-    "typescript": "^4.2.1-rc",
+    "typescript": "^4.2.2",
     "xxscreeps": "."
   }
 }
