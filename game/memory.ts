@@ -1,5 +1,4 @@
 import { typedArrayToString } from 'xxscreeps/util/string';
-declare const globalThis: any;
 
 const kMemoryGrowthSize = 4096;
 const kMemoryMaxLength = 2 * 1024 * 1024;

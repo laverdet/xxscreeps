@@ -34,7 +34,7 @@ export const MapStatsEndpoint: Endpoint = {
 								user,
 								level: room.controller.level,
 							},
-							safeMode: room.controller.safeMode !== undefined,
+							safeMode: false, //room.controller.safeMode !== undefined,
 						};
 					}
 				}

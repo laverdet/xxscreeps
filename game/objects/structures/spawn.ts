@@ -32,12 +32,14 @@ export class StructureSpawn extends withOverlay<Shape>()(Structure) {
 	get structureType() { return C.STRUCTURE_SPAWN }
 
 	canCreateCreep(body: any, name?: any) {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		return checkSpawnCreep(this, body, name ?? getUniqueName(name => Game.creeps[name] !== undefined));
 	}
 
 	createCreep(body: any, name: any, memory: any) {
 		return this.spawnCreep(
 			body,
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			name ?? getUniqueName(name => Game.creeps[name] !== undefined),
 			{ memory },
 		);
@@ -91,6 +93,7 @@ export function checkSpawnCreep(
 	if (typeof name !== 'string' || name === '') {
 		return C.ERR_INVALID_ARGS;
 
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	} else if (Game.creeps[name] !== undefined) {
 		return C.ERR_NAME_EXISTS;
 	}

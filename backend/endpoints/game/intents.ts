@@ -165,6 +165,7 @@ const CreateInvaderEndpoint: Endpoint = {
 		};
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		const body = bodies[`${size}${type}` as keyof typeof bodies]?.();
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (body === undefined) {
 			return;
 		}

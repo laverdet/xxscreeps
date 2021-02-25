@@ -23,7 +23,6 @@ export function registerActionProcessor<Type extends RoomObject, Action extends 
 	processors[action] = process;
 }
 export interface Action {}
-type Actions = Exclude<Action[keyof Action], void>;
 
 // Register per-tick per-object processor
 export function registerTickProcessor<Type extends RoomObject>(

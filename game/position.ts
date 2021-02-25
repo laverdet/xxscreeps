@@ -390,6 +390,7 @@ export function fetchPositionArgument<Extra = any>(
 
 function fetchRoom(roomName: string) {
 	const room = Game.rooms[roomName];
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (room === undefined) {
 		throw new Error(`Could not access room ${roomName}`);
 	}

@@ -63,7 +63,7 @@ const serviceUnlistener = serviceChannel.listen(message => {
 	if (message.type === 'shutdown') {
 		serviceUnlistener();
 		shutdownServer();
-		context.disconnect();
+		void context.disconnect();
 	}
 });
 

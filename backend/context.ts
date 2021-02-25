@@ -51,10 +51,10 @@ export class BackendContext {
 		return context;
 	}
 
-	disconnect() {
+	async disconnect() {
 		this.storage.disconnect();
 		this.gameChannel.disconnect();
-		this.gameMutex.disconnect();
+		await this.gameMutex.disconnect();
 	}
 
 	associateUser(providerKey: string, id: string) {

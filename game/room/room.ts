@@ -267,6 +267,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 			() => {
 				if (structureType === 'spawn' && typeof name === 'string') {
 					// TODO: Check newly created spawns too
+					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 					if (Game.spawns[name]) {
 						return C.ERR_INVALID_ARGS;
 					}
