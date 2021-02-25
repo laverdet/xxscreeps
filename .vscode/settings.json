@@ -7,5 +7,6 @@
 		"./engine/config/config.schema.json": "*/.screepsrc.yaml"
 	},
 	"yaml.validate": true,
-	"typescript.tsdk": "./node_modules/typescript/lib"
+	"typescript.tsdk": "./node_modules/typescript/lib",
+	"typescript.tsserver.experimental.enableProjectDiagnostics": true,
 }

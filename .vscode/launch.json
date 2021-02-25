@@ -1,0 +1,21 @@
+{
+	"version": "0.2.0",
+	"configurations": [ {
+		"type": "node",
+		"request": "launch",
+		"runtimeArgs": [
+			"--enable-source-maps",
+			"--experimental-specifier-resolution=node",
+			"--stack-trace-limit=20"
+		],
+		"internalConsoleOptions": "openOnSessionStart",
+		"name": "Start",
+		"skipFiles": [
+			"<node_internals>/**"
+		],
+		"program": "${workspaceFolder}/dist/engine/service/launcher.js",
+		"outFiles": [
+			"${workspaceFolder}/dist/**/*.js"
+		]
+	} ]
+}
