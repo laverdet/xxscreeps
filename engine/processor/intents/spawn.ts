@@ -3,7 +3,7 @@ import * as Game from 'xxscreeps/game/game';
 import { getPositonInDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
 import * as Room from 'xxscreeps/game/room';
 import * as Creep from 'xxscreeps/game/objects/creep';
-import { bindProcessor } from 'xxscreeps/engine/processor/bind';
+import { registerIntentProcessor, registerTickProcessor } from 'xxscreeps/processor';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
 import { checkSpawnCreep, StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
@@ -11,20 +11,6 @@ import { accumulate, instantiate } from 'xxscreeps/util/utility';
 import * as CreepIntent from './creep';
 import { newRoomObject } from './room-object';
 import * as StoreIntent from './store';
-
-type Parameters = {
-	spawn: {
-		body: Creep.PartType[];
-		name: string;
-		energyStructures?: string[];
-		directions?: Direction[];
-	};
-};
-
-export type Intents = {
-	receiver: StructureSpawn;
-	parameters: Parameters;
-};
 
 export function create(pos: RoomPosition, owner: string, name: string) {
 	return instantiate(StructureSpawn, {
@@ -37,17 +23,20 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 	});
 }
 
-function createCreep(spawn: StructureSpawn, intent: Parameters['spawn']) {
+declare module 'xxscreeps/processor' {
+	interface Intent { spawn: typeof intent }
+}
+const intent = registerIntentProcessor(StructureSpawn, 'spawn',
+(spawn, body: Creep.PartType[], name: string, energyStructureIds?: string[], directions?: Direction[]) => {
 
 	// Is this intent valid?
-	const { body, directions, energyStructures: energyStructureIds, name } = intent;
 	const canBuild = checkSpawnCreep(spawn, body, name, directions) === C.OK;
 	if (!canBuild) {
 		return false;
 	}
 
 	// Get energy structures
-	let cost = accumulate(intent.body, part => C.BODYPART_COST[part]);
+	let cost = accumulate(body, part => C.BODYPART_COST[part]);
 	const energyStructures = function() {
 		const filter = (structure?: RoomObject): structure is StructureExtension | StructureSpawn =>
 			structure instanceof StructureExtension || structure instanceof StructureSpawn;
@@ -73,44 +62,31 @@ function createCreep(spawn: StructureSpawn, intent: Parameters['spawn']) {
 	}
 
 	// Add new creep to room objects
-	const creep = CreepIntent.create(intent.body, spawn.pos, intent.name, Game.me);
+	const creep = CreepIntent.create(body, spawn.pos, name, Game.me);
 	Room.insertObject(spawn.room, creep);
 
 	// Set spawning information
-	const needTime = intent.body.length * C.CREEP_SPAWN_TIME;
+	const needTime = body.length * C.CREEP_SPAWN_TIME;
 	spawn.spawning = {
 		creep: creep.id,
-		directions: intent.directions ?? [],
+		directions: directions ?? [],
 		endTime: Game.time + needTime,
 		needTime,
 	};
+});
 
-	return true;
-}
-
-export default () => bindProcessor(StructureSpawn, {
-	process(intents: Partial<Parameters>) {
-		if (intents.spawn) {
-			return createCreep(this, intents.spawn);
+registerTickProcessor(StructureSpawn, spawn => {
+	if (spawn.spawning && spawn.spawning.endTime <= Game.time) {
+		const creep = Game.getObjectById(spawn.spawning.creep);
+		if (creep && creep instanceof Creep.Creep) {
+			const hasClaim = creep.body.some(part => part.type === 'claim');
+			creep._ageTime = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME);
+			Room.moveObject(creep, getPositonInDirection(creep.pos, C.TOP));
 		}
+		spawn.spawning = undefined;
+	}
 
-		return false;
-	},
-
-	tick() {
-		if (this.spawning && this.spawning.endTime <= Game.time) {
-			const creep = Game.getObjectById(this.spawning.creep);
-			if (creep && creep instanceof Creep.Creep) {
-				const hasClaim = creep.body.some(part => part.type === 'claim');
-				creep._ageTime = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME);
-				Room.moveObject(creep, getPositonInDirection(creep.pos, C.TOP));
-			}
-			this.spawning = undefined;
-		}
-
-		if (this.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && this.store.energy < C.SPAWN_ENERGY_CAPACITY) {
-			StoreIntent.add(this.store, 'energy', 1);
-		}
-		return false;
-	},
+	if (spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
+		StoreIntent.add(spawn.store, 'energy', 1);
+	}
 });

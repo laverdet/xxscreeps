@@ -24,7 +24,7 @@ export class Flag extends withOverlay<Shape>()(RoomObject) {
 	 * Remove the flag
 	 */
 	remove() {
-		Game.intents.push('flags', 'remove', { name: this.name });
+		Game.intents.push('flag', 'remove', this.name);
 		return C.OK;
 	}
 
@@ -37,11 +37,10 @@ export class Flag extends withOverlay<Shape>()(RoomObject) {
 		return chainIntentChecks(
 			() => checkFlagColors(color, secondaryColor),
 			() => {
-				Game.intents.push('flags', 'create', {
-					name: this.name,
-					pos: extractPositionId(this.pos),
-					color, secondaryColor,
-				});
+				Game.intents.push(
+					'flag', 'create',
+					this.name, extractPositionId(this.pos),
+					color, secondaryColor);
 				return C.OK;
 			},
 		);
@@ -60,11 +59,10 @@ export class Flag extends withOverlay<Shape>()(RoomObject) {
 		return chainIntentChecks(
 			() => checkFlagPosition(pos!),
 			() => {
-				Game.intents.push('flags', 'create', {
-					name: this.name,
-					pos: extractPositionId(this.pos),
-					color: this.color, secondaryColor: this.secondaryColor,
-				});
+				Game.intents.push(
+					'flag', 'create',
+					this.name, extractPositionId(this.pos),
+					this.color, this.secondaryColor);
 				return C.OK;
 			},
 		);

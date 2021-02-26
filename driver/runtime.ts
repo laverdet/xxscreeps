@@ -2,6 +2,8 @@ import type ivm from 'isolated-vm';
 import { inspect } from 'util';
 
 import type { Dictionary } from 'xxscreeps/util/types';
+import type { IntentListFor } from 'xxscreeps/processor';
+
 import * as Game from 'xxscreeps/game/game';
 // eslint-disable-next-line no-duplicate-imports
 import { flushIntents, initializeIntents, intents, runForUser } from 'xxscreeps/game/game';
@@ -173,22 +175,26 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 	// Post-tick tasks
 	const memory = Memory.flush();
 
-	// Execute flag intents and write other processor intents into blobs
-	const { intentsByGroup } = flushIntents();
-	const flagIntents = intentsByGroup.flags?.flags;
+	// Execute flag intents
+	const intentManager = flushIntents();
+	const flagIntents: IntentListFor<'flag'> | undefined = intentManager.acquireIntentsForGroup('flag');
 	let flagBlob: undefined | Readonly<Uint8Array>;
 	if (flagIntents !== undefined) {
-		console.log(flags);
-		delete intentsByGroup.flags;
 		FlagIntent.execute(flags, flagIntents);
 		flagBlob = FlagSchema.write(flags);
 	}
+
+	// Write room intents into blobs
+	const roomIntents: Dictionary<IntentListFor<Room>> = intentManager.acquireIntentsForGroup('room') ?? {};
 	const intentBlobs: Dictionary<SharedArrayBuffer> = Object.create(null);
-	const roomNames = Object.keys(intentsByGroup);
-	const { length } = roomNames;
-	for (let ii = 0; ii < length; ++ii) {
-		const roomName = roomNames[ii];
-		const json = JSON.stringify(intentsByGroup[roomName]);
+	const { intentsByGroup } = intentManager;
+	const roomNames = new Set(Object.keys(intentsByGroup));
+	Object.keys(roomIntents).forEach(roomName => roomNames.add(roomName));
+	for (const roomName of roomNames) {
+		const json = JSON.stringify({
+			room: roomIntents[roomName],
+			objects: intentsByGroup[roomName],
+		});
 		const buffer = new SharedArrayBuffer(json.length * 2);
 		const uint16 = new Uint16Array(buffer);
 		for (let ii = 0; ii < json.length; ++ii) {

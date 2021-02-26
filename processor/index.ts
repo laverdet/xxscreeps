@@ -1,48 +1,64 @@
+import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/util/types';
 import type { RoomObject } from 'xxscreeps/game/objects/room-object';
-import type { Implementation } from 'xxscreeps/util/types';
+import { IntentIdentifier, Processors, Tick } from './symbols';
 
 // `RoomObject` type definitions
-const Processors = Symbol('processors');
-const Tick = Symbol('tick');
+type IntentProcessorHolder = Record<string, (receiver: any, ...data: any) => void>;
+type IntentIdentifierResult = { group: string; name: string };
+type IntentReceiverInstance = {
+	[IntentIdentifier]: IntentIdentifierResult;
+	[Processors]?: IntentProcessorHolder;
+};
+declare module 'xxscreeps/game/room' {
+	interface Room {
+		[Processors]?: IntentProcessorHolder;
+	}
+}
 declare module 'xxscreeps/game/objects/room-object' {
 	interface RoomObject {
-		[Processors]?: {
-			[action: string]: (receiver: any, data: any) => boolean;
-		};
-		[Tick]?: () => boolean;
+		[IntentIdentifier]: IntentIdentifierResult;
+		[Processors]?: IntentProcessorHolder;
+		[Tick]?: (receiver: any) => void;
 	}
 }
 
+// Custom intents that the IntentManager will accept, but isn't handled by the normal processor pipeline
+export type DescribeIntentHandler<Name extends string, Intent extends string, Fn extends (...data: any) => void> =
+	Fn extends (...data: infer Data) => void ? { type: Name; intent: Intent; data: Data } : never;
+
 // Register RoomObject intent processor
-export function registerActionProcessor<Type extends RoomObject, Action extends string, Data = void>(
+export function registerIntentProcessor<Type extends IntentReceiverInstance, Intent extends string, Data extends any[]>(
 	receiver: Implementation<Type>,
-	action: Action,
-	process: (receiver: Type, data: Data) => boolean,
-): void | ((receiver: Type, action: Action) => Data) {
+	intent: Intent,
+	process: (receiver: Type, ...data: Data) => void,
+): void | { type: Type; intent: Intent; data: Data } {
 	const processors = receiver.prototype[Processors] = receiver.prototype[Processors] ?? {};
-	processors[action] = process;
+	processors[intent] = process;
 }
-export interface Action {}
+export interface Intent {}
+
+// Types for intent processors
+type Intents = Exclude<UnwrapArray<Intent[keyof Intent]>, void>;
+export type IntentReceivers = Intents['type'];
+export type IntentsForReceiver<Type extends IntentReceivers> =
+	CounterExtract<Intents, { type: Type; intent: any; data: any }>['intent'];
+export type IntentParameters<Type extends IntentReceivers, Intent extends string> =
+	CounterExtract<Intents, { type: Type; intent: Intent; data: any }>['data'];
+
+type IntentsForHelper<Type extends IntentReceivers> =
+	CounterExtract<Intents, { type: Type; intent: any; data: any }>;
+
+export type IntentMapFor<Type extends IntentReceivers> = {
+	[Key in IntentsForHelper<Type>['intent']]?: IntentParameters<Type, Key>;
+};
+export type IntentListFor<Type extends IntentReceivers> = {
+	[Key in IntentsForHelper<Type>['intent']]?: IntentParameters<Type, Key>[];
+};
 
 // Register per-tick per-object processor
 export function registerTickProcessor<Type extends RoomObject>(
 	receiver: Implementation<Type>,
-	tick: (this: Type) => boolean,
+	tick: (receiver: Type) => void,
 ) {
 	receiver.prototype[Tick] = tick;
 }
-
-/*
-
-function save<
-	Type extends Parameters<Foo>[0],
-	Action extends Parameters<Extract<Foo, (creep: Type, ...args: any[]) => void>>[1],
-	Data extends Parameters<Extract<Foo, (creep: Type, action: Action, ...args: any[]) => void>>[2],
->(
-	receiver: Type,
-	action: Action,
-	...data: Data extends undefined ? [] : [ Data ]
-) {
-
-}
-*/

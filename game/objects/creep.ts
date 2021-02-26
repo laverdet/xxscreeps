@@ -3,6 +3,7 @@ import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
 import { withOverlay } from 'xxscreeps/schema';
 import type { Shape } from 'xxscreeps/engine/schema/creep';
+import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { ConstructionSite } from './construction-site';
 import { chainIntentChecks, RoomObject } from './room-object';
@@ -36,10 +37,10 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 	get ticksToLive() { return this._ageTime - Game.time }
 	get _lookType() { return C.LOOK_CREEPS }
 
-	build(target: ConstructionSite) {
+	build(this: Creep, target: ConstructionSite) {
 		return chainIntentChecks(
 			() => checkBuild(this, target),
-			() => Game.intents.save(this, 'build', { target: target.id }));
+			() => Game.intents.save(this, 'build', target.id));
 	}
 
 	getActiveBodyparts(type: PartType) {
@@ -53,10 +54,10 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 	 * the `ERR_NO_BODYPART` checks will be bypassed; otherwise, the `ERR_NOT_IN_RANGE` check will be
 	 * bypassed.
 	 */
-	move(direction: Direction) {
+	move(this: Creep, direction: Direction) {
 		return chainIntentChecks(
 			() => checkMove(this, direction),
-			() => Game.intents.save(this, 'move', { direction }));
+			() => Game.intents.save(this, 'move', direction));
 	}
 
 	/**
@@ -178,7 +179,7 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 			});
 	}
 
-	pickup(resource: Resource) {
+	pickup(this: Creep, resource: Resource) {
 		return chainIntentChecks(
 			() => checkPickup(this, resource),
 			() => Game.intents.save(this, 'pickup', resource.id));
@@ -191,36 +192,39 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 	/**
 	 * Kill the creep immediately
 	 */
-	suicide() {
+	suicide(this: Creep) {
 		return chainIntentChecks(
 			() => checkCommon(this),
-			() => Game.intents.save(this, 'suicide', true),
+			() => Game.intents.save(this, 'suicide'),
 		);
 	}
 
-	transfer(target: RoomObjectWithStore, resourceType: ResourceType, amount?: number) {
+	transfer(this: Creep, target: RoomObjectWithStore, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),
-			() => Game.intents.save(this, 'transfer', { amount, resourceType, target: target.id }),
+			() => Game.intents.save(this, 'transfer', target.id, resourceType, amount),
 		);
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	say(message: string) {}
-	upgradeController(target: StructureController) {
+	upgradeController(this: Creep, target: StructureController) {
 		return chainIntentChecks(
 			() => checkUpgradeController(this, target),
-			() => Game.intents.save(this, 'upgradeController', { target: target.id }),
+			() => Game.intents.save(this, 'upgradeController', target.id),
 		);
 	}
 
-	withdraw(target: Extract<RoomObjectWithStore, Structure>, resourceType: ResourceType, amount?: number) {
+	withdraw(this: Creep, target: Extract<RoomObjectWithStore, Structure>, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkWithdraw(this, target, resourceType, amount),
-			() => Game.intents.save(this, 'withdraw', { amount, resourceType, target: target.id }),
+			() => Game.intents.save(this, 'withdraw', target.id, resourceType, amount),
 		);
 	}
 
+	get [IntentIdentifier]() {
+		return { group: this.room.name, name: this.name };
+	}
 	_nextPosition?: RoomPosition; // processor temporary
 }
 
@@ -420,13 +424,13 @@ export function checkWithdraw(
 				// TODO: Rampart
 				return C.ERR_NOT_OWNER */
 
-			// eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-			} else if (!creep.room.controller?.my && creep.room.controller?.safeMode! > 0) {
+			} else if (!creep.room.controller?.my && creep.room.controller!.safeMode! > 0) {
 				return C.ERR_NOT_OWNER;
 
 				/* } else if (target.structureType === 'nuker' || target.structureType === 'powerBank') {
 				return C.ERR_INVALID_TARGET; */
 
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			} else if (target.store.getCapacity(resourceType) === null /* && !(target instanceof Tombstone) */) {
 				return C.ERR_INVALID_TARGET;
 			}

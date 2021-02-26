@@ -64,12 +64,8 @@ export class StructureSpawn extends withOverlay<Shape>()(Structure) {
 				}
 
 				// Save intent
-				Game.intents.save(this, 'spawn', {
-					name,
-					body,
-					directions: options.directions,
-					energyStructures: options.energyStructures?.map(structure => structure.id),
-				});
+				const energyStructureIds = options.energyStructures?.map(structure => structure.id);
+				Game.intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, options.directions);
 
 				// Fake creep
 				const creep = createCreep(body, this.pos, name, this._owner!);

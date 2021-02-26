@@ -6,9 +6,9 @@ import type { BufferView } from 'xxscreeps/schema/buffer-view';
 import { withOverlay } from 'xxscreeps/schema';
 import type { LooseBoolean } from 'xxscreeps/util/types';
 import { accumulate, concatInPlace, exchange, mapInPlace, uncurryThis } from 'xxscreeps/util/utility';
-import { Process, ProcessorSpecification, Tick } from 'xxscreeps/engine/processor/bind';
 import type { Shape } from 'xxscreeps/engine/schema/room';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
+import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
 import * as Game from '../game';
 import * as Memory from '../memory';
@@ -78,9 +78,6 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	}
 
 	controller?: StructureController;
-	[Process]?: ProcessorSpecification<this>['process'];
-	[Tick]?: ProcessorSpecification<this>['tick'];
-
 	energyAvailable = 0;
 	energyCapacityAvailable = 0;
 
@@ -252,7 +249,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	 */
 	 createConstructionSite(x: number, y: number, structureType: ConstructibleStructureType, name?: string): number;
 	 createConstructionSite(pos: RoomPosition, structureType: ConstructibleStructureType, name?: string): number;
-	 createConstructionSite(...args: any[]) {
+	 createConstructionSite(this: Room, ...args: any[]) {
 
 		// Extract overloaded parameters
 		const { xx, yy, rest } = fetchArguments(...args);
@@ -275,7 +272,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 				return C.OK;
 			},
 			() => checkCreateConstructionSite(this, pos, structureType),
-			() => Game.intents.push(this, 'createConstructionSite', { name, structureType, xx, yy }));
+			() => Game.intents.push(this, 'createConstructionSite', structureType, xx, yy, name));
 	}
 
 	get visual() {
@@ -409,6 +406,10 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 			}
 		}
 		return spatial;
+	}
+
+	get [IntentIdentifier]() {
+		return { group: 'room' as const, name: this.name };
 	}
 
 	//

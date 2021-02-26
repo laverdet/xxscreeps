@@ -2,7 +2,7 @@ import assert from 'assert';
 import * as Room from 'xxscreeps/engine/schema/room';
 import { mapInPlace } from 'xxscreeps/util/utility';
 import { ProcessorContext } from 'xxscreeps/engine/processor/context';
-import { bindAllProcessorIntents } from 'xxscreeps/engine/processor/intents';
+import {} from 'xxscreeps/engine/processor/intents';
 import * as Invader from 'xxscreeps/engine/processor/intents/invader/main';
 import * as Game from 'xxscreeps/game/game';
 import { loadTerrain } from 'xxscreeps/game/map';
@@ -11,10 +11,6 @@ import * as Storage from 'xxscreeps/storage';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Queue } from 'xxscreeps/storage/queue';
 import { ProcessorMessage, ProcessorQueueElement } from '.';
-
-// Bind all the processor intent methods to game objec prototpyes.
-// For example Creep.prototype[Process] = () => ...
-bindAllProcessorIntents();
 
 // Keep track of rooms this thread ran. Global room processing must also happen here.
 const processedRooms = new Map<string, ProcessorContext>();

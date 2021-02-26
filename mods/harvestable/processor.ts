@@ -3,7 +3,7 @@ import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import { Creep } from 'xxscreeps/game/objects/creep';
-import { registerActionProcessor } from 'xxscreeps/processor';
+import { registerIntentProcessor } from 'xxscreeps/processor';
 import { Harvestable, checkHarvest } from './game';
 
 // `RoomObject` harvest intent processor symbol
@@ -23,7 +23,10 @@ export function registerHarvestProcessor<Type extends RoomObject>(
 }
 
 // Register `harvest` action processor
-const action = registerActionProcessor(Creep, 'harvest', (creep, id: string) => {
+declare module 'xxscreeps/processor' {
+	interface Intent { harvestable: typeof intent }
+}
+const intent = registerIntentProcessor(Creep, 'harvest', (creep, id: string) => {
 	const target = Game.getObjectById<Harvestable>(id)!;
 	if (checkHarvest(creep, target) === C.OK) {
 		return target[ProcessHarvest](creep);
@@ -31,6 +34,3 @@ const action = registerActionProcessor(Creep, 'harvest', (creep, id: string) => 
 		return false;
 	}
 });
-declare module 'xxscreeps/processor' {
-	interface Action { harvestable: typeof action }
-}

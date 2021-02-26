@@ -19,24 +19,21 @@ registerHarvestProcessor(Source, function(creep) {
 	return true;
 });
 
-registerTickProcessor(Source, function() {
-	let result = false;
+registerTickProcessor(Source, source => {
 
 	// Regenerate energy
-	if (this.energy < this.energyCapacity) {
-		if (this._nextRegenerationTime === 0) {
-			this._nextRegenerationTime = Game.time + C.ENERGY_REGEN_TIME;
-			result = true;
-		} else if (this.ticksToRegeneration === 0) {
-			this.energy = this.energyCapacity;
-			this._nextRegenerationTime = 0;
-			result = true;
+	if (source.energy < source.energyCapacity) {
+		if (source._nextRegenerationTime === 0) {
+			source._nextRegenerationTime = Game.time + C.ENERGY_REGEN_TIME;
+		} else if (source.ticksToRegeneration === 0) {
+			source.energy = source.energyCapacity;
+			source._nextRegenerationTime = 0;
 		}
 	}
 
-	// Update energy capacity on room controller statu
+	// Update energy capacity on room controller status
 	const energyCapacity = (() => {
-		const { controller } = this.room;
+		const { controller } = source.room;
 		if (controller) {
 			if (controller._owner === null) {
 				return C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
@@ -47,8 +44,5 @@ registerTickProcessor(Source, function() {
 			return C.SOURCE_ENERGY_KEEPER_CAPACITY;
 		}
 	})();
-	result = result || this.energyCapacity !== energyCapacity;
-	this.energyCapacity = energyCapacity;
-
-	return result;
+	source.energyCapacity = energyCapacity;
 });

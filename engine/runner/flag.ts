@@ -1,58 +1,57 @@
 import type { Dictionary } from 'xxscreeps/util/types';
+import type { DescribeIntentHandler, IntentListFor } from 'xxscreeps/processor';
 import * as C from 'xxscreeps/game/constants';
 import { checkCreateFlag, Color, Flag } from 'xxscreeps/game/flag';
 import { fromPositionId } from 'xxscreeps/game/position';
 import { instantiate } from 'xxscreeps/util/utility';
 
-export type Parameters = {
-	create: {
-		name: string;
-		pos: number;
-		color: Color;
-		secondaryColor: Color;
-	}[];
-	remove: { name: string }[];
-};
-
-export type Intents = {
-	receiver: 'flags';
-	parameters: Parameters;
-};
-
-export type OneIntent = Partial<{
-	[Key in keyof Parameters]: Parameters[Key][number];
-}>;
-
-// Flag intents are handled on the runners so this stuff doesn't fit into the regular intent
+// Flag intents are handled on the runners, so this stuff doesn't fit into the regular intent
 // pipeline
-export function execute(flags: Dictionary<Flag>, intents: Partial<Parameters>) {
+declare module 'xxscreeps/processor' {
+	interface Intent { flag: Intents }
+}
+type Intents = [
+	DescribeIntentHandler<'flag', 'create', typeof createFlag>,
+	DescribeIntentHandler<'flag', 'remove', typeof removeFlag>,
+];
 
-	// Intents for flag removal
-	for (const intent of intents.remove ?? []) {
-		delete flags[intent.name];
-	}
+export class FlagProcessorContext {
+	constructor(public flags: Dictionary<Flag>) {}
+}
 
+function createFlag(this: FlagProcessorContext, name: string, posId: number, color: Color, secondaryColor: Color) {
 	// Run create / move / setColor intent
-	for (const intent of intents.create ?? []) {
-		const pos = fromPositionId(intent.pos)!;
-		const { name, color, secondaryColor } = intent;
-		if (checkCreateFlag(flags, pos, name, color, secondaryColor) === C.OK) {
-			const flag = flags[name];
-			if (flag) {
-				// Modifying an existing flag
-				flag.color = color;
-				flag.secondaryColor = secondaryColor;
-				flag.pos = pos;
-			} else {
-				// Creating a new flag
-				flags[name] = instantiate(Flag, {
-					id: undefined as never,
-					effects: undefined,
-					pos,
-					name,
-					color, secondaryColor,
-				});
-			}
+	const pos = fromPositionId(posId)!;
+	if (checkCreateFlag(this.flags, pos, name, color, secondaryColor) === C.OK) {
+		const flag = this.flags[name];
+		if (flag) {
+			// Modifying an existing flag
+			flag.color = color;
+			flag.secondaryColor = secondaryColor;
+			flag.pos = pos;
+		} else {
+			// Creating a new flag
+			this.flags[name] = instantiate(Flag, {
+				id: null as never,
+				effects: undefined,
+				pos,
+				name,
+				color, secondaryColor,
+			});
 		}
+	}
+}
+
+function removeFlag(this: FlagProcessorContext, name: string) {
+	delete this.flags[name];
+}
+
+export function execute(flags: Dictionary<Flag>, intents: IntentListFor<'flag'>) {
+	const context = new FlagProcessorContext(flags);
+	for (const intent of intents.remove ?? []) {
+		removeFlag.apply(context, intent);
+	}
+	for (const intent of intents.create ?? []) {
+		createFlag.apply(context, intent);
 	}
 }

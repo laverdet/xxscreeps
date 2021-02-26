@@ -1,4 +1,4 @@
-import { bindProcessor } from 'xxscreeps/engine/processor/bind';
+import { registerTickProcessor } from 'xxscreeps/processor';
 import { ConstructionSite, ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
 import { RoomPosition } from 'xxscreeps/game/position';
 import * as Room from 'xxscreeps/game/room';
@@ -26,26 +26,23 @@ export function create(
 	});
 }
 
-export default () => bindProcessor(ConstructionSite, {
-	tick() {
-		if (this.progress >= this.progressTotal) {
-			const { pos, room, structureType, _owner } = this;
-			const level = this.room.controller?.level ?? 0;
-			Room.removeObject(this);
-			const structure = function() {
-				switch (structureType) {
-					case 'container': return ContainerIntent.create(pos);
-					case 'extension': return ExtensionIntent.create(pos, level, _owner);
-					case 'road': return RoadIntent.create(pos);
-					case 'storage': return StorageIntent.create(pos, _owner);
-					case 'tower': return TowerIntent.create(pos, _owner);
-					default:
-				}
-			}();
-			if (structure) {
-				Room.insertObject(room, structure);
+registerTickProcessor(ConstructionSite, site => {
+	if (site.progress >= site.progressTotal) {
+		const { pos, room, structureType, _owner } = site;
+		const level = site.room.controller?.level ?? 0;
+		Room.removeObject(site);
+		const structure = function() {
+			switch (structureType) {
+				case 'container': return ContainerIntent.create(pos);
+				case 'extension': return ExtensionIntent.create(pos, level, _owner);
+				case 'road': return RoadIntent.create(pos);
+				case 'storage': return StorageIntent.create(pos, _owner);
+				case 'tower': return TowerIntent.create(pos, _owner);
+				default:
 			}
+		}();
+		if (structure) {
+			Room.insertObject(room, structure);
 		}
-		return true;
-	},
+	}
 });

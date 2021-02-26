@@ -88,10 +88,12 @@ export function *concatInPlace(...iterators: Iterable<any>[]) {
 }
 
 // Replace a value on an object with a new one, and returns the old one.
-export function exchange<Target extends object, Name extends keyof Target>(
+export function exchange<Target extends {}, Name extends keyof Target>(
 		target: Target, name: Name, newValue?: Target[Name]) {
 	const value = target[name];
-	target[name] = newValue!;
+	if (newValue !== undefined || name in target) {
+		target[name] = newValue!;
+	}
 	return value;
 }
 

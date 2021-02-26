@@ -1,4 +1,4 @@
-import { bindProcessor } from 'xxscreeps/engine/processor/bind';
+import { registerTickProcessor } from 'xxscreeps/processor';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import type { RoomPosition } from 'xxscreeps/game/position';
@@ -50,12 +50,9 @@ export function drop(pos: RoomPosition, resourceType: ResourceType, amount: numb
 	Room.insertObject(room, resource);
 }
 
-export default () => bindProcessor(Resource, {
-	tick() {
-		this.amount -= Math.ceil(this.amount / C.ENERGY_DECAY);
-		if (this.amount <= 0) {
-			Room.removeObject(this);
-		}
-		return true;
-	},
+registerTickProcessor(Resource, resource => {
+	resource.amount -= Math.ceil(resource.amount / C.ENERGY_DECAY);
+	if (resource.amount <= 0) {
+		Room.removeObject(resource);
+	}
 });

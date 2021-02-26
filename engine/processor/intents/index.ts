@@ -1,19 +1,8 @@
-import constructionSite from './construction-site';
-import container from './container';
-import controller from './controller';
-import creep from './creep';
-import resource from './resource';
-import road from './road';
-import room from './room';
-import spawn from './spawn';
-
-export function bindAllProcessorIntents() {
-	constructionSite();
-	container();
-	controller();
-	creep();
-	resource();
-	road();
-	room();
-	spawn();
-}
+import {} from './construction-site';
+import {} from './container';
+import {} from './controller';
+import {} from './creep';
+import {} from './resource';
+import {} from './road';
+import {} from './room';
+import {} from './spawn';
