@@ -1,8 +1,15 @@
 import type { Dictionary } from 'xxscreeps/util/types';
 import { Room } from 'xxscreeps/game/room';
+import * as Game from 'xxscreeps/game/game';
+// eslint-disable-next-line no-duplicate-imports
 import { runAsUser, runWithTime } from 'xxscreeps/game/game';
 import * as Movement from './intents/movement';
-//import { Process, Tick } from './bind';
+import { Processors, Tick } from 'xxscreeps/processor/symbols';
+
+type RoomIntentsFromRunner = {
+	room?: Dictionary<any[]>;
+	objects?: Dictionary<Dictionary<any>>;
+};
 
 export class ProcessorContext {
 	constructor(
@@ -11,29 +18,45 @@ export class ProcessorContext {
 	) {}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	processIntents(user: string, intentsById: Dictionary<Dictionary<object>>) {
+	processIntents(user: string, intents: RoomIntentsFromRunner) {
 		runAsUser(user, this.time, () => {
-/*
-			const roomIntents = intentsById[this.room.name];
-			if (roomIntents) {
-				this.room[Process]!(roomIntents, this);
+
+			// Process intents for room (createConstructionSite)
+			const roomIntents = intents.room;
+			const processors = this.room[Processors];
+			if (roomIntents && processors) {
+				for (const intent in roomIntents) {
+					const processor = processors[intent];
+					if (processor) {
+						for (const args of roomIntents[intent]!) {
+							processor(this.room, ...args);
+						}
+					}
+				}
 			}
 
-			for (const object of this.room._objects) {
-				const intents = intentsById[object.id];
-				if (intents !== undefined) {
-					// object[Process]?.call(object, intents, this);
+			// Process intents for room objects
+			const objectIntents = intents.objects;
+			if (objectIntents) {
+				for (const id in objectIntents) {
+					const object = Game.getObjectById(id);
+					if (object) {
+						for (const [ intent, args ] of Object.entries(objectIntents[id]!)) {
+							object[Processors]![intent]?.(object, ...args);
+						}
+					}
 				}
-			}*/
+			}
 		});
 	}
 
 	processTick() {
+		// Run per-tick processor for all objects
 		runWithTime(this.time, () => {
 			Movement.dispatch(this.room);
-/* for (const object of this.room._objects) {
-				object[Tick]?.call(object, this);
-			}*/
+			for (const object of this.room._objects) {
+				object[Tick]?.(object);
+			}
 		});
 	}
 }

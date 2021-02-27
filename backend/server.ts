@@ -1,4 +1,4 @@
-import {} from 'xxscreeps/config/mods/backend';
+import 'xxscreeps/config/mods/backend';
 import bodyParser from 'body-parser';
 import Express from 'express';
 import http from 'http';

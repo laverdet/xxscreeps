@@ -75,7 +75,7 @@ export class PlayerInstance {
 			const [ codeBlob, flagBlob, memoryBlob ] = await Promise.all([
 				this.shard.storage.persistence.get(`user/${this.userId}/${this.branch}`),
 				loadUserFlagBlob(this.shard, this.userId),
-				loadUserMemoryBlob(this.shard, `memory/${this.userId}`),
+				loadUserMemoryBlob(this.shard, this.userId),
 			]);
 			this.sandbox = await createSandbox({
 				userId: this.userId,

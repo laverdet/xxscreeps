@@ -33,7 +33,7 @@ export class StructureSpawn extends withOverlay<Shape>()(Structure) {
 
 	canCreateCreep(body: any, name?: any) {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		return checkSpawnCreep(this, body, name ?? getUniqueName(name => Game.creeps[name] !== undefined));
+		return checkSpawnCreep(this, body, name ?? getUniqueName(name => Game.creeps[name] !== undefined), null, null);
 	}
 
 	createCreep(body: any, name: any, memory: any) {
@@ -50,8 +50,9 @@ export class StructureSpawn extends withOverlay<Shape>()(Structure) {
 	}
 
 	spawnCreep(body: PartType[], name: string, options: SpawnCreepOptions = {}) {
+		const directions = options.directions ?? null;
 		return chainIntentChecks(
-			() => checkSpawnCreep(this, body, name, options.directions, options.energyStructures),
+			() => checkSpawnCreep(this, body, name, directions, options.energyStructures ?? null),
 			() => {
 				if (options.dryRun == true) {
 					return C.OK;
@@ -64,8 +65,8 @@ export class StructureSpawn extends withOverlay<Shape>()(Structure) {
 				}
 
 				// Save intent
-				const energyStructureIds = options.energyStructures?.map(structure => structure.id);
-				Game.intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, options.directions);
+				const energyStructureIds = options.energyStructures?.map(structure => structure.id) ?? null;
+				Game.intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
 
 				// Fake creep
 				const creep = createCreep(body, this.pos, name, this._owner!);
@@ -81,8 +82,8 @@ export function checkSpawnCreep(
 	spawn: StructureSpawn,
 	body: PartType[],
 	name: string,
-	directions?: Direction[],
-	energyStructures?: (StructureExtension | StructureSpawn)[],
+	directions: Direction[] | null,
+	energyStructures: (StructureExtension | StructureSpawn)[] | null,
 ) {
 
 	// Check name is valid and does not already exist
@@ -95,7 +96,7 @@ export function checkSpawnCreep(
 	}
 
 	// Check direction sanity
-	if (directions !== undefined) {
+	if (directions !== null) {
 		if (!Array.isArray(directions)) {
 			return C.ERR_INVALID_ARGS;
 		}

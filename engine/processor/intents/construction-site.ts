@@ -13,7 +13,7 @@ import { newRoomObject } from './room-object';
 export function create(
 	pos: RoomPosition,
 	structureType: ConstructibleStructureType,
-	name: string | undefined,
+	name: string | null,
 	owner: string,
 ) {
 	return instantiate(ConstructionSite, {

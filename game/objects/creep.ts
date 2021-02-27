@@ -3,7 +3,6 @@ import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
 import { withOverlay } from 'xxscreeps/schema';
 import type { Shape } from 'xxscreeps/engine/schema/creep';
-import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { ConstructionSite } from './construction-site';
 import { chainIntentChecks, RoomObject } from './room-object';
@@ -222,9 +221,6 @@ export class Creep extends withOverlay<Shape>()(RoomObject) {
 		);
 	}
 
-	get [IntentIdentifier]() {
-		return { group: this.room.name, name: this.name };
-	}
 	_nextPosition?: RoomPosition; // processor temporary
 }
 
@@ -315,7 +311,7 @@ function checkTransferOrWithdraw(
 	creep: Creep,
 	target: RoomObjectWithStore,
 	resourceType: ResourceType,
-	amount?: number,
+	amount: number | null | undefined,
 ) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
@@ -339,7 +335,7 @@ export function checkTransfer(
 	creep: Creep,
 	target: RoomObjectWithStore,
 	resourceType: ResourceType,
-	amount?: number,
+	amount: number | null | undefined,
 ) {
 	return chainIntentChecks(
 		() => checkTransferOrWithdraw(creep, target, resourceType, amount),
@@ -412,7 +408,7 @@ export function checkWithdraw(
 	creep: Creep,
 	target: Extract<RoomObjectWithStore, Structure>,
 	resourceType: ResourceType,
-	amount?: number,
+	amount: number | null | undefined,
 ) {
 	return chainIntentChecks(
 		() => checkTransferOrWithdraw(creep, target, resourceType, amount),

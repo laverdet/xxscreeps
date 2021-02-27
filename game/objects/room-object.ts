@@ -4,6 +4,7 @@ import type { LookConstants } from 'xxscreeps/game/room/look';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { withOverlay, Variant } from 'xxscreeps/schema';
+import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import type { Shape } from 'xxscreeps/engine/schema/room-object';
 
 export abstract class RoomObject extends withOverlay<Shape>()(BufferObject) {
@@ -11,6 +12,10 @@ export abstract class RoomObject extends withOverlay<Shape>()(BufferObject) {
 
 	[Symbol.for('nodejs.util.inspect.custom')]() {
 		return expandGetters(this);
+	}
+
+	get [IntentIdentifier]() {
+		return { group: this.room.name, name: this.id };
 	}
 
 	room!: Room;

@@ -116,4 +116,5 @@ try {
 	storage.disconnect();
 	Storage.terminate();
 	serviceChannel.disconnect();
+	process.exit();
 }

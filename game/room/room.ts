@@ -237,7 +237,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 		}
 		const objects = this._getSpatialIndex(type);
 		return (objects.get(extractPositionId(pos)) ?? []).map(object => {
-			const type = 'arst';//object._lookType;
+			const type = object._lookType;
 			return { type, [type]: object };
 		});
 	}
@@ -290,14 +290,14 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	[InsertObject](this: this, object: RoomObject) {
 		// Add to objects & look index then flush find caches
 		this._objects.push(object as never);
-		const lookType = this._afterInsertion(object);
+		this._afterInsertion(object);
 		/* const findTypes = lookToFind[lookType];
 		for (const find of findTypes) {
 			this.#findCache.delete(find);
 		} */
 		this.#findCache.clear();
 		// Update spatial look cache if it exists
-		const spatial = this.#lookSpatialIndex.get(lookType);
+		const spatial = this.#lookSpatialIndex.get(object._lookType);
 		if (spatial) {
 			const pos = extractPositionId(object.pos);
 			const list = spatial.get(pos);
@@ -312,14 +312,14 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	[RemoveObject](this: this, object: RoomObject) {
 		// Remove from objects & look index then flush find caches
 		removeOne(this._objects, object);
-		const lookType = this._afterRemoval(object);
+		this._afterRemoval(object);
 		/* const findTypes = lookToFind[lookType];
 		for (const find of findTypes) {
 			this.#findCache.delete(find);
 		} */
 		this.#findCache.clear();
 		// Update spatial look cache if it exists
-		const spatial = this.#lookSpatialIndex.get(lookType);
+		const spatial = this.#lookSpatialIndex.get(object._lookType);
 		if (spatial) {
 			const pos = extractPositionId(object.pos);
 			const list = spatial.get(pos);
@@ -359,8 +359,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 	private _afterInsertion(object: RoomObject) {
 		object.room = this;
 		const lookType = object._lookType;
-		const list = this.#lookIndex.get(lookType)!;
-		list.push(object);
+		this.#lookIndex.get(lookType)!.push(object);
 		if (lookType === C.LOOK_STRUCTURES) {
 			if (object instanceof StructureController) {
 				this.controller = object;
@@ -369,7 +368,6 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 				this.energyCapacityAvailable += object.store.getCapacity(C.RESOURCE_ENERGY);
 			}
 		}
-		return lookType;
 	}
 
 	private _afterRemoval(object: RoomObject) {

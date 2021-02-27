@@ -27,16 +27,9 @@ declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }
 }
 const intent = registerIntentProcessor(StructureSpawn, 'spawn',
-(spawn, body: Creep.PartType[], name: string, energyStructureIds?: string[], directions?: Direction[]) => {
-
-	// Is this intent valid?
-	const canBuild = checkSpawnCreep(spawn, body, name, directions) === C.OK;
-	if (!canBuild) {
-		return false;
-	}
+(spawn, body: Creep.PartType[], name: string, energyStructureIds: string[] | null, directions: Direction[] | null) => {
 
 	// Get energy structures
-	let cost = accumulate(body, part => C.BODYPART_COST[part]);
 	const energyStructures = function() {
 		const filter = (structure?: RoomObject): structure is StructureExtension | StructureSpawn =>
 			structure instanceof StructureExtension || structure instanceof StructureSpawn;
@@ -45,13 +38,19 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 		} else {
 			const structures = spawn.room.find(C.FIND_STRUCTURES).filter(filter);
 			return structures.sort((left, right) =>
-				// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 				(left.structureType === 'extension' ? 1 : 0) - (right.structureType === 'extension' ? 1 : 0) ||
 				left.pos.getRangeTo(spawn.pos) - right.pos.getRangeTo(spawn.pos));
 		}
 	}();
 
+	// Is this intent valid?
+	const canBuild = checkSpawnCreep(spawn, body, name, directions, energyStructures) === C.OK;
+	if (!canBuild) {
+		return false;
+	}
+
 	// Withdraw energy
+	let cost = accumulate(body, part => C.BODYPART_COST[part]);
 	for (const structure of energyStructures) {
 		const energyToSpend = Math.min(cost, structure.energy);
 		StoreIntent.subtract(structure.store, 'energy', energyToSpend);

@@ -12,7 +12,7 @@ declare module 'xxscreeps/processor' {
 }
 //createConstructionSite
 const intent = registerIntentProcessor(Room, 'createConstructionSite',
-(room, structureType: ConstructibleStructureType, xx: number, yy: number, name?: string) => {
+(room, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
 	const pos = new RoomPosition(xx, yy, room.name);
 	if (checkCreateConstructionSite(room, pos, structureType) === C.OK) {
 		const site = ConstructionIntent.create(pos, structureType, name, me);

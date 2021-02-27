@@ -1,9 +1,9 @@
-import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/util/types';
+import type { CounterExtract, Dictionary, Implementation, UnwrapArray } from 'xxscreeps/util/types';
 import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { IntentIdentifier, Processors, Tick } from './symbols';
 
 // `RoomObject` type definitions
-type IntentProcessorHolder = Record<string, (receiver: any, ...data: any) => void>;
+type IntentProcessorHolder = Dictionary<(receiver: any, ...data: any) => void>;
 type IntentIdentifierResult = { group: string; name: string };
 type IntentReceiverInstance = {
 	[IntentIdentifier]: IntentIdentifierResult;
@@ -22,16 +22,24 @@ declare module 'xxscreeps/game/objects/room-object' {
 	}
 }
 
+// `undefined` is not allowed in intent processors because it JSON serializes to `null`
+type AllowedTypes = string | number | boolean | null | AllowedTypes[];
+type NullToUndefined<Type> = Type extends null ? undefined | null : Type;
+type RemapNull<Type> = Type extends any[] ? {
+	[Key in keyof Type]: RemapNull<Type[Key]>;
+} : NullToUndefined<Type>;
+
 // Custom intents that the IntentManager will accept, but isn't handled by the normal processor pipeline
 export type DescribeIntentHandler<Name extends string, Intent extends string, Fn extends (...data: any) => void> =
-	Fn extends (...data: infer Data) => void ? { type: Name; intent: Intent; data: Data } : never;
+	Fn extends (...data: infer Data) => void ?
+		Data extends AllowedTypes[] ? { type: Name; intent: Intent; data: RemapNull<Data> } : never : never;
 
 // Register RoomObject intent processor
-export function registerIntentProcessor<Type extends IntentReceiverInstance, Intent extends string, Data extends any[]>(
+export function registerIntentProcessor<Type extends IntentReceiverInstance, Intent extends string, Data extends AllowedTypes[]>(
 	receiver: Implementation<Type>,
 	intent: Intent,
 	process: (receiver: Type, ...data: Data) => void,
-): void | { type: Type; intent: Intent; data: Data } {
+): void | { type: Type; intent: Intent; data: RemapNull<Data> } {
 	const processors = receiver.prototype[Processors] = receiver.prototype[Processors] ?? {};
 	processors[intent] = process;
 }

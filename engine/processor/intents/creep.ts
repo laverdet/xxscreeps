@@ -77,7 +77,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'transfer', (creep, id: string, resourceType: ResourceType, amount?: number) => {
+	registerIntentProcessor(Creep, 'transfer', (creep, id: string, resourceType: ResourceType, amount: number | null) => {
 		const target = Game.getObjectById<RoomObjectWithStore>(id)!;
 		if (CreepLib.checkTransfer(creep, target, resourceType, amount) === C.OK) {
 			const transferAmount = Math.min(creep.store[resourceType]!, target.store.getFreeCapacity(resourceType));
@@ -96,7 +96,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'withdraw', (creep, id: string, resourceType: ResourceType, amount?: number) => {
+	registerIntentProcessor(Creep, 'withdraw', (creep, id: string, resourceType: ResourceType, amount: number | null) => {
 		const target = Game.getObjectById<Extract<RoomObjectWithStore, Structure>>(id)!;
 		if (CreepLib.checkWithdraw(creep, target, resourceType, amount) === C.OK) {
 			const transferAmount = Math.min(creep.store.getFreeCapacity(resourceType), target.store[resourceType]!);
