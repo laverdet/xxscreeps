@@ -1,5 +1,5 @@
 import assert from 'assert';
-import * as Room from 'xxscreeps/engine/schema/room';
+import * as Room from 'xxscreeps/engine/room';
 import { mapInPlace } from 'xxscreeps/util/utility';
 import { ProcessorContext } from 'xxscreeps/engine/processor/context';
 import 'xxscreeps/config/mods/processor';

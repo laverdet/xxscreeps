@@ -6,7 +6,6 @@ import type { BufferView } from 'xxscreeps/schema/buffer-view';
 import { withOverlay } from 'xxscreeps/schema';
 import type { LooseBoolean } from 'xxscreeps/util/types';
 import { accumulate, concatInPlace, exchange, mapInPlace, uncurryThis } from 'xxscreeps/util/utility';
-import type { Shape } from 'xxscreeps/engine/schema/room';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
@@ -32,6 +31,7 @@ import { RoomVisual } from '../visual';
 
 import { FindConstants, FindType, findHandlers } from './find';
 import { LookConstants, LookType, lookConstants } from './look';
+import { shape } from './schema';
 
 export type AnyRoomObject = RoomObject | InstanceType<typeof Room>['_objects'][number];
 
@@ -70,7 +70,7 @@ const MoveObject = Symbol('moveObject');
 const InsertObject = Symbol('insertObject');
 const RemoveObject = Symbol('removeObject');
 
-export class Room extends withOverlay<Shape>()(BufferObject) {
+export class Room extends withOverlay(shape)(BufferObject) {
 	get memory() {
 		const memory = Memory.get();
 		const rooms = memory.rooms ?? (memory.rooms = {});
@@ -83,6 +83,7 @@ export class Room extends withOverlay<Shape>()(BufferObject) {
 
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
+		debugger;
 		for (const object of this._objects) {
 			this._afterInsertion(object);
 		}

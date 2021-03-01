@@ -1,8 +1,14 @@
 import * as C from 'xxscreeps/game/constants';
-import type { Shape } from 'xxscreeps/engine/schema/storage';
-import { withOverlay } from 'xxscreeps/schema';
-import { Structure } from '.';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
+import * as Store from 'xxscreeps/game/store';
+import * as Structure from '.';
 
-export class StructureStorage extends withOverlay<Shape>()(Structure) {
+export function format() { return compose(shape, StructureStorage) }
+const shape = declare('Storage', struct(Structure.format, {
+	...variant('storage'),
+	store: Store.format,
+}));
+
+export class StructureStorage extends withOverlay(shape)(Structure.Structure) {
 	get structureType() { return C.STRUCTURE_STORAGE }
 }

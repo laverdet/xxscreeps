@@ -1,7 +1,7 @@
 import type { Shard } from './shard';
 import { Channel } from 'xxscreeps/storage/channel';
 import type { ConsoleMessage } from 'xxscreeps/engine/metadata/code';
-import * as FlagSchema from 'xxscreeps/engine/schema/flag';
+import * as Flag from 'xxscreeps/engine/runner/flag';
 
 export function getConsoleChannel(shard: Shard, user: string) {
 	return new Channel<ConsoleMessage>(shard.storage, `user/${user}/console`);
@@ -22,7 +22,7 @@ export async function loadUserFlagBlob(shard: Shard, user: string) {
 export async function loadUserFlags(shard: Shard, user: string) {
 	const flagBlob = await loadUserFlagBlob(shard, user);
 	if (flagBlob) {
-		return FlagSchema.read(flagBlob);
+		return Flag.read(flagBlob);
 	} else {
 		return Object.create(null) as never;
 	}

@@ -5,13 +5,13 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import { registerTickProcessor } from 'xxscreeps/processor';
 import { instantiate } from 'xxscreeps/util/utility';
 import { newRoomObject } from './room-object';
-import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
+import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
 
 export function create(pos: RoomPosition) {
 	return instantiate(StructureRoad, {
 		...newRoomObject(pos),
 		hits: C.ROAD_HITS,
-		_nextDecayTime: Game.time + C.ROAD_DECAY_TIME,
+		[NextDecayTime]: Game.time + C.ROAD_DECAY_TIME,
 		_owner: undefined,
 	});
 }
@@ -25,7 +25,7 @@ registerTickProcessor(StructureRoad, road => {
 			terrain === C.TERRAIN_MASK_SWAMP ? C.CONSTRUCTION_COST_ROAD_SWAMP_RATIO :
 			1;
 			road.hits -= C.ROAD_DECAY_AMOUNT * decayMultiplier;
-			road._nextDecayTime = Game.time + C.ROAD_DECAY_TIME;
+			road[NextDecayTime] = Game.time + C.ROAD_DECAY_TIME;
 	}
 	return true;
 });

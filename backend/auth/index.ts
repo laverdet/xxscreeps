@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { declare, getReader, getWriter, vector, TypeOf } from 'xxscreeps/schema';
+import { declare, makeReader, makeWriter, struct, vector, TypeOf } from 'xxscreeps/schema';
 import * as Id from 'xxscreeps/engine/util/schema/id';
 import { checkToken, makeToken } from './token';
 
@@ -61,12 +61,12 @@ export function flattenUsername(username: string) {
 
 //
 // Schema
-export const format = declare('Entries', vector({
+export const format = declare('Entries', vector(struct({
 	key: 'string',
 	user: Id.format,
-}));
+})));
 
 export type Shape = TypeOf<typeof format>;
 
-export const read = getReader(format);
-export const write = getWriter(format);
+export const read = makeReader(format);
+export const write = makeWriter(format);

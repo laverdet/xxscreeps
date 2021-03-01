@@ -1,3 +1,4 @@
+/*
 import { defaultInterceptorLookup } from './interceptor';
 import type { Layout } from './layout';
 
@@ -83,3 +84,4 @@ export function archiveLayout(layout: Layout): string {
 	const name = archiveNamedLayout(renderer, layout);
 	return renderer.rendered + `export default ${name};\n`;
 }
+*/

@@ -1,7 +1,7 @@
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { filterInPlace, mapInPlace, mapToKeys, nonNullable } from 'xxscreeps/util/utility';
 import * as User from 'xxscreeps/engine/metadata/user';
-import * as Room from 'xxscreeps/engine/schema/room';
+import * as Room from 'xxscreeps/engine/room';
 
 export const MapStatsEndpoint: Endpoint = {
 	method: 'post',

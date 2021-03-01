@@ -1,7 +1,7 @@
 import type { BufferView } from 'xxscreeps/schema/buffer-view';
-import { array, declare, withType } from 'xxscreeps/schema';
+import { array, compose, declare, withType } from 'xxscreeps/schema';
 
-export const optionalFormat = declare('Id', array(4, 'uint32'), {
+export const optionalFormat = declare('Id', compose(array(4, 'uint32'), {
 	composeFromBuffer(view: BufferView, offset: number) {
 		// First byte is length, remaining bytes are the hex string id. Fits up to 24 characters
 		// into 4 bytes. This could be increased to 30 characters if needed by putting more in the
@@ -39,7 +39,7 @@ export const optionalFormat = declare('Id', array(4, 'uint32'), {
 		view.uint8[offset] = value.length;
 		return 16;
 	},
-});
+}));
 
 // Most of the time id strings are required so this type is just more convenient
 export const format = withType<string>(optionalFormat);

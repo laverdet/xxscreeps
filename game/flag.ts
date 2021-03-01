@@ -3,13 +3,20 @@ import * as C from './constants';
 import * as Game from './game';
 import * as Memory from './memory';
 import { extractPositionId, fetchPositionArgument, RoomPosition } from './position';
-import { chainIntentChecks, RoomObject } from './objects/room-object';
-import { withOverlay } from 'xxscreeps/schema';
-import type { Shape } from 'xxscreeps/engine/schema/flag';
+import { RoomObject, chainIntentChecks, format as baseFormat } from './objects/room-object';
+import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
 
 export type Color = typeof C.COLORS_ALL[number];
+const colorFormat = withType<Color>('int8');
 
-export class Flag extends withOverlay<Shape>()(RoomObject) {
+export function format() { return compose(shape, Flag) }
+const shape = declare('Flag', struct(baseFormat, {
+	name: 'string',
+	color: colorFormat,
+	secondaryColor: colorFormat,
+}));
+
+export class Flag extends withOverlay(shape)(RoomObject) {
 	get memory() {
 		const memory = Memory.get();
 		const flags = memory.flags ?? (memory.flags = {});
@@ -94,7 +101,7 @@ function checkFlagPosition(pos: RoomPosition) {
 }
 
 export function checkCreateFlag(
-	flags: Dictionary<Shape>,
+	flags: Dictionary<Flag>,
 	pos: RoomPosition,
 	name: string,
 	color: Color, secondaryColor: Color,

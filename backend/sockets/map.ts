@@ -1,4 +1,4 @@
-import * as Room from 'xxscreeps/engine/schema/room';
+import * as Room from 'xxscreeps/engine/room';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { Structure } from 'xxscreeps/game/objects/structures';

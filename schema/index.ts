@@ -1,6 +1,11 @@
 export { BufferView } from './buffer-view';
-export { array, declare, enumerated, inherit, optional, variant, vector, withSymbol, withType, Variant } from './format';
-export type { ShapeOf, TypeOf } from './format';
+export { TypeOf, Variant, array, compose, declare, enumerated, member, optional, struct, variant, vector, withType } from './format';
 export { withOverlay } from './overlay';
-export { getReader } from './read';
-export { getWriter } from './write';
+export { makeReader } from './read';
+export { makeWriter } from './write';
+
+import type { Format } from './format';
+import { makeReader } from './read';
+export function resolveSchema(format: Format) {
+	makeReader(format, 0);
+}

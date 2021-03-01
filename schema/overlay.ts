@@ -1,32 +1,37 @@
-import { getBuffer, getOffset, BufferObject } from './buffer-object';
+import { Implementation } from 'xxscreeps/util/types';
 import type { BufferView } from './buffer-view';
-import { Variant } from './format';
-import type { InterceptorLookup } from './interceptor';
 import type { StructLayout } from './layout';
-import { getTypeReader } from './read';
-
+import { getBuffer, getOffset, BufferObject } from './buffer-object';
+import { TypeOf, Variant } from './format';
+import { makeTypeReader } from './read';
 
 const { defineProperty } = Object;
 const { apply } = Reflect;
 
 type GetterReader = (this: BufferObject) => any;
 
-export function injectGetters(layout: StructLayout, prototype: object, lookup: InterceptorLookup) {
+const injected = new WeakSet();
+export function injectGetters(layout: StructLayout, prototype: object) {
+	// Hacky double-inject prevention
+	if (injected.has(prototype)) {
+		return;
+	}
+	injected.add(prototype);
+
 	for (const [ key, member ] of Object.entries(layout.struct)) {
-		const { layout, offset, pointer } = member;
-		const symbol = lookup.symbol(layout) ?? key;
+		const { layout, name, offset, pointer } = member;
+		const symbol = name ?? key;
 
 		// Make getter
 		const get = function(): GetterReader {
 
 			// Get reader for this member
 			const get = function(): GetterReader {
-				const read = getTypeReader(layout, lookup);
-				if (pointer === true) {
+				const read = makeTypeReader(layout, 0 as any);
+				if (pointer) {
 					return function() {
 						const buffer = getBuffer(this);
-						const localOffset = getOffset(this);
-						return read(buffer, buffer.uint32[(offset + localOffset) >>> 2]);
+						return read(buffer, buffer.uint32[(offset + getOffset(this)) >>> 2]);
 					};
 				} else {
 					return function() {
@@ -56,9 +61,7 @@ export function injectGetters(layout: StructLayout, prototype: object, lookup: I
 		}();
 
 		// Define getter on proto
-		const isPrivate = typeof symbol === 'symbol' || symbol.startsWith('_');
 		Object.defineProperty(prototype, symbol, {
-			configurable: !isPrivate,
 			get,
 			set(value) {
 				defineProperty(this, symbol, {
@@ -71,7 +74,7 @@ export function injectGetters(layout: StructLayout, prototype: object, lookup: I
 	}
 
 	// Add Variant key
-	const variant = layout['variant!'];
+	const variant = layout.variant;
 	if (variant !== undefined) {
 		Object.defineProperty(prototype, Variant, {
 			value: variant,
@@ -80,8 +83,9 @@ export function injectGetters(layout: StructLayout, prototype: object, lookup: I
 }
 
 // Injects types from format and interceptors into class prototype
-export function withOverlay<Shape>() {
-	return <Type extends { prototype: object }>(classDeclaration: Type) =>
-		classDeclaration as any as new (view: BufferView, offset: number) =>
-			Type['prototype'] & Shape;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function withOverlay<Type>(type?: Type) {
+	return <Base extends Implementation>(classDeclaration: Base) =>
+		classDeclaration as never as new (view: BufferView, offset: number) =>
+			Base['prototype'] & TypeOf<Type> & { __withOverlay: true };
 }

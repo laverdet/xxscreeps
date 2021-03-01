@@ -1,4 +1,4 @@
-import * as Room from 'xxscreeps/engine/schema/room';
+import * as Room from 'xxscreeps/engine/room';
 import * as User from 'xxscreeps/engine/metadata/user';
 import { getFlagChannel, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser } from 'xxscreeps/game/game';

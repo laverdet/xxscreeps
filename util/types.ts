@@ -26,7 +26,7 @@ export type KeyFor<Type, Key extends keyof any> = Extract<Type, { [key in Key]: 
 export type Fallback<Type, Fallback> = (Type | Fallback) extends Fallback ? Fallback : Type;
 
 // Helper for passing around prototypes
-export type Implementation<Type> = { prototype: Type };
+export type Implementation<Type = {}> = { prototype: Type };
 
 // Type that's safe to loosely compare to true/false without weirdness like '' or NaN or 0
 export type LooseBoolean = boolean | object | null | undefined;

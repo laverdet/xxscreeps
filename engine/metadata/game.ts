@@ -1,7 +1,7 @@
-import { declare, getReader, getWriter, TypeOf } from 'xxscreeps/schema';
+import { makeReader, makeWriter, struct, TypeOf } from 'xxscreeps/schema';
 import * as StringSet from 'xxscreeps/engine/util/schema/string-set';
 
-const format = declare('Game', {
+const format = struct({
 	time: 'int32',
 	accessibleRooms: StringSet.format,
 	activeRooms: StringSet.format,
@@ -9,5 +9,5 @@ const format = declare('Game', {
 });
 export type Type = TypeOf<typeof format>;
 
-export const read = getReader(format);
-export const write = getWriter(format);
+export const read = makeReader(format);
+export const write = makeWriter(format);

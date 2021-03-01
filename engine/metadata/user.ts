@@ -1,8 +1,8 @@
-import { declare, getReader, getWriter, vector, TypeOf } from 'xxscreeps/schema';
+import { declare, makeReader, makeWriter, struct, vector, TypeOf } from 'xxscreeps/schema';
 import * as StringSet from 'xxscreeps/engine/util/schema/string-set';
 import * as Id from 'xxscreeps/engine/util/schema/id';
 
-export const format = declare('User', {
+export const format = declare('User', struct({
 	id: Id.format,
 	username: 'string',
 	cpu: 'int32',
@@ -14,15 +14,15 @@ export const format = declare('User', {
 	roomsControlled: StringSet.format,
 	roomsPresent: StringSet.format,
 	roomsVisible: StringSet.format,
-	code: {
+	code: struct({
 		branch: Id.optionalFormat,
-		branches: vector({
+		branches: vector(struct({
 			id: Id.format,
 			name: 'string',
 			timestamp: 'int32',
-		}),
-	},
-});
+		})),
+	}),
+}));
 
 export function create(username: string, id?: string) {
 	return {
@@ -46,5 +46,5 @@ export function create(username: string, id?: string) {
 
 export type User = TypeOf<typeof format>;
 
-export const read = getReader(format);
-export const write = getWriter(format);
+export const read = makeReader(format);
+export const write = makeWriter(format);

@@ -1,324 +1,216 @@
-import { RecursiveWeakMemoize } from 'xxscreeps/util/memoize';
-import { defaultInterceptorLookup, BoundInterceptor, BoundSchema, BoundSymbol, FormatName, Interceptor, InterceptorResult, WithSymbol } from './interceptor';
-import { kPointerSize, alignTo, getTraits, Integral, Layout, Primitive, StructLayout, Traits } from './layout';
-import { injectGetters } from './overlay';
+import type { Implementation } from 'xxscreeps/util/types';
+import type { BufferView } from './buffer-view';
 
-// Struct w/ inheritance
-const Inherit = Symbol('schemaInherit');
-type WithInherit<Type> = { [Inherit]: Type };
-
-// Special key used to detect which instance of a variant an object belongs to
 export const Variant = Symbol('schemaVariant');
+// Getting error:
+//   extends' clause of exported class ... has or is using private name 'Variant'.ts(4020)
+// when defining a variant symbol in module w/ different tsconfig
+// type WithVariant<V extends number | string> = { [Variant]: V };
 
-// A format describes the initial general types of data then is enriched with type information from
-// interceptors and eventually converted to layouts
-export type Format = WithShape | WithType | Primitive | StructFormat;
-type StructFormat = {
-	[Inherit]?: WithType;
-	[Variant]?: string;
-	[key: string]: Format;
-};
-
-// Internal format descriptors
-type EnumTypes = string | undefined;
-type Definition =
-	Primitive |
-	[ 'array', number, Definition ] |
-	[ 'enum', EnumTypes[] ] |
-	[ 'holder', Definition ] |
-	[ 'optional', Definition ] |
-	[ 'variant', StructFormat[] ] |
-	[ 'vector', Definition ] |
-	StructFormat;
-
-// Only used to carry type information
-const Shape = Symbol('withShape');
-type WithShape<Shape = any> = { [Shape]: Shape };
+// This is passed around as a fake type from all the declaration functions
 const Type = Symbol('withType');
-export type WithType<Type = any> = { [Type]: Type };
-export type WithShapeAndType<Shape, Type = Shape> = WithShape<Shape> & WithType<Type>;
-
-// Extracts shape & type information from a format
-type CommonShape<Format> =
+export type WithType<Type> = { [Type]: Type };
+export type TypeOf<Format> =
+	Format extends () => infer Type ? TypeOf<Type> :
+	Format extends WithType<infer Type> ? Type :
 	Format extends Integral ? number :
 	Format extends 'bool' ? boolean :
 	Format extends 'buffer' ? Readonly<Uint8Array> :
 	Format extends 'string' ? string :
 	never;
 
-export type ShapeOf<Format> =
-	Format extends WithShape<infer Type> ? Type :
-	Format extends StructFormat ? {
-		[Key in StructKeys<Format>]: ShapeOf<StructLookup<Format, Key>>;
-	} & (Format extends WithInherit<WithShape<infer Type>> ? Type : unknown) :
-	CommonShape<Format>;
+export type Format =
+	(() => Format) | WithType<any> | Primitive | ComposedFormat | NamedFormat |
+	ArrayFormat | EnumFormat | OptionalFormat | StructFormat | VariantFormat | VectorFormat;
+type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
+export type Primitive = Integral | 'bool' | 'buffer' | 'string';
 
-export type TypeOf<Format> =
-	Format extends WithType<infer Type> ? Type :
-	Format extends StructFormat ? {
-		[Key in StructKeys<Format>]: TypeOf<StructLookup<Format, Key>>;
-	} & (Format extends WithInherit<WithType<infer Type>> ? Type : unknown) :
-	CommonShape<Format>;
+type ArrayFormat = {
+	array: Format;
+	length: number;
+};
 
-// Returns keys for a given struct format, accepting symbol interceptors
-type StructKeys<Type extends StructFormat> = {
-	[Key in keyof Type]: Key extends number ? never :
-		Type[Key] extends WithSymbol<infer Symbol> ? Symbol : Key;
-}[Exclude<keyof Type, symbol>];
+type ComposedFormat = {
+	composed: Format;
+	interceptor: Interceptor | Implementation;
+};
 
-// Looks up a symbol into a struct format and returns the value/format for that symbol
-type StructLookup<Type extends StructFormat, Symbol extends string | symbol> =
-	Symbol extends keyof Type ? Type[Symbol] :
-	{ [Key in keyof Type]: Type[Key] extends WithSymbol<Symbol> ? Type[Key] : never }[keyof Type];
+type EnumTypes = string | undefined;
+export type EnumFormat = {
+	enum: EnumTypes[];
+};
 
-type DeclareOverloads =
-	[ Definition ] |
-	[ string, Definition ] |
-	[ Definition, Interceptor | symbol ] |
-	[ string | undefined, Definition, Interceptor | symbol | string ];
+type NamedFormat = {
+	named: string;
+	format: Format;
+};
 
-export function declare<Type extends Format>(format: Type):
-WithShapeAndType<ShapeOf<Type>, TypeOf<Type>>;
-export function declare<Type extends Format>(name: string, format: Type):
-WithShapeAndType<ShapeOf<Type>, TypeOf<Type>>;
+type OptionalFormat = {
+	optional: Format;
+};
 
-export function declare<Type extends Format, In extends Interceptor<Type>>(format: Type, interceptors: In):
-InterceptorResult<Type, In>;
-export function declare<Type extends Format, In extends Interceptor<Type>>(name: string | undefined, format: Type, interceptors: In):
-InterceptorResult<Type, In>;
+type StructFormat = {
+	struct: Record<string, Format | StructMember>;
+	inherit?: WithType<{}>;
+	variant?: number | string;
+};
 
-export function declare<Type extends Format, Symbol extends symbol>(format: Type, symbol: Symbol):
-WithShapeAndType<ShapeOf<Type>, TypeOf<Type>> & WithSymbol<Symbol>;
-export function declare<Type extends Format, Symbol extends string | symbol>(name: string | undefined, format: Type, symbol: Symbol):
-WithShapeAndType<ShapeOf<Type>, TypeOf<Type>> & WithSymbol<Symbol>;
+type StructMember<Name extends string | symbol = any, Format = any> = {
+	member: Format;
+	name: Name;
+};
 
-export function declare(...args: DeclareOverloads) {
-	// Extract argument overloads
-	const { name, format, interceptor, symbol } = function() {
-		if (args.length === 1) {
-			return { format: args[0] };
-		} else if (args.length === 2) {
-			if (typeof args[0] === 'string') {
-				return { name: args[0], format: args[1] as Definition };
-			} else {
-				return { format: args[0], interceptor: args[1] as Interceptor };
-			}
-		} else {
-			const { interceptor, symbol } =
-				(typeof args[2] === 'string' || typeof args[2] === 'symbol') ?
-					{ interceptor: undefined, symbol: args[2] } :
-					{ interceptor: args[2], symbol: undefined };
-			return { name: args[0], format: args[1], interceptor, symbol };
-		}
-	}();
+type VariantFormat = {
+	variant: StructFormat[];
+};
 
-	// Inject name & interceptor
-	if (name !== undefined || interceptor || symbol !== undefined) {
+type VectorFormat = {
+	vector: Format;
+};
 
-		// Create new holder
-		const holder: BoundSchema & [ 'holder', Definition ] = [ 'holder', format ];
-		if (name !== undefined) {
-			holder[FormatName] = name;
-		}
-		if (interceptor) {
-			holder[BoundInterceptor] = interceptor;
-		}
-		if (symbol !== undefined) {
-			holder[BoundSymbol] = symbol;
-		}
+// A fixed sized array of elements
+export function array<Type extends Format>(length: number, element: Type): WithType<TypeOf<Type>[]> {
+	const format: ArrayFormat = {
+		array: element,
+		length,
+	};
+	return format as never;
+}
 
-		// Inject prototype getters into overlay
-		if (interceptor && 'overlay' in interceptor) {
-			const layout = getLayout(unpackHolderFormat(format) as StructFormat);
-			injectGetters(layout, interceptor.overlay.prototype, defaultInterceptorLookup);
-		}
+// Composed interceptor types
+export type Interceptor = CompositionInterceptor | RawCompositionInterceptor;
+type CompositionInterceptor<Type = any, Result = any> = {
+	compose: (value: Type) => Result;
+	decompose: (value: Result) => Type extends any[] ? Iterable<Type[number]> : Type;
+};
 
-		return holder;
+type RawCompositionInterceptor<Type = any> = {
+	composeFromBuffer: (view: BufferView, offset: number) => Type;
+	decomposeIntoBuffer: (value: Type, view: BufferView, offset: number) => number;
+};
+
+export function compose<Type extends Format, In extends CompositionInterceptor<TypeOf<Type>>>(
+	format: Type, interceptor: In,
+): WithType<In extends CompositionInterceptor<TypeOf<Type>, infer Result> ? Result : never>;
+
+export function compose<Type extends Format, Result>(
+	format: Type, interceptor: RawCompositionInterceptor<Result>,
+): WithType<Result>;
+
+export function compose<Overlay>(format: Format, interceptor: Implementation<Overlay>): WithType<Overlay>;
+
+export function compose(format: Format, interceptor: Interceptor | Implementation) {
+	const composedFormat: ComposedFormat = {
+		composed: format,
+		interceptor,
+	};
+	return composedFormat as never;
+}
+
+// Adds a name to a format to allow reuse
+export function declare<Type extends Format>(named: string, format: Type): Type {
+	const namedFormat: NamedFormat = { named, format };
+	return namedFormat as never;
+}
+
+// An indexed value from a defined set of possible values
+export function enumerated<Type extends EnumTypes[]>(...values: Type): WithType<Type[number]> {
+	if (values.length > 256) {
+		throw new Error('`enumerated` type is too large');
 	}
-
-	// Plain format
-	return format;
+	const format: EnumFormat = {
+		enum: values,
+	};
+	return format as never;
 }
 
-// Convenience wrapper for member symbol interceptor
-export function withSymbol<Type extends Format, Symbol extends string | symbol>(symbol: Symbol, format: Type) {
-	return declare(undefined, format, symbol);
+// Helper function for renaming struct members (probably from a string to a symbol)
+export function member<Type extends Format, Name extends string | symbol>(name: Name, member: Type) {
+	const result: StructMember<Name, Type> = {
+		member,
+		name,
+	};
+	return result;
 }
 
-// Override detected shape
-export function withType<Type>(format: Format): WithShapeAndType<Type> {
-	return format as any;
+// An optional element, will consume only 1 byte in case of `undefined`
+export function optional<Type extends Format>(element: Type): WithType<TypeOf<Type> | undefined> {
+	const format: OptionalFormat = {
+		optional: element,
+	};
+	return format as never;
 }
 
-// Recursively unpacks holder formats
-function unpackHolderFormat(format: Definition) {
-	let unpacked: any = format;
-	while (unpacked[0] === 'holder') {
-		// eslint-disable-next-line prefer-destructuring
-		unpacked = unpacked[1];
-	}
-	return unpacked;
+// Returns keys for a given struct format, accepting symbols from `member` helper
+type StructKeys<Type extends StructDeclaration> = {
+	[Key in keyof Type]:
+		Key extends '__variant' ? never :
+		Type[Key] extends StructMember<infer Name> ? Name :
+		Key extends string ? Key : never;
+}[keyof Type];
+
+// Looks up a symbol into a struct format and returns the vformat for that symbol
+type StructLookup<Type extends StructDeclaration, Name extends string | symbol> =
+	Name extends keyof Type ? Type[Name] :
+	{
+		[Key in keyof Type]: Type[Key] extends StructMember<Name> ? Type[Key]['member'] : never;
+	}[keyof Type];
+
+type StructDeclaration = FakeVariant | {
+	[key: string]: Format | StructMember;
+};
+type FakeVariant<V extends number | string = number | string> = {
+	__variant: V;
+};
+type StructDeclarationType<Type extends StructDeclaration> = {
+	[Key in StructKeys<Type>]: TypeOf<StructLookup<Type, Key>>;
+} & (Type extends FakeVariant<infer V> ? FakeVariant<V> : unknown);
+
+export function struct<Type extends StructDeclaration>(format: Type):
+WithType<StructDeclarationType<Type>>;
+
+export function struct<Base extends Format, Type extends StructDeclaration>(base: Base, format: Type):
+WithType<TypeOf<Base> & StructDeclarationType<Type>>;
+
+export function struct(...args: [ StructDeclaration ] | [ any, StructDeclaration ]) {
+	const { inherit, members } = args.length === 1 ?
+		{ inherit: undefined, members: args[0] } :
+		{ inherit: args[0], members: args[1] };
+	const format: StructFormat = {
+		struct: members as any,
+		inherit,
+		variant: (members as any)[Variant],
+	};
+	return format as never;
 }
 
-// Spread creators for structs
-export function inherit<Base extends StructFormat>(base: Base) {
-	return { [Inherit]: base };
-}
+// Pass a string to define a variant key into a `struct`
+export function variant<V extends string>(name: V): FakeVariant<V>;
+// *or* an array of structs with variant keys
+export function variant<Type extends Format[]>(...args: Type): WithType<{
+	[Key in keyof Type]: TypeOf<Type[Key]>;
+}[number]>;
 
-// Constructors for type formats
-export function array<Type extends Format>(length: number, format: Type):
-WithShapeAndType<ShapeOf<Type>[], TypeOf<Type>[]> {
-	return [ 'array', length, format ] as any;
-}
-
-export function enumerated<Type extends EnumTypes[]>(...values: Type):
-WithShapeAndType<Type[number]> {
-	return [ 'enum', values ] as any;
-}
-
-export function optional<Type extends Format>(format: Type):
-WithShapeAndType<ShapeOf<Type> | undefined, TypeOf<Type> | undefined> {
-	return [ 'optional', format ] as any;
-}
-
-export function variant(name: string): { [Variant]: string };
-export function variant<Type extends Exclude<Format, Primitive>[]>(...format: Type):
-WithShapeAndType<ShapeOf<Type[number]>, TypeOf<Type[number]>>;
-export function variant(...format: any) {
-	if (format.length === 1 && typeof format[0] === 'string') {
-		return { [Variant]: format[0] };
+export function variant(...args: [ string ] | StructFormat[]): any {
+	if (args.length === 1 && typeof args[0] === 'string') {
+		return { [Variant]: args[0] };
 	} else {
-		return [ 'variant', format ] as any;
-	}
-}
-
-export function vector<Type extends Format>(format: Type):
-WithShapeAndType<Iterable<ShapeOf<Type>>, TypeOf<Type>[]> {
-	return [ 'vector', format ] as any;
-}
-
-// Layouts are memoized to prevent duplication of readers/writers and base classes
-const getBoundLayout = RecursiveWeakMemoize([ 0 ], (format: BoundSchema & Exclude<Definition, Primitive>): Layout => {
-	const layout = function(): Exclude<Layout, Primitive> {
-		if (Array.isArray(format)) {
-			switch (format[0]) {
-				// Arrays (fixed size)
-				case 'array':
-					return {
-						array: getLayout(format[2]),
-						size: format[1],
-					};
-
-				// Enums
-				case 'enum':
-					return {
-						enum: format[1],
-					};
-
-				// Holder for another type
-				case 'holder':
-					return {
-						holder: getLayout(format[1]),
-					};
-
-				// Optionals
-				case 'optional':
-					return {
-						optional: getLayout(format[1]),
-					};
-
-				// Variant
-				case 'variant':
-					return {
-						variant: format[1].map(getLayout) as StructLayout[],
-					};
-
-				// Vectors (dynamic size)
-				case 'vector':
-					return {
-						vector: getLayout(format[1]),
-					};
-
-				default:
-					throw TypeError(`Invalid format specifier: ${format[0]}`);
-			}
-
-		} else {
-			// Structures
-
-			// Fetch memory layout for each member
-			type WithTraits = { traits: Traits };
-			const members: (WithTraits & { key: string; layout: Layout })[] = [];
-			for (const [ key, memberFormat ] of Object.entries(format)) {
-				const layout = getLayout(memberFormat);
-				members.push({
-					key,
-					layout,
-					traits: getTraits(layout),
-				});
-			}
-
-			// Simple struct pack algorithm by sorting by size largest to smallest
-			const isPointer = (member: WithTraits) => member.traits.stride === undefined;
-			members.sort((left, right) => {
-				const size = (member: WithTraits) => isPointer(member) ? kPointerSize : member.traits.size;
-				const elementSize = (member: WithTraits) => isPointer(member) ? member.traits.size : Infinity;
-				return (
-					// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-					size(right) - size(left) ||
-					elementSize(right) - elementSize(left) ||
-					left.key.localeCompare(right.key)
-				);
-			});
-
-			// Initialize layout
-			const layout: StructLayout = { struct: {} };
-			let offset = 0;
-			if (format[Inherit] !== undefined) {
-				const baseLayout = getLayout(format[Inherit]!);
-				layout.inherit = baseLayout;
-				offset = getTraits(baseLayout).size;
-			}
-
-			// Arrange member layout
-			for (const member of members) {
-				const pointer = isPointer(member);
-				offset = alignTo(offset, pointer ? kPointerSize : member.traits.align);
-				layout.struct[member.key] = {
-					layout: member.layout,
-					offset,
-					...pointer && { pointer: true as const },
-				};
-				offset += pointer ? kPointerSize : member.traits.size;
-			}
-
-			// Variant type defined?
-			if (format[Variant] !== undefined) {
-				layout['variant!'] = format[Variant];
-			}
-			return layout;
-		}
-	}();
-
-	// Forward bound interceptor
-	if (BoundInterceptor in format) {
-		layout[BoundInterceptor] = format[BoundInterceptor];
-	}
-	if (BoundSymbol in format) {
-		layout[BoundSymbol] = format[BoundSymbol];
-	}
-	if (FormatName in format) {
-		layout[FormatName] = format[FormatName];
-	}
-	return layout;
-});
-
-export function getLayout(format: StructFormat): StructLayout;
-export function getLayout(format: Definition): Layout;
-export function getLayout(format: Definition): Layout {
-	if (typeof format === 'string') {
-		// Plain primitive types
+		const format: VariantFormat = {
+			variant: args as StructFormat[],
+		};
 		return format;
 	}
-	return getBoundLayout(format);
+}
+
+// An array of elements, of arbitrary size
+export function vector<Type extends Format>(element: Type): WithType<TypeOf<Type>[]> {
+	const Format: VectorFormat = {
+		vector: element,
+	};
+	return Format as never;
+}
+
+// Cast the type of a format to something else
+export function withType<Type>(format: Format): WithType<Type> {
+	return format as never;
 }

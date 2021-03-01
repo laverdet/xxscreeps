@@ -10,11 +10,11 @@ import * as Auth from 'xxscreeps/backend/auth';
 import * as CodeSchema from 'xxscreeps/engine/metadata/code';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as MapSchema from 'xxscreeps/game/map';
-import * as RoomSchema from 'xxscreeps/engine/schema/room';
+import * as RoomSchema from 'xxscreeps/engine/room';
 import * as User from 'xxscreeps/engine/metadata/user';
 
 import { Variant } from 'xxscreeps/schema/format';
-import { getWriter } from 'xxscreeps/schema/write';
+import { makeWriter } from 'xxscreeps/schema/write';
 import * as Storage from 'xxscreeps/storage';
 import { accumulate, clamp, filterInPlace, getOrSet, mapInPlace, firstMatching } from 'xxscreeps/util/utility';
 
@@ -105,7 +105,7 @@ const rooms = db.getCollection('rooms').find().map(room => ({
 
 // Save rooms
 for (const room of rooms) {
-	await persistence.set(`room/${room.name}`, RoomSchema.write(room));
+	await persistence.set(`room/${room.name}`, RoomSchema.write(room as never));
 }
 
 // Collect terrain data
@@ -120,7 +120,7 @@ const roomsTerrain = new Map(db.getCollection('rooms.terrain').find().map(({ roo
 }));
 
 // Write terrain data
-await persistence.set('terrain', getWriter(MapSchema.format)(roomsTerrain));
+await persistence.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
 
 // Get visible rooms for users
 const roomsControlled = new Map<string, Set<string>>();

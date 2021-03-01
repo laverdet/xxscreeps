@@ -1,60 +1,65 @@
-import type { Constructor } from 'xxscreeps/util/types';
-import type { BufferObject } from './buffer-object';
-import { BufferView } from './buffer-view';
-import { getLayout, Format, TypeOf, Variant } from './format';
-import { defaultInterceptorLookup, InterceptorLookup } from './interceptor';
-import { kPointerSize, getTraits, unpackHolder, Layout, StructLayout } from './layout';
-import { RecursiveWeakMemoize } from 'xxscreeps/util/memoize';
 import { typedArrayToString } from 'xxscreeps/util/string';
+import { BufferView } from './buffer-view';
+import { Format, TypeOf, Variant } from './format';
+import { Layout, StructLayout, getLayout, kPointerSize, unpackWrappedStruct } from './layout';
+import { injectGetters } from './overlay';
 
 type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
 
-const getMemberReader = RecursiveWeakMemoize([ 0, 1 ],
-	(layout: StructLayout, lookup: InterceptorLookup): MemberReader => {
+function getMemberReader(layout: StructLayout, lookup: any): MemberReader {
 
-		let readMembers: MemberReader | undefined;
-		for (const [ key, member ] of Object.entries(layout.struct)) {
-			const symbol = lookup.symbol(member.layout) ?? key;
+	let readMembers: MemberReader | undefined;
+	for (const [ key, member ] of Object.entries(layout.struct)) {
+		const symbol = member.name ?? key;
 
-			// Make reader for single field
-			const next = function(): MemberReader {
-				// Get reader for this member
-				const read = getTypeReader(member.layout, lookup);
+		// Make reader for single field
+		const next = function(): MemberReader {
+			const { layout, offset, pointer } = member;
+			const read = makeTypeReader(layout, lookup);
 
-				// Wrap to read this field from reserved address
-				const { offset, pointer } = member;
-				if (pointer === true) {
-					return (value, view, instanceOffset) => {
-						const addr = view.uint32[instanceOffset + offset >>> 2];
-						value[symbol] = read(view, addr);
-					};
-				} else {
-					return (value, view, instanceOffset) => {
-						value[symbol] = read(view, instanceOffset + offset);
-					};
-				}
-			}();
-
-			// Combine member readers
-			const prev = readMembers;
-			if (prev === undefined) {
-				readMembers = next;
+			// Wrap to read this field from reserved address
+			if (pointer) {
+				return (value, view, instanceOffset) => {
+					const addr = view.uint32[instanceOffset + offset >>> 2];
+					value[symbol] = read(view, addr);
+				};
 			} else {
-				readMembers = (value, view, offset) => {
-					prev(value, view, offset);
-					next(value, view, offset);
+				return (value, view, instanceOffset) => {
+					value[symbol] = read(view, instanceOffset + offset);
 				};
 			}
-		}
-		return readMembers!;
-	},
-);
+		}();
 
-export const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, lookup: InterceptorLookup): Reader => {
+		// Combine member readers
+		const prev = readMembers;
+		if (prev === undefined) {
+			readMembers = next;
+		} else {
+			readMembers = (value, view, offset) => {
+				prev(value, view, offset);
+				next(value, view, offset);
+			};
+		}
+	}
+
+	// Run inheritance recursively
+	const { inherit } = layout;
+	if (inherit === undefined) {
+		return readMembers!;
+	} else {
+		const readBase = getMemberReader(unpackWrappedStruct(inherit), lookup);
+		return (value, view, offset) => {
+			readBase(value, view, offset);
+			readMembers!(value, view, offset);
+		};
+	}
+}
+
+export function makeTypeReader(layout: Layout, lookup: any): Reader {
 
 	if (typeof layout === 'string') {
-		// Integral types
+		// Basic types
 		switch (layout) {
 			case 'int8': return (view, offset) => view.int8[offset];
 			case 'int16': return (view, offset) => view.int16[offset >>> 1];
@@ -88,151 +93,126 @@ export const getTypeReader = RecursiveWeakMemoize([ 0, 1 ], (layout: Layout, loo
 		}
 	}
 
-	// Fetch reader for non-literal type
-	const read = function(): Reader {
-		if ('array' in layout) {
-			// Array types
-			const arraySize = layout.size;
-			const elementLayout = layout.array;
-			const read = getTypeReader(elementLayout, lookup);
-			const { stride } = getTraits(elementLayout);
-			if (stride === undefined) {
-				throw new TypeError('Unimplemented');
-
-			} else {
-				// Array with fixed element size
-				return (view, offset) => {
-					const value: any[] = [];
-					let currentOffset = offset;
-					value.push(read(view, currentOffset));
-					for (let ii = 1; ii < arraySize; ++ii) {
-						currentOffset += stride;
-						value.push(read(view, currentOffset));
-					}
-					return value;
-				};
-			}
-
-		} else if ('enum' in layout) {
-			// Enumerated types
-			const { enum: values } = layout;
-			return (view, offset) => values[view.uint8[offset]];
-
-		} else if ('holder' in layout) {
-			// Pass through to underlying type
-			return getTypeReader(layout.holder, lookup);
-
-		} else if ('optional' in layout) {
-			// Optional types
-			const elementLayout = layout.optional;
-			const read = getTypeReader(elementLayout, lookup);
-			const { size, stride } = getTraits(elementLayout);
-
-			if (stride === undefined) {
-				// Dynamic size element. Flag is pointer to memory (just 4 bytes ahead)
-				return (view, offset) => {
-					const addr = view.uint32[offset >>> 2];
-					if (addr === 0) {
-						return undefined;
-					} else {
-						return read(view, addr);
-					}
-				};
-			} else {
-				// Fixed size element. Flag is 1 byte at end of structure.
-				return (view, offset) => {
-					if (view.int8[offset + size] === 0) {
-						return undefined;
-					} else {
-						return read(view, offset);
-					}
-				};
-			}
-
-		} else if ('variant' in layout) {
-			// Variant types
-			const variantReaders = layout.variant.map(elementLayout =>
-				getTypeReader(elementLayout, lookup));
-			return (view, offset) => variantReaders[view.uint32[offset >>> 2]](view, offset + kPointerSize);
-
-		} else if ('vector' in layout) {
-			const elementLayout = layout.vector;
-			const read = getTypeReader(elementLayout, lookup);
-			const { stride } = getTraits(elementLayout);
-			if (stride === undefined) {
-				// Vector with dynamic element size
-				return (view, offset) => {
-					const length = view.uint32[offset >>> 2];
-					if (length === 0) {
-						return [];
-					} else {
-						const value: any[] = [];
-						let currentOffset = offset + kPointerSize;
-						for (let ii = 0; ii < length; ++ii) {
-							value.push(read(view, currentOffset + kPointerSize));
-							currentOffset = view.uint32[currentOffset >>> 2];
-						}
-						return value;
-					}
-				};
-
-			} else {
-				// Vector with fixed element size
-				return (view, offset) => {
-					const length = view.uint32[offset >>> 2];
-					if (length === 0) {
-						return [];
-					} else {
-						const value: any[] = [];
-						let currentOffset = offset + kPointerSize;
-						value.push(read(view, currentOffset));
-						for (let ii = 1; ii < length; ++ii) {
-							currentOffset += stride;
-							value.push(read(view, currentOffset));
-						}
-						return value;
-					}
-				};
-			}
+	if ('array' in layout) {
+		// Array types
+		const { length, stride } = layout;
+		const elementLayout = layout.array;
+		const read = makeTypeReader(elementLayout, lookup);
+		if (stride === undefined) {
+			throw new TypeError('Unimplemented');
 
 		} else {
-			// Structures / object
-			const variant = layout['variant!'];
-			const { inherit } = layout;
-			const readBase = inherit === undefined ?
-				undefined : getMemberReader(unpackHolder(inherit), lookup);
-			const read = getMemberReader(layout, lookup);
+			// Array with fixed element size
 			return (view, offset) => {
-				const value = variant === undefined ? {} : { [Variant]: variant };
-				if (readBase !== undefined) {
-					readBase(value, view, offset);
+				const value: any[] = [];
+				let currentOffset = offset;
+				for (let ii = 0; ii < length; ++ii) {
+					value.push(read(view, currentOffset));
+					currentOffset += stride;
 				}
-				read(value, view, offset);
 				return value;
 			};
 		}
-	}();
 
-	// Has composer?
-	const interceptors = lookup.interceptor(layout);
-	const compose = interceptors?.compose;
-	if (compose !== undefined) {
-		return (view, offset) => compose(read(view, offset));
-	}
-	const composeFromBuffer = interceptors?.composeFromBuffer;
-	if (composeFromBuffer !== undefined) {
-		return (view, offset) => composeFromBuffer(view, offset);
-	}
-	const overlay = interceptors?.overlay;
-	if (overlay !== undefined) {
-		return (view, offset) => new (overlay as Constructor<BufferObject>)(view, offset);
-	}
-	return read;
-});
+	} else if ('composed' in layout) {
+		// Composed value
+		const { composed, interceptor } = layout;
+		const read = makeTypeReader(composed, lookup);
+		if ('compose' in interceptor) {
+			return (view, offset) => interceptor.compose(read(view, offset));
+		} else if ('composeFromBuffer' in interceptor) {
+			return (view, offset) => interceptor.composeFromBuffer(view, offset);
+		} else {
+			// Inject prototype getters into overlay
+			injectGetters(unpackWrappedStruct(layout), interceptor);
+			return (view, offset) => new (interceptor as any)(view, offset);
+		}
 
-export function getReader<Type extends Format>(format: Type, lookup = defaultInterceptorLookup) {
-	const layout = getLayout(format);
-	const read = getTypeReader(layout, lookup);
+	} else if ('enum' in layout) {
+		// Enumerated types
+		const { enum: values } = layout;
+		return (view, offset) => values[view.uint8[offset]];
+
+	} else if ('named' in layout) {
+		// Named type
+		return makeTypeReader(layout.layout, lookup);
+
+	} else if ('optional' in layout) {
+		// Optional types
+		const elementLayout = layout.optional;
+		const read = makeTypeReader(elementLayout, lookup);
+		return (view, offset) => {
+			const relativeOffset = view.uint8[offset];
+			if (relativeOffset === 0) {
+				return undefined;
+			} else {
+				return read(view, offset + relativeOffset);
+			}
+		};
+
+	} else if ('struct' in layout) {
+		// Structured types
+		const { variant } = layout;
+		const readMembers = getMemberReader(layout, lookup);
+		return (view, offset) => {
+			const value = variant ? { [Variant]: variant } : {};
+			readMembers(value, view, offset);
+			return value;
+		};
+
+	} else if ('variant' in layout) {
+		// Variant types
+		const variantReaders = layout.variant.map(elementLayout =>
+			makeTypeReader(elementLayout, lookup));
+		return (view, offset) =>
+			variantReaders[view.uint32[offset >>> 2]](view, offset + kPointerSize);
+
+	} else if ('vector' in layout) {
+		const elementLayout = layout.vector;
+		const read = makeTypeReader(elementLayout, lookup);
+		const { stride } = layout;
+		if (stride === undefined) {
+			// Vector with dynamic element size
+			return (view, offset) => {
+				const length = view.uint32[offset >>> 2];
+				if (length === 0) {
+					return [];
+				} else {
+					const value: any[] = [];
+					let currentOffset = offset + kPointerSize;
+					for (let ii = 0; ii < length; ++ii) {
+						value.push(read(view, currentOffset + kPointerSize));
+						currentOffset = view.uint32[currentOffset >>> 2];
+					}
+					return value;
+				}
+			};
+
+		} else {
+			// Vector with fixed element size
+			return (view, offset) => {
+				const length = view.uint32[offset >>> 2];
+				if (length === 0) {
+					return [];
+				} else {
+					const value: any[] = [];
+					let currentOffset = offset + kPointerSize;
+					for (let ii = 0; ii < length; ++ii) {
+						value.push(read(view, currentOffset));
+						currentOffset += stride;
+					}
+					return value;
+				}
+			};
+		}
+	}
+
+	throw new Error('Unknown layout');
+}
+
+export function makeReader<Type extends Format>(format: Type, lookup = 0) {
+	const { layout } = getLayout(format);
+	const read = makeTypeReader(layout, lookup);
 	return (buffer: Readonly<Uint8Array>): TypeOf<Type> => {
 		const view = BufferView.fromTypedArray(buffer);
 		return read(view, 0);

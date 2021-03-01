@@ -1,9 +1,18 @@
 import type { Dictionary } from 'xxscreeps/util/types';
 import type { DescribeIntentHandler, IntentListFor } from 'xxscreeps/processor';
 import * as C from 'xxscreeps/game/constants';
-import { checkCreateFlag, Color, Flag } from 'xxscreeps/game/flag';
+import { compose, declare, makeReader, makeWriter, vector } from 'xxscreeps/schema';
+import { checkCreateFlag, format, Color, Flag } from 'xxscreeps/game/flag';
 import { fromPositionId } from 'xxscreeps/game/position';
-import { instantiate } from 'xxscreeps/util/utility';
+import { instantiate, mapToKeys } from 'xxscreeps/util/utility';
+
+// Flags are stored in a separate blob per user.. this is the schema for the blob
+const schema = declare('Flags', compose(vector(format), {
+	compose: (flags): Record<string, Flag> => mapToKeys(flags, flag => [ flag.name, flag ]),
+	decompose: (flags: Record<string, Flag>) => Object.values(flags),
+}));
+export const read = makeReader(schema);
+export const write = makeWriter(schema);
 
 // Flag intents are handled on the runners, so this stuff doesn't fit into the regular intent
 // pipeline

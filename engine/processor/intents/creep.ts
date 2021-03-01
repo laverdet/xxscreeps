@@ -7,7 +7,7 @@ import type { ConstructionSite } from 'xxscreeps/game/objects/construction-site'
 import type { Resource } from 'xxscreeps/game/objects/resource';
 import type { Structure } from 'xxscreeps/game/objects/structures';
 import type { StructureController } from 'xxscreeps/game/objects/structures/controller';
-import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
+import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
 import type { Direction, RoomPosition } from 'xxscreeps/game/position';
 import * as Room from 'xxscreeps/game/room';
 import type { ResourceType, RoomObjectWithStore } from 'xxscreeps/game/store';
@@ -128,7 +128,7 @@ registerTickProcessor(Creep, creep => {
 				(look): look is Room.LookForType<StructureRoad> => look.structure.structureType === 'road');
 			if (road) {
 				// Update road decay
-				road.structure._nextDecayTime -= C.ROAD_WEAROUT * creep.body.length;
+				road.structure[NextDecayTime] -= C.ROAD_WEAROUT * creep.body.length;
 				return 1;
 			}
 			const terrain = creep.room.getTerrain().get(nextPosition.x, nextPosition.y);

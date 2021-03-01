@@ -1,8 +1,8 @@
 import { Endpoint } from 'xxscreeps/backend/endpoint';
-import * as FlagSchema from 'xxscreeps/engine/schema/flag';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 import * as Id from 'xxscreeps/engine/util/schema/id';
 import * as C from 'xxscreeps/game/constants';
+import { loadUserFlags } from 'xxscreeps/engine/model/user';
 import { checkCreateFlag } from 'xxscreeps/game/flag';
 import { extractPositionId, RoomPosition } from 'xxscreeps/game/position';
 
@@ -41,9 +41,8 @@ const GenUniqueFlagNameEndpoint: Endpoint = {
 
 	async execute(req) {
 		const { userid } = req.locals;
-		const flagBlob = await this.context.persistence.get(`user/${userid}/flags`).catch(() => {});
-		if (flagBlob) {
-			const flags = FlagSchema.read(flagBlob);
+		try {
+			const flags = await loadUserFlags(this.context.shard, userid!);
 			for (let ii = 0; ii < 100; ++ii) {
 				const name = `Flag${ii}`;
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -52,7 +51,7 @@ const GenUniqueFlagNameEndpoint: Endpoint = {
 				}
 			}
 			return { ok: 1, name: `Flag${Id.generateId(6)}` };
-		} else {
+		} catch (err) {
 			return { ok: 1, name: 'Flag1' };
 		}
 	},

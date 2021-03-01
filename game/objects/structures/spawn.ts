@@ -1,16 +1,16 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
-import type { Shape } from 'xxscreeps/engine/schema/spawn';
-import { withOverlay } from 'xxscreeps/schema';
+import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Structure from '.';
+import * as Store from 'xxscreeps/game/store';
 import { accumulate } from 'xxscreeps/util/utility';
-
 import { Direction } from 'xxscreeps/game/position';
 import type { PartType } from 'xxscreeps/game/objects/creep';
 import { create as createCreep } from 'xxscreeps/engine/processor/intents/creep';
 import { chainIntentChecks } from '../room-object';
 import { StructureExtension } from './extension';
-import { Structure } from '.';
 
 type SpawnCreepOptions = {
 	directions?: Direction[];
@@ -19,7 +19,20 @@ type SpawnCreepOptions = {
 	memory?: any;
 };
 
-export class StructureSpawn extends withOverlay<Shape>()(Structure) {
+export function format() { return compose(shape, StructureSpawn) }
+const shape = declare('Spawn', struct(Structure.format, {
+	...variant('spawn'),
+	name: 'string',
+	spawning: optional(struct({
+		creep: Id.format,
+		directions: vector('int8'),
+		endTime: 'int32',
+		needTime: 'int32',
+	})),
+	store: Store.restrictedFormat<'energy'>(),
+}));
+
+export class StructureSpawn extends withOverlay(shape)(Structure.Structure) {
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 

@@ -1,17 +1,19 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
-import { withOverlay } from 'xxscreeps/schema';
-import type { Shape } from 'xxscreeps/engine/schema/creep';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { ConstructionSite } from './construction-site';
-import { chainIntentChecks, RoomObject } from './room-object';
+import { chainIntentChecks, RoomObject, format as baseFormat } from './room-object';
 import { StructureController } from './structures/controller';
 import { obstacleTypes, RoomSearchOptions, SearchReturn } from '../path-finder';
 import type { RoomPath } from '../room/room';
-import type { RoomObjectWithStore } from '../store';
-import { Resource, ResourceType } from './resource';
+import { Resource, ResourceType, optionalResourceEnumFormat } from './resource';
 import { Structure } from './structures';
+import * as Store from '../store';
+// eslint-disable-next-line no-duplicate-imports
+import type { RoomObjectWithStore } from '../store';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 
@@ -22,7 +24,24 @@ type MoveToOptions = {
 	visualizePathStyle?: boolean;
 };
 
-export class Creep extends withOverlay<Shape>()(RoomObject) {
+export function format() { return compose(shape, Creep) }
+const shape = declare('Creep', struct(baseFormat, {
+	...variant('creep'),
+	body: vector(struct({
+		boost: optionalResourceEnumFormat,
+		hits: 'uint8',
+		type: enumerated(...C.BODYPARTS_ALL),
+	})),
+	fatigue: 'int16',
+	hits: 'int16',
+	name: 'string',
+	// saying: ...
+	store: Store.format,
+	_ageTime: 'int32',
+	_owner: Id.format,
+}));
+
+export class Creep extends withOverlay(shape)(RoomObject) {
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
 	get hitsMax() { return this.body.length * 100 }

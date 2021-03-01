@@ -1,4 +1,5 @@
 import type { InspectOptionsStylized } from 'util';
+import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import * as PathFinder from 'xxscreeps/game/path-finder';
 import * as C from './/constants';
@@ -25,6 +26,13 @@ type PositionFindType<Type> =
 	Type extends (infer Result)[] ? Result :
 	Type extends FindConstants ? FindType<Type> :
 	never;
+
+export function format() {
+	return declare('RoomPosition', compose('int32', {
+		compose: value => new RoomPosition(value),
+		decompose: (value: RoomPosition) => value[PositionInteger],
+	}));
+}
 
 /**
  * An object representing the specified position in the room. Every `RoomObject` in a room contains

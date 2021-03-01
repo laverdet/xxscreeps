@@ -177,7 +177,7 @@ export function obstacleChecker(room: Room, user: string, options: ObstacleCheck
 	}();
 	return (object: RoomObject) =>
 		creepFilter(object) || structureFilter(object) || constructionSiteFilter(object) ||
-		permanentObstacleTypes.has(object[Variant]);
+		permanentObstacleTypes.has(object[Variant as never]);
 }
 
 // Exported Game namespace

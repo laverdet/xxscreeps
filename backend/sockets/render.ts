@@ -5,19 +5,19 @@ import { Creep } from 'xxscreeps/game/objects/creep';
 import { Resource } from 'xxscreeps/game/objects/resource';
 import { Structure } from 'xxscreeps/game/objects/structures';
 import { StructureContainer } from 'xxscreeps/game/objects/structures/container';
-import { StructureController } from 'xxscreeps/game/objects/structures/controller';
+import { DowngradeTime, StructureController } from 'xxscreeps/game/objects/structures/controller';
 import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
-import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
+import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
 import { StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
 import { StructureStorage } from 'xxscreeps/game/objects/structures/storage';
 import { StructureTower } from 'xxscreeps/game/objects/structures/tower';
-import { Store } from 'xxscreeps/game/store';
+import { Capacity, Restricted, SingleResource, Store } from 'xxscreeps/game/store';
 import { Variant } from 'xxscreeps/schema';
 
 // Base object renderers
 bindRenderer(RoomObject, object => ({
 	_id: object.id,
-	type: object[Variant],
+	type: object[Variant as never],
 	x: object.pos.x,
 	y: object.pos.y,
 }));
@@ -36,7 +36,7 @@ function renderStore(store: Store) {
 		store: { ...store },
 		storeCapacity: store.getCapacity(),
 	};
-	if (store._restricted) {
+	if (store[Restricted]) {
 		if (store._capacityByResource) {
 			const capacityByResource: any = {};
 			for (const [ resourceType, value ] of store._capacityByResource.entries()) {
@@ -44,7 +44,7 @@ function renderStore(store: Store) {
 			}
 			result.storeCapacityResource = capacityByResource;
 		} else {
-			result.storeCapacityResource = { [store._singleResource!]: store._capacity };
+			result.storeCapacityResource = { [store[SingleResource]!]: store[Capacity] };
 		}
 	}
 	return result;
@@ -104,7 +104,7 @@ bindRenderer(StructureController, (controller, next) => ({
 	...next(),
 	level: controller.level,
 	progress: controller.progress,
-	downgradeTime: controller._downgradeTime,
+	downgradeTime: controller[DowngradeTime],
 	safeMode: 0,
 }));
 
@@ -115,7 +115,7 @@ bindRenderer(StructureExtension, (extension, next) => ({
 
 bindRenderer(StructureRoad, (road, next) => ({
 	...next(),
-	nextDecayTime: road._nextDecayTime,
+	nextDecayTime: road[NextDecayTime],
 }));
 
 bindRenderer(StructureSpawn, (spawn, next) => ({
