@@ -132,6 +132,9 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 			return write;
 		}
 
+	} else if ('constant' in layout) {
+		return () => 0;
+
 	} else if ('enum' in layout) {
 		// Enumerated types
 		const enumMap = new Map(layout.enum.map((value, ii) => [ value, ii ]));

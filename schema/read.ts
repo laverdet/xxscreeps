@@ -114,6 +114,10 @@ export function makeTypeReader(layout: Layout, lookup: any): Reader {
 			};
 		}
 
+	} else if ('constant' in layout) {
+		const { constant } = layout;
+		return () => constant;
+
 	} else if ('composed' in layout) {
 		// Composed value
 		const { composed, interceptor } = layout;
@@ -164,6 +168,9 @@ export function makeTypeReader(layout: Layout, lookup: any): Reader {
 		// Variant types
 		const variantReaders = layout.variant.map(elementLayout =>
 			makeTypeReader(elementLayout, lookup));
+		if (variantReaders.length !== layout.variant.length) {
+			throw new Error('Missing or duplicated variant key');
+		}
 		return (view, offset) =>
 			variantReaders[view.uint32[offset >>> 2]](view, offset + kPointerSize);
 

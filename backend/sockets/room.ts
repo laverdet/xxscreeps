@@ -1,18 +1,18 @@
 import * as Room from 'xxscreeps/engine/room';
 import * as User from 'xxscreeps/engine/metadata/user';
 import { getFlagChannel, loadUserFlags } from 'xxscreeps/engine/model/user';
-import { runAsUser } from 'xxscreeps/game/game';
+import { runAsUser, runWithState } from 'xxscreeps/game/game';
 import { SubscriptionEndpoint } from '../socket';
 import { acquire, mapInPlace, mapToKeys } from 'xxscreeps/util/utility';
-import { Render } from 'xxscreeps/backend/symbols';
+import { eventRenderers, Render } from 'xxscreeps/backend/symbols';
 import './render';
 
 function diff(previous: any, next: any) {
 	if (previous === next) {
 		return;
 	}
-	if (previous === undefined || typeof previous !== typeof next) {
-		return (next === undefined || next === null) ? null : next;
+	if (previous == null || next == null || typeof previous !== typeof next) {
+		return (next == null) ? null : next;
 	}
 	if (typeof previous === 'object') {
 		const result: any = {};
@@ -27,6 +27,21 @@ function diff(previous: any, next: any) {
 		return didAdd ? result : undefined;
 	}
 	return next;
+}
+
+function merge(result: any, subject: any) {
+	for (const [ key, val ] of Object.entries(subject)) {
+		if (val === null) {
+			result[key] = null;
+		} else if (
+			result[key] == null ||
+			typeof val !== 'object'
+		) {
+			result[key] = val;
+		} else {
+			merge(result[key], val);
+		}
+	}
 }
 
 export const roomSubscription: SubscriptionEndpoint = {
@@ -63,16 +78,37 @@ export const roomSubscription: SubscriptionEndpoint = {
 			const objects: any = {};
 			const visibleUsers = new Set<string>();
 			runAsUser(this.user, time, () => {
-				for (const object of room._objects) {
-					const value = object[Render]();
-					if (value._id) {
-						objects[value._id] = value;
+				runWithState([ room ], () => {
+					// Objects
+					for (const object of room._objects) {
+						const value = object[Render]();
+						if (value._id) {
+							objects[value._id] = value;
+						}
+						const owner = object._owner;
+						if (owner != null && !seenUsers.has(owner)) {
+							visibleUsers.add(owner);
+						}
 					}
-					const owner = object._owner;
-					if (owner != null && !seenUsers.has(owner)) {
-						visibleUsers.add(owner);
+
+					// Events
+					for (const event of room.getEventLog()) {
+						const hooks = eventRenderers.get(event.event);
+						for (const hook of hooks ?? []) {
+							const result = hook(event, room);
+							if (result) {
+								// Filter rendered targets that are no longer visible
+								for (const key in result) {
+									if (!(key in objects)) {
+										delete result[key];
+									}
+								}
+								// Merge event into rendered tree
+								merge(objects, result);
+							}
+						}
 					}
-				}
+				});
 			});
 
 			// Get users not yet seen

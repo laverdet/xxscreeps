@@ -1,5 +1,5 @@
 import { Implementation } from 'xxscreeps/util/types';
-import { EnumFormat, Format, Interceptor, Primitive } from './format';
+import { ConstantFormat, EnumFormat, Format, Interceptor, Primitive } from './format';
 import { injectGetters } from './overlay';
 
 export const kPointerSize = 4;
@@ -21,7 +21,7 @@ function resolve<Type>(declaration: Type): ResolvedFormat<Type> {
 
 export type Layout =
 	Primitive | ComposedLayout | NamedLayout |
-	ArrayLayout | EnumLayout | OptionalLayout | StructLayout | VariantLayout | VectorLayout;
+	ArrayLayout | ConstantLayout | EnumLayout | OptionalLayout | StructLayout | VariantLayout | VectorLayout;
 
 type ArrayLayout = {
 	array: Layout;
@@ -35,6 +35,7 @@ type ComposedLayout = {
 	interceptor: Interceptor | Implementation;
 };
 
+type ConstantLayout = ConstantFormat;
 type EnumLayout = EnumFormat;
 
 type NamedLayout = {
@@ -143,6 +144,12 @@ export function getLayout(unresolvedFormat: Format): { layout: Layout; traits: T
 				interceptor,
 			},
 			traits,
+		};
+
+	} else if ('constant' in format) {
+		return {
+			layout: format,
+			traits: { align: 1, size: 0, stride: 0 },
 		};
 
 	} else if ('enum' in format) {

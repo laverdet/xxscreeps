@@ -1,8 +1,11 @@
+import type { ContextType, Fallback, Implementation } from 'xxscreeps/util/types';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
+import * as Id from 'xxscreeps/engine/util/schema/id';
+import { constant, struct, variant } from 'xxscreeps/schema';
 import { RoomObject, chainIntentChecks } from 'xxscreeps/game/objects/room-object';
 import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
-import type { ContextType, Fallback, Implementation } from 'xxscreeps/util/types';
+import { registerEventLogFormat } from 'xxscreeps/game/room/event-log';
 
 // `RoomObject` intent check symbol
 const CheckHarvest = Symbol();
@@ -45,3 +48,15 @@ Creep.prototype.harvest = function(target) {
 		() => checkHarvest(this, target),
 		() => Game.intents.save(this, 'harvest', target.id));
 };
+
+// Event log type
+const eventLog = registerEventLogFormat(struct({
+	...variant(C.EVENT_HARVEST),
+	event: constant(C.EVENT_HARVEST),
+	objectId: Id.format,
+	targetId: Id.format,
+	amount: 'int32',
+}));
+declare module 'xxscreeps/game/room/event-log' {
+	interface EventLogFormats { harvestable: typeof eventLog }
+}

@@ -1,4 +1,4 @@
-import { compose, declare, struct, variant, vector } from 'xxscreeps/schema';
+import { compose, declare, member, struct, variant, vector } from 'xxscreeps/schema';
 import { Room } from 'xxscreeps/game/room';
 import * as Id from 'xxscreeps/engine/util/schema/id';
 import * as Container from 'xxscreeps/game/objects/structures/container';
@@ -11,7 +11,9 @@ import * as Road from 'xxscreeps/game/objects/structures//road';
 import * as Spawn from 'xxscreeps/game/objects/structures//spawn';
 import * as Storage from 'xxscreeps/game/objects/structures//storage';
 import * as Tower from 'xxscreeps/game/objects/structures//tower';
+import { format as eventLogFormat } from 'xxscreeps/game/room/event-log';
 import { mapInPlace } from 'xxscreeps/util/utility';
+import { EventLogSymbol } from './event-log';
 import { objectFormats } from './schema-hook';
 
 // Schema definition
@@ -43,5 +45,6 @@ export function shape() {
 			Storage.format,
 			Tower.format,
 		)),
+		eventLog: member(EventLogSymbol, vector(eventLogFormat)),
 	}));
 }

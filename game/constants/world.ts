@@ -128,7 +128,6 @@ export const EVENT_ATTACK = 1;
 export const EVENT_OBJECT_DESTROYED = 2;
 export const EVENT_ATTACK_CONTROLLER = 3;
 export const EVENT_BUILD = 4;
-export const EVENT_HARVEST = 5;
 export const EVENT_HEAL = 6;
 export const EVENT_REPAIR = 7;
 export const EVENT_RESERVE_CONTROLLER = 8;

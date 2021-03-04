@@ -21,7 +21,7 @@ export type TypeOf<Format> =
 
 export type Format =
 	(() => Format) | WithType<any> | Primitive | ComposedFormat | NamedFormat |
-	ArrayFormat | EnumFormat | OptionalFormat | StructFormat | VariantFormat | VectorFormat;
+	ArrayFormat | ConstantFormat | EnumFormat | OptionalFormat | StructFormat | VariantFormat | VectorFormat;
 type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
 export type Primitive = Integral | 'bool' | 'buffer' | 'string';
 
@@ -33,6 +33,10 @@ type ArrayFormat = {
 type ComposedFormat = {
 	composed: Format;
 	interceptor: Interceptor | Implementation;
+};
+
+export type ConstantFormat = {
+	constant: any;
 };
 
 type EnumTypes = string | undefined;
@@ -105,6 +109,12 @@ export function compose(format: Format, interceptor: Interceptor | Implementatio
 		interceptor,
 	};
 	return composedFormat as never;
+}
+
+// Holds a constant that doesn't even get stored into the blob
+export function constant<Type>(value: Type): WithType<Type> {
+	const format: ConstantFormat = { constant: value };
+	return format as never;
 }
 
 // Adds a name to a format to allow reuse
@@ -185,14 +195,14 @@ export function struct(...args: [ StructDeclaration ] | [ any, StructDeclaration
 }
 
 // Pass a string to define a variant key into a `struct`
-export function variant<V extends string>(name: V): FakeVariant<V>;
+export function variant<V extends number | string>(name: V): FakeVariant<V>;
 // *or* an array of structs with variant keys
 export function variant<Type extends Format[]>(...args: Type): WithType<{
 	[Key in keyof Type]: TypeOf<Type[Key]>;
 }[number]>;
 
 export function variant(...args: [ string ] | StructFormat[]): any {
-	if (args.length === 1 && typeof args[0] === 'string') {
+	if (args.length === 1 && typeof args[0] !== 'object') {
 		return { [Variant]: args[0] };
 	} else {
 		const format: VariantFormat = {

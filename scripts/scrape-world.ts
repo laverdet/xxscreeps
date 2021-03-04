@@ -16,6 +16,7 @@ import * as User from 'xxscreeps/engine/metadata/user';
 import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
 import * as Storage from 'xxscreeps/storage';
+import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
 import { accumulate, clamp, filterInPlace, getOrSet, mapInPlace, firstMatching } from 'xxscreeps/util/utility';
 
 const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
@@ -101,6 +102,7 @@ const rooms = db.getCollection('rooms').find().map(room => ({
 				};
 		}
 	})) ],
+	[EventLogSymbol]: [],
 }));
 
 // Save rooms

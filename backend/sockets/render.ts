@@ -70,21 +70,7 @@ bindRenderer(Creep, (creep, next) => ({
 	fatigue: creep.fatigue,
 	ageTime: creep._ageTime,
 	user: creep._owner,
-	actionLog: {
-		attacked: null,
-		healed: null,
-		attack: null,
-		rangedAttack: null,
-		rangedMassAttack: null,
-		rangedHeal: null,
-		harvest: null,
-		heal: null,
-		repair: null,
-		build: null,
-		say: null,
-		upgradeController: null,
-		reserveController: null,
-	},
+	actionLog: {},
 }));
 
 bindRenderer(Resource, (resource, next) => ({

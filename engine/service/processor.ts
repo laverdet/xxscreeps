@@ -1,5 +1,6 @@
 import assert from 'assert';
 import * as Room from 'xxscreeps/engine/room';
+import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
 import { mapInPlace } from 'xxscreeps/util/utility';
 import { ProcessorContext } from 'xxscreeps/engine/processor/context';
 import 'xxscreeps/config/mods/processor';
@@ -51,6 +52,9 @@ try {
 				const deleteIntentBlobs = Promise.all(mapInPlace(intents, ({ user }) =>
 					persistence.del(`intents/${room}/${user}`)));
 				const roomInstance = Room.read(roomBlob);
+
+				// TODO: Put this in a pre-tick handler
+				roomInstance[EventLogSymbol] = [];
 
 				// Run NPC scripts
 				const npcIntents = Array.from(roomInstance._npcs).map(npc => {

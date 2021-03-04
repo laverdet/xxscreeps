@@ -29,6 +29,7 @@ import { StructureExtension } from '../objects/structures/extension';
 import { StructureSpawn } from '../objects/structures/spawn';
 import { RoomVisual } from '../visual';
 
+import { EventLogSymbol } from './event-log';
 import { FindConstants, FindType, findHandlers } from './find';
 import { LookConstants, LookType, lookConstants } from './look';
 import { shape } from './schema';
@@ -83,7 +84,6 @@ export class Room extends withOverlay(shape)(BufferObject) {
 
 	constructor(view: BufferView, offset = 0) {
 		super(view, offset);
-		debugger;
 		for (const object of this._objects) {
 			this._afterInsertion(object);
 		}
@@ -274,6 +274,18 @@ export class Room extends withOverlay(shape)(BufferObject) {
 			},
 			() => checkCreateConstructionSite(this, pos, structureType),
 			() => Game.intents.push(this, 'createConstructionSite', structureType, xx, yy, name));
+	}
+
+	/**
+	 * Returns an array of events happened on the previous tick in this room.
+	 * @param raw Return as JSON string.
+	 */
+	getEventLog(raw?: boolean) {
+		if (raw) {
+			throw new Error('Don\'t use this');
+		} else {
+			return this[EventLogSymbol];
+		}
 	}
 
 	get visual() {

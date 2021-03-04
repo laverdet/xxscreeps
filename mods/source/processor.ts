@@ -7,16 +7,16 @@ import * as ResourceIntent from 'xxscreeps/engine/processor/intents/resource';
 import * as StoreIntent from 'xxscreeps/engine/processor/intents/store';
 import { Source } from './source';
 
-registerHarvestProcessor(Source, function(creep) {
+registerHarvestProcessor(Source, (creep, source) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER);
-	const energy = Math.min(this.energy, power);
+	const energy = Math.min(source.energy, power);
 	const overflow = Math.max(energy - creep.store.getFreeCapacity('energy'), 0);
 	StoreIntent.add(creep.store, 'energy', energy - overflow);
-	this.energy -= energy;
+	source.energy -= energy;
 	if (overflow > 0) {
-		ResourceIntent.drop(this.pos, 'energy', overflow);
+		ResourceIntent.drop(source.pos, 'energy', overflow);
 	}
-	return true;
+	return energy;
 });
 
 registerTickProcessor(Source, source => {
