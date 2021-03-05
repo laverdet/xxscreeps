@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import { lookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import { registerHarvestable } from 'xxscreeps/mods/harvestable';
+import { registerHarvestable } from 'xxscreeps/mods/harvestable/game';
 import { Source } from './source';
 
 // Register FIND_ types for `Source`

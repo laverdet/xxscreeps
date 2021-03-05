@@ -17,6 +17,7 @@ import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
 import * as Storage from 'xxscreeps/storage';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
+import { NPCData } from 'xxscreeps/mods/npc/game';
 import { accumulate, clamp, filterInPlace, getOrSet, mapInPlace, firstMatching } from 'xxscreeps/util/utility';
 
 const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
@@ -68,8 +69,10 @@ const { gameTime }: { gameTime: number } = env;
 const roomObjects = db.getCollection('rooms.objects');
 const rooms = db.getCollection('rooms').find().map(room => ({
 	name: room._id,
-	_npcs: new Set<string>(),
-	_npcMemory: new Map,
+	[NPCData]: {
+		users: new Set<string>(),
+		memory: new Map,
+	},
 	_objects: [ ...filterInPlace(roomObjects.find({ room: room._id }).map(object => {
 		switch (object.type) {
 			case 'controller':

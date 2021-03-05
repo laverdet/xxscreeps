@@ -77,8 +77,8 @@ export const roomSubscription: SubscriptionEndpoint = {
 			// Render current room state
 			const objects: any = {};
 			const visibleUsers = new Set<string>();
-			runAsUser(this.user, time, () => {
-				runWithState([ room ], () => {
+			runAsUser(this.user, () => {
+				runWithState([ room ], time, () => {
 					// Objects
 					for (const object of room._objects) {
 						const value = object[Render]();

@@ -8,7 +8,7 @@ import * as Store from 'xxscreeps/game/store';
 import { accumulate } from 'xxscreeps/util/utility';
 import { Direction } from 'xxscreeps/game/position';
 import type { PartType } from 'xxscreeps/game/objects/creep';
-import { create as createCreep } from 'xxscreeps/engine/processor/intents/creep';
+import { create as createCreep } from 'xxscreeps/engine/processor/intents/create-creep';
 import { chainIntentChecks } from '../room-object';
 import { StructureExtension } from './extension';
 

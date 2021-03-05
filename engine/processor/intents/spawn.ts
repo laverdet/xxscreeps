@@ -1,9 +1,9 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import { getPositonInDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
-import * as Room from 'xxscreeps/game/room';
+import { insertObject, moveObject } from 'xxscreeps/game/room/methods';
 import * as Creep from 'xxscreeps/game/objects/creep';
-import { registerIntentProcessor, registerTickProcessor } from 'xxscreeps/processor';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
 import { checkSpawnCreep, StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
@@ -62,7 +62,7 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 
 	// Add new creep to room objects
 	const creep = CreepIntent.create(body, spawn.pos, name, Game.me);
-	Room.insertObject(spawn.room, creep);
+	insertObject(spawn.room, creep);
 
 	// Set spawning information
 	const needTime = body.length * C.CREEP_SPAWN_TIME;
@@ -74,13 +74,13 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 	};
 });
 
-registerTickProcessor(StructureSpawn, spawn => {
+registerObjectTickProcessor(StructureSpawn, spawn => {
 	if (spawn.spawning && spawn.spawning.endTime <= Game.time) {
 		const creep = Game.getObjectById(spawn.spawning.creep);
 		if (creep && creep instanceof Creep.Creep) {
 			const hasClaim = creep.body.some(part => part.type === 'claim');
 			creep._ageTime = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME);
-			Room.moveObject(creep, getPositonInDirection(creep.pos, C.TOP));
+			moveObject(creep, getPositonInDirection(creep.pos, C.TOP));
 		}
 		spawn.spawning = undefined;
 	}

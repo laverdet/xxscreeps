@@ -2,8 +2,9 @@ import { findHandlers } from './symbols';
 
 import 'xxscreeps/config/mods/game';
 import type { KeysOf, KeyFor } from 'xxscreeps/util/types';
+import type { Room } from './room';
 import * as C from 'xxscreeps/game/constants';
-import { lookFor, Room } from './room';
+import { lookFor } from './methods';
 
 // Registers a FIND_ constant and its respective handler
 export type FindHandler = (room: Room) => any[];

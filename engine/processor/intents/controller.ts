@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import { DowngradeTime, Progress, StructureController } from 'xxscreeps/game/objects/structures/controller';
-import { registerTickProcessor } from 'xxscreeps/processor';
+import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { exchange } from 'xxscreeps/util/utility';
 
 export function claim(controller: StructureController, user: string) {
@@ -33,7 +33,7 @@ export function upgrade(controller: StructureController, energy: number) {
 	}
 }
 
-registerTickProcessor(StructureController, controller => {
+registerObjectTickProcessor(StructureController, controller => {
 	const upgradePower = exchange(controller, '_upgradePowerThisTick');
 	if (upgradePower !== undefined) {
 		controller[DowngradeTime] = 1 + Math.min(

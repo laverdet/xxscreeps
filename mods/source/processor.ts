@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
-import { registerTickProcessor } from 'xxscreeps/processor';
+import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { calculatePower } from 'xxscreeps/engine/processor/intents/creep';
 import * as ResourceIntent from 'xxscreeps/engine/processor/intents/resource';
 import * as StoreIntent from 'xxscreeps/engine/processor/intents/store';
@@ -19,7 +19,7 @@ registerHarvestProcessor(Source, (creep, source) => {
 	return energy;
 });
 
-registerTickProcessor(Source, source => {
+registerObjectTickProcessor(Source, source => {
 
 	// Regenerate energy
 	if (source.energy < source.energyCapacity) {

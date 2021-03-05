@@ -1,21 +1,15 @@
 import assert from 'assert';
 import * as Room from 'xxscreeps/engine/room';
-import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
 import { mapInPlace } from 'xxscreeps/util/utility';
-import { ProcessorContext } from 'xxscreeps/engine/processor/context';
-import 'xxscreeps/config/mods/processor';
-import 'xxscreeps/engine/processor/intents';
-import * as Invader from 'xxscreeps/engine/processor/intents/invader/main';
-import * as Game from 'xxscreeps/game/game';
+import { RoomProcessorContext } from 'xxscreeps/processor/room';
 import { loadTerrain } from 'xxscreeps/game/map';
-import * as Memory from 'xxscreeps/game/memory';
 import * as Storage from 'xxscreeps/storage';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Queue } from 'xxscreeps/storage/queue';
 import { ProcessorMessage, ProcessorQueueElement } from '.';
 
 // Keep track of rooms this thread ran. Global room processing must also happen here.
-const processedRooms = new Map<string, ProcessorContext>();
+const processedRooms = new Map<string, RoomProcessorContext>();
 
 // Connect to main & storage
 const storage = await Storage.connect('shard0');
@@ -40,59 +34,33 @@ try {
 			// have run their code
 			gameTime = message.time;
 			roomsQueue.version(`${gameTime}`);
-			for await (const { room, users } of roomsQueue) {
+			for await (const { room: roomName, users } of roomsQueue) {
 				// Read room data and intents from storage
-				const [ roomBlob, intents ] = await Promise.all([
-					persistence.get(`room/${room}`),
-					Promise.all(mapInPlace(users, async user => ({
-						user,
-						intents: await persistence.get(`intents/${room}/${user}`),
-					}))),
-				]);
-				const deleteIntentBlobs = Promise.all(mapInPlace(intents, ({ user }) =>
-					persistence.del(`intents/${room}/${user}`)));
-				const roomInstance = Room.read(roomBlob);
-
-				// TODO: Put this in a pre-tick handler
-				roomInstance[EventLogSymbol] = [];
-
-				// Run NPC scripts
-				const npcIntents = Array.from(roomInstance._npcs).map(npc => {
-					const memory = roomInstance._npcMemory.get(npc) ?? new Uint8Array(0);
-					Memory.initialize(memory);
-					Game.initializeIntents();
-					const result = Game.runAsUser(npc, gameTime, () =>
-						Game.runWithState([ roomInstance ], () => Invader.loop()));
-					if (result) {
-						roomInstance._npcMemory.set(npc, Memory.flush());
-					} else {
-						roomInstance._npcs.delete(npc);
-						roomInstance._npcMemory.delete(npc);
-					}
-					return {
-						user: npc,
-						intents: Game.flushIntents().intentsByGroup,
-					};
-				});
-
-				// Process intents
-				const context = new ProcessorContext(gameTime, roomInstance);
-				Game.runWithState([ roomInstance ], () => {
-					for (const { user, intents } of npcIntents) {
-						context.processIntents(user, intents[room] ?? {});
-					}
-					for (const intentInfo of intents) {
-						assert.equal(intentInfo.intents.byteOffset, 0);
-						const uint16 = new Uint16Array(intentInfo.intents.buffer);
+				const [ room, intents ] = await Promise.all([
+					(async() =>
+						Room.read(await persistence.get(`room/${roomName}`))
+					)(),
+					Promise.all(mapInPlace(users, async user => {
+						const intentsBlob = await persistence.get(`intents/${roomName}/${user}`);
+						assert.strictEqual(intentsBlob.byteOffset, 0);
+						const uint16 = new Uint16Array(intentsBlob.buffer);
 						const intents = JSON.parse(String.fromCharCode(...uint16));
-						context.processIntents(intentInfo.user, intents);
-					}
-					context.processTick();
-				});
+						return { user, intents };
+					})),
+				]);
+
+				// Delete intent blobs in background
+				const deleteIntentBlobs = Promise.all(mapInPlace(users, user =>
+					persistence.del(`intents/${roomName}/${user}`)));
+
+				// Create processor context and run first phase
+				const context = new RoomProcessorContext(room, gameTime, intents);
+				context.process();
+				processedRooms.set(roomName, context);
+
 				// Save and notify main service of completion
 				await deleteIntentBlobs;
-				processedRooms.set(room, context);
-				await processorChannel.publish({ type: 'processedRoom', roomName: room });
+				await processorChannel.publish({ type: 'processedRoom', roomName });
 			}
 
 		} else if (message.type === 'flushRooms') {

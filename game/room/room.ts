@@ -5,7 +5,7 @@ import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import type { BufferView } from 'xxscreeps/schema/buffer-view';
 import { withOverlay } from 'xxscreeps/schema';
 import type { LooseBoolean } from 'xxscreeps/util/types';
-import { accumulate, concatInPlace, exchange, mapInPlace, uncurryThis } from 'xxscreeps/util/utility';
+import { accumulate, concatInPlace, mapInPlace } from 'xxscreeps/util/utility';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
@@ -33,6 +33,7 @@ import { EventLogSymbol } from './event-log';
 import { FindConstants, FindType, findHandlers } from './find';
 import { LookConstants, LookType, lookConstants } from './look';
 import { shape } from './schema';
+import { LookFor, MoveObject, InsertObject, RemoveObject } from './symbols';
 
 export type AnyRoomObject = RoomObject | InstanceType<typeof Room>['_objects'][number];
 
@@ -64,12 +65,6 @@ export type RoomPath = {
 	dy: -1 | 0 | 1;
 	direction: Direction;
 }[];
-
-// Methods which will be extracted and exported
-const LookFor = Symbol('lookFor');
-const MoveObject = Symbol('moveObject');
-const InsertObject = Symbol('insertObject');
-const RemoveObject = Symbol('removeObject');
 
 export class Room extends withOverlay(shape)(BufferObject) {
 	get memory() {
@@ -524,20 +519,6 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 
 	return C.OK;
 }
-
-//
-// Extracted private functions
-export const lookFor = uncurryThis(exchange(Room.prototype, LookFor));
-
-export const moveObject = (moveObject => (object: RoomObject, pos: RoomPosition) =>
-	moveObject(object.room, object, pos)
-)(uncurryThis(exchange(Room.prototype, MoveObject)));
-
-export const insertObject = uncurryThis(exchange(Room.prototype, InsertObject));
-
-export const removeObject = (removeObject => (object: RoomObject) =>
-	removeObject(object.room, object)
-)(uncurryThis(exchange(Room.prototype, RemoveObject)));
 
 //
 // Utilities

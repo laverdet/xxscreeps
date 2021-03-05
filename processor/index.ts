@@ -1,6 +1,7 @@
 import type { CounterExtract, Dictionary, Implementation, UnwrapArray } from 'xxscreeps/util/types';
 import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { IntentIdentifier, Processors, Tick } from './symbols';
+export { registerRoomTickProcessor } from './room';
 
 // `RoomObject` type definitions
 type IntentProcessorHolder = Dictionary<(receiver: any, ...data: any) => void>;
@@ -64,7 +65,7 @@ export type IntentListFor<Type extends IntentReceivers> = {
 };
 
 // Register per-tick per-object processor
-export function registerTickProcessor<Type extends RoomObject>(
+export function registerObjectTickProcessor<Type extends RoomObject>(
 	receiver: Implementation<Type>,
 	tick: (receiver: Type) => void,
 ) {

@@ -3,7 +3,7 @@ import * as Game from 'xxscreeps/game/game';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import { instantiate } from 'xxscreeps/util/utility';
 import { StructureContainer } from 'xxscreeps/game/objects/structures/container';
-import { registerTickProcessor } from 'xxscreeps/processor';
+import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { newRoomObject } from './room-object';
 import * as StoreIntent from './store';
 
@@ -19,7 +19,7 @@ export function create(pos: RoomPosition) {
 	});
 }
 
-registerTickProcessor(StructureContainer, container => {
+registerObjectTickProcessor(StructureContainer, container => {
 	if (container.ticksToDecay === 0) {
 		const ownedController = Game.rooms[container.pos.roomName]!.controller?.owner;
 		container.hits -= C.CONTAINER_DECAY;

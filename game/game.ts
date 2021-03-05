@@ -76,33 +76,20 @@ export function flushIntents() {
  * This sets up global context enough that `Game.time` and `Creep..my` will work but intents and
  * `Game.getObjectById` won't work. This is used by backend readers.
  */
-export function runAsUser<Type>(userId: string, time_: number, task: () => Type) {
+export function runAsUser<Type>(userId: string, task: () => Type) {
 	me = userId;
-	time = time_;
 	try {
 		return task();
 	} finally {
 		me = '';
-		time = NaN;
-	}
-}
-
-/**
- * Used by the processor to run `tick` events
- */
-export function runWithTime<Type>(time_: number, task: () => Type) {
-	time = time_;
-	try {
-		return task();
-	} finally {
-		time = NaN;
 	}
 }
 
 /**
  * This initializes `getObjectById`, Game.rooms`, `Game.creeps`, etc.
  */
-export function runWithState<Type>(rooms_: Room[], task: () => Type) {
+export function runWithState<Type>(rooms_: Room[], time_: number, task: () => Type) {
+	time = time_;
 	for (const room of rooms_) {
 		rooms[room.name] = room;
 		if (me === '') {
@@ -132,6 +119,7 @@ export function runWithState<Type>(rooms_: Room[], task: () => Type) {
 	try {
 		return task();
 	} finally {
+		time = NaN;
 		rooms = Object.create(null);
 		objects.clear();
 		if (me !== '') {
@@ -154,7 +142,7 @@ export function runForUser<Type>(
 	flags_: Record<string, Flag>,
 	task: (game: Game) => Type,
 ) {
-	return runAsUser(userId, time_, () => runWithState(rooms, () => {
+	return runAsUser(userId, () => runWithState(rooms, time_, () => {
 		try {
 			flags = flags_;
 			task(new Game);

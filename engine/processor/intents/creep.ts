@@ -8,33 +8,19 @@ import type { Resource } from 'xxscreeps/game/objects/resource';
 import type { Structure } from 'xxscreeps/game/objects/structures';
 import type { StructureController } from 'xxscreeps/game/objects/structures/controller';
 import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
-import type { Direction, RoomPosition } from 'xxscreeps/game/position';
-import * as Room from 'xxscreeps/game/room';
+import type { Direction } from 'xxscreeps/game/position';
+import type { LookForType } from 'xxscreeps/game/room';
+import { moveObject, removeObject } from 'xxscreeps/game/room/methods';
 import type { ResourceType, RoomObjectWithStore } from 'xxscreeps/game/store';
-import { accumulate, instantiate, firstMatching } from 'xxscreeps/util/utility';
-import { registerIntentProcessor, registerTickProcessor } from 'xxscreeps/processor';
+import { accumulate, firstMatching } from 'xxscreeps/util/utility';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import * as StructureControllerIntent from './controller';
 import * as Movement from './movement';
 // eslint-disable-next-line no-duplicate-imports
 import { calculateWeight } from './movement';
 import * as ResourceIntent from './resource';
-import { newRoomObject } from './room-object';
 import * as StoreIntent from './store';
-
-export function create(body: PartType[], pos: RoomPosition, name: string, owner: string) {
-	const carryCapacity = body.reduce((energy, type) =>
-		(type === C.CARRY ? energy + C.CARRY_CAPACITY : energy), 0);
-	return instantiate(Creep, {
-		...newRoomObject(pos),
-		body: body.map(type => ({ type, hits: 100, boost: undefined })),
-		fatigue: 0,
-		hits: body.length * 100,
-		name,
-		store: StoreIntent.create(carryCapacity),
-		_ageTime: 0,
-		_owner: owner,
-	});
-}
+export { create } from './create-creep';
 
 declare module 'xxscreeps/processor' {
 	interface Intent { creep: typeof intents }
@@ -73,7 +59,7 @@ const intents = [
 
 	registerIntentProcessor(Creep, 'suicide', creep => {
 		if (creep.my) {
-			Room.removeObject(creep);
+			removeObject(creep);
 		}
 	}),
 
@@ -106,13 +92,13 @@ const intents = [
 	}),
 ];
 
-registerTickProcessor(Creep, creep => {
+registerObjectTickProcessor(Creep, creep => {
 	// Check creep age death
 	if (Game.time >= creep._ageTime && creep._ageTime !== 0) {
 		for (const [ resourceType, amount ] of Object.entries(creep.store) as [ ResourceType, number ][]) {
 			ResourceIntent.drop(creep.pos, resourceType, amount);
 		}
-		Room.removeObject(creep);
+		removeObject(creep);
 		return true;
 	}
 
@@ -120,12 +106,12 @@ registerTickProcessor(Creep, creep => {
 	const nextPosition = Movement.get(creep);
 	if (nextPosition) {
 		// Move the creep
-		Room.moveObject(creep, nextPosition);
+		moveObject(creep, nextPosition);
 		// Calculate base fatigue from plain/road/swamp
 		const fatigue = (() => {
 			const road = firstMatching(
 				creep.room.lookForAt(C.LOOK_STRUCTURES, nextPosition),
-				(look): look is Room.LookForType<StructureRoad> => look.structure.structureType === 'road');
+				(look): look is LookForType<StructureRoad> => look.structure.structureType === 'road');
 			if (road) {
 				// Update road decay
 				road.structure[NextDecayTime] -= C.ROAD_WEAROUT * creep.body.length;

@@ -59,7 +59,7 @@ type StructFormat = {
 	variant?: number | string;
 };
 
-type StructMember<Name extends string | symbol = any, Format = any> = {
+type StructMember<Name extends keyof any = any, Format = any> = {
 	member: Format;
 	name: Name;
 };
@@ -155,12 +155,12 @@ export function optional<Type extends Format>(element: Type): WithType<TypeOf<Ty
 type StructKeys<Type extends StructDeclaration> = {
 	[Key in keyof Type]:
 		Key extends '__variant' ? never :
-		Type[Key] extends StructMember<infer Name> ? Name :
-		Key extends string ? Key : never;
+		Key extends typeof Variant ? never :
+		Type[Key] extends StructMember<infer Name> ? Name : Key;
 }[keyof Type];
 
 // Looks up a symbol into a struct format and returns the vformat for that symbol
-type StructLookup<Type extends StructDeclaration, Name extends string | symbol> =
+type StructLookup<Type extends StructDeclaration, Name extends keyof any> =
 	Name extends keyof Type ? Type[Name] :
 	{
 		[Key in keyof Type]: Type[Key] extends StructMember<Name> ? Type[Key]['member'] : never;

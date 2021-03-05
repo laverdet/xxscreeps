@@ -1,7 +1,7 @@
-import { registerTickProcessor } from 'xxscreeps/processor';
+import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { ConstructionSite, ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
 import { RoomPosition } from 'xxscreeps/game/position';
-import * as Room from 'xxscreeps/game/room';
+import { insertObject, removeObject } from 'xxscreeps/game/room/methods';
 import { instantiate } from 'xxscreeps/util/utility';
 import * as ContainerIntent from './container';
 import * as ExtensionIntent from './extension';
@@ -26,11 +26,11 @@ export function create(
 	});
 }
 
-registerTickProcessor(ConstructionSite, site => {
+registerObjectTickProcessor(ConstructionSite, site => {
 	if (site.progress >= site.progressTotal) {
 		const { pos, room, structureType, _owner } = site;
 		const level = site.room.controller?.level ?? 0;
-		Room.removeObject(site);
+		removeObject(site);
 		const structure = function() {
 			switch (structureType) {
 				case 'container': return ContainerIntent.create(pos);
@@ -42,7 +42,7 @@ registerTickProcessor(ConstructionSite, site => {
 			}
 		}();
 		if (structure) {
-			Room.insertObject(room, structure);
+			insertObject(room, structure);
 		}
 	}
 });

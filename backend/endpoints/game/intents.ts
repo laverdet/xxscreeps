@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import { runAsUser } from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game/game';
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { loadRoom, loadRooms, saveRoom } from 'xxscreeps/backend/model/room';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
@@ -7,7 +7,7 @@ import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as ControllerIntents from 'xxscreeps/engine/processor/intents/controller';
 import * as CreepIntents from 'xxscreeps/engine/processor/intents/creep';
 import * as SpawnIntents from 'xxscreeps/engine/processor/intents/spawn';
-import * as Room from 'xxscreeps/game/room';
+import { insertObject } from 'xxscreeps/game/room/methods';
 import { checkCreateConstructionSite } from 'xxscreeps/game/room/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import type { PartType } from 'xxscreeps/game/objects/creep';
@@ -15,6 +15,9 @@ import { concatInPlace, accumulate } from 'xxscreeps/util/utility';
 import { ServiceMessage } from 'xxscreeps/engine/service';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 import { Channel } from 'xxscreeps/storage/channel';
+
+// TODO: Move this to backend mod
+import { activateNPC } from 'xxscreeps/mods/npc/processor';
 
 const AddObjectIntentEndpoint: Endpoint = {
 	path: '/add-object-intent',
@@ -100,17 +103,19 @@ const PlaceSpawnEndpoint: Endpoint = {
 				throw new Error('User has presence');
 			}
 			const room = await loadRoom(this.context, pos.roomName);
-			runAsUser(user.id, this.context.time, () => {
-				// Check room eligibility
-				if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
-					throw new Error('Invalid intent');
-				}
-				// Add spawn
-				Room.insertObject(room, SpawnIntents.create(pos, userid!, name));
-				ControllerIntents.claim(room.controller!, user.id);
-				user.roomsControlled.add(room.name);
-				user.roomsPresent.add(room.name);
-				user.roomsVisible.add(room.name);
+			Game.runWithState([ room ], this.context.time, () => {
+				Game.runAsUser(user.id, () => {
+					// Check room eligibility
+					if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
+						throw new Error('Invalid intent');
+					}
+					// Add spawn
+					insertObject(room, SpawnIntents.create(pos, userid!, name));
+					ControllerIntents.claim(room.controller!, user.id);
+					user.roomsControlled.add(room.name);
+					user.roomsPresent.add(room.name);
+					user.roomsVisible.add(room.name);
+				});
 			});
 
 			// Make room & user active
@@ -176,10 +181,10 @@ const CreateInvaderEndpoint: Endpoint = {
 			if (room.controller?._owner !== userid) {
 				return;
 			}
-			room._npcs.add('2');
+			activateNPC(room, '2');
 			const creep = CreepIntents.create(body, pos, `Invader_${Math.floor(Math.random() * 1000)}`, '2');
 			creep._ageTime = this.context.time + 200;
-			Room.insertObject(room, creep);
+			insertObject(room, creep);
 			await saveRoom(this.context, room);
 		});
 		return { ok: 1 };

@@ -20,7 +20,7 @@ export function structForPath<Path extends string>(path: Path): ExtractStructSch
 	const formats = schemaByPath.get(path) ?? [];
 	for (const format of formats) {
 		const resolvedFormat = resolve(format);
-		for (const [ key, member ] of Object.entries(resolvedFormat)) {
+		for (const [ key, member ] of Object.entries(resolvedFormat.struct)) {
 			schema[key] = member;
 		}
 	}
