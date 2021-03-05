@@ -5,7 +5,7 @@ import * as Id from 'xxscreeps/engine/util/schema/id';
 import { constant, struct, variant } from 'xxscreeps/schema';
 import { RoomObject, chainIntentChecks } from 'xxscreeps/game/objects/room-object';
 import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
-import { registerEventLogFormat } from 'xxscreeps/game/room/event-log';
+import { registerSchema } from 'xxscreeps/engine/schema';
 
 // `RoomObject` intent check symbol
 const CheckHarvest = Symbol();
@@ -50,13 +50,13 @@ Creep.prototype.harvest = function(target) {
 };
 
 // Event log type
-const eventLog = registerEventLogFormat(struct({
+const eventLog = registerSchema('Room.eventLog', struct({
 	...variant(C.EVENT_HARVEST),
 	event: constant(C.EVENT_HARVEST),
 	objectId: Id.format,
 	targetId: Id.format,
 	amount: 'int32',
 }));
-declare module 'xxscreeps/game/room/event-log' {
-	interface EventLogFormats { harvestable: typeof eventLog }
+declare module 'xxscreeps/engine/schema' {
+	interface Schema { harvestable: typeof eventLog }
 }

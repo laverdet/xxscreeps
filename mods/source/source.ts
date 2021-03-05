@@ -1,7 +1,7 @@
 import * as Game from 'xxscreeps/game/game';
 import * as RoomObject from 'xxscreeps/game/objects/room-object';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { registerRoomObjectFormat } from 'xxscreeps/game/room';
+import { registerSchema } from 'xxscreeps/engine/schema';
 import * as C from './constants';
 
 function format() { return compose(shape, Source) }
@@ -12,9 +12,9 @@ const shape = declare('Source', struct(RoomObject.format, {
 	_nextRegenerationTime: 'int32',
 }));
 
-registerRoomObjectFormat(format);
-declare module 'xxscreeps/game/room' {
-	interface RoomObjectFormats { source: typeof format }
+const schema = registerSchema('Room.objects', format);
+declare module 'xxscreeps/engine/schema' {
+	interface Schema { source: typeof schema }
 }
 
 export class Source extends withOverlay(shape)(RoomObject.RoomObject) {

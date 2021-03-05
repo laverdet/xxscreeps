@@ -1,5 +1,6 @@
 import { compose, declare, member, struct, variant, vector } from 'xxscreeps/schema';
 import { Room } from 'xxscreeps/game/room';
+import { structForPath, variantForPath } from 'xxscreeps/engine/schema';
 import * as Id from 'xxscreeps/engine/util/schema/id';
 import * as Container from 'xxscreeps/game/objects/structures/container';
 import * as Controller from 'xxscreeps/game/objects/structures//controller';
@@ -11,15 +12,14 @@ import * as Road from 'xxscreeps/game/objects/structures//road';
 import * as Spawn from 'xxscreeps/game/objects/structures//spawn';
 import * as Storage from 'xxscreeps/game/objects/structures//storage';
 import * as Tower from 'xxscreeps/game/objects/structures//tower';
-import { format as eventLogFormat } from 'xxscreeps/game/room/event-log';
 import { mapInPlace } from 'xxscreeps/util/utility';
 import { EventLogSymbol } from './event-log';
-import { objectFormats } from './schema-hook';
 
 // Schema definition
 export function format() { return compose(shape, Room) }
 export function shape() {
 	return declare('Room', struct({
+		...structForPath('Room'),
 		name: 'string',
 		_npcs: compose(vector(Id.format), {
 			compose: value => new Set(value),
@@ -33,7 +33,7 @@ export function shape() {
 			decompose: (map: Map<string, Readonly<Uint8Array>>) => mapInPlace(map, ([ id, memory ]) => ({ id, memory })),
 		}),
 		_objects: vector(variant(
-			...objectFormats,
+			...variantForPath('Room.objects'),
 			Container.format,
 			ConstructionSite.format,
 			Controller.format,
@@ -45,6 +45,7 @@ export function shape() {
 			Storage.format,
 			Tower.format,
 		)),
-		eventLog: member(EventLogSymbol, vector(eventLogFormat)),
+		eventLog: member(EventLogSymbol,
+			vector(variant(...variantForPath('Room.eventLog')))),
 	}));
 }

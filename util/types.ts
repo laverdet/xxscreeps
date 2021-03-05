@@ -20,7 +20,7 @@ export type Dictionary<Type> = {
 export type KeysOf<Type> = Type extends any ? keyof Type : never;
 
 // Returns value of key from any member in a union
-export type KeyFor<Type, Key extends keyof any> = Extract<Type, { [key in Key]: any }>[Key];
+export type KeyFor<Type, Key extends keyof any> = Extract<Type, WithKey<Key>>[Key];
 
 // Returns `Type`, or `Fallback` if `Type` was never. TODO: Figure out how to make this reliable
 export type Fallback<Type, Fallback> = (Type | Fallback) extends Fallback ? Fallback : Type;
@@ -43,3 +43,6 @@ export type UnionToIntersection<Union> =
 
 // Turns `T[]` into `T`, or returns `T` if it's not an array
 export type UnwrapArray<Type> = Type extends (infer Element)[] ? Element : Type;
+
+// Returns an object with a given key
+export type WithKey<Path extends keyof any> = { [key in Path]: any };

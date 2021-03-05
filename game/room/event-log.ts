@@ -1,23 +1,12 @@
 import type { Room } from '.';
-import { Format, TypeOf, Variant, variant } from 'xxscreeps/schema';
+import { Variant } from 'xxscreeps/schema';
 export const EventLogSymbol = Symbol('eventLog');
 
 // Union type of all events
-export type AnyEventLog = TypeOf<typeof format>;
-
-// Event log registration hook for mods
-type EventLogFormatTypes = Exclude<EventLogFormats[keyof EventLogFormats], void>;
-const eventLogFormats: EventLogFormatTypes[] = [];
-export function registerEventLogFormat<Type extends Format>(format: Type): void | Type {
-	eventLogFormats.push(format as never);
-}
-export interface EventLogFormats {}
-
-// Late bound format saved on `Room` object
-export const format = () => variant(...eventLogFormats);
+export type AnyEventLog = Omit<Room[typeof EventLogSymbol][number], '__variant'>;
 
 // Event log mutator
-export function appendEventLog(room: Room, event: Omit<TypeOf<typeof format>, '__variant'>) {
+export function appendEventLog(room: Room, event: AnyEventLog) {
 	room[EventLogSymbol].push({
 		[Variant]: event.event,
 		...event,

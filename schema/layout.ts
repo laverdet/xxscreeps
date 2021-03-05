@@ -12,7 +12,7 @@ export function alignTo(address: number, align: number) {
 type ResolvedFormat<Type> =
 	(Type extends () => infer First ? First : never) |
 	(Type extends () => any ? never : Type);
-function resolve<Type>(declaration: Type): ResolvedFormat<Type> {
+export function resolve<Type>(declaration: Type): ResolvedFormat<Type> {
 	if (typeof declaration === 'function') {
 		return resolve(declaration());
 	}
