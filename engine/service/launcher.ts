@@ -107,11 +107,6 @@ try {
 		]);
 	}
 
-} catch (err) {
-	// Show error now, before waiting for shut down
-	console.error('Uncaught exception ', err);
-	serviceChannel.publish({ type: 'shutdown' }).catch(console.error);
-
 } finally {
 	// Shut down shared services
 	storage.disconnect();

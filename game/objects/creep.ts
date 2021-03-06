@@ -4,8 +4,9 @@ import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
+import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { ConstructionSite } from './construction-site';
-import { chainIntentChecks, RoomObject, format as baseFormat } from './room-object';
+import { RoomObject, format as baseFormat } from './room-object';
 import { StructureController } from './structures/controller';
 import { obstacleTypes, RoomSearchOptions, SearchReturn } from '../path-finder';
 import type { RoomPath } from '../room/room';
@@ -245,23 +246,22 @@ export class Creep extends withOverlay(shape)(RoomObject) {
 
 //
 // Intent checks
-export function checkCommon(creep: Creep) {
+export function checkCommon(creep: Creep, part?: PartType) {
 	if (!creep.my) {
 		return C.ERR_NOT_OWNER;
 	} else if (creep.spawning) {
 		return C.ERR_BUSY;
+	} else if (part && creep.getActiveBodyparts(part) === 0) {
+		return C.ERR_NO_BODYPART;
 	}
 	return C.OK;
 }
 
 export function checkBuild(creep: Creep, target: ConstructionSite) {
 	return chainIntentChecks(
-		() => checkCommon(creep),
+		() => checkCommon(creep, C.WORK),
 		() => {
-			if (creep.getActiveBodyparts(C.WORK) <= 0) {
-				return C.ERR_NO_BODYPART;
-
-			} else if (creep.carry.energy <= 0) {
+			if (creep.carry.energy <= 0) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 
 			} else if (!(target instanceof ConstructionSite)) {
@@ -300,12 +300,10 @@ export function checkMove(creep: Creep, direction: number) {
 
 function checkMoveCommon(creep: Creep) {
 	return chainIntentChecks(
-		() => checkCommon(creep),
+		() => checkCommon(creep, C.MOVE),
 		() => {
 			if (creep.fatigue > 0) {
 				return C.ERR_TIRED;
-			} else if (creep.getActiveBodyparts(C.MOVE) <= 0) {
-				return C.ERR_NO_BODYPART;
 			}
 			return C.OK;
 		});

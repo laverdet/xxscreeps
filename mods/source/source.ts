@@ -4,7 +4,7 @@ import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema
 import { registerSchema } from 'xxscreeps/engine/schema';
 import * as C from './constants';
 
-function format() { return compose(shape, Source) }
+// Register schema
 const shape = declare('Source', struct(RoomObject.format, {
 	...variant('source'),
 	energy: 'int32',
@@ -12,11 +12,12 @@ const shape = declare('Source', struct(RoomObject.format, {
 	_nextRegenerationTime: 'int32',
 }));
 
-const schema = registerSchema('Room.objects', format);
+const schema = registerSchema('Room.objects', () => compose(shape, Source));
 declare module 'xxscreeps/engine/schema' {
 	interface Schema { source: typeof schema }
 }
 
+// Game object declaration
 export class Source extends withOverlay(shape)(RoomObject.RoomObject) {
 	get ticksToRegeneration() {
 		return this._nextRegenerationTime === 0 ? undefined : Math.max(0, this._nextRegenerationTime - Game.time);

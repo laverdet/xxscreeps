@@ -6,6 +6,7 @@ import { calculatePower } from 'xxscreeps/engine/processor/intents/creep';
 import * as ResourceIntent from 'xxscreeps/engine/processor/intents/resource';
 import * as StoreIntent from 'xxscreeps/engine/processor/intents/store';
 import { Source } from './source';
+import { CumulativeEnergyHarvested } from './symbols';
 
 registerHarvestProcessor(Source, (creep, source) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER);
@@ -16,6 +17,7 @@ registerHarvestProcessor(Source, (creep, source) => {
 	if (overflow > 0) {
 		ResourceIntent.drop(source.pos, 'energy', overflow);
 	}
+	creep.room[CumulativeEnergyHarvested] += energy;
 	return energy;
 });
 

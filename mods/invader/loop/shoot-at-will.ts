@@ -19,5 +19,5 @@ export default function(creep: Creep) {
 	}
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const target = minimum(targets, (left, right) => left.hits - right.hits);
-	// creep.rangedAttack(target);
+	creep.rangedAttack(target);
 }

@@ -9,9 +9,9 @@ export default function(creep: Creep, healers: Creep[]) {
 		const healTarget = minimum(healTargets,
 			(left, right) => (right.hitsMax - right.hits) - (left.hitsMax - left.hits));
 		if (creep.pos.isNearTo(healTarget)) {
-			//creep.heal(healTarget);
+			creep.heal(healTarget);
 		} else {
-			//creep.rangedHeal(healTarget);
+			creep.rangedHeal(healTarget);
 		}
 	}
 	let target: Creep | undefined;
@@ -39,7 +39,7 @@ export default function(creep: Creep, healers: Creep[]) {
 		});
 	}
 	if (!target) {
-		//creep.suicide();
+		creep.suicide();
 		return;
 	}
 	if (creep.pos.isNearTo(target)) {

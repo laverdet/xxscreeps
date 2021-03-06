@@ -8,6 +8,7 @@ import { RoomObject } from './objects/room-object';
 import { StructureSpawn } from './objects/structures/spawn';
 import { AnyStructure, Structure } from './objects/structures';
 import { flush as flushPathFinder } from 'xxscreeps/game/path-finder';
+import { flushFindCache } from 'xxscreeps/game/room/methods';
 
 /**
  * The main global game object containing all the game play information.
@@ -60,6 +61,10 @@ export function getObjectById<Type extends AnyRoomObject>(id: string) {
 	return objects.get(id) as Type | undefined;
 }
 
+export function removeObject(object: RoomObject) {
+	objects.delete(object.id);
+}
+
 // Intents
 export let intents: IntentManager;
 
@@ -68,52 +73,18 @@ export function initializeIntents() {
 }
 
 export function flushIntents() {
-	flushPathFinder();
 	return intents;
 }
 
 /**
- * This sets up global context enough that `Game.time` and `Creep..my` will work but intents and
- * `Game.getObjectById` won't work. This is used by backend readers.
- */
-export function runAsUser<Type>(userId: string, task: () => Type) {
-	me = userId;
-	try {
-		return task();
-	} finally {
-		me = '';
-	}
-}
-
-/**
- * This initializes `getObjectById`, Game.rooms`, `Game.creeps`, etc.
+ * This initializes user-agnostic data like `getObjectById`, `Game.rooms`, and `Game.time`
  */
 export function runWithState<Type>(rooms_: Room[], time_: number, task: () => Type) {
 	time = time_;
 	for (const room of rooms_) {
 		rooms[room.name] = room;
-		if (me === '') {
-			// Branch for processor (no `my`)
-			for (const object of room._objects) {
-				objects.set(object.id, object);
-			}
-		} else {
-			// Branch for runner
-			for (const object of room._objects) {
-				objects.set(object.id, object);
-				if ((object as { my: boolean }).my) {
-					if (object instanceof Structure) {
-						structures[object.id] = object;
-						if (object instanceof StructureSpawn) {
-							spawns[object.name] = object;
-						}
-					} else if (object instanceof Creep) {
-						creeps[object.name] = object;
-					} else if (object instanceof ConstructionSite) {
-						constructionSites[object.id] = object;
-					}
-				}
-			}
+		for (const object of room._objects) {
+			objects.set(object.id, object);
 		}
 	}
 	try {
@@ -122,27 +93,55 @@ export function runWithState<Type>(rooms_: Room[], time_: number, task: () => Ty
 		time = NaN;
 		rooms = Object.create(null);
 		objects.clear();
-		if (me !== '') {
-			constructionSites = Object.create(null);
-			creeps = Object.create(null);
-			spawns = Object.create(null);
-			structures = Object.create(null);
+	}
+}
+
+/*
+ * Sets up user-specific lookups like `Game.creeps` and `Game.spawns` but without user runtime data
+ * like memory and flags. Must be called within `runWithState`
+ */
+export function runAsUser<Type>(userId: string, task: () => Type) {
+	me = userId;
+	for (const room of Object.values(rooms)) {
+		flushFindCache(room);
+		for (const object of room._objects) {
+			if ((object as { my: boolean }).my) {
+				if (object instanceof Structure) {
+					structures[object.id] = object;
+					if (object instanceof StructureSpawn) {
+						spawns[object.name] = object;
+					}
+				} else if (object instanceof Creep) {
+					creeps[object.name] = object;
+				} else if (object instanceof ConstructionSite) {
+					constructionSites[object.id] = object;
+				}
+			}
 		}
+	}
+	try {
+		return task();
+	} finally {
+		flushPathFinder();
+		me = '';
+		constructionSites = Object.create(null);
+		creeps = Object.create(null);
+		spawns = Object.create(null);
+		structures = Object.create(null);
 	}
 }
 
 /**
- * Used by the runtime, sets up everything the user's script needs and invokes the callback with a
- * fresh `Game` object
+ * Full runtime setup. Invokes the callback with a fresh `Game` object
  */
 export function runForUser<Type>(
 	userId: string,
-	time_: number,
+	time: number,
 	rooms: Room[],
 	flags_: Record<string, Flag>,
 	task: (game: Game) => Type,
 ) {
-	return runAsUser(userId, () => runWithState(rooms, time_, () => {
+	return runWithState(rooms, time, () => runAsUser(userId, () => {
 		try {
 			flags = flags_;
 			task(new Game);

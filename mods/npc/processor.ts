@@ -1,7 +1,6 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
-import { mapInPlace } from 'xxscreeps/util/utility';
 import { registerRoomTickProcessor } from 'xxscreeps/processor';
 import { NPCData } from './game';
 
@@ -20,7 +19,7 @@ export function registerNPC(id: string, loop: NPCLoop) {
 // NPC loop processor
 registerRoomTickProcessor((room, context) => {
 	const data = room[NPCData];
-	mapInPlace(data.users, user => {
+	for (const user of data.users) {
 		// Initialize NPC state
 		const memory = data.memory.get(user) ?? new Uint8Array(0);
 		const loop = npcLoops.get(user)!;
@@ -42,5 +41,5 @@ registerRoomTickProcessor((room, context) => {
 			room: roomIntents[room.name],
 			objects: intentManager.intentsByGroup[room.name],
 		});
-	});
+	}
 });

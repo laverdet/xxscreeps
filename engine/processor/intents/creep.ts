@@ -93,13 +93,18 @@ const intents = [
 ];
 
 registerObjectTickProcessor(Creep, creep => {
-	// Check creep age death
-	if (Game.time >= creep._ageTime && creep._ageTime !== 0) {
+	// Check creep death
+	if (
+		(Game.time >= creep._ageTime && creep._ageTime !== 0) ||
+		creep.hits <= 0
+	) {
 		for (const [ resourceType, amount ] of Object.entries(creep.store) as [ ResourceType, number ][]) {
 			ResourceIntent.drop(creep.pos, resourceType, amount);
 		}
 		removeObject(creep);
 		return true;
+	} else if (creep.hits > creep.hitsMax) {
+		creep.hits = creep.hitsMax;
 	}
 
 	// Dispatch movements

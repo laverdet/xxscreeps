@@ -5,7 +5,8 @@ import * as Game from 'xxscreeps/game/game';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { registerIntentProcessor } from 'xxscreeps/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
-import { Harvestable, checkHarvest } from './game';
+import { checkHarvest } from './creep';
+import { Harvestable } from './game';
 
 // `RoomObject` harvest intent processor symbol
 const ProcessHarvest = Symbol();

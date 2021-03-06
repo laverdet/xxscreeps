@@ -1,16 +1,13 @@
-import * as C from '../constants';
 import type { InspectOptionsStylized } from 'util';
-
-import { BufferObject } from 'xxscreeps/schema/buffer-object';
+import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import type { BufferView } from 'xxscreeps/schema/buffer-view';
-import { withOverlay } from 'xxscreeps/schema';
 import type { LooseBoolean } from 'xxscreeps/util/types';
-import { accumulate, concatInPlace, mapInPlace } from 'xxscreeps/util/utility';
-import { iteratee } from 'xxscreeps/engine/util/iteratee';
-import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
+import * as C from '../constants';
 import * as Game from '../game';
 import * as Memory from '../memory';
+import * as PathFinder from '../path-finder';
+
 import {
 	extractPositionId,
 	fetchArguments, fetchPositionArgument,
@@ -18,12 +15,18 @@ import {
 	iterateNeighbors,
 	Direction, RoomPosition,
 } from '../position';
-import * as PathFinder from '../path-finder';
+
+import { BufferObject } from 'xxscreeps/schema/buffer-object';
+import { withOverlay } from 'xxscreeps/schema';
+import { accumulate, concatInPlace, mapInPlace } from 'xxscreeps/util/utility';
+import { iteratee } from 'xxscreeps/engine/util/iteratee';
+import { IntentIdentifier } from 'xxscreeps/processor/symbols';
+
 import { getTerrainForRoom } from '../map';
 import { isBorder, isNearBorder } from '../terrain';
 
+import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { ConstructibleStructureType } from '../objects/construction-site';
-import { chainIntentChecks, RoomObject } from '../objects/room-object';
 import { StructureController } from '../objects/structures/controller';
 import { StructureExtension } from '../objects/structures/extension';
 import { StructureSpawn } from '../objects/structures/spawn';
@@ -33,7 +36,7 @@ import { EventLogSymbol } from './event-log';
 import { FindConstants, FindType, findHandlers } from './find';
 import { LookConstants, LookType, lookConstants } from './look';
 import { shape } from './schema';
-import { LookFor, MoveObject, InsertObject, RemoveObject } from './symbols';
+import { FlushFindCache, LookFor, MoveObject, InsertObject, RemoveObject } from './symbols';
 
 export type AnyRoomObject = RoomObject | InstanceType<typeof Room>['_objects'][number];
 
@@ -295,8 +298,13 @@ export class Room extends withOverlay(shape)(BufferObject) {
 
 	//
 	// Private mutation functions
-	[InsertObject](this: this, object: RoomObject) {
+	[FlushFindCache]() {
+		this.#findCache.clear();
+	}
+
+	[InsertObject](object: RoomObject) {
 		// Add to objects & look index then flush find caches
+		object.room = this;
 		this._objects.push(object as never);
 		this._afterInsertion(object);
 		/* const findTypes = lookToFind[lookType];
@@ -317,9 +325,10 @@ export class Room extends withOverlay(shape)(BufferObject) {
 		}
 	}
 
-	[RemoveObject](this: this, object: RoomObject) {
+	[RemoveObject](object: RoomObject) {
 		// Remove from objects & look index then flush find caches
 		removeOne(this._objects, object);
+		Game.removeObject(object);
 		this._afterRemoval(object);
 		/* const findTypes = lookToFind[lookType];
 		for (const find of findTypes) {
@@ -340,7 +349,7 @@ export class Room extends withOverlay(shape)(BufferObject) {
 		}
 	}
 
-	[MoveObject](this: this, object: RoomObject, pos: RoomPosition) {
+	[MoveObject](object: RoomObject, pos: RoomPosition) {
 		const spatial = this.#lookSpatialIndex.get(object._lookType);
 		if (spatial) {
 			const oldPosition = extractPositionId(object.pos);

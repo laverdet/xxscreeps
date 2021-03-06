@@ -33,11 +33,7 @@ export const HARVEST_DEPOSIT_POWER = 1;
 export const REPAIR_POWER = 100;
 export const DISMANTLE_POWER = 50;
 export const BUILD_POWER = 5;
-export const ATTACK_POWER = 30;
 export const UPGRADE_CONTROLLER_POWER = 1;
-export const RANGED_ATTACK_POWER = 10;
-export const HEAL_POWER = 12;
-export const RANGED_HEAL_POWER = 4;
 export const REPAIR_COST = 0.01;
 export const DISMANTLE_COST = 0.005;
 

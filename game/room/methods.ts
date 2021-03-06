@@ -1,7 +1,11 @@
 import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import type { LookConstants, Room } from './room';
-import { LookFor, MoveObject, InsertObject, RemoveObject } from './symbols';
+import { FlushFindCache, LookFor, MoveObject, InsertObject, RemoveObject } from './symbols';
+
+export function flushFindCache(room: Room) {
+	room[FlushFindCache]();
+}
 
 export function lookFor<Type extends LookConstants>(room: Room, type: Type) {
 	return room[LookFor](type);

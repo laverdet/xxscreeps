@@ -1,0 +1,7 @@
+export const INVADER_CORE_HITS = 100000;
+export const INVADER_CORE_CREEP_SPAWN_TIME = [ 0, 0, 6, 3, 2, 1 ];
+export const INVADER_CORE_EXPAND_TIME = [ undefined, 4000, 3500, 3000, 2500, 2000 ];
+export const INVADER_CORE_CONTROLLER_POWER = 2;
+export const INVADER_CORE_CONTROLLER_DOWNGRADE = 5000;
+
+export const INVADERS_ENERGY_GOAL = 100000;

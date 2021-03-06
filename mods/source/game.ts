@@ -1,7 +1,18 @@
 import * as C from 'xxscreeps/game/constants';
+import { member, struct } from 'xxscreeps/schema';
+import { registerSchema } from 'xxscreeps/engine/schema';
 import { lookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/game';
 import { Source } from './source';
+import { CumulativeEnergyHarvested } from './symbols';
+
+// Track energy harvested on room
+const schema = registerSchema('Room', struct({
+	cumulativeEnergyHarvested: member(CumulativeEnergyHarvested, 'uint32'),
+}));
+declare module 'xxscreeps/engine/schema' {
+	interface Schema { source2: typeof schema }
+}
 
 // Register FIND_ types for `Source`
 const find = registerFindHandlers({

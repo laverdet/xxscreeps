@@ -1,4 +1,4 @@
-import type { LooseBoolean } from './types';
+import type { Implementation, LooseBoolean } from './types';
 
 // Like half the use cases of `reduce` are to sum an array, so this just does that with less
 // boilerplate
@@ -95,6 +95,17 @@ export function exchange<Target extends {}, Name extends keyof Target>(
 		target[name] = newValue!;
 	}
 	return value;
+}
+
+// Wrapper around `Object.assign` which brings in type information from the interface being extended
+type AddThis<Type, Fn> = Fn extends (...args: infer Args) => infer Return ?
+	(this: Type, ...args: Args) => Return : FinalizationRegistry;
+export function extend<Type extends Implementation, Proto extends {
+	[Key in keyof Type['prototype']]?: AddThis<Type['prototype'], Type['prototype'][Key]>;
+}>(
+	ctor: Type, proto: Proto,
+) {
+	Object.assign(ctor.prototype, proto);
 }
 
 export function filterInPlace<Type, Filtered extends Type>(

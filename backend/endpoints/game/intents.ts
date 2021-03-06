@@ -5,18 +5,17 @@ import { loadRoom, loadRooms, saveRoom } from 'xxscreeps/backend/model/room';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as ControllerIntents from 'xxscreeps/engine/processor/intents/controller';
-import * as CreepIntents from 'xxscreeps/engine/processor/intents/creep';
 import * as SpawnIntents from 'xxscreeps/engine/processor/intents/spawn';
 import { insertObject } from 'xxscreeps/game/room/methods';
 import { checkCreateConstructionSite } from 'xxscreeps/game/room/room';
 import { RoomPosition } from 'xxscreeps/game/position';
-import type { PartType } from 'xxscreeps/game/objects/creep';
-import { concatInPlace, accumulate } from 'xxscreeps/util/utility';
 import { ServiceMessage } from 'xxscreeps/engine/service';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 import { Channel } from 'xxscreeps/storage/channel';
+import { concatInPlace } from 'xxscreeps/util/utility';
 
 // TODO: Move this to backend mod
+import { create as createInvader } from 'xxscreeps/mods/invader/processor';
 import { activateNPC } from 'xxscreeps/mods/npc/processor';
 
 const AddObjectIntentEndpoint: Endpoint = {
@@ -135,23 +134,6 @@ const PlaceSpawnEndpoint: Endpoint = {
 	},
 };
 
-function createInvaderBody(parts: { [Type in PartType]?: number }) {
-	const size = accumulate(Object.values(parts) as number[]);
-	return [
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		...Array(parts[C.TOUGH] ?? 0).fill(C.TOUGH),
-		...Array(size - 1).fill(C.MOVE),
-		...Object.entries(parts).map(([ type, count ]) => {
-			if (type === C.TOUGH) {
-				return [];
-			} else {
-				return Array(count).fill(type);
-			}
-		}).flat(),
-		C.MOVE,
-	];
-}
-
 const CreateInvaderEndpoint: Endpoint = {
 	path: '/create-invader',
 	method: 'post',
@@ -160,18 +142,10 @@ const CreateInvaderEndpoint: Endpoint = {
 		const { userid } = req.locals;
 		const { room: roomName, x, y, size, type } = req.body;
 		const pos = new RoomPosition(x, y, roomName);
-		const bodies = {
-			bigHealer: () => createInvaderBody({ [C.HEAL]: 25 }),
-			bigRanged: () => createInvaderBody({ [C.TOUGH]: 6, [C.RANGED_ATTACK]: 18, [C.WORK]: 1 }),
-			bigMelee: () => createInvaderBody({ [C.TOUGH]: 16, [C.RANGED_ATTACK]: 3, [C.WORK]: 4, [C.ATTACK]: 2 }),
-			smallHealer: () => createInvaderBody({ [C.HEAL]: 5 }),
-			smallRanged: () => createInvaderBody({ [C.TOUGH]: 2, [C.RANGED_ATTACK]: 3 }),
-			smallMelee: () => createInvaderBody({ [C.TOUGH]: 2, [C.RANGED_ATTACK]: 1, [C.WORK]: 1, [C.ATTACK]: 1 }),
-		};
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		const body = bodies[`${size}${type}` as keyof typeof bodies]?.();
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (body === undefined) {
+		if (
+			(size !== 'big' && size !== 'small') ||
+			![ 'healer', 'melee', 'ranged' ].includes(type)
+		) {
 			return;
 		}
 
@@ -182,9 +156,7 @@ const CreateInvaderEndpoint: Endpoint = {
 				return;
 			}
 			activateNPC(room, '2');
-			const creep = CreepIntents.create(body, pos, `Invader_${Math.floor(Math.random() * 1000)}`, '2');
-			creep._ageTime = this.context.time + 200;
-			insertObject(room, creep);
+			insertObject(room, createInvader(pos, type, size, Game.time + 200));
 			await saveRoom(this.context, room);
 		});
 		return { ok: 1 };

@@ -1,10 +1,10 @@
-import { findHandlers } from './symbols';
-
-import 'xxscreeps/config/mods/game';
 import type { KeysOf, KeyFor } from 'xxscreeps/util/types';
 import type { Room } from './room';
 import * as C from 'xxscreeps/game/constants';
 import { lookFor } from './methods';
+import { findHandlers } from './symbols';
+import 'xxscreeps/config/mods/game';
+import './exit';
 
 // Registers a FIND_ constant and its respective handler
 export type FindHandler = (room: Room) => any[];
@@ -29,7 +29,7 @@ const builtinFind = registerFindHandlers({
 	// Creeps
 	[C.FIND_CREEPS]: room => lookFor(room, C.LOOK_CREEPS),
 	[C.FIND_MY_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => creep.my),
-	[C.FIND_HOSTILE_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => creep.my),
+	[C.FIND_HOSTILE_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => !creep.my),
 
 	// Spawns
 	[C.FIND_MY_SPAWNS]: room => lookFor(room, C.LOOK_STRUCTURES).filter(

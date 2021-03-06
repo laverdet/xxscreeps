@@ -2,7 +2,6 @@ import { typedArrayToString } from 'xxscreeps/util/string';
 import { BufferView } from './buffer-view';
 import { Format, TypeOf, Variant } from './format';
 import { Layout, StructLayout, getLayout, kPointerSize, unpackWrappedStruct } from './layout';
-import { injectGetters } from './overlay';
 
 type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
@@ -127,8 +126,6 @@ export function makeTypeReader(layout: Layout, lookup: any): Reader {
 		} else if ('composeFromBuffer' in interceptor) {
 			return (view, offset) => interceptor.composeFromBuffer(view, offset);
 		} else {
-			// Inject prototype getters into overlay
-			injectGetters(unpackWrappedStruct(layout), interceptor);
 			return (view, offset) => new (interceptor as any)(view, offset);
 		}
 

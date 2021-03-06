@@ -1,10 +1,9 @@
 import type { Room } from 'xxscreeps/game/room';
 import type { LookConstants } from 'xxscreeps/game/room/look';
-import { compose, declare, optional, struct, vector, withOverlay } from 'xxscreeps/schema';
-import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomPosition from 'xxscreeps/game/position';
-import * as C from 'xxscreeps/game/constants';
+import { compose, declare, optional, struct, vector, withOverlay } from 'xxscreeps/schema';
+import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
@@ -31,15 +30,4 @@ export abstract class RoomObject extends withOverlay(shape)(BufferObject) {
 	get [IntentIdentifier]() {
 		return { group: this.room.name, name: this.id };
 	}
-}
-
-export function chainIntentChecks<Checks extends (() => C.ErrorCode)[]>(...checks: Checks):
-Checks extends (() => infer Codes)[] ? Codes : C.ErrorCode {
-	for (const check of checks) {
-		const result = check();
-		if (result !== C.OK) {
-			return result as any;
-		}
-	}
-	return C.OK as any;
 }

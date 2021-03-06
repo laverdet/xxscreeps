@@ -36,7 +36,7 @@ export default function(creep: Creep, healers: Creep[], hostiles: Creep[], forti
 	if (haveAttack) {
 		const nearCreep = hostiles.find(ii => creep.pos.isNearTo(ii));
 		if (nearCreep) {
-			// creep.attack(nearCreep);
+			creep.attack(nearCreep);
 			return;
 		}
 	}
@@ -81,7 +81,7 @@ export default function(creep: Creep, healers: Creep[], hostiles: Creep[], forti
 			if (creep.getActiveBodyparts(C.WORK) > 0) {
 				// creep.dismantle(structures[0].structure);
 			} else {
-				// creep.attack(structures[0].structure);
+				creep.attack(structures[0].structure);
 			}
 		}
 	}

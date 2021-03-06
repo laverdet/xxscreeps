@@ -1,5 +1,6 @@
 import type { Implementation } from 'xxscreeps/util/types';
 import type { AnyEventLog } from 'xxscreeps/game/room/event-log';
+import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { eventRenderers, MapRender, Render } from './symbols';
 import { getOrSet } from 'xxscreeps/util/utility';
@@ -30,7 +31,10 @@ export function bindRenderer<Type extends RoomObject>(
 	};
 }
 
-export function bindEventRenderer(event: AnyEventLog['event'], fn: NonNullable<ReturnType<typeof eventRenderers['get']>>[number]) {
+export function bindEventRenderer<Event extends AnyEventLog['event']>(
+	event: Event,
+	fn: (event: Extract<AnyEventLog, { event: Event }>, room: Room) => any,
+) {
 	getOrSet(eventRenderers, event, () => []).push(fn);
 }
 

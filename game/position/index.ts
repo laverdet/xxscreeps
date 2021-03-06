@@ -3,6 +3,7 @@ import type { ConstructibleStructureType } from 'xxscreeps/game/objects/construc
 import type { FindConstants, FindType } from 'xxscreeps/game/room/find';
 import type { LookConstants } from 'xxscreeps/game/room/look';
 import type { FindPathOptions, RoomFindOptions, RoomPath } from 'xxscreeps/game/room/room';
+import type { RoomObject } from 'xxscreeps/game/objects/room-object';
 import * as PathFinder from 'xxscreeps/game/path-finder';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
@@ -10,7 +11,7 @@ import * as Flag from 'xxscreeps/game/flag';
 import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { firstMatching, instantiate, minimum } from 'xxscreeps/util/utility';
-import { RoomObject, chainIntentChecks } from 'xxscreeps/game/objects/room-object';
+import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Direction, getDirection } from './direction';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
 

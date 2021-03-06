@@ -1,5 +1,5 @@
 import type { WithType } from 'xxscreeps/schema/format';
-import type { UnwrapArray, WithKey } from 'xxscreeps/util/types';
+import type { UnionToIntersection, UnwrapArray, WithKey } from 'xxscreeps/util/types';
 import { resolve } from 'xxscreeps/schema/layout';
 import { getOrSet } from 'xxscreeps/util/utility';
 
@@ -12,9 +12,9 @@ type FormatForPath<Path extends string> = WithKey<Path> extends AllFormatsByPath
 export interface Schema {}
 
 // Returns augmented formats as plain object that can be spread into a `struct({ ... })` declaration
-type ExtractStructSchema<Format> = Format extends WithType<infer Type> ? {
+type ExtractStructSchema<Format> = UnionToIntersection<Format extends WithType<infer Type> ? {
 	[Key in keyof Type]: WithType<Type[Key]>;
-} : {};
+} : {}>;
 export function structForPath<Path extends string>(path: Path): ExtractStructSchema<FormatForPath<Path>> {
 	const schema = {} as any;
 	const formats = schemaByPath.get(path) ?? [];

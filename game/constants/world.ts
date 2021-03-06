@@ -108,8 +108,6 @@ export const PORTAL_MAX_TIMEOUT = 22 * 24 * 3600 * 1000;
 
 export const POWER_BANK_RESPAWN_TIME = 50000;
 
-export const INVADERS_ENERGY_GOAL = 100000;
-
 export const ORDER_SELL = 'sell';
 export const ORDER_BUY = 'buy';
 
@@ -124,24 +122,12 @@ export const SIGN_PLANNED_AREA = 'A new Novice or Respawn Area is being planned 
 export const SIGN_NOVICE_AREA = SIGN_PLANNED_AREA;
 export const SIGN_RESPAWN_AREA = SIGN_PLANNED_AREA;
 
-export const EVENT_ATTACK = 1;
 export const EVENT_OBJECT_DESTROYED = 2;
 export const EVENT_ATTACK_CONTROLLER = 3;
 export const EVENT_BUILD = 4;
-export const EVENT_HEAL = 6;
 export const EVENT_REPAIR = 7;
 export const EVENT_RESERVE_CONTROLLER = 8;
 export const EVENT_UPGRADE_CONTROLLER = 9;
 export const EVENT_EXIT = 10;
 export const EVENT_POWER = 11;
 export const EVENT_TRANSFER = 12;
-
-export const EVENT_ATTACK_TYPE_MELEE = 1;
-export const EVENT_ATTACK_TYPE_RANGED = 2;
-export const EVENT_ATTACK_TYPE_RANGED_MASS = 3;
-export const EVENT_ATTACK_TYPE_DISMANTLE = 4;
-export const EVENT_ATTACK_TYPE_HIT_BACK = 5;
-export const EVENT_ATTACK_TYPE_NUKE = 6;
-
-export const EVENT_HEAL_TYPE_MELEE = 1;
-export const EVENT_HEAL_TYPE_RANGED = 2;

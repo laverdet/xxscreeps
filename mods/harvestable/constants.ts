@@ -1,1 +1,1 @@
-export const EVENT_HARVEST = 6;
+export const EVENT_HARVEST = 5;
