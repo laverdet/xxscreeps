@@ -1,7 +1,7 @@
 import type { ContextType, Fallback, Implementation } from 'xxscreeps/util/types';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 import { constant, struct, variant } from 'xxscreeps/schema';
 import { RoomObject, chainIntentChecks } from 'xxscreeps/game/objects/room-object';
 import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';

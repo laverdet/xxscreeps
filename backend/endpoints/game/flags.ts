@@ -1,6 +1,6 @@
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 import * as C from 'xxscreeps/game/constants';
 import { loadUserFlags } from 'xxscreeps/engine/model/user';
 import { checkCreateFlag } from 'xxscreeps/game/flag';

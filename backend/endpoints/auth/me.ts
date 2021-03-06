@@ -1,6 +1,6 @@
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { checkToken, makeToken } from 'xxscreeps/backend/auth/token';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 
 export const MeEndpoint: Endpoint = {
 	path: '/me',

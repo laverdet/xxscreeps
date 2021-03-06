@@ -1,5 +1,5 @@
 import { makeReader, makeWriter, struct, TypeOf } from 'xxscreeps/schema';
-import * as StringSet from 'xxscreeps/engine/util/schema/string-set';
+import * as StringSet from 'xxscreeps/engine/schema/string-set';
 
 const format = struct({
 	time: 'int32',

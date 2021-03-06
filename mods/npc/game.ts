@@ -1,4 +1,4 @@
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 import { compose, member, struct, vector } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 import { mapInPlace } from 'xxscreeps/util/utility';

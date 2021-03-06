@@ -1,7 +1,7 @@
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import * as Code from 'xxscreeps/engine/metadata/code';
 import * as User from 'xxscreeps/engine/metadata/user';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 import { firstMatching, mapToKeys } from 'xxscreeps/util/utility';
 import { Channel } from 'xxscreeps/storage/channel';

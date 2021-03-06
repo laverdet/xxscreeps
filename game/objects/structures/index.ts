@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import type { AnyRoomObject } from 'xxscreeps/game/room';
 import * as RoomObject from 'xxscreeps/game/objects/room-object';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;

@@ -2,7 +2,7 @@ import type { Room } from 'xxscreeps/game/room';
 import type { LookConstants } from 'xxscreeps/game/room/look';
 import { compose, declare, optional, struct, vector, withOverlay } from 'xxscreeps/schema';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomPosition from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';

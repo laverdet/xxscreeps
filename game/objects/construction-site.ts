@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 import * as Game from 'xxscreeps/game/game';
 import { compose, declare, enumerated, struct, variant, withOverlay } from 'xxscreeps/schema';
 import * as RoomObject from './room-object';

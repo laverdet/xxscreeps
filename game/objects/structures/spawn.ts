@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
 import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 import * as Structure from '.';
 import * as Store from 'xxscreeps/game/store';
 import { accumulate } from 'xxscreeps/util/utility';

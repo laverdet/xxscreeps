@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { declare, makeReader, makeWriter, struct, vector, TypeOf } from 'xxscreeps/schema';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as Id from 'xxscreeps/engine/schema/id';
 import { checkToken, makeToken } from './token';
 
 import type {} from 'xxscreeps/backend/endpoint';

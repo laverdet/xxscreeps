@@ -1,6 +1,6 @@
 import { declare, makeReader, makeWriter, struct, vector, TypeOf } from 'xxscreeps/schema';
-import * as StringSet from 'xxscreeps/engine/util/schema/string-set';
-import * as Id from 'xxscreeps/engine/util/schema/id';
+import * as StringSet from 'xxscreeps/engine/schema/string-set';
+import * as Id from 'xxscreeps/engine/schema/id';
 
 export const format = declare('User', struct({
 	id: Id.format,
