@@ -1,14 +1,15 @@
 import type { OneOrMany } from 'xxscreeps/util/types';
 import { Goal, SearchOptions } from 'xxscreeps/game/path-finder';
 import { World } from 'xxscreeps/game/map';
-import { generateRoomNameFromId, parseRoomNameToId, PositionInteger, RoomPosition } from 'xxscreeps/game/position';
+import { RoomPosition, extractPositionId, generateRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/position';
 import { getBuffer } from 'xxscreeps/game/terrain';
 import { clamp } from 'xxscreeps/util/utility';
 import pf from '@xxscreeps/path-finder';
 
 function flattenPosition(pos: any): number {
 	// Internal position bits
-	const positionInteger = pos[PositionInteger];
+	const positionInteger = extractPositionId(pos);
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (positionInteger !== undefined) {
 		return positionInteger | 0;
 	}

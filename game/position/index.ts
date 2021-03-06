@@ -1,27 +1,26 @@
 import type { InspectOptionsStylized } from 'util';
+import type { ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
+import type { FindConstants, FindType } from 'xxscreeps/game/room/find';
+import type { LookConstants } from 'xxscreeps/game/room/look';
+import type { FindPathOptions, RoomFindOptions, RoomPath } from 'xxscreeps/game/room/room';
+import * as PathFinder from 'xxscreeps/game/path-finder';
+import * as C from 'xxscreeps/game/constants';
+import * as Game from 'xxscreeps/game/game';
+import * as Flag from 'xxscreeps/game/flag';
 import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
-import * as PathFinder from 'xxscreeps/game/path-finder';
-import * as C from './/constants';
-import * as Game from './game';
-import * as Flag from './flag';
-import type { ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
 import { firstMatching, instantiate, minimum } from 'xxscreeps/util/utility';
-import { RoomObject, chainIntentChecks } from './objects/room-object';
-import type { FindConstants, FindType } from './room/find';
-import type { LookConstants } from './room/look';
-import { FindPathOptions, RoomFindOptions, RoomPath } from './room/room';
+import { RoomObject, chainIntentChecks } from 'xxscreeps/game/objects/room-object';
+import { Direction, getDirection } from './direction';
+import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
 
-const kMaxWorldSize = 0x100;
-const kMaxWorldSize2 = kMaxWorldSize >>> 1;
-const ALL_DIRECTIONS = [
-	C.TOP, C.TOP_RIGHT, C.RIGHT, C.BOTTOM_RIGHT, C.BOTTOM, C.BOTTOM_LEFT, C.LEFT, C.TOP_LEFT,
-];
-export type Direction = typeof ALL_DIRECTIONS[number];
+export { Direction, getOffsetsFromDirection, getPositonInDirection, iterateNeighbors } from './direction';
+export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './name';
+
 type FindClosestByPathOptions<Type> =
 	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;
 
-export const PositionInteger = Symbol('positionInteger');
+const PositionInteger = Symbol('positionInteger');
 type PositionFindType<Type> =
 	Type extends (infer Result)[] ? Result :
 	Type extends FindConstants ? FindType<Type> :
@@ -53,7 +52,7 @@ export class RoomPosition {
 			this[PositionInteger] = args[0] >>> 0;
 		} else if (args.length === 3) {
 			const [ xx, yy ] = args;
-			const [ rx, ry ] = parseRoomName(args[2]);
+			const { rx, ry } = parseRoomName(args[2]);
 			if (
 				!(rx >= 0 && rx < kMaxWorldSize) ||
 				!(ry >= 0 && ry < kMaxWorldSize) ||
@@ -75,7 +74,7 @@ export class RoomPosition {
 		return generateRoomNameFromId(this[PositionInteger] & 0xffff);
 	}
 	set roomName(roomName: string) {
-		const [ rx, ry ] = parseRoomName(roomName);
+		const { rx, ry } = parseRoomName(roomName);
 		if (
 			!(rx >= 0 && rx < kMaxWorldSize) ||
 			!(ry >= 0 && ry < kMaxWorldSize)
@@ -401,96 +400,6 @@ function fetchRoom(roomName: string) {
 	return room;
 }
 
-//
-// Directional utilities
-function getDirection(dx: number, dy: number): Direction;
-function getDirection(dx: number, dy: number) {
-	const adx = Math.abs(dx);
-	const ady = Math.abs(dy);
-	if (adx > ady * 2) {
-		if (dx > 0) {
-			return C.RIGHT;
-		} else {
-			return C.LEFT;
-		}
-	} else if (ady > adx * 2) {
-		if (dy > 0) {
-			return C.BOTTOM;
-		} else {
-			return C.TOP;
-		}
-	} else if (dx > 0) {
-		if (dy > 0) {
-			return C.BOTTOM_RIGHT;
-		} else if (dy < 0) {
-			return C.TOP_RIGHT;
-		}
-	} else if (dx < 0) {
-		if (dy > 0) {
-			return C.BOTTOM_LEFT;
-		} else if (dy < 0) {
-			return C.TOP_LEFT;
-		}
-	}
-}
-
-export function getOffsetsFromDirection(direction: Direction) {
-	switch (direction) {
-		case C.TOP: return { dx: 0, dy: -1 } as const;
-		case C.TOP_RIGHT: return { dx: 1, dy: -1 } as const;
-		case C.RIGHT: return { dx: 1, dy: 0 } as const;
-		case C.BOTTOM_RIGHT: return { dx: 1, dy: 1 } as const;
-		case C.BOTTOM: return { dx: 0, dy: 1 } as const;
-		case C.BOTTOM_LEFT: return { dx: -1, dy: 1 } as const;
-		case C.LEFT: return { dx: -1, dy: 0 } as const;
-		case C.TOP_LEFT: return { dx: -1, dy: -1 } as const;
-		default: throw new Error('Invalid direction');
-	}
-}
-
-export function getPositonInDirection(position: RoomPosition, direction: Direction) {
-	const { x, y, roomName } = position;
-	const { dx, dy } = getOffsetsFromDirection(direction);
-	return new RoomPosition(x + dx, y + dy, roomName);
-}
-
-export function iterateNeighbors(position: RoomPosition) {
-	return function *() {
-		const { x, y, roomName } = position;
-		for (const direction of ALL_DIRECTIONS) {
-			const { dx, dy } = getOffsetsFromDirection(direction);
-			const posX = x + dx;
-			const posY = y + dy;
-			if (posX >= 0 && posX < 50 && posY >= 0 && posY < 50) {
-				yield new RoomPosition(posX, posY, roomName);
-			}
-		}
-	}();
-}
-
-//
-// Room name parsing
-export function generateRoomName(xx: number, yy: number) {
-	return generateRoomNameFromId(yy << 8 | xx);
-}
-
-const roomNames = new Map<number, string>();
-export function generateRoomNameFromId(id: number) {
-	// Check cache
-	let roomName = roomNames.get(id);
-	if (roomName !== undefined) {
-		return roomName;
-	}
-	// Need to generate the room name
-	const xx = (id & 0xff) - kMaxWorldSize2;
-	const yy = (id >>> 8) - kMaxWorldSize2;
-	roomName =
-		(xx < 0 ? `W${-xx - 1}` : `E${xx}`) +
-		(yy < 0 ? `N${-yy - 1}` : `S${yy}`);
-	roomNames.set(id, roomName);
-	return roomName;
-}
-
 export function extractPositionId(pos: RoomPosition) {
 	return pos[PositionInteger];
 }
@@ -511,32 +420,4 @@ export function fromPositionId(id: number) {
 	return instantiate(RoomPosition, {
 		[PositionInteger]: id,
 	});
-}
-
-export function parseRoomName(name: string): [ number, number ] {
-	// Parse X and calculate str position of Y
-	const xx = parseInt(name.substr(1), 10);
-	let verticalPos = 2;
-	if (xx >= 100) {
-		verticalPos = 4;
-	} else if (xx >= 10) {
-		verticalPos = 3;
-	}
-	// Parse Y and return adjusted coordinates
-	const yy = parseInt(name.substr(verticalPos + 1), 10);
-	const horizontalDir = name.charAt(0);
-	const verticalDir = name.charAt(verticalPos);
-	return [
-		(horizontalDir === 'W' || horizontalDir === 'w') ?
-			kMaxWorldSize2 - xx - 1 :
-			kMaxWorldSize2 + xx,
-		(verticalDir === 'N' || verticalDir === 'n') ?
-			kMaxWorldSize2 - yy - 1 :
-			kMaxWorldSize2 + yy,
-	];
-}
-
-export function parseRoomNameToId(name: string) {
-	const [ xx, yy ] = parseRoomName(name);
-	return yy << 8 | xx;
 }

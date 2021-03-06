@@ -84,7 +84,7 @@ export const TerrainZoomEndpoint: Endpoint = {
 		if (!png) {
 			// Calculate which rooms to render
 			let didFindRoom = false;
-			const [ left, top ] = parseRoomName(req.params.room);
+			const { rx: left, ry: top } = parseRoomName(req.params.room);
 			if (left % 4 === 0 && top % 4 === 0) {
 				const grid: (Terrain | undefined)[][] = [];
 				for (let yy = top; yy < top + 4; ++yy) {
