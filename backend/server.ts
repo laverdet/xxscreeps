@@ -15,10 +15,18 @@ const context = await BackendContext.connect();
 const express = Express();
 express.disable('x-powered-by');
 
+// Set up endpoints
 const httpServer = http.createServer(express);
-const shutdownServer = setupGracefulShutdown(express, httpServer);
+express.use(bodyParser.urlencoded({
+	limit: '8mb',
+	extended: false,
+}));
+express.use(bodyParser.json({ limit: '8mb' }));
+installEndpointHandlers(express, context);
+const socketServer = installSocketHandlers(httpServer, context);
 
 // Shutdown handler
+const shutdownServer = setupGracefulShutdown(httpServer, socketServer);
 const serviceChannel = await new Channel<ServiceMessage>(context.storage, 'service').subscribe();
 const serviceUnlistener = serviceChannel.listen(message => {
 	if (message.type === 'shutdown') {
@@ -27,15 +35,5 @@ const serviceUnlistener = serviceChannel.listen(message => {
 		void context.disconnect();
 	}
 });
-
-// Set up endpoints
-express.use(bodyParser.urlencoded({
-	limit: '8mb',
-	extended: false,
-}));
-express.use(bodyParser.json({ limit: '8mb' }));
-
-installEndpointHandlers(express, context);
-installSocketHandlers(httpServer, context);
 
 httpServer.listen(21025, () => console.log('🌎 Listening'));

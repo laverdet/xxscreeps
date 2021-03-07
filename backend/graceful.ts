@@ -1,43 +1,39 @@
-import { Express } from 'express';
-import { Socket } from 'net';
+import type { Socket } from 'net';
+import type sockjs from 'sockjs';
 import { IncomingMessage, Server, ServerResponse } from 'http';
 
 type Options = {
 	timeout?: number;
 };
-type ConnectionInfo = Socket & {
-	_idle: boolean;
-};
+type Reference = Socket | sockjs.Connection;
 
-export function setupGracefulShutdown(express: Express, server: Server, { timeout = 2000 }: Options = {}): () => void {
+export function setupGracefulShutdown(
+	server: Server,
+	sockjs: sockjs.Server,
+	{ timeout = 2000 }: Options = {},
+): () => void {
 
 	// Keep track of all connections
-	const sockets = new Set<ConnectionInfo>();
-	const markIdle = (connection: ConnectionInfo) => {
+	const sockets = new Map<Reference, boolean>();
+	const markIdle = (conn: Reference) => {
 		if (shuttingDown) {
-			connection.end();
+			conn.destroy();
 		}
-		connection._idle = true;
+		sockets.set(conn, true);
 	};
-	server.on('connection', (conn: ConnectionInfo) => {
+	server.on('connection', conn => {
 		markIdle(conn);
-		sockets.add(conn);
-		conn.on('close', () => sockets.delete(conn));
+		conn.once('close', () => sockets.delete(conn));
 	});
 	server.on('request', (req: IncomingMessage, res: ServerResponse) => {
-		const connection = res.connection as ConnectionInfo;
-		connection._idle = false;
-		res.on('finish', () => markIdle(connection));
+		const conn = res.connection!;
+		sockets.set(conn, false);
+		res.once('finish', () => markIdle(conn));
 	});
 
-	// Express middleware to keep track of event streams
-	express.use((req, res, next) => {
-		res.writeHead = function(writeHead) {
-			return function(this: any, ...args: any) {
-				return writeHead.call(this, args);
-			};
-		}(res.writeHead);
-		next();
+	sockjs.on('connection', conn => {
+		markIdle(conn);
+		conn.on('close', () => sockets.delete(conn));
 	});
 
 	// Shutdown handler
@@ -48,20 +44,19 @@ export function setupGracefulShutdown(express: Express, server: Server, { timeou
 		server.close();
 
 		// Close all idle connections
-		for (const socket of sockets) {
-			if (socket._idle) {
+		for (const [ socket, idle ] of sockets) {
+			if (idle) {
 				socket.end();
 			}
 		}
 
 		// Close after timeout
 		if (timeout) {
-			const timeoutRef = setTimeout(() => {
-				for (const socket of sockets) {
+			setTimeout(() => {
+				for (const socket of sockets.keys()) {
 					socket.end();
 				}
-			}, timeout);
-			timeoutRef.unref();
+			}, timeout).unref();
 		}
 	};
 }

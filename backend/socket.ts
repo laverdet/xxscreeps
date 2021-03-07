@@ -113,4 +113,5 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 
 		connection.on('close', close);
 	});
+	return socketServer;
 }
