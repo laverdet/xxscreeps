@@ -2,7 +2,7 @@ import type { ContextType, Fallback, Implementation } from 'xxscreeps/util/types
 import type { Creep } from 'xxscreeps/game/objects/creep';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { constant, struct, variant } from 'xxscreeps/schema';
+import { constant, enumerated, struct, variant } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import './creep';
@@ -28,14 +28,19 @@ export function registerHarvestable<Type extends RoomObject, Error extends C.Err
 }
 registerHarvestable(RoomObject, () => C.ERR_INVALID_TARGET);
 
-// Event log type
+// Schema registration
 declare module 'xxscreeps/engine/schema' {
-	interface Schema { harvestable: typeof eventLog }
+	interface Schema { harvestable: typeof schema }
 }
-const eventLog = registerSchema('Room.eventLog', struct({
-	...variant(C.EVENT_HARVEST),
-	event: constant(C.EVENT_HARVEST),
-	objectId: Id.format,
-	targetId: Id.format,
-	amount: 'int32',
-}));
+
+const schema = [
+	registerSchema('ActionLog.action', enumerated('harvest')),
+
+	registerSchema('Room.eventLog', struct({
+		...variant(C.EVENT_HARVEST),
+		event: constant(C.EVENT_HARVEST),
+		objectId: Id.format,
+		targetId: Id.format,
+		amount: 'int32',
+	})),
+];

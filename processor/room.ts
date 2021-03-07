@@ -3,7 +3,7 @@ import type { Room } from 'xxscreeps/game/room';
 import * as Game from 'xxscreeps/game/game';
 import * as Movement from 'xxscreeps/engine/processor/intents/movement';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
-import { Processors, RoomTickProcessor, Tick, roomTickProcessors } from './symbols';
+import { Processors, RoomTickProcessor, Tick, roomTickProcessors, PreTick } from './symbols';
 
 import 'xxscreeps/config/mods/processor';
 import 'xxscreeps/engine/processor/intents';
@@ -35,6 +35,11 @@ export class RoomProcessorContext {
 		Game.runWithState([ this.room ], this.time, () => {
 			// Reset eventLog for this tick
 			this.room[EventLogSymbol] = [];
+
+			// Pre-intent processor
+			for (const object of this.room._objects) {
+				object[PreTick]?.(object);
+			}
 
 			// Run `registerRoomTickProcessor` hooks
 			for (const process of roomTickProcessors) {

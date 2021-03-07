@@ -1,6 +1,6 @@
 import type { CounterExtract, Dictionary, Implementation, UnwrapArray } from 'xxscreeps/util/types';
 import type { RoomObject } from 'xxscreeps/game/objects/room-object';
-import { IntentIdentifier, Processors, Tick } from './symbols';
+import { IntentIdentifier, PreTick, Processors, Tick } from './symbols';
 export { registerRoomTickProcessor } from './room';
 
 // `RoomObject` type definitions
@@ -10,6 +10,7 @@ type IntentReceiverInstance = {
 	[IntentIdentifier]: IntentIdentifierResult;
 	[Processors]?: IntentProcessorHolder;
 };
+type TickProcessor<Type = any> = (receiver: Type) => void;
 declare module 'xxscreeps/game/room' {
 	interface Room {
 		[Processors]?: IntentProcessorHolder;
@@ -18,8 +19,9 @@ declare module 'xxscreeps/game/room' {
 declare module 'xxscreeps/game/objects/room-object' {
 	interface RoomObject {
 		[IntentIdentifier]: IntentIdentifierResult;
+		[PreTick]?: TickProcessor;
 		[Processors]?: IntentProcessorHolder;
-		[Tick]?: (receiver: any) => void;
+		[Tick]?: TickProcessor;
 	}
 }
 
@@ -65,9 +67,14 @@ export type IntentListFor<Type extends IntentReceivers> = {
 };
 
 // Register per-tick per-object processor
-export function registerObjectTickProcessor<Type extends RoomObject>(
-	receiver: Implementation<Type>,
-	tick: (receiver: Type) => void,
+export function registerObjectPreTickProcessor<Type extends RoomObject>(
+	receiver: Implementation<Type>, fn: TickProcessor<Type>,
 ) {
-	receiver.prototype[Tick] = tick;
+	receiver.prototype[PreTick] = fn;
+}
+
+export function registerObjectTickProcessor<Type extends RoomObject>(
+	receiver: Implementation<Type>, fn: TickProcessor<Type>,
+) {
+	receiver.prototype[Tick] = fn;
 }

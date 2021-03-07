@@ -1,3 +1,4 @@
+import { mapToKeys } from 'xxscreeps/util/utility';
 import { bindRenderer } from 'xxscreeps/backend';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
@@ -12,6 +13,7 @@ import { StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
 import { StructureStorage } from 'xxscreeps/game/objects/structures/storage';
 import { StructureTower } from 'xxscreeps/game/objects/structures/tower';
 import { Capacity, Restricted, SingleResource, Store } from 'xxscreeps/game/store';
+import { ActionLog } from 'xxscreeps/game/objects/action-log';
 import { Variant } from 'xxscreeps/schema';
 
 // Base object renderers
@@ -70,7 +72,8 @@ bindRenderer(Creep, (creep, next) => ({
 	fatigue: creep.fatigue,
 	ageTime: creep._ageTime,
 	user: creep._owner,
-	actionLog: {},
+	actionLog: mapToKeys(creep[ActionLog], action =>
+		[ action.action, { x: action.x, y: action.y } ]),
 }));
 
 bindRenderer(Resource, (resource, next) => ({

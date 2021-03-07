@@ -5,6 +5,7 @@ import * as Game from 'xxscreeps/game/game';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { registerIntentProcessor } from 'xxscreeps/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
+import { saveAction } from 'xxscreeps/game/objects/action-log';
 import { checkHarvest } from './creep';
 import { Harvestable } from './game';
 
@@ -38,6 +39,7 @@ const intent = registerIntentProcessor(Creep, 'harvest', (creep, id: string) => 
 			objectId: creep.id,
 			targetId: target.id,
 		});
+		saveAction(creep, 'harvest', target.pos.x, target.pos.y);
 		return amount > 0;
 	} else {
 		return false;

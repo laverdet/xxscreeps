@@ -13,7 +13,8 @@ import type { LookForType } from 'xxscreeps/game/room';
 import { moveObject, removeObject } from 'xxscreeps/game/room/methods';
 import type { ResourceType, RoomObjectWithStore } from 'xxscreeps/game/store';
 import { accumulate, firstMatching } from 'xxscreeps/util/utility';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
+import { ActionLog, saveAction } from 'xxscreeps/game/objects/action-log';
+import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import * as StructureControllerIntent from './controller';
 import * as Movement from './movement';
 // eslint-disable-next-line no-duplicate-imports
@@ -38,6 +39,7 @@ const intents = [
 			if (energy > 0) {
 				StoreIntent.subtract(creep.store, 'energy', energy);
 				target.progress += energy;
+				saveAction(creep, 'build', target.pos.x, target.pos.y);
 			}
 		}
 	}),
@@ -79,6 +81,7 @@ const intents = [
 			const energy = Math.min(power, creep.store.energy);
 			StoreIntent.subtract(creep.store, 'energy', energy);
 			StructureControllerIntent.upgrade(target, energy);
+			saveAction(creep, 'upgradeController', target.pos.x, target.pos.y);
 		}
 	}),
 
@@ -91,6 +94,10 @@ const intents = [
 		}
 	}),
 ];
+
+registerObjectPreTickProcessor(Creep, creep => {
+	creep[ActionLog] = [];
+});
 
 registerObjectTickProcessor(Creep, creep => {
 	// Check creep death

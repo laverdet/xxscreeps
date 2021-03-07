@@ -1,14 +1,11 @@
 import * as Id from 'xxscreeps/engine/schema/id';
-import { constant, struct, variant, withType } from 'xxscreeps/schema';
+import { constant, enumerated, struct, variant, withType } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 import * as C from './constants';
 import './creep';
 
-// Event log type
-declare module 'xxscreeps/engine/schema' {
-	interface Schema { combat: typeof eventLog }
-}
+// Schema types
 export type AttackTypes =
 	typeof C.EVENT_ATTACK_TYPE_MELEE |
 	typeof C.EVENT_ATTACK_TYPE_RANGED |
@@ -17,7 +14,16 @@ export type AttackTypes =
 export type HealTypes =
 	typeof C.EVENT_HEAL_TYPE_MELEE |
 	typeof C.EVENT_HEAL_TYPE_RANGED;
-const eventLog = [
+
+declare module 'xxscreeps/engine/schema' {
+	interface Schema { combat: typeof schema }
+}
+const schema = [
+	registerSchema('ActionLog.action', enumerated(
+		'attack', 'attacked', 'heal', 'healed',
+		'rangedAttack', 'rangedHeal', 'rangedMassAttack',
+	)),
+
 	registerSchema('Room.eventLog', struct({
 		...variant(C.EVENT_ATTACK),
 		event: constant(C.EVENT_ATTACK),

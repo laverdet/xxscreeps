@@ -11,6 +11,13 @@ type FormatForPath<Path extends string> = WithKey<Path> extends AllFormatsByPath
 	Extract<AllFormatsByPath, WithKey<Path>>[Path] : unknown;
 export interface Schema {}
 
+
+// Returns augmented formats as array that can be spread into enumerated declarations
+type ExtractEnumeratedSchema<Format> = Format extends WithType<infer Type> ? Type[] : never[];
+export function enumeratedForPath<Path extends string>(path: Path): ExtractEnumeratedSchema<FormatForPath<Path>> {
+	return (schemaByPath.get(path) ?? []).map(format => format.enum).flat() as never;
+}
+
 // Returns augmented formats as plain object that can be spread into a `struct({ ... })` declaration
 type ExtractStructSchema<Format> = UnionToIntersection<Format extends WithType<infer Type> ? {
 	[Key in keyof Type]: WithType<Type[Key]>;
@@ -30,7 +37,7 @@ export function structForPath<Path extends string>(path: Path): ExtractStructSch
 // Returns augmented formats as array that can be spread into variant declarations
 type ExtractVariantSchema<Format> = Format extends {} ? Format : never;
 export function variantForPath<Path extends string>(path: Path): ExtractVariantSchema<FormatForPath<Path>>[] {
-	return schemaByPath.get(path) as never;
+	return (schemaByPath.get(path) ?? []) as never;
 }
 
 // Register a schema format for a given "path"

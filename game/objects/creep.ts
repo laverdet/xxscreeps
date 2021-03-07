@@ -2,6 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
+import * as ActionLog from './action-log';
 import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
@@ -26,21 +27,24 @@ type MoveToOptions = {
 };
 
 export function format() { return compose(shape, Creep) }
-const shape = declare('Creep', struct(baseFormat, {
-	...variant('creep'),
-	body: vector(struct({
-		boost: optionalResourceEnumFormat,
-		hits: 'uint8',
-		type: enumerated(...C.BODYPARTS_ALL),
-	})),
-	fatigue: 'int16',
-	hits: 'int16',
-	name: 'string',
-	// saying: ...
-	store: Store.format,
-	_ageTime: 'int32',
-	_owner: Id.format,
-}));
+function shape() {
+	return declare('Creep', struct(baseFormat, {
+		...variant('creep'),
+		...ActionLog.memberFormat(),
+		body: vector(struct({
+			boost: optionalResourceEnumFormat,
+			hits: 'uint8',
+			type: enumerated(...C.BODYPARTS_ALL),
+		})),
+		fatigue: 'int16',
+		hits: 'int16',
+		name: 'string',
+		// saying: ...
+		store: Store.format,
+		_ageTime: 'int32',
+		_owner: Id.format,
+	}));
+}
 
 export class Creep extends withOverlay(shape)(RoomObject) {
 	get carry() { return this.store }
