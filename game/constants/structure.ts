@@ -20,8 +20,6 @@ export const STRUCTURE_NUKER = 'nuker' as const;
 export const STRUCTURE_FACTORY = 'factory' as const;
 export const STRUCTURE_INVADER_CORE = 'invaderCore' as const;
 
-export const MAX_CONSTRUCTION_SITES = 100;
-
 export const RAMPART_DECAY_AMOUNT = 300;
 export const RAMPART_DECAY_TIME = 100;
 export const RAMPART_HITS = 1;
@@ -36,9 +34,6 @@ export const RAMPART_HITS_MAX = [
 	100000000,
 	300000000,
 ];
-
-export const ENERGY_REGEN_TIME = 300;
-export const ENERGY_DECAY = 1000;
 
 export const SPAWN_HITS = 5000;
 export const SPAWN_ENERGY_START = 300;
@@ -66,25 +61,6 @@ export const LINK_LOSS_RATIO = 0.03;
 
 export const STORAGE_CAPACITY = 1000000;
 export const STORAGE_HITS = 10000;
-
-export const CONSTRUCTION_COST = {
-	'spawn': 15000,
-	'extension': 3000,
-	'road': 300,
-	'constructedWall': 1,
-	'rampart': 1,
-	'link': 5000,
-	'storage': 30000,
-	'tower': 5000,
-	'observer': 8000,
-	'powerSpawn': 100000,
-	'extractor': 5000,
-	'lab': 50000,
-	'terminal': 100000,
-	'container': 5000,
-	'nuker': 100000,
-	'factory': 100000,
-};
 
 export const CONSTRUCTION_COST_ROAD_SWAMP_RATIO = 5;
 export const CONSTRUCTION_COST_ROAD_WALL_RATIO = 150;
@@ -165,12 +141,6 @@ export const TERMINAL_HITS = 3000;
 export const TERMINAL_SEND_COST = 0.1;
 export const TERMINAL_MIN_SEND = 100;
 export const TERMINAL_COOLDOWN = 10;
-
-export const CONTAINER_HITS = 250000;
-export const CONTAINER_CAPACITY = 2000;
-export const CONTAINER_DECAY = 5000;
-export const CONTAINER_DECAY_TIME = 100;
-export const CONTAINER_DECAY_TIME_OWNED = 500;
 
 export const NUKER_HITS = 1000;
 export const NUKER_COOLDOWN = 100000;

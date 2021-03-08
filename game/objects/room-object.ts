@@ -20,7 +20,7 @@ const shape = declare('RoomObject', struct({
 }));
 
 export abstract class RoomObject extends withOverlay(BufferObject, shape) {
-	abstract _lookType: LookConstants;
+	abstract get _lookType(): LookConstants;
 	room!: Room;
 	_owner?: string | null;
 

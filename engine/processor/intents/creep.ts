@@ -3,7 +3,6 @@ import * as Game from 'xxscreeps/game/game';
 import { Creep, PartType } from 'xxscreeps/game/objects/creep';
 // eslint-disable-next-line no-duplicate-imports
 import * as CreepLib from 'xxscreeps/game/objects/creep';
-import type { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
 import type { Resource } from 'xxscreeps/mods/resource/resource';
 import type { Structure } from 'xxscreeps/game/objects/structures';
 import type { StructureController } from 'xxscreeps/game/objects/structures/controller';
@@ -26,23 +25,6 @@ declare module 'xxscreeps/processor' {
 	interface Intent { creep: typeof intents }
 }
 const intents = [
-	registerIntentProcessor(Creep, 'build', (creep, id: string) => {
-		const target = Game.getObjectById<ConstructionSite>(id)!;
-		if (CreepLib.checkBuild(creep, target) === C.OK) {
-			const power = calculatePower(creep, C.WORK, C.BUILD_POWER);
-			const energy = Math.min(
-				target.progressTotal - target.progress,
-				creep.store.energy,
-				power,
-			);
-			if (energy > 0) {
-				StoreIntent.subtract(creep.store, 'energy', energy);
-				target.progress += energy;
-				saveAction(creep, 'build', target.pos.x, target.pos.y);
-			}
-		}
-	}),
-
 	registerIntentProcessor(Creep, 'move', (creep, direction: Direction) => {
 		if (CreepLib.checkMove(creep, direction) === C.OK) {
 			Movement.add(creep, direction);

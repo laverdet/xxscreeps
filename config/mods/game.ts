@@ -1,4 +1,5 @@
 import 'xxscreeps/mods/combat/game';
+import 'xxscreeps/mods/construction/game';
 import 'xxscreeps/mods/harvestable/game';
 import 'xxscreeps/mods/invader/game';
 import 'xxscreeps/mods/npc/game';

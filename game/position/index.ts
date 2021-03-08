@@ -1,5 +1,4 @@
 import type { InspectOptionsStylized } from 'util';
-import type { ConstructibleStructureType } from 'xxscreeps/game/objects/construction-site';
 import type { FindConstants, FindType } from 'xxscreeps/game/room/find';
 import type { LookConstants } from 'xxscreeps/game/room/look';
 import type { FindPathOptions, RoomFindOptions, RoomPath } from 'xxscreeps/game/room/room';
@@ -296,15 +295,6 @@ export class RoomPosition {
 	}
 
 	/**
-	 * Create new `ConstructionSite` at the specified location.
-	 * @param structureType One of the `STRUCTURE_*` constants.
-	 * @param name The name of the structure, for structures that support it (currently only spawns).
-	 */
-	createConstructionSite(structureType: ConstructibleStructureType, name?: string) {
-		return fetchRoom(this.roomName).createConstructionSite(this, structureType, name);
-	}
-
-	/**
 	 * Create new `Flag` at the specified location
 	 * @param name The name of a new flag. It should be unique, i.e. the `Game.flags` object should
 	 * not contain another flag with the same name (hash key). If not defined, a random name will be
@@ -392,7 +382,7 @@ export function fetchPositionArgument<Extra = any>(
 	}
 }
 
-function fetchRoom(roomName: string) {
+export function fetchRoom(roomName: string) {
 	const room = Game.rooms[roomName];
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (room === undefined) {

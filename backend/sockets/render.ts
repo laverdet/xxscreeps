@@ -1,7 +1,6 @@
 import { mapToKeys } from 'xxscreeps/util/utility';
 import { bindRenderer } from 'xxscreeps/backend';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
-import { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { Structure } from 'xxscreeps/game/objects/structures';
 import { DowngradeTime, StructureController } from 'xxscreeps/game/objects/structures/controller';
@@ -31,14 +30,6 @@ bindRenderer(Structure, (structure, next) => ({
 }));
 
 // Builtin renderers
-bindRenderer(ConstructionSite, (constructionSite, next) => ({
-	...next(),
-	progress: constructionSite.progress,
-	progressTotal: constructionSite.progressTotal,
-	structureType: constructionSite.structureType,
-	user: constructionSite._owner,
-}));
-
 bindRenderer(Creep, (creep, next) => ({
 	...next(),
 	...renderStore(creep.store),

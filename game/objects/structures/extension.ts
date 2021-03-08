@@ -5,6 +5,7 @@ import * as Store from 'xxscreeps/mods/resource/store';
 import * as Structure from '.';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/util/utility';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export function format() { return compose(shape, StructureExtension) }
 const shape = declare('Extension', struct(Structure.format, {
@@ -26,3 +27,6 @@ export function create(pos: RoomPosition, level: number, owner: string) {
 		_owner: owner,
 	});
 }
+
+registerBuildableStructure(C.STRUCTURE_EXTENSION, site =>
+	create(site.pos, site.room.controller?.level ?? 1, site._owner));

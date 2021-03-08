@@ -5,6 +5,7 @@ import * as Structure from '.';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, member, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/util/utility';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export const NextDecayTime = Symbol('nextDecayTime');
 
@@ -25,3 +26,5 @@ export function create(pos: RoomPosition) {
 		[NextDecayTime]: Game.time + C.ROAD_DECAY_TIME,
 	});
 }
+
+registerBuildableStructure(C.STRUCTURE_ROAD, site => create(site.pos));

@@ -27,12 +27,10 @@ export const CREEP_CORPSE_RATE = 0.2;
 export const CREEP_PART_MAX_ENERGY = 125;
 
 export const CARRY_CAPACITY = 50;
-export const HARVEST_POWER = 2;
 export const HARVEST_MINERAL_POWER = 1;
 export const HARVEST_DEPOSIT_POWER = 1;
 export const REPAIR_POWER = 100;
 export const DISMANTLE_POWER = 50;
-export const BUILD_POWER = 5;
 export const UPGRADE_CONTROLLER_POWER = 1;
 export const REPAIR_COST = 0.01;
 export const DISMANTLE_COST = 0.005;

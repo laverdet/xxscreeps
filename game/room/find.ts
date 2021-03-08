@@ -3,7 +3,6 @@ import type { Room } from './room';
 import * as C from 'xxscreeps/game/constants';
 import { lookFor } from './methods';
 import { findHandlers } from './symbols';
-import 'xxscreeps/config/mods/game';
 import './exit';
 
 // Registers a FIND_ constant and its respective handler

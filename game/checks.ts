@@ -27,7 +27,7 @@ export function checkSafeMode<Error extends number>(room: Room, error: Error) {
 	return C.OK;
 }
 
-export function checkTarget(target: RoomObject | undefined, types: any[] = []) {
+export function checkTarget(target: RoomObject | undefined, ...types: any[]) {
 	if (target) {
 		for (const type of types) {
 			if (target instanceof type) {

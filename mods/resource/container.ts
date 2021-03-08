@@ -4,6 +4,7 @@ import * as Game from 'xxscreeps/game/game';
 import * as RoomObject from 'xxscreeps/game/objects/room-object';
 import * as Structure from 'xxscreeps/game/objects/structures';
 import * as Store from './store';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/util/utility';
 
@@ -29,3 +30,5 @@ export function create(pos: RoomPosition) {
 			C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME),
 	});
 }
+
+registerBuildableStructure(C.STRUCTURE_CONTAINER, site => create(site.pos));

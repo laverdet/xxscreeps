@@ -3,7 +3,7 @@ import map from './map';
 import type { Flag } from './flag';
 import type { AnyRoomObject, Room } from './room';
 import { Creep } from './objects/creep';
-import { ConstructionSite } from './objects/construction-site';
+import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site';
 import { RoomObject } from './objects/room-object';
 import { StructureSpawn } from './objects/structures/spawn';
 import { AnyStructure, Structure } from './objects/structures';

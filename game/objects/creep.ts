@@ -10,9 +10,8 @@ import { compose, declare, enumerated, struct, variant, vector, withOverlay } fr
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { assign } from 'xxscreeps/util/utility';
-import { ConstructionSite } from './construction-site';
 import { StructureController } from './structures/controller';
-import { obstacleTypes, RoomSearchOptions, SearchReturn } from '../path-finder';
+import { RoomSearchOptions, SearchReturn } from '../path-finder';
 import { Resource, ResourceType, optionalResourceEnumFormat } from '../../mods/resource/resource';
 import { Structure } from './structures';
 
@@ -58,12 +57,6 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	get spawning() { return this._ageTime === 0 }
 	get ticksToLive() { return this._ageTime - Game.time }
 	get _lookType() { return C.LOOK_CREEPS }
-
-	build(this: Creep, target: ConstructionSite) {
-		return chainIntentChecks(
-			() => checkBuild(this, target),
-			() => Game.intents.save(this, 'build', target.id));
-	}
 
 	getActiveBodyparts(type: PartType) {
 		return this.body.reduce((count, part) =>
@@ -270,35 +263,6 @@ export function checkCommon(creep: Creep, part?: PartType) {
 		return C.ERR_NO_BODYPART;
 	}
 	return C.OK;
-}
-
-export function checkBuild(creep: Creep, target: ConstructionSite) {
-	return chainIntentChecks(
-		() => checkCommon(creep, C.WORK),
-		() => {
-			if (creep.carry.energy <= 0) {
-				return C.ERR_NOT_ENOUGH_RESOURCES;
-
-			} else if (!(target instanceof ConstructionSite)) {
-				return C.ERR_INVALID_TARGET;
-
-			} else if (!creep.pos.inRangeTo(target, 3)) {
-				return C.ERR_NOT_IN_RANGE;
-			}
-
-			// A friendly creep sitting on top of a construction site for an obstacle structure prevents
-			// `build`
-			const { room } = target;
-			if (obstacleTypes.has(target.structureType)) {
-				const creepFilter = room.controller?.safeMode === undefined ? () => true : (creep: Creep) => creep.my;
-				for (const creep of room.find(C.FIND_CREEPS)) {
-					if (target.pos.isEqualTo(creep) && creepFilter(creep)) {
-						return C.ERR_INVALID_TARGET;
-					}
-				}
-			}
-			return C.OK;
-		});
 }
 
 export function checkMove(creep: Creep, direction: number) {

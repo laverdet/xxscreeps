@@ -6,7 +6,7 @@ import * as Game from './game';
 import type { RoomPosition } from './position';
 import type { Room } from './room';
 import type { RoomObject } from './objects/room-object';
-import { ConstructionSite } from './objects/construction-site';
+import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site';
 import { Creep } from './objects/creep';
 import { Structure } from './objects/structures';
 import { StructureRoad } from './objects/structures/road';

@@ -7,7 +7,7 @@ import { RoomPosition } from './position';
 import { Room } from './room';
 import { RoomVisual } from './visual';
 
-import { ConstructionSite } from './objects/construction-site';
+import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site';
 import { Creep } from './objects/creep';
 import { Resource } from '../mods/resource/resource';
 import { RoomObject } from './objects/room-object';

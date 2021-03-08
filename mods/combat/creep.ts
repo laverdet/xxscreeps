@@ -15,7 +15,7 @@ declare module 'xxscreeps/game/objects/creep' {
 		 * body parts and is not inside a rampart, it will automatically hit back at the attacker.
 		 * @param target The target object to be attacked
 		 */
-		attack(target: AttackTarget): number;
+		attack(target: AttackTarget): ReturnType<typeof checkAttack>;
 
 		/**
 		 * Heal self or another creep. It will restore the target creep’s damaged body parts function
@@ -23,7 +23,7 @@ declare module 'xxscreeps/game/objects/creep' {
 		 * adjacent square to the creep.
 		 * @param target The target creep object
 		 */
-		heal(target: Creep): number;
+		heal(target: Creep): ReturnType<typeof checkHeal>;
 
 		/**
 		 * A ranged attack against another creep or structure. Requires the `RANGED_ATTACK` body part.
@@ -39,14 +39,14 @@ declare module 'xxscreeps/game/objects/creep' {
 		 * within 3 squares range of the creep.
 		 * @param target The target creep object
 		 */
-		rangedHeal(target: Creep): number;
+		rangedHeal(target: Creep): ReturnType<typeof checkRangedHeal>;
 
 		/**
 		 * A ranged attack against all hostile creeps or structures within 3 squares range. Requires the
 		 * `RANGED_ATTACK` body part. The attack power depends on the range to each target. Friendly units
 		 * are not affected.
 		 */
-		rangedMassAttack(): number;
+		rangedMassAttack(): ReturnType<typeof checkRangedMassAttack>;
 	}
 }
 
@@ -94,7 +94,7 @@ export function checkAttack(creep: Creep, target: AttackTarget) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.ATTACK),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
-		() => checkTarget(target, [ Creep, Structure ]),
+		() => checkTarget(target, Creep, Structure),
 		() => checkRange(creep, target, 1),
 	);
 }
@@ -103,7 +103,7 @@ export function checkHeal(creep: Creep, target: Creep) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.HEAL),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
-		() => checkTarget(target, [ Creep ]),
+		() => checkTarget(target, Creep),
 		() => checkRange(creep, target, 1),
 	);
 }
@@ -112,7 +112,7 @@ export function checkRangedAttack(creep: Creep, target: AttackTarget) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.RANGED_ATTACK),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
-		() => checkTarget(target, [ Creep, Structure ]),
+		() => checkTarget(target, Creep, Structure),
 		() => checkRange(creep, target, 3),
 	);
 }
@@ -121,7 +121,7 @@ export function checkRangedHeal(creep: Creep, target: Creep) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.HEAL),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
-		() => checkTarget(target, [ Creep ]),
+		() => checkTarget(target, Creep),
 		() => checkRange(creep, target, 3),
 	);
 }

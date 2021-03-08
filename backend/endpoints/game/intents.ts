@@ -7,7 +7,7 @@ import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as ControllerIntents from 'xxscreeps/engine/processor/intents/controller';
 import * as Spawn from 'xxscreeps/game/objects/structures/spawn';
 import { insertObject } from 'xxscreeps/game/room/methods';
-import { checkCreateConstructionSite } from 'xxscreeps/game/room/room';
+import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { ServiceMessage } from 'xxscreeps/engine/service';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';

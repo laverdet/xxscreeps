@@ -2,7 +2,6 @@ import type { Dictionary } from 'xxscreeps/util/types';
 import type { IntentsForReceiver, IntentParameters, IntentReceivers } from 'xxscreeps/processor';
 import * as C from 'xxscreeps/game/constants';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
-import { exchange } from 'xxscreeps/util/utility';
 
 const kCpuCost = 0.2;
 
@@ -11,7 +10,9 @@ export class IntentManager {
 	intentsByGroup: Dictionary<Dictionary<any>> = Object.create(null);
 
 	acquireIntentsForGroup(group: string) {
-		return exchange(this.intentsByGroup, group);
+		const intents = this.intentsByGroup[group];
+		delete this.intentsByGroup[group];
+		return intents;
 	}
 
 	getIntentsForReceiver(receiver: IntentReceivers) {
