@@ -5,7 +5,7 @@ import { getOrSet, instantiate } from 'xxscreeps/util/utility';
 import * as Game from './game';
 import type { RoomPosition } from './position';
 import type { Room } from './room';
-import type { RoomObject } from './objects/room-object';
+import type { RoomObject } from './object';
 import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site';
 import { Creep } from './objects/creep';
 import { Structure } from './objects/structures';

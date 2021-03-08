@@ -1,6 +1,6 @@
 import * as C from './constants';
 import * as Game from 'xxscreeps/game/game';
-import * as RoomObject from 'xxscreeps/game/objects/room-object';
+import * as RoomObject from 'xxscreeps/game/object';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 
 export const format = () => compose(shape, Source);

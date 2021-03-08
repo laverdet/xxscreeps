@@ -11,7 +11,7 @@ import { setupGlobals } from 'xxscreeps/game/globals';
 import * as Memory from 'xxscreeps/game/memory';
 import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
 import { Room } from 'xxscreeps/game/room';
-import { RoomObject } from 'xxscreeps/game/objects/room-object';
+import { RoomObject } from 'xxscreeps/game/object';
 import type { RunnerIntent } from 'xxscreeps/engine/runner/channel';
 import * as FlagLib from 'xxscreeps/engine/runner/flag';
 import * as UserCode from 'xxscreeps/engine/metadata/code';

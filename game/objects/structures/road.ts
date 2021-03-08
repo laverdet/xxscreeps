@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
-import * as RoomObject from 'xxscreeps/game/objects/room-object';
+import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from '.';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, member, struct, variant, withOverlay } from 'xxscreeps/schema';

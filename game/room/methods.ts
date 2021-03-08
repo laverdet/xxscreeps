@@ -1,4 +1,4 @@
-import type { RoomObject } from 'xxscreeps/game/objects/room-object';
+import type { RoomObject } from 'xxscreeps/game/object';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import type { LookConstants, Room } from './room';
 import { FlushFindCache, LookFor, MoveObject, InsertObject, RemoveObject } from './symbols';

@@ -3,7 +3,7 @@ import * as C from './constants';
 import * as Game from './game';
 import * as Memory from './memory';
 import { extractPositionId, fetchPositionArgument, RoomPosition } from './position';
-import { RoomObject, format as baseFormat } from './objects/room-object';
+import { RoomObject, format as baseFormat } from './object';
 import { chainIntentChecks } from './checks';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
 

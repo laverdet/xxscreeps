@@ -1,5 +1,5 @@
 import type { Implementation } from 'xxscreeps/util/types';
-import type { RoomObject } from 'xxscreeps/game/objects/room-object';
+import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import { Creep } from 'xxscreeps/game/objects/creep';
@@ -11,7 +11,7 @@ import { Harvestable } from './game';
 
 // `RoomObject` harvest intent processor symbol
 const ProcessHarvest = Symbol();
-declare module 'xxscreeps/game/objects/room-object' {
+declare module 'xxscreeps/game/object' {
 	interface RoomObject {
 		[ProcessHarvest](creep: Creep, target: RoomObject): number;
 	}

@@ -1,5 +1,5 @@
 import type { Room } from './room';
-import type { RoomObject } from './objects/room-object';
+import type { RoomObject } from './object';
 import * as C from './constants';
 
 export function chainIntentChecks<Checks extends (() => C.ErrorCode)[]>(...checks: Checks):

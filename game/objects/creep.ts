@@ -4,7 +4,7 @@ import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as ActionLog from './action-log';
-import * as RoomObject from './room-object';
+import * as RoomObject from '../object';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';

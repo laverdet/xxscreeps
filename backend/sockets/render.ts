@@ -1,6 +1,6 @@
 import { mapToKeys } from 'xxscreeps/util/utility';
 import { bindRenderer } from 'xxscreeps/backend';
-import { RoomObject } from 'xxscreeps/game/objects/room-object';
+import { RoomObject } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { Structure } from 'xxscreeps/game/objects/structures';
 import { DowngradeTime, StructureController } from 'xxscreeps/game/objects/structures/controller';

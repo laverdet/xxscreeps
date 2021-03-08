@@ -5,7 +5,7 @@ import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 import { getPositonInDirection, Direction } from 'xxscreeps/game/position';
 import { insertObject, moveObject } from 'xxscreeps/game/room/methods';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
-import { RoomObject } from 'xxscreeps/game/objects/room-object';
+import { RoomObject } from 'xxscreeps/game/object';
 import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
 import { checkSpawnCreep, StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
 import { accumulate } from 'xxscreeps/util/utility';

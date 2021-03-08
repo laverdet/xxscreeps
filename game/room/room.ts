@@ -1,5 +1,5 @@
 import type { InspectOptionsStylized } from 'util';
-import type { RoomObject } from 'xxscreeps/game/objects/room-object';
+import type { RoomObject } from 'xxscreeps/game/object';
 import type { LooseBoolean } from 'xxscreeps/util/types';
 
 import * as C from '../constants';

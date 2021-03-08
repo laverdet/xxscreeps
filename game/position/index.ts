@@ -2,7 +2,7 @@ import type { InspectOptionsStylized } from 'util';
 import type { FindConstants, FindType } from 'xxscreeps/game/room/find';
 import type { LookConstants } from 'xxscreeps/game/room/look';
 import type { FindPathOptions, RoomFindOptions, RoomPath } from 'xxscreeps/game/room/room';
-import type { RoomObject } from 'xxscreeps/game/objects/room-object';
+import type { RoomObject } from 'xxscreeps/game/object';
 import * as PathFinder from 'xxscreeps/game/path-finder';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';

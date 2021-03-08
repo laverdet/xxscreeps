@@ -1,5 +1,5 @@
 import * as Room from 'xxscreeps/engine/room';
-import { RoomObject } from 'xxscreeps/game/objects/room-object';
+import { RoomObject } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { Structure } from 'xxscreeps/game/objects/structures';
 import { StructureController } from 'xxscreeps/game/objects/structures/controller';

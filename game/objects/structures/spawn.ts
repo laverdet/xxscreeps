@@ -3,7 +3,7 @@ import * as Creep from 'xxscreeps/game/objects/creep';
 import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
-import * as RoomObject from 'xxscreeps/game/objects/room-object';
+import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from '.';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';

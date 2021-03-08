@@ -1,5 +1,5 @@
 import type { Implementation } from 'xxscreeps/util/types';
-import type { RoomObject } from 'xxscreeps/game/objects/room-object';
+import type { RoomObject } from 'xxscreeps/game/object';
 import { MapRender, Render } from './symbols';
 
 // `RoomObject` render symbols
@@ -9,7 +9,7 @@ type RenderedRoomObject = {
 	x: number;
 	y: number;
 };
-declare module 'xxscreeps/game/objects/room-object' {
+declare module 'xxscreeps/game/object' {
 	interface RoomObject {
 		[Render]: () => RenderedRoomObject;
 		[MapRender]: (object: any) => string | undefined;
