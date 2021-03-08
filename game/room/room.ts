@@ -1,5 +1,4 @@
 import type { InspectOptionsStylized } from 'util';
-import type { RoomObject } from 'xxscreeps/game/object';
 import type { LooseBoolean } from 'xxscreeps/util/types';
 
 import * as C from '../constants';
@@ -15,6 +14,7 @@ import { mapInPlace } from 'xxscreeps/util/utility';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
+import { LookType, RoomObject } from 'xxscreeps/game/object';
 import { getTerrainForRoom } from '../map';
 import { StructureController } from '../objects/structures/controller';
 import { StructureExtension } from '../objects/structures/extension';
@@ -23,7 +23,7 @@ import { RoomVisual } from '../visual';
 
 import { EventLogSymbol } from './event-log';
 import { FindConstants, FindType, findHandlers } from './find';
-import { LookConstants, LookType, lookConstants } from './look';
+import { LookConstants, TypeOfLook, lookConstants } from './look';
 import { shape } from './schema';
 import { FlushFindCache, LookFor, MoveObject, InsertObject, RemoveObject } from './symbols';
 
@@ -32,13 +32,13 @@ export type AnyRoomObject = RoomObject | InstanceType<typeof Room>['_objects'][n
 export { LookConstants };
 
 type LookForTypeInitial<Type extends LookConstants> = {
-	[key in LookConstants]: LookType<Type>;
+	[key in LookConstants]: TypeOfLook<Type>;
 } & {
 	type: Type;
 };
 
 export type LookForType<Type extends RoomObject> = {
-	[key in LookConstants]: Type extends LookType<key> ? Type : never;
+	[key in LookConstants]: Type extends TypeOfLook<key> ? Type : never;
 } & {
 	type: never;
 };
@@ -225,7 +225,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		}
 		const objects = this._getSpatialIndex(type);
 		return (objects.get(extractPositionId(pos)) ?? []).map(object => {
-			const type = object._lookType;
+			const type = object[LookType];
 			return { type, [type]: object };
 		});
 	}
@@ -248,7 +248,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 	//
 	// Private functions
-	[LookFor]<Look extends LookConstants>(this: this, type: Look): LookType<Look>[] {
+	[LookFor]<Look extends LookConstants>(this: this, type: Look): TypeOfLook<Look>[] {
 		return this.#lookIndex.get(type)! as never[];
 	}
 
@@ -269,7 +269,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		} */
 		this.#findCache.clear();
 		// Update spatial look cache if it exists
-		const spatial = this.#lookSpatialIndex.get(object._lookType);
+		const spatial = this.#lookSpatialIndex.get(object[LookType]);
 		if (spatial) {
 			const pos = extractPositionId(object.pos);
 			const list = spatial.get(pos);
@@ -292,7 +292,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		} */
 		this.#findCache.clear();
 		// Update spatial look cache if it exists
-		const spatial = this.#lookSpatialIndex.get(object._lookType);
+		const spatial = this.#lookSpatialIndex.get(object[LookType]);
 		if (spatial) {
 			const pos = extractPositionId(object.pos);
 			const list = spatial.get(pos);
@@ -306,7 +306,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	}
 
 	[MoveObject](object: RoomObject, pos: RoomPosition) {
-		const spatial = this.#lookSpatialIndex.get(object._lookType);
+		const spatial = this.#lookSpatialIndex.get(object[LookType]);
 		if (spatial) {
 			const oldPosition = extractPositionId(object.pos);
 			const oldList = spatial.get(oldPosition)!;
@@ -331,7 +331,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	// find cache and spatial indices because those will be clean anyway
 	private _afterInsertion(object: RoomObject) {
 		object.room = this;
-		const lookType = object._lookType;
+		const lookType = object[LookType];
 		this.#lookIndex.get(lookType)!.push(object);
 		if (lookType === C.LOOK_STRUCTURES) {
 			if (object instanceof StructureController) {
@@ -345,7 +345,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 	private _afterRemoval(object: RoomObject) {
 		object.room = null as any;
-		const lookType = object._lookType;
+		const lookType = object[LookType];
 		const list = this.#lookIndex.get(lookType)!;
 		removeOne(list, object);
 		if (lookType === C.LOOK_STRUCTURES) {

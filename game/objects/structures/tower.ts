@@ -22,6 +22,6 @@ export function create(pos: RoomPosition, owner: string) {
 	return assign(RoomObject.create(new StructureTower, pos), {
 		hits: C.TOWER_HITS,
 		store: Store.create(null, { energy: C.TOWER_CAPACITY }),
-		_owner: owner,
+		[RoomObject.Owner]: owner,
 	});
 }

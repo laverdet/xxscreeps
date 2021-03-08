@@ -76,7 +76,7 @@ export function dispatch(room: Room) {
 	const terrain = room.getTerrain();
 	check: for (const creep of movingCreeps) {
 		const { _nextPosition } = creep;
-		const check = obstacleChecker(room, creep._owner);
+		const check = obstacleChecker(room, creep.owner);
 		for (const look of concatInPlace(
 			room.lookForAt(C.LOOK_CREEPS, _nextPosition!),
 			room.lookForAt(C.LOOK_STRUCTURES, _nextPosition!),

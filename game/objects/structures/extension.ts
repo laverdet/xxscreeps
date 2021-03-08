@@ -24,9 +24,9 @@ export function create(pos: RoomPosition, level: number, owner: string) {
 	return assign(RoomObject.create(new StructureExtension, pos), {
 		hits: C.EXTENSION_HITS,
 		store: Store.create(energyCapacity, { energy: energyCapacity }),
-		_owner: owner,
+		[RoomObject.Owner]: owner,
 	});
 }
 
 registerBuildableStructure(C.STRUCTURE_EXTENSION, site =>
-	create(site.pos, site.room.controller?.level ?? 1, site._owner));
+	create(site.pos, site.room.controller?.level ?? 1, site.owner));

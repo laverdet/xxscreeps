@@ -26,7 +26,7 @@ bindRenderer(Structure, (structure, next) => ({
 	structureType: structure.structureType,
 	hits: structure.hits,
 	hitsMax: 100, //structure.hitsMax,
-	user: structure._owner,
+	user: structure.owner,
 }));
 
 // Builtin renderers
@@ -40,7 +40,7 @@ bindRenderer(Creep, (creep, next) => ({
 	spawning: creep.spawning,
 	fatigue: creep.fatigue,
 	ageTime: creep._ageTime,
-	user: creep._owner,
+	user: creep.owner,
 	actionLog: mapToKeys(creep[ActionLog], action =>
 		[ action.action, { x: action.x, y: action.y } ]),
 }));

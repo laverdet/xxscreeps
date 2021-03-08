@@ -1,12 +1,13 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
+import { Owner } from 'xxscreeps/game/object';
 import { DowngradeTime, Progress, StructureController } from 'xxscreeps/game/objects/structures/controller';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { exchange } from 'xxscreeps/util/utility';
 
 export function claim(controller: StructureController, user: string) {
 	// Take controller
-	controller._owner = user;
+	controller[Owner] = user;
 	controller[DowngradeTime] = 0;
 	controller[Progress] = 0;
 	controller.safeMode = Game.time + C.SAFE_MODE_DURATION;

@@ -48,7 +48,7 @@ const CheckUniqueNameEndpoint: Endpoint = {
 			for (const structure of room.find(C.FIND_STRUCTURES)) {
 				if (
 					structure.structureType === 'spawn' &&
-					structure._owner === userid &&
+					structure.owner === userid &&
 					structure.name === req.body.name
 				) {
 					return { error: 'exists' };
@@ -75,7 +75,7 @@ const GenNameEndpoint: Endpoint = {
 				room.find(C.FIND_STRUCTURES),
 				room.find(C.FIND_CONSTRUCTION_SITES),
 			)) {
-				if (structure.structureType === 'spawn' && structure._owner === userid) {
+				if (structure.structureType === 'spawn' && structure.owner === userid) {
 					const number = Number(/^Spawn(?<count>[0-9]+)$/.exec(structure.name)?.groups?.number);
 					if (number > max) {
 						max = number;
@@ -152,7 +152,7 @@ const CreateInvaderEndpoint: Endpoint = {
 		// Modify room state
 		await this.context.gameMutex.scope(async() => {
 			const room = await loadRoom(this.context, pos.roomName);
-			if (room.controller?._owner !== userid) {
+			if (room.controller?.owner !== userid) {
 				return;
 			}
 			activateNPC(room, '2');

@@ -6,7 +6,7 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import * as ActionLog from './action-log';
 import * as RoomObject from '../object';
 import * as Store from 'xxscreeps/mods/resource/store';
-import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, enumerated, member, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { assign } from 'xxscreeps/util/utility';
@@ -37,10 +37,10 @@ function shape() {
 		fatigue: 'int16',
 		hits: 'int16',
 		name: 'string',
+		owner: member(RoomObject.Owner, Id.format),
 		// saying: ...
 		store: Store.format,
 		_ageTime: 'int32',
-		_owner: Id.format,
 	}));
 }
 
@@ -53,10 +53,11 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 		const creeps = memory.creeps ?? (memory.creeps = {});
 		return creeps[this.name] ?? (creeps[this.name] = {});
 	}
-	get my() { return this._owner === Game.me }
+	get my() { return this[RoomObject.Owner] === Game.me }
+	get owner() { return this[RoomObject.Owner] }
 	get spawning() { return this._ageTime === 0 }
 	get ticksToLive() { return this._ageTime - Game.time }
-	get _lookType() { return C.LOOK_CREEPS }
+	get [RoomObject.LookType]() { return C.LOOK_CREEPS }
 
 	getActiveBodyparts(type: PartType) {
 		return this.body.reduce((count, part) =>
@@ -248,7 +249,7 @@ export function create(pos: RoomPosition, body: PartType[], name: string, owner:
 		hits: body.length * 100,
 		name,
 		store: Store.create(carryCapacity),
-		_owner: owner,
+		[RoomObject.Owner]: owner,
 	});
 }
 

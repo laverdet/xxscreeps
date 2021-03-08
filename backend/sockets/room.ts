@@ -3,7 +3,7 @@ import * as User from 'xxscreeps/engine/metadata/user';
 import { getFlagChannel, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser, runWithState } from 'xxscreeps/game/game';
 import { SubscriptionEndpoint } from '../socket';
-import { acquire, mapInPlace, mapToKeys } from 'xxscreeps/util/utility';
+import { acquire, asUnion, mapInPlace, mapToKeys } from 'xxscreeps/util/utility';
 import { eventRenderers, Render } from 'xxscreeps/backend/symbols';
 import './render';
 
@@ -81,11 +81,12 @@ export const roomSubscription: SubscriptionEndpoint = {
 				runWithState([ room ], time, () => {
 					// Objects
 					for (const object of room._objects) {
+						asUnion(object);
 						const value = object[Render]();
 						if (value._id) {
 							objects[value._id] = value;
 						}
-						const owner = object._owner;
+						const owner = object.owner;
 						if (owner != null && !seenUsers.has(owner)) {
 							visibleUsers.add(owner);
 						}

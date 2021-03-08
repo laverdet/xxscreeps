@@ -8,6 +8,9 @@ import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { assign } from 'xxscreeps/util/utility';
 
+export const LookType = Symbol('lookType');
+export const Owner = Symbol('owner');
+
 export function format() { return compose(shape, RoomObject) }
 const shape = declare('RoomObject', struct({
 	id: Id.format,
@@ -20,9 +23,8 @@ const shape = declare('RoomObject', struct({
 }));
 
 export abstract class RoomObject extends withOverlay(BufferObject, shape) {
-	abstract get _lookType(): LookConstants;
+	abstract get [LookType](): LookConstants;
 	room!: Room;
-	_owner?: string | null;
 
 	[Symbol.for('nodejs.util.inspect.custom')]() {
 		return expandGetters(this);

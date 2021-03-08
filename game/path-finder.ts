@@ -154,8 +154,8 @@ export function obstacleChecker(room: Room, user: string, options: ObstacleCheck
 		} else if (controller?.safeMode === undefined) {
 			return object => object instanceof Creep;
 		} else {
-			const safeUser = controller._owner;
-			return object => object instanceof Creep && (object._owner === safeUser || user !== safeUser);
+			const safeUser = controller.owner;
+			return object => object instanceof Creep && (object.owner === safeUser || user !== safeUser);
 		}
 	}();
 	const structureFilter = function(): Filter {
@@ -170,7 +170,7 @@ export function obstacleChecker(room: Room, user: string, options: ObstacleCheck
 	const constructionSiteFilter = function(): Filter {
 		if (pathing) {
 			return object => object instanceof ConstructionSite &&
-				object._owner === user && obstacleTypes.has(object.structureType);
+				object.owner === user && obstacleTypes.has(object.structureType);
 		} else {
 			return () => false;
 		}

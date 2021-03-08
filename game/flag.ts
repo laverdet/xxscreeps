@@ -3,7 +3,7 @@ import * as C from './constants';
 import * as Game from './game';
 import * as Memory from './memory';
 import { extractPositionId, fetchPositionArgument, RoomPosition } from './position';
-import { RoomObject, format as baseFormat } from './object';
+import { LookType, RoomObject, format as baseFormat } from './object';
 import { chainIntentChecks } from './checks';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
 
@@ -23,10 +23,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		const flags = memory.flags ?? (memory.flags = {});
 		return flags[this.name] ?? (flags[this.name] = {});
 	}
-
-	// `room` is defined as a property on `RoomObject` but is implemented here instead as a getter
-	// @ts-ignore
-	get room() { return Game.rooms[this.pos.roomName]! }
+	get [LookType]() { return C.LOOK_FLAGS }
 
 	/**
 	 * Remove the flag
@@ -76,9 +73,8 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		);
 	}
 
-	// Unused properties from `RoomObject`
+	// Flags are kind of fake objects, and don't get an id
 	id!: never;
-	_lookType!: never;
 }
 
 //

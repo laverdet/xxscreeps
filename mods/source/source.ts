@@ -16,5 +16,5 @@ export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 	get ticksToRegeneration() {
 		return this._nextRegenerationTime === 0 ? undefined : Math.max(0, this._nextRegenerationTime - Game.time);
 	}
-	get _lookType() { return C.LOOK_SOURCES }
+	get [RoomObject.LookType]() { return C.LOOK_SOURCES }
 }

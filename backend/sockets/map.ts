@@ -11,8 +11,8 @@ import { SubscriptionEndpoint } from 'xxscreeps/backend/socket';
 
 // Register a map renderer on a `RoomObject` type
 bindMapRenderer(RoomObject, () => undefined);
-bindMapRenderer(Creep, creep => creep._owner);
-bindMapRenderer(Structure, structure => structure._owner ?? undefined);
+bindMapRenderer(Creep, creep => creep.owner);
+bindMapRenderer(Structure, structure => structure.owner ?? undefined);
 bindMapRenderer(StructureController, () => 'c');
 bindMapRenderer(StructureRoad, () => 'r');
 

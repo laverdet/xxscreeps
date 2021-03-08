@@ -82,7 +82,7 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 				Game.intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
 
 				// Fake creep
-				const creep = Creep.create(this.pos, body, name, this._owner!);
+				const creep = Creep.create(this.pos, body, name, this.owner!);
 				Game.creeps[name] = creep;
 				return C.OK;
 			});
@@ -94,7 +94,7 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 		hits: C.SPAWN_HITS,
 		name,
 		store: Store.create(null, { energy: C.SPAWN_ENERGY_CAPACITY }, { energy: C.SPAWN_ENERGY_START }),
-		_owner: owner,
+		[RoomObject.Owner]: owner,
 	});
 }
 

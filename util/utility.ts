@@ -1,4 +1,4 @@
-import type { Implementation, LooseBoolean } from './types';
+import type { Implementation, LooseBoolean, Union } from './types';
 
 // Like half the use cases of `reduce` are to sum an array, so this just does that with less
 // boilerplate
@@ -228,3 +228,6 @@ export function staticCast<Type>(value: Type) {
 export function uncurryThis<This, Args extends any[], Return>(callback: (this: This, ...args: Args) => Return) {
 	return (that: This, ...args: Args): Return => Reflect.apply(callback, that, args);
 }
+
+// Explodes a union type into all possible types inline
+export function asUnion<Type>(value: Type): asserts value is Union<Type> {}

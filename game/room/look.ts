@@ -27,4 +27,4 @@ type LookInfo = Exclude<UnwrapArray<Look[keyof Look]>, void>;
 export type LookConstants = LookInfo['look'];
 
 // Convert a LOOK_ constant to result type
-export type LookType<Look extends LookConstants> = Extract<LookInfo, { look: Look }>['type'];
+export type TypeOfLook<Look extends LookConstants> = Extract<LookInfo, { look: Look }>['type'];

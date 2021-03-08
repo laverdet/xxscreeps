@@ -26,7 +26,7 @@ export const MapStatsEndpoint: Endpoint = {
 			// Get room owner information
 			const owner = function() {
 				if (room.controller) {
-					const user = room.controller._owner;
+					const user = room.controller.owner;
 					if (user !== null) {
 						userIds.add(user);
 						return {

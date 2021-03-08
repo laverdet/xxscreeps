@@ -35,6 +35,10 @@ export type OneOrMany<Type> = Type | Type[];
 // Excludes from a union only *exact* types. Exclude<1, number> -> never  ::  StrictExclude<1, number> -> 1
 export type StrictExclude<T, U> = T extends any ? T extends U ? U extends T ? never : T : T : never;
 
+// Allow access to any property on a union
+export type Union<T, K extends keyof any = T extends any ? keyof T : never> =
+	T extends any ? T & Partial<Record<Exclude<K, keyof T>, undefined>> : never;
+
 // Converts T | U to T & U
 export type UnionToIntersection<Union> =
 	(Union extends any ? (key: Union) => void : never) extends ((key: infer Intersection) => void) ? Intersection : never;

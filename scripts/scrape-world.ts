@@ -2,6 +2,7 @@ import Loki from 'lokijs';
 import { execSync } from 'child_process';
 
 import { RoomPosition } from 'xxscreeps/game/position';
+import { Owner } from 'xxscreeps/game/object';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Store from 'xxscreeps/mods/resource/store';
 
@@ -38,7 +39,7 @@ function withRoomObject(object: any) {
 function withStructure(object: any) {
 	return {
 		...withRoomObject(object),
-		_owner: object.user ?? null,
+		[Owner]: object.user ?? null,
 		hits: 0,
 	};
 }
@@ -133,7 +134,7 @@ const roomsPresent = new Map<string, Set<string>>();
 const roomsVisible = new Map<string, Set<string>>();
 for (const room of rooms) {
 	for (const object of room._objects) {
-		const owner: string | undefined = (object as any)._owner;
+		const owner: string | undefined = (object as any)[Owner];
 		if (owner !== undefined) {
 			if (object[Variant] === 'controller') {
 				getOrSet(roomsControlled, owner, () => new Set).add(room.name);

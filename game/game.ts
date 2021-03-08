@@ -1,7 +1,8 @@
-import { IntentManager } from './intents';
-import map from './map';
 import type { Flag } from './flag';
 import type { AnyRoomObject, Room } from './room';
+import { IntentManager } from './intents';
+import map from './map';
+import { insertObject } from './room/methods';
 import { Creep } from './objects/creep';
 import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site';
 import { RoomObject } from './object';
@@ -118,6 +119,7 @@ export function runAsUser<Type>(userId: string, task: () => Type) {
 				}
 			}
 		}
+
 	}
 	try {
 		return task();
@@ -137,13 +139,20 @@ export function runAsUser<Type>(userId: string, task: () => Type) {
 export function runForUser<Type>(
 	userId: string,
 	time: number,
-	rooms: Room[],
+	rooms_: Room[],
 	flags_: Record<string, Flag>,
 	task: (game: Game) => Type,
 ) {
-	return runWithState(rooms, time, () => runAsUser(userId, () => {
+	return runWithState(rooms_, time, () => runAsUser(userId, () => {
 		try {
 			flags = flags_;
+			for (const flag of Object.values(flags)) {
+				const room = rooms[flag.pos.roomName];
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+				if (room) {
+					insertObject(room, flag);
+				}
+			}
 			task(new Game);
 		} finally {
 			flags = {};

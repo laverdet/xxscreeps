@@ -20,6 +20,6 @@ export function create(pos: RoomPosition, owner: string) {
 	return assign(RoomObject.create(new StructureStorage, pos), {
 		hits: C.STORAGE_HITS,
 		store: Store.create(C.STORAGE_CAPACITY),
-		_owner: owner,
+		[RoomObject.Owner]: owner,
 	});
 }
