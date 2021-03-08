@@ -69,11 +69,11 @@ export abstract class LocalPersistenceProvider extends Responder implements Pers
 			// Try once more
 			await tryLock();
 		})();
-		return create(`persistence://${path}`, LocalPersistenceHost, path);
+		return create(LocalPersistenceHost, `persistence://${path}`, path);
 	}
 
-	static async connect(path: string) {
-		return connect(`persistence://${path}`, LocalPersistenceClient, LocalPersistenceHost);
+	static connect(path: string) {
+		return connect(LocalPersistenceClient, `persistence://${path}`);
 	}
 
 	request(method: 'del', key: string): Promise<void>;
@@ -95,14 +95,14 @@ export abstract class LocalPersistenceProvider extends Responder implements Pers
 	}
 }
 
-const LocalPersistenceHost = ResponderHost(class LocalPersistenceHost extends LocalPersistenceProvider {
+class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
 	private bufferedBlobs = new Map<string, Readonly<Uint8Array>>();
 	private bufferedDeletes = new Set<string>();
 	private readonly knownPaths = new Set<string>();
 	private readonly processUnlistener = listen(process, 'exit', () => this.checkMissingFlush());
 
-	constructor(private readonly path: string) {
-		super();
+	constructor(name: string, private readonly path: string) {
+		super(name);
 	}
 
 	async del(key: string) {
@@ -199,7 +199,7 @@ const LocalPersistenceHost = ResponderHost(class LocalPersistenceHost extends Lo
 		}));
 	}
 
-	disconnect() {
+	destroyed() {
 		this.processUnlistener();
 		this.checkMissingFlush();
 		fs.unlink(Path.join(this.path, '.lock')).catch(() => {});
@@ -218,9 +218,9 @@ const LocalPersistenceHost = ResponderHost(class LocalPersistenceHost extends Lo
 			console.warn(`Blob storage shut down with ${size} pending write(s)`);
 		}
 	}
-});
+}
 
-const LocalPersistenceClient = ResponderClient(class LocalPersistenceClient extends LocalPersistenceProvider {
+class LocalPersistenceClient extends ResponderClient(LocalPersistenceProvider) {
 	del(key: string) {
 		return this.request('del', key);
 	}
@@ -236,4 +236,4 @@ const LocalPersistenceClient = ResponderClient(class LocalPersistenceClient exte
 	save() {
 		return this.request('save');
 	}
-});
+}

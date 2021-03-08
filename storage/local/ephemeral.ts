@@ -6,49 +6,36 @@ export abstract class LocalEphemeralProvider extends Responder implements Epheme
 	abstract spop(key: string): Promise<string | undefined>;
 	abstract sflush(key: string): Promise<void>;
 	abstract srem(key: string, values: string[]): Promise<number>;
+	protected foo = 1;
 
-	static create(name: string) {
-		return Promise.resolve(create(`ephemeral://${name}`, LocalEphemeralProviderHost));
+	// eslint-disable-next-line @typescript-eslint/require-await
+	static async create(name: string) {
+		return create(LocalEphemeralProviderHost, `ephemeral://${name}`);
 	}
 
 	static connect(name: string) {
-		return connect(`ephemeral://${name}`, LocalEphemeralProviderClient, LocalEphemeralProviderHost);
-	}
-
-	request(method: 'sadd' | 'srem', payload: { key: string; values: string[] }): Promise<number>;
-	request(method: 'spop', key: string): Promise<string | undefined>;
-	request(method: 'sflush', key: string): Promise<void>;
-	request(method: string, payload?: any) {
-		if (method === 'sadd') {
-			return this.sadd(payload.key, payload.values);
-		} else if (method === 'spop') {
-			return this.spop(payload) as any;
-		} else if (method === 'sflush') {
-			return this.sflush(payload);
-		} else if (method === 'srem') {
-			return this.srem(payload.key, payload.values);
-		} else {
-			return Promise.reject(new Error(`Unknown method: ${method}`));
-		}
+		return connect(LocalEphemeralProviderClient, `ephemeral://${name}`);
 	}
 }
 
-const LocalEphemeralProviderHost = ResponderHost(class LocalEphemeralProviderHost extends LocalEphemeralProvider {
+class LocalEphemeralProviderHost extends ResponderHost(LocalEphemeralProvider) {
 	private readonly keys = new Map<string, Set<string>>();
 
-	sadd(key: string, values: string[]) {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	async sadd(key: string, values: string[]) {
 		const set = this.keys.get(key);
 		if (set) {
 			const { size } = set;
 			values.forEach(value => set.add(value));
-			return Promise.resolve(set.size - size);
+			return set.size - size;
 		} else {
 			this.keys.set(key, new Set(values));
-			return Promise.resolve(values.length);
+			return values.length;
 		}
 	}
 
-	spop(key: string) {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	async spop(key: string) {
 		const set = this.keys.get(key);
 		if (set) {
 			const { value } = set.values().next();
@@ -57,18 +44,17 @@ const LocalEphemeralProviderHost = ResponderHost(class LocalEphemeralProviderHos
 			} else {
 				set.delete(value);
 			}
-			return Promise.resolve(value);
-		} else {
-			return Promise.resolve();
+			return value;
 		}
 	}
 
-	sflush(key: string) {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	async sflush(key: string) {
 		this.keys.delete(key);
-		return Promise.resolve();
 	}
 
-	srem(key: string, values: string[]) {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	async srem(key: string, values: string[]) {
 		const set = this.keys.get(key);
 		if (set) {
 			const { size } = set;
@@ -77,16 +63,16 @@ const LocalEphemeralProviderHost = ResponderHost(class LocalEphemeralProviderHos
 			if (result === size) {
 				this.keys.delete(key);
 			}
-			return Promise.resolve(result);
+			return result;
 		} else {
-			return Promise.resolve(0);
+			return 0;
 		}
 	}
-});
+}
 
-const LocalEphemeralProviderClient = ResponderClient(class LocalEphemeralProviderClient extends LocalEphemeralProvider {
+class LocalEphemeralProviderClient extends ResponderClient(LocalEphemeralProvider) {
 	sadd(key: string, values: string[]) {
-		return this.request('sadd', { key, values });
+		return this.request('sadd', key, values);
 	}
 
 	spop(key: string) {
@@ -98,6 +84,6 @@ const LocalEphemeralProviderClient = ResponderClient(class LocalEphemeralProvide
 	}
 
 	srem(key: string, values: string[]) {
-		return this.request('srem', { key, values });
+		return this.request('srem', key, values);
 	}
-});
+}

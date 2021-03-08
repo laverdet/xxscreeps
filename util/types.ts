@@ -1,9 +1,3 @@
-// Converts a type to a newable type
-export type Constructor<Type> =
-Type extends new(...args: infer Params) => infer Instance ?
-	new(...args: Params) => Instance :
-	new(...args: any[]) => Type;
-
 // Returns the type of `this` on a given function, which is completely different than TypeScript's `ThisType`
 export type ContextType<Function extends (...args: any) => any> =
 	Function extends (this: infer Type, ...args: any) => any ? Type : never;
@@ -28,6 +22,10 @@ export type Fallback<Type, Fallback> = (Type | Fallback) extends Fallback ? Fall
 // Helper for passing around prototypes
 export type Implementation<Type = {}> = { prototype: Type };
 
+// Gets instance type of constructor
+export type Instance<Type extends abstract new(...args: any[]) => any> =
+	Type extends abstract new(...args: any[]) => infer Instance ? Instance : never;
+
 // Type that's safe to loosely compare to true/false without weirdness like '' or NaN or 0
 export type LooseBoolean = boolean | object | null | undefined;
 
@@ -43,6 +41,9 @@ export type UnionToIntersection<Union> =
 
 // Turns `T[]` into `T`, or returns `T` if it's not an array
 export type UnwrapArray<Type> = Type extends (infer Element)[] ? Element : Type;
+
+// Returns all value types of an object
+export type Values<Type extends {}> = Type[keyof Type];
 
 // Returns an object with a given key
 export type WithKey<Path extends keyof any> = { [key in Path]: any };
