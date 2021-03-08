@@ -1,20 +1,8 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import * as Map from 'xxscreeps/game/map';
-import type { RoomPosition } from 'xxscreeps/game/position';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
-import { instantiate } from 'xxscreeps/util/utility';
-import { newRoomObject } from './room-object';
 import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
-
-export function create(pos: RoomPosition) {
-	return instantiate(StructureRoad, {
-		...newRoomObject(pos),
-		hits: C.ROAD_HITS,
-		[NextDecayTime]: Game.time + C.ROAD_DECAY_TIME,
-		_owner: undefined,
-	});
-}
 
 registerObjectTickProcessor(StructureRoad, road => {
 	if (road.ticksToDecay === 0) {

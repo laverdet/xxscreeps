@@ -13,7 +13,7 @@ const shape = declare('Structure', struct(RoomObject.format, {
 	_owner: Id.optionalFormat,
 }));
 
-export abstract class Structure extends withOverlay(shape)(RoomObject.RoomObject) {
+export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape) {
 	abstract get structureType(): string;
 	get hitsMax() { return this.hits }
 	get my() { return this._owner === null ? undefined : this._owner === Game.me }

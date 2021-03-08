@@ -1,4 +1,3 @@
-import { Implementation } from 'xxscreeps/util/types';
 import type { BufferView } from './buffer-view';
 import type { StructLayout } from './layout';
 import { getBuffer, getOffset, BufferObject } from './buffer-object';
@@ -82,10 +81,27 @@ export function injectGetters(layout: StructLayout, prototype: object) {
 	}
 }
 
-// Injects types from format and interceptors into class prototype
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function withOverlay<Type>(type?: Type) {
-	return <Base extends Implementation>(classDeclaration: Base) =>
-		classDeclaration as never as new (view: BufferView, offset: number) =>
-			Base['prototype'] & TypeOf<Type> & { __withOverlay: true };
+// Helper types for `withOverlay`
+type AbstractBufferObjectSubclass<Instance extends BufferObject = any> =
+	abstract new(view?: BufferView, offset?: number) => Instance;
+type BufferObjectSubclass<Instance extends BufferObject> =
+	new(view?: BufferView, offset?: number) => Instance;
+type BufferObjectConstructor<
+	Base extends AbstractBufferObjectSubclass,
+	Instance extends BufferObject,
+> = Omit<Base, 'prototype'> & (Base extends BufferObjectSubclass<any> ?
+	BufferObjectSubclass<Instance> : AbstractBufferObjectSubclass<Instance>);
+
+/**
+ * Injects types inherited from format into class prototype. Just passes the base class back
+ * unchanged in JS, this is only used for type information.
+ * @param base Base class
+ * @param type Schema format
+ */
+export function withOverlay<Base extends AbstractBufferObjectSubclass, Type>(
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	base: Base, type: Type):
+Base extends AbstractBufferObjectSubclass<infer Instance> ?
+BufferObjectConstructor<Base, Instance & TypeOf<Type>> : never {
+	return base as never;
 }

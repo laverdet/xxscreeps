@@ -1,21 +1,20 @@
+import type { RoomPath } from '../room/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as ActionLog from './action-log';
+import * as RoomObject from './room-object';
+import * as Store from 'xxscreeps/game/store';
 import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
+import { assign } from 'xxscreeps/util/utility';
 import { ConstructionSite } from './construction-site';
-import { RoomObject, format as baseFormat } from './room-object';
 import { StructureController } from './structures/controller';
 import { obstacleTypes, RoomSearchOptions, SearchReturn } from '../path-finder';
-import type { RoomPath } from '../room/room';
 import { Resource, ResourceType, optionalResourceEnumFormat } from './resource';
 import { Structure } from './structures';
-import * as Store from '../store';
-// eslint-disable-next-line no-duplicate-imports
-import type { RoomObjectWithStore } from '../store';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 
@@ -28,7 +27,7 @@ type MoveToOptions = {
 
 export function format() { return compose(shape, Creep) }
 function shape() {
-	return declare('Creep', struct(baseFormat, {
+	return declare('Creep', struct(RoomObject.format, {
 		...variant('creep'),
 		...ActionLog.memberFormat(),
 		body: vector(struct({
@@ -46,7 +45,7 @@ function shape() {
 	}));
 }
 
-export class Creep extends withOverlay(shape)(RoomObject) {
+export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
 	get hitsMax() { return this.body.length * 100 }
@@ -122,7 +121,7 @@ export class Creep extends withOverlay(shape)(RoomObject) {
 	 * @param target Can be a RoomObject or RoomPosition
 	 */
 	moveTo(x: number, y: number, opts?: MoveToOptions & RoomSearchOptions): number;
-	moveTo(target: RoomObject | RoomPosition, opts?: MoveToOptions & RoomSearchOptions): number;
+	moveTo(target: RoomObject.RoomObject | RoomPosition, opts?: MoveToOptions & RoomSearchOptions): number;
 	moveTo(...args: [any]) {
 		return chainIntentChecks(
 			() => checkMoveCommon(this),
@@ -222,7 +221,7 @@ export class Creep extends withOverlay(shape)(RoomObject) {
 		);
 	}
 
-	transfer(this: Creep, target: RoomObjectWithStore, resourceType: ResourceType, amount?: number) {
+	transfer(this: Creep, target: Store.RoomObjectWithStore, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),
 			() => Game.intents.save(this, 'transfer', target.id, resourceType, amount),
@@ -238,7 +237,7 @@ export class Creep extends withOverlay(shape)(RoomObject) {
 		);
 	}
 
-	withdraw(this: Creep, target: Extract<RoomObjectWithStore, Structure>, resourceType: ResourceType, amount?: number) {
+	withdraw(this: Creep, target: Extract<Store.RoomObjectWithStore, Structure>, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkWithdraw(this, target, resourceType, amount),
 			() => Game.intents.save(this, 'withdraw', target.id, resourceType, amount),
@@ -246,6 +245,18 @@ export class Creep extends withOverlay(shape)(RoomObject) {
 	}
 
 	_nextPosition?: RoomPosition; // processor temporary
+}
+
+export function create(pos: RoomPosition, body: PartType[], name: string, owner: string) {
+	const carryCapacity = body.reduce((energy, type) =>
+		(type === C.CARRY ? energy + C.CARRY_CAPACITY : energy), 0);
+	return assign(RoomObject.create(new Creep, pos), {
+		body: body.map(type => ({ type, hits: 100, boost: undefined })),
+		hits: body.length * 100,
+		name,
+		store: Store.create(carryCapacity),
+		_owner: owner,
+	});
 }
 
 //
@@ -330,7 +341,7 @@ export function checkPickup(creep: Creep, target: Resource) {
 
 function checkTransferOrWithdraw(
 	creep: Creep,
-	target: RoomObjectWithStore,
+	target: Store.RoomObjectWithStore,
 	resourceType: ResourceType,
 	amount: number | null | undefined,
 ) {
@@ -354,14 +365,14 @@ function checkTransferOrWithdraw(
 
 export function checkTransfer(
 	creep: Creep,
-	target: RoomObjectWithStore,
+	target: Store.RoomObjectWithStore,
 	resourceType: ResourceType,
 	amount: number | null | undefined,
 ) {
 	return chainIntentChecks(
 		() => checkTransferOrWithdraw(creep, target, resourceType, amount),
 		() => {
-			if (!(target instanceof RoomObject)) {
+			if (!(target instanceof RoomObject.RoomObject)) {
 				return C.ERR_INVALID_TARGET;
 
 			} else if (target instanceof Creep && target.spawning) {
@@ -427,7 +438,7 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 
 export function checkWithdraw(
 	creep: Creep,
-	target: Extract<RoomObjectWithStore, Structure>,
+	target: Extract<Store.RoomObjectWithStore, Structure>,
 	resourceType: ResourceType,
 	amount: number | null | undefined,
 ) {

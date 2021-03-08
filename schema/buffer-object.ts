@@ -1,9 +1,12 @@
 import { exchange } from 'xxscreeps/util/utility';
-import type { BufferView } from './buffer-view';
+import { BufferView } from './buffer-view';
 
 // Symbols used to keep these functions from littering Typescript types
-const GetBufferSymbol = Symbol();
-const GetOffsetSymbol = Symbol();
+const GetBuffer = Symbol();
+const GetOffset = Symbol();
+
+// Used on newly-constructed to provide defaults on uninitialized fields
+const zeroBuffer = new BufferView(new ArrayBuffer(1024));
 
 /**
  * Any object that is backed by a secret ArrayBuffer. All schema objects must inherit from this one.
@@ -11,24 +14,20 @@ const GetOffsetSymbol = Symbol();
 export class BufferObject {
 	#buffer: BufferView;
 	#offset: number;
-	constructor(buffer: BufferView, offset = 0) {
+
+	constructor(buffer = zeroBuffer, offset = 0) {
 		this.#buffer = buffer;
 		this.#offset = offset;
 	}
 
-	static [GetBufferSymbol](that: BufferObject) {
+	static [GetBuffer](that: BufferObject) {
 		return that.#buffer;
 	}
 
-	static [GetOffsetSymbol](that: BufferObject) {
+	static [GetOffset](that: BufferObject) {
 		return that.#offset;
 	}
 }
 
-// Make accessors only available to internal code
-export const getBuffer = exchange(BufferObject, GetBufferSymbol);
-export const getOffset = exchange(BufferObject, GetOffsetSymbol);
-
-// Closed for business
-Object.freeze(BufferObject);
-Object.freeze(BufferObject.prototype);
+export const getBuffer = exchange(BufferObject, GetBuffer);
+export const getOffset = exchange(BufferObject, GetOffset);

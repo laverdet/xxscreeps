@@ -1,5 +1,4 @@
-import { Amount, Capacity, ResourceType, Resources, Restricted, SingleResource, StorageRecord, Store } from 'xxscreeps/game/store';
-import { accumulate, instantiate } from 'xxscreeps/util/utility';
+import { Amount, ResourceType, Resources, SingleResource, Store } from 'xxscreeps/game/store';
 
 export function add(store: Store, resourceType: ResourceType, amount: number) {
 
@@ -83,53 +82,4 @@ export function subtract(store: Store, resourceType: ResourceType, amount: numbe
 			}
 		}
 	}
-}
-
-export function create(capacity: number | null, capacityByResource?: StorageRecord, store?: StorageRecord) {
-	// Build resource vector
-	const resources: { type: ResourceType; amount: number; capacity: number }[] = [];
-	if (capacityByResource) {
-		for (const [ type, capacity ] of Object.entries(capacityByResource) as [ ResourceType, number ][]) {
-			resources.push({ type, amount: store?.[type] ?? 0, capacity });
-		}
-	}
-	if (store) {
-		for (const [ type, amount ] of Object.entries(store) as [ ResourceType, number ][]) {
-			if (capacityByResource?.[type] === undefined) {
-				resources.push({ type, amount, capacity: 0 });
-			}
-		}
-	}
-
-	// Is single resource?
-	const singleResource =
-		resources.length === 0 ? 'energy' :
-		resources.length === 1 ? resources[0].type :
-		undefined;
-
-	// Is restricted?
-	const isRestricted = resources.some(resource => resource.capacity !== 0);
-
-	// Calculate capacity
-	const calculatedCapacity = function() {
-		if (capacity === null) {
-			if (isRestricted) {
-				return resources.reduce((capacity, info) => info.capacity + capacity, 0);
-			} else {
-				throw new Error('`Store` missing capacity');
-			}
-		} else {
-			return capacity;
-		}
-	}();
-
-	// Return data to save
-	return instantiate(Store, {
-		...store,
-		[Amount]: store ? accumulate(Object.values(store), amount => amount!) : 0,
-		[Capacity]: calculatedCapacity,
-		[Resources]: singleResource === undefined ? resources : [],
-		[Restricted]: isRestricted,
-		[SingleResource]: singleResource,
-	});
 }

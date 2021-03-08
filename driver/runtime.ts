@@ -11,20 +11,17 @@ import { setupGlobals } from 'xxscreeps/game/globals';
 import * as Memory from 'xxscreeps/game/memory';
 import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
 import { Room } from 'xxscreeps/game/room';
-import { format as roomFormat } from 'xxscreeps/game/room/schema';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import type { RunnerIntent } from 'xxscreeps/engine/runner/channel';
 import * as FlagLib from 'xxscreeps/engine/runner/flag';
 import * as UserCode from 'xxscreeps/engine/metadata/code';
-import { BufferView } from 'xxscreeps/schema/buffer-view';
-import { resolveSchema } from 'xxscreeps/schema';
+import * as RoomSchema from 'xxscreeps/engine/room';
 
 import { setupConsole, Writer } from './console';
 
 // Sets up prototype overlays
 declare const globalThis: any;
 setupGlobals(globalThis);
-resolveSchema(roomFormat);
 
 /**
  * TODO: lock these
@@ -136,8 +133,7 @@ export type TickArguments = {
 export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArguments) {
 
 	initializeIntents();
-	const rooms = roomBlobs.map(buffer =>
-		new Room(BufferView.fromTypedArray(buffer)));
+	const rooms = roomBlobs.map(RoomSchema.read);
 	runForUser(me, time, rooms, flags, Game => {
 		globalThis.Game = Game;
 		// Run player loop

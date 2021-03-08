@@ -6,6 +6,7 @@ import { compose, declare, optional, struct, vector, withOverlay } from 'xxscree
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
+import { assign } from 'xxscreeps/util/utility';
 
 export function format() { return compose(shape, RoomObject) }
 const shape = declare('RoomObject', struct({
@@ -18,7 +19,7 @@ const shape = declare('RoomObject', struct({
 	}))),
 }));
 
-export abstract class RoomObject extends withOverlay(shape)(BufferObject) {
+export abstract class RoomObject extends withOverlay(BufferObject, shape) {
 	abstract _lookType: LookConstants;
 	room!: Room;
 	_owner?: string | null;
@@ -30,4 +31,11 @@ export abstract class RoomObject extends withOverlay(shape)(BufferObject) {
 	get [IntentIdentifier]() {
 		return { group: this.room.name, name: this.id };
 	}
+}
+
+export function create<Type extends RoomObject>(instance: Type, pos: RoomPosition.RoomPosition): Type {
+	return assign<Type, RoomObject>(instance, {
+		id: Id.generateId(),
+		pos,
+	});
 }

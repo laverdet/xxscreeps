@@ -22,7 +22,7 @@ const shape = declare('Controller', struct(Structure.format, {
 	upgradeBlockedTime: member(UpgradeBlockedTime, 'int32'),
 }));
 
-export class StructureController extends withOverlay(shape)(Structure.Structure) {
+export class StructureController extends withOverlay(Structure.Structure, shape) {
 	get progress() { return this.level > 0 ? this[Progress] : undefined }
 	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
 	get structureType() { return C.STRUCTURE_CONTROLLER }

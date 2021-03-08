@@ -1,8 +1,8 @@
+import * as C from './constants';
 import * as Game from 'xxscreeps/game/game';
 import * as RoomObject from 'xxscreeps/game/objects/room-object';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
-import * as C from './constants';
 
 // Register schema
 const shape = declare('Source', struct(RoomObject.format, {
@@ -18,7 +18,7 @@ declare module 'xxscreeps/engine/schema' {
 }
 
 // Game object declaration
-export class Source extends withOverlay(shape)(RoomObject.RoomObject) {
+export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 	get ticksToRegeneration() {
 		return this._nextRegenerationTime === 0 ? undefined : Math.max(0, this._nextRegenerationTime - Game.time);
 	}

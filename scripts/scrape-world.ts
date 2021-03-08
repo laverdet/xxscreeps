@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 
 import { RoomPosition } from 'xxscreeps/game/position';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
-import * as StoreIntents from 'xxscreeps/engine/processor/intents/store';
+import * as Store from 'xxscreeps/game/store';
 
 // Schemas
 import * as Auth from 'xxscreeps/backend/auth';
@@ -48,7 +48,7 @@ function withStore(object: any) {
 		object.storeCapacity :
 		accumulate(Object.values<number>(object.storeCapacityResource));
 	return {
-		store: StoreIntents.create(capacity, object.storeCapacityResource, object.store),
+		store: Store.create(capacity, object.storeCapacityResource, object.store),
 	};
 }
 

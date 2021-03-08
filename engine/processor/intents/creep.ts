@@ -21,7 +21,6 @@ import * as Movement from './movement';
 import { calculateWeight } from './movement';
 import * as ResourceIntent from './resource';
 import * as StoreIntent from './store';
-export { create } from './create-creep';
 
 declare module 'xxscreeps/processor' {
 	interface Intent { creep: typeof intents }

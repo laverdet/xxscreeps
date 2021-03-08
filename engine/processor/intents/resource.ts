@@ -1,22 +1,12 @@
-import { registerObjectTickProcessor } from 'xxscreeps/processor';
+import type { LookForType } from 'xxscreeps/game/room';
+import type { RoomPosition } from 'xxscreeps/game/position';
+import type { StructureContainer } from 'xxscreeps/game/objects/structures/container';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
-import type { RoomPosition } from 'xxscreeps/game/position';
-import { insertObject, removeObject } from 'xxscreeps/game/room/methods';
-import { instantiate } from 'xxscreeps/util/utility';
-import { Resource, ResourceType } from 'xxscreeps/game/objects/resource';
-import type { StructureContainer } from 'xxscreeps/game/objects/structures/container';
-import { newRoomObject } from './room-object';
 import * as StoreIntent from './store';
-import type { LookForType } from 'xxscreeps/game/room';
-
-function create(pos: RoomPosition, resourceType: ResourceType, amount: number) {
-	return instantiate(Resource, {
-		...newRoomObject(pos),
-		amount,
-		resourceType,
-	});
-}
+import { registerObjectTickProcessor } from 'xxscreeps/processor';
+import { insertObject, removeObject } from 'xxscreeps/game/room/methods';
+import { Resource, ResourceType, create } from 'xxscreeps/game/objects/resource';
 
 export function drop(pos: RoomPosition, resourceType: ResourceType, amount: number) {
 	const room = Game.rooms[pos.roomName]!;

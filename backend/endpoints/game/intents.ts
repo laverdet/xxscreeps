@@ -5,7 +5,7 @@ import { loadRoom, loadRooms, saveRoom } from 'xxscreeps/backend/model/room';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as ControllerIntents from 'xxscreeps/engine/processor/intents/controller';
-import * as SpawnIntents from 'xxscreeps/engine/processor/intents/spawn';
+import * as Spawn from 'xxscreeps/game/objects/structures/spawn';
 import { insertObject } from 'xxscreeps/game/room/methods';
 import { checkCreateConstructionSite } from 'xxscreeps/game/room/room';
 import { RoomPosition } from 'xxscreeps/game/position';
@@ -109,7 +109,7 @@ const PlaceSpawnEndpoint: Endpoint = {
 						throw new Error('Invalid intent');
 					}
 					// Add spawn
-					insertObject(room, SpawnIntents.create(pos, userid!, name));
+					insertObject(room, Spawn.create(pos, userid!, name));
 					ControllerIntents.claim(room.controller!, user.id);
 					user.roomsControlled.add(room.name);
 					user.roomsPresent.add(room.name);

@@ -1,7 +1,7 @@
 import type { AnyRoomObject } from './room';
-import type { Implementation } from 'xxscreeps/util/types';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { BufferView, compose, declare, member, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
+import { accumulate, assign } from 'xxscreeps/util/utility';
 import { ResourceType, optionalResourceEnumFormat } from './objects/resource';
 export type { ResourceType };
 
@@ -30,10 +30,9 @@ const shape = declare('Store', struct({
 	singleResource: member(SingleResource, optionalResourceEnumFormat),
 }));
 
-// Adds resource types information to `Store` class. No changes from `extends BufferObject` as far
-// as JS is concerned
-const BufferObjectWithResourcesType =
-	BufferObject as any as Implementation<Partial<Record<ResourceType, number>>>;
+// Make `Store` indexable on any `ResourceType`
+const BufferObjectWithResourcesType = withOverlay(BufferObject,
+	withType<Partial<Record<ResourceType, number>>>('int8'));
 
 /**
  * An object that can contain resources in its cargo.
@@ -56,8 +55,8 @@ const BufferObjectWithResourcesType =
  * ```
  */
 export class Store<Resources extends ResourceType = any> extends
-	withOverlay(shape)(BufferObjectWithResourcesType) {
-	constructor(view: BufferView, offset = 0) {
+	withOverlay(BufferObjectWithResourcesType, shape) {
+	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
 
 		const singleResource = this[SingleResource];
@@ -133,4 +132,53 @@ export class Store<Resources extends ResourceType = any> extends
 
 	energy = 0;
 	_capacityByResource?: Map<ResourceType, number>;
+}
+
+export function create(capacity: number | null, capacityByResource?: StorageRecord, store?: StorageRecord) {
+	// Build resource vector
+	const resources: { type: ResourceType; amount: number; capacity: number }[] = [];
+	if (capacityByResource) {
+		for (const [ type, capacity ] of Object.entries(capacityByResource) as [ ResourceType, number ][]) {
+			resources.push({ type, amount: store?.[type] ?? 0, capacity });
+		}
+	}
+	if (store) {
+		for (const [ type, amount ] of Object.entries(store) as [ ResourceType, number ][]) {
+			if (capacityByResource?.[type] === undefined) {
+				resources.push({ type, amount, capacity: 0 });
+			}
+		}
+	}
+
+	// Is single resource?
+	const singleResource =
+		resources.length === 0 ? 'energy' :
+		resources.length === 1 ? resources[0].type :
+		undefined;
+
+	// Is restricted?
+	const isRestricted = resources.some(resource => resource.capacity !== 0);
+
+	// Calculate capacity
+	const calculatedCapacity = function() {
+		if (capacity === null) {
+			if (isRestricted) {
+				return resources.reduce((capacity, info) => info.capacity + capacity, 0);
+			} else {
+				throw new Error('`Store` missing capacity');
+			}
+		} else {
+			return capacity;
+		}
+	}();
+
+	// Return data to save
+	return assign(new Store, {
+		...store as any,
+		[Amount]: store ? accumulate(Object.values(store), amount => amount!) : 0,
+		[Capacity]: calculatedCapacity,
+		[Resources]: singleResource === undefined ? resources : [],
+		[Restricted]: isRestricted,
+		[SingleResource]: singleResource,
+	});
 }

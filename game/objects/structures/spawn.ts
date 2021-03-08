@@ -1,14 +1,14 @@
 import * as C from 'xxscreeps/game/constants';
+import * as Creep from 'xxscreeps/game/objects/creep';
 import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
-import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import * as Id from 'xxscreeps/engine/schema/id';
+import * as RoomObject from 'xxscreeps/game/objects/room-object';
 import * as Structure from '.';
 import * as Store from 'xxscreeps/game/store';
-import { accumulate } from 'xxscreeps/util/utility';
-import { Direction } from 'xxscreeps/game/position';
-import type { PartType } from 'xxscreeps/game/objects/creep';
-import { create as createCreep } from 'xxscreeps/engine/processor/intents/create-creep';
+import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
+import { accumulate, assign } from 'xxscreeps/util/utility';
+import { Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { StructureExtension } from './extension';
 
@@ -32,7 +32,7 @@ const shape = declare('Spawn', struct(Structure.format, {
 	store: Store.restrictedFormat<'energy'>(),
 }));
 
-export class StructureSpawn extends withOverlay(shape)(Structure.Structure) {
+export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 
@@ -62,7 +62,7 @@ export class StructureSpawn extends withOverlay(shape)(Structure.Structure) {
 		return true;
 	}
 
-	spawnCreep(body: PartType[], name: string, options: SpawnCreepOptions = {}) {
+	spawnCreep(body: Creep.PartType[], name: string, options: SpawnCreepOptions = {}) {
 		const directions = options.directions ?? null;
 		return chainIntentChecks(
 			() => checkSpawnCreep(this, body, name, directions, options.energyStructures ?? null),
@@ -82,18 +82,27 @@ export class StructureSpawn extends withOverlay(shape)(Structure.Structure) {
 				Game.intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
 
 				// Fake creep
-				const creep = createCreep(body, this.pos, name, this._owner!);
+				const creep = Creep.create(this.pos, body, name, this._owner!);
 				Game.creeps[name] = creep;
 				return C.OK;
 			});
 	}
 }
 
+export function create(pos: RoomPosition, owner: string, name: string) {
+	return assign(RoomObject.create(new StructureSpawn, pos), {
+		hits: C.SPAWN_HITS,
+		name,
+		store: Store.create(null, { energy: C.SPAWN_ENERGY_CAPACITY }, { energy: C.SPAWN_ENERGY_START }),
+		_owner: owner,
+	});
+}
+
 //
 // Intent checks
 export function checkSpawnCreep(
 	spawn: StructureSpawn,
-	body: PartType[],
+	body: Creep.PartType[],
 	name: string,
 	directions: Direction[] | null,
 	energyStructures: (StructureExtension | StructureSpawn)[] | null,

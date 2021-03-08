@@ -1,27 +1,14 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
-import { getPositonInDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
-import { insertObject, moveObject } from 'xxscreeps/game/room/methods';
 import * as Creep from 'xxscreeps/game/objects/creep';
+import * as StoreIntent from './store';
+import { getPositonInDirection, Direction } from 'xxscreeps/game/position';
+import { insertObject, moveObject } from 'xxscreeps/game/room/methods';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
 import { checkSpawnCreep, StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
-import { accumulate, instantiate } from 'xxscreeps/util/utility';
-import * as CreepIntent from './creep';
-import { newRoomObject } from './room-object';
-import * as StoreIntent from './store';
-
-export function create(pos: RoomPosition, owner: string, name: string) {
-	return instantiate(StructureSpawn, {
-		...newRoomObject(pos),
-		hits: C.SPAWN_HITS,
-		name,
-		store: StoreIntent.create(null, { energy: C.SPAWN_ENERGY_CAPACITY }, { energy: C.SPAWN_ENERGY_START }),
-		spawning: undefined,
-		_owner: owner,
-	});
-}
+import { accumulate } from 'xxscreeps/util/utility';
 
 declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }
@@ -61,7 +48,7 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 	}
 
 	// Add new creep to room objects
-	const creep = CreepIntent.create(body, spawn.pos, name, Game.me);
+	const creep = Creep.create(spawn.pos, body, name, Game.me);
 	insertObject(spawn.room, creep);
 
 	// Set spawning information

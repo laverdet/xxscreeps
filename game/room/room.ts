@@ -1,6 +1,5 @@
 import type { InspectOptionsStylized } from 'util';
 import type { RoomObject } from 'xxscreeps/game/objects/room-object';
-import type { BufferView } from 'xxscreeps/schema/buffer-view';
 import type { LooseBoolean } from 'xxscreeps/util/types';
 
 import * as C from '../constants';
@@ -17,7 +16,7 @@ import {
 } from '../position';
 
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
-import { withOverlay } from 'xxscreeps/schema';
+import { BufferView, withOverlay } from 'xxscreeps/schema';
 import { accumulate, concatInPlace, mapInPlace } from 'xxscreeps/util/utility';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
@@ -69,7 +68,7 @@ export type RoomPath = {
 	direction: Direction;
 }[];
 
-export class Room extends withOverlay(shape)(BufferObject) {
+export class Room extends withOverlay(BufferObject, shape) {
 	get memory() {
 		const memory = Memory.get();
 		const rooms = memory.rooms ?? (memory.rooms = {});
@@ -80,7 +79,7 @@ export class Room extends withOverlay(shape)(BufferObject) {
 	energyAvailable = 0;
 	energyCapacityAvailable = 0;
 
-	constructor(view: BufferView, offset = 0) {
+	constructor(view: BufferView, offset: number) {
 		super(view, offset);
 		for (const object of this._objects) {
 			this._afterInsertion(object);

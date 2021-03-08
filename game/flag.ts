@@ -17,7 +17,7 @@ const shape = declare('Flag', struct(baseFormat, {
 	secondaryColor: colorFormat,
 }));
 
-export class Flag extends withOverlay(shape)(RoomObject) {
+export class Flag extends withOverlay(RoomObject, shape) {
 	get memory() {
 		const memory = Memory.get();
 		const flags = memory.flags ?? (memory.flags = {});

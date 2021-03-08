@@ -1,7 +1,6 @@
-import type { PartType } from 'xxscreeps/game/objects/creep';
 import * as C from 'xxscreeps/game/constants';
+import * as Creep from 'xxscreeps/game/objects/creep';
 import * as Game from 'xxscreeps/game/game';
-import * as CreepIntents from 'xxscreeps/engine/processor/intents/creep';
 import { accumulate } from 'xxscreeps/util/utility';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { insertObject } from 'xxscreeps/game/room/methods';
@@ -60,12 +59,12 @@ const bodies = {
 
 export function create(pos: RoomPosition, role: Role, strength: Strength, ageTime: number) {
 	const body = bodies[`${strength}${role}` as const]();
-	const creep = CreepIntents.create(body, pos, `Invader_${pos.roomName}_${Math.floor(Math.random() * 1000)}`, '2');
+	const creep = Creep.create(pos, body, `Invader_${pos.roomName}_${Math.floor(Math.random() * 1000)}`, '2');
 	creep._ageTime = ageTime;
 	return creep;
 }
 
-function createBody(parts: { [Type in PartType]?: number }) {
+function createBody(parts: { [Type in Creep.PartType]?: number }) {
 	const size = accumulate(Object.values(parts) as number[]);
 	return [
 		...Array(parts[C.TOUGH] ?? 0).fill(C.TOUGH),

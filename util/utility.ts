@@ -69,6 +69,11 @@ export function acquire<Args extends Promise<ActionResult>[]>(...args: Args) {
 	});
 }
 
+// Wrapper around Object.assign that enforces assigned types already exist
+export function assign<Result extends Base, Base = Result, Type extends Base = Base>(target: Result, source: Partial<Type>): Result {
+	return Object.assign(target, source);
+}
+
 // Clamps a number to a given range
 export function clamp(min: number, max: number, value: number) {
 	return Math.max(min, Math.min(max, value));
