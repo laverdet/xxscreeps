@@ -3,6 +3,10 @@
 		"configFile": "./.vscode/.eslintrc.yaml"
 	},
 	"eslint.validate": [ "typescript" ],
+	"files.exclude": {
+		"dist": true,
+		"node_modules": true,
+	},
 	"yaml.schemas": {
 		"./engine/config/config.schema.json": "*/.screepsrc.yaml"
 	},

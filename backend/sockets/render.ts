@@ -3,16 +3,14 @@ import { bindRenderer } from 'xxscreeps/backend';
 import { RoomObject } from 'xxscreeps/game/objects/room-object';
 import { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
 import { Creep } from 'xxscreeps/game/objects/creep';
-import { Resource } from 'xxscreeps/game/objects/resource';
 import { Structure } from 'xxscreeps/game/objects/structures';
-import { StructureContainer } from 'xxscreeps/game/objects/structures/container';
 import { DowngradeTime, StructureController } from 'xxscreeps/game/objects/structures/controller';
 import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
 import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
 import { StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
 import { StructureStorage } from 'xxscreeps/game/objects/structures/storage';
 import { StructureTower } from 'xxscreeps/game/objects/structures/tower';
-import { Capacity, Restricted, SingleResource, Store } from 'xxscreeps/game/store';
+import { renderStore } from 'xxscreeps/mods/resource/backend';
 import { ActionLog } from 'xxscreeps/game/objects/action-log';
 import { Variant } from 'xxscreeps/schema';
 
@@ -31,26 +29,6 @@ bindRenderer(Structure, (structure, next) => ({
 	hitsMax: 100, //structure.hitsMax,
 	user: structure._owner,
 }));
-
-// Store renderer
-function renderStore(store: Store) {
-	const result: any = {
-		store: { ...store },
-		storeCapacity: store.getCapacity(),
-	};
-	if (store[Restricted]) {
-		if (store._capacityByResource) {
-			const capacityByResource: any = {};
-			for (const [ resourceType, value ] of store._capacityByResource.entries()) {
-				capacityByResource[resourceType] = value;
-			}
-			result.storeCapacityResource = capacityByResource;
-		} else {
-			result.storeCapacityResource = { [store[SingleResource]!]: store[Capacity] };
-		}
-	}
-	return result;
-}
 
 // Builtin renderers
 bindRenderer(ConstructionSite, (constructionSite, next) => ({
@@ -74,19 +52,6 @@ bindRenderer(Creep, (creep, next) => ({
 	user: creep._owner,
 	actionLog: mapToKeys(creep[ActionLog], action =>
 		[ action.action, { x: action.x, y: action.y } ]),
-}));
-
-bindRenderer(Resource, (resource, next) => ({
-	...next(),
-	type: 'energy',
-	resourceType: resource.resourceType,
-	[resource.resourceType]: resource.amount,
-}));
-
-bindRenderer(StructureContainer, (container, next) => ({
-	...next(),
-	...renderStore(container.store),
-	nextDecayTime: container._nextDecayTime,
 }));
 
 bindRenderer(StructureController, (controller, next) => ({

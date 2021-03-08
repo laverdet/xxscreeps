@@ -1,4 +1,4 @@
-import { Amount, ResourceType, Resources, SingleResource, Store } from 'xxscreeps/game/store';
+import { Amount, ResourceType, Resources, SingleResource, Store } from '../store';
 
 export function add(store: Store, resourceType: ResourceType, amount: number) {
 

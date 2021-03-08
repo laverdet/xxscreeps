@@ -1,13 +1,14 @@
-import { lookConstants } from './symbols';
-
 import 'xxscreeps/config/mods/game';
-import * as C from 'xxscreeps/game/constants';
+
+import type { AnyStructure } from 'xxscreeps/game/objects/structures';
 import type { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
 import type { Creep } from 'xxscreeps/game/objects/creep';
 import type { Flag } from 'xxscreeps/game/flag';
-import type { Resource } from 'xxscreeps/game/objects/resource';
-import type { AnyStructure } from 'xxscreeps/game/objects/structures';
+import type { Resource } from 'xxscreeps/mods/resource/resource';
 import type { UnwrapArray } from 'xxscreeps/util/types';
+
+import * as C from 'xxscreeps/game/constants';
+import { lookConstants } from './symbols';
 
 // Registers a LOOK_ constant and returns type information
 export { lookConstants };

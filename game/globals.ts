@@ -9,10 +9,10 @@ import { RoomVisual } from './visual';
 
 import { ConstructionSite } from './objects/construction-site';
 import { Creep } from './objects/creep';
-import { Resource } from './objects/resource';
+import { Resource } from '../mods/resource/resource';
 import { RoomObject } from './objects/room-object';
 import { Structure } from './objects/structures';
-import { StructureContainer } from './objects/structures/container';
+import { StructureContainer } from '../mods/resource/container';
 import { StructureController } from './objects/structures/controller';
 import { StructureExtension } from './objects/structures/extension';
 import { StructureRoad } from './objects/structures/road';

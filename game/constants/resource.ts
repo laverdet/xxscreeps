@@ -34,9 +34,6 @@ export const DEPOSIT_DECAY_TIME = 50000;
 
 export const SUBSCRIPTION_TOKEN = 'token' as const;
 
-export const RESOURCE_ENERGY = 'energy' as const;
-export const RESOURCE_POWER = 'power' as const;
-
 export const RESOURCE_HYDROGEN = 'H' as const;
 export const RESOURCE_OXYGEN = 'O' as const;
 export const RESOURCE_UTRIUM = 'U' as const;
@@ -132,6 +129,7 @@ export const RESOURCE_SPIRIT = 'spirit' as const;
 export const RESOURCE_EMANATION = 'emanation' as const;
 export const RESOURCE_ESSENCE = 'essence' as const;
 
+/*
 export const REACTIONS = {
 	H: { O: 'OH', L: 'LH', K: 'KH', U: 'UH', Z: 'ZH', G: 'GH' },
 	O: { H: 'OH', L: 'LO', K: 'KO', U: 'UO', Z: 'ZO', G: 'GO' },
@@ -820,3 +818,4 @@ export const COMMODITIES = {
 		},
 	},
 };
+*/

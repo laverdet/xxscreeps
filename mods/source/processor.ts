@@ -1,10 +1,10 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
+import * as Resource from 'xxscreeps/mods/resource/processor/resource';
+import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { calculatePower } from 'xxscreeps/engine/processor/intents/creep';
-import * as ResourceIntent from 'xxscreeps/engine/processor/intents/resource';
-import * as StoreIntent from 'xxscreeps/engine/processor/intents/store';
 import { Source } from './source';
 import { CumulativeEnergyHarvested } from './symbols';
 
@@ -12,10 +12,10 @@ registerHarvestProcessor(Source, (creep, source) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER);
 	const energy = Math.min(source.energy, power);
 	const overflow = Math.max(energy - creep.store.getFreeCapacity('energy'), 0);
-	StoreIntent.add(creep.store, 'energy', energy - overflow);
+	Store.add(creep.store, 'energy', energy - overflow);
 	source.energy -= energy;
 	if (overflow > 0) {
-		ResourceIntent.drop(source.pos, 'energy', overflow);
+		Resource.drop(source.pos, 'energy', overflow);
 	}
 	creep.room[CumulativeEnergyHarvested] += energy;
 	return energy;

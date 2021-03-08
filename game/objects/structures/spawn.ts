@@ -5,7 +5,7 @@ import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/objects/room-object';
 import * as Structure from '.';
-import * as Store from 'xxscreeps/game/store';
+import * as Store from 'xxscreeps/mods/resource/store';
 import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { accumulate, assign } from 'xxscreeps/util/utility';
 import { Direction, RoomPosition } from 'xxscreeps/game/position';

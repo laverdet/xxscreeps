@@ -5,7 +5,7 @@ import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as ActionLog from './action-log';
 import * as RoomObject from './room-object';
-import * as Store from 'xxscreeps/game/store';
+import * as Store from 'xxscreeps/mods/resource/store';
 import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
@@ -13,7 +13,7 @@ import { assign } from 'xxscreeps/util/utility';
 import { ConstructionSite } from './construction-site';
 import { StructureController } from './structures/controller';
 import { obstacleTypes, RoomSearchOptions, SearchReturn } from '../path-finder';
-import { Resource, ResourceType, optionalResourceEnumFormat } from './resource';
+import { Resource, ResourceType, optionalResourceEnumFormat } from '../../mods/resource/resource';
 import { Structure } from './structures';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];

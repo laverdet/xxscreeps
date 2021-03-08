@@ -1,7 +1,7 @@
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { ConstructionSite } from 'xxscreeps/game/objects/construction-site';
 import { insertObject, removeObject } from 'xxscreeps/game/room/methods';
-import * as Container from 'xxscreeps/game/objects/structures/container';
+import * as Container from 'xxscreeps/mods/resource/container';
 import * as Extension from 'xxscreeps/game/objects/structures/extension';
 import * as Road from 'xxscreeps/game/objects/structures/road';
 import * as Storage from 'xxscreeps/game/objects/structures/storage';

@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 
 import { RoomPosition } from 'xxscreeps/game/position';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
-import * as Store from 'xxscreeps/game/store';
+import * as Store from 'xxscreeps/mods/resource/store';
 
 // Schemas
 import * as Auth from 'xxscreeps/backend/auth';

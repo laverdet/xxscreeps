@@ -1,13 +1,13 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
-import * as Store from 'xxscreeps/game/store';
 import * as RoomObject from 'xxscreeps/game/objects/room-object';
-import * as Structure from '.';
+import * as Structure from 'xxscreeps/game/objects/structures';
+import * as Store from './store';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/util/utility';
 
-export function format() { return compose(shape, StructureContainer) }
+export const format = () => compose(shape, StructureContainer);
 const shape = declare('Container', struct(Structure.format, {
 	...variant('container'),
 	store: Store.format,

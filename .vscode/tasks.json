@@ -9,7 +9,7 @@
 		"problemMatcher": [ "$tsc-watch" ],
 		"option": "watch",
 		"presentation": {
-			"reveal": "silent",
+			"reveal": "always",
 			"focus": false,
 			"panel": "shared"
 		},

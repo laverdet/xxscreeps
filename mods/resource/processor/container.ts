@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
-import { StructureContainer } from 'xxscreeps/game/objects/structures/container';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
+import { StructureContainer } from '../container';
 
 registerObjectTickProcessor(StructureContainer, container => {
 	if (container.ticksToDecay === 0) {
