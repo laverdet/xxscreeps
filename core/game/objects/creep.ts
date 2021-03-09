@@ -12,7 +12,7 @@ import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { assign } from 'xxscreeps/util/utility';
 import { StructureController } from './structures/controller';
 import { RoomSearchOptions, SearchReturn } from '../path-finder';
-import { Resource, ResourceType, optionalResourceEnumFormat } from '../../mods/resource/resource';
+import { Resource, ResourceType, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 import { Structure } from './structures';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];

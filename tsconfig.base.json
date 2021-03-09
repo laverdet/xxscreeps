@@ -3,6 +3,11 @@
 		"composite": true,
 		"sourceMap": true,
 		"outDir": "dist",
+		"rootDir": ".",
+		"paths": {
+			"xxscreeps/mods/*": [ "./mods/*" ],
+			"xxscreeps/*": [ "./core/*" ],
+		},
 
 		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
@@ -14,6 +19,6 @@
 
 		"strict": true,
 	},
-	"exclude": [ "dist", "node_modules", "**/package.json", "**/package-lock.json", "**/tsconfig.json" ],
-	"include": [ "**/*", "**/*.json" ],
+	"exclude": [ "**/package.json", "**/package-lock.json", "**/tsconfig.json" ],
+	"include": [ "core", "mods" ],
 }
