@@ -4,7 +4,7 @@ import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from '.';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, member, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/util/utility';
+import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export const NextDecayTime = Symbol('nextDecayTime');

@@ -4,7 +4,7 @@ import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Room, lookFor, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments, iterateNeighbors } from 'xxscreeps/game/position';
 import { isBorder, isNearBorder } from 'xxscreeps/game/terrain';
-import { accumulate, concatInPlace, extend } from 'xxscreeps/util/utility';
+import { accumulate, concatInPlace, extend } from 'xxscreeps/utility/utility';
 import { ConstructibleStructureType, ConstructionSite } from './construction-site';
 import { structureFactories } from './symbols';
 

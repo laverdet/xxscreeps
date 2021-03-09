@@ -6,7 +6,7 @@ import { compose, declare, optional, struct, vector, withOverlay } from 'xxscree
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
-import { assign } from 'xxscreeps/util/utility';
+import { assign } from 'xxscreeps/utility/utility';
 
 export const LookType = Symbol('lookType');
 export const Owner = Symbol('owner');

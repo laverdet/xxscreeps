@@ -1,7 +1,7 @@
 import * as TerrainSchema from 'xxscreeps/game/terrain';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, makeReader, vector } from 'xxscreeps/schema';
-import { mapInPlace } from 'xxscreeps/util/utility';
+import { mapInPlace } from 'xxscreeps/utility/utility';
 import type { PersistenceProvider } from 'xxscreeps/storage/provider';
 
 export type World = Map<string, TerrainSchema.Terrain>;

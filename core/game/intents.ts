@@ -1,4 +1,4 @@
-import type { Dictionary } from 'xxscreeps/util/types';
+import type { Dictionary } from 'xxscreeps/utility/types';
 import type { IntentsForReceiver, IntentParameters, IntentReceivers } from 'xxscreeps/processor';
 import * as C from 'xxscreeps/game/constants';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';

@@ -8,7 +8,7 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import { RoomObject } from 'xxscreeps/game/object';
 import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
 import { checkSpawnCreep, StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
-import { accumulate } from 'xxscreeps/util/utility';
+import { accumulate } from 'xxscreeps/utility/utility';
 
 declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }

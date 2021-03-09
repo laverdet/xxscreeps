@@ -1,4 +1,4 @@
-import type { ContextType, Fallback, Implementation } from 'xxscreeps/util/types';
+import type { ContextType, Fallback, Implementation } from 'xxscreeps/utility/types';
 import type { Creep } from 'xxscreeps/game/objects/creep';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';

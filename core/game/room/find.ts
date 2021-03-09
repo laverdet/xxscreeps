@@ -1,4 +1,4 @@
-import type { KeysOf, KeyFor } from 'xxscreeps/util/types';
+import type { KeysOf, KeyFor } from 'xxscreeps/utility/types';
 import type { Room } from './room';
 import * as C from 'xxscreeps/game/constants';
 import { lookFor } from './methods';

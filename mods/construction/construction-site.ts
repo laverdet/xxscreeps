@@ -4,7 +4,7 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import * as Game from 'xxscreeps/game/game';
 import * as RoomObject from 'xxscreeps/game/object';
 import { compose, declare, enumerated, member, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/util/utility';
+import { assign } from 'xxscreeps/utility/utility';
 import { structureFactories } from './symbols';
 
 export type ConstructibleStructureType = keyof typeof C.CONSTRUCTION_COST;

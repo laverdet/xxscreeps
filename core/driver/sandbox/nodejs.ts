@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 import vm from 'vm';
-import { runOnce } from 'xxscreeps/util/memoize';
+import { runOnce } from 'xxscreeps/utility/memoize';
 import type { TickArguments } from '../runtime';
 import { compileRuntimeSource, pathFinderBinaryPath, Options } from '.';
 type Runtime = typeof import('../runtime');

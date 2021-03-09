@@ -12,7 +12,7 @@ import { RoomPosition } from 'xxscreeps/game/position';
 import { ServiceMessage } from 'xxscreeps/engine/service';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 import { Channel } from 'xxscreeps/storage/channel';
-import { concatInPlace } from 'xxscreeps/util/utility';
+import { concatInPlace } from 'xxscreeps/utility/utility';
 
 // TODO: Move this to backend mod
 import { create as createInvader } from 'xxscreeps/mods/invader/processor';

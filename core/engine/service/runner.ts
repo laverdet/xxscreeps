@@ -4,7 +4,7 @@ import { Shard } from 'xxscreeps/engine/model/shard';
 import { loadTerrainFromWorld, readWorld } from 'xxscreeps/game/map';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
-import { mapInPlace } from 'xxscreeps/util/utility';
+import { mapInPlace } from 'xxscreeps/utility/utility';
 import * as Storage from 'xxscreeps/storage';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Queue } from 'xxscreeps/storage/queue';

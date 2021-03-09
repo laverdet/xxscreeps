@@ -2,7 +2,7 @@ import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import type { GameMessage } from 'xxscreeps/engine/service';
 import { readWorld, World } from 'xxscreeps/game/map';
-import { getOrSet } from 'xxscreeps/util/utility';
+import { getOrSet } from 'xxscreeps/utility/utility';
 import * as Storage from 'xxscreeps/storage';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';

@@ -2,7 +2,7 @@ import { createSandbox, Sandbox } from 'xxscreeps/driver/sandbox';
 import * as User from 'xxscreeps/engine/metadata/user';
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import { getConsoleChannel, loadUserFlagBlob, loadUserMemoryBlob, saveUserFlagBlobForNextTick } from 'xxscreeps/engine/model/user';
-import { exchange, filterInPlace, mapInPlace } from 'xxscreeps/util/utility';
+import { exchange, filterInPlace, mapInPlace } from 'xxscreeps/utility/utility';
 import type { Subscription } from 'xxscreeps/storage/channel';
 import { getRunnerUserChannel, RunnerIntent, RunnerUserMessage } from './channel';
 

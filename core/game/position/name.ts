@@ -1,4 +1,4 @@
-import { getOrSet } from 'xxscreeps/util/utility';
+import { getOrSet } from 'xxscreeps/utility/utility';
 
 export const kMaxWorldSize = 0x100;
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;

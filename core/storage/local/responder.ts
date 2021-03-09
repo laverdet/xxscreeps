@@ -1,8 +1,8 @@
-import type { Instance, Values } from 'xxscreeps/util/types';
+import type { Instance, Values } from 'xxscreeps/utility/types';
 import assert from 'assert';
 import { Worker, isMainThread, parentPort } from 'worker_threads';
-import { Deferred } from 'xxscreeps/util/deferred';
-import { staticCast } from 'xxscreeps/util/utility';
+import { Deferred } from 'xxscreeps/utility/deferred';
+import { staticCast } from 'xxscreeps/utility/utility';
 
 /**
  * Responders generalizes the client/server request/response model for inter-thread/process

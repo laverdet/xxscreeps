@@ -3,7 +3,7 @@ import * as User from 'xxscreeps/engine/metadata/user';
 import { getFlagChannel, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser, runWithState } from 'xxscreeps/game/game';
 import { SubscriptionEndpoint } from '../socket';
-import { acquire, asUnion, mapInPlace, mapToKeys } from 'xxscreeps/util/utility';
+import { acquire, asUnion, mapInPlace, mapToKeys } from 'xxscreeps/utility/utility';
 import { eventRenderers, Render } from 'xxscreeps/backend/symbols';
 import './render';
 

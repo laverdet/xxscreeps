@@ -1,4 +1,4 @@
-import type { Implementation } from 'xxscreeps/util/types';
+import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
 import { MapRender, Render } from './symbols';
 

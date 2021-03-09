@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { enumeratedForPath } from 'xxscreeps/engine/schema';
 import { compose, declare, enumerated, struct, variant, withOverlay, withType, TypeOf } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/util/utility';
+import { assign } from 'xxscreeps/utility/utility';
 
 // Enum schema for resource types
 export type ResourceType = TypeOf<typeof resourceEnumFormat>;

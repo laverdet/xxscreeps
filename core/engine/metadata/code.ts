@@ -1,5 +1,5 @@
 import { TypeOf, compose, makeReader, makeWriter, struct, vector } from 'xxscreeps/schema';
-import { mapInPlace } from 'xxscreeps/util/utility';
+import { mapInPlace } from 'xxscreeps/utility/utility';
 
 export const format = struct({
 	modules: compose(vector(struct({

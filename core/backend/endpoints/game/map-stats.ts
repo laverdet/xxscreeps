@@ -1,5 +1,5 @@
 import { Endpoint } from 'xxscreeps/backend/endpoint';
-import { filterInPlace, mapInPlace, mapToKeys, nonNullable } from 'xxscreeps/util/utility';
+import { filterInPlace, mapInPlace, mapToKeys, nonNullable } from 'xxscreeps/utility/utility';
 import * as User from 'xxscreeps/engine/metadata/user';
 import * as Room from 'xxscreeps/engine/room';
 

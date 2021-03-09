@@ -1,5 +1,5 @@
 import type { InspectOptionsStylized } from 'util';
-import type { LooseBoolean } from 'xxscreeps/util/types';
+import type { LooseBoolean } from 'xxscreeps/utility/types';
 
 import * as C from '../constants';
 import * as Game from '../game';
@@ -10,7 +10,7 @@ import { Direction, RoomPosition, extractPositionId, fetchPositionArgument, getO
 
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { BufferView, withOverlay } from 'xxscreeps/schema';
-import { mapInPlace } from 'xxscreeps/util/utility';
+import { mapInPlace } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 

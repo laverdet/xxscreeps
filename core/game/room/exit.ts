@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import { RoomPosition } from 'xxscreeps/game/position';
-import { mapToKeys } from 'xxscreeps/util/utility';
+import { mapToKeys } from 'xxscreeps/utility/utility';
 import { registerFindHandlers } from './find';
 import type { Room } from './room';
 

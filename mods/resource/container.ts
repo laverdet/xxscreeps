@@ -6,7 +6,7 @@ import * as Structure from 'xxscreeps/game/objects/structures';
 import * as Store from './store';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/util/utility';
+import { assign } from 'xxscreeps/utility/utility';
 
 export const format = () => compose(shape, StructureContainer);
 const shape = declare('Container', struct(Structure.format, {

@@ -3,7 +3,7 @@ import * as Game from 'xxscreeps/game/game';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
 import { obstacleTypes } from 'xxscreeps/game/path-finder';
-import { extend } from 'xxscreeps/util/utility';
+import { extend } from 'xxscreeps/utility/utility';
 import { ConstructionSite } from './construction-site';
 
 declare module 'xxscreeps/game/objects/creep' {

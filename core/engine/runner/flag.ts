@@ -1,10 +1,10 @@
-import type { Dictionary } from 'xxscreeps/util/types';
+import type { Dictionary } from 'xxscreeps/utility/types';
 import type { DescribeIntentHandler, IntentListFor } from 'xxscreeps/processor';
 import * as C from 'xxscreeps/game/constants';
 import { compose, declare, makeReader, makeWriter, vector } from 'xxscreeps/schema';
 import { checkCreateFlag, format, Color, Flag } from 'xxscreeps/game/flag';
 import { fromPositionId } from 'xxscreeps/game/position';
-import { instantiate, mapToKeys } from 'xxscreeps/util/utility';
+import { instantiate, mapToKeys } from 'xxscreeps/utility/utility';
 
 // Flags are stored in a separate blob per user.. this is the schema for the blob
 const schema = declare('Flags', compose(vector(format), {

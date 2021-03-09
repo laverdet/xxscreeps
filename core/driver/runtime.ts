@@ -1,7 +1,7 @@
 import type ivm from 'isolated-vm';
 import { inspect } from 'util';
 
-import type { Dictionary } from 'xxscreeps/util/types';
+import type { Dictionary } from 'xxscreeps/utility/types';
 import type { IntentListFor } from 'xxscreeps/processor';
 
 import * as Game from 'xxscreeps/game/game';

@@ -1,6 +1,6 @@
 import assert from 'assert';
 import * as Room from 'xxscreeps/engine/room';
-import { mapInPlace } from 'xxscreeps/util/utility';
+import { mapInPlace } from 'xxscreeps/utility/utility';
 import { RoomProcessorContext } from 'xxscreeps/processor/room';
 import { loadTerrain } from 'xxscreeps/game/map';
 import * as Storage from 'xxscreeps/storage';

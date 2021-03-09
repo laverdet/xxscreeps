@@ -9,7 +9,7 @@ import * as Store from 'xxscreeps/mods/resource/store';
 import { compose, declare, enumerated, member, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { assign } from 'xxscreeps/util/utility';
+import { assign } from 'xxscreeps/utility/utility';
 import { StructureController } from './structures/controller';
 import { RoomSearchOptions, SearchReturn } from '../path-finder';
 import { Resource, ResourceType, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';

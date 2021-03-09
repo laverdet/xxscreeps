@@ -3,7 +3,7 @@ import * as Game from 'xxscreeps/game/game';
 import { Owner } from 'xxscreeps/game/object';
 import { DowngradeTime, Progress, StructureController } from 'xxscreeps/game/objects/structures/controller';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
-import { exchange } from 'xxscreeps/util/utility';
+import { exchange } from 'xxscreeps/utility/utility';
 
 export function claim(controller: StructureController, user: string) {
 	// Take controller

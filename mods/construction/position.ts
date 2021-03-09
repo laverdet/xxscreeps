@@ -1,7 +1,7 @@
 import type { ConstructibleStructureType } from './construction-site';
 import type { Room } from 'xxscreeps/game/room';
 import { RoomPosition, fetchRoom } from 'xxscreeps/game/position';
-import { extend } from 'xxscreeps/util/utility';
+import { extend } from 'xxscreeps/utility/utility';
 
 declare module 'xxscreeps/game/position' {
 	interface RoomPosition {

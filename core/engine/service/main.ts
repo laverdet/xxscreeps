@@ -1,8 +1,8 @@
 import config from 'xxscreeps/engine/config';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
-import { AveragingTimer } from 'xxscreeps/util/averaging-timer';
-import { Deferred } from 'xxscreeps/util/deferred';
-import { getOrSet, mapInPlace } from 'xxscreeps/util/utility';
+import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
+import { Deferred } from 'xxscreeps/utility/deferred';
+import { getOrSet, mapInPlace } from 'xxscreeps/utility/utility';
 import * as Storage from 'xxscreeps/storage';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';

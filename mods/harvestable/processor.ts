@@ -1,4 +1,4 @@
-import type { Implementation } from 'xxscreeps/util/types';
+import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';

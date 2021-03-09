@@ -1,4 +1,4 @@
-import { Deferred } from 'xxscreeps/util/deferred';
+import { Deferred } from 'xxscreeps/utility/deferred';
 import { Provider, PubsubProvider, PubsubSubscription } from './provider';
 
 type MessageType<Message> = Message | (Message extends string ? null : { type: null });

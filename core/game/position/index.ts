@@ -9,7 +9,7 @@ import * as Game from 'xxscreeps/game/game';
 import * as Flag from 'xxscreeps/game/flag';
 import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
-import { firstMatching, instantiate, minimum } from 'xxscreeps/util/utility';
+import { firstMatching, instantiate, minimum } from 'xxscreeps/utility/utility';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Direction, getDirection } from './direction';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';

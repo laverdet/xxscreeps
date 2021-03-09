@@ -1,4 +1,4 @@
-import { exchange } from 'xxscreeps/util/utility';
+import { exchange } from 'xxscreeps/utility/utility';
 import { BufferView } from './buffer-view';
 
 // Symbols used to keep these functions from littering Typescript types

@@ -1,4 +1,4 @@
-import type { Dictionary } from 'xxscreeps/util/types';
+import type { Dictionary } from 'xxscreeps/utility/types';
 import type { Room } from 'xxscreeps/game/room';
 import * as Game from 'xxscreeps/game/game';
 import * as Movement from 'xxscreeps/engine/processor/intents/movement';

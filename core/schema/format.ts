@@ -1,4 +1,4 @@
-import type { Implementation } from 'xxscreeps/util/types';
+import type { Implementation } from 'xxscreeps/utility/types';
 import type { BufferView } from './buffer-view';
 
 export const Variant = Symbol('schemaVariant');

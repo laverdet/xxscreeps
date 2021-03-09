@@ -1,7 +1,7 @@
 import type { AnyStructure } from 'xxscreeps/game/objects/structures';
 import type { Creep } from 'xxscreeps/game/objects/creep';
 import type { Flag } from 'xxscreeps/game/flag';
-import type { UnwrapArray } from 'xxscreeps/util/types';
+import type { UnwrapArray } from 'xxscreeps/utility/types';
 
 import * as C from 'xxscreeps/game/constants';
 import { lookConstants } from './symbols';

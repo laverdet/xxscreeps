@@ -1,7 +1,7 @@
 import type { AnyRoomObject } from 'xxscreeps/game/room';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { BufferView, compose, declare, member, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
-import { accumulate, assign } from 'xxscreeps/util/utility';
+import { accumulate, assign } from 'xxscreeps/utility/utility';
 import { ResourceType, optionalResourceEnumFormat } from './resource';
 export type { ResourceType };
 

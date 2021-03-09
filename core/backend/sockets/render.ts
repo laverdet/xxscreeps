@@ -1,4 +1,4 @@
-import { mapToKeys } from 'xxscreeps/util/utility';
+import { mapToKeys } from 'xxscreeps/utility/utility';
 import { bindRenderer } from 'xxscreeps/backend';
 import { RoomObject } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/game/objects/creep';

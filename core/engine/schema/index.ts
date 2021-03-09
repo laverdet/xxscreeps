@@ -1,7 +1,7 @@
 import type { WithType } from 'xxscreeps/schema/format';
-import type { UnionToIntersection, UnwrapArray, WithKey } from 'xxscreeps/util/types';
+import type { UnionToIntersection, UnwrapArray, WithKey } from 'xxscreeps/utility/types';
 import { resolve } from 'xxscreeps/schema/layout';
-import { getOrSet } from 'xxscreeps/util/utility';
+import { getOrSet } from 'xxscreeps/utility/utility';
 
 const schemaByPath = new Map<string, any[]>();
 

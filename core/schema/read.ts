@@ -1,4 +1,4 @@
-import { typedArrayToString } from 'xxscreeps/util/string';
+import { typedArrayToString } from 'xxscreeps/utility/string';
 import { BufferView } from './buffer-view';
 import { Format, TypeOf, Variant } from './format';
 import { Layout, StructLayout, getLayout, kPointerSize, unpackWrappedStruct } from './layout';

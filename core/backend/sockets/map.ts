@@ -4,7 +4,7 @@ import { Creep } from 'xxscreeps/game/objects/creep';
 import { Structure } from 'xxscreeps/game/objects/structures';
 import { StructureController } from 'xxscreeps/game/objects/structures/controller';
 import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
-import { getOrSet } from 'xxscreeps/util/utility';
+import { getOrSet } from 'xxscreeps/utility/utility';
 import { bindMapRenderer } from 'xxscreeps/backend';
 import { MapRender } from 'xxscreeps/backend/symbols';
 import { SubscriptionEndpoint } from 'xxscreeps/backend/socket';

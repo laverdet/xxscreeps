@@ -1,4 +1,4 @@
-import { typedArrayToString } from 'xxscreeps/util/string';
+import { typedArrayToString } from 'xxscreeps/utility/string';
 
 const kMemoryGrowthSize = 4096;
 const kMemoryMaxLength = 2 * 1024 * 1024;

@@ -7,7 +7,7 @@ import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from '.';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
-import { accumulate, assign } from 'xxscreeps/util/utility';
+import { accumulate, assign } from 'xxscreeps/utility/utility';
 import { Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { StructureExtension } from './extension';

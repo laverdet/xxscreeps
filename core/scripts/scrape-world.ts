@@ -19,7 +19,7 @@ import { makeWriter } from 'xxscreeps/schema/write';
 import * as Storage from 'xxscreeps/storage';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
 import { NPCData } from 'xxscreeps/mods/npc/game';
-import { accumulate, clamp, filterInPlace, getOrSet, mapInPlace, firstMatching } from 'xxscreeps/util/utility';
+import { accumulate, clamp, filterInPlace, getOrSet, mapInPlace, firstMatching } from 'xxscreeps/utility/utility';
 
 const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
 if (jsonSource === undefined) {

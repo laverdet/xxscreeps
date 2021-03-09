@@ -1,7 +1,7 @@
 import { BufferView } from './buffer-view';
 import { Format, TypeOf, Variant } from './format';
 import { Layout, StructLayout, kPointerSize, alignTo, getLayout, unpackWrappedStruct } from './layout';
-import { runOnce } from 'xxscreeps/util/memoize';
+import { runOnce } from 'xxscreeps/utility/memoize';
 
 type Writer<Type = any> = (value: Type, view: BufferView, offset: number) => number;
 type MemberWriter = (value: any, view: BufferView, offset: number, locals: number) => number;

@@ -1,4 +1,4 @@
-import type { CounterExtract, Dictionary, Implementation, UnwrapArray } from 'xxscreeps/util/types';
+import type { CounterExtract, Dictionary, Implementation, UnwrapArray } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
 import { IntentIdentifier, PreTick, Processors, Tick } from './symbols';
 export { registerRoomTickProcessor } from './room';

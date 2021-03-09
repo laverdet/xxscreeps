@@ -11,7 +11,7 @@ import type { Direction } from 'xxscreeps/game/position';
 import type { LookForType } from 'xxscreeps/game/room';
 import { moveObject, removeObject } from 'xxscreeps/game/room/methods';
 import type { ResourceType, RoomObjectWithStore } from 'xxscreeps/mods/resource/store';
-import { accumulate, firstMatching } from 'xxscreeps/util/utility';
+import { accumulate, firstMatching } from 'xxscreeps/utility/utility';
 import { ActionLog, saveAction } from 'xxscreeps/game/objects/action-log';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import * as StructureControllerIntent from './controller';

@@ -1,5 +1,5 @@
 import * as Game from 'xxscreeps/game/game';
-import { extend } from 'xxscreeps/util/utility';
+import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
 import { CheckHarvest, Harvestable, HarvestResult } from './game';

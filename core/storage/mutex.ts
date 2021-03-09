@@ -1,4 +1,4 @@
-import { Deferred } from 'xxscreeps/util/deferred';
+import { Deferred } from 'xxscreeps/utility/deferred';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
 import { EphemeralProvider, Provider } from './provider';
 

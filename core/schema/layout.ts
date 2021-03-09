@@ -1,4 +1,4 @@
-import { Implementation } from 'xxscreeps/util/types';
+import { Implementation } from 'xxscreeps/utility/types';
 import { ConstantFormat, EnumFormat, Format, Interceptor, Primitive } from './format';
 import { injectGetters } from './overlay';
 

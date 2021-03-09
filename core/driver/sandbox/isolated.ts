@@ -1,6 +1,6 @@
 import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
-import { runOnce } from 'xxscreeps/util/memoize';
+import { runOnce } from 'xxscreeps/utility/memoize';
 import type * as Runtime from 'xxscreeps/driver/runtime';
 import type { TickArguments } from '../runtime';
 import { compileRuntimeSource, pathFinderBinaryPath, Options } from '.';

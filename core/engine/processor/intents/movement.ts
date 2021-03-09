@@ -3,7 +3,7 @@ import { Creep } from 'xxscreeps/game/objects/creep';
 import { obstacleChecker } from 'xxscreeps/game/path-finder';
 import { getOffsetsFromDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
-import { accumulate, exchange, minimum, concatInPlace } from 'xxscreeps/util/utility';
+import { accumulate, exchange, minimum, concatInPlace } from 'xxscreeps/utility/utility';
 import { calculatePower } from './creep';
 
 // Saves list of creeps all trying to move onto the same cell
