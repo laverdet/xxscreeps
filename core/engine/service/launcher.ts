@@ -3,7 +3,7 @@ import os from 'os';
 import config from 'xxscreeps/engine/config';
 import argv from 'xxscreeps/config/arguments';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
-import { listen } from 'xxscreeps/utility/utility';
+import { listen } from 'xxscreeps/utility/async';
 import { ConsoleMessage } from 'xxscreeps/engine/metadata/code';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as UserSchema from 'xxscreeps/engine/metadata/user';

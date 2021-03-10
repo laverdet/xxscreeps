@@ -1,5 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
+import * as Fn from 'xxscreeps/utility/functional';
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { loadRoom, loadRooms, saveRoom } from 'xxscreeps/backend/model/room';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
@@ -12,7 +13,6 @@ import { RoomPosition } from 'xxscreeps/game/position';
 import { ServiceMessage } from 'xxscreeps/engine/service';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 import { Channel } from 'xxscreeps/storage/channel';
-import { concatInPlace } from 'xxscreeps/utility/utility';
 
 // TODO: Move this to backend mod
 import { create as createInvader } from 'xxscreeps/mods/invader/processor';
@@ -71,7 +71,7 @@ const GenNameEndpoint: Endpoint = {
 		const user = await loadUser(this.context, userid!);
 		let max = 0;
 		for (const room of await loadRooms(this.context, user.roomsPresent)) {
-			for (const structure of concatInPlace(
+			for (const structure of Fn.concat(
 				room.find(C.FIND_STRUCTURES),
 				room.find(C.FIND_CONSTRUCTION_SITES),
 			)) {

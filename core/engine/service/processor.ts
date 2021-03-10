@@ -1,6 +1,6 @@
 import assert from 'assert';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Room from 'xxscreeps/engine/room';
-import { mapInPlace } from 'xxscreeps/utility/utility';
 import { RoomProcessorContext } from 'xxscreeps/processor/room';
 import { loadTerrain } from 'xxscreeps/game/map';
 import * as Storage from 'xxscreeps/storage';
@@ -40,7 +40,7 @@ try {
 					(async() =>
 						Room.read(await persistence.get(`room/${roomName}`))
 					)(),
-					Promise.all(mapInPlace(users, async user => {
+					Promise.all(Fn.map(users, async user => {
 						const intentsBlob = await persistence.get(`intents/${roomName}/${user}`);
 						assert.strictEqual(intentsBlob.byteOffset, 0);
 						const uint16 = new Uint16Array(intentsBlob.buffer);
@@ -50,7 +50,7 @@ try {
 				]);
 
 				// Delete intent blobs in background
-				const deleteIntentBlobs = Promise.all(mapInPlace(users, user =>
+				const deleteIntentBlobs = Promise.all(Fn.map(users, user =>
 					persistence.del(`intents/${roomName}/${user}`)));
 
 				// Create processor context and run first phase
@@ -66,7 +66,7 @@ try {
 		} else if (message.type === 'flushRooms') {
 			// Run second phase of processing. This must wait until *all* player code and first phase
 			// processing has run
-			await Promise.all(mapInPlace(processedRooms, ([ roomName, context ]) =>
+			await Promise.all(Fn.map(processedRooms, ([ roomName, context ]) =>
 				persistence.set(`room/${roomName}`, Room.write(context.room)),
 			));
 			await processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });

@@ -1,10 +1,11 @@
 import * as C from 'xxscreeps/game/constants';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Game from 'xxscreeps/game/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Room, lookFor, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments, iterateNeighbors } from 'xxscreeps/game/position';
 import { isBorder, isNearBorder } from 'xxscreeps/game/terrain';
-import { accumulate, concatInPlace, extend } from 'xxscreeps/utility/utility';
+import { extend } from 'xxscreeps/utility/utility';
 import { ConstructibleStructureType, ConstructionSite } from './construction-site';
 import { structureFactories } from './symbols';
 
@@ -88,7 +89,7 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 			return C.ERR_RCL_NOT_ENOUGH;
 		}
 	} else {
-		const existingCount = accumulate(concatInPlace(
+		const existingCount = Fn.accumulate(Fn.concat(
 			room.find(C.FIND_STRUCTURES),
 			room.find(C.FIND_CONSTRUCTION_SITES),
 		), object => object.structureType === structureType ? 1 : 0);
@@ -125,7 +126,7 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 	}
 
 	// No structures on top of others
-	for (const object of concatInPlace(
+	for (const object of Fn.concat(
 		room.find(C.FIND_CONSTRUCTION_SITES),
 		room.find(C.FIND_STRUCTURES),
 	)) {

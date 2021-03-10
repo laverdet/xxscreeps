@@ -3,7 +3,8 @@ import { Creep } from 'xxscreeps/game/objects/creep';
 import { obstacleChecker } from 'xxscreeps/game/path-finder';
 import { getOffsetsFromDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
-import { accumulate, exchange, minimum, concatInPlace } from 'xxscreeps/utility/utility';
+import * as Fn from 'xxscreeps/utility/functional';
+import { exchange } from 'xxscreeps/utility/utility';
 import { calculatePower } from './creep';
 
 // Saves list of creeps all trying to move onto the same cell
@@ -59,11 +60,11 @@ export function dispatch(room: Room) {
 		});
 
 		// Pick the creep to win this movement
-		const first = minimum(objects, (left, right) => (
+		const first = Fn.minimum(objects, (left, right) => (
 			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 			right.movingInto - left.movingInto ||
 			right.weightRatio - left.weightRatio
-		));
+		))!;
 		first.creep._nextPosition = nextPosition;
 		movingCreeps.push(first.creep);
 	}
@@ -77,7 +78,7 @@ export function dispatch(room: Room) {
 	check: for (const creep of movingCreeps) {
 		const { _nextPosition } = creep;
 		const check = obstacleChecker(room, creep.owner);
-		for (const look of concatInPlace(
+		for (const look of Fn.concat(
 			room.lookForAt(C.LOOK_CREEPS, _nextPosition!),
 			room.lookForAt(C.LOOK_STRUCTURES, _nextPosition!),
 		)) {
@@ -117,7 +118,7 @@ export function get(creep: Creep) {
 }
 
 export function calculateWeight(creep: Creep) {
-	let weight = accumulate(creep.body, part =>
+	let weight = Fn.accumulate(creep.body, part =>
 		(part.type === C.CARRY || part.type === C.MOVE) ? 0 : 1);
 	weight += Math.ceil(creep.carry.getUsedCapacity() / C.CARRY_CAPACITY);
 	return weight;

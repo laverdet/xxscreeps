@@ -1,5 +1,5 @@
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
-// import { mapToKeys } from 'xxscreeps/util/utility';
+// import * as Fn from 'xxscreeps/utility/functional';
 import { SubscriptionEndpoint } from '../socket';
 
 /*
@@ -14,7 +14,7 @@ const CodeSubscription: SubscriptionEndpoint = {
 					const code = Code.read(await this.context.persistence.load(`user/${this.user}/${message.id}`));
 					this.send(JSON.stringify({
 						branch: message.name,
-						modules: mapToKeys(code.modules),
+						modules: Fn.fromEntries(code.modules),
 						timestamp: Date.now(),
 					}));
 				}

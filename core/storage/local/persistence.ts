@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
-import { listen, mapInPlace } from 'xxscreeps/utility/utility';
+import { listen } from 'xxscreeps/utility/async';
 import type { PersistenceProvider } from '../provider';
 import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
 
@@ -157,7 +158,7 @@ class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
 		await Promise.all([
 
 			// Saves all buffered data to disk
-			await Promise.all(mapInPlace(blobs.entries(), async([ fragment, blob ]) => {
+			await Promise.all(Fn.map(blobs.entries(), async([ fragment, blob ]) => {
 				const path = Path.join(this.path, fragment);
 				const dirname = Path.dirname(path);
 				if (!this.knownPaths.has(dirname)) {
@@ -174,7 +175,7 @@ class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
 			})),
 
 			// Dispatches buffered deletes
-			await Promise.all(mapInPlace(deletes.values(), async fragment => {
+			await Promise.all(Fn.map(deletes.values(), async fragment => {
 				const path = Path.join(this.path, fragment);
 				await fs.unlink(path);
 			})),
@@ -182,7 +183,7 @@ class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
 
 		// Also remove empty directories after everything has flushed
 		const unlinkedDirectories = new Set<string>();
-		await Promise.all(mapInPlace(deletes.values(), async fragment => {
+		await Promise.all(Fn.map(deletes.values(), async fragment => {
 			const path = Path.join(this.path, fragment);
 			for (let dir = Path.dirname(path); dir !== this.path; dir = Path.dirname(dir)) {
 				if (unlinkedDirectories.has(dir)) {

@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Creep from 'xxscreeps/game/objects/creep';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Game from 'xxscreeps/game/game';
-import { accumulate } from 'xxscreeps/utility/utility';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { insertObject } from 'xxscreeps/game/room/methods';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
@@ -65,7 +65,7 @@ export function create(pos: RoomPosition, role: Role, strength: Strength, ageTim
 }
 
 function createBody(parts: { [Type in Creep.PartType]?: number }) {
-	const size = accumulate(Object.values(parts) as number[]);
+	const size = Fn.accumulate(Object.values(parts) as number[]);
 	return [
 		...Array(parts[C.TOUGH] ?? 0).fill(C.TOUGH),
 		...Array(size - 1).fill(C.MOVE),

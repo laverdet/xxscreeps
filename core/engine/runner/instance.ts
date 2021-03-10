@@ -1,8 +1,9 @@
 import { createSandbox, Sandbox } from 'xxscreeps/driver/sandbox';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import { getConsoleChannel, loadUserFlagBlob, loadUserMemoryBlob, saveUserFlagBlobForNextTick } from 'xxscreeps/engine/model/user';
-import { exchange, filterInPlace, mapInPlace } from 'xxscreeps/utility/utility';
+import { exchange } from 'xxscreeps/utility/utility';
 import type { Subscription } from 'xxscreeps/storage/channel';
 import { getRunnerUserChannel, RunnerIntent, RunnerUserMessage } from './channel';
 
@@ -105,7 +106,7 @@ export class PlayerInstance {
 		// Save runtime results
 		const [ savedRoomNames ] = await Promise.all([
 			// Save intent blobs
-			mapInPlace(Object.entries(result.intentBlobs), async([ roomName, intents ]) => {
+			Fn.map(Object.entries(result.intentBlobs), async([ roomName, intents ]) => {
 				if (this.roomsVisible.has(roomName)) {
 					await this.shard.storage.persistence.set(`intents/${roomName}/${this.userId}`, new Uint8Array(intents!));
 					return roomName;
@@ -124,6 +125,6 @@ export class PlayerInstance {
 		]);
 
 		// Return affected room
-		return [ ...filterInPlace(await Promise.all(savedRoomNames)) ];
+		return [ ...Fn.filter(await Promise.all(savedRoomNames)) ];
 	}
 }

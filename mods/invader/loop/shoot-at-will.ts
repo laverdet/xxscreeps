@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
+import * as Fn from 'xxscreeps/utility/functional';
 import type { Creep } from 'xxscreeps/game/objects/creep';
 import type { Structure } from 'xxscreeps/game/objects/structures';
-import { minimum } from 'xxscreeps/utility/utility';
 
 export default function(creep: Creep) {
 	if (creep.getActiveBodyparts(C.RANGED_ATTACK) === 0) {
@@ -18,6 +18,6 @@ export default function(creep: Creep) {
 		return;
 	}
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const target = minimum(targets, (left, right) => left.hits - right.hits);
+	const target = Fn.minimum(targets, (left, right) => left.hits - right.hits)!;
 	creep.rangedAttack(target);
 }

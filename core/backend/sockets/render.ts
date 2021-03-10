@@ -1,4 +1,4 @@
-import { mapToKeys } from 'xxscreeps/utility/utility';
+import * as Fn from 'xxscreeps/utility/functional';
 import { bindRenderer } from 'xxscreeps/backend';
 import { RoomObject } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/game/objects/creep';
@@ -41,7 +41,7 @@ bindRenderer(Creep, (creep, next) => ({
 	fatigue: creep.fatigue,
 	ageTime: creep._ageTime,
 	user: creep.owner,
-	actionLog: mapToKeys(creep[ActionLog], action =>
+	actionLog: Fn.fromEntries(creep[ActionLog], action =>
 		[ action.action, { x: action.x, y: action.y } ]),
 }));
 

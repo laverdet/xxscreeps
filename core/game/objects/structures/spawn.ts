@@ -3,11 +3,12 @@ import * as Creep from 'xxscreeps/game/objects/creep';
 import * as Game from 'xxscreeps/game/game';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from '.';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
-import { accumulate, assign } from 'xxscreeps/utility/utility';
+import { assign } from 'xxscreeps/utility/utility';
 import { Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { StructureExtension } from './extension';
@@ -144,9 +145,9 @@ export function checkSpawnCreep(
 	}
 
 	// Check body cost
-	const creepCost = accumulate(body, part => C.BODYPART_COST[part]);
+	const creepCost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
 	if (energyStructures) {
-		const totalEnergy = accumulate(new Set(energyStructures), structure => structure.energy);
+		const totalEnergy = Fn.accumulate(new Set(energyStructures), structure => structure.energy);
 		if (totalEnergy < creepCost) {
 			return C.ERR_NOT_ENOUGH_ENERGY;
 		}

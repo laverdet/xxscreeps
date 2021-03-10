@@ -1,9 +1,11 @@
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Room from 'xxscreeps/engine/room';
 import * as User from 'xxscreeps/engine/metadata/user';
 import { getFlagChannel, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser, runWithState } from 'xxscreeps/game/game';
 import { SubscriptionEndpoint } from '../socket';
-import { acquire, asUnion, mapInPlace, mapToKeys } from 'xxscreeps/utility/utility';
+import { acquire } from 'xxscreeps/utility/async';
+import { asUnion } from 'xxscreeps/utility/utility';
 import { eventRenderers, Render } from 'xxscreeps/backend/symbols';
 import './render';
 
@@ -113,7 +115,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			});
 
 			// Get users not yet seen
-			const users = mapToKeys(await Promise.all(mapInPlace(visibleUsers, async(id): Promise<[ string, any ]> => {
+			const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async(id): Promise<[ string, any ]> => {
 				const user = User.read(await this.context.persistence.get(`user/${id}/info`));
 				return [ user.id, {
 					username: user.username,

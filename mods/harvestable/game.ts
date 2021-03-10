@@ -1,4 +1,4 @@
-import type { ContextType, Fallback, Implementation } from 'xxscreeps/utility/types';
+import type { ContextType, Implementation } from 'xxscreeps/utility/types';
 import type { Creep } from 'xxscreeps/game/objects/creep';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
@@ -17,7 +17,7 @@ declare module 'xxscreeps/game/object' {
 
 // Creep.harvest runtime registration hook
 export interface Harvest {}
-export type Harvestable = Fallback<ContextType<Harvest[keyof Harvest]>, RoomObject>;
+export type Harvestable = ContextType<Harvest[keyof Harvest]>;
 export type HarvestResult = ReturnType<Harvest[keyof Harvest]>;
 
 export function registerHarvestable<Type extends RoomObject, Error extends C.ErrorCode>(

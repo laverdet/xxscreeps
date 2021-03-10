@@ -1,10 +1,10 @@
 import os from 'os';
 import config from 'xxscreeps/engine/config';
+import * as Fn from 'xxscreeps/utility/functional';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { loadTerrainFromWorld, readWorld } from 'xxscreeps/game/map';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
-import { mapInPlace } from 'xxscreeps/utility/utility';
 import * as Storage from 'xxscreeps/storage';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Queue } from 'xxscreeps/storage/queue';
@@ -55,7 +55,7 @@ try {
 					}();
 
 					// Load visible rooms for this user
-					const roomBlobs = await Promise.all(mapInPlace(instance.roomsVisible, async roomName =>
+					const roomBlobs = await Promise.all(Fn.map(instance.roomsVisible, async roomName =>
 						roomBlobCache.get(roomName) ?? persistence.get(`room/${roomName}`).then(blob => {
 							roomBlobCache.set(roomName, blob);
 							return blob;

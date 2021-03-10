@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { Owner } from 'xxscreeps/game/object';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Store from 'xxscreeps/mods/resource/store';
 
 // Schemas
@@ -19,7 +20,7 @@ import { makeWriter } from 'xxscreeps/schema/write';
 import * as Storage from 'xxscreeps/storage';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
 import { NPCData } from 'xxscreeps/mods/npc/game';
-import { accumulate, clamp, filterInPlace, getOrSet, mapInPlace, firstMatching } from 'xxscreeps/utility/utility';
+import { clamp, getOrSet } from 'xxscreeps/utility/utility';
 
 const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
 if (jsonSource === undefined) {
@@ -47,7 +48,7 @@ function withStructure(object: any) {
 function withStore(object: any) {
 	const capacity = object.storeCapacityResource === undefined ?
 		object.storeCapacity :
-		accumulate(Object.values<number>(object.storeCapacityResource));
+		Fn.accumulate(Object.values<number>(object.storeCapacityResource));
 	return {
 		store: Store.create(capacity, object.storeCapacityResource, object.store),
 	};
@@ -74,7 +75,7 @@ const rooms = db.getCollection('rooms').find().map(room => ({
 		users: new Set<string>(),
 		memory: new Map,
 	},
-	_objects: [ ...filterInPlace(roomObjects.find({ room: room._id }).map(object => {
+	_objects: [ ...Fn.filter(roomObjects.find({ room: room._id }).map(object => {
 		switch (object.type) {
 			case 'controller':
 				return {
@@ -163,7 +164,7 @@ const users = db.getCollection('users').find().map(user => {
 		roomsPresent: (roomsPresent.get(user._id) ?? new Set),
 		roomsVisible: (roomsVisible.get(user._id) ?? new Set),
 		code: {
-			branch: firstMatching(code, code => code.activeWorld)?._id ?? null,
+			branch: Fn.firstMatching(code, code => code.activeWorld)?._id ?? null,
 			branches: code.map(row => ({
 				id: row._id,
 				name: row.branch,
@@ -191,7 +192,7 @@ for (const user of users) {
 }
 
 // Save Game object
-const roomNames = new Set(mapInPlace(rooms, room => room.name));
+const roomNames = new Set(Fn.map(rooms, room => room.name));
 const userIds = new Set(users.filter(user => user.active).map(user => user.id));
 const game = {
 	time: gameTime,

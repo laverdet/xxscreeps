@@ -1,5 +1,5 @@
 import { Endpoint } from 'xxscreeps/backend/endpoint';
-import { filterInPlace, mapInPlace, mapToKeys, nonNullable } from 'xxscreeps/utility/utility';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import * as Room from 'xxscreeps/engine/room';
 
@@ -21,7 +21,7 @@ export const MapStatsEndpoint: Endpoint = {
 
 		// Build rooms payload
 		const userIds = new Set<string>();
-		const stats = mapToKeys(filterInPlace(roomBlobs, nonNullable), blob => {
+		const stats = Fn.fromEntries(Fn.filter(roomBlobs), blob => {
 			const room = Room.read(blob);
 			// Get room owner information
 			const owner = function() {
@@ -48,9 +48,9 @@ export const MapStatsEndpoint: Endpoint = {
 
 		// Read users
 		const userObjects = await Promise.all(
-			mapInPlace(userIds, async id =>
+			Fn.map(userIds, async id =>
 				User.read(await this.context.persistence.get(`user/${id}/info`))));
-		const users = mapToKeys(userObjects, user => [
+		const users = Fn.fromEntries(userObjects, user => [
 			user.id, {
 				_id: user.id,
 				username: user.username,

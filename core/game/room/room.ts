@@ -2,6 +2,7 @@ import type { InspectOptionsStylized } from 'util';
 import type { LooseBoolean } from 'xxscreeps/utility/types';
 
 import * as C from '../constants';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Game from '../game';
 import * as Memory from '../memory';
 import * as PathFinder from '../path-finder';
@@ -10,7 +11,6 @@ import { Direction, RoomPosition, extractPositionId, fetchPositionArgument, getO
 
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { BufferView, withOverlay } from 'xxscreeps/schema';
-import { mapInPlace } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
@@ -401,7 +401,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
 	#lookIndex = new Map<LookConstants, RoomObject[]>(
-		mapInPlace(lookConstants, look => [ look, [] ]));
+		Fn.map(lookConstants, look => [ look, [] ]));
 	#lookSpatialIndex = new Map<LookConstants, Map<number, RoomObject[]>>();
 }
 

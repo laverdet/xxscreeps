@@ -7,9 +7,10 @@ import * as PathFinder from 'xxscreeps/game/path-finder';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
 import * as Flag from 'xxscreeps/game/flag';
+import * as Fn from 'xxscreeps/utility/functional';
 import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
-import { firstMatching, instantiate, minimum } from 'xxscreeps/utility/utility';
+import { instantiate } from 'xxscreeps/utility/utility';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Direction, getDirection } from './direction';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
@@ -211,7 +212,7 @@ export class RoomPosition {
 		// Match position to object
 		const { path } = result;
 		const last = path[path.length - 1] ?? this;
-		return firstMatching(filtered, object => last.isNearTo(object));
+		return Fn.firstMatching(filtered, object => last.isNearTo(object));
 	}
 
 	/**
@@ -234,7 +235,7 @@ export class RoomPosition {
 			fetchRoom(this.roomName).find(search) : search;
 		const filtered = options?.filter === undefined ? objects :
 			objects.filter(iteratee(options.filter));
-		return minimum(filtered, (left, right) =>
+		return Fn.minimum(filtered, (left, right) =>
 			this.getRangeTo(left) - this.getRangeTo(right));
 	}
 

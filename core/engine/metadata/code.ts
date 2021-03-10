@@ -1,5 +1,5 @@
+import * as Fn from 'xxscreeps/utility/functional';
 import { TypeOf, compose, makeReader, makeWriter, struct, vector } from 'xxscreeps/schema';
-import { mapInPlace } from 'xxscreeps/utility/utility';
 
 export const format = struct({
 	modules: compose(vector(struct({
@@ -7,7 +7,7 @@ export const format = struct({
 		data: 'string',
 	})), {
 		compose: value => new Map<string, string>(value.map(entry => [ entry.name, entry.data ])),
-		decompose: (value: Map<string, string>) => mapInPlace(value.entries(), ([ name, data ]) => ({ name, data })),
+		decompose: (value: Map<string, string>) => Fn.map(value.entries(), ([ name, data ]) => ({ name, data })),
 	}),
 });
 

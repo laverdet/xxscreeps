@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
+import * as Fn from 'xxscreeps/utility/functional';
 import { RoomPosition } from 'xxscreeps/game/position';
-import { mapToKeys } from 'xxscreeps/utility/utility';
 import { registerFindHandlers } from './find';
 import type { Room } from './room';
 
@@ -30,7 +30,7 @@ function makeFindExit(exit: ExitType) {
 
 // All FIND_EXIT_ handlers
 const find = registerFindHandlers({
-	...mapToKeys(exits.map(exit => [ exit, makeFindExit(exit) ])),
+	...Fn.fromEntries(exits.map(exit => [ exit, makeFindExit(exit) ])),
 	[C.FIND_EXIT]: (room: Room): RoomPosition[] => [
 		...room.find(C.FIND_EXIT_TOP),
 		...room.find(C.FIND_EXIT_RIGHT),

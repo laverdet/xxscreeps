@@ -1,7 +1,8 @@
 import type { AnyRoomObject } from 'xxscreeps/game/room';
+import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { BufferView, compose, declare, member, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
-import { accumulate, assign } from 'xxscreeps/utility/utility';
+import { assign } from 'xxscreeps/utility/utility';
 import { ResourceType, optionalResourceEnumFormat } from './resource';
 export type { ResourceType };
 
@@ -175,7 +176,7 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 	// Return data to save
 	return assign(new Store, {
 		...store as any,
-		[Amount]: store ? accumulate(Object.values(store), amount => amount!) : 0,
+		[Amount]: store ? Fn.accumulate(Object.values(store), amount => amount!) : 0,
 		[Capacity]: calculatedCapacity,
 		[Resources]: singleResource === undefined ? resources : [],
 		[Restricted]: isRestricted,

@@ -1,7 +1,7 @@
+import * as Fn from 'xxscreeps/utility/functional';
 import * as TerrainSchema from 'xxscreeps/game/terrain';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, makeReader, vector } from 'xxscreeps/schema';
-import { mapInPlace } from 'xxscreeps/utility/utility';
 import type { PersistenceProvider } from 'xxscreeps/storage/provider';
 
 export type World = Map<string, TerrainSchema.Terrain>;
@@ -58,7 +58,7 @@ export const format = declare('World', compose(vector(TerrainSchema.format), {
 	compose: world =>
 		new Map<string, TerrainSchema.Terrain>(world.map(room => [ room.name, room.terrain ])),
 	decompose: (world: World) => {
-		const vector = [ ...mapInPlace(world.entries(), ([ name, terrain ]) => ({ name, terrain })) ];
+		const vector = [ ...Fn.map(world.entries(), ([ name, terrain ]) => ({ name, terrain })) ];
 		vector.sort((left, right) => left.name.localeCompare(right.name));
 		return vector;
 	},

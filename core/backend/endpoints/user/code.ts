@@ -1,9 +1,9 @@
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import * as Code from 'xxscreeps/engine/metadata/code';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
-import { firstMatching, mapToKeys } from 'xxscreeps/utility/utility';
 import { Channel } from 'xxscreeps/storage/channel';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;
@@ -18,7 +18,7 @@ function getBranchIdFromQuery(branch: any, user: User.User, create = false) {
 		if (branch == null || branch[0] === '$') {
 			return user.code.branch;
 		} else {
-			return firstMatching(user.code.branches, info => info.name === branch)?.id;
+			return Fn.firstMatching(user.code.branches, info => info.name === branch)?.id;
 		}
 	}();
 	// Possibly need to create the default branch
@@ -41,7 +41,7 @@ function getBranchIdFromQuery(branch: any, user: User.User, create = false) {
 	// Get branch name
 	return {
 		id,
-		name: firstMatching(user.code.branches, branch => branch.id === id)!.name,
+		name: Fn.firstMatching(user.code.branches, branch => branch.id === id)!.name,
 	};
 }
 
@@ -77,7 +77,7 @@ const BranchesEndpoint: Endpoint = {
 				return {
 					activeWorld: branch.id === user.code.branch,
 					branch: branch.name,
-					modules: mapToKeys(code.modules),
+					modules: Fn.fromEntries(code.modules),
 					timestamp: branch.timestamp * 1000,
 					user: userid,
 				};
@@ -106,7 +106,7 @@ const BranchCloneEndpoint: Endpoint = {
 			} else if (user.code.branches.some(branch => branch.name === newName)) {
 				throw new Error('Branch already exists');
 			}
-			const branchId = firstMatching(user.code.branches, info => info.name === branch)?.id;
+			const branchId = Fn.firstMatching(user.code.branches, info => info.name === branch)?.id;
 			if (branchId === undefined) {
 				throw new Error('Branch does not exist');
 			}
@@ -164,7 +164,7 @@ const CodeEndpoint: Endpoint = {
 		}
 
 		const code = Code.read(await this.context.persistence.get(`user/${userid}/${id}`));
-		return { ok: 1, branch: name, modules: mapToKeys(code.modules) };
+		return { ok: 1, branch: name, modules: Fn.fromEntries(code.modules) };
 	},
 };
 

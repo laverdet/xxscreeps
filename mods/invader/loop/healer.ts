@@ -1,13 +1,13 @@
-import * as C from 'xxscreeps/game/constants';
 import type { Creep } from 'xxscreeps/game/objects/creep';
-import { minimum } from 'xxscreeps/utility/utility';
+import * as C from 'xxscreeps/game/constants';
+import * as Fn from 'xxscreeps/utility/functional';
 import flee from './flee';
 
 export default function(creep: Creep, healers: Creep[]) {
 	const healTargets = creep.pos.findInRange(C.FIND_MY_CREEPS, 3);
 	if (healTargets.length > 0) {
-		const healTarget = minimum(healTargets,
-			(left, right) => (right.hitsMax - right.hits) - (left.hitsMax - left.hits));
+		const healTarget = Fn.minimum(healTargets,
+			(left, right) => (right.hitsMax - right.hits) - (left.hitsMax - left.hits))!;
 		if (creep.pos.isNearTo(healTarget)) {
 			creep.heal(healTarget);
 		} else {

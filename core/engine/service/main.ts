@@ -1,8 +1,9 @@
 import config from 'xxscreeps/engine/config';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
 import { Deferred } from 'xxscreeps/utility/deferred';
-import { getOrSet, mapInPlace } from 'xxscreeps/utility/utility';
+import { getOrSet } from 'xxscreeps/utility/utility';
 import * as Storage from 'xxscreeps/storage';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';
@@ -83,7 +84,7 @@ try {
 
 			// Add rooms to queue and notify processors
 			roomsQueue.version(`${gameMetadata.time}`);
-			const roomsQueueElements = [ ...mapInPlace(activeRooms, room => ({
+			const roomsQueueElements = [ ...Fn.map(activeRooms, room => ({
 				room,
 				users: [ ...intentsByRoom.get(room) ?? [] ],
 			})) ];

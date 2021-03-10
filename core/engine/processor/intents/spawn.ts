@@ -1,5 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Creep from 'xxscreeps/game/objects/creep';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 import { getPositonInDirection, Direction } from 'xxscreeps/game/position';
@@ -8,7 +9,6 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import { RoomObject } from 'xxscreeps/game/object';
 import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
 import { checkSpawnCreep, StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
-import { accumulate } from 'xxscreeps/utility/utility';
 
 declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }
@@ -37,7 +37,7 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 	}
 
 	// Withdraw energy
-	let cost = accumulate(body, part => C.BODYPART_COST[part]);
+	let cost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
 	for (const structure of energyStructures) {
 		const energyToSpend = Math.min(cost, structure.energy);
 		StoreIntent.subtract(structure.store, 'energy', energyToSpend);

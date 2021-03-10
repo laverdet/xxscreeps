@@ -1,5 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game/game';
+import * as Fn from 'xxscreeps/utility/functional';
 import { Creep, PartType } from 'xxscreeps/game/objects/creep';
 // eslint-disable-next-line no-duplicate-imports
 import * as CreepLib from 'xxscreeps/game/objects/creep';
@@ -11,7 +12,6 @@ import type { Direction } from 'xxscreeps/game/position';
 import type { LookForType } from 'xxscreeps/game/room';
 import { moveObject, removeObject } from 'xxscreeps/game/room/methods';
 import type { ResourceType, RoomObjectWithStore } from 'xxscreeps/mods/resource/store';
-import { accumulate, firstMatching } from 'xxscreeps/utility/utility';
 import { ActionLog, saveAction } from 'xxscreeps/game/objects/action-log';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import * as StructureControllerIntent from './controller';
@@ -102,7 +102,7 @@ registerObjectTickProcessor(Creep, creep => {
 		moveObject(creep, nextPosition);
 		// Calculate base fatigue from plain/road/swamp
 		const fatigue = (() => {
-			const road = firstMatching(
+			const road = Fn.firstMatching(
 				creep.room.lookForAt(C.LOOK_STRUCTURES, nextPosition),
 				(look): look is LookForType<StructureRoad> => look.structure.structureType === 'road');
 			if (road) {
@@ -129,7 +129,7 @@ registerObjectTickProcessor(Creep, creep => {
 });
 
 export function calculatePower(creep: Creep, part: PartType, power: number) {
-	return accumulate(creep.body, bodyPart => {
+	return Fn.accumulate(creep.body, bodyPart => {
 		if (bodyPart.type === part && bodyPart.hits > 0) {
 			return power;
 		}

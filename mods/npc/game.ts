@@ -1,7 +1,7 @@
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { compose, member, struct, vector } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
-import { mapInPlace } from 'xxscreeps/utility/utility';
 
 export const NPCData = Symbol('npcData');
 
@@ -16,7 +16,7 @@ const schema = registerSchema('Room', struct({
 			memory: 'buffer',
 		})), {
 			compose: values => new Map(values.map(value => [ value.id, value.memory ])),
-			decompose: (map: Map<string, Readonly<Uint8Array>>) => mapInPlace(map, ([ id, memory ]) => ({ id, memory })),
+			decompose: (map: Map<string, Readonly<Uint8Array>>) => Fn.map(map, ([ id, memory ]) => ({ id, memory })),
 		}),
 	})),
 }));
