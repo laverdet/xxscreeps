@@ -1,8 +1,10 @@
 import streamToPromise from 'stream-to-promise';
+import crypto from 'crypto';
 import { PNG } from 'pngjs';
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { Terrain, isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/terrain';
+import { BackendContext } from 'xxscreeps/backend/context';
 
 function generate(grid: (Terrain | undefined)[][], zoom = 1) {
 	// Most of the time we don't need transparency. It's only needed for zoom2 images near the edges,
@@ -50,65 +52,73 @@ function generate(grid: (Terrain | undefined)[][], zoom = 1) {
 	return streamToPromise(png.pack());
 }
 
-const cache = new Map<string, Buffer>();
-export const TerrainEndpoint: Endpoint = {
-	path: '/map/:room.png',
+type TerrainRenderer = (context: BackendContext, room: string) => Promise<Buffer | null>;
+function makeTerrainEndpoint(path: string, fn: TerrainRenderer): Endpoint {
+	const cache = new Map<string, { etag: string; payload: Buffer | null }>();
+	return {
+		path,
 
-	async execute(req, res) {
-		const { room } = req.params;
-		let png = cache.get(room);
-		if (!png) {
-			const terrain = this.context.world.get(room);
-			if (terrain) {
-				png = await generate([ [ terrain ] ], 3);
-				cache.set(room, png);
-			}
-		}
-		if (png) {
-			res.set('Cache-Control', 'public,max-age=31536000,immutable');
-			res.set('Content-Type', 'image/png');
-			res.writeHead(200);
-			res.end(png);
-			return true;
-		}
-	},
-};
-
-const cacheZoom = new Map<string, Buffer>();
-export const TerrainZoomEndpoint: Endpoint = {
-	path: '/map/zoom2/:room.png',
-
-	async execute(req, res) {
-		const { room } = req.params;
-		let png = cacheZoom.get(room);
-		if (!png) {
-			// Calculate which rooms to render
-			let didFindRoom = false;
-			const { rx: left, ry: top } = parseRoomName(req.params.room);
-			if (left % 4 === 0 && top % 4 === 0) {
-				const grid: (Terrain | undefined)[][] = [];
-				for (let yy = top; yy < top + 4; ++yy) {
-					grid.push([]);
-					const row = grid[grid.length - 1];
-					for (let xx = left; xx < left + 4; ++xx) {
-						const terrain = this.context.world.get(generateRoomName(xx, yy));
-						didFindRoom = didFindRoom || terrain !== undefined;
-						row.push(terrain);
-					}
-				}
-				// Render the grid
-				if (didFindRoom) {
-					png = await generate(grid);
-					cacheZoom.set(room, png);
+		async execute(req, res) {
+			// Fetch PNG from cache, or generate fresh
+			const { room } = req.params;
+			let data = cache.get(room);
+			if (data === undefined) {
+				const payload = await fn(this.context, room);
+				if (payload === null) {
+					data = { etag: 'nothing', payload: null };
+				} else {
+					const etag = crypto.createHash('sha1').update(payload).digest('base64');
+					data = { etag, payload };
+					cache.set(room, data);
 				}
 			}
+			// The Screeps client adds a very impolite cache bust to all map URLs. We can make better use
+			// of the browser cache by redirecting to a resource which can be cached
+			if (req.query.etag === data.etag) {
+				res.set('Cache-Control', 'public,max-age=31536000,immutable');
+				if (data.payload) {
+					res.set('Content-Type', 'image/png');
+					res.writeHead(200);
+					res.end(data.payload);
+				} else {
+					res.writeHead(404);
+					res.end();
+				}
+			} else {
+				// This seems like a risk for infinite redirects at some point, oh well!
+				res.redirect(301, `${req.baseUrl}${req.path}?etag=${encodeURIComponent(data.etag)}`);
+			}
+		},
+	};
+}
+
+export const TerrainEndpoint = makeTerrainEndpoint('/map/:room.png', async(context, room) => {
+	const terrain = context.world.get(room);
+	if (terrain) {
+		return generate([ [ terrain ] ], 3);
+	}
+	return null;
+});
+
+export const TerrainZoomEndpoint = makeTerrainEndpoint('/map/zoom2/:room.png', async(context, room) => {
+	// Calculate which rooms to render
+	let didFindRoom = false;
+	const { rx: left, ry: top } = parseRoomName(room);
+	if (left % 4 === 0 && top % 4 === 0) {
+		const grid: (Terrain | undefined)[][] = [];
+		for (let yy = top; yy < top + 4; ++yy) {
+			grid.push([]);
+			const row = grid[grid.length - 1];
+			for (let xx = left; xx < left + 4; ++xx) {
+				const terrain = context.world.get(generateRoomName(xx, yy));
+				didFindRoom = didFindRoom || terrain !== undefined;
+				row.push(terrain);
+			}
 		}
-		if (png) {
-			res.set('Cache-Control', 'public,max-age=31536000,immutable');
-			res.set('Content-Type', 'image/png');
-			res.writeHead(200);
-			res.end(png);
-			return true;
+		// Render the grid
+		if (didFindRoom) {
+			return generate(grid);
 		}
-	},
-};
+	}
+	return null;
+});
