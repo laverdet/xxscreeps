@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import { search } from 'xxscreeps/driver/path-finder';
 import { Variant } from 'xxscreeps/schema';
 import { getOrSet, instantiate } from 'xxscreeps/utility/utility';
-import * as Game from './game';
+import * as Game from '.';
 import type { RoomPosition } from './position';
 import type { Room } from './room';
 import type { RoomObject } from './object';

@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import { declare, compose, member, struct, variant, withOverlay } from 'xxscreeps/schema';
 import * as Structure from '.';
 

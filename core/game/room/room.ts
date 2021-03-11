@@ -3,7 +3,7 @@ import type { LooseBoolean } from 'xxscreeps/utility/types';
 
 import * as C from '../constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Game from '../game';
+import * as Game from '../state';
 import * as Memory from '../memory';
 import * as PathFinder from '../path-finder';
 

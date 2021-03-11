@@ -18,13 +18,6 @@ export function registerFindHandlers<Find extends { [find: number]: FindHandler 
 
 // Built-in FIND_ handlers
 const builtinFind = registerFindHandlers({
-	// Construction sites
-	[C.FIND_CONSTRUCTION_SITES]: room => lookFor(room, C.LOOK_CONSTRUCTION_SITES),
-	[C.FIND_MY_CONSTRUCTION_SITES]: room =>
-		lookFor(room, C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => constructionSite.my),
-	[C.FIND_HOSTILE_CONSTRUCTION_SITES]: room =>
-		lookFor(room, C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => !constructionSite.my),
-
 	// Creeps
 	[C.FIND_CREEPS]: room => lookFor(room, C.LOOK_CREEPS),
 	[C.FIND_MY_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => creep.my),

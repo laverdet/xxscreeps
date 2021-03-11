@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Creep from 'xxscreeps/game/objects/creep';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { insertObject } from 'xxscreeps/game/room/methods';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';

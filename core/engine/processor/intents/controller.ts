@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import { Owner } from 'xxscreeps/game/object';
 import { DowngradeTime, Progress, StructureController } from 'xxscreeps/game/objects/structures/controller';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';

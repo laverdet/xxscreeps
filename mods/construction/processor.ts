@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { Room } from 'xxscreeps/game/room';

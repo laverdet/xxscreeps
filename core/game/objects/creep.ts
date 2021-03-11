@@ -1,6 +1,6 @@
 import type { RoomPath } from '../room/room';
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as ActionLog from './action-log';
@@ -14,6 +14,13 @@ import { StructureController } from './structures/controller';
 import { RoomSearchOptions, SearchReturn } from '../path-finder';
 import { Resource, ResourceType, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 import { Structure } from './structures';
+
+declare module 'xxscreeps/game' {
+	interface Game {
+		creeps: Record<string, Creep>;
+	}
+}
+Game.registerGameInitializer(game => game.creeps = Object.create(null));
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 
@@ -58,6 +65,10 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	get spawning() { return this._ageTime === 0 }
 	get ticksToLive() { return this._ageTime - Game.time }
 	get [RoomObject.LookType]() { return C.LOOK_CREEPS }
+
+	[RoomObject.AddToMyGame](game: Game.Game) {
+		game.creeps[this.name] = this;
+	}
 
 	getActiveBodyparts(type: PartType) {
 		return this.body.reduce((count, part) =>

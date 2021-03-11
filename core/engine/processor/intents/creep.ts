@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Creep, PartType } from 'xxscreeps/game/objects/creep';
 // eslint-disable-next-line no-duplicate-imports

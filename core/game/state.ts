@@ -1,21 +1,16 @@
 import type { Flag } from './flag';
 import type { AnyRoomObject, Room } from './room';
-import { IntentManager } from './intents';
+import { gameInitializers } from './symbols';
 import map from './map';
-import { insertObject } from './room/methods';
-import { Creep } from './objects/creep';
-import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site';
-import { RoomObject } from './object';
-import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
-import { AnyStructure, Structure } from './objects/structures';
 import { flush as flushPathFinder } from 'xxscreeps/game/path-finder';
 import { flushFindCache } from 'xxscreeps/game/room/methods';
+import { insertObject } from './room/methods';
+import { AddToMyGame, RoomObject } from './object';
 
 /**
  * The main global game object containing all the game play information.
  */
-class Game {
-	constructionSites = constructionSites;
+export class Game {
 	cpu = {
 		getUsed: () => 0,
 		getHeapStatistics: () => 0,
@@ -23,58 +18,49 @@ class Game {
 	gcl = {
 		level: 1,
 	};
-	flags = flags;
+	flags: Record<string, Flag> = Object.create(null);
 	market = {
 		orders: [],
 		getAllOrders: () => [],
 		incomingTransactions: [],
 		outgoingTransactions: [],
-
 	};
 	shard = {};
-	creeps = creeps;
 	map = map;
 	rooms = rooms;
-	spawns = spawns;
-	structures = structures;
 	time = time;
 	getObjectById = getObjectById;
 }
 
-export let constructionSites: Record<string, ConstructionSite> = Object.create(null);
-export let creeps: Record<string, Creep> = Object.create(null);
-export let flags: Record<string, Flag> = Object.create(null);
-export let rooms: Record<string, Room> = Object.create(null);
-export let spawns: Record<string, StructureSpawn> = Object.create(null);
-export let structures: Record<string, AnyStructure> = Object.create(null);
-
+// Core global state
+export let instance: Game;
 export let me = '';
 export let time = NaN;
+export let rooms: Record<string, Room> = Object.create(null);
+export const objects = new Map<string, RoomObject>();
 
-const objects = new Map<string, RoomObject>();
+/**
+ * Register a function which will run on newly-created `Game` objects
+ */
+export function registerGameInitializer(fn: (game: Game) => void) {
+	gameInitializers.push(fn);
+}
 
 /**
  * Get an object with the specified unique ID. It may be a game object of any type. Only objects
  * from the rooms which are visible to you can be accessed.
  * @param id The unique identifier
  */
-export function getObjectById<Type extends AnyRoomObject>(id: string) {
+export function getObjectById<Type extends RoomObject = AnyRoomObject>(id: string) {
 	return objects.get(id) as Type | undefined;
 }
 
+/**
+ * Remove an object from global Game state
+ * @private
+ */
 export function removeObject(object: RoomObject) {
 	objects.delete(object.id);
-}
-
-// Intents
-export let intents: IntentManager;
-
-export function initializeIntents() {
-	intents = new IntentManager;
-}
-
-export function flushIntents() {
-	return intents;
 }
 
 /**
@@ -102,34 +88,23 @@ export function runWithState<Type>(rooms_: Room[], time_: number, task: () => Ty
  * like memory and flags. Must be called within `runWithState`
  */
 export function runAsUser<Type>(userId: string, task: () => Type) {
+	instance = new Game;
+	gameInitializers.forEach(fn => fn(instance));
 	me = userId;
 	for (const room of Object.values(rooms)) {
 		flushFindCache(room);
 		for (const object of room._objects) {
 			if ((object as { my: boolean }).my) {
-				if (object instanceof Structure) {
-					structures[object.id] = object;
-					if (object instanceof StructureSpawn) {
-						spawns[object.name] = object;
-					}
-				} else if (object instanceof Creep) {
-					creeps[object.name] = object;
-				} else if (object instanceof ConstructionSite) {
-					constructionSites[object.id] = object;
-				}
+				object[AddToMyGame](instance);
 			}
 		}
-
 	}
 	try {
 		return task();
 	} finally {
 		flushPathFinder();
+		instance = undefined as never;
 		me = '';
-		constructionSites = Object.create(null);
-		creeps = Object.create(null);
-		spawns = Object.create(null);
-		structures = Object.create(null);
 	}
 }
 
@@ -144,18 +119,14 @@ export function runForUser<Type>(
 	task: (game: Game) => Type,
 ) {
 	return runWithState(rooms_, time, () => runAsUser(userId, () => {
-		try {
-			flags = flags_;
-			for (const flag of Object.values(flags)) {
-				const room = rooms[flag.pos.roomName];
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-				if (room) {
-					insertObject(room, flag);
-				}
+		instance.flags = flags_;
+		for (const flag of Object.values(instance.flags)) {
+			const room = rooms[flag.pos.roomName];
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (room) {
+				insertObject(room, flag);
 			}
-			task(new Game);
-		} finally {
-			flags = {};
 		}
+		task(instance);
 	}));
 }

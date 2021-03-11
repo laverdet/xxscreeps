@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from '.';
 import { RoomPosition } from 'xxscreeps/game/position';

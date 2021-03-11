@@ -1,8 +1,17 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Extension from './extension';
 import * as Spawn from './spawn';
+import { registerGameInitializer } from 'xxscreeps/game';
 import { lookFor, registerFindHandlers } from 'xxscreeps/game/room';
 import { registerSchema } from 'xxscreeps/engine/schema';
+
+// Add `spawns` to global `game` object
+declare module 'xxscreeps/game' {
+	interface Game {
+		spawns: Record<string, Spawn.StructureSpawn>;
+	}
+}
+registerGameInitializer(game => game.spawns = Object.create(null));
 
 // Register FIND_ types for `Spawn`
 const find = registerFindHandlers({

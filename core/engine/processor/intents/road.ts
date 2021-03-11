@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as Map from 'xxscreeps/game/map';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';

@@ -1,6 +1,6 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
 import * as C from './constants';
-import * as Game from './game';
+import * as Game from '.';
 import * as Memory from './memory';
 import { extractPositionId, fetchPositionArgument, RoomPosition } from './position';
 import { LookType, RoomObject, format as baseFormat } from './object';

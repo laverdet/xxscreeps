@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { loadRoom, loadRooms, saveRoom } from 'xxscreeps/backend/model/room';

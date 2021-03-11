@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
 import { obstacleTypes } from 'xxscreeps/game/path-finder';

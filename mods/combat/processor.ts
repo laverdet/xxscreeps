@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { calculatePower } from 'xxscreeps/engine/processor/intents/creep';
 import { registerIntentProcessor } from 'xxscreeps/processor';

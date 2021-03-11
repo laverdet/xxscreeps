@@ -2,7 +2,7 @@ import type { LookForType } from 'xxscreeps/game/room';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import type { StructureContainer } from '../container';
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as Store from './store';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { insertObject, removeObject } from 'xxscreeps/game/room/methods';

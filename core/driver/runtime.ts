@@ -4,9 +4,9 @@ import { inspect } from 'util';
 import type { Dictionary } from 'xxscreeps/utility/types';
 import type { IntentListFor } from 'xxscreeps/processor';
 
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 // eslint-disable-next-line no-duplicate-imports
-import { flushIntents, initializeIntents, intents, runForUser } from 'xxscreeps/game/game';
+import { flushIntents, initializeIntents, intents, runForUser } from 'xxscreeps/game';
 import { setupGlobals } from 'xxscreeps/game/globals';
 import * as Memory from 'xxscreeps/game/memory';
 import { loadTerrainFromBuffer } from 'xxscreeps/game/map';

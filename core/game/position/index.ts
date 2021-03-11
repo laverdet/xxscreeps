@@ -5,7 +5,7 @@ import type { FindPathOptions, RoomFindOptions, RoomPath } from 'xxscreeps/game/
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as PathFinder from 'xxscreeps/game/path-finder';
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as Flag from 'xxscreeps/game/flag';
 import * as Fn from 'xxscreeps/utility/functional';
 import { compose, declare } from 'xxscreeps/schema';
@@ -307,12 +307,12 @@ export class RoomPosition {
 	 */
 	createFlag(name: string, color: Flag.Color, secondaryColor: Flag.Color = color) {
 		return chainIntentChecks(
-			() => Flag.checkCreateFlag(Game.flags, this, name, color, secondaryColor),
+			() => Flag.checkCreateFlag(Game.instance.flags, this, name, color, secondaryColor),
 			() => {
 				// Save creation intent
 				Game.intents.push('flag', 'create', name, extractPositionId(this), color, secondaryColor);
 				// Create local flag immediately
-				Game.flags[name] = instantiate(Flag.Flag, {
+				Game.instance.flags[name] = instantiate(Flag.Flag, {
 					name,
 					id: undefined,
 					pos: this,

@@ -22,13 +22,15 @@ export function exchange<Target extends {}, Name extends keyof Target>(
 
 // Wrapper around `Object.assign` which brings in type information from the interface being extended
 type AddThis<Type, Fn> = Fn extends (...args: infer Args) => infer Return ?
-	(this: Type, ...args: Args) => Return : FinalizationRegistry;
-export function extend<Type extends Implementation, Proto extends {
-	[Key in keyof Type['prototype']]?: AddThis<Type['prototype'], Type['prototype'][Key]>;
+	(this: Type, ...args: Args) => Return : never;
+export function extend<Type, Proto extends {
+	[Key in keyof Type]?: AddThis<Type, Type[Key]>;
 }>(
-	ctor: Type, proto: Proto,
+	ctor: Implementation<Type>, proto: Proto | ((next: Type) => Proto),
 ) {
-	Object.assign(ctor.prototype, proto);
+	const ext = typeof proto === 'function' ?
+		proto(Object.getPrototypeOf(ctor.prototype)) : proto;
+	Object.assign(ctor.prototype, ext);
 }
 
 // Gets a key on a map and if it doesn't exist it inserts a new value, then returns the value.

@@ -1,3 +1,4 @@
+import type { Game } from 'xxscreeps/game';
 import type { Room } from 'xxscreeps/game/room';
 import type { LookConstants } from 'xxscreeps/game/room/look';
 import * as Id from 'xxscreeps/engine/schema/id';
@@ -8,6 +9,7 @@ import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { assign } from 'xxscreeps/utility/utility';
 
+export const AddToMyGame = Symbol('addToMyGame');
 export const LookType = Symbol('lookType');
 export const Owner = Symbol('owner');
 
@@ -25,6 +27,9 @@ const shape = declare('RoomObject', struct({
 export abstract class RoomObject extends withOverlay(BufferObject, shape) {
 	abstract get [LookType](): LookConstants;
 	room!: Room;
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	[AddToMyGame](game: Game) {}
 
 	[Symbol.for('nodejs.util.inspect.custom')]() {
 		return expandGetters(this);

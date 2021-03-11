@@ -1,5 +1,5 @@
 import type { Room } from 'xxscreeps/game/room';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as Memory from 'xxscreeps/game/memory';
 import { registerRoomTickProcessor } from 'xxscreeps/processor';
 import { NPCData } from './game';

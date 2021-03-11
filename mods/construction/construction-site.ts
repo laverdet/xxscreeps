@@ -1,7 +1,7 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
-import * as Game from 'xxscreeps/game/game';
+import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
 import { compose, declare, enumerated, member, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
@@ -23,6 +23,9 @@ export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) 
 	get owner() { return this[RoomObject.Owner] }
 	get progressTotal() { return C.CONSTRUCTION_COST[this.structureType] }
 	get [RoomObject.LookType]() { return C.LOOK_CONSTRUCTION_SITES }
+	[RoomObject.AddToMyGame](game: Game.Game) {
+		game.constructionSites[this.id] = this;
+	}
 }
 
 export function create(
