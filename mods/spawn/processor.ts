@@ -7,8 +7,8 @@ import { getPositonInDirection, Direction } from 'xxscreeps/game/position';
 import { insertObject, moveObject } from 'xxscreeps/game/room/methods';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import { RoomObject } from 'xxscreeps/game/object';
-import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
-import { checkSpawnCreep, StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
+import { StructureExtension } from 'xxscreeps/mods/spawn/extension';
+import { checkSpawnCreep, StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
 
 declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }

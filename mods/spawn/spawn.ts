@@ -5,12 +5,13 @@ import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Structure from '.';
+import * as Structure from 'xxscreeps/game/objects/structures';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { StructureExtension } from './extension';
 
 type SpawnCreepOptions = {
@@ -20,7 +21,7 @@ type SpawnCreepOptions = {
 	memory?: any;
 };
 
-export function format() { return compose(shape, StructureSpawn) }
+export const format = () => compose(shape, StructureSpawn);
 const shape = declare('Spawn', struct(Structure.format, {
 	...variant('spawn'),
 	name: 'string',
@@ -89,6 +90,9 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 			});
 	}
 }
+
+registerBuildableStructure(C.STRUCTURE_SPAWN, site =>
+	create(site.pos, site.owner, site.name));
 
 export function create(pos: RoomPosition, owner: string, name: string) {
 	return assign(RoomObject.create(new StructureSpawn, pos), {

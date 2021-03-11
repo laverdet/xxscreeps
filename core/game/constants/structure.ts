@@ -1,5 +1,3 @@
-export const STRUCTURE_SPAWN = 'spawn' as const;
-export const STRUCTURE_EXTENSION = 'extension' as const;
 export const STRUCTURE_ROAD = 'road' as const;
 export const STRUCTURE_WALL = 'constructedWall' as const;
 export const STRUCTURE_RAMPART = 'rampart' as const;
@@ -35,17 +33,8 @@ export const RAMPART_HITS_MAX = [
 	300000000,
 ];
 
-export const SPAWN_HITS = 5000;
-export const SPAWN_ENERGY_START = 300;
-export const SPAWN_ENERGY_CAPACITY = 300;
-export const CREEP_SPAWN_TIME = 3;
-export const SPAWN_RENEW_RATIO = 1.2;
-
 export const WALL_HITS = 1;
 export const WALL_HITS_MAX = 300000000;
-
-export const EXTENSION_HITS = 1000;
-export const EXTENSION_ENERGY_CAPACITY = [ 50, 50, 50, 50, 50, 50, 50, 100, 200 ];
 
 export const ROAD_HITS = 5000;
 export const ROAD_WEAROUT = 1;

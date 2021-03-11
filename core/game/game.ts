@@ -6,7 +6,7 @@ import { insertObject } from './room/methods';
 import { Creep } from './objects/creep';
 import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site';
 import { RoomObject } from './object';
-import { StructureSpawn } from './objects/structures/spawn';
+import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
 import { AnyStructure, Structure } from './objects/structures';
 import { flush as flushPathFinder } from 'xxscreeps/game/path-finder';
 import { flushFindCache } from 'xxscreeps/game/room/methods';

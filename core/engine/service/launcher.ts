@@ -1,4 +1,4 @@
-import 'xxscreeps/game/objects/structures/spawn';
+import 'xxscreeps/mods/spawn/spawn';
 import os from 'os';
 import config from 'xxscreeps/engine/config';
 import argv from 'xxscreeps/config/arguments';

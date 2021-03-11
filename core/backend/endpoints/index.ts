@@ -37,10 +37,16 @@ function bindRoutes(context: BackendContext, router: Router, endpoints: Endpoint
 	return router;
 }
 
+declare module 'xxscreeps/backend/endpoint' {
+	interface Locals {
+		context: BackendContext;
+	}
+}
+
 export function installEndpointHandlers(express: Express, context: BackendContext) {
 	const apiRouter = Router();
 	apiRouter.use((req, res, next) => {
-		req.locals = {};
+		req.locals = { context };
 		next();
 	});
 	bindRoutes(context, apiRouter, [ VersionEndpoint ]);

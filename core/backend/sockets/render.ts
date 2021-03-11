@@ -4,9 +4,7 @@ import { RoomObject } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { Structure } from 'xxscreeps/game/objects/structures';
 import { DowngradeTime, StructureController } from 'xxscreeps/game/objects/structures/controller';
-import { StructureExtension } from 'xxscreeps/game/objects/structures/extension';
 import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
-import { StructureSpawn } from 'xxscreeps/game/objects/structures/spawn';
 import { StructureStorage } from 'xxscreeps/game/objects/structures/storage';
 import { StructureTower } from 'xxscreeps/game/objects/structures/tower';
 import { renderStore } from 'xxscreeps/mods/resource/backend';
@@ -53,21 +51,11 @@ bindRenderer(StructureController, (controller, next) => ({
 	safeMode: 0,
 }));
 
-bindRenderer(StructureExtension, (extension, next) => ({
-	...next(),
-	...renderStore(extension.store),
-}));
-
 bindRenderer(StructureRoad, (road, next) => ({
 	...next(),
 	nextDecayTime: road[NextDecayTime],
 }));
 
-bindRenderer(StructureSpawn, (spawn, next) => ({
-	...next(),
-	...renderStore(spawn.store),
-	name: spawn.name,
-}));
 
 bindRenderer(StructureStorage, (storage, next) => ({
 	...next(),

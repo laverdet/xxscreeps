@@ -5,3 +5,4 @@ import 'xxscreeps/mods/invader/game';
 import 'xxscreeps/mods/npc/game';
 import 'xxscreeps/mods/resource/game';
 import 'xxscreeps/mods/source/game';
+import 'xxscreeps/mods/spawn/game';

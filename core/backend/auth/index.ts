@@ -11,14 +11,29 @@ declare module 'xxscreeps/backend/endpoint' {
 	}
 }
 
-export function useAuth(handler: RequestHandler) {
-	return useToken((req, res, next) => {
+export function useAuth(handler: RequestHandler): RequestHandler {
+	const withToken = useToken((req, res, next) => {
 		if (req.locals.userid === undefined) {
 			res.status(401).send({ error: 'unauthorized' });
 		} else {
 			handler(req, res, next);
 		}
 	});
+	return (req, res, next) => {
+		const auth64 = req.headers.authorization && /^Basic (?<auth>.+)$/.exec(req.headers.authorization)?.groups?.auth;
+		if (auth64) {
+			// Passwordless auth
+			// TODO(important): Remove this :)
+			const auth = Buffer.from(auth64, 'base64').toString();
+			const user = req.locals.context.lookupUserByProvider(auth);
+			if (user) {
+				req.locals.userid = user;
+				handler(req, res, next);
+				return;
+			}
+		}
+		withToken(req, res, next);
+	};
 }
 
 export function useToken(handler: RequestHandler): RequestHandler {

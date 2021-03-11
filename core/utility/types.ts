@@ -38,7 +38,7 @@ export type StrictExclude<T, U> = T extends any ? T extends U ? U extends T ? ne
 
 // Allow access to any property on a union
 export type Union<T, K extends keyof any = T extends any ? keyof T : never> =
-	T extends any ? T & Partial<Record<Exclude<K, keyof T>, undefined>> : never;
+	T extends any ? T & Partial<Record<Exclude<K, keyof T>, never>> : never;
 
 // Converts T | U to T & U
 export type UnionToIntersection<Union> =

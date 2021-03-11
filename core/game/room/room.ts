@@ -17,8 +17,8 @@ import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { LookType, RoomObject } from 'xxscreeps/game/object';
 import { getTerrainForRoom } from '../map';
 import { StructureController } from '../objects/structures/controller';
-import { StructureExtension } from '../objects/structures/extension';
-import { StructureSpawn } from '../objects/structures/spawn';
+import { StructureExtension } from 'xxscreeps/mods/spawn/extension';
+import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
 import { RoomVisual } from '../visual';
 
 import { EventLogSymbol } from './event-log';

@@ -14,9 +14,9 @@ import { RoomObject } from './object';
 import { Structure } from './objects/structures';
 import { StructureContainer } from 'xxscreeps/mods/resource/container';
 import { StructureController } from './objects/structures/controller';
-import { StructureExtension } from './objects/structures/extension';
+import { StructureExtension } from '../../mods/spawn/extension';
 import { StructureRoad } from './objects/structures/road';
-import { StructureSpawn } from './objects/structures/spawn';
+import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
 import { StructureStorage } from './objects/structures/storage';
 import { StructureTower } from './objects/structures/tower';
 

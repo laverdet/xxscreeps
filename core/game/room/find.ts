@@ -30,12 +30,6 @@ const builtinFind = registerFindHandlers({
 	[C.FIND_MY_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => creep.my),
 	[C.FIND_HOSTILE_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => !creep.my),
 
-	// Spawns
-	[C.FIND_MY_SPAWNS]: room => lookFor(room, C.LOOK_STRUCTURES).filter(
-		structure => structure.structureType === 'spawn' && structure.my),
-	[C.FIND_HOSTILE_SPAWNS]: room => lookFor(room, C.LOOK_STRUCTURES).filter(
-		structure => structure.structureType === 'spawn' && structure.my === false),
-
 	// Structures
 	[C.FIND_STRUCTURES]: room => lookFor(room, C.LOOK_STRUCTURES),
 	[C.FIND_MY_STRUCTURES]: room =>
