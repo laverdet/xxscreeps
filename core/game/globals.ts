@@ -7,18 +7,18 @@ import { RoomPosition } from './position';
 import { Room } from './room';
 import { RoomVisual } from './visual';
 
-import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site';
 import { Creep } from './objects/creep';
-import { Resource } from 'xxscreeps/mods/resource/resource';
-import { RoomObject } from './object';
-import { Structure } from '../../mods/structure/structure';
-import { StructureContainer } from 'xxscreeps/mods/resource/container';
-import { StructureController } from '../../mods/controller/controller';
-import { StructureExtension } from '../../mods/spawn/extension';
 import { StructureRoad } from './objects/structures/road';
-import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
-import { StructureStorage } from '../../mods/storage/storage';
-import { StructureTower } from '../../mods/defense/tower';
+
+const runtimeGlobals: Record<string, any> = Object.create(null);
+export function registerGlobal(name: string, value: any): void;
+export function registerGlobal(fn: Function): void;
+export function registerGlobal(...args: [ string, any ] | [ Function ]) {
+	const { name, value } = args.length === 1 ?
+		{ name: args[0].name, value: args[0] } :
+		{ name: args[0], value: args[1] };
+	runtimeGlobals[name] = value;
+}
 
 export function setupGlobals(globalThis: any) {
 
@@ -48,25 +48,18 @@ export function setupGlobals(globalThis: any) {
 	globalThis.StructureTerminal = function() {};
 	globalThis.Tombstone = function() {};
 
-	// Export prototypes
+	// Everything else
 	for (const [ key, object ] of Object.entries({
-		ConstructionSite,
 		Creep,
 		Flag,
-		Resource,
 		Room,
-		RoomObject,
 		RoomPosition,
 		RoomVisual,
-		Structure,
-		StructureContainer,
-		StructureController,
-		StructureExtension,
 		StructureRoad,
-		StructureSpawn,
-		StructureStorage,
-		StructureTower,
 	})) {
+		globalThis[key] = object;
+	}
+	for (const [ key, object ] of Object.entries(runtimeGlobals)) {
 		globalThis[key] = object;
 	}
 }

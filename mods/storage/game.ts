@@ -1,4 +1,5 @@
 import * as Storage from './storage';
+import { registerGlobal } from 'xxscreeps/game';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 // Register schema
@@ -8,3 +9,6 @@ declare module 'xxscreeps/engine/schema' {
 		storage: typeof schema;
 	}
 }
+
+// Export `StructureStorage` to runtime globals
+registerGlobal(Storage.StructureStorage);

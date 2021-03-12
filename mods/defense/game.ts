@@ -1,4 +1,5 @@
 import * as Tower from './tower';
+import { registerGlobal } from 'xxscreeps/game';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 // Register schema
@@ -8,3 +9,6 @@ declare module 'xxscreeps/engine/schema' {
 		defense: typeof schema;
 	}
 }
+
+// Export `StructureTower` to runtime globals
+registerGlobal(Tower.StructureTower);

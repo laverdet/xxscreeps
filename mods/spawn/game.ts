@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Extension from './extension';
 import * as Spawn from './spawn';
-import { registerGameInitializer } from 'xxscreeps/game';
+import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
 import { lookFor, registerFindHandlers } from 'xxscreeps/game/room';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
@@ -12,6 +12,10 @@ declare module 'xxscreeps/game' {
 	}
 }
 registerGameInitializer(game => game.spawns = Object.create(null));
+
+// Export `StructureExtension` & `StructureSpawn` to runtime globals
+registerGlobal(Extension.StructureExtension);
+registerGlobal(Spawn.StructureSpawn);
 
 // Register FIND_ types for `Spawn`
 const find = registerFindHandlers({

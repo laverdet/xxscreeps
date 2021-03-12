@@ -1,8 +1,13 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Container from './container';
 import * as Resource from './resource';
+import { registerGlobal } from 'xxscreeps/game';
 import { lookFor, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
 import { registerSchema } from 'xxscreeps/engine/schema';
+
+// Export `StructureContainer` & `Resource` to runtime globals
+registerGlobal(Container.StructureContainer);
+registerGlobal(Resource.Resource);
 
 // Register FIND_ types for `Resource`
 const find = registerFindHandlers({
