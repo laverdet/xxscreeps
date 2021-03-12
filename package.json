@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc -b",
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
+    "install": "tsc -b",
     "start": "./go dist/core/engine/service/launcher.js",
     "watch": "tsc -b -w"
   },
@@ -18,7 +19,7 @@
     "core/engine"
   ],
   "dependencies": {
-    "@xxscreeps/path-finder": "file:core/path-finder",
+    "@xxscreeps/path-finder": "file:core/driver/path-finder",
     "acorn": "^8.0.5",
     "isolated-vm": "github:laverdet/isolated-vm",
     "lodash": "^3.10.1",
