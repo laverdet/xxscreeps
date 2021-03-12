@@ -1,7 +1,7 @@
-import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend';
+import { bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
 import { DowngradeTime, StructureController } from './controller';
 
-bindMapRenderer(StructureController, () => 'c');
+bindTerrainRenderer(StructureController, () => 0x505050);
 
 bindRenderer(StructureController, (controller, next) => ({
 	...next(),

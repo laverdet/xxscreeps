@@ -3,7 +3,7 @@ import { RoomObject } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/game/objects/creep';
 import { StructureRoad } from 'xxscreeps/game/objects/structures/road';
 import { getOrSet } from 'xxscreeps/utility/utility';
-import { bindMapRenderer } from 'xxscreeps/backend';
+import { bindMapRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
 import { MapRender } from 'xxscreeps/backend/symbols';
 import { SubscriptionEndpoint } from 'xxscreeps/backend/socket';
 
@@ -11,6 +11,7 @@ import { SubscriptionEndpoint } from 'xxscreeps/backend/socket';
 bindMapRenderer(RoomObject, () => undefined);
 bindMapRenderer(Creep, creep => creep.owner);
 bindMapRenderer(StructureRoad, () => 'r');
+bindTerrainRenderer(RoomObject, () => undefined);
 
 export const mapSubscription: SubscriptionEndpoint = {
 	pattern: /^roomMap2:(?<room>[A-Z0-9]+)$/,

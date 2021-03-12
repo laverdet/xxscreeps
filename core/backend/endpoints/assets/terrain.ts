@@ -1,12 +1,16 @@
+import type { Room } from 'xxscreeps/game/room';
 import streamToPromise from 'stream-to-promise';
 import crypto from 'crypto';
+import * as Fn from 'xxscreeps/utility/functional';
 import { PNG } from 'pngjs';
+import { loadRoom } from 'xxscreeps/backend/model/room';
 import { Endpoint } from 'xxscreeps/backend/endpoint';
+import { TerrainRender } from 'xxscreeps/backend/symbols';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
-import { Terrain, isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/terrain';
+import { isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/terrain';
 import { BackendContext } from 'xxscreeps/backend/context';
 
-function generate(grid: (Terrain | undefined)[][], zoom = 1) {
+function generate(grid: (Room | null)[][], zoom = 1) {
 	// Most of the time we don't need transparency. It's only needed for zoom2 images near the edges,
 	// so transparency is turned off when possible
 	const hasTransparency = grid.some(row => row.some(terrain => !terrain));
@@ -16,24 +20,40 @@ function generate(grid: (Terrain | undefined)[][], zoom = 1) {
 		width: 50 * zoom * grid[0].length,
 		height: 50 * zoom * grid.length,
 	});
+	const data32 = new Uint32Array(png.data.buffer, png.data.byteOffset);
 	const gh = grid.length;
 	const gw = grid[0].length;
 	const iwidth = gw * 50;
 	for (let gy = 0; gy < gh; ++gy) {
 		for (let gx = 0; gx < gw; ++gx) {
-			const terrain = grid[gy][gx];
+			// Check color returned by room objects
+			const room = grid[gy][gx];
+			const terrain = room?.getTerrain();
+			const colorsByPosition = new Map<number, number>();
+			if (room) {
+				for (const object of room._objects) {
+					const color = object[TerrainRender](object);
+					if (color !== undefined) {
+						colorsByPosition.set(object.pos.x * 50 + object.pos.y, color);
+					}
+				}
+			}
+			// Generate color based on terrain
 			for (let yy = 0; yy < 50; ++yy) {
 				for (let xx = 0; xx < 50; ++xx) {
 					const color = function() {
 						if (terrain) {
+							const objectColor = colorsByPosition.get(xx * 50 + yy);
+							if (objectColor !== undefined) {
+								return objectColor | 0xff000000;
+							}
 							switch (terrain.get(xx, yy)) {
-								case TERRAIN_MASK_WALL: return [ 0x00, 0x00, 0x00, 0xff ];
-								case TERRAIN_MASK_SWAMP: return [ 0x23, 0x25, 0x13, 0xff ];
-								default: return isBorder(xx, yy) ?
-									[ 0x32, 0x32, 0x32, 0xff ] : [ 0x2b, 0x2b, 0x2b, 0xff ];
+								case TERRAIN_MASK_WALL: return 0xff000000;
+								case TERRAIN_MASK_SWAMP: return 0xff132523;
+								default: return isBorder(xx, yy) ? 0xff323232 : 0xff2b2b2b;
 							}
 						} else {
-							return [ 0, 0, 0, 0 ];
+							return 0;
 						}
 					}();
 					for (let yz = 0; yz < zoom; ++yz) {
@@ -42,7 +62,7 @@ function generate(grid: (Terrain | undefined)[][], zoom = 1) {
 								xz + zoom * (xx + gx * zoom * 50 +
 								(yz + zoom * (yy + gy * zoom * 50)) * iwidth)
 							);
-							[ png.data[ii], png.data[ii + 1], png.data[ii + 2], png.data[ii + 3] ] = color;
+							data32[ii >>> 2] = color;
 						}
 					}
 				}
@@ -92,30 +112,28 @@ function makeTerrainEndpoint(path: string, fn: TerrainRenderer): Endpoint {
 	};
 }
 
-export const TerrainEndpoint = makeTerrainEndpoint('/map/:room.png', async(context, room) => {
-	const terrain = context.world.get(room);
-	if (terrain) {
-		return generate([ [ terrain ] ], 3);
+export const TerrainEndpoint = makeTerrainEndpoint('/map/:room.png', async(context, roomName) => {
+	const room = await loadRoom(context, roomName).catch(() => null);
+	if (room) {
+		return generate([ [ room ] ], 3);
 	}
 	return null;
 });
 
 export const TerrainZoomEndpoint = makeTerrainEndpoint('/map/zoom2/:room.png', async(context, room) => {
-	// Calculate which rooms to render
+	// Fetch rooms if requset is valid
 	let didFindRoom = false;
 	const { rx: left, ry: top } = parseRoomName(room);
 	if (left % 4 === 0 && top % 4 === 0) {
-		const grid: (Terrain | undefined)[][] = [];
-		for (let yy = top; yy < top + 4; ++yy) {
-			grid.push([]);
-			const row = grid[grid.length - 1];
-			for (let xx = left; xx < left + 4; ++xx) {
-				const terrain = context.world.get(generateRoomName(xx, yy));
-				didFindRoom = didFindRoom || terrain !== undefined;
-				row.push(terrain);
-			}
-		}
+		const grid = await Promise.all(Fn.map(Fn.range(top, top + 4), yy =>
+			Promise.all(Fn.map(Fn.range(left, left + 4), async xx => {
+				const room = await loadRoom(context, generateRoomName(xx, yy)).catch(() => null);
+				didFindRoom ||= room !== null;
+				return room;
+			})),
+		));
 		// Render the grid
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (didFindRoom) {
 			return generate(grid);
 		}

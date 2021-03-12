@@ -81,6 +81,21 @@ export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, r
 	return minimum;
 }
 
+// Returns a range of numbers
+export function *range(start: number, end?: number): Iterable<number> {
+	if (end === undefined) {
+		return range(0, start);
+	} else if (start < end) {
+		for (let ii = start; ii < end; ++ii) {
+			yield ii;
+		}
+	} else {
+		for (let ii = end; ii > start; --ii) {
+			yield ii;
+		}
+	}
+}
+
 // Not nullable TS predicate
 type NonNullOrVoidable<Type> = Type extends null | undefined | void ? never : Type;
 function nonNullable<Type>(value: Type): value is NonNullOrVoidable<Type> {

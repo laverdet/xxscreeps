@@ -1,7 +1,7 @@
-import { bindRenderer, bindMapRenderer } from 'xxscreeps/backend';
+import { bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
 import { Source } from './source';
 
-bindMapRenderer(Source, () => 's');
+bindTerrainRenderer(Source, () => 0x5af3ff);
 
 bindRenderer(Source, (source, next) => ({
 	...next(),

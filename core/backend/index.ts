@@ -1,6 +1,6 @@
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
-import { MapRender, Render } from './symbols';
+import { MapRender, Render, TerrainRender } from './symbols';
 
 // `RoomObject` render symbols
 type RenderedRoomObject = {
@@ -13,6 +13,7 @@ declare module 'xxscreeps/game/object' {
 	interface RoomObject {
 		[Render]: () => RenderedRoomObject;
 		[MapRender]: (object: any) => string | undefined;
+		[TerrainRender]: (object: any) => number | undefined;
 	}
 }
 
@@ -30,4 +31,8 @@ export function bindRenderer<Type extends RoomObject>(
 
 export function bindMapRenderer<Type extends RoomObject>(object: Implementation<Type>, render: (object: Type) => string | undefined) {
 	object.prototype[MapRender] = render;
+}
+
+export function bindTerrainRenderer<Type extends RoomObject>(object: Implementation<Type>, render: (object: Type) => number | undefined) {
+	object.prototype[TerrainRender] = render;
 }
