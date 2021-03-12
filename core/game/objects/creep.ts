@@ -10,10 +10,10 @@ import { compose, declare, enumerated, member, struct, variant, vector, withOver
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { assign } from 'xxscreeps/utility/utility';
-import { StructureController } from './structures/controller';
+import { StructureController } from '../../../mods/controller/controller';
 import { RoomSearchOptions, SearchReturn } from '../path-finder';
 import { Resource, ResourceType, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
-import { Structure } from './structures';
+import { Structure } from '../../../mods/structure/structure';
 
 declare module 'xxscreeps/game' {
 	interface Game {

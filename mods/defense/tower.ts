@@ -1,12 +1,12 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Structure from '.';
+import * as Structure from '../structure/structure';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 
-export function format() { return compose(shape, StructureTower) }
+export const format = () => compose(shape, StructureTower);
 const shape = declare('Tower', struct(Structure.format, {
 		...variant('tower'),
 	store: Store.restrictedFormat<'energy'>(),

@@ -1,9 +1,9 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import { Owner } from 'xxscreeps/game/object';
-import { DowngradeTime, Progress, StructureController } from 'xxscreeps/game/objects/structures/controller';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { exchange } from 'xxscreeps/utility/utility';
+import { DowngradeTime, Progress, StructureController } from './controller';
 
 export function claim(controller: StructureController, user: string) {
 	// Take controller

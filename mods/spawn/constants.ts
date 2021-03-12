@@ -1,6 +1,9 @@
 export const STRUCTURE_SPAWN = 'spawn' as const;
 export const STRUCTURE_EXTENSION = 'extension' as const;
 
+export const FIND_MY_SPAWNS = 112 as const;
+export const FIND_HOSTILE_SPAWNS = 113 as const;
+
 export const SPAWN_HITS = 5000;
 export const SPAWN_ENERGY_START = 300;
 export const SPAWN_ENERGY_CAPACITY = 300;

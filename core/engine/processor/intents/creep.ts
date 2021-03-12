@@ -5,8 +5,8 @@ import { Creep, PartType } from 'xxscreeps/game/objects/creep';
 // eslint-disable-next-line no-duplicate-imports
 import * as CreepLib from 'xxscreeps/game/objects/creep';
 import type { Resource } from 'xxscreeps/mods/resource/resource';
-import type { Structure } from 'xxscreeps/game/objects/structures';
-import type { StructureController } from 'xxscreeps/game/objects/structures/controller';
+import type { Structure } from 'xxscreeps/mods/structure/structure';
+import type { StructureController } from 'xxscreeps/mods/controller/controller';
 import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
 import type { Direction } from 'xxscreeps/game/position';
 import type { LookForType } from 'xxscreeps/game/room';
@@ -14,7 +14,7 @@ import { moveObject, removeObject } from 'xxscreeps/game/room/methods';
 import type { ResourceType, RoomObjectWithStore } from 'xxscreeps/mods/resource/store';
 import { ActionLog, saveAction } from 'xxscreeps/game/objects/action-log';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
-import * as StructureControllerIntent from './controller';
+import * as StructureControllerIntent from '../../../../mods/controller/processor';
 import * as Movement from './movement';
 // eslint-disable-next-line no-duplicate-imports
 import { calculateWeight } from './movement';

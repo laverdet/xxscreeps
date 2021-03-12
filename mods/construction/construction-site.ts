@@ -23,6 +23,7 @@ export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) 
 	get owner() { return this[RoomObject.Owner] }
 	get progressTotal() { return C.CONSTRUCTION_COST[this.structureType] }
 	get [RoomObject.LookType]() { return C.LOOK_CONSTRUCTION_SITES }
+
 	[RoomObject.AddToMyGame](game: Game.Game) {
 		game.constructionSites[this.id] = this;
 	}

@@ -1,3 +1,4 @@
+import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Creep from 'xxscreeps/game/objects/creep';
 import * as Game from 'xxscreeps/game';
@@ -5,7 +6,7 @@ import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Structure from 'xxscreeps/game/objects/structures';
+import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
@@ -46,8 +47,17 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 
 	get structureType() { return C.STRUCTURE_SPAWN }
 	[RoomObject.AddToMyGame](game: Game.Game) {
-		super[RoomObject.AddToMyGame](game);
 		game.spawns[this.name] = this;
+	}
+	[RoomObject.AfterInsert](room: Room) {
+		super[RoomObject.AfterInsert](room);
+		room.energyAvailable += this.store[C.RESOURCE_ENERGY];
+		room.energyCapacityAvailable += this.store.getCapacity(C.RESOURCE_ENERGY);
+	}
+	[RoomObject.AfterRemove](room: Room) {
+		super[RoomObject.AfterRemove](room);
+		room.energyAvailable -= this.store[C.RESOURCE_ENERGY];
+		room.energyCapacityAvailable -= this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
 
 	canCreateCreep(body: any, name?: any) {

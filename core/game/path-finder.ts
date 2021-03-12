@@ -8,7 +8,7 @@ import type { Room } from './room';
 import type { RoomObject } from './object';
 import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site';
 import { Creep } from './objects/creep';
-import { Structure } from './objects/structures';
+import { Structure } from '../../mods/structure/structure';
 import { StructureRoad } from './objects/structures/road';
 export type { SearchReturn } from 'xxscreeps/driver/path-finder';
 

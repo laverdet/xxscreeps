@@ -11,14 +11,14 @@ import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site'
 import { Creep } from './objects/creep';
 import { Resource } from 'xxscreeps/mods/resource/resource';
 import { RoomObject } from './object';
-import { Structure } from './objects/structures';
+import { Structure } from '../../mods/structure/structure';
 import { StructureContainer } from 'xxscreeps/mods/resource/container';
-import { StructureController } from './objects/structures/controller';
+import { StructureController } from '../../mods/controller/controller';
 import { StructureExtension } from '../../mods/spawn/extension';
 import { StructureRoad } from './objects/structures/road';
 import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
-import { StructureStorage } from './objects/structures/storage';
-import { StructureTower } from './objects/structures/tower';
+import { StructureStorage } from '../../mods/storage/storage';
+import { StructureTower } from '../../mods/defense/tower';
 
 export function setupGlobals(globalThis: any) {
 

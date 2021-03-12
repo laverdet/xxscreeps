@@ -90,7 +90,7 @@ rules:
   no-delete-var: warn
   no-label-var: warn
   no-undef-init: warn
-  '@typescript-eslint/no-unused-vars': warn
+  '@typescript-eslint/no-unused-vars': [ warn, { argsIgnorePattern: '^_' } ]
 
   handle-callback-err: warn
   no-buffer-constructor: warn

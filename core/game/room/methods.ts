@@ -1,6 +1,7 @@
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import type { LookConstants, Room } from './room';
+import * as Game from '../state';
 import { FlushFindCache, LookFor, MoveObject, InsertObject, RemoveObject } from './symbols';
 
 export function flushFindCache(room: Room) {
@@ -21,4 +22,5 @@ export function moveObject(object: RoomObject, pos: RoomPosition) {
 
 export function removeObject(object: RoomObject) {
 	object.room[RemoveObject](object);
+	Game.removeObject(object);
 }

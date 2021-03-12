@@ -22,13 +22,6 @@ const builtinFind = registerFindHandlers({
 	[C.FIND_CREEPS]: room => lookFor(room, C.LOOK_CREEPS),
 	[C.FIND_MY_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => creep.my),
 	[C.FIND_HOSTILE_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => !creep.my),
-
-	// Structures
-	[C.FIND_STRUCTURES]: room => lookFor(room, C.LOOK_STRUCTURES),
-	[C.FIND_MY_STRUCTURES]: room =>
-		lookFor(room, C.LOOK_STRUCTURES).filter(structure => structure.my),
-	[C.FIND_HOSTILE_STRUCTURES]: room =>
-		lookFor(room, C.LOOK_STRUCTURES).filter(structure => structure.my === false),
 });
 export interface Find { builtin: typeof builtinFind }
 

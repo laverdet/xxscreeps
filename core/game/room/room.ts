@@ -3,7 +3,6 @@ import type { LooseBoolean } from 'xxscreeps/utility/types';
 
 import * as C from '../constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Game from '../state';
 import * as Memory from '../memory';
 import * as PathFinder from '../path-finder';
 
@@ -14,11 +13,8 @@ import { BufferView, withOverlay } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
-import { LookType, RoomObject } from 'xxscreeps/game/object';
+import { AfterInsert, AfterRemove, LookType, RoomObject } from 'xxscreeps/game/object';
 import { getTerrainForRoom } from '../map';
-import { StructureController } from '../objects/structures/controller';
-import { StructureExtension } from 'xxscreeps/mods/spawn/extension';
-import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
 import { RoomVisual } from '../visual';
 
 import { EventLogSymbol } from './event-log';
@@ -65,14 +61,15 @@ export class Room extends withOverlay(BufferObject, shape) {
 		return rooms[this.name] ?? (rooms[this.name] = {});
 	}
 
-	controller?: StructureController;
+	// TODO: Put in mods
 	energyAvailable = 0;
 	energyCapacityAvailable = 0;
 
 	constructor(view: BufferView, offset: number) {
 		super(view, offset);
-		for (const object of this._objects) {
-			this._afterInsertion(object);
+		for (const object of this._objects as RoomObject[]) {
+			object[AfterInsert](this);
+			this._addToLookIndex(object);
 		}
 	}
 
@@ -260,9 +257,8 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 	[InsertObject](object: RoomObject) {
 		// Add to objects & look index then flush find caches
-		object.room = this;
 		this._objects.push(object as never);
-		this._afterInsertion(object);
+		this._addToLookIndex(object);
 		/* const findTypes = lookToFind[lookType];
 		for (const find of findTypes) {
 			this.#findCache.delete(find);
@@ -279,13 +275,13 @@ export class Room extends withOverlay(BufferObject, shape) {
 				spatial.set(pos, [ object ]);
 			}
 		}
+		object[AfterInsert](this);
 	}
 
 	[RemoveObject](object: RoomObject) {
 		// Remove from objects & look index then flush find caches
-		removeOne(this._objects, object);
-		Game.removeObject(object);
-		this._afterRemoval(object);
+		removeOne(this._objects, object as never);
+		this._removeFromLookIndex(object);
 		/* const findTypes = lookToFind[lookType];
 		for (const find of findTypes) {
 			this.#findCache.delete(find);
@@ -303,6 +299,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 				}
 			}
 		}
+		object[AfterRemove](this);
 	}
 
 	[MoveObject](object: RoomObject, pos: RoomPosition) {
@@ -327,36 +324,12 @@ export class Room extends withOverlay(BufferObject, shape) {
 		}
 	}
 
-	// `_afterInsertion` is called on Room construction per object to batch add objects. It skips the
-	// find cache and spatial indices because those will be clean anyway
-	private _afterInsertion(object: RoomObject) {
-		object.room = this;
-		const lookType = object[LookType];
-		this.#lookIndex.get(lookType)!.push(object);
-		if (lookType === C.LOOK_STRUCTURES) {
-			if (object instanceof StructureController) {
-				this.controller = object;
-			} else if (object instanceof StructureExtension || object instanceof StructureSpawn) {
-				this.energyAvailable += object.store[C.RESOURCE_ENERGY];
-				this.energyCapacityAvailable += object.store.getCapacity(C.RESOURCE_ENERGY);
-			}
-		}
+	private _addToLookIndex(object: RoomObject) {
+		this.#lookIndex.get(object[LookType])!.push(object);
 	}
 
-	private _afterRemoval(object: RoomObject) {
-		object.room = null as any;
-		const lookType = object[LookType];
-		const list = this.#lookIndex.get(lookType)!;
-		removeOne(list, object);
-		if (lookType === C.LOOK_STRUCTURES) {
-			if (object instanceof StructureController) {
-				this.controller = object;
-			} else if (object instanceof StructureExtension || object instanceof StructureSpawn) {
-				this.energyAvailable -= object.store[C.RESOURCE_ENERGY];
-				this.energyCapacityAvailable -= object.store.getCapacity(C.RESOURCE_ENERGY);
-			}
-		}
-		return lookType;
+	private _removeFromLookIndex(object: RoomObject) {
+		removeOne(this.#lookIndex.get(object[LookType])!, object);
 	}
 
 	// Returns objects indexed by type and position

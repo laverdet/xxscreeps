@@ -1,5 +1,9 @@
 import 'xxscreeps/mods/construction/backend';
+import 'xxscreeps/mods/controller/backend';
+import 'xxscreeps/mods/defense/backend';
 import 'xxscreeps/mods/resource/backend';
 import 'xxscreeps/mods/source/backend';
 import 'xxscreeps/mods/spawn/backend';
+import 'xxscreeps/mods/storage/backend';
+import 'xxscreeps/mods/structure/backend';
 import './processor';

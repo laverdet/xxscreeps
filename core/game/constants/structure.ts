@@ -1,19 +1,13 @@
 export const STRUCTURE_ROAD = 'road' as const;
 export const STRUCTURE_WALL = 'constructedWall' as const;
-export const STRUCTURE_RAMPART = 'rampart' as const;
 export const STRUCTURE_KEEPER_LAIR = 'keeperLair' as const;
 export const STRUCTURE_PORTAL = 'portal' as const;
-export const STRUCTURE_CONTROLLER = 'controller' as const;
-export const STRUCTURE_LINK = 'link' as const;
-export const STRUCTURE_STORAGE = 'storage' as const;
-export const STRUCTURE_TOWER = 'tower' as const;
 export const STRUCTURE_OBSERVER = 'observer' as const;
 export const STRUCTURE_POWER_BANK = 'powerBank' as const;
 export const STRUCTURE_POWER_SPAWN = 'powerSpawn' as const;
 export const STRUCTURE_EXTRACTOR = 'extractor' as const;
 export const STRUCTURE_LAB = 'lab' as const;
 export const STRUCTURE_TERMINAL = 'terminal' as const;
-export const STRUCTURE_CONTAINER = 'container' as const;
 export const STRUCTURE_NUKER = 'nuker' as const;
 export const STRUCTURE_FACTORY = 'factory' as const;
 export const STRUCTURE_INVADER_CORE = 'invaderCore' as const;
@@ -42,60 +36,8 @@ export const ROAD_WEAROUT_POWER_CREEP = 100;
 export const ROAD_DECAY_AMOUNT = 100;
 export const ROAD_DECAY_TIME = 1000;
 
-export const LINK_HITS = 1000;
-export const LINK_HITS_MAX = 1000;
-export const LINK_CAPACITY = 800;
-export const LINK_COOLDOWN = 1;
-export const LINK_LOSS_RATIO = 0.03;
-
-export const STORAGE_CAPACITY = 1000000;
-export const STORAGE_HITS = 10000;
-
 export const CONSTRUCTION_COST_ROAD_SWAMP_RATIO = 5;
 export const CONSTRUCTION_COST_ROAD_WALL_RATIO = 150;
-
-export const CONTROLLER_LEVELS = [ undefined, 200, 45000, 135000, 405000, 1215000, 3645000, 10935000 ];
-export const CONTROLLER_STRUCTURES = {
-	'spawn': [ 0, 1, 1, 1, 1, 1, 1, 2, 3 ],
-	'extension': [ 0, 0, 5, 10, 20, 30, 40, 50, 60 ],
-	'link': [ 0, 0, 0, 0, 0, 2, 3, 4, 6 ],
-	'road': [ 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500 ],
-	'constructedWall': [ 0, 0, 2500, 2500, 2500, 2500, 2500, 2500, 2500 ],
-	'rampart': [ 0, 0, 2500, 2500, 2500, 2500, 2500, 2500, 2500 ],
-	'storage': [ 0, 0, 0, 0, 1, 1, 1, 1, 1 ],
-	'tower': [ 0, 0, 0, 1, 1, 2, 2, 3, 6 ],
-	'observer': [ 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-	'powerSpawn': [ 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-	'extractor': [ 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
-	'terminal': [ 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
-	'lab': [ 0, 0, 0, 0, 0, 0, 3, 6, 10 ],
-	'container': [ 5, 5, 5, 5, 5, 5, 5, 5, 5 ],
-	'nuker': [ 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-	'factory': [ 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-};
-export const CONTROLLER_DOWNGRADE = [ undefined, 20000, 10000, 20000, 40000, 80000, 120000, 150000, 200000 ];
-export const CONTROLLER_DOWNGRADE_RESTORE = 100;
-export const CONTROLLER_DOWNGRADE_SAFEMODE_THRESHOLD = 5000;
-export const CONTROLLER_CLAIM_DOWNGRADE = 300;
-export const CONTROLLER_RESERVE = 1;
-export const CONTROLLER_RESERVE_MAX = 5000;
-export const CONTROLLER_MAX_UPGRADE_PER_TICK = 15;
-export const CONTROLLER_ATTACK_BLOCKED_UPGRADE = 1000;
-export const CONTROLLER_NUKE_BLOCKED_UPGRADE = 200;
-
-export const SAFE_MODE_DURATION = 20000;
-export const SAFE_MODE_COOLDOWN = 50000;
-export const SAFE_MODE_COST = 1000;
-
-export const TOWER_HITS = 3000;
-export const TOWER_CAPACITY = 1000;
-export const TOWER_ENERGY_COST = 10;
-export const TOWER_POWER_ATTACK = 600;
-export const TOWER_POWER_HEAL = 400;
-export const TOWER_POWER_REPAIR = 800;
-export const TOWER_OPTIMAL_RANGE = 5;
-export const TOWER_FALLOFF_RANGE = 20;
-export const TOWER_FALLOFF = 0.75;
 
 export const OBSERVER_HITS = 500;
 export const OBSERVER_RANGE = 10;

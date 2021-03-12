@@ -123,11 +123,8 @@ export const SIGN_NOVICE_AREA = SIGN_PLANNED_AREA;
 export const SIGN_RESPAWN_AREA = SIGN_PLANNED_AREA;
 
 export const EVENT_OBJECT_DESTROYED = 2;
-export const EVENT_ATTACK_CONTROLLER = 3;
 export const EVENT_BUILD = 4;
 export const EVENT_REPAIR = 7;
-export const EVENT_RESERVE_CONTROLLER = 8;
-export const EVENT_UPGRADE_CONTROLLER = 9;
 export const EVENT_EXIT = 10;
 export const EVENT_POWER = 11;
 export const EVENT_TRANSFER = 12;

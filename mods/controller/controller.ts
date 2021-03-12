@@ -1,13 +1,15 @@
+import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
+import * as Structure from 'xxscreeps/mods/structure/structure';
+import * as RoomObject from 'xxscreeps/game/object';
 import { declare, compose, member, struct, variant, withOverlay } from 'xxscreeps/schema';
-import * as Structure from '.';
 
 export const DowngradeTime = Symbol('downgradeTime');
 export const Progress = Symbol('progress');
 export const UpgradeBlockedTime = Symbol('upgradeBlockedTime');
 
-export function format() { return compose(shape, StructureController) }
+export const format = () => compose(shape, StructureController);
 const shape = declare('Controller', struct(Structure.format, {
 	...variant('controller'),
 	isPowerEnabled: 'bool',
@@ -35,5 +37,20 @@ export class StructureController extends withOverlay(Structure.Structure, shape)
 		}
 	}
 
+	[RoomObject.AfterInsert](room: Room) {
+		super[RoomObject.AfterInsert](room);
+		room.controller = this;
+	}
+	[RoomObject.AfterRemove](room: Room) {
+		super[RoomObject.AfterRemove](room);
+		room.controller = undefined;
+	}
+
 	_upgradePowerThisTick?: number; // processor
+}
+
+declare module 'xxscreeps/game/room' {
+	interface Room {
+		controller?: StructureController;
+	}
 }

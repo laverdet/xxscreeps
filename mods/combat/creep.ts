@@ -3,7 +3,7 @@ import * as Game from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
 import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
-import { Structure } from 'xxscreeps/game/objects/structures';
+import { Structure } from 'xxscreeps/mods/structure/structure';
 
 // Creep extension declaration
 declare module 'xxscreeps/game/objects/creep' {

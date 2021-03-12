@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Structure from '.';
+import * as Structure from '../../../../mods/structure/structure';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, member, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';

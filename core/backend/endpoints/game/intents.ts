@@ -5,7 +5,7 @@ import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { loadRoom, loadRooms, saveRoom } from 'xxscreeps/backend/model/room';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
-import * as ControllerIntents from 'xxscreeps/engine/processor/intents/controller';
+import * as ControllerIntents from 'xxscreeps/mods/controller/processor';
 import * as Spawn from 'xxscreeps/mods/spawn/spawn';
 import { insertObject } from 'xxscreeps/game/room/methods';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';

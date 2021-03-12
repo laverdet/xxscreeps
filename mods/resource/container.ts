@@ -2,7 +2,7 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Structure from 'xxscreeps/game/objects/structures';
+import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as Store from './store';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';

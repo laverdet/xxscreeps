@@ -10,6 +10,8 @@ import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { assign } from 'xxscreeps/utility/utility';
 
 export const AddToMyGame = Symbol('addToMyGame');
+export const AfterInsert = Symbol('afterInsert');
+export const AfterRemove = Symbol('afterRemove');
 export const LookType = Symbol('lookType');
 export const Owner = Symbol('owner');
 
@@ -28,8 +30,13 @@ export abstract class RoomObject extends withOverlay(BufferObject, shape) {
 	abstract get [LookType](): LookConstants;
 	room!: Room;
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	[AddToMyGame](game: Game) {}
+	[AddToMyGame](_game: Game) {}
+	[AfterInsert](room: Room) {
+		this.room = room;
+	}
+	[AfterRemove](_room: Room) {
+		this.room = undefined as never;
+	}
 
 	[Symbol.for('nodejs.util.inspect.custom')]() {
 		return expandGetters(this);

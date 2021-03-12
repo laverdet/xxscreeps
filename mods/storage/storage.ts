@@ -2,11 +2,12 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
-import * as Structure from '.';
+import * as Structure from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
-export function format() { return compose(shape, StructureStorage) }
+export const format = () => compose(shape, StructureStorage);
 const shape = declare('Storage', struct(Structure.format, {
 	...variant('storage'),
 	store: Store.format,
@@ -23,3 +24,6 @@ export function create(pos: RoomPosition, owner: string) {
 		[RoomObject.Owner]: owner,
 	});
 }
+
+// `ConstructionSite` registration
+registerBuildableStructure(C.STRUCTURE_EXTENSION, site => create(site.pos, site.owner));
