@@ -15,6 +15,7 @@ import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Direction, getDirection } from './direction';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
 
+export { isBorder, isNearBorder } from '../terrain';
 export { Direction, getOffsetsFromDirection, getPositonInDirection, iterateNeighbors } from './direction';
 export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './name';
 

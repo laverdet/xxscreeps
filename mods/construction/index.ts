@@ -1,5 +1,5 @@
-import { StructureFactory, structureFactories } from './symbols';
+import { ConstructionTraits, structureFactories } from './symbols';
 
-export function registerBuildableStructure(structureType: string, factory: StructureFactory) {
+export function registerBuildableStructure(structureType: string, factory: ConstructionTraits) {
 	structureFactories.set(structureType, factory);
 }

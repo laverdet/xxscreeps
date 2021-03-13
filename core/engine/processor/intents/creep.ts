@@ -7,7 +7,7 @@ import * as CreepLib from 'xxscreeps/game/objects/creep';
 import type { Resource } from 'xxscreeps/mods/resource/resource';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 import type { StructureController } from 'xxscreeps/mods/controller/controller';
-import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
+import { NextDecayTime, StructureRoad } from 'xxscreeps/mods/road/road';
 import type { Direction } from 'xxscreeps/game/position';
 import type { LookForType } from 'xxscreeps/game/room';
 import { moveObject, removeObject } from 'xxscreeps/game/room/methods';

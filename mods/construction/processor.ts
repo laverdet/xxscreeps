@@ -48,7 +48,7 @@ const intents = [
 registerObjectTickProcessor(ConstructionSite, site => {
 	if (site.progress >= site.progressTotal) {
 		const { room } = site;
-		const structure = structureFactories.get(site.structureType)?.(site);
+		const structure = structureFactories.get(site.structureType)?.create(site, site.name);
 		removeObject(site);
 		if (structure) {
 			insertObject(room, structure);

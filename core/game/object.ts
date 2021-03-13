@@ -1,6 +1,6 @@
-import type { Game } from 'xxscreeps/game';
-import type { Room } from 'xxscreeps/game/room';
-import type { LookConstants } from 'xxscreeps/game/room/look';
+import type { Game } from '.';
+import type { Room } from './room';
+import type { LookConstants } from './room/look';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomPosition from 'xxscreeps/game/position';
 import { compose, declare, optional, struct, vector, withOverlay } from 'xxscreeps/schema';
@@ -14,6 +14,7 @@ export const AfterInsert = Symbol('afterInsert');
 export const AfterRemove = Symbol('afterRemove');
 export const LookType = Symbol('lookType');
 export const Owner = Symbol('owner');
+export const PathCost = Symbol('pathCost');
 
 export function format() { return compose(shape, RoomObject) }
 const shape = declare('RoomObject', struct({
@@ -44,6 +45,10 @@ export abstract class RoomObject extends withOverlay(BufferObject, shape) {
 
 	get [IntentIdentifier]() {
 		return { group: this.room.name, name: this.id };
+	}
+
+	get [PathCost](): undefined | number {
+		return undefined;
 	}
 }
 

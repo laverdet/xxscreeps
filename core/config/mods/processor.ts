@@ -5,6 +5,7 @@ import 'xxscreeps/mods/harvestable/processor';
 import 'xxscreeps/mods/invader/processor';
 import 'xxscreeps/mods/npc/processor';
 import 'xxscreeps/mods/resource/processor';
+import 'xxscreeps/mods/road/processor';
 import 'xxscreeps/mods/source/processor';
 import 'xxscreeps/mods/spawn/processor';
 import './game';

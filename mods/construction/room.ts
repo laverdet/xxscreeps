@@ -3,8 +3,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as Game from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Room, lookFor, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
-import { RoomPosition, fetchArguments, iterateNeighbors } from 'xxscreeps/game/position';
-import { isBorder, isNearBorder } from 'xxscreeps/game/terrain';
+import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';
 import { extend } from 'xxscreeps/utility/utility';
 import { ConstructibleStructureType, ConstructionSite } from './construction-site';
 import { structureFactories } from './symbols';
@@ -99,31 +98,20 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		}
 	}
 
-	// No structures on borders
-	if (isNearBorder(pos.x, pos.y)) {
+	// checkPlacement hook
+	if (structureFactories.get(structureType)?.checkPlacement(room, pos) === null) {
 		return C.ERR_INVALID_TARGET;
 	}
 
-	// No structures next to borders unless it's against a wall, or it's a road/container
-	const terrain = room.getTerrain();
-	if (structureType !== 'road' && structureType !== 'container' && isNearBorder(pos.x, pos.y)) {
-		for (const neighbor of iterateNeighbors(pos)) {
-			if (
-				isBorder(neighbor.x, neighbor.y) &&
-				terrain.get(neighbor.x, neighbor.y) !== C.TERRAIN_MASK_WALL
-			) {
-				return C.ERR_INVALID_TARGET;
-			}
-		}
-	}
-
 	// No structures on walls except for roads and extractors
+	/*
 	if (
 		structureType !== 'extractor' && structureType !== 'road' &&
 		terrain.get(pos.x, pos.y) === C.TERRAIN_MASK_WALL
 	) {
 		return C.ERR_INVALID_TARGET;
 	}
+	*/
 
 	// No structures on top of others
 	for (const object of Fn.concat(

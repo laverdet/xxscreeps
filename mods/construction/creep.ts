@@ -2,9 +2,9 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
-import { obstacleTypes } from 'xxscreeps/game/path-finder';
 import { extend } from 'xxscreeps/utility/utility';
 import { ConstructionSite } from './construction-site';
+import { structureFactories } from './symbols';
 
 declare module 'xxscreeps/game/objects/creep' {
 	interface Creep {
@@ -38,7 +38,7 @@ export function checkBuild(creep: Creep, target: ConstructionSite) {
 			// A friendly creep sitting on top of a construction site for an obstacle structure prevents
 			// `build`
 			const { room } = target;
-			if (obstacleTypes.has(target.structureType)) {
+			if (structureFactories.get(target.structureType)?.obstacle) {
 				const creepFilter = room.controller?.safeMode ? (creep: Creep) => creep.my : () => true;
 				for (const creep of room.find(C.FIND_CREEPS)) {
 					if (target.pos.isEqualTo(creep) && creepFilter(creep)) {

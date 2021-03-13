@@ -2,7 +2,6 @@ import * as Fn from 'xxscreeps/utility/functional';
 import { bindRenderer } from 'xxscreeps/backend';
 import { RoomObject } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/game/objects/creep';
-import { NextDecayTime, StructureRoad } from 'xxscreeps/game/objects/structures/road';
 import { renderStore } from 'xxscreeps/mods/resource/backend';
 import { ActionLog } from 'xxscreeps/game/objects/action-log';
 import { Variant } from 'xxscreeps/schema';
@@ -29,9 +28,4 @@ bindRenderer(Creep, (creep, next) => ({
 	user: creep.owner,
 	actionLog: Fn.fromEntries(creep[ActionLog], action =>
 		[ action.action, { x: action.x, y: action.y } ]),
-}));
-
-bindRenderer(StructureRoad, (road, next) => ({
-	...next(),
-	nextDecayTime: road[NextDecayTime],
 }));

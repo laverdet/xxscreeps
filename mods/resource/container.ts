@@ -19,6 +19,10 @@ export class StructureContainer extends withOverlay(Structure.Structure, shape) 
 	get storeCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 	get structureType() { return C.STRUCTURE_CONTAINER }
 	get ticksToDecay() { return Math.max(0, this._nextDecayTime - Game.time) }
+
+	[Structure.CheckObstacle]() {
+		return false;
+	}
 }
 
 export function create(pos: RoomPosition) {
@@ -31,4 +35,13 @@ export function create(pos: RoomPosition) {
 	});
 }
 
-registerBuildableStructure(C.STRUCTURE_CONTAINER, site => create(site.pos));
+registerBuildableStructure(C.STRUCTURE_CONTAINER, {
+	obstacle: false,
+	checkPlacement(room, pos) {
+		return Structure.checkWall(pos) === C.OK ?
+			C.CONSTRUCTION_COST.container : null;
+	},
+	create(site) {
+		return create(site.pos);
+	},
+});

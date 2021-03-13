@@ -11,7 +11,7 @@ import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { assign } from 'xxscreeps/utility/utility';
 import { StructureController } from '../../../mods/controller/controller';
-import { RoomSearchOptions, SearchReturn } from '../path-finder';
+import { RoomSearchOptions, registerObstacleChecker } from '../path-finder';
 import { Resource, ResourceType, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 import { Structure } from '../../../mods/structure/structure';
 
@@ -92,7 +92,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	 * @param path A path value as returned from `Room.findPath`, `RoomPosition.findPathTo`, or
 	 * `PathFinder.search` methods. Both array form and serialized string form are accepted.
 	 */
-	moveByPath(path: RoomPath | SearchReturn['path'] | string): C.ErrorCode {
+	moveByPath(path: RoomPath | RoomPosition[] | string): C.ErrorCode {
 		// Parse serialized path
 		if (typeof path === 'string') {
 			return this.moveByPath(this.room.deserializePath(path));
@@ -263,6 +263,19 @@ export function create(pos: RoomPosition, body: PartType[], name: string, owner:
 		[RoomObject.Owner]: owner,
 	});
 }
+
+registerObstacleChecker(params => {
+	const { room, user } = params;
+	if (params.ignoreCreeps) {
+		return null;
+	} else if (room.controller?.safeMode === undefined) {
+		return object => object instanceof Creep;
+	} else {
+		const safeUser = room.controller[RoomObject.Owner];
+		return object => object instanceof Creep &&
+			(object[RoomObject.Owner] === safeUser || object[RoomObject.Owner] !== user);
+	}
+});
 
 //
 // Intent checks

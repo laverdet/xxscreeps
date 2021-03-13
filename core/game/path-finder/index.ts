@@ -1,0 +1,115 @@
+export { registerObstacleChecker } from './obstacle';
+export { CostMatrix, search };
+
+import type { RoomPosition } from '../position';
+import * as Game from '..';
+import { search } from 'xxscreeps/driver/path-finder';
+import { getOrSet } from 'xxscreeps/utility/utility';
+import { registerGlobal } from '../globals';
+import { PathCost } from '../object';
+import { CostMatrix } from './cost-matrix';
+import { makeObstacleChecker } from './obstacle';
+
+export type Goal = RoomPosition | { pos: RoomPosition; range: number };
+
+type CommonSearchOptions = {
+	plainCost?: number;
+	swampCost?: number;
+	maxOps?: number;
+	maxRooms?: number;
+	heuristicWeight?: number;
+};
+
+export type SearchOptions = CommonSearchOptions & {
+	roomCallback?: (roomName: string) => CostMatrix | false | undefined;
+	flee?: boolean;
+	maxCost?: number;
+};
+
+export type RoomSearchOptions = CommonSearchOptions & {
+	costCallback?: (roomName: string, costMatrix: CostMatrix) => CostMatrix | undefined | void;
+	ignoreCreeps?: boolean;
+	ignoreDestructibleStructures?: boolean;
+	ignoreRoads?: boolean;
+	range?: number;
+};
+
+const cachedCostMatrices = new Map<string, CostMatrix | undefined>();
+
+export function flush() {
+	cachedCostMatrices.clear();
+}
+
+export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options: RoomSearchOptions) {
+	// Convert room search options to PathFinder options
+	const { costCallback, ignoreCreeps, ignoreDestructibleStructures, ignoreRoads } = options;
+	const costMatrixKey =
+		(ignoreCreeps ? 'a' : '') +
+		(ignoreDestructibleStructures ? 'b' : '') +
+		(ignoreRoads ? 'c' : '');
+	const baseCost = ignoreRoads ? 1 : 2;
+	const internalOptions: SearchOptions = {
+		heuristicWeight: options.heuristicWeight,
+		maxOps: options.maxOps,
+		maxRooms: options.maxRooms,
+		plainCost: options.plainCost ?? baseCost,
+		swampCost: options.swampCost ?? baseCost * 5,
+
+		roomCallback(roomName) {
+			// Get cost matrix for this room
+			const costMatrix = getOrSet(cachedCostMatrices, `${roomName}:${costMatrixKey}`, () => {
+				// Return early if there's no access to this room
+				const room = Game.rooms[roomName];
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+				if (!room) {
+					return;
+				}
+				const costMatrix = new CostMatrix;
+
+				// Mark obstacles
+				const check = makeObstacleChecker({
+					ignoreCreeps,
+					ignoreDestructibleStructures,
+					isPathFinder: true,
+					room,
+					type: 'creep',
+					user: Game.me,
+				});
+				for (const object of room._objects) {
+					const { x, y } = object.pos;
+					if (check(object)) {
+						costMatrix.set(x, y, 0xff);
+					} else if (!ignoreRoads) {
+						const cost = object[PathCost];
+						if (cost !== undefined && cost < costMatrix.get(x, y)) {
+							costMatrix.set(x, y, cost);
+						}
+					}
+				}
+				return costMatrix;
+			});
+
+			// Allow user to augment the cost matrix
+			if (costCallback) {
+				const clonedMatrix = costMatrix?.clone() ?? new CostMatrix;
+				const nextMatrix = costCallback(roomName, clonedMatrix) ?? clonedMatrix;
+				if (nextMatrix instanceof CostMatrix) {
+					return nextMatrix;
+				}
+			}
+			return costMatrix;
+		},
+	};
+
+	// Make goals
+	const range = Math.max(1, options.range ?? 1);
+	const goalsWithRange = (Array.isArray(goals) ? goals : [ goals ]).map(
+		pos => ({ pos, range }));
+
+	// Invoke the big boy pathfinder
+	return search(origin, goalsWithRange, internalOptions);
+}
+
+function use() {}
+
+registerGlobal('PathFinder', { CostMatrix, use, search });

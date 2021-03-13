@@ -3,6 +3,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
+import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { compose, declare, enumerated, member, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { structureFactories } from './symbols';
@@ -41,3 +42,15 @@ export function create(
 		[RoomObject.Owner]: owner,
 	});
 }
+
+// Register path finder logic
+registerObstacleChecker(params => {
+	const { user } = params;
+	if (params.isPathFinder) {
+		return object => object instanceof ConstructionSite &&
+			object.owner === user &&
+			(structureFactories.get(object.structureType)?.obstacle ?? true);
+	} else {
+		return null;
+	}
+});

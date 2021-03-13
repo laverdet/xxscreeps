@@ -40,5 +40,13 @@ export function create(pos: RoomPosition, level: number, owner: string) {
 	});
 }
 
-registerBuildableStructure(C.STRUCTURE_EXTENSION, site =>
-	create(site.pos, site.room.controller?.level ?? 1, site.owner));
+registerBuildableStructure(C.STRUCTURE_EXTENSION, {
+	obstacle: true,
+	checkPlacement(room, pos) {
+		return Structure.checkPlacement(room, pos) === C.OK ?
+			C.CONSTRUCTION_COST.extension : null;
+	},
+	create(site) {
+		return create(site.pos, site.room.controller?.level ?? 1, site.owner);
+	},
+});

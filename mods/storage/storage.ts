@@ -26,4 +26,13 @@ export function create(pos: RoomPosition, owner: string) {
 }
 
 // `ConstructionSite` registration
-registerBuildableStructure(C.STRUCTURE_EXTENSION, site => create(site.pos, site.owner));
+registerBuildableStructure(C.STRUCTURE_STORAGE, {
+	obstacle: true,
+	checkPlacement(room, pos) {
+		return Structure.checkPlacement(room, pos) === C.OK ?
+			C.CONSTRUCTION_COST.storage : null;
+	},
+	create(site) {
+		return create(site.pos, site.owner);
+	},
+});

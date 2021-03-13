@@ -1,14 +1,12 @@
 import lodash from 'lodash';
 import * as C from './constants';
 import * as Memory from './memory';
-import PathFinder from './path-finder';
 import { Flag } from './flag';
 import { RoomPosition } from './position';
 import { Room } from './room';
 import { RoomVisual } from './visual';
 
 import { Creep } from './objects/creep';
-import { StructureRoad } from './objects/structures/road';
 
 const runtimeGlobals: Record<string, any> = Object.create(null);
 export function registerGlobal(name: string, value: any): void;
@@ -29,9 +27,6 @@ export function setupGlobals(globalThis: any) {
 	for (const [ identifier, value ] of Object.entries(C)) {
 		globalThis[identifier] = value;
 	}
-
-	// Namespaces
-	globalThis.PathFinder = PathFinder;
 
 	// Memory
 	globalThis.RawMemory = Memory.RawMemory;
@@ -55,7 +50,6 @@ export function setupGlobals(globalThis: any) {
 		Room,
 		RoomPosition,
 		RoomVisual,
-		StructureRoad,
 	})) {
 		globalThis[key] = object;
 	}

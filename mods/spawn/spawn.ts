@@ -12,7 +12,6 @@ import { declare, compose, optional, struct, variant, vector, withOverlay } from
 import { assign } from 'xxscreeps/utility/utility';
 import { Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { StructureExtension } from './extension';
 
 type SpawnCreepOptions = {
@@ -104,9 +103,6 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 			});
 	}
 }
-
-registerBuildableStructure(C.STRUCTURE_SPAWN, site =>
-	create(site.pos, site.owner, site.name));
 
 export function create(pos: RoomPosition, owner: string, name: string) {
 	return assign(RoomObject.create(new StructureSpawn, pos), {

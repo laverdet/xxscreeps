@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import { Creep } from 'xxscreeps/game/objects/creep';
-import { obstacleChecker } from 'xxscreeps/game/path-finder';
+import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { getOffsetsFromDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
 import * as Fn from 'xxscreeps/utility/functional';
@@ -77,7 +77,12 @@ export function dispatch(room: Room) {
 	const terrain = room.getTerrain();
 	check: for (const creep of movingCreeps) {
 		const { _nextPosition } = creep;
-		const check = obstacleChecker(room, creep.owner);
+		const check = makeObstacleChecker({
+			isPathFinder: false,
+			room,
+			type: C.LOOK_CREEPS,
+			user: creep.owner,
+		});
 		for (const look of Fn.concat(
 			room.lookForAt(C.LOOK_CREEPS, _nextPosition!),
 			room.lookForAt(C.LOOK_STRUCTURES, _nextPosition!),
