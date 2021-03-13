@@ -11,12 +11,12 @@ export function clamp(min: number, max: number, value: number) {
 }
 
 // Replace a value on an object with a new one, and returns the old one.
-export function exchange<Target extends {}, Name extends keyof Target>(
-		target: Target, name: Name, newValue?: Target[Name]) {
+export function exchange<T, N extends keyof T>(
+	target: T, name: N,
+	...newValue: undefined extends T[N] ? [ T[N]? ] : [ T[N] ]): T[N];
+export function exchange(target: any, name: keyof any, newValue: any = undefined) {
 	const value = target[name];
-	if (newValue !== undefined || name in target) {
-		target[name] = newValue!;
-	}
+	target[name] = newValue;
 	return value;
 }
 

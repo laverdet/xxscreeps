@@ -1,10 +1,16 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
+import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Owner } from 'xxscreeps/game/object';
-import { registerObjectTickProcessor } from 'xxscreeps/processor';
+import { Creep } from 'xxscreeps/game/objects/creep';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
+import { calculatePower } from 'xxscreeps/engine/processor/intents/creep';
 import { exchange } from 'xxscreeps/utility/utility';
-import { DowngradeTime, Progress, StructureController } from './controller';
+import { DowngradeTime, Progress, StructureController, UpgradePowerThisTick } from './controller';
+import { checkUpgradeController } from './creep';
+import { saveAction } from 'xxscreeps/game/objects/action-log';
 
+// Processor methods
 export function claim(controller: StructureController, user: string) {
 	// Take controller
 	controller[Owner] = user;
@@ -14,10 +20,9 @@ export function claim(controller: StructureController, user: string) {
 	controller.level = 1;
 }
 
-export function upgrade(controller: StructureController, energy: number) {
-
+function upgradeController(controller: StructureController, energy: number) {
 	controller[Progress] += energy;
-	controller._upgradePowerThisTick = (controller._upgradePowerThisTick ?? 0) + energy;
+	controller[UpgradePowerThisTick] = (controller[UpgradePowerThisTick] ?? 0) + energy;
 
 	if (controller.level < 8) {
 		const nextLevel = C.CONTROLLER_LEVELS[controller.level]!;
@@ -34,8 +39,23 @@ export function upgrade(controller: StructureController, energy: number) {
 	}
 }
 
+// Register intent processors
+declare module 'xxscreeps/processor' {
+	interface Intent { controller: typeof intent }
+}
+const intent = registerIntentProcessor(Creep, 'upgradeController', (creep, id: string) => {
+	const target = Game.getObjectById<StructureController>(id)!;
+	if (checkUpgradeController(creep, target) === C.OK) {
+		const power = calculatePower(creep, C.WORK, C.UPGRADE_CONTROLLER_POWER);
+		const energy = Math.min(power, creep.store.energy);
+		Store.subtract(creep.store, 'energy', energy);
+		upgradeController(target, energy);
+		saveAction(creep, 'upgradeController', target.pos.x, target.pos.y);
+	}
+});
+
 registerObjectTickProcessor(StructureController, controller => {
-	const upgradePower = exchange(controller, '_upgradePowerThisTick');
+	const upgradePower = exchange(controller, UpgradePowerThisTick);
 	if (upgradePower !== undefined) {
 		controller[DowngradeTime] = 1 + Math.min(
 			controller[DowngradeTime] + C.CONTROLLER_DOWNGRADE_RESTORE,

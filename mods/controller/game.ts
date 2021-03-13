@@ -1,3 +1,4 @@
+import './creep';
 import * as Controller from './controller';
 import { registerSchema } from 'xxscreeps/engine/schema';
 import { registerGlobal } from 'xxscreeps/game';

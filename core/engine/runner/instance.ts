@@ -64,7 +64,7 @@ export class PlayerInstance {
 		this.sandbox?.dispose();
 	}
 
-	async run(time: number, roomBlobs: Readonly<Uint8Array>[]) {
+	async run(this: PlayerInstance, time: number, roomBlobs: Readonly<Uint8Array>[]) {
 		// Dispose the current sandbox if the user has pushed new code
 		if (this.stale) {
 			this.sandbox!.dispose();

@@ -29,5 +29,5 @@ export class BufferObject {
 	}
 }
 
-export const getBuffer = exchange(BufferObject, GetBuffer);
-export const getOffset = exchange(BufferObject, GetOffset);
+export const getBuffer = exchange(BufferObject, GetBuffer, (): never => { throw new Error });
+export const getOffset = exchange(BufferObject, GetOffset, (): never => { throw new Error });

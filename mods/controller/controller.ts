@@ -8,6 +8,7 @@ import { declare, compose, member, struct, variant, withOverlay } from 'xxscreep
 export const DowngradeTime = Symbol('downgradeTime');
 export const Progress = Symbol('progress');
 export const UpgradeBlockedTime = Symbol('upgradeBlockedTime');
+export const UpgradePowerThisTick = Symbol('upgradePowerThisTick');
 
 export const format = () => compose(shape, StructureController);
 const shape = declare('Controller', struct(Structure.format, {
@@ -46,7 +47,7 @@ export class StructureController extends withOverlay(Structure.Structure, shape)
 		room.controller = undefined;
 	}
 
-	_upgradePowerThisTick?: number; // processor
+	[UpgradePowerThisTick]: number | undefined;
 }
 
 declare module 'xxscreeps/game/room' {

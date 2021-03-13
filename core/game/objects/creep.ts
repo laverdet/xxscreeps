@@ -10,7 +10,6 @@ import { compose, declare, enumerated, member, struct, variant, vector, withOver
 import { fetchPositionArgument, Direction, RoomPosition } from '../position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { assign } from 'xxscreeps/utility/utility';
-import { StructureController } from '../../../mods/controller/controller';
 import { RoomSearchOptions, registerObstacleChecker } from '../path-finder';
 import { Resource, ResourceType, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 import { Structure } from '../../../mods/structure/structure';
@@ -235,12 +234,6 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	say(message: string) {}
-	upgradeController(this: Creep, target: StructureController) {
-		return chainIntentChecks(
-			() => checkUpgradeController(this, target),
-			() => Game.intents.save(this, 'upgradeController', target.id),
-		);
-	}
 
 	withdraw(this: Creep, target: Extract<Store.RoomObjectWithStore, Structure>, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
@@ -328,6 +321,12 @@ export function checkPickup(creep: Creep, target: Resource) {
 		});
 }
 
+
+export function checkResource(creep: Creep, amount = 1, resource = C.RESOURCE_ENERGY) {
+	return creep.store[resource] >= amount ?
+		C.OK : C.ERR_NOT_ENOUGH_RESOURCES;
+}
+
 function checkTransferOrWithdraw(
 	creep: Creep,
 	target: Store.RoomObjectWithStore,
@@ -392,33 +391,6 @@ export function checkTransfer(
 
 			} else if (tryAmount > targetFreeCapacity) {
 				return C.ERR_FULL;
-			}
-
-			return C.OK;
-		});
-}
-
-export function checkUpgradeController(creep: Creep, target: StructureController) {
-	return chainIntentChecks(
-		() => checkCommon(creep),
-		() => {
-			if (creep.getActiveBodyparts(C.WORK) <= 0) {
-				return C.ERR_NO_BODYPART;
-
-			} else if (creep.store.energy <= 0) {
-				return C.ERR_NOT_ENOUGH_RESOURCES;
-
-			} else if (!(target instanceof StructureController)) {
-				return C.ERR_INVALID_TARGET;
-
-			} else if (target.upgradeBlocked! > 0) {
-				return C.ERR_INVALID_TARGET;
-
-			} else if (!creep.pos.inRangeTo(target.pos, 3)) {
-				return C.ERR_NOT_IN_RANGE;
-
-			} else if (!target.my) {
-				return C.ERR_NOT_OWNER;
 			}
 
 			return C.OK;

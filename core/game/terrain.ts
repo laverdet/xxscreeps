@@ -34,7 +34,7 @@ export class Terrain {
 	}
 }
 
-export const getBuffer = exchange(Terrain, GetBufferSymbol);
+export const getBuffer = exchange(Terrain, GetBufferSymbol, (): never => { throw new Error });
 
 export class TerrainWriter extends Terrain {
 	constructor(buffer = new Uint8Array(625)) {
