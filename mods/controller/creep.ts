@@ -2,11 +2,11 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
-import { Creep, checkCommon, checkResource } from 'xxscreeps/game/objects/creep';
+import { Creep, checkCommon, checkResource } from 'xxscreeps/mods/creep/creep';
 import { StructureController } from './controller';
 
 // Creep extension declaration
-declare module 'xxscreeps/game/objects/creep' {
+declare module 'xxscreeps/mods/creep/creep' {
 	interface Creep {
 		/**
 		 * Upgrade your controller to the next level using carried energy. Upgrading controllers raises

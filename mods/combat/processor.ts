@@ -1,10 +1,10 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
-import { Creep } from 'xxscreeps/game/objects/creep';
-import { calculatePower } from 'xxscreeps/engine/processor/intents/creep';
+import { Creep } from 'xxscreeps/mods/creep/creep';
+import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { registerIntentProcessor } from 'xxscreeps/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
-import { saveAction } from 'xxscreeps/game/objects/action-log';
+import { saveAction } from 'xxscreeps/game/action-log';
 
 import { AttackTarget, checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep';
 import { AttackTypes } from './game';

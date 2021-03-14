@@ -1,12 +1,12 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
-import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
+import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
 import { extend } from 'xxscreeps/utility/utility';
 import { ConstructionSite } from './construction-site';
 import { structureFactories } from './symbols';
 
-declare module 'xxscreeps/game/objects/creep' {
+declare module 'xxscreeps/mods/creep/creep' {
 	interface Creep {
 		/**
 		 * Build a structure at the target construction site using carried energy. Requires `WORK` and

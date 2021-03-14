@@ -1,6 +1,6 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
-import * as Creep from 'xxscreeps/game/objects/creep';
+import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as Game from 'xxscreeps/game';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';

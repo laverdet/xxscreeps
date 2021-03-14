@@ -13,10 +13,11 @@ export const AddToMyGame = Symbol('addToMyGame');
 export const AfterInsert = Symbol('afterInsert');
 export const AfterRemove = Symbol('afterRemove');
 export const LookType = Symbol('lookType');
+export const NextPosition = Symbol('nextPosition');
 export const Owner = Symbol('owner');
 export const PathCost = Symbol('pathCost');
 
-export function format() { return compose(shape, RoomObject) }
+export const format = () => compose(shape, RoomObject);
 const shape = declare('RoomObject', struct({
 	id: Id.format,
 	pos: RoomPosition.format,
@@ -27,9 +28,12 @@ const shape = declare('RoomObject', struct({
 	}))),
 }));
 
+export type RoomObjectWithOwner = { [Owner]: string } & RoomObject;
+
 export abstract class RoomObject extends withOverlay(BufferObject, shape) {
 	abstract get [LookType](): LookConstants;
 	room!: Room;
+	[NextPosition]?: RoomPosition.RoomPosition | null;
 
 	[AddToMyGame](_game: Game) {}
 	[AfterInsert](room: Room) {

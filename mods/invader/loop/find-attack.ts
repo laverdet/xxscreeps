@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as PathFinder from 'xxscreeps/game/path-finder';
 import type { RoomPosition } from 'xxscreeps/game/position';
-import type { Creep } from 'xxscreeps/game/objects/creep';
+import type { Creep } from 'xxscreeps/mods/creep/creep';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 import flee from './flee';
 

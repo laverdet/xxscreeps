@@ -1,7 +1,7 @@
 import * as Game from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
+import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
 import { CheckHarvest, Harvestable, HarvestResult } from './game';
 
 // `harvest` intent check
@@ -12,7 +12,7 @@ export function checkHarvest(creep: Creep, target: Harvestable) {
 	) as HarvestResult;
 }
 
-declare module 'xxscreeps/game/objects/creep' {
+declare module 'xxscreeps/mods/creep/creep' {
 	interface Creep {
 		/**
 		 * Harvest energy from the source or resources from minerals and deposits. Requires the WORK

@@ -18,10 +18,7 @@ export function registerFindHandlers<Find extends { [find: number]: FindHandler 
 
 // Built-in FIND_ handlers
 const builtinFind = registerFindHandlers({
-	// Creeps
-	[C.FIND_CREEPS]: room => lookFor(room, C.LOOK_CREEPS),
-	[C.FIND_MY_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => creep.my),
-	[C.FIND_HOSTILE_CREEPS]: room => lookFor(room, C.LOOK_CREEPS).filter(creep => !creep.my),
+	[C.FIND_FLAGS]: room => lookFor(room, C.LOOK_FLAGS),
 });
 export interface Find { builtin: typeof builtinFind }
 

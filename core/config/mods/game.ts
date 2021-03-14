@@ -1,6 +1,7 @@
 import 'xxscreeps/mods/combat/game';
 import 'xxscreeps/mods/construction/game';
 import 'xxscreeps/mods/controller/game';
+import 'xxscreeps/mods/creep/game';
 import 'xxscreeps/mods/defense/game';
 import 'xxscreeps/mods/harvestable/game';
 import 'xxscreeps/mods/invader/game';

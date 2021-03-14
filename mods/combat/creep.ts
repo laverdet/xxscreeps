@@ -2,11 +2,11 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
-import { Creep, checkCommon } from 'xxscreeps/game/objects/creep';
+import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
 import { Structure } from 'xxscreeps/mods/structure/structure';
 
 // Creep extension declaration
-declare module 'xxscreeps/game/objects/creep' {
+declare module 'xxscreeps/mods/creep/creep' {
 	interface Creep {
 		/**
 		 * Attack another creep, power creep, or structure in a short-ranged attack. Requires the

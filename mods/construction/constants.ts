@@ -20,6 +20,11 @@ export interface ConstructionCost {}
 export const CONSTRUCTION_COST: ConstructionCost & typeof consts = consts as never;
 
 export const BUILD_POWER = 5;
+export const REPAIR_POWER = 100;
+export const DISMANTLE_POWER = 50;
+
+export const REPAIR_COST = 0.01;
+export const DISMANTLE_COST = 0.005;
 
 export const FIND_CONSTRUCTION_SITES = 111 as const;
 export const FIND_MY_CONSTRUCTION_SITES = 114 as const;

@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Creep from 'xxscreeps/game/objects/creep';
+import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Game from 'xxscreeps/game';
 import { RoomPosition } from 'xxscreeps/game/position';

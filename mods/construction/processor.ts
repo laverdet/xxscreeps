@@ -1,13 +1,13 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
-import { Creep } from 'xxscreeps/game/objects/creep';
+import { Creep } from 'xxscreeps/mods/creep/creep';
 import { Room } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';
-import { calculatePower } from 'xxscreeps/engine/processor/intents/creep';
+import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { insertObject, removeObject } from 'xxscreeps/game/room/methods';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
-import { saveAction } from 'xxscreeps/game/objects/action-log';
+import { saveAction } from 'xxscreeps/game/action-log';
 import { ConstructionSite, ConstructibleStructureType, create } from './construction-site';
 import { checkBuild } from './creep';
 import { checkCreateConstructionSite } from './room';

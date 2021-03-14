@@ -1,4 +1,3 @@
-import type { Creep } from 'xxscreeps/game/objects/creep';
 import type { Flag } from 'xxscreeps/game/flag';
 import type { UnwrapArray } from 'xxscreeps/utility/types';
 
@@ -15,7 +14,6 @@ export function registerLook<Type>() {
 
 // Built-in LOOK_ constants
 const builtinLook = [
-	registerLook<Creep>()(C.LOOK_CREEPS),
 	registerLook<Flag>()(C.LOOK_FLAGS),
 ];
 export interface Look { builtin: typeof builtinLook }

@@ -2,13 +2,13 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Owner } from 'xxscreeps/game/object';
-import { Creep } from 'xxscreeps/game/objects/creep';
+import { Creep } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
-import { calculatePower } from 'xxscreeps/engine/processor/intents/creep';
+import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { exchange } from 'xxscreeps/utility/utility';
 import { DowngradeTime, Progress, StructureController, UpgradePowerThisTick } from './controller';
 import { checkUpgradeController } from './creep';
-import { saveAction } from 'xxscreeps/game/objects/action-log';
+import { saveAction } from 'xxscreeps/game/action-log';
 
 // Processor methods
 export function claim(controller: StructureController, user: string) {

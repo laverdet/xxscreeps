@@ -6,8 +6,6 @@ import { RoomPosition } from './position';
 import { Room } from './room';
 import { RoomVisual } from './visual';
 
-import { Creep } from './objects/creep';
-
 const runtimeGlobals: Record<string, any> = Object.create(null);
 export function registerGlobal(name: string, value: any): void;
 export function registerGlobal(fn: Function): void;
@@ -45,7 +43,6 @@ export function setupGlobals(globalThis: any) {
 
 	// Everything else
 	for (const [ key, object ] of Object.entries({
-		Creep,
 		Flag,
 		Room,
 		RoomPosition,

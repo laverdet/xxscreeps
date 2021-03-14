@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Creep from 'xxscreeps/game/objects/creep';
+import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 import { getPositonInDirection, Direction } from 'xxscreeps/game/position';
 import { insertObject, moveObject } from 'xxscreeps/game/room/methods';

@@ -3,6 +3,8 @@ export const FIND_HOSTILE_STRUCTURES = 109 as const;
 
 export const STRUCTURE_CONTROLLER = 'controller' as const;
 
+export const UPGRADE_CONTROLLER_POWER = 1;
+
 export const CONTROLLER_LEVELS = [ undefined, 200, 45000, 135000, 405000, 1215000, 3645000, 10935000 ];
 export const CONTROLLER_STRUCTURES = {
 	'spawn': [ 0, 1, 1, 1, 1, 1, 1, 2, 3 ],

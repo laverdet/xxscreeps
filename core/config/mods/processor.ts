@@ -1,6 +1,7 @@
 import 'xxscreeps/mods/combat/processor';
 import 'xxscreeps/mods/construction/processor';
 import 'xxscreeps/mods/controller/processor';
+import 'xxscreeps/mods/creep/processor';
 import 'xxscreeps/mods/harvestable/processor';
 import 'xxscreeps/mods/invader/processor';
 import 'xxscreeps/mods/npc/processor';

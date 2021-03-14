@@ -1,25 +1,19 @@
-import type { RoomPath } from '../room/room';
+import type { RoomPath } from 'xxscreeps/game/room/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
-import * as ActionLog from './action-log';
-import * as RoomObject from '../object';
+import * as ActionLog from 'xxscreeps/game/action-log';
+import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { compose, declare, enumerated, member, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
-import { fetchPositionArgument, Direction, RoomPosition } from '../position';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
+import { fetchPositionArgument, Direction, RoomPosition } from 'xxscreeps/game/position';
+import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { assign } from 'xxscreeps/utility/utility';
-import { RoomSearchOptions, registerObstacleChecker } from '../path-finder';
+import { RoomSearchOptions, registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { Resource, ResourceType, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
-import { Structure } from '../../../mods/structure/structure';
-
-declare module 'xxscreeps/game' {
-	interface Game {
-		creeps: Record<string, Creep>;
-	}
-}
-Game.registerGameInitializer(game => game.creeps = Object.create(null));
+import { Structure } from 'xxscreeps/mods/structure/structure';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 
@@ -30,7 +24,7 @@ type MoveToOptions = {
 	visualizePathStyle?: boolean;
 };
 
-export function format() { return compose(shape, Creep) }
+export const format = () => compose(shape, Creep);
 function shape() {
 	return declare('Creep', struct(RoomObject.format, {
 		...variant('creep'),
@@ -69,9 +63,12 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 		game.creeps[this.name] = this;
 	}
 
+	/**
+	 * Get the quantity of live body parts of the given type. Fully damaged parts do not count.
+	 * @param type A body part type
+	 */
 	getActiveBodyparts(type: PartType) {
-		return this.body.reduce((count, part) =>
-			count + (part.type === type && part.hits > 0 ? 1 : 0), 0);
+		return Fn.accumulate(this.body, part => part.type === type && part.hits > 0 ? 1 : 0);
 	}
 
 	/**
@@ -128,7 +125,8 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	moveTo(target: RoomObject.RoomObject | RoomPosition, opts?: MoveToOptions & RoomSearchOptions): number;
 	moveTo(...args: [any]) {
 		return chainIntentChecks(
-			() => checkMoveCommon(this),
+			() => checkCommon(this),
+			() => checkFatigue(this),
 			() => {
 				// Parse target
 				const { pos, extra } = fetchPositionArgument<MoveToOptions>(this.pos.roomName, ...args);
@@ -205,6 +203,11 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 			});
 	}
 
+	/**
+	 * Pick up an item (a dropped piece of energy). Requires the `CARRY` body part. The target has to be
+	 * at adjacent square to the creep or at the same square.
+	 * @param resource The target object to be picked up
+	 */
 	pickup(this: Creep, resource: Resource) {
 		return chainIntentChecks(
 			() => checkPickup(this, resource),
@@ -225,6 +228,14 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 		);
 	}
 
+	/**
+	 * Transfer resource from the creep to another object. The target has to be at adjacent square to
+	 * the creep.
+	 * @param target The target object
+	 * @param resourceType One of the `RESOURCE_*` constants
+	 * @param amount The amount of resources to be transferred. If omitted, all the available carried
+	 * amount is used.
+	 */
 	transfer(this: Creep, target: Store.RoomObjectWithStore, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),
@@ -235,14 +246,21 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	say(message: string) {}
 
+	/**
+	 * Withdraw resources from a structure or tombstone. The target has to be at adjacent square to
+	 * the creep. Multiple creeps can withdraw from the same object in the same tick. Your creeps can
+	 * withdraw resources from hostile structures/tombstones as well, in case if there is no hostile
+	 * rampart on top of it.
+	 *
+	 * This method should not be used to transfer resources between creeps. To transfer between
+	 * creeps, use the `transfer` method on the original creep.
+	 */
 	withdraw(this: Creep, target: Extract<Store.RoomObjectWithStore, Structure>, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkWithdraw(this, target, resourceType, amount),
 			() => Game.intents.save(this, 'withdraw', target.id, resourceType, amount),
 		);
 	}
-
-	_nextPosition?: RoomPosition; // processor temporary
 }
 
 export function create(pos: RoomPosition, body: PartType[], name: string, owner: string) {
@@ -283,47 +301,30 @@ export function checkCommon(creep: Creep, part?: PartType) {
 	return C.OK;
 }
 
-export function checkMove(creep: Creep, direction: number) {
-	return chainIntentChecks(
-		() => checkMoveCommon(creep),
-		() => {
-			if (!(direction >= 1 && direction <= 8) && Number.isInteger(direction)) {
-				return C.ERR_INVALID_ARGS;
-			}
-			return C.OK;
-		},
-	);
+function checkFatigue(creep: Creep) {
+	return creep.fatigue > 0 ? C.ERR_TIRED : C.OK;
 }
 
-function checkMoveCommon(creep: Creep) {
+export function checkMove(creep: Creep, direction: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.MOVE),
-		() => {
-			if (creep.fatigue > 0) {
-				return C.ERR_TIRED;
-			}
-			return C.OK;
-		});
+		() => checkFatigue(creep),
+		() => (direction >= 1 && direction <= 8 && Number.isInteger(direction)) ?
+			C.OK : C.ERR_INVALID_ARGS);
 }
 
 export function checkPickup(creep: Creep, target: Resource) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => {
-			if (!(target instanceof Resource)) {
-				return C.ERR_INVALID_TARGET;
-			} else if (creep.store.getFreeCapacity(target.resourceType) === 0) {
-				return C.ERR_FULL;
-			} else if (!creep.pos.isNearTo(target)) {
-				return C.ERR_NOT_IN_RANGE;
-			}
-			return C.OK;
-		});
+		() => checkTarget(target, Resource),
+		() => checkRange(creep, target, 1),
+		() => creep.store.getFreeCapacity(target.resourceType) > 0 ?
+			C.OK : C.ERR_FULL);
 }
 
 
-export function checkResource(creep: Creep, amount = 1, resource = C.RESOURCE_ENERGY) {
-	return creep.store[resource] >= amount ?
+export function checkResource(creep: Creep, resource: ResourceType = C.RESOURCE_ENERGY) {
+	return creep.store[resource]! > 0 ?
 		C.OK : C.ERR_NOT_ENOUGH_RESOURCES;
 }
 
@@ -335,17 +336,14 @@ function checkTransferOrWithdraw(
 ) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
+		() => checkRange(creep, target, 1),
 		() => {
 			if (amount! < 0) {
 				return C.ERR_INVALID_ARGS;
 
 			} else if (!C.RESOURCES_ALL.includes(resourceType)) {
 				return C.ERR_INVALID_ARGS;
-
-			} else if (!creep.pos.isNearTo(target.pos)) {
-				return C.ERR_NOT_IN_RANGE;
 			}
-
 			return C.OK;
 		},
 	);
@@ -359,22 +357,15 @@ export function checkTransfer(
 ) {
 	return chainIntentChecks(
 		() => checkTransferOrWithdraw(creep, target, resourceType, amount),
+		() => checkTarget(target, RoomObject.RoomObject),
+		() => checkResource(creep, resourceType),
 		() => {
-			if (!(target instanceof RoomObject.RoomObject)) {
-				return C.ERR_INVALID_TARGET;
-
-			} else if (target instanceof Creep && target.spawning) {
+			if (target instanceof Creep && target.spawning) {
 				return C.ERR_INVALID_TARGET;
 
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			} else if (!target.store) {
 				return C.ERR_INVALID_TARGET;
-			}
-
-			const creepAmount = creep.store[resourceType];
-			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-			if (!creepAmount) {
-				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
 
 			const targetFreeCapacity = target.store.getFreeCapacity(resourceType);
@@ -385,6 +376,7 @@ export function checkTransfer(
 			}
 
 			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+			const creepAmount = creep.store[resourceType]!;
 			const tryAmount = amount ? amount : Math.min(creepAmount, targetFreeCapacity);
 			if (tryAmount > creepAmount) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
@@ -405,8 +397,9 @@ export function checkWithdraw(
 ) {
 	return chainIntentChecks(
 		() => checkTransferOrWithdraw(creep, target, resourceType, amount),
+		() => checkTarget(creep, Structure),
 		() => {
-			if (!(target instanceof Structure) || !('store' in target)) {
+			if (!('store' in target)) {
 				return C.ERR_INVALID_TARGET;
 
 				/* } else if (target.my === false) {

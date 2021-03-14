@@ -1,9 +1,9 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
-import { Creep, PartType } from 'xxscreeps/game/objects/creep';
+import { Creep, PartType } from 'xxscreeps/mods/creep/creep';
 // eslint-disable-next-line no-duplicate-imports
-import * as CreepLib from 'xxscreeps/game/objects/creep';
+import * as CreepLib from 'xxscreeps/mods/creep/creep';
 import type { Resource } from 'xxscreeps/mods/resource/resource';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 import { NextDecayTime, StructureRoad } from 'xxscreeps/mods/road/road';
@@ -11,11 +11,10 @@ import type { Direction } from 'xxscreeps/game/position';
 import type { LookForType } from 'xxscreeps/game/room';
 import { moveObject, removeObject } from 'xxscreeps/game/room/methods';
 import type { ResourceType, RoomObjectWithStore } from 'xxscreeps/mods/resource/store';
-import { ActionLog } from 'xxscreeps/game/objects/action-log';
+import { ActionLog } from 'xxscreeps/game/action-log';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
-import * as Movement from './movement';
+import * as Movement from 'xxscreeps/processor/movement';
 // eslint-disable-next-line no-duplicate-imports
-import { calculateWeight } from './movement';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 
@@ -25,7 +24,8 @@ declare module 'xxscreeps/processor' {
 const intents = [
 	registerIntentProcessor(Creep, 'move', (creep, direction: Direction) => {
 		if (CreepLib.checkMove(creep, direction) === C.OK) {
-			Movement.add(creep, direction);
+			const power = calculateWeight(creep);
+			Movement.add(creep, power, direction);
 		}
 	}),
 
@@ -122,4 +122,11 @@ export function calculatePower(creep: Creep, part: PartType, power: number) {
 		}
 		return 0;
 	});
+}
+
+export function calculateWeight(creep: Creep) {
+	let weight = Fn.accumulate(creep.body, part =>
+		(part.type === C.CARRY || part.type === C.MOVE) ? 0 : 1);
+	weight += Math.ceil(creep.carry.getUsedCapacity() / C.CARRY_CAPACITY);
+	return weight;
 }

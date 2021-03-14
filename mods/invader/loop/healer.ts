@@ -1,4 +1,4 @@
-import type { Creep } from 'xxscreeps/game/objects/creep';
+import type { Creep } from 'xxscreeps/mods/creep/creep';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import flee from './flee';

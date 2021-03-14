@@ -1,7 +1,6 @@
 import { compose, declare, member, struct, variant, vector } from 'xxscreeps/schema';
 import { Room } from 'xxscreeps/game/room';
 import { structForPath, variantForPath } from 'xxscreeps/engine/schema';
-import * as Creep from 'xxscreeps/game/objects/creep';
 import { EventLogSymbol } from './event-log';
 
 // Schema definition
@@ -10,10 +9,7 @@ export function shape() {
 	return declare('Room', struct({
 		...structForPath('Room'),
 		name: 'string',
-		_objects: vector(variant(
-			...variantForPath('Room.objects'),
-			Creep.format,
-		)),
+		_objects: vector(variant(...variantForPath('Room.objects'))),
 		eventLog: member(EventLogSymbol,
 			vector(variant(...variantForPath('Room.eventLog')))),
 	}));

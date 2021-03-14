@@ -208,6 +208,27 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * @param y Y position in the room
 	 * @param target Can be a RoomObject or RoomPosition
 	 */
+	lookAt(...args: [ x: number, y: number ] | [ target: RoomObject | RoomPosition ]):
+	LookForTypeInitial<LookConstants>[] {
+		const { pos } = fetchPositionArgument(this.name, ...args);
+		if (!pos || pos.roomName !== this.name) {
+			return [];
+		}
+		return [ ...Fn.map(
+			this._getSpatialIndex().get(extractPositionId(pos)) ?? [],
+			object => {
+				const type = object[LookType];
+				return { type, [type]: object };
+		}) ] as never;
+	}
+
+	/**
+	 * Get an object with the given type at the specified room position.
+	 * @param type One of the `LOOK_*` constants
+	 * @param x X position in the room
+	 * @param y Y position in the room
+	 * @param target Can be a RoomObject or RoomPosition
+	 */
 	lookForAt<Type extends LookConstants>(type: Type, x: number, y: number): LookForTypeInitial<Type>[];
 	lookForAt<Type extends LookConstants>(type: Type, target: RoomObject | RoomPosition): LookForTypeInitial<Type>[];
 	lookForAt<Type extends LookConstants>(
@@ -220,11 +241,14 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (!lookConstants.has(type)) {
 			return C.ERR_INVALID_ARGS as any;
 		}
-		const objects = this._getSpatialIndex(type);
-		return (objects.get(extractPositionId(pos)) ?? []).map(object => {
-			const type = object[LookType];
-			return { type, [type]: object };
-		});
+		return [ ...Fn.map(
+			Fn.filter(
+				this._getSpatialIndex().get(extractPositionId(pos)) ?? [],
+				object => object[LookType] === type),
+			object => {
+				const type = object[LookType];
+				return { type, [type]: object };
+		}) ];
 	}
 
 	/**
@@ -265,14 +289,13 @@ export class Room extends withOverlay(BufferObject, shape) {
 		} */
 		this.#findCache.clear();
 		// Update spatial look cache if it exists
-		const spatial = this.#lookSpatialIndex.get(object[LookType]);
-		if (spatial) {
+		if (this.#lookSpatialIndex.size) {
 			const pos = extractPositionId(object.pos);
-			const list = spatial.get(pos);
+			const list = this.#lookSpatialIndex.get(pos);
 			if (list) {
 				list.push(object);
 			} else {
-				spatial.set(pos, [ object ]);
+				this.#lookSpatialIndex.set(pos, [ object ]);
 			}
 		}
 		object[AfterInsert](this);
@@ -288,40 +311,36 @@ export class Room extends withOverlay(BufferObject, shape) {
 		} */
 		this.#findCache.clear();
 		// Update spatial look cache if it exists
-		const spatial = this.#lookSpatialIndex.get(object[LookType]);
-		if (spatial) {
+		if (this.#lookSpatialIndex.size) {
 			const pos = extractPositionId(object.pos);
-			const list = spatial.get(pos);
-			if (list) {
+			const list = this.#lookSpatialIndex.get(pos)!;
+			if (list.length === 1) {
+				this.#lookSpatialIndex.delete(pos);
+			} else {
 				removeOne(list, object);
-				if (list.length === 0) {
-					spatial.delete(pos);
-				}
 			}
 		}
 		object[AfterRemove](this);
 	}
 
 	[MoveObject](object: RoomObject, pos: RoomPosition) {
-		const spatial = this.#lookSpatialIndex.get(object[LookType]);
-		if (spatial) {
+		if (this.#lookSpatialIndex.size) {
 			const oldPosition = extractPositionId(object.pos);
-			const oldList = spatial.get(oldPosition)!;
-			removeOne(oldList, object);
-			if (oldList.length === 0) {
-				spatial.delete(oldPosition);
+			const oldList = this.#lookSpatialIndex.get(oldPosition)!;
+			if (oldList.length === 1) {
+				this.#lookSpatialIndex.delete(oldPosition);
+			} else {
+				removeOne(oldList, object);
 			}
-			object.pos = pos;
 			const posInteger = extractPositionId(pos);
-			const newList = spatial.get(posInteger);
+			const newList = this.#lookSpatialIndex.get(posInteger);
 			if (newList) {
 				newList.push(object);
 			} else {
-				spatial.set(posInteger, [ object ]);
+				this.#lookSpatialIndex.set(posInteger, [ object ]);
 			}
-		} else {
-			object.pos = pos;
 		}
+		object.pos = pos;
 	}
 
 	private _addToLookIndex(object: RoomObject) {
@@ -332,24 +351,21 @@ export class Room extends withOverlay(BufferObject, shape) {
 		removeOne(this.#lookIndex.get(object[LookType])!, object);
 	}
 
-	// Returns objects indexed by type and position
-	private _getSpatialIndex(look: LookConstants) {
-		const cached = this.#lookSpatialIndex.get(look);
-		if (cached) {
-			return cached;
+	// Returns objects indexed by position
+	private _getSpatialIndex() {
+		if (this.#lookSpatialIndex.size) {
+			return this.#lookSpatialIndex;
 		}
-		const spatial = new Map<number, RoomObject[]>();
-		this.#lookSpatialIndex.set(look, spatial);
-		for (const object of this.#lookIndex.get(look)!) {
+		for (const object of this._objects) {
 			const pos = extractPositionId(object.pos);
-			const list = spatial.get(pos);
+			const list = this.#lookSpatialIndex.get(pos);
 			if (list) {
 				list.push(object);
 			} else {
-				spatial.set(pos, [ object ]);
+				this.#lookSpatialIndex.set(pos, [ object ]);
 			}
 		}
-		return spatial;
+		return this.#lookSpatialIndex;
 	}
 
 	get [IntentIdentifier]() {
@@ -375,7 +391,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
 	#lookIndex = new Map<LookConstants, RoomObject[]>(
 		Fn.map(lookConstants, look => [ look, [] ]));
-	#lookSpatialIndex = new Map<LookConstants, Map<number, RoomObject[]>>();
+	#lookSpatialIndex = new Map<number, RoomObject[]>();
 }
 
 //

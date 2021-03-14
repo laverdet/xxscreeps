@@ -4,7 +4,7 @@ import * as Resource from 'xxscreeps/mods/resource/processor/resource';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
-import { calculatePower } from 'xxscreeps/engine/processor/intents/creep';
+import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { Source } from './source';
 import { CumulativeEnergyHarvested } from './symbols';
 
