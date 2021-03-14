@@ -12,6 +12,7 @@ import { declare, compose, optional, struct, variant, vector, withOverlay } from
 import { assign } from 'xxscreeps/utility/utility';
 import { Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { StructureExtension } from './extension';
 
 type SpawnCreepOptions = {
@@ -112,6 +113,17 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 		[RoomObject.Owner]: owner,
 	});
 }
+
+registerBuildableStructure(C.STRUCTURE_SPAWN, {
+	obstacle: true,
+	checkPlacement(room, pos) {
+		return Structure.checkPlacement(room, pos) === C.OK ?
+			C.CONSTRUCTION_COST.spawn : null;
+	},
+	create(site) {
+		return create(site.pos, site.owner, site.name);
+	},
+});
 
 //
 // Intent checks

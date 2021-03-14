@@ -13,6 +13,7 @@ import { SteamTicketEndpoint } from './auth/steam-ticket';
 import gameEndpoints from './game';
 import registrationEndpoints from './register';
 import userEndpoints from './user';
+import { routes } from '../symbols';
 
 function bindRoutes(context: BackendContext, router: Router, endpoints: Endpoint[]) {
 	for (const endpoint of endpoints) {
@@ -63,4 +64,7 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 		TerrainEndpoint,
 		TerrainZoomEndpoint,
 	]));
+	for (const route of routes) {
+		express.use(useAuth(bindRoutes(context, Router(), [ route ])));
+	}
 }

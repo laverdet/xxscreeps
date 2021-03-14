@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import * as Controller from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Owner } from 'xxscreeps/game/object';
@@ -16,7 +16,7 @@ export function claim(controller: StructureController, user: string) {
 	controller[Owner] = user;
 	controller[DowngradeTime] = 0;
 	controller[Progress] = 0;
-	controller.safeMode = Game.time + C.SAFE_MODE_DURATION;
+	controller.safeMode = Game.time + Controller.SAFE_MODE_DURATION;
 	controller.level = 1;
 }
 
@@ -25,7 +25,7 @@ function upgradeController(controller: StructureController, energy: number) {
 	controller[UpgradePowerThisTick] = (controller[UpgradePowerThisTick] ?? 0) + energy;
 
 	if (controller.level < 8) {
-		const nextLevel = C.CONTROLLER_LEVELS[controller.level]!;
+		const nextLevel = Controller.CONTROLLER_LEVELS[controller.level]!;
 		if (controller[Progress] >= nextLevel) {
 			++controller.level;
 			if (controller.level === 8) {
@@ -33,7 +33,7 @@ function upgradeController(controller: StructureController, energy: number) {
 			} else {
 				controller[Progress] -= nextLevel;
 			}
-			controller[DowngradeTime] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!;
+			controller[DowngradeTime] = Game.time + Controller.CONTROLLER_DOWNGRADE[controller.level]!;
 			++controller.safeModeAvailable;
 		}
 	}
@@ -45,8 +45,8 @@ declare module 'xxscreeps/processor' {
 }
 const intent = registerIntentProcessor(Creep, 'upgradeController', (creep, id: string) => {
 	const target = Game.getObjectById<StructureController>(id)!;
-	if (checkUpgradeController(creep, target) === C.OK) {
-		const power = calculatePower(creep, C.WORK, C.UPGRADE_CONTROLLER_POWER);
+	if (checkUpgradeController(creep, target) === Controller.OK) {
+		const power = calculatePower(creep, Controller.WORK, Controller.UPGRADE_CONTROLLER_POWER);
 		const energy = Math.min(power, creep.store.energy);
 		Store.subtract(creep.store, 'energy', energy);
 		upgradeController(target, energy);
@@ -58,8 +58,8 @@ registerObjectTickProcessor(StructureController, controller => {
 	const upgradePower = exchange(controller, UpgradePowerThisTick);
 	if (upgradePower !== undefined) {
 		controller[DowngradeTime] = 1 + Math.min(
-			controller[DowngradeTime] + C.CONTROLLER_DOWNGRADE_RESTORE,
-			Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!);
+			controller[DowngradeTime] + Controller.CONTROLLER_DOWNGRADE_RESTORE,
+			Game.time + Controller.CONTROLLER_DOWNGRADE[controller.level]!);
 		return true;
 	}
 });

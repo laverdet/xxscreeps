@@ -1,6 +1,7 @@
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
-import { MapRender, Render, TerrainRender } from './symbols';
+import type { Endpoint } from 'xxscreeps/backend/endpoint';
+import { MapRender, Render, TerrainRender, routes } from './symbols';
 
 // `RoomObject` render symbols
 type RenderedRoomObject = {
@@ -15,6 +16,10 @@ declare module 'xxscreeps/game/object' {
 		[MapRender]: (object: any) => string | undefined;
 		[TerrainRender]: (object: any) => number | undefined;
 	}
+}
+
+export function registerBackendRoute(endpoint: Endpoint) {
+	routes.push(endpoint);
 }
 
 // Backend render hooks
