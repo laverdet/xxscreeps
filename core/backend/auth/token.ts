@@ -1,5 +1,5 @@
 import * as Crypto from 'crypto';
-import config from 'xxscreeps/engine/config';
+import config from 'xxscreeps/config';
 import { runOnce } from 'xxscreeps/utility/memoize';
 
 const secret = runOnce(() => {

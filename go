@@ -17,4 +17,4 @@ if [[ -z "$SCRIPT_ARGS" ]]; then
 	NODE_ARGS=()
 fi
 
-exec node "${NODE_ARGS[@]}" --enable-source-maps --experimental-specifier-resolution=node --experimental-repl-await --stack-trace-limit=20 "${SCRIPT_ARGS[@]}"
+exec node "${NODE_ARGS[@]}" --enable-source-maps --experimental-specifier-resolution=node --experimental-import-meta-resolve --experimental-repl-await --stack-trace-limit=20 "${SCRIPT_ARGS[@]}"

@@ -389,6 +389,7 @@ export function checkTransfer(
 		});
 }
 
+// TODO: Move this somewhere else to break dependency on `Structure`?
 export function checkWithdraw(
 	creep: Creep,
 	target: Extract<Store.RoomObjectWithStore, Structure>,

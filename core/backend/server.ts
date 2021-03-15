@@ -1,4 +1,3 @@
-import 'xxscreeps/config/mods/backend';
 import bodyParser from 'body-parser';
 import Express from 'express';
 import http from 'http';
@@ -9,6 +8,11 @@ import { BackendContext } from './context';
 import { setupGracefulShutdown } from './graceful';
 import { installEndpointHandlers } from './endpoints';
 import { installSocketHandlers } from './socket';
+
+import 'xxscreeps/config/mods';
+import 'xxscreeps/config/mods/import/game';
+import 'xxscreeps/config/mods/import/processor';
+import 'xxscreeps/config/mods/import/backend';
 
 // Initialize services
 const context = await BackendContext.connect();

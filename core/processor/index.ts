@@ -1,4 +1,5 @@
 import type { CounterExtract, Dictionary, Implementation, UnwrapArray } from 'xxscreeps/utility/types';
+import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
 import { IntentIdentifier, PreTick, Processors, Tick } from './symbols';
 export { registerRoomTickProcessor } from './room';
@@ -50,7 +51,7 @@ export interface Intent {}
 
 // Types for intent processors
 type Intents = Exclude<UnwrapArray<Intent[keyof Intent]>, void>;
-export type IntentReceivers = Intents['type'];
+export type IntentReceivers = Room | Intents['type'];
 export type IntentsForReceiver<Type extends IntentReceivers> =
 	CounterExtract<Intents, { type: Type; intent: any; data: any }>['intent'];
 export type IntentParameters<Type extends IntentReceivers, Intent extends string> =

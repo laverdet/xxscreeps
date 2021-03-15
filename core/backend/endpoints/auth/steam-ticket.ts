@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import { makeToken } from 'xxscreeps/backend/auth/token';
 import { Endpoint } from 'xxscreeps/backend/endpoint';
-import config from 'xxscreeps/engine/config';
+import config from 'xxscreeps/config';
 
 export const SteamTicketEndpoint: Endpoint = {
 	method: 'post',

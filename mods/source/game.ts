@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import { member, struct } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 import { lookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import { registerHarvestable } from 'xxscreeps/mods/harvestable/game';
+import { registerHarvestable } from 'xxscreeps/mods/harvestable';
 import { Source, format } from './source';
 import { CumulativeEnergyHarvested } from './symbols';
 

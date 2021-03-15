@@ -1,5 +1,5 @@
 import { Endpoint } from 'xxscreeps/backend/endpoint';
-import config from 'xxscreeps/engine/config';
+import config from 'xxscreeps/config';
 
 const TickEndpoint: Endpoint = {
 	path: '/tick',

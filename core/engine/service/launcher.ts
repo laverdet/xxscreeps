@@ -1,5 +1,5 @@
 import os from 'os';
-import config from 'xxscreeps/engine/config';
+import config from 'xxscreeps/config';
 import argv from 'xxscreeps/config/arguments';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { listen } from 'xxscreeps/utility/async';

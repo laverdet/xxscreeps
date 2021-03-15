@@ -1,8 +1,8 @@
 {
 	"compilerOptions": {
-		"composite": true,
 		"sourceMap": true,
 		"outDir": "dist",
+		"baseUrl": ".",
 		"rootDir": ".",
 		"paths": {
 			"xxscreeps/mods/*": [ "./mods/*" ],
@@ -19,6 +19,5 @@
 
 		"strict": true,
 	},
-	"exclude": [ "**/package.json", "**/package-lock.json", "**/tsconfig.json" ],
-	"include": [ "core", "mods" ],
+	"exclude": [ "**/package.json", "**/package-lock.json", "**/tsconfig.json" ]
 }

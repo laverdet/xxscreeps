@@ -1,4 +1,4 @@
-import config from 'xxscreeps/engine/config';
+import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';

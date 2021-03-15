@@ -2,7 +2,8 @@ import * as Game from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
-import { CheckHarvest, Harvestable, HarvestResult } from './game';
+import { Harvestable, HarvestResult } from './game';
+import { CheckHarvest } from './symbols';
 
 // `harvest` intent check
 export function checkHarvest(creep: Creep, target: Harvestable) {

@@ -1,5 +1,5 @@
 import * as Path from 'path';
-import config from 'xxscreeps/engine/config';
+import config from 'xxscreeps/config';
 import { locateModule } from '../path-finder';
 import { compile, ExternalsFunctionElement } from '../webpack';
 import { IsolatedSandbox } from './isolated';

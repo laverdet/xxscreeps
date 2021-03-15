@@ -1,4 +1,0 @@
-{
-	"extends": "xxscreeps/tsconfig.base",
-	"compilerOptions": { "rootDir": "../.." }
-}

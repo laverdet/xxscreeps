@@ -1,3 +1,4 @@
+// npx typescript-json-schema tsconfig.json Schema --include ./core/config/schema.ts --defaultProps --required -o ./core/config/config.schema.json
 export type Schema = {
 	/**
 	 * Backend server settings
@@ -51,6 +52,11 @@ export type Schema = {
 		 */
 		singleThreaded?: boolean;
 	};
+
+	/**
+	 * List of mods to load
+	 */
+	mods: string[];
 
 	/**
 	 * Runner settings

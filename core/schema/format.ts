@@ -220,6 +220,12 @@ export function vector<Type extends Format>(element: Type): WithType<TypeOf<Type
 	return Format as never;
 }
 
+// If a conditional type works itself out to WithType<never> this will provide a fallback
+export function withFallback<Fallback>() {
+	return <Type extends Format>(format: Type):
+		Type extends WithType<never> ? WithType<Fallback> : Type => format as never;
+}
+
 // Cast the type of a format to something else
 export function withType<Type>(format: Format): WithType<Type> {
 	return format as never;

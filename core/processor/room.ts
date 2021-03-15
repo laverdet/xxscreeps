@@ -5,8 +5,9 @@ import * as Movement from 'xxscreeps/processor/movement';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
 import { Processors, RoomTickProcessor, Tick, roomTickProcessors, PreTick } from './symbols';
 
-import 'xxscreeps/config/mods/processor';
-import 'xxscreeps/engine/processor/intents';
+import 'xxscreeps/config/mods';
+import 'xxscreeps/config/mods/import/game';
+import 'xxscreeps/config/mods/import/processor';
 
 // Register per-tick per-room processor
 export function registerRoomTickProcessor(tick: RoomTickProcessor) {

@@ -1,10 +1,4 @@
 {
 	"extends": "./tsconfig.base",
-	"compilerOptions": {
-		"composite": false,
-	},
-	"references UNUSED": [
-		{ "path": "./mods/harvestable" },
-		{ "path": "./mods/source" },
-	]
+	"include": [ "core", "mods" ],
 }

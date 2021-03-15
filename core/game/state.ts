@@ -94,7 +94,7 @@ export function runAsUser<Type>(userId: string, task: () => Type) {
 	for (const room of Object.values(rooms)) {
 		flushFindCache(room);
 		for (const object of room._objects) {
-			if ((object as { my: boolean }).my) {
+			if ((object as any).my) {
 				object[AddToMyGame](instance);
 			}
 		}

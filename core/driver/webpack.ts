@@ -32,6 +32,12 @@ export async function compile(moduleName: string, externals: ExternalsFunctionEl
 				} ],
 			},
 
+			resolve: {
+				alias: {
+					'xxscreeps/config/mods': false,
+				},
+			},
+
 			optimization: {
 				concatenateModules: true,
 			},

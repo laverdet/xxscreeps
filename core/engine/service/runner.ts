@@ -1,5 +1,5 @@
 import os from 'os';
-import config from 'xxscreeps/engine/config';
+import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { loadTerrainFromWorld, readWorld } from 'xxscreeps/game/map';
