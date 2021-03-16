@@ -65,7 +65,7 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 		return checkSpawnCreep(this, body, name ?? getUniqueName(name => Game.instance.creeps[name] !== undefined), null, null);
 	}
 
-	createCreep(body: any, name: any, memory: any) {
+	createCreep(body: any, name: any, memory?: any) {
 		return this.spawnCreep(
 			body,
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

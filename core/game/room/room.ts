@@ -13,6 +13,7 @@ import { BufferView, withOverlay } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
+import { registerGlobal } from 'xxscreeps/game';
 import { AfterInsert, AfterRemove, LookType, RoomObject } from 'xxscreeps/game/object';
 import { getTerrainForRoom } from '../map';
 import { RoomVisual } from '../visual';
@@ -392,6 +393,12 @@ export class Room extends withOverlay(BufferObject, shape) {
 	#lookIndex = new Map<LookConstants, RoomObject[]>(
 		Fn.map(lookConstants, look => [ look, [] ]));
 	#lookSpatialIndex = new Map<number, RoomObject[]>();
+}
+
+// Export `Room` to runtime globals
+registerGlobal(Room);
+declare module 'xxscreeps/game/runtime' {
+	interface Global { Room: Room }
 }
 
 //

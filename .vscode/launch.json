@@ -7,6 +7,7 @@
 			"runtimeArgs": [
 				"--enable-source-maps",
 				"--experimental-specifier-resolution=node",
+				"--experimental-import-meta-resolve",
 				"--stack-trace-limit=20"
 			],
 			"internalConsoleOptions": "openOnSessionStart",
@@ -19,6 +20,7 @@
 			"runtimeArgs": [
 				"--enable-source-maps",
 				"--experimental-specifier-resolution=node",
+				"--experimental-import-meta-resolve",
 				"--stack-trace-limit=20"
 			],
 			"internalConsoleOptions": "openOnSessionStart",

@@ -1,1 +1,2 @@
-export const CumulativeEnergyHarvested = Symbol('cumulativeEnergyHarvested');
+import { XSymbol } from 'xxscreeps/schema';
+export const CumulativeEnergyHarvested = XSymbol('cumulativeEnergyHarvested');

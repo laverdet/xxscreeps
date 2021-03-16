@@ -1,1 +1,2 @@
-export const CheckHarvest = Symbol('checkHarvest');
+import { XSymbol } from 'xxscreeps/schema';
+export const CheckHarvest = XSymbol('checkHarvest');

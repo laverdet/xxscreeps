@@ -1,7 +1,7 @@
 import type { AnyRoomObject } from 'xxscreeps/game/room';
 import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
-import { BufferView, compose, declare, member, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
+import { BufferView, compose, declare, member, struct, vector, withOverlay, withType, XSymbol } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { ResourceType, optionalResourceEnumFormat } from './resource';
 export type { ResourceType };
@@ -9,11 +9,11 @@ export type { ResourceType };
 export type StorageRecord = Partial<Record<ResourceType, number>>;
 export type RoomObjectWithStore = Extract<AnyRoomObject, { store: any }>;
 
-export const Amount = Symbol('amount');
-export const Capacity = Symbol('capacity');
-export const Resources = Symbol('resources');
-export const Restricted = Symbol('restricted');
-export const SingleResource = Symbol('singleResource');
+export const Amount = XSymbol('amount');
+export const Capacity = XSymbol('capacity');
+export const Resources = XSymbol('resources');
+export const Restricted = XSymbol('restricted');
+export const SingleResource = XSymbol('singleResource');
 
 export function format() { return withType<Store<ResourceType>>(compose(shape, Store)) }
 export function restrictedFormat<Resource extends ResourceType>() {

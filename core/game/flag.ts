@@ -77,6 +77,12 @@ export class Flag extends withOverlay(RoomObject, shape) {
 	id!: never;
 }
 
+// Export `Flag` to runtime globals
+Game.registerGlobal(Flag);
+declare module 'xxscreeps/game/runtime' {
+	interface Global { Flag: Flag }
+}
+
 //
 // Utilities & intent checks
 function isValidColor(color: Color) {

@@ -1,11 +1,9 @@
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { BufferView } from './buffer-view';
+import { Variant } from '.';
+export { Variant };
 
-export const Variant = Symbol('schemaVariant');
-// Getting error:
-//   extends' clause of exported class ... has or is using private name 'Variant'.ts(4020)
-// when defining a variant symbol in module w/ different tsconfig
-// type WithVariant<V extends number | string> = { [Variant]: V };
+type WithVariant<V extends number | string = any> = { [Variant]: V };
 
 // This is passed around as a fake type from all the declaration functions
 const Type = Symbol('withType');
@@ -154,7 +152,6 @@ export function optional<Type extends Format>(element: Type): WithType<TypeOf<Ty
 // Returns keys for a given struct format, accepting symbols from `member` helper
 type StructKeys<Type extends StructDeclaration> = {
 	[Key in keyof Type]:
-		Key extends '__variant' ? never :
 		Key extends typeof Variant ? never :
 		Type[Key] extends StructMember<infer Name> ? Name : Key;
 }[keyof Type];
@@ -166,15 +163,12 @@ type StructLookup<Type extends StructDeclaration, Name extends keyof any> =
 		[Key in keyof Type]: Type[Key] extends StructMember<Name> ? Type[Key]['member'] : never;
 	}[keyof Type];
 
-type StructDeclaration = FakeVariant | {
+type StructDeclaration = WithVariant | {
 	[key: string]: Format | StructMember;
-};
-type FakeVariant<V extends number | string = number | string> = {
-	__variant: V;
 };
 type StructDeclarationType<Type extends StructDeclaration> = {
 	[Key in StructKeys<Type>]: TypeOf<StructLookup<Type, Key>>;
-} & (Type extends FakeVariant<infer V> ? FakeVariant<V> : unknown);
+} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
 
 export function struct<Type extends StructDeclaration>(format: Type):
 WithType<StructDeclarationType<Type>>;
@@ -195,7 +189,7 @@ export function struct(...args: [ StructDeclaration ] | [ any, StructDeclaration
 }
 
 // Pass a string to define a variant key into a `struct`
-export function variant<V extends number | string>(name: V): FakeVariant<V>;
+export function variant<V extends number | string>(name: V): WithVariant<V>;
 // *or* an array of structs with variant keys
 export function variant<Type extends Format[]>(...args: Type): WithType<{
 	[Key in keyof Type]: TypeOf<Type[Key]>;

@@ -16,6 +16,13 @@ registerGameInitializer(game => game.spawns = Object.create(null));
 // Export `StructureExtension` & `StructureSpawn` to runtime globals
 registerGlobal(Extension.StructureExtension);
 registerGlobal(Spawn.StructureSpawn);
+declare module 'xxscreeps/game/runtime' {
+	interface Global {
+		StructureExtension: Extension.StructureExtension;
+		StructureSpawn: Spawn.StructureSpawn;
+	}
+}
+
 
 // Register FIND_ types for `Spawn`
 const find = registerFindHandlers({

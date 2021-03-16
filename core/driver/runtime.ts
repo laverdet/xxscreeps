@@ -7,7 +7,7 @@ import type { IntentListFor } from 'xxscreeps/processor';
 import * as Game from 'xxscreeps/game';
 // eslint-disable-next-line no-duplicate-imports
 import { flushIntents, initializeIntents, intents, runForUser } from 'xxscreeps/game';
-import { setupGlobals } from 'xxscreeps/game/globals';
+import { setupGlobals } from 'xxscreeps/game/runtime';
 import * as Memory from 'xxscreeps/game/memory';
 import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
 import { Room } from 'xxscreeps/game/room';
@@ -69,7 +69,9 @@ export function initialize(
 
 	// Set up global `require`
 	const cache = Object.create(null);
-	globalThis.require = require = name => {
+	globalThis.require = require = fullName => {
+		// Allow require('./module')
+		const name = fullName.replace(/^\.\//, '');
 		// Check cache
 		const cached = cache[name];
 		if (cached !== undefined) {

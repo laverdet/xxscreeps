@@ -65,6 +65,6 @@ export function installEndpointHandlers(express: Express, context: BackendContex
 		TerrainZoomEndpoint,
 	]));
 	for (const route of routes) {
-		express.use(useAuth(bindRoutes(context, Router(), [ route ])));
+		apiRouter.use(useAuth(bindRoutes(context, Router(), [ route ])));
 	}
 }

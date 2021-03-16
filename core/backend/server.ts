@@ -9,7 +9,6 @@ import { setupGracefulShutdown } from './graceful';
 import { installEndpointHandlers } from './endpoints';
 import { installSocketHandlers } from './socket';
 
-import 'xxscreeps/config/mods';
 import 'xxscreeps/config/mods/import/game';
 import 'xxscreeps/config/mods/import/processor';
 import 'xxscreeps/config/mods/import/backend';

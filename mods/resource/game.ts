@@ -8,6 +8,12 @@ import { registerSchema } from 'xxscreeps/engine/schema';
 // Export `StructureContainer` & `Resource` to runtime globals
 registerGlobal(Container.StructureContainer);
 registerGlobal(Resource.Resource);
+declare module 'xxscreeps/game/runtime' {
+	interface Global {
+		Resource: Resource.Resource;
+		StructureContainer: Container.StructureContainer;
+	}
+}
 
 // Register FIND_ types for `Resource`
 const find = registerFindHandlers({

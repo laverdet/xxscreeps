@@ -1,3 +1,4 @@
+import 'xxscreeps/config/mods';
 import os from 'os';
 import config from 'xxscreeps/config';
 import argv from 'xxscreeps/config/arguments';

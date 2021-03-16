@@ -13,3 +13,6 @@ declare module 'xxscreeps/engine/schema' {
 
 // Export `StructureController` to runtime globals
 registerGlobal(Controller.StructureController);
+declare module 'xxscreeps/game/runtime' {
+	interface Global { StructureController: Controller.StructureController }
+}

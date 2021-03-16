@@ -27,7 +27,7 @@ bindRenderer(Spawn.StructureSpawn, (spawn, next) => ({
 }));
 
 registerBackendRoute({
-	path: '/api/game/check-unique-object-name',
+	path: '/game/check-unique-object-name',
 	method: 'post',
 
 	async execute(req) {
@@ -52,7 +52,7 @@ registerBackendRoute({
 });
 
 registerBackendRoute({
-	path: '/api/game/gen-unique-object-name',
+	path: '/game/gen-unique-object-name',
 	method: 'post',
 
 	async execute(req) {
@@ -80,7 +80,7 @@ registerBackendRoute({
 });
 
 registerBackendRoute({
-	path: '/api/game/place-spawn',
+	path: '/game/place-spawn',
 	method: 'post',
 
 	async execute(req) {

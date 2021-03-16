@@ -1,7 +1,7 @@
 import { enumeratedForPath } from 'xxscreeps/engine/schema';
-import { declare, enumerated, member, struct, vector, TypeOf } from 'xxscreeps/schema';
+import { declare, enumerated, member, struct, vector, TypeOf, XSymbol } from 'xxscreeps/schema';
 
-export const ActionLog = Symbol('actionLog');
+export const ActionLog = XSymbol('actionLog');
 
 export function memberFormat() {
 	return {

@@ -1,7 +1,7 @@
 import './room';
 
 import { IntentManager } from './intents';
-export { registerGlobal } from './globals';
+export { registerGlobal } from './runtime';
 export {
 	instance, Game,
 	me, rooms, time,

@@ -1,9 +1,10 @@
 import { exchange } from 'xxscreeps/utility/utility';
 import { BufferView } from './buffer-view';
+import { XSymbol } from './symbol';
 
 // Symbols used to keep these functions from littering Typescript types
-const GetBuffer = Symbol();
-const GetOffset = Symbol();
+const GetBuffer = XSymbol('getBuffer');
+const GetOffset = XSymbol('getOffset');
 
 // Used on newly-constructed to provide defaults on uninitialized fields
 const zeroBuffer = new BufferView(new ArrayBuffer(1024));

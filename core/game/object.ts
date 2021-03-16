@@ -3,19 +3,19 @@ import type { Room } from './room';
 import type { LookConstants } from './room/look';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomPosition from 'xxscreeps/game/position';
-import { compose, declare, optional, struct, vector, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, optional, struct, vector, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { assign } from 'xxscreeps/utility/utility';
 
-export const AddToMyGame = Symbol('addToMyGame');
-export const AfterInsert = Symbol('afterInsert');
-export const AfterRemove = Symbol('afterRemove');
-export const LookType = Symbol('lookType');
-export const NextPosition = Symbol('nextPosition');
-export const Owner = Symbol('owner');
-export const PathCost = Symbol('pathCost');
+export const AddToMyGame = XSymbol('addToMyGame');
+export const AfterInsert = XSymbol('afterInsert');
+export const AfterRemove = XSymbol('afterRemove');
+export const LookType = XSymbol('lookType');
+export const NextPosition = XSymbol('nextPosition');
+export const Owner = XSymbol('owner');
+export const PathCost = XSymbol('pathCost');
 
 export const format = () => compose(shape, RoomObject);
 const shape = declare('RoomObject', struct({

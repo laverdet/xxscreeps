@@ -10,7 +10,7 @@
     "watch": "tsc -b -w"
   },
   "exports": {
-    "./config/mods/import/*": "./dist/core/config/mods/import.resolved/*",
+    "./config/mods/import/*": "./dist/core/config/mods.resolved/*",
     "./mods/*": "./dist/mods/*",
     "./*": "./dist/core/*"
   },

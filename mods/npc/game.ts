@@ -1,9 +1,9 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { compose, member, struct, vector } from 'xxscreeps/schema';
+import { compose, member, struct, vector, XSymbol } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
-export const NPCData = Symbol('npcData');
+export const NPCData = XSymbol('npcData');
 
 const schema = registerSchema('Room', struct({
 	npc: member(NPCData, struct({

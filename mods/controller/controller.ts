@@ -3,12 +3,12 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as RoomObject from 'xxscreeps/game/object';
-import { declare, compose, member, struct, variant, withOverlay } from 'xxscreeps/schema';
+import { declare, compose, member, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
 
-export const DowngradeTime = Symbol('downgradeTime');
-export const Progress = Symbol('progress');
-export const UpgradeBlockedTime = Symbol('upgradeBlockedTime');
-export const UpgradePowerThisTick = Symbol('upgradePowerThisTick');
+export const DowngradeTime = XSymbol('downgradeTime');
+export const Progress = XSymbol('progress');
+export const UpgradeBlockedTime = XSymbol('upgradeBlockedTime');
+export const UpgradePowerThisTick = XSymbol('upgradePowerThisTick');
 
 export const format = () => compose(shape, StructureController);
 const shape = declare('Controller', struct(Structure.format, {

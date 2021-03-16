@@ -34,6 +34,7 @@ export async function compile(moduleName: string, externals: ExternalsFunctionEl
 
 			resolve: {
 				alias: {
+					'xxscreeps/config/mods/import': 'xxscreeps/config/mods.resolved',
 					'xxscreeps/config/mods': false,
 				},
 			},

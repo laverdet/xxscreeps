@@ -8,7 +8,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Flag from 'xxscreeps/game/flag';
 import * as Fn from 'xxscreeps/utility/functional';
-import { compose, declare } from 'xxscreeps/schema';
+import { compose, declare, XSymbol } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 import { instantiate } from 'xxscreeps/utility/utility';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
@@ -22,7 +22,7 @@ export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameT
 type FindClosestByPathOptions<Type> =
 	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;
 
-const PositionInteger = Symbol('positionInteger');
+const PositionInteger = XSymbol('positionInteger');
 type PositionFindType<Type> =
 	Type extends (infer Result)[] ? Result :
 	Type extends FindConstants ? FindType<Type> :
@@ -337,6 +337,11 @@ export class RoomPosition {
 	}
 
 	[PositionInteger]: number;
+}
+
+Game.registerGlobal(RoomPosition);
+declare module 'xxscreeps/game/runtime' {
+	interface Global { RoomPosition: RoomPosition }
 }
 
 //

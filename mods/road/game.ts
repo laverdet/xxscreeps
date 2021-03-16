@@ -12,3 +12,6 @@ declare module 'xxscreeps/engine/schema' {
 
 // Export `StructureRoad` to runtime globals
 registerGlobal(Road.StructureRoad);
+declare module 'xxscreeps/game/runtime' {
+	interface Global { StructureRoad: Road.StructureRoad }
+}

@@ -12,3 +12,6 @@ declare module 'xxscreeps/engine/schema' {
 
 // Export `StructureStorage` to runtime globals
 registerGlobal(Storage.StructureStorage);
+declare module 'xxscreeps/game/runtime' {
+	interface Global { StructureStorage: Storage.StructureStorage }
+}

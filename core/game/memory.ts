@@ -1,3 +1,4 @@
+import { registerGlobal } from 'xxscreeps/game';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 
 const kMemoryGrowthSize = 4096;
@@ -96,4 +97,10 @@ export function initialize(value?: Readonly<Uint8Array>) {
 		memoryLength = 0;
 		memory = new Uint16Array(new SharedArrayBuffer(kMemoryGrowthSize));
 	}
+}
+
+// Export `RawMemory` to runtime globals
+registerGlobal('RawMemory', RawMemory);
+declare module 'xxscreeps/game/runtime' {
+	interface Global { RawMemory: typeof RawMemory }
 }

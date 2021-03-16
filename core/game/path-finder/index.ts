@@ -5,7 +5,7 @@ import type { RoomPosition } from '../position';
 import * as Game from '..';
 import { search } from 'xxscreeps/driver/path-finder';
 import { getOrSet } from 'xxscreeps/utility/utility';
-import { registerGlobal } from '../globals';
+import { registerGlobal } from '../runtime';
 import { PathCost } from '../object';
 import { CostMatrix } from './cost-matrix';
 import { makeObstacleChecker } from './obstacle';
@@ -112,4 +112,8 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 
 function use() {}
 
-registerGlobal('PathFinder', { CostMatrix, use, search });
+const PathFinder = { CostMatrix, use, search };
+registerGlobal('PathFinder', PathFinder);
+declare module 'xxscreeps/game/runtime' {
+	interface Global { PathFinder: typeof PathFinder }
+}
