@@ -9,7 +9,7 @@ type MemberWriter = (value: any, view: BufferView, offset: number, locals: numbe
 function makeMemberWriter(layout: StructLayout, lookup: any): MemberWriter {
 
 	let writeMembers: MemberWriter | undefined;
-	for (const [ key, member ] of Object.entries(layout.struct)) {
+	for (const [ key, member ] of Object.entries(layout.struct).reverse()) {
 		const symbol = member.name ?? key;
 
 		// Make writer for single field. `locals` parameter is offset to dynamic memory.
@@ -22,13 +22,14 @@ function makeMemberWriter(layout: StructLayout, lookup: any): MemberWriter {
 				return (value, view, instanceOffset, locals) => {
 					const addr = alignTo(locals, align);
 					view.uint32[instanceOffset + offset >>> 2] = addr;
-					return addr + write(value[symbol], view, addr);
+					return write(value[symbol], view, addr);
 				};
 			} else {
 				return (value, view, instanceOffset, locals) =>
 					((write(value[symbol], view, instanceOffset + offset), locals));
 			}
 		}();
+		next.displayName = `_${typeof symbol === 'symbol' ? symbol.description : symbol}`;
 
 		// Combine member writers
 		const prev = writeMembers;
@@ -36,7 +37,7 @@ function makeMemberWriter(layout: StructLayout, lookup: any): MemberWriter {
 			writeMembers = next;
 		} else {
 			writeMembers = (value, view, offset, locals) =>
-				next(value, view, offset, prev(value, view, offset, locals));
+				prev(value, view, offset, next(value, view, offset, locals));
 		}
 	}
 
@@ -56,23 +57,23 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 	if (typeof layout === 'string') {
 		// Basic types
 		switch (layout) {
-			case 'int8': return (value, view, offset) => ((view.int8[offset] = value, 1));
-			case 'int16': return (value, view, offset) => ((view.int16[offset >>> 1] = value, 2));
-			case 'int32': return (value, view, offset) => ((view.int32[offset >>> 2] = value, 4));
+			case 'int8': return (value, view, offset) => offset + ((view.int8[offset] = value, 1));
+			case 'int16': return (value, view, offset) => offset + ((view.int16[offset >>> 1] = value, 2));
+			case 'int32': return (value, view, offset) => offset + ((view.int32[offset >>> 2] = value, 4));
 
-			case 'uint8': return (value, view, offset) => ((view.uint8[offset] = value, 1));
-			case 'uint16': return (value, view, offset) => ((view.uint16[offset >>> 1] = value, 2));
-			case 'uint32': return (value, view, offset) => ((view.uint32[offset >>> 2] = value, 4));
+			case 'uint8': return (value, view, offset) => offset + ((view.uint8[offset] = value, 1));
+			case 'uint16': return (value, view, offset) => offset + ((view.uint16[offset >>> 1] = value, 2));
+			case 'uint32': return (value, view, offset) => offset + ((view.uint32[offset >>> 2] = value, 4));
 
-			case 'double': return (value, view, offset) => ((view.double[offset >>> 3] = value, 8));
+			case 'double': return (value, view, offset) => offset + ((view.double[offset >>> 3] = value, 8));
 
-			case 'bool': return (value: boolean, view, offset) => ((view.int8[offset] = value ? 1 : 0, 1));
+			case 'bool': return (value: boolean, view, offset) => offset + ((view.int8[offset] = value ? 1 : 0, 1));
 
 			case 'buffer': return (value: Uint8Array, view, offset) => {
 				const { length } = value;
 				view.int32[offset >>> 2] = length;
 				view.uint8.set(value, offset + kPointerSize);
-				return length + kPointerSize;
+				return offset + length + kPointerSize;
 			};
 
 			case 'string': return (value: string, view, offset) => {
@@ -90,12 +91,12 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 							view.uint16[stringOffset16 + ii] = value.charCodeAt(ii);
 						}
 						view.int32[offset >>> 2] = -length;
-						return (length << 1) + kPointerSize;
+						return offset + (length << 1) + kPointerSize;
 					}
 				}
 				// Succeeded writing latin1
 				view.int32[offset >>> 2] = length;
-				return length + kPointerSize;
+				return offset + length + kPointerSize;
 			};
 
 			default: throw TypeError(`Invalid literal layout: ${layout}`);
@@ -118,7 +119,7 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 					write(value[ii], view, currentOffset);
 					currentOffset += stride;
 				}
-				return size;
+				return offset + size;
 			};
 		}
 
@@ -129,18 +130,18 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 		if ('decompose' in interceptor) {
 			return (value, view, offset) => write(interceptor.decompose(value), view, offset);
 		} else if ('decomposeIntoBuffer' in interceptor) {
-			return (value, view, offset) => interceptor.decomposeIntoBuffer(value, view, offset);
+			return (value, view, offset) => offset + interceptor.decomposeIntoBuffer(value, view, offset);
 		} else {
 			return write;
 		}
 
 	} else if ('constant' in layout) {
-		return () => 0;
+		return offset => offset;
 
 	} else if ('enum' in layout) {
 		// Enumerated types
 		const enumMap = new Map(layout.enum.map((value, ii) => [ value, ii ]));
-		return (value, view, offset) => ((view.uint8[offset] = enumMap.get(value)!, 1));
+		return (value, view, offset) => offset + ((view.uint8[offset] = enumMap.get(value)!, 1));
 
 	} else if ('named' in layout) {
 		// Named type
@@ -153,12 +154,12 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 		return (value, view, offset) => {
 			if (value === undefined) {
 				view.int8[offset] = 0;
-				return 1;
+				return offset + 1;
 			} else {
 				const payloadOffset = alignTo(offset + 1, align);
 				const relativeOffset = payloadOffset - offset;
 				view.int8[offset] = relativeOffset;
-				return write(value, view, payloadOffset) + relativeOffset;
+				return write(value, view, payloadOffset);
 			}
 		};
 
@@ -166,7 +167,7 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 		// Structured types
 		const { size } = layout;
 		const writeMembers = makeMemberWriter(layout, lookup);
-		return (value, view, offset) => writeMembers(value, view, offset, offset + size) - offset;
+		return (value, view, offset) => writeMembers(value, view, offset, offset + size);
 
 	} else if ('variant' in layout) {
 		// Variant types
@@ -180,7 +181,7 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 					view.uint32[offset >>> 2] = ii;
 					const payloadOffset = view.uint32[offset + kPointerSize >>> 2] =
 						alignTo(offset + kPointerSize * 2, align);
-					return write(value, view, payloadOffset) + payloadOffset - offset;
+					return write(value, view, payloadOffset);
 				},
 			];
 		}));
@@ -193,15 +194,15 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 			// Vector with dynamic element size
 			return (value, view, offset) => {
 				let prevOffset = offset + kPointerSize;
-				let size = 0;
+				let end = prevOffset;
 				for (const element of value) {
-					const currentOffset = alignTo(prevOffset + size + kPointerSize, align);
+					const currentOffset = alignTo(end + kPointerSize, align);
 					view.uint32[prevOffset - kPointerSize >>> 2] = currentOffset;
-					size = write(element, view, currentOffset);
+					end = write(element, view, currentOffset);
 					prevOffset = currentOffset;
 				}
 				view.uint32[prevOffset - kPointerSize >>> 2] = 0;
-				return prevOffset - offset + size;
+				return end;
 			};
 
 		} else {
@@ -217,7 +218,7 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 				view.uint32[offset >>> 2] = length;
 				// Final element is `size` instead of `stride` because we don't need to align the next
 				// element
-				return currentOffset - offset + size - stride;
+				return currentOffset + size - stride;
 			};
 		}
 	}

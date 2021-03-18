@@ -11,3 +11,7 @@ declare module 'stream-to-promise' {
 interface ImportMeta {
 	resolve(specifier: string, parent?: string): Promise<string>;
 }
+
+interface Function {
+	displayName: string;
+}

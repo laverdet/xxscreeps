@@ -9,7 +9,7 @@ type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => 
 function getMemberReader(layout: StructLayout, lookup: any): MemberReader {
 
 	let readMembers: MemberReader | undefined;
-	for (const [ key, member ] of Object.entries(layout.struct)) {
+	for (const [ key, member ] of Object.entries(layout.struct).reverse()) {
 		const symbol = member.name ?? key;
 
 		// Make reader for single field
@@ -29,6 +29,7 @@ function getMemberReader(layout: StructLayout, lookup: any): MemberReader {
 				};
 			}
 		}();
+		next.displayName = `_${typeof symbol === 'symbol' ? symbol.description : symbol}`;
 
 		// Combine member readers
 		const prev = readMembers;
@@ -36,8 +37,8 @@ function getMemberReader(layout: StructLayout, lookup: any): MemberReader {
 			readMembers = next;
 		} else {
 			readMembers = (value, view, offset) => {
-				prev(value, view, offset);
 				next(value, view, offset);
+				prev(value, view, offset);
 			};
 		}
 	}
