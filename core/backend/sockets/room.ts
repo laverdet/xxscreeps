@@ -1,10 +1,12 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Room from 'xxscreeps/engine/room';
 import * as User from 'xxscreeps/engine/metadata/user';
-import { getFlagChannel, loadUserFlags } from 'xxscreeps/engine/model/user';
+import { getFlagChannel, loadVisuals, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser, runWithState } from 'xxscreeps/game';
+import { Variant } from 'xxscreeps/schema';
 import { SubscriptionEndpoint } from '../socket';
 import { acquire } from 'xxscreeps/utility/async';
+import { stringifyInherited } from 'xxscreeps/utility/string';
 import { asUnion } from 'xxscreeps/utility/utility';
 import { eventRenderers, Render } from 'xxscreeps/backend/symbols';
 import './render';
@@ -52,6 +54,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 	async subscribe(parameters) {
 		let flagsStale = true;
 		let flagString = '';
+		let visualsString = '';
 		let lastTickTime = 0;
 		let previous: any;
 		const seenUsers = new Set<string>();
@@ -74,6 +77,20 @@ export const roomSubscription: SubscriptionEndpoint = {
 							flag => `${flag.name}~${flag.color}~${flag.secondaryColor}~${flag.pos.x}~${flag.pos.y}`).join('|');
 					}
 				})(),
+				// Update visuals
+				(async() => {
+					const allVisuals = await loadVisuals(this.context.shard, this.user, time);
+					visualsString = '';
+					if (allVisuals) {
+						const visuals = allVisuals.find(visual => visual.name === parameters.room);
+						if (visuals) {
+							for (const visual of visuals.visual) {
+								(visual as any).t = visual[Variant];
+								visualsString += stringifyInherited(visual);
+							}
+						}
+					}
+				})(),
 			]);
 
 			// Render current room state
@@ -90,6 +107,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 						}
 						const owner = object.owner;
 						if (owner != null && !seenUsers.has(owner)) {
+							seenUsers.add(owner);
 							visibleUsers.add(owner);
 						}
 					}
@@ -128,6 +146,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			const response: any = {
 				objects: dval,
 				flags: flagString,
+				visual: visualsString,
 				info: { mode: 'world' },
 				gameTime: time,
 				users,

@@ -11,7 +11,7 @@ export type WithType<Type> = { [Type]: Type };
 export type TypeOf<Format> =
 	Format extends () => infer Type ? TypeOf<Type> :
 	Format extends WithType<infer Type> ? Type :
-	Format extends Integral ? number :
+	Format extends Numeric ? number :
 	Format extends 'bool' ? boolean :
 	Format extends 'buffer' ? Readonly<Uint8Array> :
 	Format extends 'string' ? string :
@@ -20,8 +20,8 @@ export type TypeOf<Format> =
 export type Format =
 	(() => Format) | WithType<any> | Primitive | ComposedFormat | NamedFormat |
 	ArrayFormat | ConstantFormat | EnumFormat | OptionalFormat | StructFormat | VariantFormat | VectorFormat;
-type Integral = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32';
-export type Primitive = Integral | 'bool' | 'buffer' | 'string';
+type Numeric = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32' | 'double';
+export type Primitive = Numeric | 'bool' | 'buffer' | 'string';
 
 type ArrayFormat = {
 	array: Format;
@@ -166,9 +166,14 @@ type StructLookup<Type extends StructDeclaration, Name extends keyof any> =
 type StructDeclaration = WithVariant | {
 	[key: string]: Format | StructMember;
 };
-type StructDeclarationType<Type extends StructDeclaration> = {
+
+type UndefinedToOptional<Type, Keys extends keyof Type = {
+	[Key in keyof Type]: undefined extends Type[Key] ? Key : never;
+}[keyof Type]> = Omit<Type, Keys> & Partial<Pick<Type, Keys>>;
+
+type StructDeclarationType<Type extends StructDeclaration> = UndefinedToOptional<{
 	[Key in StructKeys<Type>]: TypeOf<StructLookup<Type, Key>>;
-} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
+} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown)>;
 
 export function struct<Type extends StructDeclaration>(format: Type):
 WithType<StructDeclarationType<Type>>;

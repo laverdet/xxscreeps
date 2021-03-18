@@ -264,8 +264,14 @@ export class Room extends withOverlay(BufferObject, shape) {
 		}
 	}
 
+	/**
+	 * A `RoomVisual` object for this room. You can use this object to draw simple shapes (lines,
+	 * circles, text labels) in the room.
+	 */
 	get visual() {
-		return new RoomVisual;
+		const value = new RoomVisual(this.name);
+		Object.defineProperty(this, 'visual', { value });
+		return value;
 	}
 
 	//

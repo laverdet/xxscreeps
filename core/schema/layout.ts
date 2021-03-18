@@ -6,7 +6,7 @@ export const kPointerSize = 4;
 
 export function alignTo(address: number, align: number) {
 	const alignMinusOne = align - 1;
-	return ~alignMinusOne & (address + alignMinusOne);
+	return ~alignMinusOne & (+address + alignMinusOne);
 }
 
 type ResolvedFormat<Type> =
@@ -62,11 +62,15 @@ export type StructLayout = {
 };
 
 type VariantLayout = {
-	variant: StructLayout[];
+	variant: {
+		align: number;
+		struct: StructLayout;
+	}[];
 };
 
 type VectorLayout = {
 	vector: Layout;
+	align: number;
 	size: number;
 	stride?: number;
 };
@@ -81,7 +85,7 @@ export function getLayout(unresolvedFormat: Format): { layout: Layout; traits: T
 	const format = resolve(unresolvedFormat);
 	if (typeof format === 'string') {
 		// Check for integral types
-		const integralSizes = {
+		const numericSizes = {
 			bool: 1,
 			int8: 1,
 			int16: 2,
@@ -89,10 +93,11 @@ export function getLayout(unresolvedFormat: Format): { layout: Layout; traits: T
 			uint8: 1,
 			uint16: 2,
 			uint32: 4,
+			double: 8,
 		};
-		if (format in integralSizes) {
-			const key = format as keyof typeof integralSizes;
-			const size = integralSizes[key];
+		if (format in numericSizes) {
+			const key = format as keyof typeof numericSizes;
+			const size = numericSizes[key];
 			return {
 				layout: format,
 				traits: {
@@ -252,7 +257,13 @@ export function getLayout(unresolvedFormat: Format): { layout: Layout; traits: T
 	} else if ('variant' in format) {
 		return {
 			layout: {
-				variant: format.variant.map(variant => getLayout(variant).layout as StructLayout),
+				variant: format.variant.map(variant => {
+					const { layout, traits } = getLayout(variant);
+					return {
+						struct: layout as StructLayout,
+						align: traits.align,
+					};
+				}),
 			},
 			traits: {
 				align: kPointerSize,
@@ -265,11 +276,12 @@ export function getLayout(unresolvedFormat: Format): { layout: Layout; traits: T
 		return {
 			layout: {
 				vector: layout,
+				align: Math.max(traits.align, kPointerSize),
 				size: traits.size,
 				stride: traits.stride,
 			},
 			traits: {
-				align: kPointerSize,
+				align: Math.max(traits.align, kPointerSize),
 				size: kPointerSize,
 			},
 		};

@@ -64,6 +64,8 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 			case 'uint16': return (value, view, offset) => ((view.uint16[offset >>> 1] = value, 2));
 			case 'uint32': return (value, view, offset) => ((view.uint32[offset >>> 2] = value, 4));
 
+			case 'double': return (value, view, offset) => ((view.double[offset >>> 3] = value, 8));
+
 			case 'bool': return (value: boolean, view, offset) => ((view.int8[offset] = value ? 1 : 0, 1));
 
 			case 'buffer': return (value: Uint8Array, view, offset) => {
@@ -151,7 +153,7 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 		return (value, view, offset) => {
 			if (value === undefined) {
 				view.int8[offset] = 0;
-				return kPointerSize;
+				return 1;
 			} else {
 				const payloadOffset = alignTo(offset + 1, align);
 				const relativeOffset = payloadOffset - offset;
@@ -169,34 +171,37 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 	} else if ('variant' in layout) {
 		// Variant types
 		const variantMap = new Map(layout.variant.map((unresolvedElement, ii): [ string | number, Writer ] => {
-			const element = unpackWrappedStruct(unresolvedElement);
+			const { align } = unresolvedElement;
+			const element = unpackWrappedStruct(unresolvedElement.struct);
 			const write = makeTypeWriter(element, lookup);
 			return [
 				element.variant!,
 				(value, view, offset) => {
 					view.uint32[offset >>> 2] = ii;
-					return write(value, view, offset + kPointerSize) + kPointerSize;
+					const payloadOffset = view.uint32[offset + kPointerSize >>> 2] =
+						alignTo(offset + kPointerSize * 2, align);
+					return write(value, view, payloadOffset) + payloadOffset - offset;
 				},
 			];
 		}));
 		return (value, view, offset) => variantMap.get(value[Variant])!(value, view, offset);
 
 	} else if ('vector' in layout) {
-		const { size, stride, vector: elementLayout } = layout;
+		const { align, size, stride, vector: elementLayout } = layout;
 		const write = makeTypeWriter(elementLayout, lookup);
 		if (stride === undefined) {
 			// Vector with dynamic element size
 			return (value, view, offset) => {
-				let length = 0;
-				let currentOffset = offset + kPointerSize;
+				let prevOffset = offset + kPointerSize;
+				let size = 0;
 				for (const element of value) {
-					++length;
-					const elementOffset = currentOffset + kPointerSize;
-					const size = alignTo(write(element, view, elementOffset), kPointerSize);
-					currentOffset = view.uint32[currentOffset >>> 2] = elementOffset + size;
+					const currentOffset = alignTo(prevOffset + size + kPointerSize, align);
+					view.uint32[prevOffset - kPointerSize >>> 2] = currentOffset;
+					size = write(element, view, currentOffset);
+					prevOffset = currentOffset;
 				}
-				view.uint32[offset >>> 2] = length;
-				return currentOffset - offset;
+				view.uint32[prevOffset - kPointerSize >>> 2] = 0;
+				return prevOffset - offset + size;
 			};
 
 		} else {

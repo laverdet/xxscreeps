@@ -112,6 +112,9 @@ class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
 		if (this.bufferedBlobs.has(key)) {
 			this.bufferedBlobs.delete(key);
 		} else {
+			// Ensure it actually exists on disk
+			const path = Path.join(this.path, key);
+			await fs.stat(path);
 			this.bufferedDeletes.add(key);
 		}
 		return Promise.resolve();
@@ -123,6 +126,8 @@ class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
 		const buffered = this.bufferedBlobs.get(key);
 		if (buffered !== undefined) {
 			return buffered;
+		} else if (this.bufferedDeletes.has(key)) {
+			throw new Error('Does not exist');
 		}
 		// Load from file system
 		const path = Path.join(this.path, key);

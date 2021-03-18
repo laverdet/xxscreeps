@@ -16,6 +16,7 @@ import type { RunnerIntent } from 'xxscreeps/engine/runner/channel';
 import * as FlagLib from 'xxscreeps/engine/runner/flag';
 import * as UserCode from 'xxscreeps/engine/metadata/code';
 import * as RoomSchema from 'xxscreeps/engine/room';
+import * as RoomVisual from 'xxscreeps/game/visual';
 
 import { setupConsole, Writer } from './console';
 
@@ -202,5 +203,8 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 		intentBlobs[roomName] = buffer;
 	}
 
-	return { flagBlob, intentBlobs, memory };
+	// Extras
+	const visualsBlob = RoomVisual.write();
+
+	return { flagBlob, intentBlobs, visualsBlob, memory };
 }

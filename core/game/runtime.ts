@@ -27,7 +27,6 @@ export function setupGlobals(globalThis: any) {
 
 	// Export constants
 	for (const [ identifier, value ] of Object.entries(C)) {
-		console.log(identifier);
 		globalThis[identifier] = value;
 	}
 

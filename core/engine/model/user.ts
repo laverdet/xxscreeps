@@ -1,7 +1,9 @@
+import type { ConsoleMessage } from 'xxscreeps/engine/metadata/code';
 import type { Shard } from './shard';
 import { Channel } from 'xxscreeps/storage/channel';
-import type { ConsoleMessage } from 'xxscreeps/engine/metadata/code';
+import { makeReader } from 'xxscreeps/schema';
 import * as Flag from 'xxscreeps/engine/runner/flag';
+import * as Visual from 'xxscreeps/game/visual';
 
 export function getConsoleChannel(shard: Shard, user: string) {
 	return new Channel<ConsoleMessage>(shard.storage, `user/${user}/console`);
@@ -34,6 +36,25 @@ export async function loadUserFlags(shard: Shard, user: string) {
 export async function saveUserFlagBlobForNextTick(shard: Shard, user: string, flagBlob: Readonly<Uint8Array>) {
 	await shard.storage.persistence.set(`user/${user}/flags`, flagBlob);
 	await getFlagChannel(shard, user).publish({ type: 'updated' });
+}
+
+const visualsReader = makeReader(Visual.schema);
+export async function loadVisuals(shard: Shard, user: string, time: number) {
+	const fragment = `visual${time % 2}`;
+	try {
+		return visualsReader(await shard.storage.persistence.get(`user/${user}/${fragment}`));
+	} catch (err) {}
+}
+
+export async function saveVisualsBlob(shard: Shard, user: string, time: number, visual: Readonly<Uint8Array> | undefined) {
+	const fragment = `visual${time % 2}`;
+	if (visual) {
+		await shard.storage.persistence.set(`user/${user}/${fragment}`, visual);
+	} else {
+		try {
+			await shard.storage.persistence.del(`user/${user}/${fragment}`);
+		} catch (err) {}
+	}
 }
 
 /**

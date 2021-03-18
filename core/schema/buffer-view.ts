@@ -8,6 +8,7 @@ export class BufferView {
 	readonly int8: Int8Array;
 	readonly int16: Int16Array;
 	readonly int32: Int32Array;
+	readonly double: Float64Array;
 
 	constructor(buffer: ArrayBuffer | SharedArrayBuffer, offset = 0) {
 		let { byteLength } = buffer;
@@ -18,6 +19,7 @@ export class BufferView {
 		this.int8 = new Int8Array(buffer, offset, byteLength);
 		this.int16 = new Int16Array(buffer, offset, byteLength >>> 1);
 		this.int32 = new Int32Array(buffer, offset, byteLength >>> 2);
+		this.double = new Float64Array(buffer, offset, byteLength >>> 3);
 	}
 
 	static fromTypedArray(buffer: Uint8Array): BufferView;

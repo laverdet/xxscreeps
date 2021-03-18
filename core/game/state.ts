@@ -2,10 +2,12 @@ import type { Flag } from './flag';
 import type { AnyRoomObject, Room } from './room';
 import { gameInitializers } from './symbols';
 import map from './map';
+
 import { flush as flushPathFinder } from 'xxscreeps/game/path-finder';
 import { flushFindCache } from 'xxscreeps/game/room/methods';
 import { insertObject } from './room/methods';
 import { AddToMyGame, RoomObject } from './object';
+import * as Visual from './visual';
 
 /**
  * The main global game object containing all the game play information.
@@ -120,6 +122,7 @@ export function runForUser<Type>(
 ) {
 	return runWithState(rooms_, time, () => runAsUser(userId, () => {
 		instance.flags = flags_;
+		Visual.clear();
 		for (const flag of Object.values(instance.flags)) {
 			const room = rooms[flag.pos.roomName];
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

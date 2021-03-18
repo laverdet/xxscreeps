@@ -1,7 +1,7 @@
 import { typedArrayToString } from 'xxscreeps/utility/string';
 import { BufferView } from './buffer-view';
 import { Format, TypeOf, Variant } from './format';
-import { Layout, StructLayout, getLayout, kPointerSize, unpackWrappedStruct } from './layout';
+import { Layout, StructLayout, getLayout, kPointerSize, unpackWrappedStruct, alignTo } from './layout';
 
 type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
@@ -67,6 +67,8 @@ export function makeTypeReader(layout: Layout, lookup: any): Reader {
 			case 'uint8': return (view, offset) => view.uint8[offset];
 			case 'uint16': return (view, offset) => view.uint16[offset >>> 1];
 			case 'uint32': return (view, offset) => view.uint32[offset >>> 2];
+
+			case 'double': return (view, offset) => view.double[offset >>> 3];
 
 			case 'bool': return (view, offset) => view.int8[offset] !== 0;
 
@@ -164,32 +166,28 @@ export function makeTypeReader(layout: Layout, lookup: any): Reader {
 	} else if ('variant' in layout) {
 		// Variant types
 		const variantReaders = layout.variant.map(elementLayout =>
-			makeTypeReader(elementLayout, lookup));
+			makeTypeReader(elementLayout.struct, lookup));
 		if (variantReaders.length !== layout.variant.length) {
 			throw new Error('Missing or duplicated variant key');
 		}
 		return (view, offset) =>
-			variantReaders[view.uint32[offset >>> 2]](view, offset + kPointerSize);
+			variantReaders[view.uint32[offset >>> 2]](view, view.uint32[offset + kPointerSize >>> 2]);
 
 	} else if ('vector' in layout) {
 		const elementLayout = layout.vector;
 		const read = makeTypeReader(elementLayout, lookup);
-		const { stride } = layout;
+		const { align, stride } = layout;
+		const alignOffset = alignTo(kPointerSize, align);
 		if (stride === undefined) {
 			// Vector with dynamic element size
 			return (view, offset) => {
-				const length = view.uint32[offset >>> 2];
-				if (length === 0) {
-					return [];
-				} else {
-					const value: any[] = [];
-					let currentOffset = offset + kPointerSize;
-					for (let ii = 0; ii < length; ++ii) {
-						value.push(read(view, currentOffset + kPointerSize));
-						currentOffset = view.uint32[currentOffset >>> 2];
-					}
-					return value;
+				const value = [];
+				let currentOffset = view.uint32[offset >>> 2];
+				while (currentOffset !== 0) {
+					value.push(read(view, currentOffset));
+					currentOffset = view.uint32[currentOffset - kPointerSize >>> 2];
 				}
+				return value;
 			};
 
 		} else {
@@ -200,7 +198,7 @@ export function makeTypeReader(layout: Layout, lookup: any): Reader {
 					return [];
 				} else {
 					const value: any[] = [];
-					let currentOffset = offset + kPointerSize;
+					let currentOffset = offset + alignOffset;
 					for (let ii = 0; ii < length; ++ii) {
 						value.push(read(view, currentOffset));
 						currentOffset += stride;
