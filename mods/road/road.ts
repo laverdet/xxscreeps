@@ -3,7 +3,7 @@ import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import { RoomPosition, isBorder } from 'xxscreeps/game/position';
-import { compose, declare, member, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
+import { compose, declare, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
@@ -12,7 +12,7 @@ export const NextDecayTime = XSymbol('nextDecayTime');
 export function format() { return compose(shape, StructureRoad) }
 const shape = declare('Road', struct(Structure.format, {
 	...variant('road'),
-	nextDecayTime: member(NextDecayTime, 'int32'),
+	[NextDecayTime]: 'int32',
 }));
 
 export class StructureRoad extends withOverlay(Structure.Structure, shape) {

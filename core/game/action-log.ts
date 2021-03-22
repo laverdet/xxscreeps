@@ -1,17 +1,16 @@
 import { enumeratedForPath } from 'xxscreeps/engine/schema';
-import { declare, enumerated, member, struct, vector, TypeOf, XSymbol } from 'xxscreeps/schema';
+import { declare, enumerated, struct, vector, TypeOf, XSymbol } from 'xxscreeps/schema';
 
 export const ActionLog = XSymbol('actionLog');
 
 export function memberFormat() {
 	return {
-		actionLog: member(ActionLog,
-			declare('ActionLog', vector(struct({
+		[ActionLog]: declare('ActionLog', vector(struct({
 				action: actions(),
 				x: 'int8',
 				y: 'int8',
 			})),
-		)),
+		),
 	};
 }
 

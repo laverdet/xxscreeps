@@ -1,6 +1,7 @@
 import type { WithType } from 'xxscreeps/schema/format';
 import type { UnionToIntersection, UnwrapArray, WithKey } from 'xxscreeps/utility/types';
 import { resolve } from 'xxscreeps/schema/layout';
+import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
 const schemaByPath = new Map<string, any[]>();
@@ -27,7 +28,7 @@ export function structForPath<Path extends string>(path: Path): ExtractStructSch
 	const formats = schemaByPath.get(path) ?? [];
 	for (const format of formats) {
 		const resolvedFormat = resolve(format);
-		for (const [ key, member ] of Object.entries(resolvedFormat.struct)) {
+		for (const [ key, member ] of entriesWithSymbols(resolvedFormat.struct)) {
 			schema[key] = member;
 		}
 	}

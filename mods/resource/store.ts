@@ -1,7 +1,7 @@
 import type { AnyRoomObject } from 'xxscreeps/game/room';
 import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
-import { BufferView, compose, declare, member, struct, vector, withOverlay, withType, XSymbol } from 'xxscreeps/schema';
+import { BufferView, compose, declare, struct, vector, withOverlay, withType, XSymbol } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { ResourceType, optionalResourceEnumFormat } from './resource';
 export type { ResourceType };
@@ -20,15 +20,15 @@ export function restrictedFormat<Resource extends ResourceType>() {
 	return withType<Store<Resource>>(format);
 }
 const shape = declare('Store', struct({
-	amount: member(Amount, 'int32'),
-	capacity: member(Capacity, 'int32'),
-	resources: member(Resources, vector(struct({
+	[Amount]: 'int32',
+	[Capacity]: 'int32',
+	[Resources]: vector(struct({
 		amount: 'int32',
 		capacity: 'int32',
 		type: optionalResourceEnumFormat,
-	}))),
-	restricted: member(Restricted, 'bool'),
-	singleResource: member(SingleResource, optionalResourceEnumFormat),
+	})),
+	[Restricted]: 'bool',
+	[SingleResource]: optionalResourceEnumFormat,
 }));
 
 // Make `Store` indexable on any `ResourceType`

@@ -3,6 +3,7 @@ import type { StructLayout } from './layout';
 import { getBuffer, getOffset, BufferObject } from './buffer-object';
 import { TypeOf, Variant } from './format';
 import { makeTypeReader } from './read';
+import { entriesWithSymbols } from './symbol';
 
 const { defineProperty } = Object;
 const { apply } = Reflect;
@@ -17,9 +18,8 @@ export function injectGetters(layout: StructLayout, prototype: object) {
 	}
 	injected.add(prototype);
 
-	for (const [ key, member ] of Object.entries(layout.struct)) {
-		const { layout, name, offset, pointer } = member;
-		const symbol = name ?? key;
+	for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
+		const { layout, offset, pointer } = member;
 
 		// Make getter
 		const get = function(): GetterReader {
@@ -47,7 +47,7 @@ export function injectGetters(layout: StructLayout, prototype: object) {
 			)) {
 				return function() {
 					const value = apply(get, this, []);
-					defineProperty(this, symbol, {
+					defineProperty(this, key, {
 						value,
 						writable: true,
 					});
@@ -60,10 +60,10 @@ export function injectGetters(layout: StructLayout, prototype: object) {
 		}();
 
 		// Define getter on proto
-		Object.defineProperty(prototype, symbol, {
+		Object.defineProperty(prototype, key, {
 			get,
 			set(value) {
-				defineProperty(this, symbol, {
+				defineProperty(this, key, {
 					enumerable: true,
 					writable: true,
 					value,

@@ -2,6 +2,7 @@ import { typedArrayToString } from 'xxscreeps/utility/string';
 import { BufferView } from './buffer-view';
 import { Format, TypeOf, Variant } from './format';
 import { Layout, StructLayout, getLayout, kPointerSize, unpackWrappedStruct, alignTo } from './layout';
+import { entriesWithSymbols } from './symbol';
 
 type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
@@ -9,8 +10,7 @@ type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => 
 function getMemberReader(layout: StructLayout, lookup: any): MemberReader {
 
 	let readMembers: MemberReader | undefined;
-	for (const [ key, member ] of Object.entries(layout.struct).reverse()) {
-		const symbol = member.name ?? key;
+	for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
 
 		// Make reader for single field
 		const next = function(): MemberReader {
@@ -21,15 +21,15 @@ function getMemberReader(layout: StructLayout, lookup: any): MemberReader {
 			if (pointer) {
 				return (value, view, instanceOffset) => {
 					const addr = view.uint32[instanceOffset + offset >>> 2];
-					value[symbol] = read(view, addr);
+					value[key] = read(view, addr);
 				};
 			} else {
 				return (value, view, instanceOffset) => {
-					value[symbol] = read(view, instanceOffset + offset);
+					value[key] = read(view, instanceOffset + offset);
 				};
 			}
 		}();
-		next.displayName = `_${typeof symbol === 'symbol' ? symbol.description : symbol}`;
+		next.displayName = `_${typeof key === 'symbol' ? key.description : key}`;
 
 		// Combine member readers
 		const prev = readMembers;
@@ -171,8 +171,7 @@ export function makeTypeReader(layout: Layout, lookup: any): Reader {
 		if (variantReaders.length !== layout.variant.length) {
 			throw new Error('Missing or duplicated variant key');
 		}
-		return (view, offset) =>
-			variantReaders[view.uint32[offset >>> 2]](view, view.uint32[offset + kPointerSize >>> 2]);
+		return (view, offset) => variantReaders[view.uint32[offset >>> 2]](view, view.uint32[offset + kPointerSize >>> 2]);
 
 	} else if ('vector' in layout) {
 		const elementLayout = layout.vector;

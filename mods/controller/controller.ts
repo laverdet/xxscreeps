@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as RoomObject from 'xxscreeps/game/object';
-import { declare, compose, member, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
+import { declare, compose, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
 
 export const DowngradeTime = XSymbol('downgradeTime');
 export const Progress = XSymbol('progress');
@@ -20,9 +20,9 @@ const shape = declare('Controller', struct(Structure.format, {
 	safeModeAvailable: 'int32',
 	safeModeCooldown: 'int32',
 	// sign: { username, text, time, datetime }
-	downgradeTime: member(DowngradeTime, 'int32'),
-	progress: member(Progress, 'int32'),
-	upgradeBlockedTime: member(UpgradeBlockedTime, 'int32'),
+	[DowngradeTime]: 'int32',
+	[Progress]: 'int32',
+	[UpgradeBlockedTime]: 'int32',
 }));
 
 export class StructureController extends withOverlay(Structure.Structure, shape) {

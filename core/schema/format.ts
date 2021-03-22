@@ -52,14 +52,9 @@ type OptionalFormat = {
 };
 
 type StructFormat = {
-	struct: Record<string, Format | StructMember>;
+	struct: Record<string | symbol, Format>;
 	inherit?: WithType<{}>;
 	variant?: number | string;
-};
-
-type StructMember<Name extends keyof any = any, Format = any> = {
-	member: Format;
-	name: Name;
 };
 
 type VariantFormat = {
@@ -132,15 +127,6 @@ export function enumerated<Type extends EnumTypes[]>(...values: Type): WithType<
 	return format as never;
 }
 
-// Helper function for renaming struct members (probably from a string to a symbol)
-export function member<Type extends Format, Name extends string | symbol>(name: Name, member: Type) {
-	const result: StructMember<Name, Type> = {
-		member,
-		name,
-	};
-	return result;
-}
-
 // An optional element, will consume only 1 byte in case of `undefined`
 export function optional<Type extends Format>(element: Type): WithType<TypeOf<Type> | undefined> {
 	const format: OptionalFormat = {
@@ -149,31 +135,21 @@ export function optional<Type extends Format>(element: Type): WithType<TypeOf<Ty
 	return format as never;
 }
 
-// Returns keys for a given struct format, accepting symbols from `member` helper
-type StructKeys<Type extends StructDeclaration> = {
-	[Key in keyof Type]:
-		Key extends typeof Variant ? never :
-		Type[Key] extends StructMember<infer Name> ? Name : Key;
-}[keyof Type];
-
-// Looks up a symbol into a struct format and returns the vformat for that symbol
-type StructLookup<Type extends StructDeclaration, Name extends keyof any> =
-	Name extends keyof Type ? Type[Name] :
-	{
-		[Key in keyof Type]: Type[Key] extends StructMember<Name> ? Type[Key]['member'] : never;
-	}[keyof Type];
-
+// Structure / object type
 type StructDeclaration = WithVariant | {
-	[key: string]: Format | StructMember;
+	[key: string]: Format;
 };
 
-type UndefinedToOptional<Type, Keys extends keyof Type = {
-	[Key in keyof Type]: undefined extends Type[Key] ? Key : never;
-}[keyof Type]> = Omit<Type, Keys> & Partial<Pick<Type, Keys>>;
-
-type StructDeclarationType<Type extends StructDeclaration> = UndefinedToOptional<{
-	[Key in StructKeys<Type>]: TypeOf<StructLookup<Type, Key>>;
-} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown)>;
+export type StructDeclarationType<
+	Type extends StructDeclaration,
+	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
+	Reqs extends Keys = Keys extends any ?
+		undefined extends TypeOf<Type[Keys]> ? never : Keys : never> =
+{
+	[Key in Keys]?: TypeOf<Type[Key]>;
+} & {
+	[Key in Reqs]: TypeOf<Type[Key]>;
+} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
 
 export function struct<Type extends StructDeclaration>(format: Type):
 WithType<StructDeclarationType<Type>>;

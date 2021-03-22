@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import { member, struct } from 'xxscreeps/schema';
+import { struct } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 import { lookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable';
@@ -9,7 +9,7 @@ import { CumulativeEnergyHarvested } from './symbols';
 // Register schema extensions
 const schema = [
 	registerSchema('Room', struct({
-		cumulativeEnergyHarvested: member(CumulativeEnergyHarvested, 'uint32'),
+		[CumulativeEnergyHarvested]: 'uint32',
 	})),
 
 	registerSchema('Room.objects', format),

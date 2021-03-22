@@ -2,6 +2,7 @@ import { BufferView } from './buffer-view';
 import { Format, TypeOf, Variant } from './format';
 import { Layout, StructLayout, kPointerSize, alignTo, getLayout, unpackWrappedStruct } from './layout';
 import { runOnce } from 'xxscreeps/utility/memoize';
+import { entriesWithSymbols } from './symbol';
 
 type Writer<Type = any> = (value: Type, view: BufferView, offset: number) => number;
 type MemberWriter = (value: any, view: BufferView, offset: number, locals: number) => number;
@@ -9,8 +10,7 @@ type MemberWriter = (value: any, view: BufferView, offset: number, locals: numbe
 function makeMemberWriter(layout: StructLayout, lookup: any): MemberWriter {
 
 	let writeMembers: MemberWriter | undefined;
-	for (const [ key, member ] of Object.entries(layout.struct).reverse()) {
-		const symbol = member.name ?? key;
+	for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
 
 		// Make writer for single field. `locals` parameter is offset to dynamic memory.
 		const next = function(): MemberWriter {
@@ -22,14 +22,14 @@ function makeMemberWriter(layout: StructLayout, lookup: any): MemberWriter {
 				return (value, view, instanceOffset, locals) => {
 					const addr = alignTo(locals, align);
 					view.uint32[instanceOffset + offset >>> 2] = addr;
-					return write(value[symbol], view, addr);
+					return write(value[key], view, addr);
 				};
 			} else {
 				return (value, view, instanceOffset, locals) =>
-					((write(value[symbol], view, instanceOffset + offset), locals));
+					((write(value[key], view, instanceOffset + offset), locals));
 			}
 		}();
-		next.displayName = `_${typeof symbol === 'symbol' ? symbol.description : symbol}`;
+		next.displayName = `_${typeof key === 'symbol' ? key.description : key}`;
 
 		// Combine member writers
 		const prev = writeMembers;
@@ -99,7 +99,7 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 				return offset + length + kPointerSize;
 			};
 
-			default: throw TypeError(`Invalid literal layout: ${layout}`);
+			default: debugger; throw TypeError(`Invalid literal layout: ${layout}`);
 		}
 	}
 

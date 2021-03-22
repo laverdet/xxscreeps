@@ -1,6 +1,7 @@
 import { Implementation } from 'xxscreeps/utility/types';
-import { ConstantFormat, EnumFormat, Format, Interceptor, Primitive } from './format';
+import { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, Variant } from './format';
 import { injectGetters } from './overlay';
+import { entriesWithSymbols } from './symbol';
 
 export const kPointerSize = 4;
 
@@ -49,11 +50,10 @@ type OptionalLayout = {
 };
 
 export type StructLayout = {
-	struct: Record<string, {
+	struct: Record<string | symbol, {
 		align: number;
 		offset: number;
 		pointer?: true;
-		name?: string | symbol;
 		layout: Layout;
 	}>;
 	inherit?: StructLayout;
@@ -188,16 +188,12 @@ export function getLayout(unresolvedFormat: Format): { layout: Layout; traits: T
 
 	} else if ('struct' in format) {
 		// Grab layout for structure members
-		const members = Object.entries(format.struct).map(([ key, member ]) => ({
-			key,
-			...typeof member === 'object' && 'member' in member ? {
-				...getLayout(member.member),
-				name: member.name,
-			} : {
+		const members = entriesWithSymbols(format.struct)
+			.filter(entry => entry[0] !== Variant)
+			.map(([ key, member ]) => ({
+				key,
 				...getLayout(member),
-				name: undefined,
-			},
-		}));
+			}));
 
 		// Simple struct pack algorithm by sorting by size largest to smallest
 		type MemberDescriptor = typeof members[number];
@@ -205,10 +201,11 @@ export function getLayout(unresolvedFormat: Format): { layout: Layout; traits: T
 		members.sort((left, right) => {
 			const size = (member: MemberDescriptor) => isPointer(member) ? kPointerSize : member.traits.size;
 			const elementSize = (member: MemberDescriptor) => isPointer(member) ? member.traits.size : Infinity;
+			const nameOf = (el: string | symbol) => typeof el === 'string' ? el : el.description ?? '';
 			return (
 				size(right) - size(left) ||
 				elementSize(right) - elementSize(left) ||
-				left.key.localeCompare(right.key)
+				nameOf(left.key).localeCompare(nameOf(right.key))
 			);
 		});
 
@@ -224,7 +221,6 @@ export function getLayout(unresolvedFormat: Format): { layout: Layout; traits: T
 				key: member.key,
 				info: {
 					align: traits.align,
-					name: member.name,
 					offset: memberOffset,
 					...pointer && { pointer: true as const },
 					layout,

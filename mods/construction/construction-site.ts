@@ -4,7 +4,7 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
-import { compose, declare, enumerated, member, struct, variant, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, enumerated, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { structureFactories } from './symbols';
 
@@ -14,9 +14,9 @@ export function format() { return compose(shape, ConstructionSite) }
 const shape = () => declare('ConstructionSite', struct(RoomObject.format, {
 	...variant('constructionSite'),
 	name: 'string',
-	owner: member(RoomObject.Owner, Id.format),
 	progress: 'int32',
 	structureType: enumerated(...structureFactories.keys() as never as ConstructibleStructureType[]),
+	[RoomObject.Owner]: Id.format,
 }));
 
 export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) {

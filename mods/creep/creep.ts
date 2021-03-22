@@ -7,7 +7,7 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import * as ActionLog from 'xxscreeps/game/action-log';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
-import { compose, declare, enumerated, member, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { assign } from 'xxscreeps/utility/utility';
@@ -37,9 +37,9 @@ function shape() {
 		fatigue: 'int16',
 		hits: 'int16',
 		name: 'string',
-		owner: member(RoomObject.Owner, Id.format),
 		// saying: ...
 		store: Store.format,
+		[RoomObject.Owner]: Id.format,
 		_ageTime: 'int32',
 	}));
 }

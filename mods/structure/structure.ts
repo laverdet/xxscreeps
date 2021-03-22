@@ -5,7 +5,7 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as RoomPosition from 'xxscreeps/game/position';
 import * as Map from 'xxscreeps/game/map';
-import { compose, declare, member, struct, withOverlay, XSymbol } from 'xxscreeps/schema';
+import { compose, declare, struct, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 
@@ -15,7 +15,7 @@ export const CheckObstacle = XSymbol('checkObstacle');
 export const format = () => compose(shape, Structure);
 const shape = declare('Structure', struct(RoomObject.format, {
 	hits: 'int32',
-	owner: member(RoomObject.Owner, Id.optionalFormat),
+	[RoomObject.Owner]: Id.optionalFormat,
 }));
 
 export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape) {
