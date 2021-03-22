@@ -8,18 +8,21 @@ type WithVariant<V extends number | string = any> = { [Variant]: V };
 // This is passed around as a fake type from all the declaration functions
 const Type = Symbol('withType');
 export type WithType<Type> = { [Type]: Type };
-export type TypeOf<Format> =
-	Format extends () => infer Type ? TypeOf<Type> :
+type ResolvedTypeOf<Format> =
 	Format extends WithType<infer Type> ? Type :
 	Format extends Numeric ? number :
 	Format extends 'bool' ? boolean :
 	Format extends 'buffer' ? Readonly<Uint8Array> :
 	Format extends 'string' ? string :
 	never;
+export type TypeOf<Format> =
+	Format extends () => infer Type ? ResolvedTypeOf<Type> :
+	ResolvedTypeOf<Format>;
 
-export type Format =
-	(() => Format) | WithType<any> | Primitive | ComposedFormat | NamedFormat |
+type ResolvedFormat =
+	WithType<any> | Primitive | ComposedFormat | NamedFormat |
 	ArrayFormat | ConstantFormat | EnumFormat | OptionalFormat | StructFormat | VariantFormat | VectorFormat;
+export type Format = (() => ResolvedFormat) | ResolvedFormat;
 type Numeric = 'int8' | 'int16' | 'int32' | 'uint8' | 'uint16' | 'uint32' | 'double';
 export type Primitive = Numeric | 'bool' | 'buffer' | 'string';
 
@@ -143,12 +146,8 @@ type StructDeclaration = WithVariant | {
 export type StructDeclarationType<
 	Type extends StructDeclaration,
 	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
-	Reqs extends Keys = Keys extends any ?
-		undefined extends TypeOf<Type[Keys]> ? never : Keys : never> =
-{
-	[Key in Keys]?: TypeOf<Type[Key]>;
-} & {
-	[Key in Reqs]: TypeOf<Type[Key]>;
+> = {
+	[Key in Keys]: TypeOf<Type[Key]>;
 } & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
 
 export function struct<Type extends StructDeclaration>(format: Type):

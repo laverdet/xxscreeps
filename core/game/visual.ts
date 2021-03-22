@@ -153,7 +153,7 @@ export class RoomVisual {
 		// TODO: Spread needed because Schema types are incomplete
 		const filtered = [ ...Fn.filter(Fn.map(points, (point): [ number, number ] =>
 			point instanceof RoomPosition ? [ point.x, point.y ] : point)) ];
-		this.#visuals.push({ [Variant]: 'p', points: filtered, s: style ?? {} });
+		this.#visuals.push({ [Variant]: 'p', points: filtered, s: (style as any) ?? {} });
 		return this;
 	}
 

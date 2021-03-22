@@ -1,8 +1,8 @@
-import { struct } from 'xxscreeps/schema';
+import { struct, XSymbol } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 // Track energy mined on room
-export const InvaderEnergyTarget = Symbol('invaderEnergyTarget');
+export const InvaderEnergyTarget = XSymbol('invaderEnergyTarget');
 const schema = registerSchema('Room', struct({
 	[InvaderEnergyTarget]: 'uint32',
 }));

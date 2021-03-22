@@ -1,4 +1,3 @@
-import type { Game } from '.';
 import type { Room } from './room';
 import type { LookConstants } from './room/look';
 import * as Id from 'xxscreeps/engine/schema/id';
@@ -8,6 +7,7 @@ import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { assign } from 'xxscreeps/utility/utility';
+import { Game, registerGlobal } from '.';
 
 export const AddToMyGame = XSymbol('addToMyGame');
 export const AfterInsert = XSymbol('afterInsert');
@@ -61,4 +61,12 @@ export function create<Type extends RoomObject>(instance: Type, pos: RoomPositio
 		id: Id.generateId(),
 		pos,
 	});
+}
+
+// Export `RoomObject` to runtime globals
+registerGlobal(RoomObject);
+declare module 'xxscreeps/game/runtime' {
+	interface Global {
+		RoomObject: RoomObject;
+	}
 }

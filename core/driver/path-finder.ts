@@ -18,7 +18,7 @@ function flattenPosition(pos: any): number {
 	return flattenPosition(new RoomPosition(pos.x, pos.y, pos.roomName));
 }
 
-export function search(origin: RoomPosition, goal: OneOrMany<Goal>[], userOptions: SearchOptions = {}) {
+export function search(origin: RoomPosition, goal: OneOrMany<Goal>, userOptions: SearchOptions = {}) {
 
 	// Inject defaults
 	const options = {

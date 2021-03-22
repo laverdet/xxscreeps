@@ -341,7 +341,7 @@ export class RoomPosition {
 
 Game.registerGlobal(RoomPosition);
 declare module 'xxscreeps/game/runtime' {
-	interface Global { RoomPosition: RoomPosition }
+	interface Global { RoomPosition: typeof RoomPosition }
 }
 
 //

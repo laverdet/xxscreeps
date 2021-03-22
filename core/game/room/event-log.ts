@@ -1,6 +1,6 @@
 import type { Room } from '.';
-import { Variant } from 'xxscreeps/schema';
-export const EventLogSymbol = Symbol('eventLog');
+import { Variant, XSymbol } from 'xxscreeps/schema';
+export const EventLogSymbol = XSymbol('eventLog');
 
 // Union type of all events
 type RemoveVariant<T> = T extends any ? Omit<T, typeof Variant> : never;

@@ -18,3 +18,11 @@ export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 	}
 	get [RoomObject.LookType]() { return C.LOOK_SOURCES }
 }
+
+// Export `Source` to runtime globals
+Game.registerGlobal(Source);
+declare module 'xxscreeps/game/runtime' {
+	interface Global {
+		Source: Source;
+	}
+}

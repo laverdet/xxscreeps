@@ -50,7 +50,7 @@ async function readAndUnlink(file: string) {
 
 // Read, fix, and move result
 const dts = await readAndUnlink(`${rootDir}/screeps.exports.d.ts`);
-const dtsMap = await readAndUnlink(`${rootDir}/screeps.exports.d.ts.Map`);
+const dtsMap = await readAndUnlink(`${rootDir}/screeps.exports.d.ts.map`);
 await fs.mkdir('screeps/types', { recursive: true });
 await fs.writeFile('screeps/types/screeps.exports.d.ts', dts
 	// Fix module path names
@@ -79,5 +79,5 @@ await fs.writeFile('screeps/types/globals.d.ts',
 		`declare const ${name}: typeof import('xxscreeps/game/constants')['${name}'];\n`).join('') +
 	globalNames().map(name =>
 		`declare var ${name}: ReturnType<typeof import('xxscreeps/game/runtime')['globalTypes']>['${name}'];\n` +
-		`declare type ${name} = ReturnType<typeof import('xxscreeps/game/runtime')['globalTypes']>['${name}'];\n`).join(''),
+		`declare type ${name} = InstanceType<ReturnType<typeof import('xxscreeps/game/runtime')['globalTypes']>['${name}']>;\n`).join(''),
 	'utf8');
