@@ -29,7 +29,6 @@
     "@xxscreeps/path-finder": "file:core/driver/path-finder",
     "acorn": "^8.0.5",
     "ajv": "^6.12.6",
-    "isolated-vm": "github:laverdet/isolated-vm",
     "js-yaml": "^3.14.1",
     "json-schema": "^0.3.0",
     "lodash": "^3.10.1",

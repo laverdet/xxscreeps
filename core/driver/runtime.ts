@@ -1,9 +1,11 @@
 import type ivm from 'isolated-vm';
-import { inspect } from 'util';
-
 import type { Dictionary } from 'xxscreeps/utility/types';
 import type { IntentListFor } from 'xxscreeps/processor';
 import type { RunnerIntent } from 'xxscreeps/engine/runner/channel';
+
+import { inspect } from 'util';
+import * as Base64 from 'js-base64';
+import * as SourceMap from 'source-map-support';
 
 import * as Game from 'xxscreeps/game';
 // eslint-disable-next-line no-duplicate-imports
@@ -37,6 +39,32 @@ let me: string;
 let flags = {};
 let require: (name: string) => any;
 let writeConsole: Writer;
+const sourceContent = new Map<string, string>();
+
+// Initialize source map.
+SourceMap.install({
+	environment: 'node',
+
+	overrideRetrieveSourceMap: true,
+	retrieveSourceMap(fileName: string) {
+		const content = sourceContent.get(fileName);
+		if (content) {
+			// Match final inline source map
+			const matches = [ ...content.matchAll(/\/\/# sourceMappingURL=data:application\/json;(?:charset=utf-8;)?base64,(?<map>.+)/g) ];
+			if (matches.length !== 0) {
+				debugger;
+				const sourceMapContent = matches[matches.length - 1].groups!.map;
+				if (sourceMapContent) {
+					return {
+						url: fileName,
+						map: Base64.decode(sourceMapContent),
+					};
+				}
+			}
+		}
+		return null;
+	},
+});
 
 // This is the common data between `isolated-vm` and `vm` that doesn't need any special casing
 type InitializationData = {
@@ -91,7 +119,9 @@ export function initialize(
 		const module = {
 			exports: {} as any,
 		};
-		const moduleFunction = compileModule(`(function(module,exports){${code}\n})`, `${name}.js`);
+		const sourceName = `${name}.js`;
+		sourceContent.set(sourceName, code);
+		const moduleFunction = compileModule(`(function(module,exports){${code}\n})`, sourceName);
 		const run = () => moduleFunction.apply(module, [ module, module.exports ]);
 		try {
 			run();

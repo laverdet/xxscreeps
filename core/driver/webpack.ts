@@ -36,6 +36,9 @@ export async function compile(moduleName: string, externals: ExternalsFunctionEl
 				alias: {
 					'xxscreeps/config/mods/import': 'xxscreeps/config/mods.resolved',
 					'xxscreeps/config/mods': false,
+					'buffer-from': false,
+					fs: false,
+					path: 'path-browserify',
 				},
 			},
 
@@ -50,6 +53,14 @@ export async function compile(moduleName: string, externals: ExternalsFunctionEl
 				path: fileURLToPath(new URL('.', import.meta.url)),
 				pathinfo: false,
 			},
+
+			plugins: [
+				new Webpack.DefinePlugin({
+					'module': '{require:()=>({})}',
+					'process': '({cwd:()=>".",version:""})',
+				}),
+			],
+
 		}, (error, stats) => {
 			if (error) {
 				reject(error);
