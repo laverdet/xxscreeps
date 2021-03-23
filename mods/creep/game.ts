@@ -15,7 +15,7 @@ registerGameInitializer(game => game.creeps = Object.create(null));
 // Export `Creep` to runtime globals
 registerGlobal(Creep.Creep);
 declare module 'xxscreeps/game/runtime' {
-	interface Global { Creep: Creep.Creep }
+	interface Global { Creep: typeof Creep.Creep }
 }
 
 // Register FIND_ types for `Creep`

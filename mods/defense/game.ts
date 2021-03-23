@@ -13,5 +13,5 @@ declare module 'xxscreeps/engine/schema' {
 // Export `StructureTower` to runtime globals
 registerGlobal(Tower.StructureTower);
 declare module 'xxscreeps/game/runtime' {
-	interface Global { StructureTower: Tower.StructureTower }
+	interface Global { StructureTower: typeof Tower.StructureTower }
 }

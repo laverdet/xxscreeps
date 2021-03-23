@@ -404,7 +404,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 // Export `Room` to runtime globals
 registerGlobal(Room);
 declare module 'xxscreeps/game/runtime' {
-	interface Global { Room: Room }
+	interface Global { Room: typeof Room }
 }
 
 //

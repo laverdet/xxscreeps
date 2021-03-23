@@ -193,5 +193,5 @@ export class RoomVisual {
 // Export `RoomVisual` to runtime globals
 registerGlobal(RoomVisual);
 declare module 'xxscreeps/game/runtime' {
-	interface Global { RoomVisual: RoomVisual }
+	interface Global { RoomVisual: typeof RoomVisual }
 }

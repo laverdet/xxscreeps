@@ -6,7 +6,7 @@ import { lookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room
 // Export `Structure` to runtime globals
 registerGlobal(Structure.Structure);
 declare module 'xxscreeps/game/runtime' {
-	interface Global { Structure: Structure.Structure }
+	interface Global { Structure: typeof Structure.Structure }
 }
 
 // Register FIND_ types for `Structure`

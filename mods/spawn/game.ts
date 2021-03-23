@@ -18,18 +18,17 @@ registerGlobal(Extension.StructureExtension);
 registerGlobal(Spawn.StructureSpawn);
 declare module 'xxscreeps/game/runtime' {
 	interface Global {
-		StructureExtension: Extension.StructureExtension;
-		StructureSpawn: Spawn.StructureSpawn;
+		StructureExtension: typeof Extension.StructureExtension;
+		StructureSpawn: typeof Spawn.StructureSpawn;
 	}
 }
-
 
 // Register FIND_ types for `Spawn`
 const find = registerFindHandlers({
 	[C.FIND_MY_SPAWNS]: room => lookFor(room, C.LOOK_STRUCTURES).filter(
-		structure => structure.structureType === 'spawn' && structure.my),
+		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my!),
 	[C.FIND_HOSTILE_SPAWNS]: room => lookFor(room, C.LOOK_STRUCTURES).filter(
-		structure => structure.structureType === 'spawn' && structure.my === false),
+		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my === false),
 });
 declare module 'xxscreeps/game/room' {
 	interface Find { spawn: typeof find }

@@ -69,6 +69,7 @@ export class PlayerInstance {
 		if (this.stale) {
 			this.sandbox!.dispose();
 			this.sandbox = undefined;
+			this.stale = false;
 		}
 
 		// If there's no sandbox load the required data and initialize

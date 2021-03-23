@@ -3,6 +3,7 @@ import { BufferView } from './buffer-view';
 import { XSymbol } from './symbol';
 
 // Symbols used to keep these functions from littering Typescript types
+const Detach = XSymbol('detach');
 const GetBuffer = XSymbol('getBuffer');
 const GetOffset = XSymbol('getOffset');
 
@@ -21,6 +22,10 @@ export class BufferObject {
 		this.#offset = offset;
 	}
 
+	static [Detach](that: BufferObject) {
+		that.#buffer.detach();
+	}
+
 	static [GetBuffer](that: BufferObject) {
 		return that.#buffer;
 	}
@@ -30,5 +35,6 @@ export class BufferObject {
 	}
 }
 
+export const detach = exchange(BufferObject, Detach, (): never => { throw new Error });
 export const getBuffer = exchange(BufferObject, GetBuffer, (): never => { throw new Error });
 export const getOffset = exchange(BufferObject, GetOffset, (): never => { throw new Error });

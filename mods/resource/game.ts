@@ -10,8 +10,8 @@ registerGlobal(Container.StructureContainer);
 registerGlobal(Resource.Resource);
 declare module 'xxscreeps/game/runtime' {
 	interface Global {
-		Resource: Resource.Resource;
-		StructureContainer: Container.StructureContainer;
+		Resource: typeof Resource.Resource;
+		StructureContainer: typeof Container.StructureContainer;
 	}
 }
 

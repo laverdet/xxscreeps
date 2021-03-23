@@ -75,9 +75,10 @@ await fs.writeFile('screeps/types/screeps.exports.d.ts.map', dtsMap);
 
 // Write ambient globals file
 await fs.writeFile('screeps/types/globals.d.ts',
+	'type TypeFor<T> = T extends abstract new (...args: any) => infer R ? R : T;\n' +
 	Object.keys(C).map(name =>
 		`declare const ${name}: typeof import('xxscreeps/game/constants')['${name}'];\n`).join('') +
 	globalNames().map(name =>
 		`declare var ${name}: ReturnType<typeof import('xxscreeps/game/runtime')['globalTypes']>['${name}'];\n` +
-		`declare type ${name} = InstanceType<ReturnType<typeof import('xxscreeps/game/runtime')['globalTypes']>['${name}']>;\n`).join(''),
+		`declare type ${name} = TypeFor<ReturnType<typeof import('xxscreeps/game/runtime')['globalTypes']>['${name}']>;\n`).join(''),
 	'utf8');

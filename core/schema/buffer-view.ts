@@ -27,4 +27,18 @@ export class BufferView {
 	static fromTypedArray(buffer: Uint8Array) {
 		return new BufferView(buffer.buffer, buffer.byteOffset);
 	}
+
+	/**
+	 * Forcefully detach the underlying memory from this view, invalidating all objects referring to
+	 * it, and freeing the retained memory
+	 */
+	detach() {
+		delete (this as any).uint8;
+		delete (this as any).uint16;
+		delete (this as any).uint32;
+		delete (this as any).int8;
+		delete (this as any).int16;
+		delete (this as any).int32;
+		delete (this as any).double;
+	}
 }

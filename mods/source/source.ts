@@ -22,7 +22,5 @@ export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 // Export `Source` to runtime globals
 Game.registerGlobal(Source);
 declare module 'xxscreeps/game/runtime' {
-	interface Global {
-		Source: Source;
-	}
+	interface Global { Source: typeof Source }
 }

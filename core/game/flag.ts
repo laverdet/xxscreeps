@@ -80,7 +80,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 // Export `Flag` to runtime globals
 Game.registerGlobal(Flag);
 declare module 'xxscreeps/game/runtime' {
-	interface Global { Flag: Flag }
+	interface Global { Flag: typeof Flag }
 }
 
 //

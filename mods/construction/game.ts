@@ -19,7 +19,7 @@ registerGameInitializer(game => game.constructionSites = Object.create(null));
 // Export `ConstructionSite` to runtime globals
 registerGlobal(ConstructionSite.ConstructionSite);
 declare module 'xxscreeps/game/runtime' {
-	interface Global { ConstructionSite: ConstructionSite.ConstructionSite }
+	interface Global { ConstructionSite: typeof ConstructionSite.ConstructionSite }
 }
 
 // Schema types
