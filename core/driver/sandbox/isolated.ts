@@ -27,14 +27,16 @@ export class IsolatedSandbox {
 	static async create({ userId, codeBlob, flagBlob, memoryBlob, terrainBlob, writeConsole }: Options) {
 		// Generate new isolate and context
 		const isolate = new ivm.Isolate({ memoryLimit: 128 });
-		const [ context, script ] = await Promise.all([
-			isolate.createContext(),
-			isolate.compileScript(await getRuntimeSource(), { filename: 'runtime.js' }),
-		]);
+		const context = await isolate.createContext();
 
 		// Set up required globals before running ./runtime.ts
 		const pf = getPathFinderModule();
-		await Promise.all([
+		const [ script ] = await Promise.all([
+			async function() {
+				const { source, map } = await getRuntimeSource();
+				context.global.setIgnored('runtimeSourceMap', map);
+				return isolate.compileScript(source, { filename: 'runtime.js' });
+			}(),
 			async function() {
 				const instance = await pf.module.create(context);
 				await context.global.set(pf.identifier, instance.derefInto());

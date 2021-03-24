@@ -39,20 +39,27 @@ let me: string;
 let flags = {};
 let require: (name: string) => any;
 let writeConsole: Writer;
-const sourceContent = new Map<string, string>();
 
-// Initialize source map.
+// Initialize source map
+const sourceContent = new Map<string, string>();
+const runtimeSourceMap = globalThis.runtimeSourceMap;
+delete globalThis.runtimeSourceMap;
 SourceMap.install({
 	environment: 'node',
 
 	overrideRetrieveSourceMap: true,
 	retrieveSourceMap(fileName: string) {
+		if (fileName === 'runtime.js') {
+			return {
+				url: fileName,
+				map: runtimeSourceMap,
+			};
+		}
 		const content = sourceContent.get(fileName);
 		if (content) {
 			// Match final inline source map
 			const matches = [ ...content.matchAll(/\/\/# sourceMappingURL=data:application\/json;(?:charset=utf-8;)?base64,(?<map>.+)/g) ];
 			if (matches.length !== 0) {
-				debugger;
 				const sourceMapContent = matches[matches.length - 1].groups!.map;
 				if (sourceMapContent) {
 					return {

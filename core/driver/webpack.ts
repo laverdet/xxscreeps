@@ -12,23 +12,27 @@ Acorn.Parser = Acorn.Parser.extend(AcornClassFields);
 
 export type ExternalsFunctionElement = Parameters<typeof Webpack>[0][0]['externals'];
 
+const IS_DEV = true as boolean;
+
 export async function compile(moduleName: string, externals: ExternalsFunctionElement) {
 	const baseName = Path.basename(moduleName);
 	const output = new URL(`${baseName}.webpack.js`, import.meta.url);
 
+	const sourceMapLoader = fileURLToPath(await import.meta.resolve('source-map-loader'));
 	await new Promise<Webpack.StatsCompilation>((resolve, reject) => {
 		Webpack({
 			entry: {
 				[`${baseName}.webpack`]: moduleName,
 			},
-			mode: 'development',
-			devtool: 'inline-source-map',
+			mode: IS_DEV ? 'development' : 'production',
+			devtool: IS_DEV ? 'hidden-source-map' : 'hidden-nosources-source-map',
 			externals,
 
 			module: {
 				rules: [ {
 					test: /\.[cm]?jsx?$/,
 					resolve: { fullySpecified: false },
+					use: [ sourceMapLoader ],
 				} ],
 			},
 
@@ -78,7 +82,10 @@ export async function compile(moduleName: string, externals: ExternalsFunctionEl
 		});
 	});
 
-	// Grab Webpack'd data from file system and delete the output
-	const source = await fs.readFile(output, 'utf8');
-	return source;
+	// Grab Webpack'd data from file system
+	const [ source, map ] = await Promise.all([
+		fs.readFile(output, 'utf8'),
+		fs.readFile(new URL(`${baseName}.webpack.js.map`, output), 'utf8'),
+	]);
+	return { source, map };
 }

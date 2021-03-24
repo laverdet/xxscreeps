@@ -11,13 +11,18 @@ const getPathFinderModule = runOnce(() => {
 	return { identifier: pathFinderBinaryPath, module };
 });
 
-const getCompiledRuntime = runOnce(async() =>
-	new vm.Script(await compileRuntimeSource(({ request }, callback) => {
+const getCompiledRuntime = runOnce(async() => {
+	const { source, map } = await compileRuntimeSource(({ request }, callback) => {
 		if (request === 'util') {
 			return callback(undefined, 'nodeUtilImport');
 		}
 		callback();
-	}), { filename: 'runtime.js' }));
+	});
+	return {
+		script: new vm.Script(source, { filename: 'runtime.js' }),
+		map,
+	};
+});
 
 export class NodejsSandbox {
 	private constructor(
@@ -34,7 +39,9 @@ export class NodejsSandbox {
 		context[pf.identifier] = pf.module;
 
 		// Initialize runtime.ts and load player code + memory
-		const runtime: Runtime = (await getCompiledRuntime()).runInContext(context);
+		const { script, map } = await getCompiledRuntime();
+		context.runtimeSourceMap = map;
+		const runtime: Runtime = script.runInContext(context);
 		delete context.nodeUtilImport;
 		delete context[pf.identifier];
 		const { tick } = runtime;
