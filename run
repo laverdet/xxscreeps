@@ -1,0 +1,28 @@
+#!/bin/sh
+NEXT=
+NODE_ARGS=()
+SCRIPT_ARGS=()
+while (( "$#" )); do
+	if [[ "$1" == "--" ]]; then NEXT=1; shift; continue; fi
+	if [[ "$NEXT" ]]; then
+		SCRIPT_ARGS+=("$1")
+	else
+		NODE_ARGS+=("$1")
+	fi
+	shift
+done
+
+if [[ -z "$SCRIPT_ARGS" ]]; then
+	SCRIPT_ARGS=("${NODE_ARGS[@]}")
+	NODE_ARGS=()
+fi
+SCRIPT=$(sed -r 's/^/dist\//; s/\.ts$/.js/' <<< "${SCRIPT_ARGS[0]}")
+SCRIPT_ARGS=("${SCRIPT_ARGS[@]:1}")
+
+exec node "${NODE_ARGS[@]}" \
+	--enable-source-maps \
+	--experimental-specifier-resolution=node \
+	--experimental-import-meta-resolve \
+	--experimental-repl-await \
+	--stack-trace-limit=20 \
+	"$(dirname $(realpath $0))/$SCRIPT" "${SCRIPT_ARGS[@]}"

@@ -20,7 +20,10 @@ export abstract class LocalPersistenceProvider extends Responder implements Pers
 	abstract save(): Promise<void>;
 
 	static async create(path: string) {
-		// Ensure directory exists
+		// Ensure directory exists, or make it
+		try {
+			await fs.mkdir(path);
+		} catch (err) {}
 		const dir = await fs.opendir(path);
 		await dir.close();
 

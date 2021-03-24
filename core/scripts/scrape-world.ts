@@ -1,11 +1,12 @@
 import Loki from 'lokijs';
-import { execSync } from 'child_process';
+import fs from 'fs';
 
 import { RoomPosition } from 'xxscreeps/game/position';
 import { Owner } from 'xxscreeps/game/object';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Store from 'xxscreeps/mods/resource/store';
+import Config from 'xxscreeps/config';
 
 // Schemas
 import * as Auth from 'xxscreeps/backend/auth';
@@ -58,10 +59,10 @@ function withStore(object: any) {
 const db = new Loki(jsonSource);
 await new Promise<void>((resolve, reject) =>
 	db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve()));
+fs.rmdirSync(Config.storage?.path ?? './data', { recursive: true });
 await Storage.initialize();
 const storage = await Storage.connect('shard0');
 const { persistence } = storage;
-execSync('rm -rf ./data/*');
 
 // Collect env data
 const env = db.getCollection('env').findOne().data;

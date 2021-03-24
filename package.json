@@ -3,11 +3,13 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "tsc -b",
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
     "install": "tsc -b",
-    "start": "./go dist/core/engine/service/launcher.js",
+    "start": "xxscreeps core/engine/service/launcher.ts",
     "watch": "tsc -b -w"
+  },
+  "bin": {
+    "xxscreeps": "./run"
   },
   "exports": {
     "./config/mods/import/*": "./dist/core/config/mods.resolved/*",

@@ -1,21 +1,21 @@
 {
 	"version": "2.0.0",
 	"tasks": [ {
-		"runOptions": { "runOn": "folderOpen" },
+		"type": "npm",
+		"script": "watch",
+		"group": {
+			"kind": "build",
+			"isDefault": true
+		},
 		"label": "build",
-		"type": "typescript",
-		"tsconfig": "tsconfig.json",
+
+		"runOptions": { "runOn": "folderOpen" },
 		"isBackground": true,
 		"problemMatcher": [ "$tsc-watch" ],
-		"option": "watch",
 		"presentation": {
 			"reveal": "always",
 			"focus": false,
 			"panel": "shared"
-		},
-		"group": {
-				"kind": "build",
-				"isDefault": true
 		},
 	} ]
 }
