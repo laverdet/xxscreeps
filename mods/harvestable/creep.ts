@@ -1,3 +1,4 @@
+import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
@@ -6,10 +7,10 @@ import { Harvestable, HarvestResult } from './game';
 import { CheckHarvest } from './symbols';
 
 // `harvest` intent check
-export function checkHarvest(creep: Creep, target: Harvestable) {
+export function checkHarvest(creep: Creep, target: Harvestable | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => target[CheckHarvest](creep),
+		() => target ? target[CheckHarvest](creep) : C.ERR_INVALID_TARGET,
 	) as HarvestResult;
 }
 

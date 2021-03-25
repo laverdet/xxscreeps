@@ -1,16 +1,18 @@
+import type { Direction } from 'xxscreeps/game/position';
+import type { LookForType } from 'xxscreeps/game/room';
+import type { Resource } from 'xxscreeps/mods/resource/resource';
+import type { ResourceType, WithStore } from 'xxscreeps/mods/resource/store';
+import type { RoomObject } from 'xxscreeps/game/object';
+import type { Structure } from 'xxscreeps/mods/structure/structure';
+
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Creep, PartType } from 'xxscreeps/mods/creep/creep';
 // eslint-disable-next-line no-duplicate-imports
 import * as CreepLib from 'xxscreeps/mods/creep/creep';
-import type { Resource } from 'xxscreeps/mods/resource/resource';
-import type { Structure } from 'xxscreeps/mods/structure/structure';
 import { NextDecayTime, StructureRoad } from 'xxscreeps/mods/road/road';
-import type { Direction } from 'xxscreeps/game/position';
-import type { LookForType } from 'xxscreeps/game/room';
 import { moveObject, removeObject } from 'xxscreeps/game/room/methods';
-import type { ResourceType, RoomObjectWithStore } from 'xxscreeps/mods/resource/store';
 import { ActionLog } from 'xxscreeps/game/action-log';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import * as Movement from 'xxscreeps/processor/movement';
@@ -45,7 +47,7 @@ const intents = [
 	}),
 
 	registerIntentProcessor(Creep, 'transfer', (creep, id: string, resourceType: ResourceType, amount: number | null) => {
-		const target = Game.getObjectById<RoomObjectWithStore>(id)!;
+		const target = Game.getObjectById<RoomObject & WithStore>(id)!;
 		if (CreepLib.checkTransfer(creep, target, resourceType, amount) === C.OK) {
 			const transferAmount = Math.min(creep.store[resourceType]!, target.store.getFreeCapacity(resourceType));
 			StoreIntent.subtract(creep.store, resourceType, transferAmount);
@@ -54,7 +56,7 @@ const intents = [
 	}),
 
 	registerIntentProcessor(Creep, 'withdraw', (creep, id: string, resourceType: ResourceType, amount: number | null) => {
-		const target = Game.getObjectById<Extract<RoomObjectWithStore, Structure>>(id)!;
+		const target = Game.getObjectById<Structure & WithStore>(id)!;
 		if (CreepLib.checkWithdraw(creep, target, resourceType, amount) === C.OK) {
 			const transferAmount = Math.min(creep.store.getFreeCapacity(resourceType), target.store[resourceType]!);
 			StoreIntent.subtract(target.store, resourceType, transferAmount);

@@ -15,7 +15,7 @@ registerHarvestProcessor(Source, (creep, source) => {
 	Store.add(creep.store, 'energy', energy - overflow);
 	source.energy -= energy;
 	if (overflow > 0) {
-		Resource.drop(source.pos, 'energy', overflow);
+		Resource.drop(creep.pos, 'energy', overflow);
 	}
 	creep.room[CumulativeEnergyHarvested] += energy;
 	return energy;

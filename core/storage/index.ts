@@ -7,7 +7,7 @@ import { EphemeralProvider, PersistenceProvider, Provider } from './provider';
 export { EphemeralProvider, PersistenceProvider, Provider };
 
 let provider: Provider;
-const path = Path.join(Path.dirname(configPath), config.storage?.path ?? './data');
+const path = Path.resolve(Path.dirname(configPath), config.storage?.path ?? './data');
 
 export async function initialize() {
 	provider = new Provider(

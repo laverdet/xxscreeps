@@ -236,7 +236,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	 * @param amount The amount of resources to be transferred. If omitted, all the available carried
 	 * amount is used.
 	 */
-	transfer(this: Creep, target: Store.RoomObjectWithStore, resourceType: ResourceType, amount?: number) {
+	transfer(this: Creep, target: RoomObject.RoomObject & Store.WithStore, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),
 			() => Game.intents.save(this, 'transfer', target.id, resourceType, amount),
@@ -255,7 +255,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	 * This method should not be used to transfer resources between creeps. To transfer between
 	 * creeps, use the `transfer` method on the original creep.
 	 */
-	withdraw(this: Creep, target: Extract<Store.RoomObjectWithStore, Structure>, resourceType: ResourceType, amount?: number) {
+	withdraw(this: Creep, target: Structure & Store.WithStore, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkWithdraw(this, target, resourceType, amount),
 			() => Game.intents.save(this, 'withdraw', target.id, resourceType, amount),
@@ -330,7 +330,7 @@ export function checkResource(creep: Creep, resource: ResourceType = C.RESOURCE_
 
 function checkTransferOrWithdraw(
 	creep: Creep,
-	target: Store.RoomObjectWithStore,
+	target: RoomObject.RoomObject & Store.WithStore,
 	resourceType: ResourceType,
 	amount: number | null | undefined,
 ) {
@@ -351,7 +351,7 @@ function checkTransferOrWithdraw(
 
 export function checkTransfer(
 	creep: Creep,
-	target: Store.RoomObjectWithStore,
+	target: RoomObject.RoomObject & Store.WithStore,
 	resourceType: ResourceType,
 	amount: number | null | undefined,
 ) {
@@ -392,7 +392,7 @@ export function checkTransfer(
 // TODO: Move this somewhere else to break dependency on `Structure`?
 export function checkWithdraw(
 	creep: Creep,
-	target: Extract<Store.RoomObjectWithStore, Structure>,
+	target: Structure & Store.WithStore,
 	resourceType: ResourceType,
 	amount: number | null | undefined,
 ) {

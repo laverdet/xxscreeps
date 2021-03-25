@@ -1,4 +1,3 @@
-import type { AnyRoomObject } from 'xxscreeps/game/room';
 import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { BufferView, compose, declare, struct, vector, withOverlay, withType, XSymbol } from 'xxscreeps/schema';
@@ -7,7 +6,7 @@ import { ResourceType, optionalResourceEnumFormat } from './resource';
 export type { ResourceType };
 
 export type StorageRecord = Partial<Record<ResourceType, number>>;
-export type RoomObjectWithStore = Extract<AnyRoomObject, { store: any }>;
+export type WithStore = { store: Store };
 
 export const Amount = XSymbol('amount');
 export const Capacity = XSymbol('capacity');
