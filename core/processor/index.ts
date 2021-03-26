@@ -1,17 +1,18 @@
 import type { CounterExtract, Dictionary, Implementation, UnwrapArray } from 'xxscreeps/utility/types';
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
+import type { ObjectProcessorContext } from './room';
 import { IntentIdentifier, PreTick, Processors, Tick } from './symbols';
 export { registerRoomTickProcessor } from './room';
 
 // `RoomObject` type definitions
-type IntentProcessorHolder = Dictionary<(receiver: any, ...data: any) => void>;
+type IntentProcessorHolder = Dictionary<(receiver: any, context: ObjectProcessorContext, ...data: any) => void>;
 type IntentIdentifierResult = { group: string; name: string };
 type IntentReceiverInstance = {
 	[IntentIdentifier]: IntentIdentifierResult;
 	[Processors]?: IntentProcessorHolder;
 };
-type TickProcessor<Type = any> = (receiver: Type) => void;
+type TickProcessor<Type = any> = (receiver: Type, context: ObjectProcessorContext) => void;
 declare module 'xxscreeps/game/room' {
 	interface Room {
 		[Processors]?: IntentProcessorHolder;
@@ -42,7 +43,7 @@ export type DescribeIntentHandler<Name extends string, Intent extends string, Fn
 export function registerIntentProcessor<Type extends IntentReceiverInstance, Intent extends string, Data extends AllowedTypes[]>(
 	receiver: Implementation<Type>,
 	intent: Intent,
-	process: (receiver: Type, ...data: Data) => void,
+	process: (receiver: Type, context: ObjectProcessorContext, ...data: Data) => void,
 ): void | { type: Type; intent: Intent; data: RemapNull<Data> } {
 	const processors = receiver.prototype[Processors] = receiver.prototype[Processors] ?? {};
 	processors[intent] = process;

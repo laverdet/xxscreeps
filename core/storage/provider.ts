@@ -12,6 +12,7 @@ export type PersistenceProvider = {
 	del(key: string): Promise<void>;
 	get(key: string): Promise<Readonly<Uint8Array>>;
 	set(key: string, value: Readonly<Uint8Array>): Promise<void>;
+	copy(from: string, to: string): Promise<void>;
 	save(): Promise<void>;
 	disconnect(): void;
 };

@@ -14,7 +14,7 @@ declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }
 }
 const intent = registerIntentProcessor(StructureSpawn, 'spawn',
-(spawn, body: Creep.PartType[], name: string, energyStructureIds: string[] | null, directions: Direction[] | null) => {
+(spawn, context, body: Creep.PartType[], name: string, energyStructureIds: string[] | null, directions: Direction[] | null) => {
 
 	// Get energy structures
 	const energyStructures = function() {
@@ -59,9 +59,10 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 		endTime: Game.time + needTime,
 		needTime,
 	};
+	context.didUpdate();
 });
 
-registerObjectTickProcessor(StructureSpawn, spawn => {
+registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 	if (spawn.spawning && spawn.spawning.endTime <= Game.time) {
 		const creep = Game.getObjectById(spawn.spawning.creep);
 		if (creep && creep instanceof Creep.Creep) {
@@ -70,9 +71,14 @@ registerObjectTickProcessor(StructureSpawn, spawn => {
 			moveObject(creep, getPositonInDirection(creep.pos, C.TOP));
 		}
 		spawn.spawning = undefined;
+		context.setActive();
 	}
 
 	if (spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
 		StoreIntent.add(spawn.store, 'energy', 1);
+		context.setActive();
 	}
+
+	// TODO: This is just a convenient place to keep controlled rooms unidle until I have a more sophisticated solution
+	context.setActive();
 });

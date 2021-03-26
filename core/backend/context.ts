@@ -47,7 +47,7 @@ export class BackendContext {
 		const game = GameSchema.read(await persistence.get('game'));
 		const gameMutex = await Mutex.connect(storage, 'game');
 		const auth = Auth.read(await persistence.get('auth'));
-		const context = new BackendContext(shard, storage, storage.persistence, gameChannel, world, game.accessibleRooms, gameMutex, auth, game.time);
+		const context = new BackendContext(shard, storage, storage.persistence, gameChannel, world, new Set(game.rooms.keys()), gameMutex, auth, game.time);
 		return context;
 	}
 

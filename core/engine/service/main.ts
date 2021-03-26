@@ -4,15 +4,15 @@ import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
 import { Deferred } from 'xxscreeps/utility/deferred';
 import { getOrSet } from 'xxscreeps/utility/utility';
-import * as Storage from 'xxscreeps/storage';
+import { Shard } from 'xxscreeps/engine/model/shard';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';
 import { Queue } from 'xxscreeps/storage/queue';
 import type { GameMessage, ProcessorMessage, ProcessorQueueElement, RunnerMessage, ServiceMessage } from '.';
 
 // Open channels
-const storage = await Storage.connect('shard0');
-const { persistence } = storage;
+const shard = await Shard.connect('shard0');
+const { storage } = shard;
 const [
 	roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
 ] = await Promise.all([
@@ -27,8 +27,10 @@ await serviceChannel.publish({ type: 'mainConnected' });
 
 // Run main game processing loop
 let gameMetadata: GameSchema.Type | undefined;
-let activeRooms: string[] = [];
 let activeUsers: string[] = [];
+let activeRooms: Set<string>;
+let roomsSleptLastTick: string[] = [];
+const sleepingRooms = new Map<number, string[]>();
 const performanceTimer = new AveragingTimer(1000);
 
 // Ctrl+C handler
@@ -53,23 +55,40 @@ try {
 			const timeStartedLoop = Date.now();
 
 			// Refresh current game status
-			if (!gameMetadata) {
-				gameMetadata = GameSchema.read(await persistence.get('game'));
-				activeRooms = [ ...gameMetadata.activeRooms ];
+			if (gameMetadata) {
+				const roomsWakingUp = sleepingRooms.get(gameMetadata.time);
+				if (roomsWakingUp) {
+					sleepingRooms.delete(gameMetadata.time);
+					Fn.forEach(roomsWakingUp, room => activeRooms.add(room));
+				}
+			} else {
+				gameMetadata = GameSchema.read(await storage.persistence.get('game'));
+				activeRooms = new Set(gameMetadata.rooms);
 				activeUsers = [ ...gameMetadata.users ];
+				sleepingRooms.clear();
+			}
+			const gameTime = gameMetadata.time + 1;
+
+			// Deactivate idle rooms
+			if (roomsSleptLastTick.length) {
+				await Promise.all(roomsSleptLastTick.map(name => {
+					activeRooms.delete(name);
+					return shard.copyRoomFromPreviousTick(name, gameTime);
+				}));
+				roomsSleptLastTick = [];
 			}
 
 			// Add users to runner queue
-			usersQueue.version(`${gameMetadata.time}`);
+			usersQueue.version(`${gameTime}`);
 			await Promise.all([ usersQueue.clear(), usersQueue.push(activeUsers) ]);
-			await runnerChannel.publish({ type: 'processUsers', time: gameMetadata.time });
+			await runnerChannel.publish({ type: 'processUsers', time: gameTime });
 
 			// Wait for runners to finish
 			const processedUsers = new Set<string>();
 			const intentsByRoom = new Map<string, Set<string>>();
 			for await (const message of runnerChannel) {
 				if (message.type === 'runnerConnected') {
-					await runnerChannel.publish({ type: 'processUsers', time: gameMetadata.time });
+					await runnerChannel.publish({ type: 'processUsers', time: gameTime });
 
 				} else if (message.type === 'processedUser') {
 					processedUsers.add(message.userId);
@@ -83,45 +102,54 @@ try {
 			}
 
 			// Add rooms to queue and notify processors
-			roomsQueue.version(`${gameMetadata.time}`);
+			roomsQueue.version(`${gameTime}`);
 			const roomsQueueElements = [ ...Fn.map(activeRooms, room => ({
 				room,
 				users: [ ...intentsByRoom.get(room) ?? [] ],
 			})) ];
 			await Promise.all([ roomsQueue.clear(), roomsQueue.push(roomsQueueElements) ]);
-			await processorChannel.publish({ type: 'processRooms', time: gameMetadata.time });
+			await processorChannel.publish({ type: 'processRooms', time: gameTime });
 
 			// Handle incoming processor messages
 			const processedRooms = new Set<string>();
 			const flushedRooms = new Set<string>();
 			for await (const message of processorChannel) {
 				if (message.type === 'processorConnected') {
-					await processorChannel.publish({ type: 'processRooms', time: gameMetadata.time });
+					await processorChannel.publish({ type: 'processRooms', time: gameTime });
 
 				} else if (message.type === 'processedRoom') {
 					processedRooms.add(message.roomName);
-					if (activeRooms.length === processedRooms.size) {
+					if (activeRooms.size === processedRooms.size) {
 						await processorChannel.publish({ type: 'flushRooms' });
 					}
 
 				} else if (message.type === 'flushedRooms') {
-					message.roomNames.forEach(roomName => flushedRooms.add(roomName));
-					if (activeRooms.length === flushedRooms.size) {
+					message.rooms.forEach(info => {
+						flushedRooms.add(info.name);
+						if (info.sleepUntil !== gameTime + 1) {
+							if ((info.sleepUntil ?? Infinity) !== Infinity) {
+								getOrSet(sleepingRooms, info.sleepUntil, () => []).push(info.name);
+							}
+							roomsSleptLastTick.push(info.name);
+						}
+					});
+
+					if (activeRooms.size === flushedRooms.size) {
 						break;
 					}
 				}
 			}
 
 			// Update game state
-			const previousTime = gameMetadata.time++;
-			await persistence.set('game', GameSchema.write(gameMetadata));
+			++gameMetadata.time;
+			await storage.persistence.set('game', GameSchema.write(gameMetadata));
 
 			// Finish up
 			const now = Date.now();
 			const timeTaken = now - timeStartedLoop;
 			const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
-			console.log(`Tick ${previousTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
-			await new Channel<GameMessage>(storage, 'main').publish({ type: 'tick', time: gameMetadata.time });
+			console.log(`Tick ${gameTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
+			await new Channel<GameMessage>(storage, 'main').publish({ type: 'tick', time: gameTime });
 		});
 
 		// Shutdown request came in during game loop
@@ -141,11 +169,11 @@ try {
 	} while (true);
 
 	// Save on graceful exit
-	await persistence.save();
+	await storage.persistence.save();
 
 } finally {
 	// Clean up
-	storage.disconnect();
+	shard.disconnect();
 	processorChannel.disconnect();
 	runnerChannel.disconnect();
 	await gameMutex.disconnect();

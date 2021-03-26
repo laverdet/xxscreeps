@@ -49,6 +49,13 @@ export function firstMatching(iterable: Iterable<any>, callback: (value: any) =>
 	}
 }
 
+// Simple for-loop
+export function forEach<Type>(iterable: Iterable<Type>, callback: (value: Type) => void) {
+	for (const value of iterable) {
+		callback(value);
+	}
+}
+
 // It's like the constructor for `Map` except it returns a plain Object
 export function fromEntries<Type, Key extends keyof any>(
 	iterable: Iterable<[ Key, Type ]>): Record<Key, Type>;

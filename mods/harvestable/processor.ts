@@ -29,7 +29,7 @@ export function registerHarvestProcessor<Type extends RoomObject>(
 declare module 'xxscreeps/processor' {
 	interface Intent { harvestable: typeof intent }
 }
-const intent = registerIntentProcessor(Creep, 'harvest', (creep, id: string) => {
+const intent = registerIntentProcessor(Creep, 'harvest', (creep, context, id: string) => {
 	const target = Game.getObjectById<Harvestable>(id)!;
 	if (checkHarvest(creep, target) === C.OK) {
 		const amount = target[ProcessHarvest](creep, target);
@@ -40,8 +40,6 @@ const intent = registerIntentProcessor(Creep, 'harvest', (creep, id: string) => 
 			targetId: target.id,
 		});
 		saveAction(creep, 'harvest', target.pos.x, target.pos.y);
-		return amount > 0;
-	} else {
-		return false;
+		context.didUpdate();
 	}
 });

@@ -1,5 +1,4 @@
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Room from 'xxscreeps/engine/room';
 import * as User from 'xxscreeps/engine/metadata/user';
 import { getFlagChannel, loadVisuals, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser, runWithState } from 'xxscreeps/game';
@@ -63,10 +62,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			lastTickTime = Date.now();
 			const [ room ] = await Promise.all([
 				// Update room objects
-				(async() => {
-					const roomBlob = await this.context.persistence.get(`room/${parameters.room}`);
-					return Room.read(roomBlob);
-				})(),
+				this.context.shard.loadRoom(parameters.room, time),
 				// Update user flags
 				(async() => {
 					if (flagsStale) {

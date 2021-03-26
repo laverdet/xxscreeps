@@ -1,6 +1,5 @@
 import * as Game from 'xxscreeps/game';
 import { registerBackendRoute } from 'xxscreeps/backend';
-import { loadRoom, saveRoom } from 'xxscreeps/backend/model/room';
 import { insertObject } from 'xxscreeps/game/room/methods';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { activateNPC } from 'xxscreeps/mods/npc/processor';
@@ -23,13 +22,13 @@ registerBackendRoute({
 
 		// Modify room state
 		await this.context.gameMutex.scope(async() => {
-			const room = await loadRoom(this.context, pos.roomName);
+			const room = await this.context.shard.loadRoom(pos.roomName, this.context.shard.time);
 			if (room.controller?.owner !== userid) {
 				return;
 			}
 			activateNPC(room, '2');
 			insertObject(room, create(pos, type, size, Game.time + 200));
-			await saveRoom(this.context, room);
+			await this.context.shard.saveRoom(pos.roomName, this.context.shard.time, room);
 		});
 		return { ok: 1 };
 	},

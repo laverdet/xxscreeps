@@ -13,11 +13,11 @@ import * as Auth from 'xxscreeps/backend/auth';
 import * as CodeSchema from 'xxscreeps/engine/metadata/code';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as MapSchema from 'xxscreeps/game/map';
-import * as RoomSchema from 'xxscreeps/engine/room';
 import * as User from 'xxscreeps/engine/metadata/user';
 
 import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
+import { Shard } from 'xxscreeps/engine/model/shard';
 import * as Storage from 'xxscreeps/storage';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
 import { NPCData } from 'xxscreeps/mods/npc/game';
@@ -59,14 +59,11 @@ function withStore(object: any) {
 const db = new Loki(jsonSource);
 await new Promise<void>((resolve, reject) =>
 	db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve()));
-fs.rmdirSync(Config.storage?.path ?? './data', { recursive: true });
 await Storage.initialize();
-const storage = await Storage.connect('shard0');
-const { persistence } = storage;
 
 // Collect env data
 const env = db.getCollection('env').findOne().data;
-const { gameTime }: { gameTime: number } = env;
+const gameTime: number = env.gameTime - 1;
 
 // Collect room data
 const roomObjects = db.getCollection('rooms.objects');
@@ -110,25 +107,6 @@ const rooms = db.getCollection('rooms').find().map(room => ({
 	})) ],
 	[EventLogSymbol]: [],
 }));
-
-// Save rooms
-for (const room of rooms) {
-	await persistence.set(`room/${room.name}`, RoomSchema.write(room as never));
-}
-
-// Collect terrain data
-const roomsTerrain = new Map(db.getCollection('rooms.terrain').find().map(({ room, terrain }) => {
-	const writer = new TerrainWriter;
-	for (let xx = 0; xx < 50; ++xx) {
-		for (let yy = 0; yy < 50; ++yy) {
-			writer.set(xx, yy, clamp(0, 2, Number(terrain[yy * 50 + xx])));
-		}
-	}
-	return [ room as string, writer ];
-}));
-
-// Write terrain data
-await persistence.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
 
 // Get visible rooms for users
 const roomsControlled = new Map<string, Set<string>>();
@@ -175,6 +153,40 @@ const users = db.getCollection('users').find().map(user => {
 	};
 });
 
+// Collect terrain data
+const roomsTerrain = new Map(db.getCollection('rooms.terrain').find().map(({ room, terrain }) => {
+	const writer = new TerrainWriter;
+	for (let xx = 0; xx < 50; ++xx) {
+		for (let yy = 0; yy < 50; ++yy) {
+			writer.set(xx, yy, clamp(0, 2, Number(terrain[yy * 50 + xx])));
+		}
+	}
+	return [ room as string, writer ];
+}));
+
+// Save Game object and initialize shard
+const roomNames = new Set(Fn.map(rooms, room => room.name));
+const userIds = new Set(users.filter(user => user.active).map(user => user.id));
+const game = {
+	time: gameTime,
+	rooms: roomNames,
+	users: userIds,
+};
+fs.rmdirSync(Config.storage?.path ?? './data', { recursive: true });
+{
+	const storage = await Storage.connect('shard0');
+	await storage.persistence.set('game', GameSchema.write(game));
+	await storage.persistence.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
+	storage.disconnect();
+}
+const shard = await Shard.connect('shard0');
+const { persistence } = shard.storage;
+
+// Save rooms
+for (const room of rooms) {
+	await shard.saveRoom(room.name, gameTime, room as never);
+}
+
 // Save users
 for (const user of users) {
 	await persistence.set(`user/${user.id}/info`, User.write(user));
@@ -191,17 +203,6 @@ for (const user of users) {
 		await persistence.set(`memory/${user.id}`, new Uint8Array(data.buffer));
 	}
 }
-
-// Save Game object
-const roomNames = new Set(Fn.map(rooms, room => room.name));
-const userIds = new Set(users.filter(user => user.active).map(user => user.id));
-const game = {
-	time: gameTime,
-	accessibleRooms: roomNames,
-	activeRooms: roomNames,
-	users: userIds,
-};
-await persistence.set('game', GameSchema.write(game));
 
 // Write placeholder authentication data
 await persistence.set('auth', Auth.write(users.map(user => ({
@@ -222,5 +223,5 @@ await Promise.all(db.getCollection('users.code').find().map(async row => {
 
 // Flush everything to disk
 await persistence.save();
-storage.disconnect();
+shard.disconnect();
 Storage.terminate();

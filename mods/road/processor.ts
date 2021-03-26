@@ -4,7 +4,7 @@ import * as Map from 'xxscreeps/game/map';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { NextDecayTime, StructureRoad } from './road';
 
-registerObjectTickProcessor(StructureRoad, road => {
+registerObjectTickProcessor(StructureRoad, (road, context) => {
 	if (road.ticksToDecay === 0) {
 		const { pos } = road;
 		const terrain = Map.getTerrainForRoom(pos.roomName).get(pos.x, pos.y);
@@ -14,5 +14,7 @@ registerObjectTickProcessor(StructureRoad, road => {
 			1;
 		road.hits -= C.ROAD_DECAY_AMOUNT * decayMultiplier;
 		road[NextDecayTime] = Game.time + C.ROAD_DECAY_TIME;
+		context.didUpdate();
 	}
+	context.wakeAt(road[NextDecayTime]);
 });

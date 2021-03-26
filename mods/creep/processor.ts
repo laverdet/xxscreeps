@@ -24,52 +24,60 @@ declare module 'xxscreeps/processor' {
 	interface Intent { creep: typeof intents }
 }
 const intents = [
-	registerIntentProcessor(Creep, 'move', (creep, direction: Direction) => {
+	registerIntentProcessor(Creep, 'move', (creep, context, direction: Direction) => {
 		if (CreepLib.checkMove(creep, direction) === C.OK) {
 			const power = calculateWeight(creep);
 			Movement.add(creep, power, direction);
+			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'pickup', (creep, id: string) => {
+	registerIntentProcessor(Creep, 'pickup', (creep, context, id: string) => {
 		const resource = Game.getObjectById<Resource>(id)!;
 		if (CreepLib.checkPickup(creep, resource) === C.OK) {
 			const amount = Math.min(creep.store.getFreeCapacity(resource.resourceType), resource.amount);
 			StoreIntent.add(creep.store, resource.resourceType, amount);
 			resource.amount -= amount;
+			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'suicide', creep => {
+	registerIntentProcessor(Creep, 'suicide', (creep, context) => {
 		if (creep.my) {
 			removeObject(creep);
+			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'transfer', (creep, id: string, resourceType: ResourceType, amount: number | null) => {
+	registerIntentProcessor(Creep, 'transfer', (creep, context, id: string, resourceType: ResourceType, amount: number | null) => {
 		const target = Game.getObjectById<RoomObject & WithStore>(id)!;
 		if (CreepLib.checkTransfer(creep, target, resourceType, amount) === C.OK) {
 			const transferAmount = Math.min(creep.store[resourceType]!, target.store.getFreeCapacity(resourceType));
 			StoreIntent.subtract(creep.store, resourceType, transferAmount);
 			StoreIntent.add(target.store, resourceType, transferAmount);
+			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'withdraw', (creep, id: string, resourceType: ResourceType, amount: number | null) => {
+	registerIntentProcessor(Creep, 'withdraw', (creep, context, id: string, resourceType: ResourceType, amount: number | null) => {
 		const target = Game.getObjectById<Structure & WithStore>(id)!;
 		if (CreepLib.checkWithdraw(creep, target, resourceType, amount) === C.OK) {
 			const transferAmount = Math.min(creep.store.getFreeCapacity(resourceType), target.store[resourceType]!);
 			StoreIntent.subtract(target.store, resourceType, transferAmount);
 			StoreIntent.add(creep.store, resourceType, transferAmount);
+			context.didUpdate();
 		}
 	}),
 ];
 
-registerObjectPreTickProcessor(Creep, creep => {
-	creep[ActionLog] = [];
+registerObjectPreTickProcessor(Creep, (creep, context) => {
+	if (creep[ActionLog].length !== 0) {
+		creep[ActionLog] = [];
+		context.didUpdate();
+	}
 });
 
-registerObjectTickProcessor(Creep, creep => {
+registerObjectTickProcessor(Creep, (creep, context) => {
 	// Check creep death
 	if (
 		(Game.time >= creep._ageTime && creep._ageTime !== 0) ||
@@ -79,9 +87,11 @@ registerObjectTickProcessor(Creep, creep => {
 			ResourceIntent.drop(creep.pos, resourceType, amount);
 		}
 		removeObject(creep);
-		return true;
+		context.didUpdate();
+		return;
 	} else if (creep.hits > creep.hitsMax) {
 		creep.hits = creep.hitsMax;
+		context.didUpdate();
 	}
 
 	// Dispatch movements
@@ -107,14 +117,15 @@ registerObjectTickProcessor(Creep, creep => {
 			}
 		})();
 		// Update fatigue
-		creep.fatigue = Math.max(0,
-			calculateWeight(creep) * fatigue - calculatePower(creep, C.MOVE, 2));
+		creep.fatigue = Math.max(0, calculateWeight(creep) * fatigue);
+		context.setActive();
+	}
 
-	} else if (creep.fatigue > 0) {
+	if (creep.fatigue > 0) {
 		// Reduce fatigue
 		creep.fatigue -= Math.min(creep.fatigue, calculatePower(creep, C.MOVE, 2));
+		context.setActive();
 	}
-	return false;
 });
 
 export function calculatePower(creep: Creep, part: PartType, power: number) {

@@ -43,7 +43,7 @@ function upgradeController(controller: StructureController, energy: number) {
 declare module 'xxscreeps/processor' {
 	interface Intent { controller: typeof intent }
 }
-const intent = registerIntentProcessor(Creep, 'upgradeController', (creep, id: string) => {
+const intent = registerIntentProcessor(Creep, 'upgradeController', (creep, context, id: string) => {
 	const target = Game.getObjectById<StructureController>(id)!;
 	if (checkUpgradeController(creep, target) === Controller.OK) {
 		const power = calculatePower(creep, Controller.WORK, Controller.UPGRADE_CONTROLLER_POWER);
@@ -51,15 +51,16 @@ const intent = registerIntentProcessor(Creep, 'upgradeController', (creep, id: s
 		Store.subtract(creep.store, 'energy', energy);
 		upgradeController(target, energy);
 		saveAction(creep, 'upgradeController', target.pos.x, target.pos.y);
+		context.didUpdate();
 	}
 });
 
-registerObjectTickProcessor(StructureController, controller => {
+registerObjectTickProcessor(StructureController, (controller, context) => {
 	const upgradePower = exchange(controller, UpgradePowerThisTick);
 	if (upgradePower !== undefined) {
 		controller[DowngradeTime] = 1 + Math.min(
 			controller[DowngradeTime] + Controller.CONTROLLER_DOWNGRADE_RESTORE,
 			Game.time + Controller.CONTROLLER_DOWNGRADE[controller.level]!);
-		return true;
 	}
+	// context.wakeAt(controller[DowngradeTime]);
 });

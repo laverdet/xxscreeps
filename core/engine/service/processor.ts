@@ -1,9 +1,8 @@
 import assert from 'assert';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Room from 'xxscreeps/engine/room';
 import { RoomProcessorContext } from 'xxscreeps/processor/room';
-import { loadTerrain } from 'xxscreeps/game/map';
-import * as Storage from 'xxscreeps/storage';
+import { Shard } from 'xxscreeps/engine/model/shard';
+import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Queue } from 'xxscreeps/storage/queue';
 import { ProcessorMessage, ProcessorQueueElement } from '.';
@@ -12,13 +11,13 @@ import { ProcessorMessage, ProcessorQueueElement } from '.';
 const processedRooms = new Map<string, RoomProcessorContext>();
 
 // Connect to main & storage
-const storage = await Storage.connect('shard0');
-const { persistence } = storage;
-const roomsQueue = Queue.connect<ProcessorQueueElement>(storage, 'processRooms', true);
-const processorChannel = await new Channel<ProcessorMessage>(storage, 'processor').subscribe();
+const shard = await Shard.connect('shard0');
+const { persistence } = shard.storage;
+const roomsQueue = Queue.connect<ProcessorQueueElement>(shard.storage, 'processRooms', true);
+const processorChannel = await new Channel<ProcessorMessage>(shard.storage, 'processor').subscribe();
 
 // Initialize world terrain
-await loadTerrain(persistence);
+loadTerrainFromBuffer(shard.terrainBlob);
 
 // Start the processing loop
 let gameTime = -1;
@@ -37,9 +36,7 @@ try {
 			for await (const { room: roomName, users } of roomsQueue) {
 				// Read room data and intents from storage
 				const [ room, intents ] = await Promise.all([
-					(async() =>
-						Room.read(await persistence.get(`room/${roomName}`))
-					)(),
+					shard.loadRoom(roomName, gameTime - 1),
 					Promise.all(Fn.map(users, async user => {
 						const intentsBlob = await persistence.get(`intents/${roomName}/${user}`);
 						assert.strictEqual(intentsBlob.byteOffset, 0);
@@ -66,15 +63,24 @@ try {
 		} else if (message.type === 'flushRooms') {
 			// Run second phase of processing. This must wait until *all* player code and first phase
 			// processing has run
-			await Promise.all(Fn.map(processedRooms, ([ roomName, context ]) =>
-				persistence.set(`room/${roomName}`, Room.write(context.room)),
-			));
-			await processorChannel.publish({ type: 'flushedRooms', roomNames: [ ...processedRooms.keys() ] });
+			await Promise.all(Fn.map(processedRooms, ([ roomName, context ]) => {
+				if (context.receivedUpdate) {
+					return shard.saveRoom(roomName, gameTime, context.room);
+				} else {
+					return shard.copyRoomFromPreviousTick(roomName, gameTime);
+				}
+			}));
+
+			const rooms = [ ...Fn.map(processedRooms.entries(), ([ name, context ]) => ({
+				name,
+				sleepUntil: context.nextUpdate,
+			})) ];
+			await processorChannel.publish({ type: 'flushedRooms', rooms });
 			processedRooms.clear();
 		}
 	}
 
 } finally {
-	storage.disconnect();
+	shard.disconnect();
 	processorChannel.disconnect();
 }

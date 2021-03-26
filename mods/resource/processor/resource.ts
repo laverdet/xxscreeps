@@ -41,9 +41,10 @@ export function drop(pos: RoomPosition, resourceType: ResourceType, amount: numb
 	insertObject(room, resource);
 }
 
-registerObjectTickProcessor(Resource, resource => {
+registerObjectTickProcessor(Resource, (resource, context) => {
 	resource.amount -= Math.ceil(resource.amount / C.ENERGY_DECAY);
 	if (resource.amount <= 0) {
 		removeObject(resource);
 	}
+	context.setActive();
 });

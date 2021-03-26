@@ -17,6 +17,7 @@ export abstract class LocalPersistenceProvider extends Responder implements Pers
 	abstract del(key: string): Promise<void>;
 	abstract get(key: string): Promise<Readonly<Uint8Array>>;
 	abstract set(key: string, value: Readonly<Uint8Array>): Promise<void>;
+	abstract copy(from: string, to: string): Promise<void>;
 	abstract save(): Promise<void>;
 
 	static async create(path: string) {
@@ -79,24 +80,6 @@ export abstract class LocalPersistenceProvider extends Responder implements Pers
 	static connect(path: string) {
 		return connect(LocalPersistenceClient, `persistence://${path}`);
 	}
-
-	request(method: 'del', key: string): Promise<void>;
-	request(method: 'get', key: string): Promise<Readonly<Uint8Array>>;
-	request(method: 'set', payload: { key: string; value: Readonly<Uint8Array> }): Promise<void>;
-	request(method: 'save'): Promise<void>;
-	request(method: string, payload?: any) {
-		if (method === 'del') {
-			return this.del(payload);
-		} else if (method === 'get') {
-			return this.get(payload) as any;
-		} else if (method === 'set') {
-			return this.set(payload.key, payload.value);
-		} else if (method === 'save') {
-			return this.save();
-		} else {
-			return Promise.reject(new Error(`Unknown method: ${method}`));
-		}
-	}
 }
 
 class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
@@ -153,6 +136,11 @@ class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
 		this.check(key);
 		this.bufferedBlobs.set(key, value.buffer instanceof SharedArrayBuffer ? value : copy(value));
 		return Promise.resolve();
+	}
+
+	async copy(from: string, to: string) {
+		this.check(to);
+		this.bufferedBlobs.set(to, await this.get(from));
 	}
 
 	async save() {
@@ -239,7 +227,11 @@ class LocalPersistenceClient extends ResponderClient(LocalPersistenceProvider) {
 	}
 
 	set(key: string, value: Readonly<Uint8Array>) {
-		return this.request('set', { key, value });
+		return this.request('set', key, value);
+	}
+
+	copy(from: string, to: string) {
+		return this.request('copy', from, to);
 	}
 
 	save() {

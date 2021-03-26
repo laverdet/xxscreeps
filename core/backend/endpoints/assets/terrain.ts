@@ -3,7 +3,6 @@ import streamToPromise from 'stream-to-promise';
 import crypto from 'crypto';
 import * as Fn from 'xxscreeps/utility/functional';
 import { PNG } from 'pngjs';
-import { loadRoom } from 'xxscreeps/backend/model/room';
 import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { TerrainRender } from 'xxscreeps/backend/symbols';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
@@ -113,11 +112,8 @@ function makeTerrainEndpoint(path: string, fn: TerrainRenderer): Endpoint {
 }
 
 export const TerrainEndpoint = makeTerrainEndpoint('/map/:room.png', async(context, roomName) => {
-	const room = await loadRoom(context, roomName).catch(() => null);
-	if (room) {
-		return generate([ [ room ] ], 3);
-	}
-	return null;
+	const room = await context.shard.loadRoom(roomName, context.shard.time).catch(() => null);
+	return room ? generate([ [ room ] ], 3) : null;
 });
 
 export const TerrainZoomEndpoint = makeTerrainEndpoint('/map/zoom2/:room.png', async(context, room) => {
@@ -127,7 +123,8 @@ export const TerrainZoomEndpoint = makeTerrainEndpoint('/map/zoom2/:room.png', a
 	if (left % 4 === 0 && top % 4 === 0) {
 		const grid = await Promise.all(Fn.map(Fn.range(top, top + 4), yy =>
 			Promise.all(Fn.map(Fn.range(left, left + 4), async xx => {
-				const room = await loadRoom(context, generateRoomName(xx, yy)).catch(() => null);
+				const roomName = generateRoomName(xx, yy);
+				const room = await context.shard.loadRoom(roomName, context.shard.time).catch(() => null);
 				didFindRoom ||= room !== null;
 				return room;
 			})),

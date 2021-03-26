@@ -23,8 +23,29 @@ type UserIntentPayload = {
 	intents: IntentPayload;
 };
 
+export interface ObjectProcessorContext {
+	/**
+	 * Invoke this from a processor when game state has been modified in a processor
+	 */
+	didUpdate(): void;
+
+	/**
+	 * Requests processor next tick, and also sets updated flag.
+	 */
+	setActive(): void;
+
+	/**
+	 * Request a process tick at a given time. The default is to sleep forever if there are no intents
+	 * to process.
+	 */
+	wakeAt(time: number): void;
+}
+
 // Room processor context saved been phase 1 (process) and phase 2 (flush)
-export class RoomProcessorContext {
+export class RoomProcessorContext implements ObjectProcessorContext {
+	public receivedUpdate = false;
+	public nextUpdate = Infinity;
+
 	constructor(
 		public readonly room: Room,
 		public readonly time: number,
@@ -32,13 +53,16 @@ export class RoomProcessorContext {
 	) {}
 
 	process() {
+		this.receivedUpdate = false;
+		this.nextUpdate = Infinity;
+
 		Game.runWithState([ this.room ], this.time, () => {
 			// Reset eventLog for this tick
 			this.room[EventLogSymbol] = [];
 
 			// Pre-intent processor
 			for (const object of this.room._objects) {
-				object[PreTick]?.(object);
+				object[PreTick]?.(object, this);
 			}
 
 			// Run `registerRoomTickProcessor` hooks
@@ -58,7 +82,7 @@ export class RoomProcessorContext {
 							const processor = processors[intent];
 							if (processor) {
 								for (const args of roomIntents[intent]!) {
-									processor(this.room, ...args);
+									processor(this.room, this, ...args);
 								}
 							}
 						}
@@ -71,7 +95,7 @@ export class RoomProcessorContext {
 							const object = Game.getObjectById(id);
 							if (object) {
 								for (const [ intent, args ] of Object.entries(objectIntents[id]!)) {
-									object[Processors]![intent]?.(object, ...args);
+									object[Processors]![intent]?.(object, this, ...args);
 								}
 							}
 						}
@@ -82,12 +106,30 @@ export class RoomProcessorContext {
 			// Post-intent processor
 			Movement.dispatch(this.room);
 			for (const object of this.room._objects) {
-				object[Tick]?.(object);
+				object[Tick]?.(object, this);
 			}
 		});
 	}
 
 	saveIntents(user: string, intents: IntentPayload) {
 		this.intents.push({ user, intents });
+	}
+
+	didUpdate() {
+		this.receivedUpdate = true;
+	}
+
+	setActive() {
+		this.didUpdate();
+		this.wakeAt(this.time + 1);
+	}
+
+	wakeAt(time: number) {
+		if (time !== 0) {
+			if (time < this.time + 1) {
+				throw new Error('Invalid wake time');
+			}
+			this.nextUpdate = Math.min(time, this.nextUpdate);
+		}
 	}
 }

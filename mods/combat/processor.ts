@@ -13,16 +13,17 @@ declare module 'xxscreeps/processor' {
 	interface Intent { combat: typeof intents }
 }
 const intents = [
-	registerIntentProcessor(Creep, 'attack', (creep, id: string) => {
+	registerIntentProcessor(Creep, 'attack', (creep, context, id: string) => {
 		const target = Game.getObjectById<AttackTarget>(id)!;
 		if (checkAttack(creep, target) === C.OK) {
 			const damage = calculatePower(creep, C.ATTACK, C.ATTACK_POWER);
 			processAttack(creep, target, C.EVENT_ATTACK_TYPE_MELEE, damage);
 			saveAction(creep, 'attack', target.pos.x, target.pos.y);
+			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'heal', (creep, id: string) => {
+	registerIntentProcessor(Creep, 'heal', (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkHeal(creep, target) === C.OK) {
 			const amount = calculatePower(creep, C.HEAL, C.HEAL_POWER);
@@ -35,19 +36,21 @@ const intents = [
 				amount,
 			});
 			saveAction(creep, 'heal', target.pos.x, target.pos.y);
+			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'rangedAttack', (creep, id: string) => {
+	registerIntentProcessor(Creep, 'rangedAttack', (creep, context, id: string) => {
 		const target = Game.getObjectById<AttackTarget>(id)!;
 		if (checkRangedAttack(creep, target) === C.OK) {
 			const damage = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER);
 			processAttack(creep, target, C.EVENT_ATTACK_TYPE_RANGED, damage);
 			saveAction(creep, 'rangedAttack', target.pos.x, target.pos.y);
+			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'rangedHeal', (creep, id: string) => {
+	registerIntentProcessor(Creep, 'rangedHeal', (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkRangedHeal(creep, target) === C.OK) {
 			const amount = calculatePower(creep, C.HEAL, C.RANGED_HEAL_POWER);
@@ -60,12 +63,14 @@ const intents = [
 				amount,
 			});
 			saveAction(creep, 'rangedHeal', target.pos.x, target.pos.y);
+			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'rangedMassAttack', creep => {
+	registerIntentProcessor(Creep, 'rangedMassAttack', (creep, context) => {
 		if (checkRangedMassAttack(creep) === C.OK) {
 			saveAction(creep, 'rangedMassAttack', creep.pos.x, creep.pos.y);
+			context.didUpdate();
 			// TODO
 		}
 	}),

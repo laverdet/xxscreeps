@@ -9,7 +9,13 @@ type ProcessorConnectedMessage = { type: 'processorConnected' };
 type ProcessRoomsMessage = { type: 'processRooms'; time: number };
 type ProcessedRoomMessage = { type: 'processedRoom'; roomName: string };
 type FlushRoomsMessage = { type: 'flushRooms' };
-type FlushedRoomMessage = { type: 'flushedRooms'; roomNames: string[] };
+type FlushedRoomMessage = {
+	type: 'flushedRooms';
+	rooms: {
+		name: string;
+		sleepUntil: number | null;
+	}[];
+};
 export type ProcessorMessage =
 	ProcessorConnectedMessage | ShutdownMessage |
 	ProcessRoomsMessage | ProcessedRoomMessage |

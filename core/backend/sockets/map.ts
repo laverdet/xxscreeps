@@ -1,4 +1,3 @@
-import * as Room from 'xxscreeps/engine/room';
 import { RoomObject } from 'xxscreeps/game/object';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { bindMapRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
@@ -21,10 +20,9 @@ export const mapSubscription: SubscriptionEndpoint = {
 		}
 		let lastTickTime = 0;
 		let previous = '';
-		const update = async() => {
+		const update = async(time: number) => {
 			lastTickTime = Date.now();
-			const roomBlob = await this.context.persistence.get(`room/${roomName}`);
-			const room = Room.read(roomBlob);
+			const room = await this.context.shard.loadRoom(roomName, time);
 			const response = new Map<string, [ number, number ][]>();
 			for (const object of room._objects) {
 				const record = function() {
@@ -41,10 +39,10 @@ export const mapSubscription: SubscriptionEndpoint = {
 				this.send(payload);
 			}
 		};
-		await update();
+		await update(this.context.shard.time);
 		return this.context.gameChannel.listen(event => {
 			if (event.type === 'tick' && Date.now() > lastTickTime + 250) {
-				update().catch(error => console.error(error));
+				update(event.time).catch(error => console.error(error));
 			}
 		});
 	},

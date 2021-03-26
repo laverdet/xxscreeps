@@ -19,15 +19,16 @@ declare module 'xxscreeps/processor' {
 
 const intents = [
 	registerIntentProcessor(Room, 'createConstructionSite',
-	(room, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
+	(room, context, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
 		const pos = new RoomPosition(xx, yy, room.name);
 		if (checkCreateConstructionSite(room, pos, structureType) === C.OK) {
 			const site = create(pos, structureType, Game.me, name);
 			insertObject(room, site);
+			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'build', (creep, id: string) => {
+	registerIntentProcessor(Creep, 'build', (creep, context, id: string) => {
 		const target = Game.getObjectById<ConstructionSite>(id)!;
 		if (checkBuild(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.WORK, C.BUILD_POWER);
@@ -40,12 +41,13 @@ const intents = [
 				Store.subtract(creep.store, 'energy', energy);
 				target.progress += energy;
 				saveAction(creep, 'build', target.pos.x, target.pos.y);
+				context.didUpdate();
 			}
 		}
 	}),
 ];
 
-registerObjectTickProcessor(ConstructionSite, site => {
+registerObjectTickProcessor(ConstructionSite, (site, context) => {
 	if (site.progress >= site.progressTotal) {
 		const { room } = site;
 		const structure = structureFactories.get(site.structureType)?.create(site, site.name);
@@ -53,5 +55,6 @@ registerObjectTickProcessor(ConstructionSite, site => {
 		if (structure) {
 			insertObject(room, structure);
 		}
+		context.didUpdate();
 	}
 });

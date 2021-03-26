@@ -21,17 +21,22 @@ registerHarvestProcessor(Source, (creep, source) => {
 	return energy;
 });
 
-registerObjectTickProcessor(Source, source => {
+registerObjectTickProcessor(Source, (source, context) => {
 
 	// Regenerate energy
 	if (source.energy < source.energyCapacity) {
 		if (source._nextRegenerationTime === 0) {
 			source._nextRegenerationTime = Game.time + C.ENERGY_REGEN_TIME;
+			context.didUpdate();
 		} else if (source.ticksToRegeneration === 0) {
 			source.energy = source.energyCapacity;
 			source._nextRegenerationTime = 0;
+			context.didUpdate();
 		}
+	} else if (source._nextRegenerationTime !== 0) {
+		source._nextRegenerationTime = 0;
 	}
+	context.wakeAt(source._nextRegenerationTime);
 
 	// Update energy capacity on room controller status
 	const energyCapacity = (() => {
@@ -46,5 +51,8 @@ registerObjectTickProcessor(Source, source => {
 			return C.SOURCE_ENERGY_KEEPER_CAPACITY;
 		}
 	})();
-	source.energyCapacity = energyCapacity;
+	if (source.energyCapacity !== energyCapacity) {
+		source.energyCapacity = energyCapacity;
+		context.didUpdate();
+	}
 });

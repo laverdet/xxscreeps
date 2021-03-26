@@ -407,7 +407,7 @@ export function checkWithdraw(
 				// TODO: Rampart
 				return C.ERR_NOT_OWNER */
 
-			} else if (!creep.room.controller?.my && creep.room.controller!.safeMode! > 0) {
+			} else if (!creep.room.controller?.my && creep.room.controller!.safeMode > 0) {
 				return C.ERR_NOT_OWNER;
 
 				/* } else if (target.structureType === 'nuker' || target.structureType === 'powerBank') {

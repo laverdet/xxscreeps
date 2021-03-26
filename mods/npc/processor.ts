@@ -29,9 +29,11 @@ registerRoomTickProcessor((room, context) => {
 		// Run loop and reset memory or mark user as inactive
 		if (Game.runAsUser(user, () => loop())) {
 			data.memory.set(user, Memory.flush());
+			context.setActive();
 		} else {
 			data.memory.delete(user);
 			data.users.delete(user);
+			context.didUpdate();
 		}
 
 		// Save intents

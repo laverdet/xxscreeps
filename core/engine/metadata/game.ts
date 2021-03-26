@@ -3,8 +3,7 @@ import * as StringSet from 'xxscreeps/engine/schema/string-set';
 
 const format = struct({
 	time: 'int32',
-	accessibleRooms: StringSet.format,
-	activeRooms: StringSet.format,
+	rooms: StringSet.format,
 	users: StringSet.format,
 });
 export type Type = TypeOf<typeof format>;

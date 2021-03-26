@@ -4,7 +4,6 @@ import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Controller from 'xxscreeps/mods/controller/processor';
 import * as Spawn from './spawn';
-import { loadRoom, loadRooms, saveRoom } from 'xxscreeps/backend/model/room';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
 import { insertObject } from 'xxscreeps/game/room/methods';
 import { RoomPosition } from 'xxscreeps/game/position';
@@ -36,7 +35,9 @@ registerBackendRoute({
 		}
 		const { userid } = req.locals;
 		const user = await loadUser(this.context, userid!);
-		for (const room of await loadRooms(this.context, user.roomsPresent)) {
+		const rooms = await Promise.all(Fn.map(user.roomsPresent, room =>
+			this.context.shard.loadRoom(room, this.context.shard.time)));
+		for (const room of rooms) {
 			for (const structure of room.find(C.FIND_STRUCTURES)) {
 				if (
 					structure.structureType === 'spawn' &&
@@ -61,8 +62,10 @@ registerBackendRoute({
 		}
 		const { userid } = req.locals;
 		const user = await loadUser(this.context, userid!);
+		const rooms = await Promise.all(Fn.map(user.roomsPresent, room =>
+			this.context.shard.loadRoom(room, this.context.shard.time)));
 		let max = 0;
-		for (const room of await loadRooms(this.context, user.roomsPresent)) {
+		for (const room of rooms) {
 			for (const structure of Fn.concat(
 				room.find(C.FIND_STRUCTURES),
 				room.find(C.FIND_CONSTRUCTION_SITES),
@@ -93,7 +96,7 @@ registerBackendRoute({
 			if (user.roomsPresent.size !== 0) {
 				throw new Error('User has presence');
 			}
-			const room = await loadRoom(this.context, pos.roomName);
+			const room = await this.context.shard.loadRoom(pos.roomName, this.context.shard.time);
 			Game.runWithState([ room ], this.context.time, () => {
 				Game.runAsUser(user.id, () => {
 					// Check room eligibility
@@ -111,14 +114,13 @@ registerBackendRoute({
 
 			// Make room & user active
 			const game = GameSchema.read(await this.context.persistence.get('game'));
-			game.activeRooms.add(pos.roomName);
 			game.users.add(user.id);
 
 			// Save
 			await Promise.all([
 				this.context.persistence.set('game', GameSchema.write(game)),
 				saveUser(this.context, user),
-				saveRoom(this.context, room),
+				this.context.shard.saveRoom(pos.roomName, this.context.shard.time, room),
 			]);
 			await new Channel<ServiceMessage>(this.context.storage, 'service').publish({ type: 'gameModified' });
 		});

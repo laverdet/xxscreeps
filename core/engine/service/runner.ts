@@ -13,7 +13,6 @@ import { RunnerMessage } from '.';
 // Connect to main & storage
 const shard = await Shard.connect('shard0');
 const storage = await Storage.connect('shard0');
-const { persistence } = storage;
 const usersQueue = Queue.connect(storage, 'runnerUsers');
 const runnerChannel = await new Channel<RunnerMessage>(storage, 'runner').subscribe();
 const concurrency = config.runner?.unsafeSandbox ? 1 :
@@ -55,8 +54,8 @@ try {
 					}();
 
 					// Load visible rooms for this user
-					const roomBlobs = await Promise.all(Fn.map(instance.roomsVisible, async roomName =>
-						roomBlobCache.get(roomName) ?? persistence.get(`room/${roomName}`).then(blob => {
+					const roomBlobs = await Promise.all(Fn.map(instance.roomsVisible, roomName =>
+						roomBlobCache.get(roomName) ?? shard.loadRoomBlob(roomName, gameTime - 1).then(blob => {
 							roomBlobCache.set(roomName, blob);
 							return blob;
 						})));

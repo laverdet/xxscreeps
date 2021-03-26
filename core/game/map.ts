@@ -2,7 +2,6 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as TerrainSchema from 'xxscreeps/game/terrain';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, makeReader, vector } from 'xxscreeps/schema';
-import type { PersistenceProvider } from 'xxscreeps/storage/provider';
 
 export type World = Map<string, TerrainSchema.Terrain>;
 let world: World;
@@ -36,10 +35,6 @@ export function getTerrainAt(...args: [ RoomPosition ] | [ number, number, strin
 
 export function getTerrainForRoom(room: string) {
 	return world.get(room)!;
-}
-
-export async function loadTerrain(persistence: PersistenceProvider) {
-	loadTerrainFromBuffer(await persistence.get('terrain'));
 }
 
 export function loadTerrainFromBuffer(worldTerrainBlob: Readonly<Uint8Array>) {
