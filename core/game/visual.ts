@@ -17,7 +17,7 @@ const stroke = {
 	strokeWidth: optional('double'),
 };
 
-type LineStyle = TypeOf<typeof lineSchema>['s'];
+type LineStyle = Partial<TypeOf<typeof lineSchema>['s']>;
 const lineSchema = struct({
 	...variant('l'),
 	x1: 'double',
@@ -31,19 +31,20 @@ const lineSchema = struct({
 	}),
 });
 
-type CircleStyle = TypeOf<typeof circleSchema>['s'];
+type CircleStyle = Partial<TypeOf<typeof circleSchema>['s']>;
 const circleSchema = struct({
 	...variant('c'),
 	x: 'double',
 	y: 'double',
 	s: struct({
 		...line,
-		color,
+		...stroke,
+		fill,
 		radius: optional('double'),
 	}),
 });
 
-type RectStyle = TypeOf<typeof rectSchema>['s'];
+type RectStyle = Partial<TypeOf<typeof rectSchema>['s']>;
 const rectSchema = struct({
 	...variant('r'),
 	x: 'double',
@@ -57,7 +58,7 @@ const rectSchema = struct({
 	}),
 });
 
-type PolyStyle = TypeOf<typeof polySchema>['s'];
+type PolyStyle = Partial<TypeOf<typeof polySchema>['s']>;
 const polySchema = struct({
 	...variant('p'),
 	points: vector(array(2, 'double')),
@@ -68,7 +69,7 @@ const polySchema = struct({
 	}),
 });
 
-type TextStyle = TypeOf<typeof textSchema>['s'];
+type TextStyle = Partial<TypeOf<typeof textSchema>['s']>;
 const textSchema = struct({
 	...variant('t'),
 	x: 'double',
@@ -108,10 +109,10 @@ export function write() {
 const writeSchema = makeWriter(schema);
 
 // Extract either x/y pair or RoomPosition to x/y pair
-type Point = [ pos: RoomPosition ] | [ x: number, y: number ];
+type Point = [ pos: { x: number; y: number } ] | [ x: number, y: number ];
 function *extractPositions(args: any[]) {
 	for (const arg of args) {
-		if (arg instanceof RoomPosition) {
+		if (typeof arg.x === 'number') {
 			yield arg.x;
 			yield arg.y;
 		} else {
@@ -149,10 +150,10 @@ export class RoomVisual {
 	/**
 	 * Draw a polyline.
 	 */
-	poly(points: RoomPosition[], style?: PolyStyle) {
+	poly(points: ([ x: number, y: number ] | { x: number; y: number })[], style?: PolyStyle) {
 		// TODO: Spread needed because Schema types are incomplete
 		const filtered = [ ...Fn.filter(Fn.map(points, (point): [ number, number ] =>
-			point instanceof RoomPosition ? [ point.x, point.y ] : point)) ];
+			Array.isArray(point) ? [ point[0], point[1] ] : [ point.x, point.y ])) ];
 		this.#visuals.push({ [Variant]: 'p', points: filtered, s: (style as any) ?? {} });
 		return this;
 	}

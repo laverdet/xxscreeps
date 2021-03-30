@@ -3,6 +3,9 @@
  */
 export function stringifyInherited(value: any): string {
 	if (typeof value === 'object') {
+		if (Array.isArray(value)) {
+			return `[${value.map(stringifyInherited)}]`;
+		}
 		let str = '{';
 		let first = true;
 		for (const key in value) {

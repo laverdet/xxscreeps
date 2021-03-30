@@ -207,9 +207,10 @@ function makeTypeWriter(layout: Layout, lookup: any): Writer {
 
 		} else {
 			// Vector with fixed element size
+			const alignOffset = alignTo(kPointerSize, align);
 			return (value, view, offset) => {
 				let length = 0;
-				let currentOffset = offset + kPointerSize;
+				let currentOffset = offset + alignOffset;
 				for (const element of value) {
 					++length;
 					write(element, view, currentOffset);

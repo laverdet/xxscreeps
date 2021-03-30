@@ -177,7 +177,7 @@ export function makeTypeReader(layout: Layout, lookup: any): Reader {
 		const elementLayout = layout.vector;
 		const read = makeTypeReader(elementLayout, lookup);
 		const { align, stride } = layout;
-		const alignOffset = alignTo(kPointerSize, align);
+
 		if (stride === undefined) {
 			// Vector with dynamic element size
 			return (view, offset) => {
@@ -192,6 +192,7 @@ export function makeTypeReader(layout: Layout, lookup: any): Reader {
 
 		} else {
 			// Vector with fixed element size
+			const alignOffset = alignTo(kPointerSize, align);
 			return (view, offset) => {
 				const length = view.uint32[offset >>> 2];
 				if (length === 0) {

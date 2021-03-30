@@ -82,7 +82,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 						if (visuals) {
 							for (const visual of visuals.visual) {
 								(visual as any).t = visual[Variant];
-								visualsString += stringifyInherited(visual);
+								visualsString += stringifyInherited(visual) + '\n';
 							}
 						}
 					}

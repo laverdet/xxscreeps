@@ -121,18 +121,17 @@ export function getLayout(unresolvedFormat: Format): { layout: Layout; traits: T
 		const length = format.length;
 		const { layout, traits } = getLayout(format.array);
 		const size = alignTo(traits.size, traits.align) * (length - 1) + traits.size;
-		const stride = traits.stride && (traits.stride * (length - 1) + traits.size);
 		return {
 			layout: {
 				array: layout,
 				length,
 				size,
-				stride,
+				stride: traits.stride,
 			},
 			traits: {
 				align: traits.align,
 				size,
-				stride,
+				stride: traits.stride && (traits.stride * (length - 1) + traits.size),
 			},
 		};
 
