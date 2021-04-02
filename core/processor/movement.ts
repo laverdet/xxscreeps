@@ -72,7 +72,6 @@ export function dispatch(room: Room) {
 	check: for (const mover of movingObjects) {
 		const nextPosition = mover[NextPosition]!;
 		const check = makeObstacleChecker({
-			isPathFinder: false,
 			room,
 			type: mover[LookType],
 			user: mover[Owner],

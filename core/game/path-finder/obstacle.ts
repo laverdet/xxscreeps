@@ -1,13 +1,20 @@
-import type { RoomObject } from '../object';
-import type { Room } from '../room';
+import type { RoomObject } from 'xxscreeps/game/object';
+import type { RoomPosition } from 'xxscreeps/game/position';
+import type { Room } from 'xxscreeps/game/room';
+import * as C from 'xxscreeps/game/constants';
 
 type MovementParameters = {
+	checkTerrain?: boolean;
 	ignoreCreeps?: boolean;
 	ignoreDestructibleStructures?: boolean;
-	isPathFinder: boolean;
+	isPathFinder?: true;
 	room: Room;
 	type: string;
 	user: string;
+};
+
+type PositionCheckParameters = MovementParameters & {
+	checkTerrain?: boolean;
 };
 
 type ObstacleChecker = (params: MovementParameters) =>
@@ -18,6 +25,10 @@ export function registerObstacleChecker(fn: ObstacleChecker) {
 	obstacleCheckers.push(fn);
 }
 
+/**
+ * Creates an obstacle checker based on the parameters. The return value of the callback will be
+ * `true` if the object is an obstacle.
+ */
 export function makeObstacleChecker(params: MovementParameters) {
 	return obstacleCheckers.reduce((fn, factory) => {
 		const next = factory(params);
@@ -26,6 +37,22 @@ export function makeObstacleChecker(params: MovementParameters) {
 		}
 		return fn;
 	}, (_object: RoomObject) => false);
+}
+
+/**
+ * Creates a position checker. The return value of the callback will be `true` if the position is
+ * not obstructed.
+ */
+export function makePositionChecker(params: PositionCheckParameters) {
+	const { room } = params;
+	const checkObstacle = makeObstacleChecker(params);
+	const check = (position: RoomPosition) =>
+		!room.lookAt(position).some(look => checkObstacle(look[look.type]));
+	if (params.checkTerrain) {
+		const terrain = room.getTerrain();
+		return (position: RoomPosition) => terrain.get(position.x, position.y) !== C.TERRAIN_MASK_WALL && !check(position);
+	}
+	return check;
 }
 
 /*

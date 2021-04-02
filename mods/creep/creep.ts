@@ -398,7 +398,7 @@ export function checkWithdraw(
 ) {
 	return chainIntentChecks(
 		() => checkTransferOrWithdraw(creep, target, resourceType, amount),
-		() => checkTarget(creep, Structure),
+		() => checkTarget(target, Structure),
 		() => {
 			if (!('store' in target)) {
 				return C.ERR_INVALID_TARGET;

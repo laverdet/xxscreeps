@@ -6,9 +6,11 @@ import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 import { getPositonInDirection, Direction } from 'xxscreeps/game/position';
 import { insertObject, moveObject } from 'xxscreeps/game/room/methods';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
-import { RoomObject } from 'xxscreeps/game/object';
+import { Owner, RoomObject } from 'xxscreeps/game/object';
+import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
+import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { StructureExtension } from './extension';
-import { checkSpawnCreep, StructureSpawn } from './spawn';
+import { checkSpawnCreep, StructureSpawn, SpawnTime } from './spawn';
 
 declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }
@@ -56,26 +58,49 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 	spawn.spawning = {
 		creep: creep.id,
 		directions: directions ?? [],
-		endTime: Game.time + needTime,
 		needTime,
+		[SpawnTime]: Game.time + needTime,
 	};
 	context.didUpdate();
 });
 
 registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
-	if (spawn.spawning && spawn.spawning.endTime <= Game.time) {
-		const creep = Game.getObjectById(spawn.spawning.creep);
-		if (creep && creep instanceof Creep.Creep) {
-			const hasClaim = creep.body.some(part => part.type === 'claim');
-			creep._ageTime = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME);
-			moveObject(creep, getPositonInDirection(creep.pos, C.TOP));
-		}
-		spawn.spawning = undefined;
-		context.setActive();
-	}
 
+	// Check creep spawning
+	(() => {
+		if (spawn.spawning && spawn.spawning[SpawnTime] <= Game.time) {
+			const creep = Game.getObjectById(spawn.spawning.creep);
+			if (creep && creep instanceof Creep.Creep) {
+				// Look for spawn direction
+				const check = makePositionChecker({
+					room: spawn.room,
+					type: 'creep',
+					user: creep[Owner],
+				});
+				const directions = new Set(spawn.spawning.directions.length === 0 ?
+					ALL_DIRECTIONS : spawn.spawning.directions as Direction[]);
+				const direction = Fn.firstMatching(directions, direction => check(getPositonInDirection(creep.pos, direction)));
+
+				// If no direction was found then defer this creep
+				// TODO: Spawn stomp hostile creeps
+				if (direction === undefined) {
+					spawn.spawning[SpawnTime] = Game.time + 1;
+					return;
+				}
+
+				// Creep can be spawned
+				const hasClaim = creep.body.some(part => part.type === C.CLAIM);
+				creep._ageTime = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME);
+				moveObject(creep, getPositonInDirection(creep.pos, direction));
+			}
+			spawn.spawning = undefined;
+			context.setActive();
+		}
+	})();
+
+	// Add 1 energy per tick to spawns in low energy rooms
 	if (spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
-		StoreIntent.add(spawn.store, 'energy', 1);
+		StoreIntent.add(spawn.store, C.RESOURCE_ENERGY, 1);
 		context.setActive();
 	}
 

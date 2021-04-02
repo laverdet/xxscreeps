@@ -8,7 +8,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as Store from 'xxscreeps/mods/resource/store';
-import { declare, compose, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
+import { declare, compose, optional, struct, variant, vector, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
@@ -22,6 +22,8 @@ type SpawnCreepOptions = {
 	memory?: any;
 };
 
+export const SpawnTime = XSymbol('spawnTime');
+
 export const format = () => compose(shape, StructureSpawn);
 const shape = declare('Spawn', struct(Structure.format, {
 	...variant('spawn'),
@@ -29,8 +31,8 @@ const shape = declare('Spawn', struct(Structure.format, {
 	spawning: optional(struct({
 		creep: Id.format,
 		directions: vector('int8'),
-		endTime: 'int32',
 		needTime: 'int32',
+		[SpawnTime]: 'int32',
 	})),
 	store: Store.restrictedFormat<'energy'>(),
 }));

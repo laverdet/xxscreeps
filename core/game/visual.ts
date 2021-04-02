@@ -1,6 +1,5 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import { enumerated, makeWriter, optional, struct, variant, vector, TypeOf, Variant, array } from 'xxscreeps/schema';
-import { RoomPosition } from './position';
 import { registerGlobal } from '.';
 import { getOrSet } from 'xxscreeps/utility/utility';
 

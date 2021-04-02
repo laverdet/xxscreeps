@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import { RoomPosition } from '.';
 
-const ALL_DIRECTIONS = [
+export const ALL_DIRECTIONS = [
 	C.TOP, C.TOP_RIGHT, C.RIGHT, C.BOTTOM_RIGHT, C.BOTTOM, C.BOTTOM_LEFT, C.LEFT, C.TOP_LEFT,
 ];
 export type Direction = typeof ALL_DIRECTIONS[number];
