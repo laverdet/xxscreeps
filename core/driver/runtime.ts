@@ -246,7 +246,7 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 
 	// Release shared memory
 	for (const room of rooms) {
-		detach(room);
+		detach(room, () => new Error(`Accessed a released object from a previous tick[${time}]`));
 	}
 
 	return { flagBlob, intentBlobs, visualsBlob, memory };

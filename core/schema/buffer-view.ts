@@ -1,3 +1,5 @@
+const typedArrays = [ 'uint8', 'uint16', 'uint32', 'int8', 'int16', 'int32', 'double' ] as const;
+
 /**
  * TypeArray holder for a chunk of serialized game state. Probably holds a room at time.
  */
@@ -32,13 +34,14 @@ export class BufferView {
 	 * Forcefully detach the underlying memory from this view, invalidating all objects referring to
 	 * it, and freeing the retained memory
 	 */
-	detach() {
-		delete (this as any).uint8;
-		delete (this as any).uint16;
-		delete (this as any).uint32;
-		delete (this as any).int8;
-		delete (this as any).int16;
-		delete (this as any).int32;
-		delete (this as any).double;
+	detach(error: () => Error) {
+		for (const key of typedArrays) {
+			delete this[key];
+		}
+		Object.defineProperties(this, Object.fromEntries(typedArrays.map(key => [
+			key, {
+				get: () => { throw error() },
+			},
+		])));
 	}
 }

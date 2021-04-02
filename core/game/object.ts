@@ -1,9 +1,10 @@
+import type { InspectOptionsStylized } from 'util';
 import type { Room } from './room';
 import type { LookConstants } from './room/look';
 import * as Id from 'xxscreeps/engine/schema/id';
+import * as BufferObject from 'xxscreeps/schema/buffer-object';
 import * as RoomPosition from 'xxscreeps/game/position';
 import { compose, declare, optional, struct, vector, withOverlay, XSymbol } from 'xxscreeps/schema';
-import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { assign } from 'xxscreeps/utility/utility';
@@ -30,7 +31,7 @@ const shape = declare('RoomObject', struct({
 
 export type RoomObjectWithOwner = { [Owner]: string } & RoomObject;
 
-export abstract class RoomObject extends withOverlay(BufferObject, shape) {
+export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	abstract get [LookType](): LookConstants;
 	room!: Room;
 	[NextPosition]?: RoomPosition.RoomPosition | null;
@@ -43,8 +44,12 @@ export abstract class RoomObject extends withOverlay(BufferObject, shape) {
 		this.room = undefined as never;
 	}
 
-	[Symbol.for('nodejs.util.inspect.custom')]() {
-		return expandGetters(this);
+	[Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+		if (BufferObject.check(this)) {
+			return expandGetters(this);
+		} else {
+			return `${options.stylize(`[${this.constructor.name}]`, 'special')}${options.stylize('{released}', 'null')}`;
+		}
 	}
 
 	get [IntentIdentifier]() {

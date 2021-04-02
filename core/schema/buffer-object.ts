@@ -3,6 +3,7 @@ import { BufferView } from './buffer-view';
 import { XSymbol } from './symbol';
 
 // Symbols used to keep these functions from littering Typescript types
+const Check = XSymbol('check');
 const Detach = XSymbol('detach');
 const GetBuffer = XSymbol('getBuffer');
 const GetOffset = XSymbol('getOffset');
@@ -22,8 +23,18 @@ export class BufferObject {
 		this.#offset = offset;
 	}
 
-	static [Detach](that: BufferObject) {
-		that.#buffer.detach();
+	static [Check](that: BufferObject) {
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+			that.#buffer.int32;
+			return true;
+		} catch (err) {
+			return false;
+		}
+	}
+
+	static [Detach](that: BufferObject, error: () => Error) {
+		that.#buffer.detach(error);
 	}
 
 	static [GetBuffer](that: BufferObject) {
@@ -35,6 +46,7 @@ export class BufferObject {
 	}
 }
 
+export const check = exchange(BufferObject, Check, (): never => { throw new Error });
 export const detach = exchange(BufferObject, Detach, (): never => { throw new Error });
 export const getBuffer = exchange(BufferObject, GetBuffer, (): never => { throw new Error });
 export const getOffset = exchange(BufferObject, GetOffset, (): never => { throw new Error });
