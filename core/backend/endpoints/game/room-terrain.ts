@@ -1,14 +1,14 @@
-import { Endpoint } from 'xxscreeps/backend/endpoint';
+import type { Endpoint } from 'xxscreeps/backend';
 
 const cache = new Map<string, string>();
 export const RoomTerrainEndpoint: Endpoint = {
-	path: '/room-terrain',
+	path: '/api/game/room-terrain',
 
-	execute(req, res) {
-		const room = `${req.query.room}`;
+	execute(context) {
+		const room = `${context.query.room}`;
 		let terrainString = cache.get(room);
 		if (terrainString === undefined) {
-			const terrain = this.context.world.get(room);
+			const terrain = context.backend.world.get(room);
 			if (terrain) {
 				terrainString = '';
 				for (let yy = 0; yy < 50; ++yy) {
@@ -20,12 +20,12 @@ export const RoomTerrainEndpoint: Endpoint = {
 			}
 		}
 		if (terrainString !== undefined) {
-			res.set('Cache-Control', 'public,max-age=31536000,immutable');
+			context.set('Cache-Control', 'public,max-age=31536000,immutable');
 			return {
 				ok: 1,
 				terrain: [ {
-					_id: req.query.room,
-					room: req.query.room,
+					_id: context.query.room,
+					room: context.query.room,
 					terrain: terrainString,
 					type: 'terrain',
 				} ],

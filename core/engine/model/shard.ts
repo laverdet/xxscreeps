@@ -41,14 +41,14 @@ export class Shard {
 	/**
 	 * Load room state from storage for the current or previous tick
 	 */
-	async loadRoom(name: string, time: number) {
+	async loadRoom(name: string, time = this.time) {
 		return RoomSchema.read(await this.loadRoomBlob(name, time));
 	}
 
 	/**
 	 * Load raw room state from storage for the current or previous tick
 	 */
-	async loadRoomBlob(name: string, time: number) {
+	async loadRoomBlob(name: string, time = this.time) {
 		this.checkTime(time, -1);
 		return this.storage.persistence.get(this.roomKeyForTime(name, time));
 	}

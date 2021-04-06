@@ -35,23 +35,23 @@ bindRenderer(Spawn.StructureSpawn, (spawn, next) => ({
 }));
 
 registerBackendRoute({
-	path: '/game/check-unique-object-name',
+	path: '/api/game/check-unique-object-name',
 	method: 'post',
 
-	async execute(req) {
-		if (req.body.type !== 'spawn') {
+	async execute(context) {
+		if (context.request.body.type !== 'spawn') {
 			return;
 		}
-		const { userid } = req.locals;
-		const user = await loadUser(this.context, userid!);
+		const { userId } = context.state;
+		const user = await loadUser(context.backend, userId!);
 		const rooms = await Promise.all(Fn.map(user.roomsPresent, room =>
-			this.context.shard.loadRoom(room, this.context.shard.time)));
+			context.shard.loadRoom(room)));
 		for (const room of rooms) {
 			for (const structure of room.find(C.FIND_STRUCTURES)) {
 				if (
 					structure.structureType === 'spawn' &&
-					structure.owner === userid &&
-					structure.name === req.body.name
+					structure.owner === userId &&
+					structure.name === context.request.body.name
 				) {
 					return { error: 'exists' };
 				}
@@ -62,24 +62,24 @@ registerBackendRoute({
 });
 
 registerBackendRoute({
-	path: '/game/gen-unique-object-name',
+	path: '/api/game/gen-unique-object-name',
 	method: 'post',
 
-	async execute(req) {
-		if (req.body.type !== 'spawn') {
+	async execute(context) {
+		if (context.request.body.type !== 'spawn') {
 			return;
 		}
-		const { userid } = req.locals;
-		const user = await loadUser(this.context, userid!);
+		const { userId } = context.state;
+		const user = await loadUser(context.backend, userId!);
 		const rooms = await Promise.all(Fn.map(user.roomsPresent, room =>
-			this.context.shard.loadRoom(room, this.context.shard.time)));
+			context.shard.loadRoom(room)));
 		let max = 0;
 		for (const room of rooms) {
 			for (const structure of Fn.concat(
 				room.find(C.FIND_STRUCTURES),
 				room.find(C.FIND_CONSTRUCTION_SITES),
 			)) {
-				if (structure.structureType === 'spawn' && structure.owner === userid) {
+				if (structure.structureType === 'spawn' && structure.owner === userId) {
 					const number = Number(/^Spawn(?<count>[0-9]+)$/.exec(structure.name)?.groups?.number);
 					if (number > max) {
 						max = number;
@@ -92,28 +92,28 @@ registerBackendRoute({
 });
 
 registerBackendRoute({
-	path: '/game/place-spawn',
+	path: '/api/game/place-spawn',
 	method: 'post',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const { name, room, x, y } = req.body;
+	async execute(context) {
+		const { userId } = context.state;
+		const { name, room, x, y } = context.request.body;
 		const pos = new RoomPosition(x, y, room);
-		await this.context.gameMutex.scope(async() => {
+		await context.backend.gameMutex.scope(async() => {
 			// Ensure user has no objects
-			const user = await loadUser(this.context, userid!);
+			const user = await loadUser(context.backend, userId!);
 			if (user.roomsPresent.size !== 0) {
 				throw new Error('User has presence');
 			}
-			const room = await this.context.shard.loadRoom(pos.roomName, this.context.shard.time);
-			Game.runWithState([ room ], this.context.time, () => {
+			const room = await context.shard.loadRoom(pos.roomName);
+			Game.runWithState([ room ], context.shard.time, () => {
 				Game.runAsUser(user.id, () => {
 					// Check room eligibility
 					if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
 						throw new Error('Invalid intent');
 					}
 					// Add spawn
-					insertObject(room, Spawn.create(pos, userid!, name));
+					insertObject(room, Spawn.create(pos, userId!, name));
 					Controller.claim(room.controller!, user.id);
 					user.roomsControlled.add(room.name);
 					user.roomsPresent.add(room.name);
@@ -122,16 +122,16 @@ registerBackendRoute({
 			});
 
 			// Make room & user active
-			const game = GameSchema.read(await this.context.persistence.get('game'));
+			const game = GameSchema.read(await context.backend.persistence.get('game'));
 			game.users.add(user.id);
 
 			// Save
 			await Promise.all([
-				this.context.persistence.set('game', GameSchema.write(game)),
-				saveUser(this.context, user),
-				this.context.shard.saveRoom(pos.roomName, this.context.shard.time, room),
+				context.backend.persistence.set('game', GameSchema.write(game)),
+				saveUser(context.backend, user),
+				context.backend.shard.saveRoom(pos.roomName, context.shard.time, room),
 			]);
-			await new Channel<ServiceMessage>(this.context.storage, 'service').publish({ type: 'gameModified' });
+			await new Channel<ServiceMessage>(context.backend.storage, 'service').publish({ type: 'gameModified' });
 		});
 		return { ok: 1 };
 	},

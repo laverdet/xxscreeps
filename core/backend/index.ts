@@ -1,7 +1,26 @@
+import Koa from 'koa';
+import Router from 'koa-router';
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
-import type { Endpoint } from 'xxscreeps/backend/endpoint';
-import { MapRender, Render, TerrainRender, routes } from './symbols';
+import type { Shard } from 'xxscreeps/engine/model/shard';
+import type { BackendContext } from './context';
+import { MapRender, Render, TerrainRender, middleware, routes } from './symbols';
+
+// Koa middleware & generic backend route types
+export interface Context {
+	backend: BackendContext;
+	shard: Shard;
+}
+export interface State {}
+export type Method = 'delete' | 'get' | 'post' | 'put';
+export type Middleware = Koa.Middleware<State, Context>;
+
+export type Endpoint = {
+	path: string;
+	method?: Method;
+
+	execute(context: Router.RouterContext<State, Context>): any;
+};
 
 // `RoomObject` render symbols
 type RenderedRoomObject = {
@@ -16,6 +35,10 @@ declare module 'xxscreeps/game/object' {
 		[MapRender]: (object: any) => string | undefined;
 		[TerrainRender]: (object: any) => number | undefined;
 	}
+}
+
+export function registerBackendMiddleware(fn: (koa: Koa<State, Context>, router: Router<State, Context>) => void) {
+	middleware.push(fn);
 }
 
 export function registerBackendRoute(endpoint: Endpoint) {

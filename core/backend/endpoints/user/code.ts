@@ -1,4 +1,4 @@
-import { Endpoint } from 'xxscreeps/backend/endpoint';
+import type { Endpoint } from 'xxscreeps/backend';
 import * as Code from 'xxscreeps/engine/metadata/code';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
@@ -46,11 +46,11 @@ function getBranchIdFromQuery(branch: any, user: User.User, create = false) {
 }
 
 const BranchesEndpoint: Endpoint = {
-	path: '/branches',
+	path: '/api/user/branches',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const userBlob = await this.context.persistence.get(`user/${userid}/info`).catch(() => {});
+	async execute(context) {
+		const { userId } = context.state;
+		const userBlob = await context.backend.persistence.get(`user/${userId}/info`).catch(() => {});
 		const user = userBlob && User.read(userBlob);
 
 		if (!user || user.code.branches.length === 0) {
@@ -63,7 +63,7 @@ const BranchesEndpoint: Endpoint = {
 						branch: kDefaultBranch,
 						modules: { main: '' },
 						timestamp: Date.now(),
-						user: userid,
+						user: userId,
 					},
 				],
 			};
@@ -73,13 +73,13 @@ const BranchesEndpoint: Endpoint = {
 		return {
 			ok: 1,
 			list: await Promise.all(user.code.branches.map(async branch => {
-				const code = Code.read(await this.context.persistence.get(`user/${userid}/${branch.id}`));
+				const code = Code.read(await context.backend.persistence.get(`user/${userId}/${branch.id}`));
 				return {
 					activeWorld: branch.id === user.code.branch,
 					branch: branch.name,
 					modules: Fn.fromEntries(code.modules),
 					timestamp: branch.timestamp * 1000,
-					user: userid,
+					user: userId,
 				};
 			})),
 		};
@@ -87,19 +87,19 @@ const BranchesEndpoint: Endpoint = {
 };
 
 const BranchCloneEndpoint: Endpoint = {
-	path: '/clone-branch',
+	path: '/api/user/clone-branch',
 	method: 'post',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const { branch, newName } = req.body;
+	async execute(context) {
+		const { userId } = context.state;
+		const { branch, newName } = context.request.body;
 		if (typeof newName !== 'string' || !/^[-_.a-zA-Z0-9]+$/.test(newName)) {
 			throw new Error('Invalid branch name');
 		}
 		const timestamp = Math.floor(Date.now() / 1000);
 
-		await this.context.gameMutex.scope(async() => {
-			const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
+		await context.backend.gameMutex.scope(async() => {
+			const user = User.read(await context.backend.persistence.get(`user/${userId}/info`));
 			// Validity checks
 			if (user.code.branches.length > kMaxBranches) {
 				throw new Error('Too many branches');
@@ -119,9 +119,9 @@ const BranchCloneEndpoint: Endpoint = {
 			});
 			// Save blobs
 			await Promise.all([
-				this.context.persistence.set(`user/${userid}/info`, User.write(user)),
-				this.context.persistence.set(`user/${userid}/${newId}`,
-					await this.context.persistence.get(`user/${userid}/${branchId}`)),
+				context.backend.persistence.set(`user/${userId}/info`, User.write(user)),
+				context.backend.persistence.set(`user/${userId}/${newId}`,
+					await context.backend.persistence.get(`user/${userId}/${branchId}`)),
 			]);
 		});
 
@@ -130,21 +130,21 @@ const BranchCloneEndpoint: Endpoint = {
 };
 
 const BranchSetEndpoint: Endpoint = {
-	path: '/set-active-branch',
+	path: '/api/user/set-active-branch',
 	method: 'post',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const { branch } = req.body;
-		await this.context.gameMutex.scope(async() => {
-			const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
+	async execute(context) {
+		const { userId } = context.state;
+		const { branch } = context.request.body;
+		await context.backend.gameMutex.scope(async() => {
+			const user = User.read(await context.backend.persistence.get(`user/${userId}/info`));
 			const { id, name } = getBranchIdFromQuery(branch, user);
 			if (id === undefined) {
 				throw new Error('Invalid branch');
 			}
 			user.code.branch = id;
-			await this.context.persistence.set(`user/${userid}/info`, User.write(user));
-			await getRunnerUserChannel(this.context.shard, userid!).publish({ type: 'code', id, name });
+			await context.backend.persistence.set(`user/${userId}/info`, User.write(user));
+			await getRunnerUserChannel(context.backend.shard, userId!).publish({ type: 'code', id, name });
 		});
 
 		return { ok: 1 };
@@ -152,30 +152,30 @@ const BranchSetEndpoint: Endpoint = {
 };
 
 const CodeEndpoint: Endpoint = {
-	path: '/code',
+	path: '/api/user/code',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const { branch } = req.body;
-		const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
+	async execute(context) {
+		const { userId } = context.state;
+		const { branch } = context.request.body;
+		const user = User.read(await context.backend.persistence.get(`user/${userId}/info`));
 		const { id, name } = getBranchIdFromQuery(branch, user);
 		if (id === undefined) {
 			return { ok: 1, branch: name, modules: { main: '' } };
 		}
 
-		const code = Code.read(await this.context.persistence.get(`user/${userid}/${id}`));
+		const code = Code.read(await context.backend.persistence.get(`user/${userId}/${id}`));
 		return { ok: 1, branch: name, modules: Fn.fromEntries(code.modules) };
 	},
 };
 
 const CodePostEndpoint: Endpoint = {
-	path: '/code',
+	path: '/api/user/code',
 	method: 'post',
 
-	async execute(req) {
+	async execute(context) {
 		// Validate this code payload
-		const { userid } = req.locals;
-		const { branch, modules } = req.body;
+		const { userId } = context.state;
+		const { branch, modules } = context.request.body;
 		let size = 0;
 		for (const module of Object.values(modules)) {
 			if (typeof module !== 'string') {
@@ -189,9 +189,9 @@ const CodePostEndpoint: Endpoint = {
 
 		// Save it
 		const timestamp = Math.floor(Date.now() / 1000);
-		await this.context.gameMutex.scope(async() => {
+		await context.backend.gameMutex.scope(async() => {
 			// Load user branch manifest
-			const user = User.read(await this.context.persistence.get(`user/${userid}/info`));
+			const user = User.read(await context.backend.persistence.get(`user/${userId}/info`));
 			const { id, name } = getBranchIdFromQuery(branch, user, true);
 
 			// Update manifest timestamp
@@ -204,33 +204,33 @@ const CodePostEndpoint: Endpoint = {
 
 			// Save blobs
 			await Promise.all([
-				this.context.persistence.set(`user/${userid}/info`, User.write(user)),
-				this.context.persistence.set(`user/${userid}/${id}`, Code.write({
+				context.backend.persistence.set(`user/${userId}/info`, User.write(user)),
+				context.backend.persistence.set(`user/${userId}/${id}`, Code.write({
 					modules: new Map(Object.entries(modules)),
 				})),
 			]);
-			await getRunnerUserChannel(this.context.shard, userid!).publish({ type: 'code', id, name });
+			await getRunnerUserChannel(context.backend.shard, userId!).publish({ type: 'code', id, name });
 		});
 		return { ok: 1, timestamp: timestamp * 1000 };
 	},
 };
 
 const ConsoleEndpoint: Endpoint = {
-	path: '/console',
+	path: '/api/user/console',
 	method: 'post',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const { expression } = req.body;
+	async execute(context) {
+		const { userId } = context.state;
+		const { expression } = context.request.body;
 		if (typeof expression !== 'string') {
 			throw new TypeError('Invalid expression');
 		}
 		try {
 			// Try to parse it
 			new Function(expression);
-			await getRunnerUserChannel(this.context.shard, userid!).publish({ type: 'eval', expr: req.body.expression });
+			await getRunnerUserChannel(context.backend.shard, userId!).publish({ type: 'eval', expr: context.request.body.expression });
 		} catch (err) {
-			await new Channel<Code.ConsoleMessage>(this.context.storage, `user/${userid}/console`)
+			await new Channel<Code.ConsoleMessage>(context.backend.storage, `user/${userId}/console`)
 				.publish({ type: 'console', result: `💥${err.message}` });
 		}
 		return { ok: 1 };

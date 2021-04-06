@@ -1,13 +1,13 @@
-import { Endpoint } from 'xxscreeps/backend/endpoint';
+import type { Endpoint } from 'xxscreeps/backend';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 
 export const MapStatsEndpoint: Endpoint = {
 	method: 'post',
-	path: '/map-stats',
+	path: '/api/game/map-stats',
 
-	async execute(req) {
-		const { rooms: roomNames } = req.body;
+	async execute(context) {
+		const { rooms: roomNames } = context.request.body;
 		if (!Array.isArray(roomNames) || !roomNames.every(room => /^[EW][0-9]+[NS][0-9]+$/.test(room))) {
 			throw new Error('Invalid room payload');
 		}
@@ -15,7 +15,7 @@ export const MapStatsEndpoint: Endpoint = {
 		// Read current room status
 		// TODO: A room status blob that doesn't change very tick would be good
 		const rooms = await Promise.all(roomNames.map(roomName =>
-			this.context.shard.loadRoom(roomName, this.context.shard.time).catch(() => {}),
+			context.backend.shard.loadRoom(roomName).catch(() => {}),
 		));
 
 		// Build rooms payload
@@ -47,7 +47,7 @@ export const MapStatsEndpoint: Endpoint = {
 		// Read users
 		const userObjects = await Promise.all(
 			Fn.map(userIds, async id =>
-				User.read(await this.context.persistence.get(`user/${id}/info`))));
+				User.read(await context.backend.persistence.get(`user/${id}/info`))));
 		const users = Fn.fromEntries(userObjects, user => [
 			user.id, {
 				_id: user.id,
@@ -59,7 +59,7 @@ export const MapStatsEndpoint: Endpoint = {
 		// Send it off
 		return {
 			ok: 1,
-			gameTime: this.context.time,
+			gameTime: context.backend.time,
 			stats,
 			users,
 		};

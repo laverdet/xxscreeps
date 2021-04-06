@@ -1,13 +1,13 @@
-import { Endpoint } from 'xxscreeps/backend/endpoint';
+import type { Endpoint } from 'xxscreeps/backend';
 
 export const RoomStatusEndpoint: Endpoint = {
-	path: '/room-status',
+	path: '/api/game/room-status',
 
-	execute(req) {
+	execute(context) {
 		return {
 			ok: 1,
 			room: {
-				_id: req.query.room,
+				_id: context.query.room,
 				status: 'normal',
 				openTime: 0,
 			},

@@ -1,8 +1,8 @@
-import { Endpoint } from 'xxscreeps/backend/endpoint';
+import type { Endpoint } from 'xxscreeps/backend';
 import config from 'xxscreeps/config';
 
 const TickEndpoint: Endpoint = {
-	path: '/tick',
+	path: '/api/game/tick',
 
 	execute() {
 		return {
@@ -13,12 +13,12 @@ const TickEndpoint: Endpoint = {
 };
 
 const TimeEndpoint: Endpoint = {
-	path: '/time',
+	path: '/api/game/time',
 
-	execute() {
+	execute(context) {
 		return {
 			ok: 1,
-			time: this.context.time,
+			time: context.backend.time,
 		};
 	},
 };

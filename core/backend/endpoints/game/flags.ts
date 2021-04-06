@@ -1,4 +1,4 @@
-import { Endpoint } from 'xxscreeps/backend/endpoint';
+import type { Endpoint } from 'xxscreeps/backend';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as C from 'xxscreeps/game/constants';
@@ -7,15 +7,15 @@ import { checkCreateFlag } from 'xxscreeps/game/flag';
 import { extractPositionId, RoomPosition } from 'xxscreeps/game/position';
 
 const CreateFlagEndpoint: Endpoint = {
-	path: '/create-flag',
+	path: '/api/game/create-flag',
 	method: 'post',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const { name, color, secondaryColor, room, x, y } = req.body;
+	async execute(context) {
+		const { userId } = context.state;
+		const { name, color, secondaryColor, room, x, y } = context.request.body;
 		const pos = new RoomPosition(x, y, room);
 		if (checkCreateFlag({}, pos, name, color, secondaryColor) === C.OK) {
-			await getRunnerUserChannel(this.context.shard, userid!).publish({
+			await getRunnerUserChannel(context.shard, userId!).publish({
 				type: 'intent',
 				intent: {
 					receiver: 'flags',
@@ -36,13 +36,13 @@ const CreateFlagEndpoint: Endpoint = {
 };
 
 const GenUniqueFlagNameEndpoint: Endpoint = {
-	path: '/gen-unique-flag-name',
+	path: '/api/game/gen-unique-flag-name',
 	method: 'post',
 
-	async execute(req) {
-		const { userid } = req.locals;
+	async execute(context) {
+		const { userId } = context.state;
 		try {
-			const flags = await loadUserFlags(this.context.shard, userid!);
+			const flags = await loadUserFlags(context.shard, userId!);
 			for (let ii = 0; ii < 100; ++ii) {
 				const name = `Flag${ii}`;
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -58,13 +58,13 @@ const GenUniqueFlagNameEndpoint: Endpoint = {
 };
 
 const RemoveFlagEndpoint: Endpoint = {
-	path: '/remove-flag',
+	path: '/api/game/remove-flag',
 	method: 'post',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const { name } = req.body;
-		await getRunnerUserChannel(this.context.shard, userid!)
+	async execute(context) {
+		const { userId } = context.state;
+		const { name } = context.request.body;
+		await getRunnerUserChannel(context.shard, userId!)
 			.publish({
 				type: 'intent',
 				intent: {

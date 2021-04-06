@@ -1,37 +1,37 @@
-import { flattenUsername } from 'xxscreeps/backend/auth';
-import { Endpoint } from 'xxscreeps/backend/endpoint';
+import type { Endpoint } from 'xxscreeps/backend';
 import { loadUser } from 'xxscreeps/backend/model/user';
 import * as Badge from 'xxscreeps/engine/metadata/badge';
 import * as User from 'xxscreeps/engine/metadata/user';
 
 const BadgeEndpoint: Endpoint = {
-	path: '/badge',
+	path: '/api/user/badge',
 	method: 'post',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const badge = Badge.validate(req.body.badge);
-		await this.context.gameMutex.scope(async() => {
-			const fragment = `user/${userid}/info`;
-			const user = User.read(await this.context.persistence.get(fragment));
+	async execute(context) {
+		const { userId } = context.state;
+		const badge = Badge.validate(context.request.body.badge);
+		await context.backend.gameMutex.scope(async() => {
+			const fragment = `user/${userId}/info`;
+			const user = User.read(await context.backend.persistence.get(fragment));
 			user.badge = JSON.stringify(badge);
-			await this.context.persistence.set(fragment, User.write(user));
+			await context.backend.persistence.set(fragment, User.write(user));
 		});
 		return { ok: 1 };
 	},
 };
 
 const BadgeSvgEndpoint: Endpoint = {
-	path: '/badge-svg',
+	path: '/api/user/badge-svg',
 
-	async execute(req, res) {
+	async execute(context) {
 		// Look up userid
-		const username = `${req.query.username}`;
-		const userid = this.context.lookupUserByProvider(`username:${flattenUsername(username)}`);
+		const username = `${context.query.username}`;
+		const usernameKey = context.backend.auth.usernameToProviderKey(username);
+		const userid = context.backend.auth.lookupUserByProvider(usernameKey);
 		if (userid === undefined) {
 			return;
 		}
-		const user = await loadUser(this.context, userid);
+		const user = await loadUser(context.backend, userid);
 		const badge: Badge.Badge = JSON.parse(user.badge);
 
 		// Extract or calculate paths
@@ -54,14 +54,14 @@ const BadgeSvgEndpoint: Endpoint = {
 		}();
 
 		// Send markup payload
-		res.set('Content-Type', 'image/svg+xml; charset=utf-8');
-		res.end('<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 100 100" shape-rendering="geometricPrecision">' +
+		context.set('Content-Type', 'image/svg+xml; charset=utf-8');
+		context.body = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 100 100" shape-rendering="geometricPrecision">' +
 			'<defs><clipPath id="clip"><circle cx="50" cy="50" r="52" /></clipPath></defs>' +
 			`<g transform="rotate(${rotate} 50 50)">` +
 			`<rect x="0" y="0" width="100" height="100" fill="${color1}" clip-path="url(#clip)" />` +
 			`<path d="${path1}" fill="${color2}" clip-path="url(#clip)" />` +
 			(path2 === '' ? '' : `<path d="${path2}" fill="${color3}" clip-path="url(#clip)" />`) +
-			'</g></svg>');
+			'</g></svg>';
 	},
 };
 

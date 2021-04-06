@@ -1,8 +1,8 @@
-import { Endpoint } from 'xxscreeps/backend/endpoint';
+import type { Endpoint } from 'xxscreeps/backend';
 import { loadUser } from 'xxscreeps/backend/model/user';
 
 const RespawnProhibitedRoomsEndpoint: Endpoint = {
-	path: '/respawn-prohibited-rooms',
+	path: '/api/user/respawn-prohibited-rooms',
 
 	execute() {
 		return {
@@ -13,7 +13,7 @@ const RespawnProhibitedRoomsEndpoint: Endpoint = {
 };
 
 const WorldStartRoomEndpoint: Endpoint = {
-	path: '/world-start-room',
+	path: '/api/user/world-start-room',
 
 	execute() {
 		return {
@@ -24,11 +24,11 @@ const WorldStartRoomEndpoint: Endpoint = {
 };
 
 const WorldStatusEndpoint: Endpoint = {
-	path: '/world-status',
+	path: '/api/user/world-status',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const user = userid && await loadUser(this.context, userid).catch(() => {});
+	async execute(context) {
+		const { userId } = context.state;
+		const user = userId && await loadUser(context.backend, userId).catch(() => {});
 		if (!user) {
 			return { ok: 1, status: 'empty' };
 		} else if (user.roomsControlled.size === 0) {

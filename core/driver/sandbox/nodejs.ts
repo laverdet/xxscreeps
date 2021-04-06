@@ -50,7 +50,12 @@ export class NodejsSandbox {
 			writeConsole,
 			{ userId, codeBlob, flagBlob, memoryBlob, terrainBlob },
 		);
-		return new NodejsSandbox(tick);
+		context._tick = tick;
+		const wrappedTick: Runtime['tick'] = function(...args: any[]) {
+			context._args = args;
+			return vm.runInContext('_tick(..._args)', context, { timeout: 1000 });
+		};
+		return new NodejsSandbox(wrappedTick);
 	}
 
 	dispose() {}

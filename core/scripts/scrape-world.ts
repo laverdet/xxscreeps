@@ -9,7 +9,7 @@ import * as Store from 'xxscreeps/mods/resource/store';
 import Config from 'xxscreeps/config';
 
 // Schemas
-import * as Auth from 'xxscreeps/backend/auth';
+import * as Auth from 'xxscreeps/backend/auth/model';
 import * as CodeSchema from 'xxscreeps/engine/metadata/code';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as MapSchema from 'xxscreeps/game/map';

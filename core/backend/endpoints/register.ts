@@ -1,14 +1,13 @@
-import { Endpoint, Response } from 'xxscreeps/backend/endpoint';
-import { checkUsername, flattenUsername } from 'xxscreeps/backend/auth';
-import { makeToken } from 'xxscreeps/backend/auth/token';
+import type { Endpoint } from 'xxscreeps/backend';
+import { checkUsername } from 'xxscreeps/backend/auth';
 import { loadUser } from 'xxscreeps/backend/model/user';
 import * as User from 'xxscreeps/engine/metadata/user';
 
 const CheckEmailEndpoint: Endpoint = {
-	path: '/check-email',
+	path: '/api/register/check-email',
 
-	execute(req) {
-		if (req.query.email === undefined) {
+	execute(context) {
+		if (context.query.email === undefined) {
 			return { error: 'invalid' };
 		}
 		return { ok: 1 };
@@ -16,15 +15,15 @@ const CheckEmailEndpoint: Endpoint = {
 };
 
 const CheckUsernameEndpoint: Endpoint = {
-	path: '/check-username',
+	path: '/api/register/check-username',
 
-	execute(req) {
-		const username = `${req.query.username}`;
+	execute(context) {
+		const username = `${context.query.username}`;
 		if (!checkUsername(username)) {
 			return { error: 'invalid' };
 		}
-		const usernameKey = `username:${flattenUsername(username)}`;
-		if (this.context.lookupUserByProvider(usernameKey) !== undefined) {
+		const usernameKey = context.backend.auth.usernameToProviderKey(username);
+		if (context.backend.auth.lookupUserByProvider(usernameKey) !== undefined) {
 			return { error: 'exists' };
 		}
 		return { ok: 1 };
@@ -33,14 +32,14 @@ const CheckUsernameEndpoint: Endpoint = {
 
 const SetUsernameEndpoint: Endpoint = {
 	method: 'post',
-	path: '/set-username',
+	path: '/api/register/set-username',
 
-	async execute(req, res) {
+	async execute(context) {
 
 		// Check for new reg provider
-		const { token, userid } = req.locals;
-		const { username } = req.body;
-		if (token === undefined) {
+		const { providerKey, userId, newUserId } = context.state;
+		const { username } = context.request.body;
+		if (providerKey === undefined || userId !== undefined) {
 			return { error: 'username already set' };
 		}
 
@@ -50,29 +49,31 @@ const SetUsernameEndpoint: Endpoint = {
 		}
 
 		// Register
-		return this.context.gameMutex.scope(async() => {
+		return context.backend.gameMutex.scope(async() => {
 			// Ensure account or steam reference doesn't already exist
-			if (this.context.lookupUserByProvider(token) !== undefined) {
-				throw new Error(`Account already exists: ${token}`);
+			if (context.backend.auth.lookupUserByProvider(providerKey) !== undefined) {
+				throw new Error(`Account already exists: ${providerKey}`);
 			}
-			if (await loadUser(this.context, userid!).catch(() => {})) {
-				throw new Error(`Username already set: ${userid}`);
+			if (await loadUser(context.backend, newUserId!).catch(() => {})) {
+				throw new Error(`Username already set: ${newUserId}`);
 			}
-			const usernameKey = `username:${flattenUsername(username)}`;
-			if (this.context.lookupUserByProvider(usernameKey) !== undefined) {
+			const usernameKey = context.backend.auth.usernameToProviderKey(username);
+			if (context.backend.auth.lookupUserByProvider(usernameKey) !== undefined) {
 				throw new Error(`User already exists: ${username}`);
 			}
 			// Create user
-			const user = User.create(username, userid);
+			const user = User.create(username, newUserId);
 			const userBlob = User.write(user);
-			this.context.associateUser(usernameKey, user.id);
-			this.context.associateUser(token, user.id);
+			context.backend.auth.associateUser(usernameKey, user.id);
+			context.backend.auth.associateUser(providerKey, user.id);
+			context.state.userId = newUserId;
+			context.state.newUserId = undefined;
+			context.state.providerKey = undefined;
 			await Promise.all([
-				this.context.save(),
-				this.context.persistence.set(`user/${user.id}/info`, userBlob),
+				context.backend.auth.save(),
+				context.backend.persistence.set(`user/${user.id}/info`, userBlob),
 			]);
-			// Update auth token
-			res.set('X-Token', await makeToken(user.id));
+			// Success
 			return { ok: 1, _id: user.id };
 		});
 	},
@@ -80,10 +81,11 @@ const SetUsernameEndpoint: Endpoint = {
 
 const SubmitRegistrationEndpoint: Endpoint = {
 	method: 'post',
-	path: '/submit',
+	path: '/api/register/submit',
 
-	execute() {
-		return Response(500, {});
+	execute(context) {
+		context.status = 500;
+		return {};
 	},
 };
 

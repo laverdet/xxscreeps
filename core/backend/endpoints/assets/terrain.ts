@@ -1,9 +1,9 @@
 import type { Room } from 'xxscreeps/game/room';
+import type { Endpoint } from 'xxscreeps/backend';
 import streamToPromise from 'stream-to-promise';
 import crypto from 'crypto';
 import * as Fn from 'xxscreeps/utility/functional';
 import { PNG } from 'pngjs';
-import { Endpoint } from 'xxscreeps/backend/endpoint';
 import { TerrainRender } from 'xxscreeps/backend/symbols';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/terrain';
@@ -77,12 +77,12 @@ function makeTerrainEndpoint(path: string, fn: TerrainRenderer): Endpoint {
 	return {
 		path,
 
-		async execute(req, res) {
+		async execute(context) {
 			// Fetch PNG from cache, or generate fresh
-			const { room } = req.params;
+			const room = `${context.params.room}`;
 			let data = cache.get(room);
 			if (data === undefined) {
-				const payload = await fn(this.context, room);
+				const payload = await fn(context.backend, room);
 				if (payload === null) {
 					data = { etag: 'nothing', payload: null };
 				} else {
@@ -93,30 +93,31 @@ function makeTerrainEndpoint(path: string, fn: TerrainRenderer): Endpoint {
 			}
 			// The Screeps client adds a very impolite cache bust to all map URLs. We can make better use
 			// of the browser cache by redirecting to a resource which can be cached
-			if (req.query.etag === data.etag) {
-				res.set('Cache-Control', 'public,max-age=31536000,immutable');
+			if (context.query.etag === data.etag) {
+				context.set('Cache-Control', 'public,max-age=31536000,immutable');
 				if (data.payload) {
-					res.set('Content-Type', 'image/png');
-					res.writeHead(200);
-					res.end(data.payload);
+					context.set('Content-Type', 'image/png');
+					context.status = 200;
+					return data.payload;
 				} else {
-					res.writeHead(404);
-					res.end();
+					context.status = 404;
+					return '';
 				}
 			} else {
 				// This seems like a risk for infinite redirects at some point, oh well!
-				res.redirect(301, `${req.baseUrl}${req.path}?etag=${encodeURIComponent(data.etag)}`);
+				context.status = 301;
+				context.redirect(`${context.path}?etag=${encodeURIComponent(data.etag)}`);
 			}
 		},
 	};
 }
 
-export const TerrainEndpoint = makeTerrainEndpoint('/map/:room.png', async(context, roomName) => {
-	const room = await context.shard.loadRoom(roomName, context.shard.time).catch(() => null);
+export const TerrainEndpoint = makeTerrainEndpoint('/assets/map/:room.png', async(context, roomName) => {
+	const room = await context.shard.loadRoom(roomName).catch(() => null);
 	return room ? generate([ [ room ] ], 3) : null;
 });
 
-export const TerrainZoomEndpoint = makeTerrainEndpoint('/map/zoom2/:room.png', async(context, room) => {
+export const TerrainZoomEndpoint = makeTerrainEndpoint('/assets/map/zoom2/:room.png', async(context, room) => {
 	// Fetch rooms if requset is valid
 	let didFindRoom = false;
 	const { rx: left, ry: top } = parseRoomName(room);
@@ -124,7 +125,7 @@ export const TerrainZoomEndpoint = makeTerrainEndpoint('/map/zoom2/:room.png', a
 		const grid = await Promise.all(Fn.map(Fn.range(top, top + 4), yy =>
 			Promise.all(Fn.map(Fn.range(left, left + 4), async xx => {
 				const roomName = generateRoomName(xx, yy);
-				const room = await context.shard.loadRoom(roomName, context.shard.time).catch(() => null);
+				const room = await context.shard.loadRoom(roomName).catch(() => null);
 				didFindRoom ||= room !== null;
 				return room;
 			})),

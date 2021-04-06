@@ -55,7 +55,7 @@ const intent = registerIntentProcessor(Creep, 'upgradeController', (creep, conte
 	}
 });
 
-registerObjectTickProcessor(StructureController, (controller, context) => {
+registerObjectTickProcessor(StructureController, (controller/*, context*/) => {
 	const upgradePower = exchange(controller, UpgradePowerThisTick);
 	if (upgradePower !== undefined) {
 		controller[DowngradeTime] = 1 + Math.min(

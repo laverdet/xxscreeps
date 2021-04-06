@@ -6,12 +6,12 @@ import { activateNPC } from 'xxscreeps/mods/npc/processor';
 import { create } from './processor';
 
 registerBackendRoute({
-	path: '/game/create-invader',
+	path: '/api/game/create-invader',
 	method: 'post',
 
-	async execute(req) {
-		const { userid } = req.locals;
-		const { room: roomName, x, y, size, type } = req.body;
+	async execute(context) {
+		const { userId } = context.state;
+		const { room: roomName, x, y, size, type } = context.request.body;
 		const pos = new RoomPosition(x, y, roomName);
 		if (
 			(size !== 'big' && size !== 'small') ||
@@ -21,14 +21,14 @@ registerBackendRoute({
 		}
 
 		// Modify room state
-		await this.context.gameMutex.scope(async() => {
-			const room = await this.context.shard.loadRoom(pos.roomName, this.context.shard.time);
-			if (room.controller?.owner !== userid) {
+		await context.backend.gameMutex.scope(async() => {
+			const room = await context.shard.loadRoom(pos.roomName);
+			if (room.controller?.owner !== userId) {
 				return;
 			}
 			activateNPC(room, '2');
 			insertObject(room, create(pos, type, size, Game.time + 200));
-			await this.context.shard.saveRoom(pos.roomName, this.context.shard.time, room);
+			await context.shard.saveRoom(pos.roomName, context.shard.time, room);
 		});
 		return { ok: 1 };
 	},

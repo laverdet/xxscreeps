@@ -2,17 +2,13 @@ import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import type { GameMessage } from 'xxscreeps/engine/service';
 import { readWorld, World } from 'xxscreeps/game/map';
-import { getOrSet } from 'xxscreeps/utility/utility';
 import * as Storage from 'xxscreeps/storage';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';
-import * as Auth from './auth';
+import { Authentication } from './auth/model';
 import * as User from 'xxscreeps/engine/metadata/user';
 
 export class BackendContext {
-	private readonly providerToUser = new Map<string, string>();
-	private readonly userToProvider = new Map<string, string[]>();
-
 	private constructor(
 		public readonly shard: Shard,
 		public readonly storage: Storage.Provider,
@@ -21,7 +17,7 @@ export class BackendContext {
 		public readonly world: World,
 		public readonly accessibleRooms: Set<string>,
 		public readonly gameMutex: Mutex,
-		private readonly providerEntries: Auth.Shape,
+		public readonly auth: Authentication,
 		public time: number,
 	) {
 		// Keep current time up to date
@@ -30,11 +26,6 @@ export class BackendContext {
 				this.time = message.time;
 			}
 		});
-		// Index provider entries
-		for (const entry of providerEntries) {
-			this.providerToUser.set(entry.key, entry.user);
-			getOrSet(this.userToProvider, entry.user, () => []).push(entry.key);
-		}
 	}
 
 	static async connect() {
@@ -46,7 +37,7 @@ export class BackendContext {
 		const world = readWorld(await persistence.get('terrain'));
 		const game = GameSchema.read(await persistence.get('game'));
 		const gameMutex = await Mutex.connect(storage, 'game');
-		const auth = Auth.read(await persistence.get('auth'));
+		const auth = await Authentication.connect(storage);
 		const context = new BackendContext(shard, storage, storage.persistence, gameChannel, world, new Set(game.rooms.keys()), gameMutex, auth, game.time);
 		return context;
 	}
@@ -57,28 +48,7 @@ export class BackendContext {
 		await this.gameMutex.disconnect();
 	}
 
-	associateUser(providerKey: string, id: string) {
-		if (this.providerToUser.has(providerKey)) {
-			throw new Error('Existing provider key already exists');
-		}
-		this.providerToUser.set(providerKey, id);
-		getOrSet(this.userToProvider, id, () => []).push(providerKey);
-		this.providerEntries.push({ key: providerKey, user: id });
-	}
-
-	getProvidersForUser(id: string) {
-		return this.userToProvider.get(id)!;
-	}
-
-	lookupUserByProvider(providerKey: string) {
-		return this.providerToUser.get(providerKey);
-	}
-
 	async loadUser(id: string) {
 		return User.read(await this.storage.persistence.get(`user/${id}/info`));
-	}
-
-	async save() {
-		await this.storage.persistence.set('auth', Auth.write(this.providerEntries));
 	}
 }
