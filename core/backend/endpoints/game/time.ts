@@ -1,16 +1,14 @@
-import type { Endpoint } from 'xxscreeps/backend';
+import { Endpoint, registerBackendMiddleware } from 'xxscreeps/backend';
 import config from 'xxscreeps/config';
 
-const TickEndpoint: Endpoint = {
-	path: '/api/game/tick',
-
-	execute() {
-		return {
+registerBackendMiddleware((koa, router) => {
+	router.get([ '/api/game/tick', '/api/game/shards/tick' ], context => {
+		context.body = {
 			ok: 1,
 			tick: config.game?.tickSpeed ?? 250,
 		};
-	},
-};
+	});
+});
 
 const TimeEndpoint: Endpoint = {
 	path: '/api/game/time',
@@ -23,4 +21,4 @@ const TimeEndpoint: Endpoint = {
 	},
 };
 
-export default [ TickEndpoint, TimeEndpoint ];
+export default [ TimeEndpoint ];

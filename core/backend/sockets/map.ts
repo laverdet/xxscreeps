@@ -9,7 +9,7 @@ bindMapRenderer(RoomObject, () => undefined);
 bindTerrainRenderer(RoomObject, () => undefined);
 
 export const mapSubscription: SubscriptionEndpoint = {
-	pattern: /^roomMap2:(?<room>[A-Z0-9]+)$/,
+	pattern: /^roomMap2:(?:(?<shard>[A-Za-z0-9]+)\/)?(?<room>[A-Z0-9]+)$/,
 
 	async subscribe(parameters) {
 		const roomName = parameters.room;

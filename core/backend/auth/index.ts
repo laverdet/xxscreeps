@@ -23,9 +23,9 @@ export function authentication(): Middleware {
 				throw new Error('Already flushed');
 			}
 			const userId = context.backend.auth.lookupUserByProvider(providerKey);
+			context.state.providerKey = providerKey;
 			if (userId === undefined) {
 				context.state.newUserId = Id.generateId(12);
-				context.state.providerKey = providerKey;
 			} else {
 				context.state.userId = userId;
 			}
@@ -45,14 +45,18 @@ export function authentication(): Middleware {
 			context.state.token = token;
 			if (token !== undefined) {
 				context.set('X-Token', token);
+				if (context.state.providerKey) {
+					// Authenticated on this request
+					context.cookies.set('token', token, { maxAge: 60 * 1000 });
+				}
 			}
 			return token;
 		};
 
 		try {
 			// Attempt to use request token
-			const token = context.get('x-token');
-			if (token !== '') {
+			const token = context.get('x-token') || context.cookies.get('token');
+			if (token) {
 				const tokenValue = await checkToken(token);
 				if (tokenValue === undefined) {
 					context.status = 403;

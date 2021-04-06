@@ -48,7 +48,7 @@ function merge(result: any, subject: any) {
 }
 
 export const roomSubscription: SubscriptionEndpoint = {
-	pattern: /^room:(?<room>[A-Z0-9]+)$/,
+	pattern: /^room:(?:(?<shard>[A-Za-z0-9]+)\/)?(?<room>[A-Z0-9]+)$/,
 
 	async subscribe(parameters) {
 		let flagsStale = true;

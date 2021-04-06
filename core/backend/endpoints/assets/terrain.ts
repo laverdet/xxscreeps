@@ -1,13 +1,13 @@
 import type { Room } from 'xxscreeps/game/room';
-import type { Endpoint } from 'xxscreeps/backend';
+import type { Shard } from 'xxscreeps/engine/model/shard';
 import streamToPromise from 'stream-to-promise';
 import crypto from 'crypto';
 import * as Fn from 'xxscreeps/utility/functional';
+import { registerBackendMiddleware } from 'xxscreeps/backend';
 import { PNG } from 'pngjs';
 import { TerrainRender } from 'xxscreeps/backend/symbols';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/terrain';
-import { BackendContext } from 'xxscreeps/backend/context';
 
 function generate(grid: (Room | null)[][], zoom = 1) {
 	// Most of the time we don't need transparency. It's only needed for zoom2 images near the edges,
@@ -71,18 +71,15 @@ function generate(grid: (Room | null)[][], zoom = 1) {
 	return streamToPromise(png.pack());
 }
 
-type TerrainRenderer = (context: BackendContext, room: string) => Promise<Buffer | null>;
-function makeTerrainEndpoint(path: string, fn: TerrainRenderer): Endpoint {
-	const cache = new Map<string, { etag: string; payload: Buffer | null }>();
-	return {
-		path,
-
-		async execute(context) {
+registerBackendMiddleware((koa, router) => {
+	function use(paths: string[], fn: (shard: Shard, room: string) => Promise<Buffer | null>) {
+		const cache = new Map<string, { etag: string; payload: Buffer | null }>();
+		router.get(paths, async context => {
 			// Fetch PNG from cache, or generate fresh
 			const room = `${context.params.room}`;
 			let data = cache.get(room);
 			if (data === undefined) {
-				const payload = await fn(context.backend, room);
+				const payload = await fn(context.shard, room);
 				if (payload === null) {
 					data = { etag: 'nothing', payload: null };
 				} else {
@@ -97,8 +94,7 @@ function makeTerrainEndpoint(path: string, fn: TerrainRenderer): Endpoint {
 				context.set('Cache-Control', 'public,max-age=31536000,immutable');
 				if (data.payload) {
 					context.set('Content-Type', 'image/png');
-					context.status = 200;
-					return data.payload;
+					context.body = data.payload;
 				} else {
 					context.status = 404;
 					return '';
@@ -108,33 +104,33 @@ function makeTerrainEndpoint(path: string, fn: TerrainRenderer): Endpoint {
 				context.status = 301;
 				context.redirect(`${context.path}?etag=${encodeURIComponent(data.etag)}`);
 			}
-		},
-	};
-}
-
-export const TerrainEndpoint = makeTerrainEndpoint('/assets/map/:room.png', async(context, roomName) => {
-	const room = await context.shard.loadRoom(roomName).catch(() => null);
-	return room ? generate([ [ room ] ], 3) : null;
-});
-
-export const TerrainZoomEndpoint = makeTerrainEndpoint('/assets/map/zoom2/:room.png', async(context, room) => {
-	// Fetch rooms if requset is valid
-	let didFindRoom = false;
-	const { rx: left, ry: top } = parseRoomName(room);
-	if (left % 4 === 0 && top % 4 === 0) {
-		const grid = await Promise.all(Fn.map(Fn.range(top, top + 4), yy =>
-			Promise.all(Fn.map(Fn.range(left, left + 4), async xx => {
-				const roomName = generateRoomName(xx, yy);
-				const room = await context.shard.loadRoom(roomName).catch(() => null);
-				didFindRoom ||= room !== null;
-				return room;
-			})),
-		));
-		// Render the grid
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (didFindRoom) {
-			return generate(grid);
-		}
+		});
 	}
-	return null;
+
+	use([ '/assets/map/zoom2/:room.png', '/assets/map/:shard/zoom2/:room.png' ], async(shard, room) => {
+		// Fetch rooms if requset is valid
+		let didFindRoom = false;
+		const { rx: left, ry: top } = parseRoomName(room);
+		if (left % 4 === 0 && top % 4 === 0) {
+			const grid = await Promise.all(Fn.map(Fn.range(top, top + 4), yy =>
+				Promise.all(Fn.map(Fn.range(left, left + 4), async xx => {
+					const roomName = generateRoomName(xx, yy);
+					const room = await shard.loadRoom(roomName).catch(() => null);
+					didFindRoom ||= room !== null;
+					return room;
+				})),
+			));
+			// Render the grid
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (didFindRoom) {
+				return generate(grid);
+			}
+		}
+		return null;
+	});
+
+	use([ '/assets/map/:room.png', '/assets/map/:shard/:room.png' ], async(shard, roomName) => {
+		const room = await shard.loadRoom(roomName).catch(() => null);
+		return room ? generate([ [ room ] ], 3) : null;
+	});
 });
