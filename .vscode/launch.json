@@ -12,7 +12,7 @@
 			],
 			"internalConsoleOptions": "openOnSessionStart",
 			"name": "Server",
-			"program": "${workspaceFolder}/dist/core/engine/service/launcher.js",
+			"program": "${workspaceFolder}/dist/engine/service/launcher.js",
 		},
 		{
 			"type": "node",
@@ -32,7 +32,7 @@
 		{
 			"id": "scriptName",
 			"type": "promptString",
-			"default": "dist/core/scripts/.js",
+			"default": "dist/scripts/.js",
 			"description": "File name",
 		},
 	]

@@ -1,4 +1,4 @@
 {
 	"extends": "./tsconfig.base",
-	"include": [ "core", "mods" ],
+	"include": [ "src" ],
 }

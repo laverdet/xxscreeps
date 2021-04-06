@@ -8,7 +8,7 @@
 		"node_modules": true,
 	},
 	"yaml.schemas": {
-		"./core/config/config.schema.json": "*/.screepsrc.yaml"
+		"./src/config/config.schema.json": "*/.screepsrc.yaml"
 	},
 	"yaml.validate": true,
 	"typescript.tsdk": "./node_modules/typescript/lib",

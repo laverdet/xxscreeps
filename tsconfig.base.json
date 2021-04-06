@@ -1,12 +1,13 @@
 {
 	"compilerOptions": {
+		"declaration": true,
 		"sourceMap": true,
 		"outDir": "dist",
-		"baseUrl": ".",
-		"rootDir": ".",
+		"baseUrl": "src",
+		"rootDir": "src",
+
 		"paths": {
-			"xxscreeps/mods/*": [ "./mods/*" ],
-			"xxscreeps/*": [ "./core/*" ],
+			"xxscreeps/*": [ "*" ],
 		},
 
 		"allowJs": true,

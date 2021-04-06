@@ -8,7 +8,7 @@ import { mods } from 'xxscreeps/config/mods';
 import { globalNames } from 'xxscreeps/game/runtime';
 
 // Write tsconfig
-const rootDir = fileURLToPath(new URL('../../..', import.meta.url));
+const rootDir = fileURLToPath(new URL('../../src', import.meta.url));
 const tsconfig = `{
 	"extends": "xxscreeps/tsconfig.base",
 	"compilerOptions": {
@@ -25,7 +25,7 @@ const tsconfig = `{
 		"rootDir": ${JSON.stringify(rootDir)},
 		"strict": false,
 	},
-	"include": [ "core", ${mods.map(url =>
+	"include": [ "backend", "config", "driver", "engine", "game", "processor", "schema", "storage", "utility", ${mods.map(url =>
 		JSON.stringify(fileURLToPath(new URL('.', url)).replace(/.+\/xxscreeps\/dist\/mods/, 'mods')))} ],
 }`;
 const tmpPath = `${rootDir}/tsconfig.types.json`;
@@ -54,8 +54,8 @@ const dtsMap = await readAndUnlink(`${rootDir}/screeps.exports.d.ts.map`);
 await fs.mkdir('screeps/types', { recursive: true });
 await fs.writeFile('screeps/types/screeps.exports.d.ts', dts
 	// Fix module path names
-	.replace(/(from|import|module) "core/g, '$1 "xxscreeps')
-	.replace(/(from|import|module) "mods/g, '$1 "xxscreeps/mods')
+	.replace(/(from|import|module) "/g, '$1 "xxscreeps/')
+	.replace(/(from|import|module) "xxscreeps\/xxscreeps/g, '$1 "xxscreeps')
 	// Fix import "foo/index" emit issue
 	.replace(/\/index"/g, '"')
 	// Remove <reference />
