@@ -20,11 +20,6 @@ export function setupConsole(write: Writer) {
 		},
 
 		error(...args: any[]) {
-			if (typeof args[0] === 'string') {
-				args[0] = `💥${args[0]}`;
-			} else {
-				args.unshift('💥');
-			}
 			write(2, format(args));
 		},
 

@@ -84,7 +84,8 @@ export class PlayerInstance {
 				codeBlob, flagBlob, memoryBlob,
 				terrainBlob: this.shard.terrainBlob,
 				writeConsole: (fd, payload) => {
-					this.consoleChannel.publish({ type: 'console', log: payload }).catch(console.error);
+					const type = ([ 'result', 'log', 'error' ] as const)[fd];
+					this.consoleChannel.publish({ type, value: payload }).catch(console.error);
 				},
 			});
 		}

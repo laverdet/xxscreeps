@@ -1,9 +1,13 @@
-import type { ConsoleMessage } from 'xxscreeps/engine/metadata/code';
 import type { Shard } from './shard';
 import { Channel } from 'xxscreeps/storage/channel';
 import { makeReader } from 'xxscreeps/schema';
 import * as Flag from 'xxscreeps/engine/runner/flag';
 import * as Visual from 'xxscreeps/game/visual';
+
+type ConsoleMessage =
+	{ type: 'log'; value: string } |
+	{ type: 'error'; value: string } |
+	{ type: 'result'; value: string };
 
 export function getConsoleChannel(shard: Shard, user: string) {
 	return new Channel<ConsoleMessage>(shard.storage, `user/${user}/console`);

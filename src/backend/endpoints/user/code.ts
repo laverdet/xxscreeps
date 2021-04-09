@@ -3,8 +3,8 @@ import * as Code from 'xxscreeps/engine/metadata/code';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import * as Id from 'xxscreeps/engine/schema/id';
+import { getConsoleChannel } from 'xxscreeps/engine/model/user';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
-import { Channel } from 'xxscreeps/storage/channel';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;
 const kDefaultBranch = 'master';
@@ -228,10 +228,9 @@ const ConsoleEndpoint: Endpoint = {
 		try {
 			// Try to parse it
 			new Function(expression);
-			await getRunnerUserChannel(context.backend.shard, userId!).publish({ type: 'eval', expr: context.request.body.expression });
+			await getRunnerUserChannel(context.shard, userId!).publish({ type: 'eval', expr: context.request.body.expression });
 		} catch (err) {
-			await new Channel<Code.ConsoleMessage>(context.backend.storage, `user/${userId}/console`)
-				.publish({ type: 'console', result: `💥${err.message}` });
+			await getConsoleChannel(context.shard, userId!).publish({ type: 'error', value: err.message });
 		}
 		return { ok: 1 };
 	},

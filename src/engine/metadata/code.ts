@@ -15,4 +15,3 @@ export const read = makeReader(format);
 export const write = makeWriter(format);
 
 export type UserCode = TypeOf<typeof format>;
-export type ConsoleMessage = { type: 'console'; log?: string; result?: string } | { type: null };

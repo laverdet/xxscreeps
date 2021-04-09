@@ -187,7 +187,7 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 		// Run console expressions
 		consoleEval?.map(expr => {
 			try {
-				writeConsole(1, inspect(new Function('expr', 'return eval(expr)')(expr), { colors: true }), true);
+				writeConsole(0, inspect(new Function('expr', 'return eval(expr)')(expr), { colors: true }), true);
 			} catch (err) {
 				writeConsole(2, err.stack, true);
 			}

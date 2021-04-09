@@ -73,6 +73,7 @@ const textSchema = struct({
 	...variant('t'),
 	x: 'double',
 	y: 'double',
+	text: 'string',
 	s: struct({
 		...stroke,
 		align: optional('string'),
@@ -171,7 +172,7 @@ export class RoomVisual {
 	 */
 	text(text: string, ...args: [ ...pos: Point, style?: TextStyle ]) {
 		const [ x, y, style ] = extractPositions(args);
-		this.#visuals.push({ [Variant]: 't', x, y, s: style ?? {} });
+		this.#visuals.push({ [Variant]: 't', x, y, text, s: style ?? {} });
 		return this;
 	}
 

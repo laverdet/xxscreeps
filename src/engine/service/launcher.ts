@@ -4,18 +4,19 @@ import config from 'xxscreeps/config';
 import argv from 'xxscreeps/config/arguments';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { listen } from 'xxscreeps/utility/async';
-import { ConsoleMessage } from 'xxscreeps/engine/metadata/code';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as UserSchema from 'xxscreeps/engine/metadata/user';
 import * as Storage from 'xxscreeps/storage';
+import { Shard } from 'xxscreeps/engine/model/shard';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';
-
+import { getConsoleChannel } from 'xxscreeps/engine/model/user';
 import { ProcessorMessage, RunnerMessage, ServiceMessage } from '.';
 
 // Start shared blob service
 await Storage.initialize();
-const storage = await Storage.connect('shard0');
+const shard = await Shard.connect('shard0');
+const storage = shard.storage;
 const serviceChannel = await new Channel<ServiceMessage>(storage, 'service').subscribe();
 
 try {
@@ -36,10 +37,12 @@ try {
 				}
 				throw new Error(`User: ${attachTo} not found`);
 			});
-			const channel = await new Channel<ConsoleMessage>(storage, `user/${id}/console`).subscribe();
+			const channel = await getConsoleChannel(shard, id).subscribe();
 			channel.listen(message => {
-				if (message.type === 'console') {
-					console.log(message.log);
+				if (message.type === 'log') {
+					console.log(message.value);
+				} else if (message.type === 'error') {
+					console.error(message.value);
 				}
 			});
 		} finally {
@@ -109,7 +112,7 @@ try {
 
 } finally {
 	// Shut down shared services
-	storage.disconnect();
+	shard.disconnect();
 	Storage.terminate();
 	serviceChannel.disconnect();
 }

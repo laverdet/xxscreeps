@@ -1,8 +1,7 @@
 import AnsiUpModule from 'ansi_up';
 // ansi_up's tsconfig is incorrect
 const AnsiUp: typeof AnsiUpModule = (AnsiUpModule as any).default;
-import * as Code from 'xxscreeps/engine/metadata/code';
-import { Channel } from 'xxscreeps/storage/channel';
+import { getConsoleChannel } from 'xxscreeps/engine/model/user';
 import { SubscriptionEndpoint } from '../socket';
 
 const au = new AnsiUp();
@@ -16,13 +15,19 @@ export const ConsoleSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/console$/,
 
 	async subscribe() {
-		const channel = await new Channel<Code.ConsoleMessage>(this.context.storage, `user/${this.user}/console`).subscribe();
+		const channel = await getConsoleChannel(this.context.shard, this.user).subscribe();
 		channel.listen(message => {
-			if (message.type === 'console') {
-				this.send(JSON.stringify({ messages: {
-					log: message.log === undefined ? [] : [ colorize(message.log) ],
-					results: message.result === undefined ? [] : [ colorize(message.result) ],
-				} }));
+			switch (message.type) {
+				case 'error':
+					this.send(JSON.stringify({ error: colorize(message.value) }));
+					break;
+				case 'log':
+					this.send(JSON.stringify({ messages: { log: [ colorize(message.value) ], results: [] } }));
+					break;
+				case 'result':
+					this.send(JSON.stringify({ messages: { log: [], results: [ colorize(message.value) ] } }));
+					break;
+				default:
 			}
 		});
 		return () => channel.disconnect();
