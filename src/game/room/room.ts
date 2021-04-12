@@ -11,7 +11,6 @@ import { Direction, RoomPosition, extractPositionId, fetchPositionArgument, getO
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { BufferView, withOverlay } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
-import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 
 import { registerGlobal } from 'xxscreeps/game';
 import { AfterInsert, AfterRemove, LookType, RoomObject } from 'xxscreeps/game/object';
@@ -375,10 +374,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 		return this.#lookSpatialIndex;
 	}
 
-	get [IntentIdentifier]() {
-		return { group: 'room' as const, name: this.name };
-	}
-
 	//
 	// Debug utilities
 	toString() {
@@ -396,7 +391,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	}
 
 	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
-	#lookIndex = new Map<LookConstants, RoomObject[]>(
+	#lookIndex = new Map<string, RoomObject[]>(
 		Fn.map(lookConstants, look => [ look, [] ]));
 	#lookSpatialIndex = new Map<number, RoomObject[]>();
 }

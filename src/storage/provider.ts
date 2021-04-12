@@ -1,9 +1,18 @@
 export type EphemeralProvider = {
-	// queues & rudimentary locks
+	// blobs
+	del(key: string): Promise<void>;
+	get(key: string): Promise<Readonly<Uint8Array>>;
+	set(key: string, value: Readonly<Uint8Array>): Promise<void>;
+	// lists
+	clear(key: string): Promise<void>;
+	lpop(key: string, count: number): Promise<Readonly<Uint8Array>[]>;
+	rpush(key: string, values: Readonly<Uint8Array>[]): Promise<void>;
+	// sets
 	sadd(key: string, values: string[]): Promise<number>;
 	spop(key: string): Promise<string | undefined>;
 	sflush(key: string): Promise<void>;
 	srem(key: string, values: string[]): Promise<number>;
+	// client
 	disconnect(): void;
 };
 

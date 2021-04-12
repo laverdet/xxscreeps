@@ -37,11 +37,10 @@ registerRoomTickProcessor((room, context) => {
 		}
 
 		// Save intents
-		const intentManager = Game.flushIntents();
-		const roomIntents = intentManager.acquireIntentsForGroup('room') ?? {};
-		context.saveIntents(user, {
-			room: roomIntents[room.name],
-			objects: intentManager.intentsByGroup[room.name],
-		});
+		const intents = Game.flushIntents();
+		const roomIntents = intents.getIntentsForRoom(room.name);
+		if (roomIntents) {
+			context.saveIntents(user, roomIntents);
+		}
 	}
 });

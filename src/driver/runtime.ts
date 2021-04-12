@@ -1,19 +1,18 @@
 import type ivm from 'isolated-vm';
-import type { Dictionary } from 'xxscreeps/utility/types';
-import type { IntentListFor } from 'xxscreeps/processor';
 import type { RunnerIntent } from 'xxscreeps/engine/runner/channel';
 
 import { inspect } from 'util';
 import * as Base64 from 'js-base64';
 import * as SourceMap from 'source-map-support';
+import * as Fn from 'xxscreeps/utility/functional';
 
 import * as Game from 'xxscreeps/game';
 // eslint-disable-next-line no-duplicate-imports
-import { flushIntents, initializeIntents, intents, runForUser } from 'xxscreeps/game';
+import { flushIntents, initializeIntents, runForUser } from 'xxscreeps/game';
 import { setupGlobals } from 'xxscreeps/game/runtime';
+import { stringToBuffer16 } from 'xxscreeps/utility/string';
 import * as Memory from 'xxscreeps/game/memory';
 import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
-import { Room } from 'xxscreeps/game/room';
 import { RoomObject } from 'xxscreeps/game/object';
 import { detach } from 'xxscreeps/schema/buffer-object';
 import * as FlagLib from 'xxscreeps/engine/runner/flag';
@@ -197,15 +196,11 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 	// Inject user intents
 	if (userIntents) {
 		for (const intent of userIntents) {
-			const receiver: any =
-				intent.receiver === 'flags' ? 'flags' :
-				Game.getObjectById(intent.receiver);
-			if (receiver !== undefined) {
-				if (receiver instanceof RoomObject) {
-					intents.save(receiver as any, intent.intent as any, intent.params);
-				} else {
-					intents.push(receiver, intent.intent as any, intent.params);
-				}
+			const receiver = Game.getObjectById(intent.receiver) ?? intent.receiver;
+			if (receiver instanceof RoomObject) {
+				Game.intents.save(receiver as never, intent.intent as never, ...intent.params);
+			} else {
+				Game.intents.pushNamed(receiver as never, intent.intent as never, ...intent.params);
 			}
 		}
 	}
@@ -214,8 +209,8 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 	const memory = Memory.flush();
 
 	// Execute flag intents
-	const intentManager = flushIntents();
-	const flagIntents: IntentListFor<'flag'> | undefined = intentManager.acquireIntentsForGroup('flag');
+	const intents = flushIntents();
+	const flagIntents = intents.getIntentsForName('flag');
 	let flagBlob: undefined | Readonly<Uint8Array>;
 	if (flagIntents !== undefined) {
 		FlagLib.execute(flags, flagIntents);
@@ -223,23 +218,13 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 	}
 
 	// Write room intents into blobs
-	const roomIntents: Dictionary<IntentListFor<Room>> = intentManager.acquireIntentsForGroup('room') ?? {};
-	const intentBlobs: Dictionary<SharedArrayBuffer> = Object.create(null);
-	const { intentsByGroup } = intentManager;
-	const roomNames = new Set(Object.keys(intentsByGroup));
-	Object.keys(roomIntents).forEach(roomName => roomNames.add(roomName));
-	for (const roomName of roomNames) {
-		const json = JSON.stringify({
-			room: roomIntents[roomName],
-			objects: intentsByGroup[roomName],
-		});
-		const buffer = new SharedArrayBuffer(json.length * 2);
-		const uint16 = new Uint16Array(buffer);
-		for (let ii = 0; ii < json.length; ++ii) {
-			uint16[ii] = json.charCodeAt(ii);
+	const intentBlobs = Fn.fromEntries(Fn.filter(Fn.map(rooms, ({ name }) => {
+		const intentsForRoom = intents.getIntentsForRoom(name);
+		if (intentsForRoom) {
+			const payload = stringToBuffer16(JSON.stringify(intentsForRoom));
+			return [ name, payload ];
 		}
-		intentBlobs[roomName] = buffer;
-	}
+	})));
 
 	// Extras
 	const visualsBlob = RoomVisual.write();

@@ -18,14 +18,12 @@ const CreateFlagEndpoint: Endpoint = {
 			await getRunnerUserChannel(context.shard, userId!).publish({
 				type: 'intent',
 				intent: {
-					receiver: 'flags',
+					receiver: 'flag',
 					intent: 'create',
-					params: {
-						name,
-						pos: extractPositionId(pos),
-						color,
-						secondaryColor,
-					},
+					params: [
+						name, extractPositionId(pos),
+						color, secondaryColor,
+					],
 				},
 			});
 			return { ok: 1 };
@@ -68,9 +66,9 @@ const RemoveFlagEndpoint: Endpoint = {
 			.publish({
 				type: 'intent',
 				intent: {
-					receiver: 'flags',
+					receiver: 'flag',
 					intent: 'remove',
-					params: { name },
+					params: [ name ],
 				},
 			});
 		return { ok: 1 };

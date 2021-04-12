@@ -3,6 +3,7 @@ import type { Subscription } from 'xxscreeps/storage/channel';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import { createSandbox, Sandbox } from 'xxscreeps/driver/sandbox';
+import { saveRunnerIntentsBlobForRoom } from 'xxscreeps/engine/model/processor';
 import { getConsoleChannel, loadUserFlagBlob, loadUserMemoryBlob, saveUserFlagBlobForNextTick, saveVisualsBlob } from 'xxscreeps/engine/model/user';
 import { exchange } from 'xxscreeps/utility/utility';
 import { getRunnerUserChannel, RunnerIntent, RunnerUserMessage } from './channel';
@@ -36,11 +37,11 @@ export class PlayerInstance {
 					break;
 
 				case 'eval':
-					(this.consoleEval ?? (this.consoleEval = [])).push(message.expr);
+					(this.consoleEval ??= []).push(message.expr);
 					break;
 
 				case 'intent': {
-					(this.intents ?? (this.intents = [])).push(message.intent);
+					(this.intents ??= []).push(message.intent);
 					break;
 				}
 
@@ -110,7 +111,7 @@ export class PlayerInstance {
 			// Save intent blobs
 			Fn.map(Object.entries(result.intentBlobs), async([ roomName, intents ]) => {
 				if (this.roomsVisible.has(roomName)) {
-					await this.shard.storage.persistence.set(`intents/${roomName}/${this.userId}`, new Uint8Array(intents!));
+					await saveRunnerIntentsBlobForRoom(this.shard, roomName, this.userId, intents);
 					return roomName;
 				} else {
 					console.error(`Runtime sent intent for non-visible room. User: ${this.userId}; Room: ${roomName}; Tick: ${time}`);

@@ -34,3 +34,13 @@ export function typedArrayToString(array: Readonly<Int8Array | Uint8Array | Uint
 	}
 	return string;
 }
+
+type AnyArrayBuffer = new (byteLength: number) => ArrayBuffer | SharedArrayBuffer;
+export function stringToBuffer16(value: string, ctor: AnyArrayBuffer = ArrayBuffer) {
+	const buffer = new ctor(value.length * 2);
+	const uint16 = new Uint16Array(buffer);
+	for (let ii = 0; ii < value.length; ++ii) {
+		uint16[ii] = value.charCodeAt(ii);
+	}
+	return uint16;
+}

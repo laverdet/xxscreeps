@@ -1,12 +1,10 @@
 import type { InspectOptionsStylized } from 'util';
 import type { Room } from './room';
-import type { LookConstants } from './room/look';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as BufferObject from 'xxscreeps/schema/buffer-object';
 import * as RoomPosition from 'xxscreeps/game/position';
 import { compose, declare, optional, struct, vector, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
-import { IntentIdentifier } from 'xxscreeps/processor/symbols';
 import { assign } from 'xxscreeps/utility/utility';
 import { Game, registerGlobal } from '.';
 
@@ -32,7 +30,7 @@ const shape = declare('RoomObject', struct({
 export type RoomObjectWithOwner = { [Owner]: string } & RoomObject;
 
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
-	abstract get [LookType](): LookConstants;
+	abstract get [LookType](): string;
 	room!: Room;
 	[NextPosition]?: RoomPosition.RoomPosition | null;
 
@@ -50,10 +48,6 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		} else {
 			return `${options.stylize(`[${this.constructor.name}]`, 'special')}${options.stylize('{released}', 'null')}`;
 		}
-	}
-
-	get [IntentIdentifier]() {
-		return { group: this.room.name, name: this.id };
 	}
 
 	get [PathCost](): undefined | number {

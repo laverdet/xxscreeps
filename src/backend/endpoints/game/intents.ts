@@ -1,5 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend';
-import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
+import { pushExtraIntentsForRoom } from 'xxscreeps/engine/model/processor';
 
 const AddObjectIntentEndpoint: Endpoint = {
 	path: '/api/game/add-object-intent',
@@ -10,12 +10,17 @@ const AddObjectIntentEndpoint: Endpoint = {
 		if (!userId) {
 			return;
 		}
-		const { room, name, intent: { id } } = context.request.body;
+		const { room, name, intent } = context.request.body;
+		const { id } = Array.isArray(intent) ? intent[0] : intent;
 		if (typeof room !== 'string' || typeof name !== 'string' || typeof id !== 'string') {
 			throw new TypeError('Invalid parameters');
 		}
-		await getRunnerUserChannel(context.shard, userId)
-			.publish({ type: 'intent', intent: { receiver: id, intent: name, params: true } });
+		await pushExtraIntentsForRoom(context.shard, room, context.shard.time + 2, userId, {
+			local: {},
+			object: {
+				[id]: { [name]: [] },
+			},
+		});
 		return { ok: 1 };
 	},
 };

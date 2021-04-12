@@ -1,14 +1,21 @@
+/* eslint-disable @typescript-eslint/require-await */
 import type { EphemeralProvider } from '../provider';
 import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
 
 export abstract class LocalEphemeralProvider extends Responder implements EphemeralProvider {
+	abstract del(key: string): Promise<void>;
+	abstract get(key: string): Promise<Readonly<Uint8Array>>;
+	abstract set(key: string, value: Readonly<Uint8Array>): Promise<void>;
+
+	abstract clear(key: string): Promise<void>;
+	abstract lpop(key: string, count: number): Promise<Readonly<Uint8Array>[]>;
+	abstract rpush(key: string, values: Readonly<Uint8Array>[]): Promise<void>;
+
 	abstract sadd(key: string, values: string[]): Promise<number>;
 	abstract spop(key: string): Promise<string | undefined>;
 	abstract sflush(key: string): Promise<void>;
 	abstract srem(key: string, values: string[]): Promise<number>;
-	protected foo = 1;
 
-	// eslint-disable-next-line @typescript-eslint/require-await
 	static async create(name: string) {
 		return create(LocalEphemeralProviderHost, `ephemeral://${name}`);
 	}
@@ -19,28 +26,71 @@ export abstract class LocalEphemeralProvider extends Responder implements Epheme
 }
 
 class LocalEphemeralProviderHost extends ResponderHost(LocalEphemeralProvider) {
-	private readonly keys = new Map<string, Set<string>>();
+	private readonly blobs = new Map<string, Readonly<Uint8Array>>();
+	private readonly lists = new Map<string, Readonly<Uint8Array>[]>();
+	private readonly sets = new Map<string, Set<string>>();
 
-	// eslint-disable-next-line @typescript-eslint/require-await
+	async del(key: string) {
+		this.blobs.delete(key);
+	}
+
+	async get(key: string): Promise<Readonly<Uint8Array>> {
+		const blob = this.blobs.get(key);
+		if (blob) {
+			return blob;
+		} else {
+			throw new Error('Blob does not exist');
+		}
+	}
+
+	async set(key: string, value: Readonly<Uint8Array>) {
+		this.blobs.set(key, value);
+	}
+
+	async clear(key: string) {
+		this.lists.delete(key);
+	}
+
+	async lpop(key: string, count: number) {
+		const list = this.lists.get(key);
+		if (!list) {
+			return [];
+		}
+		if (count === -1 || count <= list.length) {
+			this.lists.delete(key);
+			return list;
+		} else {
+			return list.splice(0, count);
+		}
+	}
+
+	async rpush(key: string, values: Readonly<Uint8Array>[]) {
+		const list = this.lists.get(key);
+		if (list) {
+			list.push(...values);
+		} else {
+			this.lists.set(key, values);
+		}
+	}
+
 	async sadd(key: string, values: string[]) {
-		const set = this.keys.get(key);
+		const set = this.sets.get(key);
 		if (set) {
 			const { size } = set;
 			values.forEach(value => set.add(value));
 			return set.size - size;
 		} else {
-			this.keys.set(key, new Set(values));
+			this.sets.set(key, new Set(values));
 			return values.length;
 		}
 	}
 
-	// eslint-disable-next-line @typescript-eslint/require-await
 	async spop(key: string) {
-		const set = this.keys.get(key);
+		const set = this.sets.get(key);
 		if (set) {
 			const { value } = set.values().next();
 			if (set.size === 1) {
-				this.keys.delete(key);
+				this.sets.delete(key);
 			} else {
 				set.delete(value);
 			}
@@ -48,20 +98,18 @@ class LocalEphemeralProviderHost extends ResponderHost(LocalEphemeralProvider) {
 		}
 	}
 
-	// eslint-disable-next-line @typescript-eslint/require-await
 	async sflush(key: string) {
-		this.keys.delete(key);
+		this.sets.delete(key);
 	}
 
-	// eslint-disable-next-line @typescript-eslint/require-await
 	async srem(key: string, values: string[]) {
-		const set = this.keys.get(key);
+		const set = this.sets.get(key);
 		if (set) {
 			const { size } = set;
 			values.forEach(value => set.delete(value));
 			const result = size - set.size;
 			if (result === size) {
-				this.keys.delete(key);
+				this.sets.delete(key);
 			}
 			return result;
 		} else {
@@ -71,6 +119,30 @@ class LocalEphemeralProviderHost extends ResponderHost(LocalEphemeralProvider) {
 }
 
 class LocalEphemeralProviderClient extends ResponderClient(LocalEphemeralProvider) {
+	del(key: string) {
+		return this.request('del', key);
+	}
+
+	get(key: string) {
+		return this.request('get', key);
+	}
+
+	set(key: string, value: Readonly<Uint8Array>) {
+		return this.request('set', key, value);
+	}
+
+	clear(key: string) {
+		return this.request('clear', key);
+	}
+
+	lpop(key: string, count: number) {
+		return this.request('lpop', key, count);
+	}
+
+	rpush(key: string, values: Buffer[]) {
+		return this.request('rpush', key, values);
+	}
+
 	sadd(key: string, values: string[]) {
 		return this.request('sadd', key, values);
 	}

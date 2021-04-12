@@ -134,6 +134,7 @@ class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
 
 	set(key: string, value: Readonly<Uint8Array>) {
 		this.check(key);
+		this.bufferedDeletes.delete(key);
 		this.bufferedBlobs.set(key, value.buffer instanceof SharedArrayBuffer ? value : copy(value));
 		return Promise.resolve();
 	}

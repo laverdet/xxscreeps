@@ -1,6 +1,6 @@
-import assert from 'assert';
 import * as Fn from 'xxscreeps/utility/functional';
 import { RoomProcessorContext } from 'xxscreeps/processor/room';
+import { flushExtraIntentsForRoom, flushRunnerIntentsForRoom } from 'xxscreeps/engine/model/processor';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
 import { Channel } from 'xxscreeps/storage/channel';
@@ -12,7 +12,6 @@ const processedRooms = new Map<string, RoomProcessorContext>();
 
 // Connect to main & storage
 const shard = await Shard.connect('shard0');
-const { persistence } = shard.storage;
 const roomsQueue = Queue.connect<ProcessorQueueElement>(shard.storage, 'processRooms', true);
 const processorChannel = await new Channel<ProcessorMessage>(shard.storage, 'processor').subscribe();
 
@@ -35,28 +34,27 @@ try {
 			roomsQueue.version(`${gameTime}`);
 			for await (const { room: roomName, users } of roomsQueue) {
 				// Read room data and intents from storage
-				const [ room, intents ] = await Promise.all([
+				const [ room, intentsFromUsers, extraIntents ] = await Promise.all([
 					shard.loadRoom(roomName, gameTime - 1),
 					Promise.all(Fn.map(users, async user => {
-						const intentsBlob = await persistence.get(`intents/${roomName}/${user}`);
-						assert.strictEqual(intentsBlob.byteOffset, 0);
-						const uint16 = new Uint16Array(intentsBlob.buffer);
-						const intents = JSON.parse(String.fromCharCode(...uint16));
+						const intents = await flushRunnerIntentsForRoom(shard, roomName, user);
 						return { user, intents };
 					})),
+					flushExtraIntentsForRoom(shard, roomName, gameTime),
 				]);
 
-				// Delete intent blobs in background
-				const deleteIntentBlobs = Promise.all(Fn.map(users, user =>
-					persistence.del(`intents/${roomName}/${user}`)));
+				// Create processor context and add intents
+				const intentsByUser = new Map(Fn.map(intentsFromUsers, ({ user, intents }) => [ user, intents ]));
+				const context = new RoomProcessorContext(room, gameTime, intentsByUser);
+				for (const { user, intents } of extraIntents) {
+					context.saveIntents(user, intents);
+				}
 
-				// Create processor context and run first phase
-				const context = new RoomProcessorContext(room, gameTime, intents);
+				// Run first process phase
 				context.process();
 				processedRooms.set(roomName, context);
 
-				// Save and notify main service of completion
-				await deleteIntentBlobs;
+				// Notify main service of completion
 				await processorChannel.publish({ type: 'processedRoom', roomName });
 			}
 

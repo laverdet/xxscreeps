@@ -1,5 +1,6 @@
-import type { Dictionary } from 'xxscreeps/utility/types';
 import type { Room } from 'xxscreeps/game/room';
+import type { RoomObject } from 'xxscreeps/game/object';
+import type { IntentsForReceiver, IntentReceivers } from '.';
 import * as Game from 'xxscreeps/game';
 import * as Movement from 'xxscreeps/processor/movement';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
@@ -13,14 +14,11 @@ export function registerRoomTickProcessor(tick: RoomTickProcessor) {
 	roomTickProcessors.push(tick);
 }
 
-// Intent payload from runner
-type IntentPayload = {
-	room?: Dictionary<any[]>;
-	objects?: Dictionary<Dictionary<any>>;
-};
-type UserIntentPayload = {
-	user: string;
-	intents: IntentPayload;
+export type ObjectReceivers = Extract<IntentReceivers, RoomObject>;
+type ObjectIntent = Partial<Record<IntentsForReceiver<ObjectReceivers>, any>>;
+export type RoomIntentPayload = {
+	local: Partial<Record<IntentsForReceiver<Room>, any[]>>;
+	object: Partial<Record<string, ObjectIntent>>;
 };
 
 export interface ObjectProcessorContext {
@@ -49,7 +47,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 	constructor(
 		public readonly room: Room,
 		public readonly time: number,
-		private readonly intents: UserIntentPayload[] = [],
+		private readonly intents = new Map<string, RoomIntentPayload>(),
 	) {}
 
 	process() {
@@ -71,32 +69,28 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 			}
 
 			// Process user intents
-			for (const { user, intents } of this.intents) {
+			for (const [ user, intents ] of this.intents) {
 				Game.runAsUser(user, () => {
 
 					// Process intents for room (createConstructionSite)
-					const roomIntents = intents.room;
-					const processors = this.room[Processors];
-					if (roomIntents && processors) {
-						for (const intent in roomIntents) {
-							const processor = processors[intent];
-							if (processor) {
-								for (const args of roomIntents[intent]!) {
-									processor(this.room, this, ...args);
-								}
+					const roomIntents = intents.local;
+					const processors = this.room[Processors]!;
+					for (const intent in roomIntents) {
+						const processor = processors[intent];
+						if (processor) {
+							for (const args of roomIntents[intent as keyof typeof roomIntents]!) {
+								processor(this.room, this, ...args);
 							}
 						}
 					}
 
 					// Process intents for room objects
-					const objectIntents = intents.objects;
-					if (objectIntents) {
-						for (const id in objectIntents) {
-							const object = Game.getObjectById(id);
-							if (object) {
-								for (const [ intent, args ] of Object.entries(objectIntents[id]!)) {
-									object[Processors]![intent]?.(object, this, ...args);
-								}
+					const objectIntents = intents.object;
+					for (const id in objectIntents) {
+						const object = Game.getObjectById(id);
+						if (object) {
+							for (const [ intent, args ] of Object.entries(objectIntents[id]!)) {
+								object[Processors]![intent]?.(object, this, ...args);
 							}
 						}
 					}
@@ -111,8 +105,25 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 		});
 	}
 
-	saveIntents(user: string, intents: IntentPayload) {
-		this.intents.push({ user, intents });
+	saveIntents(user: string, intentsForUser: RoomIntentPayload) {
+		const existing = this.intents.get(user);
+		if (existing) {
+			for (const [ name, intents ] of Object.entries(intentsForUser.local)) {
+				const key = name as keyof typeof existing.local;
+				existing.local[key] = [
+					...existing.local[key] ?? [],
+					...intents!,
+				];
+			}
+			for (const [ id, intents ] of Object.entries(intentsForUser.object)) {
+				existing.object[id] = {
+					...existing.object[id] ?? {},
+					...intents,
+				};
+			}
+		} else {
+			this.intents.set(user, intentsForUser);
+		}
 	}
 
 	didUpdate() {

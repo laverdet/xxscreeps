@@ -311,7 +311,7 @@ export class RoomPosition {
 			() => Flag.checkCreateFlag(Game.instance.flags, this, name, color, secondaryColor),
 			() => {
 				// Save creation intent
-				Game.intents.push('flag', 'create', name, extractPositionId(this), color, secondaryColor);
+				Game.intents.pushNamed('flag', 'create', name, extractPositionId(this), color, secondaryColor);
 				// Create local flag immediately
 				Game.instance.flags[name] = instantiate(Flag.Flag, {
 					name,

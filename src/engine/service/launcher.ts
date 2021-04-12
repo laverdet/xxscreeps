@@ -11,7 +11,7 @@ import { Shard } from 'xxscreeps/engine/model/shard';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';
 import { getConsoleChannel } from 'xxscreeps/engine/model/user';
-import { ProcessorMessage, RunnerMessage, ServiceMessage } from '.';
+import type { ProcessorMessage, RunnerMessage, ServiceMessage } from '.';
 
 // Start shared blob service
 await Storage.initialize();

@@ -7,7 +7,7 @@ import * as RoomPosition from 'xxscreeps/game/position';
 import * as Map from 'xxscreeps/game/map';
 import { compose, declare, struct, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
+import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
 export const CheckObstacle = XSymbol('checkObstacle');
@@ -24,6 +24,15 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
 	get my() { return this.owner === null ? undefined : this.owner === Game.me }
 	get owner() { return this[RoomObject.Owner] }
 	get [RoomObject.LookType]() { return C.LOOK_STRUCTURES }
+
+	/**
+	 * Destroy this structure immediately.
+	 */
+	destroy(this: Structure) {
+		return chainIntentChecks(
+			() => checkDestroy(this),
+			() => Game.intents.save(this, 'destroyStructure'));
+	}
 
 	[CheckObstacle](_user: string) {
 		return true;
@@ -60,6 +69,19 @@ export function checkWall(pos: RoomPosition.RoomPosition) {
 		return C.ERR_INVALID_TARGET;
 	}
 	return C.OK;
+}
+
+export function checkDestroy(structure: Structure) {
+	return chainIntentChecks(
+		() => checkTarget(structure, Structure),
+		() => {
+			if (!structure.my && !structure.room.controller?.my) {
+				return C.ERR_NOT_OWNER;
+			} else if (structure.room.find(C.FIND_HOSTILE_CREEPS).length > 0) {
+				return C.ERR_BUSY;
+			}
+			return C.OK;
+		});
 }
 
 export function checkPlacement(room: Room, pos: RoomPosition.RoomPosition) {

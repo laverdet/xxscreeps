@@ -2,14 +2,12 @@ import type { CounterExtract, Dictionary, Implementation, UnwrapArray } from 'xx
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { ObjectProcessorContext } from './room';
-import { IntentIdentifier, PreTick, Processors, Tick } from './symbols';
-export { registerRoomTickProcessor } from './room';
+import { PreTick, Processors, Tick } from './symbols';
+export { ObjectReceivers, RoomIntentPayload, registerRoomTickProcessor } from './room';
 
 // `RoomObject` type definitions
 type IntentProcessorHolder = Dictionary<(receiver: any, context: ObjectProcessorContext, ...data: any) => void>;
-type IntentIdentifierResult = { group: string; name: string };
 type IntentReceiverInstance = {
-	[IntentIdentifier]: IntentIdentifierResult;
 	[Processors]?: IntentProcessorHolder;
 };
 type TickProcessor<Type = any> = (receiver: Type, context: ObjectProcessorContext) => void;
@@ -20,7 +18,6 @@ declare module 'xxscreeps/game/room' {
 }
 declare module 'xxscreeps/game/object' {
 	interface RoomObject {
-		[IntentIdentifier]: IntentIdentifierResult;
 		[PreTick]?: TickProcessor;
 		[Processors]?: IntentProcessorHolder;
 		[Tick]?: TickProcessor;
@@ -53,17 +50,14 @@ export interface Intent {}
 // Types for intent processors
 type Intents = Exclude<UnwrapArray<Intent[keyof Intent]>, void>;
 export type IntentReceivers = Room | Intents['type'];
-export type IntentsForReceiver<Type extends IntentReceivers> =
-	CounterExtract<Intents, { type: Type; intent: any; data: any }>['intent'];
+export type IntentsForReceiver<Type extends IntentReceivers> = Type extends any ?
+	CounterExtract<Intents, { type: Type; intent: any; data: any }>['intent'] : never;
 export type IntentParameters<Type extends IntentReceivers, Intent extends string> =
 	CounterExtract<Intents, { type: Type; intent: Intent; data: any }>['data'];
 
 type IntentsForHelper<Type extends IntentReceivers> =
 	CounterExtract<Intents, { type: Type; intent: any; data: any }>;
 
-export type IntentMapFor<Type extends IntentReceivers> = {
-	[Key in IntentsForHelper<Type>['intent']]?: IntentParameters<Type, Key>;
-};
 export type IntentListFor<Type extends IntentReceivers> = {
 	[Key in IntentsForHelper<Type>['intent']]?: IntentParameters<Type, Key>[];
 };

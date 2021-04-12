@@ -62,7 +62,7 @@ extend(Room, {
 				return C.OK;
 			},
 			() => checkCreateConstructionSite(this, pos, structureType),
-			() => Game.intents.push(this, 'createConstructionSite', structureType, xx, yy, name));
+			() => Game.intents.pushLocal(this, 'createConstructionSite', structureType, xx, yy, name));
 	},
 });
 

@@ -18,5 +18,7 @@ export function initializeIntents() {
 }
 
 export function flushIntents() {
-	return intents;
+	const instance = intents;
+	intents = undefined as never;
+	return instance;
 }
