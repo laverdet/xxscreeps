@@ -18,6 +18,7 @@ import * as User from 'xxscreeps/engine/metadata/user';
 import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
 import { Shard } from 'xxscreeps/engine/model/shard';
+import { Objects } from 'xxscreeps/game/room/symbols';
 import * as Storage from 'xxscreeps/storage';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
 import { NPCData } from 'xxscreeps/mods/npc/game';
@@ -73,7 +74,7 @@ const rooms = db.getCollection('rooms').find().map(room => ({
 		users: new Set<string>(),
 		memory: new Map,
 	},
-	_objects: [ ...Fn.filter(roomObjects.find({ room: room._id }).map(object => {
+	[Objects]: [ ...Fn.filter(roomObjects.find({ room: room._id }).map(object => {
 		switch (object.type) {
 			case 'controller':
 				return {
@@ -113,7 +114,7 @@ const roomsControlled = new Map<string, Set<string>>();
 const roomsPresent = new Map<string, Set<string>>();
 const roomsVisible = new Map<string, Set<string>>();
 for (const room of rooms) {
-	for (const object of room._objects) {
+	for (const object of room[Objects]) {
 		const owner: string | undefined = (object as any)[Owner];
 		if (owner !== undefined) {
 			if (object[Variant] === 'controller') {

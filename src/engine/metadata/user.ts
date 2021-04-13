@@ -1,4 +1,4 @@
-import { declare, makeReader, makeWriter, struct, vector, TypeOf } from 'xxscreeps/schema';
+import { declare, makeReaderAndWriter, struct, vector, TypeOf } from 'xxscreeps/schema';
 import * as StringSet from 'xxscreeps/engine/schema/string-set';
 import * as Id from 'xxscreeps/engine/schema/id';
 
@@ -46,5 +46,4 @@ export function create(username: string, id?: string) {
 
 export type User = TypeOf<typeof format>;
 
-export const read = makeReader(format);
-export const write = makeWriter(format);
+export const { read, write } = makeReaderAndWriter(format);

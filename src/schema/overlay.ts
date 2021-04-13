@@ -1,4 +1,5 @@
 import type { BufferView } from './buffer-view';
+import type { Cache } from './cache';
 import type { StructLayout } from './layout';
 import { getBuffer, getOffset, BufferObject } from './buffer-object';
 import { TypeOf, Variant } from './format';
@@ -11,7 +12,7 @@ const { apply } = Reflect;
 type GetterReader = (this: BufferObject) => any;
 
 const injected = new WeakSet();
-export function injectGetters(layout: StructLayout, prototype: object) {
+export function injectGetters(layout: StructLayout, prototype: object, cache: Cache) {
 	// Hacky double-inject prevention
 	if (injected.has(prototype)) {
 		return;
@@ -26,7 +27,7 @@ export function injectGetters(layout: StructLayout, prototype: object) {
 
 			// Get reader for this member
 			const get = function(): GetterReader {
-				const read = makeTypeReader(layout, 0 as any);
+				const read = makeTypeReader(layout, cache);
 				if (pointer) {
 					return function() {
 						const buffer = getBuffer(this);

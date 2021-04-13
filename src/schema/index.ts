@@ -8,3 +8,15 @@ export { makeWriter } from './write';
 import { XSymbol } from './symbol';
 export { XSymbol };
 export const Variant = XSymbol('schemaVariant');
+
+import { Cache } from './cache';
+import { Format } from './format';
+import { makeReader } from './read';
+import { makeWriter } from './write';
+export function makeReaderAndWriter<Type extends Format>(format: Type) {
+	const cache = new Cache;
+	return {
+		read: makeReader(format, cache),
+		write: makeWriter(format, cache),
+	};
+}

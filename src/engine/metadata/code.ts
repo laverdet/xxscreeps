@@ -1,5 +1,5 @@
 import * as Fn from 'xxscreeps/utility/functional';
-import { TypeOf, compose, makeReader, makeWriter, struct, vector } from 'xxscreeps/schema';
+import { TypeOf, compose, makeReaderAndWriter, struct, vector } from 'xxscreeps/schema';
 
 export const format = struct({
 	modules: compose(vector(struct({
@@ -11,7 +11,6 @@ export const format = struct({
 	}),
 });
 
-export const read = makeReader(format);
-export const write = makeWriter(format);
+export const { read, write } = makeReaderAndWriter(format);
 
 export type UserCode = TypeOf<typeof format>;

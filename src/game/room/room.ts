@@ -21,9 +21,9 @@ import { EventLogSymbol } from './event-log';
 import { FindConstants, FindType, findHandlers } from './find';
 import { LookConstants, TypeOfLook, lookConstants } from './look';
 import { shape } from './schema';
-import { FlushFindCache, LookFor, MoveObject, InsertObject, RemoveObject } from './symbols';
+import { FlushFindCache, LookFor, MoveObject, Objects, InsertObject, RemoveObject } from './symbols';
 
-export type AnyRoomObject = RoomObject | InstanceType<typeof Room>['_objects'][number];
+export type AnyRoomObject = RoomObject | InstanceType<typeof Room>[typeof Objects][number];
 
 export { LookConstants };
 
@@ -67,7 +67,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 	constructor(view: BufferView, offset: number) {
 		super(view, offset);
-		for (const object of this._objects as RoomObject[]) {
+		for (const object of this[Objects] as RoomObject[]) {
 			object[AfterInsert](this);
 			this._addToLookIndex(object);
 		}
@@ -287,7 +287,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 	[InsertObject](object: RoomObject) {
 		// Add to objects & look index then flush find caches
-		this._objects.push(object as never);
+		this[Objects].push(object as never);
 		this._addToLookIndex(object);
 		/* const findTypes = lookToFind[lookType];
 		for (const find of findTypes) {
@@ -309,7 +309,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 	[RemoveObject](object: RoomObject) {
 		// Remove from objects & look index then flush find caches
-		removeOne(this._objects, object as never);
+		removeOne(this[Objects], object as never);
 		this._removeFromLookIndex(object);
 		/* const findTypes = lookToFind[lookType];
 		for (const find of findTypes) {
@@ -362,7 +362,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (this.#lookSpatialIndex.size) {
 			return this.#lookSpatialIndex;
 		}
-		for (const object of this._objects) {
+		for (const object of this[Objects]) {
 			const pos = extractPositionId(object.pos);
 			const list = this.#lookSpatialIndex.get(pos);
 			if (list) {

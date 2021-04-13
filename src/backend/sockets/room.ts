@@ -1,5 +1,6 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
+import { getObjects } from 'xxscreeps/game/room/methods';
 import { getFlagChannel, loadVisuals, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser, runWithState } from 'xxscreeps/game';
 import { Variant } from 'xxscreeps/schema';
@@ -95,7 +96,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			runAsUser(this.user, () => {
 				runWithState([ room ], time, () => {
 					// Objects
-					for (const object of room._objects) {
+					for (const object of getObjects(room)) {
 						asUnion(object);
 						const value = object[Render]();
 						if (value._id) {

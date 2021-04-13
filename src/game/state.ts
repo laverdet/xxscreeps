@@ -4,7 +4,7 @@ import { gameInitializers } from './symbols';
 import map from './map';
 
 import { flush as flushPathFinder } from 'xxscreeps/game/path-finder';
-import { flushFindCache } from 'xxscreeps/game/room/methods';
+import { flushFindCache, getObjects } from 'xxscreeps/game/room/methods';
 import { insertObject } from './room/methods';
 import { AddToMyGame, RoomObject } from './object';
 import * as Visual from './visual';
@@ -72,7 +72,7 @@ export function runWithState<Type>(rooms_: Room[], time_: number, task: () => Ty
 	time = time_;
 	for (const room of rooms_) {
 		rooms[room.name] = room;
-		for (const object of room._objects) {
+		for (const object of getObjects(room)) {
 			objects.set(object.id, object);
 		}
 	}
@@ -95,7 +95,7 @@ export function runAsUser<Type>(userId: string, task: () => Type) {
 	me = userId;
 	for (const room of Object.values(rooms)) {
 		flushFindCache(room);
-		for (const object of room._objects) {
+		for (const object of getObjects(room)) {
 			if ((object as any).my) {
 				object[AddToMyGame](instance);
 			}

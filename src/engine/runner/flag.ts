@@ -2,7 +2,7 @@ import type { Dictionary } from 'xxscreeps/utility/types';
 import type { DescribeIntentHandler, IntentListFor } from 'xxscreeps/processor';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import { compose, declare, makeReader, makeWriter, vector } from 'xxscreeps/schema';
+import { compose, declare, makeReaderAndWriter, vector } from 'xxscreeps/schema';
 import { checkCreateFlag, format, Color, Flag } from 'xxscreeps/game/flag';
 import { fromPositionId } from 'xxscreeps/game/position';
 import { instantiate } from 'xxscreeps/utility/utility';
@@ -12,8 +12,7 @@ const schema = declare('Flags', compose(vector(format), {
 	compose: (flags): Record<string, Flag> => Fn.fromEntries(flags, flag => [ flag.name, flag ]),
 	decompose: (flags: Record<string, Flag>) => Object.values(flags),
 }));
-export const read = makeReader(schema);
-export const write = makeWriter(schema);
+export const { read, write } = makeReaderAndWriter(schema);
 
 // Flag intents are handled on the runners, so this stuff doesn't fit into the regular intent
 // pipeline

@@ -1,4 +1,4 @@
-import { makeReader, makeWriter, struct, TypeOf } from 'xxscreeps/schema';
+import { makeReaderAndWriter, struct, TypeOf } from 'xxscreeps/schema';
 import * as StringSet from 'xxscreeps/engine/schema/string-set';
 
 const format = struct({
@@ -8,5 +8,4 @@ const format = struct({
 });
 export type Type = TypeOf<typeof format>;
 
-export const read = makeReader(format);
-export const write = makeWriter(format);
+export const { read, write } = makeReaderAndWriter(format);

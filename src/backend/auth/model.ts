@@ -1,7 +1,7 @@
 import type * as Storage from 'xxscreeps/storage';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { getOrSet } from 'xxscreeps/utility/utility';
-import { declare, makeReader, makeWriter, struct, vector, TypeOf } from 'xxscreeps/schema';
+import { declare, makeReaderAndWriter, struct, vector, TypeOf } from 'xxscreeps/schema';
 
 export function flattenUsername(username: string) {
 	return username.replace(/[-_]/g, '').toLowerCase();
@@ -13,8 +13,8 @@ const format = declare('Entries', vector(struct({
 })));
 
 type Shape = TypeOf<typeof format>;
-const read = makeReader(format);
-export const write = makeWriter(format);
+const { read, write } = makeReaderAndWriter(format);
+export { write };
 
 export class Authentication {
 	private readonly providerToUser = new Map<string, string>();

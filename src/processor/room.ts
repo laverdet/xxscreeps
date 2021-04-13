@@ -4,6 +4,7 @@ import type { IntentsForReceiver, IntentReceivers } from '.';
 import * as Game from 'xxscreeps/game';
 import * as Movement from 'xxscreeps/processor/movement';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
+import { getObjects } from 'xxscreeps/game/room/methods';
 import { Processors, RoomTickProcessor, Tick, roomTickProcessors, PreTick } from './symbols';
 
 import 'xxscreeps/config/mods/import/game';
@@ -59,7 +60,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 			this.room[EventLogSymbol] = [];
 
 			// Pre-intent processor
-			for (const object of this.room._objects) {
+			for (const object of getObjects(this.room)) {
 				object[PreTick]?.(object, this);
 			}
 
@@ -99,7 +100,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 
 			// Post-intent processor
 			Movement.dispatch(this.room);
-			for (const object of this.room._objects) {
+			for (const object of getObjects(this.room)) {
 				object[Tick]?.(object, this);
 			}
 		});
