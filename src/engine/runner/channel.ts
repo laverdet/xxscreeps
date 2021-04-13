@@ -9,5 +9,5 @@ type RunnerIntentMessage = { type: 'intent'; intent: RunnerIntent };
 export type RunnerUserMessage = RunnerCodePushMessage | RunnerEvalMessage | RunnerIntentMessage;
 
 export function getRunnerUserChannel(shard: Shard, user: string) {
-	return new Channel<RunnerUserMessage>(shard.storage, user);
+	return new Channel<RunnerUserMessage>(shard.pubsub, user);
 }

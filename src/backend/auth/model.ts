@@ -1,4 +1,4 @@
-import type * as Storage from 'xxscreeps/storage';
+import type { BlobProvider } from 'xxscreeps/storage';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { declare, makeReaderAndWriter, struct, vector, TypeOf } from 'xxscreeps/schema';
@@ -21,7 +21,7 @@ export class Authentication {
 	private readonly userToProvider = new Map<string, string[]>();
 
 	constructor(
-		private readonly storage: Storage.Provider,
+		private readonly blob: BlobProvider,
 		private readonly data: Shape,
 	) {
 		// Index provider entries
@@ -31,8 +31,8 @@ export class Authentication {
 		}
 	}
 
-	static async connect(storage: Storage.Provider) {
-		return new Authentication(storage, read(await storage.blob.get('auth')));
+	static async connect(blob: BlobProvider) {
+		return new Authentication(blob, read(await blob.getBuffer('auth')));
 	}
 
 	associateUser(providerKey: string, userId: string) {
@@ -57,6 +57,6 @@ export class Authentication {
 	}
 
 	save() {
-		return this.storage.blob.set('auth', write(this.data));
+		return this.blob.set('auth', write(this.data));
 	}
 }

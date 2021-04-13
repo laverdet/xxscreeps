@@ -49,7 +49,7 @@ const socketServer = installSocketHandlers(httpServer, backendContext);
 
 // Shutdown handler
 const shutdownServer = setupGracefulShutdown(httpServer, socketServer);
-const serviceChannel = await new Channel<ServiceMessage>(backendContext.storage, 'service').subscribe();
+const serviceChannel = await new Channel<ServiceMessage>(backendContext.shard.pubsub, 'service').subscribe();
 const serviceUnlistener = serviceChannel.listen(message => {
 	if (message.type === 'shutdown') {
 		serviceUnlistener();

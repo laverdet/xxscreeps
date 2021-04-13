@@ -1,6 +1,6 @@
 import { Deferred } from 'xxscreeps/utility/deferred';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
-import { KeyValProvider, Provider } from './provider';
+import { KeyValProvider, PubSubProvider } from './provider';
 
 type Message = 'waiting' | 'unlocked';
 
@@ -14,9 +14,9 @@ export class Mutex {
 		private readonly lockable: Lock,
 	) {}
 
-	static async connect(storage: Provider, name: string) {
-		const channel = await new Channel<Message>(storage, `mutex/channel/${name}`).subscribe();
-		const lock = new Lock(storage, `mutex/${name}`);
+	static async connect(name: string, keyval: KeyValProvider, pubsub: PubSubProvider) {
+		const channel = await new Channel<Message>(pubsub, `mutex/channel/${name}`).subscribe();
+		const lock = new Lock(keyval, `mutex/${name}`);
 		return new Mutex(channel, lock);
 	}
 
@@ -139,19 +139,16 @@ export class Mutex {
 }
 
 class Lock {
-	private readonly ephemeral: KeyValProvider;
 	constructor(
-		storage: Provider,
+		private readonly keyval: KeyValProvider,
 		private readonly name: string,
-	) {
-		this.ephemeral = storage.ephemeral;
-	}
+	) {}
 
 	async lock() {
-		return (await this.ephemeral.sadd('locks', [ this.name ])) === 1;
+		return (await this.keyval.sadd('locks', [ this.name ])) === 1;
 	}
 
 	unlock() {
-		return this.ephemeral.srem('locks', [ this.name ]);
+		return this.keyval.srem('locks', [ this.name ]);
 	}
 }

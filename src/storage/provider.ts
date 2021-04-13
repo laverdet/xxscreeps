@@ -1,6 +1,6 @@
 export type BlobProvider = {
 	del(key: string): Promise<void>;
-	get(key: string): Promise<Readonly<Uint8Array>>;
+	getBuffer(key: string): Promise<Readonly<Uint8Array>>;
 	set(key: string, value: Readonly<Uint8Array>): Promise<void>;
 	copy(from: string, to: string): Promise<void>;
 	save(): Promise<void>;
@@ -39,17 +39,3 @@ export type PubSubSubscription = {
 	// publishing from a subscription will not send that message to your listener
 	publish(message: string): Promise<void>;
 };
-
-export class Provider {
-	constructor(
-		public readonly blob: BlobProvider,
-		public readonly ephemeral: KeyValProvider,
-		public readonly pubsub: PubSubProvider,
-	) {}
-
-	disconnect() {
-		this.ephemeral.disconnect();
-		this.blob.disconnect();
-		this.pubsub.disconnect();
-	}
-}

@@ -122,16 +122,16 @@ registerBackendRoute({
 			});
 
 			// Make room & user active
-			const game = GameSchema.read(await context.shard.storage.blob.get('game'));
+			const game = GameSchema.read(await context.shard.blob.getBuffer('game'));
 			game.users.add(user.id);
 
 			// Save
 			await Promise.all([
-				context.shard.storage.blob.set('game', GameSchema.write(game)),
+				context.shard.blob.set('game', GameSchema.write(game)),
 				saveUser(context.backend, user),
 				context.backend.shard.saveRoom(pos.roomName, context.shard.time, room),
 			]);
-			await new Channel<ServiceMessage>(context.backend.storage, 'service').publish({ type: 'gameModified' });
+			await new Channel<ServiceMessage>(context.shard.pubsub, 'service').publish({ type: 'gameModified' });
 		});
 		return { ok: 1 };
 	},

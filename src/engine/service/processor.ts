@@ -12,8 +12,8 @@ const processedRooms = new Map<string, RoomProcessorContext>();
 
 // Connect to main & storage
 const shard = await Shard.connect('shard0');
-const roomsQueue = Queue.connect<ProcessorQueueElement>(shard.storage, 'processRooms', true);
-const processorChannel = await new Channel<ProcessorMessage>(shard.storage, 'processor').subscribe();
+const roomsQueue = Queue.connect<ProcessorQueueElement>(shard.scratch, 'processRooms', true);
+const processorChannel = await new Channel<ProcessorMessage>(shard.pubsub, 'processor').subscribe();
 
 // Initialize world terrain
 loadTerrainFromBuffer(shard.terrainBlob);

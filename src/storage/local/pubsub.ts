@@ -2,6 +2,7 @@ import { Worker, isMainThread, parentPort } from 'worker_threads';
 import { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider';
 import { listen } from 'xxscreeps/utility/async';
 import { staticCast } from 'xxscreeps/utility/utility';
+import { registerStorageProvider } from '..';
 
 type Listener = (message: string, id?: string) => void;
 type Subscription = {
@@ -33,6 +34,15 @@ type UnsubscribeRequest = {
 type UnknownMessage = { type: null };
 type MasterMessage = PubSubMessage | SubscriptionConfirmation | UnknownMessage;
 type WorkerMessage = PubSubMessage | SubscriptionRequest | UnsubscribeRequest | UnknownMessage;
+
+// eslint-disable-next-line @typescript-eslint/require-await
+registerStorageProvider('local', [ 'pubsub' ], async uri => {
+	if (isMainThread) {
+		return new LocalPubSubProviderParent(uri);
+	} else {
+		return new LocalPubSubProviderWorker(uri);
+	}
+});
 
 /**
  * Utility functions to manage subscriptions in a single isolate
@@ -74,10 +84,6 @@ export abstract class LocalPubSubProvider implements PubSubProvider {
 	abstract subscribe(key: string, listener: (message: string) => void): Promise<PubSubSubscription>;
 
 	constructor(protected readonly name: string) {}
-
-	static connect(name: string) {
-		return new (isMainThread ? LocalPubSubProviderParent : LocalPubSubProviderWorker)(name);
-	}
 
 	static initializeWorker(worker: Worker) {
 		LocalPubSubProviderParent.initializeWorker(worker);
@@ -190,7 +196,6 @@ class LocalPubSubProviderParent extends LocalPubSubProvider {
 		return Promise.resolve(new ParentSubscription(`${this.name}/${key}`, listener));
 	}
 }
-
 
 class ParentSubscription extends LocalPubSubSubscription {
 	publish(message: string) {

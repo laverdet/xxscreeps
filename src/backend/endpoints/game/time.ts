@@ -5,7 +5,7 @@ registerBackendMiddleware((koa, router) => {
 	router.get([ '/api/game/tick', '/api/game/shards/tick' ], context => {
 		context.body = {
 			ok: 1,
-			tick: config.game?.tickSpeed ?? 250,
+			tick: config.game.tickSpeed,
 		};
 	});
 });

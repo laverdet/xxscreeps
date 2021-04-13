@@ -29,7 +29,7 @@ export function compileRuntimeSource(externals?: ExternalsFunctionElement) {
 }
 
 export async function createSandbox(options: Options) {
-	if (config.runner?.unsafeSandbox === true) {
+	if (config.runner.unsafeSandbox) {
 		return NodejsSandbox.create(options);
 	} else {
 		return IsolatedSandbox.create(options);

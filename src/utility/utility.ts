@@ -53,6 +53,21 @@ export function instantiate<Type>(
 	return Object.assign(Object.create(ctor.prototype), properties);
 }
 
+export function merge(result: any, subject: any) {
+	for (const [ key, val ] of Object.entries(subject)) {
+		if (val === null) {
+			result[key] = null;
+		} else if (
+			result[key] == null ||
+			typeof val !== 'object'
+		) {
+			result[key] = val;
+		} else {
+			merge(result[key], val);
+		}
+	}
+}
+
 // Used to inline upcast a value to another Type. This is *more* restrictive than `as Type`
 export function staticCast<Type>(value: Type) {
 	return value;

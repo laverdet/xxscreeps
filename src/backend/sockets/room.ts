@@ -7,7 +7,7 @@ import { Variant } from 'xxscreeps/schema';
 import { SubscriptionEndpoint } from '../socket';
 import { acquire } from 'xxscreeps/utility/async';
 import { stringifyInherited } from 'xxscreeps/utility/string';
-import { asUnion } from 'xxscreeps/utility/utility';
+import { asUnion, merge } from 'xxscreeps/utility/utility';
 import { eventRenderers, Render } from 'xxscreeps/backend/symbols';
 import './render';
 
@@ -31,21 +31,6 @@ function diff(previous: any, next: any) {
 		return didAdd ? result : undefined;
 	}
 	return next;
-}
-
-function merge(result: any, subject: any) {
-	for (const [ key, val ] of Object.entries(subject)) {
-		if (val === null) {
-			result[key] = null;
-		} else if (
-			result[key] == null ||
-			typeof val !== 'object'
-		) {
-			result[key] = val;
-		} else {
-			merge(result[key], val);
-		}
-	}
 }
 
 export const roomSubscription: SubscriptionEndpoint = {
@@ -131,7 +116,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 
 			// Get users not yet seen
 			const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async(id): Promise<[ string, any ]> => {
-				const user = User.read(await this.context.shard.storage.blob.get(`user/${id}/info`));
+				const user = User.read(await this.context.shard.blob.getBuffer(`user/${id}/info`));
 				return [ user.id, {
 					username: user.username,
 					badge: JSON.parse(user.badge),

@@ -1,15 +1,19 @@
 import type { GameMessage } from 'xxscreeps/engine/service';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as RoomSchema from 'xxscreeps/engine/room';
-import { connect, Provider } from 'xxscreeps/storage';
+import { connectToProvider, BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/storage';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
+import config from 'xxscreeps/config';
 
 export class Shard {
 	public time = -1;
 	private readonly gameTickEffect: () => void;
 
 	private constructor(
-		public readonly storage: Provider,
+		public readonly blob: BlobProvider,
+		public readonly data: KeyValProvider,
+		public readonly pubsub: PubSubProvider,
+		public readonly scratch: KeyValProvider,
 		public readonly terrainBlob: Readonly<Uint8Array>,
 		private readonly gameChannel: Subscription<GameMessage>,
 	) {
@@ -20,14 +24,23 @@ export class Shard {
 		});
 	}
 
-	static async connect(shard: string) {
+	static async connect(name: string) {
 		// Connect to shard, load const data
-		const provider = await connect(shard);
-		const terrainBlob = await provider.blob.get('terrain');
-		const gameChannel = await new Channel<GameMessage>(provider, 'main').subscribe();
-		// Create instance (which subscribes to tick notification) and then read current
-		const instance = new Shard(provider, terrainBlob, gameChannel);
-		const game = GameSchema.read(await provider.blob.get('game'));
+		const shard = config.shards.find(shard => shard.name === name);
+		if (!shard) {
+			throw new Error(`Unknown shard: ${shard}`);
+		}
+		const [ blob, data, pubsub, scratch ] = await Promise.all([
+			connectToProvider(shard.blob, 'blob'),
+			connectToProvider(shard.data, 'keyval'),
+			connectToProvider(shard.pubsub, 'pubsub'),
+			connectToProvider(shard.scratch, 'keyval'),
+		]);
+		const terrainBlob = await blob.getBuffer('terrain');
+		const gameChannel = await new Channel<GameMessage>(pubsub, 'main').subscribe();
+		// Create instance (which subscribes to tick notification) and then read current info
+		const instance = new Shard(blob, data, pubsub, scratch, terrainBlob, gameChannel);
+		const game = GameSchema.read(await blob.getBuffer('game'));
 		instance.time = Math.max(game.time, instance.time);
 		return instance;
 	}
@@ -35,7 +48,10 @@ export class Shard {
 	disconnect() {
 		this.gameTickEffect();
 		this.gameChannel.disconnect();
-		this.storage.disconnect();
+		this.blob.disconnect();
+		this.data.disconnect();
+		this.pubsub.disconnect();
+		this.scratch.disconnect();
 	}
 
 	/**
@@ -50,7 +66,7 @@ export class Shard {
 	 */
 	async loadRoomBlob(name: string, time = this.time) {
 		this.checkTime(time, -1);
-		return this.storage.blob.get(this.roomKeyForTime(name, time));
+		return this.blob.getBuffer(this.roomKeyForTime(name, time));
 	}
 
 	/**
@@ -68,7 +84,7 @@ export class Shard {
 	 */
 	async saveRoomBlob(name: string, time: number, blob: Readonly<Uint8Array>) {
 		this.checkTime(time, 1);
-		return this.storage.blob.set(this.roomKeyForTime(name, time), blob);
+		return this.blob.set(this.roomKeyForTime(name, time), blob);
 	}
 
 	/**
@@ -77,7 +93,7 @@ export class Shard {
 	 */
 	async copyRoomFromPreviousTick(name: string, time: number) {
 		this.checkTime(time, 1);
-		return this.storage.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
+		return this.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
 	}
 
 	private checkTime(time: number, delta: number) {

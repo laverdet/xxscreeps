@@ -54,7 +54,7 @@ export class PlayerInstance {
 		// Connect to channel, load initial user data
 		const [ channel, userBlob ] = await Promise.all([
 			getRunnerUserChannel(shard, userId).subscribe(),
-			shard.storage.blob.get(`user/${userId}/info`),
+			shard.blob.getBuffer(`user/${userId}/info`),
 		]);
 		const user = User.read(userBlob);
 		return new PlayerInstance(shard, user, channel);
@@ -76,7 +76,7 @@ export class PlayerInstance {
 		// If there's no sandbox load the required data and initialize
 		if (!this.sandbox) {
 			const [ codeBlob, flagBlob, memoryBlob ] = await Promise.all([
-				this.shard.storage.blob.get(`user/${this.userId}/${this.branch}`),
+				this.shard.blob.getBuffer(`user/${this.userId}/${this.branch}`),
 				loadUserFlagBlob(this.shard, this.userId),
 				loadUserMemoryBlob(this.shard, this.userId),
 			]);
@@ -126,7 +126,7 @@ export class PlayerInstance {
 			saveVisualsBlob(this.shard, this.userId, time, result.visualsBlob),
 
 			// Save memory
-			result.memory && this.shard.storage.blob.set(`memory/${this.userId}`, result.memory),
+			result.memory && this.shard.blob.set(`memory/${this.userId}`, result.memory),
 		]);
 
 		// Return affected room

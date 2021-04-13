@@ -4,9 +4,6 @@ import { runOnce } from 'xxscreeps/utility/memoize';
 
 const secret = runOnce(() => {
 	const { secret } = config.backend;
-	if (secret === undefined) {
-		return Crypto.randomBytes(16);
-	}
 	return Crypto.createHmac('sha3-224', secret).digest().subarray(0, 16);
 });
 

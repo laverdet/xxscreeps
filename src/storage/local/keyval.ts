@@ -1,6 +1,15 @@
 /* eslint-disable @typescript-eslint/require-await */
 import type { KeyValProvider } from '../provider';
-import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
+import { connect, create, Responder, ResponderClient, ResponderHost } from './responder';
+import { registerStorageProvider } from '..';
+
+registerStorageProvider('local', [ 'keyval' ], async uri => {
+	try {
+		return await connect(LocalKeyValProviderClient, uri);
+	} catch (err) {
+		return create(LocalKeyValProviderHost, uri);
+	}
+});
 
 export abstract class LocalKeyValProvider extends Responder implements KeyValProvider {
 	abstract del(key: string): Promise<void>;
@@ -15,14 +24,6 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 	abstract spop(key: string): Promise<string | undefined>;
 	abstract sflush(key: string): Promise<void>;
 	abstract srem(key: string, values: string[]): Promise<number>;
-
-	static async create(name: string) {
-		return create(LocalKeyValProviderHost, `keyval://${name}`);
-	}
-
-	static connect(name: string) {
-		return connect(LocalKeyValProviderClient, `keyval://${name}`);
-	}
 }
 
 class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {

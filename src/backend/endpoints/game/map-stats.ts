@@ -47,7 +47,7 @@ export const MapStatsEndpoint: Endpoint = {
 		// Read users
 		const userObjects = await Promise.all(
 			Fn.map(userIds, async id =>
-				User.read(await context.shard.storage.blob.get(`user/${id}/info`))));
+				User.read(await context.shard.blob.getBuffer(`user/${id}/info`))));
 		const users = Fn.fromEntries(userObjects, user => [
 			user.id, {
 				_id: user.id,

@@ -12,16 +12,15 @@ import type { GameMessage, ProcessorMessage, ProcessorQueueElement, RunnerMessag
 
 // Open channels
 const shard = await Shard.connect('shard0');
-const { storage } = shard;
 const [
 	roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
 ] = await Promise.all([
-	Queue.connect<ProcessorQueueElement>(storage, 'processRooms', true),
-	Queue.connect(storage, 'runnerUsers'),
-	new Channel<ProcessorMessage>(storage, 'processor').subscribe(),
-	new Channel<RunnerMessage>(storage, 'runner').subscribe(),
-	new Channel<ServiceMessage>(storage, 'service').subscribe(),
-	Mutex.connect(storage, 'game'),
+	Queue.connect<ProcessorQueueElement>(shard.scratch, 'processRooms', true),
+	Queue.connect(shard.scratch, 'runnerUsers'),
+	new Channel<ProcessorMessage>(shard.pubsub, 'processor').subscribe(),
+	new Channel<RunnerMessage>(shard.pubsub, 'runner').subscribe(),
+	new Channel<ServiceMessage>(shard.pubsub, 'service').subscribe(),
+	Mutex.connect('game', shard.scratch, shard.pubsub),
 ]);
 await serviceChannel.publish({ type: 'mainConnected' });
 
@@ -49,10 +48,10 @@ serviceChannel.listen(message => {
 
 try {
 	do {
+		const timeStartedLoop = Date.now();
 		await gameMutex.scope(async() => {
 			// Start timer
 			performanceTimer.start();
-			const timeStartedLoop = Date.now();
 
 			// Refresh current game status
 			if (gameMetadata) {
@@ -62,7 +61,7 @@ try {
 					Fn.forEach(roomsWakingUp, room => activeRooms.add(room));
 				}
 			} else {
-				gameMetadata = GameSchema.read(await storage.blob.get('game'));
+				gameMetadata = GameSchema.read(await shard.blob.getBuffer('game'));
 				activeRooms = new Set(gameMetadata.rooms);
 				activeUsers = [ ...gameMetadata.users ];
 				sleepingRooms.clear();
@@ -142,14 +141,14 @@ try {
 
 			// Update game state
 			++gameMetadata.time;
-			await storage.blob.set('game', GameSchema.write(gameMetadata));
+			await shard.blob.set('game', GameSchema.write(gameMetadata));
 
 			// Finish up
 			const now = Date.now();
 			const timeTaken = now - timeStartedLoop;
 			const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
 			console.log(`Tick ${gameTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
-			await new Channel<GameMessage>(storage, 'main').publish({ type: 'tick', time: gameTime });
+			await new Channel<GameMessage>(shard.pubsub, 'main').publish({ type: 'tick', time: gameTime });
 		});
 
 		// Shutdown request came in during game loop
@@ -159,17 +158,19 @@ try {
 		}
 
 		// Add delay
-		const delay = config.game?.tickSpeed ?? 250 - Date.now();
-		delayShutdown = new Deferred;
-		const { promise } = delayShutdown;
-		setTimeout(() => delayShutdown!.resolve(true), delay).unref();
-		if (!await promise) {
-			break;
+		const delay = Math.max(0, config.game.tickSpeed - (Date.now() - timeStartedLoop));
+		if (delay > 0) {
+			delayShutdown = new Deferred;
+			const { promise } = delayShutdown;
+			setTimeout(() => delayShutdown!.resolve(true), delay).unref();
+			if (!await promise) {
+				break;
+			}
 		}
 	} while (true);
 
 	// Save on graceful exit
-	await storage.blob.save();
+	await shard.blob.save();
 
 } finally {
 	// Clean up

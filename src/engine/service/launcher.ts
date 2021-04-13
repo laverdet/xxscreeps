@@ -1,12 +1,10 @@
 import 'xxscreeps/config/mods';
-import os from 'os';
 import config from 'xxscreeps/config';
 import argv from 'xxscreeps/config/arguments';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { listen } from 'xxscreeps/utility/async';
 import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as UserSchema from 'xxscreeps/engine/metadata/user';
-import * as Storage from 'xxscreeps/storage';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';
@@ -14,23 +12,22 @@ import { getConsoleChannel } from 'xxscreeps/engine/model/user';
 import type { ProcessorMessage, RunnerMessage, ServiceMessage } from '.';
 
 // Start shared blob service
-await Storage.initialize();
 const shard = await Shard.connect('shard0');
-const storage = shard.storage;
-const serviceChannel = await new Channel<ServiceMessage>(storage, 'service').subscribe();
+const storage = shard;
+const serviceChannel = await new Channel<ServiceMessage>(shard.pubsub, 'service').subscribe();
 
 try {
 
 	// Attach console for given user
 	if (argv['attach-console']) {
 		const attachTo = argv['attach-console'];
-		const gameMutex = await Mutex.connect(storage, 'game');
+		const gameMutex = await Mutex.connect('game', shard.scratch, shard.pubsub);
 		try {
 			const id = await gameMutex.scope(async() => {
 				const { blob } = storage;
-				const userIds = GameSchema.read(await blob.get('game')).users;
+				const userIds = GameSchema.read(await blob.getBuffer('game')).users;
 				for (const userId of userIds) {
-					const user = UserSchema.read(await blob.get(`user/${userId}/info`));
+					const user = UserSchema.read(await blob.getBuffer(`user/${userId}/info`));
 					if (user.username === attachTo) {
 						return userId;
 					}
@@ -79,8 +76,8 @@ try {
 			shutdownUnlisten();
 			if (message.type === 'mainDisconnected') {
 				Promise.all([
-					new Channel<ProcessorMessage>(storage, 'processor').publish({ type: 'shutdown' }),
-					new Channel<RunnerMessage>(storage, 'runner').publish({ type: 'shutdown' }),
+					new Channel<ProcessorMessage>(shard.pubsub, 'processor').publish({ type: 'shutdown' }),
+					new Channel<RunnerMessage>(shard.pubsub, 'runner').publish({ type: 'shutdown' }),
 				]).catch(console.error);
 			}
 		});
@@ -88,19 +85,17 @@ try {
 	});
 
 	// Start workers
-	const { processorWorkers, runnerWorkers, singleThreaded } = config.launcher ?? {};
+	const { processorWorkers, runnerWorkers, singleThreaded } = config.launcher;
 	if (singleThreaded) {
 		const backend = import('xxscreeps/backend/server');
 		const processor = import('./processor');
 		const runner = import('./runner');
 		await Promise.all([ main, backend, processor, runner ]);
 	} else {
-		const processorCount = processorWorkers ?? (os.cpus().length >> 1) + 1;
-		const runnerCount = runnerWorkers ?? 1;
 		const backend = new Worker('xxscreeps/backend/server');
-		const processors = Array(processorCount).fill(undefined).map(() =>
+		const processors = Array(processorWorkers).fill(undefined).map(() =>
 			new Worker('xxscreeps/engine/service/processor'));
-		const runners = Array(runnerCount).fill(undefined).map(() =>
+		const runners = Array(runnerWorkers).fill(undefined).map(() =>
 			new Worker('xxscreeps/engine/service/runner'));
 		await Promise.all([
 			main,
@@ -113,6 +108,5 @@ try {
 } finally {
 	// Shut down shared services
 	shard.disconnect();
-	Storage.terminate();
 	serviceChannel.disconnect();
 }

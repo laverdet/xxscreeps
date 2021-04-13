@@ -34,7 +34,7 @@ export type Schema = {
 	launcher?: {
 		/**
 		 * Total number of processors to create.
-		 * @default 2
+		 * @default `os.cpus().length + 1`
 		 */
 		processorWorkers?: number;
 
@@ -56,14 +56,15 @@ export type Schema = {
 	/**
 	 * List of mods to load
 	 */
-	mods: string[];
+	mods?: string[];
 
 	/**
 	 * Runner settings
 	 */
 	runner?: {
 		/**
-		 * Total number of runner tasks to run at a time. The default is `os.cpus().length + 1`.
+		 * Total number of runner tasks to run at a time.
+		 * @default `os.cpus().length + 1`
 		 */
 		concurrency?: number;
 
@@ -78,11 +79,30 @@ export type Schema = {
 	/**
 	 * Configuration for local storage
 	 */
-	storage?: {
+	shards?: {
 		/**
-		 * Path to save game state, relative to this configuration file.
-		 * @default: ./data
+		 * Name of this shard
 		 */
-		path?: string;
-	};
+		name: string;
+
+		/**
+		 * Blob storage provider URI
+		 */
+		blob: string;
+
+		/**
+		 * Persistent storage provider URI
+		 */
+		data: string;
+
+		/**
+		 * Pubsub storage provider URI
+		 */
+		pubsub: string;
+
+		/**
+		 * Temporary storage provider URI
+		 */
+		scratch: string;
+	}[];
 };

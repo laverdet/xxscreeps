@@ -50,7 +50,7 @@ const BranchesEndpoint: Endpoint = {
 
 	async execute(context) {
 		const { userId } = context.state;
-		const userBlob = await context.shard.storage.blob.get(`user/${userId}/info`).catch(() => {});
+		const userBlob = await context.shard.blob.getBuffer(`user/${userId}/info`).catch(() => {});
 		const user = userBlob && User.read(userBlob);
 
 		if (!user || user.code.branches.length === 0) {
@@ -73,7 +73,7 @@ const BranchesEndpoint: Endpoint = {
 		return {
 			ok: 1,
 			list: await Promise.all(user.code.branches.map(async branch => {
-				const code = Code.read(await context.shard.storage.blob.get(`user/${userId}/${branch.id}`));
+				const code = Code.read(await context.shard.blob.getBuffer(`user/${userId}/${branch.id}`));
 				return {
 					activeWorld: branch.id === user.code.branch,
 					branch: branch.name,
@@ -99,7 +99,7 @@ const BranchCloneEndpoint: Endpoint = {
 		const timestamp = Math.floor(Date.now() / 1000);
 
 		await context.backend.gameMutex.scope(async() => {
-			const user = User.read(await context.shard.storage.blob.get(`user/${userId}/info`));
+			const user = User.read(await context.shard.blob.getBuffer(`user/${userId}/info`));
 			// Validity checks
 			if (user.code.branches.length > kMaxBranches) {
 				throw new Error('Too many branches');
@@ -119,9 +119,9 @@ const BranchCloneEndpoint: Endpoint = {
 			});
 			// Save blobs
 			await Promise.all([
-				context.shard.storage.blob.set(`user/${userId}/info`, User.write(user)),
-				context.shard.storage.blob.set(`user/${userId}/${newId}`,
-					await context.shard.storage.blob.get(`user/${userId}/${branchId}`)),
+				context.shard.blob.set(`user/${userId}/info`, User.write(user)),
+				context.shard.blob.set(`user/${userId}/${newId}`,
+					await context.shard.blob.getBuffer(`user/${userId}/${branchId}`)),
 			]);
 		});
 
@@ -137,13 +137,13 @@ const BranchSetEndpoint: Endpoint = {
 		const { userId } = context.state;
 		const { branch } = context.request.body;
 		await context.backend.gameMutex.scope(async() => {
-			const user = User.read(await context.shard.storage.blob.get(`user/${userId}/info`));
+			const user = User.read(await context.shard.blob.getBuffer(`user/${userId}/info`));
 			const { id, name } = getBranchIdFromQuery(branch, user);
 			if (id === undefined) {
 				throw new Error('Invalid branch');
 			}
 			user.code.branch = id;
-			await context.shard.storage.blob.set(`user/${userId}/info`, User.write(user));
+			await context.shard.blob.set(`user/${userId}/info`, User.write(user));
 			await getRunnerUserChannel(context.backend.shard, userId!).publish({ type: 'code', id, name });
 		});
 
@@ -157,13 +157,13 @@ const CodeEndpoint: Endpoint = {
 	async execute(context) {
 		const { userId } = context.state;
 		const { branch } = context.request.body;
-		const user = User.read(await context.shard.storage.blob.get(`user/${userId}/info`));
+		const user = User.read(await context.shard.blob.getBuffer(`user/${userId}/info`));
 		const { id, name } = getBranchIdFromQuery(branch, user);
 		if (id === undefined) {
 			return { ok: 1, branch: name, modules: { main: '' } };
 		}
 
-		const code = Code.read(await context.shard.storage.blob.get(`user/${userId}/${id}`));
+		const code = Code.read(await context.shard.blob.getBuffer(`user/${userId}/${id}`));
 		return { ok: 1, branch: name, modules: Fn.fromEntries(code.modules) };
 	},
 };
@@ -191,7 +191,7 @@ const CodePostEndpoint: Endpoint = {
 		const timestamp = Math.floor(Date.now() / 1000);
 		await context.backend.gameMutex.scope(async() => {
 			// Load user branch manifest
-			const user = User.read(await context.shard.storage.blob.get(`user/${userId}/info`));
+			const user = User.read(await context.shard.blob.getBuffer(`user/${userId}/info`));
 			const { id, name } = getBranchIdFromQuery(branch, user, true);
 
 			// Update manifest timestamp
@@ -204,8 +204,8 @@ const CodePostEndpoint: Endpoint = {
 
 			// Save blobs
 			await Promise.all([
-				context.shard.storage.blob.set(`user/${userId}/info`, User.write(user)),
-				context.shard.storage.blob.set(`user/${userId}/${id}`, Code.write({
+				context.shard.blob.set(`user/${userId}/info`, User.write(user)),
+				context.shard.blob.set(`user/${userId}/${id}`, Code.write({
 					modules: new Map(Object.entries(modules)),
 				})),
 			]);

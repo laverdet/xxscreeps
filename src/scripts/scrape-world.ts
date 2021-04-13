@@ -1,12 +1,11 @@
 import Loki from 'lokijs';
-import fs from 'fs';
 
 import { RoomPosition } from 'xxscreeps/game/position';
 import { Owner } from 'xxscreeps/game/object';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Store from 'xxscreeps/mods/resource/store';
-import Config from 'xxscreeps/config';
+import config from 'xxscreeps/config';
 
 // Schemas
 import * as Auth from 'xxscreeps/backend/auth/model';
@@ -19,7 +18,7 @@ import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { Objects } from 'xxscreeps/game/room/symbols';
-import * as Storage from 'xxscreeps/storage';
+import { connectToProvider } from 'xxscreeps/storage';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
 import { NPCData } from 'xxscreeps/mods/npc/game';
 import { clamp, getOrSet } from 'xxscreeps/utility/utility';
@@ -60,7 +59,6 @@ function withStore(object: any) {
 const db = new Loki(jsonSource);
 await new Promise<void>((resolve, reject) =>
 	db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve()));
-await Storage.initialize();
 
 // Collect env data
 const env = db.getCollection('env').findOne().data;
@@ -173,15 +171,16 @@ const game = {
 	rooms: roomNames,
 	users: userIds,
 };
-fs.rmdirSync(Config.storage?.path ?? './data', { recursive: true });
 {
-	const storage = await Storage.connect('shard0');
-	await storage.blob.set('game', GameSchema.write(game));
-	await storage.blob.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
-	storage.disconnect();
+	const shardConfig = config.shards[0];
+	const blob = await connectToProvider(shardConfig.blob, 'blob');
+	await blob.set('game', GameSchema.write(game));
+	await blob.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
+	await blob.save();
+	blob.disconnect();
 }
 const shard = await Shard.connect('shard0');
-const { blob } = shard.storage;
+const { blob } = shard;
 
 // Save rooms
 for (const room of rooms) {
@@ -225,4 +224,3 @@ await Promise.all(db.getCollection('users.code').find().map(async row => {
 // Flush everything to disk
 await blob.save();
 shard.disconnect();
-Storage.terminate();

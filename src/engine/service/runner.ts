@@ -1,22 +1,18 @@
-import os from 'os';
 import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { loadTerrainFromWorld, readWorld } from 'xxscreeps/game/map';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
-import * as Storage from 'xxscreeps/storage';
 import { Channel } from 'xxscreeps/storage/channel';
 import { Queue } from 'xxscreeps/storage/queue';
 import { RunnerMessage } from '.';
 
 // Connect to main & storage
 const shard = await Shard.connect('shard0');
-const storage = await Storage.connect('shard0');
-const usersQueue = Queue.connect(storage, 'runnerUsers');
-const runnerChannel = await new Channel<RunnerMessage>(storage, 'runner').subscribe();
-const concurrency = config.runner?.unsafeSandbox ? 1 :
-	config.runner?.concurrency ?? (os.cpus().length >> 1) + 1;
+const usersQueue = Queue.connect(shard.scratch, 'runnerUsers');
+const runnerChannel = await new Channel<RunnerMessage>(shard.pubsub, 'runner').subscribe();
+const concurrency = config.runner.unsafeSandbox ? 1 : config.runner.concurrency;
 
 // Load shared terrain data
 const world = readWorld(shard.terrainBlob);
@@ -72,6 +68,6 @@ try {
 	for (const instance of playerInstances.values()) {
 		instance.disconnect();
 	}
-	storage.disconnect();
 	runnerChannel.disconnect();
+	shard.disconnect();
 }

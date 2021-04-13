@@ -1,9 +1,19 @@
-import { promises as fs } from 'fs';
+import type { BlobProvider } from '../provider';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
+import { fileURLToPath } from 'url';
+import { promises as fs } from 'fs';
 import { listen } from 'xxscreeps/utility/async';
-import type { BlobProvider } from '../provider';
-import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
+import { connect, create, Responder, ResponderClient, ResponderHost } from './responder';
+import { registerStorageProvider } from '..';
+
+registerStorageProvider('file', [ 'blob' ], async uri => {
+	try {
+		return await connect(LocalBlobClient, uri);
+	} catch (err) {
+		return await LocalBlobProvider.create(uri);
+	}
+});
 
 const fragmentNameWhitelist = /^[a-zA-Z0-9/-]+$/;
 
@@ -15,18 +25,15 @@ function copy(buffer: Readonly<Uint8Array>) {
 
 export abstract class LocalBlobProvider extends Responder implements BlobProvider {
 	abstract del(key: string): Promise<void>;
-	abstract get(key: string): Promise<Readonly<Uint8Array>>;
+	abstract getBuffer(key: string): Promise<Readonly<Uint8Array>>;
 	abstract set(key: string, value: Readonly<Uint8Array>): Promise<void>;
 	abstract copy(from: string, to: string): Promise<void>;
 	abstract save(): Promise<void>;
 
-	static async create(path: string) {
+	static async create(uri: string) {
+		const path = fileURLToPath(uri);
 		// Ensure directory exists, or make it
-		try {
-			await fs.mkdir(path);
-		} catch (err) {}
-		const dir = await fs.opendir(path);
-		await dir.close();
+		await fs.mkdir(path, { recursive: true });
 
 		// Lock file maker
 		const lockFile = Path.join(path, '.lock');
@@ -74,11 +81,7 @@ export abstract class LocalBlobProvider extends Responder implements BlobProvide
 			// Try once more
 			await tryLock();
 		})();
-		return create(LocalBlobHost, `file://${path}`, path);
-	}
-
-	static connect(path: string) {
-		return connect(LocalBlobClient, `file://${path}`);
+		return create(LocalBlobHost, uri, path);
 	}
 }
 
@@ -106,7 +109,7 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		return Promise.resolve();
 	}
 
-	async get(key: string): Promise<Readonly<Uint8Array>> {
+	async getBuffer(key: string): Promise<Readonly<Uint8Array>> {
 		this.check(key);
 		// Check in-memory buffer
 		const buffered = this.bufferedBlobs.get(key);
@@ -131,7 +134,6 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		}
 	}
 
-
 	set(key: string, value: Readonly<Uint8Array>) {
 		this.check(key);
 		this.bufferedDeletes.delete(key);
@@ -141,7 +143,7 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 
 	async copy(from: string, to: string) {
 		this.check(to);
-		this.bufferedBlobs.set(to, await this.get(from));
+		this.bufferedBlobs.set(to, await this.getBuffer(from));
 	}
 
 	async save() {
@@ -223,8 +225,8 @@ class LocalBlobClient extends ResponderClient(LocalBlobProvider) {
 		return this.request('del', key);
 	}
 
-	get(key: string) {
-		return this.request('get', key);
+	getBuffer(key: string) {
+		return this.request('getBuffer', key);
 	}
 
 	set(key: string, value: Readonly<Uint8Array>) {

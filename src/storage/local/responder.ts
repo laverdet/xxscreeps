@@ -52,7 +52,7 @@ type AbstractResponderClient = {
 	readonly _requests: Map<number, Deferred<any>>;
 };
 export abstract class Responder {
-	constructor(readonly _name: string) {}
+	constructor(readonly _name?: string) {}
 	destroyed() {}
 	disconnect() {}
 }
@@ -68,10 +68,7 @@ const unlistenByClientId = new Map<string, () => void>();
 
 // Connect to an existing responder
 let parentRefs = 0;
-export function connect<Type extends AbstractResponderClient>(
-	ctor: new(...args: any[]) => Type,
-	name: string,
-): Promise<Type> {
+export function connect<Type extends AbstractResponderClient>(ctor: new() => Type, name: string): Promise<Type> {
 	if (isMainThread) {
 		// Connecting to a responder from the parent just returns the host object
 		const responder = responderHostsByName.get(name);
@@ -240,7 +237,7 @@ export function ResponderHost<New extends abstract new(...args: any[]) => Respon
 
 		disconnect(): { doNotOverrideThisMethod: true } {
 			if (--this._refs === 0) {
-				responderHostsByName.delete(this._name);
+				responderHostsByName.delete(this._name!);
 				this.destroyed();
 			}
 			return undefined as never;

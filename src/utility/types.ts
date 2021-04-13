@@ -50,5 +50,12 @@ export type UnwrapArray<Type> = Type extends (infer Element)[] ? Element : Type;
 // Returns all value types of an object
 export type Values<Type extends {}> = Type[keyof Type];
 
+export type RecursivePartial<T> = {
+  [P in keyof T]?:
+    T[P] extends (infer U)[] ? RecursivePartial<U>[] :
+    T[P] extends object ? RecursivePartial<T[P]> :
+    T[P];
+};
+
 // Returns an object with a given key
 export type WithKey<Path extends keyof any> = { [key in Path]: any };
