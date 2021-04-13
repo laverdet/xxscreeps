@@ -1,19 +1,19 @@
 import * as Path from 'path';
 import config, { configPath } from 'xxscreeps/config';
-import { LocalEphemeralProvider } from './local/ephemeral';
-import { LocalPersistenceProvider } from './local/persistence';
-import { LocalPubsubProvider } from './local/pubsub';
-import { EphemeralProvider, PersistenceProvider, Provider } from './provider';
-export { EphemeralProvider, PersistenceProvider, Provider };
+import { LocalBlobProvider } from './local/blob';
+import { LocalKeyValProvider } from './local/keyval';
+import { LocalPubSubProvider } from './local/pubsub';
+import { Provider } from './provider';
+export { Provider };
 
 let provider: Provider;
 const path = Path.resolve(Path.dirname(configPath), config.storage?.path ?? './data');
 
 export async function initialize() {
 	provider = new Provider(
-		await LocalEphemeralProvider.create('shard0'),
-		await LocalPersistenceProvider.create(path),
-		LocalPubsubProvider.connect('shard0'),
+		await LocalBlobProvider.create(path),
+		await LocalKeyValProvider.create('shard0'),
+		LocalPubSubProvider.connect('shard0'),
 	);
 }
 
@@ -22,9 +22,9 @@ export async function connect(name: string) {
 		throw new Error('Missing provider name');
 	}
 	return new Provider(
-		await LocalEphemeralProvider.connect('shard0'),
-		await LocalPersistenceProvider.connect(path),
-		LocalPubsubProvider.connect('shard0'),
+		await LocalBlobProvider.connect(path),
+		await LocalKeyValProvider.connect('shard0'),
+		LocalPubSubProvider.connect('shard0'),
 	);
 }
 

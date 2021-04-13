@@ -1,9 +1,9 @@
-import type { EphemeralProvider, Provider } from './provider';
+import type { KeyValProvider, Provider } from './provider';
 
 export class Queue<Type> {
 	private currentVersion = 'initial';
 	constructor(
-		private readonly provider: EphemeralProvider,
+		private readonly provider: KeyValProvider,
 		private readonly key: string,
 		private readonly json: boolean,
 	) {}

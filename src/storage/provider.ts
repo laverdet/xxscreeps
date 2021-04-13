@@ -1,7 +1,16 @@
-export type EphemeralProvider = {
-	// blobs
+export type BlobProvider = {
 	del(key: string): Promise<void>;
 	get(key: string): Promise<Readonly<Uint8Array>>;
+	set(key: string, value: Readonly<Uint8Array>): Promise<void>;
+	copy(from: string, to: string): Promise<void>;
+	save(): Promise<void>;
+	disconnect(): void;
+};
+
+export type KeyValProvider = {
+	// basic data
+	del(key: string): Promise<void>;
+	getBuffer(key: string): Promise<Readonly<Uint8Array>>;
 	set(key: string, value: Readonly<Uint8Array>): Promise<void>;
 	// lists
 	clear(key: string): Promise<void>;
@@ -16,26 +25,16 @@ export type EphemeralProvider = {
 	disconnect(): void;
 };
 
-export type PersistenceProvider = {
-	// key/val
-	del(key: string): Promise<void>;
-	get(key: string): Promise<Readonly<Uint8Array>>;
-	set(key: string, value: Readonly<Uint8Array>): Promise<void>;
-	copy(from: string, to: string): Promise<void>;
-	save(): Promise<void>;
-	disconnect(): void;
-};
-
-export type PubsubProvider = {
+export type PubSubProvider = {
 	// pub/sub
 	publish(key: string, message: string): Promise<void>;
-	subscribe(key: string, listener: PubsubListener): Promise<PubsubSubscription>;
+	subscribe(key: string, listener: PubSubListener): Promise<PubSubSubscription>;
 	disconnect(): void;
 };
 
-export type PubsubListener = (message: string) => void;
+export type PubSubListener = (message: string) => void;
 
-export type PubsubSubscription = {
+export type PubSubSubscription = {
 	disconnect(): void;
 	// publishing from a subscription will not send that message to your listener
 	publish(message: string): Promise<void>;
@@ -43,14 +42,14 @@ export type PubsubSubscription = {
 
 export class Provider {
 	constructor(
-		public readonly ephemeral: EphemeralProvider,
-		public readonly persistence: PersistenceProvider,
-		public readonly pubsub: PubsubProvider,
+		public readonly blob: BlobProvider,
+		public readonly ephemeral: KeyValProvider,
+		public readonly pubsub: PubSubProvider,
 	) {}
 
 	disconnect() {
 		this.ephemeral.disconnect();
-		this.persistence.disconnect();
+		this.blob.disconnect();
 		this.pubsub.disconnect();
 	}
 }

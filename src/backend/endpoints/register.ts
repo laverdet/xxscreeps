@@ -71,7 +71,7 @@ const SetUsernameEndpoint: Endpoint = {
 			context.state.providerKey = undefined;
 			await Promise.all([
 				context.backend.auth.save(),
-				context.backend.persistence.set(`user/${user.id}/info`, userBlob),
+				context.shard.storage.blob.set(`user/${user.id}/info`, userBlob),
 			]);
 			// Success
 			return { ok: 1, _id: user.id };

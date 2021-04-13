@@ -12,7 +12,6 @@ export class BackendContext {
 	private constructor(
 		public readonly shard: Shard,
 		public readonly storage: Storage.Provider,
-		public readonly persistence: Storage.PersistenceProvider,
 		public readonly gameChannel: Subscription<GameMessage>,
 		public readonly world: World,
 		public readonly accessibleRooms: Set<string>,
@@ -32,13 +31,13 @@ export class BackendContext {
 		// Connect to services
 		const shard = await Shard.connect('shard0');
 		const storage = await Storage.connect('shard0');
-		const { persistence } = storage;
+		const { blob } = storage;
 		const gameChannel = await new Channel<GameMessage>(storage, 'main').subscribe();
-		const world = readWorld(await persistence.get('terrain'));
-		const game = GameSchema.read(await persistence.get('game'));
+		const world = readWorld(await blob.get('terrain'));
+		const game = GameSchema.read(await blob.get('game'));
 		const gameMutex = await Mutex.connect(storage, 'game');
 		const auth = await Authentication.connect(storage);
-		const context = new BackendContext(shard, storage, storage.persistence, gameChannel, world, new Set(game.rooms.keys()), gameMutex, auth, game.time);
+		const context = new BackendContext(shard, storage, gameChannel, world, new Set(game.rooms.keys()), gameMutex, auth, game.time);
 		return context;
 	}
 
@@ -49,6 +48,6 @@ export class BackendContext {
 	}
 
 	async loadUser(id: string) {
-		return User.read(await this.storage.persistence.get(`user/${id}/info`));
+		return User.read(await this.storage.blob.get(`user/${id}/info`));
 	}
 }

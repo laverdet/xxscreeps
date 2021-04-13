@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type { EphemeralProvider } from '../provider';
+import type { KeyValProvider } from '../provider';
 import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
 
-export abstract class LocalEphemeralProvider extends Responder implements EphemeralProvider {
+export abstract class LocalKeyValProvider extends Responder implements KeyValProvider {
 	abstract del(key: string): Promise<void>;
-	abstract get(key: string): Promise<Readonly<Uint8Array>>;
+	abstract getBuffer(key: string): Promise<Readonly<Uint8Array>>;
 	abstract set(key: string, value: Readonly<Uint8Array>): Promise<void>;
 
 	abstract clear(key: string): Promise<void>;
@@ -17,15 +17,15 @@ export abstract class LocalEphemeralProvider extends Responder implements Epheme
 	abstract srem(key: string, values: string[]): Promise<number>;
 
 	static async create(name: string) {
-		return create(LocalEphemeralProviderHost, `ephemeral://${name}`);
+		return create(LocalKeyValProviderHost, `keyval://${name}`);
 	}
 
 	static connect(name: string) {
-		return connect(LocalEphemeralProviderClient, `ephemeral://${name}`);
+		return connect(LocalKeyValProviderClient, `keyval://${name}`);
 	}
 }
 
-class LocalEphemeralProviderHost extends ResponderHost(LocalEphemeralProvider) {
+class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 	private readonly blobs = new Map<string, Readonly<Uint8Array>>();
 	private readonly lists = new Map<string, Readonly<Uint8Array>[]>();
 	private readonly sets = new Map<string, Set<string>>();
@@ -34,7 +34,7 @@ class LocalEphemeralProviderHost extends ResponderHost(LocalEphemeralProvider) {
 		this.blobs.delete(key);
 	}
 
-	async get(key: string): Promise<Readonly<Uint8Array>> {
+	async getBuffer(key: string): Promise<Readonly<Uint8Array>> {
 		const blob = this.blobs.get(key);
 		if (blob) {
 			return blob;
@@ -118,13 +118,13 @@ class LocalEphemeralProviderHost extends ResponderHost(LocalEphemeralProvider) {
 	}
 }
 
-class LocalEphemeralProviderClient extends ResponderClient(LocalEphemeralProvider) {
+class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 	del(key: string) {
 		return this.request('del', key);
 	}
 
-	get(key: string) {
-		return this.request('get', key);
+	getBuffer(key: string) {
+		return this.request('getBuffer', key);
 	}
 
 	set(key: string, value: Readonly<Uint8Array>) {

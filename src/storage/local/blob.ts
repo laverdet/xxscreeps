@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
 import { listen } from 'xxscreeps/utility/async';
-import type { PersistenceProvider } from '../provider';
+import type { BlobProvider } from '../provider';
 import { create, connect, Responder, ResponderClient, ResponderHost } from './responder';
 
 const fragmentNameWhitelist = /^[a-zA-Z0-9/-]+$/;
@@ -13,7 +13,7 @@ function copy(buffer: Readonly<Uint8Array>) {
 	return copy;
 }
 
-export abstract class LocalPersistenceProvider extends Responder implements PersistenceProvider {
+export abstract class LocalBlobProvider extends Responder implements BlobProvider {
 	abstract del(key: string): Promise<void>;
 	abstract get(key: string): Promise<Readonly<Uint8Array>>;
 	abstract set(key: string, value: Readonly<Uint8Array>): Promise<void>;
@@ -74,15 +74,15 @@ export abstract class LocalPersistenceProvider extends Responder implements Pers
 			// Try once more
 			await tryLock();
 		})();
-		return create(LocalPersistenceHost, `persistence://${path}`, path);
+		return create(LocalBlobHost, `file://${path}`, path);
 	}
 
 	static connect(path: string) {
-		return connect(LocalPersistenceClient, `persistence://${path}`);
+		return connect(LocalBlobClient, `file://${path}`);
 	}
 }
 
-class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
+class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 	private bufferedBlobs = new Map<string, Readonly<Uint8Array>>();
 	private bufferedDeletes = new Set<string>();
 	private readonly knownPaths = new Set<string>();
@@ -218,7 +218,7 @@ class LocalPersistenceHost extends ResponderHost(LocalPersistenceProvider) {
 	}
 }
 
-class LocalPersistenceClient extends ResponderClient(LocalPersistenceProvider) {
+class LocalBlobClient extends ResponderClient(LocalBlobProvider) {
 	del(key: string) {
 		return this.request('del', key);
 	}

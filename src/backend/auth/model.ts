@@ -32,7 +32,7 @@ export class Authentication {
 	}
 
 	static async connect(storage: Storage.Provider) {
-		return new Authentication(storage, read(await storage.persistence.get('auth')));
+		return new Authentication(storage, read(await storage.blob.get('auth')));
 	}
 
 	associateUser(providerKey: string, userId: string) {
@@ -57,6 +57,6 @@ export class Authentication {
 	}
 
 	save() {
-		return this.storage.persistence.set('auth', write(this.data));
+		return this.storage.blob.set('auth', write(this.data));
 	}
 }

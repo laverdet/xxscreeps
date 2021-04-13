@@ -24,7 +24,7 @@ function extraIntentsListKey(roomName: string, time: number) {
 export async function flushRunnerIntentsForRoom(shard: Shard, roomName: string, userId: string): Promise<RoomIntentPayload> {
 	const key = intentsBlobKey(roomName, userId);
 	const [ intentsBlob ] = await Promise.all([
-		shard.storage.ephemeral.get(key),
+		shard.storage.ephemeral.getBuffer(key),
 		shard.storage.ephemeral.del(key),
 	]);
 	return JSON.parse(typedArrayToString(new Uint16Array(intentsBlob.buffer)));

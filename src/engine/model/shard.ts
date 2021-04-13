@@ -23,11 +23,11 @@ export class Shard {
 	static async connect(shard: string) {
 		// Connect to shard, load const data
 		const provider = await connect(shard);
-		const terrainBlob = await provider.persistence.get('terrain');
+		const terrainBlob = await provider.blob.get('terrain');
 		const gameChannel = await new Channel<GameMessage>(provider, 'main').subscribe();
 		// Create instance (which subscribes to tick notification) and then read current
 		const instance = new Shard(provider, terrainBlob, gameChannel);
-		const game = GameSchema.read(await provider.persistence.get('game'));
+		const game = GameSchema.read(await provider.blob.get('game'));
 		instance.time = Math.max(game.time, instance.time);
 		return instance;
 	}
@@ -50,7 +50,7 @@ export class Shard {
 	 */
 	async loadRoomBlob(name: string, time = this.time) {
 		this.checkTime(time, -1);
-		return this.storage.persistence.get(this.roomKeyForTime(name, time));
+		return this.storage.blob.get(this.roomKeyForTime(name, time));
 	}
 
 	/**
@@ -68,7 +68,7 @@ export class Shard {
 	 */
 	async saveRoomBlob(name: string, time: number, blob: Readonly<Uint8Array>) {
 		this.checkTime(time, 1);
-		return this.storage.persistence.set(this.roomKeyForTime(name, time), blob);
+		return this.storage.blob.set(this.roomKeyForTime(name, time), blob);
 	}
 
 	/**
@@ -77,7 +77,7 @@ export class Shard {
 	 */
 	async copyRoomFromPreviousTick(name: string, time: number) {
 		this.checkTime(time, 1);
-		return this.storage.persistence.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
+		return this.storage.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
 	}
 
 	private checkTime(time: number, delta: number) {

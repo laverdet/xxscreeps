@@ -1,5 +1,5 @@
 import { Worker, isMainThread, parentPort } from 'worker_threads';
-import { PubsubListener, PubsubProvider, PubsubSubscription } from '../provider';
+import { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider';
 import { listen } from 'xxscreeps/utility/async';
 import { staticCast } from 'xxscreeps/utility/utility';
 
@@ -9,7 +9,7 @@ type Subscription = {
 	readonly listener: Listener;
 };
 
-type PubsubMessage = {
+type PubSubMessage = {
 	type: 'pubsubMessage';
 	name: string;
 	message: string;
@@ -31,8 +31,8 @@ type UnsubscribeRequest = {
 };
 
 type UnknownMessage = { type: null };
-type MasterMessage = PubsubMessage | SubscriptionConfirmation | UnknownMessage;
-type WorkerMessage = PubsubMessage | SubscriptionRequest | UnsubscribeRequest | UnknownMessage;
+type MasterMessage = PubSubMessage | SubscriptionConfirmation | UnknownMessage;
+type WorkerMessage = PubSubMessage | SubscriptionRequest | UnsubscribeRequest | UnknownMessage;
 
 /**
  * Utility functions to manage subscriptions in a single isolate
@@ -68,29 +68,29 @@ function publish(name: string, message: string, id?: string) {
 /**
  * Common classes for parent / worker threads
  */
-export abstract class LocalPubsubProvider implements PubsubProvider {
+export abstract class LocalPubSubProvider implements PubSubProvider {
 	abstract disconnect(): void;
 	abstract publish(key: string, message: string): Promise<void>;
-	abstract subscribe(key: string, listener: (message: string) => void): Promise<PubsubSubscription>;
+	abstract subscribe(key: string, listener: (message: string) => void): Promise<PubSubSubscription>;
 
 	constructor(protected readonly name: string) {}
 
 	static connect(name: string) {
-		return new (isMainThread ? LocalPubsubProviderParent : LocalPubsubProviderWorker)(name);
+		return new (isMainThread ? LocalPubSubProviderParent : LocalPubSubProviderWorker)(name);
 	}
 
 	static initializeWorker(worker: Worker) {
-		LocalPubsubProviderParent.initializeWorker(worker);
+		LocalPubSubProviderParent.initializeWorker(worker);
 	}
 }
 
-abstract class LocalPubsubSubscription implements PubsubSubscription {
+abstract class LocalPubSubSubscription implements PubSubSubscription {
 	abstract publish(message: string): Promise<void>;
 
 	readonly listener: Listener;
 	readonly id = `${Math.floor(Math.random() * 2 ** 52).toString(16)}`;
 
-	constructor(readonly name: string, listener: PubsubListener) {
+	constructor(readonly name: string, listener: PubSubListener) {
 		connect(this);
 		this.listener = (message, id) => {
 			if (this.id !== id) {
@@ -107,7 +107,7 @@ abstract class LocalPubsubSubscription implements PubsubSubscription {
 /**
  * Subscriptions created within the master process
  */
-class LocalPubsubProviderParent extends LocalPubsubProvider {
+class LocalPubSubProviderParent extends LocalPubSubProvider {
 
 	// Install listener on newly created workers. Called from the host/parent thread.
 	static initializeWorker(worker: Worker) {
@@ -186,13 +186,13 @@ class LocalPubsubProviderParent extends LocalPubsubProvider {
 		return Promise.resolve();
 	}
 
-	subscribe(key: string, listener: PubsubListener) {
+	subscribe(key: string, listener: PubSubListener) {
 		return Promise.resolve(new ParentSubscription(`${this.name}/${key}`, listener));
 	}
 }
 
 
-class ParentSubscription extends LocalPubsubSubscription {
+class ParentSubscription extends LocalPubSubSubscription {
 	publish(message: string) {
 		publish(this.name, message, this.id);
 		return Promise.resolve();
@@ -204,15 +204,15 @@ class ParentSubscription extends LocalPubsubSubscription {
  */
 let parentRefs = 0;
 
-class LocalPubsubProviderWorker extends LocalPubsubProvider {
+class LocalPubSubProviderWorker extends LocalPubSubProvider {
 	private static didInit = false;
 
 	// Install listener for all pubsubs in this thread
 	private static initializeThisWorker() {
-		if (LocalPubsubProviderWorker.didInit) {
+		if (LocalPubSubProviderWorker.didInit) {
 			return;
 		}
-		LocalPubsubProviderWorker.didInit = true;
+		LocalPubSubProviderWorker.didInit = true;
 		parentPort!.on('message', (message: MasterMessage) => {
 			if (message.type === 'pubsubMessage') {
 				publish(message.name, message.message, message.id);
@@ -231,8 +231,8 @@ class LocalPubsubProviderWorker extends LocalPubsubProvider {
 		return Promise.resolve();
 	}
 
-	subscribe(key: string, listener: PubsubListener) {
-		LocalPubsubProviderWorker.initializeThisWorker();
+	subscribe(key: string, listener: PubSubListener) {
+		LocalPubSubProviderWorker.initializeThisWorker();
 		const subscription = new WorkerSubscription(`${this.name}/${key}`, listener);
 		if (++parentRefs === 1) {
 			parentPort!.ref();
@@ -255,7 +255,7 @@ class LocalPubsubProviderWorker extends LocalPubsubProvider {
 	}
 }
 
-class WorkerSubscription extends LocalPubsubSubscription {
+class WorkerSubscription extends LocalPubSubSubscription {
 	disconnect() {
 		super.disconnect();
 		parentPort!.postMessage(staticCast<WorkerMessage>({

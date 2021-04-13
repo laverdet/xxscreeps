@@ -27,10 +27,10 @@ try {
 		const gameMutex = await Mutex.connect(storage, 'game');
 		try {
 			const id = await gameMutex.scope(async() => {
-				const { persistence } = storage;
-				const userIds = GameSchema.read(await persistence.get('game')).users;
+				const { blob } = storage;
+				const userIds = GameSchema.read(await blob.get('game')).users;
 				for (const userId of userIds) {
-					const user = UserSchema.read(await persistence.get(`user/${userId}/info`));
+					const user = UserSchema.read(await blob.get(`user/${userId}/info`));
 					if (user.username === attachTo) {
 						return userId;
 					}

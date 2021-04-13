@@ -176,12 +176,12 @@ const game = {
 fs.rmdirSync(Config.storage?.path ?? './data', { recursive: true });
 {
 	const storage = await Storage.connect('shard0');
-	await storage.persistence.set('game', GameSchema.write(game));
-	await storage.persistence.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
+	await storage.blob.set('game', GameSchema.write(game));
+	await storage.blob.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
 	storage.disconnect();
 }
 const shard = await Shard.connect('shard0');
-const { persistence } = shard.storage;
+const { blob } = shard.storage;
 
 // Save rooms
 for (const room of rooms) {
@@ -190,7 +190,7 @@ for (const room of rooms) {
 
 // Save users
 for (const user of users) {
-	await persistence.set(`user/${user.id}/info`, User.write(user));
+	await blob.set(`user/${user.id}/info`, User.write(user));
 }
 
 // Save user memory
@@ -201,12 +201,12 @@ for (const user of users) {
 		for (let ii = 0; ii < data.length; ++ii) {
 			data[ii] = memory.charCodeAt(ii);
 		}
-		await persistence.set(`memory/${user.id}`, new Uint8Array(data.buffer));
+		await blob.set(`memory/${user.id}`, new Uint8Array(data.buffer));
 	}
 }
 
 // Write placeholder authentication data
-await persistence.set('auth', Auth.write(users.map(user => ({
+await blob.set('auth', Auth.write(users.map(user => ({
 	key: `username:${Auth.flattenUsername(user.username)}`,
 	user: user.id,
 }))));
@@ -217,12 +217,12 @@ await Promise.all(db.getCollection('users.code').find().map(async row => {
 		const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
 		return [ name, data as string ];
 	}));
-	await persistence.set(`user/${row.user}/${row._id}`, CodeSchema.write({
+	await blob.set(`user/${row.user}/${row._id}`, CodeSchema.write({
 		modules,
 	}));
 }));
 
 // Flush everything to disk
-await persistence.save();
+await blob.save();
 shard.disconnect();
 Storage.terminate();

@@ -122,12 +122,12 @@ registerBackendRoute({
 			});
 
 			// Make room & user active
-			const game = GameSchema.read(await context.backend.persistence.get('game'));
+			const game = GameSchema.read(await context.shard.storage.blob.get('game'));
 			game.users.add(user.id);
 
 			// Save
 			await Promise.all([
-				context.backend.persistence.set('game', GameSchema.write(game)),
+				context.shard.storage.blob.set('game', GameSchema.write(game)),
 				saveUser(context.backend, user),
 				context.backend.shard.saveRoom(pos.roomName, context.shard.time, room),
 			]);

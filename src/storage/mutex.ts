@@ -1,6 +1,6 @@
 import { Deferred } from 'xxscreeps/utility/deferred';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
-import { EphemeralProvider, Provider } from './provider';
+import { KeyValProvider, Provider } from './provider';
 
 type Message = 'waiting' | 'unlocked';
 
@@ -139,7 +139,7 @@ export class Mutex {
 }
 
 class Lock {
-	private readonly ephemeral: EphemeralProvider;
+	private readonly ephemeral: KeyValProvider;
 	constructor(
 		storage: Provider,
 		private readonly name: string,

@@ -62,7 +62,7 @@ try {
 					Fn.forEach(roomsWakingUp, room => activeRooms.add(room));
 				}
 			} else {
-				gameMetadata = GameSchema.read(await storage.persistence.get('game'));
+				gameMetadata = GameSchema.read(await storage.blob.get('game'));
 				activeRooms = new Set(gameMetadata.rooms);
 				activeUsers = [ ...gameMetadata.users ];
 				sleepingRooms.clear();
@@ -142,7 +142,7 @@ try {
 
 			// Update game state
 			++gameMetadata.time;
-			await storage.persistence.set('game', GameSchema.write(gameMetadata));
+			await storage.blob.set('game', GameSchema.write(gameMetadata));
 
 			// Finish up
 			const now = Date.now();
@@ -169,7 +169,7 @@ try {
 	} while (true);
 
 	// Save on graceful exit
-	await storage.persistence.save();
+	await storage.blob.save();
 
 } finally {
 	// Clean up
