@@ -25,7 +25,7 @@ import { FlushFindCache, LookFor, MoveObject, Objects, InsertObject, RemoveObjec
 
 export type AnyRoomObject = RoomObject | InstanceType<typeof Room>[typeof Objects][number];
 
-export { LookConstants };
+export type { LookConstants };
 
 type LookForTypeInitial<Type extends LookConstants> = {
 	[key in LookConstants]: TypeOfLook<Type>;

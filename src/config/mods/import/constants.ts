@@ -1,5 +1,6 @@
 // All constants from mods are added here for TypeScript's eyes only. nodejs will include
 // `constants.ts`.
+export {};
 throw new Error('nodejs is misconfigured');
 export * from 'xxscreeps/mods/combat/constants';
 export * from 'xxscreeps/mods/construction/constants';

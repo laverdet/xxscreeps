@@ -15,8 +15,9 @@ import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Direction, getDirection } from './direction';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
 
+export type { Direction } from './direction';
 export { isBorder, isNearBorder } from '../terrain';
-export { Direction, getOffsetsFromDirection, getPositonInDirection, iterateNeighbors } from './direction';
+export { getOffsetsFromDirection, getPositonInDirection, iterateNeighbors } from './direction';
 export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './name';
 
 type FindClosestByPathOptions<Type> =

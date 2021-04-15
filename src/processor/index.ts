@@ -3,7 +3,8 @@ import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { ObjectProcessorContext } from './room';
 import { PreTick, Processors, Tick } from './symbols';
-export { ObjectReceivers, RoomIntentPayload, registerRoomTickProcessor } from './room';
+export type { ObjectReceivers, RoomIntentPayload } from './room';
+export { registerRoomTickProcessor } from './room';
 
 // `RoomObject` type definitions
 type IntentProcessorHolder = Dictionary<(receiver: any, context: ObjectProcessorContext, ...data: any) => void>;
