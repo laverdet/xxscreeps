@@ -1,7 +1,7 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import {
-	acquireIntentsForRoom, begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey,
-	roomDidProcess, roomsDidFinalize, sleepRoomUntil, updateUserRoomRelationships,
+	acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey,
+	getProcessorChannel, processRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships,
 } from 'xxscreeps/engine/model/processor';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { getUsersInRoom } from 'xxscreeps/game/room/room';
@@ -47,42 +47,32 @@ try {
 				]);
 
 				// Create processor context and add intents
-				const context = new RoomProcessorContext(room, time);
+				const context = new RoomProcessorContext(shard, room, time);
 				for (const { userId, intents } of intentsPayloads) {
 					context.saveIntents(userId, intents);
 				}
 
 				// Run first process phase
-				context.process();
+				await context.process();
 				processedRooms.set(roomName, context);
-				await roomDidProcess(shard, roomName, time);
 			}
 
 		} else if (message.type === 'finalize') {
 			// Second processing phase. This waits until all player code and first phase processing has
 			// run.
 			const { time } = message;
-			await Promise.all(Fn.map(processedRooms, async([ roomName, context ]) => {
-				const userIds = getUsersInRoom(context.room);
-				await Promise.all([
-					// Update room to user map
-					await updateUserRoomRelationships(shard, roomName, userIds),
-					// Save updated room blob
-					function() {
-						if (context.receivedUpdate) {
-							return shard.saveRoom(roomName, time, context.room);
-						} else {
-							return shard.copyRoomFromPreviousTick(roomName, time);
-						}
-					}(),
-				]);
-				// Mark inactive if needed. Must be *after* saving room, because this copies from current
-				// tick.
-				if (userIds.size === 0 && context.nextUpdate !== time + 1) {
-					return sleepRoomUntil(shard, roomName, time, context.nextUpdate);
-				}
-			}));
-			await roomsDidFinalize(shard, processedRooms.size, time);
+			await Promise.all(Fn.map(processedRooms.values(), context => context.finalize()));
+			let count = processedRooms.size;
+			// Also finalize rooms which were sent inter-room intents
+			for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
+				const room = await shard.loadRoom(roomName, time - 1);
+				const context = new RoomProcessorContext(shard, room, time);
+				await context.process(true);
+				await context.finalize();
+				++count;
+			}
+			// Done
+			await roomsDidFinalize(shard, count, time);
 			processedRooms.clear();
 		}
 	}

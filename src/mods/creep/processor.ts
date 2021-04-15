@@ -1,4 +1,3 @@
-import type { Direction } from 'xxscreeps/game/position';
 import type { LookForType } from 'xxscreeps/game/room';
 import type { Resource } from 'xxscreeps/mods/resource/resource';
 import type { ResourceType, WithStore } from 'xxscreeps/mods/resource/store';
@@ -11,9 +10,13 @@ import * as Fn from 'xxscreeps/utility/functional';
 import { Creep, PartType } from 'xxscreeps/mods/creep/creep';
 // eslint-disable-next-line no-duplicate-imports
 import * as CreepLib from 'xxscreeps/mods/creep/creep';
+import { Direction, generateRoomName, parseRoomName, RoomPosition } from 'xxscreeps/game/position';
 import { NextDecayTime, StructureRoad } from 'xxscreeps/mods/road/road';
 import { moveObject, removeObject } from 'xxscreeps/game/room/methods';
 import { ActionLog } from 'xxscreeps/game/action-log';
+import { isBorder } from 'xxscreeps/game/terrain';
+import { writeRoomObject } from 'xxscreeps/engine/room';
+import { typedArrayToString } from 'xxscreeps/utility/string';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import * as Movement from 'xxscreeps/processor/movement';
 // eslint-disable-next-line no-duplicate-imports
@@ -125,6 +128,25 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		// Reduce fatigue
 		creep.fatigue -= Math.min(creep.fatigue, calculatePower(creep, C.MOVE, 2));
 		context.setActive();
+	}
+
+	// Move creep to next room
+	if (isBorder(creep.pos.x, creep.pos.y)) {
+		const { rx, ry } = parseRoomName(creep.pos.roomName);
+		const next = function() {
+			if (creep.pos.x === 0) {
+				return new RoomPosition(49, creep.pos.y, generateRoomName(rx - 1, ry));
+			} else if (creep.pos.x === 49) {
+				return new RoomPosition(0, creep.pos.y, generateRoomName(rx + 1, ry));
+			} else if (creep.pos.y === 0) {
+				return new RoomPosition(creep.pos.x, 49, generateRoomName(rx, ry - 1));
+			} else {
+				return new RoomPosition(creep.pos.x, 0, generateRoomName(rx, ry + 1));
+			}
+		}();
+		removeObject(creep);
+		creep.pos = next;
+		context.sendRoomIntent(next.roomName, 'import', typedArrayToString(writeRoomObject(creep)));
 	}
 });
 

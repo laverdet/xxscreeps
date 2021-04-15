@@ -108,7 +108,17 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 		pos => ({ pos, range }));
 
 	// Invoke the big boy pathfinder
-	return search(origin, goalsWithRange, internalOptions);
+	const result = search(origin, goalsWithRange, internalOptions);
+
+	// Add last position for automatic {range:1} paths
+	if (
+		(options.range ?? 0) === 0 &&
+		result.path.length > 0 && goals.length === 1 &&
+		result.path[result.path.length - 1].getRangeTo(goals[0]) === 1
+	) {
+		result.path.push(goals[0]);
+	}
+	return result;
 }
 
 function use() {}

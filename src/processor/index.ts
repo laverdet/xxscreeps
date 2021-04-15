@@ -3,7 +3,7 @@ import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { ObjectProcessorContext } from './room';
 import { PreTick, Processors, Tick } from './symbols';
-export type { ObjectReceivers, RoomIntentPayload } from './room';
+export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room';
 export { registerRoomTickProcessor } from './room';
 
 // `RoomObject` type definitions

@@ -1,6 +1,8 @@
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
-import type { IntentsForReceiver, IntentReceivers } from '.';
+import type { Shard } from 'xxscreeps/engine/model/shard';
+import type { IntentsForReceiver, IntentReceivers, IntentParameters } from '.';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Game from 'xxscreeps/game';
 import * as Movement from 'xxscreeps/processor/movement';
 import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
@@ -9,6 +11,9 @@ import { Processors, RoomTickProcessor, Tick, roomTickProcessors, PreTick } from
 
 import 'xxscreeps/config/mods/import/game';
 import 'xxscreeps/config/mods/import/processor';
+import { acquireFinalIntentsForRoom, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/model/processor';
+import { getOrSet } from 'xxscreeps/utility/utility';
+import { getUsersInRoom } from 'xxscreeps/game/room/room';
 
 // Register per-tick per-room processor
 export function registerRoomTickProcessor(tick: RoomTickProcessor) {
@@ -20,6 +25,10 @@ type ObjectIntent = Partial<Record<IntentsForReceiver<ObjectReceivers>, any>>;
 export type RoomIntentPayload = {
 	local: Partial<Record<IntentsForReceiver<Room>, any[]>>;
 	object: Partial<Record<string, ObjectIntent>>;
+};
+export type SingleIntent = {
+	intent: string;
+	args: any[];
 };
 
 export interface ObjectProcessorContext {
@@ -38,6 +47,12 @@ export interface ObjectProcessorContext {
 	 * to process.
 	 */
 	wakeAt(time: number): void;
+
+	/**
+	 * Send an intent to another room
+	 */
+	sendRoomIntent<Intent extends IntentsForReceiver<Room>>(
+		roomName: string, intent: Intent, ...params: IntentParameters<Room, Intent>): void;
 }
 
 // Room processor context saved been phase 1 (process) and phase 2 (flush)
@@ -45,13 +60,15 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 	public receivedUpdate = false;
 	public nextUpdate = Infinity;
 	private readonly intents = new Map<string, RoomIntentPayload>();
+	private readonly interRoomIntents = new Map<string, SingleIntent[]>();
 
 	constructor(
+		private readonly shard: Shard,
 		public readonly room: Room,
 		public readonly time: number,
 	) {}
 
-	process() {
+	async process(isFinalization = false) {
 		this.receivedUpdate = false;
 		this.nextUpdate = Infinity;
 
@@ -104,6 +121,43 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 				object[Tick]?.(object, this);
 			}
 		});
+
+		// Publish results
+		if (!isFinalization) {
+			await Promise.all(Fn.map(this.interRoomIntents, ([ roomName, intents ]) =>
+				publishInterRoomIntents(this.shard, roomName, this.time, intents)));
+			await roomDidProcess(this.shard, this.room.name, this.time);
+		}
+	}
+
+	async finalize() {
+		// Run inter-room intents
+		const intentPayloads = await acquireFinalIntentsForRoom(this.shard, this.room.name, this.time);
+		if (intentPayloads.length) {
+			Game.runWithState([ this.room ], this.time, () => {
+				const processors = this.room[Processors]!;
+				for (const intents of intentPayloads) {
+					for (const { intent, args } of intents) {
+						processors[intent]?.(this.room, this, ...args);
+					}
+				}
+			});
+		}
+
+		const userIds = getUsersInRoom(this.room);
+		await Promise.all([
+			// Update room to user map
+			updateUserRoomRelationships(this.shard, this.room.name, userIds),
+			// Save updated room blob
+			this.receivedUpdate ?
+				this.shard.saveRoom(this.room.name, this.time, this.room) :
+				this.shard.copyRoomFromPreviousTick(this.room.name, this.time),
+		]);
+		// Mark inactive if needed. Must be *after* saving room, because this copies from current
+		// tick.
+		if (userIds.size === 0 && this.nextUpdate !== this.time + 1) {
+			return sleepRoomUntil(this.shard, this.room.name, this.time, this.nextUpdate);
+		}
 	}
 
 	saveIntents(user: string, intentsForUser: RoomIntentPayload) {
@@ -125,6 +179,10 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 		} else {
 			this.intents.set(user, intentsForUser);
 		}
+	}
+
+	sendRoomIntent(roomName: string, intent: string, ...args: any[]) {
+		getOrSet(this.interRoomIntents, roomName, () => []).push({ intent, args });
 	}
 
 	didUpdate() {

@@ -33,6 +33,7 @@ export type KeyValProvider = {
 	zadd(key: string, members: [ number, string ][]): Promise<number>;
 	zcard(key: string): Promise<number>;
 	zincrBy(key: string, delta: number, member: string): Promise<number>;
+	zmscore(key: string, members: string[]): Promise<(number | null)[]>;
 	zrange(key: string, min: number, max: number, byscore?: 'byscore'): Promise<string[]>;
 	zrem(key: string, members: string[]): Promise<number>;
 	zunionStore(key: string, keys: string[]): Promise<number>;

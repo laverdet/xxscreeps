@@ -1,4 +1,4 @@
-import type { RoomIntentPayload } from 'xxscreeps/processor';
+import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/processor';
 import type { Shard } from './shard';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Channel } from 'xxscreeps/storage/channel';
@@ -21,14 +21,16 @@ export const userToRoomsSetKey = (userId: string) =>
 
 export const processRoomsSetKey = (time: number) =>
 	`tick${time % 2}/processRooms`;
-export const finalizeRoomsSetKey = (time: number) =>
-	`tick${time % 2}/finalizeRooms`;
+export const finalizeExtraRoomsSetKey = (time: number) =>
+	`tick${time % 2}/finalizeExtraRooms`;
 const processRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/processRoomsPending`;
 const finalizedRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/finalizedRoomsPending`;
 const intentsListForRoomKey = (time: number, roomName: string) =>
 	`tick${time % 2}/rooms/${roomName}/intents`;
+const finalIntentsListForRoomKey = (time: number, roomName: string) =>
+	`tick${time % 2}/rooms/${roomName}/finalIntents`;
 
 async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, time: number, intents?: RoomIntentPayload) {
 	return intents && shard.scratch.rpush(intentsListForRoomKey(time, roomName), [ JSON.stringify({ userId, intents }) ]);
@@ -57,12 +59,28 @@ export async function publishRunnerIntentsForRoom(shard: Shard, userId: string, 
 	}
 }
 
+export async function publishInterRoomIntents(shard: Shard, roomName: string, time: number, intents: SingleIntent[]) {
+	const active = (await shard.scratch.zmscore(activeRoomsKey, [ roomName ]))[0] !== null;
+	return Promise.all([
+		// Add room to finalization set
+		active ? undefined :
+			shard.scratch.sadd(finalizeExtraRoomsSetKey(time), [ roomName ]),
+		// Save intents
+		shard.scratch.rpush(finalIntentsListForRoomKey(time, roomName), [ JSON.stringify(intents) ]),
+	]);
+}
+
 export async function acquireIntentsForRoom(shard: Shard, roomName: string, time: number) {
 	const payloads = await shard.scratch.lpop(intentsListForRoomKey(time, roomName), -1);
 	return payloads.map(json => {
 		const value: { userId: string; intents: RoomIntentPayload } = JSON.parse(json);
 		return value;
 	});
+}
+
+export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string, time: number) {
+	const payloads = await shard.scratch.lpop(finalIntentsListForRoomKey(time, roomName), -1);
+	return payloads.map((json): SingleIntent[] => JSON.parse(json));
 }
 
 export async function begetRoomProcessQueue(shard: Shard, currentTime: number, time: number) {
@@ -85,15 +103,15 @@ export async function roomDidProcess(shard: Shard, roomName: string, time: numbe
 		// Decrement count of remaining rooms to process
 		shard.scratch.decr(processRoomsPendingKey(time)),
 		// Add this room to finalization set
-		shard.scratch.sadd(finalizeRoomsSetKey(time), [ roomName ]),
+		shard.scratch.incr(finalizedRoomsPendingKey(time)),
 	]);
 	if (count === 0) {
-		// Save total count of finalization set
-		const [ finalizeCount ] = await Promise.all([
-			shard.scratch.scard(finalizeRoomsSetKey(time)),
-			shard.scratch.del(finalizeRoomsSetKey(time)),
-		]);
-		await shard.scratch.set(finalizedRoomsPendingKey(time), finalizeCount);
+		// Count all rooms which were woken due to inter-room intents
+		const extraCount = await shard.scratch.scard(finalizeExtraRoomsSetKey(time));
+		if (extraCount) {
+			// Add inter-room intents to total pending count
+			await shard.scratch.incrBy(finalizedRoomsPendingKey(time), extraCount);
+		}
 		// Publish finalization task to workers
 		await getProcessorChannel(shard).publish({ type: 'finalize', time });
 	}

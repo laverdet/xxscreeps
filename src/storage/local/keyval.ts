@@ -50,6 +50,7 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 	abstract zadd(key: string, members: [ number, string ][]): Promise<number>;
 	abstract zcard(key: string): Promise<number>;
 	abstract zincrBy(key: string, delta: number, member: string): Promise<number>;
+	abstract zmscore(key: string, members: string[]): Promise<(number | null)[]>;
 	abstract zrange(key: string, min: number, max: number, byscore?: 'byscore'): Promise<string[]>;
 	abstract zrem(key: string, members: string[]): Promise<number>;
 	abstract zunionStore(key: string, keys: string[]): Promise<number>;
@@ -265,6 +266,15 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		return score;
 	}
 
+	async zmscore(key: string, members: string[]) {
+		const set: SortedSet<string> | undefined = this.data.get(key);
+		if (set) {
+			return members.map(member => set.score(member) ?? null);
+		} else {
+			return members.map(() => null);
+		}
+	}
+
 	async zrange(key: string, min: number, max: number, byscore?: 'byscore') {
 		const set: SortedSet<string> | undefined = this.data.get(key);
 		if (set) {
@@ -380,6 +390,10 @@ class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 
 	zincrBy(key: string, delta: number, member: string) {
 		return this.request('zincrBy', key, delta, member);
+	}
+
+	zmscore(key: string, members: string[]) {
+		return this.request('zmscore', key, members);
 	}
 
 	zrange(key: string, min: number, max: number, byscore?: 'byscore') {

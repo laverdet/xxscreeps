@@ -1,10 +1,30 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
+import * as Game from 'xxscreeps/game';
 import { LookType, NextPosition, Owner, RoomObjectWithOwner } from 'xxscreeps/game/object';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { getOffsetsFromDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
+import { readRoomObject } from 'xxscreeps/engine/room';
 import { exchange } from 'xxscreeps/utility/utility';
+import { insertObject } from 'xxscreeps/game/room/methods';
+import { latin1ToBuffer } from 'xxscreeps/utility/string';
+import { registerIntentProcessor } from '.';
+
+// Add cross-room movement
+declare module '.' {
+	interface Intent {
+		movement: typeof intents;
+	}
+}
+const intents = registerIntentProcessor(Room, 'import', (room, context, objectPayload: string) => {
+	if (Game.me !== '') {
+		return;
+	}
+	const object = readRoomObject(latin1ToBuffer(objectPayload));
+	insertObject(room, object);
+	context.didUpdate();
+});
 
 // Saves list of creeps all trying to move onto the same cell
 const moves = new Map<number, { mover: RoomObjectWithOwner; power: number }[]>();

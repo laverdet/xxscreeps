@@ -416,7 +416,7 @@ export function getUsersInRoom(room: Room) {
 	const users = new Set<string>();
 	for (const objects of room[Objects]) {
 		const user = objects[RunnerUser]();
-		if (user !== null) {
+		if (user !== null && user.length > 2) {
 			users.add(user);
 		}
 	}
