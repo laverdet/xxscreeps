@@ -3,30 +3,17 @@ NEXT=
 NODE_ARGS=()
 SCRIPT_ARGS=()
 while (( "$#" )); do
-	if [[ "$1" == "--" ]]; then NEXT=1; shift; continue; fi
-	if [[ "$NEXT" ]]; then
-		SCRIPT_ARGS+=("$1")
-	else
-		NODE_ARGS+=("$1")
-	fi
+	if [[ "$NEXT" ]]; then SCRIPT_ARGS+=("$1");
+	elif [[ "$1" = -* ]]; then NODE_ARGS+=("$1");
+	else NEXT=1; continue; fi
 	shift
 done
 
-if [[ -z "$SCRIPT_ARGS" ]]; then
-	SCRIPT_ARGS=("${NODE_ARGS[@]}")
-	NODE_ARGS=()
-fi
-SCRIPT=$(sed -r 's/^/dist\//; s/\.ts$/.js/' <<< "${SCRIPT_ARGS[0]}")
-SCRIPT_ARGS=("${SCRIPT_ARGS[@]:1}")
-BASE_DIR=$(dirname $(realpath $0))
-MOD_CONFIG="$BASE_DIR"/dist/config/mods.resolved
-
-mkdir -p "$MOD_CONFIG"
-touch "$MOD_CONFIG"/backend.js "$MOD_CONFIG"/constants.js "$MOD_CONFIG"/game.js "$MOD_CONFIG"/processor.js
+BASE=$(dirname "$(realpath $0)")
 exec node "${NODE_ARGS[@]}" \
 	--enable-source-maps \
 	--experimental-specifier-resolution=node \
 	--experimental-import-meta-resolve \
 	--experimental-repl-await \
 	--stack-trace-limit=20 \
-	"$BASE_DIR/$SCRIPT" "${SCRIPT_ARGS[@]}"
+	"$BASE"/dist/config/entry "${SCRIPT_ARGS[@]}"

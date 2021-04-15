@@ -85,8 +85,4 @@ try {
 	await fs.writeFile(
 		new URL('./manifest.compiled.js', import.meta.url),
 		`export const json = ${JSON.stringify(JSON.stringify(mods))};\n`, 'utf8');
-
-	// Try again!
-	console.error('❗️ Mod configuration is out of date. Process must be restarted.');
-	process.exit(1);
 }
