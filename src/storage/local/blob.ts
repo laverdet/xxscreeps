@@ -7,11 +7,11 @@ import { listen } from 'xxscreeps/utility/async';
 import { connect, create, Responder, ResponderClient, ResponderHost } from './responder';
 import { registerStorageProvider } from '..';
 
-registerStorageProvider('file', [ 'blob' ], async uri => {
+registerStorageProvider('file', 'blob', async url => {
 	try {
-		return await connect(LocalBlobClient, uri);
+		return await connect(LocalBlobClient, `${url}`);
 	} catch (err) {
-		return await LocalBlobProvider.create(uri);
+		return await LocalBlobProvider.create(url);
 	}
 });
 
@@ -30,8 +30,8 @@ export abstract class LocalBlobProvider extends Responder implements BlobProvide
 	abstract copy(from: string, to: string): Promise<void>;
 	abstract save(): Promise<void>;
 
-	static async create(uri: string) {
-		const path = fileURLToPath(uri);
+	static async create(url: InstanceType<typeof URL>) {
+		const path = fileURLToPath(url);
 		// Ensure directory exists, or make it
 		await fs.mkdir(path, { recursive: true });
 
@@ -81,7 +81,7 @@ export abstract class LocalBlobProvider extends Responder implements BlobProvide
 			// Try once more
 			await tryLock();
 		})();
-		return create(LocalBlobHost, uri, path);
+		return create(LocalBlobHost, `${url}`, path);
 	}
 }
 

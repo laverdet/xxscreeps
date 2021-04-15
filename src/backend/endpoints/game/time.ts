@@ -16,7 +16,7 @@ const TimeEndpoint: Endpoint = {
 	execute(context) {
 		return {
 			ok: 1,
-			time: context.backend.time,
+			time: context.shard.time,
 		};
 	},
 };

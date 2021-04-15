@@ -41,7 +41,7 @@ export const mapSubscription: SubscriptionEndpoint = {
 			}
 		};
 		await update(this.context.shard.time);
-		return this.context.gameChannel.listen(event => {
+		return this.context.shard.channel.listen(event => {
 			if (event.type === 'tick' && Date.now() > lastTickTime + 250) {
 				update(event.time).catch(error => console.error(error));
 			}

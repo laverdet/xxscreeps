@@ -47,6 +47,10 @@ export class StructureController extends withOverlay(Structure.Structure, shape)
 		room.controller = undefined;
 	}
 
+	[RoomObject.RunnerUser]() {
+		return this.level > 0 ? this[RoomObject.Owner] : null;
+	}
+
 	[UpgradePowerThisTick]: number | undefined;
 }
 

@@ -1,20 +1,19 @@
 import 'xxscreeps/config/mods';
 import config from 'xxscreeps/config';
 import argv from 'xxscreeps/config/arguments';
+import * as UserSchema from 'xxscreeps/engine/metadata/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { listen } from 'xxscreeps/utility/async';
-import * as GameSchema from 'xxscreeps/engine/metadata/game';
-import * as UserSchema from 'xxscreeps/engine/metadata/user';
 import { Shard } from 'xxscreeps/engine/model/shard';
-import { Channel } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';
+import { getProcessorChannel } from 'xxscreeps/engine/model/processor';
 import { getConsoleChannel } from 'xxscreeps/engine/model/user';
-import type { ProcessorMessage, RunnerMessage, ServiceMessage } from '.';
+import { getRunnerChannel } from 'xxscreeps/engine/runner/model';
+import { getServiceChannel } from '.';
 
-// Start shared blob service
+// Connect to shard
 const shard = await Shard.connect('shard0');
-const storage = shard;
-const serviceChannel = await new Channel<ServiceMessage>(shard.pubsub, 'service').subscribe();
+const serviceChannel = await getServiceChannel(shard).subscribe();
 
 try {
 
@@ -24,10 +23,9 @@ try {
 		const gameMutex = await Mutex.connect('game', shard.scratch, shard.pubsub);
 		try {
 			const id = await gameMutex.scope(async() => {
-				const { blob } = storage;
-				const userIds = GameSchema.read(await blob.getBuffer('game')).users;
+				const userIds = await shard.data.smembers('users');
 				for (const userId of userIds) {
-					const user = UserSchema.read(await blob.getBuffer(`user/${userId}/info`));
+					const user = UserSchema.read(await shard.blob.getBuffer(`user/${userId}/info`));
 					if (user.username === attachTo) {
 						return userId;
 					}
@@ -73,12 +71,14 @@ try {
 		// Send shutdown message to main. Once main shuts down send shutdown message to processor and
 		// runner
 		const shutdownUnlisten = serviceChannel.listen(message => {
-			shutdownUnlisten();
 			if (message.type === 'mainDisconnected') {
+				shutdownUnlisten();
 				Promise.all([
-					new Channel<ProcessorMessage>(shard.pubsub, 'processor').publish({ type: 'shutdown' }),
-					new Channel<RunnerMessage>(shard.pubsub, 'runner').publish({ type: 'shutdown' }),
-				]).catch(console.error);
+					getProcessorChannel(shard).publish({ type: 'shutdown' }),
+					getRunnerChannel(shard).publish({ type: 'shutdown' }),
+				]).then(
+					() => console.log('Engine shut down successfully'),
+					console.error);
 			}
 		});
 		serviceChannel.publish({ type: 'shutdown' }).catch(console.error);
@@ -106,7 +106,6 @@ try {
 	}
 
 } finally {
-	// Shut down shared services
 	shard.disconnect();
 	serviceChannel.disconnect();
 }

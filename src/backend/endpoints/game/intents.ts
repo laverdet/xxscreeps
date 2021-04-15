@@ -1,5 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend';
-import { pushExtraIntentsForRoom } from 'xxscreeps/engine/model/processor';
+import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/model/processor';
 
 const AddObjectIntentEndpoint: Endpoint = {
 	path: '/api/game/add-object-intent',
@@ -15,7 +15,7 @@ const AddObjectIntentEndpoint: Endpoint = {
 		if (typeof room !== 'string' || typeof name !== 'string' || typeof id !== 'string') {
 			throw new TypeError('Invalid parameters');
 		}
-		await pushExtraIntentsForRoom(context.shard, room, context.shard.time + 2, userId, {
+		await pushIntentsForRoomNextTick(context.shard, room, userId, {
 			local: {},
 			object: {
 				[id]: { [name]: [] },

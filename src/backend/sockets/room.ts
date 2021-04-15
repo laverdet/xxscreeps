@@ -140,7 +140,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		// Listen for updates
 		const [ effect ] = await acquire(
 			// Room updates
-			this.context.gameChannel.listen(event => {
+			this.context.shard.channel.listen(event => {
 				if (event.type === 'tick' && Date.now() > lastTickTime + 50) {
 					update(event.time).catch(error => console.error(error));
 				}
@@ -154,7 +154,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		);
 
 		// Fire off first update immediately
-		await update(this.context.time);
+		await update(this.context.shard.time);
 
 		// Disconnect on socket hangup
 		return effect;

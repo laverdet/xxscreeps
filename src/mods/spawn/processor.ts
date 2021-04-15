@@ -103,7 +103,4 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 		StoreIntent.add(spawn.store, C.RESOURCE_ENERGY, 1);
 		context.setActive();
 	}
-
-	// TODO: This is just a convenient place to keep controlled rooms unidle until I have a more sophisticated solution
-	context.setActive();
 });

@@ -13,7 +13,7 @@ import { BufferView, withOverlay } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/engine/util/iteratee';
 
 import { registerGlobal } from 'xxscreeps/game';
-import { AfterInsert, AfterRemove, LookType, RoomObject } from 'xxscreeps/game/object';
+import { AfterInsert, AfterRemove, LookType, RoomObject, RunnerUser } from 'xxscreeps/game/object';
 import { getTerrainForRoom } from '../map';
 import { RoomVisual } from '../visual';
 
@@ -410,4 +410,15 @@ function removeOne<Type>(list: Type[], element: Type) {
 		throw new Error('Removed object was not found');
 	}
 	list.splice(index, 1);
+}
+
+export function getUsersInRoom(room: Room) {
+	const users = new Set<string>();
+	for (const objects of room[Objects]) {
+		const user = objects[RunnerUser]();
+		if (user !== null) {
+			users.add(user);
+		}
+	}
+	return users;
 }

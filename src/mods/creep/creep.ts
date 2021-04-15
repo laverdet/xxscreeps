@@ -63,6 +63,10 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 		game.creeps[this.name] = this;
 	}
 
+	[RoomObject.RunnerUser]() {
+		return this[RoomObject.Owner];
+	}
+
 	/**
 	 * Get the quantity of live body parts of the given type. Fully damaged parts do not count.
 	 * @param type A body part type

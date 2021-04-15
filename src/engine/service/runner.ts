@@ -1,17 +1,18 @@
 import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Shard } from 'xxscreeps/engine/model/shard';
+import { userToRoomsSetKey } from 'xxscreeps/engine/model/processor';
+import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { loadTerrainFromWorld, readWorld } from 'xxscreeps/game/map';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
-import { Channel } from 'xxscreeps/storage/channel';
-import { Queue } from 'xxscreeps/storage/queue';
-import { RunnerMessage } from '.';
+import { consumeSet } from 'xxscreeps/storage/async';
+import { getOrSet } from 'xxscreeps/utility/utility';
+import { getServiceChannel } from '.';
 
 // Connect to main & storage
 const shard = await Shard.connect('shard0');
-const usersQueue = Queue.connect(shard.scratch, 'runnerUsers');
-const runnerChannel = await new Channel<RunnerMessage>(shard.pubsub, 'runner').subscribe();
+const runnerSubscription = await getRunnerChannel(shard).subscribe();
 const concurrency = config.runner.unsafeSandbox ? 1 : config.runner.concurrency;
 
 // Load shared terrain data
@@ -23,42 +24,32 @@ loadTerrainFromWorld(world); // game
 const playerInstances = new Map<string, PlayerInstance>();
 
 // Start the runner loop
-let gameTime = -1;
-await runnerChannel.publish({ type: 'runnerConnected' });
 try {
-	for await (const message of runnerChannel) {
+	await getServiceChannel(shard).publish({ type: 'runnerConnected' });
+	for await (const message of runnerSubscription) {
 
 		if (message.type === 'shutdown') {
 			break;
 
-		} else if (message.type === 'processUsers') {
-			const roomBlobCache = new Map<string, Readonly<Uint8Array>>();
-			gameTime = message.time;
-			usersQueue.version(`${gameTime}`);
-			await Promise.all(Array(concurrency).fill(undefined).map(async() => {
-				for await (const userId of usersQueue) {
-					const instance = await async function() {
-						// Get existing instance
-						const current = playerInstances.get(userId);
-						if (current) {
-							return current;
-						}
-						// Create new instance
+		} else if (message.type === 'run') {
+			const { time } = message;
+			const roomBlobCache = new Map<string, Promise<Readonly<Uint8Array>>>();
+			await Promise.all(Fn.map(Fn.range(concurrency), async() => {
+				for await (const userId of consumeSet(shard.scratch, runnerUsersSetKey(time))) {
+					// Get or create player instance
+					const instance = playerInstances.get(userId) ?? await async function() {
 						const instance = await PlayerInstance.create(shard, userId);
 						playerInstances.set(userId, instance);
 						return instance;
 					}();
 
 					// Load visible rooms for this user
-					const roomBlobs = await Promise.all(Fn.map(instance.roomsVisible, roomName =>
-						roomBlobCache.get(roomName) ?? shard.loadRoomBlob(roomName, gameTime - 1).then(blob => {
-							roomBlobCache.set(roomName, blob);
-							return blob;
-						})));
+					const roomNames = await shard.scratch.smembers(userToRoomsSetKey(userId));
+					const roomBlobs = await Promise.all(Fn.map(roomNames, roomName =>
+						getOrSet(roomBlobCache, roomName, () => shard.loadRoomBlob(roomName, time - 1))));
 
 					// Run user code
-					const roomNames = await instance.run(gameTime, roomBlobs);
-					await runnerChannel.publish({ type: 'processedUser', userId, roomNames });
+					await instance.run(time, roomBlobs, roomNames);
 				}
 			}));
 		}
@@ -68,6 +59,6 @@ try {
 	for (const instance of playerInstances.values()) {
 		instance.disconnect();
 	}
-	runnerChannel.disconnect();
+	runnerSubscription.disconnect();
 	shard.disconnect();
 }

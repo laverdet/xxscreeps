@@ -1,84 +1,93 @@
 import * as Fn from 'xxscreeps/utility/functional';
-import { RoomProcessorContext } from 'xxscreeps/processor/room';
-import { flushExtraIntentsForRoom, flushRunnerIntentsForRoom } from 'xxscreeps/engine/model/processor';
+import {
+	acquireIntentsForRoom, begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey,
+	roomDidProcess, roomsDidFinalize, sleepRoomUntil, updateUserRoomRelationships,
+} from 'xxscreeps/engine/model/processor';
 import { Shard } from 'xxscreeps/engine/model/shard';
+import { getUsersInRoom } from 'xxscreeps/game/room/room';
 import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
-import { Channel } from 'xxscreeps/storage/channel';
-import { Queue } from 'xxscreeps/storage/queue';
-import { ProcessorMessage, ProcessorQueueElement } from '.';
+import { RoomProcessorContext } from 'xxscreeps/processor/room';
+import { consumeSet, consumeSortedSet } from 'xxscreeps/storage/async';
+import { getServiceChannel } from '.';
 
 // Keep track of rooms this thread ran. Global room processing must also happen here.
 const processedRooms = new Map<string, RoomProcessorContext>();
 
 // Connect to main & storage
 const shard = await Shard.connect('shard0');
-const roomsQueue = Queue.connect<ProcessorQueueElement>(shard.scratch, 'processRooms', true);
-const processorChannel = await new Channel<ProcessorMessage>(shard.pubsub, 'processor').subscribe();
-
-// Initialize world terrain
+const processorSubscription = await getProcessorChannel(shard).subscribe();
 loadTerrainFromBuffer(shard.terrainBlob);
 
-// Start the processing loop
-let gameTime = -1;
-await processorChannel.publish({ type: 'processorConnected' });
 try {
-	for await (const message of processorChannel) {
+
+	// Initialize rooms / user relationships
+	for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
+		const room = await shard.loadRoom(roomName);
+		const userIds = getUsersInRoom(room);
+		await updateUserRoomRelationships(shard, roomName, userIds);
+	}
+
+	// Start the processing loop
+	await getServiceChannel(shard).publish({ type: 'processorInitialized' });
+	let currentTime = -1;
+	for await (const message of processorSubscription) {
 
 		if (message.type === 'shutdown') {
 			break;
 
-		} else if (message.type === 'processRooms') {
-			// First processing phase. Can start as soon as all players with visibility into this room
-			// have run their code
-			gameTime = message.time;
-			roomsQueue.version(`${gameTime}`);
-			for await (const { room: roomName, users } of roomsQueue) {
+		} else if (message.type === 'process') {
+			// Start first processing phase
+			const { time } = message;
+			currentTime = await begetRoomProcessQueue(shard, currentTime, time);
+			for await (const roomName of consumeSortedSet(shard.scratch, processRoomsSetKey(time), 0, 0)) {
 				// Read room data and intents from storage
-				const [ room, intentsFromUsers, extraIntents ] = await Promise.all([
-					shard.loadRoom(roomName, gameTime - 1),
-					Promise.all(Fn.map(users, async user => {
-						const intents = await flushRunnerIntentsForRoom(shard, roomName, user);
-						return { user, intents };
-					})),
-					flushExtraIntentsForRoom(shard, roomName, gameTime),
+				const [ room, intentsPayloads ] = await Promise.all([
+					shard.loadRoom(roomName, time - 1),
+					acquireIntentsForRoom(shard, roomName, time),
 				]);
 
 				// Create processor context and add intents
-				const intentsByUser = new Map(Fn.map(intentsFromUsers, ({ user, intents }) => [ user, intents ]));
-				const context = new RoomProcessorContext(room, gameTime, intentsByUser);
-				for (const { user, intents } of extraIntents) {
-					context.saveIntents(user, intents);
+				const context = new RoomProcessorContext(room, time);
+				for (const { userId, intents } of intentsPayloads) {
+					context.saveIntents(userId, intents);
 				}
 
 				// Run first process phase
 				context.process();
 				processedRooms.set(roomName, context);
-
-				// Notify main service of completion
-				await processorChannel.publish({ type: 'processedRoom', roomName });
+				await roomDidProcess(shard, roomName, time);
 			}
 
-		} else if (message.type === 'flushRooms') {
-			// Run second phase of processing. This must wait until *all* player code and first phase
-			// processing has run
-			await Promise.all(Fn.map(processedRooms, ([ roomName, context ]) => {
-				if (context.receivedUpdate) {
-					return shard.saveRoom(roomName, gameTime, context.room);
-				} else {
-					return shard.copyRoomFromPreviousTick(roomName, gameTime);
+		} else if (message.type === 'finalize') {
+			// Second processing phase. This waits until all player code and first phase processing has
+			// run.
+			const { time } = message;
+			await Promise.all(Fn.map(processedRooms, async([ roomName, context ]) => {
+				const userIds = getUsersInRoom(context.room);
+				await Promise.all([
+					// Update room to user map
+					await updateUserRoomRelationships(shard, roomName, userIds),
+					// Save updated room blob
+					function() {
+						if (context.receivedUpdate) {
+							return shard.saveRoom(roomName, time, context.room);
+						} else {
+							return shard.copyRoomFromPreviousTick(roomName, time);
+						}
+					}(),
+				]);
+				// Mark inactive if needed. Must be *after* saving room, because this copies from current
+				// tick.
+				if (userIds.size === 0 && context.nextUpdate !== time + 1) {
+					return sleepRoomUntil(shard, roomName, time, context.nextUpdate);
 				}
 			}));
-
-			const rooms = [ ...Fn.map(processedRooms.entries(), ([ name, context ]) => ({
-				name,
-				sleepUntil: context.nextUpdate,
-			})) ];
-			await processorChannel.publish({ type: 'flushedRooms', rooms });
+			await roomsDidFinalize(shard, processedRooms.size, time);
 			processedRooms.clear();
 		}
 	}
 
 } finally {
 	shard.disconnect();
-	processorChannel.disconnect();
+	processorSubscription.disconnect();
 }

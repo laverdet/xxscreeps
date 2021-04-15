@@ -10,7 +10,6 @@ import * as Game from 'xxscreeps/game';
 // eslint-disable-next-line no-duplicate-imports
 import { flushIntents, initializeIntents, runForUser } from 'xxscreeps/game';
 import { setupGlobals } from 'xxscreeps/game/runtime';
-import { stringToBuffer16 } from 'xxscreeps/utility/string';
 import * as Memory from 'xxscreeps/game/memory';
 import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
 import { RoomObject } from 'xxscreeps/game/object';
@@ -218,11 +217,10 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 	}
 
 	// Write room intents into blobs
-	const intentBlobs = Fn.fromEntries(Fn.filter(Fn.map(rooms, ({ name }) => {
+	const intentPayloads = Fn.fromEntries(Fn.filter(Fn.map(rooms, ({ name }) => {
 		const intentsForRoom = intents.getIntentsForRoom(name);
 		if (intentsForRoom) {
-			const payload = stringToBuffer16(JSON.stringify(intentsForRoom));
-			return [ name, payload ];
+			return [ name, intentsForRoom ];
 		}
 	})));
 
@@ -234,5 +232,5 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 		detach(room, () => new Error(`Accessed a released object from a previous tick[${time}]`));
 	}
 
-	return { flagBlob, intentBlobs, visualsBlob, memory };
+	return { flagBlob, intentPayloads, visualsBlob, memory };
 }

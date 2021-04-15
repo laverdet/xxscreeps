@@ -1,33 +1,13 @@
-export type GameMessage = { type: 'tick'; time: number } | { type: null };
+import type { Shard } from 'xxscreeps/engine/model/shard';
+import { Channel } from 'xxscreeps/storage/channel';
 
-type RunnerConnectedMessage = { type: 'runnerConnected' };
-type RunnerProcessUsers = { type: 'processUsers'; time: number };
-type RunnerProcessedUser = { type: 'processedUser'; userId: string; roomNames: string[] };
-export type RunnerMessage = RunnerConnectedMessage | ShutdownMessage | RunnerProcessUsers | RunnerProcessedUser;
-
-type ProcessorConnectedMessage = { type: 'processorConnected' };
-type ProcessRoomsMessage = { type: 'processRooms'; time: number };
-type ProcessedRoomMessage = { type: 'processedRoom'; roomName: string };
-type FlushRoomsMessage = { type: 'flushRooms' };
-type FlushedRoomMessage = {
-	type: 'flushedRooms';
-	rooms: {
-		name: string;
-		sleepUntil: number | null;
-	}[];
-};
-export type ProcessorMessage =
-	ProcessorConnectedMessage | ShutdownMessage |
-	ProcessRoomsMessage | ProcessedRoomMessage |
-	FlushRoomsMessage | FlushedRoomMessage;
-
-type ShutdownMessage = { type: 'shutdown' };
-export type ServiceMessage =
-	{ type: 'mainConnected' } | { type: 'mainDisconnected' } |
-	{ type: 'gameModified' } |
-	ShutdownMessage;
-
-export type ProcessorQueueElement = {
-	room: string;
-	users: string[];
-};
+export function getServiceChannel(shard: Shard) {
+	type Message =
+		{ type: 'shutdown' } |
+		{ type: 'mainConnected' } |
+		{ type: 'mainDisconnected' } |
+		{ type: 'processorInitialized' } |
+		{ type: 'runnerConnected' } |
+		{ type: 'tickFinished' };
+	return new Channel<Message>(shard.pubsub, 'channel/service');
+}

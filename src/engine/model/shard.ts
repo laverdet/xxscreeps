@@ -1,9 +1,9 @@
-import type { GameMessage } from 'xxscreeps/engine/service';
-import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as RoomSchema from 'xxscreeps/engine/room';
 import { connectToProvider, BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/storage';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
 import config from 'xxscreeps/config';
+
+type Message = { type: 'tick'; time: number } | { type: null };
 
 export class Shard {
 	public time = -1;
@@ -15,9 +15,9 @@ export class Shard {
 		public readonly pubsub: PubSubProvider,
 		public readonly scratch: KeyValProvider,
 		public readonly terrainBlob: Readonly<Uint8Array>,
-		private readonly gameChannel: Subscription<GameMessage>,
+		public readonly channel: Subscription<Message>,
 	) {
-		this.gameTickEffect = gameChannel.listen(message => {
+		this.gameTickEffect = channel.listen(message => {
 			if (message.type === 'tick') {
 				this.time = message.time;
 			}
@@ -37,17 +37,17 @@ export class Shard {
 			connectToProvider(shard.scratch, 'keyval'),
 		]);
 		const terrainBlob = await blob.getBuffer('terrain');
-		const gameChannel = await new Channel<GameMessage>(pubsub, 'main').subscribe();
+		const channel = await new Channel<Message>(pubsub, 'channel/game').subscribe();
 		// Create instance (which subscribes to tick notification) and then read current info
-		const instance = new Shard(blob, data, pubsub, scratch, terrainBlob, gameChannel);
-		const game = GameSchema.read(await blob.getBuffer('game'));
-		instance.time = Math.max(game.time, instance.time);
+		const instance = new Shard(blob, data, pubsub, scratch, terrainBlob, channel);
+		const time = Number(await data.get('time'));
+		instance.time = Math.max(time, instance.time);
 		return instance;
 	}
 
 	disconnect() {
 		this.gameTickEffect();
-		this.gameChannel.disconnect();
+		this.channel.disconnect();
 		this.blob.disconnect();
 		this.data.disconnect();
 		this.pubsub.disconnect();
@@ -92,7 +92,6 @@ export class Shard {
 	 * buffer to ensure a rollback doesn't overwrite room state.
 	 */
 	async copyRoomFromPreviousTick(name: string, time: number) {
-		this.checkTime(time, 1);
 		return this.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
 	}
 

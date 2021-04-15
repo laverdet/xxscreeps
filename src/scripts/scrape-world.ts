@@ -10,7 +10,6 @@ import config from 'xxscreeps/config';
 // Schemas
 import * as Auth from 'xxscreeps/backend/auth/model';
 import * as CodeSchema from 'xxscreeps/engine/metadata/code';
-import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as MapSchema from 'xxscreeps/game/map';
 import * as User from 'xxscreeps/engine/metadata/user';
 
@@ -166,18 +165,18 @@ const roomsTerrain = new Map(db.getCollection('rooms.terrain').find().map(({ roo
 // Save Game object and initialize shard
 const roomNames = new Set(Fn.map(rooms, room => room.name));
 const userIds = new Set(users.filter(user => user.active).map(user => user.id));
-const game = {
-	time: gameTime,
-	rooms: roomNames,
-	users: userIds,
-};
 {
 	const shardConfig = config.shards[0];
 	const blob = await connectToProvider(shardConfig.blob, 'blob');
-	await blob.set('game', GameSchema.write(game));
 	await blob.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
 	await blob.save();
 	blob.disconnect();
+	const keyval = await connectToProvider(shardConfig.data, 'keyval');
+	await keyval.sadd('rooms', [ ...roomNames ]);
+	await keyval.sadd('users', [ ...userIds ]);
+	await keyval.set('time', gameTime);
+	await keyval.save();
+	keyval.disconnect();
 }
 const shard = await Shard.connect('shard0');
 const { blob } = shard;

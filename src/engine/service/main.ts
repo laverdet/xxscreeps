@@ -1,154 +1,91 @@
-import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
 import { Deferred } from 'xxscreeps/utility/deferred';
-import { getOrSet } from 'xxscreeps/utility/utility';
 import { Shard } from 'xxscreeps/engine/model/shard';
-import { Channel } from 'xxscreeps/storage/channel';
 import { Mutex } from 'xxscreeps/storage/mutex';
-import { Queue } from 'xxscreeps/storage/queue';
-import type { GameMessage, ProcessorMessage, ProcessorQueueElement, RunnerMessage, ServiceMessage } from '.';
+import config from 'xxscreeps/config';
+import { getProcessorChannel, roomToUsersSetKey, userToRoomsSetKey } from 'xxscreeps/engine/model/processor';
+import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
+import { getServiceChannel } from '.';
 
 // Open channels
 const shard = await Shard.connect('shard0');
-const [
-	roomsQueue, usersQueue, processorChannel, runnerChannel, serviceChannel, gameMutex,
-] = await Promise.all([
-	Queue.connect<ProcessorQueueElement>(shard.scratch, 'processRooms', true),
-	Queue.connect(shard.scratch, 'runnerUsers'),
-	new Channel<ProcessorMessage>(shard.pubsub, 'processor').subscribe(),
-	new Channel<RunnerMessage>(shard.pubsub, 'runner').subscribe(),
-	new Channel<ServiceMessage>(shard.pubsub, 'service').subscribe(),
+const processorChannel = getProcessorChannel(shard);
+const runnerChannel = getRunnerChannel(shard);
+const [ gameMutex, serviceSubscription ] = await Promise.all([
 	Mutex.connect('game', shard.scratch, shard.pubsub),
+	getServiceChannel(shard).subscribe(),
 ]);
-await serviceChannel.publish({ type: 'mainConnected' });
-
-// Run main game processing loop
-let gameMetadata: GameSchema.Type | undefined;
-let activeUsers: string[] = [];
-let activeRooms: Set<string>;
-let roomsSleptLastTick: string[] = [];
-const sleepingRooms = new Map<number, string[]>();
-const performanceTimer = new AveragingTimer(1000);
 
 // Ctrl+C handler
 let delayShutdown: Deferred<boolean> | undefined;
 let shuttingDown = false;
-
-// Listen for service updates
-serviceChannel.listen(message => {
-	if (message.type === 'gameModified') {
-		gameMetadata = undefined;
-	} else if (message.type === 'shutdown') {
+serviceSubscription.listen(message => {
+	if (message.type === 'shutdown') {
 		shuttingDown = true;
 		delayShutdown?.resolve(false);
 	}
 });
 
+// Run main game processing loop
+const performanceTimer = new AveragingTimer(1000);
+
 try {
+	// Initialize scratch state
+	const [ rooms, users ] = await Promise.all([
+		shard.data.smembers('rooms'),
+		shard.data.smembers('users'),
+	]);
+	await Promise.all([
+		shard.scratch.sadd('initializeRooms', rooms),
+		shard.scratch.del('users'),
+		shard.scratch.sadd('users', users),
+		Promise.all(Fn.map(rooms, roomName => shard.scratch.del(roomToUsersSetKey(roomName)))),
+		Promise.all(Fn.map(users, userId => shard.scratch.del(userToRoomsSetKey(userId)))),
+	]);
+
+	// Wait for processors to connect and initialize world state
+	await serviceSubscription.publish({ type: 'mainConnected' });
+	for await (const message of serviceSubscription) {
+		if (message.type === 'processorInitialized') {
+			break;
+		}
+	}
+
+	// Game loop
 	do {
 		const timeStartedLoop = Date.now();
+		performanceTimer.start();
 		await gameMutex.scope(async() => {
-			// Start timer
-			performanceTimer.start();
+			// Initialize
+			const time = shard.time + 1;
+			await shard.scratch.copy('users', runnerUsersSetKey(time));
+			await Promise.all([
+				processorChannel.publish({ type: 'process', time }),
+				runnerChannel.publish({ type: 'run', time }),
+			]);
 
-			// Refresh current game status
-			if (gameMetadata) {
-				const roomsWakingUp = sleepingRooms.get(gameMetadata.time);
-				if (roomsWakingUp) {
-					sleepingRooms.delete(gameMetadata.time);
-					Fn.forEach(roomsWakingUp, room => activeRooms.add(room));
-				}
-			} else {
-				gameMetadata = GameSchema.read(await shard.blob.getBuffer('game'));
-				activeRooms = new Set(gameMetadata.rooms);
-				activeUsers = [ ...gameMetadata.users ];
-				sleepingRooms.clear();
-			}
-			const gameTime = gameMetadata.time + 1;
-
-			// Deactivate idle rooms
-			if (roomsSleptLastTick.length) {
-				await Promise.all(roomsSleptLastTick.map(name => {
-					activeRooms.delete(name);
-					return shard.copyRoomFromPreviousTick(name, gameTime);
-				}));
-				roomsSleptLastTick = [];
-			}
-
-			// Add users to runner queue
-			usersQueue.version(`${gameTime}`);
-			await Promise.all([ usersQueue.clear(), usersQueue.push(activeUsers) ]);
-			await runnerChannel.publish({ type: 'processUsers', time: gameTime });
-
-			// Wait for runners to finish
-			const processedUsers = new Set<string>();
-			const intentsByRoom = new Map<string, Set<string>>();
-			for await (const message of runnerChannel) {
-				if (message.type === 'runnerConnected') {
-					await runnerChannel.publish({ type: 'processUsers', time: gameTime });
-
-				} else if (message.type === 'processedUser') {
-					processedUsers.add(message.userId);
-					for (const roomName of message.roomNames) {
-						getOrSet(intentsByRoom, roomName, () => new Set).add(message.userId);
-					}
-					if (activeUsers.length === processedUsers.size) {
-						break;
-					}
-				}
-			}
-
-			// Add rooms to queue and notify processors
-			roomsQueue.version(`${gameTime}`);
-			const roomsQueueElements = [ ...Fn.map(activeRooms, room => ({
-				room,
-				users: [ ...intentsByRoom.get(room) ?? [] ],
-			})) ];
-			await Promise.all([ roomsQueue.clear(), roomsQueue.push(roomsQueueElements) ]);
-			await processorChannel.publish({ type: 'processRooms', time: gameTime });
-
-			// Handle incoming processor messages
-			const processedRooms = new Set<string>();
-			const flushedRooms = new Set<string>();
-			for await (const message of processorChannel) {
-				if (message.type === 'processorConnected') {
-					await processorChannel.publish({ type: 'processRooms', time: gameTime });
-
-				} else if (message.type === 'processedRoom') {
-					processedRooms.add(message.roomName);
-					if (activeRooms.size === processedRooms.size) {
-						await processorChannel.publish({ type: 'flushRooms' });
-					}
-
-				} else if (message.type === 'flushedRooms') {
-					message.rooms.forEach(info => {
-						flushedRooms.add(info.name);
-						if (info.sleepUntil !== gameTime + 1) {
-							if ((info.sleepUntil ?? Infinity) !== Infinity) {
-								getOrSet(sleepingRooms, info.sleepUntil, () => []).push(info.name);
-							}
-							roomsSleptLastTick.push(info.name);
-						}
-					});
-
-					if (activeRooms.size === flushedRooms.size) {
-						break;
-					}
+			// Wait for tick to finish
+			for await (const message of serviceSubscription) {
+				if (message.type === 'processorInitialized') {
+					await processorChannel.publish({ type: 'process', time });
+				} else if (message.type === 'runnerConnected') {
+					await runnerChannel.publish({ type: 'run', time });
+				} else if (message.type === 'tickFinished') {
+					break;
 				}
 			}
 
 			// Update game state
-			++gameMetadata.time;
-			await shard.blob.set('game', GameSchema.write(gameMetadata));
+			await shard.data.set('time', time);
 
-			// Finish up
+			// Display statistics
 			const now = Date.now();
 			const timeTaken = now - timeStartedLoop;
 			const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
-			console.log(`Tick ${gameTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
-			await new Channel<GameMessage>(shard.pubsub, 'main').publish({ type: 'tick', time: gameTime });
+			await shard.channel.publish({ type: 'tick', time });
+			shard.time = time;
+			console.log(`Tick ${time} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
 		});
 
 		// Shutdown request came in during game loop
@@ -170,14 +107,16 @@ try {
 	} while (true);
 
 	// Save on graceful exit
-	await shard.blob.save();
+	await Promise.all([
+		shard.blob.save(),
+		shard.data.save(),
+		shard.scratch.save(),
+	]);
 
 } finally {
 	// Clean up
 	shard.disconnect();
-	processorChannel.disconnect();
-	runnerChannel.disconnect();
 	await gameMutex.disconnect();
-	await serviceChannel.publish({ type: 'mainDisconnected' });
-	serviceChannel.disconnect();
+	await serviceSubscription.publish({ type: 'mainDisconnected' });
+	serviceSubscription.disconnect();
 }

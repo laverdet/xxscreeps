@@ -15,6 +15,7 @@ export const LookType = XSymbol('lookType');
 export const NextPosition = XSymbol('nextPosition');
 export const Owner = XSymbol('owner');
 export const PathCost = XSymbol('pathCost');
+export const RunnerUser = XSymbol('runnerUser');
 
 export const format = () => compose(shape, RoomObject);
 const shape = declare('RoomObject', struct({
@@ -40,6 +41,10 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	}
 	[AfterRemove](_room: Room) {
 		this.room = undefined as never;
+	}
+
+	[RunnerUser](): string | null {
+		return null;
 	}
 
 	[Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {

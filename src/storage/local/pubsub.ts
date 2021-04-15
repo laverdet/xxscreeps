@@ -36,11 +36,11 @@ type MasterMessage = PubSubMessage | SubscriptionConfirmation | UnknownMessage;
 type WorkerMessage = PubSubMessage | SubscriptionRequest | UnsubscribeRequest | UnknownMessage;
 
 // eslint-disable-next-line @typescript-eslint/require-await
-registerStorageProvider('local', [ 'pubsub' ], async uri => {
+registerStorageProvider('local', 'pubsub', async url => {
 	if (isMainThread) {
-		return new LocalPubSubProviderParent(uri);
+		return new LocalPubSubProviderParent(`${url}`);
 	} else {
-		return new LocalPubSubProviderWorker(uri);
+		return new LocalPubSubProviderWorker(`${url}`);
 	}
 });
 

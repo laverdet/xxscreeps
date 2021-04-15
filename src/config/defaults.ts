@@ -28,8 +28,7 @@ export const defaults = makeDefaults({
 	shards: [ {
 		name: 'shard0',
 		blob: './screeps/shard0',
-		data: 'local://tmp',
-		// data: './screeps/shard0/data.json',
+		data: './screeps/shard0/data.json',
 		pubsub: 'local://shard0',
 		scratch: 'local://shard0',
 	} ],

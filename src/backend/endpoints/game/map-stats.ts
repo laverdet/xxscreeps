@@ -59,7 +59,7 @@ export const MapStatsEndpoint: Endpoint = {
 		// Send it off
 		return {
 			ok: 1,
-			gameTime: context.backend.time,
+			gameTime: context.backend.shard.time,
 			stats,
 			users,
 		};

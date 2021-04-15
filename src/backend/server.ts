@@ -5,8 +5,7 @@ import Koa from 'koa';
 import Router from 'koa-router';
 import http from 'http';
 
-import { ServiceMessage } from 'xxscreeps/engine/service';
-import { Channel } from 'xxscreeps/storage/channel';
+import { getServiceChannel } from 'xxscreeps/engine/service';
 import { authentication } from './auth';
 import { BackendContext } from './context';
 import { setupGracefulShutdown } from './graceful';
@@ -49,7 +48,7 @@ const socketServer = installSocketHandlers(httpServer, backendContext);
 
 // Shutdown handler
 const shutdownServer = setupGracefulShutdown(httpServer, socketServer);
-const serviceChannel = await new Channel<ServiceMessage>(backendContext.shard.pubsub, 'service').subscribe();
+const serviceChannel = await getServiceChannel(backendContext.shard).subscribe();
 const serviceUnlistener = serviceChannel.listen(message => {
 	if (message.type === 'shutdown') {
 		serviceUnlistener();

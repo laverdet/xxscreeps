@@ -2,8 +2,8 @@ import { LooseBoolean } from './types';
 
 // Like half the use cases of `reduce` are to sum an array, so this just does that with less
 // boilerplate
-export function accumulate(iterable: Iterable<number>, callback?: (value: number) => number): number;
 export function accumulate<Type>(iterable: Iterable<Type>, callback: (value: Type) => number): number;
+export function accumulate(iterable: Iterable<number>, callback?: (value: number) => number): number;
 export function accumulate(iterable: Iterable<any>, callback: (value: any) => number = value => value) {
 	let sum = 0;
 	for (const value of iterable) {
@@ -13,11 +13,13 @@ export function accumulate(iterable: Iterable<any>, callback: (value: any) => nu
 }
 
 // Appends several iterators together
-export function *concat<Type extends Iterable<any>[]>(...iterators: readonly [ ...Type ]):
-Iterable<Type[number] extends (infer Result)[] ? Result : never> {
-	for (const iterator of iterators) {
-		for (const element of iterator) {
-			yield element;
+export function concat<Type>(iterator: Iterable<Iterable<Type>>): Iterable<Type>;
+export function concat<First, Second, Rest = never>(
+	first: Iterable<First>, second: Iterable<Second>, ...rest: Iterable<Rest>[]): Iterable<First | Second | Rest>;
+export function *concat(...args: any[]) {
+	for (const iterable of args.length === 1 ? args[0] : args) {
+		for (const value of iterable) {
+			yield value;
 		}
 	}
 }
@@ -31,6 +33,16 @@ export function filter<Type>(
 export function *filter(iterable: Iterable<any>, callback: (value: any) => LooseBoolean = nonNullable) {
 	for (const value of iterable) {
 		if (callback(value)) {
+			yield value;
+		}
+	}
+}
+
+export function reject<Type>(
+	iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean): Iterable<Type>;
+export function *reject(iterable: Iterable<any>, callback: (value: any) => LooseBoolean) {
+	for (const value of iterable) {
+		if (!callback(value)) {
 			yield value;
 		}
 	}
@@ -89,17 +101,24 @@ export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, r
 }
 
 // Returns a range of numbers
-export function *range(start: number, end?: number): Iterable<number> {
+export function range(count: number): Iterable<number>;
+// eslint-disable-next-line @typescript-eslint/unified-signatures
+export function range(start: number, end: number): Iterable<number>;
+export function range(start: number, end?: number): Iterable<number> {
 	if (end === undefined) {
 		return range(0, start);
-	} else if (start < end) {
-		for (let ii = start; ii < end; ++ii) {
-			yield ii;
-		}
 	} else {
-		for (let ii = end; ii > start; --ii) {
-			yield ii;
-		}
+		return function *() {
+			if (start < end) {
+				for (let ii = start; ii < end; ++ii) {
+					yield ii;
+				}
+			} else {
+				for (let ii = end; ii > start; --ii) {
+					yield ii;
+				}
+			}
+		}();
 	}
 }
 

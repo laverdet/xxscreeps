@@ -17,24 +17,26 @@ type DispositionToProvider<T> =
  * @param provider Callback to connect to given URI
  */
 export function registerStorageProvider<Dispositions extends string>(
-	scheme: string,
-	dispositions: Dispositions[],
-	provider: (uri: string) => Promise<UnionToIntersection<DispositionToProvider<Dispositions>>>,
+	schemes: string | string[],
+	dispositions: Dispositions | Dispositions[],
+	provider: (url: InstanceType<typeof URL>) => Promise<UnionToIntersection<DispositionToProvider<Dispositions>>>,
 ) {
 	// TODO: This is messy
 	const providers = (registerStorageProvider as any).providers ??= new Map<any, any>();
-	for (const disposition of dispositions) {
-		providers.set(`${scheme}:${disposition}`, provider);
+	for (const scheme of Array.isArray(schemes) ? schemes : [ schemes ]) {
+		for (const disposition of Array.isArray(dispositions) ? dispositions : [ dispositions ]) {
+			providers.set(`${scheme}:${disposition}`, provider);
+		}
 	}
 }
 
-export async function connectToProvider<Disposition extends string>(uri: string, disposition: Disposition):
+export async function connectToProvider<Disposition extends string>(fragment: string, disposition: Disposition):
 Promise<DispositionToProvider<Disposition>> {
 	const providers = (registerStorageProvider as any).providers;
-	const info = new URL(uri, pathToFileURL(configPath));
-	const provider = providers.get(info.protocol + disposition);
+	const url = new URL(fragment, pathToFileURL(configPath));
+	const provider = providers.get(url.protocol + disposition);
 	if (!provider) {
-		throw new Error(`No storage provider for ${info.protocol}${disposition}`);
+		throw new Error(`No storage provider for ${url.protocol}${disposition}`);
 	}
-	return provider(`${info}`) as Promise<any>;
+	return provider(url) as Promise<any>;
 }

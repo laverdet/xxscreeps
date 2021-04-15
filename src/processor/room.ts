@@ -44,11 +44,11 @@ export interface ObjectProcessorContext {
 export class RoomProcessorContext implements ObjectProcessorContext {
 	public receivedUpdate = false;
 	public nextUpdate = Infinity;
+	private readonly intents = new Map<string, RoomIntentPayload>();
 
 	constructor(
 		public readonly room: Room,
 		public readonly time: number,
-		private readonly intents = new Map<string, RoomIntentPayload>(),
 	) {}
 
 	process() {

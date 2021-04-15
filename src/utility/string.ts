@@ -27,7 +27,7 @@ export function stringifyInherited(value: any): string {
 }
 
 const kChunkSize = 1024 * 4;
-export function typedArrayToString(array: Readonly<Int8Array | Uint8Array | Uint16Array>) {
+export function typedArrayToString(array: Readonly<Uint8Array | Uint16Array>) {
 	let string = '';
 	for (let ii = 0; ii < array.length; ii += kChunkSize) {
 		string += String.fromCharCode(...array.subarray(ii, ii + kChunkSize));
@@ -36,11 +36,11 @@ export function typedArrayToString(array: Readonly<Int8Array | Uint8Array | Uint
 }
 
 type AnyArrayBuffer = new (byteLength: number) => ArrayBuffer | SharedArrayBuffer;
-export function stringToBuffer16(value: string, ctor: AnyArrayBuffer = ArrayBuffer) {
-	const buffer = new ctor(value.length * 2);
-	const uint16 = new Uint16Array(buffer);
+export function latin1ToBuffer(value: string, ctor: AnyArrayBuffer = ArrayBuffer) {
+	const buffer = new ctor(value.length);
+	const uint8 = new Uint8Array(buffer);
 	for (let ii = 0; ii < value.length; ++ii) {
-		uint16[ii] = value.charCodeAt(ii);
+		uint8[ii] = value.charCodeAt(ii);
 	}
-	return uint16;
+	return uint8;
 }

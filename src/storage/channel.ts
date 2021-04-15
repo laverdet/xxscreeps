@@ -5,8 +5,8 @@ type MessageType<Message> = Message | (Message extends string ? null : { type: n
 type Listener<Message> = (message: MessageType<Message>) => void;
 
 export class Channel<Message = string> {
-	constructor(storage: PubSubProvider, name: string, json?: Message extends string ? false : never);
-	constructor(storage: PubSubProvider, name: string, json: true);
+	constructor(pubsub: PubSubProvider, name: string, json?: Message extends string ? false : never);
+	constructor(pubsub: PubSubProvider, name: string, json: true);
 	constructor(
 		private readonly pubsub: PubSubProvider,
 		private readonly name: string,

@@ -1,15 +1,13 @@
 import type { Creep } from 'xxscreeps/mods/creep/creep';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
-import * as GameSchema from 'xxscreeps/engine/metadata/game';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Controller from 'xxscreeps/mods/controller/processor';
 import * as Spawn from './spawn';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
+import { forceRoomProcess } from 'xxscreeps/engine/model/processor';
 import { insertObject } from 'xxscreeps/game/room/methods';
 import { RoomPosition } from 'xxscreeps/game/position';
-import { ServiceMessage } from 'xxscreeps/engine/service';
-import { Channel } from 'xxscreeps/storage/channel';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
 import { bindRenderer, registerBackendRoute } from 'xxscreeps/backend';
 import { renderStore } from 'xxscreeps/mods/resource/backend';
@@ -97,15 +95,15 @@ registerBackendRoute({
 
 	async execute(context) {
 		const { userId } = context.state;
-		const { name, room, x, y } = context.request.body;
-		const pos = new RoomPosition(x, y, room);
+		const { name, room: roomName, x, y } = context.request.body;
+		const pos = new RoomPosition(x, y, roomName);
 		await context.backend.gameMutex.scope(async() => {
 			// Ensure user has no objects
 			const user = await loadUser(context.backend, userId!);
 			if (user.roomsPresent.size !== 0) {
 				throw new Error('User has presence');
 			}
-			const room = await context.shard.loadRoom(pos.roomName);
+			const room = await context.shard.loadRoom(roomName);
 			Game.runWithState([ room ], context.shard.time, () => {
 				Game.runAsUser(user.id, () => {
 					// Check room eligibility
@@ -121,17 +119,12 @@ registerBackendRoute({
 				});
 			});
 
-			// Make room & user active
-			const game = GameSchema.read(await context.shard.blob.getBuffer('game'));
-			game.users.add(user.id);
-
 			// Save
+			await forceRoomProcess(context.shard, roomName);
 			await Promise.all([
-				context.shard.blob.set('game', GameSchema.write(game)),
 				saveUser(context.backend, user),
-				context.backend.shard.saveRoom(pos.roomName, context.shard.time, room),
+				context.backend.shard.saveRoom(roomName, context.shard.time, room),
 			]);
-			await new Channel<ServiceMessage>(context.shard.pubsub, 'service').publish({ type: 'gameModified' });
 		});
 		return { ok: 1 };
 	},
