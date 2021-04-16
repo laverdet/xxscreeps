@@ -64,7 +64,11 @@ export function flush(): Readonly<Uint8Array> {
 	// Check for JSON-based `Memory` object
 	if (json) {
 		const value = json;
-		RawMemory.set(JSON.stringify(json));
+		try {
+			RawMemory.set(JSON.stringify(json));
+		} catch (err) {
+			console.error(err);
+		}
 		json = value;
 	}
 

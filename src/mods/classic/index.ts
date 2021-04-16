@@ -1,10 +1,9 @@
 import type { Manifest } from 'xxscreeps/config/mods';
 export const manifest: Manifest = {
 	dependencies: [
-		'xxscreeps/mods/combat',
+		'xxscreeps/mods/chemistry',
 		'xxscreeps/mods/defense',
 		'xxscreeps/mods/invader',
-		'xxscreeps/mods/minerals',
 		'xxscreeps/mods/road',
 		'xxscreeps/mods/source',
 		'xxscreeps/mods/spawn',

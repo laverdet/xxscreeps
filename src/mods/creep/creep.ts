@@ -208,6 +208,13 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	}
 
 	/**
+	 * Toggle auto notification when the structure is under attack. The notification will be sent to
+	 * your account email. Turned on by default.
+	 * @param enabled Whether to enable notification or disable.
+	 */
+	notifyWhenAttacked(_enabled = true) {}
+
+	/**
 	 * Pick up an item (a dropped piece of energy). Requires the `CARRY` body part. The target has to be
 	 * at adjacent square to the creep or at the same square.
 	 * @param resource The target object to be picked up

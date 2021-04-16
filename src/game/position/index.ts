@@ -117,7 +117,7 @@ export class RoomPosition {
 	getDirectionTo(pos: RoomObject | RoomPosition): Direction;
 	getDirectionTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { xx, yy, room } = fetchArguments(...args);
-		if ((this[PositionInteger] & 0xffff) === room) {
+		if (room === 0 || (this[PositionInteger] & 0xffff) === room) {
 			return getDirection(xx - this.x, yy - this.y);
 		}
 		// TODO: Multi-room distance
@@ -350,7 +350,14 @@ declare module 'xxscreeps/game/runtime' {
 export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any) {
 	if (typeof arg1 === 'object') {
 		const int = arg1[PositionInteger] ?? arg1?.pos?.[PositionInteger];
-		if (int !== undefined) {
+		if (int === undefined) {
+			return {
+				xx: arg1.x,
+				yy: arg1.y,
+				room: 0,
+				rest: [ arg2, arg3, ...rest ],
+			};
+		} else {
 			return {
 				xx: (int >>> 16) & 0xff,
 				yy: (int >>> 24) & 0xff,

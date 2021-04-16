@@ -1,3 +1,5 @@
+export const LOOK_CREEPS = 'creep' as const;
+
 export const MOVE = 'move' as const;
 export const WORK = 'work' as const;
 export const CARRY = 'carry' as const;
