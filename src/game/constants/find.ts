@@ -17,7 +17,6 @@ export const FIND_DEPOSITS = 122 as const;
 export const FIND_RUINS = 123 as const;
 
 export const LOOK_CREEPS = 'creep' as const;
-export const LOOK_MINERALS = 'mineral' as const;
 export const LOOK_DEPOSITS = 'deposit' as const;
 export const LOOK_FLAGS = 'flag' as const;
 export const LOOK_NUKES = 'nuke' as const;

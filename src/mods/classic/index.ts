@@ -4,6 +4,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/combat',
 		'xxscreeps/mods/defense',
 		'xxscreeps/mods/invader',
+		'xxscreeps/mods/minerals',
 		'xxscreeps/mods/road',
 		'xxscreeps/mods/source',
 		'xxscreeps/mods/spawn',

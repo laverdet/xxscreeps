@@ -9,6 +9,7 @@ export * from 'xxscreeps/mods/creep/constants';
 export * from 'xxscreeps/mods/defense/constants';
 export * from 'xxscreeps/mods/harvestable/constants';
 export * from 'xxscreeps/mods/invader/constants';
+export * from 'xxscreeps/mods/mineral/constants';
 export * from 'xxscreeps/mods/resource/constants';
 export * from 'xxscreeps/mods/road/constants';
 export * from 'xxscreeps/mods/source/constants';

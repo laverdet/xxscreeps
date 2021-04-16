@@ -122,6 +122,15 @@ export function range(start: number, end?: number): Iterable<number> {
 	}
 }
 
+// Creates an iterable which applies the accumulator to each element and yields the result
+export function *scan<Type, Result>(iterable: Iterable<Type>, initial: Result, accumulator: (result: Result, value: Type) => Result) {
+	let result = initial;
+	for (const value of iterable) {
+		result = accumulator(result, value);
+		yield result;
+	}
+}
+
 // Not nullable TS predicate
 type NonNullOrVoidable<Type> = Type extends null | undefined | void ? never : Type;
 function nonNullable<Type>(value: Type): value is NonNullOrVoidable<Type> {

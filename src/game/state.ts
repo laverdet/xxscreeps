@@ -32,6 +32,7 @@ export class Game {
 	rooms = rooms;
 	time = time;
 	getObjectById = getObjectById;
+	notify() {}
 }
 
 // Core global state

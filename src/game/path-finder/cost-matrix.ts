@@ -20,7 +20,7 @@ export class CostMatrix {
 		return [ ...new Uint32Array(this._bits.buffer, this._bits.byteOffset) ];
 	}
 
-	deserialize(data: number[]) {
+	static deserialize(data: number[]) {
 		const _bits = new Uint8Array(new Uint32Array(data).buffer);
 		return instantiate(CostMatrix, { _bits });
 	}

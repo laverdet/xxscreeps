@@ -1,4 +1,3 @@
-export const HARVEST_MINERAL_POWER = 1;
 export const HARVEST_DEPOSIT_POWER = 1;
 
 export const POWER_LEVEL_MULTIPLY = 1000;

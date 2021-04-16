@@ -2,6 +2,8 @@ import * as C from 'xxscreeps/game/constants';
 import { struct } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 import { lookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
+import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
+import { checkCommon } from 'xxscreeps/mods/creep/creep';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable';
 import { Source, format } from './source';
 import { CumulativeEnergyHarvested } from './symbols';
@@ -35,16 +37,18 @@ declare module 'xxscreeps/game/room' {
 
 // Register `Creep.harvest` target
 const harvest = registerHarvestable(Source, function(creep) {
-	if (creep.getActiveBodyparts(C.WORK) <= 0) {
-		return C.ERR_NO_BODYPART;
-	} else if (!creep.pos.isNearTo(this.pos)) {
-		return C.ERR_NOT_IN_RANGE;
-	}
-
-	if (this.energy <= 0) {
-		return C.ERR_NOT_ENOUGH_RESOURCES;
-	}
-	return C.OK;
+	return chainIntentChecks(
+		() => checkCommon(creep, C.WORK),
+		() => checkTarget(this, Source),
+		() => checkRange(creep, this, 1),
+		() => {
+			// TODO: Check controller
+			if (this.energy <= 0) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+			}
+			return C.OK;
+		},
+	);
 });
 declare module 'xxscreeps/mods/harvestable' {
 	interface Harvest { source: typeof harvest }

@@ -1,4 +1,4 @@
-import type { AnyRoomObject, Room } from 'xxscreeps/game/room';
+import type { AnyRoomObject, LookForType, Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Id from 'xxscreeps/engine/schema/id';
@@ -89,6 +89,13 @@ export function checkPlacement(room: Room, pos: RoomPosition.RoomPosition) {
 		() => checkBorder(pos),
 		() => checkWall(pos),
 	);
+}
+
+export function lookForStructureAt<Type extends string>(room: Room, pos: RoomPosition.RoomPosition, structureType: Type) {
+	type Object = Extract<AnyStructure, { structureType: Type }>;
+	return room.lookForAt(C.LOOK_STRUCTURES, pos).find(
+		(look): look is LookForType<Object> =>
+			look.structure.structureType === structureType)?.structure;
 }
 
 // Register pathfinding and movement rules

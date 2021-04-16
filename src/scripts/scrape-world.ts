@@ -87,6 +87,14 @@ const rooms = db.getCollection('rooms').find().map(room => ({
 					_upgradeBlockedTime: object.upgradeBlocked,
 				};
 
+			case 'mineral':
+				return {
+					...withRoomObject(object),
+					density: object.density,
+					mineralAmount: object.mineralAmount,
+					mineralType: object.mineralType,
+				};
+
 			case 'source':
 				return {
 					...withRoomObject(object),

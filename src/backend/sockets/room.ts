@@ -84,8 +84,10 @@ export const roomSubscription: SubscriptionEndpoint = {
 					for (const object of getObjects(room)) {
 						asUnion(object);
 						const value = object[Render]();
-						if (value._id) {
-							objects[value._id] = value;
+						if (value) {
+							if (value._id) {
+								objects[value._id] = value;
+							}
 						}
 						const owner = object.owner;
 						if (owner != null && !seenUsers.has(owner)) {

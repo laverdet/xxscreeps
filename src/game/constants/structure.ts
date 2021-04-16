@@ -4,7 +4,6 @@ export const STRUCTURE_PORTAL = 'portal' as const;
 export const STRUCTURE_OBSERVER = 'observer' as const;
 export const STRUCTURE_POWER_BANK = 'powerBank' as const;
 export const STRUCTURE_POWER_SPAWN = 'powerSpawn' as const;
-export const STRUCTURE_EXTRACTOR = 'extractor' as const;
 export const STRUCTURE_LAB = 'lab' as const;
 export const STRUCTURE_TERMINAL = 'terminal' as const;
 export const STRUCTURE_NUKER = 'nuker' as const;
@@ -43,9 +42,6 @@ export const POWER_SPAWN_HITS = 5000;
 export const POWER_SPAWN_ENERGY_CAPACITY = 5000;
 export const POWER_SPAWN_POWER_CAPACITY = 100;
 export const POWER_SPAWN_ENERGY_RATIO = 50;
-
-export const EXTRACTOR_HITS = 500;
-export const EXTRACTOR_COOLDOWN = 5;
 
 export const LAB_HITS = 500;
 export const LAB_MINERAL_CAPACITY = 3000;

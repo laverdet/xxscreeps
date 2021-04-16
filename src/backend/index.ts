@@ -31,7 +31,7 @@ type RenderedRoomObject = {
 };
 declare module 'xxscreeps/game/object' {
 	interface RoomObject {
-		[Render]: () => RenderedRoomObject;
+		[Render]: () => RenderedRoomObject | undefined;
 		[MapRender]: (object: any) => string | undefined;
 		[TerrainRender]: (object: any) => number | undefined;
 	}
@@ -48,7 +48,7 @@ export function registerBackendRoute(endpoint: Endpoint) {
 // Backend render hooks
 export function bindRenderer<Type extends RoomObject>(
 	object: Implementation<Type>,
-	render: (object: Type, next: () => RenderedRoomObject) => RenderedRoomObject,
+	render: (object: Type, next: () => RenderedRoomObject) => RenderedRoomObject | undefined,
 ) {
 	const { prototype } = object;
 	const parent = Object.getPrototypeOf(prototype);
