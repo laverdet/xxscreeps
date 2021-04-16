@@ -9,7 +9,7 @@ export type Sandbox = IsolatedSandbox | NodejsSandbox;
 export type Options = {
 	codeBlob: Readonly<Uint8Array>;
 	flagBlob?: Readonly<Uint8Array>;
-	memoryBlob?: Readonly<Uint8Array>;
+	memoryBlob: Readonly<Uint8Array> | null;
 	terrainBlob: Readonly<Uint8Array>;
 	userId: string;
 	writeConsole: (fd: number, payload: string) => void;

@@ -18,7 +18,7 @@ export function getConsoleChannel(shard: Shard, user: string) {
  */
 export async function loadUserFlagBlob(shard: Shard, user: string) {
 	try {
-		return await shard.blob.getBuffer(`user/${user}/flags`);
+		return await shard.blob.reqBuffer(`user/${user}/flags`);
 	} catch (err) {}
 }
 
@@ -46,7 +46,7 @@ const visualsReader = makeReader(Visual.schema);
 export async function loadVisuals(shard: Shard, user: string, time: number) {
 	const fragment = `visual${time % 2}`;
 	try {
-		return visualsReader(await shard.blob.getBuffer(`user/${user}/${fragment}`));
+		return visualsReader(await shard.blob.reqBuffer(`user/${user}/${fragment}`));
 	} catch (err) {}
 }
 
@@ -72,5 +72,5 @@ export function getFlagChannel(shard: Shard, user: string) {
 //
 // User memory functions
 export async function loadUserMemoryBlob(shard: Shard, user: string) {
-	return shard.blob.getBuffer(`memory/${user}`).catch(() => undefined);
+	return shard.blob.getBuffer(`memory/${user}`);
 }

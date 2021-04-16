@@ -16,4 +16,5 @@ export function registerHarvestable<Type extends RoomObject, Error extends C.Err
 
 export const manifest: Manifest = {
 	dependencies: [ 'xxscreeps/mods/creep' ],
+	provides: [ 'constants', 'game', 'processor' ],
 };

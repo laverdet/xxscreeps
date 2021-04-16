@@ -88,7 +88,7 @@ export function flush(): Readonly<Uint8Array> {
 	return new Uint8Array(memory.buffer, 0, memoryLength << 1);
 }
 
-export function initialize(value?: Readonly<Uint8Array>) {
+export function initialize(value: Readonly<Uint8Array> | null) {
 	if (value) {
 		memoryLength = value.length >>> 1;
 		memory = new Uint16Array(new SharedArrayBuffer(align(value.length)));

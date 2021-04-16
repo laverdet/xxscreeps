@@ -166,17 +166,23 @@ const roomsTerrain = new Map(db.getCollection('rooms.terrain').find().map(({ roo
 const roomNames = new Set(Fn.map(rooms, room => room.name));
 const userIds = new Set(users.filter(user => user.active).map(user => user.id));
 {
+	// Flush databases at the same time because they may point to the same service
 	const shardConfig = config.shards[0];
-	const blob = await connectToProvider(shardConfig.blob, 'blob');
+	const [ blob, data ] = await Promise.all([
+		connectToProvider(shardConfig.blob, 'blob'),
+		connectToProvider(shardConfig.data, 'keyval'),
+	]);
+	await Promise.all([ blob.flushdb(), data.flushdb() ]);
+	// Save required blob data
 	await blob.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
 	await blob.save();
 	blob.disconnect();
-	const keyval = await connectToProvider(shardConfig.data, 'keyval');
-	await keyval.sadd('rooms', [ ...roomNames ]);
-	await keyval.sadd('users', [ ...userIds ]);
-	await keyval.set('time', gameTime);
-	await keyval.save();
-	keyval.disconnect();
+	// Save required keyval data
+	await data.sadd('rooms', [ ...roomNames ]);
+	await data.sadd('users', [ ...userIds ]);
+	await data.set('time', gameTime);
+	await data.save();
+	data.disconnect();
 }
 const shard = await Shard.connect('shard0');
 const { blob } = shard;

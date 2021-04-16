@@ -1,7 +1,8 @@
 {
 	"extends": "./tsconfig.base",
 	"compilerOptions": {
-		"isolatedModules": false,
+		"isolatedModules": true,
+		"declarationDir": "dist/xxscreeps"
 	},
 	"include": [ "src" ],
 }

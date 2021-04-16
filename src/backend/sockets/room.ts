@@ -116,7 +116,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 
 			// Get users not yet seen
 			const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async(id): Promise<[ string, any ]> => {
-				const user = User.read(await this.context.shard.blob.getBuffer(`user/${id}/info`));
+				const user = User.read(await this.context.shard.blob.reqBuffer(`user/${id}/info`));
 				return [ user.id, {
 					username: user.username,
 					badge: JSON.parse(user.badge),

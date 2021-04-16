@@ -1,16 +1,15 @@
-import { Deferred } from 'xxscreeps/utility/deferred';
+import { Deferred } from 'xxscreeps/utility/async';
 import { PubSubProvider, PubSubSubscription } from './provider';
 
 type MessageType<Message> = Message | (Message extends string ? null : { type: null });
 type Listener<Message> = (message: MessageType<Message>) => void;
 
 export class Channel<Message = string> {
-	constructor(pubsub: PubSubProvider, name: string, json?: Message extends string ? false : never);
-	constructor(pubsub: PubSubProvider, name: string, json: true);
+	constructor(pubsub: PubSubProvider, name: string, ...json: Message extends string ? [ false ] : [ true? ]);
 	constructor(
 		private readonly pubsub: PubSubProvider,
 		private readonly name: string,
-		private readonly json = false,
+		private readonly json = true,
 	) {}
 
 	async listen(listener: Listener<Message>) {

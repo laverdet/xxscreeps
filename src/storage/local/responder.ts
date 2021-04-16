@@ -1,7 +1,7 @@
 import type { Instance, Values } from 'xxscreeps/utility/types';
 import assert from 'assert';
 import { Worker, isMainThread, parentPort } from 'worker_threads';
-import { Deferred } from 'xxscreeps/utility/deferred';
+import { Deferred } from 'xxscreeps/utility/async';
 import { staticCast } from 'xxscreeps/utility/utility';
 
 /**

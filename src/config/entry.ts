@@ -1,11 +1,11 @@
-import './mods';
+// Get script and remove `dist/config/entry.js` from args
+process.argv.splice(1, 1);
+const specifier = process.argv[1];
+if (!specifier) {
+	throw new Error('No script specified');
+}
+await import('./mods');
 await async function() {
-	// Get script and remove `dist/config/entry.js` from args
-	process.argv.splice(1, 1);
-	const specifier = process.argv[1];
-	if (!specifier) {
-		throw new Error('No script specified');
-	}
 	// Resolve with different pattern strategies
 	const base = new URL('../..', import.meta.url);
 	for (const fn of [

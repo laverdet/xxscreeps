@@ -131,7 +131,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 	}
 
 	// Move creep to next room
-	if (isBorder(creep.pos.x, creep.pos.y)) {
+	if (isBorder(creep.pos.x, creep.pos.y) && creep.owner.length > 2) {
 		const { rx, ry } = parseRoomName(creep.pos.roomName);
 		const next = function() {
 			if (creep.pos.x === 0) {

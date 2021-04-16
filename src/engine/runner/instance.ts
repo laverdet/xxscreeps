@@ -52,7 +52,7 @@ export class PlayerInstance {
 		// Connect to channel, load initial user data
 		const [ channel, userBlob ] = await Promise.all([
 			getRunnerUserChannel(shard, userId).subscribe(),
-			shard.blob.getBuffer(`user/${userId}/info`),
+			shard.blob.reqBuffer(`user/${userId}/info`),
 		]);
 		const user = User.read(userBlob);
 		return new PlayerInstance(shard, user, channel);
@@ -74,7 +74,7 @@ export class PlayerInstance {
 		// If there's no sandbox load the required data and initialize
 		if (!this.sandbox) {
 			const [ codeBlob, flagBlob, memoryBlob ] = await Promise.all([
-				this.shard.blob.getBuffer(`user/${this.userId}/${this.branch}`),
+				this.shard.blob.reqBuffer(`user/${this.userId}/${this.branch}`),
 				loadUserFlagBlob(this.shard, this.userId),
 				loadUserMemoryBlob(this.shard, this.userId),
 			]);

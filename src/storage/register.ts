@@ -1,3 +1,4 @@
+import 'xxscreeps/config/mods/import/storage';
 import type { UnionToIntersection } from 'xxscreeps/utility/types';
 import type { BlobProvider, KeyValProvider, PubSubProvider } from './provider';
 import { pathToFileURL } from 'url';
@@ -19,13 +20,17 @@ type DispositionToProvider<T> =
 export function registerStorageProvider<Dispositions extends string>(
 	schemes: string | string[],
 	dispositions: Dispositions | Dispositions[],
-	provider: (url: InstanceType<typeof URL>) => Promise<UnionToIntersection<DispositionToProvider<Dispositions>>>,
+	provider: (url: URL, disposition: Dispositions) => Promise<UnionToIntersection<DispositionToProvider<Dispositions>>>,
 ) {
 	// TODO: This is messy
 	const providers = (registerStorageProvider as any).providers ??= new Map<any, any>();
 	for (const scheme of Array.isArray(schemes) ? schemes : [ schemes ]) {
 		for (const disposition of Array.isArray(dispositions) ? dispositions : [ dispositions ]) {
-			providers.set(`${scheme}:${disposition}`, provider);
+			const key = `${scheme}:${disposition}`;
+			if (providers.has(key)) {
+				throw new Error(`Storage provider conflict-- ${key}`);
+			}
+			providers.set(key, provider);
 		}
 	}
 }
@@ -38,5 +43,5 @@ Promise<DispositionToProvider<Disposition>> {
 	if (!provider) {
 		throw new Error(`No storage provider for ${url.protocol}${disposition}`);
 	}
-	return provider(url) as Promise<any>;
+	return provider(url, disposition) as Promise<any>;
 }

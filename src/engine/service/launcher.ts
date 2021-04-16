@@ -1,6 +1,6 @@
-import 'xxscreeps/config/mods';
 import config from 'xxscreeps/config';
 import argv from 'xxscreeps/config/arguments';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as UserSchema from 'xxscreeps/engine/metadata/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { listen } from 'xxscreeps/utility/async';
@@ -20,12 +20,12 @@ try {
 	// Attach console for given user
 	if (argv['attach-console']) {
 		const attachTo = argv['attach-console'];
-		const gameMutex = await Mutex.connect('game', shard.scratch, shard.pubsub);
+		const gameMutex = await Mutex.connect('game', shard.data, shard.pubsub);
 		try {
 			const id = await gameMutex.scope(async() => {
 				const userIds = await shard.data.smembers('users');
 				for (const userId of userIds) {
-					const user = UserSchema.read(await shard.blob.getBuffer(`user/${userId}/info`));
+					const user = UserSchema.read(await shard.blob.reqBuffer(`user/${userId}/info`));
 					if (user.username === attachTo) {
 						return userId;
 					}
@@ -92,11 +92,11 @@ try {
 		const runner = import('./runner');
 		await Promise.all([ main, backend, processor, runner ]);
 	} else {
-		const backend = new Worker('xxscreeps/backend/server');
-		const processors = Array(processorWorkers).fill(undefined).map(() =>
-			new Worker('xxscreeps/engine/service/processor'));
-		const runners = Array(runnerWorkers).fill(undefined).map(() =>
-			new Worker('xxscreeps/engine/service/runner'));
+		const backend = await Worker.create('xxscreeps/backend/server');
+		const processors = await Promise.all(Fn.map(Fn.range(processorWorkers), () =>
+			Worker.create('xxscreeps/engine/service/processor')));
+		const runners = await Promise.all(Fn.map(Fn.range(runnerWorkers), () =>
+			Worker.create('xxscreeps/engine/service/runner')));
 		await Promise.all([
 			main,
 			Promise.all(processors.map(worker => waitForWorker(worker))),

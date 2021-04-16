@@ -14,7 +14,7 @@ export function getProcessorChannel(shard: Shard) {
 
 const activeRoomsKey = 'processor/activeRooms';
 const sleepingRoomsKey = 'processor/inactiveRooms';
-export const roomToUsersSetKey = (roomName: string) =>
+const roomToUsersSetKey = (roomName: string) =>
 	`rooms/${roomName}/users`;
 export const userToRoomsSetKey = (userId: string) =>
 	`users/${userId}/rooms`;
@@ -71,7 +71,11 @@ export async function publishInterRoomIntents(shard: Shard, roomName: string, ti
 }
 
 export async function acquireIntentsForRoom(shard: Shard, roomName: string, time: number) {
-	const payloads = await shard.scratch.lpop(intentsListForRoomKey(time, roomName), -1);
+	const key = intentsListForRoomKey(time, roomName);
+	const [ payloads ] = await Promise.all([
+		shard.scratch.lrange(key, 0, -1),
+		shard.scratch.del(key),
+	]);
 	return payloads.map(json => {
 		const value: { userId: string; intents: RoomIntentPayload } = JSON.parse(json);
 		return value;
@@ -79,14 +83,18 @@ export async function acquireIntentsForRoom(shard: Shard, roomName: string, time
 }
 
 export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string, time: number) {
-	const payloads = await shard.scratch.lpop(finalIntentsListForRoomKey(time, roomName), -1);
+	const key = finalIntentsListForRoomKey(time, roomName);
+	const [ payloads ] = await Promise.all([
+		shard.scratch.lrange(key, 0, -1),
+		shard.scratch.del(key),
+	]);
 	return payloads.map((json): SingleIntent[] => JSON.parse(json));
 }
 
 export async function begetRoomProcessQueue(shard: Shard, currentTime: number, time: number) {
 	if (
 		currentTime < time &&
-		await shard.scratch.set('processor/time', time, 'get') !== String(time)
+		await shard.scratch.set('processor/time', time, { get: true }) !== String(time)
 	) {
 		const count = await shard.scratch.zcard(activeRoomsKey);
 		await Promise.all([

@@ -32,7 +32,7 @@ export class Authentication {
 	}
 
 	static async connect(blob: BlobProvider) {
-		return new Authentication(blob, read(await blob.getBuffer('auth')));
+		return new Authentication(blob, read(await blob.reqBuffer('auth')));
 	}
 
 	associateUser(providerKey: string, userId: string) {

@@ -16,8 +16,8 @@ export class BackendContext {
 	static async connect() {
 		// Connect to services
 		const shard = await Shard.connect('shard0');
-		const world = readWorld(await shard.blob.getBuffer('terrain'));
-		const gameMutex = await Mutex.connect('game', shard.scratch, shard.pubsub);
+		const world = readWorld(await shard.blob.reqBuffer('terrain'));
+		const gameMutex = await Mutex.connect('game', shard.data, shard.pubsub);
 		const auth = await Authentication.connect(shard.blob);
 		const rooms = await shard.data.smembers('rooms');
 		const context = new BackendContext(shard, world, new Set(rooms), gameMutex, auth);
@@ -25,11 +25,11 @@ export class BackendContext {
 	}
 
 	async disconnect() {
-		this.shard.disconnect();
 		await this.gameMutex.disconnect();
+		this.shard.disconnect();
 	}
 
 	async loadUser(id: string) {
-		return User.read(await this.shard.blob.getBuffer(`user/${id}/info`));
+		return User.read(await this.shard.blob.reqBuffer(`user/${id}/info`));
 	}
 }

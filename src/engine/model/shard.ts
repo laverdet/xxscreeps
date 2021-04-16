@@ -36,7 +36,7 @@ export class Shard {
 			connectToProvider(shard.pubsub, 'pubsub'),
 			connectToProvider(shard.scratch, 'keyval'),
 		]);
-		const terrainBlob = await blob.getBuffer('terrain');
+		const terrainBlob = await blob.reqBuffer('terrain');
 		const channel = await new Channel<Message>(pubsub, 'channel/game').subscribe();
 		// Create instance (which subscribes to tick notification) and then read current info
 		const instance = new Shard(blob, data, pubsub, scratch, terrainBlob, channel);
@@ -66,7 +66,7 @@ export class Shard {
 	 */
 	async loadRoomBlob(name: string, time = this.time) {
 		this.checkTime(time, -1);
-		return this.blob.getBuffer(this.roomKeyForTime(name, time));
+		return this.blob.reqBuffer(this.roomKeyForTime(name, time));
 	}
 
 	/**
@@ -92,7 +92,7 @@ export class Shard {
 	 * buffer to ensure a rollback doesn't overwrite room state.
 	 */
 	async copyRoomFromPreviousTick(name: string, time: number) {
-		return this.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
+		await this.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
 	}
 
 	private checkTime(time: number, delta: number) {

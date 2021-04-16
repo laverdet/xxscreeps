@@ -12,7 +12,7 @@ const BadgeEndpoint: Endpoint = {
 		const badge = Badge.validate(context.request.body.badge);
 		await context.backend.gameMutex.scope(async() => {
 			const fragment = `user/${userId}/info`;
-			const user = User.read(await context.shard.blob.getBuffer(fragment));
+			const user = User.read(await context.shard.blob.reqBuffer(fragment));
 			user.badge = JSON.stringify(badge);
 			await context.shard.blob.set(fragment, User.write(user));
 		});

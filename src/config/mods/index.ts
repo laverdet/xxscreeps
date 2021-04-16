@@ -1,12 +1,14 @@
 import { promises as fs } from 'fs';
 import config, { configPath } from 'xxscreeps/config';
 
+type Provide = 'constants' | 'backend' | 'game' | 'processor' | 'storage';
 export type Manifest = {
 	dependencies?: string[];
+	provides: Provide | Provide[] | null;
 };
 
 // Resolve module dependencies in a hopefully deterministic order
-const mods: string[] = [];
+const mods: Record<string, Provide[]> = {};
 const stack: string[] = [];
 const resolved = new Set<string>();
 const baseUrl = new URL(configPath, 'file://');
@@ -28,7 +30,8 @@ async function resolve(specifiers: string[]) {
 			stack.push(specifier);
 			await resolve(manifest.dependencies ?? []);
 			stack.pop();
-			mods.push(url);
+			mods[url] = Array.isArray(manifest.provides) ? manifest.provides :
+				manifest.provides === null ? [] as never : [ manifest.provides ];
 			resolved.add(specifier);
 		}
 	}
@@ -45,13 +48,9 @@ try {
 } catch (err) {
 	// Given a specifier fragment this return all mods which export it
 	const resolveWithinMods = async(specifier: string) => {
-		const resolved = await Promise.all(mods.map(async mod => {
-			try {
-				return await import.meta.resolve(`./${specifier}`, mod);
-			} catch (err) {
-				if (err.code !== 'ERR_MODULE_NOT_FOUND') {
-					throw err;
-				}
+		const resolved = await Promise.all(Object.entries(mods).map(async([ mod, provides ]) => {
+			if (provides.includes(specifier as never)) {
+				return import.meta.resolve(`./${specifier}`, mod);
 			}
 		}));
 		return resolved.filter(mod => mod !== undefined);
@@ -69,7 +68,7 @@ try {
 
 	// Save mod bundles
 	await Promise.all([
-		...[ 'backend', 'game', 'processor' ].map(async specifier => {
+		...[ 'backend', 'game', 'processor', 'storage' ].map(async specifier => {
 			const mods = await resolveWithinMods(specifier);
 			const content = mods.map(mod => `import ${JSON.stringify(mod)};\n`).join('');
 			await fs.writeFile(new URL(`${specifier}.js`, outDir), content, 'utf8');

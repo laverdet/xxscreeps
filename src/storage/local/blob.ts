@@ -11,7 +11,7 @@ registerStorageProvider('file', 'blob', async url => {
 	try {
 		return await connect(LocalBlobClient, `${url}`);
 	} catch (err) {
-		return await LocalBlobProvider.create(url);
+		return await LocalBlobHost.create(url);
 	}
 });
 
@@ -24,14 +24,39 @@ function copy(buffer: Readonly<Uint8Array>) {
 }
 
 export abstract class LocalBlobProvider extends Responder implements BlobProvider {
-	abstract del(key: string): Promise<void>;
-	abstract getBuffer(key: string): Promise<Readonly<Uint8Array>>;
+	abstract del(key: string): Promise<number>;
+	abstract getBuffer(key: string): Promise<Readonly<Uint8Array> | null>;
 	abstract set(key: string, value: Readonly<Uint8Array>): Promise<void>;
-	abstract copy(from: string, to: string): Promise<void>;
+	abstract copy(from: string, to: string): Promise<number>;
 	abstract save(): Promise<void>;
+	abstract flushdb(): Promise<void>;
 
-	static async create(url: InstanceType<typeof URL>) {
+	async reqBuffer(key: string) {
+		const value = await this.getBuffer(key);
+		if (value === null) {
+			throw new Error(`"${key}" does not exist`);
+		}
+		return value;
+	}
+}
+
+class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
+	private bufferedBlobs = new Map<string, Readonly<Uint8Array>>();
+	private bufferedDeletes = new Set<string>();
+	private readonly knownPaths = new Set<string>();
+	private readonly processUnlistener = listen(process, 'exit', () => this.checkMissingFlush());
+
+	constructor(name: string, private readonly path: string) {
+		super(name);
+	}
+
+	static async create(url: URL) {
 		const path = fileURLToPath(url);
+		await LocalBlobHost.initializeDirectory(path);
+		return create(LocalBlobHost, `${url}`, path);
+	}
+
+	static async initializeDirectory(path: string) {
 		// Ensure directory exists, or make it
 		await fs.mkdir(path, { recursive: true });
 
@@ -81,18 +106,6 @@ export abstract class LocalBlobProvider extends Responder implements BlobProvide
 			// Try once more
 			await tryLock();
 		})();
-		return create(LocalBlobHost, `${url}`, path);
-	}
-}
-
-class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
-	private bufferedBlobs = new Map<string, Readonly<Uint8Array>>();
-	private bufferedDeletes = new Set<string>();
-	private readonly knownPaths = new Set<string>();
-	private readonly processUnlistener = listen(process, 'exit', () => this.checkMissingFlush());
-
-	constructor(name: string, private readonly path: string) {
-		super(name);
 	}
 
 	async del(key: string) {
@@ -103,34 +116,41 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		} else {
 			// Ensure it actually exists on disk
 			const path = Path.join(this.path, key);
-			await fs.stat(path);
+			try {
+				await fs.stat(path);
+			} catch (err) {
+				return 0;
+			}
 			this.bufferedDeletes.add(key);
 		}
-		return Promise.resolve();
+		return 1;
 	}
 
-	async getBuffer(key: string): Promise<Readonly<Uint8Array>> {
+	async getBuffer(key: string) {
 		this.check(key);
 		// Check in-memory buffer
 		const buffered = this.bufferedBlobs.get(key);
 		if (buffered !== undefined) {
 			return buffered;
 		} else if (this.bufferedDeletes.has(key)) {
-			throw new Error('Does not exist');
+			return null;
 		}
 		// Load from file system
 		const path = Path.join(this.path, key);
-		const handle = await fs.open(path, 'r');
-
 		try {
-			const { size } = await handle.stat();
-			const buffer = new Uint8Array(new SharedArrayBuffer(size));
-			if ((await handle.read(buffer, 0, size)).bytesRead !== size) {
-				throw new Error('Read partial file');
+			const handle = await fs.open(path, 'r');
+			try {
+				const { size } = await handle.stat();
+				const buffer = new Uint8Array(new SharedArrayBuffer(size));
+				if ((await handle.read(buffer, 0, size)).bytesRead !== size) {
+					throw new Error('Read partial file');
+				}
+				return buffer;
+			} finally {
+				await handle.close();
 			}
-			return buffer;
-		} finally {
-			await handle.close();
+		} catch (err) {
+			return null;
 		}
 	}
 
@@ -143,7 +163,21 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 
 	async copy(from: string, to: string) {
 		this.check(to);
-		this.bufferedBlobs.set(to, await this.getBuffer(from));
+		const value = await this.getBuffer(from);
+		if (value === null) {
+			return 0;
+		} else {
+			this.bufferedBlobs.set(to, value);
+			return 1;
+		}
+	}
+
+	async flushdb() {
+		this.bufferedBlobs.clear();
+		this.bufferedDeletes.clear();
+		this.knownPaths.clear();
+		await fs.rmdir(this.path, { recursive: true });
+		await LocalBlobHost.initializeDirectory(this.path);
 	}
 
 	async save() {
@@ -235,6 +269,10 @@ class LocalBlobClient extends ResponderClient(LocalBlobProvider) {
 
 	copy(from: string, to: string) {
 		return this.request('copy', from, to);
+	}
+
+	flushdb() {
+		return this.request('flushdb');
 	}
 
 	save() {

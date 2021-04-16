@@ -61,6 +61,14 @@ export function listen<
 	return () => emitter.removeListener(message, listener);
 }
 
+// Exits immediately if a promise rejects
+export function mustNotReject(task: () => Promise<void> | Promise<void>) {
+	(typeof task === 'function' ? task() : task).catch(error => {
+		console.error(error);
+		process.exit();
+	});
+}
+
 // For when a plain promise is just too unwieldy
 export class Deferred<Type = void> {
 	promise: Promise<Type>;

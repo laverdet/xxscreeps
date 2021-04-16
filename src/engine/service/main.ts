@@ -1,10 +1,9 @@
-import * as Fn from 'xxscreeps/utility/functional';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
-import { Deferred } from 'xxscreeps/utility/deferred';
+import { Deferred } from 'xxscreeps/utility/async';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { Mutex } from 'xxscreeps/storage/mutex';
 import config from 'xxscreeps/config';
-import { getProcessorChannel, roomToUsersSetKey, userToRoomsSetKey } from 'xxscreeps/engine/model/processor';
+import { getProcessorChannel } from 'xxscreeps/engine/model/processor';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';
 
@@ -13,7 +12,7 @@ const shard = await Shard.connect('shard0');
 const processorChannel = getProcessorChannel(shard);
 const runnerChannel = getRunnerChannel(shard);
 const [ gameMutex, serviceSubscription ] = await Promise.all([
-	Mutex.connect('game', shard.scratch, shard.pubsub),
+	Mutex.connect('game', shard.data, shard.pubsub),
 	getServiceChannel(shard).subscribe(),
 ]);
 
@@ -35,13 +34,11 @@ try {
 	const [ rooms, users ] = await Promise.all([
 		shard.data.smembers('rooms'),
 		shard.data.smembers('users'),
+		shard.scratch.flushdb(),
 	]);
 	await Promise.all([
 		shard.scratch.sadd('initializeRooms', rooms),
-		shard.scratch.del('users'),
 		shard.scratch.sadd('users', users),
-		Promise.all(Fn.map(rooms, roomName => shard.scratch.del(roomToUsersSetKey(roomName)))),
-		Promise.all(Fn.map(users, userId => shard.scratch.del(userToRoomsSetKey(userId)))),
 	]);
 
 	// Wait for processors to connect and initialize world state
@@ -115,8 +112,8 @@ try {
 
 } finally {
 	// Clean up
-	shard.disconnect();
 	await gameMutex.disconnect();
 	await serviceSubscription.publish({ type: 'mainDisconnected' });
 	serviceSubscription.disconnect();
+	shard.disconnect();
 }

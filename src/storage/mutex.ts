@@ -1,4 +1,4 @@
-import { Deferred } from 'xxscreeps/utility/deferred';
+import { Deferred, mustNotReject } from 'xxscreeps/utility/async';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
 import { KeyValProvider, PubSubProvider } from './provider';
 
@@ -15,7 +15,7 @@ export class Mutex {
 	) {}
 
 	static async connect(name: string, keyval: KeyValProvider, pubsub: PubSubProvider) {
-		const channel = await new Channel<Message>(pubsub, `mutex/channel/${name}`).subscribe();
+		const channel = await new Channel<Message>(pubsub, `mutex/channel/${name}`, false).subscribe();
 		const lock = new Lock(keyval, `mutex/${name}`);
 		return new Mutex(channel, lock);
 	}
@@ -139,16 +139,29 @@ export class Mutex {
 }
 
 class Lock {
+	private interval: ReturnType<typeof setInterval> | undefined;
+	private readonly value = `${Math.random()}`;
 	constructor(
 		private readonly keyval: KeyValProvider,
 		private readonly name: string,
 	) {}
 
 	async lock() {
-		return (await this.keyval.sadd('locks', [ this.name ])) === 1;
+		if (await this.keyval.set(this.name, this.value, { px: 30000, nx: true }) === null) {
+			return false;
+		} else {
+			this.interval = setInterval(() => mustNotReject(async() => {
+				if (await this.keyval.set(this.name, this.value, { px: 30000, xx: true }) === null) {
+					throw new Error('Lock expired unexpectedly');
+				}
+			}), 15000);
+			return true;
+		}
 	}
 
 	unlock() {
-		return this.keyval.srem('locks', [ this.name ]);
+		clearInterval(this.interval!);
+		this.interval = undefined;
+		return this.keyval.cad(this.name, this.value);
 	}
 }
