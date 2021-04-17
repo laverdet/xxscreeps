@@ -6,15 +6,23 @@ export { Variant };
 type WithVariant<V extends number | string = any> = { [Variant]: V };
 
 // This is passed around as a fake type from all the declaration functions
+const Shape = Symbol('withShape');
 const Type = Symbol('withType');
+export type WithShape<Type> = { [Shape]: Type };
 export type WithType<Type> = { [Type]: Type };
-type ResolvedTypeOf<Format> =
-	Format extends WithType<infer Type> ? Type :
+export type WithShapeAndType<Shape, Type = Shape> = WithShape<Shape> & WithType<Type>;
+type ResolvedShapeOf<Format> = Format extends WithShape<infer Type> ? Type : ResolvedTypeOrShapeCommon<Format>;
+type ResolvedTypeOf<Format> = Format extends WithType<infer Type> ? Type : ResolvedTypeOrShapeCommon<Format>;
+type ResolvedTypeOrShapeCommon<Format> =
 	Format extends Numeric ? number :
 	Format extends 'bool' ? boolean :
 	Format extends 'buffer' ? Readonly<Uint8Array> :
 	Format extends 'string' ? string :
 	never;
+
+export type ShapeOf<Format> =
+	Format extends () => infer Type ? ResolvedShapeOf<Type> :
+	ResolvedShapeOf<Format>;
 export type TypeOf<Format> =
 	Format extends () => infer Type ? ResolvedTypeOf<Type> :
 	ResolvedTypeOf<Format>;
@@ -69,7 +77,8 @@ type VectorFormat = {
 };
 
 // A fixed sized array of elements
-export function array<Type extends Format>(length: number, element: Type): WithType<TypeOf<Type>[]> {
+export function array<Type extends Format>(length: number, element: Type):
+WithShapeAndType<ShapeOf<Type>[], TypeOf<Type>[]> {
 	const format: ArrayFormat = {
 		array: element,
 		length,
@@ -90,14 +99,15 @@ type RawCompositionInterceptor<Type = any> = {
 };
 
 export function compose<Type extends Format, In extends CompositionInterceptor<TypeOf<Type>>>(
-	format: Type, interceptor: In,
-): WithType<In extends CompositionInterceptor<TypeOf<Type>, infer Result> ? Result : never>;
+	format: Type, interceptor: In
+): WithShapeAndType<In extends CompositionInterceptor<TypeOf<Type>, infer Result> ? Result : never>;
 
 export function compose<Type extends Format, Result>(
-	format: Type, interceptor: RawCompositionInterceptor<Result>,
-): WithType<Result>;
+	format: Type, interceptor: RawCompositionInterceptor<Result>
+): WithShapeAndType<Result>;
 
-export function compose<Overlay>(format: Format, interceptor: Implementation<Overlay>): WithType<Overlay>;
+export function compose<Type extends Format, Overlay>(format: Type, interceptor: Implementation<Overlay>):
+WithShapeAndType<ShapeOf<Type>, Overlay>;
 
 export function compose(format: Format, interceptor: Interceptor | Implementation) {
 	const composedFormat: ComposedFormat = {
@@ -108,7 +118,7 @@ export function compose(format: Format, interceptor: Interceptor | Implementatio
 }
 
 // Holds a constant that doesn't even get stored into the blob
-export function constant<Type extends number | string | {}>(value: Type): WithType<Type> {
+export function constant<Type extends number | string | {}>(value: Type): WithShapeAndType<any, Type> {
 	const format: ConstantFormat = { constant: value };
 	return format as never;
 }
@@ -120,7 +130,7 @@ export function declare<Type extends Format>(named: string, format: Type): Type 
 }
 
 // An indexed value from a defined set of possible values
-export function enumerated<Type extends EnumTypes[]>(...values: Type): WithType<Type[number]> {
+export function enumerated<Type extends EnumTypes[]>(...values: Type): WithShapeAndType<Type[number]> {
 	if (values.length > 256) {
 		throw new Error('`enumerated` type is too large');
 	}
@@ -131,7 +141,8 @@ export function enumerated<Type extends EnumTypes[]>(...values: Type): WithType<
 }
 
 // An optional element, will consume only 1 byte in case of `undefined`
-export function optional<Type extends Format>(element: Type): WithType<TypeOf<Type> | undefined> {
+export function optional<Type extends Format>(element: Type):
+WithShapeAndType<ShapeOf<Type> | undefined, TypeOf<Type> | undefined> {
 	const format: OptionalFormat = {
 		optional: element,
 	};
@@ -143,7 +154,14 @@ type StructDeclaration = WithVariant | {
 	[key: string]: Format;
 };
 
-export type StructDeclarationType<
+type StructDeclarationShape<
+	Type extends StructDeclaration,
+	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
+> = {
+	[Key in Keys]: ShapeOf<Type[Key]>;
+} & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
+
+type StructDeclarationType<
 	Type extends StructDeclaration,
 	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
 > = {
@@ -151,10 +169,10 @@ export type StructDeclarationType<
 } & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
 
 export function struct<Type extends StructDeclaration>(format: Type):
-WithType<StructDeclarationType<Type>>;
+WithShapeAndType<StructDeclarationShape<Type>, StructDeclarationType<Type>>;
 
 export function struct<Base extends Format, Type extends StructDeclaration>(base: Base, format: Type):
-WithType<TypeOf<Base> & StructDeclarationType<Type>>;
+WithShapeAndType<ShapeOf<Base> & StructDeclarationShape<Type>, TypeOf<Base> & StructDeclarationType<Type>>;
 
 export function struct(...args: [ StructDeclaration ] | [ any, StructDeclaration ]) {
 	const { inherit, members } = args.length === 1 ?
@@ -171,7 +189,9 @@ export function struct(...args: [ StructDeclaration ] | [ any, StructDeclaration
 // Pass a string to define a variant key into a `struct`
 export function variant<V extends number | string>(name: V): WithVariant<V>;
 // *or* an array of structs with variant keys
-export function variant<Type extends Format[]>(...args: Type): WithType<{
+export function variant<Type extends Format[]>(...args: Type): WithShapeAndType<{
+	[Key in keyof Type]: ShapeOf<Type[Key]>;
+}[number], {
 	[Key in keyof Type]: TypeOf<Type[Key]>;
 }[number]>;
 
@@ -187,7 +207,7 @@ export function variant(...args: [ string ] | StructFormat[]): any {
 }
 
 // An array of elements, of arbitrary size
-export function vector<Type extends Format>(element: Type): WithType<TypeOf<Type>[]> {
+export function vector<Type extends Format>(element: Type): WithShapeAndType<Iterable<ShapeOf<Type>>, TypeOf<Type>[]> {
 	const Format: VectorFormat = {
 		vector: element,
 	};
@@ -201,6 +221,6 @@ export function withFallback<Fallback>() {
 }
 
 // Cast the type of a format to something else
-export function withType<Type>(format: Format): WithType<Type> {
+export function withType<Type>(format: Format): WithShapeAndType<Type> {
 	return format as never;
 }

@@ -9,6 +9,7 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import { Owner, RoomObject } from 'xxscreeps/game/object';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
+import { assign } from 'xxscreeps/utility/utility';
 import { StructureExtension } from './extension';
 import { checkSpawnCreep, StructureSpawn, SpawnId, SpawningCreepId, SpawnTime } from './spawn';
 
@@ -55,13 +56,13 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 
 	// Set spawning information
 	const needTime = body.length * C.CREEP_SPAWN_TIME;
-	spawn.spawning = {
+	spawn.spawning = assign(new StructureSpawn.Spawning, {
 		directions: directions ?? [],
 		needTime,
 		[SpawnId]: spawn.id,
 		[SpawningCreepId]: creep.id,
 		[SpawnTime]: Game.time + needTime,
-	} as never; // TODO: remove
+	});
 	context.didUpdate();
 });
 

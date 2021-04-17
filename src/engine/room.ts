@@ -1,4 +1,4 @@
-import { makeReader, makeWriter, TypeOf } from 'xxscreeps/schema';
+import { makeReader, makeWriter, ShapeOf } from 'xxscreeps/schema';
 import { Cache } from 'xxscreeps/schema/cache';
 import { format, objectFormat } from 'xxscreeps/game/room/schema';
 import 'xxscreeps/config/mods/import/game';
@@ -9,4 +9,4 @@ export const read = makeReader(format, cache);
 export const write = makeWriter(format, cache);
 export const readRoomObject = makeReader(objectFormat, cache);
 export const writeRoomObject = makeWriter(objectFormat, cache);
-export type Shape = TypeOf<typeof format>;
+export type Shape = ShapeOf<typeof format>;

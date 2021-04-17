@@ -1,6 +1,6 @@
 import { BufferView } from './buffer-view';
 import { Cache, getOrSet } from './cache';
-import { Format, TypeOf, Variant } from './format';
+import { Format, ShapeOf, Variant } from './format';
 import { Layout, StructLayout, kPointerSize, alignTo, getLayout, unpackWrappedStruct } from './layout';
 import { runOnce } from 'xxscreeps/utility/memoize';
 import { entriesWithSymbols } from './symbol';
@@ -237,7 +237,7 @@ const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 
 export function makeWriter<Type extends Format>(format: Type, cache = new Cache) {
 	const { layout } = getLayout(format, cache);
 	const write = makeTypeWriter(layout, cache);
-	return (value: TypeOf<Type>): Readonly<Uint8Array> => {
+	return (value: ShapeOf<Type>): Readonly<Uint8Array> => {
 		const view = bufferCache();
 		const length = write(value, view, 0);
 		if (length > view.int8.length) {

@@ -1,4 +1,4 @@
-export type { Format, TypeOf } from './format';
+export type { Format, ShapeOf, TypeOf } from './format';
 export { BufferView } from './buffer-view';
 export { array, compose, constant, declare, enumerated, optional, struct, variant, vector, withFallback, withType } from './format';
 export { withOverlay } from './overlay';

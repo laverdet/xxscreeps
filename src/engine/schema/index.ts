@@ -1,4 +1,4 @@
-import type { WithType } from 'xxscreeps/schema/format';
+import type { WithShape, WithType } from 'xxscreeps/schema/format';
 import type { UnionToIntersection, UnwrapArray, WithKey } from 'xxscreeps/utility/types';
 import { resolve } from 'xxscreeps/schema/layout';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
@@ -20,7 +20,9 @@ export function enumeratedForPath<Path extends string>(path: Path): ExtractEnume
 }
 
 // Returns augmented formats as plain object that can be spread into a `struct({ ... })` declaration
-type ExtractStructSchema<Format> = UnionToIntersection<Format extends WithType<infer Type> ? {
+type ExtractStructSchema<Format> = UnionToIntersection<Format extends WithShape<infer Type> ? {
+	[Key in keyof Type]: WithShape<Type[Key]>;
+} : {}> & UnionToIntersection<Format extends WithType<infer Type> ? {
 	[Key in keyof Type]: WithType<Type[Key]>;
 } : {}>;
 export function structForPath<Path extends string>(path: Path): ExtractStructSchema<FormatForPath<Path>> {
