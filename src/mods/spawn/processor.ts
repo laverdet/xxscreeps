@@ -10,7 +10,7 @@ import { Owner, RoomObject } from 'xxscreeps/game/object';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { StructureExtension } from './extension';
-import { checkSpawnCreep, StructureSpawn, SpawnTime } from './spawn';
+import { checkSpawnCreep, StructureSpawn, SpawnId, SpawningCreepId, SpawnTime } from './spawn';
 
 declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }
@@ -56,11 +56,12 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 	// Set spawning information
 	const needTime = body.length * C.CREEP_SPAWN_TIME;
 	spawn.spawning = {
-		creep: creep.id,
 		directions: directions ?? [],
 		needTime,
+		[SpawnId]: spawn.id,
+		[SpawningCreepId]: creep.id,
 		[SpawnTime]: Game.time + needTime,
-	};
+	} as never; // TODO: remove
 	context.didUpdate();
 });
 
@@ -69,7 +70,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 	// Check creep spawning
 	(() => {
 		if (spawn.spawning && spawn.spawning[SpawnTime] <= Game.time) {
-			const creep = Game.getObjectById(spawn.spawning.creep);
+			const creep = Game.getObjectById<Creep.Creep>(spawn.spawning[SpawningCreepId]);
 			if (creep && creep instanceof Creep.Creep) {
 				// Look for spawn direction
 				const check = makePositionChecker({

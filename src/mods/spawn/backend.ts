@@ -1,4 +1,3 @@
-import type { Creep } from 'xxscreeps/mods/creep/creep';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
@@ -24,10 +23,10 @@ bindRenderer(Spawn.StructureSpawn, (spawn, next) => ({
 	name: spawn.name,
 	...spawn.spawning && {
 		spawning: {
-			name: Game.getObjectById<Creep>(spawn.spawning.creep)?.name,
+			name: spawn.spawning.name,
 			directions: spawn.spawning.directions,
 			needTime: spawn.spawning.needTime,
-			spawnTime: spawn.spawning[Spawn.SpawnTime],
+			spawnTime: Game.time + spawn.spawning.remainingTime,
 		},
 	},
 }));

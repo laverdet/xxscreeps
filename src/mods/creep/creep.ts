@@ -68,6 +68,12 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	}
 
 	/**
+	 * Cancel the order given during the current game tick.
+	 * @param methodName The name of a creep's method to be cancelled.
+	 */
+	cancelOrder(_methodName: string) {}
+
+	/**
 	 * Get the quantity of live body parts of the given type. Fully damaged parts do not count.
 	 * @param type A body part type
 	 */

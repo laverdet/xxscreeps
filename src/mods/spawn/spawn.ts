@@ -14,6 +14,7 @@ import { Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { StructureExtension } from './extension';
+import { BufferObject } from 'xxscreeps/schema/buffer-object';
 
 type SpawnCreepOptions = {
 	directions?: Direction[];
@@ -22,18 +23,31 @@ type SpawnCreepOptions = {
 	memory?: any;
 };
 
+export const SpawningCreepId = XSymbol('spawningCreepId');
+export const SpawnId = XSymbol('spawnId');
 export const SpawnTime = XSymbol('spawnTime');
 
+// `StructureSpawn.Spawning` format and definition
+const spawningFormat = struct({
+	directions: vector('int8'),
+	needTime: 'int32',
+	[SpawnId]: Id.format,
+	[SpawningCreepId]: Id.format,
+	[SpawnTime]: 'int32',
+});
+
+class Spawning extends withOverlay(BufferObject, spawningFormat) {
+	get name() { return Game.getObjectById<Creep.Creep>(this[SpawningCreepId])!.name }
+	get remainingTime() { return this[SpawnTime] - Game.time }
+	get spawn() { return Game.getObjectById<StructureSpawn>(this[SpawnId])! }
+}
+
+// `StructureSpawn` format
 export const format = () => compose(shape, StructureSpawn);
 const shape = declare('Spawn', struct(Structure.format, {
 	...variant('spawn'),
 	name: 'string',
-	spawning: optional(struct({
-		creep: Id.format,
-		directions: vector('int8'),
-		needTime: 'int32',
-		[SpawnTime]: 'int32',
-	})),
+	spawning: optional(compose(spawningFormat, Spawning)),
 	store: Store.restrictedFormat<'energy'>(),
 }));
 
@@ -105,6 +119,8 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 				return C.OK;
 			});
 	}
+
+	static Spawning = Spawning;
 }
 
 export function create(pos: RoomPosition, owner: string, name: string) {

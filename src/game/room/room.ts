@@ -376,11 +376,21 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 	//
 	// Debug utilities
-	toString() {
+	private toJSON() {
+		const result: any = {};
+		for (const ii in this) {
+			if (!(this[ii] instanceof RoomObject)) {
+				result[ii] = this[ii];
+			}
+		}
+		return result;
+	}
+
+	private toString() {
 		return `[Room ${this.name}]`;
 	}
 
-	[Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
 		// Every object has a `room` property so flatten this reference out unless it's a direct
 		// inspection
 		if (depth === options.depth) {

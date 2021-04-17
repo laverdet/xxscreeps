@@ -192,11 +192,11 @@ export class RoomPosition {
 	 */
 	findClosestByPath<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
 		search: Type, options?: FindClosestByPathOptions<PositionFindType<Type>>
-	): PositionFindType<Type> | undefined;
+	): PositionFindType<Type> | null;
 	findClosestByPath(
 		search: FindConstants | (RoomObject | RoomPosition)[],
 		options: FindClosestByPathOptions<any> = {},
-	): RoomObject | RoomPosition | undefined {
+	): RoomObject | RoomPosition | null {
 
 		// Find objects to search
 		const objects = typeof search === 'number' ?
@@ -208,13 +208,13 @@ export class RoomPosition {
 		// Invoke pathfinder
 		const result = PathFinder.roomSearch(this, goals, { ...options, maxRooms: 1 });
 		if (result.incomplete) {
-			return;
+			return null;
 		}
 
 		// Match position to object
 		const { path } = result;
 		const last = path[path.length - 1] ?? this;
-		return Fn.firstMatching(filtered, object => last.isNearTo(object));
+		return Fn.firstMatching(filtered, object => last.isNearTo(object)) ?? null;
 	}
 
 	/**
@@ -227,7 +227,7 @@ export class RoomPosition {
 	findClosestByRange<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
 		search: Type,
 		options?: RoomFindOptions<PositionFindType<Type>>,
-	): PositionFindType<Type> | undefined;
+	): PositionFindType<Type> | null;
 	findClosestByRange(
 		search: FindConstants | (RoomObject | RoomPosition)[], options?: RoomFindOptions,
 	) {
@@ -238,7 +238,7 @@ export class RoomPosition {
 		const filtered = options?.filter === undefined ? objects :
 			objects.filter(iteratee(options.filter));
 		return Fn.minimum(filtered, (left, right) =>
-			this.getRangeTo(left) - this.getRangeTo(right));
+			this.getRangeTo(left) - this.getRangeTo(right)) ?? null;
 	}
 
 	/**
@@ -325,15 +325,15 @@ export class RoomPosition {
 		);
 	}
 
-	toJSON() {
+	private toJSON() {
 		return { x: this.x, y: this.y, roomName: this.roomName };
 	}
 
-	toString() {
+	private toString() {
 		return `[room ${this.roomName} pos ${this.x},${this.y}]`;
 	}
 
-	[Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
 		return `[RoomPosition ${stylize(this.roomName, 'string')} {${stylize(`${this.x}`, 'number')}, ${stylize(`${this.y}`, 'number')}}]`;
 	}
 

@@ -14,7 +14,7 @@ export default function(creep: Creep, healers: Creep[]) {
 			creep.rangedHeal(healTarget);
 		}
 	}
-	let target: Creep | undefined;
+	let target: Creep | null;
 	if (creep.hits < creep.hitsMax / 2) {
 		if (!flee(creep, 4)) {
 			target = creep.pos.findClosestByPath(healers);
