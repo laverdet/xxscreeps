@@ -23,7 +23,7 @@ export const optionalFormat = declare('Id', compose(array(4, 'uint32'), {
 			view.uint32[offset32 - 2] =
 			view.uint32[offset32 - 3] =
 			view.uint32[offset32 - 4] = 0;
-			return 16;
+			return;
 		}
 		const { length } = value;
 		for (let ii = length; ii >= 8; ii -= 8) {
@@ -31,13 +31,8 @@ export const optionalFormat = declare('Id', compose(array(4, 'uint32'), {
 		}
 		// Leaves the front of the string with length < 8 for this part
 		view.uint32[--offset32] = parseInt(value.substr(0, length % 8), 16);
-		// Fill remaining memory with 0's
-		for (let ii = (length - 1) >>> 3; ii < 2; ++ii) {
-			view.uint32[--offset32] = 0;
-		}
 		// And write the length
 		view.uint8[offset] = value.length;
-		return 16;
 	},
 }));
 

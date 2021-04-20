@@ -24,6 +24,15 @@ export function *concat(...args: any[]) {
 	}
 }
 
+export function every<Type>(iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean) {
+	for (const value of iterable) {
+		if (!callback(value)) {
+			return false;
+		}
+	}
+	return true;
+}
+
 // Filter elements out an iterable
 export function filter<Type>(iterable: Iterable<Type>): Iterable<NonNullOrVoidable<Type>>;
 export function filter<Type, Filtered extends Type>(

@@ -11,7 +11,7 @@ import { CumulativeEnergyHarvested } from './symbols';
 // Register schema extensions
 const schema = [
 	registerSchema('Room', struct({
-		[CumulativeEnergyHarvested]: 'uint32',
+		[CumulativeEnergyHarvested]: 'int32',
 	})),
 
 	registerSchema('Room.objects', format),

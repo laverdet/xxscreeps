@@ -95,7 +95,7 @@ type CompositionInterceptor<Type = any, Result = any> = {
 
 type RawCompositionInterceptor<Type = any> = {
 	composeFromBuffer: (view: BufferView, offset: number) => Type;
-	decomposeIntoBuffer: (value: Type, view: BufferView, offset: number) => number;
+	decomposeIntoBuffer: (value: Type, view: BufferView, offset: number) => void;
 };
 
 export function compose<Type extends Format, In extends CompositionInterceptor<TypeOf<Type>>>(

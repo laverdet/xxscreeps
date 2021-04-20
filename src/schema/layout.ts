@@ -1,4 +1,5 @@
 import { Implementation } from 'xxscreeps/utility/types';
+import { staticCast } from 'xxscreeps/utility/utility';
 import { Cache, getOrSet } from './cache';
 import { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, Variant } from './format';
 import { injectGetters } from './overlay';
@@ -28,8 +29,7 @@ export type Layout =
 type ArrayLayout = {
 	array: Layout;
 	length: number;
-	size: number;
-	stride?: number;
+	stride: number;
 };
 
 type ComposedLayout = {
@@ -47,36 +47,41 @@ type NamedLayout = {
 
 type OptionalLayout = {
 	optional: Layout;
+	size: number;
+} | {
+	pointer: Layout;
 	align: number;
+	size: number;
 };
 
 export type StructLayout = {
 	struct: Record<string | symbol, {
-		align: number;
 		offset: number;
-		pointer?: true;
-		layout: Layout;
+		member: Layout;
 	}>;
 	inherit?: StructLayout;
-	size: number;
 	variant?: number | string;
 };
 
 type VariantLayout = {
 	variant: {
 		align: number;
-		struct: StructLayout;
+		layout: StructLayout;
+		size: number;
 	}[];
 };
 
 type VectorLayout = {
+	list: Layout;
+	align: number;
+	size: number;
+} | {
 	vector: Layout;
 	align: number;
 	size: number;
-	stride?: number;
 };
 
-type Traits = {
+export type Traits = {
 	align: number;
 	size: number;
 	stride?: number;
@@ -115,12 +120,12 @@ function getResolvedLayout(format: Format, cache: Cache): LayoutAndTraits {
 				};
 			}
 
-			// Other basic type
+			// String or buffer
 			return {
 				layout: format,
 				traits: {
 					align: kPointerSize,
-					size: kPointerSize,
+					size: kPointerSize * 2,
 				},
 			};
 
@@ -128,17 +133,19 @@ function getResolvedLayout(format: Format, cache: Cache): LayoutAndTraits {
 			const length = format.length;
 			const { layout, traits } = getLayout(format.array, cache);
 			const size = alignTo(traits.size, traits.align) * (length - 1) + traits.size;
+			if (traits.stride === undefined) {
+				throw new Error('Deque type not implemented');
+			}
 			return {
-				layout: {
+				layout: staticCast<ArrayLayout>({
 					array: layout,
 					length,
-					size,
 					stride: traits.stride,
-				},
+				}),
 				traits: {
 					align: traits.align,
 					size,
-					stride: traits.stride && (traits.stride * (length - 1) + traits.size),
+					stride: alignTo(size, traits.align),
 				},
 			};
 
@@ -150,47 +157,62 @@ function getResolvedLayout(format: Format, cache: Cache): LayoutAndTraits {
 				injectGetters(unpackWrappedStruct(layout), interceptor.prototype, cache);
 			}
 			return {
-				layout: {
+				layout: staticCast<ComposedLayout>({
 					composed: layout,
 					interceptor,
-				},
+				}),
 				traits,
 			};
 
 		} else if ('constant' in format) {
 			return {
-				layout: format,
+				layout: staticCast<ConstantLayout>(format),
 				traits: { align: 1, size: 0, stride: 0 },
 			};
 
 		} else if ('enum' in format) {
 			return {
-				layout: format,
+				layout: staticCast<EnumLayout>(format),
 				traits: { align: 1, size: 1, stride: 1 },
 			};
 
 		} else if ('named' in format) {
 			const { layout, traits } = getLayout(format.format, cache);
 			return {
-				layout: {
+				layout: staticCast<NamedLayout>({
 					named: format.named,
 					layout,
-				},
+				}),
 				traits,
 			};
 
 		} else if ('optional' in format) {
 			const { layout, traits } = getLayout(format.optional, cache);
-			return {
-				layout: {
-					optional: layout,
-					align: traits.align,
-				},
-				traits: {
-					align: 1,
-					size: 1,
-				},
-			};
+			if (traits.size <= kPointerSize * 2) {
+				return {
+					layout: staticCast<OptionalLayout>({
+						optional: layout,
+						size: traits.size,
+					}),
+					traits: {
+						align: traits.align,
+						size: traits.size + 1,
+						stride: traits.stride && alignTo(traits.size + 1, traits.align),
+					},
+				};
+			} else {
+				return {
+					layout: staticCast<OptionalLayout>({
+						pointer: layout,
+						align: traits.align,
+						size: traits.size,
+					}),
+					traits: {
+						align: kPointerSize,
+						size: kPointerSize,
+					},
+				};
+			}
 
 		} else if ('struct' in format) {
 			// Grab layout for structure members
@@ -202,15 +224,10 @@ function getResolvedLayout(format: Format, cache: Cache): LayoutAndTraits {
 				}));
 
 			// Simple struct pack algorithm by sorting by size largest to smallest
-			type MemberDescriptor = typeof members[number];
-			const isPointer = (member: MemberDescriptor) => member.traits.stride === undefined;
 			members.sort((left, right) => {
-				const size = (member: MemberDescriptor) => isPointer(member) ? kPointerSize : member.traits.size;
-				const elementSize = (member: MemberDescriptor) => isPointer(member) ? member.traits.size : Infinity;
 				const nameOf = (el: string | symbol) => typeof el === 'string' ? el : el.description ?? '';
 				return (
-					size(right) - size(left) ||
-					elementSize(right) - elementSize(left) ||
+					right.traits.size - left.traits.size ||
 					nameOf(left.key).localeCompare(nameOf(right.key))
 				);
 			});
@@ -219,36 +236,31 @@ function getResolvedLayout(format: Format, cache: Cache): LayoutAndTraits {
 			const baseLayout = format.inherit && getLayout(format.inherit, cache);
 			let offset = baseLayout?.traits.size ?? 0;
 			const arrangedMembers = members.map(member => {
-				const pointer = isPointer(member);
 				const { layout, traits } = member;
-				const memberOffset = alignTo(offset, pointer ? kPointerSize : traits.align);
-				offset += pointer ? kPointerSize : traits.size;
+				const memberOffset = alignTo(offset, traits.align);
+				offset += traits.size;
 				return {
 					key: member.key,
 					info: {
-						align: traits.align,
 						offset: memberOffset,
-						...pointer && { pointer: true as const },
-						layout,
+						member: layout,
 					},
 					traits,
 				};
 			});
 
 			// Calculate struct traits
-			const hasPointerElement = arrangedMembers.some(member => member.info.pointer);
-			const align = Math.max(...arrangedMembers.map(member =>
-				member.info.pointer ? kPointerSize : member.traits.align));
+			const align = Math.max(...arrangedMembers.map(member => member.traits.align));
 			const lastMember = arrangedMembers[arrangedMembers.length - 1];
-			const size = lastMember.info.offset + (lastMember.info.pointer ? kPointerSize : lastMember.traits.size);
-			const isFixedSize = !hasPointerElement && (!baseLayout || baseLayout.traits.stride !== undefined);
+			const size = lastMember.info.offset + lastMember.traits.size;
+			const isFixedSize = (!baseLayout || baseLayout.traits.stride !== undefined) &&
+				members.every(member => member.traits.stride !== undefined);
 			return {
-				layout: {
+				layout: staticCast<StructLayout>({
 					struct: Object.fromEntries(arrangedMembers.map(member => [ member.key, member.info ])),
 					inherit: baseLayout?.layout as StructLayout,
-					size,
 					variant: format.variant,
-				},
+				}),
 				traits: {
 					align,
 					size,
@@ -258,36 +270,49 @@ function getResolvedLayout(format: Format, cache: Cache): LayoutAndTraits {
 
 		} else if ('variant' in format) {
 			return {
-				layout: {
+				layout: staticCast<VariantLayout>({
 					variant: format.variant.map(variant => {
 						const { layout, traits } = getLayout(variant, cache);
 						return {
-							struct: layout as StructLayout,
+							layout: layout as StructLayout,
 							align: traits.align,
+							size: traits.size,
 						};
 					}),
-				},
+				}),
 				traits: {
 					align: kPointerSize,
-					size: kPointerSize,
+					size: kPointerSize + 1,
 				},
 			};
 
 		} else if ('vector' in format) {
 			const { layout, traits } = getLayout(format.vector, cache);
-			return {
-				layout: {
-					vector: layout,
-					align: Math.max(traits.align, kPointerSize),
-					size: traits.size,
-					stride: traits.stride,
-				},
-				traits: {
-					align: Math.max(traits.align, kPointerSize),
-					size: kPointerSize,
-				},
-			};
-
+			if (traits.stride === undefined) {
+				return {
+					layout: staticCast<VectorLayout>({
+						list: layout,
+						align: traits.align,
+						size: traits.size,
+					}),
+					traits: {
+						align: kPointerSize,
+						size: kPointerSize,
+					},
+				};
+			} else {
+				return {
+					layout: staticCast<VectorLayout>({
+						vector: layout,
+						align: traits.align,
+						size: traits.size,
+					}),
+					traits: {
+						align: kPointerSize,
+						size: kPointerSize * 2,
+					},
+				};
+			}
 		} else {
 			throw new Error('Invalid format');
 		}

@@ -2,7 +2,7 @@ import { typedArrayToString } from 'xxscreeps/utility/string';
 import { BufferView } from './buffer-view';
 import { Cache, getOrSet } from './cache';
 import { Format, TypeOf, Variant } from './format';
-import { Layout, StructLayout, getLayout, kPointerSize, unpackWrappedStruct, alignTo } from './layout';
+import { Layout, StructLayout, getLayout, kPointerSize, unpackWrappedStruct } from './layout';
 import { entriesWithSymbols } from './symbol';
 
 export type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
@@ -16,20 +16,13 @@ function getMemberReader(layout: StructLayout, cache: Cache): MemberReader {
 
 			// Make reader for single field
 			const next = function(): MemberReader {
-				const { layout, offset, pointer } = member;
+				const { member: layout, offset } = member;
 				const read = makeTypeReader(layout, cache);
 
 				// Wrap to read this field from reserved address
-				if (pointer) {
-					return (value, view, instanceOffset) => {
-						const addr = view.uint32[instanceOffset + offset >>> 2];
-						value[key] = read(view, addr);
-					};
-				} else {
-					return (value, view, instanceOffset) => {
-						value[key] = read(view, instanceOffset + offset);
-					};
-				}
+				return (value, view, instanceOffset) => {
+					value[key] = read(view, instanceOffset + offset);
+				};
 			}();
 			next.displayName = `_${typeof key === 'symbol' ? key.description : key}`;
 
@@ -77,18 +70,16 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 
 				case 'bool': return (view, offset) => view.int8[offset] !== 0;
 
-				case 'buffer': return (view, offset) => {
-					const length = view.int32[offset >>> 2];
-					return view.uint8.subarray(offset + kPointerSize, length);
-				};
+				case 'buffer': return (view, offset) =>
+					view.uint8.subarray(view.int32[offset >>> 2], view.int32[(offset >>> 2) + 1]);
 
 				case 'string': return (view, offset) => {
-					const length = view.int32[offset >>> 2];
+					const stringOffset = view.int32[offset >>> 2];
+					const length = view.int32[(offset >>> 2) + 1];
 					if (length > 0) {
-						const stringOffset = offset + kPointerSize;
 						return typedArrayToString(view.uint8.slice(stringOffset, stringOffset + length));
 					} else if (length < 0) {
-						const stringOffset16 = offset + kPointerSize >>> 1;
+						const stringOffset16 = stringOffset >>> 1;
 						return typedArrayToString(view.uint16.slice(stringOffset16, stringOffset16 - length));
 					} else {
 						return '';
@@ -100,25 +91,19 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 		}
 
 		if ('array' in layout) {
-			// Array types
+			// Array with fixed element size
 			const { length, stride } = layout;
 			const elementLayout = layout.array;
 			const read = makeTypeReader(elementLayout, cache);
-			if (stride === undefined) {
-				throw new TypeError('Unimplemented');
-
-			} else {
-				// Array with fixed element size
-				return (view, offset) => {
-					const value: any[] = [];
-					let currentOffset = offset;
-					for (let ii = 0; ii < length; ++ii) {
-						value.push(read(view, currentOffset));
-						currentOffset += stride;
-					}
-					return value;
-				};
-			}
+			return (view, offset) => {
+				const value: any[] = [];
+				let currentOffset = offset;
+				for (let ii = 0; ii < length; ++ii) {
+					value.push(read(view, currentOffset));
+					currentOffset += stride;
+				}
+				return value;
+			};
 
 		} else if ('constant' in layout) {
 			const { constant } = layout;
@@ -141,20 +126,46 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 			const { enum: values } = layout;
 			return (view, offset) => values[view.uint8[offset]];
 
+		} else if ('list' in layout) {
+			// Vector with dynamic element size
+			const elementLayout = layout.list;
+			const read = makeTypeReader(elementLayout, cache);
+			return (view, offset) => {
+				const value = [];
+				let currentOffset = view.int32[offset >>> 2];
+				while (currentOffset !== 0) {
+					value.push(read(view, currentOffset));
+					currentOffset = view.int32[currentOffset - kPointerSize >>> 2];
+				}
+				return value;
+			};
+
 		} else if ('named' in layout) {
 			// Named type
 			return makeTypeReader(layout.layout, cache);
 
 		} else if ('optional' in layout) {
-			// Optional types
-			const elementLayout = layout.optional;
+			// Small optional element
+			const { size, optional: elementLayout } = layout;
 			const read = makeTypeReader(elementLayout, cache);
 			return (view, offset) => {
-				const relativeOffset = view.uint8[offset];
-				if (relativeOffset === 0) {
+				if (view.uint8[offset + size]) {
+					return read(view, offset);
+				} else {
+					return undefined;
+				}
+			};
+
+		} else if ('pointer' in layout) {
+			// Optional element implemented as pointer
+			const elementLayout = layout.pointer;
+			const read = makeTypeReader(elementLayout, cache);
+			return (view, offset) => {
+				const payloadOffset = view.int32[offset >>> 2];
+				if (payloadOffset === 0) {
 					return undefined;
 				} else {
-					return read(view, offset + relativeOffset);
+					return read(view, payloadOffset);
 				}
 			};
 
@@ -162,56 +173,43 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 			// Structured types
 			const { variant } = layout;
 			const readMembers = getMemberReader(layout, cache);
-			return (view, offset) => {
-				const value = variant ? { [Variant]: variant } : {};
-				readMembers(value, view, offset);
-				return value;
-			};
+			if (variant) {
+				return (view, offset) => {
+					const value = { [Variant]: variant };
+					readMembers(value, view, offset);
+					return value;
+				};
+			} else {
+				return (view, offset) => {
+					const value = {};
+					readMembers(value, view, offset);
+					return value;
+				};
+			}
 
 		} else if ('variant' in layout) {
 			// Variant types
-			const variantReaders = layout.variant.map(elementLayout =>
-				makeTypeReader(elementLayout.struct, cache));
+			const variantReaders = layout.variant.map(element =>
+				makeTypeReader(element.layout, cache));
 			if (variantReaders.length !== layout.variant.length) {
 				throw new Error('Missing or duplicated variant key');
 			}
-			return (view, offset) => variantReaders[view.uint32[offset >>> 2]](view, view.uint32[offset + kPointerSize >>> 2]);
+			return (view, offset) => variantReaders[view.uint8[offset + kPointerSize]](view, view.int32[offset >>> 2]);
 
 		} else if ('vector' in layout) {
-			const elementLayout = layout.vector;
+			// Vector with fixed element size
+			const { size, vector: elementLayout } = layout;
 			const read = makeTypeReader(elementLayout, cache);
-			const { align, stride } = layout;
-
-			if (stride === undefined) {
-				// Vector with dynamic element size
-				return (view, offset) => {
-					const value = [];
-					let currentOffset = view.uint32[offset >>> 2];
-					while (currentOffset !== 0) {
-						value.push(read(view, currentOffset));
-						currentOffset = view.uint32[currentOffset - kPointerSize >>> 2];
-					}
-					return value;
-				};
-
-			} else {
-				// Vector with fixed element size
-				const alignOffset = alignTo(kPointerSize, align);
-				return (view, offset) => {
-					const length = view.uint32[offset >>> 2];
-					if (length === 0) {
-						return [];
-					} else {
-						const value: any[] = [];
-						let currentOffset = offset + alignOffset;
-						for (let ii = 0; ii < length; ++ii) {
-							value.push(read(view, currentOffset));
-							currentOffset += stride;
-						}
-						return value;
-					}
-				};
-			}
+			return (view, offset) => {
+				let currentOffset = view.int32[offset >>> 2];
+				const length = view.int32[(offset >>> 2) + 1];
+				const value: any[] = [];
+				for (let ii = 0; ii < length; ++ii) {
+					value.push(read(view, currentOffset));
+					currentOffset += size;
+				}
+				return value;
+			};
 		}
 
 		throw new Error('Unknown layout');

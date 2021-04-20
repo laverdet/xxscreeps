@@ -42,7 +42,6 @@ function createFlag(this: FlagProcessorContext, name: string, posId: number, col
 			// Creating a new flag
 			this.flags[name] = instantiate(Flag, {
 				id: null as never,
-				effects: undefined,
 				pos,
 				name,
 				color, secondaryColor,

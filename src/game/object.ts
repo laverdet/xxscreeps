@@ -3,7 +3,7 @@ import type { Room } from './room';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as BufferObject from 'xxscreeps/schema/buffer-object';
 import * as RoomPosition from 'xxscreeps/game/position';
-import { compose, declare, optional, struct, vector, withOverlay, XSymbol } from 'xxscreeps/schema';
+import { compose, declare, struct, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { expandGetters } from 'xxscreeps/engine/util/inspect';
 import { assign } from 'xxscreeps/utility/utility';
 import { Game, registerGlobal } from '.';
@@ -21,11 +21,6 @@ export const format = () => compose(shape, RoomObject);
 const shape = declare('RoomObject', struct({
 	id: Id.format,
 	pos: RoomPosition.format,
-	effects: optional(vector(struct({
-		effect: 'uint16',
-		expireTime: 'uint32',
-		level: 'uint16',
-	}))),
 }));
 
 export type RoomObjectWithOwner = { [Owner]: string } & RoomObject;

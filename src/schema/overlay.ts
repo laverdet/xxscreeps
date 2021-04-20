@@ -20,7 +20,7 @@ export function injectGetters(layout: StructLayout, prototype: object, cache: Ca
 	injected.add(prototype);
 
 	for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
-		const { layout, offset, pointer } = member;
+		const { member: layout, offset } = member;
 
 		// Make getter
 		const get = function(): GetterReader {
@@ -28,16 +28,9 @@ export function injectGetters(layout: StructLayout, prototype: object, cache: Ca
 			// Get reader for this member
 			const get = function(): GetterReader {
 				const read = makeTypeReader(layout, cache);
-				if (pointer) {
-					return function() {
-						const buffer = getBuffer(this);
-						return read(buffer, buffer.uint32[(offset + getOffset(this)) >>> 2]);
-					};
-				} else {
-					return function() {
-						return read(getBuffer(this), offset + getOffset(this));
-					};
-				}
+				return function() {
+					return read(getBuffer(this), offset + getOffset(this));
+				};
 			}();
 
 			// Memoize everything except integer access
