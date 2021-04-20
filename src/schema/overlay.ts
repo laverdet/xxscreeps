@@ -1,6 +1,6 @@
 import type { BufferView } from './buffer-view';
-import type { Cache } from './cache';
 import type { StructLayout } from './layout';
+import type { Cache } from '.';
 import { getBuffer, getOffset, BufferObject } from './buffer-object';
 import { TypeOf, Variant } from './format';
 import { makeTypeReader } from './read';
@@ -13,7 +13,8 @@ type GetterReader = (this: BufferObject) => any;
 
 const injected = new WeakSet();
 export function injectGetters(layout: StructLayout, prototype: object, cache: Cache) {
-	// Hacky double-inject prevention
+	// Hacky double-inject prevention. This occurs, for example, with RoomPosition which is loaded
+	// into more than one schema
 	if (injected.has(prototype)) {
 		return;
 	}

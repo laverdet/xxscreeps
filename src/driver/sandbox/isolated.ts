@@ -11,12 +11,9 @@ const getPathFinderModule = runOnce(() => {
 });
 
 const getRuntimeSource = runOnce(async() =>
-	compileRuntimeSource(({ request }, callback) => {
-		if (request === 'util') {
-			return callback(undefined, 'nodeUtilImport');
-		}
-		callback();
-	}));
+	compileRuntimeSource({
+		externals: ({ request }) => request === 'util' ? 'nodeUtilImport' : undefined,
+	 }));
 
 export class IsolatedSandbox {
 	private constructor(

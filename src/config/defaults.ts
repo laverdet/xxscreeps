@@ -25,6 +25,7 @@ export const defaults = makeDefaults({
 	runner: {
 		concurrency: os.cpus().length + 1,
 	},
+	schemaArchive: './screeps/archive',
 	shards: [ {
 		name: 'shard0',
 		blob: './screeps/shard0',

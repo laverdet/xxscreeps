@@ -77,6 +77,11 @@ export type Schema = {
 	};
 
 	/**
+	 * Where to save descriptions of the binary format used to write game data.
+	 */
+	schemaArchive?: string | undefined;
+
+	/**
 	 * Configuration for local storage
 	 */
 	shards?: {

@@ -1,9 +1,12 @@
+import type { Package } from './build';
 import { typedArrayToString } from 'xxscreeps/utility/string';
+import { getOrSet } from 'xxscreeps/utility/utility';
 import { BufferView } from './buffer-view';
-import { Cache, getOrSet } from './cache';
-import { Format, TypeOf, Variant } from './format';
-import { Layout, StructLayout, getLayout, kPointerSize, unpackWrappedStruct } from './layout';
+import { TypeOf, Variant } from './format';
+import { Layout, StructLayout, kPointerSize, unpackWrappedStruct, kMagic, kHeaderSize } from './layout';
+import { injectGetters } from './overlay';
 import { entriesWithSymbols } from './symbol';
+import { Cache } from '.';
 
 export type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 export type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
@@ -118,6 +121,8 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 			} else if ('composeFromBuffer' in interceptor) {
 				return (view, offset) => interceptor.composeFromBuffer(view, offset);
 			} else {
+				// Inject prototype getters into overlay
+				injectGetters(unpackWrappedStruct(layout), interceptor.prototype, cache);
 				return (view, offset) => new (interceptor as any)(view, offset);
 			}
 
@@ -172,6 +177,10 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 		} else if ('struct' in layout) {
 			// Structured types
 			const { variant } = layout;
+			if (layout.inherit) {
+				// Ensure parent injects getters
+				makeTypeReader(layout.inherit, cache);
+			}
 			const readMembers = getMemberReader(layout, cache);
 			if (variant) {
 				return (view, offset) => {
@@ -216,11 +225,18 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 	});
 }
 
-export function makeReader<Type extends Format>(format: Type, cache = new Cache) {
-	const { layout } = getLayout(format, cache);
-	const read = makeTypeReader(layout, cache);
+export function makeReader<Type extends Package>(info: Type, cache = new Cache) {
+	const read = makeTypeReader(info.layout, cache);
 	return (buffer: Readonly<Uint8Array>): TypeOf<Type> => {
 		const view = BufferView.fromTypedArray(buffer);
-		return read(view, 0);
+		if (
+			view.uint32[0] !== kMagic ||
+			view.uint32[1] !== info.version ||
+			view.uint32[2] !== buffer.length ||
+			view.uint32[3] !== 0
+		) {
+			throw new Error('Corrupted blob');
+		}
+		return read(view, kHeaderSize);
 	};
 }

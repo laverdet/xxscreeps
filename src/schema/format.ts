@@ -1,5 +1,6 @@
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { BufferView } from './buffer-view';
+import { resolve } from './layout';
 import { Variant } from '.';
 export { Variant };
 
@@ -91,11 +92,13 @@ export type Interceptor = CompositionInterceptor | RawCompositionInterceptor;
 type CompositionInterceptor<Type = any, Result = any> = {
 	compose: (value: Type) => Result;
 	decompose: (value: Result) => Type extends any[] ? Iterable<Type[number]> : Type;
+	kaitai?: any[];
 };
 
 type RawCompositionInterceptor<Type = any> = {
 	composeFromBuffer: (view: BufferView, offset: number) => Type;
 	decomposeIntoBuffer: (value: Type, view: BufferView, offset: number) => void;
+	kaitai?: any[];
 };
 
 export function compose<Type extends Format, In extends CompositionInterceptor<TypeOf<Type>>>(
@@ -223,4 +226,14 @@ export function withFallback<Fallback>() {
 // Cast the type of a format to something else
 export function withType<Type>(format: Format): WithShapeAndType<Type> {
 	return format as never;
+}
+
+// Get the name of a `declare`d format
+export function getName(format: Format) {
+	const resolved = resolve(format);
+	if (typeof resolved === 'object' && 'named' in resolved) {
+		return resolved.named;
+	} else {
+		return null;
+	}
 }

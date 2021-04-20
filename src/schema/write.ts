@@ -1,9 +1,11 @@
-import { BufferView } from './buffer-view';
-import { Cache, getOrSet } from './cache';
-import { Format, ShapeOf, Variant } from './format';
-import { Layout, StructLayout, kPointerSize, alignTo, getLayout, unpackWrappedStruct } from './layout';
+import type { Package } from './build';
+import { getOrSet } from 'xxscreeps/utility/utility';
 import { runOnce } from 'xxscreeps/utility/memoize';
+import { BufferView } from './buffer-view';
+import { ShapeOf, Variant } from './format';
+import { Layout, StructLayout, kPointerSize, alignTo, unpackWrappedStruct, kMagic, kHeaderSize } from './layout';
 import { entriesWithSymbols } from './symbol';
+import { Cache } from '.';
 
 export type Writer<Type = any> = (value: Type, view: BufferView, offset: number, heap: number) => number;
 export type MemberWriter = (value: any, view: BufferView, offset: number, heap: number) => number;
@@ -215,14 +217,13 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 			const write = makeTypeWriter(elementLayout, cache);
 			return (value, view, offset, heap) => {
 				let length = 0;
-				let currentOffset = heap;
+				let currentOffset = view.int32[offset >>> 2] = alignTo(heap, align);
 				for (const element of value) {
 					++length;
 					currentOffset = alignTo(currentOffset, align);
 					write(element, view, currentOffset, 0);
 					currentOffset += size;
 				}
-				view.int32[offset >>> 2] = heap;
 				view.int32[(offset >>> 2) + 1] = length;
 				return currentOffset;
 			};
@@ -234,15 +235,21 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 
 const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 * 1024 * 16)));
 
-export function makeWriter<Type extends Format>(format: Type, cache = new Cache) {
-	const { layout, traits } = getLayout(format, cache);
-	const write = makeTypeWriter(layout, cache);
+export function makeWriter<Type extends Package>(info: Type, cache = new Cache) {
+	const write = makeTypeWriter(info.layout, cache);
 	return (value: ShapeOf<Type>): Readonly<Uint8Array> => {
 		const view = bufferCache();
-		const length = write(value, view, 0, traits.size);
+		if ((value as any).code) {
+			debugger;
+		}
+		const length = write(value, view, kHeaderSize, info.traits.size + kHeaderSize);
 		if (length > view.int8.length) {
 			throw new Error('Exceeded memory write buffer');
 		}
+		view.uint32[0] = kMagic;
+		view.uint32[1] = info.version;
+		view.uint32[2] = length;
+		view.uint32[3] = 0;
 		const copy = new Uint8Array(new SharedArrayBuffer(length));
 		copy.set(view.uint8.subarray(0, length));
 		return copy;

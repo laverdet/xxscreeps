@@ -1,7 +1,9 @@
 import * as Path from 'path';
 import config from 'xxscreeps/config';
+import { configTransform } from 'xxscreeps/config/webpack';
+import { schemaTransform } from 'xxscreeps/engine/schema/build';
 import { locateModule } from '../path-finder';
-import { compile, ExternalsFunctionElement } from '../webpack';
+import { compile, Transform } from '../webpack';
 import { IsolatedSandbox } from './isolated';
 import { NodejsSandbox } from './nodejs';
 
@@ -15,17 +17,17 @@ export type Options = {
 	writeConsole: (fd: number, payload: string) => void;
 };
 
-export function compileRuntimeSource(externals?: ExternalsFunctionElement) {
-	return compile('xxscreeps/driver/runtime.js', ({ context, request }, callback) => {
-		if (request?.endsWith('.node')) {
-			return callback(undefined, `globalThis[${JSON.stringify(Path.join(context!, request))}]`);
-		}
-		if (externals as any as boolean) {
-			(externals as any)({ context, request }, callback);
-		} else {
-			callback();
-		}
-	});
+export function compileRuntimeSource(transform?: Transform) {
+	return compile('xxscreeps/driver/runtime.js', [
+		...transform ? [ transform ] : [],
+		configTransform,
+		schemaTransform,
+		{
+			externals: ({ context, request }) =>
+				request?.endsWith('.node') ?
+					`globalThis[${JSON.stringify(Path.join(context!, request))}]` : undefined,
+		},
+	]);
 }
 
 export async function createSandbox(options: Options) {

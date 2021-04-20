@@ -1,8 +1,12 @@
 import type { WithShape, WithType } from 'xxscreeps/schema/format';
 import type { UnionToIntersection, UnwrapArray, WithKey } from 'xxscreeps/utility/types';
 import { resolve } from 'xxscreeps/schema/layout';
+import { Cache, Format, makeReader, makeWriter } from 'xxscreeps/schema';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
 import { getOrSet } from 'xxscreeps/utility/utility';
+// Use full path here so we can rewrite it in webpack
+import { build } from 'xxscreeps/engine/schema/build';
+export { build };
 
 const schemaByPath = new Map<string, any[]>();
 
@@ -49,4 +53,13 @@ export function registerSchema<Path extends string, Type>(path: Path, format: Ty
 { [key in Path]: UnwrapLateBind<Type> } {
 	getOrSet(schemaByPath, path, () => []).push(format);
 	return undefined as never;
+}
+
+export function makeReaderAndWriter<Type extends Format>(format: Type) {
+	const info = build(format);
+	const cache = new Cache;
+	return {
+		read: makeReader(info, cache),
+		write: makeWriter(info, cache),
+	};
 }

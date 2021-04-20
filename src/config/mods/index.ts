@@ -11,7 +11,7 @@ export type Manifest = {
 const mods: Record<string, Provide[]> = {};
 const stack: string[] = [];
 const resolved = new Set<string>();
-const baseUrl = new URL(configPath, 'file://');
+const baseUrl = configPath;
 async function resolve(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
 		const url = await import.meta.resolve(specifier, `${baseUrl}`);

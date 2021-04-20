@@ -1,11 +1,11 @@
 import { Implementation } from 'xxscreeps/utility/types';
-import { staticCast } from 'xxscreeps/utility/utility';
-import { Cache, getOrSet } from './cache';
+import { getOrSet, staticCast } from 'xxscreeps/utility/utility';
 import { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, Variant } from './format';
-import { injectGetters } from './overlay';
 import { entriesWithSymbols } from './symbol';
 
 export const kPointerSize = 4;
+export const kHeaderSize = kPointerSize * 4;
+export const kMagic = 0xfff35a00;
 
 export function alignTo(address: number, align: number) {
 	const alignMinusOne = align - 1;
@@ -89,12 +89,12 @@ export type Traits = {
 
 export type LayoutAndTraits = { layout: Layout; traits: Traits };
 
-export function getLayout(unresolvedFormat: Format, cache: Cache): LayoutAndTraits {
-	return getOrSet(cache.layout, unresolvedFormat, () => getResolvedLayout(resolve(unresolvedFormat), cache));
+export function getLayout(unresolvedFormat: Format, cache: Map<Format, LayoutAndTraits>): LayoutAndTraits {
+	return getOrSet(cache, unresolvedFormat, () => getResolvedLayout(resolve(unresolvedFormat), cache));
 }
 
-function getResolvedLayout(format: Format, cache: Cache): LayoutAndTraits {
-	return getOrSet(cache.layout, format, () => {
+function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>): LayoutAndTraits {
+	return getOrSet(cache, format, () => {
 		if (typeof format === 'string') {
 			// Check for integral types
 			const numericSizes = {
@@ -152,10 +152,6 @@ function getResolvedLayout(format: Format, cache: Cache): LayoutAndTraits {
 		} else if ('composed' in format) {
 			const { interceptor } = format;
 			const { layout, traits } = getLayout(format.composed, cache);
-			if ('prototype' in interceptor) {
-				// Inject prototype getters into overlay
-				injectGetters(unpackWrappedStruct(layout), interceptor.prototype, cache);
-			}
 			return {
 				layout: staticCast<ComposedLayout>({
 					composed: layout,

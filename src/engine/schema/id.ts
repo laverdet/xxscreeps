@@ -34,6 +34,18 @@ export const optionalFormat = declare('Id', compose(array(4, 'uint32'), {
 		// And write the length
 		view.uint8[offset] = value.length;
 	},
+
+	kaitai: [ {
+		id: 'id_len',
+		type: 'u1',
+	}, {
+		size: '3',
+	}, {
+		id: 'id',
+		type: 'u4',
+		repeat: 'expr',
+		'repeat-expr': '3',
+	} ],
 }));
 
 // Most of the time id strings are required so this type is just more convenient

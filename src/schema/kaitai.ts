@@ -1,4 +1,4 @@
-import { Layout } from './layout';
+import type { Layout } from './layout';
 import jsYaml from 'js-yaml';
 import * as Fn from 'xxscreeps/utility/functional';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
@@ -20,15 +20,28 @@ export class KaitaiArchiver {
 	private readonly enums = new Map<string, any>();
 	private readonly instances = new Map<string, any>();
 	private readonly types = new Map<string, KaitaiArchiver>();
-	private readonly namedTypes: Map<any, string>;
+	private readonly namedTypes: Set<Layout>;
 	constructor(top?: KaitaiArchiver) {
 		this.top = top ?? this;
-		this.namedTypes = top?.namedTypes ?? new Map;
+		this.namedTypes = top?.namedTypes ?? new Set;
 	}
 
-	static archive(layout: Layout) {
+	static archive(layout: Layout, version: number) {
 		const instance = new KaitaiArchiver();
 		instance.archive('value', instance.top, layout);
+		instance.seq.unshift({
+			id: 'magic',
+			contents: [ '0x00', '0x5a', '0xf3', '0xff' ],
+		}, {
+			id: 'version',
+			contents: [ ...Fn.map(version.toString(16).padStart(8, '0').matchAll(/../g), match => `0x${match[0]}`) ].reverse(),
+		}, {
+			id: 'size',
+			type: 'u4',
+		}, {
+			id: 'zero',
+			contents: [ 0, 0, 0, 0 ],
+		});
 		return jsYaml.dump({
 			meta: {
 				id: 'screeps',
@@ -94,7 +107,7 @@ export class KaitaiArchiver {
 			}[layout];
 			if (type === 'buffer') {
 				if (!this.top.types.has('buffer')) {
-					const holder = new KaitaiArchiver(this);
+					const holder = this.top.child('buffer');
 					holder.seq.push({
 						id: 'buffer_ofs',
 						type: 'u4',
@@ -106,11 +119,10 @@ export class KaitaiArchiver {
 						pos: 'buffer_ofs',
 						size: 'buffer_len',
 					});
-					this.top.types.set('buffer', holder);
 				}
 			} else if (type === 'js_str') {
 				if (!this.top.types.has('js_str')) {
-					const holder = new KaitaiArchiver(this);
+					const holder = this.top.child('js_str');
 					holder.seq.push({
 						id: 'str_ofs',
 						type: 'u4',
@@ -132,7 +144,6 @@ export class KaitaiArchiver {
 						encoding: 'UTF-16LE',
 						if: 'str_len < 0',
 					});
-					this.top.types.set('js_str', holder);
 				}
 			}
 			holder.seq.push({ id, type });
@@ -150,7 +161,16 @@ export class KaitaiArchiver {
 			holder.size += (layout.length - 1) * layout.stride + element.size;
 
 		} else if ('composed' in layout) {
-			return this.archive(id, holder, layout.composed);
+			const { interceptor } = layout;
+			if ('kaitai' in interceptor) {
+				const { kaitai } = interceptor;
+				holder.seq.push(...kaitai!);
+				const tmp = new KaitaiArchiver;
+				tmp.archive(id, tmp, layout.composed);
+				holder.size = tmp.size;
+			} else {
+				this.archive(id, holder, layout.composed);
+			}
 
 		} else if ('constant' in layout) {
 			holder.instances.set(id, { value: layout.constant });
@@ -192,6 +212,7 @@ export class KaitaiArchiver {
 		} else if ('named' in layout) {
 			const nameId = toId(layout.named);
 			if (!this.namedTypes.has(layout)) {
+				this.namedTypes.add(layout);
 				const holder = new KaitaiArchiver(this);
 				this.archive(nameId, holder, layout.layout);
 				if (holder.seq.length === 1 && holder.seq[0].type === nameId) {
@@ -301,12 +322,11 @@ export class KaitaiArchiver {
 			holder.size += 8;
 
 		} else {
-			console.log(layout);
 			throw new Error('Unsupported layout');
 		}
 	}
 }
 
-export function archiveStruct(layout: Layout): string {
-	return KaitaiArchiver.archive(layout);
+export function archiveStruct(layout: Layout, version: number): string {
+	return KaitaiArchiver.archive(layout, version);
 }

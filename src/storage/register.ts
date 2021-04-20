@@ -1,7 +1,6 @@
 import 'xxscreeps/config/mods/import/storage';
 import type { UnionToIntersection } from 'xxscreeps/utility/types';
 import type { BlobProvider, KeyValProvider, PubSubProvider } from './provider';
-import { pathToFileURL } from 'url';
 import { configPath } from 'xxscreeps/config';
 
 type DispositionToProvider<T> =
@@ -38,7 +37,7 @@ export function registerStorageProvider<Dispositions extends string>(
 export async function connectToProvider<Disposition extends string>(fragment: string, disposition: Disposition):
 Promise<DispositionToProvider<Disposition>> {
 	const providers = (registerStorageProvider as any).providers;
-	const url = new URL(fragment, pathToFileURL(configPath));
+	const url = new URL(fragment, configPath);
 	const provider = providers.get(url.protocol + disposition);
 	if (!provider) {
 		throw new Error(`No storage provider for ${url.protocol}${disposition}`);

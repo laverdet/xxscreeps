@@ -10,11 +10,18 @@ const Acorn = require('acorn');
 import AcornClassFields from 'acorn-class-fields';
 Acorn.Parser = Acorn.Parser.extend(AcornClassFields);
 
-export type ExternalsFunctionElement = Parameters<typeof Webpack>[0][0]['externals'];
+type ExternalsFunctionElement = Parameters<typeof Webpack>[0][0]['externals'];
+type ExternalsPromise = Extract<ExternalsFunctionElement, (...args: any) => Promise<any>>;
+type ExternalsCallback = (...args: Parameters<ExternalsPromise>) =>
+	ReturnType<ExternalsPromise> extends Promise<infer Result> ? Result | void | Promise<Result | void> : never;
+export type Transform = {
+	alias?: Record<string, string>;
+	externals?: ExternalsCallback;
+};
 
 const IS_DEV = true as boolean;
 
-export async function compile(moduleName: string, externals: ExternalsFunctionElement) {
+export async function compile(moduleName: string, transforms: Transform[]) {
 	const baseName = Path.basename(moduleName);
 	const output = new URL(`${baseName}.webpack.js`, import.meta.url);
 
@@ -26,7 +33,16 @@ export async function compile(moduleName: string, externals: ExternalsFunctionEl
 			},
 			mode: IS_DEV ? 'development' : 'production',
 			devtool: IS_DEV ? 'hidden-source-map' : 'hidden-nosources-source-map',
-			externals,
+			externals(data, callback) {
+				(async function() {
+					for (const transform of transforms) {
+						const result = await transform.externals?.(data);
+						if (result) {
+							return result;
+						}
+					}
+				})().then(value => callback(undefined, value), callback);
+			},
 
 			module: {
 				rules: [ {
@@ -38,11 +54,10 @@ export async function compile(moduleName: string, externals: ExternalsFunctionEl
 
 			resolve: {
 				alias: {
-					'xxscreeps/config/mods/import': 'xxscreeps/config/mods.resolved',
-					'xxscreeps/config/mods': false,
 					'buffer-from': false,
 					fs: false,
 					path: 'path-browserify',
+					...Object.fromEntries(transforms.map(transform => Object.entries(transform.alias ?? {})).flat()),
 				},
 			},
 

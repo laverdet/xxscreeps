@@ -12,11 +12,8 @@ const getPathFinderModule = runOnce(() => {
 });
 
 const getCompiledRuntime = runOnce(async() => {
-	const { source, map } = await compileRuntimeSource(({ request }, callback) => {
-		if (request === 'util') {
-			return callback(undefined, 'nodeUtilImport');
-		}
-		callback();
+	const { source, map } = await compileRuntimeSource({
+		externals: ({ request }) => request === 'util' ? 'nodeUtilImport' : undefined,
 	});
 	return {
 		script: new vm.Script(source, { filename: 'runtime.js' }),

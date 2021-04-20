@@ -33,6 +33,19 @@ export function format() {
 	return declare('RoomPosition', compose('int32', {
 		compose: value => new RoomPosition(value),
 		decompose: (value: RoomPosition) => value[PositionInteger],
+		kaitai: [ {
+			id: 'rx',
+			type: 's1',
+		}, {
+			id: 'ry',
+			type: 's1',
+		}, {
+			id: 'x',
+			type: 's1',
+		}, {
+			id: 'y',
+			type: 's1',
+		} ],
 	}));
 }
 

@@ -2,6 +2,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as TerrainSchema from 'xxscreeps/game/terrain';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, makeReader, vector } from 'xxscreeps/schema';
+import { build } from 'xxscreeps/engine/schema';
 
 export type World = Map<string, TerrainSchema.Terrain>;
 let world: World;
@@ -49,7 +50,7 @@ export default { describeExits, findRoute, getRoomLinearDistance, getTerrainAt }
 
 //
 // Schema
-export const format = declare('World', compose(vector(TerrainSchema.format), {
+export const schema = build(declare('World', compose(vector(TerrainSchema.format), {
 	compose: world =>
 		new Map<string, TerrainSchema.Terrain>(world.map(room => [ room.name, room.terrain ])),
 	decompose: (world: World) => {
@@ -57,6 +58,6 @@ export const format = declare('World', compose(vector(TerrainSchema.format), {
 		vector.sort((left, right) => left.name.localeCompare(right.name));
 		return vector;
 	},
-}));
+})));
 
-export const readWorld = makeReader(format);
+export const readWorld = makeReader(schema);

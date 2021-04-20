@@ -1,5 +1,6 @@
 import * as Fn from 'xxscreeps/utility/functional';
-import { enumerated, makeWriter, optional, struct, variant, vector, TypeOf, Variant, array } from 'xxscreeps/schema';
+import { array, declare, enumerated, makeWriter, optional, struct, variant, vector, TypeOf, Variant } from 'xxscreeps/schema';
+import { build } from 'xxscreeps/engine/schema';
 import { registerGlobal } from '.';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
@@ -86,10 +87,10 @@ const textSchema = struct({
 
 const visualSchema = variant(lineSchema, circleSchema, rectSchema, polySchema, textSchema);
 
-export const schema = vector(struct({
+export const schema = build(declare('Visual', vector(struct({
 	name: 'string',
 	visual: vector(variant(lineSchema, circleSchema, rectSchema, polySchema, textSchema)),
-}));
+}))));
 
 // Clear visuals at the end of the tick
 export function clear() {

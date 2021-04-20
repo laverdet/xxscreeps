@@ -182,7 +182,7 @@ const userIds = new Set(users.filter(user => user.active).map(user => user.id));
 	]);
 	await Promise.all([ blob.flushdb(), data.flushdb() ]);
 	// Save required blob data
-	await blob.set('terrain', makeWriter(MapSchema.format)(roomsTerrain));
+	await blob.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
 	await blob.save();
 	blob.disconnect();
 	// Save required keyval data
