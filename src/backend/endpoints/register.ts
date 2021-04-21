@@ -74,7 +74,7 @@ const SetUsernameEndpoint: Endpoint = {
 				context.shard.blob.set(`user/${user.id}/info`, userBlob),
 			]);
 			// Success
-			return { ok: 1, _id: user.id };
+			return { ok: 1, _id: user.id, username };
 		});
 	},
 };

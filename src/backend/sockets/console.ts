@@ -15,6 +15,9 @@ export const ConsoleSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/console$/,
 
 	async subscribe() {
+		if (!this.user) {
+			return () => {};
+		}
 		const channel = await getConsoleChannel(this.context.shard, this.user).subscribe();
 		channel.listen(message => {
 			switch (message.type) {

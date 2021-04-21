@@ -28,6 +28,9 @@ const SetActiveBranchSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/set-active-branch$/,
 
 	subscribe() {
+		if (!this.user) {
+			return () => {};
+		}
 		return getRunnerUserChannel(this.context.shard, this.user).listen(message => {
 			if (message.type === 'code') {
 				this.send(JSON.stringify({ activeName: 'activeWorld', branch: message.name }));

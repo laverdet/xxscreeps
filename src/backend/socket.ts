@@ -1,11 +1,13 @@
 import type { Server } from 'http';
 import sockjs from 'sockjs';
+import config from 'xxscreeps/config';
 import { checkToken, makeToken } from './auth/token';
 import { BackendContext } from './context';
 import { CodeSubscriptions } from './sockets/code';
 import { ConsoleSubscription } from './sockets/console';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
+const { allowGuestAccess } = config.backend;
 
 const socketServer = sockjs.createServer({
 	prefix: '/socket',
@@ -16,7 +18,7 @@ const handlers = [ ...CodeSubscriptions, ConsoleSubscription, mapSubscription, r
 type Unlistener = () => void;
 type SubscriptionInstance = {
 	context: BackendContext;
-	user: string;
+	user?: string;
 	send: (jsonEncodedMessage: string) => void;
 };
 export type SubscriptionEndpoint = {
@@ -50,18 +52,26 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 			if (authMessage) {
 				(async() => {
 					const { token } = authMessage.groups!;
-					const id = await checkToken(token);
-					if (id !== undefined && /^[a-f0-9]+$/.test(id)) {
-						// Token for a real user
-						if (user !== undefined && id !== user) {
-							close();
-							return;
+					if (token === 'guest') {
+						if (allowGuestAccess) {
+							connection.write('auth ok guest');
+						} else {
+							connection.write('auth failed');
 						}
-						user = id;
-						connection.write(`auth ok ${await makeToken(id)}`);
 					} else {
-						// Some other auth token
-						connection.write('auth failed');
+						const id = await checkToken(token);
+						if (id !== undefined && /^[a-f0-9]+$/.test(id)) {
+							// Token for a real user
+							if (user !== undefined && id !== user) {
+								close();
+								return;
+							}
+							user = id;
+							connection.write(`auth ok ${await makeToken(id)}`);
+						} else {
+							// Some other auth token
+							connection.write('auth failed');
+						}
 					}
 				})().catch(console.error);
 			} else {
@@ -69,7 +79,7 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 				const subscriptionRequest = /^subscribe (?<name>.+)$/.exec(message);
 				if (subscriptionRequest) {
 					// Can't subscribe if you're not logged in
-					if (user === undefined) {
+					if (!allowGuestAccess && user === undefined) {
 						return;
 					}
 

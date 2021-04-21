@@ -51,7 +51,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 				this.context.shard.loadRoom(parameters.room, time),
 				// Update user flags
 				(async() => {
-					if (flagsStale) {
+					if (this.user && flagsStale) {
 						flagsStale = false;
 						const flags = await loadUserFlags(this.context.shard, this.user);
 						const flagsInThisRoom = Object.values(flags).filter(flag => flag.pos.roomName === parameters.room);
@@ -61,6 +61,9 @@ export const roomSubscription: SubscriptionEndpoint = {
 				})(),
 				// Update visuals
 				(async() => {
+					if (!this.user) {
+						return;
+					}
 					const allVisuals = await loadVisuals(this.context.shard, this.user, time);
 					visualsString = '';
 					if (allVisuals) {
@@ -78,7 +81,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			// Render current room state
 			const objects: any = {};
 			const visibleUsers = new Set<string>();
-			runAsUser(this.user, () => {
+			runAsUser(this.user ?? '0', () => {
 				runWithState([ room ], time, () => {
 					// Objects
 					for (const object of getObjects(room)) {
@@ -148,11 +151,11 @@ export const roomSubscription: SubscriptionEndpoint = {
 				}
 			}),
 			// Flag updates
-			getFlagChannel(this.context.shard, this.user).listen(event => {
+			this.user ? getFlagChannel(this.context.shard, this.user).listen(event => {
 				if (event.type === 'updated') {
 					flagsStale = true;
 				}
-			}),
+			}) : undefined,
 		);
 
 		// Fire off first update immediately

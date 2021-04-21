@@ -156,6 +156,9 @@ const CodeEndpoint: Endpoint = {
 
 	async execute(context) {
 		const { userId } = context.state;
+		if (!userId) {
+			return { ok: 1, branch: kDefaultBranch, modules: { main: '' } };
+		}
 		const { branch } = context.request.body;
 		const user = User.read(await context.shard.blob.reqBuffer(`user/${userId}/info`));
 		const { id, name } = getBranchIdFromQuery(branch, user);

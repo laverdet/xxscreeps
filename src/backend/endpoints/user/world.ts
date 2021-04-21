@@ -30,7 +30,7 @@ const WorldStatusEndpoint: Endpoint = {
 		const { userId } = context.state;
 		const user = userId && await loadUser(context.backend, userId).catch(() => {});
 		if (!user) {
-			return { ok: 1, status: 'empty' };
+			return { ok: 1, status: 'normal' };
 		} else if (user.roomsControlled.size === 0) {
 			if (user.roomsPresent.size === 0) {
 				return { ok: 1, status: 'empty' };

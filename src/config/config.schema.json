@@ -8,6 +8,11 @@
             ],
             "description": "Backend server settings",
             "properties": {
+                "allowGuestAccess": {
+                    "default": true,
+                    "description": "Whether to allow read only access to the API without logging in.",
+                    "type": "boolean"
+                },
                 "secret": {
                     "description": "Secret used for session authentication. If not specified a new secret will be generated each\nrestart.",
                     "type": "string"
@@ -41,7 +46,7 @@
             "description": "Launcher settings",
             "properties": {
                 "processorWorkers": {
-                    "default": 2,
+                    "default": "`os.cpus().length + 1`",
                     "description": "Total number of processors to create.",
                     "type": "number"
                 },
@@ -71,7 +76,8 @@
             "description": "Runner settings",
             "properties": {
                 "concurrency": {
-                    "description": "Total number of runner tasks to run at a time. The default is `os.cpus().length + 1`.",
+                    "default": "`os.cpus().length + 1`",
+                    "description": "Total number of runner tasks to run at a time.",
                     "type": "number"
                 },
                 "unsafeSandbox": {
@@ -82,23 +88,52 @@
             },
             "type": "object"
         },
-        "storage": {
-            "defaultProperties": [
-            ],
+        "schemaArchive": {
+            "default": "./screeps/archive",
+            "description": "Where to save descriptions of the binary format used to write game data.",
+            "type": "string"
+        },
+        "shards": {
             "description": "Configuration for local storage",
-            "properties": {
-                "path": {
-                    "default": ": ./data",
-                    "description": "Path to save game state, relative to this configuration file.",
-                    "type": "string"
-                }
+            "items": {
+                "defaultProperties": [
+                ],
+                "properties": {
+                    "blob": {
+                        "description": "Blob storage provider URI",
+                        "type": "string"
+                    },
+                    "data": {
+                        "description": "Persistent storage provider URI",
+                        "type": "string"
+                    },
+                    "name": {
+                        "description": "Name of this shard",
+                        "type": "string"
+                    },
+                    "pubsub": {
+                        "description": "Pubsub storage provider URI",
+                        "type": "string"
+                    },
+                    "scratch": {
+                        "description": "Temporary storage provider URI",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "blob",
+                    "data",
+                    "name",
+                    "pubsub",
+                    "scratch"
+                ],
+                "type": "object"
             },
-            "type": "object"
+            "type": "array"
         }
     },
     "required": [
-        "backend",
-        "mods"
+        "backend"
     ],
     "type": "object"
 }

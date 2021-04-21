@@ -5,6 +5,12 @@ export type Schema = {
 	 */
 	backend: {
 		/**
+		 * Whether to allow read only access to the API without logging in.
+		 * @default true
+		 */
+		allowGuestAccess?: boolean;
+
+		/**
 		 * Secret used for session authentication. If not specified a new secret will be generated each
 		 * restart.
 		 */
@@ -78,6 +84,7 @@ export type Schema = {
 
 	/**
 	 * Where to save descriptions of the binary format used to write game data.
+	 * @default ./screeps/archive
 	 */
 	schemaArchive?: string | undefined;
 

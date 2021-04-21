@@ -3,7 +3,7 @@ import { Effect, MaybePromise } from './types';
 // Given a series of effect-returning promises this waits for them all to resolve and returns a
 // single effect that owns all the underlying effects. In the case that one throws the successful
 // effects are destroyed.
-type Acquired<Type> = MaybePromise<ResolvedAcquired<Type>>;
+type Acquired<Type> = MaybePromise<ResolvedAcquired<Type>> | undefined;
 type ResolvedAcquired<Type> = void | Effect | readonly [ Effect | void, Type ];
 export function acquire<Type extends Acquired<any>[]>(...async: [ ...Type ]): Promise<[ Effect, {
 	[Key in keyof Type]: Type[Key] extends Acquired<infer Result> ? Result : never;

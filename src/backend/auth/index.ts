@@ -1,6 +1,8 @@
 import type { Middleware } from 'xxscreeps/backend';
 import * as Id from 'xxscreeps/engine/schema/id';
+import config from 'xxscreeps/config';
 import { checkToken, makeToken } from './token';
+const { allowGuestAccess } = config.backend;
 
 declare module 'xxscreeps/backend' {
 	interface Context {
@@ -40,6 +42,8 @@ export function authentication(): Middleware {
 					return makeToken(context.state.userId);
 				} else if (context.state.newUserId !== undefined) {
 					return makeToken(`new:${context.state.newUserId}:${context.state.providerKey}`);
+				} else if (allowGuestAccess) {
+					return 'guest';
 				}
 			}();
 			context.state.token = token;
@@ -55,8 +59,14 @@ export function authentication(): Middleware {
 
 		try {
 			// Attempt to use request token
-			const token = context.get('x-token') || context.cookies.get('token');
-			if (token) {
+			const token = function() {
+				const token = context.get('x-token');
+				if (token && token !== 'guest') {
+					return token;
+				}
+				return context.cookies.get('token');
+			}();
+			if (token && token !== 'guest') {
 				const tokenValue = await checkToken(token);
 				if (tokenValue === undefined) {
 					context.status = 403;
@@ -66,10 +76,10 @@ export function authentication(): Middleware {
 				if (/^[a-f0-9]+$/.test(tokenValue)) {
 					context.state.userId = tokenValue;
 				} else {
-					const guestToken = /^new:(?<id>[^:]+):(?<provider>.+)$/.exec(tokenValue);
-					if (guestToken) {
-						context.state.newUserId = guestToken.groups!.id;
-						context.state.providerKey = guestToken.groups!.provider;
+					const unsavedUserToken = /^new:(?<id>[^:]+):(?<provider>.+)$/.exec(tokenValue);
+					if (unsavedUserToken) {
+						context.state.newUserId = unsavedUserToken.groups!.id;
+						context.state.providerKey = unsavedUserToken.groups!.provider;
 					}
 				}
 			}

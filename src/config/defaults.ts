@@ -9,6 +9,7 @@ function makeDefaults<Type extends RecursivePartial<Schema>>(defaults: Type) {
 
 export const defaults = makeDefaults({
 	backend: {
+		allowGuestAccess: true as boolean,
 		secret: Crypto.randomBytes(32).toString(),
 	},
 	game: {
