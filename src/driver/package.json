@@ -3,7 +3,7 @@
   "dependencies": {
     "@types/source-map-support": "^0.5.3",
     "acorn-class-fields": "^1.0.0",
-    "isolated-vm": "^4.0.0",
+    "isolated-vm": "^4.1.0",
     "ivm-inspect": "^2.0.0",
     "js-base64": "^3.6.0",
     "path-browserify": "^1.0.1",
