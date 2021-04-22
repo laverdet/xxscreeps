@@ -1,8 +1,5 @@
 {
 	"compilerOptions": {
-		"declaration": true,
-		"sourceMap": true,
-		"outDir": "dist",
 		"baseUrl": "src",
 		"rootDir": "src",
 

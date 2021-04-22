@@ -3,10 +3,10 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc",
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
     "start": "xxscreeps engine/service/launcher.ts",
-    "watch": "tsc -b -w"
+    "watch": "tsc -w"
   },
   "bin": {
     "xxscreeps": "./run"
