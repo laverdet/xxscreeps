@@ -1,4 +1,4 @@
-import type { AnyRoomObject, LookForType, Room } from 'xxscreeps/game/room';
+import type { AnyRoomObject, Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Id from 'xxscreeps/engine/schema/id';
@@ -51,7 +51,7 @@ export function checkBorder(pos: RoomPosition.RoomPosition) {
 		return C.ERR_INVALID_TARGET;
 	} else if (RoomPosition.isNearBorder(pos.x, pos.y)) {
 		// May build obstacles near "border" as long as the border is naturally walled
-		const terrain = Map.getTerrainForRoom(pos.roomName);
+		const terrain = Map.getRoomTerrain(pos.roomName);
 		for (const neighbor of RoomPosition.iterateNeighbors(pos)) {
 			if (
 				RoomPosition.isBorder(neighbor.x, neighbor.y) &&
@@ -65,7 +65,7 @@ export function checkBorder(pos: RoomPosition.RoomPosition) {
 }
 
 export function checkWall(pos: RoomPosition.RoomPosition) {
-	if (Map.getTerrainForRoom(pos.roomName).get(pos.x, pos.y) === C.TERRAIN_MASK_WALL) {
+	if (Map.getRoomTerrain(pos.roomName).get(pos.x, pos.y) === C.TERRAIN_MASK_WALL) {
 		return C.ERR_INVALID_TARGET;
 	}
 	return C.OK;
@@ -94,8 +94,7 @@ export function checkPlacement(room: Room, pos: RoomPosition.RoomPosition) {
 export function lookForStructureAt<Type extends string>(room: Room, pos: RoomPosition.RoomPosition, structureType: Type) {
 	type Object = Extract<AnyStructure, { structureType: Type }>;
 	return room.lookForAt(C.LOOK_STRUCTURES, pos).find(
-		(look): look is LookForType<Object> =>
-			look.structure.structureType === structureType)?.structure;
+		(structure): structure is Object => structure.structureType === structureType);
 }
 
 // Register pathfinding and movement rules

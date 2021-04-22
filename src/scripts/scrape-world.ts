@@ -4,6 +4,7 @@ import { RoomPosition } from 'xxscreeps/game/position';
 import { Owner } from 'xxscreeps/game/object';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
+import * as C from 'xxscreeps/game/constants';
 import * as Store from 'xxscreeps/mods/resource/store';
 import config from 'xxscreeps/config';
 
@@ -167,7 +168,17 @@ const roomsTerrain = new Map(db.getCollection('rooms.terrain').find().map(({ roo
 			writer.set(xx, yy, clamp(0, 2, Number(terrain[yy * 50 + xx])));
 		}
 	}
-	return [ room as string, writer ];
+	const checkExit = (fn: (ii: number) => [ number, number ]) =>
+		Fn.some(Fn.range(1, 49), ii => writer.get(...fn(ii)) !== C.TERRAIN_MASK_WALL);
+	const exits =
+		(checkExit(ii => [ ii, 0 ]) ? 1 : 0) |
+		(checkExit(ii => [ 49, ii ]) ? 2 : 0) |
+		(checkExit(ii => [ ii, 49 ]) ? 4 : 0) |
+		(checkExit(ii => [ 0, ii ]) ? 8 : 0);
+	return [ room as string, {
+		exits,
+		terrain: writer,
+	} ];
 }));
 
 // Save Game object and initialize shard

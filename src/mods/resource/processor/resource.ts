@@ -27,7 +27,7 @@ export function drop(pos: RoomPosition, resourceType: ResourceType, amount: numb
 
 	// Is there already resource on the ground?
 	const resources = room.lookForAt(C.LOOK_RESOURCES, pos);
-	for (const { resource } of resources) {
+	for (const resource of resources) {
 		if (resource.resourceType === resourceType) {
 			resource.amount += remaining;
 			return;

@@ -92,8 +92,8 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, userOptions:
 
 export function loadTerrain(world: World) {
 	const rooms: Record<string, Readonly<Uint8Array>> = {};
-	for (const [ name, terrain ] of world.entries()) {
-		rooms[parseRoomNameToId(name)] = getBuffer(terrain);
+	for (const [ name, info ] of world.entries()) {
+		rooms[parseRoomNameToId(name)] = getBuffer(info.terrain);
 	}
 	pf.loadTerrain(rooms);
 }

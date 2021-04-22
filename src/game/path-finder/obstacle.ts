@@ -46,11 +46,10 @@ export function makeObstacleChecker(params: MovementParameters) {
 export function makePositionChecker(params: PositionCheckParameters) {
 	const { room } = params;
 	const checkObstacle = makeObstacleChecker(params);
-	const check = (position: RoomPosition) =>
-		!room.lookAt(position).some(look => checkObstacle(look[look.type]));
+	const check = (pos: RoomPosition) => !room._objectsAt(pos).some(object => checkObstacle(object));
 	if (params.checkTerrain) {
 		const terrain = room.getTerrain();
-		return (position: RoomPosition) => terrain.get(position.x, position.y) !== C.TERRAIN_MASK_WALL && !check(position);
+		return (pos: RoomPosition) => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL && !check(pos);
 	}
 	return check;
 }

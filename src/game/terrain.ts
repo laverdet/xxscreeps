@@ -1,9 +1,10 @@
-import { array, compose, declare, struct, BufferView, XSymbol } from 'xxscreeps/schema';
+import { array, compose, BufferView, XSymbol } from 'xxscreeps/schema';
 import { exchange, uncurryThis } from 'xxscreeps/utility/utility';
 export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants';
 
 const set = uncurryThis(Uint8Array.prototype.set);
 const GetBufferSymbol = XSymbol('getBuffer');
+const terrainTypes = [ 'plain', 'wall', 'swamp', 'wall' ] as const;
 
 export class Terrain {
 	#buffer: Uint8Array;
@@ -31,6 +32,10 @@ export class Terrain {
 			set(destinationArray, getBuffer(this));
 			return destinationArray;
 		}
+	}
+
+	_getType(xx: number, yy: number) {
+		return terrainTypes[this.get(xx, yy)];
 	}
 }
 
@@ -60,12 +65,9 @@ export function isNearBorder(xx: number, yy: number) {
 	return (xx + 2) % 50 < 4 || (yy + 2) % 50 < 4;
 }
 
-export const format = declare('Terrain', struct({
-	name: 'string',
-	terrain: compose(array(625, 'uint8'), {
-		composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),
-		decomposeIntoBuffer(value: Terrain, view: BufferView, offset: number) {
-			value.getRawBuffer(view.uint8.subarray(offset));
-		},
-	}),
-}));
+export const format = compose(array(625, 'uint8'), {
+	composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),
+	decomposeIntoBuffer(value: Terrain, view: BufferView, offset: number) {
+		value.getRawBuffer(view.uint8.subarray(offset));
+	},
+});

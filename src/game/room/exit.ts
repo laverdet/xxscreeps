@@ -6,7 +6,7 @@ import type { Room } from './room';
 
 // Base FIND_EXIT_ handler (i.e. doesn't include FIND_EXIT)
 const exits = [ C.FIND_EXIT_TOP, C.FIND_EXIT_RIGHT, C.FIND_EXIT_BOTTOM, C.FIND_EXIT_LEFT ];
-type ExitType = typeof exits[number];
+export type ExitType = typeof exits[number];
 function makeFindExit(exit: ExitType) {
 	const generators: Record<ExitType, ((name: string, ii: number) => RoomPosition)> = {
 		[C.FIND_EXIT_TOP]: (name, ii) => new RoomPosition(ii, 0, name),

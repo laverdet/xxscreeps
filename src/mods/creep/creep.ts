@@ -71,7 +71,19 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	 * Cancel the order given during the current game tick.
 	 * @param methodName The name of a creep's method to be cancelled.
 	 */
-	cancelOrder(_methodName: string) {}
+	cancelOrder(_methodName: string) {
+		console.log('TODO: cancelOrder');
+	}
+
+	/**
+	 * Drop this resource on the ground.
+	 * @param _resourceType One of the `RESOURCE_*` constants.
+	 * @param _amount The amount of resource units to be dropped. If omitted, all the available
+	 * carried amount is used.
+	 */
+	drop(_resourceType: ResourceType, _amount?: number) {
+		console.log('TODO: drop');
+	}
 
 	/**
 	 * Get the quantity of live body parts of the given type. Fully damaged parts do not count.

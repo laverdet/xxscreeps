@@ -19,8 +19,11 @@ const builtinLook = [
 export interface Look { builtin: typeof builtinLook }
 
 // All LOOK_ constants, no type information
-type LookInfo = Exclude<UnwrapArray<Look[keyof Look]>, void>;
-export type LookConstants = LookInfo['look'];
+type LookInfo = Exclude<UnwrapArray<Look[keyof Look]>, void> | {
+	look: 'terrain';
+	type: 'plain' | 'swamp' | 'wall';
+};
+export type LookConstants = LookInfo['look'] | typeof C.LOOK_TERRAIN;
 
 // Convert a LOOK_ constant to result type
 export type TypeOfLook<Look extends LookConstants> = Extract<LookInfo, { look: Look }>['type'];

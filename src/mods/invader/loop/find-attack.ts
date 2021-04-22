@@ -76,12 +76,12 @@ export default function(creep: Creep, healers: Creep[], hostiles: Creep[], forti
 
 		const pos = creep.memory._move.path[0];
 		const structures = creep.room.lookForAt(C.LOOK_STRUCTURES, pos.x, pos.y).filter(
-			look => look.structure.structureType !== 'spawn');
+			look => look.structureType !== 'spawn');
 		if (structures.length > 0) {
 			if (creep.getActiveBodyparts(C.WORK) > 0) {
 				// creep.dismantle(structures[0].structure);
 			} else {
-				creep.attack(structures[0].structure);
+				creep.attack(structures[0]);
 			}
 		}
 	}

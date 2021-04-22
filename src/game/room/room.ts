@@ -1,6 +1,7 @@
 import type { InspectOptionsStylized } from 'util';
 import type { LooseBoolean } from 'xxscreeps/utility/types';
 
+import GameMap, { getTerrainAt } from 'xxscreeps/game/map';
 import * as C from '../constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Memory from '../memory';
@@ -14,7 +15,7 @@ import { iteratee } from 'xxscreeps/engine/util/iteratee';
 
 import { registerGlobal } from 'xxscreeps/game';
 import { AfterInsert, AfterRemove, LookType, RoomObject, RunnerUser } from 'xxscreeps/game/object';
-import { getTerrainForRoom } from '../map';
+import { getRoomTerrain } from '../map';
 import { RoomVisual } from '../visual';
 
 import { EventLogSymbol } from './event-log';
@@ -22,12 +23,13 @@ import { FindConstants, FindType, findHandlers } from './find';
 import { LookConstants, TypeOfLook, lookConstants } from './look';
 import { shape } from './schema';
 import { FlushFindCache, LookFor, MoveObject, Objects, InsertObject, RemoveObject } from './symbols';
+import { iterateArea } from '../position/direction';
 
 export type AnyRoomObject = RoomObject | InstanceType<typeof Room>[typeof Objects][number];
 
 export type { LookConstants };
 
-type LookForTypeInitial<Type extends LookConstants> = {
+type LookForResult<Type extends LookConstants> = {
 	[key in LookConstants]: TypeOfLook<Type>;
 } & {
 	type: Type;
@@ -38,6 +40,8 @@ export type LookForType<Type extends RoomObject> = {
 } & {
 	type: never;
 };
+
+type LookAtArea<Type> = Record<number, Record<number, Type[]>>;
 
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
 	serialize?: boolean;
@@ -100,8 +104,13 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * method.
 	 * @param room Another room name or room object
 	 */
-	findExitTo(/*room: Room | string*/): /*FindExitDirection | */typeof C.ERR_NO_PATH | typeof C.ERR_INVALID_ARGS {
-		return C.ERR_NO_PATH;
+	findExitTo(room: Room | string) {
+		const route = GameMap.findRoute(this, room);
+		if (typeof route === 'object') {
+			return route[0].exit;
+		} else {
+			return route;
+		}
 	}
 
 	/**
@@ -198,7 +207,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * for any room in the world even if you have no access to it.
 	 */
 	getTerrain() {
-		return getTerrainForRoom(this.name)!;
+		return getRoomTerrain(this.name)!;
 	}
 
 	/**
@@ -208,8 +217,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * @param y Y position in the room
 	 * @param target Can be a RoomObject or RoomPosition
 	 */
-	lookAt(...args: [ x: number, y: number ] | [ target: RoomObject | RoomPosition ]):
-	LookForTypeInitial<LookConstants>[] {
+	lookAt(...args: [ x: number, y: number ] | [ target: RoomObject | RoomPosition ]): LookForResult<LookConstants>[] {
 		const { pos } = fetchPositionArgument(this.name, ...args);
 		if (!pos || pos.roomName !== this.name) {
 			return [];
@@ -219,7 +227,8 @@ export class Room extends withOverlay(BufferObject, shape) {
 			object => {
 				const type = object[LookType];
 				return { type, [type]: object };
-		}) ] as never;
+			}),
+			{ type: 'terrain', terrain: getTerrainAt(pos) } ] as never;
 	}
 
 	/**
@@ -229,8 +238,8 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * @param y Y position in the room
 	 * @param target Can be a RoomObject or RoomPosition
 	 */
-	lookForAt<Type extends LookConstants>(type: Type, x: number, y: number): LookForTypeInitial<Type>[];
-	lookForAt<Type extends LookConstants>(type: Type, target: RoomObject | RoomPosition): LookForTypeInitial<Type>[];
+	lookForAt<Type extends LookConstants>(type: Type, x: number, y: number): TypeOfLook<Type>[];
+	lookForAt<Type extends LookConstants>(type: Type, target: RoomObject | RoomPosition): TypeOfLook<Type>[];
 	lookForAt<Type extends LookConstants>(
 		type: Type, ...rest: [ number, number ] | [ RoomObject | RoomPosition ]
 	) {
@@ -238,17 +247,92 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (!pos || pos.roomName !== this.name) {
 			return [];
 		}
+		if (type === C.LOOK_TERRAIN) {
+			return [ getTerrainAt(pos) ];
+		}
 		if (!lookConstants.has(type)) {
 			return C.ERR_INVALID_ARGS as any;
 		}
-		return [ ...Fn.map(
-			Fn.filter(
-				this._getSpatialIndex().get(extractPositionId(pos)) ?? [],
-				object => object[LookType] === type),
-			object => {
-				const type = object[LookType];
-				return { type, [type]: object };
-		}) ];
+		return [ ...Fn.filter(
+			this._getSpatialIndex().get(extractPositionId(pos)) ?? [],
+			object => object[LookType] === type) ];
+	}
+
+	/**
+	 *
+	 * @param top The top Y boundary of the area.
+	 * @param left The left X boundary of the area.
+	 * @param bottom The bottom Y boundary of the area.
+	 * @param right The right X boundary of the area.
+	 * @param asArray Set to true if you want to get the result as a plain array.
+	 */
+	lookAtArea(top: number, left: number, bottom: number, right: number, asArray?: false): LookAtArea<LookForResult<LookConstants>>;
+	lookAtArea(top: number, left: number, bottom: number, right: number, asArray: true): LookForResult<LookConstants>[];
+	lookAtArea(top: number, left: number, bottom: number, right: number, asArray = false) {
+		const size = (bottom - top + 1) * (right - left + 1);
+		const objects: Iterable<any> = (() => {
+			if (size < this[Objects].length) {
+				// Iterate all objects
+				return Fn.filter(this[Objects], object =>
+					object.pos.x >= left && object.pos.x <= right &&
+					object.pos.y >= top && object.pos.y <= bottom);
+			} else {
+				// Filter on spatial index
+				return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos =>
+					this._getSpatialIndex().get(extractPositionId(pos)) ?? []));
+			}
+		})();
+		const terrain = this.getTerrain();
+		const results = Fn.concat(
+			// Iterate objects
+			Fn.map(objects, object => ({ x: object.pos.x, y: object.pos.y, [object[LookType]]: object })),
+			// Add terrain data
+			Fn.map(iterateArea(this.name, top, left, bottom, right), pos =>
+				({ x: pos.x, y: pos.y, terrain: terrain._getType(pos.x, pos.y) })));
+		return withAsArray(results, top, left, bottom, right, asArray, true) as never;
+	}
+
+	/**
+	 * Get the list of objects with the given type at the specified room area.
+	 * @param type One of the `LOOK_*` constants.
+	 * @param top The top Y boundary of the area.
+	 * @param left The left X boundary of the area.
+	 * @param bottom The bottom Y boundary of the area.
+	 * @param right The right X boundary of the area.
+	 * @param asArray Set to true if you want to get the result as a plain array.
+	 */
+	lookForAtArea<Type extends LookConstants>(type: Type, top: number, left: number, bottom: number, right: number, asArray?: false):
+		LookAtArea<(LookForResult<Type> & { x: number; y: number })>;
+	lookForAtArea<Type extends LookConstants>(type: Type, top: number, left: number, bottom: number, right: number, asArray: true):
+		(LookForResult<Type> & { x: number; y: number })[];
+	lookForAtArea<Type extends LookConstants>(type: Type, top: number, left: number, bottom: number, right: number, asArray = false) {
+		const size = (bottom - top + 1) * (right - left + 1);
+		const results: Iterable<any> = (() => {
+			if (type === C.LOOK_TERRAIN) {
+				// Simply return terrain data
+				const terrain = this.getTerrain();
+				return Fn.map(iterateArea(this.name, top, left, bottom, right),
+					pos => ({ x: pos.x, y: pos.y, terrain: terrain._getType(pos.x, pos.y) }));
+			} else {
+				const objects = (() => {
+					const objects = this.#lookIndex.get(type)!;
+					if (size < objects.length) {
+						// Iterate all objects by type
+						return Fn.filter(objects, object =>
+							object.pos.x >= left && object.pos.x <= right &&
+							object.pos.y >= top && object.pos.y <= bottom);
+					} else {
+						// Filter on spatial index
+						return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos =>
+							Fn.filter(this._getSpatialIndex().get(extractPositionId(pos)) ?? [],
+								object => object[LookType] === type)));
+					}
+				})();
+				// Add position and type information
+				return Fn.map(objects, object => ({ x: object.pos.x, y: object.pos.y, [type]: object }));
+			}
+		})();
+		return withAsArray(results, top, left, bottom, right, asArray, false);
 	}
 
 	/**
@@ -349,6 +433,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 		object.pos = pos;
 	}
 
+	_objectsAt(pos: RoomPosition) {
+		return this._getSpatialIndex().get(extractPositionId(pos)) ?? [];
+	}
+
 	private _addToLookIndex(object: RoomObject) {
 		this.#lookIndex.get(object[LookType])!.push(object);
 	}
@@ -431,4 +519,24 @@ export function getUsersInRoom(room: Room) {
 		}
 	}
 	return users;
+}
+
+function withAsArray(values: Iterable<{ x: number; y: number }>, top: number, left: number, bottom: number, right: number, asArray: boolean, nest: boolean) {
+	if (asArray) {
+		return [ ...values ];
+	} else {
+		const results: LookAtArea<any> = {};
+		for (let yy = top; yy <= bottom; ++yy) {
+			const row: Record<number, any[]> = results[yy] = {};
+			if (nest) {
+				for (let xx = left; xx <= right; ++xx) {
+					row[xx] = [];
+				}
+			}
+		}
+		for (const value of values) {
+			(results[value.y][value.x] ??= []).push(value);
+		}
+		return results;
+	}
 }

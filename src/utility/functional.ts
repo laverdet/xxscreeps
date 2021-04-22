@@ -33,6 +33,15 @@ export function every<Type>(iterable: Iterable<Type>, callback: (value: Type) =>
 	return true;
 }
 
+export function some<Type>(iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean) {
+	for (const value of iterable) {
+		if (callback(value)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 // Filter elements out an iterable
 export function filter<Type>(iterable: Iterable<Type>): Iterable<NonNullOrVoidable<Type>>;
 export function filter<Type, Filtered extends Type>(
@@ -96,13 +105,10 @@ export function *map<Type, Result>(iterable: Iterable<Type>, callback: (value: T
 // If you just want the smallest element of an array it's senseless to sort the whole thing and take
 // array[0]. You can just run through once and find that element in linear time
 export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, right: Type) => number) {
-	let first = true;
-	let minimum: Type | undefined;
-	for (const value of iterable) {
-		if (first) {
-			first = false;
-			minimum = value;
-		} else if (callback(minimum!, value) > 0) {
+	const head = shift(iterable);
+	let minimum = head.head;
+	for (const value of head.rest) {
+		if (callback(minimum!, value) > 0) {
 			minimum = value;
 		}
 	}
@@ -138,6 +144,24 @@ export function *scan<Type, Result>(iterable: Iterable<Type>, initial: Result, a
 		result = accumulator(result, value);
 		yield result;
 	}
+}
+
+/**
+ * Returns the first element from an iterable, as well as another iterable that will continue after
+ * the shifted element.
+ */
+export function shift<Type>(iterable: Iterable<Type>) {
+	const iterator = iterable[Symbol.iterator]();
+	const { done, value } = iterator.next();
+	const rest: Iterable<Type> = done ? [] : {
+		[Symbol.iterator]() {
+			return iterator;
+		},
+	};
+	return {
+		head: value as Type | undefined,
+		rest,
+	};
 }
 
 // Not nullable TS predicate

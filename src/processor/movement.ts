@@ -96,8 +96,7 @@ export function dispatch(room: Room) {
 			type: mover[LookType],
 			user: mover[Owner],
 		});
-		for (const look of room.lookAt(nextPosition)) {
-			const obstruction = look[look.type];
+		for (const obstruction of room._objectsAt(nextPosition)) {
 			if (check(obstruction) && !obstruction[NextPosition]) {
 				mover[NextPosition] = null;
 				continue check;
@@ -122,8 +121,8 @@ export function get(object: RoomObjectWithOwner) {
 
 	// Final check for obstructions
 	const { room } = object;
-	for (const look of room.lookAt(nextPosition)) {
-		if (look[look.type][NextPosition] === null) {
+	for (const object of room._objectsAt(nextPosition)) {
+		if (object[NextPosition] === null) {
 			return;
 		}
 	}

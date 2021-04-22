@@ -57,6 +57,14 @@ export function getPositonInDirection(position: RoomPosition, direction: Directi
 	return new RoomPosition(x + dx, y + dy, roomName);
 }
 
+export function *iterateArea(roomName: string, top: number, left: number, bottom: number, right: number) {
+	for (let yy = top; yy <= bottom; ++yy) {
+		for (let xx = left; xx <= right; ++xx) {
+			yield new RoomPosition(xx, yy, roomName);
+		}
+	}
+}
+
 export function iterateNeighbors(position: RoomPosition) {
 	return function *() {
 		const { x, y, roomName } = position;
