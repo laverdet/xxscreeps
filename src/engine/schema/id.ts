@@ -39,12 +39,12 @@ export const optionalFormat = declare('Id', compose(array(4, 'uint32'), {
 		id: 'id_len',
 		type: 'u1',
 	}, {
-		size: '3',
+		size: 3,
 	}, {
 		id: 'id',
 		type: 'u4',
 		repeat: 'expr',
-		'repeat-expr': '3',
+		'repeat-expr': 3,
 	} ],
 }));
 

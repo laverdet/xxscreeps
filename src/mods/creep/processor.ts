@@ -118,13 +118,13 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		})();
 		// Update fatigue
 		creep.fatigue = Math.max(0, calculateWeight(creep) * fatigue);
-		context.setActive();
+		context.didUpdate();
 	}
 
 	if (creep.fatigue > 0) {
 		// Reduce fatigue
 		creep.fatigue -= Math.min(creep.fatigue, calculatePower(creep, C.MOVE, 2));
-		context.setActive();
+		context.didUpdate();
 	}
 
 	// Move creep to next room
@@ -144,6 +144,9 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		removeObject(creep);
 		creep.pos = next;
 		context.sendRoomIntent(next.roomName, 'import', typedArrayToString(writeRoomObject(creep)));
+		context.didUpdate();
+	} else {
+		context.setActive();
 	}
 });
 

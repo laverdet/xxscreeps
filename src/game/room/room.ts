@@ -211,7 +211,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	}
 
 	/**
-	 * Get an object with the given type at the specified room position.
+	 * Get the list of objects at the specified room position.
 	 * @param type One of the `LOOK_*` constants
 	 * @param x X position in the room
 	 * @param y Y position in the room
@@ -259,7 +259,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	}
 
 	/**
-	 *
+	 * Get the list of objects at the specified room area.
 	 * @param top The top Y boundary of the area.
 	 * @param left The left X boundary of the area.
 	 * @param bottom The bottom Y boundary of the area.

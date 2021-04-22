@@ -34,8 +34,8 @@ function shape() {
 			hits: 'uint8',
 			type: enumerated(...C.BODYPARTS_ALL),
 		})),
-		fatigue: 'int16',
-		hits: 'int16',
+		fatigue: 'int32',
+		hits: 'int32',
 		name: 'string',
 		// saying: ...
 		store: Store.format,

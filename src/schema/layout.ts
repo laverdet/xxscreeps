@@ -234,7 +234,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 			const arrangedMembers = members.map(member => {
 				const { layout, traits } = member;
 				const memberOffset = alignTo(offset, traits.align);
-				offset += traits.size;
+				offset = memberOffset + traits.size;
 				return {
 					key: member.key,
 					info: {
