@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Store from './store';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
-import { insertObject, removeObject } from 'xxscreeps/game/room/methods';
+import { InsertObject, RemoveObject } from 'xxscreeps/game/room';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { Resource, ResourceType, create } from '../resource';
 
@@ -36,13 +36,13 @@ export function drop(pos: RoomPosition, resourceType: ResourceType, amount: numb
 
 	// Create new dropped resource here
 	const resource = create(pos, resourceType, remaining);
-	insertObject(room, resource);
+	room[InsertObject](resource);
 }
 
 registerObjectTickProcessor(Resource, (resource, context) => {
 	resource.amount -= Math.ceil(resource.amount / C.ENERGY_DECAY);
 	if (resource.amount <= 0) {
-		removeObject(resource);
+		resource.room[RemoveObject](resource);
 	}
 	context.setActive();
 });

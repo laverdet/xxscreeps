@@ -54,7 +54,7 @@ export class StructureController extends withOverlay(Structure.Structure, shape)
 	[UpgradePowerThisTick]: number | undefined;
 }
 
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/room' {
 	interface Room {
 		controller?: StructureController;
 	}

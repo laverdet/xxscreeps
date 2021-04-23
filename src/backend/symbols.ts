@@ -1,7 +1,6 @@
 import type Koa from 'koa';
 import type Router from 'koa-router';
 import type { Context, Endpoint, State } from 'xxscreeps/backend';
-export const eventRenderers = new Map<number, ((...args: any[]) => any)[]>();
 export const MapRender = Symbol('mapRender');
 export const Render = Symbol('render');
 export const TerrainRender = Symbol('terrainRender');

@@ -4,10 +4,9 @@ import * as Game from 'xxscreeps/game';
 import { LookType, NextPosition, Owner, RoomObjectWithOwner } from 'xxscreeps/game/object';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { getOffsetsFromDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
-import { Room } from 'xxscreeps/game/room';
+import { InsertObject, LookAt, Room } from 'xxscreeps/game/room';
 import { readRoomObject } from 'xxscreeps/engine/room';
 import { exchange } from 'xxscreeps/utility/utility';
-import { insertObject } from 'xxscreeps/game/room/methods';
 import { latin1ToBuffer } from 'xxscreeps/utility/string';
 import { registerIntentProcessor } from '.';
 
@@ -22,7 +21,7 @@ const intents = registerIntentProcessor(Room, 'import', (room, context, objectPa
 		return;
 	}
 	const object = readRoomObject(latin1ToBuffer(objectPayload));
-	insertObject(room, object);
+	room[InsertObject](object);
 	context.didUpdate();
 });
 
@@ -96,7 +95,7 @@ export function dispatch(room: Room) {
 			type: mover[LookType],
 			user: mover[Owner],
 		});
-		for (const obstruction of room._objectsAt(nextPosition)) {
+		for (const obstruction of room[LookAt](nextPosition)) {
 			if (check(obstruction) && !obstruction[NextPosition]) {
 				mover[NextPosition] = null;
 				continue check;
@@ -121,7 +120,7 @@ export function get(object: RoomObjectWithOwner) {
 
 	// Final check for obstructions
 	const { room } = object;
-	for (const object of room._objectsAt(nextPosition)) {
+	for (const object of room[LookAt](nextPosition)) {
 		if (object[NextPosition] === null) {
 			return;
 		}

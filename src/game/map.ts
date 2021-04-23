@@ -2,12 +2,13 @@ import type { Room } from 'xxscreeps/game/room';
 import type { ExitType } from 'xxscreeps/game/room/exit';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Terrain from 'xxscreeps/game/terrain';
+import * as Terrain from './terrain';
 import { RoomPosition, getOffsetsFromDirection, parseRoomName, generateRoomName } from 'xxscreeps/game/position';
 import { getDirection } from 'xxscreeps/game/position/direction';
 import { TypeOf, compose, declare, makeReader, struct, vector } from 'xxscreeps/schema';
 import { build } from 'xxscreeps/engine/schema';
 import { Adapter, astar } from 'xxscreeps/utility/astar';
+
 
 export type World = Map<string, TypeOf<typeof roomTerrain>>;
 let world: World;
@@ -132,10 +133,10 @@ function getRoomLinearDistance(roomName1: string, roomName2: string, continuous 
 export function getTerrainAt(position: RoomPosition): string | undefined;
 export function getTerrainAt(xx: number, yy: number, roomName: string): string | undefined;
 export function getTerrainAt(...args: [ RoomPosition ] | [ number, number, string ]) {
-	const position = args.length === 1 ? args[0] : new RoomPosition(args[0], args[1], args[2]);
-	const info = world.get(position.roomName);
+	const pos = args.length === 1 ? args[0] : new RoomPosition(args[0], args[1], args[2]);
+	const info = world.get(pos.roomName);
 	if (info) {
-		return info.terrain._getType(position.x, position.y);
+		return Terrain.terrainMaskToString[info.terrain.get(pos.x, pos.y)];
 	}
 }
 
@@ -179,7 +180,7 @@ function extractRoomName(room: string | Room) {
 
 //
 // Schema
-const roomTerrain = struct({
+const roomTerrain = () => struct({
 	exits: 'uint8',
 	terrain: Terrain.format,
 });

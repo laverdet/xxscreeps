@@ -1,4 +1,3 @@
-import type { Room } from 'xxscreeps/game/room';
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import streamToPromise from 'stream-to-promise';
 import crypto from 'crypto';
@@ -7,7 +6,7 @@ import { registerBackendMiddleware } from 'xxscreeps/backend';
 import { PNG } from 'pngjs';
 import { TerrainRender } from 'xxscreeps/backend/symbols';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
-import { getObjects } from 'xxscreeps/game/room/methods';
+import { Objects, Room } from 'xxscreeps/game/room';
 import { isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/terrain';
 
 function generate(grid: (Room | null)[][], zoom = 1) {
@@ -31,7 +30,7 @@ function generate(grid: (Room | null)[][], zoom = 1) {
 			const terrain = room?.getTerrain();
 			const colorsByPosition = new Map<number, number>();
 			if (room) {
-				for (const object of getObjects(room)) {
+				for (const object of room[Objects]) {
 					const color = object[TerrainRender](object);
 					if (color !== undefined) {
 						colorsByPosition.set(object.pos.x * 50 + object.pos.y, color);

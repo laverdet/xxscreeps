@@ -30,6 +30,7 @@ export const RawMemory = {
 	setActiveSegments() {},
 	setActiveForeignSegment() {},
 	setPublicSegments() {},
+	segments: {},
 };
 
 function align(address: number) {

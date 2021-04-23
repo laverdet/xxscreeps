@@ -1,45 +1,78 @@
 import { array, compose, BufferView, XSymbol } from 'xxscreeps/schema';
-import { exchange, uncurryThis } from 'xxscreeps/utility/utility';
-export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants';
+import { exchange } from 'xxscreeps/utility/utility';
+import { getRoomTerrain } from './map';
+import { Room } from './room';
+export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/constants';
 
-const set = uncurryThis(Uint8Array.prototype.set);
 const GetBufferSymbol = XSymbol('getBuffer');
-const terrainTypes = [ 'plain', 'wall', 'swamp', 'wall' ] as const;
+export const terrainMaskToString = [ 'plain', 'wall', 'wall', 'swamp' ] as const;
 
+/**
+ * An object which provides fast access to room terrain data. These objects can be constructed for
+ * any room in the world even if you have no access to it.
+ *
+ * Technically every Room.Terrain object is a very lightweight adapter to underlying static terrain
+ * buffers with corresponding minimal accessors.
+ */
 export class Terrain {
 	#buffer: Uint8Array;
 
-	constructor(buffer: Uint8Array) {
-		this.#buffer = buffer;
+	/**
+	 * Creates a new Terrain of room by its name. Terrain objects can be constructed for any room in
+	 * the world even if you have no access to it.
+	 * @param roomName The room name.
+	 */
+	constructor(roomName: string);
+	// eslint-disable-next-line @typescript-eslint/unified-signatures
+	constructor(buffer: Uint8Array);
+	constructor(arg: string | Uint8Array) {
+		if (typeof arg === 'string') {
+			this.#buffer = getRoomTerrain(arg).#buffer;
+		} else {
+			this.#buffer = arg;
+		}
 	}
 
+	/**
+	 * Extracts the underlying private buffer out of a `Terrain` class.
+	 */
 	static [GetBufferSymbol](that: Terrain) {
 		return that.#buffer;
 	}
 
+	/**
+	 * Get terrain type at the specified room position by `(x,y)` coordinates. Unlike the
+	 * `Game.map.getTerrainAt(...)` method, this one doesn't perform any string operations and returns
+	 * integer terrain type values.
+	 */
 	get(xx: number, yy: number) {
 		const index = yy * 50 + xx;
 		if (index >= 0 && index < 2500) {
-			return this.#buffer[index >>> 2] >>> ((index & 0x03) << 1) & 0x03;
+			return (this.#buffer[index >>> 2] >>> ((index & 0x03) << 1) & 0x03);
 		}
-		return NaN;
+		return NaN as never;
 	}
 
+	/**
+	 * Get copy of underlying static terrain buffer.
+	 *
+	 * The representation of terrain data differs from classic Screeps. The array size is 625 and each
+	 * byte includes terrain data for 4 tiles. You can extract a tile's terrain mask with the
+	 * following code:
+	 * const id = yy * 50 + xx;
+	 * const type = buffer[index >>> 2] >>> ((id & 0x03) << 1) & 0x03;
+	 *
+	 * @param destinationArray A typed array view in which terrain will be copied to.
+	 */
 	getRawBuffer(destinationArray?: Uint8Array): Uint8Array {
 		if (destinationArray === undefined) {
 			return this.getRawBuffer(new Uint8Array(625));
 		} else {
-			set(destinationArray, getBuffer(this));
+			destinationArray.set(this.#buffer);
 			return destinationArray;
 		}
 	}
-
-	_getType(xx: number, yy: number) {
-		return terrainTypes[this.get(xx, yy)];
-	}
 }
-
-export const getBuffer = exchange(Terrain, GetBufferSymbol, (): never => { throw new Error });
 
 export class TerrainWriter extends Terrain {
 	constructor(buffer = new Uint8Array(625)) {
@@ -57,6 +90,8 @@ export class TerrainWriter extends Terrain {
 	}
 }
 
+export const getBuffer = exchange(Terrain, GetBufferSymbol, (): never => { throw new Error });
+
 export function isBorder(xx: number, yy: number) {
 	return xx === 0 || xx === 49 || yy === 0 || yy === 49;
 }
@@ -71,3 +106,5 @@ export const format = compose(array(625, 'uint8'), {
 		value.getRawBuffer(view.uint8.subarray(offset));
 	},
 });
+
+Room.Terrain = Terrain;

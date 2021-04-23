@@ -1,12 +1,13 @@
 import type { Flag } from './flag';
 import type { AnyRoomObject, Room } from './room';
+import type { RoomObject } from './object';
+import * as Fn from 'xxscreeps/utility/functional';
 import { gameInitializers } from './symbols';
 import map from './map';
 
 import { flush as flushPathFinder } from 'xxscreeps/game/path-finder';
-import { flushFindCache, getObjects } from 'xxscreeps/game/room/methods';
-import { insertObject } from './room/methods';
-import { AddToMyGame, RoomObject } from './object';
+import { FlushFindCache, FlushObjects, InsertObject, Objects } from 'xxscreeps/game/room';
+import { AddToMyGame } from './object/symbols';
 import * as Visual from './visual';
 
 /**
@@ -14,6 +15,9 @@ import * as Visual from './visual';
  */
 export class Game {
 	cpu = {
+		bucket: 10000,
+		limit: 10000,
+		tickLimit: 500,
 		getUsed: () => 0,
 		getHeapStatistics: () => 0,
 	};
@@ -27,7 +31,10 @@ export class Game {
 		incomingTransactions: [],
 		outgoingTransactions: [],
 	};
-	shard = {};
+	shard = {
+		name: 'shard0',
+		type: 'normal',
+	};
 	map = map;
 	rooms = rooms;
 	time = time;
@@ -73,7 +80,7 @@ export function runWithState<Type>(rooms_: Room[], time_: number, task: () => Ty
 	time = time_;
 	for (const room of rooms_) {
 		rooms[room.name] = room;
-		for (const object of getObjects(room)) {
+		for (const object of room[Objects]) {
 			objects.set(object.id, object);
 		}
 	}
@@ -95,8 +102,8 @@ export function runAsUser<Type>(userId: string, task: () => Type) {
 	gameInitializers.forEach(fn => fn(instance));
 	me = userId;
 	for (const room of Object.values(rooms)) {
-		flushFindCache(room);
-		for (const object of getObjects(room)) {
+		room[FlushFindCache]();
+		for (const object of room[Objects]) {
 			if ((object as any).my) {
 				object[AddToMyGame](instance);
 			}
@@ -124,13 +131,16 @@ export function runForUser<Type>(
 	return runWithState(rooms_, time, () => runAsUser(userId, () => {
 		instance.flags = flags_;
 		Visual.clear();
+		const flushedRooms = new Set<Room>();
 		for (const flag of Object.values(instance.flags)) {
 			const room = rooms[flag.pos.roomName];
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (room) {
-				insertObject(room, flag);
+				flushedRooms.add(room);
+				room[InsertObject](flag);
 			}
 		}
+		Fn.map(flushedRooms, room => room[FlushObjects]);
 		task(instance);
 	}));
 }

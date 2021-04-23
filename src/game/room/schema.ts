@@ -1,9 +1,8 @@
 import type { RoomObject } from 'xxscreeps/game/object';
 import { compose, declare, struct, variant, vector, withFallback } from 'xxscreeps/schema';
-import { Room } from 'xxscreeps/game/room';
 import { structForPath, variantForPath } from 'xxscreeps/engine/schema';
-import { EventLogSymbol } from './event-log';
-import { Objects } from './symbols';
+import { EventLog, Objects } from './symbols';
+import { Room } from './room';
 
 // Schema definition
 export const format = () => declare('Room', compose(shape, Room));
@@ -13,6 +12,6 @@ export function shape() {
 		...structForPath('Room'),
 		name: 'string',
 		[Objects]: vector(objectFormat),
-		[EventLogSymbol]: vector(withFallback<any>()(variant(...variantForPath('Room.eventLog')))),
+		[EventLog]: vector(withFallback<any>()(variant(...variantForPath('Room.eventLog')))),
 	});
 }

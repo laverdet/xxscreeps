@@ -22,7 +22,7 @@ export function exchange(target: any, name: keyof any, newValue: any = undefined
 
 // Wrapper around `Object.assign` which brings in type information from the interface being extended
 type AddThis<Type, Fn> = Fn extends (...args: infer Args) => infer Return ?
-	(this: Type, ...args: Args) => Return : never;
+	(this: Type, ...args: Args) => Return : Fn;
 export function extend<Type, Proto extends {
 	[Key in keyof Type]?: AddThis<Type, Type[Key]>;
 }>(
@@ -30,7 +30,9 @@ export function extend<Type, Proto extends {
 ) {
 	const ext = typeof proto === 'function' ?
 		proto(Object.getPrototypeOf(ctor.prototype)) : proto;
-	Object.assign(ctor.prototype, ext);
+	for (const [ key, info ] of Object.entries(Object.getOwnPropertyDescriptors(ext))) {
+		Object.defineProperty(ctor.prototype, key, info);
+	}
 }
 
 // Gets a key on a map and if it doesn't exist it inserts a new value, then returns the value.
@@ -66,6 +68,14 @@ export function merge(result: any, subject: any) {
 			merge(result[key], val);
 		}
 	}
+}
+
+export function removeOne<Type>(list: Type[], element: Type) {
+	const index = list.indexOf(element);
+	if (index === -1) {
+		throw new Error('Element was not found');
+	}
+	list.splice(index, 1);
 }
 
 // Used to inline upcast a value to another Type. This is *more* restrictive than `as Type`

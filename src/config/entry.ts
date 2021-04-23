@@ -12,7 +12,7 @@ await async function() {
 		for (const fn of [
 			str => str,
 			str => str.replace(/^/, 'dist/').replace(/\.ts$/, ''),
-			str => str.replace(/^src\//, 'dist/').replace(/\.ts$/, ''),
+			str => str.replace(/^[.\\/]*src\//, 'dist/').replace(/\.ts$/, ''),
 		] as ((str: string) => string)[]) {
 			const module = await async function() {
 				try {

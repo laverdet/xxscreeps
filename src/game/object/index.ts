@@ -1,21 +1,15 @@
 import type { InspectOptionsStylized } from 'util';
-import type { Room } from './room';
+import type { Room } from 'xxscreeps/game/room';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as BufferObject from 'xxscreeps/schema/buffer-object';
 import * as RoomPosition from 'xxscreeps/game/position';
-import { compose, declare, struct, withOverlay, XSymbol } from 'xxscreeps/schema';
-import { expandGetters } from 'xxscreeps/engine/util/inspect';
+import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
+import { expandGetters } from 'xxscreeps/utility/inspect';
 import { assign } from 'xxscreeps/utility/utility';
-import { Game, registerGlobal } from '.';
+import { AddToMyGame, AfterInsert, AfterRemove, LookType, NextPosition, Owner, PathCost, RunnerUser } from './symbols';
+import { Game, registerGlobal } from '..';
 
-export const AddToMyGame = XSymbol('addToMyGame');
-export const AfterInsert = XSymbol('afterInsert');
-export const AfterRemove = XSymbol('afterRemove');
-export const LookType = XSymbol('lookType');
-export const NextPosition = XSymbol('nextPosition');
-export const Owner = XSymbol('owner');
-export const PathCost = XSymbol('pathCost');
-export const RunnerUser = XSymbol('runnerUser');
+export { AddToMyGame, AfterInsert, AfterRemove, LookType, NextPosition, Owner, PathCost, RunnerUser };
 
 export const format = () => compose(shape, RoomObject);
 const shape = declare('RoomObject', struct({

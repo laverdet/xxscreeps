@@ -1,19 +1,17 @@
-import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import type { IntentsForReceiver, IntentReceivers, IntentParameters } from '.';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Game from 'xxscreeps/game';
 import * as Movement from 'xxscreeps/processor/movement';
-import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
-import { getObjects } from 'xxscreeps/game/room/methods';
+import { EventLog, FlushObjects, Objects, Room } from 'xxscreeps/game/room';
+import { getUsersInRoom } from 'xxscreeps/game/room/room';
 import { Processors, RoomTickProcessor, Tick, roomTickProcessors, PreTick } from './symbols';
 
 import 'xxscreeps/config/mods/import/game';
 import 'xxscreeps/config/mods/import/processor';
 import { acquireFinalIntentsForRoom, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/model/processor';
 import { getOrSet } from 'xxscreeps/utility/utility';
-import { getUsersInRoom } from 'xxscreeps/game/room/room';
 
 // Register per-tick per-room processor
 export function registerRoomTickProcessor(tick: RoomTickProcessor) {
@@ -74,17 +72,19 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 
 		Game.runWithState([ this.room ], this.time, () => {
 			// Reset eventLog for this tick
-			this.room[EventLogSymbol] = [];
+			this.room[EventLog] = [];
 
 			// Pre-intent processor
-			for (const object of getObjects(this.room)) {
+			for (const object of this.room[Objects]) {
 				object[PreTick]?.(object, this);
 			}
+			this.room[FlushObjects]();
 
 			// Run `registerRoomTickProcessor` hooks
 			for (const process of roomTickProcessors) {
 				process(this.room, this);
 			}
+			this.room[FlushObjects]();
 
 			// Process user intents
 			for (const [ user, intents ] of this.intents) {
@@ -114,12 +114,14 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 					}
 				});
 			}
+			this.room[FlushObjects]();
 
 			// Post-intent processor
 			Movement.dispatch(this.room);
-			for (const object of getObjects(this.room)) {
+			for (const object of this.room[Objects]) {
 				object[Tick]?.(object, this);
 			}
+			this.room[FlushObjects]();
 		});
 
 		// Publish results
@@ -143,6 +145,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 				}
 			});
 		}
+		this.room[FlushObjects]();
 
 		const userIds = getUsersInRoom(this.room);
 		await Promise.all([

@@ -1,19 +1,8 @@
 import type { Game } from './state';
-import { globals } from './symbols';
-
 import lodash from 'lodash';
+import { globals } from './symbols';
 import * as C from './constants';
 import * as Memory from './memory';
-
-// `Memory` is a getter/setter
-export function registerGlobal(name: string, value: any): void;
-export function registerGlobal(fn: Function): void;
-export function registerGlobal(...args: [ string, any ] | [ Function ]) {
-	const { name, value } = args.length === 1 ?
-		{ name: args[0].name, value: args[0] } :
-		{ name: args[0], value: args[1] };
-	globals[name] = value;
-}
 
 export function setupGlobals(globalThis: any) {
 

@@ -9,7 +9,7 @@ const au = new AnsiUp();
 const colorize = (payload: string) => au.ansi_to_html(payload).replace(
 	/<span style="(?<color>color:rgb\(\d+,\d+,\d+\))">/g,
 	(_, color) => `<span style="padding:0;${color}">`,
-);
+).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
 export const ConsoleSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/console$/,
@@ -18,8 +18,19 @@ export const ConsoleSubscription: SubscriptionEndpoint = {
 		if (!this.user) {
 			return () => {};
 		}
+		let throttleTime = 0;
+		let throttleCount = 0;
 		const channel = await getConsoleChannel(this.context.shard, this.user).subscribe();
 		channel.listen(message => {
+			const now = Date.now();
+			if (now > throttleTime) {
+				throttleCount = 0;
+				throttleTime = now + 1000;
+			}
+			if (++throttleCount === 20) {
+				this.send(JSON.stringify({ error: 'Throttling console messages' }));
+				return;
+			}
 			switch (message.type) {
 				case 'error':
 					this.send(JSON.stringify({ error: colorize(message.value) }));

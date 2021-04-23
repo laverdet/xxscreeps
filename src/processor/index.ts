@@ -12,7 +12,7 @@ type IntentReceiverInstance = {
 	[Processors]?: IntentProcessorHolder;
 };
 type TickProcessor<Type = any> = (receiver: Type, context: ObjectProcessorContext) => void;
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/room' {
 	interface Room {
 		[Processors]?: IntentProcessorHolder;
 	}

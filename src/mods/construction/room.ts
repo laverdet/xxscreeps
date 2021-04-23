@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Game from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { Room, lookFor, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
+import { LookFor, Room, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';
 import { extend } from 'xxscreeps/utility/utility';
 import { ConstructibleStructureType, ConstructionSite } from './construction-site';
@@ -11,11 +11,11 @@ import { structureFactories } from './symbols';
 // Register FIND_ types for `ConstructionSite`
 const find = registerFindHandlers({
 	[C.FIND_CONSTRUCTION_SITES]: room =>
-		lookFor(room, C.LOOK_CONSTRUCTION_SITES),
+		room[LookFor](C.LOOK_CONSTRUCTION_SITES),
 	[C.FIND_MY_CONSTRUCTION_SITES]: room =>
-		lookFor(room, C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => constructionSite.my),
+		room[LookFor](C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => constructionSite.my),
 	[C.FIND_HOSTILE_CONSTRUCTION_SITES]: room =>
-		lookFor(room, C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => !constructionSite.my),
+		room[LookFor](C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => !constructionSite.my),
 });
 
 // Register LOOK_ type for `ConstructionSite`
@@ -26,7 +26,7 @@ declare module 'xxscreeps/game/room' {
 }
 
 // Extend `Room`
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/room' {
 	interface Room {
 		/**
 		 * Create new `ConstructionSite` at the specified location.

@@ -1,8 +1,8 @@
+import type { Room } from '.';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { RoomPosition } from 'xxscreeps/game/position';
-import { registerFindHandlers } from './find';
-import type { Room } from './room';
+import { registerFindHandlers } from './symbols';
 
 // Base FIND_EXIT_ handler (i.e. doesn't include FIND_EXIT)
 const exits = [ C.FIND_EXIT_TOP, C.FIND_EXIT_RIGHT, C.FIND_EXIT_BOTTOM, C.FIND_EXIT_LEFT ];

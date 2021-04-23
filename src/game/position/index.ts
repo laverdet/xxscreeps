@@ -1,33 +1,37 @@
 import type { InspectOptionsStylized } from 'util';
-import type { FindConstants, FindType } from 'xxscreeps/game/room/find';
+import type { FindConstants, FindType, RoomFindOptions } from 'xxscreeps/game/room/find';
 import type { LookConstants } from 'xxscreeps/game/room/look';
-import type { FindPathOptions, RoomFindOptions, RoomPath } from 'xxscreeps/game/room/room';
+import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as PathFinder from 'xxscreeps/game/path-finder';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Flag from 'xxscreeps/game/flag';
 import * as Fn from 'xxscreeps/utility/functional';
-import { compose, declare, XSymbol } from 'xxscreeps/schema';
-import { iteratee } from 'xxscreeps/engine/util/iteratee';
+import { compose, declare } from 'xxscreeps/schema';
+import { iteratee } from 'xxscreeps/utility/iteratee';
 import { instantiate } from 'xxscreeps/utility/utility';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Direction, getDirection } from './direction';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
+import { PositionInteger } from './symbols';
 
 export type { Direction } from './direction';
-export { isBorder, isNearBorder } from '../terrain';
+export { isBorder, isNearBorder } from 'xxscreeps/game/terrain';
 export { getOffsetsFromDirection, getPositonInDirection, iterateNeighbors } from './direction';
 export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './name';
 
 type FindClosestByPathOptions<Type> =
 	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;
 
-const PositionInteger = XSymbol('positionInteger');
+
 type PositionFindType<Type> =
 	Type extends (infer Result)[] ? Result :
 	Type extends FindConstants ? FindType<Type> :
 	never;
+
+export type PositionParameter = [ x: number, y: number ] | [ position: RoomPosition ] | [ target: RoomObject ];
+export { PositionInteger };
 
 export function format() {
 	return declare('RoomPosition', compose('int32', {
@@ -325,7 +329,7 @@ export class RoomPosition {
 			() => Flag.checkCreateFlag(Game.instance.flags, this, name, color, secondaryColor),
 			() => {
 				// Save creation intent
-				Game.intents.pushNamed('flag', 'create', name, extractPositionId(this), color, secondaryColor);
+				Game.intents.pushNamed('flag', 'create', name, this[PositionInteger], color, secondaryColor);
 				// Create local flag immediately
 				Game.instance.flags[name] = instantiate(Flag.Flag, {
 					name,
@@ -417,10 +421,6 @@ export function fetchRoom(roomName: string) {
 		throw new Error(`Could not access room ${roomName}`);
 	}
 	return room;
-}
-
-export function extractPositionId(pos: RoomPosition) {
-	return pos[PositionInteger];
 }
 
 export function fromPositionId(id: number) {

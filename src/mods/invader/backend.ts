@@ -1,6 +1,6 @@
 import * as Game from 'xxscreeps/game';
 import { registerBackendRoute } from 'xxscreeps/backend';
-import { insertObject } from 'xxscreeps/game/room/methods';
+import { InsertObject } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { activateNPC } from 'xxscreeps/mods/npc/processor';
 import { create } from './processor';
@@ -27,7 +27,7 @@ registerBackendRoute({
 				return;
 			}
 			activateNPC(room, '2');
-			insertObject(room, create(pos, type, size, Game.time + 200));
+			room[InsertObject](create(pos, type, size, Game.time + 200));
 			await context.shard.saveRoom(pos.roomName, context.shard.time, room);
 		});
 		return { ok: 1 };

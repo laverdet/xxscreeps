@@ -1,14 +1,14 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
-import { getObjects } from 'xxscreeps/game/room/methods';
+import { Objects } from 'xxscreeps/game/room';
 import { getFlagChannel, loadVisuals, loadUserFlags } from 'xxscreeps/engine/model/user';
 import { runAsUser, runWithState } from 'xxscreeps/game';
 import { Variant } from 'xxscreeps/schema';
 import { SubscriptionEndpoint } from '../socket';
 import { acquire } from 'xxscreeps/utility/async';
 import { stringifyInherited } from 'xxscreeps/utility/string';
-import { asUnion, merge } from 'xxscreeps/utility/utility';
-import { eventRenderers, Render } from 'xxscreeps/backend/symbols';
+import { asUnion } from 'xxscreeps/utility/utility';
+import { Render } from 'xxscreeps/backend/symbols';
 import './render';
 
 function diff(previous: any, next: any) {
@@ -84,7 +84,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			runAsUser(this.user ?? '0', () => {
 				runWithState([ room ], time, () => {
 					// Objects
-					for (const object of getObjects(room)) {
+					for (const object of room[Objects]) {
 						asUnion(object);
 						const value = object[Render]();
 						if (value) {
@@ -96,24 +96,6 @@ export const roomSubscription: SubscriptionEndpoint = {
 						if (owner != null && !seenUsers.has(owner)) {
 							seenUsers.add(owner);
 							visibleUsers.add(owner);
-						}
-					}
-
-					// Events
-					for (const event of room.getEventLog()) {
-						const hooks = eventRenderers.get(event.event);
-						for (const hook of hooks ?? []) {
-							const result = hook(event, room);
-							if (result) {
-								// Filter rendered targets that are no longer visible
-								for (const key in result) {
-									if (!(key in objects)) {
-										delete result[key];
-									}
-								}
-								// Merge event into rendered tree
-								merge(objects, result);
-							}
 						}
 					}
 				});

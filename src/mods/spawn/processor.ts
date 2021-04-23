@@ -3,8 +3,8 @@ import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
-import { getPositonInDirection, Direction } from 'xxscreeps/game/position';
-import { insertObject, moveObject } from 'xxscreeps/game/room/methods';
+import { getPositonInDirection as getPositionInDirection, Direction } from 'xxscreeps/game/position';
+import { InsertObject, MoveObject } from 'xxscreeps/game/room';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import { Owner, RoomObject } from 'xxscreeps/game/object';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
@@ -52,7 +52,7 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 
 	// Add new creep to room objects
 	const creep = Creep.create(spawn.pos, body, name, Game.me);
-	insertObject(spawn.room, creep);
+	spawn.room[InsertObject](creep);
 
 	// Set spawning information
 	const needTime = body.length * C.CREEP_SPAWN_TIME;
@@ -81,7 +81,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				});
 				const directions = new Set(spawn.spawning.directions.length === 0 ?
 					ALL_DIRECTIONS : spawn.spawning.directions as Direction[]);
-				const direction = Fn.firstMatching(directions, direction => check(getPositonInDirection(creep.pos, direction)));
+				const direction = Fn.firstMatching(directions, direction => check(getPositionInDirection(creep.pos, direction)));
 
 				// If no direction was found then defer this creep
 				// TODO: Spawn stomp hostile creeps
@@ -93,7 +93,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				// Creep can be spawned
 				const hasClaim = creep.body.some(part => part.type === C.CLAIM);
 				creep._ageTime = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME);
-				moveObject(creep, getPositonInDirection(creep.pos, direction));
+				creep.room[MoveObject](creep, getPositionInDirection(creep.pos, direction));
 			}
 			spawn.spawning = undefined;
 			context.setActive();

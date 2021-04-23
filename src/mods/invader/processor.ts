@@ -3,7 +3,7 @@ import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Game from 'xxscreeps/game';
 import { RoomPosition } from 'xxscreeps/game/position';
-import { insertObject } from 'xxscreeps/game/room/methods';
+import { InsertObject } from 'xxscreeps/game/room';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
 import { registerRoomTickProcessor } from 'xxscreeps/processor';
 import { readCumulativeEnergyHarvested } from 'xxscreeps/mods/source';
@@ -39,7 +39,7 @@ registerRoomTickProcessor(room => {
 				break;
 			}
 			const pos = exits[ii];
-			insertObject(room, create(pos, role, 'small', Game.time + C.CREEP_LIFE_TIME));
+			room[InsertObject](create(pos, role, 'small', Game.time + C.CREEP_LIFE_TIME));
 		}
 	}
 });

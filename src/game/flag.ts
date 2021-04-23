@@ -2,7 +2,8 @@ import type { Dictionary } from 'xxscreeps/utility/types';
 import * as C from './constants';
 import * as Game from '.';
 import * as Memory from './memory';
-import { extractPositionId, fetchPositionArgument, RoomPosition } from './position';
+import { fetchPositionArgument, RoomPosition } from './position';
+import { PositionInteger } from './position/symbols';
 import { LookType, RoomObject, format as baseFormat } from './object';
 import { chainIntentChecks } from './checks';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
@@ -44,7 +45,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => {
 				Game.intents.pushNamed(
 					'flag', 'create',
-					this.name, extractPositionId(this.pos),
+					this.name, this.pos[PositionInteger],
 					color, secondaryColor);
 				return C.OK;
 			},
@@ -66,7 +67,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => {
 				Game.intents.pushNamed(
 					'flag', 'create',
-					this.name, extractPositionId(this.pos),
+					this.name, this.pos[PositionInteger],
 					this.color, this.secondaryColor);
 				return C.OK;
 			},
@@ -74,7 +75,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 	}
 
 	// Flags are kind of fake objects, and don't get an id
-	id!: never;
+	declare id: never;
 }
 
 // Export `Flag` to runtime globals

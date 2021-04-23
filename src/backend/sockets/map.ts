@@ -1,5 +1,5 @@
 import { RoomObject } from 'xxscreeps/game/object';
-import { getObjects } from 'xxscreeps/game/room/methods';
+import { Objects } from 'xxscreeps/game/room';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { bindMapRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
 import { MapRender } from 'xxscreeps/backend/symbols';
@@ -25,7 +25,7 @@ export const mapSubscription: SubscriptionEndpoint = {
 			lastTickTime = Date.now();
 			const room = await this.context.shard.loadRoom(roomName, time);
 			const response = new Map<string, [ number, number ][]>();
-			for (const object of getObjects(room)) {
+			for (const object of room[Objects]) {
 				const record = function() {
 					const key = object[MapRender](object);
 					if (key !== undefined) {

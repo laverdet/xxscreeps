@@ -10,7 +10,7 @@ import { Creep, PartType } from 'xxscreeps/mods/creep/creep';
 import * as CreepLib from 'xxscreeps/mods/creep/creep';
 import { Direction, generateRoomName, parseRoomName, RoomPosition } from 'xxscreeps/game/position';
 import { NextDecayTime } from 'xxscreeps/mods/road/road';
-import { moveObject, removeObject } from 'xxscreeps/game/room/methods';
+import { MoveObject, RemoveObject } from 'xxscreeps/game/room';
 import { ActionLog } from 'xxscreeps/game/action-log';
 import { Structure, lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { isBorder } from 'xxscreeps/game/terrain';
@@ -46,7 +46,7 @@ const intents = [
 
 	registerIntentProcessor(Creep, 'suicide', (creep, context) => {
 		if (creep.my) {
-			removeObject(creep);
+			creep.room[RemoveObject](creep);
 			context.didUpdate();
 		}
 	}),
@@ -88,7 +88,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		for (const [ resourceType, amount ] of Object.entries(creep.store) as [ ResourceType, number ][]) {
 			ResourceIntent.drop(creep.pos, resourceType, amount);
 		}
-		removeObject(creep);
+		creep.room[RemoveObject](creep);
 		context.didUpdate();
 		return;
 	} else if (creep.hits > creep.hitsMax) {
@@ -100,7 +100,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 	const nextPosition = Movement.get(creep);
 	if (nextPosition) {
 		// Move the creep
-		moveObject(creep, nextPosition);
+		creep.room[MoveObject](creep, nextPosition);
 		// Calculate base fatigue from plain/road/swamp
 		const fatigue = (() => {
 			const road = lookForStructureAt(creep.room, nextPosition, C.STRUCTURE_ROAD);
@@ -141,7 +141,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 				return new RoomPosition(creep.pos.x, 0, generateRoomName(rx, ry + 1));
 			}
 		}();
-		removeObject(creep);
+		creep.room[RemoveObject](creep);
 		creep.pos = next;
 		context.sendRoomIntent(next.roomName, 'import', typedArrayToString(writeRoomObject(creep)));
 		context.didUpdate();

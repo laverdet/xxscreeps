@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import { struct } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
-import { lookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
+import { LookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { checkCommon } from 'xxscreeps/mods/creep/creep';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable';
@@ -23,9 +23,9 @@ declare module 'xxscreeps/engine/schema' {
 // Register FIND_ types for `Source`
 const find = registerFindHandlers({
 	[C.FIND_SOURCES]: room =>
-		lookFor(room, C.LOOK_SOURCES),
+		room[LookFor](C.LOOK_SOURCES),
 	[C.FIND_SOURCES_ACTIVE]: room =>
-		lookFor(room, C.LOOK_SOURCES).filter(source => source.energy > 0),
+		room[LookFor](C.LOOK_SOURCES).filter(source => source.energy > 0),
 });
 
 // Register LOOK_ type for `Source`

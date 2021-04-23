@@ -4,7 +4,7 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import * as C from 'xxscreeps/game/constants';
 import { loadUserFlags } from 'xxscreeps/engine/model/user';
 import { checkCreateFlag } from 'xxscreeps/game/flag';
-import { extractPositionId, RoomPosition } from 'xxscreeps/game/position';
+import { PositionInteger, RoomPosition } from 'xxscreeps/game/position';
 
 const CreateFlagEndpoint: Endpoint = {
 	path: '/api/game/create-flag',
@@ -21,7 +21,7 @@ const CreateFlagEndpoint: Endpoint = {
 					receiver: 'flag',
 					intent: 'create',
 					params: [
-						name, extractPositionId(pos),
+						name, pos[PositionInteger],
 						color, secondaryColor,
 					],
 				},

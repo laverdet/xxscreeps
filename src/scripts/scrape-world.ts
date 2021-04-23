@@ -19,7 +19,7 @@ import { makeWriter } from 'xxscreeps/schema/write';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { Objects } from 'xxscreeps/game/room/symbols';
 import { connectToProvider } from 'xxscreeps/storage';
-import { EventLogSymbol } from 'xxscreeps/game/room/event-log';
+import { EventLog } from 'xxscreeps/game/room';
 import { NPCData } from 'xxscreeps/mods/npc/game';
 import { clamp, getOrSet } from 'xxscreeps/utility/utility';
 
@@ -112,7 +112,7 @@ const rooms = db.getCollection('rooms').find().map(room => ({
 				};
 		}
 	})) ],
-	[EventLogSymbol]: [],
+	[EventLog]: [],
 }));
 
 // Get visible rooms for users

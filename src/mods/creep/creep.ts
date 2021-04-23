@@ -1,4 +1,4 @@
-import type { RoomPath } from 'xxscreeps/game/room/room';
+import type { RoomPath } from 'xxscreeps/game/room/path';
 import * as C from 'xxscreeps/game/constants';
 import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
