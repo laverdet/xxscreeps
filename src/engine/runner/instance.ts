@@ -1,4 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/model/shard';
+import type { World } from 'xxscreeps/game/map';
 import type { Subscription } from 'xxscreeps/storage/channel';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
@@ -19,6 +20,7 @@ export class PlayerInstance {
 
 	constructor(
 		private readonly shard: Shard,
+		private readonly world: World,
 		user: User.User,
 		private readonly channel: Subscription<RunnerUserMessage>,
 	) {
@@ -48,14 +50,14 @@ export class PlayerInstance {
 		});
 	}
 
-	static async create(shard: Shard, userId: string) {
+	static async create(shard: Shard, world: World, userId: string) {
 		// Connect to channel, load initial user data
 		const [ channel, userBlob ] = await Promise.all([
 			getRunnerUserChannel(shard, userId).subscribe(),
 			shard.blob.reqBuffer(`user/${userId}/info`),
 		]);
 		const user = User.read(userBlob);
-		return new PlayerInstance(shard, user, channel);
+		return new PlayerInstance(shard, world, user, channel);
 	}
 
 	disconnect() {
@@ -81,7 +83,8 @@ export class PlayerInstance {
 			this.sandbox = await createSandbox({
 				userId: this.userId,
 				codeBlob, flagBlob, memoryBlob,
-				terrainBlob: this.shard.terrainBlob,
+				shardName: this.shard.name,
+				terrainBlob: this.world.terrainBlob,
 				writeConsole: (fd, payload) => {
 					const type = ([ 'result', 'log', 'error' ] as const)[fd];
 					this.consoleChannel.publish({ type, value: payload }).catch(console.error);

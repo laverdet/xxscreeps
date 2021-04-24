@@ -239,9 +239,6 @@ export function makeWriter<Type extends Package>(info: Type, cache = new Cache) 
 	const write = makeTypeWriter(info.layout, cache);
 	return (value: ShapeOf<Type>): Readonly<Uint8Array> => {
 		const view = bufferCache();
-		if ((value as any).code) {
-			debugger;
-		}
 		const length = write(value, view, kHeaderSize, info.traits.size + kHeaderSize);
 		if (length > view.int8.length) {
 			throw new Error('Exceeded memory write buffer');

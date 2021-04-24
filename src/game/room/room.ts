@@ -5,6 +5,7 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import type { FindConstants, FindType, RoomFindOptions } from './find';
 import type { LookConstants, TypeOfLook } from './look';
 import * as Fn from 'xxscreeps/utility/functional';
+import * as Memory from 'xxscreeps/game/memory';
 import { BufferObject, BufferView, withOverlay } from 'xxscreeps/schema';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/utility/iteratee';
@@ -25,6 +26,12 @@ export class Room extends withOverlay(BufferObject, shape) {
 	// TODO: Move to mod
 	energyAvailable = 0;
 	energyCapacityAvailable = 0;
+	get memory() {
+		const memory = Memory.get();
+		const creeps = memory.creeps ?? (memory.creeps = {});
+		return creeps[this.name] ?? (creeps[this.name] = {});
+	}
+
 	declare static Terrain: typeof Terrain;
 
 	constructor(view: BufferView, offset: number) {

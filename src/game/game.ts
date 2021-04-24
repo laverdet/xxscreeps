@@ -1,11 +1,11 @@
 import type { Flag } from './flag';
+import type { GameMap, World } from './map';
 import type { AnyRoomObject, Room } from './room';
 import type { RoomObject } from './object';
 import * as Fn from 'xxscreeps/utility/functional';
 import { AddToMyGame } from './object/symbols';
 import { Objects } from './room/symbols';
 import { gameInitializers } from './symbols';
-import map from './map';
 
 /**
  * Underlying game state holder for a tick. Multiple `Game` objects can share this per tick, for
@@ -15,14 +15,15 @@ import map from './map';
 export class GameState {
 	readonly objects: Map<string, RoomObject>;
 	readonly rooms: Record<string, Room>;
-	readonly time: number;
-	readonly map = map;
 
-	constructor(time: number, rooms: Room[]) {
+	constructor(
+		public readonly shard: World,
+		public readonly time: number,
+		rooms: Room[],
+	) {
 		this.objects = new Map(Fn.concat(Fn.map(rooms, room =>
 			Fn.map(room[Objects], object => [ object.id, object ]))));
 		this.rooms = Fn.fromEntries(Fn.map(rooms, room => [ room.name, room ]));
-		this.time = time;
 	}
 }
 
@@ -32,13 +33,13 @@ export class GameState {
 export class GameBase {
 	readonly rooms: Record<string, Room>;
 	readonly time: number;
-	readonly map: typeof map;
+	readonly map: GameMap;
 	#state: GameState;
 
 	constructor(state: GameState) {
 		this.rooms = state.rooms;
 		this.time = state.time;
-		this.map = state.map;
+		this.map = state.shard.map;
 		this.#state = state;
 	}
 
@@ -56,8 +57,21 @@ export class GameBase {
  * The main global game object containing all the game play information.
  */
 export class Game extends GameBase {
+	/**
+	 * An object describing the world shard where your script is currently being executed in.
+	 */
+	shard: { name: string; type: string; ptr: boolean };
+
 	constructor(state: GameState) {
 		super(state);
+
+		// Shard info
+		this.shard = {
+			name: state.shard.name,
+			type: 'normal',
+			ptr: false,
+		};
+
 		// Run hooks
 		gameInitializers.forEach(fn => fn(this));
 		for (const room of Object.values(state.rooms)) {
@@ -94,9 +108,5 @@ export class Game extends GameBase {
 		getAllOrders: () => [],
 		incomingTransactions: [],
 		outgoingTransactions: [],
-	};
-	shard = {
-		name: 'shard0',
-		type: 'normal',
 	};
 }

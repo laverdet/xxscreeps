@@ -2,7 +2,7 @@ import fs from 'fs';
 import { loadTerrain, search } from 'xxscreeps/driver/path-finder';
 import { CostMatrix } from 'xxscreeps/game/path-finder';
 import { RoomPosition } from 'xxscreeps/game/position';
-import { readWorld } from 'xxscreeps/game/map';
+import { World } from 'xxscreeps/game/map';
 
 /**
  * This script is a standalone test for the path finder. It runs a whole bunch of path finding
@@ -11,7 +11,7 @@ import { readWorld } from 'xxscreeps/game/map';
  */
 
 // Load terrain into module
-loadTerrain(readWorld(fs.readFileSync(`${__dirname}/terrain`)));
+loadTerrain(new World('test', fs.readFileSync(`${__dirname}/terrain`)));
 
 // Generate a deterministic CostMatrix
 const costMatrix = new CostMatrix;

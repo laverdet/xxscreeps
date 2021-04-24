@@ -3,8 +3,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as RoomPosition from 'xxscreeps/game/position';
-import * as Map from 'xxscreeps/game/map';
-import { GameConstructor, intents, me, registerGameInitializer } from 'xxscreeps/game';
+import { GameConstructor, Game, intents, me, registerGameInitializer } from 'xxscreeps/game';
 import { compose, declare, struct, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
@@ -51,7 +50,7 @@ export function checkBorder(pos: RoomPosition.RoomPosition) {
 		return C.ERR_INVALID_TARGET;
 	} else if (RoomPosition.isNearBorder(pos.x, pos.y)) {
 		// May build obstacles near "border" as long as the border is naturally walled
-		const terrain = Map.getRoomTerrain(pos.roomName);
+		const terrain = Game.map.getRoomTerrain(pos.roomName);
 		for (const neighbor of RoomPosition.iterateNeighbors(pos)) {
 			if (
 				RoomPosition.isBorder(neighbor.x, neighbor.y) &&
@@ -65,7 +64,7 @@ export function checkBorder(pos: RoomPosition.RoomPosition) {
 }
 
 export function checkWall(pos: RoomPosition.RoomPosition) {
-	if (Map.getRoomTerrain(pos.roomName).get(pos.x, pos.y) === C.TERRAIN_MASK_WALL) {
+	if (Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y) === C.TERRAIN_MASK_WALL) {
 		return C.ERR_INVALID_TARGET;
 	}
 	return C.OK;

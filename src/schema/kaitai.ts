@@ -262,10 +262,6 @@ export class KaitaiArchiver {
 			}
 			for (const [ name, member ] of members) {
 				const id = toId(name);
-				if (id === 'store') {
-					debugger;
-				}
-
 				if (struct.size < member.offset) {
 					struct.seq.push({
 						size: member.offset - struct.size,

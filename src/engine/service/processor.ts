@@ -5,7 +5,6 @@ import {
 } from 'xxscreeps/engine/model/processor';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { getUsersInRoom } from 'xxscreeps/game/room/room';
-import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
 import { RoomProcessorContext } from 'xxscreeps/processor/room';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/storage/async';
 import { getServiceChannel } from '.';
@@ -15,8 +14,8 @@ const processedRooms = new Map<string, RoomProcessorContext>();
 
 // Connect to main & storage
 const shard = await Shard.connect('shard0');
+const world = await shard.loadWorld();
 const processorSubscription = await getProcessorChannel(shard).subscribe();
-loadTerrainFromBuffer(shard.terrainBlob);
 
 try {
 
@@ -47,7 +46,7 @@ try {
 				]);
 
 				// Create processor context and add intents
-				const context = new RoomProcessorContext(shard, room, time);
+				const context = new RoomProcessorContext(shard, world, room, time);
 				for (const { userId, intents } of intentsPayloads) {
 					context.saveIntents(userId, intents);
 				}
@@ -66,7 +65,7 @@ try {
 			// Also finalize rooms which were sent inter-room intents
 			for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
 				const room = await shard.loadRoom(roomName, time - 1);
-				const context = new RoomProcessorContext(shard, room, time);
+				const context = new RoomProcessorContext(shard, world, room, time);
 				await context.process(true);
 				await context.finalize();
 				++count;

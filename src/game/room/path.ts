@@ -1,8 +1,8 @@
 import type { Terrain } from 'xxscreeps/game/terrain';
-import Map from 'xxscreeps/game/map';
 import * as PathFinder from 'xxscreeps/game/path-finder';
 import { extend } from 'xxscreeps/utility/utility';
 import { Direction, RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position';
+import { Game } from 'xxscreeps/game';
 import { Room } from './room';
 
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
@@ -59,7 +59,7 @@ declare module './room' {
 
 extend(Room, {
 	findExitTo(room: Room | string) {
-		const route = Map.findRoute(this, room);
+		const route = Game.map.findRoute(this, room);
 		if (typeof route === 'object') {
 			return route[0].exit;
 		} else {
@@ -140,6 +140,6 @@ extend(Room, {
 	},
 
 	getTerrain() {
-		return Map.getRoomTerrain(this.name)!;
+		return Game.map.getRoomTerrain(this.name)!;
 	},
 });

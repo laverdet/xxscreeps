@@ -3,7 +3,6 @@ import * as Fn from 'xxscreeps/utility/functional';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { userToRoomsSetKey } from 'xxscreeps/engine/model/processor';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
-import { loadTerrainFromWorld, readWorld } from 'xxscreeps/game/map';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
 import { consumeSet } from 'xxscreeps/storage/async';
@@ -16,9 +15,8 @@ const runnerSubscription = await getRunnerChannel(shard).subscribe();
 const concurrency = config.runner.unsafeSandbox ? 1 : config.runner.concurrency;
 
 // Load shared terrain data
-const world = readWorld(shard.terrainBlob);
+const world = await shard.loadWorld();
 loadTerrain(world); // pathfinder
-loadTerrainFromWorld(world); // game
 
 // Persistent player instances
 const playerInstances = new Map<string, PlayerInstance>();
@@ -38,7 +36,7 @@ try {
 				for await (const userId of consumeSet(shard.scratch, runnerUsersSetKey(time))) {
 					// Get or create player instance
 					const instance = playerInstances.get(userId) ?? await async function() {
-						const instance = await PlayerInstance.create(shard, userId);
+						const instance = await PlayerInstance.create(shard, world, userId);
 						playerInstances.set(userId, instance);
 						return instance;
 					}();

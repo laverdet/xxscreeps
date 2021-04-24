@@ -10,7 +10,7 @@ import { Game, GameState, runForUser } from 'xxscreeps/game';
 // eslint-disable-next-line no-duplicate-imports
 import { setupGlobals } from 'xxscreeps/game/runtime';
 import * as Memory from 'xxscreeps/game/memory';
-import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
+import { World } from 'xxscreeps/game/map';
 import { RoomObject } from 'xxscreeps/game/object';
 import { detach } from 'xxscreeps/schema/buffer-object';
 import * as FlagLib from 'xxscreeps/engine/runner/flag';
@@ -34,6 +34,7 @@ setupGlobals(globalThis);
 
 let me: string;
 let flags = {};
+let world: World;
 let require: (name: string) => any;
 let writeConsole: Writer;
 
@@ -76,6 +77,7 @@ type InitializationData = {
 	codeBlob: Readonly<Uint8Array>;
 	flagBlob?: Readonly<Uint8Array>;
 	memoryBlob: Readonly<Uint8Array> | null;
+	shardName: string;
 	terrainBlob: Readonly<Uint8Array>;
 };
 
@@ -88,7 +90,7 @@ export function initialize(
 	setupConsole(writeConsole = _writeConsole);
 
 	// Load terrain
-	loadTerrainFromBuffer(data.terrainBlob);
+	world = new World(data.shardName, data.terrainBlob);
 
 	// Set up user information
 	const { modules } = UserCode.read(data.codeBlob);
@@ -171,7 +173,7 @@ export type TickArguments = {
 export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArguments) {
 
 	const rooms = roomBlobs.map(RoomSchema.read);
-	const state = new GameState(time, rooms);
+	const state = new GameState(world, time, rooms);
 	const [ intents ] = runForUser(me, state, Game => {
 		globalThis.Game = Game;
 		// Run player loop

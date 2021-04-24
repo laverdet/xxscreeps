@@ -8,12 +8,13 @@ export const RoomTerrainEndpoint: Endpoint = {
 		const room = `${context.query.room}`;
 		let terrainString = cache.get(room);
 		if (terrainString === undefined) {
-			const info = context.backend.world.get(room);
-			if (info) {
+			const terrain = context.backend.world.map.getRoomTerrain(room);
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (terrain) {
 				terrainString = '';
 				for (let yy = 0; yy < 50; ++yy) {
 					for (let xx = 0; xx < 50; ++xx) {
-						terrainString += info.terrain.get(xx, yy);
+						terrainString += terrain.get(xx, yy);
 					}
 				}
 				cache.set(room, terrainString);

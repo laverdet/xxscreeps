@@ -103,7 +103,7 @@ registerBackendRoute({
 				throw new Error('User has presence');
 			}
 			const room = await context.shard.loadRoom(roomName);
-			runWithState(new GameState(context.shard.time, [ room ]), () => {
+			runWithState(new GameState(context.backend.world, context.shard.time, [ room ]), () => {
 				runAsUser(user.id, () => {
 					// Check room eligibility
 					if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {

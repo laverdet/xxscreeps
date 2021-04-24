@@ -1,5 +1,6 @@
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { Shard } from 'xxscreeps/engine/model/shard';
+import type { World } from 'xxscreeps/game/map';
 import type { IntentsForReceiver, IntentReceivers, IntentParameters } from '.';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/processor/movement';
@@ -63,10 +64,11 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 
 	constructor(
 		private readonly shard: Shard,
+		world: World,
 		public readonly room: Room,
 		public readonly time: number,
 	) {
-		this.state = new GameState(time, [ room ]);
+		this.state = new GameState(world, time, [ room ]);
 	}
 
 	async process(isFinalization = false) {

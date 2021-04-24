@@ -1,6 +1,7 @@
 import * as RoomSchema from 'xxscreeps/engine/room';
 import { connectToProvider, BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/storage';
 import { Channel, Subscription } from 'xxscreeps/storage/channel';
+import { World } from 'xxscreeps/game/map';
 import config from 'xxscreeps/config';
 
 type Message = { type: 'tick'; time: number } | { type: null };
@@ -10,11 +11,11 @@ export class Shard {
 	private readonly gameTickEffect: () => void;
 
 	private constructor(
+		public readonly name: string,
 		public readonly blob: BlobProvider,
 		public readonly data: KeyValProvider,
 		public readonly pubsub: PubSubProvider,
 		public readonly scratch: KeyValProvider,
-		public readonly terrainBlob: Readonly<Uint8Array>,
 		public readonly channel: Subscription<Message>,
 	) {
 		this.gameTickEffect = channel.listen(message => {
@@ -36,10 +37,9 @@ export class Shard {
 			connectToProvider(shard.pubsub, 'pubsub'),
 			connectToProvider(shard.scratch, 'keyval'),
 		]);
-		const terrainBlob = await blob.reqBuffer('terrain');
 		const channel = await new Channel<Message>(pubsub, 'channel/game').subscribe();
 		// Create instance (which subscribes to tick notification) and then read current info
-		const instance = new Shard(blob, data, pubsub, scratch, terrainBlob, channel);
+		const instance = new Shard(name, blob, data, pubsub, scratch, channel);
 		const time = Number(await data.get('time'));
 		instance.time = Math.max(time, instance.time);
 		return instance;
@@ -52,6 +52,13 @@ export class Shard {
 		this.data.disconnect();
 		this.pubsub.disconnect();
 		this.scratch.disconnect();
+	}
+
+	/**
+	 * Load and parse shard terrain data
+	 */
+	async loadWorld() {
+		return new World(this.name, await this.blob.reqBuffer('terrain'));
 	}
 
 	/**

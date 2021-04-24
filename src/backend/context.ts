@@ -1,7 +1,7 @@
 import { Shard } from 'xxscreeps/engine/model/shard';
-import { readWorld, World } from 'xxscreeps/game/map';
 import { Mutex } from 'xxscreeps/storage/mutex';
 import { Authentication } from './auth/model';
+import { World } from 'xxscreeps/game/map';
 import * as User from 'xxscreeps/engine/metadata/user';
 
 export class BackendContext {
@@ -16,7 +16,7 @@ export class BackendContext {
 	static async connect() {
 		// Connect to services
 		const shard = await Shard.connect('shard0');
-		const world = readWorld(await shard.blob.reqBuffer('terrain'));
+		const world = await shard.loadWorld();
 		const gameMutex = await Mutex.connect('game', shard.data, shard.pubsub);
 		const auth = await Authentication.connect(shard.blob);
 		const rooms = await shard.data.smembers('rooms');

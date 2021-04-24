@@ -1,8 +1,8 @@
 import { array, compose, BufferView, XSymbol } from 'xxscreeps/schema';
 import { exchange } from 'xxscreeps/utility/utility';
-import { getRoomTerrain } from './map';
 import { Room } from './room';
-export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/constants';
+import { Game } from '.';
+export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants';
 
 const GetBufferSymbol = XSymbol('getBuffer');
 export const terrainMaskToString = [ 'plain', 'wall', 'wall', 'swamp' ] as const;
@@ -27,7 +27,7 @@ export class Terrain {
 	constructor(buffer: Uint8Array);
 	constructor(arg: string | Uint8Array) {
 		if (typeof arg === 'string') {
-			this.#buffer = getRoomTerrain(arg).#buffer;
+			this.#buffer = Game.map.getRoomTerrain(arg)!.#buffer;
 		} else {
 			this.#buffer = arg;
 		}

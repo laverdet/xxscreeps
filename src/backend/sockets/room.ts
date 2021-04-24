@@ -81,7 +81,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			// Render current room state
 			const objects: any = {};
 			const visibleUsers = new Set<string>();
-			runWithState(new GameState(time, [ room ]), () => {
+			runWithState(new GameState(this.context.world, time, [ room ]), () => {
 				runAsUser(this.user ?? '0', () => {
 					// Objects
 					for (const object of room[Objects]) {

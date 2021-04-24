@@ -1,3 +1,4 @@
+/* eslint-disable no-unreachable */
 // All constants from mods are added here for TypeScript's eyes only. nodejs will include
 // `constants.ts`.
 throw new Error('nodejs is misconfigured');
