@@ -1,4 +1,4 @@
-import * as Game from 'xxscreeps/game';
+import { Game } from 'xxscreeps/game';
 import { registerBackendRoute } from 'xxscreeps/backend';
 import { InsertObject } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';

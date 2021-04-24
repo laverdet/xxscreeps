@@ -1,8 +1,8 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as RoomObject from 'xxscreeps/game/object';
+import { Game } from 'xxscreeps/game';
 import { declare, compose, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
 
 export const DowngradeTime = XSymbol('downgradeTime');

@@ -1,3 +1,7 @@
+import 'xxscreeps/game';
+import 'xxscreeps/game/position';
+import 'xxscreeps/game/object';
+import 'xxscreeps/game/room';
 import { makeReader, makeWriter, Cache, ShapeOf } from 'xxscreeps/schema';
 import { build } from 'xxscreeps/engine/schema';
 import { format, objectFormat } from 'xxscreeps/game/room/schema';

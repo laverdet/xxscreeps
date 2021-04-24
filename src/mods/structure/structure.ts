@@ -1,10 +1,10 @@
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as RoomPosition from 'xxscreeps/game/position';
 import * as Map from 'xxscreeps/game/map';
+import { GameConstructor, intents, me, registerGameInitializer } from 'xxscreeps/game';
 import { compose, declare, struct, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
@@ -21,7 +21,7 @@ const shape = declare('Structure', struct(RoomObject.format, {
 export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape) {
 	abstract get structureType(): string;
 	get hitsMax() { return this.hits }
-	get my() { return this.owner === null ? undefined : this.owner === Game.me }
+	get my() { return this.owner === null ? undefined : this.owner === me }
 	get owner() { return this[RoomObject.Owner] }
 	get [RoomObject.LookType]() { return C.LOOK_STRUCTURES }
 
@@ -31,14 +31,14 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
 	destroy(this: Structure) {
 		return chainIntentChecks(
 			() => checkDestroy(this),
-			() => Game.intents.save(this, 'destroyStructure'));
+			() => intents.save(this, 'destroyStructure'));
 	}
 
 	[CheckObstacle](_user: string) {
 		return true;
 	}
 
-	[RoomObject.AddToMyGame](game: Game.Game) {
+	[RoomObject.AddToMyGame](game: GameConstructor) {
 		game.structures[this.id] = this as never;
 	}
 }
@@ -110,9 +110,9 @@ registerObstacleChecker(params => {
 });
 
 // Register `Game.structures`
-declare module 'xxscreeps/game' {
+declare module 'xxscreeps/game/game' {
 	interface Game {
 		structures: Record<string, AnyStructure>;
 	}
 }
-Game.registerGameInitializer(game => game.structures = Object.create(null));
+registerGameInitializer(game => game.structures = Object.create(null));

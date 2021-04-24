@@ -3,8 +3,8 @@ import type { ResourceType, WithStore } from 'xxscreeps/mods/resource/store';
 import type { RoomObject } from 'xxscreeps/game/object';
 
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
+import { Game } from 'xxscreeps/game';
 import { Creep, PartType } from 'xxscreeps/mods/creep/creep';
 // eslint-disable-next-line no-duplicate-imports
 import * as CreepLib from 'xxscreeps/mods/creep/creep';

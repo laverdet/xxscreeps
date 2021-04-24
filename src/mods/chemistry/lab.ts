@@ -1,9 +1,9 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
 import * as Structure from 'xxscreeps/mods/structure/structure';
+import { Game, registerGlobal } from 'xxscreeps/game';
 import { compose, declare, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
@@ -45,7 +45,7 @@ registerBuildableStructure(C.STRUCTURE_LAB, {
 });
 
 // Export `StructureLab` to runtime globals
-Game.registerGlobal(StructureLab);
+registerGlobal(StructureLab);
 declare module 'xxscreeps/game/runtime' {
 	interface Global { StructureLab: typeof StructureLab }
 }

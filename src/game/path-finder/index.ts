@@ -2,7 +2,7 @@ export { registerObstacleChecker } from './obstacle';
 export { CostMatrix, search };
 
 import type { RoomPosition } from '../position';
-import * as Game from '..';
+import { Game, me } from 'xxscreeps/game';
 import { search } from 'xxscreeps/driver/path-finder';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { Objects } from 'xxscreeps/game/room';
@@ -74,7 +74,7 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 					isPathFinder: true,
 					room,
 					type: 'creep',
-					user: Game.me,
+					user: me,
 				});
 				for (const object of room[Objects]) {
 					const { x, y } = object.pos;

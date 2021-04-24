@@ -1,4 +1,4 @@
-import type { Game } from './state';
+import type { GameConstructor } from '.';
 import lodash from 'lodash';
 import { globals } from './symbols';
 import * as C from './constants';
@@ -27,7 +27,6 @@ export function setupGlobals(globalThis: any) {
 	});
 
 	// Not implemented
-	globalThis.Mineral = function() {};
 	globalThis.StructureLink = function() {};
 	globalThis.StructureObserver = function() {};
 	globalThis.StructureTerminal = function() {};
@@ -36,7 +35,7 @@ export function setupGlobals(globalThis: any) {
 
 // Used to extract type information from bundled dts file, via make-types.ts
 export interface Global {
-	Game: Game;
+	Game: GameConstructor;
 	Memory: any;
 	console: Console;
 }

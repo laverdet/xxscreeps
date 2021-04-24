@@ -1,8 +1,8 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Controller from 'xxscreeps/mods/controller/processor';
 import * as Spawn from './spawn';
+import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
 import { forceRoomProcess } from 'xxscreeps/engine/model/processor';
 import { InsertObject } from 'xxscreeps/game/room';
@@ -103,8 +103,8 @@ registerBackendRoute({
 				throw new Error('User has presence');
 			}
 			const room = await context.shard.loadRoom(roomName);
-			Game.runWithState([ room ], context.shard.time, () => {
-				Game.runAsUser(user.id, () => {
+			runWithState(new GameState(context.shard.time, [ room ]), () => {
+				runAsUser(user.id, () => {
 					// Check room eligibility
 					if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
 						throw new Error('Invalid intent');

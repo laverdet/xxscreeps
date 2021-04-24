@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Game from 'xxscreeps/game';
+import { intents, userGame } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { LookFor, Room, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';
@@ -55,14 +55,14 @@ extend(Room, {
 				if (structureType === 'spawn' && typeof name === 'string') {
 					// TODO: Check newly created spawns too
 					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-					if (Game.instance.spawns[name]) {
+					if (userGame?.spawns[name]) {
 						return C.ERR_INVALID_ARGS;
 					}
 				}
 				return C.OK;
 			},
 			() => checkCreateConstructionSite(this, pos, structureType),
-			() => Game.intents.pushLocal(this, 'createConstructionSite', structureType, xx, yy, name));
+			() => intents.pushLocal(this, 'createConstructionSite', structureType, xx, yy, name));
 	},
 });
 

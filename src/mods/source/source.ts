@@ -1,6 +1,6 @@
 import * as C from './constants';
-import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
+import { Game, registerGlobal } from 'xxscreeps/game';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 
 export const format = () => compose(shape, Source);
@@ -20,7 +20,7 @@ export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 }
 
 // Export `Source` to runtime globals
-Game.registerGlobal(Source);
+registerGlobal(Source);
 declare module 'xxscreeps/game/runtime' {
 	interface Global { Source: typeof Source }
 }

@@ -1,6 +1,6 @@
 import type { Room } from 'xxscreeps/game/room';
-import * as Game from 'xxscreeps/game';
 import * as Memory from 'xxscreeps/game/memory';
+import { GameConstructor, runForUser } from 'xxscreeps/game';
 import { registerRoomTickProcessor } from 'xxscreeps/processor';
 import { NPCData } from './game';
 
@@ -10,7 +10,7 @@ export function activateNPC(room: Room, user: string) {
 }
 
 // NPC loop registration for mods
-type NPCLoop = () => boolean;
+type NPCLoop = (game: GameConstructor) => boolean;
 const npcLoops = new Map<string, NPCLoop>();
 export function registerNPC(id: string, loop: NPCLoop) {
 	npcLoops.set(id, loop);
@@ -23,11 +23,11 @@ registerRoomTickProcessor((room, context) => {
 		// Initialize NPC state
 		const memory = data.memory.get(user) ?? new Uint8Array(0);
 		const loop = npcLoops.get(user)!;
-		Game.initializeIntents();
 		Memory.initialize(memory);
 
 		// Run loop and reset memory or mark user as inactive
-		if (Game.runAsUser(user, () => loop())) {
+		const [ intents, result ] = runForUser(user, context.state, loop);
+		if (result) {
 			data.memory.set(user, Memory.flush());
 			context.setActive();
 		} else {
@@ -37,7 +37,6 @@ registerRoomTickProcessor((room, context) => {
 		}
 
 		// Save intents
-		const intents = Game.flushIntents();
 		const roomIntents = intents.getIntentsForRoom(room.name);
 		if (roomIntents) {
 			context.saveIntents(user, roomIntents);

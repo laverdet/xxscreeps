@@ -1,6 +1,6 @@
 import * as Controller from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
+import { Game } from 'xxscreeps/game';
 import { Owner } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';

@@ -9,7 +9,7 @@ import './position';
 import './room';
 
 // Add `constructionSites` to global `game` object
-declare module 'xxscreeps/game' {
+declare module 'xxscreeps/game/game' {
 	interface Game {
 		constructionSites: Record<string, ConstructionSite.ConstructionSite>;
 	}

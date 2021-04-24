@@ -8,7 +8,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject, BufferView, withOverlay } from 'xxscreeps/schema';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/utility/iteratee';
-import { registerGlobal } from 'xxscreeps/game/symbols';
+import { registerGlobal } from 'xxscreeps/game';
 import { AfterInsert, AfterRemove, LookType, RunnerUser } from 'xxscreeps/game/object/symbols';
 import { PositionInteger } from 'xxscreeps/game/position/symbols';
 import { shape } from './schema';
@@ -32,7 +32,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 		for (const object of this[Objects]) {
 			this._addToIndex(object);
 			object[AfterInsert](this);
-
 		}
 	}
 
@@ -65,7 +64,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 	[LookFor]<Look extends LookConstants>(type: Look): TypeOfLook<Look>[] {
 		return this.#lookIndex.get(type)! as never[];
 	}
-
 
 	/**
 	 * Flushes the cache used by `find` because it sometimes contains user-specific information.

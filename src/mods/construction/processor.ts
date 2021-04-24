@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
+import { Game, me } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
@@ -21,7 +21,7 @@ const intents = [
 	(room, context, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
 		const pos = new RoomPosition(xx, yy, room.name);
 		if (checkCreateConstructionSite(room, pos, structureType) === C.OK) {
-			const site = create(pos, structureType, Game.me, name);
+			const site = create(pos, structureType, me, name);
 			room[InsertObject](site);
 			context.didUpdate();
 		}

@@ -2,8 +2,8 @@ import type { RoomObject } from 'xxscreeps/game/object';
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import type { IntentsForReceiver, IntentReceivers, IntentParameters } from '.';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Game from 'xxscreeps/game';
 import * as Movement from 'xxscreeps/processor/movement';
+import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { EventLog, FlushObjects, Objects, Room } from 'xxscreeps/game/room';
 import { getUsersInRoom } from 'xxscreeps/game/room/room';
 import { Processors, RoomTickProcessor, Tick, roomTickProcessors, PreTick } from './symbols';
@@ -55,8 +55,9 @@ export interface ObjectProcessorContext {
 
 // Room processor context saved been phase 1 (process) and phase 2 (flush)
 export class RoomProcessorContext implements ObjectProcessorContext {
-	public receivedUpdate = false;
-	public nextUpdate = Infinity;
+	receivedUpdate = false;
+	nextUpdate = Infinity;
+	readonly state: GameState;
 	private readonly intents = new Map<string, RoomIntentPayload>();
 	private readonly interRoomIntents = new Map<string, SingleIntent[]>();
 
@@ -64,13 +65,15 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 		private readonly shard: Shard,
 		public readonly room: Room,
 		public readonly time: number,
-	) {}
+	) {
+		this.state = new GameState(time, [ room ]);
+	}
 
 	async process(isFinalization = false) {
 		this.receivedUpdate = false;
 		this.nextUpdate = Infinity;
 
-		Game.runWithState([ this.room ], this.time, () => {
+		runWithState(this.state, () => {
 			// Reset eventLog for this tick
 			this.room[EventLog] = [];
 
@@ -88,7 +91,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 
 			// Process user intents
 			for (const [ user, intents ] of this.intents) {
-				Game.runAsUser(user, () => {
+				runAsUser(user, () => {
 
 					// Process intents for room (createConstructionSite)
 					const roomIntents = intents.local;
@@ -136,7 +139,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 		// Run inter-room intents
 		const intentPayloads = await acquireFinalIntentsForRoom(this.shard, this.room.name, this.time);
 		if (intentPayloads.length) {
-			Game.runWithState([ this.room ], this.time, () => {
+			runWithState(this.state, () => {
 				const processors = this.room[Processors]!;
 				for (const intents of intentPayloads) {
 					for (const { intent, args } of intents) {

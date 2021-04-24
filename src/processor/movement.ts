@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Game from 'xxscreeps/game';
+import { me } from 'xxscreeps/game';
 import { LookType, NextPosition, Owner, RoomObjectWithOwner } from 'xxscreeps/game/object';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { getOffsetsFromDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
@@ -17,7 +17,7 @@ declare module '.' {
 	}
 }
 const intents = registerIntentProcessor(Room, 'import', (room, context, objectPayload: string) => {
-	if (Game.me !== '') {
+	if (me !== '') {
 		return;
 	}
 	const object = readRoomObject(latin1ToBuffer(objectPayload));

@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
+import { intents } from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
 import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
@@ -55,35 +55,35 @@ extend(Creep, {
 	attack(target) {
 		return chainIntentChecks(
 			() => checkAttack(this, target),
-			() => Game.intents.save(this, 'attack', target.id),
+			() => intents.save(this, 'attack', target.id),
 		);
 	},
 
 	heal(target) {
 		return chainIntentChecks(
 			() => checkHeal(this, target),
-			() => Game.intents.save(this, 'heal', target.id),
+			() => intents.save(this, 'heal', target.id),
 		);
 	},
 
 	rangedAttack(target) {
 		return chainIntentChecks(
 			() => checkRangedAttack(this, target),
-			() => Game.intents.save(this, 'rangedAttack', target.id),
+			() => intents.save(this, 'rangedAttack', target.id),
 		);
 	},
 
 	rangedHeal(target) {
 		return chainIntentChecks(
 			() => checkRangedHeal(this, target),
-			() => Game.intents.save(this, 'rangedHeal', target.id),
+			() => intents.save(this, 'rangedHeal', target.id),
 		);
 	},
 
 	rangedMassAttack() {
 		return chainIntentChecks(
 			() => checkRangedMassAttack(this),
-			() => Game.intents.save(this, 'rangedMassAttack'),
+			() => intents.save(this, 'rangedMassAttack'),
 		);
 	},
 });

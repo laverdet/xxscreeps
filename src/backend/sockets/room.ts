@@ -2,7 +2,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import { Objects } from 'xxscreeps/game/room';
 import { getFlagChannel, loadVisuals, loadUserFlags } from 'xxscreeps/engine/model/user';
-import { runAsUser, runWithState } from 'xxscreeps/game';
+import { GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { Variant } from 'xxscreeps/schema';
 import { SubscriptionEndpoint } from '../socket';
 import { acquire } from 'xxscreeps/utility/async';
@@ -81,8 +81,8 @@ export const roomSubscription: SubscriptionEndpoint = {
 			// Render current room state
 			const objects: any = {};
 			const visibleUsers = new Set<string>();
-			runAsUser(this.user ?? '0', () => {
-				runWithState([ room ], time, () => {
+			runWithState(new GameState(time, [ room ]), () => {
+				runAsUser(this.user ?? '0', () => {
 					// Objects
 					for (const object of room[Objects]) {
 						asUnion(object);

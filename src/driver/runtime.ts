@@ -6,9 +6,8 @@ import * as Base64 from 'js-base64';
 import * as SourceMap from 'source-map-support';
 import * as Fn from 'xxscreeps/utility/functional';
 
-import * as Game from 'xxscreeps/game';
+import { Game, GameState, runForUser } from 'xxscreeps/game';
 // eslint-disable-next-line no-duplicate-imports
-import { flushIntents, initializeIntents, runForUser } from 'xxscreeps/game';
 import { setupGlobals } from 'xxscreeps/game/runtime';
 import * as Memory from 'xxscreeps/game/memory';
 import { loadTerrainFromBuffer } from 'xxscreeps/game/map';
@@ -171,9 +170,9 @@ export type TickArguments = {
 
 export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArguments) {
 
-	initializeIntents();
 	const rooms = roomBlobs.map(RoomSchema.read);
-	runForUser(me, time, rooms, flags, Game => {
+	const state = new GameState(time, rooms);
+	const [ intents ] = runForUser(me, state, Game => {
 		globalThis.Game = Game;
 		// Run player loop
 		try {
@@ -197,9 +196,9 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 		for (const intent of userIntents) {
 			const receiver = Game.getObjectById(intent.receiver) ?? intent.receiver;
 			if (receiver instanceof RoomObject) {
-				Game.intents.save(receiver as never, intent.intent as never, ...intent.params);
+				intents.save(receiver as never, intent.intent as never, ...intent.params);
 			} else {
-				Game.intents.pushNamed(receiver as never, intent.intent as never, ...intent.params);
+				intents.pushNamed(receiver as never, intent.intent as never, ...intent.params);
 			}
 		}
 	}
@@ -208,7 +207,6 @@ export function tick({ time, roomBlobs, consoleEval, userIntents }: TickArgument
 	const memory = Memory.flush();
 
 	// Execute flag intents
-	const intents = flushIntents();
 	const flagIntents = intents.getIntentsForName('flag');
 	let flagBlob: undefined | Readonly<Uint8Array>;
 	if (flagIntents !== undefined) {

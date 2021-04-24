@@ -1,10 +1,10 @@
 import * as C from 'xxscreeps/game/constants';
-import { instance as Game } from 'xxscreeps/game';
+import { GameConstructor } from 'xxscreeps/game';
 import healer from './healer';
 import findAttack from './find-attack';
 import shootAtWill from './shoot-at-will';
 
-export function loop() {
+export function loop(Game: GameConstructor) {
 	const creeps = Object.values(Game.creeps);
 	const room = creeps[0]?.room;
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

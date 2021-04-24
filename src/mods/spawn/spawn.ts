@@ -1,13 +1,13 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Creep from 'xxscreeps/mods/creep/creep';
-import * as Game from 'xxscreeps/game';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as Store from 'xxscreeps/mods/resource/store';
+import { Game, GameConstructor, intents, userGame } from 'xxscreeps/game';
 import { declare, compose, optional, struct, variant, vector, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { Direction, RoomPosition } from 'xxscreeps/game/position';
@@ -62,7 +62,7 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 	}
 
 	get structureType() { return C.STRUCTURE_SPAWN }
-	[RoomObject.AddToMyGame](game: Game.Game) {
+	[RoomObject.AddToMyGame](game: GameConstructor) {
 		game.spawns[this.name] = this;
 	}
 	[RoomObject.AfterInsert](room: Room) {
@@ -77,15 +77,13 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 	}
 
 	canCreateCreep(body: any, name?: any) {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		return checkSpawnCreep(this, body, name ?? getUniqueName(name => Game.instance.creeps[name] !== undefined), null, null);
+		return checkSpawnCreep(this, body, name ?? getUniqueName(name => userGame?.creeps[name] !== undefined), null, null);
 	}
 
 	createCreep(body: any, name: any, memory?: any) {
 		return this.spawnCreep(
 			body,
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			name ?? getUniqueName(name => Game.instance.creeps[name] !== undefined),
+			name ?? getUniqueName(name => userGame?.creeps[name] !== undefined),
 			{ memory },
 		);
 	}
@@ -111,11 +109,11 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 
 				// Save intent
 				const energyStructureIds = options.energyStructures?.map(structure => structure.id) ?? null;
-				Game.intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
+				intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
 
 				// Fake creep
 				const creep = Creep.create(this.pos, body, name, this.owner!);
-				Game.instance.creeps[name] = creep;
+				userGame!.creeps[name] = creep;
 				return C.OK;
 			});
 	}
@@ -158,7 +156,7 @@ export function checkSpawnCreep(
 		return C.ERR_INVALID_ARGS;
 
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	} else if (Game.instance.creeps[name] !== undefined) {
+	} else if (userGame?.creeps[name] !== undefined) {
 		return C.ERR_NAME_EXISTS;
 	}
 

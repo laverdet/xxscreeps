@@ -5,9 +5,9 @@ import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as PathFinder from 'xxscreeps/game/path-finder';
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as Flag from 'xxscreeps/game/flag';
 import * as Fn from 'xxscreeps/utility/functional';
+import { Game, intents, registerGlobal, userGame } from 'xxscreeps/game';
 import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/utility/iteratee';
 import { instantiate } from 'xxscreeps/utility/utility';
@@ -326,12 +326,12 @@ export class RoomPosition {
 	 */
 	createFlag(name: string, color: Flag.Color, secondaryColor: Flag.Color = color) {
 		return chainIntentChecks(
-			() => Flag.checkCreateFlag(Game.instance.flags, this, name, color, secondaryColor),
+			() => Flag.checkCreateFlag(userGame!.flags, this, name, color, secondaryColor),
 			() => {
 				// Save creation intent
-				Game.intents.pushNamed('flag', 'create', name, this[PositionInteger], color, secondaryColor);
+				intents.pushNamed('flag', 'create', name, this[PositionInteger], color, secondaryColor);
 				// Create local flag immediately
-				Game.instance.flags[name] = instantiate(Flag.Flag, {
+				userGame!.flags[name] = instantiate(Flag.Flag, {
 					name,
 					id: undefined,
 					pos: this,
@@ -357,7 +357,7 @@ export class RoomPosition {
 	[PositionInteger]: number;
 }
 
-Game.registerGlobal(RoomPosition);
+registerGlobal(RoomPosition);
 declare module 'xxscreeps/game/runtime' {
 	interface Global { RoomPosition: typeof RoomPosition }
 }

@@ -6,7 +6,7 @@ import { LookFor, registerFindHandlers } from 'xxscreeps/game/room';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 // Add `spawns` to global `game` object
-declare module 'xxscreeps/game' {
+declare module 'xxscreeps/game/game' {
 	interface Game {
 		spawns: Record<string, Spawn.StructureSpawn>;
 	}

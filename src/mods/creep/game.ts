@@ -5,7 +5,7 @@ import { registerSchema } from 'xxscreeps/engine/schema';
 import { LookFor, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
 
 // Add `creeps` to global `Game` object
-declare module 'xxscreeps/game' {
+declare module 'xxscreeps/game/game' {
 	interface Game {
 		creeps: Record<string, Creep.Creep>;
 	}

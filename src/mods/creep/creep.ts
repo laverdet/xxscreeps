@@ -1,12 +1,12 @@
 import type { RoomPath } from 'xxscreeps/game/room/path';
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Memory from 'xxscreeps/game/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as ActionLog from 'xxscreeps/game/action-log';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
+import { Game, GameConstructor, intents, me } from 'xxscreeps/game';
 import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { fetchPositionArgument, Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
@@ -53,13 +53,13 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 		const creeps = memory.creeps ?? (memory.creeps = {});
 		return creeps[this.name] ?? (creeps[this.name] = {});
 	}
-	get my() { return this[RoomObject.Owner] === Game.me }
+	get my() { return this[RoomObject.Owner] === me }
 	get owner() { return this[RoomObject.Owner] }
 	get spawning() { return this._ageTime === 0 }
 	get ticksToLive() { return this._ageTime - Game.time }
 	get [RoomObject.LookType]() { return C.LOOK_CREEPS }
 
-	[RoomObject.AddToMyGame](game: Game.Game) {
+	[RoomObject.AddToMyGame](game: GameConstructor) {
 		game.creeps[this.name] = this;
 	}
 
@@ -102,7 +102,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	move(this: Creep, direction: Direction) {
 		return chainIntentChecks(
 			() => checkMove(this, direction),
-			() => Game.intents.save(this, 'move', direction));
+			() => intents.save(this, 'move', direction));
 	}
 
 	/**
@@ -240,7 +240,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	pickup(this: Creep, resource: Resource) {
 		return chainIntentChecks(
 			() => checkPickup(this, resource),
-			() => Game.intents.save(this, 'pickup', resource.id));
+			() => intents.save(this, 'pickup', resource.id));
 	}
 
 	repair() {
@@ -253,7 +253,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	suicide(this: Creep) {
 		return chainIntentChecks(
 			() => checkCommon(this),
-			() => Game.intents.save(this, 'suicide'),
+			() => intents.save(this, 'suicide'),
 		);
 	}
 
@@ -268,7 +268,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	transfer(this: Creep, target: RoomObject.RoomObject & Store.WithStore, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, amount),
-			() => Game.intents.save(this, 'transfer', target.id, resourceType, amount),
+			() => intents.save(this, 'transfer', target.id, resourceType, amount),
 		);
 	}
 
@@ -287,7 +287,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	withdraw(this: Creep, target: Structure & Store.WithStore, resourceType: ResourceType, amount?: number) {
 		return chainIntentChecks(
 			() => checkWithdraw(this, target, resourceType, amount),
-			() => Game.intents.save(this, 'withdraw', target.id, resourceType, amount),
+			() => intents.save(this, 'withdraw', target.id, resourceType, amount),
 		);
 	}
 }

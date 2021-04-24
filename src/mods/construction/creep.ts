@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
+import { intents } from 'xxscreeps/game';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
 import { extend } from 'xxscreeps/utility/utility';
@@ -21,7 +21,7 @@ extend(Creep, {
 	build(target: ConstructionSite) {
 		return chainIntentChecks(
 			() => checkBuild(this, target),
-			() => Game.intents.save(this, 'build', target.id));
+			() => intents.save(this, 'build', target.id));
 	},
 });
 

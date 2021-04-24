@@ -1,7 +1,7 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
 import * as C from './constants';
-import * as Game from '.';
 import * as Memory from './memory';
+import { intents, registerGlobal } from '.';
 import { fetchPositionArgument, RoomPosition } from './position';
 import { PositionInteger } from './position/symbols';
 import { LookType, RoomObject, format as baseFormat } from './object';
@@ -30,7 +30,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 	 * Remove the flag
 	 */
 	remove() {
-		Game.intents.pushNamed('flag', 'remove', this.name);
+		intents.pushNamed('flag', 'remove', this.name);
 		return C.OK;
 	}
 
@@ -43,7 +43,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		return chainIntentChecks(
 			() => checkFlagColors(color, secondaryColor),
 			() => {
-				Game.intents.pushNamed(
+				intents.pushNamed(
 					'flag', 'create',
 					this.name, this.pos[PositionInteger],
 					color, secondaryColor);
@@ -65,7 +65,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		return chainIntentChecks(
 			() => checkFlagPosition(pos!),
 			() => {
-				Game.intents.pushNamed(
+				intents.pushNamed(
 					'flag', 'create',
 					this.name, this.pos[PositionInteger],
 					this.color, this.secondaryColor);
@@ -79,7 +79,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 }
 
 // Export `Flag` to runtime globals
-Game.registerGlobal(Flag);
+registerGlobal(Flag);
 declare module 'xxscreeps/game/runtime' {
 	interface Global { Flag: typeof Flag }
 }

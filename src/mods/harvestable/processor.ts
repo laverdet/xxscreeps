@@ -1,7 +1,7 @@
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
+import { Game } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor } from 'xxscreeps/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';

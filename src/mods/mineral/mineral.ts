@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as RoomObject from 'xxscreeps/game/object';
+import { Game, registerGlobal } from 'xxscreeps/game';
 import { compose, declare, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource';
@@ -28,7 +28,7 @@ export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
 }
 
 // Export `Mineral` to runtime globals
-Game.registerGlobal(Mineral);
+registerGlobal(Mineral);
 declare module 'xxscreeps/game/runtime' {
 	interface Global { Mineral: typeof Mineral }
 }

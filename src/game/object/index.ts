@@ -7,7 +7,7 @@ import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
 import { expandGetters } from 'xxscreeps/utility/inspect';
 import { assign } from 'xxscreeps/utility/utility';
 import { AddToMyGame, AfterInsert, AfterRemove, LookType, NextPosition, Owner, PathCost, RunnerUser } from './symbols';
-import { Game, registerGlobal } from '..';
+import { GameConstructor, registerGlobal } from '..';
 
 export { AddToMyGame, AfterInsert, AfterRemove, LookType, NextPosition, Owner, PathCost, RunnerUser };
 
@@ -24,7 +24,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	room!: Room;
 	[NextPosition]?: RoomPosition.RoomPosition | null;
 
-	[AddToMyGame](_game: Game) {}
+	[AddToMyGame](_game: GameConstructor) {}
 	[AfterInsert](room: Room) {
 		this.room = room;
 	}

@@ -1,8 +1,8 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
+import { Game, me } from 'xxscreeps/game';
 import { getPositonInDirection as getPositionInDirection, Direction } from 'xxscreeps/game/position';
 import { InsertObject, MoveObject } from 'xxscreeps/game/room';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
@@ -51,7 +51,7 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 	}
 
 	// Add new creep to room objects
-	const creep = Creep.create(spawn.pos, body, name, Game.me);
+	const creep = Creep.create(spawn.pos, body, name, me);
 	spawn.room[InsertObject](creep);
 
 	// Set spawning information

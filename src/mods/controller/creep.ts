@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import * as Game from 'xxscreeps/game';
+import { intents } from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { Creep, checkCommon, checkResource } from 'xxscreeps/mods/creep/creep';
@@ -31,7 +31,7 @@ extend(Creep, {
 	upgradeController(target) {
 		return chainIntentChecks(
 			() => checkUpgradeController(this, target),
-			() => Game.intents.save(this, 'upgradeController', target.id),
+			() => intents.save(this, 'upgradeController', target.id),
 		);
 	},
 });
