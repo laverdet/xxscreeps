@@ -1,7 +1,7 @@
 import type { RoomPath } from 'xxscreeps/game/room/path';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Memory from 'xxscreeps/game/memory';
+import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as ActionLog from 'xxscreeps/game/action-log';
 import * as RoomObject from 'xxscreeps/game/object';

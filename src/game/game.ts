@@ -1,4 +1,3 @@
-import type { Flag } from './flag';
 import type { GameMap, World } from './map';
 import type { AnyRoomObject, Room } from './room';
 import type { RoomObject } from './object';
@@ -102,7 +101,6 @@ export class Game extends GameBase {
 	gcl = {
 		level: 1,
 	};
-	flags: Record<string, Flag> = Object.create(null);
 	market = {
 		orders: [],
 		getAllOrders: () => [],

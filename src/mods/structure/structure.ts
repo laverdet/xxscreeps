@@ -114,4 +114,4 @@ declare module 'xxscreeps/game/game' {
 		structures: Record<string, AnyStructure>;
 	}
 }
-registerGameInitializer(game => game.structures = Object.create(null));
+registerGameInitializer(Game => Game.structures = Object.create(null));

@@ -10,7 +10,7 @@ declare module 'xxscreeps/game/game' {
 		creeps: Record<string, Creep.Creep>;
 	}
 }
-registerGameInitializer(game => game.creeps = Object.create(null));
+registerGameInitializer(Game => Game.creeps = Object.create(null));
 
 // Export `Creep` to runtime globals
 registerGlobal(Creep.Creep);

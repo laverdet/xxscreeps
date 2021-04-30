@@ -1,7 +1,6 @@
 import type { Shard } from './shard';
 import { Channel } from 'xxscreeps/storage/channel';
 import { makeReader } from 'xxscreeps/schema';
-import * as Flag from 'xxscreeps/engine/runner/flag';
 import * as Visual from 'xxscreeps/game/visual';
 
 type ConsoleMessage =
@@ -11,35 +10,6 @@ type ConsoleMessage =
 
 export function getConsoleChannel(shard: Shard, user: string) {
 	return new Channel<ConsoleMessage>(shard.pubsub, `user/${user}/console`);
-}
-
-/**
- * Load the unparsed flag blob for a user
- */
-export async function loadUserFlagBlob(shard: Shard, user: string) {
-	try {
-		return await shard.blob.reqBuffer(`user/${user}/flags`);
-	} catch (err) {}
-}
-
-/**
- * Load a user's flags and return the game objects
- */
-export async function loadUserFlags(shard: Shard, user: string) {
-	const flagBlob = await loadUserFlagBlob(shard, user);
-	if (flagBlob) {
-		return Flag.read(flagBlob);
-	} else {
-		return Object.create(null) as never;
-	}
-}
-
-/**
- * Save a user's processed flag blob
- */
-export async function saveUserFlagBlobForNextTick(shard: Shard, user: string, flagBlob: Readonly<Uint8Array>) {
-	await shard.blob.set(`user/${user}/flags`, flagBlob);
-	await getFlagChannel(shard, user).publish({ type: 'updated' });
 }
 
 const visualsReader = makeReader(Visual.schema);
@@ -59,14 +29,6 @@ export async function saveVisualsBlob(shard: Shard, user: string, time: number, 
 			await shard.blob.del(`user/${user}/${fragment}`);
 		} catch (err) {}
 	}
-}
-
-/**
- * Return a reference to the user's flag channel
- */
-type UserFlagMessage = { type: 'updated' };
-export function getFlagChannel(shard: Shard, user: string) {
-	return new Channel<UserFlagMessage>(shard.pubsub, `user/${user}/flags`);
 }
 
 //

@@ -158,7 +158,7 @@ rules:
   no-useless-rename: warn
   no-var: warn
   object-shorthand: warn
-  prefer-arrow-callback: warn
+  prefer-arrow-callback: [ warn, { allowNamedFunctions: true } ]
   prefer-const: warn
   prefer-destructuring: [ warn, { array: false } ]
   prefer-numeric-literals: warn

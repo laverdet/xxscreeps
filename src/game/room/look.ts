@@ -1,4 +1,3 @@
-import type { Flag } from 'xxscreeps/game/flag';
 import type { UnwrapArray } from 'xxscreeps/utility/types';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
@@ -8,16 +7,11 @@ import { PositionParameter, RoomPosition, fetchPositionArgument } from 'xxscreep
 import { iterateArea } from 'xxscreeps/game/position/direction';
 import { terrainMaskToString } from 'xxscreeps/game/terrain';
 import { RoomVisual } from 'xxscreeps/game/visual';
-import { LookAt, LookFor, Objects, lookConstants, registerLook } from './symbols';
+import { LookAt, LookFor, Objects, lookConstants } from './symbols';
 import { Room } from './room';
 
-// Built-in LOOK_ constants
-const builtinLook = [
-	registerLook<Flag>()(C.LOOK_FLAGS),
-];
-export interface Look { builtin: typeof builtinLook }
-
 // All LOOK_ constants
+export interface Look {}
 export type LookConstants = LookInfo['look'] | typeof C.LOOK_TERRAIN;
 
 // Converts a LOOK_ constant to result type

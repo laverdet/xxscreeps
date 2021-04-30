@@ -1,32 +1,35 @@
+import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
+import type { Print } from 'xxscreeps/driver/runtime';
 import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
 import { runOnce } from 'xxscreeps/utility/memoize';
-import type * as Runtime from 'xxscreeps/driver/runtime';
-import type { TickArguments } from '../runtime';
-import { compileRuntimeSource, pathFinderBinaryPath, Options } from '.';
+import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox';
+type Runtime = typeof import('xxscreeps/driver/sandbox/isolated/runtime');
 
 const getPathFinderModule = runOnce(() => {
 	const module = new ivm.NativeModule(pathFinderBinaryPath);
-	return { identifier: pathFinderBinaryPath, module };
+	return { path: pathFinderBinaryPath, module };
 });
 
-const getRuntimeSource = runOnce(async() =>
-	compileRuntimeSource({
+const getRuntimeSource = runOnce(() => {
+	const path = 'xxscreeps/driver/sandbox/isolated/runtime.js';
+	return compileRuntimeSource({
 		externals: ({ request }) => request === 'util' ? 'nodeUtilImport' : undefined,
-	 }));
+	}, path);
+});
 
 export class IsolatedSandbox {
 	private constructor(
 		private readonly isolate: ivm.Isolate,
-		private readonly tick: ivm.Reference<typeof Runtime.tick>,
+		private readonly tick: ivm.Reference<Runtime['tick']>,
 	) {}
 
-	static async create({ userId, codeBlob, flagBlob, memoryBlob, shardName, terrainBlob, writeConsole }: Options) {
+	static async create(data: InitializationPayload, print: Print) {
 		// Generate new isolate and context
 		const isolate = new ivm.Isolate({ memoryLimit: 128 });
 		const context = await isolate.createContext();
 
-		// Set up required globals before running ./runtime.ts
+		// Set up required globals
 		const pf = getPathFinderModule();
 		const [ script ] = await Promise.all([
 			async function() {
@@ -36,7 +39,7 @@ export class IsolatedSandbox {
 			}(),
 			async function() {
 				const instance = await pf.module.create(context);
-				await context.global.set(pf.identifier, instance.derefInto());
+				await context.global.set(pf.path, instance.derefInto());
 			}(),
 			async function() {
 				const util = await ivmInspect.create(isolate, context);
@@ -50,16 +53,14 @@ export class IsolatedSandbox {
 		]);
 
 		// Initialize runtime.ts and load player code + memory
-		const runtime: ivm.Reference<typeof Runtime> = await script.run(context, { reference: true });
-		const [ tick, initialize ] = await Promise.all([
+		const runtime: ivm.Reference<Runtime> = await script.run(context, { reference: true });
+		const [ initialize, tick ] = await Promise.all([
+			runtime.get('initialize', { reference: true }),
 			runtime.get('tick', { reference: true }),
-			runtime.get('initializeIsolated', { reference: true }),
-			context.global.delete(pf.identifier),
+			context.global.delete(pf.path),
 			context.global.delete('nodeUtilImport'),
 		]);
-		const writeConsoleRef = new ivm.Reference(writeConsole);
-		const data = { userId, codeBlob, flagBlob, memoryBlob, shardName, terrainBlob };
-		await initialize.apply(undefined, [ isolate, context, writeConsoleRef, data ], { arguments: { copy: true } });
+		await initialize.apply(undefined, [ isolate, context, new ivm.Reference(print), data ], { arguments: { copy: true } });
 		return new IsolatedSandbox(isolate, tick);
 	}
 
@@ -67,7 +68,7 @@ export class IsolatedSandbox {
 		this.isolate.dispose();
 	}
 
-	run(args: TickArguments) {
+	run(args: TickPayload) {
 		return this.tick.apply(undefined, [ args ], { arguments: { copy: true }, result: { copy: true } });
 	}
 }

@@ -7,7 +7,6 @@ import * as C from 'xxscreeps/game/constants';
 
 const kCpuCost = 0.2;
 type NamedReceivers = Exclude<IntentReceivers, RoomObject | Room>;
-
 type NamedIntent = Partial<Record<IntentsForReceiver<NamedReceivers>, any[]>>;
 type NamedIntentPayload = Partial<Record<NamedReceivers, NamedIntent>>;
 
@@ -27,6 +26,7 @@ export class IntentManager {
 	/**
 	 * Save an intent for a globally-scoped name, like "flag.create" or "market.createOrder".
 	 */
+	/*
 	pushNamed<
 		Receiver extends NamedReceivers,
 		Action extends IntentsForReceiver<Receiver>
@@ -37,6 +37,7 @@ export class IntentManager {
 		intents.push(args);
 		return C.OK;
 	}
+	*/
 
 	/**
 	 * Save a unique intent for a RoomObject in an active room

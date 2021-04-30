@@ -1,4 +1,3 @@
-import { registerGlobal } from 'xxscreeps/game';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 
 const kMemoryGrowthSize = 4096;
@@ -9,6 +8,11 @@ let memoryLength = 0;
 let string: string | undefined;
 let json: object | undefined;
 let isBufferOutOfDate = false;
+
+function align(address: number) {
+	const alignMinusOne = kMemoryGrowthSize - 1;
+	return ~alignMinusOne & (address + alignMinusOne);
+}
 
 export const RawMemory = {
 	get() {
@@ -33,11 +37,6 @@ export const RawMemory = {
 	segments: {},
 };
 
-function align(address: number) {
-	const alignMinusOne = kMemoryGrowthSize - 1;
-	return ~alignMinusOne & (address + alignMinusOne);
-}
-
 export function get(): any {
 	if (json) {
 		return json;
@@ -48,13 +47,6 @@ export function get(): any {
 		json = {};
 	}
 	return json;
-}
-
-export function set(value: any) {
-	if (typeof value !== 'object' || value === null) {
-		throw new Error('`Memory` must be an object');
-	}
-	json = value;
 }
 
 export function flush(): Readonly<Uint8Array> {
@@ -94,6 +86,7 @@ export function flush(): Readonly<Uint8Array> {
 }
 
 export function initialize(value: Readonly<Uint8Array> | null) {
+	json = undefined;
 	if (value) {
 		memoryLength = value.length >>> 1;
 		memory = new Uint16Array(new SharedArrayBuffer(align(value.length)));
@@ -102,10 +95,4 @@ export function initialize(value: Readonly<Uint8Array> | null) {
 		memoryLength = 0;
 		memory = new Uint16Array(new SharedArrayBuffer(kMemoryGrowthSize));
 	}
-}
-
-// Export `RawMemory` to runtime globals
-registerGlobal('RawMemory', RawMemory);
-declare module 'xxscreeps/game/runtime' {
-	interface Global { RawMemory: typeof RawMemory }
 }

@@ -1,7 +1,7 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Creep from 'xxscreeps/mods/creep/creep';
-import * as Memory from 'xxscreeps/game/memory';
+import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
@@ -57,8 +57,8 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 
 	get memory() {
 		const memory = Memory.get();
-		const spawns = memory.spawns ?? (memory.spawns = {});
-		return spawns[this.name] ?? (spawns[this.name] = {});
+		const spawns = memory.spawns ??= {};
+		return spawns[this.name] ??= {};
 	}
 
 	get structureType() { return C.STRUCTURE_SPAWN }

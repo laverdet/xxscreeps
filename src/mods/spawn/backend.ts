@@ -5,7 +5,7 @@ import * as Spawn from './spawn';
 import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
 import { forceRoomProcess } from 'xxscreeps/engine/model/processor';
-import { InsertObject } from 'xxscreeps/game/room';
+import { FlushObjects, InsertObject } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
 import { bindRenderer, registerBackendRoute } from 'xxscreeps/backend';
@@ -111,6 +111,7 @@ registerBackendRoute({
 					}
 					// Add spawn
 					room[InsertObject](Spawn.create(pos, userId!, name));
+					room[FlushObjects]();
 					Controller.claim(room.controller!, user.id);
 					user.roomsControlled.add(room.name);
 					user.roomsPresent.add(room.name);

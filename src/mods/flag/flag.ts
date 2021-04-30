@@ -1,17 +1,16 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
-import * as C from './constants';
-import * as Memory from './memory';
-import { intents, registerGlobal } from '.';
-import { fetchPositionArgument, RoomPosition } from './position';
-import { PositionInteger } from './position/symbols';
-import { LookType, RoomObject, format as baseFormat } from './object';
-import { chainIntentChecks } from './checks';
+import * as C from 'xxscreeps/game/constants';
+import * as Memory from 'xxscreeps/mods/memory/memory';
+import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
+import { LookType, RoomObject, format as baseFormat } from 'xxscreeps/game/object';
+import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
+import { intents } from './game';
 
 export type Color = typeof C.COLORS_ALL[number];
 const colorFormat = withType<Color>('int8');
 
-export function format() { return compose(shape, Flag) }
+export const format = () => compose(shape, Flag);
 const shape = declare('Flag', struct(baseFormat, {
 	name: 'string',
 	color: colorFormat,
@@ -21,8 +20,8 @@ const shape = declare('Flag', struct(baseFormat, {
 export class Flag extends withOverlay(RoomObject, shape) {
 	get memory() {
 		const memory = Memory.get();
-		const flags = memory.flags ?? (memory.flags = {});
-		return flags[this.name] ?? (flags[this.name] = {});
+		const flags = memory.flags ??= {};
+		return flags[this.name] ??= {};
 	}
 	get [LookType]() { return C.LOOK_FLAGS }
 
@@ -30,7 +29,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 	 * Remove the flag
 	 */
 	remove() {
-		intents.pushNamed('flag', 'remove', this.name);
+		intents.push({ type: 'remove', params: [ this.name ] });
 		return C.OK;
 	}
 
@@ -43,10 +42,10 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		return chainIntentChecks(
 			() => checkFlagColors(color, secondaryColor),
 			() => {
-				intents.pushNamed(
-					'flag', 'create',
-					this.name, this.pos[PositionInteger],
-					color, secondaryColor);
+				intents.push({ type: 'create', params: [
+					this.name, this.pos,
+					color, secondaryColor, true,
+				] });
 				return C.OK;
 			},
 		);
@@ -65,10 +64,10 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		return chainIntentChecks(
 			() => checkFlagPosition(pos!),
 			() => {
-				intents.pushNamed(
-					'flag', 'create',
-					this.name, this.pos[PositionInteger],
-					this.color, this.secondaryColor);
+				intents.push({ type: 'create', params: [
+					this.name, this.pos,
+					this.color, this.secondaryColor, true,
+				] });
 				return C.OK;
 			},
 		);
@@ -76,12 +75,6 @@ export class Flag extends withOverlay(RoomObject, shape) {
 
 	// Flags are kind of fake objects, and don't get an id
 	declare id: never;
-}
-
-// Export `Flag` to runtime globals
-registerGlobal(Flag);
-declare module 'xxscreeps/game/runtime' {
-	interface Global { Flag: typeof Flag }
 }
 
 //
@@ -114,7 +107,7 @@ export function checkCreateFlag(
 		() => checkFlagPosition(pos),
 		() => checkFlagColors(color, secondaryColor),
 		() => {
-			if (typeof name !== 'string' || name.length > 60) {
+			if (typeof name !== 'string' || name.length === 0 || name.length > 100) {
 				return C.ERR_INVALID_ARGS;
 
 			} else if (Object.keys(flags).length >= C.FLAGS_LIMIT) {

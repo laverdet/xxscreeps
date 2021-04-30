@@ -4,14 +4,11 @@ import type { LookConstants } from 'xxscreeps/game/room/look';
 import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as PathFinder from 'xxscreeps/game/path-finder';
-import * as C from 'xxscreeps/game/constants';
-import * as Flag from 'xxscreeps/game/flag';
 import * as Fn from 'xxscreeps/utility/functional';
-import { Game, intents, registerGlobal, userGame } from 'xxscreeps/game';
+import { Game, registerGlobal } from 'xxscreeps/game';
 import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/utility/iteratee';
 import { instantiate } from 'xxscreeps/utility/utility';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Direction, getDirection } from './direction';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
 import { PositionInteger } from './symbols';
@@ -314,34 +311,6 @@ export class RoomPosition {
 		return fetchRoom(this.roomName).lookForAt(type, this);
 	}
 
-	/**
-	 * Create new `Flag` at the specified location
-	 * @param name The name of a new flag. It should be unique, i.e. the `Game.flags` object should
-	 * not contain another flag with the same name (hash key). If not defined, a random name will be
-	 * generated.
-	 * @param color The color of a new flag. Should be one of the `COLOR_*` constants. The default
-	 * value is `COLOR_WHITE`.
-	 * @param secondaryColor The secondary color of a new flag. Should be one of the `COLOR_*`
-	 * constants. The default value is equal to `color`.
-	 */
-	createFlag(name: string, color: Flag.Color, secondaryColor: Flag.Color = color) {
-		return chainIntentChecks(
-			() => Flag.checkCreateFlag(userGame!.flags, this, name, color, secondaryColor),
-			() => {
-				// Save creation intent
-				intents.pushNamed('flag', 'create', name, this[PositionInteger], color, secondaryColor);
-				// Create local flag immediately
-				userGame!.flags[name] = instantiate(Flag.Flag, {
-					name,
-					id: undefined,
-					pos: this,
-					color, secondaryColor,
-				});
-				return C.OK;
-			},
-		);
-	}
-
 	private toJSON() {
 		return { x: this.x, y: this.y, roomName: this.roomName };
 	}
@@ -410,6 +379,29 @@ export function fetchPositionArgument<Extra = any>(
 		return {
 			pos: undefined,
 			extra: undefined,
+		};
+	}
+}
+
+export function fetchPositionArgumentRest<Rest extends any[]>(
+	fromRoom: string, arg1: any, arg2: any, ...rest: Rest
+): { pos?: RoomPosition; rest: Rest } {
+	if (typeof arg1 === 'object') {
+		if (arg1 instanceof RoomPosition) {
+			return { pos: arg1, rest: [ arg2, ...rest ] as never };
+		} else if (arg1.pos instanceof RoomPosition) {
+			return { pos: arg1.pos, rest: [ arg2, ...rest ] as never };
+		}
+	}
+	try {
+		return {
+			pos: new RoomPosition(arg1, arg2, fromRoom),
+			rest,
+		};
+	} catch (err) {
+		return {
+			pos: undefined,
+			rest,
 		};
 	}
 }

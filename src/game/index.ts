@@ -2,8 +2,9 @@ import { GameBase, GameState, Game as GameConstructor } from './game';
 import { flush as flushPathFinder } from './path-finder';
 import { IntentManager } from './intents';
 import { FlushFindCache } from './room/symbols';
+import './runtime';
 
-export { registerGameInitializer, registerGlobal } from './symbols';
+export { defineGlobal, registerGameInitializer, registerGlobal } from './symbols';
 export { GameConstructor, GameState };
 export let Game: GameBase;
 export let intents: IntentManager;

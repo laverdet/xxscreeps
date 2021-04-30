@@ -1,14 +1,16 @@
-import { createRequire } from 'module';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
+import type { Evaluate, Print } from 'xxscreeps/driver/runtime';
+import util from 'util';
 import vm from 'vm';
+import { createRequire } from 'module';
 import { runOnce } from 'xxscreeps/utility/memoize';
-import type { TickArguments } from '../runtime';
-import { compileRuntimeSource, pathFinderBinaryPath, Options } from '.';
-type Runtime = typeof import('../runtime');
+import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox';
+type Runtime = typeof import('xxscreeps/driver/runtime');
 
 const getPathFinderModule = runOnce(() => {
 	const require = createRequire(import.meta.url);
 	const module = require(pathFinderBinaryPath);
-	return { identifier: pathFinderBinaryPath, module };
+	return { path: pathFinderBinaryPath, module };
 });
 
 const getCompiledRuntime = runOnce(async() => {
@@ -26,29 +28,25 @@ export class NodejsSandbox {
 		private readonly tick: Runtime['tick'],
 	) {}
 
-	static async create({ userId, codeBlob, flagBlob, memoryBlob, shardName, terrainBlob, writeConsole }: Options) {
+	static async create(data: InitializationPayload, print: Print) {
 
 		// Generate new vm context, set up globals
 		const context = vm.createContext();
 		context.global = context;
-		context.nodeUtilImport = (await import('util')).default;
+		context.nodeUtilImport = util;
 		const pf = getPathFinderModule();
-		context[pf.identifier] = pf.module;
+		context[pf.path] = pf.module;
 
 		// Initialize runtime.ts and load player code + memory
 		const { script, map } = await getCompiledRuntime();
 		context.runtimeSourceMap = map;
 		const runtime: Runtime = script.runInContext(context);
 		delete context.nodeUtilImport;
-		delete context[pf.identifier];
-		const { tick } = runtime;
-		runtime.initialize(
-			(source: string, filename: string) => (new vm.Script(source, { filename })).runInContext(context),
-			writeConsole,
-			{ userId, codeBlob, flagBlob, memoryBlob, shardName, terrainBlob },
-		);
-		context._tick = tick;
-		const wrappedTick: Runtime['tick'] = function(...args: any[]) {
+		delete context[pf.path];
+		const evaluate: Evaluate = (source, filename) => (new vm.Script(source, { filename })).runInContext(context);
+		runtime.initialize(evaluate, print, data);
+		context._tick = runtime.tick;
+		const wrappedTick: Runtime['tick'] = function(...args) {
 			context._args = args;
 			return vm.runInContext('_tick(..._args)', context, { timeout: 1000 });
 		};
@@ -57,7 +55,7 @@ export class NodejsSandbox {
 
 	dispose() {}
 
-	run(args: TickArguments) {
+	run(args: TickPayload) {
 		return Promise.resolve(this.tick(args));
 	}
 }

@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs';
 import * as Path from 'path';
+import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import Webpack from 'webpack';
 

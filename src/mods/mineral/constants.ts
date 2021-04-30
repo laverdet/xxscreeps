@@ -1,3 +1,4 @@
+export const FIND_MINERALS = 116 as const;
 export const LOOK_MINERALS = 'mineral' as const;
 
 export const HARVEST_MINERAL_POWER = 1;

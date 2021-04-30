@@ -14,7 +14,7 @@ declare module 'xxscreeps/game/game' {
 		constructionSites: Record<string, ConstructionSite.ConstructionSite>;
 	}
 }
-registerGameInitializer(game => game.constructionSites = Object.create(null));
+registerGameInitializer(Game => Game.constructionSites = Object.create(null));
 
 // Export `ConstructionSite` to runtime globals
 registerGlobal(ConstructionSite.ConstructionSite);

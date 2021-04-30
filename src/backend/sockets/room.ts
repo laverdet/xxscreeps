@@ -1,7 +1,8 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import { Objects } from 'xxscreeps/game/room';
-import { getFlagChannel, loadVisuals, loadUserFlags } from 'xxscreeps/engine/model/user';
+import { loadVisuals } from 'xxscreeps/engine/model/user';
+import { getFlagChannel, loadUserFlags } from 'xxscreeps/mods/flag/model';
 import { GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { Variant } from 'xxscreeps/schema';
 import { SubscriptionEndpoint } from '../socket';

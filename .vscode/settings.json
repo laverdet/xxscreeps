@@ -1,4 +1,7 @@
 {
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": true
+	},
 	"eslint.options": {
 		"configFile": "./.vscode/.eslintrc.yaml"
 	},
@@ -7,10 +10,10 @@
 		"dist": true,
 		"node_modules": true,
 	},
+	"typescript.tsdk": "./node_modules/typescript/lib",
+	"typescript.tsserver.experimental.enableProjectDiagnostics": true,
 	"yaml.schemas": {
 		"./src/config/config.schema.json": "*/.screepsrc.yaml"
 	},
 	"yaml.validate": true,
-	"typescript.tsdk": "./node_modules/typescript/lib",
-	"typescript.tsserver.experimental.enableProjectDiagnostics": true,
 }

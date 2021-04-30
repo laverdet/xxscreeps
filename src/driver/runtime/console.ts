@@ -1,7 +1,6 @@
 import { formatWithOptions, inspect } from 'util';
-export type Writer = (fd: number, payload: string, evalResult?: boolean) => void;
 
-export function setupConsole(write: Writer) {
+export function setupConsole(write: (fd: number, payload: string) => void) {
 	const format = (args: any[]) =>
 		formatWithOptions({ colors: true }, ...(args as [any]));
 
@@ -11,7 +10,7 @@ export function setupConsole(write: Writer) {
 		},
 
 		warn(...args: any[]) {
-			if (typeof args[0] === 'string') {
+			if (args.length === 1 && typeof args[0] === 'string') {
 				args[0] = `⚠️${args[0]}`;
 			} else {
 				args.unshift('⚠️');
@@ -43,7 +42,8 @@ export function setupConsole(write: Writer) {
 		assert(expression: boolean, ...args: any[]) {
 			if (!expression) {
 				args[0] = `Assertion failed${args.length === 0 ? '' : `: ${args[0]}`}`;
-				this.warn(...args);
+				this.error(...args);
+				throw new Error(args[0]);
 			}
 		},
 	});

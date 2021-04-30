@@ -1,21 +1,36 @@
 import type { Game } from './game';
+import { registerRuntimeInitializer } from 'xxscreeps/driver';
 export const gameInitializers: ((game: Game) => void)[] = [];
-export const globals: Record<string, any> = Object.create(null);
+export const globals = new Set<string>();
 
 /**
  * Register a function which will run on newly-created `Game` objects. These will fire once per tick
- * in the runtime, and only for user sandbox code.
+ * for user environments created via `runForUser`
  */
-export function registerGameInitializer(fn: (game: Game) => void) {
+export function registerGameInitializer(fn: (Game: Game) => void) {
 	gameInitializers.push(fn);
 }
 
 /**
- * Register an object which will be exported to `globalThis` inside the user code runtime.
+ * Same as `registerGlobal` except it accepts more configuration options like
+ * `Object.defineProperty`
+ */
+export function defineGlobal(name: string, descriptor: PropertyDescriptor) {
+	globals.add(name);
+	registerRuntimeInitializer(() => Object.defineProperty(globalThis, name, descriptor));
+}
+
+/**
+ * Register a value which will be exported to `globalThis` inside the user sandbox runtime.
  */
 export function registerGlobal(...args: [ name: string, value: any ] | [ fn: Function ]) {
 	const { name, value } = args.length === 1 ?
 		{ name: args[0].name, value: args[0] } :
 		{ name: args[0], value: args[1] };
-	globals[name] = value;
+	defineGlobal(name, {
+		configurable: true,
+		enumerable: true,
+		writable: true,
+		value,
+	});
 }

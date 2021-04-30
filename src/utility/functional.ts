@@ -92,7 +92,11 @@ export function fromEntries<Type, Key extends keyof any>(
 export function fromEntries<Type, Key extends keyof any, Value>(
 	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ]): Record<Key, Value>;
 export function fromEntries(iterable: Iterable<any>, callback?: (value: any) => [ any, any ]) {
-	return Object.fromEntries(callback ? map(iterable, callback) : iterable);
+	const object = Object.create(null);
+	for (const [ key, value ] of callback ? map(iterable, callback) : iterable) {
+		object[key] = value;
+	}
+	return object;
 }
 
 // It's like [].map except you can use it on iterables, also it doesn't generate a temporary array.

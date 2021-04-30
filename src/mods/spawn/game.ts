@@ -11,7 +11,7 @@ declare module 'xxscreeps/game/game' {
 		spawns: Record<string, Spawn.StructureSpawn>;
 	}
 }
-registerGameInitializer(game => game.spawns = Object.create(null));
+registerGameInitializer(Game => Game.spawns = Object.create(null));
 
 // Export `StructureExtension` & `StructureSpawn` to runtime globals
 registerGlobal(Extension.StructureExtension);

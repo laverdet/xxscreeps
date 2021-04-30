@@ -32,11 +32,6 @@ type RemapNull<Type> = Type extends any[] ? {
 	[Key in keyof Type]: RemapNull<Type[Key]>;
 } : NullToUndefined<Type>;
 
-// Custom intents that the IntentManager will accept, but isn't handled by the normal processor pipeline
-export type DescribeIntentHandler<Name extends string, Intent extends string, Fn extends (...data: any) => void> =
-	Fn extends (...data: infer Data) => void ?
-		Data extends AllowedTypes[] ? { type: Name; intent: Intent; data: RemapNull<Data> } : never : never;
-
 // Register RoomObject intent processor
 export function registerIntentProcessor<Type extends IntentReceiverInstance, Intent extends string, Data extends AllowedTypes[]>(
 	receiver: Implementation<Type>,
