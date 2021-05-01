@@ -1,5 +1,4 @@
-extends: "../.eslintrc.yaml"
-
+extends: ../.eslintrc.yaml
 rules:
   eol-last: 'off'
   no-debugger: 'off'
