@@ -24,6 +24,7 @@ export class StructureExtension extends withOverlay(Structure.Structure, shape) 
 		room.energyAvailable += this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable += this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
+
 	[RoomObject.AfterRemove](room: Room) {
 		super[RoomObject.AfterRemove](room);
 		room.energyAvailable -= this.store[C.RESOURCE_ENERGY];

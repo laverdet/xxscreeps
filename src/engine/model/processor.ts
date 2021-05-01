@@ -63,8 +63,8 @@ export async function publishInterRoomIntents(shard: Shard, roomName: string, ti
 	const active = (await shard.scratch.zmscore(activeRoomsKey, [ roomName ]))[0] !== null;
 	return Promise.all([
 		// Add room to finalization set
-		active ? undefined :
-			shard.scratch.sadd(finalizeExtraRoomsSetKey(time), [ roomName ]),
+		active ?
+			undefined : shard.scratch.sadd(finalizeExtraRoomsSetKey(time), [ roomName ]),
 		// Save intents
 		shard.scratch.rpush(finalIntentsListForRoomKey(time, roomName), [ JSON.stringify(intents) ]),
 	]);
@@ -174,7 +174,7 @@ export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wak
 		// Remove from active room set
 		shard.scratch.zrem(activeRoomsKey, [ roomName ]),
 		// Set alarm to wake up
-		wakeTime === Infinity ? undefined :
-			shard.scratch.zadd(sleepingRoomsKey, [ [ wakeTime, roomName ] ]),
+		wakeTime === Infinity ?
+			undefined : shard.scratch.zadd(sleepingRoomsKey, [ [ wakeTime, roomName ] ]),
 	]);
 }

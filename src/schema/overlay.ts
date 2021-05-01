@@ -96,7 +96,7 @@ type BufferObjectConstructor<
 export function withOverlay<Base extends AbstractBufferObjectSubclass, Type>(
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	base: Base, type: Type):
-Base extends AbstractBufferObjectSubclass<infer Instance> ?
-BufferObjectConstructor<Base, Instance & TypeOf<Type>> : never {
+	Base extends AbstractBufferObjectSubclass<infer Instance> ?
+		BufferObjectConstructor<Base, Instance & TypeOf<Type>> : never {
 	return base as never;
 }

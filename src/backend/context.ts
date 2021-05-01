@@ -6,11 +6,11 @@ import * as User from 'xxscreeps/engine/metadata/user';
 
 export class BackendContext {
 	private constructor(
-		public readonly shard: Shard,
-		public readonly world: World,
-		public readonly accessibleRooms: Set<string>,
-		public readonly gameMutex: Mutex,
-		public readonly auth: Authentication,
+		readonly shard: Shard,
+		readonly world: World,
+		readonly accessibleRooms: Set<string>,
+		readonly gameMutex: Mutex,
+		readonly auth: Authentication,
 	) {}
 
 	static async connect() {

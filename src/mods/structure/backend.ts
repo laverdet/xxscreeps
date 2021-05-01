@@ -7,6 +7,6 @@ bindRenderer(Structure, (structure, next) => ({
 	...next(),
 	structureType: structure.structureType,
 	hits: structure.hits,
-	hitsMax: 100, //structure.hitsMax,
+	hitsMax: 100, // structure.hitsMax,
 	user: structure.owner,
 }));

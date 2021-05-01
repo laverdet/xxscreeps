@@ -8,7 +8,7 @@ import { assign } from 'xxscreeps/utility/utility';
 
 export const format = () => compose(shape, StructureTower);
 const shape = declare('Tower', struct(Structure.format, {
-		...variant('tower'),
+	...variant('tower'),
 	store: Store.restrictedFormat<'energy'>(),
 }));
 

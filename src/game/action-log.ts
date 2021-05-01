@@ -6,11 +6,10 @@ export const ActionLog = XSymbol('actionLog');
 export function memberFormat() {
 	return {
 		[ActionLog]: declare('ActionLog', vector(struct({
-				action: actions(),
-				x: 'int8',
-				y: 'int8',
-			})),
-		),
+			action: actions(),
+			x: 'int8',
+			y: 'int8',
+		}))),
 	};
 }
 

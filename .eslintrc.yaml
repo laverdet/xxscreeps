@@ -10,30 +10,45 @@ parserOptions:
 plugins: [ '@typescript-eslint' ]
 
 rules:
-  for-direction: warn
-  getter-return: warn
+  # Possible Errors
+  for-direction: error
+  getter-return: 'off' # ts(2378)
   no-async-promise-executor: error
+  no-await-in-loop: 'off'
   no-compare-neg-zero: error
   no-cond-assign: warn
-  '@typescript-eslint/no-unnecessary-condition': [ warn, { allowConstantLoopConditions: true } ]
+  no-console: 'off'
+  no-constant-condition: [ warn, { checkLoops: false } ]
   no-control-regex: warn
   no-debugger: warn
   no-dupe-args: error
-  no-dupe-else-if: warn
+  no-dupe-else-if: error
   no-dupe-keys: error
-  no-duplicate-case: warn
+  no-duplicate-case: error
   no-empty: [ warn, { allowEmptyCatch: true } ]
   no-empty-character-class: warn
   no-ex-assign: error
   no-extra-boolean-cast: warn
+  no-extra-parens: 'off'
+  '@typescript-eslint/no-extra-parens':
+    - warn
+    - all
+    - conditionalAssign: false
+      enforceForSequenceExpressions: false
+      nestedBinaryExpressions: false
+      returnAssign: false
+  no-extra-semi: 'off'
   '@typescript-eslint/no-extra-semi': warn
   no-func-assign: warn
   no-import-assign: warn
   no-inner-declarations: error
   no-invalid-regexp: error
-  no-irregular-whitespace: error
+  no-irregular-whitespace: warn
+  no-loss-of-precision: 'off'
+  '@typescript-eslint/no-loss-of-precision': warn
   no-misleading-character-class: error
   no-obj-calls: error
+  no-promise-executor-return: error
   no-prototype-builtins: error
   no-regex-spaces: warn
   no-setter-return: error
@@ -41,119 +56,284 @@ rules:
   no-template-curly-in-string: error
   no-unexpected-multiline: error
   no-unreachable: warn
+  no-unreachable-loop: warn
   no-unsafe-finally: error
   no-unsafe-negation: error
-  use-isnan: warn
+  no-unsafe-optional-chaining: error
+  no-useless-backreference: warn
+  require-atomic-updates: 'off'
+  use-isnan: error
   valid-typeof: error
 
+  # Best Practices
   accessor-pairs: warn
+  array-callback-return: 'off' # ts(2345)
+  block-scoped-var: error
+  class-methods-use-this: 'off'
+  complexity: 'off'
+  consistent-return: 'off'
   curly: [ warn, multi-line, consistent ]
+  default-case: 'off'
+  default-case-last: 'off'
+  default-param-last: 'off'
   '@typescript-eslint/default-param-last': error
   dot-location: [ warn, property ]
-  dot-notation: warn
+  dot-notation: 'off'
+  '@typescript-eslint/dot-notation': warn
+  eqeqeq: [ warn, always, { 'null': 'ignore' } ]
   grouped-accessor-pairs: warn
+  guard-for-in: 'off'
+  max-classes-per-file: 'off'
+  no-alert: 'off'
+  no-caller: warn
   no-case-declarations: warn
   no-constructor-return: error
+  no-div-regex: 'off'
+  no-else-return: 'off'
+  no-empty-function: 'off'
+  '@typescript-eslint/no-empty-function': 'off'
   no-empty-pattern: warn
+  no-eq-null: 'off'
+  no-eval: warn
+  no-extend-native: warn
   no-extra-bind: warn
   no-extra-label: warn
   no-fallthrough: warn
+  no-floating-decimal: warn
+  no-global-assign: error
+  no-implicit-coercion: [ warn, { allow: [ '+' ] } ]
+  no-implicit-globals: warn
+  no-implied-eval: 'off'
+  '@typescript-eslint/no-implied-eval': warn
+  no-invalid-this: 'off'
+  '@typescript-eslint/no-invalid-this': 'off'
+  no-iterator: warn
+  no-labels: [ warn, { allowLoop: true, allowSwitch: true } ]
   no-lone-blocks: warn
+  no-loop-func: 'off'
+  '@typescript-eslint/no-loop-func': 'off'
+  no-magic-numbers: 'off'
+  '@typescript-eslint/no-magic-numbers': 'off'
   no-multi-spaces: warn
   no-multi-str: warn
+  no-new: warn
+  no-new-func: 'off'
   no-new-wrappers: warn
+  no-nonoctal-decimal-escape: error
   no-octal: error
   no-octal-escape: error
   no-param-reassign: warn
+  no-proto: 'off'
+  no-redeclare: 'off'
   '@typescript-eslint/no-redeclare': error
+  no-restricted-properties: 'off'
+  no-return-assign: 'off'
+  no-return-await: 'off'
   '@typescript-eslint/return-await': warn
+  no-script-url: 'off'
   no-self-assign: warn
   no-self-compare: warn
   no-sequences: warn
   no-throw-literal: warn
+  '@typescript-eslint/no-throw-literal': warn
   no-unmodified-loop-condition: warn
-  '@typescript-eslint/no-unused-expressions': [ warn, { allowShortCircuit: true, allowTernary: true } ]
+  no-unused-expressions: 'off'
+  '@typescript-eslint/no-unused-expressions':
+    - warn
+    - allowShortCircuit: true
+      allowTernary: true
   no-unused-labels: warn
   no-useless-call: warn
   no-useless-catch: warn
   no-useless-concat: warn
   no-useless-escape: warn
   no-useless-return: warn
+  no-void: [ warn, { allowAsStatement: true } ]
+  no-warning-comments: 'off'
   no-with: warn
   prefer-named-capture-group: warn
   prefer-promise-reject-errors: warn
   prefer-regex-literals: warn
   radix: warn
+  require-await: 'off'
   '@typescript-eslint/require-await': warn
+  require-unicode-regexp: 'off'
+  vars-on-top: 'off'
+  wrap-iife: 'off'
   yoda: warn
 
+  # Strict Mode
+  strict: warn
+
+  # Variables
+  init-declarations: 'off'
+  '@typescript-eslint/init-declarations': 'off'
   no-delete-var: warn
   no-label-var: warn
+  no-restricted-globals: 'off'
+  no-shadow: 'off'
+  '@typescript-eslint/no-shadow': 'off'
+  no-shadow-restricted-names: 'off'
+  no-undef: 'off'
   no-undef-init: warn
+  no-undefined: 'off'
+  no-unused-vars: 'off'
   '@typescript-eslint/no-unused-vars': [ warn, { argsIgnorePattern: '^_' } ]
+  no-use-before-define: 'off'
+  '@typescript-eslint/no-use-before-define': 'off'
 
-  handle-callback-err: warn
-  no-buffer-constructor: warn
-  no-mixed-requires: warn
-  no-new-require: warn
-
+  # Stylistic Issues
   array-bracket-newline: [ warn, consistent ]
   array-bracket-spacing: [ warn, always ]
+  array-element-newline: 'off'
   block-spacing: warn
+  brace-style: 'off'
   '@typescript-eslint/brace-style': [ warn, 1tbs, { allowSingleLine: true } ]
   camelcase: warn
-  comma-dangle: [ warn, always-multiline ]
+  capitalized-comments: 'off'
+  comma-dangle: 'off'
+  '@typescript-eslint/comma-dangle': [ warn, always-multiline ]
+  comma-spacing: 'off'
   '@typescript-eslint/comma-spacing': warn
   comma-style: warn
   computed-property-spacing: warn
+  consistent-this: 'off'
   eol-last: warn
+  func-call-spacing: 'off'
   '@typescript-eslint/func-call-spacing': warn
   func-name-matching: warn
+  func-names: 'off'
+  func-style: 'off'
+  # function-call-argument-newline: [ warn, consistent ]
+  # function-paren-newline: [ warn, multiline ]
+  id-denylist: [ warn, i, j ]
+  id-length: 'off'
+  id-match: 'off'
+  implicit-arrow-linebreak: 'off'
+  indent: 'off'
+  '@typescript-eslint/indent':
+    - warn
+    - tab
+    - SwitchCase: 1
+      flatTernaryExpressions: true
+      ignoredNodes:
+      - 'TSTypeAliasDeclaration TSFunctionType *'
+  jsx-quotes: warn
   key-spacing: [ warn, { mode: strict } ]
-  keyword-spacing: warn
+  keyword-spacing: 'off'
+  '@typescript-eslint/keyword-spacing': warn
+  line-comment-position: 'off'
   linebreak-style: warn
+  # https://github.com/typescript-eslint/typescript-eslint/issues/1150
+  # lines-around-comment:
+  #  - warn
+  #  - allowArrayStart: true
+  #    allowBlockStart: true
+  #    allowClassStart: true
+  #    allowObjectStart: true
+  lines-between-class-members: 'off'
+  '@typescript-eslint/lines-between-class-members': [ warn, always, { exceptAfterSingleLine: true } ]
+  max-depth: 'off'
+  max-len: 'off'
+  max-lines: 'off'
+  max-lines-per-function: 'off'
+  max-nested-callbacks: 'off'
+  max-params: 'off'
+  max-statements: 'off'
+  max-statements-per-line: 'off'
+  multiline-comment-style: 'off'
+  # multiline-ternary: [ warn, always-multiline ]
+  new-cap: 'off'
+  new-parens: 'off' # Doesn't work with TypeScript, i.e. `new Map<string, string>;` is invalid
+  newline-per-chained-call: 'off'
+  no-array-constructor: 'off'
+  '@typescript-eslint/no-array-constructor': warn
+  no-bitwise: 'off'
+  no-continue: 'off'
+  no-inline-comments: 'off'
   no-lonely-if: warn
-  no-mixed-spaces-and-tabs: [ warn, smart-tabs ]
+  no-mixed-operators:
+    - warn
+    - allowSamePrecedence: true
+      groups:
+        - [ '&', '^', '~', '<<', '>>', '>>>' ]
+        - [ '==', '!=', '===', '!==', '>', '>=', '<', '<=' ]
+        - [ '&&', '||' ]
+        - [ 'in', 'instanceof' ]
+  no-mixed-spaces-and-tabs: warn
+  no-multi-assign: 'off'
+  no-multiple-empty-lines: [ warn, { max: 1, maxBOF: 0, maxEOF: 0 } ]
   no-negated-condition: warn
+  no-nested-ternary: 'off'
   no-new-object: warn
+  no-plusplus: 'off'
+  no-restricted-syntax: 'off'
   no-tabs: [ warn, { allowIndentationTabs: true } ]
+  no-ternary: 'off'
   no-trailing-spaces: warn
+  no-underscore-dangle: 'off'
   no-unneeded-ternary: warn
   no-whitespace-before-property: warn
   nonblock-statement-body-position: warn
   object-curly-newline: [ warn, { consistent: true } ]
-  object-curly-spacing: [ warn, always ]
+  object-curly-spacing: 'off'
+  '@typescript-eslint/object-curly-spacing': [ warn, always ]
+  # object-property-newline: [ warn, { allowAllPropertiesOnSameLine: true } ]
+  one-var: [ warn, never ]
+  one-var-declaration-per-line: warn
   operator-assignment: warn
+  operator-linebreak:
+    - warn
+    - after
+  padded-blocks: 'off'
+  padding-line-between-statements: warn
   prefer-exponentiation-operator: warn
   prefer-object-spread: warn
+  quote-props: [ warn, as-needed ]
+  quotes: 'off'
   '@typescript-eslint/quotes': [ warn, single, { avoidEscape: true } ]
+  semi: 'off'
   '@typescript-eslint/semi': [ warn, always, { omitLastInOneLineBlock: true } ]
   semi-spacing: warn
+  semi-style: warn
+  sort-keys: 'off'
+  sort-vars: 'off'
   space-before-blocks: warn
+  space-before-function-paren: 'off'
   '@typescript-eslint/space-before-function-paren': [ warn, {
     anonymous: never,
     named: never,
     asyncArrow: never,
   } ]
   space-in-parens: warn
-  space-infix-ops: warn
+  space-infix-ops: 'off'
+  '@typescript-eslint/space-infix-ops': warn
   space-unary-ops: warn
+  spaced-comment: 'off'
   switch-colon-spacing: warn
   template-tag-spacing: warn
-  unicode-bom: warn
+  unicode-bom: error
+  wrap-regex: 'off'
 
+  # ECMAScript 6
   arrow-body-style: warn
   arrow-parens: [ warn, as-needed ]
   arrow-spacing: warn
   constructor-super: error
   generator-star-spacing: warn
   no-class-assign: warn
+  no-confusing-arrow: 'off'
   no-const-assign: error
+  no-dupe-class-members: 'off'
   '@typescript-eslint/no-dupe-class-members': error
-  no-duplicate-imports: warn
+  no-duplicate-imports: 'off'
+  '@typescript-eslint/no-duplicate-imports': warn
   no-new-symbol: warn
+  no-restricted-exports: 'off'
+  no-restricted-imports: 'off'
   no-this-before-super: warn
   no-useless-computed-key: warn
+  no-useless-constructor: 'off'
   '@typescript-eslint/no-useless-constructor': warn
   no-useless-rename: warn
   no-var: warn
@@ -164,39 +344,92 @@ rules:
   prefer-numeric-literals: warn
   prefer-rest-params: warn
   prefer-spread: warn
+  # prefer-template: warn # `@typescript-eslint/restrict-plus-operands` is better anyway
   require-yield: warn
   rest-spread-spacing: warn
+  # TODO
+  # sort-imports: warn # TODO
+  symbol-description: warn
   template-curly-spacing: warn
   yield-star-spacing: warn
 
+  # TypeScript
   '@typescript-eslint/adjacent-overload-signatures': warn
   '@typescript-eslint/array-type': warn
   '@typescript-eslint/await-thenable': warn
+  '@typescript-eslint/ban-ts-comment': 'off'
+  '@typescript-eslint/ban-tslint-comment': 'off'
+  '@typescript-eslint/ban-types': 'off'
+  '@typescript-eslint/class-literal-property-style': 'off'
+  '@typescript-eslint/consistent-indexed-object-style': warn
   '@typescript-eslint/consistent-type-assertions': warn
+  '@typescript-eslint/consistent-type-definitions': 'off'
+  '@typescript-eslint/consistent-type-imports': 'off'
+  '@typescript-eslint/explicit-function-return-type': 'off'
+  # '@typescript-eslint/explicit-member-accessibility': [ warn, { accessibility: no-public } ]
+  '@typescript-eslint/explicit-module-boundary-types': 'off'
   '@typescript-eslint/member-delimiter-style': warn
+  # '@typescript-eslint/member-ordering': warn # TODO
+  '@typescript-eslint/method-signature-style': 'off'
+  '@typescript-eslint/naming-convention': 'off'
   '@typescript-eslint/no-base-to-string': warn
+  '@typescript-eslint/no-confusing-non-null-assertion': warn
+  '@typescript-eslint/no-confusing-void-expression': 'off'
+  '@typescript-eslint/no-dynamic-delete': 'off'
+  '@typescript-eslint/no-empty-interface': 'off'
+  '@typescript-eslint/no-explicit-any': 'off'
   '@typescript-eslint/no-extra-non-null-assertion': warn
+  '@typescript-eslint/no-extraneous-class': warn
   '@typescript-eslint/no-floating-promises': warn
   '@typescript-eslint/no-for-in-array': warn
+  '@typescript-eslint/no-implicit-any-catch': 'off'
   '@typescript-eslint/no-inferrable-types': warn
+  '@typescript-eslint/no-invalid-void-type': 'off'
   '@typescript-eslint/no-misused-new': warn
   '@typescript-eslint/no-misused-promises': warn
   '@typescript-eslint/no-namespace': warn
+  '@typescript-eslint/no-non-null-assertion': 'off'
   '@typescript-eslint/no-non-null-asserted-optional-chain': warn
+  '@typescript-eslint/no-parameter-properties': 'off'
+  '@typescript-eslint/no-require-imports': 'off'
+  '@typescript-eslint/no-this-alias': error
+  '@typescript-eslint/no-type-alias': 'off'
   '@typescript-eslint/no-unnecessary-boolean-literal-compare': warn
+  '@typescript-eslint/no-unnecessary-condition': [ warn, { allowConstantLoopConditions: true } ]
   '@typescript-eslint/no-unnecessary-qualifier': warn
   '@typescript-eslint/no-unnecessary-type-arguments': warn
   '@typescript-eslint/no-unnecessary-type-assertion': warn
+  '@typescript-eslint/no-unnecessary-type-constraint': warn
+  '@typescript-eslint/no-unsafe-argument': 'off'
+  '@typescript-eslint/no-unsafe-assignment': 'off'
+  '@typescript-eslint/no-unsafe-call': 'off'
+  '@typescript-eslint/no-unsafe-member-access': 'off'
+  '@typescript-eslint/no-var-requires': 'off'
+  '@typescript-eslint/non-nullable-type-assertion-style': warn
   '@typescript-eslint/prefer-as-const': warn
+  '@typescript-eslint/prefer-enum-initializers': warn
   '@typescript-eslint/prefer-for-of': warn
+  '@typescript-eslint/prefer-function-type': warn
   '@typescript-eslint/prefer-includes': warn
+  '@typescript-eslint/prefer-literal-enum-member': warn
+  '@typescript-eslint/prefer-namespace-keyword': warn
   '@typescript-eslint/prefer-nullish-coalescing': warn
   '@typescript-eslint/prefer-optional-chain': warn
   '@typescript-eslint/prefer-readonly': warn
+  '@typescript-eslint/prefer-readonly-parameter-types': 'off'
+  '@typescript-eslint/prefer-reduce-type-parameter': warn
   '@typescript-eslint/prefer-regexp-exec': warn
   '@typescript-eslint/prefer-string-starts-ends-with': warn
+  '@typescript-eslint/prefer-ts-expect-error': warn
+  '@typescript-eslint/promise-function-async': 'off'
+  '@typescript-eslint/require-array-sort-compare': 'off'
   '@typescript-eslint/restrict-plus-operands': warn
-  '@typescript-eslint/strict-boolean-expressions': [ off, { allowNullableBoolean: true, allowNullableObject: true } ]
+  # '@typescript-eslint/restrict-template-expressions': [ warn, { allowAny: true, allowBoolean: true, allowNullish: true, allowNumber: true } ]
+  '@typescript-eslint/sort-type-union-intersection-members': 'off'
+  '@typescript-eslint/strict-boolean-expressions': 'off'
   '@typescript-eslint/switch-exhaustiveness-check': warn
+  '@typescript-eslint/triple-slash-reference': warn
   '@typescript-eslint/type-annotation-spacing': warn
+  '@typescript-eslint/typedef': 'off'
+  '@typescript-eslint/unbound-method': 'off'
   '@typescript-eslint/unified-signatures': warn

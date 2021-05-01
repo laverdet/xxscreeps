@@ -50,7 +50,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * @param opts An object with additional options:
 	 *   `filter` - The result list will be filtered using the Lodash.filter method.
 	 */
-	 find<Type extends FindConstants>(type: Type, options: RoomFindOptions<FindType<Type>> = {}): FindType<Type>[] {
+	find<Type extends FindConstants>(type: Type, options: RoomFindOptions<FindType<Type>> = {}): FindType<Type>[] {
 		// Check find cache
 		const results = getOrSet(this.#findCache, type, () => findHandlers.get(type)?.(this) ?? []);
 

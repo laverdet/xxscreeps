@@ -98,9 +98,11 @@ export class Game extends GameBase {
 		getUsed: () => 0,
 		getHeapStatistics: () => 0,
 	};
+
 	gcl = {
 		level: 1,
 	};
+
 	market = {
 		orders: [],
 		getAllOrders: () => [],

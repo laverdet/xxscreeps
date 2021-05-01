@@ -75,8 +75,8 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 
 			plugins: [
 				new Webpack.DefinePlugin({
-					'module': '{require:()=>({})}',
-					'process': '({cwd:()=>".",version:""})',
+					module: '{require:()=>({})}',
+					process: '({cwd:()=>".",version:""})',
 				}),
 			],
 

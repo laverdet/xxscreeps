@@ -60,7 +60,7 @@ export class IntentManager {
 	 * Save a local room intent.. I think this is literally only "createConstructionSite".
 	 */
 	pushLocal<
-		Action extends IntentsForReceiver<Room>
+		Action extends IntentsForReceiver<Room>,
 	>(room: Room, intent: Action, ...args: IntentParameters<Room, Action>) {
 		const intents = this.makeIntentsForRoom(room.name).local[intent] ??= [] as never;
 		this.cpu += kCpuCost;

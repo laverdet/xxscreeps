@@ -6,7 +6,7 @@ import * as User from 'xxscreeps/engine/metadata/user';
 import { createSandbox, Sandbox } from 'xxscreeps/driver/sandbox';
 import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/model/processor';
 import { loadUserFlagBlob, saveUserFlagBlobForNextTick } from 'xxscreeps/mods/flag/model';
-import { getConsoleChannel, loadUserMemoryBlob, saveVisualsBlob } from 'xxscreeps/engine/model/user';
+import { getConsoleChannel, loadUserMemoryBlob } from 'xxscreeps/engine/model/user';
 import { exchange } from 'xxscreeps/utility/utility';
 import { getRunnerUserChannel, RunnerIntent, RunnerUserMessage } from './channel';
 

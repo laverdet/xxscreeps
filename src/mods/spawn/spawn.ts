@@ -65,11 +65,13 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 	[RoomObject.AddToMyGame](game: GameConstructor) {
 		game.spawns[this.name] = this;
 	}
+
 	[RoomObject.AfterInsert](room: Room) {
 		super[RoomObject.AfterInsert](room);
 		room.energyAvailable += this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable += this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
+
 	[RoomObject.AfterRemove](room: Room) {
 		super[RoomObject.AfterRemove](room);
 		room.energyAvailable -= this.store[C.RESOURCE_ENERGY];
@@ -97,7 +99,7 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 		return chainIntentChecks(
 			() => checkSpawnCreep(this, body, name, directions, options.energyStructures ?? null),
 			() => {
-				if (options.dryRun == true) {
+				if (options.dryRun) {
 					return C.OK;
 				}
 

@@ -145,9 +145,9 @@ export const BOOSTS = {
 		XZHO2: { fatigue: 4 },
 	},
 	tough: {
-		GO: { damage: .7 },
-		GHO2: { damage: .5 },
-		XGHO2: { damage: .3 },
+		GO: { damage: 0.7 },
+		GHO2: { damage: 0.5 },
+		XGHO2: { damage: 0.3 },
 	},
 } as const;
 

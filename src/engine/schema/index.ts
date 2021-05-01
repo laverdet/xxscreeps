@@ -16,7 +16,6 @@ type FormatForPath<Path extends string> = WithKey<Path> extends AllFormatsByPath
 	Extract<AllFormatsByPath, WithKey<Path>>[Path] : unknown;
 export interface Schema {}
 
-
 // Returns augmented formats as array that can be spread into enumerated declarations
 type ExtractEnumeratedSchema<Format> = Format extends WithType<infer Type> ? Type[] : never[];
 export function enumeratedForPath<Path extends string>(path: Path): ExtractEnumeratedSchema<FormatForPath<Path>> {

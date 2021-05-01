@@ -57,8 +57,9 @@ function withStore(object: any) {
 
 // Load JSON data and connect to blob storage
 const db = new Loki(jsonSource);
-await new Promise<void>((resolve, reject) =>
-	db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve()));
+await new Promise<void>((resolve, reject) => {
+	db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve());
+});
 
 // Collect env data
 const env = db.getCollection('env').findOne().data;
@@ -146,9 +147,9 @@ const users = db.getCollection('users').find().map(user => {
 		cpuAvailable: user.cpuAvailable,
 		gcl: user.gcl,
 		badge: user.badge === undefined ? '' : JSON.stringify(user.badge),
-		roomsControlled: (roomsControlled.get(user._id) ?? new Set),
-		roomsPresent: (roomsPresent.get(user._id) ?? new Set),
-		roomsVisible: (roomsVisible.get(user._id) ?? new Set),
+		roomsControlled: roomsControlled.get(user._id) ?? new Set,
+		roomsPresent: roomsPresent.get(user._id) ?? new Set,
+		roomsVisible: roomsVisible.get(user._id) ?? new Set,
 		code: {
 			branch: Fn.firstMatching(code, code => code.activeWorld)?._id ?? null,
 			branches: code.map(row => ({

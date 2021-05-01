@@ -42,8 +42,10 @@ export class GameMap {
 
 	constructor(terrain: TerrainByRoom) {
 		this.#terrain = terrain;
-		let maxX = -Infinity, minX = Infinity;
-		let maxY = -Infinity, minY = Infinity;
+		let maxX = -Infinity;
+		let minX = Infinity;
+		let maxY = -Infinity;
+		let minY = Infinity;
 		for (const roomName of terrain.keys()) {
 			const room = parseRoomName(roomName);
 			maxX = Math.max(room.rx, maxX);

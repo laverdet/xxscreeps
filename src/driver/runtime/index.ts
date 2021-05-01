@@ -58,6 +58,7 @@ export function tick(data: TickPayload) {
 		// Run console expressions
 		data.consoleEval?.map(expr => {
 			try {
+				// eslint-disable-next-line @typescript-eslint/no-implied-eval
 				print(0, inspect(new Function('expr', 'return eval(expr)')(expr), { colors: true }), true);
 			} catch (err) {
 				print(2, err.stack, true);

@@ -201,9 +201,8 @@ export function initializeWorker(worker: Worker) {
 			// Incoming request from child
 			case 'responderRequest': {
 				const { clientId, method, payload, requestId } = message;
-				const host: undefined | {
-					[key: string]: (...args: any) => Promise<any>;
-				} = responderHostsByClientId.get(clientId) as any;
+				const host: undefined | Record<string, (...args: any) => Promise<any>> =
+					responderHostsByClientId.get(clientId) as any;
 				const request = host === undefined ?
 					Promise.reject(new Error('Responder has gone away')) :
 					host[method](...payload);

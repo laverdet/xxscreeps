@@ -15,14 +15,15 @@ export const CLAIM = 'claim' as const;
 export const MAX_CREEP_SIZE = 50;
 
 export const BODYPART_COST = {
-	'move': 50,
-	'work': 100,
-	'attack': 80,
-	'carry': 50,
-	'heal': 250,
-	'ranged_attack': 150,
-	'tough': 10,
-	'claim': 600,
+	move: 50,
+	work: 100,
+	attack: 80,
+	carry: 50,
+	heal: 250,
+	// eslint-disable-next-line camelcase
+	ranged_attack: 150,
+	tough: 10,
+	claim: 600,
 };
 export const BODYPARTS_ALL = [ MOVE, WORK, CARRY, ATTACK, RANGED_ATTACK, TOUGH, HEAL, CLAIM ];
 

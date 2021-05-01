@@ -23,6 +23,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		const flags = memory.flags ??= {};
 		return flags[this.name] ??= {};
 	}
+
 	get [LookType]() { return C.LOOK_FLAGS }
 
 	/**

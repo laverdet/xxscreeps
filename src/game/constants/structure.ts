@@ -61,7 +61,7 @@ export const FACTORY_CAPACITY = 50000;
 
 export const RUIN_DECAY = 500;
 export const RUIN_DECAY_STRUCTURES = {
-	'powerBank': 10,
+	powerBank: 10,
 };
 
 export const STRONGHOLD_RAMPART_HITS = [ 0, 100000, 200000, 500000, 1000000, 2000000 ];

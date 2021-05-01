@@ -5,13 +5,13 @@ export const HARVEST_MINERAL_POWER = 1;
 
 export const MINERAL_REGEN_TIME = 50000;
 export const MINERAL_MIN_AMOUNT = {
-	'H': 35000,
-	'O': 35000,
-	'L': 35000,
-	'K': 35000,
-	'Z': 35000,
-	'U': 35000,
-	'X': 35000,
+	H: 35000,
+	O: 35000,
+	L: 35000,
+	K: 35000,
+	Z: 35000,
+	U: 35000,
+	X: 35000,
 };
 export const MINERAL_RANDOM_FACTOR = 2;
 

@@ -17,54 +17,54 @@ declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }
 }
 const intent = registerIntentProcessor(StructureSpawn, 'spawn',
-(spawn, context, body: Creep.PartType[], name: string, energyStructureIds: string[] | null, directions: Direction[] | null) => {
+	(spawn, context, body: Creep.PartType[], name: string, energyStructureIds: string[] | null, directions: Direction[] | null) => {
 
-	// Get energy structures
-	const energyStructures = function() {
-		const filter = (structure?: RoomObject): structure is StructureExtension | StructureSpawn =>
-			structure instanceof StructureExtension || structure instanceof StructureSpawn;
-		if (energyStructureIds) {
-			return energyStructureIds.map(id => Game.getObjectById(id)).filter(filter);
-		} else {
-			const structures = spawn.room.find(C.FIND_STRUCTURES).filter(filter);
-			return structures.sort((left, right) =>
-				(left.structureType === 'extension' ? 1 : 0) - (right.structureType === 'extension' ? 1 : 0) ||
+		// Get energy structures
+		const energyStructures = function() {
+			const filter = (structure?: RoomObject): structure is StructureExtension | StructureSpawn =>
+				structure instanceof StructureExtension || structure instanceof StructureSpawn;
+			if (energyStructureIds) {
+				return energyStructureIds.map(id => Game.getObjectById(id)).filter(filter);
+			} else {
+				const structures = spawn.room.find(C.FIND_STRUCTURES).filter(filter);
+				return structures.sort((left, right) =>
+					(left.structureType === 'extension' ? 1 : 0) - (right.structureType === 'extension' ? 1 : 0) ||
 				left.pos.getRangeTo(spawn.pos) - right.pos.getRangeTo(spawn.pos));
+			}
+		}();
+
+		// Is this intent valid?
+		const canBuild = checkSpawnCreep(spawn, body, name, directions, energyStructures) === C.OK;
+		if (!canBuild) {
+			return false;
 		}
-	}();
 
-	// Is this intent valid?
-	const canBuild = checkSpawnCreep(spawn, body, name, directions, energyStructures) === C.OK;
-	if (!canBuild) {
-		return false;
-	}
-
-	// Withdraw energy
-	let cost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
-	for (const structure of energyStructures) {
-		const energyToSpend = Math.min(cost, structure.energy);
-		StoreIntent.subtract(structure.store, 'energy', energyToSpend);
-		cost -= energyToSpend;
-		if (cost === 0) {
-			break;
+		// Withdraw energy
+		let cost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
+		for (const structure of energyStructures) {
+			const energyToSpend = Math.min(cost, structure.energy);
+			StoreIntent.subtract(structure.store, 'energy', energyToSpend);
+			cost -= energyToSpend;
+			if (cost === 0) {
+				break;
+			}
 		}
-	}
 
-	// Add new creep to room objects
-	const creep = Creep.create(spawn.pos, body, name, me);
-	spawn.room[InsertObject](creep);
+		// Add new creep to room objects
+		const creep = Creep.create(spawn.pos, body, name, me);
+		spawn.room[InsertObject](creep);
 
-	// Set spawning information
-	const needTime = body.length * C.CREEP_SPAWN_TIME;
-	spawn.spawning = assign(new StructureSpawn.Spawning, {
-		directions: directions ?? [],
-		needTime,
-		[SpawnId]: spawn.id,
-		[SpawningCreepId]: creep.id,
-		[SpawnTime]: Game.time + needTime,
+		// Set spawning information
+		const needTime = body.length * C.CREEP_SPAWN_TIME;
+		spawn.spawning = assign(new StructureSpawn.Spawning, {
+			directions: directions ?? [],
+			needTime,
+			[SpawnId]: spawn.id,
+			[SpawningCreepId]: creep.id,
+			[SpawnTime]: Game.time + needTime,
+		});
+		context.didUpdate();
 	});
-	context.didUpdate();
-});
 
 registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 

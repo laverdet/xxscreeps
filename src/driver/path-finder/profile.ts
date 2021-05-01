@@ -16,7 +16,7 @@ loadTerrain(new World('test', fs.readFileSync(`${__dirname}/terrain`)));
 // Generate a deterministic CostMatrix
 const costMatrix = new CostMatrix;
 for (let ii = 0; ii < 2500; ++ii) {
-	if (ii % 7 == 0) {
+	if (ii % 7 === 0) {
 		costMatrix._bits[ii] = ii % 11;
 	}
 }

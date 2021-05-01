@@ -10,7 +10,7 @@ import { checkHarvest } from './creep';
 import { Harvestable } from './game';
 
 // `RoomObject` harvest intent processor symbol
-const ProcessHarvest = Symbol();
+const ProcessHarvest = Symbol('processHarvest');
 declare module 'xxscreeps/game/object' {
 	interface RoomObject {
 		[ProcessHarvest](creep: Creep, target: RoomObject): number;

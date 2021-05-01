@@ -28,7 +28,7 @@ declare module './room' {
 export default () => extend(Room, {
 	getEventLog(raw = false) {
 		if (raw) {
-			throw JSON.stringify(this[EventLog]);
+			return JSON.stringify(this[EventLog]);
 		} else {
 			return this[EventLog];
 		}

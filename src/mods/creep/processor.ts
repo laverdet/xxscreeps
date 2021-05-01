@@ -6,7 +6,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Game } from 'xxscreeps/game';
 import { Creep, PartType } from 'xxscreeps/mods/creep/creep';
-// eslint-disable-next-line no-duplicate-imports
+// eslint-disable-next-line @typescript-eslint/no-duplicate-imports
 import * as CreepLib from 'xxscreeps/mods/creep/creep';
 import { Direction, generateRoomName, parseRoomName, RoomPosition } from 'xxscreeps/game/position';
 import { NextDecayTime } from 'xxscreeps/mods/road/road';
@@ -161,7 +161,7 @@ export function calculatePower(creep: Creep, part: PartType, power: number) {
 
 export function calculateWeight(creep: Creep) {
 	let weight = Fn.accumulate(creep.body, part =>
-		(part.type === C.CARRY || part.type === C.MOVE) ? 0 : 1);
+		part.type === C.CARRY || part.type === C.MOVE ? 0 : 1);
 	weight += Math.ceil(creep.carry.getUsedCapacity() / C.CARRY_CAPACITY);
 	return weight;
 }

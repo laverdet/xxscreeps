@@ -74,10 +74,10 @@ export function dispatch(room: Room) {
 		}));
 
 		// Pick the object to win this movement
-		const first = Fn.minimum(contenders, (left, right) => (
+		const first = Fn.minimum(contenders, (left, right) =>
 			right.movingInto - left.movingInto ||
-			right.power - left.power
-		))!;
+			right.power - left.power,
+		)!;
 		first.mover[NextPosition] = nextPosition;
 		movingObjects.push(first.mover);
 	}

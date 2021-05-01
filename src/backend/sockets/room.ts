@@ -17,7 +17,7 @@ function diff(previous: any, next: any) {
 		return;
 	}
 	if (previous == null || next == null || typeof previous !== typeof next) {
-		return (next == null) ? null : next;
+		return next == null ? null : next;
 	}
 	if (typeof previous === 'object') {
 		const result: any = {};

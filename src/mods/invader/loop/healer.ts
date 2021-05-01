@@ -35,7 +35,7 @@ export default function(creep: Creep, healers: Creep[]) {
 			return;
 		}
 		target = creep.pos.findClosestByRange(C.FIND_MY_CREEPS, {
-			filter: ii => ii !== creep && ii.getActiveBodyparts(C.HEAL) == 0,
+			filter: ii => ii !== creep && ii.getActiveBodyparts(C.HEAL) === 0,
 		});
 	}
 	if (!target) {

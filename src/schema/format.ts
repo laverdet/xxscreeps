@@ -153,9 +153,7 @@ WithShapeAndType<ShapeOf<Type> | undefined, TypeOf<Type> | undefined> {
 }
 
 // Structure / object type
-type StructDeclaration = WithVariant | {
-	[key: string]: Format;
-};
+type StructDeclaration = WithVariant | Record<string, Format>;
 
 type StructDeclarationShape<
 	Type extends StructDeclaration,
@@ -219,8 +217,8 @@ export function vector<Type extends Format>(element: Type): WithShapeAndType<Ite
 
 // If a conditional type works itself out to WithType<never> this will provide a fallback
 export function withFallback<Fallback>() {
-	return <Type extends Format>(format: Type):
-		Type extends WithType<never> ? WithShapeAndType<Fallback> : Type => format as never;
+	return <Type extends Format>(format: Type): Type extends WithType<never> ?
+		WithShapeAndType<Fallback> : Type => format as never;
 }
 
 // Cast the type of a format to something else

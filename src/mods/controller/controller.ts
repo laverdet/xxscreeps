@@ -42,6 +42,7 @@ export class StructureController extends withOverlay(Structure.Structure, shape)
 		super[RoomObject.AfterInsert](room);
 		room.controller = this;
 	}
+
 	[RoomObject.AfterRemove](room: Room) {
 		super[RoomObject.AfterRemove](room);
 		room.controller = undefined;

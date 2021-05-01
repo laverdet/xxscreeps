@@ -8,7 +8,6 @@ import { SortedSet } from './sorted-set';
 import { registerStorageProvider } from '..';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
-
 registerStorageProvider([ 'file', 'local' ], 'keyval', async url => {
 	try {
 		return await connect(LocalKeyValProviderClient, `${url}`);
@@ -93,16 +92,16 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 				if (value === this.data) {
 					return {
 						'#': 'map',
-						'$': Object.fromEntries(Fn.reject(this.data.entries(), entry => this.expires.has(entry[0]))),
+						$: Object.fromEntries(Fn.reject(this.data.entries(), entry => this.expires.has(entry[0]))),
 					};
 				} else if (value instanceof Map) {
-					return { '#': 'map', '$': Object.fromEntries(value.entries()) };
+					return { '#': 'map', $: Object.fromEntries(value.entries()) };
 				} else if (value instanceof Set) {
-					return { '#': 'set', '$': [ ...value ] };
+					return { '#': 'set', $: [ ...value ] };
 				} else if (value instanceof SortedSet) {
-					return { '#': 'zset', '$': [ ...value.entries() ] };
+					return { '#': 'zset', $: [ ...value.entries() ] };
 				} else if (value instanceof Uint8Array) {
-					return { '#': 'uint8', '$': typedArrayToString(value) };
+					return { '#': 'uint8', $: typedArrayToString(value) };
 				} else {
 					return value;
 				}

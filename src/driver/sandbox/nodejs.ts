@@ -43,7 +43,7 @@ export class NodejsSandbox {
 		const runtime: Runtime = script.runInContext(context);
 		delete context.nodeUtilImport;
 		delete context[pf.path];
-		const evaluate: Evaluate = (source, filename) => (new vm.Script(source, { filename })).runInContext(context);
+		const evaluate: Evaluate = (source, filename) => new vm.Script(source, { filename }).runInContext(context);
 		runtime.initialize(evaluate, print, data);
 		context._tick = runtime.tick;
 		const wrappedTick: Runtime['tick'] = function(...args) {

@@ -18,14 +18,14 @@ declare module 'xxscreeps/processor' {
 
 const intents = [
 	registerIntentProcessor(Room, 'createConstructionSite',
-	(room, context, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
-		const pos = new RoomPosition(xx, yy, room.name);
-		if (checkCreateConstructionSite(room, pos, structureType) === C.OK) {
-			const site = create(pos, structureType, me, name);
-			room[InsertObject](site);
-			context.didUpdate();
-		}
-	}),
+		(room, context, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
+			const pos = new RoomPosition(xx, yy, room.name);
+			if (checkCreateConstructionSite(room, pos, structureType) === C.OK) {
+				const site = create(pos, structureType, me, name);
+				room[InsertObject](site);
+				context.didUpdate();
+			}
+		}),
 
 	registerIntentProcessor(Creep, 'build', (creep, context, id: string) => {
 		const target = Game.getObjectById<ConstructionSite>(id)!;

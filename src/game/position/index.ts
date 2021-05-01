@@ -21,7 +21,6 @@ export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameT
 type FindClosestByPathOptions<Type> =
 	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;
 
-
 type PositionFindType<Type> =
 	Type extends (infer Result)[] ? Result :
 	Type extends FindConstants ? FindType<Type> :
@@ -87,9 +86,10 @@ export class RoomPosition {
 	/**
 	 * The name of the room.
 	 */
-	 get roomName() {
+	get roomName() {
 		return generateRoomNameFromId(this[PositionInteger] & 0xffff);
 	}
+
 	set roomName(roomName: string) {
 		const { rx, ry } = parseRoomName(roomName);
 		if (
@@ -107,6 +107,7 @@ export class RoomPosition {
 	get x() {
 		return (this[PositionInteger] >>> 16) & 0xff;
 	}
+
 	set x(xx: number) {
 		if (!(xx >= 0 && xx < 50)) {
 			throw new TypeError('Invalid `x`');
@@ -120,6 +121,7 @@ export class RoomPosition {
 	get y() {
 		return this[PositionInteger] >>> 24;
 	}
+
 	set y(yy: number) {
 		if (!(yy >= 0 && yy < 50)) {
 			throw new TypeError('Invalid `y`');
@@ -243,7 +245,8 @@ export class RoomPosition {
 		options?: RoomFindOptions<PositionFindType<Type>>,
 	): PositionFindType<Type> | null;
 	findClosestByRange(
-		search: FindConstants | (RoomObject | RoomPosition)[], options?: RoomFindOptions,
+		search: FindConstants | (RoomObject | RoomPosition)[],
+		options?: RoomFindOptions,
 	) {
 
 		// Find objects to search
@@ -384,7 +387,8 @@ export function fetchPositionArgument<Extra = any>(
 }
 
 export function fetchPositionArgumentRest<Rest extends any[]>(
-	fromRoom: string, arg1: any, arg2: any, ...rest: Rest
+	fromRoom: string,
+	arg1: any, arg2: any, ...rest: Rest
 ): { pos?: RoomPosition; rest: Rest } {
 	if (typeof arg1 === 'object') {
 		if (arg1 instanceof RoomPosition) {

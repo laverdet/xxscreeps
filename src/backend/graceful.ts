@@ -1,6 +1,6 @@
+import type { IncomingMessage, Server, ServerResponse } from 'http';
 import type { Socket } from 'net';
 import type sockjs from 'sockjs';
-import { IncomingMessage, Server, ServerResponse } from 'http';
 
 type Options = {
 	timeout?: number;

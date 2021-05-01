@@ -48,9 +48,9 @@ export class Terrain {
 	get(xx: number, yy: number) {
 		const index = yy * 50 + xx;
 		if (index >= 0 && index < 2500) {
-			return (this.#buffer[index >>> 2] >>> ((index & 0x03) << 1) & 0x03);
+			return (this.#buffer[index >>> 2] >>> ((index & 0x03) << 1)) & 0x03;
 		}
-		return NaN as never;
+		return NaN;
 	}
 
 	/**

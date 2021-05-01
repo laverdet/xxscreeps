@@ -36,7 +36,7 @@ registerObjectTickProcessor(Mineral, (mineral, context) => {
 			mineral.mineralAmount = C.MINERAL_DENSITY[mineral.density] ?? 0;
 			if (
 				mineral.density === C.DENSITY_LOW ||
-				mineral.density == C.DENSITY_ULTRA ||
+				mineral.density === C.DENSITY_ULTRA ||
 				Math.random() < C.MINERAL_DENSITY_CHANGE
 			) {
 				// Unaccumulate probability from constants

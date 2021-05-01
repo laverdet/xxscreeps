@@ -84,7 +84,6 @@ declare module './room' {
 		lookForAtArea<Type extends LookConstants>(type: Type, top: number, left: number, bottom: number, right: number, asArray?: false): LookAtArea<LookForAtArea<Type>>;
 		lookForAtArea<Type extends LookConstants>(type: Type, top: number, left: number, bottom: number, right: number, asArray: boolean): LookAsArray<LookForAtArea<Type>>;
 
-
 		/**
 		 * Creates a RoomPosition object at the specified location.
 		 */

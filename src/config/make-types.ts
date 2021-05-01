@@ -26,7 +26,7 @@ const tsconfig = `{
 		"strict": false,
 	},
 	"include": [ "backend", "config", "driver", "engine", "game", "processor", "schema", "storage", "utility", ${Object.keys(mods).map(url =>
-		JSON.stringify(fileURLToPath(new URL('.', url)).replace(/.+\/xxscreeps\/dist\/mods/, 'mods')))} ],
+		JSON.stringify(fileURLToPath(new URL('.', url)).replace(/.+\/xxscreeps\/dist\/mods/, 'mods'))).join(', ')} ],
 }`;
 const tmpPath = `${rootDir}/tsconfig.types.json`;
 await fs.writeFile(tmpPath, tsconfig, { encoding: 'utf8', flag: 'w' });
@@ -52,24 +52,25 @@ async function readAndUnlink(file: string) {
 const dts = await readAndUnlink(`${rootDir}/screeps.exports.d.ts`);
 const dtsMap = await readAndUnlink(`${rootDir}/screeps.exports.d.ts.map`);
 await fs.mkdir('screeps/types', { recursive: true });
-await fs.writeFile('screeps/types/screeps.exports.d.ts', dts
-	// Fix module path names
-	.replace(/(from|import|module) "/g, '$1 "xxscreeps/')
-	.replace(/(from|import|module) "xxscreeps\/xxscreeps/g, '$1 "xxscreeps')
-	// Fix import "foo/index" emit issue
-	.replace(/\/index"/g, '"')
-	// Remove <reference />
-	.replace(/^\/\/\/ <reference.+/gm, '')
-	// Break up file by block comments
-	.split(/(\/\*[^]*?\*\/)/g)
-	.map((val, ii) => {
-		if (ii % 2) {
-			return val;
-		} else {
-			// Insert @ts-ignore comments on every line (!)
-			return val.replace(/\n/g, '// @ts-ignore\n');
-		}
-	}).join(''),
+await fs.writeFile('screeps/types/screeps.exports.d.ts',
+	dts
+		// Fix module path names
+		.replace(/(from|import|module) "/g, '$1 "xxscreeps/')
+		.replace(/(from|import|module) "xxscreeps\/xxscreeps/g, '$1 "xxscreeps')
+		// Fix import "foo/index" emit issue
+		.replace(/\/index"/g, '"')
+		// Remove <reference />
+		.replace(/^\/\/\/ <reference.+/gm, '')
+		// Break up file by block comments
+		.split(/(\/\*[^]*?\*\/)/g)
+		.map((val, ii) => {
+			if (ii % 2) {
+				return val;
+			} else {
+				// Insert @ts-ignore comments on every line (!)
+				return val.replace(/\n/g, '// @ts-ignore\n');
+			}
+		}).join(''),
 	'utf8');
 await fs.writeFile('screeps/types/screeps.exports.d.ts.map', dtsMap);
 

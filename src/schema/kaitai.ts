@@ -94,16 +94,16 @@ export class KaitaiArchiver {
 	private archive(id: string, holder: KaitaiArchiver, layout: Layout): void {
 		if (typeof layout === 'string') {
 			const { type, size } = {
-				'bool': { type: 's1', size: 1 },
-				'double': { type: 'f8', size: 8 },
-				'int8': { type: 's1', size: 1 },
-				'int16': { type: 's2', size: 2 },
-				'int32': { type: 's4', size: 4 },
-				'uint8': { type: 'u1', size: 1 },
-				'uint16': { type: 'u2', size: 2 },
-				'uint32': { type: 'u4', size: 4 },
-				'buffer': { type: 'buffer', size: 8 },
-				'string': { type: 'js_str', size: 8 },
+				bool: { type: 's1', size: 1 },
+				double: { type: 'f8', size: 8 },
+				int8: { type: 's1', size: 1 },
+				int16: { type: 's2', size: 2 },
+				int32: { type: 's4', size: 4 },
+				uint8: { type: 'u1', size: 1 },
+				uint16: { type: 'u2', size: 2 },
+				uint32: { type: 'u4', size: 4 },
+				buffer: { type: 'buffer', size: 8 },
+				string: { type: 'js_str', size: 8 },
 			}[layout];
 			if (type === 'buffer') {
 				if (!this.top.types.has('buffer')) {

@@ -53,6 +53,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 		const creeps = memory.creeps ?? (memory.creeps = {});
 		return creeps[this.name] ?? (creeps[this.name] = {});
 	}
+
 	get my() { return this[RoomObject.Owner] === me }
 	get owner() { return this[RoomObject.Owner] }
 	get spawning() { return this._ageTime === 0 }
@@ -121,8 +122,8 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 		// Find current position
 		type AnyPosition = RoomPosition | RoomPath[number];
 		const convert = (entry: AnyPosition) =>
-			entry instanceof RoomPosition ? entry :
-			new RoomPosition(entry.x, entry.y, this.pos.roomName);
+			entry instanceof RoomPosition ?
+				entry : new RoomPosition(entry.x, entry.y, this.pos.roomName);
 		let ii = path.findIndex((pos: AnyPosition) => this.pos.isEqualTo(convert(pos)));
 		if (ii === -1 && !this.pos.isNearTo(convert(path[0]))) {
 			return C.ERR_NOT_FOUND;
@@ -177,7 +178,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 						if (Game.time > _move.time + reusePath || _move.room !== this.pos.roomName) {
 							delete this.memory._move;
 
-						} else if (_move.dest.room === pos.roomName && _move.dest.x == pos.x && _move.dest.y == pos.y) {
+						} else if (_move.dest.room === pos.roomName && _move.dest.x === pos.x && _move.dest.y === pos.y) {
 
 							const path = typeof _move.path === 'string' ? this.room.deserializePath(_move.path) : _move.path;
 							const ii = path.findIndex(pos => this.pos.x === pos.x && this.pos.y === pos.y);
@@ -185,7 +186,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 								path.splice(0, ii + 1);
 								_move.path = serializeMemory ? this.room.serializePath(path) : path;
 							}
-							if (path.length == 0) {
+							if (path.length === 0) {
 								return this.pos.isNearTo(pos) ? C.OK : C.ERR_NO_PATH;
 							}
 							const result = this.moveByPath(path);
@@ -294,7 +295,7 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 
 export function create(pos: RoomPosition, body: PartType[], name: string, owner: string) {
 	const carryCapacity = body.reduce((energy, type) =>
-		(type === C.CARRY ? energy + C.CARRY_CAPACITY : energy), 0);
+		type === C.CARRY ? energy + C.CARRY_CAPACITY : energy, 0);
 	return assign(RoomObject.create(new Creep, pos), {
 		body: body.map(type => ({ type, hits: 100, boost: undefined })),
 		hits: body.length * 100,
@@ -338,7 +339,7 @@ export function checkMove(creep: Creep, direction: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.MOVE),
 		() => checkFatigue(creep),
-		() => (direction >= 1 && direction <= 8 && Number.isInteger(direction)) ?
+		() => direction >= 1 && direction <= 8 && Number.isInteger(direction) ?
 			C.OK : C.ERR_INVALID_ARGS);
 }
 
@@ -350,7 +351,6 @@ export function checkPickup(creep: Creep, target: Resource) {
 		() => creep.store.getFreeCapacity(target.resourceType) > 0 ?
 			C.OK : C.ERR_FULL);
 }
-
 
 export function checkResource(creep: Creep, resource: ResourceType = C.RESOURCE_ENERGY) {
 	return creep.store[resource]! > 0 ?

@@ -230,6 +230,7 @@ const ConsoleEndpoint: Endpoint = {
 		}
 		try {
 			// Try to parse it
+			// eslint-disable-next-line no-new, @typescript-eslint/no-implied-eval
 			new Function(expression);
 			await getRunnerUserChannel(context.shard, userId!).publish({ type: 'eval', expr: context.request.body.expression });
 		} catch (err) {
