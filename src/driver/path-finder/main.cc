@@ -62,4 +62,4 @@ void init(v8::Local<v8::Object> target) {
 	InitForContext(isolate, isolate->GetCurrentContext(), target);
 }
 
-NAN_MODULE_WORKER_ENABLED(pf, init)
+NAN_MODULE_WORKER_ENABLED(pf, init) // NOLINT
