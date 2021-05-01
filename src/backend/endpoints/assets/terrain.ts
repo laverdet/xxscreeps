@@ -1,5 +1,6 @@
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import type { GameMap } from 'xxscreeps/game/map';
+import type { Room } from 'xxscreeps/game/room';
 import streamToPromise from 'stream-to-promise';
 import crypto from 'crypto';
 import * as Fn from 'xxscreeps/utility/functional';
@@ -7,8 +8,8 @@ import { PNG } from 'pngjs';
 import { registerBackendMiddleware } from 'xxscreeps/backend';
 import { TerrainRender } from 'xxscreeps/backend/symbols';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
-import { Objects, Room } from 'xxscreeps/game/room';
-import { isBorder, TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from 'xxscreeps/game/terrain';
+import { Objects } from 'xxscreeps/game/room';
+import { TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL, isBorder } from 'xxscreeps/game/terrain';
 
 function generate(map: GameMap, grid: (Room | null)[][], zoom = 1) {
 	// Most of the time we don't need transparency. It's only needed for zoom2 images near the edges,

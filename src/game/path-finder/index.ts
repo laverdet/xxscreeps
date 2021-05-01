@@ -1,16 +1,16 @@
+import type { RoomPosition } from '../position';
+
+import { Game, me } from 'xxscreeps/game';
+import { CostMatrix } from './cost-matrix';
+import { Objects } from 'xxscreeps/game/room';
+import { PathCost } from '../object';
+import { getOrSet } from 'xxscreeps/utility/utility';
+import { makeObstacleChecker } from './obstacle';
+import { registerGlobal } from '../symbols';
+import { search } from 'xxscreeps/driver/path-finder';
+
 export { registerObstacleChecker } from './obstacle';
 export { CostMatrix, search };
-
-import type { RoomPosition } from '../position';
-import { Game, me } from 'xxscreeps/game';
-import { search } from 'xxscreeps/driver/path-finder';
-import { getOrSet } from 'xxscreeps/utility/utility';
-import { Objects } from 'xxscreeps/game/room';
-import { registerGlobal } from '../symbols';
-import { PathCost } from '../object';
-import { CostMatrix } from './cost-matrix';
-import { makeObstacleChecker } from './obstacle';
-
 export type Goal = RoomPosition | { pos: RoomPosition; range: number };
 
 type CommonSearchOptions = {

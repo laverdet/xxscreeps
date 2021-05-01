@@ -1,8 +1,8 @@
-import { GameBase, GameState, Game as GameConstructor } from './game';
-import { flush as flushPathFinder } from './path-finder';
-import { IntentManager } from './intents';
-import { FlushFindCache } from './room/symbols';
 import './runtime';
+import { GameBase, Game as GameConstructor, GameState } from './game';
+import { FlushFindCache } from './room/symbols';
+import { IntentManager } from './intents';
+import { flush as flushPathFinder } from './path-finder';
 
 export { defineGlobal, registerGameInitializer, registerGlobal } from './symbols';
 export { GameConstructor, GameState };

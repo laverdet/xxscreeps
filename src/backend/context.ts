@@ -1,16 +1,16 @@
+import type { World } from 'xxscreeps/game/map';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { Mutex } from 'xxscreeps/storage/mutex';
 import { Authentication } from './auth/model';
-import { World } from 'xxscreeps/game/map';
 import * as User from 'xxscreeps/engine/metadata/user';
 
 export class BackendContext {
 	private constructor(
-		readonly shard: Shard,
-		readonly world: World,
-		readonly accessibleRooms: Set<string>,
-		readonly gameMutex: Mutex,
-		readonly auth: Authentication,
+		public readonly shard: Shard,
+		public readonly world: World,
+		public readonly accessibleRooms: Set<string>,
+		public readonly gameMutex: Mutex,
+		public readonly auth: Authentication,
 	) {}
 
 	static async connect() {

@@ -1,7 +1,8 @@
 import type { BlobProvider } from 'xxscreeps/storage';
+import type { TypeOf } from 'xxscreeps/schema';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { getOrSet } from 'xxscreeps/utility/utility';
-import { declare, struct, vector, TypeOf } from 'xxscreeps/schema';
+import { declare, struct, vector } from 'xxscreeps/schema';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema';
 
 export function flattenUsername(username: string) {

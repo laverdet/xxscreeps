@@ -3,7 +3,7 @@ import type { KeyValProvider, SetOptions } from '../provider';
 import * as Fn from 'xxscreeps/utility/functional';
 import { promises as fs } from 'fs';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
-import { connect, create, Responder, ResponderClient, ResponderHost } from './responder';
+import { Responder, ResponderClient, ResponderHost, connect, create } from './responder';
 import { SortedSet } from './sorted-set';
 import { registerStorageProvider } from '..';
 import { getOrSet } from 'xxscreeps/utility/utility';

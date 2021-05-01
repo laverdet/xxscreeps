@@ -1,6 +1,7 @@
+import type { GameConstructor } from 'xxscreeps/game';
 import type { Room } from 'xxscreeps/game/room';
 import * as Memory from 'xxscreeps/mods/memory/memory';
-import { GameConstructor, runForUser } from 'xxscreeps/game';
+import { runForUser } from 'xxscreeps/game';
 import { registerRoomTickProcessor } from 'xxscreeps/processor';
 import { NPCData } from './game';
 

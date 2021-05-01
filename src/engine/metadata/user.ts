@@ -1,4 +1,5 @@
-import { declare, struct, vector, TypeOf } from 'xxscreeps/schema';
+import type { TypeOf } from 'xxscreeps/schema';
+import { declare, struct, vector } from 'xxscreeps/schema';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema';
 import * as StringSet from 'xxscreeps/engine/schema/string-set';
 import * as Id from 'xxscreeps/engine/schema/id';

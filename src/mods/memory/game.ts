@@ -1,6 +1,6 @@
 import { defineGlobal, registerGlobal } from 'xxscreeps/game';
 import { registerRuntimeInitializer, registerRuntimeTick } from 'xxscreeps/driver';
-import { RawMemory, get, flush, initialize } from './memory';
+import { RawMemory, flush, get, initialize } from './memory';
 
 // Export to runtime globals
 declare module 'xxscreeps/game/runtime' {

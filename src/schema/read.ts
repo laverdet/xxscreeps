@@ -1,9 +1,11 @@
+import type { Layout, StructLayout } from './layout';
 import type { Package } from './build';
+import type { TypeOf } from './format';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { BufferView } from './buffer-view';
-import { TypeOf, Variant } from './format';
-import { Layout, StructLayout, kPointerSize, unpackWrappedStruct, kMagic, kHeaderSize } from './layout';
+import { Variant } from './format';
+import { kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout';
 import { injectGetters } from './overlay';
 import { entriesWithSymbols } from './symbol';
 import { Cache } from '.';

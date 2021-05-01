@@ -1,8 +1,10 @@
+import type { BufferView } from 'xxscreeps/schema';
+import type { ResourceType } from './resource';
 import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
-import { BufferView, compose, declare, struct, vector, withOverlay, withType, XSymbol } from 'xxscreeps/schema';
+import { XSymbol, compose, declare, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
-import { ResourceType, optionalResourceEnumFormat } from './resource';
+import { optionalResourceEnumFormat } from './resource';
 export type { ResourceType };
 
 export type StorageRecord = Partial<Record<ResourceType, number>>;

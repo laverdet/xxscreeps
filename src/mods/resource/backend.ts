@@ -1,7 +1,8 @@
+import type { Store } from './store';
 import { bindRenderer } from 'xxscreeps/backend';
 import { StructureContainer } from './container';
 import { Resource } from './resource';
-import { Capacity, Restricted, SingleResource, Store } from './store';
+import { Capacity, Restricted, SingleResource } from './store';
 
 // Store renderer
 export function renderStore(store: Store) {

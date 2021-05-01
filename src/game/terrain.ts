@@ -1,4 +1,5 @@
-import { array, compose, BufferView, XSymbol } from 'xxscreeps/schema';
+import type { BufferView } from 'xxscreeps/schema';
+import { XSymbol, array, compose } from 'xxscreeps/schema';
 import { exchange } from 'xxscreeps/utility/utility';
 import { Room } from './room';
 import { Game } from '.';

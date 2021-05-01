@@ -7,13 +7,14 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as Store from 'xxscreeps/mods/resource/store';
-import { Game, GameConstructor, intents, userGame } from 'xxscreeps/game';
-import { declare, compose, optional, struct, variant, vector, withOverlay, XSymbol } from 'xxscreeps/schema';
+import type { GameConstructor } from 'xxscreeps/game';
+import { Game, intents, userGame } from 'xxscreeps/game';
+import { XSymbol, compose, declare, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
-import { Direction, RoomPosition } from 'xxscreeps/game/position';
+import type { Direction, RoomPosition } from 'xxscreeps/game/position';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
-import { StructureExtension } from './extension';
+import type { StructureExtension } from './extension';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 
 type SpawnCreepOptions = {

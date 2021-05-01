@@ -14,8 +14,8 @@ export { makeReader } from './read';
 export { makeWriter } from './write';
 
 export class Cache {
-	public readonly memberReader = new Map<Layout, MemberReader>();
-	public readonly memberWriter = new Map<Layout, MemberWriter>();
-	public readonly reader = new Map<Layout, Reader>();
-	public readonly writer = new Map<Layout, Writer>();
+	readonly memberReader = new Map<Layout, MemberReader>();
+	readonly memberWriter = new Map<Layout, MemberWriter>();
+	readonly reader = new Map<Layout, Reader>();
+	readonly writer = new Map<Layout, Writer>();
 }

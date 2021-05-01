@@ -1,18 +1,20 @@
+import type { Direction } from 'xxscreeps/game/position';
+import type { PartType } from 'xxscreeps/mods/creep/creep';
 import type { Resource } from 'xxscreeps/mods/resource/resource';
 import type { ResourceType, WithStore } from 'xxscreeps/mods/resource/store';
 import type { RoomObject } from 'xxscreeps/game/object';
-
+import type { Structure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Game } from 'xxscreeps/game';
-import { Creep, PartType } from 'xxscreeps/mods/creep/creep';
+import { Creep } from 'xxscreeps/mods/creep/creep';
 // eslint-disable-next-line @typescript-eslint/no-duplicate-imports
 import * as CreepLib from 'xxscreeps/mods/creep/creep';
-import { Direction, generateRoomName, parseRoomName, RoomPosition } from 'xxscreeps/game/position';
+import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { NextDecayTime } from 'xxscreeps/mods/road/road';
 import { MoveObject, RemoveObject } from 'xxscreeps/game/room';
 import { ActionLog } from 'xxscreeps/game/action-log';
-import { Structure, lookForStructureAt } from 'xxscreeps/mods/structure/structure';
+import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { isBorder } from 'xxscreeps/game/terrain';
 import { writeRoomObject } from 'xxscreeps/engine/room';
 import { typedArrayToString } from 'xxscreeps/utility/string';

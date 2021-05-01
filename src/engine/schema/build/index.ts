@@ -1,6 +1,7 @@
+import type { Package } from 'xxscreeps/schema/build';
 import type { Transform } from 'xxscreeps/driver/webpack';
 import type { Format } from 'xxscreeps/schema';
-import { Package, build as buildSchema } from 'xxscreeps/schema/build';
+import { build as buildSchema } from 'xxscreeps/schema/build';
 import { getName } from 'xxscreeps/schema/format';
 import config, { configPath } from 'xxscreeps/config';
 

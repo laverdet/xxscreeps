@@ -1,3 +1,4 @@
+import type { Color } from './flag';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
@@ -6,7 +7,7 @@ import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
 import { extend, instantiate } from 'xxscreeps/utility/utility';
-import { Color, Flag, checkCreateFlag } from './flag';
+import { Flag, checkCreateFlag } from './flag';
 import { intents } from './game';
 
 declare module 'xxscreeps/game/room/room' {

@@ -36,7 +36,7 @@
     "typescript": "^4.2.4"
   },
   "devDependencies": {
-    "@laverdet/eslint-config": "github:laverdet/eslint-config#b89ed2c6865d70cfe80036bb10d090ac2f119122",
+    "@laverdet/eslint-config": "github:laverdet/eslint-config#e9d99bf287a2c4e8c1be7c592645c9c9feffe8a6",
     "@typescript-eslint/eslint-plugin": "^4.22.0",
     "@typescript-eslint/parser": "^4.22.0",
     "eslint": "^7.25.0",

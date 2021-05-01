@@ -1,7 +1,8 @@
+import type { Direction, RoomPosition } from 'xxscreeps/game/position';
 import type { Terrain } from 'xxscreeps/game/terrain';
 import * as PathFinder from 'xxscreeps/game/path-finder';
 import { extend } from 'xxscreeps/utility/utility';
-import { Direction, RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position';
+import { getOffsetsFromDirection } from 'xxscreeps/game/position';
 import { Game } from 'xxscreeps/game';
 import { Room } from './room';
 

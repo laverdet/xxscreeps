@@ -1,6 +1,6 @@
+import type { Creep } from 'xxscreeps/mods/creep/creep';
 import * as C from 'xxscreeps/game/constants';
 import * as PathFinder from 'xxscreeps/game/path-finder';
-import { Creep } from 'xxscreeps/mods/creep/creep';
 import { getCostMatrix } from './rooms';
 
 export default function(creep: Creep, range: number) {

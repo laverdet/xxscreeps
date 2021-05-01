@@ -1,5 +1,6 @@
+import type { TypeOf } from 'xxscreeps/schema';
 import * as Fn from 'xxscreeps/utility/functional';
-import { array, declare, enumerated, makeWriter, optional, struct, variant, vector, TypeOf, Variant } from 'xxscreeps/schema';
+import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema';
 import { build } from 'xxscreeps/engine/schema';
 import { registerGlobal } from '.';
 import { getOrSet } from 'xxscreeps/utility/utility';

@@ -1,13 +1,15 @@
+import type { Color } from './flag';
 import type { RoomPosition } from 'xxscreeps/game/position';
+import type { TypeOf } from 'xxscreeps/schema';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import { registerGlobal, registerGameInitializer } from 'xxscreeps/game';
+import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
 import { registerRuntimeInitializer, registerRuntimeTick } from 'xxscreeps/driver';
 import { LookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import { TypeOf, compose, declare, vector } from 'xxscreeps/schema';
+import { compose, declare, vector } from 'xxscreeps/schema';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema';
 import { instantiate } from 'xxscreeps/utility/utility';
-import { Color, Flag, checkCreateFlag, format } from './flag';
+import { Flag, checkCreateFlag, format } from './flag';
 import './room';
 
 // Flags are stored in a separate blob per user.. this is the schema for the blob

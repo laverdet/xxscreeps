@@ -1,10 +1,11 @@
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room';
+import type { GameConstructor } from 'xxscreeps/game';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as RoomPosition from 'xxscreeps/game/position';
-import { GameConstructor, Game, intents, me, registerGameInitializer } from 'xxscreeps/game';
-import { compose, declare, struct, withOverlay, XSymbol } from 'xxscreeps/schema';
+import { Game, intents, me, registerGameInitializer } from 'xxscreeps/game';
+import { XSymbol, compose, declare, struct, withOverlay } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
 

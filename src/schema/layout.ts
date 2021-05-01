@@ -1,6 +1,8 @@
-import { Implementation } from 'xxscreeps/utility/types';
+import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive } from './format';
+import type { Implementation } from 'xxscreeps/utility/types';
 import { getOrSet, staticCast } from 'xxscreeps/utility/utility';
-import { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, Variant } from './format';
+
+import { Variant } from './format';
 import { entriesWithSymbols } from './symbol';
 
 export const kPointerSize = 4;

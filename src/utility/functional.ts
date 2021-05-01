@@ -1,4 +1,4 @@
-import { LooseBoolean } from './types';
+import type { LooseBoolean } from './types';
 
 // Like half the use cases of `reduce` are to sum an array, so this just does that with less
 // boilerplate

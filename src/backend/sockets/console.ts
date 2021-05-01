@@ -1,8 +1,8 @@
+import type { SubscriptionEndpoint } from '../socket';
 import AnsiUpModule from 'ansi_up';
 // ansi_up's tsconfig is incorrect
 const AnsiUp: typeof AnsiUpModule = (AnsiUpModule as any).default;
 import { getConsoleChannel } from 'xxscreeps/engine/model/user';
-import { SubscriptionEndpoint } from '../socket';
 
 const au = new AnsiUp();
 // Stupid hack to override client's CSS padding on console eval results

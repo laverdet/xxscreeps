@@ -1,8 +1,8 @@
 import type { Server } from 'http';
+import type { BackendContext } from './context';
 import sockjs from 'sockjs';
 import config from 'xxscreeps/config';
 import { checkToken, makeToken } from './auth/token';
-import { BackendContext } from './context';
 import { CodeSubscriptions } from './sockets/code';
 import { ConsoleSubscription } from './sockets/console';
 import { mapSubscription } from './sockets/map';

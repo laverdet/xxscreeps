@@ -1,7 +1,7 @@
 import { typedArrayFor } from './pack';
 
 export class Heap {
-	public size = 0;
+	size = 0;
 	private readonly heap: Record<number, number>;
 	constructor(
 		maxId: number,

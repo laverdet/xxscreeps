@@ -1,6 +1,6 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { compose, struct, vector, XSymbol } from 'xxscreeps/schema';
+import { XSymbol, compose, struct, vector } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 export const NPCData = XSymbol('npcData');

@@ -1,6 +1,6 @@
+import type { SubscriptionEndpoint } from '../socket';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 // import * as Fn from 'xxscreeps/utility/functional';
-import { SubscriptionEndpoint } from '../socket';
 
 /*
 const CodeSubscription: SubscriptionEndpoint = {

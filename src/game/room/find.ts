@@ -1,4 +1,4 @@
-import type { KeysOf, KeyFor, LooseBoolean } from 'xxscreeps/utility/types';
+import type { KeyFor, KeysOf, LooseBoolean } from 'xxscreeps/utility/types';
 import type { Room } from './room';
 import { findHandlers } from './symbols';
 import './exit';

@@ -1,8 +1,9 @@
+import type { GameConstructor } from 'xxscreeps/game';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/object';
-import { GameConstructor, me } from 'xxscreeps/game';
+import { me } from 'xxscreeps/game';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { compose, declare, enumerated, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';

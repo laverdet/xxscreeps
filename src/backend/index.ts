@@ -1,5 +1,5 @@
-import Koa from 'koa';
-import Router from 'koa-router';
+import type Koa from 'koa';
+import type Router from 'koa-router';
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { Shard } from 'xxscreeps/engine/model/shard';

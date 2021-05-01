@@ -1,8 +1,10 @@
 import type { BufferView } from './buffer-view';
 import type { StructLayout } from './layout';
 import type { Cache } from '.';
-import { getBuffer, getOffset, BufferObject } from './buffer-object';
-import { TypeOf, Variant } from './format';
+import type { BufferObject } from './buffer-object';
+import { getBuffer, getOffset } from './buffer-object';
+import type { TypeOf } from './format';
+import { Variant } from './format';
 import { makeTypeReader } from './read';
 import { entriesWithSymbols } from './symbol';
 

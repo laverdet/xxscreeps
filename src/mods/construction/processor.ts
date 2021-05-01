@@ -1,3 +1,4 @@
+import type { ConstructibleStructureType } from './construction-site';
 import * as C from 'xxscreeps/game/constants';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Game, me } from 'xxscreeps/game';
@@ -7,7 +8,7 @@ import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { InsertObject, RemoveObject, Room } from 'xxscreeps/game/room';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import { saveAction } from 'xxscreeps/game/action-log';
-import { ConstructionSite, ConstructibleStructureType, create } from './construction-site';
+import { ConstructionSite, create } from './construction-site';
 import { checkBuild } from './creep';
 import { checkCreateConstructionSite } from './room';
 import { structureFactories } from './symbols';

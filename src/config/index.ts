@@ -1,6 +1,7 @@
+import type { MergedSchema } from './defaults';
 import Ajv from 'ajv';
 import jsonSchema from './config.schema.json';
-import { MergedSchema, defaults } from './defaults';
+import { defaults } from './defaults';
 import { merge } from 'xxscreeps/utility/utility';
 import data, { configPath } from './raw';
 

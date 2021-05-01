@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Container from './container';
 import * as Resource from './resource';
 import { registerGlobal } from 'xxscreeps/game';
-import { LookFor, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
+import { LookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 // Export `StructureContainer` & `Resource` to runtime globals

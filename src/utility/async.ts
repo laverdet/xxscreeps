@@ -1,4 +1,4 @@
-import { Effect, MaybePromise } from './types';
+import type { Effect, MaybePromise } from './types';
 
 // Given a series of effect-returning promises this waits for them all to resolve and returns a
 // single effect that owns all the underlying effects. In the case that one throws the successful

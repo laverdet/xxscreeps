@@ -1,5 +1,6 @@
 import type { Manifest } from 'xxscreeps/config/mods';
-import { ConstructionTraits, structureFactories } from './symbols';
+import type { ConstructionTraits } from './symbols';
+import { structureFactories } from './symbols';
 
 export function registerBuildableStructure(structureType: string, factory: ConstructionTraits) {
 	structureFactories.set(structureType, factory);

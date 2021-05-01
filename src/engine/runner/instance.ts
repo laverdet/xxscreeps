@@ -3,21 +3,23 @@ import type { World } from 'xxscreeps/game/map';
 import type { Subscription } from 'xxscreeps/storage/channel';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
-import { createSandbox, Sandbox } from 'xxscreeps/driver/sandbox';
+import type { Sandbox } from 'xxscreeps/driver/sandbox';
+import { createSandbox } from 'xxscreeps/driver/sandbox';
 import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/model/processor';
 import { loadUserFlagBlob, saveUserFlagBlobForNextTick } from 'xxscreeps/mods/flag/model';
 import { getConsoleChannel, loadUserMemoryBlob } from 'xxscreeps/engine/model/user';
 import { exchange } from 'xxscreeps/utility/utility';
-import { getRunnerUserChannel, RunnerIntent, RunnerUserMessage } from './channel';
+import type { RunnerIntent, RunnerUserMessage } from './channel';
+import { getRunnerUserChannel } from './channel';
 
 export class PlayerInstance {
 	private branch: string | null;
 	private readonly consoleChannel: ReturnType<typeof getConsoleChannel>;
-	public consoleEval?: string[];
-	public intents?: RunnerIntent[];
+	consoleEval?: string[];
+	intents?: RunnerIntent[];
 	private sandbox?: Sandbox;
 	private stale = false;
-	public readonly userId: string;
+	readonly userId: string;
 
 	constructor(
 		public readonly shard: Shard,

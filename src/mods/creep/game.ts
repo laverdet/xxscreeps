@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Creep from './creep';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
 import { registerSchema } from 'xxscreeps/engine/schema';
-import { LookFor, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
+import { LookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 
 // Add `creeps` to global `Game` object
 declare module 'xxscreeps/game/game' {

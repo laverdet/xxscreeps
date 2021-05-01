@@ -1,5 +1,5 @@
+import type { GameConstructor } from 'xxscreeps/game';
 import * as C from 'xxscreeps/game/constants';
-import { GameConstructor } from 'xxscreeps/game';
 import healer from './healer';
 import findAttack from './find-attack';
 import shootAtWill from './shoot-at-will';

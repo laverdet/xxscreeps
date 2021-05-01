@@ -1,5 +1,6 @@
-import { Worker, isMainThread, parentPort } from 'worker_threads';
-import { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider';
+import type { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider';
+import type { Worker } from 'worker_threads';
+import { isMainThread, parentPort } from 'worker_threads';
 import { listen } from 'xxscreeps/utility/async';
 import { staticCast } from 'xxscreeps/utility/utility';
 import { registerStorageProvider } from '..';
@@ -96,7 +97,7 @@ abstract class LocalPubSubSubscription implements PubSubSubscription {
 	readonly listener: Listener;
 	readonly id = `${Math.floor(Math.random() * 2 ** 52).toString(16)}`;
 
-	constructor(readonly name: string, listener: PubSubListener) {
+	constructor(public readonly name: string, listener: PubSubListener) {
 		connect(this);
 		this.listener = (message, id) => {
 			if (this.id !== id) {

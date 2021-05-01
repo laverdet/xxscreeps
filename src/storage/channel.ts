@@ -1,5 +1,5 @@
+import type { PubSubProvider, PubSubSubscription } from './provider';
 import { Deferred } from 'xxscreeps/utility/async';
-import { PubSubProvider, PubSubSubscription } from './provider';
 
 type MessageType<Message> = Message | (Message extends string ? null : { type: null });
 type Listener<Message> = (message: MessageType<Message>) => void;

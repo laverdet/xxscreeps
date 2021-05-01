@@ -1,3 +1,4 @@
+import type { Transform } from '../webpack';
 import type { InitializationPayload } from 'xxscreeps/driver';
 import type { Print } from 'xxscreeps/driver/runtime';
 import * as Path from 'path';
@@ -5,7 +6,7 @@ import config from 'xxscreeps/config';
 import { configTransform } from 'xxscreeps/config/webpack';
 import { schemaTransform } from 'xxscreeps/engine/schema/build';
 import { locateModule } from '../path-finder';
-import { compile, Transform } from '../webpack';
+import { compile } from '../webpack';
 import { IsolatedSandbox } from './isolated/isolated';
 import { NodejsSandbox } from './nodejs';
 

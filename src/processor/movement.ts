@@ -1,9 +1,11 @@
+import type { Direction } from 'xxscreeps/game/position';
+import type { RoomObjectWithOwner } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { me } from 'xxscreeps/game';
-import { LookType, NextPosition, Owner, RoomObjectWithOwner } from 'xxscreeps/game/object';
+import { LookType, NextPosition, Owner } from 'xxscreeps/game/object';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
-import { getOffsetsFromDirection, Direction, RoomPosition } from 'xxscreeps/game/position';
+import { RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position';
 import { InsertObject, LookAt, Room } from 'xxscreeps/game/room';
 import { readRoomObject } from 'xxscreeps/engine/room';
 import { exchange } from 'xxscreeps/utility/utility';

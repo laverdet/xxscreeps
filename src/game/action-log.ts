@@ -1,5 +1,6 @@
+import type { TypeOf } from 'xxscreeps/schema';
 import { enumeratedForPath } from 'xxscreeps/engine/schema';
-import { declare, enumerated, struct, vector, TypeOf, XSymbol } from 'xxscreeps/schema';
+import { XSymbol, declare, enumerated, struct, vector } from 'xxscreeps/schema';
 
 export const ActionLog = XSymbol('actionLog');
 

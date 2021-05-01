@@ -1,6 +1,7 @@
+import type { KeyValProvider, PubSubProvider } from './provider';
+import type { Subscription } from 'xxscreeps/storage/channel';
 import { Deferred, mustNotReject } from 'xxscreeps/utility/async';
-import { Channel, Subscription } from 'xxscreeps/storage/channel';
-import { KeyValProvider, PubSubProvider } from './provider';
+import { Channel } from 'xxscreeps/storage/channel';
 
 type Message = 'waiting' | 'unlocked';
 

@@ -4,7 +4,7 @@ import * as Path from 'path';
 import { fileURLToPath } from 'url';
 import { promises as fs } from 'fs';
 import { listen } from 'xxscreeps/utility/async';
-import { connect, create, Responder, ResponderClient, ResponderHost } from './responder';
+import { Responder, ResponderClient, ResponderHost, connect, create } from './responder';
 import { registerStorageProvider } from '..';
 
 registerStorageProvider('file', 'blob', async url => {

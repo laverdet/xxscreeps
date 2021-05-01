@@ -1,3 +1,4 @@
+import type { Harvestable } from './game';
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
@@ -7,7 +8,6 @@ import { registerIntentProcessor } from 'xxscreeps/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
 import { saveAction } from 'xxscreeps/game/action-log';
 import { checkHarvest } from './creep';
-import { Harvestable } from './game';
 
 // `RoomObject` harvest intent processor symbol
 const ProcessHarvest = Symbol('processHarvest');

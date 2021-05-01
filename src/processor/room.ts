@@ -1,13 +1,15 @@
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import type { World } from 'xxscreeps/game/map';
-import type { IntentsForReceiver, IntentReceivers, IntentParameters } from '.';
+import type { IntentParameters, IntentReceivers, IntentsForReceiver } from '.';
+import type { Room } from 'xxscreeps/game/room';
+import type { RoomTickProcessor } from './symbols';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/processor/movement';
 import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
-import { EventLog, FlushObjects, Objects, Room } from 'xxscreeps/game/room';
+import { EventLog, FlushObjects, Objects } from 'xxscreeps/game/room';
 import { getUsersInRoom } from 'xxscreeps/game/room/room';
-import { Processors, RoomTickProcessor, Tick, roomTickProcessors, PreTick } from './symbols';
+import { PreTick, Processors, Tick, roomTickProcessors } from './symbols';
 
 import 'xxscreeps/config/mods/import/game';
 import 'xxscreeps/config/mods/import/processor';

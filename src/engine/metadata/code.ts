@@ -1,5 +1,6 @@
+import type { TypeOf } from 'xxscreeps/schema';
 import * as Fn from 'xxscreeps/utility/functional';
-import { TypeOf, compose, declare, struct, vector } from 'xxscreeps/schema';
+import { compose, declare, struct, vector } from 'xxscreeps/schema';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema';
 
 export const format = declare('Code', struct({

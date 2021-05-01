@@ -1,3 +1,4 @@
+import type { Direction } from './direction';
 import type { InspectOptionsStylized } from 'util';
 import type { FindConstants, FindType, RoomFindOptions } from 'xxscreeps/game/room/find';
 import type { LookConstants } from 'xxscreeps/game/room/look';
@@ -9,7 +10,7 @@ import { Game, registerGlobal } from 'xxscreeps/game';
 import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/utility/iteratee';
 import { instantiate } from 'xxscreeps/utility/utility';
-import { Direction, getDirection } from './direction';
+import { getDirection } from './direction';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
 import { PositionInteger } from './symbols';
 

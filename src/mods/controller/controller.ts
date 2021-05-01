@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game } from 'xxscreeps/game';
-import { declare, compose, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
+import { XSymbol, compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 
 export const DowngradeTime = XSymbol('downgradeTime');
 export const Progress = XSymbol('progress');

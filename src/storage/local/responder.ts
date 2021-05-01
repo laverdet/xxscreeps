@@ -1,7 +1,8 @@
 import type { Instance, Values } from 'xxscreeps/utility/types';
-import assert from 'assert';
-import { Worker, isMainThread, parentPort } from 'worker_threads';
+import type { Worker } from 'worker_threads';
+import { isMainThread, parentPort } from 'worker_threads';
 import { Deferred } from 'xxscreeps/utility/async';
+import assert from 'assert';
 import { staticCast } from 'xxscreeps/utility/utility';
 
 /**
@@ -52,7 +53,7 @@ type AbstractResponderClient = {
 	readonly _requests: Map<number, Deferred<any>>;
 };
 export abstract class Responder {
-	constructor(readonly _name?: string) {}
+	constructor(public readonly _name?: string) {}
 	destroyed() {}
 	disconnect() {}
 }

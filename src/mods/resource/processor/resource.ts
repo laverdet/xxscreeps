@@ -1,3 +1,4 @@
+import type { ResourceType } from '../resource';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Store from './store';
@@ -5,7 +6,7 @@ import { Game } from 'xxscreeps/game';
 import { registerObjectTickProcessor } from 'xxscreeps/processor';
 import { InsertObject, RemoveObject } from 'xxscreeps/game/room';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
-import { Resource, ResourceType, create } from '../resource';
+import { Resource, create } from '../resource';
 
 export function drop(pos: RoomPosition, resourceType: ResourceType, amount: number) {
 	const room = Game.rooms[pos.roomName]!;

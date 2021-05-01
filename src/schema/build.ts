@@ -1,8 +1,9 @@
 import type { Format, ShapeOf, TypeOf, WithShapeAndType } from './format';
+import type { LayoutAndTraits } from './layout';
 import crypto from 'crypto';
 import fs from 'fs';
 import { archiveLayout } from './archive';
-import { LayoutAndTraits, getLayout } from './layout';
+import { getLayout } from './layout';
 import { archiveStruct } from './kaitai';
 
 export type Package = ShapeOf<any> & TypeOf<any> & LayoutAndTraits & {

@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game, registerGlobal } from 'xxscreeps/game';
-import { compose, declare, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
+import { XSymbol, compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';

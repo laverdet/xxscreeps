@@ -1,17 +1,19 @@
+import type { Direction } from 'xxscreeps/game/position';
+import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 import { Game, me } from 'xxscreeps/game';
-import { getPositonInDirection as getPositionInDirection, Direction } from 'xxscreeps/game/position';
+import { getPositonInDirection as getPositionInDirection } from 'xxscreeps/game/position';
 import { InsertObject, MoveObject } from 'xxscreeps/game/room';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
-import { Owner, RoomObject } from 'xxscreeps/game/object';
+import { Owner } from 'xxscreeps/game/object';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { assign } from 'xxscreeps/utility/utility';
 import { StructureExtension } from './extension';
-import { checkSpawnCreep, StructureSpawn, SpawnId, SpawningCreepId, SpawnTime } from './spawn';
+import { SpawnId, SpawnTime, SpawningCreepId, StructureSpawn, checkSpawnCreep } from './spawn';
 
 declare module 'xxscreeps/processor' {
 	interface Intent { spawn: typeof intent }

@@ -1,4 +1,5 @@
-import { Endpoint, registerBackendMiddleware } from 'xxscreeps/backend';
+import type { Endpoint } from 'xxscreeps/backend';
+import { registerBackendMiddleware } from 'xxscreeps/backend';
 import config from 'xxscreeps/config';
 
 registerBackendMiddleware((koa, router) => {

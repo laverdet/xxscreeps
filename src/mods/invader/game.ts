@@ -1,4 +1,4 @@
-import { struct, XSymbol } from 'xxscreeps/schema';
+import { XSymbol, struct } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 // Track energy mined on room

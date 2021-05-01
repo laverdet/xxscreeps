@@ -1,9 +1,11 @@
+import type { Layout, StructLayout } from './layout';
 import type { Package } from './build';
+import type { ShapeOf } from './format';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { runOnce } from 'xxscreeps/utility/memoize';
 import { BufferView } from './buffer-view';
-import { ShapeOf, Variant } from './format';
-import { Layout, StructLayout, kPointerSize, alignTo, unpackWrappedStruct, kMagic, kHeaderSize } from './layout';
+import { Variant } from './format';
+import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout';
 import { entriesWithSymbols } from './symbol';
 import { Cache } from '.';
 

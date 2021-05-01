@@ -1,7 +1,7 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
-import type { IntentsForReceiver, IntentParameters, IntentReceivers } from 'xxscreeps/processor';
+import type { IntentParameters, IntentReceivers, IntentsForReceiver } from 'xxscreeps/processor';
 import type { ObjectReceivers, RoomIntentPayload } from 'xxscreeps/processor/room';
 import * as C from 'xxscreeps/game/constants';
 

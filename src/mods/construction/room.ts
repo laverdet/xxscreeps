@@ -1,11 +1,11 @@
+import type { ConstructibleStructureType, ConstructionSite } from './construction-site';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { intents, userGame } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { LookFor, Room, registerLook, registerFindHandlers } from 'xxscreeps/game/room';
+import { LookFor, Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';
 import { extend } from 'xxscreeps/utility/utility';
-import { ConstructibleStructureType, ConstructionSite } from './construction-site';
 import { structureFactories } from './symbols';
 
 // Register FIND_ types for `ConstructionSite`

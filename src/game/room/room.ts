@@ -1,3 +1,4 @@
+import type { BufferView } from 'xxscreeps/schema';
 import type { InspectOptionsStylized } from 'util';
 import type { Terrain } from 'xxscreeps/game/terrain';
 import type { RoomObject } from 'xxscreeps/game/object';
@@ -6,14 +7,14 @@ import type { FindConstants, FindType, RoomFindOptions } from './find';
 import type { LookConstants, TypeOfLook } from './look';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Memory from 'xxscreeps/mods/memory/memory';
-import { BufferObject, BufferView, withOverlay } from 'xxscreeps/schema';
+import { BufferObject, withOverlay } from 'xxscreeps/schema';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/utility/iteratee';
 import { registerGlobal } from 'xxscreeps/game';
 import { AfterInsert, AfterRemove, LookType, RunnerUser } from 'xxscreeps/game/object/symbols';
 import { PositionInteger } from 'xxscreeps/game/position/symbols';
 import { shape } from './schema';
-import { FlushFindCache, LookAt, LookFor, MoveObject, Objects, FlushObjects, InsertObject, RemoveObject, findHandlers, lookConstants } from './symbols';
+import { FlushFindCache, FlushObjects, InsertObject, LookAt, LookFor, MoveObject, Objects, RemoveObject, findHandlers, lookConstants } from './symbols';
 
 export type AnyRoomObject = Room[typeof Objects][number];
 

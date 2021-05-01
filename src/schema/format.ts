@@ -1,7 +1,7 @@
-import type { Implementation } from 'xxscreeps/utility/types';
 import type { BufferView } from './buffer-view';
-import { resolve } from './layout';
+import type { Implementation } from 'xxscreeps/utility/types';
 import { Variant } from '.';
+import { resolve } from './layout';
 export { Variant };
 
 type WithVariant<V extends number | string = any> = { [Variant]: V };

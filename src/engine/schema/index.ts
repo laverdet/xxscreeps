@@ -1,7 +1,8 @@
 import type { WithShape, WithType } from 'xxscreeps/schema/format';
 import type { UnionToIntersection, UnwrapArray, WithKey } from 'xxscreeps/utility/types';
+import type { Format } from 'xxscreeps/schema';
 import { resolve } from 'xxscreeps/schema/layout';
-import { Cache, Format, makeReader, makeWriter } from 'xxscreeps/schema';
+import { Cache, makeReader, makeWriter } from 'xxscreeps/schema';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
 import { getOrSet } from 'xxscreeps/utility/utility';
 // Use full path here so we can rewrite it in webpack

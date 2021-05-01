@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import { Game, registerGlobal } from 'xxscreeps/game';
-import { compose, declare, struct, variant, withOverlay, XSymbol } from 'xxscreeps/schema';
+import { XSymbol, compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
