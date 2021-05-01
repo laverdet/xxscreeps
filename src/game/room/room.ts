@@ -24,16 +24,16 @@ export type AnyRoomObject = Room[typeof Objects][number];
  * the `room` property.
  */
 export class Room extends withOverlay(BufferObject, shape) {
+	declare static Terrain: typeof Terrain;
+
 	// TODO: Move to mod
 	energyAvailable = 0;
 	energyCapacityAvailable = 0;
-	get memory() {
-		const memory = Memory.get();
-		const creeps = memory.creeps ??= {};
-		return creeps[this.name] ??= {};
-	}
-
-	declare static Terrain: typeof Terrain;
+	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
+	#lookIndex = new Map<string, RoomObject[]>(Fn.map(lookConstants, look => [ look, [] ]));
+	#spatialIndex = new Map<number, RoomObject[]>();
+	#insertObjects: RoomObject[] = [];
+	#removeObjects = new Set<RoomObject>();
 
 	constructor(view: BufferView, offset: number) {
 		super(view, offset);
@@ -41,6 +41,12 @@ export class Room extends withOverlay(BufferObject, shape) {
 			this._addToIndex(object);
 			object[AfterInsert](this);
 		}
+	}
+
+	get memory() {
+		const memory = Memory.get();
+		const creeps = memory.creeps ??= {};
+		return creeps[this.name] ??= {};
 	}
 
 	/**
@@ -214,12 +220,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 			return `[Room ${options.stylize(this.name, 'string')}]`;
 		}
 	}
-
-	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
-	#lookIndex = new Map<string, RoomObject[]>(Fn.map(lookConstants, look => [ look, [] ]));
-	#spatialIndex = new Map<number, RoomObject[]>();
-	#insertObjects: RoomObject[] = [];
-	#removeObjects = new Set<RoomObject>();
 }
 
 // Export `Room` to runtime globals

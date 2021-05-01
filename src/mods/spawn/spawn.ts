@@ -53,8 +53,11 @@ const shape = declare('Spawn', struct(Structure.format, {
 }));
 
 export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
+	static readonly Spawning = Spawning;
+
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
+	get structureType() { return C.STRUCTURE_SPAWN }
 
 	get memory() {
 		const memory = Memory.get();
@@ -62,7 +65,6 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 		return spawns[this.name] ??= {};
 	}
 
-	get structureType() { return C.STRUCTURE_SPAWN }
 	[RoomObject.AddToMyGame](game: GameConstructor) {
 		game.spawns[this.name] = this;
 	}
@@ -120,8 +122,6 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 				return C.OK;
 			});
 	}
-
-	static Spawning = Spawning;
 }
 
 export function create(pos: RoomPosition, owner: string, name: string) {

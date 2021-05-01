@@ -80,20 +80,18 @@ function publish(name: string, message: string, id?: string) {
  * Common classes for parent / worker threads
  */
 export abstract class LocalPubSubProvider implements PubSubProvider {
-	abstract disconnect(): void;
-	abstract publish(key: string, message: string): Promise<void>;
-	abstract subscribe(key: string, listener: (message: string) => void): Promise<PubSubSubscription>;
-
 	constructor(protected readonly name: string) {}
 
 	static initializeWorker(worker: Worker) {
 		LocalPubSubProviderParent.initializeWorker(worker);
 	}
+
+	abstract disconnect(): void;
+	abstract publish(key: string, message: string): Promise<void>;
+	abstract subscribe(key: string, listener: (message: string) => void): Promise<PubSubSubscription>;
 }
 
 abstract class LocalPubSubSubscription implements PubSubSubscription {
-	abstract publish(message: string): Promise<void>;
-
 	readonly listener: Listener;
 	readonly id = `${Math.floor(Math.random() * 2 ** 52).toString(16)}`;
 
@@ -105,6 +103,8 @@ abstract class LocalPubSubSubscription implements PubSubSubscription {
 			}
 		};
 	}
+
+	abstract publish(message: string): Promise<void>;
 
 	disconnect() {
 		disconnect(this);

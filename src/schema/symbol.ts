@@ -9,8 +9,8 @@
  * private symbols in the game runtime.
  */
 export const XSymbol: {
-	<Name extends string>(name: Name): `_$${Name}`;
 	for: (name: string) => any;
+	<Name extends string>(name: Name): `_$${Name}`;
 } = Symbol as never;
 
 export function entriesWithSymbols<T extends {}>(object: T): [ keyof T, T[keyof T] ][] {

@@ -26,6 +26,7 @@ const shape = declare('Controller', struct(Structure.format, {
 }));
 
 export class StructureController extends withOverlay(Structure.Structure, shape) {
+	[UpgradePowerThisTick]: number | undefined;
 	get progress() { return this.level > 0 ? this[Progress] : undefined }
 	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
 	get structureType() { return C.STRUCTURE_CONTROLLER }
@@ -51,8 +52,6 @@ export class StructureController extends withOverlay(Structure.Structure, shape)
 	[RoomObject.RunnerUser]() {
 		return this.level > 0 ? this[RoomObject.Owner] : null;
 	}
-
-	[UpgradePowerThisTick]: number | undefined;
 }
 
 declare module 'xxscreeps/game/room/room' {

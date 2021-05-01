@@ -56,6 +56,8 @@ export function format() {
  * using the `Room.getPositionAt` method or using the constructor.
  */
 export class RoomPosition {
+	[PositionInteger]: number;
+
 	/**
 	 * You can create new RoomPosition object using its constructor.
 	 * @param xx X position in the room.
@@ -326,8 +328,6 @@ export class RoomPosition {
 	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
 		return `[RoomPosition ${stylize(this.roomName, 'string')} {${stylize(`${this.x}`, 'number')}, ${stylize(`${this.y}`, 'number')}}]`;
 	}
-
-	[PositionInteger]: number;
 }
 
 registerGlobal(RoomPosition);

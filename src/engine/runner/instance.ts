@@ -13,13 +13,13 @@ import type { RunnerIntent, RunnerUserMessage } from './channel';
 import { getRunnerUserChannel } from './channel';
 
 export class PlayerInstance {
-	private branch: string | null;
-	private readonly consoleChannel: ReturnType<typeof getConsoleChannel>;
 	consoleEval?: string[];
 	intents?: RunnerIntent[];
+	readonly userId: string;
+	private branch: string | null;
 	private sandbox?: Sandbox;
 	private stale = false;
-	readonly userId: string;
+	private readonly consoleChannel: ReturnType<typeof getConsoleChannel>;
 
 	constructor(
 		public readonly shard: Shard,

@@ -56,6 +56,25 @@ export class GameBase {
  * The main global game object containing all the game play information.
  */
 export class Game extends GameBase {
+	cpu = {
+		bucket: 10000,
+		limit: 10000,
+		tickLimit: 500,
+		getUsed: () => 0,
+		getHeapStatistics: () => 0,
+	};
+
+	gcl = {
+		level: 1,
+	};
+
+	market = {
+		orders: [],
+		getAllOrders: () => [],
+		incomingTransactions: [],
+		outgoingTransactions: [],
+	};
+
 	/**
 	 * An object describing the world shard where your script is currently being executed in.
 	 */
@@ -90,23 +109,4 @@ export class Game extends GameBase {
 	notify(_message: string, _groupInterval?: number) {
 		console.error('TODO: notify');
 	}
-
-	cpu = {
-		bucket: 10000,
-		limit: 10000,
-		tickLimit: 500,
-		getUsed: () => 0,
-		getHeapStatistics: () => 0,
-	};
-
-	gcl = {
-		level: 1,
-	};
-
-	market = {
-		orders: [],
-		getAllOrders: () => [],
-		incomingTransactions: [],
-		outgoingTransactions: [],
-	};
 }

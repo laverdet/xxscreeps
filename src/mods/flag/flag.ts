@@ -18,6 +18,9 @@ const shape = declare('Flag', struct(baseFormat, {
 }));
 
 export class Flag extends withOverlay(RoomObject, shape) {
+	// Flags are kind of fake objects, and don't get an id
+	declare id: never;
+
 	get memory() {
 		const memory = Memory.get();
 		const flags = memory.flags ??= {};
@@ -73,9 +76,6 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			},
 		);
 	}
-
-	// Flags are kind of fake objects, and don't get an id
-	declare id: never;
 }
 
 //

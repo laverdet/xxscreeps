@@ -43,6 +43,12 @@ type LookForAtArea<Type extends LookConstants> = {
 declare module './room' {
 	interface Room {
 		/**
+		 * A `RoomVisual` object for this room. You can use this object to draw simple shapes (lines,
+		 * circles, text labels) in the room.
+		 */
+		visual: RoomVisual;
+
+		/**
 		 * Get the list of objects at the specified room position.
 		 * @param type One of the `LOOK_*` constants
 		 * @param x X position in the room
@@ -89,12 +95,6 @@ declare module './room' {
 		 * Creates a RoomPosition object at the specified location.
 		 */
 		getPositionAt(x: number, y: number): RoomPosition;
-
-		/**
-		 * A `RoomVisual` object for this room. You can use this object to draw simple shapes (lines,
-		 * circles, text labels) in the room.
-		 */
-		visual: RoomVisual;
 	}
 }
 

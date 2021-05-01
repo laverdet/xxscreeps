@@ -58,6 +58,10 @@ const BufferObjectWithResourcesType = withOverlay(BufferObject,
  */
 export class Store<Resources extends ResourceType = any> extends
 	withOverlay(BufferObjectWithResourcesType, shape) {
+
+	energy = 0;
+	_capacityByResource?: Map<ResourceType, number>;
+
 	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
 
@@ -131,9 +135,6 @@ export class Store<Resources extends ResourceType = any> extends
 			return null;
 		}
 	}
-
-	energy = 0;
-	_capacityByResource?: Map<ResourceType, number>;
 }
 
 export function create(capacity: number | null, capacityByResource?: StorageRecord, store?: StorageRecord) {
