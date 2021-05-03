@@ -1,4 +1,5 @@
 import type { BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/storage';
+import type { Effect } from 'xxscreeps/utility/types';
 import type { Subscription } from 'xxscreeps/storage/channel';
 import * as RoomSchema from 'xxscreeps/engine/room';
 import { connectToProvider } from 'xxscreeps/storage';
@@ -10,7 +11,7 @@ type Message = { type: 'tick'; time: number } | { type: null };
 
 export class Shard {
 	time = -1;
-	private readonly gameTickEffect: () => void;
+	private readonly gameTickEffect: Effect;
 
 	private constructor(
 		public readonly name: string,

@@ -30,9 +30,3 @@ export async function saveVisualsBlob(shard: Shard, user: string, time: number, 
 		} catch (err) {}
 	}
 }
-
-//
-// User memory functions
-export async function loadUserMemoryBlob(shard: Shard, user: string) {
-	return shard.blob.getBuffer(`memory/${user}`);
-}

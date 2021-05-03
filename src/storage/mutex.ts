@@ -1,3 +1,4 @@
+import type { Effect } from 'xxscreeps/utility/types';
 import type { KeyValProvider, PubSubProvider } from './provider';
 import type { Subscription } from 'xxscreeps/storage/channel';
 import { Deferred, mustNotReject } from 'xxscreeps/utility/async';
@@ -8,8 +9,8 @@ type Message = 'waiting' | 'unlocked';
 export class Mutex {
 	private lockedOrPending = false;
 	private yieldPromise?: Promise<void>;
-	private waitingListener?: () => void;
-	private readonly localQueue: (() => void)[] = [];
+	private waitingListener?: Effect;
+	private readonly localQueue: (Effect)[] = [];
 	constructor(
 		private readonly channel: Subscription<Message>,
 		private readonly lockable: Lock,

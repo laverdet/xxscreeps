@@ -120,20 +120,26 @@ export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, r
 }
 
 // Returns a range of numbers
-export function range(count: number): Iterable<number>;
+export function range(count?: number): Iterable<number>;
 // eslint-disable-next-line @typescript-eslint/unified-signatures
 export function range(start: number, end: number): Iterable<number>;
-export function range(start: number, end?: number): Iterable<number> {
+export function range(start = Infinity, end?: number): Iterable<number> {
 	if (end === undefined) {
 		return range(0, start);
 	} else {
 		return function *() {
 			if (start < end) {
-				for (let ii = start; ii < end; ++ii) {
-					yield ii;
+				if (end === Infinity) {
+					for (let ii = start; ; ++ii) {
+						yield ii;
+					}
+				} else {
+					for (let ii = start; ii < end; ++ii) {
+						yield ii;
+					}
 				}
 			} else {
-				for (let ii = end; ii > start; --ii) {
+				for (let ii = end - 1; ii >= start; --ii) {
 					yield ii;
 				}
 			}

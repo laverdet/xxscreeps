@@ -1,6 +1,15 @@
+import type { createFlag, removeFlag } from './game';
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import { Channel } from 'xxscreeps/storage/channel';
 import { read } from './game';
+
+export type FlagIntent = { type: null } | {
+	type: 'create';
+	params: Parameters<typeof createFlag>;
+} | {
+	type: 'remove';
+	params: Parameters<typeof removeFlag>;
+};
 
 /**
  * Return a reference to the user's flag channel
@@ -8,7 +17,7 @@ import { read } from './game';
 export function getFlagChannel(shard: Shard, userId: string) {
 	type Message =
 		{ type: 'updated' } |
-		{ type: 'intent'; intent: any };
+		{ type: 'intent'; intent: FlagIntent };
 	return new Channel<Message>(shard.pubsub, `user/${userId}/flags`);
 }
 

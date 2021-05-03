@@ -20,7 +20,7 @@ registerBackendRoute({
 			await getFlagChannel(context.shard, userId).publish({
 				type: 'intent',
 				intent: {
-					intent: 'create',
+					type: 'create',
 					params: [
 						name, pos[PositionInteger],
 						color, secondaryColor, true,
@@ -73,7 +73,7 @@ registerBackendRoute({
 			.publish({
 				type: 'intent',
 				intent: {
-					intent: 'remove',
+					type: 'remove',
 					params: [ name ],
 				},
 			});

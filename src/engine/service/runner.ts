@@ -6,8 +6,8 @@ import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/mod
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
 import { consumeSet } from 'xxscreeps/storage/async';
-import { getOrSet } from 'xxscreeps/utility/utility';
 import { getServiceChannel } from '.';
+import 'xxscreeps/config/mods/import/driver';
 
 // Connect to main & storage
 const shard = await Shard.connect('shard0');
@@ -31,7 +31,6 @@ try {
 
 		} else if (message.type === 'run') {
 			const { time } = message;
-			const roomBlobCache = new Map<string, Promise<Readonly<Uint8Array>>>();
 			await Promise.all(Fn.map(Fn.range(concurrency), async() => {
 				for await (const userId of consumeSet(shard.scratch, runnerUsersSetKey(time))) {
 					// Get or create player instance
@@ -41,13 +40,9 @@ try {
 						return instance;
 					}();
 
-					// Load visible rooms for this user
-					const roomNames = await shard.scratch.smembers(userToRoomsSetKey(userId));
-					const roomBlobs = await Promise.all(Fn.map(roomNames, roomName =>
-						getOrSet(roomBlobCache, roomName, () => shard.loadRoomBlob(roomName, time - 1))));
-
 					// Run user code
-					await instance.run(time, roomBlobs, roomNames);
+					const roomNames = await shard.scratch.smembers(userToRoomsSetKey(userId));
+					await instance.run(time, roomNames);
 				}
 			}));
 		}

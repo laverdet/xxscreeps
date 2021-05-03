@@ -1,4 +1,5 @@
 import type { Server } from 'http';
+import type { Effect } from 'xxscreeps/utility/types';
 import type { BackendContext } from './context';
 import sockjs from 'sockjs';
 import config from 'xxscreeps/config';
@@ -15,7 +16,6 @@ const socketServer = sockjs.createServer({
 });
 const handlers = [ ...CodeSubscriptions, ConsoleSubscription, mapSubscription, roomSubscription ];
 
-type Unlistener = () => void;
 type SubscriptionInstance = {
 	context: BackendContext;
 	user?: string;
@@ -23,7 +23,7 @@ type SubscriptionInstance = {
 };
 export type SubscriptionEndpoint = {
 	pattern: RegExp;
-	subscribe: (this: SubscriptionInstance, parameters: Record<string, string>) => Promise<Unlistener> | Unlistener;
+	subscribe: (this: SubscriptionInstance, parameters: Record<string, string>) => Promise<Effect> | Effect;
 };
 
 export function installSocketHandlers(httpServer: Server, context: BackendContext) {
@@ -35,7 +35,7 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 			return;
 		}
 		let user: string | undefined;
-		const subscriptions = new Map<string, Promise<Unlistener>>();
+		const subscriptions = new Map<string, Promise<Effect>>();
 		function close() {
 			for (const [ name, unlistener ] of subscriptions) {
 				subscriptions.delete(name);

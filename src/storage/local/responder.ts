@@ -1,4 +1,4 @@
-import type { Instance, Values } from 'xxscreeps/utility/types';
+import type { Effect, Instance, Values } from 'xxscreeps/utility/types';
 import type { Worker } from 'worker_threads';
 import { isMainThread, parentPort } from 'worker_threads';
 import { Deferred } from 'xxscreeps/utility/async';
@@ -65,7 +65,7 @@ const responderHostsByName = new Map<string, AbstractResponderHost>();
 // User in client isolate
 let didInitializeWorker = false;
 const responderClientsById = new Map<string, AbstractResponderClient>();
-const unlistenByClientId = new Map<string, () => void>();
+const unlistenByClientId = new Map<string, Effect>();
 
 // Connect to an existing responder
 let parentRefs = 0;

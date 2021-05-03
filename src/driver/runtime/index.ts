@@ -28,7 +28,7 @@ export function initialize(evaluate: Evaluate, printFn: Print, data: Initializat
 	world = new World(data.shardName, data.terrainBlob);
 
 	// Invoke runtime initialization hooks
-	initializers.splice(0, initializers.length).forEach(fn => fn(data));
+	initializers.splice(0).forEach(fn => fn(data));
 
 	// Set up runtime
 	const { modules } = CodeSchema.read(data.codeBlob);

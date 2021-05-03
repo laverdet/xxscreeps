@@ -2,7 +2,7 @@ import type { GameConstructor } from '.';
 import * as C from './constants';
 import lodash from 'lodash';
 import { globals, registerGlobal } from './symbols';
-import { registerRuntimeInitializer } from 'xxscreeps/driver';
+import { registerRuntimeConnector } from 'xxscreeps/driver';
 
 registerGlobal('_', lodash);
 
@@ -12,7 +12,11 @@ registerGlobal(function StructureTerminal() {});
 registerGlobal(function Tombstone() {});
 
 declare const globalThis: any;
-registerRuntimeInitializer(() => Object.entries(C).forEach(([ identifier, value ]) => globalThis[identifier] = value));
+registerRuntimeConnector({
+	initialize() {
+		Object.entries(C).forEach(([ identifier, value ]) => globalThis[identifier] = value);
+	},
+});
 
 // Used to extract type information from bundled dts file, via make-types.ts
 export interface Global {

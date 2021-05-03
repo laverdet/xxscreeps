@@ -7,8 +7,8 @@ import { getConsoleChannel } from 'xxscreeps/engine/model/user';
 const au = new AnsiUp();
 // Stupid hack to override client's CSS padding on console eval results
 const colorize = (payload: string) => au.ansi_to_html(payload).replace(
-	/<span style="(?<color>color:rgb\(\d+,\d+,\d+\))">/g,
-	(_, color) => `<span style="padding:0;${color}">`,
+	/<span style="(?<style>(?:background-color|color|font-weight):[^";]+?;?)+">/g,
+	(_, style) => `<span style="padding:0;${style}">`,
 ).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
 export const ConsoleSubscription: SubscriptionEndpoint = {

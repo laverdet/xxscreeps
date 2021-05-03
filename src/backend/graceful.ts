@@ -11,7 +11,7 @@ export function setupGracefulShutdown(
 	server: Server,
 	sockjs: sockjs.Server,
 	{ timeout = 2000 }: Options = {},
-): () => void {
+) {
 
 	// Keep track of all connections
 	const sockets = new Map<Reference, boolean>();

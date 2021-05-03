@@ -182,7 +182,7 @@ export class RoomVisual {
 	 * Remove all visuals from the room.
 	 */
 	clear() {
-		this.#visuals.splice(0, this.#visuals.length);
+		this.#visuals.splice(0);
 	}
 
 	/**

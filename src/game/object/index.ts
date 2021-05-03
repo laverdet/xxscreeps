@@ -42,7 +42,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		if (BufferObject.check(this)) {
 			return expandGetters(this);
 		} else {
-			return `${options.stylize(`[${this.constructor.name}]`, 'special')}${options.stylize('{released}', 'null')}`;
+			return `${options.stylize(`[${this.constructor.name}]`, 'special')} ${options.stylize('{released}', 'null')}`;
 		}
 	}
 

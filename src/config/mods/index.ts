@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import config, { configPath } from 'xxscreeps/config';
 
-type Provide = 'constants' | 'backend' | 'game' | 'processor' | 'storage';
+type Provide = 'constants' | 'backend' | 'driver' | 'game' | 'processor' | 'storage';
 export type Manifest = {
 	dependencies?: string[];
 	provides: Provide | Provide[] | null;
@@ -68,7 +68,7 @@ try {
 
 	// Save mod bundles
 	await Promise.all([
-		...[ 'backend', 'game', 'processor', 'storage' ].map(async specifier => {
+		...[ 'backend', 'driver', 'game', 'processor', 'storage' ].map(async specifier => {
 			const mods = await resolveWithinMods(specifier);
 			const content = mods.map(mod => `import ${JSON.stringify(mod)};\n`).join('');
 			await fs.writeFile(new URL(`${specifier}.js`, outDir), content, 'utf8');

@@ -1,18 +1,16 @@
-import type { Effect, MaybePromise } from './types';
+import type { AsyncEffectAndResult, Effect } from './types';
 
 // Given a series of effect-returning promises this waits for them all to resolve and returns a
 // single effect that owns all the underlying effects. In the case that one throws the successful
 // effects are destroyed.
-type Acquired<Type> = MaybePromise<ResolvedAcquired<Type>> | undefined;
-type ResolvedAcquired<Type> = void | Effect | readonly [ Effect | void, Type ];
-export function acquire<Type extends Acquired<any>[]>(...async: [ ...Type ]): Promise<[ Effect, {
-	[Key in keyof Type]: Type[Key] extends Acquired<infer Result> ? Result : never;
+export function acquire<Type extends AsyncEffectAndResult[]>(...async: [ ...Type ]): Promise<[ Effect, {
+	[Key in keyof Type]: Type[Key] extends AsyncEffectAndResult<infer Result> ? Result : never;
 } ]>;
-export function acquire(...async: Acquired<any>[]): Promise<[ Effect, any ]> {
+export function acquire(...async: AsyncEffectAndResult[]): Promise<[ Effect, any ]> {
 	// Not implemented as an async function to keep original stack traces
 	return new Promise((resolve, reject) => {
 		void Promise.allSettled(async).then(settled => {
-			const effects: Effect[] = [];
+			let effect: Effect = () => {};
 			const results = [];
 			let rejected = false;
 			for (const result of settled) {
@@ -20,15 +18,17 @@ export function acquire(...async: Acquired<any>[]): Promise<[ Effect, any ]> {
 					const { value } = result;
 					if (Array.isArray(value)) {
 						// Returned `[ effect, result ]`
-						const effect = value[0];
-						if (effect) {
-							effects.push(effect);
+						const nextEffect = value[0];
+						if (nextEffect) {
+							const prevEffect = effect;
+							effect = () => { prevEffect(); nextEffect() };
 						}
 						results.push(value[1]);
 					} else {
 						// Returned `effect`
 						if (value) {
-							effects.push(value as never);
+							const prevEffect = effect;
+							effect = () => { prevEffect(); (value as Effect)() };
 						}
 						results.push(undefined);
 					}
@@ -38,7 +38,6 @@ export function acquire(...async: Acquired<any>[]): Promise<[ Effect, any ]> {
 					reject(result.reason);
 				}
 			}
-			const effect = () => effects.forEach(effect => effect());
 			if (rejected) {
 				effect();
 			} else {

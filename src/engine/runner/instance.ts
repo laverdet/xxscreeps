@@ -1,30 +1,36 @@
+import type { Effect } from 'xxscreeps/utility/types';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
+import type { RunnerIntent, RunnerUserMessage } from './channel';
+import type { Sandbox } from 'xxscreeps/driver/sandbox';
+import type { DriverConnector } from 'xxscreeps/driver/symbols';
 import type { Shard } from 'xxscreeps/engine/model/shard';
-import type { World } from 'xxscreeps/game/map';
 import type { Subscription } from 'xxscreeps/storage/channel';
+import type { World } from 'xxscreeps/game/map';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
-import type { Sandbox } from 'xxscreeps/driver/sandbox';
+import { acquire } from 'xxscreeps/utility/async';
 import { createSandbox } from 'xxscreeps/driver/sandbox';
+import { driverConnectors } from 'xxscreeps/driver/symbols';
 import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/model/processor';
-import { loadUserFlagBlob, saveUserFlagBlobForNextTick } from 'xxscreeps/mods/flag/model';
-import { getConsoleChannel, loadUserMemoryBlob } from 'xxscreeps/engine/model/user';
-import { exchange } from 'xxscreeps/utility/utility';
-import type { RunnerIntent, RunnerUserMessage } from './channel';
+import { getConsoleChannel } from 'xxscreeps/engine/model/user';
 import { getRunnerUserChannel } from './channel';
 
 export class PlayerInstance {
-	consoleEval?: string[];
-	intents?: RunnerIntent[];
+	tickPayload: TickPayload = {} as never;
 	readonly userId: string;
 	private branch: string | null;
+	private cleanup!: Effect;
+	private connectors!: DriverConnector[];
 	private sandbox?: Sandbox;
 	private stale = false;
+	private readonly consoleEval: string[] = [];
 	private readonly consoleChannel: ReturnType<typeof getConsoleChannel>;
+	private readonly intents: RunnerIntent[] = [];
 
-	constructor(
+	private constructor(
+		user: User.User,
 		public readonly shard: Shard,
 		private readonly world: World,
-		user: User.User,
 		private readonly channel: Subscription<RunnerUserMessage>,
 	) {
 		this.branch = user.code.branch;
@@ -40,11 +46,11 @@ export class PlayerInstance {
 					break;
 
 				case 'eval':
-					(this.consoleEval ??= []).push(message.expr);
+					this.consoleEval.push(message.expr);
 					break;
 
 				case 'intent': {
-					(this.intents ??= []).push(message.intent);
+					this.intents.push(message.intent);
 					break;
 				}
 
@@ -60,51 +66,69 @@ export class PlayerInstance {
 			shard.blob.reqBuffer(`user/${userId}/info`),
 		]);
 		const user = User.read(userBlob);
-		return new PlayerInstance(shard, world, user, channel);
+		const instance = new PlayerInstance(user, shard, world, channel);
+		try {
+			[ instance.cleanup, instance.connectors ] = await acquire(...driverConnectors.map(fn => fn(instance)));
+			return instance;
+		} catch (err) {
+			instance.disconnect();
+			throw err;
+		}
 	}
 
 	disconnect() {
 		this.channel.disconnect();
 		this.sandbox?.dispose();
+		this.cleanup();
 	}
 
-	async run(this: PlayerInstance, time: number, roomBlobs: Readonly<Uint8Array>[], roomNames: string[]) {
-		// Dispose the current sandbox if the user has pushed new code
-		if (this.stale) {
-			this.sandbox!.dispose();
-			this.sandbox = undefined;
-			this.stale = false;
-		}
-
-		// If there's no sandbox load the required data and initialize
-		if (!this.sandbox) {
-			const [ codeBlob, flagBlob, memoryBlob ] = await Promise.all([
-				this.shard.blob.reqBuffer(`user/${this.userId}/${this.branch}`),
-				loadUserFlagBlob(this.shard, this.userId),
-				loadUserMemoryBlob(this.shard, this.userId),
-			]);
-			this.sandbox = await createSandbox({
-				userId: this.userId,
-				codeBlob, flagBlob, memoryBlob,
-				shardName: this.shard.name,
-				terrainBlob: this.world.terrainBlob,
-			}, (fd, payload) => {
-				const type = ([ 'result', 'log', 'error' ] as const)[fd];
-				this.consoleChannel.publish({ type, value: payload }).catch(console.error);
-			});
-		}
-
-		// Run the tick
+	async run(this: PlayerInstance, time: number, roomNames: string[]) {
 		const result = await (async() => {
-			try {
-				return await this.sandbox!.run({
-					time,
-					roomBlobs,
-					consoleEval: exchange(this, 'consoleEval'),
-					backendIntents: exchange(this, 'intents'),
+			// Dispose the current sandbox if the user has pushed new code
+			const wasStale = this.stale;
+			if (wasStale) {
+				this.sandbox!.dispose();
+				this.sandbox = undefined;
+				this.stale = false;
+			}
+
+			// If there's no sandbox load the required data and initialize
+			if (!this.sandbox) {
+				const payload: InitializationPayload = {
+					userId: this.userId,
+					shardName: this.shard.name,
+					terrainBlob: this.world.terrainBlob,
+				} as never;
+				[ payload.codeBlob ] = await Promise.all([
+					this.shard.blob.reqBuffer(`user/${this.userId}/${this.branch}`),
+					Promise.all(this.connectors.map(connector => connector.initialize?.(payload))),
+				]);
+				this.sandbox = await createSandbox(payload, (fd, payload) => {
+					const type = ([ 'result', 'log', 'error' ] as const)[fd];
+					this.consoleChannel.publish({ type, value: payload }).catch(console.error);
 				});
+			}
+
+			// Skip the tick if this reset was the player's fault
+			if (wasStale) {
+				return;
+			}
+
+			// Run the tick
+			try {
+				const payload: TickPayload = {
+					time,
+					consoleEval: this.consoleEval.splice(0),
+					backendIntents: this.intents.splice(0),
+				} as never;
+				[ payload.roomBlobs ] = await Promise.all([
+					Promise.all(Fn.map(roomNames, roomName => this.shard.loadRoomBlob(roomName, time - 1))),
+					Promise.all(Fn.map(this.connectors, connector => connector.refresh?.(payload))),
+				]);
+				return await this.sandbox.run(payload);
 			} catch (err) {
 				console.error(err.stack);
+				this.stale = true;
 			}
 		})();
 
@@ -115,16 +139,8 @@ export class PlayerInstance {
 				Promise.all(Fn.map(roomNames, roomName =>
 					publishRunnerIntentsForRoom(this.shard, this.userId, roomName, time, result.intentPayloads[roomName]))),
 
-				// Save flags
-				// TODO: Maybe some kind of sanity check on the blob since it was generated by a
-				// runner?
-				result.flagNextBlob && saveUserFlagBlobForNextTick(this.shard, this.userId, result.flagNextBlob),
-
-				// Save visuals
-				// saveVisualsBlob(this.shard, this.userId, time, result.visualsBlob),
-
-				// Save memory
-				result.memoryNextBlob && this.shard.blob.set(`memory/${this.userId}`, result.memoryNextBlob),
+				// Save driver connector information [memory, flags, visual, whatever]
+				Promise.all(Fn.map(this.connectors, connector => connector.save?.(result))),
 			]);
 		} else {
 			// Publish empty results to move processing along

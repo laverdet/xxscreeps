@@ -1,11 +1,12 @@
 import type { Color } from './flag';
-import type { RoomPosition } from 'xxscreeps/game/position';
+import type { FlagIntent } from './model';
 import type { TypeOf } from 'xxscreeps/schema';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
-import { registerRuntimeInitializer, registerRuntimeTick } from 'xxscreeps/driver';
+import { registerRuntimeConnector } from 'xxscreeps/driver';
 import { LookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
+import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, vector } from 'xxscreeps/schema';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema';
 import { instantiate } from 'xxscreeps/utility/utility';
@@ -40,27 +41,27 @@ declare module 'xxscreeps/driver' {
 	interface InitializationPayload {
 		flagBlob: Readonly<Uint8Array> | null;
 	}
+	interface TickPayload {
+		flagIntents: typeof intents;
+	}
 	interface TickResult {
 		flagNextBlob: Readonly<Uint8Array> | null;
 	}
 }
 let flags: TypeOf<typeof schema> = Object.create(null);
-registerRuntimeInitializer(payload => {
-	if (payload.flagBlob) {
-		flags = read(payload.flagBlob);
-	}
-});
-
-// Add `flags` to global `Game` object
-declare module 'xxscreeps/game/game' {
-	interface Game {
-		flags: Record<string, Flag>;
-	}
-}
-registerGameInitializer(Game => Game.flags = flags);
 
 // Update user flag blob
-registerRuntimeTick({
+registerRuntimeConnector({
+	initialize(payload) {
+		if (payload.flagBlob) {
+			flags = read(payload.flagBlob);
+		}
+	},
+
+	receive(payload) {
+		intents.push(...payload.flagIntents);
+	},
+
 	send(payload) {
 		for (const intent of intents) {
 			if (intent.type === 'create') {
@@ -77,17 +78,20 @@ registerRuntimeTick({
 	},
 });
 
+// Add `flags` to global `Game` object
+declare module 'xxscreeps/game/game' {
+	interface Game {
+		flags: Record<string, Flag>;
+	}
+}
+registerGameInitializer(Game => Game.flags = flags);
+
 // This flag mock-processor runs in the runner sandbox and simply sends back a blob if the flags have changed
 let didUpdateFlags = false;
-export let intents: ({ type: null } | {
-	type: 'create';
-	params: Parameters<typeof createFlag>;
-} | {
-	type: 'remove';
-	params: Parameters<typeof removeFlag>;
-})[] = [];
+export let intents: FlagIntent[] = [];
 
-export function createFlag(name: string, pos: RoomPosition, color: Color, secondaryColor: Color, replace = true) {
+export function createFlag(name: string, posInt: number, color: Color, secondaryColor: Color, replace = true) {
+	const pos = new RoomPosition(posInt);
 	// Run create / move / setColor intent
 	if (checkCreateFlag(flags, pos, name, color, secondaryColor) === C.OK) {
 		const flag = flags[name];

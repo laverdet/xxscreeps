@@ -1,3 +1,4 @@
+import type { Effect } from 'xxscreeps/utility/types';
 import type { PubSubProvider, PubSubSubscription } from './provider';
 import { Deferred } from 'xxscreeps/utility/async';
 
@@ -30,7 +31,7 @@ export class Channel<Message = string> {
 
 export class Subscription<Message> {
 	private didDisconnect = false;
-	private readonly disconnectListeners = new Set<() => void>();
+	private readonly disconnectListeners = new Set<Effect>();
 	private readonly listeners = new Set<Listener<Message>>();
 
 	private constructor(

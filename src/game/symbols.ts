@@ -1,5 +1,5 @@
 import type { Game } from './game';
-import { registerRuntimeInitializer } from 'xxscreeps/driver';
+import { registerRuntimeConnector } from 'xxscreeps/driver';
 export const gameInitializers: ((game: Game) => void)[] = [];
 export const globals = new Set<string>();
 
@@ -17,7 +17,11 @@ export function registerGameInitializer(fn: (Game: Game) => void) {
  */
 export function defineGlobal(name: string, descriptor: PropertyDescriptor) {
 	globals.add(name);
-	registerRuntimeInitializer(() => Object.defineProperty(globalThis, name, descriptor));
+	registerRuntimeConnector({
+		initialize() {
+			Object.defineProperty(globalThis, name, descriptor);
+		},
+	});
 }
 
 /**

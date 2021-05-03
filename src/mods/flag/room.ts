@@ -4,7 +4,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { userGame } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position';
+import { PositionInteger, RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
 import { extend, instantiate } from 'xxscreeps/utility/utility';
 import { Flag, checkCreateFlag } from './flag';
@@ -35,7 +35,7 @@ extend(Room, {
 		const { pos, rest } = fetchPositionArgumentRest(this.name, arg1, arg2, ...args);
 		const flags = userGame!.flags;
 		const name = rest[0] ?? Fn.firstMatching(
-			Fn.map(Fn.range(1, Infinity), ii => `Flag${ii}`),
+			Fn.map(Fn.range(), ii => `Flag${ii}`),
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			name => flags[name] === undefined)!;
 		const color = rest[1] ?? C.COLOR_WHITE;
@@ -50,7 +50,7 @@ extend(Room, {
 			() => checkCreateFlag(flags, pos!, name, color, secondaryColor),
 			() => {
 				// Save creation intent
-				intents.push({ type: 'create', params: [ name, pos!, color, secondaryColor ] });
+				intents.push({ type: 'create', params: [ name, pos![PositionInteger], color, secondaryColor ] });
 				// Create local flag immediately
 				userGame!.flags[name] = instantiate(Flag, {
 					name,

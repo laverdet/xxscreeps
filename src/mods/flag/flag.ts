@@ -1,7 +1,8 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
+import type { InspectOptionsStylized } from 'util';
 import * as C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
-import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
+import { PositionInteger, RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { LookType, RoomObject, format as baseFormat } from 'xxscreeps/game/object';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
@@ -47,7 +48,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => checkFlagColors(color, secondaryColor),
 			() => {
 				intents.push({ type: 'create', params: [
-					this.name, this.pos,
+					this.name, this.pos[PositionInteger],
 					color, secondaryColor, true,
 				] });
 				return C.OK;
@@ -69,12 +70,25 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => checkFlagPosition(pos!),
 			() => {
 				intents.push({ type: 'create', params: [
-					this.name, this.pos,
+					this.name, this.pos[PositionInteger],
 					this.color, this.secondaryColor, true,
 				] });
 				return C.OK;
 			},
 		);
+	}
+
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, { stylize }: InspectOptionsStylized) {
+		try {
+			// The `RoomObject` printer can fail here because these are instantiated and added to game
+			// state without reading a `BufferObject`
+			const { pos, name } = this;
+			return `[Flag ${stylize(name, 'string')} ${stylize(pos.roomName, 'string')} ` +
+				`{${stylize(`${pos.x}`, 'number')}, ${stylize(`${pos.y}`, 'number')}}]`;
+		} catch (err) {
+			// I'm not sure how this would be possible since the flag payload is only read once
+			return `${stylize('[Flag]', 'special')} ${stylize('{released}', 'null')}`;
+		}
 	}
 }
 

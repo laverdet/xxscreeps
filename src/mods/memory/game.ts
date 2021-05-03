@@ -1,5 +1,5 @@
 import { defineGlobal, registerGlobal } from 'xxscreeps/game';
-import { registerRuntimeInitializer, registerRuntimeTick } from 'xxscreeps/driver';
+import { registerRuntimeConnector } from 'xxscreeps/driver';
 import { RawMemory, flush, get, initialize } from './memory';
 
 // Export to runtime globals
@@ -25,8 +25,11 @@ declare module 'xxscreeps/driver' {
 		memoryNextBlob: Readonly<Uint8Array> | null;
 	}
 }
-registerRuntimeInitializer(payload => initialize(payload.memoryBlob));
-registerRuntimeTick({
+registerRuntimeConnector({
+	initialize(payload) {
+		initialize(payload.memoryBlob);
+	},
+
 	send(payload) {
 		payload.memoryNextBlob = flush();
 	},
