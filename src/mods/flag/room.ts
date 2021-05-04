@@ -47,14 +47,14 @@ extend(Room, {
 				}
 				return C.OK;
 			},
-			() => checkCreateFlag(flags, pos!, name, color, secondaryColor),
+			() => checkCreateFlag(flags, pos!, name, color, secondaryColor, true),
 			() => {
 				// Save creation intent
 				intents.push({ type: 'create', params: [ name, pos![PositionInteger], color, secondaryColor ] });
 				// Create local flag immediately
 				userGame!.flags[name] = instantiate(Flag, {
 					name,
-					id: undefined,
+					id: null as never,
 					pos,
 					color, secondaryColor,
 				});

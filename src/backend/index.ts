@@ -5,6 +5,7 @@ import type { RoomObject } from 'xxscreeps/game/object';
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import type { BackendContext } from './context';
 import { MapRender, Render, TerrainRender, middleware, routes } from './symbols';
+export { registerRoomSocketHandler } from './symbols';
 
 // Koa middleware & generic backend route types
 export interface Context {

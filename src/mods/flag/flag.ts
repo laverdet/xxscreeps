@@ -49,7 +49,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => {
 				intents.push({ type: 'create', params: [
 					this.name, this.pos[PositionInteger],
-					color, secondaryColor, true,
+					color, secondaryColor,
 				] });
 				return C.OK;
 			},
@@ -71,7 +71,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => {
 				intents.push({ type: 'create', params: [
 					this.name, this.pos[PositionInteger],
-					this.color, this.secondaryColor, true,
+					this.color, this.secondaryColor,
 				] });
 				return C.OK;
 			},
@@ -117,6 +117,7 @@ export function checkCreateFlag(
 	pos: RoomPosition,
 	name: string,
 	color: Color, secondaryColor: Color,
+	checkName = false,
 ) {
 	return chainIntentChecks(
 		() => checkFlagPosition(pos),
@@ -124,6 +125,8 @@ export function checkCreateFlag(
 		() => {
 			if (typeof name !== 'string' || name.length === 0 || name.length > 100) {
 				return C.ERR_INVALID_ARGS;
+			} else if (checkName && (name in flags)) {
+				return C.ERR_NAME_EXISTS;
 
 			} else if (Object.keys(flags).length >= C.FLAGS_LIMIT) {
 				return C.ERR_FULL;

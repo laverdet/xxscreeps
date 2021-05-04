@@ -6,7 +6,6 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import type { FindConstants, FindType, RoomFindOptions } from './find';
 import type { LookConstants, TypeOfLook } from './look';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Memory from 'xxscreeps/mods/memory/memory';
 import { BufferObject, withOverlay } from 'xxscreeps/schema';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/utility/iteratee';
@@ -41,12 +40,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 			this._addToIndex(object);
 			object[AfterInsert](this);
 		}
-	}
-
-	get memory() {
-		const memory = Memory.get();
-		const creeps = memory.creeps ??= {};
-		return creeps[this.name] ??= {};
 	}
 
 	/**

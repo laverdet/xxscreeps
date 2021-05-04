@@ -90,20 +90,20 @@ registerGameInitializer(Game => Game.flags = flags);
 let didUpdateFlags = false;
 export let intents: FlagIntent[] = [];
 
-export function createFlag(name: string, posInt: number, color: Color, secondaryColor: Color, replace = true) {
+export function createFlag(name: string, posInt: number, color: Color, secondaryColor: Color) {
 	const pos = new RoomPosition(posInt);
 	// Run create / move / setColor intent
 	if (checkCreateFlag(flags, pos, name, color, secondaryColor) === C.OK) {
 		const flag = flags[name];
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (flag) {
-			if (replace) {
-				// Modifying an existing flag
-				flag.color = color;
-				flag.secondaryColor = secondaryColor;
-				flag.pos = pos;
-				didUpdateFlags = true;
-			}
+			// Modifying an existing flag
+			// nb: This branch will be taken in the case `Room#createFlag` is called since that function
+			// automatically creates a Flag object
+			flag.color = color;
+			flag.secondaryColor = secondaryColor;
+			flag.pos = pos;
+			didUpdateFlags = true;
 		} else {
 			// Creating a new flag
 			flags[name] = instantiate(Flag, {

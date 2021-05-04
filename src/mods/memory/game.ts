@@ -1,8 +1,10 @@
 import { defineGlobal, registerGlobal } from 'xxscreeps/game';
 import { registerRuntimeConnector } from 'xxscreeps/driver';
+import { extend } from 'xxscreeps/utility/utility';
+import { Room } from 'xxscreeps/game/room';
 import { RawMemory, flush, get, initialize } from './memory';
 
-// Export to runtime globals
+// Export `Memory` and `RawMemory` to runtime globals
 declare module 'xxscreeps/game/runtime' {
 	interface Global {
 		Memory: any;
@@ -32,5 +34,19 @@ registerRuntimeConnector({
 
 	send(payload) {
 		payload.memoryNextBlob = flush();
+	},
+});
+
+// Define `Room#memory`
+declare module 'xxscreeps/game/room/room' {
+	interface Room {
+		memory: any;
+	}
+}
+extend(Room, {
+	get memory() {
+		const memory = get();
+		const rooms = memory.rooms ??= {};
+		return rooms[this.name] ??= {};
 	},
 });

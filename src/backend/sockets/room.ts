@@ -2,14 +2,10 @@ import type { SubscriptionEndpoint } from '../socket';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import { Objects } from 'xxscreeps/game/room';
-import { loadVisuals } from 'xxscreeps/engine/model/user';
-import { getFlagChannel, loadUserFlags } from 'xxscreeps/mods/flag/model';
 import { GameState, runAsUser, runWithState } from 'xxscreeps/game';
-import { Variant } from 'xxscreeps/schema';
 import { acquire } from 'xxscreeps/utility/async';
-import { stringifyInherited } from 'xxscreeps/utility/string';
 import { asUnion } from 'xxscreeps/utility/utility';
-import { Render } from 'xxscreeps/backend/symbols';
+import { Render, roomSocketHandlers } from 'xxscreeps/backend/symbols';
 import './render';
 
 function diff(previous: any, next: any) {
@@ -38,45 +34,17 @@ export const roomSubscription: SubscriptionEndpoint = {
 	pattern: /^room:(?:(?<shard>[A-Za-z0-9]+)\/)?(?<room>[A-Z0-9]+)$/,
 
 	async subscribe(parameters) {
-		let flagsStale = true;
-		let flagString = '';
-		let visualsString = '';
 		let lastTickTime = 0;
 		let previous: any;
 		const seenUsers = new Set<string>();
 
 		const update = async(time: number) => {
 			lastTickTime = Date.now();
-			const [ room ] = await Promise.all([
+			const [ room, extra ] = await Promise.all([
 				// Update room objects
 				this.context.shard.loadRoom(parameters.room, time),
-				// Update user flags
-				(async() => {
-					if (this.user && flagsStale) {
-						flagsStale = false;
-						const flags = await loadUserFlags(this.context.shard, this.user);
-						const flagsInThisRoom = Object.values(flags).filter(flag => flag.pos.roomName === parameters.room);
-						flagString = flagsInThisRoom.map(
-							flag => `${flag.name}~${flag.color}~${flag.secondaryColor}~${flag.pos.x}~${flag.pos.y}`).join('|');
-					}
-				})(),
-				// Update visuals
-				(async() => {
-					if (!this.user) {
-						return;
-					}
-					const allVisuals = await loadVisuals(this.context.shard, this.user, time);
-					visualsString = '';
-					if (allVisuals) {
-						const visuals = allVisuals.find(visual => visual.name === parameters.room);
-						if (visuals) {
-							for (const visual of visuals.visual) {
-								(visual as any).t = visual[Variant];
-								visualsString += stringifyInherited(visual) + '\n';
-							}
-						}
-					}
-				})(),
+				// Invoke room socket handlers
+				Promise.all(hooks.map(fn => fn(time))),
 			]);
 
 			// Render current room state
@@ -113,33 +81,29 @@ export const roomSubscription: SubscriptionEndpoint = {
 
 			// Diff with previous room state and return response
 			const dval = diff(previous, objects);
-			const response: any = {
+			const response = Object.assign({
 				objects: dval,
-				flags: flagString,
-				visual: visualsString,
 				info: { mode: 'world' },
 				gameTime: time,
 				users,
-			};
+			}, ...extra);
 			this.send(JSON.stringify(response));
 			previous = objects;
 		};
 
 		// Listen for updates
-		const [ effect ] = await acquire(
+		const [ effect, [ hookResults ] ] = await acquire(
+			// Resolve room socket handlers
+			acquire(...roomSocketHandlers.map(fn => fn(this.context.shard, this.user, parameters.room))),
 			// Room updates
 			this.context.shard.channel.listen(event => {
 				if (event.type === 'tick' && Date.now() > lastTickTime + 50) {
 					update(event.time).catch(error => console.error(error));
 				}
 			}),
-			// Flag updates
-			this.user ? getFlagChannel(this.context.shard, this.user).listen(event => {
-				if (event.type === 'updated') {
-					flagsStale = true;
-				}
-			}) : undefined,
 		);
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		const hooks = hookResults.filter(hook => hook);
 
 		// Fire off first update immediately
 		await update(this.context.shard.time);

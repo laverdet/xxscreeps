@@ -2,13 +2,11 @@ import type { TypeOf } from 'xxscreeps/schema';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema';
 import { build } from 'xxscreeps/engine/schema';
-import { registerGlobal } from '.';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
 // Declare schema and types
 const color = optional('string');
 const fill = optional('string');
-
 const line = {
 	lineStyle: optional(enumerated(undefined, 'dashed', 'dotted')),
 	opacity: optional('double'),
@@ -87,25 +85,21 @@ const textSchema = struct({
 });
 
 const visualSchema = variant(lineSchema, circleSchema, rectSchema, polySchema, textSchema);
-
 export const schema = build(declare('Visual', vector(struct({
 	name: 'string',
-	visual: vector(variant(lineSchema, circleSchema, rectSchema, polySchema, textSchema)),
+	visual: vector(visualSchema),
 }))));
 
-// Clear visuals at the end of the tick
-export function clear() {
-	tickVisuals.clear();
-}
-
 // Save to visuals to schema blob
-export function write() {
+export function flush() {
 	if (tickVisuals.size) {
-		const mapped = Fn.map(tickVisuals.entries(), entry => ({
+		const blob = writeSchema(Fn.map(tickVisuals.entries(), entry => ({
 			name: entry[0],
 			visual: entry[1],
-		}));
-		return writeSchema(mapped as (typeof mapped extends Iterable<infer T> ? T[] : never));
+		})));
+		const roomNames = [ ...tickVisuals.keys() ];
+		tickVisuals.clear();
+		return { blob, roomNames };
 	}
 }
 const writeSchema = makeWriter(schema);
@@ -191,10 +185,4 @@ export class RoomVisual {
 	getSize() {
 		return Infinity;
 	}
-}
-
-// Export `RoomVisual` to runtime globals
-registerGlobal(RoomVisual);
-declare module 'xxscreeps/game/runtime' {
-	interface Global { RoomVisual: typeof RoomVisual }
 }

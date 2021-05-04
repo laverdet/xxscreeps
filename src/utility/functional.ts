@@ -99,6 +99,18 @@ export function fromEntries(iterable: Iterable<any>, callback?: (value: any) => 
 	return object;
 }
 
+export function join(iterable: Iterable<string>, join = '') {
+	const { head, rest } = shift(iterable);
+	if (head === undefined) {
+		return '';
+	}
+	let str = head;
+	for (const value of rest) {
+		str += join + value;
+	}
+	return str;
+}
+
 // It's like [].map except you can use it on iterables, also it doesn't generate a temporary array.
 export function *map<Type, Result>(iterable: Iterable<Type>, callback: (value: Type) => Result): Iterable<Result> {
 	for (const value of iterable) {
@@ -109,9 +121,9 @@ export function *map<Type, Result>(iterable: Iterable<Type>, callback: (value: T
 // If you just want the smallest element of an array it's senseless to sort the whole thing and take
 // array[0]. You can just run through once and find that element in linear time
 export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, right: Type) => number) {
-	const head = shift(iterable);
-	let minimum = head.head;
-	for (const value of head.rest) {
+	const { head, rest } = shift(iterable);
+	let minimum = head;
+	for (const value of rest) {
 		if (callback(minimum!, value) > 0) {
 			minimum = value;
 		}

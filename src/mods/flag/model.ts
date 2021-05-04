@@ -16,7 +16,7 @@ export type FlagIntent = { type: null } | {
  */
 export function getFlagChannel(shard: Shard, userId: string) {
 	type Message =
-		{ type: 'updated' } |
+		{ type: 'updated'; time: number } |
 		{ type: 'intent'; intent: FlagIntent };
 	return new Channel<Message>(shard.pubsub, `user/${userId}/flags`);
 }
@@ -44,6 +44,7 @@ export async function loadUserFlags(shard: Shard, userId: string) {
  * Save a user's processed flag blob
  */
 export async function saveUserFlagBlobForNextTick(shard: Shard, userId: string, blob: Readonly<Uint8Array>) {
+	const time = shard.time + 1;
 	await shard.blob.set(`user/${userId}/flags`, blob);
-	await getFlagChannel(shard, userId).publish({ type: 'updated' });
+	await getFlagChannel(shard, userId).publish({ type: 'updated', time });
 }

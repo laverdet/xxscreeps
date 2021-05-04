@@ -9,6 +9,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/source',
 		'xxscreeps/mods/spawn',
 		'xxscreeps/mods/storage',
+		'xxscreeps/mods/visual',
 	],
 	provides: null,
 };

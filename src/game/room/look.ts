@@ -7,7 +7,6 @@ import type { PositionParameter } from 'xxscreeps/game/position';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { iterateArea } from 'xxscreeps/game/position/direction';
 import { terrainMaskToString } from 'xxscreeps/game/terrain';
-import { RoomVisual } from 'xxscreeps/game/visual';
 import { LookAt, LookFor, Objects, lookConstants } from './symbols';
 import { Room } from './room';
 
@@ -42,12 +41,6 @@ type LookForAtArea<Type extends LookConstants> = {
 
 declare module './room' {
 	interface Room {
-		/**
-		 * A `RoomVisual` object for this room. You can use this object to draw simple shapes (lines,
-		 * circles, text labels) in the room.
-		 */
-		visual: RoomVisual;
-
 		/**
 		 * Get the list of objects at the specified room position.
 		 * @param type One of the `LOOK_*` constants
@@ -184,12 +177,6 @@ extend(Room, {
 
 	getPositionAt(x: number, y: number) {
 		return new RoomPosition(x, y, this.name);
-	},
-
-	get visual() {
-		const value = new RoomVisual(this.name);
-		Object.defineProperty(this, 'visual', { value });
-		return value;
 	},
 });
 

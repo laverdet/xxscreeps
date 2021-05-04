@@ -1,9 +1,39 @@
 import * as C from 'xxscreeps/game/constants';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { PositionInteger, RoomPosition } from 'xxscreeps/game/position';
-import { registerBackendRoute } from 'xxscreeps/backend';
+import { registerBackendRoute, registerRoomSocketHandler } from 'xxscreeps/backend';
 import { checkCreateFlag } from './flag';
 import { getFlagChannel, loadUserFlags } from './model';
+
+registerRoomSocketHandler(async(shard, userId, roomName) => {
+	if (!userId) {
+		return;
+	}
+
+	// Subscribe to flag channel
+	let lastTime = shard.time;
+	const unlisten = await getFlagChannel(shard, userId).listen(message => {
+		if (message.type === 'updated') {
+			lastTime = message.time;
+		}
+	});
+
+	let string = '';
+	return [
+		unlisten,
+		async time => {
+			// Update flag payload if needed
+			if (time <= lastTime) {
+				const flags = await loadUserFlags(shard, userId);
+				const flagsInThisRoom = Fn.filter(Object.values(flags), flag => flag.pos.roomName === roomName);
+				string = Fn.join(Fn.map(flagsInThisRoom, flag =>
+					`${flag.name}~${flag.color}~${flag.secondaryColor}~${flag.pos.x}~${flag.pos.y}`), '|');
+			}
+			return { flags: string };
+		},
+	];
+});
 
 registerBackendRoute({
 	path: '/api/game/create-flag',
@@ -23,7 +53,7 @@ registerBackendRoute({
 					type: 'create',
 					params: [
 						name, pos[PositionInteger],
-						color, secondaryColor, true,
+						color, secondaryColor,
 					],
 				},
 			});
