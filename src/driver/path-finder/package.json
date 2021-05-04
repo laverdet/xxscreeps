@@ -1,6 +1,1 @@
-{
-  "gypfile": true,
-  "dependencies": {
-    "nan": "^2.14.2"
-  }
-}
+{ "gypfile": true }
