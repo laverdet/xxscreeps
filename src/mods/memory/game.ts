@@ -1,8 +1,9 @@
+import type { SegmentPayload } from './memory';
 import { defineGlobal, registerGlobal } from 'xxscreeps/game';
 import { registerRuntimeConnector } from 'xxscreeps/driver';
 import { extend } from 'xxscreeps/utility/utility';
 import { Room } from 'xxscreeps/game/room';
-import { RawMemory, flush, get, initialize } from './memory';
+import { RawMemory, flush, flushActiveSegments, flushSegments, get, initialize, loadSegments } from './memory';
 
 // Export `Memory` and `RawMemory` to runtime globals
 declare module 'xxscreeps/game/runtime' {
@@ -18,25 +19,6 @@ defineGlobal('Memory', {
 });
 registerGlobal('RawMemory', RawMemory);
 
-// Receive and send memory payload from driver
-declare module 'xxscreeps/driver' {
-	interface InitializationPayload {
-		memoryBlob: Readonly<Uint8Array> | null;
-	}
-	interface TickResult {
-		memoryNextBlob: Readonly<Uint8Array> | null;
-	}
-}
-registerRuntimeConnector({
-	initialize(payload) {
-		initialize(payload.memoryBlob);
-	},
-
-	send(payload) {
-		payload.memoryNextBlob = flush();
-	},
-});
-
 // Define `Room#memory`
 declare module 'xxscreeps/game/room/room' {
 	interface Room {
@@ -48,5 +30,39 @@ extend(Room, {
 		const memory = get();
 		const rooms = memory.rooms ??= {};
 		return rooms[this.name] ??= {};
+	},
+});
+
+// Receive and send memory payloads from driver
+declare module 'xxscreeps/driver' {
+	interface InitializationPayload {
+		memoryBlob: Readonly<Uint8Array> | null;
+	}
+	interface TickPayload {
+		memorySegments?: SegmentPayload[];
+	}
+	interface TickResult {
+		activeSegmentsRequest: number[] | null;
+		memorySegmentsUpdated: SegmentPayload[] | null;
+		memoryUpdated: Uint8Array;
+	}
+}
+registerRuntimeConnector({
+	initialize(payload) {
+		initialize(payload.memoryBlob);
+	},
+
+	receive(payload) {
+		if (payload.memorySegments) {
+			loadSegments(payload.memorySegments);
+		}
+	},
+
+	send(payload) {
+		// Primary memory
+		payload.memoryUpdated = flush();
+		// Segments
+		payload.activeSegmentsRequest = flushActiveSegments();
+		payload.memorySegmentsUpdated = flushSegments();
 	},
 });

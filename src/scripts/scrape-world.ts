@@ -22,6 +22,8 @@ import { connectToProvider } from 'xxscreeps/storage';
 import { EventLog } from 'xxscreeps/game/room';
 import { NPCData } from 'xxscreeps/mods/npc/game';
 import { clamp, getOrSet } from 'xxscreeps/utility/utility';
+import { saveMemoryBlob } from 'xxscreeps/mods/memory/model';
+import { utf16ToBuffer } from 'xxscreeps/utility/string';
 
 const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
 if (jsonSource === undefined) {
@@ -221,11 +223,7 @@ for (const user of users) {
 for (const user of users) {
 	const memory: string | undefined = env[`memory:${user.id}`];
 	if (memory !== undefined) {
-		const data = new Uint16Array(memory.length);
-		for (let ii = 0; ii < data.length; ++ii) {
-			data[ii] = memory.charCodeAt(ii);
-		}
-		await blob.set(`memory/${user.id}`, new Uint8Array(data.buffer));
+		await saveMemoryBlob(shard, user.id, utf16ToBuffer(memory));
 	}
 }
 
