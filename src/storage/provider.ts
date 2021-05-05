@@ -20,24 +20,31 @@ export type SetOptions = ({
 	px?: number;
 };
 
+export type Value = number | string;
 export type KeyValProvider = {
 	// keys / strings
 	cad(key: string, check: string): Promise<number>;
 	copy(from: string, to: string): Promise<number>;
 	del(key: string): Promise<number>;
 	get(key: string): Promise<string | null>;
-	set(key: string, value: number | string | Readonly<Uint8Array>, options: { get: true } & SetOptions): Promise<string | null>;
-	set(key: string, value: number | string | Readonly<Uint8Array>, options: ({ nx: true } | { xx: true }) & SetOptions): Promise<undefined | null>;
-	set(key: string, value: number | string | Readonly<Uint8Array>, options?: SetOptions): Promise<void>;
+	set(key: string, value: Value | Readonly<Uint8Array>, options: { get: true } & SetOptions): Promise<string | null>;
+	set(key: string, value: Value | Readonly<Uint8Array>, options: ({ nx: true } | { xx: true }) & SetOptions): Promise<undefined | null>;
+	set(key: string, value: Value | Readonly<Uint8Array>, options?: SetOptions): Promise<void>;
 	// numbers
 	decr(key: string): Promise<number>;
 	decrBy(key: string, value: number): Promise<number>;
 	incr(key: string): Promise<number>;
 	incrBy(key: string, value: number): Promise<number>;
+	// hashes
+	hget(key: string, field: string): Promise<string | null>;
+	hgetall(key: string): Promise<Record<string, string>>;
+	hmget(key: string, fields: Iterable<string>): Promise<Record<string, string | null>>;
+	hset(key: string, field: string, value: Value): Promise<number>;
+	hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>): Promise<number>;
 	// lists
 	lpop(key: string): Promise<string | null>;
 	lrange(key: string, start: number, stop: number): Promise<string[]>;
-	rpush(key: string, elements: string[]): Promise<number>;
+	rpush(key: string, elements: Value[]): Promise<number>;
 	// sets
 	sadd(key: string, members: string[]): Promise<number>;
 	scard(key: string): Promise<number>;

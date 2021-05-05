@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type { KeyValProvider, SetOptions } from '../provider';
+import type { KeyValProvider, SetOptions, Value } from '../provider';
 import * as Fn from 'xxscreeps/utility/functional';
 import { promises as fs } from 'fs';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
@@ -29,18 +29,24 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 	abstract copy(from: string, to: string): Promise<number>;
 	abstract del(key: string): Promise<number>;
 	abstract get(key: string): Promise<string | null>;
-	abstract set(key: string, value: number | string | Readonly<Uint8Array>, options: { get: true } & SetOptions): Promise<string | null>;
-	abstract set(key: string, value: number | string | Readonly<Uint8Array>, options: ({ nx: true } | { xx: true }) & SetOptions): Promise<undefined | null>;
-	abstract set(key: string, value: number | string | Readonly<Uint8Array>, options?: SetOptions): Promise<void>;
+	abstract set(key: string, value: Value | Readonly<Uint8Array>, options: { get: true } & SetOptions): Promise<string | null>;
+	abstract set(key: string, value: Value | Readonly<Uint8Array>, options: ({ nx: true } | { xx: true }) & SetOptions): Promise<undefined | null>;
+	abstract set(key: string, value: Value | Readonly<Uint8Array>, options?: SetOptions): Promise<void>;
 
 	abstract decr(key: string): Promise<number>;
 	abstract decrBy(key: string, delta: number): Promise<number>;
 	abstract incr(key: string): Promise<number>;
 	abstract incrBy(key: string, delta: number): Promise<number>;
 
+	abstract hget(key: string, field: string): Promise<string | null>;
+	abstract hgetall(key: string): Promise<Record<string, string>>;
+	abstract hmget(key: string, fields: Iterable<string>): Promise<Record<string, string | null>>;
+	abstract hset(key: string, field: string, value: Value): Promise<number>;
+	abstract hmset(key: string, fields: Iterable<[ string, Value ]>): Promise<number>;
+
 	abstract lpop(key: string): Promise<string | null>;
 	abstract lrange(key: string, start: number, stop: number): Promise<string[]>;
-	abstract rpush(key: string, elements: string[]): Promise<number>;
+	abstract rpush(key: string, elements: Value[]): Promise<number>;
 
 	abstract sadd(key: string, members: string[]): Promise<number>;
 	abstract scard(key: string): Promise<number>;
@@ -203,6 +209,38 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		return value;
 	}
 
+	async hget(key: string, field: string) {
+		const map: Map<string, string> | undefined = this.data.get(key);
+		return map?.get(field) ?? null;
+	}
+
+	async hgetall(key: string) {
+		const map: Map<string, string> | undefined = this.data.get(key);
+		return map ? Fn.fromEntries(map.entries()) : {};
+	}
+
+	async hmget(key: string, fields: Iterable<string>) {
+		const map: Map<string, string> | undefined = this.data.get(key);
+		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ]));
+	}
+
+	hset(key: string, field: string, value: Value) {
+		return this.hmset(key, [ [ field, value ] as const ]);
+	}
+
+	async hmset(key: string, fields: Iterable<readonly [ string, Value ]> | Record<string, Value>) {
+		let count = 0;
+		const map: Map<string, string> = getOrSet(this.data, key, () => new Map);
+		const iterable = Symbol.iterator in fields ?
+			fields as Iterable<[ string, Value ]> :
+			Object.entries(fields);
+		for (const [ field, value ] of iterable) {
+			++count;
+			map.set(field, `${value}`);
+		}
+		return count;
+	}
+
 	async lpop(key: string) {
 		const list: string[] | undefined = this.data.get(key);
 		if (!list) {
@@ -227,13 +265,14 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		);
 	}
 
-	async rpush(key: string, elements: string[]) {
+	async rpush(key: string, elements: Value[]) {
 		const list: string[] | undefined = this.data.get(key);
+		const strings = Fn.map(elements, element => `${element}`);
 		if (list) {
-			list.push(...elements);
+			list.push(...strings);
 			return list.length;
 		} else {
-			this.data.set(key, elements);
+			this.data.set(key, [ ...strings ]);
 			return elements.length;
 		}
 	}
@@ -397,6 +436,29 @@ class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 		return this.request('incrBy', key, delta);
 	}
 
+	hget(key: string, field: string) {
+		return this.request('hget', key, field);
+	}
+
+	hgetall(key: string) {
+		return this.request('hgetall', key);
+	}
+
+	hmget(key: string, fields: Iterable<string>) {
+		return this.request('hmget', key, [ ...fields ]);
+	}
+
+	hset(key: string, field: string, value: Value) {
+		return this.request('hset', key, field, value);
+	}
+
+	hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
+		const iterable = Symbol.iterator in fields ?
+			fields as Iterable<[ string, Value ]> :
+			Object.entries(fields);
+		return this.request('hmset', key, [ ...iterable ]);
+	}
+
 	lpop(key: string) {
 		return this.request('lpop', key);
 	}
@@ -405,7 +467,7 @@ class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 		return this.request('lrange', key, start, stop);
 	}
 
-	rpush(key: string, elements: string[]) {
+	rpush(key: string, elements: Value[]) {
 		return this.request('rpush', key, elements);
 	}
 
