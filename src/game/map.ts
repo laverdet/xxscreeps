@@ -1,5 +1,5 @@
 import type { Adapter } from 'xxscreeps/utility/astar';
-import type { ExitType } from 'xxscreeps/game/room/exit';
+import type { ExitType } from 'xxscreeps/game/room/find';
 import type { Room } from 'xxscreeps/game/room';
 import type { TypeOf } from 'xxscreeps/schema';
 

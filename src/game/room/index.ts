@@ -9,5 +9,6 @@ export {
 } from './symbols';
 
 import './event-log';
+import './find';
 import './path';
 import './look';
