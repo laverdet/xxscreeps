@@ -7,7 +7,7 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { exchange } from 'xxscreeps/utility/utility';
 import { DowngradeTime, Progress, StructureController, UpgradePowerThisTick } from './controller';
-import { checkUpgradeController } from './creep';
+import { checkSignController, checkUpgradeController } from './creep';
 import { saveAction } from 'xxscreeps/game/action-log';
 
 // Processor methods
@@ -41,19 +41,34 @@ function upgradeController(controller: StructureController, energy: number) {
 
 // Register intent processors
 declare module 'xxscreeps/processor' {
-	interface Intent { controller: typeof intent }
+	interface Intent { controller: typeof intents }
 }
-const intent = registerIntentProcessor(Creep, 'upgradeController', (creep, context, id: string) => {
-	const target = Game.getObjectById<StructureController>(id)!;
-	if (checkUpgradeController(creep, target) === Controller.OK) {
-		const power = calculatePower(creep, Controller.WORK, Controller.UPGRADE_CONTROLLER_POWER);
-		const energy = Math.min(power, creep.store.energy);
-		Store.subtract(creep.store, 'energy', energy);
-		upgradeController(target, energy);
-		saveAction(creep, 'upgradeController', target.pos.x, target.pos.y);
-		context.didUpdate();
-	}
-});
+const intents = [
+	registerIntentProcessor(Creep, 'signController', (creep, context, id: string, message: string) => {
+		const target = Game.getObjectById<StructureController>(id)!;
+		if (checkSignController(creep, target) === Controller.OK) {
+			target._sign = message === '' ? undefined : {
+				datetime: Date.now(),
+				text: message.substr(0, 100),
+				time: Game.time,
+				userId: creep[Owner],
+			};
+			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(Creep, 'upgradeController', (creep, context, id: string) => {
+		const target = Game.getObjectById<StructureController>(id)!;
+		if (checkUpgradeController(creep, target) === Controller.OK) {
+			const power = calculatePower(creep, Controller.WORK, Controller.UPGRADE_CONTROLLER_POWER);
+			const energy = Math.min(power, creep.store.energy);
+			Store.subtract(creep.store, 'energy', energy);
+			upgradeController(target, energy);
+			saveAction(creep, 'upgradeController', target.pos.x, target.pos.y);
+			context.didUpdate();
+		}
+	}),
+];
 
 registerObjectTickProcessor(StructureController, (controller/*, context*/) => {
 	const upgradePower = exchange(controller, UpgradePowerThisTick);

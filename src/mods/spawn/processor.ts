@@ -1,9 +1,10 @@
+import type { PartType } from 'xxscreeps/mods/creep/creep';
 import type { Direction } from 'xxscreeps/game/position';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
+import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, me } from 'xxscreeps/game';
 import { getPositonInDirection as getPositionInDirection } from 'xxscreeps/game/position';
 import { InsertObject, MoveObject } from 'xxscreeps/game/room';
@@ -13,13 +14,27 @@ import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { assign } from 'xxscreeps/utility/utility';
 import { StructureExtension } from './extension';
-import { SpawnId, SpawnTime, SpawningCreepId, StructureSpawn, checkSpawnCreep } from './spawn';
+import { SpawnId, SpawnTime, SpawningCreepId, StructureSpawn, checkRecycleCreep, checkSpawnCreep } from './spawn';
 
 declare module 'xxscreeps/processor' {
-	interface Intent { spawn: typeof intent }
+	interface Intent { spawn: typeof intents }
 }
-const intent = registerIntentProcessor(StructureSpawn, 'spawn',
-	(spawn, context, body: Creep.PartType[], name: string, energyStructureIds: string[] | null, directions: Direction[] | null) => {
+const intents = [
+	registerIntentProcessor(StructureSpawn, 'recycleCreep', (spawn, context, id: string) => {
+		const creep = Game.getObjectById<Creep>(id)!;
+		if (checkRecycleCreep(spawn, creep) === C.OK) {
+			// TODO: This stuff
+			creep.hits = 0;
+		}
+	}),
+
+	registerIntentProcessor(StructureSpawn, 'spawn', (
+		spawn, context,
+		body: PartType[],
+		name: string,
+		energyStructureIds: string[] | null,
+		directions: Direction[] | null,
+	) => {
 
 		// Get energy structures
 		const energyStructures = function() {
@@ -53,7 +68,7 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 		}
 
 		// Add new creep to room objects
-		const creep = Creep.create(spawn.pos, body, name, me);
+		const creep = createCreep(spawn.pos, body, name, me);
 		spawn.room[InsertObject](creep);
 
 		// Set spawning information
@@ -66,15 +81,16 @@ const intent = registerIntentProcessor(StructureSpawn, 'spawn',
 			[SpawnTime]: Game.time + needTime,
 		});
 		context.didUpdate();
-	});
+	}),
+];
 
 registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 
 	// Check creep spawning
 	(() => {
 		if (spawn.spawning && spawn.spawning[SpawnTime] <= Game.time) {
-			const creep = Game.getObjectById<Creep.Creep>(spawn.spawning[SpawningCreepId]);
-			if (creep && creep instanceof Creep.Creep) {
+			const creep = Game.getObjectById<Creep>(spawn.spawning[SpawningCreepId]);
+			if (creep && creep instanceof Creep) {
 				// Look for spawn direction
 				const check = makePositionChecker({
 					room: spawn.room,

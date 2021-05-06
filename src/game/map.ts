@@ -230,7 +230,7 @@ export class GameMap {
 	 */
 	isRoomAvailable() {
 		console.error('TODO: isRoomAvailable');
-		return false;
+		return true;
 	}
 }
 

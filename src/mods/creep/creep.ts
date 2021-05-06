@@ -8,7 +8,7 @@ import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
 import type { GameConstructor } from 'xxscreeps/game';
 import { Game, intents, me } from 'xxscreeps/game';
-import { compose, declare, enumerated, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import type { Direction } from 'xxscreeps/game/position';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
@@ -41,7 +41,10 @@ function shape() {
 		fatigue: 'int32',
 		hits: 'int32',
 		name: 'string',
-		// saying: ...
+		_saying: optional(struct({
+			isPublic: 'bool',
+			message: 'string',
+		})),
 		store: Store.format,
 		[RoomObject.Owner]: Id.format,
 		_ageTime: 'int32',
@@ -63,6 +66,16 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	get spawning() { return this._ageTime === 0 }
 	get ticksToLive() { return this._ageTime - Game.time }
 	get [RoomObject.LookType]() { return C.LOOK_CREEPS }
+
+	/**
+	 * The text message that the creep was saying at the last tick.
+	 */
+	get saying() {
+		const saying = this._saying;
+		if (saying && (saying.isPublic || this.owner === me)) {
+			return saying.message;
+		}
+	}
 
 	[RoomObject.AddToMyGame](game: GameConstructor) {
 		game.creeps[this.name] = this;
@@ -253,6 +266,19 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 	}
 
 	/**
+	 * Display a visual speech balloon above the creep with the specified message. The message will be
+	 * available for one tick. You can read the last message using the `saying` property. Any valid
+	 * Unicode characters are allowed, including emoji.
+	 * @param message The message to be displayed. Maximum length is 10 characters.
+	 * @param public Set to true to allow other players to see this message. Default is false.
+	 */
+	say(message: string, isPublic = true) {
+		return chainIntentChecks(
+			() => checkCommon(this),
+			() => intents.save(this, 'say', message, isPublic));
+	}
+
+	/**
 	 * Kill the creep immediately
 	 */
 	suicide(this: Creep) {
@@ -276,9 +302,6 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 			() => intents.save(this, 'transfer', target.id, resourceType, amount),
 		);
 	}
-
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	say(message: string) {}
 
 	/**
 	 * Withdraw resources from a structure or tombstone. The target has to be at adjacent square to

@@ -53,9 +53,7 @@ registerRuntimeConnector({
 	},
 
 	receive(payload) {
-		if (payload.memorySegments) {
-			loadSegments(payload.memorySegments);
-		}
+		loadSegments(payload.memorySegments);
 	},
 
 	send(payload) {

@@ -46,6 +46,16 @@ const intents = [
 		}
 	}),
 
+	registerIntentProcessor(Creep, 'say', (creep, context, message: string, isPublic: boolean) => {
+		if (CreepLib.checkCommon(creep) === C.OK) {
+			creep._saying = {
+				isPublic,
+				message: message.substr(0, 10),
+			};
+			context.didUpdate();
+		}
+	}),
+
 	registerIntentProcessor(Creep, 'suicide', (creep, context) => {
 		if (creep.my) {
 			creep.room[RemoveObject](creep);
@@ -82,6 +92,9 @@ registerObjectPreTickProcessor(Creep, (creep, context) => {
 });
 
 registerObjectTickProcessor(Creep, (creep, context) => {
+	// Remove `saying`
+	creep._saying = undefined;
+
 	// Check creep death
 	if (
 		(Game.time >= creep._ageTime && creep._ageTime !== 0) ||

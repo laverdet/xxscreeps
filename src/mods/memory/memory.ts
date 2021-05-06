@@ -93,7 +93,7 @@ export const RawMemory = {
 	 * @param ids An array of segment IDs. Each ID should be a number from 0 to 99. Subsequent calls
 	 * of `setPublicSegments` override previous ones.
 	 */
-	setPublicSegments(_ids: number[]) { console.error('TODO: setPublicSegments') },
+	setPublicSegments(_ids: number[]) { /*console.error('TODO: setPublicSegments')*/ },
 };
 
 /**
@@ -215,21 +215,23 @@ export function flushSegments() {
 /**
  * Load newly-requested `RawMemory` segments into runtime by id
  */
-export function loadSegments(segments: SegmentPayload[]) {
+export function loadSegments(segments?: SegmentPayload[]) {
 	// Keep segment strings from previous tick, and simultaneously throw away stale strings
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	RawMemory.segments = Fn.fromEntries(Fn.map(activeSegments, id => [ id, RawMemory.segments[id] ?? '' ]));
 	// Update with new segment payloads
-	for (const segment of segments) {
-		const { payload } = segment;
-		RawMemory.segments[segment.id] = '';
-		RawMemory.segments[segment.id] = function() {
-			if (payload === null) {
-				return '';
-			} else {
-				const uint16 = new Uint16Array(payload.buffer, payload.byteOffset, payload.length >>> 1);
-				return typedArrayToString(uint16);
-			}
-		}();
+	if (segments) {
+		for (const segment of segments) {
+			const { payload } = segment;
+			RawMemory.segments[segment.id] = '';
+			RawMemory.segments[segment.id] = function() {
+				if (payload === null) {
+					return '';
+				} else {
+					const uint16 = new Uint16Array(payload.buffer, payload.byteOffset, payload.length >>> 1);
+					return typedArrayToString(uint16);
+				}
+			}();
+		}
 	}
 }

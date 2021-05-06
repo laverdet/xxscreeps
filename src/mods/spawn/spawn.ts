@@ -1,20 +1,21 @@
+import type { PartType } from 'xxscreeps/mods/creep/creep';
+import type { GameConstructor } from 'xxscreeps/game';
+import type { Direction, RoomPosition } from 'xxscreeps/game/position';
 import type { Room } from 'xxscreeps/game/room';
+import type { StructureExtension } from './extension';
 import * as C from 'xxscreeps/game/constants';
-import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as Store from 'xxscreeps/mods/resource/store';
-import type { GameConstructor } from 'xxscreeps/game';
+import { Creep, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, intents, userGame } from 'xxscreeps/game';
 import { XSymbol, compose, declare, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
-import type { Direction, RoomPosition } from 'xxscreeps/game/position';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
+import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
-import type { StructureExtension } from './extension';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 
 type SpawnCreepOptions = {
@@ -38,7 +39,7 @@ const spawningFormat = struct({
 });
 
 class Spawning extends withOverlay(BufferObject, spawningFormat) {
-	get name() { return Game.getObjectById<Creep.Creep>(this[SpawningCreepId])!.name }
+	get name() { return Game.getObjectById<Creep>(this[SpawningCreepId])!.name }
 	get remainingTime() { return this[SpawnTime] - Game.time }
 	get spawn() { return Game.getObjectById<StructureSpawn>(this[SpawnId])! }
 }
@@ -81,23 +82,61 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 		room.energyCapacityAvailable -= this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
 
-	canCreateCreep(body: any, name?: any) {
-		return checkSpawnCreep(this, body, name ?? getUniqueName(name => userGame?.creeps[name] !== undefined), null, null);
-	}
-
-	createCreep(body: any, name: any, memory?: any) {
-		return this.spawnCreep(
-			body,
-			name ?? getUniqueName(name => userGame?.creeps[name] !== undefined),
-			{ memory },
-		);
-	}
-
 	isActive() {
 		return true;
 	}
 
-	spawnCreep(body: Creep.PartType[], name: string, options: SpawnCreepOptions = {}) {
+	/**
+	 * Check if a creep can be created.
+	 * @deprecated
+	 */
+	canCreateCreep(body: any, name?: any) {
+		return checkSpawnCreep(this, body, name ?? getUniqueName(name => userGame?.creeps[name] !== undefined), null, null);
+	}
+
+	/**
+	 * Start the creep spawning process. The required energy amount can be withdrawn from all spawns and extensions in the room.
+	 * @deprecated
+	 */
+	createCreep(body: any, name: any, memory?: any) {
+		const result = this.spawnCreep(
+			body,
+			name ?? getUniqueName(name => userGame?.creeps[name] !== undefined),
+			{ memory },
+		);
+		return result === C.OK ? name : result;
+	}
+
+	/**
+	 * Kill the creep and drop up to 100% of resources spent on its spawning and boosting depending on
+	 * remaining life time. The target should be at adjacent square. Energy return is limited to 125
+	 * units per body part.
+	 * @param creep The target creep object.
+	 */
+	recycleCreep(creep: Creep) {
+		chainIntentChecks(
+			() => checkRecycleCreep(this, creep),
+			() => intents.save(this, 'recycleCreep', creep.id));
+	}
+
+	/**
+	 * Start the creep spawning process. The required energy amount can be withdrawn from all spawns
+	 * and extensions in the room.
+   * @param body An array describing the new creep’s body. Should contain 1 to 50 elements with one
+	 * of these constants: `WORK`, `MOVE`, `CARRY`, `ATTACK`, `RANGED_ATTACK`, `HEAL`, `CLAIM`.
+	 * @param name The name of a new creep. The name length limit is 100 characters. It must be a
+	 * unique creep name, i.e. the `Game.creeps` object should not contain another creep with the same
+	 * name (hash key).
+	 * @param options An object with additional options for the spawning process. `memory` - Memory of
+	 *   the new creep. If provided, it will be immediately stored into `Memory.creeps[name]`
+	 *   `energyStructures` - Array of spawns/extensions from which to draw energy for the spawning
+	 *   process. Structures will be used according to the array order. `dryRun` - If `dryRun` is
+	 *   true, the operation will only check if it is possible to create a creep. `directions` - Set
+	 *   desired directions where the creep should move when spawned. An array with the direction
+	 *   constants: `TOP`, `TOP_RIGHT`, `RIGHT`, `BOTTOM_RIGHT`, `BOTTOM`, `BOTTOM_LEFT`, `LEFT`,
+	 *   `TOP_LEFT`
+	 */
+	spawnCreep(body: PartType[], name: string, options: SpawnCreepOptions = {}) {
 		const directions = options.directions ?? null;
 		return chainIntentChecks(
 			() => checkSpawnCreep(this, body, name, directions, options.energyStructures ?? null),
@@ -117,7 +156,7 @@ export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
 				intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
 
 				// Fake creep
-				const creep = Creep.create(this.pos, body, name, this.owner!);
+				const creep = createCreep(this.pos, body, name, this.owner!);
 				userGame!.creeps[name] = creep;
 				return C.OK;
 			});
@@ -146,9 +185,28 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 
 //
 // Intent checks
+function checkCommonSpawn(spawn: StructureSpawn) {
+	if (!spawn.my) {
+		return C.ERR_NOT_OWNER;
+	// eslint-disable-next-line no-negated-condition
+	} else if (!spawn.isActive()) {
+		return C.ERR_RCL_NOT_ENOUGH;
+	} else {
+		return C.OK;
+	}
+}
+
+export function checkRecycleCreep(spawn: StructureSpawn, creep: Creep) {
+	return chainIntentChecks(
+		() => checkCommonSpawn(spawn),
+		() => checkCommon(creep),
+		() => checkTarget(creep, Creep),
+		() => checkRange(spawn, creep, 1));
+}
+
 export function checkSpawnCreep(
 	spawn: StructureSpawn,
-	body: Creep.PartType[],
+	body: PartType[],
 	name: string,
 	directions: Direction[] | null,
 	energyStructures: (StructureExtension | StructureSpawn)[] | null,

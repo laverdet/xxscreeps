@@ -1,9 +1,10 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
+import * as Id from 'xxscreeps/engine/schema/id';
 import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game } from 'xxscreeps/game';
-import { XSymbol, compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
+import { XSymbol, compose, declare, optional, struct, variant, withOverlay } from 'xxscreeps/schema';
 
 export const DowngradeTime = XSymbol('downgradeTime');
 export const Progress = XSymbol('progress');
@@ -19,7 +20,12 @@ const shape = declare('Controller', struct(Structure.format, {
 	safeMode: 'int32',
 	safeModeAvailable: 'int32',
 	safeModeCooldown: 'int32',
-	// sign: { username, text, time, datetime }
+	_sign: optional(struct({
+		datetime: 'int32',
+		text: 'string',
+		time: 'int32',
+		userId: Id.format,
+	})),
 	[DowngradeTime]: 'int32',
 	[Progress]: 'int32',
 	[UpgradeBlockedTime]: 'int32',
@@ -37,6 +43,20 @@ export class StructureController extends withOverlay(Structure.Structure, shape)
 		} else {
 			return Game.time - this[UpgradeBlockedTime];
 		}
+	}
+
+	/**
+	 * An object with the controller sign info if present
+	 */
+	get sign() {
+		const value = this._sign ? {
+			datetime: new Date(this._sign.datetime),
+			text: this._sign.text,
+			time: this._sign.time,
+			username: '',
+		} : null;
+		Object.defineProperty(this, 'sign', { value });
+		return value;
 	}
 
 	[RoomObject.AfterInsert](room: Room) {
