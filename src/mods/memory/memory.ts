@@ -7,7 +7,7 @@ export const kMaxActiveSegments = 10;
 export const kMaxMemorySegmentId = 100;
 export const kMaxMemorySegmentLength = 100 * 1024;
 
-let activeSegments: number[] = [];
+let activeSegments = new Map<number, string>();
 let didUpdateSegments = false;
 let memory: Uint16Array;
 let memoryLength = 0;
@@ -66,8 +66,10 @@ export const RawMemory = {
 		if (ids.length > kMaxActiveSegments) {
 			throw new Error(`Only ${kMaxActiveSegments} memory segments can be active at the same time`);
 		}
-		activeSegments = ids.slice();
-		didUpdateSegments = true;
+		if (ids.length !== activeSegments.size || !ids.every(id => activeSegments.has(id))) {
+			didUpdateSegments = true;
+			activeSegments = new Map(Fn.map(ids, id => [ id, activeSegments.get(id) ?? '' ]));
+		}
 	},
 
 	/**
@@ -181,7 +183,7 @@ export function isValidSegmentId(id: number) {
 export function flushActiveSegments() {
 	if (didUpdateSegments) {
 		didUpdateSegments = false;
-		return activeSegments;
+		return [ ...activeSegments.keys() ];
 	} else {
 		return null;
 	}
@@ -204,27 +206,31 @@ export function flushSegments() {
 		} else if (string.length > kMaxMemorySegmentLength) {
 			console.error(`Memory segment #${id} has exceeded limit of ${kMaxMemorySegmentLength}`);
 		} else {
-			return {
-				id: Number(id),
-				payload: utf16ToBuffer(string),
-			};
+			const prev = activeSegments.get(+id);
+			if (prev !== string) {
+				if (prev !== undefined) {
+					activeSegments.set(+id, string);
+				}
+				return {
+					id: Number(id),
+					payload: utf16ToBuffer(string),
+				};
+			}
 		}
 	})) ];
 }
 
 /**
- * Load newly-requested `RawMemory` segments into runtime by id
+ * Set up `RawMemory.segments` every tick
  */
 export function loadSegments(segments?: SegmentPayload[]) {
 	// Keep segment strings from previous tick, and simultaneously throw away stale strings
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	RawMemory.segments = Fn.fromEntries(Fn.map(activeSegments, id => [ id, RawMemory.segments[id] ?? '' ]));
+	RawMemory.segments = Fn.fromEntries(activeSegments);
 	// Update with new segment payloads
 	if (segments) {
 		for (const segment of segments) {
 			const { payload } = segment;
-			RawMemory.segments[segment.id] = '';
-			RawMemory.segments[segment.id] = function() {
+			const value = function() {
 				if (payload === null) {
 					return '';
 				} else {
@@ -232,6 +238,10 @@ export function loadSegments(segments?: SegmentPayload[]) {
 					return typedArrayToString(uint16);
 				}
 			}();
+			RawMemory.segments[segment.id] = value;
+			if (activeSegments.has(segment.id)) {
+				activeSegments.set(segment.id, value);
+			}
 		}
 	}
 }
