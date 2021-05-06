@@ -9,6 +9,9 @@ import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { Resource, create } from '../resource';
 
 export function drop(pos: RoomPosition, resourceType: ResourceType, amount: number) {
+	if (amount < 0) {
+		return;
+	}
 	const room = Game.rooms[pos.roomName]!;
 	let remaining = amount;
 

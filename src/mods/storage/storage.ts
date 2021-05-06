@@ -2,18 +2,18 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
-import * as Structure from 'xxscreeps/mods/structure/structure';
+import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export const format = () => compose(shape, StructureStorage);
-const shape = declare('Storage', struct(Structure.format, {
+const shape = declare('Storage', struct(structureFormat, {
 	...variant('storage'),
 	store: Store.format,
 }));
 
-export class StructureStorage extends withOverlay(Structure.Structure, shape) {
+export class StructureStorage extends withOverlay(Structure, shape) {
 	get structureType() { return C.STRUCTURE_STORAGE }
 }
 
@@ -29,7 +29,7 @@ export function create(pos: RoomPosition, owner: string) {
 registerBuildableStructure(C.STRUCTURE_STORAGE, {
 	obstacle: true,
 	checkPlacement(room, pos) {
-		return Structure.checkPlacement(room, pos) === C.OK ?
+		return checkPlacement(room, pos) === C.OK ?
 			C.CONSTRUCTION_COST.storage : null;
 	},
 	create(site) {

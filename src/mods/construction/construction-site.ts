@@ -3,8 +3,9 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/object';
-import { me } from 'xxscreeps/game';
+import { intents, me } from 'xxscreeps/game';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
+import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { compose, declare, enumerated, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { structureFactories } from './symbols';
@@ -29,6 +30,15 @@ export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) 
 	[RoomObject.AddToMyGame](game: GameConstructor) {
 		game.constructionSites[this.id] = this;
 	}
+
+	/**
+	 * Remove the construction site.
+	 */
+	remove() {
+		return chainIntentChecks(
+			() => checkRemove(this),
+			() => intents.save(this, 'remove'));
+	}
 }
 
 export function create(
@@ -42,6 +52,13 @@ export function create(
 		name: name ?? '',
 		[RoomObject.Owner]: owner,
 	});
+}
+
+export function checkRemove(site: ConstructionSite) {
+	if (!site.my && !site.room.controller?.my) {
+		return C.ERR_NOT_OWNER;
+	}
+	return C.OK;
 }
 
 // Register path finder logic

@@ -12,7 +12,7 @@ import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
 export const CheckObstacle = XSymbol('checkObstacle');
 
-export const format = () => compose(shape, Structure);
+export const structureFormat = () => compose(shape, Structure);
 const shape = declare('Structure', struct(RoomObject.format, {
 	hits: 'int32',
 	[RoomObject.Owner]: Id.optionalFormat,

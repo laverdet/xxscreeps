@@ -5,10 +5,11 @@ import { Game, me } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
+import { drop } from 'xxscreeps/mods/resource/processor/resource';
 import { InsertObject, RemoveObject, Room } from 'xxscreeps/game/room';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
 import { saveAction } from 'xxscreeps/game/action-log';
-import { ConstructionSite, create } from './construction-site';
+import { ConstructionSite, checkRemove, create } from './construction-site';
 import { checkBuild } from './creep';
 import { checkCreateConstructionSite } from './room';
 import { structureFactories } from './symbols';
@@ -27,6 +28,14 @@ const intents = [
 				context.didUpdate();
 			}
 		}),
+
+	registerIntentProcessor(ConstructionSite, 'remove', (site, context) => {
+		if (checkRemove(site) === C.OK) {
+			drop(site.pos, C.RESOURCE_ENERGY, site.progress / 2);
+			site.room[RemoveObject](site);
+			context.didUpdate();
+		}
+	}),
 
 	registerIntentProcessor(Creep, 'build', (creep, context, id: string) => {
 		const target = Game.getObjectById<ConstructionSite>(id)!;

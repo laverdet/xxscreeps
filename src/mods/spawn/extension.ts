@@ -3,18 +3,18 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
-import * as Structure from '../structure/structure';
+import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export const format = () => compose(shape, StructureExtension);
-const shape = declare('Extension', struct(Structure.format, {
+const shape = declare('Extension', struct(structureFormat, {
 	...variant('extension'),
 	store: Store.restrictedFormat<'energy'>(),
 }));
 
-export class StructureExtension extends withOverlay(Structure.Structure, shape) {
+export class StructureExtension extends withOverlay(Structure, shape) {
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 	get structureType() { return C.STRUCTURE_EXTENSION }
@@ -44,7 +44,7 @@ export function create(pos: RoomPosition, level: number, owner: string) {
 registerBuildableStructure(C.STRUCTURE_EXTENSION, {
 	obstacle: true,
 	checkPlacement(room, pos) {
-		return Structure.checkPlacement(room, pos) === C.OK ?
+		return checkPlacement(room, pos) === C.OK ?
 			C.CONSTRUCTION_COST.extension : null;
 	},
 	create(site) {

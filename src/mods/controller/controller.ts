@@ -1,9 +1,9 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
-import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game } from 'xxscreeps/game';
+import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { XSymbol, compose, declare, optional, struct, variant, withOverlay } from 'xxscreeps/schema';
 
 export const DowngradeTime = XSymbol('downgradeTime');
@@ -12,7 +12,7 @@ export const UpgradeBlockedTime = XSymbol('upgradeBlockedTime');
 export const UpgradePowerThisTick = XSymbol('upgradePowerThisTick');
 
 export const format = () => compose(shape, StructureController);
-const shape = declare('Controller', struct(Structure.format, {
+const shape = declare('Controller', struct(structureFormat, {
 	...variant('controller'),
 	isPowerEnabled: 'bool',
 	level: 'int32',
@@ -21,7 +21,7 @@ const shape = declare('Controller', struct(Structure.format, {
 	safeModeAvailable: 'int32',
 	safeModeCooldown: 'int32',
 	_sign: optional(struct({
-		datetime: 'int32',
+		datetime: 'double',
 		text: 'string',
 		time: 'int32',
 		userId: Id.format,
@@ -31,7 +31,7 @@ const shape = declare('Controller', struct(Structure.format, {
 	[UpgradeBlockedTime]: 'int32',
 }));
 
-export class StructureController extends withOverlay(Structure.Structure, shape) {
+export class StructureController extends withOverlay(Structure, shape) {
 	[UpgradePowerThisTick]: number | undefined;
 	get progress() { return this.level > 0 ? this[Progress] : undefined }
 	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }

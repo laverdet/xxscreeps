@@ -8,10 +8,10 @@ import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Structure from 'xxscreeps/mods/structure/structure';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { Creep, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, intents, userGame } from 'xxscreeps/game';
+import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { XSymbol, compose, declare, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
@@ -46,14 +46,14 @@ class Spawning extends withOverlay(BufferObject, spawningFormat) {
 
 // `StructureSpawn` format
 export const format = () => compose(shape, StructureSpawn);
-const shape = declare('Spawn', struct(Structure.format, {
+const shape = declare('Spawn', struct(structureFormat, {
 	...variant('spawn'),
 	name: 'string',
 	spawning: optional(compose(spawningFormat, Spawning)),
 	store: Store.restrictedFormat<'energy'>(),
 }));
 
-export class StructureSpawn extends withOverlay(Structure.Structure, shape) {
+export class StructureSpawn extends withOverlay(Structure, shape) {
 	static readonly Spawning = Spawning;
 
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
@@ -175,7 +175,7 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 registerBuildableStructure(C.STRUCTURE_SPAWN, {
 	obstacle: true,
 	checkPlacement(room, pos) {
-		return Structure.checkPlacement(room, pos) === C.OK ?
+		return checkPlacement(room, pos) === C.OK ?
 			C.CONSTRUCTION_COST.spawn : null;
 	},
 	create(site) {

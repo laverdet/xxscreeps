@@ -5,4 +5,5 @@ import { StructureTower } from './tower';
 bindRenderer(StructureTower, (tower, next) => ({
 	...next(),
 	...renderStore(tower.store),
+	actionLog: {},
 }));
