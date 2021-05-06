@@ -1,5 +1,5 @@
 import type { RunnerIntent } from 'xxscreeps/engine/runner/channel';
-import type { RoomIntentPayload } from 'xxscreeps/processor';
+import type { RoomIntentPayload } from 'xxscreeps/engine/processor';
 export { registerDriverConnector, registerRuntimeConnector } from './symbols';
 
 export interface InitializationPayload {

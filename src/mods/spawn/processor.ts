@@ -8,7 +8,7 @@ import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, me } from 'xxscreeps/game';
 import { getPositonInDirection as getPositionInDirection } from 'xxscreeps/game/position';
 import { InsertObject, MoveObject } from 'xxscreeps/game/room';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { Owner } from 'xxscreeps/game/object';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
@@ -16,7 +16,7 @@ import { assign } from 'xxscreeps/utility/utility';
 import { StructureExtension } from './extension';
 import { SpawnId, SpawnTime, SpawningCreepId, StructureSpawn, checkRecycleCreep, checkSpawnCreep } from './spawn';
 
-declare module 'xxscreeps/processor' {
+declare module 'xxscreeps/engine/processor' {
 	interface Intent { spawn: typeof intents }
 }
 const intents = [

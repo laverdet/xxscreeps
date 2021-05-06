@@ -1,7 +1,7 @@
 import * as workerThreads from 'worker_threads';
 export * from 'worker_threads';
-import * as Responder from 'xxscreeps/storage/local/responder';
-import { LocalPubSubProvider } from 'xxscreeps/storage/local/pubsub';
+import * as Responder from 'xxscreeps/engine/storage/local/responder';
+import { LocalPubSubProvider } from 'xxscreeps/engine/storage/local/pubsub';
 import argv from 'xxscreeps/config/arguments';
 
 const workerArgs = [

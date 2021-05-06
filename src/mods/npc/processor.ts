@@ -2,7 +2,7 @@ import type { GameConstructor } from 'xxscreeps/game';
 import type { Room } from 'xxscreeps/game/room';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import { runForUser } from 'xxscreeps/game';
-import { registerRoomTickProcessor } from 'xxscreeps/processor';
+import { registerRoomTickProcessor } from 'xxscreeps/engine/processor';
 import { NPCData } from './game';
 
 // Mark an NPC as active in a room

@@ -1,6 +1,6 @@
 import type { createFlag, removeFlag } from './game';
 import type { Shard } from 'xxscreeps/engine/model/shard';
-import { Channel } from 'xxscreeps/storage/channel';
+import { Channel } from 'xxscreeps/engine/storage/channel';
 import { read } from './game';
 
 export type FlagIntent = { type: null } | {

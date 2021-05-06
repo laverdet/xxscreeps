@@ -4,12 +4,12 @@ import * as C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
-import { registerIntentProcessor } from 'xxscreeps/processor';
+import { registerIntentProcessor } from 'xxscreeps/engine/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
 import { saveAction } from 'xxscreeps/game/action-log';
 import { checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep';
 
-declare module 'xxscreeps/processor' {
+declare module 'xxscreeps/engine/processor' {
 	interface Intent { combat: typeof intents }
 }
 const intents = [

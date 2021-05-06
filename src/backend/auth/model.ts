@@ -1,4 +1,4 @@
-import type { BlobProvider } from 'xxscreeps/storage';
+import type { BlobProvider } from 'xxscreeps/engine/storage';
 import type { TypeOf } from 'xxscreeps/schema';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { getOrSet } from 'xxscreeps/utility/utility';

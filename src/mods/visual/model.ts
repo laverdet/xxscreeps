@@ -1,7 +1,7 @@
 import type { Shard } from 'xxscreeps/engine/model/shard';
 import * as Visual from 'xxscreeps/mods/visual/visual';
 import { makeReader } from 'xxscreeps/schema';
-import { Channel } from 'xxscreeps/storage/channel';
+import { Channel } from 'xxscreeps/engine/storage/channel';
 
 export function getVisualChannel(shard: Shard, userId: string) {
 	type Message = { type: 'publish'; roomNames: string[]; time: number };

@@ -1,5 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/model/shard';
-import { Channel } from 'xxscreeps/storage/channel';
+import { Channel } from 'xxscreeps/engine/storage/channel';
 
 export function getRunnerChannel(shard: Shard) {
 	type RunnerMessage =

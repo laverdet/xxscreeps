@@ -4,14 +4,14 @@ import type { RunnerIntent, RunnerUserMessage } from './channel';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import type { DriverConnector } from 'xxscreeps/driver/symbols';
 import type { Shard } from 'xxscreeps/engine/model/shard';
-import type { Subscription } from 'xxscreeps/storage/channel';
+import type { Subscription } from 'xxscreeps/engine/storage/channel';
 import type { World } from 'xxscreeps/game/map';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import { acquire } from 'xxscreeps/utility/async';
 import { createSandbox } from 'xxscreeps/driver/sandbox';
 import { driverConnectors } from 'xxscreeps/driver/symbols';
-import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/model/processor';
+import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/processor/processor';
 import { getConsoleChannel } from 'xxscreeps/engine/model/user';
 import { getRunnerUserChannel } from './channel';
 

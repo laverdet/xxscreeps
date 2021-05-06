@@ -1,5 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/model/shard';
-import { Channel } from 'xxscreeps/storage/channel';
+import { Channel } from 'xxscreeps/engine/storage/channel';
 
 // Messages sent to the runner for an individual user
 type RunnerCodePushMessage = { type: 'code'; id: string; name: string };

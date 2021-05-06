@@ -7,14 +7,14 @@ import { RoomPosition } from 'xxscreeps/game/position';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { drop } from 'xxscreeps/mods/resource/processor/resource';
 import { InsertObject, RemoveObject, Room } from 'xxscreeps/game/room';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { saveAction } from 'xxscreeps/game/action-log';
 import { ConstructionSite, checkRemove, create } from './construction-site';
 import { checkBuild } from './creep';
 import { checkCreateConstructionSite } from './room';
 import { structureFactories } from './symbols';
 
-declare module 'xxscreeps/processor' {
+declare module 'xxscreeps/engine/processor' {
 	interface Intent { construction: typeof intents }
 }
 

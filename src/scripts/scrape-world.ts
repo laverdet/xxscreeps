@@ -18,7 +18,7 @@ import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { Objects } from 'xxscreeps/game/room/symbols';
-import { connectToProvider } from 'xxscreeps/storage';
+import { connectToProvider } from 'xxscreeps/engine/storage';
 import { EventLog } from 'xxscreeps/game/room';
 import { NPCData } from 'xxscreeps/mods/npc/game';
 import { clamp, getOrSet } from 'xxscreeps/utility/utility';

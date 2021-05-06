@@ -2,11 +2,11 @@ import * as Fn from 'xxscreeps/utility/functional';
 import {
 	acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey,
 	getProcessorChannel, processRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships,
-} from 'xxscreeps/engine/model/processor';
+} from 'xxscreeps/engine/processor/processor';
 import { Shard } from 'xxscreeps/engine/model/shard';
 import { getUsersInRoom } from 'xxscreeps/game/room/room';
-import { RoomProcessorContext } from 'xxscreeps/processor/room';
-import { consumeSet, consumeSortedSet } from 'xxscreeps/storage/async';
+import { RoomProcessorContext } from 'xxscreeps/engine/processor/room';
+import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/storage/async';
 import { getServiceChannel } from '.';
 
 // Keep track of rooms this thread ran. Global room processing must also happen here.

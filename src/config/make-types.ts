@@ -25,7 +25,7 @@ const tsconfig = `{
 		"rootDir": ${JSON.stringify(rootDir)},
 		"strict": false,
 	},
-	"include": [ "backend", "config", "driver", "engine", "game", "processor", "schema", "storage", "utility", ${Object.keys(mods).map(url =>
+	"include": [ "backend", "config", "driver", "engine", "game", "schema", "utility", ${Object.keys(mods).map(url =>
 		JSON.stringify(fileURLToPath(new URL('.', url)).replace(/.+\/xxscreeps\/dist\/mods/, 'mods'))).join(', ')} ],
 }`;
 const tmpPath = `${rootDir}/tsconfig.types.json`;

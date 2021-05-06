@@ -1,9 +1,9 @@
-import type { BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/storage';
+import type { BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/engine/storage';
 import type { Effect } from 'xxscreeps/utility/types';
-import type { Subscription } from 'xxscreeps/storage/channel';
+import type { Subscription } from 'xxscreeps/engine/storage/channel';
 import * as RoomSchema from 'xxscreeps/engine/room';
-import { connectToProvider } from 'xxscreeps/storage';
-import { Channel } from 'xxscreeps/storage/channel';
+import { connectToProvider } from 'xxscreeps/engine/storage';
+import { Channel } from 'xxscreeps/engine/storage/channel';
 import { World } from 'xxscreeps/game/map';
 import config from 'xxscreeps/config';
 

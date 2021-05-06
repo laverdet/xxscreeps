@@ -3,7 +3,7 @@ import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Game } from 'xxscreeps/game';
 import { Owner } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/mods/creep/creep';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { exchange } from 'xxscreeps/utility/utility';
 import { DowngradeTime, Progress, StructureController, UpgradePowerThisTick } from './controller';
@@ -40,7 +40,7 @@ function upgradeController(controller: StructureController, energy: number) {
 }
 
 // Register intent processors
-declare module 'xxscreeps/processor' {
+declare module 'xxscreeps/engine/processor' {
 	interface Intent { controller: typeof intents }
 }
 const intents = [

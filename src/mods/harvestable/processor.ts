@@ -4,7 +4,7 @@ import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
-import { registerIntentProcessor } from 'xxscreeps/processor';
+import { registerIntentProcessor } from 'xxscreeps/engine/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
 import { saveAction } from 'xxscreeps/game/action-log';
 import { checkHarvest } from './creep';
@@ -26,7 +26,7 @@ export function registerHarvestProcessor<Type extends RoomObject>(
 }
 
 // Register `harvest` action processor
-declare module 'xxscreeps/processor' {
+declare module 'xxscreeps/engine/processor' {
 	interface Intent { harvestable: typeof intent }
 }
 const intent = registerIntentProcessor(Creep, 'harvest', (creep, context, id: string) => {

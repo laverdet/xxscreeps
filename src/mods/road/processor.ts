@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
-import { registerObjectTickProcessor } from 'xxscreeps/processor';
+import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { NextDecayTime, StructureRoad } from './road';
 
 registerObjectTickProcessor(StructureRoad, (road, context) => {

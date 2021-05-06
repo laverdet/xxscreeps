@@ -18,13 +18,13 @@ import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { isBorder } from 'xxscreeps/game/terrain';
 import { writeRoomObject } from 'xxscreeps/engine/room';
 import { typedArrayToString } from 'xxscreeps/utility/string';
-import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/processor';
-import * as Movement from 'xxscreeps/processor/movement';
+import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
+import * as Movement from 'xxscreeps/engine/processor/movement';
 // eslint-disable-next-line no-duplicate-imports
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 
-declare module 'xxscreeps/processor' {
+declare module 'xxscreeps/engine/processor' {
 	interface Intent { creep: typeof intents }
 }
 const intents = [

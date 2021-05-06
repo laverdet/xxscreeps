@@ -1,8 +1,8 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
-import type { IntentParameters, IntentReceivers, IntentsForReceiver } from 'xxscreeps/processor';
-import type { ObjectReceivers, RoomIntentPayload } from 'xxscreeps/processor/room';
+import type { IntentParameters, IntentReceivers, IntentsForReceiver } from 'xxscreeps/engine/processor';
+import type { ObjectReceivers, RoomIntentPayload } from 'xxscreeps/engine/processor/room';
 import * as C from 'xxscreeps/game/constants';
 
 const kCpuCost = 0.2;

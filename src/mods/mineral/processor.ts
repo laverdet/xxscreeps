@@ -4,7 +4,7 @@ import * as Resource from 'xxscreeps/mods/resource/processor/resource';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Game } from 'xxscreeps/game';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
-import { registerObjectTickProcessor } from 'xxscreeps/processor';
+import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { CooldownTime } from './extractor';

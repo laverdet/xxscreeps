@@ -5,7 +5,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import { Game } from 'xxscreeps/game';
 import { InsertObject } from 'xxscreeps/game/room';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
-import { registerRoomTickProcessor } from 'xxscreeps/processor';
+import { registerRoomTickProcessor } from 'xxscreeps/engine/processor';
 import { readCumulativeEnergyHarvested } from 'xxscreeps/mods/source';
 import { InvaderEnergyTarget } from './game';
 import { loop } from './loop';

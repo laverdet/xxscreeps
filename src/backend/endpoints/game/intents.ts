@@ -1,5 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend';
-import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/model/processor';
+import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/processor';
 
 const AddObjectIntentEndpoint: Endpoint = {
 	path: '/api/game/add-object-intent',

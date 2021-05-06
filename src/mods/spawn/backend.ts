@@ -4,7 +4,7 @@ import * as Controller from 'xxscreeps/mods/controller/processor';
 import * as Spawn from './spawn';
 import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
-import { forceRoomProcess } from 'xxscreeps/engine/model/processor';
+import { forceRoomProcess } from 'xxscreeps/engine/processor/processor';
 import { FlushObjects, InsertObject } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
