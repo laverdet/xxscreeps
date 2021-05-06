@@ -1,4 +1,4 @@
-import type { Shard } from 'xxscreeps/engine/model/shard';
+import type { Shard } from 'xxscreeps/engine/shard';
 import { Channel } from 'xxscreeps/engine/storage/channel';
 
 export function getServiceChannel(shard: Shard) {

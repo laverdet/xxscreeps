@@ -1,5 +1,5 @@
 import type { World } from 'xxscreeps/game/map';
-import { Shard } from 'xxscreeps/engine/model/shard';
+import { Shard } from 'xxscreeps/engine/shard';
 import { Mutex } from 'xxscreeps/engine/storage/mutex';
 import { Authentication } from './auth/model';
 import * as User from 'xxscreeps/engine/metadata/user';

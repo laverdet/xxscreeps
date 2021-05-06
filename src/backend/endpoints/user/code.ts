@@ -3,7 +3,7 @@ import * as Code from 'xxscreeps/engine/metadata/code';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/metadata/user';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { getConsoleChannel } from 'xxscreeps/engine/model/user';
+import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;

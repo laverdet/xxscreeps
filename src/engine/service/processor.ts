@@ -2,8 +2,8 @@ import * as Fn from 'xxscreeps/utility/functional';
 import {
 	acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey,
 	getProcessorChannel, processRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships,
-} from 'xxscreeps/engine/processor/processor';
-import { Shard } from 'xxscreeps/engine/model/shard';
+} from 'xxscreeps/engine/processor/model';
+import { Shard } from 'xxscreeps/engine/shard';
 import { getUsersInRoom } from 'xxscreeps/game/room/room';
 import { RoomProcessorContext } from 'xxscreeps/engine/processor/room';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/storage/async';

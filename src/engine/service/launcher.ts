@@ -4,11 +4,11 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as UserSchema from 'xxscreeps/engine/metadata/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { listen } from 'xxscreeps/utility/async';
-import { Shard } from 'xxscreeps/engine/model/shard';
+import { Shard } from 'xxscreeps/engine/shard';
 import { Mutex } from 'xxscreeps/engine/storage/mutex';
-import { getProcessorChannel } from 'xxscreeps/engine/processor/processor';
-import { getConsoleChannel } from 'xxscreeps/engine/model/user';
-import { getRunnerChannel } from 'xxscreeps/engine/runner/model';
+import { getProcessorChannel } from 'xxscreeps/engine/processor/model';
+import { getConsoleChannel, getRunnerChannel } from 'xxscreeps/engine/runner/model';
+
 import { getServiceChannel } from '.';
 
 // Connect to shard

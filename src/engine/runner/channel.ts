@@ -1,4 +1,4 @@
-import type { Shard } from 'xxscreeps/engine/model/shard';
+import type { Shard } from 'xxscreeps/engine/shard';
 import { Channel } from 'xxscreeps/engine/storage/channel';
 
 // Messages sent to the runner for an individual user

@@ -1,7 +1,7 @@
 import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
-import { Shard } from 'xxscreeps/engine/model/shard';
-import { userToRoomsSetKey } from 'xxscreeps/engine/processor/processor';
+import { Shard } from 'xxscreeps/engine/shard';
+import { userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';

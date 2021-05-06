@@ -1,9 +1,9 @@
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
 import { Deferred } from 'xxscreeps/utility/async';
-import { Shard } from 'xxscreeps/engine/model/shard';
+import { Shard } from 'xxscreeps/engine/shard';
 import { Mutex } from 'xxscreeps/engine/storage/mutex';
 import config from 'xxscreeps/config';
-import { getProcessorChannel } from 'xxscreeps/engine/processor/processor';
+import { getProcessorChannel } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';
 

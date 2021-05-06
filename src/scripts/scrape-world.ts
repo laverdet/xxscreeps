@@ -16,7 +16,7 @@ import * as User from 'xxscreeps/engine/metadata/user';
 
 import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
-import { Shard } from 'xxscreeps/engine/model/shard';
+import { Shard } from 'xxscreeps/engine/shard';
 import { Objects } from 'xxscreeps/game/room/symbols';
 import { connectToProvider } from 'xxscreeps/engine/storage';
 import { EventLog } from 'xxscreeps/game/room';

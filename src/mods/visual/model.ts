@@ -1,4 +1,4 @@
-import type { Shard } from 'xxscreeps/engine/model/shard';
+import type { Shard } from 'xxscreeps/engine/shard';
 import * as Visual from 'xxscreeps/mods/visual/visual';
 import { makeReader } from 'xxscreeps/schema';
 import { Channel } from 'xxscreeps/engine/storage/channel';

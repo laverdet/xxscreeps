@@ -1,5 +1,5 @@
 import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor';
-import type { Shard } from 'xxscreeps/engine/model/shard';
+import type { Shard } from 'xxscreeps/engine/shard';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Channel } from 'xxscreeps/engine/storage/channel';
 import { getServiceChannel } from 'xxscreeps/engine/service';
