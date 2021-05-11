@@ -1,48 +1,36 @@
 import config from 'xxscreeps/config';
 import argv from 'xxscreeps/config/arguments';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as UserSchema from 'xxscreeps/engine/metadata/user';
+import * as User from 'xxscreeps/engine/user/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { listen } from 'xxscreeps/utility/async';
+import { Database } from 'xxscreeps/engine/database';
 import { Shard } from 'xxscreeps/engine/shard';
-import { Mutex } from 'xxscreeps/engine/storage/mutex';
 import { getProcessorChannel } from 'xxscreeps/engine/processor/model';
 import { getConsoleChannel, getRunnerChannel } from 'xxscreeps/engine/runner/model';
-
 import { getServiceChannel } from '.';
 
 // Connect to shard
-const shard = await Shard.connect('shard0');
+const db = await Database.connect();
+const shard = await Shard.connect(db, 'shard0');
 const serviceChannel = await getServiceChannel(shard).subscribe();
 
 try {
 
 	// Attach console for given user
 	if (argv['attach-console']) {
-		const attachTo = argv['attach-console'];
-		const gameMutex = await Mutex.connect('game', shard.data, shard.pubsub);
-		try {
-			const id = await gameMutex.scope(async() => {
-				const userIds = await shard.data.smembers('users');
-				for (const userId of userIds) {
-					const user = UserSchema.read(await shard.blob.reqBuffer(`user/${userId}/info`));
-					if (user.username === attachTo) {
-						return userId;
-					}
-				}
-				throw new Error(`User: ${attachTo} not found`);
-			});
-			const channel = await getConsoleChannel(shard, id).subscribe();
-			channel.listen(message => {
-				if (message.type === 'log') {
-					console.log(message.value);
-				} else if (message.type === 'error') {
-					console.error(message.value);
-				}
-			});
-		} finally {
-			await gameMutex.disconnect();
+		const id = await User.findUserByName(db, argv['attach-console']);
+		if (!id) {
+			throw new Error(`User: ${argv['attach-console']} not found`);
 		}
+		const channel = await getConsoleChannel(shard, id).subscribe();
+		channel.listen(message => {
+			if (message.type === 'log') {
+				console.log(message.value);
+			} else if (message.type === 'error') {
+				console.error(message.value);
+			}
+		});
 	}
 
 	// Start main service

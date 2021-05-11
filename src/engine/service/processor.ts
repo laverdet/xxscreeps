@@ -3,6 +3,7 @@ import {
 	acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey,
 	getProcessorChannel, processRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships,
 } from 'xxscreeps/engine/processor/model';
+import { Database } from 'xxscreeps/engine/database';
 import { Shard } from 'xxscreeps/engine/shard';
 import { getUsersInRoom } from 'xxscreeps/game/room/room';
 import { RoomProcessorContext } from 'xxscreeps/engine/processor/room';
@@ -13,7 +14,8 @@ import { getServiceChannel } from '.';
 const processedRooms = new Map<string, RoomProcessorContext>();
 
 // Connect to main & storage
-const shard = await Shard.connect('shard0');
+const db = await Database.connect();
+const shard = await Shard.connect(db, 'shard0');
 const world = await shard.loadWorld();
 const processorSubscription = await getProcessorChannel(shard).subscribe();
 

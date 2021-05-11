@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type { KeyValProvider, SetOptions, Value } from '../provider';
+import type { KeyValProvider, SetOptions, Value, ZRangeOptions } from '../provider';
 import * as Fn from 'xxscreeps/utility/functional';
 import { promises as fs } from 'fs';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
@@ -41,7 +41,7 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 	abstract hget(key: string, field: string): Promise<string | null>;
 	abstract hgetall(key: string): Promise<Record<string, string>>;
 	abstract hmget(key: string, fields: Iterable<string>): Promise<Record<string, string | null>>;
-	abstract hset(key: string, field: string, value: Value): Promise<number>;
+	abstract hset(key: string, field: string, value: Value, options?: { nx: boolean }): Promise<number>;
 	abstract hmset(key: string, fields: Iterable<[ string, Value ]>): Promise<number>;
 
 	abstract lpop(key: string): Promise<string | null>;
@@ -50,6 +50,7 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 
 	abstract sadd(key: string, members: string[]): Promise<number>;
 	abstract scard(key: string): Promise<number>;
+	abstract sismember(key: string, member: string): Promise<number>;
 	abstract smembers(key: string): Promise<string[]>;
 	abstract spop(key: string): Promise<string | null>;
 	abstract srem(key: string, members: string[]): Promise<number>;
@@ -58,7 +59,9 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 	abstract zcard(key: string): Promise<number>;
 	abstract zincrBy(key: string, delta: number, member: string): Promise<number>;
 	abstract zmscore(key: string, members: string[]): Promise<(number | null)[]>;
-	abstract zrange(key: string, min: number, max: number, byscore?: 'byScore'): Promise<string[]>;
+	abstract zrange(key: string, min: number, max: number, options: ZRangeOptions & { withScores: true }): Promise<[ number, string ][]>;
+	abstract zrange(key: string, min: number, max: number, options?: ZRangeOptions): Promise<string[]>;
+	abstract zrange(key: string, min: string, max: string, options?: ZRangeOptions): Promise<string[]>;
 	abstract zrem(key: string, members: string[]): Promise<number>;
 	abstract zunionStore(key: string, keys: string[]): Promise<number>;
 
@@ -224,8 +227,13 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ]));
 	}
 
-	hset(key: string, field: string, value: Value) {
-		return this.hmset(key, [ [ field, value ] as const ]);
+	async hset(key: string, field: string, value: Value, options?: { nx: boolean }) {
+		const nx = options?.nx;
+		if (nx && this.data.get(key)?.has(field)) {
+			return 0;
+		} else {
+			return this.hmset(key, [ [ field, value ] as const ]);
+		}
 	}
 
 	async hmset(key: string, fields: Iterable<readonly [ string, Value ]> | Record<string, Value>) {
@@ -294,6 +302,11 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		return set ? set.size : 0;
 	}
 
+	async sismember(key: string, member: string) {
+		const set: Set<string> | undefined = this.data.get(key);
+		return set?.has(member) ?? false ? 1 : 0;
+	}
+
 	async smembers(key: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		return set ? [ ...set ] : [];
@@ -329,24 +342,24 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 	}
 
 	async zadd(key: string, members: [ number, string ][]) {
-		const set = getOrSet<string, SortedSet<string>>(this.data, key, () => new SortedSet);
+		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
 		return Fn.accumulate(members, ([ score, value ]) => set.add(value, score));
 	}
 
 	async zcard(key: string) {
-		const set: SortedSet<string> | undefined = this.data.get(key);
+		const set: SortedSet | undefined = this.data.get(key);
 		return set ? set.size : 0;
 	}
 
 	async zincrBy(key: string, delta: number, member: string) {
-		const set = getOrSet<string, SortedSet<string>>(this.data, key, () => new SortedSet);
+		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
 		const score = (set.score(member) ?? 0) + delta;
 		set.add(member, score);
 		return score;
 	}
 
 	async zmscore(key: string, members: string[]) {
-		const set: SortedSet<string> | undefined = this.data.get(key);
+		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			return members.map(member => set.score(member) ?? null);
 		} else {
@@ -354,13 +367,40 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async zrange(key: string, min: number, max: number, byscore?: 'byScore'): Promise<string[]> {
-		const set: SortedSet<string> | undefined = this.data.get(key);
+	async zrange(key: string, min: number | string, max: number | string, options?: ZRangeOptions): Promise<any[]> {
+		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
-			if (byscore === 'byScore') {
-				return [ ...Fn.map(set.entries(min, max), entry => entry[0]) ];
+			if (options?.by === 'lex') {
+				if (options.withScores) {
+					throw new Error('Invalid request');
+				}
+				const parse = (value: string): [ string, boolean ] => {
+					if (value === '-') {
+						return [ '', true ];
+					} else if (value === '+') {
+						return [ '\uffff', true ];
+					} else if (value.startsWith('(')) {
+						return [ value.substr(1), false ];
+					} else if (value.startsWith('[')) {
+						return [ value.substr(1), true ];
+					} else {
+						throw new Error(`Invalid range: ${value}`);
+					}
+				};
+				const [ minVal, minInc ] = parse(min as string);
+				const [ maxVal, maxInc ] = parse(max as string);
+				return [ ...set.entriesByLex(minInc, minVal, maxInc, maxVal) ];
+			} else if (options?.by === 'score') {
+				const entries = set.entries(min as number, max as number);
+				if (options.withScores) {
+					return [ ...entries ];
+				} else {
+					return [ ...Fn.map(entries, entry => entry[1]) ];
+				}
+			} else if (options?.withScores) {
+				return [ ...Fn.map(set.values(), (value): [ number, string ] => [ set.score(value)!, value ]) ];
 			} else {
-				return set.values().slice(min, max);
+				return set.values().slice(min as number, max as number);
 			}
 		} else {
 			return [];
@@ -368,7 +408,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 	}
 
 	async zrem(key: string, members: string[]) {
-		const set: SortedSet<string> | undefined = this.data.get(key);
+		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			return Fn.accumulate(members, member => set.delete(member));
 		} else {
@@ -377,7 +417,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 	}
 
 	async zunionStore(key: string, keys: string[]) {
-		const sets: (SortedSet<string> | undefined)[] = keys.map(key => this.data.get(key));
+		const sets: (SortedSet | undefined)[] = keys.map(key => this.data.get(key));
 		if (sets.every(set => set === undefined)) {
 			return 0;
 		}
@@ -448,8 +488,8 @@ class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 		return this.request('hmget', key, [ ...fields ]);
 	}
 
-	hset(key: string, field: string, value: Value) {
-		return this.request('hset', key, field, value);
+	hset(key: string, field: string, value: Value, options?: { nx: boolean }) {
+		return this.request('hset', key, field, value, options);
 	}
 
 	hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
@@ -477,6 +517,10 @@ class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 
 	scard(key: string) {
 		return this.request('scard', key);
+	}
+
+	sismember(key: string, member: string) {
+		return this.request('sismember', key, member);
 	}
 
 	smembers(key: string) {
@@ -507,11 +551,11 @@ class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 		return this.request('zmscore', key, members);
 	}
 
-	zrange(key: string, min: number, max: number, extra?: 'byScore' | 'withScores') {
+	zrange(key: string, min: number | string, max: number | string, options?: any) {
 		return this.request('zrange' as any, key,
 			min === -Infinity ? Number.MIN_SAFE_INTEGER : min,
 			max === Infinity ? Number.MAX_SAFE_INTEGER : max,
-			extra);
+			options);
 	}
 
 	zrem(key: string, members: string[]) {

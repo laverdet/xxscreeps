@@ -1,5 +1,4 @@
 import type { Endpoint } from 'xxscreeps/backend';
-import { loadUser } from 'xxscreeps/backend/model/user';
 
 const RespawnProhibitedRoomsEndpoint: Endpoint = {
 	path: '/api/user/respawn-prohibited-rooms',
@@ -28,18 +27,16 @@ const WorldStatusEndpoint: Endpoint = {
 
 	async execute(context) {
 		const { userId } = context.state;
-		const user = userId && await loadUser(context.backend, userId).catch(() => {});
-		if (!user) {
-			return { ok: 1, status: 'normal' };
-		} else if (user.roomsControlled.size === 0) {
-			if (user.roomsPresent.size === 0) {
-				return { ok: 1, status: 'empty' };
-			} else {
-				return { ok: 1, status: 'lost' };
-			}
-		} else {
+		if (!userId) {
 			return { ok: 1, status: 'normal' };
 		}
+		const active = await context.shard.data.sismember('users', userId);
+		if (active) {
+			return { ok: 1, status: 'normal' };
+		} else {
+			return { ok: 1, status: 'empty' };
+		}
+		// return { ok: 1, status: 'lost' };
 	},
 };
 

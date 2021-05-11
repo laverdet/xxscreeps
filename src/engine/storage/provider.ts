@@ -20,6 +20,11 @@ export type SetOptions = ({
 	px?: number;
 };
 
+export type ZRangeOptions = {
+	by?: 'score' | 'lex';
+	withScores?: boolean;
+};
+
 export type Value = number | string;
 export type KeyValProvider = {
 	// keys / strings
@@ -39,7 +44,7 @@ export type KeyValProvider = {
 	hget(key: string, field: string): Promise<string | null>;
 	hgetall(key: string): Promise<Record<string, string>>;
 	hmget(key: string, fields: Iterable<string>): Promise<Record<string, string | null>>;
-	hset(key: string, field: string, value: Value): Promise<number>;
+	hset(key: string, field: string, value: Value, options?: { nx: boolean }): Promise<number>;
 	hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>): Promise<number>;
 	// lists
 	lpop(key: string): Promise<string | null>;
@@ -48,6 +53,7 @@ export type KeyValProvider = {
 	// sets
 	sadd(key: string, members: string[]): Promise<number>;
 	scard(key: string): Promise<number>;
+	sismember(key: string, member: string): Promise<number>;
 	smembers(key: string): Promise<string[]>;
 	spop(key: string): Promise<string | null>;
 	srem(key: string, members: string[]): Promise<number>;
@@ -56,7 +62,9 @@ export type KeyValProvider = {
 	zcard(key: string): Promise<number>;
 	zincrBy(key: string, delta: number, member: string): Promise<number>;
 	zmscore(key: string, members: string[]): Promise<(number | null)[]>;
-	zrange(key: string, min: number, max: number, byscore?: 'byScore'): Promise<string[]>;
+	zrange(key: string, min: number, max: number, options: ZRangeOptions & { withScores: true }): Promise<[ number, string ][]>;
+	zrange(key: string, min: number, max: number, options?: ZRangeOptions): Promise<string[]>;
+	zrange(key: string, min: string, max: string, options?: ZRangeOptions): Promise<string[]>;
 	zrem(key: string, members: string[]): Promise<number>;
 	zunionStore(key: string, keys: string[]): Promise<number>;
 	// client

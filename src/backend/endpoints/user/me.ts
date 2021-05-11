@@ -1,4 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend';
+import * as User from 'xxscreeps/engine/user/user';
 import config from 'xxscreeps/config';
 const { allowGuestAccess } = config.backend;
 
@@ -6,27 +7,31 @@ const MeEndpoint: Endpoint = {
 	path: '/api/auth/me',
 
 	async execute(context) {
-		if (context.state.providerKey) {
+		await context.flushToken(true);
+		if (context.state.providerId) {
 			// Authenticated with provider, registration not complete
-			return { ok: 1, id: context.state.userId };
+			return { ok: 1, _id: context.state.userId };
 
 		} else if (context.state.userId) {
 			// Real user
-			const user = await context.backend.loadUser(context.state.userId);
-			return Object.assign({
+			const { userId } = context.state;
+			const [ user, providers ] = await Promise.all([
+				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
+				User.findProvidersForUser(context.db, userId),
+			]);
+			return {
 				ok: 1,
-				_id: user.id,
+				_id: userId,
 				cpu: 100,
 				username: user.username,
-				badge: user.badge === '' ? undefined : JSON.parse(user.badge),
-			}, ...context.backend.auth.getProvidersForUser(context.state.userId).map(provider => {
-				const steam = /^steam:(?<id>[0-9]+)$/.exec(provider);
-				if (steam) {
-					return {
-						steam: { id: steam.groups!.id },
-					};
-				}
-			}));
+				badge: user.badge ? JSON.parse(user.badge) : undefined,
+				...providers.email && {
+					email: providers.email,
+				},
+				...providers.steam && {
+					steam: { id: providers.steam },
+				},
+			};
 
 		} else if (allowGuestAccess) {
 			// Guest profile

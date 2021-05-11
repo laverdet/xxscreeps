@@ -1,8 +1,8 @@
-export class SortedSet<Type> {
-	readonly #members: Type[] = [];
-	readonly #scores = new Map<Type, number>();
+export class SortedSet {
+	readonly #members: string[] = [];
+	readonly #scores = new Map<string, number>();
 
-	constructor(entries?: Iterable<[ Type, number ]>) {
+	constructor(entries?: Iterable<[ number, string ]>) {
 		if (entries) {
 			this.insert(entries);
 		}
@@ -12,7 +12,7 @@ export class SortedSet<Type> {
 		return this.#members.length;
 	}
 
-	add(member: Type, score: number) {
+	add(member: string, score: number) {
 		if (this.#scores.has(member)) {
 			this.#scores.set(member, score);
 			this.sort();
@@ -25,7 +25,7 @@ export class SortedSet<Type> {
 		}
 	}
 
-	delete(member: Type) {
+	delete(member: string) {
 		if (this.#scores.has(member)) {
 			this.#scores.delete(member);
 			this.#members.splice(this.#members.indexOf(member), 1);
@@ -35,19 +35,37 @@ export class SortedSet<Type> {
 		}
 	}
 
-	*entries(min = -Infinity, max = Infinity): Iterable<[ Type, number ]> {
+	*entries(min = -Infinity, max = Infinity): Iterable<[ number, string ]> {
 		for (const member of this.#members) {
 			const score = this.#scores.get(member)!;
 			if (score > max) {
 				break;
 			} else if (score >= min) {
-				yield [ member, score ];
+				yield [ score, member ];
 			}
 		}
 	}
 
-	insert(entries: Iterable<[ Type, number ]>) {
-		for (const [ member, score ] of entries) {
+	*entriesByLex(minInclusive: boolean, min: string, maxInclusive: boolean, max: string) {
+		for (const member of this.#members) {
+			if (
+				maxInclusive ?
+					member.localeCompare(max) > 0 :
+					member.localeCompare(max) >= 0
+			) {
+				break;
+			} else if (
+				minInclusive ?
+					member.localeCompare(min) >= 0 :
+					member.localeCompare(min) > 0
+			) {
+				yield member;
+			}
+		}
+	}
+
+	insert(entries: Iterable<[ number, string ]>) {
+		for (const [ score, member ] of entries) {
 			if (!this.#scores.has(member)) {
 				this.#members.push(member);
 			}
@@ -56,8 +74,8 @@ export class SortedSet<Type> {
 		this.sort();
 	}
 
-	merge(entries: Iterable<[ Type, number ]>, accumulator = (left: number, right: number) => left + right) {
-		for (const [ member, score ] of entries) {
+	merge(entries: Iterable<[ number, string ]>, accumulator = (left: number, right: number) => left + right) {
+		for (const [ score, member ] of entries) {
 			const currentScore = this.#scores.get(member);
 			if (currentScore === undefined) {
 				this.#members.push(member);
@@ -69,7 +87,7 @@ export class SortedSet<Type> {
 		this.sort();
 	}
 
-	score(member: Type) {
+	score(member: string) {
 		return this.#scores.get(member);
 	}
 
@@ -82,6 +100,8 @@ export class SortedSet<Type> {
 	}
 
 	private sort() {
-		this.#members.sort((left, right) => this.#scores.get(left)! - this.#scores.get(right)!);
+		this.#members.sort((left, right) =>
+			(this.#scores.get(left)! - this.#scores.get(right)!) ||
+			left.localeCompare(right));
 	}
 }

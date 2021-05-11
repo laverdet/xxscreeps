@@ -35,6 +35,7 @@ koa.use(async(context, next) => {
 });
 koa.use((context, next) => {
 	context.backend = backendContext;
+	context.db = backendContext.db;
 	context.shard = backendContext.shard;
 	return next();
 });

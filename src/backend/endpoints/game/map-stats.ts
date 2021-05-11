@@ -1,6 +1,6 @@
 import type { Endpoint } from 'xxscreeps/backend';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/metadata/user';
+import * as User from 'xxscreeps/engine/user/user';
 
 export const MapStatsEndpoint: Endpoint = {
 	method: 'post',
@@ -45,14 +45,13 @@ export const MapStatsEndpoint: Endpoint = {
 		});
 
 		// Read users
-		const userObjects = await Promise.all(
-			Fn.map(userIds, async id =>
-				User.read(await context.shard.blob.reqBuffer(`user/${id}/info`))));
+		const userObjects = await Promise.all(Fn.map(userIds, async id =>
+			({ id, info: await context.db.data.hmget(User.infoKey(id), [ 'badge', 'username' ]) })));
 		const users = Fn.fromEntries(userObjects, user => [
 			user.id, {
 				_id: user.id,
-				username: user.username,
-				badge: JSON.parse(user.badge),
+				badge: JSON.parse(user.info.badge!),
+				username: user.info.username!,
 			},
 		]);
 

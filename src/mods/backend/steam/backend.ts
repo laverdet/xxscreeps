@@ -25,7 +25,7 @@ registerBackendRoute({
 		}
 
 		// Respond with temporary token. auth/me handles upgrading token to user
-		await context.authenticateForProvider(`steam:${steamid}`);
+		await context.authenticateForProvider('steam', steamid);
 		return {
 			ok: 1,
 			token: await context.flushToken(),

@@ -2,17 +2,19 @@ import type { Middleware } from 'xxscreeps/backend';
 import * as Id from 'xxscreeps/engine/schema/id';
 import config from 'xxscreeps/config';
 import { checkToken, makeToken } from './token';
+import { findUserByProvider } from 'xxscreeps/engine/user/user';
 const { allowGuestAccess } = config.backend;
 
 declare module 'xxscreeps/backend' {
 	interface Context {
-		authenticateForProvider(providerKey: string): Promise<void>;
-		flushToken(): Promise<string | undefined>;
+		authenticateForProvider(provider: string, providerId: string): Promise<void>;
+		flushToken(initializeGuest?: boolean): Promise<string | undefined>;
 	}
 	interface State {
 		newUserId?: string;
 		userId?: string;
-		providerKey?: string;
+		provider?: string;
+		providerId?: string;
 		token?: string;
 	}
 }
@@ -20,20 +22,21 @@ declare module 'xxscreeps/backend' {
 export function authentication(): Middleware {
 	return async(context, next) => {
 		// eslint-disable-next-line @typescript-eslint/require-await
-		context.authenticateForProvider = async(providerKey: string) => {
+		context.authenticateForProvider = async(provider: string, providerId: string) => {
 			if (context.state.token !== undefined) {
 				throw new Error('Already flushed');
 			}
-			const userId = context.backend.auth.lookupUserByProvider(providerKey);
-			context.state.providerKey = providerKey;
-			if (userId === undefined) {
+			const userId = await findUserByProvider(context.db, provider, providerId);
+			if (userId === null) {
 				context.state.newUserId = Id.generateId(12);
+				context.state.provider = provider;
+				context.state.providerId = providerId;
 			} else {
 				context.state.userId = userId;
 			}
 		};
 
-		context.flushToken = async() => {
+		context.flushToken = async(initializeGuest = false) => {
 			if (context.state.token !== undefined) {
 				return context.state.token;
 			}
@@ -41,15 +44,15 @@ export function authentication(): Middleware {
 				if (context.state.userId !== undefined) {
 					return makeToken(context.state.userId);
 				} else if (context.state.newUserId !== undefined) {
-					return makeToken(`new:${context.state.newUserId}:${context.state.providerKey}`);
-				} else if (allowGuestAccess) {
+					return makeToken(`new:${context.state.newUserId}:${context.state.provider}:${context.state.providerId}`);
+				} else if (allowGuestAccess && initializeGuest) {
 					return 'guest';
 				}
 			}();
 			context.state.token = token;
 			if (token !== undefined) {
 				context.set('X-Token', token);
-				if (context.state.providerKey) {
+				if (context.state.provider) {
 					// Authenticated on this request
 					context.cookies.set('token', token, { maxAge: 60 * 1000 });
 				}
@@ -69,6 +72,7 @@ export function authentication(): Middleware {
 			if (token && token !== 'guest') {
 				const tokenValue = await checkToken(token);
 				if (tokenValue === undefined) {
+					// Send failure to force the Steam client to reauthenticate
 					context.status = 403;
 					context.body = 'Malformed token';
 					return;
@@ -76,10 +80,11 @@ export function authentication(): Middleware {
 				if (/^[a-f0-9]+$/.test(tokenValue)) {
 					context.state.userId = tokenValue;
 				} else {
-					const unsavedUserToken = /^new:(?<id>[^:]+):(?<provider>.+)$/.exec(tokenValue);
+					const unsavedUserToken = /^new:(?<id>[^:]+):(?<provider>[^:]+):(?<providerId>.+)$/.exec(tokenValue);
 					if (unsavedUserToken) {
 						context.state.newUserId = unsavedUserToken.groups!.id;
-						context.state.providerKey = unsavedUserToken.groups!.provider;
+						context.state.provider = unsavedUserToken.groups!.provider;
+						context.state.providerId = unsavedUserToken.groups!.providerId;
 					}
 				}
 			}
@@ -89,15 +94,9 @@ export function authentication(): Middleware {
 			return;
 		} finally {
 			// Send refreshed token
-			await context.flushToken();
+			if (context.status === 200) {
+				await context.flushToken();
+			}
 		}
 	};
-}
-
-export function checkUsername(username: string) {
-	return (
-		typeof username === 'string' &&
-		username.length <= 20 &&
-		/^[a-zA-Z0-9][a-zA-Z0-9_-]+[a-zA-Z0-9]$/.test(username)
-	);
 }

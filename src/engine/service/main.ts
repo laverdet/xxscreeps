@@ -1,14 +1,16 @@
+import config from 'xxscreeps/config';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
+import { Database } from 'xxscreeps/engine/database';
 import { Deferred } from 'xxscreeps/utility/async';
 import { Shard } from 'xxscreeps/engine/shard';
 import { Mutex } from 'xxscreeps/engine/storage/mutex';
-import config from 'xxscreeps/config';
 import { getProcessorChannel } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';
 
 // Open channels
-const shard = await Shard.connect('shard0');
+const db = await Database.connect();
+const shard = await Shard.connect(db, 'shard0');
 const processorChannel = getProcessorChannel(shard);
 const runnerChannel = getRunnerChannel(shard);
 const [ gameMutex, serviceSubscription ] = await Promise.all([
@@ -105,9 +107,8 @@ try {
 
 	// Save on graceful exit
 	await Promise.all([
-		shard.blob.save(),
-		shard.data.save(),
-		shard.scratch.save(),
+		db.save(),
+		shard.save(),
 	]);
 
 } finally {

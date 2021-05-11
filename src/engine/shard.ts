@@ -1,4 +1,5 @@
 import type { BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/engine/storage';
+import type { Database } from './database';
 import type { Effect } from 'xxscreeps/utility/types';
 import type { Subscription } from 'xxscreeps/engine/storage/channel';
 import * as RoomSchema from 'xxscreeps/engine/room';
@@ -14,6 +15,7 @@ export class Shard {
 	private readonly gameTickEffect: Effect;
 
 	private constructor(
+		public readonly db: Database,
 		public readonly name: string,
 		public readonly blob: BlobProvider,
 		public readonly data: KeyValProvider,
@@ -28,7 +30,7 @@ export class Shard {
 		});
 	}
 
-	static async connect(name: string) {
+	static async connect(db: Database, name: string) {
 		// Connect to shard, load const data
 		const shard = config.shards.find(shard => shard.name === name);
 		if (!shard) {
@@ -42,7 +44,7 @@ export class Shard {
 		]);
 		const channel = await new Channel<Message>(pubsub, 'channel/game').subscribe();
 		// Create instance (which subscribes to tick notification) and then read current info
-		const instance = new Shard(name, blob, data, pubsub, scratch, channel);
+		const instance = new Shard(db, name, blob, data, pubsub, scratch, channel);
 		const time = Number(await data.get('time'));
 		instance.time = Math.max(time, instance.time);
 		return instance;
@@ -55,6 +57,10 @@ export class Shard {
 		this.data.disconnect();
 		this.pubsub.disconnect();
 		this.scratch.disconnect();
+	}
+
+	save() {
+		return Promise.all([ this.data.save(), this.blob.save() ]);
 	}
 
 	/**

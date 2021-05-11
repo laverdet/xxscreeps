@@ -27,6 +27,34 @@
             ],
             "type": "object"
         },
+        "database": {
+            "defaultProperties": [
+            ],
+            "description": "Configuration for global database storage",
+            "properties": {
+                "blob": {
+                    "default": "./screeps/db",
+                    "description": "Blob storage provider URI",
+                    "type": "string"
+                },
+                "data": {
+                    "default": "./screeps/db/data.json",
+                    "description": "Persistent storage provider URI",
+                    "type": "string"
+                },
+                "pubsub": {
+                    "default": "local://db",
+                    "description": "Pubsub storage provider URI",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "blob",
+                "data",
+                "pubsub"
+            ],
+            "type": "object"
+        },
         "game": {
             "defaultProperties": [
             ],
@@ -94,7 +122,8 @@
             "type": "string"
         },
         "shards": {
-            "description": "Configuration for local storage",
+            "default": "`[ {\nname: 'shard0',\nblob: './screeps/shard0',\ndata: './screeps/shard0/data.json',\npubsub: 'local://shard0',\nscratch: 'local://shard0',\n} ]`",
+            "description": "Configuration for shard-specific storage",
             "items": {
                 "defaultProperties": [
                 ],

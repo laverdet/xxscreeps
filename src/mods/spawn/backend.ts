@@ -3,8 +3,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as Controller from 'xxscreeps/mods/controller/processor';
 import * as Spawn from './spawn';
 import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
-import { loadUser, saveUser } from 'xxscreeps/backend/model/user';
-import { forceRoomProcess } from 'xxscreeps/engine/processor/model';
+import { forceRoomProcess, userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { FlushObjects, InsertObject } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
@@ -36,13 +35,16 @@ registerBackendRoute({
 	method: 'post',
 
 	async execute(context) {
+		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
 		if (context.request.body.type !== 'spawn') {
 			return;
 		}
-		const { userId } = context.state;
-		const user = await loadUser(context.backend, userId!);
-		const rooms = await Promise.all(Fn.map(user.roomsPresent, room =>
-			context.shard.loadRoom(room)));
+		const rooms = await Promise.all(Fn.map(
+			await context.shard.scratch.smembers(userToRoomsSetKey(userId)),
+			roomName => context.shard.loadRoom(roomName)));
 		for (const room of rooms) {
 			for (const structure of room.find(C.FIND_STRUCTURES)) {
 				if (
@@ -63,13 +65,16 @@ registerBackendRoute({
 	method: 'post',
 
 	async execute(context) {
+		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
 		if (context.request.body.type !== 'spawn') {
 			return;
 		}
-		const { userId } = context.state;
-		const user = await loadUser(context.backend, userId!);
-		const rooms = await Promise.all(Fn.map(user.roomsPresent, room =>
-			context.shard.loadRoom(room)));
+		const rooms = await Promise.all(Fn.map(
+			await context.shard.scratch.smembers(userToRoomsSetKey(userId)),
+			roomName => context.shard.loadRoom(roomName)));
 		let max = 0;
 		for (const room of rooms) {
 			for (const structure of Fn.concat(
@@ -94,36 +99,37 @@ registerBackendRoute({
 
 	async execute(context) {
 		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
 		const { name, room: roomName, x, y } = context.request.body;
 		const pos = new RoomPosition(x, y, roomName);
 		await context.backend.gameMutex.scope(async() => {
 			// Ensure user has no objects
-			const user = await loadUser(context.backend, userId!);
-			if (user.roomsPresent.size !== 0) {
+			const roomNames = await context.shard.scratch.smembers(userToRoomsSetKey(userId));
+			if (roomNames.length !== 0) {
 				throw new Error('User has presence');
 			}
 			const room = await context.shard.loadRoom(roomName);
 			runWithState(new GameState(context.backend.world, context.shard.time, [ room ]), () => {
-				runAsUser(user.id, () => {
+				runAsUser(userId, () => {
 					// Check room eligibility
 					if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
 						throw new Error('Invalid intent');
 					}
 					// Add spawn
-					room[InsertObject](Spawn.create(pos, userId!, name));
+					room[InsertObject](Spawn.create(pos, userId, name));
 					room[FlushObjects]();
-					Controller.claim(room.controller!, user.id);
-					user.roomsControlled.add(room.name);
-					user.roomsPresent.add(room.name);
-					user.roomsVisible.add(room.name);
+					Controller.claim(room.controller!, userId);
 				});
 			});
 
 			// Save
-			await forceRoomProcess(context.shard, roomName);
 			await Promise.all([
-				saveUser(context.backend, user),
+				forceRoomProcess(context.shard, roomName),
 				context.backend.shard.saveRoom(roomName, context.shard.time, room),
+				context.backend.shard.data.sadd('users', [ userId ]),
+				context.backend.shard.scratch.sadd('users', [ userId ]),
 			]);
 		});
 		return { ok: 1 };

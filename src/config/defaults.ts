@@ -27,6 +27,11 @@ export const defaults = makeDefaults({
 		concurrency: os.cpus().length + 1,
 	},
 	schemaArchive: './screeps/archive',
+	database: {
+		blob: './screeps/db',
+		data: './screeps/db/data.json',
+		pubsub: 'local://db',
+	},
 	shards: [ {
 		name: 'shard0',
 		blob: './screeps/shard0',

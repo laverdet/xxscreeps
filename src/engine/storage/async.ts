@@ -8,7 +8,7 @@ export async function *consumeSet(keyval: KeyValProvider, key: string) {
 }
 
 export async function *consumeSortedSet(keyval: KeyValProvider, key: string, min = -Infinity, max = Infinity) {
-	let values = await keyval.zrange(key, min, max, 'byScore');
+	let values = await keyval.zrange(key, min, max, { by: 'score' });
 	while (values.length) {
 		for (const value of values) {
 			const count = await keyval.zrem(key, [ value ]);
@@ -17,6 +17,6 @@ export async function *consumeSortedSet(keyval: KeyValProvider, key: string, min
 				break;
 			}
 		}
-		values = await keyval.zrange(key, min, max, 'byScore');
+		values = await keyval.zrange(key, min, max, { by: 'score' });
 	}
 }

@@ -1,5 +1,7 @@
+import type { Database } from 'xxscreeps/engine/database';
 import Ajv from 'ajv';
 import jsonSchema from './badge.schema.json';
+import * as User from './user';
 
 // To rebuild schema:
 // npx typescript-json-schema tsconfig.json UserBadge --include engine/metadata/badge.ts --defaultProps --required -o engine/metadata/badge.schema.json
@@ -39,4 +41,8 @@ export function validate(badge: any): UserBadge {
 		throw new Error(`Invalid badge\n${validator.errors![0].message}`);
 	}
 	return badge;
+}
+
+export async function save(db: Database, userId: string, badge: string) {
+	await db.data.hset(User.infoKey(userId), 'badge', badge);
 }

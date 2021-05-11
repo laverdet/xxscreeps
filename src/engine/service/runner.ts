@@ -1,5 +1,6 @@
 import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
+import { Database } from 'xxscreeps/engine/database';
 import { Shard } from 'xxscreeps/engine/shard';
 import { userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
@@ -10,7 +11,8 @@ import { getServiceChannel } from '.';
 import 'xxscreeps/config/mods/import/driver';
 
 // Connect to main & storage
-const shard = await Shard.connect('shard0');
+const db = await Database.connect();
+const shard = await Shard.connect(db, 'shard0');
 const runnerSubscription = await getRunnerChannel(shard).subscribe();
 const concurrency = config.runner.unsafeSandbox ? 1 : config.runner.concurrency;
 

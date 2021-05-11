@@ -89,7 +89,37 @@ export type Schema = {
 	schemaArchive?: string | undefined;
 
 	/**
-	 * Configuration for local storage
+	 * Configuration for global database storage
+	 */
+	database?: {
+		/**
+		 * Blob storage provider URI
+		 * @default ./screeps/db
+		 */
+		blob: string;
+
+		/**
+		 * Persistent storage provider URI
+		 * @default ./screeps/db/data.json
+		 */
+		data: string;
+
+		/**
+		 * Pubsub storage provider URI
+		 * @default local://db
+		 */
+		pubsub: string;
+	};
+
+	/**
+	 * Configuration for shard-specific storage
+	 * @default `[ {
+	 *   name: 'shard0',
+	 *   blob: './screeps/shard0',
+	 *   data: './screeps/shard0/data.json',
+	 *   pubsub: 'local://shard0',
+	 *   scratch: 'local://shard0',
+	 * } ]`
 	 */
 	shards?: {
 		/**

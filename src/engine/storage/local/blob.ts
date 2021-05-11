@@ -176,7 +176,7 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		this.bufferedBlobs.clear();
 		this.bufferedDeletes.clear();
 		this.knownPaths.clear();
-		await fs.rmdir(this.path, { recursive: true });
+		await fs.rm(this.path, { recursive: true });
 		await LocalBlobHost.initializeDirectory(this.path);
 	}
 

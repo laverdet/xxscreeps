@@ -4,6 +4,8 @@ import { Deferred } from 'xxscreeps/utility/async';
 
 type MessageType<Message> = Message | (Message extends string ? null : { type: null });
 type Listener<Message> = (message: MessageType<Message>) => void;
+export type SubscriptionFor<Factory extends (...args: any[]) => Channel<any>> =
+	ReturnType<Factory> extends Channel<infer Message> ? Subscription<Message> : never;
 
 export class Channel<Message = string> {
 	constructor(pubsub: PubSubProvider, name: string, ...json: Message extends string ? [ false ] : [ true? ]);

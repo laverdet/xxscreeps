@@ -1,7 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend';
-import { checkUsername } from 'xxscreeps/backend/auth';
-import { loadUser } from 'xxscreeps/backend/model/user';
-import * as User from 'xxscreeps/engine/metadata/user';
+import * as User from 'xxscreeps/engine/user/user';
 
 const CheckEmailEndpoint: Endpoint = {
 	path: '/api/register/check-email',
@@ -17,13 +15,12 @@ const CheckEmailEndpoint: Endpoint = {
 const CheckUsernameEndpoint: Endpoint = {
 	path: '/api/register/check-username',
 
-	execute(context) {
+	async execute(context) {
 		const username = `${context.query.username}`;
-		if (!checkUsername(username)) {
+		if (!User.checkUsername(username)) {
 			return { error: 'invalid' };
 		}
-		const usernameKey = context.backend.auth.usernameToProviderKey(username);
-		if (context.backend.auth.lookupUserByProvider(usernameKey) !== undefined) {
+		if (await User.findUserByName(context.db, username)) {
 			return { error: 'exists' };
 		}
 		return { ok: 1 };
@@ -37,45 +34,26 @@ const SetUsernameEndpoint: Endpoint = {
 	async execute(context) {
 
 		// Check for new reg provider
-		const { providerKey, userId, newUserId } = context.state;
+		const { provider, providerId, userId, newUserId } = context.state;
 		const { username } = context.request.body;
-		if (providerKey === undefined || userId !== undefined) {
+		if (provider === undefined || providerId === undefined) {
+			return { error: 'not authenticated' };
+		} else if (userId !== undefined || newUserId === undefined) {
 			return { error: 'username already set' };
 		}
 
 		// Sanity check
-		if (!checkUsername(username)) {
+		if (!User.checkUsername(username)) {
 			return { error: 'invalid' };
 		}
 
 		// Register
-		return context.backend.gameMutex.scope(async() => {
-			// Ensure account or steam reference doesn't already exist
-			if (context.backend.auth.lookupUserByProvider(providerKey) !== undefined) {
-				throw new Error(`Account already exists: ${providerKey}`);
-			}
-			if (await loadUser(context.backend, newUserId!).catch(() => {})) {
-				throw new Error(`Username already set: ${newUserId}`);
-			}
-			const usernameKey = context.backend.auth.usernameToProviderKey(username);
-			if (context.backend.auth.lookupUserByProvider(usernameKey) !== undefined) {
-				throw new Error(`User already exists: ${username}`);
-			}
-			// Create user
-			const user = User.create(username, newUserId);
-			const userBlob = User.write(user);
-			context.backend.auth.associateUser(usernameKey, user.id);
-			context.backend.auth.associateUser(providerKey, user.id);
-			context.state.userId = newUserId;
-			context.state.newUserId = undefined;
-			context.state.providerKey = undefined;
-			await Promise.all([
-				context.backend.auth.save(),
-				context.shard.blob.set(`user/${user.id}/info`, userBlob),
-			]);
-			// Success
-			return { ok: 1, _id: user.id, username };
-		});
+		await User.create(context.db, newUserId, username, [ { provider, id: providerId } ]);
+		context.state.userId = newUserId;
+		context.state.newUserId = undefined;
+		context.state.provider = undefined;
+		context.state.providerId = undefined;
+		return { ok: 1, _id: newUserId, username };
 	},
 };
 

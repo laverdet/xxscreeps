@@ -1,6 +1,6 @@
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as CodeSchema from 'xxscreeps/engine/metadata/code';
+import * as Code from 'xxscreeps/engine/user/code-schema';
 import * as RoomSchema from 'xxscreeps/engine/room';
 import { inspect } from 'util';
 import { initializers, tickReceive, tickSend } from 'xxscreeps/driver/symbols';
@@ -31,7 +31,7 @@ export function initialize(evaluate: Evaluate, printFn: Print, data: Initializat
 	initializers.splice(0).forEach(fn => fn(data));
 
 	// Set up runtime
-	const { modules } = CodeSchema.read(data.codeBlob);
+	const modules = Code.read(data.codeBlob);
 	if (!modules.has('main')) {
 		modules.set('main', '');
 	}

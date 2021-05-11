@@ -1,6 +1,6 @@
 import type { SubscriptionEndpoint } from '../socket';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/metadata/user';
+import * as User from 'xxscreeps/engine/user/user';
 import { Objects } from 'xxscreeps/game/room';
 import { GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { acquire } from 'xxscreeps/utility/async';
@@ -72,10 +72,10 @@ export const roomSubscription: SubscriptionEndpoint = {
 
 			// Get users not yet seen
 			const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async(id): Promise<[ string, any ]> => {
-				const user = User.read(await this.context.shard.blob.reqBuffer(`user/${id}/info`));
-				return [ user.id, {
-					username: user.username,
-					badge: JSON.parse(user.badge),
+				const info = await this.context.shard.db.data.hmget(User.infoKey(id), [ 'badge', 'username' ]);
+				return [ id, {
+					username: info.username,
+					badge: info.badge ? JSON.parse(info.badge) : {},
 				} ];
 			})));
 

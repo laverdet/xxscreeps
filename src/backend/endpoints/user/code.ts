@@ -1,157 +1,124 @@
-import type { Endpoint } from 'xxscreeps/backend';
-import * as Code from 'xxscreeps/engine/metadata/code';
+import type { Database } from 'xxscreeps/engine/database';
+import * as Code from 'xxscreeps/engine/user/code';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/metadata/user';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
+import * as User from 'xxscreeps/engine/user/user';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
+import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
+import { registerBackendRoute } from 'xxscreeps/backend';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;
-const kDefaultBranch = 'master';
+const kDefaultBranch = 'main';
 const kMaxBranches = 30;
 
-function getBranchIdFromQuery(branch: any, user: User.User, create: true): { id: string; name: string };
-function getBranchIdFromQuery(branch: any, user: User.User, create?: false): { id?: string; name: string };
-function getBranchIdFromQuery(branch: any, user: User.User, create = false) {
-	// Get branch id
-	let id = function() {
-		if (branch == null || branch[0] === '$') {
-			return user.code.branch;
-		} else {
-			return Fn.firstMatching(user.code.branches, info => info.name === branch)?.id;
-		}
-	}();
-	// Possibly need to create the default branch
-	if (id == null) {
-		if (create) {
-			if (branch != null && branch[0] !== '$' && branch !== kDefaultBranch) {
-				throw new Error('Branch does not exist');
-			}
-			id = Id.generateId(12);
-			user.code.branch = id;
-			user.code.branches.push({
-				id,
-				name: branch ?? kDefaultBranch,
-				timestamp: Date.now() / 1000,
-			});
-		} else {
-			return { name: kDefaultBranch };
-		}
+function checkBranchName(branchName: string): asserts branchName is string {
+	if (typeof branchName !== 'string' || branchName.length > 30 || !/^[-_.a-zA-Z0-9]+$/.test(branchName)) {
+		throw new Error('Invalid branch name');
 	}
-	// Get branch name
-	return {
-		id,
-		name: Fn.firstMatching(user.code.branches, branch => branch.id === id)!.name,
-	};
 }
 
-const BranchesEndpoint: Endpoint = {
+async function getBranchNameFromQuery(db: Database, userId: string, branchName: string) {
+	if (!branchName || branchName === '$activeWorld') {
+		return await db.data.hget(User.infoKey(userId), 'branch') ?? kDefaultBranch;
+	}
+	checkBranchName(branchName);
+	return branchName;
+}
+
+registerBackendRoute({
 	path: '/api/user/branches',
 
 	async execute(context) {
 		const { userId } = context.state;
-		const userBlob = await context.shard.blob.getBuffer(`user/${userId}/info`);
-		const user = userBlob && User.read(userBlob);
+		const branches = userId ? await context.db.data.smembers(Code.branchManifestKey(userId)) : undefined;
 
-		if (!user || user.code.branches.length === 0) {
+		if (!userId || !branches || branches.length === 0) {
 			// Fake module list. `default` will be created on save
 			return {
 				ok: 1,
-				list: [
-					{
-						activeWorld: true,
-						branch: kDefaultBranch,
-						modules: { main: '' },
-						timestamp: Date.now(),
-						user: userId,
-					},
-				],
+				list: [ {
+					activeWorld: true,
+					branch: kDefaultBranch,
+					// Needed for ?withCode=true
+					modules: { main: '' },
+				} ],
 			};
 		}
 
 		// First save has occurred
+		const currentBranch = await context.shard.data.hget(User.infoKey(userId), 'branch');
+		const withCode = Boolean(context.request.query.withCode);
 		return {
 			ok: 1,
-			list: await Promise.all(user.code.branches.map(async branch => {
-				const code = Code.read(await context.shard.blob.reqBuffer(`user/${userId}/${branch.id}`));
+			list: await Promise.all(Fn.map(branches, async branchName => {
+				const content = withCode && {
+					modules: await Code.loadContent(context.db, userId, branchName),
+				};
 				return {
-					activeWorld: branch.id === user.code.branch,
-					branch: branch.name,
-					modules: Fn.fromEntries(code.modules),
-					timestamp: branch.timestamp * 1000,
-					user: userId,
+					activeWorld: branchName === currentBranch,
+					branch: branchName,
+					...content,
 				};
 			})),
 		};
 	},
-};
+});
 
-const BranchCloneEndpoint: Endpoint = {
+registerBackendRoute({
 	path: '/api/user/clone-branch',
 	method: 'post',
 
 	async execute(context) {
 		const { userId } = context.state;
-		const { branch, newName } = context.request.body;
-		if (typeof newName !== 'string' || !/^[-_.a-zA-Z0-9]+$/.test(newName)) {
-			throw new Error('Invalid branch name');
+		if (!userId) {
+			return;
 		}
-		const timestamp = Math.floor(Date.now() / 1000);
 
-		await context.backend.gameMutex.scope(async() => {
-			const user = User.read(await context.shard.blob.reqBuffer(`user/${userId}/info`));
-			// Validity checks
-			if (user.code.branches.length > kMaxBranches) {
-				throw new Error('Too many branches');
-			} else if (user.code.branches.some(branch => branch.name === newName)) {
-				throw new Error('Branch already exists');
-			}
-			const branchId = Fn.firstMatching(user.code.branches, info => info.name === branch)?.id;
-			if (branchId === undefined) {
-				throw new Error('Branch does not exist');
-			}
-			// Create the branch
-			const newId = Id.generateId(12);
-			user.code.branches.push({
-				id: newId,
-				name: newName,
-				timestamp,
-			});
-			// Save blobs
-			await Promise.all([
-				context.shard.blob.set(`user/${userId}/info`, User.write(user)),
-				context.shard.blob.set(`user/${userId}/${newId}`,
-					await context.shard.blob.reqBuffer(`user/${userId}/${branchId}`)),
-			]);
-		});
+		// Check request
+		const branch = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
+		const { newName } = context.request.body;
+		checkBranchName(newName);
+		const key = Code.branchManifestKey(userId);
+		const branches = await context.db.data.smembers(key);
+		if (branches.length >= kMaxBranches) {
+			throw new Error('Too many branches');
+		} else if (branches.includes(newName)) {
+			throw new Error('Branch already exists');
+		} else if (!branches.includes(branch)) {
+			return;
+		}
 
-		return { ok: 1, timestamp: timestamp * 1000 };
+		// Create the branch
+		const timestamp = Date.now();
+		const updated = await context.db.blob.copy(Code.contentKey(userId, branch), Code.contentKey(userId, newName));
+		if (updated !== 1) {
+			throw new Error('Failed to copy');
+		}
+		await context.db.data.sadd(Code.branchManifestKey(userId), [ newName ]);
+
+		return { ok: 1, timestamp };
 	},
-};
+});
 
-const BranchSetEndpoint: Endpoint = {
+registerBackendRoute({
 	path: '/api/user/set-active-branch',
 	method: 'post',
 
 	async execute(context) {
 		const { userId } = context.state;
-		const { branch } = context.request.body;
-		await context.backend.gameMutex.scope(async() => {
-			const user = User.read(await context.shard.blob.reqBuffer(`user/${userId}/info`));
-			const { id, name } = getBranchIdFromQuery(branch, user);
-			if (id === undefined) {
-				throw new Error('Invalid branch');
-			}
-			user.code.branch = id;
-			await context.shard.blob.set(`user/${userId}/info`, User.write(user));
-			await getRunnerUserChannel(context.backend.shard, userId!).publish({ type: 'code', id, name });
-		});
-
+		if (!userId) {
+			return;
+		}
+		const branch = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
+		if (await context.db.data.sismember(Code.branchManifestKey(userId), branch) <= 0) {
+			return;
+		}
+		await context.db.data.hset(User.infoKey(userId), 'branch', branch);
+		await Code.getUserCodeChannel(context.db, userId).publish({ type: 'switch', branch });
 		return { ok: 1 };
 	},
-};
+});
 
-const CodeEndpoint: Endpoint = {
+registerBackendRoute({
 	path: '/api/user/code',
 
 	async execute(context) {
@@ -159,71 +126,57 @@ const CodeEndpoint: Endpoint = {
 		if (!userId) {
 			return { ok: 1, branch: kDefaultBranch, modules: { main: '' } };
 		}
-		const { branch } = context.request.body;
-		const user = User.read(await context.shard.blob.reqBuffer(`user/${userId}/info`));
-		const { id, name } = getBranchIdFromQuery(branch, user);
-		if (id === undefined) {
-			return { ok: 1, branch: name, modules: { main: '' } };
+		const branchName = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
+		const payload = await Code.loadContent(context.db, userId, branchName);
+		if (!payload) {
+			if (branchName === kDefaultBranch) {
+				return { ok: 1, branch: kDefaultBranch, modules: { main: '' } };
+			} else {
+				return;
+			}
 		}
-
-		const code = Code.read(await context.shard.blob.reqBuffer(`user/${userId}/${id}`));
-		return { ok: 1, branch: name, modules: Fn.fromEntries(code.modules) };
+		return { ok: 1, branch: branchName, modules: Fn.fromEntries(payload) };
 	},
-};
+});
 
-const CodePostEndpoint: Endpoint = {
+registerBackendRoute({
 	path: '/api/user/code',
 	method: 'post',
 
 	async execute(context) {
 		// Validate this code payload
 		const { userId } = context.state;
-		const { branch, modules } = context.request.body;
-		let size = 0;
-		for (const module of Object.values(modules)) {
+		if (!userId) {
+			return;
+		}
+		const { modules } = context.request.body;
+		modules.main ??= '';
+		const size = Fn.accumulate(Fn.map(Object.values(modules), module => {
 			if (typeof module !== 'string') {
 				throw new TypeError('Invalid payload');
 			}
-			size += module.length;
-		}
+			return module.length;
+		}));
 		if (size > kCodeSizeLimit) {
 			throw new Error('Too much code');
 		}
 
 		// Save it
-		const timestamp = Math.floor(Date.now() / 1000);
-		await context.backend.gameMutex.scope(async() => {
-			// Load user branch manifest
-			const user = User.read(await context.shard.blob.reqBuffer(`user/${userId}/info`));
-			const { id, name } = getBranchIdFromQuery(branch, user, true);
-
-			// Update manifest timestamp
-			for (const branch of user.code.branches) {
-				if (branch.id === id) {
-					branch.timestamp = timestamp;
-					break;
-				}
-			}
-
-			// Save blobs
-			await Promise.all([
-				context.shard.blob.set(`user/${userId}/info`, User.write(user)),
-				context.shard.blob.set(`user/${userId}/${id}`, Code.write({
-					modules: new Map(Object.entries(modules)),
-				})),
-			]);
-			await getRunnerUserChannel(context.backend.shard, userId!).publish({ type: 'code', id, name });
-		});
-		return { ok: 1, timestamp: timestamp * 1000 };
+		const branchName = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
+		await Code.saveContent(context.db, userId, branchName, new Map(Object.entries(modules)));
+		return { ok: 1 };
 	},
-};
+});
 
-const ConsoleEndpoint: Endpoint = {
+registerBackendRoute({
 	path: '/api/user/console',
 	method: 'post',
 
 	async execute(context) {
 		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
 		const { expression } = context.request.body;
 		if (typeof expression !== 'string') {
 			throw new TypeError('Invalid expression');
@@ -232,12 +185,10 @@ const ConsoleEndpoint: Endpoint = {
 			// Try to parse it
 			// eslint-disable-next-line no-new, @typescript-eslint/no-implied-eval
 			new Function(expression);
-			await getRunnerUserChannel(context.shard, userId!).publish({ type: 'eval', expr: context.request.body.expression });
+			await getRunnerUserChannel(context.shard, userId).publish({ type: 'eval', expr: context.request.body.expression });
 		} catch (err) {
-			await getConsoleChannel(context.shard, userId!).publish({ type: 'error', value: err.message });
+			await getConsoleChannel(context.shard, userId).publish({ type: 'error', value: err.message });
 		}
 		return { ok: 1 };
 	},
-};
-
-export default [ BranchesEndpoint, BranchCloneEndpoint, BranchSetEndpoint, BranchSetEndpoint, CodeEndpoint, CodePostEndpoint, ConsoleEndpoint ];
+});

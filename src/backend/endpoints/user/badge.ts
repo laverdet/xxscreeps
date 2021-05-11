@@ -1,7 +1,6 @@
 import type { Endpoint } from 'xxscreeps/backend';
-import { loadUser } from 'xxscreeps/backend/model/user';
-import * as Badge from 'xxscreeps/engine/metadata/badge';
-import * as User from 'xxscreeps/engine/metadata/user';
+import * as Badge from 'xxscreeps/engine/user/badge';
+import * as User from 'xxscreeps/engine/user/user';
 
 const BadgeEndpoint: Endpoint = {
 	path: '/api/user/badge',
@@ -9,13 +8,11 @@ const BadgeEndpoint: Endpoint = {
 
 	async execute(context) {
 		const { userId } = context.state;
+		if (!userId) {
+			return { error: 'not logged in' };
+		}
 		const badge = Badge.validate(context.request.body.badge);
-		await context.backend.gameMutex.scope(async() => {
-			const fragment = `user/${userId}/info`;
-			const user = User.read(await context.shard.blob.reqBuffer(fragment));
-			user.badge = JSON.stringify(badge);
-			await context.shard.blob.set(fragment, User.write(user));
-		});
+		await Badge.save(context.db, userId, JSON.stringify(badge));
 		return { ok: 1 };
 	},
 };
@@ -25,14 +22,15 @@ const BadgeSvgEndpoint: Endpoint = {
 
 	async execute(context) {
 		// Look up userid
-		const username = `${context.query.username}`;
-		const usernameKey = context.backend.auth.usernameToProviderKey(username);
-		const userid = context.backend.auth.lookupUserByProvider(usernameKey);
-		if (userid === undefined) {
+		const userId = await User.findUserByName(context.db, `${context.query.username}`);
+		if (!userId) {
 			return;
 		}
-		const user = await loadUser(context.backend, userid);
-		const badge: Badge.Badge = JSON.parse(user.badge);
+		const badgeData = await context.db.data.hget(User.infoKey(userId), 'badge');
+		if (!badgeData) {
+			return;
+		}
+		const badge: Badge.Badge = JSON.parse(badgeData);
 
 		// Extract or calculate paths
 		const { color1, color2, color3 } = badge;

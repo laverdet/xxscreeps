@@ -6,22 +6,21 @@ import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as C from 'xxscreeps/game/constants';
 import * as Store from 'xxscreeps/mods/resource/store';
-import config from 'xxscreeps/config';
 
 // Schemas
-import * as Auth from 'xxscreeps/backend/auth/model';
-import * as CodeSchema from 'xxscreeps/engine/metadata/code';
+import * as CodeSchema from 'xxscreeps/engine/user/code';
 import * as MapSchema from 'xxscreeps/game/map';
-import * as User from 'xxscreeps/engine/metadata/user';
+import * as Badge from 'xxscreeps/engine/user/badge';
+import * as User from 'xxscreeps/engine/user/user';
 
+import { Database } from 'xxscreeps/engine/database';
+import { Shard } from 'xxscreeps/engine/shard';
 import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
-import { Shard } from 'xxscreeps/engine/shard';
 import { Objects } from 'xxscreeps/game/room/symbols';
-import { connectToProvider } from 'xxscreeps/engine/storage';
 import { EventLog } from 'xxscreeps/game/room';
 import { NPCData } from 'xxscreeps/mods/npc/game';
-import { clamp, getOrSet } from 'xxscreeps/utility/utility';
+import { clamp } from 'xxscreeps/utility/utility';
 import { saveMemoryBlob } from 'xxscreeps/mods/memory/model';
 import { utf16ToBuffer } from 'xxscreeps/utility/string';
 
@@ -57,20 +56,65 @@ function withStore(object: any) {
 	};
 }
 
-// Load JSON data and connect to blob storage
-const db = new Loki(jsonSource);
+// Initialize import source
+const loki = new Loki(jsonSource);
 await new Promise<void>((resolve, reject) => {
-	db.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve());
+	loki.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve());
 });
-
-// Collect env data
-const env = db.getCollection('env').findOne().data;
+const env = loki.getCollection('env').findOne().data;
 const gameTime: number = env.gameTime - 1;
 
+// Initialize and connect to database & shard
+const db = await Database.connect();
+{
+	// Flush databases at the same time because they may point to the same service
+	const shard = await Shard.connect(db, 'shard0');
+	await Promise.all([
+		db.blob.flushdb(),
+		db.data.flushdb(),
+		shard.blob.flushdb(),
+		shard.data.flushdb(),
+	]);
+	// Initialize blank database
+	await shard.data.set('time', gameTime);
+	await Promise.all([
+		db.blob.save(),
+		db.data.save(),
+		shard.blob.save(),
+		shard.data.save(),
+	]);
+	shard.disconnect();
+}
+const shard = await Shard.connect(db, 'shard0');
+const { blob } = shard;
+
+// Save terrain data
+const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ room, terrain }) => {
+	const writer = new TerrainWriter;
+	for (let xx = 0; xx < 50; ++xx) {
+		for (let yy = 0; yy < 50; ++yy) {
+			writer.set(xx, yy, clamp(0, 2, Number(terrain[yy * 50 + xx])));
+		}
+	}
+	const checkExit = (fn: (ii: number) => [ number, number ]) =>
+		Fn.some(Fn.range(1, 49), ii => writer.get(...fn(ii)) !== C.TERRAIN_MASK_WALL);
+	const exits =
+		(checkExit(ii => [ ii, 0 ]) ? 1 : 0) |
+		(checkExit(ii => [ 49, ii ]) ? 2 : 0) |
+		(checkExit(ii => [ ii, 49 ]) ? 4 : 0) |
+		(checkExit(ii => [ 0, ii ]) ? 8 : 0);
+	return [ room as string, {
+		exits,
+		terrain: writer,
+	} ];
+}));
+await blob.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
+
 // Collect room data
-const roomObjects = db.getCollection('rooms.objects');
-const rooms = db.getCollection('rooms').find().map(room => ({
+const roomObjects = loki.getCollection('rooms.objects');
+const rooms = loki.getCollection('rooms').find().map(room => ({
 	name: room._id,
+	[EventLog]: [],
 	[NPCData]: {
 		users: new Set<string>(),
 		memory: new Map,
@@ -115,135 +159,50 @@ const rooms = db.getCollection('rooms').find().map(room => ({
 				};
 		}
 	})) ],
-	[EventLog]: [],
 }));
-
-// Get visible rooms for users
-const roomsControlled = new Map<string, Set<string>>();
-const roomsPresent = new Map<string, Set<string>>();
-const roomsVisible = new Map<string, Set<string>>();
-for (const room of rooms) {
-	for (const object of room[Objects]) {
-		const owner: string | undefined = (object as any)[Owner];
-		if (owner !== undefined) {
-			if (object[Variant] === 'controller') {
-				getOrSet(roomsControlled, owner, () => new Set).add(room.name);
-			}
-			getOrSet(roomsPresent, owner, () => new Set).add(room.name);
-			getOrSet(roomsVisible, owner, () => new Set).add(room.name);
-		}
-	}
-}
-
-// Collect users
-const usersCode = db.getCollection('users.code');
-const users = db.getCollection('users').find().map(user => {
-	const code = usersCode.find({ user: user._id });
-	const active: boolean = ![ '2', '3' ].includes(user._id) && user.active;
-	return {
-		id: user._id,
-		username: user.username,
-		registeredDate: +new Date(user.registeredDate),
-		active,
-		cpu: user.cpu,
-		cpuAvailable: user.cpuAvailable,
-		gcl: user.gcl,
-		badge: user.badge === undefined ? '' : JSON.stringify(user.badge),
-		roomsControlled: roomsControlled.get(user._id) ?? new Set,
-		roomsPresent: roomsPresent.get(user._id) ?? new Set,
-		roomsVisible: roomsVisible.get(user._id) ?? new Set,
-		code: {
-			branch: Fn.firstMatching(code, code => code.activeWorld)?._id ?? null,
-			branches: code.map(row => ({
-				id: row._id,
-				name: row.branch,
-				timestamp: row.timestamp,
-			})),
-		},
-	};
-});
-
-// Collect terrain data
-const roomsTerrain = new Map(db.getCollection('rooms.terrain').find().map(({ room, terrain }) => {
-	const writer = new TerrainWriter;
-	for (let xx = 0; xx < 50; ++xx) {
-		for (let yy = 0; yy < 50; ++yy) {
-			writer.set(xx, yy, clamp(0, 2, Number(terrain[yy * 50 + xx])));
-		}
-	}
-	const checkExit = (fn: (ii: number) => [ number, number ]) =>
-		Fn.some(Fn.range(1, 49), ii => writer.get(...fn(ii)) !== C.TERRAIN_MASK_WALL);
-	const exits =
-		(checkExit(ii => [ ii, 0 ]) ? 1 : 0) |
-		(checkExit(ii => [ 49, ii ]) ? 2 : 0) |
-		(checkExit(ii => [ ii, 49 ]) ? 4 : 0) |
-		(checkExit(ii => [ 0, ii ]) ? 8 : 0);
-	return [ room as string, {
-		exits,
-		terrain: writer,
-	} ];
-}));
-
-// Save Game object and initialize shard
-const roomNames = new Set(Fn.map(rooms, room => room.name));
-const userIds = new Set(users.filter(user => user.active).map(user => user.id));
-{
-	// Flush databases at the same time because they may point to the same service
-	const shardConfig = config.shards[0];
-	const [ blob, data ] = await Promise.all([
-		connectToProvider(shardConfig.blob, 'blob'),
-		connectToProvider(shardConfig.data, 'keyval'),
-	]);
-	await Promise.all([ blob.flushdb(), data.flushdb() ]);
-	// Save required blob data
-	await blob.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
-	await blob.save();
-	blob.disconnect();
-	// Save required keyval data
-	await data.sadd('rooms', [ ...roomNames ]);
-	await data.sadd('users', [ ...userIds ]);
-	await data.set('time', gameTime);
-	await data.save();
-	data.disconnect();
-}
-const shard = await Shard.connect('shard0');
-const { blob } = shard;
 
 // Save rooms
+const roomNames = new Set(Fn.map(rooms, room => room.name));
+await shard.data.sadd('rooms', [ ...roomNames ]);
 for (const room of rooms) {
 	await shard.saveRoom(room.name, gameTime, room as never);
 }
 
 // Save users
-for (const user of users) {
-	await blob.set(`user/${user.id}/info`, User.write(user));
-}
-
-// Save user memory
-for (const user of users) {
+const code = loki.getCollection('users.code');
+const users = loki.getCollection('users');
+const activeUserIds = new Set<string>();
+for (const user of users.find()) {
+	const branch = code.find({ user: user._id, activeWorld: true })[0]?.branch ?? '';
 	const memory: string | undefined = env[`memory:${user.id}`];
+	if (user.active && user.cpu > 0) {
+		activeUserIds.add(user._id);
+	}
+	await User.create(db, user._id, user.username);
+	if (user.badge) {
+		await Badge.save(db, user._id, JSON.stringify(user.badge));
+	}
+	await db.data.hmset(User.infoKey(user._id), {
+		branch,
+		...user.registeredDate && {
+			registeredDate: +new Date(user.registeredDate),
+		},
+	});
 	if (memory !== undefined) {
-		await saveMemoryBlob(shard, user.id, utf16ToBuffer(memory));
+		await saveMemoryBlob(shard, user._id, utf16ToBuffer(memory));
 	}
 }
+await shard.data.sadd('users', [ ...activeUserIds ]);
 
-// Write placeholder authentication data
-await blob.set('auth', Auth.write(users.map(user => ({
-	key: `username:${Auth.flattenUsername(user.username)}`,
-	user: user.id,
-}))));
-
-// Save user code
-await Promise.all(db.getCollection('users.code').find().map(async row => {
-	const modules = new Map(Object.entries(row.modules).map(([ key, data ]) => {
+// Save user code content
+for (const branch of code.find()) {
+	const modules = new Map(Object.entries(branch.modules).map(([ key, data ]) => {
 		const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
 		return [ name, data as string ];
 	}));
-	await blob.set(`user/${row.user}/${row._id}`, CodeSchema.write({
-		modules,
-	}));
-}));
+	await CodeSchema.saveContent(db, branch.user, branch.branch, modules);
+}
 
-// Flush everything to disk
-await blob.save();
-shard.disconnect();
+// Finish up
+await db.save();
+await shard.save();
