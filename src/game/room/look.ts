@@ -1,9 +1,8 @@
+import type { PositionParameter } from 'xxscreeps/game/position';
 import type { UnwrapArray } from 'xxscreeps/utility/types';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { extend } from 'xxscreeps/utility/utility';
-import { LookType } from 'xxscreeps/game/object';
-import type { PositionParameter } from 'xxscreeps/game/position';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { iterateArea } from 'xxscreeps/game/position/direction';
 import { terrainMaskToString } from 'xxscreeps/game/terrain';
@@ -99,7 +98,7 @@ extend(Room, {
 		}
 		return [
 			...Fn.map(this[LookAt](pos), object => {
-				const type = object[LookType];
+				const type = object['#lookType'];
 				return { type, [type]: object };
 			}),
 			{ type: 'terrain', terrain: terrainMaskToString[this.getTerrain().get(pos.x, pos.y)] },
@@ -123,7 +122,7 @@ extend(Room, {
 		const results = Fn.concat(
 			// Iterate objects
 			Fn.map(objects, object => {
-				const type = object[LookType];
+				const type = object['#lookType'];
 				return { x: object.pos.x, y: object.pos.y, type, [type]: object };
 			}),
 			// Add terrain data
@@ -143,7 +142,7 @@ extend(Room, {
 		if (!lookConstants.has(type)) {
 			return C.ERR_INVALID_ARGS as any;
 		}
-		return [ ...Fn.filter(this[LookAt](pos), object => object[LookType] === type) ];
+		return [ ...Fn.filter(this[LookAt](pos), object => object['#lookType'] === type) ];
 	},
 
 	lookForAtArea(type: LookConstants, top: number, left: number, bottom: number, right: number, asArray = false) {
@@ -165,7 +164,7 @@ extend(Room, {
 					} else {
 						// Filter on spatial index
 						return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos =>
-							Fn.filter(this[LookAt](pos), object => object[LookType] === type)));
+							Fn.filter(this[LookAt](pos), object => object['#lookType'] === type)));
 					}
 				})();
 				// Add position and type information

@@ -3,7 +3,7 @@ import type { InspectOptionsStylized } from 'util';
 import * as C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import { PositionInteger, RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
-import { LookType, RoomObject, format as baseFormat } from 'xxscreeps/game/object';
+import { RoomObject, format as baseFormat } from 'xxscreeps/game/object';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
 import { intents } from './game';
@@ -28,7 +28,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		return flags[this.name] ??= {};
 	}
 
-	get [LookType]() { return C.LOOK_FLAGS }
+	get ['#lookType']() { return C.LOOK_FLAGS }
 
 	/**
 	 * Remove the flag

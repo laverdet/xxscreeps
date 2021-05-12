@@ -1,3 +1,5 @@
+import type { PluginItem } from '@babel/core';
+import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
@@ -16,16 +18,22 @@ type ExternalsCallback = (...args: Parameters<ExternalsPromise>) =>
 	ReturnType<ExternalsPromise> extends Promise<infer Result> ? Result | void | Promise<Result | void> : never;
 export type Transform = {
 	alias?: Record<string, string>;
+	babel?: PluginItem;
 	externals?: ExternalsCallback;
 };
+
+async function resolve(module: string) {
+	return fileURLToPath(await import.meta.resolve(module));
+}
 
 const IS_DEV = true as boolean;
 
 export async function compile(moduleName: string, transforms: Transform[]) {
 	const baseName = Path.basename(moduleName);
 	const output = new URL(`${baseName}.webpack.js`, import.meta.url);
-
-	const sourceMapLoader = fileURLToPath(await import.meta.resolve('source-map-loader'));
+	const babelPlugins = [ ...Fn.filter(Fn.map(transforms, transform => transform.babel)) ];
+	const babelLoader = await resolve('babel-loader');
+	const sourceMapLoader = await resolve('source-map-loader');
 	await new Promise<Webpack.StatsCompilation>((resolve, reject) => {
 		Webpack({
 			entry: {
@@ -48,7 +56,15 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 				rules: [ {
 					test: /\.[cm]?jsx?$/,
 					resolve: { fullySpecified: false },
-					use: [ sourceMapLoader ],
+					use: [
+						...babelPlugins.length === 0 ? [] : [ {
+							loader: babelLoader,
+							options: {
+								plugins: babelPlugins,
+							},
+						} ],
+						sourceMapLoader,
+					],
 				} ],
 			},
 

@@ -1,9 +1,8 @@
 import type { Direction } from 'xxscreeps/game/position';
-import type { RoomObjectWithOwner } from 'xxscreeps/game/object';
+import type { RoomObjectWithUser } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { me } from 'xxscreeps/game';
-import { LookType, NextPosition, Owner } from 'xxscreeps/game/object';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position';
 import { InsertObject, LookAt, Room } from 'xxscreeps/game/room';
@@ -28,9 +27,9 @@ const intents = registerIntentProcessor(Room, 'import', (room, context, objectPa
 });
 
 // Saves list of creeps all trying to move onto the same cell
-const moves = new Map<number, { mover: RoomObjectWithOwner; power: number }[]>();
+const moves = new Map<number, { mover: RoomObjectWithUser; power: number }[]>();
 
-export function add(mover: RoomObjectWithOwner, power: number, direction: Direction) {
+export function add(mover: RoomObjectWithUser, power: number, direction: Direction) {
 	// Calculate new position from direction
 	const { dx, dy } = getOffsetsFromDirection(direction);
 	let { x, y } = mover.pos;
@@ -53,14 +52,14 @@ export function add(mover: RoomObjectWithOwner, power: number, direction: Direct
 
 export function dispatch(room: Room) {
 	// First resolve move conflicts
-	const movingObjects: RoomObjectWithOwner[] = [];
+	const movingObjects: RoomObjectWithUser[] = [];
 	for (const [ id, info ] of moves) {
 		const { xx, yy } = fromId(id);
 		const nextPosition = new RoomPosition(xx, yy, room.name);
 
 		// In the common case whree this move isn't contested then finish early
 		if (info.length === 1) {
-			info[0].mover[NextPosition] = nextPosition;
+			info[0].mover['#nextPosition'] = nextPosition;
 			movingObjects.push(info[0].mover);
 			continue;
 		}
@@ -80,7 +79,7 @@ export function dispatch(room: Room) {
 			right.movingInto - left.movingInto ||
 			right.power - left.power,
 		)!;
-		first.mover[NextPosition] = nextPosition;
+		first.mover['#nextPosition'] = nextPosition;
 		movingObjects.push(first.mover);
 	}
 
@@ -91,21 +90,21 @@ export function dispatch(room: Room) {
 	// After conflict resolution check for non-moving-creep obstacles
 	const terrain = room.getTerrain();
 	check: for (const mover of movingObjects) {
-		const nextPosition = mover[NextPosition]!;
+		const nextPosition = mover['#nextPosition']!;
 		const check = makeObstacleChecker({
 			room,
-			type: mover[LookType],
-			user: mover[Owner],
+			type: mover['#lookType'],
+			user: mover['#user'],
 		});
 		for (const obstruction of room[LookAt](nextPosition)) {
-			if (check(obstruction) && !obstruction[NextPosition]) {
-				mover[NextPosition] = null;
+			if (check(obstruction) && !obstruction['#nextPosition']) {
+				mover['#nextPosition'] = null;
 				continue check;
 			}
 		}
 		// Also check terrain
 		if (terrain.get(nextPosition.x, nextPosition.y) === C.TERRAIN_MASK_WALL) {
-			mover[NextPosition] = null;
+			mover['#nextPosition'] = null;
 		}
 	}
 
@@ -113,9 +112,9 @@ export function dispatch(room: Room) {
 	moves.clear();
 }
 
-export function get(object: RoomObjectWithOwner) {
+export function get(object: RoomObjectWithUser) {
 	// Get next position, calculated above
-	const nextPosition = exchange(object, NextPosition);
+	const nextPosition = exchange(object, '#nextPosition');
 	if (!nextPosition) {
 		return;
 	}
@@ -123,7 +122,7 @@ export function get(object: RoomObjectWithOwner) {
 	// Final check for obstructions
 	const { room } = object;
 	for (const object of room[LookAt](nextPosition)) {
-		if (object[NextPosition] === null) {
+		if (object['#nextPosition'] === null) {
 			return;
 		}
 	}

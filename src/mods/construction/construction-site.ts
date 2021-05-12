@@ -18,16 +18,16 @@ const shape = () => declare('ConstructionSite', struct(RoomObject.format, {
 	name: 'string',
 	progress: 'int32',
 	structureType: enumerated(...structureFactories.keys() as never as ConstructibleStructureType[]),
-	[RoomObject.Owner]: Id.format,
+	'#user': Id.format,
 }));
 
 export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) {
-	get my() { return this[RoomObject.Owner] === me }
-	get owner() { return this[RoomObject.Owner] }
+	get my() { return this['#user'] === me }
+	get owner() { return this['#user'] }
 	get progressTotal() { return C.CONSTRUCTION_COST[this.structureType] }
-	get [RoomObject.LookType]() { return C.LOOK_CONSTRUCTION_SITES }
+	get ['#lookType']() { return C.LOOK_CONSTRUCTION_SITES }
 
-	[RoomObject.AddToMyGame](game: GameConstructor) {
+	['#addToMyGame'](game: GameConstructor) {
 		game.constructionSites[this.id] = this;
 	}
 
@@ -50,7 +50,7 @@ export function create(
 	return assign(RoomObject.create(new ConstructionSite, pos), {
 		structureType,
 		name: name ?? '',
-		[RoomObject.Owner]: owner,
+		'#user': owner,
 	});
 }
 

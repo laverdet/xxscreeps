@@ -59,18 +59,18 @@ export class StructureController extends withOverlay(Structure, shape) {
 		return value;
 	}
 
-	[RoomObject.AfterInsert](room: Room) {
-		super[RoomObject.AfterInsert](room);
+	['#afterInsert'](room: Room) {
+		super['#afterInsert'](room);
 		room.controller = this;
 	}
 
-	[RoomObject.AfterRemove](room: Room) {
-		super[RoomObject.AfterRemove](room);
+	['#afterRemove'](room: Room) {
+		super['#afterRemove'](room);
 		room.controller = undefined;
 	}
 
-	[RoomObject.RunnerUser]() {
-		return this.level > 0 ? this[RoomObject.Owner] : null;
+	['#runnerUser']() {
+		return this.level > 0 ? this['#user'] : null;
 	}
 }
 

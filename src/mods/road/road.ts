@@ -19,7 +19,7 @@ const shape = declare('Road', struct(structureFormat, {
 export class StructureRoad extends withOverlay(Structure, shape) {
 	get structureType() { return C.STRUCTURE_ROAD }
 	get ticksToDecay() { return Math.max(0, this[NextDecayTime] - Game.time) }
-	get [RoomObject.PathCost]() { return 1 }
+	get ['#pathCost']() { return 1 }
 
 	[CheckObstacle]() {
 		return false;

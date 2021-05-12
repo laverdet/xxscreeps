@@ -46,7 +46,7 @@ function shape() {
 			message: 'string',
 		})),
 		store: Store.format,
-		[RoomObject.Owner]: Id.format,
+		'#user': Id.format,
 		_ageTime: 'int32',
 	}));
 }
@@ -61,11 +61,11 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 		return creeps[this.name] ?? (creeps[this.name] = {});
 	}
 
-	get my() { return this[RoomObject.Owner] === me }
-	get owner() { return this[RoomObject.Owner] }
+	get my() { return this['#user'] === me }
+	get owner() { return this['#user'] }
 	get spawning() { return this._ageTime === 0 }
 	get ticksToLive() { return this._ageTime - Game.time }
-	get [RoomObject.LookType]() { return C.LOOK_CREEPS }
+	get ['#lookType']() { return C.LOOK_CREEPS }
 
 	/**
 	 * The text message that the creep was saying at the last tick.
@@ -77,12 +77,12 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 		}
 	}
 
-	[RoomObject.AddToMyGame](game: GameConstructor) {
+	['#addToMyGame'](game: GameConstructor) {
 		game.creeps[this.name] = this;
 	}
 
-	[RoomObject.RunnerUser]() {
-		return this[RoomObject.Owner];
+	['#runnerUser']() {
+		return this['#user'];
 	}
 
 	/**
@@ -328,7 +328,7 @@ export function create(pos: RoomPosition, body: PartType[], name: string, owner:
 		hits: body.length * 100,
 		name,
 		store: Store.create(carryCapacity),
-		[RoomObject.Owner]: owner,
+		'#user': owner,
 	});
 }
 
@@ -339,9 +339,9 @@ registerObstacleChecker(params => {
 	} else if (room.controller?.safeMode === undefined) {
 		return object => object instanceof Creep;
 	} else {
-		const safeUser = room.controller[RoomObject.Owner];
+		const safeUser = room.controller['#user'];
 		return object => object instanceof Creep &&
-			(object[RoomObject.Owner] === safeUser || object[RoomObject.Owner] !== user);
+			(object['#user'] === safeUser || object['#user'] !== user);
 	}
 });
 

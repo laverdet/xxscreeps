@@ -10,7 +10,6 @@ import { BufferObject, withOverlay } from 'xxscreeps/schema';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/utility/iteratee';
 import { registerGlobal } from 'xxscreeps/game';
-import { AfterInsert, AfterRemove, LookType, RunnerUser } from 'xxscreeps/game/object/symbols';
 import { PositionInteger } from 'xxscreeps/game/position/symbols';
 import { shape } from './schema';
 import { FlushFindCache, FlushObjects, InsertObject, LookAt, LookFor, MoveObject, Objects, RemoveObject, findHandlers, lookConstants } from './symbols';
@@ -38,7 +37,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		super(view, offset);
 		for (const object of this[Objects]) {
 			this._addToIndex(object);
-			object[AfterInsert](this);
+			object['#afterInsert'](this);
 		}
 	}
 
@@ -95,7 +94,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 			for (let ii = this[Objects].length - 1; ii >= 0; --ii) {
 				const object = this[Objects][ii];
 				if (this.#removeObjects.has(object)) {
-					object[AfterRemove](this);
+					object['#afterRemove'](this);
 					this._removeFromLookIndex(object);
 					this[Objects].splice(ii, 1);
 					if (--removeCount === 0) {
@@ -114,7 +113,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 			this[Objects].push(...this.#insertObjects as never[]);
 			for (const object of this.#insertObjects) {
 				this._addToIndex(object);
-				object[AfterInsert](this);
+				object['#afterInsert'](this);
 			}
 			this.#insertObjects = [];
 		}
@@ -161,7 +160,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 */
 	// TODO: JS private method
 	_addToIndex(object: RoomObject) {
-		this.#lookIndex.get(object[LookType])!.push(object);
+		this.#lookIndex.get(object['#lookType'])!.push(object);
 		const pos = object.pos[PositionInteger];
 		const list = this.#spatialIndex.get(pos);
 		if (list) {
@@ -176,7 +175,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 */
 	// TODO: JS private method
 	_removeFromLookIndex(object: RoomObject) {
-		const lookType = object[LookType];
+		const lookType = object['#lookType'];
 		const list = this.#lookIndex.get(lookType)!;
 		if (list.length === 1) {
 			this.#lookIndex.delete(lookType);
@@ -224,7 +223,7 @@ declare module 'xxscreeps/game/runtime' {
 export function getUsersInRoom(room: Room) {
 	const users = new Set<string>();
 	for (const objects of room[Objects]) {
-		const user = objects[RunnerUser]();
+		const user = objects['#runnerUser']();
 		if (user !== null && user.length > 2) {
 			users.add(user);
 		}

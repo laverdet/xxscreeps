@@ -2,7 +2,6 @@ import type { GameMap, World } from './map';
 import type { AnyRoomObject, Room } from './room';
 import type { RoomObject } from './object';
 import * as Fn from 'xxscreeps/utility/functional';
-import { AddToMyGame } from './object/symbols';
 import { Objects } from './room/symbols';
 import { gameInitializers } from './symbols';
 
@@ -95,7 +94,7 @@ export class Game extends GameBase {
 		for (const room of Object.values(state.rooms)) {
 			for (const object of room[Objects]) {
 				if ((object as any).my) {
-					object[AddToMyGame](this);
+					object['#addToMyGame'](this);
 				}
 			}
 		}

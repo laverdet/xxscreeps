@@ -1,7 +1,6 @@
 import * as Controller from 'xxscreeps/game/constants';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Game } from 'xxscreeps/game';
-import { Owner } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
@@ -13,7 +12,7 @@ import { saveAction } from 'xxscreeps/game/action-log';
 // Processor methods
 export function claim(controller: StructureController, user: string) {
 	// Take controller
-	controller[Owner] = user;
+	controller['#user'] = user;
 	controller[DowngradeTime] = 0;
 	controller[Progress] = 0;
 	controller.safeMode = Game.time + Controller.SAFE_MODE_DURATION;
@@ -51,7 +50,7 @@ const intents = [
 				datetime: Date.now(),
 				text: message.substr(0, 100),
 				time: Game.time,
-				userId: creep[Owner],
+				userId: creep['#user'],
 			};
 			context.didUpdate();
 		}

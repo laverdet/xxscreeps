@@ -1,3 +1,5 @@
+import { ownPrivateEntries } from 'xxscreeps/driver/private/runtime';
+
 /**
  * TypeScript has pretty lousy support for Symbols in declaration files, see:
  * https://github.com/microsoft/TypeScript/issues/1863
@@ -17,5 +19,6 @@ export function entriesWithSymbols<T extends {}>(object: T): [ keyof T, T[keyof 
 	return [
 		...Object.entries(object),
 		...Object.getOwnPropertySymbols(object).map(key => [ key, object[key as never] ]),
+		...ownPrivateEntries(object),
 	] as [ any, any ][];
 }

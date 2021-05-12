@@ -9,7 +9,6 @@ import { Game, me } from 'xxscreeps/game';
 import { getPositonInDirection as getPositionInDirection } from 'xxscreeps/game/position';
 import { InsertObject, MoveObject } from 'xxscreeps/game/room';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { Owner } from 'xxscreeps/game/object';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { assign } from 'xxscreeps/utility/utility';
@@ -95,7 +94,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				const check = makePositionChecker({
 					room: spawn.room,
 					type: 'creep',
-					user: creep[Owner],
+					user: creep['#user'],
 				});
 				const directions = new Set(spawn.spawning.directions.length === 0 ?
 					ALL_DIRECTIONS : spawn.spawning.directions as Direction[]);

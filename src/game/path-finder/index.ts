@@ -3,7 +3,6 @@ import type { RoomPosition } from '../position';
 import { Game, me } from 'xxscreeps/game';
 import { CostMatrix } from './cost-matrix';
 import { Objects } from 'xxscreeps/game/room';
-import { PathCost } from '../object';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { makeObstacleChecker } from './obstacle';
 import { registerGlobal } from '../symbols';
@@ -81,7 +80,7 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 					if (check(object)) {
 						costMatrix.set(x, y, 0xff);
 					} else if (!ignoreRoads) {
-						const cost = object[PathCost];
+						const cost = object['#pathCost'];
 						if (cost !== undefined && cost < costMatrix.get(x, y)) {
 							costMatrix.set(x, y, cost);
 						}

@@ -28,7 +28,7 @@ export function create(pos: RoomPosition, owner: string) {
 	return assign(RoomObject.create(new StructureLab, pos), {
 		hits: C.LAB_HITS,
 		store: Store.create(C.LAB_ENERGY_CAPACITY + C.LAB_MINERAL_CAPACITY),
-		[RoomObject.Owner]: owner,
+		'#user': owner,
 	});
 }
 

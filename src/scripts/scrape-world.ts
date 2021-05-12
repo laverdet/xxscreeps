@@ -1,7 +1,6 @@
 import Loki from 'lokijs';
 
 import { RoomPosition } from 'xxscreeps/game/position';
-import { Owner } from 'xxscreeps/game/object';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as C from 'xxscreeps/game/constants';
@@ -42,7 +41,7 @@ function withRoomObject(object: any) {
 function withStructure(object: any) {
 	return {
 		...withRoomObject(object),
-		[Owner]: object.user ?? null,
+		'#user': object.user ?? null,
 		hits: 0,
 	};
 }

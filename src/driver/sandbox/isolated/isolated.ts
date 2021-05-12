@@ -14,7 +14,12 @@ const getPathFinderModule = runOnce(() => {
 const getRuntimeSource = runOnce(() => {
 	const path = 'xxscreeps/driver/sandbox/isolated/runtime.js';
 	return compileRuntimeSource({
-		externals: ({ request }) => request === 'util' ? 'nodeUtilImport' : undefined,
+		alias: {
+			'xxscreeps/driver/private/symbol': 'xxscreeps/driver/private/symbol/isolated-vm',
+		},
+		externals: ({ request }) =>
+			request === 'util' ? 'nodeUtilImport' :
+			request === 'isolated-vm' ? 'ivm' : undefined,
 	}, path);
 });
 
@@ -50,14 +55,16 @@ export class IsolatedSandbox {
 				await context.global.set('nodeUtilImport', deref, { copy: true });
 			}(),
 			context.global.set('global', context.global.derefInto()),
+			context.global.set('ivm', ivm),
 		]);
 
 		// Initialize runtime.ts and load player code + memory
 		const runtime: ivm.Reference<Runtime> = await script.run(context, { reference: true });
 		const [ initialize, tick ] = await Promise.all([
-			runtime.get('initialize', { reference: true }),
-			runtime.get('tick', { reference: true }),
+			runtime.get('initialize', { accessors: true, reference: true }),
+			runtime.get('tick', { accessors: true, reference: true }),
 			context.global.delete(pf.path),
+			context.global.delete('ivm'),
 			context.global.delete('nodeUtilImport'),
 		]);
 		await initialize.apply(undefined, [ isolate, context, new ivm.Reference(print), data ], { arguments: { copy: true } });

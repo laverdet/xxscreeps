@@ -23,7 +23,7 @@ export class StructureExtractor extends withOverlay(Structure, shape) {
 export function create(pos: RoomPosition, owner: string) {
 	return assign(RoomObject.create(new StructureExtractor, pos), {
 		hits: C.EXTRACTOR_HITS,
-		[RoomObject.Owner]: owner,
+		'#user': owner,
 	});
 }
 

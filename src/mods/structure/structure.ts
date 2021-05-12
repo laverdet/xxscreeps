@@ -15,15 +15,19 @@ export const CheckObstacle = XSymbol('checkObstacle');
 export const structureFormat = () => compose(shape, Structure);
 const shape = declare('Structure', struct(RoomObject.format, {
 	hits: 'int32',
-	[RoomObject.Owner]: Id.optionalFormat,
+	'#user': Id.optionalFormat,
 }));
 
 export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape) {
 	abstract get structureType(): string;
 	get hitsMax() { return this.hits }
-	get my() { return this.owner === null ? undefined : this.owner === me }
-	get owner() { return this[RoomObject.Owner] }
-	get [RoomObject.LookType]() { return C.LOOK_STRUCTURES }
+	get owner() { return this['#user'] }
+	get ['#lookType']() { return C.LOOK_STRUCTURES }
+
+	get my() {
+		const user = this['#user'];
+		return user === null ? undefined : user === me;
+	}
 
 	/**
 	 * Destroy this structure immediately.
@@ -38,7 +42,7 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
 		return true;
 	}
 
-	[RoomObject.AddToMyGame](game: GameConstructor) {
+	['#addToMyGame'](game: GameConstructor) {
 		game.structures[this.id] = this as never;
 	}
 }

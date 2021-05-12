@@ -1,3 +1,4 @@
+import type { GameConstructor } from '.';
 import type { InspectOptionsStylized } from 'util';
 import type { Room } from 'xxscreeps/game/room';
 import * as Id from 'xxscreeps/engine/schema/id';
@@ -6,11 +7,7 @@ import * as RoomPosition from 'xxscreeps/game/position';
 import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
 import { expandGetters } from 'xxscreeps/utility/inspect';
 import { assign } from 'xxscreeps/utility/utility';
-import { AddToMyGame, AfterInsert, AfterRemove, LookType, NextPosition, Owner, PathCost, RunnerUser } from './symbols';
-import type { GameConstructor } from '..';
-import { registerGlobal } from '..';
-
-export { AddToMyGame, AfterInsert, AfterRemove, LookType, NextPosition, Owner, PathCost, RunnerUser };
+import { registerGlobal } from '.';
 
 export const format = () => compose(shape, RoomObject);
 const shape = declare('RoomObject', struct({
@@ -18,36 +15,36 @@ const shape = declare('RoomObject', struct({
 	pos: RoomPosition.format,
 }));
 
-export type RoomObjectWithOwner = { [Owner]: string } & RoomObject;
+export type RoomObjectWithUser = { '#user': string } & RoomObject;
 
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
-	abstract get [LookType](): string;
+	abstract get ['#lookType'](): string;
 	room!: Room;
-	[NextPosition]?: RoomPosition.RoomPosition | null;
+	['#nextPosition']?: RoomPosition.RoomPosition | null;
 
-	[AddToMyGame](_game: GameConstructor) {}
-	[AfterInsert](room: Room) {
+	get ['#pathCost'](): undefined | number {
+		return undefined;
+	}
+
+	['#addToMyGame'](_game: GameConstructor) {}
+	['#afterInsert'](room: Room) {
 		this.room = room;
 	}
 
-	[AfterRemove](_room: Room) {
+	['#afterRemove'](_room: Room) {
 		this.room = undefined as never;
 	}
 
-	[RunnerUser](): string | null {
+	['#runnerUser'](): string | null {
 		return null;
 	}
 
-	[Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
 		if (BufferObject.check(this)) {
 			return expandGetters(this);
 		} else {
 			return `${options.stylize(`[${this.constructor.name}]`, 'special')} ${options.stylize('{released}', 'null')}`;
 		}
-	}
-
-	get [PathCost](): undefined | number {
-		return undefined;
 	}
 }
 

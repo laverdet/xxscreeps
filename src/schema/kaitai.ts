@@ -6,6 +6,8 @@ import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
 function toId(name: string | symbol): string {
 	if (typeof name === 'symbol') {
 		return toId(name.description!);
+	} else if (name.startsWith('#')) {
+		return toId(name.substr(1));
 	} else if (/^[A-Z0-9]+$/.test(name)) {
 		return name.toLowerCase();
 	} else {

@@ -19,14 +19,14 @@ export class StructureExtension extends withOverlay(Structure, shape) {
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 	get structureType() { return C.STRUCTURE_EXTENSION }
 
-	[RoomObject.AfterInsert](room: Room) {
-		super[RoomObject.AfterInsert](room);
+	['#afterInsert'](room: Room) {
+		super['#afterInsert'](room);
 		room.energyAvailable += this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable += this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
 
-	[RoomObject.AfterRemove](room: Room) {
-		super[RoomObject.AfterRemove](room);
+	['#afterRemove'](room: Room) {
+		super['#afterRemove'](room);
 		room.energyAvailable -= this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable -= this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
@@ -37,7 +37,7 @@ export function create(pos: RoomPosition, level: number, owner: string) {
 	return assign(RoomObject.create(new StructureExtension, pos), {
 		hits: C.EXTENSION_HITS,
 		store: Store.create(energyCapacity, { energy: energyCapacity }),
-		[RoomObject.Owner]: owner,
+		'#user': owner,
 	});
 }
 

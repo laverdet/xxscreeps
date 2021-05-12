@@ -25,7 +25,7 @@ const shape = declare('Resource', struct(RoomObject.format, {
 // Game object
 export class Resource extends withOverlay(RoomObject.RoomObject, shape) {
 	get energy() { return this.resourceType === C.RESOURCE_ENERGY ? this.amount : undefined }
-	get [RoomObject.LookType]() { return C.LOOK_RESOURCES }
+	get ['#lookType']() { return C.LOOK_RESOURCES }
 }
 
 export function create(pos: RoomPosition, resourceType: ResourceType, amount: number) {

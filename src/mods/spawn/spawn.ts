@@ -66,18 +66,18 @@ export class StructureSpawn extends withOverlay(Structure, shape) {
 		return spawns[this.name] ??= {};
 	}
 
-	[RoomObject.AddToMyGame](game: GameConstructor) {
+	['#addToMyGame'](game: GameConstructor) {
 		game.spawns[this.name] = this;
 	}
 
-	[RoomObject.AfterInsert](room: Room) {
-		super[RoomObject.AfterInsert](room);
+	['#afterInsert'](room: Room) {
+		super['#afterInsert'](room);
 		room.energyAvailable += this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable += this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
 
-	[RoomObject.AfterRemove](room: Room) {
-		super[RoomObject.AfterRemove](room);
+	['#afterRemove'](room: Room) {
+		super['#afterRemove'](room);
 		room.energyAvailable -= this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable -= this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
@@ -168,7 +168,7 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 		hits: C.SPAWN_HITS,
 		name,
 		store: Store.create(null, { energy: C.SPAWN_ENERGY_CAPACITY }, { energy: C.SPAWN_ENERGY_START }),
-		[RoomObject.Owner]: owner,
+		'#user': owner,
 	});
 }
 

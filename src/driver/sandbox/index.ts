@@ -3,6 +3,7 @@ import type { InitializationPayload } from 'xxscreeps/driver';
 import type { Print } from 'xxscreeps/driver/runtime';
 import * as Path from 'path';
 import config from 'xxscreeps/config';
+import Privates from 'xxscreeps/driver/private/transform';
 import { configTransform } from 'xxscreeps/config/webpack';
 import { schemaTransform } from 'xxscreeps/engine/schema/build';
 import { locateModule } from '../path-finder';
@@ -18,6 +19,7 @@ export function compileRuntimeSource(transform: Transform, path = 'xxscreeps/dri
 		configTransform,
 		schemaTransform,
 		{
+			babel: Privates,
 			externals: ({ context, request }) =>
 				request?.endsWith('.node') ?
 					`globalThis[${JSON.stringify(Path.join(context!, request))}]` : undefined,
