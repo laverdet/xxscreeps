@@ -3,11 +3,10 @@ import type { Room } from 'xxscreeps/game/room';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import { runForUser } from 'xxscreeps/game';
 import { registerRoomTickProcessor } from 'xxscreeps/engine/processor';
-import { NPCData } from './game';
 
 // Mark an NPC as active in a room
 export function activateNPC(room: Room, user: string) {
-	room[NPCData].users.add(user);
+	room['#npcData'].users.add(user);
 }
 
 // NPC loop registration for mods
@@ -19,7 +18,7 @@ export function registerNPC(id: string, loop: NPCLoop) {
 
 // NPC loop processor
 registerRoomTickProcessor((room, context) => {
-	const data = room[NPCData];
+	const data = room['#npcData'];
 	for (const user of data.users) {
 		// Initialize NPC state
 		const memory = data.memory.get(user) ?? new Uint8Array(0);

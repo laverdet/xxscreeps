@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { intents, userGame } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { LookFor, Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
+import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';
 import { extend } from 'xxscreeps/utility/utility';
 import { structureFactories } from './symbols';
@@ -11,11 +11,11 @@ import { structureFactories } from './symbols';
 // Register FIND_ types for `ConstructionSite`
 const find = registerFindHandlers({
 	[C.FIND_CONSTRUCTION_SITES]: room =>
-		room[LookFor](C.LOOK_CONSTRUCTION_SITES),
+		room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
 	[C.FIND_MY_CONSTRUCTION_SITES]: room =>
-		room[LookFor](C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => constructionSite.my),
+		room['#lookFor'](C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => constructionSite.my),
 	[C.FIND_HOSTILE_CONSTRUCTION_SITES]: room =>
-		room[LookFor](C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => !constructionSite.my),
+		room['#lookFor'](C.LOOK_CONSTRUCTION_SITES).filter(constructionSite => !constructionSite.my),
 });
 
 // Register LOOK_ type for `ConstructionSite`

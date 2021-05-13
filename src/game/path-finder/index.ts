@@ -2,7 +2,6 @@ import type { RoomPosition } from '../position';
 
 import { Game, me } from 'xxscreeps/game';
 import { CostMatrix } from './cost-matrix';
-import { Objects } from 'xxscreeps/game/room';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { makeObstacleChecker } from './obstacle';
 import { registerGlobal } from '../symbols';
@@ -75,7 +74,7 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 					type: 'creep',
 					user: me,
 				});
-				for (const object of room[Objects]) {
+				for (const object of room['#objects']) {
 					const { x, y } = object.pos;
 					if (check(object)) {
 						costMatrix.set(x, y, 0xff);

@@ -7,9 +7,9 @@ registerObjectTickProcessor(StructureContainer, (container, context) => {
 	if (container.ticksToDecay === 0) {
 		const ownedController = Game.rooms[container.pos.roomName]!.controller?.owner;
 		container.hits -= C.CONTAINER_DECAY;
-		container._nextDecayTime = Game.time + (ownedController ?
+		container['#nextDecayTime'] = Game.time + (ownedController ?
 			C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME);
 		context.didUpdate();
 	}
-	context.wakeAt(container._nextDecayTime);
+	context.wakeAt(container['#nextDecayTime']);
 });

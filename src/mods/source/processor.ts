@@ -6,7 +6,6 @@ import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { Source } from './source';
-import { CumulativeEnergyHarvested } from './symbols';
 
 registerHarvestProcessor(Source, (creep, source) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER);
@@ -17,7 +16,7 @@ registerHarvestProcessor(Source, (creep, source) => {
 	if (overflow > 0) {
 		Resource.drop(creep.pos, 'energy', overflow);
 	}
-	creep.room[CumulativeEnergyHarvested] += energy;
+	creep.room['#cumulativeEnergyHarvested'] += energy;
 	return energy;
 });
 
@@ -25,18 +24,18 @@ registerObjectTickProcessor(Source, (source, context) => {
 
 	// Regenerate energy
 	if (source.energy < source.energyCapacity) {
-		if (source._nextRegenerationTime === 0) {
-			source._nextRegenerationTime = Game.time + C.ENERGY_REGEN_TIME;
+		if (source['#nextRegenerationTime'] === 0) {
+			source['#nextRegenerationTime'] = Game.time + C.ENERGY_REGEN_TIME;
 			context.didUpdate();
 		} else if (source.ticksToRegeneration === 0) {
 			source.energy = source.energyCapacity;
-			source._nextRegenerationTime = 0;
+			source['#nextRegenerationTime'] = 0;
 			context.didUpdate();
 		}
-	} else if (source._nextRegenerationTime !== 0) {
-		source._nextRegenerationTime = 0;
+	} else if (source['#nextRegenerationTime'] !== 0) {
+		source['#nextRegenerationTime'] = 0;
 	}
-	context.wakeAt(source._nextRegenerationTime);
+	context.wakeAt(source['#nextRegenerationTime']);
 
 	// Update energy capacity on room controller status
 	const energyCapacity = (() => {

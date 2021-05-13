@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Container from './container';
 import * as Resource from './resource';
 import { registerGlobal } from 'xxscreeps/game';
-import { LookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 // Export `StructureContainer` & `Resource` to runtime globals
@@ -17,7 +17,7 @@ declare module 'xxscreeps/game/runtime' {
 
 // Register FIND_ types for `Resource`
 const find = registerFindHandlers({
-	[C.FIND_DROPPED_RESOURCES]: room => room[LookFor](C.LOOK_RESOURCES),
+	[C.FIND_DROPPED_RESOURCES]: room => room['#lookFor'](C.LOOK_RESOURCES),
 });
 
 // Register LOOK_ type for `Resource`

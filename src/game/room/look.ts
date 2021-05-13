@@ -6,7 +6,7 @@ import { extend } from 'xxscreeps/utility/utility';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { iterateArea } from 'xxscreeps/game/position/direction';
 import { terrainMaskToString } from 'xxscreeps/game/terrain';
-import { LookAt, LookFor, Objects, lookConstants } from './symbols';
+import { lookConstants } from './symbols';
 import { Room } from './room';
 
 // All LOOK_ constants
@@ -97,7 +97,7 @@ extend(Room, {
 			return [];
 		}
 		return [
-			...Fn.map(this[LookAt](pos), object => {
+			...Fn.map(this['#lookAt'](pos), object => {
 				const type = object['#lookType'];
 				return { type, [type]: object };
 			}),
@@ -108,14 +108,14 @@ extend(Room, {
 	lookAtArea(top: number, left: number, bottom: number, right: number, asArray = false) {
 		const size = (bottom - top + 1) * (right - left + 1);
 		const objects: Iterable<any> = (() => {
-			if (size < this[Objects].length) {
+			if (size < this['#objects'].length) {
 				// Iterate all objects
-				return Fn.filter(this[Objects], object =>
+				return Fn.filter(this['#objects'], object =>
 					object.pos.x >= left && object.pos.x <= right &&
 					object.pos.y >= top && object.pos.y <= bottom);
 			} else {
 				// Filter on spatial index
-				return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos => this[LookAt](pos)));
+				return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos => this['#lookAt'](pos)));
 			}
 		})();
 		const terrain = this.getTerrain();
@@ -142,7 +142,7 @@ extend(Room, {
 		if (!lookConstants.has(type)) {
 			return C.ERR_INVALID_ARGS as any;
 		}
-		return [ ...Fn.filter(this[LookAt](pos), object => object['#lookType'] === type) ];
+		return [ ...Fn.filter(this['#lookAt'](pos), object => object['#lookType'] === type) ];
 	},
 
 	lookForAtArea(type: LookConstants, top: number, left: number, bottom: number, right: number, asArray = false) {
@@ -155,7 +155,7 @@ extend(Room, {
 					({ x, y, terrain: terrainMaskToString[terrain.get(x, y)] }));
 			} else {
 				const objects = (() => {
-					const objects = this[LookFor](type);
+					const objects = this['#lookFor'](type);
 					if (size < objects.length) {
 						// Iterate all objects by type
 						return Fn.filter(objects, object =>
@@ -164,7 +164,7 @@ extend(Room, {
 					} else {
 						// Filter on spatial index
 						return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos =>
-							Fn.filter(this[LookAt](pos), object => object['#lookType'] === type)));
+							Fn.filter(this['#lookAt'](pos), object => object['#lookType'] === type)));
 					}
 				})();
 				// Add position and type information

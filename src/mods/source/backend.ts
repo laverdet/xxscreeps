@@ -7,5 +7,5 @@ bindRenderer(Source, (source, next) => ({
 	...next(),
 	energy: source.energy,
 	energyCapacity: source.energyCapacity,
-	nextRegenerationTime: source._nextRegenerationTime,
+	nextRegenerationTime: source['#nextRegenerationTime'],
 }));

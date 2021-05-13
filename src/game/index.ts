@@ -1,6 +1,5 @@
 import './runtime';
 import { GameBase, Game as GameConstructor, GameState } from './game';
-import { FlushFindCache } from './room/symbols';
 import { IntentManager } from './intents';
 import { flush as flushPathFinder } from './path-finder';
 
@@ -33,7 +32,7 @@ export function runAsUser<Type>(userId: string, task: () => Type) {
 	const prev = me;
 	me = userId;
 	for (const room of Object.values(Game.rooms)) {
-		room[FlushFindCache]();
+		room['#flushFindCache']();
 	}
 	try {
 		return task();
@@ -64,10 +63,10 @@ export function runForUser<Type>(userId: string, state: GameState, task: (game: 
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (room) {
 				flushedRooms.add(room);
-				room[InsertObject](flag);
+				room['#insertObject'](flag);
 			}
 		}
-		Fn.map(flushedRooms, room => room[FlushObjects]);
+		Fn.map(flushedRooms, room => room['#flushObjects']);
 		*/
 	}));
 }

@@ -5,7 +5,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
 import { registerRuntimeConnector } from 'xxscreeps/driver';
-import { LookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, vector } from 'xxscreeps/schema';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema';
@@ -23,7 +23,7 @@ export const { read, write } = makeReaderAndWriter(schema);
 // Register LOOK_ type for `Flag`
 const look = registerLook<Flag>()(C.LOOK_FLAGS);
 const find = registerFindHandlers({
-	[C.FIND_FLAGS]: room => room[LookFor](C.LOOK_FLAGS),
+	[C.FIND_FLAGS]: room => room['#lookFor'](C.LOOK_FLAGS),
 });
 declare module 'xxscreeps/game/room' {
 	interface Find { flag: typeof find }

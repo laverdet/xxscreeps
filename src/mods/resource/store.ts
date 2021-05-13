@@ -2,7 +2,7 @@ import type { BufferView } from 'xxscreeps/schema';
 import type { ResourceType } from './resource';
 import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
-import { XSymbol, compose, declare, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
+import { compose, declare, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { optionalResourceEnumFormat } from './resource';
 export type { ResourceType };
@@ -10,26 +10,20 @@ export type { ResourceType };
 export type StorageRecord = Partial<Record<ResourceType, number>>;
 export type WithStore = { store: Store };
 
-export const Amount = XSymbol('amount');
-export const Capacity = XSymbol('capacity');
-export const Resources = XSymbol('resources');
-export const Restricted = XSymbol('restricted');
-export const SingleResource = XSymbol('singleResource');
-
 export function format() { return withType<Store<ResourceType>>(compose(shape, Store)) }
 export function restrictedFormat<Resource extends ResourceType>() {
 	return withType<Store<Resource>>(format);
 }
 const shape = declare('Store', struct({
-	[Amount]: 'int32',
-	[Capacity]: 'int32',
-	[Resources]: vector(struct({
+	'#amount': 'int32',
+	'#capacity': 'int32',
+	'#resources': vector(struct({
 		amount: 'int32',
 		capacity: 'int32',
 		type: optionalResourceEnumFormat,
 	})),
-	[Restricted]: 'bool',
-	[SingleResource]: optionalResourceEnumFormat,
+	'#restricted': 'bool',
+	'#singleResource': optionalResourceEnumFormat,
 }));
 
 // Make `Store` indexable on any `ResourceType`
@@ -60,21 +54,21 @@ export class Store<Resources extends ResourceType = any> extends
 	withOverlay(BufferObjectWithResourcesType, shape) {
 
 	energy = 0;
-	_capacityByResource?: Map<ResourceType, number>;
+	['#capacityByResource']?: Map<ResourceType, number>;
 
 	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
 
-		const singleResource = this[SingleResource];
+		const singleResource = this['#singleResource'];
 		if (singleResource === undefined) {
 			// Create capacity record
-			if (this[Restricted]) {
-				this._capacityByResource = new Map;
+			if (this['#restricted']) {
+				this['#capacityByResource'] = new Map;
 			}
 
 			// Load up resources onto this object as properties
-			for (const resource of this[Resources]) {
-				this._capacityByResource?.set(resource.type!, resource.capacity);
+			for (const resource of this['#resources']) {
+				this['#capacityByResource']?.set(resource.type!, resource.capacity);
 				if (resource.amount !== 0) {
 					this[resource.type!] = resource.amount;
 				}
@@ -82,7 +76,7 @@ export class Store<Resources extends ResourceType = any> extends
 		} else {
 			// This store can only ever hold one type of resource so we can skip the above mess. This is
 			// true for spawns, extensions and a bunch of others.
-			this[singleResource] = this[Amount];
+			this[singleResource] = this['#amount'];
 		}
 	}
 
@@ -97,11 +91,11 @@ export class Store<Resources extends ResourceType = any> extends
 	getCapacity(resourceType?: Resources): number;
 	getCapacity(resourceType?: ResourceType): number | null;
 	getCapacity(resourceType?: ResourceType) {
-		if (this._capacityByResource === undefined) {
-			return this[Capacity];
+		if (this['#capacityByResource'] === undefined) {
+			return this['#capacity'];
 		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 		} else if (resourceType) {
-			return this._capacityByResource.get(resourceType) ?? null;
+			return this['#capacityByResource'].get(resourceType) ?? null;
 		} else {
 			return null;
 		}
@@ -129,8 +123,8 @@ export class Store<Resources extends ResourceType = any> extends
 		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 		if (resourceType) {
 			return this[resourceType] ?? 0;
-		} else if (this._capacityByResource === undefined) {
-			return this[Amount];
+		} else if (this['#capacityByResource'] === undefined) {
+			return this['#amount'];
 		} else {
 			return null;
 		}
@@ -178,10 +172,10 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 	// Return data to save
 	return assign(new Store, {
 		...store as any,
-		[Amount]: store ? Fn.accumulate(Object.values(store), amount => amount!) : 0,
-		[Capacity]: calculatedCapacity,
-		[Resources]: singleResource === undefined ? resources : [],
-		[Restricted]: isRestricted,
-		[SingleResource]: singleResource,
+		'#amount': store ? Fn.accumulate(Object.values(store), amount => amount!) : 0,
+		'#capacity': calculatedCapacity,
+		'#resources': singleResource === undefined ? resources : [],
+		'#restricted': isRestricted,
+		'#singleResource': singleResource,
 	});
 }

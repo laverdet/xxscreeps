@@ -1,11 +1,11 @@
 import type { BufferView } from 'xxscreeps/schema';
-import { XSymbol, array, compose } from 'xxscreeps/schema';
+import { array, compose } from 'xxscreeps/schema';
 import { exchange } from 'xxscreeps/utility/utility';
 import { Room } from './room';
 import { Game } from '.';
 export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants';
 
-const GetBufferSymbol = XSymbol('getBuffer');
+const GetBufferSymbol = Symbol('getBuffer');
 export const terrainMaskToString = [ 'plain', 'wall', 'wall', 'swamp' ] as const;
 
 /**

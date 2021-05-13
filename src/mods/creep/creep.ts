@@ -41,13 +41,13 @@ function shape() {
 		fatigue: 'int32',
 		hits: 'int32',
 		name: 'string',
-		_saying: optional(struct({
+		store: Store.format,
+		'#saying': optional(struct({
 			isPublic: 'bool',
 			message: 'string',
 		})),
-		store: Store.format,
 		'#user': Id.format,
-		_ageTime: 'int32',
+		'#ageTime': 'int32',
 	}));
 }
 
@@ -63,15 +63,15 @@ export class Creep extends withOverlay(RoomObject.RoomObject, shape) {
 
 	get my() { return this['#user'] === me }
 	get owner() { return this['#user'] }
-	get spawning() { return this._ageTime === 0 }
-	get ticksToLive() { return this._ageTime - Game.time }
+	get spawning() { return this['#ageTime'] === 0 }
+	get ticksToLive() { return this['#ageTime'] - Game.time }
 	get ['#lookType']() { return C.LOOK_CREEPS }
 
 	/**
 	 * The text message that the creep was saying at the last tick.
 	 */
 	get saying() {
-		const saying = this._saying;
+		const saying = this['#saying'];
 		if (saying && (saying.isPublic || this.owner === me)) {
 			return saying.message;
 		}

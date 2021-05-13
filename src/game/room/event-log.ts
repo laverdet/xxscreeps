@@ -1,15 +1,14 @@
-import { EventLog } from './symbols';
 import { Variant } from 'xxscreeps/schema';
 import { extend } from 'xxscreeps/utility/utility';
 import { Room } from './room';
 
 // Union type of all events
 type RemoveVariant<T> = T extends any ? Omit<T, typeof Variant> : never;
-export type AnyEventLog = RemoveVariant<Room[typeof EventLog][number]>;
+export type AnyEventLog = RemoveVariant<Room['#eventLog'][number]>;
 
 // Event log mutator
 export function appendEventLog(room: Room, event: AnyEventLog) {
-	room[EventLog].push({
+	room['#eventLog'].push({
 		[Variant]: event.event,
 		...event,
 	} as never);
@@ -28,9 +27,9 @@ declare module './room' {
 export default () => extend(Room, {
 	getEventLog(raw = false) {
 		if (raw) {
-			return JSON.stringify(this[EventLog]);
+			return JSON.stringify(this['#eventLog']);
 		} else {
-			return this[EventLog];
+			return this['#eventLog'];
 		}
 	},
 });

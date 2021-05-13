@@ -16,9 +16,6 @@ import { Database } from 'xxscreeps/engine/database';
 import { Shard } from 'xxscreeps/engine/shard';
 import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
-import { Objects } from 'xxscreeps/game/room/symbols';
-import { EventLog } from 'xxscreeps/game/room';
-import { NPCData } from 'xxscreeps/mods/npc/game';
 import { clamp } from 'xxscreeps/utility/utility';
 import { saveMemoryBlob } from 'xxscreeps/mods/memory/model';
 import { utf16ToBuffer } from 'xxscreeps/utility/string';
@@ -113,12 +110,12 @@ await blob.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
 const roomObjects = loki.getCollection('rooms.objects');
 const rooms = loki.getCollection('rooms').find().map(room => ({
 	name: room._id,
-	[EventLog]: [],
-	[NPCData]: {
+	'#eventLog': [],
+	'#npcData': {
 		users: new Set<string>(),
 		memory: new Map,
 	},
-	[Objects]: [ ...Fn.filter(roomObjects.find({ room: room._id }).map(object => {
+	'#objects': [ ...Fn.filter(roomObjects.find({ room: room._id }).map(object => {
 		switch (object.type) {
 			case 'controller':
 				return {
@@ -129,9 +126,9 @@ const rooms = loki.getCollection('rooms').find().map(room => ({
 					safeMode: object.safeMode,
 					safeModeAvailable: object.safeModeAvailable,
 					safeModeCooldown: object.safeModeCooldown,
-					_downgradeTime: object.downgradeTime,
-					_progress: object.progress,
-					_upgradeBlockedTime: object.upgradeBlocked,
+					'#downgradeTime': object.downgradeTime,
+					'#progress': object.progress,
+					'#upgradeBlockedTime': object.upgradeBlocked,
 				};
 
 			case 'mineral':
@@ -147,7 +144,7 @@ const rooms = loki.getCollection('rooms').find().map(room => ({
 					...withRoomObject(object),
 					energy: object.energy,
 					energyCapacity: object.energyCapacity,
-					_nextRegenerationTime: gameTime + (object.ticksToRegeneration as number),
+					'#nextRegenerationTime': gameTime + (object.ticksToRegeneration as number),
 				};
 
 			case 'spawn':

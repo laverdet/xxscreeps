@@ -7,8 +7,7 @@ import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
-import { CooldownTime } from './extractor';
-import { Mineral, NextRegenerationTime } from './mineral';
+import { Mineral } from './mineral';
 
 registerHarvestProcessor(Mineral, (creep, mineral) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_MINERAL_POWER);
@@ -20,7 +19,7 @@ registerHarvestProcessor(Mineral, (creep, mineral) => {
 		Resource.drop(creep.pos, mineral.mineralType, overflow);
 	}
 	const extractor = lookForStructureAt(mineral.room, mineral.pos, C.STRUCTURE_EXTRACTOR)!;
-	extractor[CooldownTime] = Game.time + C.EXTRACTOR_COOLDOWN;
+	extractor['#cooldownTime'] = Game.time + C.EXTRACTOR_COOLDOWN;
 	return amount;
 });
 
@@ -29,10 +28,10 @@ registerObjectTickProcessor(Mineral, (mineral, context) => {
 	// Regenerate mineral
 	if (mineral.mineralAmount === 0) {
 		if (mineral.ticksToRegeneration === undefined) {
-			mineral[NextRegenerationTime] = Game.time + C.MINERAL_REGEN_TIME;
+			mineral['#nextRegenerationTime'] = Game.time + C.MINERAL_REGEN_TIME;
 			context.didUpdate();
 		} else if (mineral.ticksToRegeneration === 0) {
-			mineral[NextRegenerationTime] = 0;
+			mineral['#nextRegenerationTime'] = 0;
 			mineral.mineralAmount = C.MINERAL_DENSITY[mineral.density] ?? 0;
 			if (
 				mineral.density === C.DENSITY_LOW ||
@@ -52,7 +51,7 @@ registerObjectTickProcessor(Mineral, (mineral, context) => {
 			}
 			context.didUpdate();
 		} else {
-			context.wakeAt(mineral[NextRegenerationTime]);
+			context.wakeAt(mineral['#nextRegenerationTime']);
 		}
 	}
 });

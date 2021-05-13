@@ -5,14 +5,13 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import { constant, enumerated, struct, variant } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 import { RoomObject } from 'xxscreeps/game/object';
-import { CheckHarvest } from './symbols';
 import { registerHarvestable } from '.';
 import './creep';
 
 // `RoomObject` intent check symbol
 declare module 'xxscreeps/game/object' {
 	interface RoomObject {
-		[CheckHarvest](creep: Creep): C.ErrorCode;
+		['#checkHarvest'](creep: Creep): C.ErrorCode;
 	}
 }
 

@@ -2,7 +2,6 @@ import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
-import { LookAt } from 'xxscreeps/game/room';
 
 type MovementParameters = {
 	checkTerrain?: boolean;
@@ -47,7 +46,7 @@ export function makeObstacleChecker(params: MovementParameters) {
 export function makePositionChecker(params: PositionCheckParameters) {
 	const { room } = params;
 	const checkObstacle = makeObstacleChecker(params);
-	const check = (pos: RoomPosition) => !room[LookAt](pos).some(object => checkObstacle(object));
+	const check = (pos: RoomPosition) => !room['#lookAt'](pos).some(object => checkObstacle(object));
 	if (params.checkTerrain) {
 		const terrain = room.getTerrain();
 		return (pos: RoomPosition) => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL && !check(pos);

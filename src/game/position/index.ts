@@ -9,10 +9,8 @@ import * as Fn from 'xxscreeps/utility/functional';
 import { Game, registerGlobal } from 'xxscreeps/game';
 import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/utility/iteratee';
-import { instantiate } from 'xxscreeps/utility/utility';
 import { getDirection } from './direction';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
-import { PositionInteger } from './symbols';
 
 export type { Direction } from './direction';
 export { isBorder, isNearBorder } from 'xxscreeps/game/terrain';
@@ -28,12 +26,11 @@ type PositionFindType<Type> =
 	never;
 
 export type PositionParameter = [ x: number, y: number ] | [ position: RoomPosition ] | [ target: RoomObject ];
-export { PositionInteger };
 
 export function format() {
 	return declare('RoomPosition', compose('int32', {
 		compose: value => new RoomPosition(value),
-		decompose: (value: RoomPosition) => value[PositionInteger],
+		decompose: (value: RoomPosition) => value['#int'],
 		kaitai: [ {
 			id: 'rx',
 			type: 's1',
@@ -56,7 +53,7 @@ export function format() {
  * using the `Room.getPositionAt` method or using the constructor.
  */
 export class RoomPosition {
-	[PositionInteger]: number;
+	['#int']: number;
 
 	/**
 	 * You can create new RoomPosition object using its constructor.
@@ -68,7 +65,7 @@ export class RoomPosition {
 	constructor(xx: number, yy: number, roomName: string);
 	constructor(...args: any[]) {
 		if (args.length === 1) {
-			this[PositionInteger] = args[0] >>> 0;
+			this['#int'] = args[0] >>> 0;
 		} else if (args.length === 3) {
 			const [ xx, yy ] = args;
 			const { rx, ry } = parseRoomName(args[2]);
@@ -80,9 +77,9 @@ export class RoomPosition {
 			) {
 				throw new TypeError('Invalid arguments in `RoomPosition` constructor');
 			}
-			this[PositionInteger] = yy << 24 | xx << 16 | ry << 8 | rx;
+			this['#int'] = yy << 24 | xx << 16 | ry << 8 | rx;
 		} else {
-			this[PositionInteger] = 0;
+			this['#int'] = 0;
 		}
 	}
 
@@ -90,7 +87,7 @@ export class RoomPosition {
 	 * The name of the room.
 	 */
 	get roomName() {
-		return generateRoomNameFromId(this[PositionInteger] & 0xffff);
+		return generateRoomNameFromId(this['#int'] & 0xffff);
 	}
 
 	set roomName(roomName: string) {
@@ -101,42 +98,42 @@ export class RoomPosition {
 		) {
 			throw new TypeError('Invalid `roomName`');
 		}
-		this[PositionInteger] = this[PositionInteger] & ~0xffff | ry << 8 | rx;
+		this['#int'] = this['#int'] & ~0xffff | ry << 8 | rx;
 	}
 
 	/**
 	 * X position in the room.
 	 */
 	get x() {
-		return (this[PositionInteger] >>> 16) & 0xff;
+		return (this['#int'] >>> 16) & 0xff;
 	}
 
 	set x(xx: number) {
 		if (!(xx >= 0 && xx < 50)) {
 			throw new TypeError('Invalid `x`');
 		}
-		this[PositionInteger] = this[PositionInteger] & ~(0xff << 16) | xx << 16;
+		this['#int'] = this['#int'] & ~(0xff << 16) | xx << 16;
 	}
 
 	/**
 	 * Y position in the room.
 	 */
 	get y() {
-		return this[PositionInteger] >>> 24;
+		return this['#int'] >>> 24;
 	}
 
 	set y(yy: number) {
 		if (!(yy >= 0 && yy < 50)) {
 			throw new TypeError('Invalid `y`');
 		}
-		this[PositionInteger] = this[PositionInteger] & ~(0xff << 24) | yy << 24;
+		this['#int'] = this['#int'] & ~(0xff << 24) | yy << 24;
 	}
 
 	getDirectionTo(x: number, y: number): Direction;
 	getDirectionTo(pos: RoomObject | RoomPosition): Direction;
 	getDirectionTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { xx, yy, room } = fetchArguments(...args);
-		if (room === 0 || (this[PositionInteger] & 0xffff) === room) {
+		if (room === 0 || (this['#int'] & 0xffff) === room) {
 			return getDirection(xx - this.x, yy - this.y);
 		}
 		// TODO: Multi-room distance
@@ -152,7 +149,7 @@ export class RoomPosition {
 	getRangeTo(target: RoomObject | RoomPosition): number;
 	getRangeTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { xx, yy, room } = fetchArguments(...args);
-		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
+		if (room !== 0 && (this['#int'] & 0xffff) !== room) {
 			return Infinity;
 		}
 		return Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
@@ -168,7 +165,7 @@ export class RoomPosition {
 	isEqualTo(target: RoomObject | RoomPosition): boolean;
 	isEqualTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { pos } = fetchPositionArgument(this.roomName, ...args);
-		return this[PositionInteger] === pos?.[PositionInteger];
+		return this['#int'] === pos?.['#int'];
 	}
 
 	/**
@@ -195,7 +192,7 @@ export class RoomPosition {
 	inRangeTo(target: RoomObject | RoomPosition, range: number): boolean;
 	inRangeTo(...args: [ number, number, number ] | [ RoomObject | RoomPosition, number ]) {
 		const { xx, yy, room, rest } = fetchArguments(...args);
-		if (room !== 0 && (this[PositionInteger] & 0xffff) !== room) {
+		if (room !== 0 && (this['#int'] & 0xffff) !== room) {
 			return false;
 		}
 		const range = Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
@@ -339,7 +336,7 @@ declare module 'xxscreeps/game/runtime' {
 // Function argument handlers
 export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any) {
 	if (typeof arg1 === 'object') {
-		const int = arg1[PositionInteger] ?? arg1?.pos?.[PositionInteger];
+		const int = arg1['#int'] ?? arg1?.pos?.['#int'];
 		if (int === undefined) {
 			return {
 				xx: arg1.x,
@@ -433,7 +430,7 @@ export function fromPositionId(id: number) {
 	) {
 		return;
 	}
-	return instantiate(RoomPosition, {
-		[PositionInteger]: id,
-	});
+	const pos = Object.create(RoomPosition);
+	pos['#int'] = id;
+	return pos;
 }

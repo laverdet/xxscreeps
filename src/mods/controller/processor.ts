@@ -4,8 +4,7 @@ import { Game } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
-import { exchange } from 'xxscreeps/utility/utility';
-import { DowngradeTime, Progress, StructureController, UpgradePowerThisTick } from './controller';
+import { StructureController } from './controller';
 import { checkSignController, checkUpgradeController } from './creep';
 import { saveAction } from 'xxscreeps/game/action-log';
 
@@ -13,26 +12,26 @@ import { saveAction } from 'xxscreeps/game/action-log';
 export function claim(controller: StructureController, user: string) {
 	// Take controller
 	controller['#user'] = user;
-	controller[DowngradeTime] = 0;
-	controller[Progress] = 0;
+	controller['#downgradeTime'] = 0;
+	controller['#progress'] = 0;
 	controller.safeMode = Game.time + Controller.SAFE_MODE_DURATION;
 	controller.level = 1;
 }
 
 function upgradeController(controller: StructureController, energy: number) {
-	controller[Progress] += energy;
-	controller[UpgradePowerThisTick] = (controller[UpgradePowerThisTick] ?? 0) + energy;
+	controller['#progress'] += energy;
+	controller['#upgradePowerThisTick'] = (controller['#upgradePowerThisTick'] ?? 0) + energy;
 
 	if (controller.level < 8) {
 		const nextLevel = Controller.CONTROLLER_LEVELS[controller.level]!;
-		if (controller[Progress] >= nextLevel) {
+		if (controller['#progress'] >= nextLevel) {
 			++controller.level;
 			if (controller.level === 8) {
-				controller[Progress] = 0;
+				controller['#progress'] = 0;
 			} else {
-				controller[Progress] -= nextLevel;
+				controller['#progress'] -= nextLevel;
 			}
-			controller[DowngradeTime] = Game.time + Controller.CONTROLLER_DOWNGRADE[controller.level]!;
+			controller['#downgradeTime'] = Game.time + Controller.CONTROLLER_DOWNGRADE[controller.level]!;
 			++controller.safeModeAvailable;
 		}
 	}
@@ -46,7 +45,7 @@ const intents = [
 	registerIntentProcessor(Creep, 'signController', (creep, context, id: string, message: string) => {
 		const target = Game.getObjectById<StructureController>(id)!;
 		if (checkSignController(creep, target) === Controller.OK) {
-			target._sign = message === '' ? undefined : {
+			target['#sign'] = message === '' ? undefined : {
 				datetime: Date.now(),
 				text: message.substr(0, 100),
 				time: Game.time,
@@ -70,11 +69,12 @@ const intents = [
 ];
 
 registerObjectTickProcessor(StructureController, (controller/*, context*/) => {
-	const upgradePower = exchange(controller, UpgradePowerThisTick);
+	const upgradePower = controller['#upgradePowerThisTick'];
+	controller['#upgradePowerThisTick'] = 0;
 	if (upgradePower !== undefined) {
-		controller[DowngradeTime] = 1 + Math.min(
-			controller[DowngradeTime] + Controller.CONTROLLER_DOWNGRADE_RESTORE,
+		controller['#downgradeTime'] = 1 + Math.min(
+			controller['#downgradeTime'] + Controller.CONTROLLER_DOWNGRADE_RESTORE,
 			Game.time + Controller.CONTROLLER_DOWNGRADE[controller.level]!);
 	}
-	// context.wakeAt(controller[DowngradeTime]);
+	// context.wakeAt(controller['#downgradeTime']);
 });

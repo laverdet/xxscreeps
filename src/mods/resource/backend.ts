@@ -2,7 +2,6 @@ import type { Store } from './store';
 import { bindRenderer } from 'xxscreeps/backend';
 import { StructureContainer } from './container';
 import { Resource } from './resource';
-import { Capacity, Restricted, SingleResource } from './store';
 
 // Store renderer
 export function renderStore(store: Store) {
@@ -10,15 +9,15 @@ export function renderStore(store: Store) {
 		store: { ...store },
 		storeCapacity: store.getCapacity(),
 	};
-	if (store[Restricted]) {
-		if (store._capacityByResource) {
+	if (store['#restricted']) {
+		if (store['#capacityByResource']) {
 			const capacityByResource: any = {};
-			for (const [ resourceType, value ] of store._capacityByResource.entries()) {
+			for (const [ resourceType, value ] of store['#capacityByResource'].entries()) {
 				capacityByResource[resourceType] = value;
 			}
 			result.storeCapacityResource = capacityByResource;
 		} else {
-			result.storeCapacityResource = { [store[SingleResource]!]: store[Capacity] };
+			result.storeCapacityResource = { [store['#singleResource']!]: store['#capacity'] };
 		}
 	}
 	return result;
@@ -34,5 +33,5 @@ bindRenderer(Resource, (resource, next) => ({
 bindRenderer(StructureContainer, (container, next) => ({
 	...next(),
 	...renderStore(container.store),
-	nextDecayTime: container._nextDecayTime,
+	nextDecayTime: container['#nextDecayTime'],
 }));

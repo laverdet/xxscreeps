@@ -1,12 +1,10 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { XSymbol, compose, struct, vector } from 'xxscreeps/schema';
+import { compose, struct, vector } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
-export const NPCData = XSymbol('npcData');
-
 const schema = registerSchema('Room', struct({
-	[NPCData]: struct({
+	'#npcData': struct({
 		users: compose(vector(Id.format), {
 			compose: value => new Set(value),
 			decompose: (value: Set<string>) => value.values(),

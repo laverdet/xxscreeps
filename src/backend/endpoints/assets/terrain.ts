@@ -8,7 +8,6 @@ import { PNG } from 'pngjs';
 import { registerBackendMiddleware } from 'xxscreeps/backend';
 import { TerrainRender } from 'xxscreeps/backend/symbols';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
-import { Objects } from 'xxscreeps/game/room';
 import { TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL, isBorder } from 'xxscreeps/game/terrain';
 
 function generate(map: GameMap, grid: (Room | null)[][], zoom = 1) {
@@ -32,7 +31,7 @@ function generate(map: GameMap, grid: (Room | null)[][], zoom = 1) {
 			const colorsByPosition = new Map<number, number>();
 			const terrain = room && map.getRoomTerrain(room.name);
 			if (room) {
-				for (const object of room[Objects]) {
+				for (const object of room['#objects']) {
 					const color = object[TerrainRender](object);
 					if (color !== undefined) {
 						colorsByPosition.set(object.pos.x * 50 + object.pos.y, color);

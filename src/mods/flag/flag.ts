@@ -2,7 +2,7 @@ import type { Dictionary } from 'xxscreeps/utility/types';
 import type { InspectOptionsStylized } from 'util';
 import * as C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
-import { PositionInteger, RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
+import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { RoomObject, format as baseFormat } from 'xxscreeps/game/object';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
@@ -48,7 +48,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => checkFlagColors(color, secondaryColor),
 			() => {
 				intents.push({ type: 'create', params: [
-					this.name, this.pos[PositionInteger],
+					this.name, this.pos['#int'],
 					color, secondaryColor,
 				] });
 				return C.OK;
@@ -70,7 +70,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => checkFlagPosition(pos!),
 			() => {
 				intents.push({ type: 'create', params: [
-					this.name, this.pos[PositionInteger],
+					this.name, this.pos['#int'],
 					this.color, this.secondaryColor,
 				] });
 				return C.OK;

@@ -8,13 +8,13 @@ const shape = declare('Source', struct(RoomObject.format, {
 	...variant('source'),
 	energy: 'int32',
 	energyCapacity: 'int32',
-	_nextRegenerationTime: 'int32',
+	'#nextRegenerationTime': 'int32',
 }));
 
 // Game object declaration
 export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 	get ticksToRegeneration() {
-		return this._nextRegenerationTime === 0 ? undefined : Math.max(0, this._nextRegenerationTime - Game.time);
+		return this['#nextRegenerationTime'] === 0 ? undefined : Math.max(0, this['#nextRegenerationTime'] - Game.time);
 	}
 
 	get ['#lookType']() { return C.LOOK_SOURCES }

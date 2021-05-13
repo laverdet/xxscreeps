@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { PositionInteger, RoomPosition } from 'xxscreeps/game/position';
+import { RoomPosition } from 'xxscreeps/game/position';
 import { registerBackendRoute, registerRoomSocketHandler } from 'xxscreeps/backend';
 import { checkCreateFlag } from './flag';
 import { getFlagChannel, loadUserFlags } from './model';
@@ -52,7 +52,7 @@ registerBackendRoute({
 				intent: {
 					type: 'create',
 					params: [
-						name, pos[PositionInteger],
+						name, pos['#int'],
 						color, secondaryColor,
 					],
 				},

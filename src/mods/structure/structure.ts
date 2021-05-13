@@ -5,12 +5,11 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as RoomPosition from 'xxscreeps/game/position';
 import { Game, intents, me, registerGameInitializer } from 'xxscreeps/game';
-import { XSymbol, compose, declare, struct, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
-export const CheckObstacle = XSymbol('checkObstacle');
 
 export const structureFormat = () => compose(shape, Structure);
 const shape = declare('Structure', struct(RoomObject.format, {
@@ -38,7 +37,7 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
 			() => intents.save(this, 'destroyStructure'));
 	}
 
-	[CheckObstacle](_user: string) {
+	['#checkObstacle'](_user: string) {
 		return true;
 	}
 
@@ -109,7 +108,7 @@ registerObstacleChecker(params => {
 			destructibleStructureTypes.has(object.structureType);
 	} else {
 		const { user } = params;
-		return object => object instanceof Structure && object[CheckObstacle](user);
+		return object => object instanceof Structure && object['#checkObstacle'](user);
 	}
 });
 

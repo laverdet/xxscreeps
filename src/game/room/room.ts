@@ -10,11 +10,10 @@ import { BufferObject, withOverlay } from 'xxscreeps/schema';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/utility/iteratee';
 import { registerGlobal } from 'xxscreeps/game';
-import { PositionInteger } from 'xxscreeps/game/position/symbols';
 import { shape } from './schema';
-import { FlushFindCache, FlushObjects, InsertObject, LookAt, LookFor, MoveObject, Objects, RemoveObject, findHandlers, lookConstants } from './symbols';
+import { findHandlers, lookConstants } from './symbols';
 
-export type AnyRoomObject = Room[typeof Objects][number];
+export type AnyRoomObject = Room['#objects'][number];
 
 /**
  * An object representing the room in which your units and structures are in. It can be used to look
@@ -35,7 +34,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 	constructor(view: BufferView, offset: number) {
 		super(view, offset);
-		for (const object of this[Objects]) {
+		for (const object of this['#objects']) {
 			this._addToIndex(object);
 			object['#afterInsert'](this);
 		}
@@ -60,21 +59,21 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Returns a plain array of all room objects at a given location.
 	 */
-	[LookAt](pos: RoomPosition): Readonly<RoomObject[]> {
-		return this.#spatialIndex.get(pos[PositionInteger]) ?? [];
+	['#lookAt'](pos: RoomPosition): Readonly<RoomObject[]> {
+		return this.#spatialIndex.get(pos['#int']) ?? [];
 	}
 
 	/**
 	 * Returns a plain array of all room objects matching `type`
 	 */
-	[LookFor]<Look extends LookConstants>(type: Look): TypeOfLook<Look>[] {
+	['#lookFor']<Look extends LookConstants>(type: Look): TypeOfLook<Look>[] {
 		return this.#lookIndex.get(type)! as never[];
 	}
 
 	/**
 	 * Flushes the cache used by `find` because it sometimes contains user-specific information.
 	 */
-	[FlushFindCache]() {
+	['#flushFindCache']() {
 		this.#findCache.clear();
 	}
 
@@ -82,7 +81,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Execute all insert / remove mutations that have been queued with `InsertObject` or
 	 * `RemoveObject`.
 	 */
-	[FlushObjects]() {
+	['#flushObjects']() {
 		// Bail early if there's no work
 		if (this.#insertObjects.length + this.#removeObjects.size === 0) {
 			return;
@@ -91,12 +90,12 @@ export class Room extends withOverlay(BufferObject, shape) {
 		// Remove objects
 		let removeCount = this.#removeObjects.size;
 		if (removeCount) {
-			for (let ii = this[Objects].length - 1; ii >= 0; --ii) {
-				const object = this[Objects][ii];
+			for (let ii = this['#objects'].length - 1; ii >= 0; --ii) {
+				const object = this['#objects'][ii];
 				if (this.#removeObjects.has(object)) {
 					object['#afterRemove'](this);
 					this._removeFromLookIndex(object);
-					this[Objects].splice(ii, 1);
+					this['#objects'].splice(ii, 1);
 					if (--removeCount === 0) {
 						break;
 					}
@@ -110,7 +109,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		}
 		// Insert objects
 		if (this.#insertObjects.length) {
-			this[Objects].push(...this.#insertObjects as never[]);
+			this['#objects'].push(...this.#insertObjects as never[]);
 			for (const object of this.#insertObjects) {
 				this._addToIndex(object);
 				object['#afterInsert'](this);
@@ -122,14 +121,14 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Queue an object to be inserted into this room. This is flushed via `FlushObjects`.
 	 */
-	[InsertObject](object: RoomObject) {
+	['#insertObject'](object: RoomObject) {
 		this.#insertObjects.push(object);
 	}
 
 	/**
 	 * Queue an object to be removed from this room. This is flushed via `FlushObjects`.
 	 */
-	[RemoveObject](object: RoomObject) {
+	['#removeObject'](object: RoomObject) {
 		this.#removeObjects.add(object);
 	}
 
@@ -137,15 +136,15 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Move an object to a new position within this room. This is reflected in the local room state
 	 * immediately.
 	 */
-	[MoveObject](object: RoomObject, pos: RoomPosition) {
-		const oldPosition = object.pos[PositionInteger];
+	['#moveObject'](object: RoomObject, pos: RoomPosition) {
+		const oldPosition = object.pos['#int'];
 		const oldList = this.#spatialIndex.get(oldPosition)!;
 		if (oldList.length === 1) {
 			this.#spatialIndex.delete(oldPosition);
 		} else {
 			removeOne(oldList, object);
 		}
-		const posInteger = pos[PositionInteger];
+		const posInteger = pos['#int'];
 		const newList = this.#spatialIndex.get(posInteger);
 		if (newList) {
 			newList.push(object);
@@ -161,7 +160,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	// TODO: JS private method
 	_addToIndex(object: RoomObject) {
 		this.#lookIndex.get(object['#lookType'])!.push(object);
-		const pos = object.pos[PositionInteger];
+		const pos = object.pos['#int'];
 		const list = this.#spatialIndex.get(pos);
 		if (list) {
 			list.push(object);
@@ -222,7 +221,7 @@ declare module 'xxscreeps/game/runtime' {
 
 export function getUsersInRoom(room: Room) {
 	const users = new Set<string>();
-	for (const objects of room[Objects]) {
+	for (const objects of room['#objects']) {
 		const user = objects['#runnerUser']();
 		if (user !== null && user.length > 2) {
 			users.add(user);

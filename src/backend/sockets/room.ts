@@ -1,7 +1,6 @@
 import type { SubscriptionEndpoint } from '../socket';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/user/user';
-import { Objects } from 'xxscreeps/game/room';
 import { GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { acquire } from 'xxscreeps/utility/async';
 import { asUnion } from 'xxscreeps/utility/utility';
@@ -53,7 +52,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			runWithState(new GameState(this.context.world, time, [ room ]), () => {
 				runAsUser(this.user ?? '0', () => {
 					// Objects
-					for (const object of room[Objects]) {
+					for (const object of room['#objects']) {
 						asUnion(object);
 						const value = object[Render]();
 						if (value) {

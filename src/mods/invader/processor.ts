@@ -3,11 +3,8 @@ import * as C from 'xxscreeps/game/constants';
 import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Game } from 'xxscreeps/game';
-import { InsertObject } from 'xxscreeps/game/room';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
 import { registerRoomTickProcessor } from 'xxscreeps/engine/processor';
-import { readCumulativeEnergyHarvested } from 'xxscreeps/mods/source';
-import { InvaderEnergyTarget } from './game';
 import { loop } from './loop';
 
 // Register invader NPC
@@ -15,16 +12,16 @@ registerNPC('2', loop);
 
 // Register invader generator
 registerRoomTickProcessor(room => {
-	const target = room[InvaderEnergyTarget] || C.INVADERS_ENERGY_GOAL;
-	const totalEnergy = readCumulativeEnergyHarvested(room);
-	const energy = totalEnergy - room[InvaderEnergyTarget];
+	const target = room['#invaderEnergyTarget'] || C.INVADERS_ENERGY_GOAL;
+	const totalEnergy = room['#cumulativeEnergyHarvested'];
+	const energy = totalEnergy - room['#invaderEnergyTarget'];
 	if (energy > target) {
 		// Reset energy goal for next invasion
 		let invaderGoal = Math.floor(C.INVADERS_ENERGY_GOAL * (Math.random() * 0.6 + 0.7));
 		if (Math.random() < 0.1) {
 			invaderGoal *= Math.floor(Math.random() > 0.5 ? 2 : 0.5);
 		}
-		room[InvaderEnergyTarget] = totalEnergy + invaderGoal;
+		room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
 
 		// Find raid origin
 		const exits = room.find(C.FIND_EXIT);
@@ -39,7 +36,7 @@ registerRoomTickProcessor(room => {
 				break;
 			}
 			const pos = exits[ii];
-			room[InsertObject](create(pos, role, 'small', Game.time + C.CREEP_LIFE_TIME));
+			room['#insertObject'](create(pos, role, 'small', Game.time + C.CREEP_LIFE_TIME));
 		}
 	}
 });
@@ -60,7 +57,7 @@ const bodies = {
 export function create(pos: RoomPosition, role: Role, strength: Strength, ageTime: number) {
 	const body = bodies[`${strength}${role}` as const]();
 	const creep = Creep.create(pos, body, `Invader_${pos.roomName}_${Math.floor(Math.random() * 1000)}`, '2');
-	creep._ageTime = ageTime;
+	creep['#ageTime'] = ageTime;
 	return creep;
 }
 

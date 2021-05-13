@@ -11,9 +11,6 @@ import { Creep } from 'xxscreeps/mods/creep/creep';
 // eslint-disable-next-line @typescript-eslint/no-duplicate-imports
 import * as CreepLib from 'xxscreeps/mods/creep/creep';
 import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position';
-import { NextDecayTime } from 'xxscreeps/mods/road/road';
-import { MoveObject, RemoveObject } from 'xxscreeps/game/room';
-import { ActionLog } from 'xxscreeps/game/action-log';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { isBorder } from 'xxscreeps/game/terrain';
 import { writeRoomObject } from 'xxscreeps/engine/room';
@@ -48,7 +45,7 @@ const intents = [
 
 	registerIntentProcessor(Creep, 'say', (creep, context, message: string, isPublic: boolean) => {
 		if (CreepLib.checkCommon(creep) === C.OK) {
-			creep._saying = {
+			creep['#saying'] = {
 				isPublic,
 				message: message.substr(0, 10),
 			};
@@ -58,7 +55,7 @@ const intents = [
 
 	registerIntentProcessor(Creep, 'suicide', (creep, context) => {
 		if (creep.my) {
-			creep.room[RemoveObject](creep);
+			creep.room['#removeObject'](creep);
 			context.didUpdate();
 		}
 	}),
@@ -85,25 +82,25 @@ const intents = [
 ];
 
 registerObjectPreTickProcessor(Creep, (creep, context) => {
-	if (creep[ActionLog].length !== 0) {
-		creep[ActionLog] = [];
+	if (creep['#actionLog'].length !== 0) {
+		creep['#actionLog'] = [];
 		context.didUpdate();
 	}
 });
 
 registerObjectTickProcessor(Creep, (creep, context) => {
 	// Remove `saying`
-	creep._saying = undefined;
+	creep['#saying'] = undefined;
 
 	// Check creep death
 	if (
-		(Game.time >= creep._ageTime && creep._ageTime !== 0) ||
+		(Game.time >= creep['#ageTime'] && creep['#ageTime'] !== 0) ||
 		creep.hits <= 0
 	) {
 		for (const [ resourceType, amount ] of Object.entries(creep.store) as [ ResourceType, number ][]) {
 			ResourceIntent.drop(creep.pos, resourceType, amount);
 		}
-		creep.room[RemoveObject](creep);
+		creep.room['#removeObject'](creep);
 		context.didUpdate();
 		return;
 	} else if (creep.hits > creep.hitsMax) {
@@ -115,13 +112,13 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 	const nextPosition = Movement.get(creep);
 	if (nextPosition) {
 		// Move the creep
-		creep.room[MoveObject](creep, nextPosition);
+		creep.room['#moveObject'](creep, nextPosition);
 		// Calculate base fatigue from plain/road/swamp
 		const fatigue = (() => {
 			const road = lookForStructureAt(creep.room, nextPosition, C.STRUCTURE_ROAD);
 			if (road) {
 				// Update road decay
-				road[NextDecayTime] -= C.ROAD_WEAROUT * creep.body.length;
+				road['#nextDecayTime'] -= C.ROAD_WEAROUT * creep.body.length;
 				return 1;
 			}
 			const terrain = creep.room.getTerrain().get(nextPosition.x, nextPosition.y);
@@ -156,7 +153,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 				return new RoomPosition(creep.pos.x, 0, generateRoomName(rx, ry + 1));
 			}
 		}();
-		creep.room[RemoveObject](creep);
+		creep.room['#removeObject'](creep);
 		creep.pos = next;
 		context.sendRoomIntent(next.roomName, 'import', typedArrayToString(writeRoomObject(creep)));
 		context.didUpdate();

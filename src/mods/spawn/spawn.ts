@@ -12,7 +12,7 @@ import * as Store from 'xxscreeps/mods/resource/store';
 import { Creep, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, intents, userGame } from 'xxscreeps/game';
 import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
-import { XSymbol, compose, declare, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
@@ -25,23 +25,19 @@ type SpawnCreepOptions = {
 	memory?: any;
 };
 
-export const SpawningCreepId = XSymbol('spawningCreepId');
-export const SpawnId = XSymbol('spawnId');
-export const SpawnTime = XSymbol('spawnTime');
-
 // `StructureSpawn.Spawning` format and definition
 const spawningFormat = struct({
 	directions: vector('int8'),
 	needTime: 'int32',
-	[SpawnId]: Id.format,
-	[SpawningCreepId]: Id.format,
-	[SpawnTime]: 'int32',
+	'#spawnId': Id.format,
+	'#spawningCreepId': Id.format,
+	'#spawnTime': 'int32',
 });
 
 class Spawning extends withOverlay(BufferObject, spawningFormat) {
-	get name() { return Game.getObjectById<Creep>(this[SpawningCreepId])!.name }
-	get remainingTime() { return this[SpawnTime] - Game.time }
-	get spawn() { return Game.getObjectById<StructureSpawn>(this[SpawnId])! }
+	get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name }
+	get remainingTime() { return this['#spawnTime'] - Game.time }
+	get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])! }
 }
 
 // `StructureSpawn` format

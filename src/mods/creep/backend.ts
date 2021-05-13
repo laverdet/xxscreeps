@@ -1,13 +1,12 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend';
 import { renderStore } from 'xxscreeps/mods/resource/backend';
-import { ActionLog } from 'xxscreeps/game/action-log';
 import { Creep } from './creep';
 
 bindMapRenderer(Creep, creep => creep.owner);
 
 bindRenderer(Creep, (creep, next) => {
-	const actionLog: Record<string, any> = Fn.fromEntries(creep[ActionLog], action =>
+	const actionLog: Record<string, any> = Fn.fromEntries(creep['#actionLog'], action =>
 		[ action.action, { x: action.x, y: action.y } ]);
 	const saying = creep.saying;
 	if (saying) {
@@ -25,7 +24,7 @@ bindRenderer(Creep, (creep, next) => {
 		hitsMax: 100,
 		spawning: creep.spawning,
 		fatigue: creep.fatigue,
-		ageTime: creep._ageTime,
+		ageTime: creep['#ageTime'],
 		user: creep.owner,
 		actionLog,
 	};

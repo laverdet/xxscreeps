@@ -1,14 +1,12 @@
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game, registerGlobal } from 'xxscreeps/game';
-import { XSymbol, compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { checkCommon } from 'xxscreeps/mods/creep/creep';
-
-export const NextRegenerationTime = XSymbol('nextRegenerationTime');
 
 export const format = () => compose(shape, Mineral);
 const shape = declare('Mineral', struct(RoomObject.format, {
@@ -16,13 +14,14 @@ const shape = declare('Mineral', struct(RoomObject.format, {
 	density: 'int32',
 	mineralAmount: 'int32',
 	mineralType: resourceEnumFormat,
-	[NextRegenerationTime]: 'int32',
+	'#nextRegenerationTime': 'int32',
 }));
 
 // Game object declaration
 export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
 	get ticksToRegeneration() {
-		return this[NextRegenerationTime] === 0 ? undefined : Math.max(0, this[NextRegenerationTime] - Game.time);
+		const nextTime = this['#nextRegenerationTime'];
+		return nextTime === 0 ? undefined : Math.max(0, nextTime - Game.time);
 	}
 
 	get ['#lookType']() { return C.LOOK_MINERALS }

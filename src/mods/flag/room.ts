@@ -4,7 +4,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { userGame } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { PositionInteger, RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position';
+import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
 import { extend, instantiate } from 'xxscreeps/utility/utility';
 import { Flag, checkCreateFlag } from './flag';
@@ -50,7 +50,7 @@ extend(Room, {
 			() => checkCreateFlag(flags, pos!, name, color, secondaryColor, true),
 			() => {
 				// Save creation intent
-				intents.push({ type: 'create', params: [ name, pos![PositionInteger], color, secondaryColor ] });
+				intents.push({ type: 'create', params: [ name, pos!['#int'], color, secondaryColor ] });
 				// Create local flag immediately
 				userGame!.flags[name] = instantiate(Flag, {
 					name,

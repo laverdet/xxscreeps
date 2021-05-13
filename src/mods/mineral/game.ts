@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import { registerSchema } from 'xxscreeps/engine/schema';
-import { LookFor, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { enumerated } from 'xxscreeps/schema';
 import * as Extractor from './extractor';
 import * as Mineral from './mineral';
@@ -25,7 +25,7 @@ declare module 'xxscreeps/engine/schema' {
 // Register FIND_ type for `Mineral`
 const find = registerFindHandlers({
 	[C.FIND_MINERALS]: room =>
-		room[LookFor](C.LOOK_MINERALS),
+		room['#lookFor'](C.LOOK_MINERALS),
 });
 
 // Register LOOK_ type for `Mineral`

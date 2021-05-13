@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Extension from './extension';
 import * as Spawn from './spawn';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
-import { LookFor, registerFindHandlers } from 'xxscreeps/game/room';
+import { registerFindHandlers } from 'xxscreeps/game/room';
 import { registerSchema } from 'xxscreeps/engine/schema';
 
 // Add `spawns` to global `game` object
@@ -25,9 +25,9 @@ declare module 'xxscreeps/game/runtime' {
 
 // Register FIND_ types for `Spawn`
 const find = registerFindHandlers({
-	[C.FIND_MY_SPAWNS]: room => room[LookFor](C.LOOK_STRUCTURES).filter(
+	[C.FIND_MY_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
 		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my!),
-	[C.FIND_HOSTILE_SPAWNS]: room => room[LookFor](C.LOOK_STRUCTURES).filter(
+	[C.FIND_HOSTILE_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
 		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my === false),
 });
 declare module 'xxscreeps/game/room' {

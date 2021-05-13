@@ -6,7 +6,7 @@ import { Creep } from 'xxscreeps/mods/creep/creep';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { drop } from 'xxscreeps/mods/resource/processor/resource';
-import { InsertObject, RemoveObject, Room } from 'xxscreeps/game/room';
+import { Room } from 'xxscreeps/game/room';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { saveAction } from 'xxscreeps/game/action-log';
 import { ConstructionSite, checkRemove, create } from './construction-site';
@@ -24,7 +24,7 @@ const intents = [
 			const pos = new RoomPosition(xx, yy, room.name);
 			if (checkCreateConstructionSite(room, pos, structureType) === C.OK) {
 				const site = create(pos, structureType, me, name);
-				room[InsertObject](site);
+				room['#insertObject'](site);
 				context.didUpdate();
 			}
 		}),
@@ -32,7 +32,7 @@ const intents = [
 	registerIntentProcessor(ConstructionSite, 'remove', (site, context) => {
 		if (checkRemove(site) === C.OK) {
 			drop(site.pos, C.RESOURCE_ENERGY, site.progress / 2);
-			site.room[RemoveObject](site);
+			site.room['#removeObject'](site);
 			context.didUpdate();
 		}
 	}),
@@ -60,9 +60,9 @@ registerObjectTickProcessor(ConstructionSite, (site, context) => {
 	if (site.progress >= site.progressTotal) {
 		const { room } = site;
 		const structure = structureFactories.get(site.structureType)?.create(site, site.name);
-		site.room[RemoveObject](site);
+		site.room['#removeObject'](site);
 		if (structure) {
-			room[InsertObject](structure);
+			room['#insertObject'](structure);
 		}
 		context.didUpdate();
 	}

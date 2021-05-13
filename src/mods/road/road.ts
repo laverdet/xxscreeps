@@ -3,25 +3,23 @@ import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game } from 'xxscreeps/game';
 import { isBorder } from 'xxscreeps/game/position';
-import { CheckObstacle, Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
-import { XSymbol, compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
+import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
-
-export const NextDecayTime = XSymbol('nextDecayTime');
 
 export function format() { return compose(shape, StructureRoad) }
 const shape = declare('Road', struct(structureFormat, {
 	...variant('road'),
-	[NextDecayTime]: 'int32',
+	'#nextDecayTime': 'int32',
 }));
 
 export class StructureRoad extends withOverlay(Structure, shape) {
 	get structureType() { return C.STRUCTURE_ROAD }
-	get ticksToDecay() { return Math.max(0, this[NextDecayTime] - Game.time) }
+	get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
 	get ['#pathCost']() { return 1 }
 
-	[CheckObstacle]() {
+	['#checkObstacle']() {
 		return false;
 	}
 }
@@ -29,7 +27,7 @@ export class StructureRoad extends withOverlay(Structure, shape) {
 export function create(pos: RoomPosition) {
 	return assign(RoomObject.create(new StructureRoad, pos), {
 		hits: C.ROAD_HITS,
-		[NextDecayTime]: Game.time + C.ROAD_DECAY_TIME,
+		'#nextDecayTime': Game.time + C.ROAD_DECAY_TIME,
 	});
 }
 

@@ -2,7 +2,6 @@ import type { GameMap, World } from './map';
 import type { AnyRoomObject, Room } from './room';
 import type { RoomObject } from './object';
 import * as Fn from 'xxscreeps/utility/functional';
-import { Objects } from './room/symbols';
 import { gameInitializers } from './symbols';
 
 /**
@@ -20,7 +19,7 @@ export class GameState {
 		rooms: Room[],
 	) {
 		this.objects = new Map(Fn.concat(Fn.map(rooms, room =>
-			Fn.map(room[Objects], object => [ object.id, object ]))));
+			Fn.map(room['#objects'], object => [ object.id, object ]))));
 		this.rooms = Fn.fromEntries(Fn.map(rooms, room => [ room.name, room ]));
 	}
 }
@@ -92,7 +91,7 @@ export class Game extends GameBase {
 		// Run hooks
 		gameInitializers.forEach(fn => fn(this));
 		for (const room of Object.values(state.rooms)) {
-			for (const object of room[Objects]) {
+			for (const object of room['#objects']) {
 				if ((object as any).my) {
 					object['#addToMyGame'](this);
 				}

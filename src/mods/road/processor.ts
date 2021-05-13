@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { NextDecayTime, StructureRoad } from './road';
+import { StructureRoad } from './road';
 
 registerObjectTickProcessor(StructureRoad, (road, context) => {
 	if (road.ticksToDecay === 0) {
@@ -12,8 +12,8 @@ registerObjectTickProcessor(StructureRoad, (road, context) => {
 			terrain === C.TERRAIN_MASK_SWAMP ? C.CONSTRUCTION_COST_ROAD_SWAMP_RATIO :
 			1;
 		road.hits -= C.ROAD_DECAY_AMOUNT * decayMultiplier;
-		road[NextDecayTime] = Game.time + C.ROAD_DECAY_TIME;
+		road['#nextDecayTime'] = Game.time + C.ROAD_DECAY_TIME;
 		context.didUpdate();
 	}
-	context.wakeAt(road[NextDecayTime]);
+	context.wakeAt(road['#nextDecayTime']);
 });

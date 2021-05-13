@@ -4,7 +4,6 @@ import * as Controller from 'xxscreeps/mods/controller/processor';
 import * as Spawn from './spawn';
 import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { forceRoomProcess, userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
-import { FlushObjects, InsertObject } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
 import { bindRenderer, registerBackendRoute } from 'xxscreeps/backend';
@@ -118,8 +117,8 @@ registerBackendRoute({
 						throw new Error('Invalid intent');
 					}
 					// Add spawn
-					room[InsertObject](Spawn.create(pos, userId, name));
-					room[FlushObjects]();
+					room['#insertObject'](Spawn.create(pos, userId, name));
+					room['#flushObjects']();
 					Controller.claim(room.controller!, userId);
 				});
 			});

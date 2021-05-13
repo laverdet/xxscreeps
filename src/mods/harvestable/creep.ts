@@ -4,13 +4,12 @@ import { intents } from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
-import { CheckHarvest } from './symbols';
 
 // `harvest` intent check
 export function checkHarvest(creep: Creep, target: Harvestable | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => target ? target[CheckHarvest](creep) : C.ERR_INVALID_TARGET,
+		() => target ? target['#checkHarvest'](creep) : C.ERR_INVALID_TARGET,
 	) as HarvestResult;
 }
 
