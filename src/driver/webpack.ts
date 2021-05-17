@@ -55,6 +55,7 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 			module: {
 				rules: [ {
 					test: /\.[cm]?jsx?$/,
+					exclude: /\/node_modules\//,
 					resolve: { fullySpecified: false },
 					use: [
 						...babelPlugins.length === 0 ? [] : [ {
