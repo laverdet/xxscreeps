@@ -1,3 +1,4 @@
+import type { Room } from 'xxscreeps/game/room/room';
 import * as Fn from 'xxscreeps/utility/functional';
 import {
 	acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey,
@@ -12,6 +13,8 @@ import { getServiceChannel } from '.';
 
 // Keep track of rooms this thread ran. Global room processing must also happen here.
 const processedRooms = new Map<string, RoomProcessorContext>();
+const nextRoomCache = new Map<string, Room>();
+let roomCache = new Map<string, Room>();
 
 // Connect to main & storage
 const db = await Database.connect();
@@ -43,7 +46,14 @@ try {
 			for await (const roomName of consumeSortedSet(shard.scratch, processRoomsSetKey(time), 0, 0)) {
 				// Read room data and intents from storage
 				const [ room, intentsPayloads ] = await Promise.all([
-					shard.loadRoom(roomName, time - 1),
+					function() {
+						const room = roomCache.get(roomName);
+						if (room) {
+							return room;
+						} else {
+							return shard.loadRoom(roomName, time - 1);
+						}
+					}(),
 					acquireIntentsForRoom(shard, roomName, time),
 				]);
 
@@ -56,6 +66,7 @@ try {
 				// Run first process phase
 				await context.process();
 				processedRooms.set(roomName, context);
+				nextRoomCache.set(roomName, room);
 			}
 
 		} else if (message.type === 'finalize') {
@@ -75,6 +86,8 @@ try {
 			// Done
 			await roomsDidFinalize(shard, count, time);
 			processedRooms.clear();
+			roomCache = nextRoomCache;
+			nextRoomCache.clear();
 		}
 	}
 

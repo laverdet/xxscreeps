@@ -6,9 +6,10 @@ import { getServiceChannel } from 'xxscreeps/engine/service';
 
 export function getProcessorChannel(shard: Shard) {
 	type Message =
-		{ type: 'shutdown' } |
+		{ type: 'finalize'; time: number } |
 		{ type: 'process'; time: number } |
-		{ type: 'finalize'; time: number };
+		{ type: 'saveRoom'; roomName: string } |
+		{ type: 'shutdown' };
 	return new Channel<Message>(shard.pubsub, 'channel/processor');
 }
 

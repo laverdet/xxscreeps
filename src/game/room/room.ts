@@ -94,7 +94,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 				const object = this['#objects'][ii];
 				if (this.#removeObjects.has(object)) {
 					object['#afterRemove'](this);
-					this._removeFromLookIndex(object);
+					this._removeFromIndex(object);
 					this['#objects'].splice(ii, 1);
 					if (--removeCount === 0) {
 						break;
@@ -173,11 +173,12 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Remove an object from the look and spatial indices
 	 */
 	// TODO: JS private method
-	_removeFromLookIndex(object: RoomObject) {
-		const lookType = object['#lookType'];
-		const list = this.#lookIndex.get(lookType)!;
+	_removeFromIndex(object: RoomObject) {
+		removeOne(this.#lookIndex.get(object['#lookType'])!, object);
+		const pos = object.pos['#int'];
+		const list = this.#spatialIndex.get(pos)!;
 		if (list.length === 1) {
-			this.#lookIndex.delete(lookType);
+			this.#spatialIndex.delete(pos);
 		} else {
 			removeOne(list, object);
 		}

@@ -154,8 +154,13 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 			}
 		}();
 		creep.room['#removeObject'](creep);
+		// Update `creep.pos` for the import command but set it back so that `#flushObjects` can safely
+		// update the internal indices.
+		const oldPos = creep.pos;
 		creep.pos = next;
-		context.sendRoomIntent(next.roomName, 'import', typedArrayToString(writeRoomObject(creep)));
+		const importPayload = writeRoomObject(creep);
+		creep.pos = oldPos;
+		context.sendRoomIntent(next.roomName, 'import', typedArrayToString(importPayload));
 		context.didUpdate();
 	} else {
 		context.setActive();
