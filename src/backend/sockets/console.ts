@@ -27,8 +27,10 @@ export const ConsoleSubscription: SubscriptionEndpoint = {
 				throttleCount = 0;
 				throttleTime = now + 1000;
 			}
-			if (++throttleCount === 20) {
-				this.send(JSON.stringify({ error: 'Throttling console messages' }));
+			if (++throttleCount >= 20) {
+				if (throttleCount === 20) {
+					this.send(JSON.stringify({ error: 'Throttling console messages' }));
+				}
 				return;
 			}
 			switch (message.type) {
