@@ -47,11 +47,12 @@ export class StructureTower extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	return assign(RoomObject.create(new StructureTower, pos), {
+	const tower = assign(RoomObject.create(new StructureTower, pos), {
 		hits: C.TOWER_HITS,
 		store: Store.create(null, { energy: C.TOWER_CAPACITY }),
-		'#user': owner,
 	});
+	tower['#user'] = owner;
+	return tower;
 }
 
 registerBuildableStructure(C.STRUCTURE_TOWER, {
@@ -61,6 +62,6 @@ registerBuildableStructure(C.STRUCTURE_TOWER, {
 			C.CONSTRUCTION_COST.tower : null;
 	},
 	create(site) {
-		return create(site.pos, site.owner);
+		return create(site.pos, site['#user']);
 	},
 });

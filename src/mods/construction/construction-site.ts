@@ -47,11 +47,12 @@ export function create(
 	owner: string,
 	name?: string | null,
 ) {
-	return assign(RoomObject.create(new ConstructionSite, pos), {
+	const site = assign(RoomObject.create(new ConstructionSite, pos), {
 		structureType,
 		name: name ?? '',
-		'#user': owner,
 	});
+	site['#user'] = owner;
+	return site;
 }
 
 export function checkRemove(site: ConstructionSite) {
@@ -66,7 +67,7 @@ registerObstacleChecker(params => {
 	const { user } = params;
 	if (params.isPathFinder) {
 		return object => object instanceof ConstructionSite &&
-			object.owner === user &&
+			object['#user'] === user &&
 			(structureFactories.get(object.structureType)?.obstacle ?? true);
 	} else {
 		return null;

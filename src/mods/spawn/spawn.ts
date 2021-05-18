@@ -154,7 +154,7 @@ export class StructureSpawn extends withOverlay(Structure, shape) {
 				intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
 
 				// Fake creep
-				const creep = createCreep(this.pos, body, name, this.owner!);
+				const creep = createCreep(this.pos, body, name, this['#user']!);
 				userGame!.creeps[name] = creep;
 				return C.OK;
 			});
@@ -162,12 +162,13 @@ export class StructureSpawn extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string, name: string) {
-	return assign(RoomObject.create(new StructureSpawn, pos), {
+	const spawn = assign(RoomObject.create(new StructureSpawn, pos), {
 		hits: C.SPAWN_HITS,
 		name,
 		store: Store.create(null, { energy: C.SPAWN_ENERGY_CAPACITY }, { energy: C.SPAWN_ENERGY_START }),
-		'#user': owner,
 	});
+	spawn['#user'] = owner;
+	return spawn;
 }
 
 registerBuildableStructure(C.STRUCTURE_SPAWN, {
@@ -177,7 +178,7 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 			C.CONSTRUCTION_COST.spawn : null;
 	},
 	create(site) {
-		return create(site.pos, site.owner, site.name);
+		return create(site.pos, site['#user'], site.name);
 	},
 });
 

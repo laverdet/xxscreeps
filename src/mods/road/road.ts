@@ -5,7 +5,6 @@ import { Game } from 'xxscreeps/game';
 import { isBorder } from 'xxscreeps/game/position';
 import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export function format() { return compose(shape, StructureRoad) }
@@ -36,10 +35,9 @@ export class StructureRoad extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition) {
-	const road = assign(RoomObject.create(new StructureRoad, pos), {
-		'#nextDecayTime': Game.time + C.ROAD_DECAY_TIME,
-		'#terrain': Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y),
-	});
+	const road = RoomObject.create(new StructureRoad, pos);
+	road['#nextDecayTime'] = Game.time + C.ROAD_DECAY_TIME;
+	road['#terrain'] = Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y);
 	road.hits = road.hitsMax;
 	return road;
 }

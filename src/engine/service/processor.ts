@@ -81,6 +81,7 @@ try {
 				const context = new RoomProcessorContext(shard, world, room, time);
 				await context.process(true);
 				await context.finalize();
+				nextRoomCache.set(roomName, room);
 				++count;
 			}
 			// Done

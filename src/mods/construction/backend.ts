@@ -6,5 +6,5 @@ bindRenderer(ConstructionSite, (constructionSite, next) => ({
 	progress: constructionSite.progress,
 	progressTotal: constructionSite.progressTotal,
 	structureType: constructionSite.structureType,
-	user: constructionSite.owner,
+	user: constructionSite['#user'],
 }));

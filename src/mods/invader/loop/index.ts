@@ -14,9 +14,7 @@ export function loop(Game: GameConstructor) {
 	const healers = creeps.filter(
 		creep => creep.getActiveBodyparts(C.HEAL) > 0);
 	const fortifications = room.find(C.FIND_HOSTILE_STRUCTURES).filter(structure =>
-		// @ts-expect-error
 		structure.structureType === C.STRUCTURE_RAMPART ||
-		// @ts-expect-error
 		structure.structureType === C.STRUCTURE_WALL);
 	// TODO: Filter SK
 	const hostiles = room.find(C.FIND_HOSTILE_CREEPS);

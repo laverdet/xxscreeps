@@ -21,27 +21,22 @@ export const MapStatsEndpoint: Endpoint = {
 		// Build rooms payload
 		const userIds = new Set<string>();
 		const stats = Fn.fromEntries(Fn.filter(rooms), room => {
-			// Get room owner information
-			const owner = function() {
-				if (room.controller) {
-					const user = room.controller.owner;
-					if (user !== null) {
-						userIds.add(user);
-						return {
-							own: {
-								user,
-								level: room.controller.level,
-							},
-							safeMode: false, //room.controller.safeMode !== undefined,
-						};
-					}
+			// Check for owner, level information
+			const extra = function() {
+				const user = room['#user'];
+				if (user) {
+					userIds.add(user);
+					return {
+						own: {
+							user,
+							level: room['#level'],
+						},
+						safeMode: room['#safeModeUntil'],
+					};
 				}
 			}();
 			// Return status payload
-			return [ room.name, {
-				status: 'normal',
-				...owner,
-			} ];
+			return [ room.name, { status: 'normal', ...extra } ];
 		});
 
 		// Read users

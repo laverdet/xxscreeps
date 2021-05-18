@@ -20,7 +20,8 @@ export type RoomObjectWithUser = { '#user': string } & RoomObject;
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	abstract get ['#lookType'](): string;
 	room!: Room;
-	['#nextPosition']?: RoomPosition.RoomPosition | null;
+	['#nextPosition']?: RoomPosition.RoomPosition;
+	['#nextPositionTime']?: number;
 
 	get ['#pathCost'](): undefined | number {
 		return undefined;

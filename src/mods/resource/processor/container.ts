@@ -5,14 +5,13 @@ import { StructureContainer } from '../container';
 
 registerObjectTickProcessor(StructureContainer, (container, context) => {
 	if (container.ticksToDecay === 0) {
-		const ownedController = Game.rooms[container.pos.roomName]!.controller?.owner;
+		const ownedController = (container.room.controller?.level ?? 0) > 0;
 		container.hits -= C.CONTAINER_DECAY;
 		if (container.hits <= 0) {
 			container.room['#removeObject'](container);
-		} else {
-			container['#nextDecayTime'] = Game.time + (ownedController ?
-				C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME);
 		}
+		container['#nextDecayTime'] = Game.time + (ownedController ?
+			C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME);
 		context.didUpdate();
 	}
 	context.wakeAt(container['#nextDecayTime']);

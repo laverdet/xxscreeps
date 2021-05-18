@@ -71,13 +71,13 @@ const intents = [
 
 		// Set spawning information
 		const needTime = body.length * C.CREEP_SPAWN_TIME;
-		spawn.spawning = assign(new StructureSpawn.Spawning, {
+		const spawning = spawn.spawning = assign(new StructureSpawn.Spawning, {
 			directions: directions ?? [],
 			needTime,
-			'#spawnId': spawn.id,
-			'#spawningCreepId': creep.id,
-			'#spawnTime': Game.time + needTime,
 		});
+		spawning['#spawnId'] = spawn.id;
+		spawning['#spawningCreepId'] = creep.id;
+		spawning['#spawnTime'] = Game.time + needTime;
 		context.didUpdate();
 	}),
 ];

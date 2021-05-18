@@ -41,7 +41,7 @@ registerObjectTickProcessor(Source, (source, context) => {
 	const energyCapacity = (() => {
 		const { controller } = source.room;
 		if (controller) {
-			if (controller.owner === null) {
+			if (controller.level === 0) {
 				return C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
 			} else {
 				return C.SOURCE_ENERGY_CAPACITY;

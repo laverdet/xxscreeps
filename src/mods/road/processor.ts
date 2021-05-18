@@ -8,9 +8,8 @@ registerObjectTickProcessor(StructureRoad, (road, context) => {
 		road.hits -= C.ROAD_DECAY_AMOUNT * road['#multiplier'];
 		if (road.hits <= 0) {
 			road.room['#removeObject'](road);
-		} else {
-			road['#nextDecayTime'] = Game.time + C.ROAD_DECAY_TIME;
 		}
+		road['#nextDecayTime'] = Game.time + C.ROAD_DECAY_TIME;
 		context.didUpdate();
 	}
 	context.wakeAt(road['#nextDecayTime']);

@@ -75,10 +75,8 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 	}
 
 	// Can't build in someone else's room
-	if (room.controller) {
-		if (room.controller.owner !== null && !room.controller.my) {
-			return C.ERR_RCL_NOT_ENOUGH;
-		}
+	if (room.controller?.my === false) {
+		return C.ERR_RCL_NOT_ENOUGH;
 	}
 
 	// Check structure count for this RCL

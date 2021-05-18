@@ -25,11 +25,12 @@ export class StructureLab extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	return assign(RoomObject.create(new StructureLab, pos), {
+	const lab = assign(RoomObject.create(new StructureLab, pos), {
 		hits: C.LAB_HITS,
 		store: Store.create(C.LAB_ENERGY_CAPACITY + C.LAB_MINERAL_CAPACITY),
-		'#user': owner,
 	});
+	lab['#user'] = owner;
+	return lab;
 }
 
 // `ConstructionSite` registration
@@ -40,7 +41,7 @@ registerBuildableStructure(C.STRUCTURE_LAB, {
 			C.CONSTRUCTION_COST.lab : null;
 	},
 	create(site) {
-		return create(site.pos, site.owner);
+		return create(site.pos, site['#user']);
 	},
 });
 

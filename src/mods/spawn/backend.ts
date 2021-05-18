@@ -48,7 +48,7 @@ registerBackendRoute({
 			for (const structure of room.find(C.FIND_STRUCTURES)) {
 				if (
 					structure.structureType === 'spawn' &&
-					structure.owner === userId &&
+					structure['#user'] === userId &&
 					structure.name === context.request.body.name
 				) {
 					return { error: 'exists' };
@@ -80,7 +80,7 @@ registerBackendRoute({
 				room.find(C.FIND_STRUCTURES),
 				room.find(C.FIND_CONSTRUCTION_SITES),
 			)) {
-				if (structure.structureType === 'spawn' && structure.owner === userId) {
+				if (structure.structureType === 'spawn' && structure['#user'] === userId) {
 					const number = Number(/^Spawn(?<count>[0-9]+)$/.exec(structure.name)?.groups?.number);
 					if (number > max) {
 						max = number;

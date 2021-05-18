@@ -1,4 +1,3 @@
-export const STRUCTURE_WALL = 'constructedWall' as const;
 export const STRUCTURE_KEEPER_LAIR = 'keeperLair' as const;
 export const STRUCTURE_PORTAL = 'portal' as const;
 export const STRUCTURE_OBSERVER = 'observer' as const;
@@ -8,24 +7,6 @@ export const STRUCTURE_TERMINAL = 'terminal' as const;
 export const STRUCTURE_NUKER = 'nuker' as const;
 export const STRUCTURE_FACTORY = 'factory' as const;
 export const STRUCTURE_INVADER_CORE = 'invaderCore' as const;
-
-export const RAMPART_DECAY_AMOUNT = 300;
-export const RAMPART_DECAY_TIME = 100;
-export const RAMPART_HITS = 1;
-export const RAMPART_HITS_MAX = [
-	undefined,
-	undefined,
-	300000,
-	1000000,
-	3000000,
-	10000000,
-	30000000,
-	100000000,
-	300000000,
-];
-
-export const WALL_HITS = 1;
-export const WALL_HITS_MAX = 300000000;
 
 export const OBSERVER_HITS = 500;
 export const OBSERVER_RANGE = 10;

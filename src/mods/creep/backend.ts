@@ -25,7 +25,7 @@ bindRenderer(Creep, (creep, next) => {
 		spawning: creep.spawning,
 		fatigue: creep.fatigue,
 		ageTime: creep['#ageTime'],
-		user: creep.owner,
+		user: creep['#user'],
 		actionLog,
 	};
 });

@@ -108,54 +108,59 @@ await blob.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
 
 // Collect room data
 const roomObjects = loki.getCollection('rooms.objects');
-const rooms = loki.getCollection('rooms').find().map(room => ({
-	name: room._id,
-	'#eventLog': [],
-	'#npcData': {
-		users: new Set<string>(),
-		memory: new Map,
-	},
-	'#objects': [ ...Fn.filter(roomObjects.find({ room: room._id }).map(object => {
-		switch (object.type) {
-			case 'controller':
-				return {
-					...withStructure(object),
+const rooms = loki.getCollection('rooms').find().map(room => {
+	const objects = roomObjects.find({ room: room._id });
+	const controller = objects.filter(object => object.type === 'controller')[0];
+	return {
+		name: room._id,
+		'#eventLog': [],
+		'#npcData': {
+			users: new Set<string>(),
+			memory: new Map,
+		},
+		'#user': controller?.user ?? null,
+		'#level': controller?.level ?? 0,
+		'#objects': [ ...Fn.filter(objects.map(object => {
+			switch (object.type) {
+				case 'controller':
+					return {
+						...withStructure(object),
+						isPowerEnabled: object.isPowerEnabled,
+						level: object.level,
+						safeMode: object.safeMode,
+						safeModeAvailable: object.safeModeAvailable,
+						safeModeCooldown: object.safeModeCooldown,
+						'#downgradeTime': object.downgradeTime,
+						'#progress': object.progress,
+						'#upgradeBlockedUntil': object.upgradeBlocked,
+					};
 
-					isPowerEnabled: object.isPowerEnabled,
-					level: object.level,
-					safeMode: object.safeMode,
-					safeModeAvailable: object.safeModeAvailable,
-					safeModeCooldown: object.safeModeCooldown,
-					'#downgradeTime': object.downgradeTime,
-					'#progress': object.progress,
-					'#upgradeBlockedTime': object.upgradeBlocked,
-				};
+				case 'mineral':
+					return {
+						...withRoomObject(object),
+						density: object.density,
+						mineralAmount: object.mineralAmount,
+						mineralType: object.mineralType,
+					};
 
-			case 'mineral':
-				return {
-					...withRoomObject(object),
-					density: object.density,
-					mineralAmount: object.mineralAmount,
-					mineralType: object.mineralType,
-				};
+				case 'source':
+					return {
+						...withRoomObject(object),
+						energy: object.energy,
+						energyCapacity: object.energyCapacity,
+						'#nextRegenerationTime': gameTime + (object.ticksToRegeneration as number),
+					};
 
-			case 'source':
-				return {
-					...withRoomObject(object),
-					energy: object.energy,
-					energyCapacity: object.energyCapacity,
-					'#nextRegenerationTime': gameTime + (object.ticksToRegeneration as number),
-				};
-
-			case 'spawn':
-				return {
-					...withStructure(object),
-					...withStore(object),
-					name: object.name,
-				};
-		}
-	})) ],
-}));
+				case 'spawn':
+					return {
+						...withStructure(object),
+						...withStore(object),
+						name: object.name,
+					};
+			}
+		})) ],
+	};
+});
 
 // Save rooms
 const roomNames = new Set(Fn.map(rooms, room => room.name));

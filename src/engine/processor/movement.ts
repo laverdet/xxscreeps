@@ -2,12 +2,11 @@ import type { Direction } from 'xxscreeps/game/position';
 import type { RoomObjectWithUser } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import { me } from 'xxscreeps/game';
+import { Game, me } from 'xxscreeps/game';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
 import { readRoomObject } from 'xxscreeps/engine/room';
-import { exchange } from 'xxscreeps/utility/utility';
 import { latin1ToBuffer } from 'xxscreeps/utility/string';
 import { registerIntentProcessor } from '.';
 
@@ -50,22 +49,35 @@ export function add(mover: RoomObjectWithUser, power: number, direction: Directi
 	}
 }
 
+function remove(mover: RoomObjectWithUser) {
+	mover['#nextPositionTime'] = -1;
+	const blockedMovers = moves.get(toId(mover.pos.x, mover.pos.y));
+	for (const { mover } of blockedMovers ?? []) {
+		if (mover['#nextPositionTime'] === Game.time) {
+			remove(mover);
+		}
+	}
+}
+
 export function dispatch(room: Room) {
 	// First resolve move conflicts
+	const { time } = Game;
 	const movingObjects: RoomObjectWithUser[] = [];
 	for (const [ id, info ] of moves) {
 		const { xx, yy } = fromId(id);
 		const nextPosition = new RoomPosition(xx, yy, room.name);
 
-		// In the common case whree this move isn't contested then finish early
+		// In the common case where this move isn't contested then finish early
 		if (info.length === 1) {
-			info[0].mover['#nextPosition'] = nextPosition;
-			movingObjects.push(info[0].mover);
+			const { mover } = info[0];
+			mover['#nextPosition'] = nextPosition;
+			mover['#nextPositionTime'] = Game.time;
+			movingObjects.push(mover);
 			continue;
 		}
 
-		// Build array to objects attempting to move
-		const contenders = info.map(({ mover, power }) => ({
+		// Build list of objects attempting to move
+		const contenders = Fn.map(info, ({ mover, power }) => ({
 			mover,
 			// First priority is moving creeps who are *currently* on cells where more creeps want to
 			// move
@@ -75,12 +87,13 @@ export function dispatch(room: Room) {
 		}));
 
 		// Pick the object to win this movement
-		const first = Fn.minimum(contenders, (left, right) =>
+		const { mover } = Fn.minimum(contenders, (left, right) =>
 			right.movingInto - left.movingInto ||
 			right.power - left.power,
 		)!;
-		first.mover['#nextPosition'] = nextPosition;
-		movingObjects.push(first.mover);
+		mover['#nextPosition'] = nextPosition;
+		mover['#nextPositionTime'] = time;
+		movingObjects.push(mover);
 	}
 
 	// Note: I think there's an issue with the safe mode part of this algorithm. If safe mode is
@@ -90,21 +103,23 @@ export function dispatch(room: Room) {
 	// After conflict resolution check for non-moving-creep obstacles
 	const terrain = room.getTerrain();
 	check: for (const mover of movingObjects) {
-		const nextPosition = mover['#nextPosition']!;
-		const check = makeObstacleChecker({
-			room,
-			type: mover['#lookType'],
-			user: mover['#user'],
-		});
-		for (const obstruction of room['#lookAt'](nextPosition)) {
-			if (check(obstruction) && !obstruction['#nextPosition']) {
-				mover['#nextPosition'] = null;
-				continue check;
+		if (mover['#nextPositionTime'] === time) {
+			const nextPosition = mover['#nextPosition']!;
+			const check = makeObstacleChecker({
+				room,
+				type: mover['#lookType'],
+				user: mover['#user'],
+			});
+			for (const object of room['#lookAt'](nextPosition)) {
+				if (check(object) && object['#nextPositionTime'] !== time) {
+					remove(mover);
+					continue check;
+				}
 			}
-		}
-		// Also check terrain
-		if (terrain.get(nextPosition.x, nextPosition.y) === C.TERRAIN_MASK_WALL) {
-			mover['#nextPosition'] = null;
+			// Also check terrain
+			if (terrain.get(nextPosition.x, nextPosition.y) === C.TERRAIN_MASK_WALL) {
+				remove(mover);
+			}
 		}
 	}
 
@@ -112,21 +127,11 @@ export function dispatch(room: Room) {
 	moves.clear();
 }
 
-export function get(object: RoomObjectWithUser) {
+export function get(mover: RoomObjectWithUser) {
 	// Get next position, calculated above
-	const nextPosition = exchange(object, '#nextPosition');
-	if (!nextPosition) {
-		return;
+	if (mover['#nextPositionTime'] === Game.time) {
+		return mover['#nextPosition'];
 	}
-
-	// Final check for obstructions
-	const { room } = object;
-	for (const object of room['#lookAt'](nextPosition)) {
-		if (object['#nextPosition'] === null) {
-			return;
-		}
-	}
-	return nextPosition;
 }
 
 function fromId(id: number) {

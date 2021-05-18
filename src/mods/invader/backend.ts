@@ -22,7 +22,7 @@ registerBackendRoute({
 		// Modify room state
 		await context.backend.gameMutex.scope(async() => {
 			const room = await context.shard.loadRoom(pos.roomName);
-			if (room.controller?.owner !== userId) {
+			if (room.controller?.['#user'] !== userId) {
 				return;
 			}
 			activateNPC(room, '2');

@@ -20,11 +20,12 @@ export class StructureStorage extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	return assign(RoomObject.create(new StructureStorage, pos), {
+	const storage = assign(RoomObject.create(new StructureStorage, pos), {
 		hits: C.STORAGE_HITS,
 		store: Store.create(C.STORAGE_CAPACITY),
-		'#user': owner,
 	});
+	storage['#user'] = owner;
+	return storage;
 }
 
 // `ConstructionSite` registration
@@ -35,6 +36,6 @@ registerBuildableStructure(C.STRUCTURE_STORAGE, {
 			C.CONSTRUCTION_COST.storage : null;
 	},
 	create(site) {
-		return create(site.pos, site.owner);
+		return create(site.pos, site['#user']);
 	},
 });

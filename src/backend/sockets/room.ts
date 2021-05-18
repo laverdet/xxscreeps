@@ -60,7 +60,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 								objects[value._id] = value;
 							}
 						}
-						const owner = object.owner;
+						const owner = object['#user'];
 						if (owner != null && !seenUsers.has(owner)) {
 							seenUsers.add(owner);
 							visibleUsers.add(owner);

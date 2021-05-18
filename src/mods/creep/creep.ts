@@ -74,7 +74,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 */
 	get saying() {
 		const saying = this['#saying'];
-		if (saying && (saying.isPublic || this.owner === me)) {
+		if (saying && (saying.isPublic || this['#user'] === me)) {
 			return saying.message;
 		}
 	}
@@ -331,13 +331,14 @@ export class Creep extends withOverlay(RoomObject, shape) {
 export function create(pos: RoomPosition, body: PartType[], name: string, owner: string) {
 	const carryCapacity = body.reduce((energy, type) =>
 		type === C.CARRY ? energy + C.CARRY_CAPACITY : energy, 0);
-	return assign(RoomObjectLib.create(new Creep, pos), {
+	const creep = assign(RoomObjectLib.create(new Creep, pos), {
 		body: body.map(type => ({ type, hits: 100, boost: undefined })),
 		hits: body.length * 100,
 		name,
 		store: Store.create(carryCapacity),
-		'#user': owner,
 	});
+	creep['#user'] = owner;
+	return creep;
 }
 
 registerObstacleChecker(params => {

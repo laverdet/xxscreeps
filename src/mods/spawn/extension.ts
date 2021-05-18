@@ -36,11 +36,12 @@ export class StructureExtension extends withOverlay(Structure, shape) {
 
 export function create(pos: RoomPosition, level: number, owner: string) {
 	const energyCapacity = C.EXTENSION_ENERGY_CAPACITY[level];
-	return assign(RoomObject.create(new StructureExtension, pos), {
+	const extension = assign(RoomObject.create(new StructureExtension, pos), {
 		hits: C.EXTENSION_HITS,
 		store: Store.create(energyCapacity, { energy: energyCapacity }),
-		'#user': owner,
 	});
+	extension['#user'] = owner;
+	return extension;
 }
 
 registerBuildableStructure(C.STRUCTURE_EXTENSION, {
@@ -50,6 +51,6 @@ registerBuildableStructure(C.STRUCTURE_EXTENSION, {
 			C.CONSTRUCTION_COST.extension : null;
 	},
 	create(site) {
-		return create(site.pos, site.room.controller?.level ?? 1, site.owner);
+		return create(site.pos, site.room.controller?.level ?? 1, site['#user']);
 	},
 });

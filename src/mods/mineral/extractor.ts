@@ -21,10 +21,11 @@ export class StructureExtractor extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	return assign(RoomObject.create(new StructureExtractor, pos), {
+	const extractor = assign(RoomObject.create(new StructureExtractor, pos), {
 		hits: C.EXTRACTOR_HITS,
-		'#user': owner,
 	});
+	extractor['#user'] = owner;
+	return extractor;
 }
 
 // `ConstructionSite` registration
@@ -35,7 +36,7 @@ registerBuildableStructure(C.STRUCTURE_EXTRACTOR, {
 			C.CONSTRUCTION_COST.extractor : null;
 	},
 	create(site) {
-		return create(site.pos, site.owner);
+		return create(site.pos, site['#user']);
 	},
 });
 
