@@ -11,12 +11,14 @@ import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 export const format = () => compose(shape, StructureExtension);
 const shape = declare('Extension', struct(structureFormat, {
 	...variant('extension'),
+	hits: 'int32',
 	store: Store.restrictedFormat<'energy'>(),
 }));
 
 export class StructureExtension extends withOverlay(Structure, shape) {
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
+	get hitsMax() { return C.EXTENSION_HITS }
 	get structureType() { return C.STRUCTURE_EXTENSION }
 
 	['#afterInsert'](room: Room) {

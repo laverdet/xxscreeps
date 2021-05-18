@@ -25,6 +25,14 @@ declare module 'xxscreeps/engine/processor' {
 	interface Intent { creep: typeof intents }
 }
 const intents = [
+	registerIntentProcessor(Creep, 'drop', (creep, context, resourceType: ResourceType, amount: number) => {
+		if (CreepLib.checkDrop(creep, resourceType, amount) === C.OK) {
+			StoreIntent.subtract(creep.store, resourceType, amount);
+			ResourceIntent.drop(creep.pos, resourceType, amount);
+			context.didUpdate();
+		}
+	}),
+
 	registerIntentProcessor(Creep, 'move', (creep, context, direction: Direction) => {
 		if (CreepLib.checkMove(creep, direction) === C.OK) {
 			const power = calculateWeight(creep);
@@ -47,7 +55,7 @@ const intents = [
 		if (CreepLib.checkCommon(creep) === C.OK) {
 			creep['#saying'] = {
 				isPublic,
-				message: message.substr(0, 10),
+				message: `${message}`.substr(0, 10),
 			};
 			context.didUpdate();
 		}
@@ -60,22 +68,20 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'transfer', (creep, context, id: string, resourceType: ResourceType, amount: number | null) => {
+	registerIntentProcessor(Creep, 'transfer', (creep, context, id: string, resourceType: ResourceType, amount: number) => {
 		const target = Game.getObjectById<RoomObject & WithStore>(id)!;
 		if (CreepLib.checkTransfer(creep, target, resourceType, amount) === C.OK) {
-			const transferAmount = Math.min(creep.store[resourceType]!, target.store.getFreeCapacity(resourceType));
-			StoreIntent.subtract(creep.store, resourceType, transferAmount);
-			StoreIntent.add(target.store, resourceType, transferAmount);
+			StoreIntent.subtract(creep.store, resourceType, amount);
+			StoreIntent.add(target.store, resourceType, amount);
 			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'withdraw', (creep, context, id: string, resourceType: ResourceType, amount: number | null) => {
+	registerIntentProcessor(Creep, 'withdraw', (creep, context, id: string, resourceType: ResourceType, amount: number) => {
 		const target = Game.getObjectById<Structure & WithStore>(id)!;
 		if (CreepLib.checkWithdraw(creep, target, resourceType, amount) === C.OK) {
-			const transferAmount = Math.min(creep.store.getFreeCapacity(resourceType), target.store[resourceType]!);
-			StoreIntent.subtract(target.store, resourceType, transferAmount);
-			StoreIntent.add(creep.store, resourceType, transferAmount);
+			StoreIntent.subtract(target.store, resourceType, amount);
+			StoreIntent.add(creep.store, resourceType, amount);
 			context.didUpdate();
 		}
 	}),

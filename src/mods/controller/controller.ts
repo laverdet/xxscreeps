@@ -27,6 +27,8 @@ const shape = declare('Controller', struct(structureFormat, {
 
 export class StructureController extends withOverlay(Structure, shape) {
 	['#upgradePowerThisTick']: number | undefined;
+	get hits() { return undefined as never }
+	get hitsMax() { return undefined as never }
 	get progress() { return this.level > 0 ? this['#progress'] : undefined }
 	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
 	get structureType() { return C.STRUCTURE_CONTROLLER }
@@ -51,6 +53,20 @@ export class StructureController extends withOverlay(Structure, shape) {
 		} : null;
 		Object.defineProperty(this, 'sign', { value });
 		return value;
+	}
+
+	/**
+	 * Activate safe mode if available.
+	 */
+	activateSafeMode() {
+		console.log('TODO: activateSafeMode');
+	}
+
+	/**
+	 * Make your claimed controller neutral again.
+	 */
+	unclaim() {
+		console.log('TODO: unclaim');
 	}
 
 	['#afterInsert'](room: Room) {

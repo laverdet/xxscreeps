@@ -19,7 +19,7 @@ export function saveAction(object: WithActionLog, action: Action, x: number, y: 
 }
 
 function actions() {
-	return enumerated('build', 'upgradeController', ...enumeratedForPath('ActionLog.action'));
+	return enumerated(...enumeratedForPath('ActionLog.action'));
 }
 
 function withActionLog() {

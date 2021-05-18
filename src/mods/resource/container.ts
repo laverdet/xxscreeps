@@ -11,11 +11,13 @@ import { assign } from 'xxscreeps/utility/utility';
 export const format = () => compose(shape, StructureContainer);
 const shape = declare('Container', struct(structureFormat, {
 	...variant('container'),
+	hits: 'int32',
 	store: Store.format,
 	'#nextDecayTime': 'int32',
 }));
 
 export class StructureContainer extends withOverlay(Structure, shape) {
+	get hitsMax() { return C.CONTAINER_HITS }
 	get storeCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 	get structureType() { return C.STRUCTURE_CONTAINER }
 	get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }

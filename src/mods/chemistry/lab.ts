@@ -12,6 +12,7 @@ import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 export const format = () => compose(shape, StructureLab);
 const shape = declare('Lab', struct(structureFormat, {
 	...variant('lab'),
+	hits: 'int32',
 	mineralType: resourceEnumFormat,
 	store: Store.format,
 	'#cooldownTime': 'int32',
@@ -19,6 +20,7 @@ const shape = declare('Lab', struct(structureFormat, {
 
 export class StructureLab extends withOverlay(Structure, shape) {
 	get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
+	get hitsMax() { return C.LAB_HITS }
 	get structureType() { return C.STRUCTURE_LAB }
 }
 

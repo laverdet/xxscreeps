@@ -13,13 +13,13 @@ export type AnyStructure = Extract<AnyRoomObject, Structure>;
 
 export const structureFormat = () => compose(shape, Structure);
 const shape = declare('Structure', struct(RoomObject.format, {
-	hits: 'int32',
 	'#user': Id.optionalFormat,
 }));
 
 export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape) {
+	abstract hits: number;
+	abstract get hitsMax(): number;
 	abstract get structureType(): string;
-	get hitsMax() { return this.hits }
 	get owner() { return this['#user'] }
 	get ['#lookType']() { return C.LOOK_STRUCTURES }
 

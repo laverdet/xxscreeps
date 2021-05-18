@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as ConstructionSite from './construction-site';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { constant, struct, variant } from 'xxscreeps/schema';
+import { constant, enumerated, struct, variant } from 'xxscreeps/schema';
 import { registerSchema } from 'xxscreeps/engine/schema';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
 import './creep';
@@ -27,6 +27,8 @@ declare module 'xxscreeps/engine/schema' {
 	interface Schema { construction: typeof schema }
 }
 const schema = [
+	registerSchema('ActionLog.action', enumerated('build', 'repair')),
+
 	registerSchema('Room.objects', ConstructionSite.format),
 
 	registerSchema('Room.eventLog', struct({

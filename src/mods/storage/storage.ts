@@ -10,10 +10,12 @@ import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 export const format = () => compose(shape, StructureStorage);
 const shape = declare('Storage', struct(structureFormat, {
 	...variant('storage'),
+	hits: 'int32',
 	store: Store.format,
 }));
 
 export class StructureStorage extends withOverlay(Structure, shape) {
+	get hitsMax() { return C.STORAGE_HITS }
 	get structureType() { return C.STRUCTURE_STORAGE }
 }
 

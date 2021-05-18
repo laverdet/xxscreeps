@@ -11,13 +11,24 @@ import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 export function format() { return compose(shape, StructureRoad) }
 const shape = declare('Road', struct(structureFormat, {
 	...variant('road'),
+	hits: 'int32',
 	'#nextDecayTime': 'int32',
+	'#terrain': 'int8',
 }));
 
 export class StructureRoad extends withOverlay(Structure, shape) {
+	get hitsMax() { return C.ROAD_HITS * this['#multiplier'] }
 	get structureType() { return C.STRUCTURE_ROAD }
 	get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
 	get ['#pathCost']() { return 1 }
+
+	get ['#multiplier']() {
+		switch (this['#terrain']) {
+			case C.TERRAIN_MASK_WALL: return C.CONSTRUCTION_COST_ROAD_WALL_RATIO;
+			case C.TERRAIN_MASK_SWAMP: return C.CONSTRUCTION_COST_ROAD_SWAMP_RATIO;
+			default: return 1;
+		}
+	}
 
 	['#checkObstacle']() {
 		return false;
@@ -25,10 +36,12 @@ export class StructureRoad extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition) {
-	return assign(RoomObject.create(new StructureRoad, pos), {
-		hits: C.ROAD_HITS,
+	const road = assign(RoomObject.create(new StructureRoad, pos), {
 		'#nextDecayTime': Game.time + C.ROAD_DECAY_TIME,
+		'#terrain': Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y),
 	});
+	road.hits = road.hitsMax;
+	return road;
 }
 
 registerBuildableStructure(C.STRUCTURE_ROAD, {

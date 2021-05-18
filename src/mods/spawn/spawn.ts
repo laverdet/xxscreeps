@@ -44,6 +44,7 @@ class Spawning extends withOverlay(BufferObject, spawningFormat) {
 export const format = () => compose(shape, StructureSpawn);
 const shape = declare('Spawn', struct(structureFormat, {
 	...variant('spawn'),
+	hits: 'int32',
 	name: 'string',
 	spawning: optional(compose(spawningFormat, Spawning)),
 	store: Store.restrictedFormat<'energy'>(),
@@ -54,6 +55,7 @@ export class StructureSpawn extends withOverlay(Structure, shape) {
 
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
+	get hitsMax() { return C.SPAWN_HITS }
 	get structureType() { return C.STRUCTURE_SPAWN }
 
 	get memory() {

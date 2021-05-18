@@ -57,6 +57,22 @@ export class IntentManager {
 	}
 
 	/**
+	 * Remove an issued intent
+	 */
+	remove<
+		Receiver extends ObjectReceivers,
+		Action extends IntentsForReceiver<any>,
+	>(receiver: Receiver, intent: Action) {
+		const intents = this.intentsByRoom[receiver.room.name]?.object[receiver.id];
+		if (intents?.[intent as keyof typeof intents]) {
+			this.cpu -= kCpuCost;
+			delete intents[intent as keyof typeof intents];
+			return C.OK;
+		}
+		return C.ERR_NOT_FOUND;
+	}
+
+	/**
 	 * Save a local room intent.. I think this is literally only "createConstructionSite".
 	 */
 	pushLocal<

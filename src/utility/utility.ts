@@ -31,7 +31,7 @@ export function extend<Type, Proto extends {
 	const ext = typeof proto === 'function' ?
 		proto(Object.getPrototypeOf(ctor.prototype)) : proto;
 	for (const [ key, info ] of Object.entries(Object.getOwnPropertyDescriptors(ext))) {
-		Object.defineProperty(ctor.prototype, key, info);
+		Object.defineProperty(ctor.prototype, key, { ...info, enumerable: false });
 	}
 }
 

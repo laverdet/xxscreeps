@@ -70,6 +70,7 @@ extend(Room, {
 export function checkCreateConstructionSite(room: Room, pos: RoomPosition, structureType: ConstructibleStructureType) {
 	// Check `structureType` is buildable
 	if (!structureFactories.has(structureType)) {
+		console.log(`TODO: create ${structureType}`);
 		return C.ERR_INVALID_ARGS;
 	}
 

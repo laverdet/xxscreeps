@@ -214,48 +214,73 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 
 		} else if ('struct' in format) {
 			// Grab layout for structure members
-			const members = entriesWithSymbols(format.struct)
+			const entries = entriesWithSymbols(format.struct)
 				.filter(entry => entry[0] !== Variant)
 				.map(([ key, member ]) => ({
 					key,
 					...getLayout(member, cache),
 				}));
 
-			// Simple struct pack algorithm by sorting by size largest to smallest
-			members.sort((left, right) => {
+			// Sort members for struct packing
+			entries.sort((left, right) => {
 				const nameOf = (el: string | symbol) => typeof el === 'string' ? el : el.description ?? '';
 				return (
 					right.traits.size - left.traits.size ||
+					right.traits.align - left.traits.align ||
 					nameOf(left.key).localeCompare(nameOf(right.key))
 				);
 			});
 
-			// Arrange member layout
+			// Create member layout
+			const members: {
+				key: keyof any;
+				info: {
+					offset: number;
+					member: Layout;
+				};
+				traits: Traits;
+			}[] = [];
 			const baseLayout = format.inherit && getLayout(format.inherit, cache);
 			let offset = baseLayout?.traits.size ?? 0;
-			const arrangedMembers = members.map(member => {
-				const { layout, traits } = member;
-				const memberOffset = alignTo(offset, traits.align);
-				offset = memberOffset + traits.size;
-				return {
-					key: member.key,
+			const paddingFor = (member: LayoutAndTraits) =>
+				alignTo(offset, member.traits.align) - offset;
+			while (entries.length !== 0) {
+				let minimum = -1;
+				let minimumPadding = Infinity;
+				for (let ii = 0; ii < entries.length; ++ii) {
+					const padding = paddingFor(entries[ii]);
+					if (padding === 0) {
+						minimum = ii;
+						break;
+					}
+					if (padding < minimumPadding) {
+						minimum = ii;
+						minimumPadding = padding;
+					}
+				}
+				const member = entries.splice(minimum, 1)[0];
+				const { key, layout, traits } = member;
+				offset = alignTo(offset, traits.align);
+				members.push({
+					key,
 					info: {
-						offset: memberOffset,
+						offset,
 						member: layout,
 					},
 					traits,
-				};
-			});
+				});
+				offset += traits.size;
+			}
 
 			// Calculate struct traits
-			const align = Math.max(...arrangedMembers.map(member => member.traits.align));
-			const lastMember = arrangedMembers[arrangedMembers.length - 1];
+			const align = Math.max(...members.map(member => member.traits.align));
+			const lastMember = members[members.length - 1];
 			const size = lastMember.info.offset + lastMember.traits.size;
 			const isFixedSize = (!baseLayout || baseLayout.traits.stride !== undefined) &&
 				members.every(member => member.traits.stride !== undefined);
 			return {
 				layout: staticCast<StructLayout>({
-					struct: Object.fromEntries(arrangedMembers.map(member => [ member.key, member.info ])),
+					struct: Object.fromEntries(members.map(member => [ member.key, member.info ])),
 					inherit: baseLayout?.layout as StructLayout,
 					variant: format.variant,
 				}),

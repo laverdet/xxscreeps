@@ -1,9 +1,10 @@
 import * as C from 'xxscreeps/game/constants';
 import { intents } from 'xxscreeps/game';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
-import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
+import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
+import { Creep, checkCommon, checkHasResource } from 'xxscreeps/mods/creep/creep';
 import { extend } from 'xxscreeps/utility/utility';
 import { ConstructionSite } from './construction-site';
+import { Structure } from 'xxscreeps/mods/structure/structure';
 import { structureFactories } from './symbols';
 
 declare module 'xxscreeps/mods/creep/creep' {
@@ -14,6 +15,20 @@ declare module 'xxscreeps/mods/creep/creep' {
 		 * @param target The target construction site to be built
 		 */
 		build(target: ConstructionSite): ReturnType<typeof checkBuild>;
+
+		/**
+		 * Repair a damaged structure using carried energy. Requires the WORK and CARRY body parts. The
+		 * target has to be within 3 squares range of the creep.
+		 * @param target The target structure to be repaired.
+		 */
+		dismantle(target: Structure): ReturnType<typeof checkDismantle>;
+
+		/**
+		 * Repair a damaged structure using carried energy. Requires the WORK and CARRY body parts. The
+		 * target has to be within 3 squares range of the creep.
+		 * @param target The target structure to be repaired.
+		 */
+		repair(target: Structure): ReturnType<typeof checkRepair>;
 	}
 }
 
@@ -23,6 +38,18 @@ extend(Creep, {
 			() => checkBuild(this, target),
 			() => intents.save(this, 'build', target.id));
 	},
+
+	dismantle(target: Structure) {
+		return chainIntentChecks(
+			() => checkDismantle(this, target),
+			() => intents.save(this, 'dismantle', target.id));
+	},
+
+	repair(target: Structure) {
+		return chainIntentChecks(
+			() => checkRepair(this, target),
+			() => intents.save(this, 'repair', target.id));
+	},
 });
 
 export function checkBuild(creep: Creep, target: ConstructionSite) {
@@ -30,22 +57,35 @@ export function checkBuild(creep: Creep, target: ConstructionSite) {
 		() => checkCommon(creep, C.WORK),
 		() => checkTarget(target, ConstructionSite),
 		() => checkRange(creep, target, 3),
+		() => checkHasResource(creep, C.RESOURCE_ENERGY),
 		() => {
-			if (creep.carry.energy <= 0) {
-				return C.ERR_NOT_ENOUGH_RESOURCES;
-			}
-
 			// A friendly creep sitting on top of a construction site for an obstacle structure prevents
 			// `build`
 			const { room } = target;
 			if (structureFactories.get(target.structureType)?.obstacle) {
 				const creepFilter = room.controller?.safeMode ? (creep: Creep) => creep.my : () => true;
-				for (const creep of room.find(C.FIND_CREEPS)) {
-					if (target.pos.isEqualTo(creep) && creepFilter(creep)) {
+				for (const creep of room.lookForAt(C.LOOK_CREEPS, target.pos.x, target.pos.y)) {
+					if (creepFilter(creep)) {
 						return C.ERR_INVALID_TARGET;
 					}
 				}
 			}
 			return C.OK;
 		});
+}
+
+export function checkDismantle(creep: Creep, target: Structure) {
+	return chainIntentChecks(
+		() => checkCommon(creep, C.WORK),
+		() => checkTarget(target, Structure),
+		() => checkRange(creep, target, 1),
+		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART));
+}
+
+export function checkRepair(creep: Creep, target: Structure) {
+	return chainIntentChecks(
+		() => checkCommon(creep, C.WORK),
+		() => checkTarget(target, Structure),
+		() => checkRange(creep, target, 3),
+		() => checkHasResource(creep, C.RESOURCE_ENERGY));
 }

@@ -10,11 +10,13 @@ import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 export const format = () => compose(shape, StructureExtractor);
 const shape = declare('Extractor', struct(structureFormat, {
 	...variant('extractor'),
+	hits: 'int32',
 	'#cooldownTime': 'int32',
 }));
 
 export class StructureExtractor extends withOverlay(Structure, shape) {
 	get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
+	get hitsMax() { return C.EXTRACTOR_HITS }
 	get structureType() { return C.STRUCTURE_EXTRACTOR }
 }
 

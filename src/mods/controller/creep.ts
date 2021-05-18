@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import { intents } from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
-import { Creep, checkCommon, checkResource } from 'xxscreeps/mods/creep/creep';
+import { Creep, checkCommon, checkHasResource } from 'xxscreeps/mods/creep/creep';
 import { StructureController } from './controller';
 
 // Creep extension declaration
@@ -63,7 +63,7 @@ export function checkSignController(creep: Creep, target: StructureController) {
 export function checkUpgradeController(creep: Creep, target: StructureController) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.WORK),
-		() => checkResource(creep),
+		() => checkHasResource(creep, C.RESOURCE_ENERGY),
 		() => checkTarget(target, StructureController),
 		() => checkRange(creep, target, 3),
 		() => {
