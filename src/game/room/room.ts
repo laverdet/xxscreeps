@@ -1,4 +1,3 @@
-import type { BufferView } from 'xxscreeps/schema';
 import type { InspectOptionsStylized } from 'util';
 import type { Terrain } from 'xxscreeps/game/terrain';
 import type { RoomObject } from 'xxscreeps/game/object';
@@ -32,14 +31,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 	#insertObjects: RoomObject[] = [];
 	#removeObjects = new Set<RoomObject>();
 
-	constructor(view: BufferView, offset: number) {
-		super(view, offset);
-		for (const object of this['#objects']) {
-			this._addToIndex(object);
-			object['#afterInsert'](this);
-		}
-	}
-
 	/**
 	 * Find all objects of the specified type in the room. Results are cached automatically for the
 	 * specified room and type before applying any custom filters. This automatic cache lasts until
@@ -54,6 +45,16 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 		// Copy or filter result
 		return options.filter ? results.filter(iteratee(options.filter)) : results.slice();
+	}
+
+	/**
+	 * Materialize all `RoomObject` instances and build FIND & LOOK indices
+	 */
+	['#initialize']() {
+		for (const object of this['#objects']) {
+			this['#addToIndex'](object);
+			object['#afterInsert'](this);
+		}
 	}
 
 	/**
@@ -86,16 +87,17 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (this.#insertObjects.length + this.#removeObjects.size === 0) {
 			return;
 		}
+		const objects = this['#objects'];
 		this.#findCache.clear();
 		// Remove objects
 		let removeCount = this.#removeObjects.size;
 		if (removeCount) {
-			for (let ii = this['#objects'].length - 1; ii >= 0; --ii) {
-				const object = this['#objects'][ii];
+			for (let ii = objects.length - 1; ii >= 0; --ii) {
+				const object = objects[ii];
 				if (this.#removeObjects.has(object)) {
 					object['#afterRemove'](this);
-					this._removeFromIndex(object);
-					this['#objects'].splice(ii, 1);
+					this['#removeFromIndex'](object);
+					objects.splice(ii, 1);
 					if (--removeCount === 0) {
 						break;
 					}
@@ -109,9 +111,9 @@ export class Room extends withOverlay(BufferObject, shape) {
 		}
 		// Insert objects
 		if (this.#insertObjects.length) {
-			this['#objects'].push(...this.#insertObjects as never[]);
+			objects.push(...this.#insertObjects as never[]);
 			for (const object of this.#insertObjects) {
-				this._addToIndex(object);
+				this['#addToIndex'](object);
 				object['#afterInsert'](this);
 			}
 			this.#insertObjects = [];
@@ -125,7 +127,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (now) {
 			this.#findCache.clear();
 			this['#objects'].push(object as never);
-			this._addToIndex(object);
+			this['#addToIndex'](object);
 			object['#afterInsert'](this);
 		} else {
 			this.#insertObjects.push(object);
@@ -165,7 +167,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Add an object to the look and spatial indices
 	 */
 	// TODO: JS private method
-	_addToIndex(object: RoomObject) {
+	private ['#addToIndex'](object: RoomObject) {
 		this.#lookIndex.get(object['#lookType'])!.push(object);
 		const pos = object.pos['#int'];
 		const list = this.#spatialIndex.get(pos);
@@ -180,7 +182,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Remove an object from the look and spatial indices
 	 */
 	// TODO: JS private method
-	_removeFromIndex(object: RoomObject) {
+	private ['#removeFromIndex'](object: RoomObject) {
 		removeOne(this.#lookIndex.get(object['#lookType'])!, object);
 		const pos = object.pos['#int'];
 		const list = this.#spatialIndex.get(pos)!;
@@ -195,7 +197,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Enumerable objects properties like `.storage` and `.controller` are removed from the JSON
 	 * serialized data because otherwise there will be circular references.
 	 */
-	toJSON() {
+	private toJSON() {
 		const result: any = {};
 		for (const ii in this) {
 			const value: any = this[ii];
@@ -206,11 +208,11 @@ export class Room extends withOverlay(BufferObject, shape) {
 		return result;
 	}
 
-	toString() {
+	private toString() {
 		return `[Room ${this.name}]`;
 	}
 
-	[Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
 		// Every object has a `room` property so flatten this reference out unless it's a direct
 		// inspection
 		if (depth === options.depth) {
@@ -227,13 +229,32 @@ declare module 'xxscreeps/game/runtime' {
 	interface Global { Room: typeof Room }
 }
 
-export function getUsersInRoom(room: Room) {
-	const users = new Set<string>();
-	for (const objects of room['#objects']) {
-		const user = objects['#runnerUser']();
-		if (user !== null && user.length > 2) {
-			users.add(user);
+/**
+ * Updates top-level user presence information based on current RoomObjects. This must be called
+ * before saving a room after modification.
+ */
+export function flushUsers(room: Room) {
+	const intents = new Set<string>();
+	const presence = new Set<string>();
+	const vision = new Set<string>();
+	for (const object of room['#objects']) {
+		const user = object['#user'];
+		if (user !== null) {
+			presence.add(user);
+			if (object['#hasIntent']) {
+				intents.add(user);
+			}
+			if (object['#providesVision']) {
+				vision.add(user);
+			}
+		}
+		for (const userId of object['#extraUsers']) {
+			presence.add(userId);
 		}
 	}
-	return users;
+	room['#users'] = {
+		intents: [ ...intents ],
+		presence: [ ...presence ],
+		vision: [ ...vision ],
+	};
 }

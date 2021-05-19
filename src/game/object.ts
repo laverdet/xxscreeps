@@ -15,17 +15,18 @@ const shape = declare('RoomObject', struct({
 	pos: RoomPosition.format,
 }));
 
-export type RoomObjectWithUser = { '#user': string } & RoomObject;
-
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	abstract get ['#lookType'](): string;
 	room!: Room;
 	['#nextPosition']?: RoomPosition.RoomPosition;
 	['#nextPositionTime']?: number;
 
-	get ['#pathCost'](): undefined | number {
-		return undefined;
-	}
+	get ['#extraUsers'](): string[] { return [] }
+	get ['#hasIntent']() { return false }
+	get ['#pathCost'](): undefined | number { return undefined }
+	get ['#providesVision']() { return false }
+	get ['#user'](): string | null { return null }
+	set ['#user'](_user: string | null) { throw new Error('Setting #user on unownable object') }
 
 	['#addToMyGame'](_game: GameConstructor) {}
 	['#afterInsert'](room: Room) {
@@ -34,10 +35,6 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 
 	['#afterRemove'](_room: Room) {
 		this.room = undefined as never;
-	}
-
-	['#runnerUser'](): string | null {
-		return null;
 	}
 
 	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {

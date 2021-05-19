@@ -14,6 +14,7 @@ export interface TickPayload {
 	roomBlobs: Readonly<Uint8Array>[];
 	consoleEval?: string[];
 	backendIntents?: RunnerIntent[];
+	usernames?: Record<string, string>;
 }
 
 export interface TickResult {

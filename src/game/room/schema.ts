@@ -11,6 +11,11 @@ export function shape() {
 		...structForPath('Room'),
 		name: 'string',
 		'#objects': vector(objectFormat),
+		'#users': struct({
+			intents: vector('string'),
+			presence: vector('string'),
+			vision: vector('string'),
+		}),
 		'#eventLog': vector(withFallback<any>()(variant(...variantForPath('Room.eventLog')))),
 	});
 }

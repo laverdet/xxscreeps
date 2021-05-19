@@ -4,7 +4,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as RoomPosition from 'xxscreeps/game/position';
-import { Game, intents, me, registerGameInitializer } from 'xxscreeps/game';
+import { Game, intents, me, registerGameInitializer, userInfo } from 'xxscreeps/game';
 import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
@@ -20,8 +20,10 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
 	abstract hits: number;
 	abstract get hitsMax(): number;
 	abstract get structureType(): string;
-	get owner() { return this['#user'] }
+	get owner() { return userInfo.get(this['#user']!) }
+	get ['#hasIntent']() { return true }
 	get ['#lookType']() { return C.LOOK_STRUCTURES }
+	get ['#providesVision']() { return true }
 
 	get my() {
 		const user = this['#user'];
@@ -37,12 +39,12 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
 			() => intents.save(this, 'destroyStructure'));
 	}
 
-	['#checkObstacle'](_user: string) {
-		return true;
-	}
-
 	['#addToMyGame'](game: GameConstructor) {
 		game.structures[this.id] = this as never;
+	}
+
+	['#checkObstacle'](_user: string) {
+		return true;
 	}
 }
 

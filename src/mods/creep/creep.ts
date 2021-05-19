@@ -10,7 +10,7 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import * as ActionLog from 'xxscreeps/game/action-log';
 import * as RoomObjectLib from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
-import { Game, intents, me } from 'xxscreeps/game';
+import { Game, intents, me, userInfo } from 'xxscreeps/game';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
@@ -65,10 +65,12 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	}
 
 	get my() { return this['#user'] === me }
-	get owner() { return this['#user'] }
+	get owner() { return userInfo.get(this['#user']) }
 	get spawning() { return this['#ageTime'] === 0 }
 	get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined }
+	get ['#hasIntent']() { return true }
 	get ['#lookType']() { return C.LOOK_CREEPS }
+	get ['#providesVision']() { return true }
 
 	/**
 	 * The text message that the creep was saying at the last tick.
@@ -82,10 +84,6 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 	['#addToMyGame'](game: GameConstructor) {
 		game.creeps[this.name] = this;
-	}
-
-	['#runnerUser']() {
-		return this['#user'];
 	}
 
 	/**

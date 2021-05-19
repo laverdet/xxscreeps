@@ -9,12 +9,12 @@ bindRenderer(StructureController, (controller, next) => ({
 	progress: controller.progress,
 	downgradeTime: controller['#downgradeTime'],
 	safeMode: 0,
-	...controller['#sign'] ? {
+	...controller.room['#sign'] ? {
 		sign: {
-			datetime: controller['#sign'].datetime,
-			text: controller['#sign'].text,
-			time: controller['#sign'].time,
-			user: controller['#sign'].userId,
+			datetime: controller.room['#sign'].datetime,
+			text: controller.room['#sign'].text,
+			time: controller.room['#sign'].time,
+			user: controller.room['#sign'].userId,
 		},
 	} : undefined,
 }));

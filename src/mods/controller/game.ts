@@ -3,7 +3,7 @@ import * as Controller from './controller';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { registerSchema } from 'xxscreeps/engine/schema';
 import { registerGlobal } from 'xxscreeps/game';
-import { enumerated, struct } from 'xxscreeps/schema';
+import { enumerated, optional, struct } from 'xxscreeps/schema';
 
 // Register schema
 const schema = [
@@ -12,6 +12,12 @@ const schema = [
 	registerSchema('Room', struct({
 		'#level': 'int32',
 		'#safeModeUntil': 'int32',
+		'#sign': optional(struct({
+			datetime: 'double',
+			text: 'string',
+			time: 'int32',
+			userId: Id.format,
+		})),
 		'#user': Id.optionalFormat,
 	})),
 

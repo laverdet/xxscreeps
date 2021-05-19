@@ -29,11 +29,13 @@ export function injectGetters(layout: StructLayout, prototype: object, cache: Ca
 		const get = function(): GetterReader {
 
 			// Get reader for this member
-			const get = function(): GetterReader {
+			const get = function() {
 				const read = makeTypeReader(layout, cache);
-				return function() {
+				const reader: GetterReader = function() {
 					return read(getBuffer(this), offset + getOffset(this));
 				};
+				reader.displayName = `_${typeof key === 'symbol' ? key.description : key}`;
+				return reader;
 			}();
 
 			// Memoize everything except integer access

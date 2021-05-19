@@ -6,7 +6,6 @@ import {
 } from 'xxscreeps/engine/processor/model';
 import { Database } from 'xxscreeps/engine/database';
 import { Shard } from 'xxscreeps/engine/shard';
-import { getUsersInRoom } from 'xxscreeps/game/room/room';
 import { RoomProcessorContext } from 'xxscreeps/engine/processor/room';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/storage/async';
 import { getServiceChannel } from '.';
@@ -26,9 +25,8 @@ try {
 
 	// Initialize rooms / user relationships
 	for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
-		const room = await shard.loadRoom(roomName);
-		const userIds = getUsersInRoom(room);
-		await updateUserRoomRelationships(shard, roomName, userIds);
+		const room = await shard.loadRoom(roomName, undefined, true);
+		await updateUserRoomRelationships(shard, room);
 	}
 
 	// Start the processing loop

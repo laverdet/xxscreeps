@@ -1,9 +1,8 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
-import * as Id from 'xxscreeps/engine/schema/id';
 import { Game } from 'xxscreeps/game';
 import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
-import { compose, declare, optional, struct, variant, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 
 export const format = () => compose(shape, StructureController);
 const shape = declare('Controller', struct(structureFormat, {
@@ -14,12 +13,6 @@ const shape = declare('Controller', struct(structureFormat, {
 	'#downgradeTime': 'int32',
 	'#progress': 'int32',
 	'#safeModeCooldownTime': 'int32',
-	'#sign': optional(struct({
-		datetime: 'double',
-		text: 'string',
-		time: 'int32',
-		userId: Id.format,
-	})),
 	'#upgradeBlockedUntil': 'int32',
 }));
 
@@ -40,10 +33,10 @@ export class StructureController extends withOverlay(Structure, shape) {
 	 * An object with the controller sign info if present
 	 */
 	get sign() {
-		const value = this['#sign'] ? {
-			datetime: new Date(this['#sign'].datetime),
-			text: this['#sign'].text,
-			time: this['#sign'].time,
+		const value = this.room['#sign'] ? {
+			datetime: new Date(this.room['#sign'].datetime),
+			text: this.room['#sign'].text,
+			time: this.room['#sign'].time,
 			username: '',
 		} : null;
 		Object.defineProperty(this, 'sign', { value });
@@ -72,10 +65,6 @@ export class StructureController extends withOverlay(Structure, shape) {
 	['#afterRemove'](room: Room) {
 		super['#afterRemove'](room);
 		room.controller = undefined;
-	}
-
-	['#runnerUser']() {
-		return this.level > 0 ? this['#user'] : null;
 	}
 }
 

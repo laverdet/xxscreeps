@@ -4,7 +4,7 @@ import * as Code from 'xxscreeps/engine/user/code-schema';
 import * as RoomSchema from 'xxscreeps/engine/room';
 import { inspect } from 'util';
 import { initializers, tickReceive, tickSend } from 'xxscreeps/driver/symbols';
-import { Game, GameState, runForUser } from 'xxscreeps/game';
+import { Game, GameState, runForUser, userInfo } from 'xxscreeps/game';
 import { World } from 'xxscreeps/game/map';
 import { RoomObject } from 'xxscreeps/game/object';
 import { detach } from 'xxscreeps/schema/buffer-object';
@@ -42,7 +42,17 @@ export function initialize(evaluate: Evaluate, printFn: Print, data: Initializat
 export function tick(data: TickPayload) {
 
 	const { time } = data;
-	const rooms = data.roomBlobs.map(RoomSchema.read);
+	const rooms = data.roomBlobs.map(blob => {
+		const room = RoomSchema.read(blob);
+		room['#initialize']();
+		return room;
+	});
+	if (data.usernames) {
+		for (const userId in data.usernames) {
+			userInfo.set(userId, { username: data.usernames[userId] });
+		}
+	}
+
 	const state = new GameState(world, data.time, rooms);
 	const [ intents ] = runForUser(me, state, Game => {
 		tickReceive(data);

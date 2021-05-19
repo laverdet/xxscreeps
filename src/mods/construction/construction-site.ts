@@ -3,7 +3,7 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObject from 'xxscreeps/game/object';
-import { intents, me } from 'xxscreeps/game';
+import { intents, me, userInfo } from 'xxscreeps/game';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { compose, declare, enumerated, struct, variant, withOverlay } from 'xxscreeps/schema';
@@ -23,7 +23,7 @@ const shape = () => declare('ConstructionSite', struct(RoomObject.format, {
 
 export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) {
 	get my() { return this['#user'] === me }
-	get owner() { return this['#user'] }
+	get owner() { return userInfo.get(this['#user']) }
 	get progressTotal() { return C.CONSTRUCTION_COST[this.structureType] }
 	get ['#lookType']() { return C.LOOK_CONSTRUCTION_SITES }
 

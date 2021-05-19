@@ -24,7 +24,7 @@ const intents = [
 	registerIntentProcessor(Creep, 'signController', (creep, context, id: string, message: string) => {
 		const target = Game.getObjectById<StructureController>(id)!;
 		if (checkSignController(creep, target) === C.OK) {
-			target['#sign'] = message === '' ? undefined : {
+			target.room['#sign'] = message === '' ? undefined : {
 				datetime: Date.now(),
 				text: message.substr(0, 100),
 				time: Game.time,

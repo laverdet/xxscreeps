@@ -7,7 +7,7 @@ import type { RoomTickProcessor } from './symbols';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/engine/processor/movement';
 import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
-import { getUsersInRoom } from 'xxscreeps/game/room/room';
+import { flushUsers } from 'xxscreeps/game/room/room';
 import { PreTick, Processors, Tick, roomTickProcessors } from './symbols';
 
 import 'xxscreeps/config/mods/import/game';
@@ -157,11 +157,12 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 			});
 		}
 		this.room['#flushObjects']();
+		flushUsers(this.room);
+		const userIds = this.room['#users'].intents;
 
-		const userIds = getUsersInRoom(this.room);
 		await Promise.all([
 			// Update room to user map
-			updateUserRoomRelationships(this.shard, this.room.name, userIds),
+			updateUserRoomRelationships(this.shard, this.room),
 			// Save updated room blob
 			this.receivedUpdate ?
 				this.shard.saveRoom(this.room.name, this.time, this.room) :
@@ -169,7 +170,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 		]);
 		// Mark inactive if needed. Must be *after* saving room, because this copies from current
 		// tick.
-		if (userIds.size === 0 && this.nextUpdate !== this.time + 1) {
+		if (userIds.length === 0 && this.nextUpdate !== this.time + 1) {
 			return sleepRoomUntil(this.shard, this.room.name, this.time, this.nextUpdate);
 		}
 	}

@@ -74,8 +74,12 @@ export class Shard {
 	/**
 	 * Load room state from storage for the current or previous tick
 	 */
-	async loadRoom(name: string, time = this.time) {
-		return RoomSchema.read(await this.loadRoomBlob(name, time));
+	async loadRoom(name: string, time = this.time, skipInitialization = false) {
+		const room = RoomSchema.read(await this.loadRoomBlob(name, time));
+		if (!skipInitialization) {
+			room['#initialize']();
+		}
+		return room;
 	}
 
 	/**

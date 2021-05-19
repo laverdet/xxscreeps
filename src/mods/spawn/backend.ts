@@ -7,6 +7,7 @@ import { forceRoomProcess, userToRoomsSetKey } from 'xxscreeps/engine/processor/
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
 import { bindRenderer, registerBackendRoute } from 'xxscreeps/backend';
+import { flushUsers } from 'xxscreeps/game/room/room';
 import { renderStore } from 'xxscreeps/mods/resource/backend';
 import { StructureExtension } from './extension';
 
@@ -120,6 +121,8 @@ registerBackendRoute({
 					room['#insertObject'](Spawn.create(pos, userId, name));
 					room['#flushObjects']();
 					Controller.claim(room.controller!, userId);
+					room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
+					flushUsers(room);
 				});
 			});
 

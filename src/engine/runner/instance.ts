@@ -8,6 +8,7 @@ import type { SubscriptionFor } from 'xxscreeps/engine/storage/channel';
 import type { World } from 'xxscreeps/game/map';
 import * as Code from 'xxscreeps/engine/user/code';
 import * as Fn from 'xxscreeps/utility/functional';
+import * as RoomSchema from 'xxscreeps/engine/room';
 import * as User from 'xxscreeps/engine/user/user';
 import { acquire } from 'xxscreeps/utility/async';
 import { createSandbox } from 'xxscreeps/driver/sandbox';
@@ -25,6 +26,7 @@ export class PlayerInstance {
 	private readonly consoleEval: string[] = [];
 	private readonly consoleChannel: ReturnType<typeof getConsoleChannel>;
 	private readonly intents: RunnerIntent[] = [];
+	private readonly seenUsers = new Set<string>();
 
 	private constructor(
 		public readonly shard: Shard,
@@ -140,10 +142,26 @@ export class PlayerInstance {
 					consoleEval: this.consoleEval.splice(0),
 					backendIntents: this.intents.splice(0),
 				} as never;
-				[ payload.roomBlobs ] = await Promise.all([
-					Promise.all(Fn.map(roomNames, roomName => this.shard.loadRoomBlob(roomName, time - 1))),
+				await Promise.all([
+					(async() => {
+						// Load room blobs
+						payload.roomBlobs = await Promise.all(Fn.map(roomNames,
+							roomName => this.shard.loadRoomBlob(roomName, time - 1)));
+						// Load unseen users
+						const userIds = Fn.concat(Fn.map(payload.roomBlobs, blob => RoomSchema.read(blob)['#users'].presence));
+						const newUserIds = Fn.reject(userIds, userId => this.seenUsers.has(userId));
+						const entries: [ string, string ][] = await Promise.all(Fn.map(newUserIds, async userId => {
+							this.seenUsers.add(userId);
+							return [ userId, (await this.shard.db.data.hget(User.infoKey(userId), 'username'))! ];
+						}));
+						if (entries.length !== 0) {
+							payload.usernames = Fn.fromEntries(entries);
+						}
+					})(),
+					// Also run mod connectors
 					Promise.all(Fn.map(this.connectors, connector => connector.refresh?.(payload))),
 				]);
+				// Send payload off to runtime and execute user code
 				return await this.sandbox.run(payload);
 			} catch (err) {
 				console.error(err.stack);

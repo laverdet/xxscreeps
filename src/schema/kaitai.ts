@@ -130,7 +130,7 @@ export class KaitaiArchiver {
 						type: 'u4',
 					}, {
 						id: 'str_len',
-						type: 'u4',
+						type: 's4',
 					});
 					holder.instances.set('latin1', {
 						type: 'str',

@@ -1,10 +1,13 @@
+import type { RoomObject } from 'xxscreeps/game/object';
+import type { Structure } from 'xxscreeps/mods/structure/structure';
+
 import Loki from 'lokijs';
 
 import { RoomPosition } from 'xxscreeps/game/position';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as C from 'xxscreeps/game/constants';
-import * as Store from 'xxscreeps/mods/resource/store';
+import * as StoreLib from 'xxscreeps/mods/resource/store';
 
 // Schemas
 import * as CodeSchema from 'xxscreeps/engine/user/code';
@@ -14,11 +17,17 @@ import * as User from 'xxscreeps/engine/user/user';
 
 import { Database } from 'xxscreeps/engine/database';
 import { Shard } from 'xxscreeps/engine/shard';
-import { Variant } from 'xxscreeps/schema/format';
 import { makeWriter } from 'xxscreeps/schema/write';
 import { clamp } from 'xxscreeps/utility/utility';
 import { saveMemoryBlob } from 'xxscreeps/mods/memory/model';
 import { utf16ToBuffer } from 'xxscreeps/utility/string';
+import { Room, flushUsers } from 'xxscreeps/game/room/room';
+
+// Objects
+import { Mineral } from 'xxscreeps/mods/mineral/mineral';
+import { Source } from 'xxscreeps/mods/source/source';
+import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
+import { StructureController } from 'xxscreeps/mods/controller/controller';
 
 const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
 if (jsonSource === undefined) {
@@ -26,30 +35,21 @@ if (jsonSource === undefined) {
 	process.exit(1);
 }
 
-function withRoomObject(object: any) {
-	return {
-		id: object._id,
-		pos: new RoomPosition(object.x, object.y, object.room),
-		[Variant]: object.type,
-		effects: undefined,
-	};
+function withRoomObject(from: any, into: RoomObject) {
+	into.id = from._id;
+	into.pos = new RoomPosition(from.x, from.y, from.room);
 }
 
-function withStructure(object: any) {
-	return {
-		...withRoomObject(object),
-		'#user': object.user ?? null,
-		hits: 0,
-	};
+function withStructure(from: any, into: Structure) {
+	withRoomObject(from, into);
+	into['#user'] = from.user ?? null;
 }
 
-function withStore(object: any) {
-	const capacity = object.storeCapacityResource === undefined ?
-		object.storeCapacity :
-		Fn.accumulate(Object.values<number>(object.storeCapacityResource));
-	return {
-		store: Store.create(capacity, object.storeCapacityResource, object.store),
-	};
+function withStore(from: any, into: { store: StoreLib.Store }) {
+	const capacity = from.storeCapacityResource === undefined ?
+		from.storeCapacity :
+		Fn.accumulate(Object.values<number>(from.storeCapacityResource));
+	into.store = StoreLib.create(capacity, from.storeCapacityResource, from.store);
 }
 
 // Initialize import source
@@ -110,56 +110,56 @@ await blob.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
 const roomObjects = loki.getCollection('rooms.objects');
 const rooms = loki.getCollection('rooms').find().map(room => {
 	const objects = roomObjects.find({ room: room._id });
-	const controller = objects.filter(object => object.type === 'controller')[0];
-	return {
-		name: room._id,
-		'#eventLog': [],
-		'#npcData': {
-			users: new Set<string>(),
-			memory: new Map,
-		},
-		'#user': controller?.user ?? null,
-		'#level': controller?.level ?? 0,
-		'#objects': [ ...Fn.filter(objects.map(object => {
-			switch (object.type) {
-				case 'controller':
-					return {
-						...withStructure(object),
-						isPowerEnabled: object.isPowerEnabled,
-						level: object.level,
-						safeMode: object.safeMode,
-						safeModeAvailable: object.safeModeAvailable,
-						safeModeCooldown: object.safeModeCooldown,
-						'#downgradeTime': object.downgradeTime,
-						'#progress': object.progress,
-						'#upgradeBlockedUntil': object.upgradeBlocked,
-					};
+	const instance = new Room;
+	instance.name = room._id;
+	instance['#level'] = -1;
+	instance['#objects'] = [ ...Fn.filter(objects.map(object => {
+		switch (object.type) {
+			case 'controller': {
+				instance['#user'] = object.user ?? null;
+				instance['#level'] = object.level ?? 0;
+				instance['#safeModeUntil'] = object.safeMode;
 
-				case 'mineral':
-					return {
-						...withRoomObject(object),
-						density: object.density,
-						mineralAmount: object.mineralAmount,
-						mineralType: object.mineralType,
-					};
-
-				case 'source':
-					return {
-						...withRoomObject(object),
-						energy: object.energy,
-						energyCapacity: object.energyCapacity,
-						'#nextRegenerationTime': gameTime + (object.ticksToRegeneration as number),
-					};
-
-				case 'spawn':
-					return {
-						...withStructure(object),
-						...withStore(object),
-						name: object.name,
-					};
+				const controller = new StructureController;
+				withStructure(object, controller);
+				controller.isPowerEnabled = object.isPowerEnabled;
+				controller.safeModeAvailable = object.safeModeAvailable;
+				controller['#downgradeTime'] = object.downgradeTime;
+				controller['#progress'] = object.progress;
+				controller['#safeModeCooldownTime'] = object.safeModeCooldown;
+				controller['#upgradeBlockedUntil'] = object.upgradeBlocked;
+				return controller;
 			}
-		})) ],
-	};
+
+			case 'mineral': {
+				const mineral = new Mineral;
+				withRoomObject(object, mineral);
+				mineral.density = object.density;
+				mineral.mineralAmount = object.mineralAmount;
+				mineral.mineralType = object.mineralType;
+				return mineral;
+			}
+
+			case 'source': {
+				const source = new Source;
+				withRoomObject(object, source);
+				source.energy = object.energy;
+				source.energyCapacity = object.energyCapacity;
+				source['#nextRegenerationTime'] = gameTime + (object.ticksToRegeneration as number);
+				return source;
+			}
+
+			case 'spawn': {
+				const spawn = new StructureSpawn;
+				withStructure(object, spawn);
+				withStore(object, spawn);
+				spawn.name = object.name;
+				return spawn;
+			}
+		}
+	})) ];
+	flushUsers(instance);
+	return instance;
 });
 
 // Save rooms

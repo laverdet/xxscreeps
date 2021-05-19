@@ -9,6 +9,7 @@ export let Game: GameBase;
 export let intents: IntentManager;
 export let me = '';
 export let userGame: GameConstructor | undefined;
+export const userInfo = new Map<string, { username: string }>();
 
 /**
  * Runs a task with global user-agnostic data like `Game.getObjectById`, `Game.rooms`, and

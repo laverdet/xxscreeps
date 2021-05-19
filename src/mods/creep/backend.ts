@@ -3,7 +3,7 @@ import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend';
 import { renderStore } from 'xxscreeps/mods/resource/backend';
 import { Creep } from './creep';
 
-bindMapRenderer(Creep, creep => creep.owner);
+bindMapRenderer(Creep, creep => creep['#user']);
 
 bindRenderer(Creep, (creep, next) => {
 	const actionLog: Record<string, any> = Fn.fromEntries(creep['#actionLog'], action =>

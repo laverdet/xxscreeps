@@ -1,5 +1,5 @@
 import type { Direction } from 'xxscreeps/game/position';
-import type { RoomObjectWithUser } from 'xxscreeps/game/object';
+import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Game, me } from 'xxscreeps/game';
@@ -26,9 +26,9 @@ const intents = registerIntentProcessor(Room, 'import', (room, context, objectPa
 });
 
 // Saves list of creeps all trying to move onto the same cell
-const moves = new Map<number, { mover: RoomObjectWithUser; power: number }[]>();
+const moves = new Map<number, { mover: RoomObject; power: number }[]>();
 
-export function add(mover: RoomObjectWithUser, power: number, direction: Direction) {
+export function add(mover: RoomObject, power: number, direction: Direction) {
 	// Calculate new position from direction
 	const { dx, dy } = getOffsetsFromDirection(direction);
 	let { x, y } = mover.pos;
@@ -49,7 +49,7 @@ export function add(mover: RoomObjectWithUser, power: number, direction: Directi
 	}
 }
 
-function remove(mover: RoomObjectWithUser) {
+function remove(mover: RoomObject) {
 	mover['#nextPositionTime'] = -1;
 	const blockedMovers = moves.get(toId(mover.pos.x, mover.pos.y));
 	for (const { mover } of blockedMovers ?? []) {
@@ -62,7 +62,7 @@ function remove(mover: RoomObjectWithUser) {
 export function dispatch(room: Room) {
 	// First resolve move conflicts
 	const { time } = Game;
-	const movingObjects: RoomObjectWithUser[] = [];
+	const movingObjects: RoomObject[] = [];
 	for (const [ id, info ] of moves) {
 		const { xx, yy } = fromId(id);
 		const nextPosition = new RoomPosition(xx, yy, room.name);
@@ -108,7 +108,7 @@ export function dispatch(room: Room) {
 			const check = makeObstacleChecker({
 				room,
 				type: mover['#lookType'],
-				user: mover['#user'],
+				user: mover['#user']!,
 			});
 			for (const object of room['#lookAt'](nextPosition)) {
 				if (check(object) && object['#nextPositionTime'] !== time) {
@@ -127,7 +127,7 @@ export function dispatch(room: Room) {
 	moves.clear();
 }
 
-export function get(mover: RoomObjectWithUser) {
+export function get(mover: RoomObject) {
 	// Get next position, calculated above
 	if (mover['#nextPositionTime'] === Game.time) {
 		return mover['#nextPosition'];

@@ -1,3 +1,4 @@
+import type { Room } from 'xxscreeps/game/room';
 import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor';
 import type { Shard } from 'xxscreeps/engine/shard';
 import * as Fn from 'xxscreeps/utility/functional';
@@ -134,11 +135,12 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 	}
 }
 
-export async function updateUserRoomRelationships(shard: Shard, roomName: string, userIds: Set<string>) {
+export async function updateUserRoomRelationships(shard: Shard, room: Room) {
+	const roomName = room.name;
 	const toUsersKey = roomToUsersSetKey(roomName);
-	const dbUsers = await shard.scratch.smembers(toUsersKey);
 	// Remove NPCs
-	const playerIds = [ ...Fn.reject(userIds, id => id.length <= 2) ];
+	const playerIds = [ ...Fn.reject(room['#users'].intents, id => id.length <= 2) ];
+	const dbUsers = await shard.scratch.smembers(toUsersKey);
 	await Promise.all([
 		// Mark user active for runner
 		// TODO: Probably want to do this another way
