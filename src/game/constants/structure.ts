@@ -1,4 +1,3 @@
-export const STRUCTURE_KEEPER_LAIR = 'keeperLair' as const;
 export const STRUCTURE_PORTAL = 'portal' as const;
 export const STRUCTURE_OBSERVER = 'observer' as const;
 export const STRUCTURE_POWER_BANK = 'powerBank' as const;

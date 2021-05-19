@@ -2,19 +2,19 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game, registerGlobal } from 'xxscreeps/game';
-import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export const format = () => compose(shape, StructureExtractor);
-const shape = declare('Extractor', struct(structureFormat, {
+const shape = declare('Extractor', struct(ownedStructureFormat, {
 	...variant('extractor'),
 	hits: 'int32',
 	'#cooldownTime': 'int32',
 }));
 
-export class StructureExtractor extends withOverlay(Structure, shape) {
+export class StructureExtractor extends withOverlay(OwnedStructure, shape) {
 	get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
 	get hitsMax() { return C.EXTRACTOR_HITS }
 	get structureType() { return C.STRUCTURE_EXTRACTOR }

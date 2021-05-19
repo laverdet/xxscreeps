@@ -11,7 +11,7 @@ import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { Creep, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, intents, userGame } from 'xxscreeps/game';
-import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
@@ -42,7 +42,7 @@ class Spawning extends withOverlay(BufferObject, spawningFormat) {
 
 // `StructureSpawn` format
 export const format = () => compose(shape, StructureSpawn);
-const shape = declare('Spawn', struct(structureFormat, {
+const shape = declare('Spawn', struct(ownedStructureFormat, {
 	...variant('spawn'),
 	hits: 'int32',
 	name: 'string',
@@ -50,7 +50,7 @@ const shape = declare('Spawn', struct(structureFormat, {
 	store: Store.restrictedFormat<'energy'>(),
 }));
 
-export class StructureSpawn extends withOverlay(Structure, shape) {
+export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	static readonly Spawning = Spawning;
 
 	get energy() { return this.store[C.RESOURCE_ENERGY] }

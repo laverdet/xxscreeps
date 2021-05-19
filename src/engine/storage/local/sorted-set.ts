@@ -16,12 +16,12 @@ export class SortedSet {
 		if (this.#scores.has(member)) {
 			this.#scores.set(member, score);
 			this.sort();
-			return 1;
+			return 0;
 		} else {
 			this.#scores.set(member, score);
 			this.#members.push(member);
 			this.sort();
-			return 0;
+			return 1;
 		}
 	}
 
@@ -64,27 +64,24 @@ export class SortedSet {
 		}
 	}
 
-	insert(entries: Iterable<[ number, string ]>) {
-		for (const [ score, member ] of entries) {
-			if (!this.#scores.has(member)) {
-				this.#members.push(member);
-			}
-			this.#scores.set(member, score);
-		}
-		this.sort();
+	has(member: string) {
+		return this.#scores.has(member);
 	}
 
-	merge(entries: Iterable<[ number, string ]>, accumulator = (left: number, right: number) => left + right) {
+	insert(entries: Iterable<[ number, string ]>, accumulator = (left: number, right: number) => left + right) {
+		let count = 0;
 		for (const [ score, member ] of entries) {
 			const currentScore = this.#scores.get(member);
 			if (currentScore === undefined) {
 				this.#members.push(member);
 				this.#scores.set(member, score);
+				++count;
 			} else {
 				this.#scores.set(member, accumulator(currentScore, score));
 			}
 		}
 		this.sort();
+		return count;
 	}
 
 	score(member: string) {

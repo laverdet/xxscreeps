@@ -1,5 +1,5 @@
 import type { ConstructibleStructureType } from './construction-site';
-import type { Structure } from 'xxscreeps/mods/structure/structure';
+import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
@@ -57,7 +57,7 @@ const intents = [
 	}),
 
 	registerIntentProcessor(Creep, 'dismantle', (creep, context, id: string) => {
-		const target = Game.getObjectById<Structure>(id)!;
+		const target = Game.getObjectById<DestructibleStructure>(id)!;
 		if (checkDismantle(creep, target) === C.OK) {
 			const effect = Math.min(calculatePower(creep, C.WORK, C.DISMANTLE_POWER), target.hits);
 			if (effect > 0) {
@@ -76,7 +76,7 @@ const intents = [
 	}),
 
 	registerIntentProcessor(Creep, 'repair', (creep, context, id: string) => {
-		const target = Game.getObjectById<Structure>(id)!;
+		const target = Game.getObjectById<DestructibleStructure>(id)!;
 		if (checkRepair(creep, target) === C.OK) {
 			const effect = Math.min(
 				calculatePower(creep, C.WORK, C.REPAIR_POWER),

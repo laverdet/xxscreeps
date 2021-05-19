@@ -20,6 +20,14 @@ export type SetOptions = ({
 	px?: number;
 };
 
+export type ZAddOptions = {
+	xx?: true;
+	nx?: never;
+} | {
+	xx?: never;
+	nx?: true;
+};
+
 export type ZRangeOptions = {
 	by?: 'score' | 'lex';
 	withScores?: boolean;
@@ -58,7 +66,7 @@ export type KeyValProvider = {
 	spop(key: string): Promise<string | null>;
 	srem(key: string, members: string[]): Promise<number>;
 	// sorted sets
-	zadd(key: string, members: [ number, string ][]): Promise<number>;
+	zadd(key: string, members: [ number, string ][], options?: ZAddOptions): Promise<number>;
 	zcard(key: string): Promise<number>;
 	zincrBy(key: string, delta: number, member: string): Promise<number>;
 	zmscore(key: string, members: string[]): Promise<(number | null)[]>;
@@ -66,6 +74,7 @@ export type KeyValProvider = {
 	zrange(key: string, min: number, max: number, options?: ZRangeOptions): Promise<string[]>;
 	zrange(key: string, min: string, max: string, options?: ZRangeOptions): Promise<string[]>;
 	zrem(key: string, members: string[]): Promise<number>;
+	zremRange(key: string, min: number, max: number): Promise<number>;
 	zunionStore(key: string, keys: string[]): Promise<number>;
 	// client
 	disconnect(): void;

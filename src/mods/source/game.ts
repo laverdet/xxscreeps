@@ -5,6 +5,7 @@ import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { checkCommon } from 'xxscreeps/mods/creep/creep';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable';
+import { format as keeperFormat } from './keeper-lair';
 import { Source, format } from './source';
 
 // Register schema extensions
@@ -14,6 +15,8 @@ const schema = [
 	})),
 
 	registerSchema('Room.objects', format),
+
+	registerSchema('Room.objects', keeperFormat),
 ];
 declare module 'xxscreeps/engine/schema' {
 	interface Schema { source: typeof schema }

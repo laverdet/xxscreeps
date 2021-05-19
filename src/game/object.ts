@@ -27,6 +27,8 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	get ['#providesVision']() { return false }
 	get ['#user'](): string | null { return null }
 	set ['#user'](_user: string | null) { throw new Error('Setting #user on unownable object') }
+	// eslint-disable-next-line no-useless-return
+	get my(): boolean | undefined { return }
 
 	['#addToMyGame'](_game: GameConstructor) {}
 	['#afterInsert'](room: Room) {

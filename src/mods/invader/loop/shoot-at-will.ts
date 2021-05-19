@@ -18,6 +18,6 @@ export default function(creep: Creep) {
 		return;
 	}
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const target = Fn.minimum(targets, (left, right) => left.hits - right.hits)!;
+	const target = Fn.minimum(targets, (left, right) => left.hits! - right.hits!)!;
 	creep.rangedAttack(target);
 }

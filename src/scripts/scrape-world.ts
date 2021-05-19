@@ -18,7 +18,6 @@ import * as User from 'xxscreeps/engine/user/user';
 import { Database } from 'xxscreeps/engine/database';
 import { Shard } from 'xxscreeps/engine/shard';
 import { makeWriter } from 'xxscreeps/schema/write';
-import { clamp } from 'xxscreeps/utility/utility';
 import { saveMemoryBlob } from 'xxscreeps/mods/memory/model';
 import { utf16ToBuffer } from 'xxscreeps/utility/string';
 import { Room, flushUsers } from 'xxscreeps/game/room/room';
@@ -28,6 +27,7 @@ import { Mineral } from 'xxscreeps/mods/mineral/mineral';
 import { Source } from 'xxscreeps/mods/source/source';
 import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
 import { StructureController } from 'xxscreeps/mods/controller/controller';
+import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair';
 
 const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
 if (jsonSource === undefined) {
@@ -89,7 +89,9 @@ const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ r
 	const writer = new TerrainWriter;
 	for (let xx = 0; xx < 50; ++xx) {
 		for (let yy = 0; yy < 50; ++yy) {
-			writer.set(xx, yy, clamp(0, 2, Number(terrain[yy * 50 + xx])));
+			// 3 == WALL + SWAMP.. turn that back into WALL
+			const value = Number(terrain[yy * 50 + xx]);
+			writer.set(xx, yy, value > 2 ? 1 : value);
 		}
 	}
 	const checkExit = (fn: (ii: number) => [ number, number ]) =>
@@ -129,6 +131,12 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 				controller['#safeModeCooldownTime'] = object.safeModeCooldown;
 				controller['#upgradeBlockedUntil'] = object.upgradeBlocked;
 				return controller;
+			}
+
+			case 'keeperLair': {
+				const keeperLair = new StructureKeeperLair;
+				withStructure(object, keeperLair);
+				return keeperLair;
 			}
 
 			case 'mineral': {

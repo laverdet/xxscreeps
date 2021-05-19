@@ -2,20 +2,20 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game, intents, me } from 'xxscreeps/game';
-import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { asUnion, assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export const format = () => compose(shape, StructureRampart);
-const shape = declare('Rampart', struct(structureFormat, {
+const shape = declare('Rampart', struct(ownedStructureFormat, {
 	...variant('rampart'),
 	hits: 'int32',
 	isPublic: 'bool',
 	'#nextDecayTime': 'int32',
 }));
 
-export class StructureRampart extends withOverlay(Structure, shape) {
+export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 	get hitsMax() {
 		return this['#user'] === this.room.controller?.['#user'] ?
 			C.RAMPART_HITS_MAX[this.room.controller.level] ?? 0 : 0;

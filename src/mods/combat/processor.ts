@@ -1,5 +1,5 @@
-import type { AttackTarget } from './creep';
 import type { AttackTypes } from './game';
+import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
@@ -14,7 +14,7 @@ declare module 'xxscreeps/engine/processor' {
 }
 const intents = [
 	registerIntentProcessor(Creep, 'attack', (creep, context, id: string) => {
-		const target = Game.getObjectById<AttackTarget>(id)!;
+		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkAttack(creep, target) === C.OK) {
 			const damage = calculatePower(creep, C.ATTACK, C.ATTACK_POWER);
 			processAttack(creep, target, C.EVENT_ATTACK_TYPE_MELEE, damage);
@@ -41,7 +41,7 @@ const intents = [
 	}),
 
 	registerIntentProcessor(Creep, 'rangedAttack', (creep, context, id: string) => {
-		const target = Game.getObjectById<AttackTarget>(id)!;
+		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkRangedAttack(creep, target) === C.OK) {
 			const damage = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER);
 			processAttack(creep, target, C.EVENT_ATTACK_TYPE_RANGED, damage);
@@ -76,7 +76,7 @@ const intents = [
 	}),
 ];
 
-function processAttack(creep: Creep, target: AttackTarget, attackType: AttackTypes, damage: number) {
+function processAttack(creep: Creep, target: Creep | DestructibleStructure, attackType: AttackTypes, damage: number) {
 	target.hits -= damage;
 	appendEventLog(target.room, {
 		event: C.EVENT_ATTACK,

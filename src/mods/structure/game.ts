@@ -1,25 +1,30 @@
+import type { AnyStructure } from './structure';
 import * as C from 'xxscreeps/game/constants';
-import * as Structure from './structure';
 import { registerGlobal } from 'xxscreeps/game';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
+import { OwnedStructure, Structure } from './structure';
 
 // Export `Structure` to runtime globals
-registerGlobal(Structure.Structure);
+registerGlobal(OwnedStructure);
+registerGlobal(Structure);
 declare module 'xxscreeps/game/runtime' {
-	interface Global { Structure: typeof Structure.Structure }
+	interface Global {
+		OwnedStructure: typeof OwnedStructure;
+		Structure: typeof Structure;
+	}
 }
 
 // Register FIND_ types for `Structure`
 const find = registerFindHandlers({
 	[C.FIND_STRUCTURES]: room => room['#lookFor'](C.LOOK_STRUCTURES),
 	[C.FIND_MY_STRUCTURES]: room =>
-		room['#lookFor'](C.LOOK_STRUCTURES).filter(structure => structure.my),
+		room['#lookFor'](C.LOOK_STRUCTURES).filter(structure => structure.my) as OwnedStructure[],
 	[C.FIND_HOSTILE_STRUCTURES]: room =>
-		room['#lookFor'](C.LOOK_STRUCTURES).filter(structure => structure.my === false),
+		room['#lookFor'](C.LOOK_STRUCTURES).filter(structure => structure.my === false) as OwnedStructure[],
 });
 
 // Register LOOK_ type for `Structure`
-const look = registerLook<Structure.AnyStructure>()(C.LOOK_STRUCTURES);
+const look = registerLook<AnyStructure>()(C.LOOK_STRUCTURES);
 declare module 'xxscreeps/game/room' {
 	interface Find { structure: typeof find }
 	interface Look { structure: typeof look }

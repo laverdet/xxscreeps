@@ -3,14 +3,14 @@ import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { Game, registerGlobal } from 'xxscreeps/game';
-import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 
 export const format = () => compose(shape, StructureLab);
-const shape = declare('Lab', struct(structureFormat, {
+const shape = declare('Lab', struct(ownedStructureFormat, {
 	...variant('lab'),
 	hits: 'int32',
 	mineralType: resourceEnumFormat,
@@ -18,7 +18,7 @@ const shape = declare('Lab', struct(structureFormat, {
 	'#cooldownTime': 'int32',
 }));
 
-export class StructureLab extends withOverlay(Structure, shape) {
+export class StructureLab extends withOverlay(OwnedStructure, shape) {
 	get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
 	get hitsMax() { return C.LAB_HITS }
 	get structureType() { return C.STRUCTURE_LAB }

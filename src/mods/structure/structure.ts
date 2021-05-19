@@ -11,24 +11,29 @@ import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
 
+export interface DestructibleStructure extends Structure {
+	hits: number;
+	hitsMax: number;
+}
+
 export const structureFormat = () => compose(shape, Structure);
-const shape = declare('Structure', struct(RoomObject.format, {
+const shape = declare('Structure', RoomObject.format);
+
+export const ownedStructureFormat = () => compose(ownedShape, OwnedStructure);
+const ownedShape = declare('OwnedStructure', struct(structureFormat, {
 	'#user': Id.optionalFormat,
 }));
 
+/**
+ * The base prototype object of all structures.
+ */
 export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape) {
-	abstract hits: number;
-	abstract get hitsMax(): number;
 	abstract get structureType(): string;
-	get owner() { return userInfo.get(this['#user']!) }
-	get ['#hasIntent']() { return true }
 	get ['#lookType']() { return C.LOOK_STRUCTURES }
-	get ['#providesVision']() { return true }
 
-	get my() {
-		const user = this['#user'];
-		return user === null ? undefined : user === me;
-	}
+	get hits(): number | undefined { return undefined }
+	set hits(hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure') }
+	get hitsMax(): number | undefined { return undefined }
 
 	/**
 	 * Destroy this structure immediately.
@@ -39,12 +44,35 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
 			() => intents.save(this, 'destroyStructure'));
 	}
 
-	['#addToMyGame'](game: GameConstructor) {
-		game.structures[this.id] = this as never;
+	/**
+	 * Check whether this structure can be used. If room controller level is insufficient, then this
+	 * method will return false, and the structure will be highlighted with red in the game.
+	 */
+	isActive() {
+		return true;
 	}
 
 	['#checkObstacle'](_user: string) {
 		return true;
+	}
+}
+
+/**
+ * The base prototype for a structure that has an owner. Such structures can be found using
+ * `FIND_MY_STRUCTURES` and `FIND_HOSTILE_STRUCTURES` constants.
+ */
+export abstract class OwnedStructure extends withOverlay(Structure, ownedShape) {
+	get owner() { return userInfo.get(this['#user']!) }
+	get ['#hasIntent']() { return true }
+	get ['#providesVision']() { return true }
+
+	get my() {
+		const user = this['#user'];
+		return user === null ? undefined : user === me;
+	}
+
+	['#addToMyGame'](game: GameConstructor) {
+		game.structures[this.id] = this as never;
 	}
 }
 

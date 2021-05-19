@@ -98,12 +98,26 @@ export async function begetRoomProcessQueue(shard: Shard, currentTime: number, t
 		currentTime < time &&
 		await shard.scratch.set('processor/time', time, { get: true }) !== String(time)
 	) {
-		const count = await shard.scratch.zcard(activeRoomsKey);
+		// Count currently active rooms, fetch rooms to wake this tick
+		const [ initialCount, wake ] = await Promise.all([
+			shard.scratch.zcard(activeRoomsKey),
+			shard.scratch.zrange(sleepingRoomsKey, 0, time, { by: 'score' }),
+		]);
+		// Send waking rooms to active queue
+		let count = initialCount;
+		if (wake.length > 0) {
+			const [ awoken ] = await Promise.all([
+				shard.scratch.zadd(activeRoomsKey, wake.map(roomName => [ 0, roomName ]), { nx: true }),
+				shard.scratch.zremRange(sleepingRoomsKey, 0, time),
+			]);
+			count += awoken;
+		}
+		// Copy active rooms to current processing queue
 		await Promise.all([
 			shard.scratch.zunionStore(processRoomsSetKey(time), [ activeRoomsKey, processRoomsSetKey(time) ]),
 			shard.scratch.incrBy(processRoomsPendingKey(time), count),
-			getProcessorChannel(shard).publish({ type: 'process', time }),
 		]);
+		await getProcessorChannel(shard).publish({ type: 'process', time });
 	}
 	return time;
 }

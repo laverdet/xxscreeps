@@ -1,21 +1,22 @@
 import type { Creep } from 'xxscreeps/mods/creep/creep';
 import type { RoomPosition } from 'xxscreeps/game/position';
+import type { Structure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
-import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export const format = () => compose(shape, StructureTower);
-const shape = declare('Tower', struct(structureFormat, {
+const shape = declare('Tower', struct(ownedStructureFormat, {
 	...variant('tower'),
 	hits: 'int32',
 	store: Store.restrictedFormat<'energy'>(),
 }));
 
-export class StructureTower extends withOverlay(Structure, shape) {
+export class StructureTower extends withOverlay(OwnedStructure, shape) {
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 	get hitsMax() { return C.TOWER_HITS }

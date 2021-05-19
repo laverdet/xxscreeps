@@ -168,8 +168,8 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		creep.pos = oldPos;
 		context.sendRoomIntent(next.roomName, 'import', typedArrayToString(importPayload));
 		context.didUpdate();
-	} else {
-		context.setActive();
+	} else if (creep['#ageTime'] > 0) {
+		context.wakeAt(creep['#ageTime']);
 	}
 });
 

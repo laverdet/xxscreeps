@@ -158,7 +158,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 		}
 		this.room['#flushObjects']();
 		flushUsers(this.room);
-		const userIds = this.room['#users'].intents;
+		const hasPlayer = Fn.some(this.room['#users'].intents, userId => userId.length > 2);
 
 		await Promise.all([
 			// Update room to user map
@@ -170,7 +170,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 		]);
 		// Mark inactive if needed. Must be *after* saving room, because this copies from current
 		// tick.
-		if (userIds.length === 0 && this.nextUpdate !== this.time + 1) {
+		if (!hasPlayer && this.nextUpdate !== this.time + 1) {
 			return sleepRoomUntil(this.shard, this.room.name, this.time, this.nextUpdate);
 		}
 	}

@@ -1,11 +1,11 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
-import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 
 export const format = () => compose(shape, StructureController);
-const shape = declare('Controller', struct(structureFormat, {
+const shape = declare('Controller', struct(ownedStructureFormat, {
 	...variant('controller'),
 	isPowerEnabled: 'bool',
 	// reservation: { username, ticksToEnd }
@@ -16,7 +16,7 @@ const shape = declare('Controller', struct(structureFormat, {
 	'#upgradeBlockedUntil': 'int32',
 }));
 
-export class StructureController extends withOverlay(Structure, shape) {
+export class StructureController extends withOverlay(OwnedStructure, shape) {
 	['#upgradePowerThisTick']: number | undefined;
 	get hits() { return undefined as never }
 	get hitsMax() { return undefined as never }

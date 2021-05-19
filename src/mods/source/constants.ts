@@ -10,3 +10,5 @@ export const LOOK_SOURCES = 'source' as const;
 export const SOURCE_ENERGY_CAPACITY = 3000;
 export const SOURCE_ENERGY_NEUTRAL_CAPACITY = 1500;
 export const SOURCE_ENERGY_KEEPER_CAPACITY = 4000;
+
+export const STRUCTURE_KEEPER_LAIR = 'keeperLair' as const;

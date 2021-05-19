@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type { KeyValProvider, SetOptions, Value, ZRangeOptions } from '../provider';
+import type { KeyValProvider, SetOptions, Value, ZAddOptions, ZRangeOptions } from '../provider';
 import * as Fn from 'xxscreeps/utility/functional';
 import { promises as fs } from 'fs';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
@@ -55,7 +55,7 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 	abstract spop(key: string): Promise<string | null>;
 	abstract srem(key: string, members: string[]): Promise<number>;
 
-	abstract zadd(key: string, members: [ number, string ][]): Promise<number>;
+	abstract zadd(key: string, members: [ number, string ][], options?: ZAddOptions): Promise<number>;
 	abstract zcard(key: string): Promise<number>;
 	abstract zincrBy(key: string, delta: number, member: string): Promise<number>;
 	abstract zmscore(key: string, members: string[]): Promise<(number | null)[]>;
@@ -63,6 +63,7 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 	abstract zrange(key: string, min: number, max: number, options?: ZRangeOptions): Promise<string[]>;
 	abstract zrange(key: string, min: string, max: string, options?: ZRangeOptions): Promise<string[]>;
 	abstract zrem(key: string, members: string[]): Promise<number>;
+	abstract zremRange(key: string, min: number, max: number): Promise<number>;
 	abstract zunionStore(key: string, keys: string[]): Promise<number>;
 
 	abstract flushdb(): Promise<void>;
@@ -341,9 +342,15 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async zadd(key: string, members: [ number, string ][]) {
+	async zadd(key: string, members: [ number, string ][], options: ZAddOptions = {}) {
 		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
-		return Fn.accumulate(members, ([ score, value ]) => set.add(value, score));
+		if (options.nx) {
+			return set.insert(members, left => left);
+		} else if (options.xx) {
+			return set.insert(Fn.reject(members, member => set.has(member[1])), (left, right) => right);
+		} else {
+			return set.insert(members, (left, right) => right);
+		}
 	}
 
 	async zcard(key: string) {
@@ -416,6 +423,18 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
+	async zremRange(key: string, min: number, max: number) {
+		const set: SortedSet | undefined = this.data.get(key);
+		if (set) {
+			return Fn.accumulate(
+				// Results are materialized into array upfront because `delete` invalidates `entries`
+				[ ...Fn.map(set.entries(min, max), entry => entry[1]) ],
+				member => set.delete(member));
+		} else {
+			return 0;
+		}
+	}
+
 	async zunionStore(key: string, keys: string[]) {
 		const sets: (SortedSet | undefined)[] = keys.map(key => this.data.get(key));
 		if (sets.every(set => set === undefined)) {
@@ -423,7 +442,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 		const out = new SortedSet;
 		this.data.set(key, out);
-		out.merge(Fn.concat(Fn.map(sets, set => {
+		out.insert(Fn.concat(Fn.map(sets, set => {
 			if (set) {
 				return set.entries();
 			} else {
@@ -535,8 +554,8 @@ class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 		return this.request('srem', key, members);
 	}
 
-	zadd(key: string, members: [ number, string ][]) {
-		return this.request('zadd', key, members);
+	zadd(key: string, members: [ number, string ][], options: ZAddOptions = {}) {
+		return this.request('zadd', key, members, options);
 	}
 
 	zcard(key: string) {
@@ -560,6 +579,10 @@ class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 
 	zrem(key: string, members: string[]) {
 		return this.request('zrem', key, members);
+	}
+
+	zremRange(key: string, min: number, max: number) {
+		return this.request('zremRange', key, min, max);
 	}
 
 	zunionStore(key: string, keys: string[]) {
