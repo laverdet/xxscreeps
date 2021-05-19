@@ -7,7 +7,7 @@ import { registerFindHandlers } from './symbols';
 
 // Declare-able interface for mods
 export interface Find {}
-export type FindHandler = (room: Room) => any[];
+export type FindHandler = (room: Room) => Readonly<any[]>;
 type FindHandlers = Exclude<Find[keyof Find], void>;
 export type FindConstants = KeysOf<FindHandlers>;
 

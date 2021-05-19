@@ -4,7 +4,7 @@ import type { RoomObject } from 'xxscreeps/game/object';
 import type { RoomPosition } from 'xxscreeps/game/position';
 
 export type ConstructionTraits = {
-	obstacle: boolean;
+	obstacle: boolean | undefined;
 	checkPlacement: (room: Room, pos: RoomPosition) => null | number;
 	create: (constructionSite: ConstructionSite, name?: string) => RoomObject;
 };

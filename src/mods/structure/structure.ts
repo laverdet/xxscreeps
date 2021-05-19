@@ -83,7 +83,6 @@ export function checkDestroy(structure: Structure) {
 			} else if (structure.room.find(C.FIND_HOSTILE_CREEPS).length > 0) {
 				return C.ERR_BUSY;
 			}
-			return C.OK;
 		});
 }
 

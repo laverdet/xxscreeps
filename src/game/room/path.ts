@@ -19,6 +19,21 @@ export type RoomPath = {
 }[];
 
 declare module './room' {
+	// eslint-disable-next-line @typescript-eslint/no-namespace
+	namespace Room {
+		/**
+		 * Serialize a path array into a short string representation, which is suitable to store in memory
+		 * @param path A path array retrieved from Room.findPath
+		 */
+		function serializePath(path: RoomPath): string;
+
+		/**
+		 * Deserialize a short string path representation into an array form
+		 * @param path A serialized path string
+		 */
+		function deserializePath(path: string): RoomPath;
+	}
+
 	interface Room {
 		/**
 		 * Find the exit direction en route to another room. Please note that this method is not required
@@ -39,18 +54,6 @@ declare module './room' {
 		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize?: boolean }): RoomPath | string;
 
 		/**
-		 * Serialize a path array into a short string representation, which is suitable to store in memory
-		 * @param path A path array retrieved from Room.findPath
-		 */
-		serializePath(path: RoomPath): string;
-
-		/**
-		 * Deserialize a short string path representation into an array form
-		 * @param path A serialized path string
-		 */
-		deserializePath(path: string): RoomPath;
-
-		/**
 		 * Get a Room.Terrain object which provides fast access to static terrain data. This method works
 		 * for any room in the world even if you have no access to it.
 		 */
@@ -58,41 +61,7 @@ declare module './room' {
 	}
 }
 
-extend(Room, {
-	findExitTo(room: Room | string) {
-		const route = Game.map.findRoute(this, room);
-		if (typeof route === 'object') {
-			return route[0].exit;
-		} else {
-			return route;
-		}
-	},
-
-	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize?: boolean } = {}) {
-
-		// Delegate to `PathFinder` and convert the result
-		const result = PathFinder.roomSearch(origin, [ goal ], options);
-		const path: RoomPath = [];
-		let previous = origin;
-		for (const pos of result.path) {
-			if (pos.roomName !== this.name) {
-				break;
-			}
-			path.push({
-				x: pos.x,
-				y: pos.y,
-				dx: pos.x - previous.x as never,
-				dy: pos.y - previous.y as never,
-				direction: previous.getDirectionTo(pos),
-			});
-			previous = pos;
-		}
-		if (options.serialize) {
-			return this.serializePath(path);
-		}
-		return path;
-	},
-
+Object.assign(Room, {
 	serializePath(path: RoomPath) {
 		if (!Array.isArray(path)) {
 			throw new Error('`path` is not an array');
@@ -138,6 +107,42 @@ extend(Room, {
 			});
 		}
 		return result;
+	},
+});
+
+extend(Room, {
+	findExitTo(room: Room | string) {
+		const route = Game.map.findRoute(this, room);
+		if (typeof route === 'object') {
+			return route[0].exit;
+		} else {
+			return route;
+		}
+	},
+
+	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize?: boolean } = {}) {
+
+		// Delegate to `PathFinder` and convert the result
+		const result = PathFinder.roomSearch(origin, [ goal ], options);
+		const path: RoomPath = [];
+		let previous = origin;
+		for (const pos of result.path) {
+			if (pos.roomName !== this.name) {
+				break;
+			}
+			path.push({
+				x: pos.x,
+				y: pos.y,
+				dx: pos.x - previous.x as never,
+				dy: pos.y - previous.y as never,
+				direction: previous.getDirectionTo(pos),
+			});
+			previous = pos;
+		}
+		if (options.serialize) {
+			return Room.serializePath(path);
+		}
+		return path;
 	},
 
 	getTerrain() {

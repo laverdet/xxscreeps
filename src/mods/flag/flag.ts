@@ -51,7 +51,6 @@ export class Flag extends withOverlay(RoomObject, shape) {
 					this.name, this.pos['#int'],
 					color, secondaryColor,
 				] });
-				return C.OK;
 			},
 		);
 	}
@@ -73,7 +72,6 @@ export class Flag extends withOverlay(RoomObject, shape) {
 					this.name, this.pos['#int'],
 					this.color, this.secondaryColor,
 				] });
-				return C.OK;
 			},
 		);
 	}
@@ -131,7 +129,5 @@ export function checkCreateFlag(
 			} else if (Object.keys(flags).length >= C.FLAGS_LIMIT) {
 				return C.ERR_FULL;
 			}
-			return C.OK;
-		},
-	);
+		});
 }

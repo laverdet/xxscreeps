@@ -51,9 +51,7 @@ const harvest = registerHarvestable(Mineral, function(creep) {
 			} else if (extractor.cooldown !== 0 && extractor.cooldown !== C.EXTRACTOR_COOLDOWN) {
 				return C.ERR_TIRED;
 			}
-			return C.OK;
-		},
-	);
+		});
 });
 declare module 'xxscreeps/mods/harvestable' {
 	interface Harvest { mineral: typeof harvest }

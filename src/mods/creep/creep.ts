@@ -20,6 +20,7 @@ import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/re
 // eslint-disable-next-line @typescript-eslint/no-duplicate-imports
 import { RoomObject } from 'xxscreeps/game/object';
 import { Structure } from 'xxscreeps/mods/structure/structure';
+import { Room } from 'xxscreeps/game/room';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 
@@ -66,7 +67,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	get my() { return this['#user'] === me }
 	get owner() { return this['#user'] }
 	get spawning() { return this['#ageTime'] === 0 }
-	get ticksToLive() { return this['#ageTime'] - Game.time }
+	get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined }
 	get ['#lookType']() { return C.LOOK_CREEPS }
 
 	/**
@@ -137,7 +138,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	moveByPath(path: RoomPath | RoomPosition[] | string): C.ErrorCode {
 		// Parse serialized path
 		if (typeof path === 'string') {
-			return this.moveByPath(this.room.deserializePath(path));
+			return this.moveByPath(Room.deserializePath(path));
 		} else if (!Array.isArray(path)) {
 			return C.ERR_INVALID_ARGS;
 		}
@@ -203,11 +204,11 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 						} else if (_move.dest.room === pos.roomName && _move.dest.x === pos.x && _move.dest.y === pos.y) {
 
-							const path = typeof _move.path === 'string' ? this.room.deserializePath(_move.path) : _move.path;
+							const path = typeof _move.path === 'string' ? Room.deserializePath(_move.path) : _move.path;
 							const ii = path.findIndex(pos => this.pos.x === pos.x && this.pos.y === pos.y);
 							if (ii !== -1) {
 								path.splice(0, ii + 1);
-								_move.path = serializeMemory ? this.room.serializePath(path) : path;
+								_move.path = serializeMemory ? Room.serializePath(path) : path;
 							}
 							if (path.length === 0) {
 								return this.pos.isNearTo(pos) ? C.OK : C.ERR_NO_PATH;
@@ -235,7 +236,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 							room: pos.roomName,
 						},
 						time: Game.time,
-						path: serializeMemory ? this.room.serializePath(path) : path,
+						path: serializeMemory ? Room.serializePath(path) : path,
 						room: this.pos.roomName,
 					};
 					this.memory._move = _move;
@@ -334,9 +335,11 @@ export function create(pos: RoomPosition, body: PartType[], name: string, owner:
 	const creep = assign(RoomObjectLib.create(new Creep, pos), {
 		body: body.map(type => ({ type, hits: 100, boost: undefined })),
 		hits: body.length * 100,
+		fatigue: 0,
 		name,
 		store: Store.create(carryCapacity),
 	});
+	creep['#ageTime'] = 0;
 	creep['#user'] = owner;
 	return creep;
 }
@@ -434,7 +437,6 @@ export function checkTransfer(creep: Creep, target: RoomObject & Store.WithStore
 			if (target instanceof Creep && target.spawning) {
 				return C.ERR_INVALID_TARGET;
 			}
-			return C.OK;
 		});
 }
 

@@ -79,18 +79,18 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 
 				case 'string': return (value: string, view, offset, heap) => {
 					// Attempt to write as latin1 and fall back to utf-16 if needed
-					const { length } = value;
+					const string = `${value}`;
+					const { length } = string;
 					view.int32[offset >>> 2] = heap;
 					for (let ii = 0; ii < length; ++ii) {
-						const code = value.charCodeAt(ii);
-						const stringOffset = heap;
+						const code = string.charCodeAt(ii);
 						if (code < 0x100) {
-							view.uint8[stringOffset + ii] = code;
+							view.uint8[heap + ii] = code;
 						} else {
 							// UTF-16 wide characters
 							const stringOffset16 = heap >>> 1;
 							for (let ii = 0; ii < length; ++ii) {
-								view.uint16[stringOffset16 + ii] = value.charCodeAt(ii);
+								view.uint16[stringOffset16 + ii] = string.charCodeAt(ii);
 							}
 							view.int32[(offset >>> 2) + 1] = -length;
 							return heap + length * 2;

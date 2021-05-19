@@ -39,7 +39,7 @@ export function drop(pos: RoomPosition, resourceType: ResourceType, amount: numb
 
 	// Create new dropped resource here
 	const resource = create(pos, resourceType, remaining);
-	room['#insertObject'](resource);
+	room['#insertObject'](resource, true);
 }
 
 registerObjectTickProcessor(Resource, (resource, context) => {

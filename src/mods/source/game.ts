@@ -45,9 +45,7 @@ const harvest = registerHarvestable(Source, function(creep) {
 			if (this.energy <= 0) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
-			return C.OK;
-		},
-	);
+		});
 });
 declare module 'xxscreeps/mods/harvestable' {
 	interface Harvest { source: typeof harvest }

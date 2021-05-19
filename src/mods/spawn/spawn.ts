@@ -155,6 +155,7 @@ export class StructureSpawn extends withOverlay(Structure, shape) {
 
 				// Fake creep
 				const creep = createCreep(this.pos, body, name, this['#user']!);
+				creep.room = this.room;
 				userGame!.creeps[name] = creep;
 				return C.OK;
 			});
@@ -187,11 +188,8 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 function checkCommonSpawn(spawn: StructureSpawn) {
 	if (!spawn.my) {
 		return C.ERR_NOT_OWNER;
-	// eslint-disable-next-line no-negated-condition
 	} else if (!spawn.isActive()) {
 		return C.ERR_RCL_NOT_ENOUGH;
-	} else {
-		return C.OK;
 	}
 }
 

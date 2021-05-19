@@ -4,7 +4,7 @@ import * as RoomObject from 'xxscreeps/game/object';
 import { Game, intents, me } from 'xxscreeps/game';
 import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
+import { asUnion, assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export const format = () => compose(shape, StructureRampart);
@@ -53,8 +53,16 @@ export function create(pos: RoomPosition, owner: string) {
 }
 
 registerBuildableStructure(C.STRUCTURE_RAMPART, {
-	obstacle: false,
+	obstacle: undefined,
 	checkPlacement(room, pos) {
+
+		// Don't allow double ramparts
+		for (const object of room['#lookAt'](pos)) {
+			asUnion(object);
+			if (object.structureType === 'rampart') {
+				return null;
+			}
+		}
 		return checkPlacement(room, pos) === C.OK ? 1 : null;
 	},
 	create(site) {

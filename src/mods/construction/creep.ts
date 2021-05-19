@@ -70,7 +70,6 @@ export function checkBuild(creep: Creep, target: ConstructionSite) {
 					}
 				}
 			}
-			return C.OK;
 		});
 }
 

@@ -72,6 +72,5 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 			} else if (!target.my) {
 				return C.ERR_NOT_OWNER;
 			}
-			return C.OK;
 		});
 }

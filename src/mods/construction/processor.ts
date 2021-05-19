@@ -25,7 +25,7 @@ const intents = [
 			const pos = new RoomPosition(xx, yy, room.name);
 			if (checkCreateConstructionSite(room, pos, structureType) === C.OK) {
 				const site = create(pos, structureType, me, name);
-				room['#insertObject'](site);
+				room['#insertObject'](site, true);
 				context.didUpdate();
 			}
 		}),

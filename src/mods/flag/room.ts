@@ -45,7 +45,6 @@ extend(Room, {
 				if (!pos || pos.roomName !== this.name) {
 					return C.ERR_INVALID_ARGS;
 				}
-				return C.OK;
 			},
 			() => checkCreateFlag(flags, pos!, name, color, secondaryColor, true),
 			() => {
@@ -58,7 +57,6 @@ extend(Room, {
 					pos,
 					color, secondaryColor,
 				});
-				return C.OK;
 			},
 		);
 	},

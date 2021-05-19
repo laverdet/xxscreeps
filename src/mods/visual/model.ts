@@ -11,9 +11,10 @@ export function getVisualChannel(shard: Shard, userId: string) {
 const visualsReader = makeReader(Visual.schema);
 export async function loadVisuals(shard: Shard, userId: string) {
 	const fragment = `user/${userId}/visual${shard.time % 2}`;
-	try {
-		return visualsReader(await shard.blob.reqBuffer(fragment));
-	} catch (err) {}
+	const blob = await shard.blob.getBuffer(fragment);
+	if (blob) {
+		return visualsReader(blob);
+	}
 }
 
 export async function publishVisualsBlobForNextTick(shard: Shard, userId: string, roomNames: string[], visual: Readonly<Uint8Array> | undefined) {
@@ -25,8 +26,6 @@ export async function publishVisualsBlobForNextTick(shard: Shard, userId: string
 			getVisualChannel(shard, userId).publish({ type: 'publish', roomNames, time }),
 		]);
 	} else {
-		try {
-			await shard.blob.del(fragment);
-		} catch (err) {}
+		await shard.blob.del(fragment);
 	}
 }

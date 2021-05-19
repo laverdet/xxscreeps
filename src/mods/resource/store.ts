@@ -129,6 +129,14 @@ export class Store<Resources extends ResourceType = any> extends
 			return null;
 		}
 	}
+
+	/**
+	 * Returns all resource entries in this Store. This is needed because quoted '#private' keys will
+	 * be iterated when not in the runtime.
+	 */
+	['#entries'](): Iterable<[ ResourceType, number ]> {
+		return Fn.filter(Object.entries(this), entry => entry[0].startsWith('#')) as never;
+	}
 }
 
 export function create(capacity: number | null, capacityByResource?: StorageRecord, store?: StorageRecord) {

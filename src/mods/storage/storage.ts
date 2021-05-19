@@ -1,3 +1,4 @@
+import type { Room } from 'xxscreeps/game/room';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
@@ -17,6 +18,11 @@ const shape = declare('Storage', struct(structureFormat, {
 export class StructureStorage extends withOverlay(Structure, shape) {
 	get hitsMax() { return C.STORAGE_HITS }
 	get structureType() { return C.STRUCTURE_STORAGE }
+
+	['#afterInsert'](room: Room) {
+		super['#afterInsert'](room);
+		room.storage = this;
+	}
 }
 
 export function create(pos: RoomPosition, owner: string) {
@@ -39,3 +45,9 @@ registerBuildableStructure(C.STRUCTURE_STORAGE, {
 		return create(site.pos, site['#user']);
 	},
 });
+
+declare module 'xxscreeps/game/room/room' {
+	interface Room {
+		storage?: StructureStorage;
+	}
+}

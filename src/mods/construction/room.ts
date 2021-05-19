@@ -5,7 +5,7 @@ import { intents, userGame } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';
-import { extend } from 'xxscreeps/utility/utility';
+import { asUnion, extend } from 'xxscreeps/utility/utility';
 import { structureFactories } from './symbols';
 
 // Register FIND_ types for `ConstructionSite`
@@ -69,7 +69,8 @@ extend(Room, {
 // Intent check
 export function checkCreateConstructionSite(room: Room, pos: RoomPosition, structureType: ConstructibleStructureType) {
 	// Check `structureType` is buildable
-	if (!structureFactories.has(structureType)) {
+	const factory = structureFactories.get(structureType);
+	if (!factory) {
 		console.log(`TODO: create ${structureType}`);
 		return C.ERR_INVALID_ARGS;
 	}
@@ -88,8 +89,8 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		}
 	} else {
 		const existingCount = Fn.accumulate(Fn.concat(
-			room.find(C.FIND_STRUCTURES),
-			room.find(C.FIND_CONSTRUCTION_SITES),
+			room['#lookFor'](C.LOOK_STRUCTURES),
+			room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
 		), object => object.structureType === structureType ? 1 : 0);
 		if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][rcl]) {
 			// TODO: Check constructions sites made this tick too
@@ -98,37 +99,24 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 	}
 
 	// checkPlacement hook
-	if (structureFactories.get(structureType)?.checkPlacement(room, pos) === null) {
+	if (factory.checkPlacement(room, pos) === null) {
 		return C.ERR_INVALID_TARGET;
 	}
-
-	// No structures on walls except for roads and extractors
-	/*
-	if (
-		structureType !== 'extractor' && structureType !== 'road' &&
-		terrain.get(pos.x, pos.y) === C.TERRAIN_MASK_WALL
-	) {
-		return C.ERR_INVALID_TARGET;
-	}
-	*/
 
 	// No structures on top of others
-	for (const object of Fn.concat(
-		room.find(C.FIND_CONSTRUCTION_SITES),
-		room.find(C.FIND_STRUCTURES),
-	)) {
-		if (
-			object.pos.isEqualTo(pos) &&
-			(object.structureType === structureType ||
-				(structureType !== 'rampart' && structureType !== 'road' &&
-				object.structureType !== 'rampart' && object.structureType !== 'road'))
-		) {
-			return C.ERR_INVALID_TARGET;
+	const { obstacle } = factory;
+	if (obstacle !== undefined) {
+		for (const object of room['#lookAt'](pos)) {
+			asUnion(object);
+			if (
+				object.structureType === structureType ||
+				obstacle ||
+				structureFactories.get(object.structureType!)?.obstacle
+			) {
+				return C.ERR_INVALID_TARGET;
+			}
 		}
 	}
-
-	// TODO: Extractors must be built on mineral
-	// TODO: Limit total construction sites built
 
 	return C.OK;
 }

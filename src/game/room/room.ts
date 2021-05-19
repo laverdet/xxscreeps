@@ -59,14 +59,14 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Returns a plain array of all room objects at a given location.
 	 */
-	['#lookAt'](pos: RoomPosition): Readonly<RoomObject[]> {
-		return this.#spatialIndex.get(pos['#int']) ?? [];
+	['#lookAt'](pos: RoomPosition): Readonly<AnyRoomObject[]> {
+		return (this.#spatialIndex.get(pos['#int']) ?? []) as never[];
 	}
 
 	/**
 	 * Returns a plain array of all room objects matching `type`
 	 */
-	['#lookFor']<Look extends LookConstants>(type: Look): TypeOfLook<Look>[] {
+	['#lookFor']<Look extends LookConstants>(type: Look): Readonly<TypeOfLook<Look>[]> {
 		return this.#lookIndex.get(type)! as never[];
 	}
 
@@ -121,8 +121,15 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Queue an object to be inserted into this room. This is flushed via `FlushObjects`.
 	 */
-	['#insertObject'](object: RoomObject) {
-		this.#insertObjects.push(object);
+	['#insertObject'](object: RoomObject, now = false) {
+		if (now) {
+			this.#findCache.clear();
+			this['#objects'].push(object as never);
+			this._addToIndex(object);
+			object['#afterInsert'](this);
+		} else {
+			this.#insertObjects.push(object);
+		}
 	}
 
 	/**

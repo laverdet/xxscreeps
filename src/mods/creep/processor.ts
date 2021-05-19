@@ -103,7 +103,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		(Game.time >= creep['#ageTime'] && creep['#ageTime'] !== 0) ||
 		creep.hits <= 0
 	) {
-		for (const [ resourceType, amount ] of Object.entries(creep.store) as [ ResourceType, number ][]) {
+		for (const [ resourceType, amount ] of creep.store['#entries']()) {
 			ResourceIntent.drop(creep.pos, resourceType, amount);
 		}
 		creep.room['#removeObject'](creep);
