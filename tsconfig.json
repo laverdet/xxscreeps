@@ -9,6 +9,7 @@
 
 		"isolatedModules": true,
 		"noEmitOnError": false,
+		"noImplicitOverride": true,
 	},
 	"include": [ "src" ],
 }

@@ -16,18 +16,18 @@ const shape = declare('Extension', struct(ownedStructureFormat, {
 }));
 
 export class StructureExtension extends withOverlay(OwnedStructure, shape) {
+	override get hitsMax() { return C.EXTENSION_HITS }
+	override get structureType() { return C.STRUCTURE_EXTENSION }
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
-	get hitsMax() { return C.EXTENSION_HITS }
-	get structureType() { return C.STRUCTURE_EXTENSION }
 
-	['#afterInsert'](room: Room) {
+	override ['#afterInsert'](room: Room) {
 		super['#afterInsert'](room);
 		room.energyAvailable += this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable += this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
 
-	['#afterRemove'](room: Room) {
+	override ['#afterRemove'](room: Room) {
 		super['#afterRemove'](room);
 		room.energyAvailable -= this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable -= this.store.getCapacity(C.RESOURCE_ENERGY);

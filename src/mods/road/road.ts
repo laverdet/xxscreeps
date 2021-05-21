@@ -16,10 +16,10 @@ const shape = declare('Road', struct(structureFormat, {
 }));
 
 export class StructureRoad extends withOverlay(Structure, shape) {
-	get hitsMax() { return C.ROAD_HITS * this['#multiplier'] }
-	get structureType() { return C.STRUCTURE_ROAD }
+	override get hitsMax() { return C.ROAD_HITS * this['#multiplier'] }
+	override get structureType() { return C.STRUCTURE_ROAD }
+	override get ['#pathCost']() { return 1 }
 	get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
-	get ['#pathCost']() { return 1 }
 
 	get ['#multiplier']() {
 		switch (this['#terrain']) {
@@ -29,7 +29,7 @@ export class StructureRoad extends withOverlay(Structure, shape) {
 		}
 	}
 
-	['#checkObstacle']() {
+	override ['#checkObstacle']() {
 		return false;
 	}
 }

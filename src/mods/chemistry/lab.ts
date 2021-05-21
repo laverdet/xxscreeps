@@ -19,9 +19,9 @@ const shape = declare('Lab', struct(ownedStructureFormat, {
 }));
 
 export class StructureLab extends withOverlay(OwnedStructure, shape) {
+	override get hitsMax() { return C.LAB_HITS }
+	override get structureType() { return C.STRUCTURE_LAB }
 	get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
-	get hitsMax() { return C.LAB_HITS }
-	get structureType() { return C.STRUCTURE_LAB }
 }
 
 export function create(pos: RoomPosition, owner: string) {

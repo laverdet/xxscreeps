@@ -62,16 +62,16 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
  * `FIND_MY_STRUCTURES` and `FIND_HOSTILE_STRUCTURES` constants.
  */
 export abstract class OwnedStructure extends withOverlay(Structure, ownedShape) {
+	override get ['#hasIntent']() { return true }
+	override get ['#providesVision']() { return true }
 	get owner() { return userInfo.get(this['#user']!) }
-	get ['#hasIntent']() { return true }
-	get ['#providesVision']() { return true }
 
-	get my() {
+	override get my() {
 		const user = this['#user'];
 		return user === null ? undefined : user === me;
 	}
 
-	['#addToMyGame'](game: GameConstructor) {
+	override ['#addToMyGame'](game: GameConstructor) {
 		game.structures[this.id] = this as never;
 	}
 }

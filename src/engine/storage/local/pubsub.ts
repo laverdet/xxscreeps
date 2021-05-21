@@ -117,7 +117,7 @@ abstract class LocalPubSubSubscription implements PubSubSubscription {
 class LocalPubSubProviderParent extends LocalPubSubProvider {
 
 	// Install listener on newly created workers. Called from the host/parent thread.
-	static initializeWorker(worker: Worker) {
+	static override initializeWorker(worker: Worker) {
 		const idsByName = new Map<string, Set<string>>();
 		const localSubscriptions = new Map<string, Subscription>();
 		worker.on('message', (message: WorkerMessage) => {
@@ -262,7 +262,7 @@ class LocalPubSubProviderWorker extends LocalPubSubProvider {
 }
 
 class WorkerSubscription extends LocalPubSubSubscription {
-	disconnect() {
+	override disconnect() {
 		super.disconnect();
 		parentPort!.postMessage(staticCast<WorkerMessage>({
 			type: 'pubsubUnsubscribe',

@@ -22,12 +22,12 @@ const shape = () => declare('ConstructionSite', struct(RoomObject.format, {
 }));
 
 export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) {
-	get my() { return this['#user'] === me }
+	override get my() { return this['#user'] === me }
+	override get ['#lookType']() { return C.LOOK_CONSTRUCTION_SITES }
 	get owner() { return userInfo.get(this['#user']) }
 	get progressTotal() { return C.CONSTRUCTION_COST[this.structureType] }
-	get ['#lookType']() { return C.LOOK_CONSTRUCTION_SITES }
 
-	['#addToMyGame'](game: GameConstructor) {
+	override ['#addToMyGame'](game: GameConstructor) {
 		game.constructionSites[this.id] = this;
 	}
 

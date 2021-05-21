@@ -13,12 +13,12 @@ const shape = declare('Wall', struct(structureFormat, {
 }));
 
 export class StructureWall extends withOverlay(Structure, shape) {
-	get hitsMax() {
+	override get hitsMax() {
 		const level = this.room.controller?.level ?? 0;
 		return C.CONTROLLER_STRUCTURES.constructedWall[level] ? C.WALL_HITS_MAX : 0;
 	}
 
-	get structureType() { return C.STRUCTURE_WALL }
+	override get structureType() { return C.STRUCTURE_WALL }
 }
 
 export function create(pos: RoomPosition) {

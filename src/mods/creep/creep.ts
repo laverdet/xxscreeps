@@ -64,13 +64,13 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		return creeps[this.name] ?? (creeps[this.name] = {});
 	}
 
-	get my() { return this['#user'] === me }
 	get owner() { return userInfo.get(this['#user']) }
 	get spawning() { return this['#ageTime'] === 0 }
 	get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined }
-	get ['#hasIntent']() { return true }
-	get ['#lookType']() { return C.LOOK_CREEPS }
-	get ['#providesVision']() { return true }
+	override get my() { return this['#user'] === me }
+	override get ['#hasIntent']() { return true }
+	override get ['#lookType']() { return C.LOOK_CREEPS }
+	override get ['#providesVision']() { return true }
 
 	/**
 	 * The text message that the creep was saying at the last tick.
@@ -82,7 +82,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		}
 	}
 
-	['#addToMyGame'](game: GameConstructor) {
+	override ['#addToMyGame'](game: GameConstructor) {
 		game.creeps[this.name] = this;
 	}
 

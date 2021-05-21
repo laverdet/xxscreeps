@@ -17,10 +17,10 @@ const shape = declare('Tower', struct(ownedStructureFormat, {
 }));
 
 export class StructureTower extends withOverlay(OwnedStructure, shape) {
+	override get hitsMax() { return C.TOWER_HITS }
+	override get structureType() { return C.STRUCTURE_TOWER }
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
-	get hitsMax() { return C.TOWER_HITS }
-	get structureType() { return C.STRUCTURE_TOWER }
 
 	/**
 	 * Remotely attack any creep, power creep or structure in the room.

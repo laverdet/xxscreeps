@@ -18,8 +18,8 @@ const shape = declare('Controller', struct(ownedStructureFormat, {
 
 export class StructureController extends withOverlay(OwnedStructure, shape) {
 	['#upgradePowerThisTick']: number | undefined;
-	get hits() { return undefined as never }
-	get hitsMax() { return undefined as never }
+	override get hits() { return undefined as never }
+	override get hitsMax() { return undefined as never }
 	get level() { return this.room['#level'] }
 	get progress() { return this.level > 0 ? this['#progress'] : undefined }
 	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
@@ -57,12 +57,12 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 		console.log('TODO: unclaim');
 	}
 
-	['#afterInsert'](room: Room) {
+	override ['#afterInsert'](room: Room) {
 		super['#afterInsert'](room);
 		room.controller = this;
 	}
 
-	['#afterRemove'](room: Room) {
+	override ['#afterRemove'](room: Room) {
 		super['#afterRemove'](room);
 		room.controller = undefined;
 	}

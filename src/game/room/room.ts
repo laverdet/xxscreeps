@@ -208,7 +208,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		return result;
 	}
 
-	private toString() {
+	private override toString() {
 		return `[Room ${this.name}]`;
 	}
 

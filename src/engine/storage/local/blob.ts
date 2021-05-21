@@ -233,7 +233,7 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		}));
 	}
 
-	destroyed() {
+	override destroyed() {
 		this.processUnlistener();
 		this.checkMissingFlush();
 		fs.unlink(Path.join(this.path, '.lock')).catch(() => {});

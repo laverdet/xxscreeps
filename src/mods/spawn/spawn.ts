@@ -55,8 +55,8 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
-	get hitsMax() { return C.SPAWN_HITS }
-	get structureType() { return C.STRUCTURE_SPAWN }
+	override get hitsMax() { return C.SPAWN_HITS }
+	override get structureType() { return C.STRUCTURE_SPAWN }
 
 	get memory() {
 		const memory = Memory.get();
@@ -64,23 +64,23 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 		return spawns[this.name] ??= {};
 	}
 
-	['#addToMyGame'](game: GameConstructor) {
+	override ['#addToMyGame'](game: GameConstructor) {
 		game.spawns[this.name] = this;
 	}
 
-	['#afterInsert'](room: Room) {
+	override ['#afterInsert'](room: Room) {
 		super['#afterInsert'](room);
 		room.energyAvailable += this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable += this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
 
-	['#afterRemove'](room: Room) {
+	override ['#afterRemove'](room: Room) {
 		super['#afterRemove'](room);
 		room.energyAvailable -= this.store[C.RESOURCE_ENERGY];
 		room.energyCapacityAvailable -= this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
 
-	isActive() {
+	override isActive() {
 		return true;
 	}
 

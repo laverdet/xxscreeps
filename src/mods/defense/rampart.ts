@@ -16,12 +16,12 @@ const shape = declare('Rampart', struct(ownedStructureFormat, {
 }));
 
 export class StructureRampart extends withOverlay(OwnedStructure, shape) {
-	get hitsMax() {
+	override get hitsMax() {
 		return this['#user'] === this.room.controller?.['#user'] ?
 			C.RAMPART_HITS_MAX[this.room.controller.level] ?? 0 : 0;
 	}
 
-	get structureType() { return C.STRUCTURE_RAMPART }
+	override get structureType() { return C.STRUCTURE_RAMPART }
 	get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
 
 	/**
@@ -37,7 +37,7 @@ export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 		}
 	}
 
-	['#checkObstacle'](user: string) {
+	override ['#checkObstacle'](user: string) {
 		return !this.isPublic && user !== this['#user'];
 	}
 }

@@ -235,7 +235,7 @@ export function ResponderHost<New extends abstract new(...args: any[]) => Respon
 	abstract class Host extends base {
 		_refs = 1;
 
-		disconnect(): { doNotOverrideThisMethod: true } {
+		override disconnect(): { doNotOverrideThisMethod: true } {
 			if (--this._refs === 0) {
 				responderHostsByName.delete(this._name!);
 				this.destroyed();
@@ -259,7 +259,7 @@ export function ResponderClient<New extends abstract new(...args: any[]) => Resp
 		readonly _clientId = `${Math.floor(Math.random() * 2 ** 52)}`;
 		readonly _requests = new Map<number, Deferred<any>>();
 
-		disconnect(): { doNotOverrideThisMethod: true } {
+		override disconnect(): { doNotOverrideThisMethod: true } {
 			for (const resolver of this._requests.values()) {
 				resolver.reject(new Error('Disconnected from responder'));
 			}

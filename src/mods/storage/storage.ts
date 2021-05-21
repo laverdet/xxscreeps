@@ -16,10 +16,10 @@ const shape = declare('Storage', struct(ownedStructureFormat, {
 }));
 
 export class StructureStorage extends withOverlay(OwnedStructure, shape) {
-	get hitsMax() { return C.STORAGE_HITS }
-	get structureType() { return C.STRUCTURE_STORAGE }
+	override get hitsMax() { return C.STORAGE_HITS }
+	override get structureType() { return C.STRUCTURE_STORAGE }
 
-	['#afterInsert'](room: Room) {
+	override ['#afterInsert'](room: Room) {
 		super['#afterInsert'](room);
 		room.storage = this;
 	}
