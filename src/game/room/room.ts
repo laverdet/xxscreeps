@@ -52,7 +52,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 */
 	['#initialize']() {
 		for (const object of this['#objects']) {
-			this['#addToIndex'](object);
+			this.#addToIndex(object);
 			object['#afterInsert'](this);
 		}
 	}
@@ -96,7 +96,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 				const object = objects[ii];
 				if (this.#removeObjects.has(object)) {
 					object['#afterRemove'](this);
-					this['#removeFromIndex'](object);
+					this.#removeFromIndex(object);
 					objects.splice(ii, 1);
 					if (--removeCount === 0) {
 						break;
@@ -113,7 +113,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (this.#insertObjects.length) {
 			objects.push(...this.#insertObjects as never[]);
 			for (const object of this.#insertObjects) {
-				this['#addToIndex'](object);
+				this.#addToIndex(object);
 				object['#afterInsert'](this);
 			}
 			this.#insertObjects = [];
@@ -127,7 +127,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (now) {
 			this.#findCache.clear();
 			this['#objects'].push(object as never);
-			this['#addToIndex'](object);
+			this.#addToIndex(object);
 			object['#afterInsert'](this);
 		} else {
 			this.#insertObjects.push(object);
@@ -167,7 +167,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Add an object to the look and spatial indices
 	 */
 	// TODO: JS private method
-	private ['#addToIndex'](object: RoomObject) {
+	#addToIndex(object: RoomObject) {
 		this.#lookIndex.get(object['#lookType'])!.push(object);
 		const pos = object.pos['#int'];
 		const list = this.#spatialIndex.get(pos);
@@ -181,8 +181,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Remove an object from the look and spatial indices
 	 */
-	// TODO: JS private method
-	private ['#removeFromIndex'](object: RoomObject) {
+	#removeFromIndex(object: RoomObject) {
 		removeOne(this.#lookIndex.get(object['#lookType'])!, object);
 		const pos = object.pos['#int'];
 		const list = this.#spatialIndex.get(pos)!;

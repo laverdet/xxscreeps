@@ -1,6 +1,7 @@
 declare const URL: typeof import('url').URL;
 declare const URLSearchParams: typeof import('url').URLSearchParams;
 declare module 'acorn-class-fields';
+declare module 'acorn-private-methods';
 declare module 'stream-to-promise' {
 	import type * as Stream from 'stream';
 

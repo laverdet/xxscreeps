@@ -5,12 +5,12 @@ import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import Webpack from 'webpack';
 
-// Hack in support for private class fields
+// Hack in support for private class fields & methods
 import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const Acorn = require('acorn');
 import AcornClassFields from 'acorn-class-fields';
-Acorn.Parser = Acorn.Parser.extend(AcornClassFields);
+import AcornPrivateMethods from 'acorn-private-methods';
+const Acorn = createRequire(import.meta.url)('acorn');
+Acorn.Parser = Acorn.Parser.extend(AcornClassFields, AcornPrivateMethods);
 
 type ExternalsFunctionElement = Parameters<typeof Webpack>[0][0]['externals'];
 type ExternalsPromise = Extract<ExternalsFunctionElement, (...args: any) => Promise<any>>;
