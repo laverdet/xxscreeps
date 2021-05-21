@@ -8,7 +8,7 @@ export const Variant = XSymbol('schemaVariant');
 export type { Format, ShapeOf, TypeOf } from './format';
 export { BufferObject } from './buffer-object';
 export { BufferView } from './buffer-view';
-export { array, compose, constant, declare, enumerated, optional, struct, variant, vector, withFallback, withType } from './format';
+export { array, compose, constant, declare, enumerated, optional, struct, variant, vector, withType } from './format';
 export { withOverlay } from './overlay';
 export { makeReader } from './read';
 export { makeWriter } from './write';

@@ -1,13 +1,11 @@
 import * as Road from './road';
 import { registerGlobal } from 'xxscreeps/game';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { registerVariant } from 'xxscreeps/engine/schema';
 
 // Register schema
-const schema = registerSchema('Room.objects', Road.format);
-declare module 'xxscreeps/engine/schema' {
-	interface Schema {
-		road: typeof schema;
-	}
+const schema = registerVariant('Room.objects', Road.format);
+declare module 'xxscreeps/game/room' {
+	interface Schema { road: typeof schema }
 }
 
 // Export `StructureRoad` to runtime globals

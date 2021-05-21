@@ -1,8 +1,8 @@
 import * as C from 'xxscreeps/game/constants';
 import * as ConstructionSite from './construction-site';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { constant, enumerated, struct, variant } from 'xxscreeps/schema';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { constant, struct, variant } from 'xxscreeps/schema';
+import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
 import './creep';
 import './position';
@@ -23,19 +23,21 @@ declare module 'xxscreeps/game/runtime' {
 }
 
 // Schema types
-declare module 'xxscreeps/engine/schema' {
-	interface Schema { construction: typeof schema }
+const actionSchema = registerEnumerated('ActionLog.action', 'build', 'repair');
+declare module 'xxscreeps/game/action-log' {
+	interface Schema { construction: typeof actionSchema }
 }
-const schema = [
-	registerSchema('ActionLog.action', enumerated('build', 'repair')),
 
-	registerSchema('Room.objects', ConstructionSite.format),
+const siteSchema = registerVariant('Room.objects', ConstructionSite.format);
 
-	registerSchema('Room.eventLog', struct({
-		...variant(C.EVENT_BUILD),
-		event: constant(C.EVENT_BUILD),
-		targetId: Id.format,
-		amount: 'int32',
-		energySpent: 'int32',
-	})),
-];
+const buildEventSchema = registerVariant('Room.eventLog', struct({
+	...variant(C.EVENT_BUILD),
+	event: constant(C.EVENT_BUILD),
+	targetId: Id.format,
+	amount: 'int32',
+	energySpent: 'int32',
+}));
+
+declare module 'xxscreeps/game/room' {
+	interface Schema { construction: [ typeof siteSchema, typeof buildEventSchema ] }
+}

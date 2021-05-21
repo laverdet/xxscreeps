@@ -3,7 +3,7 @@ import * as Extension from './extension';
 import * as Spawn from './spawn';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
 import { registerFindHandlers } from 'xxscreeps/game/room';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { registerVariant } from 'xxscreeps/engine/schema';
 
 // Add `spawns` to global `game` object
 declare module 'xxscreeps/game/game' {
@@ -35,10 +35,8 @@ declare module 'xxscreeps/game/room' {
 }
 
 // Register schema
-const schema = registerSchema('Room.objects', Extension.format);
-const schema2 = registerSchema('Room.objects', Spawn.format);
-declare module 'xxscreeps/engine/schema' {
-	interface Schema {
-		spawn: [ typeof schema, typeof schema2 ];
-	}
+const extensionSchema = registerVariant('Room.objects', Extension.format);
+const spawnSchema = registerVariant('Room.objects', Spawn.format);
+declare module 'xxscreeps/game/room' {
+	interface Schema { spawn: [ typeof extensionSchema, typeof spawnSchema ] }
 }

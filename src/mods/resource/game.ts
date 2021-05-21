@@ -3,7 +3,7 @@ import * as Container from './container';
 import * as Resource from './resource';
 import { registerGlobal } from 'xxscreeps/game';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { registerVariant } from 'xxscreeps/engine/schema';
 
 // Export `StructureContainer` & `Resource` to runtime globals
 registerGlobal(Container.StructureContainer);
@@ -28,11 +28,8 @@ declare module 'xxscreeps/game/room' {
 }
 
 // These need to be declared separately I guess
-const schema = registerSchema('Room.objects', Container.format);
-const schema2 = registerSchema('Room.objects', Resource.format);
-
-declare module 'xxscreeps/engine/schema' {
-	interface Schema {
-		resource: [ typeof schema, typeof schema2 ];
-	}
+const containerSchema = registerVariant('Room.objects', Container.format);
+const resourceSchema = registerVariant('Room.objects', Resource.format);
+declare module 'xxscreeps/game/room' {
+	interface Schema { resource: [ typeof containerSchema, typeof resourceSchema ] }
 }

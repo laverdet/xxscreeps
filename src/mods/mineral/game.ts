@@ -1,25 +1,23 @@
 import * as C from 'xxscreeps/game/constants';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import { enumerated } from 'xxscreeps/schema';
 import * as Extractor from './extractor';
 import * as Mineral from './mineral';
 
 // Register schema extensions
-const schema = [
-	registerSchema('ResourceType', enumerated(
-		C.RESOURCE_HYDROGEN, C.RESOURCE_OXYGEN,
-		C.RESOURCE_UTRIUM, C.RESOURCE_LEMERGIUM, C.RESOURCE_KEANIUM,
-		C.RESOURCE_ZYNTHIUM, C.RESOURCE_CATALYST, C.RESOURCE_GHODIUM,
-	)),
-	registerSchema('Room.objects', Extractor.format),
-];
-const schema2 = registerSchema('Room.objects', Mineral.format);
-declare module 'xxscreeps/engine/schema' {
-	interface Schema {
-		mineral: typeof schema;
-		mineral2: typeof schema2;
-	}
+const resourceSchema = registerEnumerated('ResourceType',
+	C.RESOURCE_HYDROGEN, C.RESOURCE_OXYGEN,
+	C.RESOURCE_UTRIUM, C.RESOURCE_LEMERGIUM, C.RESOURCE_KEANIUM,
+	C.RESOURCE_ZYNTHIUM, C.RESOURCE_CATALYST, C.RESOURCE_GHODIUM,
+);
+declare module 'xxscreeps/mods/resource' {
+	interface Schema { mineral: typeof resourceSchema }
+}
+
+const extractorSchema = registerVariant('Room.objects', Extractor.format);
+const mineralSchema = registerVariant('Room.objects', Mineral.format);
+declare module 'xxscreeps/game/room' {
+	interface Schema { mineral: [ typeof extractorSchema, typeof mineralSchema ] }
 }
 
 // Register FIND_ type for `Mineral`

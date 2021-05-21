@@ -2,6 +2,8 @@ import type { TypeOf } from 'xxscreeps/schema';
 import { enumeratedForPath } from 'xxscreeps/engine/schema';
 import { declare, enumerated, struct, vector } from 'xxscreeps/schema';
 
+export interface Schema {}
+
 export function memberFormat() {
 	return {
 		'#actionLog': declare('ActionLog', vector(struct({
@@ -19,7 +21,7 @@ export function saveAction(object: WithActionLog, action: Action, x: number, y: 
 }
 
 function actions() {
-	return enumerated(...enumeratedForPath('ActionLog.action'));
+	return enumerated(...enumeratedForPath<Schema>()('ActionLog.action'));
 }
 
 function withActionLog() {

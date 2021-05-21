@@ -1,6 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import { struct } from 'xxscreeps/schema';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { registerStruct, registerVariant } from 'xxscreeps/engine/schema';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { checkCommon } from 'xxscreeps/mods/creep/creep';
@@ -9,17 +8,13 @@ import { format as keeperFormat } from './keeper-lair';
 import { Source, format } from './source';
 
 // Register schema extensions
-const schema = [
-	registerSchema('Room', struct({
-		'#cumulativeEnergyHarvested': 'int32',
-	})),
-
-	registerSchema('Room.objects', format),
-
-	registerSchema('Room.objects', keeperFormat),
-];
-declare module 'xxscreeps/engine/schema' {
-	interface Schema { source: typeof schema }
+const sourceSchema = registerVariant('Room.objects', format);
+const keeperLairSchema = registerVariant('Room.objects', keeperFormat);
+const roomSchema = registerStruct('Room', {
+	'#cumulativeEnergyHarvested': 'int32',
+});
+declare module 'xxscreeps/game/room' {
+	interface Schema { source: [ typeof sourceSchema, typeof keeperLairSchema, typeof roomSchema ] }
 }
 
 // Register FIND_ types for `Source`

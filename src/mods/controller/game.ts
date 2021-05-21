@@ -1,32 +1,30 @@
 import './creep';
 import * as Controller from './controller';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/engine/schema';
 import { registerGlobal } from 'xxscreeps/game';
-import { enumerated, optional, struct } from 'xxscreeps/schema';
+import { optional, struct } from 'xxscreeps/schema';
 
 // Register schema
-const schema = [
-	registerSchema('ActionLog.action', enumerated('upgradeController')),
-
-	registerSchema('Room', struct({
-		'#level': 'int32',
-		'#safeModeUntil': 'int32',
-		'#sign': optional(struct({
-			datetime: 'double',
-			text: 'string',
-			time: 'int32',
-			userId: Id.format,
-		})),
-		'#user': Id.optionalFormat,
+const roomSchema = registerStruct('Room', {
+	'#level': 'int32',
+	'#safeModeUntil': 'int32',
+	'#sign': optional(struct({
+		datetime: 'double',
+		text: 'string',
+		time: 'int32',
+		userId: Id.format,
 	})),
+	'#user': Id.optionalFormat,
+});
+const controllerSchema = registerVariant('Room.objects', Controller.format);
+declare module 'xxscreeps/game/room' {
+	interface Schema { controller: [ typeof roomSchema, typeof controllerSchema ] }
+}
 
-	registerSchema('Room.objects', Controller.format),
-];
-declare module 'xxscreeps/engine/schema' {
-	interface Schema {
-		controller: typeof schema;
-	}
+const actionSchema = registerEnumerated('ActionLog.action', 'upgradeController');
+declare module 'xxscreeps/game/action-log' {
+	interface Schema { controller: typeof actionSchema }
 }
 
 // Export `StructureController` to runtime globals

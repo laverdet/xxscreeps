@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Creep from './creep';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { registerVariant } from 'xxscreeps/engine/schema';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 
 // Add `creeps` to global `Game` object
@@ -33,7 +33,7 @@ declare module 'xxscreeps/game/room' {
 }
 
 // Schema types
-declare module 'xxscreeps/engine/schema' {
+const schema = registerVariant('Room.objects', Creep.format);
+declare module 'xxscreeps/game/room' {
 	interface Schema { creep: typeof schema }
 }
-const schema = registerSchema('Room.objects', Creep.format);

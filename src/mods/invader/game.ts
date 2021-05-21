@@ -1,10 +1,9 @@
-import { struct } from 'xxscreeps/schema';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { registerStruct } from 'xxscreeps/engine/schema';
 
 // Track energy mined on room
-const schema = registerSchema('Room', struct({
+const schema = registerStruct('Room', {
 	'#invaderEnergyTarget': 'int32',
-}));
-declare module 'xxscreeps/engine/schema' {
+});
+declare module 'xxscreeps/game/room' {
 	interface Schema { invader: typeof schema }
 }

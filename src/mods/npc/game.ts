@@ -1,9 +1,9 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { compose, struct, vector } from 'xxscreeps/schema';
-import { registerSchema } from 'xxscreeps/engine/schema';
+import { registerStruct } from 'xxscreeps/engine/schema';
 
-const schema = registerSchema('Room', struct({
+const schema = registerStruct('Room', {
 	'#npcData': struct({
 		users: compose(vector(Id.format), {
 			compose: value => new Set(value),
@@ -17,8 +17,8 @@ const schema = registerSchema('Room', struct({
 			decompose: (map: Map<string, Readonly<Uint8Array>>) => Fn.map(map, ([ id, memory ]) => ({ id, memory })),
 		}),
 	}),
-}));
+});
 
-declare module 'xxscreeps/engine/schema' {
+declare module 'xxscreeps/game/room' {
 	interface Schema { npc: typeof schema }
 }
