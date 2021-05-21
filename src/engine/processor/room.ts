@@ -182,7 +182,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 				const key = name as keyof typeof existing.local;
 				existing.local[key] = [
 					...existing.local[key] ?? [],
-					...intents!,
+					...intents,
 				];
 			}
 			for (const [ id, intents ] of Object.entries(intentsForUser.object)) {

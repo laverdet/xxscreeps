@@ -179,7 +179,7 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 
 	// Return data to save
 	const result = assign(new Store, { ...store });
-	result['#amount'] = store ? Fn.accumulate(Object.values(store), amount => amount!) : 0;
+	result['#amount'] = store ? Fn.accumulate(Object.values(store), amount => amount) : 0;
 	result['#capacity'] = calculatedCapacity;
 	result['#resources'] = singleResource === undefined ? resources : [];
 	result['#restricted'] = isRestricted;

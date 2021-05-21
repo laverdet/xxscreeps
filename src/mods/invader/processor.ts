@@ -62,7 +62,7 @@ export function create(pos: RoomPosition, role: Role, strength: Strength, ageTim
 }
 
 function createBody(parts: { [Type in Creep.PartType]?: number }) {
-	const size = Fn.accumulate(Object.values(parts) as number[]);
+	const size = Fn.accumulate(Object.values(parts));
 	return [
 		...Array(parts[C.TOUGH] ?? 0).fill(C.TOUGH),
 		...Array(size - 1).fill(C.MOVE),
