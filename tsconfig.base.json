@@ -13,7 +13,7 @@
 		"moduleResolution": "node",
 		"module": "esnext",
 		"target": "esnext",
-		"lib": [ "esnext" ],
+		"lib": [ "esnext", "dom" ],
 
 		"strict": true,
 	},

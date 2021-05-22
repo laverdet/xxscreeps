@@ -1,5 +1,3 @@
-declare const URL: typeof import('url').URL;
-declare const URLSearchParams: typeof import('url').URLSearchParams;
 declare module 'acorn-class-fields';
 declare module 'acorn-private-methods';
 declare module 'stream-to-promise' {
@@ -15,4 +13,12 @@ interface ImportMeta {
 
 interface Function {
 	displayName: string;
+}
+
+// Stupid declaration to make node and dom version of `URL` compatible
+interface URLSearchParams {
+	entries(): IterableIterator<[ string, string ]>;
+	keys(): IterableIterator<string>;
+	values(): IterableIterator<string>;
+	[Symbol.iterator](): IterableIterator<[ string, string ]>;
 }

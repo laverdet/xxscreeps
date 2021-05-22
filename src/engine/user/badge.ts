@@ -4,7 +4,7 @@ import jsonSchema from './badge.schema.json';
 import * as User from './user';
 
 // To rebuild schema:
-// npx typescript-json-schema tsconfig.json UserBadge --include engine/metadata/badge.ts --defaultProps --required -o engine/metadata/badge.schema.json
+// npx typescript-json-schema tsconfig.json UserBadge --include src/engine/user/badge.ts --defaultProps --required -o src/engine/user/badge.schema.json
 
 /** @pattern ^#[a-f0-9]{6}$ */
 type Color = string;
