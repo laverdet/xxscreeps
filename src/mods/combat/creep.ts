@@ -95,6 +95,7 @@ export function checkAttack(creep: Creep, target: AttackTarget) {
 		() => checkCommon(creep, C.ATTACK),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
 		() => checkTarget(target, Creep, Structure),
+		() => checkDestructible(target),
 		() => checkRange(creep, target, 1),
 	);
 }
@@ -113,6 +114,7 @@ export function checkRangedAttack(creep: Creep, target: AttackTarget) {
 		() => checkCommon(creep, C.RANGED_ATTACK),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
 		() => checkTarget(target, Creep, Structure),
+		() => checkDestructible(target),
 		() => checkRange(creep, target, 3),
 	);
 }
@@ -122,6 +124,7 @@ export function checkRangedHeal(creep: Creep, target: Creep) {
 		() => checkCommon(creep, C.HEAL),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
 		() => checkTarget(target, Creep),
+		() => checkDestructible(target),
 		() => checkRange(creep, target, 3),
 	);
 }
@@ -130,4 +133,8 @@ export function checkRangedMassAttack(creep: Creep) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.RANGED_ATTACK),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART));
+}
+
+function checkDestructible(target: Creep | Structure) {
+	return target.hits === undefined ? C.ERR_INVALID_TARGET : C.OK;
 }

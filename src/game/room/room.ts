@@ -166,7 +166,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Add an object to the look and spatial indices
 	 */
-	// TODO: JS private method
 	#addToIndex(object: RoomObject) {
 		this.#lookIndex.get(object['#lookType'])!.push(object);
 		const pos = object.pos['#int'];

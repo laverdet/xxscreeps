@@ -136,6 +136,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'keeperLair': {
 				const keeperLair = new StructureKeeperLair;
 				withStructure(object, keeperLair);
+				keeperLair['#user'] = '3';
 				return keeperLair;
 			}
 

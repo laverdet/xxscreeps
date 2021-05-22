@@ -105,6 +105,7 @@ export class PlayerInstance {
 			if (wasStale) {
 				this.sandbox!.dispose();
 				this.sandbox = undefined;
+				this.seenUsers.clear();
 				this.stale = false;
 			}
 
