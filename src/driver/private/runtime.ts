@@ -38,13 +38,13 @@ export function ownPrivateEntries(object: any) {
 	}
 }
 
-export function makeGetter(name: string, optional: boolean) {
+export function makeGetter(name: string, optional: boolean): (object: any) => any {
 	const symbol = getSymbol(name);
 	return asOptional(optional, () => {
 		if (inherits) {
-			return (object: any) => object[symbol];
+			return object => object[symbol];
 		} else {
-			return (object: any) => {
+			return object => {
 				if (symbol in object) {
 					return object[symbol];
 				}
@@ -59,12 +59,12 @@ export function makeGetter(name: string, optional: boolean) {
 	});
 }
 
-export function makeSetter(name: string) {
+export function makeSetter(name: string): (object: any, value: any) => any {
 	const symbol = getSymbol(name);
 	if (inherits) {
-		return (object: any, value: any) => object[symbol] = value;
+		return (object, value) => object[symbol] = value;
 	} else {
-		return (object: any, value: any) => {
+		return (object, value) => {
 			for (let instance = object; instance !== null; instance = getPrototypeOf(instance)) {
 				if (symbol in instance) {
 					set(instance, symbol, value, object);
@@ -77,19 +77,33 @@ export function makeSetter(name: string) {
 	}
 }
 
-export function makeInvoke(name: string, optional: boolean, isSuper = false) {
+export function makeMutator(name: string, postfix = false): (object: any, fn: (value: any) => any) => any {
+	const get = makeGetter(name, false);
+	const set = makeSetter(name);
+	if (postfix) {
+		return (object, fn) => {
+			const value = get(object);
+			set(object, fn(value));
+			return value;
+		};
+	} else {
+		return (object, fn) => set(object, fn(get(object)));
+	}
+}
+
+export function makeInvoke(name: string, optional: boolean, isSuper = false): (object: any, ...args: any[]) => any {
 	const symbol = getSymbol(name);
 	return asOptional(optional, () => {
 		if (inherits) {
 			if (isSuper) {
-				return (object: any, ...args: any[]) => apply((getPrototypeOf(getPrototypeOf(object)!) as any)[symbol], object, args);
+				return (object, ...args) => apply((getPrototypeOf(getPrototypeOf(object)!) as any)[symbol], object, args);
 			} else {
-				return (object: any, ...args: any[]) => apply(object[symbol], object, args);
+				return (object, ...args) => apply(object[symbol], object, args);
 			}
 		} else {
 			// eslint-disable-next-line no-lonely-if
 			if (isSuper) {
-				return (object: any, ...args: any[]) => {
+				return (object, ...args) => {
 					for (let instance = getPrototypeOf(getPrototypeOf(object)!); instance !== null; instance = getPrototypeOf(instance)) {
 						if (symbol in instance) {
 							return apply((instance as any)[symbol], object, args);
@@ -98,7 +112,7 @@ export function makeInvoke(name: string, optional: boolean, isSuper = false) {
 					throw new Error(`${symbol.description} is undefined`);
 				};
 			} else {
-				return (object: any, ...args: any[]) => {
+				return (object, ...args) => {
 					for (let instance = object; instance !== null; instance = getPrototypeOf(instance)) {
 						if (symbol in instance) {
 							return apply(instance[symbol], object, args);

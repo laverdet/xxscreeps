@@ -110,18 +110,49 @@ export default function(): PluginObj {
 		}
 	};
 
+	const makeLambda = (params: t.Identifier[], expr: t.Expression) =>
+		t.functionExpression(undefined, params,
+			t.blockStatement([ t.returnStatement(expr) ]));
+
 	const visitor: Visitor<State> = {
 
-		// Replace `obj['#foo'] = val` -> `makeSetter('foo')(obj, val)`
 		AssignmentExpression(path) {
 			const { node } = path;
-			if (node.operator === '=') {
-				const { name, object } = extractPrivate(node.left);
-				if (name) {
+			const { name, object } = extractPrivate(node.left);
+			if (name) {
+				if (node.operator === '=') {
+					// Replace `obj['#foo'] = val` -> `makeSetter('foo')(obj, val)`
 					path.replaceWith(t.callExpression(
 						injectMaker(path.state, 'makeSetter', `set${name.value.substr(1)}`, [ name ]),
 						[ object!, node.right ]));
+
+				} else if (/^.=$/.test(node.operator)) {
+					// Replace `obj['#foo'] += val` -> `makeMutator('foo')(obj, val => val + 1)`
+					const id = path.state.program.scope.generateUidIdentifier('val');
+					path.replaceWith(t.callExpression(
+						injectMaker(path.state, 'makeMutator', `mut${name.value.substr(1)}`, [ name ]),
+						[ object!, makeLambda([ id ], t.binaryExpression(
+							node.operator.charAt(0) as any,
+							id,
+							node.right)) ]));
 				}
+			}
+		},
+
+		UpdateExpression(path) {
+			const { node } = path;
+			const { name, object } = extractPrivate(node.argument);
+			if (name) {
+				// Replace `++obj['#foo']` -> `makeMutator('foo')(obj, val => val + 1)`
+				const id = path.state.program.scope.generateUidIdentifier('val');
+				const methodKey = `mut${name.value.substr(1)}${node.prefix ? '' : 'Post'}`;
+				path.replaceWith(t.callExpression(
+					injectMaker(path.state, 'makeMutator', methodKey, [ name, t.booleanLiteral(!node.prefix) ]),
+					[ object!, makeLambda([ id ], t.binaryExpression(
+						node.operator.charAt(0) as any,
+						id,
+						t.numericLiteral(1),
+					)) ]));
 			}
 		},
 

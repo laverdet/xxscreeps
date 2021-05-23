@@ -61,6 +61,8 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 						...babelPlugins.length === 0 ? [] : [ {
 							loader: babelLoader,
 							options: {
+								cacheCompression: false,
+								cacheDirectory: true,
 								plugins: babelPlugins,
 							},
 						} ],
