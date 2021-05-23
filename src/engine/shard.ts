@@ -4,10 +4,10 @@ import type { Effect } from 'xxscreeps/utility/types';
 import type { Subscription } from 'xxscreeps/engine/storage/channel';
 import * as RoomSchema from 'xxscreeps/engine/room';
 import { connectToProvider } from 'xxscreeps/engine/storage';
-import { getProcessorChannel } from './processor/model';
 import { Channel } from 'xxscreeps/engine/storage/channel';
 import { World } from 'xxscreeps/game/map';
 import config from 'xxscreeps/config';
+import { getRoomChannel } from './processor/model';
 
 type Message = { type: 'tick'; time: number } | { type: null };
 
@@ -105,8 +105,10 @@ export class Shard {
 	 */
 	async saveRoomBlob(name: string, time: number, blob: Readonly<Uint8Array>) {
 		this.checkTime(time, 1);
-		await this.blob.set(this.roomKeyForTime(name, time), blob);
-		await getProcessorChannel(this).publish({ type: 'saveRoom', roomName: name });
+		await Promise.all([
+			this.blob.set(this.roomKeyForTime(name, time), blob),
+			getRoomChannel(this, name).publish({ type: 'didUpdate', time }),
+		]);
 	}
 
 	/**

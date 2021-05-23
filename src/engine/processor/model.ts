@@ -9,9 +9,15 @@ export function getProcessorChannel(shard: Shard) {
 	type Message =
 		{ type: 'finalize'; time: number } |
 		{ type: 'process'; time: number } |
-		{ type: 'saveRoom'; roomName: string } |
 		{ type: 'shutdown' };
 	return new Channel<Message>(shard.pubsub, 'channel/processor');
+}
+
+export function getRoomChannel(shard: Shard, roomName: string) {
+	type Message =
+		{ type: 'didUpdate'; time: number } |
+		{ type: 'willSpawn' };
+	return new Channel<Message>(shard.pubsub, `processor/room/${roomName}`);
 }
 
 const activeRoomsKey = 'processor/activeRooms';

@@ -6,6 +6,9 @@ import { acquire } from 'xxscreeps/utility/async';
 import { asUnion } from 'xxscreeps/utility/utility';
 import { Render, roomSocketHandlers } from 'xxscreeps/backend/symbols';
 import './render';
+import { getRoomChannel } from 'xxscreeps/engine/processor/model';
+
+const kUpdateInterval = 125;
 
 function diff(previous: any, next: any) {
 	if (previous === next) {
@@ -29,29 +32,68 @@ function diff(previous: any, next: any) {
 	return next;
 }
 
+function throttle(fn: () => void) {
+	let timeout: ReturnType<typeof setTimeout> | undefined;
+	let disabled = 0;
+	return {
+		clear() {
+			if (timeout) {
+				clearTimeout(timeout);
+				timeout = undefined;
+			}
+		},
+		disable() {
+			this.clear();
+			++disabled;
+		},
+		enable() {
+			--disabled;
+		},
+		reset(time: number) {
+			if (disabled === 0) {
+				this.clear();
+				this.set(time);
+			}
+		},
+		set(time: number) {
+			if (!timeout && disabled === 0) {
+				timeout = setTimeout(fn, time);
+			}
+		},
+	};
+}
+
 export const roomSubscription: SubscriptionEndpoint = {
 	pattern: /^room:(?:(?<shard>[A-Za-z0-9]+)\/)?(?<room>[A-Z0-9]+)$/,
 
 	async subscribe(parameters) {
-		let lastTickTime = 0;
 		let previous: any;
+		let didUpdate = true;
+		let time = -1;
+		let previousTime = -1;
 		const seenUsers = new Set<string>();
+		const timer = throttle(() => { update().catch(console.error) });
 
-		const update = async(time: number) => {
-			lastTickTime = Date.now();
+		const update = async() => {
+			if (time === previousTime) {
+				return;
+			}
+			previousTime = time;
+			timer.disable();
 			const [ room, extra ] = await Promise.all([
 				// Update room objects
-				this.context.shard.loadRoom(parameters.room, time),
+				didUpdate ? this.context.shard.loadRoom(parameters.room, time) : undefined,
 				// Invoke room socket handlers
 				Promise.all(hooks.map(fn => fn(time))),
 			]);
+			didUpdate = false;
 
 			// Render current room state
-			const objects: any = {};
 			const visibleUsers = new Set<string>();
-			runWithState(new GameState(this.context.world, time, [ room ]), () => {
+			const dval = room ? runWithState(new GameState(this.context.world, time, [ room ]), () =>
 				runAsUser(this.user ?? '0', () => {
-					// Objects
+					// Render all RoomObjects
+					const objects: any = {};
 					for (const object of room['#objects']) {
 						asUnion(object);
 						const value = object[Render]();
@@ -72,8 +114,11 @@ export const roomSubscription: SubscriptionEndpoint = {
 							}
 						}
 					}
-				});
-			});
+					// Diff with previous payload
+					const dval = diff(previous, objects);
+					previous = objects;
+					return dval;
+				})) : {};
 
 			// Get users not yet seen
 			const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async(id): Promise<[ string, any ]> => {
@@ -86,7 +131,6 @@ export const roomSubscription: SubscriptionEndpoint = {
 			visibleUsers.clear();
 
 			// Diff with previous room state and return response
-			const dval = diff(previous, objects);
 			const response = Object.assign({
 				objects: dval,
 				info: { mode: 'world' },
@@ -94,25 +138,50 @@ export const roomSubscription: SubscriptionEndpoint = {
 				users,
 			}, ...extra);
 			this.send(JSON.stringify(response));
-			previous = objects;
+			timer.enable();
+			timer.set(kUpdateInterval);
 		};
 
 		// Listen for updates
 		const [ effect, [ hookResults ] ] = await acquire(
 			// Resolve room socket handlers
 			acquire(...roomSocketHandlers.map(fn => fn(this.context.shard, this.user, parameters.room))),
-			// Room updates
+			// Listen for shard time update
 			this.context.shard.channel.listen(event => {
-				if (event.type === 'tick' && Date.now() > lastTickTime + 50) {
-					update(event.time).catch(error => console.error(error));
+				if (event.type === 'tick') {
+					time = event.time;
+					timer.set(0);
 				}
 			}),
+			// Listen for room updates
+			getRoomChannel(this.context.shard, parameters.room).listen(event => {
+				if (event.type === 'didUpdate') {
+					// This happens before the tick is totally done
+					didUpdate = true;
+				} else if (event.type === 'willSpawn') {
+					// There is a race condition in the client where if you send an update while placing your
+					// initial spawn the renderer will break until next refresh. It happens because the client
+					// unsubscribes and immediately resubscribes to the channel. Since channels are only
+					// addressed by the name of the channel messages from the old subscription will be sent to
+					// the new handlers. Shut down event for a full second when someone is spawning in the
+					// current room to avoid this condition.
+					timer.reset(500);
+				}
+			}),
+			// Disable updates on unlisten
+			() => () => { timer.clear(); timer.disable() },
 		);
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		const hooks = hookResults.filter(hook => hook);
 
 		// Fire off first update immediately
-		await update(this.context.shard.time);
+		try {
+			time = this.context.shard.time;
+			await update();
+		} catch (err) {
+			effect();
+			throw err;
+		}
 
 		// Disconnect on socket hangup
 		return effect;

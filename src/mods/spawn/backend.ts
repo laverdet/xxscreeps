@@ -3,7 +3,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as Controller from 'xxscreeps/mods/controller/processor';
 import * as Spawn from './spawn';
 import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
-import { forceRoomProcess, userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
+import { forceRoomProcess, getRoomChannel, userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
 import { bindRenderer, registerBackendRoute } from 'xxscreeps/backend';
@@ -104,6 +104,8 @@ registerBackendRoute({
 		}
 		const { name, room: roomName, x, y } = context.request.body;
 		const pos = new RoomPosition(x, y, roomName);
+		await getRoomChannel(context.shard, roomName).publish({ type: 'willSpawn' });
+		await new Promise(resolve => { setTimeout(resolve, 50) });
 		await context.backend.gameMutex.scope(async() => {
 			// Ensure user has no objects
 			const roomNames = await context.shard.scratch.smembers(userToRoomsSetKey(userId));

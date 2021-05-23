@@ -95,13 +95,11 @@ try {
 
 		// Add delay
 		const delay = Math.max(0, config.game.tickSpeed - (Date.now() - timeStartedLoop));
-		if (delay > 0) {
-			delayShutdown = new Deferred;
-			const { promise } = delayShutdown;
-			setTimeout(() => delayShutdown!.resolve(true), delay).unref();
-			if (!await promise) {
-				break;
-			}
+		delayShutdown = new Deferred;
+		const { promise } = delayShutdown;
+		setTimeout(() => delayShutdown!.resolve(true), delay).unref();
+		if (!await promise) {
+			break;
 		}
 	} while (true);
 
