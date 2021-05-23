@@ -16,13 +16,13 @@ export interface DestructibleStructure extends Structure {
 	hitsMax: number;
 }
 
-export const structureFormat = () => compose(shape, Structure);
-const shape = declare('Structure', RoomObject.format);
+export const structureFormat = declare('Structure', () => compose(shape, Structure));
+const shape = RoomObject.format;
 
-export const ownedStructureFormat = () => compose(ownedShape, OwnedStructure);
-const ownedShape = declare('OwnedStructure', struct(structureFormat, {
+export const ownedStructureFormat = declare('OwnedStructure', () => compose(ownedShape, OwnedStructure));
+const ownedShape = struct(structureFormat, {
 	'#user': Id.optionalFormat,
-}));
+});
 
 /**
  * The base prototype object of all structures.

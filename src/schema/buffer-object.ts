@@ -9,7 +9,8 @@ const GetBuffer = XSymbol('getBuffer');
 const GetOffset = XSymbol('getOffset');
 
 // Used on newly-constructed to provide defaults on uninitialized fields
-const zeroBuffer = new BufferView(new ArrayBuffer(1024));
+const zeroBuffer = new BufferView(new ArrayBuffer(0));
+zeroBuffer.nullify();
 
 /**
  * Any object that is backed by a secret ArrayBuffer. All schema objects must inherit from this one.

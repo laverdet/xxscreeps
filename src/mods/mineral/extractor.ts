@@ -7,12 +7,12 @@ import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
-export const format = () => compose(shape, StructureExtractor);
-const shape = declare('Extractor', struct(ownedStructureFormat, {
+export const format = declare('Extractor', () => compose(shape, StructureExtractor));
+const shape = struct(ownedStructureFormat, {
 	...variant('extractor'),
 	hits: 'int32',
 	'#cooldownTime': 'int32',
-}));
+});
 
 export class StructureExtractor extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return C.EXTRACTOR_HITS }

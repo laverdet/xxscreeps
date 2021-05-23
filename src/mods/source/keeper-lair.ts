@@ -5,11 +5,11 @@ import { Game, registerGlobal } from 'xxscreeps/game';
 import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 
-export function format() { return compose(shape, StructureKeeperLair) }
-const shape = declare('KeeperLair', struct(ownedStructureFormat, {
+export const format = declare('KeeperLair', () => compose(shape, StructureKeeperLair));
+const shape = struct(ownedStructureFormat, {
 	...variant('keeperLair'),
 	'#nextSpawnTime': 'int32',
-}));
+});
 
 /**
  * Non-player structure. Spawns NPC Source Keepers that guards energy sources and minerals in some

@@ -16,12 +16,12 @@ export const optionalResourceEnumFormat = () => declare('ResourceType',
 export const resourceEnumFormat = withType<ResourceType>(optionalResourceEnumFormat);
 
 // Schema for resource objects
-export const format = () => compose(shape, Resource);
-const shape = declare('Resource', struct(RoomObject.format, {
+export const format = declare('Resource', () => compose(shape, Resource));
+const shape = struct(RoomObject.format, {
 	...variant('resource'),
 	amount: 'int32',
 	resourceType: resourceEnumFormat,
-}));
+});
 
 // Game object
 export class Resource extends withOverlay(RoomObject.RoomObject, shape) {

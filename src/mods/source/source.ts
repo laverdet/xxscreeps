@@ -3,13 +3,13 @@ import * as RoomObject from 'xxscreeps/game/object';
 import { Game, registerGlobal } from 'xxscreeps/game';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 
-export const format = () => compose(shape, Source);
-const shape = declare('Source', struct(RoomObject.format, {
+export const format = declare('Source', () => compose(shape, Source));
+const shape = struct(RoomObject.format, {
 	...variant('source'),
 	energy: 'int32',
 	energyCapacity: 'int32',
 	'#nextRegenerationTime': 'int32',
-}));
+});
 
 // Game object declaration
 export class Source extends withOverlay(RoomObject.RoomObject, shape) {

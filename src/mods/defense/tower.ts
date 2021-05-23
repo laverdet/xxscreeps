@@ -9,12 +9,12 @@ import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
-export const format = () => compose(shape, StructureTower);
-const shape = declare('Tower', struct(ownedStructureFormat, {
+export const format = declare('Tower', () => compose(shape, StructureTower));
+const shape = struct(ownedStructureFormat, {
 	...variant('tower'),
 	hits: 'int32',
 	store: Store.restrictedFormat<'energy'>(),
-}));
+});
 
 export class StructureTower extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return C.TOWER_HITS }

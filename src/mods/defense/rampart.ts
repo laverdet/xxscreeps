@@ -7,13 +7,13 @@ import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema
 import { asUnion, assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
-export const format = () => compose(shape, StructureRampart);
-const shape = declare('Rampart', struct(ownedStructureFormat, {
+export const format = declare('Rampart', () => compose(shape, StructureRampart));
+const shape = struct(ownedStructureFormat, {
 	...variant('rampart'),
 	hits: 'int32',
 	isPublic: 'bool',
 	'#nextDecayTime': 'int32',
-}));
+});
 
 export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() {

@@ -4,8 +4,8 @@ import { Game } from 'xxscreeps/game';
 import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 
-export const format = () => compose(shape, StructureController);
-const shape = declare('Controller', struct(ownedStructureFormat, {
+export const format = declare('Controller', () => compose(shape, StructureController));
+const shape = struct(ownedStructureFormat, {
 	...variant('controller'),
 	isPowerEnabled: 'bool',
 	// reservation: { username, ticksToEnd }
@@ -14,7 +14,7 @@ const shape = declare('Controller', struct(ownedStructureFormat, {
 	'#progress': 'int32',
 	'#safeModeCooldownTime': 'int32',
 	'#upgradeBlockedUntil': 'int32',
-}));
+});
 
 export class StructureController extends withOverlay(OwnedStructure, shape) {
 	['#upgradePowerThisTick']: number | undefined;

@@ -41,14 +41,14 @@ class Spawning extends withOverlay(BufferObject, spawningFormat) {
 }
 
 // `StructureSpawn` format
-export const format = () => compose(shape, StructureSpawn);
-const shape = declare('Spawn', struct(ownedStructureFormat, {
+export const format = declare('Spawn', () => compose(shape, StructureSpawn));
+const shape = struct(ownedStructureFormat, {
 	...variant('spawn'),
 	hits: 'int32',
 	name: 'string',
 	spawning: optional(compose(spawningFormat, Spawning)),
 	store: Store.restrictedFormat<'energy'>(),
-}));
+});
 
 export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	static readonly Spawning = Spawning;

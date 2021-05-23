@@ -9,14 +9,14 @@ import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 
-export const format = () => compose(shape, StructureLab);
-const shape = declare('Lab', struct(ownedStructureFormat, {
+export const format = declare('Lab', () => compose(shape, StructureLab));
+const shape = struct(ownedStructureFormat, {
 	...variant('lab'),
 	hits: 'int32',
 	mineralType: resourceEnumFormat,
 	store: Store.format,
 	'#cooldownTime': 'int32',
-}));
+});
 
 export class StructureLab extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return C.LAB_HITS }

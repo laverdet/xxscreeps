@@ -8,14 +8,14 @@ import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { checkCommon } from 'xxscreeps/mods/creep/creep';
 
-export const format = () => compose(shape, Mineral);
-const shape = declare('Mineral', struct(RoomObject.format, {
+export const format = declare('Mineral', () => compose(shape, Mineral));
+const shape = struct(RoomObject.format, {
 	...variant('mineral'),
 	density: 'int32',
 	mineralAmount: 'int32',
 	mineralType: resourceEnumFormat,
 	'#nextRegenerationTime': 'int32',
-}));
+});
 
 // Game object declaration
 export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {

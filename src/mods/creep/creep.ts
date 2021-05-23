@@ -31,28 +31,26 @@ type MoveToOptions = {
 	visualizePathStyle?: boolean;
 };
 
-export const format = () => compose(shape, Creep);
-function shape() {
-	return declare('Creep', struct(RoomObjectLib.format, {
-		...variant('creep'),
-		...ActionLog.memberFormat(),
-		body: vector(struct({
-			boost: optionalResourceEnumFormat,
-			hits: 'uint8',
-			type: enumerated(...C.BODYPARTS_ALL),
-		})),
-		fatigue: 'int32',
-		hits: 'int32',
-		name: 'string',
-		store: Store.format,
-		'#saying': optional(struct({
-			isPublic: 'bool',
-			message: 'string',
-		})),
-		'#user': Id.format,
-		'#ageTime': 'int32',
-	}));
-}
+export const format = declare('Creep', () => compose(shape, Creep));
+const shape = struct(RoomObjectLib.format, {
+	...variant('creep'),
+	...ActionLog.memberFormat(),
+	body: vector(struct({
+		boost: optionalResourceEnumFormat,
+		hits: 'uint8',
+		type: enumerated(...C.BODYPARTS_ALL),
+	})),
+	fatigue: 'int32',
+	hits: 'int32',
+	name: 'string',
+	store: Store.format,
+	'#saying': optional(struct({
+		isPublic: 'bool',
+		message: 'string',
+	})),
+	'#user': Id.format,
+	'#ageTime': 'int32',
+});
 
 export class Creep extends withOverlay(RoomObject, shape) {
 	get carry() { return this.store }

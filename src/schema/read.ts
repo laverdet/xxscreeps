@@ -1,5 +1,4 @@
 import type { Layout, StructLayout } from './layout';
-import type { Package } from './build';
 import type { TypeOf } from './format';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 import { getOrSet } from 'xxscreeps/utility/utility';
@@ -8,13 +7,13 @@ import { Variant } from './format';
 import { kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout';
 import { injectGetters } from './overlay';
 import { entriesWithSymbols } from './symbol';
-import { Cache } from '.';
+import { Builder } from '.';
 
 export type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 export type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;
 
-function getMemberReader(layout: StructLayout, cache: Cache): MemberReader {
-	return getOrSet(cache.memberReader, layout, () => {
+function getMemberReader(layout: StructLayout, builder: Builder): MemberReader {
+	return getOrSet(builder.memberReader, layout, () => {
 
 		let readMembers: MemberReader | undefined;
 		for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
@@ -22,7 +21,7 @@ function getMemberReader(layout: StructLayout, cache: Cache): MemberReader {
 			// Make reader for single field
 			const next = function(): MemberReader {
 				const { member: layout, offset } = member;
-				const read = makeTypeReader(layout, cache);
+				const read = makeTypeReader(layout, builder);
 
 				// Wrap to read this field from reserved address
 				return (value, view, instanceOffset) => {
@@ -48,7 +47,7 @@ function getMemberReader(layout: StructLayout, cache: Cache): MemberReader {
 		if (inherit === undefined) {
 			return readMembers!;
 		} else {
-			const readBase = getMemberReader(unpackWrappedStruct(inherit), cache);
+			const readBase = getMemberReader(unpackWrappedStruct(inherit), builder);
 			return (value, view, offset) => {
 				readBase(value, view, offset);
 				readMembers!(value, view, offset);
@@ -57,8 +56,8 @@ function getMemberReader(layout: StructLayout, cache: Cache): MemberReader {
 	});
 }
 
-export function makeTypeReader(layout: Layout, cache: Cache): Reader {
-	return getOrSet(cache.reader, layout, () => {
+export function makeTypeReader(layout: Layout, builder: Builder): Reader {
+	return getOrSet(builder.reader, layout, () => {
 
 		if (typeof layout === 'string') {
 			// Basic types
@@ -99,7 +98,7 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 			// Array with fixed element size
 			const { length, stride } = layout;
 			const elementLayout = layout.array;
-			const read = makeTypeReader(elementLayout, cache);
+			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				const value: any[] = [];
 				let currentOffset = offset;
@@ -117,15 +116,27 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 		} else if ('composed' in layout) {
 			// Composed value
 			const { composed, interceptor } = layout;
-			const read = makeTypeReader(composed, cache);
+			const read = makeTypeReader(composed, builder);
 			if ('compose' in interceptor) {
 				return (view, offset) => interceptor.compose(read(view, offset));
 			} else if ('composeFromBuffer' in interceptor) {
 				return (view, offset) => interceptor.composeFromBuffer(view, offset);
 			} else {
-				// Inject prototype getters into overlay
-				injectGetters(unpackWrappedStruct(layout), interceptor.prototype, cache);
-				return (view, offset) => new (interceptor as any)(view, offset);
+				const struct = unpackWrappedStruct(layout);
+				const instantiate: Reader = (view, offset) => new (interceptor as any)(view, offset);
+				if (builder.materialize) {
+					// Immediately read all members
+					const readMembers = getMemberReader(struct, builder);
+					return (view, offset) => {
+						const instance = instantiate(view, offset);
+						readMembers(instance, view, offset);
+						return instance;
+					};
+				} else {
+					// Inject prototype getters into overlay
+					injectGetters(struct, interceptor.prototype, builder);
+					return instantiate;
+				}
 			}
 
 		} else if ('enum' in layout) {
@@ -136,7 +147,7 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 		} else if ('list' in layout) {
 			// Vector with dynamic element size
 			const elementLayout = layout.list;
-			const read = makeTypeReader(elementLayout, cache);
+			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				const value = [];
 				let currentOffset = view.int32[offset >>> 2];
@@ -149,12 +160,12 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 
 		} else if ('named' in layout) {
 			// Named type
-			return makeTypeReader(layout.layout, cache);
+			return makeTypeReader(layout.layout, builder);
 
 		} else if ('optional' in layout) {
 			// Small optional element
 			const { size, optional: elementLayout } = layout;
-			const read = makeTypeReader(elementLayout, cache);
+			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				if (view.uint8[offset + size]) {
 					return read(view, offset);
@@ -166,7 +177,7 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 		} else if ('pointer' in layout) {
 			// Optional element implemented as pointer
 			const elementLayout = layout.pointer;
-			const read = makeTypeReader(elementLayout, cache);
+			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				const payloadOffset = view.int32[offset >>> 2];
 				if (payloadOffset === 0) {
@@ -181,9 +192,9 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 			const { variant } = layout;
 			if (layout.inherit) {
 				// Ensure parent injects getters
-				makeTypeReader(layout.inherit, cache);
+				makeTypeReader(layout.inherit, builder);
 			}
-			const readMembers = getMemberReader(layout, cache);
+			const readMembers = getMemberReader(layout, builder);
 			if (variant) {
 				return (view, offset) => {
 					const value = { [Variant]: variant };
@@ -201,7 +212,7 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 		} else if ('variant' in layout) {
 			// Variant types
 			const variantReaders = layout.variant.map(element =>
-				makeTypeReader(element.layout, cache));
+				makeTypeReader(element.layout, builder));
 			if (variantReaders.length !== layout.variant.length) {
 				throw new Error('Missing or duplicated variant key');
 			}
@@ -210,7 +221,7 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 		} else if ('vector' in layout) {
 			// Vector with fixed element size
 			const { size, vector: elementLayout } = layout;
-			const read = makeTypeReader(elementLayout, cache);
+			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				let currentOffset = view.int32[offset >>> 2];
 				const length = view.int32[(offset >>> 2) + 1];
@@ -227,18 +238,32 @@ export function makeTypeReader(layout: Layout, cache: Cache): Reader {
 	});
 }
 
-export function makeReader<Type extends Package>(info: Type, cache = new Cache) {
-	const read = makeTypeReader(info.layout, cache);
-	return (buffer: Readonly<Uint8Array>): TypeOf<Type> => {
-		const view = BufferView.fromTypedArray(buffer);
-		if (
-			view.uint32[0] !== kMagic ||
-			view.uint32[1] !== info.version ||
-			view.uint32[2] !== buffer.length ||
-			view.uint32[3] !== 0
-		) {
-			throw new Error('Corrupted blob');
+type Readable = {
+	layout: any;
+	version: number;
+};
+
+export function initializeView(buffer: Readonly<Uint8Array>) {
+	const view = BufferView.fromTypedArray(buffer);
+	if (view.uint32.byteLength < kHeaderSize || view.uint32[0] !== kMagic || view.uint32[3] !== 0) {
+		throw new Error('Corrupted blob');
+	} else if (view.uint32[2] !== buffer.length) {
+		throw new Error('Truncated blob');
+	}
+	return { version: view.uint32[1], view };
+}
+
+export function makeViewReader<Type extends Readable>(info: Type, builder = new Builder) {
+	const read = makeTypeReader(info.layout, builder);
+	return (view: BufferView): TypeOf<Type> => {
+		if (view.uint32[1] !== info.version) {
+			throw new Error(`Unexpected blob version [${view.uint32[1]}]. Expected ${info.version}.`);
 		}
 		return read(view, kHeaderSize);
 	};
+}
+
+export function makeReader<Type extends Readable>(info: Type, builder = new Builder) {
+	const read = makeViewReader(info, builder);
+	return (buffer: Readonly<Uint8Array>) => read(initializeView(buffer).view);
 }

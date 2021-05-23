@@ -11,12 +11,12 @@ import { intents } from './game';
 export type Color = typeof C.COLORS_ALL[number];
 const colorFormat = withType<Color>('int8');
 
-export const format = () => compose(shape, Flag);
-const shape = declare('Flag', struct(baseFormat, {
+export const format = declare('Flag', () => compose(shape, Flag));
+const shape = struct(baseFormat, {
 	name: 'string',
 	color: colorFormat,
 	secondaryColor: colorFormat,
-}));
+});
 
 export class Flag extends withOverlay(RoomObject, shape) {
 	// Flags are kind of fake objects, and don't get an id

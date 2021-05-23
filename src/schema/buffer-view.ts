@@ -1,4 +1,5 @@
 const typedArrays = [ 'uint8', 'uint16', 'uint32', 'int8', 'int16', 'int32', 'double' ] as const;
+const zeroProxy = new Proxy(new Uint8Array([ 0 ]), { get: () => 0 });
 
 /**
  * TypeArray holder for a chunk of serialized game state. Probably holds a room at time.
@@ -43,5 +44,14 @@ export class BufferView {
 				get: () => { throw error() },
 			},
 		])));
+	}
+
+	/**
+	 * Detach the buffer and force all entries to be 0
+	 */
+	nullify() {
+		for (const key of typedArrays) {
+			(this as any)[key] = zeroProxy;
+		}
 	}
 }

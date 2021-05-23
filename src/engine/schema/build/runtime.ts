@@ -7,3 +7,5 @@ export function build(format: any, cache = new Map) {
 		...packages[getName(format)!],
 	};
 }
+
+export const makeUpgrader = () => () => { throw new Error('Blob upgrade not available') };

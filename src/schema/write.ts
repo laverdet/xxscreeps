@@ -7,13 +7,13 @@ import { BufferView } from './buffer-view';
 import { Variant } from './format';
 import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout';
 import { entriesWithSymbols } from './symbol';
-import { Cache } from '.';
+import { Builder } from '.';
 
 export type Writer<Type = any> = (value: Type, view: BufferView, offset: number, heap: number) => number;
 export type MemberWriter = (value: any, view: BufferView, offset: number, heap: number) => number;
 
-function makeMemberWriter(layout: StructLayout, cache: Cache): MemberWriter {
-	return getOrSet(cache.memberWriter, layout, () => {
+function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter {
+	return getOrSet(builder.memberWriter, layout, () => {
 
 		let writeMembers: MemberWriter | undefined;
 		for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
@@ -21,7 +21,7 @@ function makeMemberWriter(layout: StructLayout, cache: Cache): MemberWriter {
 			// Make writer for single field
 			const next = function(): MemberWriter {
 				const { member: layout, offset } = member;
-				const write = makeTypeWriter(layout, cache);
+				const write = makeTypeWriter(layout, builder);
 
 				// Wrap to write this field at reserved address
 				return (value, view, instanceOffset, heap) =>
@@ -44,15 +44,15 @@ function makeMemberWriter(layout: StructLayout, cache: Cache): MemberWriter {
 		if (inherit === undefined) {
 			return writeMembers!;
 		} else {
-			const writeBase = makeMemberWriter(unpackWrappedStruct(inherit), cache);
+			const writeBase = makeMemberWriter(unpackWrappedStruct(inherit), builder);
 			return (value, view, offset, heap) =>
 				writeMembers!(value, view, offset, writeBase(value, view, offset, heap));
 		}
 	});
 }
 
-function makeTypeWriter(layout: Layout, cache: Cache): Writer {
-	return getOrSet(cache.writer, layout, () => {
+function makeTypeWriter(layout: Layout, builder: Builder): Writer {
+	return getOrSet(builder.writer, layout, () => {
 
 		if (typeof layout === 'string') {
 			// Basic types
@@ -109,7 +109,7 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 			// Array with fixed element size
 			const { length, stride } = layout;
 			const elementLayout = layout.array;
-			const write = makeTypeWriter(elementLayout, cache);
+			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
 				let currentOffset = offset;
 				for (let ii = 0; ii < length; ++ii) {
@@ -122,7 +122,7 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 		} else if ('composed' in layout) {
 			// Composed value
 			const { composed, interceptor } = layout;
-			const write = makeTypeWriter(composed, cache);
+			const write = makeTypeWriter(composed, builder);
 			if ('decompose' in interceptor) {
 				return (value, view, offset, heap) => write(interceptor.decompose(value), view, offset, heap);
 			} else if ('decomposeIntoBuffer' in interceptor) {
@@ -143,7 +143,7 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 			// Vector with dynamic element size
 			const { size, list: elementLayout } = layout;
 			const align = Math.max(kPointerSize, layout.align);
-			const write = makeTypeWriter(elementLayout, cache);
+			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
 				let prevOffset = offset + kPointerSize;
 				let end = heap;
@@ -159,12 +159,12 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 
 		} else if ('named' in layout) {
 			// Named type
-			return makeTypeWriter(layout.layout, cache);
+			return makeTypeWriter(layout.layout, builder);
 
 		} else if ('optional' in layout) {
 			// Small optional element
 			const { size, optional: elementLayout } = layout;
-			const write = makeTypeWriter(elementLayout, cache);
+			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
 				if (value === undefined) {
 					view.int8[offset + size] = 0;
@@ -178,7 +178,7 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 		} else if ('pointer' in layout) {
 			// Optional element implemented as pointer
 			const { align, size, pointer: elementLayout } = layout;
-			const write = makeTypeWriter(elementLayout, cache);
+			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
 				if (value === undefined) {
 					view.int32[offset >>> 2] = 0;
@@ -192,7 +192,7 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 
 		} else if ('struct' in layout) {
 			// Structured types
-			const writeMembers = makeMemberWriter(layout, cache);
+			const writeMembers = makeMemberWriter(layout, builder);
 			return (value, view, offset, heap) => writeMembers(value, view, offset, heap);
 
 		} else if ('variant' in layout) {
@@ -200,7 +200,7 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 			const variantMap = new Map(layout.variant.map((element, ii): [ string | number, Writer ] => {
 				const { align, size } = element;
 				const layout = unpackWrappedStruct(element.layout);
-				const write = makeTypeWriter(layout, cache);
+				const write = makeTypeWriter(layout, builder);
 				return [
 					layout.variant!,
 					(value, view, offset, heap) => {
@@ -216,7 +216,7 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 		} else if ('vector' in layout) {
 			// Vector with fixed element size
 			const { align, size, vector: elementLayout } = layout;
-			const write = makeTypeWriter(elementLayout, cache);
+			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
 				let length = 0;
 				let currentOffset = view.int32[offset >>> 2] = alignTo(heap, align);
@@ -237,8 +237,8 @@ function makeTypeWriter(layout: Layout, cache: Cache): Writer {
 
 const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 * 1024 * 16)));
 
-export function makeWriter<Type extends Package>(info: Type, cache = new Cache) {
-	const write = makeTypeWriter(info.layout, cache);
+export function makeWriter<Type extends Package>(info: Type, builder = new Builder) {
+	const write = makeTypeWriter(info.layout, builder);
 	return (value: ShapeOf<Type>): Readonly<Uint8Array> => {
 		const view = bufferCache();
 		const length = write(value, view, kHeaderSize, info.traits.size + kHeaderSize);

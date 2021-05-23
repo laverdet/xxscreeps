@@ -12,14 +12,14 @@ import { structureFactories } from './symbols';
 
 export type ConstructibleStructureType = keyof typeof C.CONSTRUCTION_COST;
 
-export function format() { return compose(shape, ConstructionSite) }
-const shape = () => declare('ConstructionSite', struct(RoomObject.format, {
+export const format = declare('ConstructionSite', () => compose(shape, ConstructionSite));
+const shape = () => struct(RoomObject.format, {
 	...variant('constructionSite'),
 	name: 'string',
 	progress: 'int32',
 	structureType: enumerated(...structureFactories.keys() as never as ConstructibleStructureType[]),
 	'#user': Id.format,
-}));
+});
 
 export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) {
 	override get my() { return this['#user'] === me }

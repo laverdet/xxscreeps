@@ -1,12 +1,12 @@
 import type { struct, variant } from 'xxscreeps/schema/format';
 import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types';
 import type { Format } from 'xxscreeps/schema';
-import { Cache, makeReader, makeWriter } from 'xxscreeps/schema';
+import { Builder, makeReader, makeWriter } from 'xxscreeps/schema';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
 import { getOrSet } from 'xxscreeps/utility/utility';
 // Use full path here so we can rewrite it in webpack
-import { build } from 'xxscreeps/engine/schema/build';
-export { build };
+import { build, makeUpgrader } from 'xxscreeps/engine/schema/build';
+export { build, makeUpgrader };
 
 // Resolve mod formats from `declare module` interfaces
 type FormatsForPath<Schema, Path extends string> =
@@ -62,7 +62,7 @@ export function variantForPath<Schema>() {
 
 export function makeReaderAndWriter<Type extends Format>(format: Type) {
 	const info = build(format);
-	const cache = new Cache;
+	const cache = new Builder;
 	return {
 		read: makeReader(info, cache),
 		write: makeWriter(info, cache),

@@ -6,11 +6,11 @@ import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
-export const format = () => compose(shape, StructureWall);
-const shape = declare('Wall', struct(structureFormat, {
+export const format = declare('Wall', () => compose(shape, StructureWall));
+const shape = struct(structureFormat, {
 	...variant('constructedWall'),
 	hits: 'int32',
-}));
+});
 
 export class StructureWall extends withOverlay(Structure, shape) {
 	override get hitsMax() {

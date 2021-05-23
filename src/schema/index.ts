@@ -13,9 +13,13 @@ export { withOverlay } from './overlay';
 export { makeReader } from './read';
 export { makeWriter } from './write';
 
-export class Cache {
+export class Builder {
+	readonly materialize;
 	readonly memberReader = new Map<Layout, MemberReader>();
 	readonly memberWriter = new Map<Layout, MemberWriter>();
 	readonly reader = new Map<Layout, Reader>();
 	readonly writer = new Map<Layout, Writer>();
+	constructor(options: { materialize?: boolean } = {}) {
+		this.materialize = options.materialize ?? false;
+	}
 }

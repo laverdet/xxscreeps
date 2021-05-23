@@ -1,23 +1,79 @@
+import type { BufferView, Format } from 'xxscreeps/schema';
 import type { Package } from 'xxscreeps/schema/build';
 import type { Transform } from 'xxscreeps/driver/webpack';
-import type { Format } from 'xxscreeps/schema';
+import fs from 'fs';
 import { build as buildSchema } from 'xxscreeps/schema/build';
-import { getName } from 'xxscreeps/schema/format';
+import { restoreLayout } from 'xxscreeps/schema/archive';
+import { archiveStruct } from 'xxscreeps/schema/kaitai';
+import { initializeView, makeViewReader } from 'xxscreeps/schema/read';
+import { Builder } from 'xxscreeps/schema';
 import config, { configPath } from 'xxscreeps/config';
+import { getOrSet } from 'xxscreeps/utility/utility';
 
 const archivePath = new URL(`${config.schemaArchive}/`, configPath);
-
+const archivedReaders = new Map<number, (view: BufferView) => any>();
 const packages = new Map<string, Package>();
+
+function makeArchivePath(name: string, version: number, ext = 'js') {
+	const versionId = version.toString(16).padStart(8, '0').split(/(?<hex>[0-9a-f]{2})/).reverse().join('');
+	const pathFragment = `${name.toLowerCase()}-${versionId}`;
+	return new URL(`./${pathFragment}.${ext}`, archivePath);
+}
+
+/**
+ * Builds a schema package from a format and retains the result which can be used later within the
+ * player runtime.
+ */
 export function build<Type extends Format>(format: Type, cache = new Map) {
-	const name = getName(format);
-	if (name === null) {
-		throw new Error('`build` requires named schema');
+	const result = buildSchema(format, cache);
+	const file = makeArchivePath(result.name, result.version);
+	fs.mkdirSync(archivePath, { recursive: true });
+	try {
+		fs.statSync(file);
+	} catch (err) {
+		fs.writeFileSync(file, result.archive);
+		fs.writeFileSync(makeArchivePath(result.name, result.version, 'ksy'), archiveStruct(result.layout, result.version));
 	}
-	const result = buildSchema(format, archivePath, cache);
-	packages.set(name, result);
+	packages.set(result.name, {
+		...result,
+		archive: '?',
+	});
 	return result;
 }
 
+/**
+ * Creates a function which transparently upgrades a blob to a newer schema version by first reading
+ * with the old schema and writing with the new one.
+ */
+export function makeUpgrader(info: Package, write: (value: any) => Readonly<Uint8Array>) {
+	const { name, version: expectedVersion } = info;
+	return (buffer: Readonly<Uint8Array>) => {
+		const { view, version } = initializeView(buffer);
+		if (expectedVersion === version) {
+			return buffer;
+		} else {
+			const reader = getOrSet(archivedReaders, version, () => {
+				const archive = function() {
+					try {
+						return fs.readFileSync(makeArchivePath(name, version), 'utf8');
+					} catch (err) {
+						throw new Error(`No archived schema found for ${name} ${version}`);
+					}
+				}();
+				const layout = restoreLayout(archive, info.layout);
+				return makeViewReader({ layout, version }, new Builder({ materialize: true }));
+			});
+			// Read instance and nullify underlying buffer, providing defaults for unspecified members
+			const value = reader(view);
+			view.nullify();
+			return write(value);
+		}
+	};
+}
+
+/**
+ * Webpack transformation which replaces this file with `./runtime.ts`.
+ */
 export const schemaTransform: Transform = {
 	alias: {
 		'xxscreeps/engine/schema/build': 'xxscreeps/engine/schema/build/runtime',

@@ -9,11 +9,11 @@ import { expandGetters } from 'xxscreeps/utility/inspect';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerGlobal } from '.';
 
-export const format = () => compose(shape, RoomObject);
-const shape = declare('RoomObject', struct({
+export const format = declare('RoomObject', () => compose(shape, RoomObject));
+const shape = struct({
 	id: Id.format,
 	pos: RoomPosition.format,
-}));
+});
 
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	abstract get ['#lookType'](): string;

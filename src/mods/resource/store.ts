@@ -10,11 +10,11 @@ export type { ResourceType };
 export type StorageRecord = Partial<Record<ResourceType, number>>;
 export type WithStore = { store: Store };
 
-export function format() { return withType<Store<ResourceType>>(compose(shape, Store)) }
+export function format() { return withType<Store<ResourceType>>(declare('Store', compose(shape, Store))) }
 export function restrictedFormat<Resource extends ResourceType>() {
 	return withType<Store<Resource>>(format);
 }
-const shape = declare('Store', struct({
+const shape = struct({
 	'#amount': 'int32',
 	'#capacity': 'int32',
 	'#resources': vector(struct({
@@ -24,7 +24,7 @@ const shape = declare('Store', struct({
 	})),
 	'#restricted': 'bool',
 	'#singleResource': optionalResourceEnumFormat,
-}));
+});
 
 // Make `Store` indexable on any `ResourceType`
 const BufferObjectWithResourcesType = withOverlay(BufferObject,

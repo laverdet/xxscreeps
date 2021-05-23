@@ -30,9 +30,13 @@ export function expandGetters(that: any) {
 	keys.push(...ownProperties);
 	keys.sort();
 	for (const key of keys) {
-		const value = that[key];
-		if (value != null) {
-			Object.defineProperty(expanded, key, { enumerable: true, writable: true, value });
+		if (!key.startsWith('#')) {
+			try {
+				const value = that[key];
+				if (value != null) {
+					Object.defineProperty(expanded, key, { enumerable: true, writable: true, value });
+				}
+			} catch (err) {}
 		}
 	}
 	// Don't recurse

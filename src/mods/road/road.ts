@@ -7,13 +7,13 @@ import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
-export function format() { return compose(shape, StructureRoad) }
-const shape = declare('Road', struct(structureFormat, {
+export const format = declare('Road', () => compose(shape, StructureRoad));
+const shape = struct(structureFormat, {
 	...variant('road'),
 	hits: 'int32',
 	'#nextDecayTime': 'int32',
 	'#terrain': 'int8',
-}));
+});
 
 export class StructureRoad extends withOverlay(Structure, shape) {
 	override get hitsMax() { return C.ROAD_HITS * this['#multiplier'] }

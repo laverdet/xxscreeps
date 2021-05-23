@@ -1,41 +1,38 @@
 import type { Format, ShapeOf, TypeOf, WithShapeAndType } from './format';
 import type { LayoutAndTraits } from './layout';
 import crypto from 'crypto';
-import fs from 'fs';
 import { archiveLayout } from './archive';
 import { getLayout } from './layout';
-import { archiveStruct } from './kaitai';
+import { getName } from 'xxscreeps/schema/format';
 
-export type Package = ShapeOf<any> & TypeOf<any> & LayoutAndTraits & {
+export interface Package extends LayoutAndTraits {
 	archive: string;
+	name: string;
 	version: number;
-};
-export function build<Type extends Format>(format: Type, archivePath: URL, cache = new Map<Format, LayoutAndTraits>()) {
+}
+
+export function build<Type extends Format>(format: Type, cache = new Map<Format, LayoutAndTraits>()) {
+	const name = getName(format);
+	if (name === null) {
+		throw new Error('`build` requires named schema');
+	}
 	const layout = getLayout(format, cache);
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	const { archive, version } = crypto.createHash === undefined ? {
 		archive: '?',
-		version: 0,
+		version: -1,
 	} : function() {
 		const archive = archiveLayout(layout.layout);
 		const hash = crypto.createHash('sha1');
 		hash.update(archive);
 		const digest = hash.digest();
 		const version = digest.readUInt32LE(0);
-		const versionId = digest.readUInt32BE(0).toString(16);
-		const file = new URL(`./${versionId}.js`, archivePath);
-		fs.mkdirSync(archivePath, { recursive: true });
-		try {
-			fs.statSync(file);
-		} catch (err) {
-			fs.writeFileSync(file, archive);
-			fs.writeFileSync(new URL(`./${versionId}.ksy`, file), archiveStruct(layout.layout, version));
-		}
 		return { archive, version };
 	}();
 	const result = {
 		...layout,
 		archive,
+		name,
 		version,
 	};
 	return result as WithShapeAndType<ShapeOf<Type>, TypeOf<Type>> & typeof result;

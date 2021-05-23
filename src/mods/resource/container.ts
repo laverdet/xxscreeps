@@ -8,13 +8,13 @@ import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 
-export const format = () => compose(shape, StructureContainer);
-const shape = declare('Container', struct(structureFormat, {
+export const format = declare('Container', () => compose(shape, StructureContainer));
+const shape = struct(structureFormat, {
 	...variant('container'),
 	hits: 'int32',
 	store: Store.format,
 	'#nextDecayTime': 'int32',
-}));
+});
 
 export class StructureContainer extends withOverlay(Structure, shape) {
 	override get hitsMax() { return C.CONTAINER_HITS }

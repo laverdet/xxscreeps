@@ -87,7 +87,7 @@ export class Shard {
 	 */
 	async loadRoomBlob(name: string, time = this.time) {
 		this.checkTime(time, -1);
-		return this.blob.reqBuffer(this.roomKeyForTime(name, time));
+		return RoomSchema.upgrade(await this.blob.reqBuffer(this.roomKeyForTime(name, time)));
 	}
 
 	/**
