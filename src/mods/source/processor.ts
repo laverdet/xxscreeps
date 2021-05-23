@@ -38,6 +38,7 @@ registerObjectTickProcessor(Source, (source, context) => {
 		}
 	} else if (source['#nextRegenerationTime'] !== 0) {
 		source['#nextRegenerationTime'] = 0;
+		context.didUpdate();
 	}
 	context.wakeAt(source['#nextRegenerationTime']);
 
@@ -95,10 +96,7 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 		context.setActive();
 	}
 	// Make sure to wake room when it's time to spawn a new keeper
-	const nextSpawnTime = keeperLair['#nextSpawnTime'];
-	if (nextSpawnTime > 0) {
-		context.wakeAt(nextSpawnTime);
-	}
+	context.wakeAt(keeperLair['#nextSpawnTime']);
 });
 
 registerNPC('3', Game => {

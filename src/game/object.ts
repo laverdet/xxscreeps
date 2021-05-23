@@ -4,10 +4,13 @@ import type { Room } from 'xxscreeps/game/room';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as BufferObject from 'xxscreeps/schema/buffer-object';
 import * as RoomPosition from 'xxscreeps/game/position';
-import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, enumerated, struct, vector, withOverlay } from 'xxscreeps/schema';
+import { enumeratedForPath } from 'xxscreeps/engine/schema';
 import { expandGetters } from 'xxscreeps/utility/inspect';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerGlobal } from '.';
+
+export interface Schema {}
 
 export const format = declare('RoomObject', () => compose(shape, RoomObject));
 const shape = struct({
@@ -62,3 +65,9 @@ declare module 'xxscreeps/game/runtime' {
 		RoomObject: typeof RoomObject;
 	}
 }
+
+export const actionLogFormat = declare('ActionLog', () => vector(struct({
+	action: enumerated(...enumeratedForPath<Schema>()('ActionLog.action')),
+	x: 'int8',
+	y: 'int8',
+})));

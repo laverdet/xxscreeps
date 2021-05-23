@@ -1,13 +1,48 @@
 import * as C from 'xxscreeps/game/constants';
-import { intents } from 'xxscreeps/game';
+import { intents, me } from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
+import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
 import { Creep, checkCommon, checkHasResource } from 'xxscreeps/mods/creep/creep';
 import { StructureController } from './controller';
 
 // Creep extension declaration
 declare module 'xxscreeps/mods/creep/creep' {
 	interface Creep {
+		/**
+		 * Decreases the controller's downgrade timer by 300 ticks per every `CLAIM` body part, or
+		 * reservation timer by 1 tick per every `CLAIM` body part. If the controller under attack is
+		 * owned, it cannot be upgraded or attacked again for the next 1,000 ticks. The target has to be
+		 * at adjacent square to the creep.
+		 * @param target The target controller object.
+		 */
+		attackController(target: StructureController): ReturnType<typeof checkAttackController>;
+
+		/**
+		 * Claims a neutral controller under your control. Requires the `CLAIM` body part. The target has
+		 * to be at adjacent square to the creep. You need to have the corresponding Global Control
+		 * Level in order to claim a new room. If you don't have enough GCL, consider reserving this
+		 * room instead. Learn more
+		 * @param target The target controller object.
+		 */
+		claimController(target: StructureController): ReturnType<typeof checkClaimController>;
+
+		/**
+		 * Add one more available safe mode activation to a room controller. The creep has to be at
+		 * adjacent square to the target room controller and have 1000 ghodium resource.
+		 * @param target The target room controller.
+		 */
+		generateSafeMode(target: StructureController): ReturnType<typeof checkGenerateSafeMode>;
+
+		/**
+		 * Temporarily block a neutral controller from claiming by other players and restore energy
+		 * sources to their full capacity. Each tick, this command increases the counter of the period
+		 * during which the controller is unavailable by 1 tick per each `CLAIM` body part. The maximum
+		 * reservation period to maintain is 5,000 ticks. The target has to be at adjacent square to the
+		 * creep.
+		 * @param target The target controller object to be reserved.
+		 */
+		reserveController(target: StructureController): ReturnType<typeof checkReserveController>;
+
 		/**
 		 * Sign a controller with an arbitrary text visible to all players. This text will appear in the
 		 * room UI, in the world map, and can be accessed via the API. You can sign unowned and hostile
@@ -38,6 +73,30 @@ declare module 'xxscreeps/mods/creep/creep' {
 
 // Creep extension implementation
 extend(Creep, {
+	attackController(target) {
+		return chainIntentChecks(
+			() => checkAttackController(this, target),
+			() => intents.save(this, 'attackController', target.id));
+	},
+
+	claimController(target) {
+		return chainIntentChecks(
+			() => checkClaimController(this, target),
+			() => intents.save(this, 'claimController', target.id));
+	},
+
+	generateSafeMode(target) {
+		return chainIntentChecks(
+			() => checkGenerateSafeMode(this, target),
+			() => intents.save(this, 'generateSafeMode', target.id));
+	},
+
+	reserveController(target) {
+		return chainIntentChecks(
+			() => checkReserveController(this, target),
+			() => intents.save(this, 'reserveController', target.id));
+	},
+
 	signController(target, message) {
 		return chainIntentChecks(
 			() => checkSignController(this, target),
@@ -53,6 +112,57 @@ extend(Creep, {
 });
 
 // Intent checkers
+export function checkAttackController(creep: Creep, target: StructureController) {
+	return chainIntentChecks(
+		() => checkCommon(creep, C.CLAIM),
+		() => checkTarget(target, StructureController),
+		() => checkRange(creep, target, 1),
+		() => checkSafeMode(target.room, C.ERR_NO_BODYPART),
+		() => {
+			if (target['#user'] === null) {
+				return C.ERR_INVALID_TARGET;
+			} else if (target.upgradeBlocked) {
+				return C.ERR_TIRED;
+			}
+		});
+}
+
+export function checkClaimController(creep: Creep, target: StructureController) {
+	return chainIntentChecks(
+		() => checkCommon(creep, C.CLAIM),
+		() => checkTarget(target, StructureController),
+		() => checkRange(creep, target, 1),
+		() => {
+			const user = target['#user'];
+			if (user !== null && user !== me) {
+				return C.ERR_INVALID_TARGET;
+			}
+			console.error('TODO: claimController');
+			return C.ERR_GCL_NOT_ENOUGH;
+		});
+}
+
+export function checkGenerateSafeMode(creep: Creep, target: StructureController) {
+	return chainIntentChecks(
+		() => checkCommon(creep, C.WORK),
+		() => checkHasResource(creep, C.RESOURCE_GHODIUM, C.SAFE_MODE_COST),
+		() => checkTarget(target, StructureController),
+		() => checkRange(creep, target, 1));
+}
+
+export function checkReserveController(creep: Creep, target: StructureController) {
+	return chainIntentChecks(
+		() => checkCommon(creep, C.CLAIM),
+		() => checkTarget(target, StructureController),
+		() => checkRange(creep, target, 1),
+		() => {
+			const user = target['#user'];
+			if ((user !== null && user !== me) || target.level !== 0) {
+				return C.ERR_INVALID_TARGET;
+			}
+		});
+}
+
 export function checkSignController(creep: Creep, target: StructureController) {
 	return chainIntentChecks(
 		() => checkCommon(creep),

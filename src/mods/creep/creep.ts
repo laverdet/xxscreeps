@@ -7,7 +7,6 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
-import * as ActionLog from 'xxscreeps/game/action-log';
 import * as RoomObjectLib from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { Game, intents, me, userInfo } from 'xxscreeps/game';
@@ -34,7 +33,6 @@ type MoveToOptions = {
 export const format = declare('Creep', () => compose(shape, Creep));
 const shape = struct(RoomObjectLib.format, {
 	...variant('creep'),
-	...ActionLog.memberFormat(),
 	body: vector(struct({
 		boost: optionalResourceEnumFormat,
 		hits: 'uint8',
@@ -44,12 +42,13 @@ const shape = struct(RoomObjectLib.format, {
 	hits: 'int32',
 	name: 'string',
 	store: Store.format,
+	'#actionLog': RoomObjectLib.actionLogFormat,
+	'#ageTime': 'int32',
 	'#saying': optional(struct({
 		isPublic: 'bool',
 		message: 'string',
 	})),
 	'#user': Id.format,
-	'#ageTime': 'int32',
 });
 
 export class Creep extends withOverlay(RoomObject, shape) {

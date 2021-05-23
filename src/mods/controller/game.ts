@@ -22,8 +22,8 @@ declare module 'xxscreeps/game/room' {
 	interface Schema { controller: [ typeof roomSchema, typeof controllerSchema ] }
 }
 
-const actionSchema = registerEnumerated('ActionLog.action', 'upgradeController');
-declare module 'xxscreeps/game/action-log' {
+const actionSchema = registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
+declare module 'xxscreeps/game/object' {
 	interface Schema { controller: typeof actionSchema }
 }
 

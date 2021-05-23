@@ -50,8 +50,7 @@ registerObjectTickProcessor(Mineral, (mineral, context) => {
 				mineral.density = accumulated.findIndex(value => random <= value);
 			}
 			context.didUpdate();
-		} else {
-			context.wakeAt(mineral['#nextRegenerationTime']);
 		}
+		context.wakeAt(mineral['#nextRegenerationTime']);
 	}
 });

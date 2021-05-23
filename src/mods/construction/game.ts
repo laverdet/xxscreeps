@@ -24,7 +24,7 @@ declare module 'xxscreeps/game/runtime' {
 
 // Schema types
 const actionSchema = registerEnumerated('ActionLog.action', 'build', 'repair');
-declare module 'xxscreeps/game/action-log' {
+declare module 'xxscreeps/game/object' {
 	interface Schema { construction: typeof actionSchema }
 }
 

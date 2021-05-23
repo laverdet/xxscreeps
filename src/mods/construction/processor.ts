@@ -9,7 +9,6 @@ import { RoomPosition } from 'xxscreeps/game/position';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { Room } from 'xxscreeps/game/room';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { saveAction } from 'xxscreeps/game/action-log';
 import { ConstructionSite, checkRemove, create } from './construction-site';
 import { checkBuild, checkDismantle, checkRepair } from './creep';
 import { checkCreateConstructionSite } from './room';
@@ -50,7 +49,7 @@ const intents = [
 			if (energy > 0) {
 				Store.subtract(creep.store, 'energy', energy);
 				target.progress += energy;
-				saveAction(creep, 'build', target.pos.x, target.pos.y);
+				creep['#actionLog'].push({ action: 'build', x: target.pos.x, y: target.pos.y });
 				context.didUpdate();
 			}
 		}
@@ -85,7 +84,7 @@ const intents = [
 			if (effect > 0) {
 				Store.subtract(creep.store, 'energy', effect * C.REPAIR_COST);
 				target.hits += effect;
-				saveAction(creep, 'repair', target.pos.x, target.pos.y);
+				creep['#actionLog'].push({ action: 'repair', x: target.pos.x, y: target.pos.y });
 				context.didUpdate();
 			}
 		}

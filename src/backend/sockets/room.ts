@@ -65,6 +65,12 @@ export const roomSubscription: SubscriptionEndpoint = {
 							seenUsers.add(owner);
 							visibleUsers.add(owner);
 						}
+						for (const userId of object['#extraUsers']) {
+							if (!seenUsers.has(userId)) {
+								seenUsers.add(userId);
+								visibleUsers.add(userId);
+							}
+						}
 					}
 				});
 			});
@@ -77,6 +83,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 					badge: info.badge ? JSON.parse(info.badge) : {},
 				} ];
 			})));
+			visibleUsers.clear();
 
 			// Diff with previous room state and return response
 			const dval = diff(previous, objects);

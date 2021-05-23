@@ -23,7 +23,7 @@ registerHarvestable(RoomObject, () => C.ERR_INVALID_TARGET);
 
 // Schema registration
 const actionSchema = registerEnumerated('ActionLog.action', 'harvest');
-declare module 'xxscreeps/game/action-log' {
+declare module 'xxscreeps/game/object' {
 	interface Schema { harvestable: typeof actionSchema }
 }
 

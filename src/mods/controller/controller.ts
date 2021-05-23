@@ -1,17 +1,18 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
-import { Game } from 'xxscreeps/game';
+import { Game, intents, userInfo } from 'xxscreeps/game';
 import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
+import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
 
 export const format = declare('Controller', () => compose(shape, StructureController));
 const shape = struct(ownedStructureFormat, {
 	...variant('controller'),
 	isPowerEnabled: 'bool',
-	// reservation: { username, ticksToEnd }
 	safeModeAvailable: 'int32',
 	'#downgradeTime': 'int32',
 	'#progress': 'int32',
+	'#reservationTime': 'int32',
 	'#safeModeCooldownTime': 'int32',
 	'#upgradeBlockedUntil': 'int32',
 });
@@ -30,14 +31,28 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	get upgradeBlocked() { return Math.max(0, this['#upgradeBlockedUntil'] - Game.time) || undefined }
 
 	/**
+	 * An object with the controller reservation info if present
+	 */
+	get reservation() {
+		const reservationTime = this['#reservationTime'];
+		const value = reservationTime ? {
+			ticksToEnd: reservationTime - Game.time,
+			username: userInfo.get(this['#user']!)!.username,
+		} : undefined;
+		Object.defineProperty(this, 'reservation', { value });
+		return value;
+	}
+
+	/**
 	 * An object with the controller sign info if present
 	 */
 	get sign() {
-		const value = this.room['#sign'] ? {
-			datetime: new Date(this.room['#sign'].datetime),
-			text: this.room['#sign'].text,
-			time: this.room['#sign'].time,
-			username: '',
+		const sign = this.room['#sign'];
+		const value = sign ? {
+			datetime: new Date(sign.datetime),
+			text: sign.text,
+			time: sign.time,
+			username: userInfo.get(sign.userId)!.username,
 		} : null;
 		Object.defineProperty(this, 'sign', { value });
 		return value;
@@ -47,7 +62,9 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	 * Activate safe mode if available.
 	 */
 	activateSafeMode() {
-		console.log('TODO: activateSafeMode');
+		return chainIntentChecks(
+			() => checkActivateSafeMode(this),
+			() => intents.save(this, 'activateSafeMode'));
 	}
 
 	/**
@@ -66,10 +83,32 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 		super['#afterRemove'](room);
 		room.controller = undefined;
 	}
+
+	override get ['#extraUsers']() {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		const sign = this.room?.['#sign'];
+		return sign ? [ sign.userId ] : [];
+	}
 }
 
 declare module 'xxscreeps/game/room/room' {
 	interface Room {
 		controller?: StructureController;
 	}
+}
+
+export function checkActivateSafeMode(controller: StructureController) {
+	return chainIntentChecks(
+		() => checkTarget(controller, StructureController),
+		() => {
+			if (controller.my !== false) {
+				return C.ERR_NOT_OWNER;
+			} else if (controller.safeModeAvailable <= 0) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+			} else if (controller.safeModeCooldown) {
+				return C.ERR_TIRED;
+			} else if (controller.safeMode) {
+				return C.ERR_BUSY;
+			}
+		});
 }

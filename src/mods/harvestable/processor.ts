@@ -6,7 +6,6 @@ import { Game } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
-import { saveAction } from 'xxscreeps/game/action-log';
 import { checkHarvest } from './creep';
 
 // `RoomObject` harvest intent processor symbol
@@ -39,7 +38,7 @@ const intent = registerIntentProcessor(Creep, 'harvest', (creep, context, id: st
 			objectId: creep.id,
 			targetId: target.id,
 		});
-		saveAction(creep, 'harvest', target.pos.x, target.pos.y);
+		creep['#actionLog'].push({ action: 'harvest', x: target.pos.x, y: target.pos.y });
 		context.didUpdate();
 	}
 });

@@ -19,7 +19,7 @@ const actionSchema = registerEnumerated('ActionLog.action',
 	'attack', 'attacked', 'heal', 'healed',
 	'rangedAttack', 'rangedHeal', 'rangedMassAttack',
 );
-declare module 'xxscreeps/game/action-log' {
+declare module 'xxscreeps/game/object' {
 	interface Schema { combat: typeof actionSchema }
 }
 

@@ -91,11 +91,12 @@ export class Store<Resources extends ResourceType = any> extends
 	getCapacity(resourceType?: Resources): number;
 	getCapacity(resourceType?: ResourceType): number | null;
 	getCapacity(resourceType?: ResourceType) {
-		if (this['#capacityByResource'] === undefined) {
+		const capacityByResource = this['#capacityByResource'];
+		if (capacityByResource === undefined) {
 			return this['#capacity'];
 		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 		} else if (resourceType) {
-			return this['#capacityByResource'].get(resourceType) ?? null;
+			return capacityByResource.get(resourceType) ?? null;
 		} else {
 			return null;
 		}
@@ -135,7 +136,7 @@ export class Store<Resources extends ResourceType = any> extends
 	 * be iterated when not in the runtime.
 	 */
 	['#entries'](): Iterable<[ ResourceType, number ]> {
-		return Fn.filter(Object.entries(this), entry => entry[0].startsWith('#')) as never;
+		return Fn.reject(Object.entries(this), entry => entry[0].startsWith('#')) as never;
 	}
 }
 
