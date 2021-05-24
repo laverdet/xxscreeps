@@ -81,6 +81,7 @@ type VectorLayout = {
 	vector: Layout;
 	align: number;
 	size: number;
+	stride: number;
 };
 
 export type Traits = {
@@ -329,6 +330,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 						vector: layout,
 						align: traits.align,
 						size: traits.size,
+						stride: traits.stride,
 					}),
 					traits: {
 						align: kPointerSize,

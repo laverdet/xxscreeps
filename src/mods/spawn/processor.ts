@@ -6,7 +6,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, me } from 'xxscreeps/game';
-import { getPositonInDirection as getPositionInDirection } from 'xxscreeps/game/position';
+import { getPositionInDirection } from 'xxscreeps/game/position';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';

@@ -56,6 +56,7 @@ const intents = [
 			creep['#saying'] = {
 				isPublic,
 				message: `${message}`.substr(0, 10),
+				time: Game.time,
 			};
 			context.didUpdate();
 		}
@@ -88,15 +89,36 @@ const intents = [
 ];
 
 registerObjectPreTickProcessor(Creep, (creep, context) => {
-	if (creep['#actionLog'].length !== 0) {
-		creep['#actionLog'] = [];
-		context.didUpdate();
+	const kRetainActionsTime = 10;
+	const timeLimit = Game.time - kRetainActionsTime;
+
+	// Reset action log
+	const actionLog = creep['#actionLog'];
+	const actionLength = actionLog.length;
+	if (actionLength !== 0) {
+		const filteredLog = creep['#actionLog'] = actionLog.filter(action => action.time > timeLimit);
+		if (filteredLog.length !== actionLength) {
+			context.didUpdate();
+		}
+		if (filteredLog.length > 0) {
+			const minimum = Fn.minimum(Fn.map(filteredLog, action => action.time))!;
+			context.wakeAt(minimum + kRetainActionsTime);
+		}
+	}
+
+	// Remove `saying`
+	const saying = creep['#saying'];
+	if (saying) {
+		if (saying.time <= timeLimit) {
+			creep['#saying'] = undefined;
+			context.didUpdate();
+		} else {
+			context.wakeAt(saying.time + kRetainActionsTime);
+		}
 	}
 });
 
 registerObjectTickProcessor(Creep, (creep, context) => {
-	// Remove `saying`
-	creep['#saying'] = undefined;
 
 	// Check creep death
 	if (

@@ -3,6 +3,7 @@ import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
+import { saveAction } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
@@ -38,7 +39,7 @@ const intent = registerIntentProcessor(Creep, 'harvest', (creep, context, id: st
 			objectId: creep.id,
 			targetId: target.id,
 		});
-		creep['#actionLog'].push({ action: 'harvest', x: target.pos.x, y: target.pos.y });
+		saveAction(creep, 'harvest', target.pos);
 		context.didUpdate();
 	}
 });

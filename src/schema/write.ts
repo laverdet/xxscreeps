@@ -215,19 +215,23 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 
 		} else if ('vector' in layout) {
 			// Vector with fixed element size
-			const { align, size, vector: elementLayout } = layout;
+			const { align, size, stride, vector: elementLayout } = layout;
+			const tailPadding = stride - size;
 			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
 				let length = 0;
 				let currentOffset = view.int32[offset >>> 2] = alignTo(heap, align);
 				for (const element of value) {
 					++length;
-					currentOffset = alignTo(currentOffset, align);
 					write(element, view, currentOffset, 0);
-					currentOffset += size;
+					currentOffset += stride;
 				}
 				view.int32[(offset >>> 2) + 1] = length;
-				return currentOffset;
+				if (length === 0) {
+					return heap;
+				} else {
+					return currentOffset - tailPadding;
+				}
 			};
 		}
 

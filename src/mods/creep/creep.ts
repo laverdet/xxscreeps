@@ -47,6 +47,7 @@ const shape = struct(RoomObjectLib.format, {
 	'#saying': optional(struct({
 		isPublic: 'bool',
 		message: 'string',
+		time: 'int32',
 	})),
 	'#user': Id.format,
 });
@@ -74,7 +75,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 */
 	get saying() {
 		const saying = this['#saying'];
-		if (saying && (saying.isPublic || this['#user'] === me)) {
+		if (saying?.time === Game.time && (saying.isPublic || this.my)) {
 			return saying.message;
 		}
 	}
@@ -270,7 +271,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 * @param message The message to be displayed. Maximum length is 10 characters.
 	 * @param public Set to true to allow other players to see this message. Default is false.
 	 */
-	say(message: string, isPublic = true) {
+	say(message: string, isPublic = false) {
 		return chainIntentChecks(
 			() => checkCommon(this),
 			() => intents.save(this, 'say', `${message}`.substr(0, 10), isPublic));

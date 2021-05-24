@@ -1,27 +1,29 @@
 import type { GameConstructor } from '.';
 import type { InspectOptionsStylized } from 'util';
-import type { Room } from 'xxscreeps/game/room';
+import type { Room } from './room';
+import type { RoomPosition } from './position';
+import type { TypeOf } from 'xxscreeps/schema';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as BufferObject from 'xxscreeps/schema/buffer-object';
-import * as RoomPosition from 'xxscreeps/game/position';
+import { format as roomPositionFormat } from './position';
 import { compose, declare, enumerated, struct, vector, withOverlay } from 'xxscreeps/schema';
 import { enumeratedForPath } from 'xxscreeps/engine/schema';
 import { expandGetters } from 'xxscreeps/utility/inspect';
 import { assign } from 'xxscreeps/utility/utility';
-import { registerGlobal } from '.';
+import { Game, registerGlobal } from '.';
 
 export interface Schema {}
 
 export const format = declare('RoomObject', () => compose(shape, RoomObject));
 const shape = struct({
 	id: Id.format,
-	pos: RoomPosition.format,
+	pos: roomPositionFormat,
 });
 
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	abstract get ['#lookType'](): string;
 	room!: Room;
-	['#nextPosition']?: RoomPosition.RoomPosition;
+	['#nextPosition']?: RoomPosition;
 	['#nextPositionTime']?: number;
 
 	get ['#extraUsers'](): string[] { return [] }
@@ -51,7 +53,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	}
 }
 
-export function create<Type extends RoomObject>(instance: Type, pos: RoomPosition.RoomPosition): Type {
+export function create<Type extends RoomObject>(instance: Type, pos: RoomPosition): Type {
 	return assign<Type, RoomObject>(instance, {
 		id: Id.generateId(),
 		pos,
@@ -67,7 +69,24 @@ declare module 'xxscreeps/game/runtime' {
 }
 
 export const actionLogFormat = declare('ActionLog', () => vector(struct({
-	action: enumerated(...enumeratedForPath<Schema>()('ActionLog.action')),
+	type: enumerated(...enumeratedForPath<Schema>()('ActionLog.action')),
 	x: 'int8',
 	y: 'int8',
+	time: 'int32',
 })));
+
+type ActionLog = TypeOf<typeof actionLogFormat>;
+type WithActionLog = Record<'#actionLog', ActionLog>;
+
+export function saveAction(object: WithActionLog, type: ActionLog[number]['type'], pos: RoomPosition) {
+	const actionLog = object['#actionLog'];
+	for (const action of actionLog) {
+		if (action.type === type) {
+			action.time = Game.time;
+			action.x = pos.x;
+			action.y = pos.y;
+			return;
+		}
+	}
+	actionLog.push({ type, x: pos.x, y: pos.y, time: Game.time });
+}

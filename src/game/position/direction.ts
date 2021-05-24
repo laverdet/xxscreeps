@@ -51,7 +51,7 @@ export function getOffsetsFromDirection(direction: Direction) {
 	}
 }
 
-export function getPositonInDirection(position: RoomPosition, direction: Direction) {
+export function getPositionInDirection(position: RoomPosition, direction: Direction) {
 	const { x, y, roomName } = position;
 	const { dx, dy } = getOffsetsFromDirection(direction);
 	return new RoomPosition(x + dx, y + dy, roomName);

@@ -220,7 +220,7 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 
 		} else if ('vector' in layout) {
 			// Vector with fixed element size
-			const { size, vector: elementLayout } = layout;
+			const { stride, vector: elementLayout } = layout;
 			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				let currentOffset = view.int32[offset >>> 2];
@@ -228,7 +228,7 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 				const value: any[] = [];
 				for (let ii = 0; ii < length; ++ii) {
 					value.push(read(view, currentOffset));
-					currentOffset += size;
+					currentOffset += stride;
 				}
 				return value;
 			};

@@ -120,7 +120,9 @@ export function *map<Type, Result>(iterable: Iterable<Type>, callback: (value: T
 
 // If you just want the smallest element of an array it's senseless to sort the whole thing and take
 // array[0]. You can just run through once and find that element in linear time
-export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, right: Type) => number) {
+export function minimum(iterable: Iterable<number>): number | undefined;
+export function minimum<Type>(iterable: Iterable<Type>, callback: (left: Type, right: Type) => number): Type | undefined;
+export function minimum<Type>(iterable: Iterable<Type>, callback: (left: any, right: any) => number = (left, right) => left - right) {
 	const { head, rest } = shift(iterable);
 	let minimum = head;
 	for (const value of rest) {

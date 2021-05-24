@@ -3,6 +3,7 @@ import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
+import { saveAction } from 'xxscreeps/game/object';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
@@ -17,7 +18,7 @@ const intents = [
 		if (checkAttack(creep, target) === C.OK) {
 			const damage = calculatePower(creep, C.ATTACK, C.ATTACK_POWER);
 			processAttack(creep, target, C.EVENT_ATTACK_TYPE_MELEE, damage);
-			creep['#actionLog'].push({ action: 'attack', x: target.pos.x, y: target.pos.y });
+			saveAction(creep, 'attack', target.pos);
 			context.didUpdate();
 		}
 	}),
@@ -34,7 +35,7 @@ const intents = [
 				healType: C.EVENT_HEAL_TYPE_MELEE,
 				amount,
 			});
-			creep['#actionLog'].push({ action: 'heal', x: target.pos.x, y: target.pos.y });
+			saveAction(creep, 'heal', target.pos);
 			context.didUpdate();
 		}
 	}),
@@ -44,7 +45,7 @@ const intents = [
 		if (checkRangedAttack(creep, target) === C.OK) {
 			const damage = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER);
 			processAttack(creep, target, C.EVENT_ATTACK_TYPE_RANGED, damage);
-			creep['#actionLog'].push({ action: 'rangedAttack', x: target.pos.x, y: target.pos.y });
+			saveAction(creep, 'rangedAttack', target.pos);
 			context.didUpdate();
 		}
 	}),
@@ -61,14 +62,14 @@ const intents = [
 				healType: C.EVENT_HEAL_TYPE_RANGED,
 				amount,
 			});
-			creep['#actionLog'].push({ action: 'rangedHeal', x: target.pos.x, y: target.pos.y });
+			saveAction(creep, 'rangedHeal', target.pos);
 			context.didUpdate();
 		}
 	}),
 
 	registerIntentProcessor(Creep, 'rangedMassAttack', (creep, context) => {
 		if (checkRangedMassAttack(creep) === C.OK) {
-			creep['#actionLog'].push({ action: 'rangedHeal', x: creep.pos.x, y: creep.pos.y });
+			saveAction(creep, 'rangedMassAttack', creep.pos);
 			context.didUpdate();
 			// TODO
 		}
@@ -85,13 +86,13 @@ function processAttack(creep: Creep, target: Creep | DestructibleStructure, atta
 		damage,
 	});
 	if (target instanceof Creep) {
-		target['#actionLog'].push({ action: 'attacked', x: creep.pos.x, y: creep.pos.y });
+		saveAction(target, 'attacked', creep.pos);
 	}
 	if (creep.pos.isNearTo(target.pos)) {
 		const counterAttack = calculatePower(creep, C.ATTACK, C.ATTACK_POWER);
 		if (counterAttack > 0) {
 			creep.hits -= counterAttack;
-			creep['#actionLog'].push({ action: 'attacked', x: target.pos.x, y: target.pos.y });
+			saveAction(creep, 'attacked', target.pos);
 			appendEventLog(target.room, {
 				event: C.EVENT_ATTACK,
 				objectId: target.id,

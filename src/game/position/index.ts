@@ -14,7 +14,7 @@ import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
 
 export type { Direction } from './direction';
 export { isBorder, isNearBorder } from 'xxscreeps/game/terrain';
-export { getOffsetsFromDirection, getPositonInDirection, iterateNeighbors } from './direction';
+export { getOffsetsFromDirection, getPositionInDirection, iterateNeighbors } from './direction';
 export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './name';
 
 type FindClosestByPathOptions<Type> =

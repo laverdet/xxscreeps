@@ -212,7 +212,7 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 	wakeAt(time: number) {
 		if (time !== 0) {
 			if (time < this.time + 1) {
-				throw new Error('Invalid wake time');
+				throw new Error(`Invalid wake time ${time}; current ${this.time}`);
 			}
 			this.nextUpdate = Math.min(time, this.nextUpdate);
 		}

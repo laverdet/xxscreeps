@@ -1,11 +1,12 @@
 import * as C from 'xxscreeps/game/constants';
+import * as CreepLib from './creep';
 import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Game } from 'xxscreeps/game';
+import { saveAction } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { StructureController, checkActivateSafeMode } from './controller';
-import { checkAttackController, checkClaimController, checkGenerateSafeMode, checkReserveController, checkSignController, checkUpgradeController } from './creep';
 
 // Processor methods
 export function claim(controller: StructureController, user: string) {
@@ -23,7 +24,7 @@ declare module 'xxscreeps/engine/processor' {
 const intents = [
 	registerIntentProcessor(Creep, 'attackController', (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
-		if (checkAttackController(creep, controller) === C.OK) {
+		if (CreepLib.checkAttackController(creep, controller) === C.OK) {
 			const effect = creep.getActiveBodyparts(C.CLAIM);
 			const reservation = controller['#reservationTime'];
 			if (reservation) {
@@ -33,34 +34,34 @@ const intents = [
 				controller['#downgradeTime'] -= effect * C.CONTROLLER_CLAIM_DOWNGRADE;
 				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE;
 			}
-			creep['#actionLog'].push({ action: 'attack', x: controller.pos.x, y: controller.pos.y });
+			saveAction(creep, 'attack', controller.pos);
 			context.didUpdate();
 		}
 	}),
 
 	registerIntentProcessor(Creep, 'claimController', (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
-		if (checkClaimController(creep, controller) === C.OK) {
+		if (CreepLib.checkClaimController(creep, controller) === C.OK) {
 			console.error('TODO: claimController');
 			claim(controller, creep['#user']);
-			creep['#actionLog'].push({ action: 'reserveController', x: controller.pos.x, y: controller.pos.y });
+			saveAction(creep, 'reserveController', controller.pos);
 			context.didUpdate();
 		}
 	}),
 
 	registerIntentProcessor(Creep, 'generateSafeMode', (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
-		if (checkGenerateSafeMode(creep, controller) === C.OK) {
+		if (CreepLib.checkGenerateSafeMode(creep, controller) === C.OK) {
 			creep.store[C.RESOURCE_GHODIUM]! -= C.SAFE_MODE_COST;
 			++controller.safeModeAvailable;
-			creep['#actionLog'].push({ action: 'upgradeController', x: controller.pos.x, y: controller.pos.y });
+			saveAction(creep, 'upgradeController', controller.pos);
 			context.didUpdate();
 		}
 	}),
 
 	registerIntentProcessor(Creep, 'reserveController', (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
-		if (checkReserveController(creep, controller) === C.OK) {
+		if (CreepLib.checkReserveController(creep, controller) === C.OK) {
 			const reservationTime = controller['#reservationTime'];
 			const timeRemaining =
 				(reservationTime ? reservationTime - Game.time : 1) +
@@ -68,28 +69,28 @@ const intents = [
 			console.log('reserve with', creep.getActiveBodyparts(C.CLAIM));
 			controller['#reservationTime'] = Game.time + Math.min(C.CONTROLLER_RESERVE_MAX, timeRemaining);
 			controller.room['#user'] = creep['#user'];
-			creep['#actionLog'].push({ action: 'reserveController', x: controller.pos.x, y: controller.pos.y });
+			saveAction(creep, 'reserveController', controller.pos);
 			context.didUpdate();
 		}
 	}),
 
 	registerIntentProcessor(Creep, 'signController', (creep, context, id: string, message: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
-		if (checkSignController(creep, controller) === C.OK) {
+		if (CreepLib.checkSignController(creep, controller) === C.OK) {
 			controller.room['#sign'] = message === '' ? undefined : {
 				datetime: Date.now(),
 				text: message.substr(0, 100),
 				time: Game.time,
 				userId: creep['#user'],
 			};
-			creep['#actionLog'].push({ action: 'attack', x: controller.pos.x, y: controller.pos.y });
+			saveAction(creep, 'attack', controller.pos);
 			context.didUpdate();
 		}
 	}),
 
 	registerIntentProcessor(Creep, 'upgradeController', (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
-		if (checkUpgradeController(creep, controller) === C.OK) {
+		if (CreepLib.checkUpgradeController(creep, controller) === C.OK) {
 			// Calculate power, deduct energy
 			controller['#upgradePowerThisTick'] ??= 0;
 			let power = calculatePower(creep, C.WORK, C.UPGRADE_CONTROLLER_POWER);
@@ -116,7 +117,7 @@ const intents = [
 					++controller.safeModeAvailable;
 				}
 			}
-			creep['#actionLog'].push({ action: 'upgradeController', x: controller.pos.x, y: controller.pos.y });
+			saveAction(creep, 'upgradeController', controller.pos);
 			context.didUpdate();
 		}
 	}),

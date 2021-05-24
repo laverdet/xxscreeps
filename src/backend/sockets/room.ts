@@ -57,7 +57,10 @@ function throttle(fn: () => void) {
 		},
 		set(time: number) {
 			if (!timeout && disabled === 0) {
-				timeout = setTimeout(fn, time);
+				timeout = setTimeout(() => {
+					timeout = undefined;
+					fn();
+				}, time);
 			}
 		},
 	};
@@ -78,7 +81,6 @@ export const roomSubscription: SubscriptionEndpoint = {
 			if (time === previousTime) {
 				return;
 			}
-			previousTime = time;
 			timer.disable();
 			const [ room, extra ] = await Promise.all([
 				// Update room objects
@@ -96,7 +98,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 					const objects: any = {};
 					for (const object of room['#objects']) {
 						asUnion(object);
-						const value = object[Render]();
+						const value = object[Render](previousTime === -1 ? undefined : previousTime);
 						if (value) {
 							if (value._id) {
 								objects[value._id] = value;
@@ -140,6 +142,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 			this.send(JSON.stringify(response));
 			timer.enable();
 			timer.set(kUpdateInterval);
+			previousTime = time;
 		};
 
 		// Listen for updates
@@ -169,7 +172,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 				}
 			}),
 			// Disable updates on unlisten
-			() => () => { timer.clear(); timer.disable() },
+			() => { timer.clear(); timer.disable() },
 		);
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		const hooks = hookResults.filter(hook => hook);
