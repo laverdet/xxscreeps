@@ -216,3 +216,5 @@ for (const branch of code.find()) {
 // Finish up
 await db.save();
 await shard.save();
+db.disconnect();
+shard.disconnect();

@@ -116,7 +116,7 @@ export class Shard {
 	 * buffer to ensure a rollback doesn't overwrite room state.
 	 */
 	async copyRoomFromPreviousTick(name: string, time: number) {
-		await this.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
+		await this.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time), { replace: true });
 	}
 
 	private checkTime(time: number, delta: number) {

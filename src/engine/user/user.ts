@@ -34,10 +34,10 @@ export async function create(db: Database, userId: string, username: string, pro
 	// Make user
 	const key = infoKey(userId);
 	const result = await db.data.hset(key, 'username', username, { nx: true });
-	if (result === 0) {
+	if (!result) {
 		throw new Error('User already created');
 	}
-	await Promise.all([
+	await Promise.all<any>([
 		db.data.sadd('users', [ userId ]),
 		db.data.hmset(key, {
 			registeredDate: Date.now(),

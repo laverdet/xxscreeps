@@ -25,9 +25,9 @@ registerStorageProvider([ 'file', 'local' ], 'keyval', async url => {
 });
 
 export abstract class LocalKeyValProvider extends Responder implements KeyValProvider {
-	abstract cad(key: string, check: string): Promise<number>;
-	abstract copy(from: string, to: string): Promise<number>;
-	abstract del(key: string): Promise<number>;
+	abstract cad(key: string, check: string): Promise<boolean>;
+	abstract copy(from: string, to: string, options?: { replace: boolean }): Promise<boolean>;
+	abstract del(key: string): Promise<boolean>;
 	abstract get(key: string): Promise<string | null>;
 	abstract set(key: string, value: Value | Readonly<Uint8Array>, options: { get: true } & SetOptions): Promise<string | null>;
 	abstract set(key: string, value: Value | Readonly<Uint8Array>, options: ({ nx: true } | { xx: true }) & SetOptions): Promise<undefined | null>;
@@ -41,8 +41,8 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 	abstract hget(key: string, field: string): Promise<string | null>;
 	abstract hgetall(key: string): Promise<Record<string, string>>;
 	abstract hmget(key: string, fields: Iterable<string>): Promise<Record<string, string | null>>;
-	abstract hset(key: string, field: string, value: Value, options?: { nx: boolean }): Promise<number>;
-	abstract hmset(key: string, fields: Iterable<[ string, Value ]>): Promise<number>;
+	abstract hset(key: string, field: string, value: Value, options?: { nx: boolean }): Promise<boolean>;
+	abstract hmset(key: string, fields: Iterable<[ string, Value ]>): Promise<void>;
 
 	abstract lpop(key: string): Promise<string | null>;
 	abstract lrange(key: string, start: number, stop: number): Promise<string[]>;
@@ -50,7 +50,7 @@ export abstract class LocalKeyValProvider extends Responder implements KeyValPro
 
 	abstract sadd(key: string, members: string[]): Promise<number>;
 	abstract scard(key: string): Promise<number>;
-	abstract sismember(key: string, member: string): Promise<number>;
+	abstract sismember(key: string, member: string): Promise<boolean>;
 	abstract smembers(key: string): Promise<string[]>;
 	abstract spop(key: string): Promise<string | null>;
 	abstract srem(key: string, members: string[]): Promise<number>;
@@ -123,16 +123,18 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 	async cad(key: string, check: string) {
 		if (this.data.get(key) === check) {
 			this.remove(key);
-			return 1;
+			return true;
 		} else {
-			return 0;
+			return false;
 		}
 	}
 
-	async copy(from: string, to: string) {
+	async copy(from: string, to: string, options?: { replace: boolean }) {
 		const value = this.data.get(from);
 		if (value === undefined) {
-			return 0;
+			return false;
+		} else if (!options?.replace && this.data.has(to)) {
+			return false;
 		} else if (this.data.has(to)) {
 			throw new Error(`"${to}" already exists`);
 		} else if (value instanceof Array) {
@@ -146,15 +148,15 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		} else {
 			this.data.set(to, value);
 		}
-		return 1;
+		return true;
 	}
 
 	async del(key: string) {
 		if (this.data.has(key)) {
 			this.remove(key);
-			return 1;
+			return true;
 		} else {
-			return 0;
+			return false;
 		}
 	}
 
@@ -229,25 +231,25 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 	}
 
 	async hset(key: string, field: string, value: Value, options?: { nx: boolean }) {
+		const map: Map<string, string> = getOrSet(this.data, key, () => new Map);
 		const nx = options?.nx;
-		if (nx && this.data.get(key)?.has(field)) {
-			return 0;
+		const has = map.has(field);
+		if (nx && has) {
+			return false;
 		} else {
-			return this.hmset(key, [ [ field, value ] as const ]);
+			map.set(field, `${value}`);
+			return !has;
 		}
 	}
 
 	async hmset(key: string, fields: Iterable<readonly [ string, Value ]> | Record<string, Value>) {
-		let count = 0;
 		const map: Map<string, string> = getOrSet(this.data, key, () => new Map);
 		const iterable = Symbol.iterator in fields ?
 			fields as Iterable<[ string, Value ]> :
 			Object.entries(fields);
 		for (const [ field, value ] of iterable) {
-			++count;
 			map.set(field, `${value}`);
 		}
-		return count;
 	}
 
 	async lpop(key: string) {
@@ -305,7 +307,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 
 	async sismember(key: string, member: string) {
 		const set: Set<string> | undefined = this.data.get(key);
-		return set?.has(member) ?? false ? 1 : 0;
+		return set?.has(member) ?? false;
 	}
 
 	async smembers(key: string) {
@@ -463,8 +465,8 @@ class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
 		return this.request('cad', key, check);
 	}
 
-	copy(from: string, to: string) {
-		return this.request('copy', from, to);
+	copy(from: string, to: string, options?: { replace: boolean }) {
+		return this.request('copy', from, to, options);
 	}
 
 	del(key: string) {

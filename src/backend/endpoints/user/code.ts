@@ -90,7 +90,7 @@ registerBackendRoute({
 		// Create the branch
 		const timestamp = Date.now();
 		const updated = await context.db.blob.copy(Code.contentKey(userId, branch), Code.contentKey(userId, newName));
-		if (updated !== 1) {
+		if (!updated) {
 			throw new Error('Failed to copy');
 		}
 		await context.db.data.sadd(Code.branchManifestKey(userId), [ newName ]);
@@ -109,7 +109,7 @@ registerBackendRoute({
 			return;
 		}
 		const branch = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
-		if (await context.db.data.sismember(Code.branchManifestKey(userId), branch) <= 0) {
+		if (!await context.db.data.sismember(Code.branchManifestKey(userId), branch)) {
 			return;
 		}
 		await context.db.data.hset(User.infoKey(userId), 'branch', branch);

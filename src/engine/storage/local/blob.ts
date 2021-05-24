@@ -24,10 +24,10 @@ function copy(buffer: Readonly<Uint8Array>) {
 }
 
 export abstract class LocalBlobProvider extends Responder implements BlobProvider {
-	abstract del(key: string): Promise<number>;
+	abstract del(key: string): Promise<boolean>;
 	abstract getBuffer(key: string): Promise<Readonly<Uint8Array> | null>;
 	abstract set(key: string, value: Readonly<Uint8Array>): Promise<void>;
-	abstract copy(from: string, to: string): Promise<number>;
+	abstract copy(from: string, to: string, options?: { replace: boolean }): Promise<boolean>;
 	abstract save(): Promise<void>;
 	abstract flushdb(): Promise<void>;
 
@@ -119,11 +119,11 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 			try {
 				await fs.stat(path);
 			} catch (err) {
-				return 0;
+				return false;
 			}
 			this.bufferedDeletes.add(key);
 		}
-		return 1;
+		return true;
 	}
 
 	async getBuffer(key: string) {
@@ -161,14 +161,16 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		return Promise.resolve();
 	}
 
-	async copy(from: string, to: string) {
+	async copy(from: string, to: string, options?: { replace: boolean }) {
 		this.check(to);
 		const value = await this.getBuffer(from);
-		if (value === null) {
-			return 0;
+		if (!options?.replace && await this.getBuffer(to)) {
+			return false;
+		} else if (value === null) {
+			return false;
 		} else {
 			this.bufferedBlobs.set(to, value);
-			return 1;
+			return true;
 		}
 	}
 
@@ -267,8 +269,8 @@ class LocalBlobClient extends ResponderClient(LocalBlobProvider) {
 		return this.request('set', key, value);
 	}
 
-	copy(from: string, to: string) {
-		return this.request('copy', from, to);
+	copy(from: string, to: string, options?: { replace: boolean }) {
+		return this.request('copy', from, to, options);
 	}
 
 	flushdb() {
