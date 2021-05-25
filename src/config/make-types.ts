@@ -1,6 +1,7 @@
 /* eslint-disable prefer-named-capture-group */
 import 'xxscreeps/engine/room';
 import * as C from 'xxscreeps/game/constants';
+import { configPath } from 'xxscreeps/config';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
@@ -8,33 +9,48 @@ import { mods } from 'xxscreeps/config/mods';
 import { globalNames } from 'xxscreeps/game/runtime';
 
 // Write tsconfig
-const rootDir = fileURLToPath(new URL('../../src', import.meta.url));
+const baseDir = new URL('../../src', import.meta.url);
+const localDir = new URL('.', configPath);
+const paths = [ 'backend', 'config', 'driver', 'engine', 'game', 'schema', 'utility' ];
+const modSources = await Promise.all(mods.map(async mod => {
+	const map = JSON.parse(await fs.readFile(new URL('index.js.map', mod.url), 'utf8'));
+	if (map.sources.length !== 1) {
+		throw new Error('Unexpected source map manifest');
+	}
+	const manifest = new URL(map.sources[0], mod.url);
+	return fileURLToPath(new URL('.', manifest));
+}));
 const tsconfig = `{
 	"extends": "xxscreeps/tsconfig.base",
 	"compilerOptions": {
-		"baseUrl": ${JSON.stringify(rootDir)},
+		// Environment
+		"baseUrl": ${JSON.stringify(fileURLToPath(baseDir))},
+		"outFile": "screeps.exports.js",
+		"paths": {
+			"xxscreeps/*": [ "*" ],
+		},
+		"rootDir": ${JSON.stringify(fileURLToPath(new URL('/', baseDir)))}
+
+		// Module resolution
+		"isolatedModules": false,
+		"module": "system",
+		"resolveJsonModule": false,
+
+		// Output
 		"declaration": true,
 		"declarationMap": true,
 		"emitDeclarationOnly": true,
-		"noEmitOnError": false,
-		"moduleResolution": "node",
-		"module": "system",
-		"outDir": null,
-		"outFile": "screeps.exports.js",
-		"resolveJsonModule": false,
-		"rootDir": ${JSON.stringify(rootDir)},
-		"strict": false,
+		"stripInternal": true,
 	},
-	"include": [ "backend", "config", "driver", "engine", "game", "schema", "utility", ${Object.keys(mods).map(url =>
-		JSON.stringify(fileURLToPath(new URL('.', url)).replace(/.+\/xxscreeps\/dist\/mods/, 'mods'))).join(', ')} ],
+	"include": ${JSON.stringify([ ...paths, ...modSources ])},
 }`;
-const tmpPath = `${rootDir}/tsconfig.types.json`;
+const tmpPath = new URL('tsconfig.types.json', localDir);
 await fs.writeFile(tmpPath, tsconfig, { encoding: 'utf8', flag: 'w' });
 
 // Run `tsc`
 console.log(tsconfig);
 try {
-	const proc = spawn('npx', [ 'tsc', '-p', tmpPath ], { cwd: rootDir, stdio: 'inherit' });
+	const proc = spawn('npx', [ 'tsc', '-p', fileURLToPath(tmpPath) ], { cwd: fileURLToPath(localDir), stdio: 'inherit' });
 	await new Promise<void>(resolve => {
 		proc.once('exit', () => resolve());
 	});
@@ -42,25 +58,29 @@ try {
 	await fs.unlink(tmpPath);
 }
 
-async function readAndUnlink(file: string) {
+async function readAndUnlink(file: URL) {
 	const result = await fs.readFile(file, 'utf8');
 	await fs.unlink(file);
 	return result;
 }
 
 // Read, fix, and move result
-const dts = await readAndUnlink(`${rootDir}/screeps.exports.d.ts`);
-const dtsMap = await readAndUnlink(`${rootDir}/screeps.exports.d.ts.map`);
+const dts = await readAndUnlink(new URL('screeps.exports.d.ts', localDir));
+const dtsMap = await readAndUnlink(new URL('screeps.exports.d.ts.map', localDir));
 await fs.mkdir('screeps/types', { recursive: true });
+const trash = /declare module "(?<trash>[^"]+\/src)\/game\/game"/.exec(dts);
+if (!trash) {
+	throw new Error('Unable to take out the trash');
+}
+const fragment = trash.groups!.trash;
 await fs.writeFile('screeps/types/screeps.exports.d.ts',
 	dts
 		// Fix module path names
-		.replace(/(from|import|module) "/g, '$1 "xxscreeps/')
-		.replace(/(from|import|module) "xxscreeps\/xxscreeps/g, '$1 "xxscreeps')
+		.replaceAll(`from "${fragment}`, 'from "xxscreeps')
+		.replaceAll(`import "${fragment}`, 'import "xxscreeps')
+		.replaceAll(`module "${fragment}`, 'module "xxscreeps')
 		// Fix import "foo/index" emit issue
 		.replace(/\/index"/g, '"')
-		// Remove <reference />
-		.replace(/^\/\/\/ <reference.+/gm, '')
 		// Break up file by block comments
 		.split(/(\/\*[^]*?\*\/)/g)
 		.map((val, ii) => {

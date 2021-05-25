@@ -5,7 +5,6 @@ import { Room } from './room';
 import { Game } from '.';
 export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants';
 
-const GetBufferSymbol = Symbol('getBuffer');
 export const terrainMaskToString = [ 'plain', 'wall', 'wall', 'swamp' ] as const;
 
 /**
@@ -36,8 +35,9 @@ export class Terrain {
 
 	/**
 	 * Extracts the underlying private buffer out of a `Terrain` class.
+	 * @internal
 	 */
-	static [GetBufferSymbol](that: Terrain) {
+	static getBuffer(that: Terrain) {
 		return that.#buffer;
 	}
 
@@ -91,7 +91,7 @@ export class TerrainWriter extends Terrain {
 	}
 }
 
-export const getBuffer = exchange(Terrain, GetBufferSymbol, (): never => { throw new Error });
+export const getBuffer = exchange(Terrain, 'getBuffer', (): never => { throw new Error });
 
 export function isBorder(xx: number, yy: number) {
 	return xx === 0 || xx === 49 || yy === 0 || yy === 49;

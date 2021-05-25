@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="../../declarations.d.ts" />
 import { promises as fs } from 'fs';
 import config, { configPath } from 'xxscreeps/config';
 
@@ -8,7 +10,10 @@ export type Manifest = {
 };
 
 // Resolve module dependencies in a hopefully deterministic order
-const mods: Record<string, Provide[]> = {};
+const mods: {
+	provides: Provide[];
+	url: URL;
+}[] = [];
 const stack: string[] = [];
 const resolved = new Set<string>();
 const baseUrl = configPath;
@@ -16,9 +21,9 @@ async function resolve(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
 		const url = await import.meta.resolve(specifier, `${baseUrl}`);
 		return {
+			manifest: (await import(url)).manifest as Manifest,
 			specifier,
 			url,
-			manifest: (await import(url)).manifest as Manifest,
 		};
 	}));
 	for (const { manifest, specifier, url } of imports) {
@@ -30,8 +35,11 @@ async function resolve(specifiers: string[]) {
 			stack.push(specifier);
 			await resolve(manifest.dependencies ?? []);
 			stack.pop();
-			mods[url] = Array.isArray(manifest.provides) ? manifest.provides :
-				manifest.provides === null ? [] as never : [ manifest.provides ];
+			mods.push({
+				provides: Array.isArray(manifest.provides) ? manifest.provides :
+				manifest.provides === null ? [] as never : [ manifest.provides ],
+				url: new URL(url),
+			});
 			resolved.add(specifier);
 		}
 	}
@@ -48,9 +56,9 @@ try {
 } catch (err) {
 	// Given a specifier fragment this return all mods which export it
 	const resolveWithinMods = async(specifier: string) => {
-		const resolved = await Promise.all(Object.entries(mods).map(async([ mod, provides ]) => {
+		const resolved = await Promise.all(mods.map(async({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
-				return import.meta.resolve(`./${specifier}`, mod);
+				return import.meta.resolve(`./${specifier}`, `${url}`);
 			}
 		}));
 		return resolved.filter(mod => mod !== undefined);

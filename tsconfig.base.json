@@ -1,21 +1,25 @@
 {
 	"compilerOptions": {
-		"baseUrl": "src",
-		"rootDir": "src",
+		// Output
+		"declaration": true,
+		"sourceMap": true,
 
+		// Module resolution
+		"allowJs": true,
+		"allowSyntheticDefaultImports": true,
+		"moduleResolution": "node",
+		"module": "esnext",
 		"paths": {
 			"xxscreeps/*": [ "*" ],
 		},
-
-		"allowJs": true,
-		"allowSyntheticDefaultImports": true,
-		"resolveJsonModule": true,
-		"moduleResolution": "node",
-		"module": "esnext",
 		"target": "esnext",
 		"lib": [ "esnext", "dom" ],
+		"resolveJsonModule": true,
 
+		// Strictness
+		"isolatedModules": true,
+		"noEmitOnError": false,
+		"noImplicitOverride": true,
 		"strict": true,
 	},
-	"exclude": [ "**/package.json", "**/package-lock.json", "**/tsconfig.json" ]
 }
