@@ -34,7 +34,7 @@ export async function loadContent(db: Database, userId: string, branchName: stri
  */
 export async function saveContent(db: Database, userId: string, branchName: string, content: Code) {
 	const [ didSwitch ] = await Promise.all([
-		db.data.hset(User.infoKey(userId), 'branch', branchName, { nx: true }),
+		db.data.hset(User.infoKey(userId), 'branch', branchName, { if: 'nx' }),
 		db.data.sadd(branchManifestKey(userId), [ branchName ]),
 		db.blob.set(contentKey(userId, branchName), write(content)),
 	]);

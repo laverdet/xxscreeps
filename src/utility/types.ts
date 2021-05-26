@@ -22,10 +22,6 @@ export type AsyncEffectAndResult<Type = any> = MaybePromise<EffectWithResult<Typ
 // Helper for passing around prototypes
 export type Implementation<Type = {}> = { prototype: Type };
 
-// Gets instance type of constructor
-export type Instance<Type extends abstract new(...args: any[]) => any> =
-	Type extends abstract new(...args: any[]) => infer Instance ? Instance : never;
-
 // Type that's safe to loosely compare to true/false without weirdness like '' or NaN or 0
 export type LooseBoolean = boolean | object | null | undefined;
 
@@ -48,9 +44,6 @@ export type UnionToIntersection<Union> =
 
 // Turns `T[]` into `T`, or returns `T` if it's not an array
 export type UnwrapArray<Type> = Type extends (infer Element)[] ? Element : Type;
-
-// Returns all value types of an object
-export type Values<Type extends {}> = Type[keyof Type];
 
 export type RecursivePartial<T> = {
 	[P in keyof T]?: T[P] extends (infer U)[] ?

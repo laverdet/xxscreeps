@@ -1,15 +1,14 @@
-import type { Effect, Instance, Values } from 'xxscreeps/utility/types';
+import type { Effect, MaybePromise } from 'xxscreeps/utility/types';
 import type { Worker } from 'worker_threads';
+import assert from 'assert';
 import { isMainThread, parentPort } from 'worker_threads';
 import { Deferred } from 'xxscreeps/utility/async';
-import assert from 'assert';
 import { staticCast } from 'xxscreeps/utility/utility';
 
 /**
  * Responders generalizes the client/server request/response model for inter-thread/process
  * communication.
  */
-
 type ConnectMessage = {
 	type: 'responderConnect';
 	clientId: string;
@@ -32,52 +31,179 @@ type RequestMessage = {
 	clientId: string;
 	requestId: number;
 	method: string;
-	payload: any;
+	payload: unknown[];
 };
 type ResponseMessage = {
 	type: 'responderResponse';
 	clientId: string;
 	requestId: number;
-	payload: any;
-	rejection?: true;
-};
+} & ({
+	payload: unknown;
+	rejection?: false;
+} | {
+	payload: string;
+	rejection: true;
+});
 
 type ParentMessage = ResponseMessage | ConnectedMessage | ConnectionFailedMessage;
 type WorkerMessage = RequestMessage | ConnectMessage | DisconnectMessage;
 
-type AbstractResponderHost = {
-	_refs: number;
-};
-type AbstractResponderClient = {
-	readonly _clientId: string;
-	readonly _requests: Map<number, Deferred<any>>;
-};
-export abstract class Responder {
-	constructor(public readonly _name?: string) {}
-	destroyed() {}
-	disconnect() {}
+export class Responder {
+	static release(responder: Responder) {
+		responder.release();
+	}
+
+	protected release() {}
 }
 
+abstract class ResponderClient {
+	#disconnected = false;
+	#requestId = 0;
+	readonly #clientId = `${Math.floor(Math.random() * 2 ** 52)}`;
+	readonly #requests = new Map<number, Deferred<any>>();
+
+	static create<Type extends ResponderClient>(constructor: new() => Type) {
+		const client = new constructor;
+		const effect: Effect = () => client.#disconnect();
+		return { clientId: client.#clientId, effect, client };
+	}
+
+	static response(client: ResponderClient, requestId: number, message: ResponseMessage) {
+		const request = client.#requests.get(requestId)!;
+		client.#requests.delete(requestId);
+		if (message.rejection) {
+			request.reject(new Error(message.payload));
+		} else {
+			request.resolve(message.payload);
+		}
+	}
+
+	static request(client: ResponderClient, method: string, ...payload: unknown[]) {
+		const requestId = ++client.#requestId;
+		const deferred = new Deferred<unknown>();
+		client.#requests.set(requestId, deferred);
+		parentPort!.postMessage(staticCast<WorkerMessage>({
+			type: 'responderRequest',
+			clientId: client.#clientId,
+			requestId,
+			method,
+			payload,
+		}));
+		return deferred.promise;
+	}
+
+	#disconnect() {
+		if (this.#disconnected) {
+			throw new Error('Already disconnected responder client');
+		}
+		this.#disconnected = true;
+		for (const resolver of this.#requests.values()) {
+			resolver.reject(new Error('Disconnected from responder'));
+		}
+		this.#requests.clear();
+		parentPort!.postMessage(staticCast<WorkerMessage>({
+			type: 'responderDisconnect',
+			clientId: this.#clientId,
+		}));
+		if (--parentRefs === 0) {
+			parentPort!.unref();
+		}
+	}
+}
+
+abstract class ResponderHost<Type extends Responder = any> {
+	#refs = 0;
+	readonly #instance: Type | Record<string, (...args: unknown[]) => unknown>;
+	readonly #name: string;
+
+	constructor(name: string, instance: Type) {
+		this.#instance = instance;
+		this.#name = name;
+	}
+
+	static create<Type extends Responder>(constructor: new(name: string, instance: Type) => ResponderHost<Type>, name: string, instance: Type) {
+		const host = new constructor(name, instance);
+		const effect = host.#ref();
+		return { effect, host };
+	}
+
+	static invoke(client: ResponderHost, method: string, payload: unknown[]) {
+		return client.#instance[method](...payload);
+	}
+
+	static ref(host: ResponderHost) {
+		return host.#ref();
+	}
+
+	#ref(): Effect {
+		let disconnected = false;
+		++this.#refs;
+		return () => {
+			if (disconnected) {
+				throw new Error('Already disconnected responder host');
+			}
+			disconnected = true;
+			if (--this.#refs === 0) {
+				responderHostsByName.delete(this.#name);
+				Responder.release(this.#instance as Type);
+			}
+		};
+	}
+}
+
+type WithPromises<Type extends Responder> = {
+	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => infer Result | Promise<infer Result> ?
+		(...args: Args) => Promise<Result> : never;
+};
+
+export type MaybePromises<Type> = {
+	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => infer Result | Promise<infer Result> ?
+		(...args: Args) => MaybePromise<Result> : never;
+};
+
 // Used in host isolate
-const responderHostsByClientId = new Map<string, AbstractResponderHost>();
-const responderHostsByName = new Map<string, AbstractResponderHost>();
+const responderHostsByClientId = new Map<string, ResponderHost>();
+const responderHostsByName = new Map<string, ResponderHost>();
 
 // User in client isolate
 let didInitializeWorker = false;
-const responderClientsById = new Map<string, AbstractResponderClient>();
+const responderClientsById = new Map<string, ResponderClient>();
 const unlistenByClientId = new Map<string, Effect>();
 
 // Connect to an existing responder
 let parentRefs = 0;
-export function connect<Type extends AbstractResponderClient>(ctor: new() => Type, name: string): Promise<Type> {
+export async function connect<
+	Client extends ResponderClient,
+	Host extends ResponderHost<Type>,
+	Type extends Responder,
+>(
+	name: string,
+	clientConstructor: new() => Client,
+	hostConstructor: new(name: string, instance: Type) => Host,
+	create: () => Type | Promise<Type>,
+): Promise<[ Effect, Host | Client ]> {
 	if (isMainThread) {
-		// Connecting to a responder from the parent just returns the host object
 		const responder = responderHostsByName.get(name);
 		if (responder) {
-			++responder._refs;
-			return Promise.resolve(responder as never as Type);
+			// Connecting to a responder from the parent just returns the host object
+			const effect = ResponderHost.ref(responder);
+			return [ effect, responder as Host ];
 		} else {
-			return Promise.reject(new Error(`Responder: ${name} does not exist`));
+			// Only one responder per name should exist
+			if (responderHostsByName.has(name)) {
+				throw new Error(`Responder: ${name} already exists`);
+			}
+			responderHostsByName.set(name, undefined as never);
+			// Instantiate a new Responder
+			try {
+				const instance = await create();
+				const { effect, host } = ResponderHost.create(hostConstructor, name, instance);
+				responderHostsByName.set(name, host);
+				return [ effect, host as Host ];
+			} catch (err) {
+				responderHostsByName.delete(name);
+				throw err;
+			}
 		}
 
 	} else {
@@ -86,15 +212,15 @@ export function connect<Type extends AbstractResponderClient>(ctor: new() => Typ
 		if (++parentRefs === 1) {
 			parentPort!.ref();
 		}
-		return new Promise<Type>((resolve, reject) => {
+		return new Promise<[ Effect, Client ]>((resolve, reject) => {
 			// Set up connection ack handler
-			const responder = new ctor;
+			const { client, clientId, effect } = ResponderClient.create(clientConstructor);
 			const listener = (message: ParentMessage) => {
-				if (message.clientId === responder._clientId) {
+				if (message.clientId === clientId) {
 					parentPort!.removeListener('message', listener);
 					if (message.type === 'responderConnected') {
-						responderClientsById.set(responder._clientId, responder);
-						resolve(responder);
+						responderClientsById.set(clientId, client);
+						resolve([ effect, client ]);
 					} else {
 						assert(message.type === 'responderConnectionFailed');
 						reject(new Error(`Responder ${name} does not exist`));
@@ -106,33 +232,10 @@ export function connect<Type extends AbstractResponderClient>(ctor: new() => Typ
 			// Send "connection" request to main thread
 			parentPort!.postMessage(staticCast<WorkerMessage>({
 				type: 'responderConnect',
-				clientId: responder._clientId,
+				clientId,
 				name,
 			}));
 		});
-	}
-}
-
-// Create a responder on the parent thread
-export function create<Type extends AbstractResponderHost, Rest extends any[]>(
-	ctor: new(name: string, ...args: Rest) => Type,
-	name: string,
-	...args: Rest
-) {
-	assert(isMainThread);
-	// Only one responder per name should exist
-	if (responderHostsByName.has(name)) {
-		throw new Error(`Responder: ${name} already exists`);
-	}
-	responderHostsByName.set(name, undefined as never);
-	// Instantiate a new Responder
-	try {
-		const instance = new ctor(name, ...args);
-		responderHostsByName.set(name, instance);
-		return instance;
-	} catch (err) {
-		responderHostsByName.delete(name);
-		throw err;
 	}
 }
 
@@ -146,14 +249,7 @@ function initializeThisWorker() {
 		if (message.type === 'responderResponse') {
 			const client = responderClientsById.get(message.clientId);
 			if (client) {
-				const { _requests } = client;
-				const request = _requests.get(message.requestId)!;
-				_requests.delete(message.requestId);
-				if (message.rejection) {
-					request.reject(new Error(message.payload));
-				} else {
-					request.resolve(message.payload);
-				}
+				ResponderClient.response(client, message.requestId, message);
 			}
 		}
 	});
@@ -231,62 +327,44 @@ export function initializeWorker(worker: Worker) {
 	});
 }
 
-export function ResponderHost<New extends abstract new(...args: any[]) => Responder>(base: New) {
-	abstract class Host extends base {
-		_refs = 1;
+export function makeClient<Type extends Responder>(constructor: abstract new(...args: any[]) => Type) {
 
-		override disconnect(): { doNotOverrideThisMethod: true } {
-			if (--this._refs === 0) {
-				responderHostsByName.delete(this._name!);
-				this.destroyed();
-			}
-			return undefined as never;
+	// Create client wrapper class for this responder
+	class Client extends ResponderClient {
+		[Method: string]: (...args: unknown[]) => Promise<unknown>;
+	}
+
+	// Extend wrapper with request-returning methods
+	for (const name of Object.getOwnPropertyNames(constructor.prototype)) {
+		const fn = constructor.prototype[name];
+		if (name !== 'constructor' && typeof fn === 'function') {
+			Client.prototype[name] = function(...args: any[]) {
+				return ResponderClient.request(this, name, args);
+			};
 		}
 	}
-	return Host;
+
+	// Add in types
+	return Client as never as new() => ResponderClient & WithPromises<Type>;
 }
 
-export function ResponderClient<New extends abstract new(...args: any[]) => Responder>(base: New) {
-	// Get instance type and promise-returning methods
-	type Type = Instance<New>;
-	type Methods = Values<{
-		[Key in Exclude<Extract<keyof Type, string>, 'request'>]: Type[Key] extends (...args: any) => Promise<any> ? Key : never;
-	}>;
+export function makeHost<Type extends Responder>(constructor: abstract new(...args: any[]) => Type) {
 
-	// Return client mixin
-	abstract class Client extends base implements AbstractResponderClient {
-		#requestId = 0;
-		readonly _clientId = `${Math.floor(Math.random() * 2 ** 52)}`;
-		readonly _requests = new Map<number, Deferred<any>>();
+	// Create host wrapper class for this responder
+	class Host extends ResponderHost {
+		[Method: string]: (...args: unknown[]) => Promise<unknown>;
+	}
 
-		override disconnect(): { doNotOverrideThisMethod: true } {
-			for (const resolver of this._requests.values()) {
-				resolver.reject(new Error('Disconnected from responder'));
-			}
-			this._requests.clear();
-			parentPort!.postMessage(staticCast<WorkerMessage>({
-				type: 'responderDisconnect',
-				clientId: this._clientId,
-			}));
-			if (--parentRefs === 0) {
-				parentPort!.unref();
-			}
-			return undefined as never;
-		}
-
-		request<Method extends Methods>(method: Method, ...payload: Parameters<Type[Method]>): ReturnType<Type[Method]> {
-			const requestId = ++this.#requestId;
-			const deferred = new Deferred<any>();
-			this._requests.set(requestId, deferred);
-			parentPort!.postMessage(staticCast<WorkerMessage>({
-				type: 'responderRequest',
-				clientId: this._clientId,
-				requestId,
-				method,
-				payload,
-			}));
-			return deferred.promise as never;
+	// Extend wrapper with Promise-returning methods
+	for (const name of Object.getOwnPropertyNames(constructor.prototype)) {
+		const fn = constructor.prototype[name];
+		if (name !== 'constructor' && typeof fn === 'function') {
+			Host.prototype[name] = function(...args: any[]) {
+				return Promise.resolve(ResponderHost.invoke(this, name, args));
+			};
 		}
 	}
-	return Client;
+
+	// Add in types
+	return Host as never as new(name: string, instance: Type) => ResponderHost & WithPromises<Type>;
 }

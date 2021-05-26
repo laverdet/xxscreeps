@@ -149,11 +149,11 @@ class Lock {
 	) {}
 
 	async lock() {
-		if (await this.keyval.set(this.name, this.value, { px: 30000, nx: true }) === null) {
+		if (await this.keyval.set(this.name, this.value, { px: 30000, if: 'nx' }) === null) {
 			return false;
 		} else {
 			this.interval = setInterval(() => mustNotReject(async() => {
-				if (await this.keyval.set(this.name, this.value, { px: 30000, xx: true }) === null) {
+				if (await this.keyval.set(this.name, this.value, { px: 30000, if: 'xx' }) === null) {
 					throw new Error('Lock expired unexpectedly');
 				}
 			}), 15000);

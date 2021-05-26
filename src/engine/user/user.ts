@@ -33,7 +33,7 @@ export async function create(db: Database, userId: string, username: string, pro
 
 	// Make user
 	const key = infoKey(userId);
-	const result = await db.data.hset(key, 'username', username, { nx: true });
+	const result = await db.data.hset(key, 'username', username, { if: 'nx' });
 	if (!result) {
 		throw new Error('User already created');
 	}

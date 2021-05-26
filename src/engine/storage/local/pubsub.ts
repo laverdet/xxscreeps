@@ -38,11 +38,14 @@ type WorkerMessage = PubSubMessage | SubscriptionRequest | UnsubscribeRequest | 
 
 // eslint-disable-next-line @typescript-eslint/require-await
 registerStorageProvider('local', 'pubsub', async url => {
-	if (isMainThread) {
-		return new LocalPubSubProviderParent(`${url}`);
-	} else {
-		return new LocalPubSubProviderWorker(`${url}`);
-	}
+	const instance = function() {
+		if (isMainThread) {
+			return new LocalPubSubProviderParent(`${url}`);
+		} else {
+			return new LocalPubSubProviderWorker(`${url}`);
+		}
+	}();
+	return [ () => instance.disconnect(), instance ];
 });
 
 /**

@@ -8,6 +8,7 @@ import { Channel } from 'xxscreeps/engine/storage/channel';
 import { World } from 'xxscreeps/game/map';
 import config from 'xxscreeps/config';
 import { getRoomChannel } from './processor/model';
+import { acquire } from 'xxscreeps/utility/async';
 
 type Message = { type: 'tick'; time: number } | { type: null };
 
@@ -16,6 +17,7 @@ export class Shard {
 	private readonly gameTickEffect: Effect;
 
 	private constructor(
+		private readonly effect: Effect,
 		public readonly db: Database,
 		public readonly name: string,
 		public readonly blob: BlobProvider,
@@ -37,15 +39,15 @@ export class Shard {
 		if (!shard) {
 			throw new Error(`Unknown shard: ${shard}`);
 		}
-		const [ blob, data, pubsub, scratch ] = await Promise.all([
+		const [ effect, [ blob, data, pubsub, scratch ] ] = await acquire(
 			connectToProvider(shard.blob, 'blob'),
 			connectToProvider(shard.data, 'keyval'),
 			connectToProvider(shard.pubsub, 'pubsub'),
 			connectToProvider(shard.scratch, 'keyval'),
-		]);
+		);
 		const channel = await new Channel<Message>(pubsub, 'channel/game').subscribe();
 		// Create instance (which subscribes to tick notification) and then read current info
-		const instance = new Shard(db, name, blob, data, pubsub, scratch, channel);
+		const instance = new Shard(effect, db, name, blob, data, pubsub, scratch, channel);
 		const time = Number(await data.get('time'));
 		instance.time = Math.max(time, instance.time);
 		return instance;
@@ -54,10 +56,7 @@ export class Shard {
 	disconnect() {
 		this.gameTickEffect();
 		this.channel.disconnect();
-		this.blob.disconnect();
-		this.data.disconnect();
-		this.pubsub.disconnect();
-		this.scratch.disconnect();
+		this.effect();
 	}
 
 	save() {
@@ -116,7 +115,7 @@ export class Shard {
 	 * buffer to ensure a rollback doesn't overwrite room state.
 	 */
 	async copyRoomFromPreviousTick(name: string, time: number) {
-		await this.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time), { replace: true });
+		await this.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
 	}
 
 	private checkTime(time: number, delta: number) {

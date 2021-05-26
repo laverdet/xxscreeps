@@ -113,7 +113,7 @@ export async function begetRoomProcessQueue(shard: Shard, currentTime: number, t
 		let count = initialCount;
 		if (wake.length > 0) {
 			const [ awoken ] = await Promise.all([
-				shard.scratch.zadd(activeRoomsKey, wake.map(roomName => [ 0, roomName ]), { nx: true }),
+				shard.scratch.zadd(activeRoomsKey, wake.map(roomName => [ 0, roomName ]), { if: 'nx' }),
 				shard.scratch.zremRange(sleepingRoomsKey, 0, time),
 			]);
 			count += awoken;

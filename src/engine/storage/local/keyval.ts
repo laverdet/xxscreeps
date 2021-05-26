@@ -1,81 +1,34 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type { KeyValProvider, SetOptions, Value, ZAddOptions, ZRangeOptions } from '../provider';
+import type * as Provider from 'xxscreeps/engine/storage/provider';
+import type { MaybePromises } from './responder';
 import * as Fn from 'xxscreeps/utility/functional';
 import { promises as fs } from 'fs';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
-import { Responder, ResponderClient, ResponderHost, connect, create } from './responder';
+import { Responder, connect, makeClient, makeHost } from './responder';
 import { SortedSet } from './sorted-set';
-import { registerStorageProvider } from '..';
+import { registerStorageProvider } from 'xxscreeps/engine/storage';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
-registerStorageProvider([ 'file', 'local' ], 'keyval', async url => {
-	try {
-		return await connect(LocalKeyValProviderClient, `${url}`);
-	} catch (err) {
-		try {
+registerStorageProvider([ 'file', 'local' ], 'keyval', url =>
+	connect(`${url}`, LocalKeyValClient, LocalKeyValHost, async() => {
+		const payload = await async function() {
 			if (url.protocol === 'file:') {
-				const payload = await fs.readFile(url, 'utf8');
-				return create(LocalKeyValProviderHost, `${url}`, payload);
+				try {
+					return await fs.readFile(url, 'utf8');
+				} catch {}
 			}
-		} catch (err) {
-			// Just make a new empty store
-		}
-		return create(LocalKeyValProviderHost, `${url}`);
-	}
-});
+		}();
+		return new LocalKeyValResponder(`${url}`, payload);
+	}));
 
-export abstract class LocalKeyValProvider extends Responder implements KeyValProvider {
-	abstract cad(key: string, check: string): Promise<boolean>;
-	abstract copy(from: string, to: string, options?: { replace: boolean }): Promise<boolean>;
-	abstract del(key: string): Promise<boolean>;
-	abstract get(key: string): Promise<string | null>;
-	abstract set(key: string, value: Value | Readonly<Uint8Array>, options: { get: true } & SetOptions): Promise<string | null>;
-	abstract set(key: string, value: Value | Readonly<Uint8Array>, options: ({ nx: true } | { xx: true }) & SetOptions): Promise<undefined | null>;
-	abstract set(key: string, value: Value | Readonly<Uint8Array>, options?: SetOptions): Promise<void>;
+type Value = Provider.Value;
 
-	abstract decr(key: string): Promise<number>;
-	abstract decrBy(key: string, delta: number): Promise<number>;
-	abstract incr(key: string): Promise<number>;
-	abstract incrBy(key: string, delta: number): Promise<number>;
-
-	abstract hget(key: string, field: string): Promise<string | null>;
-	abstract hgetall(key: string): Promise<Record<string, string>>;
-	abstract hmget(key: string, fields: Iterable<string>): Promise<Record<string, string | null>>;
-	abstract hset(key: string, field: string, value: Value, options?: { nx: boolean }): Promise<boolean>;
-	abstract hmset(key: string, fields: Iterable<[ string, Value ]>): Promise<void>;
-
-	abstract lpop(key: string): Promise<string | null>;
-	abstract lrange(key: string, start: number, stop: number): Promise<string[]>;
-	abstract rpush(key: string, elements: Value[]): Promise<number>;
-
-	abstract sadd(key: string, members: string[]): Promise<number>;
-	abstract scard(key: string): Promise<number>;
-	abstract sismember(key: string, member: string): Promise<boolean>;
-	abstract smembers(key: string): Promise<string[]>;
-	abstract spop(key: string): Promise<string | null>;
-	abstract srem(key: string, members: string[]): Promise<number>;
-
-	abstract zadd(key: string, members: [ number, string ][], options?: ZAddOptions): Promise<number>;
-	abstract zcard(key: string): Promise<number>;
-	abstract zincrBy(key: string, delta: number, member: string): Promise<number>;
-	abstract zmscore(key: string, members: string[]): Promise<(number | null)[]>;
-	abstract zrange(key: string, min: number, max: number, options: ZRangeOptions & { withScores: true }): Promise<[ number, string ][]>;
-	abstract zrange(key: string, min: number, max: number, options?: ZRangeOptions): Promise<string[]>;
-	abstract zrange(key: string, min: string, max: string, options?: ZRangeOptions): Promise<string[]>;
-	abstract zrem(key: string, members: string[]): Promise<number>;
-	abstract zremRange(key: string, min: number, max: number): Promise<number>;
-	abstract zunionStore(key: string, keys: string[]): Promise<number>;
-
-	abstract flushdb(): Promise<void>;
-	abstract save(): Promise<void>;
-}
-
-class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
+class LocalKeyValResponder extends Responder implements MaybePromises<Provider.KeyValProvider> {
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 
-	constructor(private readonly uri: string, payload?: string) {
-		super(uri);
+	constructor(private readonly url: string, payload?: string) {
+		super();
 		if (payload) {
 			const map = JSON.parse(payload, (key, value) => {
 				switch (value?.['#']) {
@@ -92,35 +45,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async flushdb() {
-		this.data.clear();
-	}
-
-	async save() {
-		if (this.uri.startsWith('file:')) {
-			const payload = JSON.stringify(this.data, (key, value) => {
-				if (value === this.data) {
-					return {
-						'#': 'map',
-						$: Object.fromEntries(Fn.reject(this.data.entries(), entry => this.expires.has(entry[0]))),
-					};
-				} else if (value instanceof Map) {
-					return { '#': 'map', $: Object.fromEntries(value.entries()) };
-				} else if (value instanceof Set) {
-					return { '#': 'set', $: [ ...value ] };
-				} else if (value instanceof SortedSet) {
-					return { '#': 'zset', $: [ ...value.entries() ] };
-				} else if (value instanceof Uint8Array) {
-					return { '#': 'uint8', $: typedArrayToString(value) };
-				} else {
-					return value;
-				}
-			});
-			await fs.writeFile(new URL(this.uri), payload, 'utf8');
-		}
-	}
-
-	async cad(key: string, check: string) {
+	cad(key: string, check: string) {
 		if (this.data.get(key) === check) {
 			this.remove(key);
 			return true;
@@ -129,11 +54,11 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async copy(from: string, to: string, options?: { replace: boolean }) {
+	copy(from: string, to: string, options?: Provider.Copy) {
 		const value = this.data.get(from);
 		if (value === undefined) {
 			return false;
-		} else if (!options?.replace && this.data.has(to)) {
+		} else if (options?.if === 'nx' && this.data.has(to)) {
 			return false;
 		} else if (this.data.has(to)) {
 			throw new Error(`"${to}" already exists`);
@@ -151,7 +76,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		return true;
 	}
 
-	async del(key: string) {
+	del(key: string) {
 		if (this.data.has(key)) {
 			this.remove(key);
 			return true;
@@ -160,22 +85,22 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async get(key: string) {
+	get(key: string) {
 		const value = this.data.get(key);
 		return value === undefined ? null : String(value);
 	}
 
-	async set(key: string, value: number | string | Readonly<Uint8Array>, options: SetOptions = {}) {
+	set(key: string, value: number | string | Readonly<Uint8Array>, options?: Provider.Set) {
 		if (
-			options.nx ? this.data.has(key) :
-			options.xx ? !this.data.has(key) : false
+			options?.if === 'nx' ? this.data.has(key) :
+			options?.if === 'xx' ? !this.data.has(key) : false
 		) {
 			return null;
 		}
-		if (options.px) {
+		if (options?.px) {
 			this.expires.add(key);
 		}
-		if (options.get) {
+		if (options?.get) {
 			const current = this.data.get(key);
 			this.data.set(key, value);
 			return current ?? null;
@@ -196,7 +121,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		return this.incrBy(key, 1);
 	}
 
-	async incrBy(key: string, delta: number) {
+	incrBy(key: string, delta: number) {
 		const value = delta + (() => {
 			const value = this.data.get(key);
 			if (typeof value === 'number') {
@@ -215,26 +140,25 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		return value;
 	}
 
-	async hget(key: string, field: string) {
+	hget(key: string, field: string) {
 		const map: Map<string, string> | undefined = this.data.get(key);
 		return map?.get(field) ?? null;
 	}
 
-	async hgetall(key: string) {
+	hgetall(key: string) {
 		const map: Map<string, string> | undefined = this.data.get(key);
 		return map ? Fn.fromEntries(map.entries()) : {};
 	}
 
-	async hmget(key: string, fields: Iterable<string>) {
+	hmget(key: string, fields: Iterable<string>) {
 		const map: Map<string, string> | undefined = this.data.get(key);
 		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ]));
 	}
 
-	async hset(key: string, field: string, value: Value, options?: { nx: boolean }) {
+	hset(key: string, field: string, value: Value, options?: Provider.HSet) {
 		const map: Map<string, string> = getOrSet(this.data, key, () => new Map);
-		const nx = options?.nx;
 		const has = map.has(field);
-		if (nx && has) {
+		if (options?.if === 'nx' && has) {
 			return false;
 		} else {
 			map.set(field, `${value}`);
@@ -242,7 +166,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async hmset(key: string, fields: Iterable<readonly [ string, Value ]> | Record<string, Value>) {
+	hmset(key: string, fields: Iterable<readonly [ string, Value ]> | Record<string, Value>) {
 		const map: Map<string, string> = getOrSet(this.data, key, () => new Map);
 		const iterable = Symbol.iterator in fields ?
 			fields as Iterable<[ string, Value ]> :
@@ -252,7 +176,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async lpop(key: string) {
+	lpop(key: string) {
 		const list: string[] | undefined = this.data.get(key);
 		if (!list) {
 			return null;
@@ -265,7 +189,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async lrange(key: string, start: number, stop: number) {
+	lrange(key: string, start: number, stop: number) {
 		const list: string[] | undefined = this.data.get(key);
 		if (!list) {
 			return [];
@@ -276,7 +200,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		);
 	}
 
-	async rpush(key: string, elements: Value[]) {
+	rpush(key: string, elements: Value[]) {
 		const list: string[] | undefined = this.data.get(key);
 		const strings = Fn.map(elements, element => `${element}`);
 		if (list) {
@@ -288,7 +212,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async sadd(key: string, members: string[]) {
+	sadd(key: string, members: string[]) {
 		const set: Set<string> | undefined = this.data.get(key);
 		if (set) {
 			const { size } = set;
@@ -300,22 +224,22 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async scard(key: string) {
+	scard(key: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		return set ? set.size : 0;
 	}
 
-	async sismember(key: string, member: string) {
+	sismember(key: string, member: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		return set?.has(member) ?? false;
 	}
 
-	async smembers(key: string) {
+	smembers(key: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		return set ? [ ...set ] : [];
 	}
 
-	async spop(key: string) {
+	spop(key: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		if (set) {
 			const { value } = set.values().next();
@@ -329,7 +253,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		return null;
 	}
 
-	async srem(key: string, members: string[]) {
+	srem(key: string, members: string[]) {
 		const set = this.data.get(key);
 		if (set) {
 			const { size } = set;
@@ -344,30 +268,28 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async zadd(key: string, members: [ number, string ][], options: ZAddOptions = {}) {
+	zadd(key: string, members: [ number, string ][], options?: Provider.ZAdd) {
 		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
-		if (options.nx) {
-			return set.insert(members, left => left);
-		} else if (options.xx) {
-			return set.insert(Fn.reject(members, member => set.has(member[1])), (left, right) => right);
-		} else {
-			return set.insert(members, (left, right) => right);
+		switch (options?.if) {
+			case 'nx': return set.insert(members, left => left);
+			case 'xx': return set.insert(Fn.reject(members, member => set.has(member[1])), (left, right) => right);
+			default: return set.insert(members, (left, right) => right);
 		}
 	}
 
-	async zcard(key: string) {
+	zcard(key: string) {
 		const set: SortedSet | undefined = this.data.get(key);
 		return set ? set.size : 0;
 	}
 
-	async zincrBy(key: string, delta: number, member: string) {
+	zincrBy(key: string, delta: number, member: string) {
 		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
 		const score = (set.score(member) ?? 0) + delta;
 		set.add(member, score);
 		return score;
 	}
 
-	async zmscore(key: string, members: string[]) {
+	zmscore(key: string, members: string[]) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			return members.map(member => set.score(member) ?? null);
@@ -376,47 +298,50 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async zrange(key: string, min: number | string, max: number | string, options?: ZRangeOptions): Promise<any[]> {
+	zrange(key: string, min: number | string, max: number | string, options?: Provider.ZRange): any {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
-			if (options?.by === 'lex') {
-				if (options.withScores) {
-					throw new Error('Invalid request');
+			switch (options?.by) {
+				case 'lex': {
+					const parse = (value: string): [ string, boolean ] => {
+						if (value === '-') {
+							return [ '', true ];
+						} else if (value === '+') {
+							return [ '\uffff', true ];
+						} else if (value.startsWith('(')) {
+							return [ value.substr(1), false ];
+						} else if (value.startsWith('[')) {
+							return [ value.substr(1), true ];
+						} else {
+							throw new Error(`Invalid range: ${value}`);
+						}
+					};
+					const [ minVal, minInc ] = parse(min as string);
+					const [ maxVal, maxInc ] = parse(max as string);
+					return [ ...set.entriesByLex(minInc, minVal, maxInc, maxVal) ];
 				}
-				const parse = (value: string): [ string, boolean ] => {
-					if (value === '-') {
-						return [ '', true ];
-					} else if (value === '+') {
-						return [ '\uffff', true ];
-					} else if (value.startsWith('(')) {
-						return [ value.substr(1), false ];
-					} else if (value.startsWith('[')) {
-						return [ value.substr(1), true ];
-					} else {
-						throw new Error(`Invalid range: ${value}`);
-					}
-				};
-				const [ minVal, minInc ] = parse(min as string);
-				const [ maxVal, maxInc ] = parse(max as string);
-				return [ ...set.entriesByLex(minInc, minVal, maxInc, maxVal) ];
-			} else if (options?.by === 'score') {
-				const entries = set.entries(min as number, max as number);
-				if (options.withScores) {
-					return [ ...entries ];
-				} else {
-					return [ ...Fn.map(entries, entry => entry[1]) ];
-				}
-			} else if (options?.withScores) {
-				return [ ...Fn.map(set.values(), (value): [ number, string ] => [ set.score(value)!, value ]) ];
-			} else {
-				return set.values().slice(min as number, max as number);
+				case 'score': return [ ...Fn.map(set.entries(min as number, max as number), entry => entry[1]) ];
+				default: return set.values().slice(min as number, max as number);
 			}
 		} else {
 			return [];
 		}
 	}
 
-	async zrem(key: string, members: string[]) {
+	zrangeWithScores(key: string, min: number, max: number, options?: Provider.ZRange) {
+		const set: SortedSet | undefined = this.data.get(key);
+		if (set) {
+			switch (options?.by) {
+				case 'lex': throw new Error('Invalid request');
+				case 'score': return [ ...set.entries(min, max) ];
+				default: return [ ...Fn.map(set.values(), (value): [ number, string ] => [ set.score(value)!, value ]) ];
+			}
+		} else {
+			return [];
+		}
+	}
+
+	zrem(key: string, members: string[]) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			return Fn.accumulate(members, member => set.delete(member));
@@ -425,7 +350,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async zremRange(key: string, min: number, max: number) {
+	zremRange(key: string, min: number, max: number) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			return Fn.accumulate(
@@ -437,7 +362,7 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		}
 	}
 
-	async zunionStore(key: string, keys: string[]) {
+	zunionStore(key: string, keys: string[]) {
 		const sets: (SortedSet | undefined)[] = keys.map(key => this.data.get(key));
 		if (sets.every(set => set === undefined)) {
 			return 0;
@@ -454,148 +379,41 @@ class LocalKeyValProviderHost extends ResponderHost(LocalKeyValProvider) {
 		return out.size;
 	}
 
+	flushdb() {
+		this.data.clear();
+	}
+
+	async save() {
+		if (this.url.startsWith('file:')) {
+			const payload = JSON.stringify(this.data, (key, value) => {
+				if (value === this.data) {
+					return {
+						'#': 'map',
+						$: Object.fromEntries(Fn.reject(this.data.entries(), entry => this.expires.has(entry[0]))),
+					};
+				} else if (value instanceof Map) {
+					return { '#': 'map', $: Object.fromEntries(value.entries()) };
+				} else if (value instanceof Set) {
+					return { '#': 'set', $: [ ...value ] };
+				} else if (value instanceof SortedSet) {
+					return { '#': 'zset', $: [ ...value.entries() ] };
+				} else if (value instanceof Uint8Array) {
+					return { '#': 'uint8', $: typedArrayToString(value) };
+				} else {
+					return value;
+				}
+			});
+			await fs.writeFile(new URL(this.url), payload, 'utf8');
+		} else {
+			throw new Error('Can\'t save ephemeral keyval store');
+		}
+	}
+
 	private remove(key: string) {
 		this.data.delete(key);
 		this.expires.delete(key);
 	}
 }
 
-class LocalKeyValProviderClient extends ResponderClient(LocalKeyValProvider) {
-	cad(key: string, check: string) {
-		return this.request('cad', key, check);
-	}
-
-	copy(from: string, to: string, options?: { replace: boolean }) {
-		return this.request('copy', from, to, options);
-	}
-
-	del(key: string) {
-		return this.request('del', key);
-	}
-
-	get(key: string) {
-		return this.request('get', key);
-	}
-
-	set(key: string, value: Readonly<Uint8Array>, options?: SetOptions) {
-		return this.request('set' as any, key, value, options);
-	}
-
-	decr(key: string) {
-		return this.request('decr', key);
-	}
-
-	decrBy(key: string, delta: number) {
-		return this.request('decrBy', key, delta);
-	}
-
-	incr(key: string) {
-		return this.request('incr', key);
-	}
-
-	incrBy(key: string, delta: number) {
-		return this.request('incrBy', key, delta);
-	}
-
-	hget(key: string, field: string) {
-		return this.request('hget', key, field);
-	}
-
-	hgetall(key: string) {
-		return this.request('hgetall', key);
-	}
-
-	hmget(key: string, fields: Iterable<string>) {
-		return this.request('hmget', key, [ ...fields ]);
-	}
-
-	hset(key: string, field: string, value: Value, options?: { nx: boolean }) {
-		return this.request('hset', key, field, value, options);
-	}
-
-	hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
-		const iterable = Symbol.iterator in fields ?
-			fields as Iterable<[ string, Value ]> :
-			Object.entries(fields);
-		return this.request('hmset', key, [ ...iterable ]);
-	}
-
-	lpop(key: string) {
-		return this.request('lpop', key);
-	}
-
-	lrange(key: string, start: number, stop: number) {
-		return this.request('lrange', key, start, stop);
-	}
-
-	rpush(key: string, elements: Value[]) {
-		return this.request('rpush', key, elements);
-	}
-
-	sadd(key: string, members: string[]) {
-		return this.request('sadd', key, members);
-	}
-
-	scard(key: string) {
-		return this.request('scard', key);
-	}
-
-	sismember(key: string, member: string) {
-		return this.request('sismember', key, member);
-	}
-
-	smembers(key: string) {
-		return this.request('smembers', key);
-	}
-
-	spop(key: string) {
-		return this.request('spop', key);
-	}
-
-	srem(key: string, members: string[]) {
-		return this.request('srem', key, members);
-	}
-
-	zadd(key: string, members: [ number, string ][], options: ZAddOptions = {}) {
-		return this.request('zadd', key, members, options);
-	}
-
-	zcard(key: string) {
-		return this.request('zcard', key);
-	}
-
-	zincrBy(key: string, delta: number, member: string) {
-		return this.request('zincrBy', key, delta, member);
-	}
-
-	zmscore(key: string, members: string[]) {
-		return this.request('zmscore', key, members);
-	}
-
-	zrange(key: string, min: number | string, max: number | string, options?: any) {
-		return this.request('zrange' as any, key,
-			min === -Infinity ? Number.MIN_SAFE_INTEGER : min,
-			max === Infinity ? Number.MAX_SAFE_INTEGER : max,
-			options);
-	}
-
-	zrem(key: string, members: string[]) {
-		return this.request('zrem', key, members);
-	}
-
-	zremRange(key: string, min: number, max: number) {
-		return this.request('zremRange', key, min, max);
-	}
-
-	zunionStore(key: string, keys: string[]) {
-		return this.request('zunionStore', key, keys);
-	}
-
-	flushdb() {
-		return this.request('flushdb');
-	}
-
-	save() {
-		return this.request('save');
-	}
-}
+class LocalKeyValClient extends makeClient(LocalKeyValResponder) {}
+class LocalKeyValHost extends makeHost(LocalKeyValResponder) {}

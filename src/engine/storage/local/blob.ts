@@ -1,62 +1,33 @@
-import type { BlobProvider } from '../provider';
+import type * as Provider from 'xxscreeps/engine/storage/provider';
+import type { MaybePromises } from './responder';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
 import { fileURLToPath } from 'url';
 import { promises as fs } from 'fs';
 import { listen } from 'xxscreeps/utility/async';
-import { Responder, ResponderClient, ResponderHost, connect, create } from './responder';
+import { Responder, connect, makeClient, makeHost } from './responder';
 import { registerStorageProvider } from '..';
 
-registerStorageProvider('file', 'blob', async url => {
-	try {
-		return await connect(LocalBlobClient, `${url}`);
-	} catch (err) {
-		return await LocalBlobHost.create(url);
-	}
-});
+registerStorageProvider('file', 'blob', url =>
+	connect(`${url}`, LocalBlobClient, LocalBlobHost, () => LocalBlobResponder.create(url)));
 
-const fragmentNameWhitelist = /^[a-zA-Z0-9/-]+$/;
-
-function copy(buffer: Readonly<Uint8Array>) {
-	const copy = new Uint8Array(new SharedArrayBuffer(buffer.length));
-	copy.set(buffer);
-	return copy;
-}
-
-export abstract class LocalBlobProvider extends Responder implements BlobProvider {
-	abstract del(key: string): Promise<boolean>;
-	abstract getBuffer(key: string): Promise<Readonly<Uint8Array> | null>;
-	abstract set(key: string, value: Readonly<Uint8Array>): Promise<void>;
-	abstract copy(from: string, to: string, options?: { replace: boolean }): Promise<boolean>;
-	abstract save(): Promise<void>;
-	abstract flushdb(): Promise<void>;
-
-	async reqBuffer(key: string) {
-		const value = await this.getBuffer(key);
-		if (value === null) {
-			throw new Error(`"${key}" does not exist`);
-		}
-		return value;
-	}
-}
-
-class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
+class LocalBlobResponder extends Responder implements MaybePromises<Provider.BlobProvider> {
 	private bufferedBlobs = new Map<string, Readonly<Uint8Array>>();
 	private bufferedDeletes = new Set<string>();
 	private readonly knownPaths = new Set<string>();
-	private readonly processUnlistener = listen(process, 'exit', () => this.checkMissingFlush());
+	private readonly exitEffect = listen(process, 'exit', () => this.checkMissingFlush());
 
-	constructor(name: string, private readonly path: string) {
-		super(name);
+	constructor(private readonly path: string) {
+		super();
 	}
 
 	static async create(url: URL) {
 		const path = fileURLToPath(url);
-		await LocalBlobHost.initializeDirectory(path);
-		return create(LocalBlobHost, `${url}`, path);
+		await LocalBlobResponder.initializeDirectory(path);
+		return new LocalBlobResponder(path);
 	}
 
-	static async initializeDirectory(path: string) {
+	private static async initializeDirectory(path: string) {
 		// Ensure directory exists, or make it
 		await fs.mkdir(path, { recursive: true });
 
@@ -108,6 +79,19 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		})();
 	}
 
+	async copy(from: string, to: string, options?: Provider.Copy) {
+		this.check(to);
+		const value = await this.getBuffer(from);
+		if (options?.if === 'nx' && await this.getBuffer(to)) {
+			return false;
+		} else if (value === null) {
+			return false;
+		} else {
+			this.bufferedBlobs.set(to, value);
+			return true;
+		}
+	}
+
 	async del(key: string) {
 		this.check(key);
 		// If it hasn't been written to disk yet it will just be removed from the buffer
@@ -154,24 +138,25 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		}
 	}
 
+	async reqBuffer(key: string) {
+		const value = await this.getBuffer(key);
+		if (value === null) {
+			throw new Error(`"${key}" does not exist`);
+		}
+		return value;
+	}
+
 	set(key: string, value: Readonly<Uint8Array>) {
 		this.check(key);
 		this.bufferedDeletes.delete(key);
-		this.bufferedBlobs.set(key, value.buffer instanceof SharedArrayBuffer ? value : copy(value));
-		return Promise.resolve();
-	}
-
-	async copy(from: string, to: string, options?: { replace: boolean }) {
-		this.check(to);
-		const value = await this.getBuffer(from);
-		if (!options?.replace && await this.getBuffer(to)) {
-			return false;
-		} else if (value === null) {
-			return false;
-		} else {
-			this.bufferedBlobs.set(to, value);
-			return true;
-		}
+		this.bufferedBlobs.set(key, function() {
+			if (value.buffer instanceof SharedArrayBuffer) {
+				return value;
+			}
+			const copy = new Uint8Array(new SharedArrayBuffer(value.length));
+			copy.set(value);
+			return copy;
+		}());
 	}
 
 	async flushdb() {
@@ -179,7 +164,7 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		this.bufferedDeletes.clear();
 		this.knownPaths.clear();
 		await fs.rm(this.path, { recursive: true });
-		await LocalBlobHost.initializeDirectory(this.path);
+		await LocalBlobResponder.initializeDirectory(this.path);
 	}
 
 	async save() {
@@ -235,15 +220,15 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 		}));
 	}
 
-	override destroyed() {
-		this.processUnlistener();
+	protected override release() {
+		this.exitEffect();
 		this.checkMissingFlush();
 		fs.unlink(Path.join(this.path, '.lock')).catch(() => {});
 	}
 
 	private check(fragment: string) {
 		// Safety check before writing random file names based on user input
-		if (!fragmentNameWhitelist.test(fragment)) {
+		if (!/^[a-zA-Z0-9/-]+$/.test(fragment)) {
 			throw new Error(`Unsafe blob id: ${fragment}`);
 		}
 	}
@@ -256,28 +241,5 @@ class LocalBlobHost extends ResponderHost(LocalBlobProvider) {
 	}
 }
 
-class LocalBlobClient extends ResponderClient(LocalBlobProvider) {
-	del(key: string) {
-		return this.request('del', key);
-	}
-
-	getBuffer(key: string) {
-		return this.request('getBuffer', key);
-	}
-
-	set(key: string, value: Readonly<Uint8Array>) {
-		return this.request('set', key, value);
-	}
-
-	copy(from: string, to: string, options?: { replace: boolean }) {
-		return this.request('copy', from, to, options);
-	}
-
-	flushdb() {
-		return this.request('flushdb');
-	}
-
-	save() {
-		return this.request('save');
-	}
-}
+class LocalBlobClient extends makeClient(LocalBlobResponder) {}
+class LocalBlobHost extends makeHost(LocalBlobResponder) {}

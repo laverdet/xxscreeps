@@ -1,3 +1,7 @@
+// `registerStorageProvider` needs to be imported early to allow local keyval/blob providers to
+// register
+import 'xxscreeps/engine/storage/register';
+
 await async function() {
 	// Get script and remove `dist/config/entry.js` from args
 	process.argv.splice(1, 1);
