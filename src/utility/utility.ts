@@ -35,6 +35,17 @@ export function extend<Type, Proto extends {
 	}
 }
 
+// Remove all elements from an array which don't match the predicate.
+export function filterInPlace<Type>(array: Type[], fn: (value: Type) => boolean) {
+	let cursor = array.length - 1;
+	for (let ii = cursor; ii >= 0; --ii) {
+		if (!fn(array[ii])) {
+			array[ii] = array[cursor--];
+		}
+	}
+	array.splice(cursor + 1);
+}
+
 // Gets a key on a map and if it doesn't exist it inserts a new value, then returns the value.
 export function getOrSet<Key, Value>(map: Map<Key, Value>, key: Key, fn: () => Value): Value {
 	const value = map.get(key);
@@ -75,7 +86,8 @@ export function removeOne<Type>(list: Type[], element: Type) {
 	if (index === -1) {
 		throw new Error('Element was not found');
 	}
-	list.splice(index, 1);
+	list[index] = list[list.length - 1];
+	list.pop();
 }
 
 // Used to inline upcast a value to another Type. This is *more* restrictive than `as Type`

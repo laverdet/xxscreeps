@@ -20,6 +20,7 @@ import * as Movement from 'xxscreeps/engine/processor/movement';
 // eslint-disable-next-line no-duplicate-imports
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
+import { filterInPlace } from 'xxscreeps/utility/utility';
 
 declare module 'xxscreeps/engine/processor' {
 	interface Intent { creep: typeof intents }
@@ -96,12 +97,12 @@ registerObjectPreTickProcessor(Creep, (creep, context) => {
 	const actionLog = creep['#actionLog'];
 	const actionLength = actionLog.length;
 	if (actionLength !== 0) {
-		const filteredLog = creep['#actionLog'] = actionLog.filter(action => action.time > timeLimit);
-		if (filteredLog.length !== actionLength) {
+		filterInPlace(actionLog, action => action.time > timeLimit);
+		if (actionLog.length !== actionLength) {
 			context.didUpdate();
 		}
-		if (filteredLog.length > 0) {
-			const minimum = Fn.minimum(Fn.map(filteredLog, action => action.time))!;
+		if (actionLog.length > 0) {
+			const minimum = Fn.minimum(Fn.map(actionLog, action => action.time))!;
 			context.wakeAt(minimum + kRetainActionsTime);
 		}
 	}

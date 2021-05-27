@@ -1,4 +1,5 @@
 import type { ResourceType, Store } from '../store';
+import { filterInPlace } from 'xxscreeps/utility/utility';
 
 export function add(store: Store, resourceType: ResourceType, amount: number) {
 
@@ -63,14 +64,12 @@ export function subtract(store: Store, resourceType: ResourceType, amount: numbe
 			if (resourceType !== 'energy') {
 				delete store[resourceType];
 			}
-			const resources = store['#resources'].filter(resource => resource.type !== resourceType || resource.capacity);
+			const resources = store['#resources'];
+			filterInPlace(resources, resource => resource.type !== resourceType || resource.capacity > 0);
 			if (resources.length <= 1) {
 				// Simplify memory layout
 				store['#singleResource'] = resources.length === 0 ? 'energy' : resources[0].type;
 				store['#resources'] = [];
-			} else {
-				// Remains multi-resource store
-				store['#resources'] = resources;
 			}
 		} else {
 			// Just reduce the stored resource in place
