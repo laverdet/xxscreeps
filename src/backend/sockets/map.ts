@@ -1,8 +1,8 @@
 import type { SubscriptionEndpoint } from 'xxscreeps/backend/socket';
 import { RoomObject } from 'xxscreeps/game/object';
-import { getOrSet } from 'xxscreeps/utility/utility';
 import { bindMapRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
 import { MapRender } from 'xxscreeps/backend/symbols';
+import { subscribeToRoom } from './room';
 
 // Register a map renderer on a `RoomObject` type
 bindMapRenderer(RoomObject, () => undefined);
@@ -18,31 +18,25 @@ export const mapSubscription: SubscriptionEndpoint = {
 			// avoid unneeded subscriptions.
 			return () => {};
 		}
-		let lastTickTime = 0;
 		let previous = '';
-		const update = async(time: number) => {
-			lastTickTime = Date.now();
-			const room = await this.context.shard.loadRoom(roomName, time);
-			const response = new Map<string, [ number, number ][]>();
+		return subscribeToRoom(this.context.shard, roomName, (room, time, didUpdate) => {
+			if (!didUpdate) {
+				return;
+			}
+			const response: Record<string, [ number, number ][]> = {};
 			for (const object of room['#objects']) {
 				const record = function() {
 					const key = object[MapRender](object);
 					if (key !== undefined) {
-						return getOrSet(response, key, () => []);
+						return response[key] ??= [];
 					}
 				}();
 				record?.push([ object.pos.x, object.pos.y ]);
 			}
-			const payload = JSON.stringify(Object.fromEntries(response.entries()));
+			const payload = JSON.stringify(response);
 			if (payload !== previous) {
 				previous = payload;
 				this.send(payload);
-			}
-		};
-		await update(this.context.shard.time);
-		return this.context.shard.channel.listen(event => {
-			if (event.type === 'tick' && Date.now() > lastTickTime + 250) {
-				update(event.time).catch(error => console.error(error));
 			}
 		});
 	},

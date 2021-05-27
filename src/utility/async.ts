@@ -1,4 +1,5 @@
 import type { AsyncEffectAndResult, Effect } from './types';
+import * as Fn from './functional';
 
 // Given a series of effect-returning promises this waits for them all to resolve and returns a
 // single effect that owns all the underlying effects. In the case that one throws the successful
@@ -45,6 +46,38 @@ export function acquire(...async: AsyncEffectAndResult[]): Promise<[ Effect, any
 			}
 		});
 	});
+}
+
+/**
+ * Returns a general purpose event listener. `onDrain` is called any time there are 0 listeners.
+ */
+export function makeEventPublisher<Message extends any[]>(onDrain = () => {}) {
+	type Listener = (...payload: Message) => void;
+	const listeners = new Set<Listener>();
+	return {
+		listen: (fn: Listener): Effect => {
+			// Add new listener
+			const { size } = listeners;
+			listeners.add(fn);
+			if (listeners.size === size) {
+				throw new Error('Listener already exists');
+			}
+			// Unlisten effect
+			return () => {
+				const { size } = listeners;
+				listeners.delete(fn);
+				if (listeners.size === size) {
+					throw new Error('Listener already removed');
+				} else if (listeners.size === 0) {
+					onDrain();
+				}
+			};
+		},
+
+		publish: (...payload: Message) => {
+			Fn.forEach(listeners, listener => listener(...payload));
+		},
+	};
 }
 
 // Attaches a listener to an EventEmitter and returns a lambda which removes the listener

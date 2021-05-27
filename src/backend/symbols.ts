@@ -10,7 +10,7 @@ export const middleware: ((koa: Koa<State, Context>, router: Router<State, Conte
 export const routes: Endpoint[] = [];
 
 type RoomSocketHandler = (shard: Shard, userId: string | undefined, roomName: string) =>
-	AsyncEffectAndResult<(time: number) => MaybePromise<{}>>;
+	AsyncEffectAndResult<((time: number) => MaybePromise<{}>) | undefined>;
 export const roomSocketHandlers: RoomSocketHandler[] = [];
 export function registerRoomSocketHandler(handler: RoomSocketHandler) {
 	roomSocketHandlers.push(handler);

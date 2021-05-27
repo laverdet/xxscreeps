@@ -25,6 +25,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	// TODO: Move to mod
 	energyAvailable = 0;
 	energyCapacityAvailable = 0;
+	#didInitialize = false;
 	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
 	#lookIndex = new Map<string, RoomObject[]>(Fn.map(lookConstants, look => [ look, [] ]));
 	#spatialIndex = new Map<number, RoomObject[]>();
@@ -51,6 +52,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Materialize all `RoomObject` instances and build FIND & LOOK indices
 	 */
 	['#initialize']() {
+		if (this.#didInitialize) {
+			return;
+		}
+		this.#didInitialize = true;
 		for (const object of this['#objects']) {
 			this.#addToIndex(object);
 			object['#afterInsert'](this);

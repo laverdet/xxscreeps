@@ -115,7 +115,7 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 					const unlistener = subscriptions.get(name);
 					if (unlistener) {
 						subscriptions.delete(name);
-						unlistener.then(unlistener => unlistener(), () => {});
+						unlistener.then(unlistener => unlistener(), console.error);
 					}
 				}
 			}
