@@ -12,7 +12,8 @@
 			],
 			"internalConsoleOptions": "openOnSessionStart",
 			"name": "Server",
-			"program": "${workspaceFolder}/dist/engine/service/launcher.js",
+			"program": "${workspaceFolder}/dist/config/entry.js",
+			"args": [ "engine/service/launcher.js" ],
 		},
 		{
 			"type": "node",

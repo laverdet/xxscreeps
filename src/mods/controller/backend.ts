@@ -17,10 +17,12 @@ bindRenderer(StructureController, (controller, next) => {
 			user: controller.room['#user'],
 		} : undefined,
 		...sign ? {
-			datetime: sign.datetime,
-			time: sign.time,
-			text: sign.text,
-			user: sign.userId,
+			sign: {
+				datetime: sign.datetime,
+				time: sign.time,
+				text: sign.text,
+				user: sign.userId,
+			},
 		} : undefined,
 	};
 });
