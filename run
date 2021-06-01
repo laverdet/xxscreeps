@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 NEXT=
 NODE_ARGS=()
 SCRIPT_ARGS=()
@@ -9,11 +10,13 @@ while (( "$#" )); do
 	shift
 done
 
-BASE=$(dirname "$(realpath $0)")
+SCRIPT=$(readlink "$0" || echo "$0")
+BASE=$(dirname "$SCRIPT")
 exec node "${NODE_ARGS[@]}" \
 	--enable-source-maps \
 	--experimental-specifier-resolution=node \
 	--experimental-import-meta-resolve \
 	--experimental-repl-await \
+	--no-warnings \
 	--stack-trace-limit=20 \
 	"$BASE"/dist/config/entry "${SCRIPT_ARGS[@]}"

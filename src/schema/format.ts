@@ -153,7 +153,7 @@ WithShapeAndType<ShapeOf<Type> | undefined, TypeOf<Type> | undefined> {
 }
 
 // Structure / object type
-type StructDeclaration = WithVariant | Record<string, Format>;
+export type StructDeclaration = WithVariant | Record<string, Format>;
 
 type StructDeclarationShape<
 	Type extends StructDeclaration,

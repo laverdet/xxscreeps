@@ -17,7 +17,7 @@ type ExternalsPromise = Extract<ExternalsFunctionElement, (...args: any) => Prom
 type ExternalsCallback = (...args: Parameters<ExternalsPromise>) =>
 	ReturnType<ExternalsPromise> extends Promise<infer Result> ? Result | void | Promise<Result | void> : never;
 export type Transform = {
-	alias?: Record<string, string>;
+	alias?: Record<string, false | string>;
 	babel?: PluginItem;
 	externals?: ExternalsCallback;
 };

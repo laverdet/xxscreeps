@@ -1,14 +1,14 @@
 import type { MergedSchema } from './defaults';
 import Ajv from 'ajv';
-import jsonSchema from './config.schema.json';
+import schema from './config.schema.json';
+import data, { configPath } from './raw';
 import { defaults } from './defaults';
 import { merge } from 'xxscreeps/utility/utility';
-import data, { configPath } from './raw';
+import { fileURLToPath } from 'url';
 
 const ajv = new Ajv;
-const validate = ajv.compile(jsonSchema);
-if (validate(data) !== true) {
-	throw new Error(`Configuration error in: ${configPath}\n${ajv.errorsText()}`);
+if (ajv.validate(schema, data) !== true) {
+	throw new Error(`\`${fileURLToPath(configPath)}\`: ${ajv.errorsText()}`);
 }
 
 const config: MergedSchema = defaults as never;

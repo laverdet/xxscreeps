@@ -20,7 +20,7 @@ export function getRoomChannel(shard: Shard, roomName: string) {
 	return new Channel<Message>(shard.pubsub, `processor/room/${roomName}`);
 }
 
-const activeRoomsKey = 'processor/activeRooms';
+export const activeRoomsKey = 'processor/activeRooms';
 const sleepingRoomsKey = 'processor/inactiveRooms';
 const roomToUsersSetKey = (roomName: string) =>
 	`rooms/${roomName}/users`;
@@ -122,6 +122,7 @@ export async function begetRoomProcessQueue(shard: Shard, currentTime: number, t
 		await Promise.all([
 			shard.scratch.zunionStore(processRoomsSetKey(time), [ activeRoomsKey, processRoomsSetKey(time) ]),
 			shard.scratch.incrBy(processRoomsPendingKey(time), count),
+			shard.scratch.incrBy(finalizedRoomsPendingKey(time), count),
 		]);
 		await getProcessorChannel(shard).publish({ type: 'process', time });
 	}
@@ -129,12 +130,8 @@ export async function begetRoomProcessQueue(shard: Shard, currentTime: number, t
 }
 
 export async function roomDidProcess(shard: Shard, roomName: string, time: number) {
-	const [ count ] = await Promise.all([
-		// Decrement count of remaining rooms to process
-		shard.scratch.decr(processRoomsPendingKey(time)),
-		// Add this room to finalization set
-		shard.scratch.incr(finalizedRoomsPendingKey(time)),
-	]);
+	// Decrement count of remaining rooms to process
+	const count = await shard.scratch.decr(processRoomsPendingKey(time));
 	if (count === 0) {
 		// Count all rooms which were woken due to inter-room intents
 		const extraCount = await shard.scratch.scard(finalizeExtraRoomsSetKey(time));
@@ -148,10 +145,12 @@ export async function roomDidProcess(shard: Shard, roomName: string, time: numbe
 }
 
 export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: number) {
-	// Decrement number of finalization rooms remain
-	const remaining = await shard.scratch.decrBy(finalizedRoomsPendingKey(time), roomsCount);
-	if (remaining === 0) {
-		return getServiceChannel(shard).publish({ type: 'tickFinished' });
+	if (roomsCount > 0) {
+		// Decrement number of finalization rooms remain
+		const remaining = await shard.scratch.decrBy(finalizedRoomsPendingKey(time), roomsCount);
+		if (remaining === 0) {
+			return getServiceChannel(shard).publish({ type: 'tickFinished' });
+		}
 	}
 }
 

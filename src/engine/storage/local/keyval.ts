@@ -90,7 +90,7 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 		return value === undefined ? null : String(value);
 	}
 
-	set(key: string, value: number | string | Readonly<Uint8Array>, options?: Provider.Set) {
+	set(key: string, value: number | string | Readonly<Uint8Array>, options?: Provider.Set): any {
 		if (
 			options?.if === 'nx' ? this.data.has(key) :
 			options?.if === 'xx' ? !this.data.has(key) : false
@@ -103,7 +103,7 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 		if (options?.get) {
 			const current = this.data.get(key);
 			this.data.set(key, value);
-			return current ?? null;
+			return current === undefined ? null : `${current}`;
 		} else {
 			this.data.set(key, value);
 		}

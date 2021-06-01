@@ -4,7 +4,7 @@ import { Database } from 'xxscreeps/engine/database';
 import { Deferred } from 'xxscreeps/utility/async';
 import { Shard } from 'xxscreeps/engine/shard';
 import { Mutex } from 'xxscreeps/engine/storage/mutex';
-import { getProcessorChannel } from 'xxscreeps/engine/processor/model';
+import { activeRoomsKey, getProcessorChannel } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';
 
@@ -46,7 +46,10 @@ try {
 	// Wait for processors to connect and initialize world state
 	await serviceSubscription.publish({ type: 'mainConnected' });
 	for await (const message of serviceSubscription) {
-		if (message.type === 'processorInitialized') {
+		if (
+			message.type === 'processorInitialized' &&
+			await shard.scratch.zcard(activeRoomsKey) === rooms.length
+		) {
 			break;
 		}
 	}

@@ -27,7 +27,7 @@ export function getSymbol(name: string) {
 	return getOrSet(symbols, name, () => makeSymbol(name));
 }
 
-export function ownPrivateEntries(object: any) {
+export function getOwnPrivateEntries(object: any) {
 	if (isPrivate) {
 		return Fn.map(
 			Fn.filter(symbols.values(), symbol => symbol in object),

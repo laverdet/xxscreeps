@@ -3,6 +3,7 @@ export * from 'worker_threads';
 import * as Responder from 'xxscreeps/engine/storage/local/responder';
 import { LocalPubSubProvider } from 'xxscreeps/engine/storage/local/pubsub';
 import argv from 'xxscreeps/config/arguments';
+const entryShim = new URL(await import.meta.resolve('xxscreeps/config/entry'));
 
 const workerArgs = [
 	...argv.config ? [ '--config', argv.config ] : [],
@@ -10,9 +11,10 @@ const workerArgs = [
 
 export class Worker extends workerThreads.Worker {
 	constructor(filename: string | URL, options: workerThreads.WorkerOptions = {}) {
-		super(filename, {
+		super(entryShim, {
 			...options,
 			argv: [
+				filename,
 				...workerArgs,
 				...options.argv ? options.argv : [],
 			],

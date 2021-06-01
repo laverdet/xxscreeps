@@ -78,7 +78,7 @@ abstract class ResponderClient {
 		}
 	}
 
-	static request(client: ResponderClient, method: string, ...payload: unknown[]) {
+	static request(client: ResponderClient, method: string, payload: unknown[]) {
 		const requestId = ++client.#requestId;
 		const deferred = new Deferred<unknown>();
 		client.#requests.set(requestId, deferred);

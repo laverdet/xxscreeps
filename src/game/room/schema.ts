@@ -8,8 +8,7 @@ import { Room } from './room';
 export const format = declare('Room', () => compose(shape, Room));
 export const objectFormat = declare('AnyObject', () => variant(...variantForPath<Schema>()('Room.objects')));
 export function shape() {
-	return struct({
-		...structForPath<Schema>()('Room'),
+	return struct(structForPath<Schema>()('Room', {
 		name: 'string',
 		'#objects': vector(objectFormat),
 		'#users': struct({
@@ -18,5 +17,5 @@ export function shape() {
 			vision: vector(Id.format),
 		}),
 		'#eventLog': vector(variant(...variantForPath<Schema>()('Room.eventLog'))),
-	});
+	}));
 }

@@ -167,6 +167,7 @@ class LocalPubSubProviderParent extends LocalPubSubProvider {
 					subscriptionIds.delete(message.id);
 					if (subscriptionIds.size === 0) {
 						const pubsub = localSubscriptions.get(name)!;
+						idsByName.delete(name);
 						localSubscriptions.delete(name);
 						disconnect(pubsub);
 					}

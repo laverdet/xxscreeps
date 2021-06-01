@@ -3,7 +3,7 @@ export type Schema = {
 	/**
 	 * Backend server settings
 	 */
-	backend: {
+	backend?: {
 		/**
 		 * Whether to allow read only access to the API without logging in.
 		 * @default true
@@ -20,7 +20,7 @@ export type Schema = {
 		 * Steam Web API key used to authenticate users. You can get a key here:
 		 * http://steamcommunity.com/dev/apikey
 		 */
-		steamApiKey: string;
+		steamApiKey?: string;
 	};
 
 	/**

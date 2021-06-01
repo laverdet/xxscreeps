@@ -1,10 +1,7 @@
 import type { Layout } from './layout';
 import type { MemberReader, Reader } from './read';
 import type { MemberWriter, Writer } from './write';
-import { XSymbol } from './symbol';
 
-export { XSymbol };
-export const Variant = XSymbol('schemaVariant');
 export type { Format, ShapeOf, TypeOf } from './format';
 export { BufferObject } from './buffer-object';
 export { BufferView } from './buffer-view';
@@ -12,6 +9,8 @@ export { array, compose, constant, declare, enumerated, optional, struct, varian
 export { withOverlay } from './overlay';
 export { makeReader } from './read';
 export { makeWriter } from './write';
+
+export const Variant = Symbol('schemaVariant') as never as '_$Variant';
 
 export class Builder {
 	readonly materialize;

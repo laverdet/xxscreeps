@@ -62,16 +62,14 @@ class ModuleArchiver {
 				return {
 					...layout,
 					...layout.inherit && { inherit: this.archive(layout.inherit) },
-					struct: {
-						...Object.fromEntries(entriesWithSymbols(layout.struct).map(([ key, value ]) => {
-							const result = [ key, {
-								// eslint-disable-next-line no-new-wrappers
-								offset: new String(`0x${value.offset.toString(16)}`),
-								member: this.archive(value.member),
-							} ];
-							return result;
-						})),
-					},
+					struct: Object.fromEntries(entriesWithSymbols(layout.struct).map(([ key, value ]) => {
+						const result = [ key, {
+							// eslint-disable-next-line no-new-wrappers
+							offset: new String(`0x${value.offset.toString(16)}`),
+							member: this.archive(value.member),
+						} ];
+						return result;
+					})),
 				};
 			} else if ('variant' in layout) {
 				return {

@@ -22,9 +22,6 @@
                     "type": "string"
                 }
             },
-            "required": [
-                "steamApiKey"
-            ],
             "type": "object"
         },
         "database": {
@@ -161,9 +158,6 @@
             "type": "array"
         }
     },
-    "required": [
-        "backend"
-    ],
     "type": "object"
 }
 

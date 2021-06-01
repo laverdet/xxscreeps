@@ -1,4 +1,4 @@
-import type { struct, variant } from 'xxscreeps/schema/format';
+import type { StructDeclaration, struct, variant } from 'xxscreeps/schema/format';
 import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types';
 import type { Format } from 'xxscreeps/schema';
 import { Builder, makeReader, makeWriter } from 'xxscreeps/schema';
@@ -42,8 +42,9 @@ export function enumeratedForPath<Schema>() {
 
 // Returns augmented formats as plain object that can be spread into a `struct({ ... })` declaration
 export function structForPath<Schema>() {
-	return <Path extends string>(path: Path): UnionToIntersection<FormatsForPath<Schema, Path>> => {
-		const schema: any = {};
+	return <Path extends string, Format extends StructDeclaration>(path: Path, format: Format):
+	UnionToIntersection<FormatsForPath<Schema, Path>> & Format => {
+		const schema: any = format;
 		const formats = schemaByPath.get(path) ?? [];
 		for (const format of formats) {
 			for (const [ key, member ] of entriesWithSymbols(format)) {

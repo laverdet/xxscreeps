@@ -1,12 +1,5 @@
 import { exchange } from 'xxscreeps/utility/utility';
 import { BufferView } from './buffer-view';
-import { XSymbol } from './symbol';
-
-// Symbols used to keep these functions from littering Typescript types
-const Check = XSymbol('check');
-const Detach = XSymbol('detach');
-const GetBuffer = XSymbol('getBuffer');
-const GetOffset = XSymbol('getOffset');
 
 // Used on newly-constructed to provide defaults on uninitialized fields
 const zeroBuffer = new BufferView(new ArrayBuffer(0));
@@ -24,7 +17,7 @@ export class BufferObject {
 		this.#offset = offset;
 	}
 
-	static [Check](that: BufferObject) {
+	static check(that: BufferObject) {
 		try {
 			// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 			that.#buffer.int32;
@@ -34,20 +27,20 @@ export class BufferObject {
 		}
 	}
 
-	static [Detach](that: BufferObject, error: () => Error) {
+	static detach(that: BufferObject, error: () => Error) {
 		that.#buffer.detach(error);
 	}
 
-	static [GetBuffer](that: BufferObject) {
+	static getBuffer(that: BufferObject) {
 		return that.#buffer;
 	}
 
-	static [GetOffset](that: BufferObject) {
+	static getOffset(that: BufferObject) {
 		return that.#offset;
 	}
 }
 
-export const check = exchange(BufferObject, Check, (): never => { throw new Error });
-export const detach = exchange(BufferObject, Detach, (): never => { throw new Error });
-export const getBuffer = exchange(BufferObject, GetBuffer, (): never => { throw new Error });
-export const getOffset = exchange(BufferObject, GetOffset, (): never => { throw new Error });
+export const check = exchange(BufferObject, 'check', (): never => { throw new Error });
+export const detach = exchange(BufferObject, 'detach', (): never => { throw new Error });
+export const getBuffer = exchange(BufferObject, 'getBuffer', (): never => { throw new Error });
+export const getOffset = exchange(BufferObject, 'getOffset', (): never => { throw new Error });
