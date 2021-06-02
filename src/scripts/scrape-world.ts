@@ -10,13 +10,12 @@ import * as C from 'xxscreeps/game/constants';
 import * as StoreLib from 'xxscreeps/mods/resource/store';
 
 // Schemas
-import * as CodeSchema from 'xxscreeps/engine/user/code';
+import * as CodeSchema from 'xxscreeps/engine/db/user/code';
 import * as MapSchema from 'xxscreeps/game/map';
-import * as Badge from 'xxscreeps/engine/user/badge';
-import * as User from 'xxscreeps/engine/user/user';
+import * as Badge from 'xxscreeps/engine/db/user/badge';
+import * as User from 'xxscreeps/engine/db/user';
 
-import { Database } from 'xxscreeps/engine/database';
-import { Shard } from 'xxscreeps/engine/shard';
+import { Database, Shard } from 'xxscreeps/engine/db';
 import { makeWriter } from 'xxscreeps/schema/write';
 import { saveMemoryBlob } from 'xxscreeps/mods/memory/model';
 import { utf16ToBuffer } from 'xxscreeps/utility/string';

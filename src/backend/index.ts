@@ -1,9 +1,8 @@
 import type Koa from 'koa';
 import type Router from 'koa-router';
-import type { Database } from 'xxscreeps/engine/database';
+import type { Database, Shard } from 'xxscreeps/engine/db';
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
-import type { Shard } from 'xxscreeps/engine/shard';
 import type { BackendContext } from './context';
 import { MapRender, Render, TerrainRender, middleware, routes } from './symbols';
 export { registerRoomSocketHandler } from './symbols';

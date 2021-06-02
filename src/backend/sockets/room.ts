@@ -1,9 +1,9 @@
 import type { Effect } from 'xxscreeps/utility/types';
-import type { Shard } from 'xxscreeps/engine/shard';
+import type { Shard } from 'xxscreeps/engine/db';
 import type { Room } from 'xxscreeps/game/room';
 import type { SubscriptionEndpoint } from '../socket';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/user/user';
+import * as User from 'xxscreeps/engine/db/user';
 import { GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async';
 import { asUnion, getOrSet } from 'xxscreeps/utility/utility';

@@ -1,5 +1,5 @@
-import type { Shard } from 'xxscreeps/engine/shard';
-import { Channel } from 'xxscreeps/engine/storage/channel';
+import type { Shard } from 'xxscreeps/engine/db';
+import { Channel } from 'xxscreeps/engine/db/channel';
 
 // Messages sent to the runner for an individual user
 export type RunnerIntent = { receiver: string; intent: string; params: any };

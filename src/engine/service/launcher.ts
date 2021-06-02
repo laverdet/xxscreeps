@@ -1,11 +1,10 @@
 import config from 'xxscreeps/config';
 import argv from 'xxscreeps/config/arguments';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/user/user';
+import * as User from 'xxscreeps/engine/db/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { listen } from 'xxscreeps/utility/async';
-import { Database } from 'xxscreeps/engine/database';
-import { Shard } from 'xxscreeps/engine/shard';
+import { Database, Shard } from 'xxscreeps/engine/db';
 import { getProcessorChannel } from 'xxscreeps/engine/processor/model';
 import { getConsoleChannel, getRunnerChannel } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';

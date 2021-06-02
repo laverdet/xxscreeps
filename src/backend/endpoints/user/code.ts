@@ -1,7 +1,7 @@
-import type { Database } from 'xxscreeps/engine/database';
-import * as Code from 'xxscreeps/engine/user/code';
+import type { Database } from 'xxscreeps/engine/db';
+import * as Code from 'xxscreeps/engine/db/user/code';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/user/user';
+import * as User from 'xxscreeps/engine/db/user';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
 import { registerBackendRoute } from 'xxscreeps/backend';

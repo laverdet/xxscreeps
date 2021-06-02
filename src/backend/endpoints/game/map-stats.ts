@@ -1,6 +1,6 @@
 import type { Endpoint } from 'xxscreeps/backend';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/user/user';
+import * as User from 'xxscreeps/engine/db/user';
 
 export const MapStatsEndpoint: Endpoint = {
 	method: 'post',

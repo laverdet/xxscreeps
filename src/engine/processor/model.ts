@@ -1,8 +1,8 @@
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor';
-import type { Shard } from 'xxscreeps/engine/shard';
+import type { Shard } from 'xxscreeps/engine/db';
 import * as Fn from 'xxscreeps/utility/functional';
-import { Channel } from 'xxscreeps/engine/storage/channel';
+import { Channel } from 'xxscreeps/engine/db/channel';
 import { getServiceChannel } from 'xxscreeps/engine/service';
 
 export function getProcessorChannel(shard: Shard) {

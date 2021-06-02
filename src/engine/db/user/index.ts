@@ -1,4 +1,4 @@
-import type { Database } from 'xxscreeps/engine/database';
+import type { Database } from 'xxscreeps/engine/db';
 import * as Fn from 'xxscreeps/utility/functional';
 
 const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;

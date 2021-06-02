@@ -1,5 +1,5 @@
 import type { Effect } from 'xxscreeps/utility/types';
-import type { PubSubProvider, PubSubSubscription } from './provider';
+import type { PubSubProvider, PubSubSubscription } from './storage/provider';
 import { Deferred } from 'xxscreeps/utility/async';
 
 type MessageType<Message> = Message | (Message extends string ? null : { type: null });

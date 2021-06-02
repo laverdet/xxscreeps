@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type * as Provider from 'xxscreeps/engine/storage/provider';
+import type * as Provider from 'xxscreeps/engine/db/storage/provider';
 import type { MaybePromises } from './responder';
 import * as Fn from 'xxscreeps/utility/functional';
 import { promises as fs } from 'fs';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
 import { Responder, connect, makeClient, makeHost } from './responder';
 import { SortedSet } from './sorted-set';
-import { registerStorageProvider } from 'xxscreeps/engine/storage';
+import { registerStorageProvider } from 'xxscreeps/engine/db/storage';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
 registerStorageProvider([ 'file', 'local' ], 'keyval', url =>

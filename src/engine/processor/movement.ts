@@ -6,7 +6,7 @@ import { Game, me } from 'xxscreeps/game';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
-import { readRoomObject } from 'xxscreeps/engine/room';
+import { readRoomObject } from 'xxscreeps/engine/db/room';
 import { latin1ToBuffer } from 'xxscreeps/utility/string';
 import { registerIntentProcessor } from '.';
 

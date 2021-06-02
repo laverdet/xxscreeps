@@ -1,7 +1,7 @@
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Code from 'xxscreeps/engine/user/code-schema';
-import * as RoomSchema from 'xxscreeps/engine/room';
+import * as Code from 'xxscreeps/engine/db/user/code-schema';
+import * as RoomSchema from 'xxscreeps/engine/db/room';
 import { inspect } from 'util';
 import { initializers, tickReceive, tickSend } from 'xxscreeps/driver/symbols';
 import { Game, GameState, runForUser, userInfo } from 'xxscreeps/game';

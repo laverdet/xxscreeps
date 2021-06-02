@@ -1,12 +1,11 @@
 import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
-import { Database } from 'xxscreeps/engine/database';
-import { Shard } from 'xxscreeps/engine/shard';
+import { Database, Shard } from 'xxscreeps/engine/db';
 import { userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
-import { consumeSet } from 'xxscreeps/engine/storage/async';
+import { consumeSet } from 'xxscreeps/engine/db/async';
 import { getServiceChannel } from '.';
 import 'xxscreeps/config/mods/import/driver';
 

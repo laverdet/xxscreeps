@@ -1,7 +1,6 @@
 import type { World } from 'xxscreeps/game/map';
-import { Database } from 'xxscreeps/engine/database';
-import { Shard } from 'xxscreeps/engine/shard';
-import { Mutex } from 'xxscreeps/engine/storage/mutex';
+import { Database, Shard } from 'xxscreeps/engine/db';
+import { Mutex } from 'xxscreeps/engine/db/mutex';
 
 export class BackendContext {
 	private constructor(

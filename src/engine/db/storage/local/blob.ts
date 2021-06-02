@@ -1,4 +1,4 @@
-import type * as Provider from 'xxscreeps/engine/storage/provider';
+import type * as Provider from 'xxscreeps/engine/db/storage/provider';
 import type { MaybePromises } from './responder';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';

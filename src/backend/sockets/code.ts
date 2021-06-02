@@ -1,5 +1,5 @@
 import type { SubscriptionEndpoint } from '../socket';
-import * as Code from 'xxscreeps/engine/user/code';
+import * as Code from 'xxscreeps/engine/db/user/code';
 import * as Fn from 'xxscreeps/utility/functional';
 
 const CodeSubscription: SubscriptionEndpoint = {

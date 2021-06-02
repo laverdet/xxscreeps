@@ -1,6 +1,6 @@
-import type { BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/engine/storage';
+import type { BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/engine/db/storage';
 import type { Effect } from 'xxscreeps/utility/types';
-import { connectToProvider } from 'xxscreeps/engine/storage';
+import { connectToProvider } from 'xxscreeps/engine/db/storage';
 import config from 'xxscreeps/config';
 import { acquire } from 'xxscreeps/utility/async';
 

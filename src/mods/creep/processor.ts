@@ -13,7 +13,7 @@ import * as CreepLib from 'xxscreeps/mods/creep/creep';
 import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { isBorder } from 'xxscreeps/game/terrain';
-import { writeRoomObject } from 'xxscreeps/engine/room';
+import { writeRoomObject } from 'xxscreeps/engine/db/room';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import * as Movement from 'xxscreeps/engine/processor/movement';

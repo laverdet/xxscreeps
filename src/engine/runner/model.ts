@@ -1,5 +1,5 @@
-import type { Shard } from 'xxscreeps/engine/shard';
-import { Channel } from 'xxscreeps/engine/storage/channel';
+import type { Shard } from 'xxscreeps/engine/db';
+import { Channel } from 'xxscreeps/engine/db/channel';
 
 type ConsoleMessage =
 	{ type: 'log'; value: string } |

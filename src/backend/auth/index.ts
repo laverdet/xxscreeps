@@ -2,7 +2,7 @@ import type { Middleware } from 'xxscreeps/backend';
 import * as Id from 'xxscreeps/engine/schema/id';
 import config from 'xxscreeps/config';
 import { checkToken, makeToken } from './token';
-import { findUserByProvider } from 'xxscreeps/engine/user/user';
+import { findUserByProvider } from 'xxscreeps/engine/db/user';
 const { allowGuestAccess } = config.backend;
 
 declare module 'xxscreeps/backend' {

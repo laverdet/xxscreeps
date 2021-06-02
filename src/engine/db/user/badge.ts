@@ -1,7 +1,7 @@
-import type { Database } from 'xxscreeps/engine/database';
+import type { Database } from 'xxscreeps/engine/db';
 import Ajv from 'ajv';
 import jsonSchema from './badge.schema.json';
-import * as User from './user';
+import * as User from '.';
 
 // To rebuild schema:
 // npx typescript-json-schema tsconfig.json UserBadge --include src/engine/user/badge.ts --defaultProps --required -o src/engine/user/badge.schema.json

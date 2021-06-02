@@ -1,5 +1,5 @@
 import { registerBackendMiddleware } from 'xxscreeps/backend';
-import { findUserByName } from 'xxscreeps/engine/user/user';
+import { findUserByName } from 'xxscreeps/engine/db/user';
 
 registerBackendMiddleware(koa => {
 	koa.use(async(context, next) => {

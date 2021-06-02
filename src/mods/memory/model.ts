@@ -1,4 +1,4 @@
-import type { Shard } from 'xxscreeps/engine/shard';
+import type { Shard } from 'xxscreeps/engine/db';
 import { isValidSegmentId, kMaxMemoryLength, kMaxMemorySegmentLength } from './memory';
 
 const kMaxMemorySize = kMaxMemoryLength * 2;

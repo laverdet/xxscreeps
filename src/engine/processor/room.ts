@@ -1,5 +1,5 @@
 import type { RoomObject } from 'xxscreeps/game/object';
-import type { Shard } from 'xxscreeps/engine/shard';
+import type { Shard } from 'xxscreeps/engine/db';
 import type { World } from 'xxscreeps/game/map';
 import type { IntentParameters, IntentReceivers, IntentsForReceiver } from '.';
 import type { Room } from 'xxscreeps/game/room';

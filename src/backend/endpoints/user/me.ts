@@ -1,5 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend';
-import * as User from 'xxscreeps/engine/user/user';
+import * as User from 'xxscreeps/engine/db/user';
 import config from 'xxscreeps/config';
 const { allowGuestAccess } = config.backend;
 

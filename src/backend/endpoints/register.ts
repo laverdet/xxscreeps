@@ -1,5 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend';
-import * as User from 'xxscreeps/engine/user/user';
+import * as User from 'xxscreeps/engine/db/user';
 
 const CheckEmailEndpoint: Endpoint = {
 	path: '/api/register/check-email',

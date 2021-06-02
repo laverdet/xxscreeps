@@ -1,7 +1,7 @@
 import type { Code } from './code-schema';
-import type { Database } from '../database';
-import * as User from './user';
-import { Channel } from 'xxscreeps/engine/storage/channel';
+import type { Database } from 'xxscreeps/engine/db';
+import * as User from '.';
+import { Channel } from 'xxscreeps/engine/db/channel';
 import { read, write } from './code-schema';
 
 export const branchManifestKey = (userId: string) => `${User.infoKey(userId)}/branches`;

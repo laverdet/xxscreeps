@@ -1,5 +1,5 @@
-import type { Shard } from 'xxscreeps/engine/shard';
-import { Channel } from 'xxscreeps/engine/storage/channel';
+import type { Shard } from 'xxscreeps/engine/db';
+import { Channel } from 'xxscreeps/engine/db/channel';
 
 export function getServiceChannel(shard: Shard) {
 	type Message =

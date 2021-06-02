@@ -4,10 +4,9 @@ import {
 	acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey,
 	getProcessorChannel, processRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships,
 } from 'xxscreeps/engine/processor/model';
-import { Database } from 'xxscreeps/engine/database';
-import { Shard } from 'xxscreeps/engine/shard';
+import { Database, Shard } from 'xxscreeps/engine/db';
 import { RoomProcessorContext } from 'xxscreeps/engine/processor/room';
-import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/storage/async';
+import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async';
 import { getServiceChannel } from '.';
 
 // Keep track of rooms this thread ran. Global room processing must also happen here.

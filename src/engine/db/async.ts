@@ -1,4 +1,4 @@
-import type { KeyValProvider } from './provider';
+import type { KeyValProvider } from './storage/provider';
 
 export async function *consumeSet(keyval: KeyValProvider, key: string) {
 	let value: string | null;

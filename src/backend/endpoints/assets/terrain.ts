@@ -1,4 +1,4 @@
-import type { Shard } from 'xxscreeps/engine/shard';
+import type { Shard } from 'xxscreeps/engine/db';
 import type { GameMap } from 'xxscreeps/game/map';
 import type { Room } from 'xxscreeps/game/room';
 import streamToPromise from 'stream-to-promise';
