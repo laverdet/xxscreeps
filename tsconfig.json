@@ -1,0 +1,12 @@
+{
+	"extends": "xxscreeps/tsconfig.base",
+	"compilerOptions": {
+		"baseUrl": "src",
+		"outDir": "dist",
+		"rootDir": "src",
+		"paths": {
+			"xxscreeps/*": [ "../../node_modules/xxscreeps/src/*" ],
+		}
+	},
+	"include": [ "src" ],
+}
