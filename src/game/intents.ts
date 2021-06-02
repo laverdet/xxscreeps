@@ -1,9 +1,9 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
-import type { Room } from 'xxscreeps/game/room';
-import type { RoomObject } from 'xxscreeps/game/object';
+import type { Room } from './room';
+import type { RoomObject } from './object';
 import type { IntentParameters, IntentReceivers, IntentsForReceiver } from 'xxscreeps/engine/processor';
 import type { ObjectReceivers, RoomIntentPayload } from 'xxscreeps/engine/processor/room';
-import * as C from 'xxscreeps/game/constants';
+import * as C from './constants';
 
 const kCpuCost = 0.2;
 type NamedReceivers = Exclude<IntentReceivers, RoomObject | Room>;

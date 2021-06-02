@@ -1,5 +1,5 @@
-import * as C from 'xxscreeps/game/constants';
-import { RoomPosition } from '.';
+import * as C from './constants';
+import { RoomPosition } from './position';
 
 export const ALL_DIRECTIONS = [
 	C.TOP, C.TOP_RIGHT, C.RIGHT, C.BOTTOM_RIGHT, C.BOTTOM, C.BOTTOM_LEFT, C.LEFT, C.TOP_LEFT,

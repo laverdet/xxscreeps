@@ -4,7 +4,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { extend } from 'xxscreeps/utility/utility';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
-import { iterateArea } from 'xxscreeps/game/position/direction';
+import { iterateArea } from 'xxscreeps/game/direction';
 import { terrainMaskToString } from 'xxscreeps/game/terrain';
 import { lookConstants } from './symbols';
 import { Room } from './room';

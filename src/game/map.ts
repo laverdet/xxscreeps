@@ -1,16 +1,16 @@
 import type { Adapter } from 'xxscreeps/utility/astar';
-import type { ExitType } from 'xxscreeps/game/room/find';
-import type { Room } from 'xxscreeps/game/room';
+import type { ExitType } from './room/find';
+import type { Room } from './room';
 import type { TypeOf } from 'xxscreeps/schema';
 
-import * as C from 'xxscreeps/game/constants';
+import * as C from './constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Terrain from './terrain';
-import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from 'xxscreeps/game/position';
+import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from './position';
 import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema';
 import { astar } from 'xxscreeps/utility/astar';
 import { build } from 'xxscreeps/engine/schema';
-import { getDirection } from 'xxscreeps/game/position/direction';
+import { getDirection } from './direction';
 
 // Schema
 const roomTerrain = () => struct({

@@ -1,21 +1,21 @@
 import type { Direction } from './direction';
 import type { InspectOptionsStylized } from 'util';
-import type { FindConstants, FindType, RoomFindOptions } from 'xxscreeps/game/room/find';
-import type { LookConstants } from 'xxscreeps/game/room/look';
-import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path';
-import type { RoomObject } from 'xxscreeps/game/object';
-import * as PathFinder from 'xxscreeps/game/path-finder';
+import type { FindConstants, FindType, RoomFindOptions } from './room/find';
+import type { LookConstants } from './room/look';
+import type { FindPathOptions, RoomPath } from './room/path';
+import type { RoomObject } from './object';
+import * as PathFinder from './path-finder';
 import * as Fn from 'xxscreeps/utility/functional';
-import { Game, registerGlobal } from 'xxscreeps/game';
+import { Game, registerGlobal } from '.';
 import { compose, declare } from 'xxscreeps/schema';
 import { iteratee } from 'xxscreeps/utility/iteratee';
 import { getDirection } from './direction';
-import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './name';
+import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './room/name';
 
 export type { Direction } from './direction';
-export { isBorder, isNearBorder } from 'xxscreeps/game/terrain';
+export { isBorder, isNearBorder } from './terrain';
 export { getOffsetsFromDirection, getPositionInDirection, iterateNeighbors } from './direction';
-export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './name';
+export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './room/name';
 
 type FindClosestByPathOptions<Type> =
 	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;
@@ -328,7 +328,7 @@ export class RoomPosition {
 }
 
 registerGlobal(RoomPosition);
-declare module 'xxscreeps/game/runtime' {
+declare module './runtime' {
 	interface Global { RoomPosition: typeof RoomPosition }
 }
 

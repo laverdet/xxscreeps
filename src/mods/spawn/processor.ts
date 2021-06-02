@@ -8,7 +8,7 @@ import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, me } from 'xxscreeps/game';
 import { getPositionInDirection } from 'xxscreeps/game/position';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { ALL_DIRECTIONS } from 'xxscreeps/game/position/direction';
+import { ALL_DIRECTIONS } from 'xxscreeps/game/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { assign } from 'xxscreeps/utility/utility';
 import { StructureExtension } from './extension';
