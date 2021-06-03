@@ -4,9 +4,11 @@
 		"declaration": true,
 		"sourceMap": true,
 
-		// Module resolution
+		// Options
 		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
+		"experimentalDecorators": true,
+		"importHelpers": true,
 		"moduleResolution": "node",
 		"module": "esnext",
 		"paths": {

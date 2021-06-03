@@ -25,7 +25,7 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 	/**
 	 * The amount of game ticks the link has to wait until the next transfer is possible.
 	 */
-	get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
+	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
 
 	/**
 	 * Remotely transfer energy to another link at any location in the same room.

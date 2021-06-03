@@ -21,19 +21,19 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	['#upgradePowerThisTick']: number | undefined;
 	override get hits() { return undefined as never }
 	override get hitsMax() { return undefined as never }
-	get level() { return this.room['#level'] }
-	get progress() { return this.level > 0 ? this['#progress'] : undefined }
-	get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
-	get safeMode() { return Math.max(0, this.room['#safeModeUntil'] - Game.time) || undefined }
-	get safeModeCooldown() { return Math.max(0, this['#safeModeCooldownTime'] - Game.time) || undefined }
-	get structureType() { return C.STRUCTURE_CONTROLLER }
-	get ticksToDowngrade() { return this['#downgradeTime'] === 0 ? undefined : Math.max(0, this['#downgradeTime'] - Game.time) }
-	get upgradeBlocked() { return Math.max(0, this['#upgradeBlockedUntil'] - Game.time) || undefined }
+	@enumerable get level() { return this.room['#level'] }
+	@enumerable get progress() { return this.level > 0 ? this['#progress'] : undefined }
+	@enumerable get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
+	@enumerable get safeMode() { return Math.max(0, this.room['#safeModeUntil'] - Game.time) || undefined }
+	@enumerable get safeModeCooldown() { return Math.max(0, this['#safeModeCooldownTime'] - Game.time) || undefined }
+	override get structureType() { return C.STRUCTURE_CONTROLLER }
+	@enumerable get ticksToDowngrade() { return this['#downgradeTime'] === 0 ? undefined : Math.max(0, this['#downgradeTime'] - Game.time) }
+	@enumerable get upgradeBlocked() { return Math.max(0, this['#upgradeBlockedUntil'] - Game.time) || undefined }
 
 	/**
 	 * An object with the controller reservation info if present
 	 */
-	get reservation() {
+	@enumerable get reservation() {
 		const reservationTime = this['#reservationTime'];
 		const value = reservationTime ? {
 			ticksToEnd: reservationTime - Game.time,
@@ -46,7 +46,7 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	/**
 	 * An object with the controller sign info if present
 	 */
-	get sign() {
+	@enumerable get sign() {
 		const sign = this.room['#sign'];
 		const value = sign ? {
 			datetime: new Date(sign.datetime),

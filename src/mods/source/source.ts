@@ -13,7 +13,7 @@ const shape = struct(RoomObject.format, {
 
 // Game object declaration
 export class Source extends withOverlay(RoomObject.RoomObject, shape) {
-	get ticksToRegeneration() {
+	@enumerable get ticksToRegeneration() {
 		return this['#nextRegenerationTime'] === 0 ? undefined : Math.max(0, this['#nextRegenerationTime'] - Game.time);
 	}
 

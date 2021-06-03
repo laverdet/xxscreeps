@@ -1,4 +1,5 @@
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
+import 'xxscreeps/config/global';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Code from 'xxscreeps/engine/db/user/code-schema';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
@@ -10,6 +11,8 @@ import { RoomObject } from 'xxscreeps/game/object';
 import { detach } from 'xxscreeps/schema/buffer-object';
 import { setupConsole } from './console';
 import { makeRequire } from './module';
+// eslint-disable-next-line @typescript-eslint/no-duplicate-imports
+import { flushGlobals } from 'xxscreeps/config/global';
 
 export type Evaluate = (source: string, filename: string) => any;
 export type Print = (fd: number, payload: string, evalResult?: boolean) => void;
@@ -21,7 +24,8 @@ let require: (name: string) => any;
 let print: Print;
 
 export function initialize(evaluate: Evaluate, printFn: Print, data: InitializationPayload) {
-	// Set up console
+	// Set up environment
+	flushGlobals();
 	setupConsole(print = printFn);
 
 	// Load terrain

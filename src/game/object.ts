@@ -22,9 +22,9 @@ const shape = struct({
 
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	abstract get ['#lookType'](): string;
-	room!: Room;
-	['#nextPosition']?: RoomPosition;
-	['#nextPositionTime']?: number;
+	declare room: Room;
+	declare ['#nextPosition']?: RoomPosition;
+	declare ['#nextPositionTime']?: number;
 
 	get ['#extraUsers'](): string[] { return [] }
 	get ['#hasIntent']() { return false }
@@ -33,7 +33,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	get ['#user'](): string | null { return null }
 	set ['#user'](_user: string | null) { throw new Error('Setting #user on unownable object') }
 	// eslint-disable-next-line no-useless-return
-	get my(): boolean | undefined { return }
+	@enumerable get my(): boolean | undefined { return }
 
 	['#addToMyGame'](_game: GameConstructor) {}
 	['#afterInsert'](room: Room) {

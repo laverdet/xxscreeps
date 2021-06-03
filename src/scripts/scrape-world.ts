@@ -27,6 +27,12 @@ import { Source } from 'xxscreeps/mods/source/source';
 import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
 import { StructureController } from 'xxscreeps/mods/controller/controller';
 import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair';
+import { StructureExtension } from 'xxscreeps/mods/spawn/extension';
+import { Creep } from 'xxscreeps/mods/creep/creep';
+import { StructureRoad } from 'xxscreeps/mods/road/road';
+import { StructureRampart } from 'xxscreeps/mods/defense/rampart';
+import { StructureWall } from 'xxscreeps/mods/defense/wall';
+import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
 
 const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
 if (jsonSource === undefined) {
@@ -37,11 +43,16 @@ if (jsonSource === undefined) {
 function withRoomObject(from: any, into: RoomObject) {
 	into.id = from._id;
 	into.pos = new RoomPosition(from.x, from.y, from.room);
+	if (from.user !== undefined) {
+		into['#user'] = from.user ?? null;
+	}
 }
 
 function withStructure(from: any, into: Structure) {
 	withRoomObject(from, into);
-	into['#user'] = from.user ?? null;
+	if (from.hits) {
+		into.hits = from.hits;
+	}
 }
 
 function withStore(from: any, into: { store: StoreLib.Store }) {
@@ -116,8 +127,13 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 	instance['#level'] = -1;
 	instance['#objects'] = [ ...Fn.filter(objects.map(object => {
 		switch (object.type) {
+			case 'constructedWall': {
+				const wall = new StructureWall;
+				withStructure(object, wall);
+				return wall;
+			}
+
 			case 'controller': {
-				instance['#user'] = object.user ?? null;
 				instance['#level'] = object.level ?? 0;
 				instance['#safeModeUntil'] = object.safeMode;
 
@@ -130,6 +146,30 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 				controller['#safeModeCooldownTime'] = object.safeModeCooldown;
 				controller['#upgradeBlockedUntil'] = object.upgradeBlocked;
 				return controller;
+			}
+
+			case 'creep': {
+				const creep = new Creep;
+				withRoomObject(object, creep);
+				withStore(object, creep);
+				creep.body = object.body;
+				creep.hits = object.hits;
+				creep.name = object.name;
+				creep['#ageTime'] = object.ageTime;
+				return creep;
+			}
+
+			case 'extension': {
+				const extension = new StructureExtension;
+				withStructure(object, extension);
+				withStore(object, extension);
+				return extension;
+			}
+
+			case 'extractor': {
+				const extractor = new StructureExtractor;
+				withStructure(object, extractor);
+				return extractor;
 			}
 
 			case 'keeperLair': {
@@ -146,6 +186,22 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 				mineral.mineralAmount = object.mineralAmount;
 				mineral.mineralType = object.mineralType;
 				return mineral;
+			}
+
+			case 'rampart': {
+				const rampart = new StructureRampart;
+				withStructure(object, rampart);
+				rampart.isPublic = object.isPublic;
+				rampart['#nextDecayTime'] = object.nextDecayTime;
+				return rampart;
+			}
+
+			case 'road': {
+				const road = new StructureRoad;
+				withStructure(object, road);
+				road['#terrain'] = roomsTerrain.get(road.pos.roomName)!.terrain.get(road.pos.x, road.pos.y);
+				road['#nextDecayTime'] = object.nextDecayTime;
+				return road;
 			}
 
 			case 'source': {

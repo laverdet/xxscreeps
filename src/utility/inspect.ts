@@ -1,45 +1,44 @@
+const inspectSymbol = Symbol.for('nodejs.util.inspect.custom');
+
 /**
  * Returns a new object with inherited getters expanded as own properties. This is used for console
  * logging since the bulk of useful information on game objects is in the form of getters.
  */
 export function expandGetters(that: any) {
 	// Find inherited getters
-	const proto = Object.getPrototypeOf(that);
-	const ownProperties = Object.getOwnPropertyNames(that);
-	const keys: string[] = [];
-	let protoChain = proto;
-	do {
-		const descriptors = Object.getOwnPropertyDescriptors(protoChain);
-		for (const [ key, descriptor ] of Object.entries(descriptors)) {
-			if (
-				descriptor.get &&
-				descriptor.configurable &&
-				!ownProperties.includes(key)
-			) {
+	let extra = false;
+	const keys = Object.getOwnPropertyNames(that);
+	for (let proto = Object.getPrototypeOf(that); proto !== null; proto = Object.getPrototypeOf(proto)) {
+		for (const key of Object.getOwnPropertyNames(proto)) {
+			if (key.startsWith('__') || key === 'constructor') {
+				continue;
+			}
+			const descriptor = Object.getOwnPropertyDescriptor(proto, key)!;
+
+			if (descriptor.get && descriptor.enumerable && !keys.includes(key)) {
+				// Enumerability is intentionally inherited
+				extra = true;
 				keys.push(key);
 			}
 		}
-		protoChain = Object.getPrototypeOf(protoChain);
-	} while (protoChain !== Object.prototype);
+	}
 
 	// Build object with inherited getters expanded
-	if (keys.length === 0) {
+	if (!extra) {
 		return that;
 	}
 	const expanded = Object.create(that);
-	keys.push(...ownProperties);
 	keys.sort();
 	for (const key of keys) {
-		if (!key.startsWith('#')) {
-			try {
-				const value = that[key];
-				if (value != null) {
-					Object.defineProperty(expanded, key, { enumerable: true, writable: true, value });
-				}
-			} catch (err) {}
-		}
+		try {
+			const value = that[key];
+			if (value !== undefined) {
+				Object.defineProperty(expanded, key, { enumerable: true, writable: true, value });
+			}
+		} catch (err) {}
 	}
+
 	// Don't recurse
-	Object.defineProperty(expanded, Symbol.for('nodejs.util.inspect.custom'), {});
+	Object.defineProperty(expanded, inspectSymbol, {});
 	return expanded;
 }

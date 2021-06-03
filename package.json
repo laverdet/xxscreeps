@@ -56,6 +56,7 @@
     "source-map-loader": "^3.0.0",
     "source-map-support": "^0.5.19",
     "stream-to-promise": "^3.0.0",
+    "tslib": "^1.14.1",
     "typescript": "^4.3.1-rc",
     "webpack": "^5.37.1"
   },

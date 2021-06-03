@@ -22,7 +22,7 @@ export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 	}
 
 	override get structureType() { return C.STRUCTURE_RAMPART }
-	get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
+	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
 
 	/**
 	 * Make this rampart public to allow other players' creeps to pass through.

@@ -35,9 +35,9 @@ const spawningFormat = struct({
 });
 
 class Spawning extends withOverlay(BufferObject, spawningFormat) {
-	get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name }
-	get remainingTime() { return Math.max(0, this['#spawnTime'] - Game.time) }
-	get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])! }
+	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name }
+	@enumerable get remainingTime() { return Math.max(0, this['#spawnTime'] - Game.time) }
+	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])! }
 }
 
 // `StructureSpawn` format

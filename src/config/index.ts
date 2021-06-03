@@ -5,6 +5,7 @@ import data, { configPath } from './raw';
 import { defaults } from './defaults';
 import { merge } from 'xxscreeps/utility/utility';
 import { fileURLToPath } from 'url';
+import './global';
 
 const ajv = new Ajv;
 if (ajv.validate(schema, data) !== true) {

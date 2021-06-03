@@ -36,11 +36,11 @@ registerObjectTickProcessor(Source, (source, context) => {
 			source['#nextRegenerationTime'] = 0;
 			context.didUpdate();
 		}
+		context.wakeAt(source['#nextRegenerationTime']);
 	} else if (source['#nextRegenerationTime'] !== 0) {
 		source['#nextRegenerationTime'] = 0;
 		context.didUpdate();
 	}
-	context.wakeAt(source['#nextRegenerationTime']);
 
 	// Update energy capacity on room controller status
 	const energyCapacity = (() => {
@@ -71,7 +71,7 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 		if (!keeper || keeper.hits < 5000) {
 			keeperLair['#nextSpawnTime'] = Game.time + C.ENERGY_REGEN_TIME - 1;
 			context.didUpdate();
-		} else {
+		} else if (keeper.ticksToLive) {
 			context.wakeAt(keeper['#ageTime'] + 1);
 		}
 	} else if (keeperLair.ticksToSpawn === 0) {

@@ -19,7 +19,7 @@ const shape = struct(RoomObject.format, {
 
 // Game object declaration
 export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
-	get ticksToRegeneration() {
+	@enumerable get ticksToRegeneration() {
 		const nextTime = this['#nextRegenerationTime'];
 		return nextTime === 0 ? undefined : Math.max(0, nextTime - Game.time);
 	}

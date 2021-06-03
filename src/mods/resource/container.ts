@@ -19,8 +19,8 @@ const shape = struct(structureFormat, {
 export class StructureContainer extends withOverlay(Structure, shape) {
 	override get hitsMax() { return C.CONTAINER_HITS }
 	get storeCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
-	get structureType() { return C.STRUCTURE_CONTAINER }
-	get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
+	override get structureType() { return C.STRUCTURE_CONTAINER }
+	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
 
 	override ['#checkObstacle']() {
 		return false;

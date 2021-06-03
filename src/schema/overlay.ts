@@ -62,6 +62,7 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 
 		// Define getter on proto
 		Object.defineProperty(prototype, key, {
+			enumerable: typeof key === 'string' && !key.startsWith('#'),
 			get,
 			set(value) {
 				defineProperty(this, key, {

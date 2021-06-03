@@ -19,7 +19,7 @@ export class StructureRoad extends withOverlay(Structure, shape) {
 	override get hitsMax() { return C.ROAD_HITS * this['#multiplier'] }
 	override get structureType() { return C.STRUCTURE_ROAD }
 	override get ['#pathCost']() { return 1 }
-	get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
+	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
 
 	get ['#multiplier']() {
 		switch (this['#terrain']) {

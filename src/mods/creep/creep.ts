@@ -55,16 +55,16 @@ const shape = struct(RoomObjectLib.format, {
 export class Creep extends withOverlay(RoomObject, shape) {
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
-	get hitsMax() { return this.body.length * 100 }
+	@enumerable get hitsMax() { return this.body.length * 100 }
 	get memory() {
 		const memory = Memory.get();
 		const creeps = memory.creeps ?? (memory.creeps = {});
 		return creeps[this.name] ?? (creeps[this.name] = {});
 	}
 
-	get owner() { return userInfo.get(this['#user']) }
-	get spawning() { return this['#ageTime'] === 0 }
-	get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined }
+	@enumerable get owner() { return userInfo.get(this['#user']) }
+	@enumerable get spawning() { return this['#ageTime'] === 0 }
+	@enumerable get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined }
 	override get my() { return this['#user'] === me }
 	override get ['#hasIntent']() { return true }
 	override get ['#lookType']() { return C.LOOK_CREEPS }
@@ -73,7 +73,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	/**
 	 * The text message that the creep was saying at the last tick.
 	 */
-	get saying() {
+	@enumerable get saying() {
 		const saying = this['#saying'];
 		if (saying?.time === Game.time && (saying.isPublic || this.my)) {
 			return saying.message;

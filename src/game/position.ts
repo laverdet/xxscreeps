@@ -86,7 +86,7 @@ export class RoomPosition {
 	/**
 	 * The name of the room.
 	 */
-	get roomName() {
+	@enumerable get roomName() {
 		return generateRoomNameFromId(this['#int'] & 0xffff);
 	}
 
@@ -104,7 +104,7 @@ export class RoomPosition {
 	/**
 	 * X position in the room.
 	 */
-	get x() {
+	@enumerable get x() {
 		return (this['#int'] >>> 16) & 0xff;
 	}
 
@@ -118,7 +118,7 @@ export class RoomPosition {
 	/**
 	 * Y position in the room.
 	 */
-	get y() {
+	@enumerable get y() {
 		return this['#int'] >>> 24;
 	}
 

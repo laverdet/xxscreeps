@@ -28,12 +28,22 @@ const ownedShape = struct(structureFormat, {
  * The base prototype object of all structures.
  */
 export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape) {
-	abstract get structureType(): string;
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 */
+	@enumerable get structureType(): string { throw new Error }
 	get ['#lookType']() { return C.LOOK_STRUCTURES }
 
-	get hits(): number | undefined { return undefined }
+	/**
+	 * The current amount of hit points of the structure.
+	 */
+	@enumerable get hits(): number | undefined { return undefined }
 	set hits(hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure') }
-	get hitsMax(): number | undefined { return undefined }
+
+	/**
+	 * The total amount of hit points of the structure.
+	 */
+	@enumerable get hitsMax(): number | undefined { return undefined }
 
 	/**
 	 * Destroy this structure immediately.
@@ -64,8 +74,15 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
 export abstract class OwnedStructure extends withOverlay(Structure, ownedShape) {
 	override get ['#hasIntent']() { return true }
 	override get ['#providesVision']() { return true }
-	get owner() { return userInfo.get(this['#user']!) }
 
+	/**
+	 * An object with the structure’s owner info
+	 */
+	@enumerable get owner() { return userInfo.get(this['#user']!) }
+
+	/**
+	 * Whether this is your own structure.
+	 */
 	override get my() {
 		const user = this['#user'];
 		return user === null ? undefined : user === me;

@@ -16,8 +16,8 @@ const shape = struct(ownedStructureFormat, {
 
 export class StructureExtractor extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return C.EXTRACTOR_HITS }
-	get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
-	get structureType() { return C.STRUCTURE_EXTRACTOR }
+	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
+	override get structureType() { return C.STRUCTURE_EXTRACTOR }
 }
 
 export function create(pos: RoomPosition, owner: string) {

@@ -22,3 +22,5 @@ interface URLSearchParams {
 	values(): IterableIterator<string>;
 	[Symbol.iterator](): IterableIterator<[ string, string ]>;
 }
+
+declare function enumerable(target: any, key: string, descriptor: PropertyDescriptor): void;

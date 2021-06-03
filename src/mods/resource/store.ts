@@ -139,6 +139,13 @@ export class Store<Resources extends ResourceType = any> extends
 	['#entries'](): Iterable<[ ResourceType, number ]> {
 		return Fn.reject(Object.entries(this), entry => entry[0].startsWith('#')) as never;
 	}
+
+	private [Symbol.for('nodejs.util.inspect.custom')]() {
+		return {
+			[Symbol('capacity')]: this['#capacityByResource']?.entries() ?? this.getCapacity(),
+			...Fn.fromEntries(this['#entries']()),
+		};
+	}
 }
 
 export function create(capacity: number | null, capacityByResource?: StorageRecord, store?: StorageRecord) {
