@@ -34,7 +34,7 @@ export function create(pos: RoomPosition) {
 		store: Store.create(C.CONTAINER_CAPACITY),
 	});
 	container['#nextDecayTime'] = Game.time + (ownedController ?
-		C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME);
+		C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME) - 1;
 	return container;
 }
 

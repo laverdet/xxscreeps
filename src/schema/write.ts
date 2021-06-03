@@ -22,12 +22,14 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 			const next = function(): MemberWriter {
 				const { member: layout, offset } = member;
 				const write = makeTypeWriter(layout, builder);
+				Object.defineProperty(write, 'name', {
+					value: `${typeof key === 'symbol' ? key.description : key}`,
+				});
 
 				// Wrap to write this field at reserved address
 				return (value, view, instanceOffset, heap) =>
 					write(value[key], view, instanceOffset + offset, heap);
 			}();
-			next.displayName = `_${typeof key === 'symbol' ? key.description : key}`;
 
 			// Combine member writers
 			const prev = writeMembers;

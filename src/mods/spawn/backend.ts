@@ -123,7 +123,7 @@ registerBackendRoute({
 					room['#insertObject'](Spawn.create(pos, userId, name));
 					room['#flushObjects']();
 					Controller.claim(room.controller!, userId);
-					room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
+					room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION - 1;
 					flushUsers(room);
 				});
 			});

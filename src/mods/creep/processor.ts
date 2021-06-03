@@ -20,7 +20,7 @@ import * as Movement from 'xxscreeps/engine/processor/movement';
 // eslint-disable-next-line no-duplicate-imports
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
 import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
-import { filterInPlace } from 'xxscreeps/utility/utility';
+import { flushActionLog } from 'xxscreeps/engine/processor/object';
 
 declare module 'xxscreeps/engine/processor' {
 	interface Intent { creep: typeof intents }
@@ -92,20 +92,7 @@ const intents = [
 registerObjectPreTickProcessor(Creep, (creep, context) => {
 	const kRetainActionsTime = 10;
 	const timeLimit = Game.time - kRetainActionsTime;
-
-	// Reset action log
-	const actionLog = creep['#actionLog'];
-	const actionLength = actionLog.length;
-	if (actionLength !== 0) {
-		filterInPlace(actionLog, action => action.time > timeLimit);
-		if (actionLog.length !== actionLength) {
-			context.didUpdate();
-		}
-		if (actionLog.length > 0) {
-			const minimum = Fn.minimum(Fn.map(actionLog, action => action.time))!;
-			context.wakeAt(minimum + kRetainActionsTime);
-		}
-	}
+	flushActionLog(creep['#actionLog'], context);
 
 	// Remove `saying`
 	const saying = creep['#saying'];

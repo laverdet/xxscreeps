@@ -34,7 +34,9 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 				const reader: GetterReader = function() {
 					return read(getBuffer(this), offset + getOffset(this));
 				};
-				reader.displayName = `_${typeof key === 'symbol' ? key.description : key}`;
+				Object.defineProperty(read, 'name', {
+					value: `${typeof key === 'symbol' ? key.description : key}`,
+				});
 				return reader;
 			}();
 

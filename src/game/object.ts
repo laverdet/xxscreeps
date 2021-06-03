@@ -75,7 +75,7 @@ export const actionLogFormat = declare('ActionLog', () => vector(struct({
 	time: 'int32',
 })));
 
-type ActionLog = TypeOf<typeof actionLogFormat>;
+export type ActionLog = TypeOf<typeof actionLogFormat>;
 type WithActionLog = Record<'#actionLog', ActionLog>;
 
 export function saveAction(object: WithActionLog, type: ActionLog[number]['type'], pos: RoomPosition) {

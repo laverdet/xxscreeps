@@ -1,5 +1,6 @@
 import type { BufferView } from 'xxscreeps/schema';
 import type { ResourceType } from './resource';
+import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { compose, declare, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
@@ -8,7 +9,7 @@ import { optionalResourceEnumFormat } from './resource';
 export type { ResourceType };
 
 export type StorageRecord = Partial<Record<ResourceType, number>>;
-export type WithStore = { store: Store };
+export type WithStore = Record<'store', Store>;
 
 export function format() { return withType<Store<ResourceType>>(declare('Store', compose(shape, Store))) }
 export function restrictedFormat<Resource extends ResourceType>() {
@@ -186,4 +187,39 @@ export function create(capacity: number | null, capacityByResource?: StorageReco
 	result['#restricted'] = isRestricted;
 	result['#singleResource'] = singleResource;
 	return result;
+}
+
+/**
+ * The `amount` for resource-moving intents usually needs to be calculated upfront, which is done
+ * before object validity checks. This would result in an error like `Cannot read property 'store'
+ * of undefined` being thrown to the user when ERR_INVALID_TARGET should have been returned instead.
+ * This function checks that two stores are valid and invokes a function if so.
+ */
+export function calculateChecked(object1: WithStore | undefined, object2: WithStore | undefined, fn: () => number) {
+	if (object1?.store instanceof Store && object2?.store instanceof Store) {
+		return fn();
+	} else {
+		return NaN;
+	}
+}
+
+export function checkHasCapacity(target: WithStore, resourceType: ResourceType, amount: number) {
+	const capacity = target.store.getFreeCapacity(resourceType);
+	if (capacity === 0 || !(target.store.getFreeCapacity(resourceType) >= amount)) {
+		return C.ERR_FULL;
+	} else {
+		return C.OK;
+	}
+}
+
+export function checkHasResource(target: WithStore, resourceType: ResourceType, amount = 1) {
+	if (!C.RESOURCES_ALL.includes(resourceType)) {
+		return C.ERR_INVALID_ARGS;
+	} else if (typeof amount !== 'number' || amount < 0) {
+		return C.ERR_INVALID_ARGS;
+	} else if (target.store[resourceType]! >= amount) {
+		return C.OK;
+	} else {
+		return C.ERR_NOT_ENOUGH_RESOURCES;
+	}
 }

@@ -1,25 +1,20 @@
-import * as Fn from 'xxscreeps/utility/functional';
 import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend';
-import { Game } from 'xxscreeps/game';
+import { renderActionLog } from 'xxscreeps/backend/sockets/render';
 import { renderStore } from 'xxscreeps/mods/resource/backend';
 import { Creep } from './creep';
 
 bindMapRenderer(Creep, creep => creep['#user']);
 
 bindRenderer(Creep, (creep, next, previousTime) => {
-	// Generate action log, catching up with skipped ticks
-	const actionLog: Record<string, any> = Fn.fromEntries(
-		Fn.filter(creep['#actionLog'], previousTime ?
-			action => action.time > previousTime :
-			action => action.time === Game.time),
-		action => [ action.type, { x: action.x, y: action.y } ]);
+	// Inject `saying` into `actionLog`
+	const actionLog = renderActionLog(creep['#actionLog'], previousTime);
 	const saying = creep['#saying'];
 	if (
 		saying &&
 		(!previousTime || previousTime < saying.time) &&
 		(saying.isPublic || creep.my)
 	) {
-		actionLog.say = {
+		actionLog.actionLog.say = {
 			isPublic: saying.isPublic,
 			message: saying.message,
 		};
@@ -27,6 +22,7 @@ bindRenderer(Creep, (creep, next, previousTime) => {
 	return {
 		...next(),
 		...renderStore(creep.store),
+		...actionLog,
 		name: creep.name,
 		body: creep.body,
 		hits: creep.hits,
@@ -35,6 +31,5 @@ bindRenderer(Creep, (creep, next, previousTime) => {
 		fatigue: creep.fatigue,
 		ageTime: creep['#ageTime'],
 		user: creep['#user'],
-		actionLog,
 	};
 });

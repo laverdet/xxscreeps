@@ -1,7 +1,8 @@
 import * as C from 'xxscreeps/game/constants';
 import { intents } from 'xxscreeps/game';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
-import { Creep, checkCommon, checkHasResource } from 'xxscreeps/mods/creep/creep';
+import { checkHasResource } from 'xxscreeps/mods/resource/store';
+import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
 import { extend } from 'xxscreeps/utility/utility';
 import { ConstructionSite } from './construction-site';
 import { Structure } from 'xxscreeps/mods/structure/structure';

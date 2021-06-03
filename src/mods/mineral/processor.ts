@@ -19,7 +19,7 @@ registerHarvestProcessor(Mineral, (creep, mineral) => {
 		Resource.drop(creep.pos, mineral.mineralType, overflow);
 	}
 	const extractor = lookForStructureAt(mineral.room, mineral.pos, C.STRUCTURE_EXTRACTOR)!;
-	extractor['#cooldownTime'] = Game.time + C.EXTRACTOR_COOLDOWN;
+	extractor['#cooldownTime'] = Game.time + C.EXTRACTOR_COOLDOWN - 1;
 	return amount;
 });
 

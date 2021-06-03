@@ -32,7 +32,7 @@ const intents = [
 			} else {
 				// TODO FIX THIS
 				controller['#downgradeTime'] -= effect * C.CONTROLLER_CLAIM_DOWNGRADE;
-				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE;
+				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE - 1;
 			}
 			saveAction(creep, 'attack', controller.pos);
 			context.didUpdate();
@@ -62,12 +62,10 @@ const intents = [
 	registerIntentProcessor(Creep, 'reserveController', (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkReserveController(creep, controller) === C.OK) {
-			const reservationTime = controller['#reservationTime'];
-			const timeRemaining =
-				(reservationTime ? reservationTime - Game.time : 1) +
-				creep.getActiveBodyparts(C.CLAIM) * C.CONTROLLER_RESERVE;
-			console.log('reserve with', creep.getActiveBodyparts(C.CLAIM));
-			controller['#reservationTime'] = Game.time + Math.min(C.CONTROLLER_RESERVE_MAX, timeRemaining);
+			controller['#reservationTime'] = Math.min(
+				Game.time + C.CONTROLLER_RESERVE_MAX - 1,
+				(controller['#reservationTime'] || (Game.time - 1)) +
+					creep.getActiveBodyparts(C.CLAIM) * C.CONTROLLER_RESERVE);
 			controller.room['#user'] = creep['#user'];
 			saveAction(creep, 'reserveController', controller.pos);
 			context.didUpdate();
@@ -113,7 +111,7 @@ const intents = [
 					} else {
 						controller['#progress'] -= nextLevel;
 					}
-					controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2 + 1;
+					controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 					++controller.safeModeAvailable;
 				}
 			}
@@ -125,8 +123,8 @@ const intents = [
 	registerIntentProcessor(StructureController, 'activateSafeMode', (controller, context) => {
 		if (checkActivateSafeMode(controller) === C.OK) {
 			--controller.safeModeAvailable;
-			controller.room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
-			controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN;
+			controller.room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION - 1;
+			controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN - 1;
 			context.didUpdate();
 		}
 	}),
@@ -148,7 +146,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 		const upgradePower = controller['#upgradePowerThisTick'] ?? 0;
 		controller['#upgradePowerThisTick'] = 0;
 		if (controller['#downgradeTime'] === 0) {
-			controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! + 1;
+			controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!;
 			context.didUpdate();
 		} else if (upgradePower > 0) {
 			controller['#downgradeTime'] = 1 + Math.min(
@@ -166,9 +164,9 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 				controller.room['#safeModeUntil'] = 0;
 				controller.room['#user'] = null;
 			} else {
-				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2 + 1;
+				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[controller.level]! * 0.9);
-				controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN;
+				controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN - 1;
 			}
 			context.didUpdate();
 		}

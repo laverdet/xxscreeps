@@ -296,7 +296,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 * amount is used.
 	 */
 	transfer(this: Creep, target: RoomObject & Store.WithStore, resourceType: ResourceType, amount?: number) {
-		const intentAmount = calculateAmount(this, target, () =>
+		const intentAmount = Store.calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 			amount || Math.min(this.store[resourceType] ?? 0, target.store.getFreeCapacity(resourceType)));
 		return chainIntentChecks(
@@ -315,7 +315,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 * creeps, use the `transfer` method on the original creep.
 	 */
 	withdraw(this: Creep, target: Structure & Store.WithStore, resourceType: ResourceType, amount?: number) {
-		const intentAmount = calculateAmount(this, target, () =>
+		const intentAmount = Store.calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 			amount || Math.min(this.store.getFreeCapacity(resourceType), target.store[resourceType] ?? 0));
 		return chainIntentChecks(
@@ -335,7 +335,6 @@ export function create(pos: RoomPosition, body: PartType[], name: string, owner:
 		name,
 		store: Store.create(carryCapacity),
 	});
-	creep['#ageTime'] = 0;
 	creep['#user'] = owner;
 	return creep;
 }
@@ -355,15 +354,6 @@ registerObstacleChecker(params => {
 
 //
 // Intent checks
-function calculateAmount(creep: Creep, target: RoomObject & Store.WithStore, fn: () => number) {
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	if (creep instanceof Creep && target instanceof RoomObject && target.store) {
-		return fn();
-	} else {
-		return NaN;
-	}
-}
-
 export function checkCommon(creep: Creep, part?: PartType) {
 	if (!creep.my) {
 		return C.ERR_NOT_OWNER;
@@ -382,7 +372,7 @@ function checkFatigue(creep: Creep) {
 export function checkDrop(creep: Creep, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.MOVE),
-		() => checkHasResource(creep, resourceType, amount));
+		() => Store.checkHasResource(creep, resourceType, amount));
 }
 
 export function checkMove(creep: Creep, direction: number) {
@@ -402,33 +392,13 @@ export function checkPickup(creep: Creep, target: Resource) {
 			C.OK : C.ERR_FULL);
 }
 
-function checkHasCapacity(target: RoomObject & Store.WithStore, resourceType: ResourceType, amount: number) {
-	if (target.store.getFreeCapacity(resourceType) >= amount) {
-		return C.OK;
-	} else {
-		return C.ERR_FULL;
-	}
-}
-
-export function checkHasResource(target: RoomObject & Store.WithStore, resourceType: ResourceType, amount = 1) {
-	if (!C.RESOURCES_ALL.includes(resourceType)) {
-		return C.ERR_INVALID_ARGS;
-	} else if (typeof amount !== 'number' || amount < 0) {
-		return C.ERR_INVALID_ARGS;
-	} else if (target.store[resourceType]! >= amount) {
-		return C.OK;
-	} else {
-		return C.ERR_NOT_ENOUGH_RESOURCES;
-	}
-}
-
 export function checkTransfer(creep: Creep, target: RoomObject & Store.WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, RoomObject),
 		() => checkRange(creep, target, 1),
-		() => checkHasResource(creep, resourceType, amount),
-		() => checkHasCapacity(target, resourceType, amount),
+		() => Store.checkHasResource(creep, resourceType, amount),
+		() => Store.checkHasCapacity(target, resourceType, amount),
 		() => {
 			if (target instanceof Creep && target.spawning) {
 				return C.ERR_INVALID_TARGET;
@@ -441,7 +411,7 @@ export function checkWithdraw(creep: Creep, target: Structure & Store.WithStore,
 		() => checkCommon(creep),
 		() => checkTarget(target, Structure),
 		() => checkRange(creep, target, 1),
-		() => checkHasResource(target, resourceType, amount),
-		() => checkHasCapacity(creep, resourceType, amount),
+		() => Store.checkHasResource(target, resourceType, amount),
+		() => Store.checkHasCapacity(creep, resourceType, amount),
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
 }

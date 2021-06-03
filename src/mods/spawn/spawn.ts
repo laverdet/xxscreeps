@@ -11,7 +11,7 @@ import * as RoomObject from 'xxscreeps/game/object';
 import * as Store from 'xxscreeps/mods/resource/store';
 import { Creep, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, intents, userGame } from 'xxscreeps/game';
-import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
@@ -36,7 +36,7 @@ const spawningFormat = struct({
 
 class Spawning extends withOverlay(BufferObject, spawningFormat) {
 	get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name }
-	get remainingTime() { return this['#spawnTime'] - Game.time }
+	get remainingTime() { return Math.max(0, this['#spawnTime'] - Game.time) }
 	get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])! }
 }
 
@@ -185,17 +185,9 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 
 //
 // Intent checks
-function checkCommonSpawn(spawn: StructureSpawn) {
-	if (!spawn.my) {
-		return C.ERR_NOT_OWNER;
-	} else if (!spawn.isActive()) {
-		return C.ERR_RCL_NOT_ENOUGH;
-	}
-}
-
 export function checkRecycleCreep(spawn: StructureSpawn, creep: Creep) {
 	return chainIntentChecks(
-		() => checkCommonSpawn(spawn),
+		() => checkMyStructure(spawn, StructureSpawn),
 		() => checkCommon(creep),
 		() => checkTarget(creep, Creep),
 		() => checkRange(spawn, creep, 1));

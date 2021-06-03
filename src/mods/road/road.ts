@@ -36,7 +36,7 @@ export class StructureRoad extends withOverlay(Structure, shape) {
 
 export function create(pos: RoomPosition) {
 	const road = RoomObject.create(new StructureRoad, pos);
-	road['#nextDecayTime'] = Game.time + C.ROAD_DECAY_TIME;
+	road['#nextDecayTime'] = Game.time + C.ROAD_DECAY_TIME - 1;
 	road['#terrain'] = Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y);
 	road.hits = road.hitsMax;
 	return road;

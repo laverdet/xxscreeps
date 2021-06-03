@@ -1,4 +1,5 @@
 import type { Store } from './store';
+import * as Fn from 'xxscreeps/utility/functional';
 import { bindRenderer } from 'xxscreeps/backend';
 import { StructureContainer } from './container';
 import { Resource } from './resource';
@@ -6,19 +7,19 @@ import { Resource } from './resource';
 // Store renderer
 export function renderStore(store: Store) {
 	const result: any = {
-		store: { ...store },
-		storeCapacity: store.getCapacity(),
+		store: Fn.fromEntries(store['#entries']()),
 	};
 	if (store['#restricted']) {
-		if (store['#capacityByResource']) {
-			const capacityByResource: any = {};
-			for (const [ resourceType, value ] of store['#capacityByResource'].entries()) {
-				capacityByResource[resourceType] = value;
+		const singleResource = store['#singleResource'];
+		result.storeCapacityResource = function() {
+			if (singleResource) {
+				return { [singleResource]: store['#capacity'] };
+			} else {
+				return Fn.fromEntries(store['#capacityByResource']!.entries());
 			}
-			result.storeCapacityResource = capacityByResource;
-		} else {
-			result.storeCapacityResource = { [store['#singleResource']!]: store['#capacity'] };
-		}
+		}();
+	} else {
+		result.storeCapacity = store.getCapacity();
 	}
 	return result;
 }

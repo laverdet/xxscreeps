@@ -22,13 +22,15 @@ function getMemberReader(layout: StructLayout, builder: Builder): MemberReader {
 			const next = function(): MemberReader {
 				const { member: layout, offset } = member;
 				const read = makeTypeReader(layout, builder);
+				Object.defineProperty(read, 'name', {
+					value: `${typeof key === 'symbol' ? key.description : key}`,
+				});
 
 				// Wrap to read this field from reserved address
 				return (value, view, instanceOffset) => {
 					value[key] = read(view, instanceOffset + offset);
 				};
 			}();
-			next.displayName = `_${typeof key === 'symbol' ? key.description : key}`;
 
 			// Combine member readers
 			const prev = readMembers;

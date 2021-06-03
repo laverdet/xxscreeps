@@ -77,7 +77,7 @@ const intents = [
 		});
 		spawning['#spawnId'] = spawn.id;
 		spawning['#spawningCreepId'] = creep.id;
-		spawning['#spawnTime'] = Game.time + needTime;
+		spawning['#spawnTime'] = Game.time + needTime - 1;
 		context.didUpdate();
 	}),
 ];
@@ -86,7 +86,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 
 	// Check creep spawning
 	(() => {
-		if (spawn.spawning && spawn.spawning['#spawnTime'] <= Game.time) {
+		if (spawn.spawning && spawn.spawning.remainingTime === 0) {
 			const creep = Game.getObjectById<Creep>(spawn.spawning['#spawningCreepId']);
 			if (creep && creep instanceof Creep) {
 				// Look for spawn direction
@@ -108,7 +108,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 
 				// Creep can be spawned
 				const hasClaim = creep.body.some(part => part.type === C.CLAIM);
-				creep['#ageTime'] = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME);
+				creep['#ageTime'] = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME) - 1;
 				creep.room['#moveObject'](creep, getPositionInDirection(creep.pos, direction));
 			}
 			spawn.spawning = undefined;

@@ -29,7 +29,7 @@ registerObjectTickProcessor(Source, (source, context) => {
 	// Regenerate energy
 	if (source.energy < source.energyCapacity) {
 		if (source['#nextRegenerationTime'] === 0) {
-			source['#nextRegenerationTime'] = Game.time + C.ENERGY_REGEN_TIME;
+			source['#nextRegenerationTime'] = Game.time + C.ENERGY_REGEN_TIME - 1;
 			context.didUpdate();
 		} else if (source.ticksToRegeneration === 0) {
 			source.energy = source.energyCapacity;
@@ -69,7 +69,7 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 	if (keeperLair['#nextSpawnTime'] === 0) {
 		// Start respawn timer
 		if (!keeper || keeper.hits < 5000) {
-			keeperLair['#nextSpawnTime'] = Game.time + C.ENERGY_REGEN_TIME;
+			keeperLair['#nextSpawnTime'] = Game.time + C.ENERGY_REGEN_TIME - 1;
 			context.didUpdate();
 		} else {
 			context.wakeAt(keeper['#ageTime'] + 1);
@@ -85,7 +85,7 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 			...Fn.concat(Fn.map(Fn.range(10), () => [ C.ATTACK, C.RANGED_ATTACK ])),
 		];
 		const newKeeper = Creep.create(keeperLair.pos, body, keeperName, '3');
-		newKeeper['#ageTime'] = Game.time + C.CREEP_LIFE_TIME;
+		newKeeper['#ageTime'] = Game.time + C.CREEP_LIFE_TIME - 1;
 		keeperLair.room['#insertObject'](newKeeper);
 		keeperLair['#nextSpawnTime'] = 0;
 		activateNPC(keeperLair.room, '3');

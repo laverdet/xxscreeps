@@ -19,7 +19,7 @@ registerObjectTickProcessor(StructureRampart, (rampart, context) => {
 		if (rampart.hits <= 0) {
 			rampart.room['#removeObject'](rampart);
 		}
-		rampart['#nextDecayTime'] = Game.time + C.RAMPART_DECAY_TIME;
+		rampart['#nextDecayTime'] = Game.time + C.RAMPART_DECAY_TIME - 1;
 		context.didUpdate();
 	}
 	context.wakeAt(rampart['#nextDecayTime']);

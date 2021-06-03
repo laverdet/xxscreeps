@@ -11,7 +11,7 @@ registerObjectTickProcessor(StructureContainer, (container, context) => {
 			container.room['#removeObject'](container);
 		}
 		container['#nextDecayTime'] = Game.time + (ownedController ?
-			C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME);
+			C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME) - 1;
 		context.didUpdate();
 	}
 	context.wakeAt(container['#nextDecayTime']);

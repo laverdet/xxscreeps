@@ -29,7 +29,6 @@ export class StructureKeeperLair extends withOverlay(OwnedStructure, shape) {
 
 export function create(pos: RoomPosition) {
 	const keeperLair = RoomObject.create(new StructureKeeperLair, pos);
-	keeperLair['#nextSpawnTime'] = Game.time + C.ENERGY_REGEN_TIME;
 	keeperLair['#user'] = '3';
 	return keeperLair;
 }
