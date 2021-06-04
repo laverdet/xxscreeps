@@ -1,10 +1,10 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Store from './store';
 import { Game } from 'xxscreeps/game';
 import { Structure, checkWall, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
+import { OpenStore, openStoreFormat } from './store';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 
@@ -12,13 +12,13 @@ export const format = declare('Container', () => compose(shape, StructureContain
 const shape = struct(structureFormat, {
 	...variant('container'),
 	hits: 'int32',
-	store: Store.format,
+	store: openStoreFormat,
 	'#nextDecayTime': 'int32',
 });
 
 export class StructureContainer extends withOverlay(Structure, shape) {
+	get storeCapacity() { return this.store.getCapacity() }
 	override get hitsMax() { return C.CONTAINER_HITS }
-	get storeCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 	override get structureType() { return C.STRUCTURE_CONTAINER }
 	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
 
@@ -31,7 +31,7 @@ export function create(pos: RoomPosition) {
 	const ownedController = Game.rooms[pos.roomName]!.controller?.['#user'];
 	const container = assign(RoomObject.create(new StructureContainer, pos), {
 		hits: C.EXTENSION_HITS,
-		store: Store.create(C.CONTAINER_CAPACITY),
+		store: OpenStore['#create'](C.CONTAINER_CAPACITY),
 	});
 	container['#nextDecayTime'] = Game.time + (ownedController ?
 		C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME) - 1;

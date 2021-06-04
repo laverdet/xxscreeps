@@ -8,10 +8,10 @@ import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Store from 'xxscreeps/mods/resource/store';
 import { Creep, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, intents, userGame } from 'xxscreeps/game';
 import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
+import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
@@ -47,7 +47,7 @@ const shape = struct(ownedStructureFormat, {
 	hits: 'int32',
 	name: 'string',
 	spawning: optional(compose(spawningFormat, Spawning)),
-	store: Store.restrictedFormat<'energy'>(),
+	store: singleStoreFormat(),
 });
 
 export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
@@ -166,7 +166,7 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 	const spawn = assign(RoomObject.create(new StructureSpawn, pos), {
 		hits: C.SPAWN_HITS,
 		name,
-		store: Store.create(null, { energy: C.SPAWN_ENERGY_CAPACITY }, { energy: C.SPAWN_ENERGY_START }),
+		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.SPAWN_ENERGY_CAPACITY, C.SPAWN_ENERGY_START),
 	});
 	spawn['#user'] = owner;
 	return spawn;

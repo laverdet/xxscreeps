@@ -1,7 +1,6 @@
 import type { ResourceType } from '../resource';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
-import * as Store from './store';
 import { Game } from 'xxscreeps/game';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
@@ -21,7 +20,7 @@ export function drop(pos: RoomPosition, resourceType: ResourceType, amount: numb
 		if (capacity > 0) {
 			const amount = Math.min(remaining, capacity);
 			remaining -= amount;
-			Store.add(container.store, resourceType, amount);
+			container.store['#add'](resourceType, amount);
 			if (remaining === 0) {
 				return;
 			}

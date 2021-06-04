@@ -1,9 +1,9 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Store from 'xxscreeps/mods/resource/store';
 import { Game, intents } from 'xxscreeps/game';
 import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
+import { SingleStore, calculateChecked, checkHasCapacity, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
@@ -13,7 +13,7 @@ export const format = () => compose(shape, StructureLink);
 const shape = declare('Link', struct(ownedStructureFormat, {
 	...variant('link'),
 	hits: 'int32',
-	store: Store.format,
+	store: singleStoreFormat(),
 	'#actionLog': RoomObject.actionLogFormat,
 	'#cooldownTime': 'int32',
 }));
@@ -33,7 +33,7 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 	 * @param amount The amount of energy to be transferred. If omitted, all the available energy is used.
 	 */
 	transferEnergy(target: StructureLink, amount?: number) {
-		const intentAmount = Store.calculateChecked(this, target, () =>
+		const intentAmount = calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 			amount || Math.min(this.store[C.RESOURCE_ENERGY], target.store.getFreeCapacity(C.RESOURCE_ENERGY)));
 		return chainIntentChecks(
@@ -45,7 +45,7 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 export function create(pos: RoomPosition, owner: string) {
 	const link = assign(RoomObject.create(new StructureLink, pos), {
 		hits: C.LINK_HITS,
-		store: Store.create(C.LINK_CAPACITY, { [C.RESOURCE_ENERGY]: C.LINK_CAPACITY }),
+		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.LINK_CAPACITY),
 	});
 	link['#user'] = owner;
 	return link;
@@ -67,8 +67,8 @@ export function checkTransferEnergy(link: StructureLink, target: StructureLink, 
 	return chainIntentChecks(
 		() => checkMyStructure(link, StructureLink),
 		() => checkTarget(target, StructureLink),
-		() => Store.checkHasResource(link, C.RESOURCE_ENERGY, amount),
-		() => Store.checkHasCapacity(target, C.RESOURCE_ENERGY, amount),
+		() => checkHasResource(link, C.RESOURCE_ENERGY, amount),
+		() => checkHasCapacity(target, C.RESOURCE_ENERGY, amount),
 		() => {
 			if (link.cooldown) {
 				return C.ERR_TIRED;

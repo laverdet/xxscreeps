@@ -1,31 +1,19 @@
-import type { BufferView } from 'xxscreeps/schema';
+import type { BufferView, TypeOf } from 'xxscreeps/schema';
 import type { ResourceType } from './resource';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { compose, declare, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
-import { optionalResourceEnumFormat } from './resource';
+import { resourceEnumFormat } from './resource';
 export type { ResourceType };
 
-export type StorageRecord = Partial<Record<ResourceType, number>>;
 export type WithStore = Record<'store', Store>;
 
-export function format() { return withType<Store<ResourceType>>(declare('Store', compose(shape, Store))) }
-export function restrictedFormat<Resource extends ResourceType>() {
-	return withType<Store<Resource>>(format);
-}
-const shape = struct({
-	'#amount': 'int32',
-	'#capacity': 'int32',
-	'#resources': vector(struct({
-		amount: 'int32',
-		capacity: 'int32',
-		type: optionalResourceEnumFormat,
-	})),
-	'#restricted': 'bool',
-	'#singleResource': optionalResourceEnumFormat,
-});
+export const openStoreFormat = () => declare('OpenStore', compose(shapeOpen, OpenStore));
+export const restrictedStoreFormat = () => declare('RestrictedStore', compose(shapeRestricted, RestrictedStore));
+const untypedSingleStoreFormat = () => declare('SingleStore', compose(shapeSingle, SingleStore));
+export const singleStoreFormat = <Resource extends ResourceType = typeof C.RESOURCE_ENERGY>() =>
+	withType<SingleStore<Resource>>(untypedSingleStoreFormat);
 
 // Make `Store` indexable on any `ResourceType`
 const BufferObjectWithResourcesType = withOverlay(BufferObject,
@@ -51,35 +39,11 @@ const BufferObjectWithResourcesType = withOverlay(BufferObject,
  * console.log(creep.store[RESOURCE_ENERGY]);
  * ```
  */
-export class Store<Resources extends ResourceType = any> extends
-	withOverlay(BufferObjectWithResourcesType, shape) {
-
+export abstract class Store extends BufferObjectWithResourcesType {
 	energy = 0;
-	['#capacityByResource']?: Map<ResourceType, number>;
 
-	constructor(view?: BufferView, offset?: number) {
-		super(view, offset);
-
-		const singleResource = this['#singleResource'];
-		if (singleResource === undefined) {
-			// Create capacity record
-			if (this['#restricted']) {
-				this['#capacityByResource'] = new Map;
-			}
-
-			// Load up resources onto this object as properties
-			for (const resource of this['#resources']) {
-				this['#capacityByResource']?.set(resource.type!, resource.capacity);
-				if (resource.amount !== 0) {
-					this[resource.type!] = resource.amount;
-				}
-			}
-		} else {
-			// This store can only ever hold one type of resource so we can skip the above mess. This is
-			// true for spawns, extensions and a bunch of others.
-			this[singleResource] = this['#amount'];
-		}
-	}
+	abstract ['#add'](type: ResourceType, amount: number): void;
+	abstract ['#subtract'](type: ResourceType, amount: number): void;
 
 	/**
 	 * Returns capacity of this store for the specified resource, or total capacity if `resource` is
@@ -87,21 +51,15 @@ export class Store<Resources extends ResourceType = any> extends
 	 * @param resourceType The type of resource
 	 * @returns Capacity, or null in case of a not valid resource for this store type
 	 */
-	getCapacity(): Resources extends ResourceType ? number : null;
-	getCapacity(resourceType: Exclude<ResourceType, Resources>): number | null;
-	getCapacity(resourceType?: Resources): number;
-	getCapacity(resourceType?: ResourceType): number | null;
-	getCapacity(resourceType?: ResourceType) {
-		const capacityByResource = this['#capacityByResource'];
-		if (capacityByResource === undefined) {
-			return this['#capacity'];
-		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-		} else if (resourceType) {
-			return capacityByResource.get(resourceType) ?? null;
-		} else {
-			return null;
-		}
-	}
+	abstract getCapacity(resourceType?: ResourceType): number | null;
+
+	/**
+	 * Returns the capacity used by the specified resource, or total used capacity for general purpose
+	 * stores if resource is undefined.
+	 * @param resourceType The type of resource
+	 * @returns Used capacity, or null in case of a not valid resource for this store type
+	 */
+	abstract getUsedCapacity(resourceType?: ResourceType): number | null;
 
 	/**
 	 * A shorthand for `getCapacity(resource) - getUsedCapacity(resource)`.
@@ -111,89 +69,191 @@ export class Store<Resources extends ResourceType = any> extends
 		return this.getCapacity(resourceType)! - this.getUsedCapacity(resourceType)!;
 	}
 
-	/**
-	 * Returns the capacity used by the specified resource, or total used capacity for general purpose
-	 * stores if resource is undefined.
-	 * @param resourceType The type of resource
-	 * @returns Used capacity, or null in case of a not valid resource for this store type
-	 */
-	getUsedCapacity(): Resources extends ResourceType ? number : null;
-	getUsedCapacity(resourceType: Exclude<ResourceType, Resources>): number | null;
-	getUsedCapacity(resourceType: Resources): number;
-	getUsedCapacity(resourceType?: ResourceType): number | null;
-	getUsedCapacity(resourceType?: ResourceType) {
-		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-		if (resourceType) {
-			return this[resourceType] ?? 0;
-		} else if (this['#capacityByResource'] === undefined) {
-			return this['#amount'];
-		} else {
-			return null;
-		}
-	}
-
-	/**
-	 * Returns all resource entries in this Store. This is needed because quoted '#private' keys will
-	 * be iterated when not in the runtime.
-	 */
-	['#entries'](): Iterable<[ ResourceType, number ]> {
-		return Fn.reject(Object.entries(this), entry => entry[0].startsWith('#')) as never;
+	['#entries']() {
+		return Object.entries(this) as [ ResourceType, number ][];
 	}
 
 	private [Symbol.for('nodejs.util.inspect.custom')]() {
+		const capacity = this.getCapacity();
 		return {
-			[Symbol('capacity')]: this['#capacityByResource']?.entries() ?? this.getCapacity(),
+			[Symbol('capacity')]: capacity === null ?
+				Object.fromEntries(Fn.map(this['#entries'](), ([ type ]) => [ type, this.getCapacity(type) ])) :
+				capacity,
 			...Fn.fromEntries(this['#entries']()),
 		};
 	}
 }
 
-export function create(capacity: number | null, capacityByResource?: StorageRecord, store?: StorageRecord) {
-	// Build resource vector
-	const resources: { type: ResourceType; amount: number; capacity: number }[] = [];
-	if (capacityByResource) {
-		for (const [ type, capacity ] of Object.entries(capacityByResource) as [ ResourceType, number ][]) {
-			resources.push({ type, amount: store?.[type] ?? 0, capacity });
+const shapeOpen = struct({
+	'#capacity': 'int32',
+	'#resources': vector(struct({
+		amount: 'int32',
+		type: resourceEnumFormat,
+	})),
+});
+
+/**
+ * A `Store` which can hold any resource and shares capacity between them.
+ */
+export class OpenStore extends withOverlay(Store, shapeOpen) {
+	#amount = 0;
+
+	constructor(view?: BufferView, offset?: number) {
+		super(view, offset);
+		for (const info of this['#resources']) {
+			this[info.type] = info.amount;
+			this.#amount += info.amount;
 		}
 	}
-	if (store) {
-		for (const [ type, amount ] of Object.entries(store) as [ ResourceType, number ][]) {
-			if (capacityByResource?.[type] === undefined) {
-				resources.push({ type, amount, capacity: 0 });
-			}
-		}
+
+	static ['#create'](capacity: number) {
+		const instance = new OpenStore;
+		instance['#capacity'] = capacity;
+		return instance;
 	}
 
-	// Is single resource?
-	const singleResource =
-		resources.length === 0 ? 'energy' :
-		resources.length === 1 ? resources[0].type :
-		undefined;
+	getCapacity() {
+		return this['#capacity'];
+	}
 
-	// Is restricted?
-	const isRestricted = resources.some(resource => resource.capacity !== 0);
+	getUsedCapacity() {
+		return this.#amount;
+	}
 
-	// Calculate capacity
-	const calculatedCapacity = function() {
-		if (capacity === null) {
-			if (isRestricted) {
-				return resources.reduce((capacity, info) => info.capacity + capacity, 0);
-			} else {
-				throw new Error('`Store` missing capacity');
-			}
+	['#add'](type: ResourceType, amount: number) {
+		if (amount === 0) {
+			return;
+		}
+		const info = this['#resources'].find(info => info.type === type);
+		if (info) {
+			this[type] = info.amount += amount;
 		} else {
-			return capacity;
+			this['#resources'].push({
+				amount,
+				type,
+			});
+			this[type] = amount;
 		}
-	}();
+		this.#amount += amount;
+	}
 
-	// Return data to save
-	const result = assign(new Store, { ...store });
-	result['#amount'] = store ? Fn.accumulate(Object.values(store), amount => amount) : 0;
-	result['#capacity'] = calculatedCapacity;
-	result['#resources'] = singleResource === undefined ? resources : [];
-	result['#restricted'] = isRestricted;
-	result['#singleResource'] = singleResource;
-	return result;
+	['#subtract'](type: ResourceType, amount: number) {
+		if (amount === 0) {
+			return;
+		}
+		const resources = this['#resources'];
+		const ii = resources.findIndex(info => info.type === type)!;
+		const info = resources[ii];
+		if ((info.amount -= amount) === 0) {
+			resources[ii] = resources[resources.length - 1];
+			resources.pop();
+			if (type === C.RESOURCE_ENERGY) {
+				this[type] = 0;
+			} else {
+				delete this[type];
+			}
+		}
+		this.#amount -= amount;
+	}
+}
+
+const shapeRestricted = struct({
+	'#resources': vector(struct({
+		amount: 'int32',
+		capacity: 'int32',
+		type: resourceEnumFormat,
+	})),
+});
+
+type RestrictedResourceInfo = TypeOf<typeof shapeRestricted>['#resources'][number];
+type StorageRecord = Record<ResourceType, number>;
+
+/**
+ * A `Store` which can only hold a certain amount of each resource.
+ */
+export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
+	static ['#create'](capacities: Partial<StorageRecord>) {
+		const instance = new RestrictedStore;
+		for (const type in capacities) {
+			const info: RestrictedResourceInfo = {
+				amount: 0,
+				capacity: capacities[type as ResourceType]!,
+				type: type as ResourceType,
+			};
+			instance['#resources'].push(info);
+		}
+		return instance;
+	}
+
+	getCapacity(resourceType?: ResourceType) {
+		return this['#resources'].find(info => info.type === resourceType)?.capacity ?? null;
+	}
+
+	getUsedCapacity(resourceType?: ResourceType) {
+		return this[resourceType!] ?? null;
+	}
+
+	['#add'](type: ResourceType, amount: number) {
+		const info = this['#resources'].find(info => info.type === type)!;
+		this[type] = info.amount += amount;
+	}
+
+	['#subtract'](type: ResourceType, amount: number) {
+		const info = this['#resources'].find(info => info.type === type)!;
+		this[type] = info.amount -= amount;
+		if (type !== C.RESOURCE_ENERGY && this[type] === 0) {
+			delete this[type];
+		}
+	}
+}
+
+const shapeSingle = struct({
+	'#amount': 'int32',
+	'#capacity': 'int32',
+	'#type': resourceEnumFormat,
+});
+
+/**
+ * A `Store` which can only hold a single pre-defined resource.
+ */
+export class SingleStore<Type extends ResourceType> extends withOverlay(Store, shapeSingle) {
+	constructor(view?: BufferView, offset?: number) {
+		super(view, offset);
+		this[this['#type']] = this['#amount'];
+	}
+
+	static ['#create']<Type extends ResourceType>(type: Type, capacity: number, amount = 0) {
+		const instance = new SingleStore<Type>();
+		instance[type] = amount;
+		instance['#amount'] = amount;
+		instance['#capacity'] = capacity;
+		instance['#type'] = type;
+		return instance;
+	}
+
+	getCapacity(resourceType: Type): number;
+	getCapacity(resourceType?: ResourceType): number | null;
+	getCapacity(resourceType?: Type) {
+		if (resourceType === this['#type']) {
+			return this['#capacity'];
+		} else {
+			return null;
+		}
+	}
+
+	getUsedCapacity(resourceType: Type): number;
+	getUsedCapacity(resourceType?: ResourceType): number | null;
+	getUsedCapacity(resourceType?: Type): number | null {
+		return this[resourceType!] ?? null;
+	}
+
+	['#add'](type: ResourceType, amount: number) {
+		this[type] = this['#amount'] += amount;
+	}
+
+	['#subtract'](type: ResourceType, amount: number) {
+		this[type] = this['#amount'] -= amount;
+	}
 }
 
 /**

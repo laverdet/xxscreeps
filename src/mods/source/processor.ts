@@ -2,7 +2,6 @@ import * as C from 'xxscreeps/game/constants';
 import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource';
-import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
@@ -15,7 +14,7 @@ registerHarvestProcessor(Source, (creep, source) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER);
 	const energy = Math.min(source.energy, power);
 	const overflow = Math.max(energy - creep.store.getFreeCapacity('energy'), 0);
-	Store.add(creep.store, 'energy', energy - overflow);
+	creep.store['#add'](C.RESOURCE_ENERGY, energy - overflow);
 	source.energy -= energy;
 	if (overflow > 0) {
 		Resource.drop(creep.pos, 'energy', overflow);

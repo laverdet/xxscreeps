@@ -1,4 +1,5 @@
 import type { RoomObject } from 'xxscreeps/game/object';
+import type { ResourceType, Store } from 'xxscreeps/mods/resource/store';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 
 import Loki from 'lokijs';
@@ -7,7 +8,6 @@ import { RoomPosition } from 'xxscreeps/game/position';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as C from 'xxscreeps/game/constants';
-import * as StoreLib from 'xxscreeps/mods/resource/store';
 
 // Schemas
 import * as CodeSchema from 'xxscreeps/engine/db/user/code';
@@ -33,6 +33,7 @@ import { StructureRoad } from 'xxscreeps/mods/road/road';
 import { StructureRampart } from 'xxscreeps/mods/defense/rampart';
 import { StructureWall } from 'xxscreeps/mods/defense/wall';
 import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
+import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
 
 const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
 if (jsonSource === undefined) {
@@ -55,11 +56,10 @@ function withStructure(from: any, into: Structure) {
 	}
 }
 
-function withStore(from: any, into: { store: StoreLib.Store }) {
-	const capacity = from.storeCapacityResource === undefined ?
-		from.storeCapacity :
-		Fn.accumulate(Object.values<number>(from.storeCapacityResource));
-	into.store = StoreLib.create(capacity, from.storeCapacityResource, from.store);
+function withStore(from: any, into: { store: Store }) {
+	for (const type in from.store) {
+		into.store['#add'](type as ResourceType, from.store[type]);
+	}
 }
 
 // Initialize import source
@@ -151,6 +151,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'creep': {
 				const creep = new Creep;
 				withRoomObject(object, creep);
+				creep.store = OpenStore['#create'](Fn.accumulate(Object.values<number>(object.storeCapacityResource)));
 				withStore(object, creep);
 				creep.body = object.body;
 				creep.hits = object.hits;
@@ -162,6 +163,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'extension': {
 				const extension = new StructureExtension;
 				withStructure(object, extension);
+				extension.store = SingleStore['#create'](C.RESOURCE_ENERGY, object.storeCapacityResource.energy);
 				withStore(object, extension);
 				return extension;
 			}
@@ -216,6 +218,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'spawn': {
 				const spawn = new StructureSpawn;
 				withStructure(object, spawn);
+				spawn.store = SingleStore['#create'](C.RESOURCE_ENERGY, object.storeCapacityResource.energy);
 				withStore(object, spawn);
 				spawn.name = object.name;
 				return spawn;

@@ -1,9 +1,9 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Store from 'xxscreeps/mods/resource/store';
 import { Game, registerGlobal } from 'xxscreeps/game';
 import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
+import { RestrictedStore, restrictedStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
@@ -14,7 +14,7 @@ const shape = struct(ownedStructureFormat, {
 	...variant('lab'),
 	hits: 'int32',
 	mineralType: resourceEnumFormat,
-	store: Store.format,
+	store: restrictedStoreFormat,
 	'#cooldownTime': 'int32',
 });
 
@@ -27,7 +27,7 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 export function create(pos: RoomPosition, owner: string) {
 	const lab = assign(RoomObject.create(new StructureLab, pos), {
 		hits: C.LAB_HITS,
-		store: Store.create(C.LAB_ENERGY_CAPACITY + C.LAB_MINERAL_CAPACITY),
+		store: RestrictedStore['#create']({ [C.RESOURCE_ENERGY]: C.LAB_ENERGY_CAPACITY }),
 	});
 	lab['#user'] = owner;
 	return lab;

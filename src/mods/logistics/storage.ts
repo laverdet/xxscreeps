@@ -2,8 +2,8 @@ import type { Room } from 'xxscreeps/game/room';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Store from 'xxscreeps/mods/resource/store';
 import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
+import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
@@ -12,7 +12,7 @@ export const format = () => compose(shape, StructureStorage);
 const shape = declare('Storage', struct(ownedStructureFormat, {
 	...variant('storage'),
 	hits: 'int32',
-	store: Store.format,
+	store: openStoreFormat,
 }));
 
 export class StructureStorage extends withOverlay(OwnedStructure, shape) {
@@ -28,7 +28,7 @@ export class StructureStorage extends withOverlay(OwnedStructure, shape) {
 export function create(pos: RoomPosition, owner: string) {
 	const storage = assign(RoomObject.create(new StructureStorage, pos), {
 		hits: C.STORAGE_HITS,
-		store: Store.create(C.STORAGE_CAPACITY),
+		store: OpenStore['#create'](C.STORAGE_CAPACITY),
 	});
 	storage['#user'] = owner;
 	return storage;

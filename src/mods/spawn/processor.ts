@@ -3,7 +3,6 @@ import type { Direction } from 'xxscreeps/game/position';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, me } from 'xxscreeps/game';
 import { getPositionInDirection } from 'xxscreeps/game/position';
@@ -58,7 +57,7 @@ const intents = [
 		let cost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
 		for (const structure of energyStructures) {
 			const energyToSpend = Math.min(cost, structure.energy);
-			StoreIntent.subtract(structure.store, 'energy', energyToSpend);
+			structure.store['#subtract'](C.RESOURCE_ENERGY, energyToSpend);
 			cost -= energyToSpend;
 			if (cost === 0) {
 				break;
@@ -118,7 +117,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 
 	// Add 1 energy per tick to spawns in low energy rooms
 	if (spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
-		StoreIntent.add(spawn.store, C.RESOURCE_ENERGY, 1);
+		spawn.store['#add'](C.RESOURCE_ENERGY, 1);
 		context.setActive();
 	}
 });

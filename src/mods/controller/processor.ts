@@ -1,6 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
 import * as CreepLib from './creep';
-import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Game } from 'xxscreeps/game';
 import { saveAction } from 'xxscreeps/game/object';
 import { Creep } from 'xxscreeps/mods/creep/creep';
@@ -96,7 +95,7 @@ const intents = [
 				power = Math.min(power, C.CONTROLLER_MAX_UPGRADE_PER_TICK - controller['#upgradePowerThisTick']);
 			}
 			const energy = Math.min(power, creep.store.energy);
-			Store.subtract(creep.store, 'energy', energy);
+			creep.store['#subtract'](C.RESOURCE_ENERGY, energy);
 
 			// Update progress
 			controller['#progress'] += energy;

@@ -2,7 +2,6 @@ import type { ConstructibleStructureType } from './construction-site';
 import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource';
-import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Game, me } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { RoomPosition } from 'xxscreeps/game/position';
@@ -48,7 +47,7 @@ const intents = [
 				power,
 			);
 			if (energy > 0) {
-				Store.subtract(creep.store, 'energy', energy);
+				creep.store['#subtract'](C.RESOURCE_ENERGY, energy);
 				target.progress += energy;
 				saveAction(creep, 'build', target.pos);
 				context.didUpdate();
@@ -63,7 +62,7 @@ const intents = [
 			if (effect > 0) {
 				const energy = Math.floor(effect * C.DISMANTLE_COST);
 				const overflow = Math.max(energy - creep.store.getFreeCapacity(C.RESOURCE_ENERGY), 0);
-				Store.add(creep.store, 'energy', energy - overflow);
+				creep.store['#add'](C.RESOURCE_ENERGY, energy - overflow);
 				if (overflow > 0) {
 					Resource.drop(creep.pos, 'energy', overflow);
 				}
@@ -83,7 +82,7 @@ const intents = [
 				target.hitsMax - target.hits,
 				creep.store.energy / C.REPAIR_COST);
 			if (effect > 0) {
-				Store.subtract(creep.store, 'energy', effect * C.REPAIR_COST);
+				creep.store['#subtract'](C.RESOURCE_ENERGY, effect * C.REPAIR_COST);
 				target.hits += effect;
 				saveAction(creep, 'repair', target.pos);
 				context.didUpdate();

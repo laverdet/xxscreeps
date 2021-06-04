@@ -19,7 +19,6 @@ import { registerIntentProcessor, registerObjectPreTickProcessor, registerObject
 import * as Movement from 'xxscreeps/engine/processor/movement';
 // eslint-disable-next-line no-duplicate-imports
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
-import * as StoreIntent from 'xxscreeps/mods/resource/processor/store';
 import { flushActionLog } from 'xxscreeps/engine/processor/object';
 
 declare module 'xxscreeps/engine/processor' {
@@ -28,7 +27,7 @@ declare module 'xxscreeps/engine/processor' {
 const intents = [
 	registerIntentProcessor(Creep, 'drop', (creep, context, resourceType: ResourceType, amount: number) => {
 		if (CreepLib.checkDrop(creep, resourceType, amount) === C.OK) {
-			StoreIntent.subtract(creep.store, resourceType, amount);
+			creep.store['#subtract'](resourceType, amount);
 			ResourceIntent.drop(creep.pos, resourceType, amount);
 			context.didUpdate();
 		}
@@ -46,7 +45,7 @@ const intents = [
 		const resource = Game.getObjectById<Resource>(id)!;
 		if (CreepLib.checkPickup(creep, resource) === C.OK) {
 			const amount = Math.min(creep.store.getFreeCapacity(resource.resourceType), resource.amount);
-			StoreIntent.add(creep.store, resource.resourceType, amount);
+			creep.store['#add'](resource.resourceType, amount);
 			resource.amount -= amount;
 			context.didUpdate();
 		}
@@ -73,8 +72,8 @@ const intents = [
 	registerIntentProcessor(Creep, 'transfer', (creep, context, id: string, resourceType: ResourceType, amount: number) => {
 		const target = Game.getObjectById<RoomObject & WithStore>(id)!;
 		if (CreepLib.checkTransfer(creep, target, resourceType, amount) === C.OK) {
-			StoreIntent.subtract(creep.store, resourceType, amount);
-			StoreIntent.add(target.store, resourceType, amount);
+			creep.store['#subtract'](resourceType, amount);
+			target.store['#add'](resourceType, amount);
 			context.didUpdate();
 		}
 	}),
@@ -82,8 +81,8 @@ const intents = [
 	registerIntentProcessor(Creep, 'withdraw', (creep, context, id: string, resourceType: ResourceType, amount: number) => {
 		const target = Game.getObjectById<Structure & WithStore>(id)!;
 		if (CreepLib.checkWithdraw(creep, target, resourceType, amount) === C.OK) {
-			StoreIntent.subtract(target.store, resourceType, amount);
-			StoreIntent.add(creep.store, resourceType, amount);
+			target.store['#subtract'](resourceType, amount);
+			creep.store['#add'](resourceType, amount);
 			context.didUpdate();
 		}
 	}),

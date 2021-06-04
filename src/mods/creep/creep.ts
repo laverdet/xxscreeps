@@ -3,13 +3,14 @@ import type { GameConstructor } from 'xxscreeps/game';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource';
 import type { RoomPath } from 'xxscreeps/game/room/path';
 import type { RoomSearchOptions } from 'xxscreeps/game/path-finder';
+import type { WithStore } from 'xxscreeps/mods/resource/store';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as RoomObjectLib from 'xxscreeps/game/object';
-import * as Store from 'xxscreeps/mods/resource/store';
 import { Game, intents, me, userInfo } from 'xxscreeps/game';
+import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
@@ -41,7 +42,7 @@ const shape = struct(RoomObjectLib.format, {
 	fatigue: 'int32',
 	hits: 'int32',
 	name: 'string',
-	store: Store.format,
+	store: openStoreFormat,
 	'#actionLog': RoomObjectLib.actionLogFormat,
 	'#ageTime': 'int32',
 	'#saying': optional(struct({
@@ -295,8 +296,8 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 * @param amount The amount of resources to be transferred. If omitted, all the available carried
 	 * amount is used.
 	 */
-	transfer(this: Creep, target: RoomObject & Store.WithStore, resourceType: ResourceType, amount?: number) {
-		const intentAmount = Store.calculateChecked(this, target, () =>
+	transfer(this: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount?: number) {
+		const intentAmount = calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 			amount || Math.min(this.store[resourceType] ?? 0, target.store.getFreeCapacity(resourceType)));
 		return chainIntentChecks(
@@ -314,8 +315,8 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 * This method should not be used to transfer resources between creeps. To transfer between
 	 * creeps, use the `transfer` method on the original creep.
 	 */
-	withdraw(this: Creep, target: Structure & Store.WithStore, resourceType: ResourceType, amount?: number) {
-		const intentAmount = Store.calculateChecked(this, target, () =>
+	withdraw(this: Creep, target: Structure & WithStore, resourceType: ResourceType, amount?: number) {
+		const intentAmount = calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 			amount || Math.min(this.store.getFreeCapacity(resourceType), target.store[resourceType] ?? 0));
 		return chainIntentChecks(
@@ -333,7 +334,7 @@ export function create(pos: RoomPosition, body: PartType[], name: string, owner:
 		hits: body.length * 100,
 		fatigue: 0,
 		name,
-		store: Store.create(carryCapacity),
+		store: OpenStore['#create'](carryCapacity),
 	});
 	creep['#user'] = owner;
 	return creep;
@@ -372,7 +373,7 @@ function checkFatigue(creep: Creep) {
 export function checkDrop(creep: Creep, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.MOVE),
-		() => Store.checkHasResource(creep, resourceType, amount));
+		() => checkHasResource(creep, resourceType, amount));
 }
 
 export function checkMove(creep: Creep, direction: number) {
@@ -392,13 +393,13 @@ export function checkPickup(creep: Creep, target: Resource) {
 			C.OK : C.ERR_FULL);
 }
 
-export function checkTransfer(creep: Creep, target: RoomObject & Store.WithStore, resourceType: ResourceType, amount: number) {
+export function checkTransfer(creep: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, RoomObject),
 		() => checkRange(creep, target, 1),
-		() => Store.checkHasResource(creep, resourceType, amount),
-		() => Store.checkHasCapacity(target, resourceType, amount),
+		() => checkHasResource(creep, resourceType, amount),
+		() => checkHasCapacity(target, resourceType, amount),
 		() => {
 			if (target instanceof Creep && target.spawning) {
 				return C.ERR_INVALID_TARGET;
@@ -406,12 +407,12 @@ export function checkTransfer(creep: Creep, target: RoomObject & Store.WithStore
 		});
 }
 
-export function checkWithdraw(creep: Creep, target: Structure & Store.WithStore, resourceType: ResourceType, amount: number) {
+export function checkWithdraw(creep: Creep, target: Structure & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Structure),
 		() => checkRange(creep, target, 1),
-		() => Store.checkHasResource(target, resourceType, amount),
-		() => Store.checkHasCapacity(creep, resourceType, amount),
+		() => checkHasResource(target, resourceType, amount),
+		() => checkHasCapacity(creep, resourceType, amount),
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
 }

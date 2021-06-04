@@ -3,8 +3,8 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
-import * as Store from 'xxscreeps/mods/resource/store';
 import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
+import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
@@ -13,7 +13,7 @@ export const format = declare('Tower', () => compose(shape, StructureTower));
 const shape = struct(ownedStructureFormat, {
 	...variant('tower'),
 	hits: 'int32',
-	store: Store.restrictedFormat<'energy'>(),
+	store: singleStoreFormat(),
 });
 
 export class StructureTower extends withOverlay(OwnedStructure, shape) {
@@ -50,7 +50,7 @@ export class StructureTower extends withOverlay(OwnedStructure, shape) {
 export function create(pos: RoomPosition, owner: string) {
 	const tower = assign(RoomObject.create(new StructureTower, pos), {
 		hits: C.TOWER_HITS,
-		store: Store.create(null, { energy: C.TOWER_CAPACITY }),
+		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.TOWER_CAPACITY),
 	});
 	tower['#user'] = owner;
 	return tower;

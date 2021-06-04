@@ -1,7 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource';
-import * as Store from 'xxscreeps/mods/resource/processor/store';
 import { Game } from 'xxscreeps/game';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
@@ -13,7 +12,7 @@ registerHarvestProcessor(Mineral, (creep, mineral) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_MINERAL_POWER);
 	const amount = Math.min(mineral.mineralAmount, power);
 	const overflow = Math.max(amount - creep.store.getFreeCapacity(mineral.mineralType), 0);
-	Store.add(creep.store, mineral.mineralType, amount - overflow);
+	creep.store['#add'](mineral.mineralType, amount - overflow);
 	mineral.mineralAmount -= amount;
 	if (overflow > 0) {
 		Resource.drop(creep.pos, mineral.mineralType, overflow);
