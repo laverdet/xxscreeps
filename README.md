@@ -74,15 +74,18 @@ There's a lot of factors that can make Screeps difficult to work with. Every pla
 the disappointment of typing `console.log(creep)` into the console and seeing `[Object object]`
 echoed back. xxscreeps comes with robust console support just like you get in nodejs. Full support
 for the Chrome Web Inspector or VS Code debugger is planned as well, which will make it possible to
-step through your script line by line to troubleshoot issues. The whole thing is written with
-detailed TypeScript annotations and inline documentation as well which greatly improves the player's
-access to information about game APIs.
+step through your script line by line to troubleshoot issues. Source map support is built-in to the
+player sandbox so if you use a transpiler (like TypeScript or Webpack) you will be able to see the
+original file name and line number in stack traces. And the whole thing is written with detailed
+TypeScript annotations and inline documentation as well which greatly improves the player's access
+to information about game APIs.
 
 ![Console Example](./docs/console-demo.png)
 
 ## Getting Started
 
 To get xxscreeps running here's what you need to do. This should work on Linux, macOS, and Windows.
+First step is make sure nodejs v16.x is installed, older versions will not work.
 ```
 git clone https://github.com/laverdet/xxscreeps.git
 cd xxscreeps
