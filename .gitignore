@@ -1,2 +1,5 @@
-dist
+/.screepsrc.yaml
+/dist
 /node_modules
+/package-lock.json
+/screeps

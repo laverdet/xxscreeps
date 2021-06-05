@@ -5,11 +5,15 @@
   "scripts": {
     "build": "tsc",
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
-    "start": "xxscreeps engine/service/launcher.ts",
+    "import": "xxscreeps ./dist/scripts/scrape-world.js node_modules/@screeps/launcher/init_dist/db.json",
+    "start": "xxscreeps ./dist/engine/service/launcher.js",
     "watch": "tsc -w"
   },
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "bin": {
-    "xxscreeps": "./run"
+    "xxscreeps": "./trampoline.bat"
   },
   "exports": {
     "./config/mods/import/*": "./dist/config/mods.resolved/*",
@@ -57,11 +61,12 @@
     "source-map-support": "^0.5.19",
     "stream-to-promise": "^3.0.0",
     "tslib": "^1.14.1",
-    "typescript": "^4.3.1-rc",
+    "typescript": "^4.3.2",
     "webpack": "^5.37.1"
   },
   "devDependencies": {
     "@laverdet/eslint-config": "github:laverdet/eslint-config#2549f758f69f2ee625edb40589329802a5682db5",
+    "@screeps/launcher": "^4.1.0",
     "@typescript-eslint/eslint-plugin": "^4.24.0",
     "@typescript-eslint/parser": "^4.24.0",
     "eslint": "^7.26.0",
