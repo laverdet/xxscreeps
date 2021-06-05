@@ -11,6 +11,9 @@ export { registerRoomSocketHandler } from './symbols';
 export interface Context {
 	backend: BackendContext;
 	db: Database;
+	request: {
+		body: any;
+	};
 	shard: Shard;
 }
 export interface State {}
