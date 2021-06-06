@@ -7,13 +7,12 @@
 			"runtimeArgs": [
 				"--enable-source-maps",
 				"--experimental-specifier-resolution=node",
-				"--experimental-import-meta-resolve",
-				"--stack-trace-limit=20"
+				"--experimental-import-meta-resolve"
 			],
 			"internalConsoleOptions": "openOnSessionStart",
 			"name": "Server",
 			"program": "${workspaceFolder}/dist/config/entry.js",
-			"args": [ "engine/service/launcher.js" ],
+			"args": [ "dist/engine/service/launcher.js" ],
 		},
 		{
 			"type": "node",
@@ -21,8 +20,7 @@
 			"runtimeArgs": [
 				"--enable-source-maps",
 				"--experimental-specifier-resolution=node",
-				"--experimental-import-meta-resolve",
-				"--stack-trace-limit=20"
+				"--experimental-import-meta-resolve"
 			],
 			"internalConsoleOptions": "openOnSessionStart",
 			"name": "Script",

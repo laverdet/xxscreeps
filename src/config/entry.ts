@@ -1,43 +1,21 @@
+#!/usr/bin/env node
 // `registerStorageProvider` needs to be imported early to allow local keyval/blob providers to
 // register
 import 'xxscreeps/engine/db/storage/register';
 
-await async function() {
-	// Get script and remove `dist/config/entry.js` from args
-	process.argv.splice(1, 1);
-	const specifier = process.argv[1];
+// Get script and remove `dist/config/entry.js` from args
+process.argv.splice(1, 1);
+const specifier = process.argv[1];
 
-	// Load mods
-	await import('./mods');
+// Load mods
+await import('./mods');
 
-	if (specifier) {
-		// Resolve with different pattern strategies
-		const base = new URL('../..', import.meta.url);
-		for (const fn of [
-			str => str,
-			str => str.replace(/^/, 'dist/').replace(/\.ts$/, ''),
-			str => str.replace(/^[.\\/]*src\//, 'dist/').replace(/\.ts$/, ''),
-		] as ((str: string) => string)[]) {
-			const module = await async function() {
-				try {
-					const path = `${new URL(fn(specifier), base)}`;
-					// .ts files will resolve but fail to import
-					if (!path.endsWith('.ts')) {
-						return await import.meta.resolve(path);
-					}
-				} catch (err) {}
-			}();
-			if (module) {
-				// Forward to script
-				await import(module);
-				return;
-			}
-		}
-		throw new Error(`Cannot find module '${specifier}'`);
-
-	} else {
-		// Start repl
-		const repl = await import('repl');
-		repl.start('> ');
-	}
-}();
+if (specifier) {
+	// Run
+	const base = new URL('../..', import.meta.url);
+	await import(`${new URL(specifier, base)}`);
+} else {
+	// Start repl
+	const repl = await import('repl');
+	repl.start('> ');
+}
