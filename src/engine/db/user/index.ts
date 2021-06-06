@@ -43,7 +43,7 @@ export async function create(db: Database, userId: string, username: string, pro
 			registeredDate: Date.now(),
 		}),
 		db.data.hmset(userProvidersKey(userId),
-			Fn.map(allProviders, ({ provider, id }) => [ provider, id ])),
+			[ ...Fn.map(allProviders, ({ provider, id }): [ string, string ] => [ provider, id ]) ]),
 		...Fn.map(allProviders, ({ provider, id }) =>
 			db.data.hset(providerMembersKey(provider), id, userId)),
 	]);

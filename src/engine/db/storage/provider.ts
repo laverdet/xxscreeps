@@ -44,7 +44,7 @@ export type KeyValProvider = {
 	hgetall(key: string): Promise<Record<string, string>>;
 	hmget(key: string, fields: string[]): Promise<Record<string, string | null>>;
 	hset(key: string, field: string, value: Value, options?: HSet): Promise<boolean>;
-	hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>): Promise<void>;
+	hmset(key: string, fields: [ string, Value ][] | Record<string, Value>): Promise<void>;
 	// lists
 	lpop(key: string): Promise<string | null>;
 	lrange(key: string, start: number, stop: number): Promise<string[]>;
