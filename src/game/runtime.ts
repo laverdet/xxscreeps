@@ -6,8 +6,17 @@ import { registerRuntimeConnector } from 'xxscreeps/driver';
 
 registerGlobal('_', lodash);
 
-registerGlobal(function StructureLink() {});
+registerGlobal(function Deposit() {});
+registerGlobal(function Nuke() {});
+registerGlobal(function PowerCreep() {});
+registerGlobal(function Ruin() {});
+registerGlobal(function StructureFactory() {});
+registerGlobal(function StructureInvaderCore() {});
+registerGlobal(function StructureNuker() {});
 registerGlobal(function StructureObserver() {});
+registerGlobal(function StructurePowerBank() {});
+registerGlobal(function StructurePowerSpawn() {});
+registerGlobal(function StructurePortal() {});
 registerGlobal(function StructureTerminal() {});
 registerGlobal(function Tombstone() {});
 
