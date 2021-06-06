@@ -5,6 +5,13 @@ export type Schema = {
 	 */
 	backend?: {
 		/**
+		 * Network interface to bind server to. Format is: "host" or "host:port". Host can be * to bind
+		 * to all interfaces: "*:port". Port is 21025, if not specified.
+		 * @default localhost
+		 */
+		bind?: string;
+
+		/**
 		 * Whether to allow read only access to the API without logging in.
 		 * @default true
 		 */

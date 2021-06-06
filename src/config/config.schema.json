@@ -13,6 +13,11 @@
                     "description": "Whether to allow read only access to the API without logging in.",
                     "type": "boolean"
                 },
+                "bind": {
+                    "default": "localhost",
+                    "description": "Network interface to bind server to. Format is: \"host\" or \"host:port\". Host can be * to bind\nto all interfaces: \"*:port\". Port is 21025, if not specified.",
+                    "type": "string"
+                },
                 "secret": {
                     "description": "Secret used for session authentication. If not specified a new secret will be generated each\nrestart.",
                     "type": "string"

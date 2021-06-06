@@ -4,6 +4,7 @@ import bodyParser from 'koa-bodyparser';
 import Koa from 'koa';
 import Router from 'koa-router';
 import http from 'http';
+import config from 'xxscreeps/config';
 
 import { getServiceChannel } from 'xxscreeps/engine/service';
 import { authentication } from './auth';
@@ -58,4 +59,11 @@ const serviceUnlistener = serviceChannel.listen(message => {
 	}
 });
 
-httpServer.listen(21025, () => console.log('🌎 Listening'));
+// Read configuration
+const addr: any[] = config.backend.bind.split(':');
+addr[1] = Number(addr[1] ?? 21025);
+if (addr[0] === '*') {
+	addr.shift();
+}
+addr.reverse();
+httpServer.listen(...addr, () => console.log('🌎 Listening'));
