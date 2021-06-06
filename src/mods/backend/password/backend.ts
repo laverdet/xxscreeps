@@ -1,4 +1,4 @@
-import { registerBackendMiddleware } from 'xxscreeps/backend';
+import { registerBackendMiddleware, registerBackendRoute } from 'xxscreeps/backend';
 import { findUserByName } from 'xxscreeps/engine/db/user';
 
 registerBackendMiddleware(koa => {
@@ -15,4 +15,21 @@ registerBackendMiddleware(koa => {
 		}
 		return next();
 	});
+});
+
+registerBackendRoute({
+	method: 'post',
+	path: '/api/auth/signin',
+
+	async execute(context) {
+		const { email } = context.request.body;
+		const userId = await findUserByName(context.db, email);
+		if (userId) {
+			context.state.userId = userId;
+			return { ok: 1, token: await context.flushToken() };
+		} else {
+			context.status = 401;
+			return 'Unauthorized';
+		}
+	},
 });
