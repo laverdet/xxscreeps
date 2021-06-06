@@ -8,10 +8,8 @@ import { configTransform } from 'xxscreeps/config/webpack';
 import { schemaTransform } from 'xxscreeps/engine/schema/build';
 import { locateModule } from '../path-finder';
 import { compile } from '../webpack';
-import { IsolatedSandbox } from './isolated/isolated';
-import { NodejsSandbox } from './nodejs';
 
-export type Sandbox = IsolatedSandbox | NodejsSandbox;
+export type Sandbox = import('./nodejs').NodejsSandbox | import('./isolated/isolated').IsolatedSandbox;
 
 export function compileRuntimeSource(transform: Transform, path = 'xxscreeps/driver/runtime') {
 	return compile(path, [
@@ -29,8 +27,10 @@ export function compileRuntimeSource(transform: Transform, path = 'xxscreeps/dri
 
 export async function createSandbox(data: InitializationPayload, print: Print) {
 	if (config.runner.unsafeSandbox) {
+		const { NodejsSandbox } = await import('./nodejs');
 		return NodejsSandbox.create(data, print);
 	} else {
+		const { IsolatedSandbox } = await import('./isolated/isolated');
 		return IsolatedSandbox.create(data, print);
 	}
 }
