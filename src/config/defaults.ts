@@ -23,6 +23,7 @@ export const defaults = makeDefaults({
 	mods: [
 		'xxscreeps/mods/classic',
 		'xxscreeps/mods/backend/password',
+		'xxscreeps/mods/backend/steam',
 	],
 	runner: {
 		concurrency: os.cpus().length + 1,
