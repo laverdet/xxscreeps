@@ -3,7 +3,7 @@ import argv from 'xxscreeps/config/arguments';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
-import { listen } from 'xxscreeps/utility/async';
+import { listen, mustNotReject } from 'xxscreeps/utility/async';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { getProcessorChannel } from 'xxscreeps/engine/processor/model';
 import { getConsoleChannel, getRunnerChannel } from 'xxscreeps/engine/runner/model';
@@ -60,12 +60,10 @@ try {
 		const shutdownUnlisten = serviceChannel.listen(message => {
 			if (message.type === 'mainDisconnected') {
 				shutdownUnlisten();
-				Promise.all([
+				mustNotReject(async() => void await Promise.all([
 					getProcessorChannel(shard).publish({ type: 'shutdown' }),
 					getRunnerChannel(shard).publish({ type: 'shutdown' }),
-				]).then(
-					() => console.log('Engine shut down successfully'),
-					console.error);
+				]));
 			}
 		});
 		serviceChannel.publish({ type: 'shutdown' }).catch(console.error);
@@ -76,18 +74,25 @@ try {
 	if (singleThreaded) {
 		const backend = import('xxscreeps/backend/server');
 		const processor = import('./processor');
-		const runner = import('./runner');
-		await Promise.all([ main, backend, processor, runner ]);
+		const runner = import('./runner')
+		const services = Promise.all([ main, processor, runner ]);
+		await Promise.all([
+			services.then(() => console.log('💾 Engine shut down successfully.')),
+			backend,
+		]);
 	} else {
 		const backend = await Worker.create('xxscreeps/backend/server');
 		const processors = await Promise.all(Fn.map(Fn.range(processorWorkers), () =>
 			Worker.create('xxscreeps/engine/service/processor')));
 		const runners = await Promise.all(Fn.map(Fn.range(runnerWorkers), () =>
 			Worker.create('xxscreeps/engine/service/runner')));
-		await Promise.all([
+		const services = Promise.all([
 			main,
 			Promise.all(processors.map(worker => waitForWorker(worker))),
 			Promise.all(runners.map(worker => waitForWorker(worker))),
+		]);
+		await Promise.all([
+			services.then(() => console.log('💾 Engine shut down successfully.')),
 			waitForWorker(backend),
 		]);
 	}

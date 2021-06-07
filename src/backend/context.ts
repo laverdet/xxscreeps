@@ -24,6 +24,7 @@ export class BackendContext {
 
 	async disconnect() {
 		await this.gameMutex.disconnect();
+		this.db.disconnect();
 		this.shard.disconnect();
 	}
 }

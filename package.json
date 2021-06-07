@@ -65,7 +65,7 @@
     "webpack": "^5.37.1"
   },
   "devDependencies": {
-    "@laverdet/eslint-config": "github:laverdet/eslint-config#2549f758f69f2ee625edb40589329802a5682db5",
+    "@laverdet/eslint-config": "github:laverdet/eslint-config#a12fa0a782425b584992fc937eb0db43642b560a",
     "@screeps/launcher": "^4.1.0",
     "@typescript-eslint/eslint-plugin": "^4.24.0",
     "@typescript-eslint/parser": "^4.24.0",
