@@ -83,6 +83,9 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 		// Set up publisher
 		const { listen, publish } = makeEventPublisher<Parameters<RoomListener>>(() => effect());
 		const timer = throttle(() => {
+			if (state.time === time) {
+				return;
+			}
 			mustNotReject(async() => {
 				if (didUpdate) {
 					state.room = await shard.loadRoom(roomName, time);
