@@ -136,6 +136,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'controller': {
 				instance['#level'] = object.level ?? 0;
 				instance['#safeModeUntil'] = object.safeMode;
+				instance['#user'] = object.user ?? null;
 
 				const controller = new StructureController;
 				withStructure(object, controller);
