@@ -12,7 +12,7 @@ const getPathFinderModule = runOnce(() => {
 });
 
 const getRuntimeSource = runOnce(() => {
-	const path = 'xxscreeps/driver/sandbox/isolated/runtime.js';
+	const path = 'xxscreeps/driver/sandbox/isolated/runtime';
 	return compileRuntimeSource({
 		alias: {
 			'xxscreeps/driver/private/symbol': 'xxscreeps/driver/private/symbol/isolated-vm',

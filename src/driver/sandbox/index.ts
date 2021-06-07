@@ -17,6 +17,9 @@ export function compileRuntimeSource(transform: Transform, path = 'xxscreeps/dri
 		configTransform,
 		schemaTransform,
 		{
+			alias: {
+				'xxscreeps/engine/processor': 'xxscreeps/driver/runtime/tripwire',
+			},
 			babel: Privates,
 			externals: ({ context, request }) =>
 				request?.endsWith('.node') ?
