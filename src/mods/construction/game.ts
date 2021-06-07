@@ -37,7 +37,15 @@ const buildEventSchema = registerVariant('Room.eventLog', struct({
 	amount: 'int32',
 	energySpent: 'int32',
 }));
+const repairEventSchema = registerVariant('Room.eventLog', struct({
+	...variant(C.EVENT_REPAIR),
+	event: constant(C.EVENT_REPAIR),
+	objectId: Id.format,
+	targetId: Id.format,
+	amount: 'int32',
+	energySpent: 'int32',
+}));
 
 declare module 'xxscreeps/game/room' {
-	interface Schema { construction: [ typeof siteSchema, typeof buildEventSchema ] }
+	interface Schema { construction: [ typeof siteSchema, typeof buildEventSchema, typeof repairEventSchema ] }
 }

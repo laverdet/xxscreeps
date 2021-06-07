@@ -61,7 +61,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		}
 	}
 
-	['#captureDamage'](power: number, _type: number, _source?: RoomObject) {
+	['#captureDamage'](power: number, _type: number, _source: RoomObject | null) {
 		return power;
 	}
 

@@ -20,6 +20,13 @@ export function checkRange(actor: RoomObject, target: RoomObject, range: number)
 	return C.ERR_NOT_IN_RANGE;
 }
 
+export function checkSameRoom(object1: RoomObject, object2: RoomObject) {
+	if (object1.room === object2.room) {
+		return C.OK;
+	}
+	return C.ERR_NOT_IN_RANGE;
+}
+
 export function checkSafeMode<Error extends number>(room: Room, error: Error) {
 	if (room.controller?.safeMode && !room.controller.my) {
 		return error;

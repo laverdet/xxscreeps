@@ -101,7 +101,7 @@ Creep.prototype['#applyDamage'] = function(this: Creep, power, type, source) {
 	) {
 		const counterAttack = calculatePower(this, C.ATTACK, C.ATTACK_POWER);
 		if (counterAttack) {
-			const damage = captureDamage(source, counterAttack, C.EVENT_ATTACK_TYPE_HIT_BACK);
+			const damage = captureDamage(source, counterAttack, C.EVENT_ATTACK_TYPE_HIT_BACK, null);
 			if (damage > 0) {
 				source['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_HIT_BACK, this);
 			}
@@ -156,7 +156,10 @@ export function checkRangedHeal(creep: Creep, target: Creep) {
 	);
 }
 
-function checkDestructible(target: Creep | Structure) {
+export function checkDestructible(target: Creep | Structure) {
+	if (target instanceof Creep && target.spawning) {
+		return C.ERR_INVALID_TARGET;
+	}
 	return target.hits === undefined ? C.ERR_INVALID_TARGET : C.OK;
 }
 
@@ -164,7 +167,7 @@ function checkDestructible(target: Creep | Structure) {
  * Invokes damage capture callback from top to bottom and returns the remaining power which should
  * be applied to the target.
  */
-export function captureDamage(target: RoomObject, initialPower: number, type: number, source?: RoomObject) {
+export function captureDamage(target: RoomObject, initialPower: number, type: number, source: RoomObject | null) {
 	// Sort objects by layer
 	const objects = [ ...Fn.reject(target.room['#lookAt'](target.pos),
 		object => object['#layer'] === undefined || object.hits === undefined) ];

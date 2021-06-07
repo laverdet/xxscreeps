@@ -7,7 +7,7 @@ import { SingleStore, calculateChecked, checkHasCapacity, checkHasResource, sing
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
-import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
+import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks';
 
 export const format = () => compose(shape, StructureLink);
 const shape = declare('Link', struct(ownedStructureFormat, {
@@ -69,6 +69,7 @@ export function checkTransferEnergy(link: StructureLink, target: StructureLink, 
 		() => checkTarget(target, StructureLink),
 		() => checkHasResource(link, C.RESOURCE_ENERGY, amount),
 		() => checkHasCapacity(target, C.RESOURCE_ENERGY, amount),
+		() => checkSameRoom(link, target),
 		() => {
 			if (link.cooldown) {
 				return C.ERR_TIRED;

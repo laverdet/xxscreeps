@@ -18,7 +18,7 @@ const intents = [
 		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkAttack(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.ATTACK, C.ATTACK_POWER);
-			const damage = captureDamage(target, power, C.EVENT_ATTACK_TYPE_MELEE);
+			const damage = captureDamage(target, power, C.EVENT_ATTACK_TYPE_MELEE, creep);
 			if (damage > 0) {
 				target['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_MELEE, creep);
 				appendEventLog(target.room, {
@@ -38,7 +38,7 @@ const intents = [
 		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkRangedAttack(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER);
-			const damage = captureDamage(target, power, C.RANGED_ATTACK_POWER);
+			const damage = captureDamage(target, power, C.RANGED_ATTACK_POWER, creep);
 			if (damage > 0) {
 				target['#applyDamage'](damage, C.RANGED_ATTACK_POWER, creep);
 				appendEventLog(target.room, {
@@ -112,6 +112,7 @@ const intents = [
 				amount: power,
 			});
 			saveAction(creep, 'heal', target.pos);
+			saveAction(target, 'healed', creep.pos);
 			context.didUpdate();
 		}
 	}),
@@ -129,6 +130,7 @@ const intents = [
 				amount: power,
 			});
 			saveAction(creep, 'rangedHeal', target.pos);
+			saveAction(target, 'healed', creep.pos);
 			context.didUpdate();
 		}
 	}),
