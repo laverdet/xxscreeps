@@ -2,6 +2,7 @@
 #include <nan.h>
 #include <array>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <unordered_set>
