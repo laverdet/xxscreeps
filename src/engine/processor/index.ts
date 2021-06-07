@@ -1,26 +1,30 @@
-import type { CounterExtract, Dictionary, Implementation, UnwrapArray } from 'xxscreeps/utility/types';
+import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/utility/types';
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { ObjectProcessorContext } from './room';
-import { PreTick, Processors, Tick } from './symbols';
+import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbols';
+import { getOrSet } from 'xxscreeps/utility/utility';
 export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room';
 export { registerRoomTickProcessor } from './room';
 
-// `RoomObject` type definitions
-type IntentProcessorHolder = Dictionary<(receiver: any, context: ObjectProcessorContext, ...data: any) => void>;
-type IntentReceiverInstance = {
-	[Processors]?: IntentProcessorHolder;
+// Intent type definitions
+type IntentProcessor = (receiver: any, context: ObjectProcessorContext, ...data: any) => void;
+export type IntentProcessorInfo = {
+	constraints: {
+		after: string[];
+		before: string[];
+		type: string[];
+	};
+	intent: string;
+	mask: number;
+	priority: number;
+	process: IntentProcessor;
+	receiver: abstract new(...args: any[]) => any;
 };
 type TickProcessor<Type = any> = (receiver: Type, context: ObjectProcessorContext) => void;
-declare module 'xxscreeps/game/room/room' {
-	interface Room {
-		[Processors]?: IntentProcessorHolder;
-	}
-}
 declare module 'xxscreeps/game/object' {
 	interface RoomObject {
 		[PreTick]?: TickProcessor;
-		[Processors]?: IntentProcessorHolder;
 		[Tick]?: TickProcessor;
 	}
 }
@@ -33,13 +37,31 @@ type RemapNull<Type> = Type extends any[] ? {
 } : NullToUndefined<Type>;
 
 // Register RoomObject intent processor
-export function registerIntentProcessor<Type extends IntentReceiverInstance, Intent extends string, Data extends AllowedTypes[]>(
-	receiver: Implementation<Type>,
+export function registerIntentProcessor<Type extends {}, Intent extends string, Data extends AllowedTypes[]>(
+	receiver: abstract new(...args: any[]) => Type,
 	intent: Intent,
+	constraints: {
+		after?: string | string[];
+		before?: string | string[];
+		type?: string | string[];
+	},
 	process: (receiver: Type, context: ObjectProcessorContext, ...data: Data) => void,
 ): void | { type: Type; intent: Intent; data: RemapNull<Data> } {
-	const processors = receiver.prototype[Processors] = receiver.prototype[Processors] ?? {};
-	processors[intent] = process;
+	const toArray = (constraint: string | string[] | undefined) =>
+		constraint === undefined ? [] :
+		typeof constraint === 'string' ? [ constraint ] : constraint;
+	intentProcessors.push({
+		constraints: {
+			after: toArray(constraints.after),
+			before: toArray(constraints.before),
+			type: toArray(constraints.type),
+		},
+		intent,
+		mask: 0,
+		priority: 0,
+		process,
+		receiver,
+	});
 }
 export interface Intent {}
 
@@ -69,4 +91,72 @@ export function registerObjectTickProcessor<Type extends RoomObject>(
 	receiver: Implementation<Type>, fn: TickProcessor<Type>,
 ) {
 	receiver.prototype[Tick] = fn;
+}
+
+export function initializeIntentConstraints() {
+	const cmp = (left: IntentProcessorInfo, right: IntentProcessorInfo) => {
+		if (
+			left.receiver !== right.receiver &&
+			!(left.receiver.prototype instanceof right.receiver) &&
+			!(right.receiver.prototype instanceof left.receiver)
+		) {
+			// Intent between unrelated receivers
+			return 0;
+		}
+		if (
+			left.constraints.before.includes(right.intent) ||
+			right.constraints.after.includes(left.intent)
+		) {
+			return -1;
+		} else if (
+			left.constraints.after.includes(right.intent) ||
+			right.constraints.before.includes(left.intent)
+		) {
+			return 1;
+		}
+		// No relation
+		return 0;
+	};
+	const swap = (ii: number, jj: number) => {
+		const tmp = intentProcessors[ii];
+		intentProcessors[ii] = intentProcessors[jj];
+		intentProcessors[jj] = tmp;
+	};
+	const masks = new Map<string, number>();
+	const intentProcessorsByName = new Map<string, IntentProcessorInfo[]>();
+
+	// Most intents are not directly comparable with each other, so a modified selection sort is
+	// implemented to rank them by relative priority.
+	for (let ii = 0; ii < intentProcessors.length; ++ii) {
+		let min = ii;
+		let end = intentProcessors.length;
+		loop: while (true) {
+			for (let jj = ii + 1; jj < end; ++jj) {
+				if (cmp(intentProcessors[min], intentProcessors[jj]) > 0) {
+					swap(min, --end);
+					min = jj;
+					continue loop;
+				}
+			}
+			break;
+		}
+		swap(min, ii);
+		// Add in calculated data, once per element
+		const info = intentProcessors[ii];
+		info.mask = info.constraints.type.reduce(
+			(mask, type) => mask | getOrSet(masks, type, () => 2 ** masks.size),
+			0);
+		info.priority = ii;
+		getOrSet(intentProcessorsByName, info.intent, () => []).push(info);
+	}
+
+	// Generate getters
+	for (const [ intent, infos ] of intentProcessorsByName) {
+		const first = infos[0];
+		intentProcessorGetters.set(intent, infos.length === 0 ?
+			// If there is only one intent with this name the getter is simple
+			() => first :
+			// Some unrelated intents share names, but not receivers
+			instance => infos.find(info => instance instanceof info.receiver)!);
+	}
 }

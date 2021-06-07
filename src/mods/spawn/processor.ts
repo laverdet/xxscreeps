@@ -17,7 +17,7 @@ declare module 'xxscreeps/engine/processor' {
 	interface Intent { spawn: typeof intents }
 }
 const intents = [
-	registerIntentProcessor(StructureSpawn, 'recycleCreep', (spawn, context, id: string) => {
+	registerIntentProcessor(StructureSpawn, 'recycleCreep', {}, (spawn, context, id: string) => {
 		const creep = Game.getObjectById<Creep>(id)!;
 		if (checkRecycleCreep(spawn, creep) === C.OK) {
 			// TODO: This stuff
@@ -25,7 +25,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(StructureSpawn, 'spawn', (
+	registerIntentProcessor(StructureSpawn, 'spawn', {}, (
 		spawn, context,
 		body: PartType[],
 		name: string,

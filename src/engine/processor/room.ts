@@ -8,7 +8,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/engine/processor/movement';
 import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { flushUsers } from 'xxscreeps/game/room/room';
-import { PreTick, Processors, Tick, roomTickProcessors } from './symbols';
+import { PreTick, Tick, intentProcessorGetters, roomTickProcessors } from './symbols';
 
 import 'xxscreeps/config/mods/import/game';
 import 'xxscreeps/config/mods/import/processor';
@@ -101,12 +101,11 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 
 					// Process intents for room (createConstructionSite)
 					const roomIntents = intents.local;
-					const processors = this.room[Processors]!;
 					for (const intent in roomIntents) {
-						const processor = processors[intent];
+						const processor = intentProcessorGetters.get(intent)?.(this.room);
 						if (processor) {
 							for (const args of roomIntents[intent as keyof typeof roomIntents]!) {
-								processor(this.room, this, ...args);
+								processor.process(this.room, this, ...args);
 							}
 						}
 					}
@@ -116,8 +115,20 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 					for (const id in objectIntents) {
 						const object = Game.getObjectById(id);
 						if (object) {
-							for (const [ intent, args ] of Object.entries(objectIntents[id]!)) {
-								object[Processors]![intent]?.(object, this, ...args);
+							let mask = 0;
+							const entries = [ ...Fn.filter(
+								Fn.map(Object.entries(objectIntents[id]!), ([ intent, args ]) => ({
+									intent,
+									args,
+									processor: intentProcessorGetters.get(intent)?.(object),
+								})),
+								info => info.processor) ];
+							entries.sort((left, right) => left.processor!.priority - right.processor!.priority);
+							for (const info of entries) {
+								if ((mask & info.processor!.mask) === 0) {
+									mask |= info.processor!.mask;
+									info.processor?.process(object, this, ...info.args);
+								}
 							}
 						}
 					}
@@ -148,10 +159,10 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 		const intentPayloads = await acquireFinalIntentsForRoom(this.shard, this.room.name, this.time);
 		if (intentPayloads.length) {
 			runWithState(this.state, () => {
-				const processors = this.room[Processors]!;
 				for (const intents of intentPayloads) {
 					for (const { intent, args } of intents) {
-						processors[intent]?.(this.room, this, ...args);
+						const processor = intentProcessorGetters.get(intent)?.(this.room);
+						processor!.process(this.room, this, ...args);
 					}
 				}
 			});

@@ -16,7 +16,7 @@ function calculateEfficiency(tower: StructureTower, target: Creep | Structure) {
 }
 
 const intents = [
-	registerIntentProcessor(StructureTower, 'attack', (tower, context, id: string) => {
+	registerIntentProcessor(StructureTower, 'attack', { type: 'primary' }, (tower, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkTower(tower, target, Creep) === C.OK) {
 			tower.store['#subtract'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
@@ -37,7 +37,10 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(StructureTower, 'heal', (tower, context, id: string) => {
+	registerIntentProcessor(StructureTower, 'heal', {
+		before: 'repair',
+		type: 'primary',
+	}, (tower, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkTower(tower, target, Creep) === C.OK) {
 			tower.store['#subtract'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
@@ -56,7 +59,10 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(StructureTower, 'repair', (tower, context, id: string) => {
+	registerIntentProcessor(StructureTower, 'repair', {
+		before: 'attack',
+		type: 'primary',
+	}, (tower, context, id: string) => {
 		const target = Game.getObjectById<Structure>(id)!;
 		if (checkTower(tower, target, Structure) === C.OK) {
 			tower.store['#subtract'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
@@ -74,7 +80,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(StructureRampart, 'setPublic', (rampart, context, isPublic: boolean) => {
+	registerIntentProcessor(StructureRampart, 'setPublic', {}, (rampart, context, isPublic: boolean) => {
 		if (rampart['#user'] === me) {
 			rampart.isPublic = Boolean(isPublic);
 			context.didUpdate();

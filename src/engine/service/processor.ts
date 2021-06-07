@@ -5,6 +5,7 @@ import {
 	getProcessorChannel, processRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships,
 } from 'xxscreeps/engine/processor/model';
 import { Database, Shard } from 'xxscreeps/engine/db';
+import { initializeIntentConstraints } from 'xxscreeps/engine/processor';
 import { RoomProcessorContext } from 'xxscreeps/engine/processor/room';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async';
 import { getServiceChannel } from '.';
@@ -19,6 +20,7 @@ const db = await Database.connect();
 const shard = await Shard.connect(db, 'shard0');
 const world = await shard.loadWorld();
 const processorSubscription = await getProcessorChannel(shard).subscribe();
+initializeIntentConstraints();
 
 try {
 

@@ -18,7 +18,7 @@ declare module 'xxscreeps/engine/processor' {
 }
 
 const intents = [
-	registerIntentProcessor(Room, 'createConstructionSite',
+	registerIntentProcessor(Room, 'createConstructionSite', {},
 		(room, context, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
 			const pos = new RoomPosition(xx, yy, room.name);
 			if (checkCreateConstructionSite(room, pos, structureType) === C.OK) {
@@ -28,7 +28,7 @@ const intents = [
 			}
 		}),
 
-	registerIntentProcessor(ConstructionSite, 'remove', (site, context) => {
+	registerIntentProcessor(ConstructionSite, 'remove', {}, (site, context) => {
 		if (checkRemove(site) === C.OK) {
 			Resource.drop(site.pos, C.RESOURCE_ENERGY, site.progress / 2);
 			site.room['#removeObject'](site);
@@ -36,7 +36,10 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'build', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'build', {
+		before: [ 'attack', 'harvest', 'rangedMassAttack' ],
+		type: [ 'primary', 'laser' ],
+	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<ConstructionSite>(id)!;
 		if (checkBuild(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.WORK, C.BUILD_POWER);
@@ -54,7 +57,10 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'dismantle', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'dismantle', {
+		before: 'repair',
+		type: 'primary',
+	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<DestructibleStructure>(id)!;
 		if (checkDismantle(creep, target) === C.OK) {
 			const effect = Math.min(calculatePower(creep, C.WORK, C.DISMANTLE_POWER), target.hits);
@@ -73,7 +79,10 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'repair', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'repair', {
+		before: [ 'build', 'rangedMassAttack' ],
+		type: [ 'primary', 'laser' ],
+	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<DestructibleStructure>(id)!;
 		if (checkRepair(creep, target) === C.OK) {
 			const effect = Math.min(

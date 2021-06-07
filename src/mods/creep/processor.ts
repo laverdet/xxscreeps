@@ -23,7 +23,7 @@ declare module 'xxscreeps/engine/processor' {
 	interface Intent { creep: typeof intents }
 }
 const intents = [
-	registerIntentProcessor(Creep, 'drop', (creep, context, resourceType: ResourceType, amount: number) => {
+	registerIntentProcessor(Creep, 'drop', { before: 'transfer' }, (creep, context, resourceType: ResourceType, amount: number) => {
 		if (CreepLib.checkDrop(creep, resourceType, amount) === C.OK) {
 			creep.store['#subtract'](resourceType, amount);
 			ResourceIntent.drop(creep.pos, resourceType, amount);
@@ -31,7 +31,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'move', (creep, context, direction: Direction) => {
+	registerIntentProcessor(Creep, 'move', {}, (creep, context, direction: Direction) => {
 		if (CreepLib.checkMove(creep, direction) === C.OK) {
 			const power = CreepLib.calculateWeight(creep);
 			Movement.add(creep, power, direction);
@@ -39,7 +39,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'pickup', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'pickup', {}, (creep, context, id: string) => {
 		const resource = Game.getObjectById<Resource>(id)!;
 		if (CreepLib.checkPickup(creep, resource) === C.OK) {
 			const amount = Math.min(creep.store.getFreeCapacity(resource.resourceType), resource.amount);
@@ -49,7 +49,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'say', (creep, context, message: string, isPublic: boolean) => {
+	registerIntentProcessor(Creep, 'say', {}, (creep, context, message: string, isPublic: boolean) => {
 		if (CreepLib.checkCommon(creep) === C.OK) {
 			creep['#saying'] = {
 				isPublic,
@@ -60,14 +60,14 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'suicide', (creep, context) => {
+	registerIntentProcessor(Creep, 'suicide', {}, (creep, context) => {
 		if (creep.my) {
 			creep.room['#removeObject'](creep);
 			context.didUpdate();
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'transfer', (creep, context, id: string, resourceType: ResourceType, amount: number) => {
+	registerIntentProcessor(Creep, 'transfer', { before: 'withdraw' }, (creep, context, id: string, resourceType: ResourceType, amount: number) => {
 		const target = Game.getObjectById<RoomObject & WithStore>(id)!;
 		if (CreepLib.checkTransfer(creep, target, resourceType, amount) === C.OK) {
 			creep.store['#subtract'](resourceType, amount);
@@ -76,7 +76,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'withdraw', (creep, context, id: string, resourceType: ResourceType, amount: number) => {
+	registerIntentProcessor(Creep, 'withdraw', { before: 'pickup' }, (creep, context, id: string, resourceType: ResourceType, amount: number) => {
 		const target = Game.getObjectById<Structure & WithStore>(id)!;
 		if (CreepLib.checkWithdraw(creep, target, resourceType, amount) === C.OK) {
 			target.store['#subtract'](resourceType, amount);

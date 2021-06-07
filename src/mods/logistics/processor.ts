@@ -9,7 +9,7 @@ declare module 'xxscreeps/engine/processor' {
 	interface Intent { logistics: typeof intents }
 }
 const intents = [
-	registerIntentProcessor(StructureLink, 'transferEnergy', (link, context, id: string, amount: number) => {
+	registerIntentProcessor(StructureLink, 'transferEnergy', {}, (link, context, id: string, amount: number) => {
 		const target = Game.getObjectById<StructureLink>(id)!;
 		if (checkTransferEnergy(link, target, amount) === C.OK) {
 			link.store['#subtract'](C.RESOURCE_ENERGY, amount);

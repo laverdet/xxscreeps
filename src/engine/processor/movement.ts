@@ -16,7 +16,7 @@ declare module '.' {
 		movement: typeof intents;
 	}
 }
-const intents = registerIntentProcessor(Room, 'import', (room, context, objectPayload: string) => {
+const intents = registerIntentProcessor(Room, 'import', {}, (room, context, objectPayload: string) => {
 	if (me !== '') {
 		return;
 	}

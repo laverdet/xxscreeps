@@ -74,7 +74,7 @@ try {
 	if (singleThreaded) {
 		const backend = import('xxscreeps/backend/server');
 		const processor = import('./processor');
-		const runner = import('./runner')
+		const runner = import('./runner');
 		const services = Promise.all([ main, processor, runner ]);
 		await Promise.all([
 			services.then(() => console.log('💾 Engine shut down successfully.')),

@@ -6,7 +6,7 @@ declare module 'xxscreeps/engine/processor' {
 	interface Intent { structure: typeof intents }
 }
 const intents = [
-	registerIntentProcessor(Structure, 'destroyStructure', (structure, context) => {
+	registerIntentProcessor(Structure, 'destroyStructure', {}, (structure, context) => {
 		if (checkDestroy(structure) === C.OK) {
 			structure.room['#removeObject'](structure);
 			context.didUpdate();

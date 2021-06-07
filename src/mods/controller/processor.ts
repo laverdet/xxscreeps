@@ -20,7 +20,10 @@ declare module 'xxscreeps/engine/processor' {
 	interface Intent { controller: typeof intents }
 }
 const intents = [
-	registerIntentProcessor(Creep, 'attackController', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'attackController', {
+		before: [ 'dismantle', 'attack', 'harvest' ],
+		type: 'primary',
+	}, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkAttackController(creep, controller) === C.OK) {
 			const effect = creep.getActiveBodyparts(C.CLAIM);
@@ -37,7 +40,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'claimController', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'claimController', { before: 'reserveController' }, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkClaimController(creep, controller) === C.OK) {
 			console.error('TODO: claimController');
@@ -47,7 +50,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'generateSafeMode', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'generateSafeMode', {}, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkGenerateSafeMode(creep, controller) === C.OK) {
 			creep.store[C.RESOURCE_GHODIUM]! -= C.SAFE_MODE_COST;
@@ -57,7 +60,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'reserveController', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'reserveController', {}, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkReserveController(creep, controller) === C.OK) {
 			controller['#reservationTime'] = Math.min(
@@ -70,7 +73,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'signController', (creep, context, id: string, message: string) => {
+	registerIntentProcessor(Creep, 'signController', {}, (creep, context, id: string, message: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkSignController(creep, controller) === C.OK) {
 			controller.room['#sign'] = message === '' ? undefined : {
@@ -84,7 +87,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'upgradeController', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'upgradeController', { after: 'build' }, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkUpgradeController(creep, controller) === C.OK) {
 			// Calculate power, deduct energy
@@ -118,7 +121,7 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(StructureController, 'activateSafeMode', (controller, context) => {
+	registerIntentProcessor(StructureController, 'activateSafeMode', {}, (controller, context) => {
 		if (checkActivateSafeMode(controller) === C.OK) {
 			--controller.safeModeAvailable;
 			controller.room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION - 1;

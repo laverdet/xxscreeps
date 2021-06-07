@@ -14,7 +14,10 @@ declare module 'xxscreeps/engine/processor' {
 	interface Intent { combat: typeof intents }
 }
 const intents = [
-	registerIntentProcessor(Creep, 'attack', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'attack', {
+		before: 'harvest',
+		type: 'primary',
+	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkAttack(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.ATTACK, C.ATTACK_POWER);
@@ -34,7 +37,10 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'rangedAttack', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'rangedAttack', {
+		after: 'build',
+		type: 'laser',
+	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkRangedAttack(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER);
@@ -54,7 +60,10 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'rangedMassAttack', (creep, context) => {
+	registerIntentProcessor(Creep, 'rangedMassAttack', {
+		before: 'rangedAttack',
+		type: 'laser',
+	}, (creep, context) => {
 		if (checkRangedMassAttack(creep) === C.OK) {
 			const area = mapArea(
 				Math.max(0, creep.pos.y - 3),
@@ -99,7 +108,10 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'heal', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'heal', {
+		before: [ 'attack', 'rangedHeal' ],
+		type: 'primary',
+	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkHeal(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.HEAL, C.HEAL_POWER);
@@ -117,7 +129,11 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'rangedHeal', (creep, context, id: string) => {
+	registerIntentProcessor(Creep, 'rangedHeal', {
+		after: 'heal',
+		before: [ 'attackController', 'rangedMassAttack', 'repair' ],
+		type: [ 'primary', 'laser' ],
+	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkRangedHeal(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.HEAL, C.RANGED_HEAL_POWER);
