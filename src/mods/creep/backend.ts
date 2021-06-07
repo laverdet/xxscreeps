@@ -26,7 +26,7 @@ bindRenderer(Creep, (creep, next, previousTime) => {
 		name: creep.name,
 		body: creep.body,
 		hits: creep.hits,
-		hitsMax: 100,
+		hitsMax: creep.hitsMax,
 		spawning: creep.spawning,
 		fatigue: creep.fatigue,
 		ageTime: creep['#ageTime'],

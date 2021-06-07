@@ -25,7 +25,7 @@ type PositionFindType<Type> =
 	Type extends FindConstants ? FindType<Type> :
 	never;
 
-export type PositionParameter = [ x: number, y: number ] | [ position: RoomPosition ] | [ target: RoomObject ];
+export type PositionParameter = [ position: RoomPosition ] | [ target: RoomObject ] | [ x: number, y: number ];
 
 export function format() {
 	return declare('RoomPosition', compose('int32', {

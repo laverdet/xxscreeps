@@ -179,7 +179,7 @@ extend(Room, {
 	},
 });
 
-function *mapArea<Type>(top: number, left: number, bottom: number, right: number, fn: (xx: number, yy: number) => Type): Iterable<Type> {
+export function *mapArea<Type>(top: number, left: number, bottom: number, right: number, fn: (xx: number, yy: number) => Type): Iterable<Type> {
 	for (let yy = top; yy <= bottom; ++yy) {
 		for (let xx = left; xx <= right; ++xx) {
 			yield fn(xx, yy);

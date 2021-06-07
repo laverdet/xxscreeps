@@ -8,7 +8,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
-import * as RoomObjectLib from 'xxscreeps/game/object';
+import { actionLogFormat, create as createObject, format as objectFormat, saveAction } from 'xxscreeps/game/object';
 import { Game, intents, me, userInfo } from 'xxscreeps/game';
 import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
@@ -21,6 +21,7 @@ import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/re
 import { RoomObject } from 'xxscreeps/game/object';
 import { Structure } from 'xxscreeps/mods/structure/structure';
 import { Room } from 'xxscreeps/game/room';
+import { appendEventLog } from 'xxscreeps/game/room/event-log';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 
@@ -32,7 +33,7 @@ type MoveToOptions = {
 };
 
 export const format = declare('Creep', () => compose(shape, Creep));
-const shape = struct(RoomObjectLib.format, {
+const shape = struct(objectFormat, {
 	...variant('creep'),
 	body: vector(struct({
 		boost: optionalResourceEnumFormat,
@@ -43,7 +44,7 @@ const shape = struct(RoomObjectLib.format, {
 	hits: 'int32',
 	name: 'string',
 	store: openStoreFormat,
-	'#actionLog': RoomObjectLib.actionLogFormat,
+	'#actionLog': actionLogFormat,
 	'#ageTime': 'int32',
 	'#saying': optional(struct({
 		isPublic: 'bool',
@@ -56,7 +57,8 @@ const shape = struct(RoomObjectLib.format, {
 export class Creep extends withOverlay(RoomObject, shape) {
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
-	@enumerable get hitsMax() { return this.body.length * 100 }
+	@enumerable override get hitsMax() { return this.body.length * 100 }
+
 	get memory() {
 		const memory = Memory.get();
 		const creeps = memory.creeps ?? (memory.creeps = {});
@@ -66,7 +68,10 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	@enumerable get owner() { return userInfo.get(this['#user']) }
 	@enumerable get spawning() { return this['#ageTime'] === 0 }
 	@enumerable get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined }
-	override get my() { return this['#user'] === me }
+	@enumerable override get my() { return this['#user'] === me }
+
+	/** @internal */
+	declare tickHitsDelta: number | undefined;
 	override get ['#hasIntent']() { return true }
 	override get ['#lookType']() { return C.LOOK_CREEPS }
 	override get ['#providesVision']() { return true }
@@ -83,6 +88,23 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 	override ['#addToMyGame'](game: GameConstructor) {
 		game.creeps[this.name] = this;
+	}
+
+	override ['#applyDamage'](power: number, type: number, source?: RoomObject) {
+		if (this.spawning) {
+			return;
+		}
+		this.tickHitsDelta = (this.tickHitsDelta ?? 0) - power;
+		if (source) {
+			appendEventLog(this.room, {
+				event: C.EVENT_ATTACK,
+				objectId: source.id,
+				targetId: this.id,
+				attackType: type,
+				damage: power,
+			});
+			saveAction(this, 'attacked', source.pos);
+		}
 	}
 
 	/**
@@ -329,7 +351,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 export function create(pos: RoomPosition, body: PartType[], name: string, owner: string) {
 	const carryCapacity = body.reduce((energy, type) =>
 		type === C.CARRY ? energy + C.CARRY_CAPACITY : energy, 0);
-	const creep = assign(RoomObjectLib.create(new Creep, pos), {
+	const creep = assign(createObject(new Creep, pos), {
 		body: body.map(type => ({ type, hits: 100, boost: undefined })),
 		hits: body.length * 100,
 		fatigue: 0,
@@ -348,8 +370,10 @@ registerObstacleChecker(params => {
 		return object => object instanceof Creep;
 	} else {
 		const safeUser = room.controller['#user'];
-		return object => object instanceof Creep &&
-			(object['#user'] === safeUser || object['#user'] !== user);
+		if (safeUser !== user) {
+			return object => object instanceof Creep;
+		}
+		return object => object instanceof Creep && object['#user'] !== user;
 	}
 });
 
@@ -415,4 +439,20 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 		() => checkHasResource(target, resourceType, amount),
 		() => checkHasCapacity(creep, resourceType, amount),
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
+}
+
+export function calculatePower(creep: Creep, part: PartType, power: number) {
+	return Fn.accumulate(creep.body, bodyPart => {
+		if (bodyPart.type === part && bodyPart.hits > 0) {
+			return power;
+		}
+		return 0;
+	});
+}
+
+export function calculateWeight(creep: Creep) {
+	let weight = Fn.accumulate(creep.body, part =>
+		part.type === C.CARRY || part.type === C.MOVE ? 0 : 1);
+	weight += Math.ceil(creep.carry.getUsedCapacity() / C.CARRY_CAPACITY);
+	return weight;
 }

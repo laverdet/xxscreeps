@@ -22,8 +22,8 @@ const shape = () => struct(RoomObject.format, {
 });
 
 export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) {
-	override get my() { return this['#user'] === me }
 	override get ['#lookType']() { return C.LOOK_CONSTRUCTION_SITES }
+	@enumerable override get my() { return this['#user'] === me }
 	@enumerable get owner() { return userInfo.get(this['#user']) }
 	@enumerable get progressTotal() { return C.CONSTRUCTION_COST[this.structureType] }
 

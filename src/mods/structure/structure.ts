@@ -37,13 +37,13 @@ export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape
 	/**
 	 * The current amount of hit points of the structure.
 	 */
-	@enumerable get hits(): number | undefined { return undefined }
-	set hits(hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure') }
+	@enumerable override get hits(): number | undefined { return undefined }
+	override set hits(hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure') }
 
 	/**
 	 * The total amount of hit points of the structure.
 	 */
-	@enumerable get hitsMax(): number | undefined { return undefined }
+	@enumerable override get hitsMax(): number | undefined { return undefined }
 
 	/**
 	 * Destroy this structure immediately.
@@ -83,7 +83,7 @@ export abstract class OwnedStructure extends withOverlay(Structure, ownedShape) 
 	/**
 	 * Whether this is your own structure.
 	 */
-	override get my() {
+	@enumerable override get my() {
 		const user = this['#user'];
 		return user === null ? undefined : user === me;
 	}

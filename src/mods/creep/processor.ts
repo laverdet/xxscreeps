@@ -1,11 +1,9 @@
 import type { Direction } from 'xxscreeps/game/position';
-import type { PartType } from 'xxscreeps/mods/creep/creep';
 import type { Resource } from 'xxscreeps/mods/resource/resource';
 import type { ResourceType, WithStore } from 'xxscreeps/mods/resource/store';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
 import { Game } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 // eslint-disable-next-line @typescript-eslint/no-duplicate-imports
@@ -35,7 +33,7 @@ const intents = [
 
 	registerIntentProcessor(Creep, 'move', (creep, context, direction: Direction) => {
 		if (CreepLib.checkMove(creep, direction) === C.OK) {
-			const power = calculateWeight(creep);
+			const power = CreepLib.calculateWeight(creep);
 			Movement.add(creep, power, direction);
 			context.didUpdate();
 		}
@@ -108,6 +106,11 @@ registerObjectPreTickProcessor(Creep, (creep, context) => {
 registerObjectTickProcessor(Creep, (creep, context) => {
 
 	// Check creep death
+	if (creep.tickHitsDelta) {
+		creep.hits += creep.tickHitsDelta;
+		creep.tickHitsDelta = 0;
+		context.didUpdate();
+	}
 	if (
 		(Game.time >= creep['#ageTime'] && creep['#ageTime'] !== 0) ||
 		creep.hits <= 0
@@ -144,13 +147,13 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 			}
 		})();
 		// Update fatigue
-		creep.fatigue = Math.max(0, calculateWeight(creep) * fatigue);
+		creep.fatigue = Math.max(0, CreepLib.calculateWeight(creep) * fatigue);
 		context.didUpdate();
 	}
 
 	if (creep.fatigue > 0) {
 		// Reduce fatigue
-		creep.fatigue -= Math.min(creep.fatigue, calculatePower(creep, C.MOVE, 2));
+		creep.fatigue -= Math.min(creep.fatigue, CreepLib.calculatePower(creep, C.MOVE, 2));
 		context.didUpdate();
 	}
 
@@ -181,19 +184,3 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		context.wakeAt(creep['#ageTime']);
 	}
 });
-
-export function calculatePower(creep: Creep, part: PartType, power: number) {
-	return Fn.accumulate(creep.body, bodyPart => {
-		if (bodyPart.type === part && bodyPart.hits > 0) {
-			return power;
-		}
-		return 0;
-	});
-}
-
-export function calculateWeight(creep: Creep) {
-	let weight = Fn.accumulate(creep.body, part =>
-		part.type === C.CARRY || part.type === C.MOVE ? 0 : 1);
-	weight += Math.ceil(creep.carry.getUsedCapacity() / C.CARRY_CAPACITY);
-	return weight;
-}

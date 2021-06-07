@@ -4,8 +4,8 @@ import * as Resource from 'xxscreeps/mods/resource/processor/resource';
 import { Game } from 'xxscreeps/game';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
+import { calculatePower } from 'xxscreeps/mods/creep/creep';
 import { Mineral } from './mineral';
 
 registerHarvestProcessor(Mineral, (creep, mineral) => {

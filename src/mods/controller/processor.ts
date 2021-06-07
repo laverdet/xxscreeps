@@ -2,9 +2,8 @@ import * as C from 'xxscreeps/game/constants';
 import * as CreepLib from './creep';
 import { Game } from 'xxscreeps/game';
 import { saveAction } from 'xxscreeps/game/object';
-import { Creep } from 'xxscreeps/mods/creep/creep';
+import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { calculatePower } from 'xxscreeps/mods/creep/processor';
 import { StructureController, checkActivateSafeMode } from './controller';
 
 // Processor methods

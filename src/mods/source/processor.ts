@@ -5,7 +5,7 @@ import * as Resource from 'xxscreeps/mods/resource/processor/resource';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { calculatePower } from 'xxscreeps/mods/creep/processor';
+import { calculatePower } from 'xxscreeps/mods/creep/creep';
 import { Game } from 'xxscreeps/game';
 import { StructureKeeperLair } from './keeper-lair';
 import { Source } from './source';
