@@ -88,17 +88,17 @@ const intents = [
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkUpgradeController(creep, controller) === C.OK) {
 			// Calculate power, deduct energy
-			controller['#upgradePowerThisTick'] ??= 0;
+			controller.upgradePowerThisTick ??= 0;
 			let power = calculatePower(creep, C.WORK, C.UPGRADE_CONTROLLER_POWER);
 			if (controller.level === 8) {
-				power = Math.min(power, C.CONTROLLER_MAX_UPGRADE_PER_TICK - controller['#upgradePowerThisTick']);
+				power = Math.min(power, C.CONTROLLER_MAX_UPGRADE_PER_TICK - controller.upgradePowerThisTick);
 			}
 			const energy = Math.min(power, creep.store.energy);
 			creep.store['#subtract'](C.RESOURCE_ENERGY, energy);
 
 			// Update progress
 			controller['#progress'] += energy;
-			controller['#upgradePowerThisTick'] += energy;
+			controller.upgradePowerThisTick += energy;
 
 			if (controller.level < 8) {
 				const nextLevel = C.CONTROLLER_LEVELS[controller.level]!;
@@ -141,8 +141,8 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			}
 		}
 	} else {
-		const upgradePower = controller['#upgradePowerThisTick'] ?? 0;
-		controller['#upgradePowerThisTick'] = 0;
+		const upgradePower = controller.upgradePowerThisTick ?? 0;
+		controller.upgradePowerThisTick = 0;
 		if (controller['#downgradeTime'] === 0) {
 			controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!;
 			context.didUpdate();

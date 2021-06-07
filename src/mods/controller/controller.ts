@@ -18,7 +18,8 @@ const shape = struct(ownedStructureFormat, {
 });
 
 export class StructureController extends withOverlay(OwnedStructure, shape) {
-	['#upgradePowerThisTick']: number | undefined;
+	/** @internal */
+	declare upgradePowerThisTick?: number;
 	override get hits() { return undefined as never }
 	override get hitsMax() { return undefined as never }
 	@enumerable get level() { return this.room['#level'] }

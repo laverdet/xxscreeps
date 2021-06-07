@@ -50,10 +50,10 @@ export function add(mover: RoomObject, power: number, direction: Direction) {
 }
 
 function remove(mover: RoomObject) {
-	mover['#nextPositionTime'] = -1;
+	mover.nextPositionTime = -1;
 	const blockedMovers = moves.get(toId(mover.pos.x, mover.pos.y));
 	for (const { mover } of blockedMovers ?? []) {
-		if (mover['#nextPositionTime'] === Game.time) {
+		if (mover.nextPositionTime === Game.time) {
 			remove(mover);
 		}
 	}
@@ -70,8 +70,8 @@ export function dispatch(room: Room) {
 		// In the common case where this move isn't contested then finish early
 		if (info.length === 1) {
 			const { mover } = info[0];
-			mover['#nextPosition'] = nextPosition;
-			mover['#nextPositionTime'] = Game.time;
+			mover.nextPosition = nextPosition;
+			mover.nextPositionTime = Game.time;
 			movingObjects.push(mover);
 			continue;
 		}
@@ -91,8 +91,8 @@ export function dispatch(room: Room) {
 			right.movingInto - left.movingInto ||
 			right.power - left.power,
 		)!;
-		mover['#nextPosition'] = nextPosition;
-		mover['#nextPositionTime'] = time;
+		mover.nextPosition = nextPosition;
+		mover.nextPositionTime = time;
 		movingObjects.push(mover);
 	}
 
@@ -103,15 +103,15 @@ export function dispatch(room: Room) {
 	// After conflict resolution check for non-moving-creep obstacles
 	const terrain = room.getTerrain();
 	check: for (const mover of movingObjects) {
-		if (mover['#nextPositionTime'] === time) {
-			const nextPosition = mover['#nextPosition']!;
+		if (mover.nextPositionTime === time) {
+			const nextPosition = mover.nextPosition!;
 			const check = makeObstacleChecker({
 				room,
 				type: mover['#lookType'],
 				user: mover['#user']!,
 			});
 			for (const object of room['#lookAt'](nextPosition)) {
-				if (check(object) && object['#nextPositionTime'] !== time) {
+				if (check(object) && object.nextPositionTime !== time) {
 					remove(mover);
 					continue check;
 				}
@@ -129,8 +129,8 @@ export function dispatch(room: Room) {
 
 export function get(mover: RoomObject) {
 	// Get next position, calculated above
-	if (mover['#nextPositionTime'] === Game.time) {
-		return mover['#nextPosition'];
+	if (mover.nextPositionTime === Game.time) {
+		return mover.nextPosition;
 	}
 }
 

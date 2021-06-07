@@ -24,9 +24,9 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	abstract get ['#lookType'](): string;
 
 	/** @internal */
-	declare ['#nextPosition']?: RoomPosition;
+	declare nextPosition?: RoomPosition;
 	/** @internal */
-	declare ['#nextPositionTime']?: number;
+	declare nextPositionTime?: number;
 
 	/**
 	 * The link to the Room object. May be `undefined` in case if an object is a flag or a construction
