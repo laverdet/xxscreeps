@@ -1,9 +1,10 @@
 import type { Effect, MaybePromise } from 'xxscreeps/utility/types';
 import type { Worker } from 'worker_threads';
 import assert from 'assert';
-import { isMainThread, parentPort } from 'worker_threads';
+import { parentPort } from 'worker_threads';
 import { Deferred } from 'xxscreeps/utility/async';
 import { staticCast } from 'xxscreeps/utility/utility';
+import { isTopThread } from 'xxscreeps/utility/worker';
 
 /**
  * Responders generalizes the client/server request/response model for inter-thread/process
@@ -182,7 +183,7 @@ export async function connect<
 	hostConstructor: new(name: string, instance: Type) => Host,
 	create: () => Type | Promise<Type>,
 ): Promise<[ Effect, Host | Client ]> {
-	if (isMainThread) {
+	if (isTopThread) {
 		const responder = responderHostsByName.get(name);
 		if (responder) {
 			// Connecting to a responder from the parent just returns the host object

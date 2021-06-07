@@ -1,7 +1,7 @@
 import type { Schema } from './schema';
 import path from 'path';
 import jsYaml from 'js-yaml';
-import { isMainThread } from 'worker_threads';
+import { isMainThread, workerData } from 'worker_threads';
 import { pathToFileURL } from 'url';
 import { promises as fs } from 'fs';
 
@@ -15,7 +15,7 @@ const config = function(): Schema {
 	if (content) {
 		return jsYaml.load(content) as Schema;
 	} else {
-		if (isMainThread) {
+		if (isMainThread || workerData?.isTopThread) {
 			console.warn('`.screepsrc.yaml` not found; using default configuration');
 		}
 		return {};

@@ -1,8 +1,9 @@
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider';
 import type { Worker } from 'worker_threads';
-import { isMainThread, parentPort } from 'worker_threads';
+import { parentPort } from 'worker_threads';
 import { listen } from 'xxscreeps/utility/async';
 import { staticCast } from 'xxscreeps/utility/utility';
+import { isTopThread } from 'xxscreeps/utility/worker';
 import { registerStorageProvider } from '..';
 
 type Listener = (message: string, id?: string) => void;
@@ -39,7 +40,7 @@ type WorkerMessage = PubSubMessage | SubscriptionRequest | UnsubscribeRequest | 
 // eslint-disable-next-line @typescript-eslint/require-await
 registerStorageProvider('local', 'pubsub', async url => {
 	const instance = function() {
-		if (isMainThread) {
+		if (isTopThread) {
 			return new LocalPubSubProviderParent(`${url}`);
 		} else {
 			return new LocalPubSubProviderWorker(`${url}`);

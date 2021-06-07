@@ -1,16 +1,18 @@
-import * as workerThreads from 'worker_threads';
-export * from 'worker_threads';
+import type { WorkerOptions } from 'worker_threads';
 import * as Responder from 'xxscreeps/engine/db/storage/local/responder';
+import { Worker as NodeWorker, isMainThread, workerData } from 'worker_threads';
 import { LocalPubSubProvider } from 'xxscreeps/engine/db/storage/local/pubsub';
 import argv from 'xxscreeps/config/arguments';
+
+export const isTopThread = isMainThread || workerData?.isTopThread === true;
 const entryShim = new URL(await import.meta.resolve('xxscreeps/config/entry'));
 
 const workerArgs = [
 	...argv.config ? [ '--config', argv.config ] : [],
 ];
 
-export class Worker extends workerThreads.Worker {
-	constructor(filename: string | URL, options: workerThreads.WorkerOptions = {}) {
+export class Worker extends NodeWorker {
+	constructor(filename: string | URL, options: WorkerOptions = {}) {
 		super(entryShim, {
 			...options,
 			argv: [
@@ -18,12 +20,13 @@ export class Worker extends workerThreads.Worker {
 				...workerArgs,
 				...options.argv ? options.argv : [],
 			],
+			execArgv: process.execArgv,
 		});
 		LocalPubSubProvider.initializeWorker(this);
 		Responder.initializeWorker(this);
 	}
 
-	static async create(module: string, options: workerThreads.WorkerOptions = {}) {
+	static async create(module: string, options: WorkerOptions = {}) {
 		const url = new URL(await import.meta.resolve(module));
 		return new Worker(url, options);
 	}

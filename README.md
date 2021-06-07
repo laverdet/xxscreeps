@@ -89,7 +89,7 @@ First step is make sure nodejs v16.x is installed, older versions will not work.
 ```
 git clone https://github.com/laverdet/xxscreeps.git
 cd xxscreeps
-npm install -D
+npm install
 npm run build
 npm run import
 ```

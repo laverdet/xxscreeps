@@ -5,9 +5,12 @@
   "scripts": {
     "build": "tsc",
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
-    "import": "node --enable-source-maps --experimental-specifier-resolution=node --experimental-import-meta-resolve --no-warnings ./dist/config/entry ./dist/scripts/scrape-world.js node_modules/@screeps/launcher/init_dist/db.json",
-    "start": "node --enable-source-maps --experimental-specifier-resolution=node --experimental-import-meta-resolve --no-warnings ./dist/config/entry ./dist/engine/service/launcher.js",
+    "import": "xxscreeps ./dist/scripts/scrape-world.js node_modules/@screeps/launcher/init_dist/db.json",
+    "start": "xxscreeps ./dist/engine/service/launcher.js",
     "watch": "tsc -w"
+  },
+  "bin": {
+    "xxscreeps": "./bin/xxscreeps.js"
   },
   "engines": {
     "node": ">=16.0.0"

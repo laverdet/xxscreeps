@@ -2,28 +2,20 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "Server",
 			"type": "node",
 			"request": "launch",
-			"runtimeArgs": [
-				"--enable-source-maps",
-				"--experimental-specifier-resolution=node",
-				"--experimental-import-meta-resolve"
-			],
 			"internalConsoleOptions": "openOnSessionStart",
-			"name": "Server",
+			"envFile": "${workspaceFolder}/.env",
 			"program": "${workspaceFolder}/dist/config/entry.js",
 			"args": [ "dist/engine/service/launcher.js" ],
 		},
 		{
+			"name": "Script",
 			"type": "node",
 			"request": "launch",
-			"runtimeArgs": [
-				"--enable-source-maps",
-				"--experimental-specifier-resolution=node",
-				"--experimental-import-meta-resolve"
-			],
 			"internalConsoleOptions": "openOnSessionStart",
-			"name": "Script",
+			"envFile": "${workspaceFolder}/.env",
 			"program": "${workspaceRoot}/${input:scriptName}",
 		},
 	],
