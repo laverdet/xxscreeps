@@ -21,17 +21,22 @@ if (steamApiKey) {
 				appid: `${464350}`,
 				ticket: context.request.body.ticket,
 			})}`);
-			const { result, steamid } = (await response.json())?.response?.params ?? {};
-			if (result !== 'OK') {
-				throw new Error('Steam authentication failure');
-			}
+			if (response.status === 200) {
+				const { result, steamid } = (await response.json())?.response?.params ?? {};
 
-			// Respond with temporary token. auth/me handles upgrading token to user
-			await context.authenticateForProvider('steam', steamid);
-			return {
-				ok: 1,
-				token: await context.flushToken(),
-			};
+				if (result !== 'OK') {
+					throw new Error('Steam authentication failure');
+				}
+
+				// Respond with temporary token. auth/me handles upgrading token to user
+				await context.authenticateForProvider('steam', steamid);
+				return {
+					ok: 1,
+					token: await context.flushToken(),
+				};
+			} else {
+				throw new Error('Steam failure. Check `backend.steamApiKey`');
+			}
 		},
 	});
 } else {
