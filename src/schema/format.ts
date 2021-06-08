@@ -63,7 +63,7 @@ type OptionalFormat = {
 };
 
 type StructFormat = {
-	struct: Record<string | symbol, Format>;
+	struct: Record<string | symbol, Format> | Record<string, UnionDeclaration>;
 	inherit?: WithType<{}>;
 	variant?: number | string;
 };
@@ -153,20 +153,20 @@ WithShapeAndType<ShapeOf<Type> | undefined, TypeOf<Type> | undefined> {
 }
 
 // Structure / object type
-export type StructDeclaration = WithVariant | Record<string, Format>;
+export type StructDeclaration = WithVariant | Record<string, Format | UnionDeclaration>;
 
 type StructDeclarationShape<
 	Type extends StructDeclaration,
 	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
 > = {
-	[Key in Keys]: ShapeOf<Type[Key]>;
+	[Key in Keys]: ShapeOf<Type[Key] extends UnionDeclaration<any, infer Format> ? Format : Type[Key]>;
 } & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
 
 type StructDeclarationType<
 	Type extends StructDeclaration,
 	Keys extends keyof Type = Exclude<keyof Type, typeof Variant>,
 > = {
-	[Key in Keys]: TypeOf<Type[Key]>;
+	[Key in Keys]: TypeOf<Type[Key] extends UnionDeclaration<any, infer Format> ? Format : Type[Key]>;
 } & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
 
 export function struct<Type extends StructDeclaration>(format: Type):
@@ -185,6 +185,14 @@ export function struct(...args: [ StructDeclaration ] | [ any, StructDeclaration
 		variant: (members as any)[Variant],
 	};
 	return format as never;
+}
+
+export type UnionDeclaration<Key extends string = string, Type extends Format = Format> = {
+	union: Record<Key, Type>;
+};
+
+export function union<Key extends string, Type extends Format>(format: Record<Key, Type>): UnionDeclaration<Key, Type> {
+	return { union: format };
 }
 
 // Pass a string to define a variant key into a `struct`

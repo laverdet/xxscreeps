@@ -17,6 +17,10 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 
 		let writeMembers: MemberWriter | undefined;
 		for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
+			// Don't bother writing union members
+			if (member.union) {
+				continue;
+			}
 
 			// Make writer for single field
 			const next = function(): MemberWriter {

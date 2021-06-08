@@ -1,6 +1,6 @@
-import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive } from './format';
+import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, UnionDeclaration } from './format';
+import * as Fn from 'xxscreeps/utility/functional';
 import { getOrSet, staticCast } from 'xxscreeps/utility/utility';
-
 import { Variant } from './format';
 import { entriesWithSymbols } from './symbol';
 
@@ -59,6 +59,7 @@ export type StructLayout = {
 	struct: Record<string | symbol, {
 		offset: number;
 		member: Layout;
+		union?: true;
 	}>;
 	inherit?: StructLayout;
 	variant?: number | string;
@@ -214,12 +215,14 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 
 		} else if ('struct' in format) {
 			// Grab layout for structure members
-			const entries = entriesWithSymbols(format.struct)
-				.filter(entry => entry[0] !== Variant)
-				.map(([ key, member ]) => ({
-					key,
-					...getLayout(member, cache),
-				}));
+			const allEntries = entriesWithSymbols(format.struct).filter(
+				entry => entry[0] !== Variant) as ([ string, Format] | [ string, UnionDeclaration])[];
+			const [ unionReferences, memberDeclarations ] = Fn.bifurcate(allEntries,
+				(entry): entry is [ string, UnionDeclaration ] => typeof entry[1] === 'object' && 'union' in entry[1]);
+			const entries = memberDeclarations.map(([ key, member ]) => ({
+				key,
+				...getLayout(member, cache),
+			}));
 
 			// Sort members for struct packing
 			entries.sort((left, right) => {
@@ -237,6 +240,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 				info: {
 					offset: number;
 					member: Layout;
+					union?: true;
 				};
 				traits: Traits;
 			}[] = [];
@@ -278,6 +282,26 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 			const size = lastMember.info.offset + lastMember.traits.size;
 			const isFixedSize = (!baseLayout || baseLayout.traits.stride !== undefined) &&
 				members.every(member => member.traits.stride !== undefined);
+
+			// Add union entries
+			for (const [ key, union ] of unionReferences) {
+				const [ referencedKey, unionFormat ] = entriesWithSymbols(union.union)[0];
+				const { layout, traits } = getLayout(unionFormat, cache);
+				const referencedMember = members.find(info => info.key === referencedKey)!;
+				if (traits.align > referencedMember.traits.align) {
+					throw new Error('Union alignment error');
+				}
+				members.push({
+					key,
+					info: {
+						offset: referencedMember.info.offset,
+						member: layout,
+						union: true,
+					},
+					traits,
+				});
+			}
+
 			return {
 				layout: staticCast<StructLayout>({
 					struct: Object.fromEntries(members.map(member => [ member.key, member.info ])),

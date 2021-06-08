@@ -6,7 +6,7 @@ import type { TypeOf } from 'xxscreeps/schema';
 import * as BufferObject from 'xxscreeps/schema/buffer-object';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { format as roomPositionFormat } from './position';
-import { compose, declare, enumerated, struct, vector, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, enumerated, struct, union, vector, withOverlay } from 'xxscreeps/schema';
 import { enumeratedForPath } from 'xxscreeps/engine/schema';
 import { expandGetters } from 'xxscreeps/utility/inspect';
 import { assign } from 'xxscreeps/utility/utility';
@@ -18,6 +18,7 @@ export const format = declare('RoomObject', () => compose(shape, RoomObject));
 const shape = struct({
 	id: Id.format,
 	pos: roomPositionFormat,
+	'#posId': union({ pos: 'int32' }),
 });
 
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {

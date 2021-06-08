@@ -12,6 +12,23 @@ export function accumulate(iterable: Iterable<any>, callback: (value: any) => nu
 	return sum;
 }
 
+// Combination filter + reject
+export function bifurcate<Type, Yes extends Type, No = Exclude<Type, Yes>>(
+	iterator: Iterable<Type>, callback: (value: Type) => value is Yes): [ Yes[], No[] ];
+export function bifurcate<Type>(iterator: Iterable<Type>, callback: (value: Type) => LooseBoolean): [ Type[], Type[] ];
+export function bifurcate(iterator: Iterable<any>, callback: (value: any) => LooseBoolean) {
+	const yes: any[] = [];
+	const no: any[] = [];
+	for (const value of iterator) {
+		if (callback(value)) {
+			yes.push(value);
+		} else {
+			no.push(value);
+		}
+	}
+	return [ yes, no ];
+}
+
 // Appends several iterators together
 export function concat<Type>(iterator: Iterable<Iterable<Type>>): Iterable<Type>;
 export function concat<First, Second, Rest = never>(
