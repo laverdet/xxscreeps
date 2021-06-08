@@ -53,6 +53,8 @@ export const RESOURCE_SPIRIT = 'spirit' as const;
 export const RESOURCE_EMANATION = 'emanation' as const;
 export const RESOURCE_ESSENCE = 'essence' as const;
 
+export const INTERSHARD_RESOURCES = [];
+export const COMMODITIES = {};
 /*
 export const RESOURCES_ALL = [
 	RESOURCE_ENERGY,
