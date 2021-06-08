@@ -36,6 +36,7 @@ if (missingFlags.length) {
 		});
 		process.on('SIGINT', () => {
 			worker.postMessage('SIGINT');
+			setTimeout(() => process.removeAllListeners('SIGINT'), 250);
 		});
 		process.stdin.pipe(worker.stdin!);
 	}));
@@ -49,9 +50,8 @@ if (missingFlags.length) {
 		parentPort!.on('message', message => {
 			if (message === 'SIGINT') {
 				parentPort!.postMessage({ SIGINT: process.emit('SIGINT' as never) });
-				parentPort!.unref();
 			}
-		});
+		}).unref();
 	}
 
 	// `registerStorageProvider` needs to be imported early to allow local keyval/blob providers to
