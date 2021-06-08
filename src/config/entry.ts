@@ -1,4 +1,4 @@
-import { Worker, isMainThread } from 'worker_threads';
+import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not
 const requiredFlags = [
@@ -29,11 +29,30 @@ if (missingFlags.length) {
 		});
 		worker.on('error', error => reject(error));
 		worker.on('exit', code => resolve(code));
+		worker.on('message', message => {
+			if (typeof message === 'object' && message.SIGINT === false) {
+				process.exit(0);
+			}
+		});
+		process.on('SIGINT', () => {
+			worker.postMessage('SIGINT');
+		});
 		process.stdin.pipe(worker.stdin!);
 	}));
 
 } else {
-	// All good to continue running
+
+	// All required flags were passed
+
+	if (!isMainThread && workerData?.isTopThread) {
+		// This is a fake top-thread, so the real top thread will send SIGINT messages
+		parentPort!.on('message', message => {
+			if (message === 'SIGINT') {
+				parentPort!.postMessage({ SIGINT: process.emit('SIGINT' as never) });
+				parentPort!.unref();
+			}
+		});
+	}
 
 	// `registerStorageProvider` needs to be imported early to allow local keyval/blob providers to
 	// register
