@@ -91,7 +91,7 @@ let didUpdateFlags = false;
 export let intents: FlagIntent[] = [];
 
 export function createFlag(name: string, posInt: number, color: Color, secondaryColor: Color) {
-	const pos = new RoomPosition(posInt);
+	const pos = RoomPosition['#create'](posInt);
 	// Run create / move / setColor intent
 	if (checkCreateFlag(flags, pos, name, color, secondaryColor) === C.OK) {
 		const flag = flags[name];

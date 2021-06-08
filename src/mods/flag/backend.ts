@@ -52,7 +52,7 @@ registerBackendRoute({
 				intent: {
 					type: 'create',
 					params: [
-						name, pos['#int'],
+						name, pos['#id'],
 						color, secondaryColor,
 					],
 				},

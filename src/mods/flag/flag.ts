@@ -48,7 +48,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => checkFlagColors(color, secondaryColor),
 			() => {
 				intents.push({ type: 'create', params: [
-					this.name, this.pos['#int'],
+					this.name, this.pos['#id'],
 					color, secondaryColor,
 				] });
 			},
@@ -69,7 +69,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => checkFlagPosition(pos!),
 			() => {
 				intents.push({ type: 'create', params: [
-					this.name, this.pos['#int'],
+					this.name, this.pos['#id'],
 					this.color, this.secondaryColor,
 				] });
 			},

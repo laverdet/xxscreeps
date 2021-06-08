@@ -29,8 +29,8 @@ export type PositionParameter = [ position: RoomPosition ] | [ target: RoomObjec
 
 export function format() {
 	return declare('RoomPosition', compose('int32', {
-		compose: value => new RoomPosition(value),
-		decompose: (value: RoomPosition) => value['#int'],
+		compose: pos => RoomPosition['#create'](pos),
+		decompose: (pos: RoomPosition) => pos['#id'],
 		kaitai: [ {
 			id: 'rx',
 			type: 's1',
@@ -47,13 +47,18 @@ export function format() {
 	}));
 }
 
+const RawPositionId = Symbol('defaultRoomPosition');
+
 /**
  * An object representing the specified position in the room. Every `RoomObject` in a room contains
  * a `RoomPosition` as the `pos` property. A position object for a custom location can be obtained
  * using the `Room.getPositionAt` method or using the constructor.
  */
 export class RoomPosition {
-	['#int']: number;
+	#id;
+
+	/** @internal */
+	constructor(xx: typeof RawPositionId, id: number, roomName?: unknown);
 
 	/**
 	 * You can create new RoomPosition object using its constructor.
@@ -61,14 +66,13 @@ export class RoomPosition {
 	 * @param yy Y position in the room.
 	 * @param roomName The room name.
 	 */
-	constructor(bits: number);
 	constructor(xx: number, yy: number, roomName: string);
-	constructor(...args: any[]) {
-		if (args.length === 1) {
-			this['#int'] = args[0] >>> 0;
-		} else if (args.length === 3) {
-			const [ xx, yy ] = args;
-			const { rx, ry } = parseRoomName(args[2]);
+
+	constructor(xx: number | typeof RawPositionId, yy: number, roomName: string) {
+		if (xx === RawPositionId) {
+			this.#id = yy;
+		} else {
+			const { rx, ry } = parseRoomName(roomName);
 			if (
 				!(rx >= 0 && rx < kMaxWorldSize) ||
 				!(ry >= 0 && ry < kMaxWorldSize) ||
@@ -77,17 +81,23 @@ export class RoomPosition {
 			) {
 				throw new TypeError('Invalid arguments in `RoomPosition` constructor');
 			}
-			this['#int'] = yy << 24 | xx << 16 | ry << 8 | rx;
-		} else {
-			this['#int'] = 0;
+			this.#id = yy << 24 | xx << 16 | ry << 8 | rx;
 		}
+	}
+
+	static ['#create'](pos: number) {
+		return new RoomPosition(RawPositionId, pos);
+	}
+
+	get ['#id']() {
+		return this.#id;
 	}
 
 	/**
 	 * The name of the room.
 	 */
 	@enumerable get roomName() {
-		return generateRoomNameFromId(this['#int'] & 0xffff);
+		return generateRoomNameFromId(this.#id & 0xffff);
 	}
 
 	set roomName(roomName: string) {
@@ -98,42 +108,42 @@ export class RoomPosition {
 		) {
 			throw new TypeError('Invalid `roomName`');
 		}
-		this['#int'] = this['#int'] & ~0xffff | ry << 8 | rx;
+		this.#id = this.#id & ~0xffff | ry << 8 | rx;
 	}
 
 	/**
 	 * X position in the room.
 	 */
 	@enumerable get x() {
-		return (this['#int'] >>> 16) & 0xff;
+		return (this.#id >>> 16) & 0xff;
 	}
 
 	set x(xx: number) {
 		if (!(xx >= 0 && xx < 50)) {
 			throw new TypeError('Invalid `x`');
 		}
-		this['#int'] = this['#int'] & ~(0xff << 16) | xx << 16;
+		this.#id = this.#id & ~(0xff << 16) | xx << 16;
 	}
 
 	/**
 	 * Y position in the room.
 	 */
 	@enumerable get y() {
-		return this['#int'] >>> 24;
+		return this.#id >>> 24;
 	}
 
 	set y(yy: number) {
 		if (!(yy >= 0 && yy < 50)) {
 			throw new TypeError('Invalid `y`');
 		}
-		this['#int'] = this['#int'] & ~(0xff << 24) | yy << 24;
+		this.#id = this.#id & ~(0xff << 24) | yy << 24;
 	}
 
 	getDirectionTo(x: number, y: number): Direction;
 	getDirectionTo(pos: RoomObject | RoomPosition): Direction;
 	getDirectionTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { xx, yy, room } = fetchArguments(...args);
-		if (room === 0 || (this['#int'] & 0xffff) === room) {
+		if (room === 0 || (this.#id & 0xffff) === room) {
 			return getDirection(xx - this.x, yy - this.y);
 		}
 		// TODO: Multi-room distance
@@ -149,7 +159,7 @@ export class RoomPosition {
 	getRangeTo(target: RoomObject | RoomPosition): number;
 	getRangeTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { xx, yy, room } = fetchArguments(...args);
-		if (room !== 0 && (this['#int'] & 0xffff) !== room) {
+		if (room !== 0 && (this.#id & 0xffff) !== room) {
 			return Infinity;
 		}
 		return Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
@@ -165,7 +175,7 @@ export class RoomPosition {
 	isEqualTo(target: RoomObject | RoomPosition): boolean;
 	isEqualTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { pos } = fetchPositionArgument(this.roomName, ...args);
-		return this['#int'] === pos?.['#int'];
+		return this.#id === (pos ? pos.#id : 0);
 	}
 
 	/**
@@ -192,7 +202,7 @@ export class RoomPosition {
 	inRangeTo(target: RoomObject | RoomPosition, range: number): boolean;
 	inRangeTo(...args: [ number, number, number ] | [ RoomObject | RoomPosition, number ]) {
 		const { xx, yy, room, rest } = fetchArguments(...args);
-		if (room !== 0 && (this['#int'] & 0xffff) !== room) {
+		if (room !== 0 && (this.#id & 0xffff) !== room) {
 			return false;
 		}
 		const range = Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
@@ -336,7 +346,7 @@ declare module './runtime' {
 // Function argument handlers
 export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any) {
 	if (typeof arg1 === 'object') {
-		const int = arg1['#int'] ?? arg1?.pos?.['#int'];
+		const int = arg1['#id'] ?? arg1?.pos?.['#id'];
 		if (int === undefined) {
 			return {
 				xx: arg1.x,
@@ -415,22 +425,4 @@ export function fetchRoom(roomName: string) {
 		throw new Error(`Could not access room ${roomName}`);
 	}
 	return room;
-}
-
-export function fromPositionId(id: number) {
-	const rx = id & 0xff;
-	const ry = (id >>> 8) & 0xff;
-	const xx = (id >>> 16) & 0xff;
-	const yy = id >>> 24;
-	if (
-		!(rx >= 0 && rx < kMaxWorldSize) ||
-		!(ry >= 0 && ry < kMaxWorldSize) ||
-		!(xx >= 0 && xx < 50) ||
-		!(yy >= 0 && yy < 50)
-	) {
-		return;
-	}
-	const pos = Object.create(RoomPosition);
-	pos['#int'] = id;
-	return pos;
 }

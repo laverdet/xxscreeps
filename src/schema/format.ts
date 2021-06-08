@@ -1,5 +1,4 @@
 import type { BufferView } from './buffer-view';
-import type { Implementation } from 'xxscreeps/utility/types';
 import { Variant } from '.';
 import { resolve } from './layout';
 export { Variant };
@@ -42,7 +41,7 @@ type ArrayFormat = {
 
 type ComposedFormat = {
 	composed: Format;
-	interceptor: Interceptor | Implementation;
+	interceptor: Interceptor;
 };
 
 export type ConstantFormat = {
@@ -88,7 +87,8 @@ WithShapeAndType<ShapeOf<Type>[], TypeOf<Type>[]> {
 }
 
 // Composed interceptor types
-export type Interceptor = CompositionInterceptor | RawCompositionInterceptor;
+export type Interceptor = CompositionInterceptor | RawCompositionInterceptor | OverlayInterceptor;
+type OverlayInterceptor<Type = unknown> = abstract new(view: BufferView, offset: number) => Type;
 type CompositionInterceptor<Type = any, Result = any> = {
 	compose: (value: Type) => Result;
 	decompose: (value: Result) => Type extends any[] ? Iterable<Type[number]> : Type;
@@ -109,10 +109,10 @@ export function compose<Type extends Format, Result>(
 	format: Type, interceptor: RawCompositionInterceptor<Result>
 ): WithShapeAndType<Result>;
 
-export function compose<Type extends Format, Overlay>(format: Type, interceptor: Implementation<Overlay>):
+export function compose<Type extends Format, Overlay>(format: Type, interceptor: OverlayInterceptor<Overlay>):
 WithShapeAndType<ShapeOf<Type>, Overlay>;
 
-export function compose(format: Format, interceptor: Interceptor | Implementation) {
+export function compose(format: Format, interceptor: Interceptor) {
 	const composedFormat: ComposedFormat = {
 		composed: format,
 		interceptor,

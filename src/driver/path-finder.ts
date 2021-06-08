@@ -8,7 +8,7 @@ import pf from '@xxscreeps/path-finder';
 
 function flattenPosition(pos: any): number {
 	// Internal position bits
-	const positionInteger = pos['#int'];
+	const positionInteger = pos['#id'];
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (positionInteger !== undefined) {
 		return positionInteger | 0;
@@ -86,7 +86,7 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, userOptions:
 	}
 	return {
 		...ret,
-		path: ret.path.map(pos => new RoomPosition(pos)).reverse(),
+		path: ret.path.map(pos => RoomPosition['#create'](pos)).reverse(),
 	};
 }
 

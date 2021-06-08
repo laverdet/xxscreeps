@@ -1,5 +1,4 @@
 import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive } from './format';
-import type { Implementation } from 'xxscreeps/utility/types';
 import { getOrSet, staticCast } from 'xxscreeps/utility/utility';
 
 import { Variant } from './format';
@@ -36,7 +35,7 @@ type ArrayLayout = {
 
 type ComposedLayout = {
 	composed: Layout;
-	interceptor: Interceptor | Implementation;
+	interceptor: Interceptor;
 };
 
 type ConstantLayout = ConstantFormat;

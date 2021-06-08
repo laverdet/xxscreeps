@@ -373,7 +373,7 @@ registerObstacleChecker(params => {
 		if (safeUser !== user) {
 			return object => object instanceof Creep;
 		}
-		return object => object instanceof Creep && object['#user'] !== user;
+		return object => object instanceof Creep && object['#user'] === user;
 	}
 });
 
