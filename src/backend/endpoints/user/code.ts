@@ -24,6 +24,26 @@ async function getBranchNameFromQuery(db: Database, userId: string, branchName: 
 	return branchName;
 }
 
+function getModulePayloadFromQuery(query: any) {
+	if (!query) {
+		return new Map([ [ 'main', '' ] ]);
+	}
+	const modules = new Map<string, string>(Object.entries(query));
+	if (!modules.has('main')) {
+		modules.set('main', '');
+	}
+	const size = Fn.accumulate(Fn.map(modules.values(), content => {
+		if (typeof content !== 'string') {
+			throw new TypeError('Invalid payload');
+		}
+		return content.length;
+	}));
+	if (size > kCodeSizeLimit) {
+		throw new Error('Too much code');
+	}
+	return modules;
+}
+
 registerBackendRoute({
 	path: '/api/user/branches',
 
@@ -94,7 +114,8 @@ registerBackendRoute({
 			if (branch) {
 				return context.db.blob.copy(Code.contentKey(userId, branch), Code.contentKey(userId, newName));
 			} else {
-				await Code.saveContent(context.db, userId, newName, new Map([ [ 'main', '' ] ]));
+				const modules = getModulePayloadFromQuery(context.request.body.defaultModules);
+				await Code.saveContent(context.db, userId, newName, modules);
 				return true;
 			}
 		}();
@@ -181,21 +202,11 @@ registerBackendRoute({
 		if (!userId) {
 			return;
 		}
-		const { modules } = context.request.body;
-		modules.main ??= '';
-		const size = Fn.accumulate(Fn.map(Object.values(modules), module => {
-			if (typeof module !== 'string') {
-				throw new TypeError('Invalid payload');
-			}
-			return module.length;
-		}));
-		if (size > kCodeSizeLimit) {
-			throw new Error('Too much code');
-		}
+		const modules = getModulePayloadFromQuery(context.request.body.modules);
 
 		// Save it
 		const branchName = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
-		await Code.saveContent(context.db, userId, branchName, new Map(Object.entries(modules)));
+		await Code.saveContent(context.db, userId, branchName, modules);
 		return { ok: 1 };
 	},
 });
