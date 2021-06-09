@@ -94,7 +94,9 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 							view.uint8[heap + ii] = code;
 						} else {
 							// UTF-16 wide characters
-							const stringOffset16 = heap >>> 1;
+							const heap16 = alignTo(heap, 2);
+							view.int32[offset >>> 2] = heap16;
+							const stringOffset16 = heap16 >>> 1;
 							for (let ii = 0; ii < length; ++ii) {
 								view.uint16[stringOffset16 + ii] = string.charCodeAt(ii);
 							}
