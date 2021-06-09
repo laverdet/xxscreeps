@@ -101,7 +101,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 								view.uint16[stringOffset16 + ii] = string.charCodeAt(ii);
 							}
 							view.int32[(offset >>> 2) + 1] = -length;
-							return heap + length * 2;
+							return heap16 + length * 2;
 						}
 					}
 					// Succeeded writing latin1
