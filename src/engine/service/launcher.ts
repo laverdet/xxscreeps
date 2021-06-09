@@ -81,8 +81,9 @@ try {
 			backend,
 		]);
 	} else {
+		const userCount = Number(await db.data.scard('users'));
 		const backend = await Worker.create('xxscreeps/backend/server');
-		const processors = await Promise.all(Fn.map(Fn.range(processorWorkers), () =>
+		const processors = await Promise.all(Fn.map(Fn.range(Math.min(processorWorkers, userCount)), () =>
 			Worker.create('xxscreeps/engine/service/processor')));
 		const runners = await Promise.all(Fn.map(Fn.range(runnerWorkers), () =>
 			Worker.create('xxscreeps/engine/service/runner')));

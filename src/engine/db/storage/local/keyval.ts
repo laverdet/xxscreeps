@@ -54,6 +54,16 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 		}
 	}
 
+	cas(key: string, value: Value, old: Value) {
+		const current = this.data.get(key);
+		if (current === old) {
+			this.data.set(key, value);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	copy(from: string, to: string, options?: Provider.Copy) {
 		const value = this.data.get(from);
 		if (value === undefined) {
@@ -363,19 +373,11 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 	}
 
 	zunionStore(key: string, keys: string[]) {
-		const sets: (SortedSet | undefined)[] = keys.map(key => this.data.get(key));
-		if (sets.every(set => set === undefined)) {
-			return 0;
-		}
+		// Fetch sets first because you can use this command to store a set back into itself
+		const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
 		const out = new SortedSet;
 		this.data.set(key, out);
-		out.insert(Fn.concat(Fn.map(sets, set => {
-			if (set) {
-				return set.entries();
-			} else {
-				return [];
-			}
-		})));
+		out.insert(Fn.concat(Fn.map(sets, set => set.entries())));
 		return out.size;
 	}
 
@@ -404,8 +406,6 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 				}
 			});
 			await fs.writeFile(new URL(this.url), payload, 'utf8');
-		} else {
-			throw new Error('Can\'t save ephemeral keyval store');
 		}
 	}
 

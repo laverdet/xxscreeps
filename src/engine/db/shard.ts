@@ -60,7 +60,7 @@ export class Shard {
 	}
 
 	save() {
-		return Promise.all([ this.data.save(), this.blob.save() ]);
+		return Promise.all([ this.data.save(), this.blob.save(), this.scratch.save() ]);
 	}
 
 	/**

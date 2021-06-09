@@ -3,7 +3,7 @@ import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { Deferred } from 'xxscreeps/utility/async';
 import { Mutex } from 'xxscreeps/engine/db/mutex';
-import { activeRoomsKey, getProcessorChannel } from 'xxscreeps/engine/processor/model';
+import { activeRoomsKey, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';
 
@@ -40,6 +40,7 @@ try {
 	await Promise.all([
 		shard.scratch.sadd('initializeRooms', rooms),
 		shard.scratch.sadd('users', users),
+		shard.scratch.set(processorTimeKey, shard.time),
 	]);
 
 	// Wait for processors to connect and initialize world state

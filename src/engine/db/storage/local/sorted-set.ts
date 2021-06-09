@@ -1,3 +1,5 @@
+import * as Fn from 'xxscreeps/utility/functional';
+
 export class SortedSet {
 	readonly #members: string[] = [];
 	readonly #scores = new Map<string, number>();
@@ -93,7 +95,7 @@ export class SortedSet {
 	}
 
 	[Symbol.for('nodejs.util.inspect.custom')]() {
-		return Object.fromEntries(this.entries());
+		return Object.fromEntries(Fn.map(this.entries(), entry => [ entry[1], entry[0] ]));
 	}
 
 	private sort() {

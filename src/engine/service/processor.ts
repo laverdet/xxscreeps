@@ -2,7 +2,7 @@ import type { Room } from 'xxscreeps/game/room/room';
 import * as Fn from 'xxscreeps/utility/functional';
 import {
 	acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey,
-	getProcessorChannel, processRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships,
+	getProcessorChannel, processRoomsSetKey, processorTimeKey, roomsDidFinalize, updateUserRoomRelationships,
 } from 'xxscreeps/engine/processor/model';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor';
@@ -32,7 +32,7 @@ try {
 
 	// Start the processing loop
 	await getServiceChannel(shard).publish({ type: 'processorInitialized' });
-	let currentTime = -1;
+	let currentTime = Number(await shard.scratch.get(processorTimeKey));
 	for await (const message of processorSubscription) {
 
 		if (message.type === 'shutdown') {
@@ -41,7 +41,10 @@ try {
 		} else if (message.type === 'process') {
 			// Start first processing phase
 			const { time } = message;
-			currentTime = await begetRoomProcessQueue(shard, currentTime, time);
+			currentTime = await begetRoomProcessQueue(shard, time, currentTime);
+			if (currentTime !== time) {
+				continue;
+			}
 			for await (const roomName of consumeSortedSet(shard.scratch, processRoomsSetKey(time), 0, 0)) {
 				// Read room data and intents from storage
 				const [ room, intentsPayloads ] = await Promise.all([

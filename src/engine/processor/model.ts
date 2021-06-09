@@ -20,6 +20,7 @@ export function getRoomChannel(shard: Shard, roomName: string) {
 	return new Channel<Message>(shard.pubsub, `processor/room/${roomName}`);
 }
 
+export const processorTimeKey = 'processor/time';
 export const activeRoomsKey = 'processor/activeRooms';
 const sleepingRoomsKey = 'processor/inactiveRooms';
 const roomToUsersSetKey = (roomName: string) =>
@@ -99,11 +100,20 @@ export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string,
 	return payloads.map((json): SingleIntent[] => JSON.parse(json));
 }
 
-export async function begetRoomProcessQueue(shard: Shard, currentTime: number, time: number) {
-	if (
-		currentTime < time &&
-		await shard.scratch.set('processor/time', time, { get: true }) !== String(time)
-	) {
+export async function begetRoomProcessQueue(shard: Shard, time: number, processorTime: number) {
+	if (processorTime > time) {
+		// The processor has lagged and is running through old `process` messages
+		return processorTime;
+	}
+	const currentTime = Number(await shard.scratch.get(processorTimeKey));
+	if (currentTime === time) {
+		// Already in sync
+		return time;
+	} else if (currentTime !== time - 1) {
+		// First iteration of laggy processor
+		return currentTime;
+	}
+	if (await shard.scratch.cas(processorTimeKey, time, time - 1)) {
 		// Count currently active rooms, fetch rooms to wake this tick
 		const [ initialCount, wake ] = await Promise.all([
 			shard.scratch.zcard(activeRoomsKey),
@@ -118,15 +128,19 @@ export async function begetRoomProcessQueue(shard: Shard, currentTime: number, t
 			]);
 			count += awoken;
 		}
-		// Copy active rooms to current processing queue
+		// Copy active rooms to current processing queue. This can run after runners
+		// have already started so it's important that it's resilient to negative
+		// numbers already in `processRoomsSetKey`.
 		await Promise.all([
 			shard.scratch.zunionStore(processRoomsSetKey(time), [ activeRoomsKey, processRoomsSetKey(time) ]),
 			shard.scratch.incrBy(processRoomsPendingKey(time), count),
 			shard.scratch.incrBy(finalizedRoomsPendingKey(time), count),
 		]);
 		await getProcessorChannel(shard).publish({ type: 'process', time });
+		return time;
+	} else {
+		return Number(await shard.scratch.get(processorTimeKey));
 	}
-	return time;
 }
 
 export async function roomDidProcess(shard: Shard, roomName: string, time: number) {
