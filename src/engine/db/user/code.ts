@@ -5,7 +5,8 @@ import { Channel } from 'xxscreeps/engine/db/channel';
 import { read, write } from './code-schema';
 
 export const branchManifestKey = (userId: string) => `${User.infoKey(userId)}/branches`;
-export const contentKey = (userId: string, branchName: string) => `${User.infoKey(userId)}/code/${branchName}`;
+export const contentKey = (userId: string, branchName: string) =>
+	`${User.infoKey(userId)}/code/${branchName.replace(/[^a-zA-Z0-9_]/g, char => `-${char.charCodeAt(0).toString(36)}`)}`;
 
 export function getUserCodeChannel(db: Database, userId: string) {
 	type Message =

@@ -11,7 +11,7 @@ const kDefaultBranch = 'main';
 const kMaxBranches = 30;
 
 function checkBranchName(branchName: string): asserts branchName is string {
-	if (typeof branchName !== 'string' || branchName.length > 30 || !/^[-_.a-zA-Z0-9]+$/.test(branchName)) {
+	if (typeof branchName !== 'string' || branchName.length > 30) {
 		throw new Error('Invalid branch name');
 	}
 }
@@ -74,7 +74,8 @@ registerBackendRoute({
 		}
 
 		// Check request
-		const branch = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
+		const reqBranch: string | undefined = context.request.body.branch;
+		const branch = reqBranch && await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
 		const { newName } = context.request.body;
 		checkBranchName(newName);
 		const key = Code.branchManifestKey(userId);
@@ -83,19 +84,50 @@ registerBackendRoute({
 			throw new Error('Too many branches');
 		} else if (branches.includes(newName)) {
 			throw new Error('Branch already exists');
-		} else if (!branches.includes(branch)) {
+		} else if (branch && !branches.includes(branch)) {
 			return;
 		}
 
 		// Create the branch
 		const timestamp = Date.now();
-		const updated = await context.db.blob.copy(Code.contentKey(userId, branch), Code.contentKey(userId, newName));
+		const updated = await async function() {
+			if (branch) {
+				return context.db.blob.copy(Code.contentKey(userId, branch), Code.contentKey(userId, newName));
+			} else {
+				await Code.saveContent(context.db, userId, newName, new Map([ [ 'main', '' ] ]));
+				return true;
+			}
+		}();
 		if (!updated) {
 			throw new Error('Failed to copy');
 		}
 		await context.db.data.sadd(Code.branchManifestKey(userId), [ newName ]);
 
 		return { ok: 1, timestamp };
+	},
+});
+
+registerBackendRoute({
+	path: '/api/user/delete-branch',
+	method: 'post',
+
+	async execute(context) {
+		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
+		const [ branch, currentBranch ] = await Promise.all([
+			getBranchNameFromQuery(context.db, userId, context.request.body.branch),
+			context.shard.data.hget(User.infoKey(userId), 'branch'),
+		]);
+		if (branch === currentBranch) {
+			return;
+		}
+		await Promise.all([
+			context.db.data.srem(Code.branchManifestKey(userId), [ branch ]),
+			context.db.blob.del(Code.contentKey(userId, branch)),
+		]);
+		return { ok: 1 };
 	},
 });
 

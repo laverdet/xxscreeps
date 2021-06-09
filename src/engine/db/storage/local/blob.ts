@@ -228,7 +228,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 
 	private check(fragment: string) {
 		// Safety check before writing random file names based on user input
-		if (!/^[a-zA-Z0-9/-]+$/.test(fragment)) {
+		if (!/^[a-zA-Z0-9/_-]+$/.test(fragment)) {
 			throw new Error(`Unsafe blob id: ${fragment}`);
 		}
 	}
