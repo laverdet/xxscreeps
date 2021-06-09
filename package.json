@@ -7,8 +7,8 @@
   "scripts": {
     "build": "tsc",
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
-    "import": "xxscreeps ./dist/scripts/scrape-world.js node_modules/@screeps/launcher/init_dist/db.json",
-    "start": "xxscreeps ./dist/engine/service/launcher.js",
+    "import": "xxscreeps import",
+    "start": "xxscreeps start",
     "watch": "tsc -w"
   },
   "bin": {

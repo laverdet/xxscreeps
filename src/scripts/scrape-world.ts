@@ -35,11 +35,8 @@ import { StructureWall } from 'xxscreeps/mods/defense/wall';
 import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
 
-const [ jsonSource ] = process.argv.slice(2) as (string | undefined)[];
-if (jsonSource === undefined) {
-	console.error(`Usage: ${process.argv[1]} db.json`);
-	process.exit(1);
-}
+const jsonSource = process.argv.length > 2 ? process.argv[2] :
+	`${new URL('../init_dist/db.json', await import.meta.resolve('@screeps/launcher', import.meta.url))}`;
 
 function withRoomObject(from: any, into: RoomObject) {
 	into.id = from._id;

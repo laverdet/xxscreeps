@@ -7,7 +7,6 @@ import { inspect } from 'util';
 import { initializers, tickReceive, tickSend } from 'xxscreeps/driver/symbols';
 import { Game, GameState, runForUser, userInfo } from 'xxscreeps/game';
 import { World } from 'xxscreeps/game/map';
-import { RoomObject } from 'xxscreeps/game/object';
 import { detach } from 'xxscreeps/schema/buffer-object';
 import { setupConsole } from './console';
 import { makeRequire } from './module';
@@ -88,11 +87,11 @@ export function tick(data: TickPayload) {
 	// Inject user intents
 	if (data.backendIntents) {
 		for (const intent of data.backendIntents) {
-			const receiver = Game.getObjectById(intent.receiver) ?? intent.receiver;
-			if (receiver instanceof RoomObject) {
-				intents.save(receiver as never, intent.intent as never, ...intent.params);
+			const receiver = Game.getObjectById(intent.receiver);
+			if (receiver) {
+				intents.save(receiver as never, intent.intent as never, ...intent.params as never);
 			} else {
-				// intents.pushNamed(receiver as never, intent.intent as never, ...intent.params);
+				// intents.pushNamed(intent.receiver as never, intent.intent as never, ...intent.params);
 			}
 		}
 	}

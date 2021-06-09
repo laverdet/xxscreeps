@@ -8,6 +8,8 @@ import { MapRender, Render, TerrainRender, middleware, routes } from './symbols'
 export { registerRoomSocketHandler } from './symbols';
 
 // Koa middleware & generic backend route types
+
+/// <reference path="./auth/index.ts" />
 export interface Context {
 	backend: BackendContext;
 	db: Database;

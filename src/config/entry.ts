@@ -68,7 +68,10 @@ if (missingFlags.length) {
 	if (specifier && !specifier.startsWith('-')) {
 		// Run
 		const base = new URL('../..', import.meta.url);
-		await import(`${new URL(specifier, base)}`);
+		await import(`${new URL({
+			import: './dist/scripts/scrape-world.js',
+			start: './dist/engine/service/launcher.js',
+		}[specifier] ?? specifier, base)}`);
 	} else {
 		// Start repl
 		if (!isMainThread) {
