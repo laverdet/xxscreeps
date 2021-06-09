@@ -11,7 +11,9 @@ bindRenderer(StructureController, (controller, next) => {
 		level: controller.level,
 		progress: controller.progress,
 		downgradeTime: controller['#downgradeTime'],
-		safeMode: 0,
+		safeMode: controller.safeMode,
+		safeModeAvailable: controller.safeModeAvailable,
+		safeModeCooldown: controller.safeModeCooldown,
 		...reservationTime ? {
 			endTime: reservationTime,
 			user: controller.room['#user'],
