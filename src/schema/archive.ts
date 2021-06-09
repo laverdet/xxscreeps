@@ -67,6 +67,7 @@ class ModuleArchiver {
 							// eslint-disable-next-line no-new-wrappers
 							offset: new String(`0x${value.offset.toString(16)}`),
 							member: this.archive(value.member),
+							...value.union ? { union: true } : undefined,
 						} ];
 						return result;
 					})),

@@ -263,6 +263,9 @@ export class KaitaiArchiver {
 				this.archive('super', struct, layout.inherit);
 			}
 			for (const [ name, member ] of members) {
+				if (member.union) {
+					continue;
+				}
 				const id = toId(name);
 				if (struct.size < member.offset) {
 					struct.seq.push({
