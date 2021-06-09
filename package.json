@@ -2,6 +2,8 @@
   "name": "xxscreeps",
   "version": "0.0.4",
   "type": "module",
+  "license": "ISC",
+  "repository": "https://github.com/laverdet/xxscreeps",
   "scripts": {
     "build": "tsc",
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
