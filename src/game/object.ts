@@ -76,10 +76,12 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 }
 
 export function create<Type extends RoomObject>(instance: Type, pos: RoomPosition): Type {
-	return assign<Type, RoomObject>(instance, {
+	const object = assign<Type, RoomObject>(instance, {
 		id: Id.generateId(),
 		pos,
 	});
+	object['#posId'] = pos['#id'];
+	return object;
 }
 
 // Export `RoomObject` to runtime globals

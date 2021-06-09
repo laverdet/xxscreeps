@@ -105,7 +105,7 @@ registerObjectTickProcessor(ConstructionSite, (site, context) => {
 		const structure = structureFactories.get(site.structureType)?.create(site, site.name);
 		site.room['#removeObject'](site);
 		if (structure) {
-			room['#insertObject'](structure);
+			room['#insertObject'](structure, true);
 		}
 		context.didUpdate();
 	}

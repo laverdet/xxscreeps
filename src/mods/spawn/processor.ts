@@ -90,6 +90,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 			if (creep && creep instanceof Creep) {
 				// Look for spawn direction
 				const check = makePositionChecker({
+					checkTerrain: true,
 					room: spawn.room,
 					type: 'creep',
 					user: creep['#user'],

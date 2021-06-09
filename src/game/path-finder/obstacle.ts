@@ -13,10 +13,6 @@ type MovementParameters = {
 	user: string;
 };
 
-type PositionCheckParameters = MovementParameters & {
-	checkTerrain?: boolean;
-};
-
 type ObstacleChecker = (params: MovementParameters) =>
 	((object: RoomObject) => boolean) | null;
 
@@ -43,13 +39,13 @@ export function makeObstacleChecker(params: MovementParameters) {
  * Creates a position checker. The return value of the callback will be `true` if the position is
  * not obstructed.
  */
-export function makePositionChecker(params: PositionCheckParameters) {
+export function makePositionChecker(params: MovementParameters) {
 	const { room } = params;
 	const checkObstacle = makeObstacleChecker(params);
 	const check = (pos: RoomPosition) => !room['#lookAt'](pos).some(object => checkObstacle(object));
 	if (params.checkTerrain) {
 		const terrain = room.getTerrain();
-		return (pos: RoomPosition) => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL && !check(pos);
+		return (pos: RoomPosition) => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL && check(pos);
 	}
 	return check;
 }

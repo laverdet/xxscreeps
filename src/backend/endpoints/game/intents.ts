@@ -15,10 +15,13 @@ const AddObjectIntentEndpoint: Endpoint = {
 		if (typeof room !== 'string' || typeof name !== 'string' || typeof id !== 'string') {
 			throw new TypeError('Invalid parameters');
 		}
+		const realIntentName = {
+			removeConstructionSite: 'remove',
+		}[name] ?? name;
 		await pushIntentsForRoomNextTick(context.shard, room, userId, {
 			local: {},
 			object: {
-				[id]: { [name]: [] },
+				[id]: { [realIntentName]: [] },
 			},
 		});
 		return { ok: 1 };
