@@ -16,14 +16,15 @@
 			"request": "launch",
 			"internalConsoleOptions": "openOnSessionStart",
 			"envFile": "${workspaceFolder}/.env",
-			"program": "${workspaceRoot}/${input:scriptName}",
+			"program": "${workspaceFolder}/dist/config/entry.js",
+			"args": [ "${workspaceRoot}/dist/${input:scriptName}" ]
 		},
 	],
 	"inputs": [
 		{
 			"id": "scriptName",
 			"type": "promptString",
-			"default": "dist/scripts/.js",
+			"default": ".js",
 			"description": "File name",
 		},
 	]
