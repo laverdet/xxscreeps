@@ -76,8 +76,10 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 
 				case 'bool': return (view, offset) => view.int8[offset] !== 0;
 
-				case 'buffer': return (view, offset) =>
-					view.uint8.subarray(view.int32[offset >>> 2], view.int32[(offset >>> 2) + 1]);
+				case 'buffer': return (view, offset) => {
+					const start = view.int32[offset >>> 2];
+					return view.uint8.subarray(start, start + view.int32[(offset >>> 2) + 1]);
+				};
 
 				case 'string': return (view, offset) => {
 					const stringOffset = view.int32[offset >>> 2];

@@ -5,6 +5,7 @@ import * as User from 'xxscreeps/engine/db/user';
 import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
 import { registerBackendRoute } from 'xxscreeps/backend';
+import { typedArrayToString } from 'xxscreeps/utility/string';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;
 const kDefaultBranch = 'main';
@@ -28,20 +29,42 @@ function getModulePayloadFromQuery(query: any) {
 	if (!query) {
 		return new Map([ [ 'main', '' ] ]);
 	}
-	const modules = new Map<string, string>(Object.entries(query));
+	const modules = new Map(Fn.map(Object.entries<string | { binary: string }>(query), ([ name, content ]) => {
+		const decoded = function() {
+			if (typeof content === 'string') {
+				return content;
+			} else if (
+				typeof content === 'object' && typeof content.binary === 'string') {
+				return Buffer.from(content.binary, 'base64');
+			}
+			throw new TypeError('Invalid payload');
+		}();
+		return [ name, decoded ];
+	}));
 	if (!modules.has('main')) {
 		modules.set('main', '');
 	}
 	const size = Fn.accumulate(Fn.map(modules.values(), content => {
-		if (typeof content !== 'string') {
-			throw new TypeError('Invalid payload');
+		if (typeof content === 'string') {
+			return content.length;
+		} else {
+			// Vanilla Screeps stores these in base64, so add fake encoding overhead to match
+			return content.byteLength * 1.333;
 		}
-		return content.length;
 	}));
 	if (size > kCodeSizeLimit) {
 		throw new Error('Too much code');
 	}
 	return modules;
+}
+
+function toModulesContent(payload: Code.CodePayload) {
+	return Object.fromEntries(Fn.map(
+		payload.entries(),
+		([ name, content ]) =>
+			[ name, typeof content === 'string' ? content : {
+				binary: btoa(typedArrayToString(content)),
+			} ]));
 }
 
 registerBackendRoute({
@@ -69,16 +92,15 @@ registerBackendRoute({
 		const withCode = Boolean(context.request.query.withCode);
 		return {
 			ok: 1,
-			list: await Promise.all(Fn.map(branches, async branchName => {
-				const content = withCode && {
-					modules: await Code.loadContent(context.db, userId, branchName),
-				};
-				return {
-					activeWorld: branchName === currentBranch,
-					branch: branchName,
-					...content,
-				};
-			})),
+			list: await Promise.all(Fn.map(branches, async branchName => ({
+				activeWorld: branchName === currentBranch,
+				branch: branchName,
+				...withCode && {
+					// What is this endpoint for??
+					// 5mb branches * 30 count = 150mb response payload??
+					modules: toModulesContent((await Code.loadContent(context.db, userId, branchName))!),
+				},
+			}))),
 		};
 	},
 });
@@ -112,7 +134,15 @@ registerBackendRoute({
 		const timestamp = Date.now();
 		const updated = await async function() {
 			if (branch) {
-				return context.db.blob.copy(Code.contentKey(userId, branch), Code.contentKey(userId, newName));
+				const [ updatedBlobs, updatedStrings ] = await Promise.all([
+					context.db.blob.copy(Code.buffersKey(userId, branch), Code.buffersKey(userId, newName)),
+					context.db.blob.copy(Code.stringsKey(userId, branch), Code.stringsKey(userId, newName)),
+				]);
+				await Promise.all([
+					updatedBlobs ? undefined : context.db.blob.del(Code.buffersKey(userId, newName)),
+					updatedStrings ? undefined : context.db.blob.del(Code.stringsKey(userId, newName)),
+				]);
+				return updatedBlobs || updatedStrings;
 			} else {
 				const modules = getModulePayloadFromQuery(context.request.body.defaultModules);
 				await Code.saveContent(context.db, userId, newName, modules);
@@ -146,7 +176,8 @@ registerBackendRoute({
 		}
 		await Promise.all([
 			context.db.data.srem(Code.branchManifestKey(userId), [ branch ]),
-			context.db.blob.del(Code.contentKey(userId, branch)),
+			context.db.blob.del(Code.buffersKey(userId, branch)),
+			context.db.blob.del(Code.stringsKey(userId, branch)),
 		]);
 		return { ok: 1 };
 	},
@@ -188,7 +219,7 @@ registerBackendRoute({
 				return;
 			}
 		}
-		return { ok: 1, branch: branchName, modules: Fn.fromEntries(payload) };
+		return { ok: 1, branch: branchName, modules: toModulesContent(payload) };
 	},
 });
 

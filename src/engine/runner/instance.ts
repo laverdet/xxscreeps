@@ -117,7 +117,7 @@ export class PlayerInstance {
 					terrainBlob: this.world.terrainBlob,
 				} as never;
 				const [ codeBlob ] = await Promise.all([
-					this.branchName ? Code.loadBlob(this.shard.db, this.userId, this.branchName) : null,
+					this.branchName ? Code.loadBlobs(this.shard.db, this.userId, this.branchName) : null,
 					Promise.all(this.connectors.map(connector => connector.initialize?.(payload))),
 				]);
 				if (!codeBlob) {

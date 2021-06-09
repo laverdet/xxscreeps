@@ -40,7 +40,9 @@ koa.use((context, next) => {
 	context.shard = backendContext.shard;
 	return next();
 });
-koa.use(bodyParser());
+koa.use(bodyParser({
+	jsonLimit: '8mb',
+}));
 koa.use(authentication());
 middleware.forEach(fn => fn(koa, router));
 koa.use(router.routes());
