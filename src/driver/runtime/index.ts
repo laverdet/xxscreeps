@@ -64,9 +64,13 @@ export function tick(data: TickPayload) {
 		// Run player loop
 		globalThis.Game = Game;
 		try {
-			require('main').loop();
+			(function thisIsWhereThePlayerCodeStarts() {
+				require('main').loop();
+			}());
 		} catch (err) {
-			console.error(err);
+			const lines: string[] = err.stack.split(/\n/g);
+			const index = lines.findIndex(line => line.includes('thisIsWhereThePlayerCodeStarts'));
+			console.error(lines.slice(0, index).join('\n'));
 		}
 
 		// Run console expressions

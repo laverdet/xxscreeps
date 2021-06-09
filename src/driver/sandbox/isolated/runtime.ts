@@ -7,7 +7,7 @@ function freezeClass(constructor: abstract new(...args: any[]) => any) {
 	freezeProperty(constructor, 'prototype');
 	for (
 		let prototype = constructor.prototype;
-		prototype !== null;
+		prototype !== null && prototype !== Object.prototype;
 		prototype = Object.getPrototypeOf(prototype)
 	) {
 		Object.freeze(prototype);
