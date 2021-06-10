@@ -36,7 +36,7 @@ import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
 
 const jsonSource = process.argv.length > 2 ? process.argv[2] :
-	`${new URL('../init_dist/db.json', await import.meta.resolve('@screeps/launcher', import.meta.url))}`;
+	new URL('../init_dist/db.json', await import.meta.resolve('@screeps/launcher', import.meta.url));
 
 function withRoomObject(from: any, into: RoomObject) {
 	into.id = from._id;
@@ -60,7 +60,7 @@ function withStore(from: any, into: { store: Store }) {
 }
 
 // Initialize import source
-const loki = new Loki(jsonSource);
+const loki = new Loki(jsonSource as string);
 await new Promise<void>((resolve, reject) => {
 	loki.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve());
 });
