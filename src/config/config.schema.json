@@ -10,7 +10,7 @@
             "properties": {
                 "allowGuestAccess": {
                     "default": true,
-                    "description": "Whether to allow read only access to the API without logging in.",
+                    "description": "Whether to allow read-only access to the API without logging in.",
                     "type": "boolean"
                 },
                 "bind": {
@@ -21,6 +21,16 @@
                 "secret": {
                     "description": "Secret used for session authentication. If not specified a new secret will be generated each\nrestart.",
                     "type": "string"
+                },
+                "socketSkipsPermanents": {
+                    "default": true,
+                    "description": "The back can represent permanent objects such as sources and minerals as pixels in the map\nthumbnail instead of as coordinates over the `roomMap2` socket. This may speed up the client\nbut may also break compatibility with unofficial tools. Set this option to `false` to select\nthe behavior that matches the official server.",
+                    "type": "boolean"
+                },
+                "socketThrottle": {
+                    "default": 125,
+                    "description": "Minimum time between socket updates, in milliseconds. Setting this lower may cause\nperformance issues in the client.",
+                    "type": "number"
                 },
                 "steamApiKey": {
                     "description": "Steam Web API key used to authenticate users. You can get a key here:\nhttp://steamcommunity.com/dev/apikey",

@@ -89,21 +89,34 @@ registerBackendMiddleware((koa, router) => {
 					cache.set(room, data);
 				}
 			}
+			// Check ETag
+			if (context.req.headers['if-none-match'] === data.etag) {
+				context.status = 304;
+				return '';
+			} else if (!data.payload) {
+				context.status = 404;
+				return '';
+			}
 			// The Screeps client adds a very impolite cache bust to all map URLs. We can make better use
 			// of the browser cache by redirecting to a resource which can be cached
-			if (context.query.etag === data.etag) {
-				context.set('Cache-Control', 'public,max-age=31536000,immutable');
-				if (data.payload) {
-					context.set('Content-Type', 'image/png');
-					context.body = data.payload;
-				} else {
-					context.status = 404;
-					return '';
-				}
-			} else {
+			if (
+				context.query.bust ||
+				(context.query.etag && context.query.etag !== data.etag)
+			) {
 				// This seems like a risk for infinite redirects at some point, oh well!
 				context.status = 301;
 				context.redirect(`${context.path}?etag=${encodeURIComponent(data.etag)}`);
+				context.set('Cache-Control', 'no-store');
+			} else {
+				if (context.query.etag) {
+					// The redirect above acts as our revalidation in this case
+					context.set('Cache-Control', 'public,max-age=31536000,immutable');
+				} else {
+					// A non-bust request was sent, we can just use plain etag now
+					context.set('ETag', data.etag);
+				}
+				context.set('Content-Type', 'image/png');
+				context.body = data.payload;
 			}
 		});
 	}

@@ -1,11 +1,16 @@
+import config from 'xxscreeps/config';
 import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
 import { StructureKeeperLair } from './keeper-lair';
 import { Source } from './source';
 
-bindMapRenderer(StructureKeeperLair, () => undefined);
-
-bindTerrainRenderer(Source, () => 0x5af3ff);
-bindTerrainRenderer(StructureKeeperLair, () => 0x0f0f64);
+if (config.backend.socketSkipsPermanents) {
+	bindMapRenderer(StructureKeeperLair, () => undefined);
+	bindTerrainRenderer(Source, () => 0x5af3ff);
+	bindTerrainRenderer(StructureKeeperLair, () => 0x0f0f64);
+} else {
+	bindMapRenderer(Source, () => 's');
+	bindMapRenderer(StructureKeeperLair, () => 'k');
+}
 
 bindRenderer(Source, (source, next) => ({
 	...next(),

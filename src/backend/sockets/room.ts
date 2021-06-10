@@ -2,6 +2,7 @@ import type { Effect } from 'xxscreeps/utility/types';
 import type { Shard } from 'xxscreeps/engine/db';
 import type { Room } from 'xxscreeps/game/room';
 import type { SubscriptionEndpoint } from '../socket';
+import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
 import { GameState, runAsUser, runWithState } from 'xxscreeps/game';
@@ -10,8 +11,6 @@ import { asUnion, getOrSet } from 'xxscreeps/utility/utility';
 import { Render, roomSocketHandlers } from 'xxscreeps/backend/symbols';
 import { getRoomChannel } from 'xxscreeps/engine/processor/model';
 import './render';
-
-const kUpdateInterval = 125;
 
 function diff(previous: any, next: any) {
 	if (previous === next) {
@@ -93,7 +92,7 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 				state.time = time;
 				publish(state.room, time, didUpdate);
 				didUpdate = false;
-				timer.set(kUpdateInterval);
+				timer.set(config.backend.socketThrottle);
 			});
 		});
 

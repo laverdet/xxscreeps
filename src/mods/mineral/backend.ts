@@ -1,7 +1,12 @@
-import { bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
+import config from 'xxscreeps/config';
+import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
 import { Mineral } from './mineral';
 
-bindTerrainRenderer(Mineral, () => 0xaeaeae);
+if (config.backend.socketSkipsPermanents) {
+	bindTerrainRenderer(Mineral, () => 0xaeaeae);
+} else {
+	bindMapRenderer(Mineral, () => 'm');
+}
 
 bindRenderer(Mineral, (mineral, next) => ({
 	...next(),

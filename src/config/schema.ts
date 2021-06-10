@@ -5,6 +5,12 @@ export type Schema = {
 	 */
 	backend?: {
 		/**
+		 * Whether to allow read-only access to the API without logging in.
+		 * @default true
+		 */
+		allowGuestAccess?: boolean;
+
+		/**
 		 * Network interface to bind server to. Format is: "host" or "host:port". Host can be * to bind
 		 * to all interfaces: "*:port". Port is 21025, if not specified.
 		 * @default localhost
@@ -12,16 +18,26 @@ export type Schema = {
 		bind?: string;
 
 		/**
-		 * Whether to allow read only access to the API without logging in.
-		 * @default true
-		 */
-		allowGuestAccess?: boolean;
-
-		/**
 		 * Secret used for session authentication. If not specified a new secret will be generated each
 		 * restart.
 		 */
 		secret?: string;
+
+		/**
+		 * The back can represent permanent objects such as sources and minerals as pixels in the map
+		 * thumbnail instead of as coordinates over the `roomMap2` socket. This may speed up the client
+		 * but may also break compatibility with unofficial tools. Set this option to `false` to select
+		 * the behavior that matches the official server.
+		 * @default true
+		 */
+		socketSkipsPermanents?: boolean;
+
+		/**
+		 * Minimum time between socket updates, in milliseconds. Setting this lower may cause
+		 * performance issues in the client.
+		 * @default 125
+		 */
+		socketThrottle?: number;
 
 		/**
 		 * Steam Web API key used to authenticate users. You can get a key here:

@@ -1,7 +1,12 @@
-import { bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
+import config from 'xxscreeps/config';
+import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
 import { StructureController } from './controller';
 
-bindTerrainRenderer(StructureController, () => 0x505050);
+if (config.backend.socketSkipsPermanents) {
+	bindTerrainRenderer(StructureController, () => 0x505050);
+} else {
+	bindMapRenderer(StructureController, () => 'c');
+}
 
 bindRenderer(StructureController, (controller, next) => {
 	const reservationTime = controller['#reservationTime'];
