@@ -9,6 +9,7 @@ import { RoomPosition } from 'xxscreeps/game/position';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as C from 'xxscreeps/game/constants';
+import args from 'xxscreeps/config/arguments';
 
 // Schemas
 import * as CodeSchema from 'xxscreeps/engine/db/user/code';
@@ -36,7 +37,8 @@ import { StructureWall } from 'xxscreeps/mods/defense/wall';
 import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
 
-const jsonSource = process.argv.length > 2 ? process.argv[2] :
+const shardOnly = args['shard-only'];
+const jsonSource = args._[0] ??
 	new URL('../init_dist/db.json', await import.meta.resolve('@screeps/launcher', import.meta.url));
 
 function withRoomObject(from: any, into: RoomObject) {
@@ -61,7 +63,7 @@ function withStore(from: any, into: { store: Store }) {
 }
 
 // Initialize import source
-const loki = new Loki(jsonSource as string);
+const loki = new Loki(jsonSource);
 await new Promise<void>((resolve, reject) => {
 	loki.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve());
 });
@@ -74,16 +76,16 @@ const db = await Database.connect();
 	// Flush databases at the same time because they may point to the same service
 	const shard = await Shard.connect(db, 'shard0');
 	await Promise.all([
-		db.blob.flushdb(),
-		db.data.flushdb(),
+		shardOnly ? undefined : db.blob.flushdb(),
+		shardOnly ? undefined : db.data.flushdb(),
 		shard.blob.flushdb(),
 		shard.data.flushdb(),
 	]);
 	// Initialize blank database
 	await shard.data.set('time', gameTime);
 	await Promise.all([
-		db.blob.save(),
-		db.data.save(),
+		shardOnly ? undefined : db.blob.save(),
+		shardOnly ? undefined : db.data.save(),
 		shard.blob.save(),
 		shard.data.save(),
 	]);
@@ -236,38 +238,40 @@ for (const room of rooms) {
 }
 
 // Save users
-const code = loki.getCollection('users.code');
-const users = loki.getCollection('users');
-const activeUserIds = new Set<string>();
-for (const user of users.find()) {
-	const branch = code.find({ user: user._id, activeWorld: true })[0]?.branch ?? '';
-	const memory: string | undefined = env[`memory:${user.id}`];
-	if (user.active && user.cpu > 0) {
-		activeUserIds.add(user._id);
+if (!shardOnly) {
+	const code = loki.getCollection('users.code');
+	const users = loki.getCollection('users');
+	const activeUserIds = new Set<string>();
+	for (const user of users.find()) {
+		const branch = code.find({ user: user._id, activeWorld: true })[0]?.branch ?? '';
+		const memory: string | undefined = env[`memory:${user.id}`];
+		if (user.active && user.cpu > 0) {
+			activeUserIds.add(user._id);
+		}
+		await User.create(db, user._id, user.username);
+		if (user.badge) {
+			await Badge.save(db, user._id, JSON.stringify(user.badge));
+		}
+		await db.data.hmset(User.infoKey(user._id), {
+			branch,
+			...user.registeredDate && {
+				registeredDate: +new Date(user.registeredDate),
+			},
+		});
+		if (memory !== undefined) {
+			await saveMemoryBlob(shard, user._id, utf16ToBuffer(memory));
+		}
 	}
-	await User.create(db, user._id, user.username);
-	if (user.badge) {
-		await Badge.save(db, user._id, JSON.stringify(user.badge));
-	}
-	await db.data.hmset(User.infoKey(user._id), {
-		branch,
-		...user.registeredDate && {
-			registeredDate: +new Date(user.registeredDate),
-		},
-	});
-	if (memory !== undefined) {
-		await saveMemoryBlob(shard, user._id, utf16ToBuffer(memory));
-	}
-}
-await shard.data.sadd('users', [ ...activeUserIds ]);
+	await shard.data.sadd('users', [ ...activeUserIds ]);
 
-// Save user code content
-for (const branch of code.find()) {
-	const modules = new Map(Object.entries(branch.modules).map(([ key, data ]) => {
-		const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
-		return [ name, data as string ];
-	}));
-	await CodeSchema.saveContent(db, branch.user, branch.branch, modules);
+	// Save user code content
+	for (const branch of code.find()) {
+		const modules = new Map(Object.entries(branch.modules).map(([ key, data ]) => {
+			const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
+			return [ name, data as string ];
+		}));
+		await CodeSchema.saveContent(db, branch.user, branch.branch, modules);
+	}
 }
 
 // Finish up

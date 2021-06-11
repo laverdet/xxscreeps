@@ -270,11 +270,10 @@ export function calculateChecked(object1: WithStore | undefined, object2: WithSt
 }
 
 export function checkHasCapacity(target: WithStore, resourceType: ResourceType, amount: number) {
-	const capacity = target.store.getFreeCapacity(resourceType);
-	if (capacity === 0 || !(target.store.getFreeCapacity(resourceType) >= amount)) {
-		return C.ERR_FULL;
-	} else {
+	if (target.store.getFreeCapacity(resourceType) >= Math.max(1, amount)) {
 		return C.OK;
+	} else {
+		return C.ERR_FULL;
 	}
 }
 
@@ -283,7 +282,7 @@ export function checkHasResource(target: WithStore, resourceType: ResourceType, 
 		return C.ERR_INVALID_ARGS;
 	} else if (typeof amount !== 'number' || amount < 0) {
 		return C.ERR_INVALID_ARGS;
-	} else if (target.store[resourceType]! >= amount) {
+	} else if (target.store[resourceType]! >= Math.max(1, amount)) {
 		return C.OK;
 	} else {
 		return C.ERR_NOT_ENOUGH_RESOURCES;

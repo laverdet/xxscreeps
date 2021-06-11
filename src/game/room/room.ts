@@ -258,6 +258,10 @@ export function flushUsers(room: Room) {
 			presence.add(userId);
 		}
 	}
+	const user = room['#user'];
+	if (user) {
+		presence.add(user);
+	}
 	room['#users'] = {
 		intents: [ ...intents ],
 		presence: [ ...presence ],

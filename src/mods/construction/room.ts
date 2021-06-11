@@ -1,12 +1,13 @@
 import type { ConstructibleStructureType, ConstructionSite } from './construction-site';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import { intents, userGame } from 'xxscreeps/game';
+import { intents, me, userGame } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';
 import { asUnion, extend } from 'xxscreeps/utility/utility';
 import { structureFactories } from './symbols';
+import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 
 // Register FIND_ types for `ConstructionSite`
 const find = registerFindHandlers({
@@ -105,13 +106,19 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 
 	// No structures on top of others
 	const { obstacle } = factory;
-	if (obstacle !== undefined) {
+	const obstacleChecker = makeObstacleChecker({
+		checkTerrain: false,
+		ignoreCreeps: true,
+		room,
+		type: C.LOOK_STRUCTURES,
+		user: me,
+	});
+	if (obstacle) {
 		for (const object of room['#lookAt'](pos)) {
 			asUnion(object);
 			if (
 				object.structureType === structureType ||
-				obstacle ||
-				structureFactories.get(object.structureType!)?.obstacle
+				obstacleChecker(object)
 			) {
 				return C.ERR_INVALID_TARGET;
 			}

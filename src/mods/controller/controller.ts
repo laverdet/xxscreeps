@@ -1,9 +1,9 @@
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import { Game, intents, userInfo } from 'xxscreeps/game';
-import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { chainIntentChecks, checkTarget } from 'xxscreeps/game/checks';
+import { chainIntentChecks } from 'xxscreeps/game/checks';
 
 export const format = declare('Controller', () => compose(shape, StructureController));
 const shape = struct(ownedStructureFormat, {
@@ -12,7 +12,7 @@ const shape = struct(ownedStructureFormat, {
 	safeModeAvailable: 'int32',
 	'#downgradeTime': 'int32',
 	'#progress': 'int32',
-	'#reservationTime': 'int32',
+	'#reservationEndTime': 'int32',
 	'#safeModeCooldownTime': 'int32',
 	'#upgradeBlockedUntil': 'int32',
 });
@@ -35,10 +35,10 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	 * An object with the controller reservation info if present
 	 */
 	@enumerable get reservation() {
-		const reservationTime = this['#reservationTime'];
-		const value = reservationTime ? {
-			ticksToEnd: reservationTime - Game.time,
-			username: userInfo.get(this['#user']!)!.username,
+		const ticksToEnd = this['#reservationEndTime'] - Game.time;
+		const value = ticksToEnd > 0 ? {
+			ticksToEnd,
+			username: userInfo.get(this.room['#user']!)!.username,
 		} : undefined;
 		Object.defineProperty(this, 'reservation', { value });
 		return value;
@@ -72,7 +72,9 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	 * Make your claimed controller neutral again.
 	 */
 	unclaim() {
-		console.log('TODO: unclaim');
+		return chainIntentChecks(
+			() => checkUnclaim(this),
+			() => intents.save(this, 'unclaim'));
 	}
 
 	override ['#afterInsert'](room: Room) {
@@ -100,11 +102,9 @@ declare module 'xxscreeps/game/room/room' {
 
 export function checkActivateSafeMode(controller: StructureController) {
 	return chainIntentChecks(
-		() => checkTarget(controller, StructureController),
+		() => checkMyStructure(controller, StructureController),
 		() => {
-			if (controller.my !== false) {
-				return C.ERR_NOT_OWNER;
-			} else if (controller.safeModeAvailable <= 0) {
+			if (controller.safeModeAvailable <= 0) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			} else if (controller.safeModeCooldown) {
 				return C.ERR_TIRED;
@@ -112,4 +112,8 @@ export function checkActivateSafeMode(controller: StructureController) {
 				return C.ERR_BUSY;
 			}
 		});
+}
+
+export function checkUnclaim(controller: StructureController) {
+	return checkMyStructure(controller, StructureController);
 }

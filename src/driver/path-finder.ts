@@ -40,16 +40,18 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, userOptions:
 	const flee = userOptions.flee ?? false;
 
 	// Convert one-or-many goal into standard format for native extension
-	const goals = (Array.isArray(goal) ? goal : [ goal ]).map(goal => {
-		if ('range' in goal) {
-			return {
-				pos: flattenPosition(goal.pos),
-				range: goal.range | 0,
-			};
-		} else {
+	const goals = (Array.isArray(goal) ? goal : [ goal ]).map((goal: any) => {
+		if (goal.x !== undefined && goal.y !== undefined && goal.roomName !== undefined) {
 			return {
 				pos: flattenPosition(goal),
 				range: 0,
+			};
+		} else {
+			// This case detects `Goal` and `RoomObject`. The path finder was never meant to accept game
+			// objects but it did by accident, so I guess here we are.
+			return {
+				pos: flattenPosition(goal.pos),
+				range: Math.max(0, goal.range | 0),
 			};
 		}
 	});

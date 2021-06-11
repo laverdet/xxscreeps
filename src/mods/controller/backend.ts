@@ -9,7 +9,7 @@ if (config.backend.socketSkipsPermanents) {
 }
 
 bindRenderer(StructureController, (controller, next) => {
-	const reservationTime = controller['#reservationTime'];
+	const reservationEndTime = controller['#reservationEndTime'];
 	const sign = controller.room['#sign'];
 	return {
 		...next(),
@@ -19,9 +19,11 @@ bindRenderer(StructureController, (controller, next) => {
 		safeMode: controller.safeMode,
 		safeModeAvailable: controller.safeModeAvailable,
 		safeModeCooldown: controller.safeModeCooldown,
-		...reservationTime ? {
-			endTime: reservationTime,
-			user: controller.room['#user'],
+		...reservationEndTime ? {
+			reservation: {
+				endTime: reservationEndTime,
+				user: controller.room['#user'],
+			},
 		} : undefined,
 		...sign ? {
 			sign: {

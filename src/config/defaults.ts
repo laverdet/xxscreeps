@@ -12,6 +12,7 @@ export const defaults = makeDefaults({
 		allowGuestAccess: true as boolean,
 		bind: 'localhost',
 		secret: Crypto.randomBytes(32).toString(),
+		socketSkipsPermanents: true as boolean,
 		socketThrottle: 125,
 	},
 	game: {

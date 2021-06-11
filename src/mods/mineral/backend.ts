@@ -10,6 +10,7 @@ if (config.backend.socketSkipsPermanents) {
 
 bindRenderer(Mineral, (mineral, next) => ({
 	...next(),
+	density: mineral.density,
 	mineralAmount: mineral.mineralAmount,
 	mineralType: mineral.mineralType,
 	ticksToRegeneration: 0,

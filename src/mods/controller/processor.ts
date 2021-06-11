@@ -4,12 +4,12 @@ import { Game } from 'xxscreeps/game';
 import { saveAction } from 'xxscreeps/game/object';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { StructureController, checkActivateSafeMode } from './controller';
+import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller';
 
 // Processor methods
 export function claim(controller: StructureController, user: string) {
 	// Take controller
-	controller['#reservationTime'] = 0;
+	controller['#reservationEndTime'] = 0;
 	controller['#user'] = user;
 	controller.room['#level'] = 1;
 	controller.room['#user'] = user;
@@ -27,9 +27,10 @@ const intents = [
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkAttackController(creep, controller) === C.OK) {
 			const effect = creep.getActiveBodyparts(C.CLAIM);
-			const reservation = controller['#reservationTime'];
+			const reservation = controller['#reservationEndTime'];
+			controller['#user'] = null;
 			if (reservation) {
-				controller['#reservationTime'] = reservation - effect * C.CONTROLLER_RESERVE;
+				controller['#reservationEndTime'] = reservation - effect * C.CONTROLLER_RESERVE;
 			} else {
 				// TODO FIX THIS
 				controller['#downgradeTime'] -= effect * C.CONTROLLER_CLAIM_DOWNGRADE;
@@ -63,11 +64,17 @@ const intents = [
 	registerIntentProcessor(Creep, 'reserveController', {}, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkReserveController(creep, controller) === C.OK) {
-			controller['#reservationTime'] = Math.min(
-				Game.time + C.CONTROLLER_RESERVE_MAX - 1,
-				(controller['#reservationTime'] || (Game.time - 1)) +
-					creep.getActiveBodyparts(C.CLAIM) * C.CONTROLLER_RESERVE);
-			controller.room['#user'] = creep['#user'];
+			const power = creep.getActiveBodyparts(C.CLAIM) * C.CONTROLLER_RESERVE;
+			const reservationEndTime = controller['#reservationEndTime'];
+			if (reservationEndTime) {
+				controller['#reservationEndTime'] = Math.min(
+					Game.time + C.CONTROLLER_RESERVE_MAX,
+					reservationEndTime + power + 1,
+				);
+			} else {
+				controller['#reservationEndTime'] = Game.time + power + 1;
+				controller.room['#user'] = creep['#user'];
+			}
 			saveAction(creep, 'reserveController', controller.pos);
 			context.didUpdate();
 		}
@@ -129,18 +136,34 @@ const intents = [
 			context.didUpdate();
 		}
 	}),
+
+	registerIntentProcessor(StructureController, 'unclaim', {}, (controller, context) => {
+		if (checkUnclaim(controller) === C.OK) {
+			controller.isPowerEnabled = false;
+			controller.safeModeAvailable = 0;
+			controller['#downgradeTime'] = 0;
+			controller['#progress'] = 0;
+			controller['#safeModeCooldownTime'] = 0;
+			controller['#upgradeBlockedUntil'] = 0;
+			controller['#user'] =
+			controller.room['#user'] = null;
+			controller.room['#level'] = 0;
+			controller.room['#safeModeUntil'] = 0;
+			context.didUpdate();
+		}
+	}),
 ];
 
 registerObjectTickProcessor(StructureController, (controller, context) => {
 	if (controller.level === 0) {
-		const reservationTime = controller['#reservationTime'];
-		if (reservationTime) {
-			if (reservationTime <= Game.time) {
-				controller['#reservationTime'] = 0;
+		const reservationEndTime = controller['#reservationEndTime'];
+		if (reservationEndTime) {
+			if (reservationEndTime <= Game.time) {
+				controller['#reservationEndTime'] = 0;
 				controller.room['#user'] = null;
 				context.didUpdate();
 			} else {
-				context.wakeAt(reservationTime);
+				context.wakeAt(reservationEndTime);
 			}
 		}
 	} else {

@@ -72,9 +72,26 @@ export function authentication(): Middleware {
 			if (token && token !== 'guest') {
 				const tokenValue = await checkToken(token);
 				if (tokenValue === undefined) {
-					// Send failure to force the Steam client to reauthenticate
-					context.status = 403;
-					context.body = 'Malformed token';
+					// Allow this request to continue as long as `userId` isn't accessed
+					const message = 'Malformed token';
+					Object.defineProperty(context.state, 'userId', {
+						configurable: true,
+						get() {
+							throw new Error(message);
+						},
+					});
+					try {
+						await next();
+						Object.defineProperty(context.state, 'userId', { value: undefined });
+					} catch (err) {
+						if (err.message === message) {
+							// Send failure to force the Steam client to reauthenticate
+							context.status = 403;
+							context.body = 'Malformed token';
+						} else {
+							throw err;
+						}
+					}
 					return;
 				}
 				if (/^[a-f0-9]+$/.test(tokenValue)) {
