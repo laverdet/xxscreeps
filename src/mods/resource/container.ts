@@ -2,11 +2,11 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game } from 'xxscreeps/game';
-import { Structure, checkWall, structureFormat } from 'xxscreeps/mods/structure/structure';
+import { Structure, checkWall, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { OpenStore, openStoreFormat } from './store';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
+import { asUnion, assign } from 'xxscreeps/utility/utility';
 
 export const format = declare('Container', () => compose(shape, StructureContainer));
 const shape = struct(structureFormat, {
@@ -30,7 +30,7 @@ export class StructureContainer extends withOverlay(Structure, shape) {
 export function create(pos: RoomPosition) {
 	const ownedController = Game.rooms[pos.roomName]!.controller?.['#user'];
 	const container = assign(RoomObject.create(new StructureContainer, pos), {
-		hits: C.EXTENSION_HITS,
+		hits: C.CONTAINER_HITS,
 		store: OpenStore['#create'](C.CONTAINER_CAPACITY),
 	});
 	container['#nextDecayTime'] = Game.time + (ownedController ?
@@ -41,7 +41,14 @@ export function create(pos: RoomPosition) {
 registerBuildableStructure(C.STRUCTURE_CONTAINER, {
 	obstacle: false,
 	checkPlacement(room, pos) {
-		return checkWall(pos) === C.OK ?
+		// Don't allow double containers
+		for (const object of room['#lookAt'](pos)) {
+			asUnion(object);
+			if (object.structureType === 'container') {
+				return null;
+			}
+		}
+		return checkWall(pos) === C.OK ? // checkPlacement?
 			C.CONSTRUCTION_COST.container : null;
 	},
 	create(site) {

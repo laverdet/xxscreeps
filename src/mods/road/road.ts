@@ -5,6 +5,7 @@ import { Game } from 'xxscreeps/game';
 import { isBorder } from 'xxscreeps/game/position';
 import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
+import { asUnion } from 'xxscreeps/utility/utility';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 
 export const format = declare('Road', () => compose(shape, StructureRoad));
@@ -47,6 +48,16 @@ registerBuildableStructure(C.STRUCTURE_ROAD, {
 	checkPlacement(room, pos) {
 		const terrain = room.getTerrain().get(pos.x, pos.y);
 		const cost = C.CONSTRUCTION_COST.road;
+
+		// Don't allow double roads
+		for (const object of room['#lookAt'](pos)) {
+			asUnion(object);
+			if(object.structureType === 'road') {
+				return null;
+			}
+		}	
+
+		// Decide cost based on terrain
 		switch (terrain) {
 			case C.TERRAIN_MASK_SWAMP: return cost * C.CONSTRUCTION_COST_ROAD_SWAMP_RATIO;
 			case C.TERRAIN_MASK_WALL: return isBorder(pos.x, pos.y) ? null :
