@@ -59,9 +59,11 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	override get structureType() { return C.STRUCTURE_SPAWN }
 
 	get memory() {
-		const memory = Memory.get();
-		const spawns = memory.spawns ??= {};
-		return spawns[this.name] ??= {};
+		return (Memory.get().spawns ??= {})[this.name] ??= {};
+	}
+
+	set memory(memory: any) {
+		(Memory.get().spawns ??= {})[this.name] ??= memory;
 	}
 
 	override ['#addToMyGame'](game: GameConstructor) {

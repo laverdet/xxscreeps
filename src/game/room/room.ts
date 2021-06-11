@@ -40,7 +40,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * @param opts An object with additional options:
 	 *   `filter` - The result list will be filtered using the Lodash.filter method.
 	 */
-	find<Type extends FindConstants>(type: Type, options: RoomFindOptions<FindType<Type>> = {}): FindType<Type>[] {
+	find<Type extends FindConstants>(this: Room, type: Type, options: RoomFindOptions<FindType<Type>> = {}): FindType<Type>[] {
 		// Check find cache
 		const results = getOrSet(this.#findCache, type, () => findHandlers.get(type)?.(this) ?? []);
 
@@ -51,7 +51,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Materialize all `RoomObject` instances and build FIND & LOOK indices
 	 */
-	['#initialize']() {
+	['#initialize'](this: Room) {
 		if (this.#didInitialize) {
 			return;
 		}
@@ -87,7 +87,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Execute all insert / remove mutations that have been queued with `InsertObject` or
 	 * `RemoveObject`.
 	 */
-	['#flushObjects']() {
+	['#flushObjects'](this: Room) {
 		// Bail early if there's no work
 		if (this.#insertObjects.length + this.#removeObjects.size === 0) {
 			return;
@@ -130,7 +130,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Queue an object to be inserted into this room. This is flushed via `FlushObjects`.
 	 */
-	['#insertObject'](object: RoomObject, now = false) {
+	['#insertObject'](this: Room, object: RoomObject, now = false) {
 		if (now) {
 			this.#findCache.clear();
 			this['#objects'].push(object as never);

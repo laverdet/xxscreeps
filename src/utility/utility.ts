@@ -1,4 +1,4 @@
-import type { Implementation, Union } from './types';
+import type { Union } from './types';
 
 // Wrapper around Object.assign that enforces assigned types already exist
 export function assign<Result extends Base, Base = Result, Type extends Base = Base>(target: Result, source: Partial<Type>): Result {
@@ -22,16 +22,25 @@ export function exchange(target: any, name: keyof any, newValue: any = undefined
 
 // Wrapper around `Object.assign` which brings in type information from the interface being extended
 type AddThis<Type, Fn> = Fn extends (...args: infer Args) => infer Return ?
-	(this: Type, ...args: Args) => Return : Fn;
+	(this: Type, ...args: Args) => Return : {
+		configurable?: boolean;
+		enumerable?: boolean;
+		writable?: boolean;
+		get?: (this: Type) => any;
+		set?: (this: Type, value: any) => void;
+		value?: any;
+	};
 export function extend<Type, Proto extends {
 	[Key in keyof Type]?: AddThis<Type, Type[Key]>;
-}>(
-	ctor: Implementation<Type>, proto: Proto | ((next: Type) => Proto),
-) {
+}>(ctor: abstract new (...args: any[]) => Type, proto: Proto | ((next: Type) => Proto)) {
 	const ext = typeof proto === 'function' ?
 		proto(Object.getPrototypeOf(ctor.prototype)) : proto;
 	for (const [ key, info ] of Object.entries(Object.getOwnPropertyDescriptors(ext))) {
-		Object.defineProperty(ctor.prototype, key, { ...info, enumerable: false });
+		if (info.value && typeof info.value === 'function') {
+			Object.defineProperty(ctor.prototype, key, { ...info, enumerable: false });
+		} else {
+			Object.defineProperty(ctor.prototype, key, info.value);
+		}
 	}
 }
 

@@ -5,7 +5,6 @@ import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { compose, declare, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
 import { resourceEnumFormat } from './resource';
-export type { ResourceType };
 
 export type WithStore = Record<'store', Store>;
 

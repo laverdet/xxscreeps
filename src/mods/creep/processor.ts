@@ -1,6 +1,7 @@
 import type { Direction } from 'xxscreeps/game/position';
 import type { Resource } from 'xxscreeps/mods/resource/resource';
-import type { ResourceType, WithStore } from 'xxscreeps/mods/resource/store';
+import type { ResourceType } from 'xxscreeps/mods/resource';
+import type { WithStore } from 'xxscreeps/mods/resource/store';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';

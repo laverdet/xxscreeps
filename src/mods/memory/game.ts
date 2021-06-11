@@ -20,16 +20,20 @@ defineGlobal('Memory', {
 registerGlobal('RawMemory', RawMemory);
 
 // Define `Room#memory`
-declare module 'xxscreeps/game/room/room' {
+declare module 'xxscreeps/game/room' {
 	interface Room {
 		memory: any;
 	}
 }
+
 extend(Room, {
-	get memory() {
-		const memory = get();
-		const rooms = memory.rooms ??= {};
-		return rooms[this.name] ??= {};
+	memory: {
+		get() {
+			return (get().rooms ??= {})[this.name] ??= {};
+		},
+		set(memory: any) {
+			(get().rooms ??= {})[this.name] ??= memory;
+		},
 	},
 });
 

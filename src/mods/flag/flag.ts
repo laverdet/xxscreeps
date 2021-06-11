@@ -23,9 +23,11 @@ export class Flag extends withOverlay(RoomObject, shape) {
 	declare id: never;
 
 	get memory() {
-		const memory = Memory.get();
-		const flags = memory.flags ??= {};
-		return flags[this.name] ??= {};
+		return (Memory.get().flags ??= {})[this.name] ??= {};
+	}
+
+	set memory(memory: any) {
+		(Memory.get().flags ??= {})[this.name] ??= memory;
 	}
 
 	get ['#lookType']() { return C.LOOK_FLAGS }

@@ -1,5 +1,6 @@
 import type { RoomObject } from 'xxscreeps/game/object';
-import type { ResourceType, Store } from 'xxscreeps/mods/resource/store';
+import type { ResourceType } from 'xxscreeps/mods/resource';
+import type { Store } from 'xxscreeps/mods/resource/store';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 
 import Loki from 'lokijs';

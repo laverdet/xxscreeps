@@ -27,7 +27,7 @@ registerRuntimeConnector({
 });
 
 // Add `Room#visual` getter
-declare module 'xxscreeps/game/room/room' {
+declare module 'xxscreeps/game/room' {
 	interface Room {
 		/**
 		 * A `RoomVisual` object for this room. You can use this object to draw simple shapes (lines,
@@ -38,9 +38,11 @@ declare module 'xxscreeps/game/room/room' {
 }
 
 extend(Room, {
-	get visual() {
-		const value = new RoomVisual(this.name);
-		Object.defineProperty(this, 'visual', { value });
-		return value;
+	visual: {
+		get() {
+			const value = new RoomVisual(this.name);
+			Object.defineProperty(this, 'visual', { value });
+			return value;
+		},
 	},
 });

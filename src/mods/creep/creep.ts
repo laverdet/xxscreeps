@@ -1,6 +1,6 @@
 import type { Direction } from 'xxscreeps/game/position';
 import type { GameConstructor } from 'xxscreeps/game';
-import type { ResourceType } from 'xxscreeps/mods/resource/resource';
+import type { ResourceType } from 'xxscreeps/mods/resource';
 import type { RoomPath } from 'xxscreeps/game/room/path';
 import type { RoomSearchOptions } from 'xxscreeps/game/path-finder';
 import type { WithStore } from 'xxscreeps/mods/resource/store';
@@ -60,9 +60,11 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	@enumerable override get hitsMax() { return this.body.length * 100 }
 
 	get memory() {
-		const memory = Memory.get();
-		const creeps = memory.creeps ?? (memory.creeps = {});
-		return creeps[this.name] ?? (creeps[this.name] = {});
+		return (Memory.get().creeps ??= {})[this.name] ??= {};
+	}
+
+	set memory(memory: any) {
+		(Memory.get().creeps ??= {})[this.name] ??= memory;
 	}
 
 	@enumerable get owner() { return userInfo.get(this['#user']) }

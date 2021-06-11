@@ -23,6 +23,11 @@ export class StructureStorage extends withOverlay(OwnedStructure, shape) {
 		super['#afterInsert'](room);
 		room.storage = this;
 	}
+
+	override ['#afterRemove'](room: Room) {
+		super['#afterRemove'](room);
+		room.storage = undefined;
+	}
 }
 
 export function create(pos: RoomPosition, owner: string) {
