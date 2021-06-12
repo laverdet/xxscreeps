@@ -18,7 +18,7 @@ export function claim(controller: StructureController, user: string) {
 }
 
 function updateExtensionCapacities(room: Room) {
-	// Extensions only change capacity a RCL 6/7/8
+	// Extensions only change capacity at RCL 6/7/8
 	if (room['#level'] > 5) {
 		const newCap = C.EXTENSION_ENERGY_CAPACITY[room['#level']];
 		for (const structure of room.find(C.FIND_STRUCTURES)) {
