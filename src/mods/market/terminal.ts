@@ -109,9 +109,9 @@ registerBuildableStructure(C.STRUCTURE_TERMINAL, {
 	obstacle: true,
 	checkPlacement(room, pos) {
 		return checkPlacement(room, pos) === C.OK ?
-			C.CONSTRUCTION_COST.spawn : null;
+			C.CONSTRUCTION_COST.terminal : null;
 	},
 	create(site) {
 		return create(site.pos, site['#user']);
 	},
-});
+);
