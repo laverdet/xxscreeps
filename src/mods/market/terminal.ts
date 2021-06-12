@@ -114,4 +114,4 @@ registerBuildableStructure(C.STRUCTURE_TERMINAL, {
 	create(site) {
 		return create(site.pos, site['#user']);
 	},
-);
+});
