@@ -1,3 +1,5 @@
+import type { Room } from 'xxscreeps/game/room';
+import type { Structure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
 import * as CreepLib from './creep';
 import { Game } from 'xxscreeps/game';
@@ -13,6 +15,17 @@ export function claim(controller: StructureController, user: string) {
 	controller['#user'] = user;
 	controller.room['#level'] = 1;
 	controller.room['#user'] = user;
+}
+
+function updateExtensionCapacities(room: Room) {
+	// Extensions only change capacity a RCL 6/7/8
+	if (room['#level'] > 5) {
+		const newCap = C.EXTENSION_ENERGY_CAPACITY[room['#level']];
+		for (const structure of room.find(C.FIND_STRUCTURES)) {
+			if (structure.structureType === C.STRUCTURE_EXTENSION)
+				structure.store['#updateCapacity'](newCap);
+		}
+	}
 }
 
 // Register intent processors
@@ -121,6 +134,9 @@ const intents = [
 					}
 					controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 					++controller.safeModeAvailable;
+
+					// Update extension sizes
+					updateExtensionCapacities(controller.room);
 				}
 			}
 			saveAction(creep, 'upgradeController', controller.pos);
@@ -192,6 +208,10 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[controller.level]! * 0.9);
 				controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN - 1;
 			}
+
+			// Update extension sizes
+			updateExtensionCapacities(controller.room);
+
 			context.didUpdate();
 		}
 		context.wakeAt(controller['#downgradeTime']);

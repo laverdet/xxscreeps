@@ -253,6 +253,10 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 	['#subtract'](type: ResourceType, amount: number) {
 		this[type] = this['#amount'] -= amount;
 	}
+
+	['#updateCapacity'](amount: number) {
+		this['#capacity'] = amount;
+	}
 }
 
 /**
