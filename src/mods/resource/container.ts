@@ -41,10 +41,10 @@ export function create(pos: RoomPosition) {
 registerBuildableStructure(C.STRUCTURE_CONTAINER, {
 	obstacle: false,
 	checkPlacement(room, pos) {
-		// Don't allow double containers
+		// Can't build on anything but road or rampart
 		for (const object of room['#lookAt'](pos)) {
 			asUnion(object);
-			if (object.structureType === 'container') {
+			if (object.structureType != 'road' && object.structureType != 'rampart') {
 				return null;
 			}
 		}
