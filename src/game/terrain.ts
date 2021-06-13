@@ -5,7 +5,7 @@ import { Room } from './room';
 import { Game } from '.';
 export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants';
 
-export const terrainMaskToString = [ 'plain', 'wall', 'wall', 'swamp' ] as const;
+export const terrainMaskToString = [ 'plain', 'wall', 'swamp', 'wall' ] as const;
 
 /**
  * An object which provides fast access to room terrain data. These objects can be constructed for
