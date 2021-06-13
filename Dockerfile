@@ -5,7 +5,7 @@ RUN touch /usr/app/xxscreeps/.screepsrc.yaml
 RUN npm install
 RUN npm run build
 
-FROM node:alpine as run
+FROM node:slim as run
 WORKDIR /usr/app/xxscreeps
 COPY --from=build /usr/app/xxscreeps/ ./
 EXPOSE 21025
