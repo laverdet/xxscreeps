@@ -9,6 +9,7 @@
     "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
     "import": "xxscreeps import",
     "start": "xxscreeps start",
+    "import-and-start": "xxscreeps import && xxscreeps start",
     "watch": "tsc -w"
   },
   "bin": {
