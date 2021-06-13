@@ -152,6 +152,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 			if ((await handle.read(value, 0, size)).bytesRead !== size) {
 				throw new Error('Read partial file');
 			}
+			await handle.close();
 			this.cache.set(key, {
 				saveId: this.saveId,
 				value,
