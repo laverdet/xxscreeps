@@ -27,6 +27,8 @@ export function authentication(): Middleware {
 				throw new Error('Already flushed');
 			}
 			const userId = await findUserByProvider(context.db, provider, providerId);
+			// Disarm `userId` exception trap from malformed token
+			delete context.state.userId;
 			if (userId === null) {
 				context.state.newUserId = Id.generateId(12);
 				context.state.provider = provider;
