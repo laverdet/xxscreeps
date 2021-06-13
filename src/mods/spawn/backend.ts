@@ -116,14 +116,17 @@ registerBackendRoute({
 			runWithState(new GameState(context.backend.world, context.shard.time, [ room ]), () => {
 				runAsUser(userId, () => {
 					// Check room eligibility
+					if (!room.controller || room.controller.reservation || room.controller.my === false) {
+						throw new Error('Room is owned');
+					}
+					// Add spawn
+					Controller.claim(room.controller, userId);
 					if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
 						throw new Error('Invalid intent');
 					}
-					// Add spawn
 					room['#insertObject'](Spawn.create(pos, userId, name));
 					room['#flushObjects']();
-					Controller.claim(room.controller!, userId);
-					room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION - 1;
+					room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
 					flushUsers(room);
 				});
 			});

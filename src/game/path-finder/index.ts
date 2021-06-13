@@ -71,7 +71,6 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 					ignoreDestructibleStructures,
 					isPathFinder: true,
 					room,
-					type: 'creep',
 					user: me,
 				});
 				for (const object of room['#objects']) {

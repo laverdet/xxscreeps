@@ -107,7 +107,6 @@ export function dispatch(room: Room) {
 			const nextPosition = mover.nextPosition!;
 			const check = makeObstacleChecker({
 				room,
-				type: mover['#lookType'],
 				user: mover['#user']!,
 			});
 			for (const object of room['#lookAt'](nextPosition)) {

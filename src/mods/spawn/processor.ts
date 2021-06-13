@@ -92,7 +92,6 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				const check = makePositionChecker({
 					checkTerrain: true,
 					room: spawn.room,
-					type: 'creep',
 					user: creep['#user'],
 				});
 				const directions = new Set(spawn.spawning.directions.length === 0 ?
