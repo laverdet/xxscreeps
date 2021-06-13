@@ -1,7 +1,7 @@
 import config from 'xxscreeps/config';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
 import { Database, Shard } from 'xxscreeps/engine/db';
-import { Deferred } from 'xxscreeps/utility/async';
+import { Deferred, mustNotReject } from 'xxscreeps/utility/async';
 import { Mutex } from 'xxscreeps/engine/db/mutex';
 import { activeRoomsKey, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
@@ -29,7 +29,8 @@ serviceSubscription.listen(message => {
 
 // Run main game processing loop
 const performanceTimer = new AveragingTimer(1000);
-
+const saveInterval = config.database.saveInterval * 60000;
+let lastSave = Date.now();
 try {
 	// Initialize scratch state
 	const [ rooms, users ] = await Promise.all([
@@ -94,6 +95,16 @@ try {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (shuttingDown) {
 			break;
+		}
+
+		// Maybe save
+		const now = Date.now();
+		if (lastSave + saveInterval < now) {
+			lastSave = now;
+			mustNotReject(Promise.all([
+				db.save(),
+				shard.save(),
+			]));
 		}
 
 		// Add delay

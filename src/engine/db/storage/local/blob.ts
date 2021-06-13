@@ -12,8 +12,12 @@ registerStorageProvider('file', 'blob', url =>
 	connect(`${url}`, LocalBlobClient, LocalBlobHost, () => LocalBlobResponder.create(url)));
 
 class LocalBlobResponder extends Responder implements MaybePromises<Provider.BlobProvider> {
-	private bufferedBlobs = new Map<string, Readonly<Uint8Array>>();
-	private bufferedDeletes = new Set<string>();
+	private readonly cache = new Map<string, {
+		saveId: number;
+		value: Readonly<Uint8Array> | null;
+	}>();
+
+	private saveId = 0;
 	private readonly knownPaths = new Set<string>();
 	private readonly exitEffect = listen(process, 'exit', () => this.checkMissingFlush());
 
@@ -87,25 +91,40 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 		} else if (value === null) {
 			return false;
 		} else {
-			this.bufferedBlobs.set(to, value);
+			this.cache.set(to, {
+				saveId: this.saveId,
+				value,
+			});
 			return true;
 		}
 	}
 
 	async del(key: string) {
 		this.check(key);
-		// If it hasn't been written to disk yet it will just be removed from the buffer
-		if (this.bufferedBlobs.has(key)) {
-			this.bufferedBlobs.delete(key);
+		// Check if the write is still pending
+		const cached = this.cache.get(key);
+		if (cached?.saveId === this.saveId) {
+			this.cache.set(key, {
+				saveId: -1,
+				value: null,
+			});
+			return cached.value !== null;
 		} else {
 			// Ensure it actually exists on disk
 			const path = Path.join(this.path, key);
 			try {
 				await fs.stat(path);
 			} catch (err) {
+				this.cache.set(key, {
+					saveId: -1,
+					value: null,
+				});
 				return false;
 			}
-			this.bufferedDeletes.add(key);
+			this.cache.set(key, {
+				saveId: this.saveId,
+				value: null,
+			});
 		}
 		return true;
 	}
@@ -113,27 +132,37 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 	async getBuffer(key: string) {
 		this.check(key);
 		// Check in-memory buffer
-		const buffered = this.bufferedBlobs.get(key);
-		if (buffered !== undefined) {
-			return buffered;
-		} else if (this.bufferedDeletes.has(key)) {
-			return null;
+		const cached = this.cache.get(key);
+		if (cached) {
+			return cached.value;
 		}
-		// Load from file system
+		// Open handle from file system, we should catch this error
 		const path = Path.join(this.path, key);
-		try {
-			const handle = await fs.open(path, 'r');
+		const handle = await async function() {
 			try {
-				const { size } = await handle.stat();
-				const buffer = new Uint8Array(new SharedArrayBuffer(size));
-				if ((await handle.read(buffer, 0, size)).bytesRead !== size) {
-					throw new Error('Read partial file');
-				}
-				return buffer;
-			} finally {
-				await handle.close();
+				return await fs.open(path, 'r');
+			} catch (err) {
+				return null;
 			}
-		} catch (err) {
+		}();
+		if (handle) {
+			// An error here would be unexpected, so don't catch
+			const { size } = await handle.stat();
+			const value = new Uint8Array(new SharedArrayBuffer(size));
+			if ((await handle.read(value, 0, size)).bytesRead !== size) {
+				throw new Error('Read partial file');
+			}
+			this.cache.set(key, {
+				saveId: this.saveId,
+				value,
+			});
+			return value;
+		} else {
+			// Cache the absence of this file
+			this.cache.set(key, {
+				saveId: -1,
+				value: null,
+			});
 			return null;
 		}
 	}
@@ -148,39 +177,36 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 
 	set(key: string, value: Readonly<Uint8Array>) {
 		this.check(key);
-		this.bufferedDeletes.delete(key);
-		this.bufferedBlobs.set(key, function() {
-			if (value.buffer instanceof SharedArrayBuffer) {
-				return value;
-			}
-			const copy = new Uint8Array(new SharedArrayBuffer(value.length));
-			copy.set(value);
-			return copy;
-		}());
+		this.cache.set(key, {
+			saveId: this.saveId,
+			value: function() {
+				if (value.buffer instanceof SharedArrayBuffer) {
+					return value;
+				}
+				const copy = new Uint8Array(new SharedArrayBuffer(value.length));
+				copy.set(value);
+				return copy;
+			}(),
+		});
 	}
 
 	async flushdb() {
-		this.bufferedBlobs.clear();
-		this.bufferedDeletes.clear();
+		this.cache.clear();
 		this.knownPaths.clear();
 		await fs.rm(this.path, { recursive: true });
 		await LocalBlobResponder.initializeDirectory(this.path);
 	}
 
 	async save() {
-		// Reset buffers
-		const blobs = this.bufferedBlobs;
-		const deletes = this.bufferedDeletes;
-		this.bufferedBlobs = new Map;
-		this.bufferedDeletes = new Set;
+		// Get changes since last save
+		const entries = [ ...Fn.filter(this.cache, entry => entry[1].saveId === this.saveId) ];
+		++this.saveId;
 
-		// Run saves and deletes in parallel
-		await Promise.all([
-
-			// Saves all buffered data to disk
-			await Promise.all(Fn.map(blobs.entries(), async([ fragment, blob ]) => {
-				const path = Path.join(this.path, fragment);
-				const dirname = Path.dirname(path);
+		// Save to disk
+		await Promise.all(Fn.map(entries, async([ key, { value } ]) => {
+			const path = Path.join(this.path, key);
+			const dirname = Path.dirname(path);
+			if (value) {
 				if (!this.knownPaths.has(dirname)) {
 					try {
 						await fs.mkdir(dirname, { recursive: true });
@@ -191,20 +217,19 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 					}
 					this.knownPaths.add(dirname);
 				}
-				await fs.writeFile(path, blob as Uint8Array);
-			})),
-
-			// Dispatches buffered deletes
-			await Promise.all(Fn.map(deletes.values(), async fragment => {
-				const path = Path.join(this.path, fragment);
+				await fs.writeFile(path, value);
+			} else {
 				await fs.unlink(path);
-			})),
-		]);
+			}
+		}));
 
 		// Also remove empty directories after everything has flushed
 		const unlinkedDirectories = new Set<string>();
-		await Promise.all(Fn.map(deletes.values(), async fragment => {
-			const path = Path.join(this.path, fragment);
+		await Promise.all(Fn.map(entries, async([ key, { value } ]) => {
+			if (value) {
+				return;
+			}
+			const path = Path.join(this.path, key);
 			for (let dir = Path.dirname(path); dir !== this.path; dir = Path.dirname(dir)) {
 				if (unlinkedDirectories.has(dir)) {
 					break;
@@ -234,7 +259,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 	}
 
 	private checkMissingFlush() {
-		const size = this.bufferedBlobs.size + this.bufferedDeletes.size;
+		const size = Fn.accumulate(this.cache, entry => entry[1].saveId === this.saveId ? 1 : 0);
 		if (size !== 0) {
 			console.warn(`Blob storage shut down with ${size} pending write(s)`);
 		}

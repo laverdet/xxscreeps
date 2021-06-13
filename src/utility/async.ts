@@ -94,7 +94,7 @@ export function listen<
 }
 
 // Exits immediately if a promise rejects
-export function mustNotReject(task: () => Promise<void> | Promise<void>) {
+export function mustNotReject(task: (() => Promise<any>) | Promise<any>) {
 	(typeof task === 'function' ? task() : task).catch(error => {
 		console.error(error);
 		process.exit();

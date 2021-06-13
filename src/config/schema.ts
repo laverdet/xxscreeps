@@ -132,6 +132,12 @@ export type Schema = {
 		 * @default local://db
 		 */
 		pubsub: string;
+
+		/**
+		 * How often (in wall time minutes) to save the main database
+		 * @default 120
+		 */
+		saveInterval?: number;
 	};
 
 	/**

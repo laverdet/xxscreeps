@@ -60,7 +60,7 @@ try {
 		const shutdownUnlisten = serviceChannel.listen(message => {
 			if (message.type === 'mainDisconnected') {
 				shutdownUnlisten();
-				mustNotReject(async() => void await Promise.all([
+				mustNotReject(Promise.all([
 					getProcessorChannel(shard).publish({ type: 'shutdown' }),
 					getRunnerChannel(shard).publish({ type: 'shutdown' }),
 				]));

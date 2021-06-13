@@ -35,6 +35,7 @@ export const defaults = makeDefaults({
 		blob: './screeps/db',
 		data: './screeps/db/data.json',
 		pubsub: 'local://db',
+		saveInterval: 2,
 	},
 	shards: [ {
 		name: 'shard0',
