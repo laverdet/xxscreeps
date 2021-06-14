@@ -1,6 +1,7 @@
 import type { GameMap, World } from './map';
 import type { AnyRoomObject, Room } from './room';
 import type { RoomObject } from './object';
+import type { TickPayload } from 'xxscreeps/driver';
 import * as Fn from 'xxscreeps/utility/functional';
 import { gameInitializers } from './symbols';
 
@@ -54,13 +55,10 @@ export class GameBase {
  * The main global game object containing all the game play information.
  */
 export class Game extends GameBase {
-	cpu = {
-		bucket: 10000,
-		limit: 10000,
-		tickLimit: 500,
-		getUsed: () => 0,
-		getHeapStatistics: () => 0,
-	};
+	/**
+	 * An object containing information about your CPU usage.
+	 */
+	declare cpu: CPU;
 
 	gcl = {
 		level: 1,
@@ -78,7 +76,7 @@ export class Game extends GameBase {
 	 */
 	shard: { name: string; type: string; ptr: boolean };
 
-	constructor(state: GameState) {
+	constructor(state: GameState, data?: TickPayload) {
 		super(state);
 
 		// Shard info
@@ -89,7 +87,7 @@ export class Game extends GameBase {
 		};
 
 		// Run hooks
-		gameInitializers.forEach(fn => fn(this));
+		gameInitializers.forEach(fn => fn(this, data));
 		for (const room of Object.values(state.rooms)) {
 			for (const object of room['#objects']) {
 				if ((object as any).my) {
@@ -107,4 +105,28 @@ export class Game extends GameBase {
 	notify(_message: string, _groupInterval?: number) {
 		console.error('TODO: notify');
 	}
+}
+
+export interface CPU {
+	/**
+	 * An amount of unused CPU accumulated in your [bucket](https://docs.screeps.com/cpu-limit.html#Bucket).
+	 */
+	bucket: number;
+
+	/**
+	 * Your assigned CPU limit for the current shard.
+	 */
+	limit: number;
+
+	/**
+	 * An amount of available CPU time at the current game tick. Usually it is higher than
+	 * `Game.cpu.limit`. [Learn more](https://docs.screeps.com/cpu-limit.html)
+	 */
+	tickLimit: number;
+
+	/**
+	 * Get amount of CPU time used from the beginning of the current game tick. Always returns 0 in
+	 * the Simulation mode.
+	 */
+	getUsed(): number;
 }

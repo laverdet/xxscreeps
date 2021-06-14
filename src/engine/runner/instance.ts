@@ -1,32 +1,37 @@
 import type { Effect } from 'xxscreeps/utility/types';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
-import type { RunnerIntent } from './channel';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import type { DriverConnector } from 'xxscreeps/driver/symbols';
+import type { RunnerIntent } from './channel';
 import type { Shard } from 'xxscreeps/engine/db';
 import type { SubscriptionFor } from 'xxscreeps/engine/db/channel';
 import type { World } from 'xxscreeps/game/map';
+import config from 'xxscreeps/config';
 import * as Code from 'xxscreeps/engine/db/user/code';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import * as User from 'xxscreeps/engine/db/user';
+import { getRunnerUserChannel, getUsageChannel } from './channel';
 import { acquire } from 'xxscreeps/utility/async';
 import { createSandbox } from 'xxscreeps/driver/sandbox';
 import { driverConnectors } from 'xxscreeps/driver/symbols';
 import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/processor/model';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
-import { getRunnerUserChannel } from './channel';
+import { clamp } from 'xxscreeps/utility/utility';
+
+const kCPU = 100;
 
 export class PlayerInstance {
-	tickPayload: TickPayload = {} as never;
+	private bucket = config.runner.cpu.bucket;
 	private cleanup!: Effect;
 	private connectors!: DriverConnector[];
 	private sandbox?: Sandbox;
 	private stale = false;
 	private readonly consoleEval: string[] = [];
-	private readonly consoleChannel: ReturnType<typeof getConsoleChannel>;
+	private readonly consoleChannel;
 	private readonly intents: RunnerIntent[] = [];
 	private readonly seenUsers = new Set<string>();
+	private readonly usageChannel;
 
 	private constructor(
 		public readonly shard: Shard,
@@ -38,6 +43,7 @@ export class PlayerInstance {
 		private branchName: string | null,
 	) {
 		this.consoleChannel = getConsoleChannel(this.shard, this.userId);
+		this.usageChannel = getUsageChannel(this.shard, this.userId);
 
 		// Listen for game interactions from user
 		channel.listen(message => {
@@ -138,11 +144,16 @@ export class PlayerInstance {
 
 			// Run the tick
 			try {
-				const payload: TickPayload = {
-					time,
-					consoleEval: this.consoleEval.splice(0),
+				const payload: Partial<TickPayload> = {
 					backendIntents: this.intents.splice(0),
-				} as never;
+					consoleEval: this.consoleEval.splice(0),
+					cpu: {
+						bucket: this.bucket,
+						limit: kCPU,
+						tickLimit: Math.min(config.runner.cpu.tickLimit, this.bucket),
+					},
+					time,
+				};
 				await Promise.all([
 					(async() => {
 						// Load room blobs
@@ -160,10 +171,10 @@ export class PlayerInstance {
 						}
 					})(),
 					// Also run mod connectors
-					Promise.all(Fn.map(this.connectors, connector => connector.refresh?.(payload))),
+					Promise.all(Fn.map(this.connectors, connector => connector.refresh?.(payload as TickPayload))),
 				]);
 				// Send payload off to runtime and execute user code
-				return await this.sandbox.run(payload);
+				return await this.sandbox.run(payload as TickPayload);
 			} catch (err) {
 				console.error(err.stack);
 				this.stale = true;
@@ -171,16 +182,32 @@ export class PlayerInstance {
 		})();
 
 		// Save runtime results
-		if (result) {
+		if (result?.result === 'success') {
+			const { payload } = result;
+			this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - payload.usage.cpu + kCPU);
 			await Promise.all([
 				// Publish intent blobs
 				Promise.all(Fn.map(roomNames, roomName =>
-					publishRunnerIntentsForRoom(this.shard, this.userId, roomName, time, result.intentPayloads[roomName]))),
+					publishRunnerIntentsForRoom(this.shard, this.userId, roomName, time, payload.intentPayloads[roomName]))),
+
+				// Publish usage event
+				this.usageChannel.publish(payload.usage),
 
 				// Save driver connector information [memory, flags, visual, whatever]
-				Promise.all(Fn.map(this.connectors, connector => connector.save?.(result))),
+				Promise.all(Fn.map(this.connectors, connector => connector.save?.(payload))),
 			]);
 		} else {
+			if (result) {
+				// Deduct CPU limit in case of severe failure
+				this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - config.runner.cpu.tickLimit) + kCPU;
+				void this.usageChannel.publish({ cpu: kCPU });
+				if (result.result === 'disposed') {
+					void this.consoleChannel.publish({ type: 'error', value: 'Script was disposed' });
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+				} else if (result.result === 'timedOut') {
+					void this.consoleChannel.publish({ type: 'error', value: 'Script timed out' });
+				}
+			}
 			// Publish empty results to move processing along
 			await Promise.all(Fn.map(roomNames, roomName => publishRunnerIntentsForRoom(this.shard, this.userId, roomName, time)));
 		}

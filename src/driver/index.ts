@@ -11,8 +11,13 @@ export interface InitializationPayload {
 }
 
 export interface TickPayload {
-	time: number;
+	cpu: {
+		bucket: number;
+		limit: number;
+		tickLimit: number;
+	};
 	roomBlobs: Readonly<Uint8Array>[];
+	time: number;
 	consoleEval?: string[];
 	backendIntents?: RunnerIntent[];
 	usernames?: Record<string, string>;
@@ -20,4 +25,5 @@ export interface TickPayload {
 
 export interface TickResult {
 	intentPayloads: Record<string, RoomIntentPayload>;
+	usage: any;
 }

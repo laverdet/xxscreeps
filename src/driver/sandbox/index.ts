@@ -1,5 +1,5 @@
 import type { Transform } from '../webpack';
-import type { InitializationPayload } from 'xxscreeps/driver';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
 import type { Print } from 'xxscreeps/driver/runtime';
 import * as Path from 'path';
 import config from 'xxscreeps/config';
@@ -9,9 +9,18 @@ import { schemaTransform } from 'xxscreeps/engine/schema/build';
 import { locateModule } from '../path-finder';
 import { compile } from '../webpack';
 
-export type Sandbox = import('./nodejs').NodejsSandbox | import('./isolated/isolated').IsolatedSandbox;
+export interface Sandbox {
+	dispose(): void;
 
-export function compileRuntimeSource(transform: Transform, path = 'xxscreeps/driver/runtime') {
+	run(data: TickPayload): Promise<{
+		result: 'disposed' | 'timedOut';
+	} | {
+		result: 'success';
+		payload: TickResult;
+	}>;
+}
+
+export function compileRuntimeSource(path: string, transform: Transform) {
 	return compile(path, [
 		transform,
 		configTransform,
@@ -28,12 +37,12 @@ export function compileRuntimeSource(transform: Transform, path = 'xxscreeps/dri
 	]);
 }
 
-export async function createSandbox(data: InitializationPayload, print: Print) {
+export async function createSandbox(data: InitializationPayload, print: Print): Promise<Sandbox> {
 	if (config.runner.unsafeSandbox) {
 		const { NodejsSandbox } = await import('./nodejs');
 		return NodejsSandbox.create(data, print);
 	} else {
-		const { IsolatedSandbox } = await import('./isolated/isolated');
+		const { IsolatedSandbox } = await import('./isolated');
 		return IsolatedSandbox.create(data, print);
 	}
 }

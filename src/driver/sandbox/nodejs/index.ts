@@ -1,11 +1,14 @@
 import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
 import type { Evaluate, Print } from 'xxscreeps/driver/runtime';
+import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import util from 'util';
 import vm from 'vm';
 import { createRequire } from 'module';
 import { runOnce } from 'xxscreeps/utility/memoize';
 import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox';
-type Runtime = typeof import('xxscreeps/driver/runtime');
+type Runtime = typeof import('./runtime');
+
+const defaultRequire = createRequire(import.meta.url);
 
 const getPathFinderModule = runOnce(() => {
 	const require = createRequire(import.meta.url);
@@ -14,7 +17,7 @@ const getPathFinderModule = runOnce(() => {
 });
 
 const getCompiledRuntime = runOnce(async() => {
-	const { source, map } = await compileRuntimeSource({
+	const { source, map } = await compileRuntimeSource('xxscreeps/driver/sandbox/nodejs/runtime', {
 		externals: ({ request }) => request === 'util' ? 'nodeUtilImport' : undefined,
 	});
 	return {
@@ -23,7 +26,7 @@ const getCompiledRuntime = runOnce(async() => {
 	};
 });
 
-export class NodejsSandbox {
+export class NodejsSandbox implements Sandbox {
 	private constructor(
 		private readonly tick: Runtime['tick'],
 	) {}
@@ -44,18 +47,38 @@ export class NodejsSandbox {
 		delete context.nodeUtilImport;
 		delete context[pf.path];
 		const evaluate: Evaluate = (source, filename) => new vm.Script(source, { filename }).runInContext(context);
-		runtime.initialize(evaluate, print, data);
-		context._tick = runtime.tick;
-		const wrappedTick: Runtime['tick'] = function(...args) {
-			context._args = args;
-			return vm.runInContext('_tick(..._args)', context, { timeout: 1000 });
-		};
-		return new NodejsSandbox(wrappedTick);
+		runtime.initialize(defaultRequire, evaluate, print, data);
+		return new NodejsSandbox(vm.runInContext(`
+			(function(context, tick, runInContext) {
+				let data;
+				_runWithArgs = function() {
+					const result = tick(data);
+					data = undefined;
+					return result;
+				};
+
+				return function(data_) {
+					data = data_;
+					return runInContext('_runWithArgs()', context, { timeout: data.cpu.tickLimit });
+				};
+			})
+		`, context)(context, runtime.tick, vm.runInContext));
 	}
 
 	dispose() {}
 
-	run(args: TickPayload) {
-		return Promise.resolve(this.tick(args));
+	// eslint-disable-next-line @typescript-eslint/require-await
+	async run(data: TickPayload) {
+		const start = process.hrtime.bigint();
+		try {
+			const payload = this.tick(data);
+			payload.usage.cpu = Number(process.hrtime.bigint() - start) / 1e6;
+			return { result: 'success' as const, payload };
+		} catch (err) {
+			if (err.message.startsWith('Script execution timed out after')) {
+				return { result: 'timedOut' as const };
+			}
+			throw err;
+		}
 	}
 }

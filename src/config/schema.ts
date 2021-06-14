@@ -91,6 +91,20 @@ export type Schema = {
 	 * Runner settings
 	 */
 	runner?: {
+		cpu?: {
+			/**
+			 * CPU bucket size per user
+			 * @default: 10000
+			 */
+			bucket?: number;
+
+			/**
+			 * Maximum amount of time in milliseconds that a user's runtime may run for.
+			 * @default: 500
+			 */
+			tickLimit?: number;
+		};
+
 		/**
 		 * Total number of runner tasks to run at a time.
 		 * @default `os.cpus().length + 1`

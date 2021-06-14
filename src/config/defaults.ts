@@ -29,6 +29,10 @@ export const defaults = makeDefaults({
 	],
 	runner: {
 		concurrency: os.cpus().length + 1,
+		cpu: {
+			bucket: 10000,
+			tickLimit: 500,
+		},
 	},
 	schemaArchive: './screeps/archive',
 	database: {

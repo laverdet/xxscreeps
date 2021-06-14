@@ -5,7 +5,11 @@ import { Channel } from 'xxscreeps/engine/db/channel';
 export type RunnerIntent = { receiver: string; intent: string; params: any[] };
 export function getRunnerUserChannel(shard: Shard, user: string) {
 	type Message =
-	{ type: 'eval'; expr: string } |
-	{ type: 'intent'; intent: RunnerIntent };
-	return new Channel<Message>(shard.pubsub, user);
+		{ type: 'eval'; expr: string } |
+		{ type: 'intent'; intent: RunnerIntent };
+	return new Channel<Message>(shard.pubsub, `runner/${user}`);
+}
+
+export function getUsageChannel(shard: Shard, user: string) {
+	return new Channel<any>(shard.pubsub, `runner/${user}/usage`);
 }

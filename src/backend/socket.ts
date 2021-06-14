@@ -5,7 +5,7 @@ import sockjs from 'sockjs';
 import config from 'xxscreeps/config';
 import { checkToken, makeToken } from './auth/token';
 import { CodeSubscriptions } from './sockets/code';
-import { ConsoleSubscription } from './sockets/console';
+import { ConsoleSubscriptions } from './sockets/console';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
 const { allowGuestAccess } = config.backend;
@@ -14,7 +14,7 @@ const socketServer = sockjs.createServer({
 	prefix: '/socket',
 	log: () => {},
 });
-const handlers = [ ...CodeSubscriptions, ConsoleSubscription, mapSubscription, roomSubscription ];
+const handlers = [ ...CodeSubscriptions, ...ConsoleSubscriptions, mapSubscription, roomSubscription ];
 
 type SubscriptionInstance = {
 	context: BackendContext;
