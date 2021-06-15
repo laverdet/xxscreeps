@@ -105,6 +105,20 @@ If you're using VS Code and you have the YAML extension installed all the option
 autocomplete. If not you can read the [config
 schema](https://github.com/laverdet/xxscreeps/blob/main/src/config/schema.ts).
 
+## Docker
+If you want to install xxscreeps via docker you can use the following compose as an example
+```yaml
+version: "3"
+services:
+  xxscreeps:
+    image: nilskri/xxscreeps
+    ports:
+      - "21025:21025"
+    volumes:
+      - <your path to the .screepsrc.yaml you want to use>:/usr/app/xxscreeps/.screepsrc.yaml
+# set this if you want to persist the content
+#      - <path to persistence>:/usr/app/xxscreeps/screeps
+```
 ## Contributing
 
 If you've read this far, hopefully you would like to help. Without support from the community
