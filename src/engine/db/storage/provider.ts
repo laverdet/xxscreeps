@@ -28,7 +28,7 @@ export type Value = number | string;
 export type KeyValProvider = {
 	// keys / strings
 	cad(key: string, check: string): Promise<boolean>;
-	cas(key: string, value: Value, old: Value): Promise<boolean>;
+	cas(key: string, expected: Value, desired: Value): Promise<boolean>;
 	copy(from: string, to: string, options?: Copy): Promise<boolean>;
 	del(key: string): Promise<boolean>;
 	get(key: string): Promise<string | null>;
@@ -43,6 +43,7 @@ export type KeyValProvider = {
 	// hashes
 	hget(key: string, field: string): Promise<string | null>;
 	hgetall(key: string): Promise<Record<string, string>>;
+	hincrBy(key: string, field: string, value: number): Promise<number>;
 	hmget(key: string, fields: string[]): Promise<Record<string, string | null>>;
 	hset(key: string, field: string, value: Value, options?: HSet): Promise<boolean>;
 	hmset(key: string, fields: [ string, Value ][] | Record<string, Value>): Promise<void>;

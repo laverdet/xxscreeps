@@ -54,10 +54,10 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 		}
 	}
 
-	cas(key: string, value: Value, old: Value) {
+	cas(key: string, expected: Value, desired: Value) {
 		const current = this.data.get(key);
-		if (current === old) {
-			this.data.set(key, value);
+		if (`${current}` === `${expected}`) {
+			this.data.set(key, desired);
 			return true;
 		} else {
 			return false;
@@ -160,29 +160,36 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 		return map ? Fn.fromEntries(map.entries()) : {};
 	}
 
+	hincrBy(key: string, field: string, value: number) {
+		const map: Map<string, any> = getOrSet(this.data, key, () => new Map);
+		const result = (Number(map.get(field)) || 0) + value;
+		map.set(field, result);
+		return result;
+	}
+
 	hmget(key: string, fields: Iterable<string>) {
 		const map: Map<string, string> | undefined = this.data.get(key);
 		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ]));
 	}
 
 	hset(key: string, field: string, value: Value, options?: Provider.HSet) {
-		const map: Map<string, string> = getOrSet(this.data, key, () => new Map);
+		const map: Map<string, any> = getOrSet(this.data, key, () => new Map);
 		const has = map.has(field);
 		if (options?.if === 'nx' && has) {
 			return false;
 		} else {
-			map.set(field, `${value}`);
+			map.set(field, value);
 			return !has;
 		}
 	}
 
 	hmset(key: string, fields: Iterable<readonly [ string, Value ]> | Record<string, Value>) {
-		const map: Map<string, string> = getOrSet(this.data, key, () => new Map);
+		const map: Map<string, any> = getOrSet(this.data, key, () => new Map);
 		const iterable = Symbol.iterator in fields ?
 			fields as Iterable<[ string, Value ]> :
 			Object.entries(fields);
 		for (const [ field, value ] of iterable) {
-			map.set(field, `${value}`);
+			map.set(field, value);
 		}
 	}
 

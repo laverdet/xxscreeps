@@ -6,7 +6,7 @@ import type { Room } from 'xxscreeps/game/room';
 import type { RoomTickProcessor } from './symbols';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/engine/processor/movement';
-import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
+import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game';
 import { flushUsers } from 'xxscreeps/game/room/room';
 import { PreTick, Tick, intentProcessorGetters, roomTickProcessors } from './symbols';
 
@@ -31,7 +31,9 @@ export type SingleIntent = {
 	args: any[];
 };
 
-export interface ObjectProcessorContext {
+export interface ProcessorContext {
+	shard: Shard;
+
 	/**
 	 * Invoke this from a processor when game state has been modified in a processor
 	 */
@@ -53,18 +55,29 @@ export interface ObjectProcessorContext {
 	 */
 	sendRoomIntent<Intent extends IntentsForReceiver<Room>>(
 		roomName: string, intent: Intent, ...params: IntentParameters<Room, Intent>): void;
+
+	/**
+	 * Run an asynchronous task with an optional finalization process with the result when it's done.
+	 * This must not be invoked during the finalization phase.
+	 */
+	task<Type>(task: Promise<Type>, finalize?: (result: Type) => void): void;
 }
 
 // Room processor context saved been phase 1 (process) and phase 2 (flush)
-export class RoomProcessorContext implements ObjectProcessorContext {
+export class RoomProcessor implements ProcessorContext {
 	receivedUpdate = false;
 	nextUpdate = Infinity;
 	readonly state: GameState;
 	private readonly intents = new Map<string, RoomIntentPayload>();
 	private readonly interRoomIntents = new Map<string, SingleIntent[]>();
+	private readonly tasks: {
+		promise: Promise<any>;
+		userId?: string;
+		finalize?: (result: any) => void;
+	}[] = [];
 
 	constructor(
-		private readonly shard: Shard,
+		public readonly shard: Shard,
 		world: World,
 		public readonly room: Room,
 		public readonly time: number,
@@ -155,10 +168,27 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 	}
 
 	async finalize() {
-		// Run inter-room intents
-		const intentPayloads = await acquireFinalIntentsForRoom(this.shard, this.room.name, this.time);
-		if (intentPayloads.length) {
+		const [ intentPayloads, taskResults ] = await Promise.all([
+			acquireFinalIntentsForRoom(this.shard, this.room.name, this.time),
+			Promise.all(Fn.map(this.tasks, task => task.promise)),
+		]);
+		const hasTaskFinalization = this.tasks.some(task => task.finalize);
+		if (intentPayloads.length || hasTaskFinalization) {
 			runWithState(this.state, () => {
+				// Run task finalizations
+				for (let ii = 0; ii < this.tasks.length; ++ii) {
+					const task = this.tasks[ii];
+					if (task.finalize) {
+						const run = () => task.finalize!(taskResults[ii]);
+						if (task.userId) {
+							runAsUser(task.userId, run);
+						} else {
+							run();
+						}
+					}
+				}
+
+				// Run inter-room intents
 				for (const intents of intentPayloads) {
 					for (const { intent, args } of intents) {
 						const processor = intentProcessorGetters.get(intent)?.(this.room);
@@ -218,6 +248,10 @@ export class RoomProcessorContext implements ObjectProcessorContext {
 	setActive() {
 		this.didUpdate();
 		this.wakeAt(this.time + 1);
+	}
+
+	task(promise: Promise<any>, finalize?: (result: any) => void) {
+		this.tasks.push({ promise, finalize, userId: me });
 	}
 
 	wakeAt(time: number) {

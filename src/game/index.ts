@@ -44,7 +44,7 @@ function runWithGame<Type>(userId: string, state: GameState, game: () => GameCon
 
 /*
  * Initializes `Game.me` and user-specific `room.find` and pathing information. Does not set up
- * `Game.creeps`, memory, flags, etc. Must be called from within `runTask`.
+ * `Game.creeps`, memory, flags, etc. Must be called from within `runWithState`.
  */
 export function runAsUser<Type>(userId: string, task: () => Type) {
 	const prev = me;

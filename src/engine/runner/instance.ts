@@ -154,11 +154,14 @@ export class PlayerInstance {
 					},
 					time,
 				};
+				// Allow driver connectors to access room blobs by waiting on this promise
+				payload.roomBlobsPromise = Promise.all(Fn.map(roomNames,
+					roomName => this.shard.loadRoomBlob(roomName, time - 1)));
 				await Promise.all([
 					(async() => {
-						// Load room blobs
-						payload.roomBlobs = await Promise.all(Fn.map(roomNames,
-							roomName => this.shard.loadRoomBlob(roomName, time - 1)));
+						// Wait for room blobs
+						payload.roomBlobs = await payload.roomBlobsPromise!;
+						delete payload.roomBlobsPromise;
 						// Load unseen users
 						const userIds = Fn.concat(Fn.map(payload.roomBlobs, blob => RoomSchema.read(blob)['#users'].presence));
 						const newUserIds = Fn.reject(userIds, userId => this.seenUsers.has(userId));

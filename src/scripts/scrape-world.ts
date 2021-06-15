@@ -4,12 +4,12 @@ import type { Store } from 'xxscreeps/mods/resource/store';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 
 import Loki from 'lokijs';
+import minimist from 'minimist';
 
 import { RoomPosition } from 'xxscreeps/game/position';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as C from 'xxscreeps/game/constants';
-import args from 'xxscreeps/config/arguments';
 
 // Schemas
 import * as CodeSchema from 'xxscreeps/engine/db/user/code';
@@ -37,8 +37,13 @@ import { StructureWall } from 'xxscreeps/mods/defense/wall';
 import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
 
-const shardOnly = args['shard-only'];
-const jsonSource = args._[0] ??
+const argv = minimist(process.argv.slice(2), {
+	boolean: [ 'shard-only' ],
+	unknown: param => { throw new Error(`Unknown argument: ${param}`) },
+});
+
+const shardOnly = argv['shard-only'];
+const jsonSource = argv._[0] ??
 	new URL('../init_dist/db.json', await import.meta.resolve('@screeps/launcher', import.meta.url));
 
 function withRoomObject(from: any, into: RoomObject) {

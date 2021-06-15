@@ -1,5 +1,5 @@
+import minimist from 'minimist';
 import config from 'xxscreeps/config';
-import argv from 'xxscreeps/config/arguments';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
@@ -8,6 +8,11 @@ import { Database, Shard } from 'xxscreeps/engine/db';
 import { getProcessorChannel } from 'xxscreeps/engine/processor/model';
 import { getConsoleChannel, getRunnerChannel } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';
+
+const argv = minimist(process.argv.slice(2), {
+	string: [ 'attach-console' ],
+	unknown: param => { throw new Error(`Unknown argument: ${param}`) },
+});
 
 // Connect to shard
 const db = await Database.connect();

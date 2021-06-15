@@ -113,7 +113,7 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 		// First iteration of laggy processor
 		return currentTime;
 	}
-	if (await shard.scratch.cas(processorTimeKey, time, time - 1)) {
+	if (await shard.scratch.cas(processorTimeKey, time - 1, time)) {
 		// Count currently active rooms, fetch rooms to wake this tick
 		const [ initialCount, wake ] = await Promise.all([
 			shard.scratch.zcard(activeRoomsKey),

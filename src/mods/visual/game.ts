@@ -12,14 +12,6 @@ declare module 'xxscreeps/game/runtime' {
 registerGlobal(RoomVisual);
 
 // Receive and send visuals payload from driver
-declare module 'xxscreeps/driver' {
-	interface TickResult {
-		visuals?: {
-			blob: Readonly<Uint8Array>;
-			roomNames: string[];
-		};
-	}
-}
 registerRuntimeConnector({
 	send(payload) {
 		payload.visuals = flush();

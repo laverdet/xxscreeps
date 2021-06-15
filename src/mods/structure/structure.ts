@@ -2,9 +2,10 @@ import type { AnyRoomObject, Room } from 'xxscreeps/game/room';
 import type { GameConstructor } from 'xxscreeps/game';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
-import * as RoomObject from 'xxscreeps/game/object';
-import * as RoomPosition from 'xxscreeps/game/position';
+import type { RoomPosition } from 'xxscreeps/game/position';
+import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position';
 import { Game, intents, me, registerGameInitializer, userInfo } from 'xxscreeps/game';
+import { RoomObject, format as objectFormat } from 'xxscreeps/game/object';
 import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
@@ -17,7 +18,7 @@ export interface DestructibleStructure extends Structure {
 }
 
 export const structureFormat = declare('Structure', () => compose(shape, Structure));
-const shape = RoomObject.format;
+const shape = objectFormat;
 
 export const ownedStructureFormat = declare('OwnedStructure', () => compose(ownedShape, OwnedStructure));
 const ownedShape = struct(structureFormat, {
@@ -27,7 +28,7 @@ const ownedShape = struct(structureFormat, {
 /**
  * The base prototype object of all structures.
  */
-export abstract class Structure extends withOverlay(RoomObject.RoomObject, shape) {
+export abstract class Structure extends withOverlay(RoomObject, shape) {
 	/**
 	 * One of the `STRUCTURE_*` constants.
 	 */
@@ -95,17 +96,17 @@ export abstract class OwnedStructure extends withOverlay(Structure, ownedShape) 
 
 //
 // Intent checks
-export function checkBorder(pos: RoomPosition.RoomPosition) {
-	if (RoomPosition.isBorder(pos.x, pos.y)) {
+export function checkBorder(pos: RoomPosition) {
+	if (isBorder(pos.x, pos.y)) {
 		// Cannot build obstacles on border
 		return C.ERR_INVALID_TARGET;
-	} else if (RoomPosition.isNearBorder(pos.x, pos.y)) {
+	} else if (isNearBorder(pos.x, pos.y)) {
 		// May build obstacles near "border" as long as the border is naturally walled
 		const terrain = Game.map.getRoomTerrain(pos.roomName);
-		for (const neighbor of RoomPosition.iterateNeighbors(pos)) {
+		for (const neighbor of iterateNeighbors(pos)) {
 			if (
-				RoomPosition.isBorder(neighbor.x, neighbor.y) &&
-				terrain.get(neighbor.x, neighbor.y) === C.TERRAIN_MASK_WALL
+				isBorder(neighbor.x, neighbor.y) &&
+				terrain.get(neighbor.x, neighbor.y) !== C.TERRAIN_MASK_WALL
 			) {
 				return C.ERR_INVALID_TARGET;
 			}
@@ -114,7 +115,7 @@ export function checkBorder(pos: RoomPosition.RoomPosition) {
 	return C.OK;
 }
 
-export function checkWall(pos: RoomPosition.RoomPosition) {
+export function checkWall(pos: RoomPosition) {
 	if (Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y) === C.TERRAIN_MASK_WALL) {
 		return C.ERR_INVALID_TARGET;
 	}
@@ -140,14 +141,14 @@ export function checkDestroy(structure: Structure) {
 		});
 }
 
-export function checkPlacement(room: Room, pos: RoomPosition.RoomPosition) {
+export function checkPlacement(room: Room, pos: RoomPosition) {
 	return chainIntentChecks(
 		() => checkBorder(pos),
 		() => checkWall(pos),
 	);
 }
 
-export function lookForStructureAt<Type extends string>(room: Room, pos: RoomPosition.RoomPosition, structureType: Type) {
+export function lookForStructureAt<Type extends string>(room: Room, pos: RoomPosition, structureType: Type) {
 	type Object = Extract<AnyStructure, { structureType: Type }>;
 	return room.lookForAt(C.LOOK_STRUCTURES, pos).find(
 		(structure): structure is Object => structure.structureType === structureType);

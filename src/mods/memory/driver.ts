@@ -1,7 +1,23 @@
+import type { SegmentPayload } from './memory';
 import * as Fn from 'xxscreeps/utility/functional';
 import { registerDriverConnector } from 'xxscreeps/driver';
 import { kMaxActiveSegments } from './memory';
 import { loadMemorySegmentBlob, loadUserMemoryBlob, saveMemoryBlob, saveMemorySegmentBlob } from './model';
+
+// Receive and send memory payloads from driver
+declare module 'xxscreeps/driver' {
+	interface InitializationPayload {
+		memoryBlob: Readonly<Uint8Array> | null;
+	}
+	interface TickPayload {
+		memorySegments?: SegmentPayload[];
+	}
+	interface TickResult {
+		activeSegmentsRequest: number[] | null;
+		memorySegmentsUpdated: SegmentPayload[] | null;
+		memoryUpdated: Uint8Array;
+	}
+}
 
 registerDriverConnector(player => {
 	const { shard, userId } = player;

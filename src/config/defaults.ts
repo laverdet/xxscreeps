@@ -1,6 +1,5 @@
 import type { RecursivePartial } from 'xxscreeps/utility/types';
 import type { Schema } from './schema';
-import * as Crypto from 'crypto';
 import os from 'os';
 
 function makeDefaults<Type extends RecursivePartial<Schema>>(defaults: Type) {
@@ -11,7 +10,6 @@ export const defaults = makeDefaults({
 	backend: {
 		allowGuestAccess: true as boolean,
 		bind: 'localhost',
-		secret: Crypto.randomBytes(32).toString(),
 		socketSkipsPermanents: true as boolean,
 		socketThrottle: 125,
 	},

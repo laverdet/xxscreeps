@@ -1,7 +1,3 @@
-export const GCL_POW = 2.4;
-export const GCL_MULTIPLY = 1000000;
-export const GCL_NOVICE = 3;
-
 export const SUBSCRIPTION_TOKEN = 'token' as const;
 
 export const RESOURCE_SILICON = 'silicon' as const;

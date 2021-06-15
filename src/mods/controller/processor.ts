@@ -1,10 +1,13 @@
 import * as C from 'xxscreeps/game/constants';
 import * as CreepLib from './creep';
+import * as User from 'xxscreeps/engine/db/user';
 import { Game } from 'xxscreeps/game';
 import { saveAction } from 'xxscreeps/game/object';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller';
+
+export const controlledRoomCountKey = (userId: string) => `users/${userId}/controlledRooms`;
 
 // Processor methods
 export function claim(controller: StructureController, user: string) {
@@ -44,10 +47,28 @@ const intents = [
 	registerIntentProcessor(Creep, 'claimController', { before: 'reserveController' }, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkClaimController(creep, controller) === C.OK) {
-			console.error('TODO: claimController');
-			claim(controller, creep['#user']);
-			saveAction(creep, 'reserveController', controller.pos);
-			context.didUpdate();
+			const userId = creep['#user'];
+			context.task(async function() {
+				// Fetch current GCL & controlled room count from database
+				const [ roomCountStr, gcl ] = await Promise.all([
+					context.shard.scratch.get(controlledRoomCountKey(userId)),
+					context.shard.db.data.hget(User.infoKey(userId), 'gcl'),
+				]);
+				// Check GCL, and compare-and-swap the new room count
+				const roomCount = Number(roomCountStr);
+				if (Number(gcl) >= roomCount ** C.GCL_POW * C.GCL_MULTIPLY) {
+					return context.shard.scratch.cas(controlledRoomCountKey(userId), roomCount, roomCount + 1);
+				}
+				return false;
+			}(), didIncrement => {
+				// Still need to double-check that this intent is valid. If this fails the runner should
+				// update total room count at the beginning of next tick
+				if (didIncrement && CreepLib.checkClaimController(creep, controller) === C.OK) {
+					claim(controller, creep['#user']);
+					saveAction(creep, 'reserveController', controller.pos);
+					context.didUpdate();
+				}
+			});
 		}
 	}),
 
@@ -176,11 +197,13 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			controller['#downgradeTime'] = 1 + Math.min(
 				controller['#downgradeTime'] + C.CONTROLLER_DOWNGRADE_RESTORE,
 				Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!);
+			context.task(context.shard.db.data.hincrBy(User.infoKey(controller['#user']!), 'gcl', upgradePower));
 			context.didUpdate();
 		} else if (controller.ticksToDowngrade === 0) {
 			--controller.room['#level'];
 			controller.safeModeAvailable = 0;
 			if (controller.level === 0) {
+				context.task(context.shard.scratch.decr(controlledRoomCountKey(controller['#user']!)));
 				controller['#downgradeTime'] = 0;
 				controller['#progress'] = 0;
 				controller['#user'] = null;
