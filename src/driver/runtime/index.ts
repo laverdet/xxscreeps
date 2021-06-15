@@ -114,7 +114,7 @@ export function tick(data: TickPayload) {
 		}
 
 		// Run requested eval expressions
-		data.eval?.forEach(payload => {
+		data.eval.forEach(payload => {
 			try {
 				// eslint-disable-next-line @typescript-eslint/no-implied-eval
 				const result = new Function('expr', 'return eval(expr)')(payload.expr);
