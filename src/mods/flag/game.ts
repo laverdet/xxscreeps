@@ -35,19 +35,6 @@ declare module 'xxscreeps/game/runtime' {
 	interface Global { Flag: typeof Flag }
 }
 registerGlobal(Flag);
-
-// Read flag payload on user sandbox initialization
-declare module 'xxscreeps/driver' {
-	interface InitializationPayload {
-		flagBlob: Readonly<Uint8Array> | null;
-	}
-	interface TickPayload {
-		flagIntents: typeof intents;
-	}
-	interface TickResult {
-		flagNextBlob: Readonly<Uint8Array> | null;
-	}
-}
 let flags: TypeOf<typeof schema> = Object.create(null);
 
 // Update user flag blob
@@ -89,7 +76,6 @@ registerGameInitializer(Game => Game.flags = flags);
 // This flag mock-processor runs in the runner sandbox and simply sends back a blob if the flags have changed
 let didUpdateFlags = false;
 export let intents: FlagIntent[] = [];
-
 export function createFlag(name: string, posInt: number, color: Color, secondaryColor: Color) {
 	const pos = RoomPosition['#create'](posInt);
 	// Run create / move / setColor intent

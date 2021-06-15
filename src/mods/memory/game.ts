@@ -1,4 +1,3 @@
-import type { SegmentPayload } from './memory';
 import { defineGlobal, registerGlobal } from 'xxscreeps/game';
 import { registerRuntimeConnector } from 'xxscreeps/driver';
 import { extend } from 'xxscreeps/utility/utility';
@@ -37,20 +36,6 @@ extend(Room, {
 	},
 });
 
-// Receive and send memory payloads from driver
-declare module 'xxscreeps/driver' {
-	interface InitializationPayload {
-		memoryBlob: Readonly<Uint8Array> | null;
-	}
-	interface TickPayload {
-		memorySegments?: SegmentPayload[];
-	}
-	interface TickResult {
-		activeSegmentsRequest: number[] | null;
-		memorySegmentsUpdated: SegmentPayload[] | null;
-		memoryUpdated: Uint8Array;
-	}
-}
 registerRuntimeConnector({
 	initialize(payload) {
 		initialize(payload.memoryBlob);

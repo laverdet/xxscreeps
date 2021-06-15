@@ -60,10 +60,6 @@ export class Game extends GameBase {
 	 */
 	declare cpu: CPU;
 
-	gcl = {
-		level: 1,
-	};
-
 	market = {
 		orders: [],
 		getAllOrders: () => [],

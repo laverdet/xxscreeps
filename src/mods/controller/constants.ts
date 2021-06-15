@@ -1,3 +1,7 @@
+export const GCL_POW = 2.4;
+export const GCL_MULTIPLY = 1000000;
+export const GCL_NOVICE = 3;
+
 export const FIND_MY_STRUCTURES = 108 as const;
 export const FIND_HOSTILE_STRUCTURES = 109 as const;
 
