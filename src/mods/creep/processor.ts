@@ -1,24 +1,42 @@
+import type { ActionLog, RoomObject } from 'xxscreeps/game/object';
 import type { Direction } from 'xxscreeps/game/position';
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room';
 import type { Resource } from 'xxscreeps/mods/resource/resource';
 import type { ResourceType } from 'xxscreeps/mods/resource';
 import type { WithStore } from 'xxscreeps/mods/resource/store';
-import type { RoomObject } from 'xxscreeps/game/object';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
+import * as CreepLib from 'xxscreeps/mods/creep/creep';
+import * as Fn from 'xxscreeps/utility/functional';
+import * as Movement from 'xxscreeps/engine/processor/movement';
+import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
 import { Game } from 'xxscreeps/game';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 // eslint-disable-next-line @typescript-eslint/no-duplicate-imports
-import * as CreepLib from 'xxscreeps/mods/creep/creep';
 import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { isBorder } from 'xxscreeps/game/terrain';
 import { writeRoomObject } from 'xxscreeps/engine/db/room';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import * as Movement from 'xxscreeps/engine/processor/movement';
-// eslint-disable-next-line no-duplicate-imports
-import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
-import { flushActionLog } from 'xxscreeps/engine/processor/object';
+import { filterInPlace } from 'xxscreeps/utility/utility';
+
+export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) {
+	const kRetainActionsTime = 10;
+	const timeLimit = Game.time - kRetainActionsTime;
+
+	const length = actionLog.length;
+	if (length > 0) {
+		filterInPlace(actionLog, action => action.time > timeLimit);
+		if (actionLog.length !== length) {
+			context.didUpdate();
+		}
+		if (actionLog.length > 0) {
+			const minimum = Fn.minimum(Fn.map(actionLog, action => action.time))!;
+			context.wakeAt(minimum + kRetainActionsTime);
+		}
+	}
+}
 
 declare module 'xxscreeps/engine/processor' {
 	interface Intent { creep: typeof intents }

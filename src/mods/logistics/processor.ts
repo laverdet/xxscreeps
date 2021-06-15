@@ -1,9 +1,8 @@
 import * as C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
-import { registerIntentProcessor, registerObjectPreTickProcessor } from 'xxscreeps/engine/processor';
+import { registerIntentProcessor } from 'xxscreeps/engine/processor';
 import { StructureLink, checkTransferEnergy } from './link';
 import { saveAction } from 'xxscreeps/game/object';
-import { flushActionLog } from 'xxscreeps/engine/processor/object';
 
 declare module 'xxscreeps/engine/processor' {
 	interface Intent { logistics: typeof intents }
@@ -19,5 +18,3 @@ const intents = [
 		}
 	}),
 ];
-
-registerObjectPreTickProcessor(StructureLink, (link, context) => flushActionLog(link['#actionLog'], context));
