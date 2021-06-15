@@ -1,12 +1,12 @@
 import type { Endpoint } from 'xxscreeps/backend';
 import { registerBackendMiddleware } from 'xxscreeps/backend';
-import config from 'xxscreeps/config';
+import { tickSpeed } from 'xxscreeps/engine/service/tick';
 
 registerBackendMiddleware((koa, router) => {
 	router.get([ '/api/game/tick', '/api/game/shards/tick' ], context => {
 		context.body = {
 			ok: 1,
-			tick: config.game.tickSpeed,
+			tick: tickSpeed,
 		};
 	});
 });

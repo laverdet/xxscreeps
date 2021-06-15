@@ -1,7 +1,7 @@
 import type { Effect } from 'xxscreeps/utility/types';
 import type { Shard } from 'xxscreeps/engine/db';
-import config from 'xxscreeps/config';
 import { Channel } from 'xxscreeps/engine/db/channel';
+import { tickSpeed } from 'xxscreeps/engine/service/tick';
 
 export function getConsoleChannel(shard: Shard, user: string) {
 	type Message = {
@@ -59,7 +59,7 @@ export async function requestRunnerEvalAck(shard: Shard, userId: string, expr: s
 		});
 		timeout = setTimeout(
 			() => reject(new Error('Timed out')),
-			Math.max(500, config.game.tickSpeed * 4));
+			Math.max(500, tickSpeed * 4));
 	});
 	await getRunnerUserChannel(shard, userId).publish({ type: 'eval', payload: { ack: id, echo, expr } });
 	try {
