@@ -8,7 +8,7 @@ const secret = runOnce(() => {
 		return Crypto.createHmac('sha3-224', secret).digest().subarray(0, 16);
 	} else {
 		console.error('`backend.secret` is not set, this will cause login issues when restarting the server');
-		return Crypto.randomBytes(32);
+		return Crypto.randomBytes(16);
 	}
 });
 
