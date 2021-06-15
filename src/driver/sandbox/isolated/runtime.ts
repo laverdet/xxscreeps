@@ -1,54 +1,71 @@
 import type ivm from 'isolated-vm';
-import type { InitializationPayload } from 'xxscreeps/driver';
+import type { CPU } from 'xxscreeps/game/game';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
 import * as Runtime from 'xxscreeps/driver/runtime';
+import { registerGameInitializer } from 'xxscreeps/game';
 export { tick } from 'xxscreeps/driver/runtime';
 
-function freezeClass(constructor: abstract new(...args: any[]) => any) {
-	freezeProperty(constructor, 'prototype');
-	for (
-		let prototype = constructor.prototype;
-		prototype !== null && prototype !== Object.prototype;
-		prototype = Object.getPrototypeOf(prototype)
-	) {
-		Object.freeze(prototype);
+let isolate: ivm.Isolate;
+
+declare module 'xxscreeps/game/game' {
+	interface CPU {
+		/**
+		 * Use this method to get heap statistics for your virtual machine. The return value is almost
+		 * identical to the Node.js function `v8.getHeapStatistics()`. This function returns one
+		 * additional property: `externally_allocated_size` which is the total amount of currently
+		 * allocated memory which is not included in the v8 heap but counts against this isolate's memory
+		 * limit. `ArrayBuffer` instances over a certain size are externally allocated and will be counted
+		 * here.
+		 */
+		getHeapStatistics(): ivm.HeapStatistics;
+
+		/**
+		 * Reset your runtime environment and wipe all data in heap memory.
+		 */
+		halt(): never;
 	}
 }
 
-function freezeProperty(object: {}, key: keyof any) {
-	const info = Object.getOwnPropertyDescriptor(object, key)!;
-	info.configurable = false;
-	info.writable = false;
-	Object.defineProperty(object, key, info);
+class IsolatedCPU implements CPU {
+	bucket;
+	limit;
+	tickLimit;
+	#startTime;
+
+	constructor(data: TickPayload) {
+		this.bucket = data.cpu.bucket;
+		this.limit = data.cpu.limit;
+		this.tickLimit = data.cpu.tickLimit;
+		this.#startTime = isolate.wallTime;
+	}
+
+	getHeapStatistics() {
+		return isolate.getHeapStatisticsSync();
+	}
+
+	getUsed() {
+		return Number(isolate.wallTime - this.#startTime) / 1e6;
+	}
+
+	halt() {
+		isolate.dispose();
+		return undefined as never;
+	}
 }
 
-// `iterator` can be used to override the behavior of the spread operator
-freezeProperty(Array.prototype, Symbol.iterator);
-
-// These all need to be locked down to prevent write access to shared terrain state
-const typedArrays = [
-	'ArrayBuffer',
-	'SharedArrayBuffer',
-	'Uint8Array',
-	'Uint16Array',
-	'Uint32Array',
-	'Int8Array',
-	'Int16Array',
-	'Int32Array',
-	'Float64Array',
-] as const;
-for (const key of typedArrays) {
-	freezeProperty(globalThis, key);
-	freezeClass(globalThis[key]);
-}
+registerGameInitializer((game, data) => {
+	game.cpu = new IsolatedCPU(data!);
+});
 
 export function initialize(
-	isolate: ivm.Isolate,
+	isolate_: ivm.Isolate,
 	context: ivm.Context,
 	printRef: ivm.Reference<Runtime.Print>,
 	data: InitializationPayload,
 ) {
+	isolate = isolate_;
 	const evaluate: Runtime.Evaluate = (source, filename) => {
-		const script = isolate.compileScriptSync(source, { filename });
+		const script = isolate_.compileScriptSync(source, { filename });
 		return script.runSync(context, { reference: true }).deref();
 	};
 	const print: Runtime.Print = (fd, payload) => printRef.applySync(undefined, [ fd, payload ]);

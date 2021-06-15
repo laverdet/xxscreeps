@@ -63,6 +63,7 @@ registerRuntimeConnector({
 	send(payload) {
 		// Primary memory
 		payload.memoryUpdated = flush();
+		payload.usage.memory = payload.memoryUpdated.byteLength >>> 1;
 		// Segments
 		payload.activeSegmentsRequest = flushActiveSegments();
 		payload.memorySegmentsUpdated = flushSegments();

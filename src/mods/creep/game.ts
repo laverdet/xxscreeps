@@ -22,7 +22,7 @@ declare module 'xxscreeps/game/runtime' {
 const find = registerFindHandlers({
 	[C.FIND_CREEPS]: room => room['#lookFor'](C.LOOK_CREEPS),
 	[C.FIND_MY_CREEPS]: room => room['#lookFor'](C.LOOK_CREEPS).filter(creep => creep.my),
-	[C.FIND_HOSTILE_CREEPS]: room => room['#lookFor'](C.LOOK_CREEPS).filter(creep => !creep.my),
+	[C.FIND_HOSTILE_CREEPS]: room => room['#lookFor'](C.LOOK_CREEPS).filter(creep => !creep.my && !creep.spawning),
 });
 
 // Register LOOK_ type for `Creep`

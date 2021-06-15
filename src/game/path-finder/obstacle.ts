@@ -9,7 +9,6 @@ type MovementParameters = {
 	ignoreDestructibleStructures?: boolean;
 	isPathFinder?: true;
 	room: Room;
-	type: string;
 	user: string;
 };
 

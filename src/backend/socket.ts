@@ -5,16 +5,16 @@ import sockjs from 'sockjs';
 import config from 'xxscreeps/config';
 import { checkToken, makeToken } from './auth/token';
 import { CodeSubscriptions } from './sockets/code';
-import { ConsoleSubscription } from './sockets/console';
+import { ConsoleSubscriptions } from './sockets/console';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
+import { subscriptions } from './symbols';
 const { allowGuestAccess } = config.backend;
 
 const socketServer = sockjs.createServer({
 	prefix: '/socket',
 	log: () => {},
 });
-const handlers = [ ...CodeSubscriptions, ConsoleSubscription, mapSubscription, roomSubscription ];
 
 type SubscriptionInstance = {
 	context: BackendContext;
@@ -27,6 +27,7 @@ export type SubscriptionEndpoint = {
 };
 
 export function installSocketHandlers(httpServer: Server, context: BackendContext) {
+	const handlers = [ ...CodeSubscriptions, ...ConsoleSubscriptions, mapSubscription, roomSubscription, ...subscriptions ];
 	socketServer.installHandlers(httpServer);
 	socketServer.on('connection', connection => {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

@@ -7,7 +7,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
 import { GameState, runAsUser, runWithState } from 'xxscreeps/game';
 import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async';
-import { asUnion, getOrSet } from 'xxscreeps/utility/utility';
+import { asUnion, getOrSet, throttle } from 'xxscreeps/utility/utility';
 import { Render, roomSocketHandlers } from 'xxscreeps/backend/symbols';
 import { getRoomChannel } from 'xxscreeps/engine/processor/model';
 import './render';
@@ -32,30 +32,6 @@ function diff(previous: any, next: any) {
 		return didAdd ? result : undefined;
 	}
 	return next;
-}
-
-function throttle(fn: () => void) {
-	let timeout: ReturnType<typeof setTimeout> | undefined;
-	return {
-		clear() {
-			if (timeout) {
-				clearTimeout(timeout);
-				timeout = undefined;
-			}
-		},
-		reset(time: number) {
-			this.clear();
-			this.set(time);
-		},
-		set(time: number) {
-			if (!timeout) {
-				timeout = setTimeout(() => {
-					timeout = undefined;
-					fn();
-				}, time);
-			}
-		},
-	};
 }
 
 type RoomListener = (room: Room, time: number, didUpdate: boolean) => void;

@@ -2,6 +2,7 @@ import './runtime';
 import { GameBase, Game as GameConstructor, GameState } from './game';
 import { IntentManager } from './intents';
 import { flush as flushPathFinder } from './path-finder';
+import type { TickPayload } from 'xxscreeps/driver';
 
 export { defineGlobal, registerGameInitializer, registerGlobal } from './symbols';
 export { GameConstructor, GameState };
@@ -23,6 +24,22 @@ export function runWithState<Type>(state: GameState, task: () => Type) {
 	} finally {
 		Game = prev;
 	}
+}
+
+/**
+ * Runs a task with `Game` and intents assigned.
+ */
+function runWithGame<Type>(userId: string, state: GameState, game: () => GameConstructor, task: (game: GameConstructor) => Type) {
+	return runWithState(state, () => runAsUser(userId, () => {
+		try {
+			const intentManager = intents = new IntentManager;
+			const instance = userGame = game();
+			return [ intentManager, task(instance) ] as const;
+		} finally {
+			intents = undefined as never;
+			userGame = undefined;
+		}
+	}));
 }
 
 /*
@@ -47,27 +64,12 @@ export function runAsUser<Type>(userId: string, task: () => Type) {
  * Does everything `runAsUser` does except also sets up `Game.creeps`, `intents`.
  */
 export function runForUser<Type>(userId: string, state: GameState, task: (game: GameConstructor) => Type) {
-	return runWithState(state, () => runAsUser(userId, () => {
-		try {
-			const intentManager = intents = new IntentManager;
-			const instance = userGame = new GameConstructor(state);
-			return [ intentManager, task(instance) ] as const;
-		} finally {
-			userGame = undefined;
-		}
-		// instance.flags = flags_;
-		// Visual.clear();
-		/*
-		const flushedRooms = new Set<Room>();
-		for (const flag of Object.values(instance.flags)) {
-			const room = rooms[flag.pos.roomName];
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			if (room) {
-				flushedRooms.add(room);
-				room['#insertObject'](flag);
-			}
-		}
-		Fn.map(flushedRooms, room => room['#flushObjects']);
-		*/
-	}));
+	return runWithGame(userId, state, () => new GameConstructor(state), task);
+}
+
+/**
+ * This is the full sandbox + runtime initialization wrapper.
+ */
+export function runForPlayer<Type>(userId: string, state: GameState, data: TickPayload, task: (game: GameConstructor) => Type) {
+	return runWithGame(userId, state, () => new GameConstructor(state, data), task);
 }
