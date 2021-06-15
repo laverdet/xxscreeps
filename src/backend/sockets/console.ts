@@ -2,8 +2,7 @@ import type { SubscriptionEndpoint } from '../socket';
 import AnsiUpModule from 'ansi_up';
 // ansi_up's tsconfig is incorrect
 const AnsiUp: typeof AnsiUpModule = (AnsiUpModule as any).default;
-import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
-import { getUsageChannel } from 'xxscreeps/engine/runner/channel';
+import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model';
 import { throttle } from 'xxscreeps/utility/utility';
 import config from 'xxscreeps/config';
 

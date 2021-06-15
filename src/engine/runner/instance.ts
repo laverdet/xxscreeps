@@ -2,7 +2,7 @@ import type { Effect } from 'xxscreeps/utility/types';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import type { DriverConnector } from 'xxscreeps/driver/symbols';
-import type { RunnerIntent } from './channel';
+import type { RunnerIntent } from './model';
 import type { Shard } from 'xxscreeps/engine/db';
 import type { SubscriptionFor } from 'xxscreeps/engine/db/channel';
 import type { World } from 'xxscreeps/game/map';
@@ -11,7 +11,7 @@ import * as Code from 'xxscreeps/engine/db/user/code';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import * as User from 'xxscreeps/engine/db/user';
-import { getRunnerUserChannel, getUsageChannel } from './channel';
+import { getRunnerUserChannel, getUsageChannel } from './model';
 import { acquire } from 'xxscreeps/utility/async';
 import { createSandbox } from 'xxscreeps/driver/sandbox';
 import { driverConnectors } from 'xxscreeps/driver/symbols';
@@ -27,7 +27,7 @@ export class PlayerInstance {
 	private connectors!: DriverConnector[];
 	private sandbox?: Sandbox;
 	private stale = false;
-	private readonly consoleEval: string[] = [];
+	private readonly consoleEval: Exclude<TickPayload['eval'], undefined> = [];
 	private readonly consoleChannel;
 	private readonly intents: RunnerIntent[] = [];
 	private readonly seenUsers = new Set<string>();
@@ -49,7 +49,7 @@ export class PlayerInstance {
 		channel.listen(message => {
 			switch (message.type) {
 				case 'eval':
-					this.consoleEval.push(message.expr);
+					this.consoleEval.push(message.payload);
 					break;
 
 				case 'intent': {
@@ -146,7 +146,7 @@ export class PlayerInstance {
 			try {
 				const payload: Partial<TickPayload> = {
 					backendIntents: this.intents.splice(0),
-					consoleEval: this.consoleEval.splice(0),
+					eval: this.consoleEval.splice(0),
 					cpu: {
 						bucket: this.bucket,
 						limit: kCPU,
@@ -192,6 +192,11 @@ export class PlayerInstance {
 
 				// Publish usage event
 				this.usageChannel.publish(payload.usage),
+
+				// Publish console acks
+				payload.evalAck ? Promise.all(payload.evalAck.map(ack =>
+					getConsoleChannel(this.shard, this.userId).publish({ type: 'ack', ...ack }),
+				)) : undefined,
 
 				// Save driver connector information [memory, flags, visual, whatever]
 				Promise.all(Fn.map(this.connectors, connector => connector.save?.(payload))),

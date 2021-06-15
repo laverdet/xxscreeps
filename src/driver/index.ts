@@ -1,6 +1,7 @@
-import type { RunnerIntent } from 'xxscreeps/engine/runner/channel';
-import type { RoomIntentPayload } from 'xxscreeps/engine/processor';
 import type { CodeBlobs } from 'xxscreeps/engine/db/user/code-schema';
+import type { MessageFor } from 'xxscreeps/engine/db/channel';
+import type { RunnerIntent, getRunnerUserChannel } from 'xxscreeps/engine/runner/model';
+import type { RoomIntentPayload } from 'xxscreeps/engine/processor';
 export { registerDriverConnector, registerRuntimeConnector } from './symbols';
 
 export interface InitializationPayload {
@@ -18,12 +19,19 @@ export interface TickPayload {
 	};
 	roomBlobs: Readonly<Uint8Array>[];
 	time: number;
-	consoleEval?: string[];
 	backendIntents?: RunnerIntent[];
+	eval: Extract<MessageFor<typeof getRunnerUserChannel>, { type: 'eval' }>['payload'][];
 	usernames?: Record<string, string>;
 }
 
 export interface TickResult {
+	evalAck?: {
+		id: string;
+		result: {
+			error: boolean;
+			value: string;
+		};
+	}[];
 	intentPayloads: Record<string, RoomIntentPayload>;
 	usage: any;
 }

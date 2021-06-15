@@ -82,6 +82,7 @@ export function initialize(evaluate: Evaluate, printFn: Print, data: Initializat
 
 export function tick(data: TickPayload) {
 
+	// Initialize rooms and data about users in those rooms
 	const { time } = data;
 	const rooms = data.roomBlobs.map(blob => {
 		const room = RoomSchema.read(blob);
@@ -93,8 +94,10 @@ export function tick(data: TickPayload) {
 			userInfo.set(userId, { username: data.usernames[userId] });
 		}
 	}
-
 	const state = new GameState(world, data.time, rooms);
+
+	// Enter user runtime context
+	const tickResult: Partial<TickResult> = { usage: {} };
 	const [ intents ] = runForPlayer(me, state, data, Game => {
 		tickReceive(data);
 
@@ -110,13 +113,38 @@ export function tick(data: TickPayload) {
 			console.error(lines.slice(0, index).join('\n'));
 		}
 
-		// Run console expressions
-		data.consoleEval?.map(expr => {
+		// Run requested eval expressions
+		data.eval?.forEach(payload => {
 			try {
 				// eslint-disable-next-line @typescript-eslint/no-implied-eval
-				print(0, inspect(new Function('expr', 'return eval(expr)')(expr), { colors: true }), true);
+				const result = new Function('expr', 'return eval(expr)')(payload.expr);
+				if (payload.ack) {
+					const ack = tickResult.evalAck ??= [];
+					ack.push({
+						id: payload.ack,
+						result: {
+							error: false,
+							value: result,
+						},
+					});
+				}
+				if (payload.echo) {
+					print(0, inspect(result, { colors: true }), true);
+				}
 			} catch (err) {
-				print(2, err.stack, true);
+				if (payload.ack) {
+					const ack = tickResult.evalAck ??= [];
+					ack.push({
+						id: payload.ack,
+						result: {
+							error: true,
+							value: err.message,
+						},
+					});
+				}
+				if (payload.echo) {
+					print(2, err.stack, true);
+				}
 			}
 		});
 		globalThis.Game = undefined;
@@ -135,24 +163,20 @@ export function tick(data: TickPayload) {
 	}
 
 	// Write room intents into blobs
-	const intentPayloads = Fn.fromEntries(Fn.filter(Fn.map(rooms, ({ name }) => {
+	tickResult.intentPayloads = Fn.fromEntries(Fn.filter(Fn.map(rooms, ({ name }) => {
 		const intentsForRoom = intents.getIntentsForRoom(name);
 		if (intentsForRoom) {
 			return [ name, intentsForRoom ];
 		}
 	})));
 
-	// Gather tick results
-	const result: Partial<TickResult> = {
-		intentPayloads,
-		usage: {},
-	};
-	tickSend(result as TickResult);
+	// Gather tick results from `registerRuntimeConnector`
+	tickSend(tickResult as TickResult);
 
 	// Release shared memory
 	for (const room of rooms) {
 		detach(room, () => new Error(`Accessed a released object from a previous tick[${time}]`));
 	}
 
-	return result as TickResult;
+	return tickResult as TickResult;
 }
