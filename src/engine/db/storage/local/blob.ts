@@ -218,7 +218,9 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 					}
 					this.knownPaths.add(dirname);
 				}
-				await fs.writeFile(path, value);
+				const tmp = Path.join(this.path, Path.dirname(key), `.${Path.basename(key)}.swp`);
+				await fs.writeFile(tmp, value);
+				await fs.rename(tmp, path);
 			} else {
 				await fs.unlink(path);
 			}

@@ -413,7 +413,7 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 				}
 			});
 			const original = new URL(this.url);
-			const tmp = new URL(original.pathname + '.tmp', original);
+			const tmp = new URL(`./.${original.pathname.substr(original.pathname.lastIndexOf('/') + 1)}.swp`, original);
 			await fs.writeFile(tmp, payload, 'utf8');
 			await fs.rename(tmp, original);
 		}
