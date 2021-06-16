@@ -30,7 +30,7 @@ export class StructureContainer extends withOverlay(Structure, shape) {
 export function create(pos: RoomPosition) {
 	const ownedController = Game.rooms[pos.roomName]!.controller?.['#user'];
 	const container = assign(RoomObject.create(new StructureContainer, pos), {
-		hits: C.EXTENSION_HITS,
+		hits: C.CONTAINER_HITS,
 		store: OpenStore['#create'](C.CONTAINER_CAPACITY),
 	});
 	container['#nextDecayTime'] = Game.time + (ownedController ?
