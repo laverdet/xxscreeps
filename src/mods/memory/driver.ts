@@ -1,7 +1,8 @@
 import type { SegmentPayload } from './memory';
+import type { TickResult } from 'xxscreeps/driver';
 import * as Fn from 'xxscreeps/utility/functional';
-import { registerDriverConnector } from 'xxscreeps/driver';
 import { kMaxActiveSegments } from './memory';
+import { registerDriverConnector } from 'xxscreeps/driver';
 import { loadMemorySegmentBlob, loadUserMemoryBlob, saveMemoryBlob, saveMemorySegmentBlob } from './model';
 
 // Receive and send memory payloads from driver
@@ -14,6 +15,10 @@ declare module 'xxscreeps/driver' {
 	}
 	interface TickResult {
 		activeSegmentsRequest: number[] | null;
+		foreignSegmentRequest: null | {
+			id: number | undefined;
+			username: string;
+		};
 		memorySegmentsUpdated: SegmentPayload[] | null;
 		memoryUpdated: Uint8Array;
 	}
@@ -23,6 +28,7 @@ registerDriverConnector(player => {
 	const { shard, userId } = player;
 	let activeSegments = new Set<number>();
 	let nextSegments: Set<number> | undefined;
+	let foreignSegmentRequest: TickResult['foreignSegmentRequest'] = null;
 	return [ undefined, {
 		async initialize(payload) {
 			// Get current memory payload
@@ -42,6 +48,9 @@ registerDriverConnector(player => {
 				activeSegments = nextSegments;
 				nextSegments = undefined;
 			}
+			if (foreignSegmentRequest) {
+				// TODO
+			}
 		},
 
 		async save(payload) {
@@ -49,6 +58,7 @@ registerDriverConnector(player => {
 			if (payload.activeSegmentsRequest) {
 				nextSegments = new Set(Fn.take(payload.activeSegmentsRequest, kMaxActiveSegments));
 			}
+			foreignSegmentRequest = payload.foreignSegmentRequest;
 			await Promise.all([
 				// Save primary memory blob
 				saveMemoryBlob(shard, userId, payload.memoryUpdated),

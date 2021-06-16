@@ -188,8 +188,8 @@ export class GameMap {
 	 * Gets availability status of the room with the specified name. Learn more about starting areas
 	 * from [this article](https://docs.screeps.com/start-areas.html).
 	 */
-	getRoomStatus() {
-		console.error('TODO: getRoomStatus');
+	getRoomStatus(_roomName: string) {
+		// console.error('TODO: getRoomStatus');
 		return { status: 'normal', timestamp: null };
 	}
 
@@ -228,9 +228,8 @@ export class GameMap {
 	 * Check if the room is available to move into.
 	 * @deprecated
 	 */
-	isRoomAvailable() {
-		console.error('TODO: isRoomAvailable');
-		return true;
+	isRoomAvailable(roomName: string) {
+		return this.getRoomStatus(roomName).status === 'normal';
 	}
 }
 

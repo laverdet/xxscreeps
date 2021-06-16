@@ -12,7 +12,7 @@ import { Creep, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/
 import { Game, intents, userGame } from 'xxscreeps/game';
 import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store';
-import { compose, declare, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
+import { compose, declare, optional, struct, variant, vector, withOverlay, withType } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
@@ -27,7 +27,7 @@ type SpawnCreepOptions = {
 
 // `StructureSpawn.Spawning` format and definition
 const spawningFormat = struct({
-	directions: vector('int8'),
+	directions: optional(vector(withType<Direction>('int8'))),
 	needTime: 'int32',
 	'#spawnId': Id.format,
 	'#spawningCreepId': Id.format,

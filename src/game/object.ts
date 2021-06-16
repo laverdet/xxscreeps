@@ -33,7 +33,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	 * The link to the Room object. May be `undefined` in case if an object is a flag or a construction
 	 * site and is placed in a room that is not visible to you.
 	 */
-	room = undefined as never as Room;
+	declare room: Room;
 
 	get ['#extraUsers'](): string[] { return [] }
 	get ['#hasIntent']() { return false }
