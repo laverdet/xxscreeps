@@ -128,9 +128,9 @@ extend(Room, {
 		// Add last position for automatic {range:1} paths
 		if (
 			(options.range ?? 0) === 0 &&
-			!origin.isNearTo(goal) &&
-			result.path.length > 0 &&
-			result.path[result.path.length - 1].getRangeTo(goal) === 1
+			(result.path.length ?
+				result.path[result.path.length - 1].getRangeTo(goal) === 1 :
+				origin.isNearTo(goal))
 		) {
 			result.path.push(goal);
 		}
