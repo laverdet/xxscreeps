@@ -1,10 +1,10 @@
-import { registerBackendRoute } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend';
 import fetch from 'node-fetch';
 import config from 'xxscreeps/config';
 
 const { steamApiKey } = config.backend;
 if (steamApiKey) {
-	registerBackendRoute({
+	hooks.register('route', {
 		method: 'post',
 		path: '/api/auth/steam-ticket',
 

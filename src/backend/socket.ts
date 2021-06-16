@@ -11,7 +11,7 @@ import { ConsoleSubscriptions } from './sockets/console';
 import { EventEmitter } from 'events';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
-import { subscriptions } from './symbols';
+import { hooks } from './symbols';
 const { allowGuestAccess } = config.backend;
 
 type SubscriptionInstance = {
@@ -73,7 +73,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, httpServer: Serv
 	});
 
 	// The rest is regular WebSocket code, no more dragons
-	const handlers = [ ...CodeSubscriptions, ...ConsoleSubscriptions, mapSubscription, roomSubscription, ...subscriptions ];
+	const handlers = [ ...CodeSubscriptions, ...ConsoleSubscriptions, mapSubscription, roomSubscription, ...hooks.map('subscription') ];
 	socketServer.on('connection', connection => {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (!connection) {

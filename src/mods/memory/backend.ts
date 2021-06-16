@@ -1,7 +1,7 @@
 import type { Shard } from 'xxscreeps/engine/db';
 import config from 'xxscreeps/config';
 import { gzip } from 'zlib';
-import { registerBackendRoute, registerBackendSubscription } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend';
 import { loadUserMemoryBlob } from 'xxscreeps/mods/memory/model';
 import { mustNotReject } from 'xxscreeps/utility/async';
 import { typedArrayToString } from 'xxscreeps/utility/string';
@@ -27,7 +27,7 @@ async function loadAndParse(shard: Shard, userId: string, path?: string) {
 	}
 }
 
-registerBackendSubscription({
+hooks.register('subscription', {
 	pattern: /^user:(?<user>[^/]+)\/memory\/(?<shard>[^/]+)\/(?<path>.+)$/,
 
 	subscribe(params) {
@@ -54,7 +54,7 @@ registerBackendSubscription({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/user/memory',
 
 	async execute(context) {
@@ -75,7 +75,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/user/memory',
 	method: 'post',
 

@@ -1,11 +1,11 @@
 import { Game } from 'xxscreeps/game';
-import { registerBackendRoute } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { activateNPC } from 'xxscreeps/mods/npc/processor';
 import { flushUsers } from 'xxscreeps/game/room/room';
 import { create } from './processor';
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/game/create-invader',
 	method: 'post',
 

@@ -6,7 +6,7 @@ import { VersionEndpoint } from './version';
 import gameEndpoints from './game';
 import registrationEndpoints from './register';
 import userEndpoints from './user';
-import { routes } from '../symbols';
+import { hooks } from 'xxscreeps/backend';
 
 import './assets/terrain';
 
@@ -16,7 +16,7 @@ export function installEndpointHandlers(koa: Koa<State, Context>, router: Router
 		...gameEndpoints,
 		...registrationEndpoints,
 		...userEndpoints,
-		...routes,
+		...hooks.map('route'),
 	];
 	for (const endpoint of endpoints) {
 		router[endpoint.method ?? 'get'](endpoint.path, async(context, next) => {

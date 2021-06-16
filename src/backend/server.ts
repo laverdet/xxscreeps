@@ -12,7 +12,7 @@ import { BackendContext } from './context';
 import { setupGracefulShutdown } from './graceful';
 import { installEndpointHandlers } from './endpoints';
 import { installSocketHandlers } from './socket';
-import { middleware } from './symbols';
+import { hooks } from './symbols';
 
 import 'xxscreeps/config/mods/import/game';
 import 'xxscreeps/config/mods/import/processor';
@@ -25,7 +25,7 @@ const router = new Router<State, Context>();
 
 // Set up endpoints
 const httpServer = http.createServer(koa.callback());
-const socketServer = installSocketHandlers(koa as Koa<any, any>, httpServer, backendContext);
+const socketServer = installSocketHandlers(koa, httpServer, backendContext);
 koa.use(async(context, next) => {
 	try {
 		await next();
@@ -45,7 +45,7 @@ koa.use(bodyParser({
 	jsonLimit: '8mb',
 }));
 koa.use(authentication());
-middleware.forEach(fn => fn(koa, router));
+hooks.makeIterated('middleware')(koa, router);
 koa.use(router.routes());
 koa.use(router.allowedMethods());
 installEndpointHandlers(koa, router);

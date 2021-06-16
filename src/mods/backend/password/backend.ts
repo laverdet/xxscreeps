@@ -1,7 +1,7 @@
-import { registerBackendMiddleware, registerBackendRoute } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend';
 import { findUserByName } from 'xxscreeps/engine/db/user';
 
-registerBackendMiddleware(koa => {
+hooks.register('middleware', koa => {
 	koa.use(async(context, next) => {
 		const auth64 = context.headers.authorization && /^Basic (?<auth>.+)$/.exec(context.headers.authorization)?.groups?.auth;
 		if (auth64) {
@@ -17,7 +17,7 @@ registerBackendMiddleware(koa => {
 	});
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	method: 'post',
 	path: '/api/auth/signin',
 

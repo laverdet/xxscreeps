@@ -3,7 +3,7 @@ import * as Code from 'xxscreeps/engine/db/user/code';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
 import { getConsoleChannel, requestRunnerEval } from 'xxscreeps/engine/runner/model';
-import { registerBackendRoute } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;
@@ -66,7 +66,7 @@ function toModulesContent(payload: Code.CodePayload) {
 			} ]));
 }
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/user/branches',
 
 	async execute(context) {
@@ -104,7 +104,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/user/clone-branch',
 	method: 'post',
 
@@ -157,7 +157,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/user/delete-branch',
 	method: 'post',
 
@@ -182,7 +182,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/user/set-active-branch',
 	method: 'post',
 
@@ -201,7 +201,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/user/code',
 
 	async execute(context) {
@@ -222,7 +222,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/user/code',
 	method: 'post',
 
@@ -241,7 +241,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/user/console',
 	method: 'post',
 

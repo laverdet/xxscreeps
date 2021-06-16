@@ -8,7 +8,8 @@ import * as User from 'xxscreeps/engine/db/user';
 import { runOneShot } from 'xxscreeps/game';
 import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async';
 import { asUnion, getOrSet, throttle } from 'xxscreeps/utility/utility';
-import { Render, roomSocketHandlers } from 'xxscreeps/backend/symbols';
+import { hooks } from 'xxscreeps/backend';
+import { Render } from 'xxscreeps/backend/symbols';
 import { getRoomChannel } from 'xxscreeps/engine/processor/model';
 import './render';
 
@@ -40,6 +41,7 @@ type RoomState = {
 	time: number;
 };
 const globalSubscriptionsByRoom = new Map<string, Promise<{ listen: (fn: RoomListener) => Effect; state: RoomState }>>();
+const invokeSocketHooks = hooks.makeMapped('roomSocket');
 
 /**
  * Listen for updates to a room. Some work is shared between multiple listeners. If game time is
@@ -112,8 +114,11 @@ export const roomSubscription: SubscriptionEndpoint = {
 		const seenUsers = new Set<string>();
 
 		// Resolve room socket handlers
-		const [ hookEffect, hookResults ] = await acquire(...roomSocketHandlers.map(fn => fn(shard, this.user, parameters.room)));
-		const hooks = [ ...Fn.filter(hookResults) ];
+		// HACK: TypeScript doesn't infer types correctly for iterable types into a rest spread. The
+		// `hookMap` cast here shouldn't be needed but it is.
+		const mappedHooks = invokeSocketHooks(shard, this.user, parameters.room);
+		const [ hookEffect, hookResults ] = await acquire(...mappedHooks as typeof mappedHooks extends Iterable<infer T> ? T[] : never);
+		const hookRunners = [ ...Fn.filter(hookResults) ];
 
 		// Listen for room updates. Must be done after hooks are resolved because `update` will call hooks.
 		const [ effect ] = await acquire(
@@ -123,7 +128,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 				}
 
 				// Invoke room socket handlers
-				const extra = await Promise.all(hooks.map(fn => fn(time)));
+				const extra = await Promise.all(hookRunners.map(fn => fn(time)));
 
 				// Render current room state
 				room['#initialize']();

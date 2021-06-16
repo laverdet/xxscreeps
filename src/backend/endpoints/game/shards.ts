@@ -1,7 +1,7 @@
-import { registerBackendRoute } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend';
 import config from 'xxscreeps/config';
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/game/shards/info',
 	execute() {
 		return {

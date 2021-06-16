@@ -5,7 +5,7 @@ import streamToPromise from 'stream-to-promise';
 import crypto from 'crypto';
 import * as Fn from 'xxscreeps/utility/functional';
 import { PNG } from 'pngjs';
-import { registerBackendMiddleware } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend';
 import { TerrainRender } from 'xxscreeps/backend/symbols';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL, isBorder } from 'xxscreeps/game/terrain';
@@ -72,7 +72,7 @@ function generate(map: GameMap, grid: (Room | null)[][], zoom = 1) {
 	return streamToPromise(png.pack());
 }
 
-registerBackendMiddleware((koa, router) => {
+hooks.register('middleware', (koa, router) => {
 	function use(paths: string[], fn: (shard: Shard, map: GameMap, room: string) => Promise<Buffer | null>) {
 		const cache = new Map<string, { etag: string; payload: Buffer | null }>();
 		router.get(paths, async context => {

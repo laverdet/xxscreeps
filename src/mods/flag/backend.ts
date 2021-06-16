@@ -2,11 +2,11 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { RoomPosition } from 'xxscreeps/game/position';
-import { registerBackendRoute, registerRoomSocketHandler } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend';
 import { checkCreateFlag } from './flag';
 import { getFlagChannel, loadUserFlags } from './model';
 
-registerRoomSocketHandler(async(shard, userId, roomName) => {
+hooks.register('roomSocket', async(shard, userId, roomName) => {
 	if (!userId) {
 		return;
 	}
@@ -35,7 +35,7 @@ registerRoomSocketHandler(async(shard, userId, roomName) => {
 	];
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/game/create-flag',
 	method: 'post',
 
@@ -64,7 +64,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/game/gen-unique-flag-name',
 	method: 'post',
 
@@ -89,7 +89,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/game/remove-flag',
 	method: 'post',
 

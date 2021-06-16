@@ -6,7 +6,7 @@ import { Game, runOneShot } from 'xxscreeps/game';
 import { forceRoomProcess, getRoomChannel, userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
-import { bindRenderer, registerBackendRoute } from 'xxscreeps/backend';
+import { bindRenderer, hooks } from 'xxscreeps/backend';
 import { flushUsers } from 'xxscreeps/game/room/room';
 import { renderStore } from 'xxscreeps/mods/resource/backend';
 import { StructureExtension } from './extension';
@@ -30,7 +30,7 @@ bindRenderer(Spawn.StructureSpawn, (spawn, next) => ({
 	},
 }));
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/game/check-unique-object-name',
 	method: 'post',
 
@@ -60,7 +60,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/game/gen-unique-object-name',
 	method: 'post',
 
@@ -93,7 +93,7 @@ registerBackendRoute({
 	},
 });
 
-registerBackendRoute({
+hooks.register('route', {
 	path: '/api/game/place-spawn',
 	method: 'post',
 

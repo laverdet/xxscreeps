@@ -1,9 +1,9 @@
-import { registerRoomSocketHandler } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend';
 import { Variant } from 'xxscreeps/schema';
 import { stringifyInherited } from 'xxscreeps/utility/string';
 import { getVisualChannel, loadVisuals } from './model';
 
-registerRoomSocketHandler(async(shard, userId, roomName) => {
+hooks.register('roomSocket', async(shard, userId, roomName) => {
 	if (!userId) {
 		return;
 	}
