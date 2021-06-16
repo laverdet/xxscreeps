@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants';
 import { intents, me, userGame } from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
-import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
+import { chainIntentChecks, checkRange, checkSafeMode, checkString, checkTarget } from 'xxscreeps/game/checks';
 import { checkHasResource } from 'xxscreeps/mods/resource/store';
 import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
 import { StructureController } from './controller';
@@ -103,7 +103,7 @@ extend(Creep, {
 
 	signController(target, message) {
 		return chainIntentChecks(
-			() => checkSignController(this, target),
+			() => checkSignController(this, target, message),
 			() => intents.save(this, 'signController', target.id, message));
 	},
 
@@ -177,11 +177,12 @@ export function checkReserveController(creep: Creep, target: StructureController
 		});
 }
 
-export function checkSignController(creep: Creep, target: StructureController) {
+export function checkSignController(creep: Creep, target: StructureController, message: string | null | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, StructureController),
-		() => checkRange(creep, target, 1));
+		() => checkRange(creep, target, 1),
+		() => message ? checkString(message, 100) : C.OK);
 }
 
 export function checkUpgradeController(creep: Creep, target: StructureController) {

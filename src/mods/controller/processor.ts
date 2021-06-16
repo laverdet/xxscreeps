@@ -101,15 +101,15 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'signController', {}, (creep, context, id: string, message: string) => {
+	registerIntentProcessor(Creep, 'signController', {}, (creep, context, id: string, message: string | null) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
-		if (CreepLib.checkSignController(creep, controller) === C.OK) {
-			controller.room['#sign'] = message === '' ? undefined : {
+		if (CreepLib.checkSignController(creep, controller, message) === C.OK) {
+			controller.room['#sign'] = message ? {
 				datetime: Date.now(),
 				text: message.substr(0, 100),
 				time: Game.time,
 				userId: creep['#user'],
-			};
+			} : undefined;
 			saveAction(creep, 'attack', controller.pos);
 			context.didUpdate();
 		}
