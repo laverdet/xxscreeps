@@ -26,9 +26,11 @@ export function setupGracefulShutdown(
 		conn.once('close', () => sockets.delete(conn));
 	});
 	server.on('request', (req: IncomingMessage, res: ServerResponse) => {
-		const conn = res.connection!;
-		sockets.set(conn, false);
-		res.once('finish', () => markIdle(conn));
+		if (res.socket) {
+			const conn = res.socket;
+			sockets.set(conn, false);
+			res.once('finish', () => markIdle(conn));
+		}
 	});
 
 	sockjs.on('connection', conn => {

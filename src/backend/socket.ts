@@ -1,20 +1,18 @@
-import type { Server } from 'http';
-import type { Effect } from 'xxscreeps/utility/types';
+import type Koa from 'koa';
 import type { BackendContext } from './context';
+import type { Context, State } from '.';
+import type { Effect } from 'xxscreeps/utility/types';
+import type { IncomingMessage, Server } from 'http';
 import sockjs from 'sockjs';
 import config from 'xxscreeps/config';
 import { checkToken, makeToken } from './auth/token';
 import { CodeSubscriptions } from './sockets/code';
 import { ConsoleSubscriptions } from './sockets/console';
+import { EventEmitter } from 'events';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
 import { subscriptions } from './symbols';
 const { allowGuestAccess } = config.backend;
-
-const socketServer = sockjs.createServer({
-	prefix: '/socket',
-	log: () => {},
-});
 
 type SubscriptionInstance = {
 	context: BackendContext;
@@ -26,15 +24,72 @@ export type SubscriptionEndpoint = {
 	subscribe: (this: SubscriptionInstance, parameters: Record<string, string>) => Promise<Effect> | Effect;
 };
 
-export function installSocketHandlers(httpServer: Server, context: BackendContext) {
+const prefix = '/socket';
+function usesPrefix(path: string, prefix: string) {
+	return path === prefix || path.startsWith(`${prefix}/`);
+}
+
+export function installSocketHandlers(koa: Koa<State, Context>, httpServer: Server, context: BackendContext) {
+	// SockJS aggressively injects its listeners at the front of the queue, so we pass it a fake HTTP
+	// server to have better control over the event flow.
+	const httpDelegate = new EventEmitter as Server;
+	const socketServer = sockjs.createServer({
+		prefix,
+		log: () => {},
+	});
+	socketServer.installHandlers(httpDelegate);
+
+	// Install Koa handler
+	koa.use(async(context, next) => {
+		// Disable Koa response if this is a request to /socket
+		const isSocket = usesPrefix(context.request.path, prefix);
+		if (isSocket) {
+			context.respond = false;
+		}
+		// Invoke remaining middleware
+		await next();
+		if (isSocket) {
+			// Update state on request object as well, so that Koa middleware which authenticates will
+			// carry over to the socket
+			const token = await context.flushToken();
+			if (token) {
+				context.request.headers['x-token'] = token;
+			}
+			// Forward request to SockJS
+			const head = (context.req as any).head;
+			if (head) {
+				delete (context.req as any).head;
+				httpDelegate.emit('upgrade', context.req, context.res, head);
+			} else {
+				httpDelegate.emit('request', context.req, context.res);
+			}
+		}
+	});
+
+	// Install HTTP upgrade handler
+	httpServer.on('upgrade', (request, socket, head) => {
+		request.head = head;
+		httpServer.emit('request', request, socket, head);
+	});
+
+	// The rest is regular WebSocket code, no more dragons
 	const handlers = [ ...CodeSubscriptions, ...ConsoleSubscriptions, mapSubscription, roomSubscription, ...subscriptions ];
-	socketServer.installHandlers(httpServer);
 	socketServer.on('connection', connection => {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (!connection) {
 			// Sometimes Sockjs gives us dead connections on restart..
 			return;
 		}
+
+		// Fish `request` object out of internal structure
+		const session = (connection as any)._session;
+		const request: IncomingMessage | undefined =
+			// WebSocket
+			session.recv.ws?._driver._request ??
+			// XHR
+			session.recv.request;
+
+		// Set up subscription bookkeeping for this socket
 		let user: string | undefined;
 		const subscriptions = new Map<string, Promise<Effect>>();
 		function close() {
@@ -52,7 +107,10 @@ export function installSocketHandlers(httpServer: Server, context: BackendContex
 
 			if (authMessage) {
 				(async() => {
-					const { token } = authMessage.groups!;
+					// If this socket has an X-Token header it will taken priority over the auth message. This
+					// header is probably never sent by the client but authentication middleware can stick it
+					// on the request object.
+					const token = `${request?.headers['x-token'] ?? authMessage.groups!.token}`;
 					if (token === 'guest') {
 						if (allowGuestAccess) {
 							connection.write('auth ok guest');

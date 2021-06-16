@@ -1,6 +1,6 @@
 import type { Middleware } from 'xxscreeps/backend';
-import * as Id from 'xxscreeps/engine/schema/id';
 import config from 'xxscreeps/config';
+import * as Id from 'xxscreeps/engine/schema/id';
 import { checkToken, makeToken } from './token';
 import { findUserByProvider } from 'xxscreeps/engine/db/user';
 const { allowGuestAccess } = config.backend;
@@ -40,6 +40,7 @@ export function authentication(): Middleware {
 			if (context.state.token !== undefined) {
 				return context.state.token;
 			}
+			// Make token from middleware authentication
 			const token = await function() {
 				if (context.state.userId !== undefined) {
 					return makeToken(context.state.userId);
@@ -49,13 +50,10 @@ export function authentication(): Middleware {
 					return 'guest';
 				}
 			}();
+			// Send X-Token response header
 			context.state.token = token;
-			if (token !== undefined) {
+			if (token !== undefined && context.respond !== false) {
 				context.set('X-Token', token);
-				if (context.state.provider) {
-					// Authenticated on this request
-					context.cookies.set('token', token, { maxAge: 60 * 1000 });
-				}
 			}
 			return token;
 		};
@@ -67,7 +65,6 @@ export function authentication(): Middleware {
 				if (token && token !== 'guest') {
 					return token;
 				}
-				return context.cookies.get('token');
 			}();
 			if (token && token !== 'guest') {
 				const tokenValue = await checkToken(token);

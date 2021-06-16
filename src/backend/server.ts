@@ -25,6 +25,7 @@ const router = new Router<State, Context>();
 
 // Set up endpoints
 const httpServer = http.createServer(koa.callback());
+const socketServer = installSocketHandlers(koa as Koa<any, any>, httpServer, backendContext);
 koa.use(async(context, next) => {
 	try {
 		await next();
@@ -48,7 +49,6 @@ middleware.forEach(fn => fn(koa, router));
 koa.use(router.routes());
 koa.use(router.allowedMethods());
 installEndpointHandlers(koa, router);
-const socketServer = installSocketHandlers(httpServer, backendContext);
 
 // Shutdown handler
 const shutdownServer = setupGracefulShutdown(httpServer, socketServer);
