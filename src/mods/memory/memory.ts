@@ -9,6 +9,10 @@ export const kMaxMemorySegmentLength = 100 * 1024;
 
 let activeSegments = new Map<number, string>();
 let didUpdateSegments = false;
+let requestedForeignSegment: null | {
+	id: number | undefined;
+	username: string;
+};
 let memory: Uint16Array;
 let memoryLength = 0;
 let string: string | undefined;
@@ -80,7 +84,9 @@ export const RawMemory = {
 	 * @param id The ID of the requested segment from 0 to 99. If undefined, the user's default public
 	 * segment is requested as set by setDefaultPublicSegment.
 	 */
-	setActiveForeignSegment(_username: string, _id?: number) { console.error('TODO: setActiveForeignSegment') },
+	setActiveForeignSegment(username: string, id?: number) {
+		requestedForeignSegment = { id, username };
+	},
 
 	/**
 	 * Set the specified segment as your default public segment. It will be returned if no `id`
@@ -187,6 +193,15 @@ export function flushActiveSegments() {
 	} else {
 		return null;
 	}
+}
+
+/**
+ * Returns the request from `RawMemory.setActiveForeignSegment`
+ */
+export function flushForeignSegment() {
+	const tmp = requestedForeignSegment;
+	requestedForeignSegment = null;
+	return tmp;
 }
 
 /**

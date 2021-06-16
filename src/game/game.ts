@@ -39,6 +39,7 @@ export class GameBase {
 		this.time = state.time;
 		this.map = state.shard.map;
 		this.#state = state;
+		this.getObjectById = this.getObjectById.bind(this);
 	}
 
 	/**

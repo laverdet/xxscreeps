@@ -122,8 +122,20 @@ extend(Room, {
 
 	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize?: boolean } = {}) {
 
-		// Delegate to `PathFinder` and convert the result
+		// Delegate to `PathFinder` for main search
 		const result = PathFinder.roomSearch(origin, [ goal ], options);
+
+		// Add last position for automatic {range:1} paths
+		if (
+			(options.range ?? 0) === 0 &&
+			!origin.isNearTo(goal) &&
+			result.path.length > 0 &&
+			result.path[result.path.length - 1].getRangeTo(goal) === 1
+		) {
+			result.path.push(goal);
+		}
+
+		// Convert to room path
 		const path: RoomPath = [];
 		let previous = origin;
 		for (const pos of result.path) {

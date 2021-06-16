@@ -3,7 +3,7 @@ import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
 import * as Lab from './lab';
 
 // Register `ResourceType` schema
-const resourceSchema = registerEnumerated('ResourceType',
+const resources = [
 	C.RESOURCE_HYDROXIDE, C.RESOURCE_ZYNTHIUM_KEANITE, C.RESOURCE_UTRIUM_LEMERGITE,
 
 	C.RESOURCE_UTRIUM_HYDRIDE, C.RESOURCE_UTRIUM_OXIDE, C.RESOURCE_KEANIUM_HYDRIDE, C.RESOURCE_KEANIUM_OXIDE,
@@ -18,7 +18,10 @@ const resourceSchema = registerEnumerated('ResourceType',
 	C.RESOURCE_CATALYZED_KEANIUM_ALKALIDE, C.RESOURCE_CATALYZED_LEMERGIUM_ACID, C.RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE,
 	C.RESOURCE_CATALYZED_ZYNTHIUM_ACID, C.RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE, C.RESOURCE_CATALYZED_GHODIUM_ACID,
 	C.RESOURCE_CATALYZED_GHODIUM_ALKALIDE,
-);
+];
+const resourceSchema = registerEnumerated('ResourceType', ...resources);
+C.RESOURCES_ALL.push(...resources);
+
 declare module 'xxscreeps/mods/resource' {
 	interface Schema { chemistry: typeof resourceSchema }
 }

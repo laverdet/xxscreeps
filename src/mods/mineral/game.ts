@@ -5,11 +5,13 @@ import * as Extractor from './extractor';
 import * as Mineral from './mineral';
 
 // Register schema extensions
-const resourceSchema = registerEnumerated('ResourceType',
+const resources = [
 	C.RESOURCE_HYDROGEN, C.RESOURCE_OXYGEN,
 	C.RESOURCE_UTRIUM, C.RESOURCE_LEMERGIUM, C.RESOURCE_KEANIUM,
 	C.RESOURCE_ZYNTHIUM, C.RESOURCE_CATALYST, C.RESOURCE_GHODIUM,
-);
+];
+const resourceSchema = registerEnumerated('ResourceType', ...resources);
+C.RESOURCES_ALL.push(...resources);
 declare module 'xxscreeps/mods/resource' {
 	interface Schema { mineral: typeof resourceSchema }
 }

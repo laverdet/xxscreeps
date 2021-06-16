@@ -6,6 +6,7 @@ import { Mutex } from 'xxscreeps/engine/db/mutex';
 import { activeRoomsKey, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';
+import { tickSpeed, watch } from './tick';
 
 // Open channels
 const db = await Database.connect();
@@ -17,13 +18,18 @@ const [ gameMutex, serviceSubscription ] = await Promise.all([
 	getServiceChannel(shard).subscribe(),
 ]);
 
-// Ctrl+C handler
-let delayShutdown: Deferred<boolean> | undefined;
+// Ctrl+C handler, config watcher
+let tickDelay: Deferred<boolean> | undefined;
 let shuttingDown = false;
+const unwatch = await watch(() => {
+	console.log(`Tick speed changed to ${tickSpeed}ms`);
+	tickDelay?.resolve(true);
+});
 serviceSubscription.listen(message => {
 	if (message.type === 'shutdown') {
 		shuttingDown = true;
-		delayShutdown?.resolve(false);
+		tickDelay?.resolve(false);
+		unwatch?.();
 	}
 });
 
@@ -108,10 +114,10 @@ try {
 		}
 
 		// Add delay
-		const delay = Math.max(0, config.game.tickSpeed - (Date.now() - timeStartedLoop));
-		delayShutdown = new Deferred;
-		const { promise } = delayShutdown;
-		setTimeout(() => delayShutdown!.resolve(true), delay).unref();
+		const delay = Math.max(0, tickSpeed - (Date.now() - timeStartedLoop));
+		tickDelay = new Deferred;
+		const { promise, resolve } = tickDelay;
+		setTimeout(() => resolve(true), delay).unref();
 		if (!await promise) {
 			break;
 		}

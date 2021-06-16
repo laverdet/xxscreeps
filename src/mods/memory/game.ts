@@ -2,7 +2,7 @@ import { defineGlobal, registerGlobal } from 'xxscreeps/game';
 import { registerRuntimeConnector } from 'xxscreeps/driver';
 import { extend } from 'xxscreeps/utility/utility';
 import { Room } from 'xxscreeps/game/room';
-import { RawMemory, flush, flushActiveSegments, flushSegments, get, initialize, loadSegments } from './memory';
+import { RawMemory, flush, flushActiveSegments, flushForeignSegment, flushSegments, get, initialize, loadSegments } from './memory';
 
 // Export `Memory` and `RawMemory` to runtime globals
 declare module 'xxscreeps/game/runtime' {
@@ -51,6 +51,7 @@ registerRuntimeConnector({
 		payload.usage.memory = payload.memoryUpdated.byteLength >>> 1;
 		// Segments
 		payload.activeSegmentsRequest = flushActiveSegments();
+		payload.foreignSegmentRequest = flushForeignSegment();
 		payload.memorySegmentsUpdated = flushSegments();
 	},
 });

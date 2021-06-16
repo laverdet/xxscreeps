@@ -91,11 +91,11 @@ git clone https://github.com/laverdet/xxscreeps.git
 cd xxscreeps
 npm install
 npm run build
-npm run import
+npx xxscreeps import
 ```
 
-After that you can start xxscreeps via `npm run start` except you won't be able to connect with the
-Steam client. You'll need to create a file `.screepsrc.yaml` with content:
+After that you can start xxscreeps via `npx xxscreeps start` except you won't be able to connect
+with the Steam client. You'll need to create a file `.screepsrc.yaml` with content:
 ```
 backend:
   steamApiKey: <your steam key>

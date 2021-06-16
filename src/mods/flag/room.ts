@@ -25,8 +25,8 @@ declare module 'xxscreeps/game/room/room' {
 		 * @param secondaryColor The secondary color of a new flag. Should be one of the `COLOR_*`
 		 * constants. The default value is equal to `color`.
 		 */
-		createFlag(pos: RoomObject | RoomPosition, name?: string, color?: Color, secondaryColor?: Color): ReturnType<typeof checkCreateFlag>;
-		createFlag(x: number, y: number, name?: string, color?: Color, secondaryColor?: Color): ReturnType<typeof checkCreateFlag>;
+		createFlag(pos: RoomObject | RoomPosition, name?: string, color?: Color, secondaryColor?: Color): ReturnType<typeof checkCreateFlag> | string;
+		createFlag(x: number, y: number, name?: string, color?: Color, secondaryColor?: Color): ReturnType<typeof checkCreateFlag> | string;
 	}
 }
 
@@ -40,7 +40,7 @@ extend(Room, {
 			name => flags[name] === undefined)!;
 		const color = rest[1] ?? C.COLOR_WHITE;
 		const secondaryColor = rest[2] ?? color;
-		return chainIntentChecks(
+		const result = chainIntentChecks(
 			() => {
 				if (!pos || pos.roomName !== this.name) {
 					return C.ERR_INVALID_ARGS;
@@ -59,6 +59,7 @@ extend(Room, {
 				});
 			},
 		);
+		return result === C.OK ? name : result;
 	},
 });
 
@@ -74,7 +75,7 @@ declare module 'xxscreeps/game/position' {
 		* @param secondaryColor The secondary color of a new flag. Should be one of the `COLOR_*`
 		* constants. The default value is equal to `color`.
 		*/
-		createFlag(name?: string, color?: Color, secondaryColor?: Color): ReturnType<typeof checkCreateFlag>;
+		createFlag(name?: string, color?: Color, secondaryColor?: Color): ReturnType<typeof checkCreateFlag> | string;
 	}
 }
 

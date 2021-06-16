@@ -27,8 +27,6 @@ export function authentication(): Middleware {
 				throw new Error('Already flushed');
 			}
 			const userId = await findUserByProvider(context.db, provider, providerId);
-			// Disarm `userId` exception trap from malformed token
-			delete context.state.userId;
 			if (userId === null) {
 				context.state.newUserId = Id.generateId(12);
 				context.state.provider = provider;
@@ -76,15 +74,27 @@ export function authentication(): Middleware {
 				if (tokenValue === undefined) {
 					// Allow this request to continue as long as `userId` isn't accessed
 					const message = 'Malformed token';
+					let didSet = false;
 					Object.defineProperty(context.state, 'userId', {
 						configurable: true,
 						get() {
 							throw new Error(message);
 						},
+						set(value: string) {
+							didSet = true;
+							Object.defineProperty(context.state, 'userId', {
+								configurable: true,
+								writable: true,
+								value,
+							});
+						},
 					});
 					try {
 						await next();
-						Object.defineProperty(context.state, 'userId', { value: undefined });
+						// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+						if (!didSet) {
+							Object.defineProperty(context.state, 'userId', { value: undefined });
+						}
 					} catch (err) {
 						if (err.message === message) {
 							// Send failure to force the Steam client to reauthenticate
