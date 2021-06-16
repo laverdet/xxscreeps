@@ -9,4 +9,4 @@ FROM node:slim as run
 WORKDIR /usr/app/xxscreeps
 COPY --from=build /usr/app/xxscreeps/ ./
 EXPOSE 21025
-ENTRYPOINT ["npm", "run", "import-and-start"]
+ENTRYPOINT ["/bin/sh", "-c", "npx xxscreeps import && npx xxscreeps start"]
