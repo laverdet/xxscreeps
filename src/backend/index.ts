@@ -1,10 +1,11 @@
 import type Koa from 'koa';
 import type Router from 'koa-router';
+import type { BackendContext } from './context';
 import type { Database, Shard } from 'xxscreeps/engine/db';
 import type { Implementation } from 'xxscreeps/utility/types';
 import type { RoomObject } from 'xxscreeps/game/object';
-import type { BackendContext } from './context';
-import { MapRender, Render, TerrainRender, middleware, routes } from './symbols';
+import type { SubscriptionEndpoint } from './socket';
+import { MapRender, Render, TerrainRender, middleware, routes, subscriptions } from './symbols';
 export { registerRoomSocketHandler } from './symbols';
 
 // Koa middleware & generic backend route types
@@ -50,6 +51,10 @@ export function registerBackendMiddleware(fn: (koa: Koa<State, Context>, router:
 
 export function registerBackendRoute(endpoint: Endpoint) {
 	routes.push(endpoint);
+}
+
+export function registerBackendSubscription(handler: SubscriptionEndpoint) {
+	subscriptions.push(handler);
 }
 
 // Backend render hooks

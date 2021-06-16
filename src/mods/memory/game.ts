@@ -1,9 +1,8 @@
-import type { SegmentPayload } from './memory';
 import { defineGlobal, registerGlobal } from 'xxscreeps/game';
 import { registerRuntimeConnector } from 'xxscreeps/driver';
 import { extend } from 'xxscreeps/utility/utility';
 import { Room } from 'xxscreeps/game/room';
-import { RawMemory, flush, flushActiveSegments, flushSegments, get, initialize, loadSegments } from './memory';
+import { RawMemory, flush, flushActiveSegments, flushForeignSegment, flushSegments, get, initialize, loadSegments } from './memory';
 
 // Export `Memory` and `RawMemory` to runtime globals
 declare module 'xxscreeps/game/runtime' {
@@ -37,20 +36,6 @@ extend(Room, {
 	},
 });
 
-// Receive and send memory payloads from driver
-declare module 'xxscreeps/driver' {
-	interface InitializationPayload {
-		memoryBlob: Readonly<Uint8Array> | null;
-	}
-	interface TickPayload {
-		memorySegments?: SegmentPayload[];
-	}
-	interface TickResult {
-		activeSegmentsRequest: number[] | null;
-		memorySegmentsUpdated: SegmentPayload[] | null;
-		memoryUpdated: Uint8Array;
-	}
-}
 registerRuntimeConnector({
 	initialize(payload) {
 		initialize(payload.memoryBlob);
@@ -63,8 +48,10 @@ registerRuntimeConnector({
 	send(payload) {
 		// Primary memory
 		payload.memoryUpdated = flush();
+		payload.usage.memory = payload.memoryUpdated.byteLength >>> 1;
 		// Segments
 		payload.activeSegmentsRequest = flushActiveSegments();
+		payload.foreignSegmentRequest = flushForeignSegment();
 		payload.memorySegmentsUpdated = flushSegments();
 	},
 });

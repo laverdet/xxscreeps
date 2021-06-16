@@ -82,21 +82,12 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 	}
 
 	// Check structure count for this RCL
-	const rcl = room.controller?.level ?? 0;
-	if (rcl === 0 && structureType === 'spawn') {
-		// TODO: GCL check here
-		if (!room.controller) {
-			return C.ERR_RCL_NOT_ENOUGH;
-		}
-	} else {
-		const existingCount = Fn.accumulate(Fn.concat(
-			room['#lookFor'](C.LOOK_STRUCTURES),
-			room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
-		), object => object.structureType === structureType ? 1 : 0);
-		if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][rcl]) {
-			// TODO: Check constructions sites made this tick too
-			return C.ERR_RCL_NOT_ENOUGH;
-		}
+	const existingCount = Fn.accumulate(Fn.concat(
+		room['#lookFor'](C.LOOK_STRUCTURES),
+		room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
+	), object => object.structureType === structureType ? 1 : 0);
+	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][room.controller?.level ?? 0]) {
+		return C.ERR_RCL_NOT_ENOUGH;
 	}
 
 	// checkPlacement hook
@@ -110,18 +101,15 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		checkTerrain: false,
 		ignoreCreeps: true,
 		room,
-		type: C.LOOK_STRUCTURES,
 		user: me,
 	});
-	if (obstacle) {
-		for (const object of room['#lookAt'](pos)) {
-			asUnion(object);
-			if (
-				object.structureType === structureType ||
-				obstacleChecker(object)
-			) {
-				return C.ERR_INVALID_TARGET;
-			}
+	for (const object of room['#lookAt'](pos)) {
+		asUnion(object);
+		if (
+			object.structureType === structureType ||
+			(obstacle && obstacleChecker(object))
+		) {
+			return C.ERR_INVALID_TARGET;
 		}
 	}
 

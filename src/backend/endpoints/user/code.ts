@@ -2,8 +2,7 @@ import type { Database } from 'xxscreeps/engine/db';
 import * as Code from 'xxscreeps/engine/db/user/code';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
-import { getRunnerUserChannel } from 'xxscreeps/engine/runner/channel';
-import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
+import { getConsoleChannel, requestRunnerEval } from 'xxscreeps/engine/runner/model';
 import { registerBackendRoute } from 'xxscreeps/backend';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 
@@ -259,7 +258,7 @@ registerBackendRoute({
 			// Try to parse it
 			// eslint-disable-next-line no-new, @typescript-eslint/no-implied-eval
 			new Function(expression);
-			await getRunnerUserChannel(context.shard, userId).publish({ type: 'eval', expr: context.request.body.expression });
+			requestRunnerEval(context.shard, userId, context.request.body.expression, true);
 		} catch (err) {
 			await getConsoleChannel(context.shard, userId).publish({ type: 'error', value: err.message });
 		}

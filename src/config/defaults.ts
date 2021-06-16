@@ -1,6 +1,5 @@
 import type { RecursivePartial } from 'xxscreeps/utility/types';
 import type { Schema } from './schema';
-import * as Crypto from 'crypto';
 import os from 'os';
 
 function makeDefaults<Type extends RecursivePartial<Schema>>(defaults: Type) {
@@ -11,7 +10,6 @@ export const defaults = makeDefaults({
 	backend: {
 		allowGuestAccess: true as boolean,
 		bind: 'localhost',
-		secret: Crypto.randomBytes(32).toString(),
 		socketSkipsPermanents: true as boolean,
 		socketThrottle: 125,
 	},
@@ -29,6 +27,10 @@ export const defaults = makeDefaults({
 	],
 	runner: {
 		concurrency: os.cpus().length + 1,
+		cpu: {
+			bucket: 10000,
+			tickLimit: 500,
+		},
 	},
 	schemaArchive: './screeps/archive',
 	database: {

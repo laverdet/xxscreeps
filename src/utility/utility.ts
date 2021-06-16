@@ -104,6 +104,30 @@ export function staticCast<Type>(value: Type) {
 	return value;
 }
 
+export function throttle(fn: () => void) {
+	let timeout: ReturnType<typeof setTimeout> | undefined;
+	return {
+		clear() {
+			if (timeout) {
+				clearTimeout(timeout);
+				timeout = undefined;
+			}
+		},
+		reset(time: number) {
+			this.clear();
+			this.set(time);
+		},
+		set(time: number) {
+			if (!timeout) {
+				timeout = setTimeout(() => {
+					timeout = undefined;
+					fn();
+				}, time);
+			}
+		},
+	};
+}
+
 // Accepts an instance function an returns a free function where the first argument becomes `this`
 export function uncurryThis<This, Args extends any[], Return>(callback: (this: This, ...args: Args) => Return) {
 	return (that: This, ...args: Args): Return => Reflect.apply(callback, that, args);

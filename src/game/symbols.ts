@@ -1,13 +1,16 @@
 import type { Game } from './game';
+import type { TickPayload } from 'xxscreeps/driver';
 import { registerRuntimeConnector } from 'xxscreeps/driver';
-export const gameInitializers: ((game: Game) => void)[] = [];
+
+type GameInitializer = (game: Game, data?: TickPayload) => void;
+export const gameInitializers: GameInitializer[] = [];
 export const globals = new Set<string>();
 
 /**
  * Register a function which will run on newly-created `Game` objects. These will fire once per tick
  * for user environments created via `runForUser`
  */
-export function registerGameInitializer(fn: (Game: Game) => void) {
+export function registerGameInitializer(fn: GameInitializer) {
 	gameInitializers.push(fn);
 }
 

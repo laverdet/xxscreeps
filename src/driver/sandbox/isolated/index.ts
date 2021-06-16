@@ -1,5 +1,6 @@
 import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
 import type { Print } from 'xxscreeps/driver/runtime';
+import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
 import { runOnce } from 'xxscreeps/utility/memoize';
@@ -11,19 +12,18 @@ const getPathFinderModule = runOnce(() => {
 	return { path: pathFinderBinaryPath, module };
 });
 
-const getRuntimeSource = runOnce(() => {
-	const path = 'xxscreeps/driver/sandbox/isolated/runtime';
-	return compileRuntimeSource({
-		alias: {
-			'xxscreeps/driver/private/symbol': 'xxscreeps/driver/private/symbol/isolated-vm',
-		},
-		externals: ({ request }) =>
-			request === 'util' ? 'nodeUtilImport' :
-			request === 'isolated-vm' ? 'ivm' : undefined,
-	}, path);
-});
+const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime', {
+	alias: {
+		'xxscreeps/driver/private/symbol': 'xxscreeps/driver/private/symbol/isolated-vm',
+	},
+	externals: ({ request }) =>
+		request === 'util' ? 'nodeUtilImport' :
+		request === 'isolated-vm' ? 'ivm' : undefined,
+}));
 
-export class IsolatedSandbox {
+export class IsolatedSandbox implements Sandbox {
+	private totalTime = 0n;
+
 	private constructor(
 		private readonly isolate: ivm.Isolate,
 		private readonly tick: ivm.Reference<Runtime['tick']>,
@@ -75,7 +75,24 @@ export class IsolatedSandbox {
 		this.isolate.dispose();
 	}
 
-	run(args: TickPayload) {
-		return this.tick.apply(undefined, [ args ], { arguments: { copy: true }, result: { copy: true } });
+	async run(args: TickPayload) {
+		try {
+			const payload = await this.tick.apply(
+				undefined,
+				[ args ], {
+					arguments: { copy: true },
+					result: { copy: true },
+					timeout: args.cpu.tickLimit,
+				});
+			const totalTime = this.isolate.cpuTime;
+			payload.usage.cpu = Number(totalTime - this.totalTime) / 1e6;
+			this.totalTime = totalTime;
+			return { result: 'success' as const, payload };
+		} catch (err) {
+			if (err.message === 'Script execution timed out.') {
+				return { result: 'timedOut' as const };
+			}
+			throw err;
+		}
 	}
 }

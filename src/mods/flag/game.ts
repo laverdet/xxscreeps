@@ -1,6 +1,7 @@
 import type { Color } from './flag';
 import type { FlagIntent } from './model';
 import type { TypeOf } from 'xxscreeps/schema';
+import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
@@ -35,19 +36,6 @@ declare module 'xxscreeps/game/runtime' {
 	interface Global { Flag: typeof Flag }
 }
 registerGlobal(Flag);
-
-// Read flag payload on user sandbox initialization
-declare module 'xxscreeps/driver' {
-	interface InitializationPayload {
-		flagBlob: Readonly<Uint8Array> | null;
-	}
-	interface TickPayload {
-		flagIntents: typeof intents;
-	}
-	interface TickResult {
-		flagNextBlob: Readonly<Uint8Array> | null;
-	}
-}
 let flags: TypeOf<typeof schema> = Object.create(null);
 
 // Update user flag blob
@@ -84,12 +72,27 @@ declare module 'xxscreeps/game/game' {
 		flags: Record<string, Flag>;
 	}
 }
-registerGameInitializer(Game => Game.flags = flags);
+registerGameInitializer((Game, data) => {
+	if (data) {
+		Game.flags = flags;
+		const rooms = new Set<Room>();
+		for (const flag of Object.values(flags)) {
+			const room: Room = Game.rooms[flag.pos.roomName];
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (room) {
+				room['#insertObject'](flag);
+				rooms.add(room);
+			} else {
+				flag.room = undefined as never;
+			}
+		}
+		Fn.forEach(rooms, room => room['#flushObjects']());
+	}
+});
 
 // This flag mock-processor runs in the runner sandbox and simply sends back a blob if the flags have changed
 let didUpdateFlags = false;
 export let intents: FlagIntent[] = [];
-
 export function createFlag(name: string, posInt: number, color: Color, secondaryColor: Color) {
 	const pos = RoomPosition['#create'](posInt);
 	// Run create / move / setColor intent
@@ -103,15 +106,17 @@ export function createFlag(name: string, posInt: number, color: Color, secondary
 			flag.color = color;
 			flag.secondaryColor = secondaryColor;
 			flag.pos = pos;
+			flag['#posId'] = pos['#id'];
 			didUpdateFlags = true;
 		} else {
 			// Creating a new flag
-			flags[name] = instantiate(Flag, {
+			const flag = flags[name] = instantiate(Flag, {
 				id: null as never,
 				pos,
 				name,
 				color, secondaryColor,
 			});
+			flag['#posId'] = pos['#id'];
 			didUpdateFlags = true;
 		}
 	}

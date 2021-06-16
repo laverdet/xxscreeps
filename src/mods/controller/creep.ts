@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants';
-import { intents, me } from 'xxscreeps/game';
+import { intents, me, userGame } from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
 import { checkHasResource } from 'xxscreeps/mods/resource/store';
@@ -83,7 +83,10 @@ extend(Creep, {
 	claimController(target) {
 		return chainIntentChecks(
 			() => checkClaimController(this, target),
-			() => intents.save(this, 'claimController', target.id));
+			() => {
+				controllerActivity |= 2;
+				intents.save(this, 'claimController', target.id);
+			});
 	},
 
 	generateSafeMode(target) {
@@ -107,7 +110,10 @@ extend(Creep, {
 	upgradeController(target) {
 		return chainIntentChecks(
 			() => checkUpgradeController(this, target),
-			() => intents.save(this, 'upgradeController', target.id),
+			() => {
+				controllerActivity |= 1;
+				intents.save(this, 'upgradeController', target.id);
+			},
 		);
 	},
 });
@@ -134,12 +140,19 @@ export function checkClaimController(creep: Creep, target: StructureController) 
 		() => checkTarget(target, StructureController),
 		() => checkRange(creep, target, 1),
 		() => {
+			if (userGame && userGame.gcl.level <= userGame.gcl['#roomCount']) {
+				return C.ERR_GCL_NOT_ENOUGH;
+			}
 			const user = target['#user'];
-			if (user !== null && user !== me) {
+			if (user !== null) {
 				return C.ERR_INVALID_TARGET;
 			}
-			console.error('TODO: claimController');
-			return C.ERR_GCL_NOT_ENOUGH;
+			const roomOwner = target.room['#user'];
+			if (roomOwner && roomOwner !== creep['#user']) {
+				// Someone else reserved the controller
+				return C.ERR_INVALID_TARGET;
+			}
+			return C.OK;
 		});
 }
 
@@ -185,3 +198,16 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 			}
 		});
 }
+
+/**
+ * Keeps track of whether `upgradeController` was called in the runner this tick. This tells the
+ * driver whether or not to check for GCL updates. This isn't for correctness, it's just an
+ * optimization.
+ */
+export function acquireControllerActivity() {
+	const result = controllerActivity;
+	controllerActivity = 0;
+	return result;
+}
+
+let controllerActivity = 0;

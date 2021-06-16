@@ -6,12 +6,12 @@ import {
 } from 'xxscreeps/engine/processor/model';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor';
-import { RoomProcessorContext } from 'xxscreeps/engine/processor/room';
+import { RoomProcessor } from 'xxscreeps/engine/processor/room';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async';
 import { getServiceChannel } from '.';
 
 // Keep track of rooms this thread ran. Global room processing must also happen here.
-const processedRooms = new Map<string, RoomProcessorContext>();
+const processedRooms = new Map<string, RoomProcessor>();
 const nextRoomCache = new Map<string, Room>();
 let roomCache = new Map<string, Room>();
 
@@ -60,7 +60,7 @@ try {
 				]);
 
 				// Create processor context and add intents
-				const context = new RoomProcessorContext(shard, world, room, time);
+				const context = new RoomProcessor(shard, world, room, time);
 				for (const { userId, intents } of intentsPayloads) {
 					context.saveIntents(userId, intents);
 				}
@@ -80,7 +80,7 @@ try {
 			// Also finalize rooms which were sent inter-room intents
 			for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
 				const room = await shard.loadRoom(roomName, time - 1);
-				const context = new RoomProcessorContext(shard, world, room, time);
+				const context = new RoomProcessor(shard, world, room, time);
 				await context.process(true);
 				await context.finalize();
 				nextRoomCache.set(roomName, room);

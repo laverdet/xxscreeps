@@ -71,7 +71,7 @@ const intents = [
 		// Set spawning information
 		const needTime = body.length * C.CREEP_SPAWN_TIME;
 		const spawning = spawn.spawning = assign(new StructureSpawn.Spawning, {
-			directions: directions ?? [],
+			directions: directions ?? undefined,
 			needTime,
 		});
 		spawning['#spawnId'] = spawn.id;
@@ -92,11 +92,9 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				const check = makePositionChecker({
 					checkTerrain: true,
 					room: spawn.room,
-					type: 'creep',
 					user: creep['#user'],
 				});
-				const directions = new Set(spawn.spawning.directions.length === 0 ?
-					ALL_DIRECTIONS : spawn.spawning.directions as Direction[]);
+				const directions = new Set(spawn.spawning.directions ?? ALL_DIRECTIONS);
 				const direction = Fn.firstMatching(directions, direction => check(getPositionInDirection(creep.pos, direction)));
 
 				// If no direction was found then defer this creep

@@ -4,7 +4,12 @@ import { runOnce } from 'xxscreeps/utility/memoize';
 
 const secret = runOnce(() => {
 	const { secret } = config.backend;
-	return Crypto.createHmac('sha3-224', secret).digest().subarray(0, 16);
+	if (secret) {
+		return Crypto.createHmac('sha3-224', secret).digest().subarray(0, 16);
+	} else {
+		console.error('`backend.secret` is not set, this will cause login issues when restarting the server');
+		return Crypto.randomBytes(16);
+	}
 });
 
 const kTokenExpiry = 120;
