@@ -5,7 +5,7 @@ import type { SubscriptionEndpoint } from '../socket';
 import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
-import { GameState, runAsUser, runWithState } from 'xxscreeps/game';
+import { runOneShot } from 'xxscreeps/game';
 import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async';
 import { asUnion, getOrSet, throttle } from 'xxscreeps/utility/utility';
 import { Render, roomSocketHandlers } from 'xxscreeps/backend/symbols';
@@ -128,35 +128,34 @@ export const roomSubscription: SubscriptionEndpoint = {
 				// Render current room state
 				room['#initialize']();
 				const visibleUsers = new Set<string>();
-				const dval = didUpdate ? runWithState(new GameState(this.context.world, time, [ room ]), () =>
-					runAsUser(this.user ?? '0', () => {
-						// Render all RoomObjects
-						const objects: any = {};
-						for (const object of room['#objects']) {
-							asUnion(object);
-							const value = object[Render](previousTime === -1 ? undefined : previousTime);
-							if (value) {
-								if (value._id) {
-									objects[value._id] = value;
-								}
-							}
-							const owner = object['#user'];
-							if (owner != null && !seenUsers.has(owner)) {
-								seenUsers.add(owner);
-								visibleUsers.add(owner);
-							}
-							for (const userId of object['#extraUsers']) {
-								if (!seenUsers.has(userId)) {
-									seenUsers.add(userId);
-									visibleUsers.add(userId);
-								}
+				const dval = didUpdate ? runOneShot(this.context.world, room, time, this.user ?? '0', () => {
+					// Render all RoomObjects
+					const objects: any = {};
+					for (const object of room['#objects']) {
+						asUnion(object);
+						const value = object[Render](previousTime === -1 ? undefined : previousTime);
+						if (value) {
+							if (value._id) {
+								objects[value._id] = value;
 							}
 						}
-						// Diff with previous payload
-						const dval = diff(previous, objects);
-						previous = objects;
-						return dval;
-					})) : {};
+						const owner = object['#user'];
+						if (owner != null && !seenUsers.has(owner)) {
+							seenUsers.add(owner);
+							visibleUsers.add(owner);
+						}
+						for (const userId of object['#extraUsers']) {
+							if (!seenUsers.has(userId)) {
+								seenUsers.add(userId);
+								visibleUsers.add(userId);
+							}
+						}
+					}
+					// Diff with previous payload
+					const dval = diff(previous, objects);
+					previous = objects;
+					return dval;
+				}) : {};
 
 				// Get users not yet seen
 				const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async(id): Promise<[ string, any ]> => {

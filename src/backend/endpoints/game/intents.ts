@@ -1,5 +1,9 @@
 import type { Endpoint } from 'xxscreeps/backend';
+import * as C from 'xxscreeps/game/constants';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model';
+import { runOneShot } from 'xxscreeps/game';
+import { RoomPosition } from 'xxscreeps/game/position';
+import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
 
 const AddObjectIntentEndpoint: Endpoint = {
 	path: '/api/game/add-object-intent',
@@ -28,4 +32,32 @@ const AddObjectIntentEndpoint: Endpoint = {
 	},
 };
 
-export default [ AddObjectIntentEndpoint ];
+const CreateConstructionIntentEndpoint: Endpoint = {
+	path: '/api/game/create-construction',
+	method: 'post',
+
+	async execute(context) {
+		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
+		const { name, room: roomName, x, y, structureType } = context.request.body;
+		const pos = new RoomPosition(x, y, roomName);
+		const room = await context.shard.loadRoom(pos.roomName);
+		const result = runOneShot(context.backend.world, room, context.shard.time, userId,
+			() => checkCreateConstructionSite(room, pos, structureType));
+		if (result === C.OK) {
+			return pushIntentsForRoomNextTick(context.shard, roomName, userId, {
+				local: {
+					createConstructionSite: [
+						[ structureType, pos.x, pos.y, name ],
+					],
+				},
+				object: {},
+			});
+		}
+		return { ok: 1 };
+	},
+};
+
+export default [ AddObjectIntentEndpoint, CreateConstructionIntentEndpoint ];

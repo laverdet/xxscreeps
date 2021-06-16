@@ -1,8 +1,11 @@
+import type { TickPayload } from 'xxscreeps/driver';
 import './runtime';
 import { GameBase, Game as GameConstructor, GameState } from './game';
 import { IntentManager } from './intents';
 import { flush as flushPathFinder } from './path-finder';
-import type { TickPayload } from 'xxscreeps/driver';
+import { Shard } from 'xxscreeps/engine/db';
+import type { Room } from 'xxscreeps/game/room';
+import type { World } from 'xxscreeps/game/map';
 
 export { defineGlobal, registerGameInitializer, registerGlobal } from './symbols';
 export { GameConstructor, GameState };
@@ -12,9 +15,11 @@ export let me = '';
 export let userGame: GameConstructor | undefined;
 export const userInfo = new Map<string, { username: string }>();
 
+type GameTask<Type> = (game: GameConstructor) => Type;
+
 /**
  * Runs a task with global user-agnostic data like `Game.getObjectById`, `Game.rooms`, and
- * `Game.time`. Used by tick processors.
+ * `Game.time`. Used by tick processors. This is the base of all the `run*` family of functions.
  */
 export function runWithState<Type>(state: GameState, task: () => Type) {
 	const prev = Game;
@@ -26,25 +31,10 @@ export function runWithState<Type>(state: GameState, task: () => Type) {
 	}
 }
 
-/**
- * Runs a task with `Game` and intents assigned.
- */
-function runWithGame<Type>(userId: string, state: GameState, game: () => GameConstructor, task: (game: GameConstructor) => Type) {
-	return runWithState(state, () => runAsUser(userId, () => {
-		try {
-			const intentManager = intents = new IntentManager;
-			const instance = userGame = game();
-			return [ intentManager, task(instance) ] as const;
-		} finally {
-			intents = undefined as never;
-			userGame = undefined;
-		}
-	}));
-}
-
 /*
  * Initializes `Game.me` and user-specific `room.find` and pathing information. Does not set up
- * `Game.creeps`, memory, flags, etc. Must be called from within `runWithState`.
+ * `Game.creeps`, memory, flags, etc. Must be called from within `runWithState`. This is used
+ * directly by user intent processors, and by the backend.
  */
 export function runAsUser<Type>(userId: string, task: () => Type) {
 	const prev = me;
@@ -61,15 +51,40 @@ export function runAsUser<Type>(userId: string, task: () => Type) {
 }
 
 /**
- * Does everything `runAsUser` does except also sets up `Game.creeps`, `intents`.
+ * Runs a task with `Game` and `intents` set up. Used by player runtime and NPC.
  */
-export function runForUser<Type>(userId: string, state: GameState, task: (game: GameConstructor) => Type) {
+function runWithGame<Type>(userId: string, state: GameState, game: () => GameConstructor, task: GameTask<Type>) {
+	return runWithState(state, () => runAsUser(userId, () => {
+		try {
+			const intentManager = intents = new IntentManager;
+			const instance = userGame = game();
+			return [ intentManager, task(instance) ] as const;
+		} finally {
+			intents = undefined as never;
+			userGame = undefined;
+		}
+	}));
+}
+
+/**
+ * Sets up `Game.creeps`, `intents` but does not set send `TickPayload` to `GameConstructor`, which
+ * is needed by some `registerGameInitializer` hooks (`Flags`, `CPU`). Used by NPC.
+ */
+export function runForUser<Type>(userId: string, state: GameState, task: GameTask<Type>) {
 	return runWithGame(userId, state, () => new GameConstructor(state), task);
 }
 
 /**
  * This is the full sandbox + runtime initialization wrapper.
  */
-export function runForPlayer<Type>(userId: string, state: GameState, data: TickPayload, task: (game: GameConstructor) => Type) {
+export function runForPlayer<Type>(userId: string, state: GameState, data: TickPayload, task: GameTask<Type>) {
 	return runWithGame(userId, state, () => new GameConstructor(state, data), task);
+}
+
+/**
+ * Runs a task which uses a single room, and will only use the game state one time. Use by
+ */
+export function runOneShot<Type>(world: World, room: Room, time: number, userId: string, task: () => Type) {
+	const state = new GameState(world, time, [ room ]);
+	return runWithState(state, () => runAsUser(userId, task));
 }

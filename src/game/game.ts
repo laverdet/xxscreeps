@@ -15,7 +15,7 @@ export class GameState {
 	readonly rooms: Record<string, Room>;
 
 	constructor(
-		public readonly shard: World,
+		public readonly world: World,
 		public readonly time: number,
 		rooms: Room[],
 	) {
@@ -37,7 +37,7 @@ export class GameBase {
 	constructor(state: GameState) {
 		this.rooms = state.rooms;
 		this.time = state.time;
-		this.map = state.shard.map;
+		this.map = state.world.map;
 		this.#state = state;
 		this.getObjectById = this.getObjectById.bind(this);
 	}
@@ -78,7 +78,7 @@ export class Game extends GameBase {
 
 		// Shard info
 		this.shard = {
-			name: state.shard.name,
+			name: state.world.name,
 			type: 'normal',
 			ptr: false,
 		};

@@ -2,7 +2,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Controller from 'xxscreeps/mods/controller/processor';
 import * as Spawn from './spawn';
-import { Game, GameState, runAsUser, runWithState } from 'xxscreeps/game';
+import { Game, runOneShot } from 'xxscreeps/game';
 import { forceRoomProcess, getRoomChannel, userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
@@ -113,22 +113,20 @@ registerBackendRoute({
 				throw new Error('User has presence');
 			}
 			const room = await context.shard.loadRoom(roomName);
-			runWithState(new GameState(context.backend.world, context.shard.time, [ room ]), () => {
-				runAsUser(userId, () => {
-					// Check room eligibility
-					if (!room.controller || room.controller.reservation || room.controller.my === false) {
-						throw new Error('Room is owned');
-					}
-					// Add spawn
-					Controller.claim(room.controller, userId);
-					if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
-						throw new Error('Invalid intent');
-					}
-					room['#insertObject'](Spawn.create(pos, userId, name));
-					room['#flushObjects']();
-					room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
-					flushUsers(room);
-				});
+			runOneShot(context.backend.world, room, context.shard.time, userId, () => {
+				// Check room eligibility
+				if (!room.controller || room.controller.reservation || room.controller.my === false) {
+					throw new Error('Room is owned');
+				}
+				// Add spawn
+				Controller.claim(room.controller, userId);
+				if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
+					throw new Error('Invalid intent');
+				}
+				room['#insertObject'](Spawn.create(pos, userId, name));
+				room['#flushObjects']();
+				room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
+				flushUsers(room);
 			});
 
 			// Save
