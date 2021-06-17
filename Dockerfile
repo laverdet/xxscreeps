@@ -1,7 +1,7 @@
 FROM node as build
 WORKDIR /usr/app/xxscreeps
-COPY ./ ./
 RUN touch /usr/app/xxscreeps/.screepsrc.yaml
+COPY ./ ./
 RUN npm install
 RUN npm run build
 

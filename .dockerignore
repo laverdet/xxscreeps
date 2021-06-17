@@ -1,12 +1,4 @@
-/.idea
-/.vscode
-/docker
-/docs
-/README.md
-/LICENSE
-/.gitignore
-/.screepsrc.yaml
-/dist
-/node_modules
-/package-lock.json
-/screeps
+**
+!/bin/**
+!/src/**
+!*.json
