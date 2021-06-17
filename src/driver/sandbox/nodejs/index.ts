@@ -65,6 +65,10 @@ export class NodejsSandbox implements Sandbox {
 		`, context)(context, runtime.tick, vm.runInContext));
 	}
 
+	createInspectorSession(): never {
+		throw new Error('Inspector not supported with `backend.unsafeSandbox`');
+	}
+
 	dispose() {}
 
 	// eslint-disable-next-line @typescript-eslint/require-await

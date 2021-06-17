@@ -122,6 +122,13 @@ export function authentication(): Middleware {
 			// Send refreshed token
 			if (context.status === 200) {
 				await context.flushToken();
+			} else if (context.upgrade) {
+				// If this is an upgrade request then attach authentication information on the request, so
+				// that Koa middleware which authenticates will carry over to the socket
+				const token = await context.flushToken();
+				if (token) {
+					context.request.headers['x-token'] = token;
+				}
 			}
 		}
 	};

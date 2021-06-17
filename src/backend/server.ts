@@ -11,7 +11,7 @@ import { authentication } from './auth';
 import { BackendContext } from './context';
 import { setupGracefulShutdown } from './graceful';
 import { installEndpointHandlers } from './endpoints';
-import { installSocketHandlers } from './socket';
+import { installSocketHandlers, installUpgradeHandlers } from './socket';
 import { hooks } from './symbols';
 
 import 'xxscreeps/config/mods/import/game';
@@ -25,7 +25,8 @@ const router = new Router<State, Context>();
 
 // Set up endpoints
 const httpServer = http.createServer(koa.callback());
-const socketServer = installSocketHandlers(koa, httpServer, backendContext);
+installUpgradeHandlers(koa, httpServer);
+installSocketHandlers(koa, backendContext);
 koa.use(async(context, next) => {
 	try {
 		await next();
@@ -51,7 +52,7 @@ koa.use(router.allowedMethods());
 installEndpointHandlers(koa, router);
 
 // Shutdown handler
-const shutdownServer = setupGracefulShutdown(httpServer, socketServer);
+const shutdownServer = setupGracefulShutdown(httpServer);
 const serviceChannel = await getServiceChannel(backendContext.shard).subscribe();
 const serviceUnlistener = serviceChannel.listen(message => {
 	if (message.type === 'shutdown') {

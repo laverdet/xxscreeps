@@ -5,7 +5,10 @@ import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
 import { runOnce } from 'xxscreeps/utility/memoize';
 import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox';
+import { hooks } from 'xxscreeps/driver';
 type Runtime = typeof import('xxscreeps/driver/sandbox/isolated/runtime');
+
+const useInspector = [ ...hooks.map('isolateInspector') ].some(use => use);
 
 const getPathFinderModule = runOnce(() => {
 	const module = new ivm.NativeModule(pathFinderBinaryPath);
@@ -31,8 +34,11 @@ export class IsolatedSandbox implements Sandbox {
 
 	static async create(data: InitializationPayload, print: Print) {
 		// Generate new isolate and context
-		const isolate = new ivm.Isolate({ memoryLimit: 128 });
-		const context = await isolate.createContext();
+		const isolate = new ivm.Isolate({
+			inspector: useInspector,
+			memoryLimit: 128,
+		});
+		const context = await isolate.createContext({ inspector: useInspector });
 
 		// Set up required globals
 		const pf = getPathFinderModule();
@@ -69,6 +75,10 @@ export class IsolatedSandbox implements Sandbox {
 		]);
 		await initialize.apply(undefined, [ isolate, context, new ivm.Reference(print), data ], { arguments: { copy: true } });
 		return new IsolatedSandbox(isolate, tick);
+	}
+
+	createInspectorSession() {
+		return this.isolate.createInspectorSession();
 	}
 
 	dispose() {

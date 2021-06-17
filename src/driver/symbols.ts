@@ -1,6 +1,7 @@
 import type { AsyncEffectAndResult, MaybePromise } from 'xxscreeps/utility/types';
 import type { PlayerInstance } from 'xxscreeps/engine/runner/instance';
 import type { InitializationPayload, TickPayload, TickResult } from '.';
+import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import { makeHookRegistration } from 'xxscreeps/utility/hook';
 
 export const hooks = makeHookRegistration<{
@@ -26,4 +27,7 @@ export const hooks = makeHookRegistration<{
 		receive?: (payload: TickPayload) => void;
 		send?: (result: TickResult) => void;
 	};
+
+	isolateInspector: boolean;
+	sandboxCreated: (sandbox: Sandbox, userId: string) => void;
 }>();

@@ -7,11 +7,7 @@ type Options = {
 };
 type Reference = Socket | sockjs.Connection;
 
-export function setupGracefulShutdown(
-	server: Server,
-	sockjs: sockjs.Server,
-	{ timeout = 2000 }: Options = {},
-) {
+export function setupGracefulShutdown(server: Server, { timeout = 2000 }: Options = {}) {
 
 	// Keep track of all connections
 	const sockets = new Map<Reference, boolean>();
@@ -26,16 +22,21 @@ export function setupGracefulShutdown(
 		conn.once('close', () => sockets.delete(conn));
 	});
 	server.on('request', (req: IncomingMessage, res: ServerResponse) => {
-		if (res.socket) {
-			const conn = res.socket;
-			sockets.set(conn, false);
-			res.once('finish', () => markIdle(conn));
+		const { socket } = res;
+		if (socket) {
+			sockets.set(socket, false);
+			res.once('finish', () => markIdle(socket));
+			res.writeHead = function(writeHead) {
+				return function(this: any, ...args: any) {
+					markIdle(socket);
+					return writeHead.apply(this, args);
+				};
+			}(res.writeHead);
 		}
 	});
-
-	sockjs.on('connection', conn => {
-		markIdle(conn);
-		conn.on('close', () => sockets.delete(conn));
+	server.on('upgrade', (req: IncomingMessage, socket: Socket) => {
+		markIdle(socket);
+		socket.on('close', () => sockets.delete(socket));
 	});
 
 	// Shutdown handler

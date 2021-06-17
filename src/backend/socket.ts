@@ -2,7 +2,8 @@ import type Koa from 'koa';
 import type { BackendContext } from './context';
 import type { Context, State } from '.';
 import type { Effect } from 'xxscreeps/utility/types';
-import type { IncomingMessage, Server } from 'http';
+import type { Server } from 'http';
+import { IncomingMessage, ServerResponse } from 'http';
 import sockjs from 'sockjs';
 import config from 'xxscreeps/config';
 import { checkToken, makeToken } from './auth/token';
@@ -12,7 +13,14 @@ import { EventEmitter } from 'events';
 import { mapSubscription } from './sockets/map';
 import { roomSubscription } from './sockets/room';
 import { hooks } from './symbols';
+import { Socket } from 'net';
 const { allowGuestAccess } = config.backend;
+
+declare module '.' {
+	interface Context {
+		upgrade?: (fn: (req: IncomingMessage, socket: Socket, head: Buffer) => void | Promise<void>) => Promise<void>;
+	}
+}
 
 type SubscriptionInstance = {
 	context: BackendContext;
@@ -24,12 +32,54 @@ export type SubscriptionEndpoint = {
 	subscribe: (this: SubscriptionInstance, parameters: Record<string, string>) => Promise<Effect> | Effect;
 };
 
-const prefix = '/socket';
-function usesPrefix(path: string, prefix: string) {
-	return path === prefix || path.startsWith(`${prefix}/`);
+// Used to mark HTTP upgrade requests
+class FakeResponse extends ServerResponse {
+	constructor(
+		public readonly upgradeSocket: Socket,
+		public readonly head: Buffer,
+	) {
+		super(new IncomingMessage(new Socket));
+	}
 }
 
-export function installSocketHandlers(koa: Koa<State, Context>, httpServer: Server, context: BackendContext) {
+const prefix = '/socket';
+
+/**
+ * Allows HTTP upgrade requests to be routed through Koa middleware
+ */
+export function installUpgradeHandlers(koa: Koa<State, Context>, httpServer: Server) {
+
+	// Install HTTP upgrade handler to forward fake requests to Koa
+	const callback = koa.callback();
+	httpServer.on('upgrade', (request, socket, head) => {
+		const fakeResponse: any = new FakeResponse(socket, head);
+		fakeResponse.head = head;
+		fakeResponse.socket = socket;
+		callback(request, fakeResponse);
+	});
+
+	koa.use(async(context, next) => {
+		// Detect and handle FakeResponse
+		const res = context.res;
+		if (res instanceof FakeResponse) {
+			context.upgrade = fn => {
+				context.respond = false;
+				return Promise.resolve(fn(context.req, res.upgradeSocket, res.head));
+			};
+		}
+		// Invoke remaining middleware
+		await next();
+		// Check to see if it was handled
+		if (res instanceof FakeResponse) {
+			if (context.respond !== false) {
+				context.respond = false;
+				res.upgradeSocket.end('HTTP/1.1 404 Not Found\r\n\r\n');
+			}
+		}
+	});
+}
+
+export function installSocketHandlers(koa: Koa<State, Context>, context: BackendContext) {
 	// SockJS aggressively injects its listeners at the front of the queue, so we pass it a fake HTTP
 	// server to have better control over the event flow.
 	const httpDelegate = new EventEmitter as Server;
@@ -39,37 +89,19 @@ export function installSocketHandlers(koa: Koa<State, Context>, httpServer: Serv
 	});
 	socketServer.installHandlers(httpDelegate);
 
-	// Install Koa handler
+	// Hook into Koa
 	koa.use(async(context, next) => {
-		// Disable Koa response if this is a request to /socket
-		const isSocket = usesPrefix(context.request.path, prefix);
-		if (isSocket) {
-			context.respond = false;
-		}
-		// Invoke remaining middleware
+		// Let mods run first
 		await next();
-		if (isSocket) {
-			// Update state on request object as well, so that Koa middleware which authenticates will
-			// carry over to the socket
-			const token = await context.flushToken();
-			if (token) {
-				context.request.headers['x-token'] = token;
-			}
-			// Forward request to SockJS
-			const head = (context.req as any).head;
-			if (head) {
-				delete (context.req as any).head;
-				httpDelegate.emit('upgrade', context.req, context.res, head);
+		if (context.path === prefix || context.path.startsWith(`${prefix}/`)) {
+			// Pass off to SockJS
+			if (context.upgrade) {
+				await context.upgrade((req, socket, head) => void httpDelegate.emit('upgrade', req, socket, head));
 			} else {
+				context.respond = false;
 				httpDelegate.emit('request', context.req, context.res);
 			}
 		}
-	});
-
-	// Install HTTP upgrade handler
-	httpServer.on('upgrade', (request, socket, head) => {
-		request.head = head;
-		httpServer.emit('request', request, socket, head);
 	});
 
 	// The rest is regular WebSocket code, no more dragons
