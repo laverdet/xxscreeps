@@ -4,7 +4,7 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/engine/schema';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
 import { optional, struct } from 'xxscreeps/schema';
-import { registerRuntimeConnector } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/driver';
 import { acquireControllerActivity } from './creep';
 
 // Register schema
@@ -66,7 +66,7 @@ registerGameInitializer((Game, payload) => {
 	}
 });
 
-registerRuntimeConnector({
+hooks.register('runtimeConnector', {
 	send(payload) {
 		payload.controllerActivity = acquireControllerActivity();
 	},

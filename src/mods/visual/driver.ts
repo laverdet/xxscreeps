@@ -1,4 +1,4 @@
-import { registerDriverConnector } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/driver';
 import { publishVisualsBlobForNextTick } from './model';
 
 declare module 'xxscreeps/driver' {
@@ -10,7 +10,7 @@ declare module 'xxscreeps/driver' {
 	}
 }
 
-registerDriverConnector(player => [ undefined, {
+hooks.register('driverConnector', player => [ undefined, {
 	async save(payload) {
 		// Publish visuals
 		const { visuals } = payload;

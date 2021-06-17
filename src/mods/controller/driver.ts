@@ -1,7 +1,7 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import * as User from 'xxscreeps/engine/db/user';
-import { registerDriverConnector } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/driver';
 import { controlledRoomCountKey } from './processor';
 
 declare module 'xxscreeps/driver' {
@@ -14,7 +14,7 @@ declare module 'xxscreeps/driver' {
 	}
 }
 
-registerDriverConnector(player => {
+hooks.register('driverConnector', player => {
 	const { shard, userId } = player;
 	let gcl = NaN;
 	let roomCount = NaN;

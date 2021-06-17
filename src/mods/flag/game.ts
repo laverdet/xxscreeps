@@ -5,7 +5,7 @@ import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
-import { registerRuntimeConnector } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/driver';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, vector } from 'xxscreeps/schema';
@@ -39,7 +39,7 @@ registerGlobal(Flag);
 let flags: TypeOf<typeof schema> = Object.create(null);
 
 // Update user flag blob
-registerRuntimeConnector({
+hooks.register('runtimeConnector', {
 	initialize(payload) {
 		if (payload.flagBlob) {
 			flags = read(payload.flagBlob);

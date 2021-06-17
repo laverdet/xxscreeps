@@ -1,6 +1,6 @@
 import type { Game } from './game';
 import type { TickPayload } from 'xxscreeps/driver';
-import { registerRuntimeConnector } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/driver';
 
 type GameInitializer = (game: Game, data?: TickPayload) => void;
 export const gameInitializers: GameInitializer[] = [];
@@ -20,7 +20,7 @@ export function registerGameInitializer(fn: GameInitializer) {
  */
 export function defineGlobal(name: string, descriptor: PropertyDescriptor) {
 	globals.add(name);
-	registerRuntimeConnector({
+	hooks.register('runtimeConnector', {
 		initialize() {
 			Object.defineProperty(globalThis, name, descriptor);
 		},

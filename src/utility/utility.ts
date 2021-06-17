@@ -135,3 +135,9 @@ export function uncurryThis<This, Args extends any[], Return>(callback: (this: T
 
 // Explodes a union type into all possible types inline
 export function asUnion<Type>(value: Type): asserts value is Union<Type> {}
+
+// There are some cases where an array type is required but an iterable is all you have. This just
+// forces the type to be that.
+export function hackyIterableToArray<Type>(value: Iterable<Type>): asserts value is Type[] {
+	return value as never;
+}

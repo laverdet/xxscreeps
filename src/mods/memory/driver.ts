@@ -2,7 +2,7 @@ import type { SegmentPayload } from './memory';
 import type { TickResult } from 'xxscreeps/driver';
 import * as Fn from 'xxscreeps/utility/functional';
 import { kMaxActiveSegments } from './memory';
-import { registerDriverConnector } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/driver';
 import { loadMemorySegmentBlob, loadUserMemoryBlob, saveMemoryBlob, saveMemorySegmentBlob } from './model';
 
 // Receive and send memory payloads from driver
@@ -24,7 +24,7 @@ declare module 'xxscreeps/driver' {
 	}
 }
 
-registerDriverConnector(player => {
+hooks.register('driverConnector', player => {
 	const { shard, userId } = player;
 	let activeSegments = new Set<number>();
 	let nextSegments: Set<number> | undefined;

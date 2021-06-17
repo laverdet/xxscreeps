@@ -4,7 +4,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as Code from 'xxscreeps/engine/db/user/code-schema';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import { inspect } from 'util';
-import { initializers, tickReceive, tickSend } from 'xxscreeps/driver/symbols';
+import { hooks } from 'xxscreeps/driver/symbols';
 import { Game, GameState, runForPlayer, userInfo } from 'xxscreeps/game';
 import { World } from 'xxscreeps/game/map';
 import { detach } from 'xxscreeps/schema/buffer-object';
@@ -54,6 +54,15 @@ for (const key of typedArrays) {
 	freezeClass(globalThis[key]);
 }
 
+const hooksComposed = function() {
+	const mapped = [ ...hooks.map('runtimeConnector') ];
+	return {
+		initialize: Fn.chain(Fn.filter(Fn.map(mapped, hook => hook.initialize))),
+		receive: Fn.chain(Fn.filter(Fn.map(mapped, hook => hook.receive))),
+		send: Fn.chain(Fn.filter(Fn.map(mapped, hook => hook.send)), true),
+	};
+}();
+
 declare const globalThis: any;
 let me: string;
 let world: World;
@@ -69,7 +78,8 @@ export function initialize(evaluate: Evaluate, printFn: Print, data: Initializat
 	world = new World(data.shardName, data.terrainBlob);
 
 	// Invoke runtime initialization hooks
-	initializers.splice(0).forEach(fn => fn(data));
+	hooksComposed.initialize(data);
+	hooksComposed.initialize = () => {};
 
 	// Set up runtime
 	const modules = Code.read(data.codeBlob);
@@ -99,7 +109,7 @@ export function tick(data: TickPayload) {
 	// Enter user runtime context
 	const tickResult: Partial<TickResult> = { usage: {} };
 	const [ intents ] = runForPlayer(me, state, data, Game => {
-		tickReceive(data);
+		hooksComposed.receive(data);
 
 		// Run player loop
 		globalThis.Game = Game;
@@ -170,8 +180,8 @@ export function tick(data: TickPayload) {
 		}
 	})));
 
-	// Gather tick results from `registerRuntimeConnector`
-	tickSend(tickResult as TickResult);
+	// Gather tick results from runtimeConnector
+	hooksComposed.send(tickResult as TickResult);
 
 	// Release shared memory
 	for (const room of rooms) {

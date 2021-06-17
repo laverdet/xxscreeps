@@ -2,6 +2,7 @@ import * as Fn from './functional';
 
 export function makeHookRegistration<keys extends Record<string, any>>() {
 	const hooksByName = new Map<keyof any, any[]>();
+	const took = new Set<keyof any>();
 
 	type Hook = {
 		/**
@@ -40,6 +41,7 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 	const hookable: Hook = {
 		makeIterated(key) {
 			const handlers = hooksByName.get(key);
+			took.add(key);
 			if (handlers) {
 				const { head, rest } = Fn.shift(handlers);
 				let fn = head;
@@ -58,6 +60,7 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 
 		makeMapped(key): any {
 			const handlers = hooksByName.get(key);
+			took.add(key);
 			if (handlers) {
 				const savedHandlers = [ ...handlers ];
 				return (...args: any[]) => Fn.map(savedHandlers, fn => fn(...args));
@@ -68,6 +71,7 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 
 		makeReduced(key) {
 			const handlers = hooksByName.get(key);
+			took.add(key);
 			if (handlers) {
 				const { head, rest } = Fn.shift(handlers);
 				let fn = head;
@@ -87,6 +91,9 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 		},
 
 		register(key, handler) {
+			if (took.has(key)) {
+				throw new Error(`Already took ${key}`);
+			}
 			const handlers = hooksByName.get(key);
 			if (handlers) {
 				handlers.push(handler);

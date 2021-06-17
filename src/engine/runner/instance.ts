@@ -1,7 +1,6 @@
 import type { Effect } from 'xxscreeps/utility/types';
-import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
-import type { DriverConnector } from 'xxscreeps/driver/symbols';
 import type { RunnerIntent } from './model';
 import type { Shard } from 'xxscreeps/engine/db';
 import type { SubscriptionFor } from 'xxscreeps/engine/db/channel';
@@ -14,17 +13,35 @@ import * as User from 'xxscreeps/engine/db/user';
 import { getRunnerUserChannel, getUsageChannel } from './model';
 import { acquire } from 'xxscreeps/utility/async';
 import { createSandbox } from 'xxscreeps/driver/sandbox';
-import { driverConnectors } from 'xxscreeps/driver/symbols';
+import { hooks } from 'xxscreeps/driver';
 import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/processor/model';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
-import { clamp } from 'xxscreeps/utility/utility';
+import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility';
+import { runOnce } from 'xxscreeps/utility/memoize';
 
+const acquireConnectors = runOnce(() => function(invoke) {
+	return async(instance: PlayerInstance) => {
+		const connectorPromises = invoke(instance);
+		hackyIterableToArray(connectorPromises);
+		const [ effect, connectors ] = await acquire(...connectorPromises);
+		const initialize = [ ...Fn.filter(Fn.map(connectors, hook => hook.initialize)) ];
+		const refresh = [ ...Fn.filter(Fn.map(connectors, hook => hook.refresh)) ];
+		const save = [ ...Fn.filter(Fn.map(connectors, hook => hook.save)) ].reverse();
+		return [ effect, {
+			initialize: (payload: InitializationPayload) => Promise.all(Fn.map(initialize, fn => fn(payload))),
+			refresh: (payload: TickPayload) => Promise.all(Fn.map(refresh, fn => fn(payload))),
+			save: (payload: TickResult) => Promise.all(Fn.map(save, fn => fn(payload))),
+		} ] as const;
+	};
+}(hooks.makeMapped('driverConnector')));
 const kCPU = 100;
 
 export class PlayerInstance {
 	private bucket = config.runner.cpu.bucket;
 	private cleanup!: Effect;
-	private connectors!: DriverConnector[];
+	private connectors!: ReturnType<typeof acquireConnectors> extends (...args: any[]) =>
+	Promise<readonly [ any, infer Type ]> ? Type : never;
+
 	private sandbox?: Sandbox;
 	private stale = false;
 	private readonly consoleEval: Exclude<TickPayload['eval'], undefined> = [];
@@ -89,7 +106,7 @@ export class PlayerInstance {
 		]);
 		const instance = new PlayerInstance(shard, world, channel, codeChannel, userId, userInfo.username!, userInfo.branch);
 		try {
-			[ instance.cleanup, instance.connectors ] = await acquire(...driverConnectors.map(fn => fn(instance)));
+			[ instance.cleanup, instance.connectors ] = await acquireConnectors()(instance);
 			return instance;
 		} catch (err) {
 			instance.disconnect();
@@ -124,7 +141,7 @@ export class PlayerInstance {
 				} as never;
 				const [ codeBlob ] = await Promise.all([
 					this.branchName ? Code.loadBlobs(this.shard.db, this.userId, this.branchName) : null,
-					Promise.all(this.connectors.map(connector => connector.initialize?.(payload))),
+					this.connectors.initialize(payload),
 				]);
 				if (!codeBlob) {
 					console.error(`Unable to load code for user ${this.userId}`);
@@ -174,7 +191,7 @@ export class PlayerInstance {
 						}
 					})(),
 					// Also run mod connectors
-					Promise.all(Fn.map(this.connectors, connector => connector.refresh?.(payload as TickPayload))),
+					this.connectors.refresh(payload as TickPayload),
 				]);
 				// Send payload off to runtime and execute user code
 				return await this.sandbox.run(payload as TickPayload);
@@ -202,7 +219,7 @@ export class PlayerInstance {
 				)) : undefined,
 
 				// Save driver connector information [memory, flags, visual, whatever]
-				Promise.all(Fn.map(this.connectors, connector => connector.save?.(payload))),
+				this.connectors.save(payload),
 			]);
 		} else {
 			if (result) {

@@ -3,7 +3,6 @@ import './runtime';
 import { GameBase, Game as GameConstructor, GameState } from './game';
 import { IntentManager } from './intents';
 import { flush as flushPathFinder } from './path-finder';
-import { Shard } from 'xxscreeps/engine/db';
 import type { Room } from 'xxscreeps/game/room';
 import type { World } from 'xxscreeps/game/map';
 

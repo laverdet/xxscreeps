@@ -2,7 +2,7 @@ import type { GameConstructor } from '.';
 import * as C from './constants';
 import lodash from 'lodash';
 import { globals, registerGlobal } from './symbols';
-import { registerRuntimeConnector } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/driver';
 
 registerGlobal('_', lodash);
 
@@ -21,7 +21,7 @@ registerGlobal(function StructureTerminal() {});
 registerGlobal(function Tombstone() {});
 
 declare const globalThis: any;
-registerRuntimeConnector({
+hooks.register('runtimeConnector', {
 	initialize() {
 		Object.entries(C).forEach(([ identifier, value ]) => globalThis[identifier] = value);
 	},

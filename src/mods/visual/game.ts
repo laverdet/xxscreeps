@@ -1,5 +1,5 @@
 import { registerGlobal } from 'xxscreeps/game';
-import { registerRuntimeConnector } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/driver';
 import { Room } from 'xxscreeps/game/room/room';
 import { extend } from 'xxscreeps/utility/utility';
 import { RoomVisual, flush } from './visual';
@@ -12,7 +12,7 @@ declare module 'xxscreeps/game/runtime' {
 registerGlobal(RoomVisual);
 
 // Receive and send visuals payload from driver
-registerRuntimeConnector({
+hooks.register('runtimeConnector', {
 	send(payload) {
 		payload.visuals = flush();
 	},

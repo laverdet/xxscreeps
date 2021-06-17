@@ -1,5 +1,5 @@
 import { defineGlobal, registerGlobal } from 'xxscreeps/game';
-import { registerRuntimeConnector } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/driver';
 import { extend } from 'xxscreeps/utility/utility';
 import { Room } from 'xxscreeps/game/room';
 import { RawMemory, flush, flushActiveSegments, flushForeignSegment, flushSegments, get, initialize, loadSegments } from './memory';
@@ -36,7 +36,7 @@ extend(Room, {
 	},
 });
 
-registerRuntimeConnector({
+hooks.register('runtimeConnector', {
 	initialize(payload) {
 		initialize(payload.memoryBlob);
 	},

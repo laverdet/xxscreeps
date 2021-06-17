@@ -2,7 +2,7 @@ import type { CodeBlobs } from 'xxscreeps/engine/db/user/code-schema';
 import type { MessageFor } from 'xxscreeps/engine/db/channel';
 import type { RunnerIntent, getRunnerUserChannel } from 'xxscreeps/engine/runner/model';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor';
-export { registerDriverConnector, registerRuntimeConnector } from './symbols';
+export { hooks } from './symbols';
 
 export interface InitializationPayload {
 	userId: string;
