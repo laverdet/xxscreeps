@@ -253,8 +253,8 @@ class LocalPubSubProviderWorker extends LocalPubSubProvider {
 			const unlisten = listen(parentPort!, 'message', (message: MasterMessage) => {
 				if (message.type === 'pubsubSubscribed' && message.id === subscription.id) {
 					unlisten();
-					resolve(subscription);
 					connect(subscription);
+					resolve(subscription);
 				}
 			});
 			parentPort!.postMessage(staticCast<WorkerMessage>({
