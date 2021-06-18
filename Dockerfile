@@ -1,10 +1,10 @@
 FROM node as build
 WORKDIR /usr/app/xxscreeps
 RUN touch .screepsrc.yaml
-COPY package*.json .
+COPY package*.json ./
 COPY bin bin
 RUN npm install
-COPY tsconfig*.json .
+COPY tsconfig*.json ./
 COPY src src
 RUN npm explore @xxscreeps/path-finder -- npm install && npm run build
 
