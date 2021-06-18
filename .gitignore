@@ -1,9 +1,5 @@
 /.screepsrc.yaml
-/docker/.screepsrc.yaml
 /dist
 /node_modules
 /package-lock.json
 /screeps
-/docker/data/
-/docker/.screepsrc.yaml
-/docker/docker-compose.yaml

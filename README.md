@@ -82,6 +82,7 @@ to information about game APIs.
 
 ![Console Example](./docs/console-demo.png)
 
+
 ## Getting Started
 
 To get xxscreeps running here's what you need to do. This should work on Linux, macOS, and Windows.
@@ -106,7 +107,9 @@ autocomplete. If not you can read the [config
 schema](https://github.com/laverdet/xxscreeps/blob/main/src/config/schema.ts).
 
 ## Docker
-If you want to install xxscreeps via docker you can use the following compose as an example
+
+If you want to install xxscreeps via docker you can use the following `docker-compose.yaml` as an
+example.
 ```yaml
 version: "3"
 services:
@@ -119,6 +122,18 @@ services:
 # set this if you want to persist the content
 #      - <path to persistence>:/usr/app/xxscreeps/screeps
 ```
+
+Or you can use this short script in a fresh copy of the git source to start a new container which
+persists data to the current working directory.
+```
+docker build -t xxscreeps .
+docker run -it -p 21025:21025 \
+  --mount type=bind,source="$(pwd)"/.screepsrc.yaml,target=/usr/app/xxscreeps/.screepsrc.yaml \
+  --mount type=bind,source="$(pwd)"/screeps,target=/usr/app/xxscreeps/screeps \
+  xxscreeps
+```
+
+
 ## Contributing
 
 If you've read this far, hopefully you would like to help. Without support from the community

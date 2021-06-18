@@ -100,7 +100,12 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 			plugins: [
 				new Webpack.DefinePlugin({
 					module: '{require:()=>({})}',
-					process: '({cwd:()=>".",version:""})',
+					process: `({
+						arch: ${JSON.stringify(process.arch)},
+						cwd: ()=>".",
+						platform: ${JSON.stringify(process.platform)},
+						version: ${JSON.stringify(process.version)},
+					})`,
 				}),
 			],
 

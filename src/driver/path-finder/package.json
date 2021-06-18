@@ -1,1 +1,6 @@
-{ "gypfile": true }
+{
+	"scripts": {
+		"install": "node-gyp rebuild --release",
+		"postinstall": "node-gyp clean"
+	}
+ }

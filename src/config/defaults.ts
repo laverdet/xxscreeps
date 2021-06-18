@@ -9,7 +9,7 @@ function makeDefaults<Type extends RecursivePartial<Schema>>(defaults: Type) {
 export const defaults = makeDefaults({
 	backend: {
 		allowGuestAccess: true as boolean,
-		bind: 'localhost',
+		bind: '*',
 		socketSkipsPermanents: true as boolean,
 		socketThrottle: 125,
 	},

@@ -59,6 +59,14 @@
 				'main.cc',
 				'pf.cc',
 			],
+		}, {
+			'target_name': 'action_after_build',
+			'type': 'none',
+			'dependencies': [ 'pf' ],
+			'copies': [ {
+				'files': [ '<(PRODUCT_DIR)/pf.node' ],
+				'destination': "out/<!(node -e 'console.log(`${process.arch}-${process.platform}-${process.version}`)')",
+			} ],
 		},
 	],
 }

@@ -38,10 +38,11 @@ import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
 
 const argv = minimist(process.argv.slice(2), {
-	boolean: [ 'shard-only' ],
+	boolean: [ 'dont-overwrite', 'shard-only' ],
 	unknown: param => { throw new Error(`Unknown argument: ${param}`) },
 });
 
+const dontOverwrite = argv['dont-overwrite'];
 const shardOnly = argv['shard-only'];
 const jsonSource = argv._[0] ??
 	new URL('../init_dist/db.json', await import.meta.resolve('@screeps/launcher', import.meta.url));
@@ -77,6 +78,10 @@ const gameTime: number = env.gameTime - 1;
 
 // Initialize and connect to database & shard
 const db = await Database.connect();
+if (dontOverwrite && await db.data.scard('users') > 0) {
+	console.log('Found existing data, exiting');
+	process.exit(0);
+}
 {
 	// Flush databases at the same time because they may point to the same service
 	const shard = await Shard.connect(db, 'shard0');

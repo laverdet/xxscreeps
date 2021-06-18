@@ -3,7 +3,8 @@ import type { MaybePromises } from './responder';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
 import { fileURLToPath } from 'url';
-import { promises as fs } from 'fs';
+import fsSync from 'fs';
+import fs from 'fs/promises';
 import { listen } from 'xxscreeps/utility/async';
 import { Responder, connect, makeClient, makeHost } from './responder';
 import { registerStorageProvider } from '..';
@@ -59,8 +60,9 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 				}
 			}();
 
-			// See if process still exists
-			if (pid !== undefined) {
+			// See if process still exists. On Docker the pid will probably always be the same, so just
+			// ignore it in this case.
+			if (pid !== undefined && pid !== process.pid) {
 				const exists = function() {
 					try {
 						process.kill(pid, 0); // does *not* kill the process, just tries to send a signal
@@ -251,7 +253,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 	protected override release() {
 		this.exitEffect();
 		this.checkMissingFlush();
-		fs.unlink(Path.join(this.path, '.lock')).catch(() => {});
+		fsSync.unlinkSync(Path.join(this.path, '.lock'));
 	}
 
 	private check(fragment: string) {
