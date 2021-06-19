@@ -6,7 +6,9 @@ COPY bin bin
 RUN npm install
 COPY tsconfig*.json ./
 COPY src src
-RUN npm explore @xxscreeps/path-finder -- npm install && npm run build
+RUN echo 'update-notifier=false' >> .npmrc && \
+	npm explore @xxscreeps/path-finder -- npm install && \
+	npm run build
 
 FROM node:slim as run
 WORKDIR /usr/app/xxscreeps
