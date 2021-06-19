@@ -16,7 +16,7 @@
 	"typescript.preferences.importModuleSpecifier": "non-relative",
 	"typescript.tsserver.experimental.enableProjectDiagnostics": false,
 	"yaml.schemas": {
-		"./src/config/config.schema.json": "*/.screepsrc.yaml"
+		"./dist/config/mods.resolved/config.schema.json": "*/.screepsrc.yaml"
 	},
 	"yaml.validate": true,
 }

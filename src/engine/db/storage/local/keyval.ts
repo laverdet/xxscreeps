@@ -2,8 +2,8 @@
 import type * as Provider from 'xxscreeps/engine/db/storage/provider';
 import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
 import type { MaybePromises } from './responder';
+import fs from 'fs/promises';
 import * as Fn from 'xxscreeps/utility/functional';
-import { promises as fs } from 'fs';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
 import { Responder, connect, makeClient, makeHost } from './responder';
 import { SortedSet } from './sorted-set';

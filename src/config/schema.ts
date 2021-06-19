@@ -1,4 +1,3 @@
-// npx typescript-json-schema tsconfig.json Schema --include ./src/config/schema.ts --defaultProps --required -o ./src/config/config.schema.json
 export type Schema = {
 	/**
 	 * Backend server settings

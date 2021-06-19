@@ -1,9 +1,9 @@
 import type { PluginItem } from '@babel/core';
+import fs from 'fs/promises';
+import Webpack from 'webpack';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
-import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
-import Webpack from 'webpack';
 
 // Hack in support for private class fields & methods
 import { createRequire } from 'module';

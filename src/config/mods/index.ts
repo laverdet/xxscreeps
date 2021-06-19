@@ -1,9 +1,13 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../../declarations.d.ts" />
-import { promises as fs } from 'fs';
-import config, { configPath } from 'xxscreeps/config';
+import fs from 'fs/promises';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { fileURLToPath } from 'url';
+import { defaults } from 'xxscreeps/config/defaults';
+import config, { configPath } from 'xxscreeps/config/raw';
 
-type Provide = 'constants' | 'backend' | 'driver' | 'game' | 'processor' | 'storage';
+type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'processor' | 'storage';
 export type Manifest = {
 	dependencies?: string[];
 	provides: Provide | Provide[] | null;
@@ -44,7 +48,7 @@ async function resolve(specifiers: string[]) {
 		}
 	}
 }
-await resolve(config.mods);
+await resolve(config.mods ?? defaults.mods);
 export { mods };
 
 // Ensure module imports are up to date on the filesystem
@@ -55,13 +59,14 @@ try {
 	}
 } catch (err) {
 	// Given a specifier fragment this return all mods which export it
+	console.log('Regenerating mod manifest...');
 	const resolveWithinMods = async(specifier: string) => {
 		const resolved = await Promise.all(mods.map(async({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
 				return import.meta.resolve(`./${specifier}`, `${url}`);
 			}
 		}));
-		return resolved.filter(mod => mod !== undefined);
+		return resolved.filter((mod): mod is string => mod !== undefined);
 	};
 
 	// Create output directory
@@ -81,6 +86,44 @@ try {
 			const content = mods.map(mod => `import ${JSON.stringify(mod)};\n`).join('');
 			await fs.writeFile(new URL(`${specifier}.js`, outDir), content, 'utf8');
 		}),
+		async function() {
+			const typesOutput = new URL('config.ts', outDir);
+			const schemaOutput = new URL('config.schema.json', outDir);
+
+			// These will be the resolved .js files, but we need to convert back to .ts paths.
+			const compiled = [
+				await import.meta.resolve('xxscreeps/config/schema'),
+				...await resolveWithinMods('config'),
+			];
+			const sources = compiled.map(path => {
+				// These are file:// URLs, so no need to worry about platform separator
+				const indexOf = path.lastIndexOf('/dist/');
+				if (indexOf === -1) {
+					throw new Error(`Did not find 'dist' in '${path}'`);
+				}
+				return fileURLToPath(path.substr(0, indexOf) + '/src/' + path.substr(indexOf + 6)).replace(/\.js$/, '');
+			});
+			// Combine them into one type
+			const content =
+				sources.map((mod, ii) => `import { Schema as Schema${ii} } from ${JSON.stringify(mod)};\n`).join('') +
+				`export type Schema = ${sources.map((mod, ii) => `Schema${ii}`).join(' & ')};\n`;
+			await fs.writeFile(typesOutput, content, 'utf8');
+			try {
+				await promisify(execFile)('npx', [
+					'typescript-json-schema',
+					'--include', fileURLToPath(typesOutput),
+					'--defaultProps',
+					'--required',
+					'tsconfig.json',
+					'Schema',
+					'-o', fileURLToPath(schemaOutput),
+				]);
+			} catch (err) {
+				try {
+					await fs.unlink(schemaOutput);
+				} catch (err) {}
+			}
+		}(),
 		async function() {
 			const mods = await resolveWithinMods('constants');
 			const content = mods.map(mod => `export * from ${JSON.stringify(mod)};\n`).join('');

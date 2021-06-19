@@ -1,9 +1,9 @@
 /* eslint-disable prefer-named-capture-group */
 import 'xxscreeps/engine/db/room';
 import * as C from 'xxscreeps/game/constants';
+import fs from 'fs/promises';
 import { configPath } from 'xxscreeps/config';
 import { spawn } from 'child_process';
-import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { mods } from 'xxscreeps/config/mods';
 import { globalNames } from 'xxscreeps/game/runtime';

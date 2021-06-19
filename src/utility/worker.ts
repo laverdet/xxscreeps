@@ -1,9 +1,9 @@
 import type { WorkerOptions } from 'worker_threads';
 import * as Responder from 'xxscreeps/engine/db/storage/local/responder';
-import { Worker as NodeWorker, isMainThread, workerData } from 'worker_threads';
+import { Worker as NodeWorker } from 'worker_threads';
 import { LocalPubSubProvider } from 'xxscreeps/engine/db/storage/local/pubsub';
+export { isTopThread } from 'xxscreeps/config/raw';
 
-export const isTopThread = isMainThread || workerData?.isTopThread === true;
 const entryShim = new URL(await import.meta.resolve('xxscreeps/config/entry'));
 
 export class Worker extends NodeWorker {
