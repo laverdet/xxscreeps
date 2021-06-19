@@ -4,8 +4,8 @@ import type { Store } from 'xxscreeps/mods/resource/store';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 
 import Loki from 'lokijs';
-import minimist from 'minimist';
 
+import { checkArguments } from 'xxscreeps/config/arguments';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
@@ -37,11 +37,9 @@ import { StructureWall } from 'xxscreeps/mods/defense/wall';
 import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
 
-const argv = minimist(process.argv.slice(2), {
-	boolean: [ 'dont-overwrite', 'shard-only' ],
-	unknown: param => { throw new Error(`Unknown argument: ${param}`) },
+const argv = checkArguments({
+	boolean: [ 'dont-overwrite', 'shard-only' ] as const,
 });
-
 const dontOverwrite = argv['dont-overwrite'];
 const shardOnly = argv['shard-only'];
 const jsonSource = argv._[0] ??
@@ -162,7 +160,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'creep': {
 				const creep = new Creep;
 				withRoomObject(object, creep);
-				creep.store = OpenStore['#create'](Fn.accumulate(Object.values<number>(object.storeCapacityResource)));
+				creep.store = OpenStore['#create'](object.storeCapacity);
 				withStore(object, creep);
 				creep.body = object.body;
 				creep.hits = object.hits;
@@ -272,7 +270,6 @@ if (!shardOnly) {
 			await saveMemoryBlob(shard, user._id, utf16ToBuffer(memory));
 		}
 	}
-	await shard.data.sadd('users', [ ...activeUserIds ]);
 
 	// Save user code content
 	for (const branch of code.find()) {
