@@ -49,6 +49,50 @@ export function acquire(...async: AsyncEffectAndResult[]): Promise<[ Effect, any
 }
 
 /**
+ * Concatenates the supplied async generators sequentially.
+ */
+export async function *concat<Type>(...generators: AsyncIterable<Type>[]) {
+	for (const generator of generators) {
+		for await (const value of generator) {
+			yield value;
+		}
+	}
+}
+
+/**
+ * Returns an iterator which proxies the given generator, requesting up to `count` elements in
+ * advance. If you break ouf of this loop there will be abandoned values!
+ */
+export function lookAhead<Type>(generator: AsyncGenerator<Type>, count: number) {
+	if (count <= 0) {
+		return generator;
+	}
+	function push(result: IteratorResult<Type>) {
+		if (!result.done && queue.length <= count) {
+			const next = generator.next();
+			void next.then(push);
+			queue.push(next);
+		}
+	}
+	const first = generator.next();
+	void first.then(push);
+	const queue = [ first ];
+	return {
+		async *[Symbol.asyncIterator]() {
+			while (true) {
+				const next = await queue[0];
+				if (next.done) {
+					return;
+				}
+				void queue.shift();
+				push(next);
+				yield next.value;
+			}
+		},
+	};
+}
+
+/**
  * Returns a general purpose event listener. `onDrain` is called any time there are 0 listeners.
  */
 export function makeEventPublisher<Message extends any[]>(onDrain = () => {}) {

@@ -1,3 +1,6 @@
+import type { KeyvalScript } from './script';
+export type { KeyvalScript };
+
 export type Copy = { if?: 'nx' };
 export type Set = {
 	if?: 'nx' | 'xx';
@@ -12,6 +15,7 @@ export type ZAdd = {
 };
 export type ZRange = {
 	by?: 'lex' | 'score';
+	limit?: [ number, number ];
 };
 
 export type BlobProvider = {
@@ -54,6 +58,7 @@ export type KeyValProvider = {
 	// sets
 	sadd(key: string, members: string[]): Promise<number>;
 	scard(key: string): Promise<number>;
+	sinter(key: string, keys: string[]): Promise<string[]>;
 	sismember(key: string, member: string): Promise<boolean>;
 	smembers(key: string): Promise<string[]>;
 	spop(key: string): Promise<string | null>;
@@ -68,8 +73,11 @@ export type KeyValProvider = {
 	zrangeWithScores(key: string, min: number, max: number, options?: ZRange): Promise<[ number, string ][]>;
 	zrem(key: string, members: string[]): Promise<number>;
 	zremRange(key: string, min: number, max: number): Promise<number>;
+	zscore(key: string, member: string): Promise<number | null>;
 	zunionStore(key: string, keys: string[]): Promise<number>;
-	// client
+	// scripting
+	eval<Result extends Value | null, Keys extends string[], Argv extends Value[]>(script: KeyvalScript<Result, Keys, Argv>, keys: Keys, argv: Argv): Promise<Result>;
+	// management
 	flushdb(): Promise<void>;
 	save(): Promise<void>;
 };

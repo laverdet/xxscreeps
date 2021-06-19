@@ -30,7 +30,7 @@ const WorldStatusEndpoint: Endpoint = {
 		if (!userId) {
 			return { ok: 1, status: 'normal' };
 		}
-		const active = await context.shard.data.sismember('users', userId);
+		const active = await context.shard.data.sismember('activeUsers', userId);
 		if (active) {
 			return { ok: 1, status: 'normal' };
 		} else {

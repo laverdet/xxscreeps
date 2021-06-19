@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/require-await */
 import type * as Provider from 'xxscreeps/engine/db/storage/provider';
+import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
 import type { MaybePromises } from './responder';
 import * as Fn from 'xxscreeps/utility/functional';
 import { promises as fs } from 'fs';
@@ -23,9 +24,10 @@ registerStorageProvider([ 'file', 'local' ], 'keyval', url =>
 
 type Value = Provider.Value;
 
-class LocalKeyValResponder extends Responder implements MaybePromises<Provider.KeyValProvider> {
+export class LocalKeyValResponder extends Responder implements MaybePromises<Provider.KeyValProvider> {
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
+	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: Value[]) => any>();
 
 	constructor(private readonly url: string, payload?: string) {
 		super();
@@ -100,7 +102,7 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 		return value === undefined ? null : String(value);
 	}
 
-	set(key: string, value: number | string | Readonly<Uint8Array>, options?: Provider.Set): any {
+	set(key: string, value: Value | Readonly<Uint8Array>, options?: Provider.Set): any {
 		if (
 			options?.if === 'nx' ? this.data.has(key) :
 			options?.if === 'xx' ? !this.data.has(key) : false
@@ -246,6 +248,19 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 		return set ? set.size : 0;
 	}
 
+	sinter(key: string, keys: string[]) {
+		const sets = [ ...Fn.filter(Fn.map(
+			Fn.concat([ key ], keys),
+			(key): Set<string> | undefined => this.data.get(key))) ];
+		sets.sort((left, right) => left.size - right.size);
+		const first = sets.shift();
+		if (sets.length > 0) {
+			return [ ...Fn.filter(first!, member => sets.every(set => set.has(member))) ];
+		} else {
+			return [];
+		}
+	}
+
 	sismember(key: string, member: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		return set?.has(member) ?? false;
@@ -318,27 +333,34 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 	zrange(key: string, min: number | string, max: number | string, options?: Provider.ZRange): any {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
-			switch (options?.by) {
-				case 'lex': {
-					const parse = (value: string): [ string, boolean ] => {
-						if (value === '-') {
-							return [ '', true ];
-						} else if (value === '+') {
-							return [ '\uffff', true ];
-						} else if (value.startsWith('(')) {
-							return [ value.substr(1), false ];
-						} else if (value.startsWith('[')) {
-							return [ value.substr(1), true ];
-						} else {
-							throw new Error(`Invalid range: ${value}`);
-						}
-					};
-					const [ minVal, minInc ] = parse(min as string);
-					const [ maxVal, maxInc ] = parse(max as string);
-					return [ ...set.entriesByLex(minInc, minVal, maxInc, maxVal) ];
+			const allMatching = function() {
+				switch (options?.by) {
+					case 'lex': {
+						const parse = (value: string): [ string, boolean ] => {
+							if (value === '-') {
+								return [ '', true ];
+							} else if (value === '+') {
+								return [ '\uffff', true ];
+							} else if (value.startsWith('(')) {
+								return [ value.substr(1), false ];
+							} else if (value.startsWith('[')) {
+								return [ value.substr(1), true ];
+							} else {
+								throw new Error(`Invalid range: ${value}`);
+							}
+						};
+						const [ minVal, minInc ] = parse(min as string);
+						const [ maxVal, maxInc ] = parse(max as string);
+						return [ ...set.entriesByLex(minInc, minVal, maxInc, maxVal) ];
+					}
+					case 'score': return [ ...Fn.map(set.entries(min as number, max as number), entry => entry[1]) ];
+					default: return set.values().slice(min as number, max as number);
 				}
-				case 'score': return [ ...Fn.map(set.entries(min as number, max as number), entry => entry[1]) ];
-				default: return set.values().slice(min as number, max as number);
+			}();
+			if (options?.limit) {
+				return allMatching.slice(options.limit[0], options.limit[0] + options.limit[1]);
+			} else {
+				return allMatching;
 			}
 		} else {
 			return [];
@@ -379,6 +401,15 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 		}
 	}
 
+	zscore(key: string, member: string) {
+		const set: SortedSet | undefined = this.data.get(key);
+		if (set) {
+			return set.score(member) ?? null;
+		} else {
+			return null;
+		}
+	}
+
 	zunionStore(key: string, keys: string[]) {
 		// Fetch sets first because you can use this command to store a set back into itself
 		const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
@@ -386,6 +417,19 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 		this.data.set(key, out);
 		out.insert(Fn.concat(Fn.map(sets, set => set.entries())));
 		return out.size;
+	}
+
+	eval(script: KeyvalScript, keys: string[], argv: Value[]) {
+		return this.evaluateInline(script.id, script.local, keys, argv);
+	}
+
+	async evaluateInline(id: string, script: string, keys: string[], argv: Value[]) {
+		const fn = getOrSet(this.scripts, id, () => {
+			// eslint-disable-next-line @typescript-eslint/no-implied-eval
+			const impl = new Function(`return ${script}`)();
+			return (instance, keys: string[], argv: Value[]) => impl(instance, keys, argv);
+		});
+		return fn(this, keys, argv);
 	}
 
 	flushdb() {
@@ -425,5 +469,12 @@ class LocalKeyValResponder extends Responder implements MaybePromises<Provider.K
 	}
 }
 
-class LocalKeyValClient extends makeClient(LocalKeyValResponder) {}
+class LocalKeyValClient extends makeClient(LocalKeyValResponder) {
+	// https://github.com/microsoft/TypeScript/issues/27689
+	// @ts-expect-error
+	eval(script: KeyvalScript, keys: string[], argv: Value[]) {
+		return this.evaluateInline(script.id, script.local, keys, argv);
+	}
+}
+
 class LocalKeyValHost extends makeHost(LocalKeyValResponder) {}

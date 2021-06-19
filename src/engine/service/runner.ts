@@ -1,11 +1,13 @@
 import config from 'xxscreeps/config';
+import * as Async from 'xxscreeps/utility/async';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
-import { consumeSet } from 'xxscreeps/engine/db/async';
+import { clamp } from 'xxscreeps/utility/utility';
+import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async';
 import { getServiceChannel } from '.';
 import 'xxscreeps/config/mods/import/driver';
 
@@ -13,7 +15,7 @@ import 'xxscreeps/config/mods/import/driver';
 const db = await Database.connect();
 const shard = await Shard.connect(db, 'shard0');
 const runnerSubscription = await getRunnerChannel(shard).subscribe();
-const concurrency = config.runner.unsafeSandbox ? 1 : config.runner.concurrency;
+const maxConcurrency = config.runner.unsafeSandbox ? 1 : config.runner.concurrency;
 
 // Load shared terrain data
 const world = await shard.loadWorld();
@@ -32,8 +34,12 @@ try {
 
 		} else if (message.type === 'run') {
 			const { time } = message;
-			await Promise.all(Fn.map(Fn.range(concurrency), async() => {
-				for await (const userId of consumeSet(shard.scratch, runnerUsersSetKey(time))) {
+			await Promise.all(Fn.map(Fn.range(clamp(1, maxConcurrency, playerInstances.size)), async() => {
+				const affinity = [ ...playerInstances.keys() ];
+				for await (const userId of Async.concat(
+					Async.lookAhead(consumeSetMembers(shard.scratch, runnerUsersSetKey(time), affinity), 1),
+					consumeSet(shard.scratch, runnerUsersSetKey(time)),
+				)) {
 					// Get or create player instance
 					const instance = playerInstances.get(userId) ?? await async function() {
 						const instance = await PlayerInstance.create(shard, world, userId);

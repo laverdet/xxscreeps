@@ -39,14 +39,12 @@ const saveInterval = config.database.saveInterval * 60000;
 let lastSave = Date.now();
 try {
 	// Initialize scratch state
-	const [ rooms, users ] = await Promise.all([
+	const [ rooms ] = await Promise.all([
 		shard.data.smembers('rooms'),
-		shard.data.smembers('users'),
 		shard.scratch.flushdb(),
 	]);
 	await Promise.all([
 		shard.scratch.sadd('initializeRooms', rooms),
-		shard.scratch.sadd('users', users),
 		shard.scratch.set(processorTimeKey, shard.time),
 	]);
 
@@ -68,7 +66,7 @@ try {
 		await gameMutex.scope(async() => {
 			// Initialize
 			const time = shard.time + 1;
-			await shard.scratch.copy('users', runnerUsersSetKey(time));
+			await shard.scratch.copy('activeUsers', runnerUsersSetKey(time));
 			await Promise.all([
 				processorChannel.publish({ type: 'process', time }),
 				runnerChannel.publish({ type: 'run', time }),

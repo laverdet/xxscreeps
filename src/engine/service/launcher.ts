@@ -86,9 +86,9 @@ try {
 			backend,
 		]);
 	} else {
-		const userCount = Number(await db.data.scard('users'));
+		const userCount = Number(await db.data.scard('users')) - 3; // minus Invader, Source Keeper, Screeps
 		const backend = await Worker.create('xxscreeps/backend/server');
-		const processors = await Promise.all(Fn.map(Fn.range(Math.min(processorWorkers, userCount)), () =>
+		const processors = await Promise.all(Fn.map(Fn.range(Math.min(processorWorkers, Math.ceil(userCount / 2))), () =>
 			Worker.create('xxscreeps/engine/service/processor')));
 		const runners = await Promise.all(Fn.map(Fn.range(runnerWorkers), () =>
 			Worker.create('xxscreeps/engine/service/runner')));

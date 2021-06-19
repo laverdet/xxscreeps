@@ -29,9 +29,9 @@ export const userToRoomsSetKey = (userId: string) =>
 	`users/${userId}/rooms`;
 
 export const processRoomsSetKey = (time: number) =>
-	`tick${time % 2}/processRooms`;
+	`tick${time}/processRooms`;
 export const finalizeExtraRoomsSetKey = (time: number) =>
-	`tick${time % 2}/finalizeExtraRooms`;
+	`tick${time}/finalizeExtraRooms`;
 const processRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/processRoomsPending`;
 const finalizedRoomsPendingKey = (time: number) =>
@@ -69,7 +69,7 @@ export async function publishRunnerIntentsForRoom(shard: Shard, userId: string, 
 }
 
 export async function publishInterRoomIntents(shard: Shard, roomName: string, time: number, intents: SingleIntent[]) {
-	const active = (await shard.scratch.zmscore(activeRoomsKey, [ roomName ]))[0] !== null;
+	const active = await shard.scratch.zscore(activeRoomsKey, roomName) !== null;
 	return Promise.all([
 		// Add room to finalization set
 		active ?
@@ -136,7 +136,6 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 			shard.scratch.incrBy(processRoomsPendingKey(time), count),
 			shard.scratch.incrBy(finalizedRoomsPendingKey(time), count),
 		]);
-		await getProcessorChannel(shard).publish({ type: 'process', time });
 		return time;
 	} else {
 		return Number(await shard.scratch.get(processorTimeKey));
@@ -163,9 +162,14 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 		// Decrement number of finalization rooms remain
 		const remaining = await shard.scratch.decrBy(finalizedRoomsPendingKey(time), roomsCount);
 		if (remaining === 0) {
-			return getServiceChannel(shard).publish({ type: 'tickFinished' });
+			const [ nextTime ] = await Promise.all([
+				begetRoomProcessQueue(shard, time + 1, time),
+				getServiceChannel(shard).publish({ type: 'tickFinished' }),
+			]);
+			return nextTime;
 		}
 	}
+	return time;
 }
 
 export async function updateUserRoomRelationships(shard: Shard, room: Room) {
@@ -177,7 +181,7 @@ export async function updateUserRoomRelationships(shard: Shard, room: Room) {
 	await Promise.all([
 		// Mark user active for runner
 		// TODO: Probably want to do this another way
-		shard.scratch.sadd('users', playerIds),
+		shard.scratch.sadd('activeUsers', playerIds),
 		// Update user count in processing queue
 		shard.scratch.zadd(activeRoomsKey, [ [ playerIds.length, roomName ] ]),
 		// Remove users that no longer have access to this room
@@ -199,8 +203,20 @@ export async function updateUserRoomRelationships(shard: Shard, room: Room) {
 	]);
 }
 
-export function forceRoomProcess(shard: Shard, roomName: string) {
-	return shard.scratch.zincrBy(activeRoomsKey, 0, roomName);
+export async function forceRoomProcess(shard: Shard, roomName: string) {
+	// The processor queue has already been created via `begetRoomProcessQueue` so we need to add this
+	// room to the active queue
+	const time = shard.time + 1;
+	const [ count ] = await Promise.all([
+		shard.scratch.zadd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'nx' }),
+		shard.scratch.zincrBy(activeRoomsKey, 0, roomName),
+	]);
+	if (count === 1) {
+		await Promise.all([
+			shard.scratch.incrBy(processRoomsPendingKey(time), count),
+			shard.scratch.incrBy(finalizedRoomsPendingKey(time), count),
+		]);
+	}
 }
 
 export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wakeTime: number) {
