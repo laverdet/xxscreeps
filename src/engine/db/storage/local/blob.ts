@@ -1,4 +1,4 @@
-import type * as Provider from 'xxscreeps/engine/db/storage/provider';
+import type * as P from 'xxscreeps/engine/db/storage/provider';
 import type { MaybePromises } from './responder';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
@@ -12,7 +12,7 @@ import { registerStorageProvider } from '..';
 registerStorageProvider('file', 'blob', url =>
 	connect(`${url}`, LocalBlobClient, LocalBlobHost, () => LocalBlobResponder.create(url)));
 
-class LocalBlobResponder extends Responder implements MaybePromises<Provider.BlobProvider> {
+class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvider> {
 	private readonly cache = new Map<string, {
 		saveId: number;
 		value: Readonly<Uint8Array> | null;
@@ -85,7 +85,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 		})();
 	}
 
-	async copy(from: string, to: string, options?: Provider.Copy) {
+	async copy(from: string, to: string, options?: P.Copy) {
 		this.check(to);
 		const value = await this.getBuffer(from);
 		if (options?.if === 'nx' && await this.getBuffer(to)) {
@@ -182,14 +182,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 		this.check(key);
 		this.cache.set(key, {
 			saveId: this.saveId,
-			value: function() {
-				if (value.buffer instanceof SharedArrayBuffer) {
-					return value;
-				}
-				const copy = new Uint8Array(new SharedArrayBuffer(value.length));
-				copy.set(value);
-				return copy;
-			}(),
+			value,
 		});
 	}
 
@@ -271,5 +264,26 @@ class LocalBlobResponder extends Responder implements MaybePromises<Provider.Blo
 	}
 }
 
-class LocalBlobClient extends makeClient(LocalBlobResponder) {}
-class LocalBlobHost extends makeHost(LocalBlobResponder) {}
+function externalizeBlob(value: Readonly<Uint8Array>, options: P.SetBuffer | undefined) {
+	if (value.buffer instanceof SharedArrayBuffer && !options?.retain) {
+		return value;
+	} else {
+		const copy = new Uint8Array(new SharedArrayBuffer(value.length));
+		copy.set(value);
+		return copy;
+	}
+}
+
+class LocalBlobClient extends makeClient(LocalBlobResponder) {
+	// @ts-expect-error
+	set(key: string, value: Readonly<Uint8Array>, options?: P.SetBuffer) {
+		return super.set(key, externalizeBlob(value, options));
+	}
+}
+
+class LocalBlobHost extends makeHost(LocalBlobResponder) {
+	// @ts-expect-error
+	set(key: string, value: Readonly<Uint8Array>, options?: P.SetBuffer) {
+		return super.set(key, externalizeBlob(value, options));
+	}
+}

@@ -1,4 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db';
+import { typedArrayToString } from 'xxscreeps/utility/string';
 import { isValidSegmentId, kMaxMemoryLength, kMaxMemorySegmentLength } from './memory';
 
 const kMaxMemorySize = kMaxMemoryLength * 2;
@@ -8,9 +9,14 @@ export function loadUserMemoryBlob(shard: Shard, user: string) {
 	return shard.blob.getBuffer(`user/${user}/memory`);
 }
 
+export async function loadUserMemoryString(shard: Shard, user: string) {
+	const blob = await loadUserMemoryBlob(shard, user);
+	return blob && typedArrayToString(new Uint16Array(blob.buffer, 0, blob.length >>> 1));
+}
+
 export function saveMemoryBlob(shard: Shard, userId: string, blob: Readonly<Uint8Array>) {
 	if (blob.byteLength < kMaxMemorySize) {
-		return shard.blob.set(`user/${userId}/memory`, blob);
+		return shard.blob.set(`user/${userId}/memory`, blob, { retain: true });
 	}
 }
 

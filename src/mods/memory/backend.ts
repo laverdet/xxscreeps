@@ -2,28 +2,29 @@ import type { Shard } from 'xxscreeps/engine/db';
 import config from 'xxscreeps/config';
 import { gzip } from 'zlib';
 import { hooks } from 'xxscreeps/backend';
-import { loadUserMemoryBlob } from 'xxscreeps/mods/memory/model';
+import { loadUserMemoryString } from 'xxscreeps/mods/memory/model';
 import { mustNotReject } from 'xxscreeps/utility/async';
-import { typedArrayToString } from 'xxscreeps/utility/string';
 import { throttle } from 'xxscreeps/utility/utility';
 import { requestRunnerEvalAck } from 'xxscreeps/engine/runner/model';
 
+const invalidPath = 'Incorrect memory path';
+const emptyObject = Object.create(null);
+
 async function loadAndParse(shard: Shard, userId: string, path?: string) {
-	const blob = await loadUserMemoryBlob(shard, userId);
-	const string = blob && typedArrayToString(new Uint16Array(blob.buffer, 0, blob.length >>> 1));
-	if (path && string) {
-		try {
-			let memory = JSON.parse(string);
-			const parts = path.split('.');
-			while (memory && parts.length) {
-				memory = memory[parts.shift()!];
-			}
-			if (memory) {
-				return JSON.stringify(memory);
-			}
-		} catch (err) {}
-	} else {
-		return string;
+	const string = await loadUserMemoryString(shard, userId);
+	try {
+		if (string === null) {
+			return path ? invalidPath : null;
+		}
+		const memory = JSON.parse(string);
+		if (path) {
+			const value = path.split('.').reduce((memory, key) => key in memory ? memory[key] : emptyObject, memory);
+			return value === emptyObject ? invalidPath : value;
+		} else {
+			return memory;
+		}
+	} catch (err) {
+		return invalidPath;
 	}
 }
 
@@ -39,10 +40,10 @@ hooks.register('subscription', {
 		let previous: any;
 		const check = throttle(() => mustNotReject(async() => {
 			// Load memory and send if updated
-			const payload = await loadAndParse(shard, user, params.path);
-			if (previous !== payload) {
-				previous = payload;
-				this.send(payload ?? 'Incorrect memory path');
+			const memory = JSON.stringify(`${await loadAndParse(shard, user, params.path)}`);
+			if (previous !== memory) {
+				previous = memory;
+				this.send(memory);
 			}
 		}));
 		// Subscribe to game tick updates
@@ -63,15 +64,16 @@ hooks.register('route', {
 			return;
 		}
 		const memory = await loadAndParse(context.shard, userId, context.request.query.path as string);
-		if (memory) {
-			// WHYYYYYYYYYYYYYY
-			const gzipBase64 = await new Promise<string>((resolve, reject) => {
-				gzip(memory, (err, value) => err ? reject(err) : resolve(value.toString('base64')));
-			});
-			return { ok: 1, data: `gz:${gzipBase64}` };
-		} else {
-			return { ok: 1, data: 'Incorrect memory path' };
+		if (memory === undefined) {
+			return { ok: 1 };
 		}
+		// WHYYYYYYYYYYYYYY
+		const gzipBase64 = await new Promise<string>((resolve, reject) => {
+			gzip(
+				`${JSON.stringify(memory)}`,
+				(err, value) => err ? reject(err) : resolve(value.toString('base64')));
+		});
+		return { ok: 1, data: `gz:${gzipBase64}` };
 	},
 });
 
@@ -93,7 +95,7 @@ hooks.register('route', {
 		const expression = function() {
 			if (path) {
 				const property = path.split('.').map(fragment => `[${JSON.stringify(fragment)}]`).join('');
-				return value ? `Memory${property} = ${value}; undefined;` : `delete Memory${property}`;
+				return value === undefined ? `delete Memory${property};` : `Memory${property} = ${value}; undefined;`;
 			} else {
 				return `Object.keys(Memory).forEach(key => delete Memory[key]); Object.assign(Memory, ${value}); undefined;`;
 			}

@@ -7,6 +7,9 @@ export type Set = {
 	get?: boolean;
 	px?: number;
 };
+export type SetBuffer = {
+	retain?: boolean;
+};
 export type HSet = {
 	if?: 'nx';
 };
@@ -23,7 +26,7 @@ export type BlobProvider = {
 	del(key: string): Promise<boolean>;
 	getBuffer(key: string): Promise<Readonly<Uint8Array> | null>;
 	reqBuffer(key: string): Promise<Readonly<Uint8Array>>;
-	set(key: string, value: Readonly<Uint8Array>): Promise<void>;
+	set(key: string, value: Readonly<Uint8Array>, options?: SetBuffer): Promise<void>;
 	flushdb(): Promise<void>;
 	save(): Promise<void>;
 };
