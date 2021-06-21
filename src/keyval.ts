@@ -16,6 +16,15 @@ else
 	return 0
 end`,
 		});
+		client.defineCommand('cas', {
+			numberOfKeys: 1,
+			lua:
+`if redis.call('get', KEYS[1]) == ARGV[1] then
+	return redis.call('set', KEYS[1], ARGV[2])
+else
+	return 0
+end`,
+		});
 	}
 
 	static async connect(url: URL, blob = false) {
@@ -30,6 +39,10 @@ end`,
 	// keys / strings
 	async cad(key: string, check: string) {
 		return await (this.client as any).cad(key, check) !== 0;
+	}
+
+	async cas(key: string, expected: Value, desired: Value) {
+		return await (this.client as any).cas(key, expected, desired) !== 0;
 	}
 
 	async copy(from: string, to: string, options?: P.Copy) {
@@ -112,6 +125,10 @@ end`,
 		return this.client.hgetall(key);
 	}
 
+	hincrBy(key: string, field: string, value: number) {
+		return this.client.hincrby(key, field, value);
+	}
+
 	async hmget(key: string, fields: string[]) {
 		const payload = await this.client.hmget(key, fields);
 		return Fn.fromEntries(payload.map((value, ii) => [ fields[ii], value ]));
@@ -160,6 +177,10 @@ end`,
 		return this.client.scard(key);
 	}
 
+	sinter(key: string, keys: string[]) {
+		return this.client.sinter(key, ...keys);
+	}
+
 	async sismember(key: string, member: string) {
 		return await this.client.sismember(key, member) !== 0;
 	}
@@ -197,8 +218,9 @@ end`,
 		return Number(await this.client.zincrby(key, delta, member));
 	}
 
-	zmscore(key: string, members: string[]) {
-		return this.client.zmscore(key, members);
+	async zmscore(key: string, members: string[]) {
+		const scores = await this.client.zmscore(key, members);
+		return scores.map(score => score === null ? null : Number(score));
 	}
 
 	zrange(key: string, min: any, max: any, options?: P.ZRange) {
@@ -221,8 +243,30 @@ end`,
 		return this.client.zremrangebyscore(key, min, max);
 	}
 
+	async zscore(key: string, member: string) {
+		const score = await this.client.zscore(key, member);
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		return score === null ? null : Number(score);
+	}
+
 	zunionStore(key: string, keys: string[]): Promise<number> {
 		return this.client.zunionstore(key, keys.length, keys as never) as any;
+	}
+
+	//
+	// scripting
+	// eslint-disable-next-line @typescript-eslint/require-await
+	async eval(script: P.KeyvalScript, keys: string[], argv: Value[]) {
+		const anyClient: any = this.client;
+		if (!anyClient[script.id]) {
+			if (!script.lua) {
+				throw new Error('Invoked `eval` with no defined lua implementation');
+			}
+			this.client.defineCommand(script.id, {
+				lua: script.lua,
+			});
+		}
+		return anyClient[script.id](keys.length, keys, argv);
 	}
 
 	//

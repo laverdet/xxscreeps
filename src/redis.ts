@@ -8,7 +8,7 @@ declare module 'ioredis' {
 	interface Redis {
 		copy(from: string, to: string, replace?: 'replace'): Promise<number>;
 		mgetBuffer(keys: string[]): Promise<(Buffer | null)[]>;
-		zmscore(key: string, members: string[]): Promise<number[]>;
+		zmscore(key: string, members: string[]): Promise<(string | null)[]>;
 	}
 }
 
