@@ -2,7 +2,7 @@ import type { Shard } from 'xxscreeps/engine/db';
 import type { GameMap } from 'xxscreeps/game/map';
 import type { Room } from 'xxscreeps/game/room';
 import streamToPromise from 'stream-to-promise';
-import crypto from 'crypto';
+import makeEtag from 'etag';
 import * as Fn from 'xxscreeps/utility/functional';
 import { PNG } from 'pngjs';
 import { hooks } from 'xxscreeps/backend';
@@ -84,7 +84,7 @@ hooks.register('middleware', (koa, router) => {
 				if (payload === null) {
 					data = { etag: 'nothing', payload: null };
 				} else {
-					const etag = crypto.createHash('sha1').update(payload).digest('base64');
+					const etag = makeEtag(payload);
 					data = { etag, payload };
 					cache.set(room, data);
 				}
@@ -92,10 +92,8 @@ hooks.register('middleware', (koa, router) => {
 			// Check ETag
 			if (context.req.headers['if-none-match'] === data.etag) {
 				context.status = 304;
-				return '';
 			} else if (!data.payload) {
 				context.status = 404;
-				return '';
 			}
 			// The Screeps client adds a very impolite cache bust to all map URLs. We can make better use
 			// of the browser cache by redirecting to a resource which can be cached

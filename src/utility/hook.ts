@@ -34,7 +34,7 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 
 		/**
 		 * Register a hook
-		 **/
+		 */
 		register<Key extends keyof keys>(key: Key, handler: keys[Key]): void;
 	};
 

@@ -1,4 +1,5 @@
 import type { World } from 'xxscreeps/game/map';
+import makeEtag from 'etag';
 import * as Fn from 'xxscreeps/utility/functional';
 import { hooks } from 'xxscreeps/backend';
 
@@ -41,8 +42,8 @@ hooks.register('route', {
 		const roomName = `${context.query.room}`;
 		const terrain = getTerrainPayload(context.backend.world, roomName);
 		if (terrain) {
-			context.set('Cache-Control', 'public,max-age=31536000,immutable');
-			return { ok: 1, terrain };
+			context.set('ETag', makeEtag(terrain.terrain));
+			return { ok: 1, terrain: [ terrain ] };
 		}
 	},
 });
@@ -52,7 +53,6 @@ hooks.register('route', {
 	method: 'post',
 
 	execute(context) {
-		context.set('Cache-Control', 'public,max-age=31536000,immutable');
 		return {
 			ok: 1,
 			rooms: [ ...Fn.filter(Fn.map(

@@ -38,9 +38,9 @@ async function processRoom(time: number, roomName: string) {
 	}
 
 	// Run first process phase
-	await context.process();
 	processedRooms.set(roomName, context);
 	nextRoomCache.set(roomName, room);
+	await context.process();
 }
 
 // Updates current time based on a pubsub message. Handles affinity information.

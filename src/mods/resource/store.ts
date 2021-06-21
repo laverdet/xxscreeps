@@ -151,6 +151,8 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 			} else {
 				delete this[type];
 			}
+		} else {
+			this[type] -= amount;
 		}
 		this.#amount -= amount;
 	}
@@ -199,9 +201,14 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 
 	['#subtract'](type: ResourceType, amount: number) {
 		const info = this['#resources'].find(info => info.type === type)!;
-		this[type] = info.amount -= amount;
-		if (type !== C.RESOURCE_ENERGY && this[type] === 0) {
-			delete this[type];
+		if ((info.amount -= amount) === 0) {
+			if (type === C.RESOURCE_ENERGY) {
+				this[type] = 0;
+			} else {
+				delete this[type];
+			}
+		} else {
+			this[type] = info.amount;
 		}
 	}
 }

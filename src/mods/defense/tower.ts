@@ -52,7 +52,7 @@ export class StructureTower extends withOverlay(OwnedStructure, shape) {
 	repair(target: Structure) {
 		return chainIntentChecks(
 			() => checkTower(this, target, Structure),
-			() => intents.save(this, 'heal', target.id));
+			() => intents.save(this, 'repair', target.id));
 	}
 }
 

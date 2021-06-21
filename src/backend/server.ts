@@ -2,6 +2,7 @@ import type { Context, State } from '.';
 
 import bodyParser from 'koa-bodyparser';
 import Koa from 'koa';
+import ConditionalGet from 'koa-conditional-get';
 import Router from 'koa-router';
 import http from 'http';
 import config from 'xxscreeps/config';
@@ -27,6 +28,7 @@ const router = new Router<State, Context>();
 const httpServer = http.createServer(koa.callback());
 installUpgradeHandlers(koa, httpServer);
 installSocketHandlers(koa, backendContext);
+koa.use(ConditionalGet());
 koa.use(async(context, next) => {
 	try {
 		await next();

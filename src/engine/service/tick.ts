@@ -30,7 +30,7 @@ export async function watch(onUpdate?: () => void) {
 							onUpdate?.();
 						}
 					}
-				} catch (err) { console.log(err) }
+				} catch (err) {}
 			}), 100));
 		return () => handle.close();
 	} catch (err) {}

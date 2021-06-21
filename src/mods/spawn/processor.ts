@@ -63,6 +63,7 @@ const intents = [
 				break;
 			}
 		}
+		spawn.room.energyAvailable -= cost;
 
 		// Add new creep to room objects
 		const creep = createCreep(spawn.pos, body, name, me);
