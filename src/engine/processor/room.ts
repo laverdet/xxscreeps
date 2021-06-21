@@ -169,7 +169,7 @@ export class RoomProcessor implements ProcessorContext {
 
 	async finalize() {
 		const [ intentPayloads, taskResults ] = await Promise.all([
-			acquireFinalIntentsForRoom(this.shard, this.room.name, this.time),
+			acquireFinalIntentsForRoom(this.shard, this.room.name),
 			Promise.all(Fn.map(this.tasks, task => task.promise)),
 		]);
 		const hasTaskFinalization = this.tasks.some(task => task.finalize);

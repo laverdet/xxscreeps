@@ -28,7 +28,7 @@ async function processRoom(time: number, roomName: string) {
 				return shard.loadRoom(roomName, time - 1);
 			}
 		}(),
-		acquireIntentsForRoom(shard, roomName, time),
+		acquireIntentsForRoom(shard, roomName),
 	]);
 
 	// Create processor context and add intents

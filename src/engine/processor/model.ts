@@ -36,22 +36,21 @@ const processRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/processRoomsPending`;
 const finalizedRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/finalizedRoomsPending`;
-const intentsListForRoomKey = (time: number, roomName: string) =>
-	`tick${time % 2}/rooms/${roomName}/intents`;
-const finalIntentsListForRoomKey = (time: number, roomName: string) =>
-	`tick${time % 2}/rooms/${roomName}/finalIntents`;
+const intentsListForRoomKey = (roomName: string) =>
+	`rooms/${roomName}/intents`;
+const finalIntentsListForRoomKey = (roomName: string) =>
+	`rooms/${roomName}/finalIntents`;
 
-async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, time: number, intents?: RoomIntentPayload) {
-	return intents && shard.scratch.rpush(intentsListForRoomKey(time, roomName), [ JSON.stringify({ userId, intents }) ]);
+async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, intents?: RoomIntentPayload) {
+	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
 }
 
 export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userId: string, intents: RoomIntentPayload) {
-	const time = shard.time + 2;
 	return Promise.all([
 		// Add this room to the active set
 		forceRoomProcess(shard, roomName),
 		// Save intents
-		pushIntentsForRoom(shard, roomName, userId, time, intents),
+		pushIntentsForRoom(shard, roomName, userId, intents),
 	]);
 }
 
@@ -60,7 +59,7 @@ export async function publishRunnerIntentsForRoom(shard: Shard, userId: string, 
 		// Decrement count of users that this room is waiting for
 		shard.scratch.zincrBy(processRoomsSetKey(time), -1, roomName),
 		// Add intents to list
-		pushIntentsForRoom(shard, roomName, userId, time, intents),
+		pushIntentsForRoom(shard, roomName, userId, intents),
 	]);
 	if (count === 0) {
 		// Publish process task to workers
@@ -75,12 +74,12 @@ export async function publishInterRoomIntents(shard: Shard, roomName: string, ti
 		active ?
 			undefined : shard.scratch.sadd(finalizeExtraRoomsSetKey(time), [ roomName ]),
 		// Save intents
-		shard.scratch.rpush(finalIntentsListForRoomKey(time, roomName), [ JSON.stringify(intents) ]),
+		shard.scratch.rpush(finalIntentsListForRoomKey(roomName), [ JSON.stringify(intents) ]),
 	]);
 }
 
-export async function acquireIntentsForRoom(shard: Shard, roomName: string, time: number) {
-	const key = intentsListForRoomKey(time, roomName);
+export async function acquireIntentsForRoom(shard: Shard, roomName: string) {
+	const key = intentsListForRoomKey(roomName);
 	const [ payloads ] = await Promise.all([
 		shard.scratch.lrange(key, 0, -1),
 		shard.scratch.del(key),
@@ -91,8 +90,8 @@ export async function acquireIntentsForRoom(shard: Shard, roomName: string, time
 	});
 }
 
-export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string, time: number) {
-	const key = finalIntentsListForRoomKey(time, roomName);
+export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string) {
+	const key = finalIntentsListForRoomKey(roomName);
 	const [ payloads ] = await Promise.all([
 		shard.scratch.lrange(key, 0, -1),
 		shard.scratch.del(key),
@@ -203,20 +202,8 @@ export async function updateUserRoomRelationships(shard: Shard, room: Room) {
 	]);
 }
 
-export async function forceRoomProcess(shard: Shard, roomName: string) {
-	// The processor queue has already been created via `begetRoomProcessQueue` so we need to add this
-	// room to the active queue
-	const time = shard.time + 1;
-	const [ count ] = await Promise.all([
-		shard.scratch.zadd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'nx' }),
-		shard.scratch.zincrBy(activeRoomsKey, 0, roomName),
-	]);
-	if (count === 1) {
-		await Promise.all([
-			shard.scratch.incrBy(processRoomsPendingKey(time), count),
-			shard.scratch.incrBy(finalizedRoomsPendingKey(time), count),
-		]);
-	}
+export function forceRoomProcess(shard: Shard, roomName: string) {
+	return shard.scratch.zadd(sleepingRoomsKey, [ [ 0, roomName ] ]);
 }
 
 export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wakeTime: number) {
@@ -227,6 +214,6 @@ export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wak
 		shard.scratch.zrem(activeRoomsKey, [ roomName ]),
 		// Set alarm to wake up
 		wakeTime === Infinity ?
-			undefined : shard.scratch.zadd(sleepingRoomsKey, [ [ wakeTime, roomName ] ]),
+			undefined : shard.scratch.zadd(sleepingRoomsKey, [ [ wakeTime, roomName ] ], { if: 'nx' }),
 	]);
 }
