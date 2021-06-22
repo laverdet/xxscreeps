@@ -10,7 +10,7 @@ import { extend, instantiate } from 'xxscreeps/utility/utility';
 import { Flag, checkCreateFlag } from './flag';
 import { intents } from './game';
 
-declare module 'xxscreeps/game/room/room' {
+declare module 'xxscreeps/game/room' {
 	interface Room {
 		/**
 		 * Create new `Flag` at the specified location

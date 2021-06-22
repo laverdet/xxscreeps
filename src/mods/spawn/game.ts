@@ -1,17 +1,36 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Extension from './extension';
 import * as Spawn from './spawn';
-import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
+import { hooks, registerGlobal } from 'xxscreeps/game';
 import { registerFindHandlers } from 'xxscreeps/game/room';
 import { registerVariant } from 'xxscreeps/engine/schema';
 
-// Add `spawns` to global `game` object
+// Add `spawns` to global `Game` object
 declare module 'xxscreeps/game/game' {
 	interface Game {
 		spawns: Record<string, Spawn.StructureSpawn>;
 	}
 }
-registerGameInitializer(Game => Game.spawns = Object.create(null));
+hooks.register('gameInitializer', Game => Game.spawns = Object.create(null));
+
+// Accumulate `energyAvailable` and `energyCapacityAvailable` on `Room` objects
+declare module 'xxscreeps/game/room' {
+	interface Room {
+		energyAvailable: number;
+		energyCapacityAvailable: number;
+	}
+}
+
+hooks.register('roomInitializer', room => {
+	room.energyAvailable = 0;
+	room.energyCapacityAvailable = 0;
+	for (const object of room.find(C.FIND_STRUCTURES)) {
+		if (object.structureType === C.STRUCTURE_SPAWN || object.structureType === C.STRUCTURE_EXTENSION) {
+			room.energyAvailable += object.store[C.RESOURCE_ENERGY];
+			room.energyCapacityAvailable += object.store.getCapacity(C.RESOURCE_ENERGY);
+		}
+	}
+});
 
 // Export `StructureExtension` & `StructureSpawn` to runtime globals
 registerGlobal(Extension.StructureExtension);

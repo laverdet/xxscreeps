@@ -1,18 +1,38 @@
-import type { Game } from './game';
-import type { TickPayload } from 'xxscreeps/driver';
-import { hooks } from 'xxscreeps/driver';
+import type { Game, GameState } from './game';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
+import type { Room } from 'xxscreeps/game/room';
+import { makeHookRegistration } from 'xxscreeps/utility/hook';
 
-type GameInitializer = (game: Game, data?: TickPayload) => void;
-export const gameInitializers: GameInitializer[] = [];
 export const globals = new Set<string>();
 
-/**
- * Register a function which will run on newly-created `Game` objects. These will fire once per tick
- * for user environments created via `runForUser`
- */
-export function registerGameInitializer(fn: GameInitializer) {
-	gameInitializers.push(fn);
-}
+export const hooks = makeHookRegistration<{
+	/**
+	 * Register a function which will run on newly-created `Game` objects. These will fire once per tick
+	 * for user environments created via `runForUser`
+	 */
+	gameInitializer: (game: Game, data?: TickPayload) => void;
+
+	/**
+	 * Register a function which will run on `Room` instances each tick. This runs in the runtime and
+	 * processor. It may run on the same instance more than once because instances can be reused in
+	 * the processor.
+	 */
+	roomInitializer: (room: Room, game: GameState) => void;
+
+	/**
+	 * Registers methods which will run in the player's sandbox runtime.
+	 * - `initialize` will run once when the sandbox is created and receives `InitializationPayload`
+	 *   from `DriverConnector#initialize`
+	 * - `receive` runs before each tick and receives `TickPayload` from `DriverConnector#refresh`
+	 * - `send` runs after each tick and generates `TickResult` which will be sent to
+	 *   `DriverConnector#save`
+	 */
+	runtimeConnector: {
+		initialize?: (payload: InitializationPayload) => void;
+		receive?: (payload: TickPayload) => void;
+		send?: (result: TickResult) => void;
+	};
+}>();
 
 /**
  * Same as `registerGlobal` except it accepts more configuration options like

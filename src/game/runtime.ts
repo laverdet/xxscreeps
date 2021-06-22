@@ -1,8 +1,7 @@
 import type { GameConstructor } from '.';
 import * as C from './constants';
 import lodash from 'lodash';
-import { globals, registerGlobal } from './symbols';
-import { hooks } from 'xxscreeps/driver';
+import { globals, hooks, registerGlobal } from './symbols';
 
 registerGlobal('_', lodash);
 

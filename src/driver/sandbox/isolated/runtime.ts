@@ -2,7 +2,7 @@ import type ivm from 'isolated-vm';
 import type { CPU } from 'xxscreeps/game/game';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
 import * as Runtime from 'xxscreeps/driver/runtime';
-import { registerGameInitializer } from 'xxscreeps/game';
+import { hooks } from 'xxscreeps/game';
 export { tick } from 'xxscreeps/driver/runtime';
 
 let isolate: ivm.Isolate;
@@ -53,7 +53,7 @@ class IsolatedCPU implements CPU {
 	}
 }
 
-registerGameInitializer((game, data) => {
+hooks.register('gameInitializer', (game, data) => {
 	game.cpu = new IsolatedCPU(data!);
 });
 

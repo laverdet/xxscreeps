@@ -22,9 +22,6 @@ export type AnyRoomObject = Room['#objects'][number];
 export class Room extends withOverlay(BufferObject, shape) {
 	declare static Terrain: typeof Terrain;
 
-	// TODO: Move to mod
-	energyAvailable = 0;
-	energyCapacityAvailable = 0;
 	#didInitialize = false;
 	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
 	#lookIndex = new Map<string, RoomObject[]>(Fn.map(lookConstants, look => [ look, [] ]));

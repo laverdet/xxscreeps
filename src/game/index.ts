@@ -6,7 +6,7 @@ import { flush as flushPathFinder } from './path-finder';
 import type { Room } from 'xxscreeps/game/room';
 import type { World } from 'xxscreeps/game/map';
 
-export { defineGlobal, registerGameInitializer, registerGlobal } from './symbols';
+export { defineGlobal, hooks, registerGlobal } from './symbols';
 export { GameConstructor, GameState };
 export let Game: GameBase;
 export let intents: IntentManager;

@@ -2,9 +2,8 @@ import * as C from 'xxscreeps/game/constants';
 import * as Controller from './controller';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/engine/schema';
-import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
+import { hooks, registerGlobal } from 'xxscreeps/game';
 import { optional, struct } from 'xxscreeps/schema';
-import { hooks } from 'xxscreeps/driver';
 import { acquireControllerActivity } from './creep';
 
 // Register schema
@@ -53,7 +52,7 @@ declare module 'xxscreeps/game/game' {
 	}
 }
 
-registerGameInitializer((Game, payload) => {
+hooks.register('gameInitializer', (Game, payload) => {
 	if (payload) {
 		const level = Math.floor((payload.gcl / C.GCL_MULTIPLY) ** (1 / C.GCL_POW));
 		const progress = Math.floor(level ** C.GCL_POW * C.GCL_MULTIPLY);

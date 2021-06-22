@@ -94,7 +94,7 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	}
 }
 
-declare module 'xxscreeps/game/room/room' {
+declare module 'xxscreeps/game/room' {
 	interface Room {
 		controller?: StructureController;
 	}

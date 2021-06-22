@@ -1,5 +1,4 @@
-import { defineGlobal, registerGlobal } from 'xxscreeps/game';
-import { hooks } from 'xxscreeps/driver';
+import { defineGlobal, hooks, registerGlobal } from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { Room } from 'xxscreeps/game/room';
 import { RawMemory, flush, flushActiveSegments, flushForeignSegment, flushSegments, get, initialize, loadSegments } from './memory';

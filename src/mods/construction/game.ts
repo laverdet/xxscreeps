@@ -3,7 +3,7 @@ import * as ConstructionSite from './construction-site';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { constant, struct, variant } from 'xxscreeps/schema';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
-import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
+import { hooks, registerGlobal } from 'xxscreeps/game';
 import './creep';
 import './position';
 import './room';
@@ -14,7 +14,7 @@ declare module 'xxscreeps/game/game' {
 		constructionSites: Record<string, ConstructionSite.ConstructionSite>;
 	}
 }
-registerGameInitializer(Game => Game.constructionSites = Object.create(null));
+hooks.register('gameInitializer', Game => Game.constructionSites = Object.create(null));
 
 // Export `ConstructionSite` to runtime globals
 registerGlobal(ConstructionSite.ConstructionSite);

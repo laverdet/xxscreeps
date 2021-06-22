@@ -1,6 +1,5 @@
-import { registerGlobal } from 'xxscreeps/game';
-import { hooks } from 'xxscreeps/driver';
-import { Room } from 'xxscreeps/game/room/room';
+import { hooks, registerGlobal } from 'xxscreeps/game';
+import { Room } from 'xxscreeps/game/room';
 import { extend } from 'xxscreeps/utility/utility';
 import { RoomVisual, flush } from './visual';
 

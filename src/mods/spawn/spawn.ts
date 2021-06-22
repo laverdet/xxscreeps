@@ -1,7 +1,6 @@
 import type { PartType } from 'xxscreeps/mods/creep/creep';
-import type { GameConstructor } from 'xxscreeps/game';
 import type { Direction, RoomPosition } from 'xxscreeps/game/position';
-import type { Room } from 'xxscreeps/game/room';
+import type { GameConstructor } from 'xxscreeps/game';
 import type { StructureExtension } from './extension';
 import * as C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
@@ -68,18 +67,6 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 
 	override ['#addToMyGame'](game: GameConstructor) {
 		game.spawns[this.name] = this;
-	}
-
-	override ['#afterInsert'](room: Room) {
-		super['#afterInsert'](room);
-		room.energyAvailable += this.store[C.RESOURCE_ENERGY];
-		room.energyCapacityAvailable += this.store.getCapacity(C.RESOURCE_ENERGY);
-	}
-
-	override ['#afterRemove'](room: Room) {
-		super['#afterRemove'](room);
-		room.energyAvailable -= this.store[C.RESOURCE_ENERGY];
-		room.energyCapacityAvailable -= this.store.getCapacity(C.RESOURCE_ENERGY);
 	}
 
 	override isActive() {

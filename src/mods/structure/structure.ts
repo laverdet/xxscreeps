@@ -4,7 +4,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position';
-import { Game, intents, me, registerGameInitializer, userInfo } from 'xxscreeps/game';
+import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game';
 import { RoomObject, format as objectFormat } from 'xxscreeps/game/object';
 import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
@@ -172,4 +172,4 @@ declare module 'xxscreeps/game/game' {
 		structures: Record<string, AnyStructure>;
 	}
 }
-registerGameInitializer(Game => Game.structures = Object.create(null));
+hooks.register('gameInitializer', Game => Game.structures = Object.create(null));

@@ -27,7 +27,7 @@ declare module 'xxscreeps/game/room' {
 }
 
 // Extend `Room`
-declare module 'xxscreeps/game/room/room' {
+declare module 'xxscreeps/game/room' {
 	interface Room {
 		/**
 		 * Create new `ConstructionSite` at the specified location.

@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Creep from './creep';
-import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
+import { hooks, registerGlobal } from 'xxscreeps/game';
 import { registerVariant } from 'xxscreeps/engine/schema';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 
@@ -10,7 +10,7 @@ declare module 'xxscreeps/game/game' {
 		creeps: Record<string, Creep.Creep>;
 	}
 }
-registerGameInitializer(Game => Game.creeps = Object.create(null));
+hooks.register('gameInitializer', Game => Game.creeps = Object.create(null));
 
 // Export `Creep` to runtime globals
 registerGlobal(Creep.Creep);

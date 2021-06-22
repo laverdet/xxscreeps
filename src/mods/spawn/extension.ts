@@ -1,4 +1,3 @@
-import type { Room } from 'xxscreeps/game/room';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
@@ -20,18 +19,6 @@ export class StructureExtension extends withOverlay(OwnedStructure, shape) {
 	override get structureType() { return C.STRUCTURE_EXTENSION }
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
-
-	override ['#afterInsert'](room: Room) {
-		super['#afterInsert'](room);
-		room.energyAvailable += this.store[C.RESOURCE_ENERGY];
-		room.energyCapacityAvailable += this.store.getCapacity(C.RESOURCE_ENERGY);
-	}
-
-	override ['#afterRemove'](room: Room) {
-		super['#afterRemove'](room);
-		room.energyAvailable -= this.store[C.RESOURCE_ENERGY];
-		room.energyCapacityAvailable -= this.store.getCapacity(C.RESOURCE_ENERGY);
-	}
 }
 
 export function create(pos: RoomPosition, level: number, owner: string) {

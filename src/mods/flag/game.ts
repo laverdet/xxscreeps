@@ -4,8 +4,7 @@ import type { TypeOf } from 'xxscreeps/schema';
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import { registerGameInitializer, registerGlobal } from 'xxscreeps/game';
-import { hooks } from 'xxscreeps/driver';
+import { hooks, registerGlobal } from 'xxscreeps/game';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, vector } from 'xxscreeps/schema';
@@ -72,7 +71,7 @@ declare module 'xxscreeps/game/game' {
 		flags: Record<string, Flag>;
 	}
 }
-registerGameInitializer((Game, data) => {
+hooks.register('gameInitializer', (Game, data) => {
 	if (data) {
 		Game.flags = flags;
 		const rooms = new Set<Room>();
