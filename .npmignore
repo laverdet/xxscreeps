@@ -1,4 +1,4 @@
+/.eslintrc.yaml
 /.screepsrc.yaml
-/dist
-/node_modules
+/.vscode
 /screeps
