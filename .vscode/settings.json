@@ -14,9 +14,5 @@
 	"typescript.tsdk": "./node_modules/typescript/lib",
 	"typescript.enablePromptUseWorkspaceTsdk": true,
 	"typescript.preferences.importModuleSpecifier": "non-relative",
-	"typescript.tsserver.experimental.enableProjectDiagnostics": false,
-	"yaml.schemas": {
-		"./dist/config/mods.resolved/config.schema.json": "*/.screepsrc.yaml"
-	},
-	"yaml.validate": true,
+	"typescript.tsserver.experimental.enableProjectDiagnostics": false
 }

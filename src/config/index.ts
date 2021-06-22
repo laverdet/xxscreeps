@@ -1,8 +1,8 @@
-import type { MergedSchema } from './defaults';
+import type { Schema } from './config';
 import fs from 'fs/promises';
 import Ajv from 'ajv';
+import Config from 'xxscreeps/config/mods/import/config';
 import data, { configPath, isTopThread } from './raw';
-import { defaults } from './defaults';
 import { merge } from 'xxscreeps/utility/utility';
 import { fileURLToPath } from 'url';
 import './global';
@@ -25,8 +25,18 @@ if (isTopThread) {
 	}
 }
 
-const config: MergedSchema = defaults as never;
-merge(config, data);
+// Merge defaults into config data
+const config = {};
+for (const entry of Config) {
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+	merge(config, entry.defaults ?? {});
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+	merge(config, entry.configDefaults ?? {});
+}
 
-export default config;
+merge(config, data);
+type ConfigInfo = typeof Config[number];
+type MergedSchema = Schema & ConfigInfo['configDefaults'] & ConfigInfo['defaults'];
+
+export default config as MergedSchema;
 export { configPath };

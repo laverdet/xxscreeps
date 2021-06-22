@@ -1,6 +1,5 @@
 import type { Effect, UnionToIntersection } from 'xxscreeps/utility/types';
 import type { BlobProvider, KeyValProvider, PubSubProvider } from './provider';
-import { configPath } from 'xxscreeps/config';
 
 type DispositionToProvider<T> =
 	T extends 'blob' ? BlobProvider :
@@ -36,7 +35,10 @@ export function registerStorageProvider<Dispositions extends string>(
 
 export async function connectToProvider<Disposition extends string>(fragment: string, disposition: Disposition):
 Promise<[ Effect, DispositionToProvider<Disposition> ]> {
-	await import('xxscreeps/config/mods/import/storage');
+	const [ { configPath } ] = await Promise.all([
+		import('xxscreeps/config'),
+		import('xxscreeps/config/mods/import/storage'),
+	]);
 	const url = new URL(fragment, configPath);
 	const provider = providers.get(url.protocol + disposition);
 	if (!provider) {

@@ -1,0 +1,200 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "defaultProperties": [
+    ],
+    "properties": {
+        "backend": {
+            "defaultProperties": [
+            ],
+            "description": "Backend server settings",
+            "properties": {
+                "allowGuestAccess": {
+                    "default": true,
+                    "description": "Whether to allow read-only access to the API without logging in.",
+                    "type": "boolean"
+                },
+                "bind": {
+                    "default": "*",
+                    "description": "Network interface to bind server to. Format is: \"host\" or \"host:port\". Host can be * to bind\nto all interfaces: \"*:port\". Port is 21025, if not specified.",
+                    "type": "string"
+                },
+                "secret": {
+                    "description": "Secret used for session authentication. If not specified a new secret will be generated each\nrestart.",
+                    "type": "string"
+                },
+                "socketSkipsPermanents": {
+                    "default": true,
+                    "description": "The back can represent permanent objects such as sources and minerals as pixels in the map\nthumbnail instead of as coordinates over the `roomMap2` socket. This may speed up the client\nbut may also break compatibility with unofficial tools. Set this option to `false` to select\nthe behavior that matches the official server.",
+                    "type": "boolean"
+                },
+                "socketThrottle": {
+                    "default": 125,
+                    "description": "Minimum time between socket updates, in milliseconds. Setting this lower may cause\nperformance issues in the client.",
+                    "type": "number"
+                },
+                "steamApiKey": {
+                    "description": "Steam Web API key used to authenticate users. You can get a key here:\nhttp://steamcommunity.com/dev/apikey",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "database": {
+            "defaultProperties": [
+            ],
+            "description": "Configuration for global database storage",
+            "properties": {
+                "blob": {
+                    "default": "./screeps/db",
+                    "description": "Blob storage provider URI",
+                    "type": "string"
+                },
+                "data": {
+                    "default": "./screeps/db/data.json",
+                    "description": "Persistent storage provider URI",
+                    "type": "string"
+                },
+                "pubsub": {
+                    "default": "local://db",
+                    "description": "Pubsub storage provider URI",
+                    "type": "string"
+                },
+                "saveInterval": {
+                    "default": 120,
+                    "description": "How often (in wall time minutes) to save the main database",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "blob",
+                "data",
+                "pubsub"
+            ],
+            "type": "object"
+        },
+        "game": {
+            "defaultProperties": [
+            ],
+            "description": "Game settings",
+            "properties": {
+                "tickSpeed": {
+                    "default": 250,
+                    "description": "Minimum length of a game tick in milliseconds.",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
+        "launcher": {
+            "defaultProperties": [
+            ],
+            "description": "Launcher settings",
+            "properties": {
+                "processorWorkers": {
+                    "default": "`os.cpus().length + 1`",
+                    "description": "Total number of processors to create.",
+                    "type": "number"
+                },
+                "runnerWorkers": {
+                    "default": 1,
+                    "description": "Total number of runners to create. It's best to leave this at 1 because runner will create\nits own threads.",
+                    "type": "number"
+                },
+                "singleThreaded": {
+                    "default": false,
+                    "description": "Set true to run all services in a single nodejs isolate. This does *not* affect the runner's\nisolates.",
+                    "type": "boolean"
+                }
+            },
+            "type": "object"
+        },
+        "mods": {
+            "description": "List of mods to load",
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "runner": {
+            "defaultProperties": [
+            ],
+            "description": "Runner settings",
+            "properties": {
+                "concurrency": {
+                    "default": "`os.cpus().length + 1`",
+                    "description": "Total number of runner tasks to run at a time.",
+                    "type": "number"
+                },
+                "cpu": {
+                    "defaultProperties": [
+                    ],
+                    "properties": {
+                        "bucket": {
+                            "default": ": 10000",
+                            "description": "CPU bucket size per user",
+                            "type": "number"
+                        },
+                        "tickLimit": {
+                            "default": ": 500",
+                            "description": "Maximum amount of time in milliseconds that a user's runtime may run for.",
+                            "type": "number"
+                        }
+                    },
+                    "type": "object"
+                },
+                "unsafeSandbox": {
+                    "default": false,
+                    "description": "Setting this to true will run user code using the nodejs `vm` module instead\nof `isolated-vm`. Do not enable this on public servers!",
+                    "type": "boolean"
+                }
+            },
+            "type": "object"
+        },
+        "schemaArchive": {
+            "default": "./screeps/archive",
+            "description": "Where to save descriptions of the binary format used to write game data.",
+            "type": "string"
+        },
+        "shards": {
+            "default": "`[ {\nname: 'shard0',\nblob: './screeps/shard0',\ndata: './screeps/shard0/data.json',\npubsub: 'local://shard0',\nscratch: 'local://shard0',\n} ]`",
+            "description": "Configuration for shard-specific storage",
+            "items": {
+                "defaultProperties": [
+                ],
+                "properties": {
+                    "blob": {
+                        "description": "Blob storage provider URI",
+                        "type": "string"
+                    },
+                    "data": {
+                        "description": "Persistent storage provider URI",
+                        "type": "string"
+                    },
+                    "name": {
+                        "description": "Name of this shard",
+                        "type": "string"
+                    },
+                    "pubsub": {
+                        "description": "Pubsub storage provider URI",
+                        "type": "string"
+                    },
+                    "scratch": {
+                        "description": "Temporary storage provider URI",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "blob",
+                    "data",
+                    "name",
+                    "pubsub",
+                    "scratch"
+                ],
+                "type": "object"
+            },
+            "type": "array"
+        }
+    },
+    "type": "object"
+}
+

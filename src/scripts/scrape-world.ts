@@ -4,8 +4,13 @@ import type { Store } from 'xxscreeps/mods/resource/store';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 
 import Loki from 'lokijs';
+import jsYaml from 'js-yaml';
+import fs from 'fs/promises';
 
+import Configs from 'xxscreeps/config/mods/import/config';
+import config, { configPath } from 'xxscreeps/config';
 import { checkArguments } from 'xxscreeps/config/arguments';
+
 import { RoomPosition } from 'xxscreeps/game/position';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
@@ -36,6 +41,7 @@ import { StructureRampart } from 'xxscreeps/mods/defense/rampart';
 import { StructureWall } from 'xxscreeps/mods/defense/wall';
 import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
+import { merge } from 'xxscreeps/utility/utility';
 
 const argv = checkArguments({
 	boolean: [ 'dont-overwrite', 'shard-only' ] as const,
@@ -64,6 +70,62 @@ function withStore(from: any, into: { store: Store }) {
 	for (const type in from.store) {
 		into.store['#add'](type as ResourceType, from.store[type]);
 	}
+}
+
+// Create .screepsrc.yaml
+const rcInfo = await fs.stat(configPath).catch(() => undefined);
+if ((rcInfo?.size ?? 0) === 0) {
+	console.log('Writing default `.screepsrc.yaml`');
+
+	// Get default `mods`
+	const fetched = new Set<string>();
+	const mods = new Set<string>(config.mods);
+	const fetch = async function(specifier: string, depth: number) {
+		if (depth === 0 || fetched.has(specifier)) {
+			return;
+		}
+		fetched.add(specifier);
+		try {
+			// Find `package.json` for this specifier
+			const indexPath = new URL(await import.meta.resolve(specifier, `${configPath}`));
+			const packagePath = await async function() {
+				let path = indexPath;
+				while (true) {
+					const packagePath = new URL('package.json', path);
+					try {
+						await fs.stat(packagePath);
+						return packagePath;
+					} catch (err) {}
+					const next = new URL('..', path);
+					if (`${next}` === `${path}`) {
+						return;
+					}
+					path = next;
+				}
+			}();
+			// Read package.json contents
+			if (packagePath) {
+				const info = JSON.parse(await fs.readFile(packagePath, 'utf8'));
+				const dependencies = Object.keys(info.dependencies ?? {});
+				await Promise.all(dependencies.map(specifier => fetch(specifier, depth - 1)));
+				if (info.xxscreeps) {
+					mods.add(info.name);
+				}
+			}
+		} catch (err) {}
+	};
+	await fetch('.', 2);
+
+	// Write yaml content
+	const schema = await import.meta.resolve('xxscreeps/config/mods.resolved/config.schema.json').catch(() => undefined);
+	const preamble = schema ? `# yaml-language-server: $schema=${schema}\n` : '';
+	const defaultConfig: any = {};
+	for (const modConfig of Configs) {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		merge(defaultConfig, modConfig.configDefaults ?? {});
+	}
+	defaultConfig.mods = [ ...mods ];
+	await fs.writeFile(configPath, preamble + jsYaml.dump(defaultConfig));
 }
 
 // Initialize import source

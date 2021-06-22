@@ -1,3 +1,7 @@
+import crypto from 'crypto';
+import os from 'os';
+
+// npx typescript-json-schema tsconfig.json Schema --include ./src/config/schema.ts --defaultProps --required -o ./src/config/config.schema.json
 export type Schema = {
 	/**
 	 * Backend server settings
@@ -189,4 +193,59 @@ export type Schema = {
 		 */
 		scratch: string;
 	}[];
+};
+
+/**
+ * These defaults will be merged into `xxscreepts/config` at runtime
+ */
+export const defaults = {
+	backend: {
+		allowGuestAccess: true as boolean,
+		bind: '*',
+		socketSkipsPermanents: true as boolean,
+		socketThrottle: 125,
+	},
+	launcher: {
+		processorWorkers: os.cpus().length + 1,
+		runnerWorkers: 1,
+	},
+	runner: {
+		concurrency: os.cpus().length + 1,
+		cpu: {
+			bucket: 10000,
+			tickLimit: 500,
+		},
+	},
+	schemaArchive: './screeps/archive',
+	database: {
+		blob: './screeps/db',
+		data: './screeps/db/data.json',
+		pubsub: 'local://db',
+		saveInterval: 2,
+	},
+	shards: [ {
+		name: 'shard0',
+		blob: './screeps/shard0',
+		data: './screeps/shard0/data.json',
+		pubsub: 'local://shard0',
+		scratch: 'local://shard0',
+	} ],
+};
+
+/**
+ * These defaults will be written to `.screepsrc.yaml` on import, as a guide for the user. They will
+ * also be merged into the `config` defaults.
+ */
+export const configDefaults = {
+	backend: {
+		secret: crypto.randomBytes(16).toString('hex'),
+	},
+	game: {
+		tickSpeed: 250,
+	},
+	mods: [
+		'xxscreeps/mods/classic',
+		'xxscreeps/mods/backend/password',
+		'xxscreeps/mods/backend/steam',
+	],
 };

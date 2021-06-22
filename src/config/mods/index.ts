@@ -1,10 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../../declarations.d.ts" />
 import fs from 'fs/promises';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import { fileURLToPath } from 'url';
-import { defaults } from 'xxscreeps/config/defaults';
+import { configDefaults } from 'xxscreeps/config/config';
 import config, { configPath } from 'xxscreeps/config/raw';
 
 type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'processor' | 'storage';
@@ -21,6 +18,7 @@ const mods: {
 const stack: string[] = [];
 const resolved = new Set<string>();
 const baseUrl = configPath;
+const version = 1;
 async function resolve(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
 		const url = await import.meta.resolve(specifier, `${baseUrl}`);
@@ -48,18 +46,17 @@ async function resolve(specifiers: string[]) {
 		}
 	}
 }
-await resolve(config.mods ?? defaults.mods);
+await resolve(config.mods ?? configDefaults.mods);
 export { mods };
 
 // Ensure module imports are up to date on the filesystem
 try {
-	const compiled = await import(`${'./manifest.compiled'}`);
-	if (compiled.json !== JSON.stringify(mods)) {
+	const cached = await import(`${'./manifest.cached'}`);
+	if (cached.json !== JSON.stringify(mods) || cached.version !== version) {
 		throw new Error('Out of date');
 	}
 } catch (err) {
 	// Given a specifier fragment this return all mods which export it
-	console.log('Regenerating mod manifest...');
 	const resolveWithinMods = async(specifier: string) => {
 		const resolved = await Promise.all(mods.map(async({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
@@ -87,42 +84,32 @@ try {
 			await fs.writeFile(new URL(`${specifier}.js`, outDir), content, 'utf8');
 		}),
 		async function() {
-			const typesOutput = new URL('config.ts', outDir);
+			// Merge JSON schema
 			const schemaOutput = new URL('config.schema.json', outDir);
-
-			// These will be the resolved .js files, but we need to convert back to .ts paths.
-			const compiled = [
-				await import.meta.resolve('xxscreeps/config/schema'),
+			const inputs = [
+				await import.meta.resolve('xxscreeps/config/config'),
 				...await resolveWithinMods('config'),
 			];
-			const sources = compiled.map(path => {
-				// These are file:// URLs, so no need to worry about platform separator
-				const indexOf = path.lastIndexOf('/dist/');
-				if (indexOf === -1) {
-					throw new Error(`Did not find 'dist' in '${path}'`);
-				}
-				return fileURLToPath(path.substr(0, indexOf) + '/src/' + path.substr(indexOf + 6)).replace(/\.js$/, '');
-			});
-			// Combine them into one type
-			const content =
-				sources.map((mod, ii) => `import { Schema as Schema${ii} } from ${JSON.stringify(mod)};\n`).join('') +
-				`export type Schema = ${sources.map((mod, ii) => `Schema${ii}`).join(' & ')};\n`;
-			await fs.writeFile(typesOutput, content, 'utf8');
-			try {
-				await promisify(execFile)('npx', [
-					'typescript-json-schema',
-					'--include', fileURLToPath(typesOutput),
-					'--defaultProps',
-					'--required',
-					'tsconfig.json',
-					'Schema',
-					'-o', fileURLToPath(schemaOutput),
-				]);
-			} catch (err) {
+			const json = (await Promise.all(inputs.map(async path => {
 				try {
-					await fs.unlink(schemaOutput);
+					return JSON.parse(await fs.readFile(new URL('config.schema.json', path), 'utf8'));
 				} catch (err) {}
-			}
+			}))).filter(content => content);
+			const merged = {
+				$schema: json[0].$schema,
+				allOf: json.map(content => ({
+					...content,
+					$schema: undefined,
+				})),
+			};
+			await fs.writeFile(schemaOutput, JSON.stringify(merged), 'utf8');
+
+			// Write JS file
+			const content =
+			inputs.map((mod, ii) =>
+				`import * as Config${ii} from ${JSON.stringify(mod)};\n`).join('') +
+				`export default [ ${inputs.map((mod, ii) => `Config${ii}`).join(', ')} ];\n`;
+			await fs.writeFile(new URL('config.js', outDir), content, 'utf8');
 		}(),
 		async function() {
 			const mods = await resolveWithinMods('constants');
@@ -133,6 +120,7 @@ try {
 
 	// Save mod inclusion manifest
 	await fs.writeFile(
-		new URL('./manifest.compiled.js', import.meta.url),
-		`export const json = ${JSON.stringify(JSON.stringify(mods))};\n`, 'utf8');
+		new URL('./manifest.cached.js', import.meta.url), `
+			export const json = ${JSON.stringify(JSON.stringify(mods))}
+			export const version = ${version};\n`, 'utf8');
 }

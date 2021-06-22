@@ -40,5 +40,5 @@ if (steamApiKey) {
 		},
 	});
 } else {
-	console.warn('Config `backend.steamApiKey` missing; steam login inactive');
+	console.warn('Config `backend.steamApiKey` missing; Steam login inactive');
 }
