@@ -345,7 +345,7 @@ declare module './runtime' {
 //
 // Function argument handlers
 export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any) {
-	if (typeof arg1 === 'object') {
+	if (typeof arg1 === 'object' && arg1 !== null) {
 		const int = arg1['#id'] ?? arg1?.pos?.['#id'];
 		if (int === undefined) {
 			return {
@@ -374,7 +374,7 @@ export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any)
 export function fetchPositionArgument<Extra = any>(
 	fromRoom: string, arg1?: any, arg2?: any, arg3?: any,
 ): { pos?: RoomPosition; extra?: Extra } {
-	if (typeof arg1 === 'object') {
+	if (typeof arg1 === 'object' && arg1 !== null) {
 		if (arg1 instanceof RoomPosition) {
 			return { pos: arg1, extra: arg2 };
 		} else if (arg1.pos instanceof RoomPosition) {
@@ -398,7 +398,7 @@ export function fetchPositionArgumentRest<Rest extends any[]>(
 	fromRoom: string,
 	arg1: any, arg2: any, ...rest: Rest
 ): { pos?: RoomPosition; rest: Rest } {
-	if (typeof arg1 === 'object') {
+	if (typeof arg1 === 'object' && arg1 !== null) {
 		if (arg1 instanceof RoomPosition) {
 			return { pos: arg1, rest: [ arg2, ...rest ] as never };
 		} else if (arg1.pos instanceof RoomPosition) {

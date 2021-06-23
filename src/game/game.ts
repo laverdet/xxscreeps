@@ -55,7 +55,7 @@ export class GameBase {
 	 * @param id The unique identifier
 	 */
 	getObjectById<Type extends RoomObject = AnyRoomObject>(id: string) {
-		return this.#state.objects.get(id) as Type | undefined;
+		return (this.#state.objects.get(id) ?? null) as Type | null;
 	}
 }
 

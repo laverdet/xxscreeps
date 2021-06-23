@@ -140,7 +140,9 @@ extend(Room, {
 			return [ terrainMaskToString[this.getTerrain().get(pos.x, pos.y)] ];
 		}
 		if (!lookConstants.has(type)) {
-			return C.ERR_INVALID_ARGS as any;
+			return [] as any;
+			// TODO: Set this back once all game objects have been implemented (?)
+			// return C.ERR_INVALID_ARGS as any;
 		}
 		return [ ...Fn.filter(this['#lookAt'](pos), object => object['#lookType'] === type) ];
 	},

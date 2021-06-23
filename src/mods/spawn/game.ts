@@ -35,10 +35,12 @@ hooks.register('roomInitializer', room => {
 // Export `StructureExtension` & `StructureSpawn` to runtime globals
 registerGlobal(Extension.StructureExtension);
 registerGlobal(Spawn.StructureSpawn);
+registerGlobal('Spawn', Spawn.StructureSpawn);
 declare module 'xxscreeps/game/runtime' {
 	interface Global {
 		StructureExtension: typeof Extension.StructureExtension;
 		StructureSpawn: typeof Spawn.StructureSpawn;
+		Spawn: typeof Spawn.StructureSpawn;
 	}
 }
 

@@ -54,7 +54,7 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 			text: sign.text,
 			time: sign.time,
 			username: userInfo.get(sign.userId)!.username,
-		} : null;
+		} : undefined;
 		Object.defineProperty(this, 'sign', { value });
 		return value;
 	}

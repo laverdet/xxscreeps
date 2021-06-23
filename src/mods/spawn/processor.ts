@@ -35,7 +35,7 @@ const intents = [
 
 		// Get energy structures
 		const energyStructures = function() {
-			const filter = (structure?: RoomObject): structure is StructureExtension | StructureSpawn =>
+			const filter = (structure: RoomObject | null): structure is StructureExtension | StructureSpawn =>
 				structure instanceof StructureExtension || structure instanceof StructureSpawn;
 			if (energyStructureIds) {
 				return energyStructureIds.map(id => Game.getObjectById(id)).filter(filter);
