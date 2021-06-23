@@ -443,6 +443,10 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
 }
 
+export function calculateCost(creep: Creep) {
+	return Fn.accumulate(creep.body, bodyPart => C.BODYPART_COST[bodyPart.type]);
+}
+
 export function calculatePower(creep: Creep, part: PartType, power: number) {
 	return Fn.accumulate(creep.body, bodyPart => {
 		if (bodyPart.type === part && bodyPart.hits > 0) {

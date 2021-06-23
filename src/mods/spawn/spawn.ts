@@ -7,10 +7,10 @@ import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomObject from 'xxscreeps/game/object';
-import { Creep, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
+import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, intents, userGame } from 'xxscreeps/game';
 import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
-import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store';
+import { SingleStore, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, optional, struct, variant, vector, withOverlay, withType } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
@@ -107,6 +107,21 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	}
 
 	/**
+	 * Increase the remaining time to live of the target creep. The target should be at adjacent
+	 * square. The target should not have CLAIM body parts. The spawn should not be busy with the
+	 * spawning process. Each execution increases the creep's timer by amount of ticks according to
+	 * this formula: `floor(600 / body.length)`. Energy required for each execution is determined
+	 * using this formula: `ceil(creepCost / 2.5 / body.length)`. Renewing a creep removes all of its
+	 * boosts.
+	 * @param creep The target creep object.
+	 */
+	renewCreep(creep: Creep) {
+		chainIntentChecks(
+			() => checkRenewCreep(this, creep),
+			() => intents.save(this, 'renewCreep', creep.id));
+	}
+
+	/**
 	 * Start the creep spawning process. The required energy amount can be withdrawn from all spawns
 	 * and extensions in the room.
    * @param body An array describing the new creep’s body. Should contain 1 to 50 elements with one
@@ -180,6 +195,24 @@ export function checkRecycleCreep(spawn: StructureSpawn, creep: Creep) {
 		() => checkCommon(creep),
 		() => checkTarget(creep, Creep),
 		() => checkRange(spawn, creep, 1));
+}
+
+export function checkRenewCreep(spawn: StructureSpawn, creep: Creep) {
+	return chainIntentChecks(
+		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkCommon(creep),
+		() => checkRange(spawn, creep, 1),
+		() => checkHasResource(spawn, C.RESOURCE_ENERGY, calculateRenewCost(creep)),
+		() => {
+			if (
+				creep.body.some(bodyPart => bodyPart.type === C.CLAIM) ||
+				creep.body.some(bodyPart => bodyPart.boost !== undefined)
+			) {
+				return C.ERR_NO_BODYPART;
+			} else if (creep.ticksToLive! + calculateRenewAmount(creep) > C.CREEP_LIFE_TIME) {
+				return C.ERR_FULL;
+			}
+		});
 }
 
 export function checkSpawnCreep(
@@ -276,4 +309,12 @@ function getUniqueName(exists: (name: string) => boolean) {
 			return name;
 		}
 	} while (true);
+}
+
+export function calculateRenewCost(creep: Creep) {
+	return Math.ceil(C.SPAWN_RENEW_RATIO * calculateCost(creep) / C.CREEP_SPAWN_TIME / creep.body.length);
+}
+
+export function calculateRenewAmount(creep: Creep) {
+	return Math.floor(C.SPAWN_RENEW_RATIO * C.CREEP_LIFE_TIME / C.CREEP_SPAWN_TIME / creep.body.length);
 }

@@ -11,7 +11,27 @@ import { ALL_DIRECTIONS } from 'xxscreeps/game/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { assign } from 'xxscreeps/utility/utility';
 import { StructureExtension } from './extension';
-import { StructureSpawn, checkRecycleCreep, checkSpawnCreep } from './spawn';
+import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkRecycleCreep, checkRenewCreep, checkSpawnCreep } from './spawn';
+
+function consumeEnergy(spawn: StructureSpawn, amount: number) {
+	const energyStructures = spawn.room.find(C.FIND_STRUCTURES).filter(
+		(structure): structure is StructureSpawn | StructureExtension =>
+			structure.structureType === C.STRUCTURE_SPAWN || structure.structureType === C.STRUCTURE_EXTENSION);
+	energyStructures.sort((left, right) => left.pos.getRangeTo(spawn.pos) - right.pos.getRangeTo(spawn.pos));
+
+	if (Fn.accumulate(energyStructures, structure => structure.store[C.RESOURCE_ENERGY]) < amount) {
+		throw new Error('Not enough');
+	}
+	let remaining = amount;
+	for (const structure of energyStructures) {
+		const subtraction = Math.min(remaining, structure.store[C.RESOURCE_ENERGY]);
+		structure.store['#subtract'](C.RESOURCE_ENERGY, subtraction);
+		if ((remaining -= subtraction) === 0) {
+			return;
+		}
+	}
+	throw new Error('Did not subtract energy correctly.');
+}
 
 declare module 'xxscreeps/engine/processor' {
 	interface Intent { spawn: typeof intents }
@@ -22,6 +42,16 @@ const intents = [
 		if (checkRecycleCreep(spawn, creep) === C.OK) {
 			// TODO: This stuff
 			creep.hits = 0;
+			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(StructureSpawn, 'renewCreep', {}, (spawn, context, id: string) => {
+		const creep = Game.getObjectById<Creep>(id)!;
+		if (checkRenewCreep(spawn, creep) === C.OK) {
+			consumeEnergy(spawn, calculateRenewCost(creep));
+			creep['#ageTime'] += calculateRenewAmount(creep);
+			context.didUpdate();
 		}
 	}),
 
