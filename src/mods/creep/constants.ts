@@ -1,7 +1,9 @@
 export const FIND_CREEPS = 101 as const;
 export const FIND_MY_CREEPS = 102 as const;
 export const FIND_HOSTILE_CREEPS = 103 as const;
+export const FIND_TOMBSTONES = 118 as const;
 export const LOOK_CREEPS = 'creep' as const;
+export const LOOK_TOMBSTONES = 'tombstone' as const;
 
 export const MOVE = 'move' as const;
 export const WORK = 'work' as const;

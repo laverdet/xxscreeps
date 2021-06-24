@@ -16,8 +16,6 @@ registerGlobal(function StructureObserver() {});
 registerGlobal(function StructurePowerBank() {});
 registerGlobal(function StructurePowerSpawn() {});
 registerGlobal(function StructurePortal() {});
-registerGlobal(function StructureTerminal() {});
-registerGlobal(function Tombstone() {});
 
 declare const globalThis: any;
 hooks.register('runtimeConnector', {

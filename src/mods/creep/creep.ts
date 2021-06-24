@@ -8,7 +8,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { actionLogFormat, create as createObject, format as objectFormat, saveAction } from 'xxscreeps/game/object';
+import { RoomObject, actionLogFormat, create as createObject, format as objectFormat, saveAction } from 'xxscreeps/game/object';
 import { Game, intents, me, userInfo } from 'xxscreeps/game';
 import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
@@ -17,8 +17,6 @@ import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscr
 import { assign } from 'xxscreeps/utility/utility';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
-// eslint-disable-next-line @typescript-eslint/no-duplicate-imports
-import { RoomObject } from 'xxscreeps/game/object';
 import { Structure } from 'xxscreeps/mods/structure/structure';
 import { Room } from 'xxscreeps/game/room';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
@@ -94,7 +92,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 	override ['#applyDamage'](power: number, type: number, source?: RoomObject) {
 		if (this.spawning) {
-			return;
+			return false;
 		}
 		this.tickHitsDelta = (this.tickHitsDelta ?? 0) - power;
 		if (source) {
@@ -107,6 +105,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 			});
 			saveAction(this, 'attacked', source.pos);
 		}
+		return false;
 	}
 
 	/**

@@ -6,13 +6,12 @@ import type { ResourceType } from 'xxscreeps/mods/resource';
 import type { WithStore } from 'xxscreeps/mods/resource/store';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 import * as C from 'xxscreeps/game/constants';
-import * as CreepLib from 'xxscreeps/mods/creep/creep';
+import * as CreepLib from './creep';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/engine/processor/movement';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
 import { Game } from 'xxscreeps/game';
-import { Creep } from 'xxscreeps/mods/creep/creep';
-// eslint-disable-next-line @typescript-eslint/no-duplicate-imports
+import { Creep } from './creep';
 import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
 import { isBorder } from 'xxscreeps/game/terrain';
@@ -20,6 +19,7 @@ import { writeRoomObject } from 'xxscreeps/engine/db/room';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { filterInPlace } from 'xxscreeps/utility/utility';
+import { Tombstone, buryCreep } from './tombstone';
 
 export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) {
 	const kRetainActionsTime = 10;
@@ -81,7 +81,7 @@ const intents = [
 
 	registerIntentProcessor(Creep, 'suicide', {}, (creep, context) => {
 		if (creep.my) {
-			creep.room['#removeObject'](creep);
+			buryCreep(creep, creep['#user'].length > 2 ? undefined : 0);
 			context.didUpdate();
 		}
 	}),
@@ -134,10 +134,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		(Game.time >= creep['#ageTime'] && creep['#ageTime'] !== 0) ||
 		creep.hits <= 0
 	) {
-		for (const [ resourceType, amount ] of creep.store['#entries']()) {
-			ResourceIntent.drop(creep.pos, resourceType, amount);
-		}
-		creep.room['#removeObject'](creep);
+		buryCreep(creep);
 		context.didUpdate();
 		return;
 	} else if (creep.hits > creep.hitsMax) {
@@ -203,5 +200,17 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		context.didUpdate();
 	} else {
 		context.wakeAt(creep['#ageTime']);
+	}
+});
+
+registerObjectTickProcessor(Tombstone, (tombstone, context) => {
+	if (tombstone.ticksToDecay === 0) {
+		for (const [ resourceType, amount ] of tombstone.store['#entries']()) {
+			ResourceIntent.drop(tombstone.pos, resourceType, amount);
+		}
+		tombstone.room['#removeObject'](tombstone);
+		context.didUpdate();
+	} else {
+		context.wakeAt(tombstone['#decayTime']);
 	}
 });
