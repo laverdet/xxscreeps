@@ -1,12 +1,13 @@
 import type { PartType } from 'xxscreeps/mods/creep/creep';
 import type { Direction, RoomPosition } from 'xxscreeps/game/position';
 import type { GameConstructor } from 'xxscreeps/game';
+import type { RoomObject } from 'xxscreeps/game/object';
 import type { StructureExtension } from './extension';
 import * as C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as RoomObject from 'xxscreeps/game/object';
+import { create as createObject } from 'xxscreeps/game/object';
 import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, intents, userGame } from 'xxscreeps/game';
 import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
@@ -67,6 +68,19 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 
 	override ['#addToMyGame'](game: GameConstructor) {
 		game.spawns[this.name] = this;
+	}
+
+	override ['#applyDamage'](power: number, type: number, source?: RoomObject) {
+		if (super['#applyDamage'](power, type, source)) {
+			const { spawning } = this;
+			if (this.hits <= 0 && spawning) {
+				const creep = Game.getObjectById(spawning['#spawnId'])!;
+				creep.room['#removeObject'](creep);
+			}
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	override isActive() {
@@ -167,7 +181,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string, name: string) {
-	const spawn = assign(RoomObject.create(new StructureSpawn, pos), {
+	const spawn = assign(createObject(new StructureSpawn, pos), {
 		hits: C.SPAWN_HITS,
 		name,
 		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.SPAWN_ENERGY_CAPACITY, C.SPAWN_ENERGY_START),

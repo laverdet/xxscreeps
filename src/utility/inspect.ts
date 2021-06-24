@@ -6,7 +6,6 @@ const inspectSymbol = Symbol.for('nodejs.util.inspect.custom');
  */
 export function expandGetters(that: any) {
 	// Find inherited getters
-	let extra = false;
 	const keys = Object.getOwnPropertyNames(that);
 	for (let proto = Object.getPrototypeOf(that); proto !== null; proto = Object.getPrototypeOf(proto)) {
 		for (const key of Object.getOwnPropertyNames(proto)) {
@@ -14,19 +13,14 @@ export function expandGetters(that: any) {
 				continue;
 			}
 			const descriptor = Object.getOwnPropertyDescriptor(proto, key)!;
-
 			if (descriptor.get && descriptor.enumerable && !keys.includes(key)) {
 				// Enumerability is intentionally inherited
-				extra = true;
 				keys.push(key);
 			}
 		}
 	}
 
 	// Build object with inherited getters expanded
-	if (!extra) {
-		return that;
-	}
 	const expanded = Object.create(that);
 	keys.sort();
 	for (const key of keys) {

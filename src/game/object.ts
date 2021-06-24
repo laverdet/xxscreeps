@@ -59,6 +59,9 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	['#applyDamage'](power: number, _type: number, _source?: RoomObject) {
 		if ((this.hits! -= power) <= 0) {
 			this.room['#removeObject'](this);
+			return true;
+		} else {
+			return false;
 		}
 	}
 

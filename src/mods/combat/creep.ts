@@ -107,6 +107,7 @@ Creep.prototype['#applyDamage'] = function(this: Creep, power, type, source) {
 			}
 		}
 	}
+	return false;
 };
 
 // Intent checks
