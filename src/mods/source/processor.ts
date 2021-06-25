@@ -45,7 +45,8 @@ registerObjectTickProcessor(Source, (source, context) => {
 	const energyCapacity = (() => {
 		const { controller } = source.room;
 		if (controller) {
-			if (controller.level === 0) {
+			// TODO: Hook into controller level change event
+			if (controller.level === 0 && controller['#reservationEndTime'] === 0) {
 				return C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
 			} else {
 				return C.SOURCE_ENERGY_CAPACITY;
