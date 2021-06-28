@@ -40,8 +40,8 @@ function getModulePayloadFromQuery(query: any) {
 		}();
 		return [ name, decoded ];
 	}));
-	if (!modules.has('main')) {
-		modules.set('main', '');
+	if (![ 'main', 'main.js', 'main.mjs', 'main.wasm' ].some(entry => modules.has(entry))) {
+		throw new Error('No `main` module');
 	}
 	const size = Fn.accumulate(Fn.map(modules.values(), content => {
 		if (typeof content === 'string') {

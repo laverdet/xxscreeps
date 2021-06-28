@@ -5,7 +5,7 @@ import * as Runtime from 'xxscreeps/driver/runtime';
 import { hooks } from 'xxscreeps/game';
 export { tick } from 'xxscreeps/driver/runtime';
 
-let isolate: ivm.Isolate;
+export let isolate: ivm.Isolate;
 
 declare module 'xxscreeps/game/game' {
 	interface CPU {
@@ -64,10 +64,28 @@ export function initialize(
 	data: InitializationPayload,
 ) {
 	isolate = isolate_;
+	// Evaluation for plain JS scripts
 	const evaluate: Runtime.Evaluate = (source, filename) => {
 		const script = isolate_.compileScriptSync(source, { filename });
 		return script.runSync(context, { reference: true }).deref();
 	};
+
+	// Compilation for ES Modules
+	type WithFilename = ivm.Module & Record<'filename', string>;
+	const compiler: Runtime.Compiler<WithFilename> = {
+		compile(source, filename) {
+			const module = isolate_.compileModuleSync(source, { filename }) as WithFilename;
+			module.filename = filename;
+			return module;
+		},
+		evaluate(module, linker) {
+			module.instantiateSync(context, (specifier, referrer) =>
+				linker(specifier, (referrer as WithFilename).filename));
+			module.evaluateSync();
+			return module.namespace.deref();
+		},
+	};
+
 	const print: Runtime.Print = (fd, payload) => printRef.applySync(undefined, [ fd, payload ]);
-	Runtime.initialize(evaluate, print, data);
+	Runtime.initialize(compiler, evaluate, print, data);
 }

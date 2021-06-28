@@ -8,10 +8,14 @@ import { Game, GameState, hooks, runForPlayer, userInfo } from 'xxscreeps/game';
 import { World } from 'xxscreeps/game/map';
 import { detach } from 'xxscreeps/schema/buffer-object';
 import { setupConsole } from './console';
-import { makeRequire } from './module';
+import { makeEnvironment } from './module';
 // eslint-disable-next-line @typescript-eslint/no-duplicate-imports
 import { flushGlobals } from 'xxscreeps/config/global';
 
+export type Compiler<Type = any> = {
+	compile(source: string, filename: string): Type;
+	evaluate(module: Type, linker: (specifier: string, referrer?: string) => Type): any;
+};
 export type Evaluate = (source: string, filename: string) => any;
 export type Print = (fd: number, payload: string, evalResult?: boolean) => void;
 
@@ -65,10 +69,11 @@ const hooksComposed = function() {
 declare const globalThis: any;
 let me: string;
 let world: World;
-let require: (name: string) => any;
+let loop: (() => any) | undefined;
+let requireMain: () => any;
 let print: Print;
 
-export function initialize(evaluate: Evaluate, printFn: Print, data: InitializationPayload) {
+export function initialize(compiler: Compiler, evaluate: Evaluate, printFn: Print, data: InitializationPayload) {
 	// Set up environment
 	flushGlobals();
 	setupConsole(print = printFn);
@@ -81,12 +86,9 @@ export function initialize(evaluate: Evaluate, printFn: Print, data: Initializat
 	hooksComposed.initialize = () => {};
 
 	// Set up runtime
-	const modules = Code.read(data.codeBlob);
-	if (!modules.has('main')) {
-		modules.set('main', '');
-	}
 	me = data.userId;
-	require = makeRequire(modules, evaluate);
+	const modules = Code.read(data.codeBlob);
+	requireMain = makeEnvironment(modules, evaluate, compiler);
 }
 
 export function tick(data: TickPayload) {
@@ -114,12 +116,22 @@ export function tick(data: TickPayload) {
 		globalThis.Game = Game;
 		try {
 			(function thisIsWhereThePlayerCodeStarts() {
-				require('main').loop();
+				if (loop) {
+					loop();
+				} else {
+					const main = requireMain();
+					if (main.loop) {
+						loop = main.loop;
+						loop!();
+					} else {
+						throw new Error('No `loop` function exported by `main` module');
+					}
+				}
 			}());
 		} catch (err) {
 			const lines: string[] = err.stack.split(/\n/g);
 			const index = lines.findIndex(line => line.includes('thisIsWhereThePlayerCodeStarts'));
-			console.error(lines.slice(0, index).join('\n'));
+			console.error((index === -1 ? lines : lines.slice(0, index)).join('\n'));
 		}
 
 		// Run requested eval expressions

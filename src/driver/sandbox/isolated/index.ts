@@ -6,6 +6,7 @@ import * as ivmInspect from 'ivm-inspect';
 import { runOnce } from 'xxscreeps/utility/memoize';
 import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox';
 import { hooks } from 'xxscreeps/driver';
+
 type Runtime = typeof import('xxscreeps/driver/sandbox/isolated/runtime');
 
 const useInspector = [ ...hooks.map('isolateInspector') ].some(use => use);
@@ -17,6 +18,7 @@ const getPathFinderModule = runOnce(() => {
 
 const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime', {
 	alias: {
+		process: 'xxscreeps/driver/sandbox/isolated/process',
 		'xxscreeps/driver/private/symbol': 'xxscreeps/driver/private/symbol/isolated-vm',
 	},
 	externals: ({ request }) =>

@@ -1,5 +1,5 @@
 import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
-import type { Evaluate, Print } from 'xxscreeps/driver/runtime';
+import type { Compiler, Evaluate, Print } from 'xxscreeps/driver/runtime';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import util from 'util';
 import vm from 'vm';
@@ -18,6 +18,9 @@ const getPathFinderModule = runOnce(() => {
 
 const getCompiledRuntime = runOnce(async() => {
 	const { source, map } = await compileRuntimeSource('xxscreeps/driver/sandbox/nodejs/runtime', {
+		alias: {
+			process: 'xxscreeps/driver/sandbox/nodejs/process',
+		},
 		externals: ({ request }) => request === 'util' ? 'nodeUtilImport' : undefined,
 	});
 	return {
@@ -46,8 +49,13 @@ export class NodejsSandbox implements Sandbox {
 		const runtime: Runtime = script.runInContext(context);
 		delete context.nodeUtilImport;
 		delete context[pf.path];
+		const compiler: Compiler = {
+			// `vm` module only support async operation
+			compile() { throw new Error('Modules are not supported within `unsafeSandbox`') },
+			evaluate() { throw new Error },
+		};
 		const evaluate: Evaluate = (source, filename) => new vm.Script(source, { filename }).runInContext(context);
-		runtime.initialize(defaultRequire, evaluate, print, data);
+		runtime.initialize(defaultRequire, compiler, evaluate, print, data);
 		return new NodejsSandbox(vm.runInContext(`
 			(function(context, tick, runInContext) {
 				let data;
