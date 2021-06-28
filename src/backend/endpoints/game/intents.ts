@@ -45,7 +45,7 @@ const CreateConstructionIntentEndpoint: Endpoint = {
 		const pos = new RoomPosition(x, y, roomName);
 		const room = await context.shard.loadRoom(pos.roomName);
 		const result = runOneShot(context.backend.world, room, context.shard.time, userId,
-			() => checkCreateConstructionSite(room, pos, structureType));
+			() => checkCreateConstructionSite(room, pos, structureType, name));
 		if (result === C.OK) {
 			return pushIntentsForRoomNextTick(context.shard, roomName, userId, {
 				local: {

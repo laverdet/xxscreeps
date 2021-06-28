@@ -21,7 +21,7 @@ const intents = [
 	registerIntentProcessor(Room, 'createConstructionSite', {},
 		(room, context, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
 			const pos = new RoomPosition(xx, yy, room.name);
-			if (checkCreateConstructionSite(room, pos, structureType) === C.OK) {
+			if (checkCreateConstructionSite(room, pos, structureType, name) === C.OK) {
 				const site = create(pos, structureType, me, name);
 				room['#insertObject'](site, true);
 				context.didUpdate();

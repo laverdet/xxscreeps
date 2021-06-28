@@ -177,6 +177,12 @@ export function checkPlacement(room: Room, pos: RoomPosition) {
 	);
 }
 
+export function lookForStructures<Type extends string>(room: Room, structureType: Type) {
+	type Object = Extract<AnyStructure, { structureType: Type }>;
+	return room.find(C.FIND_STRUCTURES).filter(
+		(structure): structure is Object => structure.structureType === structureType);
+}
+
 export function lookForStructureAt<Type extends string>(room: Room, pos: RoomPosition, structureType: Type) {
 	type Object = Extract<AnyStructure, { structureType: Type }>;
 	return room.lookForAt(C.LOOK_STRUCTURES, pos).find(

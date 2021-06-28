@@ -120,7 +120,7 @@ hooks.register('route', {
 				}
 				// Add spawn
 				Controller.claim(room.controller, userId);
-				if (checkCreateConstructionSite(room, pos, 'spawn') !== C.OK) {
+				if (checkCreateConstructionSite(room, pos, 'spawn', 'Spawn1') !== C.OK) {
 					throw new Error('Invalid intent');
 				}
 				room['#insertObject'](Spawn.create(pos, userId, name));

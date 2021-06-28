@@ -48,27 +48,18 @@ extend(Room, {
 			return C.ERR_INVALID_ARGS;
 		}
 		const pos = new RoomPosition(xx, yy, this.name);
-		const [ structureType, name ] = rest;
+		const [ structureType, nameArg ] = rest;
+		const name = structureFactories.get(structureType)?.checkName?.(this, nameArg);
 
 		// Send it off
 		return chainIntentChecks(
-			() => {
-				if (structureType === 'spawn' && typeof name === 'string') {
-					// TODO: Check newly created spawns too
-					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-					if (userGame?.spawns[name]) {
-						return C.ERR_INVALID_ARGS;
-					}
-				}
-				return C.OK;
-			},
-			() => checkCreateConstructionSite(this, pos, structureType),
+			() => checkCreateConstructionSite(this, pos, structureType, name),
 			() => intents.pushLocal(this, 'createConstructionSite', structureType, xx, yy, name));
 	},
 });
 
 // Intent check
-export function checkCreateConstructionSite(room: Room, pos: RoomPosition, structureType: ConstructibleStructureType) {
+export function checkCreateConstructionSite(room: Room, pos: RoomPosition, structureType: ConstructibleStructureType, name: string | null | undefined) {
 	// Check `structureType` is buildable
 	const factory = structureFactories.get(structureType);
 	if (!factory) {
@@ -93,6 +84,8 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 	// checkPlacement hook
 	if (factory.checkPlacement(room, pos) === null) {
 		return C.ERR_INVALID_TARGET;
+	} else if (factory.checkName?.(room, name) === null) {
+		return C.ERR_INVALID_ARGS;
 	}
 
 	// No structures on top of others
