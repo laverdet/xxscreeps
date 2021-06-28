@@ -56,10 +56,11 @@ function writeASCII(buffer: Uint8Array, offset: number, value: string) {
 // module.
 export class WASI {
 	#dv!: DataView;
-	#i32!: Int32Array;
+	#i32: Int32Array = {} as never;
 	#u8!: Uint8Array;
 	#output: Uint8Array[][] = [ [], [], [] ];
 	#env: Record<string, string>;
+	#memory!: WebAssembly.Memory & { addGrowCallback?: (fn: () => void) => void };
 	#title;
 
 	constructor(title: string, env: Record<string, string> = {}) {
@@ -68,20 +69,29 @@ export class WASI {
 	}
 
 	/**
+	 * Reset TypedArray views if the underlying linear memory buffer has changed.
+	 */
+	reset() {
+		const { buffer } = this.#memory;
+		if (buffer !== this.#i32.buffer) {
+			this.#dv = new DataView(buffer);
+			this.#i32 = new Int32Array(buffer);
+			this.#u8 = new Uint8Array(buffer);
+		}
+	}
+
+	/**
 	 * This differs from the nodejs version in that it does *not* invoke `initialize_`.
 	 * https://nodejs.org/api/wasi.html#wasi_wasi_initialize_instance
 	 */
 	initialize = (instance: WebAssembly.Instance) => {
-		type WithGrowCallback = { addGrowCallback?: (fn: () => void) => void };
-		const memory = instance.exports.memory as WebAssembly.Memory & WithGrowCallback;
-		const reset = () => {
-			const { buffer } = memory;
-			this.#dv = new DataView(buffer);
-			this.#i32 = new Int32Array(buffer);
-			this.#u8 = new Uint8Array(buffer);
-		};
-		reset();
-		memory.addGrowCallback?.(reset);
+		this.#memory = instance.exports.memory as never;
+		this.reset();
+		if (this.#memory.addGrowCallback) {
+			// If a memory growth callback is provided we don't need to check memory growth each time.
+			this.#memory.addGrowCallback(this.reset.bind(this));
+			this.reset = () => {};
+		}
 	};
 
 	/**
@@ -92,6 +102,7 @@ export class WASI {
 	 * @param resolution uint64_t* - The resolution of the clock, or an error if one happened.
 	 */
 	clock_getres = (clockId: number, resolution: number) => {
+		this.reset();
 		let result: bigint;
 		switch (clockId) {
 			case C.realtime:
@@ -118,6 +129,7 @@ export class WASI {
 	 * @param timestamp uint64_t* - The time value of the clock.
 	 */
 	clock_time_get = (clockId: number, precision: bigint, timestamp: number) => {
+		this.reset();
 		let now: bigint;
 		switch (clockId) {
 			case C.realtime:
@@ -147,6 +159,7 @@ export class WASI {
 	 * @param environBuf char*
 	 */
 	environ_get = (environ: number, environBuf: number) => {
+		this.reset();
 		let envIndex = environ >>> 2;
 		let bufAddr = environBuf;
 		for (const [ key, value ] of Object.entries(this.#env)) {
@@ -164,6 +177,7 @@ export class WASI {
 	 * @param size int*
 	 */
 	environ_sizes_get = (count: number, size: number) => {
+		this.reset();
 		const entries = Object.entries(this.#env);
 		this.#i32[count >>> 2] = entries.length;
 		this.#i32[size >>> 2] = entries.reduce((sum, entry) => sum + entry[0].length + entry[1].length + 2, 0);
@@ -182,6 +196,7 @@ export class WASI {
 		if (fd !== 1 && fd !== 2) {
 			return C.inval;
 		}
+		this.reset();
 		let totalSize = 0;
 		for (let ii = 0; ii < iovs; ++ii) {
 			// Read iovector
@@ -227,6 +242,7 @@ export class WASI {
 	 * @param size - int
 	 */
 	random_get = (buffer: number, size: number) => {
+		this.reset();
 		// Math.random() is of course not cryptographically secure, but this is a video game.
 		for (let ii = buffer; ii < buffer + size; ++ii) {
 			this.#u8[ii] = (Math.random() * 0x100) >>> 0;
