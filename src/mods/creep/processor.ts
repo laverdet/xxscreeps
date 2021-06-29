@@ -11,14 +11,15 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/engine/processor/movement';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
 import { Game } from 'xxscreeps/game';
-import { Creep } from './creep';
+import { Creep, calculateCarry } from './creep';
 import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
+import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource';
 import { isBorder } from 'xxscreeps/game/terrain';
 import { writeRoomObject } from 'xxscreeps/engine/db/room';
 import { typedArrayToString } from 'xxscreeps/utility/string';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { filterInPlace } from 'xxscreeps/utility/utility';
+import { clamp, filterInPlace } from 'xxscreeps/utility/utility';
 import { Tombstone, buryCreep } from './tombstone';
 
 export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) {
@@ -34,6 +35,29 @@ export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) 
 		if (actionLog.length > 0) {
 			const minimum = Fn.minimum(Fn.map(actionLog, action => action.time))!;
 			context.wakeAt(minimum + kRetainActionsTime);
+		}
+	}
+}
+
+function recalculateBody(creep: Creep) {
+	// Apply damage to body parts
+	let hits = creep.hits - creep.hitsMax;
+	for (const part of creep.body) {
+		hits += 100;
+		part.hits = clamp(0, 100, hits);
+	}
+	// Drop excess resources
+	const capacity = creep.store['#capacity'] = calculateCarry(creep.body);
+	let overflow = creep.store.getUsedCapacity() - capacity;
+	if (overflow > 0) {
+		const entries = creep.store['#entries']();
+		for (const [ type, amount ] of entries) {
+			const drop = Math.min(amount, overflow);
+			creep.store['#subtract'](type, drop);
+			dropResource(creep.pos, type, drop);
+			if ((overflow -= drop) <= 0) {
+				break;
+			}
 		}
 	}
 }
@@ -128,6 +152,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 	if (creep.tickHitsDelta) {
 		creep.hits += creep.tickHitsDelta;
 		creep.tickHitsDelta = 0;
+		recalculateBody(creep);
 		context.didUpdate();
 	}
 	if (

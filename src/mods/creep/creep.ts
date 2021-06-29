@@ -35,7 +35,7 @@ const shape = struct(objectFormat, {
 	...variant('creep'),
 	body: vector(struct({
 		boost: optionalResourceEnumFormat,
-		hits: 'uint8',
+		hits: 'int8',
 		type: enumerated(...C.BODYPARTS_ALL),
 	})),
 	fatigue: 'int32',
@@ -349,18 +349,23 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	}
 }
 
-export function create(pos: RoomPosition, body: PartType[], name: string, owner: string) {
-	const carryCapacity = body.reduce((energy, type) =>
-		type === C.CARRY ? energy + C.CARRY_CAPACITY : energy, 0);
+export function create(pos: RoomPosition, parts: PartType[], name: string, owner: string) {
+	const body = parts.map(type => ({ type, hits: 100, boost: undefined }));
 	const creep = assign(createObject(new Creep, pos), {
-		body: body.map(type => ({ type, hits: 100, boost: undefined })),
+		body,
 		hits: body.length * 100,
 		fatigue: 0,
 		name,
-		store: OpenStore['#create'](carryCapacity),
+		store: OpenStore['#create'](calculateCarry(body)),
 	});
 	creep['#user'] = owner;
 	return creep;
+}
+
+export function calculateCarry(body: Creep['body']) {
+	return Fn.accumulate(
+		Fn.filter(body, part => part.hits > 0),
+		part => part.type === C.CARRY ? C.CARRY_CAPACITY : 0);
 }
 
 registerObstacleChecker(params => {
