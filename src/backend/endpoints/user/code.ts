@@ -28,9 +28,11 @@ function getModulePayloadFromQuery(query: any) {
 	if (!query) {
 		return new Map([ [ 'main', '' ] ]);
 	}
-	const modules = new Map(Fn.map(Object.entries<string | { binary: string }>(query), ([ name, content ]) => {
+	const entries = Fn.map(Object.entries<any>(query), ([ name, content ]): [ string, any ] => {
 		const decoded = function() {
-			if (typeof content === 'string') {
+			if (content === null) {
+				return;
+			} else if (typeof content === 'string') {
 				return content;
 			} else if (
 				typeof content === 'object' && typeof content.binary === 'string') {
@@ -39,7 +41,8 @@ function getModulePayloadFromQuery(query: any) {
 			throw new TypeError('Invalid payload');
 		}();
 		return [ name, decoded ];
-	}));
+	});
+	const modules = new Map(Fn.reject(entries, entry => entry[1] === undefined));
 	if (![ 'main', 'main.js', 'main.mjs', 'main.wasm' ].some(entry => modules.has(entry))) {
 		throw new Error('No `main` module');
 	}
