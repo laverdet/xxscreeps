@@ -132,6 +132,7 @@ hooks.register('route', {
 			// Save
 			await Promise.all([
 				forceRoomProcess(context.shard, roomName),
+				context.backend.shard.saveRoom(roomName, context.shard.time, room),
 				context.backend.shard.saveRoom(roomName, context.shard.time + 1, room),
 			]);
 		});

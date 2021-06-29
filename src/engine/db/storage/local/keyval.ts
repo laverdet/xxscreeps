@@ -237,9 +237,11 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 			const { size } = set;
 			members.forEach(value => set.add(value));
 			return set.size - size;
-		} else {
+		} else if (members.length) {
 			this.data.set(key, new Set(members));
 			return members.length;
+		} else {
+			return 0;
 		}
 	}
 

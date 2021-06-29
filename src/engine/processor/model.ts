@@ -99,7 +99,7 @@ export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string)
 	return payloads.map((json): SingleIntent[] => JSON.parse(json));
 }
 
-export async function begetRoomProcessQueue(shard: Shard, time: number, processorTime: number) {
+export async function begetRoomProcessQueue(shard: Shard, time: number, processorTime: number, early?: boolean) {
 	if (processorTime > time) {
 		// The processor has lagged and is running through old `process` messages
 		return processorTime;
@@ -127,14 +127,29 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 			]);
 			count += awoken;
 		}
-		// Copy active rooms to current processing queue. This can run after runners
-		// have already started so it's important that it's resilient to negative
-		// numbers already in `processRoomsSetKey`.
-		await Promise.all([
-			shard.scratch.zunionStore(processRoomsSetKey(time), [ activeRoomsKey, processRoomsSetKey(time) ]),
-			shard.scratch.incrBy(processRoomsPendingKey(time), count),
-			shard.scratch.incrBy(finalizedRoomsPendingKey(time), count),
-		]);
+		if (count === 0) {
+			// In this case there are *no* rooms to process so we take care to make sure processing
+			// doesn't halt.
+			if (early) {
+				// We're invoking the function at the end of the previous queue, and the main loop is not
+				// currently ready for the next tick. We'll set the processor time back the way it was so
+				// that this code will be invoked again at the start of the next tick.
+				await shard.scratch.cas(processorTimeKey, time, time - 1);
+				return time - 1;
+			} else {
+				// The current processor tick has started, so we can now send the finished notification.
+				await getServiceChannel(shard).publish({ type: 'tickFinished' });
+			}
+		} else {
+			// Copy active rooms to current processing queue. This can run after runners
+			// have already started so it's important that it's resilient to negative
+			// numbers already in `processRoomsSetKey`.
+			await Promise.all([
+				shard.scratch.zunionStore(processRoomsSetKey(time), [ activeRoomsKey, processRoomsSetKey(time) ]),
+				shard.scratch.incrBy(processRoomsPendingKey(time), count),
+				shard.scratch.incrBy(finalizedRoomsPendingKey(time), count),
+			]);
+		}
 		return time;
 	} else {
 		return Number(await shard.scratch.get(processorTimeKey));
@@ -162,7 +177,7 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 		const remaining = await shard.scratch.decrBy(finalizedRoomsPendingKey(time), roomsCount);
 		if (remaining === 0) {
 			const [ nextTime ] = await Promise.all([
-				begetRoomProcessQueue(shard, time + 1, time),
+				begetRoomProcessQueue(shard, time + 1, time, true),
 				getServiceChannel(shard).publish({ type: 'tickFinished' }),
 			]);
 			return nextTime;

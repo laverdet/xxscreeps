@@ -74,9 +74,7 @@ try {
 
 			// Wait for tick to finish
 			for await (const message of serviceSubscription) {
-				if (message.type === 'processorInitialized') {
-					await processorChannel.publish({ type: 'process', time });
-				} else if (message.type === 'runnerConnected') {
+				if (message.type === 'runnerConnected') {
 					await runnerChannel.publish({ type: 'run', time });
 				} else if (message.type === 'tickFinished') {
 					break;

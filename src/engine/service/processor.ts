@@ -94,22 +94,22 @@ try {
 	}
 
 	// Initialize processor queue, or sync up with existing processors
-	currentTime = await begetRoomProcessQueue(shard, firstTime, firstTime - 1);
+	const time = updateTime(await begetRoomProcessQueue(shard, firstTime, firstTime - 1));
+	// Send message to begin processing, this will be picked up by the loop iteration below
+	queueMicrotask(() => void getProcessorChannel(shard).publish({ type: 'process', time }));
 	let latch = 0;
-	let nextTime = currentTime;
 	for await (const message of processorSubscription) {
 
 		if (message.type === 'shutdown') {
 			break;
 
 		} else if (message.type === 'process') {
-			nextTime = message.time;
 			if (++latch > 1) {
 				continue;
 			}
 			mustNotReject(async() => {
 				loop: while (true) {
-					const time = updateTime(nextTime);
+					const time = updateTime(await begetRoomProcessQueue(shard, message.time, currentTime));
 					const queueKey = processRoomsSetKey(time);
 
 					// Check affinity rooms
