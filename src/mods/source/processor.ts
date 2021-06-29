@@ -1,14 +1,18 @@
+import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource';
+import { StructureKeeperLair } from './keeper-lair';
+import { Source } from './source';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { calculatePower } from 'xxscreeps/mods/creep/creep';
 import { Game } from 'xxscreeps/game';
-import { StructureKeeperLair } from './keeper-lair';
-import { Source } from './source';
+import { search } from 'xxscreeps/driver/path-finder';
+import { lookForStructures } from 'xxscreeps/mods/structure/structure';
+import { iterateNeighbors } from 'xxscreeps/game/position';
 
 registerHarvestProcessor(Source, (creep, source) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER);
@@ -102,18 +106,56 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 
 registerNPC('3', Game => {
 	let loop = false;
-	for (const creep of Object.values(Game.creeps)) {
+	const creeps = Object.values(Game.creeps);
+	for (const creep of creeps) {
 
 		// Find resource to protect
 		const resource = Game.getObjectById<Source>(creep.memory.id ??= function() {
 			const resources = [ ...creep.room.find(C.FIND_SOURCES), ...creep.room.find(C.FIND_MINERALS) ];
-			const resource = resources.find(resource => creep.pos.inRangeTo(resource, 5));
-			if (!resource) {
-				console.error(`Failed to find resource for keeper ${creep.pos}`);
-				return;
+			const resource = resources.filter(resource =>
+				creep.pos.inRangeTo(resource, 5) &&
+				!creeps.some(creep => creep.memory.id === resource.id));
+
+			if (resource.length === 1) {
+				return resource[0].id;
+			} else {
+				// Multiple resources nearby. This is a more complete solution than the vanilla server
+				// implements. The goal is to allow keepers to settle on a source so those rooms can idle
+				const lairs = lookForStructures(creep.room, C.STRUCTURE_KEEPER_LAIR);
+				const home = lairs.find(lair => creep.name === `Keeper${lair.id}`)!;
+				const terrain = creep.room.getTerrain();
+				const costTo = (origin: RoomPosition, goal: RoomPosition) => {
+					// Search specifically to walkable nodes to handle the case where a source is neighboring
+					// a keeper lair, but separated by a wall.
+					const goals = Fn.reject(iterateNeighbors(goal), pos => terrain.get(pos.x, pos.y) === C.TERRAIN_MASK_WALL);
+					const result = search(origin, [ ...goals ], { maxCost: 25 });
+					return result.incomplete ? Infinity : result.cost;
+				};
+
+				// Search farthest resources first, to ensure that we get shortest total path length between
+				// all lair :: source pairs
+				const resourceInfo = resources.map(resource => ({
+					cost: costTo(home.pos, resource.pos),
+					resource,
+				}));
+				resources.sort((left, right) => costTo(home.pos, right.pos) - costTo(home.pos, left.pos));
+				for (const { resource } of Fn.reject(resourceInfo, info => info.cost === Infinity)) {
+					// Find distance to each lair from this resource
+					const localLairs = lairs.filter(lair => resource.pos.inRangeTo(lair, 5)).map(lair => ({
+						cost: costTo(resource.pos, lair.pos),
+						lair,
+					}));
+					// Sort and iterate over all minimum equal-cost lairs
+					localLairs.sort((left, right) => left.cost - right.cost);
+					const closeLairs = Fn.filter(localLairs, lair => lair.cost === localLairs[0].cost);
+					for (const lair of closeLairs) {
+						if (lair.lair === home) {
+							return resource.id;
+						}
+					}
+				}
 			}
-			return resource.id;
-		}());
+		}()!);
 
 		// Move towards it
 		if (resource && !creep.pos.isNearTo(resource)) {

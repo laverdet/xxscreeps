@@ -164,6 +164,7 @@ export function flush(): Uint8Array {
  */
 export function initialize(value: Readonly<Uint8Array> | null) {
 	json = undefined;
+	string = undefined;
 	if (value) {
 		memoryLength = value.length >>> 1;
 		memory = new Uint16Array(new SharedArrayBuffer(align(value.length)));
