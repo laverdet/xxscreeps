@@ -1,13 +1,11 @@
-import type { Endpoint } from 'xxscreeps/backend';
 import * as User from 'xxscreeps/engine/db/user';
 import { hooks } from 'xxscreeps/backend';
 import { runOnce } from 'xxscreeps/utility/memoize';
 import config from 'xxscreeps/config';
 const { allowGuestAccess } = config.backend;
-
 const sendUserInfo = runOnce(() => hooks.makeMapped('sendUserInfo'));
 
-const MeEndpoint: Endpoint = {
+hooks.register('route', {
 	path: '/api/auth/me',
 
 	async execute(context) {
@@ -23,7 +21,7 @@ const MeEndpoint: Endpoint = {
 			const [ user ] = await Promise.all([
 				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
 				User.findProvidersForUser(context.db, userId),
-				Promise.all(sendUserInfo()(context.db, userId, info)),
+				Promise.all(sendUserInfo()(context.db, userId, info, true)),
 			]);
 			return Object.assign(info, {
 				ok: 1,
@@ -54,6 +52,27 @@ const MeEndpoint: Endpoint = {
 			};
 		}
 	},
-};
+});
 
-export default [ MeEndpoint ];
+hooks.register('route', {
+	path: '/api/user/find',
+
+	async execute(context) {
+		const userId = await User.findUserByName(context.db, String(context.query.username));
+		if (userId) {
+			const info = {};
+			const [ user ] = await Promise.all([
+				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
+				Promise.all(sendUserInfo()(context.db, userId, info, false)),
+			]);
+			return {
+				ok: 1,
+				user: Object.assign(info, {
+					_id: userId,
+					username: user.username,
+					badge: user.badge ? JSON.parse(user.badge) : undefined,
+				}),
+			};
+		}
+	},
+});

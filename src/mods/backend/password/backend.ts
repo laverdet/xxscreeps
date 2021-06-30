@@ -90,9 +90,11 @@ hooks.register('route', {
 });
 
 // Add password flag to user info payload
-hooks.register('sendUserInfo', async(db, userId, userInfo) => {
-	const password = await db.data.hget(infoKey(userId), 'password');
-	if (password) {
-		userInfo.password = true;
+hooks.register('sendUserInfo', async(db, userId, userInfo, privateSelf) => {
+	if (privateSelf) {
+		const password = await db.data.hget(infoKey(userId), 'password');
+		if (password) {
+			userInfo.password = true;
+		}
 	}
 });

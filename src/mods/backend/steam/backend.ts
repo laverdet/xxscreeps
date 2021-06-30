@@ -44,9 +44,11 @@ if (steamApiKey) {
 	console.warn('Config `backend.steamApiKey` missing; Steam login inactive');
 }
 
-hooks.register('sendUserInfo', async(db, userId, userInfo) => {
-	const providers = await User.findProvidersForUser(db, userId);
-	if (providers.steam) {
-		userInfo.steam = { id: providers.steam };
+hooks.register('sendUserInfo', async(db, userId, userInfo, privateSelf) => {
+	if (privateSelf) {
+		const providers = await User.findProvidersForUser(db, userId);
+		if (providers.steam) {
+			userInfo.steam = { id: providers.steam };
+		}
 	}
 });

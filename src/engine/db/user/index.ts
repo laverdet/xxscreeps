@@ -5,10 +5,14 @@ const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
 export const infoKey = (userId: string) => `user/${userId}`;
 
+const annoyingUsernames = [
+	NaN, Infinity, false, true, undefined, null,
+].map(value => `${value}`);
 export function checkUsername(username: string) {
 	return (
 		typeof username === 'string' &&
 		username.length <= 20 &&
+		!annoyingUsernames.includes(username) &&
 		/^[a-zA-Z0-9][a-zA-Z0-9_-]+[a-zA-Z0-9]$/.test(username)
 	);
 }
