@@ -1,8 +1,7 @@
-import * as Fn from 'xxscreeps/utility/functional';
-import * as RoomSchema from 'xxscreeps/engine/db/room';
 import * as User from 'xxscreeps/engine/db/user';
 import { hooks } from 'xxscreeps/engine/runner';
-import { controlledRoomCountKey } from './processor';
+import { hooks as processorHooks } from 'xxscreeps/engine/processor';
+import { controlledRoomKey, reservedRoomKey } from './processor';
 
 declare module 'xxscreeps/engine/runner' {
 	interface TickPayload {
@@ -14,6 +13,14 @@ declare module 'xxscreeps/engine/runner' {
 	}
 }
 
+processorHooks.register('refreshRoom', async(shard, room) => {
+	const userId = room['#user'];
+	if (userId !== null) {
+		const key = room['#level'] === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);
+		await shard.scratch.sadd(key, [ room.name ]);
+	}
+});
+
 hooks.register('runnerConnector', player => {
 	const { shard, userId } = player;
 	let gcl = NaN;
@@ -23,11 +30,7 @@ hooks.register('runnerConnector', player => {
 	return [ undefined, {
 		async refresh(payload) {
 			if (shouldCheckRooms) {
-				roomCount = Fn.accumulate(await payload.roomBlobsPromise, blob => {
-					const room = RoomSchema.read(blob);
-					return room['#user'] === userId && room['#level'] > 0 ? 1 : 0;
-				});
-				await shard.scratch.set(controlledRoomCountKey(userId), roomCount);
+				roomCount = await shard.scratch.scard(controlledRoomKey(userId));
 			}
 			payload.controlledRoomCount = roomCount;
 			if (shouldCheckGcl) {

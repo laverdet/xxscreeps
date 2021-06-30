@@ -18,7 +18,6 @@ export interface TickPayload {
 		tickLimit: number;
 	};
 	roomBlobs: Readonly<Uint8Array>[];
-	roomBlobsPromise: Promise<Readonly<Uint8Array>[]>;
 	time: number;
 	backendIntents?: RunnerIntent[];
 	eval: Extract<MessageFor<typeof getRunnerUserChannel>, { type: 'eval' }>['payload'][];

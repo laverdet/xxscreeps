@@ -8,8 +8,9 @@ import { Database, Shard } from 'xxscreeps/engine/db';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async';
-import { getServiceChannel } from '.';
 import { lookAhead, mustNotReject } from 'xxscreeps/utility/async';
+import { hooks } from 'xxscreeps/engine/processor/symbols';
+import { getServiceChannel } from '.';
 
 // Per-tick bookkeeping handles
 const processedRooms = new Map<string, RoomProcessor>();
@@ -70,9 +71,13 @@ initializeIntentConstraints();
 try {
 
 	// Initialize rooms / user relationships
+	const refreshRoom = hooks.makeMapped('refreshRoom');
 	for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
 		const room = await shard.loadRoom(roomName, undefined, true);
-		await updateUserRoomRelationships(shard, room);
+		await Promise.all([
+			updateUserRoomRelationships(shard, room),
+			...refreshRoom(shard, room),
+		]);
 	}
 
 	// Wait for all processors to initialize

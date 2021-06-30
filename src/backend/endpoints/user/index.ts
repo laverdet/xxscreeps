@@ -5,6 +5,7 @@ import './auth';
 import './code';
 import './me';
 import './profile';
+import './stats';
 import { hooks } from 'xxscreeps/backend';
 
 export default [ ...badge, ...messages, ...world ];

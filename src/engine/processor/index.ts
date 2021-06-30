@@ -6,6 +6,7 @@ import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbo
 import { getOrSet } from 'xxscreeps/utility/utility';
 export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room';
 export { registerRoomTickProcessor } from './room';
+export { hooks } from './symbols';
 
 // Intent type definitions
 type IntentProcessor = (receiver: any, context: ProcessorContext, ...data: any) => void;

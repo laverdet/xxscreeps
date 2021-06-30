@@ -7,7 +7,8 @@ import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller';
 
-export const controlledRoomCountKey = (userId: string) => `users/${userId}/controlledRooms`;
+export const controlledRoomKey = (userId: string) => `user/${userId}/controlledRooms`;
+export const reservedRoomKey = (userId: string) => `user/${userId}/reservedRooms`;
 
 // Processor methods
 export function claim(controller: StructureController, user: string) {
@@ -48,22 +49,34 @@ const intents = [
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkClaimController(creep, controller) === C.OK) {
 			const userId = creep['#user'];
+			const roomName = controller.room.name;
+			// Set user to ensure another user doesn't claim this controller while the promises are
+			// pending
+			controller['#user'] = userId;
 			context.task(async function() {
 				// Fetch current GCL & controlled room count from database
-				const [ roomCountStr, gcl ] = await Promise.all([
-					context.shard.scratch.get(controlledRoomCountKey(userId)),
+				const [ roomCount, gcl ] = await Promise.all([
+					context.shard.scratch.scard(controlledRoomKey(userId)),
 					context.shard.db.data.hget(User.infoKey(userId), 'gcl'),
 				]);
-				// Check GCL, and compare-and-swap the new room count
-				const roomCount = Number(roomCountStr);
-				if (Number(gcl) >= roomCount ** C.GCL_POW * C.GCL_MULTIPLY) {
-					return context.shard.scratch.cas(controlledRoomCountKey(userId), roomCount, roomCount + 1);
+				// Check GCL, and save the newly-controlled room
+				const roomCapacity = Math.floor((Number(gcl) / C.GCL_MULTIPLY) ** (1 / C.GCL_POW)) + 1;
+				if (roomCapacity > Number(roomCount)) {
+					const [ , count ] = await Promise.all([
+						context.shard.scratch.sadd(controlledRoomKey(userId), [ roomName ]),
+						context.shard.scratch.scard(controlledRoomKey(userId)),
+					]);
+					if (roomCapacity >= count) {
+						return true;
+					} else {
+						await context.shard.scratch.srem(controlledRoomKey(userId), [ roomName ]);
+						return false;
+					}
 				}
 				return false;
-			}(), didIncrement => {
-				// Still need to double-check that this intent is valid. If this fails the runner should
-				// update total room count at the beginning of next tick
-				if (didIncrement && CreepLib.checkClaimController(creep, controller) === C.OK) {
+			}(), didClaim => {
+				if (didClaim) {
+					controller['#user'] = null;
 					claim(controller, creep['#user']);
 					saveAction(creep, 'reserveController', controller.pos);
 					context.didUpdate();
@@ -93,8 +106,10 @@ const intents = [
 					reservationEndTime + power + 1,
 				);
 			} else {
+				const userId = creep['#user'];
 				controller['#reservationEndTime'] = Game.time + power + 1;
-				controller.room['#user'] = creep['#user'];
+				controller.room['#user'] = userId;
+				context.task(context.shard.scratch.sadd(reservedRoomKey(userId), [ controller.room.name ]));
 			}
 			saveAction(creep, 'reserveController', controller.pos);
 			context.didUpdate();
@@ -180,8 +195,10 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 		const reservationEndTime = controller['#reservationEndTime'];
 		if (reservationEndTime) {
 			if (reservationEndTime <= Game.time) {
+				const userId = controller.room['#user']!;
 				controller['#reservationEndTime'] = 0;
 				controller.room['#user'] = null;
+				context.task(context.shard.scratch.srem(reservedRoomKey(userId), [ controller.room.name ]));
 				context.didUpdate();
 			} else {
 				context.wakeAt(reservationEndTime);
@@ -203,13 +220,14 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			--controller.room['#level'];
 			controller.safeModeAvailable = 0;
 			if (controller.level === 0) {
-				context.task(context.shard.scratch.decr(controlledRoomCountKey(controller['#user']!)));
+				const userId = controller.room['#user']!;
 				controller['#downgradeTime'] = 0;
 				controller['#progress'] = 0;
 				controller['#user'] = null;
 				controller['#safeModeCooldownTime'] = 0;
 				controller.room['#safeModeUntil'] = 0;
 				controller.room['#user'] = null;
+				context.task(context.shard.scratch.srem(controlledRoomKey(userId), [ controller.room.name ]));
 			} else {
 				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[controller.level]! * 0.9);

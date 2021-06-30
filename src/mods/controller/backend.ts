@@ -1,6 +1,7 @@
 import config from 'xxscreeps/config';
-import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
+import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks } from 'xxscreeps/backend';
 import { StructureController } from './controller';
+import { controlledRoomKey, reservedRoomKey } from './processor';
 
 if (config.backend.socketSkipsPermanents) {
 	bindTerrainRenderer(StructureController, () => 0x505050);
@@ -34,4 +35,25 @@ bindRenderer(StructureController, (controller, next) => {
 			},
 		} : undefined,
 	};
+});
+
+hooks.register('route', {
+	path: '/api/user/rooms',
+	async execute(context) {
+		const { shard } = context;
+		const userId = context.query.id as string;
+		const [ controlled, reserved ] = await Promise.all([
+			shard.scratch.smembers(controlledRoomKey(userId)),
+			shard.scratch.smembers(reservedRoomKey(userId)),
+		]);
+		return {
+			ok: 1,
+			shards: {
+				[shard.name]: controlled,
+			},
+			reservations: {
+				[shard.name]: reserved,
+			},
+		};
+	},
 });
