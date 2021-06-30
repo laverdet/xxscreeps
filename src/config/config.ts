@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import os from 'os';
 
-// npx typescript-json-schema tsconfig.json Schema --include ./src/config/schema.ts --defaultProps --required -o ./src/config/config.schema.json
+// npx typescript-json-schema tsconfig.json Schema --include ./src/config/config.ts --defaultProps --required -o ./src/config/config.schema.json
 export type Schema = {
 	/**
 	 * Backend server settings
@@ -25,15 +25,6 @@ export type Schema = {
 		 * restart.
 		 */
 		secret?: string;
-
-		/**
-		 * The back can represent permanent objects such as sources and minerals as pixels in the map
-		 * thumbnail instead of as coordinates over the `roomMap2` socket. This may speed up the client
-		 * but may also break compatibility with unofficial tools. Set this option to `false` to select
-		 * the behavior that matches the official server.
-		 * @default true
-		 */
-		socketSkipsPermanents?: boolean;
 
 		/**
 		 * Minimum time between socket updates, in milliseconds. Setting this lower may cause
@@ -202,7 +193,6 @@ export const defaults = {
 	backend: {
 		allowGuestAccess: true as boolean,
 		bind: '*',
-		socketSkipsPermanents: true as boolean,
 		socketThrottle: 125,
 	},
 	launcher: {

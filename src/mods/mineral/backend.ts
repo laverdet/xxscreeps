@@ -1,13 +1,9 @@
-import config from 'xxscreeps/config';
 import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
 import { StructureExtractor } from './extractor';
 import { Mineral } from './mineral';
 
-if (config.backend.socketSkipsPermanents) {
-	bindTerrainRenderer(Mineral, () => 0xaeaeae);
-} else {
-	bindMapRenderer(Mineral, () => 'm');
-}
+bindMapRenderer(Mineral, () => 'm');
+bindTerrainRenderer(Mineral, () => 0xaeaeae);
 
 bindRenderer(Mineral, (mineral, next) => ({
 	...next(),

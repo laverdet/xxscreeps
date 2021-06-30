@@ -22,11 +22,6 @@
                     "description": "Secret used for session authentication. If not specified a new secret will be generated each\nrestart.",
                     "type": "string"
                 },
-                "socketSkipsPermanents": {
-                    "default": true,
-                    "description": "The back can represent permanent objects such as sources and minerals as pixels in the map\nthumbnail instead of as coordinates over the `roomMap2` socket. This may speed up the client\nbut may also break compatibility with unofficial tools. Set this option to `false` to select\nthe behavior that matches the official server.",
-                    "type": "boolean"
-                },
                 "socketThrottle": {
                     "default": 125,
                     "description": "Minimum time between socket updates, in milliseconds. Setting this lower may cause\nperformance issues in the client.",
