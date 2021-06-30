@@ -61,4 +61,5 @@ try {
 	}
 	runnerSubscription.disconnect();
 	shard.disconnect();
+	db.disconnect();
 }

@@ -104,6 +104,7 @@ try {
 	}
 
 } finally {
+	db.disconnect();
 	shard.disconnect();
 	serviceChannel.disconnect();
 }

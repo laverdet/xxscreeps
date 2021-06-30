@@ -56,9 +56,9 @@ installEndpointHandlers(koa, router);
 // Shutdown handler
 const shutdownServer = setupGracefulShutdown(httpServer);
 const serviceChannel = await getServiceChannel(backendContext.shard).subscribe();
-const serviceUnlistener = serviceChannel.listen(message => {
+serviceChannel.listen(message => {
 	if (message.type === 'shutdown') {
-		serviceUnlistener();
+		serviceChannel.disconnect();
 		shutdownServer();
 		void backendContext.disconnect();
 	}

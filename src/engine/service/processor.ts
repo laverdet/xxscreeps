@@ -174,6 +174,7 @@ try {
 	}
 
 } finally {
-	shard.disconnect();
 	processorSubscription.disconnect();
+	shard.disconnect();
+	db.disconnect();
 }
