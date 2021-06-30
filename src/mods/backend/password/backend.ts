@@ -44,8 +44,7 @@ hooks.register('route', {
 		const { email, password } = context.request.body;
 		const userId = await findUserByName(context.db, email);
 		if (userId) {
-			const result = await checkPassword(context.db, userId, password);
-			if (result === true) {
+			if (await checkPassword(context.db, userId, password)) {
 				context.state.userId = userId;
 				return { ok: 1, token: await context.flushToken() };
 			}
@@ -68,18 +67,13 @@ hooks.register('route', {
 		const { oldPassword, password } = context.request.body;
 		if (
 			typeof password !== 'string' || password.length < 8 ||
-			!await checkPassword(context.db, userId, oldPassword)
+			await checkPassword(context.db, userId, oldPassword) === false
 		) {
 			return { error: 'Invalid password' };
 		}
 		const iterations = 100000;
 		const salt = crypto.randomBytes(16);
 		const hash = await promisify(crypto.pbkdf2)(password, salt, iterations, 64, 'sha512');
-		console.log(JSON.stringify({
-			hash: hash.toString('latin1'),
-			iterations,
-			salt: salt.toString('latin1'),
-		}));
 		await context.db.data.hset(infoKey(userId), 'password', JSON.stringify({
 			hash,
 			iterations,
