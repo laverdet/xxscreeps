@@ -126,7 +126,7 @@ export class PlayerInstance {
 			// Dispose the current sandbox if the user has pushed new code
 			const wasStale = this.stale;
 			if (wasStale) {
-				this.sandbox!.dispose();
+				this.sandbox?.dispose();
 				this.sandbox = undefined;
 				this.seenUsers.clear();
 				this.stale = false;
@@ -140,13 +140,9 @@ export class PlayerInstance {
 					terrainBlob: this.world.terrainBlob,
 				} as never;
 				const [ codeBlob ] = await Promise.all([
-					this.branchName ? Code.loadBlobs(this.shard.db, this.userId, this.branchName) : null,
+					this.branchName ? Code.loadBlobs(this.shard.db, this.userId, this.branchName) : undefined,
 					this.connectors.initialize(payload),
 				]);
-				if (!codeBlob) {
-					console.error(`Unable to load code for user ${this.userId}`);
-					return;
-				}
 				payload.codeBlob = codeBlob;
 				this.sandbox = await createSandbox(payload, this.userId, (fd, payload) => {
 					const type = ([ 'result', 'log', 'error' ] as const)[fd];

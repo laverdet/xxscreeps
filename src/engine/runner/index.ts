@@ -6,7 +6,7 @@ export { hooks } from './symbols';
 
 export interface InitializationPayload {
 	userId: string;
-	codeBlob: CodeBlobs;
+	codeBlob: CodeBlobs | undefined;
 	shardName: string;
 	terrainBlob: Readonly<Uint8Array>;
 }

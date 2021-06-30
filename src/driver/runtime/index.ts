@@ -87,7 +87,7 @@ export function initialize(compiler: Compiler, evaluate: Evaluate, printFn: Prin
 
 	// Set up runtime
 	me = data.userId;
-	const modules = Code.read(data.codeBlob);
+	const modules = data.codeBlob ? Code.read(data.codeBlob) : new Map;
 	requireMain = makeEnvironment(modules, evaluate, compiler);
 }
 

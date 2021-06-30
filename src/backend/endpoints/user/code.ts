@@ -44,7 +44,7 @@ function getModulePayloadFromQuery(query: any) {
 	});
 	const modules = new Map(Fn.reject(entries, entry => entry[1] === undefined));
 	if (![ 'main', 'main.js', 'main.mjs', 'main.wasm' ].some(entry => modules.has(entry))) {
-		throw new Error('No `main` module');
+		modules.set('main', '');
 	}
 	const size = Fn.accumulate(Fn.map(modules.values(), content => {
 		if (typeof content === 'string') {
