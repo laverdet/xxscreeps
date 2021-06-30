@@ -1,3 +1,4 @@
+import * as User from 'xxscreeps/engine/db/user';
 import { hooks } from 'xxscreeps/backend';
 import fetch from 'node-fetch';
 import config from 'xxscreeps/config';
@@ -42,3 +43,10 @@ if (steamApiKey) {
 } else {
 	console.warn('Config `backend.steamApiKey` missing; Steam login inactive');
 }
+
+hooks.register('sendUserInfo', async(db, userId, userInfo) => {
+	const providers = await User.findProvidersForUser(db, userId);
+	if (providers.steam) {
+		userInfo.steam = { id: providers.steam };
+	}
+});

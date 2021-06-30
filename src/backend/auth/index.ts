@@ -7,7 +7,7 @@ const { allowGuestAccess } = config.backend;
 
 declare module 'xxscreeps/backend' {
 	interface Context {
-		authenticateForProvider(provider: string, providerId: string): Promise<void>;
+		authenticateForProvider(provider: string, providerId: string): Promise<string>;
 		flushToken(initializeGuest?: boolean): Promise<string | undefined>;
 	}
 	interface State {
@@ -31,8 +31,10 @@ export function authentication(): Middleware {
 				context.state.newUserId = Id.generateId(12);
 				context.state.provider = provider;
 				context.state.providerId = providerId;
+				return context.state.newUserId;
 			} else {
 				context.state.userId = userId;
+				return userId;
 			}
 		};
 

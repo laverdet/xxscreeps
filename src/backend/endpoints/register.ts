@@ -1,11 +1,16 @@
 import type { Endpoint } from 'xxscreeps/backend';
 import * as User from 'xxscreeps/engine/db/user';
 
+function validateEmail(email: any) {
+	return typeof email === 'string' && /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email);
+}
+
 const CheckEmailEndpoint: Endpoint = {
 	path: '/api/register/check-email',
 
 	execute(context) {
-		if (context.query.email === undefined) {
+		const { email } = context.query;
+		if (!validateEmail(email)) {
 			return { error: 'invalid' };
 		}
 		return { ok: 1 };

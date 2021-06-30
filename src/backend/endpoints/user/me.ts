@@ -1,7 +1,11 @@
 import type { Endpoint } from 'xxscreeps/backend';
 import * as User from 'xxscreeps/engine/db/user';
+import { hooks } from 'xxscreeps/backend';
+import { runOnce } from 'xxscreeps/utility/memoize';
 import config from 'xxscreeps/config';
 const { allowGuestAccess } = config.backend;
+
+const sendUserInfo = runOnce(() => hooks.makeMapped('sendUserInfo'));
 
 const MeEndpoint: Endpoint = {
 	path: '/api/auth/me',
@@ -15,23 +19,19 @@ const MeEndpoint: Endpoint = {
 		} else if (context.state.userId) {
 			// Real user
 			const { userId } = context.state;
-			const [ user, providers ] = await Promise.all([
+			const info = {};
+			const [ user ] = await Promise.all([
 				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
 				User.findProvidersForUser(context.db, userId),
+				Promise.all(sendUserInfo()(context.db, userId, info)),
 			]);
-			return {
+			return Object.assign(info, {
 				ok: 1,
 				_id: userId,
 				cpu: 100,
 				username: user.username,
 				badge: user.badge ? JSON.parse(user.badge) : undefined,
-				...providers.email && {
-					email: providers.email,
-				},
-				...providers.steam && {
-					steam: { id: providers.steam },
-				},
-			};
+			});
 
 		} else if (allowGuestAccess) {
 			// Guest profile
