@@ -1,5 +1,5 @@
 import type { Effect } from 'xxscreeps/utility/types';
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import type { RunnerIntent } from './model';
 import type { Shard } from 'xxscreeps/engine/db';
@@ -13,7 +13,7 @@ import * as User from 'xxscreeps/engine/db/user';
 import { getRunnerUserChannel, getUsageChannel } from './model';
 import { acquire } from 'xxscreeps/utility/async';
 import { createSandbox } from 'xxscreeps/driver/sandbox';
-import { hooks } from 'xxscreeps/driver';
+import { hooks } from './symbols';
 import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/processor/model';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
 import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility';
@@ -33,7 +33,7 @@ const acquireConnectors = runOnce(() => function(invoke) {
 			save: (payload: TickResult) => Promise.all(Fn.map(save, fn => fn(payload))),
 		} ] as const;
 	};
-}(hooks.makeMapped('driverConnector')));
+}(hooks.makeMapped('runnerConnector')));
 const kCPU = 100;
 
 export class PlayerInstance {

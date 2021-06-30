@@ -1,4 +1,4 @@
-import type { TickPayload } from 'xxscreeps/driver';
+import type { TickPayload } from 'xxscreeps/engine/runner';
 import './runtime';
 import { GameBase, Game as GameConstructor, GameState } from './game';
 import { IntentManager } from './intents';

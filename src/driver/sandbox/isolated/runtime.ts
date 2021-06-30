@@ -1,6 +1,6 @@
 import type ivm from 'isolated-vm';
 import type { CPU } from 'xxscreeps/game/game';
-import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner';
 import * as Runtime from 'xxscreeps/driver/runtime';
 import { hooks } from 'xxscreeps/game';
 export { tick } from 'xxscreeps/driver/runtime';

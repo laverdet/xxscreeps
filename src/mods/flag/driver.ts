@@ -1,9 +1,9 @@
 import type { FlagIntent } from './model';
-import { hooks } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/engine/runner';
 import { getFlagChannel, loadUserFlagBlob, saveUserFlagBlobForNextTick } from './model';
 
 // Read flag payload on user sandbox initialization
-declare module 'xxscreeps/driver' {
+declare module 'xxscreeps/engine/runner' {
 	interface InitializationPayload {
 		flagBlob: Readonly<Uint8Array> | null;
 	}
@@ -15,7 +15,7 @@ declare module 'xxscreeps/driver' {
 	}
 }
 
-hooks.register('driverConnector', async player => {
+hooks.register('runnerConnector', async player => {
 	// Listen for flag modification requests from backend, send to player sandbox for processing
 	const channel = await getFlagChannel(player.shard, player.userId).subscribe();
 	const intents: FlagIntent[] = [];

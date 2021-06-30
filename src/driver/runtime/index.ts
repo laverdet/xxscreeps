@@ -1,4 +1,4 @@
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
 import 'xxscreeps/config/global';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Code from 'xxscreeps/engine/db/user/code-schema';

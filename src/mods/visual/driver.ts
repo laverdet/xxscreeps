@@ -1,7 +1,7 @@
-import { hooks } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/engine/runner';
 import { publishVisualsBlobForNextTick } from './model';
 
-declare module 'xxscreeps/driver' {
+declare module 'xxscreeps/engine/runner' {
 	interface TickResult {
 		visuals?: {
 			blob: Readonly<Uint8Array>;
@@ -10,7 +10,7 @@ declare module 'xxscreeps/driver' {
 	}
 }
 
-hooks.register('driverConnector', player => [ undefined, {
+hooks.register('runnerConnector', player => [ undefined, {
 	async save(payload) {
 		// Publish visuals
 		const { visuals } = payload;

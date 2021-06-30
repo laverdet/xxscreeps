@@ -1,10 +1,10 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import * as User from 'xxscreeps/engine/db/user';
-import { hooks } from 'xxscreeps/driver';
+import { hooks } from 'xxscreeps/engine/runner';
 import { controlledRoomCountKey } from './processor';
 
-declare module 'xxscreeps/driver' {
+declare module 'xxscreeps/engine/runner' {
 	interface TickPayload {
 		controlledRoomCount: number;
 		gcl: number;
@@ -14,7 +14,7 @@ declare module 'xxscreeps/driver' {
 	}
 }
 
-hooks.register('driverConnector', player => {
+hooks.register('runnerConnector', player => {
 	const { shard, userId } = player;
 	let gcl = NaN;
 	let roomCount = NaN;

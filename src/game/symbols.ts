@@ -1,5 +1,5 @@
 import type { Game, GameState } from './game';
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
 import type { Room } from 'xxscreeps/game/room';
 import { makeHookRegistration } from 'xxscreeps/utility/hook';
 

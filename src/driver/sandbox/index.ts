@@ -1,5 +1,5 @@
 import type { Transform } from '../webpack';
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/driver';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
 import type { InspectorSession } from 'isolated-vm';
 import type { Print } from 'xxscreeps/driver/runtime';
 import * as Path from 'path';

@@ -1,4 +1,4 @@
-import type { InitializationPayload, TickPayload } from 'xxscreeps/driver';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner';
 import type { Print } from 'xxscreeps/driver/runtime';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import ivm from 'isolated-vm';

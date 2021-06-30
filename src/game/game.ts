@@ -1,7 +1,7 @@
 import type { GameMap, World } from './map';
 import type { AnyRoomObject, Room } from './room';
 import type { RoomObject } from './object';
-import type { TickPayload } from 'xxscreeps/driver';
+import type { TickPayload } from 'xxscreeps/engine/runner';
 import * as Fn from 'xxscreeps/utility/functional';
 import { hooks } from './symbols';
 import { runOnce } from 'xxscreeps/utility/memoize';
