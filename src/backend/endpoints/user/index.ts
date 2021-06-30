@@ -3,7 +3,6 @@ import messages from './messages';
 import world from './world';
 import './auth';
 import './code';
-import './me';
 import './profile';
 import './stats';
 import { hooks } from 'xxscreeps/backend';
