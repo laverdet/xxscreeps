@@ -40,25 +40,26 @@ export class Subscription<Message> {
 		private readonly json: boolean,
 		private readonly listeners: Set<Listener<Message>>,
 		private readonly subscription: PubSubSubscription,
+		private readonly effect: Effect,
 	) {}
 
 	static async subscribe<Message>(pubsub: PubSubProvider, name: string, json: boolean) {
 		const listeners = new Set<Listener<Message>>();
-		const subscription = await pubsub.subscribe(name, message => {
+		const [ effect, subscription ] = await pubsub.subscribe(name, message => {
 			const payload = json ? JSON.parse(message) : message;
 			for (const listener of listeners) {
 				listener(payload);
 			}
 		});
-		return new Subscription<Message>(json, listeners, subscription);
+		return new Subscription<Message>(json, listeners, subscription, effect);
 	}
 
 	disconnect() {
 		for (const listener of this.disconnectListeners) {
 			listener();
 		}
+		this.effect();
 		this.didDisconnect = true;
-		this.subscription.disconnect();
 	}
 
 	// Add a new listener to this channel

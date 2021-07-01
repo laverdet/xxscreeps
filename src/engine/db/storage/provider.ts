@@ -1,3 +1,4 @@
+import type { Effect } from 'xxscreeps/utility/types';
 import type { KeyvalScript } from './script';
 export type { KeyvalScript };
 
@@ -88,13 +89,12 @@ export type KeyValProvider = {
 export type PubSubProvider = {
 	// pub/sub
 	publish(key: string, message: string): Promise<void>;
-	subscribe(key: string, listener: PubSubListener): Promise<PubSubSubscription>;
+	subscribe(key: string, listener: PubSubListener): Promise<readonly [ Effect, PubSubSubscription ]>;
 };
 
 export type PubSubListener = (message: string) => void;
 
 export type PubSubSubscription = {
-	disconnect(): void;
 	// publishing from a subscription will not send that message to your listener
 	publish(message: string): Promise<void>;
 };

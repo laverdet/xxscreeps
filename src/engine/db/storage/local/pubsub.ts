@@ -1,232 +1,147 @@
+import type { MessagePort, Worker } from 'worker_threads';
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider';
-import type { Worker } from 'worker_threads';
-import { parentPort } from 'worker_threads';
-import { listen } from 'xxscreeps/utility/async';
-import { staticCast } from 'xxscreeps/utility/utility';
+import { MessageChannel, parentPort } from 'worker_threads';
+import { Deferred, listen } from 'xxscreeps/utility/async';
+import { getOrSet, staticCast } from 'xxscreeps/utility/utility';
 import { isTopThread } from 'xxscreeps/utility/worker';
 import { registerStorageProvider } from '..';
 
-type Listener = (message: string, id?: string) => void;
-type Subscription = {
-	readonly name: string;
-	readonly listener: Listener;
-};
+type Listener = (message: string) => void;
 
-type PubSubMessage = {
-	type: 'pubsubMessage';
+type ConnectionRequest = {
+	type: 'pubsubConnect';
 	name: string;
+	port: MessagePort;
+};
+type ConnectedResponse = {
+	type: 'connected';
+};
+type PublishMessage = {
+	type: 'publish';
+	key: string;
 	message: string;
-	id?: string;
+	id?: number;
 };
 type SubscriptionRequest = {
-	type: 'pubsubSubscribe';
-	name: string;
-	id: string;
+	type: 'subscribe';
+	key: string;
+	id: number;
 };
-type SubscriptionConfirmation = {
-	type: 'pubsubSubscribed';
-	id: string;
+type UnsubscriptionRequest = {
+	type: 'unsubscribe';
+	id: number;
 };
-type UnsubscribeRequest = {
-	type: 'pubsubUnsubscribe';
-	name: string;
-	id: string;
+type AckMessage = {
+	type: 'ack';
 };
 
 type UnknownMessage = { type: null };
-type MasterMessage = PubSubMessage | SubscriptionConfirmation | UnknownMessage;
-type WorkerMessage = PubSubMessage | SubscriptionRequest | UnsubscribeRequest | UnknownMessage;
 
-// eslint-disable-next-line @typescript-eslint/require-await
+const providersByName = new Map<string, { instance: LocalPubSubProviderParent; refs: 0 }>();
 registerStorageProvider('local', 'pubsub', async url => {
-	const instance = function() {
-		if (isTopThread) {
-			return new LocalPubSubProviderParent(`${url}`);
-		} else {
-			return new LocalPubSubProviderWorker(`${url}`);
-		}
-	}();
-	return [ () => instance.disconnect(), instance ];
+	if (isTopThread) {
+		const id = `${url}`;
+		const info = getOrSet(providersByName, id, () => ({
+			instance: new LocalPubSubProviderParent,
+			refs: 0,
+		}));
+		++info.refs;
+		return [ () => {
+			if (--info.refs === 0) {
+				providersByName.delete(id);
+				info.instance.disconnect();
+			}
+		}, info.instance ];
+	} else {
+		const instance = await LocalPubSubProviderWorker.connect(`${url}`);
+		return [ () => instance.disconnect(), instance ];
+	}
 });
 
-/**
- * Utility functions to manage subscriptions in a single isolate
- */
-const subscriptionsByName = new Map<string, Set<Subscription>>();
+interface SubscriptionReference {
+	send(message: string): void;
+}
 
-function connect(subscription: Subscription) {
-	const pubsubs = subscriptionsByName.get(subscription.name);
-	if (pubsubs) {
-		pubsubs.add(subscription);
-	} else {
-		subscriptionsByName.set(subscription.name, new Set([ subscription ]));
+class ParentSubscription implements PubSubSubscription, SubscriptionReference {
+	constructor(
+		private readonly listener: Listener,
+		private readonly key: string,
+		private readonly provider: LocalPubSubProviderParent) {}
+
+	async publish(message: string) {
+		this.provider.send(this.key, message, this);
+		return Promise.resolve();
+	}
+
+	send(message: string) {
+		this.listener(message);
 	}
 }
 
-function disconnect(pubsub: Subscription) {
-	const pubsubs = subscriptionsByName.get(pubsub.name)!;
-	pubsubs.delete(pubsub);
-	if (pubsubs.size === 0) {
-		subscriptionsByName.delete(pubsub.name);
-	}
-}
+class WorkerSubscriptionReference implements SubscriptionReference {
+	constructor(
+		private readonly port: MessagePort,
+		public readonly key: string) {}
 
-function publish(name: string, message: string, id?: string) {
-	const pubsubs = subscriptionsByName.get(name);
-	if (pubsubs !== undefined) {
-		for (const pubsub of pubsubs) {
-			pubsub.listener(message, id);
-		}
-	}
-}
-
-/**
- * Common classes for parent / worker threads
- */
-export abstract class LocalPubSubProvider implements PubSubProvider {
-	constructor(protected readonly name: string) {}
-
-	static initializeWorker(worker: Worker) {
-		LocalPubSubProviderParent.initializeWorker(worker);
+	close() {
+		this.port.close();
 	}
 
-	abstract disconnect(): void;
-	abstract publish(key: string, message: string): Promise<void>;
-	abstract subscribe(key: string, listener: (message: string) => void): Promise<PubSubSubscription>;
-}
-
-abstract class LocalPubSubSubscription implements PubSubSubscription {
-	readonly listener: Listener;
-	readonly id = `${Math.floor(Math.random() * 2 ** 52).toString(16)}`;
-
-	constructor(public readonly name: string, listener: PubSubListener) {
-		connect(this);
-		this.listener = (message, id) => {
-			if (this.id !== id) {
-				listener(message);
-			}
-		};
-	}
-
-	abstract publish(message: string): Promise<void>;
-
-	disconnect() {
-		disconnect(this);
+	send(message: string) {
+		this.port.postMessage(staticCast<PublishMessage>({ type: 'publish', key: this.key, message }));
 	}
 }
 
 /**
- * Subscriptions created within the master process
+ * Provider created within the top thread
  */
-class LocalPubSubProviderParent extends LocalPubSubProvider {
+class LocalPubSubProviderParent implements PubSubProvider {
+	private readonly subscriptionsByKey = new Map<string, Set<SubscriptionReference>>();
 
 	// Install listener on newly created workers. Called from the host/parent thread.
-	static override initializeWorker(worker: Worker) {
-		const idsByName = new Map<string, Set<string>>();
-		const localSubscriptions = new Map<string, Subscription>();
-		worker.on('message', (message: WorkerMessage) => {
-			switch (message.type) {
-				case 'pubsubMessage':
-					// Child sent message to the main thread
-					return publish(message.name, message.message, message.id);
+	static initializeWorker(worker: Worker) {
+		worker.on('message', (message: ConnectionRequest | UnknownMessage) => {
+			if (message.type === 'pubsubConnect') {
+				const provider = providersByName.get(message.name)?.instance;
+				const { port } = message;
+				if (provider) {
+					const subscriptionsById = new Map<number, WorkerSubscriptionReference>();
+					port.on('message', (message: PublishMessage | SubscriptionRequest | UnsubscriptionRequest) => {
+						switch (message.type) {
+							case 'publish': {
+								const { id } = message;
+								const source = id === undefined ? undefined : subscriptionsById.get(id);
+								provider.send(message.key, message.message, source);
+								port.postMessage(staticCast<AckMessage>({ type: 'ack' }));
+								break;
+							}
 
-				case 'pubsubSubscribe': {
-					const pubsubIds = idsByName.get(message.name);
-					if (pubsubIds) {
-						// This worker is already subscribed to this pubsub.. just add another local reference
-						pubsubIds.add(message.id);
-					} else {
-						// Set up a new subscription for this worker
-						const { name } = message;
-						const pubsubIds = new Set([ message.id ]);
-						idsByName.set(name, pubsubIds);
-						const subscription: Subscription = {
-							name,
-							listener: (message, id) => {
-								if (id === undefined || pubsubIds.size > 1 || !pubsubIds.has(id)) {
-									worker.postMessage(staticCast<MasterMessage>({
-										type: 'pubsubMessage',
-										name, message, id,
-									}));
+							case 'subscribe': {
+								const { key } = message;
+								const ref = new WorkerSubscriptionReference(port, key);
+								subscriptionsById.set(message.id, ref);
+								getOrSet(provider.subscriptionsByKey, key, () => new Set).add(ref);
+								port.postMessage(staticCast<AckMessage>({ type: 'ack' }));
+								break;
+							}
+
+							case 'unsubscribe': {
+								const source = subscriptionsById.get(message.id)!;
+								const sources = provider.subscriptionsByKey.get(source.key)!;
+								if (sources.size === 1) {
+									provider.subscriptionsByKey.delete(source.key);
+								} else {
+									sources.delete(source);
 								}
-							},
-						};
-						connect(subscription);
-						localSubscriptions.set(name, subscription);
-					}
-					// Send notification to child that the subscription is ready
-					worker.postMessage(staticCast<MasterMessage>({
-						type: 'pubsubSubscribed',
-						id: message.id,
+							}
+						}
+					});
+					message.port.postMessage(staticCast<ConnectedResponse>({
+						type: 'connected',
 					}));
-					break;
+				} else {
+					message.port.close();
 				}
-
-				case 'pubsubUnsubscribe': {
-					const { name } = message;
-					const subscriptionIds = idsByName.get(name)!;
-					subscriptionIds.delete(message.id);
-					if (subscriptionIds.size === 0) {
-						const pubsub = localSubscriptions.get(name)!;
-						idsByName.delete(name);
-						localSubscriptions.delete(name);
-						disconnect(pubsub);
-					}
-					break;
-				}
-
-				default:
-			}
-		});
-
-		// If the worker exits ungracefully then clean up all dangling subscriptions
-		worker.on('exit', () => {
-			for (const pubsub of localSubscriptions.values()) {
-				disconnect(pubsub);
-			}
-			idsByName.clear();
-			localSubscriptions.clear();
-		});
-
-		return worker;
-	}
-
-	disconnect() {}
-
-	publish(name: string, message: string) {
-		publish(`${this.name}/${name}`, message);
-		return Promise.resolve();
-	}
-
-	subscribe(key: string, listener: PubSubListener) {
-		return Promise.resolve(new ParentSubscription(`${this.name}/${key}`, listener));
-	}
-}
-
-class ParentSubscription extends LocalPubSubSubscription {
-	publish(message: string) {
-		publish(this.name, message, this.id);
-		return Promise.resolve();
-	}
-}
-
-/**
- * Subscriptions within a worker_thread
- */
-let parentRefs = 0;
-
-class LocalPubSubProviderWorker extends LocalPubSubProvider {
-	private static didInit = false;
-
-	// Install listener for all pubsubs in this thread
-	private static initializeThisWorker() {
-		if (LocalPubSubProviderWorker.didInit) {
-			return;
-		}
-		LocalPubSubProviderWorker.didInit = true;
-		parentPort!.on('message', (message: MasterMessage) => {
-			if (message.type === 'pubsubMessage') {
-				publish(message.name, message.message, message.id);
 			}
 		});
 	}
@@ -234,58 +149,163 @@ class LocalPubSubProviderWorker extends LocalPubSubProvider {
 	disconnect() {}
 
 	publish(key: string, message: string) {
-		parentPort!.postMessage(staticCast<WorkerMessage>({
-			type: 'pubsubMessage',
-			name: `${this.name}/${key}`,
-			message,
-		}));
+		this.send(key, message);
 		return Promise.resolve();
 	}
 
-	subscribe(key: string, listener: PubSubListener) {
-		LocalPubSubProviderWorker.initializeThisWorker();
-		const subscription = new WorkerSubscription(`${this.name}/${key}`, listener);
-		if (++parentRefs === 1) {
-			parentPort!.ref();
-		}
-		// Send connection notification to parent
-		return new Promise<WorkerSubscription>(resolve => {
-			const unlisten = listen(parentPort!, 'message', (message: MasterMessage) => {
-				if (message.type === 'pubsubSubscribed' && message.id === subscription.id) {
-					unlisten();
-					connect(subscription);
-					resolve(subscription);
+	send(key: string, message: string, source?: SubscriptionReference) {
+		const subscriptions = this.subscriptionsByKey.get(key);
+		if (subscriptions) {
+			for (const subscription of subscriptions) {
+				if (subscription !== source) {
+					subscription.send(message);
 				}
-			});
-			parentPort!.postMessage(staticCast<WorkerMessage>({
-				type: 'pubsubSubscribe',
-				name: subscription.name,
-				id: subscription.id,
-			}));
+			}
+		}
+	}
+
+	// eslint-disable-next-line @typescript-eslint/require-await
+	async subscribe(key: string, listener: PubSubListener) {
+		const subscription = new ParentSubscription(listener, key, this);
+		const sources = getOrSet(this.subscriptionsByKey, key, () => new Set);
+		sources.add(subscription);
+		return [ () => {
+			if (sources.size === 1) {
+				this.subscriptionsByKey.delete(key);
+			} else {
+				sources.delete(subscription);
+			}
+		}, subscription ] as const;
+	}
+}
+
+/**
+ * Provider within a worker
+ */
+class LocalPubSubProviderWorker implements PubSubProvider {
+	private id = 0;
+	private readonly subscriptionsByKey = new Map<string, Set<WorkerSubscription>>();
+	private readonly syn: Deferred[] = [];
+	constructor(private readonly port: MessagePort) {
+		port.on('message', (message: AckMessage | PublishMessage) => {
+			switch (message.type) {
+				case 'ack':
+					this.syn.shift()!.resolve();
+					break;
+
+				case 'publish': {
+					const subscriptions = this.subscriptionsByKey.get(message.key);
+					if (subscriptions) {
+						const payload = message.message;
+						for (const subscription of subscriptions) {
+							subscription.listener(payload);
+						}
+					}
+				}
+			}
 		});
 	}
-}
 
-class WorkerSubscription extends LocalPubSubSubscription {
-	override disconnect() {
-		super.disconnect();
-		parentPort!.postMessage(staticCast<WorkerMessage>({
-			type: 'pubsubUnsubscribe',
-			name: this.name,
-			id: this.id,
+	static connect(name: string) {
+		return new Promise<LocalPubSubProviderWorker>((resolve, reject) => {
+			// Create message channel and listen for response
+			const channel = new MessageChannel;
+			const port = channel.port1;
+			port.once('message', (message: ConnectedResponse | UnknownMessage) => {
+				if (message.type === 'connected') {
+					closeEffect();
+					resolve(new LocalPubSubProviderWorker(port));
+				} else {
+					reject(new Error(`PubSub provider ${name} sent weird ack`));
+				}
+			});
+
+			// Failure handler
+			const closeEffect = listen(port, 'close', () =>
+				reject(new Error(`PubSub provider ${name} does not exist`)));
+
+			// Send subscription request to parent
+			parentPort!.postMessage(staticCast<ConnectionRequest>({
+				type: 'pubsubConnect',
+				name,
+				port: channel.port2,
+			}), [ channel.port2 ]);
+		});
+	}
+
+	disconnect() {
+		this.port.close();
+		this.syn.forEach(deferred => deferred.reject(new Error('PubSub hung up')));
+	}
+
+	publish(key: string, message: string) {
+		return this.send(key, message);
+	}
+
+	async send(key: string, message: string, source?: WorkerSubscription) {
+		// Send message to top thread and wait for ack
+		const deferred = new Deferred;
+		this.syn.push(deferred);
+		this.port.postMessage(staticCast<PublishMessage>({
+			type: 'publish',
+			key,
+			message,
 		}));
-		if (--parentRefs === 0) {
-			parentPort!.unref();
+		await deferred.promise;
+		// Forward message to local subscribers
+		const subscriptions = this.subscriptionsByKey.get(key);
+		if (subscriptions) {
+			for (const subscription of subscriptions) {
+				if (subscription !== source) {
+					subscription.listener(message);
+				}
+			}
 		}
 	}
 
-	publish(message: string) {
-		parentPort!.postMessage(staticCast<WorkerMessage>({
-			type: 'pubsubMessage',
-			name: this.name,
-			message,
-			id: this.id,
+	async subscribe(key: string, listener: PubSubListener) {
+
+		// Send subscription request
+		const id = ++this.id;
+		const deferred = new Deferred;
+		this.syn.push(deferred);
+		this.port.postMessage(staticCast<SubscriptionRequest>({
+			type: 'subscribe',
+			key,
+			id,
 		}));
-		return Promise.resolve();
+
+		// Wait for response before returning
+		await deferred.promise;
+		const subscription = new WorkerSubscription(listener, key, this);
+		const subscriptions = getOrSet(this.subscriptionsByKey, key, () => new Set);
+		subscriptions.add(subscription);
+		return [ () => {
+			if (subscriptions.size === 1) {
+				this.subscriptionsByKey.delete(key);
+			} else {
+				subscriptions.delete(subscription);
+			}
+			this.port.postMessage(staticCast<UnsubscriptionRequest>({
+				type: 'unsubscribe',
+				id,
+			}));
+		}, subscription ] as const;
 	}
 }
+
+/**
+ * Active subscription to a message channel
+ */
+class WorkerSubscription implements PubSubSubscription {
+	constructor(
+		public readonly listener: Listener,
+		private readonly key: string,
+		private readonly provider: LocalPubSubProviderWorker) {}
+
+	async publish(message: string) {
+		return this.provider.send(this.key, message, this);
+	}
+}
+
+export const initializeWorker = LocalPubSubProviderParent.initializeWorker;
