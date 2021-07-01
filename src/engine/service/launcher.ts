@@ -1,6 +1,5 @@
 import minimist from 'minimist';
 import config from 'xxscreeps/config';
-import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { listen, mustNotReject } from 'xxscreeps/utility/async';
@@ -75,33 +74,28 @@ try {
 	});
 
 	// Start workers
-	const { processorWorkers, runnerWorkers, singleThreaded } = config.launcher;
-	if (singleThreaded) {
-		const backend = import('xxscreeps/backend/server');
-		const processor = import('./processor');
-		const runner = import('./runner');
-		const services = Promise.all([ main, processor, runner ]);
-		await Promise.all([
-			services.then(() => console.log('💾 Engine shut down successfully.')),
-			backend,
-		]);
-	} else {
-		const userCount = Number(await db.data.scard('users')) - 3; // minus Invader, Source Keeper, Screeps
-		const backend = await Worker.create('xxscreeps/backend/server');
-		const processors = await Promise.all(Fn.map(Fn.range(Math.min(processorWorkers, Math.ceil(userCount / 2))), () =>
-			Worker.create('xxscreeps/engine/service/processor')));
-		const runners = await Promise.all(Fn.map(Fn.range(runnerWorkers), () =>
-			Worker.create('xxscreeps/engine/service/runner')));
-		const services = Promise.all([
-			main,
-			Promise.all(processors.map(worker => waitForWorker(worker))),
-			Promise.all(runners.map(worker => waitForWorker(worker))),
-		]);
-		await Promise.all([
-			services.then(() => console.log('💾 Engine shut down successfully.')),
-			waitForWorker(backend),
-		]);
-	}
+	const singleThreaded = config.launcher?.singleThreaded;
+	const { services, backend } = await async function() {
+		if (singleThreaded) {
+			const backend = import('xxscreeps/backend/server');
+			const processor = import('./processor');
+			const runner = import('./runner');
+			const services = Promise.all([ main, processor, runner ]);
+			return { services, backend };
+		} else {
+			const [ backend, processor, runner ] = await Promise.all([
+				Worker.create('xxscreeps/backend/server'),
+				Worker.create('xxscreeps/engine/service/processor'),
+				Worker.create('xxscreeps/engine/service/runner'),
+			]);
+			const services = Promise.all([ main, waitForWorker(processor), waitForWorker(runner) ]);
+			return { services, backend };
+		}
+	}();
+	await Promise.all([
+		services.then(() => console.log('💾 Engine shut down successfully.')),
+		backend,
+	]);
 
 } finally {
 	db.disconnect();

@@ -9,11 +9,10 @@ import * as Movement from 'xxscreeps/engine/processor/movement';
 import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game';
 import { flushUsers } from 'xxscreeps/game/room/room';
 import { PreTick, Tick, intentProcessorGetters, roomTickProcessors } from './symbols';
-
-import 'xxscreeps/config/mods/import/game';
-import 'xxscreeps/config/mods/import/processor';
 import { acquireFinalIntentsForRoom, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model';
 import { getOrSet } from 'xxscreeps/utility/utility';
+import 'xxscreeps/config/mods/import/game';
+import 'xxscreeps/config/mods/import/processor';
 
 // Register per-tick per-room processor
 export function registerRoomTickProcessor(tick: RoomTickProcessor) {

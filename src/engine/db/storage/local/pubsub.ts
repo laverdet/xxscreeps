@@ -100,50 +100,59 @@ class LocalPubSubProviderParent implements PubSubProvider {
 
 	// Install listener on newly created workers. Called from the host/parent thread.
 	static initializeWorker(worker: Worker) {
-		worker.on('message', (message: ConnectionRequest | UnknownMessage) => {
-			if (message.type === 'pubsubConnect') {
-				const provider = providersByName.get(message.name)?.instance;
-				const { port } = message;
-				if (provider) {
-					const subscriptionsById = new Map<number, WorkerSubscriptionReference>();
-					port.on('message', (message: PublishMessage | SubscriptionRequest | UnsubscriptionRequest) => {
-						switch (message.type) {
-							case 'publish': {
-								const { id } = message;
-								const source = id === undefined ? undefined : subscriptionsById.get(id);
-								provider.send(message.key, message.message, source);
-								port.postMessage(staticCast<AckMessage>({ type: 'ack' }));
-								break;
-							}
+		if (isTopThread) {
+			worker.on('message', (message: ConnectionRequest | UnknownMessage) => {
+				if (message.type === 'pubsubConnect') {
+					const provider = providersByName.get(message.name)?.instance;
+					const { port } = message;
+					if (provider) {
+						const subscriptionsById = new Map<number, WorkerSubscriptionReference>();
+						port.on('message', (message: PublishMessage | SubscriptionRequest | UnsubscriptionRequest) => {
+							switch (message.type) {
+								case 'publish': {
+									const { id } = message;
+									const source = id === undefined ? undefined : subscriptionsById.get(id);
+									provider.send(message.key, message.message, source);
+									port.postMessage(staticCast<AckMessage>({ type: 'ack' }));
+									break;
+								}
 
-							case 'subscribe': {
-								const { key } = message;
-								const ref = new WorkerSubscriptionReference(port, key);
-								subscriptionsById.set(message.id, ref);
-								getOrSet(provider.subscriptionsByKey, key, () => new Set).add(ref);
-								port.postMessage(staticCast<AckMessage>({ type: 'ack' }));
-								break;
-							}
+								case 'subscribe': {
+									const { key } = message;
+									const ref = new WorkerSubscriptionReference(port, key);
+									subscriptionsById.set(message.id, ref);
+									getOrSet(provider.subscriptionsByKey, key, () => new Set).add(ref);
+									port.postMessage(staticCast<AckMessage>({ type: 'ack' }));
+									break;
+								}
 
-							case 'unsubscribe': {
-								const source = subscriptionsById.get(message.id)!;
-								const sources = provider.subscriptionsByKey.get(source.key)!;
-								if (sources.size === 1) {
-									provider.subscriptionsByKey.delete(source.key);
-								} else {
-									sources.delete(source);
+								case 'unsubscribe': {
+									const source = subscriptionsById.get(message.id)!;
+									const sources = provider.subscriptionsByKey.get(source.key)!;
+									if (sources.size === 1) {
+										provider.subscriptionsByKey.delete(source.key);
+									} else {
+										sources.delete(source);
+									}
 								}
 							}
-						}
-					});
-					message.port.postMessage(staticCast<ConnectedResponse>({
-						type: 'connected',
-					}));
-				} else {
-					message.port.close();
+						});
+						message.port.postMessage(staticCast<ConnectedResponse>({
+							type: 'connected',
+						}));
+					} else {
+						message.port.close();
+					}
 				}
-			}
-		});
+			});
+		} else {
+			// Forward message up to top thread
+			worker.on('message', (message: ConnectionRequest | UnknownMessage) => {
+				if (message.type === 'pubsubConnect') {
+					parentPort!.postMessage(message, [ message.port ]);
+				}
+			});
+		}
 	}
 
 	disconnect() {}

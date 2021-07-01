@@ -4,6 +4,11 @@ import os from 'os';
 // npx typescript-json-schema tsconfig.json Schema --include ./src/config/config.ts --defaultProps --required -o ./src/config/config.schema.json
 export type Schema = {
 	/**
+	 * List of mods to load
+	 */
+	mods?: string[];
+
+	/**
 	 * Backend server settings
 	 */
 	backend?: {
@@ -56,19 +61,6 @@ export type Schema = {
 	 */
 	launcher?: {
 		/**
-		 * Total number of processors to create.
-		 * @default `os.cpus().length + 1`
-		 */
-		processorWorkers?: number;
-
-		/**
-		 * Total number of runners to create. It's best to leave this at 1 because runner will create
-		 * its own threads.
-		 * @default 1
-		 */
-		runnerWorkers?: number;
-
-		/**
 		 * Set true to run all services in a single nodejs isolate. This does *not* affect the runner's
 		 * isolates.
 		 * @default false
@@ -77,9 +69,15 @@ export type Schema = {
 	};
 
 	/**
-	 * List of mods to load
+	 * Processor settings
 	 */
-	mods?: string[];
+	processor?: {
+		/**
+		 * Total number of processor tasks to run at a time. The default is the number of CPU cores
+		 * (including hyper-threaded) + 1
+		 */
+		concurrency?: number;
+	};
 
 	/**
 	 * Runner settings
@@ -100,8 +98,8 @@ export type Schema = {
 		};
 
 		/**
-		 * Total number of runner tasks to run at a time.
-		 * @default `os.cpus().length + 1`
+		 * Total number of run tasks to run at a time. The default is the number of CPU cores (including
+		 * hyper-threaded) + 1
 		 */
 		concurrency?: number;
 
@@ -195,9 +193,8 @@ export const defaults = {
 		bind: '*',
 		socketThrottle: 125,
 	},
-	launcher: {
-		processorWorkers: os.cpus().length + 1,
-		runnerWorkers: 1,
+	processor: {
+		concurrency: os.cpus().length + 1,
 	},
 	runner: {
 		concurrency: os.cpus().length + 1,

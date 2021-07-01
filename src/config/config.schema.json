@@ -85,16 +85,6 @@
             ],
             "description": "Launcher settings",
             "properties": {
-                "processorWorkers": {
-                    "default": "`os.cpus().length + 1`",
-                    "description": "Total number of processors to create.",
-                    "type": "number"
-                },
-                "runnerWorkers": {
-                    "default": 1,
-                    "description": "Total number of runners to create. It's best to leave this at 1 because runner will create\nits own threads.",
-                    "type": "number"
-                },
                 "singleThreaded": {
                     "default": false,
                     "description": "Set true to run all services in a single nodejs isolate. This does *not* affect the runner's\nisolates.",
@@ -110,14 +100,25 @@
             },
             "type": "array"
         },
+        "processor": {
+            "defaultProperties": [
+            ],
+            "description": "Processor settings",
+            "properties": {
+                "concurrency": {
+                    "description": "Total number of processor tasks to run at a time. The default is the number of CPU cores\n(including hyper-threaded) + 1",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
         "runner": {
             "defaultProperties": [
             ],
             "description": "Runner settings",
             "properties": {
                 "concurrency": {
-                    "default": "`os.cpus().length + 1`",
-                    "description": "Total number of runner tasks to run at a time.",
+                    "description": "Total number of run tasks to run at a time. The default is the number of CPU cores (including\nhyper-threaded) + 1",
                     "type": "number"
                 },
                 "cpu": {

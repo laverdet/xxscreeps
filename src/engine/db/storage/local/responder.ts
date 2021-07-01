@@ -98,6 +98,9 @@ abstract class ResponderClient {
 	}
 
 	static request(client: ResponderClient, method: string, payload: unknown[]) {
+		if (client.#disconnected) {
+			return Promise.reject(new Error('Disconnected from responder'));
+		}
 		const requestId = ++client.#requestId;
 		const deferred = new Deferred<unknown>();
 		client.#requests.set(requestId, deferred);
@@ -114,9 +117,6 @@ abstract class ResponderClient {
 			throw new Error('Already disconnected responder client');
 		}
 		this.#disconnected = true;
-		for (const resolver of this.#requests.values()) {
-			resolver.reject(new Error('Disconnected from responder'));
-		}
 		this.#requests.clear();
 		this.#port.close();
 	}
@@ -232,23 +232,32 @@ export async function connect<
 
 // Called on the parent thread, once per worker created
 export function initializeWorker(worker: Worker) {
-	worker.on('message', (message: ConnectMessage | UnknownMessage) => {
-		if (message.type === 'responderConnect') {
-			// Child worker is connecting to parent
-			const responder = responderHostsByName.get(message.name);
-			const { port } = message;
-			if (responder) {
-				// Connect to responder
-				ResponderHost.connect(responder, port);
-				port.postMessage(staticCast<ConnectedMessage>({
-					type: 'responderConnected',
-				}));
-			} else {
-				// Doesn't exist
-				port.close();
+	if (isTopThread) {
+		worker.on('message', (message: ConnectMessage | UnknownMessage) => {
+			if (message.type === 'responderConnect') {
+				// Child worker is connecting to parent
+				const responder = responderHostsByName.get(message.name);
+				const { port } = message;
+				if (responder) {
+					// Connect to responder
+					ResponderHost.connect(responder, port);
+					port.postMessage(staticCast<ConnectedMessage>({
+						type: 'responderConnected',
+					}));
+				} else {
+					// Doesn't exist
+					port.close();
+				}
 			}
-		}
-	});
+		});
+	} else {
+		worker.on('message', (message: ConnectMessage | UnknownMessage) => {
+			// Forward message up to top thread
+			if (message.type === 'responderConnect') {
+				parentPort!.postMessage(message, [ message.port ]);
+			}
+		});
+	}
 }
 
 export function makeClient<Type extends Responder>(constructor: abstract new(...args: any[]) => Type) {

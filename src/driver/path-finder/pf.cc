@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include <stdexcept>
+#include <mutex>
 
 using namespace screeps;
 
@@ -597,8 +598,10 @@ auto path_finder_t::search(
 }
 
 // Loads static terrain data into module upfront
+std::mutex terrain_lock;
 void path_finder_t::load_terrain(v8::Local<v8::Object> world) {
 	// Save reference to this data
+	std::lock_guard<std::mutex> lock{terrain_lock};
 	static Nan::Persistent<v8::Object> handle;
 	handle.Reset(world);
 	// Parse out terrain by rooms

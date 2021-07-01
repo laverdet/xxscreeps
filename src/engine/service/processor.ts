@@ -1,91 +1,41 @@
-import type { Room } from 'xxscreeps/game/room/room';
+import type { ProcessorRequest } from 'xxscreeps/engine/processor/worker';
+import config from 'xxscreeps/config';
 import * as Fn from 'xxscreeps/utility/functional';
-import {
-	acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey,
-	getProcessorChannel, processRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships,
-} from 'xxscreeps/engine/processor/model';
+import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { Database, Shard } from 'xxscreeps/engine/db';
-import { initializeIntentConstraints } from 'xxscreeps/engine/processor';
-import { RoomProcessor } from 'xxscreeps/engine/processor/room';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async';
-import { lookAhead, mustNotReject } from 'xxscreeps/utility/async';
-import { hooks } from 'xxscreeps/engine/processor/symbols';
+import { lookAhead } from 'xxscreeps/utility/async';
+import { negotiateResponderClient } from 'xxscreeps/utility/responder';
 import { getServiceChannel } from '.';
-
-// Per-tick bookkeeping handles
-const processedRooms = new Map<string, RoomProcessor>();
-let nextRoomCache = new Map<string, Room>();
-let roomCache = new Map<string, Room>();
-
-// Process a single room, assumes that the room is actually ready to be processed
-async function processRoom(time: number, roomName: string) {
-	// Read room data and intents from storage
-	const [ room, intentsPayloads ] = await Promise.all([
-		function() {
-			const room = roomCache.get(roomName);
-			if (room) {
-				return room;
-			} else {
-				return shard.loadRoom(roomName, time - 1);
-			}
-		}(),
-		acquireIntentsForRoom(shard, roomName),
-	]);
-
-	// Create processor context and add intents
-	const context = new RoomProcessor(shard, world, room, time);
-	for (const { userId, intents } of intentsPayloads) {
-		context.saveIntents(userId, intents);
-	}
-
-	// Run first process phase
-	processedRooms.set(roomName, context);
-	nextRoomCache.set(roomName, room);
-	await context.process();
-}
-
-// Updates current time based on a pubsub message. Handles affinity information.
-let currentTime = -1;
-let affinity: string[] = [];
-function updateTime(time: number) {
-	if (currentTime !== time) {
-		// Setup for next tick
-		roomCache = nextRoomCache;
-		nextRoomCache = new Map;
-		if (currentTime !== time - 1) {
-			// Processor missed a whole tick! This data is no longer good.
-			roomCache.clear();
-		}
-		currentTime = time;
-		affinity = [ ...roomCache.keys() ];
-	}
-	return time;
-}
 
 // Connect to main & storage
 const db = await Database.connect();
 const shard = await Shard.connect(db, 'shard0');
-const world = await shard.loadWorld();
+const worldBlob = await shard.blob.reqBuffer('terrain');
 const processorSubscription = await getProcessorChannel(shard).subscribe();
-initializeIntentConstraints();
 try {
 
-	// Initialize rooms / user relationships
-	const refreshRoom = hooks.makeMapped('refreshRoom');
-	for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
-		const room = await shard.loadRoom(roomName, undefined, true);
-		await Promise.all([
-			updateUserRoomRelationships(shard, room),
-			...refreshRoom(shard, room),
-		]);
-	}
+	// Create processor workers
+	const userCount = Number(await db.data.scard('users')) - 3; // minus Invader, Source Keeper, Screeps
+	const singleThreaded = config.launcher?.singleThreaded;
+	const processorCount = singleThreaded ? 1 : Math.min(config.processor.concurrency, Math.ceil(userCount / 2));
+	const threads = await Promise.all(Fn.map(Fn.range(processorCount), () =>
+		negotiateResponderClient<ProcessorRequest>('xxscreeps/engine/processor/worker.js', singleThreaded)));
 
-	// Wait for all processors to initialize
+	// Initialize workers and rooms
+	await Promise.all(Fn.map(threads, async({ responder }) => {
+		await responder({ type: 'world', worldBlob });
+		for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
+			await responder({ type: 'initialize', roomName });
+		}
+	}));
+
+	// Wait for initialization signal from main
 	const [ firstTime ] = await Promise.all([
 		async function() {
 			for await (const message of processorSubscription) {
 				if (message.type === 'shutdown') {
-					return -1;
+					throw new Error('Processor initialization failure');
 				} else if (message.type === 'process') {
 					return message.time;
 				}
@@ -94,84 +44,88 @@ try {
 		}(),
 		getServiceChannel(shard).publish({ type: 'processorInitialized' }),
 	]);
-	if (firstTime === -1) {
-		throw new Error('Processor initialization failure');
-	}
 
 	// Initialize processor queue, or sync up with existing processors
-	const time = updateTime(await begetRoomProcessQueue(shard, firstTime, firstTime - 1));
+	let currentTime = await begetRoomProcessQueue(shard, firstTime, firstTime - 1);
+
 	// Send message to begin processing, this will be picked up by the loop iteration below
-	queueMicrotask(() => void getProcessorChannel(shard).publish({ type: 'process', time }));
-	let latch = 0;
-	for await (const message of processorSubscription) {
+	queueMicrotask(() => void getProcessorChannel(shard).publish({ type: 'process', time: currentTime }));
 
-		if (message.type === 'shutdown') {
-			break;
+	// Fan out work to workers
+	await Promise.all(Fn.map(threads, async thread => {
+		let affinityTime = currentTime;
+		let affinity: string[] = [];
+		let processed: string[] = [];
+		for await (const message of processorSubscription) {
+			// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
+			switch (message.type) {
+				case 'shutdown':
+					thread.close();
+					return thread.wait();
 
-		} else if (message.type === 'process') {
-			if (++latch > 1) {
-				continue;
-			}
-			mustNotReject(async() => {
-				loop: while (true) {
-					const time = updateTime(await begetRoomProcessQueue(shard, message.time, currentTime));
+				case 'process': {
+					// Ensure processor time is in sync
+					const { time } = message;
+					currentTime = await begetRoomProcessQueue(shard, message.time, currentTime);
+					if (time !== currentTime) {
+						break;
+					} else if (affinityTime !== currentTime) {
+						// Update affinity set once per tick
+						if (affinityTime === currentTime - 1) {
+							affinity = processed;
+						} else {
+							affinity = [];
+						}
+						affinityTime = currentTime;
+						processed = [];
+					}
+
+					// Continue processing until the queue is empty. Empty queue may not mean processing is
+					// done, it also may mean we're waiting on workers
 					const queueKey = processRoomsSetKey(time);
+					let ran = true;
+					loop: while (ran) {
+						ran = false;
 
-					// Check affinity rooms
-					for await (const roomName of lookAhead(consumeSortedSetMembers(shard.scratch, queueKey, affinity, 0, 0), 1)) {
-						await processRoom(time, roomName);
-					}
+						// Check affinity rooms
+						for await (const roomName of lookAhead(consumeSortedSetMembers(shard.scratch, queueKey, affinity, 0, 0), 1)) {
+							ran = true;
+							await thread.responder({ type: 'process', roomName, time });
+							processed.push(roomName);
+						}
 
-					// Run one non-preferred room, then check affinity rooms again
-					// eslint-disable-next-line no-unreachable-loop
-					for await (const roomName of consumeSortedSet(shard.scratch, queueKey, 0, 0)) {
-						await processRoom(time, roomName);
-						continue loop;
-					}
+						// Run one non-preferred room, then check affinity rooms again
+						// eslint-disable-next-line no-unreachable-loop
+						for await (const roomName of consumeSortedSet(shard.scratch, queueKey, 0, 0)) {
+							ran = true;
+							await thread.responder({ type: 'process', roomName, time });
+							processed.push(roomName);
+							continue loop;
+						}
 
-					// No extra rooms were run. Check to see if there's anything left in the affinity array.
-					if (affinity.length === 0) {
-						break;
+						// No extra rooms were run. Check to see if there's anything left in the affinity array.
+						if (affinity.length === 0) {
+							break;
+						}
+						const scores = await shard.scratch.zmscore(queueKey, affinity);
+						affinity = [ ...Fn.map(
+							Fn.reject(Fn.range(affinity.length), ii => scores[ii] === null),
+							ii => affinity[ii]) ];
+						if (affinity.length === 0) {
+							break;
+						}
 					}
-					const scores = await shard.scratch.zmscore(queueKey, affinity);
-					affinity = [ ...Fn.filter(Fn.map(
-						Fn.reject(Fn.range(affinity.length), ii => scores[ii] === null),
-						ii => affinity[ii])) ];
-					if (affinity.length === 0) {
-						break;
-					}
-
-					// If an invocation was skipped while this function was running, we will continue looping.
-					// Otherwise it's time to exit.
-					if (latch === 1) {
-						break;
-					} else {
-						latch = 1;
-					}
+					break;
 				}
-				latch = 0;
-			});
 
-		} else if (message.type === 'finalize') {
-			// Second processing phase. This waits until all player code and first phase processing has
-			// run.
-			const { time } = message;
-			await Promise.all(Fn.map(processedRooms.values(), context => context.finalize()));
-			let count = processedRooms.size;
-			// Also finalize rooms which were sent inter-room intents
-			for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
-				const room = await shard.loadRoom(roomName, time - 1);
-				const context = new RoomProcessor(shard, world, room, time);
-				await context.process(true);
-				await context.finalize();
-				nextRoomCache.set(roomName, room);
-				++count;
+				// Second processing phase. This waits until all player code and first phase processing has
+				// run.
+				case 'finalize':
+					await thread.responder({ type: 'finalize', time: currentTime });
+					break;
 			}
-			// Done
-			processedRooms.clear();
-			updateTime(await roomsDidFinalize(shard, count, time));
 		}
-	}
+	}));
 
 } finally {
 	processorSubscription.disconnect();
