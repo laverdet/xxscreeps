@@ -1,24 +1,34 @@
-import minimist from 'minimist';
+import { ArgumentParser } from 'argparse';
 export function checkArguments<Type extends {
+	argv?: true;
 	boolean?: readonly string[];
 	string?: readonly string[];
 }>(options: Type): {
-	_: string[];
-} & {
 	[Key in NonNullable<Type['boolean']>[number]]: boolean;
 } & {
-	[Key in NonNullable<Type['string']>[number]]: string;
+	[Key in NonNullable<Type['string']>[number]]?: string;
+} & {
+	argv: Type['argv'] extends true ? (string | undefined)[] : never;
 } {
-	const argv = minimist(process.argv.slice(2), {
-		stopEarly: true,
-		...options as any,
-	});
-	const unknown = Object.keys(argv).find(key =>
-		key !== '_' &&
-		!options.boolean?.includes(key) &&
-		!options.string?.includes(key));
-	if (unknown !== undefined) {
-		throw new TypeError(`Unknown argument: ${unknown}`);
+	const parser = new ArgumentParser;
+	for (const key of options.boolean ?? []) {
+		parser.add_argument(`--${key}`, {
+			action: 'store_true',
+			default: false,
+			dest: key,
+		});
 	}
-	return argv as never;
+	for (const key of options.string ?? []) {
+		parser.add_argument(`--${key}`, {
+			dest: key,
+			nargs: '?',
+			type: 'str',
+		});
+	}
+	if (options.argv) {
+		parser.add_argument('argv', {
+			nargs: '*',
+		});
+	}
+	return parser.parse_args();
 }

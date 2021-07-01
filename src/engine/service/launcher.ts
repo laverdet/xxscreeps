@@ -1,14 +1,14 @@
-import minimist from 'minimist';
 import config from 'xxscreeps/config';
+import { checkArguments } from 'xxscreeps/config/arguments';
 import * as User from 'xxscreeps/engine/db/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';
 
-const argv = minimist(process.argv.slice(2), {
-	string: [ 'attach-console' ],
-	unknown: param => { throw new Error(`Unknown argument: ${param}`) },
+const argv = checkArguments({
+	boolean: [ 'no-backend', 'no-processor', 'no-runner' ] as const,
+	string: [ 'attach-console' ] as const,
 });
 
 // Connect to shard
@@ -49,18 +49,18 @@ try {
 	const singleThreaded = config.launcher?.singleThreaded;
 	const { services, backend } = await async function() {
 		if (singleThreaded) {
-			const backend = import('xxscreeps/backend/server');
-			const processor = import('./processor');
-			const runner = import('./runner');
+			const backend = argv['no-backend'] ? undefined : import('xxscreeps/backend/server');
+			const processor = argv['no-processor'] ? undefined : import('./processor');
+			const runner = argv['no-runner'] ? undefined : import('./runner');
 			const services = Promise.all([ main, processor, runner ]);
 			return { services, backend };
 		} else {
 			const [ backend, processor, runner ] = await Promise.all([
-				Worker.create('xxscreeps/backend/server'),
-				Worker.create('xxscreeps/engine/service/processor'),
-				Worker.create('xxscreeps/engine/service/runner'),
+				argv['no-backend'] ? undefined : Worker.create('xxscreeps/backend/server'),
+				argv['no-processor'] ? undefined : Worker.create('xxscreeps/engine/service/processor'),
+				argv['no-runner'] ? undefined : Worker.create('xxscreeps/engine/service/runner'),
 			]);
-			const services = Promise.all([ main, waitForWorker(processor), waitForWorker(runner) ]);
+			const services = Promise.all([ main, processor && waitForWorker(processor), runner && waitForWorker(runner) ]);
 			return { services, backend };
 		}
 	}();

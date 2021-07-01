@@ -44,11 +44,12 @@ import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
 import { merge } from 'xxscreeps/utility/utility';
 
 const argv = checkArguments({
+	argv: true,
 	boolean: [ 'dont-overwrite', 'shard-only' ] as const,
 });
 const dontOverwrite = argv['dont-overwrite'];
 const shardOnly = argv['shard-only'];
-const jsonSource = argv._[0] ??
+const jsonSource = argv.argv[0] ??
 	new URL('../init_dist/db.json', await import.meta.resolve('@screeps/launcher', import.meta.url));
 
 function withRoomObject(from: any, into: RoomObject) {
@@ -129,7 +130,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 }
 
 // Initialize import source
-const loki = new Loki(jsonSource);
+const loki = new Loki(jsonSource as string);
 await new Promise<void>((resolve, reject) => {
 	loki.loadDatabase({}, (err?: Error) => err ? reject(err) : resolve());
 });
