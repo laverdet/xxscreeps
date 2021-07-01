@@ -19,6 +19,7 @@ export interface Sandbox {
 
 	dispose(): void;
 
+	initialize(data: InitializationPayload, print: Print): Promise<void>;
 	run(data: TickPayload): Promise<{
 		result: 'disposed' | 'timedOut';
 	} | {
@@ -44,14 +45,14 @@ export function compileRuntimeSource(path: string, transform: Transform) {
 	]);
 }
 
-export async function createSandbox(data: InitializationPayload, userId: string, print: Print): Promise<Sandbox> {
+export async function createSandbox(userId: string): Promise<Sandbox> {
 	const sandbox = await async function() {
 		if (config.runner.unsafeSandbox) {
 			const { NodejsSandbox } = await import('./nodejs');
-			return NodejsSandbox.create(data, print);
+			return new NodejsSandbox;
 		} else {
 			const { IsolatedSandbox } = await import('./isolated');
-			return IsolatedSandbox.create(data, print);
+			return new IsolatedSandbox;
 		}
 	}();
 	didMakeSandbox()(sandbox, userId);

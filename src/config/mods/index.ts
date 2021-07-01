@@ -18,7 +18,7 @@ const mods: {
 const stack: string[] = [];
 const resolved = new Set<string>();
 const baseUrl = configPath;
-const version = 2;
+const version = 3;
 async function resolve(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
 		const url = await import.meta.resolve(specifier, `${baseUrl}`);

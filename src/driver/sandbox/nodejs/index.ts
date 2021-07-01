@@ -30,14 +30,21 @@ const getCompiledRuntime = runOnce(async() => {
 });
 
 export class NodejsSandbox implements Sandbox {
-	private constructor(
-		private readonly tick: Runtime['tick'],
-	) {}
+	private tick?: Runtime['tick'];
 
-	static async create(data: InitializationPayload, print: Print) {
+	constructor(
+		private readonly context = vm.createContext()) {}
 
-		// Generate new vm context, set up globals
-		const context = vm.createContext();
+	createInspectorSession(): never {
+		throw new Error('Inspector not supported with `backend.unsafeSandbox`');
+	}
+
+	dispose() {}
+
+	async initialize(data: InitializationPayload, print: Print) {
+
+		// Initialize vm context, set up globals
+		const { context } = this;
 		context.global = context;
 		context.nodeUtilImport = util;
 		const pf = getPathFinderModule();
@@ -56,7 +63,7 @@ export class NodejsSandbox implements Sandbox {
 		};
 		const evaluate: Evaluate = (source, filename) => new vm.Script(source, { filename }).runInContext(context);
 		runtime.initialize(defaultRequire, compiler, evaluate, print, data);
-		return new NodejsSandbox(vm.runInContext(`
+		this.tick = vm.runInContext(`
 			(function(context, tick, runInContext) {
 				let data;
 				_runWithArgs = function() {
@@ -70,20 +77,14 @@ export class NodejsSandbox implements Sandbox {
 					return runInContext('_runWithArgs()', context, { timeout: data.cpu.tickLimit });
 				};
 			})
-		`, context)(context, runtime.tick, vm.runInContext));
+		`, context)(context, runtime.tick, vm.runInContext);
 	}
-
-	createInspectorSession(): never {
-		throw new Error('Inspector not supported with `backend.unsafeSandbox`');
-	}
-
-	dispose() {}
 
 	// eslint-disable-next-line @typescript-eslint/require-await
 	async run(data: TickPayload) {
 		const start = process.hrtime.bigint();
 		try {
-			const payload = this.tick(data);
+			const payload = this.tick!(data);
 			payload.usage.cpu = Number(process.hrtime.bigint() - start) / 1e6;
 			return { result: 'success' as const, payload };
 		} catch (err) {

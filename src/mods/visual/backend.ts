@@ -10,7 +10,7 @@ hooks.register('roomSocket', async(shard, userId, roomName) => {
 
 	// Subscribe to visuals channel and listen for publishes to this room
 	let lastTime = shard.time;
-	const unlisten = await getVisualChannel(shard, userId).listen(message => {
+	const unlisten = await getVisualChannel(shard, userId).listen<true>(message => {
 		if (message.type === 'publish' && message.roomNames.includes(roomName)) {
 			lastTime = message.time;
 		}

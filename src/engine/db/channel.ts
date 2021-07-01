@@ -2,7 +2,7 @@ import type { Effect } from 'xxscreeps/utility/types';
 import type { PubSubProvider, PubSubSubscription } from './storage/provider';
 import { Deferred } from 'xxscreeps/utility/async';
 
-type MessageType<Message> = Message | (Message extends string ? null : { type: null });
+type MessageType<Message> = Message;
 type Listener<Message> = (message: MessageType<Message>) => void;
 type ChannelFactory<Message = any> = (...args: any[]) => Channel<Message>;
 export type MessageFor<Factory> = Factory extends ChannelFactory<infer Message> ? Message : never;
@@ -16,10 +16,30 @@ export class Channel<Message = string> {
 		private readonly json = true,
 	) {}
 
-	async listen(listener: Listener<Message>) {
+	async listen<ForIf = false>(listener: Listener<Message | (ForIf extends true ? { type: null } : never)>) {
 		const subscription = await this.subscribe();
-		subscription.listen(listener);
+		subscription.listen(listener as any);
 		return () => subscription.disconnect();
+	}
+
+	listenFor(filter: (message: Message) => boolean): [ Effect, Promise<Message | undefined> ] {
+		let resolver: (message?: Message) => void;
+		const subscription = this.listen(message => {
+			if (filter(message)) {
+				resolver(message);
+			}
+		});
+		return [
+			() => resolver(),
+			new Promise<Message | undefined>((resolve, reject) => {
+				subscription.catch(reject);
+				resolver = message => {
+					resolver = () => {};
+					resolve(message);
+					void subscription.then(effect => effect());
+				};
+			}),
+		];
 	}
 
 	publish(message: Message) {

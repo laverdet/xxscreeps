@@ -49,6 +49,51 @@ export function acquire(...async: AsyncEffectAndResult[]): Promise<[ Effect, any
 }
 
 /**
+ * Returns a delegate generator which can be broken externally. This will cause the generator to
+ * discard a result.
+ */
+export function breakable<Type>(iterable: AsyncIterable<Type>): [ Effect, AsyncIterable<Type> ];
+export function breakable<Type>(iterable: AsyncIterable<Type>, fn: (breaker: Effect) => void): AsyncIterable<Type>;
+export function breakable<Type>(iterable: AsyncIterable<Type>, fn?: (breaker: Effect) => void):
+AsyncIterable<Type> | [ Effect, AsyncIterable<Type> ] {
+	// Set up breaker
+	type Value = IteratorResult<Type> | typeof token;
+	let broken = false as boolean;
+	let resolveNow: ((value: Value) => void) | undefined;
+	const token: Record<any, never> = {};
+	const breaker = () => {
+		broken = true;
+		resolveNow?.(token);
+	};
+	// Create delegate iterable
+	const delegate = async function *() {
+		const generator = iterable[Symbol.asyncIterator]();
+		while (true) {
+			const next = await new Promise<Value>((resolve, reject) => {
+				// Care needs to be taken here to avoid adding `then` handlers onto the break case, because
+				// otherwise they will build up with each iteration.
+				resolveNow = resolve;
+				generator.next().then(resolve, reject);
+			});
+			if (next === token || next.done) {
+				return;
+			}
+			yield next.value;
+			if (broken) {
+				return;
+			}
+		}
+	}();
+	// Return overloaded result
+	if (fn) {
+		fn(breaker);
+		return delegate;
+	} else {
+		return [ breaker, delegate ];
+	}
+}
+
+/**
  * Concatenates the supplied async generators sequentially.
  */
 export async function *concat<Type>(...generators: AsyncIterable<Type>[]) {
@@ -60,36 +105,58 @@ export async function *concat<Type>(...generators: AsyncIterable<Type>[]) {
 }
 
 /**
+ * Returns a delegate which will forward up to `count` simultaneous invocations to a function.
+ */
+export function fanOut<Args extends any[]>(count: number, fn: (...args: Args) => Promise<void>) {
+	const pending: Deferred[] = [];
+	return {
+		async invoke(...args: Args) {
+			if (pending.length >= count) {
+				await pending[0].promise;
+			}
+			const deferred = new Deferred;
+			pending.push(deferred);
+			fn(...args).then(
+				() => pending.shift()!.resolve(),
+				err => pending.shift()!.reject(err));
+		},
+
+		drain() {
+			return Promise.all(pending.map(deferred => deferred.promise));
+		},
+	};
+}
+
+/**
  * Returns an iterator which proxies the given generator, requesting up to `count` elements in
  * advance. If you break ouf of this loop there will be abandoned values!
  */
-export function lookAhead<Type>(generator: AsyncGenerator<Type>, count: number) {
+export function lookAhead<Type>(iterable: AsyncIterable<Type>, count: number) {
 	if (count <= 0) {
-		return generator;
+		return iterable;
 	}
-	function push(result: IteratorResult<Type>) {
-		if (!result.done && queue.length <= count) {
-			const next = generator.next();
-			void next.then(push);
-			queue.push(next);
-		}
-	}
-	const first = generator.next();
-	void first.then(push);
-	const queue = [ first ];
-	return {
-		async *[Symbol.asyncIterator]() {
-			while (true) {
-				const next = await queue[0];
-				if (next.done) {
-					return;
-				}
-				void queue.shift();
-				push(next);
-				yield next.value;
+	return async function *() {
+		const generator = iterable[Symbol.asyncIterator]();
+		function push(result: IteratorResult<Type>) {
+			if (!result.done && queue.length <= count) {
+				const next = generator.next();
+				void next.then(push);
+				queue.push(next);
 			}
-		},
-	};
+		}
+		const first = generator.next();
+		void first.then(push);
+		const queue = [ first ];
+		while (true) {
+			const next = await queue[0];
+			if (next.done) {
+				return;
+			}
+			void queue.shift();
+			push(next);
+			yield next.value;
+		}
+	}();
 }
 
 /**

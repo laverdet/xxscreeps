@@ -1,6 +1,9 @@
+import type { Effect } from 'xxscreeps/utility/types';
 import type { IncomingMessage, Server, ServerResponse } from 'http';
 import type { Socket } from 'net';
 import type sockjs from 'sockjs';
+import { Deferred } from 'xxscreeps/utility/async';
+import * as Fn from 'xxscreeps/utility/functional';
 
 type Options = {
 	timeout?: number;
@@ -10,12 +13,17 @@ type Reference = Socket | sockjs.Connection;
 export function setupGracefulShutdown(server: Server, { timeout = 2000 }: Options = {}) {
 
 	// Keep track of all connections
+	let flushedHandler: Effect | undefined;
 	const sockets = new Map<Reference, boolean>();
 	const markIdle = (conn: Reference) => {
-		if (shuttingDown) {
-			conn.destroy();
-		}
 		sockets.set(conn, true);
+		if (flushedHandler) {
+			// Currently shutting down
+			conn.destroy();
+			if (Fn.every(sockets.values())) {
+				flushedHandler();
+			}
+		}
 	};
 	server.on('connection', conn => {
 		markIdle(conn);
@@ -40,10 +48,13 @@ export function setupGracefulShutdown(server: Server, { timeout = 2000 }: Option
 	});
 
 	// Shutdown handler
-	let shuttingDown = false;
+	let deferred: Deferred | undefined;
 	return () => {
-		// Close HTTP listener
-		shuttingDown = true;
+		if (deferred) {
+			return deferred.promise;
+		}
+		deferred = new Deferred();
+		flushedHandler = () => deferred!.resolve();
 		server.close();
 
 		// Close all idle connections
@@ -52,6 +63,9 @@ export function setupGracefulShutdown(server: Server, { timeout = 2000 }: Option
 				socket.end();
 			}
 		}
+		if (Fn.every(sockets.values())) {
+			flushedHandler();
+		}
 
 		// Close after timeout
 		if (timeout) {
@@ -59,6 +73,7 @@ export function setupGracefulShutdown(server: Server, { timeout = 2000 }: Option
 				for (const socket of sockets.keys()) {
 					socket.end();
 				}
+				flushedHandler!();
 			}, timeout).unref();
 		}
 	};

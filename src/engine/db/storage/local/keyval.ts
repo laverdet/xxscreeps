@@ -323,6 +323,34 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		return score;
 	}
 
+	zinterStore(key: string, keys: string[], options?: Provider.ZAggregate) {
+		// Fetch sets first because you can use this command to store a set back into itself
+		const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
+		const smallest = Fn.minimum(sets, (left, right) => left.size - right.size)!;
+		const weights = options?.weights ?? [ ...Fn.map(sets, () => 1) ];
+		// Generate intersection
+		const out = new SortedSet(function *(): Iterable<[ number, string ]> {
+			loop: for (const member of smallest.values()) {
+				let nextScore = 0;
+				for (let ii = 0; ii < sets.length; ++ii) {
+					const score = sets[ii].score(member);
+					if (score === undefined) {
+						continue loop;
+					}
+					nextScore += score * weights[ii];
+				}
+				yield [ nextScore, member ];
+			}
+		}());
+		// Save result
+		if (out.size > 0) {
+			this.data.set(key, out);
+		} else {
+			this.data.delete(key);
+		}
+		return out.size;
+	}
+
 	zmscore(key: string, members: string[]) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {

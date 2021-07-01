@@ -56,7 +56,7 @@ export class PlayerInstance {
 		private readonly channel: SubscriptionFor<typeof getRunnerUserChannel>,
 		private readonly codeChannel: SubscriptionFor<typeof Code['getUserCodeChannel']>,
 		public readonly userId: string,
-		private readonly username: string,
+		public readonly username: string,
 		private branchName: string | null,
 	) {
 		this.consoleChannel = getConsoleChannel(this.shard, this.userId);
@@ -144,7 +144,8 @@ export class PlayerInstance {
 					this.connectors.initialize(payload),
 				]);
 				payload.codeBlob = codeBlob;
-				this.sandbox = await createSandbox(payload, this.userId, (fd, payload) => {
+				this.sandbox = await createSandbox(this.userId);
+				await this.sandbox.initialize(payload, (fd, payload) => {
 					const type = ([ 'result', 'log', 'error' ] as const)[fd];
 					this.consoleChannel.publish({ type, value: payload }).catch(console.error);
 				});

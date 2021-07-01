@@ -2,10 +2,8 @@ import minimist from 'minimist';
 import config from 'xxscreeps/config';
 import * as User from 'xxscreeps/engine/db/user';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
-import { listen, mustNotReject } from 'xxscreeps/utility/async';
 import { Database, Shard } from 'xxscreeps/engine/db';
-import { getProcessorChannel } from 'xxscreeps/engine/processor/model';
-import { getConsoleChannel, getRunnerChannel } from 'xxscreeps/engine/runner/model';
+import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from '.';
 
 const argv = minimist(process.argv.slice(2), {
@@ -46,32 +44,6 @@ try {
 	}();
 	const main = import('./main');
 	await Promise.race([ main, waitForMain ]);
-
-	// Ctrl+C listener
-	let terminating = false;
-	const killListener = listen(process, 'SIGINT', () => {
-		// `npm run` will send two interrupts, so we have to swallow the extra
-		if (terminating) {
-			return;
-		}
-		terminating = true;
-		const timeout = setTimeout(killListener, 250);
-		timeout.unref();
-		console.log('Shutting down...');
-
-		// Send shutdown message to main. Once main shuts down send shutdown message to processor and
-		// runner
-		const shutdownUnlisten = serviceChannel.listen(message => {
-			if (message.type === 'mainDisconnected') {
-				shutdownUnlisten();
-				mustNotReject(Promise.all([
-					getProcessorChannel(shard).publish({ type: 'shutdown' }),
-					getRunnerChannel(shard).publish({ type: 'shutdown' }),
-				]));
-			}
-		});
-		serviceChannel.publish({ type: 'shutdown' }).catch(console.error);
-	});
 
 	// Start workers
 	const singleThreaded = config.launcher?.singleThreaded;

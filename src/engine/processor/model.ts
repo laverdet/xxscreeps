@@ -3,6 +3,7 @@ import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor
 import type { Shard } from 'xxscreeps/engine/db';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Channel } from 'xxscreeps/engine/db/channel';
+import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from 'xxscreeps/engine/service';
 
 export function getProcessorChannel(shard: Shard) {
@@ -231,4 +232,16 @@ export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wak
 		wakeTime === Infinity ?
 			undefined : shard.scratch.zadd(sleepingRoomsKey, [ [ wakeTime, roomName ] ], { if: 'nx' }),
 	]);
+}
+
+export async function abandonIntentsForTick(shard: Shard, time: number) {
+	const key = processRoomsSetKey(time);
+	await Promise.all([
+		// Update all processor pending counts to 0
+		shard.scratch.zinterStore(key, [ key ], { weights: [ 0 ] }),
+		// Clear runner queue
+		shard.scratch.del(runnerUsersSetKey(time)),
+	]);
+	// Publish process task to workers
+	await getProcessorChannel(shard).publish({ type: 'process', time });
 }

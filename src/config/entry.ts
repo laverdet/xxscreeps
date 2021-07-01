@@ -71,6 +71,10 @@ if (missingFlags.length) {
 		await import(`${new URL({
 			import: './dist/scripts/scrape-world.js',
 			start: './dist/engine/service/launcher.js',
+			main: './dist/engine/service/main.js',
+			backend: './dist/backend/server.js',
+			processor: './dist/engine/service/processor.js',
+			runner: './dist/engine/service/runner.js',
 		}[specifier] ?? specifier, base)}`);
 	} else {
 		// Start repl

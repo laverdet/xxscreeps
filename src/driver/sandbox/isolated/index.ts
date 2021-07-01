@@ -27,19 +27,16 @@ const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sa
 }));
 
 export class IsolatedSandbox implements Sandbox {
+	private tick?: ivm.Reference<Runtime['tick']>;
 	private totalTime = 0n;
+	private readonly isolate: ivm.Isolate = new ivm.Isolate({
+		inspector: useInspector,
+		memoryLimit: 128,
+	});
 
-	private constructor(
-		private readonly isolate: ivm.Isolate,
-		private readonly tick: ivm.Reference<Runtime['tick']>,
-	) {}
-
-	static async create(data: InitializationPayload, print: Print) {
-		// Generate new isolate and context
-		const isolate = new ivm.Isolate({
-			inspector: useInspector,
-			memoryLimit: 128,
-		});
+	async initialize(data: InitializationPayload, print: Print) {
+		// Initialize isolate and context
+		const { isolate } = this;
 		const context = await isolate.createContext({ inspector: useInspector });
 
 		// Set up required globals
@@ -75,8 +72,8 @@ export class IsolatedSandbox implements Sandbox {
 			context.global.delete('ivm'),
 			context.global.delete('nodeUtilImport'),
 		]);
+		this.tick = tick;
 		await initialize.apply(undefined, [ isolate, context, new ivm.Reference(print), data ], { arguments: { copy: true } });
-		return new IsolatedSandbox(isolate, tick);
 	}
 
 	createInspectorSession() {
@@ -91,7 +88,7 @@ export class IsolatedSandbox implements Sandbox {
 
 	async run(args: TickPayload) {
 		try {
-			const payload = await this.tick.apply(
+			const payload = await this.tick!.apply(
 				undefined,
 				[ args ], {
 					arguments: { copy: true },
@@ -105,6 +102,8 @@ export class IsolatedSandbox implements Sandbox {
 		} catch (err) {
 			if (err.message === 'Script execution timed out.') {
 				return { result: 'timedOut' as const };
+			} else if (err.message === 'Isolate is disposed') {
+				return { result: 'disposed' as const };
 			}
 			throw err;
 		}

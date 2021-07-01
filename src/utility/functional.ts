@@ -63,7 +63,9 @@ export function *concat(...args: any[]) {
 	}
 }
 
-export function every<Type>(iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean) {
+export function every(iterable: Iterable<LooseBoolean>): boolean;
+export function every<Type>(iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean): boolean;
+export function every(iterable: Iterable<any>, callback = (value: LooseBoolean) => value) {
 	for (const value of iterable) {
 		if (!callback(value)) {
 			return false;

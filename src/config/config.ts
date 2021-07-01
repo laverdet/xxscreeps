@@ -77,6 +77,13 @@ export type Schema = {
 		 * (including hyper-threaded) + 1
 		 */
 		concurrency?: number;
+
+		/**
+		 * Timeout in milliseconds before the processors give up on waiting for intents from the Runner
+		 * service and continue processing all outstanding rooms.
+		 * @default 5000
+		 */
+		intentAbandonTimeout?: number;
 	};
 
 	/**
@@ -102,6 +109,13 @@ export type Schema = {
 		 * hyper-threaded) + 1
 		 */
 		concurrency?: number;
+
+		/**
+		 * How long an idle runner will wait before migrating a player sandbox into that runner, causing
+		 * a hard reset for the player.
+		 * @default 50
+		 */
+		migrationTimeout?: number;
 
 		/**
 		 * Setting this to true will run user code using the nodejs `vm` module instead
@@ -195,6 +209,7 @@ export const defaults = {
 	},
 	processor: {
 		concurrency: os.cpus().length + 1,
+		intentAbandonTimeout: 5000,
 	},
 	runner: {
 		concurrency: os.cpus().length + 1,
@@ -202,6 +217,7 @@ export const defaults = {
 			bucket: 10000,
 			tickLimit: 500,
 		},
+		migrationTimeout: 50,
 	},
 	schemaArchive: './screeps/archive',
 	database: {
@@ -224,15 +240,15 @@ export const defaults = {
  * also be merged into the `config` defaults.
  */
 export const configDefaults = {
+	mods: [
+		'xxscreeps/mods/classic',
+		'xxscreeps/mods/backend/password',
+		'xxscreeps/mods/backend/steam',
+	],
 	backend: {
 		secret: crypto.randomBytes(16).toString('hex'),
 	},
 	game: {
 		tickSpeed: 250,
 	},
-	mods: [
-		'xxscreeps/mods/classic',
-		'xxscreeps/mods/backend/password',
-		'xxscreeps/mods/backend/steam',
-	],
 };

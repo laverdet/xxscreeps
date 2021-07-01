@@ -1,5 +1,7 @@
+import type { Effect } from 'xxscreeps/utility/types';
 import type { Context, State } from '.';
 
+import * as Async from 'xxscreeps/utility/async';
 import bodyParser from 'koa-bodyparser';
 import Koa from 'koa';
 import ConditionalGet from 'koa-conditional-get';
@@ -7,7 +9,7 @@ import Router from 'koa-router';
 import http from 'http';
 import config from 'xxscreeps/config';
 
-import { getServiceChannel } from 'xxscreeps/engine/service';
+import { getServiceChannel, handleInterrupt } from 'xxscreeps/engine/service';
 import { authentication } from './auth';
 import { BackendContext } from './context';
 import { setupGracefulShutdown } from './graceful';
@@ -26,6 +28,7 @@ const router = new Router<State, Context>();
 
 // Set up endpoints
 const httpServer = http.createServer(koa.callback());
+const unlistenServer = setupGracefulShutdown(httpServer);
 installUpgradeHandlers(koa, httpServer);
 installSocketHandlers(koa, backendContext);
 koa.use(ConditionalGet());
@@ -53,17 +56,6 @@ koa.use(router.routes());
 koa.use(router.allowedMethods());
 installEndpointHandlers(koa, router);
 
-// Shutdown handler
-const shutdownServer = setupGracefulShutdown(httpServer);
-const serviceChannel = await getServiceChannel(backendContext.shard).subscribe();
-serviceChannel.listen(message => {
-	if (message.type === 'shutdown') {
-		serviceChannel.disconnect();
-		shutdownServer();
-		void backendContext.disconnect();
-	}
-});
-
 // Read configuration
 const addr: any[] = config.backend.bind.split(':');
 addr[1] = Number(addr[1] ?? 21025);
@@ -72,3 +64,20 @@ if (addr[0] === '*') {
 }
 addr.reverse();
 httpServer.listen(...addr, () => console.log('🌎 Listening'));
+
+// Interrupt handler
+let halt: Effect | undefined;
+handleInterrupt(() => halt?.());
+
+// Wait for shutdown message
+const serviceChannel = await getServiceChannel(backendContext.shard).subscribe();
+for await (const message of Async.breakable(serviceChannel, breaker => halt = breaker)) {
+	if (message.type === 'shutdown') {
+		break;
+	}
+}
+
+// Start graceful exit
+serviceChannel.disconnect();
+await unlistenServer();
+await backendContext.disconnect();

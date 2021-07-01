@@ -108,6 +108,11 @@
                 "concurrency": {
                     "description": "Total number of processor tasks to run at a time. The default is the number of CPU cores\n(including hyper-threaded) + 1",
                     "type": "number"
+                },
+                "intentAbandonTimeout": {
+                    "default": 5000,
+                    "description": "Timeout in milliseconds before the processors give up on waiting for intents from the Runner\nservice and continue processing all outstanding rooms.",
+                    "type": "number"
                 }
             },
             "type": "object"
@@ -137,6 +142,11 @@
                         }
                     },
                     "type": "object"
+                },
+                "migrationTimeout": {
+                    "default": 25,
+                    "description": "How long an idle runner will wait before migrating a player sandbox into that runner, causing\na hard reset for the player.",
+                    "type": "number"
                 },
                 "unsafeSandbox": {
                     "default": false,

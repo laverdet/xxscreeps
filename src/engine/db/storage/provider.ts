@@ -17,6 +17,10 @@ export type HSet = {
 export type ZAdd = {
 	if?: 'nx' | 'xx';
 };
+export type ZAggregate = {
+	// aggregate: 'sum' | 'min' | 'max';
+	weights?: number[];
+};
 export type ZRange = {
 	by?: 'lex' | 'score';
 	limit?: [ number, number ];
@@ -71,6 +75,7 @@ export type KeyValProvider = {
 	zadd(key: string, members: [ number, string ][], options?: ZAdd): Promise<number>;
 	zcard(key: string): Promise<number>;
 	zincrBy(key: string, delta: number, member: string): Promise<number>;
+	zinterStore(key: string, keys: string[], options?: ZAggregate): Promise<number>;
 	zmscore(key: string, members: string[]): Promise<(number | null)[]>;
 	zrange(key: string, min: string, max: string, options: ZRange & { by: 'lex' }): Promise<string[]>;
 	zrange(key: string, min: number, max: number, options?: ZRange): Promise<string[]>;
