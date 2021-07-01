@@ -76,7 +76,7 @@ export class RedisPubSubProvider implements PubSubProvider {
 		}
 		const subscriber = new RedisSubscription(listener, key, this);
 		subscribers.add(subscriber);
-		return subscriber;
+		return [ () => this.unsubscribe(key, subscriber), subscriber ] as const;
 	}
 
 	unsubscribe(key: string, subscriber: RedisSubscription) {
@@ -95,10 +95,6 @@ class RedisSubscription implements PubSubSubscription {
 		private readonly key: string,
 		private readonly parent: RedisPubSubProvider,
 	) {}
-
-	disconnect() {
-		this.parent.unsubscribe(this.key, this);
-	}
 
 	publish(message: string) {
 		return this.parent.publishFromClient(this.key, message, this);

@@ -76,7 +76,8 @@ end`,
 		return value;
 	}
 
-	async set(key: string, value: Value | Readonly<Uint8Array>, options?: P.Set): Promise<any> {
+	async set(key: string, value: Value | Readonly<Uint8Array>, options?: P.Set | P.SetBuffer): Promise<any>;
+	async set(key: string, value: Value | Readonly<Uint8Array>, options?: P.Set) {
 		const payload = function() {
 			if (typeof value === 'string' || typeof value === 'number' || value instanceof Buffer) {
 				return value;
