@@ -76,6 +76,7 @@ const intents = [
 				}
 			} else if (object['#user'] === me) {
 				if (object instanceof OwnedStructure) {
+					object['#user'] = '1';
 					const ruin = createRuin(object, 500000);
 					room['#insertObject'](ruin);
 					room['#removeObject'](object);

@@ -26,6 +26,10 @@ const shape = struct(objectFormat, {
  */
 export class Ruin extends withOverlay(RoomObject, shape) {
 	override get ['#lookType']() { return C.LOOK_RUINS }
+	override get ['#extraUsers']() {
+		const user = this['#structure'].user;
+		return user ? [ user ] : [];
+	}
 
 	/**
 	 * An object containing basic data of the destroyed structure.

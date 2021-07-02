@@ -19,5 +19,5 @@ bindRenderer(Ruin, (ruin, next) => ({
 	structure: {
 		type: ruin['#structure'].type,
 	},
-	user: ruin['#user'],
+	user: ruin['#structure'].user,
 }));
