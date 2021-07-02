@@ -47,6 +47,7 @@ export class Responder {
 
 abstract class ResponderClient {
 	#disconnected = false;
+	#queue: RequestMessage[] = [];
 	#requestId = 0;
 	readonly #channel = new MessageChannel;
 	readonly #port = this.#channel.port1;
@@ -83,14 +84,16 @@ abstract class ResponderClient {
 		});
 
 		// Add listener for responses from host
-		client.#port.on('message', (message: ResponseMessage) => {
-			const { requestId } = message;
-			const request = client.#requests.get(requestId)!;
-			client.#requests.delete(requestId);
-			if (message.rejection) {
-				request.reject(new Error(message.payload));
-			} else {
-				request.resolve(message.payload);
+		client.#port.on('message', (messages: ResponseMessage[]) => {
+			for (const message of messages) {
+				const { requestId } = message;
+				const request = client.#requests.get(requestId)!;
+				client.#requests.delete(requestId);
+				if (message.rejection) {
+					request.reject(new Error(message.payload));
+				} else {
+					request.resolve(message.payload);
+				}
 			}
 		});
 
@@ -104,11 +107,17 @@ abstract class ResponderClient {
 		const requestId = ++client.#requestId;
 		const deferred = new Deferred<unknown>();
 		client.#requests.set(requestId, deferred);
-		client.#port.postMessage(staticCast<RequestMessage>({
+		if (client.#queue.length === 0) {
+			process.nextTick(() => {
+				client.#port.postMessage(client.#queue);
+				client.#queue = [];
+			});
+		}
+		client.#queue.push({
 			requestId,
 			method,
 			payload,
-		}));
+		});
 		return deferred.promise;
 	}
 
@@ -139,20 +148,32 @@ abstract class ResponderHost<Type extends Responder = any> {
 	}
 
 	static connect(host: ResponderHost, port: MessagePort) {
+		let queue: ResponseMessage[] = [];
 		const instance = host.#instance;
+		const respond = (message: ResponseMessage) => {
+			if (queue.length === 0) {
+				process.nextTick(() => {
+					port.postMessage(queue);
+					queue = [];
+				});
+			}
+			queue.push(message);
+		};
 		port.on('close', host.#ref());
-		port.on('message', (message: RequestMessage) => {
-			const { method, payload, requestId } = message;
-			(async function() {
-				port.postMessage(staticCast<ResponseMessage>({
+		port.on('message', (messages: RequestMessage[]) => {
+			for (const message of messages) {
+				const { method, payload, requestId } = message;
+				(async function() {
+					respond({
+						requestId,
+						payload: await instance[method](...payload),
+					});
+				})().catch(err => respond({
 					requestId,
-					payload: await instance[method](...payload),
+					payload: err.stack,
+					rejection: true,
 				}));
-			})().catch(err => port.postMessage(staticCast<ResponseMessage>({
-				requestId,
-				payload: err.stack,
-				rejection: true,
-			})));
+			}
 		});
 	}
 
