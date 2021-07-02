@@ -175,7 +175,10 @@ export class PlayerInstance {
 						payload.roomBlobs = await Promise.all(Fn.map(roomNames,
 							roomName => this.shard.loadRoomBlob(roomName, time - 1)));
 						// Load unseen users
-						const userIds = Fn.concat(Fn.map(payload.roomBlobs, blob => RoomSchema.read(blob)['#users'].presence));
+						const userIds = Fn.concat(Fn.map(payload.roomBlobs, blob => {
+							const users = RoomSchema.read(blob)['#users'];
+							return Fn.concat(users.presence, users.extra);
+						}));
 						const newUserIds = Fn.reject(userIds, userId => this.seenUsers.has(userId));
 						const entries: [ string, string ][] = await Promise.all(Fn.map(newUserIds, async userId => {
 							this.seenUsers.add(userId);

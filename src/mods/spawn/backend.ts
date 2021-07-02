@@ -1,14 +1,15 @@
+import config from 'xxscreeps/config';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import * as Controller from 'xxscreeps/mods/controller/processor';
+import * as User from 'xxscreeps/engine/db/user';
 import * as Spawn from './spawn';
 import { Game, runOneShot } from 'xxscreeps/game';
-import { forceRoomProcess, getRoomChannel, userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model';
+import { getRoomChannel, pushIntentsForRoomNextTick, userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
 import { bindRenderer, hooks } from 'xxscreeps/backend';
-import { flushUsers } from 'xxscreeps/game/room/room';
 import { renderStore } from 'xxscreeps/mods/resource/backend';
+import { saveUserFlagBlobForNextTick } from 'xxscreeps/mods/flag/model';
 import { StructureExtension } from './extension';
 
 bindRenderer(StructureExtension, (extension, next) => ({
@@ -104,38 +105,69 @@ hooks.register('route', {
 		}
 		const { name, room: roomName, x, y } = context.request.body;
 		const pos = new RoomPosition(x, y, roomName);
-		await getRoomChannel(context.shard, roomName).publish({ type: 'willSpawn' });
-		await new Promise(resolve => { setTimeout(resolve, 50) });
-		await context.backend.gameMutex.scope(async() => {
-			// Ensure user has no objects
-			const roomNames = await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId));
-			if (roomNames.length !== 0) {
-				throw new Error('User has presence');
-			}
-			const room = await context.shard.loadRoom(roomName);
-			runOneShot(context.backend.world, room, context.shard.time, userId, () => {
-				// Check room eligibility
-				if (!room.controller || room.controller.reservation || room.controller.my === false) {
-					throw new Error('Room is owned');
-				}
-				// Add spawn
-				Controller.claim(room.controller, userId);
-				if (checkCreateConstructionSite(room, pos, 'spawn', 'Spawn1') !== C.OK) {
-					throw new Error('Invalid intent');
-				}
-				room['#insertObject'](Spawn.create(pos, userId, name));
-				room['#flushObjects']();
-				room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
-				flushUsers(room);
-			});
 
-			// Save
-			await Promise.all([
-				forceRoomProcess(context.shard, roomName),
-				context.backend.shard.saveRoom(roomName, context.shard.time, room),
-				context.backend.shard.saveRoom(roomName, context.shard.time + 1, room),
-			]);
+		// Check last spawn time
+		const now = Date.now();
+		const lastSpawn = await context.shard.data.hget(User.infoKey(userId), 'lastSpawnTime');
+		if (lastSpawn !== null && now < Number(lastSpawn) + config.game.respawnTimeout * 3600 * 1000) {
+			throw new Error('Too soon after last respawn');
+		}
+
+		// Insert delay to workaround client bugs [see room socket]
+		await getRoomChannel(context.shard, roomName).publish({ type: 'willSpawn' });
+
+		// Ensure user has no objects
+		const roomNames = await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId));
+		if (roomNames.length !== 0) {
+			throw new Error('User has presence');
+		}
+
+		// Check room eligibility
+		const room = await context.shard.loadRoom(roomName);
+		runOneShot(context.backend.world, room, context.shard.time, userId, () => {
+			// Check room eligibility
+			if (!room.controller || room.controller.reservation || room.controller.my === false) {
+				throw new Error('Room is owned');
+			}
+			room['#user'] = userId;
+			room['#level'] = 1;
+			if (checkCreateConstructionSite(room, pos, 'spawn', name) !== C.OK) {
+				throw new Error('Invalid intent');
+			}
 		});
+
+		// Send intent to processor
+		await pushIntentsForRoomNextTick(context.shard, roomName, userId, {
+			local: { placeSpawn: [ [ x, y, name ] ] },
+			object: {},
+			internal: true,
+		});
+
+		// Update last spawn time
+		await context.shard.data.hset(User.infoKey(userId), 'lastSpawnTime', Date.now());
+		return { ok: 1 };
+	},
+});
+
+hooks.register('route', {
+	path: '/api/user/respawn',
+	method: 'post',
+
+	async execute(context) {
+		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
+		const roomNames = await context.shard.scratch.smembers(userToPresenceRoomsSetKey(userId));
+		if (roomNames.length === 0) {
+			throw new Error('Invalid status');
+		}
+		await Promise.all(roomNames.map(roomName => pushIntentsForRoomNextTick(context.shard, roomName, userId, {
+			local: { unspawn: [ [] ] },
+			object: {},
+			internal: true,
+		})));
+		await saveUserFlagBlobForNextTick(context.shard, userId, undefined);
 		return { ok: 1 };
 	},
 });

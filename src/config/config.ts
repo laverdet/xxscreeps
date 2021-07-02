@@ -50,6 +50,13 @@ export type Schema = {
 	 */
 	game?: {
 		/**
+		 * Amount of time in hours before a user is allowed to respawn, counted from the time of their
+		 * initial spawn placement.
+		 * @default 0
+		 */
+		respawnTimeout?: number;
+
+		/**
 		 * Minimum length of a game tick in milliseconds.
 		 * @default 250
 		 */
@@ -206,6 +213,9 @@ export const defaults = {
 		allowGuestAccess: true as boolean,
 		bind: '*',
 		socketThrottle: 125,
+	},
+	game: {
+		respawnTimeout: 0,
 	},
 	processor: {
 		concurrency: os.cpus().length + 1,

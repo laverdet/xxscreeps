@@ -3,15 +3,20 @@ import type { Direction } from 'xxscreeps/game/position';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
+import * as ControllerProc from 'xxscreeps/mods/controller/processor';
+import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep';
 import { Game, me } from 'xxscreeps/game';
-import { getPositionInDirection } from 'xxscreeps/game/position';
+import { Room } from 'xxscreeps/game/room';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { assign } from 'xxscreeps/utility/utility';
 import { StructureExtension } from './extension';
-import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkRecycleCreep, checkRenewCreep, checkSpawnCreep } from './spawn';
+import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn';
+import { OwnedStructure } from 'xxscreeps/mods/structure/structure';
+import { StructureController } from 'xxscreeps/mods/controller/controller';
+import { createRuin } from 'xxscreeps/mods/structure/ruin';
 
 function consumeEnergy(spawn: StructureSpawn, amount: number) {
 	const energyStructures = spawn.room.find(C.FIND_STRUCTURES).filter(
@@ -37,6 +42,51 @@ declare module 'xxscreeps/engine/processor' {
 	interface Intent { spawn: typeof intents }
 }
 const intents = [
+	registerIntentProcessor(Room, 'placeSpawn', { internal: true },
+		(room, context, xx: number, yy: number, name: string) => {
+			const pos = new RoomPosition(xx, yy, room.name);
+			if (room['#user'] === null) {
+				// Remove existing objects
+				for (const object of room['#objects']) {
+					if (object['#user'] === null) {
+						if (object.hits !== undefined) {
+							room['#removeObject'](object);
+						}
+					} else if (object instanceof OwnedStructure) {
+						const ruin = createRuin(object, 100000);
+						room['#insertObject'](ruin);
+						room['#removeObject'](object);
+					} else {
+						room['#removeObject'](object);
+					}
+				}
+				// Set up initial player state
+				ControllerProc.claim(context, room.controller!, me);
+				room['#insertObject'](create(pos, me, name));
+				room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
+				context.didUpdate();
+			}
+		}),
+
+	registerIntentProcessor(Room, 'unspawn', { internal: true }, (room, context) => {
+		for (const object of room['#objects']) {
+			if (object instanceof StructureController) {
+				if (object.room['#user'] === me) {
+					ControllerProc.release(context, object);
+				}
+			} else if (object['#user'] === me) {
+				if (object instanceof OwnedStructure) {
+					const ruin = createRuin(object, 500000);
+					room['#insertObject'](ruin);
+					room['#removeObject'](object);
+				} else {
+					room['#removeObject'](object);
+				}
+				context.didUpdate();
+			}
+		}
+	}),
+
 	registerIntentProcessor(StructureSpawn, 'recycleCreep', {}, (spawn, context, id: string) => {
 		const creep = Game.getObjectById<Creep>(id)!;
 		if (checkRecycleCreep(spawn, creep) === C.OK) {

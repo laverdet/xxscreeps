@@ -1,10 +1,11 @@
+import type { Store } from 'xxscreeps/mods/resource/store';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
-import { RoomObject, format as objectFormat } from 'xxscreeps/game/object';
+import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure';
 import { Game } from 'xxscreeps/game';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { openStoreFormat } from 'xxscreeps/mods/resource/store';
+import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store';
 
 export const format = declare('Ruin', () => compose(shape, Ruin));
 const shape = struct(objectFormat, {
@@ -55,4 +56,26 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 	 * The amount of game ticks before this ruin decays.
 	 */
 	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time) }
+}
+
+export function createRuin(structure: Structure, decay?: number) {
+	const ruin = createObject(new Ruin, structure.pos);
+	ruin.store = new OpenStore;
+	const withStore = structure as never as Record<'store', Store | undefined>;
+	if (withStore.store) {
+		for (const [ resourceType, amount ] of withStore.store['#entries']()) {
+			ruin.store['#add'](resourceType, amount);
+		}
+	}
+	ruin.destroyTime = Game.time;
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+	const decayTimeout = decay ?? (C.RUIN_DECAY_STRUCTURES[structure.structureType as keyof typeof C.RUIN_DECAY_STRUCTURES] ?? C.RUIN_DECAY);
+	ruin['#decayTime'] = Game.time + decayTimeout;
+	ruin['#structure'] = {
+		id: structure.id,
+		hitsMax: structure.hitsMax ?? 0,
+		type: structure.structureType,
+		user: structure['#user'],
+	};
+	return ruin;
 }

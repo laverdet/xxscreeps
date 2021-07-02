@@ -77,6 +77,24 @@ export function every(iterable: Iterable<any>, callback = (value: LooseBoolean) 
 	return true;
 }
 
+export function groupBy<Type, Key>(iterable: Iterable<Type>, key: (value: Type) => Key): Map<Key, Type[]>;
+export function groupBy<Type, Key, Value>(
+	iterable: Iterable<Type>, key: (value: Type) => Key, map: (value: Type) => Value): Map<Key, Value[]>;
+export function groupBy(iterable: Iterable<any>, key: (value: any) => any, map = (value: any) => value) {
+	const result = new Map<any, any[]>();
+	for (const value of iterable) {
+		const computed = key(value);
+		const mapped = map(value);
+		const array = result.get(computed);
+		if (array === undefined) {
+			result.set(computed, [ mapped ]);
+		} else {
+			array.push(mapped);
+		}
+	}
+	return result;
+}
+
 export function some<Type>(iterable: Iterable<Type>, callback: (value: Type) => LooseBoolean) {
 	for (const value of iterable) {
 		if (callback(value)) {

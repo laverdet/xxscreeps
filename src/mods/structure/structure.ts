@@ -1,17 +1,15 @@
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room';
 import type { GameConstructor } from 'xxscreeps/game';
-import type { Store } from 'xxscreeps/mods/resource/store';
+import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
-import type { RoomPosition } from 'xxscreeps/game/position';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position';
 import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game';
-import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object';
+import { RoomObject, format as objectFormat } from 'xxscreeps/game/object';
 import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { OpenStore } from 'xxscreeps/mods/resource/store';
-import { Ruin } from './ruin';
+import { createRuin } from './ruin';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
 
@@ -68,24 +66,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 
 	override ['#applyDamage'](power: number, type: number, source?: RoomObject) {
 		if (super['#applyDamage'](power, type, source)) {
-			const ruin = createObject(new Ruin, this.pos);
-			ruin.store = new OpenStore;
-			const withStore = this as never as Record<'store', Store | undefined>;
-			if (withStore.store) {
-				for (const [ resourceType, amount ] of withStore.store['#entries']()) {
-					ruin.store['#add'](resourceType, amount);
-				}
-			}
-			ruin.destroyTime = Game.time;
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			ruin['#decayTime'] = Game.time + (C.RUIN_DECAY_STRUCTURES[this.structureType as keyof typeof C.RUIN_DECAY_STRUCTURES] ?? C.RUIN_DECAY);
-			ruin['#structure'] = {
-				id: this.id,
-				hitsMax: this.hitsMax ?? 0,
-				type: this.structureType,
-				user: this['#user'],
-			};
-			Game.rooms[this.pos.roomName]['#insertObject'](ruin);
+			this.room['#insertObject'](createRuin(this));
 			return true;
 		} else {
 			return false;

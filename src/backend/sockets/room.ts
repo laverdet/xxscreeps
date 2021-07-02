@@ -146,16 +146,13 @@ export const roomSubscription: SubscriptionEndpoint = {
 								objects[value._id] = value;
 							}
 						}
-						const owner = object['#user'];
-						if (owner != null && !seenUsers.has(owner)) {
-							seenUsers.add(owner);
-							visibleUsers.add(owner);
-						}
-						for (const userId of object['#extraUsers']) {
-							if (!seenUsers.has(userId)) {
-								seenUsers.add(userId);
-								visibleUsers.add(userId);
-							}
+					}
+					// Check for new users
+					const users = room['#users'];
+					for (const userId of Fn.concat(users.presence, users.extra)) {
+						if (!seenUsers.has(userId)) {
+							seenUsers.add(userId);
+							visibleUsers.add(userId);
 						}
 					}
 					// Diff with previous payload

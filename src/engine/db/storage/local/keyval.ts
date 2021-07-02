@@ -410,7 +410,12 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 						return [ ...set.entriesByLex(minInc, minVal, maxInc, maxVal) ];
 					}
 					case 'score': return [ ...Fn.map(set.entries(min as number, max as number), entry => entry[1]) ];
-					default: return set.values().slice(min as number, max as number);
+					default: {
+						if (min < 0 || max === Infinity) {
+							throw new Error(`Invalid index range [${min}, ${max}]`);
+						}
+						return set.values().slice(min as number, max as number);
+					}
 				}
 			}();
 			if (options?.limit) {

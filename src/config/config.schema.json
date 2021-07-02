@@ -72,6 +72,11 @@
             ],
             "description": "Game settings",
             "properties": {
+                "respawnTimeout": {
+                    "default": 0,
+                    "description": "Amount of time in hours before a user is allowed to respawn, counted from the time of their\ninitial spawn placement.",
+                    "type": "number"
+                },
                 "tickSpeed": {
                     "default": 250,
                     "description": "Minimum length of a game tick in milliseconds.",
@@ -144,7 +149,7 @@
                     "type": "object"
                 },
                 "migrationTimeout": {
-                    "default": 25,
+                    "default": 50,
                     "description": "How long an idle runner will wait before migrating a player sandbox into that runner, causing\na hard reset for the player.",
                     "type": "number"
                 },

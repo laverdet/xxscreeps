@@ -1,3 +1,4 @@
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room';
 import * as C from 'xxscreeps/game/constants';
 import * as CreepLib from './creep';
 import * as User from 'xxscreeps/engine/db/user';
@@ -11,12 +12,32 @@ export const controlledRoomKey = (userId: string) => `user/${userId}/controlledR
 export const reservedRoomKey = (userId: string) => `user/${userId}/reservedRooms`;
 
 // Processor methods
-export function claim(controller: StructureController, user: string) {
-	// Take controller
+export function claim(context: ProcessorContext, controller: StructureController, userId: string) {
+	context.task(Promise.all([
+		context.shard.scratch.sadd(controlledRoomKey(userId), [ controller.room.name ]),
+		context.shard.scratch.srem(reservedRoomKey(userId), [ controller.room.name ]),
+	]));
 	controller['#reservationEndTime'] = 0;
-	controller['#user'] = user;
+	controller['#user'] = userId;
 	controller.room['#level'] = 1;
-	controller.room['#user'] = user;
+	controller.room['#user'] = userId;
+}
+
+export function release(context: ProcessorContext, controller: StructureController) {
+	const userId = controller.room['#user'];
+	if (userId !== null) {
+		const key = controller.level === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);
+		context.task(context.shard.scratch.srem(key, [ controller.room.name ]));
+	}
+	controller['#downgradeTime'] = 0;
+	controller['#progress'] = 0;
+	controller['#reservationEndTime'] = 0;
+	controller['#safeModeCooldownTime'] = 0;
+	controller['#user'] = null;
+	controller.room['#level'] = 0;
+	controller.room['#safeModeUntil'] = 0;
+	controller.room['#user'] = null;
+	context.didUpdate();
 }
 
 // Register intent processors
@@ -32,11 +53,9 @@ const intents = [
 		if (CreepLib.checkAttackController(creep, controller) === C.OK) {
 			const effect = creep.getActiveBodyparts(C.CLAIM);
 			const reservation = controller['#reservationEndTime'];
-			controller['#user'] = null;
 			if (reservation) {
 				controller['#reservationEndTime'] = reservation - effect * C.CONTROLLER_RESERVE;
 			} else {
-				// TODO FIX THIS
 				controller['#downgradeTime'] -= effect * C.CONTROLLER_CLAIM_DOWNGRADE;
 				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE - 1;
 			}
@@ -77,7 +96,7 @@ const intents = [
 			}(), didClaim => {
 				if (didClaim) {
 					controller['#user'] = null;
-					claim(controller, creep['#user']);
+					claim(context, controller, creep['#user']);
 					saveAction(creep, 'reserveController', controller.pos);
 					context.didUpdate();
 				}
@@ -175,17 +194,7 @@ const intents = [
 
 	registerIntentProcessor(StructureController, 'unclaim', {}, (controller, context) => {
 		if (checkUnclaim(controller) === C.OK) {
-			controller.isPowerEnabled = false;
-			controller.safeModeAvailable = 0;
-			controller['#downgradeTime'] = 0;
-			controller['#progress'] = 0;
-			controller['#safeModeCooldownTime'] = 0;
-			controller['#upgradeBlockedUntil'] = 0;
-			controller['#user'] =
-			controller.room['#user'] = null;
-			controller.room['#level'] = 0;
-			controller.room['#safeModeUntil'] = 0;
-			context.didUpdate();
+			release(context, controller);
 		}
 	}),
 ];
@@ -195,11 +204,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 		const reservationEndTime = controller['#reservationEndTime'];
 		if (reservationEndTime) {
 			if (reservationEndTime <= Game.time) {
-				const userId = controller.room['#user']!;
-				controller['#reservationEndTime'] = 0;
-				controller.room['#user'] = null;
-				context.task(context.shard.scratch.srem(reservedRoomKey(userId), [ controller.room.name ]));
-				context.didUpdate();
+				release(context, controller);
 			} else {
 				context.wakeAt(reservationEndTime);
 			}
@@ -220,14 +225,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			--controller.room['#level'];
 			controller.safeModeAvailable = 0;
 			if (controller.level === 0) {
-				const userId = controller.room['#user']!;
-				controller['#downgradeTime'] = 0;
-				controller['#progress'] = 0;
-				controller['#user'] = null;
-				controller['#safeModeCooldownTime'] = 0;
-				controller.room['#safeModeUntil'] = 0;
-				controller.room['#user'] = null;
-				context.task(context.shard.scratch.srem(controlledRoomKey(userId), [ controller.room.name ]));
+				release(context, controller);
 			} else {
 				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[controller.level]! * 0.9);

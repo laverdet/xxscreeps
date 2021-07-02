@@ -51,12 +51,16 @@ const executePlayer = Async.fanOut(maxConcurrency, async(userId: string, time: n
 
 	// Run user code
 	const roomNames = await shard.scratch.smembers(userToIntentRoomsSetKey(userId));
-	if (isEntry) {
-		process.stdout.write(`+${instance.username}, `);
-	}
-	await instance.run(time, roomNames);
-	if (isEntry) {
-		process.stdout.write(`-${instance.username}, `);
+	if (roomNames.length === 0) {
+		await shard.scratch.srem('activeUsers', [ userId ]);
+	} else {
+		if (isEntry) {
+			process.stdout.write(`+${instance.username}, `);
+		}
+		await instance.run(time, roomNames);
+		if (isEntry) {
+			process.stdout.write(`-${instance.username}, `);
+		}
 	}
 });
 

@@ -17,6 +17,7 @@ export type IntentProcessorInfo = {
 		type: string[];
 	};
 	intent: string;
+	internal: boolean;
 	mask: number;
 	priority: number;
 	process: IntentProcessor;
@@ -45,6 +46,7 @@ export function registerIntentProcessor<Type extends {}, Intent extends string, 
 		after?: string | string[];
 		before?: string | string[];
 		type?: string | string[];
+		internal?: true;
 	},
 	process: (receiver: Type, context: ProcessorContext, ...data: Data) => void,
 ): void | { type: Type; intent: Intent; data: RemapNull<Data> } {
@@ -58,6 +60,7 @@ export function registerIntentProcessor<Type extends {}, Intent extends string, 
 			type: toArray(constraints.type),
 		},
 		intent,
+		internal: constraints.internal ?? false,
 		mask: 0,
 		priority: 0,
 		process,

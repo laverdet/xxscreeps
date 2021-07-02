@@ -1,9 +1,9 @@
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor';
 import type { Shard } from 'xxscreeps/engine/db';
+import type { flushUsers } from 'xxscreeps/game/room/room';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Channel } from 'xxscreeps/engine/db/channel';
-import { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
 import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from 'xxscreeps/engine/service';
 
@@ -25,10 +25,6 @@ export function getRoomChannel(shard: Shard, roomName: string) {
 export const processorTimeKey = 'processor/time';
 export const activeRoomsKey = 'processor/activeRooms';
 const sleepingRoomsKey = 'processor/inactiveRooms';
-const roomToIntentPlayersSetKey = (roomName: string) =>
-	`rooms/${roomName}/intentUsers`;
-const roomToPresencePlayersSetKey = (roomName: string) =>
-	`rooms/${roomName}/presenceUsers`;
 export const userToIntentRoomsSetKey = (userId: string) =>
 	`users/${userId}/intentRooms`;
 export const userToPresenceRoomsSetKey = (userId: string) =>
@@ -46,32 +42,6 @@ const intentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/intents`;
 const finalIntentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/finalIntents`;
-
-/**
- * Adds the members of `members` to a set and removes from the set those which don't exist. Returns
- * a list of elements which were removed. When the script returns the contents of the set will be
- * equal to `members`.
- */
-const UpdateSetMembers = new KeyvalScript((keyval, [ key ]: [ string ], members: string[]) => {
-	keyval.sadd('.tmp', members);
-	const result = keyval.sdiff(key, [ '.tmp' ]);
-	keyval.sunionStore(key, [ '.tmp' ]);
-	keyval.del('.tmp');
-	return result;
-}, {
-	lua:
-`if #ARGV == 0 then
-	local result = redis.call('smembers', KEYS[1])
-	redis.call('del', KEYS[1])
-	return result
-else
-	redis.call('sadd', '.tmp', unpack(ARGV))
-	local result = redis.call('sdiff', KEYS[1], '.tmp')
-	redis.call('sunionstore', KEYS[1], '.tmp')
-	redis.call('del', '.tmp')
-	return result
-end`,
-});
 
 async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, intents?: RoomIntentPayload) {
 	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
@@ -218,34 +188,47 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 	return time;
 }
 
-export async function updateUserRoomRelationships(shard: Shard, room: Room) {
+export async function updateUserRoomRelationships(shard: Shard, room: Room, previous?: ReturnType<typeof flushUsers>) {
+	const checkPlayers = (current: string[], previous?: string[]) => {
+		// Filter out NPCs
+		const players = [ ...Fn.reject(current, (userId: string) => userId.length <= 2) ];
+		// Apply diff
+		return previous ? {
+			players,
+			added: [ ...Fn.reject(players, id => previous.includes(id)) ],
+			removed: [ ...Fn.reject(previous, id => players.includes(id)) ],
+		} : {
+			players,
+			added: players,
+			removed: [],
+		};
+	};
 	const roomName = room.name;
-	// Remove NPCs from user list
-	const intentPlayerIds = [ ...Fn.reject(room['#users'].intents, id => id.length <= 2) ];
-	const presencePlayerIds = [ ...Fn.reject(room['#users'].presence, id => id.length <= 2) ];
-
-	const [ removedIntentUserIds, removedPresenceUserIds ] = await Promise.all([
-		// Update intent users in room
-		await shard.scratch.eval(UpdateSetMembers, [ roomToIntentPlayersSetKey(roomName) ], intentPlayerIds),
-		// Update presence users in room
-		await shard.scratch.eval(UpdateSetMembers, [ roomToPresencePlayersSetKey(roomName) ], presencePlayerIds),
-		// Update intent user reverse associations
-		Promise.all(Fn.map(intentPlayerIds, playerId =>
+	const users = room['#users'];
+	const intentPlayers = checkPlayers(users.intents, previous?.intents);
+	const presencePlayers = checkPlayers(users.presence, previous?.presence);
+	await Promise.all([
+		// Add intent user associations
+		Promise.all(Fn.map(intentPlayers.added, playerId =>
 			shard.scratch.sadd(userToIntentRoomsSetKey(playerId), [ roomName ]))),
+		// Remove intent user associations
+		Promise.all(Fn.map(intentPlayers.removed, playerId =>
+			shard.scratch.srem(userToIntentRoomsSetKey(playerId), [ roomName ]))),
+
+		// Add presence user associations
+		Promise.all(Fn.map(presencePlayers.added, playerId =>
+			shard.scratch.sadd(userToPresenceRoomsSetKey(playerId), [ roomName ]))),
+		// Remove presence user associations
+		Promise.all(Fn.map(presencePlayers.removed, playerId =>
+			shard.scratch.srem(userToPresenceRoomsSetKey(playerId), [ roomName ]))),
+
 		// Mark players active for runner
-		shard.scratch.sadd('activeUsers', intentPlayerIds),
+		shard.scratch.sadd('activeUsers', intentPlayers.added),
+
 		// Update user count in processing queue
-		shard.scratch.zadd(activeRoomsKey, [ [ intentPlayerIds.length, roomName ] ]),
+		previous && (intentPlayers.added.length + intentPlayers.removed.length) === 0 ? undefined :
+		shard.scratch.zadd(activeRoomsKey, [ [ intentPlayers.players.length, roomName ] ]),
 	]);
-	if (removedIntentUserIds.length > 0 || removedPresenceUserIds.length > 0) {
-		// Users left this room, so the reverse associations need to be updated
-		await Promise.all([
-			Promise.all(Fn.map(removedIntentUserIds, playerId =>
-				shard.scratch.srem(userToIntentRoomsSetKey(playerId), [ roomName ]))),
-			Promise.all(Fn.map(removedPresenceUserIds, playerId =>
-				shard.scratch.srem(userToPresenceRoomsSetKey(playerId), [ roomName ]))),
-		]);
-	}
 }
 
 export function forceRoomProcess(shard: Shard, roomName: string) {
@@ -266,7 +249,9 @@ export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wak
 
 export async function abandonIntentsForTick(shard: Shard, time: number) {
 	const key = processRoomsSetKey(time);
-	await Promise.all([
+	const [ pending ] = await Promise.all([
+		// Fetch which rooms we're waiting on, for diagnostics
+		shard.scratch.zrange(key, 0, 1000),
 		// Update all processor pending counts to 0
 		shard.scratch.zinterStore(key, [ key ], { weights: [ 0 ] }),
 		// Clear runner queue
@@ -274,4 +259,5 @@ export async function abandonIntentsForTick(shard: Shard, time: number) {
 	]);
 	// Publish process task to workers
 	await getProcessorChannel(shard).publish({ type: 'process', time });
+	return pending;
 }

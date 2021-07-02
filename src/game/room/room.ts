@@ -240,6 +240,7 @@ export function flushUsers(room: Room) {
 	const intents = new Set<string>();
 	const presence = new Set<string>();
 	const vision = new Set<string>();
+	const extra = new Set<string>();
 	for (const object of room['#objects']) {
 		const user = object['#user'];
 		if (user !== null) {
@@ -252,16 +253,19 @@ export function flushUsers(room: Room) {
 			}
 		}
 		for (const userId of object['#extraUsers']) {
-			presence.add(userId);
+			extra.add(userId);
 		}
 	}
 	const user = room['#user'];
 	if (user) {
 		presence.add(user);
 	}
+	const previous = room['#users'];
 	room['#users'] = {
 		intents: [ ...intents ],
 		presence: [ ...presence ],
 		vision: [ ...vision ],
+		extra: [ ...extra ],
 	};
+	return previous;
 }

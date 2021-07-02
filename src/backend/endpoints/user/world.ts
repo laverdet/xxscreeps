@@ -22,22 +22,4 @@ const WorldStartRoomEndpoint: Endpoint = {
 	},
 };
 
-const WorldStatusEndpoint: Endpoint = {
-	path: '/api/user/world-status',
-
-	async execute(context) {
-		const { userId } = context.state;
-		if (!userId) {
-			return { ok: 1, status: 'normal' };
-		}
-		const active = await context.shard.scratch.sismember('activeUsers', userId);
-		if (active) {
-			return { ok: 1, status: 'normal' };
-		} else {
-			return { ok: 1, status: 'empty' };
-		}
-		// return { ok: 1, status: 'lost' };
-	},
-};
-
-export default [ RespawnProhibitedRoomsEndpoint, WorldStartRoomEndpoint, WorldStatusEndpoint ];
+export default [ RespawnProhibitedRoomsEndpoint, WorldStartRoomEndpoint ];

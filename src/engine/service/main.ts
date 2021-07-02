@@ -80,10 +80,10 @@ try {
 			await runnerChannel.publish({ type: 'run', time });
 
 			// Wait for tick to finish
-			const timeout = setTimeout(() => {
-				console.log(`Abandoning intents for tick ${time}`);
-				void abandonIntentsForTick(shard, time);
-			}, config.processor.intentAbandonTimeout);
+			const timeout = setTimeout(() => mustNotReject(async() => {
+				const rooms = await abandonIntentsForTick(shard, time);
+				console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
+			}), config.processor.intentAbandonTimeout);
 			for await (const message of serviceChannel) {
 				if (message.type === 'processorInitialized') {
 					await processorChannel.publish({ type: 'process', time });

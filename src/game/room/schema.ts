@@ -12,9 +12,14 @@ export function shape() {
 		name: 'string',
 		'#objects': vector(objectFormat),
 		'#users': struct({
+			// Users who can issue intents in this room
 			intents: vector(Id.format),
+			// Users who have active objects in this room
 			presence: vector(Id.format),
+			// Users who can see into this room
 			vision: vector(Id.format),
+			// Users needed for rendering, for example signed controller
+			extra: vector(Id.format),
 		}),
 		'#eventLog': vector(variant(...variantForPath<Schema>()('Room.eventLog'))),
 	}));

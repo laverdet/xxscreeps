@@ -1,7 +1,7 @@
 import type { ConstructibleStructureType, ConstructionSite } from './construction-site';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import { intents, me, userGame } from 'xxscreeps/game';
+import { intents, me } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';

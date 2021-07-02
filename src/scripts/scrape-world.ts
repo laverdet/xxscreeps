@@ -52,11 +52,15 @@ const shardOnly = argv['shard-only'];
 const jsonSource = argv.argv[0] ??
 	new URL('../init_dist/db.json', await import.meta.resolve('@screeps/launcher', import.meta.url));
 
+function forUser(userId: string | null) {
+	return userId === 'f4b532d08c3952a' ? '1' : userId;
+}
+
 function withRoomObject(from: any, into: RoomObject) {
 	into.id = from._id;
 	into.pos = new RoomPosition(from.x, from.y, from.room);
 	if (from.user !== undefined) {
-		into['#user'] = from.user ?? null;
+		into['#user'] = forUser(from.user ?? null);
 	}
 }
 
@@ -207,7 +211,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'controller': {
 				instance['#level'] = object.level ?? 0;
 				instance['#safeModeUntil'] = object.safeMode;
-				instance['#user'] = object.user ?? null;
+				instance['#user'] = forUser(object.user ?? null);
 
 				const controller = new StructureController;
 				withStructure(object, controller);
@@ -314,23 +318,24 @@ if (!shardOnly) {
 	const users = loki.getCollection('users');
 	const activeUserIds = new Set<string>();
 	for (const user of users.find()) {
-		const branch = code.find({ user: user._id, activeWorld: true })[0]?.branch ?? '';
-		const memory: string | undefined = env[`memory:${user.id}`];
+		const id = forUser(user._id)!;
+		const branch = code.find({ user: id, activeWorld: true })[0]?.branch ?? '';
+		const memory: string | undefined = env[`memory:${id}`];
 		if (user.active && user.cpu > 0) {
-			activeUserIds.add(user._id);
+			activeUserIds.add(id);
 		}
-		await User.create(db, user._id, user.username);
+		await User.create(db, id, user.username);
 		if (user.badge) {
-			await Badge.save(db, user._id, JSON.stringify(user.badge));
+			await Badge.save(db, id, JSON.stringify(user.badge));
 		}
-		await db.data.hmset(User.infoKey(user._id), {
+		await db.data.hmset(User.infoKey(id), {
 			branch,
 			...user.registeredDate && {
 				registeredDate: +new Date(user.registeredDate),
 			},
 		});
 		if (memory !== undefined) {
-			await saveMemoryBlob(shard, user._id, utf16ToBuffer(memory));
+			await saveMemoryBlob(shard, id, utf16ToBuffer(memory));
 		}
 	}
 
@@ -340,7 +345,7 @@ if (!shardOnly) {
 			const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
 			return [ name, data as string ];
 		}));
-		await CodeSchema.saveContent(db, branch.user, branch.branch, modules);
+		await CodeSchema.saveContent(db, forUser(branch.user)!, branch.branch, modules);
 	}
 }
 

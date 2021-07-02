@@ -43,8 +43,13 @@ export async function loadUserFlags(shard: Shard, userId: string) {
 /**
  * Save a user's processed flag blob
  */
-export async function saveUserFlagBlobForNextTick(shard: Shard, userId: string, blob: Readonly<Uint8Array>) {
+export async function saveUserFlagBlobForNextTick(shard: Shard, userId: string, blob?: Readonly<Uint8Array>) {
 	const time = shard.time + 1;
-	await shard.blob.set(`user/${userId}/flags`, blob);
+	const key = `user/${userId}/flags`;
+	if (blob) {
+		await shard.blob.set(key, blob);
+	} else {
+		await shard.blob.del(key);
+	}
 	await getFlagChannel(shard, userId).publish({ type: 'updated', time });
 }

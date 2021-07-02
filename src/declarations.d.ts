@@ -24,3 +24,8 @@ interface URLSearchParams {
 }
 
 declare function enumerable(target: any, key: string, descriptor: PropertyDescriptor): void;
+
+interface String {
+	// Prevent `for (const ii of 'hello')` bugs because who would ever do that
+	[Symbol.iterator]: never;
+}

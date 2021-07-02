@@ -24,6 +24,7 @@ type ObjectIntent = Partial<Record<IntentsForReceiver<ObjectReceivers>, any>>;
 export type RoomIntentPayload = {
 	local: Partial<Record<IntentsForReceiver<Room>, any[]>>;
 	object: Partial<Record<string, ObjectIntent>>;
+	internal?: true;
 };
 export type SingleIntent = {
 	intent: string;
@@ -67,13 +68,15 @@ export class RoomProcessor implements ProcessorContext {
 	receivedUpdate = false;
 	nextUpdate = Infinity;
 	readonly state: GameState;
-	private readonly intents = new Map<string, RoomIntentPayload>();
-	private readonly interRoomIntents = new Map<string, SingleIntent[]>();
-	private readonly tasks: {
+
+	private tasks: {
 		promise: Promise<any>;
-		userId?: string;
+		userId: string;
 		finalize?: (result: any) => void;
 	}[] = [];
+
+	private readonly intents = new Map<string, RoomIntentPayload>();
+	private readonly interRoomIntents = new Map<string, SingleIntent[]>();
 
 	constructor(
 		public readonly shard: Shard,
@@ -115,7 +118,7 @@ export class RoomProcessor implements ProcessorContext {
 					const roomIntents = intents.local;
 					for (const intent in roomIntents) {
 						const processor = intentProcessorGetters.get(intent)?.(this.room);
-						if (processor) {
+						if (processor && (!processor.internal || intents.internal)) {
 							for (const args of roomIntents[intent as keyof typeof roomIntents]!) {
 								processor.process(this.room, this, ...args);
 							}
@@ -137,7 +140,10 @@ export class RoomProcessor implements ProcessorContext {
 								info => info.processor) ];
 							entries.sort((left, right) => left.processor!.priority - right.processor!.priority);
 							for (const info of entries) {
-								if ((mask & info.processor!.mask) === 0) {
+								if (
+									(!info.processor!.internal || intents.internal) &&
+									(mask & info.processor!.mask) === 0
+								) {
 									mask |= info.processor!.mask;
 									info.processor?.process(object, this, ...info.args);
 								}
@@ -174,18 +180,8 @@ export class RoomProcessor implements ProcessorContext {
 		const hasTaskFinalization = this.tasks.some(task => task.finalize);
 		if (intentPayloads.length || hasTaskFinalization) {
 			runWithState(this.state, () => {
-				// Run task finalizations
-				for (let ii = 0; ii < this.tasks.length; ++ii) {
-					const task = this.tasks[ii];
-					if (task.finalize) {
-						const run = () => task.finalize!(taskResults[ii]);
-						if (task.userId) {
-							runAsUser(task.userId, run);
-						} else {
-							run();
-						}
-					}
-				}
+				// Run first batch of finalizations
+				this.runTaskFinalizations(taskResults);
 
 				// Run inter-room intents
 				for (const intents of intentPayloads) {
@@ -196,20 +192,27 @@ export class RoomProcessor implements ProcessorContext {
 				}
 			});
 		}
+		// Flush tasks
+		while (this.tasks.length !== 0) {
+			const results = await Promise.all(Fn.map(this.tasks, task => task.promise));
+			runWithState(this.state, () => {
+				this.runTaskFinalizations(results);
+			});
+		}
+		// Finalize room object
 		this.room['#flushObjects']();
-		flushUsers(this.room);
+		const previousUsers = flushUsers(this.room);
 		const hasPlayer = Fn.some(this.room['#users'].intents, userId => userId.length > 2);
 
 		await Promise.all([
 			// Update room to user map
-			updateUserRoomRelationships(this.shard, this.room),
+			updateUserRoomRelationships(this.shard, this.room, previousUsers),
 			// Save updated room blob
 			this.receivedUpdate ?
 				this.shard.saveRoom(this.room.name, this.time, this.room) :
 				this.shard.copyRoomFromPreviousTick(this.room.name, this.time),
 		]);
-		// Mark inactive if needed. Must be *after* saving room, because this copies from current
-		// tick.
+		// Mark inactive if needed. Must be *after* saving room, because this copies from current tick.
 		if (!hasPlayer && this.nextUpdate !== this.time + 1) {
 			return sleepRoomUntil(this.shard, this.room.name, this.time, this.nextUpdate);
 		}
@@ -259,6 +262,22 @@ export class RoomProcessor implements ProcessorContext {
 				throw new Error(`Invalid wake time ${time}; current ${this.time}`);
 			}
 			this.nextUpdate = Math.min(time, this.nextUpdate);
+		}
+	}
+
+	private runTaskFinalizations(results: any[]) {
+		const tasks = this.tasks;
+		this.tasks = [];
+		if (tasks.length !== results.length) {
+			throw new Error('Tasks queued out of processor context');
+		}
+		const tasksByUser = Fn.groupBy(Fn.range(tasks.length), ii => tasks[ii].userId);
+		for (const [ userId, indices ] of tasksByUser) {
+			runAsUser(userId, () => {
+				for (const ii of indices) {
+					tasks[ii].finalize?.(results[ii]);
+				}
+			});
 		}
 	}
 }
