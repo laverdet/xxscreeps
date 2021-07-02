@@ -1,13 +1,13 @@
 import badge from './badge';
 import messages from './messages';
-import world from './world';
 import './auth';
 import './code';
 import './profile';
 import './stats';
+import './world';
 import { hooks } from 'xxscreeps/backend';
 
-export default [ ...badge, ...messages, ...world ];
+export default [ ...badge, ...messages ];
 
 hooks.register('route', {
 	path: '/api/user/decorations/themes',
