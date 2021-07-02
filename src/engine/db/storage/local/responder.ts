@@ -150,7 +150,7 @@ abstract class ResponderHost<Type extends Responder = any> {
 				}));
 			})().catch(err => port.postMessage(staticCast<ResponseMessage>({
 				requestId,
-				payload: err.message,
+				payload: err.stack,
 				rejection: true,
 			})));
 		});

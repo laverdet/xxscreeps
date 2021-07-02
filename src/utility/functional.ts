@@ -52,6 +52,9 @@ export function bifurcate(iterator: Iterable<any>, callback: (value: any) => Loo
 }
 
 // Appends several iterators together
+export function concat<Type>(iterator: Iterable<Type>[]): Iterable<Type>;
+// Extra overload is needed for some reason. Delete the above line if there aren't errors elsewhere
+// eslint-disable-next-line @typescript-eslint/unified-signatures
 export function concat<Type>(iterator: Iterable<Iterable<Type>>): Iterable<Type>;
 export function concat<First, Second, Rest = never>(
 	first: Iterable<First>, second: Iterable<Second>, ...rest: Iterable<Rest>[]): Iterable<First | Second | Rest>;

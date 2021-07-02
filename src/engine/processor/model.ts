@@ -3,6 +3,7 @@ import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor
 import type { Shard } from 'xxscreeps/engine/db';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Channel } from 'xxscreeps/engine/db/channel';
+import { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
 import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from 'xxscreeps/engine/service';
 
@@ -41,6 +42,32 @@ const intentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/intents`;
 const finalIntentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/finalIntents`;
+
+/**
+ * Adds the members of `members` to a set and removes from the set those which don't exist. Returns
+ * a list of elements which were removed. When the script returns the contents of the set will be
+ * equal to `members`.
+ */
+const UpdateSetMembers = new KeyvalScript((keyval, [ key ]: [ string ], members: string[]) => {
+	keyval.sadd('.tmp', members);
+	const result = keyval.sdiff(key, [ '.tmp' ]);
+	keyval.sunionStore(key, [ '.tmp' ]);
+	keyval.del('.tmp');
+	return result;
+}, {
+	lua:
+`if #ARGV == 0 then
+	local result = redis.call('smembers', KEYS[1])
+	redis.call('del', KEYS[1])
+	return result
+else
+	redis.call('sadd', '.tmp', unpack(ARGV))
+	local result = redis.call('sdiff', KEYS[1], '.tmp')
+	redis.call('sunionstore', KEYS[1], '.tmp')
+	redis.call('del', '.tmp')
+	return result
+end`,
+});
 
 async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, intents?: RoomIntentPayload) {
 	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
@@ -189,33 +216,24 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 
 export async function updateUserRoomRelationships(shard: Shard, room: Room) {
 	const roomName = room.name;
-	const toUsersKey = roomToUsersSetKey(roomName);
 	// Remove NPCs
-	const playerIds = [ ...Fn.reject(room['#users'].intents, id => id.length <= 2) ];
-	const dbUsers = await shard.scratch.smembers(toUsersKey);
-	await Promise.all([
-		// Mark user active for runner
-		// TODO: Probably want to do this another way
-		shard.scratch.sadd('activeUsers', playerIds),
+	const intentPlayerIds = [ ...Fn.reject(room['#users'].intents, id => id.length <= 2) ];
+	const [ removedIntentUserIds ] = await Promise.all([
+		// Update intent users in room
+		await shard.scratch.eval(UpdateSetMembers, [ roomToUsersSetKey(roomName) ], intentPlayerIds),
+		// Update intent user reverse associations
+		Promise.all(Fn.map(intentPlayerIds, playerId =>
+			shard.scratch.sadd(userToRoomsSetKey(playerId), [ roomName ]))),
+		// Mark players active for runner
+		shard.scratch.sadd('activeUsers', intentPlayerIds),
 		// Update user count in processing queue
-		shard.scratch.zadd(activeRoomsKey, [ [ playerIds.length, roomName ] ]),
-		// Remove users that no longer have access to this room
-		Promise.all(Fn.map(
-			Fn.reject(dbUsers, id => playerIds.includes(id)),
-			id => Promise.all([
-				shard.scratch.srem(toUsersKey, [ id ]),
-				shard.scratch.srem(userToRoomsSetKey(id), [ roomName ]),
-			]),
-		)),
-		// Add users that should have access to this room
-		Promise.all(Fn.map(
-			Fn.reject(playerIds, id => dbUsers.includes(id)),
-			userId => Promise.all([
-				shard.scratch.sadd(toUsersKey, [ userId ]),
-				shard.scratch.sadd(userToRoomsSetKey(userId), [ roomName ]),
-			]),
-		)),
+		shard.scratch.zadd(activeRoomsKey, [ [ intentPlayerIds.length, roomName ] ]),
 	]);
+	if (removedIntentUserIds.length > 0) {
+		// Users left this room, so the reverse association needs to be updated
+		await Promise.all(Fn.map(removedIntentUserIds, playerId =>
+			shard.scratch.srem(userToRoomsSetKey(playerId), [ roomName ])));
+	}
 }
 
 export function forceRoomProcess(shard: Shard, roomName: string) {

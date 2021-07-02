@@ -66,11 +66,14 @@ export type KeyValProvider = {
 	// sets
 	sadd(key: string, members: string[]): Promise<number>;
 	scard(key: string): Promise<number>;
+	sdiff(key: string, keys: string[]): Promise<string[]>;
 	sinter(key: string, keys: string[]): Promise<string[]>;
 	sismember(key: string, member: string): Promise<boolean>;
+	smismember(key: string, members: string[]): Promise<boolean[]>;
 	smembers(key: string): Promise<string[]>;
 	spop(key: string): Promise<string | null>;
 	srem(key: string, members: string[]): Promise<number>;
+	sunionStore(key: string, keys: string[]): Promise<number>;
 	// sorted sets
 	zadd(key: string, members: [ number, string ][], options?: ZAdd): Promise<number>;
 	zcard(key: string): Promise<number>;
@@ -85,7 +88,7 @@ export type KeyValProvider = {
 	zscore(key: string, member: string): Promise<number | null>;
 	zunionStore(key: string, keys: string[]): Promise<number>;
 	// scripting
-	eval<Result extends Value | null, Keys extends string[], Argv extends Value[]>(script: KeyvalScript<Result, Keys, Argv>, keys: Keys, argv: Argv): Promise<Result>;
+	eval<Result extends Value[] | Value | null, Keys extends string[], Argv extends Value[]>(script: KeyvalScript<Result, Keys, Argv>, keys: Keys, argv: Argv): Promise<Result>;
 	// management
 	flushdb(): Promise<void>;
 	save(): Promise<void>;

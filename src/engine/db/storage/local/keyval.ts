@@ -250,6 +250,16 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		return set ? set.size : 0;
 	}
 
+	sdiff(key: string, keys: string[]) {
+		const set: Set<string> | undefined = this.data.get(key);
+		if (set) {
+			const sets: (Set<string> | undefined)[] = keys.map(key => this.data.get(key));
+			return [ ...Fn.reject(set, member => sets.some(set => set?.has(member))) ];
+		} else {
+			return [];
+		}
+	}
+
 	sinter(key: string, keys: string[]) {
 		const sets = [ ...Fn.filter(Fn.map(
 			Fn.concat([ key ], keys),
@@ -266,6 +276,15 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 	sismember(key: string, member: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		return set?.has(member) ?? false;
+	}
+
+	smismember(key: string, members: string[]) {
+		const set: Set<string> | undefined = this.data.get(key);
+		if (set) {
+			return members.map(member => set.has(member));
+		} else {
+			return members.map(() => false);
+		}
 	}
 
 	smembers(key: string) {
@@ -300,6 +319,13 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		} else {
 			return 0;
 		}
+	}
+
+	sunionStore(key: string, keys: string[]) {
+		const sets = [ ...Fn.filter(Fn.map(keys, (key): Set<string> => this.data.get(key))) ];
+		const out = new Set(Fn.concat(sets));
+		this.data.set(key, out);
+		return out.size;
 	}
 
 	zadd(key: string, members: [ number, string ][], options?: Provider.ZAdd) {
