@@ -1,7 +1,6 @@
 import type { PartType } from 'xxscreeps/mods/creep/creep';
 import type { Direction, RoomPosition } from 'xxscreeps/game/position';
 import type { GameConstructor } from 'xxscreeps/game';
-import type { RoomObject } from 'xxscreeps/game/object';
 import type { StructureExtension } from './extension';
 import * as C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
@@ -70,17 +69,13 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 		game.spawns[this.name] = this;
 	}
 
-	override ['#applyDamage'](power: number, type: number, source?: RoomObject) {
-		if (super['#applyDamage'](power, type, source)) {
-			const { spawning } = this;
-			if (this.hits <= 0 && spawning) {
-				const creep = Game.getObjectById(spawning['#spawnId'])!;
-				creep.room['#removeObject'](creep);
-			}
-			return true;
-		} else {
-			return false;
+	override ['#beforeRemove']() {
+		const { spawning } = this;
+		if (this.hits <= 0 && spawning) {
+			const creep = Game.getObjectById(spawning['#spawnId'])!;
+			creep.room['#removeObject'](creep);
 		}
+		super['#beforeRemove']();
 	}
 
 	override isActive() {

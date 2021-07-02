@@ -18,6 +18,19 @@ export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 	}
 
 	get ['#lookType']() { return C.LOOK_SOURCES }
+
+	override ['#roomStatusDidChange'](level: number, userId: string | undefined | null) {
+		this.energyCapacity = function() {
+			if (userId === undefined) {
+				return C.SOURCE_ENERGY_KEEPER_CAPACITY;
+			} else if (userId === null) {
+				return C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
+			} else {
+				return C.SOURCE_ENERGY_CAPACITY;
+			}
+		}();
+		this.energy = Math.min(this.energy, this.energyCapacity);
+	}
 }
 
 // Export `Source` to runtime globals

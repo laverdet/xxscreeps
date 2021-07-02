@@ -24,9 +24,9 @@ export class StructureStorage extends withOverlay(OwnedStructure, shape) {
 		room.storage = this;
 	}
 
-	override ['#afterRemove'](room: Room) {
-		super['#afterRemove'](room);
-		room.storage = undefined;
+	override ['#beforeRemove']() {
+		this.room.storage = undefined;
+		super['#beforeRemove']();
 	}
 }
 

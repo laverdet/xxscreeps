@@ -44,25 +44,6 @@ registerObjectTickProcessor(Source, (source, context) => {
 		source['#nextRegenerationTime'] = 0;
 		context.didUpdate();
 	}
-
-	// Update energy capacity on room controller status
-	const energyCapacity = (() => {
-		const { controller } = source.room;
-		if (controller) {
-			// TODO: Hook into controller level change event
-			if (controller.level === 0 && controller['#reservationEndTime'] === 0) {
-				return C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
-			} else {
-				return C.SOURCE_ENERGY_CAPACITY;
-			}
-		} else {
-			return C.SOURCE_ENERGY_KEEPER_CAPACITY;
-		}
-	})();
-	if (source.energyCapacity !== energyCapacity) {
-		source.energyCapacity = energyCapacity;
-		context.didUpdate();
-	}
 });
 
 registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {

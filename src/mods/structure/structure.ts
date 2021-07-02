@@ -64,17 +64,13 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return true;
 	}
 
-	override ['#applyDamage'](power: number, type: number, source?: RoomObject) {
-		if (super['#applyDamage'](power, type, source)) {
-			this.room['#insertObject'](createRuin(this));
-			return true;
-		} else {
-			return false;
-		}
-	}
-
 	['#checkObstacle'](_user: string) {
 		return true;
+	}
+
+	override ['#destroy']() {
+		this.room['#insertObject'](createRuin(this));
+		super['#destroy']();
 	}
 }
 

@@ -91,6 +91,8 @@ extend(Creep, {
 });
 
 // Add counter attack
+// TODO: Look into why passing `applyDamage` as an argument to an anonymous function breaks the
+// babel transform
 const applyDamage = Creep.prototype['#applyDamage'];
 Creep.prototype['#applyDamage'] = function(this: Creep, power, type, source) {
 	applyDamage.call(this, power, type, source);
@@ -107,7 +109,6 @@ Creep.prototype['#applyDamage'] = function(this: Creep, power, type, source) {
 			}
 		}
 	}
-	return false;
 };
 
 // Intent checks

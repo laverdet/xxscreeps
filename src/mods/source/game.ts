@@ -39,8 +39,10 @@ const harvest = registerHarvestable(Source, function(creep) {
 		() => checkTarget(this, Source),
 		() => checkRange(creep, this, 1),
 		() => {
-			// TODO: Check controller
-			if (this.energy <= 0) {
+			const roomUser = this.room['#user'];
+			if (roomUser != null && roomUser !== creep['#user']) {
+				return C.ERR_NOT_OWNER;
+			} else if (this.energy <= 0) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
 		});

@@ -10,7 +10,7 @@ declare module 'xxscreeps/engine/processor' {
 const intents = [
 	registerIntentProcessor(Structure, 'destroyStructure', {}, (structure, context) => {
 		if (checkDestroy(structure) === C.OK) {
-			structure['#applyDamage'](Infinity, 0);
+			structure['#destroy']();
 			context.didUpdate();
 		}
 	}),

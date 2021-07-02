@@ -15,7 +15,7 @@ declare module 'xxscreeps/engine/runner' {
 
 processorHooks.register('refreshRoom', async(shard, room) => {
 	const userId = room['#user'];
-	if (userId !== null) {
+	if (userId != null) {
 		const key = room['#level'] === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);
 		await shard.scratch.sadd(key, [ room.name ]);
 	}

@@ -1,4 +1,5 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room';
+import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
 import * as CreepLib from './creep';
 import * as User from 'xxscreeps/engine/db/user';
@@ -13,19 +14,21 @@ export const reservedRoomKey = (userId: string) => `user/${userId}/reservedRooms
 
 // Processor methods
 export function claim(context: ProcessorContext, controller: StructureController, userId: string) {
+	const { room } = controller;
 	context.task(Promise.all([
-		context.shard.scratch.sadd(controlledRoomKey(userId), [ controller.room.name ]),
-		context.shard.scratch.srem(reservedRoomKey(userId), [ controller.room.name ]),
+		context.shard.scratch.sadd(controlledRoomKey(userId), [ room.name ]),
+		context.shard.scratch.srem(reservedRoomKey(userId), [ room.name ]),
 	]));
 	controller['#reservationEndTime'] = 0;
 	controller['#user'] = userId;
-	controller.room['#level'] = 1;
-	controller.room['#user'] = userId;
+	updateRoomStatus(room, 1, userId);
+	context.didUpdate();
 }
 
 export function release(context: ProcessorContext, controller: StructureController) {
-	const userId = controller.room['#user'];
-	if (userId !== null) {
+	const { room } = controller;
+	const userId = room['#user'];
+	if (userId != null) {
 		const key = controller.level === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);
 		context.task(context.shard.scratch.srem(key, [ controller.room.name ]));
 	}
@@ -34,10 +37,21 @@ export function release(context: ProcessorContext, controller: StructureControll
 	controller['#reservationEndTime'] = 0;
 	controller['#safeModeCooldownTime'] = 0;
 	controller['#user'] = null;
-	controller.room['#level'] = 0;
-	controller.room['#safeModeUntil'] = 0;
-	controller.room['#user'] = null;
+	room['#safeModeUntil'] = 0;
+	updateRoomStatus(room, 0, null);
 	context.didUpdate();
+}
+
+/**
+ * Update room owner and/or level, and notify all objects of the change
+ */
+function updateRoomStatus(room: Room, level: number, userId: string | null | undefined) {
+	room['#level'] = level;
+	room['#user'] = userId ?? null;
+	room['#flushObjects']();
+	for (const object of room['#objects']) {
+		object['#roomStatusDidChange'](1, userId);
+	}
 }
 
 // Register intent processors
@@ -127,7 +141,7 @@ const intents = [
 			} else {
 				const userId = creep['#user'];
 				controller['#reservationEndTime'] = Game.time + power + 1;
-				controller.room['#user'] = userId;
+				updateRoomStatus(controller.room, 0, userId);
 				context.task(context.shard.scratch.sadd(reservedRoomKey(userId), [ controller.room.name ]));
 			}
 			saveAction(creep, 'reserveController', controller.pos);
@@ -222,14 +236,16 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			context.task(context.shard.db.data.hincrBy(User.infoKey(controller['#user']!), 'gcl', upgradePower));
 			context.didUpdate();
 		} else if (controller.ticksToDowngrade === 0) {
-			--controller.room['#level'];
+			const { room } = controller;
+			const level = --room['#level'];
 			controller.safeModeAvailable = 0;
-			if (controller.level === 0) {
+			if (level === 0) {
 				release(context, controller);
 			} else {
 				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[controller.level]! * 0.9);
 				controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN - 1;
+				updateRoomStatus(controller.room, 0, null);
 			}
 			context.didUpdate();
 		}

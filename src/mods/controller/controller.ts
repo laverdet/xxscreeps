@@ -82,9 +82,9 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 		room.controller = this;
 	}
 
-	override ['#afterRemove'](room: Room) {
-		super['#afterRemove'](room);
-		room.controller = undefined;
+	override ['#beforeRemove']() {
+		this.room.controller = undefined;
+		super['#beforeRemove']();
 	}
 
 	override get ['#extraUsers']() {

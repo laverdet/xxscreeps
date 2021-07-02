@@ -19,6 +19,10 @@ export class StructureExtension extends withOverlay(OwnedStructure, shape) {
 	override get structureType() { return C.STRUCTURE_EXTENSION }
 	get energy() { return this.store[C.RESOURCE_ENERGY] }
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
+
+	override ['#roomStatusDidChange'](level: number) {
+		this.store['#capacity'] = C.EXTENSION_ENERGY_CAPACITY[level];
+	}
 }
 
 export function create(pos: RoomPosition, level: number, owner: string) {
@@ -37,6 +41,6 @@ registerBuildableStructure(C.STRUCTURE_EXTENSION, {
 			C.CONSTRUCTION_COST.extension : null;
 	},
 	create(site) {
-		return create(site.pos, site.room.controller?.level ?? 1, site['#user']);
+		return create(site.pos, site.room['#level'], site['#user']);
 	},
 });

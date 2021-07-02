@@ -92,7 +92,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 	override ['#applyDamage'](power: number, type: number, source?: RoomObject) {
 		if (this.spawning) {
-			return false;
+			return;
 		}
 		this.tickHitsDelta = (this.tickHitsDelta ?? 0) - power;
 		if (source) {
@@ -105,7 +105,6 @@ export class Creep extends withOverlay(RoomObject, shape) {
 			});
 			saveAction(this, 'attacked', source.pos);
 		}
-		return false;
 	}
 
 	/**

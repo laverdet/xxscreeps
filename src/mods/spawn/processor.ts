@@ -16,6 +16,7 @@ import { StructureExtension } from './extension';
 import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn';
 import { OwnedStructure } from 'xxscreeps/mods/structure/structure';
 import { StructureController } from 'xxscreeps/mods/controller/controller';
+import { saveAction } from 'xxscreeps/game/object';
 import { createRuin } from 'xxscreeps/mods/structure/ruin';
 
 function consumeEnergy(spawn: StructureSpawn, amount: number) {
@@ -63,6 +64,7 @@ const intents = [
 				// Set up initial player state
 				ControllerProc.claim(context, room.controller!, me);
 				room['#insertObject'](create(pos, me, name));
+				room['#cumulativeEnergyHarvested'] = 0;
 				room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
 				context.didUpdate();
 			}
@@ -100,6 +102,7 @@ const intents = [
 	registerIntentProcessor(StructureSpawn, 'renewCreep', {}, (spawn, context, id: string) => {
 		const creep = Game.getObjectById<Creep>(id)!;
 		if (checkRenewCreep(spawn, creep) === C.OK) {
+			saveAction(creep, 'healed', spawn.pos);
 			consumeEnergy(spawn, calculateRenewCost(creep));
 			creep['#ageTime'] += calculateRenewAmount(creep);
 			context.didUpdate();

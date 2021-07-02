@@ -61,9 +61,9 @@ export class StructureTerminal extends withOverlay(OwnedStructure, shape) {
 		room.terminal = this;
 	}
 
-	override ['#afterRemove'](room: Room) {
-		super['#afterRemove'](room);
-		room.terminal = undefined;
+	override ['#beforeRemove']() {
+		this.room.terminal = undefined;
+		super['#beforeRemove']();
 	}
 }
 
