@@ -25,10 +25,14 @@ export function getRoomChannel(shard: Shard, roomName: string) {
 export const processorTimeKey = 'processor/time';
 export const activeRoomsKey = 'processor/activeRooms';
 const sleepingRoomsKey = 'processor/inactiveRooms';
-const roomToUsersSetKey = (roomName: string) =>
-	`rooms/${roomName}/users`;
-export const userToRoomsSetKey = (userId: string) =>
-	`users/${userId}/rooms`;
+const roomToIntentPlayersSetKey = (roomName: string) =>
+	`rooms/${roomName}/intentUsers`;
+const roomToPresencePlayersSetKey = (roomName: string) =>
+	`rooms/${roomName}/presenceUsers`;
+export const userToIntentRoomsSetKey = (userId: string) =>
+	`users/${userId}/intentRooms`;
+export const userToPresenceRoomsSetKey = (userId: string) =>
+	`users/${userId}/presenceRooms`;
 
 export const processRoomsSetKey = (time: number) =>
 	`tick${time}/processRooms`;
@@ -216,23 +220,31 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 
 export async function updateUserRoomRelationships(shard: Shard, room: Room) {
 	const roomName = room.name;
-	// Remove NPCs
+	// Remove NPCs from user list
 	const intentPlayerIds = [ ...Fn.reject(room['#users'].intents, id => id.length <= 2) ];
-	const [ removedIntentUserIds ] = await Promise.all([
+	const presencePlayerIds = [ ...Fn.reject(room['#users'].presence, id => id.length <= 2) ];
+
+	const [ removedIntentUserIds, removedPresenceUserIds ] = await Promise.all([
 		// Update intent users in room
-		await shard.scratch.eval(UpdateSetMembers, [ roomToUsersSetKey(roomName) ], intentPlayerIds),
+		await shard.scratch.eval(UpdateSetMembers, [ roomToIntentPlayersSetKey(roomName) ], intentPlayerIds),
+		// Update presence users in room
+		await shard.scratch.eval(UpdateSetMembers, [ roomToPresencePlayersSetKey(roomName) ], presencePlayerIds),
 		// Update intent user reverse associations
 		Promise.all(Fn.map(intentPlayerIds, playerId =>
-			shard.scratch.sadd(userToRoomsSetKey(playerId), [ roomName ]))),
+			shard.scratch.sadd(userToIntentRoomsSetKey(playerId), [ roomName ]))),
 		// Mark players active for runner
 		shard.scratch.sadd('activeUsers', intentPlayerIds),
 		// Update user count in processing queue
 		shard.scratch.zadd(activeRoomsKey, [ [ intentPlayerIds.length, roomName ] ]),
 	]);
-	if (removedIntentUserIds.length > 0) {
-		// Users left this room, so the reverse association needs to be updated
-		await Promise.all(Fn.map(removedIntentUserIds, playerId =>
-			shard.scratch.srem(userToRoomsSetKey(playerId), [ roomName ])));
+	if (removedIntentUserIds.length > 0 || removedPresenceUserIds.length > 0) {
+		// Users left this room, so the reverse associations need to be updated
+		await Promise.all([
+			Promise.all(Fn.map(removedIntentUserIds, playerId =>
+				shard.scratch.srem(userToIntentRoomsSetKey(playerId), [ roomName ]))),
+			Promise.all(Fn.map(removedPresenceUserIds, playerId =>
+				shard.scratch.srem(userToPresenceRoomsSetKey(playerId), [ roomName ]))),
+		]);
 	}
 }
 

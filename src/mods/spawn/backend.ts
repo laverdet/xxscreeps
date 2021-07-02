@@ -3,7 +3,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as Controller from 'xxscreeps/mods/controller/processor';
 import * as Spawn from './spawn';
 import { Game, runOneShot } from 'xxscreeps/game';
-import { forceRoomProcess, getRoomChannel, userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
+import { forceRoomProcess, getRoomChannel, userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
 import { bindRenderer, hooks } from 'xxscreeps/backend';
@@ -43,7 +43,7 @@ hooks.register('route', {
 			return;
 		}
 		const rooms = await Promise.all(Fn.map(
-			await context.shard.scratch.smembers(userToRoomsSetKey(userId)),
+			await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
 			roomName => context.shard.loadRoom(roomName)));
 		for (const room of rooms) {
 			for (const structure of room.find(C.FIND_STRUCTURES)) {
@@ -73,7 +73,7 @@ hooks.register('route', {
 			return;
 		}
 		const rooms = await Promise.all(Fn.map(
-			await context.shard.scratch.smembers(userToRoomsSetKey(userId)),
+			await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
 			roomName => context.shard.loadRoom(roomName)));
 		let max = 0;
 		for (const room of rooms) {
@@ -108,7 +108,7 @@ hooks.register('route', {
 		await new Promise(resolve => { setTimeout(resolve, 50) });
 		await context.backend.gameMutex.scope(async() => {
 			// Ensure user has no objects
-			const roomNames = await context.shard.scratch.smembers(userToRoomsSetKey(userId));
+			const roomNames = await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId));
 			if (roomNames.length !== 0) {
 				throw new Error('User has presence');
 			}

@@ -3,7 +3,7 @@ import config from 'xxscreeps/config';
 import * as Async from 'xxscreeps/utility/async';
 import * as Timers from 'timers/promises';
 import { Database, Shard } from 'xxscreeps/engine/db';
-import { userToRoomsSetKey } from 'xxscreeps/engine/processor/model';
+import { userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
@@ -50,7 +50,7 @@ const executePlayer = Async.fanOut(maxConcurrency, async(userId: string, time: n
 	}();
 
 	// Run user code
-	const roomNames = await shard.scratch.smembers(userToRoomsSetKey(userId));
+	const roomNames = await shard.scratch.smembers(userToIntentRoomsSetKey(userId));
 	if (isEntry) {
 		process.stdout.write(`+${instance.username}, `);
 	}
