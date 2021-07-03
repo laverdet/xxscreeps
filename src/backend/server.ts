@@ -79,5 +79,5 @@ for await (const message of Async.breakable(serviceChannel, breaker => halt = br
 
 // Start graceful exit
 serviceChannel.disconnect();
+backendContext.disconnect();
 await unlistenServer();
-await backendContext.disconnect();

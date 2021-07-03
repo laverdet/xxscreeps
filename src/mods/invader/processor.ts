@@ -1,10 +1,11 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as Creep from 'xxscreeps/mods/creep/creep';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Game } from 'xxscreeps/game';
+import { RoomPosition } from 'xxscreeps/game/position';
+import { Room } from 'xxscreeps/game/room';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
-import { registerRoomTickProcessor } from 'xxscreeps/engine/processor';
+import { registerIntentProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor';
 import { loop } from './loop';
 
 // Register invader NPC
@@ -39,6 +40,17 @@ registerRoomTickProcessor(room => {
 			room['#insertObject'](create(pos, role, 'small', Game.time + C.CREEP_LIFE_TIME));
 		}
 	}
+});
+
+// Add backend-only Invader request
+declare module 'xxscreeps/engine/processor' {
+	interface Intent { invader: typeof intent }
+}
+const intent = registerIntentProcessor(Room, 'requestInvader', { internal: true }, (room, context, xx: number, yy: number, role: Role, strength: Strength) => {
+	const pos = new RoomPosition(xx, yy, room.name);
+	room['#insertObject'](create(pos, role, strength, Game.time + 200));
+	activateNPC(room, '2');
+	context.setActive();
 });
 
 // Creep factory for invaders

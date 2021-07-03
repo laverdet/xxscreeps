@@ -1,9 +1,7 @@
-import { Game } from 'xxscreeps/game';
+import * as C from 'xxscreeps/game/constants';
 import { hooks } from 'xxscreeps/backend';
 import { RoomPosition } from 'xxscreeps/game/position';
-import { activateNPC } from 'xxscreeps/mods/npc/processor';
-import { flushUsers } from 'xxscreeps/game/room/room';
-import { create } from './processor';
+import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model';
 
 hooks.register('route', {
 	path: '/api/game/create-invader',
@@ -11,7 +9,13 @@ hooks.register('route', {
 
 	async execute(context) {
 		const { userId } = context.state;
-		const { room: roomName, x, y, size, type } = context.request.body;
+		const { room: roomName, x, y, size } = context.request.body;
+		const type = context.request.body.type?.toLowerCase();
+		if (!userId) {
+			return;
+		}
+
+		// Sanity check
 		const pos = new RoomPosition(x, y, roomName);
 		if (
 			(size !== 'big' && size !== 'small') ||
@@ -20,18 +24,25 @@ hooks.register('route', {
 			return;
 		}
 
-		// Modify room state
-		await context.backend.gameMutex.scope(async() => {
-			const room = await context.shard.loadRoom(pos.roomName);
-			if (room.controller?.['#user'] !== userId) {
-				return;
-			}
-			activateNPC(room, '2');
-			room['#insertObject'](create(pos, type, size, Game.time + 200));
-			room['#flushObjects']();
-			flushUsers(room);
-			await context.shard.saveRoom(pos.roomName, context.shard.time, room);
+		// Room state check
+		const room = await context.shard.loadRoom(pos.roomName);
+		if (room['#user'] !== userId) {
+			throw new Error('Not room owner');
+		}
+		const creeps = room.find(C.FIND_CREEPS);
+		if (creeps.filter(creep => creep['#user'] === '2').length >= 5) {
+			throw new Error('Too many invaders');
+		} else if (creeps.some(creep => creep['#user'] !== userId && creep['#user'] !== '2')) {
+			throw new Error('Hostile creeps exist');
+		}
+
+		// Send the intent off to the processor
+		await pushIntentsForRoomNextTick(context.shard, pos.roomName, userId, {
+			local: { requestInvader: [ [ pos.x, pos.y, type, size ] ] },
+			object: {},
+			internal: true,
 		});
+
 		return { ok: 1 };
 	},
 });
