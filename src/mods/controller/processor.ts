@@ -242,10 +242,10 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			if (level === 0) {
 				release(context, controller);
 			} else {
-				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
-				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[controller.level]! * 0.9);
+				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[level]! / 2;
+				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[level]! * 0.9);
 				controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN - 1;
-				updateRoomStatus(controller.room, 0, null);
+				updateRoomStatus(controller.room, level, controller['#user']);
 			}
 			context.didUpdate();
 		}
