@@ -112,6 +112,11 @@ export function get(): any {
 		return json;
 	}
 	try {
+		const memory = RawMemory.get();
+		if (memory === '') {
+			// Prevent annoying debugger breaks on the subsequent caught exception
+			return json = {};
+		}
 		json = JSON.parse(RawMemory.get());
 	} catch (err) {
 		json = {};
