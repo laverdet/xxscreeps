@@ -153,11 +153,5 @@ to be developed. Feel free to talk to me about the status of the project!
 
 ## Community
 
-[Join the xxscreeps Discord](https://discord.gg/Ga4C44UP9c). Yes, I know there is already a
-community Slack server with over 32,000 members, but it's time to rip this band-aid off. Open source
-communities are *not* the target market for Slack. Slack only lets us access the last 10,000
-messages on the server which is like 10 days of total history. *Years* of wisdom has been lost in
-these channels. I can't even see my own direct messages after 30 days *even if I never actually read
-the message*. Slack wants $2,900 *per month* to upgrade to the "pro" plan which buys you everything
-Discord is giving away for free. Enough is enough 🙅🏼‍♂️ ! If you want to talk to me about this
-project please just come over to the Discord server.
+[Join the official Screeps Discord](https://discord.gg/hTyDafdK). You can find me [The General] in
+the #xxscreeps channel.
