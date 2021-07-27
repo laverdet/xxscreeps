@@ -72,7 +72,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	override ['#beforeRemove']() {
 		const { spawning } = this;
 		if (spawning) {
-			const creep = Game.getObjectById(spawning['#spawnId'])!;
+			const creep = Game.getObjectById(spawning['#spawningCreepId'])!;
 			creep.room['#removeObject'](creep);
 		}
 		super['#beforeRemove']();
