@@ -61,7 +61,26 @@ hooks.register('route', {
 		} else {
 			return { error: 'Invalid intent' };
 		}
-		
+	},
+});
+
+hooks.register('route', {
+	path: '/api/game/check-unique-flag-name',
+	method: 'post',
+
+	async execute(context) {
+		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
+		const { name } = context.request.body;
+		const flags = await loadUserFlags(context.shard, userId);
+
+		if (flags[name]) {
+			return { "error": "name exists" };
+		} else {
+			return { "ok": 1 };
+		}
 	},
 });
 
