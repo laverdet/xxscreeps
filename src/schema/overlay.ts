@@ -49,8 +49,9 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 				return function() {
 					const value = apply(get, this, []);
 					defineProperty(this, key, {
-						value,
+						enumerable,
 						writable: true,
+						value,
 					});
 					return value;
 				};

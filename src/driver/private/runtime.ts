@@ -1,20 +1,13 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import { isPrivate, makeSymbol } from 'xxscreeps/driver/private/symbol'; // Use full path for webpack rewrite
 import { getOrSet } from 'xxscreeps/utility/utility';
-const { apply, get, getPrototypeOf, defineProperty, set } = Reflect;
+const { apply, get, getPrototypeOf, set } = Reflect;
 const inherits = function(): boolean {
 	// v8 private symbols don't follow prototype chain. This tests the implementation's behavior.
 	const symbol = makeSymbol();
 	const test = { [symbol]: true };
 	return Object.create(test)[symbol] ?? false;
 }();
-
-function setInto(target: object, symbol: keyof any, value: any) {
-	defineProperty(target, symbol, {
-		get() { return value },
-		set(value) { setInto(this, symbol, value) },
-	});
-}
 
 function asOptional(optional: boolean, factory: () => (...args: any[]) => any) {
 	const fn = factory();
@@ -72,14 +65,16 @@ export function makeSetter(name: string): (object: any, value: any) => any {
 		return (object, value) => object[symbol] = value;
 	} else {
 		return (object, value) => {
-			for (let instance = object; instance !== null; instance = getPrototypeOf(instance)) {
+			if (symbol in object) {
+				return object[symbol] = value;
+			}
+			for (let instance = getPrototypeOf(object); instance !== null; instance = getPrototypeOf(instance)) {
 				if (symbol in instance) {
 					set(instance, symbol, value, object);
 					return value;
 				}
 			}
-			setInto(object, symbol, value);
-			return value;
+			return object[symbol] = value;
 		};
 	}
 }
