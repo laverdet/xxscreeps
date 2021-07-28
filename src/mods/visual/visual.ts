@@ -81,6 +81,7 @@ const textSchema = struct({
 		backgroundPadding: optional('double'),
 		color,
 		font: optional('string'),
+		opacity: optional('double'),
 	}),
 });
 
