@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="xxscreeps" type="NodeJSConfigurationType" application-parameters="dist/engine/service/launcher.js " path-to-js-file="dist/config/entry.js" working-dir="$PROJECT_DIR$">
+    <method v="2" />
+  </configuration>
+</component>
