@@ -127,6 +127,27 @@ export class RoomVisual {
 	}
 
 	/**
+	 * Export the visuals as a string
+	 */
+	export() {
+		return this.#visuals.map(vis => JSON.stringify({ ...vis, t: vis[Variant] })).join('\n') + '\n';
+	}
+
+	/**
+	 * Import visuals from string
+	 */
+	import(text: string) {
+		for (const row of text.split('\n')) {
+			if (!row) continue;
+			const data = JSON.parse(row);
+			const type = data.t;
+			delete data.t;
+			this.#visuals.push({ [Variant]: type, ...data, s: data.s || {} });
+		}
+		return this;
+	}
+
+	/**
 	 * Draw a circle.
 	 */
 	circle(...args: [ ...pos: Point, style?: CircleStyle ]) {
