@@ -81,6 +81,7 @@ const textSchema = struct({
 		backgroundPadding: optional('double'),
 		color,
 		font: optional('string'),
+		opacity: optional('double'),
 	}),
 });
 
@@ -123,6 +124,27 @@ export class RoomVisual {
 	constructor(roomName: string) {
 		const tmp = getOrSet(tickVisuals, roomName, () => []);
 		this.#visuals = tmp; // typescript bug
+	}
+
+	/**
+	 * Export the visuals as a string
+	 */
+	export() {
+		return this.#visuals.map(vis => JSON.stringify({ ...vis, t: vis[Variant] })).join('\n') + '\n';
+	}
+
+	/**
+	 * Import visuals from string
+	 */
+	import(text: string) {
+		for (const row of text.split('\n')) {
+			if (!row) continue;
+			const data = JSON.parse(row);
+			const type = data.t;
+			delete data.t;
+			this.#visuals.push({ [Variant]: type, ...data, s: data.s || {} });
+		}
+		return this;
 	}
 
 	/**
