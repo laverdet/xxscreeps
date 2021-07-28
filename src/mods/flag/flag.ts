@@ -114,13 +114,13 @@ function checkFlagPosition(pos: RoomPosition) {
 
 export function checkCreateFlag(
 	flags: Dictionary<Flag>,
-	pos: RoomPosition,
+	pos: RoomPosition | undefined,
 	name: string,
 	color: Color, secondaryColor: Color,
 	checkName = false,
 ) {
 	return chainIntentChecks(
-		() => checkFlagPosition(pos),
+		pos ? () => checkFlagPosition(pos) : () => C.OK,
 		() => checkFlagColors(color, secondaryColor),
 		() => {
 			if (typeof name !== 'string' || name.length === 0 || name.length > 100) {

@@ -36,6 +36,55 @@ hooks.register('roomSocket', async(shard, userId, roomName) => {
 });
 
 hooks.register('route', {
+	path: '/api/game/change-flag-color',
+	method: 'post',
+
+	async execute(context) {
+		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
+		const { name, color, secondaryColor } = context.request.body;
+		
+		if (checkCreateFlag({}, undefined, name, color, secondaryColor) === C.OK) {
+			await getFlagChannel(context.shard, userId).publish({
+				type: 'intent',
+				intent: {
+					type: 'create',
+					params: [
+						name, undefined,
+						color, secondaryColor,
+					],
+				},
+			});
+			return { ok: 1 };
+		} else {
+			return { error: 'Invalid intent' };
+		}
+	},
+});
+
+hooks.register('route', {
+	path: '/api/game/check-unique-flag-name',
+	method: 'post',
+
+	async execute(context) {
+		const { userId } = context.state;
+		if (!userId) {
+			return;
+		}
+		const { name } = context.request.body;
+		const flags = await loadUserFlags(context.shard, userId);
+
+		if (flags[name]) {
+			return { "error": "name exists" };
+		} else {
+			return { "ok": 1 };
+		}
+	},
+});
+
+hooks.register('route', {
 	path: '/api/game/create-flag',
 	method: 'post',
 
