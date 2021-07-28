@@ -66,6 +66,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	}
 
 	override ['#addToMyGame'](game: GameConstructor) {
+		super['#addToMyGame'](game);
 		game.spawns[this.name] = this;
 	}
 
@@ -133,7 +134,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	/**
 	 * Start the creep spawning process. The required energy amount can be withdrawn from all spawns
 	 * and extensions in the room.
-   * @param body An array describing the new creep’s body. Should contain 1 to 50 elements with one
+	 * @param body An array describing the new creep’s body. Should contain 1 to 50 elements with one
 	 * of these constants: `WORK`, `MOVE`, `CARRY`, `ATTACK`, `RANGED_ATTACK`, `HEAL`, `CLAIM`.
 	 * @param name The name of a new creep. The name length limit is 100 characters. It must be a
 	 * unique creep name, i.e. the `Game.creeps` object should not contain another creep with the same

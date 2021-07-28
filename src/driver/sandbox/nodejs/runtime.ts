@@ -20,17 +20,13 @@ class NodejsCPU implements CPU {
 		this.#startTime = process.hrtime.bigint();
 	}
 
-	getHeapStatistics() {
-		return {} as never;
-	}
+	getHeapStatistics = () => ({} as never);
 
-	getUsed() {
-		return Number(process.hrtime.bigint() - this.#startTime) / 1e6;
-	}
+	getUsed = () => Number(process.hrtime.bigint() - this.#startTime) / 1e6;
 
-	halt(): never {
+	halt = (): never => {
 		throw new Error('Cannot halt()');
-	}
+	};
 }
 
 hooks.register('gameInitializer', (game, data) => {

@@ -39,18 +39,14 @@ class IsolatedCPU implements CPU {
 		this.#startTime = isolate.wallTime;
 	}
 
-	getHeapStatistics() {
-		return isolate.getHeapStatisticsSync();
-	}
+	getHeapStatistics = () => isolate.getHeapStatisticsSync();
 
-	getUsed() {
-		return Number(isolate.wallTime - this.#startTime) / 1e6;
-	}
+	getUsed = () => Number(isolate.wallTime - this.#startTime) / 1e6;
 
-	halt() {
+	halt = () => {
 		isolate.dispose();
 		return undefined as never;
-	}
+	};
 }
 
 hooks.register('gameInitializer', (game, data) => {

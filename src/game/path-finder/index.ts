@@ -69,7 +69,6 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 				const check = makeObstacleChecker({
 					ignoreCreeps,
 					ignoreDestructibleStructures,
-					isPathFinder: true,
 					room,
 					user: me,
 				});

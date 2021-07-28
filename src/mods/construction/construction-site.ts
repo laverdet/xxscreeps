@@ -65,11 +65,7 @@ export function checkRemove(site: ConstructionSite) {
 // Register path finder logic
 registerObstacleChecker(params => {
 	const { user } = params;
-	if (params.isPathFinder) {
-		return object => object instanceof ConstructionSite &&
-			object['#user'] === user &&
-			(structureFactories.get(object.structureType)?.obstacle ?? true);
-	} else {
-		return null;
-	}
+	return object => object instanceof ConstructionSite &&
+		object['#user'] === user &&
+		(structureFactories.get(object.structureType)?.obstacle ?? true);
 });

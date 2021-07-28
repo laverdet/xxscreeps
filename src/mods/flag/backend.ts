@@ -45,14 +45,14 @@ hooks.register('route', {
 			return;
 		}
 		const { name, color, secondaryColor } = context.request.body;
-		
+
 		if (checkCreateFlag({}, undefined, name, color, secondaryColor) === C.OK) {
 			await getFlagChannel(context.shard, userId).publish({
 				type: 'intent',
 				intent: {
 					type: 'create',
 					params: [
-						name, undefined,
+						name, null,
 						color, secondaryColor,
 					],
 				},
@@ -76,10 +76,11 @@ hooks.register('route', {
 		const { name } = context.request.body;
 		const flags = await loadUserFlags(context.shard, userId);
 
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (flags[name]) {
-			return { "error": "name exists" };
+			return { error: 'name exists' };
 		} else {
-			return { "ok": 1 };
+			return { ok: 1 };
 		}
 	},
 });

@@ -11,7 +11,7 @@ import { captureDamage } from 'xxscreeps/mods/combat/creep';
 import { Structure } from 'xxscreeps/mods/structure/structure';
 
 function calculateEfficiency(tower: StructureTower, target: Creep | Structure) {
-	const range = clamp(tower.pos.getRangeTo(target.pos), C.TOWER_FALLOFF_RANGE, C.TOWER_OPTIMAL_RANGE);
+	const range = clamp(C.TOWER_OPTIMAL_RANGE, C.TOWER_FALLOFF_RANGE, tower.pos.getRangeTo(target.pos));
 	return 1 - C.TOWER_FALLOFF * (range - C.TOWER_OPTIMAL_RANGE) / (C.TOWER_FALLOFF_RANGE - C.TOWER_OPTIMAL_RANGE);
 }
 

@@ -46,7 +46,7 @@ extend(Room, {
 					return C.ERR_INVALID_ARGS;
 				}
 			},
-			() => checkCreateFlag(flags, pos!, name, color, secondaryColor, true),
+			() => checkCreateFlag(flags, pos, name, color, secondaryColor, true),
 			() => {
 				// Save creation intent
 				intents.push({ type: 'create', params: [ name, pos!['#id'], color, secondaryColor ] });

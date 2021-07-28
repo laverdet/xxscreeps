@@ -92,7 +92,7 @@ hooks.register('gameInitializer', (Game, data) => {
 // This flag mock-processor runs in the runner sandbox and simply sends back a blob if the flags have changed
 let didUpdateFlags = false;
 export let intents: FlagIntent[] = [];
-export function createFlag(name: string, posInt: number | undefined, color: Color, secondaryColor: Color) {
+export function createFlag(name: string, posInt: number | null, color: Color, secondaryColor: Color) {
 	const pos = posInt ? RoomPosition['#create'](posInt) : undefined;
 	// Run create / move / setColor intent
 	if (checkCreateFlag(flags, pos, name, color, secondaryColor) === C.OK) {
