@@ -37,6 +37,7 @@
     "@types/pngjs": "^6.0.0",
     "@types/sockjs": "^0.3.32",
     "@types/source-map-support": "^0.5.3",
+    "@xxscreeps/client": "^0.0.5-a",
     "@xxscreeps/path-finder": "file:src/driver/path-finder",
     "acorn": "^8.4.0",
     "acorn-class-fields": "^1.0.0",
