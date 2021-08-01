@@ -37,7 +37,7 @@ const argv = checkArguments({
 });
 const dontOverwrite = argv['dont-overwrite'];
 
-const jsonSource = argv.argv[0] ?? 'map-mmo-shard2.json';
+const jsonSource = argv.argv[0] ?? 'map-mmo-shard1.json';
 
 function forUser(userId: string | null) {
 	return userId === 'f4b532d08c3952a' ? '1' : userId;
