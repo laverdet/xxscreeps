@@ -54,8 +54,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		}
 		this.#didInitialize = true;
 		for (const object of this['#objects']) {
-			this.#addToIndex(object);
-			object['#afterInsert'](this);
+			this.#afterInsert(object);
 		}
 	}
 
@@ -86,20 +85,21 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 */
 	['#flushObjects'](this: Room) {
 		// Bail early if there's no work
-		if (this.#insertObjects.length + this.#removeObjects.size === 0) {
+		if (this.#insertObjects.length === 0 && this.#removeObjects.size === 0) {
 			return;
 		}
 		const objects = this['#objects'];
 		this.#findCache.clear();
 		// Remove objects
-		let removeCount = this.#removeObjects.size;
+		const removeObjects = this.#removeObjects;
+		let removeCount = removeObjects.size;
 		if (removeCount) {
+			this.#removeObjects = new Set;
 			let cursor = objects.length - 1;
 			for (let ii = cursor; ii >= 0; --ii) {
 				const object = objects[ii];
-				if (this.#removeObjects.has(object)) {
-					object['#beforeRemove']();
-					this.#removeFromIndex(object);
+				if (removeObjects.has(object)) {
+					this.#beforeRemove(object);
 					objects[ii] = objects[cursor--];
 					if (--removeCount === 0) {
 						break;
@@ -108,20 +108,21 @@ export class Room extends withOverlay(BufferObject, shape) {
 			}
 			objects.splice(cursor + 1);
 
-			this.#removeObjects.clear();
 			if (removeCount !== 0) {
 				throw new Error('Removed objects mismatch');
 			}
 		}
 		// Insert objects
-		if (this.#insertObjects.length) {
-			objects.push(...this.#insertObjects as never[]);
-			for (const object of this.#insertObjects) {
-				this.#addToIndex(object);
-				object['#afterInsert'](this);
-			}
+		const insertObjects = this.#insertObjects;
+		if (insertObjects.length) {
 			this.#insertObjects = [];
+			objects.push(...insertObjects as never[]);
+			for (const object of insertObjects) {
+				this.#afterInsert(object);
+			}
 		}
+		// Flush objects added/removed by #afterInsert / #beforeRemove hooks
+		this['#flushObjects']();
 	}
 
 	/**
@@ -131,8 +132,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (now) {
 			this.#findCache.clear();
 			this['#objects'].push(object as never);
-			this.#addToIndex(object);
-			object['#afterInsert'](this);
+			this.#afterInsert(object);
 		} else {
 			this.#insertObjects.push(object);
 		}
@@ -171,7 +171,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Add an object to the look and spatial indices
 	 */
-	#addToIndex(object: RoomObject) {
+	#afterInsert(this: Room, object: RoomObject) {
 		this.#lookIndex.get(object['#lookType'])!.push(object);
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos);
@@ -180,12 +180,14 @@ export class Room extends withOverlay(BufferObject, shape) {
 		} else {
 			this.#spatialIndex.set(pos, [ object ]);
 		}
+		object['#afterInsert'](this);
 	}
 
 	/**
 	 * Remove an object from the look and spatial indices
 	 */
-	#removeFromIndex(object: RoomObject) {
+	#beforeRemove(object: RoomObject) {
+		object['#beforeRemove']();
 		removeOne(this.#lookIndex.get(object['#lookType'])!, object);
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos)!;

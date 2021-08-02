@@ -18,6 +18,7 @@ import { assign } from 'xxscreeps/utility/utility';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 import { Structure } from 'xxscreeps/mods/structure/structure';
+import { Ruin } from 'xxscreeps/mods/structure/ruin';
 import { Room } from 'xxscreeps/game/room';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
 
@@ -439,7 +440,7 @@ export function checkTransfer(creep: Creep, target: RoomObject & WithStore, reso
 export function checkWithdraw(creep: Creep, target: Structure & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => checkTarget(target, Structure),
+		() => checkTarget(target, Ruin, Structure),
 		() => checkRange(creep, target, 1),
 		() => checkHasResource(target, resourceType, amount),
 		() => checkHasCapacity(creep, resourceType, amount),

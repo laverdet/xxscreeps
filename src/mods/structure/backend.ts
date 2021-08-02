@@ -1,4 +1,5 @@
 import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend';
+import { renderStore } from 'xxscreeps/mods/resource/backend';
 import { Structure } from './structure';
 import { Ruin } from './ruin';
 
@@ -14,6 +15,7 @@ bindRenderer(Structure, (structure, next) => ({
 
 bindRenderer(Ruin, (ruin, next) => ({
 	...next(),
+	...renderStore(ruin.store),
 	decayTime: ruin['#decayTime'],
 	destroyTime: ruin.destroyTime,
 	structure: {
