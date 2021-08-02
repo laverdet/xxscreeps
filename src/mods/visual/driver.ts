@@ -12,10 +12,6 @@ declare module 'xxscreeps/engine/runner' {
 
 hooks.register('runnerConnector', player => [ undefined, {
 	async save(payload) {
-		// Publish visuals
-		const { visuals } = payload;
-		if (visuals) {
-			await publishVisualsBlobForNextTick(player.shard, player.userId, visuals.roomNames, visuals.blob);
-		}
+		await publishVisualsBlobForNextTick(player.shard, player.userId, payload.visuals);
 	},
 } ]);
