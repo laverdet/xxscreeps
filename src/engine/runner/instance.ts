@@ -17,9 +17,8 @@ import { hooks } from './symbols';
 import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/processor/model';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
 import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility';
-import { runOnce } from 'xxscreeps/utility/memoize';
 
-const acquireConnectors = runOnce(() => function(invoke) {
+const acquireConnectors = function(invoke) {
 	return async(instance: PlayerInstance) => {
 		const connectorPromises = invoke(instance);
 		hackyIterableToArray(connectorPromises);
@@ -33,13 +32,13 @@ const acquireConnectors = runOnce(() => function(invoke) {
 			save: (payload: TickResult) => Promise.all(Fn.map(save, fn => fn(payload))),
 		} ] as const;
 	};
-}(hooks.makeMapped('runnerConnector')));
+}(hooks.makeMapped('runnerConnector'));
 const kCPU = 100;
 
 export class PlayerInstance {
 	private bucket = config.runner.cpu.bucket;
 	private cleanup!: Effect;
-	private connectors!: ReturnType<typeof acquireConnectors> extends (...args: any[]) =>
+	private connectors!: typeof acquireConnectors extends (...args: any[]) =>
 	Promise<readonly [ any, infer Type ]> ? Type : never;
 
 	private sandbox?: Sandbox;
@@ -106,7 +105,7 @@ export class PlayerInstance {
 		]);
 		const instance = new PlayerInstance(shard, world, channel, codeChannel, userId, userInfo.username!, userInfo.branch);
 		try {
-			[ instance.cleanup, instance.connectors ] = await acquireConnectors()(instance);
+			[ instance.cleanup, instance.connectors ] = await acquireConnectors(instance);
 			return instance;
 		} catch (err) {
 			instance.disconnect();

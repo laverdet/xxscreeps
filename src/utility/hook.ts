@@ -1,4 +1,5 @@
 import * as Fn from './functional';
+import { lateCallback } from './memoize';
 
 export function makeHookRegistration<keys extends Record<string, any>>() {
 	const hooksByName = new Map<keyof any, any[]>();
@@ -40,49 +41,55 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 
 	const hookable: Hook = {
 		makeIterated(key) {
-			const handlers = hooksByName.get(key);
-			took.add(key);
-			if (handlers) {
-				const { head, rest } = Fn.shift(handlers);
-				let fn = head;
-				for (const next of rest) {
-					const prev = fn;
-					fn = (...args: any[]) => {
-						prev(...args);
-						next(...args);
-					};
+			return lateCallback(() => {
+				const handlers = hooksByName.get(key);
+				took.add(key);
+				if (handlers) {
+					const { head, rest } = Fn.shift(handlers);
+					let fn = head;
+					for (const next of rest) {
+						const prev = fn;
+						fn = (...args: any[]) => {
+							prev(...args);
+							next(...args);
+						};
+					}
+					return fn;
+				} else {
+					return () => {};
 				}
-				return fn as never;
-			} else {
-				return (() => {}) as never;
-			}
+			}) as never;
 		},
 
 		makeMapped(key): any {
-			const handlers = hooksByName.get(key);
-			took.add(key);
-			if (handlers) {
-				const savedHandlers = [ ...handlers ];
-				return (...args: any[]) => Fn.map(savedHandlers, fn => fn(...args));
-			} else {
-				return function *() {};
-			}
+			return lateCallback(() => {
+				const handlers = hooksByName.get(key);
+				took.add(key);
+				if (handlers) {
+					const savedHandlers = [ ...handlers ];
+					return (...args: any[]) => Fn.map(savedHandlers, fn => fn(...args));
+				} else {
+					return function *() {};
+				}
+			});
 		},
 
 		makeReduced(key) {
-			const handlers = hooksByName.get(key);
-			took.add(key);
-			if (handlers) {
-				const { head, rest } = Fn.shift(handlers);
-				let fn = head;
-				for (const next of rest) {
-					const prev = fn;
-					fn = (value: any) => next(prev(value));
+			return lateCallback(() => {
+				const handlers = hooksByName.get(key);
+				took.add(key);
+				if (handlers) {
+					const { head, rest } = Fn.shift(handlers);
+					let fn = head;
+					for (const next of rest) {
+						const prev = fn;
+						fn = (value: any) => next(prev(value));
+					}
+					return fn;
+				} else {
+					return (value: any) => value;
 				}
-				return fn as never;
-			} else {
-				return ((value: any) => value) as never;
-			}
+			}) as never;
 		},
 
 		map(key: keyof any, fn = (value: any) => value) {

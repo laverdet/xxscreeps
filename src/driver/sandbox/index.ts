@@ -10,9 +10,8 @@ import { schemaTransform } from 'xxscreeps/engine/schema/build';
 import { hooks } from 'xxscreeps/driver';
 import { locateModule } from '../path-finder';
 import { compile } from '../webpack';
-import { runOnce } from 'xxscreeps/utility/memoize';
 
-const didMakeSandbox = runOnce(() => hooks.makeIterated('sandboxCreated'));
+const didMakeSandbox = hooks.makeIterated('sandboxCreated');
 
 export interface Sandbox {
 	createInspectorSession(): InspectorSession;
@@ -58,7 +57,7 @@ export async function createSandbox(userId: string): Promise<Sandbox> {
 			return new IsolatedSandbox;
 		}
 	}();
-	didMakeSandbox()(sandbox, userId);
+	didMakeSandbox(sandbox, userId);
 	return sandbox;
 }
 

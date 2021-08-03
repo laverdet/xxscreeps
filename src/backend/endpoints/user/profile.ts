@@ -1,9 +1,8 @@
 import * as User from 'xxscreeps/engine/db/user';
 import { hooks } from 'xxscreeps/backend';
-import { runOnce } from 'xxscreeps/utility/memoize';
 import config from 'xxscreeps/config';
 const { allowGuestAccess } = config.backend;
-const sendUserInfo = runOnce(() => hooks.makeMapped('sendUserInfo'));
+const sendUserInfo = hooks.makeMapped('sendUserInfo');
 
 hooks.register('route', {
 	path: '/api/auth/me',
@@ -21,7 +20,7 @@ hooks.register('route', {
 			const [ user ] = await Promise.all([
 				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
 				User.findProvidersForUser(context.db, userId),
-				Promise.all(sendUserInfo()(context.db, userId, info, true)),
+				Promise.all(sendUserInfo(context.db, userId, info, true)),
 			]);
 			return Object.assign(info, {
 				ok: 1,
@@ -63,7 +62,7 @@ hooks.register('route', {
 			const info = {};
 			const [ user ] = await Promise.all([
 				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
-				Promise.all(sendUserInfo()(context.db, userId, info, false)),
+				Promise.all(sendUserInfo(context.db, userId, info, false)),
 			]);
 			return {
 				ok: 1,

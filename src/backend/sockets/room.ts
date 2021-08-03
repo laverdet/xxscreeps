@@ -11,7 +11,6 @@ import { asUnion, getOrSet, hackyIterableToArray, throttle } from 'xxscreeps/uti
 import { hooks } from 'xxscreeps/backend';
 import { Render } from 'xxscreeps/backend/symbols';
 import { getRoomChannel } from 'xxscreeps/engine/processor/model';
-import { runOnce } from 'xxscreeps/utility/memoize';
 import './render';
 
 function diff(previous: any, next: any) {
@@ -42,7 +41,7 @@ type RoomState = {
 	time: number;
 };
 const globalSubscriptionsByRoom = new Map<string, Promise<{ listen: (fn: RoomListener) => Effect; state: RoomState }>>();
-const invokeSocketHooks = runOnce(() => hooks.makeMapped('roomSocket'));
+const invokeSocketHooks = hooks.makeMapped('roomSocket');
 
 /**
  * Listen for updates to a room. Some work is shared between multiple listeners. If game time is
@@ -117,7 +116,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		// Resolve room socket handlers
 		// HACK: TypeScript doesn't infer types correctly for iterable types into a rest spread. The
 		// `hookMap` cast here shouldn't be needed but it is.
-		const mappedHooks = invokeSocketHooks()(shard, this.user, parameters.room);
+		const mappedHooks = invokeSocketHooks(shard, this.user, parameters.room);
 		hackyIterableToArray(mappedHooks);
 		const [ hookEffect, hookResults ] = await acquire(...mappedHooks);
 		const hookRunners = [ ...Fn.filter(hookResults) ];
