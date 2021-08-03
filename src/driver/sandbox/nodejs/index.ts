@@ -74,7 +74,7 @@ export class NodejsSandbox implements Sandbox {
 
 				return function(data_) {
 					data = data_;
-					return runInContext('_runWithArgs()', context, { timeout: data.cpu.tickLimit });
+					return runInContext('_runWithArgs()', context, { timeout: Math.floor(data.cpu.tickLimit) });
 				};
 			})
 		`, context)(context, runtime.tick, vm.runInContext);

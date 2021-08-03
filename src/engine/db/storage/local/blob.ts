@@ -5,7 +5,7 @@ import * as Path from 'path';
 import { fileURLToPath } from 'url';
 import fsSync from 'fs';
 import fs from 'fs/promises';
-import { listen } from 'xxscreeps/utility/async';
+import { listen, spread } from 'xxscreeps/utility/async';
 import { Responder, connect, makeClient, makeHost } from './responder';
 import { registerStorageProvider } from '..';
 
@@ -199,27 +199,31 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 		++this.saveId;
 
 		// Save to disk
-		await Promise.all(Fn.map(entries, async([ key, { value } ]) => {
-			const path = Path.join(this.path, key);
-			const dirname = Path.dirname(path);
-			if (value) {
-				if (!this.knownPaths.has(dirname)) {
-					try {
-						await fs.mkdir(dirname, { recursive: true });
-					} catch (err) {
-						if (err.code !== 'EEXIST') {
-							throw err;
+		await spread(500, async throttle => {
+			for (const [ key, { value } ] of entries) {
+				await throttle(async() => {
+					const path = Path.join(this.path, key);
+					const dirname = Path.dirname(path);
+					if (value) {
+						if (!this.knownPaths.has(dirname)) {
+							try {
+								await fs.mkdir(dirname, { recursive: true });
+							} catch (err) {
+								if (err.code !== 'EEXIST') {
+									throw err;
+								}
+							}
+							this.knownPaths.add(dirname);
 						}
+						const tmp = Path.join(this.path, Path.dirname(key), `.${Path.basename(key)}.swp`);
+						await fs.writeFile(tmp, value);
+						await fs.rename(tmp, path);
+					} else {
+						await fs.unlink(path);
 					}
-					this.knownPaths.add(dirname);
-				}
-				const tmp = Path.join(this.path, Path.dirname(key), `.${Path.basename(key)}.swp`);
-				await fs.writeFile(tmp, value);
-				await fs.rename(tmp, path);
-			} else {
-				await fs.unlink(path);
+				});
 			}
-		}));
+		});
 
 		// Also remove empty directories after everything has flushed
 		const unlinkedDirectories = new Set<string>();

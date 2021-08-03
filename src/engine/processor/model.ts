@@ -34,25 +34,28 @@ export const processRoomsSetKey = (time: number) =>
 	`tick${time}/processRooms`;
 export const finalizeExtraRoomsSetKey = (time: number) =>
 	`tick${time}/finalizeExtraRooms`;
+const abandonedIntentsKey = (time: number) =>
+	`tick${time}/didAbandonIntents`;
 const processRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/processRoomsPending`;
 const finalizedRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/finalizedRoomsPending`;
-const intentsListForRoomKey = (roomName: string) =>
-	`rooms/${roomName}/intents`;
+const intentsListForRoomKey = (roomName: string, time: number) =>
+	`tick${time % 2}/${roomName}/intents`;
 const finalIntentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/finalIntents`;
 
-async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, intents?: RoomIntentPayload) {
-	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
+async function pushIntentsForRoom(shard: Shard, roomName: string, time: number, userId: string, intents?: RoomIntentPayload) {
+	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName, time), [ JSON.stringify({ userId, intents }) ]);
 }
 
 export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userId: string, intents: RoomIntentPayload) {
+	const time = shard.time + 1;
 	return Promise.all([
 		// Add this room to the active set
-		forceRoomProcess(shard, roomName),
+		shard.scratch.zadd(sleepingRoomsKey, [ [ time, roomName ] ]),
 		// Save intents
-		pushIntentsForRoom(shard, roomName, userId, intents),
+		pushIntentsForRoom(shard, roomName, time, userId, intents),
 	]);
 }
 
@@ -61,11 +64,20 @@ export async function publishRunnerIntentsForRoom(shard: Shard, userId: string, 
 		// Decrement count of users that this room is waiting for
 		shard.scratch.zincrBy(processRoomsSetKey(time), -1, roomName),
 		// Add intents to list
-		pushIntentsForRoom(shard, roomName, userId, intents),
+		pushIntentsForRoom(shard, roomName, shard.time, userId, intents),
 	]);
+	const requestProcessRooms = () => getProcessorChannel(shard).publish({ type: 'process', time });
 	if (count === 0) {
 		// Publish process task to workers
-		await getProcessorChannel(shard).publish({ type: 'process', time });
+		await requestProcessRooms();
+	} else if (count < 0) {
+		// If this runner set the count to -1 then check to see if this tick was abandoned. If so, then
+		// set the count back to 0 and republish the process event to processors
+		const wasAbandoned = await shard.scratch.get(abandonedIntentsKey(time));
+		if (wasAbandoned) {
+			await shard.scratch.zadd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'xx' });
+			await requestProcessRooms();
+		}
 	}
 }
 
@@ -81,7 +93,7 @@ export async function publishInterRoomIntents(shard: Shard, roomName: string, ti
 }
 
 export async function acquireIntentsForRoom(shard: Shard, roomName: string) {
-	const key = intentsListForRoomKey(roomName);
+	const key = intentsListForRoomKey(roomName, shard.time);
 	const [ payloads ] = await Promise.all([
 		shard.scratch.lrange(key, 0, -1),
 		shard.scratch.del(key),
@@ -125,7 +137,7 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 		if (wake.length > 0) {
 			const [ awoken ] = await Promise.all([
 				shard.scratch.zadd(activeRoomsKey, wake.map(roomName => [ 0, roomName ]), { if: 'nx' }),
-				shard.scratch.zremRange(sleepingRoomsKey, 0, time),
+				shard.scratch.zrem(sleepingRoomsKey, wake),
 			]);
 			count += awoken;
 		}
@@ -231,10 +243,6 @@ export async function updateUserRoomRelationships(shard: Shard, room: Room, prev
 	]);
 }
 
-export function forceRoomProcess(shard: Shard, roomName: string) {
-	return shard.scratch.zadd(sleepingRoomsKey, [ [ 0, roomName ] ]);
-}
-
 export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wakeTime: number) {
 	return Promise.all([
 		// Copy current room state to buffer0 and buffer1
@@ -252,6 +260,8 @@ export async function abandonIntentsForTick(shard: Shard, time: number) {
 	const [ pending ] = await Promise.all([
 		// Fetch which rooms we're waiting on, for diagnostics
 		shard.scratch.zrange(key, 0, 1000),
+		// Mark this tick as abandoned
+		shard.scratch.set(abandonedIntentsKey(time), 1),
 		// Update all processor pending counts to 0
 		shard.scratch.zinterStore(key, [ key ], { weights: [ 0 ] }),
 		// Clear runner queue
