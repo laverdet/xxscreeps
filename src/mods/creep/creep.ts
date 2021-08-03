@@ -392,6 +392,8 @@ export function checkCommon(creep: Creep, part?: PartType) {
 		return C.ERR_BUSY;
 	} else if (part && creep.getActiveBodyparts(part) === 0) {
 		return C.ERR_NO_BODYPART;
+	} else if (!creep.room as unknown) {
+		return C.ERR_INVALID_ARGS;
 	}
 	return C.OK;
 }

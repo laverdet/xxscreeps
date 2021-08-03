@@ -42,7 +42,7 @@ export function checkString(value: string, maxLength: number) {
 }
 
 export function checkTarget(target: RoomObject | undefined, ...types: any[]) {
-	if (target) {
+	if (target && target.room as unknown) {
 		for (const type of types) {
 			if (target instanceof type) {
 				return C.OK;
