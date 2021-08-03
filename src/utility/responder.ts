@@ -1,6 +1,7 @@
 import type { Effect } from './types';
 import type { MessagePort } from 'worker_threads';
 import * as Fn from 'xxscreeps/utility/functional';
+import { MessageChannel, parentPort } from 'worker_threads';
 import { EventEmitter } from 'events';
 import { Deferred, mustNotReject } from './async';
 import { staticCast } from './utility';
@@ -20,11 +21,10 @@ type ResponseMessage = {
 	rejection: true;
 });
 
-type ResponderResult<Type> = [ Effect, (payload: Type) => Promise<void> ];
+type ResponderResult<Type, Result> = [ Effect, (payload: Type) => Promise<Result> ];
+const localEmitter = new EventEmitter;
 
-export const localEmitter = new EventEmitter;
-
-export async function negotiateResponderClient<Type>(path: string, singleThread?: boolean) {
+export async function negotiateResponderClient<Type, Result>(path: string, singleThread?: boolean) {
 	const { onMessage, onClose, wait } = await async function(): Promise<{
 		onMessage(fn: (message: any) => void): void;
 		onClose(fn: (err: any) => void): void;
@@ -46,10 +46,10 @@ export async function negotiateResponderClient<Type>(path: string, singleThread?
 			};
 		}
 	}();
-	const [ close, responder ] = await new Promise<ResponderResult<Type>>((resolve, reject) => {
+	const [ close, responder ] = await new Promise<ResponderResult<Type, Result>>((resolve, reject) => {
 		onClose(err => reject(err));
 		onMessage(message => {
-			if (message.type === 'processorReady') {
+			if (message.type === 'responderReady') {
 				resolve(makeBasicResponderClient(message.port));
 			}
 		});
@@ -57,7 +57,7 @@ export async function negotiateResponderClient<Type>(path: string, singleThread?
 	return { close, responder, wait };
 }
 
-export function makeBasicResponderClient<Type>(port: MessagePort): ResponderResult<Type> {
+export function makeBasicResponderClient<Type, Result>(port: MessagePort): ResponderResult<Type, Result> {
 	let currentId = 0;
 	let alive = true;
 	let pending = 0;
@@ -87,12 +87,12 @@ export function makeBasicResponderClient<Type>(port: MessagePort): ResponderResu
 			}
 		},
 		(payload: Type) => {
-			const deferred = new Deferred<void>();
+			const deferred = new Deferred<Result>();
 			++pending;
 			if (alive) {
 				const id = ++currentId;
 				requestsById.set(id, deferred);
-				port.postMessage({ type: 'processorRequest', id, payload });
+				port.postMessage({ id, payload });
 			} else {
 				deferred.reject(new Error('Worker is dead'));
 			}
@@ -101,7 +101,18 @@ export function makeBasicResponderClient<Type>(port: MessagePort): ResponderResu
 	];
 }
 
-export async function makeBasicResponderHost<Type>(port: MessagePort, implementation: (payload: Type) => Promise<void>) {
+export async function makeBasicResponderHost<Type>(url: string, implementation: (payload: Type) => Promise<any>) {
+	const channel = new MessageChannel;
+	const readyMessage = {
+		type: 'responderReady',
+		port: channel.port1,
+	};
+	if (new URL(import.meta.url).searchParams.get('singleThread')) {
+		localEmitter.emit('message', readyMessage);
+	} else {
+		parentPort!.postMessage(readyMessage, [ channel.port1 ]);
+	}
+	const port = channel.port2;
 	return new Promise<void>(resolve => {
 		let alive = true;
 		let pending = 0;
