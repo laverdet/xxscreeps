@@ -34,6 +34,8 @@ export const processRoomsSetKey = (time: number) =>
 	`tick${time}/processRooms`;
 export const finalizeExtraRoomsSetKey = (time: number) =>
 	`tick${time}/finalizeExtraRooms`;
+const abandonedIntentsKey = (time: number) =>
+	`tick${time}/didAbandonIntents`;
 const processRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/processRoomsPending`;
 const finalizedRoomsPendingKey = (time: number) =>
@@ -63,9 +65,18 @@ export async function publishRunnerIntentsForRoom(shard: Shard, userId: string, 
 		// Add intents to list
 		pushIntentsForRoom(shard, roomName, userId, intents),
 	]);
+	const requestProcessRooms = () => getProcessorChannel(shard).publish({ type: 'process', time });
 	if (count === 0) {
 		// Publish process task to workers
-		await getProcessorChannel(shard).publish({ type: 'process', time });
+		await requestProcessRooms();
+	} else if (count < 0) {
+		// If this runner set the count to -1 then check to see if this tick was abandoned. If so, then
+		// set the count back to 0 and republish the process event to processors
+		const wasAbandoned = await shard.scratch.get(abandonedIntentsKey(time));
+		if (wasAbandoned) {
+			await shard.scratch.zadd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'xx' });
+			await requestProcessRooms();
+		}
 	}
 }
 
@@ -252,6 +263,8 @@ export async function abandonIntentsForTick(shard: Shard, time: number) {
 	const [ pending ] = await Promise.all([
 		// Fetch which rooms we're waiting on, for diagnostics
 		shard.scratch.zrange(key, 0, 1000),
+		// Mark this tick as abandoned
+		shard.scratch.set(abandonedIntentsKey(time), 1),
 		// Update all processor pending counts to 0
 		shard.scratch.zinterStore(key, [ key ], { weights: [ 0 ] }),
 		// Clear runner queue
