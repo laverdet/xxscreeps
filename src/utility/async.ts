@@ -105,29 +105,6 @@ export async function *concat<Type>(...generators: AsyncIterable<Type>[]) {
 }
 
 /**
- * Returns a delegate which will forward up to `count` simultaneous invocations to a function.
- */
-export function fanOut<Args extends any[]>(count: number, fn: (...args: Args) => Promise<void>) {
-	const pending: Deferred[] = [];
-	return {
-		async invoke(...args: Args) {
-			if (pending.length >= count) {
-				await pending[0].promise;
-			}
-			const deferred = new Deferred;
-			pending.push(deferred);
-			fn(...args).then(
-				() => pending.shift()!.resolve(),
-				err => pending.shift()!.reject(err));
-		},
-
-		drain() {
-			return Promise.all(pending.map(deferred => deferred.promise));
-		},
-	};
-}
-
-/**
  * Returns an iterator which proxies the given generator, requesting up to `count` elements in
  * advance. If you break ouf of this loop there will be abandoned values!
  */
@@ -157,6 +134,25 @@ export function lookAhead<Type>(iterable: AsyncIterable<Type>, count: number) {
 			yield next.value;
 		}
 	}();
+}
+
+/**
+ * Invokes `body` by passing a throttler callback which can be used to execute a certain number of
+ * concurrent tasks.
+ */
+export async function spread(concurrency: number, body: (throttle: (fn: () => Promise<void>) => Promise<void>) => Promise<void>) {
+	const pending: Deferred[] = [];
+	await body(async fn => {
+		const index = pending.length - concurrency;
+		pending.push(new Deferred);
+		if (index >= 0) {
+			await pending[index].promise;
+		}
+		fn().then(
+			() => pending.shift()!.resolve(),
+			err => pending.shift()!.reject(err));
+	});
+	await Promise.all(Fn.map(pending, deferred => deferred.promise));
 }
 
 /**

@@ -40,30 +40,6 @@ loadTerrain(world); // pathfinder
 // Persistent player instances
 const playerInstances = new Map<string, PlayerInstance>();
 
-// Player runner task
-const executePlayer = Async.fanOut(maxConcurrency, async(userId: string, time: number) => {
-	// Get or create player instance
-	const instance = playerInstances.get(userId) ?? await async function() {
-		const instance = await PlayerInstance.create(shard, world, userId);
-		playerInstances.set(userId, instance);
-		return instance;
-	}();
-
-	// Run user code
-	const roomNames = await shard.scratch.smembers(userToIntentRoomsSetKey(userId));
-	if (roomNames.length === 0) {
-		await shard.scratch.srem('activeUsers', [ userId ]);
-	} else {
-		if (isEntry) {
-			process.stdout.write(`+${instance.username}, `);
-		}
-		await instance.run(time, roomNames);
-		if (isEntry) {
-			process.stdout.write(`-${instance.username}, `);
-		}
-	}
-});
-
 // Start the runner loop
 try {
 	await getServiceChannel(shard).publish({ type: 'runnerConnected' });
@@ -97,15 +73,38 @@ try {
 					}
 				}();
 				// Run player code
-				for await (const userId of Async.concat(
-					Async.lookAhead(affinityIterator, 1),
-					pauseIfMoreRemain,
-					fallbackIterator,
-				)) {
-					seen.add(userId);
-					await executePlayer.invoke(userId, time);
-				}
-				await executePlayer.drain();
+				await Async.spread(maxConcurrency, async throttle => {
+					for await (const userId of Async.concat(
+						Async.lookAhead(affinityIterator, 1),
+						pauseIfMoreRemain,
+						fallbackIterator,
+					)) {
+						await throttle(async() => {
+							// Get or create player instance
+							seen.add(userId);
+							const instance = playerInstances.get(userId) ?? await async function() {
+								const instance = await PlayerInstance.create(shard, world, userId);
+								playerInstances.set(userId, instance);
+								return instance;
+							}();
+
+							// Run user code
+							const roomNames = await shard.scratch.smembers(userToIntentRoomsSetKey(userId));
+							if (roomNames.length === 0) {
+								await shard.scratch.srem('activeUsers', [ userId ]);
+							} else {
+								if (isEntry) {
+									process.stdout.write(`+${instance.username}, `);
+								}
+								await instance.run(time, roomNames);
+								if (isEntry) {
+									process.stdout.write(`-${instance.username}, `);
+								}
+							}
+						});
+					}
+				});
+
 				// Throwaway migrated player sandboxes
 				for (const [ userId, instance ] of playerInstances) {
 					if (!seen.has(userId)) {
