@@ -228,7 +228,7 @@ export class PlayerInstance {
 					void this.consoleChannel.publish({ type: 'error', value: 'Script was disposed' });
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 				} else if (result.result === 'timedOut') {
-					void this.consoleChannel.publish({ type: 'error', value: 'Script timed out' });
+					void this.consoleChannel.publish({ type: 'error', value: `Script timed out${result.stack ? `\n${result.stack}` : ''}` });
 				}
 			}
 			// Publish empty results to move processing along

@@ -21,7 +21,10 @@ export interface Sandbox {
 
 	initialize(data: InitializationPayload, print: Print): Promise<void>;
 	run(data: TickPayload): Promise<{
-		result: 'disposed' | 'timedOut';
+		result: 'disposed';
+	} | {
+		result: 'timedOut';
+		stack?: string;
 	} | {
 		result: 'success';
 		payload: TickResult;
