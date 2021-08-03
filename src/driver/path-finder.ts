@@ -56,7 +56,7 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, userOptions:
 		}
 	});
 	if (goals.length === 0) {
-		return { path: [], ops: 0, cost: 0, incomplete: true };
+		return { path: [], ops: 0, cost: 0, incomplete: false };
 	}
 
 	// Setup room callback
