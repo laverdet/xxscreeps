@@ -23,7 +23,7 @@ export type Transform = {
 };
 
 async function resolve(module: string) {
-	return fileURLToPath(await import.meta.resolve(module));
+	return fileURLToPath(await import.meta.resolve!(module));
 }
 
 const IS_DEV = true as boolean;
@@ -67,7 +67,7 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 							loader: babelLoader,
 							options: {
 								cacheCompression: false,
-								cacheDirectory: true,
+								cacheDirectory: fileURLToPath(new URL('.cache', import.meta.url)),
 								plugins: babelPlugins,
 							},
 						} ],

@@ -107,7 +107,7 @@ export async function makeBasicResponderHost<Type>(url: string, implementation: 
 		type: 'responderReady',
 		port: channel.port1,
 	};
-	if (new URL(import.meta.url).searchParams.get('singleThread')) {
+	if (new URL(url).searchParams.get('singleThread')) {
 		localEmitter.emit('message', readyMessage);
 	} else {
 		parentPort!.postMessage(readyMessage, [ channel.port1 ]);

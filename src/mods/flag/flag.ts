@@ -1,4 +1,5 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
+import type { FlagIntent } from './model';
 import type { InspectOptionsStylized } from 'util';
 import * as C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
@@ -6,7 +7,13 @@ import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { RoomObject, format as baseFormat } from 'xxscreeps/game/object';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
-import { intents } from './game';
+
+export let intents: FlagIntent[] = [];
+export function acquireIntents() {
+	const result = intents;
+	intents = [];
+	return result;
+}
 
 export type Color = typeof C.COLORS_ALL[number];
 const colorFormat = withType<Color>('int8');

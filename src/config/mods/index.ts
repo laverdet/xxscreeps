@@ -21,7 +21,7 @@ const baseUrl = configPath;
 const version = 4;
 async function resolve(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
-		const url = await import.meta.resolve(specifier, `${baseUrl}`);
+		const url = await import.meta.resolve!(specifier, `${baseUrl}`);
 		return {
 			manifest: (await import(url)).manifest as Manifest,
 			specifier,
@@ -60,7 +60,7 @@ try {
 	const resolveWithinMods = async(specifier: string) => {
 		const resolved = await Promise.all(mods.map(async({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
-				return import.meta.resolve(`./${specifier}`, `${url}`);
+				return import.meta.resolve!(`./${specifier}`, `${url}`);
 			}
 		}));
 		return resolved.filter((mod): mod is string => mod !== undefined);
@@ -87,7 +87,7 @@ try {
 			// Merge JSON schema
 			const schemaOutput = new URL('config.schema.json', outDir);
 			const inputs = [
-				await import.meta.resolve('xxscreeps/config/config'),
+				await import.meta.resolve!('xxscreeps/config/config'),
 				...await resolveWithinMods('config'),
 			];
 			const json = (await Promise.all(inputs.map(async path => {

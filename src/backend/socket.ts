@@ -1,6 +1,7 @@
 import type Koa from 'koa';
 import type { BackendContext } from './context';
 import type { Context, State } from '.';
+import type { Duplex } from 'stream';
 import type { Effect } from 'xxscreeps/utility/types';
 import type { Server } from 'http';
 import { IncomingMessage, ServerResponse } from 'http';
@@ -18,7 +19,7 @@ const { allowGuestAccess } = config.backend;
 
 declare module '.' {
 	interface Context {
-		upgrade?: (fn: (req: IncomingMessage, socket: Socket, head: Buffer) => void | Promise<void>) => Promise<void>;
+		upgrade?: (fn: (req: IncomingMessage, socket: Duplex, head: Buffer) => void | Promise<void>) => Promise<void>;
 	}
 }
 
@@ -35,7 +36,7 @@ export type SubscriptionEndpoint = {
 // Used to mark HTTP upgrade requests
 class FakeResponse extends ServerResponse {
 	constructor(
-		public readonly upgradeSocket: Socket,
+		public readonly upgradeSocket: Duplex,
 		public readonly head: Buffer,
 	) {
 		super(new IncomingMessage(new Socket));

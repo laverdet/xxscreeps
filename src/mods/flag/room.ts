@@ -7,8 +7,7 @@ import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
 import { extend, instantiate } from 'xxscreeps/utility/utility';
-import { Flag, checkCreateFlag } from './flag';
-import { intents } from './game';
+import { Flag, checkCreateFlag, intents } from './flag';
 
 declare module 'xxscreeps/game/room' {
 	interface Room {
