@@ -38,7 +38,7 @@ const threads = await Promise.all(Fn.map(Fn.range(processorCount), async() => ({
 		affinity: [] as string[],
 		processed: [] as string[],
 	},
-	thread: await negotiateResponderClient<ProcessorRequest>('xxscreeps/engine/processor/worker.js', singleThreaded),
+	thread: await negotiateResponderClient<ProcessorRequest, void>('xxscreeps/engine/processor/worker.js', singleThreaded),
 })));
 
 try {

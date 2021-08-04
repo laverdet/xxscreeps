@@ -7,8 +7,7 @@ import { RoomProcessor } from 'xxscreeps/engine/processor/room';
 import { consumeSet } from 'xxscreeps/engine/db/async';
 import { hooks } from 'xxscreeps/engine/processor/symbols';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
-import { localEmitter, makeBasicResponderHost } from 'xxscreeps/utility/responder';
-import { MessageChannel, parentPort } from 'worker_threads';
+import { makeBasicResponderHost } from 'xxscreeps/utility/responder';
 import { World } from 'xxscreeps/game/map';
 
 import 'xxscreeps/config/mods/import/driver';
@@ -51,17 +50,7 @@ const shard = await Shard.connect(db, 'shard0');
 
 try {
 	// Create responder host and listen for requests
-	const channel = new MessageChannel;
-	const readyMessage = {
-		type: 'processorReady',
-		port: channel.port1,
-	};
-	if (new URL(import.meta.url).searchParams.get('singleThread')) {
-		localEmitter.emit('message', readyMessage);
-	} else {
-		parentPort!.postMessage(readyMessage, [ channel.port1 ]);
-	}
-	await makeBasicResponderHost<ProcessorRequest>(channel.port2, async message => {
+	await makeBasicResponderHost<ProcessorRequest>(import.meta.url, async message => {
 		switch (message.type) {
 			// Load world shared data between all workers in the process
 			case 'world':

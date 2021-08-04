@@ -4,10 +4,9 @@ import type { RoomObject } from './object';
 import type { TickPayload } from 'xxscreeps/engine/runner';
 import * as Fn from 'xxscreeps/utility/functional';
 import { hooks } from './symbols';
-import { runOnce } from 'xxscreeps/utility/memoize';
 
-const initializeGame = runOnce(() => hooks.makeIterated('gameInitializer'));
-const initializeRoom = runOnce(() => hooks.makeIterated('roomInitializer'));
+const initializeGame = hooks.makeIterated('gameInitializer');
+const initializeRoom = hooks.makeIterated('roomInitializer');
 
 /**
  * Underlying game state holder for a tick. Multiple `Game` objects can share this per tick, for
@@ -27,7 +26,7 @@ export class GameState {
 			Fn.map(room['#objects'], object => [ object.id, object ]))));
 		this.rooms = Fn.fromEntries(Fn.map(rooms, room => [ room.name, room ]));
 		for (const room of Object.values(this.rooms)) {
-			initializeRoom()(room, this);
+			initializeRoom(room, this);
 		}
 	}
 }
@@ -68,13 +67,6 @@ export class Game extends GameBase {
 	 */
 	declare cpu: CPU;
 
-	market = {
-		orders: [],
-		getAllOrders: () => [],
-		incomingTransactions: [],
-		outgoingTransactions: [],
-	};
-
 	/**
 	 * An object describing the world shard where your script is currently being executed in.
 	 */
@@ -91,7 +83,7 @@ export class Game extends GameBase {
 		};
 
 		// Run hooks
-		initializeGame()(this, data);
+		initializeGame(this, data);
 		for (const room of Object.values(state.rooms)) {
 			for (const object of room['#objects']) {
 				if ((object as any).my) {

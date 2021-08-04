@@ -12,51 +12,55 @@ export const MapStatsEndpoint: Endpoint = {
 			throw new Error('Invalid room payload');
 		}
 
-		// Read current room status
-		// TODO: A room status blob that doesn't change very tick would be good
-		const rooms = await Promise.all(roomNames.map(roomName =>
-			context.backend.shard.loadRoom(roomName, undefined, true).catch(() => {}),
-		));
-
-		// Build rooms payload
-		const userIds = new Set<string>();
 		const { time } = context.backend.shard;
-		const stats = Fn.fromEntries(Fn.filter(rooms), room => [
-			room.name, {
-				status: 'normal',
-				// Owner, level information
-				...function() {
-					const user = room['#user'];
-					if (user) {
-						userIds.add(user);
-						return {
-							own: {
-								user,
-								level: room['#level'],
-							},
-						};
-					}
-				}(),
-				// Sign
-				...function() {
-					const sign = room['#sign'];
-					if (sign) {
-						userIds.add(sign.userId);
-						return {
-							sign: {
-								datetime: sign.datetime,
-								text: sign.text,
-								time: sign.time,
-								user: sign.userId,
-							},
-						};
-					}
-				}(),
-				...room['#safeModeUntil'] > time && {
-					safeMode: true,
+		const userIds = new Set<string>();
+		const stats = Fn.fromEntries(Fn.filter(await Promise.all(Fn.map(roomNames, async roomName => {
+			// The client spams requests for rooms that don't exist
+			if (!context.backend.world.map.getRoomStatus(roomName)) {
+				return;
+			}
+
+			// TODO: A room status blob that doesn't change every tick would be good
+			const room = await context.backend.shard.loadRoom(roomName, undefined, true);
+
+			// Build rooms payload
+			return [
+				room.name, {
+					status: 'normal',
+					// Owner, level information
+					...function() {
+						const user = room['#user'];
+						if (user) {
+							userIds.add(user);
+							return {
+								own: {
+									user,
+									level: room['#level'],
+								},
+							};
+						}
+					}(),
+					// Sign
+					...function() {
+						const sign = room['#sign'];
+						if (sign) {
+							userIds.add(sign.userId);
+							return {
+								sign: {
+									datetime: sign.datetime,
+									text: sign.text,
+									time: sign.time,
+									user: sign.userId,
+								},
+							};
+						}
+					}(),
+					...room['#safeModeUntil'] > time && {
+						safeMode: true,
+					},
 				},
-			},
-		]);
+			];
+		}))));
 
 		// Read users
 		const userObjects = await Promise.all(Fn.map(userIds, async id =>

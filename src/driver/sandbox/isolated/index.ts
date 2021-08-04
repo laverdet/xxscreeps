@@ -101,7 +101,7 @@ export class IsolatedSandbox implements Sandbox {
 			return { result: 'success' as const, payload };
 		} catch (err) {
 			if (err.message === 'Script execution timed out.') {
-				return { result: 'timedOut' as const };
+				return { result: 'timedOut' as const, stack: err.stack };
 			} else if (err.message === 'Isolate is disposed') {
 				return { result: 'disposed' as const };
 			}

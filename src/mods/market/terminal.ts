@@ -81,7 +81,7 @@ export function checkSend(terminal: StructureTerminal, resourceType: ResourceTyp
 				() => checkHasResource(terminal, resourceType, amount)),
 		() => description ? checkString(description, 100) : C.OK,
 		() => {
-			if (!(range < Infinity)) {
+			if (!(range < Infinity) || range === 0) {
 				return C.ERR_INVALID_ARGS;
 			} else if (terminal.cooldown) {
 				return C.ERR_TIRED;

@@ -164,6 +164,9 @@ export class RoomProcessor implements ProcessorContext {
 			this.room['#flushObjects']();
 		});
 
+		// Run async tasks
+		await this.flushTasks();
+
 		// Publish results
 		if (!isFinalization) {
 			await Promise.all(Fn.map(this.interRoomIntents, ([ roomName, intents ]) =>
@@ -181,7 +184,9 @@ export class RoomProcessor implements ProcessorContext {
 		if (intentPayloads.length || hasTaskFinalization) {
 			runWithState(this.state, () => {
 				// Run first batch of finalizations
-				this.runTaskFinalizations(taskResults);
+				const tasks = this.tasks;
+				this.tasks = [];
+				this.finalizeTaskBatch(tasks, taskResults);
 
 				// Run inter-room intents
 				for (const intents of intentPayloads) {
@@ -192,13 +197,10 @@ export class RoomProcessor implements ProcessorContext {
 				}
 			});
 		}
-		// Flush tasks
-		while (this.tasks.length !== 0) {
-			const results = await Promise.all(Fn.map(this.tasks, task => task.promise));
-			runWithState(this.state, () => {
-				this.runTaskFinalizations(results);
-			});
-		}
+
+		// Flush extra tasks
+		await this.flushTasks();
+
 		// Finalize room object
 		this.room['#flushObjects']();
 		const previousUsers = flushUsers(this.room);
@@ -265,19 +267,32 @@ export class RoomProcessor implements ProcessorContext {
 		}
 	}
 
-	private runTaskFinalizations(results: any[]) {
-		const tasks = this.tasks;
-		this.tasks = [];
+	private async flushTasks() {
+		while (this.tasks.length) {
+			const tasks = this.tasks;
+			this.tasks = [];
+			const results = await Promise.all(Fn.map(tasks, task => task.promise));
+			if (tasks.some(task => task.finalize)) {
+				runWithState(this.state, () => {
+					this.finalizeTaskBatch(tasks, results);
+				});
+			}
+		}
+	}
+
+	private finalizeTaskBatch(tasks: any[], results: any[]) {
 		if (tasks.length !== results.length) {
 			throw new Error('Tasks queued out of processor context');
 		}
 		const tasksByUser = Fn.groupBy(Fn.range(tasks.length), ii => tasks[ii].userId);
 		for (const [ userId, indices ] of tasksByUser) {
-			runAsUser(userId, () => {
-				for (const ii of indices) {
-					tasks[ii].finalize?.(results[ii]);
-				}
-			});
+			if (indices.some(ii => tasks[ii].finalize)) {
+				runAsUser(userId, () => {
+					for (const ii of indices) {
+						tasks[ii].finalize?.(results[ii]);
+					}
+				});
+			}
 		}
 	}
 }
