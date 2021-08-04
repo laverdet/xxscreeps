@@ -67,13 +67,6 @@ export class Game extends GameBase {
 	 */
 	declare cpu: CPU;
 
-	market = {
-		orders: [],
-		getAllOrders: () => [],
-		incomingTransactions: [],
-		outgoingTransactions: [],
-	};
-
 	/**
 	 * An object describing the world shard where your script is currently being executed in.
 	 */
