@@ -330,11 +330,17 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 
 	zadd(key: string, members: [ number, string ][], options?: Provider.ZAdd) {
 		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
-		switch (options?.if) {
-			case 'nx': return set.insert(members, left => left);
-			case 'xx': return set.insert(Fn.reject(members, member => set.has(member[1])), (left, right) => right);
-			default: return set.insert(members, (left, right) => right);
+		const result = function() {
+			switch (options?.if) {
+				case 'nx': return set.insert(members, left => left);
+				case 'xx': return set.insert(Fn.reject(members, member => set.has(member[1])), (left, right) => right);
+				default: return set.insert(members, (left, right) => right);
+			}
+		}();
+		if (set.size === 0) {
+			this.data.delete(key);
 		}
+		return result;
 	}
 
 	zcard(key: string) {
@@ -352,22 +358,29 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 	zinterStore(key: string, keys: string[], options?: Provider.ZAggregate) {
 		// Fetch sets first because you can use this command to store a set back into itself
 		const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
-		const smallest = Fn.minimum(sets, (left, right) => left.size - right.size)!;
-		const weights = options?.weights ?? [ ...Fn.map(sets, () => 1) ];
-		// Generate intersection
-		const out = new SortedSet(function *(): Iterable<[ number, string ]> {
-			loop: for (const member of smallest.values()) {
-				let nextScore = 0;
-				for (let ii = 0; ii < sets.length; ++ii) {
-					const score = sets[ii].score(member);
-					if (score === undefined) {
-						continue loop;
-					}
-					nextScore += score * weights[ii];
-				}
-				yield [ nextScore, member ];
+		const out = function() {
+			const smallest = Fn.minimum(sets, (left, right) => left.size - right.size);
+			if (!smallest) {
+				return new SortedSet;
 			}
-		}());
+
+			// Generate intersection
+			const weights = options?.weights ?? [ ...Fn.map(sets, () => 1) ];
+			return new SortedSet(function *(): Iterable<[ number, string ]> {
+				loop: for (const member of smallest.values()) {
+					let nextScore = 0;
+					for (let ii = 0; ii < sets.length; ++ii) {
+						const score = sets[ii].score(member);
+						if (score === undefined) {
+							continue loop;
+						}
+						nextScore += score * weights[ii];
+					}
+					yield [ nextScore, member ];
+				}
+			}());
+		}();
+
 		// Save result
 		if (out.size > 0) {
 			this.data.set(key, out);
@@ -444,7 +457,11 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 	zrem(key: string, members: string[]) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
-			return Fn.accumulate(members, member => set.delete(member));
+			const result = Fn.accumulate(members, member => set.delete(member));
+			if (set.size === 0) {
+				this.data.delete(key);
+			}
+			return result;
 		} else {
 			return 0;
 		}
@@ -453,10 +470,14 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 	zremRange(key: string, min: number, max: number) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
-			return Fn.accumulate(
+			const result = Fn.accumulate(
 				// Results are materialized into array upfront because `delete` invalidates `entries`
 				[ ...Fn.map(set.entries(min, max), entry => entry[1]) ],
 				member => set.delete(member));
+			if (set.size === 0) {
+				this.data.delete(key);
+			}
+			return result;
 		} else {
 			return 0;
 		}
@@ -475,8 +496,12 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		// Fetch sets first because you can use this command to store a set back into itself
 		const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
 		const out = new SortedSet;
-		this.data.set(key, out);
 		out.insert(Fn.concat(Fn.map(sets, set => set.entries())));
+		if (out.size === 0) {
+			this.data.delete(key);
+		} else {
+			this.data.set(key, out);
+		}
 		return out.size;
 	}
 
