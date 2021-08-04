@@ -112,6 +112,9 @@ export const roomSubscription: SubscriptionEndpoint = {
 		let skipUntil = 0;
 		const { shard } = this.context;
 		const seenUsers = new Set<string>();
+		if (!this.context.world.map.getRoomStatus(parameters.room)) {
+			return () => {};
+		}
 
 		// Resolve room socket handlers
 		// HACK: TypeScript doesn't infer types correctly for iterable types into a rest spread. The

@@ -1,15 +1,27 @@
 import type { GameMap } from 'xxscreeps/game/map';
 import type { Room } from 'xxscreeps/game/room';
 import type { Shard } from 'xxscreeps/engine/db';
+import type { Terrain } from 'xxscreeps/game/terrain';
 import streamToPromise from 'stream-to-promise';
 import makeEtag from 'etag';
 import * as Fn from 'xxscreeps/utility/functional';
 import { PNG } from 'pngjs';
 import { hooks } from 'xxscreeps/backend';
+import { runOnce } from 'xxscreeps/utility/memoize';
 import { TerrainRender } from 'xxscreeps/backend/symbols';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
-import type { Terrain } from 'xxscreeps/game/terrain';
 import { TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL, isBorder } from 'xxscreeps/game/terrain';
+
+const onePxImage = runOnce(() => {
+	const png = new PNG({
+		colorType: 6,
+		inputColorType: 6,
+		width: 1,
+		height: 1,
+	});
+	png.data.writeInt32LE(0);
+	return streamToPromise(png.pack());
+});
 
 const brightness2 = (color: number) =>
 	0.299 * ((color & 0xff)) ** 2 +
@@ -151,23 +163,18 @@ function register(paths: string[], fn: (shard: Shard, map: GameMap, room: string
 			async execute(context) {
 				// Fetch PNG from cache, or generate fresh
 				const room = `${context.params.room}`;
-				let data = cache.get(room);
-				if (data === undefined) {
+				const data = cache.get(room) ?? await async function() {
 					const payload = await fn(context.shard, context.backend.world.map, room);
 					if (payload === null) {
-						data = { etag: 'nothing', payload: null };
+						return { etag: 'nothing', payload: null };
 					} else {
 						const etag = makeEtag(payload);
-						data = { etag, payload };
+						const data = { etag, payload };
 						cache.set(room, data);
+						return data;
 					}
-				}
-				// Check ETag
-				if (context.req.headers['if-none-match'] === data.etag) {
-					context.status = 304;
-				} else if (!data.payload) {
-					context.status = 404;
-				}
+				}();
+
 				// The Screeps client adds a very impolite cache bust to all map URLs. We can make better use
 				// of the browser cache by redirecting to a resource which can be cached
 				if (
@@ -184,10 +191,12 @@ function register(paths: string[], fn: (shard: Shard, map: GameMap, room: string
 						context.set('Cache-Control', 'public,max-age=31536000,immutable');
 					} else {
 						// A non-bust request was sent, we can just use plain etag now
+						context.set('Cache-Control', 'public');
 						context.set('ETag', data.etag);
 					}
+					context.status = 200;
 					context.set('Content-Type', 'image/png');
-					context.body = data.payload;
+					context.body = data.payload ?? await onePxImage();
 				}
 			},
 		});
@@ -196,8 +205,11 @@ function register(paths: string[], fn: (shard: Shard, map: GameMap, room: string
 
 // Full thumbnail
 register([ '/assets/map/:room.png', '/assets/map/:shard/:room.png' ], async(shard, map, roomName) => {
-	const room = await shard.loadRoom(roomName).catch(() => null);
-	return room ? generate(map, [ [ room ] ], 3) : null;
+	if (map.getRoomStatus(roomName)) {
+		return generate(map, [ [ await shard.loadRoom(roomName) ] ], 3);
+	} else {
+		return null;
+	}
 });
 
 // Grids
@@ -210,7 +222,7 @@ for (const [ fragment, grid, align, zoom ] of [ [ 'zoom1', 10, 2, 0.4 ], [ 'zoom
 			const rooms = await Promise.all(Fn.map(Fn.range(top, top + grid), yy =>
 				Promise.all(Fn.map(Fn.range(left, left + grid), async xx => {
 					const roomName = generateRoomName(xx, yy);
-					const room = await shard.loadRoom(roomName).catch(() => null);
+					const room = map.getRoomStatus(roomName) ? await shard.loadRoom(roomName) : null;
 					didFindRoom ||= room !== null;
 					return room;
 				})),
