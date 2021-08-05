@@ -324,6 +324,13 @@ export class RoomPosition {
 		return fetchRoom(this.roomName).lookForAt(type, this);
 	}
 
+	/**
+	 * Get the list of objects at this room position.
+	 */
+	look() {
+		return fetchRoom(this.roomName).lookAt(this);
+	}
+
 	private toJSON() {
 		return { x: this.x, y: this.y, roomName: this.roomName };
 	}
