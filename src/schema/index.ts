@@ -12,13 +12,16 @@ export { makeWriter } from './write';
 
 export const Variant = Symbol('schemaVariant') as never as '_$Variant';
 
+export type BuilderOptions = {
+	materialize?: boolean;
+};
 export class Builder {
 	readonly materialize;
 	readonly memberReader = new Map<Layout, MemberReader>();
 	readonly memberWriter = new Map<Layout, MemberWriter>();
 	readonly reader = new Map<Layout, Reader>();
 	readonly writer = new Map<Layout, Writer>();
-	constructor(options: { materialize?: boolean } = {}) {
+	constructor(options: BuilderOptions = {}) {
 		this.materialize = options.materialize ?? false;
 	}
 }

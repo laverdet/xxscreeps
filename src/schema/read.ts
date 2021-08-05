@@ -267,7 +267,18 @@ export function makeViewReader<Type extends Readable>(info: Type, builder = new 
 	};
 }
 
-export function makeReader<Type extends Readable>(info: Type, builder = new Builder) {
+export type ReadOptions = {
+	release?: boolean;
+};
+export function makeReader<Type extends Readable>(info: Type, builder = new Builder, options: ReadOptions = {}) {
 	const read = makeViewReader(info, builder);
-	return (buffer: Readonly<Uint8Array>) => read(initializeView(buffer).view);
+	const { release } = options;
+	return (buffer: Readonly<Uint8Array>) => {
+		const { view } = initializeView(buffer);
+		const result = read(view);
+		if (release) {
+			view.detach(() => Error('BufferView was automatically released'));
+		}
+		return result;
+	};
 }
