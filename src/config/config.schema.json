@@ -140,6 +140,11 @@
                             "description": "CPU bucket size per user",
                             "type": "number"
                         },
+                        "memoryLimit": {
+                            "default": 256,
+                            "description": "Memory limit, in megabytes. The actual memory limit as reported by the isolate will be\nhigher, since it accounts for shared terrain data.\n\nThis option does nothing when `unsafeSandbox` is true.",
+                            "type": "number"
+                        },
                         "tickLimit": {
                             "default": ": 500",
                             "description": "Maximum amount of time in milliseconds that a user's runtime may run for.",

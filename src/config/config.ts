@@ -105,6 +105,15 @@ export type Schema = {
 			bucket?: number;
 
 			/**
+			 * Memory limit, in megabytes. The actual memory limit as reported by the isolate will be
+			 * higher, since it accounts for shared terrain data.
+			 *
+			 * This option does nothing when `unsafeSandbox` is true.
+			 * @default 256
+			 */
+			memoryLimit?: number;
+
+			/**
 			 * Maximum amount of time in milliseconds that a user's runtime may run for.
 			 * @default: 500
 			 */
@@ -225,6 +234,7 @@ export const defaults = {
 		concurrency: os.cpus().length + 1,
 		cpu: {
 			bucket: 10000,
+			memoryLimit: 256,
 			tickLimit: 500,
 		},
 		migrationTimeout: 50,

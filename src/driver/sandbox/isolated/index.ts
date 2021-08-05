@@ -2,6 +2,7 @@ import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner
 import type { Print } from 'xxscreeps/driver/runtime';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import ivm from 'isolated-vm';
+import config from 'xxscreeps/config';
 import * as ivmInspect from 'ivm-inspect';
 import { runOnce } from 'xxscreeps/utility/memoize';
 import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox';
@@ -29,13 +30,17 @@ const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sa
 export class IsolatedSandbox implements Sandbox {
 	private tick?: ivm.Reference<Runtime['tick']>;
 	private totalTime = 0n;
-	private readonly isolate: ivm.Isolate = new ivm.Isolate({
-		inspector: useInspector,
-		memoryLimit: 128,
-	});
+	private readonly isolate;
+
+	constructor(data: InitializationPayload) {
+		// Initialize isolate and context
+		this.isolate = new ivm.Isolate({
+			inspector: useInspector,
+			memoryLimit: config.runner.cpu.memoryLimit + data.terrainBlob.length,
+		});
+	}
 
 	async initialize(data: InitializationPayload, print: Print) {
-		// Initialize isolate and context
 		const { isolate } = this;
 		const context = await isolate.createContext({ inspector: useInspector });
 

@@ -47,16 +47,17 @@ export function compileRuntimeSource(path: string, transform: Transform) {
 	]);
 }
 
-export async function createSandbox(userId: string): Promise<Sandbox> {
+export async function createSandbox(userId: string, payload: InitializationPayload, print: Print): Promise<Sandbox> {
 	const sandbox = await async function() {
 		if (config.runner.unsafeSandbox) {
 			const { NodejsSandbox } = await import('./nodejs');
 			return new NodejsSandbox;
 		} else {
 			const { IsolatedSandbox } = await import('./isolated');
-			return new IsolatedSandbox;
+			return new IsolatedSandbox(payload);
 		}
 	}();
+	await sandbox.initialize(payload, print);
 	didMakeSandbox(sandbox, userId);
 	return sandbox;
 }
