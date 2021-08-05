@@ -40,7 +40,7 @@ const unwatch = await watch(() => {
 });
 
 // Run main game processing loop
-const performanceTimer = new AveragingTimer(1000);
+const performanceTimer = new AveragingTimer(100);
 const saveInterval = config.database.saveInterval * 60000;
 let lastSave = Date.now();
 try {
