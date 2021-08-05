@@ -1,5 +1,4 @@
 import type { Color } from './flag';
-import type { FlagIntent } from './model';
 import type { TypeOf } from 'xxscreeps/schema';
 import type { Room } from 'xxscreeps/game/room';
 import * as C from 'xxscreeps/game/constants';
@@ -10,7 +9,7 @@ import { RoomPosition } from 'xxscreeps/game/position';
 import { compose, declare, vector } from 'xxscreeps/schema';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema';
 import { instantiate } from 'xxscreeps/utility/utility';
-import { Flag, checkCreateFlag, format } from './flag';
+import { Flag, acquireIntents, checkCreateFlag, format, intents } from './flag';
 import './room';
 
 // Flags are stored in a separate blob per user.. this is the schema for the blob
@@ -50,14 +49,13 @@ hooks.register('runtimeConnector', {
 	},
 
 	send(payload) {
-		for (const intent of intents) {
+		for (const intent of acquireIntents()) {
 			if (intent.type === 'create') {
 				createFlag(...intent.params);
 			} else if (intent.type === 'remove') {
 				removeFlag(...intent.params);
 			}
 		}
-		intents = [];
 		if (didUpdateFlags) {
 			didUpdateFlags = false;
 			payload.flagNextBlob = write(flags);
@@ -91,7 +89,6 @@ hooks.register('gameInitializer', (Game, data) => {
 
 // This flag mock-processor runs in the runner sandbox and simply sends back a blob if the flags have changed
 let didUpdateFlags = false;
-export let intents: FlagIntent[] = [];
 export function createFlag(name: string, posInt: number | null, color: Color, secondaryColor: Color) {
 	const pos = posInt ? RoomPosition['#create'](posInt) : undefined;
 	// Run create / move / setColor intent

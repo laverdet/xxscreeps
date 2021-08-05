@@ -30,8 +30,11 @@ if (missingFlags.length) {
 		worker.on('error', error => reject(error));
 		worker.on('exit', code => resolve(code));
 		worker.on('message', message => {
-			if (typeof message === 'object' && message.SIGINT === false) {
+			if (message === 'EXIT') {
 				process.exit(0);
+			} else {
+				console.error('Received unhandled message from child shim', message);
+				process.exit(1);
 			}
 		});
 		process.on('SIGINT', () => {
@@ -49,7 +52,9 @@ if (missingFlags.length) {
 		// This is a fake top-thread, so the real top thread will send SIGINT messages
 		parentPort!.on('message', message => {
 			if (message === 'SIGINT') {
-				parentPort!.postMessage({ SIGINT: process.emit('SIGINT' as never) });
+				if (!process.emit('SIGINT' as never)) {
+					parentPort!.postMessage('EXIT');
+				}
 			}
 		}).unref();
 	}

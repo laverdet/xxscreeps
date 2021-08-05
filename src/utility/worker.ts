@@ -4,7 +4,7 @@ import * as Responder from 'xxscreeps/engine/db/storage/local/responder';
 import { Worker as NodeWorker } from 'worker_threads';
 export { isTopThread } from 'xxscreeps/config/raw';
 
-const entryShim = new URL(await import.meta.resolve('xxscreeps/config/entry'));
+const entryShim = new URL(await import.meta.resolve!('xxscreeps/config/entry'));
 
 export class Worker extends NodeWorker {
 	constructor(filename: string | URL, options: WorkerOptions = {}) {
@@ -21,7 +21,7 @@ export class Worker extends NodeWorker {
 	}
 
 	static async create(module: string, options: WorkerOptions = {}) {
-		const url = new URL(await import.meta.resolve(module));
+		const url = new URL(await import.meta.resolve!(module));
 		return new Worker(url, options);
 	}
 }
