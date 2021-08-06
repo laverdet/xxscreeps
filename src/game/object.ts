@@ -2,7 +2,7 @@ import type { GameConstructor } from '.';
 import type { InspectOptionsStylized } from 'util';
 import type { Room } from './room';
 import type { RoomPosition } from './position';
-import type { TypeOf } from 'xxscreeps/schema';
+import type { BufferView, TypeOf } from 'xxscreeps/schema';
 import * as BufferObject from 'xxscreeps/schema/buffer-object';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { format as roomPositionFormat } from './position';
@@ -34,6 +34,24 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	 * site and is placed in a room that is not visible to you.
 	 */
 	declare room: Room;
+
+	/** @internal */
+	constructor(buffer?: BufferView, offset?: number);
+	/** @deprecated */
+	constructor(xx: number, yy: number, roomName: string);
+
+	constructor(viewOrXx?: unknown, offsetOrYy?: unknown, roomName?: unknown) {
+		if (typeof viewOrXx === 'number') {
+			// Undocumented constructor of fake object
+			super();
+			this.pos.x = viewOrXx;
+			this.pos.y = offsetOrYy as number;
+			this.pos.roomName = roomName as string;
+			this.room = Game.rooms[roomName as string];
+		} else {
+			super(viewOrXx as BufferView, offsetOrYy as number);
+		}
+	}
 
 	get ['#extraUsers'](): string[] { return [] }
 	get ['#hasIntent']() { return false }
