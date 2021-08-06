@@ -173,6 +173,15 @@ type StorageRecord = Record<ResourceType, number>;
  * A `Store` which can only hold a certain amount of each resource.
  */
 export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
+	constructor(view?: BufferView, offset?: number) {
+		super(view, offset);
+		for (const info of this['#resources']) {
+			if (info.amount > 0) {
+				this[info.type] = info.amount;
+			}
+		}
+	}
+
 	static ['#create'](capacities: Partial<StorageRecord>) {
 		const instance = new RestrictedStore;
 		for (const type in capacities) {
@@ -182,6 +191,7 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 				type: type as ResourceType,
 			};
 			instance['#resources'].push(info);
+			instance[type as ResourceType] = 0;
 		}
 		return instance;
 	}
