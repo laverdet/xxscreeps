@@ -168,24 +168,24 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 
 		} else if ('optional' in layout) {
 			// Small optional element
-			const { size, optional: elementLayout } = layout;
+			const { size, optional: elementLayout, uninitialized } = layout;
 			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				if (view.uint8[offset + size]) {
 					return read(view, offset);
 				} else {
-					return undefined;
+					return uninitialized;
 				}
 			};
 
 		} else if ('pointer' in layout) {
 			// Optional element implemented as pointer
-			const elementLayout = layout.pointer;
+			const { pointer: elementLayout, uninitialized } = layout;
 			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				const payloadOffset = view.int32[offset >>> 2];
 				if (payloadOffset === 0) {
-					return undefined;
+					return uninitialized;
 				} else {
 					return read(view, payloadOffset);
 				}

@@ -174,7 +174,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 			const { size, optional: elementLayout } = layout;
 			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
-				if (value === undefined) {
+				if (value == null) {
 					view.int8[offset + size] = 0;
 					return heap;
 				} else {
@@ -188,7 +188,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 			const { align, size, pointer: elementLayout } = layout;
 			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
-				if (value === undefined) {
+				if (value == null) {
 					view.int32[offset >>> 2] = 0;
 					return heap;
 				} else {

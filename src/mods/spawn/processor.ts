@@ -194,7 +194,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				creep['#ageTime'] = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME) - 1;
 				creep.room['#moveObject'](creep, getPositionInDirection(creep.pos, direction));
 			}
-			spawn.spawning = undefined;
+			spawn.spawning = null;
 			context.setActive();
 		}
 	})();
