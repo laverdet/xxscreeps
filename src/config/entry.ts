@@ -82,16 +82,20 @@ if (missingFlags.length) {
 			runner: './dist/engine/service/runner.js',
 		};
 
-		let modulePath;
-
-		try {
-			modulePath = await import.meta.resolve(`${new URL(commands[specifier] ?? specifier, base)}`);
-		} catch (error) {
-			if (error.code !== 'ERR_MODULE_NOT_FOUND') { throw error }
-			console.log(`Invalid command or module "${specifier}", built in commands are ${Object.keys(commands).join(', ')}`);
+		const modulePath = await async function() {
+			try {
+				return await import.meta.resolve!(`${new URL(commands[specifier] ?? specifier, base)}`);
+			} catch (error) {
+				if (error.code !== 'ERR_MODULE_NOT_FOUND') {
+					throw error;
+				}
+				console.log(`Invalid command or module "${specifier}", built in commands are ${Object.keys(commands).join(', ')}`);
+			}
+		}();
+		if (modulePath !== undefined) {
+			await import(modulePath);
 		}
 
-		if (modulePath !== undefined) { await import(modulePath) }
 	} else {
 		// Start repl
 		if (!isMainThread) {
