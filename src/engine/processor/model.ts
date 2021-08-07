@@ -40,22 +40,21 @@ const processRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/processRoomsPending`;
 const finalizedRoomsPendingKey = (time: number) =>
 	`tick${time % 2}/finalizedRoomsPending`;
-const intentsListForRoomKey = (roomName: string, time: number) =>
-	`tick${time % 2}/${roomName}/intents`;
+const intentsListForRoomKey = (roomName: string) =>
+	`rooms/${roomName}/intents`;
 const finalIntentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/finalIntents`;
 
-async function pushIntentsForRoom(shard: Shard, roomName: string, time: number, userId: string, intents?: RoomIntentPayload) {
-	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName, time), [ JSON.stringify({ userId, intents }) ]);
+async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, intents?: RoomIntentPayload) {
+	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
 }
 
 export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userId: string, intents: RoomIntentPayload) {
-	const time = shard.time + 1;
 	return Promise.all([
 		// Add this room to the active set
-		shard.scratch.zadd(sleepingRoomsKey, [ [ time, roomName ] ]),
+		shard.scratch.zadd(sleepingRoomsKey, [ [ shard.time + 1, roomName ] ]),
 		// Save intents
-		pushIntentsForRoom(shard, roomName, time, userId, intents),
+		pushIntentsForRoom(shard, roomName, userId, intents),
 	]);
 }
 
@@ -64,7 +63,7 @@ export async function publishRunnerIntentsForRoom(shard: Shard, userId: string, 
 		// Decrement count of users that this room is waiting for
 		shard.scratch.zincrBy(processRoomsSetKey(time), -1, roomName),
 		// Add intents to list
-		pushIntentsForRoom(shard, roomName, shard.time, userId, intents),
+		pushIntentsForRoom(shard, roomName, userId, intents),
 	]);
 	const requestProcessRooms = () => getProcessorChannel(shard).publish({ type: 'process', time });
 	if (count === 0) {
@@ -93,7 +92,7 @@ export async function publishInterRoomIntents(shard: Shard, roomName: string, ti
 }
 
 export async function acquireIntentsForRoom(shard: Shard, roomName: string) {
-	const key = intentsListForRoomKey(roomName, shard.time);
+	const key = intentsListForRoomKey(roomName);
 	const [ payloads ] = await Promise.all([
 		shard.scratch.lrange(key, 0, -1),
 		shard.scratch.del(key),
