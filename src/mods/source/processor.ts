@@ -140,7 +140,7 @@ registerNPC('3', Game => {
 
 		// Move towards it
 		if (resource && !creep.pos.isNearTo(resource)) {
-			creep.moveTo(resource);
+			creep.moveTo(resource, { maxRooms: 1 });
 			loop = true;
 		}
 
