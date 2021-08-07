@@ -20,6 +20,7 @@ import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/re
 import { Structure } from 'xxscreeps/mods/structure/structure';
 import { Ruin } from 'xxscreeps/mods/structure/ruin';
 import { Room } from 'xxscreeps/game/room';
+import { Tombstone } from 'xxscreeps/mods/creep/tombstone';
 import { appendEventLog } from 'xxscreeps/game/room/event-log';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
@@ -442,7 +443,7 @@ export function checkTransfer(creep: Creep, target: RoomObject & WithStore, reso
 export function checkWithdraw(creep: Creep, target: Structure & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => checkTarget(target, Ruin, Structure),
+		() => checkTarget(target, Ruin, Structure, Tombstone),
 		() => checkRange(creep, target, 1),
 		() => checkHasResource(target, resourceType, amount),
 		() => checkHasCapacity(creep, resourceType, amount),
