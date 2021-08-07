@@ -143,8 +143,7 @@ export class PlayerInstance {
 					this.connectors.initialize(payload),
 				]);
 				payload.codeBlob = codeBlob;
-				this.sandbox = await createSandbox(this.userId);
-				await this.sandbox.initialize(payload, (fd, payload) => {
+				this.sandbox = await createSandbox(this.userId, payload, (fd, payload) => {
 					const type = ([ 'result', 'log', 'error' ] as const)[fd];
 					this.consoleChannel.publish({ type, value: payload }).catch(console.error);
 				});

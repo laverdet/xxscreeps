@@ -60,6 +60,7 @@ type NamedFormat = {
 
 type OptionalFormat = {
 	optional: Format;
+	uninitialized: undefined | null;
 };
 
 type StructFormat = {
@@ -145,9 +146,13 @@ export function enumerated<Type extends EnumTypes[]>(...values: Type): WithShape
 
 // An optional element, will consume only 1 byte in case of `undefined`
 export function optional<Type extends Format>(element: Type):
-WithShapeAndType<ShapeOf<Type> | undefined, TypeOf<Type> | undefined> {
+WithShapeAndType<ShapeOf<Type> | undefined, TypeOf<Type> | undefined>;
+export function optional<Type extends Format, NullOpt extends undefined | null>(element: Type, uninitialized: NullOpt):
+WithShapeAndType<ShapeOf<Type> | NullOpt, TypeOf<Type> | NullOpt>;
+export function optional(element: unknown, uninitialized?: null) {
 	const format: OptionalFormat = {
-		optional: element,
+		optional: element as Format,
+		uninitialized,
 	};
 	return format as never;
 }

@@ -49,10 +49,12 @@ type NamedLayout = {
 type OptionalLayout = {
 	optional: Layout;
 	size: number;
+	uninitialized: null | undefined;
 } | {
 	pointer: Layout;
 	align: number;
 	size: number;
+	uninitialized: null | undefined;
 };
 
 export type StructLayout = {
@@ -192,6 +194,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 					layout: staticCast<OptionalLayout>({
 						optional: layout,
 						size: traits.size,
+						uninitialized: format.uninitialized,
 					}),
 					traits: {
 						align: traits.align,
@@ -205,6 +208,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 						pointer: layout,
 						align: traits.align,
 						size: traits.size,
+						uninitialized: format.uninitialized,
 					}),
 					traits: {
 						align: kPointerSize,

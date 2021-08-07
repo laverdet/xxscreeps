@@ -45,7 +45,7 @@ const shape = struct(ownedStructureFormat, {
 	...variant('spawn'),
 	hits: 'int32',
 	name: 'string',
-	spawning: optional(compose(spawningFormat, Spawning)),
+	spawning: optional(compose(spawningFormat, Spawning), null),
 	store: singleStoreFormat(),
 });
 

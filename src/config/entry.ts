@@ -73,14 +73,29 @@ if (missingFlags.length) {
 	if (specifier && !specifier.startsWith('-')) {
 		// Run
 		const base = new URL('../..', import.meta.url);
-		await import(`${new URL({
+		const commands: Record<string, string | undefined> = {
 			import: './dist/scripts/scrape-world.js',
 			start: './dist/engine/service/launcher.js',
 			main: './dist/engine/service/main.js',
 			backend: './dist/backend/server.js',
 			processor: './dist/engine/service/processor.js',
 			runner: './dist/engine/service/runner.js',
-		}[specifier] ?? specifier, base)}`);
+		};
+
+		const modulePath = await async function() {
+			try {
+				return await import.meta.resolve!(`${new URL(commands[specifier] ?? specifier, base)}`);
+			} catch (error) {
+				if (error.code !== 'ERR_MODULE_NOT_FOUND') {
+					throw error;
+				}
+				console.log(`Invalid command or module "${specifier}", built in commands are ${Object.keys(commands).join(', ')}`);
+			}
+		}();
+		if (modulePath !== undefined) {
+			await import(modulePath);
+		}
+
 	} else {
 		// Start repl
 		if (!isMainThread) {

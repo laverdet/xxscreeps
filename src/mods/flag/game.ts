@@ -17,7 +17,7 @@ const schema = declare('Flags', compose(vector(format), {
 	compose: flags => Fn.fromEntries(flags, flag => [ flag.name, flag ]),
 	decompose: (flags: Record<string, Flag>) => Object.values(flags),
 }));
-export const { read, write } = makeReaderAndWriter(schema);
+export const { read, write } = makeReaderAndWriter(schema, { materialize: true, release: true });
 
 // Register LOOK_ type for `Flag`
 const look = registerLook<Flag>()(C.LOOK_FLAGS);

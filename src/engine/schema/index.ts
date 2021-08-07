@@ -1,6 +1,7 @@
 import type { StructDeclaration, struct, variant } from 'xxscreeps/schema/format';
 import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types';
-import type { Format } from 'xxscreeps/schema';
+import type { BuilderOptions, Format } from 'xxscreeps/schema';
+import type { ReadOptions } from 'xxscreeps/schema/read';
 import { Builder, makeReader, makeWriter } from 'xxscreeps/schema';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
 import { getOrSet } from 'xxscreeps/utility/utility';
@@ -61,11 +62,11 @@ export function variantForPath<Schema>() {
 	return <Path extends string>(path: Path): VariantSchema<FormatsForPath<Schema, Path>>[] => schemaByPath.get(path) ?? [];
 }
 
-export function makeReaderAndWriter<Type extends Format>(format: Type) {
+export function makeReaderAndWriter<Type extends Format>(format: Type, options?: BuilderOptions & ReadOptions) {
 	const info = build(format);
-	const cache = new Builder;
+	const builder = new Builder(options);
 	return {
-		read: makeReader(info, cache),
-		write: makeWriter(info, cache),
+		read: makeReader(info, builder, options),
+		write: makeWriter(info, builder),
 	};
 }

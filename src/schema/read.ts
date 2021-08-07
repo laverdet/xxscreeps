@@ -168,24 +168,24 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 
 		} else if ('optional' in layout) {
 			// Small optional element
-			const { size, optional: elementLayout } = layout;
+			const { size, optional: elementLayout, uninitialized } = layout;
 			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				if (view.uint8[offset + size]) {
 					return read(view, offset);
 				} else {
-					return undefined;
+					return uninitialized;
 				}
 			};
 
 		} else if ('pointer' in layout) {
 			// Optional element implemented as pointer
-			const elementLayout = layout.pointer;
+			const { pointer: elementLayout, uninitialized } = layout;
 			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				const payloadOffset = view.int32[offset >>> 2];
 				if (payloadOffset === 0) {
-					return undefined;
+					return uninitialized;
 				} else {
 					return read(view, payloadOffset);
 				}
@@ -267,7 +267,18 @@ export function makeViewReader<Type extends Readable>(info: Type, builder = new 
 	};
 }
 
-export function makeReader<Type extends Readable>(info: Type, builder = new Builder) {
+export type ReadOptions = {
+	release?: boolean;
+};
+export function makeReader<Type extends Readable>(info: Type, builder = new Builder, options: ReadOptions = {}) {
 	const read = makeViewReader(info, builder);
-	return (buffer: Readonly<Uint8Array>) => read(initializeView(buffer).view);
+	const { release } = options;
+	return (buffer: Readonly<Uint8Array>) => {
+		const { view } = initializeView(buffer);
+		const result = read(view);
+		if (release) {
+			view.detach(() => Error('BufferView was automatically released'));
+		}
+		return result;
+	};
 }
