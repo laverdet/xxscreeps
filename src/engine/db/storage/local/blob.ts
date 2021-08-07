@@ -199,29 +199,25 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 		++this.saveId;
 
 		// Save to disk
-		await spread(500, async throttle => {
-			for (const [ key, { value } ] of entries) {
-				await throttle(async() => {
-					const path = Path.join(this.path, key);
-					const dirname = Path.dirname(path);
-					if (value) {
-						if (!this.knownPaths.has(dirname)) {
-							try {
-								await fs.mkdir(dirname, { recursive: true });
-							} catch (err) {
-								if (err.code !== 'EEXIST') {
-									throw err;
-								}
-							}
-							this.knownPaths.add(dirname);
+		await spread(500, entries, async([ key, { value } ]) => {
+			const path = Path.join(this.path, key);
+			const dirname = Path.dirname(path);
+			if (value) {
+				if (!this.knownPaths.has(dirname)) {
+					try {
+						await fs.mkdir(dirname, { recursive: true });
+					} catch (err) {
+						if (err.code !== 'EEXIST') {
+							throw err;
 						}
-						const tmp = Path.join(this.path, Path.dirname(key), `.${Path.basename(key)}.swp`);
-						await fs.writeFile(tmp, value);
-						await fs.rename(tmp, path);
-					} else {
-						await fs.unlink(path);
 					}
-				});
+					this.knownPaths.add(dirname);
+				}
+				const tmp = Path.join(this.path, Path.dirname(key), `.${Path.basename(key)}.swp`);
+				await fs.writeFile(tmp, value);
+				await fs.rename(tmp, path);
+			} else {
+				await fs.unlink(path);
 			}
 		});
 

@@ -73,35 +73,32 @@ try {
 					}
 				}();
 				// Run player code
-				await Async.spread(maxConcurrency, async throttle => {
-					for await (const userId of Async.concat(
-						Async.lookAhead(affinityIterator, 1),
-						pauseIfMoreRemain,
-						fallbackIterator,
-					)) {
-						await throttle(async() => {
-							// Get or create player instance
-							seen.add(userId);
-							const instance = playerInstances.get(userId) ?? await async function() {
-								const instance = await PlayerInstance.create(shard, world, userId);
-								playerInstances.set(userId, instance);
-								return instance;
-							}();
+				const userQueue = Async.concat(
+					Async.lookAhead(affinityIterator, 1),
+					pauseIfMoreRemain,
+					fallbackIterator,
+				);
+				await Async.spread(maxConcurrency, userQueue, async userId => {
+					// Get or create player instance
+					seen.add(userId);
+					const instance = playerInstances.get(userId) ?? await async function() {
+						const instance = await PlayerInstance.create(shard, world, userId);
+						playerInstances.set(userId, instance);
+						return instance;
+					}();
 
-							// Run user code
-							const roomNames = await shard.scratch.smembers(userToIntentRoomsSetKey(userId));
-							if (roomNames.length === 0) {
-								await shard.scratch.srem('activeUsers', [ userId ]);
-							} else {
-								if (isEntry) {
-									process.stdout.write(`+${instance.username}, `);
-								}
-								await instance.run(time, roomNames);
-								if (isEntry) {
-									process.stdout.write(`-${instance.username}, `);
-								}
-							}
-						});
+					// Run user code
+					const roomNames = await shard.scratch.smembers(userToIntentRoomsSetKey(userId));
+					if (roomNames.length === 0) {
+						await shard.scratch.srem('activeUsers', [ userId ]);
+					} else {
+						if (isEntry) {
+							process.stdout.write(`+${instance.username}, `);
+						}
+						await instance.run(time, roomNames);
+						if (isEntry) {
+							process.stdout.write(`-${instance.username}, `);
+						}
 					}
 				});
 

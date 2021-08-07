@@ -137,22 +137,39 @@ export function lookAhead<Type>(iterable: AsyncIterable<Type>, count: number) {
 }
 
 /**
- * Invokes `body` by passing a throttler callback which can be used to execute a certain number of
- * concurrent tasks.
+ * Maps over the iterable with up to `concurrency` parallel tasks.
  */
-export async function spread(concurrency: number, body: (throttle: (fn: () => Promise<void>) => Promise<void>) => Promise<void>) {
+export async function spread<Type>(
+	concurrency: number,
+	iterable: Iterable<Type> | AsyncIterable<Type>,
+	fn: (value: Type) => void | Promise<void>,
+) {
+	if (!(concurrency >= 1)) {
+		throw new Error('Invalid concurrency');
+	}
+	const iterator =
+		(iterable as Iterable<Type> | Record<keyof Iterable<Type>, undefined>)[Symbol.iterator]?.() ??
+		(iterable as AsyncIterable<Type>)[Symbol.asyncIterator]();
+
+	let offset = 0;
 	const pending: Deferred[] = [];
-	await body(async fn => {
-		const index = pending.length - concurrency;
-		pending.push(new Deferred);
-		if (index >= 0) {
-			await pending[index].promise;
+	while (true) {
+		const next = await iterator.next();
+		if (next.done) {
+			await Promise.all(Fn.map(pending, deferred => deferred.promise));
+			return;
 		}
-		fn().then(
-			() => pending.shift()!.resolve(),
-			err => pending.shift()!.reject(err));
-	});
-	await Promise.all(Fn.map(pending, deferred => deferred.promise));
+		pending.push(new Deferred);
+		if (pending.length > concurrency) {
+			await pending[0].promise;
+			pending[0] = pending[offset];
+			pending[offset--] = pending[pending.length - 1];
+			pending.pop();
+		}
+		Promise.resolve(fn(next.value)).then(
+			() => pending[offset++].resolve(),
+			err => pending[offset++].reject(err));
+	}
 }
 
 /**
