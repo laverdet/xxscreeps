@@ -171,10 +171,10 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 
 		} else if ('optional' in layout) {
 			// Small optional element
-			const { size, optional: elementLayout } = layout;
+			const { size, optional: elementLayout, uninitialized } = layout;
 			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
-				if (value == null) {
+				if (value === uninitialized) {
 					view.int8[offset + size] = 0;
 					return heap;
 				} else {
@@ -185,10 +185,10 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 
 		} else if ('pointer' in layout) {
 			// Optional element implemented as pointer
-			const { align, size, pointer: elementLayout } = layout;
+			const { align, size, pointer: elementLayout, uninitialized } = layout;
 			const write = makeTypeWriter(elementLayout, builder);
 			return (value, view, offset, heap) => {
-				if (value == null) {
+				if (value === uninitialized) {
 					view.int32[offset >>> 2] = 0;
 					return heap;
 				} else {
