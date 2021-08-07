@@ -118,6 +118,7 @@ export class KaitaiArchiver {
 						type: 'u4',
 					});
 					holder.instances.set('buffer', {
+						io: '_root._io',
 						pos: 'buffer_ofs',
 						size: 'buffer_len',
 					});
@@ -134,6 +135,7 @@ export class KaitaiArchiver {
 					});
 					holder.instances.set('latin1', {
 						type: 'str',
+						io: '_root._io',
 						pos: 'str_ofs',
 						size: 'str_len',
 						encoding: 'Latin1',
@@ -141,6 +143,7 @@ export class KaitaiArchiver {
 					});
 					holder.instances.set('utf8', {
 						type: 'str',
+						io: '_root._io',
 						pos: 'str_ofs',
 						size: 'str_len * -2',
 						encoding: 'UTF-16LE',
@@ -193,6 +196,7 @@ export class KaitaiArchiver {
 			});
 			holder.instances.set(id, {
 				type: id,
+				io: '_root._io',
 				pos: `${id}_ofs - 4`,
 				if: `${id}_ofs > 0`,
 				repeat: 'until',
@@ -229,12 +233,25 @@ export class KaitaiArchiver {
 		} else if ('optional' in layout) {
 			const element = new KaitaiArchiver(this);
 			this.archive(id, element, layout.optional);
+			// dummy type which constructs substream
+			const stream = new KaitaiArchiver(this);
+			stream.seq.push({ size: element.size });
+			stream.size += element.size;
+			holder.types.set(`${id}_stream`, stream);
 			holder.seq.push({
-				id,
-				type: holder.makeType(id, element),
+				id: `${id}_stream`,
+				type: `${id}_stream`,
+				size: element.size,
 			}, {
 				id: `has_${id}`,
-				type: 'b1',
+				// b1 doesn't work(?!)
+				type: 'u1',
+			});
+			holder.instances.set(id, {
+				type: holder.makeType(id, element),
+				io: `${id}_stream._io`,
+				pos: 0,
+				if: `has_${id} != 0`,
 			});
 			holder.size += element.size + 1;
 
@@ -247,6 +264,7 @@ export class KaitaiArchiver {
 			});
 			holder.instances.set(id, {
 				type: holder.makeType(id, element),
+				io: '_root._io',
 				pos: `${id}_ofs`,
 				if: `${id}_ofs > 0`,
 			});
@@ -316,6 +334,7 @@ export class KaitaiArchiver {
 			});
 			holder.instances.set(id, {
 				type: typeId,
+				io: '_root._io',
 				pos: `${id}_ofs`,
 				repeat: 'expr',
 				'repeat-expr': `${id}_len`,

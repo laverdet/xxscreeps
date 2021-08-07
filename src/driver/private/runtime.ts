@@ -1,7 +1,7 @@
 import * as Fn from 'xxscreeps/utility/functional';
 import { isPrivate, makeSymbol } from 'xxscreeps/driver/private/symbol'; // Use full path for webpack rewrite
 import { getOrSet } from 'xxscreeps/utility/utility';
-const { apply, get, getPrototypeOf, set } = Reflect;
+const { apply, defineProperty, get, getPrototypeOf, set } = Reflect;
 const inherits = function(): boolean {
 	// v8 private symbols don't follow prototype chain. This tests the implementation's behavior.
 	const symbol = makeSymbol();
@@ -74,7 +74,16 @@ export function makeSetter(name: string): (object: any, value: any) => any {
 					return value;
 				}
 			}
-			return object[symbol] = value;
+			defineProperty(object, symbol, {
+				get() { return value },
+				set(value) {
+					defineProperty(this, symbol, {
+						writable: true,
+						value,
+					});
+				},
+			});
+			return value;
 		};
 	}
 }

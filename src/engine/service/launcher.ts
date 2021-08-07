@@ -35,12 +35,15 @@ try {
 	}
 
 	// Start main service
-	const waitForMain = async function() {
-		for await (const message of serviceChannel) {
-			if (message.type === 'mainConnected') {
-				return true;
+	const waitForMain = function() {
+		const messages = serviceChannel.iterable();
+		return async function() {
+			for await (const message of messages) {
+				if (message.type === 'mainConnected') {
+					return true;
+				}
 			}
-		}
+		}();
 	}();
 	const main = import('./main');
 	await Promise.race([ main, waitForMain ]);

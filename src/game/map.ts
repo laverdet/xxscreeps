@@ -40,8 +40,10 @@ type FindRoute = {
  */
 export class GameMap {
 	#terrain: TerrainByRoom;
-	#height: number;
-	#width: number;
+	#left;
+	#top;
+	#height;
+	#width;
 
 	constructor(terrain: TerrainByRoom) {
 		this.#terrain = terrain;
@@ -56,8 +58,14 @@ export class GameMap {
 			maxY = Math.max(room.ry, maxY);
 			minY = Math.min(room.ry, minY);
 		}
+		this.#left = minX;
+		this.#top = minY;
 		this.#width = maxX - minX;
 		this.#height = maxY - minY;
+	}
+
+	['#getCenterRoom']() {
+		return generateRoomName(this.#left + Math.floor(this.#width / 2), this.#top + Math.floor(this.#height / 2));
 	}
 
 	/**

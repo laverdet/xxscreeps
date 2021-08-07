@@ -26,6 +26,7 @@ const BadgeSvgEndpoint: Endpoint = {
 		if (!userId) {
 			return;
 		}
+		const border = context.query.border === '1';
 		const badgeData = await context.db.data.hget(User.infoKey(userId), 'badge');
 		if (!badgeData) {
 			return;
@@ -54,11 +55,12 @@ const BadgeSvgEndpoint: Endpoint = {
 		// Send markup payload
 		context.set('Content-Type', 'image/svg+xml; charset=utf-8');
 		context.body = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 100 100" shape-rendering="geometricPrecision">' +
-			'<defs><clipPath id="clip"><circle cx="50" cy="50" r="52" /></clipPath></defs>' +
+			`<defs><clipPath id="clip"><circle cx="50" cy="50" r="${border ? 48 : 52}" /></clipPath></defs>` +
 			`<g transform="rotate(${rotate} 50 50)">` +
 			`<rect x="0" y="0" width="100" height="100" fill="${color1}" clip-path="url(#clip)" />` +
 			`<path d="${path1}" fill="${color2}" clip-path="url(#clip)" />` +
 			(path2 === '' ? '' : `<path d="${path2}" fill="${color3}" clip-path="url(#clip)" />`) +
+			(border ? '<circle cx="50" cy="50" r="47.5" fill="transparent" stroke="#000" stroke-width="5"></circle>' : '') +
 			'</g></svg>';
 	},
 };

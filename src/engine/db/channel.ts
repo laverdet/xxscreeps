@@ -102,7 +102,7 @@ export class Subscription<Message> {
 	}
 
 	// Iterates over all messages in a `for await` loop
-	async *[Symbol.asyncIterator](): AsyncGenerator<MessageType<Message>> {
+	iterable(): AsyncIterable<MessageType<Message>> {
 		// Create listener to save incoming messages
 		let deferred: Deferred<MessageType<Message> | void> | undefined;
 		const queue: MessageType<Message>[] = [];
@@ -114,36 +114,43 @@ export class Subscription<Message> {
 				queue.push(message);
 			}
 		});
-		try {
-			do {
-				// Immediately yield any queued messages
-				while (queue.length !== 0) {
-					yield queue.shift()!;
-					if (this.didDisconnect) {
-						return;
-					}
+		// The top function is not async in order to ensure it is run immediately. When it's time to
+		// wait on the channel we switch to an async closure.
+		const that = this;
+		return {
+			async *[Symbol.asyncIterator]() {
+				try {
+					do {
+						// Immediately yield any queued messages
+						while (queue.length !== 0) {
+							yield queue.shift()!;
+							if (that.didDisconnect) {
+								return;
+							}
+						}
+						// Make promise to await on
+						deferred = new Deferred;
+						const { promise } = deferred;
+						const disconnectListener = () => deferred!.resolve();
+						that.disconnectListeners.add(disconnectListener);
+						// Wait for new messages
+						const value = await promise;
+						that.disconnectListeners.delete(disconnectListener);
+						// Check for `undefined` from disconnect listener
+						if (value === undefined) {
+							return;
+						}
+						// Yield back to loop
+						yield value;
+						if (that.didDisconnect) {
+							return;
+						}
+					} while (true);
+				} finally {
+					// Clean up listeners when it's all done
+					unlisten();
 				}
-				// Make promise to await on
-				deferred = new Deferred;
-				const { promise } = deferred;
-				const disconnectListener = () => deferred!.resolve();
-				this.disconnectListeners.add(disconnectListener);
-				// Wait for new messages
-				const value = await promise;
-				this.disconnectListeners.delete(disconnectListener);
-				// Check for `undefined` from disconnect listener
-				if (value === undefined) {
-					return;
-				}
-				// Yield back to loop
-				yield value;
-				if (this.didDisconnect) {
-					return;
-				}
-			} while (true);
-		} finally {
-			// Clean up listeners when it's all done
-			unlisten();
-		}
+			},
+		};
 	}
 }

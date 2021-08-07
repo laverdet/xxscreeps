@@ -68,7 +68,10 @@ if (missingFlags.length) {
 	const specifier = process.argv[1];
 
 	// Load mods
-	await import('./mods');
+	await Promise.all([
+		import('./mods'),
+		import('./global'),
+	]);
 
 	if (specifier && !specifier.startsWith('-')) {
 		// Run

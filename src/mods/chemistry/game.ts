@@ -31,3 +31,9 @@ const labSchema = registerVariant('Room.objects', Lab.format);
 declare module 'xxscreeps/game/room' {
 	interface Schema { chemistry: [ typeof labSchema ] }
 }
+
+// Action log types
+const actionSchema = registerEnumerated('ActionLog.action', 'reaction1', 'reaction2');
+declare module 'xxscreeps/game/object' {
+	interface Schema { chemistry: typeof actionSchema }
+}
