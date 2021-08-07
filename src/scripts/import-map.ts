@@ -1,6 +1,7 @@
-import * as fs from 'fs';
+import { writeFileSync } from 'fs';
+import { readFile } from 'fs/promises';
+import fetch from 'node-fetch';
 import { checkArguments } from 'xxscreeps/config/arguments';
-
 import { Database, Shard } from 'xxscreeps/engine/db';
 
 // Schemas
@@ -12,19 +13,10 @@ import { Room } from 'xxscreeps/game/room';
 import { flushUsers } from 'xxscreeps/game/room/room';
 import { TerrainWriter } from 'xxscreeps/game/terrain';
 import { StructureController } from 'xxscreeps/mods/controller/controller';
-import { Creep } from 'xxscreeps/mods/creep/creep';
-import { StructureRampart } from 'xxscreeps/mods/defense/rampart';
 import { StructureWall } from 'xxscreeps/mods/defense/wall';
-import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral';
-import type { ResourceType } from 'xxscreeps/mods/resource';
-import type { Store } from 'xxscreeps/mods/resource/store';
-import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
-import { StructureRoad } from 'xxscreeps/mods/road/road';
 import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair';
 import { Source } from 'xxscreeps/mods/source/source';
-import { StructureExtension } from 'xxscreeps/mods/spawn/extension';
-import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 
 // Objects
@@ -37,7 +29,7 @@ const argv = checkArguments({
 });
 const dontOverwrite = argv['dont-overwrite'];
 
-const jsonSource = argv.argv[0] ?? 'map-mmo-shard1.json';
+const jsonSource = argv.argv[0] ?? 'map-mmo-shard1';
 
 function forUser(userId: string | null) {
 	return userId === 'f4b532d08c3952a' ? '1' : userId;
@@ -58,14 +50,20 @@ function withStructure(from: any, into: Structure) {
 	}
 }
 
-function withStore(from: any, into: { store: Store }) {
-	for (const type in from.store) {
-		into.store['#add'](type as ResourceType, from.store[type]);
+let data: { description: string; rooms: { room: string; terrain: string; objects: any[] }[] };
+
+try {
+	data = JSON.parse(await readFile(`map-${jsonSource}.json`, 'utf8'));
+} catch {
+	const res = await fetch(`https://maps.screepspl.us/maps/map-${jsonSource}.json`);
+	try {
+		data = await res.json();
+		writeFileSync(`map-${jsonSource}.json`, JSON.stringify(data));
+	} catch (err) {
+		console.log('error', err);
+		process.exit(0);
 	}
 }
-
-console.log(jsonSource);
-const data = JSON.parse(fs.readFileSync(jsonSource, 'utf8'));
 
 const db = await Database.connect();
 const gameTime = 1;
@@ -181,7 +179,6 @@ const rooms = data.rooms.map((entry: any) => {
 
 // Save rooms
 
-// @ts-expect-error
 const roomNames = new Set(Fn.map(rooms, room => room.name));
 await shard.data.sadd('rooms', [ ...roomNames ]);
 for (const room of rooms) {
