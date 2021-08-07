@@ -31,7 +31,7 @@ const processorSubscription = await getProcessorChannel(shard).subscribe();
 // Create processor workers
 const userCount = Number(await db.data.scard('users')) - 3; // minus Invader, Source Keeper, Screeps
 const singleThreaded = config.launcher?.singleThreaded;
-const processorCount = singleThreaded ? 1 : Math.min(config.processor.concurrency, Math.ceil(userCount / 2));
+const processorCount = Math.max(1, singleThreaded ? 1 : Math.min(config.processor.concurrency, Math.ceil(userCount / 2)));
 const threads = await Promise.all(Fn.map(Fn.range(processorCount), async() => ({
 	info: {
 		affinityTime: -1,
