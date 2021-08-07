@@ -17,9 +17,10 @@ hooks.register('route', {
 
 	async execute(context) {
 		const { userId } = context.state;
+		const { map } = context.backend.world;
 		if (userId) {
 			const lastRoom = await context.db.data.hget(User.infoKey(userId), 'lastViewedRoom');
-			if (lastRoom !== null && context.backend.world.map.getRoomStatus(lastRoom)) {
+			if (lastRoom !== null && map.getRoomStatus(lastRoom)) {
 				return {
 					ok: 1,
 					room: [ lastRoom ],
@@ -28,7 +29,7 @@ hooks.register('route', {
 		}
 		return {
 			ok: 1,
-			room: [ 'W5N5' ],
+			room: [ map['#getCenterRoom']() ],
 		};
 	},
 });
