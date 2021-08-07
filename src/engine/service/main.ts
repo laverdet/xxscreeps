@@ -55,8 +55,9 @@ try {
 	]);
 
 	// Wait for processors to connect and initialize world state
+	const processorMessages = serviceChannel.iterable();
 	await serviceChannel.publish({ type: 'mainConnected' });
-	for await (const message of Async.breakable(serviceChannel, breaker => halt = breaker)) {
+	for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
 		if (
 			message.type === 'processorInitialized' &&
 			await shard.scratch.zcard(activeRoomsKey) === rooms.length
@@ -73,6 +74,7 @@ try {
 		await gameMutex.scope(async() => {
 			// Initialize
 			const time = shard.time + 1;
+			const serviceMessages = serviceChannel.iterable();
 			await Promise.all([
 				shard.scratch.copy('activeUsers', runnerUsersSetKey(time)),
 				processorChannel.publish({ type: 'process', time }),
@@ -84,7 +86,7 @@ try {
 				const rooms = await abandonIntentsForTick(shard, time);
 				console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
 			}), config.processor.intentAbandonTimeout);
-			for await (const message of serviceChannel) {
+			for await (const message of serviceMessages) {
 				if (message.type === 'processorInitialized') {
 					await processorChannel.publish({ type: 'process', time });
 				} else if (message.type === 'runnerConnected') {

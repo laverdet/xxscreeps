@@ -71,7 +71,7 @@ handleInterrupt(() => halt?.());
 
 // Wait for shutdown message
 const serviceChannel = await getServiceChannel(backendContext.shard).subscribe();
-for await (const message of Async.breakable(serviceChannel, breaker => halt = breaker)) {
+for await (const message of Async.breakable(serviceChannel.iterable(), breaker => halt = breaker)) {
 	if (message.type === 'shutdown') {
 		break;
 	}

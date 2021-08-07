@@ -42,8 +42,9 @@ const playerInstances = new Map<string, PlayerInstance>();
 
 // Start the runner loop
 try {
+	const runnerMessages = runnerSubscription.iterable();
 	await getServiceChannel(shard).publish({ type: 'runnerConnected' });
-	loop: for await (const message of Async.breakable(runnerSubscription, breaker => break1 = breaker)) {
+	loop: for await (const message of Async.breakable(runnerMessages, breaker => break1 = breaker)) {
 		switch (message.type) {
 			case 'shutdown':
 				break loop;

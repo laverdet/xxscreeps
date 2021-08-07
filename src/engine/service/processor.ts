@@ -55,9 +55,10 @@ try {
 	}));
 
 	// Wait for initialization signal from main
-	const [ firstTime ] = await Promise.all([
-		async function() {
-			for await (const message of Async.breakable(processorSubscription, breaker => halt = breaker)) {
+	const waitForSync = function() {
+		const messages = processorSubscription.iterable();
+		return async function() {
+			for await (const message of Async.breakable(messages, breaker => halt = breaker)) {
 				if (message.type === 'shutdown' || halted) {
 					throw new Error('Processor initialization failure');
 				} else if (message.type === 'process') {
@@ -65,18 +66,20 @@ try {
 				}
 			}
 			throw new Error('End of message stream');
-		}(),
-		getServiceChannel(shard).publish({ type: 'processorInitialized' }),
-	]);
+		}();
+	}();
+	await getServiceChannel(shard).publish({ type: 'processorInitialized' })
+	const firstTime = await waitForSync;
 
 	// Initialize processor queue, or sync up with existing processors
+	const processorMessages = processorSubscription.iterable();
 	let currentTime = await begetRoomProcessQueue(shard, firstTime, firstTime - 1);
 
 	// Send message to begin processing, this will be picked up by the loop iteration below
 	queueMicrotask(() => void getProcessorChannel(shard).publish({ type: 'process', time: currentTime }));
 
 	// Process messages
-	loop: for await (const message of Async.breakable(processorSubscription, breaker => halt = breaker)) {
+	loop: for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
 
 		switch (message.type) {
 			case 'shutdown':
