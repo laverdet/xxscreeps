@@ -61,65 +61,78 @@ export function authentication(): Middleware {
 		};
 
 		try {
-			// Attempt to use request token
-			const token = function() {
+			// Check authentication payload
+			const authValue = await async function() {
 				const token = context.get('x-token');
-				if (token && token !== 'guest') {
-					return token;
+				if (token === '') {
+					// No header sent; logged out
+					return false;
+				} else if (token === 'guest') {
+					// Header sent; guest access requested
+					return allowGuestAccess;
+				} else {
+					const tokenValue = await checkToken(token);
+					if (tokenValue === undefined) {
+						// Expired / invalid header
+						return false;
+					}
+					return tokenValue;
 				}
 			}();
-			if (token && token !== 'guest') {
-				const tokenValue = await checkToken(token);
-				if (tokenValue === undefined) {
-					// Allow this request to continue as long as `userId` isn't accessed
-					const message = 'Malformed token';
-					let didSet = false;
-					Object.defineProperty(context.state, 'userId', {
-						configurable: true,
-						get() {
-							throw new Error(message);
-						},
-						set(value: string) {
-							didSet = true;
-							Object.defineProperty(context.state, 'userId', {
-								configurable: true,
-								writable: true,
-								value,
-							});
-						},
-					});
-					try {
-						await next();
-						// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-						if (!didSet) {
-							Object.defineProperty(context.state, 'userId', { value: undefined });
-						}
-					} catch (err) {
-						if (err.message === message) {
-							// Send failure to force the Steam client to reauthenticate
-							context.status = 403;
-							context.body = 'Malformed token';
-						} else {
-							throw err;
-						}
+			if (authValue === false) {
+				// Allow this request to continue as long as `userId` isn't accessed
+				let didThrow;
+				let didSet = false;
+				Object.defineProperty(context.state, 'userId', {
+					configurable: true,
+					get() {
+						throw didThrow = new Error('Unauthorized');
+					},
+					set(value: string) {
+						didSet = true;
+						Object.defineProperty(context.state, 'userId', {
+							configurable: true,
+							writable: true,
+							value,
+						});
+					},
+				});
+				try {
+					await next();
+					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+					if (!didSet) {
+						Object.defineProperty(context.state, 'userId', { value: undefined });
 					}
-					return;
+				} catch (err) {
+					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+					if (err === didThrow) {
+						// Send failure to force the Steam client to reauthenticate
+						context.status = 401;
+						context.body = { error: 'unauthorized' };
+					} else {
+						throw err;
+					}
 				}
-				if (/^[a-f0-9]+$/.test(tokenValue)) {
-					context.state.userId = tokenValue;
+			} else {
+				if (authValue === true) {
+					// Not logged in
+					context.state.userId = undefined;
+				} else if (/^[a-f0-9]+$/.test(authValue)) {
+					// Real userId
+					context.state.userId = authValue;
 				} else {
-					const unsavedUserToken = /^new:(?<id>[^:]+):(?<provider>[^:]+):(?<providerId>.+)$/.exec(tokenValue);
+					// Fake userId
+					const unsavedUserToken = /^new:(?<id>[^:]+):(?<provider>[^:]+):(?<providerId>.+)$/.exec(authValue);
 					if (unsavedUserToken) {
 						context.state.newUserId = unsavedUserToken.groups!.id;
 						context.state.provider = unsavedUserToken.groups!.provider;
 						context.state.providerId = unsavedUserToken.groups!.providerId;
 					}
 				}
-			}
 
-			// Forward request along to handlers
-			await next();
-			return;
+				// Forward request along to handlers
+				await next();
+			}
 		} finally {
 			// Send refreshed token
 			if (context.status === 200) {
