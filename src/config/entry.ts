@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'url';
 import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not
@@ -75,7 +76,6 @@ if (missingFlags.length) {
 
 	if (specifier && !specifier.startsWith('-')) {
 		// Run
-		const base = new URL('../..', import.meta.url);
 		const commands: Record<string, string | undefined> = {
 			import: './dist/scripts/scrape-world.js',
 			start: './dist/engine/service/launcher.js',
@@ -87,7 +87,7 @@ if (missingFlags.length) {
 
 		const modulePath = await async function() {
 			try {
-				return await import.meta.resolve!(`${new URL(commands[specifier] ?? specifier, base)}`);
+				return await import.meta.resolve!(`${new URL(commands[specifier] ?? specifier, `${pathToFileURL(process.cwd())}/`)}`);
 			} catch (error) {
 				if (error.code !== 'ERR_MODULE_NOT_FOUND') {
 					throw error;
