@@ -62,17 +62,23 @@ export class Terrain {
 	 * @param destinationArray A typed array view in which terrain will be copied to.
 	 * @deprecated
 	 */
-	getRawBuffer(destinationArray?: Uint8Array): Uint8Array {
-		const buffer = destinationArray ?? new Uint32Array(625);
-		for (let ii = 0; ii < 625; ++ii) {
-			const value = this.#buffer[ii];
-			buffer[ii] =
-				(value >>> ((ii << 3) & 0x06)) & 0x03 |
-				((value >>> ((ii << 3) + 2 & 0x06)) & 0x03) << 8 |
-				((value >>> ((ii << 3) + 4 & 0x06)) & 0x03) << 16 |
-				((value >>> ((ii << 3) + 6 & 0x06)) & 0x03) << 24;
+	getRawBuffer(destinationArray?: Uint8Array, version?: 'xxscreeps'): Uint8Array {
+		if (version === 'xxscreeps') {
+			const buffer = destinationArray instanceof Uint8Array ? destinationArray : new Uint8Array(625);
+			buffer.set(this.#buffer);
+			return buffer;
+		} else {
+			const buffer = destinationArray ?? new Uint32Array(625);
+			for (let ii = 0; ii < 625; ++ii) {
+				const value = this.#buffer[ii];
+				buffer[ii] =
+					(value >>> ((ii << 3) & 0x06)) & 0x03 |
+					((value >>> ((ii << 3) + 2 & 0x06)) & 0x03) << 8 |
+					((value >>> ((ii << 3) + 4 & 0x06)) & 0x03) << 16 |
+					((value >>> ((ii << 3) + 6 & 0x06)) & 0x03) << 24;
+			}
+			return new Uint8Array(buffer.buffer);
 		}
-		return new Uint8Array(buffer.buffer);
 	}
 }
 
@@ -105,7 +111,7 @@ export function isNearBorder(xx: number, yy: number) {
 export const format = compose(array(625, 'uint8'), {
 	composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset, offset + 625)),
 	decomposeIntoBuffer(value: Terrain, view: BufferView, offset: number) {
-		value.getRawBuffer(view.uint8.subarray(offset, offset + 625));
+		value.getRawBuffer(view.uint8.subarray(offset, offset + 625), 'xxscreeps');
 	},
 });
 
