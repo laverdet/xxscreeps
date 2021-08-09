@@ -22,6 +22,7 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 				return modules.get(url);
 			},
 		});
+		globalThis.require = require as never;
 		return () => require('main');
 
 	} else if (main) {
