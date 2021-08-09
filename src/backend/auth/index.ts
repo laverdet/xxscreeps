@@ -44,10 +44,10 @@ export function authentication(): Middleware {
 			}
 			// Make token from middleware authentication
 			const token = await function() {
-				if (context.state.userId !== undefined) {
-					return makeToken(context.state.userId);
-				} else if (context.state.newUserId !== undefined) {
+				if (context.state.newUserId !== undefined) {
 					return makeToken(`new:${context.state.newUserId}:${context.state.provider}:${context.state.providerId}`);
+				} else if (context.state.userId !== undefined) {
+					return makeToken(context.state.userId);
 				} else if (allowGuestAccess && initializeGuest) {
 					return 'guest';
 				}
