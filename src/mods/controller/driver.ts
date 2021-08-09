@@ -14,7 +14,16 @@ declare module 'xxscreeps/engine/runner' {
 }
 
 processorHooks.register('refreshRoom', async(shard, room) => {
-	const userId = room['#user'];
+	const userId = room.controller?.['#user'];
+	if (userId !== room['#user']) {
+		// TODO: Remove this cleanup
+		console.log(`Fixed ${room.name} controller status`);
+		room['#user'] = userId;
+		await Promise.all([
+			shard.saveRoom(room.name, shard.time, room),
+			shard.saveRoom(room.name, shard.time + 1, room),
+		]);
+	}
 	if (userId != null) {
 		const key = room['#level'] === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);
 		await shard.scratch.sadd(key, [ room.name ]);
