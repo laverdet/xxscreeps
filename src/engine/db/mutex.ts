@@ -3,6 +3,7 @@ import type { KeyValProvider, PubSubProvider } from './storage/provider';
 import type { Subscription } from './channel';
 import { Deferred, mustNotReject } from 'xxscreeps/utility/async';
 import { Channel } from './channel';
+import { KeyvalScript } from './storage/script';
 
 type Message = 'waiting' | 'unlocked';
 
@@ -140,6 +141,22 @@ export class Mutex {
 	}
 }
 
+const CompareAndDelete = new KeyvalScript((keyval, [ key ]: [ string ], [ value ]: [ string ]) => {
+	if (keyval.get(key) === value) {
+		keyval.del(key);
+		return 1;
+	} else {
+		return 0;
+	}
+}, {
+	lua:
+		`if redis.call('get', KEYS[1]) == ARGV[1] then
+			return redis.call('del', KEYS[1])
+		else
+			return 0
+		end`,
+});
+
 class Lock {
 	private interval: ReturnType<typeof setInterval> | undefined;
 	private readonly value = `${Math.random()}`;
@@ -164,6 +181,6 @@ class Lock {
 	unlock() {
 		clearInterval(this.interval!);
 		this.interval = undefined;
-		return this.keyval.cad(this.name, this.value);
+		return this.keyval.eval(CompareAndDelete, [ this.name ], [ this.value ]);
 	}
 }

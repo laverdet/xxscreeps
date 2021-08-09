@@ -47,25 +47,6 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		}
 	}
 
-	cad(key: string, check: string) {
-		if (this.data.get(key) === check) {
-			this.remove(key);
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	cas(key: string, expected: Value, desired: Value) {
-		const current = this.data.get(key);
-		if (`${current}` === `${expected}`) {
-			this.data.set(key, desired);
-			return true;
-		} else {
-			return false;
-		}
-	}
-
 	copy(from: string, to: string, options?: Provider.Copy) {
 		const value = this.data.get(from);
 		if (value === undefined) {

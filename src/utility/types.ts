@@ -16,7 +16,7 @@ export type KeyFor<Type, Key extends keyof any> = Extract<Type, WithKey<Key>>[Ke
 
 // React style unlistener
 export type Effect = () => void;
-export type EffectWithResult<Type = any> = Effect | void | [ Effect | void, Type ];
+export type EffectWithResult<Type = any> = Effect | void | readonly [ Effect | void, Type ];
 export type AsyncEffectAndResult<Type = any> = MaybePromise<EffectWithResult<Type>> | void;
 
 // Helper for passing around prototypes
