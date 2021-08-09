@@ -51,7 +51,7 @@ export class StructureTerminal extends withOverlay(OwnedStructure, shape) {
 	 * maximum length is 100 characters.
 	 */
 	send(resourceType: ResourceType, amount: number, destination: string, description?: string) {
-		chainIntentChecks(
+		return chainIntentChecks(
 			() => checkSend(this, resourceType, amount, destination, description),
 			() => intents.save(this, 'send', resourceType, amount, destination, description));
 	}

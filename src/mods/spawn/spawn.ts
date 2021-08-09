@@ -113,7 +113,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	 * @param creep The target creep object.
 	 */
 	recycleCreep(creep: Creep) {
-		chainIntentChecks(
+		return chainIntentChecks(
 			() => checkRecycleCreep(this, creep),
 			() => intents.save(this, 'recycleCreep', creep.id));
 	}
@@ -128,7 +128,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	 * @param creep The target creep object.
 	 */
 	renewCreep(creep: Creep) {
-		chainIntentChecks(
+		return chainIntentChecks(
 			() => checkRenewCreep(this, creep),
 			() => intents.save(this, 'renewCreep', creep.id));
 	}
