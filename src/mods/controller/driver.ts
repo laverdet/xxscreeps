@@ -19,6 +19,9 @@ processorHooks.register('refreshRoom', async(shard, room) => {
 		// TODO: Remove this cleanup
 		console.log(`Fixed ${room.name} controller status`);
 		room['#user'] = userId;
+		if (userId == null) {
+			room['#level'] = 0;
+		}
 		await Promise.all([
 			shard.saveRoom(room.name, shard.time, room),
 			shard.saveRoom(room.name, shard.time + 1, room),

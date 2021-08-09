@@ -60,7 +60,7 @@ try {
 
 			// Initialize rooms / user relationships
 			case 'initialize': {
-				const room = await shard.loadRoom(message.roomName, undefined, true);
+				const room = await shard.loadRoom(message.roomName, undefined);
 				await Promise.all([
 					updateUserRoomRelationships(shard, room),
 					...refreshRoom(shard, room),
