@@ -62,8 +62,8 @@ if (steamApiKey) {
 			const steamid = (context.state as { user: string }).user; // this is set by koa-passport
 			await context.authenticateForProvider('steam', steamid);
 			const token = await context.flushToken();
-			const { userId } = context.state;
 			const username = await async function() {
+				const userId = context.state.newUserId ?? context.state.userId;
 				if (userId !== undefined) {
 					const key = User.infoKey(userId);
 					const sessionId = Crypto.randomBytes(16).toString('hex');
@@ -73,7 +73,7 @@ if (steamApiKey) {
 					]);
 					context.cookies.set('id', userId, { httpOnly: false });
 					context.cookies.set('session', sessionId, { httpOnly: false });
-					return username;
+					return username ?? 'New User';
 				}
 			}();
 			const json = JSON.stringify(JSON.stringify({ steamid, token, username }));
