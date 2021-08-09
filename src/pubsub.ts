@@ -1,7 +1,6 @@
 import type { URL } from 'url';
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from 'xxscreeps/engine/db/storage/provider';
-import type { Redis } from './redis';
-import { makeClient } from './redis';
+import { RedisHolder } from './client';
 
 export class RedisPubSubProvider implements PubSubProvider {
 	private readonly publishIgnore = new Map<string, {
@@ -12,10 +11,10 @@ export class RedisPubSubProvider implements PubSubProvider {
 	private readonly subscribersByKey = new Map<string, Set<RedisSubscription>>();
 
 	constructor(
-		private readonly listener: Redis,
-		private readonly publisher: Redis,
+		private readonly listener: RedisHolder,
+		private readonly publisher: RedisHolder,
 	) {
-		listener.on('message', (key, message) => {
+		listener.client.on('message', (key, message) => {
 			const ignoreInfo = this.publishIgnore.get(key);
 			const ignore = (() => {
 				if (ignoreInfo) {
@@ -41,20 +40,15 @@ export class RedisPubSubProvider implements PubSubProvider {
 		});
 	}
 
-	static async connect(url: URL) {
-		return new RedisPubSubProvider(
-			await makeClient(url),
-			await makeClient(url),
-		);
-	}
-
-	disconnect() {
-		this.listener.disconnect();
-		this.publisher.disconnect();
+	static async connect(url: URL, blob = false) {
+		const [ effect1, client1 ] = await RedisHolder.connect(url, blob);
+		const [ effect2, client2 ] = await RedisHolder.connect(url, blob);
+		const provider = new RedisPubSubProvider(client1, client2);
+		return [ () => { effect1(); effect2() }, provider ] as const;
 	}
 
 	async publish(key: string, message: string) {
-		await this.publisher.publish(key, message);
+		await this.publisher.invoke(cb => this.publisher.batch().publish(key, message, cb));
 	}
 
 	async publishFromClient(key: string, message: string, client: RedisSubscription) {
@@ -64,7 +58,7 @@ export class RedisPubSubProvider implements PubSubProvider {
 		} else {
 			this.publishIgnore.set(key, [ { client, message } ]);
 		}
-		await this.publisher.publish(key, message);
+		await this.publisher.invoke(cb => this.publisher.batch().publish(key, message, cb));
 	}
 
 	async subscribe(key: string, listener: PubSubListener) {
@@ -72,7 +66,7 @@ export class RedisPubSubProvider implements PubSubProvider {
 		if (!subscribers) {
 			subscribers = new Set;
 			this.subscribersByKey.set(key, subscribers);
-			await this.listener.subscribe(key);
+			await this.listener.invoke(cb => this.listener.batch().subscribe(key, cb));
 		}
 		const subscriber = new RedisSubscription(listener, key, this);
 		subscribers.add(subscriber);

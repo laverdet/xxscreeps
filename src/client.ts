@@ -1,0 +1,81 @@
+import type { URL } from 'url';
+import type { Multi } from 'redis';
+import redis from 'redis';
+import { listen } from 'xxscreeps/utility/async';
+export type Redis = redis.RedisClient;
+
+declare module 'redis' {
+	interface Multi {
+		copy: OverloadedCommand<string, number, Multi>;
+		smismember: OverloadedCommand<string, number[], Multi>;
+		zmscore: OverloadedCommand<string, number[], Multi>;
+	}
+	interface RedisClient {
+		copy: OverloadedCommand<string, number, boolean>;
+		smismember: OverloadedCommand<string, number[], boolean>;
+		zmscore: OverloadedCommand<string, number[], boolean>;
+	}
+}
+
+export class RedisHolder {
+	private tickBatch?: Multi;
+	private tickBatchId = 0;
+	private tickBatchFresh = false;
+
+	private constructor(public readonly client: Redis) {}
+
+	static async connect(url: URL, blob = false) {
+		const client = redis.createClient(`${url}`.replace('redis2', 'redis'), {
+			enable_offline_queue: false,
+			return_buffers: Boolean(blob),
+			retry_strategy: () => false,
+		});
+		await new Promise<void>((resolve, reject) => {
+			const unlisten1 = listen(client, 'ready', () => { unlisten(); resolve() });
+			const unlisten2 = listen(client, 'error', error => { unlisten(); reject(error) });
+			const unlisten = (): void => { unlisten1(); unlisten2() };
+		});
+		client.on('error', error => {
+			console.error(error.message);
+			process.exit();
+		});
+		return [ () => client.quit(), new RedisHolder(client) ] as const;
+	}
+
+	batch(): Multi {
+		const client = this.tickBatch ??= this.client.batch();
+		if (!this.tickBatchFresh) {
+			this.tickBatchFresh = true;
+			const id = ++this.tickBatchId;
+			process.nextTick(() => {
+				this.tickBatchFresh = false;
+				if (id === this.tickBatchId) {
+					this.tickBatch = undefined;
+					client.exec();
+				}
+			});
+		}
+		return client;
+	}
+
+	flushBatch() {
+		if (this.tickBatch) {
+			this.tickBatch.exec();
+			this.tickBatch = undefined;
+			this.tickBatchFresh = false;
+			++this.tickBatchId;
+		}
+	}
+
+	invoke<Type>(fn: (cb: (err: Error | null, result: Type) => any) => void) {
+		return new Promise<Type>((resolve, reject) => {
+			fn((err, result) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve(result);
+				}
+			});
+		});
+	}
+}

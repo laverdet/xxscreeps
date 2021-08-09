@@ -2,11 +2,11 @@
 	"eslint.options": {
 		"configFile": "./.vscode/.eslintrc.yaml",
 	},
-	"eslint.validate": [ "typescript" ],
 	"files.exclude": {
 		"dist": true,
 		"node_modules": true,
 	},
+	"files.insertFinalNewline": true,
 	"typescript.tsdk": "./node_modules/typescript/lib",
 	"typescript.tsserver.experimental.enableProjectDiagnostics": true,
 	"typescript.enablePromptUseWorkspaceTsdk": true,
