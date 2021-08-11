@@ -48,7 +48,7 @@ const invokeSocketHooks = hooks.makeMapped('roomSocket');
  * updated without any change to the room the listener is invoked with `room` === `undefined`.
  */
 export async function subscribeToRoom(shard: Shard, roomName: string, listener: RoomListener) {
-	const { listen, state } = await getOrSet(globalSubscriptionsByRoom, roomName, async() => {
+	const task = getOrSet(globalSubscriptionsByRoom, roomName, async() => {
 		// Initialize current state
 		let { time } = shard;
 		let didUpdate = false;
@@ -99,8 +99,16 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 		);
 		return { listen, state };
 	});
-	listener(state.room, state.time, true);
-	return listen(listener);
+
+	const { listen, state } = await task;
+	if (task === globalSubscriptionsByRoom.get(roomName)) {
+		listener(state.room, state.time, true);
+		return listen(listener);
+	} else {
+		// Avoid invoking `listen` on a dead event publisher
+		const result: any = subscribeToRoom(shard, roomName, listener);
+		return result;
+	}
 }
 
 export const roomSubscription: SubscriptionEndpoint = {
