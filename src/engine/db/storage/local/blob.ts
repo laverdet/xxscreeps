@@ -156,7 +156,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 			}
 			await handle.close();
 			this.cache.set(key, {
-				saveId: this.saveId,
+				saveId: -1,
 				value,
 			});
 			return value;
