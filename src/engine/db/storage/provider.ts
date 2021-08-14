@@ -39,8 +39,6 @@ export type BlobProvider = {
 export type Value = number | string;
 export type KeyValProvider = {
 	// keys / strings
-	cad(key: string, check: string): Promise<boolean>;
-	cas(key: string, expected: Value, desired: Value): Promise<boolean>;
 	copy(from: string, to: string, options?: Copy): Promise<boolean>;
 	del(key: string): Promise<boolean>;
 	get(key: string): Promise<string | null>;

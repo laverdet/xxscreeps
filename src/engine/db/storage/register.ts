@@ -7,7 +7,7 @@ type DispositionToProvider<T> =
 	T extends 'pubsub' ? PubSubProvider :
 	never;
 
-type Provider = (url: URL, disposition: any) => Promise<[ Effect, any ]>;
+type Provider = (url: URL, disposition: any) => Promise<readonly [ Effect, any ]>;
 const providers = new Map<string, Provider>();
 
 /**
@@ -20,7 +20,7 @@ const providers = new Map<string, Provider>();
 export function registerStorageProvider<Dispositions extends string>(
 	schemes: string | string[],
 	dispositions: Dispositions | Dispositions[],
-	provider: (url: URL, disposition: Dispositions) => Promise<[ Effect, UnionToIntersection<DispositionToProvider<Dispositions>> ]>,
+	provider: (url: URL, disposition: Dispositions) => Promise<readonly [ Effect, UnionToIntersection<DispositionToProvider<Dispositions>> ]>,
 ) {
 	for (const scheme of Array.isArray(schemes) ? schemes : [ schemes ]) {
 		for (const disposition of Array.isArray(dispositions) ? dispositions : [ dispositions ]) {
@@ -34,7 +34,7 @@ export function registerStorageProvider<Dispositions extends string>(
 }
 
 export async function connectToProvider<Disposition extends string>(fragment: string, disposition: Disposition):
-Promise<[ Effect, DispositionToProvider<Disposition> ]> {
+Promise<readonly [ Effect, DispositionToProvider<Disposition> ]> {
 	const [ { configPath } ] = await Promise.all([
 		import('xxscreeps/config'),
 		import('xxscreeps/config/mods/import/storage'),

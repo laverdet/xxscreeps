@@ -1,7 +1,7 @@
 import type { Direction } from 'xxscreeps/game/position';
 import type { GameConstructor } from 'xxscreeps/game';
 import type { ResourceType } from 'xxscreeps/mods/resource';
-import type { RoomPath } from 'xxscreeps/game/room/path';
+import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path';
 import type { RoomSearchOptions } from 'xxscreeps/game/path-finder';
 import type { WithStore } from 'xxscreeps/mods/resource/store';
 import * as C from 'xxscreeps/game/constants';
@@ -25,7 +25,7 @@ import { appendEventLog } from 'xxscreeps/game/room/event-log';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 
-type MoveToOptions = {
+type MoveToOptions = FindPathOptions & {
 	noPathFinding?: boolean;
 	reusePath?: number;
 	serializeMemory?: boolean;
@@ -246,7 +246,10 @@ export class Creep extends withOverlay(RoomObject, shape) {
 				if (extra?.noPathFinding) {
 					return C.ERR_NOT_FOUND;
 				}
-				const path = this.pos.findPathTo(pos);
+				const path = this.pos.findPathTo(pos, extra && {
+					...extra,
+					serialize: false,
+				});
 
 				// Cache path in memory
 				if (reusePath > 0) {

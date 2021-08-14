@@ -42,7 +42,7 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 	 * @param lab2 The second source lab.
 	 */
 	runReaction(lab1: StructureLab, lab2: StructureLab) {
-		chainIntentChecks(
+		return chainIntentChecks(
 			() => checkRunReaction(this, lab1, lab2),
 			() => intents.save(this, 'runReaction', lab1.id, lab2.id));
 	}

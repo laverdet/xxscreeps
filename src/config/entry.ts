@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not
@@ -74,8 +75,6 @@ if (missingFlags.length) {
 	]);
 
 	if (specifier && !specifier.startsWith('-')) {
-		// Run
-		const base = new URL('../..', import.meta.url);
 		const commands: Record<string, string | undefined> = {
 			import: './dist/scripts/scrape-world.js',
 			start: './dist/engine/service/launcher.js',
@@ -85,9 +84,21 @@ if (missingFlags.length) {
 			runner: './dist/engine/service/runner.js',
 		};
 
+		// Resolve entry script
 		const modulePath = await async function() {
 			try {
-				return await import.meta.resolve!(`${new URL(commands[specifier] ?? specifier, base)}`);
+				const command = commands[specifier];
+				if (command) {
+					// Found run alias
+					return await import.meta.resolve!(`${new URL(command, new URL('../..', import.meta.url))}`);
+				} else {
+					// Try to parse as file:// URL, probably a self-invoking worker
+					try {
+						return `${new URL(specifier)}`;
+					} catch (err) {}
+					// Resolve as file from cwd
+					return await import.meta.resolve!(join(process.cwd(), specifier), import.meta.url);
+				}
 			} catch (error) {
 				if (error.code !== 'ERR_MODULE_NOT_FOUND') {
 					throw error;
@@ -95,6 +106,8 @@ if (missingFlags.length) {
 				console.log(`Invalid command or module "${specifier}", built in commands are ${Object.keys(commands).join(', ')}`);
 			}
 		}();
+
+		// Run it outside of try / catch
 		if (modulePath !== undefined) {
 			await import(modulePath);
 		}

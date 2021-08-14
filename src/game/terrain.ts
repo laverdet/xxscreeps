@@ -57,20 +57,27 @@ export class Terrain {
 	/**
 	 * Get copy of underlying static terrain buffer.
 	 *
-	 * The representation of terrain data differs from classic Screeps. The array size is 625 and each
-	 * byte includes terrain data for 4 tiles. You can extract a tile's terrain mask with the
-	 * following code:
-	 * const id = yy * 50 + xx;
-	 * const type = buffer[index >>> 2] >>> ((id & 0x03) << 1) & 0x03;
+	 * Note: It's probably better to just use the `get` method.
 	 *
 	 * @param destinationArray A typed array view in which terrain will be copied to.
+	 * @deprecated
 	 */
-	getRawBuffer(destinationArray?: Uint8Array): Uint8Array {
-		if (destinationArray === undefined) {
-			return this.getRawBuffer(new Uint8Array(625));
+	getRawBuffer(destinationArray?: Uint8Array, version?: 'xxscreeps'): Uint8Array {
+		if (version === 'xxscreeps') {
+			const buffer = destinationArray instanceof Uint8Array ? destinationArray : new Uint8Array(625);
+			buffer.set(this.#buffer);
+			return buffer;
 		} else {
-			destinationArray.set(this.#buffer);
-			return destinationArray;
+			const buffer = destinationArray ?? new Uint32Array(625);
+			for (let ii = 0; ii < 625; ++ii) {
+				const value = this.#buffer[ii];
+				buffer[ii] =
+					(value >>> ((ii << 3) & 0x06)) & 0x03 |
+					((value >>> ((ii << 3) + 2 & 0x06)) & 0x03) << 8 |
+					((value >>> ((ii << 3) + 4 & 0x06)) & 0x03) << 16 |
+					((value >>> ((ii << 3) + 6 & 0x06)) & 0x03) << 24;
+			}
+			return new Uint8Array(buffer.buffer);
 		}
 	}
 }
@@ -102,9 +109,9 @@ export function isNearBorder(xx: number, yy: number) {
 }
 
 export const format = compose(array(625, 'uint8'), {
-	composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset)),
+	composeFromBuffer: (view: BufferView, offset: number) => new Terrain(view.uint8.subarray(offset, offset + 625)),
 	decomposeIntoBuffer(value: Terrain, view: BufferView, offset: number) {
-		value.getRawBuffer(view.uint8.subarray(offset));
+		value.getRawBuffer(view.uint8.subarray(offset, offset + 625), 'xxscreeps');
 	},
 });
 

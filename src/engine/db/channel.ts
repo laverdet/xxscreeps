@@ -116,6 +116,7 @@ export class Subscription<Message> {
 		});
 		// The top function is not async in order to ensure it is run immediately. When it's time to
 		// wait on the channel we switch to an async closure.
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const that = this;
 		return {
 			async *[Symbol.asyncIterator]() {

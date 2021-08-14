@@ -6,6 +6,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import { Channel } from 'xxscreeps/engine/db/channel';
 import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from 'xxscreeps/engine/service';
+import { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
 
 export function getProcessorChannel(shard: Shard) {
 	type Message =
@@ -44,6 +45,27 @@ const intentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/intents`;
 const finalIntentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/finalIntents`;
+
+const CompareAndSwap = new KeyvalScript((
+	keyval,
+	[ key ]: [ string ],
+	[ expected, desired ]: [ expected: number | string, desired: number | string ],
+) => {
+	const current = keyval.get(key);
+	if (`${current}` === `${expected}`) {
+		keyval.set(key, desired);
+		return 1;
+	} else {
+		return 0;
+	}
+}, {
+	lua:
+		`if redis.call('get', KEYS[1]) == ARGV[1] then
+			return redis.call('set', KEYS[1], ARGV[2])
+		else
+			return 0
+		end`,
+});
 
 async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, intents?: RoomIntentPayload) {
 	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
@@ -125,7 +147,7 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 		// First iteration of laggy processor
 		return currentTime;
 	}
-	if (await shard.scratch.cas(processorTimeKey, time - 1, time)) {
+	if (await shard.scratch.eval(CompareAndSwap, [ processorTimeKey ], [ time - 1, time ])) {
 		// Count currently active rooms, fetch rooms to wake this tick
 		const [ initialCount, wake ] = await Promise.all([
 			shard.scratch.zcard(activeRoomsKey),
@@ -147,7 +169,7 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 				// We're invoking the function at the end of the previous queue, and the main loop is not
 				// currently ready for the next tick. We'll set the processor time back the way it was so
 				// that this code will be invoked again at the start of the next tick.
-				await shard.scratch.cas(processorTimeKey, time, time - 1);
+				await shard.scratch.eval(CompareAndSwap, [ processorTimeKey ], [ time, time - 1 ]);
 				return time - 1;
 			} else {
 				// The current processor tick has started, so we can now send the finished notification.

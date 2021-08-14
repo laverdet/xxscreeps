@@ -141,7 +141,9 @@ export function checkDestroy(structure: Structure) {
 	return chainIntentChecks(
 		() => checkMyStructure(structure, Structure),
 		() => {
-			if (structure.room.find(C.FIND_HOSTILE_CREEPS).length > 0) {
+			if ((structure.hits ?? 0) <= 0) {
+				return C.ERR_INVALID_TARGET;
+			} else if (structure.room.find(C.FIND_HOSTILE_CREEPS).length > 0) {
 				return C.ERR_BUSY;
 			}
 		});

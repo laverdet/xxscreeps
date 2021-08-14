@@ -68,7 +68,7 @@ try {
 			throw new Error('End of message stream');
 		}();
 	}();
-	await getServiceChannel(shard).publish({ type: 'processorInitialized' })
+	await getServiceChannel(shard).publish({ type: 'processorInitialized' });
 	const firstTime = await waitForSync;
 
 	// Initialize processor queue, or sync up with existing processors
