@@ -3,6 +3,7 @@ const consts = {
 	extension: 3000,
 	road: 300,
 	constructedWall: 1,
+	container: 5000,
 	rampart: 1,
 	link: 5000,
 	storage: 30000,
