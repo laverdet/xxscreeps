@@ -25,6 +25,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 		world: World;
 		player: (userId: string, task: (game: GameConstructor) => void) => Promise<void>;
 		tick: () => Promise<void>;
+		withRoom: (roomName: string, task: (room: Room) => void) => Promise<void>;
 	}) => Promise<void>) => {
 
 		const { db, shard, world } = await instantiateTestShard();
@@ -49,6 +50,11 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 				db,
 				shard,
 				world,
+
+				async withRoom(roomName, task) {
+					const room = await shard.loadRoom(roomName, shard.time);
+					runOneShot(world, room, shard.time, '', () => task(room));
+				},
 
 				async player(userId, task) {
 					// Fetch game state for player

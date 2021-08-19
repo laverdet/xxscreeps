@@ -80,7 +80,7 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 						const currentCost = costMatrix.get(x, y);
 						if (currentCost !== 0xff) {
 							const cost = object['#pathCost'];
-							if (cost !== undefined && cost < currentCost) {
+							if (cost !== undefined && (currentCost === 0 || cost < currentCost)) {
 								costMatrix.set(x, y, cost);
 							}
 						}
