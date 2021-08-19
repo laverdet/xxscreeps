@@ -78,7 +78,20 @@ export function dispatch(room: Room) {
 			mover,
 			// First priority is moving creeps who are *currently* on cells where more creeps want to
 			// move
-			movingInto: moves.get(toId(mover.pos.x, mover.pos.y))?.length ?? 0,
+			movingInto: function() {
+				const followers = moves.get(toId(mover.pos.x, mover.pos.y));
+				if (followers) {
+					if (followers.some(({ mover }) => mover.pos.isEqualTo(xx, yy))) {
+						// This strange special case non-recursively checks if another move is dependent on this
+						// one, and applies the maximum priority if so.
+						return 9;
+					} else {
+						return followers.length;
+					}
+				} else {
+					return 0;
+				}
+			}(),
 			// Second priority is the move/weight ratio, faster wins
 			power,
 		}));

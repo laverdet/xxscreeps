@@ -76,8 +76,9 @@ const intents = [
 
 	registerIntentProcessor(Creep, 'move', {}, (creep, context, direction: Direction) => {
 		if (CreepLib.checkMove(creep, direction) === C.OK) {
-			const power = CreepLib.calculateWeight(creep);
-			Movement.add(creep, power, direction);
+			const power = CreepLib.calculatePower(creep, C.MOVE, 1);
+			const weight = CreepLib.calculateWeight(creep);
+			Movement.add(creep, weight ? -weight / power : power, direction);
 			context.didUpdate();
 		}
 	}),

@@ -151,6 +151,7 @@ const intents = [
 
 		// Add new creep to room objects
 		const creep = createCreep(spawn.pos, body, name, me);
+		creep['#ageTime'] = 0;
 		spawn.room['#insertObject'](creep);
 
 		// Set spawning information
