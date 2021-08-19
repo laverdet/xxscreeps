@@ -2,6 +2,7 @@ import type { Database, Shard } from 'xxscreeps/engine/db';
 import type { GameConstructor } from 'xxscreeps/game';
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/room';
+import type { World } from 'xxscreeps/game/map';
 import assert from 'assert';
 import * as Fn from 'xxscreeps/utility/functional';
 import { flushUsers } from 'xxscreeps/game/room/room';
@@ -21,6 +22,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 	return async(body: (refs: {
 		db: Database;
 		shard: Shard;
+		world: World;
 		player: (userId: string, task: (game: GameConstructor) => void) => Promise<void>;
 		tick: () => Promise<void>;
 	}) => Promise<void>) => {
@@ -46,6 +48,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 			await body({
 				db,
 				shard,
+				world,
 
 				async player(userId, task) {
 					// Fetch game state for player
