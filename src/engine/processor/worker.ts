@@ -1,5 +1,6 @@
 import type { Room } from 'xxscreeps/game/room/room';
 import * as Fn from 'xxscreeps/utility/functional';
+import { importMods } from 'xxscreeps/config/mods';
 import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor';
@@ -9,9 +10,9 @@ import { hooks } from 'xxscreeps/engine/processor/symbols';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { makeBasicResponderHost } from 'xxscreeps/utility/responder';
 import { World } from 'xxscreeps/game/map';
-
-import 'xxscreeps/config/mods/import/driver';
-import 'xxscreeps/config/mods/import/processor';
+import 'xxscreeps/config/mods/import/game';
+await importMods('driver');
+await importMods('processor');
 
 export type ProcessorRequest = LoadWorldRequest | InitializeRequest | ProcessRequest | FinalizeRequest;
 

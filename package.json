@@ -16,7 +16,7 @@
     "node": ">=16.0.0"
   },
   "exports": {
-    "./config/mods/import/*": "./dist/config/mods.resolved/*",
+    "./config/mods/import/*": "./dist/config/mods.static/*",
     "./*": "./dist/*"
   },
   "dependencies": {

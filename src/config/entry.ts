@@ -82,6 +82,7 @@ if (missingFlags.length) {
 			backend: './dist/backend/server.js',
 			processor: './dist/engine/service/processor.js',
 			runner: './dist/engine/service/runner.js',
+			test: './dist/test/run.js',
 		};
 
 		// Resolve entry script

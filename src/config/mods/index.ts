@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import { configDefaults } from 'xxscreeps/config/config';
 import config, { configPath } from 'xxscreeps/config/raw';
 
-type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'processor' | 'storage';
+type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'processor' | 'storage' | 'test';
 export type Manifest = {
 	dependencies?: string[];
 	provides: Provide | Provide[] | null;
@@ -47,15 +47,17 @@ async function resolve(specifiers: string[]) {
 	}
 }
 await resolve(config.mods ?? configDefaults.mods);
-export { mods };
 
 // Ensure module imports are up to date on the filesystem
-try {
-	const cached = await import(`${'./manifest.cached'}`);
-	if (cached.json !== JSON.stringify(mods) || cached.version !== version) {
-		throw new Error('Out of date');
-	}
-} catch (err) {
+const cached = await async function() {
+	try {
+		return await import(`${'./manifest.cached'}`) as {
+			json: string;
+			version: number;
+		};
+	} catch (err) {}
+}();
+if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 	// Given a specifier fragment this return all mods which export it
 	const resolveWithinMods = async(specifier: string) => {
 		const resolved = await Promise.all(mods.map(async({ provides, url }) => {
@@ -67,7 +69,7 @@ try {
 	};
 
 	// Create output directory
-	const outDir = new URL('../mods.resolved/', import.meta.url);
+	const outDir = new URL('../mods.static/', import.meta.url);
 	try {
 		await fs.mkdir(outDir);
 	} catch (err) {
@@ -78,11 +80,16 @@ try {
 
 	// Save mod bundles
 	await Promise.all([
-		...[ 'backend', 'driver', 'game', 'processor', 'storage' ].map(async specifier => {
-			const mods = await resolveWithinMods(specifier);
+		async function() {
+			const mods = await resolveWithinMods('constants');
+			const content = mods.map(mod => `export * from ${JSON.stringify(mod)};\n`).join('');
+			await fs.writeFile(new URL('constants.js', outDir), content, 'utf8');
+		}(),
+		async function() {
+			const mods = await resolveWithinMods('game');
 			const content = mods.map(mod => `import ${JSON.stringify(mod)};\n`).join('');
-			await fs.writeFile(new URL(`${specifier}.js`, outDir), content, 'utf8');
-		}),
+			await fs.writeFile(new URL('game.js', outDir), content, 'utf8');
+		}(),
 		async function() {
 			// Merge JSON schema
 			const schemaOutput = new URL('config.schema.json', outDir);
@@ -111,11 +118,6 @@ try {
 				`export default [ ${inputs.map((mod, ii) => `Config${ii}`).join(', ')} ];\n`;
 			await fs.writeFile(new URL('config.js', outDir), content, 'utf8');
 		}(),
-		async function() {
-			const mods = await resolveWithinMods('constants');
-			const content = mods.map(mod => `export * from ${JSON.stringify(mod)};\n`).join('');
-			await fs.writeFile(new URL('constants.js', outDir), content, 'utf8');
-		}(),
 	]);
 
 	// Save mod inclusion manifest
@@ -123,4 +125,13 @@ try {
 		new URL('./manifest.cached.js', import.meta.url), `
 			export const json = ${JSON.stringify(JSON.stringify(mods))}
 			export const version = ${version};\n`, 'utf8');
+}
+
+export { mods };
+export async function importMods(provides: Provide) {
+	for (const mod of mods) {
+		if (mod.provides.includes(provides)) {
+			await import(await import.meta.resolve!(`./${provides}`, `${mod.url}`));
+		}
+	}
 }

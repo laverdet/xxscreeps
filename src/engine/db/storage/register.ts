@@ -35,9 +35,10 @@ export function registerStorageProvider<Dispositions extends string>(
 
 export async function connectToProvider<Disposition extends string>(fragment: string, disposition: Disposition):
 Promise<readonly [ Effect, DispositionToProvider<Disposition> ]> {
+	const { importMods } = await import('xxscreeps/config/mods');
 	const [ { configPath } ] = await Promise.all([
 		import('xxscreeps/config'),
-		import('xxscreeps/config/mods/import/storage'),
+		importMods('storage'),
 	]);
 	const url = new URL(fragment, configPath);
 	const provider = providers.get(url.protocol + disposition);

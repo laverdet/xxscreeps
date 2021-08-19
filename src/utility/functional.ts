@@ -180,6 +180,10 @@ export function *map<Type, Result>(iterable: Iterable<Type>, callback: (value: T
 	}
 }
 
+export function mapAsync<Type, Result>(iterable: Iterable<Type>, callback: (value: Type) => Promise<Result>) {
+	return Promise.all(map(iterable, callback));
+}
+
 // If you just want the smallest element of an array it's senseless to sort the whole thing and take
 // array[0]. You can just run through once and find that element in linear time
 export function minimum(iterable: Iterable<number>): number | undefined;

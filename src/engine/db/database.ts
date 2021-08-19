@@ -15,8 +15,11 @@ export class Database {
 		public readonly pubsub: PubSubProvider,
 	) {}
 
-	static async connect() {
-		const info = config.database;
+	static async connect(info: {
+		blob: string;
+		data: string;
+		pubsub: string;
+	} = config.database) {
 		const [ effect, [ blob, data, pubsub ] ] = await acquire(
 			connectToProvider(info.blob, 'blob'),
 			connectToProvider(info.data, 'keyval'),
