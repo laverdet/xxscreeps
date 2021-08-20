@@ -1,17 +1,20 @@
 import * as C from 'xxscreeps/game/constants';
 import * as Container from './container';
 import * as Resource from './resource';
+import { Store } from './store';
 import { registerGlobal } from 'xxscreeps/game';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { registerVariant } from 'xxscreeps/engine/schema';
 
-// Export `StructureContainer` & `Resource` to runtime globals
+// Export `StructureContainer`, `Resource` & `Store` to runtime globals
 registerGlobal(Container.StructureContainer);
 registerGlobal(Resource.Resource);
+registerGlobal(Store);
 declare module 'xxscreeps/game/runtime' {
 	interface Global {
 		Resource: typeof Resource.Resource;
 		StructureContainer: typeof Container.StructureContainer;
+		Store: typeof Store;
 	}
 }
 

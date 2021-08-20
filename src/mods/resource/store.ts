@@ -96,6 +96,8 @@ const shapeOpen = struct({
  */
 export class OpenStore extends withOverlay(Store, shapeOpen) {
 	#amount = 0;
+	/** @deprecated */
+	private _sum: number | undefined;
 
 	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
@@ -115,8 +117,13 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		return this['#capacity'];
 	}
 
-	getUsedCapacity() {
-		return this.#amount;
+	getUsedCapacity(resourceType?: ResourceType) {
+		if (resourceType) {
+			return this[resourceType] ?? 0;
+		} else {
+			// `_sum` added for compatibility with undocumented Screeps feature
+			return this._sum ??= this.#amount;
+		}
 	}
 
 	['#add'](type: ResourceType, amount: number) {
