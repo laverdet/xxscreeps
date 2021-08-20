@@ -11,8 +11,6 @@ import { flushUsers } from 'xxscreeps/game/room/room';
 import { PreTick, Tick, intentProcessorGetters, roomTickProcessors } from './symbols';
 import { acquireFinalIntentsForRoom, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model';
 import { getOrSet } from 'xxscreeps/utility/utility';
-import 'xxscreeps/config/mods/import/game';
-import 'xxscreeps/config/mods/import/processor';
 
 // Register per-tick per-room processor
 export function registerRoomTickProcessor(tick: RoomTickProcessor) {

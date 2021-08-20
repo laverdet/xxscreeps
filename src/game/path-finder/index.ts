@@ -77,9 +77,12 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 					if (check(object)) {
 						costMatrix.set(x, y, 0xff);
 					} else if (!ignoreRoads) {
-						const cost = object['#pathCost'];
-						if (cost !== undefined && cost < costMatrix.get(x, y)) {
-							costMatrix.set(x, y, cost);
+						const currentCost = costMatrix.get(x, y);
+						if (currentCost !== 0xff) {
+							const cost = object['#pathCost'];
+							if (cost !== undefined && (currentCost === 0 || cost < currentCost)) {
+								costMatrix.set(x, y, cost);
+							}
 						}
 					}
 				}

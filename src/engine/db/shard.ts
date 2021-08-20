@@ -39,15 +39,25 @@ export class Shard {
 		if (!shard) {
 			throw new Error(`Unknown shard: ${shard}`);
 		}
+		return this.connectWith(db, shard);
+	}
+
+	static async connectWith(db: Database, info: {
+		name: string;
+		blob: string;
+		data: string;
+		pubsub: string;
+		scratch: string;
+	}) {
 		const [ effect, [ blob, data, pubsub, scratch ] ] = await acquire(
-			connectToProvider(shard.blob, 'blob'),
-			connectToProvider(shard.data, 'keyval'),
-			connectToProvider(shard.pubsub, 'pubsub'),
-			connectToProvider(shard.scratch, 'keyval'),
+			connectToProvider(info.blob, 'blob'),
+			connectToProvider(info.data, 'keyval'),
+			connectToProvider(info.pubsub, 'pubsub'),
+			connectToProvider(info.scratch, 'keyval'),
 		);
 		const channel = await new Channel<Message>(pubsub, 'channel/game').subscribe();
 		// Create instance (which subscribes to tick notification) and then read current info
-		const instance = new Shard(effect, db, name, blob, data, pubsub, scratch, channel);
+		const instance = new Shard(effect, db, info.name, blob, data, pubsub, scratch, channel);
 		const time = Number(await data.get('time'));
 		instance.time = Math.max(time, instance.time);
 		return instance;

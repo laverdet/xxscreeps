@@ -10,17 +10,19 @@ import { SortedSet } from './sorted-set';
 import { registerStorageProvider } from 'xxscreeps/engine/db/storage';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
-registerStorageProvider([ 'file', 'local' ], 'keyval', url =>
-	connect(`${url}`, LocalKeyValClient, LocalKeyValHost, async() => {
-		const payload = await async function() {
-			if (url.protocol === 'file:') {
-				try {
-					return await fs.readFile(url, 'utf8');
-				} catch {}
-			}
-		}();
-		return new LocalKeyValResponder(`${url}`, payload);
-	}));
+const provider = (url: URL) => connect(`${url}`, LocalKeyValClient, LocalKeyValHost, async() => {
+	const payload = await async function() {
+		if (url.protocol === 'file:') {
+			try {
+				return await fs.readFile(url, 'utf8');
+			} catch {}
+		}
+	}();
+	return new LocalKeyValResponder(`${url}`, payload);
+});
+
+registerStorageProvider([ 'file', 'local' ], 'keyval', provider);
+registerStorageProvider('local', 'blob', provider);
 
 type Value = Provider.Value;
 
@@ -53,8 +55,6 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 			return false;
 		} else if (options?.if === 'nx' && this.data.has(to)) {
 			return false;
-		} else if (this.data.has(to)) {
-			throw new Error(`"${to}" already exists`);
 		} else if (value instanceof Array) {
 			this.data.set(to, [ ...value ]);
 		} else if (value instanceof Map) {
@@ -83,7 +83,19 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		return value === undefined ? null : String(value);
 	}
 
-	set(key: string, value: Value | Readonly<Uint8Array>, options?: Provider.Set): any {
+	getBuffer(key: string) {
+		return this.data.get(key) ?? null;
+	}
+
+	async reqBuffer(key: string) {
+		const value = await this.getBuffer(key);
+		if (value === null) {
+			throw new Error(`"${key}" does not exist`);
+		}
+		return value;
+	}
+
+	set(key: string, value: Value | Readonly<Uint8Array>, options?: Provider.Set & Provider.SetBuffer): any {
 		if (
 			options?.if === 'nx' ? this.data.has(key) :
 			options?.if === 'xx' ? !this.data.has(key) : false

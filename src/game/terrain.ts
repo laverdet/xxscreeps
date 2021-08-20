@@ -1,4 +1,6 @@
 import type { BufferView } from 'xxscreeps/schema';
+import * as C from 'xxscreeps/game/constants';
+import * as Fn from 'xxscreeps/utility/functional';
 import { array, compose } from 'xxscreeps/schema';
 import { exchange } from 'xxscreeps/utility/utility';
 import { Room } from './room';
@@ -106,6 +108,17 @@ export function isBorder(xx: number, yy: number) {
 
 export function isNearBorder(xx: number, yy: number) {
 	return (xx + 2) % 50 < 4 || (yy + 2) % 50 < 4;
+}
+
+export function packExits(terrain: Terrain) {
+	const checkExit = (fn: (ii: number) => [ number, number ]) =>
+		Fn.some(Fn.range(1, 49), ii => terrain.get(...fn(ii)) !== C.TERRAIN_MASK_WALL);
+	const exits =
+		(checkExit(ii => [ ii, 0 ]) ? 1 : 0) |
+		(checkExit(ii => [ 49, ii ]) ? 2 : 0) |
+		(checkExit(ii => [ ii, 49 ]) ? 4 : 0) |
+		(checkExit(ii => [ 0, ii ]) ? 8 : 0);
+	return exits;
 }
 
 export const format = compose(array(625, 'uint8'), {

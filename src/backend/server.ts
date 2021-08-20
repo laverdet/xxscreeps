@@ -8,7 +8,7 @@ import ConditionalGet from 'koa-conditional-get';
 import Router from 'koa-router';
 import http from 'http';
 import config from 'xxscreeps/config';
-
+import { importMods } from 'xxscreeps/config/mods';
 import { getServiceChannel, handleInterrupt } from 'xxscreeps/engine/service';
 import { authentication } from './auth';
 import { BackendContext } from './context';
@@ -18,8 +18,8 @@ import { installSocketHandlers, installUpgradeHandlers } from './socket';
 import { hooks } from './symbols';
 
 import 'xxscreeps/config/mods/import/game';
-import 'xxscreeps/config/mods/import/processor';
-import 'xxscreeps/config/mods/import/backend';
+await importMods('backend');
+await importMods('processor');
 
 // Initialize services
 const backendContext = await BackendContext.connect();

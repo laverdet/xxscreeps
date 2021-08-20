@@ -362,6 +362,8 @@ export function create(pos: RoomPosition, parts: PartType[], name: string, owner
 		name,
 		store: OpenStore['#create'](calculateCarry(body)),
 	});
+	// age time is inaccurate, this will be reset in StructureSpawn code. This just helps with test scripts.
+	creep['#ageTime'] = Game.time + C.CREEP_LIFE_TIME;
 	creep['#user'] = owner;
 	return creep;
 }

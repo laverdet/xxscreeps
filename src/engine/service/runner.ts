@@ -2,6 +2,7 @@ import type { Effect } from 'xxscreeps/utility/types';
 import config from 'xxscreeps/config';
 import * as Async from 'xxscreeps/utility/async';
 import * as Timers from 'timers/promises';
+import { importMods } from 'xxscreeps/config/mods';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
@@ -9,7 +10,7 @@ import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
 import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from '.';
-import 'xxscreeps/config/mods/import/driver';
+await importMods('driver');
 const isEntry = checkIsEntry();
 
 // Interrupt handler

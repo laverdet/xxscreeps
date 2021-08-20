@@ -12,7 +12,7 @@ import config, { configPath } from 'xxscreeps/config';
 import { checkArguments } from 'xxscreeps/config/arguments';
 
 import { RoomPosition } from 'xxscreeps/game/position';
-import { TerrainWriter } from 'xxscreeps/game/terrain';
+import { TerrainWriter, packExits } from 'xxscreeps/game/terrain';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as C from 'xxscreeps/game/constants';
 
@@ -122,7 +122,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 	await fetch('.', 2);
 
 	// Write yaml content
-	const schema = await import.meta.resolve!('xxscreeps/config/mods.resolved/config.schema.json').catch(() => undefined);
+	const schema = await import.meta.resolve!('xxscreeps/config/mods.static/config.schema.json').catch(() => undefined);
 	const preamble = schema ? `# yaml-language-server: $schema=${schema}\n` : '';
 	const defaultConfig: any = {};
 	for (const modConfig of Configs) {
@@ -179,15 +179,8 @@ const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ r
 			writer.set(xx, yy, value > 2 ? 1 : value);
 		}
 	}
-	const checkExit = (fn: (ii: number) => [ number, number ]) =>
-		Fn.some(Fn.range(1, 49), ii => writer.get(...fn(ii)) !== C.TERRAIN_MASK_WALL);
-	const exits =
-		(checkExit(ii => [ ii, 0 ]) ? 1 : 0) |
-		(checkExit(ii => [ 49, ii ]) ? 2 : 0) |
-		(checkExit(ii => [ ii, 49 ]) ? 4 : 0) |
-		(checkExit(ii => [ 0, ii ]) ? 8 : 0);
 	return [ room as string, {
-		exits,
+		exits: packExits(terrain),
 		terrain: writer,
 	} ];
 }));
