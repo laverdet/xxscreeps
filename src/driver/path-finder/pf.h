@@ -340,7 +340,7 @@ namespace screeps {
 			open_closed_t<2500 * k_max_rooms> open_closed;
 			heap_t<pos_index_t, cost_t, 2500 * k_max_rooms> heap;
 			std::vector<goal_t> goals;
-			std::array<cost_t, 4> look_table = {obstacle, obstacle, obstacle, obstacle};
+			std::array<cost_t, 4> look_table = {{obstacle, obstacle, obstacle, obstacle}};
 			double heuristic_weight;
 			room_index_t max_rooms;
 			bool flee;
