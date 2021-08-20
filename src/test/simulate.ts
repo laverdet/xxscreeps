@@ -24,7 +24,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 		shard: Shard;
 		world: World;
 		player: (userId: string, task: (game: GameConstructor) => void) => Promise<void>;
-		tick: () => Promise<void>;
+		tick: (count?: number) => Promise<void>;
 		withRoom: (roomName: string, task: (room: Room) => void) => Promise<void>;
 	}) => Promise<void>) => {
 
@@ -72,34 +72,36 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 					}
 				},
 
-				async tick() {
-					// Initialize processor queue
-					const time = shard.time + 1;
-					const processorTime = await begetRoomProcessQueue(shard, time, time - 1);
-					assert.equal(time, processorTime);
-					const nextRoomInstances = new Map<string, Room>();
-					const contexts = new Map<string, RoomProcessor>();
+				async tick(count = 1) {
+					for (let ii = 0; ii < count; ++ii) {
+						// Initialize processor queue
+						const time = shard.time + 1;
+						const processorTime = await begetRoomProcessQueue(shard, time, time - 1);
+						assert.equal(time, processorTime);
+						const nextRoomInstances = new Map<string, Room>();
+						const contexts = new Map<string, RoomProcessor>();
 
-					// First phase
-					for await (const roomName of consumeSortedSet(shard.scratch, processRoomsSetKey(time), 0, Infinity)) {
-						const room = roomInstances.get(roomName) ?? await shard.loadRoom(roomName);
-						nextRoomInstances.set(roomName, room);
-						const context = new RoomProcessor(shard, world, room, time);
-						contexts.set(roomName, context);
-						for (const { userId, intents } of intentsByRoom.get(roomName) ?? []) {
-							context.saveIntents(userId, intents);
+						// First phase
+						for await (const roomName of consumeSortedSet(shard.scratch, processRoomsSetKey(time), 0, Infinity)) {
+							const room = roomInstances.get(roomName) ?? await shard.loadRoom(roomName);
+							nextRoomInstances.set(roomName, room);
+							const context = new RoomProcessor(shard, world, room, time);
+							contexts.set(roomName, context);
+							for (const { userId, intents } of intentsByRoom.get(roomName) ?? []) {
+								context.saveIntents(userId, intents);
+							}
+							await context.process();
 						}
-						await context.process();
+						roomInstances = nextRoomInstances;
+
+						// Second phase
+						await Promise.all(Fn.map(contexts.values(), context => context.finalize()));
+
+						// Increment time
+						await shard.data.set('time', time);
+						await shard.channel.publish({ type: 'tick', time });
+						shard.time = time;
 					}
-					roomInstances = nextRoomInstances;
-
-					// Second phase
-					await Promise.all(Fn.map(contexts.values(), context => context.finalize()));
-
-					// Increment time
-					await shard.data.set('time', time);
-					await shard.channel.publish({ type: 'tick', time });
-					shard.time = time;
 				},
 			});
 		} finally {

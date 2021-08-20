@@ -37,6 +37,25 @@ class Spawning extends withOverlay(BufferObject, spawningFormat) {
 	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name }
 	@enumerable get remainingTime() { return Math.max(0, this['#spawnTime'] - Game.time) }
 	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])! }
+
+	/**
+	 * Cancel spawning immediately. Energy spent on spawning is not returned.
+	 */
+	cancel() {
+		chainIntentChecks(
+			() => checkMyStructure(this.spawn, StructureSpawn),
+			() => intents.save(this.spawn, 'cancelSpawning'));
+	}
+
+	/**
+	 * Set desired directions where the creep should move when spawned.
+	 */
+	setDirections(directions: Direction[]) {
+		chainIntentChecks(
+			() => checkMyStructure(this.spawn, StructureSpawn),
+			() => checkDirections(directions) ? C.OK : C.ERR_INVALID_ARGS,
+			() => intents.save(this.spawn, 'setSpawnDirections', directions));
+	}
 }
 
 // `StructureSpawn` format
@@ -267,6 +286,15 @@ export function checkRenewCreep(spawn: StructureSpawn, creep: Creep) {
 		});
 }
 
+export function checkDirections(directions: Direction[] | null) {
+	return (
+		Array.isArray(directions) &&
+		directions.length > 0 &&
+		directions.length <= 8 &&
+		directions.every(dir => Number.isInteger(dir) && dir >= 1 && dir <= 8)
+	);
+}
+
 export function checkSpawnCreep(
 	spawn: StructureSpawn,
 	body: PartType[],
@@ -285,14 +313,8 @@ export function checkSpawnCreep(
 	}
 
 	// Check direction sanity
-	if (directions !== null) {
-		if (!Array.isArray(directions)) {
-			return C.ERR_INVALID_ARGS;
-		}
-		// Bail if out of range
-		if (directions.length === 0 || directions.some(dir => !Number.isInteger(dir) || dir < 1 || dir > 8)) {
-			return C.ERR_INVALID_ARGS;
-		}
+	if (directions !== null && !checkDirections(directions)) {
+		return C.ERR_INVALID_ARGS;
 	}
 
 	if (!spawn.my) {
