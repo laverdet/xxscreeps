@@ -96,10 +96,11 @@ const shapeOpen = struct({
  */
 export class OpenStore extends withOverlay(Store, shapeOpen) {
 	// Undocumented screeps property
-	private _sum = 0;
+	declare _sum: number;
 
 	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
+		Object.defineProperty(this, '_sum', { value: 0, writable: true });
 		for (const info of this['#resources']) {
 			this[info.type] = info.amount;
 			this._sum += info.amount;
@@ -110,10 +111,6 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		const instance = new OpenStore;
 		instance['#capacity'] = capacity;
 		return instance;
-	}
-
-	override ['#entries'](): Iterable<[ ResourceType, number ]> {
-		return Fn.filter(Object.entries(this), ([ type ]) => type !== '_sum') as never;
 	}
 
 	getCapacity() {
