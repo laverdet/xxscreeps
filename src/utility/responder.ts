@@ -130,7 +130,7 @@ export async function makeBasicResponderHost<Type>(url: string, implementation: 
 					id,
 					payload: await implementation(payload as Type),
 				}));
-			} catch (err) {
+			} catch (err: any) {
 				port.postMessage(staticCast<ResponseMessage>({
 					id,
 					payload: err.stack,

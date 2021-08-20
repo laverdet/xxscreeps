@@ -191,7 +191,7 @@ export class PlayerInstance {
 				]);
 				// Send payload off to runtime and execute user code
 				return await this.sandbox.run(payload as TickPayload);
-			} catch (err) {
+			} catch (err: any) {
 				console.error(err.stack);
 				this.stale = true;
 			}

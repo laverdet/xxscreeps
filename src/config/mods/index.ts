@@ -72,7 +72,7 @@ if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 	const outDir = new URL('../mods.static/', import.meta.url);
 	try {
 		await fs.mkdir(outDir);
-	} catch (err) {
+	} catch (err: any) {
 		if (err.code !== 'EEXIST') {
 			throw err;
 		}

@@ -87,7 +87,7 @@ export class NodejsSandbox implements Sandbox {
 			const payload = this.tick!(data);
 			payload.usage.cpu = Number(process.hrtime.bigint() - start) / 1e6;
 			return { result: 'success' as const, payload };
-		} catch (err) {
+		} catch (err: any) {
 			if (err.message.startsWith('Script execution timed out after')) {
 				return { result: 'timedOut' as const };
 			}

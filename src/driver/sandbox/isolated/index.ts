@@ -104,7 +104,7 @@ export class IsolatedSandbox implements Sandbox {
 			payload.usage.cpu = Number(totalTime - this.totalTime) / 1e6;
 			this.totalTime = totalTime;
 			return { result: 'success' as const, payload };
-		} catch (err) {
+		} catch (err: any) {
 			if (err.message === 'Script execution timed out.') {
 				return { result: 'timedOut' as const, stack: err.stack };
 			} else if (err.message === 'Isolate is disposed') {

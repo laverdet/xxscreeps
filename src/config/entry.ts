@@ -100,7 +100,7 @@ if (missingFlags.length) {
 					// Resolve as file from cwd
 					return await import.meta.resolve!(join(process.cwd(), specifier), import.meta.url);
 				}
-			} catch (error) {
+			} catch (error: any) {
 				if (error.code !== 'ERR_MODULE_NOT_FOUND') {
 					throw error;
 				}
