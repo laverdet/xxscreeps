@@ -68,8 +68,8 @@ export abstract class Store extends BufferObjectWithResourcesType {
 		return this.getCapacity(resourceType)! - this.getUsedCapacity(resourceType)!;
 	}
 
-	['#entries']() {
-		return Object.entries(this) as [ ResourceType, number ][];
+	['#entries'](): Iterable<[ ResourceType, number ]> {
+		return Object.entries(this) as never;
 	}
 
 	private [Symbol.for('nodejs.util.inspect.custom')]() {
@@ -95,15 +95,14 @@ const shapeOpen = struct({
  * A `Store` which can hold any resource and shares capacity between them.
  */
 export class OpenStore extends withOverlay(Store, shapeOpen) {
-	#amount = 0;
-	/** @deprecated */
-	private _sum: number | undefined;
+	// Undocumented screeps property
+	private _sum = 0;
 
 	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
 		for (const info of this['#resources']) {
 			this[info.type] = info.amount;
-			this.#amount += info.amount;
+			this._sum += info.amount;
 		}
 	}
 
@@ -111,6 +110,10 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		const instance = new OpenStore;
 		instance['#capacity'] = capacity;
 		return instance;
+	}
+
+	override ['#entries'](): Iterable<[ ResourceType, number ]> {
+		return Fn.filter(Object.entries(this), ([ type ]) => type !== '_sum') as never;
 	}
 
 	getCapacity() {
@@ -121,8 +124,7 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		if (resourceType) {
 			return this[resourceType] ?? 0;
 		} else {
-			// `_sum` added for compatibility with undocumented Screeps feature
-			return this._sum ??= this.#amount;
+			return this._sum;
 		}
 	}
 
@@ -140,7 +142,7 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 			});
 			this[type] = amount;
 		}
-		this.#amount += amount;
+		this._sum += amount;
 	}
 
 	['#subtract'](type: ResourceType, amount: number) {
@@ -161,7 +163,7 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		} else {
 			this[type] -= amount;
 		}
-		this.#amount -= amount;
+		this._sum -= amount;
 	}
 }
 

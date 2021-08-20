@@ -50,8 +50,7 @@ function recalculateBody(creep: Creep) {
 	const capacity = creep.store['#capacity'] = calculateCarry(creep.body);
 	let overflow = creep.store.getUsedCapacity() - capacity;
 	if (overflow > 0) {
-		const entries = creep.store['#entries']();
-		for (const [ type, amount ] of entries) {
+		for (const [ type, amount ] of creep.store['#entries']()) {
 			const drop = Math.min(amount, overflow);
 			creep.store['#subtract'](type, drop);
 			dropResource(creep.pos, type, drop);
