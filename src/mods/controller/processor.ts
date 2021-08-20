@@ -50,7 +50,7 @@ function updateRoomStatus(room: Room, level: number, userId: string | null | und
 	room['#user'] = userId ?? null;
 	room['#flushObjects']();
 	for (const object of room['#objects']) {
-		object['#roomStatusDidChange'](1, userId);
+		object['#roomStatusDidChange'](level, userId);
 	}
 }
 
