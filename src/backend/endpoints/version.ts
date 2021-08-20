@@ -12,6 +12,10 @@ export const VersionEndpoint: Endpoint = {
 			useNativeAuth: false,
 			users: 1,
 			serverData: {
+				features: [
+					{ name: 'auth', version: 1 },
+					{ name: 'official-like', version: 1 },
+				],
 				customObjectTypes: {},
 				renderer: {
 					resources: {},
