@@ -34,6 +34,7 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 		object.pos = new RoomPosition(xx, yy, room.name);
 		object['#posId'] = object.pos['#id'];
 		fn?.(metadata);
+		room['#insertObject'](object);
 	};
 
 	for (const [ yy, line ] of info.layout.entries()) {
@@ -77,6 +78,7 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 			}
 		}
 	}
+	room['#flushObjects']();
 	return { room, terrain };
 });
 

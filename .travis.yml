@@ -1,0 +1,15 @@
+os: linux
+dist: xenial
+language: node_js
+node_js: 16
+
+install:
+  - npm install
+  - npm run build
+
+script:
+  - npm run eslint
+  - npm run test
+
+notifications:
+  email: false

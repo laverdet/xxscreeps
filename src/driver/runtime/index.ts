@@ -128,7 +128,7 @@ export function tick(data: TickPayload) {
 					}
 				}
 			}());
-		} catch (err) {
+		} catch (err: any) {
 			const lines: string[] = err.stack.split(/\n/g);
 			const index = lines.findIndex(line => line.includes('thisIsWhereThePlayerCodeStarts'));
 			console.error((index === -1 ? lines : lines.slice(0, index)).join('\n'));
@@ -152,7 +152,7 @@ export function tick(data: TickPayload) {
 				if (payload.echo) {
 					print(0, inspect(result, { colors: true }), true);
 				}
-			} catch (err) {
+			} catch (err: any) {
 				if (payload.ack) {
 					const ack = tickResult.evalAck ??= [];
 					ack.push({

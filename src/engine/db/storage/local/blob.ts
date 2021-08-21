@@ -206,7 +206,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 				if (!this.knownPaths.has(dirname)) {
 					try {
 						await fs.mkdir(dirname, { recursive: true });
-					} catch (err) {
+					} catch (err: any) {
 						if (err.code !== 'EEXIST') {
 							throw err;
 						}

@@ -13,8 +13,8 @@ import { ALL_DIRECTIONS } from 'xxscreeps/game/direction';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { assign } from 'xxscreeps/utility/utility';
 import { StructureExtension } from './extension';
-import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn';
-import { OwnedStructure } from 'xxscreeps/mods/structure/structure';
+import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkDirections, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn';
+import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/structure/structure';
 import { StructureController } from 'xxscreeps/mods/controller/controller';
 import { saveAction } from 'xxscreeps/game/object';
 import { createRuin } from 'xxscreeps/mods/structure/ruin';
@@ -90,6 +90,16 @@ const intents = [
 		}
 	}),
 
+	registerIntentProcessor(StructureSpawn, 'cancelSpawning', {}, (spawn, context) => {
+		const spawning = spawn.spawning;
+		if (checkMyStructure(spawn, StructureSpawn) === C.OK && spawning) {
+			const creep = Game.getObjectById(spawning['#spawningCreepId'])!;
+			spawn.room['#removeObject'](creep);
+			spawn.spawning = null;
+			context.didUpdate();
+		}
+	}),
+
 	registerIntentProcessor(StructureSpawn, 'recycleCreep', {}, (spawn, context, id: string) => {
 		const creep = Game.getObjectById<Creep>(id)!;
 		if (checkRecycleCreep(spawn, creep) === C.OK) {
@@ -105,6 +115,14 @@ const intents = [
 			saveAction(creep, 'healed', spawn.pos);
 			consumeEnergy(spawn, calculateRenewCost(creep));
 			creep['#ageTime'] += calculateRenewAmount(creep);
+			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(StructureSpawn, 'setSpawnDirections', {}, (spawn, context, directions: Direction[]) => {
+		const spawning = spawn.spawning;
+		if (checkMyStructure(spawn, StructureSpawn) === C.OK && checkDirections(directions) && spawning) {
+			spawning.directions = directions;
 			context.didUpdate();
 		}
 	}),
