@@ -180,7 +180,7 @@ const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ r
 		}
 	}
 	return [ room as string, {
-		exits: packExits(terrain),
+		exits: packExits(writer),
 		terrain: writer,
 	} ];
 }));
