@@ -9,13 +9,15 @@ import { flushUsers } from 'xxscreeps/game/room/room';
 import { begetRoomProcessQueue, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { consumeSortedSet } from 'xxscreeps/engine/db/async';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room';
-import { GameState, runForUser, runOneShot } from 'xxscreeps/game';
+import { GameState, initializeGameEnvironment, runForUser, runOneShot } from 'xxscreeps/game';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { instantiateTestShard } from 'xxscreeps/test/import';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor';
 import { importMods } from 'xxscreeps/config/mods';
 
+import 'xxscreeps/config/mods/import/game';
 await importMods('processor');
+initializeGameEnvironment();
 initializeIntentConstraints();
 
 export function simulate(rooms: Record<string, (room: Room) => void>) {

@@ -9,7 +9,9 @@ import { consumeSet } from 'xxscreeps/engine/db/async';
 import { hooks } from 'xxscreeps/engine/processor/symbols';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { makeBasicResponderHost } from 'xxscreeps/utility/responder';
+import { initializeGameEnvironment } from 'xxscreeps/game';
 import { World } from 'xxscreeps/game/map';
+
 import 'xxscreeps/config/mods/import/game';
 await importMods('driver');
 await importMods('processor');
@@ -36,6 +38,7 @@ type FinalizeRequest = {
 
 // Hooks
 const refreshRoom = hooks.makeMapped('refreshRoom');
+initializeGameEnvironment();
 initializeIntentConstraints();
 
 // Per-tick bookkeeping handles

@@ -3,8 +3,10 @@ import type { ResourceType } from './resource';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
-import { compose, declare, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
+import { compose, declare, makeReader, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
+import { getLayout } from 'xxscreeps/schema/layout';
 import { resourceEnumFormat } from './resource';
+import { hooks } from 'xxscreeps/game';
 
 export type WithStore = Record<'store', Store>;
 
@@ -16,7 +18,14 @@ export const singleStoreFormat = <Resource extends ResourceType = typeof C.RESOU
 
 // Make `Store` indexable on any `ResourceType`
 const BufferObjectWithResourcesType = withOverlay(BufferObject,
-	withType<Partial<Record<ResourceType, number>>>('int8'));
+	withType<Record<ResourceType, number>>('int8'));
+
+// Set up default value for all resources on `Store`
+hooks.register('environment', () => {
+	for (const resourceType of C.RESOURCES_ALL) {
+		Object.defineProperty(Store.prototype, resourceType, { value: 0, writable: true });
+	}
+});
 
 /**
  * An object that can contain resources in its cargo.
@@ -39,8 +48,6 @@ const BufferObjectWithResourcesType = withOverlay(BufferObject,
  * ```
  */
 export abstract class Store extends BufferObjectWithResourcesType {
-	energy = 0;
-
 	abstract ['#add'](type: ResourceType, amount: number): void;
 	abstract ['#subtract'](type: ResourceType, amount: number): void;
 
@@ -113,13 +120,13 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		return instance;
 	}
 
-	getCapacity() {
+	getCapacity(_resourceType?: ResourceType) {
 		return this['#capacity'];
 	}
 
 	getUsedCapacity(resourceType?: ResourceType) {
 		if (resourceType) {
-			return this[resourceType] ?? 0;
+			return this[resourceType];
 		} else {
 			return this._sum;
 		}
@@ -152,13 +159,9 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		if ((info.amount -= amount) === 0) {
 			resources[ii] = resources[resources.length - 1];
 			resources.pop();
-			if (type === C.RESOURCE_ENERGY) {
-				this[type] = 0;
-			} else {
-				delete this[type];
-			}
+			delete this[type];
 		} else {
-			this[type] -= amount;
+			this[type]! -= amount;
 		}
 		this._sum -= amount;
 	}
@@ -177,6 +180,7 @@ type StorageRecord = Record<ResourceType, number>;
 
 /**
  * A `Store` which can only hold a certain amount of each resource.
+ * @deprecated Remove schema hack!
  */
 export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 	constructor(view?: BufferView, offset?: number) {
@@ -197,7 +201,6 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 				type: type as ResourceType,
 			};
 			instance['#resources'].push(info);
-			instance[type as ResourceType] = 0;
 		}
 		return instance;
 	}
@@ -207,7 +210,11 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 	}
 
 	getUsedCapacity(resourceType?: ResourceType) {
-		return this[resourceType!] ?? null;
+		if (resourceType) {
+			return this[resourceType];
+		} else {
+			return null;
+		}
 	}
 
 	['#add'](type: ResourceType, amount: number) {
@@ -218,16 +225,15 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 	['#subtract'](type: ResourceType, amount: number) {
 		const info = this['#resources'].find(info => info.type === type)!;
 		if ((info.amount -= amount) === 0) {
-			if (type === C.RESOURCE_ENERGY) {
-				this[type] = 0;
-			} else {
-				delete this[type];
-			}
+			delete this[type];
 		} else {
 			this[type] = info.amount;
 		}
 	}
 }
+// TODO: This is needed to initialize the getters of the unused store implementation, just for
+// testing
+makeReader({ ...getLayout(restrictedStoreFormat, new Map), version: 0 });
 
 const shapeSingle = struct({
 	'#amount': 'int32',
@@ -241,12 +247,16 @@ const shapeSingle = struct({
 export class SingleStore<Type extends ResourceType> extends withOverlay(Store, shapeSingle) {
 	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
-		this[this['#type']] = this['#amount'];
+		if (this['#amount'] > 0) {
+			this[this['#type']] = this['#amount'];
+		}
 	}
 
 	static ['#create']<Type extends ResourceType>(type: Type, capacity: number, amount = 0) {
 		const instance = new SingleStore<Type>();
-		instance[type] = amount;
+		if (amount > 0) {
+			instance[type] = amount;
+		}
 		instance['#amount'] = amount;
 		instance['#capacity'] = capacity;
 		instance['#type'] = type;
@@ -266,7 +276,11 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 	getUsedCapacity(resourceType: Type): number;
 	getUsedCapacity(resourceType?: ResourceType): number | null;
 	getUsedCapacity(resourceType?: Type): number | null {
-		return this[resourceType!] ?? null;
+		if (resourceType) {
+			return this[resourceType];
+		} else {
+			return null;
+		}
 	}
 
 	['#add'](type: ResourceType, amount: number) {
@@ -274,7 +288,12 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 	}
 
 	['#subtract'](type: ResourceType, amount: number) {
-		this[type] = this['#amount'] -= amount;
+		const value = this['#amount'] -= amount;
+		if (value === 0) {
+			delete this[type];
+		} else {
+			this[type] = value;
+		}
 	}
 }
 

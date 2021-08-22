@@ -1,47 +1,82 @@
+import type { Store } from './store';
 import * as C from 'xxscreeps/game/constants';
-import { OpenStore } from './store';
-import { assert, describe, test } from 'xxscreeps/test';
+import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store';
+import { assert, describe, reconstructor, test } from 'xxscreeps/test';
 
-describe('Open store', () => {
-	const store = OpenStore['#create'](100);
+const keys = (object: {}) => [ ...function *() {
+	for (const key in object) {
+		yield key;
+	}
+}() ];
 
-	test('empty', () => {
-		assert.deepEqual(
-			[ ...Object.entries(store) ],
-			[ [ C.RESOURCE_ENERGY, 0 ] ]);
-		assert.strictEqual(store.getFreeCapacity(), 100);
-		assert.strictEqual(store.getUsedCapacity(), 0);
-		assert.strictEqual(store.getUsedCapacity(C.RESOURCE_ENERGY), 0);
-		assert.strictEqual(store.getUsedCapacity(C.RESOURCE_CATALYST), 0);
-		assert.strictEqual(store[C.RESOURCE_ENERGY], 0);
-		assert.strictEqual(store[C.RESOURCE_CATALYST], undefined);
-	});
+describe('Store', () => {
+	const types: [ string, any, () => Store][] = [
+		[ 'Open store', openStoreFormat, () => OpenStore['#create'](100) ],
+		[ 'Restricted store', restrictedStoreFormat, () => RestrictedStore['#create']({ [C.RESOURCE_ENERGY]: 100 }) ],
+		[ 'Single store', singleStoreFormat, () => SingleStore['#create'](C.RESOURCE_ENERGY, 100) ],
+	];
 
-	test('add', () => {
-		store['#add'](C.RESOURCE_ENERGY, 10);
-		store['#add'](C.RESOURCE_CATALYST, 10);
-		assert.deepEqual(
-			[ ...Object.entries(store) ],
-			[ [ C.RESOURCE_ENERGY, 10 ], [ C.RESOURCE_CATALYST, 10 ] ]);
-		assert.strictEqual(store.getFreeCapacity(), 80);
-		assert.strictEqual(store.getUsedCapacity(), 20);
-		assert.strictEqual(store.getUsedCapacity(C.RESOURCE_ENERGY), 10);
-		assert.strictEqual(store.getUsedCapacity(C.RESOURCE_CATALYST), 10);
-		assert.strictEqual(store[C.RESOURCE_ENERGY], 10);
-		assert.strictEqual(store[C.RESOURCE_CATALYST], 10);
-	});
+	for (const [ label, format, create ] of types) {
+		describe(`Common: ${label}`, () => {
+			const reconstruct = reconstructor(format);
+			test('resources are 0', () => {
+				const store = create();
+				C.RESOURCES_ALL.forEach(type => assert.strictEqual(store[type], 0));
+			});
 
-	test('reset', () => {
-		store['#subtract'](C.RESOURCE_ENERGY, 10);
-		store['#subtract'](C.RESOURCE_CATALYST, 10);
-		assert.deepEqual(
-			[ ...Object.entries(store) ],
-			[ [ C.RESOURCE_ENERGY, 0 ] ]);
-		assert.strictEqual(store.getFreeCapacity(), 100);
-		assert.strictEqual(store.getUsedCapacity(), 0);
-		assert.strictEqual(store.getUsedCapacity(C.RESOURCE_ENERGY), 0);
-		assert.strictEqual(store.getUsedCapacity(C.RESOURCE_CATALYST), 0);
-		assert.strictEqual(store[C.RESOURCE_ENERGY], 0);
-		assert.strictEqual(store[C.RESOURCE_CATALYST], undefined);
-	});
+			test('empty resources are non-enumerable', () => {
+				const store = create();
+				assert.deepStrictEqual(keys(store), []);
+			});
+
+			test('enumerable resources', () => {
+				const store = create();
+				store['#add'](C.RESOURCE_ENERGY, 10);
+				assert.deepStrictEqual(keys(store), [ C.RESOURCE_ENERGY ]);
+				assert.deepStrictEqual(keys(reconstruct(store)), [ C.RESOURCE_ENERGY ]);
+				store['#subtract'](C.RESOURCE_ENERGY, 10);
+				assert.deepStrictEqual(keys(store), []);
+				assert.deepStrictEqual(keys(reconstruct(store)), []);
+			});
+
+			test('used capacity', () => {
+				const store = create();
+				assert.strictEqual(store.getUsedCapacity(C.RESOURCE_ENERGY), 0);
+				store['#add'](C.RESOURCE_ENERGY, 10);
+				assert.strictEqual(store.getUsedCapacity(C.RESOURCE_ENERGY), 10);
+				assert.strictEqual(reconstruct(store).getUsedCapacity(C.RESOURCE_ENERGY), 10);
+				store['#subtract'](C.RESOURCE_ENERGY, 10);
+				assert.strictEqual(store.getUsedCapacity(C.RESOURCE_ENERGY), 0);
+				assert.strictEqual(reconstruct(store).getUsedCapacity(C.RESOURCE_ENERGY), 0);
+			});
+		});
+
+		test('Open store', () => {
+			const store = OpenStore['#create'](100);
+			assert.strictEqual(store.getCapacity(), 100);
+			assert.strictEqual(store.getCapacity(C.RESOURCE_ENERGY), 100);
+			assert.strictEqual(store.getCapacity(C.RESOURCE_POWER), 100);
+			assert.strictEqual(store.getUsedCapacity(), 0);
+			store['#add'](C.RESOURCE_ENERGY, 10);
+			assert.strictEqual(store.getUsedCapacity(), 10);
+			store['#subtract'](C.RESOURCE_ENERGY, 10);
+			assert.strictEqual(store.getUsedCapacity(), 0);
+		});
+
+		test('Restricted store', () => {
+			const store = RestrictedStore['#create']({ [C.RESOURCE_ENERGY]: 100 });
+			assert.strictEqual(store.getCapacity(), null);
+			assert.strictEqual(store.getCapacity(C.RESOURCE_ENERGY), 100);
+			assert.strictEqual(store.getCapacity(C.RESOURCE_POWER), null);
+			assert.strictEqual(store.getUsedCapacity(), null);
+		});
+
+		test('Single store', () => {
+			const store = SingleStore['#create'](C.RESOURCE_ENERGY, 100);
+			assert.strictEqual(store.getCapacity(), null);
+			assert.strictEqual(store.getCapacity(C.RESOURCE_ENERGY), 100);
+			assert.strictEqual(store.getCapacity(C.RESOURCE_POWER), null);
+			assert.strictEqual(store.getUsedCapacity(), null);
+		});
+	}
 });

@@ -4,7 +4,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as Code from 'xxscreeps/engine/db/user/code-schema';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import { inspect } from 'util';
-import { Game, GameState, hooks, runForPlayer, userInfo } from 'xxscreeps/game';
+import { Game, GameState, hooks, initializeGameEnvironment, runForPlayer, userInfo } from 'xxscreeps/game';
 import { World } from 'xxscreeps/game/map';
 import { detach } from 'xxscreeps/schema/buffer-object';
 import { setupConsole } from './console';
@@ -82,6 +82,7 @@ export function initialize(compiler: Compiler, evaluate: Evaluate, printFn: Prin
 	world = new World(data.shardName, data.terrainBlob);
 
 	// Invoke runtime initialization hooks
+	initializeGameEnvironment();
 	hooksComposed.initialize(data);
 	hooksComposed.initialize = () => {};
 
