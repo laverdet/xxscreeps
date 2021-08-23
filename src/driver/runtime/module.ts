@@ -225,7 +225,7 @@ function splitLocator(url: string): [ string, string ] {
 function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 
 	// Create `require` factory
-	const cache = new Map<string, any>();
+	const cache = new Map<string, null | { error?: any; exports?: any }>();
 	const requireFrom = (referrer?: string) => (specifier: string) => {
 		// Resolve and check for existing or pending module
 		const url = loader.resolve(specifier, referrer);
@@ -233,8 +233,10 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 		if (cached !== undefined) {
 			if (cached === null) {
 				throw new Error(`Circular reference to module: ${specifier}`);
+			} else if (cached.error) {
+				throw cached.error;
 			}
-			return cached;
+			return cached.exports;
 		}
 		const content = loader.compile(url);
 		if (content === undefined) {
@@ -247,19 +249,21 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 				const module = {
 					exports: {} as any,
 				};
-				const moduleFunction = evaluate(`(function(require,module,exports){${content}\n})`, url);
-				const run = () => moduleFunction.apply(module, [ requireFrom(url), module, module.exports ]);
-				try {
-					run();
-				} catch (err) {
-					cache.delete(url);
-					throw err;
-				}
+				const run = function() {
+					try {
+						const moduleFunction = evaluate(`(function(require,module,exports){${content}\n})`, url);
+						const run = () => moduleFunction.apply(module, [ requireFrom(url), module, module.exports ]);
+						run();
+						return run;
+					} catch (error) {
+						cache.set(url, { error });
+						throw error;
+					}
+				}();
 				if (url === 'main' && module.exports.loop === undefined) {
 					// If user doesn't have `loop` it means the first tick already run. Simulate a proper `loop`
 					// method which runs the second time this is called.
-					const loop = () => run();
-					module.exports.loop = () => module.exports.loop = loop;
+					module.exports.loop = run;
 				}
 				return module.exports;
 			} else {
@@ -270,7 +274,7 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 		}();
 
 		// Cache executed module and release code string (maybe it frees memory?)
-		cache.set(url, exports);
+		cache.set(url, { exports });
 		return exports;
 	};
 	return requireFrom();
