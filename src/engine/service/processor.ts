@@ -25,7 +25,7 @@ handleInterrupt(() => {
 // Connect to main & storage
 const db = await Database.connect();
 const shard = await Shard.connect(db, 'shard0');
-const worldBlob = await shard.blob.reqBuffer('terrain');
+const worldBlob = await shard.data.req('terrain', { blob: true });
 const processorSubscription = await getProcessorChannel(shard).subscribe();
 
 // Create processor workers

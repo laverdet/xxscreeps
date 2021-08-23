@@ -105,13 +105,11 @@ const users = {
 export async function instantiateTestShard() {
 	// Create fake database
 	const db = await Database.connect({
-		blob: 'local://blob',
 		data: 'local://data',
 		pubsub: 'local://pubsub',
 	});
 	const shard = await Shard.connectWith(db, {
 		name: 'shard0',
-		blob: 'local://shard-blob',
 		data: 'local://keyval',
 		pubsub: 'local://pubsub',
 		scratch: 'local://scratch',
@@ -122,7 +120,7 @@ export async function instantiateTestShard() {
 	// needed right now.
 	shard.time = 1;
 	await Promise.all([
-		shard.blob.set('terrain', terrain),
+		shard.data.set('terrain', terrain),
 		shard.data.set('time', shard.time),
 		shard.data.sadd('rooms', [ ...Fn.map(rooms, room => room.room.name) ]),
 		shard.scratch.set(processorTimeKey, shard.time),

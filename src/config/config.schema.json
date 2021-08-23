@@ -39,13 +39,8 @@
             ],
             "description": "Configuration for global database storage",
             "properties": {
-                "blob": {
-                    "default": "./screeps/db",
-                    "description": "Blob storage provider URI",
-                    "type": "string"
-                },
                 "data": {
-                    "default": "./screeps/db/data.json",
+                    "default": "./screeps/db",
                     "description": "Persistent storage provider URI",
                     "type": "string"
                 },
@@ -61,7 +56,6 @@
                 }
             },
             "required": [
-                "blob",
                 "data",
                 "pubsub"
             ],
@@ -172,16 +166,12 @@
             "type": "string"
         },
         "shards": {
-            "default": "`[ {\nname: 'shard0',\nblob: './screeps/shard0',\ndata: './screeps/shard0/data.json',\npubsub: 'local://shard0',\nscratch: 'local://shard0',\n} ]`",
+            "default": "`[ {\nname: 'shard0',\ndata: './screeps/shard0',\npubsub: 'local://shard0',\nscratch: 'local://shard0',\n} ]`",
             "description": "Configuration for shard-specific storage",
             "items": {
                 "defaultProperties": [
                 ],
                 "properties": {
-                    "blob": {
-                        "description": "Blob storage provider URI",
-                        "type": "string"
-                    },
                     "data": {
                         "description": "Persistent storage provider URI",
                         "type": "string"
@@ -200,7 +190,6 @@
                     }
                 },
                 "required": [
-                    "blob",
                     "data",
                     "name",
                     "pubsub",

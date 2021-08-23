@@ -2,14 +2,15 @@ import type { Effect } from 'xxscreeps/utility/types';
 import type { KeyvalScript } from './script';
 export type { KeyvalScript };
 
-export type AsBuffer = { buffer?: boolean };
+export type AsBlob = { blob?: boolean };
 export type Copy = { if?: 'nx' };
 export type Set = {
 	if?: 'nx' | 'xx';
 	get?: boolean;
 	px?: number;
-};
-export type SetBuffer = {
+	// Flag which announces that the client will retain and modify the buffer after invocation. A
+	// network provider would be able to simply write the buffer to the wire, but the default local
+	// provider needs to make a copy.
 	retain?: boolean;
 };
 export type HSet = {
@@ -27,22 +28,15 @@ export type ZRange = {
 	limit?: [ number, number ];
 };
 
-export type BlobProvider = {
-	copy(from: string, to: string, options?: Copy): Promise<boolean>;
-	del(key: string): Promise<boolean>;
-	getBuffer(key: string): Promise<Readonly<Uint8Array> | null>;
-	reqBuffer(key: string): Promise<Readonly<Uint8Array>>;
-	set(key: string, value: Readonly<Uint8Array>, options?: SetBuffer): Promise<void>;
-	flushdb(): Promise<void>;
-	save(): Promise<void>;
-};
-
 export type Value = number | string | Readonly<Uint8Array>;
 export type KeyValProvider = {
 	// keys / strings
 	copy(from: string, to: string, options?: Copy): Promise<boolean>;
 	del(key: string): Promise<boolean>;
-	get(key: string): Promise<string | null>;
+	get(key: string, options: { blob: true }): Promise<Readonly<Uint8Array> | null>;
+	get(key: string, options?: AsBlob): Promise<string | null>;
+	req(key: string, options: { blob: true }): Promise<Readonly<Uint8Array>>;
+	req(key: string, options?: AsBlob): Promise<string>;
 	set(key: string, value: Value, options: { get: true } & Set): Promise<string | null>;
 	set(key: string, value: Value, options: { if: string } & Set): Promise<undefined | null>;
 	set(key: string, value: Value, options?: Set): Promise<void>;
@@ -55,8 +49,8 @@ export type KeyValProvider = {
 	hget(key: string, field: string): Promise<string | null>;
 	hgetall(key: string): Promise<Record<string, string>>;
 	hincrBy(key: string, field: string, value: number): Promise<number>;
-	hmget(key: string, fields: string[], options: { buffer: true }): Promise<Record<string, Readonly<Uint8Array> | null>>;
-	hmget(key: string, fields: string[], options?: AsBuffer): Promise<Record<string, string | null>>;
+	hmget(key: string, fields: string[], options: { blob: true }): Promise<Record<string, Readonly<Uint8Array> | null>>;
+	hmget(key: string, fields: string[], options?: AsBlob): Promise<Record<string, string | null>>;
 	hset(key: string, field: string, value: Value, options?: HSet): Promise<boolean>;
 	hmset(key: string, fields: [ string, Value ][] | Record<string, Value>): Promise<void>;
 	// lists

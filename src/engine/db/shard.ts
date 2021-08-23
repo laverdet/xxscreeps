@@ -1,4 +1,4 @@
-import type { BlobProvider, KeyValProvider, PubSubProvider } from './storage';
+import type { KeyValProvider, PubSubProvider } from './storage';
 import type { Database } from './database';
 import type { Effect } from 'xxscreeps/utility/types';
 import type { Subscription } from './channel';
@@ -20,7 +20,6 @@ export class Shard {
 		private readonly effect: Effect,
 		public readonly db: Database,
 		public readonly name: string,
-		public readonly blob: BlobProvider,
 		public readonly data: KeyValProvider,
 		public readonly pubsub: PubSubProvider,
 		public readonly scratch: KeyValProvider,
@@ -44,20 +43,18 @@ export class Shard {
 
 	static async connectWith(db: Database, info: {
 		name: string;
-		blob: string;
 		data: string;
 		pubsub: string;
 		scratch: string;
 	}) {
-		const [ effect, [ blob, data, pubsub, scratch ] ] = await acquire(
-			connectToProvider(info.blob, 'blob'),
+		const [ effect, [ data, pubsub, scratch ] ] = await acquire(
 			connectToProvider(info.data, 'keyval'),
 			connectToProvider(info.pubsub, 'pubsub'),
 			connectToProvider(info.scratch, 'keyval'),
 		);
 		const channel = await new Channel<Message>(pubsub, 'channel/game').subscribe();
 		// Create instance (which subscribes to tick notification) and then read current info
-		const instance = new Shard(effect, db, info.name, blob, data, pubsub, scratch, channel);
+		const instance = new Shard(effect, db, info.name, data, pubsub, scratch, channel);
 		const time = Number(await data.get('time'));
 		instance.time = Math.max(time, instance.time);
 		return instance;
@@ -70,14 +67,14 @@ export class Shard {
 	}
 
 	save() {
-		return Promise.all([ this.data.save(), this.blob.save(), this.scratch.save() ]);
+		return Promise.all([ this.data.save(), this.scratch.save() ]);
 	}
 
 	/**
 	 * Load and parse shard terrain data
 	 */
 	async loadWorld() {
-		return new World(this.name, await this.blob.reqBuffer('terrain'));
+		return new World(this.name, await this.data.req('terrain', { blob: true }));
 	}
 
 	/**
@@ -96,7 +93,7 @@ export class Shard {
 	 */
 	async loadRoomBlob(name: string, time = this.time) {
 		this.checkTime(time, -1);
-		return RoomSchema.upgrade(await this.blob.reqBuffer(this.roomKeyForTime(name, time)));
+		return RoomSchema.upgrade(await this.data.req(this.roomKeyForTime(name, time), { blob: true }));
 	}
 
 	/**
@@ -115,7 +112,7 @@ export class Shard {
 	async saveRoomBlob(name: string, time: number, blob: Readonly<Uint8Array>) {
 		this.checkTime(time, 1);
 		await Promise.all([
-			this.blob.set(this.roomKeyForTime(name, time), blob),
+			this.data.set(this.roomKeyForTime(name, time), blob),
 			getRoomChannel(this, name).publish({ type: 'didUpdate', time }),
 		]);
 	}
@@ -125,7 +122,7 @@ export class Shard {
 	 * buffer to ensure a rollback doesn't overwrite room state.
 	 */
 	async copyRoomFromPreviousTick(name: string, time: number) {
-		await this.blob.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
+		await this.data.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
 	}
 
 	private checkTime(time: number, delta: number) {
