@@ -2,6 +2,7 @@ import type { Effect } from 'xxscreeps/utility/types';
 import type { KeyvalScript } from './script';
 export type { KeyvalScript };
 
+export type AsBuffer = { buffer?: boolean };
 export type Copy = { if?: 'nx' };
 export type Set = {
 	if?: 'nx' | 'xx';
@@ -36,15 +37,15 @@ export type BlobProvider = {
 	save(): Promise<void>;
 };
 
-export type Value = number | string;
+export type Value = number | string | Readonly<Uint8Array>;
 export type KeyValProvider = {
 	// keys / strings
 	copy(from: string, to: string, options?: Copy): Promise<boolean>;
 	del(key: string): Promise<boolean>;
 	get(key: string): Promise<string | null>;
-	set(key: string, value: Value | Readonly<Uint8Array>, options: { get: true } & Set): Promise<string | null>;
-	set(key: string, value: Value | Readonly<Uint8Array>, options: { if: string } & Set): Promise<undefined | null>;
-	set(key: string, value: Value | Readonly<Uint8Array>, options?: Set): Promise<void>;
+	set(key: string, value: Value, options: { get: true } & Set): Promise<string | null>;
+	set(key: string, value: Value, options: { if: string } & Set): Promise<undefined | null>;
+	set(key: string, value: Value, options?: Set): Promise<void>;
 	// numbers
 	decr(key: string): Promise<number>;
 	decrBy(key: string, value: number): Promise<number>;
@@ -54,7 +55,8 @@ export type KeyValProvider = {
 	hget(key: string, field: string): Promise<string | null>;
 	hgetall(key: string): Promise<Record<string, string>>;
 	hincrBy(key: string, field: string, value: number): Promise<number>;
-	hmget(key: string, fields: string[]): Promise<Record<string, string | null>>;
+	hmget(key: string, fields: string[], options: { buffer: true }): Promise<Record<string, Readonly<Uint8Array> | null>>;
+	hmget(key: string, fields: string[], options?: AsBuffer): Promise<Record<string, string | null>>;
 	hset(key: string, field: string, value: Value, options?: HSet): Promise<boolean>;
 	hmset(key: string, fields: [ string, Value ][] | Record<string, Value>): Promise<void>;
 	// lists

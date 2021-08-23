@@ -51,7 +51,7 @@ export class PlayerInstance {
 
 	private constructor(
 		public readonly shard: Shard,
-		private readonly world: World,
+		public readonly world: World,
 		private readonly channel: SubscriptionFor<typeof getRunnerUserChannel>,
 		private readonly codeChannel: SubscriptionFor<typeof Code['getUserCodeChannel']>,
 		public readonly userId: string,

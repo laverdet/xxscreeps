@@ -95,7 +95,7 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		return value;
 	}
 
-	set(key: string, value: Value | Readonly<Uint8Array>, options?: Provider.Set & Provider.SetBuffer): any {
+	set(key: string, value: Value, options?: Provider.Set & Provider.SetBuffer): any {
 		if (
 			options?.if === 'nx' ? this.data.has(key) :
 			options?.if === 'xx' ? !this.data.has(key) : false
@@ -163,8 +163,8 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 	}
 
 	hmget(key: string, fields: Iterable<string>) {
-		const map: Map<string, string> | undefined = this.data.get(key);
-		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ]));
+		const map: Map<string, string | Readonly<Uint8Array>> | undefined = this.data.get(key);
+		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ])) as never;
 	}
 
 	hset(key: string, field: string, value: Value, options?: Provider.HSet) {
@@ -214,7 +214,7 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 
 	rpush(key: string, elements: Value[]) {
 		const list: string[] | undefined = this.data.get(key);
-		const strings = Fn.map(elements, element => `${element}`);
+		const strings = Fn.map(elements, element => element) as string[];
 		if (list) {
 			list.push(...strings);
 			return list.length;
