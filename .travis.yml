@@ -10,6 +10,7 @@ install:
 script:
   - npm run eslint
   - npm run test
+  - npx xxscreeps import
 
 notifications:
   email: false
