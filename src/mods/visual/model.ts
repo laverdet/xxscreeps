@@ -37,6 +37,7 @@ export async function publishVisualsBlobsForNextTick(shard: Shard, userId: strin
 		await shard.scratch.del(fragment);
 	} else {
 		await Promise.all([
+			shard.scratch.del(fragment),
 			shard.scratch.hmset(fragment, [
 				[ 'time', Buffer.from(`${time}`) ],
 				...payload,
