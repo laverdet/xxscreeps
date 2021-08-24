@@ -61,7 +61,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	copy(from: string, to: string, options?: P.Copy) {
 		const value = this.data.get(from);
 		if (value === undefined) {
-			return this.blob.copy(from, to, options);
+			return this.blob.copy(from, to, options) as never;
 		} else if (options?.if === 'nx' && this.data.has(to)) {
 			return false;
 		} else if (value instanceof Array) {
@@ -83,7 +83,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			this.remove(key);
 			return true;
 		} else {
-			return this.blob.del(key);
+			return this.blob.del(key) as never;
 		}
 	}
 
@@ -110,7 +110,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 
 	set(key: string, value: P.Value, options?: P.Set): any {
 		if (value instanceof Uint8Array) {
-			return this.blob.set(key, value, options);
+			return this.blob.set(key, value, options) as never;
 		}
 		if (
 			options?.if === 'nx' ? this.data.has(key) :
