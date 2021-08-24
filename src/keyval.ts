@@ -1,14 +1,48 @@
 import type { URL } from 'url';
 import type * as P from 'xxscreeps/engine/db/storage/provider';
 import * as Fn from 'xxscreeps/utility/functional';
+import { Buffer } from 'buffer';
 import { RedisHolder } from './client';
-type Value = P.Value;
 
-export class RedisProvider implements P.BlobProvider, P.KeyValProvider {
+type Value = P.Value;
+function recv(value: Value) {
+	// Convert value to type for redis
+	if (value instanceof Uint8Array) {
+		if (Buffer.isBuffer(value)) {
+			// node-redis accepts buffers, but the types usually specify only string
+			return value as never as string;
+		} else {
+			// this does not make a copy
+			return Buffer.from(value.buffer, value.byteOffset, value.byteLength) as never as string;
+		}
+	} else {
+		return `${value}`;
+	}
+}
+
+function send<Type>(value: Type, options?: P.AsBlob): Type | string {
+	// Convert value from redis
+	if (Buffer.isBuffer(value)) {
+		if (options?.blob) {
+			const copy = new Uint8Array(new SharedArrayBuffer(value.byteLength));
+			copy.set(value);
+			return copy as never;
+		} else {
+			return value.toString('utf8');
+		}
+	}
+	return value;
+}
+
+function sendv(values: string[], options?: P.AsBlob) {
+	return values.map(value => send(value, options));
+}
+
+export class RedisProvider implements P.KeyValProvider {
 	private constructor(private readonly redis: RedisHolder) {}
 
-	static async connect(url: URL, blob = false) {
-		const [ effect, redis ] = await RedisHolder.connect(url, blob);
+	static async connect(url: URL) {
+		const [ effect, redis ] = await RedisHolder.connect(url, true);
 		const provider = new RedisProvider(redis);
 		return [ effect, provider ] as const;
 	}
@@ -23,45 +57,28 @@ export class RedisProvider implements P.BlobProvider, P.KeyValProvider {
 		return await this.redis.invoke<number>(cb => this.redis.batch().del(key, cb)) !== 0;
 	}
 
-	get(key: string) {
-		return this.redis.invoke<string | null>(cb => this.redis.batch().get(key, cb));
+	async get(key: string, options?: P.AsBlob): Promise<any> {
+		return send(await this.redis.invoke<string | null>(cb => this.redis.batch().get(key, cb)), options);
 	}
 
-	async getBuffer(key: string) {
-		const buffer = await this.get(key) as Uint8Array | null;
-		if (buffer === null) {
-			return null;
-		}
-		const copy = new Uint8Array(new SharedArrayBuffer(buffer.byteLength));
-		copy.set(buffer);
-		return copy;
-	}
-
-	async reqBuffer(key: string) {
-		const value = await this.getBuffer(key);
+	async req(key: string, options?: P.AsBlob): Promise<any> {
+		const value = await this.get(key, options);
 		if (value === null) {
 			throw new Error(`"${key}" does not exist`);
 		}
-		return value;
+		return send(value, options);
 	}
 
-	async set(key: string, value: Value | Readonly<Uint8Array>, options?: P.Set | P.SetBuffer): Promise<any>;
-	async set(key: string, value: Value | Readonly<Uint8Array>, options?: P.Set) {
-		const payload: any = function() {
-			if (typeof value === 'string' || typeof value === 'number' || value instanceof Buffer) {
-				return value;
-			} else {
-				return Buffer.from(value);
-			}
-		}();
+	async set(key: string, value: Value, options?: P.Set): Promise<any>;
+	async set(key: string, value: Value, options?: P.Set) {
 		const extra: any[] = [
 			...options?.px ? [ 'px', options.px ] : [],
 			...options?.if ? [ options.if ] : [],
 		];
 		if (options?.get) {
-			return this.redis.invoke<string | null>(cb => this.redis.batch().set(key, payload, ...extra, 'get', cb));
+			return send(await this.redis.invoke<string | null>(cb => this.redis.batch().set(key, recv(value), ...extra, 'get', cb)));
 		} else {
-			const result = await this.redis.invoke<'OK' | null>(cb => this.redis.batch().set(key, payload, ...extra, cb));
+			const result = await this.redis.invoke<'OK' | null>(cb => this.redis.batch().set(key, recv(value), ...extra, cb));
 			// Avoid sending back 'OK'
 			return result === null ? null : undefined;
 		}
@@ -87,50 +104,51 @@ export class RedisProvider implements P.BlobProvider, P.KeyValProvider {
 
 	//
 	// hashes
-	hget(key: string, field: string) {
-		return this.redis.invoke<string | null>(cb => this.redis.batch().hget(key, field, cb));
+	async hget(key: string, field: string) {
+		return send(await this.redis.invoke<string | null>(cb => this.redis.batch().hget(key, field, cb)));
 	}
 
-	hgetall(key: string) {
-		return this.redis.invoke<Record<string, string>>(cb => this.redis.batch().hgetall(key, cb));
+	async hgetall(key: string) {
+		const result = await this.redis.invoke<Record<string, string>>(cb => this.redis.batch().hgetall(key, cb));
+		return Fn.fromEntries(Object.entries(result), ([ key, val ]) => [ key, send(val) ]);
 	}
 
 	hincrBy(key: string, field: string, value: number) {
 		return this.redis.invoke<number>(cb => this.redis.batch().hincrby(key, field, value, cb));
 	}
 
-	async hmget(key: string, fields: string[]) {
+	async hmget(key: string, fields: string[], options?: P.AsBlob) {
 		const payload = await this.redis.invoke<string[]>(cb => this.redis.batch().hmget(key, fields, cb));
-		return Fn.fromEntries(payload.map((value, ii) => [ fields[ii], value ]));
+		return Fn.fromEntries(payload.map((value, ii) => [ fields[ii], send(value, options) ])) as never;
 	}
 
 	async hset(key: string, field: string, value: Value, options?: P.HSet) {
 		if (options?.if === 'nx') {
-			return await this.redis.invoke<number>(cb => this.redis.batch().hsetnx(key, field, value as string, cb)) !== 0;
+			return await this.redis.invoke<number>(cb => this.redis.batch().hsetnx(key, field, recv(value), cb)) !== 0;
 		} else {
-			return await this.redis.invoke<number>(cb => this.redis.batch().hset(key, field, value as string, cb)) !== 0;
+			return await this.redis.invoke<number>(cb => this.redis.batch().hset(key, field, recv(value), cb)) !== 0;
 		}
 	}
 
-	async hmset(key: string, fields: Iterable<[string, Value]> | Record<string, Value>) {
+	async hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
 		const iterable = Symbol.iterator in fields ?
-			fields as Iterable<[ string, string ]> :
+			fields as Iterable<[ string, Value ]> :
 			Object.entries(fields);
-		await this.redis.invoke<number>(cb => this.redis.batch().hset(key, [ ...Fn.concat(iterable) ], cb));
+		await this.redis.invoke<number>(cb => this.redis.batch().hset(key, [ ...Fn.map(Fn.concat(iterable), recv) ], cb));
 	}
 
 	//
 	// lists
-	lpop(key: string) {
-		return this.redis.invoke<string>(cb => this.redis.batch().lpop(key, cb));
+	async lpop(key: string) {
+		return send(await this.redis.invoke<string>(cb => this.redis.batch().lpop(key, cb)));
 	}
 
-	lrange(key: string, start: number, stop: number) {
-		return this.redis.invoke<string[]>(cb => this.redis.batch().lrange(key, start, stop, cb));
+	async lrange(key: string, start: number, stop: number) {
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().lrange(key, start, stop, cb)));
 	}
 
-	rpush(key: string, elements: string[]) {
-		return this.redis.invoke<number>(cb => this.redis.batch().rpush(key, elements, cb));
+	rpush(key: string, elements: Value[]) {
+		return this.redis.invoke<number>(cb => this.redis.batch().rpush(key, elements.map(recv), cb));
 	}
 
 	//
@@ -147,20 +165,20 @@ export class RedisProvider implements P.BlobProvider, P.KeyValProvider {
 		return this.redis.invoke<number>(cb => this.redis.batch().scard(key, cb));
 	}
 
-	sdiff(key: string, keys: string[]) {
-		return this.redis.invoke<string[]>(cb => this.redis.batch().sdiff(key, keys, cb));
+	async sdiff(key: string, keys: string[]) {
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().sdiff(key, keys, cb)));
 	}
 
-	sinter(key: string, keys: string[]) {
-		return this.redis.invoke<string[]>(cb => this.redis.batch().sinter(key, keys, cb));
+	async sinter(key: string, keys: string[]) {
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().sinter(key, keys, cb)));
 	}
 
 	async sismember(key: string, member: string) {
 		return await this.redis.invoke<number>(cb => this.redis.batch().sismember(key, member, cb)) !== 0;
 	}
 
-	smembers(key: string) {
-		return this.redis.invoke<string[]>(cb => this.redis.batch().smembers(key, cb));
+	async smembers(key: string) {
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().smembers(key, cb)));
 	}
 
 	async smismember(key: string, members: string[]) {
@@ -168,8 +186,8 @@ export class RedisProvider implements P.BlobProvider, P.KeyValProvider {
 		return result.map(value => value !== 0);
 	}
 
-	spop(key: string) {
-		return this.redis.invoke<string>(cb => this.redis.batch().spop(key, cb));
+	async spop(key: string) {
+		return send(await this.redis.invoke<string>(cb => this.redis.batch().spop(key, cb)));
 	}
 
 	srem(key: string, members: string[]) {
@@ -220,10 +238,10 @@ export class RedisProvider implements P.BlobProvider, P.KeyValProvider {
 		return scores.map(score => score === null ? null : Number(score));
 	}
 
-	zrange(key: string, min: any, max: any, options?: P.ZRange) {
+	async zrange(key: string, min: any, max: any, options?: P.ZRange) {
 		const by: any = options?.by === 'lex' ? [ 'BYLEX' ] :
 			options?.by === 'score' ? [ 'BYSCORE' ] : [];
-		return this.redis.invoke<string[]>(cb => this.redis.batch().zrange(key, min, max, ...by, cb));
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().zrange(key, min, max, ...by, cb)));
 	}
 
 	zrangeWithScores(key: string, min: number, max: number, options?: P.ZRange): any {
@@ -241,7 +259,7 @@ export class RedisProvider implements P.BlobProvider, P.KeyValProvider {
 	}
 
 	async zscore(key: string, member: string) {
-		const score = await this.redis.invoke<string | null>(cb => this.redis.batch().zscore(key, member, cb));
+		const score = send(await this.redis.invoke<string | null>(cb => this.redis.batch().zscore(key, member, cb)));
 		return score === null ? null : Number(score);
 	}
 
@@ -253,11 +271,17 @@ export class RedisProvider implements P.BlobProvider, P.KeyValProvider {
 	// scripting
 	async eval(script: P.KeyvalScript, keys: string[], argv: Value[]): Promise<any> {
 		const { sha } = script;
-		this.redis.flushBatch();
+		await this.redis.sync();
 		if (sha) {
 			try {
-				return await this.redis.invoke<any>(cb => this.redis.client.evalsha(sha, keys.length, ...keys, ...argv, cb));
-			} catch (err) {
+				const result = await this.redis.invoke<any>(cb =>
+					this.redis.client.evalsha(sha, keys.length, ...keys, ...Fn.map(argv, recv), cb));
+				if (Array.isArray(result)) {
+					return sendv(result);
+				} else {
+					return send(result);
+				}
+			} catch (err: any) {
 				if (err.code !== 'NOSCRIPT') {
 					throw err;
 				}
@@ -272,12 +296,12 @@ export class RedisProvider implements P.BlobProvider, P.KeyValProvider {
 	//
 	// management
 	async flushdb() {
-		this.redis.flushBatch();
+		await this.redis.sync();
 		await this.redis.invoke(cb => this.redis.client.flushdb(cb));
 	}
 
 	async save() {
-		this.redis.flushBatch();
+		await this.redis.sync();
 		try {
 			// ERR Background save already in progress
 			await this.redis.invoke(cb => this.redis.client.save(cb));

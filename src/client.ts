@@ -18,6 +18,7 @@ declare module 'redis' {
 }
 
 export class RedisHolder {
+	private task = Promise.resolve();
 	private tickBatch?: Multi;
 	private tickBatchId = 0;
 	private tickBatchFresh = false;
@@ -25,7 +26,7 @@ export class RedisHolder {
 	private constructor(public readonly client: Redis) {}
 
 	static async connect(url: URL, blob = false) {
-		const client = redis.createClient(`${url}`.replace('redis2', 'redis'), {
+		const client = redis.createClient(`${url}`, {
 			enable_offline_queue: false,
 			return_buffers: Boolean(blob),
 			retry_strategy: () => false,
@@ -51,20 +52,22 @@ export class RedisHolder {
 				this.tickBatchFresh = false;
 				if (id === this.tickBatchId) {
 					this.tickBatch = undefined;
-					client.exec();
+					this.task = this.invoke<any>(fn => client.exec(fn));
 				}
 			});
 		}
 		return client;
 	}
 
-	flushBatch() {
-		if (this.tickBatch) {
-			this.tickBatch.exec();
-			this.tickBatch = undefined;
-			this.tickBatchFresh = false;
+	sync() {
+		const client = this.tickBatch;
+		if (client) {
 			++this.tickBatchId;
+			this.tickBatchFresh = false;
+			this.tickBatch = undefined;
+			this.task = this.invoke<any>(fn => client.exec(fn));
 		}
+		return this.task;
 	}
 
 	invoke<Type>(fn: (cb: (err: Error | null, result: Type) => any) => void) {
