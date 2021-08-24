@@ -96,7 +96,7 @@ describe('Movement', () => {
 			room.controller!['#user'] = '100';
 			room.controller!.safeModeAvailable = 1;
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), [ C.MOVE ], 'creep', '100'));
-			room['#insertObject'](create(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'creep', '101'));
+			room['#insertObject'](create(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE, C.MOVE ], 'creep', '101'));
 		},
 	});
 	test('safe mode', () => hostile(async({ player, tick }) => {
@@ -110,6 +110,14 @@ describe('Movement', () => {
 		await tick();
 		await player('100', Game => {
 			assert.ok(Game.creeps.creep.pos.isEqualTo(new RoomPosition(25, 26, 'W1N1')));
+			assert.strictEqual(Game.creeps.creep.move(C.TOP), C.OK);
+		});
+		await player('101', Game => {
+			assert.strictEqual(Game.creeps.creep.move(C.TOP), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			assert.ok(Game.creeps.creep.pos.isEqualTo(new RoomPosition(25, 25, 'W1N1')));
 		});
 	}));
 });
