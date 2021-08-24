@@ -45,7 +45,6 @@
     "acorn": "8.4.1",
     "acorn-class-fields": "1.0.0",
     "acorn-private-methods": "1.0.0",
-    "ansi_up": "5.0.1",
     "argparse": "2.0.1",
     "babel-loader": "8.2.2",
     "etag": "1.8.1",
