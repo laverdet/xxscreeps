@@ -125,7 +125,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 */
 	drop(resourceType: ResourceType, amount?: number) {
 		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-		const intentAmount = amount || (this.store[resourceType] ?? 0);
+		const intentAmount = amount || this.store[resourceType];
 		return chainIntentChecks(
 			() => checkDrop(this, resourceType, intentAmount),
 			() => intents.save(this, 'drop', resourceType, intentAmount));
@@ -326,7 +326,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	transfer(this: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			amount || Math.min(this.store[resourceType] ?? 0, target.store.getFreeCapacity(resourceType)));
+			amount || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)));
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, intentAmount),
 			() => intents.save(this, 'transfer', target.id, resourceType, intentAmount),
@@ -345,7 +345,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	withdraw(this: Creep, target: Structure & WithStore, resourceType: ResourceType, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			amount || Math.min(this.store.getFreeCapacity(resourceType), target.store[resourceType] ?? 0));
+			amount || Math.min(this.store.getFreeCapacity(resourceType), target.store[resourceType]));
 		return chainIntentChecks(
 			() => checkWithdraw(this, target, resourceType, intentAmount),
 			() => intents.save(this, 'withdraw', target.id, resourceType, intentAmount),

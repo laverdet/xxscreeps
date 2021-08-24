@@ -15,35 +15,45 @@ export const labStoreFormat = () => compose(shape, LabStore);
 export class LabStore extends withOverlay(Store, shape) {
 	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
-		this[C.RESOURCE_ENERGY] = this['#energy'];
+		const energy = this['#energy'];
+		if (energy) {
+			this[C.RESOURCE_ENERGY] = energy;
+		}
 		const reaction = this['#mineralType'];
 		if (reaction) {
-			this[reaction] = this['#mineralAmount'];
+			const amount = this['#mineralAmount'];
+			if (amount) {
+				this[reaction] = amount;
+			}
 		}
 	}
 
 	getCapacity(resourceType?: ResourceType) {
-		if (resourceType === C.RESOURCE_ENERGY) {
-			return C.LAB_ENERGY_CAPACITY;
-		} else if (resourceType === undefined) {
-			return null;
-		} else {
-			const mineralType = this['#mineralType'];
-			if (mineralType === undefined) {
-				return C.LAB_ENERGY_CAPACITY + C.LAB_MINERAL_CAPACITY;
-			} else if (mineralType === resourceType) {
-				return C.LAB_MINERAL_CAPACITY;
+		if (resourceType) {
+			if (resourceType === C.RESOURCE_ENERGY) {
+				return C.LAB_ENERGY_CAPACITY;
+			} else {
+				const mineralType = this['#mineralType'];
+				if (mineralType === undefined || mineralType === resourceType) {
+					return C.LAB_MINERAL_CAPACITY;
+				}
 			}
-			return null;
 		}
+		return null;
 	}
 
 	getUsedCapacity(resourceType?: ResourceType) {
-		if (resourceType === undefined) {
-			return null;
-		} else {
-			return this[resourceType] ?? null;
+		if (resourceType) {
+			if (resourceType === C.RESOURCE_ENERGY) {
+				return this[C.RESOURCE_ENERGY];
+			} else {
+				const mineralType = this['#mineralType'];
+				if (mineralType === undefined || resourceType === mineralType) {
+					return this[resourceType];
+				}
+			}
 		}
+		return null;
 	}
 
 	['#add'](type: ResourceType, amount: number) {
@@ -52,17 +62,21 @@ export class LabStore extends withOverlay(Store, shape) {
 			this[C.RESOURCE_ENERGY] += amount;
 		} else {
 			this['#mineralAmount'] =
-			this[type] = (this[type] ?? 0) + amount;
+			this[type] += amount;
 			this['#mineralType'] = type;
 		}
 	}
 
 	['#subtract'](type: ResourceType, amount: number) {
 		if (type === C.RESOURCE_ENERGY) {
+			this['#energy'] =
 			this[C.RESOURCE_ENERGY] -= amount;
+			if (this[C.RESOURCE_ENERGY] === 0) {
+				delete this[C.RESOURCE_ENERGY as ResourceType];
+			}
 		} else {
 			this['#mineralAmount'] =
-			this[type]! -= amount;
+			this[type] -= amount;
 			if (this[type] === 0) {
 				this['#mineralType'] = undefined;
 				delete this[type];
