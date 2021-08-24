@@ -1,6 +1,5 @@
 import type { PartType } from 'xxscreeps/mods/creep/creep';
 import type { Direction } from 'xxscreeps/game/position';
-import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor';
@@ -14,26 +13,42 @@ import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { assign } from 'xxscreeps/utility/utility';
 import { StructureExtension } from './extension';
 import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkDirections, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn';
-import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure';
 import { StructureController } from 'xxscreeps/mods/controller/controller';
 import { saveAction } from 'xxscreeps/game/object';
 import { createRuin } from 'xxscreeps/mods/structure/ruin';
 
-function consumeEnergy(spawn: StructureSpawn, amount: number) {
-	const energyStructures = spawn.room.find(C.FIND_STRUCTURES).filter(
-		(structure): structure is StructureSpawn | StructureExtension =>
-			structure.structureType === C.STRUCTURE_SPAWN || structure.structureType === C.STRUCTURE_EXTENSION);
-	energyStructures.sort((left, right) => left.pos.getRangeTo(spawn.pos) - right.pos.getRangeTo(spawn.pos));
-
-	if (Fn.accumulate(energyStructures, structure => structure.store[C.RESOURCE_ENERGY]) < amount) {
-		throw new Error('Not enough');
+type EnergyStructure = StructureExtension | StructureSpawn;
+function getEnergyStructures(spawn: StructureSpawn, ids?: string[]) {
+	if (ids) {
+		return [ ...new Set(Fn.filter(Fn.map(ids, id => {
+			const object = Game.getObjectById(id);
+			if (object instanceof StructureExtension || object instanceof StructureSpawn) {
+				return object;
+			}
+		}))) ];
+	} else {
+		const comparator = (left: EnergyStructure, right: EnergyStructure) =>
+			spawn.pos.getRangeTo(left) - spawn.pos.getRangeTo(right);
+		return [
+			...lookForStructures(spawn.room, C.STRUCTURE_SPAWN).sort(comparator),
+			...lookForStructures(spawn.room, C.STRUCTURE_EXTENSION).sort(comparator),
+		];
 	}
+}
+
+function consumeEnergy(spawn: StructureSpawn, amount: number, structures = getEnergyStructures(spawn)) {
+	if (Fn.accumulate(structures, structure => structure.store[C.RESOURCE_ENERGY]) < amount) {
+		return false;
+	}
+
 	let remaining = amount;
-	for (const structure of energyStructures) {
+	for (const structure of structures) {
 		const subtraction = Math.min(remaining, structure.store[C.RESOURCE_ENERGY]);
 		structure.store['#subtract'](C.RESOURCE_ENERGY, subtraction);
 		if ((remaining -= subtraction) === 0) {
-			return;
+			spawn.room.energyAvailable -= amount;
+			return true;
 		}
 	}
 	throw new Error('Did not subtract energy correctly.');
@@ -112,10 +127,12 @@ const intents = [
 	registerIntentProcessor(StructureSpawn, 'renewCreep', {}, (spawn, context, id: string) => {
 		const creep = Game.getObjectById<Creep>(id)!;
 		if (checkRenewCreep(spawn, creep) === C.OK) {
-			saveAction(creep, 'healed', spawn.pos);
-			consumeEnergy(spawn, calculateRenewCost(creep));
-			creep['#ageTime'] += calculateRenewAmount(creep);
-			context.didUpdate();
+			const cost = calculateRenewCost(creep);
+			if (consumeEnergy(spawn, cost)) {
+				saveAction(creep, 'healed', spawn.pos);
+				creep['#ageTime'] += calculateRenewAmount(creep);
+				context.didUpdate();
+			}
 		}
 	}),
 
@@ -135,37 +152,18 @@ const intents = [
 		directions: Direction[] | null,
 	) => {
 
-		// Get energy structures
-		const energyStructures = function() {
-			const filter = (structure: RoomObject | null): structure is StructureExtension | StructureSpawn =>
-				structure instanceof StructureExtension || structure instanceof StructureSpawn;
-			if (energyStructureIds) {
-				return energyStructureIds.map(id => Game.getObjectById(id)).filter(filter);
-			} else {
-				const structures = spawn.room.find(C.FIND_STRUCTURES).filter(filter);
-				return structures.sort((left, right) =>
-					(left.structureType === 'extension' ? 1 : 0) - (right.structureType === 'extension' ? 1 : 0) ||
-				left.pos.getRangeTo(spawn.pos) - right.pos.getRangeTo(spawn.pos));
-			}
-		}();
-
 		// Is this intent valid?
-		const canBuild = checkSpawnCreep(spawn, body, name, directions, energyStructures) === C.OK;
+		const structures = getEnergyStructures(spawn, energyStructureIds ?? undefined);
+		const canBuild = checkSpawnCreep(spawn, body, name, directions, structures) === C.OK;
 		if (!canBuild) {
-			return false;
+			return;
 		}
 
 		// Withdraw energy
-		let cost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
-		for (const structure of energyStructures) {
-			const energyToSpend = Math.min(cost, structure.energy);
-			structure.store['#subtract'](C.RESOURCE_ENERGY, energyToSpend);
-			cost -= energyToSpend;
-			if (cost === 0) {
-				break;
-			}
+		const cost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
+		if (!consumeEnergy(spawn, cost, structures)) {
+			return;
 		}
-		spawn.room.energyAvailable -= cost;
 
 		// Add new creep to room objects
 		const creep = createCreep(spawn.pos, body, name, me);
@@ -220,6 +218,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 
 	// Add 1 energy per tick to spawns in low energy rooms
 	if (spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
+		++spawn.room.energyAvailable;
 		spawn.store['#add'](C.RESOURCE_ENERGY, 1);
 		context.setActive();
 	}

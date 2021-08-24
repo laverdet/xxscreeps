@@ -1,5 +1,6 @@
 import type { Database, Shard } from 'xxscreeps/engine/db';
 import type { GameConstructor } from 'xxscreeps/game';
+import type { GameBase } from 'xxscreeps/game/game';
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/room';
 import type { World } from 'xxscreeps/game/map';
@@ -9,7 +10,7 @@ import { flushUsers } from 'xxscreeps/game/room/room';
 import { begetRoomProcessQueue, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { consumeSortedSet } from 'xxscreeps/engine/db/async';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room';
-import { GameState, initializeGameEnvironment, runForUser, runOneShot } from 'xxscreeps/game';
+import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot } from 'xxscreeps/game';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { instantiateTestShard } from 'xxscreeps/test/import';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor';
@@ -27,7 +28,8 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 		world: World;
 		player: (userId: string, task: (game: GameConstructor) => void) => Promise<void>;
 		tick: (count?: number) => Promise<void>;
-		withRoom: (roomName: string, task: (room: Room) => void) => Promise<void>;
+		peekRoom: <Type>(roomName: string, task: (room: Room, game: GameBase) => Type) => Promise<Type>;
+		pokeRoom: <Type>(roomName: string, task: (room: Room, game: GameBase) => Type) => Promise<Type>;
 	}) => Promise<void>) => {
 
 		const { db, shard, world } = await instantiateTestShard();
@@ -53,9 +55,22 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 				shard,
 				world,
 
-				async withRoom(roomName, task) {
-					const room = await shard.loadRoom(roomName, shard.time);
-					runOneShot(world, room, shard.time, '', () => task(room));
+				async peekRoom(roomName, task) {
+					const room = await shard.loadRoom(roomName);
+					return runOneShot(world, room, shard.time, '', () => task(room, Game));
+				},
+
+				async pokeRoom(roomName, task) {
+					const room = await shard.loadRoom(roomName);
+					const result = runOneShot(world, room, shard.time, '', () => task(room, Game));
+					room['#flushObjects']();
+					const previousUsers = flushUsers(room);
+					await Promise.all([
+						shard.saveRoom(room.name, shard.time, room),
+						updateUserRoomRelationships(shard, room, previousUsers),
+					]);
+					roomInstances.delete(roomName);
+					return result;
 				},
 
 				async player(userId, task) {

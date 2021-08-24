@@ -9,7 +9,7 @@ describe('Roads', () => {
 			room['#insertObject'](createExtension(new RoomPosition(25, 25, 'W0N0'), 1, '100'));
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W0N0')));
 		},
-	})(({ withRoom }) => withRoom('W0N0', room => {
+	})(({ peekRoom }) => peekRoom('W0N0', room => {
 		const path = room.findPath(new RoomPosition(24, 24, 'W0N0'), new RoomPosition(26, 26, 'W0N0'));
 		assert.strictEqual(path.length, 3);
 	})));
@@ -23,7 +23,7 @@ describe('Roads', () => {
 			room['#insertObject'](create(new RoomPosition(23, 26, 'W0N0')));
 			room['#insertObject'](create(new RoomPosition(24, 26, 'W0N0')));
 		},
-	})(({ withRoom }) => withRoom('W0N0', room => {
+	})(({ peekRoom }) => peekRoom('W0N0', room => {
 		// Follows roads, except corner road
 		const path1 = room.findPath(new RoomPosition(21, 22, 'W0N0'), new RoomPosition(25, 26, 'W0N0'));
 		assert.strictEqual(path1.length, 5);
