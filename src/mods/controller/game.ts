@@ -5,7 +5,7 @@ import { RoomObject } from 'xxscreeps/game/object';
 import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/engine/schema';
 import { hooks, registerGlobal } from 'xxscreeps/game';
 import { optional, struct } from 'xxscreeps/schema';
-import { acquireControllerActivity } from './creep';
+import './creep';
 
 // Register schema
 const roomSchema = registerStruct('Room', {
@@ -70,12 +70,6 @@ hooks.register('gameInitializer', (Game, payload) => {
 			'#roomCount': payload.controlledRoomCount,
 		};
 	}
-});
-
-hooks.register('runtimeConnector', {
-	send(payload) {
-		payload.controllerActivity = acquireControllerActivity();
-	},
 });
 
 // Export `StructureController` to runtime globals

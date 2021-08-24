@@ -8,9 +8,6 @@ declare module 'xxscreeps/engine/runner' {
 		controlledRoomCount: number;
 		gcl: number;
 	}
-	interface TickResult {
-		controllerActivity: number;
-	}
 }
 
 processorHooks.register('refreshRoom', async(shard, room) => {
@@ -23,25 +20,17 @@ processorHooks.register('refreshRoom', async(shard, room) => {
 
 hooks.register('runnerConnector', player => {
 	const { shard, userId } = player;
-	let gcl = NaN;
-	let roomCount = NaN;
-	let shouldCheckGcl = true;
-	let shouldCheckRooms = true;
 	return [ undefined, {
 		async refresh(payload) {
-			if (shouldCheckRooms) {
-				roomCount = await shard.scratch.scard(controlledRoomKey(userId));
-			}
-			payload.controlledRoomCount = roomCount;
-			if (shouldCheckGcl) {
-				gcl = Number(await shard.db.data.hget(User.infoKey(userId), 'gcl')) || 0;
-			}
-			payload.gcl = gcl;
-		},
-
-		save(payload) {
-			shouldCheckGcl = Boolean(payload.controllerActivity & 1);
-			shouldCheckRooms = Boolean(payload.controllerActivity & 2);
+			[
+				payload.controlledRoomCount,
+				payload.gcl,
+			] = await Promise.all([
+				shard.scratch.scard(controlledRoomKey(userId)),
+				async function() {
+					return Number(await shard.db.data.hget(User.infoKey(userId), 'gcl')) || 0;
+				}(),
+			]);
 		},
 	} ];
 });
