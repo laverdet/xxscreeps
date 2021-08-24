@@ -88,4 +88,28 @@ describe('Movement', () => {
 			assert.ok(Game.creeps.topLeft.pos.isEqualTo(new RoomPosition(24, 25, 'W0N0')));
 		});
 	}));
+
+	const hostile = simulate({
+		W1N1: room => {
+			room['#level'] = 1;
+			room['#user'] =
+			room.controller!['#user'] = '100';
+			room.controller!.safeModeAvailable = 1;
+			room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), [ C.MOVE ], 'creep', '100'));
+			room['#insertObject'](create(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'creep', '101'));
+		},
+	});
+	test('safe mode', () => hostile(async({ player, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.rooms.W1N1.controller!.activateSafeMode(), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.creep.move(C.BOTTOM), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			assert.ok(Game.creeps.creep.pos.isEqualTo(new RoomPosition(25, 26, 'W1N1')));
+		});
+	}));
 });
