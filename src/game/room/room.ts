@@ -121,6 +121,12 @@ export class Room extends withOverlay(BufferObject, shape) {
 				this.#afterInsert(object);
 			}
 		}
+		// Don't attempt to double remove objects queued from hooks
+		for (const object of this.#removeObjects) {
+			if (removeObjects.has(object)) {
+				this.#removeObjects.delete(object);
+			}
+		}
 		// Flush objects added/removed by #afterInsert / #beforeRemove hooks
 		this['#flushObjects']();
 	}
