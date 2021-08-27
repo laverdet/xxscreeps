@@ -234,7 +234,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 							path.splice(0, ii + 1);
 							_move.path = serializeMemory ? Room.serializePath(path) : path;
 						}
-						if (this.pos.isNearTo(path[0].x, path[0].y)) {
+						if (path.length === 0 || this.pos.isNearTo(path[0].x, path[0].y)) {
 							return path;
 						}
 					}
