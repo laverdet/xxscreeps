@@ -54,13 +54,14 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 
 			module: {
 				rules: [ {
-					test: /\.[cm]?jsx?$/,
+					test: /\.m?jsx?$/,
 					exclude: {
 						and: [
 							/\/node_modules\//,
 							{ not: /\/node_modules\/xxscreeps\/dist\// },
 						],
 					},
+					type: 'javascript/esm',
 					resolve: { fullySpecified: false },
 					use: [
 						...babelPlugins.length === 0 ? [] : [ {
