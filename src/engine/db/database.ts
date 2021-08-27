@@ -1,4 +1,4 @@
-import type { BlobProvider, KeyValProvider, PubSubProvider } from 'xxscreeps/engine/db/storage';
+import type { KeyValProvider, PubSubProvider } from 'xxscreeps/engine/db/storage';
 import type { Effect } from 'xxscreeps/utility/types';
 import { connectToProvider } from 'xxscreeps/engine/db/storage';
 import config from 'xxscreeps/config';
@@ -10,22 +10,19 @@ export class Database {
 
 	private constructor(
 		private readonly effect: Effect,
-		public readonly blob: BlobProvider,
 		public readonly data: KeyValProvider,
 		public readonly pubsub: PubSubProvider,
 	) {}
 
 	static async connect(info: {
-		blob: string;
 		data: string;
 		pubsub: string;
 	} = config.database) {
-		const [ effect, [ blob, data, pubsub ] ] = await acquire(
-			connectToProvider(info.blob, 'blob'),
+		const [ effect, [ data, pubsub ] ] = await acquire(
 			connectToProvider(info.data, 'keyval'),
 			connectToProvider(info.pubsub, 'pubsub'),
 		);
-		return new Database(effect, blob, data, pubsub);
+		return new Database(effect, data, pubsub);
 	}
 
 	disconnect() {
@@ -33,6 +30,6 @@ export class Database {
 	}
 
 	save() {
-		return Promise.all([ this.data.save(), this.blob.save() ]);
+		return this.data.save();
 	}
 }

@@ -152,14 +152,8 @@ export type Schema = {
 	 */
 	database?: {
 		/**
-		 * Blob storage provider URI
-		 * @default ./screeps/db
-		 */
-		blob: string;
-
-		/**
 		 * Persistent storage provider URI
-		 * @default ./screeps/db/data.json
+		 * @default ./screeps/db
 		 */
 		data: string;
 
@@ -180,8 +174,7 @@ export type Schema = {
 	 * Configuration for shard-specific storage
 	 * @default `[ {
 	 *   name: 'shard0',
-	 *   blob: './screeps/shard0',
-	 *   data: './screeps/shard0/data.json',
+	 *   data: './screeps/shard0',
 	 *   pubsub: 'local://shard0',
 	 *   scratch: 'local://shard0',
 	 * } ]`
@@ -191,11 +184,6 @@ export type Schema = {
 		 * Name of this shard
 		 */
 		name: string;
-
-		/**
-		 * Blob storage provider URI
-		 */
-		blob: string;
 
 		/**
 		 * Persistent storage provider URI
@@ -241,15 +229,13 @@ export const defaults = {
 	},
 	schemaArchive: './screeps/archive',
 	database: {
-		blob: './screeps/db',
-		data: './screeps/db/data.json',
+		data: './screeps/db',
 		pubsub: 'local://db',
 		saveInterval: 2,
 	},
 	shards: [ {
 		name: 'shard0',
-		blob: './screeps/shard0',
-		data: './screeps/shard0/data.json',
+		data: './screeps/shard0',
 		pubsub: 'local://shard0',
 		scratch: 'local://shard0',
 	} ],
@@ -262,6 +248,7 @@ export const defaults = {
 export const configDefaults = {
 	mods: [
 		'xxscreeps/mods/classic',
+		'xxscreeps/mods/backend/cookie',
 		'xxscreeps/mods/backend/password',
 		'xxscreeps/mods/backend/steam',
 	],

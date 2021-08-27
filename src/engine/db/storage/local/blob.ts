@@ -1,18 +1,13 @@
 import type * as P from 'xxscreeps/engine/db/storage/provider';
-import type { MaybePromises } from './responder';
+import type { Effect } from 'xxscreeps/utility/types';
+import fsSync from 'fs';
+import fs from 'fs/promises';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
 import { fileURLToPath } from 'url';
-import fsSync from 'fs';
-import fs from 'fs/promises';
 import { listen, spread } from 'xxscreeps/utility/async';
-import { Responder, connect, makeClient, makeHost } from './responder';
-import { registerStorageProvider } from '..';
 
-registerStorageProvider('file', 'blob', url =>
-	connect(`${url}`, LocalBlobClient, LocalBlobHost, () => LocalBlobResponder.create(url)));
-
-class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvider> {
+export class BlobStorage {
 	private readonly cache = new Map<string, {
 		saveId: number;
 		value: Readonly<Uint8Array> | null;
@@ -20,16 +15,26 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 
 	private saveId = 0;
 	private readonly knownPaths = new Set<string>();
-	private readonly exitEffect = listen(process, 'exit', () => this.checkMissingFlush());
 
-	constructor(private readonly path: string) {
-		super();
-	}
+	constructor(private readonly path: string | null) {}
 
-	static async create(url: URL) {
-		const path = fileURLToPath(url);
-		await LocalBlobResponder.initializeDirectory(path);
-		return new LocalBlobResponder(path);
+	static async create(url: URL): Promise<[ Effect, BlobStorage ]> {
+		if (url.protocol === 'file:') {
+			const path = fileURLToPath(url);
+			await BlobStorage.initializeDirectory(path);
+			const host = new BlobStorage(path);
+			const unlisten = () => listen(process, 'exit', () => host.checkMissingFlush());
+			return [
+				() => {
+					unlisten();
+					host.checkMissingFlush();
+					fsSync.unlinkSync(Path.join(path, '.lock'));
+				},
+				host,
+			];
+		} else {
+			return [ () => {}, new BlobStorage(null) ];
+		}
 	}
 
 	private static async initializeDirectory(path: string) {
@@ -87,8 +92,8 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 
 	async copy(from: string, to: string, options?: P.Copy) {
 		this.check(to);
-		const value = await this.getBuffer(from);
-		if (options?.if === 'nx' && await this.getBuffer(to)) {
+		const value = await this.get(from);
+		if (options?.if === 'nx' && await this.get(to)) {
 			return false;
 		} else if (value === null) {
 			return false;
@@ -111,6 +116,8 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 				value: null,
 			});
 			return cached.value !== null;
+		} else if (this.path === null) {
+			return false;
 		} else {
 			// Ensure it actually exists on disk
 			const path = Path.join(this.path, key);
@@ -131,12 +138,14 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 		return true;
 	}
 
-	async getBuffer(key: string) {
+	async get(key: string) {
 		this.check(key);
 		// Check in-memory buffer
 		const cached = this.cache.get(key);
 		if (cached) {
 			return cached.value;
+		} else if (this.path === null) {
+			return null;
 		}
 		// Open handle from file system, we should catch this error
 		const path = Path.join(this.path, key);
@@ -170,37 +179,50 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 		}
 	}
 
-	async reqBuffer(key: string) {
-		const value = await this.getBuffer(key);
+	async req(key: string) {
+		const value = await this.get(key);
 		if (value === null) {
 			throw new Error(`"${key}" does not exist`);
 		}
 		return value;
 	}
 
-	set(key: string, value: Readonly<Uint8Array>) {
+	set(key: string, value: Readonly<Uint8Array>, options?: P.Set) {
 		this.check(key);
 		this.cache.set(key, {
 			saveId: this.saveId,
-			value,
+			value: function() {
+				if (value.buffer instanceof SharedArrayBuffer && !options?.retain) {
+					return value;
+				} else {
+					const copy = new Uint8Array(new SharedArrayBuffer(value.length));
+					copy.set(value);
+					return copy;
+				}
+			}(),
 		});
 	}
 
 	async flushdb() {
 		this.cache.clear();
 		this.knownPaths.clear();
-		await fs.rm(this.path, { recursive: true });
-		await LocalBlobResponder.initializeDirectory(this.path);
+		if (this.path !== null) {
+			await fs.rm(this.path, { recursive: true });
+			await BlobStorage.initializeDirectory(this.path);
+		}
 	}
 
 	async save() {
 		// Get changes since last save
+		if (this.path === null) {
+			return;
+		}
 		const entries = [ ...Fn.filter(this.cache, entry => entry[1].saveId === this.saveId) ];
 		++this.saveId;
 
 		// Save to disk
 		await spread(500, entries, async([ key, { value } ]) => {
-			const path = Path.join(this.path, key);
+			const path = Path.join(this.path!, key);
 			const dirname = Path.dirname(path);
 			if (value) {
 				if (!this.knownPaths.has(dirname)) {
@@ -213,7 +235,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 					}
 					this.knownPaths.add(dirname);
 				}
-				const tmp = Path.join(this.path, Path.dirname(key), `.${Path.basename(key)}.swp`);
+				const tmp = Path.join(this.path!, Path.dirname(key), `.${Path.basename(key)}.swp`);
 				await fs.writeFile(tmp, value);
 				await fs.rename(tmp, path);
 			} else {
@@ -227,7 +249,7 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 			if (value) {
 				return;
 			}
-			const path = Path.join(this.path, key);
+			const path = Path.join(this.path!, key);
 			for (let dir = Path.dirname(path); dir !== this.path; dir = Path.dirname(dir)) {
 				if (unlinkedDirectories.has(dir)) {
 					break;
@@ -243,12 +265,6 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 		}));
 	}
 
-	protected override release() {
-		this.exitEffect();
-		this.checkMissingFlush();
-		fsSync.unlinkSync(Path.join(this.path, '.lock'));
-	}
-
 	private check(fragment: string) {
 		// Safety check before writing random file names based on user input
 		if (!/^[a-zA-Z0-9/_-]*[a-zA-Z0-9_-]+$/.test(fragment)) {
@@ -261,29 +277,5 @@ class LocalBlobResponder extends Responder implements MaybePromises<P.BlobProvid
 		if (size !== 0) {
 			console.warn(`Blob storage shut down with ${size} pending write(s)`);
 		}
-	}
-}
-
-function externalizeBlob(value: Readonly<Uint8Array>, options: P.SetBuffer | undefined) {
-	if (value.buffer instanceof SharedArrayBuffer && !options?.retain) {
-		return value;
-	} else {
-		const copy = new Uint8Array(new SharedArrayBuffer(value.length));
-		copy.set(value);
-		return copy;
-	}
-}
-
-class LocalBlobClient extends makeClient(LocalBlobResponder) {
-	// @ts-expect-error
-	set(key: string, value: Readonly<Uint8Array>, options?: P.SetBuffer) {
-		return super.set(key, externalizeBlob(value, options));
-	}
-}
-
-class LocalBlobHost extends makeHost(LocalBlobResponder) {
-	// @ts-expect-error
-	set(key: string, value: Readonly<Uint8Array>, options?: P.SetBuffer) {
-		return super.set(key, externalizeBlob(value, options));
 	}
 }

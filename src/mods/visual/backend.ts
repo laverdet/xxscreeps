@@ -1,6 +1,4 @@
 import { hooks } from 'xxscreeps/backend';
-import { Variant } from 'xxscreeps/schema';
-import { stringifyInherited } from 'xxscreeps/utility/string';
 import { getVisualChannel, loadVisuals } from './model';
 
 hooks.register('roomSocket', async(shard, userId, roomName) => {
@@ -11,8 +9,10 @@ hooks.register('roomSocket', async(shard, userId, roomName) => {
 	// Subscribe to visuals channel and listen for publishes to this room
 	let lastTime = shard.time;
 	const unlisten = await getVisualChannel(shard, userId).listen<true>(message => {
-		if (message.type === 'publish' && message.roomNames.includes(roomName)) {
-			lastTime = message.time;
+		if (message.type === 'publish') {
+			if (message.roomNames.includes('*') || message.roomNames.includes(roomName)) {
+				lastTime = message.time;
+			}
 		}
 	});
 
@@ -21,14 +21,9 @@ hooks.register('roomSocket', async(shard, userId, roomName) => {
 		async time => {
 			// Stringify visuals for this room only if visuals were sent for this room+time
 			if (time <= lastTime) {
-				const visuals = (await loadVisuals(shard, userId))?.find(visual => visual.name === roomName);
-				if (visuals) {
-					let visualsString = '';
-					for (const visual of visuals.visual) {
-						(visual as any).t = visual[Variant];
-						visualsString += stringifyInherited(visual) + '\n';
-					}
-					return { visual: visualsString };
+				const visual = await loadVisuals(shard, userId, roomName);
+				if (visual) {
+					return { visual };
 				}
 			}
 		},

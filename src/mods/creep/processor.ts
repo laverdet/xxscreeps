@@ -77,7 +77,18 @@ const intents = [
 		if (CreepLib.checkMove(creep, direction) === C.OK) {
 			const power = CreepLib.calculatePower(creep, C.MOVE, 1);
 			const weight = CreepLib.calculateWeight(creep);
-			Movement.add(creep, weight ? -weight / power : power, direction);
+			const priority = weight ? -weight / power : power;
+			const adjustedPriority = function() {
+				if (
+					creep.room.controller?.safeMode === undefined ||
+					creep.room.controller['#user'] === creep['#user']
+				) {
+					return priority;
+				} else {
+					return priority - 500;
+				}
+			}();
+			Movement.add(creep, adjustedPriority, direction);
 			context.didUpdate();
 		}
 	}),

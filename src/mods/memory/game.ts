@@ -48,7 +48,7 @@ hooks.register('runtimeConnector', {
 	send(payload) {
 		// Primary memory
 		payload.memoryUpdated = flush();
-		payload.usage.memory = payload.memoryUpdated.byteLength >>> 1;
+		payload.usage.memory = payload.memoryUpdated.size;
 		// Segments
 		payload.activeSegmentsRequest = flushActiveSegments();
 		payload.foreignSegmentRequest = flushForeignSegment();

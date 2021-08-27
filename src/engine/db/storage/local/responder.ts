@@ -34,16 +34,7 @@ type ResponseMessage = {
 });
 
 // Used in host isolate
-const responderHostsByName = new Map<string, ResponderHost>();
-
-// Base class exists just to mark `release` as protected
-export class Responder {
-	static release(responder: Responder) {
-		responder.release();
-	}
-
-	protected release() {}
-}
+const responderHostsByName = new Map<string, { effect: Effect; host: ResponderHost }>();
 
 abstract class ResponderClient {
 	#disconnected = false;
@@ -131,7 +122,7 @@ abstract class ResponderClient {
 	}
 }
 
-abstract class ResponderHost<Type extends Responder = any> {
+abstract class ResponderHost<Type = any> {
 	#refs = 0;
 	readonly #instance: Type | Record<string, (...args: unknown[]) => unknown>;
 	readonly #name: string;
@@ -139,12 +130,6 @@ abstract class ResponderHost<Type extends Responder = any> {
 	constructor(name: string, instance: Type) {
 		this.#instance = instance;
 		this.#name = name;
-	}
-
-	static create<Type extends Responder>(constructor: new(name: string, instance: Type) => ResponderHost<Type>, name: string, instance: Type) {
-		const host = new constructor(name, instance);
-		const effect = host.#ref();
-		return { effect, host };
 	}
 
 	static connect(host: ResponderHost, port: MessagePort) {
@@ -194,20 +179,21 @@ abstract class ResponderHost<Type extends Responder = any> {
 			}
 			disconnected = true;
 			if (--this.#refs === 0) {
+				const { effect } = responderHostsByName.get(this.#name)!;
 				responderHostsByName.delete(this.#name);
-				Responder.release(this.#instance as Type);
+				effect();
 			}
 		};
 	}
 }
 
-type WithPromises<Type extends Responder> = {
-	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => infer Result | Promise<infer Result> ?
+type WithPromises<Type> = {
+	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => MaybePromise<infer Result> ?
 		(...args: Args) => Promise<Result> : never;
 };
 
 export type MaybePromises<Type> = {
-	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => infer Result | Promise<infer Result> ?
+	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => MaybePromise<infer Result> ?
 		(...args: Args) => MaybePromise<Result> : never;
 };
 
@@ -215,19 +201,19 @@ export type MaybePromises<Type> = {
 export async function connect<
 	Client extends ResponderClient,
 	Host extends ResponderHost<Type>,
-	Type extends Responder,
+	Type,
 >(
 	name: string,
 	clientConstructor: new() => Client,
 	hostConstructor: new(name: string, instance: Type) => Host,
-	create: () => Type | Promise<Type>,
+	create: () => MaybePromise<readonly [ Effect, Type ]>,
 ): Promise<[ Effect, Host | Client ]> {
 	if (isTopThread) {
 		const responder = responderHostsByName.get(name);
 		if (responder) {
 			// Connecting to a responder from the parent just returns the host object
-			const effect = ResponderHost.ref(responder);
-			return [ effect, responder as Host ];
+			const effect = ResponderHost.ref(responder.host);
+			return [ effect, responder.host as Host ];
 		} else {
 			// Only one responder per name should exist
 			if (responderHostsByName.has(name)) {
@@ -236,9 +222,10 @@ export async function connect<
 			responderHostsByName.set(name, undefined as never);
 			// Instantiate a new Responder
 			try {
-				const { effect, host } = ResponderHost.create(hostConstructor, name, await create());
-				responderHostsByName.set(name, host);
-				return [ effect, host as Host ];
+				const [ effect, instance ] = await create();
+				const host = new hostConstructor(name, instance);
+				responderHostsByName.set(name, { effect, host });
+				return [ ResponderHost.ref(host), host ];
 			} catch (err) {
 				responderHostsByName.delete(name);
 				throw err;
@@ -261,7 +248,7 @@ export function initializeWorker(worker: Worker) {
 				const { port } = message;
 				if (responder) {
 					// Connect to responder
-					ResponderHost.connect(responder, port);
+					ResponderHost.connect(responder.host, port);
 					port.postMessage(staticCast<ConnectedMessage>({
 						type: 'responderConnected',
 					}));
@@ -281,7 +268,7 @@ export function initializeWorker(worker: Worker) {
 	}
 }
 
-export function makeClient<Type extends Responder>(constructor: abstract new(...args: any[]) => Type) {
+export function makeClient<Type>(constructor: abstract new(...args: any[]) => Type) {
 
 	// Create client wrapper class for this responder
 	class Client extends ResponderClient {
@@ -302,7 +289,7 @@ export function makeClient<Type extends Responder>(constructor: abstract new(...
 	return Client as never as new() => ResponderClient & WithPromises<Type>;
 }
 
-export function makeHost<Type extends Responder>(constructor: abstract new(...args: any[]) => Type) {
+export function makeHost<Type>(constructor: abstract new(...args: any[]) => Type) {
 
 	// Create host wrapper class for this responder
 	class Host extends ResponderHost {

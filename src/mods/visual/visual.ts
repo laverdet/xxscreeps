@@ -57,7 +57,7 @@ const rectSchema = struct({
 	}),
 });
 
-type PolyStyle = Partial<TypeOf<typeof polySchema>['s']>;
+export type PolyStyle = Partial<TypeOf<typeof polySchema>['s']>;
 const polySchema = struct({
 	...variant('p'),
 	points: vector(array(2, 'double')),
@@ -86,22 +86,16 @@ const textSchema = struct({
 });
 
 const visualSchema = variant(lineSchema, circleSchema, rectSchema, polySchema, textSchema);
-export const schema = build(declare('Visual', vector(struct({
-	name: 'string',
-	visual: vector(visualSchema),
-}))));
+export const schema = build(declare('Visual', vector(visualSchema)));
 
 // Save to visuals to schema blob
 export function flush() {
-	if (tickVisuals.size) {
-		const blob = writeSchema(Fn.map(tickVisuals.entries(), entry => ({
-			name: entry[0],
-			visual: entry[1],
-		})));
-		const roomNames = [ ...tickVisuals.keys() ];
-		tickVisuals.clear();
-		return { blob, roomNames };
-	}
+	const result = [ ...Fn.map(tickVisuals, ([ roomName, visual ]) => ({
+		roomName,
+		blob: writeSchema(visual),
+	})) ];
+	tickVisuals.clear();
+	return result;
 }
 const writeSchema = makeWriter(schema);
 
@@ -119,18 +113,41 @@ function *extractPositions(args: any[]) {
 }
 
 const tickVisuals = new Map<string, TypeOf<typeof visualSchema>[]>();
+
+/**
+ * Room visuals provide a way to show various visual debug info in game rooms. You can use the
+ * `RoomVisual` object to draw simple shapes that are visible only to you. Every existing Room
+ * object already contains the visual property, but you also can create new `RoomVisual` objects for
+ * any room (even without visibility) using the constructor.
+ *
+ * Room visuals are not stored in the database, their only purpose is to display something in your
+ * browser. All drawings will persist for one tick and will disappear if not updated. All
+ * `RoomVisual` API calls have no added CPU cost (their cost is natural and mostly related to simple
+ * `JSON.serialize` calls). However, there is a usage limit: you cannot post more than 500 KB of
+ * serialized data per one room (see `getSize` method).
+ *
+ * All draw coordinates are measured in game coordinates and centered to tile centers, i.e. (10,10)
+ * will point to the center of the creep at `x:10; y:10` position. Fractional coordinates are
+ * allowed.
+ */
 export class RoomVisual {
 	#visuals;
-	constructor(roomName: string) {
-		const tmp = getOrSet(tickVisuals, roomName, () => []);
-		this.#visuals = tmp; // typescript bug
+
+	/**
+	 * You can directly create new RoomVisual object in any room, even if it's invisible to your
+	 * script.
+	 * @param roomName The room name. If undefined, visuals will be posted to all rooms
+	 * simultaneously.
+	 */
+	constructor(roomName = '*') {
+		this.#visuals = getOrSet(tickVisuals, roomName, () => []);
 	}
 
 	/**
 	 * Export the visuals as a string
 	 */
 	export() {
-		return this.#visuals.map(vis => JSON.stringify({ ...vis, t: vis[Variant] })).join('\n') + '\n';
+		return `${this.#visuals.map(vis => JSON.stringify({ ...vis, t: vis[Variant] })).join('\n')}\n`;
 	}
 
 	/**

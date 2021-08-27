@@ -24,8 +24,8 @@ export type CodePayload = Map<string, string | Uint8Array>;
  */
 export async function loadBlobs(db: Database, userId: string, branchName: string): Promise<Schema.CodeBlobs | undefined> {
 	const [ buffers, strings ] = await Promise.all([
-		db.blob.getBuffer(buffersKey(userId, branchName)),
-		db.blob.getBuffer(stringsKey(userId, branchName)),
+		db.data.get(buffersKey(userId, branchName), { blob: true }),
+		db.data.get(stringsKey(userId, branchName), { blob: true }),
 	]);
 	if (buffers || strings) {
 		return { buffers, strings };
@@ -54,11 +54,11 @@ export async function saveContent(db: Database, userId: string, branchName: stri
 		db.data.hset(User.infoKey(userId), 'branch', branchName, { if: 'nx' }),
 		db.data.sadd(branchManifestKey(userId), [ branchName ]),
 		bufferBlob ?
-			db.blob.set(buffersKey(userId, branchName), bufferBlob) :
-			db.blob.del(buffersKey(userId, branchName)) as Promise<never>,
+			db.data.set(buffersKey(userId, branchName), bufferBlob) :
+			db.data.del(buffersKey(userId, branchName)) as Promise<never>,
 		stringBlob ?
-			db.blob.set(stringsKey(userId, branchName), stringBlob) :
-			db.blob.del(stringsKey(userId, branchName)) as Promise<never>,
+			db.data.set(stringsKey(userId, branchName), stringBlob) :
+			db.data.del(stringsKey(userId, branchName)) as Promise<never>,
 	]);
 	await getUserCodeChannel(db, userId).publish({ type: 'update', branch: branchName });
 	if (didSwitch) {

@@ -34,8 +34,8 @@ export function checkSafeMode<Error extends number>(room: Room, error: Error) {
 	return C.OK;
 }
 
-export function checkString(value: string, maxLength: number) {
-	if (typeof value === 'string' && value.length <= maxLength) {
+export function checkString(value: string, maxLength: number, required = false) {
+	if (typeof value === 'string' && value.length <= maxLength && (!required || value.length > 0)) {
 		return C.OK;
 	}
 	return C.ERR_INVALID_ARGS;

@@ -151,23 +151,19 @@ if (dontOverwrite && await db.data.scard('users') > 0) {
 	// Flush databases at the same time because they may point to the same service
 	const shard = await Shard.connect(db, 'shard0');
 	await Promise.all([
-		shardOnly ? undefined : db.blob.flushdb(),
 		shardOnly ? undefined : db.data.flushdb(),
-		shard.blob.flushdb(),
 		shard.data.flushdb(),
 	]);
 	// Initialize blank database
 	await shard.data.set('time', gameTime);
 	await Promise.all([
-		shardOnly ? undefined : db.blob.save(),
 		shardOnly ? undefined : db.data.save(),
-		shard.blob.save(),
 		shard.data.save(),
 	]);
 	shard.disconnect();
 }
 const shard = await Shard.connect(db, 'shard0');
-const { blob } = shard;
+const { data } = shard;
 
 // Save terrain data
 const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ room, terrain }) => {
@@ -180,11 +176,11 @@ const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ r
 		}
 	}
 	return [ room as string, {
-		exits: packExits(terrain),
+		exits: packExits(writer),
 		terrain: writer,
 	} ];
 }));
-await blob.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
+await data.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
 
 // Collect room data
 const roomObjects = loki.getCollection('rooms.objects');

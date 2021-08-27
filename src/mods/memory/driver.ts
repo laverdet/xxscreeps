@@ -1,4 +1,4 @@
-import type { SegmentPayload } from './memory';
+import type { SegmentPayload, flush } from './memory';
 import type { TickResult } from 'xxscreeps/engine/runner';
 import * as Fn from 'xxscreeps/utility/functional';
 import { kMaxActiveSegments } from './memory';
@@ -20,7 +20,7 @@ declare module 'xxscreeps/engine/runner' {
 			username: string;
 		};
 		memorySegmentsUpdated: SegmentPayload[] | null;
-		memoryUpdated: Uint8Array;
+		memoryUpdated: ReturnType<typeof flush>;
 	}
 }
 
@@ -61,12 +61,11 @@ hooks.register('runnerConnector', player => {
 			foreignSegmentRequest = payload.foreignSegmentRequest;
 			await Promise.all([
 				// Save primary memory blob
-				saveMemoryBlob(shard, userId, payload.memoryUpdated),
+				payload.memoryUpdated.payload && saveMemoryBlob(shard, userId, payload.memoryUpdated.payload),
 				// Save memory segments
-				payload.memorySegmentsUpdated ?
+				payload.memorySegmentsUpdated &&
 					Promise.all(Fn.map(Fn.take(payload.memorySegmentsUpdated, kMaxActiveSegments),
-						segment => saveMemorySegmentBlob(shard, userId, segment.id, segment.payload))) :
-					undefined,
+						segment => saveMemorySegmentBlob(shard, userId, segment.id, segment.payload))),
 			]);
 		},
 	} ];

@@ -7,6 +7,12 @@ export const globals = new Set<string>();
 
 export const hooks = makeHookRegistration<{
 	/**
+	 * Hooks which runs in environments which will execute any game-code [runtime, processor,
+	 * backend]. Executed once after all mod imports have finished resolving.
+	 */
+	environment: () => void;
+
+	/**
 	 * Register a function which will run on newly-created `Game` objects. These will fire once per tick
 	 * for user environments created via `runForUser`
 	 */

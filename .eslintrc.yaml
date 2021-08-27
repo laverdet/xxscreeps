@@ -3,5 +3,6 @@ env:
   es2021: true
   node: true
 parserOptions:
+  extraFileExtensions: [ '.cjs' ]
   project: ./tsconfig.json
   sourceType: module

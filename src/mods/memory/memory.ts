@@ -16,6 +16,7 @@ let requestedForeignSegment: null | {
 let memory: Uint16Array;
 let memoryLength = 0;
 let string: string | undefined;
+let accessedJson = false;
 let json: object | undefined;
 let isBufferOutOfDate = false;
 
@@ -24,7 +25,38 @@ function align(address: number) {
 	return ~alignMinusOne & (address + alignMinusOne);
 }
 
+/**
+ * Vanilla Screeps runs a flagrantly wasteful `JSON.parse` each tick on the player's memory. Besides
+ * wasting CPU this also has the effect of turning `undefined` into `null`, removing `undefined`
+ * object fields, and of course copying the entire object. This function aims to simulate some of
+ * those effects without the cost of deserializing the whole memory payload.
+*/
+function crunch(payload: any) {
+	if (typeof payload === 'object') {
+		if (Array.isArray(payload)) {
+			for (const [ key, value ] of payload.entries()) {
+				if (value === undefined) {
+					payload[key] = null;
+				} else {
+					crunch(value);
+				}
+			}
+		} else if (payload !== null) {
+			for (const [ key, value ] of Object.entries(payload)) {
+				if (value === undefined) {
+					delete payload[key];
+				} else {
+					crunch(value);
+				}
+			}
+		}
+	}
+}
+
 export const RawMemory = {
+	/** @deprecated */
+	_parsed: undefined as any,
+
 	/**
 	 * An object with asynchronous memory segments available on this tick. Each object key is the
 	 * segment ID with data in string values. Use `setActiveSegments` to fetch segments on the next
@@ -51,7 +83,7 @@ export const RawMemory = {
 		if (typeof value !== 'string') {
 			throw new TypeError('Memory value must be a string');
 		}
-		json = undefined;
+		RawMemory._parsed = json = undefined;
 		string = value;
 		isBufferOutOfDate = true;
 	},
@@ -108,6 +140,7 @@ export const RawMemory = {
  * `Game.memory` getter
  */
 export function get(): any {
+	accessedJson = true;
 	if (json) {
 		return json;
 	}
@@ -115,32 +148,48 @@ export function get(): any {
 		const memory = RawMemory.get();
 		if (memory === '') {
 			// Prevent annoying debugger breaks on the subsequent caught exception
-			return json = {};
+			json = {};
+		} else {
+			json = JSON.parse(RawMemory.get());
 		}
-		json = JSON.parse(RawMemory.get());
 	} catch (err) {
 		json = {};
 	}
-	return json;
+	return RawMemory._parsed = json;
 }
 
 /**
  * Flush non-segment `RawMemory` payload back to driver as `Uint8Array`
  */
-export function flush(): Uint8Array {
+export function flush() {
+	// Memory was never used
 	if (string === undefined) {
-		return new Uint8Array(0);
+		return { size: 0 };
 	}
 
 	// Check for JSON-based `Memory` object
 	if (json) {
-		const value = json;
+		// "Memhack" - https://wiki.screepspl.us/index.php/MemHack
+		const memhack = RawMemory._parsed;
+		const accessedJsonThisTick = accessedJson;
+		accessedJson = false;
+		if (!memhack) {
+			// User wants to skip saving memory this tick
+			RawMemory._parsed = json;
+			return { size: memoryLength };
+		} else if (accessedJsonThisTick && json === memhack) {
+			// User did not mess with `Memory`, simulate vanilla reconstruction
+			crunch(json);
+		} else {
+			// User wants to reuse memory object
+			json = memhack;
+		}
 		try {
-			RawMemory.set(JSON.stringify(json));
+			string = JSON.stringify(json);
+			isBufferOutOfDate = true;
 		} catch (err) {
 			console.error(err);
 		}
-		json = value;
 	}
 
 	// Update the uint16 buffer
@@ -160,7 +209,10 @@ export function flush(): Uint8Array {
 		}
 		memoryLength = length;
 	}
-	return new Uint8Array(memory.buffer, 0, memoryLength << 1);
+	return {
+		payload: new Uint8Array(memory.buffer, 0, memoryLength << 1),
+		size: memoryLength,
+	};
 }
 
 /**

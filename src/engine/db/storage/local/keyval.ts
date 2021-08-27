@@ -1,38 +1,32 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type * as Provider from 'xxscreeps/engine/db/storage/provider';
+import type * as P from 'xxscreeps/engine/db/storage/provider';
 import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
 import type { MaybePromises } from './responder';
 import fs from 'fs/promises';
 import * as Fn from 'xxscreeps/utility/functional';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
-import { Responder, connect, makeClient, makeHost } from './responder';
+import { connect, makeClient, makeHost } from './responder';
 import { SortedSet } from './sorted-set';
 import { registerStorageProvider } from 'xxscreeps/engine/db/storage';
 import { getOrSet } from 'xxscreeps/utility/utility';
+import { BlobStorage } from './blob';
 
-const provider = (url: URL) => connect(`${url}`, LocalKeyValClient, LocalKeyValHost, async() => {
-	const payload = await async function() {
-		if (url.protocol === 'file:') {
-			try {
-				return await fs.readFile(url, 'utf8');
-			} catch {}
-		}
-	}();
-	return new LocalKeyValResponder(`${url}`, payload);
+registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
+	const path = url.pathname.endsWith('/') ? url : new URL(`${url}/`);
+	return connect(`${path}`, LocalKeyValClient, LocalKeyValHost, () =>
+		LocalKeyValResponder.create(path));
 });
 
-registerStorageProvider([ 'file', 'local' ], 'keyval', provider);
-registerStorageProvider('local', 'blob', provider);
-
-type Value = Provider.Value;
-
-export class LocalKeyValResponder extends Responder implements MaybePromises<Provider.KeyValProvider> {
+export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
-	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: Value[]) => any>();
+	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: P.Value[]) => any>();
 
-	constructor(private readonly url: string, payload?: string) {
-		super();
+	constructor(
+		private readonly url: URL | undefined,
+		private readonly blob: BlobStorage,
+		payload: string | undefined,
+	) {
 		if (payload) {
 			const map = JSON.parse(payload, (key, value) => {
 				switch (value?.['#']) {
@@ -49,10 +43,25 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		}
 	}
 
-	copy(from: string, to: string, options?: Provider.Copy) {
+	static async create(path: URL) {
+		const [ blobEffect, blob ] = await BlobStorage.create(path);
+		const [ url, payload ] = await async function() {
+			if (path.protocol === 'file:') {
+				try {
+					const url = new URL('data.json', path);
+					return [ url, await fs.readFile(new URL('data.json', path), 'utf8') ] as const;
+				} catch {}
+			}
+			return [];
+		}();
+		const host = new LocalKeyValResponder(url, blob, payload);
+		return [ blobEffect, host ] as const;
+	}
+
+	copy(from: string, to: string, options?: P.Copy) {
 		const value = this.data.get(from);
 		if (value === undefined) {
-			return false;
+			return this.blob.copy(from, to, options) as never;
 		} else if (options?.if === 'nx' && this.data.has(to)) {
 			return false;
 		} else if (value instanceof Array) {
@@ -74,28 +83,35 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 			this.remove(key);
 			return true;
 		} else {
-			return false;
+			return this.blob.del(key) as never;
 		}
 	}
 
-	get(key: string) {
-		const value = this.data.get(key);
-		return value === undefined ? null : String(value);
-	}
-
-	getBuffer(key: string) {
-		return this.data.get(key) ?? null;
-	}
-
-	async reqBuffer(key: string) {
-		const value = await this.getBuffer(key);
-		if (value === null) {
-			throw new Error(`"${key}" does not exist`);
+	get(key: string, options?: P.AsBlob) {
+		if (options?.blob) {
+			return this.blob.get(key) as never;
+		} else {
+			const value = this.data.get(key);
+			return value === undefined ? null : String(value);
 		}
-		return value;
 	}
 
-	set(key: string, value: Value | Readonly<Uint8Array>, options?: Provider.Set & Provider.SetBuffer): any {
+	req(key: string, options?: P.AsBlob) {
+		if (options?.blob) {
+			return this.blob.req(key) as never;
+		} else {
+			const value = this.get(key);
+			if (value === null) {
+				throw new Error(`"${key}" does not exist`);
+			}
+			return value;
+		}
+	}
+
+	set(key: string, value: P.Value, options?: P.Set): any {
+		if (value instanceof Uint8Array) {
+			return this.blob.set(key, value, options) as never;
+		}
 		if (
 			options?.if === 'nx' ? this.data.has(key) :
 			options?.if === 'xx' ? !this.data.has(key) : false
@@ -163,11 +179,11 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 	}
 
 	hmget(key: string, fields: Iterable<string>) {
-		const map: Map<string, string> | undefined = this.data.get(key);
-		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ]));
+		const map: Map<string, string | Readonly<Uint8Array>> | undefined = this.data.get(key);
+		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ])) as never;
 	}
 
-	hset(key: string, field: string, value: Value, options?: Provider.HSet) {
+	hset(key: string, field: string, value: P.Value, options?: P.HSet) {
 		const map: Map<string, any> = getOrSet(this.data, key, () => new Map);
 		const has = map.has(field);
 		if (options?.if === 'nx' && has) {
@@ -178,10 +194,10 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		}
 	}
 
-	hmset(key: string, fields: Iterable<readonly [ string, Value ]> | Record<string, Value>) {
+	hmset(key: string, fields: Iterable<readonly [ string, P.Value ]> | Record<string, P.Value>) {
 		const map: Map<string, any> = getOrSet(this.data, key, () => new Map);
 		const iterable = Symbol.iterator in fields ?
-			fields as Iterable<[ string, Value ]> :
+			fields as Iterable<[ string, P.Value ]> :
 			Object.entries(fields);
 		for (const [ field, value ] of iterable) {
 			map.set(field, value);
@@ -212,9 +228,9 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		);
 	}
 
-	rpush(key: string, elements: Value[]) {
+	rpush(key: string, elements: P.Value[]) {
 		const list: string[] | undefined = this.data.get(key);
-		const strings = Fn.map(elements, element => `${element}`);
+		const strings = Fn.map(elements, element => element) as string[];
 		if (list) {
 			list.push(...strings);
 			return list.length;
@@ -321,7 +337,7 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		return out.size;
 	}
 
-	zadd(key: string, members: [ number, string ][], options?: Provider.ZAdd) {
+	zadd(key: string, members: [ number, string ][], options?: P.ZAdd) {
 		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
 		const result = function() {
 			switch (options?.if) {
@@ -348,7 +364,7 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		return score;
 	}
 
-	zinterStore(key: string, keys: string[], options?: Provider.ZAggregate) {
+	zinterStore(key: string, keys: string[], options?: P.ZAggregate) {
 		// Fetch sets first because you can use this command to store a set back into itself
 		const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
 		const out = function() {
@@ -392,7 +408,7 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		}
 	}
 
-	zrange(key: string, min: number | string, max: number | string, options?: Provider.ZRange): any {
+	zrange(key: string, min: number | string, max: number | string, options?: P.ZRange): any {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			const allMatching = function() {
@@ -434,7 +450,7 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		}
 	}
 
-	zrangeWithScores(key: string, min: number, max: number, options?: Provider.ZRange) {
+	zrangeWithScores(key: string, min: number, max: number, options?: P.ZRange) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			switch (options?.by) {
@@ -498,25 +514,26 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 		return out.size;
 	}
 
-	eval(script: KeyvalScript, keys: string[], argv: Value[]) {
+	eval(script: KeyvalScript, keys: string[], argv: P.Value[]) {
 		return this.evaluateInline(script.id, script.local, keys, argv);
 	}
 
-	async evaluateInline(id: string, script: string, keys: string[], argv: Value[]) {
+	async evaluateInline(id: string, script: string, keys: string[], argv: P.Value[]) {
 		const fn = getOrSet(this.scripts, id, () => {
 			// eslint-disable-next-line @typescript-eslint/no-implied-eval
 			const impl = new Function(`return ${script}`)();
-			return (instance, keys: string[], argv: Value[]) => impl(instance, keys, argv);
+			return (instance, keys: string[], argv: P.Value[]) => impl(instance, keys, argv);
 		});
 		return fn(this, keys, argv);
 	}
 
-	flushdb() {
+	async flushdb() {
+		await this.blob.flushdb();
 		this.data.clear();
 	}
 
 	async save() {
-		if (this.url.startsWith('file:')) {
+		if (this.url) {
 			const payload = JSON.stringify(this.data, (key, value) => {
 				if (value === this.data) {
 					return {
@@ -537,8 +554,13 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 			});
 			const original = new URL(this.url);
 			const tmp = new URL(`./.${original.pathname.substr(original.pathname.lastIndexOf('/') + 1)}.swp`, original);
-			await fs.writeFile(tmp, payload, 'utf8');
-			await fs.rename(tmp, original);
+			await Promise.all([
+				this.blob.save(),
+				async function() {
+					await fs.writeFile(tmp, payload, 'utf8');
+					await fs.rename(tmp, original);
+				}(),
+			]);
 		}
 	}
 
@@ -549,11 +571,17 @@ export class LocalKeyValResponder extends Responder implements MaybePromises<Pro
 }
 
 class LocalKeyValClient extends makeClient(LocalKeyValResponder) {
+	declare get: (...args: any[]) => any;
+	declare req: (...args: any[]) => any;
+
 	// https://github.com/microsoft/TypeScript/issues/27689
 	// @ts-expect-error
-	eval(script: KeyvalScript, keys: string[], argv: Value[]) {
+	eval(script: KeyvalScript, keys: string[], argv: P.Value[]) {
 		return this.evaluateInline(script.id, script.local, keys, argv);
 	}
 }
 
-class LocalKeyValHost extends makeHost(LocalKeyValResponder) {}
+class LocalKeyValHost extends makeHost(LocalKeyValResponder) {
+	declare get: (...args: any[]) => any;
+	declare req: (...args: any[]) => any;
+}

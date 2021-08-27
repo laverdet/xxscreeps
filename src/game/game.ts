@@ -72,6 +72,8 @@ export class Game extends GameBase {
 	 */
 	shard: { name: string; type: string; ptr: boolean };
 
+	gpl = { level: 0, progress: 0, progressTotal: Infinity };
+
 	constructor(state: GameState, data?: TickPayload) {
 		super(state);
 

@@ -25,7 +25,7 @@ export function getFlagChannel(shard: Shard, userId: string) {
  * Load the unparsed flag blob for a user
  */
 export function loadUserFlagBlob(shard: Shard, userId: string) {
-	return shard.blob.getBuffer(`user/${userId}/flags`);
+	return shard.data.get(`user/${userId}/flags`, { blob: true });
 }
 
 /**
@@ -47,9 +47,9 @@ export async function saveUserFlagBlobForNextTick(shard: Shard, userId: string, 
 	const time = shard.time + 1;
 	const key = `user/${userId}/flags`;
 	if (blob) {
-		await shard.blob.set(key, blob);
+		await shard.data.set(key, blob);
 	} else {
-		await shard.blob.del(key);
+		await shard.data.del(key);
 	}
 	await getFlagChannel(shard, userId).publish({ type: 'updated', time });
 }

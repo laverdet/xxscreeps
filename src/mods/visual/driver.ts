@@ -1,17 +1,22 @@
+import * as Fn from 'xxscreeps/utility/functional';
 import { hooks } from 'xxscreeps/engine/runner';
-import { publishVisualsBlobForNextTick } from './model';
+import { publishVisualsBlobsForNextTick } from './model';
 
 declare module 'xxscreeps/engine/runner' {
 	interface TickResult {
-		visuals?: {
+		visuals: {
 			blob: Readonly<Uint8Array>;
-			roomNames: string[];
-		};
+			roomName: string;
+		}[];
 	}
 }
 
 hooks.register('runnerConnector', player => [ undefined, {
-	async save(payload) {
-		await publishVisualsBlobForNextTick(player.shard, player.userId, payload.visuals);
+	async save(result) {
+		const validPayloads = Fn.filter(result.visuals, ({ roomName }) =>
+			roomName === '*' || player.world.terrain.has(roomName));
+		const payload = new Map(Fn.map(validPayloads, payload =>
+			[ payload.roomName, payload.blob ]));
+		await publishVisualsBlobsForNextTick(player.shard, player.userId, payload);
 	},
 } ]);

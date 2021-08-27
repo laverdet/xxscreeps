@@ -1,5 +1,4 @@
 import type { Context, State } from 'xxscreeps/backend';
-import * as Crypto from 'crypto';
 import * as OpenId from 'openid';
 import * as User from 'xxscreeps/engine/db/user';
 import config from 'xxscreeps/config';
@@ -66,13 +65,7 @@ if (steamApiKey) {
 				const userId = context.state.newUserId ?? context.state.userId;
 				if (userId !== undefined) {
 					const key = User.infoKey(userId);
-					const sessionId = Crypto.randomBytes(16).toString('hex');
-					const [ username ] = await Promise.all([
-						context.db.data.hget(key, 'username'),
-						context.db.data.hset(key, 'session', sessionId),
-					]);
-					context.cookies.set('id', userId, { httpOnly: false });
-					context.cookies.set('session', sessionId, { httpOnly: false });
+					const username = await context.db.data.hget(key, 'username');
 					return username ?? 'New User';
 				}
 			}();

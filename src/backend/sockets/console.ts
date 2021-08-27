@@ -1,17 +1,32 @@
+/* eslint-disable no-control-regex */
 import type { SubscriptionEndpoint } from '../socket';
-import AnsiUpModule from 'ansi_up';
-// ansi_up's tsconfig is incorrect
-const AnsiUp: typeof AnsiUpModule = (AnsiUpModule as any).default;
 import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model';
 import { throttle } from 'xxscreeps/utility/utility';
 import config from 'xxscreeps/config';
 
-const au = new AnsiUp();
-// Stupid hack to override client's CSS padding on console eval results
-const colorize = (payload: string) => au.ansi_to_html(payload).replace(
-	/<span style="(?<style>(?:background-color|color|font-weight):[^";]+?;?)+">/g,
-	(_, style) => `<span style="padding:0;${style}">`,
-).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+function colorize(payload: string) {
+	return payload
+		// null
+		.replace(/\x1b\[1m/g, '<b>')
+		.replace(/\x1b\[22m/g, '</b>')
+		// undefined
+		.replace(/\x1b\[90m/g, '<span style="padding:0;color:#999">')
+		// yellow - number, boolean
+		.replace(/\x1b\[33m/g, '<span style="padding:0;color:#bb0">')
+		// green - string, symbol
+		.replace(/\x1b\[32m/g, '<span style="padding:0;color:#0b0">')
+		// magenta - date
+		.replace(/\x1b\[35m/g, '<span style="padding:0;color:#b0b">')
+		// red - regexp
+		.replace(/\x1b\[31m/g, '<span style="padding:0;color:#b00">')
+		// cyan - regexp
+		.replace(/\x1b\[36m/g, '<span style="padding:0;color:#0bb">')
+		// generic reset
+		.replace(/\x1b\[39m/g, '</span>')
+		// underline - module [unused]
+		.replace(/\x1b\[4/g, '<u>')
+		.replace(/\x1b\[24m/g, '</u>');
+}
 
 const ConsoleSubscription: SubscriptionEndpoint = {
 	pattern: /^user:(?<user>[^/]+)\/console$/,

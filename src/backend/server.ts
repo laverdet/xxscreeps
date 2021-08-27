@@ -15,11 +15,13 @@ import { BackendContext } from './context';
 import { setupGracefulShutdown } from './graceful';
 import { installEndpointHandlers } from './endpoints';
 import { installSocketHandlers, installUpgradeHandlers } from './socket';
+import { initializeGameEnvironment } from 'xxscreeps/game';
 import { hooks } from './symbols';
 
 import 'xxscreeps/config/mods/import/game';
 await importMods('backend');
 await importMods('processor');
+initializeGameEnvironment();
 
 // Initialize services
 const backendContext = await BackendContext.connect();

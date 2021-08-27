@@ -1,10 +1,11 @@
 import type { TickPayload } from 'xxscreeps/engine/runner';
+import type { Room } from 'xxscreeps/game/room';
+import type { World } from 'xxscreeps/game/map';
 import './runtime';
 import { GameBase, Game as GameConstructor, GameState } from './game';
 import { IntentManager } from './intents';
 import { flush as flushPathFinder } from './path-finder';
-import type { Room } from 'xxscreeps/game/room';
-import type { World } from 'xxscreeps/game/map';
+import { hooks } from './symbols';
 
 export { defineGlobal, hooks, registerGlobal } from './symbols';
 export { GameConstructor, GameState };
@@ -15,6 +16,14 @@ export let userGame: GameConstructor | undefined;
 export const userInfo = new Map<string, { username: string }>();
 
 type GameTask<Type> = (game: GameConstructor) => Type;
+
+let didInit = false;
+export function initializeGameEnvironment() {
+	if (!didInit) {
+		didInit = true;
+		hooks.makeIterated('environment')();
+	}
+}
 
 /**
  * Runs a task with global user-agnostic data like `Game.getObjectById`, `Game.rooms`, and

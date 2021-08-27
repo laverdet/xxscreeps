@@ -28,7 +28,10 @@ registerRoomTickProcessor((room, context) => {
 		// Run loop and reset memory or mark user as inactive
 		const [ intents, result ] = runForUser(user, context.state, loop);
 		if (result) {
-			data.memory.set(user, Memory.flush());
+			const memory = Memory.flush().payload;
+			if (memory) {
+				data.memory.set(user, memory);
+			}
 			context.setActive();
 		} else {
 			data.memory.delete(user);

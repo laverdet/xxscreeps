@@ -83,10 +83,7 @@ extend(Creep, {
 	claimController(target) {
 		return chainIntentChecks(
 			() => checkClaimController(this, target),
-			() => {
-				controllerActivity |= 2;
-				intents.save(this, 'claimController', target.id);
-			});
+			() => intents.save(this, 'claimController', target.id));
 	},
 
 	generateSafeMode(target) {
@@ -110,11 +107,7 @@ extend(Creep, {
 	upgradeController(target) {
 		return chainIntentChecks(
 			() => checkUpgradeController(this, target),
-			() => {
-				controllerActivity |= 1;
-				intents.save(this, 'upgradeController', target.id);
-			},
-		);
+			() => intents.save(this, 'upgradeController', target.id));
 	},
 });
 
@@ -199,16 +192,3 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 			}
 		});
 }
-
-/**
- * Keeps track of whether `upgradeController` was called in the runner this tick. This tells the
- * driver whether or not to check for GCL updates. This isn't for correctness, it's just an
- * optimization.
- */
-export function acquireControllerActivity() {
-	const result = controllerActivity;
-	controllerActivity = 0;
-	return result;
-}
-
-let controllerActivity = 0;
