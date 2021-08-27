@@ -46,12 +46,18 @@ export function add(mover: RoomObject, power: number, direction: Direction) {
 	}
 }
 
-function remove(mover: RoomObject) {
-	mover.nextPositionTime = -1;
-	const blockedMovers = moves.get(toId(mover.pos.x, mover.pos.y));
+function remove(removedMover: RoomObject) {
+	removedMover.nextPositionTime = -1;
+	const blockedMovers = moves.get(toId(removedMover.pos.x, removedMover.pos.y));
 	for (const { mover } of blockedMovers ?? []) {
 		if (mover.nextPositionTime === Game.time) {
-			remove(mover);
+			const check = makeObstacleChecker({
+				room: mover.room,
+				user: mover['#user']!,
+			});
+			if (check(removedMover)) {
+				remove(mover);
+			}
 		}
 	}
 }
@@ -76,7 +82,9 @@ export function dispatch(room: Room) {
 		// Build list of objects attempting to move
 		const contenders = Fn.map(info, ({ mover, power }) => ({
 			mover,
-			// First priority is moving creeps who are *currently* on cells where more creeps want to
+			// First priority is the move/weight ratio, higher wins
+			power,
+			// Second priority is moving creeps who are *currently* on cells where more creeps want to
 			// move
 			movingInto: function() {
 				const followers = moves.get(toId(mover.pos.x, mover.pos.y));
@@ -92,14 +100,12 @@ export function dispatch(room: Room) {
 					return 0;
 				}
 			}(),
-			// Second priority is the move/weight ratio, faster wins
-			power,
 		}));
 
 		// Pick the object to win this movement
 		const { mover } = Fn.minimum(contenders, (left, right) =>
-			right.movingInto - left.movingInto ||
-			right.power - left.power,
+			right.power - left.power ||
+			right.movingInto - left.movingInto,
 		)!;
 		mover.nextPosition = nextPosition;
 		mover.nextPositionTime = time;
