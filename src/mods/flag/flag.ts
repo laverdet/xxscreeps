@@ -5,7 +5,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { RoomObject, format as baseFormat } from 'xxscreeps/game/object';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
+import { chainIntentChecks, checkString } from 'xxscreeps/game/checks';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
 
 export let intents: FlagIntent[] = [];
@@ -136,7 +136,7 @@ export function checkCreateFlag(
 		pos ? () => checkFlagPosition(pos) : () => C.OK,
 		() => checkFlagColors(color, secondaryColor),
 		() => {
-			if (typeof name !== 'string' || name.length === 0 || name.length > 100) {
+			if (checkString(name, 100, true)) {
 				return C.ERR_INVALID_ARGS;
 			} else if (checkName && (name in flags)) {
 				return C.ERR_NAME_EXISTS;
