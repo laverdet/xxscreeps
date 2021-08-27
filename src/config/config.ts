@@ -248,6 +248,7 @@ export const defaults = {
 export const configDefaults = {
 	mods: [
 		'xxscreeps/mods/classic',
+		'xxscreeps/mods/backend/cookie',
 		'xxscreeps/mods/backend/password',
 		'xxscreeps/mods/backend/steam',
 	],

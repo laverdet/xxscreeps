@@ -77,10 +77,16 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	override get structureType() { return C.STRUCTURE_SPAWN }
 
 	get memory() {
+		if (!this.my) {
+			return;
+		}
 		return (Memory.get().spawns ??= {})[this.name] ??= {};
 	}
 
 	set memory(memory: any) {
+		if (!this.my) {
+			return;
+		}
 		(Memory.get().spawns ??= {})[this.name] ??= memory;
 	}
 
@@ -221,7 +227,7 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 	obstacle: true,
 	checkName(room, name) {
 		if (name) {
-			if (checkString(name, 100) !== C.OK) {
+			if (checkString(name, 100, true) !== C.OK) {
 				return null;
 			}
 			if (userGame) {
@@ -302,48 +308,44 @@ export function checkSpawnCreep(
 	directions: Direction[] | null,
 	energyStructures: (StructureExtension | StructureSpawn)[] | null,
 ) {
+	return chainIntentChecks(
+		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkString(name, 100, true),
+		() => {
+			if (userGame?.creeps[name] !== undefined) {
+				return C.ERR_NAME_EXISTS;
+			}
+			if (directions !== null && !checkDirections(directions)) {
+				return C.ERR_INVALID_ARGS;
+			}
+			if (spawn.spawning) {
+				return C.ERR_BUSY;
+			}
 
-	// Check name is valid and does not already exist
-	if (typeof name !== 'string' || name === '') {
-		return C.ERR_INVALID_ARGS;
+			// TODO: RCL
 
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	} else if (userGame?.creeps[name] !== undefined) {
-		return C.ERR_NAME_EXISTS;
-	}
+			if (
+				!Array.isArray(body) ||
+				body.length === 0 ||
+				body.length > C.MAX_CREEP_SIZE ||
+				!body.every(part => C.BODYPARTS_ALL.includes(part))
+			) {
+				return C.ERR_INVALID_ARGS;
+			}
 
-	// Check direction sanity
-	if (directions !== null && !checkDirections(directions)) {
-		return C.ERR_INVALID_ARGS;
-	}
+			// Check body cost
+			const creepCost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
+			if (energyStructures) {
+				const totalEnergy = Fn.accumulate(new Set(energyStructures), structure => structure.energy);
+				if (totalEnergy < creepCost) {
+					return C.ERR_NOT_ENOUGH_ENERGY;
+				}
+			} else if (spawn.room.energyAvailable < creepCost) {
+				return C.ERR_NOT_ENOUGH_ENERGY;
+			}
 
-	if (!spawn.my) {
-		return C.ERR_NOT_OWNER;
-	} else if (spawn.spawning) {
-		return C.ERR_BUSY;
-	}
-
-	// TODO: RCL
-
-	if (!Array.isArray(body) || body.length === 0 || body.length > C.MAX_CREEP_SIZE) {
-		return C.ERR_INVALID_ARGS;
-
-	} else if (!body.every(part => C.BODYPARTS_ALL.includes(part))) {
-		return C.ERR_INVALID_ARGS;
-	}
-
-	// Check body cost
-	const creepCost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
-	if (energyStructures) {
-		const totalEnergy = Fn.accumulate(new Set(energyStructures), structure => structure.energy);
-		if (totalEnergy < creepCost) {
-			return C.ERR_NOT_ENOUGH_ENERGY;
-		}
-	} else if (spawn.room.energyAvailable < creepCost) {
-		return C.ERR_NOT_ENOUGH_ENERGY;
-	}
-
-	return C.OK;
+			return C.OK;
+		});
 }
 
 //

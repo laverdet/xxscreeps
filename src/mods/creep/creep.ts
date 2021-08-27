@@ -2,6 +2,7 @@ import type { Direction } from 'xxscreeps/game/position';
 import type { GameConstructor } from 'xxscreeps/game';
 import type { ResourceType } from 'xxscreeps/mods/resource';
 import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path';
+import type { PolyStyle } from 'xxscreeps/mods/visual/visual';
 import type { RoomSearchOptions } from 'xxscreeps/game/path-finder';
 import type { WithStore } from 'xxscreeps/mods/resource/store';
 import * as C from 'xxscreeps/game/constants';
@@ -29,7 +30,7 @@ type MoveToOptions = FindPathOptions & {
 	noPathFinding?: boolean;
 	reusePath?: number;
 	serializeMemory?: boolean;
-	visualizePathStyle?: boolean;
+	visualizePathStyle?: Partial<PolyStyle>;
 };
 
 export const format = declare('Creep', () => compose(shape, Creep));
@@ -60,10 +61,16 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	@enumerable override get hitsMax() { return this.body.length * 100 }
 
 	get memory() {
+		if (!this.my) {
+			return;
+		}
 		return (Memory.get().creeps ??= {})[this.name] ??= {};
 	}
 
 	set memory(memory: any) {
+		if (!this.my) {
+			return;
+		}
 		(Memory.get().creeps ??= {})[this.name] ??= memory;
 	}
 
@@ -192,86 +199,111 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	moveTo(x: number, y: number, opts?: MoveToOptions & RoomSearchOptions): number;
 	moveTo(target: RoomObject | RoomPosition, opts?: MoveToOptions & RoomSearchOptions): number;
 	moveTo(...args: [any]) {
-		return chainIntentChecks(
-			() => checkCommon(this),
-			() => checkFatigue(this),
-			() => {
-				// Parse target
-				const { pos, extra } = fetchPositionArgument<MoveToOptions>(this.pos.roomName, ...args);
-				if (pos === undefined) {
-					return C.ERR_INVALID_TARGET;
-				} else if (pos.isEqualTo(this.pos)) {
-					return C.OK;
-				}
+		// Parse target
+		const { pos, extra } = fetchPositionArgument<MoveToOptions>(this.pos.roomName, ...args);
+		if (pos === undefined) {
+			return C.ERR_INVALID_TARGET;
+		} else if (pos.isEqualTo(this.pos)) {
+			return C.OK;
+		}
 
-				// Reuse saved path
-				const reusePath = extra?.reusePath ?? 5;
-				const serializeMemory = extra?.serializeMemory ?? true;
-				type SavedMove = {
-					dest: {
-						room: string;
-						x: number;
-						y: number;
-					};
-					path: string | RoomPath;
+		const searchOrFetchPath = () => {
+			// Reuse saved path
+			const reusePath = extra?.reusePath ?? 5;
+			const serializeMemory = extra?.serializeMemory ?? true;
+			type SavedMove = {
+				dest: {
 					room: string;
-					time: number;
+					x: number;
+					y: number;
 				};
-				if (reusePath > 0) {
-					const { _move }: { _move?: SavedMove } = this.memory;
-					if (_move !== undefined) {
-						if (Game.time > _move.time + reusePath || _move.room !== this.pos.roomName) {
-							delete this.memory._move;
+				path: string | RoomPath;
+				room: string;
+				time: number;
+			};
+			if (reusePath > 0) {
+				const { _move }: { _move?: SavedMove } = this.memory;
+				if (_move !== undefined) {
+					if (Game.time > _move.time + reusePath || _move.room !== this.pos.roomName) {
+						delete this.memory._move;
 
-						} else if (_move.dest.room === pos.roomName && _move.dest.x === pos.x && _move.dest.y === pos.y) {
-
-							const path = typeof _move.path === 'string' ? Room.deserializePath(_move.path) : _move.path;
-							const ii = path.findIndex(pos => this.pos.x === pos.x && this.pos.y === pos.y);
-							if (ii !== -1) {
-								path.splice(0, ii + 1);
-								_move.path = serializeMemory ? Room.serializePath(path) : path;
-							}
-							if (path.length === 0) {
-								return this.pos.isNearTo(pos) ? C.OK : C.ERR_NO_PATH;
-							}
-							const result = this.moveByPath(path);
-							if (result === C.OK) {
-								return C.OK;
-							}
+					} else if (_move.dest.room === pos.roomName && _move.dest.x === pos.x && _move.dest.y === pos.y) {
+						const path = typeof _move.path === 'string' ? Room.deserializePath(_move.path) : _move.path;
+						const ii = path.findIndex(pos => this.pos.x === pos.x && this.pos.y === pos.y);
+						if (ii !== -1) {
+							path.splice(0, ii + 1);
+							_move.path = serializeMemory ? Room.serializePath(path) : path;
+						}
+						if (this.pos.isNearTo(path[0].x, path[0].y)) {
+							return path;
 						}
 					}
 				}
+			}
 
-				// Find a path
-				if (extra?.noPathFinding) {
-					return C.ERR_NOT_FOUND;
-				}
-				const path = this.pos.findPathTo(pos, extra && {
-					...extra,
-					serialize: false,
-				});
-
-				// Cache path in memory
-				if (reusePath > 0) {
-					const _move: SavedMove = {
-						dest: {
-							x: pos.x,
-							y: pos.y,
-							room: pos.roomName,
-						},
-						time: Game.time,
-						path: serializeMemory ? Room.serializePath(path) : path,
-						room: this.pos.roomName,
-					};
-					this.memory._move = _move;
-				}
-
-				// And move one tile
-				if (path.length === 0) {
-					return C.ERR_NO_PATH;
-				}
-				return this.move(path[0].direction);
+			// Find a path
+			if (extra?.noPathFinding) {
+				return null;
+			}
+			const path = this.pos.findPathTo(pos, extra && {
+				...extra,
+				serialize: false,
 			});
+
+			// Cache path in memory
+			if (reusePath > 0) {
+				const _move: SavedMove = {
+					dest: {
+						x: pos.x,
+						y: pos.y,
+						room: pos.roomName,
+					},
+					time: Game.time,
+					path: serializeMemory ? Room.serializePath(path) : path,
+					room: this.pos.roomName,
+				};
+				this.memory._move = _move;
+			}
+			return path;
+		};
+
+		const visualize = (path: RoomPath) => {
+			if (path.length > 0 && extra?.visualizePathStyle) {
+				this.room.visual.poly(path, {
+					fill: 'transparent',
+					lineStyle: 'dashed',
+					opacity: 0.1,
+					stroke: '#fff',
+					strokeWidth: 0.15,
+					...extra.visualizePathStyle,
+				});
+			}
+		};
+
+		// Run intent checks & visualize path before returning a failure code
+		const result = chainIntentChecks(
+			() => checkCommon(this),
+			() => checkFatigue(this));
+		if (result !== C.OK) {
+			if (result === C.ERR_TIRED) {
+				const maybePath = searchOrFetchPath();
+				if (maybePath) {
+					visualize(maybePath);
+				}
+			}
+			return result;
+		}
+
+		// Move to the target
+		const path = searchOrFetchPath();
+		if (!path) {
+			return C.ERR_NO_PATH;
+		}
+		visualize(path);
+		if (path.length === 0) {
+			return this.pos.isNearTo(pos) ? C.OK : C.ERR_NO_PATH;
+		}
+		return this.move(path[0].direction);
 	}
 
 	/**

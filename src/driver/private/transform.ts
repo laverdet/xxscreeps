@@ -23,7 +23,7 @@ function extractPrivate(node: Node) {
 }
 
 export default function(): PluginObj {
-	const runtimePath = `${new URL('./shim.js', import.meta.url)}`;
+	const runtimePath = `${new URL('./runtime.js', import.meta.url)}`;
 	type State = {
 		library?: {
 			declaration: NodePath<t.ImportDeclaration>;
