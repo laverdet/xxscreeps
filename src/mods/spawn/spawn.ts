@@ -77,10 +77,16 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	override get structureType() { return C.STRUCTURE_SPAWN }
 
 	get memory() {
+		if (!this.my) {
+			return;
+		}
 		return (Memory.get().spawns ??= {})[this.name] ??= {};
 	}
 
 	set memory(memory: any) {
+		if (!this.my) {
+			return;
+		}
 		(Memory.get().spawns ??= {})[this.name] ??= memory;
 	}
 

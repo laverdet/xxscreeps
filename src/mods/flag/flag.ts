@@ -30,10 +30,16 @@ export class Flag extends withOverlay(RoomObject, shape) {
 	declare id: never;
 
 	get memory() {
+		if (!this.my) {
+			return;
+		}
 		return (Memory.get().flags ??= {})[this.name] ??= {};
 	}
 
 	set memory(memory: any) {
+		if (!this.my) {
+			return;
+		}
 		(Memory.get().flags ??= {})[this.name] ??= memory;
 	}
 

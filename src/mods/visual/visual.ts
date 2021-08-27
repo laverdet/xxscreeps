@@ -57,7 +57,7 @@ const rectSchema = struct({
 	}),
 });
 
-type PolyStyle = Partial<TypeOf<typeof polySchema>['s']>;
+export type PolyStyle = Partial<TypeOf<typeof polySchema>['s']>;
 const polySchema = struct({
 	...variant('p'),
 	points: vector(array(2, 'double')),
