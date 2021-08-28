@@ -73,14 +73,16 @@ export function dispatch(room: Room) {
 		// In the common case where this move isn't contested then finish early
 		if (info.length === 1) {
 			const { mover } = info[0];
-			mover.nextPosition = nextPosition;
-			mover.nextPositionTime = Game.time;
-			movingObjects.push(mover);
+			if (mover.room as any) {
+				mover.nextPosition = nextPosition;
+				mover.nextPositionTime = Game.time;
+				movingObjects.push(mover);
+			}
 			continue;
 		}
 
 		// Build list of objects attempting to move
-		const contenders = Fn.map(info, ({ mover, power }) => ({
+		const contenders = Fn.map(Fn.filter(info, move => move.mover.room), ({ mover, power }) => ({
 			mover,
 			// First priority is the move/weight ratio, higher wins
 			power,
@@ -103,13 +105,15 @@ export function dispatch(room: Room) {
 		}));
 
 		// Pick the object to win this movement
-		const { mover } = Fn.minimum(contenders, (left, right) =>
+		const move = Fn.minimum(contenders, (left, right) =>
 			right.power - left.power ||
 			right.movingInto - left.movingInto,
-		)!;
-		mover.nextPosition = nextPosition;
-		mover.nextPositionTime = time;
-		movingObjects.push(mover);
+		);
+		if (move) {
+			move.mover.nextPosition = nextPosition;
+			move.mover.nextPositionTime = time;
+			movingObjects.push(move.mover);
+		}
 	}
 
 	// Note: I think there's an issue with the safe mode part of this algorithm. If safe mode is
