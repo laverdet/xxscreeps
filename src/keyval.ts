@@ -109,8 +109,8 @@ export class RedisProvider implements P.KeyValProvider {
 	}
 
 	async hgetall(key: string) {
-		const result = await this.redis.invoke<Record<string, string>>(cb => this.redis.batch().hgetall(key, cb));
-		return Fn.fromEntries(Object.entries(result), ([ key, val ]) => [ key, send(val) ]);
+		const result = await this.redis.invoke<Record<string, string> | null>(cb => this.redis.batch().hgetall(key, cb));
+		return Fn.fromEntries(Object.entries(result ?? {}), ([ key, val ]) => [ key, send(val) ]);
 	}
 
 	hincrBy(key: string, field: string, value: number) {
