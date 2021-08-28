@@ -173,7 +173,7 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 				return time - 1;
 			} else {
 				// The current processor tick has started, so we can now send the finished notification.
-				await getServiceChannel(shard).publish({ type: 'tickFinished' });
+				await getServiceChannel(shard).publish({ type: 'tickFinished', time });
 			}
 		} else {
 			// Copy active rooms to current processing queue. This can run after runners
@@ -213,7 +213,7 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 		if (remaining === 0) {
 			const [ nextTime ] = await Promise.all([
 				begetRoomProcessQueue(shard, time + 1, time, true),
-				getServiceChannel(shard).publish({ type: 'tickFinished' }),
+				getServiceChannel(shard).publish({ type: 'tickFinished', time }),
 			]);
 			return nextTime;
 		}

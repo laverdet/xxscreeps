@@ -57,13 +57,12 @@ export function breakable<Type>(iterable: AsyncIterable<Type>, fn: (breaker: Eff
 export function breakable<Type>(iterable: AsyncIterable<Type>, fn?: (breaker: Effect) => void):
 AsyncIterable<Type> | [ Effect, AsyncIterable<Type> ] {
 	// Set up breaker
-	type Value = IteratorResult<Type> | typeof token;
+	type Value = IteratorResult<Type> | typeof breakToken;
 	let broken = false as boolean;
 	let resolveNow: ((value: Value) => void) | undefined;
-	const token: Record<any, never> = {};
 	const breaker = () => {
 		broken = true;
-		resolveNow?.(token);
+		resolveNow?.(breakToken);
 	};
 	// Create delegate iterable
 	const delegate = async function *() {
@@ -75,7 +74,7 @@ AsyncIterable<Type> | [ Effect, AsyncIterable<Type> ] {
 				resolveNow = resolve;
 				generator.next().then(resolve, reject);
 			});
-			if (next === token || next.done) {
+			if (next === breakToken || next.done) {
 				return;
 			}
 			yield next.value;
@@ -92,6 +91,8 @@ AsyncIterable<Type> | [ Effect, AsyncIterable<Type> ] {
 		return [ breaker, delegate ];
 	}
 }
+
+const breakToken: Record<any, never> = {};
 
 /**
  * Concatenates the supplied async generators sequentially.
@@ -162,8 +163,8 @@ export async function spread<Type>(
 		pending.push(new Deferred);
 		if (pending.length > concurrency) {
 			await pending[0].promise;
-			pending[0] = pending[offset];
-			pending[offset--] = pending[pending.length - 1];
+			pending[0] = pending[offset--];
+			pending[offset] = pending[pending.length - 1];
 			pending.pop();
 		}
 		Promise.resolve(fn(next.value)).then(

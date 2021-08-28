@@ -64,14 +64,15 @@ try {
 				// eslint-disable-next-line require-yield
 				const pauseIfMoreRemain = async function *() {
 					if (migrationTimeout > 0) {
+						const [ cancel, tickFinished ] = getServiceChannel(shard).listenFor(message =>
+							message.type === 'tickFinished' && message.time === time);
 						const count = await shard.scratch.scard(key);
 						if (count > 0) {
 							// This will insert a configurable timeout before taking on new player sandboxes
-							const [ cancel, tickFinished ] = getServiceChannel(shard).listenFor(message => message.type === 'tickFinished');
 							const timeout = Timers.setTimeout(migrationTimeout);
 							await Promise.race([ tickFinished, timeout ]);
-							cancel();
 						}
+						cancel();
 					}
 				}();
 				// Run player code
