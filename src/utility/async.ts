@@ -67,20 +67,24 @@ AsyncIterable<Type> | [ Effect, AsyncIterable<Type> ] {
 	// Create delegate iterable
 	const delegate = async function *() {
 		const generator = iterable[Symbol.asyncIterator]();
-		while (true) {
-			const next = await new Promise<Value>((resolve, reject) => {
-				// Care needs to be taken here to avoid adding `then` handlers onto the break case, because
-				// otherwise they will build up with each iteration.
-				resolveNow = resolve;
-				generator.next().then(resolve, reject);
-			});
-			if (next === breakToken || next.done) {
-				return;
+		try {
+			while (true) {
+				const next = await new Promise<Value>((resolve, reject) => {
+					// Care needs to be taken here to avoid adding `then` handlers onto the break case, because
+					// otherwise they will build up with each iteration.
+					resolveNow = resolve;
+					generator.next().then(resolve, reject);
+				});
+				if (next === breakToken || next.done) {
+					return;
+				}
+				yield next.value;
+				if (broken) {
+					return;
+				}
 			}
-			yield next.value;
-			if (broken) {
-				return;
-			}
+		} finally {
+			generator.return?.();
 		}
 	}();
 	// Return overloaded result
@@ -115,24 +119,28 @@ export function lookAhead<Type>(iterable: AsyncIterable<Type>, count: number) {
 	}
 	return async function *() {
 		const generator = iterable[Symbol.asyncIterator]();
-		function push(result: IteratorResult<Type>) {
-			if (!result.done && queue.length <= count) {
-				const next = generator.next();
-				void next.then(push);
-				queue.push(next);
+		try {
+			const push = (result: IteratorResult<Type>) => {
+				if (!result.done && queue.length <= count) {
+					const next = generator.next();
+					void next.then(push);
+					queue.push(next);
+				}
+			};
+			const first = generator.next();
+			void first.then(push);
+			const queue = [ first ];
+			while (true) {
+				const next = await queue[0];
+				if (next.done) {
+					return;
+				}
+				void queue.shift();
+				push(next);
+				yield next.value;
 			}
-		}
-		const first = generator.next();
-		void first.then(push);
-		const queue = [ first ];
-		while (true) {
-			const next = await queue[0];
-			if (next.done) {
-				return;
-			}
-			void queue.shift();
-			push(next);
-			yield next.value;
+		} finally {
+			generator.return?.();
 		}
 	}();
 }
@@ -152,24 +160,28 @@ export async function spread<Type>(
 		(iterable as Iterable<Type> | Record<keyof Iterable<Type>, undefined>)[Symbol.iterator]?.() ??
 		(iterable as AsyncIterable<Type>)[Symbol.asyncIterator]();
 
-	let offset = 0;
-	const pending: Deferred[] = [];
-	while (true) {
-		const next = await iterator.next();
-		if (next.done) {
-			await Promise.all(Fn.map(pending, deferred => deferred.promise));
-			return;
+	try {
+		let offset = 0;
+		const pending: Deferred[] = [];
+		while (true) {
+			const next = await iterator.next();
+			if (next.done) {
+				await Promise.all(Fn.map(pending, deferred => deferred.promise));
+				return;
+			}
+			pending.push(new Deferred);
+			if (pending.length > concurrency) {
+				await pending[0].promise;
+				pending[0] = pending[offset--];
+				pending[offset] = pending[pending.length - 1];
+				pending.pop();
+			}
+			Promise.resolve(fn(next.value)).then(
+				() => pending[offset++].resolve(),
+				err => pending[offset++].reject(err));
 		}
-		pending.push(new Deferred);
-		if (pending.length > concurrency) {
-			await pending[0].promise;
-			pending[0] = pending[offset--];
-			pending[offset] = pending[pending.length - 1];
-			pending.pop();
-		}
-		Promise.resolve(fn(next.value)).then(
-			() => pending[offset++].resolve(),
-			err => pending[offset++].reject(err));
+	} finally {
+		iterator.return?.();
 	}
 }
 
