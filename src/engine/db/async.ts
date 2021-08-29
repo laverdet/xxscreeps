@@ -89,35 +89,54 @@ export async function *consumeSortedSet(keyval: KeyValProvider, key: string, min
 }
 
 /**
- * Removes a single member from the given sorted set within range [min, max] and also exists in
- * `members`. Returns the index of the remove member or `null` if none were found.
+ * Removes a single member from the sorted set within range [min, max]. Returns a bulk response
+ * where the first element is the index of the removed member, or `null` if none were found.
+ * Subsequent elements represent members which are not in the set.
  */
 const ZRemOneInRange = new KeyvalScript((
 	keyval,
 	[ key ]: [ string ],
 	[ min, max, ...members ]: [ number, number, ...string[] ],
-) => {
-	for (let ii = 0; ii < members.length; ++ii) {
-		const member = members[ii];
-		const score = keyval.zscore(key, member);
-		if (score !== null && score >= min && score <= max) {
-			keyval.zrem(key, [ member ]);
-			return ii;
+): number[] => {
+	const result = [ -1 ];
+	for (let ii = 0; ii < members.length; ii += 16) {
+		const scores = keyval.zmscore(key, members.slice(ii, ii + 16));
+		for (let jj = 0; jj < scores.length; ++jj) {
+			const score = scores[jj];
+			if (score === null) {
+				result.push(ii + jj);
+			} else if (score >= min && score <= max) {
+				result[0] = ii + jj;
+			}
+		}
+		if (result[0] !== -1) {
+			keyval.zrem(key, [ members[result[0]] ]);
+			break;
 		}
 	}
-	return null;
+	return result;
 }, {
 	lua:
 `local key = KEYS[1]
 local min, max = tonumber(ARGV[1]), tonumber(ARGV[2])
-for ii = 3, #ARGV do
-	local member = ARGV[ii]
-	local score = tonumber(redis.call('zscore', key, member))
-	if score ~= nil and score >= min and score <= max then
-		redis.call('zrem', key, member)
-		return ii - 3
+local result = { -1 }
+for ii = 3, #ARGV, 16 do
+	local scores = redis.call('zmscore', key, unpack(ARGV, ii, math.min(ii + 15, #ARGV)))
+	for jj = 1, #scores do
+		local score = tonumber(scores[jj])
+		if score == nil then
+			result[#result + 1] = ii + jj - 4
+		elseif score >= min and score <= max then
+			result[1] = ii + jj - 4
+		end
 	end
-end`,
+	if result[1] ~= -1 then
+		redis.call('zrem', key, ARGV[result[1] + 3])
+		break
+	end
+end
+return result
+`,
 });
 
 /**
@@ -127,13 +146,19 @@ end`,
  */
 export async function *consumeSortedSetMembers(keyval: KeyValProvider, key: string, members: string[], min = -Infinity, max = Infinity) {
 	while (members.length > 0) {
-		const ii = await keyval.eval(ZRemOneInRange, [ key ], [ min, max, ...members ]);
-		if (ii === null) {
+		const result = await keyval.eval(ZRemOneInRange, [ key ], [ min, max, ...members ]);
+		let cursor = members.length;
+		const index = result[0];
+		if (index !== -1) {
+			yield members[index];
+			members[index] = members[--cursor];
+		}
+		for (let ii = 1; ii < result.length; ++ii) {
+			members[result[ii]] = members[--cursor];
+		}
+		members.splice(cursor);
+		if (index === -1) {
 			return;
 		}
-		const member = members[ii];
-		members[ii] = members[members.length - 1];
-		members.pop();
-		yield member;
 	}
 }
