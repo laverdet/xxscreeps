@@ -110,6 +110,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 							await context.process();
 						}
 						roomInstances = nextRoomInstances;
+						intentsByRoom.clear();
 
 						// Second phase
 						await Promise.all(Fn.map(contexts.values(), context => context.finalize()));
