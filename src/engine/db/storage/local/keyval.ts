@@ -579,13 +579,13 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	eval(script: KeyvalScript, keys: string[], argv: P.Value[]) {
-		return this.evaluateInline(script.id, script.local, keys, argv);
+		return this.evaluateInline(script.local, keys, argv);
 	}
 
 	load() {}
 
-	async evaluateInline(id: string, script: string, keys: string[], argv: P.Value[]) {
-		const fn = getOrSet(this.scripts, id, () => {
+	async evaluateInline(script: string, keys: string[], argv: P.Value[]) {
+		const fn = getOrSet(this.scripts, script, () => {
 			// eslint-disable-next-line @typescript-eslint/no-implied-eval
 			const impl = new Function(`return ${script}`)();
 			return (instance, keys: string[], argv: P.Value[]) => impl(instance, keys, argv);
@@ -643,7 +643,7 @@ class LocalKeyValClient extends makeClient(LocalKeyValResponder) {
 	// https://github.com/microsoft/TypeScript/issues/27689
 	// @ts-expect-error
 	eval(script: KeyvalScript, keys: string[], argv: P.Value[]) {
-		return this.evaluateInline(script.id, script.local, keys, argv);
+		return this.evaluateInline(script.local, keys, argv);
 	}
 }
 
