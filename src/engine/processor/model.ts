@@ -98,11 +98,11 @@ const ZSetToSet = new KeyvalScript(
 	{
 		lua:
 			`local members = redis.call("zrange", KEYS[2], 0, -1)
-			if #members > 0 then
-				return redis.call("sadd", KEYS[1], unpack(members))
-			else
-				return 0
-			end`,
+			local result = 0
+			for ii = 1, #members, 5000 do
+				result = result + redis.call("sadd", KEYS[1], unpack(members, ii, math.min(ii + 4999, #members)))
+			end
+			return result`,
 	});
 
 async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, intents?: RoomIntentPayload) {
