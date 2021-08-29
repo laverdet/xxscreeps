@@ -284,25 +284,24 @@ export class RedisProvider implements P.KeyValProvider {
 	async eval(script: P.KeyvalScript, keys: string[], argv: Value[]): Promise<any> {
 		const { sha } = script;
 		if (sha) {
-			try {
-				const result = await this.redis.invoke<any>(cb =>
-					this.redis.batch().evalsha(sha, keys.length, ...keys, ...Fn.map(argv, recv), cb));
-				if (Array.isArray(result)) {
-					return sendv(result);
-				} else {
-					return send(result);
-				}
-			} catch (err: any) {
-				if (err.code !== 'NOSCRIPT') {
-					throw err;
-				}
+			const result = await this.redis.invoke<any>(cb =>
+				this.redis.batch().evalsha(sha, keys.length, ...keys, ...Fn.map(argv, recv), cb));
+			if (Array.isArray(result)) {
+				return sendv(result);
+			} else {
+				return send(result);
 			}
 		}
-		const loaded = await this.redis.invoke<string>(cb => this.redis.client.script('LOAD', script.lua, cb));
-		// @ts-expect-error
-		script.sha = loaded;
-		await this.redis.sync();
+		await this.load(script);
 		return this.eval(script, keys, argv);
+	}
+
+	async load(script: P.KeyvalScript) {
+		if (!script.sha) {
+			const loaded = await this.redis.invoke<string>(cb => this.redis.client.script('LOAD', script.lua, cb));
+			// @ts-expect-error
+			script.sha = loaded;
+		}
 	}
 
 	//
