@@ -1,7 +1,9 @@
 import type { URL } from 'url';
 import type { Multi } from 'redis';
+import * as Fn from 'xxscreeps/utility/functional';
 import redis from 'redis';
-import { listen } from 'xxscreeps/utility/async';
+import { Deferred, listen, mustNotReject } from 'xxscreeps/utility/async';
+import { getOrSet } from 'xxscreeps/utility/utility';
 export type Redis = redis.RedisClient;
 
 declare module 'redis' {
@@ -21,7 +23,16 @@ declare module 'redis' {
 	}
 }
 
+type Merge = {
+	argv: any[];
+	command: string;
+	deferred: Deferred[];
+	keys: Set<string>;
+	fn: (argv: any[]) => Promise<void>;
+};
 export class RedisHolder {
+	private readonly mergeByCommand = new Map<string, Merge>();
+	private readonly mergeByKey = new Map<string, Merge>();
 	private task = Promise.resolve();
 	private tickBatch?: Multi;
 	private tickBatchId = 0;
@@ -47,20 +58,47 @@ export class RedisHolder {
 		return [ () => client.quit(), new RedisHolder(client) ] as const;
 	}
 
-	batch(): Multi {
+	batch(...keys: string[]): Multi {
 		const client = this.tickBatch ??= this.client.batch();
+		mustNotReject(Fn.mapAsync(new Set(
+			Fn.filter(Fn.map(keys, key => this.mergeByKey.get(key)))), merge => this.flush(merge)));
 		if (!this.tickBatchFresh) {
 			this.tickBatchFresh = true;
 			const id = ++this.tickBatchId;
 			process.nextTick(() => {
-				this.tickBatchFresh = false;
 				if (id === this.tickBatchId) {
+					// Set flag so that a new batch client isn't created by merge handlers
+					this.tickBatchFresh = true;
+					mustNotReject(Fn.mapAsync(this.mergeByCommand.values(), merge => this.flush(merge)));
 					this.tickBatch = undefined;
 					this.task = this.invoke<any>(fn => client.exec(fn));
 				}
+				this.tickBatchFresh = false;
 			});
 		}
 		return client;
+	}
+
+	async merge<Arg>(command: string, keys: string[], arg: Arg, fn: (argv: Arg[]) => Promise<void>) {
+		this.batch();
+		const merge = getOrSet(this.mergeByCommand, command, () => ({
+			argv: [],
+			command,
+			deferred: [],
+			keys: new Set<string>(),
+			fn,
+		}));
+		for (const key of keys) {
+			const existing = this.mergeByKey.get(key);
+			if (existing && existing !== merge) {
+				await this.flush(existing);
+			}
+		}
+		const deferred = new Deferred;
+		merge.argv.push(arg);
+		merge.deferred.push(deferred);
+		keys.forEach(key => merge.keys.add(key));
+		await deferred.promise;
 	}
 
 	sync() {
@@ -84,5 +122,18 @@ export class RedisHolder {
 				}
 			});
 		});
+	}
+
+	private async flush(merge: Merge) {
+		try {
+			await merge.fn(merge.argv);
+			merge.deferred.forEach(deferred => deferred.resolve());
+		} catch (err: any) {
+			merge.deferred.forEach(deferred => deferred.reject(err));
+		}
+		this.mergeByCommand.delete(merge.command);
+		for (const key of merge.keys) {
+			this.mergeByKey.delete(key);
+		}
 	}
 }

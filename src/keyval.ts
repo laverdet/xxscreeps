@@ -50,15 +50,22 @@ export class RedisProvider implements P.KeyValProvider {
 	//
 	// keys / strings
 	async copy(from: string, to: string, options?: P.Copy) {
-		return await this.redis.invoke<number>(cb => this.redis.batch().copy(from, to, ...options?.if === 'nx' ? [] : [ 'replace' ], cb)) !== 0;
+		return await this.redis.invoke<number>(cb => this.redis.batch(from, to)
+			.copy(from, to, ...options?.if === 'nx' ? [] : [ 'replace' ], cb)) !== 0;
 	}
 
 	async del(key: string) {
-		return await this.redis.invoke<number>(cb => this.redis.batch().del(key, cb)) !== 0;
+		return await this.redis.invoke<number>(cb => this.redis.batch(key).del(key, cb)) !== 0;
+	}
+
+	vdel(key: string) {
+		return this.redis.merge('del', [ key ], key, async argv => {
+			await this.redis.invoke<number>(cb => this.redis.batch().del(argv, cb));
+		});
 	}
 
 	async get(key: string, options?: P.AsBlob): Promise<any> {
-		return send(await this.redis.invoke<string | null>(cb => this.redis.batch().get(key, cb)), options);
+		return send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).get(key, cb)), options);
 	}
 
 	async req(key: string, options?: P.AsBlob): Promise<any> {
@@ -76,9 +83,9 @@ export class RedisProvider implements P.KeyValProvider {
 			...options?.if ? [ options.if ] : [],
 		];
 		if (options?.get) {
-			return send(await this.redis.invoke<string | null>(cb => this.redis.batch().set(key, recv(value), ...extra, 'get', cb)));
+			return send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).set(key, recv(value), ...extra, 'get', cb)));
 		} else {
-			const result = await this.redis.invoke<'OK' | null>(cb => this.redis.batch().set(key, recv(value), ...extra, cb));
+			const result = await this.redis.invoke<'OK' | null>(cb => this.redis.batch(key).set(key, recv(value), ...extra, cb));
 			// Avoid sending back 'OK'
 			return result === null ? null : undefined;
 		}
@@ -87,46 +94,46 @@ export class RedisProvider implements P.KeyValProvider {
 	//
 	// numbers
 	decr(key: string) {
-		return this.redis.invoke<number>(cb => this.redis.batch().decr(key, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).decr(key, cb));
 	}
 
 	decrBy(key: string, value: number) {
-		return this.redis.invoke<number>(cb => this.redis.batch().decrby(key, value, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).decrby(key, value, cb));
 	}
 
 	incr(key: string) {
-		return this.redis.invoke<number>(cb => this.redis.batch().incr(key, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).incr(key, cb));
 	}
 
 	incrBy(key: string, value: number) {
-		return this.redis.invoke<number>(cb => this.redis.batch().incrby(key, value, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).incrby(key, value, cb));
 	}
 
 	//
 	// hashes
 	async hget(key: string, field: string) {
-		return send(await this.redis.invoke<string | null>(cb => this.redis.batch().hget(key, field, cb)));
+		return send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).hget(key, field, cb)));
 	}
 
 	async hgetall(key: string) {
-		const result = await this.redis.invoke<Record<string, string> | null>(cb => this.redis.batch().hgetall(key, cb));
+		const result = await this.redis.invoke<Record<string, string> | null>(cb => this.redis.batch(key).hgetall(key, cb));
 		return Fn.fromEntries(Object.entries(result ?? {}), ([ key, val ]) => [ key, send(val) ]);
 	}
 
 	hincrBy(key: string, field: string, value: number) {
-		return this.redis.invoke<number>(cb => this.redis.batch().hincrby(key, field, value, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).hincrby(key, field, value, cb));
 	}
 
 	async hmget(key: string, fields: string[], options?: P.AsBlob) {
-		const payload = await this.redis.invoke<string[]>(cb => this.redis.batch().hmget(key, fields, cb));
+		const payload = await this.redis.invoke<string[]>(cb => this.redis.batch(key).hmget(key, fields, cb));
 		return Fn.fromEntries(payload.map((value, ii) => [ fields[ii], send(value, options) ])) as never;
 	}
 
 	async hset(key: string, field: string, value: Value, options?: P.HSet) {
 		if (options?.if === 'nx') {
-			return await this.redis.invoke<number>(cb => this.redis.batch().hsetnx(key, field, recv(value), cb)) !== 0;
+			return await this.redis.invoke<number>(cb => this.redis.batch(key).hsetnx(key, field, recv(value), cb)) !== 0;
 		} else {
-			return await this.redis.invoke<number>(cb => this.redis.batch().hset(key, field, recv(value), cb)) !== 0;
+			return await this.redis.invoke<number>(cb => this.redis.batch(key).hset(key, field, recv(value), cb)) !== 0;
 		}
 	}
 
@@ -134,21 +141,21 @@ export class RedisProvider implements P.KeyValProvider {
 		const iterable = Symbol.iterator in fields ?
 			fields as Iterable<[ string, Value ]> :
 			Object.entries(fields);
-		await this.redis.invoke<number>(cb => this.redis.batch().hset(key, [ ...Fn.map(Fn.concat(iterable), recv) ], cb));
+		await this.redis.invoke<number>(cb => this.redis.batch(key).hset(key, [ ...Fn.map(Fn.concat(iterable), recv) ], cb));
 	}
 
 	//
 	// lists
 	async lpop(key: string) {
-		return send(await this.redis.invoke<string>(cb => this.redis.batch().lpop(key, cb)));
+		return send(await this.redis.invoke<string>(cb => this.redis.batch(key).lpop(key, cb)));
 	}
 
 	async lrange(key: string, start: number, stop: number) {
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().lrange(key, start, stop, cb)));
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key).lrange(key, start, stop, cb)));
 	}
 
 	rpush(key: string, elements: Value[]) {
-		return this.redis.invoke<number>(cb => this.redis.batch().rpush(key, elements.map(recv), cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).rpush(key, elements.map(recv), cb));
 	}
 
 	//
@@ -157,49 +164,49 @@ export class RedisProvider implements P.KeyValProvider {
 		if (members.length === 0) {
 			return Promise.resolve(0);
 		} else {
-			return this.redis.invoke<number>(cb => this.redis.batch().sadd(key, members, cb));
+			return this.redis.invoke<number>(cb => this.redis.batch(key).sadd(key, members, cb));
 		}
 	}
 
 	scard(key: string) {
-		return this.redis.invoke<number>(cb => this.redis.batch().scard(key, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).scard(key, cb));
 	}
 
 	async sdiff(key: string, keys: string[]) {
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().sdiff(key, keys, cb)));
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key).sdiff(key, keys, cb)));
 	}
 
 	async sinter(key: string, keys: string[]) {
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().sinter(key, keys, cb)));
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key, ...keys).sinter(key, keys, cb)));
 	}
 
 	async sismember(key: string, member: string) {
-		return await this.redis.invoke<number>(cb => this.redis.batch().sismember(key, member, cb)) !== 0;
+		return await this.redis.invoke<number>(cb => this.redis.batch(key).sismember(key, member, cb)) !== 0;
 	}
 
 	async smembers(key: string) {
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().smembers(key, cb)));
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key).smembers(key, cb)));
 	}
 
 	async smismember(key: string, members: string[]) {
-		const result = await this.redis.invoke<number[]>(cb => this.redis.batch().smismember(key, members, cb));
+		const result = await this.redis.invoke<number[]>(cb => this.redis.batch(key).smismember(key, members, cb));
 		return result.map(value => value !== 0);
 	}
 
 	async spop(key: string) {
-		return send(await this.redis.invoke<string>(cb => this.redis.batch().spop(key, cb)));
+		return send(await this.redis.invoke<string>(cb => this.redis.batch(key).spop(key, cb)));
 	}
 
 	srem(key: string, members: string[]) {
 		if (members.length === 0) {
 			return Promise.resolve(0);
 		} else {
-			return this.redis.invoke<number>(cb => this.redis.batch().srem(key, members, cb));
+			return this.redis.invoke<number>(cb => this.redis.batch(key).srem(key, members, cb));
 		}
 	}
 
 	sunionStore(key: string, keys: string[]) {
-		return this.redis.invoke<number>(cb => this.redis.batch().sunionstore(key, keys, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).sunionstore(key, keys, cb));
 	}
 
 	//
@@ -208,7 +215,7 @@ export class RedisProvider implements P.KeyValProvider {
 		if (members.length === 0) {
 			return Promise.resolve(0);
 		} else {
-			const result = await this.redis.invoke<number>(cb => this.redis.batch().zadd(
+			const result = await this.redis.invoke<number>(cb => this.redis.batch(key).zadd(
 				key,
 				...options?.if ? [ options.if ] : [],
 				...options?.incr ? [ 'incr' ] : [],
@@ -219,63 +226,63 @@ export class RedisProvider implements P.KeyValProvider {
 	}
 
 	zcard(key: string) {
-		return this.redis.invoke<number>(cb => this.redis.batch().zcard(key, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).zcard(key, cb));
 	}
 
 	async zincrBy(key: string, delta: number, member: string) {
-		return Number(await this.redis.invoke<string>(cb => this.redis.batch().zincrby(key, delta, member, cb)));
+		return Number(await this.redis.invoke<string>(cb => this.redis.batch(key).zincrby(key, delta, member, cb)));
 	}
 
 	zinterStore(key: string, keys: string[], options?: P.ZAggregate) {
 		if (options?.weights) {
-			return this.redis.invoke<number>(cb => this.redis.batch().zinterstore(key, keys.length, ...keys, 'weights', ...options.weights!, cb));
+			return this.redis.invoke<number>(cb => this.redis.batch(key, ...keys).zinterstore(key, keys.length, ...keys, 'weights', ...options.weights!, cb));
 		} else {
-			return this.redis.invoke<number>(cb => this.redis.batch().zinterstore(key, keys.length, ...keys, cb));
+			return this.redis.invoke<number>(cb => this.redis.batch(key, ...keys).zinterstore(key, keys.length, ...keys, cb));
 		}
 	}
 
 	async zmscore(key: string, members: string[]) {
 		type T = (number | null)[]; // Raises an eslint condition which deletes the parenthesis below..
-		const scores = await this.redis.invoke<T>(cb => this.redis.batch().zmscore(key, members, cb));
+		const scores = await this.redis.invoke<T>(cb => this.redis.batch(key).zmscore(key, members, cb));
 		return scores.map(score => score === null ? null : Number(score));
 	}
 
 	async zrange(key: string, min: any, max: any, options?: P.ZRange) {
 		const by: any = options?.by === 'lex' ? [ 'BYLEX' ] :
 			options?.by === 'score' ? [ 'BYSCORE' ] : [];
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().zrange(key, min, max, ...by, cb)));
+		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key).zrange(key, min, max, ...by, cb)));
 	}
 
 	async zrangeStore(into: string, from: string, min: any, max: any, options?: P.ZRange) {
 		const by: any = options?.by === 'lex' ? [ 'BYLEX' ] :
 			options?.by === 'score' ? [ 'BYSCORE' ] : [];
-		return this.redis.invoke<number>(cb => this.redis.batch().zrangestore(into, from, min, max, ...by, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(into, from).zrangestore(into, from, min, max, ...by, cb));
 	}
 
 	zrangeWithScores(key: string, min: number, max: number, options?: P.ZRange): any {
 		const by: any = options?.by === 'lex' ? [ 'BYLEX' ] :
 			options?.by === 'score' ? [ 'BYSCORE' ] : [];
-		return this.redis.invoke<number>(cb => this.redis.batch().zrange(key, min, max, ...by, 'WITHSCORES', cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).zrange(key, min, max, ...by, 'WITHSCORES', cb));
 	}
 
 	zrem(key: string, members: string[]) {
-		return this.redis.invoke<number>(cb => this.redis.batch().zrem(key, members, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).zrem(key, members, cb));
 	}
 
 	zremRange(key: string, min: number, max: number) {
-		return this.redis.invoke<number>(cb => this.redis.batch().zremrangebyscore(key, min, max, cb));
+		return this.redis.invoke<number>(cb => this.redis.batch(key).zremrangebyscore(key, min, max, cb));
 	}
 
 	async zscore(key: string, member: string) {
-		const score = send(await this.redis.invoke<string | null>(cb => this.redis.batch().zscore(key, member, cb)));
+		const score = send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).zscore(key, member, cb)));
 		return score === null ? null : Number(score);
 	}
 
 	zunionStore(key: string, keys: string[], options?: P.ZAggregate): Promise<number> {
 		if (options?.weights) {
-			return this.redis.invoke<number>(cb => this.redis.batch().zunionstore(key, keys.length, ...keys, 'weights', ...options.weights!, cb));
+			return this.redis.invoke<number>(cb => this.redis.batch(key, ...keys).zunionstore(key, keys.length, ...keys, 'weights', ...options.weights!, cb));
 		} else {
-			return this.redis.invoke<number>(cb => this.redis.batch().zunionstore(key, keys.length, ...keys, cb));
+			return this.redis.invoke<number>(cb => this.redis.batch(key, ...keys).zunionstore(key, keys.length, ...keys, cb));
 		}
 	}
 
@@ -285,7 +292,7 @@ export class RedisProvider implements P.KeyValProvider {
 		const { sha } = script;
 		if (sha) {
 			const result = await this.redis.invoke<any>(cb =>
-				this.redis.batch().evalsha(sha, keys.length, ...keys, ...Fn.map(argv, recv), cb));
+				this.redis.batch(...keys).evalsha(sha, keys.length, ...keys, ...Fn.map(argv, recv), cb));
 			if (Array.isArray(result)) {
 				return sendv(result);
 			} else {
