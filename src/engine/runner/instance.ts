@@ -156,13 +156,14 @@ export class PlayerInstance {
 
 			// Run the tick
 			try {
+				const bucket = Math.floor(this.bucket);
 				const payload: Partial<TickPayload> = {
 					backendIntents: this.intents.splice(0),
 					eval: this.consoleEval.splice(0),
 					cpu: {
-						bucket: this.bucket,
+						bucket,
 						limit: kCPU,
-						tickLimit: Math.min(config.runner.cpu.tickLimit, this.bucket),
+						tickLimit: Math.min(config.runner.cpu.tickLimit, bucket),
 					},
 					time,
 				};
