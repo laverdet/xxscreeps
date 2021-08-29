@@ -87,6 +87,10 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
+	vdel(key: string) {
+		this.del(key);
+	}
+
 	get(key: string, options?: P.AsBlob) {
 		if (options?.blob) {
 			return this.blob.get(key) as never;

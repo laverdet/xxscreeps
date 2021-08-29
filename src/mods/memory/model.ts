@@ -28,7 +28,7 @@ export async function saveMemorySegmentBlob(shard: Shard, userId: string, segmen
 	if (isValidSegmentId(segmentId)) {
 		const key = `user/${userId}/segment${segmentId}`;
 		if (blob === null || blob.byteLength === 0) {
-			await shard.data.del(key);
+			await shard.data.vdel(key);
 		} else if (blob.byteLength <= kMaxMemorySegmentSize) {
 			return shard.data.set(key, blob);
 		}

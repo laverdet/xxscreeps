@@ -34,6 +34,7 @@ export type KeyValProvider = {
 	// keys / strings
 	copy(from: string, to: string, options?: Copy): Promise<boolean>;
 	del(key: string): Promise<boolean>;
+	vdel(key: string): Promise<void>;
 	get(key: string, options: { blob: true }): Promise<Readonly<Uint8Array> | null>;
 	get(key: string, options?: AsBlob): Promise<string | null>;
 	req(key: string, options: { blob: true }): Promise<Readonly<Uint8Array>>;
