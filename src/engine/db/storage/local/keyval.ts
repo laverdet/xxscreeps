@@ -47,10 +47,15 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		const [ blobEffect, blob ] = await BlobStorage.create(path);
 		const [ url, payload ] = await async function() {
 			if (path.protocol === 'file:') {
-				try {
-					const url = new URL('data.json', path);
-					return [ url, await fs.readFile(new URL('data.json', path), 'utf8') ] as const;
-				} catch {}
+				const url = new URL('data.json', path);
+				return [
+					url,
+					await async function() {
+						try {
+							return await fs.readFile(new URL('data.json', path), 'utf8');
+						} catch {}
+					}(),
+				] as const;
 			}
 			return [];
 		}();
