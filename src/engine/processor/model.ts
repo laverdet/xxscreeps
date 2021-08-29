@@ -264,15 +264,16 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 	return time;
 }
 
+const isSystemUser = (userId: string) => userId.length <= 2;
 export async function updateUserRoomRelationships(shard: Shard, room: Room, previous?: ReturnType<typeof flushUsers>) {
 	const checkPlayers = (current: string[], previous?: string[]) => {
 		// Filter out NPCs
-		const players = [ ...Fn.reject(current, (userId: string) => userId.length <= 2) ];
+		const players = [ ...Fn.reject(current, isSystemUser) ];
 		// Apply diff
 		return previous ? {
 			players,
 			added: [ ...Fn.reject(players, id => previous.includes(id)) ],
-			removed: [ ...Fn.reject(previous, id => players.includes(id)) ],
+			removed: [ ...Fn.reject(previous, id => isSystemUser(id) || players.includes(id)) ],
 		} : {
 			players,
 			added: players,
