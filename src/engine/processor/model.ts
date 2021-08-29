@@ -97,10 +97,10 @@ const ZSetToSet = new KeyvalScript(
 	(keyval, [ into, from ]: [string, string]) => keyval.sadd(into, keyval.zrange(from, 0, -1)),
 	{
 		lua:
-			`local members = redis.call("zrange", KEYS[2], 0, -1)
+			`local members = redis.call('zrange', KEYS[2], 0, -1)
 			local result = 0
 			for ii = 1, #members, 5000 do
-				result = result + redis.call("sadd", KEYS[1], unpack(members, ii, math.min(ii + 4999, #members)))
+				result = result + redis.call('sadd', KEYS[1], unpack(members, ii, math.min(ii + 4999, #members)))
 			end
 			return result`,
 	});
@@ -184,6 +184,12 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 		return currentTime;
 	}
 	if (await shard.scratch.eval(CompareAndSwap, [ processorTimeKey ], [ time - 1, time ])) {
+		// Guarantee atomicity of the following transaction
+		await Promise.all([
+			shard.scratch.load(ZCardStore),
+			shard.scratch.load(ZSetToSet),
+		]);
+
 		// Copy active and waking rooms into current processing queue
 		const tmpKey = 'processorWakeUp';
 		const processSet = processRoomsSetKey(time);
@@ -228,12 +234,13 @@ export async function roomDidProcess(shard: Shard, roomName: string, time: numbe
 	const count = await shard.scratch.decr(processRoomsPendingKey(time));
 	if (count === 0) {
 		// Count rooms which need to be finalized
-		await shard.scratch.eval(SCardStore, [ finalizedRoomsPendingKey(time), activeRoomsProcessingKey(time) ], []);
+		const roomsKey = activeRoomsProcessingKey(time);
+		await shard.scratch.eval(SCardStore, [ finalizedRoomsPendingKey(time), roomsKey ], []);
 		await Promise.all([
 			// Publish finalization task to workers
 			getProcessorChannel(shard).publish({ type: 'finalize', time }),
 			// Delete rooms bookkeeping set
-			shard.scratch.del(activeRoomsProcessingKey(time)),
+			shard.scratch.del(roomsKey),
 			// Delete "0" value from scratch
 			shard.scratch.del(processRoomsPendingKey(time)),
 		]);

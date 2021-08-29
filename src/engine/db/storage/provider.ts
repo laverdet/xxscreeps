@@ -86,6 +86,7 @@ export type KeyValProvider = {
 	zunionStore(key: string, keys: string[], options?: ZAggregate): Promise<number>;
 	// scripting
 	eval<Result extends Value[] | Value | null, Keys extends string[], Argv extends Value[]>(script: KeyvalScript<Result, Keys, Argv>, keys: Keys, argv: Argv): Promise<Result>;
+	load(script: KeyvalScript): Promise<void>;
 	// management
 	flushdb(): Promise<void>;
 	save(): Promise<void>;

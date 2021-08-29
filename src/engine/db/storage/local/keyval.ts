@@ -573,6 +573,8 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return this.evaluateInline(script.id, script.local, keys, argv);
 	}
 
+	load() {}
+
 	async evaluateInline(id: string, script: string, keys: string[], argv: P.Value[]) {
 		const fn = getOrSet(this.scripts, id, () => {
 			// eslint-disable-next-line @typescript-eslint/no-implied-eval
