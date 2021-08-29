@@ -79,6 +79,8 @@ try {
 			case 'shutdown':
 				break loop;
 
+			// TODO: Use `roomNames` from this message to better guide process dispatching. Current
+			// implementation is a little messy.
 			case 'process': {
 				// Ensure processor time is in sync
 				const { time } = message;

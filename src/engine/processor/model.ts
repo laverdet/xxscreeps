@@ -11,7 +11,7 @@ import { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
 export function getProcessorChannel(shard: Shard) {
 	type Message =
 		{ type: 'finalize'; time: number } |
-		{ type: 'process'; time: number } |
+		{ type: 'process'; time: number; roomNames?: string[] } |
 		{ type: 'shutdown' };
 	return new Channel<Message>(shard.pubsub, 'channel/processor');
 }
@@ -118,22 +118,29 @@ export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userI
 	]);
 }
 
-export async function publishRunnerIntentsForRoom(shard: Shard, userId: string, roomName: string, time: number, intents?: RoomIntentPayload) {
-	const [ count ] = await Promise.all([
-		// Decrement count of users that this room is waiting for
-		shard.scratch.zadd(processRoomsSetKey(time), [ [ -1, roomName ] ], { if: 'xx', incr: true }),
-		// Add intents to list
-		pushIntentsForRoom(shard, roomName, userId, intents),
-	]);
-	if (count === null || count > 0) {
-		return;
-	} else if (count < 0) {
-		// Reset count back to 0 in the case we've published intents for an abandoned tick
-		// NOTE: These intents will still be processed at some point, which is probably not desired.
-		await shard.scratch.zadd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'xx' });
+export async function publishRunnerIntentsForRooms(
+	shard: Shard, userId: string, time: number, roomNames: string[], intents: Record<string, RoomIntentPayload | undefined>,
+) {
+	const notify = [ ...Fn.filter(await Promise.all(Fn.map(roomNames, async roomName => {
+		const [ count ] = await Promise.all([
+			// Decrement count of users that this room is waiting for
+			shard.scratch.zadd(processRoomsSetKey(time), [ [ -1, roomName ] ], { if: 'xx', incr: true }),
+			// Add intents to list
+			pushIntentsForRoom(shard, roomName, userId, intents[roomName]),
+		]);
+		if (count === null || count > 0) {
+			return;
+		} else if (count < 0) {
+			// Reset count back to 0 in the case we've published intents for an abandoned tick
+			// NOTE: These intents will still be processed at some point, which is probably not desired.
+			await shard.scratch.zadd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'xx' });
+		}
+		return roomName;
+	}))) ];
+	if (notify.length > 0) {
+		// Publish process task to workers
+		await getProcessorChannel(shard).publish({ type: 'process', time, roomNames: notify });
 	}
-	// Publish process task to workers
-	await getProcessorChannel(shard).publish({ type: 'process', time });
 }
 
 export async function publishInterRoomIntents(shard: Shard, roomName: string, time: number, intents: SingleIntent[]) {

@@ -14,7 +14,7 @@ import { getRunnerUserChannel, getUsageChannel } from './model';
 import { acquire } from 'xxscreeps/utility/async';
 import { createSandbox } from 'xxscreeps/driver/sandbox';
 import { hooks } from './symbols';
-import { publishRunnerIntentsForRoom } from 'xxscreeps/engine/processor/model';
+import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
 import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility';
 
@@ -204,8 +204,7 @@ export class PlayerInstance {
 			this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - payload.usage.cpu + kCPU);
 			await Promise.all([
 				// Publish intent blobs
-				Promise.all(Fn.map(roomNames, roomName =>
-					publishRunnerIntentsForRoom(this.shard, this.userId, roomName, time, payload.intentPayloads[roomName]))),
+				publishRunnerIntentsForRooms(this.shard, this.userId, time, roomNames, payload.intentPayloads),
 
 				// Publish usage event
 				this.usageChannel.publish(payload.usage),
@@ -231,7 +230,7 @@ export class PlayerInstance {
 				}
 			}
 			// Publish empty results to move processing along
-			await Promise.all(Fn.map(roomNames, roomName => publishRunnerIntentsForRoom(this.shard, this.userId, roomName, time)));
+			await publishRunnerIntentsForRooms(this.shard, this.userId, time, roomNames, {});
 		}
 	}
 }
