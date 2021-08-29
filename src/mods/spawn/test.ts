@@ -5,7 +5,7 @@ import { Creep } from 'xxscreeps/mods/creep/creep';
 import { assert, describe, simulate, test } from 'xxscreeps/test';
 import { create as createExtension } from './extension';
 import { create } from './spawn';
-import { lookForStructureAt, lookForStructures } from '../structure/structure';
+import { lookForStructures } from '../structure/structure';
 
 describe('Spawn', () => {
 	const simulation = simulate({
