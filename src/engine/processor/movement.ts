@@ -105,9 +105,10 @@ export function dispatch(room: Room) {
 		}));
 
 		// Pick the object to win this movement
+		// TODO: New movement algorithm should enforce power first
 		const move = Fn.minimum(contenders, (left, right) =>
-			right.power - left.power ||
-			right.movingInto - left.movingInto,
+			right.movingInto - left.movingInto ||
+			right.power - left.power,
 		);
 		if (move) {
 			move.mover.nextPosition = nextPosition;

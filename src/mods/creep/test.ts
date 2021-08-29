@@ -9,7 +9,7 @@ describe('Movement', () => {
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W0N0'), [ C.MOVE ], 'topLeft', '100'));
 			room['#insertObject'](create(new RoomPosition(26, 25, 'W0N0'), [ C.MOVE ], 'topRight', '100'));
 			room['#insertObject'](create(new RoomPosition(25, 26, 'W0N0'), [ C.MOVE ], 'bottomLeft', '100'));
-			room['#insertObject'](create(new RoomPosition(26, 26, 'W0N0'), [ C.MOVE ], 'bottomRight', '100'));
+			room['#insertObject'](create(new RoomPosition(26, 26, 'W0N0'), [ C.MOVE, C.MOVE ], 'bottomRight', '100'));
 		},
 	});
 
@@ -57,6 +57,20 @@ describe('Movement', () => {
 		});
 	}));
 
+	test('swapping against fast', () => movement(async({ player, tick }) => {
+		await player('100', Game => {
+			Game.creeps.bottomRight.move(C.TOP);
+			Game.creeps.topLeft.move(C.RIGHT);
+			Game.creeps.topRight.move(C.LEFT);
+		});
+		await tick();
+		await player('100', Game => {
+			assert.ok(Game.creeps.topLeft.pos.isEqualTo(new RoomPosition(26, 25, 'W0N0')));
+			assert.ok(Game.creeps.topRight.pos.isEqualTo(new RoomPosition(25, 25, 'W0N0')));
+			assert.ok(Game.creeps.bottomRight.pos.isEqualTo(new RoomPosition(26, 26, 'W0N0')));
+		});
+	}));
+
 	test('with followers', () => movement(async({ player, tick }) => {
 		await player('100', Game => {
 			Game.creeps.bottomLeft.move(C.TOP_LEFT);
@@ -92,18 +106,13 @@ describe('Movement', () => {
 	const hostile = simulate({
 		W1N1: room => {
 			room['#level'] = 1;
-			room['#user'] =
-			room.controller!['#user'] = '100';
-			room.controller!.safeModeAvailable = 1;
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#safeModeUntil'] = 100;
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), [ C.MOVE ], 'creep', '100'));
 			room['#insertObject'](create(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE, C.MOVE ], 'creep', '101'));
 		},
 	});
 	test('safe mode', () => hostile(async({ player, tick }) => {
-		await player('100', Game => {
-			assert.strictEqual(Game.rooms.W1N1.controller!.activateSafeMode(), C.OK);
-		});
-		await tick();
 		await player('100', Game => {
 			assert.strictEqual(Game.creeps.creep.move(C.BOTTOM), C.OK);
 		});
@@ -209,5 +218,29 @@ describe('Movement', () => {
 			assert.ok(Game.creeps.owner.pos.isEqualTo(new RoomPosition(20, 21, 'W2N2')));
 			assert.ok(Game.creeps.ownerObstacle.pos.isEqualTo(new RoomPosition(19, 21, 'W2N2')));
 		});
+	}));
+
+	test('safe mode - hostile conflict w/ follower', () => enterPossiblyFreeTile(async({ player, tick }) => {
+		await player('100', Game => {
+			// move to [21,21]
+			assert.strictEqual(Game.creeps.owner.move(C.BOTTOM_RIGHT), C.OK);
+		});
+		await player('101', Game => {
+			// move to [21,21]
+			assert.strictEqual(Game.creeps.hostile.move(C.RIGHT), C.OK);
+			// move to `hostile`
+			assert.strictEqual(Game.creeps.hostile2.move(C.TOP), C.OK);
+		});
+		await tick();
+		/*
+		TODO: Fix this case
+		await player('100', Game => {
+			assert.ok(Game.creeps.owner.pos.isEqualTo(new RoomPosition(21, 21, 'W2N2')));
+		});
+		await player('101', Game => {
+			assert.ok(Game.creeps.hostile.pos.isEqualTo(new RoomPosition(20, 21, 'W2N2')));
+			assert.ok(Game.creeps.hostile2.pos.isEqualTo(new RoomPosition(20, 22, 'W2N2')));
+		});
+		*/
 	}));
 });
