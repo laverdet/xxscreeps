@@ -8,12 +8,16 @@ declare module 'redis' {
 	interface Multi {
 		copy: OverloadedCommand<string, number, Multi>;
 		smismember: OverloadedCommand<string, number[], Multi>;
+		zdiffstore: OverloadedCommand<string | number, number, boolean>;
 		zmscore: OverloadedCommand<string, number[], Multi>;
+		zrangestore: OverloadedCommand<string, number, boolean>;
 	}
 	interface RedisClient {
 		copy: OverloadedCommand<string, number, boolean>;
 		smismember: OverloadedCommand<string, number[], boolean>;
+		zdiffstore: OverloadedCommand<string | number, number, boolean>;
 		zmscore: OverloadedCommand<string, number[], boolean>;
+		zrangeStore: OverloadedCommand<string, number, boolean>;
 	}
 }
 

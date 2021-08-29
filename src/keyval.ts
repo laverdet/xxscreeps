@@ -204,15 +204,17 @@ export class RedisProvider implements P.KeyValProvider {
 
 	//
 	// sorted sets
-	zadd(key: string, members: [ number, string ][], options?: P.ZAdd) {
+	async zadd(key: string, members: [ number, string ][], options?: P.ZAdd) {
 		if (members.length === 0) {
 			return Promise.resolve(0);
 		} else {
-			return this.redis.invoke<number>(cb => this.redis.batch().zadd(
+			const result = await this.redis.invoke<number>(cb => this.redis.batch().zadd(
 				key,
 				...options?.if ? [ options.if ] : [],
+				...options?.incr ? [ 'incr' ] : [],
 				...Fn.concat(members),
 				cb));
+			return options?.incr ? Number(send(result)) : result;
 		}
 	}
 
@@ -244,6 +246,12 @@ export class RedisProvider implements P.KeyValProvider {
 		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch().zrange(key, min, max, ...by, cb)));
 	}
 
+	async zrangeStore(into: string, from: string, min: any, max: any, options?: P.ZRange) {
+		const by: any = options?.by === 'lex' ? [ 'BYLEX' ] :
+			options?.by === 'score' ? [ 'BYSCORE' ] : [];
+		return this.redis.invoke<number>(cb => this.redis.batch().zrangestore(into, from, min, max, ...by, cb));
+	}
+
 	zrangeWithScores(key: string, min: number, max: number, options?: P.ZRange): any {
 		const by: any = options?.by === 'lex' ? [ 'BYLEX' ] :
 			options?.by === 'score' ? [ 'BYSCORE' ] : [];
@@ -263,19 +271,22 @@ export class RedisProvider implements P.KeyValProvider {
 		return score === null ? null : Number(score);
 	}
 
-	zunionStore(key: string, keys: string[]): Promise<number> {
-		return this.redis.invoke<number>(cb => this.redis.batch().zunionstore(key, keys.length, ...keys, cb));
+	zunionStore(key: string, keys: string[], options?: P.ZAggregate): Promise<number> {
+		if (options?.weights) {
+			return this.redis.invoke<number>(cb => this.redis.batch().zunionstore(key, keys.length, ...keys, 'weights', ...options.weights!, cb));
+		} else {
+			return this.redis.invoke<number>(cb => this.redis.batch().zunionstore(key, keys.length, ...keys, cb));
+		}
 	}
 
 	//
 	// scripting
 	async eval(script: P.KeyvalScript, keys: string[], argv: Value[]): Promise<any> {
 		const { sha } = script;
-		await this.redis.sync();
 		if (sha) {
 			try {
 				const result = await this.redis.invoke<any>(cb =>
-					this.redis.client.evalsha(sha, keys.length, ...keys, ...Fn.map(argv, recv), cb));
+					this.redis.batch().evalsha(sha, keys.length, ...keys, ...Fn.map(argv, recv), cb));
 				if (Array.isArray(result)) {
 					return sendv(result);
 				} else {
@@ -290,6 +301,7 @@ export class RedisProvider implements P.KeyValProvider {
 		const loaded = await this.redis.invoke<string>(cb => this.redis.client.script('LOAD', script.lua, cb));
 		// @ts-expect-error
 		script.sha = loaded;
+		await this.redis.sync();
 		return this.eval(script, keys, argv);
 	}
 
