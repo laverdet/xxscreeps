@@ -76,7 +76,7 @@ export class SortedSet {
 			const currentScore = this.#scores.get(member);
 			if (currentScore === undefined) {
 				this.#members.push(member);
-				this.#scores.set(member, score);
+				this.#scores.set(member, accumulator(0, score));
 				++count;
 			} else {
 				this.#scores.set(member, accumulator(currentScore, score));

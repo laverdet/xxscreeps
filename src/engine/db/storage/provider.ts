@@ -18,6 +18,7 @@ export type HSet = {
 };
 export type ZAdd = {
 	if?: 'nx' | 'xx';
+	incr?: boolean;
 };
 export type ZAggregate = {
 	// aggregate: 'sum' | 'min' | 'max';
@@ -69,6 +70,7 @@ export type KeyValProvider = {
 	srem(key: string, members: string[]): Promise<number>;
 	sunionStore(key: string, keys: string[]): Promise<number>;
 	// sorted sets
+	zadd(key: string, members: [ number, string ][], options: { incr: true } & ZAdd): Promise<number | null>;
 	zadd(key: string, members: [ number, string ][], options?: ZAdd): Promise<number>;
 	zcard(key: string): Promise<number>;
 	zincrBy(key: string, delta: number, member: string): Promise<number>;
@@ -76,11 +78,12 @@ export type KeyValProvider = {
 	zmscore(key: string, members: string[]): Promise<(number | null)[]>;
 	zrange(key: string, min: string, max: string, options: ZRange & { by: 'lex' }): Promise<string[]>;
 	zrange(key: string, min: number, max: number, options?: ZRange): Promise<string[]>;
+	zrangeStore(into: string, from: string, min: number, max: number, options?: ZRange): Promise<number>;
 	zrangeWithScores(key: string, min: number, max: number, options?: ZRange): Promise<[ number, string ][]>;
 	zrem(key: string, members: string[]): Promise<number>;
 	zremRange(key: string, min: number, max: number): Promise<number>;
 	zscore(key: string, member: string): Promise<number | null>;
-	zunionStore(key: string, keys: string[]): Promise<number>;
+	zunionStore(key: string, keys: string[], options?: ZAggregate): Promise<number>;
 	// scripting
 	eval<Result extends Value[] | Value | null, Keys extends string[], Argv extends Value[]>(script: KeyvalScript<Result, Keys, Argv>, keys: Keys, argv: Argv): Promise<Result>;
 	// management

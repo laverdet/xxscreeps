@@ -7,7 +7,7 @@ let id = 0;
  * Represents a script which can be sent to the keyval storage engine and run locally on that
  * service. This is a plain JavaScript function in the local provider, or a lua script on Redis.
  */
-export class KeyvalScript<Result extends Value | Value[] | null = any, Keys extends Value[] = any, Argv extends Value[] = any> {
+export class KeyvalScript<Result extends Value | Value[] | null = any, Keys extends string[] = [], Argv extends Value[] = []> {
 	readonly [provider: string]: string;
 	readonly id: string;
 	readonly local: string;
