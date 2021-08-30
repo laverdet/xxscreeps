@@ -9,6 +9,7 @@ import { World } from 'xxscreeps/game/map';
 import { detach } from 'xxscreeps/schema/buffer-object';
 import { setupConsole } from './console';
 import { makeEnvironment } from './module';
+import { flush, print, resultPrefix } from './print';
 // eslint-disable-next-line @typescript-eslint/no-duplicate-imports
 import { flushGlobals } from 'xxscreeps/config/global';
 
@@ -17,7 +18,6 @@ export type Compiler<Type = any> = {
 	evaluate(module: Type, linker: (specifier: string, referrer?: string) => Type): any;
 };
 export type Evaluate = (source: string, filename: string) => any;
-export type Print = (fd: number, payload: string, evalResult?: boolean) => void;
 
 function freezeClass(constructor: abstract new(...args: any[]) => any) {
 	freezeProperty(constructor, 'prototype');
@@ -71,12 +71,11 @@ let me: string;
 let world: World;
 let loop: (() => any) | undefined;
 let requireMain: () => any;
-let print: Print;
 
-export function initialize(compiler: Compiler, evaluate: Evaluate, printFn: Print, data: InitializationPayload) {
+export function initialize(compiler: Compiler, evaluate: Evaluate, data: InitializationPayload) {
 	// Set up environment
 	flushGlobals();
-	setupConsole(print = printFn);
+	setupConsole(print);
 
 	// Load terrain
 	world = new World(data.shardName, data.terrainBlob);
@@ -146,12 +145,12 @@ export function tick(data: TickPayload) {
 						id: payload.ack,
 						result: {
 							error: false,
-							value: result,
+							value: payload.echo ? undefined : result,
 						},
 					});
 				}
 				if (payload.echo) {
-					print(0, inspect(result, { colors: true }), true);
+					print(1, `${resultPrefix}${inspect(result, { colors: true })}`);
 				}
 			} catch (err: any) {
 				if (payload.ack) {
@@ -165,7 +164,7 @@ export function tick(data: TickPayload) {
 					});
 				}
 				if (payload.echo) {
-					print(2, err.stack, true);
+					print(2, err.stack ?? err.message ?? err);
 				}
 			}
 		});
@@ -194,6 +193,7 @@ export function tick(data: TickPayload) {
 
 	// Gather tick results from runtimeConnector
 	hooksComposed.send(tickResult as TickResult);
+	tickResult.console = flush();
 
 	// Release shared memory
 	for (const room of rooms) {

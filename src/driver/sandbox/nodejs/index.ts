@@ -1,5 +1,5 @@
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner';
-import type { Compiler, Evaluate, Print } from 'xxscreeps/driver/runtime';
+import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import util from 'util';
 import vm from 'vm';
@@ -41,7 +41,7 @@ export class NodejsSandbox implements Sandbox {
 
 	dispose() {}
 
-	async initialize(data: InitializationPayload, print: Print) {
+	async initialize(data: InitializationPayload) {
 
 		// Initialize vm context, set up globals
 		const { context } = this;
@@ -62,7 +62,7 @@ export class NodejsSandbox implements Sandbox {
 			evaluate() { throw new Error },
 		};
 		const evaluate: Evaluate = (source, filename) => new vm.Script(source, { filename }).runInContext(context);
-		runtime.initialize(defaultRequire, compiler, evaluate, print, data);
+		runtime.initialize(defaultRequire, compiler, evaluate, data);
 		this.tick = vm.runInContext(`
 			(function(context, tick, runInContext) {
 				let data;

@@ -1,11 +1,12 @@
 /* eslint-disable no-control-regex */
 import type { SubscriptionEndpoint } from '../socket';
 import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model';
-import { throttle } from 'xxscreeps/utility/utility';
 import config from 'xxscreeps/config';
+import { throttle } from 'xxscreeps/utility/utility';
+import { resultPrefix } from 'xxscreeps/driver/runtime/print';
 
 function colorize(payload: string) {
-	return payload
+	return `${payload}`
 		// null
 		.replace(/\x1b\[1m/g, '<b>')
 		.replace(/\x1b\[22m/g, '</b>')
@@ -35,31 +36,41 @@ const ConsoleSubscription: SubscriptionEndpoint = {
 		if (!this.user || params.user !== this.user) {
 			return () => {};
 		}
-		let throttleTime = 0;
-		let throttleCount = 0;
 		return getConsoleChannel(this.context.shard, params.user).listen(message => {
-			const now = Date.now();
-			if (now > throttleTime) {
-				throttleCount = 0;
-				throttleTime = now + 1000;
-			}
-			if (++throttleCount >= 20) {
-				if (throttleCount === 20) {
-					this.send(JSON.stringify({ error: 'Throttling console messages' }));
+			type Frame = {
+				error?: never;
+				messages: { log: string[]; results: string[] };
+			} | {
+				error: string;
+				messages?: never;
+			};
+			const frames: Frame[] = [];
+			const lines = JSON.parse(message);
+
+			for (const line of lines) {
+				if (line.fd === 1) {
+					if (line.data.startsWith(resultPrefix)) {
+						if (frames[frames.length - 1]?.messages?.results.length) {
+							// Eval response
+							frames[frames.length - 1].messages!.results.push(colorize(line.data.substr(resultPrefix.length)));
+						} else {
+							// Repeated eval response
+							frames.push({ messages: { log: [], results: [ colorize(line.data.substr(resultPrefix.length)) ] } });
+						}
+					} else if (frames[frames.length - 1]?.messages?.log.length) {
+						// console.log
+						frames[frames.length - 1].messages!.log.push(colorize(line.data));
+					} else {
+						// Repeated console.log
+						frames.push({ messages: { log: [ colorize(line.data) ], results: [] } });
+					}
+				} else {
+					// Error
+					frames.push({ error: colorize(line.data) });
 				}
-				return;
 			}
-			switch (message.type) {
-				case 'error':
-					this.send(JSON.stringify({ error: colorize(message.value) }));
-					break;
-				case 'log':
-					this.send(JSON.stringify({ messages: { log: [ colorize(message.value) ], results: [] } }));
-					break;
-				case 'result':
-					this.send(JSON.stringify({ messages: { log: [], results: [ colorize(message.value) ] } }));
-					break;
-				default:
+			for (const frame of frames) {
+				this.send(JSON.stringify(frame));
 			}
 		});
 	},

@@ -261,9 +261,9 @@ hooks.register('route', {
 			// Try to parse it
 			// eslint-disable-next-line no-new, @typescript-eslint/no-implied-eval
 			new Function(expression);
-			requestRunnerEval(context.shard, userId, context.request.body.expression, true);
+			await requestRunnerEval(context.shard, userId, context.request.body.expression, true);
 		} catch (err: any) {
-			await getConsoleChannel(context.shard, userId).publish({ type: 'error', value: err.message });
+			await getConsoleChannel(context.shard, userId).publish(JSON.stringify([ { fd: 2, data: err.message } ]));
 		}
 		return { ok: 1 };
 	},

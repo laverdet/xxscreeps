@@ -10,7 +10,7 @@ import * as Code from 'xxscreeps/engine/db/user/code';
 import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import * as User from 'xxscreeps/engine/db/user';
-import { getRunnerUserChannel, getUsageChannel } from './model';
+import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model';
 import { acquire } from 'xxscreeps/utility/async';
 import { createSandbox } from 'xxscreeps/driver/sandbox';
 import { hooks } from './symbols';
@@ -143,10 +143,7 @@ export class PlayerInstance {
 					this.connectors.initialize(payload),
 				]);
 				payload.codeBlob = codeBlob;
-				this.sandbox = await createSandbox(this.userId, payload, (fd, payload) => {
-					const type = ([ 'result', 'log', 'error' ] as const)[fd];
-					this.consoleChannel.publish({ type, value: payload }).catch(console.error);
-				});
+				this.sandbox = await createSandbox(this.userId, payload);
 			}
 
 			// Skip the tick if this reset was the player's fault
@@ -209,28 +206,38 @@ export class PlayerInstance {
 				// Publish usage event
 				this.usageChannel.publish(payload.usage),
 
-				// Publish console acks
+				// Publish console
+				payload.console ? this.consoleChannel.publish(payload.console) : undefined,
 				payload.evalAck ? Promise.all(payload.evalAck.map(ack =>
-					getConsoleChannel(this.shard, this.userId).publish({ type: 'ack', ...ack }),
+					getAckChannel(this.shard, this.userId).publish(ack),
 				)) : undefined,
 
 				// Save driver connector information [memory, flags, visual, whatever]
 				this.connectors.save(payload),
 			]);
 		} else {
+			const tasks: Promise<void>[] = [];
 			if (result) {
 				// Deduct CPU limit in case of severe failure
 				this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - config.runner.cpu.tickLimit) + kCPU;
-				void this.usageChannel.publish({ cpu: kCPU });
+				tasks.push(this.usageChannel.publish({ cpu: kCPU }));
+
 				if (result.result === 'disposed') {
-					void this.consoleChannel.publish({ type: 'error', value: 'Script was disposed' });
+					tasks.push(this.consoleChannel.publish(JSON.stringify([ {
+						fd: 2,
+						data: 'Script was disposed',
+					} ])));
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 				} else if (result.result === 'timedOut') {
-					void this.consoleChannel.publish({ type: 'error', value: `Script timed out${result.stack ? `\n${result.stack}` : ''}` });
+					tasks.push(this.consoleChannel.publish(JSON.stringify([ {
+						fd: 2,
+						data: `Script timed out${result.stack ? `; ${result.stack}` : ''}`,
+					} ])));
 				}
 			}
 			// Publish empty results to move processing along
-			await publishRunnerIntentsForRooms(this.shard, this.userId, time, roomNames, {});
+			tasks.push(publishRunnerIntentsForRooms(this.shard, this.userId, time, roomNames, {}));
+			await Promise.all(tasks);
 		}
 	}
 }

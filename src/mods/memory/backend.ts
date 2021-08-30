@@ -5,7 +5,7 @@ import { hooks } from 'xxscreeps/backend';
 import { loadUserMemoryString } from 'xxscreeps/mods/memory/model';
 import { mustNotReject } from 'xxscreeps/utility/async';
 import { throttle } from 'xxscreeps/utility/utility';
-import { requestRunnerEvalAck } from 'xxscreeps/engine/runner/model';
+import { requestRunnerEval } from 'xxscreeps/engine/runner/model';
 
 const invalidPath = 'Incorrect memory path';
 const emptyObject = Object.create(null);
@@ -100,7 +100,7 @@ hooks.register('route', {
 				return `Object.keys(Memory).forEach(key => delete Memory[key]); Object.assign(Memory, ${value}); undefined;`;
 			}
 		}();
-		await requestRunnerEvalAck(context.shard, userId, expression, false);
+		await requestRunnerEval(context.shard, userId, expression, false);
 		return { ok: 1 };
 	},
 });
