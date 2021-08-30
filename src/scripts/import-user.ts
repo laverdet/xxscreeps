@@ -52,8 +52,6 @@ const db = await Database.connect();
 
 const shard = await Shard.connect(db, 'shard0');
 
-const { blob } = shard;
-
 // @ts-expect-error
 const importData = JSON.parse(await fs.readFile('out.json'));
 

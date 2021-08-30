@@ -29,7 +29,7 @@ const argv = checkArguments({
 });
 const dontOverwrite = argv['dont-overwrite'];
 
-const jsonSource = argv.argv[0] ?? 'map-mmo-shard1';
+const jsonSource = argv.argv[0] ?? 'mmo-shard1';
 
 function forUser(userId: string | null) {
 	return userId === 'f4b532d08c3952a' ? '1' : userId;
@@ -50,15 +50,15 @@ function withStructure(from: any, into: Structure) {
 	}
 }
 
-let data: { description: string; rooms: { room: string; terrain: string; objects: any[] }[] };
+let importData: { description: string; rooms: { room: string; terrain: string; objects: any[] }[] };
 
 try {
-	data = JSON.parse(await readFile(`map-${jsonSource}.json`, 'utf8'));
+	importData = JSON.parse(await readFile(`map-${jsonSource}.json`, 'utf8'));
 } catch {
 	const res = await fetch(`https://maps.screepspl.us/maps/map-${jsonSource}.json`);
 	try {
-		data = await res.json();
-		writeFileSync(`map-${jsonSource}.json`, JSON.stringify(data));
+		importData = await res.json();
+		writeFileSync(`map-${jsonSource}.json`, JSON.stringify(importData));
 	} catch (err) {
 		console.log('error', err);
 		process.exit(0);
@@ -76,23 +76,21 @@ if (dontOverwrite && await db.data.scard('users') > 0) {
 	// Flush databases at the same time because they may point to the same service
 	const shard = await Shard.connect(db, 'shard0');
 	await Promise.all([
-		shard.blob.flushdb(),
 		shard.data.flushdb(),
 	]);
 	// Initialize blank database
 	await shard.data.set('time', gameTime);
 	await Promise.all([
-		shard.blob.save(),
 		shard.data.save(),
 	]);
 	shard.disconnect();
 }
 
 const shard = await Shard.connect(db, 'shard0');
-const { blob } = shard;
+const { data } = shard;
 
 // Save terrain data
-const roomsTerrain: Map<string, { exits: number; terrain: TerrainWriter }> = new Map(data.rooms.map((entry: any) => {
+const roomsTerrain: Map<string, { exits: number; terrain: TerrainWriter }> = new Map(importData.rooms.map((entry: any) => {
 	const writer = new TerrainWriter;
 	for (let xx = 0; xx < 50; ++xx) {
 		for (let yy = 0; yy < 50; ++yy) {
@@ -114,9 +112,9 @@ const roomsTerrain: Map<string, { exits: number; terrain: TerrainWriter }> = new
 	} ];
 }));
 
-await blob.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
+await data.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
 
-const rooms = data.rooms.map((entry: any) => {
+const rooms = importData.rooms.map((entry: any) => {
 	const objects = entry.objects;
 	const instance = new Room;
 	instance.name = entry.room;

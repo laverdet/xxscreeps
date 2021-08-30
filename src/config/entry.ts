@@ -77,6 +77,7 @@ if (missingFlags.length) {
 	if (specifier && !specifier.startsWith('-')) {
 		const commands: Record<string, string | undefined> = {
 			import: './dist/scripts/scrape-world.js',
+			'import-map': './dist/scripts/import-map.js',
 			start: './dist/engine/service/launcher.js',
 			main: './dist/engine/service/main.js',
 			backend: './dist/backend/server.js',
