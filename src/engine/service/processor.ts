@@ -6,8 +6,8 @@ import * as Fn from 'xxscreeps/utility/functional';
 import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async';
-import { lookAhead } from 'xxscreeps/utility/async';
 import { negotiateResponderClient } from 'xxscreeps/utility/responder';
+import { clamp } from 'xxscreeps/utility/utility';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from '.';
 const isEntry = checkIsEntry();
 
@@ -29,25 +29,56 @@ const worldBlob = await shard.data.req('terrain', { blob: true });
 const processorSubscription = await getProcessorChannel(shard).subscribe();
 
 // Create processor workers
+type RoomWorker = typeof workers extends (infer Type)[] ? Type : never;
 const userCount = Number(await db.data.scard('users')) - 3; // minus Invader, Source Keeper, Screeps
 const singleThreaded = config.launcher?.singleThreaded;
-const processorCount = Math.max(1, singleThreaded ? 1 : Math.min(config.processor.concurrency, Math.ceil(userCount / 2)));
-const threads = await Promise.all(Fn.map(Fn.range(processorCount), async() => ({
-	info: {
-		affinityTime: -1,
-		affinity: [] as string[],
-		processed: [] as string[],
-	},
-	thread: await negotiateResponderClient<ProcessorRequest, void>('xxscreeps/engine/processor/worker.js', singleThreaded),
+const processorCount = clamp(1, config.processor.concurrency, singleThreaded ? 1 : Math.ceil(userCount / 2));
+const workers = await Promise.all(Fn.map(Fn.range(processorCount), async() => ({
+	affinity: [] as string[],
+	checkAffinity: true,
+	idle: true,
+	processed: [] as string[],
+	...await negotiateResponderClient<ProcessorRequest, void>('xxscreeps/engine/processor/worker.js', singleThreaded),
 })));
+const affinityByRoom = new Map<string, RoomWorker>();
+
+// Pulls rooms from process queue for a given worker. Prioritizes affinity rooms, but will return
+// other rooms if needed.
+async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
+	const queueKey = processRoomsSetKey(time);
+	loop: while (true) {
+
+		// Yield affinity rooms first
+		while (worker.checkAffinity) {
+			const affinityIterator = consumeSortedSetMembers(shard.scratch, queueKey, worker.affinity, 0, 0);
+			// eslint-disable-next-line @typescript-eslint/require-await, require-yield
+			const endOfAffinity = async function *() {
+				worker.checkAffinity = false;
+			}();
+			for await (const roomName of Async.lookAhead(Async.concat(affinityIterator, endOfAffinity), 1)) {
+				yield roomName;
+			}
+		}
+
+		// Yield non-affinity rooms until there's no more, or it's time to check affinity again
+		for await (const roomName of consumeSortedSet(shard.scratch, queueKey, 0, 0)) {
+			yield roomName;
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (worker.checkAffinity) {
+				continue loop;
+			}
+		}
+		break;
+	}
+}
 
 try {
 
 	// Initialize workers and rooms
-	await Promise.all(Fn.map(threads, async({ thread }) => {
-		await thread.responder({ type: 'world', worldBlob });
+	await Promise.all(Fn.map(workers, async worker => {
+		await worker.responder({ type: 'world', worldBlob });
 		for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
-			await thread.responder({ type: 'initialize', roomName });
+			await worker.responder({ type: 'initialize', roomName });
 			if (halted) {
 				break;
 			}
@@ -79,88 +110,79 @@ try {
 			case 'shutdown':
 				break loop;
 
-			// TODO: Use `roomNames` from this message to better guide process dispatching. Current
-			// implementation is a little messy.
 			case 'process': {
 				// Ensure processor time is in sync
-				const { time } = message;
+				const { time, roomNames } = message;
 				currentTime = await begetRoomProcessQueue(shard, message.time, currentTime);
 				if (time !== currentTime) {
 					break;
 				}
-
-				// Fan out to workers
 				processing = true;
-				await Promise.all(Fn.map(threads, async({ info, thread }) => {
-					if (info.affinityTime !== currentTime) {
-						// Update affinity set once per tick
-						if (info.affinityTime === currentTime - 1) {
-							info.affinity = info.processed;
-						} else {
-							info.affinity = [];
+
+				// Update checkAffinity flag on workers
+				let activations = function() {
+					if (roomNames) {
+						for (const roomName of roomNames) {
+							const worker = affinityByRoom.get(roomName);
+							if (worker) {
+								worker.checkAffinity = true;
+							}
 						}
-						info.affinityTime = currentTime;
-						info.processed = [];
+						return roomNames.length;
+					} else {
+						return Infinity;
 					}
+				}();
 
-					// Simple process handler for each room
-					async function processRoom(roomName: string, time: number) {
-						await thread.responder({ type: 'process', roomName, time });
-						info.processed.push(roomName);
-						if (isEntry) {
-							process.stdout.write(`${roomName}, `);
-						}
-					}
-
-					// Continue processing until the queue is empty. Empty queue may not mean processing is
-					// done, it also may mean we're waiting on workers
-					const queueKey = processRoomsSetKey(time);
-					let ran = true;
-					loop: while (ran) {
-						ran = false;
-
-						// Check affinity rooms
-						for await (const roomName of lookAhead(consumeSortedSetMembers(shard.scratch, queueKey, info.affinity, 0, 0), 1)) {
-							ran = true;
-							await processRoom(roomName, time);
-						}
-
-						// Run one non-preferred room, then check affinity rooms again
-						// eslint-disable-next-line no-unreachable-loop
-						for await (const roomName of consumeSortedSet(shard.scratch, queueKey, 0, 0)) {
-							ran = true;
-							await processRoom(roomName, time);
-							continue loop;
-						}
-
-						// No extra rooms were run. Check to see if there's anything left in the affinity array.
-						if (info.affinity.length === 0) {
-							break;
-						}
-						const scores = await shard.scratch.zmscore(queueKey, info.affinity);
-						info.affinity = [ ...Fn.map(
-							Fn.reject(Fn.range(info.affinity.length), ii => scores[ii] === null),
-							ii => info.affinity[ii]) ];
-						if (info.affinity.length === 0) {
+				// Activate a worker per room
+				for (const worker of workers) {
+					if (worker.idle) {
+						worker.idle = false;
+						Async.mustNotReject(async() => {
+							// Continue processing until the queue is empty. Empty queue may not mean processing is
+							// done, it also may mean we're waiting on workers
+							for await (const roomName of consumeRoomsQueue(worker, time)) {
+								await worker.responder({ type: 'process', roomName, time });
+								worker.processed.push(roomName);
+								if (isEntry) {
+									process.stdout.write(`${roomName}, `);
+								}
+							}
+							worker.idle = true;
+						});
+						if (--activations <= 0) {
 							break;
 						}
 					}
-				}));
+				}
 				break;
 			}
 
 			// Second processing phase. This waits until all player code and first phase processing has
 			// run.
 			case 'finalize':
-				await Promise.all(Fn.map(threads, async({ thread }) =>
-					thread.responder({ type: 'finalize', time: currentTime })));
-				processing = false;
+				// Run finalization in worker
+				await Fn.mapAsync(workers, async worker => {
+					if (worker.processed.length > 0) {
+						await worker.responder({ type: 'finalize', time: currentTime });
+					}
+				});
 				if (isEntry) {
 					console.log(`...completed tick ${currentTime}`);
 				}
+				processing = false;
 				if (halted) {
 					// We check for interrupts at the end of tick
 					break loop;
+				}
+				// Reset affinity for each worker
+				affinityByRoom.clear();
+				for (const worker of workers) {
+					worker.affinity = worker.processed;
+					worker.processed = [];
+					for (const roomName of worker.affinity) {
+						affinityByRoom.set(roomName, worker);
+					}
 				}
 				break;
 		}
@@ -168,10 +190,10 @@ try {
 
 } finally {
 	// Close workers
-	await Promise.all(Fn.map(threads, async({ thread }) => {
-		thread.close();
-		return thread.wait();
-	}));
+	await Fn.mapAsync(workers, async worker => {
+		worker.close();
+		return worker.wait();
+	});
 
 	// Close connections
 	processorSubscription.disconnect();

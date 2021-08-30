@@ -51,7 +51,7 @@ try {
 	]);
 	await Promise.all([
 		shard.scratch.sadd('initializeRooms', rooms),
-		shard.scratch.set(processorTimeKey, shard.time - 1),
+		shard.scratch.set(processorTimeKey, shard.time),
 	]);
 
 	// Wait for processors to connect and initialize world state
@@ -65,7 +65,7 @@ try {
 			break;
 		}
 	}
-	await begetRoomProcessQueue(shard, shard.time, shard.time - 1);
+	await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
 
 	// Game loop
 	// eslint-disable-next-line no-unmodified-loop-condition
