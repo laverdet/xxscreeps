@@ -78,7 +78,7 @@ const UsageSubscription: SubscriptionEndpoint = {
 		});
 		const subscription = await getUsageChannel(this.context.shard, params.user).listen(message => {
 			Object.assign(usage, message);
-			usage.cpu = Math.round(usage.cpu);
+			usage.cpu = Math.floor(usage.cpu);
 			send.set(config.backend.socketThrottle);
 		});
 		return () => {

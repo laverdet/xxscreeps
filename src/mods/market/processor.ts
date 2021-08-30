@@ -44,7 +44,7 @@ const intents = [
 	}),
 
 	registerIntentProcessor(Room, 'terminalSend', { internal: true }, (room, context, resourceType: ResourceType, amount: number) => {
-		context.task(context.shard.scratch.del(`room/${room.name}/terminalIngress`));
+		context.task(context.shard.scratch.vdel(`room/${room.name}/terminalIngress`));
 		room.terminal?.store['#add'](resourceType, amount);
 		context.didUpdate();
 	}),

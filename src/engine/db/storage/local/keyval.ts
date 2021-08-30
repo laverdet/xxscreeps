@@ -47,10 +47,15 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		const [ blobEffect, blob ] = await BlobStorage.create(path);
 		const [ url, payload ] = await async function() {
 			if (path.protocol === 'file:') {
-				try {
-					const url = new URL('data.json', path);
-					return [ url, await fs.readFile(new URL('data.json', path), 'utf8') ] as const;
-				} catch {}
+				const url = new URL('data.json', path);
+				return [
+					url,
+					await async function() {
+						try {
+							return await fs.readFile(new URL('data.json', path), 'utf8');
+						} catch {}
+					}(),
+				] as const;
 			}
 			return [];
 		}();
@@ -85,6 +90,10 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		} else {
 			return this.blob.del(key) as never;
 		}
+	}
+
+	vdel(key: string) {
+		this.del(key);
 	}
 
 	get(key: string, options?: P.AsBlob) {
@@ -337,19 +346,41 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return out.size;
 	}
 
-	zadd(key: string, members: [ number, string ][], options?: P.ZAdd) {
+	zadd(key: string, members: [ number, string ][], options?: P.ZAdd): any {
 		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
-		const result = function() {
-			switch (options?.if) {
-				case 'nx': return set.insert(members, left => left);
-				case 'xx': return set.insert(Fn.reject(members, member => set.has(member[1])), (left, right) => right);
-				default: return set.insert(members, (left, right) => right);
+		try {
+			const range = function() {
+				switch (options?.if) {
+					case 'nx': return Fn.reject(members, member => set.has(member[1]));
+					case 'xx': return Fn.filter(members, member => set.has(member[1]));
+					default: return members;
+				}
+			}();
+
+			if (options?.incr) {
+				if (members.length > 1) {
+					throw new Error('ZADD with INCR option cannot be used with multiple elements');
+				}
+				const { head } = Fn.shift(range);
+				if (!head) {
+					return null;
+				}
+				const score = set.score(head[1]);
+				if (score === undefined) {
+					return null;
+				} else {
+					const result = score + head[0];
+					set.add(head[1], result);
+					return result;
+				}
 			}
-		}();
-		if (set.size === 0) {
-			this.data.delete(key);
+
+			return set.insert(range, (left, right) => right);
+		} finally {
+			if (set.size === 0) {
+				this.data.delete(key);
+			}
 		}
-		return result;
 	}
 
 	zcard(key: string) {
@@ -433,10 +464,16 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 					}
 					case 'score': return [ ...Fn.map(set.entries(min as number, max as number), entry => entry[1]) ];
 					default: {
-						if (min < 0 || max === Infinity) {
-							throw new Error(`Invalid index range [${min}, ${max}]`);
-						}
-						return set.values().slice(min as number, max as number);
+						const convert = (value: number) => {
+							if (value === Infinity || value === -Infinity) {
+								throw new Error(`Invalid range value: ${value}`);
+							} else if (value < 0) {
+								return set.size + value;
+							} else {
+								return value;
+							}
+						};
+						return set.values().slice(convert(min as number), convert(max as number) + 1);
 					}
 				}
 			}();
@@ -447,6 +484,23 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			}
 		} else {
 			return [];
+		}
+	}
+
+	zrangeStore(into: string, from: string, min: number | string, max: number | string, options?: P.ZRange) {
+		const set: SortedSet | undefined = this.data.get(from);
+		if (set) {
+			const range: string[] = this.zrange(from, min, max, options);
+			const out = new SortedSet;
+			out.insert(Fn.map(range, member => [ set.score(member)!, member ]));
+			if (out.size === 0) {
+				this.data.delete(into);
+			} else {
+				this.data.set(into, out);
+			}
+			return out.size;
+		} else {
+			return 0;
 		}
 	}
 
@@ -501,11 +555,21 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	zunionStore(key: string, keys: string[]) {
-		// Fetch sets first because you can use this command to store a set back into itself
-		const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
+	zunionStore(key: string, keys: string[], options?: P.ZAggregate) {
 		const out = new SortedSet;
-		out.insert(Fn.concat(Fn.map(sets, set => set.entries())));
+		if (options?.weights) {
+			// With WEIGHTS each set needs to be applied one at a time
+			const maybeSets = Fn.map(keys.entries(), ([ index, key ]): [number, SortedSet] =>
+				[ options.weights![index] ?? 1, this.data.get(key) ]);
+			const sets = Fn.filter(maybeSets, entry => entry[1]);
+			for (const [ weight, set ] of sets) {
+				out.insert(set.entries(), (left, right) => left + right * weight);
+			}
+		} else {
+			// Without WEIGHTS insert can happen at once
+			const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
+			out.insert(Fn.concat(Fn.map(sets, set => set.entries())));
+		}
 		if (out.size === 0) {
 			this.data.delete(key);
 		} else {
@@ -515,11 +579,13 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	eval(script: KeyvalScript, keys: string[], argv: P.Value[]) {
-		return this.evaluateInline(script.id, script.local, keys, argv);
+		return this.evaluateInline(script.local, keys, argv);
 	}
 
-	async evaluateInline(id: string, script: string, keys: string[], argv: P.Value[]) {
-		const fn = getOrSet(this.scripts, id, () => {
+	load() {}
+
+	async evaluateInline(script: string, keys: string[], argv: P.Value[]) {
+		const fn = getOrSet(this.scripts, script, () => {
 			// eslint-disable-next-line @typescript-eslint/no-implied-eval
 			const impl = new Function(`return ${script}`)();
 			return (instance, keys: string[], argv: P.Value[]) => impl(instance, keys, argv);
@@ -577,7 +643,7 @@ class LocalKeyValClient extends makeClient(LocalKeyValResponder) {
 	// https://github.com/microsoft/TypeScript/issues/27689
 	// @ts-expect-error
 	eval(script: KeyvalScript, keys: string[], argv: P.Value[]) {
-		return this.evaluateInline(script.id, script.local, keys, argv);
+		return this.evaluateInline(script.local, keys, argv);
 	}
 }
 

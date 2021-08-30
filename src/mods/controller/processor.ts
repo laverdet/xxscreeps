@@ -182,7 +182,7 @@ const intents = [
 			if (controller.level < 8) {
 				const nextLevel = C.CONTROLLER_LEVELS[controller.level]!;
 				if (controller['#progress'] >= nextLevel) {
-					++controller.room['#level'];
+					const level = ++controller.room['#level'];
 					if (controller.level === 8) {
 						controller['#progress'] = 0;
 					} else {
@@ -190,6 +190,7 @@ const intents = [
 					}
 					controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 					++controller.safeModeAvailable;
+					updateRoomStatus(controller.room, level, controller['#user']);
 				}
 			}
 			saveAction(creep, 'upgradeController', controller.pos);

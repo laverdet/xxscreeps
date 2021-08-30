@@ -8,9 +8,9 @@ import * as Id from 'xxscreeps/engine/schema/id';
 import * as Fn from 'xxscreeps/utility/functional';
 import { create as createObject } from 'xxscreeps/game/object';
 import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep';
-import { Game, hooks, intents, userGame } from 'xxscreeps/game';
+import { Game, intents, userGame } from 'xxscreeps/game';
 import { OwnedStructure, checkMyStructure, checkPlacement, lookForStructures, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
-import { SingleStore, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store';
+import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store';
 import { compose, declare, optional, struct, variant, vector, withOverlay, withType } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkString, checkTarget } from 'xxscreeps/game/checks';
@@ -213,13 +213,10 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 	return spawn;
 }
 
-const createdSpawns = new Set<string>();
-hooks.register('gameInitializer', () => createdSpawns.clear());
 function hasSpawn(userGame: GameConstructor, name: string) {
 	return Boolean(
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		userGame.spawns[name] ||
-		createdSpawns.has(name) ||
 		Object.values(userGame.constructionSites).some(site => site.name === name));
 }
 
@@ -235,7 +232,6 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 				if (hasSpawn(userGame, name)) {
 					return null;
 				} else {
-					createdSpawns.add(name);
 					return name;
 				}
 			} else {
@@ -279,9 +275,10 @@ export function checkRenewCreep(spawn: StructureSpawn, creep: Creep) {
 		() => checkMyStructure(spawn, StructureSpawn),
 		() => checkCommon(creep),
 		() => checkRange(spawn, creep, 1),
-		() => checkHasResource(spawn, C.RESOURCE_ENERGY, calculateRenewCost(creep)),
 		() => {
-			if (
+			if (spawn.room.energyAvailable < calculateRenewCost(creep)) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+			} else if (
 				creep.body.some(bodyPart => bodyPart.type === C.CLAIM) ||
 				creep.body.some(bodyPart => bodyPart.boost !== undefined)
 			) {

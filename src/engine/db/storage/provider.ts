@@ -18,6 +18,7 @@ export type HSet = {
 };
 export type ZAdd = {
 	if?: 'nx' | 'xx';
+	incr?: boolean;
 };
 export type ZAggregate = {
 	// aggregate: 'sum' | 'min' | 'max';
@@ -33,6 +34,7 @@ export type KeyValProvider = {
 	// keys / strings
 	copy(from: string, to: string, options?: Copy): Promise<boolean>;
 	del(key: string): Promise<boolean>;
+	vdel(key: string): Promise<void>;
 	get(key: string, options: { blob: true }): Promise<Readonly<Uint8Array> | null>;
 	get(key: string, options?: AsBlob): Promise<string | null>;
 	req(key: string, options: { blob: true }): Promise<Readonly<Uint8Array>>;
@@ -69,6 +71,7 @@ export type KeyValProvider = {
 	srem(key: string, members: string[]): Promise<number>;
 	sunionStore(key: string, keys: string[]): Promise<number>;
 	// sorted sets
+	zadd(key: string, members: [ number, string ][], options: { incr: true } & ZAdd): Promise<number | null>;
 	zadd(key: string, members: [ number, string ][], options?: ZAdd): Promise<number>;
 	zcard(key: string): Promise<number>;
 	zincrBy(key: string, delta: number, member: string): Promise<number>;
@@ -76,13 +79,15 @@ export type KeyValProvider = {
 	zmscore(key: string, members: string[]): Promise<(number | null)[]>;
 	zrange(key: string, min: string, max: string, options: ZRange & { by: 'lex' }): Promise<string[]>;
 	zrange(key: string, min: number, max: number, options?: ZRange): Promise<string[]>;
+	zrangeStore(into: string, from: string, min: number, max: number, options?: ZRange): Promise<number>;
 	zrangeWithScores(key: string, min: number, max: number, options?: ZRange): Promise<[ number, string ][]>;
 	zrem(key: string, members: string[]): Promise<number>;
 	zremRange(key: string, min: number, max: number): Promise<number>;
 	zscore(key: string, member: string): Promise<number | null>;
-	zunionStore(key: string, keys: string[]): Promise<number>;
+	zunionStore(key: string, keys: string[], options?: ZAggregate): Promise<number>;
 	// scripting
 	eval<Result extends Value[] | Value | null, Keys extends string[], Argv extends Value[]>(script: KeyvalScript<Result, Keys, Argv>, keys: Keys, argv: Argv): Promise<Result>;
+	load(script: KeyvalScript): Promise<void>;
 	// management
 	flushdb(): Promise<void>;
 	save(): Promise<void>;

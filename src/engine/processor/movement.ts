@@ -46,12 +46,18 @@ export function add(mover: RoomObject, power: number, direction: Direction) {
 	}
 }
 
-function remove(mover: RoomObject) {
-	mover.nextPositionTime = -1;
-	const blockedMovers = moves.get(toId(mover.pos.x, mover.pos.y));
+function remove(removedMover: RoomObject) {
+	removedMover.nextPositionTime = -1;
+	const blockedMovers = moves.get(toId(removedMover.pos.x, removedMover.pos.y));
 	for (const { mover } of blockedMovers ?? []) {
 		if (mover.nextPositionTime === Game.time) {
-			remove(mover);
+			const check = makeObstacleChecker({
+				room: mover.room,
+				user: mover['#user']!,
+			});
+			if (check(removedMover)) {
+				remove(mover);
+			}
 		}
 	}
 }
@@ -67,16 +73,20 @@ export function dispatch(room: Room) {
 		// In the common case where this move isn't contested then finish early
 		if (info.length === 1) {
 			const { mover } = info[0];
-			mover.nextPosition = nextPosition;
-			mover.nextPositionTime = Game.time;
-			movingObjects.push(mover);
+			if (mover.room as any) {
+				mover.nextPosition = nextPosition;
+				mover.nextPositionTime = Game.time;
+				movingObjects.push(mover);
+			}
 			continue;
 		}
 
 		// Build list of objects attempting to move
-		const contenders = Fn.map(info, ({ mover, power }) => ({
+		const contenders = Fn.map(Fn.filter(info, move => move.mover.room), ({ mover, power }) => ({
 			mover,
-			// First priority is moving creeps who are *currently* on cells where more creeps want to
+			// First priority is the move/weight ratio, higher wins
+			power,
+			// Second priority is moving creeps who are *currently* on cells where more creeps want to
 			// move
 			movingInto: function() {
 				const followers = moves.get(toId(mover.pos.x, mover.pos.y));
@@ -92,18 +102,19 @@ export function dispatch(room: Room) {
 					return 0;
 				}
 			}(),
-			// Second priority is the move/weight ratio, faster wins
-			power,
 		}));
 
 		// Pick the object to win this movement
-		const { mover } = Fn.minimum(contenders, (left, right) =>
+		// TODO: New movement algorithm should enforce power first
+		const move = Fn.minimum(contenders, (left, right) =>
 			right.movingInto - left.movingInto ||
 			right.power - left.power,
-		)!;
-		mover.nextPosition = nextPosition;
-		mover.nextPositionTime = time;
-		movingObjects.push(mover);
+		);
+		if (move) {
+			move.mover.nextPosition = nextPosition;
+			move.mover.nextPositionTime = time;
+			movingObjects.push(move.mover);
+		}
 	}
 
 	// Note: I think there's an issue with the safe mode part of this algorithm. If safe mode is

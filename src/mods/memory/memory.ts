@@ -286,7 +286,7 @@ export function flushSegments() {
 				}
 				return {
 					id: Number(id),
-					payload: utf16ToBuffer(string),
+					payload: utf16ToBuffer(string, SharedArrayBuffer),
 				};
 			}
 		}

@@ -49,7 +49,7 @@ export async function saveUserFlagBlobForNextTick(shard: Shard, userId: string, 
 	if (blob) {
 		await shard.data.set(key, blob);
 	} else {
-		await shard.data.del(key);
+		await shard.data.vdel(key);
 	}
 	await getFlagChannel(shard, userId).publish({ type: 'updated', time });
 }

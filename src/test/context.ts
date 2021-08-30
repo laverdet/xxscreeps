@@ -41,7 +41,9 @@ export function describe(name: string, fn: Callback): void {
 		return;
 	}
 	context.children.push(async() => {
-		process.stdout.write('  '.repeat(stack.length) + name);
+		if (argv.length === 0) {
+			process.stdout.write('  '.repeat(stack.length) + name);
+		}
 		const frame = makeFrame(name);
 		stack.push(context!);
 		context = frame;
@@ -63,11 +65,14 @@ export function test(name: string, fn: Callback) {
 	context.tests.push(async() => {
 		try {
 			await fn();
-			process.stdout.write('.');
+			if (argv.length === 0) {
+				process.stdout.write('.');
+			}
 		} catch (err: any) {
 			const names = [ ...stack.map(frame => frame.name), context?.name, name ].filter(name => name);
-			console.log(
-				`\nTest "${name}" failed. Isolate with: npx xxscreeps test ${names.map(name => `"${name}"`).join(' ')}`);
+			if (argv.length === 0) {
+				console.log(`\nTest "${name}" failed. Isolate with: npx xxscreeps test ${names.map(name => `"${name}"`).join(' ')}`);
+			}
 			console.log(err.stack);
 		}
 	});

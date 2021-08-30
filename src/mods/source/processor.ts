@@ -58,7 +58,10 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 			context.didUpdate();
 		}
 		if (keeper) {
-			context.wakeAt(keeper['#ageTime'] + 1);
+			const ageTime = keeper['#ageTime'];
+			if (ageTime >= Game.time) {
+				context.wakeAt(keeper['#ageTime'] + 1);
+			}
 		}
 	} else if (keeperLair.ticksToSpawn === 0) {
 		// Respawn keeper

@@ -1,7 +1,7 @@
 import type { ConstructibleStructureType, ConstructionSite } from './construction-site';
 import * as C from 'xxscreeps/game/constants';
 import * as Fn from 'xxscreeps/utility/functional';
-import { intents, me } from 'xxscreeps/game';
+import { hooks, intents, me } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';
@@ -39,6 +39,9 @@ declare module 'xxscreeps/game/room' {
 	}
 }
 
+const createdNames = new Set<string>();
+hooks.register('gameInitializer', () => createdNames.clear());
+
 extend(Room, {
 	createConstructionSite(this: Room, ...args: any[]) {
 
@@ -50,6 +53,12 @@ extend(Room, {
 		const pos = new RoomPosition(xx, yy, this.name);
 		const [ structureType, nameArg ] = rest;
 		const name = structureFactories.get(structureType)?.checkName?.(this, nameArg);
+		if (name) {
+			if (createdNames.has(name)) {
+				return C.ERR_NAME_EXISTS;
+			}
+			createdNames.add(name);
+		}
 
 		// Send it off
 		return chainIntentChecks(

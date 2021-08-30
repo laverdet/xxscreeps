@@ -55,10 +55,10 @@ export async function saveContent(db: Database, userId: string, branchName: stri
 		db.data.sadd(branchManifestKey(userId), [ branchName ]),
 		bufferBlob ?
 			db.data.set(buffersKey(userId, branchName), bufferBlob) :
-			db.data.del(buffersKey(userId, branchName)) as Promise<never>,
+			db.data.vdel(buffersKey(userId, branchName)) as Promise<never>,
 		stringBlob ?
 			db.data.set(stringsKey(userId, branchName), stringBlob) :
-			db.data.del(stringsKey(userId, branchName)) as Promise<never>,
+			db.data.vdel(stringsKey(userId, branchName)) as Promise<never>,
 	]);
 	await getUserCodeChannel(db, userId).publish({ type: 'update', branch: branchName });
 	if (didSwitch) {

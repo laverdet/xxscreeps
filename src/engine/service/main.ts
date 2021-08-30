@@ -5,7 +5,7 @@ import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { Deferred, mustNotReject } from 'xxscreeps/utility/async';
 import { Mutex } from 'xxscreeps/engine/db/mutex';
-import { abandonIntentsForTick, activeRoomsKey, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model';
+import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from '.';
 import { tickSpeed, watch } from './tick';
@@ -51,7 +51,7 @@ try {
 	]);
 	await Promise.all([
 		shard.scratch.sadd('initializeRooms', rooms),
-		shard.scratch.set(processorTimeKey, shard.time),
+		shard.scratch.set(processorTimeKey, shard.time - 1),
 	]);
 
 	// Wait for processors to connect and initialize world state
@@ -65,6 +65,7 @@ try {
 			break;
 		}
 	}
+	await begetRoomProcessQueue(shard, shard.time, shard.time - 1);
 
 	// Game loop
 	// eslint-disable-next-line no-unmodified-loop-condition

@@ -14,7 +14,6 @@ const argv = checkArguments({
 // Connect to shard
 const db = await Database.connect();
 const shard = await Shard.connect(db, 'shard0');
-const serviceChannel = await getServiceChannel(shard).subscribe();
 
 try {
 
@@ -35,16 +34,7 @@ try {
 	}
 
 	// Start main service
-	const waitForMain = function() {
-		const messages = serviceChannel.iterable();
-		return async function() {
-			for await (const message of messages) {
-				if (message.type === 'mainConnected') {
-					return true;
-				}
-			}
-		}();
-	}();
+	const [ , waitForMain ] = getServiceChannel(shard).listenFor(message => message.type === 'mainConnected');
 	const main = import('./main');
 	await Promise.race([ main, waitForMain ]);
 
@@ -75,5 +65,4 @@ try {
 } finally {
 	db.disconnect();
 	shard.disconnect();
-	serviceChannel.disconnect();
 }
