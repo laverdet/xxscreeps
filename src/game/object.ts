@@ -24,11 +24,6 @@ const shape = struct({
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	abstract get ['#lookType'](): string;
 
-	/** @internal */
-	declare nextPosition?: RoomPosition;
-	/** @internal */
-	declare nextPositionTime?: number;
-
 	/**
 	 * The link to the Room object. May be `undefined` in case if an object is a flag or a construction
 	 * site and is placed in a room that is not visible to you.

@@ -160,6 +160,7 @@ export class RoomProcessor implements ProcessorContext {
 				object[Tick]?.(object, this);
 			}
 			this.room['#flushObjects']();
+			Movement.flush();
 		});
 
 		// Run async tasks

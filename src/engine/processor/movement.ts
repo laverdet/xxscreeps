@@ -1,14 +1,13 @@
 import type { Direction } from 'xxscreeps/game/position';
 import type { RoomObject } from 'xxscreeps/game/object';
 import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
-import { Game } from 'xxscreeps/game';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
 import { readRoomObject } from 'xxscreeps/engine/db/room';
 import { latin1ToBuffer } from 'xxscreeps/utility/string';
 import { registerIntentProcessor } from '.';
+import { getOrSet } from 'xxscreeps/utility/utility';
 
 // Add cross-room movement
 declare module '.' {
@@ -23,139 +22,121 @@ const intents = registerIntentProcessor(Room, 'import', { internal: true }, (roo
 });
 
 // Saves list of creeps all trying to move onto the same cell
-const moves = new Map<number, { mover: RoomObject; power: number }[]>();
+type Movement = {
+	object: RoomObject;
+	power: number;
+	resolved: boolean;
+	moved: boolean;
+	xx: number;
+	yy: number;
+};
+const movesByLocation = new Map<number, Movement[]>();
+const movesByObject = new Map<RoomObject, Movement>();
 
-export function add(mover: RoomObject, power: number, direction: Direction) {
+export function add(object: RoomObject, power: number, direction: Direction) {
 	// Calculate new position from direction
 	const { dx, dy } = getOffsetsFromDirection(direction);
-	let { x, y } = mover.pos;
-	x += dx;
-	y += dy;
+	let { x: xx, y: yy } = object.pos;
+	xx += dx;
+	yy += dy;
 	// Basic range check
-	if (x < 0 || x >= 50 || y < 0 || y >= 50) {
+	if (xx < 0 || xx >= 50 || yy < 0 || yy >= 50) {
 		return;
 	}
 	// Save it to run after object intents have run
-	const id = toId(x, y);
-	const list = moves.get(id);
-	const info = { mover, power };
-	if (list) {
-		list.push(info);
-	} else {
-		moves.set(id, [ info ]);
-	}
-}
-
-function remove(removedMover: RoomObject) {
-	removedMover.nextPositionTime = -1;
-	const blockedMovers = moves.get(toId(removedMover.pos.x, removedMover.pos.y));
-	for (const { mover } of blockedMovers ?? []) {
-		if (mover.nextPositionTime === Game.time) {
-			const check = makeObstacleChecker({
-				room: mover.room,
-				user: mover['#user']!,
-			});
-			if (check(removedMover)) {
-				remove(mover);
-			}
-		}
-	}
+	const id = toId(xx, yy);
+	const info: Movement = {
+		object,
+		power,
+		moved: false,
+		resolved: false,
+		xx,
+		yy,
+	};
+	getOrSet(movesByLocation, id, () => []).push(info);
+	movesByObject.set(object, info);
 }
 
 export function dispatch(room: Room) {
-	// First resolve move conflicts
-	const { time } = Game;
-	const movingObjects: RoomObject[] = [];
-	for (const [ id, info ] of moves) {
-		const { xx, yy } = fromId(id);
-		const nextPosition = new RoomPosition(xx, yy, room.name);
-
-		// In the common case where this move isn't contested then finish early
-		if (info.length === 1) {
-			const { mover } = info[0];
-			if (mover.room as any) {
-				mover.nextPosition = nextPosition;
-				mover.nextPositionTime = Game.time;
-				movingObjects.push(mover);
-			}
-			continue;
-		}
-
-		// Build list of objects attempting to move
-		const contenders = Fn.map(Fn.filter(info, move => move.mover.room), ({ mover, power }) => ({
-			mover,
-			// First priority is the move/weight ratio, higher wins
-			power,
-			// Second priority is moving creeps who are *currently* on cells where more creeps want to
-			// move
-			movingInto: function() {
-				const followers = moves.get(toId(mover.pos.x, mover.pos.y));
-				if (followers) {
-					if (followers.some(({ mover }) => mover.pos.isEqualTo(xx, yy))) {
-						// This strange special case non-recursively checks if another move is dependent on this
-						// one, and applies the maximum priority if so.
-						return 9;
-					} else {
-						return followers.length;
-					}
-				} else {
-					return 0;
-				}
-			}(),
-		}));
-
-		// Pick the object to win this movement
-		// TODO: New movement algorithm should enforce power first
-		const move = Fn.minimum(contenders, (left, right) =>
-			right.movingInto - left.movingInto ||
-			right.power - left.power,
-		);
-		if (move) {
-			move.mover.nextPosition = nextPosition;
-			move.mover.nextPositionTime = time;
-			movingObjects.push(move.mover);
-		}
-	}
-
-	// Note: I think there's an issue with the safe mode part of this algorithm. If safe mode is
-	// activated enemy creeps shouldn't obstruct, but they could still win a movement battle. So
-	// theoretically you could surround a base with constantly moving creeps in order to obstruct.
-
-	// After conflict resolution check for non-moving-creep obstacles
+	// Recursive move resolver
+	const checkersByUser = new Map<string, ReturnType<typeof makeObstacleChecker>>();
 	const terrain = room.getTerrain();
-	check: for (const mover of movingObjects) {
-		if (mover.nextPositionTime === time) {
-			const nextPosition = mover.nextPosition!;
-			const check = makeObstacleChecker({
-				room,
-				user: mover['#user']!,
-			});
-			for (const object of room['#lookAt'](nextPosition)) {
-				if (check(object) && object.nextPositionTime !== time) {
-					remove(mover);
-					continue check;
-				}
-			}
-			// Also check terrain
-			if (terrain.get(nextPosition.x, nextPosition.y) === C.TERRAIN_MASK_WALL) {
-				remove(mover);
+	const resolve = (move: Movement, objects: RoomObject[] = []) => {
+		if (move.resolved) {
+			// Can't resolve twice
+			return false;
+		} else if (objects.length > 1) {
+			if (objects[0] === move.object) {
+				// Completing a circuit
+				return true;
+			} else if (objects.includes(move.object)) {
+				// Prevent cycles
+				return false;
 			}
 		}
-	}
 
-	// Clean up for next iteration
-	moves.clear();
+		// Check terrain
+		if (terrain.get(move.xx, move.yy) === C.TERRAIN_MASK_WALL) {
+			move.resolved = true;
+			return false;
+		}
+
+		// Check obstacles
+		objects.push(move.object);
+		const willMove = function() {
+			const user = move.object['#user']!;
+			const check = getOrSet(checkersByUser, user, () => makeObstacleChecker({ room, user }));
+			const nextPosition = new RoomPosition(move.xx, move.yy, room.name);
+
+			// Check current obstacles
+			for (const object of room['#lookAt'](nextPosition)) {
+				if (check(object)) {
+					const move = movesByObject.get(object);
+					if (move) {
+						if (!move.moved && (move.resolved || !resolve(move, objects))) {
+							return false;
+						}
+					} else {
+						return false;
+					}
+				}
+			}
+
+			// Check moved obstacles
+			for (const conflict of movesByLocation.get(toId(move.xx, move.yy)) ?? []) {
+				if (conflict.moved && check(conflict.object)) {
+					return false;
+				}
+			}
+			return true;
+		}();
+		objects.pop();
+
+		// Done
+		if (objects.length === 0 || willMove) {
+			// Unconditionally resolve this move if it's the top object.
+			// Or, if an object with higher priority is pushing this one out the way then it will be
+			// resolved
+			move.resolved = true;
+			move.moved = willMove;
+		}
+		return willMove;
+	};
+
+	// Resolve in order of power
+	const movesByPriority = [ ...movesByObject.values() ];
+	movesByPriority.sort((left, right) => (right.power - left.power) || (Math.random() - 0.5));
+	movesByPriority.forEach(move => resolve(move));
 }
 
-export function get(mover: RoomObject) {
-	// Get next position, calculated above
-	if (mover.nextPositionTime === Game.time) {
-		return mover.nextPosition;
-	}
+export function get(object: RoomObject) {
+	const move = movesByObject.get(object);
+	return move?.moved && new RoomPosition(move.xx, move.yy, object.room.name);
 }
 
-function fromId(id: number) {
-	return { xx: id & 0xff, yy: id >>> 8 };
+export function flush() {
+	movesByLocation.clear();
+	movesByObject.clear();
 }
 
 function toId(xx: number, yy: number) {
