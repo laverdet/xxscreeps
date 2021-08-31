@@ -3,6 +3,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game } from 'xxscreeps/game';
 import { Structure, checkWall, structureFormat } from 'xxscreeps/mods/structure/structure';
+import { isBorder } from 'xxscreeps/game/position';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { OpenStore, openStoreFormat } from './store';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
@@ -41,6 +42,9 @@ export function create(pos: RoomPosition) {
 registerBuildableStructure(C.STRUCTURE_CONTAINER, {
 	obstacle: false,
 	checkPlacement(room, pos) {
+		if (isBorder(pos.x, pos.y)) {
+			return null;
+		}
 		return checkWall(pos) === C.OK ?
 			C.CONSTRUCTION_COST.container : null;
 	},

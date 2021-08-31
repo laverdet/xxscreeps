@@ -45,6 +45,9 @@ export function create(pos: RoomPosition) {
 registerBuildableStructure(C.STRUCTURE_ROAD, {
 	obstacle: false,
 	checkPlacement(room, pos) {
+		if (isBorder(pos.x, pos.y)) {
+			return null;
+		}
 		const terrain = room.getTerrain().get(pos.x, pos.y);
 		const cost = C.CONSTRUCTION_COST.road;
 		switch (terrain) {
