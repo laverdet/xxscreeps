@@ -1,4 +1,3 @@
-import type { URL } from 'url';
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from 'xxscreeps/engine/db/storage/provider';
 import { RedisHolder } from './client';
 

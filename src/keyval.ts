@@ -1,4 +1,3 @@
-import type { URL } from 'url';
 import type * as P from 'xxscreeps/engine/db/storage/provider';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Buffer } from 'buffer';

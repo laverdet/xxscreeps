@@ -5,7 +5,7 @@
 		"outDir": "dist",
 		"rootDir": "src",
 		"paths": {
-			"xxscreeps/*": [ "../../node_modules/xxscreeps/src/*" ],
+			"xxscreeps/*": [ "../../node_modules/xxscreeps/dist/types/*" ],
 		}
 	},
 	"include": [ "src" ],

@@ -1,4 +1,3 @@
-import type { URL } from 'url';
 import type { Multi } from 'redis';
 import * as Fn from 'xxscreeps/utility/functional';
 import redis from 'redis';
@@ -34,7 +33,7 @@ export class RedisHolder {
 	private readonly mergeByCommand = new Map<string, Merge>();
 	private readonly mergeByKey = new Map<string, Merge>();
 	private task = Promise.resolve();
-	private tickBatch?: Multi;
+	private tickBatch: Multi | undefined;
 	private tickBatchId = 0;
 	private tickBatchFresh = false;
 
