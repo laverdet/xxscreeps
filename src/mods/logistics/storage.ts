@@ -53,6 +53,6 @@ registerBuildableStructure(C.STRUCTURE_STORAGE, {
 
 declare module 'xxscreeps/game/room' {
 	interface Room {
-		storage?: StructureStorage;
+		storage: StructureStorage | undefined;
 	}
 }

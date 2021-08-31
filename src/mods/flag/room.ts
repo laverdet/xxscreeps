@@ -53,7 +53,7 @@ extend(Room, {
 				userGame!.flags[name] = instantiate(Flag, {
 					name,
 					id: null as never,
-					pos,
+					pos: pos!,
 					color, secondaryColor,
 				});
 			},

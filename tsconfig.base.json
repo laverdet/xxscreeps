@@ -20,8 +20,11 @@
 
 		// Strictness
 		"isolatedModules": true,
+		"exactOptionalPropertyTypes": true,
 		"noEmitOnError": false,
 		"noImplicitOverride": true,
+		// TODO: Re-enable this when nodejs types have been fixed
+		"skipLibCheck": true,
 		"strict": true,
 	},
 }

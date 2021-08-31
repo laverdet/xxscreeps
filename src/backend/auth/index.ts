@@ -11,11 +11,11 @@ declare module 'xxscreeps/backend' {
 		flushToken(initializeGuest?: boolean): Promise<string | undefined>;
 	}
 	interface State {
-		newUserId?: string;
-		userId?: string;
-		provider?: string;
-		providerId?: string;
-		token?: string;
+		newUserId?: string | undefined;
+		userId?: string | undefined;
+		provider?: string | undefined;
+		providerId?: string | undefined;
+		token?: string | undefined;
 	}
 }
 

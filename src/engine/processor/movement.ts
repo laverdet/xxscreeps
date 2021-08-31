@@ -23,7 +23,7 @@ const intents = registerIntentProcessor(Room, 'import', { internal: true }, (roo
 
 // Saves list of creeps all trying to move onto the same cell
 type Movement = {
-	dispatch?: DispatchCallback;
+	dispatch: DispatchCallback | undefined;
 	initial: InitialCallback;
 	object: RoomObject;
 	power: number | undefined;

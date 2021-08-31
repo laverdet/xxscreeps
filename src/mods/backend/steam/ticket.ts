@@ -22,7 +22,8 @@ if (steamApiKey) {
 				ticket: context.request.body.ticket,
 			})}`);
 			if (response.status === 200) {
-				const { result, steamid } = (await response.json())?.response?.params ?? {};
+				const json = await response.json();
+				const { result, steamid } = (json as any)?.response?.params ?? {};
 
 				if (result !== 'OK') {
 					throw new Error('Steam authentication failure');

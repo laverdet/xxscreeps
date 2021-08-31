@@ -25,7 +25,7 @@ export interface TickPayload {
 }
 
 export interface TickResult {
-	console?: string;
+	console: string | undefined;
 	evalAck?: {
 		id: string;
 		result: {

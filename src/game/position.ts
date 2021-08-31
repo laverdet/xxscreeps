@@ -386,7 +386,7 @@ export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any)
 
 export function fetchPositionArgument<Extra = any>(
 	fromRoom: string, arg1?: any, arg2?: any, arg3?: any,
-): { pos?: RoomPosition; extra?: Extra } {
+): { pos: RoomPosition | undefined; extra: Extra | undefined } {
 	if (typeof arg1 === 'object' && arg1 !== null) {
 		if (arg1 instanceof RoomPosition) {
 			return { pos: arg1, extra: arg2 };
@@ -410,7 +410,7 @@ export function fetchPositionArgument<Extra = any>(
 export function fetchPositionArgumentRest<Rest extends any[]>(
 	fromRoom: string,
 	arg1: any, arg2: any, ...rest: Rest
-): { pos?: RoomPosition; rest: Rest } {
+): { pos: RoomPosition | undefined; rest: Rest } {
 	if (typeof arg1 === 'object' && arg1 !== null) {
 		if (arg1 instanceof RoomPosition) {
 			return { pos: arg1, rest: [ arg2, ...rest ] as never };

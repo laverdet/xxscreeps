@@ -72,7 +72,7 @@ export class RoomProcessor implements ProcessorContext {
 	private tasks: {
 		promise: Promise<any>;
 		userId: string;
-		finalize?: (result: any) => void;
+		finalize: ((result: any) => void) | undefined;
 	}[] = [];
 
 	private readonly intents = new Map<string, RoomIntentPayload>();

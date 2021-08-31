@@ -25,7 +25,7 @@ declare module '.' {
 
 type SubscriptionInstance = {
 	context: BackendContext;
-	user?: string;
+	user: string | undefined;
 	send: (jsonEncodedMessage: string) => void;
 };
 export type SubscriptionEndpoint = {
