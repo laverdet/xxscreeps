@@ -142,8 +142,8 @@ try {
 							// Continue processing until the queue is empty. Empty queue may not mean processing is
 							// done, it also may mean we're waiting on workers
 							for await (const roomName of consumeRoomsQueue(worker, time)) {
-								await worker.responder({ type: 'process', roomName, time });
 								worker.processed.push(roomName);
+								await worker.responder({ type: 'process', roomName, time });
 								if (isEntry) {
 									process.stdout.write(`${roomName}, `);
 								}
