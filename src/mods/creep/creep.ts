@@ -152,10 +152,10 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 * the `ERR_NO_BODYPART` checks will be bypassed; otherwise, the `ERR_NOT_IN_RANGE` check will be
 	 * bypassed.
 	 */
-	move(this: Creep, direction: Direction) {
+	move(this: Creep, target: Direction | Creep) {
 		return chainIntentChecks(
-			() => checkMove(this, direction),
-			() => intents.save(this, 'move', direction));
+			() => checkMove(this, target),
+			() => intents.save(this, 'move', typeof target === 'number' ? target : target.id));
 	}
 
 	/**
@@ -325,6 +325,19 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	}
 
 	/**
+	 * Help another creep to follow this creep. The fatigue generated for the target's move will be
+	 * added to the creep instead of the target. Requires the `MOVE` body part. The target has to be at
+	 * adjacent square to the creep. The creep must move elsewhere, and the target must move towards
+	 * the creep.
+	 * @param target The target creep
+	 */
+	pull(this: Creep, target: Creep) {
+		return chainIntentChecks(
+			() => checkPull(this, target),
+			() => intents.save(this, 'pull', target.id));
+	}
+
+	/**
 	 * Display a visual speech balloon above the creep with the specified message. The message will be
 	 * available for one tick. You can read the last message using the `saying` property. Any valid
 	 * Unicode characters are allowed, including emoji.
@@ -446,12 +459,24 @@ export function checkDrop(creep: Creep, resourceType: ResourceType, amount: numb
 		() => checkHasResource(creep, resourceType, amount));
 }
 
-export function checkMove(creep: Creep, direction: number) {
+export function checkMove(creep: Creep, target: Direction | Creep | null) {
 	return chainIntentChecks(
-		() => checkCommon(creep, C.MOVE),
-		() => checkFatigue(creep),
-		() => direction >= 1 && direction <= 8 && Number.isInteger(direction) ?
-			C.OK : C.ERR_INVALID_ARGS);
+		target instanceof Creep ?
+			() => chainIntentChecks(
+				() => checkCommon(creep),
+				() => checkRange(creep, target, 1)) :
+			() => chainIntentChecks(
+				() => checkCommon(creep, C.MOVE),
+				() => checkFatigue(creep),
+				() => Number.isInteger(target) && target! >= 1 && target! <= 8 ?
+					C.OK : C.ERR_INVALID_ARGS));
+}
+
+export function checkPull(creep: Creep, target: Creep | null | undefined) {
+	return chainIntentChecks(
+		() => checkCommon(creep),
+		() => checkTarget(target, Creep),
+		() => checkRange(creep, target!, 1));
 }
 
 export function checkPickup(creep: Creep, target: Resource) {

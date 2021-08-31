@@ -5,7 +5,6 @@ import { Creep } from 'xxscreeps/mods/creep/creep';
 import { assert, describe, simulate, test } from 'xxscreeps/test';
 import { create as createExtension } from './extension';
 import { create } from './spawn';
-import { lookForStructures } from '../structure/structure';
 
 describe('Spawn', () => {
 	const simulation = simulate({
@@ -79,16 +78,16 @@ describe('Spawn', () => {
 		});
 	}));
 
-	test('renew energy structures', () => simulation(async({ player, tick, peekRoom, pokeRoom }) => {
+	test('renew energy structures', () => simulation(async({ player, tick, peekRoom, poke }) => {
 		const extensionId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 27)[0].id);
 		await player('100', Game => {
 			Game.spawns.Spawn1.spawnCreep([ C.MOVE, C.MOVE, C.MOVE, C.MOVE, C.MOVE ], 'creep');
 		});
 		await tick(5 * C.CREEP_SPAWN_TIME);
-		await pokeRoom('W1N1', (room, Game) => {
-			const spawn = lookForStructures(room, C.STRUCTURE_SPAWN)[0];
+		await poke('W1N1', '100', Game => {
+			const spawn = Game.spawns.Spawn1;
 			spawn.store['#subtract']('energy', spawn.store[C.RESOURCE_ENERGY] - 1);
-			room.find(C.FIND_CREEPS)[0]['#ageTime'] = Game.time + 1;
+			Game.creeps.creep['#ageTime'] = Game.time + 1;
 		});
 		await player('100', Game => {
 			assert.strictEqual(Game.spawns.Spawn1.renewCreep(Game.creeps.creep), C.OK);

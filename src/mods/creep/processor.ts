@@ -18,9 +18,16 @@ import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource
 import { isBorder } from 'xxscreeps/game/terrain';
 import { writeRoomObject } from 'xxscreeps/engine/db/room';
 import { typedArrayToString } from 'xxscreeps/utility/string';
-import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
+import { hooks, registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { clamp, filterInPlace } from 'xxscreeps/utility/utility';
 import { Tombstone, buryCreep } from './tombstone';
+
+const pulledToPuller = new Map<Creep, Creep>();
+const pullerToPulled = new Map<Creep, Creep>();
+hooks.register('flushContext', () => {
+	pulledToPuller.clear();
+	pullerToPulled.clear();
+});
 
 export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) {
 	const kRetainActionsTime = 10;
@@ -73,23 +80,99 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Creep, 'move', {}, (creep, context, direction: Direction) => {
-		if (CreepLib.checkMove(creep, direction) === C.OK) {
-			const power = CreepLib.calculatePower(creep, C.MOVE, 1);
-			const weight = CreepLib.calculateWeight(creep);
-			const priority = weight ? -weight / power : power;
-			const adjustedPriority = function() {
-				if (
-					creep.room.controller?.safeMode === undefined ||
-					creep.room.controller['#user'] === creep['#user']
-				) {
-					return priority;
-				} else {
-					return priority - 500;
+	registerIntentProcessor(Creep, 'move', {}, (creep, context, param: Direction | string) => {
+		const target = typeof param === 'string' ? Game.getObjectById<Creep>(param) : param;
+		if (CreepLib.checkMove(creep, target) === C.OK) {
+			const direction = target instanceof Creep ? creep.pos.getDirectionTo(target.pos) : target!;
+			Movement.announce(creep, direction, (commit, look) => {
+
+				// Calculate power & weight
+				const { power, weight } = function() {
+					const pulled = pullerToPulled.get(creep);
+					if (pulled) {
+						if (look(pulled)?.isEqualTo(creep.pos)) {
+							// Check for cycles
+							const seen = new Set<Creep>([ creep ]);
+							for (let creep: Creep | undefined = pulled; creep; creep = pullerToPulled.get(creep)) {
+								if (seen.has(creep)) {
+									pulledToPuller.delete(pullerToPulled.get(creep)!);
+									pullerToPulled.delete(creep);
+								} else {
+									seen.add(creep);
+								}
+							}
+							// A pulling creep has no power; it will actually be pushed by the caboose
+							return { power: -Infinity, weight: 0 };
+						}
+					}
+					// Calculate the cumulative power of the chain
+					let power = 0;
+					let weight = 0;
+					let member: Creep | undefined = creep;
+					while (true) {
+						power += CreepLib.calculatePower(member, C.MOVE, 1);
+						weight += CreepLib.calculateWeight(member);
+						const puller = pulledToPuller.get(member);
+						if (puller) {
+							if (look(member)?.isEqualTo(puller.pos)) {
+								member = puller;
+							} else {
+								pulledToPuller.delete(member);
+								pullerToPulled.delete(puller);
+							}
+						} else {
+							break;
+						}
+					}
+					return { power, weight };
+				}();
+				if (power === 0) {
+					return;
 				}
-			}();
-			Movement.add(creep, adjustedPriority, direction);
-			context.didUpdate();
+
+				// Deduct priority from hostile creeps in safe mode
+				const basePriority = weight ? -weight / power : power;
+				const priority = basePriority + function() {
+					if (
+						creep.room.controller?.safeMode === undefined ||
+						creep.room.controller['#user'] === creep['#user']
+					) {
+						return 0;
+					} else {
+						return -500;
+					}
+				}();
+
+				// Dispatch movement request
+				return commit(priority, pos => {
+					// Move resolved successfully
+					creep.room['#moveObject'](creep, pos);
+
+					// Calculate base fatigue from plain/road/swamp
+					const baseFatigue = (() => {
+						const road = lookForStructureAt(creep.room, pos, C.STRUCTURE_ROAD);
+						if (road) {
+							// Update road decay
+							road['#nextDecayTime'] -= C.ROAD_WEAROUT * creep.body.length;
+							return 1;
+						}
+						const terrain = creep.room.getTerrain().get(pos.x, pos.y);
+						if (terrain === C.TERRAIN_MASK_SWAMP) {
+							return 10;
+						} else {
+							return 2;
+						}
+					})();
+
+					// Add adjusted fatigue to first creep in chain
+					let receiver = creep;
+					for (let creep = pulledToPuller.get(receiver); creep; creep = pulledToPuller.get(creep)) {
+						receiver = creep;
+					}
+					receiver.fatigue += Math.max(0, CreepLib.calculateWeight(creep) * baseFatigue);
+					context.didUpdate();
+				});
+			});
 		}
 	}),
 
@@ -100,6 +183,14 @@ const intents = [
 			creep.store['#add'](resource.resourceType, amount);
 			resource.amount -= amount;
 			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(Creep, 'pull', { before: 'move' }, (creep, context, id: string) => {
+		const target = Game.getObjectById<Creep>(id);
+		if (CreepLib.checkPull(creep, target) === C.OK) {
+			pullerToPulled.set(creep, target!);
+			pulledToPuller.set(target!, creep);
 		}
 	}),
 
@@ -178,34 +269,20 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		context.didUpdate();
 	}
 
-	// Dispatch movements
-	const nextPosition = Movement.get(creep);
-	if (nextPosition) {
-		// Move the creep
-		creep.room['#moveObject'](creep, nextPosition);
-		// Calculate base fatigue from plain/road/swamp
-		const fatigue = (() => {
-			const road = lookForStructureAt(creep.room, nextPosition, C.STRUCTURE_ROAD);
-			if (road) {
-				// Update road decay
-				road['#nextDecayTime'] -= C.ROAD_WEAROUT * creep.body.length;
-				return 1;
-			}
-			const terrain = creep.room.getTerrain().get(nextPosition.x, nextPosition.y);
-			if (terrain === C.TERRAIN_MASK_SWAMP) {
-				return 10;
-			} else {
-				return 2;
-			}
-		})();
-		// Update fatigue
-		creep.fatigue = Math.max(0, CreepLib.calculateWeight(creep) * fatigue);
-		context.didUpdate();
-	}
-
-	if (creep.fatigue > 0) {
-		// Reduce fatigue
-		creep.fatigue -= Math.min(creep.fatigue, CreepLib.calculatePower(creep, C.MOVE, 2));
+	// Reduce fatigue
+	const puller = pulledToPuller.get(creep);
+	if (creep.fatigue > 0 || puller) {
+		// Calculate power, reduce own fatigue
+		let power = CreepLib.calculatePower(creep, C.MOVE, 2);
+		const delta = Math.min(creep.fatigue, power);
+		creep.fatigue -= delta;
+		power -= delta;
+		// Reduce fatigue of puller chain
+		for (let creep = puller; power > 0 && creep; creep = pulledToPuller.get(creep)) {
+			const delta = Math.min(creep.fatigue, power);
+			creep.fatigue -= delta;
+			power -= delta;
+		}
 		context.didUpdate();
 	}
 
