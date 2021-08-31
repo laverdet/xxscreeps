@@ -2,12 +2,13 @@ import type { Layout, StructLayout } from './layout';
 import type { Package } from './build';
 import type { ShapeOf } from './format';
 import { getOrSet } from 'xxscreeps/utility/utility';
-import { runOnce } from 'xxscreeps/utility/memoize';
 import { BufferView } from './buffer-view';
 import { Variant } from './format';
 import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout';
+import { makeTypeScanner, oracle } from './scan';
 import { entriesWithSymbols } from './symbol';
 import { Builder } from '.';
+import { runOnce } from 'xxscreeps/utility/memoize';
 
 export type Writer<Type = any> = (value: Type, view: BufferView, offset: number, heap: number) => number;
 export type MemberWriter = (value: any, view: BufferView, offset: number, heap: number) => number;
@@ -86,27 +87,28 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 				case 'string': return (value: string, view, offset, heap) => {
 					// Attempt to write as latin1 and fall back to utf-16 if needed
 					const string = `${value}`;
+					const isOneByte = oracle.shift();
 					const { length } = string;
-					view.int32[offset >>> 2] = heap;
-					for (let ii = 0; ii < length; ++ii) {
-						const code = string.charCodeAt(ii);
-						if (code < 0x100) {
+					if (isOneByte) {
+						// latin1
+						view.int32[offset >>> 2] = heap;
+						for (let ii = 0; ii < length; ++ii) {
+							const code = string.charCodeAt(ii);
 							view.uint8[heap + ii] = code;
-						} else {
-							// UTF-16 wide characters
-							const heap16 = alignTo(heap, 2);
-							view.int32[offset >>> 2] = heap16;
-							const stringOffset16 = heap16 >>> 1;
-							for (let ii = 0; ii < length; ++ii) {
-								view.uint16[stringOffset16 + ii] = string.charCodeAt(ii);
-							}
-							view.int32[(offset >>> 2) + 1] = -length;
-							return heap16 + length * 2;
 						}
+						view.int32[(offset >>> 2) + 1] = length;
+						return heap + length;
+					} else {
+						// UTF-16 wide characters
+						const heap16 = alignTo(heap, 2);
+						view.int32[offset >>> 2] = heap16;
+						const stringOffset16 = heap16 >>> 1;
+						for (let ii = 0; ii < length; ++ii) {
+							view.uint16[stringOffset16 + ii] = string.charCodeAt(ii);
+						}
+						view.int32[(offset >>> 2) + 1] = -length;
+						return heap16 + length * 2;
 					}
-					// Succeeded writing latin1
-					view.int32[(offset >>> 2) + 1] = length;
-					return heap + length;
 				};
 
 				default: throw TypeError(`Invalid literal layout: ${layout}`);
@@ -159,6 +161,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 					const currentOffset = alignTo(end + kPointerSize, align);
 					view.int32[(prevOffset >>> 2) - 1] = currentOffset;
 					end = write(element, view, currentOffset, currentOffset + size);
+					// console.log('wrote', end, element);
 					prevOffset = currentOffset;
 				}
 				view.int32[(prevOffset >>> 2) - 1] = 0;
@@ -248,21 +251,37 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 }
 
 const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 * 1024 * 16)));
-
 export function makeWriter<Type extends Package>(info: Type, builder = new Builder) {
+	const scan = makeTypeScanner(info.layout, builder) ?? ((value, heap) => heap);
 	const write = makeTypeWriter(info.layout, builder);
-	return (value: ShapeOf<Type>): Readonly<Uint8Array> => {
-		const view = bufferCache();
+	return (value: ShapeOf<Type>, scanFirst = false): Readonly<Uint8Array> => {
+		const heap = info.traits.size + kHeaderSize;
+		const view = function() {
+			if (scanFirst) {
+				const length = scan(value, heap);
+				const buffer = new Uint8Array(new SharedArrayBuffer(length));
+				return BufferView.fromTypedArray(buffer);
+			} else {
+				return bufferCache();
+			}
+		}();
 		const length = write(value, view, kHeaderSize, info.traits.size + kHeaderSize);
-		if (length > view.int8.length) {
-			throw new Error('Exceeded memory write buffer');
-		}
 		view.uint32[0] = kMagic;
 		view.uint32[1] = info.version;
 		view.uint32[2] = length;
 		view.uint32[3] = 0;
-		const copy = new Uint8Array(new SharedArrayBuffer(length));
-		copy.set(view.uint8.subarray(0, length));
-		return copy;
+		if (scanFirst) {
+			if (length !== view.uint8.length) {
+				throw new Error('Exceeded memory write buffer');
+			}
+			return view.uint8;
+		} else {
+			if (length > view.uint8.length) {
+				throw new Error('Exceeded memory write buffer');
+			}
+			const copy = new Uint8Array(new SharedArrayBuffer(length));
+			copy.set(view.uint8.subarray(0, length));
+			return copy;
+		}
 	};
 }

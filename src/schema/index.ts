@@ -1,5 +1,6 @@
 import type { Layout } from './layout';
 import type { MemberReader, Reader } from './read';
+import type { Scanner } from './scan';
 import type { MemberWriter, Writer } from './write';
 
 export type { Format, ShapeOf, TypeOf } from './format';
@@ -20,6 +21,7 @@ export class Builder {
 	readonly memberReader = new Map<Layout, MemberReader>();
 	readonly memberWriter = new Map<Layout, MemberWriter>();
 	readonly reader = new Map<Layout, Reader>();
+	readonly scanner = new Map<Layout, Scanner>();
 	readonly writer = new Map<Layout, Writer>();
 	constructor(options: BuilderOptions = {}) {
 		this.materialize = options.materialize ?? false;
