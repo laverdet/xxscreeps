@@ -1,6 +1,6 @@
 import config from 'xxscreeps/config';
-import { checkArguments } from 'xxscreeps/config/arguments';
 import * as User from 'xxscreeps/engine/db/user';
+import { checkArguments } from 'xxscreeps/config/arguments';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
@@ -25,10 +25,12 @@ try {
 		}
 		const channel = await getConsoleChannel(shard, id).subscribe();
 		channel.listen(message => {
-			if (message.type === 'log') {
-				console.log(message.value);
-			} else if (message.type === 'error') {
-				console.error(message.value);
+			for (const line of JSON.parse(message)) {
+				if (line.fd === 1) {
+					console.log(line.data);
+				} else {
+					console.error(line.data);
+				}
 			}
 		});
 	}

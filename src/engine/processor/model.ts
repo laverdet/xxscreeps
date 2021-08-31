@@ -27,9 +27,9 @@ export const processorTimeKey = 'processor/time';
 export const activeRoomsKey = 'processor/activeRooms';
 const sleepingRoomsKey = 'processor/inactiveRooms';
 export const userToIntentRoomsSetKey = (userId: string) =>
-	`users/${userId}/intentRooms`;
+	`user/${userId}/intentRooms`;
 export const userToPresenceRoomsSetKey = (userId: string) =>
-	`users/${userId}/presenceRooms`;
+	`user/${userId}/presenceRooms`;
 
 export const processRoomsSetKey = (time: number) =>
 	`tick${time}/processRooms`;
@@ -109,12 +109,16 @@ async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string
 	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
 }
 
-export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userId: string, intents: RoomIntentPayload) {
+export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userId: string, intents: Partial<RoomIntentPayload>) {
 	return Promise.all([
 		// Add this room to the active set
 		shard.scratch.zadd(sleepingRoomsKey, [ [ shard.time + 1, roomName ] ]),
 		// Save intents
-		pushIntentsForRoom(shard, roomName, userId, intents),
+		pushIntentsForRoom(shard, roomName, userId, {
+			local: {},
+			object: {},
+			...intents,
+		}),
 	]);
 }
 
@@ -236,7 +240,7 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 	}
 }
 
-export async function roomDidProcess(shard: Shard, roomName: string, time: number) {
+export async function roomDidProcess(shard: Shard, time: number) {
 	// Decrement count of remaining rooms to process
 	const count = await shard.scratch.decr(processRoomsPendingKey(time));
 	if (count === 0) {
@@ -260,11 +264,13 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 		const remaining = await shard.scratch.decrBy(finalizedRoomsPendingKey(time), roomsCount);
 		if (remaining === 0) {
 			const [ nextTime ] = await Promise.all([
+				// Set up state for next tick
 				begetRoomProcessQueue(shard, time + 1, time, true),
 				// Delete "0" value from scratch
 				shard.scratch.vdel(finalizedRoomsPendingKey(time)),
-				getServiceChannel(shard).publish({ type: 'tickFinished', time }),
 			]);
+			// Notify main loop that we're ready for the next tick
+			await getServiceChannel(shard).publish({ type: 'tickFinished', time });
 			return nextTime;
 		}
 	}

@@ -14,6 +14,11 @@ export const roomTickProcessors: RoomTickProcessor[] = [];
 
 export const hooks = makeHookRegistration<{
 	/**
+	 * Runs after a processor phase has completed in a room.
+	 */
+	flushContext(): void;
+
+	/**
 	 * Run on every room on the shard when processor continuity has been broken.
 	 */
 	refreshRoom(shard: Shard, room: Room): Promise<void>;

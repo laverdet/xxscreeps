@@ -1,5 +1,5 @@
 import type { CPU } from 'xxscreeps/game/game';
-import type { Compiler, Evaluate, Print } from 'xxscreeps/driver/runtime';
+import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner';
 import * as Runtime from 'xxscreeps/driver/runtime';
 import { hooks } from 'xxscreeps/game';
@@ -33,7 +33,7 @@ hooks.register('gameInitializer', (game, data) => {
 	game.cpu = new NodejsCPU(data!);
 });
 
-export function initialize(require: NodeRequire, compiler: Compiler, evaluate: Evaluate, printFn: Print, data: InitializationPayload) {
+export function initialize(require: NodeRequire, compiler: Compiler, evaluate: Evaluate, data: InitializationPayload) {
 	process = require('process');
-	Runtime.initialize(compiler, evaluate, printFn, data);
+	Runtime.initialize(compiler, evaluate, data);
 }

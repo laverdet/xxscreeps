@@ -41,7 +41,7 @@ export function checkString(value: string, maxLength: number, required = false) 
 	return C.ERR_INVALID_ARGS;
 }
 
-export function checkTarget(target: RoomObject | undefined, ...types: any[]) {
+export function checkTarget(target: RoomObject | null | undefined, ...types: any[]) {
 	if (target && target.room as unknown) {
 		for (const type of types) {
 			if (target instanceof type) {

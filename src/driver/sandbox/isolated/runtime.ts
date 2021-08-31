@@ -56,7 +56,6 @@ hooks.register('gameInitializer', (game, data) => {
 export function initialize(
 	isolate_: ivm.Isolate,
 	context: ivm.Context,
-	printRef: ivm.Reference<Runtime.Print>,
 	data: InitializationPayload,
 ) {
 	isolate = isolate_;
@@ -82,6 +81,5 @@ export function initialize(
 		},
 	};
 
-	const print: Runtime.Print = (fd, payload) => printRef.applySync(undefined, [ fd, payload ]);
-	Runtime.initialize(compiler, evaluate, print, data);
+	Runtime.initialize(compiler, evaluate, data);
 }

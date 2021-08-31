@@ -10,7 +10,7 @@ import { flushUsers } from 'xxscreeps/game/room/room';
 import { begetRoomProcessQueue, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { consumeSortedSet } from 'xxscreeps/engine/db/async';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room';
-import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot } from 'xxscreeps/game';
+import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { instantiateTestShard } from 'xxscreeps/test/import';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor';
@@ -29,7 +29,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 		player: (userId: string, task: (game: GameConstructor) => void) => Promise<void>;
 		tick: (count?: number) => Promise<void>;
 		peekRoom: <Type>(roomName: string, task: (room: Room, game: GameBase) => Type) => Promise<Type>;
-		pokeRoom: <Type>(roomName: string, task: (room: Room, game: GameBase) => Type) => Promise<Type>;
+		poke: <Type>(roomName: string, userId: string | undefined, task: (game: GameConstructor, room: Room) => Type) => Promise<Type>;
 	}) => Promise<void>) => {
 
 		const { db, shard, world } = await instantiateTestShard();
@@ -60,9 +60,10 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 					return runOneShot(world, room, shard.time, '', () => task(room, Game));
 				},
 
-				async pokeRoom(roomName, task) {
+				async poke(roomName, userId, task) {
 					const room = await shard.loadRoom(roomName);
-					const result = runOneShot(world, room, shard.time, '', () => task(room, Game));
+					const state = new GameState(world, shard.time, [ room ]);
+					const [ , result ] = runWithState(state, () => runForUser(userId ?? '', state, Game => task(Game, room)));
 					room['#flushObjects']();
 					const previousUsers = flushUsers(room);
 					await Promise.all([

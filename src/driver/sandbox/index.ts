@@ -1,7 +1,6 @@
 import type { Transform } from '../webpack';
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
 import type { InspectorSession } from 'isolated-vm';
-import type { Print } from 'xxscreeps/driver/runtime';
 import * as Path from 'path';
 import config from 'xxscreeps/config';
 import Privates from 'xxscreeps/driver/private/transform';
@@ -18,7 +17,7 @@ export interface Sandbox {
 
 	dispose(): void;
 
-	initialize(data: InitializationPayload, print: Print): Promise<void>;
+	initialize(data: InitializationPayload): Promise<void>;
 	run(data: TickPayload): Promise<{
 		result: 'disposed';
 	} | {
@@ -47,7 +46,7 @@ export function compileRuntimeSource(path: string, transform: Transform) {
 	]);
 }
 
-export async function createSandbox(userId: string, payload: InitializationPayload, print: Print): Promise<Sandbox> {
+export async function createSandbox(userId: string, payload: InitializationPayload): Promise<Sandbox> {
 	const sandbox = await async function() {
 		if (config.runner.unsafeSandbox) {
 			const { NodejsSandbox } = await import('./nodejs');
@@ -57,7 +56,7 @@ export async function createSandbox(userId: string, payload: InitializationPaylo
 			return new IsolatedSandbox(payload);
 		}
 	}();
-	await sandbox.initialize(payload, print);
+	await sandbox.initialize(payload);
 	didMakeSandbox(sandbox, userId);
 	return sandbox;
 }

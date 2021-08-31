@@ -1,5 +1,4 @@
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner';
-import type { Print } from 'xxscreeps/driver/runtime';
 import type { Sandbox } from 'xxscreeps/driver/sandbox';
 import ivm from 'isolated-vm';
 import config from 'xxscreeps/config';
@@ -40,7 +39,7 @@ export class IsolatedSandbox implements Sandbox {
 		});
 	}
 
-	async initialize(data: InitializationPayload, print: Print) {
+	async initialize(data: InitializationPayload) {
 		const { isolate } = this;
 		const context = await isolate.createContext({ inspector: useInspector });
 
@@ -78,7 +77,7 @@ export class IsolatedSandbox implements Sandbox {
 			context.global.delete('nodeUtilImport'),
 		]);
 		this.tick = tick;
-		await initialize.apply(undefined, [ isolate, context, new ivm.Reference(print), data ], { arguments: { copy: true } });
+		await initialize.apply(undefined, [ isolate, context, data ], { arguments: { copy: true } });
 	}
 
 	createInspectorSession() {

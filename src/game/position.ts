@@ -93,6 +93,12 @@ export class RoomPosition {
 		return this.#id;
 	}
 
+	/** @deprecated */
+	get __packedPos() {
+		const id = this['#id'];
+		return (id & 0xffff) << 16 | (id >>> 8) & 0xff00 | id >>> 24;
+	}
+
 	/**
 	 * The name of the room.
 	 */

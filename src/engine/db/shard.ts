@@ -92,7 +92,7 @@ export class Shard {
 	 * Load raw room state from storage for the current or previous tick
 	 */
 	async loadRoomBlob(name: string, time = this.time) {
-		this.checkTime(time, -1);
+		await this.checkTime(time, -1);
 		return RoomSchema.upgrade(await this.data.req(this.roomKeyForTime(name, time), { blob: true }));
 	}
 
@@ -110,7 +110,7 @@ export class Shard {
 	 * Save raw room state to storage for the current or next tick
 	 */
 	async saveRoomBlob(name: string, time: number, blob: Readonly<Uint8Array>) {
-		this.checkTime(time, 1);
+		await this.checkTime(time, 1);
 		await Promise.all([
 			this.data.set(this.roomKeyForTime(name, time), blob),
 			getRoomChannel(this, name).publish({ type: 'didUpdate', time }),
@@ -125,9 +125,12 @@ export class Shard {
 		await this.data.copy(this.roomKeyForTime(name, time - 1), this.roomKeyForTime(name, time));
 	}
 
-	private checkTime(time: number, delta: number) {
+	private async checkTime(time: number, delta: number) {
 		if (!(time === this.time || time === this.time + delta)) {
-			throw new Error(`Invalid time: ${time} [current: ${this.time}]`);
+			this.time = Math.max(this.time, Number(await this.data.get('time')));
+			if (!(time === this.time || time === this.time + delta)) {
+				throw new Error(`Invalid time: ${time} [current: ${this.time}]`);
+			}
 		}
 	}
 

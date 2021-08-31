@@ -8,7 +8,7 @@ import * as Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/engine/processor/movement';
 import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game';
 import { flushUsers } from 'xxscreeps/game/room/room';
-import { PreTick, Tick, intentProcessorGetters, roomTickProcessors } from './symbols';
+import { PreTick, Tick, hooks, intentProcessorGetters, roomTickProcessors } from './symbols';
 import { acquireFinalIntentsForRoom, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
@@ -28,6 +28,8 @@ export type SingleIntent = {
 	intent: string;
 	args: any[];
 };
+
+const flushContext = hooks.makeIterated('flushContext');
 
 export interface ProcessorContext {
 	shard: Shard;
@@ -167,10 +169,11 @@ export class RoomProcessor implements ProcessorContext {
 
 		// Publish results
 		if (!isFinalization) {
-			await Promise.all(Fn.map(this.interRoomIntents, ([ roomName, intents ]) =>
-				publishInterRoomIntents(this.shard, roomName, this.time, intents)));
-			await roomDidProcess(this.shard, this.room.name, this.time);
+			await Fn.mapAsync(this.interRoomIntents, ([ roomName, intents ]) =>
+				publishInterRoomIntents(this.shard, roomName, this.time, intents));
+			await roomDidProcess(this.shard, this.time);
 		}
+		flushContext();
 	}
 
 	async finalize() {
@@ -203,6 +206,7 @@ export class RoomProcessor implements ProcessorContext {
 		this.room['#flushObjects']();
 		const previousUsers = flushUsers(this.room);
 		const hasPlayer = Fn.some(this.room['#users'].intents, userId => userId.length > 2);
+		flushContext();
 
 		await Promise.all([
 			// Update room to user map
