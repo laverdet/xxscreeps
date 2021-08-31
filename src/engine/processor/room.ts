@@ -168,9 +168,9 @@ export class RoomProcessor implements ProcessorContext {
 
 		// Publish results
 		if (!isFinalization) {
-			await Promise.all(Fn.map(this.interRoomIntents, ([ roomName, intents ]) =>
-				publishInterRoomIntents(this.shard, roomName, this.time, intents)));
-			await roomDidProcess(this.shard, this.room.name, this.time);
+			await Fn.mapAsync(this.interRoomIntents, ([ roomName, intents ]) =>
+				publishInterRoomIntents(this.shard, roomName, this.time, intents));
+			await roomDidProcess(this.shard, this.time);
 		}
 	}
 

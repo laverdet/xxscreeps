@@ -39,7 +39,6 @@ hooks.register('route', {
 		// Send the intent off to the processor
 		await pushIntentsForRoomNextTick(context.shard, pos.roomName, userId, {
 			local: { requestInvader: [ [ pos.x, pos.y, type, size ] ] },
-			object: {},
 			internal: true,
 		});
 

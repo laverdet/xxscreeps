@@ -139,7 +139,6 @@ hooks.register('route', {
 		// Send intent to processor
 		await pushIntentsForRoomNextTick(context.shard, roomName, userId, {
 			local: { placeSpawn: [ [ x, y, name ] ] },
-			object: {},
 			internal: true,
 		});
 
@@ -164,7 +163,6 @@ hooks.register('route', {
 		}
 		await Promise.all(roomNames.map(roomName => pushIntentsForRoomNextTick(context.shard, roomName, userId, {
 			local: { unspawn: [ [] ] },
-			object: {},
 			internal: true,
 		})));
 		await saveUserFlagBlobForNextTick(context.shard, userId, undefined);

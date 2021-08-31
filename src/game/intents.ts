@@ -48,7 +48,6 @@ export class IntentManager {
 		//Action extends IntentsForReceiver<Receiver>,
 	>(receiver: Receiver, intent: Action, ...args: IntentParameters<Receiver, Action>) {
 		const intents = this.makeIntentsForRoom(receiver.room.name).object[receiver.id] ??= {};
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (intents[intent as keyof typeof intents] === undefined) {
 			this.cpu += kCpuCost;
 		}

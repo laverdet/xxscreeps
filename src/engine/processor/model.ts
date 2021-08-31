@@ -109,12 +109,16 @@ async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string
 	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
 }
 
-export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userId: string, intents: RoomIntentPayload) {
+export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userId: string, intents: Partial<RoomIntentPayload>) {
 	return Promise.all([
 		// Add this room to the active set
 		shard.scratch.zadd(sleepingRoomsKey, [ [ shard.time + 1, roomName ] ]),
 		// Save intents
-		pushIntentsForRoom(shard, roomName, userId, intents),
+		pushIntentsForRoom(shard, roomName, userId, {
+			local: {},
+			object: {},
+			...intents,
+		}),
 	]);
 }
 
@@ -236,7 +240,7 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 	}
 }
 
-export async function roomDidProcess(shard: Shard, roomName: string, time: number) {
+export async function roomDidProcess(shard: Shard, time: number) {
 	// Decrement count of remaining rooms to process
 	const count = await shard.scratch.decr(processRoomsPendingKey(time));
 	if (count === 0) {
