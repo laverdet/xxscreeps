@@ -244,6 +244,29 @@ describe('Movement', () => {
 		});
 	}));
 
+	describe('Room', () => {
+		const sim = simulate({
+			W0N0: room => {
+				room['#insertObject'](create(new RoomPosition(24, 5, 'W0N0'), [ C.MOVE, C.TOUGH, C.TOUGH ], 'slow', '100'));
+			},
+		});
+
+		test('edge fatigue', () => sim(async({ player, tick }) => {
+			await tick(11, {
+				100: ({ creeps: { slow } }) => {
+					slow.moveTo(new RoomPosition(24, 48, 'W0N1'));
+				},
+			});
+			await player('100', ({ creeps: { slow } }) => {
+				assert(slow.pos.isEqualTo(24, 48));
+			});
+		}));
+	});
+
+	// These tests are adapted from the vanilla server:
+	// https://github.com/screeps/engine/blob/9aa2e113355b35789d975bea2ef49aec37c15185/spec/engine/processor/intents/movementSpec.js#L277-L433
+	// The coordinates are shifted up by 20 because there's a bunch of rough terrain in the middle of
+	// W0N0 which would obstruct movement.
 	describe('Pull', () => {
 		const sim = simulate({
 			W0N0: room => {
