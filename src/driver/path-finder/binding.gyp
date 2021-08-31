@@ -65,7 +65,7 @@
 			'dependencies': [ 'pf' ],
 			'copies': [ {
 				'files': [ '<(PRODUCT_DIR)/pf.node' ],
-				'destination': "out/<!(node -e 'console.log(`${process.arch}-${process.platform}-${process.version}`)')",
+				'destination': 'out/<!(node -e "console.log(process.arch + \'-\' + process.platform + \'-\' + process.version)")',
 			} ],
 		},
 	],
