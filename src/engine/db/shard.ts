@@ -104,7 +104,7 @@ export class Shard {
 		if (room.name !== name) {
 			throw new Error('Room name mismatch');
 		}
-		await this.saveRoomBlob(name, time, RoomSchema.write(room, room['#objects'].length > 16));
+		await this.saveRoomBlob(name, time, RoomSchema.write(room));
 	}
 
 	/**

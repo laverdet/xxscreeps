@@ -1,11 +1,12 @@
 import type { Layout, StructLayout } from './layout';
 import type { Package } from './build';
 import type { ShapeOf } from './format';
+import * as Fn from 'xxscreeps/utility/functional';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { BufferView } from './buffer-view';
 import { Variant } from './format';
 import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout';
-import { makeTypeScanner, oracle } from './scan';
+import { makeTypeScanner } from './scan';
 import { entriesWithSymbols } from './symbol';
 import { Builder } from '.';
 import { runOnce } from 'xxscreeps/utility/memoize';
@@ -16,15 +17,15 @@ export type MemberWriter = (value: any, view: BufferView, offset: number, heap: 
 function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter {
 	return getOrSet(builder.memberWriter, layout, () => {
 
-		let writeMembers: MemberWriter | undefined;
-		for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
-			// Don't bother writing union members
-			if (member.union) {
-				continue;
-			}
+		// Get writer for each member
+		const writers = [ ...Fn.filter(Fn.map(entriesWithSymbols(layout.struct),
+			([ key, member ]): MemberWriter | undefined => {
+				// Don't bother writing union members
+				if (member.union) {
+					return;
+				}
 
-			// Make writer for single field
-			const next = function(): MemberWriter {
+				// Make writer for single field
 				const { member: layout, offset } = member;
 				const write = makeTypeWriter(layout, builder);
 				Object.defineProperty(write, 'name', {
@@ -34,15 +35,45 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 				// Wrap to write this field at reserved address
 				return (value, view, instanceOffset, heap) =>
 					write(value[key], view, instanceOffset + offset, heap);
+			})) ];
+
+		// Combine member writes
+		let writeMembers: MemberWriter | undefined;
+		let ii = 0;
+		while (ii < writers.length) {
+			// Unroll recursion into 1 - 4 calls
+			const remaining = writers.length - ii;
+			const next = function(): MemberWriter {
+				if (remaining >= 4) {
+					const [ fn0, fn1, fn2, fn3 ] = writers.slice(ii, ii += 4);
+					return (value, view, instanceOffset, heap) =>
+						fn3(value, view, instanceOffset,
+							fn2(value, view, instanceOffset,
+								fn1(value, view, instanceOffset,
+									fn0(value, view, instanceOffset, heap))));
+				} else if (remaining >= 3) {
+					const [ fn0, fn1, fn2 ] = writers.slice(ii, ii += 3);
+					return (value, view, instanceOffset, heap) =>
+						fn2(value, view, instanceOffset,
+							fn1(value, view, instanceOffset,
+								fn0(value, view, instanceOffset, heap)));
+				} else if (remaining >= 2) {
+					const [ fn0, fn1 ] = writers.slice(ii, ii += 2);
+					return (value, view, instanceOffset, heap) =>
+						fn1(value, view, instanceOffset,
+							fn0(value, view, instanceOffset, heap));
+				} else {
+					return writers[ii++];
+				}
 			}();
 
-			// Combine member writers
+			// Combine with previous writer
 			const prev = writeMembers;
 			if (prev === undefined) {
 				writeMembers = next;
 			} else {
 				writeMembers = (value, view, offset, heap) =>
-					prev(value, view, offset, next(value, view, offset, heap));
+					next(value, view, offset, prev(value, view, offset, heap));
 			}
 		}
 
@@ -87,28 +118,27 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 				case 'string': return (value: string, view, offset, heap) => {
 					// Attempt to write as latin1 and fall back to utf-16 if needed
 					const string = `${value}`;
-					const isOneByte = oracle.shift();
 					const { length } = string;
-					if (isOneByte) {
-						// latin1
-						view.int32[offset >>> 2] = heap;
-						for (let ii = 0; ii < length; ++ii) {
-							const code = string.charCodeAt(ii);
+					view.int32[offset >>> 2] = heap;
+					for (let ii = 0; ii < length; ++ii) {
+						const code = string.charCodeAt(ii);
+						if (code < 0x100) {
 							view.uint8[heap + ii] = code;
+						} else {
+							// UTF-16 wide characters
+							const heap16 = alignTo(heap, 2);
+							view.int32[offset >>> 2] = heap16;
+							const stringOffset16 = heap16 >>> 1;
+							for (let ii = 0; ii < length; ++ii) {
+								view.uint16[stringOffset16 + ii] = string.charCodeAt(ii);
+							}
+							view.int32[(offset >>> 2) + 1] = -length;
+							return heap16 + length * 2;
 						}
-						view.int32[(offset >>> 2) + 1] = length;
-						return heap + length;
-					} else {
-						// UTF-16 wide characters
-						const heap16 = alignTo(heap, 2);
-						view.int32[offset >>> 2] = heap16;
-						const stringOffset16 = heap16 >>> 1;
-						for (let ii = 0; ii < length; ++ii) {
-							view.uint16[stringOffset16 + ii] = string.charCodeAt(ii);
-						}
-						view.int32[(offset >>> 2) + 1] = -length;
-						return heap16 + length * 2;
 					}
+					// Succeeded writing latin1
+					view.int32[(offset >>> 2) + 1] = length;
+					return heap + length;
 				};
 
 				default: throw TypeError(`Invalid literal layout: ${layout}`);
@@ -161,7 +191,6 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 					const currentOffset = alignTo(end + kPointerSize, align);
 					view.int32[(prevOffset >>> 2) - 1] = currentOffset;
 					end = write(element, view, currentOffset, currentOffset + size);
-					// console.log('wrote', end, element);
 					prevOffset = currentOffset;
 				}
 				view.int32[(prevOffset >>> 2) - 1] = 0;

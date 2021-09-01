@@ -7,7 +7,6 @@ import { alignTo, kPointerSize, unpackWrappedStruct } from './layout';
 import { entriesWithSymbols } from './symbol';
 
 export type Scanner<Type = any> = (value: Type, heap: number) => number;
-export const oracle: any[] = [];
 
 const empty: Scanner = (value, heap) => heap;
 
@@ -39,7 +38,7 @@ function makeMemberScanner(layout: StructLayout, builder: Builder): Scanner | un
 				if (prev === undefined) {
 					scanMembers = next;
 				} else {
-					scanMembers = (value, heap) => prev(value, next(value, heap));
+					scanMembers = (value, heap) => next(value, prev(value, heap));
 				}
 			}
 		}
@@ -75,11 +74,9 @@ export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | und
 					for (let ii = 0; ii < length; ++ii) {
 						const code = string.charCodeAt(ii);
 						if (code >= 0x100) {
-							oracle.push(false);
 							return alignTo(heap, 2) + length * 2;
 						}
 					}
-					oracle.push(true);
 					return heap + length;
 				};
 			}
@@ -88,14 +85,11 @@ export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | und
 		if ('composed' in layout) {
 			// Composed value
 			const { composed, interceptor } = layout;
-			const maybeScan = makeTypeScanner(composed, builder);
-			if ('decompose' in interceptor) {
-				const scan = maybeScan ?? empty;
+			const scan = makeTypeScanner(composed, builder);
+			if (scan && 'decompose' in interceptor) {
 				return (value, heap) => scan(interceptor.decompose(value), heap);
-			} else if ('decomposeIntoBuffer' in interceptor) {
-				return maybeScan;
 			} else {
-				return maybeScan;
+				return scan;
 			}
 
 		} else if ('list' in layout) {
@@ -103,14 +97,6 @@ export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | und
 			const { size, list: elementLayout } = layout;
 			const align = Math.max(kPointerSize, layout.align);
 			const scan = makeTypeScanner(elementLayout, builder)!;
-			return (value, heap) => {
-				let end = heap;
-				for (const element of value) {
-					const currentOffset = alignTo(end + kPointerSize, align);
-					end = scan(element, currentOffset + size);
-				}
-				return end;
-			};
 			return (value, heap) => Fn.reduce(value, heap, (heap, element) =>
 				scan(element, alignTo(heap + kPointerSize, align) + size));
 
