@@ -140,9 +140,9 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 
 			if (authMessage) {
 				(async() => {
-					// If this socket has an X-Token header it will taken priority over the auth message. This
-					// header is probably never sent by the client but authentication middleware can stick it
-					// on the request object.
+					// If this socket has an X-Token header it will take priority over the auth message. This
+					// header is never sent by the client but the authentication middleware can stick it on
+					// the request object.
 					const token = `${request?.headers['x-token'] ?? authMessage.groups!.token}`;
 					if (token === 'guest') {
 						if (allowGuestAccess) {
