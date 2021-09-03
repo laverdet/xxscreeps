@@ -87,11 +87,13 @@ export class RedisHolder {
 			keys: new Set<string>(),
 			fn,
 		}));
-		for (const key of keys) {
+		const existing = Fn.filter(Fn.map(keys, key => {
 			const existing = this.mergeByKey.get(key);
-			if (existing && existing !== merge) {
-				await this.flush(existing);
-			}
+			return existing === merge ? undefined : existing;
+		}));
+		mustNotReject(Fn.mapAsync(existing, merge => this.flush(merge)));
+		for (const key of keys) {
+			this.mergeByKey.set(key, merge);
 		}
 		const deferred = new Deferred;
 		merge.argv.push(arg);
@@ -124,15 +126,15 @@ export class RedisHolder {
 	}
 
 	private async flush(merge: Merge) {
+		this.mergeByCommand.delete(merge.command);
+		for (const key of merge.keys) {
+			this.mergeByKey.delete(key);
+		}
 		try {
 			await merge.fn(merge.argv);
 			merge.deferred.forEach(deferred => deferred.resolve());
 		} catch (err: any) {
 			merge.deferred.forEach(deferred => deferred.reject(err));
-		}
-		this.mergeByCommand.delete(merge.command);
-		for (const key of merge.keys) {
-			this.mergeByKey.delete(key);
 		}
 	}
 }
