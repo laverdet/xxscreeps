@@ -12,11 +12,11 @@ export { CostMatrix, search };
 export type Goal = RoomPosition | { pos: RoomPosition; range: number };
 
 type CommonSearchOptions = {
-	plainCost?: number;
-	swampCost?: number;
-	maxOps?: number;
-	maxRooms?: number;
-	heuristicWeight?: number;
+	plainCost?: number | undefined;
+	swampCost?: number | undefined;
+	maxOps?: number | undefined;
+	maxRooms?: number | undefined;
+	heuristicWeight?: number | undefined;
 };
 
 export type SearchOptions = CommonSearchOptions & {

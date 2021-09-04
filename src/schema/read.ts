@@ -38,8 +38,8 @@ function getMemberReader(layout: StructLayout, builder: Builder): MemberReader {
 				readMembers = next;
 			} else {
 				readMembers = (value, view, offset) => {
-					next(value, view, offset);
 					prev(value, view, offset);
+					next(value, view, offset);
 				};
 			}
 		}

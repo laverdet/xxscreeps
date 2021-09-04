@@ -4,9 +4,9 @@ import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 
 type MovementParameters = {
-	checkTerrain?: boolean;
-	ignoreCreeps?: boolean;
-	ignoreDestructibleStructures?: boolean;
+	checkTerrain?: boolean | undefined;
+	ignoreCreeps?: boolean | undefined;
+	ignoreDestructibleStructures?: boolean | undefined;
 	room: Room;
 	user: string;
 };

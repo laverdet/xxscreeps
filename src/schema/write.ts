@@ -1,13 +1,15 @@
 import type { Layout, StructLayout } from './layout';
 import type { Package } from './build';
 import type { ShapeOf } from './format';
+import * as Fn from 'xxscreeps/utility/functional';
 import { getOrSet } from 'xxscreeps/utility/utility';
-import { runOnce } from 'xxscreeps/utility/memoize';
 import { BufferView } from './buffer-view';
 import { Variant } from './format';
 import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout';
+import { makeTypeScanner } from './scan';
 import { entriesWithSymbols } from './symbol';
 import { Builder } from '.';
+import { runOnce } from 'xxscreeps/utility/memoize';
 
 export type Writer<Type = any> = (value: Type, view: BufferView, offset: number, heap: number) => number;
 export type MemberWriter = (value: any, view: BufferView, offset: number, heap: number) => number;
@@ -15,15 +17,15 @@ export type MemberWriter = (value: any, view: BufferView, offset: number, heap: 
 function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter {
 	return getOrSet(builder.memberWriter, layout, () => {
 
-		let writeMembers: MemberWriter | undefined;
-		for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
-			// Don't bother writing union members
-			if (member.union) {
-				continue;
-			}
+		// Get writer for each member
+		const writers = [ ...Fn.filter(Fn.map(entriesWithSymbols(layout.struct),
+			([ key, member ]): MemberWriter | undefined => {
+				// Don't bother writing union members
+				if (member.union) {
+					return;
+				}
 
-			// Make writer for single field
-			const next = function(): MemberWriter {
+				// Make writer for single field
 				const { member: layout, offset } = member;
 				const write = makeTypeWriter(layout, builder);
 				Object.defineProperty(write, 'name', {
@@ -33,15 +35,45 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 				// Wrap to write this field at reserved address
 				return (value, view, instanceOffset, heap) =>
 					write(value[key], view, instanceOffset + offset, heap);
+			})) ];
+
+		// Combine member writes
+		let writeMembers: MemberWriter | undefined;
+		let ii = 0;
+		while (ii < writers.length) {
+			// Unroll recursion into 1 - 4 calls
+			const remaining = writers.length - ii;
+			const next = function(): MemberWriter {
+				if (remaining >= 4) {
+					const [ fn0, fn1, fn2, fn3 ] = writers.slice(ii, ii += 4);
+					return (value, view, instanceOffset, heap) =>
+						fn3(value, view, instanceOffset,
+							fn2(value, view, instanceOffset,
+								fn1(value, view, instanceOffset,
+									fn0(value, view, instanceOffset, heap))));
+				} else if (remaining >= 3) {
+					const [ fn0, fn1, fn2 ] = writers.slice(ii, ii += 3);
+					return (value, view, instanceOffset, heap) =>
+						fn2(value, view, instanceOffset,
+							fn1(value, view, instanceOffset,
+								fn0(value, view, instanceOffset, heap)));
+				} else if (remaining >= 2) {
+					const [ fn0, fn1 ] = writers.slice(ii, ii += 2);
+					return (value, view, instanceOffset, heap) =>
+						fn1(value, view, instanceOffset,
+							fn0(value, view, instanceOffset, heap));
+				} else {
+					return writers[ii++];
+				}
 			}();
 
-			// Combine member writers
+			// Combine with previous writer
 			const prev = writeMembers;
 			if (prev === undefined) {
 				writeMembers = next;
 			} else {
 				writeMembers = (value, view, offset, heap) =>
-					prev(value, view, offset, next(value, view, offset, heap));
+					next(value, view, offset, prev(value, view, offset, heap));
 			}
 		}
 
@@ -248,21 +280,37 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 }
 
 const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 * 1024 * 16)));
-
 export function makeWriter<Type extends Package>(info: Type, builder = new Builder) {
+	const scan = makeTypeScanner(info.layout, builder) ?? ((value, heap) => heap);
 	const write = makeTypeWriter(info.layout, builder);
-	return (value: ShapeOf<Type>): Readonly<Uint8Array> => {
-		const view = bufferCache();
+	return (value: ShapeOf<Type>, scanFirst = false): Readonly<Uint8Array> => {
+		const heap = info.traits.size + kHeaderSize;
+		const view = function() {
+			if (scanFirst) {
+				const length = scan(value, heap);
+				const buffer = new Uint8Array(new SharedArrayBuffer(length));
+				return BufferView.fromTypedArray(buffer);
+			} else {
+				return bufferCache();
+			}
+		}();
 		const length = write(value, view, kHeaderSize, info.traits.size + kHeaderSize);
-		if (length > view.int8.length) {
-			throw new Error('Exceeded memory write buffer');
-		}
 		view.uint32[0] = kMagic;
 		view.uint32[1] = info.version;
 		view.uint32[2] = length;
 		view.uint32[3] = 0;
-		const copy = new Uint8Array(new SharedArrayBuffer(length));
-		copy.set(view.uint8.subarray(0, length));
-		return copy;
+		if (scanFirst) {
+			if (length !== view.uint8.length) {
+				throw new Error('Exceeded memory write buffer');
+			}
+			return view.uint8;
+		} else {
+			if (length > view.uint8.length) {
+				throw new Error('Exceeded memory write buffer');
+			}
+			const copy = new Uint8Array(new SharedArrayBuffer(length));
+			copy.set(view.uint8.subarray(0, length));
+			return copy;
+		}
 	};
 }

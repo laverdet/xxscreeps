@@ -41,7 +41,7 @@ export class PlayerInstance {
 	private connectors!: typeof acquireConnectors extends (...args: any[]) =>
 	Promise<readonly [ any, infer Type ]> ? Type : never;
 
-	private sandbox?: Sandbox;
+	private sandbox: Sandbox | undefined;
 	private stale = false;
 	private readonly consoleEval: Exclude<TickPayload['eval'], undefined> = [];
 	private readonly consoleChannel;

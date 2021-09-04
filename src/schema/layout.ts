@@ -64,7 +64,7 @@ export type StructLayout = {
 		union?: true;
 	}>;
 	inherit?: StructLayout;
-	variant?: number | string;
+	variant: number | string | undefined;
 };
 
 type VariantLayout = {
@@ -89,7 +89,7 @@ type VectorLayout = {
 export type Traits = {
 	align: number;
 	size: number;
-	stride?: number;
+	stride?: number | undefined;
 };
 
 export type LayoutAndTraits = { layout: Layout; traits: Traits };

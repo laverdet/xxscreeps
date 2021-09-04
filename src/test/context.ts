@@ -2,7 +2,7 @@ import { checkArguments } from 'xxscreeps/config/arguments';
 
 type Callback = () => void | Promise<void>;
 type Context = {
-	name?: string;
+	name: string | undefined;
 	children: Callback[];
 	tests: Callback[];
 };

@@ -1,4 +1,3 @@
-import type { ShapeOf } from 'xxscreeps/schema';
 import 'xxscreeps/game';
 import 'xxscreeps/game/position';
 import 'xxscreeps/game/object';
@@ -18,4 +17,3 @@ export const write = makeWriter(schema, builder);
 export const upgrade = makeUpgrader(schema, write);
 export const readRoomObject = makeReader(objectSchema, builder);
 export const writeRoomObject = makeWriter(objectSchema, builder);
-export type Shape = ShapeOf<typeof format>;

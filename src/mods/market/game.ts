@@ -16,7 +16,7 @@ declare module 'xxscreeps/game/room' {
 		/**
 		 * The Terminal structure of this room, if present, otherwise undefined.
 		 */
-		terminal?: Terminal.StructureTerminal;
+		terminal?: Terminal.StructureTerminal | undefined;
 	}
 
 	interface Schema { terminal: typeof terminalSchema }

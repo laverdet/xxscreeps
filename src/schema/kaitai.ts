@@ -169,7 +169,7 @@ export class KaitaiArchiver {
 			const { interceptor } = layout;
 			if ('kaitai' in interceptor) {
 				const { kaitai } = interceptor;
-				holder.seq.push(...kaitai!);
+				holder.seq.push(...kaitai);
 				const tmp = new KaitaiArchiver;
 				tmp.archive(id, tmp, layout.composed);
 				holder.size = tmp.size;

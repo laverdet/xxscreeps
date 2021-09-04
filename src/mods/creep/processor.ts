@@ -305,6 +305,8 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		// update the internal indices.
 		const oldPos = creep.pos;
 		creep.pos = next;
+		// Creeps are revitalized when moving to a new room
+		creep.fatigue = 0;
 		// Reset actionLog since the actions were in the previous room
 		creep['#actionLog'] = [];
 		const importPayload = writeRoomObject(creep);

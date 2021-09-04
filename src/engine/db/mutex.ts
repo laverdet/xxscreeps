@@ -9,8 +9,8 @@ type Message = 'waiting' | 'unlocked';
 
 export class Mutex {
 	private lockedOrPending = false;
-	private yieldPromise?: Promise<void>;
-	private waitingListener?: Effect;
+	private yieldPromise: Promise<void> | undefined;
+	private waitingListener: Effect | undefined;
 	private readonly localQueue: (Effect)[] = [];
 	constructor(
 		private readonly channel: Subscription<Message>,

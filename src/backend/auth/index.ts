@@ -11,11 +11,11 @@ declare module 'xxscreeps/backend' {
 		flushToken(initializeGuest?: boolean): Promise<string | undefined>;
 	}
 	interface State {
-		newUserId?: string;
-		userId?: string;
-		provider?: string;
-		providerId?: string;
-		token?: string;
+		newUserId?: string | undefined;
+		userId?: string | undefined;
+		provider?: string | undefined;
+		providerId?: string | undefined;
+		token?: string | undefined;
 	}
 }
 
@@ -52,8 +52,11 @@ export function authentication(): Middleware {
 					return 'guest';
 				}
 			}();
-			// Send X-Token response header
+			// Set X-Token on state, and also fake the header on the request. This may be picked up by the
+			// socket handler.
+			context.req.headers['x-token'] =
 			context.state.token = token;
+			// Send X-Token response header
 			if (token !== undefined && context.respond !== false) {
 				context.set('X-Token', token);
 			}
@@ -101,7 +104,7 @@ export function authentication(): Middleware {
 					await next();
 					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 					if (!didSet) {
-						Object.defineProperty(context.state, 'userId', { value: undefined });
+						context.state.userId = undefined;
 					}
 				} catch (err) {
 					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

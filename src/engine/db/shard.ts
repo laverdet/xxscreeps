@@ -1,6 +1,7 @@
 import type { KeyValProvider, PubSubProvider } from './storage';
 import type { Database } from './database';
 import type { Effect } from 'xxscreeps/utility/types';
+import type { Room } from 'xxscreeps/game/room';
 import type { Subscription } from './channel';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import { connectToProvider } from 'xxscreeps/engine/db/storage';
@@ -99,7 +100,7 @@ export class Shard {
 	/**
 	 * Save room state to storage for the current or next tick
 	 */
-	async saveRoom(name: string, time: number, room: RoomSchema.Shape) {
+	async saveRoom(name: string, time: number, room: Room) {
 		if (room.name !== name) {
 			throw new Error('Room name mismatch');
 		}

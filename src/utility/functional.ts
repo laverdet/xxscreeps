@@ -279,7 +279,7 @@ export function *take<Type>(iterable: Iterable<Type>, count: number) {
 }
 
 // Not nullable TS predicate
-type NonNullOrVoidable<Type> = Type extends null | undefined | void ? never : Type;
+type NonNullOrVoidable<Type> = Type extends null | undefined | void | false | 0 ? never : Type;
 function nonNullable<Type>(value: Type): value is NonNullOrVoidable<Type> {
 	return value != null;
 }
