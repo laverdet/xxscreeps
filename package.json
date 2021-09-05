@@ -48,7 +48,7 @@
     "argparse": "2.0.1",
     "babel-loader": "8.2.2",
     "etag": "1.8.1",
-    "isolated-vm": "4.3.4",
+    "isolated-vm": "4.3.5",
     "ivm-inspect": "2.0.1",
     "js-base64": "3.6.1",
     "js-yaml": "4.1.0",
