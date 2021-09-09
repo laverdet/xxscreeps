@@ -1,4 +1,5 @@
 import type { InspectOptionsStylized } from 'util';
+import type { GameState } from 'xxscreeps/game';
 import type { Terrain } from 'xxscreeps/game/terrain';
 import type { RoomObject } from 'xxscreeps/game/object';
 import type { RoomPosition } from 'xxscreeps/game/position';
@@ -83,13 +84,25 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Execute all insert / remove mutations that have been queued with `InsertObject` or
 	 * `RemoveObject`.
 	 */
-	['#flushObjects'](this: Room) {
+	['#flushObjects'](this: Room, state: GameState | null) {
 		// Bail early if there's no work
 		if (this.#insertObjects.length === 0 && this.#removeObjects.size === 0) {
 			return;
 		}
 		const objects = this['#objects'];
 		this.#findCache.clear();
+		// Insert objects
+		// nb: This is done before object removal intentionally because objects may reference other
+		// objects in the '#beforeRemove' hook
+		const insertObjects = this.#insertObjects;
+		if (insertObjects.length) {
+			this.#insertObjects = [];
+			objects.push(...insertObjects as never[]);
+			for (const object of insertObjects) {
+				this.#afterInsert(object);
+				state?.insertObject(object);
+			}
+		}
 		// Remove objects
 		const removeObjects = this.#removeObjects;
 		let removeCount = removeObjects.size;
@@ -112,15 +125,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 				throw new Error('Removed objects mismatch');
 			}
 		}
-		// Insert objects
-		const insertObjects = this.#insertObjects;
-		if (insertObjects.length) {
-			this.#insertObjects = [];
-			objects.push(...insertObjects as never[]);
-			for (const object of insertObjects) {
-				this.#afterInsert(object);
-			}
-		}
 		// Don't attempt to double remove objects queued from hooks
 		for (const object of this.#removeObjects) {
 			if (removeObjects.has(object)) {
@@ -128,7 +132,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 			}
 		}
 		// Flush objects added/removed by #afterInsert / #beforeRemove hooks
-		this['#flushObjects']();
+		this['#flushObjects'](state);
 	}
 
 	/**

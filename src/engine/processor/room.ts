@@ -32,7 +32,8 @@ export type SingleIntent = {
 const flushContext = hooks.makeIterated('flushContext');
 
 export interface ProcessorContext {
-	shard: Shard;
+	readonly shard: Shard;
+	readonly state: GameState;
 
 	/**
 	 * Invoke this from a processor when game state has been modified in a processor
@@ -102,13 +103,13 @@ export class RoomProcessor implements ProcessorContext {
 				const object = objects[ii];
 				object[PreTick]?.(object, this);
 			}
-			this.room['#flushObjects']();
+			this.room['#flushObjects'](this.state);
 
 			// Run `registerRoomTickProcessor` hooks
 			for (const process of roomTickProcessors) {
 				process(this.room, this);
 			}
-			this.room['#flushObjects']();
+			this.room['#flushObjects'](this.state);
 
 			// Process user intents
 			for (const [ user, intents ] of this.intents) {
@@ -152,7 +153,7 @@ export class RoomProcessor implements ProcessorContext {
 					}
 				});
 			}
-			this.room['#flushObjects']();
+			this.room['#flushObjects'](this.state);
 
 			// Post-intent processor
 			Movement.dispatch(this.room);
@@ -161,7 +162,7 @@ export class RoomProcessor implements ProcessorContext {
 				const object = objects[ii];
 				object[Tick]?.(object, this);
 			}
-			this.room['#flushObjects']();
+			this.room['#flushObjects'](this.state);
 		});
 
 		// Run async tasks
@@ -203,7 +204,7 @@ export class RoomProcessor implements ProcessorContext {
 		await this.flushTasks();
 
 		// Finalize room object
-		this.room['#flushObjects']();
+		this.room['#flushObjects'](this.state);
 		const previousUsers = flushUsers(this.room);
 		const hasPlayer = Fn.some(this.room['#users'].intents, userId => userId.length > 2);
 		flushContext();

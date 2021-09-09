@@ -21,7 +21,7 @@ export function claim(context: ProcessorContext, controller: StructureController
 	]));
 	controller['#reservationEndTime'] = 0;
 	controller['#user'] = userId;
-	updateRoomStatus(room, 1, userId);
+	updateRoomStatus(context, room, 1, userId);
 	context.didUpdate();
 }
 
@@ -38,17 +38,17 @@ export function release(context: ProcessorContext, controller: StructureControll
 	controller['#safeModeCooldownTime'] = 0;
 	controller['#user'] = null;
 	room['#safeModeUntil'] = 0;
-	updateRoomStatus(room, 0, null);
+	updateRoomStatus(context, room, 0, null);
 	context.didUpdate();
 }
 
 /**
  * Update room owner and/or level, and notify all objects of the change
  */
-function updateRoomStatus(room: Room, level: number, userId: string | null | undefined) {
+function updateRoomStatus(context: ProcessorContext, room: Room, level: number, userId: string | null | undefined) {
 	room['#level'] = level;
 	room['#user'] = userId ?? null;
-	room['#flushObjects']();
+	room['#flushObjects'](context.state);
 	for (const object of room['#objects']) {
 		object['#roomStatusDidChange'](level, userId);
 	}
@@ -141,7 +141,7 @@ const intents = [
 			} else {
 				const userId = creep['#user'];
 				controller['#reservationEndTime'] = Game.time + power + 1;
-				updateRoomStatus(controller.room, 0, userId);
+				updateRoomStatus(context, controller.room, 0, userId);
 				context.task(context.shard.scratch.sadd(reservedRoomKey(userId), [ controller.room.name ]));
 			}
 			saveAction(creep, 'reserveController', controller.pos);
@@ -190,7 +190,7 @@ const intents = [
 					}
 					controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
 					++controller.safeModeAvailable;
-					updateRoomStatus(controller.room, level, controller['#user']);
+					updateRoomStatus(context, controller.room, level, controller['#user']);
 				}
 			}
 			saveAction(creep, 'upgradeController', controller.pos);
@@ -246,7 +246,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[level]! / 2;
 				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[level]! * 0.9);
 				controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN - 1;
-				updateRoomStatus(controller.room, level, controller['#user']);
+				updateRoomStatus(context, controller.room, level, controller['#user']);
 			}
 			context.didUpdate();
 		}

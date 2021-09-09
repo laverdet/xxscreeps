@@ -87,12 +87,10 @@ const intents = [
 
 	registerIntentProcessor(Room, 'unspawn', { internal: true }, (room, context) => {
 		for (const object of room['#objects']) {
-			if (object instanceof StructureController) {
-				if (object.room['#user'] === me) {
+			if (object.room['#user'] === me) {
+				if (object instanceof StructureController) {
 					ControllerProc.release(context, object);
-				}
-			} else if (object['#user'] === me) {
-				if (object instanceof OwnedStructure) {
+				} else if (object instanceof OwnedStructure) {
 					object['#user'] = '1';
 					const ruin = createRuin(object, 500000);
 					room['#insertObject'](ruin);

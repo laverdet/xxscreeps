@@ -78,7 +78,7 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 			}
 		}
 	}
-	room['#flushObjects']();
+	room['#flushObjects'](null);
 	return { room, terrain };
 });
 

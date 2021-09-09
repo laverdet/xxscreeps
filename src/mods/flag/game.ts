@@ -83,7 +83,7 @@ hooks.register('gameInitializer', (Game, data) => {
 				flag.room = undefined as never;
 			}
 		}
-		Fn.forEach(rooms, room => room['#flushObjects']());
+		Fn.forEach(rooms, room => room['#flushObjects'](null));
 	}
 });
 

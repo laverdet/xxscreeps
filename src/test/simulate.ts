@@ -75,7 +75,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 			await Promise.all(Fn.map(Object.entries(rooms), async([ roomName, callback ]) => {
 				const room = await shard.loadRoom(roomName, shard.time);
 				runOneShot(world, room, shard.time, '', () => callback(room));
-				room['#flushObjects']();
+				room['#flushObjects'](null);
 				const previousUsers = flushUsers(room);
 				await Promise.all([
 					shard.saveRoom(room.name, shard.time + 1, room),
@@ -101,7 +101,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 					const room = await shard.loadRoom(roomName);
 					const state = new GameState(world, shard.time, [ room ]);
 					const [ , result ] = runWithState(state, () => runForUser(userId ?? '', state, Game => task(Game, room)));
-					room['#flushObjects']();
+					room['#flushObjects'](state);
 					const previousUsers = flushUsers(room);
 					await Promise.all([
 						shard.saveRoom(room.name, shard.time, room),

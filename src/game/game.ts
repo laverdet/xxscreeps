@@ -29,6 +29,10 @@ export class GameState {
 			initializeRoom(room, this);
 		}
 	}
+
+	insertObject(object: RoomObject) {
+		this.objects.set(object.id, object);
+	}
 }
 
 /**

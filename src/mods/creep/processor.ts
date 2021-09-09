@@ -206,7 +206,7 @@ const intents = [
 	}),
 
 	registerIntentProcessor(Creep, 'suicide', {}, (creep, context) => {
-		if (creep.my) {
+		if (CreepLib.checkCommon(creep) === C.OK) {
 			buryCreep(creep, creep['#user'].length > 2 ? undefined : 0);
 			context.didUpdate();
 		}

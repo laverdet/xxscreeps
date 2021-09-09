@@ -99,4 +99,20 @@ describe('Spawn', () => {
 			assert.strictEqual(Game.getObjectById<StructureExtension>(extensionId)!.store[C.RESOURCE_ENERGY], 181);
 		});
 	}));
+
+	test('destroy + unclaim', () => simulation(async({ player, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'creep'), C.OK);
+			assert.strictEqual(Game.spawns.Spawn1.destroy(), C.OK);
+			assert.strictEqual(Game.rooms.W1N1.controller!.unclaim(), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			// This might fail in the future if we change room visibility rules in the tests, since the
+			// player controls no intent objects
+			assert(!Game.spawns.Spawn1);
+			assert.strictEqual(Game.rooms.W1N1.find(C.FIND_MY_CREEPS).length, 0);
+			assert(!Game.rooms.W1N1.controller?.my);
+		});
+	}));
 });
