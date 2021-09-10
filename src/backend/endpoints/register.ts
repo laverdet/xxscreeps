@@ -62,14 +62,4 @@ const SetUsernameEndpoint: Endpoint = {
 	},
 };
 
-const SubmitRegistrationEndpoint: Endpoint = {
-	method: 'post',
-	path: '/api/register/submit',
-
-	execute(context) {
-		context.status = 500;
-		return {};
-	},
-};
-
-export default [ CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint, SubmitRegistrationEndpoint ];
+export default [ CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint ];
