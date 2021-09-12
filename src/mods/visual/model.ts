@@ -24,7 +24,11 @@ export async function loadVisuals(shard: Shard, userId: string, roomName: string
 		return visualsString;
 	}
 	if (payload.time && typedArrayToString(payload.time) === `${shard.time}`) {
-		return stringify(payload['*']) + stringify(payload[roomName]);
+		if (roomName === 'map') {
+			return stringify(payload[roomName]);
+		} else {
+			return stringify(payload['*']) + stringify(payload[roomName]);
+		}
 	} else {
 		return '';
 	}
