@@ -118,9 +118,9 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 		const session = (connection as any)._session;
 		const request: IncomingMessage | undefined =
 			// WebSocket
-			session.recv.ws?._driver._request ??
+			session.recv?.ws?._driver._request ??
 			// XHR
-			session.recv.request;
+			session.recv?.request;
 
 		// Set up subscription bookkeeping for this socket
 		let user: string | undefined;
