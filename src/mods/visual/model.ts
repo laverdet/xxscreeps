@@ -12,7 +12,9 @@ export function getVisualChannel(shard: Shard, userId: string) {
 const visualsReader = makeReader(Visual.schema);
 export async function loadVisuals(shard: Shard, userId: string, roomName: string) {
 	const fragment = `user/${userId}/visual${shard.time % 2}`;
-	const payload = await shard.scratch.hmget(fragment, [ 'time', '*', roomName ], { blob: true });
+	const fields = [ 'time', roomName ];
+	if (roomName !== 'map') fields.push('*');
+	const payload = await shard.scratch.hmget(fragment, fields, { blob: true });
 	function stringify(blob: Readonly<Uint8Array> | null) {
 		let visualsString = '';
 		if (blob) {
