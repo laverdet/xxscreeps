@@ -4,7 +4,7 @@ import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
-import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
+import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
 import { assign } from 'xxscreeps/utility/utility';
 
@@ -21,7 +21,8 @@ export class StructureObserver extends withOverlay(OwnedStructure, shape) {
 
 	observeRoom(roomName: string) {
 		return chainIntentChecks(
-			() => checkObserveRange(this, roomName),
+			() => checkMyStructure(this, StructureObserver),
+			() => checkObserve(this, roomName),
 			() => intents.save(this, 'observeRoom', roomName));
 	}
 }
@@ -48,7 +49,8 @@ registerBuildableStructure(C.STRUCTURE_OBSERVER, {
 
 //
 // Intent checks
-function checkObserveRange(observer: StructureObserver, target: string) {
+function checkObserve(observer: StructureObserver, target: string) {
+	if (observer.room.controller!.level < 8) return C.ERR_RCL_NOT_ENOUGH;
 	const range = Game.map.getRoomLinearDistance(observer.room.name, target);
 	if (!(range < Infinity) || range === 0) {
 		return C.ERR_INVALID_ARGS;
