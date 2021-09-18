@@ -22,7 +22,7 @@ const shape = struct({
 });
 
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
-	abstract get ['#lookType'](): string;
+	abstract get ['#lookType'](): string | null;
 
 	/**
 	 * The link to the Room object. May be `undefined` in case if an object is a flag or a construction

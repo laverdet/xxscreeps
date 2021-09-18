@@ -182,7 +182,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Add an object to the look and spatial indices
 	 */
 	#afterInsert(this: Room, object: RoomObject) {
-		this.#lookIndex.get(object['#lookType'])!.push(object);
+		if (object['#lookType']) this.#lookIndex.get(object['#lookType'])!.push(object);
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos);
 		if (list) {
@@ -198,7 +198,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 */
 	#beforeRemove(object: RoomObject) {
 		object['#beforeRemove']();
-		removeOne(this.#lookIndex.get(object['#lookType'])!, object);
+		if (object['#lookType']) removeOne(this.#lookIndex.get(object['#lookType'])!, object);
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos)!;
 		if (list.length === 1) {

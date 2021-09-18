@@ -12,12 +12,15 @@ export const format = () => compose(shape, StructureObserver);
 const shape = declare('Observer', struct(ownedStructureFormat, {
 	...variant('observer'),
 	hits: 'int32',
-	'#actionLog': RoomObject.actionLogFormat,
 }));
 
 export class StructureObserver extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return C.OBSERVER_HITS }
 	override get structureType() { return C.STRUCTURE_OBSERVER }
+
+	override isActive() {
+		return this.room.controller!.level === 8;
+	}
 
 	observeRoom(roomName: string) {
 		return chainIntentChecks(
@@ -52,7 +55,7 @@ registerBuildableStructure(C.STRUCTURE_OBSERVER, {
 function checkObserve(observer: StructureObserver, target: string) {
 	if (observer.room.controller!.level < 8) return C.ERR_RCL_NOT_ENOUGH;
 	const range = Game.map.getRoomLinearDistance(observer.room.name, target);
-	if (!(range < Infinity) || range === 0) {
+	if (!(range < Infinity)) {
 		return C.ERR_INVALID_ARGS;
 	} else if (range > C.OBSERVER_RANGE) {
 		return C.ERR_NOT_IN_RANGE;
