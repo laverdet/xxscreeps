@@ -105,10 +105,8 @@ hooks.register('route', {
 		if (await User.findUserByName(context.db, username)) {
 			return { error: 'exists' };
 		}
-
 		if (allowEmailRegistration) {
 			const newUserId = Id.generateId(12);
-
 			await User.create(context.db, newUserId, username, [ { provider: 'email', id: email } ]);
 			await setPassword(context.db, newUserId, password);
 			return { ok: 1 };
@@ -126,9 +124,9 @@ hooks.register('sendUserInfo', async(db, userId, userInfo, privateSelf) => {
 		if (password) {
 			userInfo.password = true;
 		}
-		const providers = await User.findProvidersForUser(db, userId);
-		if (providers.email) {
-			userInfo.email = providers.email;
+		const email = await User.providerIdForUser(db, 'email', userId);
+		if (email) {
+			userInfo.email = email;
 		}
 	}
 });
