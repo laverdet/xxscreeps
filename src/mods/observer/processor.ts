@@ -2,7 +2,7 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import * as C from 'xxscreeps/game/constants';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
-import { StructureObserver, checkObserve } from 'xxscreeps/mods/observer/observer';
+import { StructureObserver, checkObserveRoom } from 'xxscreeps/mods/observer/observer';
 import { ObserverSpy, create as createObserverSpy } from 'xxscreeps/mods/observer/observer_spy';
 
 declare module 'xxscreeps/engine/processor' {
@@ -11,7 +11,7 @@ declare module 'xxscreeps/engine/processor' {
 
 const intents = [
 	registerIntentProcessor(StructureObserver, 'observeRoom', {}, (observer, context, target: string) => {
-		if (checkObserve(observer, target) === C.OK) {
+		if (checkObserveRoom(observer, target) === C.OK) {
 			context.sendRoomIntent(target, 'observerObserve', observer['#user']!);
 		}
 	}),
