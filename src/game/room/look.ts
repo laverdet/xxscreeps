@@ -1,3 +1,4 @@
+import type { RoomObject } from 'xxscreeps/game/object';
 import type { PositionParameter } from 'xxscreeps/game/position';
 import type { UnwrapArray } from 'xxscreeps/utility/types';
 import * as C from 'xxscreeps/game/constants';
@@ -98,7 +99,7 @@ extend(Room, {
 		}
 		return [
 			...Fn.map(this['#lookAt'](pos), object => {
-				const type = object['#lookType'];
+				const type = object['#lookType']!;
 				return { type, [type]: object };
 			}),
 			{ type: 'terrain', terrain: terrainMaskToString[this.getTerrain().get(pos.x, pos.y)] },
@@ -170,7 +171,7 @@ extend(Room, {
 					}
 				})();
 				// Add position and type information
-				return Fn.map(objects, object => ({ x: object.pos.x, y: object.pos.y, [type]: object }));
+				return Fn.map(objects as RoomObject[], object => ({ x: object.pos.x, y: object.pos.y, [type]: object }));
 			}
 		})();
 		return withAsArray(results, top, left, bottom, right, asArray, false) as never;

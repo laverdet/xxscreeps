@@ -1,5 +1,7 @@
 import fs from 'fs/promises';
 import * as C from 'xxscreeps/game/constants';
+import type { Mineral } from 'xxscreeps/mods/mineral/mineral';
+import type { Structure } from 'xxscreeps/mods/structure/structure';
 import * as Fn from 'xxscreeps/utility/functional';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { parseRoomName } from 'xxscreeps/game/position';
@@ -26,12 +28,12 @@ const payload = Fn.fromEntries(await Fn.mapAsync(entriesSorted, async([ roomName
 		const info = function() {
 			switch (object['#lookType']) {
 				case 'structure':
-					return object.structureType === C.STRUCTURE_CONTROLLER ? { marker: '@' } : undefined;
+					return (object as Structure).structureType === C.STRUCTURE_CONTROLLER ? { marker: '@' } : undefined;
 				case 'mineral': return {
 					marker: 'M',
 					meta: {
-						density: object.density,
-						mineral: object.mineralType,
+						density: (object as Mineral).density,
+						mineral: (object as Mineral).mineralType,
 					},
 				};
 				case 'source': return { marker: 'E' };
