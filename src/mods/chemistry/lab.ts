@@ -1,5 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { assign } from 'xxscreeps/utility/utility';
 import { Game, intents, registerGlobal } from 'xxscreeps/game';

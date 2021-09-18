@@ -1,4 +1,6 @@
 import type { LooseBoolean } from './types';
+import * as Fn from './functional';
+export default Fn;
 
 export function chain<Args extends any[]>(fns: Iterable<(...args: Args) => void>, reverse = false) {
 	const { head, rest } = shift(fns);

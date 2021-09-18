@@ -1,4 +1,4 @@
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { hooks } from 'xxscreeps/engine/runner';
 import { publishVisualsBlobsForNextTick } from './model';
 

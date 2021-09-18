@@ -1,6 +1,6 @@
 import type { Builder } from '.';
 import type { Layout, StructLayout } from './layout';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { Variant } from './format';
 import { alignTo, kPointerSize, unpackWrappedStruct } from './layout';

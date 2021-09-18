@@ -1,6 +1,6 @@
 import type { ContextType } from 'xxscreeps/utility/types';
 import type { Creep } from 'xxscreeps/mods/creep/creep';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { constant, struct, variant } from 'xxscreeps/schema';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';

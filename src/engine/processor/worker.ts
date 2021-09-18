@@ -1,5 +1,5 @@
 import type { Room } from 'xxscreeps/game/room/room';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { importMods } from 'xxscreeps/config/mods';
 import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model';
 import { Database, Shard } from 'xxscreeps/engine/db';

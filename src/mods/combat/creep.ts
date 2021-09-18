@@ -1,6 +1,6 @@
 import type { RoomObject } from 'xxscreeps/game/object';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import { intents } from 'xxscreeps/game';
 import { extend } from 'xxscreeps/utility/utility';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';

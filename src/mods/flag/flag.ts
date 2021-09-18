@@ -1,7 +1,7 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
 import type { FlagIntent } from './model';
 import type { InspectOptionsStylized } from 'util';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { RoomObject, format as baseFormat } from 'xxscreeps/game/object';

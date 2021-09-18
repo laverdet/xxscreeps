@@ -1,7 +1,7 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import * as Creep from 'xxscreeps/mods/creep/creep';
-import * as Fn from 'xxscreeps/utility/functional';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource';
 import { StructureKeeperLair } from './keeper-lair';
 import { Source } from './source';

@@ -1,6 +1,6 @@
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
 import 'xxscreeps/config/global';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import * as Code from 'xxscreeps/engine/db/user/code-schema';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import { inspect } from 'util';

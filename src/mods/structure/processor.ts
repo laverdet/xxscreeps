@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { Structure, checkDestroy } from './structure';

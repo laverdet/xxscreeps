@@ -1,6 +1,6 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room';
 import type { Room } from 'xxscreeps/game/room';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as CreepLib from './creep';
 import * as User from 'xxscreeps/engine/db/user';
 import { Game } from 'xxscreeps/game';

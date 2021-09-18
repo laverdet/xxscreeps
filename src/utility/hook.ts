@@ -1,4 +1,4 @@
-import * as Fn from './functional';
+import Fn from './functional';
 import { lateCallback } from './memoize';
 
 export function makeHookRegistration<keys extends Record<string, any>>() {

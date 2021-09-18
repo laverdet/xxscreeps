@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { hooks } from 'xxscreeps/backend';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model';

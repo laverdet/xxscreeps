@@ -1,5 +1,5 @@
 import type { ResourceType } from 'xxscreeps/mods/resource';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
 import { Room } from 'xxscreeps/game/room';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor';

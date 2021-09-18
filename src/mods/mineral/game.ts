@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import * as Extractor from './extractor';

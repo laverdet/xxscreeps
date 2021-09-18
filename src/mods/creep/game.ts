@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { Creep, format as creepFormat } from './creep';
 import { Tombstone, format as tombstoneFormat } from './tombstone';
 import { hooks, registerGlobal } from 'xxscreeps/game';

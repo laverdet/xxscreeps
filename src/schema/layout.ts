@@ -1,5 +1,5 @@
 import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, UnionDeclaration } from './format';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { getOrSet, staticCast } from 'xxscreeps/utility/utility';
 import { Variant } from './format';
 import { entriesWithSymbols } from './symbol';

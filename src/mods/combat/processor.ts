@@ -1,6 +1,6 @@
 import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import { Game } from 'xxscreeps/game';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep';

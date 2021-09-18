@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Controller from './controller';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { RoomObject } from 'xxscreeps/game/object';

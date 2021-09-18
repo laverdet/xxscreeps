@@ -1,7 +1,7 @@
 import type { BufferView, TypeOf } from 'xxscreeps/schema';
 import type { ResourceType } from './resource';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import { BufferObject } from 'xxscreeps/schema/buffer-object';
 import { compose, declare, makeReader, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
 import { getLayout } from 'xxscreeps/schema/layout';

@@ -1,6 +1,6 @@
 import type { ConstructibleStructureType } from './construction-site';
 import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource';
 import { Game, me } from 'xxscreeps/game';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep';

@@ -1,7 +1,7 @@
 import type { PositionParameter } from 'xxscreeps/game/position';
 import type { UnwrapArray } from 'xxscreeps/utility/types';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import { extend } from 'xxscreeps/utility/utility';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { iterateArea } from 'xxscreeps/game/direction';

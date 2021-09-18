@@ -2,7 +2,7 @@ import type { Room } from 'xxscreeps/game/room';
 import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor';
 import type { Shard } from 'xxscreeps/engine/db';
 import type { flushUsers } from 'xxscreeps/game/room/room';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { Channel } from 'xxscreeps/engine/db/channel';
 import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { getServiceChannel } from 'xxscreeps/engine/service';

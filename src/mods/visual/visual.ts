@@ -1,5 +1,5 @@
 import type { TypeOf } from 'xxscreeps/schema';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema';
 import { build } from 'xxscreeps/engine/schema';
 import { getOrSet } from 'xxscreeps/utility/utility';

@@ -1,6 +1,6 @@
 import type { World } from 'xxscreeps/game/map';
 import makeEtag from 'etag';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { hooks } from 'xxscreeps/backend';
 
 const cache = new Map<string, {

@@ -1,7 +1,7 @@
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room';
 import type { GameConstructor } from 'xxscreeps/game';
 import type { RoomPosition } from 'xxscreeps/game/position';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position';
 import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game';

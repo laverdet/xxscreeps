@@ -1,6 +1,6 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
 import type { Schema } from '.';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { enumeratedForPath } from 'xxscreeps/engine/schema';
 import { compose, declare, enumerated, struct, variant, withOverlay, withType } from 'xxscreeps/schema';

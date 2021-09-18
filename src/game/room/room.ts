@@ -5,7 +5,7 @@ import type { RoomObject } from 'xxscreeps/game/object';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import type { FindConstants, FindType, RoomFindOptions } from './find';
 import type { LookConstants, TypeOfLook } from './look';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { BufferObject, withOverlay } from 'xxscreeps/schema';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/utility/iteratee';

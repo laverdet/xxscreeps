@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';

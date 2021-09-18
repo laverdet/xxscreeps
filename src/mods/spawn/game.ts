@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Extension from './extension';
 import * as Spawn from './spawn';
 import { hooks, registerGlobal } from 'xxscreeps/game';

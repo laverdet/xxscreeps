@@ -3,7 +3,7 @@ import type * as P from 'xxscreeps/engine/db/storage/provider';
 import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
 import type { MaybePromises } from './responder';
 import fs from 'fs/promises';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
 import { connect, makeClient, makeHost } from './responder';
 import { SortedSet } from './sorted-set';

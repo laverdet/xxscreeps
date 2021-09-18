@@ -1,4 +1,4 @@
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { compose, struct, vector } from 'xxscreeps/schema';
 import { registerStruct } from 'xxscreeps/engine/schema';

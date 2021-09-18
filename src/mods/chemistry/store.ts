@@ -1,6 +1,6 @@
 import type { BufferView } from 'xxscreeps/schema';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { Store } from 'xxscreeps/mods/resource/store';
 import { optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 import { compose, struct, withOverlay } from 'xxscreeps/schema';

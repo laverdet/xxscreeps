@@ -1,8 +1,8 @@
 import type { Effect } from 'xxscreeps/utility/types';
 import type { ProcessorRequest } from 'xxscreeps/engine/processor/worker';
 import config from 'xxscreeps/config';
+import Fn from 'xxscreeps/utility/functional';
 import * as Async from 'xxscreeps/utility/async';
-import * as Fn from 'xxscreeps/utility/functional';
 import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { Database, Shard } from 'xxscreeps/engine/db';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async';

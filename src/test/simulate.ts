@@ -5,7 +5,7 @@ import type { Room } from 'xxscreeps/game/room';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/room';
 import type { World } from 'xxscreeps/game/map';
 import assert from 'assert';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { flushUsers } from 'xxscreeps/game/room/room';
 import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async';

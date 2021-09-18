@@ -1,7 +1,7 @@
 import type { Room } from '.';
 import type { KeyFor, KeysOf, LooseBoolean } from 'xxscreeps/utility/types';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { registerFindHandlers } from './symbols';
 

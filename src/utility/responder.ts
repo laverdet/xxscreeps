@@ -1,6 +1,6 @@
 import type { Effect } from './types';
 import type { MessagePort } from 'worker_threads';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { MessageChannel, parentPort } from 'worker_threads';
 import { EventEmitter } from 'events';
 import { Deferred, mustNotReject } from './async';

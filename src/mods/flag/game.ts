@@ -1,8 +1,8 @@
 import type { Color } from './flag';
 import type { TypeOf } from 'xxscreeps/schema';
 import type { Room } from 'xxscreeps/game/room';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import { hooks, registerGlobal } from 'xxscreeps/game';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { RoomPosition } from 'xxscreeps/game/position';

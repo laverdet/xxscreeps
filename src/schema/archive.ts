@@ -1,6 +1,6 @@
 import type { Layout, StructLayout } from './layout';
+import Fn from 'xxscreeps/utility/functional';
 import { unpackWrappedStruct } from './layout';
-import * as Fn from 'xxscreeps/utility/functional';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
 
 class ModuleArchiver {

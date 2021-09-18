@@ -1,6 +1,6 @@
 import type { SubscriptionEndpoint } from '../socket';
+import Fn from 'xxscreeps/utility/functional';
 import * as Code from 'xxscreeps/engine/db/user/code';
-import * as Fn from 'xxscreeps/utility/functional';
 
 const CodeSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/code$/,

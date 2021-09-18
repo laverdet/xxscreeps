@@ -1,6 +1,6 @@
 import type { Direction } from 'xxscreeps/game/position';
 import type { RoomObject } from 'xxscreeps/game/object';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
 import { RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';

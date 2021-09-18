@@ -4,7 +4,7 @@ import type { World } from 'xxscreeps/game/map';
 import type { IntentParameters, IntentReceivers, IntentsForReceiver } from '.';
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomTickProcessor } from './symbols';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/engine/processor/movement';
 import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game';
 import { flushUsers } from 'xxscreeps/game/room/room';

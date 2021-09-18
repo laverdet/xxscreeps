@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game, registerGlobal } from 'xxscreeps/game';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';

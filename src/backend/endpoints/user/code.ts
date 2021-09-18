@@ -1,6 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db';
+import Fn from 'xxscreeps/utility/functional';
 import * as Code from 'xxscreeps/engine/db/user/code';
-import * as Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
 import { getConsoleChannel, requestRunnerEval } from 'xxscreeps/engine/runner/model';
 import { hooks } from 'xxscreeps/backend';

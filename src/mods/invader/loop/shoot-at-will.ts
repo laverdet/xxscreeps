@@ -1,5 +1,5 @@
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import type { Creep } from 'xxscreeps/mods/creep/creep';
 import type { Structure } from 'xxscreeps/mods/structure/structure';
 

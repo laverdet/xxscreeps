@@ -1,5 +1,5 @@
 import type { Store } from './store';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store';
 import { assert, describe, reconstructor, test } from 'xxscreeps/test';
 
