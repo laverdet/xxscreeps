@@ -1,17 +1,20 @@
 import type { Endpoint } from 'xxscreeps/backend';
 import * as User from 'xxscreeps/engine/db/user';
 
-function validateEmail(email: any) {
-	return typeof email === 'string' && /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email);
+function validateEmail(email: string) {
+	return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email);
 }
 
 const CheckEmailEndpoint: Endpoint = {
 	path: '/api/register/check-email',
 
-	execute(context) {
+	async execute(context) {
 		const { email } = context.query;
-		if (!validateEmail(email)) {
+		if (typeof email !== 'string' || !validateEmail(email)) {
 			return { error: 'invalid' };
+		}
+		if (await User.findUserByProvider(context.db, 'email', email)) {
+			return { error: 'exists' };
 		}
 		return { ok: 1 };
 	},
@@ -40,7 +43,7 @@ const SetUsernameEndpoint: Endpoint = {
 
 		// Check for new reg provider
 		const { provider, providerId, userId, newUserId } = context.state;
-		const { username } = context.request.body;
+		const { username, email } = context.request.body;
 		if (provider === undefined || providerId === undefined) {
 			return { error: 'not authenticated' };
 		} else if (userId !== undefined || newUserId === undefined) {
@@ -48,12 +51,15 @@ const SetUsernameEndpoint: Endpoint = {
 		}
 
 		// Sanity check
-		if (!User.checkUsername(username)) {
+		if (!User.checkUsername(username) || !validateEmail(email)) {
 			return { error: 'invalid' };
 		}
 
 		// Register
-		await User.create(context.db, newUserId, username, [ { provider, id: providerId } ]);
+		await User.create(context.db, newUserId, username, [
+			{ provider, id: providerId },
+			{ provider: 'email', id: email },
+		]);
 		context.state.userId = newUserId;
 		context.state.newUserId = undefined;
 		context.state.provider = undefined;

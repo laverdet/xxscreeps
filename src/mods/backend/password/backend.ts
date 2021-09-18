@@ -2,9 +2,12 @@ import type { Database } from 'xxscreeps/engine/db';
 import crypto from 'crypto';
 import { promisify } from 'util';
 import { hooks } from 'xxscreeps/backend';
+import config from 'xxscreeps/config';
 import * as User from 'xxscreeps/engine/db/user';
 import { findUserByName, infoKey } from 'xxscreeps/engine/db/user';
 import * as Id from 'xxscreeps/engine/schema/id';
+
+const { allowEmailRegistration } = config.backend;
 
 async function checkPassword(db: Database, userId: string, password: string) {
 	const info = await async function() {
@@ -28,10 +31,6 @@ async function setPassword(db: Database, userId: string, password: string) {
 		iterations,
 		salt: salt.toString('latin1'),
 	}));
-}
-
-async function setEmail(db: Database, userId: string, email: string) {
-	await db.data.hset(infoKey(userId), 'email', email);
 }
 
 // HTTP Basic Auth
@@ -106,24 +105,30 @@ hooks.register('route', {
 		if (await User.findUserByName(context.db, username)) {
 			return { error: 'exists' };
 		}
-		const newUserId = Id.generateId(12);
 
-		await User.create(context.db, newUserId, username, []);
-		await setPassword(context.db, newUserId, password);
-		await setEmail(context.db, newUserId, email);
-		return { ok: 1 };
+		if (allowEmailRegistration) {
+			const newUserId = Id.generateId(12);
+
+			await User.create(context.db, newUserId, username, [ { provider: 'email', id: email } ]);
+			await setPassword(context.db, newUserId, password);
+			return { ok: 1 };
+		} else {
+			context.status = 500;
+			return { error: 'registration disabled' };
+		}
 	},
 });
 
 // Add password flag and email to user info payload
 hooks.register('sendUserInfo', async(db, userId, userInfo, privateSelf) => {
 	if (privateSelf) {
-		const profileData = await db.data.hmget(infoKey(userId), [ 'password', 'email' ]);
-		if (profileData.password) {
+		const password = await db.data.hget(infoKey(userId), 'password');
+		if (password) {
 			userInfo.password = true;
 		}
-		if (profileData.email) {
-			userInfo.email = profileData.email;
+		const providers = await User.findProvidersForUser(db, userId);
+		if (providers.email) {
+			userInfo.email = providers.email;
 		}
 	}
 });

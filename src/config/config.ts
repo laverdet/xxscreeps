@@ -19,6 +19,12 @@ export type Schema = {
 		allowGuestAccess?: boolean;
 
 		/**
+		 * Whether to allow users sign up without steam with only their email address.
+		 * Note: there is currently no confirmation mail send to the user to verify the address.
+		 * @default false
+		 */
+		allowEmailRegistration?: boolean;
+		/**
 		 * Network interface to bind server to. Format is: "host" or "host:port". Host can be * to bind
 		 * to all interfaces: "*:port". Port is 21025, if not specified.
 		 * @default *
