@@ -43,7 +43,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		(Memory.get().flags ??= {})[this.name] ??= memory;
 	}
 
-	get ['#lookType']() { return C.LOOK_FLAGS }
+	get '#lookType'() { return C.LOOK_FLAGS }
 
 	/**
 	 * Remove the flag

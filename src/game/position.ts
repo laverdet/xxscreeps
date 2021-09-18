@@ -89,7 +89,7 @@ export class RoomPosition {
 		return new RoomPosition(RawPositionId, pos);
 	}
 
-	get ['#id']() {
+	get '#id'() {
 		return this.#id;
 	}
 

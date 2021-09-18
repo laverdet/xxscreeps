@@ -17,7 +17,7 @@ export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 		return this['#nextRegenerationTime'] === 0 ? undefined : Math.max(0, this['#nextRegenerationTime'] - Game.time);
 	}
 
-	get ['#lookType']() { return C.LOOK_SOURCES }
+	get '#lookType'() { return C.LOOK_SOURCES }
 
 	override ['#roomStatusDidChange'](level: number, userId: string | undefined | null) {
 		this.energyCapacity = function() {

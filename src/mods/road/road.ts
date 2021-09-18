@@ -21,7 +21,7 @@ export class StructureRoad extends withOverlay(Structure, shape) {
 	override get ['#pathCost']() { return 1 }
 	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
 
-	get ['#multiplier']() {
+	get '#multiplier'() {
 		switch (this['#terrain']) {
 			case C.TERRAIN_MASK_WALL: return C.CONSTRUCTION_COST_ROAD_WALL_RATIO;
 			case C.TERRAIN_MASK_SWAMP: return C.CONSTRUCTION_COST_ROAD_SWAMP_RATIO;

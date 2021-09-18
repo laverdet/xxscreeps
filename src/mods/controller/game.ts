@@ -29,7 +29,7 @@ const actionSchema = registerEnumerated('ActionLog.action', 'reserveController',
 declare module 'xxscreeps/game/object' {
 	interface Schema { controller: typeof actionSchema }
 	interface RoomObject {
-		['#roomStatusDidChange'](level: number, userId: string | null | undefined): void;
+		'#roomStatusDidChange'(level: number, userId: string | null | undefined): void;
 	}
 }
 

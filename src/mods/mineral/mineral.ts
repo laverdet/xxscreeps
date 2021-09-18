@@ -24,7 +24,7 @@ export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
 		return nextTime === 0 ? undefined : Math.max(0, nextTime - Game.time);
 	}
 
-	get ['#lookType']() { return C.LOOK_MINERALS }
+	get '#lookType'() { return C.LOOK_MINERALS }
 }
 
 // Export `Mineral` to runtime globals

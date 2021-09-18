@@ -48,38 +48,38 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		}
 	}
 
-	get ['#extraUsers'](): string[] { return [] }
-	get ['#hasIntent']() { return false }
-	get ['#layer'](): number | undefined { return 0.5 }
-	get ['#pathCost'](): undefined | number { return undefined }
-	get ['#providesVision']() { return false }
-	get ['#user'](): string | null { return null }
-	set ['#user'](_user: string | null) { throw new Error('Setting `#user` on unownable object') }
+	get '#extraUsers'(): string[] { return [] }
+	get '#hasIntent'() { return false }
+	get '#layer'(): number | undefined { return 0.5 }
+	get '#pathCost'(): undefined | number { return undefined }
+	get '#providesVision'() { return false }
+	get '#user'(): string | null { return null }
+	set '#user'(_user: string | null) { throw new Error('Setting `#user` on unownable object') }
 	get hits(): number | undefined { return undefined }
 	set hits(_hits: number | undefined) { throw new Error('Setting `hits` on indestructible object') }
 	get hitsMax(): number | undefined { return undefined }
 	get my(): boolean | undefined { return undefined }
 
-	['#addToMyGame'](_game: GameConstructor) {}
-	['#afterInsert'](room: Room) {
+	'#addToMyGame'(_game: GameConstructor) {}
+	'#afterInsert'(room: Room) {
 		this.room = room;
 	}
 
-	['#beforeRemove']() {
+	'#beforeRemove'() {
 		this.room = undefined as never;
 	}
 
-	['#applyDamage'](power: number, _type: number, _source?: RoomObject) {
+	'#applyDamage'(power: number, _type: number, _source?: RoomObject) {
 		if ((this.hits! -= power) <= 0) {
 			this['#destroy']();
 		}
 	}
 
-	['#captureDamage'](power: number, _type: number, _source: RoomObject | null) {
+	'#captureDamage'(power: number, _type: number, _source: RoomObject | null) {
 		return power;
 	}
 
-	['#destroy']() {
+	'#destroy'() {
 		this.room['#removeObject'](this);
 	}
 

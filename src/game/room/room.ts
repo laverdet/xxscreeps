@@ -49,7 +49,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Materialize all `RoomObject` instances and build FIND & LOOK indices
 	 */
-	['#initialize'](this: Room) {
+	'#initialize'(this: Room) {
 		if (this.#didInitialize) {
 			return;
 		}
@@ -62,7 +62,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Returns a plain array of all room objects at a given location.
 	 */
-	['#lookAt'](pos: RoomPosition): Readonly<AnyRoomObject[]> {
+	'#lookAt'(pos: RoomPosition): Readonly<AnyRoomObject[]> {
 		return (this.#spatialIndex.get(pos['#id']) ?? []) as never[];
 	}
 
@@ -76,7 +76,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Flushes the cache used by `find` because it sometimes contains user-specific information.
 	 */
-	['#flushFindCache']() {
+	'#flushFindCache'() {
 		this.#findCache.clear();
 	}
 
@@ -84,7 +84,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Execute all insert / remove mutations that have been queued with `InsertObject` or
 	 * `RemoveObject`.
 	 */
-	['#flushObjects'](this: Room, state: GameState | null) {
+	'#flushObjects'(this: Room, state: GameState | null) {
 		// Bail early if there's no work
 		if (this.#insertObjects.length === 0 && this.#removeObjects.size === 0) {
 			return;
@@ -138,7 +138,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Queue an object to be inserted into this room. This is flushed via `FlushObjects`.
 	 */
-	['#insertObject'](this: Room, object: RoomObject, now = false) {
+	'#insertObject'(this: Room, object: RoomObject, now = false) {
 		if (now) {
 			this.#findCache.clear();
 			this['#objects'].push(object as never);
@@ -151,7 +151,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Queue an object to be removed from this room. This is flushed via `FlushObjects`.
 	 */
-	['#removeObject'](object: RoomObject) {
+	'#removeObject'(object: RoomObject) {
 		this.#removeObjects.add(object);
 	}
 
@@ -159,7 +159,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Move an object to a new position within this room. This is reflected in the local room state
 	 * immediately.
 	 */
-	['#moveObject'](object: RoomObject, pos: RoomPosition) {
+	'#moveObject'(object: RoomObject, pos: RoomPosition) {
 		const oldPosition = object.pos['#id'];
 		const oldList = this.#spatialIndex.get(oldPosition)!;
 		if (oldList.length === 1) {

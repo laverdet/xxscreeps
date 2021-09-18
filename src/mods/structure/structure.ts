@@ -34,7 +34,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 * One of the `STRUCTURE_*` constants.
 	 */
 	@enumerable get structureType(): string { throw new Error }
-	get ['#lookType']() { return C.LOOK_STRUCTURES }
+	get '#lookType'() { return C.LOOK_STRUCTURES }
 
 	/**
 	 * The current amount of hit points of the structure.
@@ -64,7 +64,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return true;
 	}
 
-	['#checkObstacle'](_user: string) {
+	'#checkObstacle'(_user: string) {
 		return true;
 	}
 

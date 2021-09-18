@@ -11,7 +11,7 @@ import './creep';
 // `RoomObject` intent check symbol
 declare module 'xxscreeps/game/object' {
 	interface RoomObject {
-		['#checkHarvest'](creep: Creep): C.ErrorCode;
+		'#checkHarvest'(creep: Creep): C.ErrorCode;
 	}
 }
 

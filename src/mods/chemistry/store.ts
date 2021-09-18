@@ -56,7 +56,7 @@ export class LabStore extends withOverlay(Store, shape) {
 		return null;
 	}
 
-	['#add'](type: ResourceType, amount: number) {
+	'#add'(type: ResourceType, amount: number) {
 		if (type === C.RESOURCE_ENERGY) {
 			this['#energy'] =
 			this[C.RESOURCE_ENERGY] += amount;
@@ -67,7 +67,7 @@ export class LabStore extends withOverlay(Store, shape) {
 		}
 	}
 
-	['#subtract'](type: ResourceType, amount: number) {
+	'#subtract'(type: ResourceType, amount: number) {
 		if (type === C.RESOURCE_ENERGY) {
 			this['#energy'] =
 			this[C.RESOURCE_ENERGY] -= amount;

@@ -75,7 +75,7 @@ export abstract class Store extends BufferObjectWithResourcesType {
 		return this.getCapacity(resourceType)! - this.getUsedCapacity(resourceType)!;
 	}
 
-	['#entries'](): Iterable<[ ResourceType, number ]> {
+	'#entries'(): Iterable<[ ResourceType, number ]> {
 		return Object.entries(this) as never;
 	}
 
@@ -132,7 +132,7 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		}
 	}
 
-	['#add'](type: ResourceType, amount: number) {
+	'#add'(type: ResourceType, amount: number) {
 		if (amount === 0) {
 			return;
 		}
@@ -149,7 +149,7 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		this._sum += amount;
 	}
 
-	['#subtract'](type: ResourceType, amount: number) {
+	'#subtract'(type: ResourceType, amount: number) {
 		if (amount === 0) {
 			return;
 		}
@@ -217,12 +217,12 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 		}
 	}
 
-	['#add'](type: ResourceType, amount: number) {
+	'#add'(type: ResourceType, amount: number) {
 		const info = this['#resources'].find(info => info.type === type)!;
 		this[type] = info.amount += amount;
 	}
 
-	['#subtract'](type: ResourceType, amount: number) {
+	'#subtract'(type: ResourceType, amount: number) {
 		const info = this['#resources'].find(info => info.type === type)!;
 		if ((info.amount -= amount) === 0) {
 			delete this[type];
@@ -283,11 +283,11 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 		}
 	}
 
-	['#add'](type: ResourceType, amount: number) {
+	'#add'(type: ResourceType, amount: number) {
 		this[type] = this['#amount'] += amount;
 	}
 
-	['#subtract'](type: ResourceType, amount: number) {
+	'#subtract'(type: ResourceType, amount: number) {
 		const value = this['#amount'] -= amount;
 		if (value === 0) {
 			delete this[type];

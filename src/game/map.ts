@@ -64,7 +64,7 @@ export class GameMap {
 		this.#height = maxY - minY;
 	}
 
-	['#getCenterRoom']() {
+	'#getCenterRoom'() {
 		return generateRoomName(this.#left + Math.floor(this.#width / 2), this.#top + Math.floor(this.#height / 2));
 	}
 
