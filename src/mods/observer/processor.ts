@@ -1,12 +1,12 @@
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import * as C from 'xxscreeps/game/constants';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { Room } from 'xxscreeps/game/room';
 import { StructureObserver, checkObserveRoom } from 'xxscreeps/mods/observer/observer';
-import { ObserverSpy, create as createObserverSpy } from 'xxscreeps/mods/observer/observer_spy';
+import { ObserverSpy, create as createObserverSpy } from 'xxscreeps/mods/observer/observer-spy';
 
 declare module 'xxscreeps/engine/processor' {
-	interface Intent {observer: typeof intents}
+	interface Intent { observer: typeof intents }
 }
 
 const intents = [
@@ -18,8 +18,8 @@ const intents = [
 
 	registerIntentProcessor(Room, 'observerObserve', { internal: true }, (room, context, user: string) => {
 		const spy = createObserverSpy(new RoomPosition(1, 1, room.name), user);
-		room['#insertObject'](spy, true);
-		context.didUpdate();
+		room['#insertObject'](spy);
+		context.setActive();
 	}),
 ];
 

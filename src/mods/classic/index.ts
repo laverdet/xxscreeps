@@ -7,11 +7,11 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/invader',
 		'xxscreeps/mods/logistics',
 		'xxscreeps/mods/market',
+		'xxscreeps/mods/observer',
 		'xxscreeps/mods/road',
 		'xxscreeps/mods/source',
 		'xxscreeps/mods/spawn',
 		'xxscreeps/mods/visual',
-		'xxscreeps/mods/observer',
 	],
 	provides: null,
 };

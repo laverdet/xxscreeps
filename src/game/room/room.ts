@@ -13,7 +13,7 @@ import { registerGlobal } from 'xxscreeps/game';
 import { shape } from './schema';
 import { findHandlers, lookConstants } from './symbols';
 
-export type AnyRoomObject = Room['#objects'][number];
+export type AnyRoomObject = Exclude<Room['#objects'][number], { '#lookType': null }>;
 
 /**
  * An object representing the room in which your units and structures are in. It can be used to look
@@ -182,7 +182,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Add an object to the look and spatial indices
 	 */
 	#afterInsert(this: Room, object: RoomObject) {
-		if (object['#lookType']) this.#lookIndex.get(object['#lookType'])!.push(object);
+		const lookType = object['#lookType'];
+		if (lookType) {
+			this.#lookIndex.get(lookType)!.push(object);
+		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos);
 		if (list) {
@@ -198,7 +201,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 */
 	#beforeRemove(object: RoomObject) {
 		object['#beforeRemove']();
-		if (object['#lookType']) removeOne(this.#lookIndex.get(object['#lookType'])!, object);
+		const lookType = object['#lookType'];
+		if (lookType) {
+			removeOne(this.#lookIndex.get(lookType)!, object);
+		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos)!;
 		if (list.length === 1) {

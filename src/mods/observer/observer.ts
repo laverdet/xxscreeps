@@ -1,8 +1,8 @@
-import { Game, intents } from 'xxscreeps/game';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
+import type { RoomPosition } from 'xxscreeps/game/position';
 import * as C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
-import type { RoomPosition } from 'xxscreeps/game/position';
+import { Game, intents } from 'xxscreeps/game';
+import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction';
 import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
@@ -53,9 +53,11 @@ registerBuildableStructure(C.STRUCTURE_OBSERVER, {
 //
 // Intent checks
 export function checkObserveRoom(observer: StructureObserver, target: string) {
-	if (observer.room.controller!.level < 8) return C.ERR_RCL_NOT_ENOUGH;
+	if (!observer.isActive()) {
+		return C.ERR_RCL_NOT_ENOUGH;
+	}
 	const range = Game.map.getRoomLinearDistance(observer.room.name, target);
-	if (!(range < Infinity)) {
+	if (Object.is(range, NaN)) {
 		return C.ERR_INVALID_ARGS;
 	} else if (range > C.OBSERVER_RANGE) {
 		return C.ERR_NOT_IN_RANGE;

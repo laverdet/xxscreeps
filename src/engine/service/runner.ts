@@ -4,7 +4,7 @@ import * as Async from 'xxscreeps/utility/async';
 import * as Timers from 'timers/promises';
 import { importMods } from 'xxscreeps/config/mods';
 import { Database, Shard } from 'xxscreeps/engine/db';
-import { userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model';
+import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
 import { loadTerrain } from 'xxscreeps/driver/path-finder';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
@@ -91,14 +91,17 @@ try {
 					}();
 
 					// Run user code
-					const roomNames = await shard.scratch.smembers(userToIntentRoomsSetKey(userId));
-					if (roomNames.length === 0) {
+					const [ intentRooms, visibleRooms ] = await Promise.all([
+						shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
+						shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
+					]);
+					if (intentRooms.length === 0) {
 						await shard.scratch.srem('activeUsers', [ userId ]);
 					} else {
 						if (isEntry) {
 							process.stdout.write(`+${instance.username}, `);
 						}
-						await instance.run(time, roomNames);
+						await instance.run(time, visibleRooms, intentRooms);
 						if (isEntry) {
 							process.stdout.write(`-${instance.username}, `);
 						}

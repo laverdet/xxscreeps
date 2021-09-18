@@ -14,6 +14,7 @@ export * from 'xxscreeps/mods/invader/constants';
 export * from 'xxscreeps/mods/logistics/constants';
 export * from 'xxscreeps/mods/market/constants';
 export * from 'xxscreeps/mods/mineral/constants';
+export * from 'xxscreeps/mods/observer/constants';
 export * from 'xxscreeps/mods/resource/constants';
 export * from 'xxscreeps/mods/road/constants';
 export * from 'xxscreeps/mods/source/constants';

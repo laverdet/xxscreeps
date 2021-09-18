@@ -30,6 +30,8 @@ export const userToIntentRoomsSetKey = (userId: string) =>
 	`user/${userId}/intentRooms`;
 export const userToPresenceRoomsSetKey = (userId: string) =>
 	`user/${userId}/presenceRooms`;
+export const userToVisibleRoomsSetKey = (userId: string) =>
+	`user/${userId}/visibleRooms`;
 
 export const processRoomsSetKey = (time: number) =>
 	`tick${time}/processRooms`;
@@ -297,20 +299,21 @@ export async function updateUserRoomRelationships(shard: Shard, room: Room, prev
 	const users = room['#users'];
 	const intentPlayers = checkPlayers(users.intents, previous?.intents);
 	const presencePlayers = checkPlayers(users.presence, previous?.presence);
+	const visionPlayers = checkPlayers(users.vision, previous?.vision);
 	await Promise.all([
-		// Add intent user associations
-		Promise.all(Fn.map(intentPlayers.added, playerId =>
-			shard.scratch.sadd(userToIntentRoomsSetKey(playerId), [ roomName ]))),
-		// Remove intent user associations
-		Promise.all(Fn.map(intentPlayers.removed, playerId =>
-			shard.scratch.srem(userToIntentRoomsSetKey(playerId), [ roomName ]))),
-
-		// Add presence user associations
-		Promise.all(Fn.map(presencePlayers.added, playerId =>
-			shard.scratch.sadd(userToPresenceRoomsSetKey(playerId), [ roomName ]))),
-		// Remove presence user associations
-		Promise.all(Fn.map(presencePlayers.removed, playerId =>
-			shard.scratch.srem(userToPresenceRoomsSetKey(playerId), [ roomName ]))),
+		// Update intent, presence, and vision relationships
+		...Fn.concat(Fn.map([
+			[ intentPlayers, userToIntentRoomsSetKey ],
+			[ presencePlayers, userToPresenceRoomsSetKey ],
+			[ visionPlayers, userToVisibleRoomsSetKey ],
+		] as const, ([ players, toKey ]) => Fn.concat(
+			// Add new user associations
+			Fn.map(players.added, playerId =>
+				shard.scratch.sadd(toKey(playerId), [ roomName ])),
+			// Remove stale user associations
+			Fn.map(players.removed, playerId =>
+				shard.scratch.srem(toKey(playerId), [ roomName ])),
+		))),
 
 		// Mark players active for runner
 		shard.scratch.sadd('activeUsers', intentPlayers.added),
