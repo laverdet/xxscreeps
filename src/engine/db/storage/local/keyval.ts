@@ -118,7 +118,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	set(key: string, value: P.Value, options?: P.Set): any {
-		if (value instanceof Uint8Array) {
+		if (ArrayBuffer.isView(value)) {
 			return this.blob.set(key, value, options) as never;
 		}
 		if (
@@ -612,8 +612,8 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 					return { '#': 'set', $: [ ...value ] };
 				} else if (value instanceof SortedSet) {
 					return { '#': 'zset', $: [ ...value.entries() ] };
-				} else if (value instanceof Uint8Array) {
-					return { '#': 'uint8', $: typedArrayToString(value) };
+				} else if (ArrayBuffer.isView(value)) {
+					return { '#': 'uint8', $: typedArrayToString(value as Uint8Array) };
 				} else {
 					return value;
 				}
