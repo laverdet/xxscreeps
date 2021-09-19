@@ -1,6 +1,7 @@
+import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import type { TypeOf } from 'xxscreeps/schema';
+import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema';
 import * as Fn from 'xxscreeps/utility/functional';
-import { Variant, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema';
 import { build } from 'xxscreeps/engine/schema';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
@@ -21,10 +22,8 @@ const lineSchema = struct({
 	...variant('l'),
 	x1: 'double',
 	y1: 'double',
-	n1: optional('string'),
 	x2: 'double',
 	y2: 'double',
-	n2: optional('string'),
 	s: struct({
 		...line,
 		color,
@@ -37,7 +36,6 @@ const circleSchema = struct({
 	...variant('c'),
 	x: 'double',
 	y: 'double',
-	n: optional('string'),
 	s: struct({
 		...line,
 		...stroke,
@@ -53,7 +51,6 @@ const rectSchema = struct({
 	y: 'double',
 	w: 'double',
 	h: 'double',
-	n: optional('string'),
 	s: struct({
 		...line,
 		...stroke,
@@ -64,9 +61,7 @@ const rectSchema = struct({
 export type PolyStyle = Partial<TypeOf<typeof polySchema>['s']>;
 const polySchema = struct({
 	...variant('p'),
-	// to allow room names for map visuals the points have to be saved in a less optimal way as objects.
-	// the vanilla screeps server allows sending the points as objects or [x,y][] array
-	points: vector(struct({ x: 'double', y: 'double', n: optional('string') })),
+	points: vector(array(2, 'double')),
 	s: struct({
 		...line,
 		...stroke,
@@ -79,7 +74,6 @@ const textSchema = struct({
 	...variant('t'),
 	x: 'double',
 	y: 'double',
-	n: optional('string'),
 	text: 'string',
 	s: struct({
 		...stroke,
@@ -108,9 +102,26 @@ const writeSchema = makeWriter(schema);
 
 // Extract either x/y pair or RoomPosition to x/y pair
 type Point = [ pos: { x: number; y: number; roomName: string } ] | [ x: number, y: number ];
-function *extractPositions(args: any[]) {
-	for (const arg of args) {
+
+function encodeRoomPosition(pos: { x: number; y: number; roomName: string }) {
+	const { rx, ry } = parseRoomName(pos.roomName);
+	return { x: rx + pos.x / 50, y: ry + pos.y / 50 };
+}
+
+export function decodeRoomPosition(coord: { x: number; y: number }) {
+	const rx = Math.trunc(coord.x);
+	const ry = Math.trunc(coord.y);
+	return {
+		n: generateRoomName(rx, ry),
+		x: Math.round((coord.x - rx) * 50),
+		y: Math.round((coord.y - ry) * 50),
+	};
+}
+
+function *extractPositions(args: any[], includeRoom: boolean) {
+	for (let arg of args) {
 		if (typeof arg.x === 'number') {
+			if (includeRoom) arg = encodeRoomPosition(arg);
 			yield arg.x;
 			yield arg.y;
 		} else {
@@ -177,9 +188,8 @@ export class RoomVisual {
 	 * Draw a circle.
 	 */
 	circle(...args: [ ...pos: Point, style?: CircleStyle ]) {
-		const [ x, y, style ] = extractPositions(args);
-		const n = this.#map ? (args[0] as any).roomName : undefined;
-		this.#visuals.push({ [Variant]: 'c', x, y, n, s: style ?? {} });
+		const [ x, y, style ] = extractPositions(args, this.#map);
+		this.#visuals.push({ [Variant]: 'c', x, y, s: style ?? {} });
 		return this;
 	}
 
@@ -187,10 +197,8 @@ export class RoomVisual {
 	 * Draw a line.
 	 */
 	line(...args: [ ...pos1: Point, ...pos2: Point, style?: LineStyle ]) {
-		const [ x1, y1, x2, y2, style ] = extractPositions(args);
-		const n1 = this.#map ? (args[0] as any).roomName : undefined;
-		const n2 = this.#map ? (args[1] as any).roomName : undefined;
-		this.#visuals.push({ [Variant]: 'l', x1, y1, n1, x2, y2, n2, s: style ?? {} });
+		const [ x1, y1, x2, y2, style ] = extractPositions(args, this.#map);
+		this.#visuals.push({ [Variant]: 'l', x1, y1, x2, y2, s: style ?? {} });
 		return this;
 	}
 
@@ -199,8 +207,10 @@ export class RoomVisual {
 	 */
 	poly(points: ([ x: number, y: number ] | { x: number; y: number; roomName?: string })[], style?: PolyStyle) {
 		// TODO: Spread needed because Schema types are incomplete
-		const filtered = [ ...Fn.filter(Fn.map(points, (point): { x: number; y: number; n: string | undefined } =>
-			Array.isArray(point) ? { x: point[0], y: point[1], n: undefined } : { x: point.x, y: point.y, n: this.#map ? point.roomName : undefined })) ];
+		const filtered = [ ...Fn.filter(Fn.map(points, (point): [ number, number ] => {
+			if (this.#map && (point as any).x) point = encodeRoomPosition(point as any);
+			return Array.isArray(point) ? [ point[0], point[1] ] : [ point.x, point.y ];
+		})) ];
 		this.#visuals.push({ [Variant]: 'p', points: filtered, s: (style as any) ?? {} });
 		return this;
 	}
@@ -209,9 +219,8 @@ export class RoomVisual {
 	 * Draw a rectangle.
 	 */
 	rect(...args: [ ...pos: Point, width: number, height: number, style?: RectStyle ]) {
-		const [ x, y, width, height, style ] = extractPositions(args);
-		const n = this.#map ? (args[0] as any).roomName : undefined;
-		this.#visuals.push({ [Variant]: 'r', x, y, n, w: width, h: height, s: style ?? {} });
+		const [ x, y, width, height, style ] = extractPositions(args, this.#map);
+		this.#visuals.push({ [Variant]: 'r', x, y, w: width, h: height, s: style ?? {} });
 		return this;
 	}
 
@@ -219,9 +228,8 @@ export class RoomVisual {
 	 * Draw a text label. You can use any valid Unicode characters, including emoji.
 	 */
 	text(text: string, ...args: [ ...pos: Point, style?: TextStyle ]) {
-		const [ x, y, style ] = extractPositions(args);
-		const n = this.#map ? (args[0] as any).roomName : undefined;
-		this.#visuals.push({ [Variant]: 't', x, y, n, text, s: style ?? {} });
+		const [ x, y, style ] = extractPositions(args, this.#map);
+		this.#visuals.push({ [Variant]: 't', x, y, text, s: style ?? {} });
 		return this;
 	}
 
