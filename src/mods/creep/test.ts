@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { assert, describe, simulate, test } from 'xxscreeps/test';
 import { RoomPosition } from 'xxscreeps/game/position';
 import { create } from './creep';

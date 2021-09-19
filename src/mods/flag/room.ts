@@ -1,7 +1,7 @@
 import type { Color } from './flag';
 import type { RoomObject } from 'xxscreeps/game/object';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import { userGame } from 'xxscreeps/game';
 import { chainIntentChecks } from 'xxscreeps/game/checks';
 import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position';

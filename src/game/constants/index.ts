@@ -1,3 +1,5 @@
+import * as C from '.';
+export default C;
 export * from './creep';
 export * from './find';
 export * from './resource';

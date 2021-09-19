@@ -1,6 +1,6 @@
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomPosition } from 'xxscreeps/game/position';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store';

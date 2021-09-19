@@ -1,5 +1,5 @@
 import type { Room } from 'xxscreeps/game/room/room';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { importMods } from 'xxscreeps/config/mods';
 import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model';
 import { Database, Shard } from 'xxscreeps/engine/db';
@@ -116,14 +116,14 @@ try {
 			case 'finalize': {
 				const { time } = message;
 				// Finalize rooms from first phase
-				await Promise.all(Fn.map(processedRooms.values(), context => context.finalize()));
+				await Promise.all(Fn.map(processedRooms.values(), context => context.finalize(false)));
 				let count = processedRooms.size;
 				// Also finalize rooms which were sent inter-room intents
 				for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
 					const room = await shard.loadRoom(roomName, time - 1);
 					const context = new RoomProcessor(shard, world, room, time);
 					await context.process(true);
-					await context.finalize();
+					await context.finalize(true);
 					nextRoomCache.set(roomName, room);
 					++count;
 				}

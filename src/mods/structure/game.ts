@@ -1,5 +1,5 @@
 import type { AnyStructure } from './structure';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { registerGlobal } from 'xxscreeps/game';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
 import { registerVariant } from 'xxscreeps/engine/schema';

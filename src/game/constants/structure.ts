@@ -1,13 +1,9 @@
 export const STRUCTURE_PORTAL = 'portal' as const;
-export const STRUCTURE_OBSERVER = 'observer' as const;
 export const STRUCTURE_POWER_BANK = 'powerBank' as const;
 export const STRUCTURE_POWER_SPAWN = 'powerSpawn' as const;
 export const STRUCTURE_NUKER = 'nuker' as const;
 export const STRUCTURE_FACTORY = 'factory' as const;
 export const STRUCTURE_INVADER_CORE = 'invaderCore' as const;
-
-export const OBSERVER_HITS = 500;
-export const OBSERVER_RANGE = 10;
 
 export const POWER_BANK_HITS = 2000000;
 export const POWER_BANK_CAPACITY_MAX = 5000;

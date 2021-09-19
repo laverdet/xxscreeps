@@ -1,5 +1,5 @@
 import type { Store } from './store';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { bindRenderer } from 'xxscreeps/backend';
 import { StructureContainer } from './container';
 import { Resource } from './resource';

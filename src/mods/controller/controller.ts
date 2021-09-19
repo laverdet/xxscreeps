@@ -1,5 +1,5 @@
 import type { Room } from 'xxscreeps/game/room';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { Game, intents, userInfo } from 'xxscreeps/game';
 import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';

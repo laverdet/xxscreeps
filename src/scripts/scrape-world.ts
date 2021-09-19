@@ -13,8 +13,8 @@ import { checkArguments } from 'xxscreeps/config/arguments';
 
 import { RoomPosition } from 'xxscreeps/game/position';
 import { TerrainWriter, packExits } from 'xxscreeps/game/terrain';
-import * as Fn from 'xxscreeps/utility/functional';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 
 // Schemas
 import * as CodeSchema from 'xxscreeps/engine/db/user/code';

@@ -1,4 +1,4 @@
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { isPrivate, makeSymbol } from 'xxscreeps/driver/private/symbol'; // Use full path for webpack rewrite
 import { getOrSet } from 'xxscreeps/utility/utility';
 const { apply, defineProperty, get, getPrototypeOf, set } = Reflect;

@@ -1,6 +1,6 @@
 import config from 'xxscreeps/config';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
 import * as Spawn from './spawn';
 import { Game, runOneShot } from 'xxscreeps/game';

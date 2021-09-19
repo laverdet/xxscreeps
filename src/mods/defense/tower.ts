@@ -1,5 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { Creep } from 'xxscreeps/mods/creep/creep';
 import { actionLogFormat, create as createObject } from 'xxscreeps/game/object';
 import { OwnedStructure, Structure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';

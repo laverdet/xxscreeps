@@ -1,7 +1,7 @@
 import type { Layout, StructLayout } from './layout';
 import type { Package } from './build';
 import type { ShapeOf } from './format';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { getOrSet } from 'xxscreeps/utility/utility';
 import { BufferView } from './buffer-view';
 import { Variant } from './format';

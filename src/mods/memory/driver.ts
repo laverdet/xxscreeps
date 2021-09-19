@@ -1,6 +1,6 @@
 import type { SegmentPayload, flush } from './memory';
 import type { TickResult } from 'xxscreeps/engine/runner';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { kMaxActiveSegments } from './memory';
 import { hooks } from 'xxscreeps/engine/runner';
 import { loadMemorySegmentBlob, loadUserMemoryBlob, saveMemoryBlob, saveMemorySegmentBlob } from './model';

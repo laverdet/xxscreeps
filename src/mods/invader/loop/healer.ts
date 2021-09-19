@@ -1,6 +1,6 @@
 import type { Creep } from 'xxscreeps/mods/creep/creep';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import flee from './flee';
 
 export default function(creep: Creep, healers: Creep[]) {

@@ -1,8 +1,8 @@
 import type { Payload } from './export';
 import type { RoomObject } from 'xxscreeps/game/object';
 import fs from 'fs/promises';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import * as MapSchema from 'xxscreeps/game/map';
 import * as User from 'xxscreeps/engine/db/user';
 import { Database, Shard } from 'xxscreeps/engine/db';

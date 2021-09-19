@@ -3,7 +3,7 @@ import type { IncomingMessage, Server, ServerResponse } from 'http';
 import type { Socket } from 'net';
 import type sockjs from 'sockjs';
 import { Deferred } from 'xxscreeps/utility/async';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 
 type Options = {
 	timeout?: number;

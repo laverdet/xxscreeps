@@ -1,6 +1,6 @@
 import type { RoomPosition } from 'xxscreeps/game/position';
 import type { Schema } from '.';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { enumeratedForPath } from 'xxscreeps/engine/schema';
 import { compose, declare, enumerated, struct, variant, withOverlay, withType } from 'xxscreeps/schema';
@@ -26,7 +26,7 @@ const shape = struct(RoomObject.format, {
 // Game object
 export class Resource extends withOverlay(RoomObject.RoomObject, shape) {
 	get energy() { return this.resourceType === C.RESOURCE_ENERGY ? this.amount : undefined }
-	get ['#lookType']() { return C.LOOK_RESOURCES }
+	get '#lookType'() { return C.LOOK_RESOURCES }
 }
 
 export function create(pos: RoomPosition, resourceType: ResourceType, amount: number) {

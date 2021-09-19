@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { Game } from 'xxscreeps/game';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor';
 import { StructureLink, checkTransferEnergy } from './link';

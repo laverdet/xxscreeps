@@ -6,8 +6,8 @@ import type { Shard } from 'xxscreeps/engine/db';
 import type { SubscriptionFor } from 'xxscreeps/engine/db/channel';
 import type { World } from 'xxscreeps/game/map';
 import config from 'xxscreeps/config';
+import Fn from 'xxscreeps/utility/functional';
 import * as Code from 'xxscreeps/engine/db/user/code';
-import * as Fn from 'xxscreeps/utility/functional';
 import * as RoomSchema from 'xxscreeps/engine/db/room';
 import * as User from 'xxscreeps/engine/db/user';
 import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model';
@@ -120,7 +120,7 @@ export class PlayerInstance {
 		this.cleanup();
 	}
 
-	async run(this: PlayerInstance, time: number, roomNames: string[]) {
+	async run(this: PlayerInstance, time: number, visibleRooms: string[], intentRooms: string[]) {
 		const result = await (async() => {
 			// Dispose the current sandbox if the user has pushed new code
 			const wasStale = this.stale;
@@ -168,7 +168,7 @@ export class PlayerInstance {
 				await Promise.all([
 					(async() => {
 						// Wait for room blobs
-						payload.roomBlobs = await Promise.all(Fn.map(roomNames,
+						payload.roomBlobs = await Promise.all(Fn.map(visibleRooms,
 							roomName => this.shard.loadRoomBlob(roomName, time - 1)));
 						// Load unseen users
 						const userIds = Fn.concat(Fn.map(payload.roomBlobs, blob => {
@@ -201,7 +201,7 @@ export class PlayerInstance {
 			this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - payload.usage.cpu + kCPU);
 			await Promise.all([
 				// Publish intent blobs
-				publishRunnerIntentsForRooms(this.shard, this.userId, time, roomNames, payload.intentPayloads),
+				publishRunnerIntentsForRooms(this.shard, this.userId, time, intentRooms, payload.intentPayloads),
 
 				// Publish usage event
 				this.usageChannel.publish(payload.usage),
@@ -236,7 +236,7 @@ export class PlayerInstance {
 				}
 			}
 			// Publish empty results to move processing along
-			tasks.push(publishRunnerIntentsForRooms(this.shard, this.userId, time, roomNames, {}));
+			tasks.push(publishRunnerIntentsForRooms(this.shard, this.userId, time, intentRooms, {}));
 			await Promise.all(tasks);
 		}
 	}

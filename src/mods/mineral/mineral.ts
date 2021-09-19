@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as RoomObject from 'xxscreeps/game/object';
 import { Game, registerGlobal } from 'xxscreeps/game';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
@@ -24,7 +24,7 @@ export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
 		return nextTime === 0 ? undefined : Math.max(0, nextTime - Game.time);
 	}
 
-	get ['#lookType']() { return C.LOOK_MINERALS }
+	get '#lookType'() { return C.LOOK_MINERALS }
 }
 
 // Export `Mineral` to runtime globals

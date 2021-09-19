@@ -1,7 +1,7 @@
 import type { PartType } from 'xxscreeps/mods/creep/creep';
 import type { Direction } from 'xxscreeps/game/position';
-import * as C from 'xxscreeps/game/constants';
-import * as Fn from 'xxscreeps/utility/functional';
+import C from 'xxscreeps/game/constants';
+import Fn from 'xxscreeps/utility/functional';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor';
 import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep';
@@ -87,10 +87,11 @@ const intents = [
 
 	registerIntentProcessor(Room, 'unspawn', { internal: true }, (room, context) => {
 		for (const object of room['#objects']) {
-			if (object.room['#user'] === me) {
-				if (object instanceof StructureController) {
-					ControllerProc.release(context, object);
-				} else if (object instanceof OwnedStructure) {
+			if (object instanceof StructureController && object.room['#user'] === me) {
+				ControllerProc.release(context, object);
+				context.didUpdate();
+			} else if (object['#user'] === me) {
+				if (object instanceof OwnedStructure) {
 					object['#user'] = '1';
 					const ruin = createRuin(object, 500000);
 					room['#insertObject'](ruin);

@@ -2,7 +2,7 @@ import type * as P from 'xxscreeps/engine/db/storage/provider';
 import type { Effect } from 'xxscreeps/utility/types';
 import fsSync from 'fs';
 import fs from 'fs/promises';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import * as Path from 'path';
 import { fileURLToPath } from 'url';
 import { listen, spread } from 'xxscreeps/utility/async';

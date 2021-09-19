@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Container from './container';
 import * as Resource from './resource';
 import { Store } from './store';

@@ -5,9 +5,9 @@ import type { Room } from 'xxscreeps/game/room';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/room';
 import type { World } from 'xxscreeps/game/map';
 import assert from 'assert';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { flushUsers } from 'xxscreeps/game/room/room';
-import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model';
+import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game';
@@ -113,13 +113,16 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 
 				async player(userId, task) {
 					// Fetch game state for player
-					const roomNames = await shard.scratch.smembers(userToIntentRoomsSetKey(userId));
-					const rooms = await Promise.all(Fn.map(roomNames, roomName => shard.loadRoom(roomName)));
+					const [ intentRooms, visibleRooms ] = await Promise.all([
+						shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
+						shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
+					]);
+					const rooms = await Promise.all(Fn.map(visibleRooms, roomName => shard.loadRoom(roomName)));
 					const state = new GameState(world, shard.time, rooms);
 					const [ intents ] = runForUser(userId, state, task);
 
 					// Save intents
-					for (const roomName of roomNames) {
+					for (const roomName of intentRooms) {
 						const roomIntents = intents.getIntentsForRoom(roomName);
 						if (roomIntents) {
 							getOrSet(intentsByRoom, roomName, () => []).push({ userId, intents: roomIntents });
@@ -156,12 +159,12 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						intentsByRoom.clear();
 
 						// Second phase
-						await Promise.all(Fn.map(contexts.values(), context => context.finalize()));
+						await Promise.all(Fn.map(contexts.values(), context => context.finalize(false)));
 						for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
 							const room = roomInstances.get(roomName) ?? await shard.loadRoom(roomName);
 							const context = new RoomProcessor(shard, world, room, time);
 							await context.process(true);
-							await context.finalize();
+							await context.finalize(true);
 							nextRoomInstances.set(roomName, room);
 						}
 

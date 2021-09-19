@@ -4,12 +4,12 @@ import type { World } from 'xxscreeps/game/map';
 import type { IntentParameters, IntentReceivers, IntentsForReceiver } from '.';
 import type { Room } from 'xxscreeps/game/room';
 import type { RoomTickProcessor } from './symbols';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import * as Movement from 'xxscreeps/engine/processor/movement';
 import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game';
 import { flushUsers } from 'xxscreeps/game/room/room';
 import { PreTick, Tick, hooks, intentProcessorGetters, roomTickProcessors } from './symbols';
-import { acquireFinalIntentsForRoom, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model';
+import { acquireFinalIntentsForRoom, activeRoomsKey, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
 // Register per-tick per-room processor
@@ -177,7 +177,7 @@ export class RoomProcessor implements ProcessorContext {
 		flushContext();
 	}
 
-	async finalize() {
+	async finalize(didWake: boolean) {
 		const [ intentPayloads, taskResults ] = await Promise.all([
 			acquireFinalIntentsForRoom(this.shard, this.room.name),
 			Promise.all(Fn.map(this.tasks, task => task.promise)),
@@ -217,9 +217,17 @@ export class RoomProcessor implements ProcessorContext {
 				this.shard.saveRoom(this.room.name, this.time, this.room) :
 				this.shard.copyRoomFromPreviousTick(this.room.name, this.time),
 		]);
-		// Mark inactive if needed. Must be *after* saving room, because this copies from current tick.
-		if (!hasPlayer && this.nextUpdate !== this.time + 1) {
-			return sleepRoomUntil(this.shard, this.room.name, this.time, this.nextUpdate);
+		// Update room processor status
+		if (!hasPlayer) {
+			if (this.nextUpdate === this.time + 1) {
+				if (didWake) {
+					// Room was woken this tick by an inter-room intent, and will remain active
+					await this.shard.scratch.zadd(activeRoomsKey, [ [ 0, this.room.name ] ]);
+				}
+			} else {
+				// Mark inactive if needed. Must be *after* saving room, because this copies from current tick.
+				return sleepRoomUntil(this.shard, this.room.name, this.time, this.nextUpdate);
+			}
 		}
 	}
 

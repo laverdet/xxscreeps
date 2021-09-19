@@ -4,7 +4,7 @@ import type { Shard } from 'xxscreeps/engine/db';
 import type { Terrain } from 'xxscreeps/game/terrain';
 import streamToPromise from 'stream-to-promise';
 import makeEtag from 'etag';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { PNG } from 'pngjs';
 import { hooks } from 'xxscreeps/backend';
 import { runOnce } from 'xxscreeps/utility/memoize';

@@ -3,7 +3,7 @@ import type { Shard } from 'xxscreeps/engine/db';
 import type { Room } from 'xxscreeps/game/room';
 import type { SubscriptionEndpoint } from '../socket';
 import config from 'xxscreeps/config';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import * as User from 'xxscreeps/engine/db/user';
 import { runOneShot } from 'xxscreeps/game';
 import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async';

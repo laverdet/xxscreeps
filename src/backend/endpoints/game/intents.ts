@@ -1,5 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model';
 import { runOneShot } from 'xxscreeps/game';
 import { RoomPosition } from 'xxscreeps/game/position';

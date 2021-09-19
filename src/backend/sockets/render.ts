@@ -1,5 +1,5 @@
 import type { ActionLog } from 'xxscreeps/game/object';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { bindRenderer } from 'xxscreeps/backend';
 import { Game } from 'xxscreeps/game';
 import { RoomObject } from 'xxscreeps/game/object';

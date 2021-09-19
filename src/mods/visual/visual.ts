@@ -1,5 +1,6 @@
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import type { TypeOf } from 'xxscreeps/schema';
+import Fn from 'xxscreeps/utility/functional';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema';
 import * as Fn from 'xxscreeps/utility/functional';
 import { build } from 'xxscreeps/engine/schema';

@@ -1,7 +1,7 @@
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room';
 import type { GameConstructor } from 'xxscreeps/game';
 import type { RoomPosition } from 'xxscreeps/game/position';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position';
 import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game';
@@ -34,7 +34,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 * One of the `STRUCTURE_*` constants.
 	 */
 	@enumerable get structureType(): string { throw new Error }
-	get ['#lookType']() { return C.LOOK_STRUCTURES }
+	get '#lookType'() { return C.LOOK_STRUCTURES }
 
 	/**
 	 * The current amount of hit points of the structure.
@@ -64,7 +64,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return true;
 	}
 
-	['#checkObstacle'](_user: string) {
+	'#checkObstacle'(_user: string) {
 		return true;
 	}
 

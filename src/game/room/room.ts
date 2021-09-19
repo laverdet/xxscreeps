@@ -5,7 +5,7 @@ import type { RoomObject } from 'xxscreeps/game/object';
 import type { RoomPosition } from 'xxscreeps/game/position';
 import type { FindConstants, FindType, RoomFindOptions } from './find';
 import type { LookConstants, TypeOfLook } from './look';
-import * as Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional';
 import { BufferObject, withOverlay } from 'xxscreeps/schema';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility';
 import { iteratee } from 'xxscreeps/utility/iteratee';
@@ -13,7 +13,7 @@ import { registerGlobal } from 'xxscreeps/game';
 import { shape } from './schema';
 import { findHandlers, lookConstants } from './symbols';
 
-export type AnyRoomObject = Room['#objects'][number];
+export type AnyRoomObject = Exclude<Room['#objects'][number], { '#lookType': null }>;
 
 /**
  * An object representing the room in which your units and structures are in. It can be used to look
@@ -49,7 +49,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Materialize all `RoomObject` instances and build FIND & LOOK indices
 	 */
-	['#initialize'](this: Room) {
+	'#initialize'(this: Room) {
 		if (this.#didInitialize) {
 			return;
 		}
@@ -62,7 +62,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Returns a plain array of all room objects at a given location.
 	 */
-	['#lookAt'](pos: RoomPosition): Readonly<AnyRoomObject[]> {
+	'#lookAt'(pos: RoomPosition): Readonly<AnyRoomObject[]> {
 		return (this.#spatialIndex.get(pos['#id']) ?? []) as never[];
 	}
 
@@ -76,7 +76,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Flushes the cache used by `find` because it sometimes contains user-specific information.
 	 */
-	['#flushFindCache']() {
+	'#flushFindCache'() {
 		this.#findCache.clear();
 	}
 
@@ -84,7 +84,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Execute all insert / remove mutations that have been queued with `InsertObject` or
 	 * `RemoveObject`.
 	 */
-	['#flushObjects'](this: Room, state: GameState | null) {
+	'#flushObjects'(this: Room, state: GameState | null) {
 		// Bail early if there's no work
 		if (this.#insertObjects.length === 0 && this.#removeObjects.size === 0) {
 			return;
@@ -138,7 +138,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Queue an object to be inserted into this room. This is flushed via `FlushObjects`.
 	 */
-	['#insertObject'](this: Room, object: RoomObject, now = false) {
+	'#insertObject'(this: Room, object: RoomObject, now = false) {
 		if (now) {
 			this.#findCache.clear();
 			this['#objects'].push(object as never);
@@ -151,7 +151,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Queue an object to be removed from this room. This is flushed via `FlushObjects`.
 	 */
-	['#removeObject'](object: RoomObject) {
+	'#removeObject'(object: RoomObject) {
 		this.#removeObjects.add(object);
 	}
 
@@ -159,7 +159,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Move an object to a new position within this room. This is reflected in the local room state
 	 * immediately.
 	 */
-	['#moveObject'](object: RoomObject, pos: RoomPosition) {
+	'#moveObject'(object: RoomObject, pos: RoomPosition) {
 		const oldPosition = object.pos['#id'];
 		const oldList = this.#spatialIndex.get(oldPosition)!;
 		if (oldList.length === 1) {
@@ -182,7 +182,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Add an object to the look and spatial indices
 	 */
 	#afterInsert(this: Room, object: RoomObject) {
-		this.#lookIndex.get(object['#lookType'])!.push(object);
+		const lookType = object['#lookType'];
+		if (lookType) {
+			this.#lookIndex.get(lookType)!.push(object);
+		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos);
 		if (list) {
@@ -198,7 +201,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 */
 	#beforeRemove(object: RoomObject) {
 		object['#beforeRemove']();
-		removeOne(this.#lookIndex.get(object['#lookType'])!, object);
+		const lookType = object['#lookType'];
+		if (lookType) {
+			removeOne(this.#lookIndex.get(lookType)!, object);
+		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos)!;
 		if (list.length === 1) {

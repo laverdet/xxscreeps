@@ -1,7 +1,7 @@
 import type { Dictionary } from 'xxscreeps/utility/types';
 import type { FlagIntent } from './model';
 import type { InspectOptionsStylized } from 'util';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Memory from 'xxscreeps/mods/memory/memory';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
 import { RoomObject, format as baseFormat } from 'xxscreeps/game/object';
@@ -30,20 +30,14 @@ export class Flag extends withOverlay(RoomObject, shape) {
 	declare id: never;
 
 	get memory() {
-		if (!this.my) {
-			return;
-		}
 		return (Memory.get().flags ??= {})[this.name] ??= {};
 	}
 
 	set memory(memory: any) {
-		if (!this.my) {
-			return;
-		}
 		(Memory.get().flags ??= {})[this.name] ??= memory;
 	}
 
-	get ['#lookType']() { return C.LOOK_FLAGS }
+	get '#lookType'() { return C.LOOK_FLAGS }
 
 	/**
 	 * Remove the flag

@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as ConstructionSite from './construction-site';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { constant, struct, variant } from 'xxscreeps/schema';

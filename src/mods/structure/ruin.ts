@@ -1,5 +1,5 @@
 import type { Store } from 'xxscreeps/mods/resource/store';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure';

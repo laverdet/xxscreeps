@@ -1,4 +1,4 @@
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import * as Controller from './controller';
 import * as Id from 'xxscreeps/engine/schema/id';
 import { RoomObject } from 'xxscreeps/game/object';
@@ -29,7 +29,7 @@ const actionSchema = registerEnumerated('ActionLog.action', 'reserveController',
 declare module 'xxscreeps/game/object' {
 	interface Schema { controller: typeof actionSchema }
 	interface RoomObject {
-		['#roomStatusDidChange'](level: number, userId: string | null | undefined): void;
+		'#roomStatusDidChange'(level: number, userId: string | null | undefined): void;
 	}
 }
 

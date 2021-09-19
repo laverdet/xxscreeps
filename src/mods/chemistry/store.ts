@@ -1,6 +1,6 @@
 import type { BufferView } from 'xxscreeps/schema';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource';
-import * as C from 'xxscreeps/game/constants';
+import C from 'xxscreeps/game/constants';
 import { Store } from 'xxscreeps/mods/resource/store';
 import { optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
 import { compose, struct, withOverlay } from 'xxscreeps/schema';
@@ -56,7 +56,7 @@ export class LabStore extends withOverlay(Store, shape) {
 		return null;
 	}
 
-	['#add'](type: ResourceType, amount: number) {
+	'#add'(type: ResourceType, amount: number) {
 		if (type === C.RESOURCE_ENERGY) {
 			this['#energy'] =
 			this[C.RESOURCE_ENERGY] += amount;
@@ -67,7 +67,7 @@ export class LabStore extends withOverlay(Store, shape) {
 		}
 	}
 
-	['#subtract'](type: ResourceType, amount: number) {
+	'#subtract'(type: ResourceType, amount: number) {
 		if (type === C.RESOURCE_ENERGY) {
 			this['#energy'] =
 			this[C.RESOURCE_ENERGY] -= amount;

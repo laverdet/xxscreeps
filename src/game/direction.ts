@@ -1,4 +1,4 @@
-import * as C from './constants';
+import C from './constants';
 import { RoomPosition } from './position';
 
 export const ALL_DIRECTIONS = [

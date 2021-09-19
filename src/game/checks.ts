@@ -2,12 +2,11 @@ import type { Room } from './room';
 import type { RoomObject } from './object';
 import * as C from './constants';
 
-export function chainIntentChecks<Checks extends (() => C.ErrorCode | undefined | void)[]>(...checks: Checks):
-Checks extends (() => infer Codes)[] ? Exclude<Codes, undefined | void> : C.ErrorCode {
+export function chainIntentChecks<Errors extends C.ErrorCode>(...checks: (() => (Errors | undefined | void))[]): Errors {
 	for (const check of checks) {
 		const result = check();
 		if (result !== undefined && result !== C.OK) {
-			return result as any;
+			return result;
 		}
 	}
 	return C.OK as any;
