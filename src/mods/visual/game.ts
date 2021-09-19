@@ -1,4 +1,5 @@
 import { hooks, registerGlobal } from 'xxscreeps/game';
+import { GameMap } from 'xxscreeps/game/map';
 import { Room } from 'xxscreeps/game/room';
 import { extend } from 'xxscreeps/utility/utility';
 import { RoomVisual, flush } from './visual';
@@ -34,6 +35,24 @@ extend(Room, {
 			const value = new RoomVisual(this.name);
 			Object.defineProperty(this, 'visual', { value });
 			return value;
+		},
+	},
+});
+
+declare module 'xxscreeps/game/map' {
+	interface GameMap {
+		/**
+		 * A `RoomVisual` object for the map. You can use this object to draw simple shapes (lines,
+		 * circles, text labels).
+		 */
+		readonly visual: RoomVisual;
+	}
+}
+
+extend(GameMap, {
+	visual: {
+		get() {
+			return new RoomVisual('map');
 		},
 	},
 });

@@ -10,21 +10,45 @@ export function getVisualChannel(shard: Shard, userId: string) {
 }
 
 const visualsReader = makeReader(Visual.schema);
+
 export async function loadVisuals(shard: Shard, userId: string, roomName: string) {
 	const fragment = `user/${userId}/visual${shard.time % 2}`;
-	const payload = await shard.scratch.hmget(fragment, [ 'time', '*', roomName ], { blob: true });
-	function stringify(blob: Readonly<Uint8Array> | null) {
+	const fields = [ 'time', roomName ];
+	if (roomName !== 'map') fields.push('*');
+	const payload = await shard.scratch.hmget(fragment, fields, { blob: true });
+
+	function stringify(blob: Readonly<Uint8Array> | null, map = false) {
 		let visualsString = '';
 		if (blob) {
-			for (const visual of visualsReader(blob)) {
-				(visual as any).t = visual[Variant];
+			for (const visual of visualsReader(blob) as any[]) {
+				if (map) {
+					switch (visual[Variant]) {
+						case 'l': {
+							const p1 = Visual.decodeRoomPosition({ x: visual.x1 as number, y: visual.y1 as number });
+							const p2 = Visual.decodeRoomPosition({ x: visual.x2 as number, y: visual.y2 as number });
+							Object.assign(visual, { x1: p1.x, y1: p1.y, n1: p1.n, x2: p2.x, y2: p2.y, n2: p2.n });
+							break;
+						}
+						case 'p':
+							visual.points = visual.points.map((p: number[]) => Visual.decodeRoomPosition({ x: p[0], y: p[1] }));
+							break;
+						default:
+							Object.assign(visual, Visual.decodeRoomPosition(visual));
+					}
+				}
+				visual.t = visual[Variant];
 				visualsString += stringifyInherited(visual) + '\n';
 			}
 		}
 		return visualsString;
 	}
+
 	if (payload.time && typedArrayToString(payload.time) === `${shard.time}`) {
-		return stringify(payload['*']) + stringify(payload[roomName]);
+		if (roomName === 'map') {
+			return stringify(payload[roomName], true);
+		} else {
+			return stringify(payload['*']) + stringify(payload[roomName]);
+		}
 	} else {
 		return '';
 	}

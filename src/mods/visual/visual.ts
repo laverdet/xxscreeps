@@ -1,6 +1,8 @@
+import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import type { TypeOf } from 'xxscreeps/schema';
 import Fn from 'xxscreeps/utility/functional';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema';
+import * as Fn from 'xxscreeps/utility/functional';
 import { build } from 'xxscreeps/engine/schema';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
@@ -100,10 +102,27 @@ export function flush() {
 const writeSchema = makeWriter(schema);
 
 // Extract either x/y pair or RoomPosition to x/y pair
-type Point = [ pos: { x: number; y: number } ] | [ x: number, y: number ];
-function *extractPositions(args: any[]) {
-	for (const arg of args) {
+type Point = [ pos: { x: number; y: number; roomName: string } ] | [ x: number, y: number ];
+
+function encodeRoomPosition(pos: { x: number; y: number; roomName: string }) {
+	const { rx, ry } = parseRoomName(pos.roomName);
+	return { x: rx + pos.x / 50, y: ry + pos.y / 50 };
+}
+
+export function decodeRoomPosition(coord: { x: number; y: number }) {
+	const rx = Math.trunc(coord.x);
+	const ry = Math.trunc(coord.y);
+	return {
+		n: generateRoomName(rx, ry),
+		x: Math.round((coord.x - rx) * 50),
+		y: Math.round((coord.y - ry) * 50),
+	};
+}
+
+function *extractPositions(args: any[], includeRoom: boolean) {
+	for (let arg of args) {
 		if (typeof arg.x === 'number') {
+			if (includeRoom) arg = encodeRoomPosition(arg);
 			yield arg.x;
 			yield arg.y;
 		} else {
@@ -132,6 +151,7 @@ const tickVisuals = new Map<string, TypeOf<typeof visualSchema>[]>();
  */
 export class RoomVisual {
 	#visuals;
+	readonly #map;
 
 	/**
 	 * You can directly create new RoomVisual object in any room, even if it's invisible to your
@@ -141,6 +161,7 @@ export class RoomVisual {
 	 */
 	constructor(roomName = '*') {
 		this.#visuals = getOrSet(tickVisuals, roomName, () => []);
+		this.#map = roomName === 'map';
 	}
 
 	/**
@@ -168,7 +189,7 @@ export class RoomVisual {
 	 * Draw a circle.
 	 */
 	circle(...args: [ ...pos: Point, style?: CircleStyle ]) {
-		const [ x, y, style ] = extractPositions(args);
+		const [ x, y, style ] = extractPositions(args, this.#map);
 		this.#visuals.push({ [Variant]: 'c', x, y, s: style ?? {} });
 		return this;
 	}
@@ -177,7 +198,7 @@ export class RoomVisual {
 	 * Draw a line.
 	 */
 	line(...args: [ ...pos1: Point, ...pos2: Point, style?: LineStyle ]) {
-		const [ x1, y1, x2, y2, style ] = extractPositions(args);
+		const [ x1, y1, x2, y2, style ] = extractPositions(args, this.#map);
 		this.#visuals.push({ [Variant]: 'l', x1, y1, x2, y2, s: style ?? {} });
 		return this;
 	}
@@ -185,10 +206,12 @@ export class RoomVisual {
 	/**
 	 * Draw a polyline.
 	 */
-	poly(points: ([ x: number, y: number ] | { x: number; y: number })[], style?: PolyStyle) {
+	poly(points: ([ x: number, y: number ] | { x: number; y: number; roomName?: string })[], style?: PolyStyle) {
 		// TODO: Spread needed because Schema types are incomplete
-		const filtered = [ ...Fn.filter(Fn.map(points, (point): [ number, number ] =>
-			Array.isArray(point) ? [ point[0], point[1] ] : [ point.x, point.y ])) ];
+		const filtered = [ ...Fn.filter(Fn.map(points, (point): [ number, number ] => {
+			if (this.#map && (point as any).x) point = encodeRoomPosition(point as any);
+			return Array.isArray(point) ? [ point[0], point[1] ] : [ point.x, point.y ];
+		})) ];
 		this.#visuals.push({ [Variant]: 'p', points: filtered, s: (style as any) ?? {} });
 		return this;
 	}
@@ -197,7 +220,7 @@ export class RoomVisual {
 	 * Draw a rectangle.
 	 */
 	rect(...args: [ ...pos: Point, width: number, height: number, style?: RectStyle ]) {
-		const [ x, y, width, height, style ] = extractPositions(args);
+		const [ x, y, width, height, style ] = extractPositions(args, this.#map);
 		this.#visuals.push({ [Variant]: 'r', x, y, w: width, h: height, s: style ?? {} });
 		return this;
 	}
@@ -206,7 +229,7 @@ export class RoomVisual {
 	 * Draw a text label. You can use any valid Unicode characters, including emoji.
 	 */
 	text(text: string, ...args: [ ...pos: Point, style?: TextStyle ]) {
-		const [ x, y, style ] = extractPositions(args);
+		const [ x, y, style ] = extractPositions(args, this.#map);
 		this.#visuals.push({ [Variant]: 't', x, y, text, s: style ?? {} });
 		return this;
 	}

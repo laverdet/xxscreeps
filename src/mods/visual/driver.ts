@@ -14,7 +14,7 @@ declare module 'xxscreeps/engine/runner' {
 hooks.register('runnerConnector', player => [ undefined, {
 	async save(result) {
 		const validPayloads = Fn.filter(result.visuals, ({ roomName }) =>
-			roomName === '*' || player.world.terrain.has(roomName));
+			roomName === '*' || roomName === 'map' || player.world.terrain.has(roomName));
 		const payload = new Map(Fn.map(validPayloads, payload =>
 			[ payload.roomName, payload.blob ]));
 		await publishVisualsBlobsForNextTick(player.shard, player.userId, payload);
