@@ -1,6 +1,6 @@
-import { hooks } from 'xxscreeps/backend';
 import config from 'xxscreeps/config';
-import { mustNotReject } from 'xxscreeps/utility/async';
+import { hooks } from 'xxscreeps/backend';
+import { acquire, mustNotReject } from 'xxscreeps/utility/async';
 import { throttle } from 'xxscreeps/utility/utility';
 import { getVisualChannel, loadVisuals } from './model';
 
@@ -36,22 +36,40 @@ hooks.register('roomSocket', async(shard, userId, roomName) => {
 hooks.register('subscription', {
 	pattern: /^mapVisual:(?<user>[^/]+)\/(?<shard>[^/]+)$/,
 
-	subscribe(params) {
+	async subscribe(params) {
 		const { user } = params;
 		const { shard } = this.context;
 		if (!this.user || user !== this.user) {
 			return () => {};
 		}
 
+		let lastTime = shard.time;
 		const check = throttle(() => mustNotReject(async() => {
 			const visual = await loadVisuals(shard, user, 'map');
 			this.send(JSON.stringify(visual));
 		}));
-		// Subscribe to game tick updates
-		const subscription = this.context.shard.channel.listen(() => check.set(config.backend.socketThrottle));
-		return () => {
-			subscription();
-			check.clear();
-		};
+
+		const [ effect ] = await acquire(
+			// Subscribe to visuals channel and listen for map publishes
+			function() {
+				return getVisualChannel(shard, user).listen<true>(message => {
+					if (message.type === 'publish') {
+						if (message.roomNames.includes('map')) {
+							lastTime = message.time;
+						}
+					}
+				});
+			}(),
+			function() {
+				// Subscribe to game tick updates
+				return shard.channel.listen(message => {
+					if (message.type === 'tick' && message.time >= lastTime) {
+						check.set(config.backend.socketThrottle);
+					}
+				});
+			}(),
+			() => check.clear(),
+		);
+		return effect;
 	},
 });

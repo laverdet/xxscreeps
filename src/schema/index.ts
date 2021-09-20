@@ -27,3 +27,9 @@ export class Builder {
 		this.materialize = options.materialize ?? false;
 	}
 }
+
+// Workaround for TypeScript bug:
+// https://github.com/microsoft/TypeScript/issues/10530
+export function assertVariant<Type, Var extends string>(_schema: Type, _variant: Var):
+		asserts _schema is Extract<Type, { [Variant]: Var }> {
+}

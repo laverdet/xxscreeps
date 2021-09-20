@@ -52,7 +52,18 @@ declare module 'xxscreeps/game/map' {
 extend(GameMap, {
 	visual: {
 		get() {
-			return new RoomVisual('map');
+			const value = new RoomVisual('map');
+			Object.defineProperty(this, 'visual', {
+				value,
+				configurable: true,
+			});
+			return value;
 		},
 	},
+});
+
+// Delete cached RoomVisual instance each tick
+hooks.register('gameInitializer', Game => {
+	const map: any = Game.map;
+	delete map.visual;
 });

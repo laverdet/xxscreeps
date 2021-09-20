@@ -1,8 +1,7 @@
-import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import type { TypeOf } from 'xxscreeps/schema';
 import Fn from 'xxscreeps/utility/functional';
+import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema';
-import * as Fn from 'xxscreeps/utility/functional';
 import { build } from 'xxscreeps/engine/schema';
 import { getOrSet } from 'xxscreeps/utility/utility';
 
@@ -102,9 +101,16 @@ export function flush() {
 const writeSchema = makeWriter(schema);
 
 // Extract either x/y pair or RoomPosition to x/y pair
-type Point = [ pos: { x: number; y: number; roomName: string } ] | [ x: number, y: number ];
+type LocalPoint = {
+	x: number;
+	y: number;
+};
+type RoomPoint = LocalPoint & {
+	roomName: string;
+};
+type PointParam = [ x: number, y: number ] | [ pos: LocalPoint ] | [ pos: RoomPoint ];
 
-function encodeRoomPosition(pos: { x: number; y: number; roomName: string }) {
+function encodeRoomPosition(pos: RoomPoint) {
 	const { rx, ry } = parseRoomName(pos.roomName);
 	return { x: rx + pos.x / 50, y: ry + pos.y / 50 };
 }
@@ -119,12 +125,12 @@ export function decodeRoomPosition(coord: { x: number; y: number }) {
 	};
 }
 
-function *extractPositions(args: any[], includeRoom: boolean) {
-	for (let arg of args) {
+function *extractPositions(args: any[], includeRoom: boolean): Iterable<any> {
+	for (const arg of args) {
 		if (typeof arg.x === 'number') {
-			if (includeRoom) arg = encodeRoomPosition(arg);
-			yield arg.x;
-			yield arg.y;
+			const point = includeRoom ? encodeRoomPosition(arg) : arg;
+			yield point.x;
+			yield point.y;
 		} else {
 			yield arg;
 		}
@@ -151,7 +157,7 @@ const tickVisuals = new Map<string, TypeOf<typeof visualSchema>[]>();
  */
 export class RoomVisual {
 	#visuals;
-	readonly #map;
+	readonly #isMap;
 
 	/**
 	 * You can directly create new RoomVisual object in any room, even if it's invisible to your
@@ -161,7 +167,7 @@ export class RoomVisual {
 	 */
 	constructor(roomName = '*') {
 		this.#visuals = getOrSet(tickVisuals, roomName, () => []);
-		this.#map = roomName === 'map';
+		this.#isMap = roomName === 'map';
 	}
 
 	/**
@@ -188,8 +194,8 @@ export class RoomVisual {
 	/**
 	 * Draw a circle.
 	 */
-	circle(...args: [ ...pos: Point, style?: CircleStyle ]) {
-		const [ x, y, style ] = extractPositions(args, this.#map);
+	circle(...args: [ ...pos: PointParam, style?: CircleStyle ]) {
+		const [ x, y, style ] = extractPositions(args, this.#isMap);
 		this.#visuals.push({ [Variant]: 'c', x, y, s: style ?? {} });
 		return this;
 	}
@@ -197,8 +203,8 @@ export class RoomVisual {
 	/**
 	 * Draw a line.
 	 */
-	line(...args: [ ...pos1: Point, ...pos2: Point, style?: LineStyle ]) {
-		const [ x1, y1, x2, y2, style ] = extractPositions(args, this.#map);
+	line(...args: [ ...pos1: PointParam, ...pos2: PointParam, style?: LineStyle ]) {
+		const [ x1, y1, x2, y2, style ] = extractPositions(args, this.#isMap);
 		this.#visuals.push({ [Variant]: 'l', x1, y1, x2, y2, s: style ?? {} });
 		return this;
 	}
@@ -206,21 +212,20 @@ export class RoomVisual {
 	/**
 	 * Draw a polyline.
 	 */
-	poly(points: ([ x: number, y: number ] | { x: number; y: number; roomName?: string })[], style?: PolyStyle) {
-		// TODO: Spread needed because Schema types are incomplete
-		const filtered = [ ...Fn.filter(Fn.map(points, (point): [ number, number ] => {
-			if (this.#map && (point as any).x) point = encodeRoomPosition(point as any);
-			return Array.isArray(point) ? [ point[0], point[1] ] : [ point.x, point.y ];
-		})) ];
-		this.#visuals.push({ [Variant]: 'p', points: filtered, s: (style as any) ?? {} });
+	poly(points: (LocalPoint | RoomPoint)[], style?: PolyStyle) {
+		const pairs = [
+			...Fn.map(points, point =>
+				[ ...extractPositions([ point ], this.#isMap) ] as [ number, number ]),
+		];
+		this.#visuals.push({ [Variant]: 'p', points: pairs, s: (style as any) ?? {} });
 		return this;
 	}
 
 	/**
 	 * Draw a rectangle.
 	 */
-	rect(...args: [ ...pos: Point, width: number, height: number, style?: RectStyle ]) {
-		const [ x, y, width, height, style ] = extractPositions(args, this.#map);
+	rect(...args: [ ...pos: PointParam, width: number, height: number, style?: RectStyle ]) {
+		const [ x, y, width, height, style ] = extractPositions(args, this.#isMap);
 		this.#visuals.push({ [Variant]: 'r', x, y, w: width, h: height, s: style ?? {} });
 		return this;
 	}
@@ -228,8 +233,8 @@ export class RoomVisual {
 	/**
 	 * Draw a text label. You can use any valid Unicode characters, including emoji.
 	 */
-	text(text: string, ...args: [ ...pos: Point, style?: TextStyle ]) {
-		const [ x, y, style ] = extractPositions(args, this.#map);
+	text(text: string, ...args: [ ...pos: PointParam, style?: TextStyle ]) {
+		const [ x, y, style ] = extractPositions(args, this.#isMap);
 		this.#visuals.push({ [Variant]: 't', x, y, text, s: style ?? {} });
 		return this;
 	}
