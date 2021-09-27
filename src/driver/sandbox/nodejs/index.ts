@@ -85,6 +85,9 @@ export class NodejsSandbox implements Sandbox {
 		const start = process.hrtime.bigint();
 		try {
 			const payload = this.tick!(data);
+			if (payload.error) {
+				return { result: 'error' as const, console: payload.console };
+			}
 			payload.usage.cpu = Number(process.hrtime.bigint() - start) / 1e6;
 			return { result: 'success' as const, payload };
 		} catch (err: any) {

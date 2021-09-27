@@ -19,6 +19,9 @@ export interface Sandbox {
 
 	initialize(data: InitializationPayload): Promise<void>;
 	run(data: TickPayload): Promise<{
+		result: 'error';
+		console: string | undefined;
+	} | {
 		result: 'disposed';
 	} | {
 		result: 'timedOut';

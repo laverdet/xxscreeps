@@ -99,6 +99,9 @@ export class IsolatedSandbox implements Sandbox {
 					result: { copy: true },
 					timeout: args.cpu.tickLimit,
 				});
+			if (payload.error) {
+				return { result: 'error' as const, console: payload.console };
+			}
 			const totalTime = this.isolate.cpuTime;
 			payload.usage.cpu = Number(totalTime - this.totalTime) / 1e6;
 			this.totalTime = totalTime;

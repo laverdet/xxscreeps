@@ -92,113 +92,127 @@ export function initialize(compiler: Compiler, evaluate: Evaluate, data: Initial
 }
 
 export function tick(data: TickPayload) {
-
-	// Initialize rooms and data about users in those rooms
-	const { time } = data;
-	const rooms = data.roomBlobs.map(blob => {
-		const room = RoomSchema.read(blob);
-		room['#initialize']();
-		return room;
-	});
-	if (data.usernames) {
-		for (const userId in data.usernames) {
-			userInfo.set(userId, { username: data.usernames[userId] });
+	try {
+		// Initialize rooms and data about users in those rooms
+		const { time } = data;
+		const rooms = data.roomBlobs.map(blob => {
+			const room = RoomSchema.read(blob);
+			room['#initialize']();
+			return room;
+		});
+		if (data.usernames) {
+			for (const userId in data.usernames) {
+				userInfo.set(userId, { username: data.usernames[userId] });
+			}
 		}
-	}
-	const state = new GameState(world, data.time, rooms);
+		const state = new GameState(world, data.time, rooms);
 
-	// Enter user runtime context
-	const tickResult: Partial<TickResult> = { usage: {} };
-	const [ intents ] = runForPlayer(me, state, data, Game => {
-		hooksComposed.receive(data);
+		// Enter user runtime context
+		const tickResult: Partial<TickResult> = { usage: {} };
+		const [ intents ] = runForPlayer(me, state, data, Game => {
+			hooksComposed.receive(data);
 
-		// Run player loop
-		globalThis.Game = Game;
-		try {
-			(function thisIsWhereThePlayerCodeStarts() {
-				if (loop) {
-					loop();
-				} else {
-					const main = requireMain();
-					if (main.loop) {
-						loop = main.loop;
-						loop!();
+			// Run player loop
+			globalThis.Game = Game;
+			try {
+				(function thisIsWhereThePlayerCodeStarts() {
+					if (loop) {
+						loop();
 					} else {
-						throw new Error('No `loop` function exported by `main` module');
+						const main = requireMain();
+						if (main.loop) {
+							loop = main.loop;
+							loop!();
+						} else {
+							throw new Error('No `loop` function exported by `main` module');
+						}
+					}
+				}());
+			} catch (err: any) {
+				const lines: string[] = err.stack.split(/\n/g);
+				const index = lines.findIndex(line => line.includes('thisIsWhereThePlayerCodeStarts'));
+				console.error((index === -1 ? lines : lines.slice(0, index)).join('\n'));
+			}
+
+			// Run requested eval expressions
+			data.eval.forEach(payload => {
+				try {
+					// eslint-disable-next-line @typescript-eslint/no-implied-eval
+					const result = new Function('expr', 'return eval(expr)')(payload.expr);
+					if (payload.ack) {
+						const ack = tickResult.evalAck ??= [];
+						ack.push({
+							id: payload.ack,
+							result: {
+								error: false,
+								value: payload.echo ? undefined : result,
+							},
+						});
+					}
+					if (payload.echo) {
+						print(1, `${resultPrefix}${inspect(result, { colors: true })}`);
+					}
+				} catch (err: any) {
+					if (payload.ack) {
+						const ack = tickResult.evalAck ??= [];
+						ack.push({
+							id: payload.ack,
+							result: {
+								error: true,
+								value: err.message,
+							},
+						});
+					}
+					if (payload.echo) {
+						print(2, err.stack ?? err.message ?? err);
 					}
 				}
-			}());
-		} catch (err: any) {
-			const lines: string[] = err.stack.split(/\n/g);
-			const index = lines.findIndex(line => line.includes('thisIsWhereThePlayerCodeStarts'));
-			console.error((index === -1 ? lines : lines.slice(0, index)).join('\n'));
-		}
-
-		// Run requested eval expressions
-		data.eval.forEach(payload => {
-			try {
-				// eslint-disable-next-line @typescript-eslint/no-implied-eval
-				const result = new Function('expr', 'return eval(expr)')(payload.expr);
-				if (payload.ack) {
-					const ack = tickResult.evalAck ??= [];
-					ack.push({
-						id: payload.ack,
-						result: {
-							error: false,
-							value: payload.echo ? undefined : result,
-						},
-					});
-				}
-				if (payload.echo) {
-					print(1, `${resultPrefix}${inspect(result, { colors: true })}`);
-				}
-			} catch (err: any) {
-				if (payload.ack) {
-					const ack = tickResult.evalAck ??= [];
-					ack.push({
-						id: payload.ack,
-						result: {
-							error: true,
-							value: err.message,
-						},
-					});
-				}
-				if (payload.echo) {
-					print(2, err.stack ?? err.message ?? err);
-				}
-			}
+			});
+			globalThis.Game = undefined;
 		});
-		globalThis.Game = undefined;
-	});
 
-	// Inject user intents
-	if (data.backendIntents) {
-		for (const intent of data.backendIntents) {
-			const receiver = Game.getObjectById(intent.receiver);
-			if (receiver) {
-				intents.save(receiver as never, intent.intent as never, ...intent.params as never);
-			} else {
-				// intents.pushNamed(intent.receiver as never, intent.intent as never, ...intent.params);
+		// Inject user intents
+		if (data.backendIntents) {
+			for (const intent of data.backendIntents) {
+				const receiver = Game.getObjectById(intent.receiver);
+				if (receiver) {
+					intents.save(receiver as never, intent.intent as never, ...intent.params as never);
+				} else {
+					// intents.pushNamed(intent.receiver as never, intent.intent as never, ...intent.params);
+				}
 			}
 		}
-	}
 
-	// Write room intents into blobs
-	tickResult.intentPayloads = Fn.fromEntries(Fn.filter(Fn.map(rooms, ({ name }) => {
-		const intentsForRoom = intents.getIntentsForRoom(name);
-		if (intentsForRoom) {
-			return [ name, intentsForRoom ];
+		// Write room intents into blobs
+		tickResult.intentPayloads = Fn.fromEntries(Fn.filter(Fn.map(rooms, ({ name }) => {
+			const intentsForRoom = intents.getIntentsForRoom(name);
+			if (intentsForRoom) {
+				return [ name, intentsForRoom ];
+			}
+		})));
+
+		// Gather tick results from runtimeConnector
+		hooksComposed.send(tickResult as TickResult);
+		tickResult.console = flush();
+
+		// Release shared memory
+		for (const room of rooms) {
+			detach(room, () => new Error(`Accessed a released object from a previous tick[${time}]`));
 		}
-	})));
 
-	// Gather tick results from runtimeConnector
-	hooksComposed.send(tickResult as TickResult);
-	tickResult.console = flush();
+		return tickResult as TickResult;
 
-	// Release shared memory
-	for (const room of rooms) {
-		detach(room, () => new Error(`Accessed a released object from a previous tick[${time}]`));
+	} catch (err) {
+		try {
+			console.error(
+				'An error was caught in the game runtime. This may be due to unsafe modifications to game prototypes by the player.',
+				err);
+			return {
+				error: true as const,
+				console: flush(),
+			};
+		} catch {
+			return { error: true as const };
+		}
 	}
-
-	return tickResult as TickResult;
 }
