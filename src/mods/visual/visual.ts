@@ -212,10 +212,12 @@ export class RoomVisual {
 	/**
 	 * Draw a polyline.
 	 */
-	poly(points: (LocalPoint | RoomPoint)[], style?: PolyStyle) {
+	poly(points: (LocalPoint | RoomPoint | [number, number])[], style?: PolyStyle) {
 		const pairs = [
 			...Fn.map(points, point =>
-				[ ...extractPositions([ point ], this.#isMap) ] as [ number, number ]),
+				Array.isArray(point) ?
+					point :
+					[ ...extractPositions([ point ], this.#isMap) ] as [ number, number ]),
 		];
 		this.#visuals.push({ [Variant]: 'p', points: pairs, s: (style as any) ?? {} });
 		return this;
