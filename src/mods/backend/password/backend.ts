@@ -2,7 +2,12 @@ import type { Database } from 'xxscreeps/engine/db';
 import crypto from 'crypto';
 import { promisify } from 'util';
 import { hooks } from 'xxscreeps/backend';
+import config from 'xxscreeps/config';
+import * as User from 'xxscreeps/engine/db/user';
 import { findUserByName, infoKey } from 'xxscreeps/engine/db/user';
+import * as Id from 'xxscreeps/engine/schema/id';
+
+const { allowEmailRegistration } = config.backend;
 
 async function checkPassword(db: Database, userId: string, password: string) {
 	const info = await async function() {
@@ -15,6 +20,17 @@ async function checkPassword(db: Database, userId: string, password: string) {
 		const hash = await promisify(crypto.pbkdf2)(password, Buffer.from(info.salt, 'latin1'), info.iterations, 64, 'sha512');
 		return hash.compare(Buffer.from(info.hash, 'latin1')) === 0;
 	}
+}
+
+async function setPassword(db: Database, userId: string, password: string) {
+	const iterations = 100000;
+	const salt = crypto.randomBytes(16);
+	const hash = await promisify(crypto.pbkdf2)(password, salt, iterations, 64, 'sha512');
+	await db.data.hset(infoKey(userId), 'password', JSON.stringify({
+		hash,
+		iterations,
+		salt: salt.toString('latin1'),
+	}));
 }
 
 // HTTP Basic Auth
@@ -71,24 +87,46 @@ hooks.register('route', {
 		) {
 			return { error: 'Invalid password' };
 		}
-		const iterations = 100000;
-		const salt = crypto.randomBytes(16);
-		const hash = await promisify(crypto.pbkdf2)(password, salt, iterations, 64, 'sha512');
-		await context.db.data.hset(infoKey(userId), 'password', JSON.stringify({
-			hash,
-			iterations,
-			salt: salt.toString('latin1'),
-		}));
+		await setPassword(context.db, userId, password);
 		return { ok: 1 };
 	},
 });
 
-// Add password flag to user info payload
+// Register Account
+hooks.register('route', {
+	method: 'post',
+	path: '/api/register/submit',
+
+	async execute(context) {
+		const { username, email, password } = context.request.body;
+		if (!User.checkUsername(username)) {
+			return { error: 'invalid' };
+		}
+		if (await User.findUserByName(context.db, username)) {
+			return { error: 'exists' };
+		}
+		if (allowEmailRegistration) {
+			const newUserId = Id.generateId(12);
+			await User.create(context.db, newUserId, username, [ { provider: 'email', id: email } ]);
+			await setPassword(context.db, newUserId, password);
+			return { ok: 1 };
+		} else {
+			context.status = 500;
+			return { error: 'registration disabled' };
+		}
+	},
+});
+
+// Add password flag and email to user info payload
 hooks.register('sendUserInfo', async(db, userId, userInfo, privateSelf) => {
 	if (privateSelf) {
 		const password = await db.data.hget(infoKey(userId), 'password');
 		if (password) {
 			userInfo.password = true;
+		}
+		const email = await User.providerIdForUser(db, 'email', userId);
+		if (email) {
+			userInfo.email = email;
 		}
 	}
 });

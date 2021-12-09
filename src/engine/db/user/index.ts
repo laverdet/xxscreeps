@@ -57,6 +57,10 @@ export function findProvidersForUser(db: Database, userId: string) {
 	return db.data.hgetall(userProvidersKey(userId));
 }
 
+export function providerIdForUser(db: Database, provider: string, userId: string) {
+	return db.data.hget(userProvidersKey(userId), provider);
+}
+
 export async function findUserByProvider(db: Database, provider: string, providerId: string) {
 	return db.data.hget(providerMembersKey(provider), providerId);
 }
