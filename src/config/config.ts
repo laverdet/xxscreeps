@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import os from 'os';
 
+// When making changes to the schema, remember to generate a new typescript json schema with the below command
 // npx typescript-json-schema tsconfig.json Schema --include ./src/config/config.ts --defaultProps --required -o ./src/config/config.schema.json
 export type Schema = {
 	/**

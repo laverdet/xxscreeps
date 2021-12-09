@@ -102,9 +102,9 @@ backend:
   steamApiKey: <your steam key>
 ```
 
-If you're using VS Code and you have the YAML extension installed all the options should
+If you're using VS Code and you have the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) installed all the options should
 autocomplete. If not you can read the [config
-schema](https://github.com/laverdet/xxscreeps/blob/main/src/config/schema.ts).
+schema](src/config/config.ts).
 
 ## Docker
 
