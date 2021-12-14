@@ -1,10 +1,10 @@
 import * as C from 'xxscreeps/game/constants';
 import { assert, describe, simulate, test } from 'xxscreeps/test';
-
+import { RoomPosition } from 'xxscreeps/game/position';
+import { create } from 'xxscreeps/mods/spawn/spawn';
 describe('Power', () => {
 	const simulation = simulate({
-		W0N0: room => {
-			room['#user'] = '100';
+		W1N1: room => {
 		},
 	});
 
