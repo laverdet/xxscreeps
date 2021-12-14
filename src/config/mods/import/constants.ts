@@ -20,3 +20,4 @@ export * from 'xxscreeps/mods/road/constants';
 export * from 'xxscreeps/mods/source/constants';
 export * from 'xxscreeps/mods/spawn/constants';
 export * from 'xxscreeps/mods/structure/constants';
+export * from 'xxscreeps/mods/power/constants';

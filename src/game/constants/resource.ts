@@ -5,7 +5,7 @@ export const RESOURCE_METAL = 'metal' as const;
 export const RESOURCE_BIOMASS = 'biomass' as const;
 export const RESOURCE_MIST = 'mist' as const;
 
-export const RESOURCE_OPS = 'ops' as const;
+/*export const RESOURCE_OPS = 'ops' as const;*/
 
 export const RESOURCE_UTRIUM_BAR = 'utrium_bar' as const;
 export const RESOURCE_LEMERGIUM_BAR = 'lemergium_bar' as const;
