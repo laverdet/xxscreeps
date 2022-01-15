@@ -53,7 +53,7 @@ export function create(pos: RoomPosition, owner: string) {
 }
 
 registerBuildableStructure(C.STRUCTURE_RAMPART, {
-	obstacle: undefined,
+	obstacle: false,
 	checkPlacement(room, pos) {
 
 		// Don't allow double ramparts
