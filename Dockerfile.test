@@ -1,0 +1,14 @@
+FROM node:16 as build
+WORKDIR /usr/app/xxscreeps
+RUN touch .screepsrc.yaml
+COPY package*.json ./
+COPY bin bin
+RUN npm install
+COPY tsconfig*.json ./
+COPY src src
+RUN echo 'update-notifier=false' >> .npmrc && \
+	npm explore @xxscreeps/path-finder -- npm install && \
+	npm run build
+COPY test test
+RUN npm run eslint
+RUN npm run test

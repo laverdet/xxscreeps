@@ -1,16 +1,9 @@
-os: linux
-dist: xenial
-language: node_js
-node_js: 16
 
-install:
-  - npm install
-  - npm run build
+services:
+  - docker
 
 script:
-  - npm run eslint
-  - npm run test
-  - npx xxscreeps import
+  - docker build -f Dockerfile.test .
 
 notifications:
   email: false
