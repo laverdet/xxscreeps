@@ -4,7 +4,7 @@ import { RoomPosition } from 'xxscreeps/game/position';
 import { create as createConstructionSite } from 'xxscreeps/mods/construction/construction-site';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep';
 
-describe('ramparts', () => {    
+describe('ramparts', () => {
 	const roomWithUnbuiltRamparts = simulate({
 		W0N0: room => {
 			room['#level'] = 3;
@@ -18,7 +18,7 @@ describe('ramparts', () => {
 		await player('100', Game => {
 			assert.strictEqual(Game.creeps.rampart_movement.moveTo(25, 25), C.OK);
 		});
-        
+
 		await tick();
 
 		await player('100', Game => {
@@ -33,7 +33,7 @@ describe('ramparts', () => {
 		await player('100', Game => {
 			assert.strictEqual(Game.creeps.rampart_movement.move(C.RIGHT), C.OK);
 		});
-        
+
 		await tick();
 
 		await player('100', Game => {
