@@ -1,4 +1,4 @@
-FROM node:16 as build
+FROM node:20 as build
 WORKDIR /usr/app/xxscreeps
 RUN touch .screepsrc.yaml
 COPY package*.json ./
@@ -10,7 +10,7 @@ RUN echo 'update-notifier=false' >> .npmrc && \
 	npm explore @xxscreeps/path-finder -- npm install && \
 	npm run build
 
-FROM node:16-slim as run
+FROM node:20-slim as run
 WORKDIR /usr/app/xxscreeps
 COPY --from=build /usr/app/xxscreeps/ ./
 EXPOSE 21025
