@@ -252,6 +252,6 @@ export class RoomVisual {
 	 * Not implemented!
 	 */
 	getSize() {
-		return Infinity;
+		return 0;
 	}
 }
