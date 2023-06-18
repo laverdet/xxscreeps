@@ -15,8 +15,11 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 		// Use flat CommonJS loader
 		const require = makeRequire(evaluate, {
 			resolve(specifier) {
-				// Allow require('./module')
-				return specifier.replace(/^\.\//, '');
+				// Allow require('./module.js')
+				const basename = specifier.replace(/^\.\//, '');
+				// Allow require('module')
+				const withJs = `${basename}.js`
+				return modules.has(withJs) ? withJs : basename
 			},
 			compile(url) {
 				return modules.get(url);
