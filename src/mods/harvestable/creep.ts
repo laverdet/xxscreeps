@@ -9,7 +9,7 @@ import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep.js';
 export function checkHarvest(creep: Creep, target: Harvestable | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => target ? target['#checkHarvest'](creep) : C.ERR_INVALID_TARGET,
+		() => target && target['#checkHarvest'] ? target['#checkHarvest'](creep) : C.ERR_INVALID_TARGET,
 	) as HarvestResult;
 }
 
