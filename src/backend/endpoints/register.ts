@@ -51,15 +51,14 @@ const SetUsernameEndpoint: Endpoint = {
 		}
 
 		// Sanity check
-		if (!User.checkUsername(username) || !validateEmail(email)) {
+		if (!User.checkUsername(username) || (email && !validateEmail(email))) {
 			return { error: 'invalid' };
 		}
 
 		// Register
-		await User.create(context.db, newUserId, username, [
-			{ provider, id: providerId },
-			{ provider: 'email', id: email },
-		]);
+		const providers = [{ provider, id: providerId }]
+		if (email) providers.push({ provider: 'email', id: email })
+		await User.create(context.db, newUserId, username, providers);
 		context.state.userId = newUserId;
 		context.state.newUserId = undefined;
 		context.state.provider = undefined;
