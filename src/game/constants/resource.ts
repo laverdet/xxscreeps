@@ -1,5 +1,3 @@
-export const SUBSCRIPTION_TOKEN = 'token' as const;
-
 export const RESOURCE_SILICON = 'silicon' as const;
 export const RESOURCE_METAL = 'metal' as const;
 export const RESOURCE_BIOMASS = 'biomass' as const;
@@ -49,7 +47,6 @@ export const RESOURCE_SPIRIT = 'spirit' as const;
 export const RESOURCE_EMANATION = 'emanation' as const;
 export const RESOURCE_ESSENCE = 'essence' as const;
 
-export const INTERSHARD_RESOURCES = [];
 export const COMMODITIES = {};
 /*
 export const RESOURCES_ALL = [
@@ -150,8 +147,6 @@ export const RESOURCES_ALL = [
 	RESOURCE_EMANATION,
 	RESOURCE_ESSENCE,
 ];
-
-export const INTERSHARD_RESOURCES = [ SUBSCRIPTION_TOKEN ];
 
 export const COMMODITIES = {
 	[RESOURCE_UTRIUM_BAR]: {
