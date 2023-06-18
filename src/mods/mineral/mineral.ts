@@ -7,6 +7,7 @@ import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
+import { assign } from 'xxscreeps/utility/utility.js';
 
 export const format = declare('Mineral', () => compose(shape, Mineral));
 const shape = struct(RoomObject.format, {
@@ -19,6 +20,12 @@ const shape = struct(RoomObject.format, {
 
 // Game object declaration
 export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
+
+	constructor(idOrArg1?: any, arg2?: any) {
+		super(idOrArg1, arg2)
+		if (typeof idOrArg1 === 'string') assign<Mineral>(this, RoomObject.getById(Mineral, idOrArg1))
+	}
+
 	@enumerable get ticksToRegeneration() {
 		const nextTime = this['#nextRegenerationTime'];
 		return nextTime === 0 ? undefined : Math.max(0, nextTime - Game.time);
