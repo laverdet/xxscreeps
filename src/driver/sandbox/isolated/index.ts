@@ -65,6 +65,7 @@ export class IsolatedSandbox implements Sandbox {
 			}(),
 			context.global.set('global', context.global.derefInto()),
 			context.global.set('ivm', ivm),
+			context.global.set('exports', {}, { copy: true })
 		]);
 
 		// Initialize runtime.ts and load player code + memory
