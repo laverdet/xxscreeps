@@ -145,14 +145,20 @@ export class RoomPosition {
 		this.#id = this.#id & ~(0xff << 24) | yy << 24;
 	}
 
+	get '#rx'() {
+		return this.#id & 0xff;
+	}
+	get '#ry'() {
+		return (this.#id >>> 8) & 0xff;
+	}
+
 	getDirectionTo(x: number, y: number): Direction;
 	getDirectionTo(pos: RoomObject | RoomPosition): Direction;
-	getDirectionTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
-		const { xx, yy, room } = fetchArguments(...args);
-		if (room === 0 || (this.#id & 0xffff) === room) {
-			return getDirection(xx - this.x, yy - this.y);
-		}
-		// TODO: Multi-room distance
+	getDirectionTo(...args: [number, number] | [RoomObject | RoomPosition]) {
+		const { pos } = fetchPositionArgument(this.roomName, ...args);
+		if (!pos) return undefined;
+
+		return getDirection(pos['#rx'] * 50 + pos.x - this['#rx'] * 50 - this.x, pos['#ry'] * 50 + pos.y - this['#ry'] * 50 - this.y);
 	}
 
 	/**
@@ -385,24 +391,26 @@ export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any)
 }
 
 export function fetchPositionArgument<Extra = any>(
-	fromRoom: string, arg1?: any, arg2?: any, arg3?: any,
-): { pos: RoomPosition | undefined; extra: Extra | undefined } {
+	fromRoom: string, arg1?: any, arg2?: any, arg3?: Extra, ...rest: any
+): { pos: RoomPosition | undefined; extra: Extra | undefined, rest: any } {
 	if (typeof arg1 === 'object' && arg1 !== null) {
 		if (arg1 instanceof RoomPosition) {
-			return { pos: arg1, extra: arg2 };
+			return { pos: arg1, extra: arg2, rest };
 		} else if (arg1.pos instanceof RoomPosition) {
-			return { pos: arg1.pos, extra: arg2 };
+			return { pos: arg1.pos, extra: arg2, rest };
 		}
 	}
 	try {
 		return {
 			pos: new RoomPosition(arg1, arg2, fromRoom),
 			extra: arg3,
+			rest,
 		};
 	} catch (err) {
 		return {
 			pos: undefined,
 			extra: undefined,
+			rest,
 		};
 	}
 }
