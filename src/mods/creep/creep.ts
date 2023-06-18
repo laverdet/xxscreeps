@@ -9,7 +9,7 @@ import C from 'xxscreeps/game/constants/index.js';
 import Fn from 'xxscreeps/utility/functional.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { RoomObject, actionLogFormat, create as createObject, format as objectFormat, saveAction } from 'xxscreeps/game/object.js';
+import { RoomObject, actionLogFormat, create as createObject, getById, format as objectFormat, saveAction } from 'xxscreeps/game/object.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
@@ -56,6 +56,18 @@ const shape = struct(objectFormat, {
 });
 
 export class Creep extends withOverlay(RoomObject, shape) {
+
+	constructor(idOrArg1?: any, arg2?: any) {
+		super(typeof idOrArg1 === 'string' ? undefined : idOrArg1, arg2)
+		if (typeof idOrArg1 === 'string') {
+			const it = getById(Creep, idOrArg1)
+			this['#ageTime'] = it['#ageTime']
+			this['#user'] = it['#user']
+			assign<Creep>(this, it)
+		}
+		
+	}
+
 	get carry() { return this.store }
 	get carryCapacity() { return this.store.getCapacity() }
 	@enumerable override get hitsMax() { return this.body.length * 100 }

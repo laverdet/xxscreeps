@@ -1,5 +1,5 @@
 import type { GameConstructor } from './index.js';
-import type { InspectOptionsStylized } from 'util';
+import { inspect, type InspectOptionsStylized } from 'util';
 import type { Room } from './room/index.js';
 import type { RoomPosition } from './position.js';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
@@ -130,4 +130,12 @@ export function saveAction(object: WithActionLog, type: ActionLog[number]['type'
 		}
 	}
 	actionLog.push({ type, x: pos.x, y: pos.y, time: Game.time });
+}
+
+export function getById<T>(Type: new (...args: any) => T, id: string): T {
+	const it = Game.getObjectById(id)
+	if (!it || !(it instanceof Type)) throw new Error("Could not find an object with ID " + id);
+	// Render all properties
+	inspect(it, true, 1)
+	return it as T
 }
