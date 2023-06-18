@@ -11,7 +11,7 @@ type Loader<Source> = {
 
 export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compiler: Compiler) {
 	const main = [ 'main.js', 'main.mjs', 'main.wasm', 'main' ].find(entry => modules.has(entry));
-	if (main === 'main') {
+	if (main === 'main' || main == 'main.js') {
 		// Use flat CommonJS loader
 		const require = makeRequire(evaluate, {
 			resolve(specifier) {
