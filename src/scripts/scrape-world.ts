@@ -6,6 +6,7 @@ import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 import Loki from 'lokijs';
 import jsYaml from 'js-yaml';
 import fs from 'fs/promises';
+import path from 'path';
 
 import Configs from 'xxscreeps/config/mods/import/config.js';
 import config, { configPath } from 'xxscreeps/config/index.js';
@@ -45,7 +46,8 @@ import { merge } from 'xxscreeps/utility/utility.js';
 
 const argv = checkArguments({
 	argv: true,
-	boolean: [ 'dont-overwrite', 'shard-only' ] as const,
+	boolean: ['dont-overwrite', 'shard-only'] as const,
+	string: ['overwrite-code'] as const
 });
 const dontOverwrite = argv['dont-overwrite'];
 const shardOnly = argv['shard-only'];
@@ -329,8 +331,20 @@ if (!shardOnly) {
 	}
 
 	// Save user code content
+	const overwriteModules = new Map<string, string>()
+	const codePath = argv['overwrite-code']
+	if (codePath) {
+		const names = await fs.readdir(codePath)
+		const files = await Promise.all(names.map(async name => {
+			const data = await fs.readFile(path.join(codePath, name), 'utf8')
+			return { name, data }
+		}))
+		for (const { name, data } of files) {
+			overwriteModules.set(name, data)
+		}
+	}
 	for (const branch of code.find()) {
-		const modules = new Map(Object.entries(branch.modules).map(([ key, data ]) => {
+		const modules = overwriteModules.size ? overwriteModules : new Map(Object.entries(branch.modules).map(([ key, data ]) => {
 			const name = key.replace(/\$DOT\$/g, '.').replace(/\$SLASH\$/g, '/').replace(/\$BACKSLASH\$/g, '\\');
 			return [ name, data as string ];
 		}));

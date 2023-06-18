@@ -107,6 +107,8 @@ If you're using VS Code and you have the [YAML extension](https://marketplace.vi
 autocomplete. If not you can read the [config
 schema](src/config/config.ts).
 
+If you want to use your bot script, use `npx xxscreeps import --overwrite-code ../your-bot/dist` to replace builtin bots.
+
 ## Docker
 
 If you want to install xxscreeps via docker you can use the following `docker-compose.yaml` as an
