@@ -76,7 +76,7 @@ if (missingFlags.length) {
 		import('./global.js'),
 	]);
 
-	if (specifier && !specifier.startsWith('-')) {
+	if (specifier) {
 		const commands: Record<string, string | undefined> = {
 			import: './dist/scripts/scrape-world.js',
 			start: './dist/engine/service/launcher.js',
