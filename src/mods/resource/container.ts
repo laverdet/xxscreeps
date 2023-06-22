@@ -1,13 +1,13 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { Game } from 'xxscreeps/game';
-import { Structure, checkWall, structureFormat } from 'xxscreeps/mods/structure/structure';
-import { isBorder } from 'xxscreeps/game/position';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction';
-import { OpenStore, openStoreFormat } from './store';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { Structure, checkWall, structureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { isBorder } from 'xxscreeps/game/position.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
+import { OpenStore, openStoreFormat } from './store.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { assign } from 'xxscreeps/utility/utility.js';
 
 export const format = declare('Container', () => compose(shape, StructureContainer));
 const shape = struct(structureFormat, {

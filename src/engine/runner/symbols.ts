@@ -1,7 +1,7 @@
-import type { AsyncEffectAndResult, MaybePromise } from 'xxscreeps/utility/types';
-import type { PlayerInstance } from 'xxscreeps/engine/runner/instance';
-import type { InitializationPayload, TickPayload, TickResult } from '.';
-import { makeHookRegistration } from 'xxscreeps/utility/hook';
+import type { AsyncEffectAndResult, MaybePromise } from 'xxscreeps/utility/types.js';
+import type { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
+import type { InitializationPayload, TickPayload, TickResult } from './index.js';
+import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 
 export const hooks = makeHookRegistration<{
 	/**

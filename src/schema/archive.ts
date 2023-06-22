@@ -1,7 +1,7 @@
-import type { Layout, StructLayout } from './layout';
-import Fn from 'xxscreeps/utility/functional';
-import { unpackWrappedStruct } from './layout';
-import { entriesWithSymbols } from 'xxscreeps/schema/symbol';
+import type { Layout, StructLayout } from './layout.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { unpackWrappedStruct } from './layout.js';
+import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 
 class ModuleArchiver {
 	private readonly dependencies = new Map<string, Set<string>>();

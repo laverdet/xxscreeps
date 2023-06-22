@@ -1,12 +1,12 @@
 /* eslint-disable prefer-named-capture-group */
-import 'xxscreeps/engine/db/room';
-import C from 'xxscreeps/game/constants';
+import 'xxscreeps/engine/db/room.js';
+import C from 'xxscreeps/game/constants/index.js';
 import fs from 'fs/promises';
-import { configPath } from 'xxscreeps/config';
+import { configPath } from 'xxscreeps/config/index.js';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
-import { mods } from 'xxscreeps/config/mods';
-import { globalNames } from 'xxscreeps/game/runtime';
+import { mods } from 'xxscreeps/config/mods/index.js';
+import { globalNames } from 'xxscreeps/game/runtime.js';
 
 // Write tsconfig
 const baseDir = new URL('../../src', import.meta.url);
@@ -98,8 +98,8 @@ await fs.writeFile('screeps/types/screeps.exports.d.ts.map', dtsMap);
 await fs.writeFile('screeps/types/globals.d.ts',
 	'type TypeFor<T> = T extends abstract new (...args: any) => infer R ? R : T;\n' +
 	Object.keys(C).map(name =>
-		`declare const ${name}: typeof import('xxscreeps/game/constants')['${name}'];\n`).join('') +
+		`declare const ${name}: typeof import('xxscreeps/game/constants/index.js')['${name}'];\n`).join('') +
 	globalNames().map(name =>
-		`declare var ${name}: ReturnType<typeof import('xxscreeps/game/runtime')['globalTypes']>['${name}'];\n` +
-		`declare type ${name} = TypeFor<ReturnType<typeof import('xxscreeps/game/runtime')['globalTypes']>['${name}']>;\n`).join(''),
+		`declare var ${name}: ReturnType<typeof import('xxscreeps/game/runtime.js')['globalTypes']>['${name}'];\n` +
+		`declare type ${name} = TypeFor<ReturnType<typeof import('xxscreeps/game/runtime.js')['globalTypes']>['${name}']>;\n`).join(''),
 	'utf8');

@@ -1,11 +1,11 @@
-import type { Database } from 'xxscreeps/engine/db';
+import type { Database } from 'xxscreeps/engine/db/index.js';
 import crypto from 'crypto';
 import { promisify } from 'util';
-import { hooks } from 'xxscreeps/backend';
-import config from 'xxscreeps/config';
-import * as User from 'xxscreeps/engine/db/user';
-import { findUserByName, infoKey } from 'xxscreeps/engine/db/user';
-import * as Id from 'xxscreeps/engine/schema/id';
+import { hooks } from 'xxscreeps/backend/index.js';
+import config from 'xxscreeps/config/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { findUserByName, infoKey } from 'xxscreeps/engine/db/user/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
 
 const { allowEmailRegistration } = config.backend;
 

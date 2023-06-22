@@ -1,9 +1,9 @@
-import type { Effect } from 'xxscreeps/utility/types';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import type { IncomingMessage, Server, ServerResponse } from 'http';
 import type { Socket } from 'net';
 import type sockjs from 'sockjs';
-import { Deferred } from 'xxscreeps/utility/async';
-import Fn from 'xxscreeps/utility/functional';
+import { Deferred } from 'xxscreeps/utility/async.js';
+import Fn from 'xxscreeps/utility/functional.js';
 
 type Options = {
 	timeout?: number;

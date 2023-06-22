@@ -1,8 +1,8 @@
-import type { Schema } from '.';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { compose, declare, struct, variant, vector } from 'xxscreeps/schema';
-import { structForPath, variantForPath } from 'xxscreeps/engine/schema';
-import { Room } from './room';
+import type { Schema } from './index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { compose, declare, struct, variant, vector } from 'xxscreeps/schema/index.js';
+import { structForPath, variantForPath } from 'xxscreeps/engine/schema/index.js';
+import { Room } from './room.js';
 
 // Schema definition
 export const format = declare('Room', () => compose(shape, Room));

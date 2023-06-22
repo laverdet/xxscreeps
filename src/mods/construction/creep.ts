@@ -1,12 +1,12 @@
-import C from 'xxscreeps/game/constants';
-import { intents } from 'xxscreeps/game';
-import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks';
-import { checkHasResource } from 'xxscreeps/mods/resource/store';
-import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
-import { extend } from 'xxscreeps/utility/utility';
-import { ConstructionSite } from './construction-site';
-import { Structure } from 'xxscreeps/mods/structure/structure';
-import { structureFactories } from './symbols';
+import C from 'xxscreeps/game/constants/index.js';
+import { intents } from 'xxscreeps/game/index.js';
+import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
+import { checkHasResource } from 'xxscreeps/mods/resource/store.js';
+import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep.js';
+import { extend } from 'xxscreeps/utility/utility.js';
+import { ConstructionSite } from './construction-site.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { structureFactories } from './symbols.js';
 
 declare module 'xxscreeps/mods/creep/creep' {
 	interface Creep {

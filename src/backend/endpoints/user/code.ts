@@ -1,10 +1,10 @@
-import type { Database } from 'xxscreeps/engine/db';
-import Fn from 'xxscreeps/utility/functional';
-import * as Code from 'xxscreeps/engine/db/user/code';
-import * as User from 'xxscreeps/engine/db/user';
-import { getConsoleChannel, requestRunnerEval } from 'xxscreeps/engine/runner/model';
-import { hooks } from 'xxscreeps/backend';
-import { typedArrayToString } from 'xxscreeps/utility/string';
+import type { Database } from 'xxscreeps/engine/db/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Code from 'xxscreeps/engine/db/user/code.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { getConsoleChannel, requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
+import { hooks } from 'xxscreeps/backend/index.js';
+import { typedArrayToString } from 'xxscreeps/utility/string.js';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;
 const kDefaultBranch = 'main';

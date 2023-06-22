@@ -1,6 +1,6 @@
-import type { BufferView } from './buffer-view';
-import { Variant } from '.';
-import { resolve } from './layout';
+import type { BufferView } from './buffer-view.js';
+import { Variant } from './index.js';
+import { resolve } from './layout.js';
 export { Variant };
 
 type WithVariant<V extends number | string = any> = { [Variant]: V };

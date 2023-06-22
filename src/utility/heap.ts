@@ -1,4 +1,4 @@
-import { typedArrayFor } from './pack';
+import { typedArrayFor } from './pack.js';
 
 export class Heap {
 	size = 0;

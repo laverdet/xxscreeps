@@ -1,7 +1,7 @@
-import C from 'xxscreeps/game/constants';
-import { Game } from 'xxscreeps/game';
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { StructureRoad } from './road';
+import C from 'xxscreeps/game/constants/index.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { StructureRoad } from './road.js';
 
 registerObjectTickProcessor(StructureRoad, (road, context) => {
 	if (road.ticksToDecay === 0) {

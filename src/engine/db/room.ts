@@ -1,11 +1,11 @@
-import 'xxscreeps/game';
-import 'xxscreeps/game/position';
-import 'xxscreeps/game/object';
-import 'xxscreeps/game/room';
-import { Builder, makeReader, makeWriter } from 'xxscreeps/schema';
-import { build, makeUpgrader } from 'xxscreeps/engine/schema';
-import { format, objectFormat } from 'xxscreeps/game/room/schema';
-import 'xxscreeps/config/mods/import/game';
+import 'xxscreeps/game/index.js';
+import 'xxscreeps/game/position.js';
+import 'xxscreeps/game/object.js';
+import 'xxscreeps/game/room/index.js';
+import { Builder, makeReader, makeWriter } from 'xxscreeps/schema/index.js';
+import { build, makeUpgrader } from 'xxscreeps/engine/schema/index.js';
+import { format, objectFormat } from 'xxscreeps/game/room/schema.js';
+import 'xxscreeps/config/mods/import/game.js';
 
 // Base room reader & writer
 const formatCache = new Map;

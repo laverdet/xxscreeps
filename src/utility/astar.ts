@@ -1,6 +1,6 @@
-import { Heap } from './heap';
-import { OpenClosed } from './open-closed';
-import { typedArrayFor } from './pack';
+import { Heap } from './heap.js';
+import { OpenClosed } from './open-closed.js';
+import { typedArrayFor } from './pack.js';
 
 export type Adapter<Type> = {
 	id(value: Type): number | null;

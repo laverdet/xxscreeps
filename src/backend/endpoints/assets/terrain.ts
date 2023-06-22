@@ -1,16 +1,16 @@
-import type { GameMap } from 'xxscreeps/game/map';
-import type { Room } from 'xxscreeps/game/room';
-import type { Shard } from 'xxscreeps/engine/db';
-import type { Terrain } from 'xxscreeps/game/terrain';
+import type { GameMap } from 'xxscreeps/game/map.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { Terrain } from 'xxscreeps/game/terrain.js';
 import streamToPromise from 'stream-to-promise';
 import makeEtag from 'etag';
-import Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional.js';
 import { PNG } from 'pngjs';
-import { hooks } from 'xxscreeps/backend';
-import { runOnce } from 'xxscreeps/utility/memoize';
-import { TerrainRender } from 'xxscreeps/backend/symbols';
-import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
-import { TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL, isBorder } from 'xxscreeps/game/terrain';
+import { hooks } from 'xxscreeps/backend/index.js';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
+import { TerrainRender } from 'xxscreeps/backend/symbols.js';
+import { generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
+import { TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL, isBorder } from 'xxscreeps/game/terrain.js';
 
 const onePxImage = runOnce(() => {
 	const png = new PNG({

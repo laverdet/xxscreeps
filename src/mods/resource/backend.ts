@@ -1,8 +1,8 @@
-import type { Store } from './store';
-import Fn from 'xxscreeps/utility/functional';
-import { bindRenderer } from 'xxscreeps/backend';
-import { StructureContainer } from './container';
-import { Resource } from './resource';
+import type { Store } from './store.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { bindRenderer } from 'xxscreeps/backend/index.js';
+import { StructureContainer } from './container.js';
+import { Resource } from './resource.js';
 
 // Store renderer
 export function renderStore(store: Store) {

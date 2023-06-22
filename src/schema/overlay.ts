@@ -1,12 +1,12 @@
-import type { BufferView } from './buffer-view';
-import type { StructLayout } from './layout';
-import type { Builder } from '.';
-import type { BufferObject } from './buffer-object';
-import { getBuffer, getOffset } from './buffer-object';
-import type { TypeOf } from './format';
-import { Variant } from './format';
-import { makeTypeReader } from './read';
-import { entriesWithSymbols } from './symbol';
+import type { BufferView } from './buffer-view.js';
+import type { StructLayout } from './layout.js';
+import type { Builder } from './index.js';
+import type { BufferObject } from './buffer-object.js';
+import { getBuffer, getOffset } from './buffer-object.js';
+import type { TypeOf } from './format.js';
+import { Variant } from './format.js';
+import { makeTypeReader } from './read.js';
+import { entriesWithSymbols } from './symbol.js';
 
 const { defineProperty } = Object;
 const { apply } = Reflect;

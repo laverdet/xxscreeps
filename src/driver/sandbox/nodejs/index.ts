@@ -1,12 +1,12 @@
-import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner';
-import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime';
-import type { Sandbox } from 'xxscreeps/driver/sandbox';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
+import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
+import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
 import util from 'util';
 import vm from 'vm';
 import { createRequire } from 'module';
-import { runOnce } from 'xxscreeps/utility/memoize';
-import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox';
-type Runtime = typeof import('./runtime');
+import { runOnce } from 'xxscreeps/utility/memoize.js';
+import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox/index.js';
+type Runtime = typeof import('./runtime.js');
 
 const defaultRequire = createRequire(import.meta.url);
 

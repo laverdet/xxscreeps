@@ -1,6 +1,6 @@
-import Fn from 'xxscreeps/utility/functional';
-import { hooks } from 'xxscreeps/engine/runner';
-import { publishVisualsBlobsForNextTick } from './model';
+import Fn from 'xxscreeps/utility/functional.js';
+import { hooks } from 'xxscreeps/engine/runner/index.js';
+import { publishVisualsBlobsForNextTick } from './model.js';
 
 declare module 'xxscreeps/engine/runner' {
 	interface TickResult {

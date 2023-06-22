@@ -1,7 +1,7 @@
-import type { Game, GameState } from './game';
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
-import type { Room } from 'xxscreeps/game/room';
-import { makeHookRegistration } from 'xxscreeps/utility/hook';
+import type { Game, GameState } from './game.js';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 
 export const globals = new Set<string>();
 

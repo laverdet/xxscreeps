@@ -1,12 +1,12 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { Game, intents } from 'xxscreeps/game';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { Game, intents } from 'xxscreeps/game/index.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
+import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { assign } from 'xxscreeps/utility/utility.js';
 
 export const format = () => compose(shape, StructureObserver);
 const shape = declare('Observer', struct(ownedStructureFormat, {

@@ -1,14 +1,14 @@
 import type { Transform } from '../webpack';
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import type { InspectorSession } from 'isolated-vm';
 import * as Path from 'path';
-import config from 'xxscreeps/config';
-import Privates from 'xxscreeps/driver/private/transform';
-import { configTransform } from 'xxscreeps/config/webpack';
-import { schemaTransform } from 'xxscreeps/engine/schema/build';
-import { hooks } from 'xxscreeps/driver';
-import { locateModule } from '../path-finder';
-import { compile } from '../webpack';
+import config from 'xxscreeps/config/index.js';
+import Privates from 'xxscreeps/driver/private/transform.js';
+import { configTransform } from 'xxscreeps/config/webpack.js';
+import { schemaTransform } from 'xxscreeps/engine/schema/build/index.js';
+import { hooks } from 'xxscreeps/driver/index.js';
+import { locateModule } from '../path-finder.js';
+import { compile } from '../webpack.js';
 
 const didMakeSandbox = hooks.makeIterated('sandboxCreated');
 
@@ -52,10 +52,10 @@ export function compileRuntimeSource(path: string, transform: Transform) {
 export async function createSandbox(userId: string, payload: InitializationPayload): Promise<Sandbox> {
 	const sandbox = await async function() {
 		if (config.runner.unsafeSandbox) {
-			const { NodejsSandbox } = await import('./nodejs');
+			const { NodejsSandbox } = await import('./nodejs/index.js');
 			return new NodejsSandbox;
 		} else {
-			const { IsolatedSandbox } = await import('./isolated');
+			const { IsolatedSandbox } = await import('./isolated/index.js');
 			return new IsolatedSandbox(payload);
 		}
 	}();

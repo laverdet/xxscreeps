@@ -1,11 +1,11 @@
-import C from 'xxscreeps/game/constants';
-import { registerStruct, registerVariant } from 'xxscreeps/engine/schema';
-import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
-import { checkCommon } from 'xxscreeps/mods/creep/creep';
-import { registerHarvestable } from 'xxscreeps/mods/harvestable';
-import { format as keeperFormat } from './keeper-lair';
-import { Source, format } from './source';
+import C from 'xxscreeps/game/constants/index.js';
+import { registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
+import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
+import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
+import { format as keeperFormat } from './keeper-lair.js';
+import { Source, format } from './source.js';
 
 // Register schema extensions
 const sourceSchema = registerVariant('Room.objects', format);

@@ -1,8 +1,8 @@
-import { bindRenderer } from 'xxscreeps/backend';
-import { renderActionLog } from 'xxscreeps/backend/sockets/render';
-import { renderStore } from 'xxscreeps/mods/resource/backend';
-import { StructureLink } from './link';
-import { StructureStorage } from './storage';
+import { bindRenderer } from 'xxscreeps/backend/index.js';
+import { renderActionLog } from 'xxscreeps/backend/sockets/render.js';
+import { renderStore } from 'xxscreeps/mods/resource/backend.js';
+import { StructureLink } from './link.js';
+import { StructureStorage } from './storage.js';
 
 bindRenderer(StructureLink, (link, next, previousTime) => ({
 	...next(),

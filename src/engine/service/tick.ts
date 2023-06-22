@@ -1,8 +1,8 @@
 import fsPromises from 'fs/promises';
 import fs from 'fs';
 import jsYaml from 'js-yaml';
-import config, { configPath } from 'xxscreeps/config';
-import { mustNotReject } from 'xxscreeps/utility/async';
+import config, { configPath } from 'xxscreeps/config/index.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
 
 let configTickSpeed = config.game.tickSpeed;
 export let tickSpeed = configTickSpeed;

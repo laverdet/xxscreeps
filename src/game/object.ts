@@ -1,16 +1,16 @@
-import type { GameConstructor } from '.';
+import type { GameConstructor } from './index.js';
 import type { InspectOptionsStylized } from 'util';
-import type { Room } from './room';
-import type { RoomPosition } from './position';
-import type { BufferView, TypeOf } from 'xxscreeps/schema';
-import * as BufferObject from 'xxscreeps/schema/buffer-object';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { format as roomPositionFormat } from './position';
-import { compose, declare, enumerated, struct, union, vector, withOverlay } from 'xxscreeps/schema';
-import { enumeratedForPath } from 'xxscreeps/engine/schema';
-import { expandGetters } from 'xxscreeps/utility/inspect';
-import { assign } from 'xxscreeps/utility/utility';
-import { Game, registerGlobal } from '.';
+import type { Room } from './room/index.js';
+import type { RoomPosition } from './position.js';
+import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
+import * as BufferObject from 'xxscreeps/schema/buffer-object.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { format as roomPositionFormat } from './position.js';
+import { compose, declare, enumerated, struct, union, vector, withOverlay } from 'xxscreeps/schema/index.js';
+import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
+import { expandGetters } from 'xxscreeps/utility/inspect.js';
+import { assign } from 'xxscreeps/utility/utility.js';
+import { Game, registerGlobal } from './index.js';
 
 export interface Schema {}
 

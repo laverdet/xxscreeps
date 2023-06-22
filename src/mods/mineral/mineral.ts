@@ -1,12 +1,12 @@
-import C from 'xxscreeps/game/constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { Game, registerGlobal } from 'xxscreeps/game';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { registerHarvestable } from 'xxscreeps/mods/harvestable';
-import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource';
-import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
-import { checkCommon } from 'xxscreeps/mods/creep/creep';
+import C from 'xxscreeps/game/constants/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { Game, registerGlobal } from 'xxscreeps/game/index.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
+import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
+import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
+import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
+import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
 
 export const format = declare('Mineral', () => compose(shape, Mineral));
 const shape = struct(RoomObject.format, {

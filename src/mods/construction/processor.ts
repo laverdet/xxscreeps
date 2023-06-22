@@ -1,17 +1,17 @@
-import type { ConstructibleStructureType } from './construction-site';
-import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure';
-import C from 'xxscreeps/game/constants';
-import * as Resource from 'xxscreeps/mods/resource/processor/resource';
-import { Game, me } from 'xxscreeps/game';
-import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { saveAction } from 'xxscreeps/game/object';
-import { Room } from 'xxscreeps/game/room';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { ConstructionSite, checkRemove, create } from './construction-site';
-import { checkBuild, checkDismantle, checkRepair } from './creep';
-import { checkCreateConstructionSite } from './room';
-import { structureFactories } from './symbols';
+import type { ConstructibleStructureType } from './construction-site.js';
+import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
+import { Game, me } from 'xxscreeps/game/index.js';
+import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { saveAction } from 'xxscreeps/game/object.js';
+import { Room } from 'xxscreeps/game/room/index.js';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { ConstructionSite, checkRemove, create } from './construction-site.js';
+import { checkBuild, checkDismantle, checkRepair } from './creep.js';
+import { checkCreateConstructionSite } from './room.js';
+import { structureFactories } from './symbols.js';
 
 declare module 'xxscreeps/engine/processor' {
 	interface Intent { construction: typeof intents }

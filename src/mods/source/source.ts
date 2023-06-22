@@ -1,7 +1,7 @@
-import * as C from './constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { Game, registerGlobal } from 'xxscreeps/game';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
+import * as C from './constants.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { Game, registerGlobal } from 'xxscreeps/game/index.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 
 export const format = declare('Source', () => compose(shape, Source));
 const shape = struct(RoomObject.format, {

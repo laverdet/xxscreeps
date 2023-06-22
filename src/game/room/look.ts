@@ -1,13 +1,13 @@
-import type { PositionParameter } from 'xxscreeps/game/position';
-import type { UnwrapArray } from 'xxscreeps/utility/types';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import { extend } from 'xxscreeps/utility/utility';
-import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
-import { iterateArea } from 'xxscreeps/game/direction';
-import { terrainMaskToString } from 'xxscreeps/game/terrain';
-import { lookConstants } from './symbols';
-import { Room } from './room';
+import type { PositionParameter } from 'xxscreeps/game/position.js';
+import type { UnwrapArray } from 'xxscreeps/utility/types.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { extend } from 'xxscreeps/utility/utility.js';
+import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
+import { iterateArea } from 'xxscreeps/game/direction.js';
+import { terrainMaskToString } from 'xxscreeps/game/terrain.js';
+import { lookConstants } from './symbols.js';
+import { Room } from './room.js';
 
 // All LOOK_ constants
 export interface Look {}

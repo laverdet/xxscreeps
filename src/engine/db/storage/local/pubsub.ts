@@ -1,10 +1,10 @@
 import type { MessagePort, Worker } from 'worker_threads';
-import type { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider';
+import type { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider.js';
 import { MessageChannel, parentPort } from 'worker_threads';
-import { Deferred, listen } from 'xxscreeps/utility/async';
-import { getOrSet, staticCast } from 'xxscreeps/utility/utility';
-import { isTopThread } from 'xxscreeps/utility/worker';
-import { registerStorageProvider } from '..';
+import { Deferred, listen } from 'xxscreeps/utility/async.js';
+import { getOrSet, staticCast } from 'xxscreeps/utility/utility.js';
+import { isTopThread } from 'xxscreeps/utility/worker.js';
+import { registerStorageProvider } from '../index.js';
 
 type Listener = (message: string) => void;
 

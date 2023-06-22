@@ -1,5 +1,5 @@
-import type { LooseBoolean } from './types';
-import * as Fn from './functional';
+import type { LooseBoolean } from './types.js';
+import * as Fn from './functional.js';
 export default Fn;
 
 export function chain<Args extends any[]>(fns: Iterable<(...args: Args) => void>, reverse = false) {
@@ -152,10 +152,10 @@ export function forEach<Type>(iterable: Iterable<Type>, callback: (value: Type) 
 
 // It's like the constructor for `Map` except it returns a plain Object
 export function fromEntries<Type, Key extends keyof any>(
-	iterable: Iterable<[ Key, Type ]>): Record<Key, Type>;
+	iterable: Iterable<readonly [ Key, Type ]>): Record<Key, Type>;
 export function fromEntries<Type, Key extends keyof any, Value>(
-	iterable: Iterable<Type>, callback: (value: Type) => [ Key, Value ]): Record<Key, Value>;
-export function fromEntries(iterable: Iterable<any>, callback?: (value: any) => [ any, any ]) {
+	iterable: Iterable<Type>, callback: (value: Type) => readonly [ Key, Value ]): Record<Key, Value>;
+export function fromEntries(iterable: Iterable<any>, callback?: (value: any) => readonly [ any, any ]) {
 	const object = Object.create(null);
 	for (const [ key, value ] of callback ? map(iterable, callback) : iterable) {
 		object[key] = value;

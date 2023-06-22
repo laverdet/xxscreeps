@@ -1,9 +1,9 @@
-import type { HarvestResult, Harvestable } from './game';
-import C from 'xxscreeps/game/constants';
-import { intents } from 'xxscreeps/game';
-import { extend } from 'xxscreeps/utility/utility';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep';
+import type { HarvestResult, Harvestable } from './game.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { intents } from 'xxscreeps/game/index.js';
+import { extend } from 'xxscreeps/utility/utility.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep.js';
 
 // `harvest` intent check
 export function checkHarvest(creep: Creep, target: Harvestable | undefined) {

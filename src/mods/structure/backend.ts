@@ -1,7 +1,7 @@
-import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend';
-import { renderStore } from 'xxscreeps/mods/resource/backend';
-import { Structure } from './structure';
-import { Ruin } from './ruin';
+import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend/index.js';
+import { renderStore } from 'xxscreeps/mods/resource/backend.js';
+import { Structure } from './structure.js';
+import { Ruin } from './ruin.js';
 
 bindMapRenderer(Structure, structure => structure['#user'] ?? undefined);
 

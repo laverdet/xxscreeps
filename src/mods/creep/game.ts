@@ -1,9 +1,9 @@
-import C from 'xxscreeps/game/constants';
-import { Creep, format as creepFormat } from './creep';
-import { Tombstone, format as tombstoneFormat } from './tombstone';
-import { hooks, registerGlobal } from 'xxscreeps/game';
-import { registerVariant } from 'xxscreeps/engine/schema';
-import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
+import C from 'xxscreeps/game/constants/index.js';
+import { Creep, format as creepFormat } from './creep.js';
+import { Tombstone, format as tombstoneFormat } from './tombstone.js';
+import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 
 // Add `creeps` to global `Game` object
 declare module 'xxscreeps/game/game' {

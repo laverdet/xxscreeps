@@ -1,14 +1,14 @@
-import type { BufferView, Format } from 'xxscreeps/schema';
-import type { Package } from 'xxscreeps/schema/build';
-import type { Transform } from 'xxscreeps/driver/webpack';
+import type { BufferView, Format } from 'xxscreeps/schema/index.js';
+import type { Package } from 'xxscreeps/schema/build.js';
+import type { Transform } from 'xxscreeps/driver/webpack.js';
 import fs from 'fs';
-import { build as buildSchema } from 'xxscreeps/schema/build';
-import { restoreLayout } from 'xxscreeps/schema/archive';
-import { archiveStruct } from 'xxscreeps/schema/kaitai';
-import { initializeView, makeViewReader } from 'xxscreeps/schema/read';
-import { Builder } from 'xxscreeps/schema';
-import config, { configPath } from 'xxscreeps/config';
-import { getOrSet } from 'xxscreeps/utility/utility';
+import { build as buildSchema } from 'xxscreeps/schema/build.js';
+import { restoreLayout } from 'xxscreeps/schema/archive.js';
+import { archiveStruct } from 'xxscreeps/schema/kaitai.js';
+import { initializeView, makeViewReader } from 'xxscreeps/schema/read.js';
+import { Builder } from 'xxscreeps/schema/index.js';
+import config, { configPath } from 'xxscreeps/config/index.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 const archivePath = new URL(`${config.schemaArchive}/`, configPath);
 const archivedReaders = new Map<number, (view: BufferView) => any>();
@@ -76,10 +76,10 @@ export function makeUpgrader(info: Package, write: (value: any) => Readonly<Uint
  */
 export const schemaTransform: Transform = {
 	alias: {
-		'xxscreeps/engine/schema/build': 'xxscreeps/engine/schema/build/runtime',
+		'xxscreeps/engine/schema/build/index.js': 'xxscreeps/engine/schema/build/runtime.js',
 	},
 	externals: ({ request }) => {
-		if (request === 'xxscreeps/engine/schema/build/packages') {
+		if (request === 'xxscreeps/engine/schema/build/packages.js') {
 			return JSON.stringify(Object.fromEntries([ ...packages ].map(entry => [ entry[0], {
 				version: entry[1].version,
 			} ])));

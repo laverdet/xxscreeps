@@ -1,9 +1,9 @@
-import type { Endpoint } from 'xxscreeps/backend';
-import C from 'xxscreeps/game/constants';
-import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model';
-import { runOneShot } from 'xxscreeps/game';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
+import type { Endpoint } from 'xxscreeps/backend/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
+import { runOneShot } from 'xxscreeps/game/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';
 
 const AddObjectIntentEndpoint: Endpoint = {
 	path: '/api/game/add-object-intent',

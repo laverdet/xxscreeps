@@ -1,8 +1,8 @@
-import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, UnionDeclaration } from './format';
-import Fn from 'xxscreeps/utility/functional';
-import { getOrSet, staticCast } from 'xxscreeps/utility/utility';
-import { Variant } from './format';
-import { entriesWithSymbols } from './symbol';
+import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, UnionDeclaration } from './format.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { getOrSet, staticCast } from 'xxscreeps/utility/utility.js';
+import { Variant } from './format.js';
+import { entriesWithSymbols } from './symbol.js';
 
 export const kPointerSize = 4;
 export const kHeaderSize = kPointerSize * 4;

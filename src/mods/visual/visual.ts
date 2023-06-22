@@ -1,9 +1,9 @@
-import type { TypeOf } from 'xxscreeps/schema';
-import Fn from 'xxscreeps/utility/functional';
-import { generateRoomName, parseRoomName } from 'xxscreeps/game/position';
-import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema';
-import { build } from 'xxscreeps/engine/schema';
-import { getOrSet } from 'xxscreeps/utility/utility';
+import type { TypeOf } from 'xxscreeps/schema/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
+import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
+import { build } from 'xxscreeps/engine/schema/index.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 // Declare schema and types
 const color = optional('string');

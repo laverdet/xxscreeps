@@ -1,12 +1,12 @@
-import type { ContextType } from 'xxscreeps/utility/types';
-import type { Creep } from 'xxscreeps/mods/creep/creep';
-import C from 'xxscreeps/game/constants';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { constant, struct, variant } from 'xxscreeps/schema';
-import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
-import { RoomObject } from 'xxscreeps/game/object';
-import { registerHarvestable } from '.';
-import './creep';
+import type { ContextType } from 'xxscreeps/utility/types.js';
+import type { Creep } from 'xxscreeps/mods/creep/creep.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { constant, struct, variant } from 'xxscreeps/schema/index.js';
+import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { RoomObject } from 'xxscreeps/game/object.js';
+import { registerHarvestable } from './index.js';
+import './creep.js';
 
 // `RoomObject` intent check symbol
 declare module 'xxscreeps/game/object' {

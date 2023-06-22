@@ -1,12 +1,12 @@
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import * as Creep from 'xxscreeps/mods/creep/creep';
-import { Game } from 'xxscreeps/game';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { Room } from 'xxscreeps/game/room';
-import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
-import { registerIntentProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor';
-import { loop } from './loop';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Creep from 'xxscreeps/mods/creep/creep.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { Room } from 'xxscreeps/game/room/index.js';
+import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
+import { registerIntentProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { loop } from './loop/index.js';
 
 // Register invader NPC
 registerNPC('2', loop);

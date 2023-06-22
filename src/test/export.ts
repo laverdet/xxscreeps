@@ -1,9 +1,9 @@
 import fs from 'fs/promises';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import { Database, Shard } from 'xxscreeps/engine/db';
-import { parseRoomName } from 'xxscreeps/game/position';
-import 'xxscreeps/config/mods/import/game';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { parseRoomName } from 'xxscreeps/game/position.js';
+import 'xxscreeps/config/mods/import/game.js';
 export type Payload = typeof payload;
 
 const db = await Database.connect();

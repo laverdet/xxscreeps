@@ -1,13 +1,13 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { Game, intents } from 'xxscreeps/game';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
-import { SingleStore, calculateChecked, checkHasCapacity, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction';
-import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { Game, intents } from 'xxscreeps/game/index.js';
+import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { SingleStore, calculateChecked, checkHasCapacity, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { assign } from 'xxscreeps/utility/utility.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
+import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 
 export const format = () => compose(shape, StructureLink);
 const shape = declare('Link', struct(ownedStructureFormat, {

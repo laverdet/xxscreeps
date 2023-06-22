@@ -1,8 +1,8 @@
-import C from 'xxscreeps/game/constants';
-import { Game } from 'xxscreeps/game';
-import { registerIntentProcessor } from 'xxscreeps/engine/processor';
-import { StructureLink, checkTransferEnergy } from './link';
-import { saveAction } from 'xxscreeps/game/object';
+import C from 'xxscreeps/game/constants/index.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
+import { StructureLink, checkTransferEnergy } from './link.js';
+import { saveAction } from 'xxscreeps/game/object.js';
 
 declare module 'xxscreeps/engine/processor' {
 	interface Intent { logistics: typeof intents }

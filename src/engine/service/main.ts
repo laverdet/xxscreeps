@@ -1,14 +1,14 @@
-import type { Effect } from 'xxscreeps/utility/types';
-import config from 'xxscreeps/config';
-import * as Async from 'xxscreeps/utility/async';
-import { AveragingTimer } from 'xxscreeps/utility/averaging-timer';
-import { Database, Shard } from 'xxscreeps/engine/db';
-import { Deferred, mustNotReject } from 'xxscreeps/utility/async';
-import { Mutex } from 'xxscreeps/engine/db/mutex';
-import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model';
-import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from '.';
-import { tickSpeed, watch } from './tick';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import config from 'xxscreeps/config/index.js';
+import * as Async from 'xxscreeps/utility/async.js';
+import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
+import { Mutex } from 'xxscreeps/engine/db/mutex.js';
+import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model.js';
+import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
+import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+import { tickSpeed, watch } from './tick.js';
 checkIsEntry();
 
 // Open channels

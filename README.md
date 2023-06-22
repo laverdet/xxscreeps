@@ -86,7 +86,7 @@ to information about game APIs.
 ## Getting Started
 
 To get xxscreeps running here's what you need to do. This should work on Linux, macOS, and Windows.
-First step is make sure nodejs v16.x is installed, older versions will not work.
+First step is make sure nodejs v20.x is installed, older versions will not work.
 ```
 git clone https://github.com/laverdet/xxscreeps.git
 cd xxscreeps
@@ -95,8 +95,9 @@ npm run build
 npx xxscreeps import
 ```
 
-After that you can start xxscreeps via `npx xxscreeps start` except you won't be able to connect
-with the Steam client. You'll need to create a file `.screepsrc.yaml` with content:
+After that you can start xxscreeps via `NODE_OPTIONS='--no-node-snapshot' npx xxscreeps start`
+except you won't be able to connect with the Steam client. You'll need to create a file
+`.screepsrc.yaml` with content:
 ```
 backend:
   steamApiKey: <your steam key>

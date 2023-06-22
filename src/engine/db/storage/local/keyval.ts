@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type * as P from 'xxscreeps/engine/db/storage/provider';
-import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
-import type { MaybePromises } from './responder';
+import type * as P from 'xxscreeps/engine/db/storage/provider.js';
+import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
+import type { MaybePromises } from './responder.js';
 import fs from 'fs/promises';
-import Fn from 'xxscreeps/utility/functional';
-import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string';
-import { connect, makeClient, makeHost } from './responder';
-import { SortedSet } from './sorted-set';
-import { registerStorageProvider } from 'xxscreeps/engine/db/storage';
-import { getOrSet } from 'xxscreeps/utility/utility';
-import { BlobStorage } from './blob';
+import Fn from 'xxscreeps/utility/functional.js';
+import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
+import { connect, makeClient, makeHost } from './responder.js';
+import { SortedSet } from './sorted-set.js';
+import { registerStorageProvider } from 'xxscreeps/engine/db/storage/index.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { BlobStorage } from './blob.js';
 
 registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
 	const path = url.pathname.endsWith('/') ? url : new URL(`${url}/`);

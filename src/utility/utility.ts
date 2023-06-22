@@ -1,7 +1,11 @@
-import type { Union } from './types';
+import type { Union } from './types.js';
 
 // Wrapper around Object.assign that enforces assigned types already exist
-export function assign<Result extends Base, Base = Result, Type extends Base = Base>(target: Result, source: Partial<Type>): Result {
+export function assign<
+	Result extends Base,
+	Base extends Record<any, any> = Result,
+	Type extends Base = Base,
+>(target: Result, source: Partial<Type>): Result {
 	return Object.assign(target, source);
 }
 

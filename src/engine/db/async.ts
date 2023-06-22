@@ -1,5 +1,5 @@
-import type { KeyValProvider } from './storage/provider';
-import { KeyvalScript } from './storage/script';
+import type { KeyValProvider } from './storage/provider.js';
+import { KeyvalScript } from './storage/script.js';
 
 /**
  * Returns an async generator which pops every member out of a set and yields the result.

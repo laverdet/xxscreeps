@@ -1,2 +1,2 @@
-import './container';
-import './resource';
+import './container.js';
+import './resource.js';

@@ -1,4 +1,4 @@
-import type { Manifest } from 'xxscreeps/config/mods';
+import type { Manifest } from 'xxscreeps/config/mods/index.js';
 export const manifest: Manifest = {
 	dependencies: [],
 	provides: [ 'backend', 'driver', 'game' ],

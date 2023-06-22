@@ -1,5 +1,5 @@
-import Fn from './functional';
-import { lateCallback } from './memoize';
+import Fn from './functional.js';
+import { lateCallback } from './memoize.js';
 
 export function makeHookRegistration<keys extends Record<string, any>>() {
 	const hooksByName = new Map<keyof any, any[]>();
@@ -99,7 +99,7 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 
 		register(key, handler) {
 			if (took.has(key)) {
-				throw new Error(`Already took ${key}`);
+				throw new Error(`Already took ${String(key)}`);
 			}
 			const handlers = hooksByName.get(key);
 			if (handlers) {

@@ -1,10 +1,10 @@
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { hooks } from 'xxscreeps/backend';
-import { checkCreateFlag } from './flag';
-import { getFlagChannel, loadUserFlags } from './model';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { hooks } from 'xxscreeps/backend/index.js';
+import { checkCreateFlag } from './flag.js';
+import { getFlagChannel, loadUserFlags } from './model.js';
 
 hooks.register('roomSocket', async(shard, userId, roomName) => {
 	if (!userId) {

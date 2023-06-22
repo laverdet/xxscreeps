@@ -1,15 +1,15 @@
-import type { Effect } from 'xxscreeps/utility/types';
-import config from 'xxscreeps/config';
-import * as Async from 'xxscreeps/utility/async';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import config from 'xxscreeps/config/index.js';
+import * as Async from 'xxscreeps/utility/async.js';
 import * as Timers from 'timers/promises';
-import { importMods } from 'xxscreeps/config/mods';
-import { Database, Shard } from 'xxscreeps/engine/db';
-import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model';
-import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
-import { loadTerrain } from 'xxscreeps/driver/path-finder';
-import { PlayerInstance } from 'xxscreeps/engine/runner/instance';
-import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from '.';
+import { importMods } from 'xxscreeps/config/mods/index.js';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
+import { loadTerrain } from 'xxscreeps/driver/path-finder.js';
+import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
+import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async.js';
+import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
 await importMods('driver');
 const isEntry = checkIsEntry();
 

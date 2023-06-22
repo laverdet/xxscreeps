@@ -1,10 +1,10 @@
-import type { Builder } from '.';
-import type { Layout, StructLayout } from './layout';
-import Fn from 'xxscreeps/utility/functional';
-import { getOrSet } from 'xxscreeps/utility/utility';
-import { Variant } from './format';
-import { alignTo, kPointerSize, unpackWrappedStruct } from './layout';
-import { entriesWithSymbols } from './symbol';
+import type { Builder } from './index.js';
+import type { Layout, StructLayout } from './layout.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { Variant } from './format.js';
+import { alignTo, kPointerSize, unpackWrappedStruct } from './layout.js';
+import { entriesWithSymbols } from './symbol.js';
 
 export type Scanner<Type = any> = (value: Type, heap: number) => number;
 

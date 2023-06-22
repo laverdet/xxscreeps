@@ -1,6 +1,6 @@
-import type { Endpoint } from 'xxscreeps/backend';
-import { hooks } from 'xxscreeps/backend';
-import { tickSpeed } from 'xxscreeps/engine/service/tick';
+import type { Endpoint } from 'xxscreeps/backend/index.js';
+import { hooks } from 'xxscreeps/backend/index.js';
+import { tickSpeed } from 'xxscreeps/engine/service/tick.js';
 
 hooks.register('middleware', (koa, router) => {
 	router.get([ '/api/game/tick', '/api/game/shards/tick' ], context => {

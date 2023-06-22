@@ -1,8 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../../declarations.d.ts" />
 import fs from 'fs/promises';
-import { configDefaults } from 'xxscreeps/config/config';
-import config, { configPath } from 'xxscreeps/config/raw';
+import { configDefaults } from 'xxscreeps/config/config.js';
+import config, { configPath } from 'xxscreeps/config/raw.js';
 
 type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'processor' | 'storage' | 'test';
 export type Manifest = {
@@ -21,7 +21,17 @@ const baseUrl = configPath;
 const version = 5;
 async function resolve(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
-		const url = await import.meta.resolve!(specifier, `${baseUrl}`);
+		const url = await async function() {
+			try {
+				return await import.meta.resolve!(`${specifier}/index.js`, `${baseUrl}`);
+			} catch {
+				try {
+					return await import.meta.resolve!(`${specifier}.js`, `${baseUrl}`);
+				} catch {
+					return import.meta.resolve!(specifier, `${baseUrl}`);
+				}
+			}
+		}();
 		return {
 			manifest: (await import(url)).manifest as Manifest,
 			specifier,
@@ -62,7 +72,11 @@ if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 	const resolveWithinMods = async(specifier: string) => {
 		const resolved = await Promise.all(mods.map(async({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
-				return import.meta.resolve!(`./${specifier}`, `${url}`);
+				try {
+					return await import.meta.resolve!(`./${specifier}/index.js`, `${url}`);
+				} catch {
+					return import.meta.resolve!(`./${specifier}.js`, `${url}`);
+				}
 			}
 		}));
 		return resolved.filter((mod): mod is string => mod !== undefined);
@@ -94,7 +108,7 @@ if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 			// Merge JSON schema
 			const schemaOutput = new URL('config.schema.json', outDir);
 			const inputs = [
-				await import.meta.resolve!('xxscreeps/config/config'),
+				await import.meta.resolve!('xxscreeps/config/config.js'),
 				...await resolveWithinMods('config'),
 			];
 			const json = (await Promise.all(inputs.map(async path => {
@@ -131,7 +145,14 @@ export { mods };
 export async function importMods(provides: Provide) {
 	for (const mod of mods) {
 		if (mod.provides.includes(provides)) {
-			await import(await import.meta.resolve!(`./${provides}`, `${mod.url}`));
+			const url = await async function() {
+				try {
+					return await import.meta.resolve!(`./${provides}/index.js`, `${mod.url}`);
+				} catch {
+					return import.meta.resolve!(`./${provides}.js`, `${mod.url}`);
+				}
+			}();
+			await import(url);
 		}
 	}
 }

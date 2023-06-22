@@ -1,5 +1,5 @@
-import Fn from 'xxscreeps/utility/functional';
-import { typedArrayToString, utf16ToBuffer } from 'xxscreeps/utility/string';
+import Fn from 'xxscreeps/utility/functional.js';
+import { typedArrayToString, utf16ToBuffer } from 'xxscreeps/utility/string.js';
 
 const kMemoryGrowthSize = 4096;
 export const kMaxMemoryLength = 2 * 1024 * 1024;

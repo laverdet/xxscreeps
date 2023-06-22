@@ -1,6 +1,6 @@
-import { bindRenderer } from 'xxscreeps/backend';
-import { renderStore } from 'xxscreeps/mods/resource/backend';
-import { StructureTerminal } from './terminal';
+import { bindRenderer } from 'xxscreeps/backend/index.js';
+import { renderStore } from 'xxscreeps/mods/resource/backend.js';
+import { StructureTerminal } from './terminal.js';
 
 bindRenderer(StructureTerminal, (terminal, next) => ({
 	...next(),

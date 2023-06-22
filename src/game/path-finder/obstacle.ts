@@ -1,7 +1,7 @@
-import type { Room } from 'xxscreeps/game/room';
-import type { RoomObject } from 'xxscreeps/game/object';
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
 
 type MovementParameters = {
 	checkTerrain?: boolean | undefined;

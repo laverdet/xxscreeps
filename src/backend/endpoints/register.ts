@@ -1,5 +1,5 @@
-import type { Endpoint } from 'xxscreeps/backend';
-import * as User from 'xxscreeps/engine/db/user';
+import type { Endpoint } from 'xxscreeps/backend/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 
 function validateEmail(email: string) {
 	return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email);

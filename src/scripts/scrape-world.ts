@@ -1,47 +1,47 @@
-import type { RoomObject } from 'xxscreeps/game/object';
-import type { ResourceType } from 'xxscreeps/mods/resource';
-import type { Store } from 'xxscreeps/mods/resource/store';
-import type { Structure } from 'xxscreeps/mods/structure/structure';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import type { Store } from 'xxscreeps/mods/resource/store.js';
+import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 
 import Loki from 'lokijs';
 import jsYaml from 'js-yaml';
 import fs from 'fs/promises';
 
-import Configs from 'xxscreeps/config/mods/import/config';
-import config, { configPath } from 'xxscreeps/config';
-import { checkArguments } from 'xxscreeps/config/arguments';
+import Configs from 'xxscreeps/config/mods/import/config.js';
+import config, { configPath } from 'xxscreeps/config/index.js';
+import { checkArguments } from 'xxscreeps/config/arguments.js';
 
-import { RoomPosition } from 'xxscreeps/game/position';
-import { TerrainWriter, packExits } from 'xxscreeps/game/terrain';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
 
 // Schemas
-import * as CodeSchema from 'xxscreeps/engine/db/user/code';
-import * as MapSchema from 'xxscreeps/game/map';
-import * as Badge from 'xxscreeps/engine/db/user/badge';
-import * as User from 'xxscreeps/engine/db/user';
+import * as CodeSchema from 'xxscreeps/engine/db/user/code.js';
+import * as MapSchema from 'xxscreeps/game/map.js';
+import * as Badge from 'xxscreeps/engine/db/user/badge.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 
-import { Database, Shard } from 'xxscreeps/engine/db';
-import { makeWriter } from 'xxscreeps/schema/write';
-import { saveMemoryBlob } from 'xxscreeps/mods/memory/model';
-import { utf16ToBuffer } from 'xxscreeps/utility/string';
-import { Room, flushUsers } from 'xxscreeps/game/room/room';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { makeWriter } from 'xxscreeps/schema/write.js';
+import { saveMemoryBlob } from 'xxscreeps/mods/memory/model.js';
+import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
+import { Room, flushUsers } from 'xxscreeps/game/room/room.js';
 
 // Objects
-import { Mineral } from 'xxscreeps/mods/mineral/mineral';
-import { Source } from 'xxscreeps/mods/source/source';
-import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn';
-import { StructureController } from 'xxscreeps/mods/controller/controller';
-import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair';
-import { StructureExtension } from 'xxscreeps/mods/spawn/extension';
-import { Creep } from 'xxscreeps/mods/creep/creep';
-import { StructureRoad } from 'xxscreeps/mods/road/road';
-import { StructureRampart } from 'xxscreeps/mods/defense/rampart';
-import { StructureWall } from 'xxscreeps/mods/defense/wall';
-import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor';
-import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store';
-import { merge } from 'xxscreeps/utility/utility';
+import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
+import { Source } from 'xxscreeps/mods/source/source.js';
+import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn.js';
+import { StructureController } from 'xxscreeps/mods/controller/controller.js';
+import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair.js';
+import { StructureExtension } from 'xxscreeps/mods/spawn/extension.js';
+import { Creep } from 'xxscreeps/mods/creep/creep.js';
+import { StructureRoad } from 'xxscreeps/mods/road/road.js';
+import { StructureRampart } from 'xxscreeps/mods/defense/rampart.js';
+import { StructureWall } from 'xxscreeps/mods/defense/wall.js';
+import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor.js';
+import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store.js';
+import { merge } from 'xxscreeps/utility/utility.js';
 
 const argv = checkArguments({
 	argv: true,

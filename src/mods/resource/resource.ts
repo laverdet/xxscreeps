@@ -1,10 +1,10 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import type { Schema } from '.';
-import C from 'xxscreeps/game/constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { enumeratedForPath } from 'xxscreeps/engine/schema';
-import { compose, declare, enumerated, struct, variant, withOverlay, withType } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import type { Schema } from './index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
+import { compose, declare, enumerated, struct, variant, withOverlay, withType } from 'xxscreeps/schema/index.js';
+import { assign } from 'xxscreeps/utility/utility.js';
 
 // Enum schema for resource types
 // HACK: If an enumerated schema contains `undefined` then TS collapses the result to `any` when

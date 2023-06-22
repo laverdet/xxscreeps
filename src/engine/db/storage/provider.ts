@@ -1,5 +1,5 @@
-import type { Effect } from 'xxscreeps/utility/types';
-import type { KeyvalScript } from './script';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import type { KeyvalScript } from './script.js';
 export type { KeyvalScript };
 
 export type AsBlob = { blob?: boolean };

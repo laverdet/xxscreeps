@@ -1,4 +1,4 @@
-import { checkArguments } from 'xxscreeps/config/arguments';
+import { checkArguments } from 'xxscreeps/config/arguments.js';
 
 type Callback = () => void | Promise<void>;
 type Context = {

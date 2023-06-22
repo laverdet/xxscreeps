@@ -1,5 +1,5 @@
-import { bindRenderer } from 'xxscreeps/backend';
-import { ConstructionSite } from './construction-site';
+import { bindRenderer } from 'xxscreeps/backend/index.js';
+import { ConstructionSite } from './construction-site.js';
 
 bindRenderer(ConstructionSite, (constructionSite, next) => ({
 	...next(),

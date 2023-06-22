@@ -1,16 +1,16 @@
-import type { RoomObject } from 'xxscreeps/game/object';
-import type { Shard } from 'xxscreeps/engine/db';
-import type { World } from 'xxscreeps/game/map';
-import type { IntentParameters, IntentReceivers, IntentsForReceiver } from '.';
-import type { Room } from 'xxscreeps/game/room';
-import type { RoomTickProcessor } from './symbols';
-import Fn from 'xxscreeps/utility/functional';
-import * as Movement from 'xxscreeps/engine/processor/movement';
-import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game';
-import { flushUsers } from 'xxscreeps/game/room/room';
-import { PreTick, Tick, hooks, intentProcessorGetters, roomTickProcessors } from './symbols';
-import { acquireFinalIntentsForRoom, activeRoomsKey, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model';
-import { getOrSet } from 'xxscreeps/utility/utility';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { World } from 'xxscreeps/game/map.js';
+import type { IntentParameters, IntentReceivers, IntentsForReceiver } from './index.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { RoomTickProcessor } from './symbols.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Movement from 'xxscreeps/engine/processor/movement.js';
+import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game/index.js';
+import { flushUsers } from 'xxscreeps/game/room/room.js';
+import { PreTick, Tick, hooks, intentProcessorGetters, roomTickProcessors } from './symbols.js';
+import { acquireFinalIntentsForRoom, activeRoomsKey, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 // Register per-tick per-room processor
 export function registerRoomTickProcessor(tick: RoomTickProcessor) {

@@ -1,8 +1,8 @@
-import type { GameConstructor } from 'xxscreeps/game';
-import C from 'xxscreeps/game/constants';
-import healer from './healer';
-import findAttack from './find-attack';
-import shootAtWill from './shoot-at-will';
+import type { GameConstructor } from 'xxscreeps/game/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import healer from './healer.js';
+import findAttack from './find-attack.js';
+import shootAtWill from './shoot-at-will.js';
 
 export function loop(Game: GameConstructor) {
 	const creeps = Object.values(Game.creeps);

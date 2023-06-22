@@ -1,9 +1,9 @@
-import type { GameMap, World } from './map';
-import type { AnyRoomObject, Room } from './room';
-import type { RoomObject } from './object';
+import type { GameMap, World } from './map.js';
+import type { AnyRoomObject, Room } from './room/index.js';
+import type { RoomObject } from './object.js';
 import type { TickPayload } from 'xxscreeps/engine/runner';
-import Fn from 'xxscreeps/utility/functional';
-import { hooks } from './symbols';
+import Fn from 'xxscreeps/utility/functional.js';
+import { hooks } from './symbols.js';
 
 const initializeGame = hooks.makeIterated('gameInitializer');
 const initializeRoom = hooks.makeIterated('roomInitializer');

@@ -1,10 +1,10 @@
-import type { ResourceType } from '../resource';
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import { Game } from 'xxscreeps/game';
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
-import { Resource, create } from '../resource';
+import type { ResourceType } from '../resource.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
+import { Resource, create } from '../resource.js';
 
 export function drop(pos: RoomPosition, resourceType: ResourceType, amount: number) {
 	if (amount < 0) {

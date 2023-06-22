@@ -1,12 +1,12 @@
-import C from 'xxscreeps/game/constants';
-import * as ConstructionSite from './construction-site';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { constant, struct, variant } from 'xxscreeps/schema';
-import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
-import { hooks, registerGlobal } from 'xxscreeps/game';
-import './creep';
-import './position';
-import './room';
+import C from 'xxscreeps/game/constants/index.js';
+import * as ConstructionSite from './construction-site.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { constant, struct, variant } from 'xxscreeps/schema/index.js';
+import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
+import './creep.js';
+import './position.js';
+import './room.js';
 
 // Add `constructionSites` to global `game` object
 declare module 'xxscreeps/game/game' {

@@ -1,9 +1,9 @@
-import type { Effect, MaybePromise } from 'xxscreeps/utility/types';
+import type { Effect, MaybePromise } from 'xxscreeps/utility/types.js';
 import type { MessagePort, Worker } from 'worker_threads';
 import { MessageChannel, parentPort } from 'worker_threads';
-import { Deferred, listen } from 'xxscreeps/utility/async';
-import { staticCast } from 'xxscreeps/utility/utility';
-import { isTopThread } from 'xxscreeps/utility/worker';
+import { Deferred, listen } from 'xxscreeps/utility/async.js';
+import { staticCast } from 'xxscreeps/utility/utility.js';
+import { isTopThread } from 'xxscreeps/utility/worker.js';
 
 /**
  * Responders generalizes the client/server request/response model for inter-thread/process

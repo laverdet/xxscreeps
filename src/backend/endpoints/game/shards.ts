@@ -1,5 +1,5 @@
-import { hooks } from 'xxscreeps/backend';
-import config from 'xxscreeps/config';
+import { hooks } from 'xxscreeps/backend/index.js';
+import config from 'xxscreeps/config/index.js';
 
 hooks.register('route', {
 	path: '/api/game/shards/info',

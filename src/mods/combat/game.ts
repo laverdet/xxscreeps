@@ -1,8 +1,8 @@
-import * as C from './constants';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { constant, struct, variant } from 'xxscreeps/schema';
-import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
-import './creep';
+import * as C from './constants.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { constant, struct, variant } from 'xxscreeps/schema/index.js';
+import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import './creep.js';
 
 // Schema types
 const actionSchema = registerEnumerated('ActionLog.action',

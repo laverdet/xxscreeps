@@ -1,10 +1,10 @@
-import config from 'xxscreeps/config';
-import * as User from 'xxscreeps/engine/db/user';
-import { checkArguments } from 'xxscreeps/config/arguments';
-import { Worker, waitForWorker } from 'xxscreeps/utility/worker';
-import { Database, Shard } from 'xxscreeps/engine/db';
-import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
-import { getServiceChannel } from '.';
+import config from 'xxscreeps/config/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { checkArguments } from 'xxscreeps/config/arguments.js';
+import { Worker, waitForWorker } from 'xxscreeps/utility/worker.js';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
+import { getServiceChannel } from './index.js';
 
 const argv = checkArguments({
 	boolean: [ 'no-backend', 'no-processor', 'no-runner' ] as const,
@@ -37,16 +37,16 @@ try {
 
 	// Start main service
 	const [ , waitForMain ] = getServiceChannel(shard).listenFor(message => message.type === 'mainConnected');
-	const main = import('./main');
+	const main = import('./main.js');
 	await Promise.race([ main, waitForMain ]);
 
 	// Start workers
 	const singleThreaded = config.launcher?.singleThreaded;
 	const { services, backend } = await async function() {
 		if (singleThreaded) {
-			const backend = argv['no-backend'] ? undefined : import('xxscreeps/backend/server');
-			const processor = argv['no-processor'] ? undefined : import('./processor');
-			const runner = argv['no-runner'] ? undefined : import('./runner');
+			const backend = argv['no-backend'] ? undefined : import('xxscreeps/backend/server.js');
+			const processor = argv['no-processor'] ? undefined : import('./processor.js');
+			const runner = argv['no-runner'] ? undefined : import('./runner.js');
 			const services = Promise.all([ main, processor, runner ]);
 			return { services, backend };
 		} else {

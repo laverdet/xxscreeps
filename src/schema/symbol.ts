@@ -1,4 +1,4 @@
-import { getOwnPrivateEntries } from 'xxscreeps/driver/private/runtime';
+import { getOwnPrivateEntries } from 'xxscreeps/driver/private/runtime.js';
 
 export function entriesWithSymbols<T extends {}>(object: T): [ keyof T, T[keyof T] ][] {
 	return [

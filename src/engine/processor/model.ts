@@ -1,12 +1,12 @@
-import type { Room } from 'xxscreeps/game/room';
-import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor';
-import type { Shard } from 'xxscreeps/engine/db';
-import type { flushUsers } from 'xxscreeps/game/room/room';
-import Fn from 'xxscreeps/utility/functional';
-import { Channel } from 'xxscreeps/engine/db/channel';
-import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model';
-import { getServiceChannel } from 'xxscreeps/engine/service';
-import { KeyvalScript } from 'xxscreeps/engine/db/storage/script';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor/index.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { flushUsers } from 'xxscreeps/game/room/room.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { Channel } from 'xxscreeps/engine/db/channel.js';
+import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
+import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
+import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 
 export function getProcessorChannel(shard: Shard) {
 	type Message =

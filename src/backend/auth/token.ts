@@ -1,6 +1,6 @@
 import * as Crypto from 'crypto';
-import config from 'xxscreeps/config';
-import { runOnce } from 'xxscreeps/utility/memoize';
+import config from 'xxscreeps/config/index.js';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
 
 const secret = runOnce(() => {
 	const { secret } = config.backend;

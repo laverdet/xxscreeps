@@ -1,10 +1,10 @@
-import type { StructureExtension } from './extension';
-import C from 'xxscreeps/game/constants';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { Creep } from 'xxscreeps/mods/creep/creep';
-import { assert, describe, simulate, test } from 'xxscreeps/test';
-import { create as createExtension } from './extension';
-import { create } from './spawn';
+import type { StructureExtension } from './extension.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { Creep } from 'xxscreeps/mods/creep/creep.js';
+import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { create as createExtension } from './extension.js';
+import { create } from './spawn.js';
 
 describe('Spawn', () => {
 	const simulation = simulate({

@@ -1,24 +1,24 @@
-import type { Effect } from 'xxscreeps/utility/types';
-import type { Context, State } from '.';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import type { Context, State } from './index.js';
 
-import * as Async from 'xxscreeps/utility/async';
+import * as Async from 'xxscreeps/utility/async.js';
 import bodyParser from 'koa-bodyparser';
 import Koa from 'koa';
 import ConditionalGet from 'koa-conditional-get';
 import Router from 'koa-router';
 import http from 'http';
-import config from 'xxscreeps/config';
-import { importMods } from 'xxscreeps/config/mods';
-import { getServiceChannel, handleInterrupt } from 'xxscreeps/engine/service';
-import { authentication } from './auth';
-import { BackendContext } from './context';
-import { setupGracefulShutdown } from './graceful';
-import { installEndpointHandlers } from './endpoints';
-import { installSocketHandlers, installUpgradeHandlers } from './socket';
-import { initializeGameEnvironment } from 'xxscreeps/game';
-import { hooks } from './symbols';
+import config from 'xxscreeps/config/index.js';
+import { importMods } from 'xxscreeps/config/mods/index.js';
+import { getServiceChannel, handleInterrupt } from 'xxscreeps/engine/service/index.js';
+import { authentication } from './auth/index.js';
+import { BackendContext } from './context.js';
+import { setupGracefulShutdown } from './graceful.js';
+import { installEndpointHandlers } from './endpoints/index.js';
+import { installSocketHandlers, installUpgradeHandlers } from './socket.js';
+import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
+import { hooks } from './symbols.js';
 
-import 'xxscreeps/config/mods/import/game';
+import 'xxscreeps/config/mods/import/game.js';
 await importMods('backend');
 await importMods('processor');
 initializeGameEnvironment();

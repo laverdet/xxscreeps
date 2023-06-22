@@ -1,6 +1,6 @@
-import { importMods } from 'xxscreeps/config/mods';
-import { flush } from './context';
-import './import';
+import { importMods } from 'xxscreeps/config/mods/index.js';
+import { flush } from './context.js';
+import './import.js';
 await importMods('test');
 try {
 	await flush();

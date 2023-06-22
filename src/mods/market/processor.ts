@@ -1,10 +1,10 @@
-import type { ResourceType } from 'xxscreeps/mods/resource';
-import C from 'xxscreeps/game/constants';
-import { Game } from 'xxscreeps/game';
-import { Room } from 'xxscreeps/game/room';
-import { registerIntentProcessor } from 'xxscreeps/engine/processor';
-import { clamp } from 'xxscreeps/utility/utility';
-import { StructureTerminal, calculateEnergyCost, checkSend } from './terminal';
+import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { Room } from 'xxscreeps/game/room/index.js';
+import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
+import { clamp } from 'xxscreeps/utility/utility.js';
+import { StructureTerminal, calculateEnergyCost, checkSend } from './terminal.js';
 
 declare module 'xxscreeps/engine/processor' {
 	interface Intent { market: typeof intents }

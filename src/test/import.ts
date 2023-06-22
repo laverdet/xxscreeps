@@ -1,20 +1,20 @@
-import type { Payload } from './export';
-import type { RoomObject } from 'xxscreeps/game/object';
+import type { Payload } from './export.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
 import fs from 'fs/promises';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import * as MapSchema from 'xxscreeps/game/map';
-import * as User from 'xxscreeps/engine/db/user';
-import { Database, Shard } from 'xxscreeps/engine/db';
-import { makeWriter } from 'xxscreeps/schema/write';
-import { loadTerrain } from 'xxscreeps/driver/path-finder';
-import { processorTimeKey } from 'xxscreeps/engine/processor/model';
-import { TerrainWriter, packExits } from 'xxscreeps/game/terrain';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { StructureController } from 'xxscreeps/mods/controller/controller';
-import { Source } from 'xxscreeps/mods/source/source';
-import { Room } from 'xxscreeps/game/room';
-import { Mineral } from 'xxscreeps/mods/mineral/mineral';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as MapSchema from 'xxscreeps/game/map.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { makeWriter } from 'xxscreeps/schema/write.js';
+import { loadTerrain } from 'xxscreeps/driver/path-finder.js';
+import { processorTimeKey } from 'xxscreeps/engine/processor/model.js';
+import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { StructureController } from 'xxscreeps/mods/controller/controller.js';
+import { Source } from 'xxscreeps/mods/source/source.js';
+import { Room } from 'xxscreeps/game/room/index.js';
+import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
 
 // Read file
 const root = new URL('../../test/', import.meta.url);

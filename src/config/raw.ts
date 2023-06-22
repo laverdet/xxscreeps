@@ -1,4 +1,4 @@
-import type { Schema } from './config';
+import type { Schema } from './config.js';
 import fs from 'fs/promises';
 import jsYaml from 'js-yaml';
 import { isMainThread, workerData } from 'worker_threads';

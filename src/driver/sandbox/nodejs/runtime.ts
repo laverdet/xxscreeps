@@ -1,9 +1,9 @@
-import type { CPU } from 'xxscreeps/game/game';
-import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime';
-import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner';
-import * as Runtime from 'xxscreeps/driver/runtime';
-import { hooks } from 'xxscreeps/game';
-export { tick } from 'xxscreeps/driver/runtime';
+import type { CPU } from 'xxscreeps/game/game.js';
+import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
+import * as Runtime from 'xxscreeps/driver/runtime/index.js';
+import { hooks } from 'xxscreeps/game/index.js';
+export { tick } from 'xxscreeps/driver/runtime/index.js';
 
 export let process: typeof import('process');
 

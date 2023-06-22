@@ -1,7 +1,7 @@
-import { RoomPosition } from 'xxscreeps/game/position';
-import { assert, describe, simulate, test } from 'xxscreeps/test';
-import { create as createExtension } from 'xxscreeps/mods/spawn/extension';
-import { create } from './road';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
+import { create } from './road.js';
 
 describe('Roads', () => {
 	test('under obstacle', () => simulate({

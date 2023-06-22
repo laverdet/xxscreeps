@@ -1,15 +1,15 @@
-import type { AnyRoomObject, Room } from 'xxscreeps/game/room';
-import type { GameConstructor } from 'xxscreeps/game';
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position';
-import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game';
-import { RoomObject, format as objectFormat } from 'xxscreeps/game/object';
-import { compose, declare, struct, withOverlay } from 'xxscreeps/schema';
-import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { createRuin } from './ruin';
+import type { AnyRoomObject, Room } from 'xxscreeps/game/room/index.js';
+import type { GameConstructor } from 'xxscreeps/game/index.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
+import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game/index.js';
+import { RoomObject, format as objectFormat } from 'xxscreeps/game/object.js';
+import { compose, declare, struct, withOverlay } from 'xxscreeps/schema/index.js';
+import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import { createRuin } from './ruin.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
 

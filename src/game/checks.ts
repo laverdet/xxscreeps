@@ -1,6 +1,6 @@
-import type { Room } from './room';
-import type { RoomObject } from './object';
-import * as C from './constants';
+import type { Room } from './room/index.js';
+import type { RoomObject } from './object.js';
+import * as C from './constants/index.js';
 
 export function chainIntentChecks<Errors extends C.ErrorCode>(...checks: (() => (Errors | undefined | void))[]): Errors {
 	for (const check of checks) {

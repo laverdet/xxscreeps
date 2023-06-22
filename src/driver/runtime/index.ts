@@ -1,17 +1,17 @@
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
-import 'xxscreeps/config/global';
-import Fn from 'xxscreeps/utility/functional';
-import * as Code from 'xxscreeps/engine/db/user/code-schema';
-import * as RoomSchema from 'xxscreeps/engine/db/room';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
+import 'xxscreeps/config/global.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Code from 'xxscreeps/engine/db/user/code-schema.js';
+import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import { inspect } from 'util';
-import { Game, GameState, hooks, initializeGameEnvironment, runForPlayer, userInfo } from 'xxscreeps/game';
-import { World } from 'xxscreeps/game/map';
-import { detach } from 'xxscreeps/schema/buffer-object';
-import { setupConsole } from './console';
-import { makeEnvironment } from './module';
-import { flush, print, resultPrefix } from './print';
+import { Game, GameState, hooks, initializeGameEnvironment, runForPlayer, userInfo } from 'xxscreeps/game/index.js';
+import { World } from 'xxscreeps/game/map.js';
+import { detach } from 'xxscreeps/schema/buffer-object.js';
+import { setupConsole } from './console.js';
+import { makeEnvironment } from './module.js';
+import { flush, print, resultPrefix } from './print.js';
 // eslint-disable-next-line @typescript-eslint/no-duplicate-imports
-import { flushGlobals } from 'xxscreeps/config/global';
+import { flushGlobals } from 'xxscreeps/config/global.js';
 
 export type Compiler<Type = any> = {
 	compile(source: string, filename: string): Type;

@@ -1,14 +1,14 @@
-import type { GameConstructor } from 'xxscreeps/game';
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import * as Id from 'xxscreeps/engine/schema/id';
-import * as RoomObject from 'xxscreeps/game/object';
-import { intents, me, userInfo } from 'xxscreeps/game';
-import { registerObstacleChecker } from 'xxscreeps/game/path-finder';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { compose, declare, enumerated, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
-import { structureFactories } from './symbols';
+import type { GameConstructor } from 'xxscreeps/game/index.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { intents, me, userInfo } from 'xxscreeps/game/index.js';
+import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import { compose, declare, enumerated, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { assign } from 'xxscreeps/utility/utility.js';
+import { structureFactories } from './symbols.js';
 
 export type ConstructibleStructureType = keyof typeof C.CONSTRUCTION_COST;
 

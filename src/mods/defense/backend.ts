@@ -1,10 +1,10 @@
-import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend';
-import { renderActionLog } from 'xxscreeps/backend/sockets/render';
-import { Game } from 'xxscreeps/game';
-import { renderStore } from 'xxscreeps/mods/resource/backend';
-import { StructureRampart } from './rampart';
-import { StructureTower } from './tower';
-import { StructureWall } from './wall';
+import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend/index.js';
+import { renderActionLog } from 'xxscreeps/backend/sockets/render.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { renderStore } from 'xxscreeps/mods/resource/backend.js';
+import { StructureRampart } from './rampart.js';
+import { StructureTower } from './tower.js';
+import { StructureWall } from './wall.js';
 
 bindMapRenderer(StructureWall, () => 'w');
 

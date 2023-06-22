@@ -1,4 +1,4 @@
-import type { GameBase } from 'xxscreeps/game/game';
+import type { GameBase } from 'xxscreeps/game/game.js';
 
 export class Market {
 	orders = [];

@@ -1,12 +1,12 @@
-import type { BufferView, TypeOf } from 'xxscreeps/schema';
-import type { ResourceType } from './resource';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import { BufferObject } from 'xxscreeps/schema/buffer-object';
-import { compose, declare, makeReader, struct, vector, withOverlay, withType } from 'xxscreeps/schema';
-import { getLayout } from 'xxscreeps/schema/layout';
-import { resourceEnumFormat } from './resource';
-import { hooks } from 'xxscreeps/game';
+import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
+import type { ResourceType } from './resource.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
+import { compose, declare, makeReader, struct, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
+import { getLayout } from 'xxscreeps/schema/layout.js';
+import { resourceEnumFormat } from './resource.js';
+import { hooks } from 'xxscreeps/game/index.js';
 
 export type WithStore = Record<'store', Store>;
 
@@ -319,12 +319,12 @@ export function checkHasCapacity(target: WithStore, resourceType: ResourceType, 
 	}
 }
 
-export function checkHasResource(target: WithStore, resourceType: ResourceType, amount = 1) {
-	if (!C.RESOURCES_ALL.includes(resourceType)) {
+export function checkHasResource(target: WithStore, resourceType: ResourceType | undefined, amount = 1) {
+	if (!C.RESOURCES_ALL.includes(resourceType!)) {
 		return C.ERR_INVALID_ARGS;
 	} else if (typeof amount !== 'number' || amount < 0) {
 		return C.ERR_INVALID_ARGS;
-	} else if (target.store[resourceType]! >= Math.max(1, amount)) {
+	} else if (target.store[resourceType!]! >= Math.max(1, amount)) {
 		return C.OK;
 	} else {
 		return C.ERR_NOT_ENOUGH_RESOURCES;

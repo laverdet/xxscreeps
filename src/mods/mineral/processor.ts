@@ -1,12 +1,12 @@
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import * as Resource from 'xxscreeps/mods/resource/processor/resource';
-import { Game } from 'xxscreeps/game';
-import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { lookForStructureAt } from 'xxscreeps/mods/structure/structure';
-import { calculatePower } from 'xxscreeps/mods/creep/creep';
-import { Mineral } from './mineral';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor.js';
+import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
+import { calculatePower } from 'xxscreeps/mods/creep/creep.js';
+import { Mineral } from './mineral.js';
 
 registerHarvestProcessor(Mineral, (creep, mineral) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_MINERAL_POWER);

@@ -1,10 +1,10 @@
-import type { Direction, RoomPosition } from 'xxscreeps/game/position';
-import type { Terrain } from 'xxscreeps/game/terrain';
-import * as PathFinder from 'xxscreeps/game/path-finder';
-import { extend } from 'xxscreeps/utility/utility';
-import { getOffsetsFromDirection } from 'xxscreeps/game/position';
-import { Game } from 'xxscreeps/game';
-import { Room } from './room';
+import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
+import type { Terrain } from 'xxscreeps/game/terrain.js';
+import * as PathFinder from 'xxscreeps/game/path-finder/index.js';
+import { extend } from 'xxscreeps/utility/utility.js';
+import { getOffsetsFromDirection } from 'xxscreeps/game/position.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { Room } from './room.js';
 
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
 	serialize?: boolean;

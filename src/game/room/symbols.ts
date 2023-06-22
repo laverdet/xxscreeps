@@ -1,4 +1,4 @@
-import type { FindHandler } from './find';
+import type { FindHandler } from './find.js';
 
 export const findHandlers = new Map<number, FindHandler>();
 export const lookConstants = new Set<string>();

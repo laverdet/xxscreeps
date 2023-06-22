@@ -1,5 +1,5 @@
-import { exchange } from 'xxscreeps/utility/utility';
-import { BufferView } from './buffer-view';
+import { exchange } from 'xxscreeps/utility/utility.js';
+import { BufferView } from './buffer-view.js';
 
 // Used on newly-constructed to provide defaults on uninitialized fields
 const zeroBuffer = new BufferView(new ArrayBuffer(0));

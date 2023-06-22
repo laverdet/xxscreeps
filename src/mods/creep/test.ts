@@ -1,7 +1,7 @@
-import C from 'xxscreeps/game/constants';
-import { assert, describe, simulate, test } from 'xxscreeps/test';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { create } from './creep';
+import C from 'xxscreeps/game/constants/index.js';
+import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { create } from './creep.js';
 
 describe('Movement', () => {
 	const movement = simulate({

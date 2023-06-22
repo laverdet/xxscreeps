@@ -1,6 +1,6 @@
-import type { Effect } from 'xxscreeps/utility/types';
-import type { PubSubProvider, PubSubSubscription } from './storage/provider';
-import { Deferred } from 'xxscreeps/utility/async';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import type { PubSubProvider, PubSubSubscription } from './storage/provider.js';
+import { Deferred } from 'xxscreeps/utility/async.js';
 
 type MessageType<Message> = Message;
 type Listener<Message> = (message: MessageType<Message>) => void;

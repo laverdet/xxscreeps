@@ -1,7 +1,7 @@
-import * as User from 'xxscreeps/engine/db/user';
-import { hooks } from 'xxscreeps/engine/runner';
-import { hooks as processorHooks } from 'xxscreeps/engine/processor';
-import { controlledRoomKey, reservedRoomKey } from './processor';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { hooks } from 'xxscreeps/engine/runner/index.js';
+import { hooks as processorHooks } from 'xxscreeps/engine/processor/index.js';
+import { controlledRoomKey, reservedRoomKey } from './processor.js';
 
 declare module 'xxscreeps/engine/runner' {
 	interface TickPayload {

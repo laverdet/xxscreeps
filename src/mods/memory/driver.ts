@@ -1,9 +1,9 @@
-import type { SegmentPayload, flush } from './memory';
-import type { TickResult } from 'xxscreeps/engine/runner';
-import Fn from 'xxscreeps/utility/functional';
-import { kMaxActiveSegments } from './memory';
-import { hooks } from 'xxscreeps/engine/runner';
-import { loadMemorySegmentBlob, loadUserMemoryBlob, saveMemoryBlob, saveMemorySegmentBlob } from './model';
+import type { SegmentPayload, flush } from './memory.js';
+import type { TickResult } from 'xxscreeps/engine/runner/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { kMaxActiveSegments } from './memory.js';
+import { hooks } from 'xxscreeps/engine/runner/index.js';
+import { loadMemorySegmentBlob, loadUserMemoryBlob, saveMemoryBlob, saveMemorySegmentBlob } from './model.js';
 
 // Receive and send memory payloads from driver
 declare module 'xxscreeps/engine/runner' {

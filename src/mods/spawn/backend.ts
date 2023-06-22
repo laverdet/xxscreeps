@@ -1,16 +1,16 @@
-import config from 'xxscreeps/config';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/db/user';
-import * as Spawn from './spawn';
-import { Game, runOneShot } from 'xxscreeps/game';
-import { getRoomChannel, pushIntentsForRoomNextTick, userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room';
-import { bindRenderer, hooks } from 'xxscreeps/backend';
-import { renderStore } from 'xxscreeps/mods/resource/backend';
-import { saveUserFlagBlobForNextTick } from 'xxscreeps/mods/flag/model';
-import { StructureExtension } from './extension';
+import config from 'xxscreeps/config/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import * as Spawn from './spawn.js';
+import { Game, runOneShot } from 'xxscreeps/game/index.js';
+import { getRoomChannel, pushIntentsForRoomNextTick, userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';
+import { bindRenderer, hooks } from 'xxscreeps/backend/index.js';
+import { renderStore } from 'xxscreeps/mods/resource/backend.js';
+import { saveUserFlagBlobForNextTick } from 'xxscreeps/mods/flag/model.js';
+import { StructureExtension } from './extension.js';
 
 bindRenderer(StructureExtension, (extension, next) => ({
 	...next(),

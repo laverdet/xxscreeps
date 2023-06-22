@@ -1,6 +1,6 @@
-import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
-import { StructureKeeperLair } from './keeper-lair';
-import { Source } from './source';
+import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend/index.js';
+import { StructureKeeperLair } from './keeper-lair.js';
+import { Source } from './source.js';
 
 bindMapRenderer(StructureKeeperLair, () => undefined);
 bindMapRenderer(Source, () => 's');

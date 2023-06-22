@@ -1,5 +1,5 @@
-import type { LocalKeyValResponder } from './local/keyval';
-import type { Value } from './provider';
+import type { LocalKeyValResponder } from './local/keyval.js';
+import type { Value } from './provider.js';
 
 /**
  * Represents a script which can be sent to the keyval storage engine and run locally on that

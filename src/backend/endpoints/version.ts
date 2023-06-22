@@ -1,5 +1,5 @@
-import type { Endpoint } from 'xxscreeps/backend';
-import config from 'xxscreeps/config';
+import type { Endpoint } from 'xxscreeps/backend/index.js';
+import config from 'xxscreeps/config/index.js';
 
 export const VersionEndpoint: Endpoint = {
 	path: '/api/version',

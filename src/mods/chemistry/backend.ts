@@ -1,7 +1,7 @@
-import { bindRenderer } from 'xxscreeps/backend';
-import { renderActionLog } from 'xxscreeps/backend/sockets/render';
-import { renderStore } from 'xxscreeps/mods/resource/backend';
-import { StructureLab } from './lab';
+import { bindRenderer } from 'xxscreeps/backend/index.js';
+import { renderActionLog } from 'xxscreeps/backend/sockets/render.js';
+import { renderStore } from 'xxscreeps/mods/resource/backend.js';
+import { StructureLab } from './lab.js';
 
 bindRenderer(StructureLab, (lab, next, previousTime) => {
 	// Combine reaction1 & reaction2 into expected action log format

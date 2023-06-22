@@ -1,13 +1,13 @@
-import type { RoomPosition } from '../position';
+import type { RoomPosition } from '../position.js';
 
-import { Game, me } from 'xxscreeps/game';
-import { CostMatrix } from './cost-matrix';
-import { getOrSet } from 'xxscreeps/utility/utility';
-import { makeObstacleChecker } from './obstacle';
-import { registerGlobal } from '../symbols';
-import { search } from 'xxscreeps/driver/path-finder';
+import { Game, me } from 'xxscreeps/game/index.js';
+import { CostMatrix } from './cost-matrix.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { makeObstacleChecker } from './obstacle.js';
+import { registerGlobal } from '../symbols.js';
+import { search } from 'xxscreeps/driver/path-finder.js';
 
-export { registerObstacleChecker } from './obstacle';
+export { registerObstacleChecker } from './obstacle.js';
 export { CostMatrix, search };
 export type Goal = RoomPosition | { pos: RoomPosition; range: number };
 

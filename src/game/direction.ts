@@ -1,5 +1,5 @@
-import C from './constants';
-import { RoomPosition } from './position';
+import C from './constants/index.js';
+import { RoomPosition } from './position.js';
 
 export const ALL_DIRECTIONS = [
 	C.TOP, C.TOP_RIGHT, C.RIGHT, C.BOTTOM_RIGHT, C.BOTTOM, C.BOTTOM_LEFT, C.LEFT, C.TOP_LEFT,

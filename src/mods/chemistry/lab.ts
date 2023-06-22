@@ -1,15 +1,15 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { assign } from 'xxscreeps/utility/utility';
-import { Game, intents, registerGlobal } from 'xxscreeps/game';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction';
-import { LabStore, labStoreFormat } from './store';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks';
-import { checkHasCapacity, checkHasResource } from '../resource/store';
-import type { ResourceType } from 'xxscreeps/mods/resource';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { assign } from 'xxscreeps/utility/utility.js';
+import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
+import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
+import { LabStore, labStoreFormat } from './store.js';
+import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
+import { checkHasCapacity, checkHasResource } from '../resource/store.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 
 export const format = declare('Lab', () => compose(shape, StructureLab));
 const shape = struct(ownedStructureFormat, {
@@ -31,7 +31,7 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 	/** @deprecated */
 	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
 	/** @deprecated */
-	@enumerable get mineralAmount() { return this.store[this.mineralType!] }
+	@enumerable get mineralAmount() { return this.store[this.mineralType as keyof typeof labStoreFormat] }
 	/** @deprecated */
 	@enumerable get mineralCapacity() { return C.LAB_MINERAL_CAPACITY }
 
@@ -91,8 +91,8 @@ export function checkRunReaction(lab: StructureLab, left: StructureLab, right: S
 		() => checkRange(lab, left, 2),
 		() => checkRange(lab, right, 2),
 		() => checkHasCapacity(lab, reaction, C.LAB_REACTION_AMOUNT),
-		() => checkHasResource(left, left.mineralType!, C.LAB_REACTION_AMOUNT),
-		() => checkHasResource(right, right.mineralType!, C.LAB_REACTION_AMOUNT),
+		() => checkHasResource(left, left.mineralType, C.LAB_REACTION_AMOUNT),
+		() => checkHasResource(right, right.mineralType, C.LAB_REACTION_AMOUNT),
 		() => {
 			if (lab.cooldown) {
 				return C.ERR_TIRED;

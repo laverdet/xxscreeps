@@ -1,5 +1,5 @@
 import ivm from 'isolated-vm';
-import { isolate } from './runtime';
+import { isolate } from './runtime.js';
 declare const processInfo: any;
 
 const { lib } = ivm as any;

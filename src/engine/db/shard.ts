@@ -1,15 +1,15 @@
-import type { KeyValProvider, PubSubProvider } from './storage';
-import type { Database } from './database';
-import type { Effect } from 'xxscreeps/utility/types';
-import type { Room } from 'xxscreeps/game/room';
-import type { Subscription } from './channel';
-import * as RoomSchema from 'xxscreeps/engine/db/room';
-import { connectToProvider } from 'xxscreeps/engine/db/storage';
-import { Channel } from './channel';
-import { World } from 'xxscreeps/game/map';
-import config from 'xxscreeps/config';
-import { getRoomChannel } from '../processor/model';
-import { acquire } from 'xxscreeps/utility/async';
+import type { KeyValProvider, PubSubProvider } from './storage/index.js';
+import type { Database } from './database.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { Subscription } from './channel.js';
+import * as RoomSchema from 'xxscreeps/engine/db/room.js';
+import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
+import { Channel } from './channel.js';
+import { World } from 'xxscreeps/game/map.js';
+import config from 'xxscreeps/config/index.js';
+import { getRoomChannel } from '../processor/model.js';
+import { acquire } from 'xxscreeps/utility/async.js';
 
 type Message = { type: 'tick'; time: number } | { type: null };
 

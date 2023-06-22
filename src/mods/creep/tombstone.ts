@@ -1,10 +1,10 @@
-import C from 'xxscreeps/game/constants';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object';
-import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema';
-import { Game } from 'xxscreeps/game';
-import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store';
-import { Creep } from './creep';
+import C from 'xxscreeps/game/constants/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object.js';
+import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { Creep } from './creep.js';
 
 export const format = declare('Tombstone', () => compose(shape, Tombstone));
 const shape = struct(objectFormat, {

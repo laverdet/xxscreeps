@@ -1,9 +1,9 @@
 /* eslint-disable no-control-regex */
-import type { SubscriptionEndpoint } from '../socket';
-import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model';
-import config from 'xxscreeps/config';
-import { throttle } from 'xxscreeps/utility/utility';
-import { resultPrefix } from 'xxscreeps/driver/runtime/print';
+import type { SubscriptionEndpoint } from '../socket.js';
+import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model.js';
+import config from 'xxscreeps/config/index.js';
+import { throttle } from 'xxscreeps/utility/utility.js';
+import { resultPrefix } from 'xxscreeps/driver/runtime/print.js';
 
 function colorize(payload: string) {
 	return `${payload}`

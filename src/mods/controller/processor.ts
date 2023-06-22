@@ -1,13 +1,13 @@
-import type { ProcessorContext } from 'xxscreeps/engine/processor/room';
-import type { Room } from 'xxscreeps/game/room';
-import C from 'xxscreeps/game/constants';
-import * as CreepLib from './creep';
-import * as User from 'xxscreeps/engine/db/user';
-import { Game } from 'xxscreeps/game';
-import { saveAction } from 'xxscreeps/game/object';
-import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller';
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as CreepLib from './creep.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { saveAction } from 'xxscreeps/game/object.js';
+import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 
 export const controlledRoomKey = (userId: string) => `user/${userId}/controlledRooms`;
 export const reservedRoomKey = (userId: string) => `user/${userId}/reservedRooms`;

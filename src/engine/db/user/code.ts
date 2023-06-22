@@ -1,8 +1,8 @@
-import type { Database } from 'xxscreeps/engine/db';
-import Fn from 'xxscreeps/utility/functional';
-import * as Schema from './code-schema';
-import * as User from '.';
-import { Channel } from 'xxscreeps/engine/db/channel';
+import type { Database } from 'xxscreeps/engine/db/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Schema from './code-schema.js';
+import * as User from './index.js';
+import { Channel } from 'xxscreeps/engine/db/channel.js';
 
 export const branchManifestKey = (userId: string) => `${User.infoKey(userId)}/branches`;
 export const buffersKey = (userId: string, branchName: string) =>

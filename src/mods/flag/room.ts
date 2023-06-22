@@ -1,13 +1,13 @@
-import type { Color } from './flag';
-import type { RoomObject } from 'xxscreeps/game/object';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import { userGame } from 'xxscreeps/game';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position';
-import { Room } from 'xxscreeps/game/room';
-import { extend, instantiate } from 'xxscreeps/utility/utility';
-import { Flag, checkCreateFlag, intents } from './flag';
+import type { Color } from './flag.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { userGame } from 'xxscreeps/game/index.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position.js';
+import { Room } from 'xxscreeps/game/room/index.js';
+import { extend, instantiate } from 'xxscreeps/utility/utility.js';
+import { Flag, checkCreateFlag, intents } from './flag.js';
 
 declare module 'xxscreeps/game/room' {
 	interface Room {

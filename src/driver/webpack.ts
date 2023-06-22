@@ -1,6 +1,6 @@
 import type { PluginItem } from '@babel/core';
 import fs from 'fs/promises';
-import Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional.js';
 import Webpack from 'webpack';
 import * as Path from 'path';
 import { fileURLToPath } from 'url';

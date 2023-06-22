@@ -12,6 +12,7 @@
 				},
 				'msvs_settings': {
 					'VCCLCompilerTool': {
+						'AdditionalOptions': [ '/std:c++17' ],
 						'ExceptionHandling': '1',
 					},
 				},

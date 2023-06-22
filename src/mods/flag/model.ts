@@ -1,7 +1,7 @@
-import type { createFlag, removeFlag } from './game';
-import type { Shard } from 'xxscreeps/engine/db';
-import { Channel } from 'xxscreeps/engine/db/channel';
-import { read } from './game';
+import type { createFlag, removeFlag } from './game.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import { Channel } from 'xxscreeps/engine/db/channel.js';
+import { read } from './game.js';
 
 export type FlagIntent = { type: null } | {
 	type: 'create';

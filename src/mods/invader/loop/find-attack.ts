@@ -1,9 +1,9 @@
-import type * as PathFinder from 'xxscreeps/game/path-finder';
-import C from 'xxscreeps/game/constants';
-import type { RoomPosition } from 'xxscreeps/game/position';
-import type { Creep } from 'xxscreeps/mods/creep/creep';
-import type { Structure } from 'xxscreeps/mods/structure/structure';
-import flee from './flee';
+import type * as PathFinder from 'xxscreeps/game/path-finder/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import type { Creep } from 'xxscreeps/mods/creep/creep.js';
+import type { Structure } from 'xxscreeps/mods/structure/structure.js';
+import flee from './flee.js';
 
 function checkPath(pos1: RoomPosition, pos2: RoomPosition) {
 	const path = pos1.findPathTo(pos2, { maxRooms: 1 });

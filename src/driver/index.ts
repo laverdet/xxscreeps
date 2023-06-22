@@ -1,1 +1,1 @@
-export { hooks } from './symbols';
+export { hooks } from './symbols.js';

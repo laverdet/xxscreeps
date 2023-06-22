@@ -1,13 +1,13 @@
-import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner';
-import type { Sandbox } from 'xxscreeps/driver/sandbox';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
+import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
 import ivm from 'isolated-vm';
-import config from 'xxscreeps/config';
+import config from 'xxscreeps/config/index.js';
 import * as ivmInspect from 'ivm-inspect';
-import { runOnce } from 'xxscreeps/utility/memoize';
-import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox';
-import { hooks } from 'xxscreeps/driver';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
+import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox/index.js';
+import { hooks } from 'xxscreeps/driver/index.js';
 
-type Runtime = typeof import('xxscreeps/driver/sandbox/isolated/runtime');
+type Runtime = typeof import('xxscreeps/driver/sandbox/isolated/runtime.js');
 
 const useInspector = [ ...hooks.map('isolateInspector') ].some(use => use);
 
@@ -19,7 +19,7 @@ const getPathFinderModule = runOnce(() => {
 const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime', {
 	alias: {
 		process: 'xxscreeps/driver/sandbox/isolated/process',
-		'xxscreeps/driver/private/symbol': 'xxscreeps/driver/private/symbol/isolated-vm',
+		'xxscreeps/driver/private/symbol.js': 'xxscreeps/driver/private/symbol/isolated-vm.js',
 	},
 	externals: ({ request }) =>
 		request === 'util' ? 'nodeUtilImport' :

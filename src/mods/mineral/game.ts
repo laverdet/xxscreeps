@@ -1,8 +1,8 @@
-import C from 'xxscreeps/game/constants';
-import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
-import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import * as Extractor from './extractor';
-import * as Mineral from './mineral';
+import C from 'xxscreeps/game/constants/index.js';
+import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import * as Extractor from './extractor.js';
+import * as Mineral from './mineral.js';
 
 // Register schema extensions
 const resources = [

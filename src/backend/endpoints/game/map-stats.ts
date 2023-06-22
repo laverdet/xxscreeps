@@ -1,6 +1,6 @@
-import type { Endpoint } from 'xxscreeps/backend';
-import Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/db/user';
+import type { Endpoint } from 'xxscreeps/backend/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 
 export const MapStatsEndpoint: Endpoint = {
 	method: 'post',
@@ -24,42 +24,40 @@ export const MapStatsEndpoint: Endpoint = {
 			const room = await context.backend.shard.loadRoom(roomName, undefined, true);
 
 			// Build rooms payload
-			return [
-				room.name, {
-					status: 'normal',
-					// Owner, level information
-					...function() {
-						const user = room['#user'];
-						if (user) {
-							userIds.add(user);
-							return {
-								own: {
-									user,
-									level: room['#level'],
-								},
-							};
-						}
-					}(),
-					// Sign
-					...function() {
-						const sign = room['#sign'];
-						if (sign) {
-							userIds.add(sign.userId);
-							return {
-								sign: {
-									datetime: sign.datetime,
-									text: sign.text,
-									time: sign.time,
-									user: sign.userId,
-								},
-							};
-						}
-					}(),
-					...room['#safeModeUntil'] > time && {
-						safeMode: true,
-					},
+			return [ room.name, {
+				status: 'normal',
+				// Owner, level information
+				...function() {
+					const user = room['#user'];
+					if (user) {
+						userIds.add(user);
+						return {
+							own: {
+								user,
+								level: room['#level'],
+							},
+						};
+					}
+				}(),
+				// Sign
+				...function() {
+					const sign = room['#sign'];
+					if (sign) {
+						userIds.add(sign.userId);
+						return {
+							sign: {
+								datetime: sign.datetime,
+								text: sign.text,
+								time: sign.time,
+								user: sign.userId,
+							},
+						};
+					}
+				}(),
+				...room['#safeModeUntil'] > time && {
+					safeMode: true,
 				},
-			];
+			} ] as const;
 		}))));
 
 		// Read users

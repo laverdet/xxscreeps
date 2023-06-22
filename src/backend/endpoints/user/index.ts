@@ -1,11 +1,11 @@
-import badge from './badge';
-import messages from './messages';
-import './auth';
-import './code';
-import './profile';
-import './stats';
-import './world';
-import { hooks } from 'xxscreeps/backend';
+import badge from './badge.js';
+import messages from './messages.js';
+import './auth.js';
+import './code.js';
+import './profile.js';
+import './stats.js';
+import './world.js';
+import { hooks } from 'xxscreeps/backend/index.js';
 
 export default [ ...badge, ...messages ];
 

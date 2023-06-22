@@ -1,4 +1,4 @@
-import { packIntrinsics } from './pack';
+import { packIntrinsics } from './pack.js';
 const { Store, arrayLength, indexShift, indexMask, indexBitShift, mask } = packIntrinsics(2, 1);
 
 export class OpenClosed {

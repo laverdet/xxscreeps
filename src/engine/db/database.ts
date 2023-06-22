@@ -1,8 +1,8 @@
-import type { KeyValProvider, PubSubProvider } from 'xxscreeps/engine/db/storage';
-import type { Effect } from 'xxscreeps/utility/types';
-import { connectToProvider } from 'xxscreeps/engine/db/storage';
-import config from 'xxscreeps/config';
-import { acquire } from 'xxscreeps/utility/async';
+import type { KeyValProvider, PubSubProvider } from 'xxscreeps/engine/db/storage/index.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
+import config from 'xxscreeps/config/index.js';
+import { acquire } from 'xxscreeps/utility/async.js';
 
 export class Database {
 	// Ensure this isn't compatible with `Shard`

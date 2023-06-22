@@ -1,6 +1,6 @@
-import { Variant } from 'xxscreeps/schema';
-import { extend } from 'xxscreeps/utility/utility';
-import { Room } from './room';
+import { Variant } from 'xxscreeps/schema/index.js';
+import { extend } from 'xxscreeps/utility/utility.js';
+import { Room } from './room.js';
 
 // Union type of all events
 type RemoveVariant<T> = T extends any ? Omit<T, typeof Variant> : never;

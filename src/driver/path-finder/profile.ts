@@ -1,8 +1,8 @@
 import fs from 'fs';
-import { loadTerrain, search } from 'xxscreeps/driver/path-finder';
-import { CostMatrix } from 'xxscreeps/game/path-finder';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { World } from 'xxscreeps/game/map';
+import { loadTerrain, search } from 'xxscreeps/driver/path-finder.js';
+import { CostMatrix } from 'xxscreeps/game/path-finder/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { World } from 'xxscreeps/game/map.js';
 
 /**
  * This script is a standalone test for the path finder. It runs a whole bunch of path finding

@@ -1,13 +1,13 @@
-import type { ConstructibleStructureType, ConstructionSite } from './construction-site';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import { hooks, intents, me } from 'xxscreeps/game';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
-import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import { RoomPosition, fetchArguments } from 'xxscreeps/game/position';
-import { asUnion, extend } from 'xxscreeps/utility/utility';
-import { structureFactories } from './symbols';
-import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
+import type { ConstructibleStructureType, ConstructionSite } from './construction-site.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { hooks, intents, me } from 'xxscreeps/game/index.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
+import { asUnion, extend } from 'xxscreeps/utility/utility.js';
+import { structureFactories } from './symbols.js';
+import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle.js';
 
 // Register FIND_ types for `ConstructionSite`
 const find = registerFindHandlers({

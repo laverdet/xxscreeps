@@ -1,9 +1,9 @@
-import intents from './intents';
-import { MapStatsEndpoint } from './map-stats';
-import './leaderboard';
-import './room';
-import './terrain';
-import './shards';
-import './world';
-import time from './time';
+import intents from './intents.js';
+import { MapStatsEndpoint } from './map-stats.js';
+import './leaderboard.js';
+import './room.js';
+import './terrain.js';
+import './shards.js';
+import './world.js';
+import time from './time.js';
 export default [ ...intents, ...time, MapStatsEndpoint ];

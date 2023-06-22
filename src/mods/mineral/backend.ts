@@ -1,6 +1,6 @@
-import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend';
-import { StructureExtractor } from './extractor';
-import { Mineral } from './mineral';
+import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend/index.js';
+import { StructureExtractor } from './extractor.js';
+import { Mineral } from './mineral.js';
 
 bindMapRenderer(Mineral, () => 'm');
 bindTerrainRenderer(Mineral, () => 0xaeaeae);

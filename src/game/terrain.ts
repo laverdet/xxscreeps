@@ -1,11 +1,11 @@
-import type { BufferView } from 'xxscreeps/schema';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import { array, compose } from 'xxscreeps/schema';
-import { exchange } from 'xxscreeps/utility/utility';
-import { Room } from './room';
-import { Game } from '.';
-export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants';
+import type { BufferView } from 'xxscreeps/schema/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { array, compose } from 'xxscreeps/schema/index.js';
+import { exchange } from 'xxscreeps/utility/utility.js';
+import { Room } from './room/index.js';
+import { Game } from './index.js';
+export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants/index.js';
 
 export const terrainMaskToString = [ 'plain', 'wall', 'swamp', 'wall' ] as const;
 

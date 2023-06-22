@@ -1,7 +1,7 @@
-import Fn from 'xxscreeps/utility/functional';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { compose, struct, vector } from 'xxscreeps/schema';
-import { registerStruct } from 'xxscreeps/engine/schema';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { compose, struct, vector } from 'xxscreeps/schema/index.js';
+import { registerStruct } from 'xxscreeps/engine/schema/index.js';
 
 const schema = registerStruct('Room', {
 	'#npcData': struct({

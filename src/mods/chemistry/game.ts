@@ -1,6 +1,6 @@
-import C from 'xxscreeps/game/constants';
-import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema';
-import * as Lab from './lab';
+import C from 'xxscreeps/game/constants/index.js';
+import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import * as Lab from './lab.js';
 
 // Register `ResourceType` schema
 const resources = [

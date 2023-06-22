@@ -1,9 +1,9 @@
-import type { OneOrMany } from 'xxscreeps/utility/types';
-import type { Goal, SearchOptions } from 'xxscreeps/game/path-finder';
-import type { World } from 'xxscreeps/game/map';
-import { RoomPosition, generateRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/position';
-import { getBuffer } from 'xxscreeps/game/terrain';
-import { clamp } from 'xxscreeps/utility/utility';
+import type { OneOrMany } from 'xxscreeps/utility/types.js';
+import type { Goal, SearchOptions } from 'xxscreeps/game/path-finder/index.js';
+import type { World } from 'xxscreeps/game/map.js';
+import { RoomPosition, generateRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/position.js';
+import { getBuffer } from 'xxscreeps/game/terrain.js';
+import { clamp } from 'xxscreeps/utility/utility.js';
 import pf from '@xxscreeps/path-finder';
 
 function flattenPosition(pos: any): number {

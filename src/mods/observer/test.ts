@@ -1,10 +1,10 @@
-import type { GameConstructor } from 'xxscreeps/game';
-import type { Room } from 'xxscreeps/game/room';
-import C from 'xxscreeps/game/constants';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { assert, describe, simulate, test } from 'xxscreeps/test';
-import { lookForStructures } from 'xxscreeps/mods/structure/structure';
-import { create } from './observer';
+import type { GameConstructor } from 'xxscreeps/game/index.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
+import { create } from './observer.js';
 
 describe('Observer', () => {
 	const simulation = simulate({

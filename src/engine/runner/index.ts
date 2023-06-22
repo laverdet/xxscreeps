@@ -1,8 +1,8 @@
-import type { CodeBlobs } from 'xxscreeps/engine/db/user/code-schema';
-import type { MessageFor } from 'xxscreeps/engine/db/channel';
-import type { RunnerIntent, getRunnerUserChannel } from 'xxscreeps/engine/runner/model';
-import type { RoomIntentPayload } from 'xxscreeps/engine/processor';
-export { hooks } from './symbols';
+import type { CodeBlobs } from 'xxscreeps/engine/db/user/code-schema.js';
+import type { MessageFor } from 'xxscreeps/engine/db/channel.js';
+import type { RunnerIntent, getRunnerUserChannel } from 'xxscreeps/engine/runner/model.js';
+import type { RoomIntentPayload } from 'xxscreeps/engine/processor/index.js';
+export { hooks } from './symbols.js';
 
 export interface InitializationPayload {
 	userId: string;

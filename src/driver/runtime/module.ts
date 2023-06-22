@@ -1,8 +1,8 @@
-import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime';
-import type { CodePayload } from 'xxscreeps/engine/db/user/code';
-import { WASI } from './wasi';
-import { getOrSet } from 'xxscreeps/utility/utility';
-import { loadSourceMap } from './source-map';
+import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
+import type { CodePayload } from 'xxscreeps/engine/db/user/code.js';
+import { WASI } from './wasi/index.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { loadSourceMap } from './source-map.js';
 
 type Loader<Source> = {
 	resolve(specifier: string, referrer?: string): string;

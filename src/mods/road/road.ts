@@ -1,11 +1,11 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { Game } from 'xxscreeps/game';
-import { isBorder } from 'xxscreeps/game/position';
-import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { isBorder } from 'xxscreeps/game/position.js';
+import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 
 export const format = declare('Road', () => compose(shape, StructureRoad));
 const shape = struct(structureFormat, {

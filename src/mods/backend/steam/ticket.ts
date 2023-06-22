@@ -1,6 +1,6 @@
-import { hooks } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend/index.js';
 import fetch from 'node-fetch';
-import config from 'xxscreeps/config';
+import config from 'xxscreeps/config/index.js';
 
 const { steamApiKey } = config.backend;
 if (steamApiKey) {

@@ -3,8 +3,10 @@ import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not
 const requiredFlags = [
-	'--experimental-specifier-resolution=node',
 	'--experimental-import-meta-resolve',
+];
+const noWorkerFlags = [
+	'--no-node-snapshot',
 ];
 const extraFlags = (process.env.NODE_OPTIONS ?? '').split(/ /g).filter(flag => flag !== '');
 const isMissingFlag = (flag: string) => !process.execArgv.includes(flag) && !extraFlags.includes(flag);
@@ -16,8 +18,8 @@ if (missingFlags.length) {
 		'--no-warnings',
 	];
 	const execArgv = process.execArgv = [
-		...process.execArgv,
-		...extraFlags,
+		...process.execArgv.filter(flag => !noWorkerFlags.includes(flag)),
+		...extraFlags.filter(flag => !noWorkerFlags.includes(flag)),
 		...missingFlags,
 		...niceToHaveFlags.filter(isMissingFlag),
 	];
@@ -62,7 +64,7 @@ if (missingFlags.length) {
 
 	// `registerStorageProvider` needs to be imported early to allow local keyval/blob providers to
 	// register
-	await import('xxscreeps/engine/db/storage/register');
+	await import('xxscreeps/engine/db/storage/register.js');
 
 	// Get script and remove `dist/config/entry.js` from args
 	process.argv.splice(1, 1);
@@ -70,8 +72,8 @@ if (missingFlags.length) {
 
 	// Load mods
 	await Promise.all([
-		import('./mods'),
-		import('./global'),
+		import('./mods/index.js'),
+		import('./global.js'),
 	]);
 
 	if (specifier && !specifier.startsWith('-')) {

@@ -1,11 +1,11 @@
-import type { Store } from 'xxscreeps/mods/resource/store';
-import C from 'xxscreeps/game/constants';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object';
-import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure';
-import { Game } from 'xxscreeps/game';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store';
+import type { Store } from 'xxscreeps/mods/resource/store.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object.js';
+import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 
 export const format = declare('Ruin', () => compose(shape, Ruin));
 const shape = struct(objectFormat, {

@@ -1,12 +1,12 @@
-import type { Dictionary } from 'xxscreeps/utility/types';
-import type { FlagIntent } from './model';
+import type { Dictionary } from 'xxscreeps/utility/types.js';
+import type { FlagIntent } from './model.js';
 import type { InspectOptionsStylized } from 'util';
-import C from 'xxscreeps/game/constants';
-import * as Memory from 'xxscreeps/mods/memory/memory';
-import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position';
-import { RoomObject, format as baseFormat } from 'xxscreeps/game/object';
-import { chainIntentChecks, checkString } from 'xxscreeps/game/checks';
-import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema';
+import C from 'xxscreeps/game/constants/index.js';
+import * as Memory from 'xxscreeps/mods/memory/memory.js';
+import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
+import { RoomObject, format as baseFormat } from 'xxscreeps/game/object.js';
+import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
+import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema/index.js';
 
 export let intents: FlagIntent[] = [];
 export function acquireIntents() {

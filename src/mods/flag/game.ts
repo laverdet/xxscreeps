@@ -1,16 +1,16 @@
-import type { Color } from './flag';
-import type { TypeOf } from 'xxscreeps/schema';
-import type { Room } from 'xxscreeps/game/room';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import { hooks, registerGlobal } from 'xxscreeps/game';
-import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { compose, declare, vector } from 'xxscreeps/schema';
-import { makeReaderAndWriter } from 'xxscreeps/engine/schema';
-import { instantiate } from 'xxscreeps/utility/utility';
-import { Flag, acquireIntents, checkCreateFlag, format, intents } from './flag';
-import './room';
+import type { Color } from './flag.js';
+import type { TypeOf } from 'xxscreeps/schema/index.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { compose, declare, vector } from 'xxscreeps/schema/index.js';
+import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
+import { instantiate } from 'xxscreeps/utility/utility.js';
+import { Flag, acquireIntents, checkCreateFlag, format, intents } from './flag.js';
+import './room.js';
 
 // Flags are stored in a separate blob per user.. this is the schema for the blob
 const schema = declare('Flags', compose(vector(format), {

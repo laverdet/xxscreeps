@@ -1,11 +1,11 @@
-import type * as P from 'xxscreeps/engine/db/storage/provider';
-import type { Effect } from 'xxscreeps/utility/types';
+import type * as P from 'xxscreeps/engine/db/storage/provider.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import fsSync from 'fs';
 import fs from 'fs/promises';
-import Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional.js';
 import * as Path from 'path';
 import { fileURLToPath } from 'url';
-import { listen, spread } from 'xxscreeps/utility/async';
+import { listen, spread } from 'xxscreeps/utility/async.js';
 
 export class BlobStorage {
 	private readonly cache = new Map<string, {

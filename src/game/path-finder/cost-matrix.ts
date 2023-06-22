@@ -1,4 +1,4 @@
-import { instantiate } from 'xxscreeps/utility/utility';
+import { instantiate } from 'xxscreeps/utility/utility.js';
 
 export class CostMatrix {
 	_bits = new Uint8Array(2500);

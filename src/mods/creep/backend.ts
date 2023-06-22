@@ -1,9 +1,9 @@
-import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend';
-import { renderActionLog } from 'xxscreeps/backend/sockets/render';
-import { me } from 'xxscreeps/game';
-import { renderStore } from 'xxscreeps/mods/resource/backend';
-import { Creep } from './creep';
-import { Tombstone } from './tombstone';
+import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend/index.js';
+import { renderActionLog } from 'xxscreeps/backend/sockets/render.js';
+import { me } from 'xxscreeps/game/index.js';
+import { renderStore } from 'xxscreeps/mods/resource/backend.js';
+import { Creep } from './creep.js';
+import { Tombstone } from './tombstone.js';
 
 bindMapRenderer(Creep, creep => creep['#user']);
 

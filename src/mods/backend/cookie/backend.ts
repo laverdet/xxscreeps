@@ -1,6 +1,6 @@
 import * as Crypto from 'crypto';
-import * as User from 'xxscreeps/engine/db/user';
-import { hooks } from 'xxscreeps/backend';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { hooks } from 'xxscreeps/backend/index.js';
 
 hooks.register('middleware', koa => koa.use(async(context, next) => {
 	const clear = () => {

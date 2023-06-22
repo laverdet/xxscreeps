@@ -1,8 +1,8 @@
-import * as User from 'xxscreeps/engine/db/user';
-import { hooks } from 'xxscreeps/backend';
-import config from 'xxscreeps/config';
-import './openid';
-import './ticket';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { hooks } from 'xxscreeps/backend/index.js';
+import config from 'xxscreeps/config/index.js';
+import './openid.js';
+import './ticket.js';
 
 const { steamApiKey } = config.backend;
 if (!steamApiKey) {

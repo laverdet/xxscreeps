@@ -1,13 +1,13 @@
-import type { Direction } from 'xxscreeps/game/position';
-import type { RoomObject } from 'xxscreeps/game/object';
-import C from 'xxscreeps/game/constants';
-import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle';
-import { RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position';
-import { Room } from 'xxscreeps/game/room';
-import { readRoomObject } from 'xxscreeps/engine/db/room';
-import { latin1ToBuffer } from 'xxscreeps/utility/string';
-import { registerIntentProcessor } from '.';
-import { getOrSet } from 'xxscreeps/utility/utility';
+import type { Direction } from 'xxscreeps/game/position.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle.js';
+import { RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position.js';
+import { Room } from 'xxscreeps/game/room/index.js';
+import { readRoomObject } from 'xxscreeps/engine/db/room.js';
+import { latin1ToBuffer } from 'xxscreeps/utility/string.js';
+import { registerIntentProcessor } from './index.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 // Add cross-room movement
 declare module '.' {

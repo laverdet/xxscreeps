@@ -1,21 +1,21 @@
-import type { Direction } from './direction';
+import type { Direction } from './direction.js';
 import type { InspectOptionsStylized } from 'util';
-import type { FindConstants, FindType, RoomFindOptions } from './room/find';
-import type { LookConstants } from './room/look';
-import type { FindPathOptions, RoomPath } from './room/path';
-import type { RoomObject } from './object';
-import Fn from 'xxscreeps/utility/functional';
-import * as PathFinder from './path-finder';
-import { Game, registerGlobal } from '.';
-import { compose, declare } from 'xxscreeps/schema';
-import { iteratee } from 'xxscreeps/utility/iteratee';
-import { getDirection } from './direction';
-import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './room/name';
+import type { FindConstants, FindType, RoomFindOptions } from './room/find.js';
+import type { LookConstants } from './room/look.js';
+import type { FindPathOptions, RoomPath } from './room/path.js';
+import type { RoomObject } from './object.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as PathFinder from './path-finder/index.js';
+import { Game, registerGlobal } from './index.js';
+import { compose, declare } from 'xxscreeps/schema/index.js';
+import { iteratee } from 'xxscreeps/utility/iteratee.js';
+import { getDirection } from './direction.js';
+import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './room/name.js';
 
-export type { Direction } from './direction';
-export { isBorder, isNearBorder } from './terrain';
-export { getOffsetsFromDirection, getPositionInDirection, iterateNeighbors } from './direction';
-export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './room/name';
+export type { Direction } from './direction.js';
+export { isBorder, isNearBorder } from './terrain.js';
+export { getOffsetsFromDirection, getPositionInDirection, iterateNeighbors } from './direction.js';
+export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './room/name.js';
 
 type FindClosestByPathOptions<Type> =
 	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;

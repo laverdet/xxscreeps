@@ -1,6 +1,6 @@
-import Fn from 'xxscreeps/utility/functional';
-import { isPrivate, makeSymbol } from 'xxscreeps/driver/private/symbol'; // Use full path for webpack rewrite
-import { getOrSet } from 'xxscreeps/utility/utility';
+import Fn from 'xxscreeps/utility/functional.js';
+import { isPrivate, makeSymbol } from 'xxscreeps/driver/private/symbol/index.js'; // Use full path for webpack rewrite
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 const { apply, defineProperty, get, getPrototypeOf, set } = Reflect;
 const inherits = function(): boolean {
 	// v8 private symbols don't follow prototype chain. This tests the implementation's behavior.

@@ -1,12 +1,12 @@
-import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/utility/types';
-import type { Room } from 'xxscreeps/game/room';
-import type { RoomObject } from 'xxscreeps/game/object';
-import type { ProcessorContext } from './room';
-import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbols';
-import { getOrSet } from 'xxscreeps/utility/utility';
-export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room';
-export { registerRoomTickProcessor } from './room';
-export { hooks } from './symbols';
+import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/utility/types.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { ProcessorContext } from './room.js';
+import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbols.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
+export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room.js';
+export { registerRoomTickProcessor } from './room.js';
+export { hooks } from './symbols.js';
 
 // Intent type definitions
 type IntentProcessor = (receiver: any, context: ProcessorContext, ...data: any) => void;

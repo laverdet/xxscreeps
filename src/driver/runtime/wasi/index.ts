@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 // https://github.com/WebAssembly/WASI/blob/main/phases/snapshot/witx/wasi_snapshot_preview1.wit
-import * as C from './constants';
+import * as C from './constants.js';
 
 // Adapted from:
 // https://github.com/emscripten-core/emscripten/blob/9af077b01455277a8d38f9a2cb74c0bfbe012b0e/src/runtime_strings.js#L48

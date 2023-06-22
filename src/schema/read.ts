@@ -1,13 +1,13 @@
-import type { Layout, StructLayout } from './layout';
-import type { TypeOf } from './format';
-import { typedArrayToString } from 'xxscreeps/utility/string';
-import { getOrSet } from 'xxscreeps/utility/utility';
-import { BufferView } from './buffer-view';
-import { Variant } from './format';
-import { kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout';
-import { injectGetters } from './overlay';
-import { entriesWithSymbols } from './symbol';
-import { Builder } from '.';
+import type { Layout, StructLayout } from './layout.js';
+import type { TypeOf } from './format.js';
+import { typedArrayToString } from 'xxscreeps/utility/string.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { BufferView } from './buffer-view.js';
+import { Variant } from './format.js';
+import { kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout.js';
+import { injectGetters } from './overlay.js';
+import { entriesWithSymbols } from './symbol.js';
+import { Builder } from './index.js';
 
 export type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
 export type MemberReader = (value: any, view: Readonly<BufferView>, offset: number) => void;

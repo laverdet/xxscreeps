@@ -1,11 +1,11 @@
-import type { Effect } from './types';
+import type { Effect } from './types.js';
 import type { MessagePort } from 'worker_threads';
-import Fn from 'xxscreeps/utility/functional';
+import Fn from 'xxscreeps/utility/functional.js';
 import { MessageChannel, parentPort } from 'worker_threads';
 import { EventEmitter } from 'events';
-import { Deferred, mustNotReject } from './async';
-import { staticCast } from './utility';
-import { Worker, waitForWorker } from './worker';
+import { Deferred, mustNotReject } from './async.js';
+import { staticCast } from './utility.js';
+import { Worker, waitForWorker } from './worker.js';
 
 type RequestMessage = {
 	id: number;

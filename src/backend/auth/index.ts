@@ -1,8 +1,8 @@
-import type { Middleware } from 'xxscreeps/backend';
-import config from 'xxscreeps/config';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { checkToken, makeToken } from './token';
-import { findUserByProvider } from 'xxscreeps/engine/db/user';
+import type { Middleware } from 'xxscreeps/backend/index.js';
+import config from 'xxscreeps/config/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { checkToken, makeToken } from './token.js';
+import { findUserByProvider } from 'xxscreeps/engine/db/user/index.js';
 const { allowGuestAccess } = config.backend;
 
 declare module 'xxscreeps/backend' {

@@ -1,14 +1,14 @@
-import C from 'xxscreeps/game/constants';
-import { Game, me } from 'xxscreeps/game';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { appendEventLog } from 'xxscreeps/game/room/event-log';
-import { saveAction } from 'xxscreeps/game/object';
-import { Creep } from 'xxscreeps/mods/creep/creep';
-import { StructureRampart } from './rampart';
-import { StructureTower, checkTower } from './tower';
-import { clamp } from 'xxscreeps/utility/utility';
-import { captureDamage } from 'xxscreeps/mods/combat/creep';
-import { Structure } from 'xxscreeps/mods/structure/structure';
+import C from 'xxscreeps/game/constants/index.js';
+import { Game, me } from 'xxscreeps/game/index.js';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
+import { saveAction } from 'xxscreeps/game/object.js';
+import { Creep } from 'xxscreeps/mods/creep/creep.js';
+import { StructureRampart } from './rampart.js';
+import { StructureTower, checkTower } from './tower.js';
+import { clamp } from 'xxscreeps/utility/utility.js';
+import { captureDamage } from 'xxscreeps/mods/combat/creep.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
 
 function calculateEfficiency(tower: StructureTower, target: Creep | Structure) {
 	const range = clamp(C.TOWER_OPTIMAL_RANGE, C.TOWER_FALLOFF_RANGE, tower.pos.getRangeTo(target.pos));

@@ -1,5 +1,5 @@
-import type { ResourceType } from './resource';
-import * as Construction from 'xxscreeps/mods/construction/constants';
+import type { ResourceType } from './resource.js';
+import * as Construction from 'xxscreeps/mods/construction/constants.js';
 
 // Add `Container` construction cost constant
 Construction.CONSTRUCTION_COST.container = 5000;

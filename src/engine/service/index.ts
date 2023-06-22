@@ -1,7 +1,7 @@
-import type { Shard } from 'xxscreeps/engine/db';
-import { isTopThread } from 'xxscreeps/config/raw';
-import { Channel } from 'xxscreeps/engine/db/channel';
-import { listen } from 'xxscreeps/utility/async';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import { isTopThread } from 'xxscreeps/config/raw.js';
+import { Channel } from 'xxscreeps/engine/db/channel.js';
+import { listen } from 'xxscreeps/utility/async.js';
 
 export function getServiceChannel(shard: Shard) {
 	type Message =

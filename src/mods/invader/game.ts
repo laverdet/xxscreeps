@@ -1,4 +1,4 @@
-import { registerStruct } from 'xxscreeps/engine/schema';
+import { registerStruct } from 'xxscreeps/engine/schema/index.js';
 
 // Track energy mined on room
 const schema = registerStruct('Room', {

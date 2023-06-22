@@ -1,7 +1,7 @@
-import type { Creep } from 'xxscreeps/mods/creep/creep';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import flee from './flee';
+import type { Creep } from 'xxscreeps/mods/creep/creep.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import flee from './flee.js';
 
 export default function(creep: Creep, healers: Creep[]) {
 	const healTargets = creep.pos.findInRange(C.FIND_MY_CREEPS, 3);

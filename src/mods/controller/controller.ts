@@ -1,9 +1,9 @@
-import type { Room } from 'xxscreeps/game/room';
-import C from 'xxscreeps/game/constants';
-import { Game, intents, userInfo } from 'xxscreeps/game';
-import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { chainIntentChecks } from 'xxscreeps/game/checks';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { Game, intents, userInfo } from 'xxscreeps/game/index.js';
+import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 
 export const format = declare('Controller', () => compose(shape, StructureController));
 const shape = struct(ownedStructureFormat, {

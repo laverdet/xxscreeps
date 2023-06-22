@@ -1,7 +1,7 @@
-import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks } from 'xxscreeps/backend';
-import { userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model';
-import { StructureController } from './controller';
-import { controlledRoomKey as controlledRoomsKey, reservedRoomKey as reservedRoomsKey } from './processor';
+import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks } from 'xxscreeps/backend/index.js';
+import { userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { StructureController } from './controller.js';
+import { controlledRoomKey as controlledRoomsKey, reservedRoomKey as reservedRoomsKey } from './processor.js';
 
 bindMapRenderer(StructureController, () => 'c');
 bindTerrainRenderer(StructureController, () => 0x505050);

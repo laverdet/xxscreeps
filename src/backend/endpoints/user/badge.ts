@@ -1,6 +1,6 @@
-import type { Endpoint } from 'xxscreeps/backend';
-import * as Badge from 'xxscreeps/engine/db/user/badge';
-import * as User from 'xxscreeps/engine/db/user';
+import type { Endpoint } from 'xxscreeps/backend/index.js';
+import * as Badge from 'xxscreeps/engine/db/user/badge.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 
 const BadgeEndpoint: Endpoint = {
 	path: '/api/user/badge',

@@ -1,11 +1,11 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { Game, registerGlobal } from 'xxscreeps/game';
-import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
-import { assign } from 'xxscreeps/utility/utility';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { Game, registerGlobal } from 'xxscreeps/game/index.js';
+import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { assign } from 'xxscreeps/utility/utility.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 
 export const format = declare('Extractor', () => compose(shape, StructureExtractor));
 const shape = struct(ownedStructureFormat, {

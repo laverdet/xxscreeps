@@ -1,4 +1,4 @@
-import type { Endpoint } from 'xxscreeps/backend';
+import type { Endpoint } from 'xxscreeps/backend/index.js';
 
 const UnreadCountEndpoint: Endpoint = {
 	path: '/api/user/messages/unread-count',

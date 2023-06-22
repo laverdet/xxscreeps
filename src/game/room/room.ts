@@ -1,17 +1,17 @@
 import type { InspectOptionsStylized } from 'util';
-import type { GameState } from 'xxscreeps/game';
-import type { Terrain } from 'xxscreeps/game/terrain';
-import type { RoomObject } from 'xxscreeps/game/object';
-import type { RoomPosition } from 'xxscreeps/game/position';
-import type { FindConstants, FindType, RoomFindOptions } from './find';
-import type { LookConstants, TypeOfLook } from './look';
-import Fn from 'xxscreeps/utility/functional';
-import { BufferObject, withOverlay } from 'xxscreeps/schema';
-import { getOrSet, removeOne } from 'xxscreeps/utility/utility';
-import { iteratee } from 'xxscreeps/utility/iteratee';
-import { registerGlobal } from 'xxscreeps/game';
-import { shape } from './schema';
-import { findHandlers, lookConstants } from './symbols';
+import type { GameState } from 'xxscreeps/game/index.js';
+import type { Terrain } from 'xxscreeps/game/terrain.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import type { FindConstants, FindType, RoomFindOptions } from './find.js';
+import type { LookConstants, TypeOfLook } from './look.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { BufferObject, withOverlay } from 'xxscreeps/schema/index.js';
+import { getOrSet, removeOne } from 'xxscreeps/utility/utility.js';
+import { iteratee } from 'xxscreeps/utility/iteratee.js';
+import { registerGlobal } from 'xxscreeps/game/index.js';
+import { shape } from './schema.js';
+import { findHandlers, lookConstants } from './symbols.js';
 
 export type AnyRoomObject = Exclude<Room['#objects'][number], { '#lookType': null }>;
 

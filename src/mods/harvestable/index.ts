@@ -1,10 +1,10 @@
-import type C from 'xxscreeps/game/constants';
-import type { Creep } from 'xxscreeps/mods/creep/creep';
-import type { RoomObject } from 'xxscreeps/game/object';
-import type { Implementation } from 'xxscreeps/utility/types';
-import type { Manifest } from 'xxscreeps/config/mods';
+import type C from 'xxscreeps/game/constants/index.js';
+import type { Creep } from 'xxscreeps/mods/creep/creep.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { Implementation } from 'xxscreeps/utility/types.js';
+import type { Manifest } from 'xxscreeps/config/mods/index.js';
 
-export type { Harvest } from './game';
+export type { Harvest } from './game.js';
 
 export function registerHarvestable<Type extends RoomObject, Error extends C.ErrorCode>(
 	target: Implementation<Type>,

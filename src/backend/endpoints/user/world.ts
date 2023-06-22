@@ -1,5 +1,5 @@
-import * as User from 'xxscreeps/engine/db/user';
-import { hooks } from 'xxscreeps/backend';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { hooks } from 'xxscreeps/backend/index.js';
 
 hooks.register('route', {
 	path: '/api/user/respawn-prohibited-rooms',

@@ -1,18 +1,18 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import Fn from 'xxscreeps/utility/functional';
-import * as Creep from 'xxscreeps/mods/creep/creep';
-import * as Resource from 'xxscreeps/mods/resource/processor/resource';
-import { StructureKeeperLair } from './keeper-lair';
-import { Source } from './source';
-import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor';
-import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor';
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { calculatePower } from 'xxscreeps/mods/creep/creep';
-import { Game } from 'xxscreeps/game';
-import { search } from 'xxscreeps/driver/path-finder';
-import { lookForStructures } from 'xxscreeps/mods/structure/structure';
-import { iterateNeighbors } from 'xxscreeps/game/position';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Creep from 'xxscreeps/mods/creep/creep.js';
+import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
+import { StructureKeeperLair } from './keeper-lair.js';
+import { Source } from './source.js';
+import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
+import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor.js';
+import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { calculatePower } from 'xxscreeps/mods/creep/creep.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { search } from 'xxscreeps/driver/path-finder.js';
+import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
+import { iterateNeighbors } from 'xxscreeps/game/position.js';
 
 registerHarvestProcessor(Source, (creep, source) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER);

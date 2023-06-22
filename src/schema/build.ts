@@ -1,9 +1,9 @@
-import type { Format, ShapeOf, TypeOf, WithShapeAndType } from './format';
-import type { LayoutAndTraits } from './layout';
+import type { Format, ShapeOf, TypeOf, WithShapeAndType } from './format.js';
+import type { LayoutAndTraits } from './layout.js';
 import crypto from 'crypto';
-import { archiveLayout } from './archive';
-import { getLayout } from './layout';
-import { getName } from 'xxscreeps/schema/format';
+import { archiveLayout } from './archive.js';
+import { getLayout } from './layout.js';
+import { getName } from 'xxscreeps/schema/format.js';
 
 export interface Package extends LayoutAndTraits {
 	archive: string;

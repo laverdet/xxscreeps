@@ -1,9 +1,9 @@
-import type { Dictionary } from 'xxscreeps/utility/types';
-import type { Room } from './room';
-import type { RoomObject } from './object';
-import type { IntentParameters, IntentReceivers, IntentsForReceiver } from 'xxscreeps/engine/processor';
-import type { ObjectReceivers, RoomIntentPayload } from 'xxscreeps/engine/processor/room';
-import C from './constants';
+import type { Dictionary } from 'xxscreeps/utility/types.js';
+import type { Room } from './room/index.js';
+import type { RoomObject } from './object.js';
+import type { IntentParameters, IntentReceivers, IntentsForReceiver } from 'xxscreeps/engine/processor/index.js';
+import type { ObjectReceivers, RoomIntentPayload } from 'xxscreeps/engine/processor/room.js';
+import C from './constants/index.js';
 
 const kCpuCost = 0.2;
 type NamedReceivers = Exclude<IntentReceivers, RoomObject | Room>;

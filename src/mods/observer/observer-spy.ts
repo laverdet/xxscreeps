@@ -1,7 +1,7 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import * as Id from 'xxscreeps/engine/schema/id';
-import { RoomObject, create as objectCreate, format as objectFormat } from 'xxscreeps/game/object';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { RoomObject, create as objectCreate, format as objectFormat } from 'xxscreeps/game/object.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 
 export const format = () => compose(shape, ObserverSpy);
 const shape = declare('ObserverSpy', struct(objectFormat, {

@@ -1,16 +1,16 @@
-import type { Adapter } from 'xxscreeps/utility/astar';
-import type { ExitType } from './room/find';
-import type { Room } from './room';
-import type { TypeOf } from 'xxscreeps/schema';
+import type { Adapter } from 'xxscreeps/utility/astar.js';
+import type { ExitType } from './room/find.js';
+import type { Room } from './room/index.js';
+import type { TypeOf } from 'xxscreeps/schema/index.js';
 
-import C from './constants';
-import Fn from 'xxscreeps/utility/functional';
-import * as Terrain from './terrain';
-import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from './position';
-import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema';
-import { astar } from 'xxscreeps/utility/astar';
-import { build } from 'xxscreeps/engine/schema';
-import { getDirection } from './direction';
+import C from './constants/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Terrain from './terrain.js';
+import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from './position.js';
+import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
+import { astar } from 'xxscreeps/utility/astar.js';
+import { build } from 'xxscreeps/engine/schema/index.js';
+import { getDirection } from './direction.js';
 
 // Schema
 const roomTerrain = () => struct({

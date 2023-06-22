@@ -1,5 +1,5 @@
-import type { AsyncEffectAndResult, Effect } from './types';
-import Fn from './functional';
+import type { AsyncEffectAndResult, Effect } from './types.js';
+import Fn from './functional.js';
 
 // Given a series of effect-returning promises this waits for them all to resolve and returns a
 // single effect that owns all the underlying effects. In the case that one throws the successful

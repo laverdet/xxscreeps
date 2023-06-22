@@ -1,8 +1,8 @@
-import config from 'xxscreeps/config';
-import { hooks } from 'xxscreeps/backend';
-import { acquire, mustNotReject } from 'xxscreeps/utility/async';
-import { throttle } from 'xxscreeps/utility/utility';
-import { getVisualChannel, loadVisuals } from './model';
+import config from 'xxscreeps/config/index.js';
+import { hooks } from 'xxscreeps/backend/index.js';
+import { acquire, mustNotReject } from 'xxscreeps/utility/async.js';
+import { throttle } from 'xxscreeps/utility/utility.js';
+import { getVisualChannel, loadVisuals } from './model.js';
 
 hooks.register('roomSocket', async(shard, userId, roomName) => {
 	if (!userId) {

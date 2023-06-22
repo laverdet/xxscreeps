@@ -1,14 +1,14 @@
-import type { Effect } from 'xxscreeps/utility/types';
-import type { ProcessorRequest } from 'xxscreeps/engine/processor/worker';
-import config from 'xxscreeps/config';
-import Fn from 'xxscreeps/utility/functional';
-import * as Async from 'xxscreeps/utility/async';
-import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model';
-import { Database, Shard } from 'xxscreeps/engine/db';
-import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async';
-import { negotiateResponderClient } from 'xxscreeps/utility/responder';
-import { clamp } from 'xxscreeps/utility/utility';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from '.';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import type { ProcessorRequest } from 'xxscreeps/engine/processor/worker.js';
+import config from 'xxscreeps/config/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Async from 'xxscreeps/utility/async.js';
+import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async.js';
+import { negotiateResponderClient } from 'xxscreeps/utility/responder.js';
+import { clamp } from 'xxscreeps/utility/utility.js';
+import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
 const isEntry = checkIsEntry();
 
 // Interrupt handler

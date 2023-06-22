@@ -1,2 +1,2 @@
-export { Database } from './database';
-export { Shard } from './shard';
+export { Database } from './database.js';
+export { Shard } from './shard.js';

@@ -1,11 +1,11 @@
-import type { Shard } from 'xxscreeps/engine/db';
-import config from 'xxscreeps/config';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import config from 'xxscreeps/config/index.js';
 import { gzip } from 'zlib';
-import { hooks } from 'xxscreeps/backend';
-import { loadUserMemoryString } from 'xxscreeps/mods/memory/model';
-import { mustNotReject } from 'xxscreeps/utility/async';
-import { throttle } from 'xxscreeps/utility/utility';
-import { requestRunnerEval } from 'xxscreeps/engine/runner/model';
+import { hooks } from 'xxscreeps/backend/index.js';
+import { loadUserMemoryString } from 'xxscreeps/mods/memory/model.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { throttle } from 'xxscreeps/utility/utility.js';
+import { requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
 
 const invalidPath = 'Incorrect memory path';
 const emptyObject = Object.create(null);

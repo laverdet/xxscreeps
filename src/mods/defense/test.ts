@@ -1,8 +1,8 @@
-import * as C from 'xxscreeps/game/constants';
-import { assert, describe, simulate, test } from 'xxscreeps/test';
-import { RoomPosition } from 'xxscreeps/game/position';
-import { create as createConstructionSite } from 'xxscreeps/mods/construction/construction-site';
-import { create as createCreep } from 'xxscreeps/mods/creep/creep';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { create as createConstructionSite } from 'xxscreeps/mods/construction/construction-site.js';
+import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 
 describe('ramparts', () => {
 	const roomWithUnbuiltRamparts = simulate({

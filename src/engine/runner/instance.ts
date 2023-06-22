@@ -1,22 +1,22 @@
-import type { Effect } from 'xxscreeps/utility/types';
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner';
-import type { Sandbox } from 'xxscreeps/driver/sandbox';
-import type { RunnerIntent } from './model';
-import type { Shard } from 'xxscreeps/engine/db';
-import type { SubscriptionFor } from 'xxscreeps/engine/db/channel';
-import type { World } from 'xxscreeps/game/map';
-import config from 'xxscreeps/config';
-import Fn from 'xxscreeps/utility/functional';
-import * as Code from 'xxscreeps/engine/db/user/code';
-import * as RoomSchema from 'xxscreeps/engine/db/room';
-import * as User from 'xxscreeps/engine/db/user';
-import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model';
-import { acquire } from 'xxscreeps/utility/async';
-import { createSandbox } from 'xxscreeps/driver/sandbox';
-import { hooks } from './symbols';
-import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model';
-import { getConsoleChannel } from 'xxscreeps/engine/runner/model';
-import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
+import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
+import type { RunnerIntent } from './model.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { SubscriptionFor } from 'xxscreeps/engine/db/channel.js';
+import type { World } from 'xxscreeps/game/map.js';
+import config from 'xxscreeps/config/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as Code from 'xxscreeps/engine/db/user/code.js';
+import * as RoomSchema from 'xxscreeps/engine/db/room.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model.js';
+import { acquire } from 'xxscreeps/utility/async.js';
+import { createSandbox } from 'xxscreeps/driver/sandbox/index.js';
+import { hooks } from './symbols.js';
+import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model.js';
+import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
+import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility.js';
 
 const acquireConnectors = function(invoke) {
 	return async(instance: PlayerInstance) => {

@@ -1,14 +1,14 @@
 import type Koa from 'koa';
 import type Router from 'koa-router';
-import type { Context, State } from 'xxscreeps/backend';
+import type { Context, State } from 'xxscreeps/backend/index.js';
 
-import { VersionEndpoint } from './version';
-import gameEndpoints from './game';
-import registrationEndpoints from './register';
-import userEndpoints from './user';
-import { hooks } from 'xxscreeps/backend';
+import { VersionEndpoint } from './version.js';
+import gameEndpoints from './game/index.js';
+import registrationEndpoints from './register.js';
+import userEndpoints from './user/index.js';
+import { hooks } from 'xxscreeps/backend/index.js';
 
-import './assets/terrain';
+import './assets/terrain.js';
 
 export function installEndpointHandlers(koa: Koa<State, Context>, router: Router<State, Context>) {
 	const endpoints = [

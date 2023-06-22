@@ -1,9 +1,9 @@
-import type { BufferView } from 'xxscreeps/schema';
-import type { ResourceType } from 'xxscreeps/mods/resource/resource';
-import C from 'xxscreeps/game/constants';
-import { Store } from 'xxscreeps/mods/resource/store';
-import { optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource';
-import { compose, struct, withOverlay } from 'xxscreeps/schema';
+import type { BufferView } from 'xxscreeps/schema/index.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { Store } from 'xxscreeps/mods/resource/store.js';
+import { optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
+import { compose, struct, withOverlay } from 'xxscreeps/schema/index.js';
 
 const shape = struct({
 	'#energy': 'int32',

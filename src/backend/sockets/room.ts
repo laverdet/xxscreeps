@@ -1,17 +1,17 @@
-import type { Effect } from 'xxscreeps/utility/types';
-import type { Shard } from 'xxscreeps/engine/db';
-import type { Room } from 'xxscreeps/game/room';
-import type { SubscriptionEndpoint } from '../socket';
-import config from 'xxscreeps/config';
-import Fn from 'xxscreeps/utility/functional';
-import * as User from 'xxscreeps/engine/db/user';
-import { runOneShot } from 'xxscreeps/game';
-import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async';
-import { asUnion, getOrSet, hackyIterableToArray, throttle } from 'xxscreeps/utility/utility';
-import { hooks } from 'xxscreeps/backend';
-import { Render } from 'xxscreeps/backend/symbols';
-import { getRoomChannel } from 'xxscreeps/engine/processor/model';
-import './render';
+import type { Effect } from 'xxscreeps/utility/types.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { SubscriptionEndpoint } from '../socket.js';
+import config from 'xxscreeps/config/index.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import { runOneShot } from 'xxscreeps/game/index.js';
+import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async.js';
+import { asUnion, getOrSet, hackyIterableToArray, throttle } from 'xxscreeps/utility/utility.js';
+import { hooks } from 'xxscreeps/backend/index.js';
+import { Render } from 'xxscreeps/backend/symbols.js';
+import { getRoomChannel } from 'xxscreeps/engine/processor/model.js';
+import './render.js';
 
 function diff(previous: any, next: any) {
 	if (previous === next) {

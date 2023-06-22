@@ -1,7 +1,7 @@
-import type { GameConstructor } from '.';
-import C from './constants';
+import type { GameConstructor } from './index.js';
+import C from './constants/index.js';
 import lodash from 'lodash';
-import { globals, hooks, registerGlobal } from './symbols';
+import { globals, hooks, registerGlobal } from './symbols.js';
 
 registerGlobal('_', lodash);
 

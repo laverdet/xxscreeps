@@ -1,5 +1,5 @@
-import type { World } from 'xxscreeps/game/map';
-import { Database, Shard } from 'xxscreeps/engine/db';
+import type { World } from 'xxscreeps/game/map.js';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 
 export class BackendContext {
 	private constructor(

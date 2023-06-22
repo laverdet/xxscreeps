@@ -1,7 +1,7 @@
 import type { Node, NodePath, PluginObj, Visitor } from '@babel/core';
 import type { VisitNode } from '@babel/traverse';
 import * as t from '@babel/types';
-import { getOrSet } from 'xxscreeps/utility/utility';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 function extractPrivateName(node: Node) {
 	if (t.isStringLiteral(node) && node.value.startsWith('#')) {

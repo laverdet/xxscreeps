@@ -1,13 +1,13 @@
-import type { TickPayload } from 'xxscreeps/engine/runner';
-import type { Room } from 'xxscreeps/game/room';
-import type { World } from 'xxscreeps/game/map';
-import './runtime';
-import { GameBase, Game as GameConstructor, GameState } from './game';
-import { IntentManager } from './intents';
-import { flush as flushPathFinder } from './path-finder';
-import { hooks } from './symbols';
+import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { World } from 'xxscreeps/game/map.js';
+import './runtime.js';
+import { GameBase, Game as GameConstructor, GameState } from './game.js';
+import { IntentManager } from './intents.js';
+import { flush as flushPathFinder } from './path-finder/index.js';
+import { hooks } from './symbols.js';
 
-export { defineGlobal, hooks, registerGlobal } from './symbols';
+export { defineGlobal, hooks, registerGlobal } from './symbols.js';
 export { GameConstructor, GameState };
 export let Game: GameBase;
 export let intents: IntentManager;

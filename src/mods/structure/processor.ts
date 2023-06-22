@@ -1,8 +1,8 @@
-import C from 'xxscreeps/game/constants';
-import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor';
-import { Structure, checkDestroy } from './structure';
-import { Ruin } from './ruin';
+import C from 'xxscreeps/game/constants/index.js';
+import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { Structure, checkDestroy } from './structure.js';
+import { Ruin } from './ruin.js';
 
 declare module 'xxscreeps/engine/processor' {
 	interface Intent { structure: typeof intents }

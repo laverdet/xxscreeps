@@ -1,10 +1,10 @@
-import type { Context, State } from 'xxscreeps/backend';
+import type { Context, State } from 'xxscreeps/backend/index.js';
 import * as OpenId from 'openid';
-import * as User from 'xxscreeps/engine/db/user';
-import config from 'xxscreeps/config';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import config from 'xxscreeps/config/index.js';
 import Passport from 'koa-passport';
 import Router from 'koa-router';
-import { hooks } from 'xxscreeps/backend';
+import { hooks } from 'xxscreeps/backend/index.js';
 import { Strategy as SteamStrategy } from 'passport-steam';
 const { RelyingParty } = (OpenId as never as Record<'default', typeof OpenId>).default;
 

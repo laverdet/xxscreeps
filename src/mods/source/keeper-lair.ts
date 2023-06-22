@@ -1,9 +1,9 @@
-import type { RoomPosition } from 'xxscreeps/game/position';
-import C from 'xxscreeps/game/constants';
-import * as RoomObject from 'xxscreeps/game/object';
-import { Game, registerGlobal } from 'xxscreeps/game';
-import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import C from 'xxscreeps/game/constants/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { Game, registerGlobal } from 'xxscreeps/game/index.js';
+import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 
 export const format = declare('KeeperLair', () => compose(shape, StructureKeeperLair));
 const shape = struct(ownedStructureFormat, {

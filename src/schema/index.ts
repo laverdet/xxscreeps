@@ -1,15 +1,15 @@
-import type { Layout } from './layout';
-import type { MemberReader, Reader } from './read';
-import type { Scanner } from './scan';
-import type { MemberWriter, Writer } from './write';
+import type { Layout } from './layout.js';
+import type { MemberReader, Reader } from './read.js';
+import type { Scanner } from './scan.js';
+import type { MemberWriter, Writer } from './write.js';
 
-export type { Format, ShapeOf, TypeOf } from './format';
-export { BufferObject } from './buffer-object';
-export { BufferView } from './buffer-view';
-export { array, compose, constant, declare, enumerated, optional, struct, union, variant, vector, withType } from './format';
-export { withOverlay } from './overlay';
-export { makeReader } from './read';
-export { makeWriter } from './write';
+export type { Format, ShapeOf, TypeOf } from './format.js';
+export { BufferObject } from './buffer-object.js';
+export { BufferView } from './buffer-view.js';
+export { array, compose, constant, declare, enumerated, optional, struct, union, variant, vector, withType } from './format.js';
+export { withOverlay } from './overlay.js';
+export { makeReader } from './read.js';
+export { makeWriter } from './write.js';
 
 export const Variant = Symbol('schemaVariant') as never as '_$Variant';
 

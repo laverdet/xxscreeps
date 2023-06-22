@@ -1,6 +1,6 @@
-import type { Shard } from 'xxscreeps/engine/db';
-import { Channel } from 'xxscreeps/engine/db/channel';
-import { tickSpeed } from 'xxscreeps/engine/service/tick';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import { Channel } from 'xxscreeps/engine/db/channel.js';
+import { tickSpeed } from 'xxscreeps/engine/service/tick.js';
 
 export function getConsoleChannel(shard: Shard, user: string) {
 	return new Channel(shard.pubsub, `user/${user}/console`, false);

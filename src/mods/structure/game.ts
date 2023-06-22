@@ -1,10 +1,10 @@
-import type { AnyStructure } from './structure';
-import C from 'xxscreeps/game/constants';
-import { registerGlobal } from 'xxscreeps/game';
-import { registerFindHandlers, registerLook } from 'xxscreeps/game/room';
-import { registerVariant } from 'xxscreeps/engine/schema';
-import { Ruin, format as ruinFormat } from './ruin';
-import { OwnedStructure, Structure } from './structure';
+import type { AnyStructure } from './structure.js';
+import C from 'xxscreeps/game/constants/index.js';
+import { registerGlobal } from 'xxscreeps/game/index.js';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { Ruin, format as ruinFormat } from './ruin.js';
+import { OwnedStructure, Structure } from './structure.js';
 
 // Export `Structure` & `Ruin` to runtime globals
 registerGlobal(OwnedStructure);

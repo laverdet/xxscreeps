@@ -1,8 +1,8 @@
-import { hooks, registerGlobal } from 'xxscreeps/game';
-import { GameMap } from 'xxscreeps/game/map';
-import { Room } from 'xxscreeps/game/room';
-import { extend } from 'xxscreeps/utility/utility';
-import { RoomVisual, flush } from './visual';
+import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
+import { GameMap } from 'xxscreeps/game/map.js';
+import { Room } from 'xxscreeps/game/room/index.js';
+import { extend } from 'xxscreeps/utility/utility.js';
+import { RoomVisual, flush } from './visual.js';
 
 // Export `RoomVisual` to runtime globals
 registerGlobal(RoomVisual);

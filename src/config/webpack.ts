@@ -1,4 +1,4 @@
-import type { Transform } from 'xxscreeps/driver/webpack';
+import type { Transform } from 'xxscreeps/driver/webpack.js';
 export const configTransform: Transform = {
 	externals: ({ context, request }) => {
 		if (request === 'xxscreeps/config/mods/import') {

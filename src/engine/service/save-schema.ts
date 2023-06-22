@@ -1,5 +1,5 @@
-import * as RoomSchema from 'xxscreeps/engine/db/room';
-import 'xxscreeps/config/mods/import/game';
+import * as RoomSchema from 'xxscreeps/engine/db/room.js';
+import 'xxscreeps/config/mods/import/game.js';
 
 // Writes room schema to archive
 try {

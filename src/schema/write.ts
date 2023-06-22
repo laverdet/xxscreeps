@@ -1,15 +1,15 @@
-import type { Layout, StructLayout } from './layout';
-import type { Package } from './build';
-import type { ShapeOf } from './format';
-import Fn from 'xxscreeps/utility/functional';
-import { getOrSet } from 'xxscreeps/utility/utility';
-import { BufferView } from './buffer-view';
-import { Variant } from './format';
-import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout';
-import { makeTypeScanner } from './scan';
-import { entriesWithSymbols } from './symbol';
-import { Builder } from '.';
-import { runOnce } from 'xxscreeps/utility/memoize';
+import type { Layout, StructLayout } from './layout.js';
+import type { Package } from './build.js';
+import type { ShapeOf } from './format.js';
+import Fn from 'xxscreeps/utility/functional.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { BufferView } from './buffer-view.js';
+import { Variant } from './format.js';
+import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout.js';
+import { makeTypeScanner } from './scan.js';
+import { entriesWithSymbols } from './symbol.js';
+import { Builder } from './index.js';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
 
 export type Writer<Type = any> = (value: Type, view: BufferView, offset: number, heap: number) => number;
 export type MemberWriter = (value: any, view: BufferView, offset: number, heap: number) => number;

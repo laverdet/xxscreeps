@@ -1,12 +1,12 @@
-import type { Schema } from './config';
+import type { Schema } from './config.js';
 import fs from 'fs/promises';
 import Ajv from 'ajv';
-import Config from 'xxscreeps/config/mods/import/config';
-import data, { configPath, isTopThread } from './raw';
-import { merge } from 'xxscreeps/utility/utility';
+import Config from 'xxscreeps/config/mods/import/config.js';
+import data, { configPath, isTopThread } from './raw.js';
+import { merge } from 'xxscreeps/utility/utility.js';
 import { fileURLToPath } from 'url';
-import './global';
-import './mods';
+import './global.js';
+import './mods/index.js';
 
 if (isTopThread) {
 	const schema = await async function() {
