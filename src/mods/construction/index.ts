@@ -8,5 +8,5 @@ export function registerBuildableStructure(structureType: string, factory: Const
 
 export const manifest: Manifest = {
 	dependencies: [ 'xxscreeps/mods/creep' ],
-	provides: [ 'backend', 'constants', 'game', 'processor' ],
+	provides: [ 'backend', 'constants', 'game', 'processor', 'test' ],
 };
