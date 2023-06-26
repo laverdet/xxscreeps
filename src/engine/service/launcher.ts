@@ -51,9 +51,9 @@ try {
 			return { services, backend };
 		} else {
 			const [ backend, processor, runner ] = await Promise.all([
-				argv['no-backend'] ? undefined : Worker.create('xxscreeps/backend/server'),
-				argv['no-processor'] ? undefined : Worker.create('xxscreeps/engine/service/processor'),
-				argv['no-runner'] ? undefined : Worker.create('xxscreeps/engine/service/runner'),
+				argv['no-backend'] ? undefined : Worker.create('xxscreeps/backend/server.js'),
+				argv['no-processor'] ? undefined : Worker.create('xxscreeps/engine/service/processor.js'),
+				argv['no-runner'] ? undefined : Worker.create('xxscreeps/engine/service/runner.js'),
 			]);
 			const services = Promise.all([ main, processor && waitForWorker(processor), runner && waitForWorker(runner) ]);
 			return { services, backend };
