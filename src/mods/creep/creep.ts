@@ -467,7 +467,7 @@ function checkFatigue(creep: Creep) {
 
 export function checkDrop(creep: Creep, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
-		() => checkCommon(creep, C.MOVE),
+		() => checkCommon(creep),
 		() => checkHasResource(creep, resourceType, amount));
 }
 
