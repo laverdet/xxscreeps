@@ -10,7 +10,7 @@ const { RelyingParty } = (OpenId as never as Record<'default', typeof OpenId>).d
 
 // Hack in dynamic host support for abandoned Steam OpenId module
 SteamStrategy.prototype.authenticate = function(authenticate) {
-	return function(this: any, ...args: any[]) {
+	return function(this: any, ...args: any) {
 		const req = args[0];
 		this._relyingParty.update = function() {
 			this.returnUrl = `${new URL('/api/auth/steam/return', req.href)}`;
@@ -48,6 +48,7 @@ if (steamApiKey) {
 		Passport.use('steam', new SteamStrategy({
 			apiKey: steamApiKey,
 			profile: false,
+			realm: '',
 			returnURL: 'http:///',
 		}, (identifier: string, profile: unknown, done: (err: null | Error, value?: string) => void) => {
 			const steamId = /https:\/\/steamcommunity.com\/openid\/id\/(?<id>[^/]+)/.exec(identifier)?.groups!.id;
