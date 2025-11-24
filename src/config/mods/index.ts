@@ -73,9 +73,9 @@ if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 		const resolved = await Promise.all(mods.map(async({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
 				try {
-					return await import.meta.resolve!(`./${specifier}/index.js`, `${url}`);
+					return await import.meta.resolve!(`./${specifier}.js`, `${url}`);
 				} catch {
-					return import.meta.resolve!(`./${specifier}.js`, `${url}`);
+					return import.meta.resolve!(`./${specifier}/index.js`, `${url}`);
 				}
 			}
 		}));
@@ -145,14 +145,12 @@ export { mods };
 export async function importMods(provides: Provide) {
 	for (const mod of mods) {
 		if (mod.provides.includes(provides)) {
-			const url = await async function() {
-				try {
-					return await import.meta.resolve!(`./${provides}/index.js`, `${mod.url}`);
-				} catch {
-					return import.meta.resolve!(`./${provides}.js`, `${mod.url}`);
-				}
-			}();
-			await import(url);
+	        try {
+                await import(await import.meta.resolve!(`./${provides}.js`, `${mod.url}`));
+            }
+            catch (e) {
+                await import(await import.meta.resolve!(`./${provides}/index.js`, `${mod.url}`));
+            }
 		}
 	}
 }
