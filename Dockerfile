@@ -14,4 +14,5 @@ FROM node:20-slim as run
 WORKDIR /usr/app/xxscreeps
 COPY --from=build /usr/app/xxscreeps/ ./
 EXPOSE 21025
+ENV NODE_OPTIONS="--no-node-snapshot"
 ENTRYPOINT /bin/sh -c 'npx xxscreeps import --dont-overwrite && npx xxscreeps start'
