@@ -145,12 +145,12 @@ export { mods };
 export async function importMods(provides: Provide) {
 	for (const mod of mods) {
 		if (mod.provides.includes(provides)) {
-	        try {
-                await import(await import.meta.resolve!(`./${provides}.js`, `${mod.url}`));
-            }
-            catch (e) {
-                await import(await import.meta.resolve!(`./${provides}/index.js`, `${mod.url}`));
-            }
+			try {
+				await import(await import.meta.resolve!(`./${provides}.js`, `${mod.url}`));
+			}
+			catch (e) {
+				await import(await import.meta.resolve!(`./${provides}/index.js`, `${mod.url}`));
+			}
 		}
 	}
 }

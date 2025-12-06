@@ -108,6 +108,7 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 	for (const object of room['#lookAt'](pos)) {
 		asUnion(object);
 		if (
+			object['#lookType'] === C.LOOK_CONSTRUCTION_SITES ||
 			object.structureType === structureType ||
 			(obstacle && obstacleChecker(object))
 		) {

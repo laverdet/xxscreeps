@@ -1,4 +1,4 @@
-import { assert, describe, simulate, test } from 'xxscreeps/test';
+import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
 describe('Construction', () => {
 	const construction = simulate({
