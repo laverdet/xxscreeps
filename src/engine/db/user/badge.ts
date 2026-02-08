@@ -1,6 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import Ajv from 'ajv';
-import jsonSchema from './badge.schema.json' assert { type: 'json' };
+import jsonSchema from './badge.schema.json' with { type: 'json' };
 import * as User from './index.js';
 
 // To rebuild schema:
@@ -32,7 +32,7 @@ export type Badge = UserBadge | {
 	};
 };
 
-const ajv = new Ajv;
+const ajv = new Ajv({ strict: false });
 const validator = ajv.compile(jsonSchema);
 
 export function validate(badge: any): UserBadge {
@@ -40,7 +40,7 @@ export function validate(badge: any): UserBadge {
 	if (!validator(badge)) {
 		throw new Error(`Invalid badge\n${validator.errors![0].message}`);
 	}
-	return badge;
+	return badge as UserBadge;
 }
 
 export async function save(db: Database, userId: string, badge: string) {

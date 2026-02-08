@@ -17,15 +17,15 @@ async function checkPassword(db: Database, userId: string, password: string) {
 		} catch (err) {}
 	}();
 	if (info) {
-		const hash = await promisify(crypto.pbkdf2)(password, Buffer.from(info.salt, 'latin1'), info.iterations, 64, 'sha512');
-		return hash.compare(Buffer.from(info.hash, 'latin1')) === 0;
+		const hash = await promisify(crypto.pbkdf2)(password, Uint8Array.from(Buffer.from(info.salt, 'latin1')), info.iterations, 64, 'sha512');
+		return hash.compare(Uint8Array.from(Buffer.from(info.hash, 'latin1'))) === 0;
 	}
 }
 
 async function setPassword(db: Database, userId: string, password: string) {
 	const iterations = 100000;
 	const salt = crypto.randomBytes(16);
-	const hash = await promisify(crypto.pbkdf2)(password, salt, iterations, 64, 'sha512');
+	const hash = await promisify(crypto.pbkdf2)(password, Uint8Array.from(salt), iterations, 64, 'sha512');
 	await db.data.hset(infoKey(userId), 'password', JSON.stringify({
 		hash,
 		iterations,

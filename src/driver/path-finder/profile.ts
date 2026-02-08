@@ -11,7 +11,7 @@ import { World } from 'xxscreeps/game/map.js';
  */
 
 // Load terrain into module
-loadTerrain(new World('test', fs.readFileSync(`${__dirname}/terrain`)));
+loadTerrain(new World('test', new Uint8Array(fs.readFileSync(`${__dirname}/terrain`))));
 
 // Generate a deterministic CostMatrix
 const costMatrix = new CostMatrix;

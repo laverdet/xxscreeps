@@ -16,7 +16,7 @@ SteamStrategy.prototype.authenticate = function(authenticate) {
 			this.returnUrl = `${new URL('/api/auth/steam/return', req.href)}`;
 			this.realm = req.origin;
 		};
-		return authenticate.apply(this, args);
+		return authenticate.apply(this, args as any);
 	};
 }(SteamStrategy.prototype.authenticate);
 
@@ -50,7 +50,7 @@ if (steamApiKey) {
 			profile: false,
 			realm: '',
 			returnURL: 'http:///',
-		}, (identifier: string, profile: unknown, done: (err: null | Error, value?: string) => void) => {
+		} as any, (identifier: string, profile: unknown, done: (err: null | Error, value?: string) => void) => {
 			const steamId = /https:\/\/steamcommunity.com\/openid\/id\/(?<id>[^/]+)/.exec(identifier)?.groups!.id;
 			done(null, steamId);
 		}));
