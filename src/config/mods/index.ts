@@ -10,6 +10,46 @@ export type Manifest = {
 	provides: Provide | Provide[] | null;
 };
 
+// Helper to check if a file exists
+async function fileExists(path: string): Promise<boolean> {
+	try {
+		const url = new URL(path);
+		await fs.access(url);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+// Helper to resolve a module with file existence checking
+async function resolveModuleWithCheck(specifier: string, baseUrl: string): Promise<string | null> {
+	// Try as directory with index.js
+	try {
+		const indexPath = await import.meta.resolve!(`${specifier}/index.js`, baseUrl);
+		if (await fileExists(indexPath)) {
+			return indexPath;
+		}
+	} catch {}
+
+	// Try as .js file
+	try {
+		const jsPath = await import.meta.resolve!(`${specifier}.js`, baseUrl);
+		if (await fileExists(jsPath)) {
+			return jsPath;
+		}
+	} catch {}
+
+	// Try as-is
+	try {
+		const directPath = await import.meta.resolve!(specifier, baseUrl);
+		if (await fileExists(directPath)) {
+			return directPath;
+		}
+	} catch {}
+
+	return null;
+}
+
 // Resolve module dependencies in a hopefully deterministic order
 const mods: {
 	provides: Provide[];
@@ -21,17 +61,10 @@ const baseUrl = configPath;
 const version = 5;
 async function resolve(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
-		const url = await async function() {
-			try {
-				return await import.meta.resolve!(`${specifier}/index.js`, `${baseUrl}`);
-			} catch {
-				try {
-					return await import.meta.resolve!(`${specifier}.js`, `${baseUrl}`);
-				} catch {
-					return import.meta.resolve!(specifier, `${baseUrl}`);
-				}
-			}
-		}();
+		const url = await resolveModuleWithCheck(specifier, `${baseUrl}`);
+		if (!url) {
+			throw new Error(`Could not resolve module: ${specifier}`);
+		}
 		return {
 			manifest: (await import(url)).manifest as Manifest,
 			specifier,
@@ -72,14 +105,10 @@ if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 	const resolveWithinMods = async(specifier: string) => {
 		const resolved = await Promise.all(mods.map(async({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
-				try {
-					return await import.meta.resolve!(`./${specifier}.js`, `${url}`);
-				} catch {
-					return import.meta.resolve!(`./${specifier}/index.js`, `${url}`);
-				}
+				return await resolveModuleWithCheck(`./${specifier}`, `${url}`);
 			}
 		}));
-		return resolved.filter((mod): mod is string => mod !== undefined);
+		return resolved.filter((mod): mod is string => mod !== null && mod !== undefined);
 	};
 
 	// Create output directory
@@ -145,11 +174,9 @@ export { mods };
 export async function importMods(provides: Provide) {
 	for (const mod of mods) {
 		if (mod.provides.includes(provides)) {
-			try {
-				await import(await import.meta.resolve!(`./${provides}.js`, `${mod.url}`));
-			}
-			catch (e) {
-				await import(await import.meta.resolve!(`./${provides}/index.js`, `${mod.url}`));
+			const url = await resolveModuleWithCheck(`./${provides}`, `${mod.url}`);
+			if (url) {
+				await import(url);
 			}
 		}
 	}
