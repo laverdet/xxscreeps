@@ -16,7 +16,7 @@ if (isTopThread) {
 		} catch (err) {}
 	}();
 	if (schema) {
-		const ajv = new Ajv;
+		const ajv = new Ajv({ strict: false });
 		if (ajv.validate(schema, data) !== true) {
 			throw new Error(`\`${fileURLToPath(configPath)}\`: ${ajv.errorsText()}`);
 		}

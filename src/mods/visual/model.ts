@@ -78,7 +78,7 @@ export async function publishVisualsBlobsForNextTick(shard: Shard, userId: strin
 		await Promise.all([
 			shard.scratch.vdel(fragment),
 			shard.scratch.hmset(fragment, [
-				[ 'time', Buffer.from(`${time}`) ],
+				[ 'time', Uint8Array.from(Buffer.from(`${time}`)) ],
 				...payload,
 			]),
 			getVisualChannel(shard, userId).publish({ type: 'publish', roomNames: [ ...payload.keys() ], time }),

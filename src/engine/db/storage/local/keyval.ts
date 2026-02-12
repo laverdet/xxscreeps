@@ -314,12 +314,15 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		const set: Set<string> | undefined = this.data.get(key);
 		if (set) {
 			const { value } = set.values().next();
+			if (value === undefined) {
+				return null;
+			}
 			if (set.size === 1) {
 				this.remove(key);
 			} else {
 				set.delete(value);
 			}
-			return value as string;
+			return value;
 		}
 		return null;
 	}

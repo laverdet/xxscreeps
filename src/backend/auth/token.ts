@@ -15,41 +15,41 @@ const secret = runOnce(() => {
 const kTokenExpiry = 120;
 
 async function encrypt(data: string | Buffer) {
-	const key = secret();
+	const key = new Uint8Array(secret());
 	const hmac = Crypto.createHmac('sha3-224', key);
 	const iv = Crypto.randomBytes(16);
-	hmac.update(iv);
-	const chunks = await new Promise<Buffer[]>((resolve, reject) => {
-		const chunks: Buffer[] = [];
-		const cipher = Crypto.createCipheriv('aes-128-cbc', key, iv);
+	hmac.update(new Uint8Array(iv));
+	const chunks = await new Promise<Uint8Array[]>((resolve, reject) => {
+		const chunks: Uint8Array[] = [];
+		const cipher = Crypto.createCipheriv('aes-128-cbc', key, new Uint8Array(iv));
 		cipher.on('data', chunk => {
-			hmac.update(chunk);
-			chunks.push(chunk);
+			hmac.update(new Uint8Array(chunk));
+			chunks.push(new Uint8Array(chunk));
 		});
 		cipher.on('end', () => resolve(chunks));
 		cipher.on('error', error => reject(error));
 		cipher.end(data);
 	});
 	return Buffer.concat([
-		hmac.digest().subarray(0, 8),
-		iv,
+		new Uint8Array(hmac.digest().subarray(0, 8)),
+		new Uint8Array(iv),
 		...chunks,
 	]).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 async function decrypt(data: string) {
-	const key = secret();
+	const key = new Uint8Array(secret());
 	const buffer = Buffer.from(data.replace(/-/g, '+').replace('_', '/'), 'base64');
 	const hmac = Crypto.createHmac('sha3-224', key);
-	hmac.update(buffer.subarray(8));
-	if (!hmac.digest().subarray(0, 8).equals(buffer.subarray(0, 8))) {
+	hmac.update(new Uint8Array(buffer.subarray(8)));
+	if (!hmac.digest().subarray(0, 8).equals(Uint8Array.from(buffer.subarray(0, 8)))) {
 		return;
 	}
-	const chunks = await new Promise<Buffer[]>((resolve, reject) => {
-		const chunks: Buffer[] = [];
-		const iv = buffer.subarray(8, 24);
+	const chunks = await new Promise<Uint8Array[]>((resolve, reject) => {
+		const chunks: Uint8Array[] = [];
+		const iv = new Uint8Array(buffer.subarray(8, 24));
 		const cipher = Crypto.createDecipheriv('aes-128-cbc', key, iv);
-		cipher.on('data', chunk => chunks.push(chunk));
+		cipher.on('data', chunk => chunks.push(new Uint8Array(chunk)));
 		cipher.on('end', () => resolve(chunks));
 		cipher.on('error', error => reject(error));
 		cipher.end(buffer.subarray(24));
