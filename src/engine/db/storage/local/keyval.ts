@@ -317,7 +317,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			if (set.size === 1) {
 				this.remove(key);
 			} else {
-				set.delete(value);
+				set.delete(value!);
 			}
 			return value as string;
 		}

@@ -122,7 +122,7 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 								case '.wasm': {
 									// We want an instance of WASI for each WebAssembly instance
 									const wasiSpecifier = `wasi_snapshot_preview1#${url}`;
-									const wasm = new WebAssembly.Module(content as Uint8Array);
+									const wasm = new WebAssembly.Module(content as BufferSource);
 
 									// Resolve modules and create import declarations. The imports are created with a
 									// boring `import{N}` naming scheme because WASM could conceivably import two

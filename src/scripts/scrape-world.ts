@@ -124,7 +124,11 @@ if ((rcInfo?.size ?? 0) === 0) {
 	await fetch('.', 2);
 
 	// Write yaml content
-	const schema = await import.meta.resolve!('xxscreeps/config/mods.static/config.schema.json').catch(() => undefined);
+	const schema = function() {
+		try {
+			return import.meta.resolve('xxscreeps/config/mods.static/config.schema.json');
+		} catch {}
+	}();
 	const preamble = schema ? `# yaml-language-server: $schema=${schema}\n` : '';
 	const defaultConfig: any = {};
 	for (const modConfig of Configs) {

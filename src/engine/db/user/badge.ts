@@ -1,6 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import Ajv from 'ajv';
-import jsonSchema from './badge.schema.json' assert { type: 'json' };
+import jsonSchema from './badge.schema.json' with { type: 'json' };
 import * as User from './index.js';
 
 // To rebuild schema:

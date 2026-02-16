@@ -3,16 +3,16 @@
 		'default_configuration': 'Release',
 		'configurations': {
 			'Common': {
-				'cflags_cc': [ '-std=c++17', '-g', '-Wall', '-Wextra' ],
+				'cflags_cc': [ '-std=c++20', '-g', '-Wall', '-Wextra' ],
 				'cflags_cc!': [ '-fno-exceptions' ],
 				'xcode_settings': {
 					'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
 					'GCC_GENERATE_DEBUGGING_SYMBOLS': 'YES',
-					'CLANG_CXX_LANGUAGE_STANDARD': 'c++17',
+					'CLANG_CXX_LANGUAGE_STANDARD': 'c++20',
 				},
 				'msvs_settings': {
 					'VCCLCompilerTool': {
-						'AdditionalOptions': [ '/std:c++17' ],
+						'AdditionalOptions': [ '/std:c++20' ],
 						'ExceptionHandling': '1',
 					},
 				},

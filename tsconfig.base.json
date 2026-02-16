@@ -15,7 +15,7 @@
 			"xxscreeps/*": [ "*" ],
 		},
 		"target": "esnext",
-		"lib": [ "esnext", "dom" ],
+		"lib": [ "esnext", "dom", "dom.iterable" ],
 		"resolveJsonModule": true,
 
 		// Strictness

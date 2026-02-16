@@ -1,3 +1,4 @@
 # Disable git `autoclrf` feature.
 # https://git-scm.com/docs/gitattributes#_text
 * -text
+package-lock.json linguist-generated binary
