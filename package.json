@@ -58,7 +58,7 @@
     "koa-conditional-get": "3.0.0",
     "koa-passport": "4.1.4",
     "koa-router": "10.1.1",
-    "lodash": "3.10.1",
+    "lodash": "4.17.21",
     "lokijs": "1.5.12",
     "nan": "2.25.0",
     "node-fetch": "3.3.1",
