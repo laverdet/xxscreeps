@@ -26,7 +26,7 @@ try {
 		const channel = await getConsoleChannel(shard, id).subscribe();
 		channel.listen(message => {
 			for (const line of JSON.parse(message)) {
-				if (line.fd === 1) {
+				if (line.fd !== 2) {
 					console.log(line.data);
 				} else {
 					console.error(line.data);

@@ -3,7 +3,7 @@ import type { SubscriptionEndpoint } from '../socket.js';
 import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model.js';
 import config from 'xxscreeps/config/index.js';
 import { throttle } from 'xxscreeps/utility/utility.js';
-import { resultPrefix } from 'xxscreeps/driver/runtime/print.js';
+import { resultPrefix, unescapedFd } from 'xxscreeps/driver/runtime/print.js';
 
 function colorize(payload: string) {
 	return `${payload}`
@@ -29,6 +29,10 @@ function colorize(payload: string) {
 		.replace(/\x1b\[24m/g, '</u>');
 }
 
+function escape(html: string) {
+	return html.replace(/([<&])/g, char => `&#x${char.charCodeAt(0).toString(16)};`);
+}
+
 const ConsoleSubscription: SubscriptionEndpoint = {
 	pattern: /^user:(?<user>[^/]+)\/console$/,
 
@@ -48,7 +52,10 @@ const ConsoleSubscription: SubscriptionEndpoint = {
 			const lines = JSON.parse(message);
 
 			for (const line of lines) {
-				if (line.fd === 1) {
+				if (line.fd !== unescapedFd) {
+					line.data = escape(line.data);
+				}
+				if (line.fd !== 2) {
 					if (line.data.startsWith(resultPrefix)) {
 						if (frames[frames.length - 1]?.messages?.results.length) {
 							// Eval response

@@ -3,6 +3,9 @@ const kHalfMax = 50;
 // Marker for `result` message in console socket
 export const resultPrefix = '\x1b[1m>\x1b[22m ';
 
+// An option fd for unsafe logs like html tags
+export const unescapedFd = 3;
+
 type Log = { fd: number; data: string };
 let head: Log[] = [];
 let tail: Log[] = [];
