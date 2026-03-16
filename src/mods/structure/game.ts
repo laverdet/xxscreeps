@@ -1,5 +1,5 @@
 import type { AnyStructure } from './structure.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
@@ -10,7 +10,7 @@ import { OwnedStructure, Structure } from './structure.js';
 registerGlobal(OwnedStructure);
 registerGlobal(Ruin);
 registerGlobal(Structure);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global {
 		OwnedStructure: typeof OwnedStructure;
 		Ruin: typeof Ruin;
@@ -33,13 +33,13 @@ const look = [
 	registerLook<Ruin>()(C.LOOK_RUINS),
 	registerLook<AnyStructure>()(C.LOOK_STRUCTURES),
 ];
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Find { structure: typeof find }
 	interface Look { structure: typeof look }
 }
 
 // Register schema type for `Ruin`
 const schema = registerVariant('Room.objects', ruinFormat);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { structure: [ typeof schema ] }
 }

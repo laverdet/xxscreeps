@@ -1,6 +1,6 @@
 import config from 'xxscreeps/config/index.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Spawn from './spawn.js';
 import { Game, runOneShot } from 'xxscreeps/game/index.js';

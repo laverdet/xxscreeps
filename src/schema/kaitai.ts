@@ -1,6 +1,6 @@
 import type { Layout } from './layout.js';
 import jsYaml from 'js-yaml';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 
 function toId(name: string | symbol): string {

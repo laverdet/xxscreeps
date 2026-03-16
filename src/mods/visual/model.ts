@@ -3,7 +3,7 @@ import * as Visual from 'xxscreeps/mods/visual/visual.js';
 import { Variant, assertVariant, makeReader } from 'xxscreeps/schema/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { stringifyInherited, typedArrayToString } from 'xxscreeps/utility/string.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 export function getVisualChannel(shard: Shard, userId: string) {
 	type Message = { type: 'publish'; roomNames: string[]; time: number };

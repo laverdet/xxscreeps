@@ -1,6 +1,6 @@
 import type { Effect } from './types.js';
 import type { MessagePort } from 'worker_threads';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { MessageChannel, parentPort } from 'worker_threads';
 import { EventEmitter } from 'events';
 import { Deferred, mustNotReject } from './async.js';

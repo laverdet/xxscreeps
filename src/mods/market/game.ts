@@ -5,13 +5,13 @@ import { Market } from './market.js';
 
 // Export `StructureTerminal` to runtime globals
 registerGlobal(Terminal.StructureTerminal);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureTerminal: typeof Terminal.StructureTerminal }
 }
 
 // Register schema
 const terminalSchema = registerVariant('Room.objects', Terminal.format);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		/**
 		 * The Terminal structure of this room, if present, otherwise undefined.
@@ -23,7 +23,7 @@ declare module 'xxscreeps/game/room' {
 }
 
 // Register `Game.market`
-declare module 'xxscreeps/game/game' {
+declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		/**
 		 * A global object representing the in-game market. You can use this object to track resource

@@ -116,6 +116,6 @@ function use() {}
 
 const PathFinder = { CostMatrix, use, search };
 registerGlobal('PathFinder', PathFinder);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { PathFinder: typeof PathFinder }
 }

@@ -1,4 +1,4 @@
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { typedArrayToString, utf16ToBuffer } from 'xxscreeps/utility/string.js';
 
 const kMemoryGrowthSize = 4096;

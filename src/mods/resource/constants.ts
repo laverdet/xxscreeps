@@ -3,7 +3,7 @@ import * as Construction from 'xxscreeps/mods/construction/constants.js';
 
 // Add `Container` construction cost constant
 Construction.CONSTRUCTION_COST.container = 5000;
-declare module 'xxscreeps/mods/construction/constants' {
+declare module 'xxscreeps/mods/construction/constants.js' {
 	interface ConstructionCost {
 		container: 5000;
 	}

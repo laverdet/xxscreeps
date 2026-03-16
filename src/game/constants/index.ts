@@ -1,5 +1,3 @@
-import * as C from './index.js';
-export default C;
 export * from './creep.js';
 export * from './find.js';
 export * from './resource.js';

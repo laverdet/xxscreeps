@@ -3,7 +3,7 @@ import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { hooks as processorHooks } from 'xxscreeps/engine/processor/index.js';
 import { controlledRoomKey, reservedRoomKey } from './processor.js';
 
-declare module 'xxscreeps/engine/runner' {
+declare module 'xxscreeps/engine/runner/index.js' {
 	interface TickPayload {
 		controlledRoomCount: number;
 		gcl: number;

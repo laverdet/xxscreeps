@@ -4,7 +4,7 @@ import type { World } from 'xxscreeps/game/map.js';
 import type { IntentParameters, IntentReceivers, IntentsForReceiver } from './index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RoomTickProcessor } from './symbols.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';

@@ -9,8 +9,8 @@
 		"allowSyntheticDefaultImports": true,
 		"experimentalDecorators": true,
 		"importHelpers": true,
-		"moduleResolution": "node",
-		"module": "esnext",
+		"moduleResolution": "nodenext",
+		"module": "nodenext",
 		"paths": {
 			"xxscreeps/*": [ "*" ],
 		},

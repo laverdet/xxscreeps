@@ -1,6 +1,6 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as CreepLib from './creep.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Game } from 'xxscreeps/game/index.js';
@@ -55,7 +55,7 @@ function updateRoomStatus(context: ProcessorContext, room: Room, level: number, 
 }
 
 // Register intent processors
-declare module 'xxscreeps/engine/processor' {
+declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { controller: typeof intents }
 }
 const intents = [

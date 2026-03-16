@@ -8,7 +8,7 @@ import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 const rampartSchema = registerVariant('Room.objects', Rampart.format);
 const towerSchema = registerVariant('Room.objects', Tower.format);
 const wallSchema = registerVariant('Room.objects', Wall.format);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { defense: [ typeof rampartSchema, typeof towerSchema, typeof wallSchema ] }
 }
 
@@ -16,7 +16,7 @@ declare module 'xxscreeps/game/room' {
 registerGlobal(Rampart.StructureRampart);
 registerGlobal(Tower.StructureTower);
 registerGlobal(Wall.StructureWall);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global {
 		StructureRampart: typeof Rampart.StructureRampart;
 		StructureTower: typeof Tower.StructureTower;

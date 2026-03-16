@@ -20,7 +20,7 @@ SteamStrategy.prototype.authenticate = function(authenticate) {
 	};
 }(SteamStrategy.prototype.authenticate);
 
-declare module 'openid' {
+declare module 'openid/index.js' {
 	interface RelyingParty {
 		update(): void;
 	}

@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { Game, registerGlobal } from 'xxscreeps/game/index.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
@@ -36,7 +36,7 @@ export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
 
 // Export `Mineral` to runtime globals
 registerGlobal(Mineral);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { Mineral: typeof Mineral }
 }
 
@@ -60,6 +60,6 @@ const harvest = registerHarvestable(Mineral, function(creep) {
 			}
 		});
 });
-declare module 'xxscreeps/mods/harvestable' {
+declare module 'xxscreeps/mods/harvestable/index.js' {
 	interface Harvest { mineral: typeof harvest }
 }

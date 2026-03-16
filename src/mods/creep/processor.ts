@@ -5,8 +5,8 @@ import type { Resource } from 'xxscreeps/mods/resource/resource.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as CreepLib from './creep.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
@@ -68,7 +68,7 @@ function recalculateBody(creep: Creep) {
 	}
 }
 
-declare module 'xxscreeps/engine/processor' {
+declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { creep: typeof intents }
 }
 const intents = [

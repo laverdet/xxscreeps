@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
@@ -87,7 +87,7 @@ const intents = [
 		}
 	}),
 ];
-declare module 'xxscreeps/engine/processor' {
+declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { defense: typeof intents }
 }
 

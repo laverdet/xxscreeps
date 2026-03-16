@@ -1,6 +1,6 @@
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
@@ -51,7 +51,7 @@ registerBuildableStructure(C.STRUCTURE_STORAGE, {
 	},
 });
 
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		storage: StructureStorage | undefined;
 	}

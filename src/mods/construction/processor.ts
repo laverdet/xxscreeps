@@ -1,6 +1,6 @@
 import type { ConstructibleStructureType } from './construction-site.js';
 import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
@@ -13,7 +13,7 @@ import { checkBuild, checkDismantle, checkRepair } from './creep.js';
 import { checkCreateConstructionSite } from './room.js';
 import { structureFactories } from './symbols.js';
 
-declare module 'xxscreeps/engine/processor' {
+declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { construction: typeof intents }
 }
 

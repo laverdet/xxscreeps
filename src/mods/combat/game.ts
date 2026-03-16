@@ -9,7 +9,7 @@ const actionSchema = registerEnumerated('ActionLog.action',
 	'attack', 'attacked', 'heal', 'healed',
 	'rangedAttack', 'rangedHeal', 'rangedMassAttack',
 );
-declare module 'xxscreeps/game/object' {
+declare module 'xxscreeps/game/object.js' {
 	interface Schema { combat: typeof actionSchema }
 }
 
@@ -29,6 +29,6 @@ const healEventSchema = registerVariant('Room.eventLog', struct({
 	healType: 'int32',
 	amount: 'int32',
 }));
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { combat: [ typeof attackEventSchema, typeof healEventSchema ] }
 }

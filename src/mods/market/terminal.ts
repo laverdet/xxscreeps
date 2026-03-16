@@ -1,7 +1,7 @@
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { create as createObject } from 'xxscreeps/game/object.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
 import { OpenStore, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';

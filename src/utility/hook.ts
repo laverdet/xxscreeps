@@ -1,4 +1,4 @@
-import Fn from './functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { lateCallback } from './memoize.js';
 
 export function makeHookRegistration<keys extends Record<string, any>>() {

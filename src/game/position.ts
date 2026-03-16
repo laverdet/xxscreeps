@@ -4,7 +4,7 @@ import type { FindConstants, FindType, RoomFindOptions } from './room/find.js';
 import type { LookConstants } from './room/look.js';
 import type { FindPathOptions, RoomPath } from './room/path.js';
 import type { RoomObject } from './object.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as PathFinder from './path-finder/index.js';
 import { Game, registerGlobal } from './index.js';
 import { compose, declare } from 'xxscreeps/schema/index.js';
@@ -357,7 +357,7 @@ export class RoomPosition {
 }
 
 registerGlobal(RoomPosition);
-declare module './runtime' {
+declare module './runtime.js' {
 	interface Global { RoomPosition: typeof RoomPosition }
 }
 

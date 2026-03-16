@@ -1,8 +1,8 @@
 import type { Payload } from './export.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import fs from 'fs/promises';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';

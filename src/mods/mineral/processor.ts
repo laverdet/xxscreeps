@@ -1,5 +1,5 @@
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor.js';

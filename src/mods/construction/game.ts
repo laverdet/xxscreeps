@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as ConstructionSite from './construction-site.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { constant, struct, variant } from 'xxscreeps/schema/index.js';
@@ -9,7 +9,7 @@ import './position.js';
 import './room.js';
 
 // Add `constructionSites` to global `game` object
-declare module 'xxscreeps/game/game' {
+declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		constructionSites: Record<string, ConstructionSite.ConstructionSite>;
 	}
@@ -18,13 +18,13 @@ hooks.register('gameInitializer', Game => Game.constructionSites = Object.create
 
 // Export `ConstructionSite` to runtime globals
 registerGlobal(ConstructionSite.ConstructionSite);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { ConstructionSite: typeof ConstructionSite.ConstructionSite }
 }
 
 // Schema types
 const actionSchema = registerEnumerated('ActionLog.action', 'build', 'repair');
-declare module 'xxscreeps/game/object' {
+declare module 'xxscreeps/game/object.js' {
 	interface Schema { construction: typeof actionSchema }
 }
 
@@ -46,6 +46,6 @@ const repairEventSchema = registerVariant('Room.eventLog', struct({
 	energySpent: 'int32',
 }));
 
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { construction: [ typeof siteSchema, typeof buildEventSchema, typeof repairEventSchema ] }
 }

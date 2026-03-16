@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { RoomObject, create as createObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
@@ -31,12 +31,12 @@ const shape = struct(objectFormat, {
  * A remnant of dead creeps. This is a walkable object.
  */
 export class Tombstone extends withOverlay(RoomObject, shape) {
-	
+
 	constructor(idOrArg1?: any, arg2?: any) {
 		super(idOrArg1, arg2)
 		if (typeof idOrArg1 === 'string') assign<Tombstone>(this, getById(Tombstone, idOrArg1))
 	}
-	
+
 	override get ['#lookType']() { return C.LOOK_TOMBSTONES }
 
 	/**

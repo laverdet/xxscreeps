@@ -3,8 +3,8 @@ import type { ExitType } from './room/find.js';
 import type { Room } from './room/index.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 
-import C from './constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from './constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Terrain from './terrain.js';
 import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from './position.js';
 import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema/index.js';

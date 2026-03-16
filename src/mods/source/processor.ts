@@ -1,6 +1,6 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Creep from 'xxscreeps/mods/creep/creep.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
 import { StructureKeeperLair } from './keeper-lair.js';

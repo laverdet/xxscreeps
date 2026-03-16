@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import * as Extractor from './extractor.js';
@@ -12,13 +12,13 @@ const resources = [
 ];
 const resourceSchema = registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
-declare module 'xxscreeps/mods/resource' {
+declare module 'xxscreeps/mods/resource/index.js' {
 	interface Schema { mineral: typeof resourceSchema }
 }
 
 const extractorSchema = registerVariant('Room.objects', Extractor.format);
 const mineralSchema = registerVariant('Room.objects', Mineral.format);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { mineral: [ typeof extractorSchema, typeof mineralSchema ] }
 }
 
@@ -30,7 +30,7 @@ const find = registerFindHandlers({
 
 // Register LOOK_ type for `Mineral`
 const look = registerLook<Mineral.Mineral>()(C.LOOK_MINERALS);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Find { mineral: typeof find }
 	interface Look { mineral: typeof look }
 }

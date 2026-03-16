@@ -1,7 +1,7 @@
 import type { Color } from './flag.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { userGame } from 'xxscreeps/game/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position.js';
@@ -9,7 +9,7 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { extend, instantiate } from 'xxscreeps/utility/utility.js';
 import { Flag, checkCreateFlag, intents } from './flag.js';
 
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		/**
 		 * Create new `Flag` at the specified location
@@ -62,7 +62,7 @@ extend(Room, {
 	},
 });
 
-declare module 'xxscreeps/game/position' {
+declare module 'xxscreeps/game/position.js' {
 	interface RoomPosition {
 		/**
 		* Create new `Flag` at the specified location

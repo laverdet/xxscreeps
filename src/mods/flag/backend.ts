@@ -1,5 +1,5 @@
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { hooks } from 'xxscreeps/backend/index.js';

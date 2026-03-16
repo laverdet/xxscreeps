@@ -1,4 +1,4 @@
-import C from './constants/index.js';
+import * as C from './constants/index.js';
 import { RoomPosition } from './position.js';
 
 export const ALL_DIRECTIONS = [

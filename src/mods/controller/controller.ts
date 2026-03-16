@@ -1,5 +1,5 @@
 import type { Room } from 'xxscreeps/game/room/index.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, userInfo } from 'xxscreeps/game/index.js';
 import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
@@ -94,7 +94,7 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	}
 }
 
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		controller?: StructureController | undefined;
 	}

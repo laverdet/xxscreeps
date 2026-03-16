@@ -4,12 +4,12 @@ import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 
 // Register schema
 const schema = registerVariant('Room.objects', Road.format);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { road: typeof schema }
 }
 
 // Export `StructureRoad` to runtime globals
 registerGlobal(Road.StructureRoad);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureRoad: typeof Road.StructureRoad }
 }

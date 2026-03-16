@@ -1,5 +1,5 @@
 import type { Store } from './store.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { bindRenderer } from 'xxscreeps/backend/index.js';
 import { StructureContainer } from './container.js';
 import { Resource } from './resource.js';

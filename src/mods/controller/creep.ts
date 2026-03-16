@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { intents, me, userGame } from 'xxscreeps/game/index.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkString, checkTarget } from 'xxscreeps/game/checks.js';
@@ -7,7 +7,7 @@ import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { StructureController } from './controller.js';
 
 // Creep extension declaration
-declare module 'xxscreeps/mods/creep/creep' {
+declare module 'xxscreeps/mods/creep/creep.js' {
 	interface Creep {
 		/**
 		 * Decreases the controller's downgrade timer by 300 ticks per every `CLAIM` body part, or

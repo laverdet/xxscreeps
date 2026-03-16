@@ -1,5 +1,5 @@
 import type { Room } from 'xxscreeps/game/room/room.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';

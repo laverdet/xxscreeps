@@ -1,6 +1,6 @@
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';

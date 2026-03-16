@@ -1,5 +1,5 @@
 import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, UnionDeclaration } from './format.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { getOrSet, staticCast } from 'xxscreeps/utility/utility.js';
 import { Variant } from './format.js';
 import { entriesWithSymbols } from './symbol.js';

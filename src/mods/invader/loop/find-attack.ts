@@ -1,5 +1,5 @@
 import type * as PathFinder from 'xxscreeps/game/path-finder/index.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Creep } from 'xxscreeps/mods/creep/creep.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';

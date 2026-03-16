@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as Extension from './extension.js';
 import * as Spawn from './spawn.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
@@ -6,7 +6,7 @@ import { registerFindHandlers } from 'xxscreeps/game/room/index.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 
 // Add `spawns` to global `Game` object
-declare module 'xxscreeps/game/game' {
+declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		spawns: Record<string, Spawn.StructureSpawn>;
 	}
@@ -14,7 +14,7 @@ declare module 'xxscreeps/game/game' {
 hooks.register('gameInitializer', Game => Game.spawns = Object.create(null));
 
 // Accumulate `energyAvailable` and `energyCapacityAvailable` on `Room` objects
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		energyAvailable: number;
 		energyCapacityAvailable: number;
@@ -36,7 +36,7 @@ hooks.register('roomInitializer', room => {
 registerGlobal(Extension.StructureExtension);
 registerGlobal(Spawn.StructureSpawn);
 registerGlobal('Spawn', Spawn.StructureSpawn);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global {
 		StructureExtension: typeof Extension.StructureExtension;
 		StructureSpawn: typeof Spawn.StructureSpawn;
@@ -51,13 +51,13 @@ const find = registerFindHandlers({
 	[C.FIND_HOSTILE_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
 		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my === false),
 });
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Find { spawn: typeof find }
 }
 
 // Register schema
 const extensionSchema = registerVariant('Room.objects', Extension.format);
 const spawnSchema = registerVariant('Room.objects', Spawn.format);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { spawn: [ typeof extensionSchema, typeof spawnSchema ] }
 }

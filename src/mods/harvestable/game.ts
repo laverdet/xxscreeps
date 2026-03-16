@@ -1,6 +1,6 @@
 import type { ContextType } from 'xxscreeps/utility/types.js';
 import type { Creep } from 'xxscreeps/mods/creep/creep.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { constant, struct, variant } from 'xxscreeps/schema/index.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
@@ -9,7 +9,7 @@ import { registerHarvestable } from './index.js';
 import './creep.js';
 
 // `RoomObject` intent check symbol
-declare module 'xxscreeps/game/object' {
+declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		'#checkHarvest'(creep: Creep): C.ErrorCode;
 	}
@@ -23,7 +23,7 @@ registerHarvestable(RoomObject, () => C.ERR_INVALID_TARGET);
 
 // Schema registration
 const actionSchema = registerEnumerated('ActionLog.action', 'harvest');
-declare module 'xxscreeps/game/object' {
+declare module 'xxscreeps/game/object.js' {
 	interface Schema { harvestable: typeof actionSchema }
 }
 
@@ -35,6 +35,6 @@ const harvestEventSchema = registerVariant('Room.eventLog', struct({
 	amount: 'int32',
 }));
 
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { harvestable: typeof harvestEventSchema }
 }

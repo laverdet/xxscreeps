@@ -1,7 +1,7 @@
 import type { Effect } from 'xxscreeps/utility/types.js';
 import type { ProcessorRequest } from 'xxscreeps/engine/processor/worker.js';
 import config from 'xxscreeps/config/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';

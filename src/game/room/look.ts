@@ -1,7 +1,7 @@
 import type { PositionParameter } from 'xxscreeps/game/position.js';
 import type { UnwrapArray } from 'xxscreeps/utility/types.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { iterateArea } from 'xxscreeps/game/direction.js';
@@ -38,7 +38,7 @@ type LookForAtArea<Type extends LookConstants> = {
 	[key in LookConstants]: TypeOfLook<Type>;
 };
 
-declare module './room' {
+declare module './room.js' {
 	interface Room {
 		/**
 		 * Get the list of objects at the specified room position.

@@ -1,7 +1,7 @@
 import type { Room } from './index.js';
 import type { KeyFor, KeysOf, LooseBoolean } from 'xxscreeps/utility/types.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerFindHandlers } from './symbols.js';
 
@@ -52,6 +52,6 @@ const find = registerFindHandlers({
 		...room.find(C.FIND_EXIT_LEFT),
 	],
 });
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Find { exit: typeof find }
 }

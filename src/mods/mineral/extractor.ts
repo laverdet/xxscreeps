@@ -1,5 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { Game, registerGlobal } from 'xxscreeps/game/index.js';
 import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
@@ -42,6 +42,6 @@ registerBuildableStructure(C.STRUCTURE_EXTRACTOR, {
 
 // Export `StructureExtractor` to runtime globals
 registerGlobal(StructureExtractor);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureExtractor: typeof StructureExtractor }
 }

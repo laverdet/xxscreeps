@@ -17,7 +17,7 @@ import { hooks } from './symbols.js';
 import { Socket } from 'net';
 const { allowGuestAccess } = config.backend;
 
-declare module '.' {
+declare module './index.js' {
 	interface Context {
 		upgrade?: (fn: (req: IncomingMessage, socket: Duplex, head: Buffer) => void | Promise<void>) => Promise<void>;
 	}

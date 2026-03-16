@@ -1,7 +1,7 @@
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room/index.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game/index.js';
@@ -31,12 +31,12 @@ const ownedShape = struct(structureFormat, {
  * The base prototype object of all structures.
  */
 export class Structure extends withOverlay(RoomObject, shape) {
-	
+
 	constructor(idOrArg1?: any, arg2?: any) {
 		super(idOrArg1, arg2)
 		if (typeof idOrArg1 === 'string') assign<Structure>(this, getById(Structure, idOrArg1))
 	}
-	
+
 	/**
 	 * One of the `STRUCTURE_*` constants.
 	 */
@@ -188,7 +188,7 @@ registerObstacleChecker(params => {
 });
 
 // Register `Game.structures`
-declare module 'xxscreeps/game/game' {
+declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		structures: Record<string, AnyStructure>;
 	}

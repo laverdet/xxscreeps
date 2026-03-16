@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as Controller from './controller.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
@@ -21,12 +21,12 @@ const roomSchema = registerStruct('Room', {
 	'#user': optional(Id.optionalFormat),
 });
 const controllerSchema = registerVariant('Room.objects', Controller.format);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { controller: [ typeof roomSchema, typeof controllerSchema ] }
 }
 
 const actionSchema = registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
-declare module 'xxscreeps/game/object' {
+declare module 'xxscreeps/game/object.js' {
 	interface Schema { controller: typeof actionSchema }
 	interface RoomObject {
 		'#roomStatusDidChange'(level: number, userId: string | null | undefined): void;
@@ -36,7 +36,7 @@ declare module 'xxscreeps/game/object' {
 RoomObject.prototype['#roomStatusDidChange'] = function(_level: number, _userId: string | null | undefined) {};
 
 // Save `Game.gcl` from driver
-declare module 'xxscreeps/game/game' {
+declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		gcl: {
 			/**
@@ -74,6 +74,6 @@ hooks.register('gameInitializer', (Game, payload) => {
 
 // Export `StructureController` to runtime globals
 registerGlobal(Controller.StructureController);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureController: typeof Controller.StructureController }
 }

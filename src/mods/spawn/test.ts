@@ -1,5 +1,5 @@
 import type { StructureExtension } from './extension.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';

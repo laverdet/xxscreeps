@@ -1,7 +1,7 @@
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import type { Direction } from 'xxscreeps/game/position.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
 import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
@@ -54,7 +54,7 @@ function consumeEnergy(spawn: StructureSpawn, amount: number, structures = getEn
 	throw new Error('Did not subtract energy correctly.');
 }
 
-declare module 'xxscreeps/engine/processor' {
+declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { spawn: typeof intents }
 }
 const intents = [

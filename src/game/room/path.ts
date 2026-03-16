@@ -18,7 +18,7 @@ export type RoomPath = {
 	direction: Direction;
 }[];
 
-declare module './room' {
+declare module './room.js' {
 	// eslint-disable-next-line @typescript-eslint/no-namespace
 	namespace Room {
 		/**

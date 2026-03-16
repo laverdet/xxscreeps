@@ -1,4 +1,4 @@
-import type C from 'xxscreeps/game/constants/index.js';
+import type * as C from 'xxscreeps/game/constants/index.js';
 import type { Creep } from 'xxscreeps/mods/creep/creep.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Implementation } from 'xxscreeps/utility/types.js';

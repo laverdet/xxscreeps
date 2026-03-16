@@ -1,12 +1,12 @@
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
 import { StructureTerminal, calculateEnergyCost, checkSend } from './terminal.js';
 
-declare module 'xxscreeps/engine/processor' {
+declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { market: typeof intents }
 }
 const intents = [

@@ -3,7 +3,7 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import { RoomPosition, fetchRoom } from 'xxscreeps/game/position.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 
-declare module 'xxscreeps/game/position' {
+declare module 'xxscreeps/game/position.js' {
 	interface RoomPosition {
 		/**
 		 * Create new `ConstructionSite` at the specified location.

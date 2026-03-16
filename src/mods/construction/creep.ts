@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import { checkHasResource } from 'xxscreeps/mods/resource/store.js';
@@ -8,7 +8,7 @@ import { ConstructionSite } from './construction-site.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { structureFactories } from './symbols.js';
 
-declare module 'xxscreeps/mods/creep/creep' {
+declare module 'xxscreeps/mods/creep/creep.js' {
 	interface Creep {
 		/**
 		 * Build a structure at the target construction site using carried energy. Requires `WORK` and

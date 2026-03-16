@@ -1,5 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
@@ -71,7 +71,7 @@ registerBuildableStructure(C.STRUCTURE_LAB, {
 
 // Export `StructureLab` to runtime globals
 registerGlobal(StructureLab);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureLab: typeof StructureLab }
 }
 

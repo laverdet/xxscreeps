@@ -1,4 +1,4 @@
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { compose, declare, struct, vector } from 'xxscreeps/schema/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 

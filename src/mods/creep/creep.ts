@@ -5,8 +5,8 @@ import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path.js';
 import type { PolyStyle } from 'xxscreeps/mods/visual/visual.js';
 import type { RoomSearchOptions } from 'xxscreeps/game/path-finder/index.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { RoomObject, actionLogFormat, create as createObject, getById, format as objectFormat, saveAction } from 'xxscreeps/game/object.js';
@@ -65,7 +65,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 			this['#user'] = it['#user']
 			assign<Creep>(this, it)
 		}
-		
+
 	}
 
 	get carry() { return this.store }

@@ -5,7 +5,7 @@ import { checkToken, makeToken } from './token.js';
 import { findUserByProvider } from 'xxscreeps/engine/db/user/index.js';
 const { allowGuestAccess } = config.backend;
 
-declare module 'xxscreeps/backend' {
+declare module 'xxscreeps/backend/index.js' {
 	interface Context {
 		authenticateForProvider(provider: string, providerId: string): Promise<string>;
 		flushToken(initializeGuest?: boolean): Promise<string | undefined>;

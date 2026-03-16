@@ -1,6 +1,6 @@
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { intents, me, userInfo } from 'xxscreeps/game/index.js';

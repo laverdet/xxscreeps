@@ -6,7 +6,7 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { SubscriptionFor } from 'xxscreeps/engine/db/channel.js';
 import type { World } from 'xxscreeps/game/map.js';
 import config from 'xxscreeps/config/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';

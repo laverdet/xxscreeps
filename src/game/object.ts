@@ -103,7 +103,7 @@ export function create<Type extends RoomObject>(instance: Type, pos: RoomPositio
 
 // Export `RoomObject` to runtime globals
 registerGlobal(RoomObject);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global {
 		RoomObject: typeof RoomObject;
 	}

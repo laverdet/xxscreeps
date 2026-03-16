@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { parseRoomName } from 'xxscreeps/game/position.js';
 import 'xxscreeps/config/mods/import/game.js';

@@ -1,5 +1,5 @@
 import type { Layout, StructLayout } from './layout.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { unpackWrappedStruct } from './layout.js';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 

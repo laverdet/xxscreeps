@@ -1,8 +1,8 @@
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { publishVisualsBlobsForNextTick } from './model.js';
 
-declare module 'xxscreeps/engine/runner' {
+declare module 'xxscreeps/engine/runner/index.js' {
 	interface TickResult {
 		visuals: {
 			blob: Readonly<Uint8Array>;

@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
@@ -13,7 +13,7 @@ const keeperLairSchema = registerVariant('Room.objects', keeperFormat);
 const roomSchema = registerStruct('Room', {
 	'#cumulativeEnergyHarvested': 'int32',
 });
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { source: [ typeof sourceSchema, typeof keeperLairSchema, typeof roomSchema ] }
 }
 
@@ -27,7 +27,7 @@ const find = registerFindHandlers({
 
 // Register LOOK_ type for `Source`
 const look = registerLook<Source>()(C.LOOK_SOURCES);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Find { source: typeof find }
 	interface Look { source: typeof look }
 }
@@ -47,6 +47,6 @@ const harvest = registerHarvestable(Source, function(creep) {
 			}
 		});
 });
-declare module 'xxscreeps/mods/harvestable' {
+declare module 'xxscreeps/mods/harvestable/index.js' {
 	interface Harvest { source: typeof harvest }
 }

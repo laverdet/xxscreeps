@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { StructureContainer } from '../container.js';

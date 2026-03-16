@@ -1,6 +1,6 @@
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import 'xxscreeps/config/global.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Code from 'xxscreeps/engine/db/user/code-schema.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import { inspect } from 'util';

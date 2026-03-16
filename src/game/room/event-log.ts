@@ -14,7 +14,7 @@ export function appendEventLog(room: Room, event: AnyEventLog) {
 	} as never);
 }
 
-declare module './room' {
+declare module './room.js' {
 	interface Room {
 		/**
 		 * Returns an array of events happened on the previous tick in this room.

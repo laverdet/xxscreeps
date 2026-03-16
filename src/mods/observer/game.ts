@@ -7,12 +7,12 @@ import * as Observer from './observer.js';
 const observerSchema = registerVariant('Room.objects', Observer.format);
 const observerSpySchema = registerVariant('Room.objects', ObserverSpy.format);
 
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { observer: [ typeof observerSchema, typeof observerSpySchema ] }
 }
 
 registerGlobal(Observer.StructureObserver);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global {
 		StructureObserver: typeof Observer.StructureObserver;
 	}

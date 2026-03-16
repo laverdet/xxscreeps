@@ -24,7 +24,7 @@ export type IntentProcessorInfo = {
 	receiver: abstract new(...args: any[]) => any;
 };
 type TickProcessor<Type = any> = (receiver: Type, context: ProcessorContext) => void;
-declare module 'xxscreeps/game/object' {
+declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		[PreTick]?: TickProcessor;
 		[Tick]?: TickProcessor;

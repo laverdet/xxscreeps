@@ -1,4 +1,4 @@
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 export class SortedSet {
 	readonly #members: string[] = [];

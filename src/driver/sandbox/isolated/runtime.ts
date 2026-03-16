@@ -7,7 +7,7 @@ export { tick } from 'xxscreeps/driver/runtime/index.js';
 
 export let isolate: ivm.Isolate;
 
-declare module 'xxscreeps/game/game' {
+declare module 'xxscreeps/game/game.js' {
 	interface CPU {
 		/**
 		 * Use this method to get heap statistics for your virtual machine. The return value is almost

@@ -3,7 +3,7 @@ import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { getFlagChannel, loadUserFlagBlob, saveUserFlagBlobForNextTick } from './model.js';
 
 // Read flag payload on user sandbox initialization
-declare module 'xxscreeps/engine/runner' {
+declare module 'xxscreeps/engine/runner/index.js' {
 	interface InitializationPayload {
 		flagBlob: Readonly<Uint8Array> | null;
 	}

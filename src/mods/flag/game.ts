@@ -1,8 +1,8 @@
 import type { Color } from './flag.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -24,13 +24,13 @@ const look = registerLook<Flag>()(C.LOOK_FLAGS);
 const find = registerFindHandlers({
 	[C.FIND_FLAGS]: room => room['#lookFor'](C.LOOK_FLAGS),
 });
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Find { flag: typeof find }
 	interface Look { flag: typeof look }
 }
 
 // Export `Flag` to runtime globals
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { Flag: typeof Flag }
 }
 registerGlobal(Flag);
@@ -64,7 +64,7 @@ hooks.register('runtimeConnector', {
 });
 
 // Add `flags` to global `Game` object
-declare module 'xxscreeps/game/game' {
+declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		flags: Record<string, Flag>;
 	}

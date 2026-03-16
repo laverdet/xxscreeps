@@ -6,7 +6,7 @@ import { RoomVisual, flush } from './visual.js';
 
 // Export `RoomVisual` to runtime globals
 registerGlobal(RoomVisual);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { RoomVisual: typeof RoomVisual }
 }
 registerGlobal(RoomVisual);
@@ -19,7 +19,7 @@ hooks.register('runtimeConnector', {
 });
 
 // Add `Room#visual` getter
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		/**
 		 * A `RoomVisual` object for this room. You can use this object to draw simple shapes (lines,
@@ -39,7 +39,7 @@ extend(Room, {
 	},
 });
 
-declare module 'xxscreeps/game/map' {
+declare module 'xxscreeps/game/map.js' {
 	interface GameMap {
 		/**
 		 * A `RoomVisual` object for the map. You can use this object to draw simple shapes (lines,

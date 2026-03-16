@@ -1,4 +1,4 @@
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
 import * as Lab from './lab.js';
 
@@ -22,18 +22,18 @@ const resources = [
 const resourceSchema = registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
 
-declare module 'xxscreeps/mods/resource' {
+declare module 'xxscreeps/mods/resource/index.js' {
 	interface Schema { chemistry: typeof resourceSchema }
 }
 
 // Register `RoomObject` schema
 const labSchema = registerVariant('Room.objects', Lab.format);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { chemistry: [ typeof labSchema ] }
 }
 
 // Action log types
 const actionSchema = registerEnumerated('ActionLog.action', 'reaction1', 'reaction2');
-declare module 'xxscreeps/game/object' {
+declare module 'xxscreeps/game/object.js' {
 	interface Schema { chemistry: typeof actionSchema }
 }

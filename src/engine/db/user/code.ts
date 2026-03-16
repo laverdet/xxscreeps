@@ -1,5 +1,5 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Schema from './code-schema.js';
 import * as User from './index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';

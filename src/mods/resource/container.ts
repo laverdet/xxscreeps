@@ -1,5 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import C from 'xxscreeps/game/constants/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { Structure, checkWall, structureFormat } from 'xxscreeps/mods/structure/structure.js';

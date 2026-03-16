@@ -36,7 +36,7 @@ type RenderedRoomObject = {
 	x: number;
 	y: number;
 };
-declare module 'xxscreeps/game/object' {
+declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		[Render]: (previousTime?: number) => RenderedRoomObject | undefined;
 		[MapRender]: (object: any) => string | undefined;

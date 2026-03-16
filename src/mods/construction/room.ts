@@ -1,6 +1,6 @@
 import type { ConstructibleStructureType, ConstructionSite } from './construction-site.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { hooks, intents, me } from 'xxscreeps/game/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
@@ -21,13 +21,13 @@ const find = registerFindHandlers({
 
 // Register LOOK_ type for `ConstructionSite`
 const look = registerLook<ConstructionSite>()(C.LOOK_CONSTRUCTION_SITES);
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Find { construction: typeof find }
 	interface Look { construction: typeof look }
 }
 
 // Extend `Room`
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		/**
 		 * Create new `ConstructionSite` at the specified location.

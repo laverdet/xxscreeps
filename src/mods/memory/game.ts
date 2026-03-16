@@ -4,7 +4,7 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { RawMemory, flush, flushActiveSegments, flushForeignSegment, flushSegments, get, initialize, loadSegments } from './memory.js';
 
 // Export `Memory` and `RawMemory` to runtime globals
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global {
 		Memory: any;
 		RawMemory: typeof RawMemory;
@@ -13,7 +13,7 @@ declare module 'xxscreeps/game/runtime' {
 registerGlobal('RawMemory', RawMemory);
 
 // Define `Room#memory`
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		memory: any;
 	}

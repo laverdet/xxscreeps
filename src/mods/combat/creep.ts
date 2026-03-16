@@ -1,6 +1,6 @@
 import type { RoomObject } from 'xxscreeps/game/object.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
@@ -8,7 +8,7 @@ import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/creep/creep.j
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 
 // Creep extension declaration
-declare module 'xxscreeps/mods/creep/creep' {
+declare module 'xxscreeps/mods/creep/creep.js' {
 	interface Creep {
 		/**
 		 * Attack another creep, power creep, or structure in a short-ranged attack. Requires the

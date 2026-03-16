@@ -1,4 +1,4 @@
-import type { Transform } from '../webpack';
+import type { Transform } from '../webpack.js';
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import type { InspectorSession } from 'isolated-vm';
 import * as Path from 'path';

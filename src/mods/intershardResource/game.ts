@@ -2,7 +2,7 @@ import { hooks } from 'xxscreeps/game/index.js';
 import { INTERSHARD_RESOURCES } from './constants.js';
 
 // Register `Game.resources`
-declare module 'xxscreeps/game/game' {
+declare module 'xxscreeps/game/game.js' {
     interface Game {
         resources: { [key: string]: number };
     }

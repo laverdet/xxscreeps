@@ -4,6 +4,6 @@ import { registerStruct } from 'xxscreeps/engine/schema/index.js';
 const schema = registerStruct('Room', {
 	'#invaderEnergyTarget': 'int32',
 });
-declare module 'xxscreeps/game/room' {
+declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { invader: typeof schema }
 }

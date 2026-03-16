@@ -14,8 +14,8 @@ import { checkArguments } from 'xxscreeps/config/arguments.js';
 
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
-import C from 'xxscreeps/game/constants/index.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 // Schemas
 import * as CodeSchema from 'xxscreeps/engine/db/user/code.js';

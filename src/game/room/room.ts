@@ -5,7 +5,7 @@ import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { FindConstants, FindType, RoomFindOptions } from './find.js';
 import type { LookConstants, TypeOfLook } from './look.js';
-import Fn from 'xxscreeps/utility/functional.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { BufferObject, withOverlay } from 'xxscreeps/schema/index.js';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility.js';
 import { iteratee } from 'xxscreeps/utility/iteratee.js';
@@ -246,7 +246,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 
 // Export `Room` to runtime globals
 registerGlobal(Room);
-declare module 'xxscreeps/game/runtime' {
+declare module 'xxscreeps/game/runtime.js' {
 	interface Global { Room: typeof Room }
 }
 

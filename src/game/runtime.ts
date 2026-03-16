@@ -1,5 +1,5 @@
 import type { GameConstructor } from './index.js';
-import C from './constants/index.js';
+import * as C from './constants/index.js';
 import lodash from 'lodash';
 import { globals, hooks, registerGlobal } from './symbols.js';
 
