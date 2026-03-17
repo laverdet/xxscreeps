@@ -1,12 +1,12 @@
 import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
 import type { CodePayload } from 'xxscreeps/engine/db/user/code.js';
-import { WASI } from './wasi/index.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { loadSourceMap } from './source-map.js';
+import { WASI } from './wasi/index.js';
 
 type Loader<Source> = {
-	resolve(specifier: string, referrer?: string): string;
-	compile(url: string): Source | undefined;
+	resolve: (specifier: string, referrer?: string) => string;
+	compile: (url: string) => Source | undefined;
 };
 
 export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compiler: Compiler) {
@@ -18,8 +18,8 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 				// Allow require('./module.js')
 				const basename = specifier.replace(/^\.\//, '');
 				// Allow require('module')
-				const withJs = `${basename}.js`
-				return modules.has(withJs) ? withJs : basename
+				const withJs = `${basename}.js`;
+				return modules.has(withJs) ? withJs : basename;
 			},
 			compile(url) {
 				return modules.get(url);
@@ -210,7 +210,7 @@ export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compil
 
 	} else {
 		// No main defined
-		return () => { throw new Error('Cannot find module \'main\'') };
+		return () => { throw new Error('Cannot find module \'main\''); };
 	}
 }
 

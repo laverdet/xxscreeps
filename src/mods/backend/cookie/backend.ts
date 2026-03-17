@@ -1,11 +1,11 @@
-import * as Crypto from 'crypto';
-import * as User from 'xxscreeps/engine/db/user/index.js';
+import * as Crypto from 'node:crypto';
 import { hooks } from 'xxscreeps/backend/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 
-hooks.register('middleware', koa => koa.use(async(context, next) => {
+hooks.register('middleware', koa => koa.use(async (context, next) => {
 	const clear = () => {
 		if (context.cookies.get('id')) {
-			const now = new Date;
+			const now = new Date();
 			context.cookies.set('id', null, { expires: now, httpOnly: false });
 			context.cookies.set('session', null, { expires: now, httpOnly: false });
 		}

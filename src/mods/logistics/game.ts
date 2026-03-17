@@ -1,7 +1,7 @@
+import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerGlobal } from 'xxscreeps/game/index.js';
 import * as Link from './link.js';
 import * as Storage from './storage.js';
-import { registerGlobal } from 'xxscreeps/game/index.js';
-import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
 
 // Register schema
 const linkSchema = registerVariant('Room.objects', Link.format);

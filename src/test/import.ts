@@ -1,20 +1,20 @@
 import type { Payload } from './export.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
-import fs from 'fs/promises';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as MapSchema from 'xxscreeps/game/map.js';
-import * as User from 'xxscreeps/engine/db/user/index.js';
-import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { makeWriter } from 'xxscreeps/schema/write.js';
+import fs from 'node:fs/promises';
 import { loadTerrain } from 'xxscreeps/driver/path-finder.js';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { processorTimeKey } from 'xxscreeps/engine/processor/model.js';
-import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { StructureController } from 'xxscreeps/mods/controller/controller.js';
-import { Source } from 'xxscreeps/mods/source/source.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
+import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
+import { Source } from 'xxscreeps/mods/source/source.js';
+import { makeWriter } from 'xxscreeps/schema/write.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 // Read file
 const root = new URL('../../test/', import.meta.url);
@@ -22,8 +22,8 @@ const payload: Payload = JSON.parse(await fs.readFile(new URL('shard.json', root
 
 // Generate rooms
 const rooms = Object.entries(payload).map(([ roomName, info ]) => {
-	const terrain = new TerrainWriter;
-	const room = new Room;
+	const terrain = new TerrainWriter();
+	const room = new Room();
 	room.name = roomName;
 
 	let ii = 0;
@@ -51,7 +51,7 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 
 				case '@': {
 					terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
-					const controller = new StructureController;
+					const controller = new StructureController();
 					room['#user'] = null;
 					saveObject(controller, xx, yy);
 					break;
@@ -59,16 +59,16 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 
 				case 'E': {
 					terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
-					const source = new Source;
+					const source = new Source();
 					source.energy =
-					source.energyCapacity = C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
+						source.energyCapacity = C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
 					saveObject(source, xx, yy);
 					break;
 				}
 
 				case 'M': {
 					terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
-					const mineral = new Mineral;
+					const mineral = new Mineral();
 					saveObject(mineral, xx, yy, metadata => {
 						mineral.density = metadata.density!;
 						mineral.mineralType = metadata.mineral!;

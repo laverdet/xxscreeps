@@ -1,9 +1,9 @@
-import type { BufferView } from './buffer-view.js';
-import type { StructLayout } from './layout.js';
-import type { Builder } from './index.js';
 import type { BufferObject } from './buffer-object.js';
-import { getBuffer, getOffset } from './buffer-object.js';
+import type { BufferView } from './buffer-view.js';
 import type { TypeOf } from './format.js';
+import type { Builder } from './index.js';
+import type { StructLayout } from './layout.js';
+import { getBuffer, getOffset } from './buffer-object.js';
 import { Variant } from './format.js';
 import { makeTypeReader } from './read.js';
 import { entriesWithSymbols } from './symbol.js';
@@ -93,8 +93,8 @@ type BufferObjectSubclass<Instance extends BufferObject> =
 type BufferObjectConstructor<
 	Base extends AbstractBufferObjectSubclass,
 	Instance extends BufferObject,
-> = Omit<Base, 'prototype'> & (Base extends BufferObjectSubclass<any> ?
-	BufferObjectSubclass<Instance> : AbstractBufferObjectSubclass<Instance>);
+> = Omit<Base, 'prototype'> & (Base extends BufferObjectSubclass<any>
+	? BufferObjectSubclass<Instance> : AbstractBufferObjectSubclass<Instance>);
 
 /**
  * Injects types inherited from format into class prototype. Just passes the base class back
@@ -105,7 +105,7 @@ type BufferObjectConstructor<
 export function withOverlay<Base extends AbstractBufferObjectSubclass, Type>(
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	base: Base, type: Type):
-	Base extends AbstractBufferObjectSubclass<infer Instance> ?
-		BufferObjectConstructor<Base, Instance & TypeOf<Type>> : never {
+	Base extends AbstractBufferObjectSubclass<infer Instance>
+		? BufferObjectConstructor<Base, Instance & TypeOf<Type>> : never {
 	return base as never;
 }

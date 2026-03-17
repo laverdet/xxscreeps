@@ -1,7 +1,7 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks } from 'xxscreeps/backend/index.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
 
 hooks.register('route', {
 	path: '/api/game/create-invader',

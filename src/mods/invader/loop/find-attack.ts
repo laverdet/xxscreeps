@@ -1,8 +1,8 @@
 import type * as PathFinder from 'xxscreeps/game/path-finder/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Creep } from 'xxscreeps/mods/creep/creep.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import flee from './flee.js';
 
 function checkPath(pos1: RoomPosition, pos2: RoomPosition) {
@@ -63,7 +63,7 @@ export default function(creep: Creep, healers: Creep[], hostiles: Creep[], forti
 	}
 
 	const target = unreachableSpawns[0];
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 	if (target) {
 		creep.moveTo(target, { ...pathOptions, ignoreDestructibleStructures: true });
 		return;

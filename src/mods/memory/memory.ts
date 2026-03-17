@@ -126,7 +126,7 @@ export const RawMemory = {
 	 * @param id The ID of the memory segment from 0 to 99. Pass `null` to remove your default public
 	 * segment.
 	 */
-	setDefaultPublicSegment(_id: number) { console.error('TODO: setDefaultPublicSegment') },
+	setDefaultPublicSegment(_id: number) { console.error('TODO: setDefaultPublicSegment'); },
 
 	/**
 	 * Set specified segments as public. Other users will be able to request access to them using `setActiveForeignSegment`.

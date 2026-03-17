@@ -40,7 +40,7 @@ export class BufferObject {
 	}
 }
 
-export const check = exchange(BufferObject, 'check', (): never => { throw new Error });
-export const detach = exchange(BufferObject, 'detach', (): never => { throw new Error });
-export const getBuffer = exchange(BufferObject, 'getBuffer', (): never => { throw new Error });
-export const getOffset = exchange(BufferObject, 'getOffset', (): never => { throw new Error });
+export const check = exchange(BufferObject, 'check', (): never => { throw new Error(); });
+export const detach = exchange(BufferObject, 'detach', (): never => { throw new Error(); });
+export const getBuffer = exchange(BufferObject, 'getBuffer', (): never => { throw new Error(); });
+export const getOffset = exchange(BufferObject, 'getOffset', (): never => { throw new Error(); });

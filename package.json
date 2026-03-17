@@ -74,10 +74,11 @@
     "webpack": "5.88.0"
   },
   "devDependencies": {
-    "@laverdet/eslint-config": "github:laverdet/eslint-config#a12fa0a782425b584992fc937eb0db43642b560a",
-    "@typescript-eslint/eslint-plugin": "~5.60.0",
-    "@typescript-eslint/parser": "~5.60.0",
-    "eslint": "~8.43.0",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.1",
+    "@typescript-eslint/parser": "^8.57.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-import": "^2.32.0",
     "typescript-json-schema": "0.57.0",
     "xxscreeps": "."
   }

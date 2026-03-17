@@ -1,7 +1,7 @@
-import type { Effect } from 'xxscreeps/utility/types.js';
-import type { IncomingMessage, Server, ServerResponse } from 'http';
-import type { Socket } from 'net';
+import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+import type { Socket } from 'node:net';
 import type sockjs from 'sockjs';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import { Deferred } from 'xxscreeps/utility/async.js';
 import { Fn } from 'xxscreeps/utility/fn.js';
 

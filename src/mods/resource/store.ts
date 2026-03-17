@@ -1,12 +1,12 @@
-import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
 import type { ResourceType } from './resource.js';
+import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { hooks } from 'xxscreeps/game/index.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
 import { compose, declare, makeReader, struct, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
 import { getLayout } from 'xxscreeps/schema/layout.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { resourceEnumFormat } from './resource.js';
-import { hooks } from 'xxscreeps/game/index.js';
 
 export type WithStore = Record<'store', Store>;
 
@@ -82,8 +82,8 @@ export abstract class Store extends BufferObjectWithResourcesType {
 	private [Symbol.for('nodejs.util.inspect.custom')]() {
 		const capacity = this.getCapacity();
 		return {
-			[Symbol('capacity')]: capacity === null ?
-				Object.fromEntries(Fn.map(this['#entries'](), ([ type ]) => [ type, this.getCapacity(type) ])) :
+			[Symbol('capacity')]: capacity === null
+				? Object.fromEntries(Fn.map(this['#entries'](), ([ type ]) => [ type, this.getCapacity(type) ])) :
 				capacity,
 			...Fn.fromEntries(this['#entries']()),
 		};
@@ -114,8 +114,8 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		}
 	}
 
-	static ['#create'](capacity: number) {
-		const instance = new OpenStore;
+	static '#create'(capacity: number) {
+		const instance = new OpenStore();
 		instance['#capacity'] = capacity;
 		return instance;
 	}
@@ -192,8 +192,8 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 		}
 	}
 
-	static ['#create'](capacities: Partial<StorageRecord>) {
-		const instance = new RestrictedStore;
+	static '#create'(capacities: Partial<StorageRecord>) {
+		const instance = new RestrictedStore();
 		for (const type in capacities) {
 			const info: RestrictedResourceInfo = {
 				amount: 0,
@@ -233,7 +233,7 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 }
 // TODO: This is needed to initialize the getters of the unused store implementation, just for
 // testing
-makeReader({ ...getLayout(restrictedStoreFormat, new Map), version: 0 });
+makeReader({ ...getLayout(restrictedStoreFormat, new Map()), version: 0 });
 
 const shapeSingle = struct({
 	'#amount': 'int32',
@@ -252,7 +252,7 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 		}
 	}
 
-	static ['#create']<Type extends ResourceType>(type: Type, capacity: number, amount = 0) {
+	static '#create'<Type extends ResourceType>(type: Type, capacity: number, amount = 0) {
 		const instance = new SingleStore<Type>();
 		if (amount > 0) {
 			instance[type] = amount;

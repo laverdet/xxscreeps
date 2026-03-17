@@ -1,8 +1,8 @@
 import type { Schema } from './config.js';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+import { isMainThread, workerData } from 'node:worker_threads';
 import jsYaml from 'js-yaml';
-import { isMainThread, workerData } from 'worker_threads';
-import { pathToFileURL } from 'url';
 
 export const isTopThread: boolean = isMainThread || workerData?.isTopThread;
 

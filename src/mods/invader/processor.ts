@@ -1,11 +1,11 @@
+import { registerIntentProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as Creep from 'xxscreeps/mods/creep/creep.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import * as Creep from 'xxscreeps/mods/creep/creep.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
-import { registerIntentProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { loop } from './loop/index.js';
 
 // Register invader NPC
@@ -73,7 +73,7 @@ export function create(pos: RoomPosition, role: Role, strength: Strength, ageTim
 	return creep;
 }
 
-function createBody(parts: { [Type in Creep.PartType]?: number }) {
+function createBody(parts: Partial<Record<Creep.PartType, number>>) {
 	const size = Fn.accumulate(Object.values(parts));
 	return [
 		...Array(parts[C.TOUGH] ?? 0).fill(C.TOUGH),

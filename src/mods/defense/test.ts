@@ -1,8 +1,8 @@
 import * as C from 'xxscreeps/game/constants/index.js';
-import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createConstructionSite } from 'xxscreeps/mods/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
 describe('ramparts', () => {
 	const roomWithUnbuiltRamparts = simulate({
@@ -14,7 +14,7 @@ describe('ramparts', () => {
 		},
 	});
 
-	test('moveTo should be able to pass trough rampart csite', () => roomWithUnbuiltRamparts(async({ player, tick }) => {
+	test('moveTo should be able to pass trough rampart csite', () => roomWithUnbuiltRamparts(async ({ player, tick }) => {
 		await player('100', Game => {
 			assert.strictEqual(Game.creeps.rampart_movement.moveTo(25, 25), C.OK);
 		});
@@ -29,7 +29,7 @@ describe('ramparts', () => {
 		});
 	}));
 
-	test('move should be able to pass trough rampart csite', () => roomWithUnbuiltRamparts(async({ player, tick }) => {
+	test('move should be able to pass trough rampart csite', () => roomWithUnbuiltRamparts(async ({ player, tick }) => {
 		await player('100', Game => {
 			assert.strictEqual(Game.creeps.rampart_movement.move(C.RIGHT), C.OK);
 		});

@@ -1,12 +1,12 @@
-import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
-import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 
 export const format = () => compose(shape, StructureStorage);
 const shape = declare('Storage', struct(ownedStructureFormat, {
@@ -16,22 +16,22 @@ const shape = declare('Storage', struct(ownedStructureFormat, {
 }));
 
 export class StructureStorage extends withOverlay(OwnedStructure, shape) {
-	override get hitsMax() { return C.STORAGE_HITS }
-	override get structureType() { return C.STRUCTURE_STORAGE }
+	override get hitsMax() { return C.STORAGE_HITS; }
+	override get structureType() { return C.STRUCTURE_STORAGE; }
 
-	override ['#afterInsert'](room: Room) {
+	override '#afterInsert'(room: Room) {
 		super['#afterInsert'](room);
 		room.storage = this;
 	}
 
-	override ['#beforeRemove']() {
+	override '#beforeRemove'() {
 		this.room.storage = undefined;
 		super['#beforeRemove']();
 	}
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const storage = assign(RoomObject.create(new StructureStorage, pos), {
+	const storage = assign(RoomObject.create(new StructureStorage(), pos), {
 		hits: C.STORAGE_HITS,
 		store: OpenStore['#create'](C.STORAGE_CAPACITY),
 	});
@@ -43,8 +43,8 @@ export function create(pos: RoomPosition, owner: string) {
 registerBuildableStructure(C.STRUCTURE_STORAGE, {
 	obstacle: true,
 	checkPlacement(room, pos) {
-		return checkPlacement(room, pos) === C.OK ?
-			C.CONSTRUCTION_COST.storage : null;
+		return checkPlacement(room, pos) === C.OK
+			? C.CONSTRUCTION_COST.storage : null;
 	},
 	create(site) {
 		return create(site.pos, site['#user']);

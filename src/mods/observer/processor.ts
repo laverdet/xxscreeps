@@ -1,9 +1,9 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { StructureObserver, checkObserveRoom } from 'xxscreeps/mods/observer/observer.js';
 import { ObserverSpy, create as createObserverSpy } from 'xxscreeps/mods/observer/observer-spy.js';
+import { StructureObserver, checkObserveRoom } from 'xxscreeps/mods/observer/observer.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { observer: typeof intents }

@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../../declarations.d.ts" />
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { configDefaults } from 'xxscreeps/config/config.js';
 import config, { configPath } from 'xxscreeps/config/raw.js';
 
@@ -23,10 +23,10 @@ async function resolve(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
 		const url = await async function() {
 			try {
-				return await import.meta.resolve!(`${specifier}/index.js`, `${baseUrl}`);
+				return import.meta.resolve!(`${specifier}/index.js`, `${baseUrl}`);
 			} catch {
 				try {
-					return await import.meta.resolve!(`${specifier}.js`, `${baseUrl}`);
+					return import.meta.resolve!(`${specifier}.js`, `${baseUrl}`);
 				} catch {
 					return import.meta.resolve!(specifier, `${baseUrl}`);
 				}
@@ -61,6 +61,7 @@ await resolve(config.mods ?? configDefaults.mods);
 // Ensure module imports are up to date on the filesystem
 const cached = await async function() {
 	try {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
 		return await import(`${'./manifest.cached'}`) as {
 			json: string;
 			version: number;
@@ -69,11 +70,11 @@ const cached = await async function() {
 }();
 if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 	// Given a specifier fragment this return all mods which export it
-	const resolveWithinMods = async(specifier: string) => {
-		const resolved = await Promise.all(mods.map(async({ provides, url }) => {
+	const resolveWithinMods = async (specifier: string) => {
+		const resolved = await Promise.all(mods.map(async ({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
 				try {
-					return await import.meta.resolve!(`./${specifier}.js`, `${url}`);
+					return import.meta.resolve!(`./${specifier}.js`, `${url}`);
 				} catch {
 					return import.meta.resolve!(`./${specifier}/index.js`, `${url}`);
 				}
@@ -127,8 +128,8 @@ if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 
 			// Write JS file
 			const content =
-			inputs.map((mod, ii) =>
-				`import * as Config${ii} from ${JSON.stringify(mod)};\n`).join('') +
+				inputs.map((mod, ii) =>
+					`import * as Config${ii} from ${JSON.stringify(mod)};\n`).join('') +
 				`export default [ ${inputs.map((mod, ii) => `Config${ii}`).join(', ')} ];\n`;
 			await fs.writeFile(new URL('config.js', outDir), content, 'utf8');
 		}(),
@@ -147,8 +148,7 @@ export async function importMods(provides: Provide) {
 		if (mod.provides.includes(provides)) {
 			try {
 				await import(await import.meta.resolve!(`./${provides}.js`, `${mod.url}`));
-			}
-			catch (e) {
+			} catch (e) {
 				await import(await import.meta.resolve!(`./${provides}/index.js`, `${mod.url}`));
 			}
 		}

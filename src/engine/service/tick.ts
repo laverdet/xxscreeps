@@ -1,5 +1,5 @@
-import fsPromises from 'fs/promises';
-import fs from 'fs';
+import fsPromises from 'node:fs/promises';
+import fs from 'node:fs';
 import jsYaml from 'js-yaml';
 import config, { configPath } from 'xxscreeps/config/index.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';

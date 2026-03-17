@@ -1,6 +1,6 @@
-import * as Road from './road.js';
-import { registerGlobal } from 'xxscreeps/game/index.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerGlobal } from 'xxscreeps/game/index.js';
+import * as Road from './road.js';
 
 // Register schema
 const schema = registerVariant('Room.objects', Road.format);

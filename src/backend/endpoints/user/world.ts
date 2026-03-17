@@ -1,5 +1,5 @@
-import * as User from 'xxscreeps/engine/db/user/index.js';
 import { hooks } from 'xxscreeps/backend/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 
 hooks.register('route', {
 	path: '/api/user/respawn-prohibited-rooms',
@@ -34,7 +34,7 @@ hooks.register('route', {
 	},
 });
 
-hooks.register('roomSocket', async(shard, userId, roomName) => {
+hooks.register('roomSocket', async (shard, userId, roomName) => {
 	if (userId !== undefined) {
 		await shard.db.data.hset(User.infoKey(userId), 'lastViewedRoom', roomName);
 	}

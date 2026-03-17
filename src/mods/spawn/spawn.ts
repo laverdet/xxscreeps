@@ -1,21 +1,21 @@
-import type { PartType } from 'xxscreeps/mods/creep/creep.js';
-import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
-import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { StructureExtension } from './extension.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as Memory from 'xxscreeps/mods/memory/memory.js';
+import type { GameConstructor } from 'xxscreeps/game/index.js';
+import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
+import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { create as createObject } from 'xxscreeps/game/object.js';
-import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
-import { Game, intents, userGame } from 'xxscreeps/game/index.js';
-import { OwnedStructure, checkMyStructure, checkPlacement, lookForStructures, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { compose, declare, optional, struct, variant, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 import { chainIntentChecks, checkRange, checkString, checkTarget } from 'xxscreeps/game/checks.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Game, intents, userGame } from 'xxscreeps/game/index.js';
+import { create as createObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
+import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import * as Memory from 'xxscreeps/mods/memory/memory.js';
+import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { OwnedStructure, checkMyStructure, checkPlacement, lookForStructures, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
+import { compose, declare, optional, struct, variant, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { assign } from 'xxscreeps/utility/utility.js';
 
 type SpawnCreepOptions = {
 	directions?: Direction[];
@@ -34,9 +34,9 @@ const spawningFormat = struct({
 });
 
 class Spawning extends withOverlay(BufferObject, spawningFormat) {
-	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name }
-	@enumerable get remainingTime() { return Math.max(0, this['#spawnTime'] - Game.time) }
-	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])! }
+	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name; }
+	@enumerable get remainingTime() { return Math.max(0, this['#spawnTime'] - Game.time); }
+	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])!; }
 
 	/**
 	 * Cancel spawning immediately. Energy spent on spawning is not returned.
@@ -71,10 +71,10 @@ const shape = struct(ownedStructureFormat, {
 export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	static readonly Spawning = Spawning;
 
-	get energy() { return this.store[C.RESOURCE_ENERGY] }
-	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
-	override get hitsMax() { return C.SPAWN_HITS }
-	override get structureType() { return C.STRUCTURE_SPAWN }
+	get energy() { return this.store[C.RESOURCE_ENERGY]; }
+	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
+	override get hitsMax() { return C.SPAWN_HITS; }
+	override get structureType() { return C.STRUCTURE_SPAWN; }
 
 	get memory() {
 		if (!this.my) {
@@ -90,12 +90,12 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 		(Memory.get().spawns ??= {})[this.name] ??= memory;
 	}
 
-	override ['#addToMyGame'](game: GameConstructor) {
+	override '#addToMyGame'(game: GameConstructor) {
 		super['#addToMyGame'](game);
 		game.spawns[this.name] = this;
 	}
 
-	override ['#beforeRemove']() {
+	override '#beforeRemove'() {
 		const { spawning } = this;
 		if (spawning) {
 			const creep = Game.getObjectById(spawning['#spawningCreepId'])!;
@@ -187,7 +187,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 				// Save memory option to Memory
 				if (options.memory !== undefined) {
 					const memory = Memory.get();
-					(memory.creeps ?? (memory.creeps = {}))[name] = options.memory;
+					(memory.creeps ??= {})[name] = options.memory;
 				}
 
 				// Save intent
@@ -204,7 +204,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string, name: string) {
-	const spawn = assign(createObject(new StructureSpawn, pos), {
+	const spawn = assign(createObject(new StructureSpawn(), pos), {
 		hits: C.SPAWN_HITS,
 		name,
 		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.SPAWN_ENERGY_CAPACITY, C.SPAWN_ENERGY_START),
@@ -215,7 +215,7 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 
 function hasSpawn(userGame: GameConstructor, name: string) {
 	return Boolean(
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 		userGame.spawns[name] ||
 		Object.values(userGame.constructionSites).some(site => site.name === name));
 }
@@ -236,8 +236,8 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 				}
 			} else {
 				// Just check the current room for name collision
-				return lookForStructures(room, C.STRUCTURE_SPAWN).some(spawn => spawn.my && spawn.name === name) ?
-					null : name;
+				return lookForStructures(room, C.STRUCTURE_SPAWN).some(spawn => spawn.my && spawn.name === name)
+					? null : name;
 			}
 		} else if (userGame) {
 			// Generate a new name
@@ -252,8 +252,8 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 		}
 	},
 	checkPlacement(room, pos) {
-		return checkPlacement(room, pos) === C.OK ?
-			C.CONSTRUCTION_COST.spawn : null;
+		return checkPlacement(room, pos) === C.OK
+			? C.CONSTRUCTION_COST.spawn : null;
 	},
 	create(site) {
 		return create(site.pos, site['#user'], site.name);

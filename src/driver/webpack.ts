@@ -1,14 +1,15 @@
 import type { PluginItem } from '@babel/core';
-import fs from 'fs/promises';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import Webpack from 'webpack';
-import * as Path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import * as Path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Hack in support for private class fields & methods
-import { createRequire } from 'module';
 import AcornClassFields from 'acorn-class-fields';
 import AcornPrivateMethods from 'acorn-private-methods';
+import Webpack from 'webpack';
+import { Fn } from 'xxscreeps/utility/fn.js';
+
 const Acorn = createRequire(import.meta.url)('acorn');
 Acorn.Parser = Acorn.Parser.extend(AcornClassFields, AcornPrivateMethods);
 

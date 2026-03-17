@@ -1,9 +1,10 @@
-import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/utility/types.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
-import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { ProcessorContext } from './room.js';
-import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbols.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/utility/types.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbols.js';
+
 export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room.js';
 export { registerRoomTickProcessor } from './room.js';
 export { hooks } from './symbols.js';
@@ -72,8 +73,8 @@ export interface Intent {}
 // Types for intent processors
 type Intents = Exclude<UnwrapArray<Intent[keyof Intent]>, void>;
 export type IntentReceivers = Room | Intents['type'];
-export type IntentsForReceiver<Type extends IntentReceivers> = Type extends any ?
-	CounterExtract<Intents, { type: Type; intent: any; data: any }>['intent'] : never;
+export type IntentsForReceiver<Type extends IntentReceivers> = Type extends any
+	? CounterExtract<Intents, { type: Type; intent: any; data: any }>['intent'] : never;
 export type IntentParameters<Type extends IntentReceivers, Intent extends string> =
 	CounterExtract<Intents, { type: Type; intent: Intent; data: any }>['data'];
 
@@ -157,9 +158,9 @@ export function initializeIntentConstraints() {
 	// Generate getters
 	for (const [ intent, infos ] of intentProcessorsByName) {
 		const first = infos[0];
-		intentProcessorGetters.set(intent, infos.length === 0 ?
+		intentProcessorGetters.set(intent, infos.length === 0
 			// If there is only one intent with this name the getter is simple
-			() => first :
+			? () => first :
 			// Some unrelated intents share names, but not receivers
 			instance => infos.find(info => instance instanceof info.receiver)!);
 	}

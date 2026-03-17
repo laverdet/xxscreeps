@@ -1,7 +1,7 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
-import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
 import { format as keeperFormat } from './keeper-lair.js';

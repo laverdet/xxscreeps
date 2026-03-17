@@ -40,7 +40,7 @@ export function describe(name: string, fn: Callback): void {
 	} else if (checkFilter(name)) {
 		return;
 	}
-	context.children.push(async() => {
+	context.children.push(async () => {
 		if (argv.length === 0) {
 			process.stdout.write('  '.repeat(stack.length) + name);
 		}
@@ -62,7 +62,7 @@ export function test(name: string, fn: Callback) {
 	} else if (checkFilter(name)) {
 		return;
 	}
-	context.tests.push(async() => {
+	context.tests.push(async () => {
 		try {
 			await fn();
 			if (argv.length === 0) {

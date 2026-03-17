@@ -1,16 +1,16 @@
 import type { Direction } from './direction.js';
-import type { InspectOptionsStylized } from 'util';
+import type { RoomObject } from './object.js';
 import type { FindConstants, FindType, RoomFindOptions } from './room/find.js';
 import type { LookConstants } from './room/look.js';
 import type { FindPathOptions, RoomPath } from './room/path.js';
-import type { RoomObject } from './object.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as PathFinder from './path-finder/index.js';
-import { Game, registerGlobal } from './index.js';
+import type { InspectOptionsStylized } from 'node:util';
 import { compose, declare } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { iteratee } from 'xxscreeps/utility/iteratee.js';
 import { getDirection } from './direction.js';
+import * as PathFinder from './path-finder/index.js';
 import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './room/name.js';
+import { Game, registerGlobal } from './index.js';
 
 export type { Direction } from './direction.js';
 export { isBorder, isNearBorder } from './terrain.js';
@@ -85,7 +85,7 @@ export class RoomPosition {
 		}
 	}
 
-	static ['#create'](pos: number) {
+	static '#create'(pos: number) {
 		return new RoomPosition(RawPositionId, pos);
 	}
 
@@ -148,6 +148,7 @@ export class RoomPosition {
 	get '#rx'() {
 		return this.#id & 0xff;
 	}
+
 	get '#ry'() {
 		return (this.#id >>> 8) & 0xff;
 	}
@@ -237,8 +238,8 @@ export class RoomPosition {
 	): RoomObject | RoomPosition | null {
 
 		// Find objects to search
-		const objects = typeof search === 'number' ?
-			fetchRoom(this.roomName).find(search) : search;
+		const objects = typeof search === 'number'
+			? fetchRoom(this.roomName).find(search) : search;
 		const filtered = options.filter === undefined ? objects :
 			objects.filter(iteratee(options.filter));
 		const goals = filtered.map(object => 'pos' in object ? object.pos : object);
@@ -272,8 +273,8 @@ export class RoomPosition {
 	) {
 
 		// Find objects to search
-		const objects = typeof search === 'number' ?
-			fetchRoom(this.roomName).find(search) : search;
+		const objects = typeof search === 'number'
+			? fetchRoom(this.roomName).find(search) : search;
 		const filtered = options?.filter === undefined ? objects :
 			objects.filter(iteratee(options.filter));
 		return Fn.minimum(filtered, (left, right) =>
@@ -300,8 +301,8 @@ export class RoomPosition {
 	) {
 
 		// Find objects to search
-		const objects: (RoomObject | RoomPosition)[] = typeof search === 'number' ?
-			fetchRoom(this.roomName).find(search) : search;
+		const objects: (RoomObject | RoomPosition)[] = typeof search === 'number'
+			? fetchRoom(this.roomName).find(search) : search;
 
 		// Filter out in range & matching
 		const inRange = objects.filter(object => this.inRangeTo(object, range));
@@ -392,7 +393,7 @@ export function fetchArguments(arg1?: any, arg2?: any, arg3?: any, ...rest: any)
 
 export function fetchPositionArgument<Extra = any>(
 	fromRoom: string, arg1?: any, arg2?: any, arg3?: Extra, ...rest: any
-): { pos: RoomPosition | undefined; extra: Extra | undefined, rest: any } {
+): { pos: RoomPosition | undefined; extra: Extra | undefined; rest: any } {
 	if (typeof arg1 === 'object' && arg1 !== null) {
 		if (arg1 instanceof RoomPosition) {
 			return { pos: arg1, extra: arg2, rest };
@@ -441,7 +442,7 @@ export function fetchPositionArgumentRest<Rest extends any[]>(
 
 export function fetchRoom(roomName: string) {
 	const room = Game.rooms[roomName];
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 	if (room === undefined) {
 		throw new Error(`Could not access room ${roomName}`);
 	}

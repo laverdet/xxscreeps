@@ -12,7 +12,7 @@ export function getCostMatrix(roomName: string) {
 	if (cached?.time === Game.time && cached.roomName === roomName) {
 		return cached.costMatrix;
 	}
-	const cm = new CostMatrix;
+	const cm = new CostMatrix();
 	cached = {
 		costMatrix: cm,
 		roomName,

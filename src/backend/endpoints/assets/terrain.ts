@@ -1,16 +1,16 @@
+import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameMap } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { Terrain } from 'xxscreeps/game/terrain.js';
-import streamToPromise from 'stream-to-promise';
 import makeEtag from 'etag';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { PNG } from 'pngjs';
+import streamToPromise from 'stream-to-promise';
 import { hooks } from 'xxscreeps/backend/index.js';
-import { runOnce } from 'xxscreeps/utility/memoize.js';
 import { TerrainRender } from 'xxscreeps/backend/symbols.js';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
 import { TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL, isBorder } from 'xxscreeps/game/terrain.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
 
 const onePxImage = runOnce(() => {
 	const png = new PNG({
@@ -162,7 +162,7 @@ function register(paths: string[], fn: (shard: Shard, map: GameMap, room: string
 
 			async execute(context) {
 				// Fetch PNG from cache, or generate fresh
-				const room = `${context.params.room}`;
+				const room = context.params.room;
 				const data = cache.get(room) ?? await async function() {
 					const payload = await fn(context.shard, context.backend.world.map, room);
 					if (payload === null) {
@@ -204,7 +204,7 @@ function register(paths: string[], fn: (shard: Shard, map: GameMap, room: string
 }
 
 // Full thumbnail
-register([ '/assets/map/:room.png', '/assets/map/:shard/:room.png' ], async(shard, map, roomName) => {
+register([ '/assets/map/:room.png', '/assets/map/:shard/:room.png' ], async (shard, map, roomName) => {
 	if (map.getRoomStatus(roomName)) {
 		return generate(map, [ [ await shard.loadRoom(roomName) ] ], 3);
 	} else {
@@ -214,7 +214,7 @@ register([ '/assets/map/:room.png', '/assets/map/:shard/:room.png' ], async(shar
 
 // Grids
 for (const [ fragment, grid, align, zoom ] of [ [ 'zoom1', 10, 2, 0.4 ], [ 'zoom2', 4, 0, 1 ] ] as const) {
-	register([ `/assets/map/${fragment}/:room.png`, `/assets/map/:shard/${fragment}/:room.png` ], async(shard, map, room) => {
+	register([ `/assets/map/${fragment}/:room.png`, `/assets/map/:shard/${fragment}/:room.png` ], async (shard, map, room) => {
 		// Fetch rooms if request is valid
 		let didFindRoom = false;
 		const { rx: left, ry: top } = parseRoomName(room);
@@ -228,7 +228,7 @@ for (const [ fragment, grid, align, zoom ] of [ [ 'zoom1', 10, 2, 0.4 ], [ 'zoom
 				})),
 			));
 			// Render the grid
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 			if (didFindRoom) {
 				return generate(map, rooms, zoom);
 			}

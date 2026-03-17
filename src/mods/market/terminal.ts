@@ -1,14 +1,14 @@
-import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { create as createObject } from 'xxscreeps/game/object.js';
-import { Game, intents } from 'xxscreeps/game/index.js';
-import { OpenStore, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Game, intents } from 'xxscreeps/game/index.js';
+import { create as createObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
+import { OpenStore, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
 export const format = declare('StructureTerminal', () => compose(shape, StructureTerminal));
@@ -30,17 +30,17 @@ const shape = struct(ownedStructureFormat, {
  * Terminals are used in the [Market system](https://docs.screeps.com/market.html).
  */
 export class StructureTerminal extends withOverlay(OwnedStructure, shape) {
-	override get hitsMax() { return C.TERMINAL_HITS }
-	override get structureType() { return C.STRUCTURE_TERMINAL }
+	override get hitsMax() { return C.TERMINAL_HITS; }
+	override get structureType() { return C.STRUCTURE_TERMINAL; }
 
 	/** @deprecated  */
-	get storeCapacity() { return this.store.getCapacity() }
+	get storeCapacity() { return this.store.getCapacity(); }
 
 	/**
 	 * The remaining amount of ticks while this terminal cannot be used to make
 	 * `StructureTerminal.send` or `Game.market.deal` calls.
 	 */
-	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
+	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
 
 	/**
 	 * Sends resource to a Terminal in another room with the specified name.
@@ -56,12 +56,12 @@ export class StructureTerminal extends withOverlay(OwnedStructure, shape) {
 			() => intents.save(this, 'send', resourceType, amount, destination, description));
 	}
 
-	override ['#afterInsert'](room: Room) {
+	override '#afterInsert'(room: Room) {
 		super['#afterInsert'](room);
 		room.terminal = this;
 	}
 
-	override ['#beforeRemove']() {
+	override '#beforeRemove'() {
 		this.room.terminal = undefined;
 		super['#beforeRemove']();
 	}
@@ -74,8 +74,8 @@ export function checkSend(terminal: StructureTerminal, resourceType: ResourceTyp
 	const energyCost = calculateEnergyCost(amount, range);
 	return chainIntentChecks(
 		() => checkMyStructure(terminal, StructureTerminal),
-		resourceType === C.RESOURCE_ENERGY ?
-			() => checkHasResource(terminal, C.RESOURCE_ENERGY, amount + energyCost) :
+		resourceType === C.RESOURCE_ENERGY
+			? () => checkHasResource(terminal, C.RESOURCE_ENERGY, amount + energyCost) :
 			() => chainIntentChecks(
 				() => checkHasResource(terminal, C.RESOURCE_ENERGY, energyCost),
 				() => checkHasResource(terminal, resourceType, amount)),
@@ -97,7 +97,7 @@ export function calculateEnergyCost(amount: number, range: number) {
 //
 // Construction implementation
 function create(pos: RoomPosition, owner: string) {
-	const terminal = assign(createObject(new StructureTerminal, pos), {
+	const terminal = assign(createObject(new StructureTerminal(), pos), {
 		hits: C.TERMINAL_HITS,
 		store: OpenStore['#create'](C.TERMINAL_CAPACITY),
 	});
@@ -108,8 +108,8 @@ function create(pos: RoomPosition, owner: string) {
 registerBuildableStructure(C.STRUCTURE_TERMINAL, {
 	obstacle: true,
 	checkPlacement(room, pos) {
-		return checkPlacement(room, pos) === C.OK ?
-			C.CONSTRUCTION_COST.terminal : null;
+		return checkPlacement(room, pos) === C.OK
+			? C.CONSTRUCTION_COST.terminal : null;
 	},
 	create(site) {
 		return create(site.pos, site['#user']);

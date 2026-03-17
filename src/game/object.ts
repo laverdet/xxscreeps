@@ -1,15 +1,16 @@
 import type { GameConstructor } from './index.js';
-import { inspect, type InspectOptionsStylized } from 'util';
-import type { Room } from './room/index.js';
 import type { RoomPosition } from './position.js';
+import type { Room } from './room/index.js';
+import type { InspectOptionsStylized } from 'node:util';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
-import * as BufferObject from 'xxscreeps/schema/buffer-object.js';
+import { inspect } from 'node:util';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { format as roomPositionFormat } from './position.js';
-import { compose, declare, enumerated, struct, union, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
+import * as BufferObject from 'xxscreeps/schema/buffer-object.js';
+import { compose, declare, enumerated, struct, union, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { expandGetters } from 'xxscreeps/utility/inspect.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { format as roomPositionFormat } from './position.js';
 import { Game, registerGlobal } from './index.js';
 
 export interface Schema {}
@@ -48,17 +49,17 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		}
 	}
 
-	get '#extraUsers'(): string[] { return [] }
-	get '#hasIntent'() { return false }
-	get '#layer'(): number | undefined { return 0.5 }
-	get '#pathCost'(): undefined | number { return undefined }
-	get '#providesVision'() { return false }
-	get '#user'(): string | null { return null }
-	set '#user'(_user: string | null) { throw new Error('Setting `#user` on unownable object') }
-	get hits(): number | undefined { return undefined }
-	set hits(_hits: number | undefined) { throw new Error('Setting `hits` on indestructible object') }
-	get hitsMax(): number | undefined { return undefined }
-	get my(): boolean | undefined { return undefined }
+	get '#extraUsers'(): string[] { return []; }
+	get '#hasIntent'() { return false; }
+	get '#layer'(): number | undefined { return 0.5; }
+	get '#pathCost'(): undefined | number { return undefined; }
+	get '#providesVision'() { return false; }
+	get '#user'(): string | null { return null; }
+	set '#user'(_user: string | null) { throw new Error('Setting `#user` on unownable object'); }
+	get hits(): number | undefined { return undefined; }
+	set hits(_hits: number | undefined) { throw new Error('Setting `hits` on indestructible object'); }
+	get hitsMax(): number | undefined { return undefined; }
+	get my(): boolean | undefined { return undefined; }
 
 	'#addToMyGame'(_game: GameConstructor) {}
 	'#afterInsert'(room: Room) {
@@ -133,9 +134,9 @@ export function saveAction(object: WithActionLog, type: ActionLog[number]['type'
 }
 
 export function getById<T>(Type: new (...args: any) => T, id: string): T {
-	const it = Game.getObjectById(id)
-	if (!it || !(it instanceof Type)) throw new Error("Could not find an object with ID " + id);
+	const it = Game.getObjectById(id);
+	if (!it || !(it instanceof Type)) throw new Error('Could not find an object with ID ' + id);
 	// Render all properties
-	inspect(it, true, 1)
-	return it as T
+	inspect(it, true, 1);
+	return it as T;
 }

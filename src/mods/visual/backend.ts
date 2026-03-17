@@ -1,10 +1,10 @@
-import config from 'xxscreeps/config/index.js';
 import { hooks } from 'xxscreeps/backend/index.js';
+import config from 'xxscreeps/config/index.js';
 import { acquire, mustNotReject } from 'xxscreeps/utility/async.js';
 import { throttle } from 'xxscreeps/utility/utility.js';
 import { getVisualChannel, loadVisuals } from './model.js';
 
-hooks.register('roomSocket', async(shard, userId, roomName) => {
+hooks.register('roomSocket', async (shard, userId, roomName) => {
 	if (!userId) {
 		return;
 	}
@@ -44,7 +44,7 @@ hooks.register('subscription', {
 		}
 
 		let lastTime = shard.time;
-		const check = throttle(() => mustNotReject(async() => {
+		const check = throttle(() => mustNotReject(async () => {
 			const visual = await loadVisuals(shard, user, 'map');
 			this.send(JSON.stringify(visual));
 		}));

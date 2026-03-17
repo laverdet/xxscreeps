@@ -22,14 +22,14 @@ export function acquire(...async: AsyncEffectAndResult[]): Promise<[ Effect, any
 						const nextEffect = value[0];
 						if (nextEffect) {
 							const prevEffect = effect;
-							effect = () => { prevEffect(); nextEffect() };
+							effect = () => { prevEffect(); nextEffect(); };
 						}
 						results.push(value[1]);
 					} else {
 						// Returned `effect`
 						if (value) {
 							const prevEffect = effect;
-							effect = () => { prevEffect(); (value as Effect)() };
+							effect = () => { prevEffect(); (value as Effect)(); };
 						}
 						results.push(undefined);
 					}
@@ -65,7 +65,7 @@ AsyncIterable<Type> | [ Effect, AsyncIterable<Type> ] {
 		resolveNow?.(breakToken);
 	};
 	// Create delegate iterable
-	const delegate = async function *() {
+	const delegate = async function*() {
 		const generator = iterable[Symbol.asyncIterator]();
 		try {
 			while (true) {
@@ -117,7 +117,7 @@ export function lookAhead<Type>(iterable: AsyncIterable<Type>, count: number) {
 	if (count <= 0) {
 		return iterable;
 	}
-	return async function *() {
+	return async function*() {
 		const generator = iterable[Symbol.asyncIterator]();
 		try {
 			const push = (result: IteratorResult<Type>) => {
@@ -169,7 +169,7 @@ export async function spread<Type>(
 				await Promise.all(Fn.map(pending, deferred => deferred.promise));
 				return;
 			}
-			pending.push(new Deferred);
+			pending.push(new Deferred());
 			if (pending.length > concurrency) {
 				await pending[0].promise;
 				pending[0] = pending[offset--];

@@ -1,6 +1,7 @@
 import type { BufferView } from './buffer-view.js';
-import { Variant } from './index.js';
 import { resolve } from './layout.js';
+import { Variant } from './index.js';
+
 export { Variant };
 
 type WithVariant<V extends number | string = any> = { [Variant]: V };
@@ -103,11 +104,11 @@ type RawCompositionInterceptor<Type = any> = {
 };
 
 export function compose<Type extends Format, In extends CompositionInterceptor<TypeOf<Type>>>(
-	format: Type, interceptor: In
+	format: Type, interceptor: In,
 ): WithShapeAndType<In extends CompositionInterceptor<TypeOf<Type>, infer Result> ? Result : never>;
 
 export function compose<Type extends Format, Result>(
-	format: Type, interceptor: RawCompositionInterceptor<Result>
+	format: Type, interceptor: RawCompositionInterceptor<Result>,
 ): WithShapeAndType<Result>;
 
 export function compose<Type extends Format, Overlay>(format: Type, interceptor: OverlayInterceptor<Overlay>):
@@ -181,8 +182,8 @@ export function struct<Base extends Format, Type extends StructDeclaration>(base
 WithShapeAndType<ShapeOf<Base> & StructDeclarationShape<Type>, TypeOf<Base> & StructDeclarationType<Type>>;
 
 export function struct(...args: [ StructDeclaration ] | [ any, StructDeclaration ]) {
-	const { inherit, members } = args.length === 1 ?
-		{ inherit: undefined, members: args[0] } :
+	const { inherit, members } = args.length === 1
+		? { inherit: undefined, members: args[0] } :
 		{ inherit: args[0], members: args[1] };
 	const format: StructFormat = {
 		struct: members as any,

@@ -1,11 +1,11 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { RoomObject, create as createObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
-import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
+import { RoomObject, create as createObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { Creep } from './creep.js';
+import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { Creep } from './creep.js';
 
 export const format = declare('Tombstone', () => compose(shape, Tombstone));
 const shape = struct(objectFormat, {
@@ -33,17 +33,17 @@ const shape = struct(objectFormat, {
 export class Tombstone extends withOverlay(RoomObject, shape) {
 
 	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2)
-		if (typeof idOrArg1 === 'string') assign<Tombstone>(this, getById(Tombstone, idOrArg1))
+		super(idOrArg1, arg2);
+		if (typeof idOrArg1 === 'string') assign<Tombstone>(this, getById(Tombstone, idOrArg1));
 	}
 
-	override get ['#lookType']() { return C.LOOK_TOMBSTONES }
+	override get '#lookType'() { return C.LOOK_TOMBSTONES; }
 
 	/**
 	 * An object containing the deceased creep.
 	 */
 	get creep() {
-		const creep = new Creep;
+		const creep = new Creep();
 		const creepInfo = this['#creep'];
 		creep['#posId'] = this['#posId'];
 		creep['#user'] = creepInfo.user;
@@ -62,13 +62,13 @@ export class Tombstone extends withOverlay(RoomObject, shape) {
 	/**
 	 * The amount of game ticks before this tombstone decays.
 	 */
-	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time) }
+	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time); }
 }
 
 export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
-	const tombstone = createObject(new Tombstone, creep.pos);
+	const tombstone = createObject(new Tombstone(), creep.pos);
 	tombstone.deathTime = Game.time;
-	tombstone.store = new OpenStore;
+	tombstone.store = new OpenStore();
 	for (const [ resourceType, amount ] of creep.store['#entries']()) {
 		tombstone.store['#add'](resourceType, Math.floor(amount * rate));
 	}

@@ -1,6 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import crypto from 'crypto';
-import { promisify } from 'util';
+import crypto from 'node:crypto';
+import { promisify } from 'node:util';
 import { hooks } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
@@ -35,7 +35,7 @@ async function setPassword(db: Database, userId: string, password: string) {
 
 // HTTP Basic Auth
 hooks.register('middleware', koa => {
-	koa.use(async(context, next) => {
+	koa.use(async (context, next) => {
 		const auth64 = context.headers.authorization && /^Basic (?<auth>.+)$/.exec(context.headers.authorization)?.groups?.auth;
 		if (auth64) {
 			const auth = Buffer.from(auth64, 'base64').toString();
@@ -118,7 +118,7 @@ hooks.register('route', {
 });
 
 // Add password flag and email to user info payload
-hooks.register('sendUserInfo', async(db, userId, userInfo, privateSelf) => {
+hooks.register('sendUserInfo', async (db, userId, userInfo, privateSelf) => {
 	if (privateSelf) {
 		const password = await db.data.hget(infoKey(userId), 'password');
 		if (password) {

@@ -1,21 +1,21 @@
-import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import type { Direction } from 'xxscreeps/game/position.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
-import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
-import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
-import { Game, me } from 'xxscreeps/game/index.js';
-import { Room } from 'xxscreeps/game/room/index.js';
+import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/direction.js';
+import { Game, me } from 'xxscreeps/game/index.js';
+import { saveAction } from 'xxscreeps/game/object.js';
 import { makePositionChecker } from 'xxscreeps/game/path-finder/obstacle.js';
+import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
+import { Room } from 'xxscreeps/game/room/index.js';
+import { StructureController } from 'xxscreeps/mods/controller/controller.js';
+import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
+import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { StructureExtension } from './extension.js';
 import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkDirections, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn.js';
 import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
-import { StructureController } from 'xxscreeps/mods/controller/controller.js';
-import { saveAction } from 'xxscreeps/game/object.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 
 type EnergyStructure = StructureExtension | StructureSpawn;
@@ -171,7 +171,7 @@ const intents = [
 
 		// Set spawning information
 		const needTime = body.length * C.CREEP_SPAWN_TIME;
-		const spawning = spawn.spawning = assign(new StructureSpawn.Spawning, {
+		const spawning = spawn.spawning = assign(new StructureSpawn.Spawning(), {
 			directions: directions ?? undefined,
 			needTime,
 		});
@@ -186,7 +186,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 
 	// Check creep spawning
 	(() => {
-		if (spawn.spawning && spawn.spawning.remainingTime === 0) {
+		if (spawn.spawning?.remainingTime === 0) {
 			const creep = Game.getObjectById<Creep>(spawn.spawning['#spawningCreepId']);
 			if (creep && creep instanceof Creep) {
 				// Look for spawn direction

@@ -1,6 +1,6 @@
+import type { MessagePort, Worker } from 'node:worker_threads';
 import type { Effect, MaybePromise } from 'xxscreeps/utility/types.js';
-import type { MessagePort, Worker } from 'worker_threads';
-import { MessageChannel, parentPort } from 'worker_threads';
+import { MessageChannel, parentPort } from 'node:worker_threads';
 import { Deferred, listen } from 'xxscreeps/utility/async.js';
 import { staticCast } from 'xxscreeps/utility/utility.js';
 import { isTopThread } from 'xxscreeps/utility/worker.js';
@@ -40,13 +40,13 @@ abstract class ResponderClient {
 	#disconnected = false;
 	#queue: RequestMessage[] = [];
 	#requestId = 0;
-	readonly #channel = new MessageChannel;
+	readonly #channel = new MessageChannel();
 	readonly #port = this.#channel.port1;
 	readonly #requests = new Map<number, Deferred<any>>();
 
 	static async connect<Type extends ResponderClient>(constructor: new() => Type, name: string) {
 		// Instantiate client & port
-		const client = new constructor;
+		const client = new constructor();
 		const effect: Effect = () => client.#disconnect();
 		const port = client.#channel.port2;
 
@@ -188,13 +188,13 @@ abstract class ResponderHost<Type = any> {
 }
 
 type WithPromises<Type> = {
-	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => MaybePromise<infer Result> ?
-		(...args: Args) => Promise<Result> : never;
+	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => MaybePromise<infer Result>
+		? (...args: Args) => Promise<Result> : never;
 };
 
 export type MaybePromises<Type> = {
-	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => MaybePromise<infer Result> ?
-		(...args: Args) => MaybePromise<Result> : never;
+	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => MaybePromise<infer Result>
+		? (...args: Args) => MaybePromise<Result> : never;
 };
 
 // Connect to an existing responder

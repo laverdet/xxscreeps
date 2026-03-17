@@ -1,6 +1,7 @@
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { isPrivate, makeSymbol } from 'xxscreeps/driver/private/symbol/index.js'; // Use full path for webpack rewrite
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
+
 const { apply, defineProperty, get, getPrototypeOf, set } = Reflect;
 const inherits = function(): boolean {
 	// v8 private symbols don't follow prototype chain. This tests the implementation's behavior.
@@ -75,7 +76,7 @@ export function makeSetter(name: string): (object: any, value: any) => any {
 				}
 			}
 			defineProperty(object, symbol, {
-				get() { return value },
+				get() { return value; },
 				set(value) {
 					defineProperty(this, symbol, {
 						writable: true,

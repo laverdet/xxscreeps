@@ -46,11 +46,11 @@ export type UnionToIntersection<Union> =
 export type UnwrapArray<Type> = Type extends (infer Element)[] ? Element : Type;
 
 export type RecursivePartial<T> = {
-	[P in keyof T]?: T[P] extends (infer U)[] ?
-		RecursivePartial<U>[] :
+	[P in keyof T]?: T[P] extends (infer U)[]
+		? RecursivePartial<U>[] :
 		T[P] extends object ? RecursivePartial<T[P]> :
 		T[P];
 };
 
 // Returns an object with a given key
-export type WithKey<Path extends keyof any> = { [key in Path]: any };
+export type WithKey<Path extends keyof any> = Record<Path, any>;

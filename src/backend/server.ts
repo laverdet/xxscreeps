@@ -1,24 +1,25 @@
-import type { Effect } from 'xxscreeps/utility/types.js';
 import type { Context, State } from './index.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
 
-import * as Async from 'xxscreeps/utility/async.js';
-import bodyParser from 'koa-bodyparser';
+import http from 'node:http';
 import Koa from 'koa';
+import bodyParser from 'koa-bodyparser';
 import ConditionalGet from 'koa-conditional-get';
 import Router from 'koa-router';
-import http from 'http';
 import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { getServiceChannel, handleInterrupt } from 'xxscreeps/engine/service/index.js';
+import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
+import * as Async from 'xxscreeps/utility/async.js';
 import { authentication } from './auth/index.js';
 import { BackendContext } from './context.js';
-import { setupGracefulShutdown } from './graceful.js';
 import { installEndpointHandlers } from './endpoints/index.js';
+import { setupGracefulShutdown } from './graceful.js';
 import { installSocketHandlers, installUpgradeHandlers } from './socket.js';
-import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import { hooks } from './symbols.js';
 
 import 'xxscreeps/config/mods/import/game.js';
+
 await importMods('backend');
 await importMods('processor');
 initializeGameEnvironment();
@@ -34,7 +35,7 @@ const unlistenServer = setupGracefulShutdown(httpServer);
 installUpgradeHandlers(koa, httpServer);
 installSocketHandlers(koa, backendContext);
 koa.use(ConditionalGet());
-koa.use(async(context, next) => {
+koa.use(async (context, next) => {
 	try {
 		await next();
 	} catch (err) {

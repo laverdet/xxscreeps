@@ -57,8 +57,8 @@ export function defineGlobal(name: string, descriptor: PropertyDescriptor) {
  * Register a value which will be exported to `globalThis` inside the user sandbox runtime.
  */
 export function registerGlobal(...args: [ name: string, value: any ] | [ fn: Function ]) {
-	const { name, value } = args.length === 1 ?
-		{ name: args[0].name, value: args[0] } :
+	const { name, value } = args.length === 1
+		? { name: args[0].name, value: args[0] } :
 		{ name: args[0], value: args[1] };
 	defineGlobal(name, {
 		configurable: true,

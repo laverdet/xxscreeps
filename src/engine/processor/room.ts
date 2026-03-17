@@ -1,16 +1,16 @@
-import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { IntentParameters, IntentReceivers, IntentsForReceiver } from './index.js';
+import type { RoomTickProcessor } from './symbols.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { World } from 'xxscreeps/game/map.js';
-import type { IntentParameters, IntentReceivers, IntentsForReceiver } from './index.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { RoomTickProcessor } from './symbols.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { acquireFinalIntentsForRoom, activeRoomsKey, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
-import { PreTick, Tick, hooks, intentProcessorGetters, roomTickProcessors } from './symbols.js';
-import { acquireFinalIntentsForRoom, activeRoomsKey, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { PreTick, Tick, hooks, intentProcessorGetters, roomTickProcessors } from './symbols.js';
 
 // Register per-tick per-room processor
 export function registerRoomTickProcessor(tick: RoomTickProcessor) {
@@ -38,30 +38,30 @@ export interface ProcessorContext {
 	/**
 	 * Invoke this from a processor when game state has been modified in a processor
 	 */
-	didUpdate(): void;
+	didUpdate: () => void;
 
 	/**
 	 * Requests processor next tick, and also sets updated flag.
 	 */
-	setActive(): void;
+	setActive: () => void;
 
 	/**
 	 * Request a process tick at a given time. The default is to sleep forever if there are no intents
 	 * to process.
 	 */
-	wakeAt(time: number): void;
+	wakeAt: (time: number) => void;
 
 	/**
 	 * Send an intent to another room
 	 */
-	sendRoomIntent<Intent extends IntentsForReceiver<Room>>(
-		roomName: string, intent: Intent, ...params: IntentParameters<Room, Intent>): void;
+	sendRoomIntent: <Intent extends IntentsForReceiver<Room>>(
+		roomName: string, intent: Intent, ...params: IntentParameters<Room, Intent>) => void;
 
 	/**
 	 * Run an asynchronous task with an optional finalization process with the result when it's done.
 	 * This must not be invoked during the finalization phase.
 	 */
-	task<Type>(task: Promise<Type>, finalize?: (result: Type) => void): void;
+	task: <Type>(task: Promise<Type>, finalize?: (result: Type) => void) => void;
 }
 
 // Room processor context saved been phase 1 (process) and phase 2 (flush)
@@ -213,8 +213,8 @@ export class RoomProcessor implements ProcessorContext {
 			// Update room to user map
 			updateUserRoomRelationships(this.shard, this.room, previousUsers),
 			// Save updated room blob
-			this.receivedUpdate ?
-				this.shard.saveRoom(this.room.name, this.time, this.room) :
+			this.receivedUpdate
+				? this.shard.saveRoom(this.room.name, this.time, this.room) :
 				this.shard.copyRoomFromPreviousTick(this.room.name, this.time),
 		]);
 		// Update room processor status

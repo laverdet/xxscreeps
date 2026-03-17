@@ -1,5 +1,5 @@
-import type { Layout, StructLayout } from './layout.js';
 import type { TypeOf } from './format.js';
+import type { Layout, StructLayout } from './layout.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { BufferView } from './buffer-view.js';
@@ -257,7 +257,7 @@ export function initializeView(buffer: Readonly<Uint8Array>) {
 	return { version: view.uint32[1], view };
 }
 
-export function makeViewReader<Type extends Readable>(info: Type, builder = new Builder) {
+export function makeViewReader<Type extends Readable>(info: Type, builder = new Builder()) {
 	const read = makeTypeReader(info.layout, builder);
 	return (view: BufferView): TypeOf<Type> => {
 		if (view.uint32[1] !== info.version) {
@@ -270,7 +270,7 @@ export function makeViewReader<Type extends Readable>(info: Type, builder = new 
 export type ReadOptions = {
 	release?: boolean;
 };
-export function makeReader<Type extends Readable>(info: Type, builder = new Builder, options: ReadOptions = {}) {
+export function makeReader<Type extends Readable>(info: Type, builder = new Builder(), options: ReadOptions = {}) {
 	const read = makeViewReader(info, builder);
 	const { release } = options;
 	return (buffer: Readonly<Uint8Array>) => {

@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 
 // errno
 export const success = 0;

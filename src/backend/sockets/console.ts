@@ -1,12 +1,12 @@
-/* eslint-disable no-control-regex */
+
 import type { SubscriptionEndpoint } from '../socket.js';
-import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model.js';
 import config from 'xxscreeps/config/index.js';
-import { throttle } from 'xxscreeps/utility/utility.js';
 import { resultPrefix, unescapedFd } from 'xxscreeps/driver/runtime/print.js';
+import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model.js';
+import { throttle } from 'xxscreeps/utility/utility.js';
 
 function colorize(payload: string) {
-	return `${payload}`
+	return String(payload)
 		// null
 		.replace(/\x1b\[1m/g, '<b>')
 		.replace(/\x1b\[22m/g, '</b>')

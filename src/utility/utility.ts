@@ -25,8 +25,8 @@ export function exchange(target: any, name: keyof any, newValue: any = undefined
 }
 
 // Wrapper around `Object.assign` which brings in type information from the interface being extended
-type AddThis<Type, Fn> = Fn extends (...args: infer Args) => infer Return ?
-	(this: Type, ...args: Args) => Return : {
+type AddThis<Type, Fn> = Fn extends (...args: infer Args) => infer Return
+	? (this: Type, ...args: Args) => Return : {
 		configurable?: boolean;
 		enumerable?: boolean;
 		writable?: boolean;
@@ -37,8 +37,8 @@ type AddThis<Type, Fn> = Fn extends (...args: infer Args) => infer Return ?
 export function extend<Type, Proto extends {
 	[Key in keyof Type]?: AddThis<Type, Type[Key]>;
 }>(ctor: abstract new (...args: any[]) => Type, proto: Proto | ((next: Type) => Proto)) {
-	const ext = typeof proto === 'function' ?
-		proto(Object.getPrototypeOf(ctor.prototype)) : proto;
+	const ext = typeof proto === 'function'
+		? proto(Object.getPrototypeOf(ctor.prototype)) : proto;
 	for (const [ key, info ] of Object.entries(Object.getOwnPropertyDescriptors(ext))) {
 		if (info.value && typeof info.value === 'function') {
 			Object.defineProperty(ctor.prototype, key, { ...info, enumerable: false });
@@ -122,12 +122,10 @@ export function throttle(fn: () => void) {
 			this.set(time);
 		},
 		set(time: number) {
-			if (!timeout) {
-				timeout = setTimeout(() => {
-					timeout = undefined;
-					fn();
-				}, time);
-			}
+			timeout ||= setTimeout(() => {
+				timeout = undefined;
+				fn();
+			}, time);
 		},
 	};
 }

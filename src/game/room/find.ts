@@ -1,13 +1,13 @@
 import type { Room } from './index.js';
 import type { KeyFor, KeysOf, LooseBoolean } from 'xxscreeps/utility/types.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { registerFindHandlers } from './symbols.js';
 
 // Declare-able interface for mods
 export interface Find {}
-export type FindHandler = (room: Room) => Readonly<any[]>;
+export type FindHandler = (room: Room) => readonly any[];
 type FindHandlers = Exclude<Find[keyof Find], void>;
 export type FindConstants = KeysOf<FindHandlers>;
 

@@ -1,15 +1,15 @@
-import type { InspectOptionsStylized } from 'util';
-import type { GameState } from 'xxscreeps/game/index.js';
-import type { Terrain } from 'xxscreeps/game/terrain.js';
-import type { RoomObject } from 'xxscreeps/game/object.js';
-import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { FindConstants, FindType, RoomFindOptions } from './find.js';
 import type { LookConstants, TypeOfLook } from './look.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import { BufferObject, withOverlay } from 'xxscreeps/schema/index.js';
-import { getOrSet, removeOne } from 'xxscreeps/utility/utility.js';
-import { iteratee } from 'xxscreeps/utility/iteratee.js';
+import type { InspectOptionsStylized } from 'node:util';
+import type { GameState } from 'xxscreeps/game/index.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import type { Terrain } from 'xxscreeps/game/terrain.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
+import { BufferObject, withOverlay } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { iteratee } from 'xxscreeps/utility/iteratee.js';
+import { getOrSet, removeOne } from 'xxscreeps/utility/utility.js';
 import { shape } from './schema.js';
 import { findHandlers, lookConstants } from './symbols.js';
 
@@ -62,14 +62,14 @@ export class Room extends withOverlay(BufferObject, shape) {
 	/**
 	 * Returns a plain array of all room objects at a given location.
 	 */
-	'#lookAt'(pos: RoomPosition): Readonly<AnyRoomObject[]> {
+	'#lookAt'(pos: RoomPosition): readonly AnyRoomObject[] {
 		return (this.#spatialIndex.get(pos['#id']) ?? []) as never[];
 	}
 
 	/**
 	 * Returns a plain array of all room objects matching `type`
 	 */
-	['#lookFor']<Look extends LookConstants>(type: Look): Readonly<TypeOfLook<Look>[]> {
+	'#lookFor'<Look extends LookConstants>(type: Look): readonly TypeOfLook<Look>[] {
 		return this.#lookIndex.get(type)! as never[];
 	}
 
@@ -107,7 +107,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 		const removeObjects = this.#removeObjects;
 		let removeCount = removeObjects.size;
 		if (removeCount) {
-			this.#removeObjects = new Set;
+			this.#removeObjects = new Set();
 			let cursor = objects.length - 1;
 			for (let ii = cursor; ii >= 0; --ii) {
 				const object = objects[ii];

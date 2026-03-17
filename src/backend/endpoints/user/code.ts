@@ -1,9 +1,9 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { hooks } from 'xxscreeps/backend/index.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getConsoleChannel, requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
-import { hooks } from 'xxscreeps/backend/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;

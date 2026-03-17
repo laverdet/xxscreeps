@@ -1,7 +1,7 @@
 import type { KeyValProvider, PubSubProvider } from 'xxscreeps/engine/db/storage/index.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
 import config from 'xxscreeps/config/index.js';
+import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
 import { acquire } from 'xxscreeps/utility/async.js';
 
 export class Database {

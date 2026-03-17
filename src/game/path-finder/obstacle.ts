@@ -1,6 +1,6 @@
-import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 
 type MovementParameters = {

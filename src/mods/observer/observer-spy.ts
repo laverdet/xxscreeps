@@ -10,12 +10,12 @@ const shape = declare('ObserverSpy', struct(objectFormat, {
 }));
 
 export class ObserverSpy extends withOverlay(RoomObject, shape) {
-	get '#lookType'() { return null }
-	override get ['#providesVision']() { return true }
+	get '#lookType'() { return null; }
+	override get '#providesVision'() { return true; }
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const object = objectCreate(new ObserverSpy, pos);
+	const object = objectCreate(new ObserverSpy(), pos);
 	object['#user'] = owner;
 	return object;
 }

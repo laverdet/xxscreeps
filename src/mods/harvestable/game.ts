@@ -1,10 +1,10 @@
-import type { ContextType } from 'xxscreeps/utility/types.js';
 import type { Creep } from 'xxscreeps/mods/creep/creep.js';
-import * as C from 'xxscreeps/game/constants/index.js';
+import type { ContextType } from 'xxscreeps/utility/types.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { constant, struct, variant } from 'xxscreeps/schema/index.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
+import { constant, struct, variant } from 'xxscreeps/schema/index.js';
 import { registerHarvestable } from './index.js';
 import './creep.js';
 

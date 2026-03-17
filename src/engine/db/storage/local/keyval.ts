@@ -2,7 +2,7 @@
 import type * as P from 'xxscreeps/engine/db/storage/provider.js';
 import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 import type { MaybePromises } from './responder.js';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { Fn } from 'xxscreeps/utility/fn.js';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
 import { connect, makeClient, makeHost } from './responder.js';

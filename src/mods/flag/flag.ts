@@ -1,11 +1,11 @@
-import type { Dictionary } from 'xxscreeps/utility/types.js';
 import type { FlagIntent } from './model.js';
-import type { InspectOptionsStylized } from 'util';
-import * as C from 'xxscreeps/game/constants/index.js';
-import * as Memory from 'xxscreeps/mods/memory/memory.js';
-import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
-import { RoomObject, format as baseFormat } from 'xxscreeps/game/object.js';
+import type { InspectOptionsStylized } from 'node:util';
+import type { Dictionary } from 'xxscreeps/utility/types.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { RoomObject, format as baseFormat } from 'xxscreeps/game/object.js';
+import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
+import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema/index.js';
 
 export let intents: FlagIntent[] = [];
@@ -37,7 +37,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		(Memory.get().flags ??= {})[this.name] ??= memory;
 	}
 
-	get '#lookType'() { return C.LOOK_FLAGS }
+	get '#lookType'() { return C.LOOK_FLAGS; }
 
 	/**
 	 * Remove the flag

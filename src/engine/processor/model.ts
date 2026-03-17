@@ -1,12 +1,12 @@
-import type { Room } from 'xxscreeps/game/room/index.js';
-import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor/index.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor/index.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
 import type { flushUsers } from 'xxscreeps/game/room/room.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
+import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
-import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 export function getProcessorChannel(shard: Shard) {
 	type Message =
@@ -331,8 +331,8 @@ export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wak
 		// Remove from active room set
 		shard.scratch.zrem(activeRoomsKey, [ roomName ]),
 		// Set alarm to wake up
-		wakeTime === Infinity ?
-			undefined : shard.scratch.zadd(sleepingRoomsKey, [ [ wakeTime, roomName ] ], { if: 'nx' }),
+		wakeTime === Infinity
+			? undefined : shard.scratch.zadd(sleepingRoomsKey, [ [ wakeTime, roomName ] ], { if: 'nx' }),
 	]);
 }
 

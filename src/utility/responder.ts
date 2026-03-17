@@ -1,8 +1,8 @@
 import type { Effect } from './types.js';
-import type { MessagePort } from 'worker_threads';
+import type { MessagePort } from 'node:worker_threads';
+import { EventEmitter } from 'node:events';
+import { MessageChannel, parentPort } from 'node:worker_threads';
 import { Fn } from 'xxscreeps/utility/fn.js';
-import { MessageChannel, parentPort } from 'worker_threads';
-import { EventEmitter } from 'events';
 import { Deferred, mustNotReject } from './async.js';
 import { staticCast } from './utility.js';
 import { Worker, waitForWorker } from './worker.js';
@@ -22,26 +22,26 @@ type ResponseMessage = {
 });
 
 type ResponderResult<Type, Result> = [ Effect, (payload: Type) => Promise<Result> ];
-const localEmitter = new EventEmitter;
+const localEmitter = new EventEmitter();
 
 export async function negotiateResponderClient<Type, Result>(path: string, singleThread?: boolean) {
 	const { onMessage, onClose, wait } = await async function(): Promise<{
-		onMessage(fn: (message: any) => void): void;
-		onClose(fn: (err: any) => void): void;
+		onMessage: (fn: (message: any) => void) => void;
+		onClose: (fn: (err: any) => void) => void;
 		wait: () => Promise<void>;
 	}> {
 		if (singleThread) {
 			const worker = import(`${path}?singleThread=1`);
 			return {
-				onMessage(fn) { localEmitter.on('message', fn) },
-				onClose(fn) { worker.catch(err => fn(err)) },
+				onMessage(fn) { localEmitter.on('message', fn); },
+				onClose(fn) { worker.catch(err => fn(err)); },
 				wait: () => worker,
 			};
 		} else {
 			const worker = await Worker.create(path);
 			return {
-				onMessage(fn) { worker.on('message', fn) },
-				onClose(fn) { worker.on('exit', () => fn(new Error('Processor failed to initialize'))) },
+				onMessage(fn) { worker.on('message', fn); },
+				onClose(fn) { worker.on('exit', () => fn(new Error('Processor failed to initialize'))); },
 				wait: () => waitForWorker(worker),
 			};
 		}
@@ -102,7 +102,7 @@ export function makeBasicResponderClient<Type, Result>(port: MessagePort): Respo
 }
 
 export async function makeBasicResponderHost<Type>(url: string, implementation: (payload: Type) => Promise<any>) {
-	const channel = new MessageChannel;
+	const channel = new MessageChannel();
 	const readyMessage = {
 		type: 'responderReady',
 		port: channel.port1,
@@ -122,7 +122,7 @@ export async function makeBasicResponderHost<Type>(url: string, implementation: 
 				resolve();
 			}
 		});
-		port.on('message', (message: RequestMessage) => mustNotReject(async() => {
+		port.on('message', (message: RequestMessage) => mustNotReject(async () => {
 			const { payload, id } = message;
 			++pending;
 			try {

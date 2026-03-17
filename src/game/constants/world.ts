@@ -6,6 +6,7 @@ export type ErrorCode =
 	typeof ERR_BUSY |
 	typeof ERR_NOT_FOUND |
 	typeof ERR_NOT_ENOUGH_ENERGY |
+	// eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
 	typeof ERR_NOT_ENOUGH_RESOURCES |
 	typeof ERR_INVALID_TARGET |
 	typeof ERR_FULL |
@@ -13,6 +14,7 @@ export type ErrorCode =
 	typeof ERR_INVALID_ARGS |
 	typeof ERR_TIRED |
 	typeof ERR_NO_BODYPART |
+	// eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
 	typeof ERR_NOT_ENOUGH_EXTENSIONS |
 	typeof ERR_RCL_NOT_ENOUGH |
 	typeof ERR_GCL_NOT_ENOUGH;

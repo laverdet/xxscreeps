@@ -1,8 +1,8 @@
 import type { TypeOf } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { build } from 'xxscreeps/engine/schema/index.js';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
-import { build } from 'xxscreeps/engine/schema/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 // Declare schema and types
@@ -215,8 +215,8 @@ export class RoomVisual {
 	poly(points: (LocalPoint | RoomPoint | [number, number])[], style?: PolyStyle) {
 		const pairs = [
 			...Fn.map(points, point =>
-				Array.isArray(point) ?
-					point :
+				Array.isArray(point)
+					? point :
 					[ ...extractPositions([ point ], this.#isMap) ] as [ number, number ]),
 		];
 		this.#visuals.push({ [Variant]: 'p', points: pairs, s: (style as any) ?? {} });

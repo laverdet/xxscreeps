@@ -1,25 +1,25 @@
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { ActionLog, RoomObject } from 'xxscreeps/game/object.js';
 import type { Direction } from 'xxscreeps/game/position.js';
-import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
-import type { Resource } from 'xxscreeps/mods/resource/resource.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import type { Resource } from 'xxscreeps/mods/resource/resource.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as CreepLib from './creep.js';
-import * as Movement from 'xxscreeps/engine/processor/movement.js';
-import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
-import { Game } from 'xxscreeps/game/index.js';
-import { Creep, calculateCarry } from './creep.js';
-import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
-import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
-import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
-import { isBorder } from 'xxscreeps/game/terrain.js';
 import { writeRoomObject } from 'xxscreeps/engine/db/room.js';
-import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { hooks, registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import * as Movement from 'xxscreeps/engine/processor/movement.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
+import { isBorder } from 'xxscreeps/game/terrain.js';
+import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
+import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
+import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { clamp, filterInPlace } from 'xxscreeps/utility/utility.js';
+import { Creep, calculateCarry } from './creep.js';
+import * as CreepLib from './creep.js';
 import { Tombstone, buryCreep } from './tombstone.js';
 
 const pulledToPuller = new Map<Creep, Creep>();
@@ -198,7 +198,7 @@ const intents = [
 		if (CreepLib.checkCommon(creep) === C.OK) {
 			creep['#saying'] = {
 				isPublic,
-				message: `${message}`.substr(0, 10),
+				message: String(message).substring(0, 10),
 				time: Game.time,
 			};
 			context.didUpdate();

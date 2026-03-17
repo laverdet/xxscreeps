@@ -1,12 +1,12 @@
+import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
 import { Game, registerGlobal } from 'xxscreeps/game/index.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
-import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
+import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
 export const format = declare('Mineral', () => compose(shape, Mineral));
@@ -22,8 +22,8 @@ const shape = struct(RoomObject.format, {
 export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
 
 	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2)
-		if (typeof idOrArg1 === 'string') assign<Mineral>(this, RoomObject.getById(Mineral, idOrArg1))
+		super(idOrArg1, arg2);
+		if (typeof idOrArg1 === 'string') assign<Mineral>(this, RoomObject.getById(Mineral, idOrArg1));
 	}
 
 	@enumerable get ticksToRegeneration() {
@@ -31,7 +31,7 @@ export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
 		return nextTime === 0 ? undefined : Math.max(0, nextTime - Game.time);
 	}
 
-	get '#lookType'() { return C.LOOK_MINERALS }
+	get '#lookType'() { return C.LOOK_MINERALS; }
 }
 
 // Export `Mineral` to runtime globals

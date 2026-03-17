@@ -20,9 +20,9 @@ export const optionalFormat = declare('Id', compose(array(4, 'uint32'), {
 		let offset32 = (offset >>> 2) + 4;
 		if (value === null) {
 			view.uint32[offset32 - 1] =
-			view.uint32[offset32 - 2] =
-			view.uint32[offset32 - 3] =
-			view.uint32[offset32 - 4] = 0;
+				view.uint32[offset32 - 2] =
+					view.uint32[offset32 - 3] =
+						view.uint32[offset32 - 4] = 0;
 			return;
 		}
 		const { length } = value;

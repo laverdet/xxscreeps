@@ -223,8 +223,8 @@ const BadgePaths: ((param: number) => { rotate?: number; path1: string; path2: s
 	param => {
 		const angle = Math.PI / 4 + param * Math.PI / 4 / 100;
 		return {
-			path1: `M 50 0 Q 50 ${50} ${50 + 50 * Math.cos(angle)} ${50 + 50 * Math.sin(angle)} H 100 V 0 H 50 Z`,
-			path2: `M 50 0 Q 50 ${50} ${50 - 50 * Math.cos(angle)} ${50 + 50 * Math.sin(angle)} H 0 V 0 H 50 Z`,
+			path1: `M 50 0 Q 50 50 ${50 + 50 * Math.cos(angle)} ${50 + 50 * Math.sin(angle)} H 100 V 0 H 50 Z`,
+			path2: `M 50 0 Q 50 50 ${50 - 50 * Math.cos(angle)} ${50 + 50 * Math.sin(angle)} H 0 V 0 H 50 Z`,
 			rotate: 180,
 		};
 	},

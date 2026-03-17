@@ -1,5 +1,5 @@
-import type { Effect } from 'xxscreeps/utility/types.js';
 import type { PubSubProvider, PubSubSubscription } from './storage/provider.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import { Deferred } from 'xxscreeps/utility/async.js';
 
 type MessageType<Message> = Message;
@@ -130,7 +130,7 @@ export class Subscription<Message> {
 							}
 						}
 						// Make promise to await on
-						deferred = new Deferred;
+						deferred = new Deferred();
 						const { promise } = deferred;
 						const disconnectListener = () => deferred!.resolve();
 						that.disconnectListeners.add(disconnectListener);

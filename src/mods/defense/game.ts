@@ -1,8 +1,8 @@
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerGlobal } from 'xxscreeps/game/index.js';
 import * as Rampart from './rampart.js';
 import * as Tower from './tower.js';
 import * as Wall from './wall.js';
-import { registerGlobal } from 'xxscreeps/game/index.js';
-import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 
 // Register schema
 const rampartSchema = registerVariant('Room.objects', Rampart.format);

@@ -1,6 +1,6 @@
 import type { Endpoint } from 'xxscreeps/backend/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { runOneShot } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';

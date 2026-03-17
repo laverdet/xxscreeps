@@ -1,12 +1,12 @@
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as Id from 'xxscreeps/engine/schema/id.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
 import { hooks } from 'xxscreeps/backend/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { checkCreateFlag } from './flag.js';
 import { getFlagChannel, loadUserFlags } from './model.js';
 
-hooks.register('roomSocket', async(shard, userId, roomName) => {
+hooks.register('roomSocket', async (shard, userId, roomName) => {
 	if (!userId) {
 		return;
 	}
@@ -76,7 +76,6 @@ hooks.register('route', {
 		const { name } = context.request.body;
 		const flags = await loadUserFlags(context.shard, userId);
 
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (flags[name]) {
 			return { error: 'name exists' };
 		} else {
@@ -127,7 +126,7 @@ hooks.register('route', {
 			const flags = await loadUserFlags(context.shard, userId);
 			for (let ii = 0; ii < 100; ++ii) {
 				const name = `Flag${ii}`;
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 				if (!flags[name]) {
 					return { ok: 1, name };
 				}

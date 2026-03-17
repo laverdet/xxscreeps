@@ -1,7 +1,7 @@
 import type { World } from 'xxscreeps/game/map.js';
 import makeEtag from 'etag';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { hooks } from 'xxscreeps/backend/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 const cache = new Map<string, {
 	_id: string;
@@ -15,7 +15,7 @@ function getTerrainPayload(world: World, roomName: string) {
 		return cached;
 	}
 	const terrain = world.map.getRoomTerrain(roomName);
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 	if (!terrain) {
 		return;
 	}

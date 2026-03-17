@@ -1,13 +1,13 @@
-import type { BufferView, Format } from 'xxscreeps/schema/index.js';
-import type { Package } from 'xxscreeps/schema/build.js';
 import type { Transform } from 'xxscreeps/driver/webpack.js';
-import fs from 'fs';
-import { build as buildSchema } from 'xxscreeps/schema/build.js';
+import type { Package } from 'xxscreeps/schema/build.js';
+import type { BufferView, Format } from 'xxscreeps/schema/index.js';
+import fs from 'node:fs';
+import config, { configPath } from 'xxscreeps/config/index.js';
 import { restoreLayout } from 'xxscreeps/schema/archive.js';
+import { build as buildSchema } from 'xxscreeps/schema/build.js';
+import { Builder } from 'xxscreeps/schema/index.js';
 import { archiveStruct } from 'xxscreeps/schema/kaitai.js';
 import { initializeView, makeViewReader } from 'xxscreeps/schema/read.js';
-import { Builder } from 'xxscreeps/schema/index.js';
-import config, { configPath } from 'xxscreeps/config/index.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 const archivePath = new URL(`${config.schemaArchive}/`, configPath);
@@ -24,7 +24,7 @@ function makeArchivePath(name: string, version: number, ext = 'js') {
  * Builds a schema package from a format and retains the result which can be used later within the
  * player runtime.
  */
-export function build<Type extends Format>(format: Type, cache = new Map) {
+export function build<Type extends Format>(format: Type, cache = new Map()) {
 	const result = buildSchema(format, cache);
 	const file = makeArchivePath(result.name, result.version);
 	fs.mkdirSync(archivePath, { recursive: true });

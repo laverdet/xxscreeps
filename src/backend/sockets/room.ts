@@ -1,16 +1,16 @@
-import type { Effect } from 'xxscreeps/utility/types.js';
+import type { SubscriptionEndpoint } from '../socket.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { SubscriptionEndpoint } from '../socket.js';
-import config from 'xxscreeps/config/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as User from 'xxscreeps/engine/db/user/index.js';
-import { runOneShot } from 'xxscreeps/game/index.js';
-import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async.js';
-import { asUnion, getOrSet, hackyIterableToArray, throttle } from 'xxscreeps/utility/utility.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import { hooks } from 'xxscreeps/backend/index.js';
 import { Render } from 'xxscreeps/backend/symbols.js';
+import config from 'xxscreeps/config/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getRoomChannel } from 'xxscreeps/engine/processor/model.js';
+import { runOneShot } from 'xxscreeps/game/index.js';
+import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { asUnion, getOrSet, hackyIterableToArray, throttle } from 'xxscreeps/utility/utility.js';
 import './render.js';
 
 function diff(previous: any, next: any) {
@@ -48,7 +48,7 @@ const invokeSocketHooks = hooks.makeMapped('roomSocket');
  * updated without any change to the room the listener is invoked with `room` === `undefined`.
  */
 export async function subscribeToRoom(shard: Shard, roomName: string, listener: RoomListener) {
-	const task = getOrSet(globalSubscriptionsByRoom, roomName, async() => {
+	const task = getOrSet(globalSubscriptionsByRoom, roomName, async () => {
 		// Initialize current state
 		let { time } = shard;
 		let didUpdate = false;
@@ -63,7 +63,7 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 			if (state.time === time) {
 				return;
 			}
-			mustNotReject(async() => {
+			mustNotReject(async () => {
 				if (didUpdate) {
 					state.room = await shard.loadRoom(roomName, time);
 				}
@@ -134,7 +134,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 
 		// Listen for room updates. Must be done after hooks are resolved because `update` will call hooks.
 		const [ effect ] = await acquire(
-			subscribeToRoom(shard, parameters.room, (room, time, didUpdate) => mustNotReject(async() => {
+			subscribeToRoom(shard, parameters.room, (room, time, didUpdate) => mustNotReject(async () => {
 				if (Date.now() < skipUntil) {
 					return;
 				}
@@ -172,7 +172,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 				}) : {};
 
 				// Get users not yet seen
-				const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async(id): Promise<[ string, any ]> => {
+				const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async (id): Promise<[ string, any ]> => {
 					const info = await shard.db.data.hmget(User.infoKey(id), [ 'badge', 'username' ]);
 					return [ id, {
 						username: info.username,

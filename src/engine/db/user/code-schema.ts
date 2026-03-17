@@ -1,6 +1,6 @@
-import { Fn } from 'xxscreeps/utility/fn.js';
-import { compose, declare, struct, vector } from 'xxscreeps/schema/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
+import { compose, declare, struct, vector } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 export type CodeBlobs = {
 	buffers: Readonly<Uint8Array> | null;

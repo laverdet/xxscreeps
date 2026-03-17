@@ -1,6 +1,6 @@
 import type { GameConstructor } from './index.js';
-import * as C from './constants/index.js';
 import lodash from 'lodash';
+import * as C from './constants/index.js';
 import { globals, hooks, registerGlobal } from './symbols.js';
 
 registerGlobal('_', lodash);

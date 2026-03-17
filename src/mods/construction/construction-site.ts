@@ -1,11 +1,11 @@
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import * as C from 'xxscreeps/game/constants/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
-import { intents, me, userInfo } from 'xxscreeps/game/index.js';
-import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { intents, me, userInfo } from 'xxscreeps/game/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
 import { compose, declare, enumerated, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { structureFactories } from './symbols.js';
@@ -24,16 +24,16 @@ const shape = () => struct(RoomObject.format, {
 export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) {
 
 	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2)
-		if (typeof idOrArg1 === 'string') assign<ConstructionSite>(this, RoomObject.getById(ConstructionSite, idOrArg1))
+		super(idOrArg1, arg2);
+		if (typeof idOrArg1 === 'string') assign<ConstructionSite>(this, RoomObject.getById(ConstructionSite, idOrArg1));
 	}
 
-	override get ['#lookType']() { return C.LOOK_CONSTRUCTION_SITES }
-	@enumerable override get my() { return this['#user'] === me }
-	@enumerable get owner() { return userInfo.get(this['#user']) }
-	@enumerable get progressTotal() { return C.CONSTRUCTION_COST[this.structureType] }
+	override get '#lookType'() { return C.LOOK_CONSTRUCTION_SITES; }
+	@enumerable override get my() { return this['#user'] === me; }
+	@enumerable get owner() { return userInfo.get(this['#user']); }
+	@enumerable get progressTotal() { return C.CONSTRUCTION_COST[this.structureType]; }
 
-	override ['#addToMyGame'](game: GameConstructor) {
+	override '#addToMyGame'(game: GameConstructor) {
 		game.constructionSites[this.id] = this;
 	}
 
@@ -53,7 +53,7 @@ export function create(
 	owner: string,
 	name?: string | null,
 ) {
-	const site = assign(RoomObject.create(new ConstructionSite, pos), {
+	const site = assign(RoomObject.create(new ConstructionSite(), pos), {
 		structureType,
 		name: name ?? '',
 	});

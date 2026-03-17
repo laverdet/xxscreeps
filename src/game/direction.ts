@@ -66,7 +66,7 @@ export function *iterateArea(roomName: string, top: number, left: number, bottom
 }
 
 export function iterateNeighbors(position: RoomPosition) {
-	return function *() {
+	return function*() {
 		const { x, y, roomName } = position;
 		for (const direction of ALL_DIRECTIONS) {
 			const { dx, dy } = getOffsetsFromDirection(direction);

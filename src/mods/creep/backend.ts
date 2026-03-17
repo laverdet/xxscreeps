@@ -39,8 +39,8 @@ bindRenderer(Creep, (creep, next, previousTime) => {
 bindRenderer(Tombstone, (tombstone, next) => {
 	const creep = tombstone['#creep'];
 	const saying = creep.saying;
-	const creepSaying = saying && (saying.isPublic || creep.user === me) ?
-		saying.message : undefined;
+	const creepSaying = saying && (saying.isPublic || creep.user === me)
+		? saying.message : undefined;
 	return {
 		...next(),
 		...renderStore(tombstone.store),

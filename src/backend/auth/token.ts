@@ -1,4 +1,4 @@
-import * as Crypto from 'crypto';
+import * as Crypto from 'node:crypto';
 import config from 'xxscreeps/config/index.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 

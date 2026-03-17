@@ -6,4 +6,5 @@ import './terrain.js';
 import './shards.js';
 import './world.js';
 import time from './time.js';
+
 export default [ ...intents, ...time, MapStatsEndpoint ];

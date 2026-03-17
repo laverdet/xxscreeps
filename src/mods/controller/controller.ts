@@ -1,9 +1,9 @@
 import type { Room } from 'xxscreeps/game/room/index.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, userInfo } from 'xxscreeps/game/index.js';
 import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 
 export const format = declare('Controller', () => compose(shape, StructureController));
 const shape = struct(ownedStructureFormat, {
@@ -20,16 +20,16 @@ const shape = struct(ownedStructureFormat, {
 export class StructureController extends withOverlay(OwnedStructure, shape) {
 	/** @internal */
 	declare upgradePowerThisTick?: number;
-	override get hits() { return undefined as never }
-	override get hitsMax() { return undefined as never }
-	@enumerable get level() { return this.room['#level'] }
-	@enumerable get progress() { return this.level > 0 ? this['#progress'] : undefined }
-	@enumerable get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined }
-	@enumerable get safeMode() { return Math.max(0, this.room['#safeModeUntil'] - Game.time) || undefined }
-	@enumerable get safeModeCooldown() { return Math.max(0, this['#safeModeCooldownTime'] - Game.time) || undefined }
-	override get structureType() { return C.STRUCTURE_CONTROLLER }
-	@enumerable get ticksToDowngrade() { return this['#downgradeTime'] === 0 ? undefined : Math.max(0, this['#downgradeTime'] - Game.time) }
-	@enumerable get upgradeBlocked() { return Math.max(0, this['#upgradeBlockedUntil'] - Game.time) || undefined }
+	override get hits() { return undefined as never; }
+	override get hitsMax() { return undefined as never; }
+	@enumerable get level() { return this.room['#level']; }
+	@enumerable get progress() { return this.level > 0 ? this['#progress'] : undefined; }
+	@enumerable get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined; }
+	@enumerable get safeMode() { return Math.max(0, this.room['#safeModeUntil'] - Game.time) || undefined; }
+	@enumerable get safeModeCooldown() { return Math.max(0, this['#safeModeCooldownTime'] - Game.time) || undefined; }
+	override get structureType() { return C.STRUCTURE_CONTROLLER; }
+	@enumerable get ticksToDowngrade() { return this['#downgradeTime'] === 0 ? undefined : Math.max(0, this['#downgradeTime'] - Game.time); }
+	@enumerable get upgradeBlocked() { return Math.max(0, this['#upgradeBlockedUntil'] - Game.time) || undefined; }
 
 	/**
 	 * An object with the controller reservation info if present
@@ -77,18 +77,18 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 			() => intents.save(this, 'unclaim'));
 	}
 
-	override ['#afterInsert'](room: Room) {
+	override '#afterInsert'(room: Room) {
 		super['#afterInsert'](room);
 		room.controller = this;
 	}
 
-	override ['#beforeRemove']() {
+	override '#beforeRemove'() {
 		this.room.controller = undefined;
 		super['#beforeRemove']();
 	}
 
-	override get ['#extraUsers']() {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+	override get '#extraUsers'() {
+
 		const sign = this.room?.['#sign'];
 		return sign ? [ sign.userId ] : [];
 	}

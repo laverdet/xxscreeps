@@ -1,22 +1,23 @@
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import type { GameConstructor } from 'xxscreeps/game/index.js';
-import type { GameBase } from 'xxscreeps/game/game.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/room.js';
+import type { GameBase } from 'xxscreeps/game/game.js';
+import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { World } from 'xxscreeps/game/map.js';
-import assert from 'assert';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import { flushUsers } from 'xxscreeps/game/room/room.js';
-import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import assert from 'node:assert';
+import { importMods } from 'xxscreeps/config/mods/index.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
+import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
+import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
-import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
-import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
-import { importMods } from 'xxscreeps/config/mods/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 import 'xxscreeps/config/mods/import/game.js';
+
 await importMods('processor');
 initializeGameEnvironment();
 initializeIntentConstraints();
@@ -31,26 +32,26 @@ type Simulation = {
 	 * the user's `Game` object. Intents can be issued using normal game commands, and they will be
 	 * dispatched when `tick` is called.
 	 */
-	player(userId: string, task: (game: GameConstructor) => void): Promise<void>;
+	player: (userId: string, task: (game: GameConstructor) => void) => Promise<void>;
 
 	/**
 	 * This behaves similarly to `player` but only one room will be loaded, regardless of whether or
 	 * not the player can see the room. Crucially, you are allowed to modify the room however you
 	 * want and it will be saved after the function returns. Intents issued will be discards.
 	 */
-	poke<Type>(roomName: string, userId: string | undefined, task: (game: GameConstructor, room: Room) => Type): Promise<Type>;
+	poke: <Type>(roomName: string, userId: string | undefined, task: (game: GameConstructor, room: Room) => Type) => Promise<Type>;
 
 	/**
 	 * Invokes the game processor to dispatch intents.
 	 * @param count How many ticks to process.
 	 * @param players Player implementations to run each tick.
 	 */
-	tick(
+	tick: (
 		count?: number,
-		players?: Record<string, (game: GameConstructor) => void>): Promise<void>;
+		players?: Record<string, (game: GameConstructor) => void>) => Promise<void>;
 
 	// I think this was a bad idea, I would just recommend using `player` instead.
-	peekRoom<Type>(roomName: string, task: (room: Room, game: GameBase) => Type): Promise<Type>;
+	peekRoom: <Type>(roomName: string, task: (room: Room, game: GameBase) => Type) => Promise<Type>;
 };
 
 /**
@@ -67,12 +68,12 @@ type Simulation = {
  * the supplied function with an object containing various references and utilities.
  */
 export function simulate(rooms: Record<string, (room: Room) => void>) {
-	return async(body: (refs: Simulation) => Promise<void>) => {
+	return async (body: (refs: Simulation) => Promise<void>) => {
 
 		const { db, shard, world } = await instantiateTestShard();
 		try {
 			// Initialize world
-			await Promise.all(Fn.map(Object.entries(rooms), async([ roomName, callback ]) => {
+			await Promise.all(Fn.map(Object.entries(rooms), async ([ roomName, callback ]) => {
 				const room = await shard.loadRoom(roomName, shard.time);
 				runOneShot(world, room, shard.time, '', () => callback(room));
 				room['#flushObjects'](null);

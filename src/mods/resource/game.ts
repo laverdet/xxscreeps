@@ -1,10 +1,10 @@
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { registerGlobal } from 'xxscreeps/game/index.js';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import * as Container from './container.js';
 import * as Resource from './resource.js';
 import { Store } from './store.js';
-import { registerGlobal } from 'xxscreeps/game/index.js';
-import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
-import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 
 // Export `StructureContainer`, `Resource` & `Store` to runtime globals
 registerGlobal(Container.StructureContainer);

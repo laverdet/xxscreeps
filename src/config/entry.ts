@@ -1,4 +1,4 @@
-import { join } from 'path';
+import { join } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not

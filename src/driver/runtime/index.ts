@@ -1,21 +1,20 @@
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
-import 'xxscreeps/config/global.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as Code from 'xxscreeps/engine/db/user/code-schema.js';
+import { inspect } from 'node:util';
+import { flushGlobals } from 'xxscreeps/config/global.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
-import { inspect } from 'util';
+import * as Code from 'xxscreeps/engine/db/user/code-schema.js';
 import { Game, GameState, hooks, initializeGameEnvironment, runForPlayer, userInfo } from 'xxscreeps/game/index.js';
 import { World } from 'xxscreeps/game/map.js';
 import { detach } from 'xxscreeps/schema/buffer-object.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { setupConsole } from './console.js';
 import { makeEnvironment } from './module.js';
 import { flush, print, resultPrefix } from './print.js';
 // eslint-disable-next-line @typescript-eslint/no-duplicate-imports
-import { flushGlobals } from 'xxscreeps/config/global.js';
 
 export type Compiler<Type = any> = {
-	compile(source: string, filename: string): Type;
-	evaluate(module: Type, linker: (specifier: string, referrer?: string) => Type): any;
+	compile: (source: string, filename: string) => Type;
+	evaluate: (module: Type, linker: (specifier: string, referrer?: string) => Type) => any;
 };
 export type Evaluate = (source: string, filename: string) => any;
 
@@ -87,7 +86,7 @@ export function initialize(compiler: Compiler, evaluate: Evaluate, data: Initial
 
 	// Set up runtime
 	me = data.userId;
-	const modules = data.codeBlob ? Code.read(data.codeBlob) : new Map;
+	const modules = data.codeBlob ? Code.read(data.codeBlob) : new Map();
 	requireMain = makeEnvironment(modules, evaluate, compiler);
 }
 

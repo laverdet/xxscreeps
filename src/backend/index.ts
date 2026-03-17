@@ -1,10 +1,11 @@
+import type { BackendContext } from './context.js';
 import type Koa from 'koa';
 import type Router from 'koa-router';
-import type { BackendContext } from './context.js';
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import type { Implementation } from 'xxscreeps/utility/types.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { Implementation } from 'xxscreeps/utility/types.js';
 import { MapRender, Render, TerrainRender } from './symbols.js';
+
 export { hooks } from './symbols.js';
 
 // Koa middleware & generic backend route types
@@ -26,7 +27,7 @@ export type Endpoint = {
 	path: string;
 	method?: Method;
 
-	execute(context: Router.RouterContext<State, Context>): any;
+	execute: (context: Router.RouterContext<State, Context>) => any;
 };
 
 // `RoomObject` render symbols

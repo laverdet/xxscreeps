@@ -1,10 +1,11 @@
 import type { BufferView } from 'xxscreeps/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { array, compose } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { exchange } from 'xxscreeps/utility/utility.js';
 import { Room } from './room/index.js';
 import { Game } from './index.js';
+
 export { TERRAIN_MASK_WALL, TERRAIN_MASK_SWAMP } from './constants/index.js';
 
 export const terrainMaskToString = [ 'plain', 'wall', 'swamp', 'wall' ] as const;
@@ -100,7 +101,7 @@ export class TerrainWriter extends Terrain {
 	}
 }
 
-export const getBuffer = exchange(Terrain, 'getBuffer', (): never => { throw new Error });
+export const getBuffer = exchange(Terrain, 'getBuffer', (): never => { throw new Error(); });
 
 export function isBorder(xx: number, yy: number) {
 	return xx === 0 || xx === 49 || yy === 0 || yy === 49;

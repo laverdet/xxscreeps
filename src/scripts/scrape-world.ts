@@ -3,51 +3,46 @@ import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { Store } from 'xxscreeps/mods/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 
-import Loki from 'lokijs';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import jsYaml from 'js-yaml';
-import fs from 'fs/promises';
-import path from 'path';
+import Loki from 'lokijs';
 
-import Configs from 'xxscreeps/config/mods/import/config.js';
-import config, { configPath } from 'xxscreeps/config/index.js';
 import { checkArguments } from 'xxscreeps/config/arguments.js';
-
-import { RoomPosition } from 'xxscreeps/game/position.js';
-import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-
-// Schemas
-import * as CodeSchema from 'xxscreeps/engine/db/user/code.js';
-import * as MapSchema from 'xxscreeps/game/map.js';
-import * as Badge from 'xxscreeps/engine/db/user/badge.js';
-import * as User from 'xxscreeps/engine/db/user/index.js';
+import config, { configPath } from 'xxscreeps/config/index.js';
+import Configs from 'xxscreeps/config/mods/import/config.js';
 
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { makeWriter } from 'xxscreeps/schema/write.js';
-import { saveMemoryBlob } from 'xxscreeps/mods/memory/model.js';
-import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
+import * as Badge from 'xxscreeps/engine/db/user/badge.js';
+import * as CodeSchema from 'xxscreeps/engine/db/user/code.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import * as MapSchema from 'xxscreeps/game/map.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room, flushUsers } from 'xxscreeps/game/room/room.js';
-
-// Objects
-import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
-import { Source } from 'xxscreeps/mods/source/source.js';
-import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn.js';
+import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
-import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair.js';
-import { StructureExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
-import { StructureRoad } from 'xxscreeps/mods/road/road.js';
 import { StructureRampart } from 'xxscreeps/mods/defense/rampart.js';
 import { StructureWall } from 'xxscreeps/mods/defense/wall.js';
+import { saveMemoryBlob } from 'xxscreeps/mods/memory/model.js';
 import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor.js';
+import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store.js';
+import { StructureRoad } from 'xxscreeps/mods/road/road.js';
+import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair.js';
+import { Source } from 'xxscreeps/mods/source/source.js';
+import { StructureExtension } from 'xxscreeps/mods/spawn/extension.js';
+import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn.js';
+import { makeWriter } from 'xxscreeps/schema/write.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 import { merge } from 'xxscreeps/utility/utility.js';
 
 const argv = checkArguments({
 	argv: true,
-	boolean: ['dont-overwrite', 'shard-only'] as const,
-	string: ['overwrite-code'] as const
+	boolean: [ 'dont-overwrite', 'shard-only' ] as const,
+	string: [ 'overwrite-code' ] as const,
 });
 const dontOverwrite = argv['dont-overwrite'];
 const shardOnly = argv['shard-only'];
@@ -132,7 +127,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 	const preamble = schema ? `# yaml-language-server: $schema=${schema}\n` : '';
 	const defaultConfig: any = {};
 	for (const modConfig of Configs) {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 		merge(defaultConfig, modConfig.configDefaults ?? {});
 	}
 	defaultConfig.mods = [ ...mods ];
@@ -173,7 +168,7 @@ const { data } = shard;
 
 // Save terrain data
 const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ room, terrain }) => {
-	const writer = new TerrainWriter;
+	const writer = new TerrainWriter();
 	for (let xx = 0; xx < 50; ++xx) {
 		for (let yy = 0; yy < 50; ++yy) {
 			// 3 == WALL + SWAMP.. turn that back into WALL
@@ -192,13 +187,13 @@ await data.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
 const roomObjects = loki.getCollection('rooms.objects');
 const rooms = loki.getCollection('rooms').find().map(room => {
 	const objects = roomObjects.find({ room: room._id });
-	const instance = new Room;
+	const instance = new Room();
 	instance.name = room._id;
 	instance['#level'] = -1;
 	instance['#objects'] = [ ...Fn.filter(objects.map(object => {
 		switch (object.type) {
 			case 'constructedWall': {
-				const wall = new StructureWall;
+				const wall = new StructureWall();
 				withStructure(object, wall);
 				return wall;
 			}
@@ -208,7 +203,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 				instance['#safeModeUntil'] = object.safeMode;
 				instance['#user'] = forUser(object.user ?? null);
 
-				const controller = new StructureController;
+				const controller = new StructureController();
 				withStructure(object, controller);
 				controller.isPowerEnabled = object.isPowerEnabled;
 				controller.safeModeAvailable = object.safeModeAvailable;
@@ -220,7 +215,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 
 			case 'creep': {
-				const creep = new Creep;
+				const creep = new Creep();
 				withRoomObject(object, creep);
 				creep.store = OpenStore['#create'](object.storeCapacity);
 				withStore(object, creep);
@@ -232,7 +227,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 
 			case 'extension': {
-				const extension = new StructureExtension;
+				const extension = new StructureExtension();
 				withStructure(object, extension);
 				extension.store = SingleStore['#create'](C.RESOURCE_ENERGY, object.storeCapacityResource.energy);
 				withStore(object, extension);
@@ -240,20 +235,20 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 
 			case 'extractor': {
-				const extractor = new StructureExtractor;
+				const extractor = new StructureExtractor();
 				withStructure(object, extractor);
 				return extractor;
 			}
 
 			case 'keeperLair': {
-				const keeperLair = new StructureKeeperLair;
+				const keeperLair = new StructureKeeperLair();
 				withStructure(object, keeperLair);
 				keeperLair['#user'] = '3';
 				return keeperLair;
 			}
 
 			case 'mineral': {
-				const mineral = new Mineral;
+				const mineral = new Mineral();
 				withRoomObject(object, mineral);
 				mineral.density = object.density;
 				mineral.mineralAmount = object.mineralAmount;
@@ -262,7 +257,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 
 			case 'rampart': {
-				const rampart = new StructureRampart;
+				const rampart = new StructureRampart();
 				withStructure(object, rampart);
 				rampart.isPublic = object.isPublic;
 				rampart['#nextDecayTime'] = object.nextDecayTime;
@@ -270,7 +265,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 
 			case 'road': {
-				const road = new StructureRoad;
+				const road = new StructureRoad();
 				withStructure(object, road);
 				road['#terrain'] = roomsTerrain.get(road.pos.roomName)!.terrain.get(road.pos.x, road.pos.y);
 				road['#nextDecayTime'] = object.nextDecayTime;
@@ -278,7 +273,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 
 			case 'source': {
-				const source = new Source;
+				const source = new Source();
 				withRoomObject(object, source);
 				source.energy = object.energy;
 				source.energyCapacity = object.energyCapacity;
@@ -287,7 +282,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 
 			case 'spawn': {
-				const spawn = new StructureSpawn;
+				const spawn = new StructureSpawn();
 				withStructure(object, spawn);
 				spawn.store = SingleStore['#create'](C.RESOURCE_ENERGY, object.storeCapacityResource.energy);
 				withStore(object, spawn);
@@ -335,16 +330,16 @@ if (!shardOnly) {
 	}
 
 	// Save user code content
-	const overwriteModules = new Map<string, string>()
-	const codePath = argv['overwrite-code']
+	const overwriteModules = new Map<string, string>();
+	const codePath = argv['overwrite-code'];
 	if (codePath) {
-		const names = await fs.readdir(codePath)
+		const names = await fs.readdir(codePath);
 		const files = await Promise.all(names.map(async name => {
-			const data = await fs.readFile(path.join(codePath, name), 'utf8')
-			return { name, data }
-		}))
+			const data = await fs.readFile(path.join(codePath, name), 'utf8');
+			return { name, data };
+		}));
 		for (const { name, data } of files) {
-			overwriteModules.set(name, data)
+			overwriteModules.set(name, data);
 		}
 	}
 	for (const branch of code.find()) {

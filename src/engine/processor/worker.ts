@@ -1,18 +1,19 @@
 import type { Room } from 'xxscreeps/game/room/room.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
-import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
+import { loadTerrain } from 'xxscreeps/driver/path-finder.js';
+import { consumeSet } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
+import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
-import { consumeSet } from 'xxscreeps/engine/db/async.js';
 import { hooks } from 'xxscreeps/engine/processor/symbols.js';
-import { loadTerrain } from 'xxscreeps/driver/path-finder.js';
-import { makeBasicResponderHost } from 'xxscreeps/utility/responder.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import { World } from 'xxscreeps/game/map.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { makeBasicResponderHost } from 'xxscreeps/utility/responder.js';
 
 import 'xxscreeps/config/mods/import/game.js';
+
 await importMods('driver');
 await importMods('processor');
 
@@ -80,10 +81,10 @@ try {
 					if (cacheTime === time - 1) {
 						roomCache = nextRoomCache;
 					} else {
-						roomCache = new Map;
+						roomCache = new Map();
 					}
 					cacheTime = time;
-					nextRoomCache = new Map;
+					nextRoomCache = new Map();
 				}
 
 				// Read room data and intents from storage

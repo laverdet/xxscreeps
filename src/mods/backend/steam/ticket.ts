@@ -1,5 +1,5 @@
-import { hooks } from 'xxscreeps/backend/index.js';
 import fetch from 'node-fetch';
+import { hooks } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
 
 const { steamApiKey } = config.backend;
@@ -18,7 +18,7 @@ if (steamApiKey) {
 			// Get user id from Steam
 			const response = await fetch(`https://api.steampowered.com/ISteamUserAuth/AuthenticateUserTicket/v1/?${new URLSearchParams({
 				key: steamApiKey,
-				appid: `${464350}`,
+				appid: '464350',
 				ticket: context.request.body.ticket,
 			})}`);
 			if (response.status === 200) {

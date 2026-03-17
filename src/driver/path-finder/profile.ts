@@ -1,8 +1,8 @@
-import fs from 'fs';
+import fs from 'node:fs';
 import { loadTerrain, search } from 'xxscreeps/driver/path-finder.js';
+import { World } from 'xxscreeps/game/map.js';
 import { CostMatrix } from 'xxscreeps/game/path-finder/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { World } from 'xxscreeps/game/map.js';
 
 /**
  * This script is a standalone test for the path finder. It runs a whole bunch of path finding
@@ -14,7 +14,7 @@ import { World } from 'xxscreeps/game/map.js';
 loadTerrain(new World('test', fs.readFileSync(`${__dirname}/terrain`)));
 
 // Generate a deterministic CostMatrix
-const costMatrix = new CostMatrix;
+const costMatrix = new CostMatrix();
 for (let ii = 0; ii < 2500; ++ii) {
 	if (ii % 7 === 0) {
 		costMatrix._bits[ii] = ii % 11;

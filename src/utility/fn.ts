@@ -1,1 +1,1 @@
-export * as Fn from "./functional.js";
+export * as Fn from './functional.js';

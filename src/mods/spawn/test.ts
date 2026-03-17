@@ -18,11 +18,11 @@ describe('Spawn', () => {
 			room['#insertObject'](extension2);
 			room['#level'] = 8;
 			room['#user'] =
-			room.controller!['#user'] = '100';
+				room.controller!['#user'] = '100';
 		},
 	});
 
-	test('spawn direction', () => simulation(async({ player, tick }) => {
+	test('spawn direction', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {
 			Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'creep', {
 				directions: [ C.RIGHT ],
@@ -34,7 +34,7 @@ describe('Spawn', () => {
 		});
 	}));
 
-	test('set direction', () => simulation(async({ player, tick }) => {
+	test('set direction', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {
 			Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'creep');
 		});
@@ -48,7 +48,7 @@ describe('Spawn', () => {
 		});
 	}));
 
-	test('cancel spawn', () => simulation(async({ player, tick }) => {
+	test('cancel spawn', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {
 			Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'creep');
 		});
@@ -63,7 +63,7 @@ describe('Spawn', () => {
 		});
 	}));
 
-	test('spawn energy structures', () => simulation(async({ player, tick, peekRoom }) => {
+	test('spawn energy structures', () => simulation(async ({ player, tick, peekRoom }) => {
 		const extensionId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 27)[0].id);
 		await player('100', Game => {
 			Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'creep', {
@@ -78,7 +78,7 @@ describe('Spawn', () => {
 		});
 	}));
 
-	test('renew energy structures', () => simulation(async({ player, tick, peekRoom, poke }) => {
+	test('renew energy structures', () => simulation(async ({ player, tick, peekRoom, poke }) => {
 		const extensionId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 27)[0].id);
 		await player('100', Game => {
 			Game.spawns.Spawn1.spawnCreep([ C.MOVE, C.MOVE, C.MOVE, C.MOVE, C.MOVE ], 'creep');
@@ -100,7 +100,7 @@ describe('Spawn', () => {
 		});
 	}));
 
-	test('destroy + unclaim', () => simulation(async({ player, tick }) => {
+	test('destroy + unclaim', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {
 			assert.strictEqual(Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'creep'), C.OK);
 			assert.strictEqual(Game.spawns.Spawn1.destroy(), C.OK);

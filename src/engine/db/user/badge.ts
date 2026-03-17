@@ -32,7 +32,7 @@ export type Badge = UserBadge | {
 	};
 };
 
-const ajv = new Ajv;
+const ajv = new Ajv();
 const validator = ajv.compile(jsonSchema);
 
 export function validate(badge: any): UserBadge {

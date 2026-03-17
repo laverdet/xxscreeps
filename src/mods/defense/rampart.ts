@@ -1,11 +1,11 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
 import { Game, intents, me } from 'xxscreeps/game/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { asUnion, assign } from 'xxscreeps/utility/utility.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 
 export const format = declare('Rampart', () => compose(shape, StructureRampart));
 const shape = struct(ownedStructureFormat, {
@@ -17,12 +17,12 @@ const shape = struct(ownedStructureFormat, {
 
 export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() {
-		return this['#user'] === this.room.controller?.['#user'] ?
-			C.RAMPART_HITS_MAX[this.room.controller.level] ?? 0 : 0;
+		return this['#user'] === this.room.controller?.['#user']
+			? C.RAMPART_HITS_MAX[this.room.controller.level] ?? 0 : 0;
 	}
 
-	override get structureType() { return C.STRUCTURE_RAMPART }
-	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
+	override get structureType() { return C.STRUCTURE_RAMPART; }
+	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
 
 	/**
 	 * Make this rampart public to allow other players' creeps to pass through.
@@ -37,13 +37,13 @@ export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 		}
 	}
 
-	override ['#checkObstacle'](user: string) {
+	override '#checkObstacle'(user: string) {
 		return !this.isPublic && user !== this['#user'];
 	}
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const rampart = assign(RoomObject.create(new StructureRampart, pos), {
+	const rampart = assign(RoomObject.create(new StructureRampart(), pos), {
 		hits: 1,
 		isPublic: false,
 	});

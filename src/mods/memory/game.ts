@@ -1,6 +1,6 @@
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
-import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { extend } from 'xxscreeps/utility/utility.js';
 import { RawMemory, flush, flushActiveSegments, flushForeignSegment, flushSegments, get, initialize, loadSegments } from './memory.js';
 
 // Export `Memory` and `RawMemory` to runtime globals

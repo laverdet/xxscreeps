@@ -1,9 +1,9 @@
 import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
 import type { Terrain } from 'xxscreeps/game/terrain.js';
-import * as PathFinder from 'xxscreeps/game/path-finder/index.js';
-import { extend } from 'xxscreeps/utility/utility.js';
-import { getOffsetsFromDirection } from 'xxscreeps/game/position.js';
 import { Game } from 'xxscreeps/game/index.js';
+import * as PathFinder from 'xxscreeps/game/path-finder/index.js';
+import { getOffsetsFromDirection } from 'xxscreeps/game/position.js';
+import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from './room.js';
 
 export type FindPathOptions = PathFinder.RoomSearchOptions & {
@@ -19,7 +19,7 @@ export type RoomPath = {
 }[];
 
 declare module './room.js' {
-	// eslint-disable-next-line @typescript-eslint/no-namespace
+
 	namespace Room {
 		/**
 		 * Serialize a path array into a short string representation, which is suitable to store in memory
@@ -128,8 +128,8 @@ extend(Room, {
 		// Add last position for automatic {range:1} paths
 		if (
 			(options.range ?? 0) === 0 &&
-			(result.path.length ?
-				result.path[result.path.length - 1].getRangeTo(goal) === 1 :
+			(result.path.length
+				? result.path[result.path.length - 1].getRangeTo(goal) === 1 :
 				origin.isNearTo(goal))
 		) {
 			result.path.push(goal);

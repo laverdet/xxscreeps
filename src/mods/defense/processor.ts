@@ -1,14 +1,14 @@
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
-import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { saveAction } from 'xxscreeps/game/object.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
+import { captureDamage } from 'xxscreeps/mods/combat/creep.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { clamp } from 'xxscreeps/utility/utility.js';
 import { StructureRampart } from './rampart.js';
 import { StructureTower, checkTower } from './tower.js';
-import { clamp } from 'xxscreeps/utility/utility.js';
-import { captureDamage } from 'xxscreeps/mods/combat/creep.js';
-import { Structure } from 'xxscreeps/mods/structure/structure.js';
 
 function calculateEfficiency(tower: StructureTower, target: Creep | Structure) {
 	const range = clamp(C.TOWER_OPTIMAL_RANGE, C.TOWER_FALLOFF_RANGE, tower.pos.getRangeTo(target.pos));

@@ -1,11 +1,11 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
 import { Game } from 'xxscreeps/game/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
 import { isBorder } from 'xxscreeps/game/position.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 
 export const format = declare('Road', () => compose(shape, StructureRoad));
 const shape = struct(structureFormat, {
@@ -16,10 +16,10 @@ const shape = struct(structureFormat, {
 });
 
 export class StructureRoad extends withOverlay(Structure, shape) {
-	override get hitsMax() { return C.ROAD_HITS * this['#multiplier'] }
-	override get structureType() { return C.STRUCTURE_ROAD }
-	override get ['#pathCost']() { return 1 }
-	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time) }
+	override get hitsMax() { return C.ROAD_HITS * this['#multiplier']; }
+	override get structureType() { return C.STRUCTURE_ROAD; }
+	override get '#pathCost'() { return 1; }
+	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
 
 	get '#multiplier'() {
 		switch (this['#terrain']) {
@@ -29,13 +29,13 @@ export class StructureRoad extends withOverlay(Structure, shape) {
 		}
 	}
 
-	override ['#checkObstacle']() {
+	override '#checkObstacle'() {
 		return false;
 	}
 }
 
 export function create(pos: RoomPosition) {
-	const road = RoomObject.create(new StructureRoad, pos);
+	const road = RoomObject.create(new StructureRoad(), pos);
 	road['#nextDecayTime'] = Game.time + C.ROAD_DECAY_TIME - 1;
 	road['#terrain'] = Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y);
 	road.hits = road.hitsMax;

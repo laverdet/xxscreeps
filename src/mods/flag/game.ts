@@ -1,13 +1,13 @@
 import type { Color } from './flag.js';
-import type { TypeOf } from 'xxscreeps/schema/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
-import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
-import { compose, declare, vector } from 'xxscreeps/schema/index.js';
+import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import { compose, declare, vector } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { instantiate } from 'xxscreeps/utility/utility.js';
 import { Flag, acquireIntents, checkCreateFlag, format, intents } from './flag.js';
 import './room.js';
@@ -75,7 +75,7 @@ hooks.register('gameInitializer', (Game, data) => {
 		const rooms = new Set<Room>();
 		for (const flag of Object.values(flags)) {
 			const room: Room = Game.rooms[flag.pos.roomName];
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 			if (room) {
 				room['#insertObject'](flag);
 				rooms.add(room);
@@ -94,7 +94,7 @@ export function createFlag(name: string, posInt: number | null, color: Color, se
 	// Run create / move / setColor intent
 	if (checkCreateFlag(flags, pos, name, color, secondaryColor) === C.OK) {
 		const flag = flags[name];
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 		if (flag) {
 			// Modifying an existing flag
 			// nb: This branch will be taken in the case `Room#createFlag` is called since that function

@@ -1,8 +1,8 @@
-import type { Room } from './room/index.js';
 import type { RoomObject } from './object.js';
+import type { Room } from './room/index.js';
 import * as C from './constants/index.js';
 
-export function chainIntentChecks<Errors extends C.ErrorCode>(...checks: (() => (Errors | undefined | void))[]): Errors {
+export function chainIntentChecks<Errors extends C.ErrorCode>(...checks: (() => Errors | undefined | void)[]): Errors {
 	for (const check of checks) {
 		const result = check();
 		if (result !== undefined && result !== C.OK) {

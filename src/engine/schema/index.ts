@@ -1,12 +1,12 @@
 import type { StructDeclaration, struct, variant } from 'xxscreeps/schema/format.js';
-import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types.js';
 import type { BuilderOptions, Format } from 'xxscreeps/schema/index.js';
 import type { ReadOptions } from 'xxscreeps/schema/read.js';
+import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types.js';
+import { build, makeUpgrader } from 'xxscreeps/engine/schema/build/index.js';
 import { Builder, makeReader, makeWriter } from 'xxscreeps/schema/index.js';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 // Use full path here so we can rewrite it in webpack
-import { build, makeUpgrader } from 'xxscreeps/engine/schema/build/index.js';
 export { build, makeUpgrader };
 
 // Resolve mod formats from `declare module` interfaces

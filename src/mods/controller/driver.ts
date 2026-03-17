@@ -1,6 +1,6 @@
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { hooks as processorHooks } from 'xxscreeps/engine/processor/index.js';
+import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { controlledRoomKey, reservedRoomKey } from './processor.js';
 
 declare module 'xxscreeps/engine/runner/index.js' {
@@ -10,7 +10,7 @@ declare module 'xxscreeps/engine/runner/index.js' {
 	}
 }
 
-processorHooks.register('refreshRoom', async(shard, room) => {
+processorHooks.register('refreshRoom', async (shard, room) => {
 	const userId = room['#user'];
 	if (userId != null) {
 		const key = room['#level'] === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);

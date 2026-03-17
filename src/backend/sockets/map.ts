@@ -1,7 +1,7 @@
 import type { SubscriptionEndpoint } from 'xxscreeps/backend/socket.js';
-import { RoomObject } from 'xxscreeps/game/object.js';
 import { bindMapRenderer, bindTerrainRenderer } from 'xxscreeps/backend/index.js';
 import { MapRender } from 'xxscreeps/backend/symbols.js';
+import { RoomObject } from 'xxscreeps/game/object.js';
 import { subscribeToRoom } from './room.js';
 
 // Register a map renderer on a `RoomObject` type

@@ -1,6 +1,6 @@
 import type { GameMap, World } from './map.js';
-import type { AnyRoomObject, Room } from './room/index.js';
 import type { RoomObject } from './object.js';
+import type { AnyRoomObject, Room } from './room/index.js';
 import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
 import { Fn } from 'xxscreeps/utility/fn.js';
 import { hooks } from './symbols.js';
@@ -130,5 +130,5 @@ export interface CPU {
 	 * Get amount of CPU time used from the beginning of the current game tick. Always returns 0 in
 	 * the Simulation mode.
 	 */
-	getUsed(): number;
+	getUsed: () => number;
 }

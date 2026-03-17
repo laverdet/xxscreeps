@@ -51,14 +51,14 @@ export class SortedSet {
 	*entriesByLex(minInclusive: boolean, min: string, maxInclusive: boolean, max: string) {
 		for (const member of this.#members) {
 			if (
-				maxInclusive ?
-					member.localeCompare(max) > 0 :
+				maxInclusive
+					? member.localeCompare(max) > 0 :
 					member.localeCompare(max) >= 0
 			) {
 				break;
 			} else if (
-				minInclusive ?
-					member.localeCompare(min) >= 0 :
+				minInclusive
+					? member.localeCompare(min) >= 0 :
 					member.localeCompare(min) > 0
 			) {
 				yield member;

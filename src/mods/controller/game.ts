@@ -1,10 +1,10 @@
-import * as C from 'xxscreeps/game/constants/index.js';
-import * as Controller from './controller.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { RoomObject } from 'xxscreeps/game/object.js';
 import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
+import { RoomObject } from 'xxscreeps/game/object.js';
 import { optional, struct } from 'xxscreeps/schema/index.js';
+import * as Controller from './controller.js';
 import './creep.js';
 
 // Register schema

@@ -1,6 +1,6 @@
-import type { MessagePort, Worker } from 'worker_threads';
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider.js';
-import { MessageChannel, parentPort } from 'worker_threads';
+import type { MessagePort, Worker } from 'node:worker_threads';
+import { MessageChannel, parentPort } from 'node:worker_threads';
 import { Deferred, listen } from 'xxscreeps/utility/async.js';
 import { getOrSet, staticCast } from 'xxscreeps/utility/utility.js';
 import { isTopThread } from 'xxscreeps/utility/worker.js';
@@ -42,7 +42,7 @@ registerStorageProvider('local', 'pubsub', async url => {
 	if (isTopThread) {
 		const id = `${url}`;
 		const info = getOrSet(providersByName, id, () => ({
-			instance: new LocalPubSubProviderParent,
+			instance: new LocalPubSubProviderParent(),
 			refs: 0,
 		}));
 		++info.refs;
@@ -59,7 +59,7 @@ registerStorageProvider('local', 'pubsub', async url => {
 });
 
 interface SubscriptionReference {
-	send(message: string): void;
+	send: (message: string) => void;
 }
 
 class ParentSubscription implements PubSubSubscription, SubscriptionReference {
@@ -121,7 +121,7 @@ class LocalPubSubProviderParent implements PubSubProvider {
 									const { key } = message;
 									const ref = new WorkerSubscriptionReference(port, key);
 									subscriptionsById.set(message.id, ref);
-									getOrSet(provider.subscriptionsByKey, key, () => new Set).add(ref);
+									getOrSet(provider.subscriptionsByKey, key, () => new Set()).add(ref);
 									port.postMessage(staticCast<AckMessage>({ type: 'ack' }));
 									break;
 								}
@@ -176,7 +176,7 @@ class LocalPubSubProviderParent implements PubSubProvider {
 	// eslint-disable-next-line @typescript-eslint/require-await
 	async subscribe(key: string, listener: PubSubListener) {
 		const subscription = new ParentSubscription(listener, key, this);
-		const sources = getOrSet(this.subscriptionsByKey, key, () => new Set);
+		const sources = getOrSet(this.subscriptionsByKey, key, () => new Set());
 		sources.add(subscription);
 		return [ () => {
 			if (sources.size === 1) {
@@ -218,7 +218,7 @@ class LocalPubSubProviderWorker implements PubSubProvider {
 	static connect(name: string) {
 		return new Promise<LocalPubSubProviderWorker>((resolve, reject) => {
 			// Create message channel and listen for response
-			const channel = new MessageChannel;
+			const channel = new MessageChannel();
 			const port = channel.port1;
 			port.once('message', (message: ConnectedResponse | UnknownMessage) => {
 				if (message.type === 'connected') {
@@ -253,7 +253,7 @@ class LocalPubSubProviderWorker implements PubSubProvider {
 
 	async send(key: string, message: string, source?: WorkerSubscription) {
 		// Send message to top thread and wait for ack
-		const deferred = new Deferred;
+		const deferred = new Deferred();
 		this.syn.push(deferred);
 		this.port.postMessage(staticCast<PublishMessage>({
 			type: 'publish',
@@ -276,7 +276,7 @@ class LocalPubSubProviderWorker implements PubSubProvider {
 
 		// Send subscription request
 		const id = ++this.id;
-		const deferred = new Deferred;
+		const deferred = new Deferred();
 		this.syn.push(deferred);
 		this.port.postMessage(staticCast<SubscriptionRequest>({
 			type: 'subscribe',
@@ -287,7 +287,7 @@ class LocalPubSubProviderWorker implements PubSubProvider {
 		// Wait for response before returning
 		await deferred.promise;
 		const subscription = new WorkerSubscription(listener, key, this);
-		const subscriptions = getOrSet(this.subscriptionsByKey, key, () => new Set);
+		const subscriptions = getOrSet(this.subscriptionsByKey, key, () => new Set());
 		subscriptions.add(subscription);
 		return [ () => {
 			if (subscriptions.size === 1) {

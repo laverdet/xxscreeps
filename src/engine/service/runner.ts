@@ -1,15 +1,16 @@
 import type { Effect } from 'xxscreeps/utility/types.js';
+import * as Timers from 'node:timers/promises';
 import config from 'xxscreeps/config/index.js';
-import * as Async from 'xxscreeps/utility/async.js';
-import * as Timers from 'timers/promises';
 import { importMods } from 'xxscreeps/config/mods/index.js';
+import { loadTerrain } from 'xxscreeps/driver/path-finder.js';
+import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
-import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
-import { loadTerrain } from 'xxscreeps/driver/path-finder.js';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
-import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async.js';
+import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
+import * as Async from 'xxscreeps/utility/async.js';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+
 await importMods('driver');
 const isEntry = checkIsEntry();
 
@@ -62,7 +63,7 @@ try {
 				const affinityIterator = Async.breakable(consumeSetMembers(shard.scratch, key, affinity), breaker => break2 = breaker);
 				const fallbackIterator = Async.breakable(consumeSet(shard.scratch, key), breaker => break3 = breaker);
 				// eslint-disable-next-line require-yield
-				const pauseIfMoreRemain = async function *() {
+				const pauseIfMoreRemain = async function*() {
 					if (migrationTimeout > 0) {
 						const [ cancel, tickFinished ] = getServiceChannel(shard).listenFor(message =>
 							message.type === 'tickFinished' && message.time === time);

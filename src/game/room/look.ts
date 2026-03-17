@@ -1,13 +1,13 @@
 import type { PositionParameter } from 'xxscreeps/game/position.js';
 import type { UnwrapArray } from 'xxscreeps/utility/types.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { iterateArea } from 'xxscreeps/game/direction.js';
+import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
+import { terrainMaskToString } from 'xxscreeps/game/terrain.js';
 import { Fn } from 'xxscreeps/utility/fn.js';
 import { extend } from 'xxscreeps/utility/utility.js';
-import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
-import { iterateArea } from 'xxscreeps/game/direction.js';
-import { terrainMaskToString } from 'xxscreeps/game/terrain.js';
-import { lookConstants } from './symbols.js';
 import { Room } from './room.js';
+import { lookConstants } from './symbols.js';
 
 // All LOOK_ constants
 export interface Look {}
@@ -23,9 +23,7 @@ type LookInfo = Exclude<UnwrapArray<Look[keyof Look]>, void> | {
 };
 
 // Result of `room.lookAt` and  `room.lookAtArea`,
-type LookAtResult<Type extends LookConstants> = {
-	[key in LookConstants]: TypeOfLook<Type>;
-} & {
+type LookAtResult<Type extends LookConstants> = Record<LookConstants, TypeOfLook<Type>> & {
 	type: Type;
 };
 
@@ -34,9 +32,7 @@ type LookAsArray<Type> = (Type & { x: number; y: number })[];
 type LookAtArea<Type> = Record<number, Record<number, Type[]>>;
 
 // Result of `room.lookForAtArea`. This is the same as `LookAtResult` but without `type`
-type LookForAtArea<Type extends LookConstants> = {
-	[key in LookConstants]: TypeOfLook<Type>;
-};
+type LookForAtArea<Type extends LookConstants> = Record<LookConstants, TypeOfLook<Type>>;
 
 declare module './room.js' {
 	interface Room {
@@ -93,7 +89,7 @@ declare module './room.js' {
 extend(Room, {
 	lookAt(...args: PositionParameter) {
 		const { pos } = fetchPositionArgument(this.name, ...args);
-		if (!pos || pos.roomName !== this.name) {
+		if (pos?.roomName !== this.name) {
 			return [];
 		}
 		return [
@@ -133,7 +129,7 @@ extend(Room, {
 
 	lookForAt(type: LookConstants, ...rest: PositionParameter) {
 		const { pos } = fetchPositionArgument(this.name, ...rest);
-		if (!pos || pos.roomName !== this.name) {
+		if (pos?.roomName !== this.name) {
 			return [];
 		}
 		if (type === C.LOOK_TERRAIN) {

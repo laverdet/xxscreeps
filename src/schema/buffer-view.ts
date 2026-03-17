@@ -26,7 +26,7 @@ export class BufferView {
 	}
 
 	static fromTypedArray(buffer: Uint8Array): BufferView;
-	static fromTypedArray(buffer: Readonly<Uint8Array>): Readonly<BufferView>
+	static fromTypedArray(buffer: Readonly<Uint8Array>): Readonly<BufferView>;
 	static fromTypedArray(buffer: Uint8Array) {
 		return new BufferView(buffer.buffer, buffer.byteOffset);
 	}
@@ -41,7 +41,7 @@ export class BufferView {
 		}
 		Object.defineProperties(this, Object.fromEntries(typedArrays.map(key => [
 			key, {
-				get: () => { throw error() },
+				get: () => { throw error(); },
 			},
 		])));
 	}

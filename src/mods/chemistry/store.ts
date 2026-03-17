@@ -1,8 +1,8 @@
-import type { BufferView } from 'xxscreeps/schema/index.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import type { BufferView } from 'xxscreeps/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Store } from 'xxscreeps/mods/resource/store.js';
 import { optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
+import { Store } from 'xxscreeps/mods/resource/store.js';
 import { compose, struct, withOverlay } from 'xxscreeps/schema/index.js';
 
 const shape = struct({
@@ -59,10 +59,10 @@ export class LabStore extends withOverlay(Store, shape) {
 	'#add'(type: ResourceType, amount: number) {
 		if (type === C.RESOURCE_ENERGY) {
 			this['#energy'] =
-			this[C.RESOURCE_ENERGY] += amount;
+				this[C.RESOURCE_ENERGY] += amount;
 		} else {
 			this['#mineralAmount'] =
-			this[type] += amount;
+				this[type] += amount;
 			this['#mineralType'] = type;
 		}
 	}
@@ -70,13 +70,13 @@ export class LabStore extends withOverlay(Store, shape) {
 	'#subtract'(type: ResourceType, amount: number) {
 		if (type === C.RESOURCE_ENERGY) {
 			this['#energy'] =
-			this[C.RESOURCE_ENERGY] -= amount;
+				this[C.RESOURCE_ENERGY] -= amount;
 			if (this[C.RESOURCE_ENERGY] === 0) {
 				delete this[C.RESOURCE_ENERGY as ResourceType];
 			}
 		} else {
 			this['#mineralAmount'] =
-			this[type] -= amount;
+				this[type] -= amount;
 			if (this[type] === 0) {
 				this['#mineralType'] = undefined;
 				delete this[type];

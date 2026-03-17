@@ -1,14 +1,15 @@
-import type { Effect } from 'xxscreeps/utility/types.js';
 import type { ProcessorRequest } from 'xxscreeps/engine/processor/worker.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import config from 'xxscreeps/config/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as Async from 'xxscreeps/utility/async.js';
-import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
-import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async.js';
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import * as Async from 'xxscreeps/utility/async.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { negotiateResponderClient } from 'xxscreeps/utility/responder.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+
 const isEntry = checkIsEntry();
 
 // Interrupt handler
@@ -33,7 +34,7 @@ type RoomWorker = typeof workers extends (infer Type)[] ? Type : never;
 const userCount = Number(await db.data.scard('users')) - 3; // minus Invader, Source Keeper, Screeps
 const singleThreaded = config.launcher?.singleThreaded;
 const processorCount = clamp(1, config.processor.concurrency, singleThreaded ? 1 : Math.ceil(userCount / 2));
-const workers = await Promise.all(Fn.map(Fn.range(processorCount), async() => ({
+const workers = await Promise.all(Fn.map(Fn.range(processorCount), async () => ({
 	affinity: [] as string[],
 	checkAffinity: true,
 	idle: true,
@@ -52,7 +53,7 @@ async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
 		while (worker.checkAffinity) {
 			const affinityIterator = consumeSortedSetMembers(shard.scratch, queueKey, worker.affinity, 0, 0);
 			// eslint-disable-next-line @typescript-eslint/require-await, require-yield
-			const endOfAffinity = async function *() {
+			const endOfAffinity = async function*() {
 				worker.checkAffinity = false;
 			}();
 			for await (const roomName of Async.lookAhead(Async.concat(affinityIterator, endOfAffinity), 1)) {
@@ -63,7 +64,7 @@ async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
 		// Yield non-affinity rooms until there's no more, or it's time to check affinity again
 		for await (const roomName of consumeSortedSet(shard.scratch, queueKey, 0, 0)) {
 			yield roomName;
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 			if (worker.checkAffinity) {
 				continue loop;
 			}
@@ -138,7 +139,7 @@ try {
 				for (const worker of workers) {
 					if (worker.idle) {
 						worker.idle = false;
-						Async.mustNotReject(async() => {
+						Async.mustNotReject(async () => {
 							// Continue processing until the queue is empty. Empty queue may not mean processing is
 							// done, it also may mean we're waiting on workers
 							for await (const roomName of consumeRoomsQueue(worker, time)) {

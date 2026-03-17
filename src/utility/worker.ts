@@ -1,7 +1,8 @@
-import type { WorkerOptions } from 'worker_threads';
+import type { WorkerOptions } from 'node:worker_threads';
+import { Worker as NodeWorker } from 'node:worker_threads';
 import * as PubSub from 'xxscreeps/engine/db/storage/local/pubsub.js';
 import * as Responder from 'xxscreeps/engine/db/storage/local/responder.js';
-import { Worker as NodeWorker } from 'worker_threads';
+
 export { isTopThread } from 'xxscreeps/config/raw.js';
 
 const entryShim = new URL(await import.meta.resolve!('xxscreeps/config/entry.js'));

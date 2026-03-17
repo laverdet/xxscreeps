@@ -1,15 +1,15 @@
 import type { HarvestResult, Harvestable } from './game.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
-import { extend } from 'xxscreeps/utility/utility.js';
-import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep.js';
+import { extend } from 'xxscreeps/utility/utility.js';
 
 // `harvest` intent check
 export function checkHarvest(creep: Creep, target: Harvestable | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => target && target['#checkHarvest'] ? target['#checkHarvest'](creep) : C.ERR_INVALID_TARGET,
+		() => target?.['#checkHarvest'] ? target['#checkHarvest'](creep) : C.ERR_INVALID_TARGET,
 	) as HarvestResult;
 }
 

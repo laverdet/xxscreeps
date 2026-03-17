@@ -1,9 +1,9 @@
 import type { Store } from './store.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store.js';
 import { assert, describe, reconstructor, test } from 'xxscreeps/test/index.js';
+import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store.js';
 
-const keys = (object: {}) => [ ...function *() {
+const keys = (object: {}) => [ ...function*() {
 	for (const key in object) {
 		yield key;
 	}

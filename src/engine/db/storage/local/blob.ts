@@ -1,11 +1,11 @@
 import type * as P from 'xxscreeps/engine/db/storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import fsSync from 'fs';
-import fs from 'fs/promises';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as Path from 'path';
+import fsSync from 'node:fs';
+import fs from 'node:fs/promises';
+import * as Path from 'node:path';
 import { fileURLToPath } from 'url';
 import { listen, spread } from 'xxscreeps/utility/async.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 export class BlobStorage {
 	private readonly cache = new Map<string, {
@@ -43,13 +43,13 @@ export class BlobStorage {
 
 		// Lock file maker
 		const lockFile = Path.join(path, '.lock');
-		const tryLock = async() => {
+		const tryLock = async () => {
 			const file = await fs.open(lockFile, 'wx');
 			await file.write(`${process.pid}`);
 			await file.close();
 		};
 
-		await (async() => {
+		await (async () => {
 			// Try lock
 			try {
 				await tryLock();
@@ -221,7 +221,7 @@ export class BlobStorage {
 		++this.saveId;
 
 		// Save to disk
-		await spread(500, entries, async([ key, { value } ]) => {
+		await spread(500, entries, async ([ key, { value } ]) => {
 			const path = Path.join(this.path!, key);
 			const dirname = Path.dirname(path);
 			if (value) {
@@ -245,7 +245,7 @@ export class BlobStorage {
 
 		// Also remove empty directories after everything has flushed
 		const unlinkedDirectories = new Set<string>();
-		await Promise.all(Fn.map(entries, async([ key, { value } ]) => {
+		await Promise.all(Fn.map(entries, async ([ key, { value } ]) => {
 			if (value) {
 				return;
 			}

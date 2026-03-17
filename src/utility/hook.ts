@@ -9,34 +9,30 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 		/**
 		 * Makes an invocator which iterates through all hooks unconditionally.
 		 */
-		makeIterated<Key extends keyof keys>(key: Key):
-		(() => void) extends keys[Key] ? keys[Key] extends (...args: infer Args) => void ?
-			(...args: Args) => void : never : never;
+		makeIterated: <Key extends keyof keys>(key: Key) => (() => void) extends keys[Key] ? keys[Key] extends (...args: infer Args) => void
+			? (...args: Args) => void : never : never;
 
 		/**
 		 * Makes an invocator which maps the hooks with arguments.
 		 */
-		makeMapped<Key extends keyof keys>(key: Key):
-		keys[Key] extends (...args: infer Params) => infer Result ?
-			(...args: Params) => Iterable<Result> : never;
+		makeMapped: <Key extends keyof keys>(key: Key) => keys[Key] extends (...args: infer Params) => infer Result
+			? (...args: Params) => Iterable<Result> : never;
 
 		/**
 		 * Makes an invocator which passes a value through each hooks and returns the final result.
 		 */
-		makeReduced<Key extends keyof keys>(key: Key):
-		keys[Key] extends (arg: infer Type) => infer Type ?
-			(arg: Type) => Type : never;
+		makeReduced: <Key extends keyof keys>(key: Key) => keys[Key] extends (arg: infer Type) => infer Type
+			? (arg: Type) => Type : never;
 
 		/**
 		 * Iterates over each hook.
 		 */
-		map<Key extends keyof keys>(key: Key): Iterable<keys[Key]>;
-		map<Key extends keyof keys, Type>(key: Key, fn: (value: keys[Key]) => Type): Iterable<Type>;
+		map: (<Key extends keyof keys>(key: Key) => Iterable<keys[Key]>) & (<Key extends keyof keys, Type>(key: Key, fn: (value: keys[Key]) => Type) => Iterable<Type>);
 
 		/**
 		 * Register a hook
 		 */
-		register<Key extends keyof keys>(key: Key, handler: keys[Key]): void;
+		register: <Key extends keyof keys>(key: Key, handler: keys[Key]) => void;
 	};
 
 	const hookable: Hook = {
@@ -69,7 +65,7 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 					const savedHandlers = [ ...handlers ];
 					return (...args: any[]) => Fn.map(savedHandlers, fn => fn(...args));
 				} else {
-					return function *() {};
+					return function*() {};
 				}
 			});
 		},

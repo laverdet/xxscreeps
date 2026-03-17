@@ -1,5 +1,5 @@
-import type { Effect } from 'xxscreeps/utility/types.js';
 import type { KeyValProvider, PubSubProvider } from './provider.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
 
 type DispositionToProvider<T> =
 	T extends 'keyval' ? KeyValProvider :

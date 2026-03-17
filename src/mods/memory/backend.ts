@@ -1,11 +1,11 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import config from 'xxscreeps/config/index.js';
-import { gzip } from 'zlib';
+import { gzip } from 'node:zlib';
 import { hooks } from 'xxscreeps/backend/index.js';
+import config from 'xxscreeps/config/index.js';
+import { requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
 import { loadUserMemoryString } from 'xxscreeps/mods/memory/model.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { throttle } from 'xxscreeps/utility/utility.js';
-import { requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
 
 const invalidPath = 'Incorrect memory path';
 const emptyObject = Object.create(null);
@@ -38,7 +38,7 @@ hooks.register('subscription', {
 			return () => {};
 		}
 		let previous: any;
-		const check = throttle(() => mustNotReject(async() => {
+		const check = throttle(() => mustNotReject(async () => {
 			// Load memory and send if updated
 			const memory = JSON.stringify(`${await loadAndParse(shard, user, params.path)}`);
 			if (previous !== memory) {
@@ -70,7 +70,7 @@ hooks.register('route', {
 		// WHYYYYYYYYYYYYYY
 		const gzipBase64 = await new Promise<string>((resolve, reject) => {
 			gzip(
-				`${JSON.stringify(memory)}`,
+				JSON.stringify(memory),
 				(err, value) => err ? reject(err) : resolve(value.toString('base64')));
 		});
 		return { ok: 1, data: `gz:${gzipBase64}` };

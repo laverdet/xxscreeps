@@ -1,8 +1,8 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
-import { Game, intents } from 'xxscreeps/game/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Game, intents } from 'xxscreeps/game/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
@@ -15,8 +15,8 @@ const shape = declare('Observer', struct(ownedStructureFormat, {
 }));
 
 export class StructureObserver extends withOverlay(OwnedStructure, shape) {
-	override get hitsMax() { return C.OBSERVER_HITS }
-	override get structureType() { return C.STRUCTURE_OBSERVER }
+	override get hitsMax() { return C.OBSERVER_HITS; }
+	override get structureType() { return C.STRUCTURE_OBSERVER; }
 
 	override isActive() {
 		return this.room.controller!.level === 8;
@@ -31,7 +31,7 @@ export class StructureObserver extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const observer = assign(RoomObject.create(new StructureObserver, pos), {
+	const observer = assign(RoomObject.create(new StructureObserver(), pos), {
 		hits: C.OBSERVER_HITS,
 	});
 	observer['#user'] = owner;
@@ -42,8 +42,8 @@ export function create(pos: RoomPosition, owner: string) {
 registerBuildableStructure(C.STRUCTURE_OBSERVER, {
 	obstacle: true,
 	checkPlacement(room, pos) {
-		return checkPlacement(room, pos) === C.OK ?
-			C.CONSTRUCTION_COST.observer : null;
+		return checkPlacement(room, pos) === C.OK
+			? C.CONSTRUCTION_COST.observer : null;
 	},
 	create(site) {
 		return create(site.pos, site['#user']);

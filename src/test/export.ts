@@ -1,9 +1,10 @@
-import fs from 'fs/promises';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import fs from 'node:fs/promises';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { parseRoomName } from 'xxscreeps/game/position.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import 'xxscreeps/config/mods/import/game.js';
+
 export type Payload = typeof payload;
 
 const db = await Database.connect();
@@ -20,7 +21,7 @@ const roomNames = [ ...Fn.map(map.entries(), ([ roomName ]) => roomName) ].sort(
 const entriesSorted = new Map(Fn.map(roomNames, roomName => [ roomName, map.map.getRoomTerrain(roomName) ]));
 
 // Render room terrain + object string representation
-const payload = Fn.fromEntries(await Fn.mapAsync(entriesSorted, async([ roomName, terrain ]) => {
+const payload = Fn.fromEntries(await Fn.mapAsync(entriesSorted, async ([ roomName, terrain ]) => {
 	const room = await shard.loadRoom(roomName);
 	const objects = new Map(Fn.filter(Fn.map(room['#objects'], object => {
 		const info = function() {

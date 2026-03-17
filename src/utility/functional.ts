@@ -3,9 +3,9 @@ import type { LooseBoolean } from './types.js';
 export function chain<Args extends any[]>(fns: Iterable<(...args: Args) => void>, reverse = false) {
 	const { head, rest } = shift(fns);
 	if (head) {
-		return reduce(rest, head, reverse ?
-			(left, right) => (...args) => { right(...args); left(...args) } :
-			(left, right) => (...args) => { left(...args); right(...args) });
+		return reduce(rest, head, reverse
+			? (left, right) => (...args) => { right(...args); left(...args); } :
+			(left, right) => (...args) => { left(...args); right(...args); });
 	} else {
 		return () => {};
 	}
@@ -14,8 +14,8 @@ export function chain<Args extends any[]>(fns: Iterable<(...args: Args) => void>
 export function compose<Type>(fns: Iterable<(value: Type) => Type>, reverse = false) {
 	const { head, rest } = shift(fns);
 	if (head) {
-		return reduce(rest, head, reverse ?
-			(left, right) => (value: Type) => right(left(value)) :
+		return reduce(rest, head, reverse
+			? (left, right) => (value: Type) => right(left(value)) :
 			(left, right) => (value: Type) => left(right(value)));
 	} else {
 		return (value: Type) => value;
@@ -207,7 +207,7 @@ export function range(start = Infinity, end?: number): Iterable<number> {
 	if (end === undefined) {
 		return range(0, start);
 	} else {
-		return function *() {
+		return function*() {
 			if (start < end) {
 				if (end === Infinity) {
 					for (let ii = start; ; ++ii) {

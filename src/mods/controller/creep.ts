@@ -1,9 +1,9 @@
+import { chainIntentChecks, checkRange, checkSafeMode, checkString, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents, me, userGame } from 'xxscreeps/game/index.js';
-import { extend } from 'xxscreeps/utility/utility.js';
-import { chainIntentChecks, checkRange, checkSafeMode, checkString, checkTarget } from 'xxscreeps/game/checks.js';
-import { checkHasResource } from 'xxscreeps/mods/resource/store.js';
 import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep.js';
+import { checkHasResource } from 'xxscreeps/mods/resource/store.js';
+import { extend } from 'xxscreeps/utility/utility.js';
 import { StructureController } from './controller.js';
 
 // Creep extension declaration

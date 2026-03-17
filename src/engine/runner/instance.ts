@@ -1,25 +1,25 @@
-import type { Effect } from 'xxscreeps/utility/types.js';
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
-import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
 import type { RunnerIntent } from './model.js';
-import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
 import type { SubscriptionFor } from 'xxscreeps/engine/db/channel.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import type { World } from 'xxscreeps/game/map.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import config from 'xxscreeps/config/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as Code from 'xxscreeps/engine/db/user/code.js';
-import * as RoomSchema from 'xxscreeps/engine/db/room.js';
-import * as User from 'xxscreeps/engine/db/user/index.js';
-import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model.js';
-import { acquire } from 'xxscreeps/utility/async.js';
 import { createSandbox } from 'xxscreeps/driver/sandbox/index.js';
-import { hooks } from './symbols.js';
+import * as RoomSchema from 'xxscreeps/engine/db/room.js';
+import * as Code from 'xxscreeps/engine/db/user/code.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
+import { acquire } from 'xxscreeps/utility/async.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility.js';
+import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model.js';
+import { hooks } from './symbols.js';
 
 const acquireConnectors = function(invoke) {
-	return async(instance: PlayerInstance) => {
+	return async (instance: PlayerInstance) => {
 		const connectorPromises = invoke(instance);
 		hackyIterableToArray(connectorPromises);
 		const [ effect, connectors ] = await acquire(...connectorPromises);
@@ -121,7 +121,7 @@ export class PlayerInstance {
 	}
 
 	async run(this: PlayerInstance, time: number, visibleRooms: string[], intentRooms: string[]) {
-		const result = await (async() => {
+		const result = await (async () => {
 			// Dispose the current sandbox if the user has pushed new code
 			const wasStale = this.stale;
 			if (wasStale) {
@@ -166,7 +166,7 @@ export class PlayerInstance {
 				};
 				// Allow driver connectors to access room blobs by waiting on this promise
 				await Promise.all([
-					(async() => {
+					(async () => {
 						// Wait for room blobs
 						payload.roomBlobs = await Promise.all(Fn.map(visibleRooms,
 							roomName => this.shard.loadRoomBlob(roomName, time - 1)));
@@ -227,7 +227,7 @@ export class PlayerInstance {
 						fd: 2,
 						data: 'Script was disposed',
 					} ])));
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 				} else if (result.result === 'timedOut') {
 					tasks.push(this.consoleChannel.publish(JSON.stringify([ {
 						fd: 2,

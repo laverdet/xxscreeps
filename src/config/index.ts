@@ -1,10 +1,10 @@
 import type { Schema } from './config.js';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
 import Config from 'xxscreeps/config/mods/import/config.js';
-import data, { configPath, isTopThread } from './raw.js';
 import { merge } from 'xxscreeps/utility/utility.js';
-import { fileURLToPath } from 'url';
+import data, { configPath, isTopThread } from './raw.js';
 import './global.js';
 import './mods/index.js';
 
@@ -16,7 +16,7 @@ if (isTopThread) {
 		} catch (err) {}
 	}();
 	if (schema) {
-		const ajv = new Ajv;
+		const ajv = new Ajv();
 		if (ajv.validate(schema, data) !== true) {
 			throw new Error(`\`${fileURLToPath(configPath)}\`: ${ajv.errorsText()}`);
 		}
@@ -28,9 +28,9 @@ if (isTopThread) {
 // Merge defaults into config data
 const config = {};
 for (const entry of Config) {
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 	merge(config, entry.defaults ?? {});
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 	merge(config, entry.configDefaults ?? {});
 }
 

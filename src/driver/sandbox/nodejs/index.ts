@@ -1,11 +1,12 @@
-import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
 import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
-import util from 'util';
-import vm from 'vm';
-import { createRequire } from 'module';
-import { runOnce } from 'xxscreeps/utility/memoize.js';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
+import { createRequire } from 'node:module';
+import util from 'node:util';
+import vm from 'node:vm';
 import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox/index.js';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
+
 type Runtime = typeof import('./runtime.js');
 
 const defaultRequire = createRequire(import.meta.url);
@@ -16,12 +17,12 @@ const getPathFinderModule = runOnce(() => {
 	return { path: pathFinderBinaryPath, module };
 });
 
-const getCompiledRuntime = runOnce(async() => {
+const getCompiledRuntime = runOnce(async () => {
 	const { source, map } = await compileRuntimeSource('xxscreeps/driver/sandbox/nodejs/runtime', {
 		alias: {
 			process: 'xxscreeps/driver/sandbox/nodejs/process',
 		},
-		externals: ({ request }) => request === 'util' ? 'nodeUtilImport' : undefined,
+		externals: ({ request }) => request === 'node:util' ? 'nodeUtilImport' : undefined,
 	});
 	return {
 		script: new vm.Script(source, { filename: 'runtime.js' }),
@@ -58,8 +59,8 @@ export class NodejsSandbox implements Sandbox {
 		delete context[pf.path];
 		const compiler: Compiler = {
 			// `vm` module only support async operation
-			compile() { throw new Error('Modules are not supported within `unsafeSandbox`') },
-			evaluate() { throw new Error },
+			compile() { throw new Error('Modules are not supported within `unsafeSandbox`'); },
+			evaluate() { throw new Error(); },
 		};
 		const evaluate: Evaluate = (source, filename) => new vm.Script(source, { filename }).runInContext(context);
 		runtime.initialize(defaultRequire, compiler, evaluate, data);

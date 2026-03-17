@@ -22,7 +22,7 @@ export const BODYPART_COST = {
 	attack: 80,
 	carry: 50,
 	heal: 250,
-	// eslint-disable-next-line camelcase
+
 	ranged_attack: 150,
 	tough: 10,
 	claim: 600,

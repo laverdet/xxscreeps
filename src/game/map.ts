@@ -1,16 +1,16 @@
-import type { Adapter } from 'xxscreeps/utility/astar.js';
 import type { ExitType } from './room/find.js';
 import type { Room } from './room/index.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
+import type { Adapter } from 'xxscreeps/utility/astar.js';
 
-import * as C from './constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as Terrain from './terrain.js';
-import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from './position.js';
+import { build } from 'xxscreeps/engine/schema/index.js';
 import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
-import { build } from 'xxscreeps/engine/schema/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import * as C from './constants/index.js';
 import { getDirection } from './direction.js';
+import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from './position.js';
+import * as Terrain from './terrain.js';
 
 // Schema
 const roomTerrain = () => struct({
@@ -155,8 +155,8 @@ export class GameMap {
 			adapter,
 			[ origin ],
 			pos => Math.abs(destination.rx - pos.rx) + Math.abs(destination.ry - pos.ry),
-			routeCallback ?
-				(to, from) => routeCallback(generateRoomName(from.rx, from.ry), generateRoomName(to.rx, to.ry)) :
+			routeCallback
+				? (to, from) => routeCallback(generateRoomName(from.rx, from.ry), generateRoomName(to.rx, to.ry)) :
 				() => 1,
 			pos => Fn.map(Object.values(this.describeExits(generateRoomName(pos.rx, pos.ry))), parseRoomName));
 		if (route) {

@@ -1,7 +1,7 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
 import { Game, registerGlobal } from 'xxscreeps/game/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
 import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 
@@ -16,7 +16,7 @@ const shape = struct(ownedStructureFormat, {
  * rooms. This structure cannot be destroyed.
  */
 export class StructureKeeperLair extends withOverlay(OwnedStructure, shape) {
-	override get structureType() { return C.STRUCTURE_KEEPER_LAIR }
+	override get structureType() { return C.STRUCTURE_KEEPER_LAIR; }
 
 	/**
 	 * Time to spawning of the next Source Keeper.
@@ -28,7 +28,7 @@ export class StructureKeeperLair extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition) {
-	const keeperLair = RoomObject.create(new StructureKeeperLair, pos);
+	const keeperLair = RoomObject.create(new StructureKeeperLair(), pos);
 	keeperLair['#user'] = '3';
 	return keeperLair;
 }

@@ -1,7 +1,7 @@
 import type { Layout } from './layout.js';
 import jsYaml from 'js-yaml';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 function toId(name: string | symbol): string {
 	if (typeof name === 'symbol') {
@@ -25,7 +25,7 @@ export class KaitaiArchiver {
 	private readonly namedTypes: Set<Layout>;
 	constructor(top?: KaitaiArchiver) {
 		this.top = top ?? this;
-		this.namedTypes = top?.namedTypes ?? new Set;
+		this.namedTypes = top?.namedTypes ?? new Set();
 	}
 
 	static archive(layout: Layout, version: number) {
@@ -170,7 +170,7 @@ export class KaitaiArchiver {
 			if ('kaitai' in interceptor) {
 				const { kaitai } = interceptor;
 				holder.seq.push(...kaitai);
-				const tmp = new KaitaiArchiver;
+				const tmp = new KaitaiArchiver();
 				tmp.archive(id, tmp, layout.composed);
 				holder.size = tmp.size;
 			} else {

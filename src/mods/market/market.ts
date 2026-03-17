@@ -10,13 +10,13 @@ export class Market {
 		this.#map = game.map;
 	}
 
-	get credits() { return 0 }
+	get credits() { return 0; }
 	cancelOrder() {}
 	changeOrderPrice() {}
 	createOrder() {}
 	deal() {}
 	extendOrder() {}
-	getAllOrders() { return [] }
+	getAllOrders() { return []; }
 	getHistory() {}
 	getOrderById() {}
 

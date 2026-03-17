@@ -1,13 +1,13 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
+import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { SingleStore, calculateChecked, checkHasCapacity, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 
 export const format = () => compose(shape, StructureLink);
 const shape = declare('Link', struct(ownedStructureFormat, {
@@ -19,13 +19,13 @@ const shape = declare('Link', struct(ownedStructureFormat, {
 }));
 
 export class StructureLink extends withOverlay(OwnedStructure, shape) {
-	override get hitsMax() { return C.LINK_HITS }
-	override get structureType() { return C.STRUCTURE_LINK }
+	override get hitsMax() { return C.LINK_HITS; }
+	override get structureType() { return C.STRUCTURE_LINK; }
 
 	/**
 	 * The amount of game ticks the link has to wait until the next transfer is possible.
 	 */
-	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
+	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
 
 	/**
 	 * Remotely transfer energy to another link at any location in the same room.
@@ -43,7 +43,7 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const link = assign(RoomObject.create(new StructureLink, pos), {
+	const link = assign(RoomObject.create(new StructureLink(), pos), {
 		hits: C.LINK_HITS,
 		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.LINK_CAPACITY),
 	});
@@ -55,8 +55,8 @@ export function create(pos: RoomPosition, owner: string) {
 registerBuildableStructure(C.STRUCTURE_LINK, {
 	obstacle: true,
 	checkPlacement(room, pos) {
-		return checkPlacement(room, pos) === C.OK ?
-			C.CONSTRUCTION_COST.link : null;
+		return checkPlacement(room, pos) === C.OK
+			? C.CONSTRUCTION_COST.link : null;
 	},
 	create(site) {
 		return create(site.pos, site['#user']);

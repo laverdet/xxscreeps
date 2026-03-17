@@ -1,11 +1,11 @@
 import type { RoomPosition } from '../position.js';
 
-import { Game, me } from 'xxscreeps/game/index.js';
-import { CostMatrix } from './cost-matrix.js';
-import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { makeObstacleChecker } from './obstacle.js';
-import { registerGlobal } from '../symbols.js';
 import { search } from 'xxscreeps/driver/path-finder.js';
+import { Game, me } from 'xxscreeps/game/index.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { registerGlobal } from '../symbols.js';
+import { CostMatrix } from './cost-matrix.js';
+import { makeObstacleChecker } from './obstacle.js';
 
 export { registerObstacleChecker } from './obstacle.js';
 export { CostMatrix, search };
@@ -59,11 +59,11 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 			const costMatrix = getOrSet(cachedCostMatrices, `${roomName}:${costMatrixKey}`, () => {
 				// Return early if there's no access to this room
 				const room = Game.rooms[roomName];
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 				if (!room) {
 					return;
 				}
-				const costMatrix = new CostMatrix;
+				const costMatrix = new CostMatrix();
 
 				// Mark obstacles
 				const check = makeObstacleChecker({
@@ -91,7 +91,7 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 
 			// Allow user to augment the cost matrix
 			if (costCallback) {
-				const clonedMatrix = costMatrix?.clone() ?? new CostMatrix;
+				const clonedMatrix = costMatrix?.clone() ?? new CostMatrix();
 				const nextMatrix = costCallback(roomName, clonedMatrix) ?? clonedMatrix;
 				if (nextMatrix instanceof CostMatrix) {
 					return nextMatrix;

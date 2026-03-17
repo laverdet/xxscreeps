@@ -1,6 +1,6 @@
 import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
 import type { World } from 'xxscreeps/game/map.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
 import './runtime.js';
 import { GameBase, Game as GameConstructor, GameState } from './game.js';
 import { IntentManager } from './intents.js';
@@ -64,7 +64,7 @@ export function runAsUser<Type>(userId: string, task: () => Type) {
 function runWithGame<Type>(userId: string, state: GameState, game: () => GameConstructor, task: GameTask<Type>) {
 	return runWithState(state, () => runAsUser(userId, () => {
 		try {
-			const intentManager = intents = new IntentManager;
+			const intentManager = intents = new IntentManager();
 			const instance = userGame = game();
 			return [ intentManager, task(instance) ] as const;
 		} finally {

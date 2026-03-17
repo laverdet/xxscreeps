@@ -1,7 +1,7 @@
-import * as Terminal from './terminal.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { Market } from './market.js';
+import * as Terminal from './terminal.js';
 
 // Export `StructureTerminal` to runtime globals
 registerGlobal(Terminal.StructureTerminal);

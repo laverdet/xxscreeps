@@ -1,28 +1,28 @@
-import type { Direction } from 'xxscreeps/game/position.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
-import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path.js';
-import type { PolyStyle } from 'xxscreeps/mods/visual/visual.js';
 import type { RoomSearchOptions } from 'xxscreeps/game/path-finder/index.js';
+import type { Direction } from 'xxscreeps/game/position.js';
+import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import * as Memory from 'xxscreeps/mods/memory/memory.js';
+import type { PolyStyle } from 'xxscreeps/mods/visual/visual.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { RoomObject, actionLogFormat, create as createObject, getById, format as objectFormat, saveAction } from 'xxscreeps/game/object.js';
-import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
-import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
-import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
-import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
+import { RoomObject, actionLogFormat, create as createObject, getById, format as objectFormat, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
-import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
-import { Structure } from 'xxscreeps/mods/structure/structure.js';
-import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
+import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
-import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
+import * as Memory from 'xxscreeps/mods/memory/memory.js';
+import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
+import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { assign } from 'xxscreeps/utility/utility.js';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 
@@ -58,19 +58,19 @@ const shape = struct(objectFormat, {
 export class Creep extends withOverlay(RoomObject, shape) {
 
 	constructor(idOrArg1?: any, arg2?: any) {
-		super(typeof idOrArg1 === 'string' ? undefined : idOrArg1, arg2)
+		super(typeof idOrArg1 === 'string' ? undefined : idOrArg1, arg2);
 		if (typeof idOrArg1 === 'string') {
-			const it = getById(Creep, idOrArg1)
-			this['#ageTime'] = it['#ageTime']
-			this['#user'] = it['#user']
-			assign<Creep>(this, it)
+			const it = getById(Creep, idOrArg1);
+			this['#ageTime'] = it['#ageTime'];
+			this['#user'] = it['#user'];
+			assign<Creep>(this, it);
 		}
 
 	}
 
-	get carry() { return this.store }
-	get carryCapacity() { return this.store.getCapacity() }
-	@enumerable override get hitsMax() { return this.body.length * 100 }
+	get carry() { return this.store; }
+	get carryCapacity() { return this.store.getCapacity(); }
+	@enumerable override get hitsMax() { return this.body.length * 100; }
 
 	get memory() {
 		if (!this.my) {
@@ -86,16 +86,16 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		(Memory.get().creeps ??= {})[this.name] ??= memory;
 	}
 
-	@enumerable get owner() { return userInfo.get(this['#user']) }
-	@enumerable get spawning() { return this['#ageTime'] === 0 }
-	@enumerable get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined }
-	@enumerable override get my() { return this['#user'] === me }
+	@enumerable get owner() { return userInfo.get(this['#user']); }
+	@enumerable get spawning() { return this['#ageTime'] === 0; }
+	@enumerable get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined; }
+	@enumerable override get my() { return this['#user'] === me; }
 
 	/** @internal */
 	declare tickHitsDelta: number | undefined;
-	override get ['#hasIntent']() { return true }
-	override get ['#lookType']() { return C.LOOK_CREEPS }
-	override get ['#providesVision']() { return true }
+	override get '#hasIntent'() { return true; }
+	override get '#lookType'() { return C.LOOK_CREEPS; }
+	override get '#providesVision'() { return true; }
 
 	/**
 	 * The text message that the creep was saying at the last tick.
@@ -107,11 +107,11 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		}
 	}
 
-	override ['#addToMyGame'](game: GameConstructor) {
+	override '#addToMyGame'(game: GameConstructor) {
 		game.creeps[this.name] = this;
 	}
 
-	override ['#applyDamage'](power: number, type: number, source?: RoomObject) {
+	override '#applyDamage'(power: number, type: number, source?: RoomObject) {
 		if (this.spawning) {
 			return;
 		}
@@ -186,8 +186,8 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		// Find current position
 		type AnyPosition = RoomPosition | RoomPath[number];
 		const convert = (entry: AnyPosition) =>
-			entry instanceof RoomPosition ?
-				entry : new RoomPosition(entry.x, entry.y, this.pos.roomName);
+			entry instanceof RoomPosition
+				? entry : new RoomPosition(entry.x, entry.y, this.pos.roomName);
 		let ii = path.findIndex((pos: AnyPosition) => this.pos.isEqualTo(convert(pos)));
 		if (ii === -1 && !this.pos.isNearTo(convert(path[0]))) {
 			return C.ERR_NOT_FOUND;
@@ -359,7 +359,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	say(message: string, isPublic = false) {
 		return chainIntentChecks(
 			() => checkCommon(this),
-			() => intents.save(this, 'say', `${message}`.substr(0, 10), isPublic));
+			() => intents.save(this, 'say', String(message).substring(0, 10), isPublic));
 	}
 
 	/**
@@ -412,7 +412,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 export function create(pos: RoomPosition, parts: PartType[], name: string, owner: string) {
 	const body = parts.map(type => ({ type, hits: 100, boost: undefined }));
-	const creep = assign(createObject(new Creep, pos), {
+	const creep = assign(createObject(new Creep(), pos), {
 		body,
 		hits: body.length * 100,
 		fatigue: 0,
@@ -473,15 +473,15 @@ export function checkDrop(creep: Creep, resourceType: ResourceType, amount: numb
 
 export function checkMove(creep: Creep, target: Direction | Creep | null) {
 	return chainIntentChecks(
-		target instanceof Creep ?
-			() => chainIntentChecks(
+		target instanceof Creep
+			? () => chainIntentChecks(
 				() => checkCommon(creep),
 				() => checkRange(creep, target, 1)) :
 			() => chainIntentChecks(
 				() => checkCommon(creep, C.MOVE),
 				() => checkFatigue(creep),
-				() => Number.isInteger(target) && target! >= 1 && target! <= 8 ?
-					C.OK : C.ERR_INVALID_ARGS));
+				() => Number.isInteger(target) && target! >= 1 && target! <= 8
+					? C.OK : C.ERR_INVALID_ARGS));
 }
 
 export function checkPull(creep: Creep, target: Creep | null | undefined) {
@@ -496,8 +496,8 @@ export function checkPickup(creep: Creep, target: Resource) {
 		() => checkCommon(creep),
 		() => checkTarget(target, Resource),
 		() => checkRange(creep, target, 1),
-		() => creep.store.getFreeCapacity(target.resourceType) > 0 ?
-			C.OK : C.ERR_FULL);
+		() => creep.store.getFreeCapacity(target.resourceType) > 0
+			? C.OK : C.ERR_FULL);
 }
 
 export function checkTransfer(creep: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount: number) {

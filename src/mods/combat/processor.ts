@@ -1,14 +1,14 @@
 import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import { Game } from 'xxscreeps/game/index.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
-import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
-import { saveAction } from 'xxscreeps/game/object.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Game } from 'xxscreeps/game/index.js';
+import { saveAction } from 'xxscreeps/game/object.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
-import { captureDamage, checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep.js';
 import { mapArea } from 'xxscreeps/game/room/look.js';
+import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
+import { captureDamage, checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { combat: typeof intents }

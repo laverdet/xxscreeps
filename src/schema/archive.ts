@@ -1,7 +1,7 @@
 import type { Layout, StructLayout } from './layout.js';
+import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 import { Fn } from 'xxscreeps/utility/fn.js';
 import { unpackWrappedStruct } from './layout.js';
-import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 
 class ModuleArchiver {
 	private readonly dependencies = new Map<string, Set<string>>();
@@ -10,7 +10,7 @@ class ModuleArchiver {
 	private current = '';
 
 	static archive(layout: Layout) {
-		const instance = new ModuleArchiver;
+		const instance = new ModuleArchiver();
 		const exports = `export default ${render(instance.archive(layout))};\n`;
 		const sorted = new Map([ ...instance.dependencies.entries() ]
 			.sort((left, right) => left[0].localeCompare(right[0])));
@@ -43,7 +43,7 @@ class ModuleArchiver {
 			} else if ('named' in layout) {
 				const name = layout.named;
 				if (!this.dependencies.has(name)) {
-					this.dependencies.set(name, new Set);
+					this.dependencies.set(name, new Set());
 					this.layoutToIdentifier.set(layout, name);
 					const previous = this.current;
 					this.current = name;
@@ -145,7 +145,7 @@ export function archiveLayout(layout: Layout): string {
 export function restoreLayout(archive: string, layoutTemplate: Layout) {
 
 	// Crawl layout template for compositions and named layouts
-	const compositions = new Map<string, Extract<Layout, { 'composed': any }>>();
+	const compositions = new Map<string, Extract<Layout, { composed: any }>>();
 	mapLayout(layoutTemplate, (layout, path) => {
 		if (typeof layout === 'object') {
 			if ('composed' in layout) {

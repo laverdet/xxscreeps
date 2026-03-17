@@ -1,5 +1,5 @@
-import * as C from 'xxscreeps/game/constants/index.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import * as Extractor from './extractor.js';
 import * as Mineral from './mineral.js';

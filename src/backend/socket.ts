@@ -1,20 +1,21 @@
-import type Koa from 'koa';
 import type { BackendContext } from './context.js';
 import type { Context, State } from './index.js';
-import type { Duplex } from 'stream';
+import type Koa from 'koa';
+import type { Server } from 'node:http';
+import type { Duplex } from 'node:stream';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import type { Server } from 'http';
-import { IncomingMessage, ServerResponse } from 'http';
+import { EventEmitter } from 'node:events';
+import { IncomingMessage, ServerResponse } from 'node:http';
+import { Socket } from 'node:net';
 import sockjs from 'sockjs';
 import config from 'xxscreeps/config/index.js';
 import { checkToken, makeToken } from './auth/token.js';
 import { CodeSubscriptions } from './sockets/code.js';
 import { ConsoleSubscriptions } from './sockets/console.js';
-import { EventEmitter } from 'events';
 import { mapSubscription } from './sockets/map.js';
 import { roomSubscription } from './sockets/room.js';
 import { hooks } from './symbols.js';
-import { Socket } from 'net';
+
 const { allowGuestAccess } = config.backend;
 
 declare module './index.js' {
@@ -39,7 +40,7 @@ class FakeResponse extends ServerResponse {
 		public readonly upgradeSocket: Duplex,
 		public readonly head: Buffer,
 	) {
-		super(new IncomingMessage(new Socket));
+		super(new IncomingMessage(new Socket()));
 	}
 }
 
@@ -59,7 +60,7 @@ export function installUpgradeHandlers(koa: Koa<State, Context>, httpServer: Ser
 		callback(request, fakeResponse);
 	});
 
-	koa.use(async(context, next) => {
+	koa.use(async (context, next) => {
 		// Detect and handle FakeResponse
 		const res = context.res;
 		if (res instanceof FakeResponse) {
@@ -83,7 +84,7 @@ export function installUpgradeHandlers(koa: Koa<State, Context>, httpServer: Ser
 export function installSocketHandlers(koa: Koa<State, Context>, context: BackendContext) {
 	// SockJS aggressively injects its listeners at the front of the queue, so we pass it a fake HTTP
 	// server to have better control over the event flow.
-	const httpDelegate = new EventEmitter as Server;
+	const httpDelegate = new EventEmitter() as Server;
 	const socketServer = sockjs.createServer({
 		prefix,
 		log: () => {},
@@ -91,7 +92,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 	socketServer.installHandlers(httpDelegate);
 
 	// Hook into Koa
-	koa.use(async(context, next) => {
+	koa.use(async (context, next) => {
 		// Let mods run first
 		await next();
 		if (context.path === prefix || context.path.startsWith(`${prefix}/`)) {
@@ -108,7 +109,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 	// The rest is regular WebSocket code, no more dragons
 	const handlers = [ ...CodeSubscriptions, ...ConsoleSubscriptions, mapSubscription, roomSubscription, ...hooks.map('subscription') ];
 	socketServer.on('connection', connection => {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 		if (!connection) {
 			// Sometimes Sockjs gives us dead connections on restart..
 			return;
@@ -139,7 +140,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 			const authMessage = /^auth (?<token>.+)$/.exec(message);
 
 			if (authMessage) {
-				(async() => {
+				(async () => {
 					// If this socket has an X-Token header it will take priority over the auth message. This
 					// header is never sent by the client but the authentication middleware can stick it on
 					// the request object.

@@ -1,6 +1,7 @@
-import * as User from 'xxscreeps/engine/db/user/index.js';
 import { hooks } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
+
 const { allowGuestAccess } = config.backend;
 const sendUserInfo = hooks.makeMapped('sendUserInfo');
 

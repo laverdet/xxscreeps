@@ -1,8 +1,8 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
+import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Schema from './code-schema.js';
 import * as User from './index.js';
-import { Channel } from 'xxscreeps/engine/db/channel.js';
 
 export const branchManifestKey = (userId: string) => `${User.infoKey(userId)}/branches`;
 export const buffersKey = (userId: string, branchName: string) =>
@@ -53,11 +53,11 @@ export async function saveContent(db: Database, userId: string, branchName: stri
 	const [ didSwitch ] = await Promise.all([
 		db.data.hset(User.infoKey(userId), 'branch', branchName, { if: 'nx' }),
 		db.data.sadd(branchManifestKey(userId), [ branchName ]),
-		bufferBlob ?
-			db.data.set(buffersKey(userId, branchName), bufferBlob) :
+		bufferBlob
+			? db.data.set(buffersKey(userId, branchName), bufferBlob) :
 			db.data.vdel(buffersKey(userId, branchName)) as Promise<never>,
-		stringBlob ?
-			db.data.set(stringsKey(userId, branchName), stringBlob) :
+		stringBlob
+			? db.data.set(stringsKey(userId, branchName), stringBlob) :
 			db.data.vdel(stringsKey(userId, branchName)) as Promise<never>,
 	]);
 	await getUserCodeChannel(db, userId).publish({ type: 'update', branch: branchName });

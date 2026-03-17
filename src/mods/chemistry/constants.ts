@@ -123,7 +123,7 @@ export const BOOSTS = {
 		UH2O: { attack: 3 },
 		XUH2O: { attack: 4 },
 	},
-	// eslint-disable-next-line camelcase
+
 	ranged_attack: {
 		KO: { rangedAttack: 2, rangedMassAttack: 2 },
 		KHO2: { rangedAttack: 3, rangedMassAttack: 3 },

@@ -3,13 +3,13 @@ import { INTERSHARD_RESOURCES } from './constants.js';
 
 // Register `Game.resources`
 declare module 'xxscreeps/game/game.js' {
-    interface Game {
-        resources: { [key: string]: number };
-    }
+	interface Game {
+		resources: Record<string, number>;
+	}
 }
 hooks.register('gameInitializer', Game => {
-    Game.resources = Object.create(null);
-    for (const key of INTERSHARD_RESOURCES) {
-        Game.resources[key] = 0;
-    }
+	Game.resources = Object.create(null);
+	for (const key of INTERSHARD_RESOURCES) {
+		Game.resources[key] = 0;
+	}
 });

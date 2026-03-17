@@ -1,8 +1,8 @@
-import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Schema } from './index.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
+import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
-import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
 import { compose, declare, enumerated, struct, variant, withOverlay, withType } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
@@ -27,16 +27,16 @@ const shape = struct(RoomObject.format, {
 export class Resource extends withOverlay(RoomObject.RoomObject, shape) {
 
 	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2)
-		if (typeof idOrArg1 === 'string') assign<Resource>(this, RoomObject.getById(Resource, idOrArg1))
+		super(idOrArg1, arg2);
+		if (typeof idOrArg1 === 'string') assign<Resource>(this, RoomObject.getById(Resource, idOrArg1));
 	}
 
-	get energy() { return this.resourceType === C.RESOURCE_ENERGY ? this.amount : undefined }
-	get '#lookType'() { return C.LOOK_RESOURCES }
+	get energy() { return this.resourceType === C.RESOURCE_ENERGY ? this.amount : undefined; }
+	get '#lookType'() { return C.LOOK_RESOURCES; }
 }
 
 export function create(pos: RoomPosition, resourceType: ResourceType, amount: number) {
-	return assign(RoomObject.create(new Resource, pos), {
+	return assign(RoomObject.create(new Resource(), pos), {
 		amount,
 		resourceType,
 	});

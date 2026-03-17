@@ -1,7 +1,7 @@
-import * as C from './constants.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { constant, struct, variant } from 'xxscreeps/schema/index.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { constant, struct, variant } from 'xxscreeps/schema/index.js';
+import * as C from './constants.js';
 import './creep.js';
 
 // Schema types

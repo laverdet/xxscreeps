@@ -1,7 +1,8 @@
-import type { Layout, StructLayout } from './layout.js';
 import type { Package } from './build.js';
 import type { ShapeOf } from './format.js';
+import type { Layout, StructLayout } from './layout.js';
 import { Fn } from 'xxscreeps/utility/fn.js';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { BufferView } from './buffer-view.js';
 import { Variant } from './format.js';
@@ -9,7 +10,6 @@ import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from 
 import { makeTypeScanner } from './scan.js';
 import { entriesWithSymbols } from './symbol.js';
 import { Builder } from './index.js';
-import { runOnce } from 'xxscreeps/utility/memoize.js';
 
 export type Writer<Type = any> = (value: Type, view: BufferView, offset: number, heap: number) => number;
 export type MemberWriter = (value: any, view: BufferView, offset: number, heap: number) => number;
@@ -95,17 +95,17 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 		if (typeof layout === 'string') {
 			// Basic types
 			switch (layout) {
-				case 'int8': return (value, view, offset, heap) => ((view.int8[offset] = value, heap));
-				case 'int16': return (value, view, offset, heap) => ((view.int16[offset >>> 1] = value, heap));
-				case 'int32': return (value, view, offset, heap) => ((view.int32[offset >>> 2] = value, heap));
+				case 'int8': return (value, view, offset, heap) => (view.int8[offset] = value, heap);
+				case 'int16': return (value, view, offset, heap) => (view.int16[offset >>> 1] = value, heap);
+				case 'int32': return (value, view, offset, heap) => (view.int32[offset >>> 2] = value, heap);
 
-				case 'uint8': return (value, view, offset, heap) => ((view.uint8[offset] = value, heap));
-				case 'uint16': return (value, view, offset, heap) => ((view.uint16[offset >>> 1] = value, heap));
-				case 'uint32': return (value, view, offset, heap) => ((view.uint32[offset >>> 2] = value, heap));
+				case 'uint8': return (value, view, offset, heap) => (view.uint8[offset] = value, heap);
+				case 'uint16': return (value, view, offset, heap) => (view.uint16[offset >>> 1] = value, heap);
+				case 'uint32': return (value, view, offset, heap) => (view.uint32[offset >>> 2] = value, heap);
 
-				case 'double': return (value, view, offset, heap) => ((view.double[offset >>> 3] = value, heap));
+				case 'double': return (value, view, offset, heap) => (view.double[offset >>> 3] = value, heap);
 
-				case 'bool': return (value: boolean, view, offset, heap) => ((view.int8[offset] = value ? 1 : 0, heap));
+				case 'bool': return (value: boolean, view, offset, heap) => (view.int8[offset] = value ? 1 : 0, heap);
 
 				case 'buffer': return (value: Uint8Array, view, offset, heap) => {
 					const { length } = value;
@@ -117,7 +117,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 
 				case 'string': return (value: string, view, offset, heap) => {
 					// Attempt to write as latin1 and fall back to utf-16 if needed
-					const string = `${value}`;
+					const string = String(value);
 					const { length } = string;
 					view.int32[offset >>> 2] = heap;
 					for (let ii = 0; ii < length; ++ii) {
@@ -166,7 +166,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 			if ('decompose' in interceptor) {
 				return (value, view, offset, heap) => write(interceptor.decompose(value), view, offset, heap);
 			} else if ('decomposeIntoBuffer' in interceptor) {
-				return (value, view, offset, heap) => ((interceptor.decomposeIntoBuffer(value, view, offset), heap));
+				return (value, view, offset, heap) => (interceptor.decomposeIntoBuffer(value, view, offset), heap);
 			} else {
 				return write;
 			}
@@ -177,7 +177,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 		} else if ('enum' in layout) {
 			// Enumerated types
 			const enumMap = new Map(layout.enum.map((value, ii) => [ value, ii ]));
-			return (value, view, offset, heap) => ((view.uint8[offset] = enumMap.get(value)!, heap));
+			return (value, view, offset, heap) => (view.uint8[offset] = enumMap.get(value)!, heap);
 
 		} else if ('list' in layout) {
 			// Vector with dynamic element size
@@ -280,7 +280,7 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 }
 
 const bufferCache = runOnce(() => BufferView.fromTypedArray(new Uint8Array(1024 * 1024 * 16)));
-export function makeWriter<Type extends Package>(info: Type, builder = new Builder) {
+export function makeWriter<Type extends Package>(info: Type, builder = new Builder()) {
 	const scan = makeTypeScanner(info.layout, builder) ?? ((value, heap) => heap);
 	const write = makeTypeWriter(info.layout, builder);
 	return (value: ShapeOf<Type>, scanFirst = false): Readonly<Uint8Array> => {

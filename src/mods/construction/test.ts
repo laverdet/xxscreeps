@@ -8,7 +8,7 @@ describe('Construction', () => {
 		},
 	});
 
-	test('create site', () => construction(async({ player, tick }) => {
+	test('create site', () => construction(async ({ player, tick }) => {
 		await player('100', Game => {
 			Game.rooms.W1N1.createConstructionSite(25, 25, 'road');
 		});
@@ -18,7 +18,7 @@ describe('Construction', () => {
 			assert(Object.values(Game.constructionSites).length === 1);
 		});
 	}));
-	test('create two sites at same position', () => construction(async({ player, tick }) => {
+	test('create two sites at same position', () => construction(async ({ player, tick }) => {
 		await player('100', Game => {
 			Game.rooms.W1N1.createConstructionSite(25, 25, 'road');
 			Game.rooms.W1N1.createConstructionSite(25, 25, 'rampart');

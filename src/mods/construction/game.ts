@@ -1,9 +1,9 @@
-import * as C from 'xxscreeps/game/constants/index.js';
-import * as ConstructionSite from './construction-site.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { constant, struct, variant } from 'xxscreeps/schema/index.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
+import { constant, struct, variant } from 'xxscreeps/schema/index.js';
+import * as ConstructionSite from './construction-site.js';
 import './creep.js';
 import './position.js';
 import './room.js';

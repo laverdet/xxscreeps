@@ -1,11 +1,11 @@
-import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
+import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import ivm from 'isolated-vm';
-import config from 'xxscreeps/config/index.js';
 import * as ivmInspect from 'ivm-inspect';
-import { runOnce } from 'xxscreeps/utility/memoize.js';
-import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox/index.js';
+import config from 'xxscreeps/config/index.js';
 import { hooks } from 'xxscreeps/driver/index.js';
+import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox/index.js';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
 
 type Runtime = typeof import('xxscreeps/driver/sandbox/isolated/runtime.js');
 
@@ -22,7 +22,7 @@ const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sa
 		'xxscreeps/driver/private/symbol.js': 'xxscreeps/driver/private/symbol/isolated-vm.js',
 	},
 	externals: ({ request }) =>
-		request === 'util' ? 'nodeUtilImport' :
+		request === 'node:util' ? 'nodeUtilImport' :
 		request === 'isolated-vm' ? 'ivm' : undefined,
 }));
 
@@ -65,7 +65,7 @@ export class IsolatedSandbox implements Sandbox {
 			}(),
 			context.global.set('global', context.global.derefInto()),
 			context.global.set('ivm', ivm),
-			context.global.set('exports', {}, { copy: true })
+			context.global.set('exports', {}, { copy: true }),
 		]);
 
 		// Initialize runtime.ts and load player code + memory

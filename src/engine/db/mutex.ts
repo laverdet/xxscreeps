@@ -1,6 +1,6 @@
-import type { Effect } from 'xxscreeps/utility/types.js';
-import type { KeyValProvider, PubSubProvider } from './storage/provider.js';
 import type { Subscription } from './channel.js';
+import type { KeyValProvider, PubSubProvider } from './storage/provider.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
 import { Channel } from './channel.js';
 import { KeyvalScript } from './storage/script.js';
@@ -67,7 +67,7 @@ export class Mutex {
 			return;
 		}
 		// Must wait for lock
-		const lockDefer = new Deferred;
+		const lockDefer = new Deferred();
 		const tryLock = () => {
 			this.lockable.lock().then(locked => {
 				if (locked) {
@@ -169,7 +169,7 @@ class Lock {
 		if (await this.keyval.set(this.name, this.value, { px: 30000, if: 'nx' }) === null) {
 			return false;
 		} else {
-			this.interval = setInterval(() => mustNotReject(async() => {
+			this.interval = setInterval(() => mustNotReject(async () => {
 				if (await this.keyval.set(this.name, this.value, { px: 30000, if: 'xx' }) === null) {
 					throw new Error('Lock expired unexpectedly');
 				}

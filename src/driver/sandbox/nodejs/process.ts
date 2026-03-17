@@ -1,4 +1,5 @@
 import { process } from './runtime.js';
+
 declare const processInfo: any;
 
 export const { arch, platform, version } = processInfo;

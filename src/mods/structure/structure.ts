@@ -1,16 +1,16 @@
-import type { AnyRoomObject, Room } from 'xxscreeps/game/room/index.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import * as C from 'xxscreeps/game/constants/index.js';
+import type { AnyRoomObject, Room } from 'xxscreeps/game/room/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
-import { compose, declare, struct, withOverlay } from 'xxscreeps/schema/index.js';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
-import { chainIntentChecks } from 'xxscreeps/game/checks.js';
-import { createRuin } from './ruin.js';
+import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
+import { compose, declare, struct, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { createRuin } from './ruin.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
 
@@ -33,26 +33,26 @@ const ownedShape = struct(structureFormat, {
 export class Structure extends withOverlay(RoomObject, shape) {
 
 	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2)
-		if (typeof idOrArg1 === 'string') assign<Structure>(this, getById(Structure, idOrArg1))
+		super(idOrArg1, arg2);
+		if (typeof idOrArg1 === 'string') assign<Structure>(this, getById(Structure, idOrArg1));
 	}
 
 	/**
 	 * One of the `STRUCTURE_*` constants.
 	 */
-	@enumerable get structureType(): string { throw new Error }
-	get '#lookType'() { return C.LOOK_STRUCTURES }
+	@enumerable get structureType(): string { throw new Error(); }
+	get '#lookType'() { return C.LOOK_STRUCTURES; }
 
 	/**
 	 * The current amount of hit points of the structure.
 	 */
-	@enumerable override get hits(): number | undefined { return undefined }
-	override set hits(hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure') }
+	@enumerable override get hits(): number | undefined { return undefined; }
+	override set hits(hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure'); }
 
 	/**
 	 * The total amount of hit points of the structure.
 	 */
-	@enumerable override get hitsMax(): number | undefined { return undefined }
+	@enumerable override get hitsMax(): number | undefined { return undefined; }
 
 	/**
 	 * Destroy this structure immediately.
@@ -75,7 +75,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return true;
 	}
 
-	override ['#destroy']() {
+	override '#destroy'() {
 		this.room['#insertObject'](createRuin(this));
 		super['#destroy']();
 	}
@@ -86,13 +86,13 @@ export class Structure extends withOverlay(RoomObject, shape) {
  * `FIND_MY_STRUCTURES` and `FIND_HOSTILE_STRUCTURES` constants.
  */
 export class OwnedStructure extends withOverlay(Structure, ownedShape) {
-	override get ['#hasIntent']() { return true }
-	override get ['#providesVision']() { return true }
+	override get '#hasIntent'() { return true; }
+	override get '#providesVision'() { return true; }
 
 	/**
 	 * An object with the structure’s owner info
 	 */
-	@enumerable get owner() { return userInfo.get(this['#user']!) }
+	@enumerable get owner() { return userInfo.get(this['#user']!); }
 
 	/**
 	 * Whether this is your own structure.
@@ -102,7 +102,7 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 		return user === null ? undefined : user === me;
 	}
 
-	override ['#addToMyGame'](game: GameConstructor) {
+	override '#addToMyGame'(game: GameConstructor) {
 		game.structures[this.id] = this as never;
 	}
 }

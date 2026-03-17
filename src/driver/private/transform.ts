@@ -168,7 +168,7 @@ export default function(): PluginObj {
 	return {
 		visitor: {
 			Program(path) {
-				path.traverse(visitor, { program: path, methods: new Map });
+				path.traverse(visitor, { program: path, methods: new Map() });
 				path.stop();
 			},
 		},

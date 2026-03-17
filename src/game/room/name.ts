@@ -40,11 +40,11 @@ export function parseRoomName(name: string) {
 	const horizontalDir = name.charAt(0);
 	const verticalDir = name.charAt(verticalPos);
 	return {
-		rx: horizontalDir === 'W' || horizontalDir === 'w' ?
-			kMaxWorldSize2 - rx - 1 :
+		rx: horizontalDir === 'W' || horizontalDir === 'w'
+			? kMaxWorldSize2 - rx - 1 :
 			kMaxWorldSize2 + rx,
-		ry: verticalDir === 'N' || verticalDir === 'n' ?
-			kMaxWorldSize2 - ry - 1 :
+		ry: verticalDir === 'N' || verticalDir === 'n'
+			? kMaxWorldSize2 - ry - 1 :
 			kMaxWorldSize2 + ry,
 	};
 }

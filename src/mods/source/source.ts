@@ -1,8 +1,8 @@
-import * as C from './constants.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
 import { Game, registerGlobal } from 'xxscreeps/game/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import * as C from './constants.js';
 
 export const format = declare('Source', () => compose(shape, Source));
 const shape = struct(RoomObject.format, {
@@ -16,17 +16,17 @@ const shape = struct(RoomObject.format, {
 export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 
 	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2)
-		if (typeof idOrArg1 === 'string') assign<Source>(this, RoomObject.getById(Source, idOrArg1))
+		super(idOrArg1, arg2);
+		if (typeof idOrArg1 === 'string') assign<Source>(this, RoomObject.getById(Source, idOrArg1));
 	}
 
 	@enumerable get ticksToRegeneration() {
 		return this['#nextRegenerationTime'] === 0 ? undefined : Math.max(0, this['#nextRegenerationTime'] - Game.time);
 	}
 
-	get '#lookType'() { return C.LOOK_SOURCES }
+	get '#lookType'() { return C.LOOK_SOURCES; }
 
-	override ['#roomStatusDidChange'](level: number, userId: string | undefined | null) {
+	override '#roomStatusDidChange'(level: number, userId: string | undefined | null) {
 		this.energyCapacity = function() {
 			if (userId === undefined) {
 				return C.SOURCE_ENERGY_KEEPER_CAPACITY;

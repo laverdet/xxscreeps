@@ -1,11 +1,10 @@
-/* eslint-disable prefer-named-capture-group */
 import 'xxscreeps/engine/db/room.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import fs from 'fs/promises';
+import { spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { configPath } from 'xxscreeps/config/index.js';
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
 import { mods } from 'xxscreeps/config/mods/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { globalNames } from 'xxscreeps/game/runtime.js';
 
 // Write tsconfig

@@ -3,9 +3,9 @@ import { OpenClosed } from './open-closed.js';
 import { typedArrayFor } from './pack.js';
 
 export type Adapter<Type> = {
-	id(value: Type): number | null;
-	value(id: number): Type;
-	sizeof(): number;
+	id: (value: Type) => number | null;
+	value: (id: number) => Type;
+	sizeof: () => number;
 };
 
 export function astar<Type>(

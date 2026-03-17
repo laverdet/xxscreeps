@@ -1,4 +1,4 @@
-/* eslint-disable camelcase */
+
 // https://github.com/WebAssembly/WASI/blob/main/phases/snapshot/witx/wasi_snapshot_preview1.wit
 import * as C from './constants.js';
 

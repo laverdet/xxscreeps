@@ -1,6 +1,6 @@
 import type { SubscriptionEndpoint } from '../socket.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
+import { Fn } from 'xxscreeps/utility/fn.js';
 
 const CodeSubscription: SubscriptionEndpoint = {
 	pattern: /^user:[^/]+\/code$/,
@@ -11,7 +11,7 @@ const CodeSubscription: SubscriptionEndpoint = {
 		}
 		return Code.getUserCodeChannel(this.context.db, this.user).listen(message => {
 			if (message.type === 'update') {
-				(async() => {
+				(async () => {
 					const modules = await Code.loadContent(this.context.db, this.user!, message.branch);
 					if (modules) {
 						this.send(JSON.stringify({

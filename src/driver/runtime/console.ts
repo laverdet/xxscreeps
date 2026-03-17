@@ -1,4 +1,4 @@
-import { formatWithOptions, inspect } from 'util';
+import { formatWithOptions, inspect } from 'node:util';
 
 export function setupConsole(write: (fd: number, payload: string) => void) {
 	const format = (args: any[]) =>

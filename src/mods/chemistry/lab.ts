@@ -1,15 +1,15 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
+import * as RoomObject from 'xxscreeps/game/object.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { LabStore, labStoreFormat } from './store.js';
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
+import { assign } from 'xxscreeps/utility/utility.js';
 import { checkHasCapacity, checkHasResource } from '../resource/store.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import { LabStore, labStoreFormat } from './store.js';
 
 export const format = declare('Lab', () => compose(shape, StructureLab));
 const shape = struct(ownedStructureFormat, {
@@ -21,19 +21,19 @@ const shape = struct(ownedStructureFormat, {
 });
 
 export class StructureLab extends withOverlay(OwnedStructure, shape) {
-	override get hitsMax() { return C.LAB_HITS }
-	override get structureType() { return C.STRUCTURE_LAB }
-	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time) }
-	@enumerable get mineralType() { return this.store['#mineralType'] }
+	override get hitsMax() { return C.LAB_HITS; }
+	override get structureType() { return C.STRUCTURE_LAB; }
+	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
+	@enumerable get mineralType() { return this.store['#mineralType']; }
 
 	/** @deprecated */
-	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY] }
+	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY]; }
 	/** @deprecated */
-	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) }
+	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
 	/** @deprecated */
-	@enumerable get mineralAmount() { return this.store[this.mineralType as keyof typeof labStoreFormat] }
+	@enumerable get mineralAmount() { return this.store[this.mineralType as keyof typeof labStoreFormat]; }
 	/** @deprecated */
-	@enumerable get mineralCapacity() { return C.LAB_MINERAL_CAPACITY }
+	@enumerable get mineralCapacity() { return C.LAB_MINERAL_CAPACITY; }
 
 	/**
 	 * Produce mineral compounds using reagents from two other labs. The same input labs can be used
@@ -49,9 +49,9 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const lab = assign(RoomObject.create(new StructureLab, pos), {
+	const lab = assign(RoomObject.create(new StructureLab(), pos), {
 		hits: C.LAB_HITS,
-		store: new LabStore,
+		store: new LabStore(),
 	});
 	lab['#user'] = owner;
 	return lab;
@@ -61,8 +61,8 @@ export function create(pos: RoomPosition, owner: string) {
 registerBuildableStructure(C.STRUCTURE_LAB, {
 	obstacle: true,
 	checkPlacement(room, pos) {
-		return checkPlacement(room, pos) === C.OK ?
-			C.CONSTRUCTION_COST.lab : null;
+		return checkPlacement(room, pos) === C.OK
+			? C.CONSTRUCTION_COST.lab : null;
 	},
 	create(site) {
 		return create(site.pos, site['#user']);

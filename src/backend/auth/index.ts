@@ -1,8 +1,9 @@
 import type { Middleware } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
+import { findUserByProvider } from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { checkToken, makeToken } from './token.js';
-import { findUserByProvider } from 'xxscreeps/engine/db/user/index.js';
+
 const { allowGuestAccess } = config.backend;
 
 declare module 'xxscreeps/backend/index.js' {
@@ -20,9 +21,9 @@ declare module 'xxscreeps/backend/index.js' {
 }
 
 export function authentication(): Middleware {
-	return async(context, next) => {
-		// eslint-disable-next-line @typescript-eslint/require-await
-		context.authenticateForProvider = async(provider: string, providerId: string) => {
+	return async (context, next) => {
+
+		context.authenticateForProvider = async (provider: string, providerId: string) => {
 			if (context.state.token !== undefined) {
 				throw new Error('Already flushed');
 			}
@@ -38,7 +39,7 @@ export function authentication(): Middleware {
 			}
 		};
 
-		context.flushToken = async(initializeGuest = false) => {
+		context.flushToken = async (initializeGuest = false) => {
 			if (context.state.token !== undefined) {
 				return context.state.token;
 			}
@@ -55,7 +56,7 @@ export function authentication(): Middleware {
 			// Set X-Token on state, and also fake the header on the request. This may be picked up by the
 			// socket handler.
 			context.req.headers['x-token'] =
-			context.state.token = token;
+				context.state.token = token;
 			// Send X-Token response header
 			if (token !== undefined && context.respond !== false) {
 				context.set('X-Token', token);
@@ -102,12 +103,12 @@ export function authentication(): Middleware {
 				});
 				try {
 					await next();
-					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 					if (!didSet) {
 						context.state.userId = undefined;
 					}
 				} catch (err) {
-					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 					if (err === didThrow) {
 						// Send failure to force the Steam client to reauthenticate
 						context.status = 401;

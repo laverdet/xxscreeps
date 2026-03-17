@@ -56,8 +56,8 @@ const SetUsernameEndpoint: Endpoint = {
 		}
 
 		// Register
-		const providers = [{ provider, id: providerId }]
-		if (email) providers.push({ provider: 'email', id: email })
+		const providers = [ { provider, id: providerId } ];
+		if (email) providers.push({ provider: 'email', id: email });
 		await User.create(context.db, newUserId, username, providers);
 		context.state.userId = newUserId;
 		context.state.newUserId = undefined;

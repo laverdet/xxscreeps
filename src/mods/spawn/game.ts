@@ -1,9 +1,9 @@
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import * as Extension from './extension.js';
-import * as Spawn from './spawn.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers } from 'xxscreeps/game/room/index.js';
-import { registerVariant } from 'xxscreeps/engine/schema/index.js';
+import * as Extension from './extension.js';
+import * as Spawn from './spawn.js';
 
 // Add `spawns` to global `Game` object
 declare module 'xxscreeps/game/game.js' {

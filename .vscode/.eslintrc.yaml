@@ -1,7 +1,0 @@
-extends: ../.eslintrc.yaml
-rules:
-  eol-last: 'off'
-  no-debugger: 'off'
-  no-empty: 'off'
-  no-trailing-spaces: 'off'
-  no-unreachable: 'off'

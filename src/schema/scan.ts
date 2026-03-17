@@ -69,7 +69,7 @@ export function makeTypeScanner(layout: Layout, builder: Builder): Scanner | und
 				case 'buffer': return (value: Uint8Array, heap) => heap + value.length;
 
 				case 'string': return (value: string, heap) => {
-					const string = `${value}`;
+					const string = String(value);
 					const { length } = string;
 					for (let ii = 0; ii < length; ++ii) {
 						const code = string.charCodeAt(ii);
