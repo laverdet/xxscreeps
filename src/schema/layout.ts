@@ -234,7 +234,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 				return (
 					right.traits.size - left.traits.size ||
 					right.traits.align - left.traits.align ||
-					nameOf(left.key).localeCompare(nameOf(right.key))
+					Fn.primitiveComparator(nameOf(left.key), nameOf(right.key))
 				);
 			});
 

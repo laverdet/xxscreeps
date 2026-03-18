@@ -55,7 +55,7 @@ export class KaitaiArchiver {
 
 	render(): any {
 		function sort(map: Map<string, any>) {
-			return [ ...map ].sort((left, right) => left[0].localeCompare(right[0]));
+			return [ ...map ].sort((left, right) => Fn.primitiveComparator(left[0], right[0]));
 		}
 		return {
 			seq: this.seq,

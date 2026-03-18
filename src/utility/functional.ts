@@ -199,6 +199,17 @@ export function minimum<Type>(iterable: Iterable<Type>, callback: (left: any, ri
 	return minimum;
 }
 
+type PrimitiveComparable = bigint | boolean | string;
+
+/**
+ * A comparator which can be used mainly for strings, but also bigint / booleans if you feel the
+ * need for that kind of thing. You could use it for numbers too, but that's better suited to
+ * `numeric` so the types don't permit it in that case.
+ */
+export function primitiveComparator<Type extends PrimitiveComparable>(left: Type, right: Type): number {
+	return left < right ? -1 : left === right ? 0 : 1;
+}
+
 // Returns a range of numbers
 export function range(count?: number): Iterable<number>;
 // eslint-disable-next-line @typescript-eslint/unified-signatures

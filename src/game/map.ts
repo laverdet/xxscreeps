@@ -24,7 +24,7 @@ export const schema = build(declare('World', compose(vector(struct({
 	compose: world => new Map(world.map(room => [ room.name, room.info ])),
 	decompose: (world: Map<string, TypeOf<typeof roomTerrain>>) => {
 		const vector = [ ...Fn.map(world.entries(), ([ name, info ]) => ({ name, info })) ];
-		vector.sort((left, right) => left.name.localeCompare(right.name));
+		vector.sort((left, right) => Fn.primitiveComparator(left.name, right.name));
 		return vector;
 	},
 })));
