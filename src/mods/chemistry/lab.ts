@@ -1,3 +1,4 @@
+import type { Creep } from 'xxscreeps/mods/creep/creep.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
@@ -45,6 +46,21 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 		return chainIntentChecks(
 			() => checkRunReaction(this, lab1, lab2),
 			() => intents.save(this, 'runReaction', lab1.id, lab2.id));
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	boostCreep(creep: Creep, bodyPartsCount?: number) {
+		return C.ERR_INVALID_TARGET as C.ErrorCode;
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	reverseReaction(lab1: StructureLab, lab2: StructureLab) {
+		return C.ERR_INVALID_TARGET as C.ErrorCode;
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	unboostCreep(creep: Creep) {
+		return C.ERR_INVALID_TARGET as C.ErrorCode;
 	}
 }
 

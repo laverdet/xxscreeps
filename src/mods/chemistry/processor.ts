@@ -16,7 +16,7 @@ const intents = [
 			lab.store['#add'](product, C.LAB_REACTION_AMOUNT);
 			left.store['#subtract'](left.mineralType!, C.LAB_REACTION_AMOUNT);
 			right.store['#subtract'](right.mineralType!, C.LAB_REACTION_AMOUNT);
-			lab['#cooldownTime'] = Game.time + C.LAB_COOLDOWN;
+			lab['#cooldownTime'] = Game.time + C.REACTION_TIME[product as keyof typeof C.REACTION_TIME];
 			saveAction(lab, 'reaction1', left.pos);
 			saveAction(lab, 'reaction2', left.pos);
 			context.didUpdate();
