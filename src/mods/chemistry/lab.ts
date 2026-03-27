@@ -54,9 +54,10 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 			() => intents.save(this, 'boostCreep', creep.id, bodyPartsCount ?? 0));
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	reverseReaction(lab1: StructureLab, lab2: StructureLab) {
-		return C.ERR_INVALID_TARGET as C.ErrorCode;
+		return chainIntentChecks(
+			() => checkReverseReaction(this, lab1, lab2),
+			() => intents.save(this, 'reverseReaction', lab1.id, lab2.id));
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -115,6 +116,58 @@ export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefin
 				p => !p.boost && (C.BOOSTS as any)[p.type]?.[mineralType!]).length;
 			if (!nonBoostedCount || (bodyPartsCount && bodyPartsCount > nonBoostedCount)) {
 				return C.ERR_NOT_FOUND;
+			}
+		});
+}
+
+export function getReactionVariants(compound: ResourceType): [ResourceType, ResourceType][] {
+	const result: [ResourceType, ResourceType][] = [];
+	const reactions = C.REACTIONS as Record<string, Record<string, string>>;
+	for (const r1 in reactions) {
+		for (const r2 in reactions[r1]) {
+			if (reactions[r1][r2] === compound) {
+				result.push([ r1 as ResourceType, r2 as ResourceType ]);
+			}
+		}
+	}
+	return result;
+}
+
+export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | null | undefined, lab2: StructureLab | null | undefined) {
+	return chainIntentChecks(
+		() => checkMyStructure(lab, StructureLab),
+		() => checkTarget(lab1, StructureLab),
+		() => checkTarget(lab2, StructureLab),
+		() => checkRange(lab, lab1!, 2),
+		() => checkRange(lab, lab2!, 2),
+		() => {
+			if (lab1!.id === lab2!.id) {
+				return C.ERR_INVALID_ARGS;
+			}
+		},
+		() => {
+			if (lab.cooldown) {
+				return C.ERR_TIRED;
+			}
+		},
+		() => checkHasResource(lab, lab.mineralType, C.LAB_REACTION_AMOUNT),
+		() => {
+			const mineralType = lab.mineralType!;
+			const variants = getReactionVariants(mineralType);
+			const variant = variants.find(v =>
+				(!lab1!.mineralType || lab1!.mineralType === v[0]) &&
+				(!lab2!.mineralType || lab2!.mineralType === v[1]));
+			if (!variant) {
+				return C.ERR_INVALID_ARGS;
+			}
+			// Check destination labs can receive reagents
+			const lab1Mineral = lab1!.mineralType;
+			const lab2Mineral = lab2!.mineralType;
+			if (lab1Mineral && (lab1!.store[lab1Mineral as keyof typeof labStoreFormat] + C.LAB_REACTION_AMOUNT) > C.LAB_MINERAL_CAPACITY) {
+				return C.ERR_FULL;
+			}
+			if (lab2Mineral && (lab2!.store[lab2Mineral as keyof typeof labStoreFormat] + C.LAB_REACTION_AMOUNT) > C.LAB_MINERAL_CAPACITY) {
+				return C.ERR_FULL;
 			}
 		});
 }

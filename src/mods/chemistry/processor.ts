@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { Creep, calculateCarry } from 'xxscreeps/mods/creep/creep.js';
-import { StructureLab, checkBoostCreep, checkRunReaction, getReactionProduct } from './lab.js';
+import { StructureLab, checkBoostCreep, checkReverseReaction, checkRunReaction, getReactionProduct, getReactionVariants } from './lab.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { chemistry: typeof intents }
@@ -60,6 +60,25 @@ const intents = [
 		creep.store['#capacity'] = calculateCarry(creep.body);
 
 		saveAction(creep, 'healed', lab.pos);
+		context.didUpdate();
+	}),
+
+	registerIntentProcessor(StructureLab, 'reverseReaction', {}, (lab, context, id1: string, id2: string) => {
+		const lab1 = Game.getObjectById<StructureLab>(id1)!;
+		const lab2 = Game.getObjectById<StructureLab>(id2)!;
+		if (checkReverseReaction(lab, lab1, lab2) !== C.OK) {
+			return;
+		}
+		const mineralType = lab.mineralType!;
+		const variants = getReactionVariants(mineralType);
+		const variant = variants.find(v =>
+			(!lab1.mineralType || lab1.mineralType === v[0]) &&
+			(!lab2.mineralType || lab2.mineralType === v[1]))!;
+
+		lab.store['#subtract'](mineralType, C.LAB_REACTION_AMOUNT);
+		lab1.store['#add'](variant[0], C.LAB_REACTION_AMOUNT);
+		lab2.store['#add'](variant[1], C.LAB_REACTION_AMOUNT);
+		lab['#cooldownTime'] = Game.time + C.REACTION_TIME[mineralType as keyof typeof C.REACTION_TIME];
 		context.didUpdate();
 	}),
 ];
