@@ -125,7 +125,7 @@ describe('Chemistry', () => {
 					'GO', 300, 2000));
 				// Lab with WORK boost mineral (UO = harvest) + energy
 				room['#insertObject'](createLabWithResources(
-					new RoomPosition(27, 25, 'W1N1'), '100',
+					new RoomPosition(26, 25, 'W1N1'), '100',
 					'UO', 300, 2000));
 				// Creep with mixed body adjacent to labs
 				room['#insertObject'](createCreep(
@@ -503,11 +503,11 @@ describe('Chemistry', () => {
 					'UO', 300, 2000));
 				// Lab with KH (carry boost) + energy
 				room['#insertObject'](createLabWithResources(
-					new RoomPosition(27, 25, 'W1N1'), '100',
+					new RoomPosition(26, 25, 'W1N1'), '100',
 					'KH', 300, 2000));
 				// Lab with ZO (fatigue/move boost) + energy
 				room['#insertObject'](createLabWithResources(
-					new RoomPosition(23, 25, 'W1N1'), '100',
+					new RoomPosition(24, 25, 'W1N1'), '100',
 					'ZO', 300, 2000));
 				// Worker creep adjacent to labs
 				room['#insertObject'](createCreep(

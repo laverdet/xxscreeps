@@ -110,7 +110,7 @@ const intents = [
 					let weight = 0;
 					let member: Creep | undefined = creep;
 					while (true) {
-						power += CreepLib.calculatePower(member, C.MOVE, 1);
+						power += CreepLib.calculatePower(member, C.MOVE, 1, 'fatigue');
 						weight += CreepLib.calculateWeight(member);
 						const puller = pulledToPuller.get(member);
 						if (puller) {
@@ -273,7 +273,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 	const puller = pulledToPuller.get(creep);
 	if (creep.fatigue > 0 || puller) {
 		// Calculate power, reduce own fatigue
-		let power = CreepLib.calculatePower(creep, C.MOVE, 2);
+		let power = CreepLib.calculatePower(creep, C.MOVE, 2, 'fatigue');
 		const delta = Math.min(creep.fatigue, power);
 		creep.fatigue -= delta;
 		power -= delta;

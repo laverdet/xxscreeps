@@ -1,6 +1,6 @@
-import type { Creep } from 'xxscreeps/mods/creep/creep.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
@@ -48,9 +48,10 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 			() => intents.save(this, 'runReaction', lab1.id, lab2.id));
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	boostCreep(creep: Creep, bodyPartsCount?: number) {
-		return C.ERR_INVALID_TARGET as C.ErrorCode;
+		return chainIntentChecks(
+			() => checkBoostCreep(this, creep, bodyPartsCount),
+			() => intents.save(this, 'boostCreep', creep.id, bodyPartsCount ?? 0));
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -93,6 +94,29 @@ declare module 'xxscreeps/game/runtime.js' {
 
 export function getReactionProduct(mineral1?: ResourceType, mineral2?: ResourceType) {
 	return (C.REACTIONS as Partial<Record<string, Partial<Record<string, ResourceType>>>>)[mineral1!]?.[mineral2!];
+}
+
+export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefined, bodyPartsCount?: number) {
+	const mineralType = lab.mineralType;
+	return chainIntentChecks(
+		() => checkMyStructure(lab, StructureLab),
+		() => checkTarget(creep, Creep),
+		() => checkRange(lab, creep!, 1),
+		() => {
+			if (lab.store[C.RESOURCE_ENERGY] < C.LAB_BOOST_ENERGY) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+			}
+			if (!mineralType || lab.store[mineralType as keyof typeof labStoreFormat] < C.LAB_BOOST_MINERAL) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+			}
+		},
+		() => {
+			const nonBoostedCount = creep!.body.filter(
+				p => !p.boost && (C.BOOSTS as any)[p.type]?.[mineralType!]).length;
+			if (!nonBoostedCount || (bodyPartsCount && bodyPartsCount > nonBoostedCount)) {
+				return C.ERR_NOT_FOUND;
+			}
+		});
 }
 
 export function checkRunReaction(lab: StructureLab, left: StructureLab, right: StructureLab) {

@@ -15,7 +15,7 @@ import { StructureKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';
 
 registerHarvestProcessor(Source, (creep, source) => {
-	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER);
+	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER, 'harvest');
 	const energy = Math.min(source.energy, power);
 	const overflow = Math.max(energy - creep.store.getFreeCapacity('energy'), 0);
 	creep.store['#add'](C.RESOURCE_ENERGY, energy - overflow);

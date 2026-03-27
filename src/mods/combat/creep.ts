@@ -101,7 +101,7 @@ Creep.prototype['#applyDamage'] = function(this: Creep, power, type, source) {
 			source instanceof Creep &&
 			!this.room.controller?.safeMode
 	) {
-		const counterAttack = calculatePower(this, C.ATTACK, C.ATTACK_POWER);
+		const counterAttack = calculatePower(this, C.ATTACK, C.ATTACK_POWER, 'attack');
 		if (counterAttack) {
 			const damage = captureDamage(source, counterAttack, C.EVENT_ATTACK_TYPE_HIT_BACK, null);
 			if (damage > 0) {
