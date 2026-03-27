@@ -432,11 +432,14 @@ describe('Chemistry', () => {
 			await player('100', Game => {
 				const creep = Game.creeps.unboosted;
 				// LAB_UNBOOST_MINERAL (15) per boosted part: 2 TOUGH parts = 30 GO dropped
+				// After 1 tick of decay: ceil(30/1000) = 1 lost
+				const expectedDrop = 2 * C.LAB_UNBOOST_MINERAL;
+				const expectedAfterDecay = expectedDrop - Math.ceil(expectedDrop / C.ENERGY_DECAY);
 				const resources = creep.room.lookForAt(C.LOOK_RESOURCES, creep.pos);
 				const goResource = resources.find(r => r.resourceType === 'GO');
 				assert.ok(goResource, 'GO resource should be dropped at creep position');
-				assert.strictEqual(goResource!.amount, 2 * C.LAB_UNBOOST_MINERAL,
-					'dropped amount should be LAB_UNBOOST_MINERAL per boosted part');
+				assert.strictEqual(goResource!.amount, expectedAfterDecay,
+					'dropped amount should be LAB_UNBOOST_MINERAL per boosted part (minus 1 tick decay)');
 			});
 		}));
 
@@ -479,8 +482,10 @@ describe('Chemistry', () => {
 			});
 			await tick();
 			// Move the creep far away via poke
-			await poke('W1N1', '100', Game => {
-				Game.creeps.unboosted['#posId'] = new RoomPosition(10, 10, 'W1N1')['#id'];
+			await poke('W1N1', '100', (Game, room) => {
+				const creep = Game.creeps.unboosted;
+				creep.pos.x = 10;
+				creep.pos.y = 10;
 			});
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);

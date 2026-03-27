@@ -3,7 +3,8 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { Creep, calculateCarry } from 'xxscreeps/mods/creep/creep.js';
-import { StructureLab, checkBoostCreep, checkReverseReaction, checkRunReaction, getReactionProduct, getReactionVariants } from './lab.js';
+import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
+import { StructureLab, calcTotalReactionsTime, checkBoostCreep, checkReverseReaction, checkRunReaction, checkUnboostCreep, getReactionProduct, getReactionVariants } from './lab.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { chemistry: typeof intents }
@@ -79,6 +80,49 @@ const intents = [
 		lab1.store['#add'](variant[0], C.LAB_REACTION_AMOUNT);
 		lab2.store['#add'](variant[1], C.LAB_REACTION_AMOUNT);
 		lab['#cooldownTime'] = Game.time + C.REACTION_TIME[mineralType as keyof typeof C.REACTION_TIME];
+		context.didUpdate();
+	}),
+
+	registerIntentProcessor(StructureLab, 'unboostCreep', {}, (lab, context, creepId: string) => {
+		const creep = Game.getObjectById<Creep>(creepId)!;
+		if (checkUnboostCreep(lab, creep) !== C.OK) {
+			return;
+		}
+
+		// Count boosted parts by boost type
+		const boostedParts: Record<string, number> = {};
+		for (const part of creep.body) {
+			if (part.boost) {
+				boostedParts[part.boost] = (boostedParts[part.boost] ?? 0) + 1;
+			}
+		}
+
+		// Strip all boosts
+		for (const part of creep.body) {
+			part.boost = undefined;
+		}
+
+		// Recalculate carry capacity
+		creep.store['#capacity'] = calculateCarry(creep.body);
+
+		// Drop resources and calculate cooldown
+		let cooldown = 0;
+		for (const resource of C.RESOURCES_ALL) {
+			const count = boostedParts[resource];
+			if (!count) continue;
+
+			const mineralReturn = count * C.LAB_UNBOOST_MINERAL;
+			if (mineralReturn > 0) {
+				dropResource(creep.pos, resource, mineralReturn);
+			}
+
+			cooldown += count * calcTotalReactionsTime(resource) * C.LAB_UNBOOST_MINERAL / C.LAB_REACTION_AMOUNT;
+		}
+
+		if (cooldown > 0) {
+			lab['#cooldownTime'] = Game.time + cooldown;
+		}
+
 		context.didUpdate();
 	}),
 ];

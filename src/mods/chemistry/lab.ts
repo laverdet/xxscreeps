@@ -60,9 +60,10 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 			() => intents.save(this, 'reverseReaction', lab1.id, lab2.id));
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	unboostCreep(creep: Creep) {
-		return C.ERR_INVALID_TARGET as C.ErrorCode;
+		return chainIntentChecks(
+			() => checkUnboostCreep(this, creep),
+			() => intents.save(this, 'unboostCreep', creep.id));
 	}
 }
 
@@ -170,6 +171,45 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 				return C.ERR_FULL;
 			}
 		});
+}
+
+export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undefined) {
+	return chainIntentChecks(
+		() => checkTarget(creep, Creep),
+		() => {
+			if (!lab.my || !creep!.my) {
+				return C.ERR_NOT_OWNER;
+			}
+		},
+		() => checkMyStructure(lab, StructureLab),
+		() => checkRange(lab, creep!, 1),
+		() => {
+			if (lab.cooldown) {
+				return C.ERR_TIRED;
+			}
+		},
+		() => {
+			if (!creep!.body.some(p => !!p.boost)) {
+				return C.ERR_NOT_FOUND;
+			}
+		});
+}
+
+export function calcTotalReactionsTime(mineral: string): number {
+	// Build reagent lookup: compound -> [reagent1, reagent2]
+	const reactions = C.REACTIONS as Record<string, Record<string, string>>;
+	const reagents: Record<string, [string, string]> = {};
+	for (const r1 in reactions) {
+		for (const r2 in reactions[r1]) {
+			reagents[reactions[r1][r2]] = [ r2, r1 ];
+		}
+	}
+	const calcStep = (m: string): number => {
+		const time = (C.REACTION_TIME as Record<string, number>)[m];
+		if (!time) return 0;
+		return time + calcStep(reagents[m][0]) + calcStep(reagents[m][1]);
+	};
+	return calcStep(mineral);
 }
 
 export function checkRunReaction(lab: StructureLab, left: StructureLab, right: StructureLab) {
