@@ -59,7 +59,7 @@ export function checkObserveRoom(observer: StructureObserver, target: string) {
 	const range = Game.map.getRoomLinearDistance(observer.room.name, target);
 	if (Object.is(range, NaN)) {
 		return C.ERR_INVALID_ARGS;
-	} else if (range > C.OBSERVER_RANGE) {
+	} else if (range > C.OBSERVER_RANGE || Game.map.getRoomStatus(target) === undefined) {
 		return C.ERR_NOT_IN_RANGE;
 	}
 	return C.OK;
