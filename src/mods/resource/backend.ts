@@ -11,9 +11,7 @@ export function renderStore(store: Store) {
 	};
 	const capacity = store.getCapacity();
 	if (capacity === null) {
-		result.storeCapacityResource = Fn.fromEntries(
-			store['#entries'](),
-			([ type ]) => [ type, store.getCapacity(type) ]);
+		result.storeCapacityResource = Fn.fromEntries(store['#capacityEntries']());
 	} else {
 		result.storeCapacity = capacity;
 	}
