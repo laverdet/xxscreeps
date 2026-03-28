@@ -2,7 +2,7 @@
 /// <reference path="../../declarations.d.ts" />
 import fs from 'node:fs/promises';
 import { configDefaults } from 'xxscreeps/config/config.js';
-import config, { configPath } from 'xxscreeps/config/raw.js';
+import config from 'xxscreeps/config/raw.js';
 
 type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'processor' | 'storage' | 'test';
 export type Manifest = {
@@ -17,18 +17,21 @@ const mods: {
 }[] = [];
 const stack: string[] = [];
 const resolved = new Set<string>();
-const baseUrl = configPath;
 const version = 5;
 async function resolve(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
+		// Node 24 ignores the second argument to import.meta.resolve, so bare
+		// specifiers always resolve from *this* file's package scope. That
+		// happens to work for built-in xxscreeps/* mods but would break for
+		// third-party mods installed outside this package tree.
 		const url = await async function() {
 			try {
-				return import.meta.resolve!(`${specifier}/index.js`, `${baseUrl}`);
+				return import.meta.resolve(`${specifier}/index.js`);
 			} catch {
 				try {
-					return import.meta.resolve!(`${specifier}.js`, `${baseUrl}`);
+					return import.meta.resolve(`${specifier}.js`);
 				} catch {
-					return import.meta.resolve!(specifier, `${baseUrl}`);
+					return import.meta.resolve(specifier);
 				}
 			}
 		}();
@@ -69,14 +72,19 @@ const cached = await async function() {
 	} catch (err) {}
 }();
 if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
-	// Given a specifier fragment this return all mods which export it
+	// Given a specifier fragment this return all mods which export it.
+	// Uses new URL() instead of import.meta.resolve because these are
+	// relative paths against each mod's URL — import.meta.resolve's
+	// second argument is ignored on Node 24.
 	const resolveWithinMods = async (specifier: string) => {
 		const resolved = await Promise.all(mods.map(async ({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
+				const primary = new URL(`./${specifier}.js`, url);
 				try {
-					return import.meta.resolve!(`./${specifier}.js`, `${url}`);
+					await fs.access(primary);
+					return `${primary}`;
 				} catch {
-					return import.meta.resolve!(`./${specifier}/index.js`, `${url}`);
+					return `${new URL(`./${specifier}/index.js`, url)}`;
 				}
 			}
 		}));
@@ -109,7 +117,7 @@ if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 			// Merge JSON schema
 			const schemaOutput = new URL('config.schema.json', outDir);
 			const inputs = [
-				await import.meta.resolve!('xxscreeps/config/config.js'),
+				import.meta.resolve('xxscreeps/config/config.js'),
 				...await resolveWithinMods('config'),
 			];
 			const json = (await Promise.all(inputs.map(async path => {
@@ -147,9 +155,9 @@ export async function importMods(provides: Provide) {
 	for (const mod of mods) {
 		if (mod.provides.includes(provides)) {
 			try {
-				await import(await import.meta.resolve!(`./${provides}.js`, `${mod.url}`));
+				await import(new URL(`./${provides}.js`, mod.url).href);
 			} catch (e) {
-				await import(await import.meta.resolve!(`./${provides}/index.js`, `${mod.url}`));
+				await import(new URL(`./${provides}/index.js`, mod.url).href);
 			}
 		}
 	}

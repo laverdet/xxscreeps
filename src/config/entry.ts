@@ -94,14 +94,14 @@ if (missingFlags.length) {
 				const command = commands[specifier];
 				if (command) {
 					// Found run alias
-					return await import.meta.resolve!(`${new URL(command, new URL('../..', import.meta.url))}`);
+					return import.meta.resolve(`${new URL(command, new URL('../..', import.meta.url))}`);
 				} else {
 					// Try to parse as file:// URL, probably a self-invoking worker
 					try {
 						return `${new URL(specifier)}`;
 					} catch (err) {}
 					// Resolve as file from cwd
-					return await import.meta.resolve!(join(process.cwd(), specifier), import.meta.url);
+					return import.meta.resolve(join(process.cwd(), specifier));
 				}
 			} catch (error: any) {
 				if (error.code !== 'ERR_MODULE_NOT_FOUND') {

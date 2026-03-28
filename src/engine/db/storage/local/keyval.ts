@@ -7,7 +7,7 @@ import { Fn } from 'xxscreeps/utility/fn.js';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
 import { connect, makeClient, makeHost } from './responder.js';
 import { SortedSet } from './sorted-set.js';
-import { registerStorageProvider } from 'xxscreeps/engine/db/storage/index.js';
+import { registerStorageProvider } from 'xxscreeps/engine/db/storage/register.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { BlobStorage } from './blob.js';
 
