@@ -71,6 +71,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	}
 
 	'#applyDamage'(power: number, _type: number, _source?: RoomObject) {
+		if (this.hits! <= 0) return;
 		if ((this.hits! -= power) <= 0) {
 			this['#destroy']();
 		}
