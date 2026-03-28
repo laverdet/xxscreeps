@@ -79,11 +79,15 @@ export abstract class Store extends BufferObjectWithResourcesType {
 		return Object.entries(this) as never;
 	}
 
+	'#capacityEntries'(): Iterable<[ ResourceType, number ]> {
+		return [];
+	}
+
 	private [Symbol.for('nodejs.util.inspect.custom')]() {
 		const capacity = this.getCapacity();
 		return {
 			[Symbol('capacity')]: capacity === null
-				? Object.fromEntries(Fn.map(this['#entries'](), ([ type ]) => [ type, this.getCapacity(type) ])) :
+				? Fn.fromEntries(this['#capacityEntries']()) :
 				capacity,
 			...Fn.fromEntries(this['#entries']()),
 		};
@@ -205,6 +209,10 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 		return instance;
 	}
 
+	override '#capacityEntries'(): Iterable<[ ResourceType, number ]> {
+		return Fn.map(this['#resources'], info => [ info.type, info.capacity ] as [ ResourceType, number ]);
+	}
+
 	getCapacity(resourceType?: ResourceType) {
 		return this['#resources'].find(info => info.type === resourceType)?.capacity ?? null;
 	}
@@ -261,6 +269,10 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 		instance['#capacity'] = capacity;
 		instance['#type'] = type;
 		return instance;
+	}
+
+	override '#capacityEntries'(): Iterable<[ ResourceType, number ]> {
+		return [ [ this['#type'] as ResourceType, this['#capacity'] ] ];
 	}
 
 	getCapacity(resourceType: Type): number;
