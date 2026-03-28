@@ -11,7 +11,7 @@ import './mods/index.js';
 if (isTopThread) {
 	const schema = await async function() {
 		try {
-			const path = await import.meta.resolve!('./mods.static/config.schema.json', import.meta.url);
+			const path = import.meta.resolve('./mods.static/config.schema.json');
 			return JSON.parse(await fs.readFile(new URL(path), 'utf8'));
 		} catch (err) {}
 	}();
