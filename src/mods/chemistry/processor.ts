@@ -18,9 +18,9 @@ const intents = [
 			lab.store['#add'](product, C.LAB_REACTION_AMOUNT);
 			left.store['#subtract'](left.mineralType!, C.LAB_REACTION_AMOUNT);
 			right.store['#subtract'](right.mineralType!, C.LAB_REACTION_AMOUNT);
-			lab['#cooldownTime'] = Game.time + C.REACTION_TIME[product as keyof typeof C.REACTION_TIME];
+			lab['#cooldownTime'] = Game.time + (C.REACTION_TIME as Partial<Record<string, number>>)[product]!;
 			saveAction(lab, 'reaction1', left.pos);
-			saveAction(lab, 'reaction2', left.pos);
+			saveAction(lab, 'reaction2', right.pos);
 			context.didUpdate();
 		}
 	}),
@@ -33,8 +33,9 @@ const intents = [
 		const mineralType = lab.mineralType!;
 
 		// Find non-boosted parts matching this mineral's boost type
+		const boosts = C.BOOSTS as Partial<Record<string, Partial<Record<string, unknown>>>>;
 		let nonBoostedParts = creep.body.filter(
-			p => !p.boost && (C.BOOSTS as any)[p.type]?.[mineralType]);
+			p => !p.boost && boosts[p.type]?.[mineralType]);
 
 		// TOUGH parts boosted first (ascending index), all others last-to-first (reversed)
 		if (nonBoostedParts.length > 0 && nonBoostedParts[0].type !== C.TOUGH) {
@@ -46,15 +47,15 @@ const intents = [
 		}
 
 		// Apply boosts while resources allow
-		while (
+		for (let i = 0;
+			i < nonBoostedParts.length &&
 			lab.store[C.RESOURCE_ENERGY] >= C.LAB_BOOST_ENERGY &&
-			(lab.store as any)[mineralType] >= C.LAB_BOOST_MINERAL &&
-			nonBoostedParts.length
+			lab.store[mineralType] >= C.LAB_BOOST_MINERAL;
+			++i
 		) {
-			nonBoostedParts[0].boost = mineralType;
+			nonBoostedParts[i].boost = mineralType;
 			lab.store['#subtract'](mineralType, C.LAB_BOOST_MINERAL);
 			lab.store['#subtract'](C.RESOURCE_ENERGY, C.LAB_BOOST_ENERGY);
-			nonBoostedParts.splice(0, 1);
 		}
 
 		// Recalculate carry capacity in case CARRY parts were boosted
@@ -79,7 +80,9 @@ const intents = [
 		lab.store['#subtract'](mineralType, C.LAB_REACTION_AMOUNT);
 		lab1.store['#add'](variant[0], C.LAB_REACTION_AMOUNT);
 		lab2.store['#add'](variant[1], C.LAB_REACTION_AMOUNT);
-		lab['#cooldownTime'] = Game.time + C.REACTION_TIME[mineralType as keyof typeof C.REACTION_TIME];
+		lab['#cooldownTime'] = Game.time + (C.REACTION_TIME as Partial<Record<string, number>>)[mineralType]!;
+		saveAction(lab, 'reverseReaction1', lab1.pos);
+		saveAction(lab, 'reverseReaction2', lab2.pos);
 		context.didUpdate();
 	}),
 
@@ -111,6 +114,10 @@ const intents = [
 			const count = boostedParts[resource];
 			if (!count) continue;
 
+			const energyReturn = count * C.LAB_UNBOOST_ENERGY;
+			if (energyReturn > 0) {
+				dropResource(creep.pos, C.RESOURCE_ENERGY, energyReturn);
+			}
 			const mineralReturn = count * C.LAB_UNBOOST_MINERAL;
 			if (mineralReturn > 0) {
 				dropResource(creep.pos, resource, mineralReturn);

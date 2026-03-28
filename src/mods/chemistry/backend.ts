@@ -4,17 +4,23 @@ import { renderStore } from 'xxscreeps/mods/resource/backend.js';
 import { StructureLab } from './lab.js';
 
 bindRenderer(StructureLab, (lab, next, previousTime) => {
-	// Combine reaction1 & reaction2 into expected action log format
+	// Combine paired action log entries into the format the client expects
 	const actionLog = function() {
-		const actionLog = renderActionLog(lab['#actionLog'], previousTime);
-		if (actionLog.reaction1 && actionLog.reaction2) {
-			return {
-				reaction: {
-					x1: actionLog.reaction1.x, y1: actionLog.reaction1.y,
-					x2: actionLog.reaction2.x, y2: actionLog.reaction2.y,
-				},
+		const raw = renderActionLog(lab['#actionLog'], previousTime);
+		const result: Record<string, { x1: number; y1: number; x2: number; y2: number }> = {};
+		if (raw.reaction1 && raw.reaction2) {
+			result.runReaction = {
+				x1: raw.reaction1.x, y1: raw.reaction1.y,
+				x2: raw.reaction2.x, y2: raw.reaction2.y,
 			};
 		}
+		if (raw.reverseReaction1 && raw.reverseReaction2) {
+			result.reverseReaction = {
+				x1: raw.reverseReaction1.x, y1: raw.reverseReaction1.y,
+				x2: raw.reverseReaction2.x, y2: raw.reverseReaction2.y,
+			};
+		}
+		return Object.keys(result).length ? result : undefined;
 	}();
 	return {
 		...next(),

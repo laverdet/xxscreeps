@@ -1,6 +1,6 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { create as createCreep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createLab } from './lab.js';
@@ -8,10 +8,10 @@ import { create as createLab } from './lab.js';
 // Helper to create a lab with resources pre-loaded
 function createLabWithResources(pos: RoomPosition, owner: string, mineral?: string, mineralAmount?: number, energy?: number) {
 	const lab = createLab(pos, owner);
-	if (energy) {
+	if (energy !== undefined) {
 		lab.store['#add'](C.RESOURCE_ENERGY, energy);
 	}
-	if (mineral && mineralAmount) {
+	if (mineral !== undefined && mineralAmount !== undefined) {
 		lab.store['#add'](mineral as any, mineralAmount);
 	}
 	return lab;
@@ -91,6 +91,31 @@ describe('Chemistry', () => {
 				const labO = labs.find(l => l.mineralType === C.RESOURCE_OXYGEN)!;
 				assert.strictEqual(labH.store[C.RESOURCE_HYDROGEN], 100 - C.LAB_REACTION_AMOUNT);
 				assert.strictEqual(labO.store[C.RESOURCE_OXYGEN], 100 - C.LAB_REACTION_AMOUNT);
+			});
+		}));
+
+		test('runReaction action log points to correct source labs', () => reactionSim(async ({ player, tick }) => {
+			await player('100', Game => {
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				const output = labs.find(l => !l.mineralType)!;
+				const labH = labs.find(l => l.mineralType === C.RESOURCE_HYDROGEN)!;
+				const labO = labs.find(l => l.mineralType === C.RESOURCE_OXYGEN)!;
+				output.runReaction(labH, labO);
+			});
+			await tick();
+			await player('100', Game => {
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				const output = labs.find(l => l.mineralType === 'OH')!;
+				const labH = labs.find(l => l.mineralType === C.RESOURCE_HYDROGEN)!;
+				const labO = labs.find(l => l.mineralType === C.RESOURCE_OXYGEN)!;
+				const actionLog = output['#actionLog'];
+				const r1 = actionLog.find(a => a.type === 'reaction1');
+				const r2 = actionLog.find(a => a.type === 'reaction2');
+				assert.ok(r1 && r2, 'both reaction action log entries should exist');
+				assert.strictEqual(r1!.x, labH.pos.x, 'reaction1 x should match source lab 1');
+				assert.strictEqual(r1!.y, labH.pos.y, 'reaction1 y should match source lab 1');
+				assert.strictEqual(r2!.x, labO.pos.x, 'reaction2 x should match source lab 2');
+				assert.strictEqual(r2!.y, labO.pos.y, 'reaction2 y should match source lab 2');
 			});
 		}));
 
@@ -514,11 +539,20 @@ describe('Chemistry', () => {
 				room['#insertObject'](createLabWithResources(
 					new RoomPosition(24, 25, 'W1N1'), '100',
 					'ZO', 300, 2000));
+				// Lab with UH (attack boost) + energy
+				room['#insertObject'](createLabWithResources(
+					new RoomPosition(27, 25, 'W1N1'), '100',
+					'UH', 300, 2000));
 				// Worker creep adjacent to labs
 				room['#insertObject'](createCreep(
 					new RoomPosition(25, 26, 'W1N1'),
 					[C.WORK, C.WORK, C.CARRY, C.CARRY, C.MOVE, C.MOVE],
 					'worker', '100'));
+				// Attacker creep adjacent to labs
+				room['#insertObject'](createCreep(
+					new RoomPosition(26, 26, 'W1N1'),
+					[C.ATTACK, C.ATTACK, C.MOVE],
+					'attacker', '100'));
 				room['#level'] = 7;
 				room['#user'] =
 					room.controller!['#user'] = '100';
@@ -538,6 +572,54 @@ describe('Chemistry', () => {
 				// 2 CARRY parts * CARRY_CAPACITY(50) * 2 = 200 (up from 100)
 				assert.strictEqual(creep.store.getCapacity(), 2 * C.CARRY_CAPACITY * C.BOOSTS.carry.KH.capacity,
 					'boosted carry capacity should reflect KH multiplier');
+			});
+		}));
+
+		test('harvest boost increases work power', () => boostEffectSim(async ({ player, tick }) => {
+			await player('100', Game => {
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				const labUO = labs.find(l => l.mineralType === 'UO')!;
+				labUO.boostCreep(Game.creeps.worker);
+			});
+			await tick();
+			await player('100', Game => {
+				const creep = Game.creeps.worker;
+				// 2 WORK parts boosted with UO (harvest × 3)
+				const power = calculatePower(creep, C.WORK, C.HARVEST_POWER, 'harvest');
+				assert.strictEqual(power, 2 * C.HARVEST_POWER * C.BOOSTS.work.UO.harvest,
+					'boosted harvest power should reflect UO multiplier');
+			});
+		}));
+
+		test('move boost increases fatigue reduction', () => boostEffectSim(async ({ player, tick }) => {
+			await player('100', Game => {
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				const labZO = labs.find(l => l.mineralType === 'ZO')!;
+				labZO.boostCreep(Game.creeps.worker);
+			});
+			await tick();
+			await player('100', Game => {
+				const creep = Game.creeps.worker;
+				// 2 MOVE parts boosted with ZO (fatigue × 2)
+				const power = calculatePower(creep, C.MOVE, 2, 'fatigue');
+				assert.strictEqual(power, 2 * 2 * C.BOOSTS.move.ZO.fatigue,
+					'boosted move power should reflect ZO multiplier');
+			});
+		}));
+
+		test('attack boost increases attack power', () => boostEffectSim(async ({ player, tick }) => {
+			await player('100', Game => {
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				const labUH = labs.find(l => l.mineralType === 'UH')!;
+				labUH.boostCreep(Game.creeps.attacker);
+			});
+			await tick();
+			await player('100', Game => {
+				const creep = Game.creeps.attacker;
+				// 2 ATTACK parts boosted with UH (attack × 2)
+				const power = calculatePower(creep, C.ATTACK, C.ATTACK_POWER, 'attack');
+				assert.strictEqual(power, 2 * C.ATTACK_POWER * C.BOOSTS.attack.UH.attack,
+					'boosted attack power should reflect UH multiplier');
 			});
 		}));
 	});

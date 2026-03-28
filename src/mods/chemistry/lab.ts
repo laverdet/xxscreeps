@@ -32,7 +32,7 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 	/** @deprecated */
 	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
 	/** @deprecated */
-	@enumerable get mineralAmount() { return this.store[this.mineralType as keyof typeof labStoreFormat]; }
+	@enumerable get mineralAmount() { const type = this.mineralType; return type ? this.store[type] : 0; }
 	/** @deprecated */
 	@enumerable get mineralCapacity() { return C.LAB_MINERAL_CAPACITY; }
 
@@ -103,18 +103,24 @@ export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefin
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
 		() => checkTarget(creep, Creep),
+		() => {
+			if (creep!.spawning) {
+				return C.ERR_INVALID_TARGET;
+			}
+		},
 		() => checkRange(lab, creep!, 1),
 		() => {
 			if (lab.store[C.RESOURCE_ENERGY] < C.LAB_BOOST_ENERGY) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
-			if (!mineralType || lab.store[mineralType as keyof typeof labStoreFormat] < C.LAB_BOOST_MINERAL) {
+			if (!mineralType || lab.store[mineralType] < C.LAB_BOOST_MINERAL) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
 		},
 		() => {
+			const boosts = C.BOOSTS as Partial<Record<string, Partial<Record<string, unknown>>>>;
 			const nonBoostedCount = creep!.body.filter(
-				p => !p.boost && (C.BOOSTS as any)[p.type]?.[mineralType!]).length;
+				p => !p.boost && boosts[p.type]?.[mineralType!]).length;
 			if (!nonBoostedCount || (bodyPartsCount && bodyPartsCount > nonBoostedCount)) {
 				return C.ERR_NOT_FOUND;
 			}
@@ -137,6 +143,11 @@ export function getReactionVariants(compound: ResourceType): [ResourceType, Reso
 export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | null | undefined, lab2: StructureLab | null | undefined) {
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
+		() => {
+			if (lab.cooldown) {
+				return C.ERR_TIRED;
+			}
+		},
 		() => checkTarget(lab1, StructureLab),
 		() => checkTarget(lab2, StructureLab),
 		() => checkRange(lab, lab1!, 2),
@@ -144,11 +155,6 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 		() => {
 			if (lab1!.id === lab2!.id) {
 				return C.ERR_INVALID_ARGS;
-			}
-		},
-		() => {
-			if (lab.cooldown) {
-				return C.ERR_TIRED;
 			}
 		},
 		() => checkHasResource(lab, lab.mineralType, C.LAB_REACTION_AMOUNT),
@@ -164,10 +170,10 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 			// Check destination labs can receive reagents
 			const lab1Mineral = lab1!.mineralType;
 			const lab2Mineral = lab2!.mineralType;
-			if (lab1Mineral && (lab1!.store[lab1Mineral as keyof typeof labStoreFormat] + C.LAB_REACTION_AMOUNT) > C.LAB_MINERAL_CAPACITY) {
+			if (lab1Mineral && (lab1!.store[lab1Mineral] + C.LAB_REACTION_AMOUNT) > C.LAB_MINERAL_CAPACITY) {
 				return C.ERR_FULL;
 			}
-			if (lab2Mineral && (lab2!.store[lab2Mineral as keyof typeof labStoreFormat] + C.LAB_REACTION_AMOUNT) > C.LAB_MINERAL_CAPACITY) {
+			if (lab2Mineral && (lab2!.store[lab2Mineral] + C.LAB_REACTION_AMOUNT) > C.LAB_MINERAL_CAPACITY) {
 				return C.ERR_FULL;
 			}
 		});
@@ -176,13 +182,12 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undefined) {
 	return chainIntentChecks(
 		() => checkTarget(creep, Creep),
+		() => checkMyStructure(lab, StructureLab),
 		() => {
-			if (!lab.my || !creep!.my) {
+			if (!creep!.my) {
 				return C.ERR_NOT_OWNER;
 			}
 		},
-		() => checkMyStructure(lab, StructureLab),
-		() => checkRange(lab, creep!, 1),
 		() => {
 			if (lab.cooldown) {
 				return C.ERR_TIRED;
@@ -192,7 +197,8 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 			if (!creep!.body.some(p => !!p.boost)) {
 				return C.ERR_NOT_FOUND;
 			}
-		});
+		},
+		() => checkRange(lab, creep!, 1));
 }
 
 export function calcTotalReactionsTime(mineral: string): number {
@@ -219,16 +225,16 @@ export function checkRunReaction(lab: StructureLab, left: StructureLab, right: S
 	}
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
+		() => {
+			if (lab.cooldown) {
+				return C.ERR_TIRED;
+			}
+		},
 		() => checkTarget(left, StructureLab),
 		() => checkTarget(right, StructureLab),
 		() => checkRange(lab, left, 2),
 		() => checkRange(lab, right, 2),
 		() => checkHasCapacity(lab, reaction, C.LAB_REACTION_AMOUNT),
 		() => checkHasResource(left, left.mineralType, C.LAB_REACTION_AMOUNT),
-		() => checkHasResource(right, right.mineralType, C.LAB_REACTION_AMOUNT),
-		() => {
-			if (lab.cooldown) {
-				return C.ERR_TIRED;
-			}
-		});
+		() => checkHasResource(right, right.mineralType, C.LAB_REACTION_AMOUNT));
 }

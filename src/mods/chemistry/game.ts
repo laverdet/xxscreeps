@@ -33,7 +33,7 @@ declare module 'xxscreeps/game/room/index.js' {
 }
 
 // Action log types
-const actionSchema = registerEnumerated('ActionLog.action', 'reaction1', 'reaction2');
+const actionSchema = registerEnumerated('ActionLog.action', 'reaction1', 'reaction2', 'reverseReaction1', 'reverseReaction2');
 declare module 'xxscreeps/game/object.js' {
 	interface Schema { chemistry: typeof actionSchema }
 }

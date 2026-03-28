@@ -431,9 +431,9 @@ export function calculateCarry(body: Creep['body']) {
 		part => {
 			if (part.type !== C.CARRY) return 0;
 			if (part.boost) {
-				const boosts = (C.BOOSTS as any)[C.CARRY]?.[part.boost];
-				if (boosts?.capacity) {
-					return C.CARRY_CAPACITY * boosts.capacity;
+				const multiplier = (C.BOOSTS as BoostsLookup)[C.CARRY]?.[part.boost]?.capacity;
+				if (multiplier) {
+					return C.CARRY_CAPACITY * multiplier;
 				}
 			}
 			return C.CARRY_CAPACITY;
@@ -537,13 +537,16 @@ export function calculateCost(creep: Creep) {
 	return Fn.accumulate(creep.body, bodyPart => C.BODYPART_COST[bodyPart.type]);
 }
 
+type BoostEffects = Partial<Record<string, number>>;
+type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
+
 export function calculatePower(creep: Creep, part: PartType, power: number, boostMethod?: string) {
 	return Fn.accumulate(creep.body, bodyPart => {
 		if (bodyPart.type === part && bodyPart.hits > 0) {
 			if (boostMethod && bodyPart.boost) {
-				const boosts = (C.BOOSTS as any)[part]?.[bodyPart.boost];
-				if (boosts?.[boostMethod]) {
-					return power * boosts[boostMethod];
+				const multiplier = (C.BOOSTS as BoostsLookup)[part]?.[bodyPart.boost]?.[boostMethod];
+				if (multiplier) {
+					return power * multiplier;
 				}
 			}
 			return power;
