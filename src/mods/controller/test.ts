@@ -6,20 +6,19 @@ import { create } from 'xxscreeps/mods/creep/creep.js';
 describe('Controller', () => {
 
 	// Controller in W3N3 is at (33, 32)
-	const creepX = 34;
-	const creepY = 32;
+	const pos = new RoomPosition(34, 32, 'W3N3');
 
 	const hostileReservation = simulate({
 		W3N3: room => {
 			room['#user'] = '101';
 			room.controller!['#reservationEndTime'] = 5000;
-			room['#insertObject'](create(new RoomPosition(creepX, creepY, 'W3N3'), [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
 		},
 	});
 
 	const neutralRoom = simulate({
 		W3N3: room => {
-			room['#insertObject'](create(new RoomPosition(creepX, creepY, 'W3N3'), [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
 		},
 	});
 
@@ -27,7 +26,7 @@ describe('Controller', () => {
 		W3N3: room => {
 			room['#user'] = '100';
 			room.controller!['#reservationEndTime'] = 5000;
-			room['#insertObject'](create(new RoomPosition(creepX, creepY, 'W3N3'), [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
 		},
 	});
 
