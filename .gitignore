@@ -1,4 +1,4 @@
-/.screepsrc.yaml
+/.screepsrc.yaml*
 /dist
 /node_modules
 /screeps
