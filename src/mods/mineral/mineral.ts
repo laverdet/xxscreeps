@@ -55,8 +55,6 @@ const harvest = registerHarvestable(Mineral, function(creep) {
 				return C.ERR_NOT_FOUND;
 			} else if (extractor['#user'] && extractor['#user'] !== creep['#user']) {
 				return C.ERR_NOT_OWNER;
-			} else if (!extractor.isActive()) {
-				return C.ERR_RCL_NOT_ENOUGH;
 			} else if (extractor.cooldown !== 0 && extractor.cooldown !== C.EXTRACTOR_COOLDOWN) {
 				return C.ERR_TIRED;
 			}
