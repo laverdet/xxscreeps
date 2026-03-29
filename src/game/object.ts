@@ -71,7 +71,6 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	}
 
 	'#applyDamage'(power: number, _type: number, _source?: RoomObject) {
-		if (this.hits! <= 0) return;
 		if ((this.hits! -= power) <= 0) {
 			this['#destroy']();
 		}
@@ -82,7 +81,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	}
 
 	'#destroy'() {
-		this.room['#removeObject'](this);
+		return this.room['#removeObject'](this);
 	}
 
 	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {

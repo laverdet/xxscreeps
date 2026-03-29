@@ -152,7 +152,9 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Queue an object to be removed from this room. This is flushed via `FlushObjects`.
 	 */
 	'#removeObject'(object: RoomObject) {
+		const size = this.#removeObjects.size;
 		this.#removeObjects.add(object);
+		return this.#removeObjects.size !== size;
 	}
 
 	/**

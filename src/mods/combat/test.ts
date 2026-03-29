@@ -5,11 +5,11 @@ import { create as createLab } from 'xxscreeps/mods/chemistry/lab.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
 describe('Combat', () => {
-	// 17 ATTACK (510 dmg), 1 RANGED_ATTACK (10 dmg), 18 MOVE.
+	// 17 ATTACK (510 dmg), 1 RANGED_ATTACK (10 dmg)
 	// attack intent (type 'primary') runs before rangedAttack (type 'laser').
 	// 510 melee damage kills the 500 HP lab, then the ranged intent fires on
-	// the already-dead structure. Without the #applyDamage guard this calls
-	// #destroy a second time, producing a duplicate ruin.
+	// the already-dead structure. #destroy was not previously idempotent and
+	// so created two ruins
 	const sim = simulate({
 		W1N1: room => {
 			room['#level'] = 7;
@@ -20,7 +20,6 @@ describe('Combat', () => {
 				[
 					...Array(17).fill(C.ATTACK),
 					...Array(1).fill(C.RANGED_ATTACK),
-					...Array(18).fill(C.MOVE),
 				],
 				'warrior',
 				'100',
