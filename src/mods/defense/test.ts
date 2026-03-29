@@ -1,10 +1,11 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { create as createConstructionSite } from 'xxscreeps/mods/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
-import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
-import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createRampart } from './rampart.js';
+import { create as createTower } from './tower.js';
+import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
 describe('ramparts', () => {
 	const roomWithUnbuiltRamparts = simulate({
@@ -86,6 +87,40 @@ describe('setPublic', () => {
 		await tick();
 		await player('101', Game => {
 			assert(Game.creeps.hostile.pos.isEqualTo(25, 25), 'hostile creep should have moved through public rampart');
+		});
+	}));
+});
+
+describe('Tower isActive', () => {
+	const simulation = simulate({
+		W3N2: room => {
+			room['#insertObject'](createTower(new RoomPosition(25, 25, 'W3N2'), '100'));
+			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W3N2'), [ C.MOVE ], 'target', '101'));
+			room['#level'] = 2;
+			room['#user'] =
+				room.controller!['#user'] = '100';
+		},
+		W3N3: room => {
+			room['#insertObject'](createTower(new RoomPosition(25, 25, 'W3N3'), '100'));
+			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W3N3'), [ C.MOVE ], 'target2', '101'));
+			room['#level'] = 3;
+			room['#user'] =
+				room.controller!['#user'] = '100';
+		},
+	});
+
+	test('tower inactive at too-low RCL', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const tower = lookForStructures(Game.rooms.W3N2, C.STRUCTURE_TOWER)[0];
+			assert.strictEqual(tower.isActive(), false, 'tower should be inactive at RCL 2');
+			assert.strictEqual(tower.attack(Game.rooms.W3N2.find(C.FIND_HOSTILE_CREEPS)[0]), C.ERR_RCL_NOT_ENOUGH);
+		});
+	}));
+
+	test('tower active at sufficient RCL', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const tower = lookForStructures(Game.rooms.W3N3, C.STRUCTURE_TOWER)[0];
+			assert.strictEqual(tower.isActive(), true, 'tower should be active at RCL 3');
 		});
 	}));
 });

@@ -25,7 +25,10 @@ hooks.register('roomInitializer', room => {
 	room.energyAvailable = 0;
 	room.energyCapacityAvailable = 0;
 	for (const object of room.find(C.FIND_STRUCTURES)) {
-		if (object.structureType === C.STRUCTURE_SPAWN || object.structureType === C.STRUCTURE_EXTENSION) {
+		if (
+			(object.structureType === C.STRUCTURE_SPAWN || object.structureType === C.STRUCTURE_EXTENSION) &&
+			object.isActive()
+		) {
 			room.energyAvailable += object.store[C.RESOURCE_ENERGY];
 			room.energyCapacityAvailable += object.store.getCapacity(C.RESOURCE_ENERGY);
 		}

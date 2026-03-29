@@ -6,7 +6,7 @@ import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { checkHasCapacity, checkHasResource } from '../resource/store.js';
@@ -102,6 +102,7 @@ export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefin
 	const mineralType = lab.mineralType;
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
+		() => checkIsActive(lab),
 		() => checkTarget(creep, Creep),
 		() => {
 			if (creep!.spawning) {
@@ -143,6 +144,7 @@ export function getReactionVariants(compound: ResourceType): [ResourceType, Reso
 export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | null | undefined, lab2: StructureLab | null | undefined) {
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
+		() => checkIsActive(lab),
 		() => {
 			if (lab.cooldown) {
 				return C.ERR_TIRED;
@@ -183,6 +185,7 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 	return chainIntentChecks(
 		() => checkTarget(creep, Creep),
 		() => checkMyStructure(lab, StructureLab),
+		() => checkIsActive(lab),
 		() => {
 			if (!creep!.my) {
 				return C.ERR_NOT_OWNER;
@@ -225,6 +228,7 @@ export function checkRunReaction(lab: StructureLab, left: StructureLab, right: S
 	}
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
+		() => checkIsActive(lab),
 		() => {
 			if (lab.cooldown) {
 				return C.ERR_TIRED;

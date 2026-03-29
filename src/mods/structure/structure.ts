@@ -67,8 +67,19 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 * Check whether this structure can be used. If room controller level is insufficient, then this
 	 * method will return false, and the structure will be highlighted with red in the game.
 	 */
-	isActive() {
-		return true;
+	isActive(): boolean {
+		const controller = this.room.controller;
+		if (!controller) return true;
+		const lookup = (C.CONTROLLER_STRUCTURES as Record<string, number[] | undefined>)[this.structureType];
+		if (!lookup) return true;
+		const maxCount = lookup[controller.level] ?? 0;
+		if (maxCount === 0) return false;
+		// Excess-structure check (handles RCL downgrade)
+		const structures: Structure[] = this.room.find(C.FIND_MY_STRUCTURES).filter(
+			s => s.structureType === this.structureType);
+		if (structures.length <= maxCount) return true;
+		structures.sort((a: Structure, b: Structure) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+		return structures.indexOf(this) < maxCount;
 	}
 
 	'#checkObstacle'(_user: string) {
@@ -144,6 +155,13 @@ export function checkMyStructure(structure: Structure, constructor: abstract new
 		return C.ERR_INVALID_ARGS;
 	} else if (!structure.my && !structure.room.controller?.my) {
 		return C.ERR_NOT_OWNER;
+	}
+	return C.OK;
+}
+
+export function checkIsActive(structure: Structure) {
+	if (!structure.isActive()) {
+		return C.ERR_RCL_NOT_ENOUGH;
 	}
 	return C.OK;
 }

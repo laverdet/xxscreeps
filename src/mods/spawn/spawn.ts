@@ -12,7 +12,7 @@ import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js
 import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, checkMyStructure, checkPlacement, lookForStructures, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, lookForStructures, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
 import { compose, declare, optional, struct, variant, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
@@ -104,10 +104,6 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 			}
 		}
 		super['#beforeRemove']();
-	}
-
-	override isActive() {
-		return true;
 	}
 
 	/**
@@ -265,6 +261,7 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 export function checkRecycleCreep(spawn: StructureSpawn, creep: Creep) {
 	return chainIntentChecks(
 		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkIsActive(spawn),
 		() => checkTarget(creep, Creep),
 		() => checkCommon(creep),
 		() => checkRange(spawn, creep, 1));
@@ -273,6 +270,7 @@ export function checkRecycleCreep(spawn: StructureSpawn, creep: Creep) {
 export function checkRenewCreep(spawn: StructureSpawn, creep: Creep) {
 	return chainIntentChecks(
 		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkIsActive(spawn),
 		() => checkTarget(creep, Creep),
 		() => checkCommon(creep),
 		() => checkRange(spawn, creep, 1),
@@ -308,6 +306,7 @@ export function checkSpawnCreep(
 ) {
 	return chainIntentChecks(
 		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkIsActive(spawn),
 		() => checkString(name, 100, true),
 		() => {
 			if (userGame?.creeps[name] !== undefined) {
@@ -319,8 +318,6 @@ export function checkSpawnCreep(
 			if (spawn.spawning) {
 				return C.ERR_BUSY;
 			}
-
-			// TODO: RCL
 
 			if (
 				!Array.isArray(body) ||

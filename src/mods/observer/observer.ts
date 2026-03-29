@@ -18,10 +18,6 @@ export class StructureObserver extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return C.OBSERVER_HITS; }
 	override get structureType() { return C.STRUCTURE_OBSERVER; }
 
-	override isActive() {
-		return this.room.controller!.level === 8;
-	}
-
 	observeRoom(roomName: string) {
 		return chainIntentChecks(
 			() => checkMyStructure(this, StructureObserver),
