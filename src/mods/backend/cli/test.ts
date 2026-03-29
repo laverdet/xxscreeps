@@ -1,8 +1,12 @@
+import net from 'node:net';
+import os from 'node:os';
+import path from 'node:path';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { executeCommand } from './sandbox.js';
+import { startSocketServer } from './socket.js';
 import 'xxscreeps/backend/sockets/render.js';
 
 await importMods('backend');
@@ -32,8 +36,7 @@ describe('CLI', () => {
 
 		test('object result is inspected', async () => {
 			const result = await run('({ a: 1 })');
-			assert.ok(result.includes('a'));
-			assert.ok(result.includes('1'));
+			assert.ok(result.includes('{ a: 1 }'));
 		});
 
 		test('async expression resolves', async () => {
@@ -65,8 +68,7 @@ describe('CLI', () => {
 
 		test('print() inspects non-string args', async () => {
 			const result = await run('print(42, { a: 1 })');
-			assert.ok(result.includes('42'));
-			assert.ok(result.includes('a'));
+			assert.ok(result.includes('42 { a: 1 }'));
 		});
 	});
 
@@ -134,14 +136,23 @@ describe('CLI', () => {
 		test('shard.get returns game time', async () => {
 			const result = await run('shard.get("time")');
 			assert.ok(result !== 'null');
+			assert.ok(result !== 'undefined');
+		});
+
+		test('db provider is functional', async () => {
+			const result = await run('await db.smembers("users")');
+			assert.ok(result.includes('100'));
 		});
 
 		test('storage.db aliases db', async () => {
 			assert.strictEqual(await run('storage.db === db'), 'true');
+			// Verify it's not undefined === undefined
+			assert.strictEqual(await run('typeof db.get'), 'function');
 		});
 
 		test('storage.shard aliases shard', async () => {
 			assert.strictEqual(await run('storage.shard === shard'), 'true');
+			assert.strictEqual(await run('typeof shard.get'), 'function');
 		});
 
 		test('storage.pubsub is available', async () => {
@@ -152,8 +163,11 @@ describe('CLI', () => {
 
 	describe('Room helpers', () => {
 		test('rooms.list() returns room names', async () => {
-			const result = await run('rooms.list()');
-			assert.ok(result.includes('W'));
+			const result = await run('JSON.stringify(await rooms.list())');
+			const rooms = JSON.parse(result);
+			assert.ok(Array.isArray(rooms));
+			assert.ok(rooms.length > 0);
+			assert.ok(rooms.every((r: string) => /^[WE]\d+[NS]\d+$/.test(r)));
 		});
 
 		test('rooms.load() returns a plain object keyed by _id', async () => {
@@ -195,14 +209,15 @@ describe('CLI', () => {
 
 		test('rooms.load() with non-existent room throws', async () => {
 			const result = await run('await rooms.load("X9X9")');
-			assert.ok(result.includes('Error') || result.includes('null') || result.includes('undefined'));
+			assert.ok(result.includes('Error'));
 		});
 	});
 
 	describe('System', () => {
-		test('system.getTickDuration returns a number', async () => {
+		test('system.getTickDuration returns a positive number', async () => {
 			const result = await run('system.getTickDuration()');
-			assert.ok(!Number.isNaN(Number(result)));
+			const value = Number(result);
+			assert.ok(Number.isFinite(value) && value > 0);
 		});
 
 		test('system.setTickDuration rejects invalid input', async () => {
@@ -289,6 +304,185 @@ describe('CLI', () => {
 
 		test('users.findByName returns null for non-existent user', async () => {
 			assert.strictEqual(await run('users.findByName("Nobody")'), 'null');
+		});
+	});
+});
+
+// Socket integration tests
+const testSocketPath = path.join(os.tmpdir(), `xxscreeps-test-${process.pid}.sock`);
+
+function sendCommand(socketPath: string, expression: string): Promise<{ result?: string; error?: string }> {
+	return new Promise((resolve, reject) => {
+		const client = net.connect({ path: socketPath }, () => {
+			client.write(JSON.stringify({ expression }) + '\n');
+		});
+		let buffer = '';
+		client.on('data', chunk => {
+			buffer += chunk.toString();
+			const newline = buffer.indexOf('\n');
+			if (newline !== -1) {
+				const line = buffer.slice(0, newline);
+				client.destroy();
+				resolve(JSON.parse(line));
+			}
+		});
+		client.on('error', reject);
+	});
+}
+
+// Start socket server at module level so it's ready before describe blocks run
+// (the framework runs tests before nested describes within the same level)
+const socketCleanup = await startSocketServer(db, shard, testSocketPath, () => {});
+
+describe('Socket', () => {
+
+	describe('Protocol', () => {
+		test('expression returns result', async () => {
+			const response = await sendCommand(testSocketPath, '1 + 1');
+			assert.strictEqual(response.result, '2');
+		});
+
+		test('string result returned as-is', async () => {
+			const response = await sendCommand(testSocketPath, '"hello"');
+			assert.strictEqual(response.result, 'hello');
+		});
+
+		test('async expression resolves', async () => {
+			const response = await sendCommand(testSocketPath, 'await Promise.resolve(42)');
+			assert.strictEqual(response.result, '42');
+		});
+
+		test('runtime error returns stack trace in result', async () => {
+			const response = await sendCommand(testSocketPath, 'throw new Error("boom")');
+			assert.ok(response.result?.includes('Error: boom'));
+		});
+
+		test('invalid JSON returns error field', async () => {
+			const response = await new Promise<{ result?: string; error?: string }>((resolve, reject) => {
+				const client = net.connect({ path: testSocketPath }, () => {
+					client.write('not json\n');
+				});
+				let buffer = '';
+				client.on('data', chunk => {
+					buffer += chunk.toString();
+					const newline = buffer.indexOf('\n');
+					if (newline !== -1) {
+						client.destroy();
+						resolve(JSON.parse(buffer.slice(0, newline)));
+					}
+				});
+				client.on('error', reject);
+			});
+			assert.ok(response.error);
+		});
+
+		test('helpers available through socket', async () => {
+			const response = await sendCommand(testSocketPath, 'JSON.stringify(await rooms.list())');
+			const rooms = JSON.parse(response.result!);
+			assert.ok(Array.isArray(rooms));
+			assert.ok(rooms.length > 0);
+		});
+
+		test('db provider returns real data', async () => {
+			const response = await sendCommand(testSocketPath, 'await db.smembers("users")');
+			assert.ok(response.result?.includes('100'));
+		});
+
+		test('shard provider returns game time', async () => {
+			const response = await sendCommand(testSocketPath, 'await shard.get("time")');
+			assert.ok(response.result !== 'undefined');
+			assert.ok(response.result !== 'null');
+		});
+
+		test('storage aliases are functional', async () => {
+			const response = await sendCommand(testSocketPath, 'typeof storage.pubsub.publish');
+			assert.strictEqual(response.result, 'function');
+		});
+
+		test('help() returns usage string', async () => {
+			const response = await sendCommand(testSocketPath, 'help()');
+			assert.ok(response.result?.includes('rooms'));
+			assert.ok(response.result?.includes('system'));
+		});
+	});
+
+	describe('Sequential processing', () => {
+		test('responses arrive in order', async () => {
+			const results = await new Promise<string[]>((resolve, reject) => {
+				const client = net.connect({ path: testSocketPath }, () => {
+					client.write(JSON.stringify({ expression: '"first"' }) + '\n');
+					client.write(JSON.stringify({ expression: '"second"' }) + '\n');
+					client.write(JSON.stringify({ expression: '"third"' }) + '\n');
+				});
+				const responses: string[] = [];
+				let buffer = '';
+				client.on('data', chunk => {
+					buffer += chunk.toString();
+					let newline;
+					while ((newline = buffer.indexOf('\n')) !== -1) {
+						const line = buffer.slice(0, newline);
+						buffer = buffer.slice(newline + 1);
+						responses.push(JSON.parse(line).result);
+						if (responses.length === 3) {
+							client.destroy();
+							resolve(responses);
+						}
+					}
+				});
+				client.on('error', reject);
+			});
+			assert.deepStrictEqual(results, ['first', 'second', 'third']);
+		});
+	});
+
+	describe('Concurrent clients', () => {
+		test('two clients receive independent responses', async () => {
+			const [a, b] = await Promise.all([
+				sendCommand(testSocketPath, '"from-a"'),
+				sendCommand(testSocketPath, '"from-b"'),
+			]);
+			assert.strictEqual(a.result, 'from-a');
+			assert.strictEqual(b.result, 'from-b');
+		});
+
+		test('shared state is visible across clients', async () => {
+			// Client A queries, client B queries the same thing — both see the same data
+			const [a, b] = await Promise.all([
+				sendCommand(testSocketPath, 'JSON.stringify(await rooms.list())'),
+				sendCommand(testSocketPath, 'JSON.stringify(await rooms.list())'),
+			]);
+			assert.strictEqual(a.result, b.result);
+		});
+
+		test('state mutation on one client is visible to another', async () => {
+			// Client A pauses
+			const pause = await sendCommand(testSocketPath, 'system.pauseSimulation()');
+			assert.strictEqual(pause.result, 'Simulation paused');
+
+			// Client B sees it's already paused
+			const duplicate = await sendCommand(testSocketPath, 'system.pauseSimulation()');
+			assert.strictEqual(duplicate.result, 'Simulation is already paused');
+
+			// Client B resumes
+			const resume = await sendCommand(testSocketPath, 'system.resumeSimulation()');
+			assert.strictEqual(resume.result, 'Simulation resumed');
+		});
+	});
+
+	describe('Cleanup', () => {
+		test('stop socket server', () => {
+			socketCleanup();
+		});
+
+		test('socket is closed after cleanup', async () => {
+			await new Promise<void>((resolve, reject) => {
+				const client = net.connect({ path: testSocketPath });
+				client.on('error', () => resolve());
+				client.on('connect', () => {
+					client.destroy();
+					reject(new Error('Should not connect after cleanup'));
+				});
+			});
 		});
 	});
 });

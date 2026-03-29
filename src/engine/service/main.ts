@@ -71,9 +71,11 @@ try {
 	// Game loop
 	// eslint-disable-next-line no-unmodified-loop-condition
 	while (!halted) {
-		const timeStartedLoop = Date.now();
-		performanceTimer.start();
+		let timeStartedLoop!: number;
 		await gameMutex.scope(async() => {
+			timeStartedLoop = Date.now();
+			performanceTimer.start();
+
 			// Initialize
 			const time = shard.time + 1;
 			const serviceMessages = serviceChannel.iterable();

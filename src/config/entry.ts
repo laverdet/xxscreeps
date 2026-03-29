@@ -2,8 +2,10 @@ import { join } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not
+const nodeMajor = Number(process.versions.node.split('.')[0]);
 const requiredFlags = [
-	'--experimental-import-meta-resolve',
+	// import.meta.resolve stabilized in Node 20.6
+	...nodeMajor < 20 ? ['--experimental-import-meta-resolve'] : [],
 ];
 const noWorkerFlags = [
 	'--no-node-snapshot',
@@ -117,11 +119,7 @@ if (missingFlags.length) {
 		}
 
 	} else {
-		// Start repl
-		if (!isMainThread) {
-			console.log(`REPL is running in a sub-thread, this will not be a good experience! Please run node with ${requiredFlags.join(' ')} to avoid this.`);
-		}
-		const repl = await import('repl');
-		repl.start('> ');
+		// Start CLI client — connects to the server's Unix socket
+		await import('./repl.js');
 	}
 }

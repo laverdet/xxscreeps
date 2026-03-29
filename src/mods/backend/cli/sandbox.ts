@@ -19,7 +19,7 @@ import type { Subscription } from 'xxscreeps/engine/db/channel.js';
 // Per-shard state: connection + cached terrain. Persists across CLI requests.
 // Currently only shard0 exists; this map enables future multi-shard without
 // reconnecting or reloading terrain on every request.
-interface ShardEntry {
+export interface ShardEntry {
 	shard: Shard;
 	worldCache?: World;
 }
@@ -30,7 +30,7 @@ const shardEntries = new Map<string, ShardEntry>();
 let pauseMutex: Mutex | undefined;
 let pauseChannel: Subscription<any> | undefined;
 
-async function releasePause() {
+export async function releasePause() {
 	if (!pauseMutex) return;
 	const mutex = pauseMutex;
 	const channel = pauseChannel;
@@ -41,7 +41,7 @@ async function releasePause() {
 	await mutex.disconnect();
 }
 
-function makeSystemHelpers(db: Database, entry: ShardEntry) {
+export function makeSystemHelpers(db: Database, entry: ShardEntry) {
 	return {
 		getTickDuration: () => tickSpeed,
 		setTickDuration: async (ms: number) => {
@@ -88,7 +88,7 @@ function makeSystemHelpers(db: Database, entry: ShardEntry) {
 	};
 }
 
-function makeRoomHelpers(entry: ShardEntry) {
+export function makeRoomHelpers(entry: ShardEntry) {
 	return {
 		list: () => entry.shard.data.smembers('rooms'),
 		load: async (name: string) => {
@@ -188,11 +188,12 @@ export async function executeCommand(db: Database, shard: Shard, expression: str
 			'  rooms.load(name)            - Load room snapshot (rendered objects)',
 			'  system.getTickDuration()    - Get current tick speed (ms)',
 			'  system.setTickDuration(ms)  - Set tick speed (ms)',
-			'  system.resetAllData()       - (stub) See output for manual steps',
+			'  system.resetAllData()       - (stub) Not implemented',
 			'  system.pauseSimulation()    - Pause the game loop',
 			'  system.resumeSimulation()   - Resume the game loop',
 			'  system.sendServerMessage(msg) - Broadcast to all players',
 			'  help()                      - Show this help',
+			'  exit / quit / Ctrl+D        - Disconnect from server',
 		].join('\n'),
 	});
 
@@ -202,17 +203,14 @@ export async function executeCommand(db: Database, shard: Shard, expression: str
 		let result;
 		if (expression.includes('await')) {
 			// Top-level await: wrap in async IIFE
+			let fn;
 			try {
-				// Try as single expression
-				result = vm.runInContext(`(async()=>(${expression}))()`, sandbox, vmOptions);
+				fn = vm.runInContext(`(async()=>(${expression}))`, sandbox, vmOptions);
 			} catch (err) {
-				if (err instanceof SyntaxError) {
-					// Multi-statement: wrap as block
-					result = vm.runInContext(`(async()=>{${expression}})()`, sandbox, vmOptions);
-				} else {
-					throw err;
-				}
+				if (!(err instanceof SyntaxError)) throw err;
+				fn = vm.runInContext(`(async()=>{${expression}})`, sandbox, vmOptions);
 			}
+			result = fn();
 		} else {
 			result = vm.runInContext(expression, sandbox, vmOptions);
 		}
