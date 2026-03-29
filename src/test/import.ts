@@ -115,6 +115,13 @@ export async function instantiateTestShard() {
 		scratch: 'local://scratch',
 	});
 
+	// Reset all stores so shared `local://` singletons start clean
+	await Promise.all([
+		db.data.flushdb(),
+		shard.data.flushdb(),
+		shard.scratch.flushdb(),
+	]);
+
 	// Save to fake database
 	// nb: This skips the `refreshRoom` stage. This step may need to be added later but isn't
 	// needed right now.
