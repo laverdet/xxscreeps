@@ -10,7 +10,9 @@ export function getServiceChannel(shard: Shard) {
 		{ type: 'mainDisconnected' } |
 		{ type: 'processorInitialized' } |
 		{ type: 'runnerConnected' } |
-		{ type: 'tickFinished'; time: number };
+		{ type: 'tickFinished'; time: number } |
+		{ type: 'pauseSimulation' } |
+		{ type: 'resumeSimulation' };
 	return new Channel<Message>(shard.pubsub, 'channel/service');
 }
 
