@@ -4,7 +4,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
@@ -21,6 +21,7 @@ export class StructureObserver extends withOverlay(OwnedStructure, shape) {
 	observeRoom(roomName: string) {
 		return chainIntentChecks(
 			() => checkMyStructure(this, StructureObserver),
+			() => checkIsActive(this),
 			() => checkObserveRoom(this, roomName),
 			() => intents.save(this, 'observeRoom', roomName));
 	}
@@ -49,9 +50,6 @@ registerBuildableStructure(C.STRUCTURE_OBSERVER, {
 //
 // Intent checks
 export function checkObserveRoom(observer: StructureObserver, target: string) {
-	if (!observer.isActive()) {
-		return C.ERR_RCL_NOT_ENOUGH;
-	}
 	const range = Game.map.getRoomLinearDistance(observer.room.name, target);
 	if (Object.is(range, NaN)) {
 		return C.ERR_INVALID_ARGS;
