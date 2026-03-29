@@ -25,14 +25,12 @@ const [ gameMutex, serviceChannel ] = await Promise.all([
 let halted = false as boolean;
 let halt: Effect | undefined;
 let tickDelay: Deferred<boolean> | undefined;
-let paused = false as boolean;
-let pauseResume: Deferred<void> | undefined;
 handleInterrupt(() => {
 	console.log('Shutting down...');
 	halted = true;
 	halt?.();
 	tickDelay?.resolve(false);
-	pauseResume?.resolve();
+	serviceChannel.publish({ type: 'shutdown' });
 	unwatch?.();
 });
 
@@ -40,22 +38,6 @@ handleInterrupt(() => {
 const unwatch = await watch(() => {
 	console.log(`Tick speed changed to ${tickSpeed}ms`);
 	tickDelay?.resolve(true);
-});
-
-// Listen for pause/resume messages from CLI
-const pauseListener = serviceChannel.listen(message => {
-	if (message.type === 'pauseSimulation' && !paused) {
-		paused = true;
-		pauseResume = new Deferred;
-		console.log('Simulation paused');
-		tickDelay?.resolve(true);
-	} else if (message.type === 'resumeSimulation' && paused) {
-		paused = false;
-		pauseResume?.resolve();
-		pauseResume = undefined;
-		console.log('Simulation resumed');
-		tickDelay?.resolve(true);
-	}
 });
 
 // Run main game processing loop
@@ -89,12 +71,6 @@ try {
 	// Game loop
 	// eslint-disable-next-line no-unmodified-loop-condition
 	while (!halted) {
-		// Wait if paused
-		if (paused) {
-			await pauseResume?.promise;
-			if (halted) break;
-		}
-
 		const timeStartedLoop = Date.now();
 		performanceTimer.start();
 		await gameMutex.scope(async() => {
@@ -173,7 +149,6 @@ try {
 
 } finally {
 	// Clean up
-	pauseListener();
 	await gameMutex.disconnect();
 	await serviceChannel.publish({ type: 'mainDisconnected' });
 	serviceChannel.disconnect();
