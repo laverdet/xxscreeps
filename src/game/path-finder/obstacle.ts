@@ -7,6 +7,7 @@ type MovementParameters = {
 	checkTerrain?: boolean | undefined;
 	ignoreCreeps?: boolean | undefined;
 	ignoreDestructibleStructures?: boolean | undefined;
+	pathing?: boolean | undefined;
 	room: Room;
 	user: string;
 };

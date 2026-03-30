@@ -68,8 +68,11 @@ export function checkRemove(site: ConstructionSite) {
 	return C.OK;
 }
 
-// Register path finder logic
+// Construction sites are only obstacles during pathfinding, never during movement
 registerObstacleChecker(params => {
+	if (!params.pathing) {
+		return null;
+	}
 	const { user } = params;
 	return object => object instanceof ConstructionSite &&
 		object['#user'] === user &&
