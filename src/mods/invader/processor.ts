@@ -12,7 +12,7 @@ import { loop } from './loop/index.js';
 registerNPC('2', loop);
 
 // Register invader generator
-registerRoomTickProcessor(room => {
+registerRoomTickProcessor((room, context) => {
 	const target = room['#invaderEnergyTarget'] || C.INVADERS_ENERGY_GOAL;
 	const totalEnergy = room['#cumulativeEnergyHarvested'];
 	const energy = totalEnergy - room['#invaderEnergyTarget'];
@@ -24,21 +24,48 @@ registerRoomTickProcessor(room => {
 		}
 		room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
 
-		// Find raid origin
-		const exits = room.find(C.FIND_EXIT);
-		const origin = exits[Math.floor(exits.length * Math.random())];
-		exits.sort((a, b) => origin.getRangeTo(a) - origin.getRangeTo(b));
-
-		// Send the boys
-		activateNPC(room, '2');
-		for (let ii = 0; ii < 3; ++ii) {
-			const role = ([ 'melee', 'healer', 'ranged' ] as Role[])[ii % 3];
-			if (ii >= exits.length) {
-				break;
-			}
-			const pos = exits[ii];
-			room['#insertObject'](create(pos, role, 'small', Game.time + C.CREEP_LIFE_TIME));
+		// Check neighbor rooms to filter exits leading to owned/reserved rooms
+		const exitDirections = Game.map.describeExits(room.name);
+		if (!exitDirections) {
+			return;
 		}
+		const directions = Object.entries(exitDirections);
+		context.task(
+			Promise.all(directions.map(([, neighborName]) =>
+				context.shard.loadRoom(neighborName, undefined, true).catch(() => null))),
+			neighbors => {
+				// Build set of blocked directions (neighbor is owned or reserved)
+				const blockedDirs = new Set(
+					directions
+						.filter((_, ii) => neighbors[ii]?.['#user'])
+						.map(([dir]) => Number(dir)));
+
+				// Filter exit positions to unblocked directions only
+				const validExits = room.find(C.FIND_EXIT).filter(pos => {
+					if (pos.x === 0) return !blockedDirs.has(C.LEFT);
+					if (pos.x === 49) return !blockedDirs.has(C.RIGHT);
+					if (pos.y === 0) return !blockedDirs.has(C.TOP);
+					return !blockedDirs.has(C.BOTTOM);
+				});
+				if (validExits.length === 0) {
+					return;
+				}
+
+				// Find raid origin from valid exits
+				const origin = validExits[Math.floor(validExits.length * Math.random())];
+				validExits.sort((a, b) => origin.getRangeTo(a) - origin.getRangeTo(b));
+
+				// Send the boys
+				activateNPC(room, '2');
+				for (let ii = 0; ii < 3; ++ii) {
+					const role = ([ 'melee', 'healer', 'ranged' ] as Role[])[ii % 3];
+					if (ii >= validExits.length) {
+						break;
+					}
+					room['#insertObject'](create(validExits[ii], role, 'small', Game.time + C.CREEP_LIFE_TIME));
+				}
+			},
+		);
 	}
 });
 
