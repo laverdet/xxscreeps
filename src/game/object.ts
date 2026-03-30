@@ -81,7 +81,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	}
 
 	'#destroy'() {
-		this.room['#removeObject'](this);
+		return this.room['#removeObject'](this);
 	}
 
 	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
