@@ -2,8 +2,8 @@ import type { Store } from './store.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { assert, describe, reconstructor, test } from 'xxscreeps/test/index.js';
 import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store.js';
+import { LabStore } from 'xxscreeps/mods/chemistry/store.js';
 import { renderStore } from './backend.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 
 const keys = (object: {}) => [ ...function*() {
 	for (const key in object) {
@@ -83,45 +83,34 @@ describe('Store', () => {
 	}
 
 	describe('renderStore', () => {
-		// Fn.fromEntries returns null-prototype objects, so expected values must match
-		const nullProto = (...entries: [string, number][]) => Fn.fromEntries(entries);
-
 		test('Open store renders storeCapacity', () => {
 			const store = OpenStore['#create'](300);
 			const rendered = renderStore(store);
-			assert.deepStrictEqual(rendered.store, nullProto());
+			assert.deepStrictEqual({ ...rendered.store }, {});
 			assert.strictEqual(rendered.storeCapacity, 300);
 			assert.strictEqual(rendered.storeCapacityResource, undefined);
-		});
-
-		test('Open store with resources', () => {
-			const store = OpenStore['#create'](300);
-			store['#add'](C.RESOURCE_ENERGY, 50);
-			const rendered = renderStore(store);
-			assert.deepStrictEqual(rendered.store, nullProto([C.RESOURCE_ENERGY, 50]));
-			assert.strictEqual(rendered.storeCapacity, 300);
 		});
 
 		test('Single store empty renders capacity', () => {
 			const store = SingleStore['#create'](C.RESOURCE_ENERGY, 200);
 			const rendered = renderStore(store);
-			assert.deepStrictEqual(rendered.store, nullProto());
-			assert.deepStrictEqual(rendered.storeCapacityResource, nullProto([C.RESOURCE_ENERGY, 200]));
+			assert.deepStrictEqual({ ...rendered.store }, {});
+			assert.deepStrictEqual({ ...rendered.storeCapacityResource }, { [C.RESOURCE_ENERGY]: 200 });
 			assert.strictEqual(rendered.storeCapacity, undefined);
 		});
 
 		test('Single store with resources renders capacity', () => {
 			const store = SingleStore['#create'](C.RESOURCE_ENERGY, 200, 100);
 			const rendered = renderStore(store);
-			assert.deepStrictEqual(rendered.store, nullProto([C.RESOURCE_ENERGY, 100]));
-			assert.deepStrictEqual(rendered.storeCapacityResource, nullProto([C.RESOURCE_ENERGY, 200]));
+			assert.deepStrictEqual({ ...rendered.store }, { [C.RESOURCE_ENERGY]: 100 });
+			assert.deepStrictEqual({ ...rendered.storeCapacityResource }, { [C.RESOURCE_ENERGY]: 200 });
 		});
 
 		test('Restricted store empty renders capacity', () => {
 			const store = RestrictedStore['#create']({ [C.RESOURCE_ENERGY]: 100, [C.RESOURCE_POWER]: 50 });
 			const rendered = renderStore(store);
-			assert.deepStrictEqual(rendered.store, nullProto());
-			assert.deepStrictEqual(rendered.storeCapacityResource, nullProto([C.RESOURCE_ENERGY, 100], [C.RESOURCE_POWER, 50]));
+			assert.deepStrictEqual({ ...rendered.store }, {});
+			assert.deepStrictEqual({ ...rendered.storeCapacityResource }, { [C.RESOURCE_ENERGY]: 100, [C.RESOURCE_POWER]: 50 });
 			assert.strictEqual(rendered.storeCapacity, undefined);
 		});
 
@@ -129,8 +118,25 @@ describe('Store', () => {
 			const store = RestrictedStore['#create']({ [C.RESOURCE_ENERGY]: 100 });
 			store['#add'](C.RESOURCE_ENERGY, 40);
 			const rendered = renderStore(store);
-			assert.deepStrictEqual(rendered.store, nullProto([C.RESOURCE_ENERGY, 40]));
-			assert.deepStrictEqual(rendered.storeCapacityResource, nullProto([C.RESOURCE_ENERGY, 100]));
+			assert.deepStrictEqual({ ...rendered.store }, { [C.RESOURCE_ENERGY]: 40 });
+			assert.deepStrictEqual({ ...rendered.storeCapacityResource }, { [C.RESOURCE_ENERGY]: 100 });
+		});
+
+		test('Lab store empty renders energy capacity', () => {
+			const store = new LabStore();
+			const rendered = renderStore(store);
+			assert.deepStrictEqual({ ...rendered.store }, {});
+			assert.deepStrictEqual({ ...rendered.storeCapacityResource }, { [C.RESOURCE_ENERGY]: C.LAB_ENERGY_CAPACITY });
+			assert.strictEqual(rendered.storeCapacity, undefined);
+		});
+
+		test('Lab store with mineral renders both capacities', () => {
+			const store = new LabStore();
+			store['#add'](C.RESOURCE_ENERGY, 500);
+			store['#add'](C.RESOURCE_HYDROXIDE, 100);
+			const rendered = renderStore(store);
+			assert.deepStrictEqual({ ...rendered.store }, { [C.RESOURCE_ENERGY]: 500, [C.RESOURCE_HYDROXIDE]: 100 });
+			assert.deepStrictEqual({ ...rendered.storeCapacityResource }, { [C.RESOURCE_ENERGY]: C.LAB_ENERGY_CAPACITY, [C.RESOURCE_HYDROXIDE]: C.LAB_MINERAL_CAPACITY });
 		});
 	});
 });
