@@ -265,14 +265,15 @@ registerBuildableStructure(C.STRUCTURE_SPAWN, {
 export function checkRecycleCreep(spawn: StructureSpawn, creep: Creep) {
 	return chainIntentChecks(
 		() => checkMyStructure(spawn, StructureSpawn),
-		() => checkCommon(creep),
 		() => checkTarget(creep, Creep),
+		() => checkCommon(creep),
 		() => checkRange(spawn, creep, 1));
 }
 
 export function checkRenewCreep(spawn: StructureSpawn, creep: Creep) {
 	return chainIntentChecks(
 		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkTarget(creep, Creep),
 		() => checkCommon(creep),
 		() => checkRange(spawn, creep, 1),
 		() => {
