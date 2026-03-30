@@ -33,7 +33,7 @@ const router = new Router<State, Context>();
 const httpServer = http.createServer(koa.callback());
 const unlistenServer = setupGracefulShutdown(httpServer);
 installUpgradeHandlers(koa, httpServer);
-installSocketHandlers(koa, backendContext);
+const socketHandler = installSocketHandlers(koa, backendContext);
 koa.use(ConditionalGet());
 koa.use(async (context, next) => {
 	try {
@@ -82,5 +82,6 @@ for await (const message of Async.breakable(serviceChannel.iterable(), breaker =
 
 // Start graceful exit
 serviceChannel.disconnect();
-backendContext.disconnect();
 await unlistenServer();
+await socketHandler.flush();
+backendContext.disconnect();
