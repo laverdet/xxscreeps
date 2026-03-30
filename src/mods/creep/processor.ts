@@ -208,7 +208,7 @@ const intents = [
 	registerIntentProcessor(Creep, 'suicide', {}, (creep, context) => {
 		if (CreepLib.checkCommon(creep) === C.OK) {
 			buryCreep(creep, creep['#user'].length > 2 ? undefined : 0);
-			context.didUpdate();
+			context.setActive();
 		}
 	}),
 
@@ -262,7 +262,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		creep.hits <= 0
 	) {
 		buryCreep(creep);
-		context.didUpdate();
+		context.setActive();
 		return;
 	} else if (creep.hits > creep.hitsMax) {
 		creep.hits = creep.hitsMax;
