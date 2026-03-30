@@ -43,3 +43,55 @@ describe('Combat', () => {
 		});
 	}));
 });
+
+describe('getEventLog', () => {
+	const sim = simulate({
+		W1N1: room => {
+			room['#level'] = 7;
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), '100'));
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 24, 'W1N1'),
+				[ C.ATTACK ],
+				'attacker',
+				'100',
+			));
+		},
+	});
+
+	test('returns an array', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const log = Game.rooms.W1N1.getEventLog();
+			assert.ok(Array.isArray(log));
+		});
+	}));
+
+	test('records attack events after processing', () => sim(async ({ player, tick }) => {
+		await player('100', Game => {
+			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
+				.find((s: any) => s.structureType === C.STRUCTURE_LAB)!;
+			assert.strictEqual(Game.creeps.attacker.attack(lab), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			const log = Game.rooms.W1N1.getEventLog() as any[];
+			const attackEvent = log.find(e => e.event === C.EVENT_ATTACK);
+			assert.ok(attackEvent, 'expected an attack event in the event log');
+		});
+	}));
+
+	test('raw mode returns JSON string', () => sim(async ({ player, tick }) => {
+		await player('100', Game => {
+			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
+				.find((s: any) => s.structureType === C.STRUCTURE_LAB)!;
+			Game.creeps.attacker.attack(lab);
+		});
+		await tick();
+		await player('100', Game => {
+			const raw = Game.rooms.W1N1.getEventLog(true);
+			assert.strictEqual(typeof raw, 'string');
+			const parsed = JSON.parse(raw as string);
+			assert.ok(Array.isArray(parsed));
+		});
+	}));
+});
