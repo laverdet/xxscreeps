@@ -10,7 +10,41 @@ export function getVisualChannel(shard: Shard, userId: string) {
 	return new Channel<Message>(shard.pubsub, `user/${userId}/visual`);
 }
 
-const visualsReader = makeReader(Visual.schema);
+export const visualsReader = makeReader(Visual.schema);
+
+export function decodeMapVisuals(visuals: Iterable<any>) {
+	return Fn.map(visuals, visual => {
+		switch (visual[Variant]) {
+			case 'l': {
+				assertVariant(visual, 'l');
+				const p1 = Visual.decodeRoomPosition({ x: visual.x1, y: visual.y1 });
+				const p2 = Visual.decodeRoomPosition({ x: visual.x2, y: visual.y2 });
+				return Object.assign(visual, {
+					x1: p1.x,
+					y1: p1.y,
+					n1: p1.n,
+					x2: p2.x,
+					y2: p2.y,
+					n2: p2.n,
+				});
+			}
+			case 'p': {
+				assertVariant(visual, 'p');
+				return Object.assign(visual, {
+					...visual,
+					points: visual.points.map((point: any) => Visual.decodeRoomPosition({ x: point[0], y: point[1] })),
+				});
+			}
+			case 'c':
+			case 'r':
+			case 't': {
+				const p = Visual.decodeRoomPosition({ x: visual.x, y: visual.y });
+				return Object.assign(visual, { x: p.x, y: p.y, n: p.n });
+			}
+			default: return visual;
+		}
+	});
+}
 
 export async function loadVisuals(shard: Shard, userId: string, roomName: string) {
 	const fragment = `user/${userId}/visual${shard.time % 2}`;
@@ -24,33 +58,8 @@ export async function loadVisuals(shard: Shard, userId: string, roomName: string
 		let visualsString = '';
 		if (blob) {
 			const visuals = visualsReader(blob);
-			const decoded = isMapVisual ? Fn.map(visuals, visual => {
-				switch (visual[Variant]) {
-					case 'l': {
-						assertVariant(visual, 'l');
-						const p1 = Visual.decodeRoomPosition({ x: visual.x1, y: visual.y1 });
-						const p2 = Visual.decodeRoomPosition({ x: visual.x2, y: visual.y2 });
-						return Object.assign(visual, {
-							x1: p1.x,
-							y1: p1.y,
-							n1: p1.n,
-							x2: p2.x,
-							y2: p2.y,
-							n2: p2.n,
-						});
-					}
-					case 'p': {
-						assertVariant(visual, 'p');
-						return Object.assign(visual, {
-							...visual,
-							points: visual.points.map(point => Visual.decodeRoomPosition({ x: point[0], y: point[1] })),
-						});
-					}
-					default: return visual;
-				}
-			}) : visuals;
+			const decoded = isMapVisual ? decodeMapVisuals(visuals) : visuals;
 			for (const visual of decoded) {
-				// @ts-expect-error
 				visual.t = visual[Variant];
 				visualsString += stringifyInherited(visual) + '\n';
 			}

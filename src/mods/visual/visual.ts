@@ -91,9 +91,9 @@ export const schema = build(declare('Visual', vector(visualSchema)));
 
 // Save to visuals to schema blob
 export function flush() {
-	const result = [ ...Fn.map(tickVisuals, ([ roomName, visual ]) => ({
+	const result = [ ...Fn.map(tickVisuals, ([ roomName, entry ]) => ({
 		roomName,
-		blob: writeSchema(visual),
+		blob: writeSchema(entry.visuals),
 	})) ];
 	tickVisuals.clear();
 	return result;
@@ -137,7 +137,10 @@ function *extractPositions(args: any[], includeRoom: boolean): Iterable<any> {
 	}
 }
 
-const tickVisuals = new Map<string, TypeOf<typeof visualSchema>[]>();
+// Per-room visual state. `size` tracks cumulative serialized bytes for limit enforcement
+// (500 KB per room, 1000 KB for map). Shared across all RoomVisual instances for the same room.
+type RoomVisualState = { visuals: TypeOf<typeof visualSchema>[]; size: number };
+const tickVisuals = new Map<string, RoomVisualState>();
 
 /**
  * Room visuals provide a way to show various visual debug info in game rooms. You can use the
@@ -156,8 +159,11 @@ const tickVisuals = new Map<string, TypeOf<typeof visualSchema>[]>();
  * allowed.
  */
 export class RoomVisual {
-	#visuals;
+	#state;
 	readonly #isMap;
+	readonly #roomName;
+	readonly #limit;
+	readonly #limitKB;
 
 	/**
 	 * You can directly create new RoomVisual object in any room, even if it's invisible to your
@@ -166,15 +172,30 @@ export class RoomVisual {
 	 * simultaneously.
 	 */
 	constructor(roomName = '*') {
-		this.#visuals = getOrSet(tickVisuals, roomName, () => []);
+		this.#state = getOrSet(tickVisuals, roomName, () => ({ visuals: [], size: 0 }));
 		this.#isMap = roomName === 'map';
+		this.#roomName = roomName;
+		this.#limitKB = this.#isMap ? 1000 : 500;
+		this.#limit = this.#limitKB * 1024;
+	}
+
+	#push(visual: any) {
+		const entrySize = JSON.stringify({ ...visual, t: visual[Variant] }).length + 1;
+		if (this.#state.size + entrySize > this.#limit) {
+			if (this.#isMap) {
+				throw new Error(`MapVisual size has exceeded ${this.#limitKB} KB limit`);
+			}
+			throw new Error(`RoomVisual size in room ${this.#roomName} has exceeded ${this.#limitKB} KB limit`);
+		}
+		this.#state.visuals.push(visual);
+		this.#state.size += entrySize;
 	}
 
 	/**
 	 * Export the visuals as a string
 	 */
 	export() {
-		return `${this.#visuals.map(vis => JSON.stringify({ ...vis, t: vis[Variant] })).join('\n')}\n`;
+		return `${this.#state.visuals.map(vis => JSON.stringify({ ...vis, t: vis[Variant] })).join('\n')}\n`;
 	}
 
 	/**
@@ -186,7 +207,7 @@ export class RoomVisual {
 			const data = JSON.parse(row);
 			const type = data.t;
 			delete data.t;
-			this.#visuals.push({ [Variant]: type, ...data, s: data.s || {} });
+			this.#push({ [Variant]: type, ...data, s: data.s || {} });
 		}
 		return this;
 	}
@@ -196,7 +217,7 @@ export class RoomVisual {
 	 */
 	circle(...args: [ ...pos: PointParam, style?: CircleStyle ]) {
 		const [ x, y, style ] = extractPositions(args, this.#isMap);
-		this.#visuals.push({ [Variant]: 'c', x, y, s: style ?? {} });
+		this.#push({ [Variant]: 'c', x, y, s: style ?? {} });
 		return this;
 	}
 
@@ -205,7 +226,7 @@ export class RoomVisual {
 	 */
 	line(...args: [ ...pos1: PointParam, ...pos2: PointParam, style?: LineStyle ]) {
 		const [ x1, y1, x2, y2, style ] = extractPositions(args, this.#isMap);
-		this.#visuals.push({ [Variant]: 'l', x1, y1, x2, y2, s: style ?? {} });
+		this.#push({ [Variant]: 'l', x1, y1, x2, y2, s: style ?? {} });
 		return this;
 	}
 
@@ -219,7 +240,7 @@ export class RoomVisual {
 					? point :
 					[ ...extractPositions([ point ], this.#isMap) ] as [ number, number ]),
 		];
-		this.#visuals.push({ [Variant]: 'p', points: pairs, s: (style as any) ?? {} });
+		this.#push({ [Variant]: 'p', points: pairs, s: (style as any) ?? {} });
 		return this;
 	}
 
@@ -228,7 +249,7 @@ export class RoomVisual {
 	 */
 	rect(...args: [ ...pos: PointParam, width: number, height: number, style?: RectStyle ]) {
 		const [ x, y, width, height, style ] = extractPositions(args, this.#isMap);
-		this.#visuals.push({ [Variant]: 'r', x, y, w: width, h: height, s: style ?? {} });
+		this.#push({ [Variant]: 'r', x, y, w: width, h: height, s: style ?? {} });
 		return this;
 	}
 
@@ -237,7 +258,7 @@ export class RoomVisual {
 	 */
 	text(text: string, ...args: [ ...pos: PointParam, style?: TextStyle ]) {
 		const [ x, y, style ] = extractPositions(args, this.#isMap);
-		this.#visuals.push({ [Variant]: 't', x, y, text, s: style ?? {} });
+		this.#push({ [Variant]: 't', x, y, text, s: style ?? {} });
 		return this;
 	}
 
@@ -245,13 +266,76 @@ export class RoomVisual {
 	 * Remove all visuals from the room.
 	 */
 	clear() {
-		this.#visuals.splice(0);
+		this.#state.visuals.splice(0);
+		this.#state.size = 0;
 	}
 
 	/**
-	 * Not implemented!
+	 * Get the stored size of all visuals added in the current tick.
+	 * @returns The size of the visuals in bytes.
 	 */
 	getSize() {
-		return 0;
+		return this.#state.size;
+	}
+}
+
+/**
+ * Map visuals provide a way to show various visual debug info on the game map. You can use the
+ * `MapVisual` object to draw simple shapes that are visible only to you.
+ *
+ * Map visuals are not stored in the database, their only purpose is to display something in your
+ * browser. All drawings will persist for one tick and will disappear if not updated. All
+ * `MapVisual` API calls have no added CPU cost (their cost is natural and mostly related to simple
+ * `JSON.serialize` calls). However, there is a usage limit: you cannot post more than 1000 KB of
+ * serialized data (see `getSize` method).
+ */
+export class MapVisual {
+	#inner;
+
+	constructor() {
+		this.#inner = new RoomVisual('map');
+	}
+
+	line(pos1: RoomPoint, pos2: RoomPoint, style?: LineStyle) {
+		style ? this.#inner.line(pos1, pos2, style) : this.#inner.line(pos1, pos2);
+		return this;
+	}
+
+	circle(pos: RoomPoint, style?: CircleStyle) {
+		style ? this.#inner.circle(pos, style) : this.#inner.circle(pos);
+		return this;
+	}
+
+	rect(topLeftPos: RoomPoint, width: number, height: number, style?: RectStyle) {
+		style ? this.#inner.rect(topLeftPos, width, height, style) : this.#inner.rect(topLeftPos, width, height);
+		return this;
+	}
+
+	poly(points: RoomPoint[], style?: PolyStyle) {
+		style ? this.#inner.poly(points, style) : this.#inner.poly(points);
+		return this;
+	}
+
+	text(text: string, pos: RoomPoint, style?: TextStyle) {
+		style ? this.#inner.text(text, pos, style) : this.#inner.text(text, pos);
+		return this;
+	}
+
+	clear() {
+		this.#inner.clear();
+		return this;
+	}
+
+	getSize() {
+		return this.#inner.getSize();
+	}
+
+	export() {
+		return this.#inner.export();
+	}
+
+	import(data: string) {
+		this.#inner.import(data);
+		return this;
 	}
 }
