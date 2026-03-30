@@ -31,6 +31,10 @@ hooks.register('runnerConnector', player => {
 	let foreignSegmentRequest: TickResult['foreignSegmentRequest'] = null;
 	return [ undefined, {
 		async initialize(payload) {
+			// Reset state that mirrors the runtime sandbox
+			activeSegments = new Set<number>();
+			nextSegments = undefined;
+			foreignSegmentRequest = null;
 			// Get current memory payload
 			payload.memoryBlob = await loadUserMemoryBlob(shard, userId);
 		},
