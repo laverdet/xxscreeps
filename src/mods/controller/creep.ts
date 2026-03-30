@@ -119,7 +119,8 @@ export function checkAttackController(creep: Creep, target: StructureController)
 		() => checkRange(creep, target, 1),
 		() => checkSafeMode(target.room, C.ERR_NO_BODYPART),
 		() => {
-			if (target['#user'] === null) {
+			// Owned controllers use #user; reserved controllers only set room #user
+			if (target['#user'] === null && !target['#reservationEndTime']) {
 				return C.ERR_INVALID_TARGET;
 			} else if (target.upgradeBlocked) {
 				return C.ERR_TIRED;
@@ -164,7 +165,8 @@ export function checkReserveController(creep: Creep, target: StructureController
 		() => checkRange(creep, target, 1),
 		() => {
 			const user = target['#user'];
-			if ((user !== null && user !== me) || target.level !== 0) {
+			const roomUser = target.room['#user'];
+			if ((user !== null && user !== me) || (roomUser !== null && roomUser !== me) || target.level !== 0) {
 				return C.ERR_INVALID_TARGET;
 			}
 		});
