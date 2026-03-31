@@ -9,7 +9,7 @@ import { Fn } from 'xxscreeps/utility/fn.js';
 import { Mineral } from './mineral.js';
 
 registerHarvestProcessor(Mineral, (creep, mineral) => {
-	const power = calculatePower(creep, C.WORK, C.HARVEST_MINERAL_POWER);
+	const power = calculatePower(creep, C.WORK, C.HARVEST_MINERAL_POWER, 'harvest');
 	const amount = Math.min(mineral.mineralAmount, power);
 	const overflow = Math.max(amount - creep.store.getFreeCapacity(mineral.mineralType), 0);
 	creep.store['#add'](mineral.mineralType, amount - overflow);

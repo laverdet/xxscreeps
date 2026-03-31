@@ -428,7 +428,16 @@ export function create(pos: RoomPosition, parts: PartType[], name: string, owner
 export function calculateCarry(body: Creep['body']) {
 	return Fn.accumulate(
 		Fn.filter(body, part => part.hits > 0),
-		part => part.type === C.CARRY ? C.CARRY_CAPACITY : 0);
+		part => {
+			if (part.type !== C.CARRY) return 0;
+			if (part.boost) {
+				const multiplier = (C.BOOSTS as BoostsLookup)[C.CARRY]?.[part.boost]?.capacity;
+				if (multiplier) {
+					return C.CARRY_CAPACITY * multiplier;
+				}
+			}
+			return C.CARRY_CAPACITY;
+		});
 }
 
 registerObstacleChecker(params => {
@@ -528,9 +537,18 @@ export function calculateCost(creep: Creep) {
 	return Fn.accumulate(creep.body, bodyPart => C.BODYPART_COST[bodyPart.type]);
 }
 
-export function calculatePower(creep: Creep, part: PartType, power: number) {
+type BoostEffects = Partial<Record<string, number>>;
+type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
+
+export function calculatePower(creep: Creep, part: PartType, power: number, boostMethod?: string) {
 	return Fn.accumulate(creep.body, bodyPart => {
 		if (bodyPart.type === part && bodyPart.hits > 0) {
+			if (boostMethod && bodyPart.boost) {
+				const multiplier = (C.BOOSTS as BoostsLookup)[part]?.[bodyPart.boost]?.[boostMethod];
+				if (multiplier) {
+					return power * multiplier;
+				}
+			}
 			return power;
 		}
 		return 0;

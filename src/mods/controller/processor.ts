@@ -168,7 +168,7 @@ const intents = [
 		if (CreepLib.checkUpgradeController(creep, controller) === C.OK) {
 			// Calculate power, deduct energy
 			controller.upgradePowerThisTick ??= 0;
-			let power = calculatePower(creep, C.WORK, C.UPGRADE_CONTROLLER_POWER);
+			let power = calculatePower(creep, C.WORK, C.UPGRADE_CONTROLLER_POWER, 'upgradeController');
 			if (controller.level === 8) {
 				power = Math.min(power, C.CONTROLLER_MAX_UPGRADE_PER_TICK - controller.upgradePowerThisTick);
 			}
