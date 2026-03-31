@@ -40,7 +40,13 @@ declare module 'xxscreeps/game/room/index.js' {
 }
 
 const createdNames = new Set<string>();
-hooks.register('gameInitializer', () => createdNames.clear());
+// Mirrors vanilla's `createdConstructionSites` runtime counter. The processor runs per-room and
+// cannot enforce this shard-level constraint, so it is only checked here in the player runtime.
+let createdConstructionSites = 0;
+hooks.register('gameInitializer', () => {
+	createdNames.clear();
+	createdConstructionSites = 0;
+});
 
 extend(Room, {
 	createConstructionSite(this: Room, ...args: any[]) {
@@ -61,14 +67,18 @@ extend(Room, {
 		}
 
 		// Check global construction site limit
-		if (userGame && Object.keys(userGame.constructionSites).length >= C.MAX_CONSTRUCTION_SITES) {
+		if (userGame && Object.keys(userGame.constructionSites).length + createdConstructionSites >= C.MAX_CONSTRUCTION_SITES) {
 			return C.ERR_FULL;
 		}
 
 		// Send it off
-		return chainIntentChecks(
+		const result = chainIntentChecks(
 			() => checkCreateConstructionSite(this, pos, structureType, name),
 			() => intents.pushLocal(this, 'createConstructionSite', structureType, xx, yy, name));
+		if (result === C.OK) {
+			++createdConstructionSites;
+		}
+		return result;
 	},
 });
 
