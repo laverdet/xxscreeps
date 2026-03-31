@@ -79,12 +79,11 @@ export abstract class Store extends BufferObjectWithResourcesType {
 		return Object.entries(this) as never;
 	}
 
+	abstract '#storeCapacityResource'(): Record<string, number> | null;
+
 	private [Symbol.for('nodejs.util.inspect.custom')]() {
-		const capacity = this.getCapacity();
 		return {
-			[Symbol('capacity')]: capacity === null
-				? Object.fromEntries(Fn.map(this['#entries'](), ([ type ]) => [ type, this.getCapacity(type) ])) :
-				capacity,
+			[Symbol('capacity')]: this['#storeCapacityResource']() ?? this.getCapacity(),
 			...Fn.fromEntries(this['#entries']()),
 		};
 	}
@@ -118,6 +117,10 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		const instance = new OpenStore();
 		instance['#capacity'] = capacity;
 		return instance;
+	}
+
+	'#storeCapacityResource'() {
+		return null;
 	}
 
 	getCapacity(_resourceType?: ResourceType) {
@@ -205,6 +208,14 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 		return instance;
 	}
 
+	'#storeCapacityResource'() {
+		const result: Record<string, number> = Object.create(null);
+		for (const info of this['#resources']) {
+			result[info.type] = info.capacity;
+		}
+		return result;
+	}
+
 	getCapacity(resourceType?: ResourceType) {
 		return this['#resources'].find(info => info.type === resourceType)?.capacity ?? null;
 	}
@@ -261,6 +272,12 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 		instance['#capacity'] = capacity;
 		instance['#type'] = type;
 		return instance;
+	}
+
+	'#storeCapacityResource'() {
+		const result: Record<string, number> = Object.create(null);
+		result[this['#type']] = this['#capacity'];
+		return result;
 	}
 
 	getCapacity(resourceType: Type): number;

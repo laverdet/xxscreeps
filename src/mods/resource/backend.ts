@@ -9,13 +9,11 @@ export function renderStore(store: Store) {
 	const result: any = {
 		store: Fn.fromEntries(store['#entries']()),
 	};
-	const capacity = store.getCapacity();
-	if (capacity === null) {
-		result.storeCapacityResource = Fn.fromEntries(
-			store['#entries'](),
-			([ type ]) => [ type, store.getCapacity(type) ]);
+	const storeCapacityResource = store['#storeCapacityResource']();
+	if (storeCapacityResource !== null) {
+		result.storeCapacityResource = storeCapacityResource;
 	} else {
-		result.storeCapacity = capacity;
+		result.storeCapacity = store.getCapacity();
 	}
 	return result;
 }
