@@ -18,12 +18,12 @@ declare module 'xxscreeps/game/game.js' {
 		 * limit. `ArrayBuffer` instances over a certain size are externally allocated and will be counted
 		 * here.
 		 */
-		getHeapStatistics(): ivm.HeapStatistics;
+		getHeapStatistics: () => ivm.HeapStatistics;
 
 		/**
 		 * Reset your runtime environment and wipe all data in heap memory.
 		 */
-		halt(): never;
+		halt: () => never;
 	}
 }
 
@@ -31,7 +31,7 @@ class IsolatedCPU implements CPU {
 	bucket;
 	limit;
 	tickLimit;
-	#startTime;
+	readonly #startTime;
 
 	constructor(data: TickPayload) {
 		this.bucket = data.cpu.bucket;
@@ -61,7 +61,7 @@ export function initialize(
 ) {
 	isolate = isolate_;
 	// Evaluation for plain JS scripts
-	const evaluate: Runtime.Evaluate = (source, filename) => {
+	const evaluate: Runtime.Evaluate = (source, filename): unknown => {
 		const script = isolate_.compileScriptSync(source, { filename });
 		return script.runSync(context, { reference: true }).deref();
 	};
@@ -74,7 +74,7 @@ export function initialize(
 			module.filename = filename;
 			return module;
 		},
-		evaluate(module, linker) {
+		evaluate(module, linker): unknown {
 			module.instantiateSync(context, (specifier, referrer) =>
 				linker(specifier, (referrer as WithFilename).filename));
 			module.evaluateSync();

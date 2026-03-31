@@ -100,6 +100,18 @@ describe('Spawn', () => {
 		});
 	}));
 
+	test('renewCreep undefined', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.spawns.Spawn1.renewCreep(undefined as any), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('recycleCreep undefined', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.spawns.Spawn1.recycleCreep(undefined as any), C.ERR_INVALID_TARGET);
+		});
+	}));
+
 	test('destroy + unclaim', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {
 			assert.strictEqual(Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'creep'), C.OK);

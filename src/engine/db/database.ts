@@ -5,14 +5,17 @@ import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
 import { acquire } from 'xxscreeps/utility/async.js';
 
 export class Database {
+	readonly data;
+	readonly pubsub;
 	// Ensure this isn't compatible with `Shard`
-	declare private readonly _: any;
+	declare private readonly '#private': any;
+	private readonly effect;
 
-	private constructor(
-		private readonly effect: Effect,
-		public readonly data: KeyValProvider,
-		public readonly pubsub: PubSubProvider,
-	) {}
+	private constructor(effect: Effect, data: KeyValProvider, pubsub: PubSubProvider) {
+		this.effect = effect;
+		this.data = data;
+		this.pubsub = pubsub;
+	}
 
 	static async connect(info: {
 		data: string;

@@ -7,6 +7,7 @@ import { StructureLink, checkTransferEnergy } from './link.js';
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { logistics: typeof intents }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureLink, 'transferEnergy', {}, (link, context, id: string, amount: number) => {
 		const target = Game.getObjectById<StructureLink>(id)!;

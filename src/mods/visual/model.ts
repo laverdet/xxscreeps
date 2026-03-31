@@ -1,8 +1,8 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Visual from 'xxscreeps/mods/visual/visual.js';
 import { Variant, assertVariant, makeReader } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { stringifyInherited, typedArrayToString } from 'xxscreeps/utility/string.js';
 
 export function getVisualChannel(shard: Shard, userId: string) {

@@ -1,8 +1,9 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerStruct } from 'xxscreeps/engine/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { compose, struct, vector } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const schema = registerStruct('Room', {
 	'#npcData': struct({
 		users: compose(vector(Id.format), {

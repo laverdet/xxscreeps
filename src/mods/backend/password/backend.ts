@@ -14,7 +14,7 @@ async function checkPassword(db: Database, userId: string, password: string) {
 		const payload = await db.data.hget(infoKey(userId), 'password');
 		try {
 			return JSON.parse(payload!);
-		} catch (err) {}
+		} catch {}
 	}();
 	if (info) {
 		const hash = await promisify(crypto.pbkdf2)(password, Buffer.from(info.salt, 'latin1'), info.iterations, 64, 'sha512');
@@ -35,15 +35,15 @@ async function setPassword(db: Database, userId: string, password: string) {
 
 // HTTP Basic Auth
 hooks.register('middleware', koa => {
-	koa.use(async (context, next) => {
-		const auth64 = context.headers.authorization && /^Basic (?<auth>.+)$/.exec(context.headers.authorization)?.groups?.auth;
-		if (auth64) {
+	koa.use(async (context, next): Promise<unknown> => {
+		const auth64 = context.headers.authorization === undefined ? undefined : /^Basic (?<auth>.+)$/.exec(context.headers.authorization)?.groups?.auth;
+		if (auth64 !== undefined) {
 			const auth = Buffer.from(auth64, 'base64').toString();
 			const colon = auth.indexOf(':');
 			const username = auth.substr(0, colon);
 			const password = auth.substr(colon + 1);
 			const userId = await findUserByName(context.db, username);
-			if (userId && await checkPassword(context.db, userId, password)) {
+			if (userId !== null && await checkPassword(context.db, userId, password)) {
 				context.state.userId = userId;
 			}
 		}
@@ -59,7 +59,7 @@ hooks.register('route', {
 	async execute(context) {
 		const { email, password } = context.request.body;
 		const userId = await findUserByName(context.db, email);
-		if (userId) {
+		if (userId !== null) {
 			if (await checkPassword(context.db, userId, password)) {
 				context.state.userId = userId;
 				return { ok: 1, token: await context.flushToken() };

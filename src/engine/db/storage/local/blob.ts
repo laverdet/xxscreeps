@@ -4,8 +4,8 @@ import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import * as Path from 'node:path';
 import { fileURLToPath } from 'url';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { listen, spread } from 'xxscreeps/utility/async.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 
 export class BlobStorage {
 	private readonly cache = new Map<string, {
@@ -54,13 +54,13 @@ export class BlobStorage {
 			try {
 				await tryLock();
 				return;
-			} catch (err) {}
+			} catch {}
 
 			// On failure get locked pid
 			const pid = await async function() {
 				try {
 					return JSON.parse(await fs.readFile(lockFile, 'utf8'));
-				} catch (err) {
+				} catch {
 					// Lock format unrecognized
 				}
 			}();
@@ -72,7 +72,7 @@ export class BlobStorage {
 					try {
 						process.kill(pid, 0); // does *not* kill the process, just tries to send a signal
 						return true;
-					} catch (err) {
+					} catch {
 						return false;
 					}
 				}();
@@ -123,7 +123,7 @@ export class BlobStorage {
 			const path = Path.join(this.path, key);
 			try {
 				await fs.stat(path);
-			} catch (err) {
+			} catch {
 				this.cache.set(key, {
 					saveId: -1,
 					value: null,
@@ -152,7 +152,7 @@ export class BlobStorage {
 		const handle = await async function() {
 			try {
 				return await fs.open(path, 'r');
-			} catch (err) {
+			} catch {
 				return null;
 			}
 		}();
@@ -258,7 +258,7 @@ export class BlobStorage {
 					unlinkedDirectories.add(dir);
 					await fs.rmdir(dir);
 					this.knownPaths.delete(dir);
-				} catch (err) {
+				} catch {
 					break;
 				}
 			}

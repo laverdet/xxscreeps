@@ -13,6 +13,7 @@ import { assign } from 'xxscreeps/utility/utility.js';
 import { format as roomPositionFormat } from './position.js';
 import { Game, registerGlobal } from './index.js';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Schema {}
 
 export const format = declare('RoomObject', () => compose(shape, RoomObject));
@@ -23,8 +24,6 @@ const shape = struct({
 });
 
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
-	abstract get ['#lookType'](): string | null;
-
 	/**
 	 * The link to the Room object. May be `undefined` in case if an object is a flag or a construction
 	 * site and is placed in a room that is not visible to you.
@@ -50,16 +49,21 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	}
 
 	get '#extraUsers'(): string[] { return []; }
+	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#hasIntent'() { return false; }
+	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#layer'(): number | undefined { return 0.5; }
 	get '#pathCost'(): undefined | number { return undefined; }
+	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#providesVision'() { return false; }
 	get '#user'(): string | null { return null; }
-	set '#user'(_user: string | null) { throw new Error('Setting `#user` on unownable object'); }
 	get hits(): number | undefined { return undefined; }
-	set hits(_hits: number | undefined) { throw new Error('Setting `hits` on indestructible object'); }
 	get hitsMax(): number | undefined { return undefined; }
 	get my(): boolean | undefined { return undefined; }
+	abstract get ['#lookType'](): string | null;
+
+	set '#user'(_user: string | null) { throw new Error('Setting `#user` on unownable object'); }
+	set hits(_hits: number | undefined) { throw new Error('Setting `hits` on indestructible object'); }
 
 	'#addToMyGame'(_game: GameConstructor) {}
 	'#afterInsert'(room: Room) {
@@ -84,7 +88,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		return this.room['#removeObject'](this);
 	}
 
-	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized) {
+	private [Symbol.for('nodejs.util.inspect.custom')](depth: number, options: InspectOptionsStylized): unknown {
 		if (BufferObject.check(this)) {
 			return expandGetters(this);
 		} else {

@@ -2,9 +2,9 @@ import * as Crypto from 'node:crypto';
 import { hooks } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 
-hooks.register('middleware', koa => koa.use(async (context, next) => {
+hooks.register('middleware', koa => koa.use(async (context, next): Promise<unknown> => {
 	const clear = () => {
-		if (context.cookies.get('id')) {
+		if (context.cookies.get('id') !== undefined) {
 			const now = new Date();
 			context.cookies.set('id', null, { expires: now, httpOnly: false });
 			context.cookies.set('session', null, { expires: now, httpOnly: false });
@@ -25,9 +25,9 @@ hooks.register('middleware', koa => koa.use(async (context, next) => {
 			const userId = function() {
 				try {
 					return context.state.userId;
-				} catch (err) {}
+				} catch {}
 			}();
-			if (userId) {
+			if (userId !== undefined) {
 				if (userId !== cookieUserId) {
 					clear();
 				}
@@ -44,7 +44,7 @@ hooks.register('middleware', koa => koa.use(async (context, next) => {
 	if (context.path === '/api/auth/me') {
 		// Save session after login
 		const { userId } = context.state;
-		if (userId) {
+		if (userId !== undefined) {
 			const sessionId = Crypto.randomBytes(16).toString('hex');
 			context.cookies.set('id', userId, { httpOnly: false });
 			context.cookies.set('session', sessionId, { httpOnly: false });

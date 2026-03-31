@@ -27,6 +27,7 @@ const javaScriptRules = {
 	eqeqeq: [ 'warn', 'smart' ],
 	'func-name-matching': 'warn',
 	'id-denylist': [ 'warn', 'xxx', 'foo', 'bar' ],
+	'id-length': [ 'warn', { exceptions: [ 'C' ], properties: 'never' } ],
 	'logical-assignment-operators': [ 'warn', 'always', { enforceForIfStatements: true } ],
 	'no-array-constructor': 'warn',
 	'no-caller': 'warn',

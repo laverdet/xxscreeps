@@ -2,13 +2,15 @@ import { bindRenderer, hooks } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getRoomChannel, pushIntentsForRoomNextTick, userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, runOneShot } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site.js';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';
 import { saveUserFlagBlobForNextTick } from 'xxscreeps/mods/flag/model.js';
 import { renderStore } from 'xxscreeps/mods/resource/backend.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { AnyStructure } from 'xxscreeps/mods/structure/structure.js';
 import { StructureExtension } from './extension.js';
 import * as Spawn from './spawn.js';
 
@@ -78,10 +80,10 @@ hooks.register('route', {
 			roomName => context.shard.loadRoom(roomName)));
 		let max = 0;
 		for (const room of rooms) {
-			for (const structure of Fn.concat(
+			for (const structure of Fn.concat<AnyStructure | ConstructionSite>([
 				room.find(C.FIND_STRUCTURES),
 				room.find(C.FIND_CONSTRUCTION_SITES),
-			)) {
+			])) {
 				if (structure.structureType === 'spawn' && structure['#user'] === userId) {
 					const number = Number(/^Spawn(?<count>[0-9]+)$/.exec(structure.name)?.groups?.number);
 					if (number > max) {
