@@ -3,6 +3,7 @@ import { registerStruct } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { compose, struct, vector } from 'xxscreeps/schema/index.js';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const schema = registerStruct('Room', {
 	'#npcData': struct({
 		users: compose(vector(Id.format), {

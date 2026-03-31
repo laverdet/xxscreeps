@@ -11,4 +11,5 @@ const UnreadCountEndpoint: Endpoint = {
 	},
 };
 
-export default [ UnreadCountEndpoint ];
+const endpoints = [ UnreadCountEndpoint ];
+export default endpoints;

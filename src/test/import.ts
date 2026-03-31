@@ -29,7 +29,7 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 	let ii = 0;
 	type Metadata = Extract<Payload[string]['objects'], any[]>[any];
 	const saveObject = (object: RoomObject, xx: number, yy: number, fn?: (metadata: Metadata) => void) => {
-		const metadata = info.objects![ii++]!;
+		const metadata = info.objects![ii++];
 		object.id = metadata.id;
 		object.pos = new RoomPosition(xx, yy, room.name);
 		object['#posId'] = object.pos['#id'];

@@ -18,7 +18,7 @@ export function getCostMatrix(roomName: string) {
 		roomName,
 		time: Game.time,
 	};
-	const room = Game.rooms[roomName]!;
+	const room = Game.rooms[roomName];
 	room.find(C.FIND_CREEPS).forEach(creep => cm.set(creep.pos.x, creep.pos.y, 0xff));
 	for (const structure of room.find(C.FIND_STRUCTURES)) {
 		if (

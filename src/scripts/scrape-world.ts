@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { Store } from 'xxscreeps/mods/resource/store.js';
@@ -97,7 +100,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 					try {
 						await fs.stat(packagePath);
 						return packagePath;
-					} catch (err) {}
+					} catch {}
 					const next = new URL('..', path);
 					if (`${next}` === `${path}`) {
 						return;
@@ -114,7 +117,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 					mods.add(info.name);
 				}
 			}
-		} catch (err) {}
+		} catch {}
 	};
 	await fetch('.', 2);
 
@@ -124,10 +127,9 @@ if ((rcInfo?.size ?? 0) === 0) {
 			return import.meta.resolve('xxscreeps/config/mods.static/config.schema.json');
 		} catch {}
 	}();
-	const preamble = schema ? `# yaml-language-server: $schema=${schema}\n` : '';
+	const preamble = schema === undefined ? '' : `# yaml-language-server: $schema=${schema}\n`;
 	const defaultConfig: any = {};
 	for (const modConfig of Configs) {
-
 		merge(defaultConfig, modConfig.configDefaults ?? {});
 	}
 	defaultConfig.mods = [ ...mods ];

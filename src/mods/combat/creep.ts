@@ -17,7 +17,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * body parts and is not inside a rampart, it will automatically hit back at the attacker.
 		 * @param target The target object to be attacked
 		 */
-		attack(target: AttackTarget): ReturnType<typeof checkAttack>;
+		attack: (target: AttackTarget) => ReturnType<typeof checkAttack>;
 
 		/**
 		 * Heal self or another creep. It will restore the target creep’s damaged body parts function
@@ -25,7 +25,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * adjacent square to the creep.
 		 * @param target The target creep object
 		 */
-		heal(target: Creep): ReturnType<typeof checkHeal>;
+		heal: (target: Creep) => ReturnType<typeof checkHeal>;
 
 		/**
 		 * A ranged attack against another creep or structure. Requires the `RANGED_ATTACK` body part.
@@ -33,7 +33,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * within 3 squares range of the creep.
 		 * @param target The target object to be attacked
 		 */
-		rangedAttack(target: AttackTarget): ReturnType<typeof checkRangedAttack>;
+		rangedAttack: (target: AttackTarget) => ReturnType<typeof checkRangedAttack>;
 
 		/**
 		 * Heal another creep at a distance. It will restore the target creep’s damaged body parts
@@ -41,14 +41,14 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * within 3 squares range of the creep.
 		 * @param target The target creep object
 		 */
-		rangedHeal(target: Creep): ReturnType<typeof checkRangedHeal>;
+		rangedHeal: (target: Creep) => ReturnType<typeof checkRangedHeal>;
 
 		/**
 		 * A ranged attack against all hostile creeps or structures within 3 squares range. Requires the
 		 * `RANGED_ATTACK` body part. The attack power depends on the range to each target. Friendly units
 		 * are not affected.
 		 */
-		rangedMassAttack(): ReturnType<typeof checkRangedMassAttack>;
+		rangedMassAttack: () => ReturnType<typeof checkRangedMassAttack>;
 	}
 }
 

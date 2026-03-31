@@ -156,7 +156,7 @@ const tickVisuals = new Map<string, TypeOf<typeof visualSchema>[]>();
  * allowed.
  */
 export class RoomVisual {
-	#visuals;
+	readonly #visuals;
 	readonly #isMap;
 
 	/**

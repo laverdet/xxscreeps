@@ -50,7 +50,7 @@ function makeMemberScanner(layout: StructLayout, builder: Builder): Scanner | un
 		} else {
 			const scanBase = makeMemberScanner(unpackWrappedStruct(inherit), builder);
 			if (scanBase) {
-				return scanMembers ? (value, heap) => scanMembers!(value, scanBase(value, heap)) : scanBase;
+				return scanMembers ? (value, heap) => scanMembers(value, scanBase(value, heap)) : scanBase;
 			} else {
 				return scanMembers;
 			}

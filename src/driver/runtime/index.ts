@@ -21,7 +21,7 @@ export type Evaluate = (source: string, filename: string) => any;
 function freezeClass(constructor: abstract new(...args: any[]) => any) {
 	freezeProperty(constructor, 'prototype');
 	for (
-		let prototype = constructor.prototype;
+		let prototype = constructor.prototype as unknown;
 		prototype !== null && prototype !== Object.prototype;
 		prototype = Object.getPrototypeOf(prototype)
 	) {
@@ -29,7 +29,7 @@ function freezeClass(constructor: abstract new(...args: any[]) => any) {
 	}
 }
 
-function freezeProperty(object: {}, key: keyof any) {
+function freezeProperty(object: unknown, key: keyof any) {
 	const info = Object.getOwnPropertyDescriptor(object, key)!;
 	info.configurable = false;
 	info.writable = false;
@@ -70,7 +70,6 @@ const hooksComposed = function() {
 	};
 }();
 
-declare const globalThis: any;
 let me: string;
 let world: World;
 let loop: (() => any) | undefined;
@@ -117,6 +116,7 @@ export function tick(data: TickPayload) {
 			hooksComposed.receive(data);
 
 			// Run player loop
+			// @ts-expect-error
 			globalThis.Game = Game;
 			try {
 				(function thisIsWhereThePlayerCodeStarts() {
@@ -172,6 +172,7 @@ export function tick(data: TickPayload) {
 					}
 				}
 			});
+			// @ts-expect-error
 			globalThis.Game = undefined;
 		});
 

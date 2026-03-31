@@ -9,11 +9,11 @@ import './global.js';
 import './mods/index.js';
 
 if (isTopThread) {
-	const schema = await async function() {
+	const schema = await async function(): Promise<unknown> {
 		try {
 			const path = import.meta.resolve('./mods.static/config.schema.json');
 			return JSON.parse(await fs.readFile(new URL(path), 'utf8'));
-		} catch (err) {}
+		} catch {}
 	}();
 	if (schema) {
 		const ajv = new Ajv();
@@ -28,9 +28,7 @@ if (isTopThread) {
 // Merge defaults into config data
 const config = {};
 for (const entry of Config) {
-
 	merge(config, entry.defaults ?? {});
-
 	merge(config, entry.configDefaults ?? {});
 }
 

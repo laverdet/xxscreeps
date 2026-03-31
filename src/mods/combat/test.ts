@@ -31,14 +31,14 @@ describe('Combat', () => {
 	test('attack + rangedAttack killing a structure produces exactly one ruin', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
 			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
-				.find((s: any) => s.structureType === C.STRUCTURE_LAB)!;
+				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
 			assert.strictEqual(Game.creeps.warrior.attack(lab), C.OK);
 			assert.strictEqual(Game.creeps.warrior.rangedAttack(lab), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
 			const ruins = Game.rooms.W1N1.find(C.FIND_RUINS);
-			const labRuins = ruins.filter((r: any) => r.pos.x === 25 && r.pos.y === 25);
+			const labRuins = ruins.filter(ruin => ruin.pos.x === 25 && ruin.pos.y === 25);
 			assert.strictEqual(labRuins.length, 1,
 				`expected 1 ruin at lab position, got ${labRuins.length}`);
 		});
@@ -70,13 +70,13 @@ describe('getEventLog', () => {
 	test('records attack events after processing', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
 			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
-				.find((s: any) => s.structureType === C.STRUCTURE_LAB)!;
+				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
 			assert.strictEqual(Game.creeps.attacker.attack(lab), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
-			const log = Game.rooms.W1N1.getEventLog() as any[];
-			const attackEvent = log.find(e => e.event === C.EVENT_ATTACK);
+			const log = Game.rooms.W1N1.getEventLog();
+			const attackEvent: unknown = log.find(event => event.event === C.EVENT_ATTACK);
 			assert.ok(attackEvent, 'expected an attack event in the event log');
 		});
 	}));
@@ -84,14 +84,14 @@ describe('getEventLog', () => {
 	test('raw mode returns JSON string', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
 			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
-				.find((s: any) => s.structureType === C.STRUCTURE_LAB)!;
+				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
 			Game.creeps.attacker.attack(lab);
 		});
 		await tick();
 		await player('100', Game => {
 			const raw = Game.rooms.W1N1.getEventLog(true);
-			assert.strictEqual(typeof raw, 'string');
-			const parsed = JSON.parse(raw as string);
+			assert(typeof raw === 'string');
+			const parsed: unknown = JSON.parse(raw);
 			assert.ok(Array.isArray(parsed));
 		});
 	}));

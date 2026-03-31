@@ -9,6 +9,7 @@ import { IncomingMessage, ServerResponse } from 'node:http';
 import { Socket } from 'node:net';
 import sockjs from 'sockjs';
 import config from 'xxscreeps/config/index.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { checkToken, makeToken } from './auth/token.js';
 import { CodeSubscriptions } from './sockets/code.js';
 import { ConsoleSubscriptions } from './sockets/console.js';
@@ -57,7 +58,7 @@ export function installUpgradeHandlers(koa: Koa<State, Context>, httpServer: Ser
 		const fakeResponse: any = new FakeResponse(socket, head);
 		fakeResponse.head = head;
 		fakeResponse.socket = socket;
-		callback(request, fakeResponse);
+		mustNotReject(callback(request, fakeResponse));
 	});
 
 	koa.use(async (context, next) => {
@@ -134,7 +135,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 				subscriptions.delete(name);
 				const teardown = unlistener.then(unlistener => unlistener(), () => {});
 				pendingTeardowns.add(teardown);
-				teardown.finally(() => pendingTeardowns.delete(teardown));
+				void teardown.finally(() => pendingTeardowns.delete(teardown));
 			}
 			connection.close();
 		}

@@ -157,14 +157,14 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 			return;
 		}
 		const resources = this['#resources'];
-		const ii = resources.findIndex(info => info.type === type)!;
+		const ii = resources.findIndex(info => info.type === type);
 		const info = resources[ii];
 		if ((info.amount -= amount) === 0) {
 			resources[ii] = resources[resources.length - 1];
 			resources.pop();
 			delete this[type];
 		} else {
-			this[type]! -= amount;
+			this[type] -= amount;
 		}
 		this._sum -= amount;
 	}
@@ -341,7 +341,7 @@ export function checkHasResource(target: WithStore, resourceType: ResourceType |
 		return C.ERR_INVALID_ARGS;
 	} else if (typeof amount !== 'number' || amount < 0) {
 		return C.ERR_INVALID_ARGS;
-	} else if (target.store[resourceType!]! >= Math.max(1, amount)) {
+	} else if (target.store[resourceType!] >= Math.max(1, amount)) {
 		return C.OK;
 	} else {
 		return C.ERR_NOT_ENOUGH_RESOURCES;

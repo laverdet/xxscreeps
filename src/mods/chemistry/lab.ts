@@ -1,11 +1,11 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
-import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
+import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';

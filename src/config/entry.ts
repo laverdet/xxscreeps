@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
+import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not
 const requiredFlags = [
@@ -89,19 +89,19 @@ if (missingFlags.length) {
 		};
 
 		// Resolve entry script
-		const modulePath = await async function() {
+		const modulePath = function() {
 			try {
 				const command = commands[specifier];
-				if (command) {
-					// Found run alias
-					return import.meta.resolve(`${new URL(command, new URL('../..', import.meta.url))}`);
-				} else {
+				if (command === undefined) {
 					// Try to parse as file:// URL, probably a self-invoking worker
 					try {
 						return `${new URL(specifier)}`;
-					} catch (err) {}
+					} catch {}
 					// Resolve as file from cwd
 					return import.meta.resolve(join(process.cwd(), specifier));
+				} else {
+					// Found run alias
+					return import.meta.resolve(`${new URL(command, new URL('../..', import.meta.url))}`);
 				}
 			} catch (error: any) {
 				if (error.code !== 'ERR_MODULE_NOT_FOUND') {

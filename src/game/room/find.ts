@@ -6,6 +6,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerFindHandlers } from './symbols.js';
 
 // Declare-able interface for mods
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Find {}
 export type FindHandler = (room: Room) => readonly any[];
 type FindHandlers = Exclude<Find[keyof Find], void>;
@@ -43,6 +44,7 @@ function makeFindExit(exit: ExitType) {
 }
 
 // All FIND_EXIT_ handlers
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	...Fn.fromEntries(exits.map(exit => [ exit, makeFindExit(exit) ])),
 	[C.FIND_EXIT]: (room: Room): RoomPosition[] => [

@@ -69,7 +69,7 @@ const cached = await async function() {
 			json: string;
 			version: number;
 		};
-	} catch (err) {}
+	} catch {}
 }();
 if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 	// Given a specifier fragment this return all mods which export it.
@@ -123,7 +123,7 @@ if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 			const json = (await Promise.all(inputs.map(async path => {
 				try {
 					return JSON.parse(await fs.readFile(new URL('config.schema.json', path), 'utf8'));
-				} catch (err) {}
+				} catch {}
 			}))).filter(content => content);
 			const merged = {
 				$schema: json[0].$schema,

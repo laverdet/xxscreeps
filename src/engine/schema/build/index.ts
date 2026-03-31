@@ -30,7 +30,7 @@ export function build<Type extends Format>(format: Type, cache = new Map()) {
 	fs.mkdirSync(archivePath, { recursive: true });
 	try {
 		fs.statSync(file);
-	} catch (err) {
+	} catch {
 		fs.writeFileSync(file, result.archive);
 		fs.writeFileSync(makeArchivePath(result.name, result.version, 'ksy'), archiveStruct(result.layout, result.version));
 	}
@@ -56,7 +56,7 @@ export function makeUpgrader(info: Package, write: (value: any) => Readonly<Uint
 				const archive = function() {
 					try {
 						return fs.readFileSync(makeArchivePath(name, version), 'utf8');
-					} catch (err) {
+					} catch {
 						throw new Error(`No archived schema found for ${name} ${version}`);
 					}
 				}();

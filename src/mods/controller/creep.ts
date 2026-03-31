@@ -16,7 +16,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * at adjacent square to the creep.
 		 * @param target The target controller object.
 		 */
-		attackController(target: StructureController): ReturnType<typeof checkAttackController>;
+		attackController: (target: StructureController) => ReturnType<typeof checkAttackController>;
 
 		/**
 		 * Claims a neutral controller under your control. Requires the `CLAIM` body part. The target has
@@ -25,14 +25,14 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * room instead. Learn more
 		 * @param target The target controller object.
 		 */
-		claimController(target: StructureController): ReturnType<typeof checkClaimController>;
+		claimController: (target: StructureController) => ReturnType<typeof checkClaimController>;
 
 		/**
 		 * Add one more available safe mode activation to a room controller. The creep has to be at
 		 * adjacent square to the target room controller and have 1000 ghodium resource.
 		 * @param target The target room controller.
 		 */
-		generateSafeMode(target: StructureController): ReturnType<typeof checkGenerateSafeMode>;
+		generateSafeMode: (target: StructureController) => ReturnType<typeof checkGenerateSafeMode>;
 
 		/**
 		 * Temporarily block a neutral controller from claiming by other players and restore energy
@@ -42,7 +42,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * creep.
 		 * @param target The target controller object to be reserved.
 		 */
-		reserveController(target: StructureController): ReturnType<typeof checkReserveController>;
+		reserveController: (target: StructureController) => ReturnType<typeof checkReserveController>;
 
 		/**
 		 * Sign a controller with an arbitrary text visible to all players. This text will appear in the
@@ -52,7 +52,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * @param target The target controller object to be signed.
 		 * @param message The sign text. The string is cut off after 100 characters.
 		 */
-		signController(target: StructureController, message: string): ReturnType<typeof checkSignController>;
+		signController: (target: StructureController, message: string) => ReturnType<typeof checkSignController>;
 
 		/**
 		 * Upgrade your controller to the next level using carried energy. Upgrading controllers raises
@@ -68,7 +68,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * full in order for controller to be levelled up.
 		 * @param target The target controller object to be upgraded
 		 */
-		upgradeController(target: StructureController): ReturnType<typeof checkUpgradeController>;
+		upgradeController: (target: StructureController) => ReturnType<typeof checkUpgradeController>;
 	}
 }
 

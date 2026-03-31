@@ -27,7 +27,7 @@ registerRoomTickProcessor(room => {
 		// Find raid origin
 		const exits = room.find(C.FIND_EXIT);
 		const origin = exits[Math.floor(exits.length * Math.random())];
-		exits.sort((a, b) => origin.getRangeTo(a) - origin.getRangeTo(b));
+		exits.sort((left, right) => origin.getRangeTo(left) - origin.getRangeTo(right));
 
 		// Send the boys
 		activateNPC(room, '2');
@@ -46,6 +46,7 @@ registerRoomTickProcessor(room => {
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { invader: typeof intent }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intent = registerIntentProcessor(Room, 'requestInvader', { internal: true }, (room, context, xx: number, yy: number, role: Role, strength: Strength) => {
 	const pos = new RoomPosition(xx, yy, room.name);
 	room['#insertObject'](create(pos, role, strength, Game.time + 200));

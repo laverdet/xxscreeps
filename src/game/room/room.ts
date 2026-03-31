@@ -24,9 +24,9 @@ export class Room extends withOverlay(BufferObject, shape) {
 	declare static Terrain: typeof Terrain;
 
 	#didInitialize = false;
-	#findCache = new Map<number, (RoomObject | RoomPosition)[]>();
-	#lookIndex = new Map<string, RoomObject[]>(Fn.map(lookConstants, look => [ look, [] ]));
-	#spatialIndex = new Map<number, RoomObject[]>();
+	readonly #findCache = new Map<number, (RoomObject | RoomPosition)[]>();
+	readonly #lookIndex = new Map<string, RoomObject[]>(Fn.map(lookConstants, look => [ look, [] ]));
+	readonly #spatialIndex = new Map<number, RoomObject[]>();
 	#insertObjects: RoomObject[] = [];
 	#removeObjects = new Set<RoomObject>();
 
@@ -181,46 +181,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 	}
 
 	/**
-	 * Add an object to the look and spatial indices
-	 */
-	#afterInsert(this: Room, object: RoomObject) {
-		const lookType = object['#lookType'];
-		if (lookType) {
-			this.#lookIndex.get(lookType)!.push(object);
-		}
-		const pos = object['#posId'];
-		const list = this.#spatialIndex.get(pos);
-		if (list) {
-			list.push(object);
-		} else {
-			this.#spatialIndex.set(pos, [ object ]);
-		}
-		object['#afterInsert'](this);
-	}
-
-	/**
-	 * Remove an object from the look and spatial indices
-	 */
-	#beforeRemove(object: RoomObject) {
-		object['#beforeRemove']();
-		const lookType = object['#lookType'];
-		if (lookType) {
-			removeOne(this.#lookIndex.get(lookType)!, object);
-		}
-		const pos = object['#posId'];
-		const list = this.#spatialIndex.get(pos)!;
-		if (list.length === 1) {
-			this.#spatialIndex.delete(pos);
-		} else {
-			removeOne(list, object);
-		}
-	}
-
-	/**
 	 * Enumerable objects properties like `.storage` and `.controller` are removed from the JSON
 	 * serialized data because otherwise there will be circular references.
 	 */
-	private toJSON() {
+	private toJSON(): unknown {
 		const result: any = {};
 		for (const ii in this) {
 			const value: any = this[ii];
@@ -242,6 +206,42 @@ export class Room extends withOverlay(BufferObject, shape) {
 			return this;
 		} else {
 			return `[Room ${options.stylize(this.name, 'string')}]`;
+		}
+	}
+
+	/**
+	 * Add an object to the look and spatial indices
+	 */
+	#afterInsert(this: Room, object: RoomObject) {
+		const lookType = object['#lookType'];
+		if (lookType !== null) {
+			this.#lookIndex.get(lookType)!.push(object);
+		}
+		const pos = object['#posId'];
+		const list = this.#spatialIndex.get(pos);
+		if (list) {
+			list.push(object);
+		} else {
+			this.#spatialIndex.set(pos, [ object ]);
+		}
+		object['#afterInsert'](this);
+	}
+
+	/**
+	 * Remove an object from the look and spatial indices
+	 */
+	#beforeRemove(object: RoomObject) {
+		object['#beforeRemove']();
+		const lookType = object['#lookType'];
+		if (lookType !== null) {
+			removeOne(this.#lookIndex.get(lookType)!, object);
+		}
+		const pos = object['#posId'];
+		const list = this.#spatialIndex.get(pos)!;
+		if (list.length === 1) {
+			this.#spatialIndex.delete(pos);
+		} else {
+			removeOne(list, object);
 		}
 	}
 }
@@ -277,7 +277,7 @@ export function flushUsers(room: Room) {
 		}
 	}
 	const user = room['#user'];
-	if (user) {
+	if (user != null) {
 		presence.add(user);
 	}
 	const previous = room['#users'];

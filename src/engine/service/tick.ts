@@ -1,5 +1,5 @@
-import fsPromises from 'node:fs/promises';
 import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
 import jsYaml from 'js-yaml';
 import config, { configPath } from 'xxscreeps/config/index.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
@@ -12,8 +12,8 @@ export async function watch(onUpdate?: () => void) {
 		let stat = await fsPromises.stat(configPath);
 		const handle = fs.watch(
 			new URL('.', configPath),
-			(message, fileName) => setTimeout(() => mustNotReject(async() => {
-				if (fileName && fileName !== '.screepsrc.yaml') {
+			(message, fileName) => setTimeout(() => mustNotReject(async () => {
+				if (fileName !== null && fileName !== '.screepsrc.yaml') {
 					return;
 				}
 				try {
@@ -30,8 +30,8 @@ export async function watch(onUpdate?: () => void) {
 							onUpdate?.();
 						}
 					}
-				} catch (err) {}
+				} catch {}
 			}), 100));
 		return () => handle.close();
-	} catch (err) {}
+	} catch {}
 }

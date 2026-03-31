@@ -121,7 +121,7 @@ const intents = [
 	registerIntentProcessor(Creep, 'generateSafeMode', {}, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkGenerateSafeMode(creep, controller) === C.OK) {
-			creep.store[C.RESOURCE_GHODIUM]! -= C.SAFE_MODE_COST;
+			creep.store[C.RESOURCE_GHODIUM] -= C.SAFE_MODE_COST;
 			++controller.safeModeAvailable;
 			saveAction(creep, 'upgradeController', controller.pos);
 			context.didUpdate();

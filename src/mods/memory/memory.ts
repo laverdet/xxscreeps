@@ -152,7 +152,7 @@ export function get(): any {
 		} else {
 			json = JSON.parse(RawMemory.get());
 		}
-	} catch (err) {
+	} catch {
 		json = {};
 	}
 	return RawMemory._parsed = json;

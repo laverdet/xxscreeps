@@ -40,11 +40,11 @@ type FindRoute = {
  * A global object representing world map. Use it to navigate between rooms.
  */
 export class GameMap {
-	#terrain: TerrainByRoom;
-	#left;
-	#top;
-	#height;
-	#width;
+	readonly #terrain: TerrainByRoom;
+	readonly #left;
+	readonly #top;
+	readonly #height;
+	readonly #width;
 
 	constructor(terrain: TerrainByRoom) {
 		this.#terrain = terrain;
@@ -254,12 +254,13 @@ export class GameMap {
  */
 export class World {
 	map: GameMap;
+	name;
 	terrain: TerrainByRoom;
+	terrainBlob;
 
-	constructor(
-		public name: string,
-		public terrainBlob: Readonly<Uint8Array>,
-	) {
+	constructor(name: string, terrainBlob: Readonly<Uint8Array>) {
+		this.name = name;
+		this.terrainBlob = terrainBlob;
 		this.terrain = reader(terrainBlob);
 		this.map = new GameMap(this.terrain);
 	}

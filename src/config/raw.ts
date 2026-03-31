@@ -10,7 +10,7 @@ export const configPath = new URL('.screepsrc.yaml', `${pathToFileURL(process.cw
 const content = await async function() {
 	try {
 		return await fs.readFile(configPath, 'utf8');
-	} catch (err) {}
+	} catch {}
 }();
 const config = function(): Schema {
 	if (content) {

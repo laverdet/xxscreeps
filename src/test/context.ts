@@ -1,4 +1,5 @@
 import { checkArguments } from 'xxscreeps/config/arguments.js';
+import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 
 type Callback = () => void | Promise<void>;
 type Context = {
@@ -69,7 +70,7 @@ export function test(name: string, fn: Callback) {
 				process.stdout.write('.');
 			}
 		} catch (err: any) {
-			const names = [ ...stack.map(frame => frame.name), context?.name, name ].filter(name => name);
+			const names = [ ...stack.map(frame => frame.name), context?.name, name ].filter(nonNullPredicate);
 			if (argv.length === 0) {
 				console.log(`\nTest "${name}" failed. Isolate with: npx xxscreeps test ${names.map(name => `"${name}"`).join(' ')}`);
 			}

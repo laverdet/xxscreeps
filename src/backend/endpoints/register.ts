@@ -67,4 +67,5 @@ const SetUsernameEndpoint: Endpoint = {
 	},
 };
 
-export default [ CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint ];
+const endpoints = [ CheckEmailEndpoint, CheckUsernameEndpoint, SetUsernameEndpoint ];
+export default endpoints;

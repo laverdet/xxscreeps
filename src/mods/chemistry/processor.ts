@@ -1,4 +1,5 @@
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
@@ -9,6 +10,7 @@ import { StructureLab, calcTotalReactionsTime, checkBoostCreep, checkReverseReac
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { chemistry: typeof intents }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureLab, 'runReaction', {}, (lab, context, id1: string, id2: string) => {
 		const left = Game.getObjectById<StructureLab>(id1)!;
@@ -35,7 +37,7 @@ const intents = [
 		// Find non-boosted parts matching this mineral's boost type
 		const boosts = C.BOOSTS as Partial<Record<string, Partial<Record<string, unknown>>>>;
 		let nonBoostedParts = creep.body.filter(
-			p => !p.boost && boosts[p.type]?.[mineralType]);
+			part => !part.boost && boosts[part.type]?.[mineralType]);
 
 		// TOUGH parts boosted first (ascending index), all others last-to-first (reversed)
 		if (nonBoostedParts.length > 0 && nonBoostedParts[0].type !== C.TOUGH) {
@@ -47,13 +49,11 @@ const intents = [
 		}
 
 		// Apply boosts while resources allow
-		for (let i = 0;
-			i < nonBoostedParts.length &&
-			lab.store[C.RESOURCE_ENERGY] >= C.LAB_BOOST_ENERGY &&
-			lab.store[mineralType] >= C.LAB_BOOST_MINERAL;
-			++i
-		) {
-			nonBoostedParts[i].boost = mineralType;
+		for (const ii of Fn.range(nonBoostedParts.length)) {
+			if (lab.store[C.RESOURCE_ENERGY] < C.LAB_BOOST_ENERGY || lab.store[mineralType] < C.LAB_BOOST_MINERAL) {
+				break;
+			}
+			nonBoostedParts[ii].boost = mineralType;
 			lab.store['#subtract'](mineralType, C.LAB_BOOST_MINERAL);
 			lab.store['#subtract'](C.RESOURCE_ENERGY, C.LAB_BOOST_ENERGY);
 		}
@@ -73,9 +73,9 @@ const intents = [
 		}
 		const mineralType = lab.mineralType!;
 		const variants = getReactionVariants(mineralType);
-		const variant = variants.find(v =>
-			(!lab1.mineralType || lab1.mineralType === v[0]) &&
-			(!lab2.mineralType || lab2.mineralType === v[1]))!;
+		const variant = variants.find(variant =>
+			(!lab1.mineralType || lab1.mineralType === variant[0]) &&
+			(!lab2.mineralType || lab2.mineralType === variant[1]))!;
 
 		lab.store['#subtract'](mineralType, C.LAB_REACTION_AMOUNT);
 		lab1.store['#add'](variant[0], C.LAB_REACTION_AMOUNT);

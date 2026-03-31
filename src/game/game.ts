@@ -45,7 +45,7 @@ export class GameBase {
 	readonly rooms: Record<string, Room>;
 	readonly time: number;
 	readonly map: GameMap;
-	#state: GameState;
+	readonly #state: GameState;
 
 	constructor(state: GameState) {
 		this.rooms = state.rooms;

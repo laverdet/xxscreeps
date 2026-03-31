@@ -20,12 +20,17 @@ declare module './room.js' {
 		 * Returns an array of events happened on the previous tick in this room.
 		 * @param raw Return as JSON string.
 		 */
-		getEventLog(raw?: boolean): string | AnyEventLog[];
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
+		getEventLog(raw: true): string;
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
+		getEventLog(raw?: false): AnyEventLog[];
 	}
 }
 
 extend(Room, {
+	// @ts-expect-error
 	getEventLog(raw = false) {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (raw) {
 			return JSON.stringify(this['#eventLog']);
 		} else {

@@ -7,4 +7,5 @@ import './shards.js';
 import './world.js';
 import time from './time.js';
 
-export default [ ...intents, ...time, MapStatsEndpoint ];
+const endpoints = [ ...intents, ...time, MapStatsEndpoint ];
+export default endpoints;

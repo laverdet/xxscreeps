@@ -3,7 +3,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import flee from './flee.js';
 
-export default function(creep: Creep, healers: Creep[]) {
+export default function healer(creep: Creep, healers: Creep[]) {
 	const healTargets = creep.pos.findInRange(C.FIND_MY_CREEPS, 3);
 	if (healTargets.length > 0) {
 		const healTarget = Fn.minimum(healTargets,

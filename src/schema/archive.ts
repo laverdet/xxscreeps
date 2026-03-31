@@ -31,9 +31,9 @@ class ModuleArchiver {
 		return rendered + exports;
 	}
 
-	private archive(layout: Layout): any {
+	private archive(layout: Layout): unknown {
 		const identifier = this.layoutToIdentifier.get(layout);
-		if (identifier) {
+		if (identifier !== undefined) {
 			this.dependencies.get(this.current)?.add(identifier);
 			// eslint-disable-next-line no-new-wrappers
 			return new String(identifier);
@@ -63,15 +63,18 @@ class ModuleArchiver {
 				return {
 					...layout,
 					...layout.inherit && { inherit: this.archive(layout.inherit) },
-					struct: Object.fromEntries(entriesWithSymbols(layout.struct).map(([ key, value ]) => {
-						const result = [ key, {
-							// eslint-disable-next-line no-new-wrappers
-							offset: new String(`0x${value.offset.toString(16)}`),
-							member: this.archive(value.member),
-							...value.union ? { union: true } : undefined,
-						} ];
-						return result;
-					})),
+					struct: Fn.pipe(
+						entriesWithSymbols(layout.struct),
+						$$ => Fn.map($$, ([ key, value ]) => {
+							const result = {
+								// eslint-disable-next-line no-new-wrappers
+								offset: new String(`0x${value.offset.toString(16)}`),
+								member: this.archive(value.member),
+								...value.union ? { union: true } : undefined,
+							};
+							return [ key, result ] as const;
+						}),
+						$$ => Fn.fromEntries($$)),
 				};
 			} else if ('variant' in layout) {
 				return {
@@ -82,7 +85,7 @@ class ModuleArchiver {
 				};
 			} else {
 				const nested = [ 'array', 'list', 'optional', 'pointer', 'vector' ].find(key => key in layout);
-				if (nested) {
+				if (nested !== undefined) {
 					return {
 						...layout,
 						[nested]: this.archive(layout[nested as keyof typeof layout]),
@@ -157,13 +160,14 @@ export function restoreLayout(archive: string, layoutTemplate: Layout) {
 	});
 
 	// Evaluate archive code string
-	// eslint-disable-next-line @typescript-eslint/no-implied-eval
+	// eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
 	const exec = new Function(
 		'exports',
 		archive
 			.replace(/export default /, 'exports.default = ')
 			.replace(/export const (?<id>[a-zA-Z0-9]+) = /g, 'const $<id> = exports.$<id> = '));
 	const exports: Record<string, Layout> = {};
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 	exec(exports);
 	const exportedLayout = exports.default;
 	delete exports.default;
@@ -172,7 +176,7 @@ export function restoreLayout(archive: string, layoutTemplate: Layout) {
 	// Add compositions to restore layout
 	return mapLayout(exportedLayout, (layout, path) => {
 		const named = namedExports.get(layout);
-		if (named && path !== named && path !== `${named}.`) {
+		if (named !== undefined && path !== named && path !== `${named}.`) {
 			return { named, layout };
 		}
 		const composition = compositions.get(path);
@@ -192,7 +196,7 @@ function mapLayout(layout: Layout, fn: (layout: Layout, path: string) => Layout)
 
 		// Check for repeated layouts
 		const previous = layouts.get(layoutParam);
-		if (previous) {
+		if (previous !== undefined) {
 			return previous;
 		}
 

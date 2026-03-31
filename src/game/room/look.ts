@@ -43,7 +43,7 @@ declare module './room.js' {
 		 * @param y Y position in the room
 		 * @param target Can be a RoomObject or RoomPosition
 		 */
-		lookAt(...args: PositionParameter): LookAtResult<any>[];
+		lookAt: (...args: PositionParameter) => LookAtResult<any>[];
 
 		/**
 		 * Get the list of objects at the specified room area.
@@ -82,7 +82,7 @@ declare module './room.js' {
 		/**
 		 * Creates a RoomPosition object at the specified location.
 		 */
-		getPositionAt(x: number, y: number): RoomPosition;
+		getPositionAt: (x: number, y: number) => RoomPosition;
 	}
 }
 
@@ -178,8 +178,8 @@ extend(Room, {
 		return withAsArray(results, top, left, bottom, right, asArray, false) as never;
 	},
 
-	getPositionAt(x: number, y: number) {
-		return new RoomPosition(x, y, this.name);
+	getPositionAt(xx: number, yy: number) {
+		return new RoomPosition(xx, yy, this.name);
 	},
 });
 

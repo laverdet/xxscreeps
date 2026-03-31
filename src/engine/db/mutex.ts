@@ -12,10 +12,14 @@ export class Mutex {
 	private yieldPromise: Promise<void> | undefined;
 	private waitingListener: Effect | undefined;
 	private readonly localQueue: (Effect)[] = [];
-	constructor(
-		private readonly channel: Subscription<Message>,
-		private readonly lockable: Lock,
-	) {}
+	private readonly channel;
+	private readonly lockable;
+
+	constructor(channel: Subscription<Message>, lockable: Lock) {
+		this.channel = channel;
+		this.lockable = lockable;
+
+	}
 
 	static async connect(name: string, keyval: KeyValProvider, pubsub: PubSubProvider) {
 		const channel = await new Channel<Message>(pubsub, `mutex/channel/${name}`, false).subscribe();
@@ -160,10 +164,13 @@ const CompareAndDelete = new KeyvalScript((keyval, [ key ]: [ string ], [ value 
 class Lock {
 	private interval: ReturnType<typeof setInterval> | undefined;
 	private readonly value = `${Math.random()}`;
-	constructor(
-		private readonly keyval: KeyValProvider,
-		private readonly name: string,
-	) {}
+	private readonly keyval;
+	private readonly name;
+	constructor(keyval: KeyValProvider, name: string) {
+		this.keyval = keyval;
+		this.name = name;
+
+	}
 
 	async lock() {
 		if (await this.keyval.set(this.name, this.value, { px: 30000, if: 'nx' }) === null) {
@@ -179,7 +186,7 @@ class Lock {
 	}
 
 	unlock() {
-		clearInterval(this.interval!);
+		clearInterval(this.interval);
 		this.interval = undefined;
 		return this.keyval.eval(CompareAndDelete, [ this.name ], [ this.value ]);
 	}

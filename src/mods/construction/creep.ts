@@ -15,21 +15,21 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * `CARRY` body parts. The target has to be within 3 squares range of the creep.
 		 * @param target The target construction site to be built
 		 */
-		build(target: ConstructionSite): ReturnType<typeof checkBuild>;
+		build: (target: ConstructionSite) => ReturnType<typeof checkBuild>;
 
 		/**
 		 * Repair a damaged structure using carried energy. Requires the WORK and CARRY body parts. The
 		 * target has to be within 3 squares range of the creep.
 		 * @param target The target structure to be repaired.
 		 */
-		dismantle(target: Structure): ReturnType<typeof checkDismantle>;
+		dismantle: (target: Structure) => ReturnType<typeof checkDismantle>;
 
 		/**
 		 * Repair a damaged structure using carried energy. Requires the WORK and CARRY body parts. The
 		 * target has to be within 3 squares range of the creep.
 		 * @param target The target structure to be repaired.
 		 */
-		repair(target: Structure): ReturnType<typeof checkRepair>;
+		repair: (target: Structure) => ReturnType<typeof checkRepair>;
 	}
 }
 

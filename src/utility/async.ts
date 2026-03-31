@@ -84,7 +84,7 @@ AsyncIterable<Type> | [ Effect, AsyncIterable<Type> ] {
 				}
 			}
 		} finally {
-			generator.return?.();
+			void generator.return?.();
 		}
 	}();
 	// Return overloaded result
@@ -140,7 +140,7 @@ export function lookAhead<Type>(iterable: AsyncIterable<Type>, count: number) {
 				yield next.value;
 			}
 		} finally {
-			generator.return?.();
+			void generator.return?.();
 		}
 	}();
 }

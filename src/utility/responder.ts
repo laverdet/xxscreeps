@@ -2,7 +2,6 @@ import type { Effect } from './types.js';
 import type { MessagePort } from 'node:worker_threads';
 import { EventEmitter } from 'node:events';
 import { MessageChannel, parentPort } from 'node:worker_threads';
-import { Fn } from 'xxscreeps/functional/fn.js';
 import { Deferred, mustNotReject } from './async.js';
 import { staticCast } from './utility.js';
 import { Worker, waitForWorker } from './worker.js';
@@ -38,7 +37,7 @@ export async function negotiateResponderClient<Type, Result>(path: string, singl
 				wait: () => worker,
 			};
 		} else {
-			const worker = await Worker.create(path);
+			const worker = Worker.create(path);
 			return {
 				onMessage(fn) { worker.on('message', fn); },
 				onClose(fn) { worker.on('exit', () => fn(new Error('Processor failed to initialize'))); },

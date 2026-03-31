@@ -3,7 +3,7 @@ import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 
-export default function(creep: Creep) {
+export default function shootAtWill(creep: Creep) {
 	if (creep.getActiveBodyparts(C.RANGED_ATTACK) === 0) {
 		return;
 	}

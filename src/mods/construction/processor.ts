@@ -17,6 +17,7 @@ declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { construction: typeof intents }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Room, 'createConstructionSite', {},
 		(room, context, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
