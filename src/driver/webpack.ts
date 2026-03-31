@@ -33,7 +33,11 @@ const IS_DEV = true as boolean;
 export async function compile(moduleName: string, transforms: Transform[]) {
 	const baseName = Path.basename(moduleName);
 	const output = new URL(`${baseName}.webpack.js`, import.meta.url);
-	const babelPlugins = [ ...Fn.filter(Fn.map(transforms, transform => transform.babel), nonNullPredicate) ];
+	const babelPlugins = Fn.pipe(
+		transforms,
+		$$ => Fn.map($$, transform => transform.babel),
+		$$ => Fn.filter($$, nonNullPredicate),
+		$$ => [ ...$$ ]);
 	const babelLoader = await resolve('babel-loader');
 	const sourceMapLoader = await resolve('source-map-loader');
 	await new Promise<Webpack.StatsCompilation>((resolve, reject) => {

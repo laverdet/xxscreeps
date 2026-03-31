@@ -111,7 +111,10 @@ extend(Room, {
 					object.pos.y >= top && object.pos.y <= bottom);
 			} else {
 				// Filter on spatial index
-				return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos => this['#lookAt'](pos)));
+				return Fn.pipe(
+					iterateArea(this.name, top, left, bottom, right),
+					$$ => Fn.map($$, pos => this['#lookAt'](pos)),
+					$$ => Fn.concat($$));
 			}
 		})();
 		const terrain = this.getTerrain();
@@ -162,8 +165,10 @@ extend(Room, {
 							object.pos.y >= top && object.pos.y <= bottom);
 					} else {
 						// Filter on spatial index
-						return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos =>
-							Fn.filter(this['#lookAt'](pos), object => object['#lookType'] === type)));
+						return Fn.pipe(
+							iterateArea(this.name, top, left, bottom, right),
+							$$ => Fn.transform($$, pos => this['#lookAt'](pos)),
+							$$ => Fn.filter($$, object => object['#lookType'] === type));
 					}
 				})();
 				// Add position and type information

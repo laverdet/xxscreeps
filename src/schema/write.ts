@@ -18,8 +18,9 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 	return getOrSet(builder.memberWriter, layout, () => {
 
 		// Get writer for each member
-		const writers = [ ...Fn.filter(Fn.map(entriesWithSymbols(layout.struct),
-			([ key, member ]): MemberWriter | undefined => {
+		const writers = Fn.pipe(
+			entriesWithSymbols(layout.struct),
+			$$ => Fn.map($$, ([ key, member ]): MemberWriter | undefined => {
 				// Don't bother writing union members
 				if (member.union) {
 					return;
@@ -35,7 +36,9 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 				// Wrap to write this field at reserved address
 				return (value, view, instanceOffset, heap) =>
 					write(value[key], view, instanceOffset + offset, heap);
-			})) ];
+			}),
+			$$ => Fn.filter($$),
+			$$ => [ ...$$ ]);
 
 		// Combine member writes
 		let writeMembers: MemberWriter | undefined;

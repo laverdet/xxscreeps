@@ -273,24 +273,28 @@ export function flushSegments() {
 		console.error(`Cannot save more than ${kMaxActiveSegments} memory segments on the same tick`);
 		return null;
 	}
-	return [ ...Fn.filter(Fn.map(entries, ([ id, string ]): SegmentPayload | undefined => {
-		if (typeof string !== 'string') {
-			console.error(`Memory segment #${id} is not a string`);
-		} else if (string.length > kMaxMemorySegmentLength) {
-			console.error(`Memory segment #${id} has exceeded limit of ${kMaxMemorySegmentLength}`);
-		} else {
-			const prev = activeSegments.get(+id);
-			if (prev !== string) {
-				if (prev !== undefined) {
-					activeSegments.set(+id, string);
+	return Fn.pipe(
+		entries,
+		$$ => Fn.map($$, ([ id, string ]): SegmentPayload | undefined => {
+			if (typeof string !== 'string') {
+				console.error(`Memory segment #${id} is not a string`);
+			} else if (string.length > kMaxMemorySegmentLength) {
+				console.error(`Memory segment #${id} has exceeded limit of ${kMaxMemorySegmentLength}`);
+			} else {
+				const prev = activeSegments.get(+id);
+				if (prev !== string) {
+					if (prev !== undefined) {
+						activeSegments.set(+id, string);
+					}
+					return {
+						id: Number(id),
+						payload: utf16ToBuffer(string, SharedArrayBuffer),
+					};
 				}
-				return {
-					id: Number(id),
-					payload: utf16ToBuffer(string, SharedArrayBuffer),
-				};
 			}
-		}
-	})) ];
+		}),
+		$$ => Fn.filter($$),
+		$$ => [ ...$$ ]);
 }
 
 /**

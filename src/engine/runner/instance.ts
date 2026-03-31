@@ -171,14 +171,18 @@ export class PlayerInstance {
 						payload.roomBlobs = await Promise.all(Fn.map(visibleRooms,
 							roomName => this.shard.loadRoomBlob(roomName, time - 1)));
 						// Load unseen users
-						const userIds = Fn.concat(Fn.map(payload.roomBlobs, blob => {
-							const users = RoomSchema.read(blob)['#users'];
-							return Fn.concat([ users.presence, users.extra ]);
-						}));
-						const newUserIds = Fn.reject(userIds, userId => this.seenUsers.has(userId));
-						const entries: [ string, string ][] = await Promise.all(Fn.map(newUserIds, async userId => {
+						const newUserIds = Fn.pipe(
+							payload.roomBlobs,
+							$$ => Fn.map($$, blob => {
+								const users = RoomSchema.read(blob)['#users'];
+								return Fn.concat([ users.presence, users.extra ]);
+							}),
+							$$ => Fn.concat($$),
+							$$ => Fn.reject($$, userId => this.seenUsers.has(userId)),
+						);
+						const entries = await Promise.all(Fn.map(newUserIds, async userId => {
 							this.seenUsers.add(userId);
-							return [ userId, (await this.shard.db.data.hget(User.infoKey(userId), 'username'))! ];
+							return [ userId, (await this.shard.db.data.hget(User.infoKey(userId), 'username'))! ] as const;
 						}));
 						if (entries.length !== 0) {
 							payload.usernames = Fn.fromEntries(entries);

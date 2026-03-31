@@ -1,7 +1,8 @@
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createLab } from 'xxscreeps/mods/chemistry/lab.js';
+import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
 describe('Combat', () => {
@@ -18,8 +19,8 @@ describe('Combat', () => {
 			room['#insertObject'](createCreep(
 				new RoomPosition(25, 24, 'W1N1'),
 				[
-					...Array(17).fill(C.ATTACK),
-					...Array(1).fill(C.RANGED_ATTACK),
+					...Fn.map(Fn.range(17), () => C.ATTACK),
+					...Fn.map(Fn.range(1), () => C.RANGED_ATTACK),
 				],
 				'warrior',
 				'100',

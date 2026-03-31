@@ -342,8 +342,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	sunionStore(key: string, keys: string[]) {
-		const sets = [ ...Fn.filter(Fn.map(keys, (key): Set<string> => this.data.get(key))) ];
-		const out = new Set(Fn.concat(sets));
+		const out = Fn.pipe(
+			keys,
+			$$ => Fn.map($$, (key): Set<string> => this.data.get(key)),
+			$$ => Fn.filter($$),
+			$$ => Fn.concat($$),
+			$$ => new Set($$));
 		this.data.set(key, out);
 		return out.size;
 	}
@@ -399,7 +403,11 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 
 	zinterStore(key: string, keys: string[], options?: P.ZAggregate) {
 		// Fetch sets first because you can use this command to store a set back into itself
-		const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
+		const sets = Fn.pipe(
+			keys,
+			$$ => Fn.map($$, (key): SortedSet => this.data.get(key)),
+			$$ => Fn.filter($$),
+			$$ => [ ...$$ ]);
 		const out = function() {
 			const smallest = Fn.minimum(sets, (left, right) => left.size - right.size);
 			if (!smallest) {
@@ -569,8 +577,14 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			}
 		} else {
 			// Without WEIGHTS insert can happen at once
-			const sets = [ ...Fn.filter(Fn.map(keys, (key): SortedSet => this.data.get(key))) ];
-			out.insert(Fn.concat(Fn.map(sets, set => set.entries())));
+			const entries = Fn.pipe(
+				keys,
+				$$ => Fn.map($$, (key): SortedSet => this.data.get(key)),
+				$$ => Fn.filter($$),
+				$$ => [ ...$$ ],
+				$$ => Fn.map($$, set => set.entries()),
+				$$ => Fn.concat($$));
+			out.insert(entries);
 		}
 		if (out.size === 0) {
 			this.data.delete(key);

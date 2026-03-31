@@ -22,8 +22,11 @@ export class GameState {
 		public readonly time: number,
 		rooms: Room[],
 	) {
-		this.objects = new Map(Fn.concat(Fn.map(rooms, room =>
-			Fn.map(room['#objects'], object => [ object.id, object ]))));
+		this.objects = Fn.pipe(
+			rooms,
+			$$ => Fn.map($$, room => Fn.map(room['#objects'], object => [ object.id, object ] as const)),
+			$$ => Fn.concat($$),
+			$$ => new Map($$));
 		this.rooms = Fn.fromEntries(Fn.map(rooms, room => [ room.name, room ]));
 		for (const room of Object.values(this.rooms)) {
 			initializeRoom(room, this);

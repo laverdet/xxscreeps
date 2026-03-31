@@ -77,12 +77,14 @@ export class GameMap {
 		const info = this.#terrain.get(roomName);
 		if (info) {
 			const room = parseRoomName(roomName);
-			const exits = Fn.reject([ C.TOP, C.RIGHT, C.BOTTOM, C.LEFT ], direction =>
-				(info.exits & (2 ** ((direction - 1) >>> 1))) === 0);
-			return Fn.fromEntries(Fn.map(exits, direction => {
-				const offsets = getOffsetsFromDirection(direction);
-				return [ direction, generateRoomName(room.rx + offsets.dx, room.ry + offsets.dy) ];
-			}));
+			return Fn.pipe(
+				[ C.TOP, C.RIGHT, C.BOTTOM, C.LEFT ],
+				$$ => Fn.reject($$, direction => (info.exits & (2 ** ((direction - 1) >>> 1))) === 0),
+				$$ => Fn.map($$, direction => {
+					const offsets = getOffsetsFromDirection(direction);
+					return [ direction, generateRoomName(room.rx + offsets.dx, room.ry + offsets.dy) ] as const;
+				}),
+				$$ => Fn.fromEntries($$));
 		}
 		return null as never;
 	}

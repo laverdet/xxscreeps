@@ -21,12 +21,16 @@ import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkDirectio
 type EnergyStructure = StructureExtension | StructureSpawn;
 function getEnergyStructures(spawn: StructureSpawn, ids?: string[]) {
 	if (ids) {
-		return [ ...new Set(Fn.filter(Fn.map(ids, id => {
-			const object = Game.getObjectById(id);
-			if (object instanceof StructureExtension || object instanceof StructureSpawn) {
-				return object;
-			}
-		}))) ];
+		return Fn.pipe(
+			ids,
+			$$ => Fn.map($$, id => {
+				const object = Game.getObjectById(id);
+				if (object instanceof StructureExtension || object instanceof StructureSpawn) {
+					return object;
+				}
+			}),
+			$$ => Fn.filter($$),
+			$$ => [ ...new Set($$) ]);
 	} else {
 		const comparator = (left: EnergyStructure, right: EnergyStructure) =>
 			spawn.pos.getRangeTo(left) - spawn.pos.getRangeTo(right);

@@ -46,14 +46,17 @@ function getModulePayloadFromQuery(query: any) {
 	if (![ 'main', 'main.js', 'main.mjs', 'main.wasm' ].some(entry => modules.has(entry))) {
 		modules.set('main', '');
 	}
-	const size = Fn.accumulate(Fn.map(modules.values(), content => {
-		if (typeof content === 'string') {
-			return content.length;
-		} else {
+	const size = Fn.pipe(
+		modules.values(),
+		$$ => Fn.map($$, content => {
+			if (typeof content === 'string') {
+				return content.length;
+			} else {
 			// Vanilla Screeps stores these in base64, so add fake encoding overhead to match
-			return content.byteLength * 1.333;
-		}
-	}));
+				return content.byteLength * 1.333;
+			}
+		}),
+		$$ => Fn.accumulate($$));
 	if (size > kCodeSizeLimit) {
 		throw new Error('Too much code');
 	}

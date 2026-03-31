@@ -76,15 +76,15 @@ export function create(pos: RoomPosition, role: Role, strength: Strength, ageTim
 function createBody(parts: Partial<Record<Creep.PartType, number>>) {
 	const size = Fn.accumulate(Object.values(parts));
 	return [
-		...Array(parts[C.TOUGH] ?? 0).fill(C.TOUGH),
-		...Array(size - 1).fill(C.MOVE),
-		...Object.entries(parts).map(([ type, count ]) => {
+		...Fn.map(Fn.range(parts[C.TOUGH] ?? 0), () => C.TOUGH),
+		...Fn.map(Fn.range(size - 1), () => C.MOVE),
+		...Fn.transform(Object.entries(parts), ([ type, count ]) => {
 			if (type === C.TOUGH) {
 				return [];
 			} else {
-				return Array(count).fill(type);
+				return Fn.map(Fn.range(count), () => type as Creep.PartType);
 			}
-		}).flat(),
+		}),
 		C.MOVE,
 	];
 }

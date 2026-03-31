@@ -132,13 +132,15 @@ export class RoomProcessor implements ProcessorContext {
 						const object = Game.getObjectById(id);
 						if (object) {
 							let mask = 0;
-							const entries = [ ...Fn.filter(
-								Fn.map(Object.entries(objectIntents[id]!), ([ intent, args ]) => ({
+							const entries = Fn.pipe(
+								Object.entries(objectIntents[id]!),
+								$$ => Fn.map($$, ([ intent, args ]) => ({
 									intent,
 									args,
 									processor: intentProcessorGetters.get(intent)?.(object),
 								})),
-								info => info.processor) ];
+								$$ => Fn.filter($$, info => info.processor),
+								$$ => [ ...$$ ]);
 							entries.sort((left, right) => left.processor!.priority - right.processor!.priority);
 							for (const info of entries) {
 								if (

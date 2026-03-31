@@ -25,32 +25,36 @@ const payload = Fn.fromEntries(await Fn.pipe(
 	entriesSorted,
 	$$ => Fn.map($$, async ([ roomName, terrain ]) => {
 		const room = await shard.loadRoom(roomName);
-		const objects = new Map(Fn.filter(Fn.map(room['#objects'], object => {
-			const info = function() {
-				switch (object['#lookType']) {
-					case 'structure':
-						return object.structureType === C.STRUCTURE_CONTROLLER ? { marker: '@' } : undefined;
-					case 'mineral': return {
-						marker: 'M',
+		const objects = Fn.pipe(
+			room['#objects'],
+			$$ => Fn.map($$, object => {
+				const info = function() {
+					switch (object['#lookType']) {
+						case 'structure':
+							return object.structureType === C.STRUCTURE_CONTROLLER ? { marker: '@' } : undefined;
+						case 'mineral': return {
+							marker: 'M',
+							meta: {
+								density: object.density,
+								mineral: object.mineralType,
+							},
+						};
+						case 'source': return { marker: 'E' };
+						default:
+					}
+				}();
+				if (info) {
+					return [ `${object.pos.x},${object.pos.y}`, {
+						marker: info.marker,
 						meta: {
-							density: object.density,
-							mineral: object.mineralType,
+							id: object.id,
+							...info.meta,
 						},
-					};
-					case 'source': return { marker: 'E' };
-					default:
+					} ] as const;
 				}
-			}();
-			if (info) {
-				return [ `${object.pos.x},${object.pos.y}`, {
-					marker: info.marker,
-					meta: {
-						id: object.id,
-						...info.meta,
-					},
-				} ] as const;
-			}
-		})));
+			}),
+			$$ => Fn.filter($$),
+			$$ => new Map($$));
 		const metadata: typeof objects extends Map<any, { meta: infer T }> ? T[] : never = [];
 		const layout = [ ...Fn.map(Fn.range(50), yy => [
 			...Fn.map(Fn.range(50), xx => {
