@@ -53,7 +53,7 @@ const harvest = registerHarvestable(Mineral, function(creep) {
 			const extractor = lookForStructureAt(this.room, this.pos, C.STRUCTURE_EXTRACTOR);
 			if (!extractor) {
 				return C.ERR_NOT_FOUND;
-			} else if (extractor.my !== true) {
+			} else if (extractor['#user'] && extractor['#user'] !== creep['#user']) {
 				return C.ERR_NOT_OWNER;
 			} else if (extractor.cooldown !== 0 && extractor.cooldown !== C.EXTRACTOR_COOLDOWN) {
 				return C.ERR_TIRED;

@@ -4,7 +4,9 @@ import * as ObserverSpy from './observer-spy.js';
 import * as Observer from './observer.js';
 
 // Register schema
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const observerSchema = registerVariant('Room.objects', Observer.format);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const observerSpySchema = registerVariant('Room.objects', ObserverSpy.format);
 
 declare module 'xxscreeps/game/room/index.js' {

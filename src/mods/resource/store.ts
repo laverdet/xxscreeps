@@ -1,11 +1,11 @@
 import type { ResourceType } from './resource.js';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
 import { compose, declare, makeReader, struct, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
 import { getLayout } from 'xxscreeps/schema/layout.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { resourceEnumFormat } from './resource.js';
 
 export type WithStore = Record<'store', Store>;
@@ -79,12 +79,11 @@ export abstract class Store extends BufferObjectWithResourcesType {
 		return Object.entries(this) as never;
 	}
 
+	abstract '#storeCapacityResource'(): Record<string, number> | null;
+
 	private [Symbol.for('nodejs.util.inspect.custom')]() {
-		const capacity = this.getCapacity();
 		return {
-			[Symbol('capacity')]: capacity === null
-				? Object.fromEntries(Fn.map(this['#entries'](), ([ type ]) => [ type, this.getCapacity(type) ])) :
-				capacity,
+			[Symbol('capacity')]: this['#storeCapacityResource']() ?? this.getCapacity(),
 			...Fn.fromEntries(this['#entries']()),
 		};
 	}
@@ -118,6 +117,10 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		const instance = new OpenStore();
 		instance['#capacity'] = capacity;
 		return instance;
+	}
+
+	'#storeCapacityResource'() {
+		return null;
 	}
 
 	getCapacity(_resourceType?: ResourceType) {
@@ -154,14 +157,14 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 			return;
 		}
 		const resources = this['#resources'];
-		const ii = resources.findIndex(info => info.type === type)!;
+		const ii = resources.findIndex(info => info.type === type);
 		const info = resources[ii];
 		if ((info.amount -= amount) === 0) {
 			resources[ii] = resources[resources.length - 1];
 			resources.pop();
 			delete this[type];
 		} else {
-			this[type]! -= amount;
+			this[type] -= amount;
 		}
 		this._sum -= amount;
 	}
@@ -203,6 +206,14 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 			instance['#resources'].push(info);
 		}
 		return instance;
+	}
+
+	'#storeCapacityResource'() {
+		const result: Record<string, number> = Object.create(null);
+		for (const info of this['#resources']) {
+			result[info.type] = info.capacity;
+		}
+		return result;
 	}
 
 	getCapacity(resourceType?: ResourceType) {
@@ -261,6 +272,12 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 		instance['#capacity'] = capacity;
 		instance['#type'] = type;
 		return instance;
+	}
+
+	'#storeCapacityResource'() {
+		const result: Record<string, number> = Object.create(null);
+		result[this['#type']] = this['#capacity'];
+		return result;
 	}
 
 	getCapacity(resourceType: Type): number;
@@ -324,7 +341,7 @@ export function checkHasResource(target: WithStore, resourceType: ResourceType |
 		return C.ERR_INVALID_ARGS;
 	} else if (typeof amount !== 'number' || amount < 0) {
 		return C.ERR_INVALID_ARGS;
-	} else if (target.store[resourceType!]! >= Math.max(1, amount)) {
+	} else if (target.store[resourceType!] >= Math.max(1, amount)) {
 		return C.OK;
 	} else {
 		return C.ERR_NOT_ENOUGH_RESOURCES;

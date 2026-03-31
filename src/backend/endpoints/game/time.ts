@@ -22,4 +22,5 @@ const TimeEndpoint: Endpoint = {
 	},
 };
 
-export default [ TimeEndpoint ];
+const endpoints = [ TimeEndpoint ];
+export default endpoints;

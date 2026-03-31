@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import * as PathFinder from 'xxscreeps/game/path-finder/index.js';
 import { getCostMatrix } from './rooms.js';
 
-export default function(creep: Creep, range: number) {
+export default function flee(creep: Creep, range: number) {
 	const nearCreeps = creep.pos.findInRange(C.FIND_HOSTILE_CREEPS, range - 1)
 		.filter(ii => ii.getActiveBodyparts(C.ATTACK) + ii.getActiveBodyparts(C.RANGED_ATTACK) > 0);
 

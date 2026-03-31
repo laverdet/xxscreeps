@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { parseRoomName } from 'xxscreeps/game/position.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import 'xxscreeps/config/mods/import/game.js';
 
 export type Payload = typeof payload;
@@ -21,48 +21,55 @@ const roomNames = [ ...Fn.map(map.entries(), ([ roomName ]) => roomName) ].sort(
 const entriesSorted = new Map(Fn.map(roomNames, roomName => [ roomName, map.map.getRoomTerrain(roomName) ]));
 
 // Render room terrain + object string representation
-const payload = Fn.fromEntries(await Fn.mapAsync(entriesSorted, async ([ roomName, terrain ]) => {
-	const room = await shard.loadRoom(roomName);
-	const objects = new Map(Fn.filter(Fn.map(room['#objects'], object => {
-		const info = function() {
-			switch (object['#lookType']) {
-				case 'structure':
-					return object.structureType === C.STRUCTURE_CONTROLLER ? { marker: '@' } : undefined;
-				case 'mineral': return {
-					marker: 'M',
-					meta: {
-						density: object.density,
-						mineral: object.mineralType,
-					},
-				};
-				case 'source': return { marker: 'E' };
-				default:
-			}
-		}();
-		if (info) {
-			return [ `${object.pos.x},${object.pos.y}`, {
-				marker: info.marker,
-				meta: {
-					id: object.id,
-					...info.meta,
-				},
-			} ];
-		}
-	})));
-	const metadata: typeof objects extends Map<any, { meta: infer T }> ? T[] : never = [];
-	const layout = [ ...Fn.map(Fn.range(50), yy => [
-		...Fn.map(Fn.range(50), xx => {
-			const object = objects.get(`${xx},${yy}`);
-			if (object) {
-				metadata.push(object.meta);
-				return object.marker;
-			} else {
-				return terrainMask[terrain.get(xx, yy)];
-			}
-		}),
-	].join('')) ];
-	return [ roomName, { layout, objects: metadata.length > 0 ? metadata : undefined } ];
-}));
+const payload = Fn.fromEntries(await Fn.pipe(
+	entriesSorted,
+	$$ => Fn.map($$, async ([ roomName, terrain ]) => {
+		const room = await shard.loadRoom(roomName);
+		const objects = Fn.pipe(
+			room['#objects'],
+			$$ => Fn.map($$, object => {
+				const info = function() {
+					switch (object['#lookType']) {
+						case 'structure':
+							return object.structureType === C.STRUCTURE_CONTROLLER ? { marker: '@' } : undefined;
+						case 'mineral': return {
+							marker: 'M',
+							meta: {
+								density: object.density,
+								mineral: object.mineralType,
+							},
+						};
+						case 'source': return { marker: 'E' };
+						default:
+					}
+				}();
+				if (info) {
+					return [ `${object.pos.x},${object.pos.y}`, {
+						marker: info.marker,
+						meta: {
+							id: object.id,
+							...info.meta,
+						},
+					} ] as const;
+				}
+			}),
+			$$ => Fn.filter($$),
+			$$ => new Map($$));
+		const metadata: typeof objects extends Map<any, { meta: infer T }> ? T[] : never = [];
+		const layout = [ ...Fn.map(Fn.range(50), yy => [
+			...Fn.map(Fn.range(50), xx => {
+				const object = objects.get(`${xx},${yy}`);
+				if (object) {
+					metadata.push(object.meta);
+					return object.marker;
+				} else {
+					return terrainMask[terrain.get(xx, yy)];
+				}
+			}),
+		].join('')) ];
+		return [ roomName, { layout, objects: metadata.length > 0 ? metadata : undefined } ] as const;
+	}),
+	$$ => Promise.all($$)));
 
 const file = process.argv[2];
 if (!file.endsWith('.json')) {

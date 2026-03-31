@@ -9,8 +9,8 @@ zeroBuffer.nullify();
  * Any object that is backed by a secret ArrayBuffer. All schema objects must inherit from this one.
  */
 export class BufferObject {
-	#buffer: BufferView;
-	#offset: number;
+	readonly #buffer: BufferView;
+	readonly #offset: number;
 
 	constructor(buffer = zeroBuffer, offset = 0) {
 		this.#buffer = buffer;
@@ -22,7 +22,7 @@ export class BufferObject {
 			// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 			that.#buffer.int32;
 			return true;
-		} catch (err) {
+		} catch {
 			return false;
 		}
 	}

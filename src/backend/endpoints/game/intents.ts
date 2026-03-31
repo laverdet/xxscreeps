@@ -11,10 +11,15 @@ const AddObjectIntentEndpoint: Endpoint = {
 
 	async execute(context) {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId === undefined) {
 			return;
 		}
-		const { room, name, intent } = context.request.body;
+		interface Body {
+			room: unknown;
+			name: unknown;
+			intent: unknown;
+		}
+		const { room, name, intent } = context.request.body as Body;
 		const { id } = Array.isArray(intent) ? intent[0] : intent;
 		if (typeof room !== 'string' || typeof name !== 'string' || typeof id !== 'string') {
 			throw new TypeError('Invalid parameters');
@@ -38,7 +43,7 @@ const CreateConstructionIntentEndpoint: Endpoint = {
 
 	async execute(context) {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId === undefined) {
 			return;
 		}
 		const { name, room: roomName, x, y, structureType } = context.request.body;
@@ -60,4 +65,5 @@ const CreateConstructionIntentEndpoint: Endpoint = {
 	},
 };
 
-export default [ AddObjectIntentEndpoint, CreateConstructionIntentEndpoint ];
+const endpoints = [ AddObjectIntentEndpoint, CreateConstructionIntentEndpoint ];
+export default endpoints;

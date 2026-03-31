@@ -1,6 +1,6 @@
 import type { Store } from './store.js';
 import { bindRenderer } from 'xxscreeps/backend/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { StructureContainer } from './container.js';
 import { Resource } from './resource.js';
 
@@ -9,13 +9,11 @@ export function renderStore(store: Store) {
 	const result: any = {
 		store: Fn.fromEntries(store['#entries']()),
 	};
-	const capacity = store.getCapacity();
-	if (capacity === null) {
-		result.storeCapacityResource = Fn.fromEntries(
-			store['#entries'](),
-			([ type ]) => [ type, store.getCapacity(type) ]);
+	const storeCapacityResource = store['#storeCapacityResource']();
+	if (storeCapacityResource !== null) {
+		result.storeCapacityResource = storeCapacityResource;
 	} else {
-		result.storeCapacity = capacity;
+		result.storeCapacity = store.getCapacity();
 	}
 	return result;
 }

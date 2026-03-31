@@ -7,9 +7,9 @@ import { PNG } from 'pngjs';
 import streamToPromise from 'stream-to-promise';
 import { hooks } from 'xxscreeps/backend/index.js';
 import { TerrainRender } from 'xxscreeps/backend/symbols.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
 import { TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL, isBorder } from 'xxscreeps/game/terrain.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 
 const onePxImage = runOnce(() => {

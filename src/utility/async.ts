@@ -1,5 +1,5 @@
 import type { AsyncEffectAndResult, Effect } from './types.js';
-import { Fn } from './fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 
 // Given a series of effect-returning promises this waits for them all to resolve and returns a
 // single effect that owns all the underlying effects. In the case that one throws the successful
@@ -84,7 +84,7 @@ AsyncIterable<Type> | [ Effect, AsyncIterable<Type> ] {
 				}
 			}
 		} finally {
-			generator.return?.();
+			void generator.return?.();
 		}
 	}();
 	// Return overloaded result
@@ -140,7 +140,7 @@ export function lookAhead<Type>(iterable: AsyncIterable<Type>, count: number) {
 				yield next.value;
 			}
 		} finally {
-			generator.return?.();
+			void generator.return?.();
 		}
 	}();
 }
@@ -212,7 +212,9 @@ export function makeEventPublisher<Message extends any[]>(onDrain = () => {}) {
 		},
 
 		publish: (...payload: Message) => {
-			Fn.forEach(listeners, listener => listener(...payload));
+			for (const listener of listeners) {
+				listener(...payload);
+			}
 		},
 	};
 }

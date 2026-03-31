@@ -76,8 +76,12 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	}
 
 	override '#destroy'() {
-		this.room['#insertObject'](createRuin(this));
-		super['#destroy']();
+		if (super['#destroy']()) {
+			this.room['#insertObject'](createRuin(this));
+			return true;
+		} else {
+			return false;
+		}
 	}
 }
 

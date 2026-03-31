@@ -3,7 +3,7 @@ import { hooks } from 'xxscreeps/backend/index.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getConsoleChannel, requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 
 const kCodeSizeLimit = 5 * 1024 * 1024;
@@ -46,14 +46,17 @@ function getModulePayloadFromQuery(query: any) {
 	if (![ 'main', 'main.js', 'main.mjs', 'main.wasm' ].some(entry => modules.has(entry))) {
 		modules.set('main', '');
 	}
-	const size = Fn.accumulate(Fn.map(modules.values(), content => {
-		if (typeof content === 'string') {
-			return content.length;
-		} else {
+	const size = Fn.pipe(
+		modules.values(),
+		$$ => Fn.map($$, content => {
+			if (typeof content === 'string') {
+				return content.length;
+			} else {
 			// Vanilla Screeps stores these in base64, so add fake encoding overhead to match
-			return content.byteLength * 1.333;
-		}
-	}));
+				return content.byteLength * 1.333;
+			}
+		}),
+		$$ => Fn.accumulate($$));
 	if (size > kCodeSizeLimit) {
 		throw new Error('Too much code');
 	}

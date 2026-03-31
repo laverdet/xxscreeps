@@ -19,6 +19,7 @@ const resources = [
 	C.RESOURCE_CATALYZED_ZYNTHIUM_ACID, C.RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE, C.RESOURCE_CATALYZED_GHODIUM_ACID,
 	C.RESOURCE_CATALYZED_GHODIUM_ALKALIDE,
 ];
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const resourceSchema = registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
 
@@ -27,13 +28,15 @@ declare module 'xxscreeps/mods/resource/index.js' {
 }
 
 // Register `RoomObject` schema
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const labSchema = registerVariant('Room.objects', Lab.format);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { chemistry: [ typeof labSchema ] }
 }
 
 // Action log types
-const actionSchema = registerEnumerated('ActionLog.action', 'reaction1', 'reaction2');
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const actionSchema = registerEnumerated('ActionLog.action', 'reaction1', 'reaction2', 'reverseReaction1', 'reverseReaction2');
 declare module 'xxscreeps/game/object.js' {
 	interface Schema { chemistry: typeof actionSchema }
 }

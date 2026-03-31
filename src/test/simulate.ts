@@ -10,10 +10,10 @@ import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
 import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 import 'xxscreeps/config/mods/import/game.js';

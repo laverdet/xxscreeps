@@ -29,7 +29,7 @@ export function expandGetters(that: any) {
 			if (value !== undefined) {
 				Object.defineProperty(expanded, key, { enumerable: true, writable: true, value });
 			}
-		} catch (err) {}
+		} catch {}
 	}
 
 	// Don't recurse

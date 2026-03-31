@@ -1,7 +1,8 @@
 import type { Layout } from './layout.js';
 import jsYaml from 'js-yaml';
+import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 
 function toId(name: string | symbol): string {
 	if (typeof name === 'symbol') {
@@ -55,7 +56,7 @@ export class KaitaiArchiver {
 
 	render(): any {
 		function sort(map: Map<string, any>) {
-			return [ ...map ].sort((left, right) => Fn.primitiveComparator(left[0], right[0]));
+			return [ ...map ].sort((left, right) => primitiveComparator(left[0], right[0]));
 		}
 		return {
 			seq: this.seq,

@@ -28,6 +28,16 @@ export class LabStore extends withOverlay(Store, shape) {
 		}
 	}
 
+	'#storeCapacityResource'() {
+		const result: Record<string, number> = Object.create(null);
+		result[C.RESOURCE_ENERGY] = C.LAB_ENERGY_CAPACITY;
+		const mineralType = this['#mineralType'];
+		if (mineralType) {
+			result[mineralType] = C.LAB_MINERAL_CAPACITY;
+		}
+		return result;
+	}
+
 	getCapacity(resourceType?: ResourceType) {
 		if (resourceType) {
 			if (resourceType === C.RESOURCE_ENERGY) {

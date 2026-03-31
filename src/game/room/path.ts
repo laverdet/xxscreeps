@@ -25,13 +25,13 @@ declare module './room.js' {
 		 * Serialize a path array into a short string representation, which is suitable to store in memory
 		 * @param path A path array retrieved from Room.findPath
 		 */
-		function serializePath(path: RoomPath): string;
+		const serializePath: (path: RoomPath) => string;
 
 		/**
 		 * Deserialize a short string path representation into an array form
 		 * @param path A serialized path string
 		 */
-		function deserializePath(path: string): RoomPath;
+		const deserializePath: (path: string) => RoomPath;
 	}
 
 	interface Room {
@@ -41,7 +41,13 @@ declare module './room.js' {
 		 * method.
 		 * @param room Another room name or room object
 		 */
-		findExitTo(room: Room | string): any;
+		findExitTo: (room: Room | string) => any;
+
+		/**
+		 * Get a Room.Terrain object which provides fast access to static terrain data. This method works
+		 * for any room in the world even if you have no access to it.
+		 */
+		getTerrain: () => Terrain;
 
 		/**
 		 * Find an optimal path inside the room between fromPos and toPos using Jump Point Search algorithm.
@@ -49,15 +55,12 @@ declare module './room.js' {
 		 * @param goal The end position
 		 * @param options
 		 */
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize?: false }): RoomPath;
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize: true }): string;
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize?: boolean }): RoomPath | string;
-
-		/**
-		 * Get a Room.Terrain object which provides fast access to static terrain data. This method works
-		 * for any room in the world even if you have no access to it.
-		 */
-		getTerrain(): Terrain;
 	}
 }
 
@@ -88,20 +91,21 @@ Object.assign(Room, {
 			return result;
 		}
 
-		let x = Number(path.substr(0, 2));
-		let y = Number(path.substr(2, 2));
-		if (Number.isNaN(x) || Number.isNaN(y)) {
+		let xx = Number(path.substr(0, 2));
+		let yy = Number(path.substr(2, 2));
+		if (Number.isNaN(xx) || Number.isNaN(yy)) {
 			throw new Error('`path` is not a valid serialized path string');
 		}
 		for (let ii = 4; ii < path.length; ++ii) {
 			const direction = Number(path[ii]) as Direction;
 			const { dx, dy } = getOffsetsFromDirection(direction);
 			if (ii > 4) {
-				x += dx;
-				y += dy;
+				xx += dx;
+				yy += dy;
 			}
 			result.push({
-				x, y,
+				x: xx,
+				y: yy,
 				dx, dy,
 				direction,
 			});
@@ -158,6 +162,6 @@ extend(Room, {
 	},
 
 	getTerrain() {
-		return Game.map.getRoomTerrain(this.name)!;
+		return Game.map.getRoomTerrain(this.name);
 	},
 });
