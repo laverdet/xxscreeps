@@ -65,3 +65,9 @@ export async function requestRunnerEval(shard: Shard, userId: string, expr: stri
 
 export const runnerUsersSetKey = (time: number) =>
 	`tick${time % 2}/runnerUsers`;
+
+export const runnerLastCallKey = (time: number) =>
+	`tick${time}/runnerLastCall`;
+
+export const runnerPublishedUsersSetKey = (time: number) =>
+	`tick${time}/runnerPublishedUsers`;

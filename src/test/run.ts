@@ -1,6 +1,8 @@
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { flush } from './context.js';
 import './import.js';
+import './runner-accounting.js';
+import './runner-last-call.js';
 import './shard-race.js';
 
 await importMods('test');

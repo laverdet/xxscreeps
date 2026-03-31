@@ -4,7 +4,7 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import type { flushUsers } from 'xxscreeps/game/room/room.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
-import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
+import { runnerLastCallKey, runnerPublishedUsersSetKey, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
@@ -108,6 +108,23 @@ const ZSetToSet = new KeyvalScript(
 			return result`,
 	});
 
+const ReserveRunnerPublication = new KeyvalScript((
+	keyval,
+	[ closedKey, publishedKey ]: [ string, string ],
+	[ userId, force ]: [ string, string ],
+) => {
+	if (force !== '1' && keyval.get(closedKey) !== null) {
+		return 0;
+	}
+	return keyval.sadd(publishedKey, [ userId ]);
+}, {
+	lua:
+		`if ARGV[2] ~= '1' and redis.call('get', KEYS[1]) ~= false then
+			return 0
+		end
+		return redis.call('sadd', KEYS[2], ARGV[1])`,
+});
+
 async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, intents?: RoomIntentPayload) {
 	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
 }
@@ -126,9 +143,22 @@ export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userI
 }
 
 export async function publishRunnerIntentsForRooms(
-	shard: Shard, userId: string, time: number, roomNames: string[], intents: Record<string, RoomIntentPayload | undefined>,
+	shard: Shard,
+	userId: string,
+	time: number,
+	roomNames: string[],
+	intents: Record<string, RoomIntentPayload | undefined>,
+	options?: { force?: boolean },
 ) {
 	const roomsWithIntents = Promise.all(Fn.map(roomNames, async roomName => {
+	const reserved = await shard.scratch.eval(
+		ReserveRunnerPublication,
+		[ runnerLastCallKey(time), runnerPublishedUsersSetKey(time) ],
+		[ userId, options?.force ? '1' : '0' ],
+	);
+	if (!reserved) {
+		return;
+	}
 		const [ count ] = await Promise.all([
 			// Decrement count of users that this room is waiting for
 			shard.scratch.zadd(processRoomsSetKey(time), [ [ -1, roomName ] ], { if: 'xx', incr: true }),
@@ -138,8 +168,9 @@ export async function publishRunnerIntentsForRooms(
 		if (count === null || count > 0) {
 			return;
 		} else if (count < 0) {
-			// Reset count back to 0 in the case we've published intents for an abandoned tick
-			// NOTE: These intents will still be processed at some point, which is probably not desired.
+			// Reset count back to 0 in the case we've closed out a user after the room has already
+			// been abandoned. The reservation above prevents a later duplicate publication from
+			// re-adding intents for this user and tick.
 			await shard.scratch.zadd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'xx' });
 		}
 		return roomName;
@@ -272,6 +303,8 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 				begetRoomProcessQueue(shard, time + 1, time, true),
 				// Delete "0" value from scratch
 				shard.scratch.vdel(finalizedRoomsPendingKey(time)),
+				shard.scratch.vdel(runnerLastCallKey(time)),
+				shard.scratch.vdel(runnerPublishedUsersSetKey(time)),
 			]);
 			// Notify main loop that we're ready for the next tick
 			await getServiceChannel(shard).publish({ type: 'tickFinished', time });
@@ -350,6 +383,8 @@ export async function abandonIntentsForTick(shard: Shard, time: number) {
 		shard.scratch.zinterStore(key, [ key ], { weights: [ 0 ] }),
 		// Clear runner queue
 		shard.scratch.vdel(runnerUsersSetKey(time)),
+		shard.scratch.vdel(runnerLastCallKey(time)),
+		shard.scratch.vdel(runnerPublishedUsersSetKey(time)),
 	]);
 	// Publish process task to workers
 	await getProcessorChannel(shard).publish({ type: 'process', time });

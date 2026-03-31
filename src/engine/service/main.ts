@@ -3,7 +3,7 @@ import config from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model.js';
-import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
+import { getRunnerChannel, runnerLastCallKey, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
@@ -83,9 +83,15 @@ try {
 			await runnerChannel.publish({ type: 'run', time });
 
 			// Wait for tick to finish
-			const timeout = setTimeout(() => mustNotReject(async () => {
-				const rooms = await abandonIntentsForTick(shard, time);
-				console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
+			let hardTimeout: ReturnType<typeof setTimeout> | undefined;
+			const timeout = setTimeout(() => mustNotReject(async() => {
+				await shard.scratch.set(runnerLastCallKey(time), '1');
+				await serviceChannel.publish({ type: 'lastCall', time });
+				console.log(`Last call for tick ${time}`);
+				hardTimeout = setTimeout(() => mustNotReject(async() => {
+					const rooms = await abandonIntentsForTick(shard, time);
+					console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
+				}), config.processor.intentAbandonTimeout);
 			}), config.processor.intentAbandonTimeout);
 			for await (const message of serviceMessages) {
 				if (message.type === 'processorInitialized') {
@@ -97,6 +103,9 @@ try {
 				}
 			}
 			clearTimeout(timeout);
+			if (hardTimeout) {
+				clearTimeout(hardTimeout);
+			}
 
 			// Update game state
 			await shard.data.set('time', time);

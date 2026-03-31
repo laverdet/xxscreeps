@@ -34,6 +34,9 @@ const acquireConnectors = function(invoke) {
 	};
 }(hooks.makeMapped('runnerConnector'));
 const kCPU = 100;
+export type TickPhase = 'setup' | 'runtime';
+export const shouldChargeAbortedTick = (phase: TickPhase | undefined) =>
+	phase === 'runtime';
 
 export class PlayerInstance {
 	private bucket = config.runner.cpu.bucket;
@@ -48,6 +51,9 @@ export class PlayerInstance {
 	private readonly intents: RunnerIntent[] = [];
 	private readonly seenUsers = new Set<string>();
 	private readonly usageChannel;
+	private activeTick: number | undefined;
+	private activePhase: TickPhase | undefined;
+	private abortedTick: number | undefined;
 
 	private constructor(
 		public readonly shard: Shard,
@@ -120,7 +126,16 @@ export class PlayerInstance {
 		this.cleanup();
 	}
 
+	abortTick(time: number) {
+		if (this.activeTick === time) {
+			this.abortedTick = time;
+			this.sandbox?.dispose();
+		}
+	}
+
 	async run(this: PlayerInstance, time: number, visibleRooms: string[], intentRooms: string[]) {
+		this.activeTick = time;
+		this.activePhase = 'setup';
 		const result = await (async () => {
 			// Dispose the current sandbox if the user has pushed new code
 			const wasStale = this.stale;
@@ -170,6 +185,9 @@ export class PlayerInstance {
 						// Wait for room blobs
 						payload.roomBlobs = await Promise.all(Fn.map(visibleRooms,
 							roomName => this.shard.loadRoomBlob(roomName, time - 1)));
+						if (this.abortedTick === time) {
+							return;
+						}
 						// Load unseen users
 						const newUserIds = Fn.pipe(
 							payload.roomBlobs,
@@ -191,7 +209,11 @@ export class PlayerInstance {
 					// Also run mod connectors
 					this.connectors.refresh(payload as TickPayload),
 				]);
+				if (this.abortedTick === time) {
+					return { result: 'disposed' as const };
+				}
 				// Send payload off to runtime and execute user code
+				this.activePhase = 'runtime';
 				return await this.sandbox.run(payload as TickPayload);
 			} catch (err: any) {
 				console.error(err.stack);
@@ -200,7 +222,14 @@ export class PlayerInstance {
 		})();
 
 		// Save runtime results
-		if (result?.result === 'success') {
+		const wasAborted = this.abortedTick === time;
+		const phase = this.activePhase;
+		this.activeTick = undefined;
+		this.activePhase = undefined;
+		if (wasAborted) {
+			this.abortedTick = undefined;
+		}
+		if (result?.result === 'success' && !wasAborted) {
 			const { payload } = result;
 			this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - payload.usage.cpu + kCPU);
 			await Promise.all([
@@ -221,18 +250,24 @@ export class PlayerInstance {
 			]);
 		} else {
 			const tasks: Promise<void>[] = [];
-			if (result) {
+			if (result || (wasAborted && shouldChargeAbortedTick(phase))) {
 				// Deduct CPU limit in case of severe failure
 				this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - config.runner.cpu.tickLimit) + kCPU;
 				tasks.push(this.usageChannel.publish({ cpu: kCPU }));
 
-				if (result.result === 'disposed') {
+				if (result?.result === 'disposed' && !wasAborted) {
 					tasks.push(this.consoleChannel.publish(JSON.stringify([ {
 						fd: 2,
 						data: 'Script was disposed',
 					} ])));
 
-				} else if (result.result === 'timedOut') {
+				} else if (wasAborted && shouldChargeAbortedTick(phase)) {
+					tasks.push(this.consoleChannel.publish(JSON.stringify([ {
+						fd: 2,
+						data: `Tick ${time} expired before results were accepted`,
+					} ])));
+
+				} else if (result?.result === 'timedOut') {
 					tasks.push(this.consoleChannel.publish(JSON.stringify([ {
 						fd: 2,
 						data: `Script timed out${result.stack ? `; ${result.stack}` : ''}`,

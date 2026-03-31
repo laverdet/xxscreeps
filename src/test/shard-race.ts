@@ -3,7 +3,7 @@ import { Shard } from 'xxscreeps/engine/db/index.js';
 import { describe, test } from 'xxscreeps/test/context.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 
-describe('Shard time race condition', () => {
+describe('Shard time safety', () => {
 	test('pubsub tick updates runner shard.time independently', async () => {
 		const { db, shard: mainShard } = await instantiateTestShard();
 
@@ -32,7 +32,7 @@ describe('Shard time race condition', () => {
 		db.disconnect();
 	});
 
-	test('runner: loadRoomBlob succeeds when shard.time advances 2+ ticks', async () => {
+	test('runner: rejects stale room reads after a later tick reuses the same buffer slot', async () => {
 		const { db, shard: mainShard } = await instantiateTestShard();
 
 		const runnerShard = await Shard.connectWith(db, {
@@ -42,27 +42,28 @@ describe('Shard time race condition', () => {
 			scratch: 'local://scratch',
 		});
 
-		// Runner freezes time at the start of tick processing (as the fix does)
-		runnerShard.freezeTime();
+		// Tick 1 and tick 3 share the same backing storage slot (`room1/*`). Use
+		// a different valid room blob as the tick 3 payload so the stale read
+		// would observe incorrect-but-well-formed room data if allowed through.
+		const [ tick1Blob, tick3Blob ] = await Promise.all([
+			mainShard.loadRoomBlob('W1N1', 1),
+			mainShard.loadRoomBlob('W1N9', 1),
+		]);
+		assert.notDeepEqual(tick1Blob, tick3Blob);
 
-		// Simulate main completing 2 ticks while runner is busy processing.
-		// This happens when the runner processes many players sequentially
-		// and the processor completes ticks faster than the runner can keep up.
-		await mainShard.data.set('time', 3);
-		await mainShard.channel.publish({ type: 'tick', time: 2 });
-		await mainShard.channel.publish({ type: 'tick', time: 3 });
-
-		// Runner's time is frozen — pubsub updates are buffered
-		assert.equal(runnerShard.time, 1);
-
-		// Runner is still processing run(2) and tries to load room blob for time 1.
-		// With frozen time, checkTime validates against the stable shard.time (1).
-		const blob = await runnerShard.loadRoomBlob('W1N1', 1);
-		assert.ok(blob);
-
-		// After processing, runner unfreezes and catches up
-		runnerShard.unfreezeTime();
+		// Simulate the processor advancing to tick 3 and overwriting the same
+		// parity buffer that tick 1 used for W1N1.
+		await Promise.all([
+			mainShard.data.set('time', 3),
+			mainShard.data.set('room1/W1N1', tick3Blob),
+			mainShard.channel.publish({ type: 'tick', time: 3 }),
+		]);
 		assert.equal(runnerShard.time, 3);
+
+		await assert.rejects(
+			runnerShard.loadRoomBlob('W1N1', 1),
+			/Invalid time: 1 \[current: 3\]/,
+		);
 
 		runnerShard.disconnect();
 		mainShard.disconnect();
