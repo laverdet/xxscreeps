@@ -5,7 +5,7 @@ import * as RoomObject from 'xxscreeps/game/object.js';
 import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
-import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
+import { checkIsActive, lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
@@ -55,6 +55,8 @@ const harvest = registerHarvestable(Mineral, function(creep) {
 				return C.ERR_NOT_FOUND;
 			} else if (extractor['#user'] && extractor['#user'] !== creep['#user']) {
 				return C.ERR_NOT_OWNER;
+			} else if (!extractor.isActive()) {
+				return C.ERR_RCL_NOT_ENOUGH;
 			} else if (extractor.cooldown !== 0 && extractor.cooldown !== C.EXTRACTOR_COOLDOWN) {
 				return C.ERR_TIRED;
 			}
