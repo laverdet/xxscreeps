@@ -26,13 +26,13 @@ declare module 'xxscreeps/engine/runner/index.js' {
 
 hooks.register('runnerConnector', player => {
 	const { shard, userId } = player;
-	let activeSegments = new Set<number>();
+	let activeSegments: Set<number>;
 	let nextSegments: Set<number> | undefined;
 	let foreignSegmentRequest: TickResult['foreignSegmentRequest'] = null;
 	return [ undefined, {
 		async initialize(payload) {
 			// Reset state that mirrors the runtime sandbox
-			activeSegments = new Set<number>();
+			activeSegments = new Set();
 			nextSegments = undefined;
 			foreignSegmentRequest = null;
 			// Get current memory payload
