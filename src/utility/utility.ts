@@ -1,4 +1,4 @@
-import type { Union } from './types.js';
+import type { LooseBoolean, Union } from './types.js';
 
 // Wrapper around Object.assign that enforces assigned types already exist
 export function assign<
@@ -7,6 +7,23 @@ export function assign<
 	Type extends Base = Base,
 >(target: Result, source: Partial<Type>): Result {
 	return Object.assign(target, source);
+}
+
+// Combination filter + reject
+export function bifurcate<Type, Yes extends Type, No = Exclude<Type, Yes>>(
+	iterator: Iterable<Type>, callback: (value: Type) => value is Yes): [ Yes[], No[] ];
+export function bifurcate<Type>(iterator: Iterable<Type>, callback: (value: Type) => LooseBoolean): [ Type[], Type[] ];
+export function bifurcate(iterator: Iterable<any>, callback: (value: any) => LooseBoolean) {
+	const yes: any[] = [];
+	const no: any[] = [];
+	for (const value of iterator) {
+		if (callback(value)) {
+			yes.push(value);
+		} else {
+			no.push(value);
+		}
+	}
+	return [ yes, no ];
 }
 
 // Clamps a number to a given range

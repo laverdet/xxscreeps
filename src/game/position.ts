@@ -4,8 +4,8 @@ import type { FindConstants, FindType, RoomFindOptions } from './room/find.js';
 import type { LookConstants } from './room/look.js';
 import type { FindPathOptions, RoomPath } from './room/path.js';
 import type { InspectOptionsStylized } from 'node:util';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { compose, declare } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { iteratee } from 'xxscreeps/utility/iteratee.js';
 import { getDirection } from './direction.js';
 import * as PathFinder from './path-finder/index.js';
@@ -253,7 +253,7 @@ export class RoomPosition {
 		// Match position to object
 		const { path } = result;
 		const last = path[path.length - 1] ?? this;
-		return Fn.firstMatching(filtered, object => last.isNearTo(object)) ?? null;
+		return Fn.find(filtered, object => last.isNearTo(object)) ?? null;
 	}
 
 	/**

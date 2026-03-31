@@ -12,8 +12,8 @@ import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { acquire } from 'xxscreeps/utility/async.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility.js';
 import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model.js';
 import { hooks } from './symbols.js';
@@ -173,7 +173,7 @@ export class PlayerInstance {
 						// Load unseen users
 						const userIds = Fn.concat(Fn.map(payload.roomBlobs, blob => {
 							const users = RoomSchema.read(blob)['#users'];
-							return Fn.concat(users.presence, users.extra);
+							return Fn.concat([ users.presence, users.extra ]);
 						}));
 						const newUserIds = Fn.reject(userIds, userId => this.seenUsers.has(userId));
 						const entries: [ string, string ][] = await Promise.all(Fn.map(newUserIds, async userId => {

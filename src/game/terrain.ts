@@ -1,7 +1,7 @@
 import type { BufferView } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { array, compose } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { exchange } from 'xxscreeps/utility/utility.js';
 import { Room } from './room/index.js';
 import { Game } from './index.js';

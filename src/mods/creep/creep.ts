@@ -6,6 +6,7 @@ import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
 import type { PolyStyle } from 'xxscreeps/mods/visual/visual.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
@@ -21,7 +22,6 @@ import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openSt
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];

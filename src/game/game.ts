@@ -2,7 +2,7 @@ import type { GameMap, World } from './map.js';
 import type { RoomObject } from './object.js';
 import type { AnyRoomObject, Room } from './room/index.js';
 import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { hooks } from './symbols.js';
 
 const initializeGame = hooks.makeIterated('gameInitializer');

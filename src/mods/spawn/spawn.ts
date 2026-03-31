@@ -3,6 +3,7 @@ import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkString, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, userGame } from 'xxscreeps/game/index.js';
@@ -14,7 +15,6 @@ import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store.js
 import { OwnedStructure, checkMyStructure, checkPlacement, lookForStructures, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
 import { compose, declare, optional, struct, variant, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
 type SpawnCreepOptions = {

@@ -1,12 +1,13 @@
-import type { ConstructibleStructureType, ConstructionSite } from './construction-site.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, intents, me } from 'xxscreeps/game/index.js';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle.js';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { asUnion, extend } from 'xxscreeps/utility/utility.js';
+import { ConstructibleStructureType, ConstructionSite } from './construction-site.js';
 import { structureFactories } from './symbols.js';
 
 // Register FIND_ types for `ConstructionSite`
@@ -82,10 +83,10 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 	}
 
 	// Check structure count for this RCL
-	const existingCount = Fn.accumulate(Fn.concat(
+	const existingCount = Fn.accumulate(Fn.concat<Structure | ConstructionSite>([
 		room['#lookFor'](C.LOOK_STRUCTURES),
 		room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
-	), object => object.structureType === structureType ? 1 : 0);
+	]), object => object.structureType === structureType ? 1 : 0);
 	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][room.controller?.level ?? 0]) {
 		return C.ERR_RCL_NOT_ENOUGH;
 	}

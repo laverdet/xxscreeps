@@ -2,7 +2,7 @@ import type { Effect } from './types.js';
 import type { MessagePort } from 'node:worker_threads';
 import { EventEmitter } from 'node:events';
 import { MessageChannel, parentPort } from 'node:worker_threads';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { Deferred, mustNotReject } from './async.js';
 import { staticCast } from './utility.js';
 import { Worker, waitForWorker } from './worker.js';
@@ -77,7 +77,9 @@ export function makeBasicResponderClient<Type, Result>(port: MessagePort): Respo
 	});
 	port.on('close', () => {
 		alive = false;
-		Fn.forEach(requestsById.values(), request => request.reject(new Error('Responder died')));
+		for (const request of requestsById.values()) {
+			request.reject(new Error('Worker is dead'));
+		}
 	});
 	return [
 		() => {

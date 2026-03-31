@@ -1,11 +1,11 @@
 import type { ResourceType } from './resource.js';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
 import { compose, declare, makeReader, struct, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
 import { getLayout } from 'xxscreeps/schema/layout.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { resourceEnumFormat } from './resource.js';
 
 export type WithStore = Record<'store', Store>;

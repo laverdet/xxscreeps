@@ -16,6 +16,7 @@ import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as Badge from 'xxscreeps/engine/db/user/badge.js';
 import * as CodeSchema from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -35,7 +36,6 @@ import { Source } from 'xxscreeps/mods/source/source.js';
 import { StructureExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 import { merge } from 'xxscreeps/utility/utility.js';
 

@@ -1,7 +1,7 @@
 import type { Package } from './build.js';
 import type { ShapeOf } from './format.js';
 import type { Layout, StructLayout } from './layout.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { BufferView } from './buffer-view.js';

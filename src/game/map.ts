@@ -4,9 +4,10 @@ import type { TypeOf } from 'xxscreeps/schema/index.js';
 import type { Adapter } from 'xxscreeps/utility/astar.js';
 
 import { build } from 'xxscreeps/engine/schema/index.js';
+import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import * as C from './constants/index.js';
 import { getDirection } from './direction.js';
 import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from './position.js';
@@ -24,7 +25,7 @@ export const schema = build(declare('World', compose(vector(struct({
 	compose: world => new Map(world.map(room => [ room.name, room.info ])),
 	decompose: (world: Map<string, TypeOf<typeof roomTerrain>>) => {
 		const vector = [ ...Fn.map(world.entries(), ([ name, info ]) => ({ name, info })) ];
-		vector.sort((left, right) => Fn.primitiveComparator(left.name, right.name));
+		vector.sort((left, right) => primitiveComparator(left.name, right.name));
 		return vector;
 	},
 })));
@@ -160,11 +161,15 @@ export class GameMap {
 				() => 1,
 			pos => Fn.map(Object.values(this.describeExits(generateRoomName(pos.rx, pos.ry))), parseRoomName));
 		if (route) {
-			const moves = Fn.shift(Fn.scan(route, [ origin, origin ] as const, (prev, next) => [ prev[1], next ] as const)).rest;
-			return [ ...Fn.map(moves, ([ prev, next ]) => ({
-				exit: getDirection(next.rx - prev.rx, next.ry - prev.ry) as ExitType,
-				room: generateRoomName(next.rx, next.ry),
-			})) ];
+			return Fn.pipe(
+				route,
+				$$ => Fn.scan($$, [ origin, origin ] as const, (prev, next) => [ prev[1], next ] as const),
+				$$ => Fn.shift($$).rest ?? [],
+				$$ => Fn.map($$, ([ prev, next ]) => ({
+					exit: getDirection(next.rx - prev.rx, next.ry - prev.ry) as ExitType,
+					room: generateRoomName(next.rx, next.ry),
+				})),
+				$$ => [ ...$$ ]);
 		} else {
 			return C.ERR_NO_PATH;
 		}

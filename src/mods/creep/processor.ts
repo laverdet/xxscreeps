@@ -8,6 +8,8 @@ import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { writeRoomObject } from 'xxscreeps/engine/db/room.js';
 import { hooks, registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
+import { numericComparator } from 'xxscreeps/functional/comparator.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
@@ -15,7 +17,6 @@ import { isBorder } from 'xxscreeps/game/terrain.js';
 import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { clamp, filterInPlace } from 'xxscreeps/utility/utility.js';
 import { Creep, calculateCarry } from './creep.js';
@@ -40,7 +41,7 @@ export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) 
 			context.didUpdate();
 		}
 		if (actionLog.length > 0) {
-			const minimum = Fn.minimum(Fn.map(actionLog, action => action.time))!;
+			const minimum = Fn.minimum(Fn.map(actionLog, action => action.time), numericComparator)!;
 			context.wakeAt(minimum + kRetainActionsTime);
 		}
 	}

@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 import AcornClassFields from 'acorn-class-fields';
 import AcornPrivateMethods from 'acorn-private-methods';
 import Webpack from 'webpack';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 
 const Acorn = createRequire(import.meta.url)('acorn');
 Acorn.Parser = Acorn.Parser.extend(AcornClassFields, AcornPrivateMethods);
@@ -32,7 +33,7 @@ const IS_DEV = true as boolean;
 export async function compile(moduleName: string, transforms: Transform[]) {
 	const baseName = Path.basename(moduleName);
 	const output = new URL(`${baseName}.webpack.js`, import.meta.url);
-	const babelPlugins = [ ...Fn.filter(Fn.map(transforms, transform => transform.babel)) ];
+	const babelPlugins = [ ...Fn.filter(Fn.map(transforms, transform => transform.babel), nonNullPredicate) ];
 	const babelLoader = await resolve('babel-loader');
 	const sourceMapLoader = await resolve('source-map-loader');
 	await new Promise<Webpack.StatsCompilation>((resolve, reject) => {

@@ -1,6 +1,7 @@
 import type { Layout, StructLayout } from './layout.js';
+import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { unpackWrappedStruct } from './layout.js';
 
 class ModuleArchiver {
@@ -13,7 +14,7 @@ class ModuleArchiver {
 		const instance = new ModuleArchiver();
 		const exports = `export default ${render(instance.archive(layout))};\n`;
 		const sorted = new Map([ ...instance.dependencies.entries() ]
-			.sort((left, right) => Fn.primitiveComparator(left[0], right[0])));
+			.sort((left, right) => primitiveComparator(left[0], right[0])));
 		const resolved = new Set<string>();
 		let rendered = '';
 		while (sorted.size) {
@@ -124,7 +125,7 @@ function render(value: any, indent = 1): string {
 			const hasNewLine = (value: typeof left) => value[1].includes('\n') ? 1 : 0;
 			const asString = (value: typeof left) => typeof value[0] === 'symbol' ? `%${value[0].description}` : `${value[0]}`;
 			return hasNewLine(left) - hasNewLine(right) ||
-				Fn.primitiveComparator(asString(left), asString(right));
+				primitiveComparator(asString(left), asString(right));
 		});
 		const rendered = preRendered.map(tuple => `${render(tuple[0])}: ${tuple[1]}`);
 		const useNewLines = entries.some(entry => typeof entry[1] === 'object' && !(entry[1] instanceof String));

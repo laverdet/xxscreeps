@@ -1,8 +1,8 @@
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { build } from 'xxscreeps/engine/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 // Declare schema and types

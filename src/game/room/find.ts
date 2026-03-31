@@ -1,8 +1,8 @@
 import type { Room } from './index.js';
 import type { KeyFor, KeysOf, LooseBoolean } from 'xxscreeps/utility/types.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { registerFindHandlers } from './symbols.js';
 
 // Declare-able interface for mods

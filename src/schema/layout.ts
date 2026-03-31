@@ -1,6 +1,6 @@
 import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, UnionDeclaration } from './format.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import { getOrSet, staticCast } from 'xxscreeps/utility/utility.js';
+import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { bifurcate, getOrSet, staticCast } from 'xxscreeps/utility/utility.js';
 import { Variant } from './format.js';
 import { entriesWithSymbols } from './symbol.js';
 
@@ -221,7 +221,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 			// Grab layout for structure members
 			const allEntries = entriesWithSymbols(format.struct).filter(
 				entry => entry[0] !== Variant) as ([ string, Format] | [ string, UnionDeclaration])[];
-			const [ unionReferences, memberDeclarations ] = Fn.bifurcate(allEntries,
+			const [ unionReferences, memberDeclarations ] = bifurcate(allEntries,
 				(entry): entry is [ string, UnionDeclaration ] => typeof entry[1] === 'object' && 'union' in entry[1]);
 			const entries = memberDeclarations.map(([ key, member ]) => ({
 				key,
@@ -234,7 +234,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 				return (
 					right.traits.size - left.traits.size ||
 					right.traits.align - left.traits.align ||
-					Fn.primitiveComparator(nameOf(left.key), nameOf(right.key))
+					primitiveComparator(nameOf(left.key), nameOf(right.key))
 				);
 			});
 

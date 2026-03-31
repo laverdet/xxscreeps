@@ -1,10 +1,10 @@
 import type { RoomObject } from 'xxscreeps/game/object.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 
 // Creep extension declaration

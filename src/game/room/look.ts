@@ -1,10 +1,10 @@
 import type { PositionParameter } from 'xxscreeps/game/position.js';
 import type { UnwrapArray } from 'xxscreeps/utility/types.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { iterateArea } from 'xxscreeps/game/direction.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { terrainMaskToString } from 'xxscreeps/game/terrain.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from './room.js';
 import { lookConstants } from './symbols.js';
@@ -115,7 +115,7 @@ extend(Room, {
 			}
 		})();
 		const terrain = this.getTerrain();
-		const results = Fn.concat(
+		const results = Fn.concat([
 			// Iterate objects
 			Fn.map(objects, object => {
 				const type = object['#lookType'];
@@ -123,7 +123,8 @@ extend(Room, {
 			}),
 			// Add terrain data
 			mapArea(top, left, bottom, right, (x, y) =>
-				({ x, y, type: 'terrain', terrain: terrainMaskToString[terrain.get(x, y)] })));
+				({ x, y, type: 'terrain', terrain: terrainMaskToString[terrain.get(x, y)] })),
+		]);
 		return withAsArray(results, top, left, bottom, right, asArray, true) as never;
 	},
 

@@ -1,7 +1,7 @@
 import type { Creep } from 'xxscreeps/mods/creep/creep.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 
 export default function(creep: Creep) {
 	if (creep.getActiveBodyparts(C.RANGED_ATTACK) === 0) {

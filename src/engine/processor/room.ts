@@ -6,9 +6,9 @@ import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { acquireFinalIntentsForRoom, activeRoomsKey, publishInterRoomIntents, roomDidProcess, sleepRoomUntil, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, me, runAsUser, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { PreTick, Tick, hooks, intentProcessorGetters, roomTickProcessors } from './symbols.js';
 
@@ -170,8 +170,8 @@ export class RoomProcessor implements ProcessorContext {
 
 		// Publish results
 		if (!isFinalization) {
-			await Fn.mapAsync(this.interRoomIntents, ([ roomName, intents ]) =>
-				publishInterRoomIntents(this.shard, roomName, this.time, intents));
+			await Promise.all(Fn.map(this.interRoomIntents, ([ roomName, intents ]) =>
+				publishInterRoomIntents(this.shard, roomName, this.time, intents)));
 			await roomDidProcess(this.shard, this.time);
 		}
 		flushContext();
@@ -297,7 +297,7 @@ export class RoomProcessor implements ProcessorContext {
 		if (tasks.length !== results.length) {
 			throw new Error('Tasks queued out of processor context');
 		}
-		const tasksByUser = Fn.groupBy(Fn.range(tasks.length), ii => tasks[ii].userId);
+		const tasksByUser = Fn.groupBy(Fn.range(tasks.length), ii => [ tasks[ii].userId, ii ]);
 		for (const [ userId, indices ] of tasksByUser) {
 			if (indices.some(ii => tasks[ii].finalize)) {
 				runAsUser(userId, () => {

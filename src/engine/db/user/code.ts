@@ -1,6 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { bifurcate } from 'xxscreeps/utility/utility.js';
 import * as Schema from './code-schema.js';
 import * as User from './index.js';
 
@@ -46,7 +46,7 @@ export async function loadContent(db: Database, userId: string, branchName: stri
  * Update the user's code content and publish the change to runners
  */
 export async function saveContent(db: Database, userId: string, branchName: string, content: CodePayload) {
-	const [ strings, buffers ] = Fn.bifurcate(content,
+	const [ strings, buffers ] = bifurcate(content,
 		(entry): entry is [ string, string ] => typeof entry[1] === 'string');
 	const bufferBlob = buffers.length === 0 ? undefined : Schema.writeBuffers(new Map(buffers as [ string, Uint8Array ][]));
 	const stringBlob = strings.length === 0 ? undefined : Schema.writeStrings(new Map(strings));

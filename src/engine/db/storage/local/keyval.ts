@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/require-await */
+import type { MaybePromises } from './responder.js';
 import type * as P from 'xxscreeps/engine/db/storage/provider.js';
 import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
-import type { MaybePromises } from './responder.js';
 import fs from 'node:fs/promises';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
-import { connect, makeClient, makeHost } from './responder.js';
-import { SortedSet } from './sorted-set.js';
 import { registerStorageProvider } from 'xxscreeps/engine/db/storage/register.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { BlobStorage } from './blob.js';
+import { connect, makeClient, makeHost } from './responder.js';
+import { SortedSet } from './sorted-set.js';
 
 registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
 	const path = url.pathname.endsWith('/') ? url : new URL(`${url}/`);
@@ -181,7 +181,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	hincrBy(key: string, field: string, value: number) {
-		const map: Map<string, any> = getOrSet(this.data, key, () => new Map);
+		const map: Map<string, any> = getOrSet(this.data, key, () => new Map());
 		const result = (Number(map.get(field)) || 0) + value;
 		map.set(field, result);
 		return result;
@@ -193,7 +193,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	hset(key: string, field: string, value: P.Value, options?: P.HSet) {
-		const map: Map<string, any> = getOrSet(this.data, key, () => new Map);
+		const map: Map<string, any> = getOrSet(this.data, key, () => new Map());
 		const has = map.has(field);
 		if (options?.if === 'nx' && has) {
 			return false;
@@ -204,9 +204,9 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	hmset(key: string, fields: Iterable<readonly [ string, P.Value ]> | Record<string, P.Value>) {
-		const map: Map<string, any> = getOrSet(this.data, key, () => new Map);
-		const iterable = Symbol.iterator in fields ?
-			fields as Iterable<[ string, P.Value ]> :
+		const map: Map<string, any> = getOrSet(this.data, key, () => new Map());
+		const iterable = Symbol.iterator in fields
+			? fields as Iterable<[ string, P.Value ]> :
 			Object.entries(fields);
 		for (const [ field, value ] of iterable) {
 			map.set(field, value);
@@ -279,9 +279,11 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	sinter(key: string, keys: string[]) {
-		const sets = [ ...Fn.filter(Fn.map(
-			Fn.concat([ key ], keys),
-			(key): Set<string> | undefined => this.data.get(key))) ];
+		const sets = Fn.pipe(
+			Fn.concat([ [ key ], keys ]),
+			$$ => Fn.map($$, (key): Set<string> | undefined => this.data.get(key)),
+			$$ => Fn.filter($$),
+			$$ => [ ...$$ ]);
 		sets.sort((left, right) => left.size - right.size);
 		const first = sets.shift();
 		if (sets.length > 0) {
@@ -319,7 +321,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			} else {
 				set.delete(value!);
 			}
-			return value as string;
+			return value!;
 		}
 		return null;
 	}
@@ -347,7 +349,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	zadd(key: string, members: [ number, string ][], options?: P.ZAdd): any {
-		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
+		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet());
 		try {
 			const range = function() {
 				switch (options?.if) {
@@ -389,7 +391,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	zincrBy(key: string, delta: number, member: string) {
-		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet);
+		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet());
 		const score = (set.score(member) ?? 0) + delta;
 		set.add(member, score);
 		return score;
@@ -401,12 +403,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		const out = function() {
 			const smallest = Fn.minimum(sets, (left, right) => left.size - right.size);
 			if (!smallest) {
-				return new SortedSet;
+				return new SortedSet();
 			}
 
 			// Generate intersection
 			const weights = options?.weights ?? [ ...Fn.map(sets, () => 1) ];
-			return new SortedSet(function *(): Iterable<[ number, string ]> {
+			return new SortedSet(function*(): Iterable<[ number, string ]> {
 				loop: for (const member of smallest.values()) {
 					let nextScore = 0;
 					for (let ii = 0; ii < sets.length; ++ii) {
@@ -491,7 +493,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		const set: SortedSet | undefined = this.data.get(from);
 		if (set) {
 			const range: string[] = this.zrange(from, min, max, options);
-			const out = new SortedSet;
+			const out = new SortedSet();
 			out.insert(Fn.map(range, member => [ set.score(member)!, member ]));
 			if (out.size === 0) {
 				this.data.delete(into);
@@ -556,7 +558,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	zunionStore(key: string, keys: string[], options?: P.ZAggregate) {
-		const out = new SortedSet;
+		const out = new SortedSet();
 		if (options?.weights) {
 			// With WEIGHTS each set needs to be applied one at a time
 			const maybeSets = Fn.map(keys.entries(), ([ index, key ]): [number, SortedSet] =>

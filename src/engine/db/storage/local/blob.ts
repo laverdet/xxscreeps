@@ -4,8 +4,8 @@ import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import * as Path from 'node:path';
 import { fileURLToPath } from 'url';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { listen, spread } from 'xxscreeps/utility/async.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 
 export class BlobStorage {
 	private readonly cache = new Map<string, {

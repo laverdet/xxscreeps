@@ -1,9 +1,9 @@
 import type { Color } from './flag.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
-import { userGame } from 'xxscreeps/game/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { userGame } from 'xxscreeps/game/index.js';
 import { RoomPosition, fetchPositionArgumentRest, fetchRoom } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { extend, instantiate } from 'xxscreeps/utility/utility.js';
@@ -33,15 +33,15 @@ extend(Room, {
 	createFlag(arg1, arg2, ...args) {
 		const { pos, rest } = fetchPositionArgumentRest(this.name, arg1, arg2, ...args);
 		const flags = userGame!.flags;
-		const name = rest[0] ?? Fn.firstMatching(
+		const name = rest[0] ?? Fn.find(
 			Fn.map(Fn.range(), ii => `Flag${ii}`),
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 			name => flags[name] === undefined)!;
 		const color = rest[1] ?? C.COLOR_WHITE;
 		const secondaryColor = rest[2] ?? color;
 		const result = chainIntentChecks(
 			() => {
-				if (!pos || pos.roomName !== this.name) {
+				if (pos?.roomName !== this.name) {
 					return C.ERR_INVALID_ARGS;
 				}
 			},
