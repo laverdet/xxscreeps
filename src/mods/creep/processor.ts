@@ -60,7 +60,7 @@ function calculateEffectiveDamage(creep: Creep, totalDamage: number) {
 		if (remaining <= 0) break;
 		if (part.hits <= 0) continue;
 		if (part.type === C.TOUGH && part.boost) {
-			const multiplier = (C.BOOSTS as Record<string, any>).tough?.[part.boost]?.damage as number | undefined;
+			const multiplier = (C.BOOSTS as CreepLib.BoostsLookup)[C.TOUGH]?.[part.boost]?.damage;
 			if (multiplier) {
 				// This part can absorb part.hits/multiplier incoming damage
 				const absorbed = Math.min(remaining, part.hits / multiplier);
@@ -299,14 +299,15 @@ registerObjectPreTickProcessor(Creep, (creep, context) => {
 registerObjectTickProcessor(Creep, (creep, context) => {
 
 	// Check creep death — apply TOUGH damage reduction before updating hits
-	if (creep.tickHitsDelta) {
+	if (creep.tickHitsDelta || creep.tickDamageTaken) {
+		const delta = creep.tickHitsDelta ?? 0;
 		const rawDamage = creep.tickDamageTaken ?? 0;
 		if (rawDamage > 0) {
 			const effectiveDamage = calculateEffectiveDamage(creep, rawDamage);
 			const damageReduction = rawDamage - effectiveDamage;
-			creep.hits += creep.tickHitsDelta + damageReduction;
+			creep.hits += delta + damageReduction;
 		} else {
-			creep.hits += creep.tickHitsDelta;
+			creep.hits += delta;
 		}
 		creep.tickHitsDelta = 0;
 		creep.tickDamageTaken = 0;

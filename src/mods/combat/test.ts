@@ -3,6 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createLab } from 'xxscreeps/mods/chemistry/lab.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { createLabWithResources } from 'xxscreeps/mods/chemistry/test.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
@@ -101,17 +102,6 @@ describe('getEventLog', () => {
 // =========================================================================
 // TOUGH damage reduction
 // =========================================================================
-
-function createLabWithResources(pos: RoomPosition, owner: string, mineral?: string, mineralAmount?: number, energy?: number) {
-	const lab = createLab(pos, owner);
-	if (energy !== undefined) {
-		lab.store['#add'](C.RESOURCE_ENERGY, energy);
-	}
-	if (mineral !== undefined && mineralAmount !== undefined) {
-		lab.store['#add'](mineral as any, mineralAmount);
-	}
-	return lab;
-}
 
 describe('TOUGH damage reduction', () => {
 	// Defender (25,25): 2 TOUGH + 2 MOVE = 400 HP
@@ -286,6 +276,60 @@ describe('TOUGH damage reduction', () => {
 			// Total effective: 140
 			assert.strictEqual(Game.creeps.defender.hits, 300 - 140,
 				'overflow damage past exhausted TOUGH should hit remaining parts at full rate');
+		});
+	}));
+
+	// Balanced: 2 ATTACK (60 dmg) + 5 HEAL (60 heal) = tickHitsDelta 0
+	// TOUGH reduction must still apply when net delta is zero
+	const balancedSim = simulate({
+		W1N1: room => {
+			room['#level'] = 7;
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#insertObject'](createLabWithResources(
+				new RoomPosition(24, 25, 'W1N1'), '100', 'GO', 300, 2000));
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 25, 'W1N1'),
+				[C.TOUGH, C.TOUGH, C.MOVE, C.MOVE],
+				'defender', '100'));
+			room['#insertObject'](createCreep(
+				new RoomPosition(26, 25, 'W1N1'),
+				[C.ATTACK, C.ATTACK, C.MOVE],
+				'attacker', '100'));
+			room['#insertObject'](createCreep(
+				new RoomPosition(26, 26, 'W1N1'),
+				[...Array(5).fill(C.HEAL), C.MOVE],
+				'healer', '100'));
+		},
+	});
+
+	test('TOUGH reduction applies when damage exactly equals healing', () => balancedSim(async ({ player, tick }) => {
+		// Boost
+		await player('100', Game => {
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
+				.find(l => l.mineralType === 'GO')!;
+			lab.boostCreep(Game.creeps.defender);
+		});
+		await tick();
+		// Pre-damage so TOUGH gain doesn't hit hitsMax cap
+		await player('100', Game => {
+			Game.creeps.attacker.attack(Game.creeps.defender);
+		});
+		await tick();
+		await player('100', Game => {
+			// 60 * 0.7 = 42 effective
+			assert.strictEqual(Game.creeps.defender.hits, 400 - 42,
+				'pre-damage should leave defender at 358');
+		});
+		// Attack + heal in same tick: tickHitsDelta = -60 + 60 = 0
+		await player('100', Game => {
+			Game.creeps.attacker.attack(Game.creeps.defender);
+			Game.creeps.healer.heal(Game.creeps.defender);
+		});
+		await tick();
+		await player('100', Game => {
+			// TOUGH reduces 60 to 42 effective, +60 healing = net +18
+			assert.strictEqual(Game.creeps.defender.hits, 358 + 18,
+				'TOUGH reduction must apply even when raw damage equals healing');
 		});
 	}));
 });
