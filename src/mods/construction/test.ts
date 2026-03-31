@@ -40,9 +40,7 @@ describe('Construction', () => {
 				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(xx, yy, 'road'), C.OK);
 			}
 			assert.strictEqual(Game.rooms.W1N1.createConstructionSite(1, 4, 'road'), C.ERR_FULL);
-		});
-		// Remove one site, then creating should succeed again
-		await player('100', Game => {
+			// Remove one site, then creating should succeed again
 			Object.values(Game.constructionSites)[0]!.remove();
 		});
 		await tick();
