@@ -94,14 +94,18 @@ describe('setPublic', () => {
 describe('Tower isActive', () => {
 	const simulation = simulate({
 		W3N2: room => {
-			room['#insertObject'](createTower(new RoomPosition(25, 25, 'W3N2'), '100'));
+			const tower = createTower(new RoomPosition(25, 25, 'W3N2'), '100');
+			tower.store['#add'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
+			room['#insertObject'](tower);
 			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W3N2'), [ C.MOVE ], 'target', '101'));
 			room['#level'] = 2;
 			room['#user'] =
 				room.controller!['#user'] = '100';
 		},
 		W3N3: room => {
-			room['#insertObject'](createTower(new RoomPosition(25, 25, 'W3N3'), '100'));
+			const tower = createTower(new RoomPosition(25, 25, 'W3N3'), '100');
+			tower.store['#add'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
+			room['#insertObject'](tower);
 			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W3N3'), [ C.MOVE ], 'target2', '101'));
 			room['#level'] = 3;
 			room['#user'] =

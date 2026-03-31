@@ -144,12 +144,12 @@ export function getReactionVariants(compound: ResourceType): [ResourceType, Reso
 export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | null | undefined, lab2: StructureLab | null | undefined) {
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
-		() => checkIsActive(lab),
 		() => {
 			if (lab.cooldown) {
 				return C.ERR_TIRED;
 			}
 		},
+		() => checkIsActive(lab),
 		() => checkTarget(lab1, StructureLab),
 		() => checkTarget(lab2, StructureLab),
 		() => checkRange(lab, lab1!, 2),
@@ -228,12 +228,12 @@ export function checkRunReaction(lab: StructureLab, left: StructureLab, right: S
 	}
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
-		() => checkIsActive(lab),
 		() => {
 			if (lab.cooldown) {
 				return C.ERR_TIRED;
 			}
 		},
+		() => checkIsActive(lab),
 		() => checkTarget(left, StructureLab),
 		() => checkTarget(right, StructureLab),
 		() => checkRange(lab, left, 2),

@@ -81,9 +81,9 @@ export function checkTower<Type extends Creep | Structure>(
 ) {
 	return chainIntentChecks(
 		() => checkMyStructure(tower, StructureTower),
-		() => checkIsActive(tower),
 		() => checkTarget(target, targetType),
 		() => checkDestructible(target),
 		() => checkHasResource(tower, C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST),
+		() => checkIsActive(tower),
 		() => checkSameRoom(tower, target));
 }
