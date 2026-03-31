@@ -3,6 +3,7 @@ import { flush } from './context.js';
 import './import.js';
 import './runner-accounting.js';
 import './runner-last-call.js';
+import './runner-scheduler.js';
 import './shard-race.js';
 
 await importMods('test');
