@@ -117,6 +117,11 @@ abstract class ResponderClient {
 			throw new Error('Already disconnected responder client');
 		}
 		this.#disconnected = true;
+		const error = new Error('Disconnected from responder');
+		for (const deferred of this.#requests.values()) {
+			deferred.reject(error);
+			deferred.promise.catch(() => {});
+		}
 		this.#requests.clear();
 		this.#port.close();
 	}

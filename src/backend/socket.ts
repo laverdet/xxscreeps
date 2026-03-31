@@ -82,6 +82,9 @@ export function installUpgradeHandlers(koa: Koa<State, Context>, httpServer: Ser
 }
 
 export function installSocketHandlers(koa: Koa<State, Context>, context: BackendContext) {
+	// Track pending subscription teardowns for graceful shutdown
+	const pendingTeardowns = new Set<Promise<void>>();
+
 	// SockJS aggressively injects its listeners at the front of the queue, so we pass it a fake HTTP
 	// server to have better control over the event flow.
 	const httpDelegate = new EventEmitter() as Server;
@@ -129,7 +132,9 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 		function close() {
 			for (const [ name, unlistener ] of subscriptions) {
 				subscriptions.delete(name);
-				unlistener.then(unlistener => unlistener(), () => {});
+				const teardown = unlistener.then(unlistener => unlistener(), () => {});
+				pendingTeardowns.add(teardown);
+				teardown.finally(() => pendingTeardowns.delete(teardown));
 			}
 			connection.close();
 		}
@@ -216,5 +221,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 
 		connection.on('close', close);
 	});
-	return socketServer;
+	return {
+		flush: () => Promise.all(pendingTeardowns),
+	};
 }
