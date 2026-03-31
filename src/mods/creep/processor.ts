@@ -47,6 +47,36 @@ export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) 
 	}
 }
 
+/**
+ * Calculates effective HP lost after TOUGH boost damage reduction.
+ * Walks body parts front-to-back: boosted TOUGH parts absorb more incoming
+ * damage per HP lost (each point of incoming damage costs only `multiplier` HP).
+ * Non-TOUGH and unboosted parts take damage at 1:1.
+ */
+function calculateEffectiveDamage(creep: Creep, totalDamage: number) {
+	let remaining = totalDamage;
+	let hitsLost = 0;
+	for (const part of creep.body) {
+		if (remaining <= 0) break;
+		if (part.hits <= 0) continue;
+		if (part.type === C.TOUGH && part.boost) {
+			const multiplier = (C.BOOSTS as Record<string, any>).tough?.[part.boost]?.damage as number | undefined;
+			if (multiplier) {
+				// This part can absorb part.hits/multiplier incoming damage
+				const absorbed = Math.min(remaining, part.hits / multiplier);
+				hitsLost += absorbed * multiplier;
+				remaining -= absorbed;
+				continue;
+			}
+		}
+		// Non-TOUGH or unboosted: 1:1
+		const absorbed = Math.min(remaining, part.hits);
+		hitsLost += absorbed;
+		remaining -= absorbed;
+	}
+	return hitsLost;
+}
+
 function recalculateBody(creep: Creep) {
 	// Apply damage to body parts
 	let hits = creep.hits - creep.hitsMax;
@@ -268,10 +298,18 @@ registerObjectPreTickProcessor(Creep, (creep, context) => {
 
 registerObjectTickProcessor(Creep, (creep, context) => {
 
-	// Check creep death
+	// Check creep death — apply TOUGH damage reduction before updating hits
 	if (creep.tickHitsDelta) {
-		creep.hits += creep.tickHitsDelta;
+		const rawDamage = creep.tickDamageTaken ?? 0;
+		if (rawDamage > 0) {
+			const effectiveDamage = calculateEffectiveDamage(creep, rawDamage);
+			const damageReduction = rawDamage - effectiveDamage;
+			creep.hits += creep.tickHitsDelta + damageReduction;
+		} else {
+			creep.hits += creep.tickHitsDelta;
+		}
 		creep.tickHitsDelta = 0;
+		creep.tickDamageTaken = 0;
 		recalculateBody(creep);
 		context.didUpdate();
 	}

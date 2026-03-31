@@ -78,6 +78,11 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	@enumerable get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined; }
 	@enumerable override get my() { return this['#user'] === me; }
 
+	/** @internal */
+	declare tickHitsDelta: number | undefined;
+	/** @internal — raw incoming damage this tick (before TOUGH reduction), always >= 0 */
+	declare tickDamageTaken: number | undefined;
+
 	/**
 	 * The text message that the creep was saying at the last tick.
 	 */
@@ -118,6 +123,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 			return;
 		}
 		this.tickHitsDelta = (this.tickHitsDelta ?? 0) - power;
+		this.tickDamageTaken = (this.tickDamageTaken ?? 0) + power;
 		if (source) {
 			appendEventLog(this.room, {
 				event: C.EVENT_ATTACK,
