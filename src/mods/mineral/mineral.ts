@@ -5,7 +5,7 @@ import * as RoomObject from 'xxscreeps/game/object.js';
 import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
-import { checkIsActive, lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
+import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 

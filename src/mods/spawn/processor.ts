@@ -246,7 +246,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 	})();
 
 	// Add 1 energy per tick to spawns in low energy rooms
-	if (spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
+	if (spawn.isActive() && spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
 		++spawn.room.energyAvailable;
 		spawn.store['#add'](C.RESOURCE_ENERGY, 1);
 		context.setActive();

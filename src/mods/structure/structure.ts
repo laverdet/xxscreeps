@@ -73,7 +73,8 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		const lookup = (C.CONTROLLER_STRUCTURES as Record<string, number[] | undefined>)[this.structureType];
 		if (!lookup) return true;
 		const controller = this.room.controller;
-		if (!controller || controller.level < 1 || controller['#user'] !== user) return false;
+		if (!controller) return true;
+		if (controller.level < 1 || controller['#user'] !== user) return false;
 		const maxCount = lookup[controller.level] ?? 0;
 		if (maxCount === 0) return false;
 		if (lookup[8] === 1) return true;
