@@ -71,7 +71,7 @@
     "stream-to-promise": "3.0.0",
     "tslib": "~2.5.3",
     "typescript": "^5.9.3",
-    "webpack": "5.88.0"
+    "webpack": "5.105.4"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.10.0",
