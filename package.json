@@ -53,7 +53,7 @@
     "js-base64": "3.7.5",
     "js-yaml": "4.1.0",
     "json-schema": "0.4.0",
-    "koa": "2.14.2",
+    "koa": "3.1.2",
     "koa-bodyparser": "4.4.1",
     "koa-conditional-get": "3.0.0",
     "koa-passport": "4.1.4",
