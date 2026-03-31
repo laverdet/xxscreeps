@@ -4,7 +4,7 @@ export class Market {
 	orders = [];
 	incomingTransactions = [];
 	outgoingTransactions = [];
-	#map;
+	readonly #map;
 
 	constructor(game: GameBase) {
 		this.#map = game.map;

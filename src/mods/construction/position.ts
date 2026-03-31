@@ -10,7 +10,7 @@ declare module 'xxscreeps/game/position.js' {
 		 * @param structureType One of the `STRUCTURE_*` constants.
 		 * @param name The name of the structure, for structures that support it (currently only spawns).
 		 */
-		createConstructionSite(structureType: ConstructibleStructureType, name?: string): ReturnType<Room['createConstructionSite']>;
+		createConstructionSite: (structureType: ConstructibleStructureType, name?: string) => ReturnType<Room['createConstructionSite']>;
 	}
 }
 

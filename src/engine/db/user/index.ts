@@ -1,5 +1,5 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 
 const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;

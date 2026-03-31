@@ -88,7 +88,7 @@ export class IsolatedSandbox implements Sandbox {
 	dispose() {
 		try {
 			this.isolate.dispose();
-		} catch (err) {}
+		} catch {}
 	}
 
 	async run(args: TickPayload) {

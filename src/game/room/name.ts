@@ -7,8 +7,8 @@ const roomNames = new Map<number, string>();
 
 export function generateRoomName(xx: number, yy: number) {
 	return getOrSet(roomNames,
-		yy << 8 | xx,
-		() => generateRoomNameFromId(yy << 8 | xx));
+		(yy << 8) | xx,
+		() => generateRoomNameFromId((yy << 8) | xx));
 }
 
 export function generateRoomNameFromId(id: number) {
@@ -51,5 +51,5 @@ export function parseRoomName(name: string) {
 
 export function parseRoomNameToId(name: string) {
 	const { rx, ry } = parseRoomName(name);
-	return ry << 8 | rx;
+	return (ry << 8) | rx;
 }

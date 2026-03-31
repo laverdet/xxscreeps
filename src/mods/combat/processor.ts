@@ -1,5 +1,6 @@
 import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
@@ -7,7 +8,6 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { mapArea } from 'xxscreeps/game/room/look.js';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { captureDamage, checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
@@ -20,7 +20,7 @@ const intents = [
 	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkAttack(creep, target) === C.OK) {
-			const power = calculatePower(creep, C.ATTACK, C.ATTACK_POWER);
+			const power = calculatePower(creep, C.ATTACK, C.ATTACK_POWER, 'attack');
 			const damage = captureDamage(target, power, C.EVENT_ATTACK_TYPE_MELEE, creep);
 			if (damage > 0) {
 				target['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_MELEE, creep);
@@ -43,7 +43,7 @@ const intents = [
 	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkRangedAttack(creep, target) === C.OK) {
-			const power = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER);
+			const power = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER, 'rangedAttack');
 			const damage = captureDamage(target, power, C.RANGED_ATTACK_POWER, creep);
 			if (damage > 0) {
 				target['#applyDamage'](damage, C.RANGED_ATTACK_POWER, creep);
@@ -71,7 +71,7 @@ const intents = [
 				Math.min(49, creep.pos.y + 3),
 				Math.min(49, creep.pos.x + 3),
 				(xx, yy) => new RoomPosition(xx, yy, creep.room.name));
-			const basePower = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER);
+			const basePower = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER, 'rangedMassAttack');
 			for (const pos of area) {
 
 				// Sort objects by layer
@@ -114,7 +114,7 @@ const intents = [
 	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkHeal(creep, target) === C.OK) {
-			const power = calculatePower(creep, C.HEAL, C.HEAL_POWER);
+			const power = calculatePower(creep, C.HEAL, C.HEAL_POWER, 'heal');
 			target.tickHitsDelta = (target.tickHitsDelta ?? 0) + power;
 			appendEventLog(target.room, {
 				event: C.EVENT_HEAL,
@@ -136,7 +136,7 @@ const intents = [
 	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkRangedHeal(creep, target) === C.OK) {
-			const power = calculatePower(creep, C.HEAL, C.RANGED_HEAL_POWER);
+			const power = calculatePower(creep, C.HEAL, C.RANGED_HEAL_POWER, 'rangedHeal');
 			target.tickHitsDelta = (target.tickHitsDelta ?? 0) + power;
 			appendEventLog(target.room, {
 				event: C.EVENT_HEAL,

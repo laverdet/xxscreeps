@@ -1,6 +1,6 @@
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { compose, declare, struct, vector } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 
 export type CodeBlobs = {
 	buffers: Readonly<Uint8Array> | null;
@@ -28,7 +28,8 @@ export const { read: readBuffers, write: writeBuffers } = makeReaderAndWriter(bu
 export const { read: readStrings, write: writeStrings } = makeReaderAndWriter(stringsFormat);
 
 export function read(blobs: CodeBlobs) {
-	return new Map<string, string | Uint8Array>(Fn.concat(
+	return new Map<string, string | Uint8Array>(Fn.concat<[ string, string | Uint8Array ]>([
 		blobs.buffers ? readBuffers(blobs.buffers) : [],
-		blobs.strings ? readStrings(blobs.strings) : []));
+		blobs.strings ? readStrings(blobs.strings) : [],
+	]));
 }

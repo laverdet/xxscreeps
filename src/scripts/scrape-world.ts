@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { Store } from 'xxscreeps/mods/resource/store.js';
@@ -16,6 +19,7 @@ import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as Badge from 'xxscreeps/engine/db/user/badge.js';
 import * as CodeSchema from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -35,7 +39,6 @@ import { Source } from 'xxscreeps/mods/source/source.js';
 import { StructureExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 import { merge } from 'xxscreeps/utility/utility.js';
 
@@ -47,7 +50,7 @@ const argv = checkArguments({
 const dontOverwrite = argv['dont-overwrite'];
 const shardOnly = argv['shard-only'];
 const jsonSource = argv.argv[0] ??
-	new URL('../init_dist/db.json', await import.meta.resolve!('@screeps/launcher', import.meta.url));
+	new URL('../init_dist/db.json', import.meta.resolve('@screeps/launcher'));
 
 function forUser(userId: string | null) {
 	return userId === 'f4b532d08c3952a' ? '1' : userId;
@@ -89,7 +92,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 		fetched.add(specifier);
 		try {
 			// Find `package.json` for this specifier
-			const indexPath = new URL(await import.meta.resolve!(specifier, `${configPath}`));
+			const indexPath = new URL(import.meta.resolve(specifier));
 			const packagePath = await async function() {
 				let path = indexPath;
 				while (true) {
@@ -97,7 +100,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 					try {
 						await fs.stat(packagePath);
 						return packagePath;
-					} catch (err) {}
+					} catch {}
 					const next = new URL('..', path);
 					if (`${next}` === `${path}`) {
 						return;
@@ -114,7 +117,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 					mods.add(info.name);
 				}
 			}
-		} catch (err) {}
+		} catch {}
 	};
 	await fetch('.', 2);
 
@@ -124,10 +127,9 @@ if ((rcInfo?.size ?? 0) === 0) {
 			return import.meta.resolve('xxscreeps/config/mods.static/config.schema.json');
 		} catch {}
 	}();
-	const preamble = schema ? `# yaml-language-server: $schema=${schema}\n` : '';
+	const preamble = schema === undefined ? '' : `# yaml-language-server: $schema=${schema}\n`;
 	const defaultConfig: any = {};
 	for (const modConfig of Configs) {
-
 		merge(defaultConfig, modConfig.configDefaults ?? {});
 	}
 	defaultConfig.mods = [ ...mods ];

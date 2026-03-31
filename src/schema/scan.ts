@@ -1,6 +1,6 @@
 import type { Builder } from './index.js';
 import type { Layout, StructLayout } from './layout.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { Variant } from './format.js';
 import { alignTo, kPointerSize, unpackWrappedStruct } from './layout.js';
@@ -50,7 +50,7 @@ function makeMemberScanner(layout: StructLayout, builder: Builder): Scanner | un
 		} else {
 			const scanBase = makeMemberScanner(unpackWrappedStruct(inherit), builder);
 			if (scanBase) {
-				return scanMembers ? (value, heap) => scanMembers!(value, scanBase(value, heap)) : scanBase;
+				return scanMembers ? (value, heap) => scanMembers(value, scanBase(value, heap)) : scanBase;
 			} else {
 				return scanMembers;
 			}

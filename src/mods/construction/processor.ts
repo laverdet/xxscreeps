@@ -17,6 +17,7 @@ declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { construction: typeof intents }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Room, 'createConstructionSite', {},
 		(room, context, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
@@ -42,7 +43,7 @@ const intents = [
 	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<ConstructionSite>(id)!;
 		if (checkBuild(creep, target) === C.OK) {
-			const power = calculatePower(creep, C.WORK, C.BUILD_POWER);
+			const power = calculatePower(creep, C.WORK, C.BUILD_POWER, 'build');
 			const energy = Math.min(
 				target.progressTotal - target.progress,
 				creep.store.energy,
@@ -63,7 +64,7 @@ const intents = [
 	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<DestructibleStructure>(id)!;
 		if (checkDismantle(creep, target) === C.OK) {
-			const effect = Math.min(calculatePower(creep, C.WORK, C.DISMANTLE_POWER), target.hits);
+			const effect = Math.min(calculatePower(creep, C.WORK, C.DISMANTLE_POWER, 'dismantle'), target.hits);
 			if (effect > 0) {
 				const energy = Math.floor(effect * C.DISMANTLE_COST);
 				const overflow = Math.max(energy - creep.store.getFreeCapacity(C.RESOURCE_ENERGY), 0);
@@ -86,7 +87,7 @@ const intents = [
 		const target = Game.getObjectById<DestructibleStructure>(id)!;
 		if (checkRepair(creep, target) === C.OK) {
 			const effect = Math.min(
-				calculatePower(creep, C.WORK, C.REPAIR_POWER),
+				calculatePower(creep, C.WORK, C.REPAIR_POWER, 'repair'),
 				target.hitsMax - target.hits,
 				creep.store.energy / C.REPAIR_COST);
 			if (effect > 0) {

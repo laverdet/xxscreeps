@@ -1,10 +1,10 @@
 import type { PositionParameter } from 'xxscreeps/game/position.js';
 import type { UnwrapArray } from 'xxscreeps/utility/types.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { iterateArea } from 'xxscreeps/game/direction.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { terrainMaskToString } from 'xxscreeps/game/terrain.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from './room.js';
 import { lookConstants } from './symbols.js';
@@ -43,7 +43,7 @@ declare module './room.js' {
 		 * @param y Y position in the room
 		 * @param target Can be a RoomObject or RoomPosition
 		 */
-		lookAt(...args: PositionParameter): LookAtResult<any>[];
+		lookAt: (...args: PositionParameter) => LookAtResult<any>[];
 
 		/**
 		 * Get the list of objects at the specified room area.
@@ -82,7 +82,7 @@ declare module './room.js' {
 		/**
 		 * Creates a RoomPosition object at the specified location.
 		 */
-		getPositionAt(x: number, y: number): RoomPosition;
+		getPositionAt: (x: number, y: number) => RoomPosition;
 	}
 }
 
@@ -111,11 +111,14 @@ extend(Room, {
 					object.pos.y >= top && object.pos.y <= bottom);
 			} else {
 				// Filter on spatial index
-				return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos => this['#lookAt'](pos)));
+				return Fn.pipe(
+					iterateArea(this.name, top, left, bottom, right),
+					$$ => Fn.map($$, pos => this['#lookAt'](pos)),
+					$$ => Fn.concat($$));
 			}
 		})();
 		const terrain = this.getTerrain();
-		const results = Fn.concat(
+		const results = Fn.concat([
 			// Iterate objects
 			Fn.map(objects, object => {
 				const type = object['#lookType'];
@@ -123,7 +126,8 @@ extend(Room, {
 			}),
 			// Add terrain data
 			mapArea(top, left, bottom, right, (x, y) =>
-				({ x, y, type: 'terrain', terrain: terrainMaskToString[terrain.get(x, y)] })));
+				({ x, y, type: 'terrain', terrain: terrainMaskToString[terrain.get(x, y)] })),
+		]);
 		return withAsArray(results, top, left, bottom, right, asArray, true) as never;
 	},
 
@@ -161,8 +165,10 @@ extend(Room, {
 							object.pos.y >= top && object.pos.y <= bottom);
 					} else {
 						// Filter on spatial index
-						return Fn.concat(Fn.map(iterateArea(this.name, top, left, bottom, right), pos =>
-							Fn.filter(this['#lookAt'](pos), object => object['#lookType'] === type)));
+						return Fn.pipe(
+							iterateArea(this.name, top, left, bottom, right),
+							$$ => Fn.transform($$, pos => this['#lookAt'](pos)),
+							$$ => Fn.filter($$, object => object['#lookType'] === type));
 					}
 				})();
 				// Add position and type information
@@ -172,8 +178,8 @@ extend(Room, {
 		return withAsArray(results, top, left, bottom, right, asArray, false) as never;
 	},
 
-	getPositionAt(x: number, y: number) {
-		return new RoomPosition(x, y, this.name);
+	getPositionAt(xx: number, yy: number) {
+		return new RoomPosition(xx, yy, this.name);
 	},
 });
 

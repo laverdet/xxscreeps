@@ -1,10 +1,10 @@
 import type { RoomObject } from 'xxscreeps/game/object.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 
 // Creep extension declaration
@@ -17,7 +17,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * body parts and is not inside a rampart, it will automatically hit back at the attacker.
 		 * @param target The target object to be attacked
 		 */
-		attack(target: AttackTarget): ReturnType<typeof checkAttack>;
+		attack: (target: AttackTarget) => ReturnType<typeof checkAttack>;
 
 		/**
 		 * Heal self or another creep. It will restore the target creep’s damaged body parts function
@@ -25,7 +25,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * adjacent square to the creep.
 		 * @param target The target creep object
 		 */
-		heal(target: Creep): ReturnType<typeof checkHeal>;
+		heal: (target: Creep) => ReturnType<typeof checkHeal>;
 
 		/**
 		 * A ranged attack against another creep or structure. Requires the `RANGED_ATTACK` body part.
@@ -33,7 +33,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * within 3 squares range of the creep.
 		 * @param target The target object to be attacked
 		 */
-		rangedAttack(target: AttackTarget): ReturnType<typeof checkRangedAttack>;
+		rangedAttack: (target: AttackTarget) => ReturnType<typeof checkRangedAttack>;
 
 		/**
 		 * Heal another creep at a distance. It will restore the target creep’s damaged body parts
@@ -41,14 +41,14 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * within 3 squares range of the creep.
 		 * @param target The target creep object
 		 */
-		rangedHeal(target: Creep): ReturnType<typeof checkRangedHeal>;
+		rangedHeal: (target: Creep) => ReturnType<typeof checkRangedHeal>;
 
 		/**
 		 * A ranged attack against all hostile creeps or structures within 3 squares range. Requires the
 		 * `RANGED_ATTACK` body part. The attack power depends on the range to each target. Friendly units
 		 * are not affected.
 		 */
-		rangedMassAttack(): ReturnType<typeof checkRangedMassAttack>;
+		rangedMassAttack: () => ReturnType<typeof checkRangedMassAttack>;
 	}
 }
 
@@ -101,7 +101,7 @@ Creep.prototype['#applyDamage'] = function(this: Creep, power, type, source) {
 			source instanceof Creep &&
 			!this.room.controller?.safeMode
 	) {
-		const counterAttack = calculatePower(this, C.ATTACK, C.ATTACK_POWER);
+		const counterAttack = calculatePower(this, C.ATTACK, C.ATTACK_POWER, 'attack');
 		if (counterAttack) {
 			const damage = captureDamage(source, counterAttack, C.EVENT_ATTACK_TYPE_HIT_BACK, null);
 			if (damage > 0) {

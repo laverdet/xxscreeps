@@ -7,9 +7,9 @@ import { Render } from 'xxscreeps/backend/symbols.js';
 import config from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getRoomChannel } from 'xxscreeps/engine/processor/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { runOneShot } from 'xxscreeps/game/index.js';
 import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { asUnion, getOrSet, hackyIterableToArray, throttle } from 'xxscreeps/utility/utility.js';
 import './render.js';
 
@@ -159,7 +159,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 					}
 					// Check for new users
 					const users = room['#users'];
-					for (const userId of Fn.concat(users.presence, users.extra)) {
+					for (const userId of Fn.concat([ users.presence, users.extra ])) {
 						if (!seenUsers.has(userId)) {
 							seenUsers.add(userId);
 							visibleUsers.add(userId);

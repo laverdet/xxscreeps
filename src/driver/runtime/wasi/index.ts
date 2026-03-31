@@ -58,10 +58,10 @@ export class WASI {
 	#dv!: DataView;
 	#i32: Int32Array = {} as never;
 	#u8!: Uint8Array;
-	#output: Uint8Array[][] = [ [], [], [] ];
-	#env: Record<string, string>;
+	readonly #output: Uint8Array[][] = [ [], [], [] ];
+	readonly #env: Record<string, string>;
 	#memory!: WebAssembly.Memory & { addGrowCallback?: (fn: () => void) => void };
-	#title;
+	readonly #title;
 
 	constructor(title: string, env: Record<string, string> = {}) {
 		this.#title = title;

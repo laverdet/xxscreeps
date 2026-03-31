@@ -1,5 +1,5 @@
 import { hooks } from 'xxscreeps/engine/runner/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { publishVisualsBlobsForNextTick } from './model.js';
 
 declare module 'xxscreeps/engine/runner/index.js' {

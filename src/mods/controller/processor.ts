@@ -121,7 +121,7 @@ const intents = [
 	registerIntentProcessor(Creep, 'generateSafeMode', {}, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkGenerateSafeMode(creep, controller) === C.OK) {
-			creep.store[C.RESOURCE_GHODIUM]! -= C.SAFE_MODE_COST;
+			creep.store[C.RESOURCE_GHODIUM] -= C.SAFE_MODE_COST;
 			++controller.safeModeAvailable;
 			saveAction(creep, 'upgradeController', controller.pos);
 			context.didUpdate();
@@ -168,7 +168,7 @@ const intents = [
 		if (CreepLib.checkUpgradeController(creep, controller) === C.OK) {
 			// Calculate power, deduct energy
 			controller.upgradePowerThisTick ??= 0;
-			let power = calculatePower(creep, C.WORK, C.UPGRADE_CONTROLLER_POWER);
+			let power = calculatePower(creep, C.WORK, C.UPGRADE_CONTROLLER_POWER, 'upgradeController');
 			if (controller.level === 8) {
 				power = Math.min(power, C.CONTROLLER_MAX_UPGRADE_PER_TICK - controller.upgradePowerThisTick);
 			}

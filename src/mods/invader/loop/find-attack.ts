@@ -18,7 +18,7 @@ function costCallbackIgnoreRamparts(fortifications: Structure[], roomName: strin
 }
 
 const pathOptions = { maxRoads: 1, maxRooms: 1, ignoreRoads: true, serializeMemory: false };
-export default function(creep: Creep, healers: Creep[], hostiles: Creep[], fortifications: Structure[]) {
+export default function findAttack(creep: Creep, healers: Creep[], hostiles: Creep[], fortifications: Structure[]) {
 	const haveAttack = creep.getActiveBodyparts(C.ATTACK) > 0;
 	if (!haveAttack && creep.getActiveBodyparts(C.RANGED_ATTACK) === 0 && flee(creep, 3)) {
 		return;
