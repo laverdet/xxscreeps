@@ -144,15 +144,12 @@ describe('Spawn', () => {
 				assert(!Game.creeps.newCreep.spawning);
 				// Should spawn at TOP (25,24) — first direction in default order
 				assert(Game.creeps.newCreep.pos.isEqualTo(25, 24));
+				assert.strictEqual(Game.rooms.W1N1.find(C.FIND_TOMBSTONES).length, 1);
 			});
 			await player('101', Game => {
 				// h2 at TOP (25,24) should be stomped — first hostile in direction order
 				assert.strictEqual(Object.values(Game.creeps).length, 7);
 				assert(!Game.creeps.h2);
-			});
-			await player('100', Game => {
-				const tombstones = Game.rooms.W1N1.find(C.FIND_TOMBSTONES);
-				assert.strictEqual(tombstones.length, 1);
 			});
 		}));
 

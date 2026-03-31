@@ -199,12 +199,12 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				const directions = new Set(spawn.spawning.directions ?? ALL_DIRECTIONS);
 
 				// Find first open preferred direction, remembering first hostile encountered
-				let spawnDirection: Direction | undefined;
+				let spawnPos: RoomPosition | undefined;
 				let hostileCreep: Creep | undefined;
 				for (const dir of directions) {
 					const pos = getPositionInDirection(creep.pos, dir);
 					if (check(pos)) {
-						spawnDirection = dir;
+						spawnPos = pos;
 						break;
 					}
 					if (!hostileCreep) {
@@ -216,14 +216,10 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 					}
 				}
 
-				// Determine spawn position
-				let spawnPos: RoomPosition | undefined;
-				if (spawnDirection !== undefined) {
-					spawnPos = getPositionInDirection(creep.pos, spawnDirection);
-				} else if (hostileCreep) {
-					// All preferred directions blocked — only stomp if non-preferred are also blocked
-					const otherDirections = ALL_DIRECTIONS.filter(d => !directions.has(d));
-					if (!otherDirections.some(dir => check(getPositionInDirection(creep.pos, dir)))) {
+				// All preferred directions blocked — only stomp if non-preferred are also blocked
+				if (!spawnPos && hostileCreep) {
+					const otherDirections = Fn.reject(ALL_DIRECTIONS, d => directions.has(d));
+					if (!Fn.some(otherDirections, dir => check(getPositionInDirection(creep.pos, dir)))) {
 						spawnPos = hostileCreep.pos;
 						buryCreep(hostileCreep);
 					}
