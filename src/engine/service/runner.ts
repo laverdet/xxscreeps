@@ -57,64 +57,73 @@ try {
 				if (isEntry) {
 					process.stdout.write(`Tick ${time}: `);
 				}
-				const seen = new Set<string>();
-				const affinity = [ ...playerInstances.keys() ];
-				const key = runnerUsersSetKey(time);
-				const affinityIterator = Async.breakable(consumeSetMembers(shard.scratch, key, affinity), breaker => break2 = breaker);
-				const fallbackIterator = Async.breakable(consumeSet(shard.scratch, key), breaker => break3 = breaker);
-				// eslint-disable-next-line require-yield
-				const pauseIfMoreRemain = async function*() {
-					if (migrationTimeout > 0) {
-						const [ cancel, tickFinished ] = getServiceChannel(shard).listenFor(message =>
-							message.type === 'tickFinished' && message.time === time);
-						const count = await shard.scratch.scard(key);
-						if (count > 0) {
-							// This will insert a configurable timeout before taking on new player sandboxes
-							const timeout = Timers.setTimeout(migrationTimeout);
-							await Promise.race([ tickFinished, timeout ]);
+				// Freeze shard.time so pubsub tick notifications don't advance it
+				// while we're processing. Without this, checkTime rejects valid
+				// loadRoomBlob reads when the main loop advances faster than the
+				// runner can process.
+				shard.freezeTime();
+				try {
+					const seen = new Set<string>();
+					const affinity = [ ...playerInstances.keys() ];
+					const key = runnerUsersSetKey(time);
+					const affinityIterator = Async.breakable(consumeSetMembers(shard.scratch, key, affinity), breaker => break2 = breaker);
+					const fallbackIterator = Async.breakable(consumeSet(shard.scratch, key), breaker => break3 = breaker);
+					// eslint-disable-next-line require-yield
+					const pauseIfMoreRemain = async function*() {
+						if (migrationTimeout > 0) {
+							const [ cancel, tickFinished ] = getServiceChannel(shard).listenFor(message =>
+								message.type === 'tickFinished' && message.time === time);
+							const count = await shard.scratch.scard(key);
+							if (count > 0) {
+								// This will insert a configurable timeout before taking on new player sandboxes
+								const timeout = Timers.setTimeout(migrationTimeout);
+								await Promise.race([ tickFinished, timeout ]);
+							}
+							cancel();
 						}
-						cancel();
-					}
-				}();
-				// Run player code
-				const userQueue = Async.concat(
-					Async.lookAhead(affinityIterator, 1),
-					pauseIfMoreRemain,
-					fallbackIterator,
-				);
-				await Async.spread(maxConcurrency, userQueue, async userId => {
-					// Get or create player instance
-					seen.add(userId);
-					const instance = playerInstances.get(userId) ?? await async function() {
-						const instance = await PlayerInstance.create(shard, world, userId);
-						playerInstances.set(userId, instance);
-						return instance;
 					}();
+					// Run player code
+					const userQueue = Async.concat(
+						Async.lookAhead(affinityIterator, 1),
+						pauseIfMoreRemain,
+						fallbackIterator,
+					);
+					await Async.spread(maxConcurrency, userQueue, async userId => {
+						// Get or create player instance
+						seen.add(userId);
+						const instance = playerInstances.get(userId) ?? await async function() {
+							const instance = await PlayerInstance.create(shard, world, userId);
+							playerInstances.set(userId, instance);
+							return instance;
+						}();
 
-					// Run user code
-					const [ intentRooms, visibleRooms ] = await Promise.all([
-						shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
-						shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
-					]);
-					if (intentRooms.length === 0) {
-						await shard.scratch.srem('activeUsers', [ userId ]);
-					} else {
-						if (isEntry) {
-							process.stdout.write(`+${instance.username}, `);
+						// Run user code
+						const [ intentRooms, visibleRooms ] = await Promise.all([
+							shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
+							shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
+						]);
+						if (intentRooms.length === 0) {
+							await shard.scratch.srem('activeUsers', [ userId ]);
+						} else {
+							if (isEntry) {
+								process.stdout.write(`+${instance.username}, `);
+							}
+							await instance.run(time, visibleRooms, intentRooms);
+							if (isEntry) {
+								process.stdout.write(`-${instance.username}, `);
+							}
 						}
-						await instance.run(time, visibleRooms, intentRooms);
-						if (isEntry) {
-							process.stdout.write(`-${instance.username}, `);
+					});
+
+					// Throwaway migrated player sandboxes
+					for (const [ userId, instance ] of playerInstances) {
+						if (!seen.has(userId)) {
+							playerInstances.delete(userId);
+							instance.disconnect();
 						}
 					}
-				});
-
-				// Throwaway migrated player sandboxes
-				for (const [ userId, instance ] of playerInstances) {
-					if (!seen.has(userId)) {
-						playerInstances.delete(userId);
-						instance.disconnect();
-					}
+				} finally {
+					shard.unfreezeTime();
 				}
 				if (isEntry) {
 					console.log('... done');

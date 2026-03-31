@@ -15,6 +15,8 @@ type Message = { type: 'tick'; time: number } | { type: null };
 
 export class Shard {
 	time = -1;
+	private timeFrozen = false;
+	private pendingTime: number | undefined;
 	private readonly gameTickEffect: Effect;
 
 	private constructor(
@@ -28,9 +30,34 @@ export class Shard {
 	) {
 		this.gameTickEffect = channel.listen(message => {
 			if (message.type === 'tick') {
-				this.time = message.time;
+				if (this.timeFrozen) {
+					this.pendingTime = this.pendingTime === undefined
+						? message.time
+						: Math.max(this.pendingTime, message.time);
+				} else {
+					this.time = message.time;
+				}
 			}
 		});
+	}
+
+	/**
+	 * Prevent pubsub tick notifications from updating `this.time`. Tick updates
+	 * received while frozen are buffered and applied when `unfreezeTime` is called.
+	 * Used by the runner to keep `shard.time` stable during tick processing so that
+	 * `checkTime` validation doesn't reject valid reads.
+	 */
+	freezeTime() {
+		this.timeFrozen = true;
+		this.pendingTime = undefined;
+	}
+
+	unfreezeTime() {
+		this.timeFrozen = false;
+		if (this.pendingTime !== undefined) {
+			this.time = Math.max(this.time, this.pendingTime);
+			this.pendingTime = undefined;
+		}
 	}
 
 	static async connect(db: Database, name: string) {
