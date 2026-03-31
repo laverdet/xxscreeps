@@ -75,6 +75,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		if (!controller || controller.level < 1 || controller['#user'] !== this['#user']) return false;
 		const maxCount = lookup[controller.level] ?? 0;
 		if (maxCount === 0) return false;
+		if (lookup[8] === 1) return true;
 		// Excess-structure check (handles RCL downgrade): prefer structures closer to controller
 		const user = this['#user'];
 		const structures: Structure[] = this.room.find(C.FIND_STRUCTURES).filter(
