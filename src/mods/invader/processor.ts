@@ -22,8 +22,6 @@ registerRoomTickProcessor((room, context) => {
 		if (Math.random() < 0.1) {
 			invaderGoal *= Math.floor(Math.random() > 0.5 ? 2 : 0.5);
 		}
-		room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
-
 		// Check neighbor rooms to filter exits leading to owned/reserved rooms
 		const exitDirections = Game.map.describeExits(room.name);
 		if (!exitDirections) {
@@ -34,22 +32,25 @@ registerRoomTickProcessor((room, context) => {
 			Promise.all(directions.map(([, neighborName]) =>
 				context.shard.loadRoom(neighborName, undefined, true).catch(() => null))),
 			neighbors => {
-				// Build set of blocked directions (neighbor is owned or reserved)
-				const blockedDirs = new Set(
+				// Build set of allowed directions (neighbor is uncontrolled)
+				const allowedDirs = new Set(
 					directions
-						.filter((_, ii) => neighbors[ii]?.['#user'])
+						.filter((_, ii) => neighbors[ii]?.['#user'] === null)
 						.map(([dir]) => Number(dir)));
 
-				// Filter exit positions to unblocked directions only
+				// Filter exit positions to allowed directions only
 				const validExits = room.find(C.FIND_EXIT).filter(pos => {
-					if (pos.x === 0) return !blockedDirs.has(C.LEFT);
-					if (pos.x === 49) return !blockedDirs.has(C.RIGHT);
-					if (pos.y === 0) return !blockedDirs.has(C.TOP);
-					return !blockedDirs.has(C.BOTTOM);
+					if (pos.x === 0) return allowedDirs.has(C.LEFT);
+					if (pos.x === 49) return allowedDirs.has(C.RIGHT);
+					if (pos.y === 0) return allowedDirs.has(C.TOP);
+					return allowedDirs.has(C.BOTTOM);
 				});
 				if (validExits.length === 0) {
 					return;
 				}
+
+				// Only consume the energy budget when invaders actually spawn
+				room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
 
 				// Find raid origin from valid exits
 				const origin = validExits[Math.floor(validExits.length * Math.random())];

@@ -13,7 +13,7 @@ describe('Invader exit filtering', () => {
 	// Baseline: all neighbors uncontrolled — invaders should spawn
 	const uncontrolled = simulate({
 		W7N7: room => {
-			room['#insertObject'](createCreep(minerPos, [ C.MOVE, C.WORK ], 'miner', '100'));
+			room['#insertObject'](createCreep(minerPos, [ C.MOVE ], 'miner', '100'));
 			room['#cumulativeEnergyHarvested'] = C.INVADERS_ENERGY_GOAL * 3;
 		},
 	});
@@ -32,7 +32,7 @@ describe('Invader exit filtering', () => {
 	// All exits lead to owned rooms — no invaders should spawn
 	const allOwned = simulate({
 		W7N7: room => {
-			room['#insertObject'](createCreep(minerPos, [ C.MOVE, C.WORK ], 'miner', '100'));
+			room['#insertObject'](createCreep(minerPos, [ C.MOVE ], 'miner', '100'));
 			room['#cumulativeEnergyHarvested'] = C.INVADERS_ENERGY_GOAL * 3;
 		},
 		W7N8: room => {
@@ -67,7 +67,7 @@ describe('Invader exit filtering', () => {
 	// All exits lead to reserved rooms — no invaders should spawn
 	const allReserved = simulate({
 		W7N7: room => {
-			room['#insertObject'](createCreep(minerPos, [ C.MOVE, C.WORK ], 'miner', '100'));
+			room['#insertObject'](createCreep(minerPos, [ C.MOVE ], 'miner', '100'));
 			room['#cumulativeEnergyHarvested'] = C.INVADERS_ENERGY_GOAL * 3;
 		},
 		W7N8: room => {
@@ -103,7 +103,7 @@ describe('Invader exit filtering', () => {
 	// LEFT exit positions have x=0
 	const partialBlock = simulate({
 		W7N7: room => {
-			room['#insertObject'](createCreep(minerPos, [ C.MOVE, C.WORK ], 'miner', '100'));
+			room['#insertObject'](createCreep(minerPos, [ C.MOVE ], 'miner', '100'));
 			room['#cumulativeEnergyHarvested'] = C.INVADERS_ENERGY_GOAL * 3;
 		},
 		W7N8: room => {
