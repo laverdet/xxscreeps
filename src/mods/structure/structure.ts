@@ -68,16 +68,16 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 * method will return false, and the structure will be highlighted with red in the game.
 	 */
 	isActive(): boolean {
-		if (!this['#user']) return true;
+		const user = this['#user'];
+		if (!user) return true;
 		const lookup = (C.CONTROLLER_STRUCTURES as Record<string, number[] | undefined>)[this.structureType];
 		if (!lookup) return true;
 		const controller = this.room.controller;
-		if (!controller || controller.level < 1 || controller['#user'] !== this['#user']) return false;
+		if (!controller || controller.level < 1 || controller['#user'] !== user) return false;
 		const maxCount = lookup[controller.level] ?? 0;
 		if (maxCount === 0) return false;
 		if (lookup[8] === 1) return true;
 		// Excess-structure check (handles RCL downgrade): prefer structures closer to controller
-		const user = this['#user'];
 		const structures: Structure[] = this.room.find(C.FIND_STRUCTURES).filter(
 			s => s.structureType === this.structureType && s['#user'] === user);
 		if (structures.length <= maxCount) return true;
