@@ -2,12 +2,12 @@ import type { Color } from './flag.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { compose, declare, vector } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { instantiate } from 'xxscreeps/utility/utility.js';
 import { Flag, acquireIntents, checkCreateFlag, format, intents } from './flag.js';
 import './room.js';
@@ -83,7 +83,9 @@ hooks.register('gameInitializer', (Game, data) => {
 				flag.room = undefined as never;
 			}
 		}
-		Fn.forEach(rooms, room => room['#flushObjects'](null));
+		for (const room of rooms) {
+			room['#flushObjects'](null);
+		}
 	}
 });
 

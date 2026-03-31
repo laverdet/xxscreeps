@@ -1,7 +1,7 @@
 import type { BufferView } from 'xxscreeps/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { array, compose } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { exchange } from 'xxscreeps/utility/utility.js';
 import { Room } from './room/index.js';
 import { Game } from './index.js';
@@ -18,7 +18,7 @@ export const terrainMaskToString = [ 'plain', 'wall', 'swamp', 'wall' ] as const
  * buffers with corresponding minimal accessors.
  */
 export class Terrain {
-	#buffer: Uint8Array;
+	readonly #buffer: Uint8Array;
 
 	/**
 	 * Creates a new Terrain of room by its name. Terrain objects can be constructed for any room in
@@ -30,7 +30,7 @@ export class Terrain {
 	constructor(buffer: Uint8Array);
 	constructor(arg: string | Uint8Array) {
 		if (typeof arg === 'string') {
-			this.#buffer = Game.map.getRoomTerrain(arg)!.#buffer;
+			this.#buffer = Game.map.getRoomTerrain(arg).#buffer;
 		} else {
 			this.#buffer = arg;
 		}
@@ -75,10 +75,10 @@ export class Terrain {
 			for (let ii = 0; ii < 625; ++ii) {
 				const value = this.#buffer[ii];
 				buffer[ii] =
-					(value >>> ((ii << 3) & 0x06)) & 0x03 |
-					((value >>> ((ii << 3) + 2 & 0x06)) & 0x03) << 8 |
-					((value >>> ((ii << 3) + 4 & 0x06)) & 0x03) << 16 |
-					((value >>> ((ii << 3) + 6 & 0x06)) & 0x03) << 24;
+					((value >>> ((ii << 3) & 0x06)) & 0x03) |
+					(((value >>> ((ii << 3) + 2 & 0x06)) & 0x03) << 8) |
+					(((value >>> ((ii << 3) + 4 & 0x06)) & 0x03) << 16) |
+					(((value >>> ((ii << 3) + 6 & 0x06)) & 0x03) << 24);
 			}
 			return new Uint8Array(buffer.buffer);
 		}
@@ -96,7 +96,7 @@ export class TerrainWriter extends Terrain {
 		if (index >= 0 && index < 2500) {
 			const byte = index >>> 2;
 			const shift = (index & 0x03) << 1;
-			buffer[byte] = buffer[byte] & ~(0x03 << shift) | (value & 0x03) << shift;
+			buffer[byte] = (buffer[byte] & ~(0x03 << shift)) | ((value & 0x03) << shift);
 		}
 	}
 }

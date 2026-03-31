@@ -1,4 +1,5 @@
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 
 export class SortedSet {
 	readonly #members: string[] = [];
@@ -50,9 +51,9 @@ export class SortedSet {
 
 	*entriesByLex(minInclusive: boolean, min: string, maxInclusive: boolean, max: string) {
 		for (const member of this.#members) {
-			if (Fn.primitiveComparator(member, max) > (maxInclusive ? 0 : -1)) {
+			if (primitiveComparator(member, max) > (maxInclusive ? 0 : -1)) {
 				break;
-			} else if (Fn.primitiveComparator(member, min) > (minInclusive ? -1 : 0)) {
+			} else if (primitiveComparator(member, min) > (minInclusive ? -1 : 0)) {
 				yield member;
 			}
 		}
@@ -93,7 +94,7 @@ export class SortedSet {
 	private sort() {
 		this.#members.sort((left, right) =>
 			(this.#scores.get(left)! - this.#scores.get(right)!) ||
-			Fn.primitiveComparator(left, right),
+			primitiveComparator(left, right),
 		);
 	}
 }

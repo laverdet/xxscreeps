@@ -11,22 +11,25 @@ import './creep.js';
 // `RoomObject` intent check symbol
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
-		'#checkHarvest'(creep: Creep): C.ErrorCode;
+		'#checkHarvest': (creep: Creep) => C.ErrorCode;
 	}
 }
 
 // Creep.harvest runtime registration hook
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Harvest {}
 export type Harvestable = ContextType<Harvest[keyof Harvest]>;
 export type HarvestResult = ReturnType<Harvest[keyof Harvest]>;
 registerHarvestable(RoomObject, () => C.ERR_INVALID_TARGET);
 
 // Schema registration
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const actionSchema = registerEnumerated('ActionLog.action', 'harvest');
 declare module 'xxscreeps/game/object.js' {
 	interface Schema { harvestable: typeof actionSchema }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const harvestEventSchema = registerVariant('Room.eventLog', struct({
 	...variant(C.EVENT_HARVEST),
 	event: constant(C.EVENT_HARVEST),

@@ -22,7 +22,7 @@ declare module 'xxscreeps/mods/creep/creep.js' {
 		 * creep.
 		 * @param target The object to be harvested
 		 */
-		harvest(target: Harvestable): HarvestResult;
+		harvest: (target: Harvestable) => HarvestResult;
 	}
 }
 

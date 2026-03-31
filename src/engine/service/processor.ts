@@ -4,8 +4,8 @@ import config from 'xxscreeps/config/index.js';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { negotiateResponderClient } from 'xxscreeps/utility/responder.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
@@ -163,11 +163,11 @@ try {
 			// run.
 			case 'finalize':
 				// Run finalization in worker
-				await Fn.mapAsync(workers, async worker => {
+				await Promise.all(Fn.map(workers, async worker => {
 					if (worker.processed.length > 0) {
 						await worker.responder({ type: 'finalize', time: currentTime });
 					}
-				});
+				}));
 				if (isEntry) {
 					console.log(`...completed tick ${currentTime}`);
 				}
@@ -191,10 +191,10 @@ try {
 
 } finally {
 	// Close workers
-	await Fn.mapAsync(workers, async worker => {
+	await Promise.all(Fn.map(workers, async worker => {
 		worker.close();
 		return worker.wait();
-	});
+	}));
 
 	// Close connections
 	processorSubscription.disconnect();

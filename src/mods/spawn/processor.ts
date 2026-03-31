@@ -1,6 +1,7 @@
 import type { Direction } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/direction.js';
 import { Game, me } from 'xxscreeps/game/index.js';
@@ -11,22 +12,25 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
+import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { StructureExtension } from './extension.js';
 import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkDirections, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn.js';
-import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
-import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 
 type EnergyStructure = StructureExtension | StructureSpawn;
 function getEnergyStructures(spawn: StructureSpawn, ids?: string[]) {
 	if (ids) {
-		return [ ...new Set(Fn.filter(Fn.map(ids, id => {
-			const object = Game.getObjectById(id);
-			if (object instanceof StructureExtension || object instanceof StructureSpawn) {
-				return object;
-			}
-		}))) ];
+		return Fn.pipe(
+			ids,
+			$$ => Fn.map($$, id => {
+				const object = Game.getObjectById(id);
+				if (object instanceof StructureExtension || object instanceof StructureSpawn) {
+					return object;
+				}
+			}),
+			$$ => Fn.filter($$),
+			$$ => [ ...new Set($$) ]);
 	} else {
 		const comparator = (left: EnergyStructure, right: EnergyStructure) =>
 			spawn.pos.getRangeTo(left) - spawn.pos.getRangeTo(right);
@@ -196,7 +200,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 					user: creep['#user'],
 				});
 				const directions = new Set(spawn.spawning.directions ?? ALL_DIRECTIONS);
-				const direction = Fn.firstMatching(directions, direction => check(getPositionInDirection(creep.pos, direction)));
+				const direction = Fn.find(directions, direction => check(getPositionInDirection(creep.pos, direction)));
 
 				// If no direction was found then defer this creep
 				// TODO: Spawn stomp hostile creeps

@@ -8,8 +8,8 @@ const { allowGuestAccess } = config.backend;
 
 declare module 'xxscreeps/backend/index.js' {
 	interface Context {
-		authenticateForProvider(provider: string, providerId: string): Promise<string>;
-		flushToken(initializeGuest?: boolean): Promise<string | undefined>;
+		authenticateForProvider: (provider: string, providerId: string) => Promise<string>;
+		flushToken: (initializeGuest?: boolean) => Promise<string | undefined>;
 	}
 	interface State {
 		newUserId?: string | undefined;
@@ -86,7 +86,7 @@ export function authentication(): Middleware {
 			if (authValue === false) {
 				// Allow this request to continue as long as `userId` isn't accessed
 				let didThrow;
-				let didSet = false;
+				let didSet = false as boolean;
 				Object.defineProperty(context.state, 'userId', {
 					configurable: true,
 					get() {
@@ -145,7 +145,7 @@ export function authentication(): Middleware {
 				// If this is an upgrade request then attach authentication information on the request, so
 				// that Koa middleware which authenticates will carry over to the socket
 				const token = await context.flushToken();
-				if (token) {
+				if (token !== undefined) {
 					context.request.headers['x-token'] = token;
 				}
 			}

@@ -15,6 +15,7 @@ declare module './index.js' {
 		movement: typeof intents;
 	}
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = registerIntentProcessor(Room, 'import', { internal: true }, (room, context, objectPayload: string) => {
 	const object = readRoomObject(latin1ToBuffer(objectPayload));
 	room['#insertObject'](object);
@@ -53,7 +54,7 @@ export function announce(object: RoomObject, direction: Direction, next: Initial
 		return;
 	}
 	// Save initial movement data
-	const id = yy << 8 | xx;
+	const id = (yy << 8) | xx;
 	const move: Movement = {
 		dispatch: undefined,
 		initial: next,
@@ -75,7 +76,8 @@ export function dispatch(room: Room) {
 		const { object } = move;
 		const willRemove = function() {
 			// Make sure this object is still active
-			if (!object.room as unknown) {
+			const maybeRoom: unknown = object.room;
+			if (!maybeRoom) {
 				return true;
 			}
 			// Invoke second movement pass

@@ -21,10 +21,10 @@ declare module 'xxscreeps/game/room/index.js' {
 
 extend(Room, {
 	memory: {
-		get() {
+		get(): unknown {
 			return (get().rooms ??= {})[this.name] ??= {};
 		},
-		set(memory: any) {
+		set(memory: unknown) {
 			(get().rooms ??= {})[this.name] ??= memory;
 		},
 	},

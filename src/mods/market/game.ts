@@ -10,6 +10,7 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 // Register schema
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const terminalSchema = registerVariant('Room.objects', Terminal.format);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Room {

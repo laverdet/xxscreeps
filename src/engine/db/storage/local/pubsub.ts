@@ -4,7 +4,7 @@ import { MessageChannel, parentPort } from 'node:worker_threads';
 import { Deferred, listen } from 'xxscreeps/utility/async.js';
 import { getOrSet, staticCast } from 'xxscreeps/utility/utility.js';
 import { isTopThread } from 'xxscreeps/utility/worker.js';
-import { registerStorageProvider } from '../index.js';
+import { registerStorageProvider } from '../register.js';
 
 type Listener = (message: string) => void;
 

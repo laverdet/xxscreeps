@@ -1,7 +1,7 @@
 import type { World } from 'xxscreeps/game/map.js';
 import makeEtag from 'etag';
 import { hooks } from 'xxscreeps/backend/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 
 const cache = new Map<string, {
 	_id: string;
@@ -55,10 +55,11 @@ hooks.register('route', {
 	execute(context) {
 		return {
 			ok: 1,
-			rooms: [ ...Fn.filter(Fn.map(
+			rooms: Fn.pipe(
 				context.request.body.rooms,
-				roomQuery => getTerrainPayload(context.backend.world, `${roomQuery}`),
-			)) ],
+				$$ => Fn.map($$, roomQuery => getTerrainPayload(context.backend.world, `${roomQuery}`)),
+				$$ => Fn.filter($$),
+				$$ => [ ...$$ ]),
 		};
 	},
 });

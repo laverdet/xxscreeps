@@ -8,9 +8,11 @@ import { fileURLToPath } from 'node:url';
 import AcornClassFields from 'acorn-class-fields';
 import AcornPrivateMethods from 'acorn-private-methods';
 import Webpack from 'webpack';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 
-const Acorn = createRequire(import.meta.url)('acorn');
+const Acorn = createRequire(import.meta.url)('acorn') as typeof import('acorn');
+// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 Acorn.Parser = Acorn.Parser.extend(AcornClassFields, AcornPrivateMethods);
 
 type ExternalsFunctionElement = Parameters<typeof Webpack>[0][0]['externals'];
@@ -23,8 +25,8 @@ export type Transform = {
 	externals?: ExternalsCallback;
 };
 
-async function resolve(module: string) {
-	return fileURLToPath(await import.meta.resolve!(module));
+function resolve(module: string) {
+	return fileURLToPath(import.meta.resolve(module));
 }
 
 const IS_DEV = true as boolean;
@@ -32,9 +34,13 @@ const IS_DEV = true as boolean;
 export async function compile(moduleName: string, transforms: Transform[]) {
 	const baseName = Path.basename(moduleName);
 	const output = new URL(`${baseName}.webpack.js`, import.meta.url);
-	const babelPlugins = [ ...Fn.filter(Fn.map(transforms, transform => transform.babel)) ];
-	const babelLoader = await resolve('babel-loader');
-	const sourceMapLoader = await resolve('source-map-loader');
+	const babelPlugins = Fn.pipe(
+		transforms,
+		$$ => Fn.map($$, transform => transform.babel),
+		$$ => Fn.filter($$, nonNullPredicate),
+		$$ => [ ...$$ ]);
+	const babelLoader = resolve('babel-loader');
+	const sourceMapLoader = resolve('source-map-loader');
 	await new Promise<Webpack.StatsCompilation>((resolve, reject) => {
 		Webpack({
 			entry: {

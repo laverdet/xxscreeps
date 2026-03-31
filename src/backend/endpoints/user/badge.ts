@@ -65,7 +65,8 @@ const BadgeSvgEndpoint: Endpoint = {
 	},
 };
 
-export default [ BadgeEndpoint, BadgeSvgEndpoint ];
+const endpoints = [ BadgeEndpoint, BadgeSvgEndpoint ];
+export default endpoints;
 
 //
 // Pretty printed and fixed up from badge.js

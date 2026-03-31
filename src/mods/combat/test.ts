@@ -1,7 +1,8 @@
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createLab } from 'xxscreeps/mods/chemistry/lab.js';
+import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
 describe('Combat', () => {
@@ -18,8 +19,8 @@ describe('Combat', () => {
 			room['#insertObject'](createCreep(
 				new RoomPosition(25, 24, 'W1N1'),
 				[
-					...Array(17).fill(C.ATTACK),
-					...Array(1).fill(C.RANGED_ATTACK),
+					...Fn.map(Fn.range(17), () => C.ATTACK),
+					...Fn.map(Fn.range(1), () => C.RANGED_ATTACK),
 				],
 				'warrior',
 				'100',
@@ -30,16 +31,68 @@ describe('Combat', () => {
 	test('attack + rangedAttack killing a structure produces exactly one ruin', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
 			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
-				.find((s: any) => s.structureType === C.STRUCTURE_LAB)!;
+				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
 			assert.strictEqual(Game.creeps.warrior.attack(lab), C.OK);
 			assert.strictEqual(Game.creeps.warrior.rangedAttack(lab), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
 			const ruins = Game.rooms.W1N1.find(C.FIND_RUINS);
-			const labRuins = ruins.filter((r: any) => r.pos.x === 25 && r.pos.y === 25);
+			const labRuins = ruins.filter(ruin => ruin.pos.x === 25 && ruin.pos.y === 25);
 			assert.strictEqual(labRuins.length, 1,
 				`expected 1 ruin at lab position, got ${labRuins.length}`);
+		});
+	}));
+});
+
+describe('getEventLog', () => {
+	const sim = simulate({
+		W1N1: room => {
+			room['#level'] = 7;
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), '100'));
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 24, 'W1N1'),
+				[ C.ATTACK ],
+				'attacker',
+				'100',
+			));
+		},
+	});
+
+	test('returns an array', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const log = Game.rooms.W1N1.getEventLog();
+			assert.ok(Array.isArray(log));
+		});
+	}));
+
+	test('records attack events after processing', () => sim(async ({ player, tick }) => {
+		await player('100', Game => {
+			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
+				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
+			assert.strictEqual(Game.creeps.attacker.attack(lab), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			const log = Game.rooms.W1N1.getEventLog();
+			const attackEvent: unknown = log.find(event => event.event === C.EVENT_ATTACK);
+			assert.ok(attackEvent, 'expected an attack event in the event log');
+		});
+	}));
+
+	test('raw mode returns JSON string', () => sim(async ({ player, tick }) => {
+		await player('100', Game => {
+			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
+				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
+			Game.creeps.attacker.attack(lab);
+		});
+		await tick();
+		await player('100', Game => {
+			const raw = Game.rooms.W1N1.getEventLog(true);
+			assert(typeof raw === 'string');
+			const parsed: unknown = JSON.parse(raw);
+			assert.ok(Array.isArray(parsed));
 		});
 	}));
 });
