@@ -1,7 +1,7 @@
 import type { ConstructibleStructureType, ConstructionSite } from './construction-site.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { hooks, intents, me } from 'xxscreeps/game/index.js';
+import { hooks, intents, me, userGame } from 'xxscreeps/game/index.js';
 import { makeObstacleChecker } from 'xxscreeps/game/path-finder/obstacle.js';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
@@ -58,6 +58,11 @@ extend(Room, {
 				return C.ERR_NAME_EXISTS;
 			}
 			createdNames.add(name);
+		}
+
+		// Check global construction site limit
+		if (userGame && Object.keys(userGame.constructionSites).length >= C.MAX_CONSTRUCTION_SITES) {
+			return C.ERR_FULL;
 		}
 
 		// Send it off
