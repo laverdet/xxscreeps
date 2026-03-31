@@ -21,9 +21,10 @@ describe('Construction', () => {
 		});
 	}));
 	test('max construction sites', () => construction(async ({ player, tick }) => {
-		// Place 90 sites in tick 1
+		// Place most sites in tick 1
+		const firstBatch = C.MAX_CONSTRUCTION_SITES - 10;
 		await player('100', Game => {
-			for (const pos of Fn.range(90)) {
+			for (const pos of Fn.range(firstBatch)) {
 				const xx = 1 + (pos % 48);
 				const yy = 1 + Math.floor(pos / 48);
 				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(xx, yy, 'road'), C.OK);
@@ -32,8 +33,8 @@ describe('Construction', () => {
 		await tick();
 		// Try 11 more in tick 2 — first 10 should succeed, 11th should fail
 		await player('100', Game => {
-			assert.strictEqual(Object.keys(Game.constructionSites).length, 90);
-			for (const pos of Fn.range(90, 100)) {
+			assert.strictEqual(Object.keys(Game.constructionSites).length, firstBatch);
+			for (const pos of Fn.range(firstBatch, C.MAX_CONSTRUCTION_SITES)) {
 				const xx = 1 + (pos % 48);
 				const yy = 1 + Math.floor(pos / 48);
 				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(xx, yy, 'road'), C.OK);
