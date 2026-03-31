@@ -164,6 +164,23 @@ const intents = [
 						}
 					})();
 
+					// Stomp hostile construction sites
+					if (
+						creep.room.controller?.safeMode === undefined ||
+						creep.room.controller['#user'] === creep['#user']
+					) {
+						for (const object of creep.room['#lookAt'](pos)) {
+							if (object['#lookType'] === 'constructionSite' && object['#user'] !== creep['#user']) {
+								const { progress } = object as any;
+								if (progress > 1) {
+									ResourceIntent.drop(pos, C.RESOURCE_ENERGY, Math.floor(progress / 2));
+								}
+								creep.room['#removeObject'](object);
+								break;
+							}
+						}
+					}
+
 					// Add adjusted fatigue to first creep in chain
 					let receiver = creep;
 					for (let creep = pulledToPuller.get(receiver); creep; creep = pulledToPuller.get(creep)) {
