@@ -164,6 +164,13 @@ export class PlayerInstance {
 					},
 					time,
 				};
+				// This means `processor.intentAbandonTimeout` is too fast for `runner.cpu.tickLimit` *
+				// `runner.concurrency` * active players * runner services. The user must be hard reset in
+				// this case because we don't know if their loop has been setup.
+				if (this.shard.time + 1 !== time) {
+					throw new Error(`User '${this.username}' has been left behind`);
+				}
+
 				// Allow driver connectors to access room blobs by waiting on this promise
 				await Promise.all([
 					(async () => {
