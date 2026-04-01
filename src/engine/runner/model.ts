@@ -1,6 +1,7 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { tickSpeed } from 'xxscreeps/engine/service/tick.js';
+import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 
 export function getConsoleChannel(shard: Shard, user: string) {
 	return new Channel(shard.pubsub, `user/${user}/console`, false);
@@ -39,10 +40,12 @@ export function getUsageChannel(shard: Shard, user: string) {
  */
 export async function requestRunnerEval(shard: Shard, userId: string, expr: string, echo: boolean) {
 	// Response timeout
-	let timeout;
-	const timer = new Promise<never>((resolve, reject) => {
-		timeout = setTimeout(() => reject(new Error('Runner did not respond')), Math.max(500, tickSpeed * 4));
-	});
+	const timer = Promise.withResolvers<never>();
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	using timeout = acquireTimeout(
+		Math.max(500, tickSpeed * 4),
+		() => timer.reject(new Error('Runner did not respond')),
+	);
 
 	// Response promise
 	const id = `${Math.random()}`;
@@ -51,7 +54,7 @@ export async function requestRunnerEval(shard: Shard, userId: string, expr: stri
 	try {
 		// Send the request
 		await getRunnerUserChannel(shard, userId).publish({ type: 'eval', payload: { ack: id, echo, expr } });
-		const { result } = (await Promise.race([ timer, promise ]))!;
+		const { result } = (await Promise.race([ timer.promise, promise ]))!;
 		if (result.error) {
 			throw new Error(result.value);
 		} else {
@@ -59,7 +62,6 @@ export async function requestRunnerEval(shard: Shard, userId: string, expr: stri
 		}
 	} finally {
 		cancel();
-		clearTimeout(timeout);
 	}
 }
 

@@ -7,6 +7,7 @@ import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/mod
 import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
+import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { tickSpeed, watch } from './tick.js';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
 
@@ -83,20 +84,24 @@ try {
 			await runnerChannel.publish({ type: 'run', time });
 
 			// Wait for tick to finish
-			const timeout = setTimeout(() => mustNotReject(async () => {
-				const rooms = await abandonIntentsForTick(shard, time);
-				console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
-			}), config.processor.intentAbandonTimeout);
-			for await (const message of serviceMessages) {
-				if (message.type === 'processorInitialized') {
-					await processorChannel.publish({ type: 'process', time });
-				} else if (message.type === 'runnerConnected') {
-					await runnerChannel.publish({ type: 'run', time });
-				} else if (message.type === 'tickFinished') {
-					break;
+			{
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+				using timeout = acquireTimeout(
+					config.processor.intentAbandonTimeout,
+					() => mustNotReject(async () => {
+						const rooms = await abandonIntentsForTick(shard, time);
+						console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
+					}));
+				for await (const message of serviceMessages) {
+					if (message.type === 'processorInitialized') {
+						await processorChannel.publish({ type: 'process', time });
+					} else if (message.type === 'runnerConnected') {
+						await runnerChannel.publish({ type: 'run', time });
+					} else if (message.type === 'tickFinished') {
+						break;
+					}
 				}
 			}
-			clearTimeout(timeout);
 
 			// Update game state
 			await shard.data.set('time', time);

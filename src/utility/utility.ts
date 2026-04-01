@@ -147,6 +147,24 @@ export function throttle(fn: () => void) {
 	};
 }
 
+// Disposable timeout, clears on scope exit with `using`
+export function acquireTimeout(timeout: number, fn: () => void) {
+	let handle: NodeJS.Timeout | undefined = setTimeout(
+		() => {
+			handle = undefined;
+			fn();
+		},
+		timeout,
+	);
+	return {
+		[Symbol.dispose]() {
+			if (handle) {
+				clearTimeout(handle);
+			}
+		},
+	};
+}
+
 // Accepts an instance function an returns a free function where the first argument becomes `this`
 export function uncurryThis<This, Args extends any[], Return>(callback: (this: This, ...args: Args) => Return) {
 	return (that: This, ...args: Args): Return => Reflect.apply(callback, that, args);
