@@ -182,8 +182,8 @@ describe('CLI', () => {
 
 		test('rooms.load() objects have rendered fields', async () => {
 			const result = await run('JSON.stringify(await rooms.load("W5N5"))');
-			const snapshot = JSON.parse(result);
-			for (const object of Object.values(snapshot) as any[]) {
+			const snapshot: Record<string, any> = JSON.parse(result);
+			for (const object of Object.values(snapshot)) {
 				assert.ok(typeof object._id === 'string');
 				assert.ok(typeof object.type === 'string');
 				assert.ok(typeof object.x === 'number');
