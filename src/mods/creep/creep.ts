@@ -15,6 +15,7 @@ import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { getBoostEffect } from 'xxscreeps/mods/chemistry/lab.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
@@ -22,7 +23,6 @@ import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openSt
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
-import { getBoostEffect } from 'xxscreeps/mods/chemistry/lab.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];

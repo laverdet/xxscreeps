@@ -141,8 +141,8 @@ export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefin
 
 export function getReactionVariants(compound: string): [ResourceType, ResourceType][] {
 	const result: [ResourceType, ResourceType][] = [];
-	for (const [r1, inner] of Object.entries(C.REACTIONS)) {
-		for (const [r2, product] of Object.entries(inner)) {
+	for (const [ r1, inner ] of Object.entries(C.REACTIONS)) {
+		for (const [ r2, product ] of Object.entries(inner)) {
 			if (product === compound) {
 				result.push([ r1 as ResourceType, r2 as ResourceType ]);
 			}
@@ -214,8 +214,8 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 
 export function calcTotalReactionsTime(mineral: string): number {
 	const reagents: Record<string, [string, string]> = {};
-	for (const [r1, inner] of Object.entries(C.REACTIONS)) {
-		for (const [r2, product] of Object.entries(inner)) {
+	for (const [ r1, inner ] of Object.entries(C.REACTIONS)) {
+		for (const [ r2, product ] of Object.entries(inner)) {
 			reagents[product] = [ r2, r1 ];
 		}
 	}
