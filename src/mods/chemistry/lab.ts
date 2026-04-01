@@ -12,6 +12,11 @@ import { assign } from 'xxscreeps/utility/utility.js';
 import { checkHasCapacity, checkHasResource } from '../resource/store.js';
 import { LabStore, labStoreFormat } from './store.js';
 
+type BoostEffects = Partial<Record<string, number>>;
+type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
+type ReactionsLookup = Partial<Record<string, Partial<Record<string, string>>>>;
+type ReactionTimeLookup = Partial<Record<string, number>>;
+
 export const format = declare('Lab', () => compose(shape, StructureLab));
 const shape = struct(ownedStructureFormat, {
 	...variant('lab'),
@@ -94,8 +99,16 @@ declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureLab: typeof StructureLab }
 }
 
-export function getReactionProduct(mineral1?: ResourceType, mineral2?: ResourceType) {
-	return (C.REACTIONS as Partial<Record<string, Partial<Record<string, ResourceType>>>>)[mineral1!]?.[mineral2!];
+export function getReactionProduct(m1: string | undefined, m2: string | undefined): ResourceType | undefined {
+	return (C.REACTIONS as ReactionsLookup)[m1!]?.[m2!] as ResourceType | undefined;
+}
+
+export function getReactionTime(resource: string): number | undefined {
+	return (C.REACTION_TIME as ReactionTimeLookup)[resource];
+}
+
+export function getBoostEffect(bodyPart: string, mineral: string): BoostEffects | undefined {
+	return (C.BOOSTS as BoostsLookup)[bodyPart]?.[mineral];
 }
 
 export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefined, bodyPartsCount?: number) {
@@ -118,21 +131,19 @@ export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefin
 			}
 		},
 		() => {
-			const boosts = C.BOOSTS as Partial<Record<string, Partial<Record<string, unknown>>>>;
 			const nonBoostedCount = creep!.body.filter(
-				p => !p.boost && boosts[p.type]?.[mineralType!]).length;
+				p => !p.boost && getBoostEffect(p.type, mineralType!)).length;
 			if (!nonBoostedCount || (bodyPartsCount && bodyPartsCount > nonBoostedCount)) {
 				return C.ERR_NOT_FOUND;
 			}
 		});
 }
 
-export function getReactionVariants(compound: ResourceType): [ResourceType, ResourceType][] {
+export function getReactionVariants(compound: string): [ResourceType, ResourceType][] {
 	const result: [ResourceType, ResourceType][] = [];
-	const reactions = C.REACTIONS as Record<string, Record<string, string>>;
-	for (const r1 in reactions) {
-		for (const r2 in reactions[r1]) {
-			if (reactions[r1][r2] === compound) {
+	for (const [r1, inner] of Object.entries(C.REACTIONS)) {
+		for (const [r2, product] of Object.entries(inner)) {
+			if (product === compound) {
 				result.push([ r1 as ResourceType, r2 as ResourceType ]);
 			}
 		}
@@ -202,16 +213,14 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 }
 
 export function calcTotalReactionsTime(mineral: string): number {
-	// Build reagent lookup: compound -> [reagent1, reagent2]
-	const reactions = C.REACTIONS as Record<string, Record<string, string>>;
 	const reagents: Record<string, [string, string]> = {};
-	for (const r1 in reactions) {
-		for (const r2 in reactions[r1]) {
-			reagents[reactions[r1][r2]] = [ r2, r1 ];
+	for (const [r1, inner] of Object.entries(C.REACTIONS)) {
+		for (const [r2, product] of Object.entries(inner)) {
+			reagents[product] = [ r2, r1 ];
 		}
 	}
 	const calcStep = (m: string): number => {
-		const time = (C.REACTION_TIME as Record<string, number>)[m];
+		const time = getReactionTime(m);
 		if (!time) return 0;
 		return time + calcStep(reagents[m][0]) + calcStep(reagents[m][1]);
 	};

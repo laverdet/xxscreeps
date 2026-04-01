@@ -22,6 +22,7 @@ import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openSt
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
+import { getBoostEffect } from 'xxscreeps/mods/chemistry/lab.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
@@ -429,7 +430,7 @@ export function calculateCarry(body: Creep['body']) {
 		part => {
 			if (part.type !== C.CARRY) return 0;
 			if (part.boost) {
-				const multiplier = (C.BOOSTS as BoostsLookup)[C.CARRY]?.[part.boost]?.capacity;
+				const multiplier = getBoostEffect(C.CARRY, part.boost)?.capacity;
 				if (multiplier !== undefined) {
 					return C.CARRY_CAPACITY * multiplier;
 				}
@@ -535,14 +536,11 @@ export function calculateCost(creep: Creep) {
 	return Fn.accumulate(creep.body, bodyPart => C.BODYPART_COST[bodyPart.type]);
 }
 
-type BoostEffects = Partial<Record<string, number>>;
-type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
-
 export function calculatePower(creep: Creep, part: PartType, power: number, boostMethod?: string) {
 	return Fn.accumulate(creep.body, bodyPart => {
 		if (bodyPart.type === part && bodyPart.hits > 0) {
 			if (boostMethod !== undefined && bodyPart.boost) {
-				const multiplier = (C.BOOSTS as BoostsLookup)[part]?.[bodyPart.boost]?.[boostMethod];
+				const multiplier = getBoostEffect(part, bodyPart.boost)?.[boostMethod];
 				if (multiplier !== undefined) {
 					return power * multiplier;
 				}

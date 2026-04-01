@@ -5,7 +5,7 @@ import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { Creep, calculateCarry } from 'xxscreeps/mods/creep/creep.js';
 import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
-import { StructureLab, calcTotalReactionsTime, checkBoostCreep, checkReverseReaction, checkRunReaction, checkUnboostCreep, getReactionProduct, getReactionVariants } from './lab.js';
+import { StructureLab, calcTotalReactionsTime, checkBoostCreep, checkReverseReaction, checkRunReaction, checkUnboostCreep, getBoostEffect, getReactionProduct, getReactionTime, getReactionVariants } from './lab.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { chemistry: typeof intents }
@@ -20,7 +20,7 @@ const intents = [
 			lab.store['#add'](product, C.LAB_REACTION_AMOUNT);
 			left.store['#subtract'](left.mineralType!, C.LAB_REACTION_AMOUNT);
 			right.store['#subtract'](right.mineralType!, C.LAB_REACTION_AMOUNT);
-			lab['#cooldownTime'] = Game.time + (C.REACTION_TIME as Partial<Record<string, number>>)[product]!;
+			lab['#cooldownTime'] = Game.time + getReactionTime(product)!;
 			saveAction(lab, 'reaction1', left.pos);
 			saveAction(lab, 'reaction2', right.pos);
 			context.didUpdate();
@@ -35,9 +35,8 @@ const intents = [
 		const mineralType = lab.mineralType!;
 
 		// Find non-boosted parts matching this mineral's boost type
-		const boosts = C.BOOSTS as Partial<Record<string, Partial<Record<string, unknown>>>>;
 		let nonBoostedParts = creep.body.filter(
-			part => !part.boost && boosts[part.type]?.[mineralType]);
+			part => !part.boost && getBoostEffect(part.type, mineralType));
 
 		// TOUGH parts boosted first (ascending index), all others last-to-first (reversed)
 		if (nonBoostedParts.length > 0 && nonBoostedParts[0].type !== C.TOUGH) {
@@ -80,7 +79,7 @@ const intents = [
 		lab.store['#subtract'](mineralType, C.LAB_REACTION_AMOUNT);
 		lab1.store['#add'](variant[0], C.LAB_REACTION_AMOUNT);
 		lab2.store['#add'](variant[1], C.LAB_REACTION_AMOUNT);
-		lab['#cooldownTime'] = Game.time + (C.REACTION_TIME as Partial<Record<string, number>>)[mineralType]!;
+		lab['#cooldownTime'] = Game.time + getReactionTime(mineralType)!;
 		saveAction(lab, 'reverseReaction1', lab1.pos);
 		saveAction(lab, 'reverseReaction2', lab2.pos);
 		context.didUpdate();
