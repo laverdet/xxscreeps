@@ -252,7 +252,7 @@ describe('Movement', () => {
 	describe('Tombstone decay', () => {
 		const dying = simulate({
 			W5N5: room => {
-				const creep = create(new RoomPosition(25, 25, 'W5N5'), [C.MOVE], 'mortal', '100');
+				const creep = create(new RoomPosition(25, 25, 'W5N5'), [ C.MOVE ], 'mortal', '100');
 				creep['#ageTime'] = 3;
 				room['#insertObject'](creep);
 			},
@@ -278,7 +278,7 @@ describe('Movement', () => {
 
 		const firstTickDeath = simulate({
 			W4N4: room => {
-				const creep = create(new RoomPosition(25, 25, 'W4N4'), [C.MOVE], 'ephemeral', '100');
+				const creep = create(new RoomPosition(25, 25, 'W4N4'), [ C.MOVE ], 'ephemeral', '100');
 				creep['#ageTime'] = 2;
 				room['#insertObject'](creep);
 			},
