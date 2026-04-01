@@ -1,9 +1,9 @@
-import net from 'node:net';
-import fs from 'node:fs';
+import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { configPath } from 'xxscreeps/config/raw.js';
-import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { executeCommand } from './sandbox.js';
 
@@ -79,7 +79,7 @@ export async function startSocketServer(db: Database, shard: Shard, path = socke
 }
 
 // Results that should be echoed to the server console
-const serverLogResults = new Set(['Simulation paused', 'Simulation resumed']);
+const serverLogResults = new Set([ 'Simulation paused', 'Simulation resumed' ]);
 
 async function handleMessage(db: Database, shard: Shard, connection: net.Socket, line: string, log: typeof console.log) {
 	try {

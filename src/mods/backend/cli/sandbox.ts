@@ -1,20 +1,21 @@
-import { type Database, Shard } from 'xxscreeps/engine/db/index.js';
+import type { Subscription } from 'xxscreeps/engine/db/channel.js';
+import type { Database } from 'xxscreeps/engine/db/index.js';
 import type { World } from 'xxscreeps/game/map.js';
-import vm from 'node:vm';
 import fs from 'node:fs/promises';
 import { inspect } from 'node:util';
+import vm from 'node:vm';
 import jsYaml from 'js-yaml';
+import { Render } from 'xxscreeps/backend/symbols.js';
 import config from 'xxscreeps/config/index.js';
 import { configPath } from 'xxscreeps/config/raw.js';
-import { Render } from 'xxscreeps/backend/symbols.js';
+import { Shard } from 'xxscreeps/engine/db/index.js';
+import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
+import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { tickSpeed } from 'xxscreeps/engine/service/tick.js';
 import { runOneShot } from 'xxscreeps/game/index.js';
 import { asUnion } from 'xxscreeps/utility/utility.js';
-import { Mutex } from 'xxscreeps/engine/db/mutex.js';
-import type { Subscription } from 'xxscreeps/engine/db/channel.js';
 
 // Per-shard state: connection + cached terrain. Persists across CLI requests.
 // Currently only shard0 exists; this map enables future multi-shard without
@@ -71,15 +72,13 @@ export function makeSystemHelpers(db: Database, entry: ShardEntry) {
 			await releasePause();
 			return 'Simulation resumed';
 		},
-		resetAllData: () => {
-			return 'Not implemented';
-		},
+		resetAllData: () => 'Not implemented',
 		sendServerMessage: async (message: string) => {
 			if (typeof message !== 'string' || !message) {
 				return 'Invalid message';
 			}
 			const users = await db.data.smembers('users');
-			const payload = JSON.stringify([{ fd: 0, data: `[Server] ${message}` }]);
+			const payload = JSON.stringify([ { fd: 0, data: `[Server] ${message}` } ]);
 			await Promise.all(users.map(userId =>
 				getConsoleChannel(entry.shard, userId).publish(payload),
 			));

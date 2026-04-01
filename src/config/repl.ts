@@ -1,5 +1,5 @@
-import net from 'node:net';
 import fs from 'node:fs';
+import net from 'node:net';
 import readline from 'node:readline';
 import { socketPath } from 'xxscreeps/mods/backend/cli/socket.js';
 
@@ -14,11 +14,11 @@ if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 		'db', 'shard', 'storage', 'users', 'rooms', 'system', 'shards', 'help',
 	];
 	const dotMembers: Record<string, string[]> = {
-		storage: ['db', 'shard', 'pubsub'],
-		users: ['findByName', 'info'],
-		rooms: ['list', 'load'],
-		system: ['getTickDuration', 'setTickDuration', 'pauseSimulation', 'resumeSimulation', 'resetAllData', 'sendServerMessage'],
-		shards: ['list', 'get'],
+		storage: [ 'db', 'shard', 'pubsub' ],
+		users: [ 'findByName', 'info' ],
+		rooms: [ 'list', 'load' ],
+		system: [ 'getTickDuration', 'setTickDuration', 'pauseSimulation', 'resumeSimulation', 'resetAllData', 'sendServerMessage' ],
+		shards: [ 'list', 'get' ],
 	};
 
 	function completer(line: string): [string[], string] {
@@ -29,11 +29,11 @@ if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 			const members = dotMembers[obj];
 			if (members) {
 				const hits = members.filter(m => m.startsWith(partial)).map(m => `${obj}.${m}`);
-				return [hits.length ? hits : [], line];
+				return [ hits.length ? hits : [], line ];
 			}
 		}
 		const hits = topLevel.filter(t => t.startsWith(line));
-		return [hits.length ? hits : [], line];
+		return [ hits.length ? hits : [], line ];
 	}
 
 	const rl = readline.createInterface({

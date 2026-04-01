@@ -5,7 +5,7 @@ import { Worker, isMainThread, parentPort, workerData } from 'node:worker_thread
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 const requiredFlags = [
 	// import.meta.resolve stabilized in Node 20.6
-	...nodeMajor < 20 ? ['--experimental-import-meta-resolve'] : [],
+	...nodeMajor < 20 ? [ '--experimental-import-meta-resolve' ] : [],
 ];
 const noWorkerFlags = [
 	'--no-node-snapshot',

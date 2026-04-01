@@ -1,10 +1,10 @@
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
+import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { executeCommand } from './sandbox.js';
 import { startSocketServer } from './socket.js';
 import 'xxscreeps/backend/sockets/render.js';
@@ -183,7 +183,7 @@ describe('CLI', () => {
 		test('rooms.load() objects have rendered fields', async () => {
 			const result = await run('JSON.stringify(await rooms.load("W5N5"))');
 			const snapshot = JSON.parse(result);
-			for (const object of Object.values(snapshot) as any[]) {
+			for (const object of Object.values(snapshot)) {
 				assert.ok(typeof object._id === 'string');
 				assert.ok(typeof object.type === 'string');
 				assert.ok(typeof object.x === 'number');
@@ -431,13 +431,13 @@ describe('Socket', () => {
 				});
 				client.on('error', reject);
 			});
-			assert.deepStrictEqual(results, ['first', 'second', 'third']);
+			assert.deepStrictEqual(results, [ 'first', 'second', 'third' ]);
 		});
 	});
 
 	describe('Concurrent clients', () => {
 		test('two clients receive independent responses', async () => {
-			const [a, b] = await Promise.all([
+			const [ a, b ] = await Promise.all([
 				sendCommand(testSocketPath, '"from-a"'),
 				sendCommand(testSocketPath, '"from-b"'),
 			]);
@@ -447,7 +447,7 @@ describe('Socket', () => {
 
 		test('shared state is visible across clients', async () => {
 			// Client A queries, client B queries the same thing — both see the same data
-			const [a, b] = await Promise.all([
+			const [ a, b ] = await Promise.all([
 				sendCommand(testSocketPath, 'JSON.stringify(await rooms.list())'),
 				sendCommand(testSocketPath, 'JSON.stringify(await rooms.list())'),
 			]);
