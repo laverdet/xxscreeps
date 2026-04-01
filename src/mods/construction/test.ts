@@ -1,5 +1,4 @@
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
 describe('Construction', () => {
@@ -24,7 +23,7 @@ describe('Construction', () => {
 		// Place most sites in tick 1
 		const firstBatch = C.MAX_CONSTRUCTION_SITES - 10;
 		await player('100', Game => {
-			for (const pos of Fn.range(firstBatch)) {
+			for (let pos = 0; pos < firstBatch; ++pos) {
 				const xx = 1 + (pos % 48);
 				const yy = 1 + Math.floor(pos / 48);
 				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(xx, yy, 'road'), C.OK);
@@ -34,14 +33,14 @@ describe('Construction', () => {
 		// Try 11 more in tick 2 — first 10 should succeed, 11th should fail
 		await player('100', Game => {
 			assert.strictEqual(Object.keys(Game.constructionSites).length, firstBatch);
-			for (const pos of Fn.range(firstBatch, C.MAX_CONSTRUCTION_SITES)) {
+			for (let pos = firstBatch; pos < C.MAX_CONSTRUCTION_SITES; ++pos) {
 				const xx = 1 + (pos % 48);
 				const yy = 1 + Math.floor(pos / 48);
 				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(xx, yy, 'road'), C.OK);
 			}
 			assert.strictEqual(Game.rooms.W1N1.createConstructionSite(1, 4, 'road'), C.ERR_FULL);
 			// Remove one site, then creating should succeed again
-			Object.values(Game.constructionSites)[0]!.remove();
+			Object.values(Game.constructionSites)[0].remove();
 		});
 		await tick();
 		await player('100', Game => {
