@@ -29,14 +29,14 @@ registerRoomTickProcessor((room, context) => {
 		}
 		const directions = Object.entries(exitDirections);
 		context.task(
-			Promise.all(directions.map(([, neighborName]) =>
+			Promise.all(directions.map(([ , neighborName ]) =>
 				context.shard.loadRoom(neighborName, undefined, true).catch(() => null))),
 			neighbors => {
 				// Build set of allowed directions (neighbor is uncontrolled)
 				const allowedDirs = new Set(
 					directions
 						.filter((_, ii) => neighbors[ii]?.['#user'] === null)
-						.map(([dir]) => Number(dir)));
+						.map(([ dir ]) => Number(dir)));
 
 				// Filter exit positions to allowed directions only
 				const validExits = room.find(C.FIND_EXIT).filter(pos => {
