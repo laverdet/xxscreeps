@@ -264,8 +264,7 @@ describe('Spawn isActive', () => {
 			room['#insertObject'](create(new RoomPosition(20, 25, 'W3N1'), '100', 'SpawnA'));
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W3N1'), '100', 'SpawnB'));
 			room['#level'] = 1;
-			room['#user'] =
-				room.controller!['#user'] = '100';
+			room['#user'] = room.controller!['#user'] = '100';
 		},
 	});
 
@@ -273,7 +272,7 @@ describe('Spawn isActive', () => {
 		await player('100', Game => {
 			const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
 			assert.strictEqual(spawns.length, 2, 'should have 2 spawns');
-			const activeCount = spawns.filter(s => s.isActive()).length;
+			const activeCount = spawns.filter(spawn => spawn.isActive()).length;
 			assert.strictEqual(activeCount, 1, 'exactly 1 spawn should be active at RCL 1');
 		});
 	}));
@@ -281,7 +280,7 @@ describe('Spawn isActive', () => {
 	test('inactive spawn returns ERR_RCL_NOT_ENOUGH', () => excessSpawnSim(async ({ player }) => {
 		await player('100', Game => {
 			const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
-			const inactive = spawns.find(s => !s.isActive())!;
+			const inactive = spawns.find(spawn => !spawn.isActive())!;
 			assert.ok(inactive, 'should find an inactive spawn');
 			assert.strictEqual(inactive.spawnCreep([ C.MOVE ], 'test'), C.ERR_RCL_NOT_ENOUGH);
 		});
@@ -290,7 +289,7 @@ describe('Spawn isActive', () => {
 	test('inactive spawn can still be destroyed', () => excessSpawnSim(async ({ player }) => {
 		await player('100', Game => {
 			const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
-			const inactive = spawns.find(s => !s.isActive())!;
+			const inactive = spawns.find(spawn => !spawn.isActive())!;
 			assert.ok(inactive, 'should find an inactive spawn');
 			assert.strictEqual(inactive.destroy(), C.OK, 'inactive structures should be destroyable');
 		});
@@ -300,12 +299,11 @@ describe('Spawn isActive', () => {
 		W3N1: room => {
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W3N1'), '100', 'Spawn1'));
 			// Extension at RCL 1 should be inactive (extensions available from RCL 2)
-			const ext = createExtension(new RoomPosition(25, 27, 'W3N1'), 8, '100');
+			const ext = createExtension(new RoomPosition(25, 27, 'W3N1'), 1, '100');
 			ext.store['#add'](C.RESOURCE_ENERGY, 50);
 			room['#insertObject'](ext);
 			room['#level'] = 1;
-			room['#user'] =
-				room.controller!['#user'] = '100';
+			room['#user'] = room.controller!['#user'] = '100';
 		},
 	});
 
@@ -313,7 +311,6 @@ describe('Spawn isActive', () => {
 		await player('100', Game => {
 			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0];
 			assert.strictEqual(ext.isActive(), false, 'extension should be inactive at RCL 1');
-			// energyAvailable should only include spawn energy, not the inactive extension
 			assert.strictEqual(Game.rooms.W3N1.energyAvailable, C.SPAWN_ENERGY_START,
 				'energyAvailable should exclude inactive extension');
 		});
@@ -322,31 +319,30 @@ describe('Spawn isActive', () => {
 	const transferSim = simulate({
 		W3N1: room => {
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W3N1'), '100', 'Spawn1'));
-			const ext = createExtension(new RoomPosition(25, 27, 'W3N1'), 8, '100');
-			ext.store['#add'](C.RESOURCE_ENERGY, 50);
+			const ext = createExtension(new RoomPosition(25, 27, 'W3N1'), 1, '100');
+			ext.store['#add'](C.RESOURCE_ENERGY, 10);
 			room['#insertObject'](ext);
 			const creep = createCreep(new RoomPosition(25, 26, 'W3N1'), [ C.CARRY, C.MOVE ], 'worker', '100');
 			creep.store['#add'](C.RESOURCE_ENERGY, 10);
 			room['#insertObject'](creep);
 			room['#level'] = 1;
-			room['#user'] =
-				room.controller!['#user'] = '100';
+			room['#user'] = room.controller!['#user'] = '100';
 		},
 	});
 
-	test('transfer to inactive extension returns ERR_RCL_NOT_ENOUGH', () => transferSim(async ({ player }) => {
+	test('stores on inactive buildings still work — transfer', () => transferSim(async ({ player }) => {
 		await player('100', Game => {
 			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0];
 			assert.strictEqual(ext.isActive(), false);
-			assert.strictEqual(Game.creeps.worker.transfer(ext, C.RESOURCE_ENERGY, 1), C.ERR_RCL_NOT_ENOUGH);
+			assert.strictEqual(Game.creeps.worker.transfer(ext, C.RESOURCE_ENERGY, 1), C.OK);
 		});
 	}));
 
-	test('withdraw from inactive extension returns ERR_RCL_NOT_ENOUGH', () => transferSim(async ({ player }) => {
+	test('stores on inactive buildings still work — withdraw', () => transferSim(async ({ player }) => {
 		await player('100', Game => {
 			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0];
 			assert.strictEqual(ext.isActive(), false);
-			assert.strictEqual(Game.creeps.worker.withdraw(ext, C.RESOURCE_ENERGY, 1), C.ERR_RCL_NOT_ENOUGH);
+			assert.strictEqual(Game.creeps.worker.withdraw(ext, C.RESOURCE_ENERGY, 1), C.OK);
 		});
 	}));
 });

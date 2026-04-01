@@ -36,8 +36,8 @@ function getEnergyStructures(spawn: StructureSpawn, ids?: string[]) {
 		const comparator = (left: EnergyStructure, right: EnergyStructure) =>
 			spawn.pos.getRangeTo(left) - spawn.pos.getRangeTo(right);
 		return [
-			...lookForStructures(spawn.room, C.STRUCTURE_SPAWN).filter(s => s.isActive()).sort(comparator),
-			...lookForStructures(spawn.room, C.STRUCTURE_EXTENSION).filter(s => s.isActive()).sort(comparator),
+			...lookForStructures(spawn.room, C.STRUCTURE_SPAWN).filter(structure => structure.isActive()).sort(comparator),
+			...lookForStructures(spawn.room, C.STRUCTURE_EXTENSION).filter(structure => structure.isActive()).sort(comparator),
 		];
 	}
 }

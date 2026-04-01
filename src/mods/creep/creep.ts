@@ -20,7 +20,7 @@ import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
-import { Structure, checkIsActive } from 'xxscreeps/mods/structure/structure.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
@@ -518,11 +518,6 @@ export function checkTransfer(creep: Creep, target: RoomObject & WithStore, reso
 			if (target instanceof Creep && target.spawning) {
 				return C.ERR_INVALID_TARGET;
 			}
-		},
-		() => {
-			if (target instanceof Structure) {
-				return checkIsActive(target);
-			}
 		});
 }
 
@@ -533,12 +528,7 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 		() => checkRange(creep, target, 1),
 		() => checkHasResource(target, resourceType, amount),
 		() => checkHasCapacity(creep, resourceType, amount),
-		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER),
-		() => {
-			if (target instanceof Structure) {
-				return checkIsActive(target);
-			}
-		});
+		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
 }
 
 export function calculateCost(creep: Creep) {

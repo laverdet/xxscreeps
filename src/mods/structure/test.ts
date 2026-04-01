@@ -11,8 +11,7 @@ describe('Structure isActive', () => {
 		W4N1: room => {
 			room['#insertObject'](createSpawn(new RoomPosition(25, 25, 'W4N1'), '100', 'ConqueredSpawn'));
 			room['#level'] = 4;
-			room['#user'] =
-				room.controller!['#user'] = '101'; // controller owned by different player
+			room['#user'] = room.controller!['#user'] = '101'; // controller owned by different player
 		},
 	});
 
@@ -34,8 +33,7 @@ describe('Structure isActive', () => {
 			// Spawn far from controller
 			room['#insertObject'](createSpawn(new RoomPosition(1, 1, 'W5N1'), '100', 'FarSpawn'));
 			room['#level'] = 1; // RCL 1 allows only 1 spawn
-			room['#user'] =
-				room.controller!['#user'] = '100';
+			room['#user'] = room.controller!['#user'] = '100';
 		},
 	});
 
@@ -57,8 +55,7 @@ describe('Structure isActive', () => {
 			room['#insertObject'](createExtractor(mineral.pos, '100'));
 			room['#insertObject'](createCreep(mineral.pos, [ C.WORK, C.CARRY, C.MOVE ], 'miner', '100'));
 			room['#level'] = 5; // extractors require RCL 6
-			room['#user'] =
-				room.controller!['#user'] = '100';
+			room['#user'] = room.controller!['#user'] = '100';
 		},
 	});
 

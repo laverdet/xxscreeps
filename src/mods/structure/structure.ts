@@ -8,7 +8,7 @@ import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
-import { compose, declare, struct, withOverlay } from 'xxscreeps/schema/index.js';
+import { compose, declare, optional, struct, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { createRuin } from './ruin.js';
 
@@ -25,6 +25,7 @@ const shape = objectFormat;
 export const ownedStructureFormat = declare('OwnedStructure', () => compose(ownedShape, OwnedStructure));
 const ownedShape = struct(structureFormat, {
 	'#user': Id.optionalFormat,
+	'#active': optional('bool'),
 });
 
 /**
@@ -68,29 +69,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 * method will return false, and the structure will be highlighted with red in the game.
 	 */
 	isActive(): boolean {
-		const user = this['#user'];
-		if (!user) return true;
-		const lookup = (C.CONTROLLER_STRUCTURES as Record<string, number[] | undefined>)[this.structureType];
-		if (!lookup) return true;
-		const controller = this.room.controller;
-		if (!controller) return true;
-		if (controller.level < 1 || controller['#user'] !== user) return false;
-		const maxCount = lookup[controller.level] ?? 0;
-		if (maxCount === 0) return false;
-		if (lookup[8] === 1) return true;
-		// Excess-structure check (handles RCL downgrade): prefer structures closer to controller
-		const structures: Structure[] = this.room.find(C.FIND_STRUCTURES).filter(
-			s => s.structureType === this.structureType && s['#user'] === user);
-		if (structures.length <= maxCount) return true;
-		const cx = controller.pos.x;
-		const cy = controller.pos.y;
-		const dist = (s: Structure) => Math.max(Math.abs(s.pos.x - cx), Math.abs(s.pos.y - cy));
-		structures.sort((a: Structure, b: Structure) => {
-			const da = dist(a);
-			const db = dist(b);
-			return da !== db ? da - db : a.id < b.id ? -1 : 1;
-		});
-		return structures.indexOf(this) < maxCount;
+		return true;
 	}
 
 	'#checkObstacle'(_user: string) {
@@ -116,7 +95,7 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 	override get '#providesVision'() { return true; }
 
 	/**
-	 * An object with the structure’s owner info
+	 * An object with the structure's owner info
 	 */
 	@enumerable get owner() { return userInfo.get(this['#user']!); }
 
@@ -128,8 +107,64 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 		return user === null ? undefined : user === me;
 	}
 
+	override isActive() {
+		if (this['#active'] === undefined) {
+			checkActiveStructures(this.room);
+		}
+		return this['#active'] ?? true;
+	}
+
+	override '#destroy'() {
+		if (super['#destroy']()) {
+			// Invalidate active flags for same-type structures so the lazy
+			// fallback in isActive() recomputes after this structure is flushed
+			const type = this.structureType;
+			for (const object of this.room['#objects']) {
+				if (object instanceof OwnedStructure && object.structureType === type) {
+					object['#active'] = undefined;
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+
 	override '#addToMyGame'(game: GameConstructor) {
 		game.structures[this.id] = this as never;
+	}
+}
+
+/**
+ * Batch-compute the '#active' flag for all owned structures in a room. Groups structures
+ * by type, sorts each group by distance to controller, and marks the closest ones active.
+ * Called from the controller processor on room status changes, and lazily on first access.
+ */
+export function checkActiveStructures(room: Room) {
+	const controller = room.controller;
+	const level = controller?.level ?? 0;
+	const userId = controller?.['#user'];
+	const controllerStructures = C.CONTROLLER_STRUCTURES as Record<string, number[] | undefined>;
+	// Single pass: collect owned structures by type
+	const byType: Record<string, OwnedStructure[]> = {};
+	for (const object of room['#objects']) {
+		if (object instanceof OwnedStructure && object.structureType in controllerStructures) {
+			(byType[object.structureType] ??= []).push(object);
+		}
+	}
+	// Sort each group by distance to controller and mark active/inactive
+	for (const type in byType) {
+		const structures = byType[type];
+		const maxCount = level < 1 ? 0 : controllerStructures[type]![level] ?? 0;
+		if (maxCount === 0 || structures.length <= maxCount) {
+			for (const structure of structures) {
+				structure['#active'] = maxCount > 0 && structure['#user'] === userId;
+			}
+		} else {
+			structures.sort((left, right) => left.pos.getRangeTo(controller!.pos) - right.pos.getRangeTo(controller!.pos));
+			for (let ii = 0; ii < structures.length; ++ii) {
+				structures[ii]['#active'] = ii < maxCount && structures[ii]['#user'] === userId;
+			}
+		}
 	}
 }
 

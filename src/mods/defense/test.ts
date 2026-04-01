@@ -101,8 +101,7 @@ describe('Tower isActive', () => {
 			room['#insertObject'](tower);
 			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W3N2'), [ C.MOVE ], 'target', '101'));
 			room['#level'] = 2;
-			room['#user'] =
-				room.controller!['#user'] = '100';
+			room['#user'] = room.controller!['#user'] = '100';
 		},
 	});
 

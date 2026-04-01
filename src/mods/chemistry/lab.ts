@@ -152,8 +152,6 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 		() => checkIsActive(lab),
 		() => checkTarget(lab1, StructureLab),
 		() => checkTarget(lab2, StructureLab),
-		() => checkIsActive(lab1!),
-		() => checkIsActive(lab2!),
 		() => checkRange(lab, lab1!, 2),
 		() => checkRange(lab, lab2!, 2),
 		() => {
@@ -238,8 +236,6 @@ export function checkRunReaction(lab: StructureLab, left: StructureLab, right: S
 		() => checkIsActive(lab),
 		() => checkTarget(left, StructureLab),
 		() => checkTarget(right, StructureLab),
-		() => checkIsActive(left),
-		() => checkIsActive(right),
 		() => checkRange(lab, left, 2),
 		() => checkRange(lab, right, 2),
 		() => checkHasCapacity(lab, reaction, C.LAB_REACTION_AMOUNT),
