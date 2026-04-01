@@ -1,7 +1,7 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createSite } from './construction-site.js';
 
 describe('Construction', () => {
