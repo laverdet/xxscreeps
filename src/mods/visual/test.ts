@@ -1,7 +1,7 @@
 import { Variant } from 'xxscreeps/schema/index.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
-import { MapVisual, RoomVisual, flush, schema } from './visual.js';
 import { decodeMapVisuals, visualsReader } from './model.js';
+import { MapVisual, RoomVisual, flush, schema } from './visual.js';
 
 // Each test uses a unique room name or calls clear() to avoid shared state.
 // flush() is only called where it is the thing being tested (e.g. verifying

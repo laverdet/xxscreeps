@@ -159,7 +159,7 @@ const tickVisuals = new Map<string, RoomVisualState>();
  * allowed.
  */
 export class RoomVisual {
-	#state;
+	readonly #state;
 	readonly #isMap;
 	readonly #roomName;
 	readonly #limit;
@@ -290,7 +290,7 @@ export class RoomVisual {
  * serialized data (see `getSize` method).
  */
 export class MapVisual {
-	#inner;
+	readonly #inner;
 
 	constructor() {
 		this.#inner = new RoomVisual('map');
