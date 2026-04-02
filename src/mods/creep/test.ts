@@ -244,6 +244,59 @@ describe('Movement', () => {
 		});
 	}));
 
+	// https://github.com/laverdet/xxscreeps/issues/58
+	// When a creep dies, buryCreep() inserts a tombstone via deferred #insertObject.
+	// The Tick loop captures array length before iterating, so the new tombstone's
+	// Tick processor never runs on the death tick. setActive() ensures the room
+	// wakes next tick so the tombstone can register its decay timer.
+	describe('Tombstone decay', () => {
+		const dying = simulate({
+			W5N5: room => {
+				const creep = create(new RoomPosition(25, 25, 'W5N5'), [ C.MOVE ], 'mortal', '100');
+				creep['#ageTime'] = 3;
+				room['#insertObject'](creep);
+			},
+		});
+
+		test('tombstone appears after age death and decays', () => dying(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W5N5', room => {
+				assert.strictEqual(room['#lookFor'](C.LOOK_CREEPS).length, 1, 'creep should be alive after tick 1');
+			});
+			await tick();
+			await peekRoom('W5N5', room => {
+				assert.strictEqual(room['#lookFor'](C.LOOK_CREEPS).length, 0, 'creep should be dead');
+				assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 1, 'tombstone should exist');
+			});
+			// 1 MOVE part × TOMBSTONE_DECAY_PER_PART ticks, plus buffer
+			await tick(C.TOMBSTONE_DECAY_PER_PART + 5);
+			await peekRoom('W5N5', room => {
+				assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 0,
+					'tombstone should be cleaned up after decay window');
+			});
+		}));
+
+		const firstTickDeath = simulate({
+			W4N4: room => {
+				const creep = create(new RoomPosition(25, 25, 'W4N4'), [ C.MOVE ], 'ephemeral', '100');
+				creep['#ageTime'] = 2;
+				room['#insertObject'](creep);
+			},
+		});
+
+		test('first-tick death tombstone decays', () => firstTickDeath(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W4N4', room => {
+				assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 1, 'tombstone should exist');
+			});
+			await tick(C.TOMBSTONE_DECAY_PER_PART + 5);
+			await peekRoom('W4N4', room => {
+				assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 0,
+					'first-tick tombstone should decay');
+			});
+		}));
+	});
+
 	describe('Room', () => {
 		const sim = simulate({
 			W0N0: room => {
