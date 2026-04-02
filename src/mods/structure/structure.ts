@@ -10,6 +10,7 @@ import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { compose, declare, optional, struct, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { createRuin } from './ruin.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
@@ -25,6 +26,8 @@ const shape = objectFormat;
 export const ownedStructureFormat = declare('OwnedStructure', () => compose(ownedShape, OwnedStructure));
 const ownedShape = struct(structureFormat, {
 	'#user': Id.optionalFormat,
+	// TODO: Rename to '#inactive' so default 0 value = active (true). optional('bool') takes
+	// 2 bytes; should not be lazy.
 	'#active': optional('bool'),
 });
 
@@ -107,6 +110,8 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 		return user === null ? undefined : user === me;
 	}
 
+	// TODO: This may be invoked each tick until the processor calls isActive. The cache
+	// does not persist from runner into processor, only from processor into runtime.
 	override isActive() {
 		if (this['#active'] === undefined) {
 			checkActiveStructures(this.room);
@@ -152,15 +157,14 @@ export function checkActiveStructures(room: Room) {
 		}
 	}
 	// Sort each group by distance to controller and mark active/inactive
-	for (const type in byType) {
-		const structures = byType[type];
-		const maxCount = level < 1 ? 0 : controllerStructures[type]![level] ?? 0;
+	for (const [ type, structures ] of Object.entries(byType)) {
+		const maxCount = controllerStructures[type]![level] ?? 0;
 		if (maxCount === 0 || structures.length <= maxCount) {
 			for (const structure of structures) {
 				structure['#active'] = maxCount > 0 && structure['#user'] === userId;
 			}
 		} else {
-			structures.sort((left, right) => left.pos.getRangeTo(controller!.pos) - right.pos.getRangeTo(controller!.pos));
+			structures.sort(mappedNumericComparator(structure => structure.pos.getRangeTo(controller!.pos)));
 			for (let ii = 0; ii < structures.length; ++ii) {
 				structures[ii]['#active'] = ii < maxCount && structures[ii]['#user'] === userId;
 			}
