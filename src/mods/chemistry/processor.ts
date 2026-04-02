@@ -5,7 +5,11 @@ import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { Creep, calculateCarry } from 'xxscreeps/mods/creep/creep.js';
 import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
-import { StructureLab, calcTotalReactionsTime, checkBoostCreep, checkReverseReaction, checkRunReaction, checkUnboostCreep, getBoostEffect, getReactionProduct, getReactionTime, getReactionVariants } from './lab.js';
+import { StructureLab, calcTotalReactionsTime, checkBoostCreep, checkReverseReaction, checkRunReaction, checkUnboostCreep, getReactionProduct, getReactionVariants } from './lab.js';
+
+type BoostEffects = Partial<Record<string, number>>;
+type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
+type ReactionTimeLookup = Partial<Record<string, number>>;
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { chemistry: typeof intents }
@@ -15,16 +19,20 @@ const intents = [
 	registerIntentProcessor(StructureLab, 'runReaction', {}, (lab, context, id1: string, id2: string) => {
 		const left = Game.getObjectById<StructureLab>(id1)!;
 		const right = Game.getObjectById<StructureLab>(id2)!;
-		if (checkRunReaction(lab, left, right) === C.OK) {
-			const product = getReactionProduct(left.mineralType, right.mineralType)!;
-			lab.store['#add'](product, C.LAB_REACTION_AMOUNT);
-			left.store['#subtract'](left.mineralType!, C.LAB_REACTION_AMOUNT);
-			right.store['#subtract'](right.mineralType!, C.LAB_REACTION_AMOUNT);
-			lab['#cooldownTime'] = Game.time + getReactionTime(product)!;
-			saveAction(lab, 'reaction1', left.pos);
-			saveAction(lab, 'reaction2', right.pos);
-			context.didUpdate();
+		if (checkRunReaction(lab, left, right) !== C.OK) {
+			return;
 		}
+
+		const product = getReactionProduct(left.mineralType!, right.mineralType!)!;
+		const reactionTime: ReactionTimeLookup = C.REACTION_TIME;
+
+		lab.store['#add'](product, C.LAB_REACTION_AMOUNT);
+		left.store['#subtract'](left.mineralType!, C.LAB_REACTION_AMOUNT);
+		right.store['#subtract'](right.mineralType!, C.LAB_REACTION_AMOUNT);
+		lab['#cooldownTime'] = Game.time + reactionTime[product]!;
+		saveAction(lab, 'reaction1', left.pos);
+		saveAction(lab, 'reaction2', right.pos);
+		context.didUpdate();
 	}),
 
 	registerIntentProcessor(StructureLab, 'boostCreep', {}, (lab, context, creepId: string, bodyPartsCount: number) => {
@@ -35,8 +43,9 @@ const intents = [
 		const mineralType = lab.mineralType!;
 
 		// Find non-boosted parts matching this mineral's boost type
+		const boosts: BoostsLookup = C.BOOSTS;
 		let nonBoostedParts = creep.body.filter(
-			part => !part.boost && getBoostEffect(part.type, mineralType));
+			part => !part.boost && boosts[part.type]?.[mineralType]);
 
 		// TOUGH parts boosted first (ascending index), all others last-to-first (reversed)
 		if (nonBoostedParts.length > 0 && nonBoostedParts[0].type !== C.TOUGH) {
@@ -79,7 +88,8 @@ const intents = [
 		lab.store['#subtract'](mineralType, C.LAB_REACTION_AMOUNT);
 		lab1.store['#add'](variant[0], C.LAB_REACTION_AMOUNT);
 		lab2.store['#add'](variant[1], C.LAB_REACTION_AMOUNT);
-		lab['#cooldownTime'] = Game.time + getReactionTime(mineralType)!;
+		const reactionTime: ReactionTimeLookup = C.REACTION_TIME;
+		lab['#cooldownTime'] = Game.time + reactionTime[mineralType]!;
 		saveAction(lab, 'reverseReaction1', lab1.pos);
 		saveAction(lab, 'reverseReaction2', lab2.pos);
 		context.didUpdate();

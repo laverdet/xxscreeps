@@ -15,7 +15,6 @@ import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { getBoostEffect } from 'xxscreeps/mods/chemistry/lab.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
@@ -26,6 +25,8 @@ import { compose, declare, enumerated, optional, struct, variant, vector, withOv
 import { assign } from 'xxscreeps/utility/utility.js';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
+type BoostEffects = Partial<Record<string, number>>;
+type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
 
 type MoveToOptions = FindPathOptions & {
 	noPathFinding?: boolean;
@@ -425,12 +426,13 @@ export function create(pos: RoomPosition, parts: PartType[], name: string, owner
 }
 
 export function calculateCarry(body: Creep['body']) {
+	const boosts: BoostsLookup = C.BOOSTS;
 	return Fn.accumulate(
 		Fn.filter(body, part => part.hits > 0),
 		part => {
 			if (part.type !== C.CARRY) return 0;
 			if (part.boost) {
-				const multiplier = getBoostEffect(C.CARRY, part.boost)?.capacity;
+				const multiplier = boosts[C.CARRY]?.[part.boost]?.capacity;
 				if (multiplier !== undefined) {
 					return C.CARRY_CAPACITY * multiplier;
 				}
@@ -537,10 +539,11 @@ export function calculateCost(creep: Creep) {
 }
 
 export function calculatePower(creep: Creep, part: PartType, power: number, boostMethod?: string) {
+	const boosts: BoostsLookup = C.BOOSTS;
 	return Fn.accumulate(creep.body, bodyPart => {
 		if (bodyPart.type === part && bodyPart.hits > 0) {
 			if (boostMethod !== undefined && bodyPart.boost) {
-				const multiplier = getBoostEffect(part, bodyPart.boost)?.[boostMethod];
+				const multiplier = boosts[part]?.[bodyPart.boost]?.[boostMethod];
 				if (multiplier !== undefined) {
 					return power * multiplier;
 				}
