@@ -1,21 +1,19 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "defaultProperties": [
-    ],
+    "defaultProperties": [],
     "properties": {
         "backend": {
-            "defaultProperties": [
-            ],
+            "defaultProperties": [],
             "description": "Backend server settings",
             "properties": {
+                "allowEmailRegistration": {
+                    "default": false,
+                    "description": "Whether to allow users sign up without steam with only their email address.\nNote: there is currently no confirmation mail send to the user to verify the address.",
+                    "type": "boolean"
+                },
                 "allowGuestAccess": {
                     "default": true,
                     "description": "Whether to allow read-only access to the API without logging in.",
-                    "type": "boolean"
-                },
-                "allowEmailRegistration": {
-                    "default": false,
-                    "description": "Whether to allow users to sign up with just their email address.",
                     "type": "boolean"
                 },
                 "bind": {
@@ -40,8 +38,7 @@
             "type": "object"
         },
         "database": {
-            "defaultProperties": [
-            ],
+            "defaultProperties": [],
             "description": "Configuration for global database storage",
             "properties": {
                 "data": {
@@ -67,8 +64,7 @@
             "type": "object"
         },
         "game": {
-            "defaultProperties": [
-            ],
+            "defaultProperties": [],
             "description": "Game settings",
             "properties": {
                 "respawnTimeout": {
@@ -85,8 +81,7 @@
             "type": "object"
         },
         "launcher": {
-            "defaultProperties": [
-            ],
+            "defaultProperties": [],
             "description": "Launcher settings",
             "properties": {
                 "singleThreaded": {
@@ -105,8 +100,7 @@
             "type": "array"
         },
         "processor": {
-            "defaultProperties": [
-            ],
+            "defaultProperties": [],
             "description": "Processor settings",
             "properties": {
                 "concurrency": {
@@ -117,13 +111,17 @@
                     "default": 5000,
                     "description": "Timeout in milliseconds before the processors give up on waiting for intents from the Runner\nservice and continue processing all outstanding rooms.",
                     "type": "number"
+                },
+                "log": {
+                    "default": false,
+                    "description": "Show processor log messages when running from main thread.",
+                    "type": "boolean"
                 }
             },
             "type": "object"
         },
         "runner": {
-            "defaultProperties": [
-            ],
+            "defaultProperties": [],
             "description": "Runner settings",
             "properties": {
                 "concurrency": {
@@ -131,8 +129,7 @@
                     "type": "number"
                 },
                 "cpu": {
-                    "defaultProperties": [
-                    ],
+                    "defaultProperties": [],
                     "properties": {
                         "bucket": {
                             "default": ": 10000",
@@ -151,6 +148,11 @@
                         }
                     },
                     "type": "object"
+                },
+                "log": {
+                    "default": false,
+                    "description": "Show runner log messages when running from main thread.",
+                    "type": "boolean"
                 },
                 "migrationTimeout": {
                     "default": 50,
@@ -174,8 +176,7 @@
             "default": "`[ {\nname: 'shard0',\ndata: './screeps/shard0',\npubsub: 'local://shard0',\nscratch: 'local://shard0',\n} ]`",
             "description": "Configuration for shard-specific storage",
             "items": {
-                "defaultProperties": [
-                ],
+                "defaultProperties": [],
                 "properties": {
                     "data": {
                         "description": "Persistent storage provider URI",

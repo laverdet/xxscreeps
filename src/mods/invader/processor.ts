@@ -1,11 +1,11 @@
 import { registerIntentProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import * as Creep from 'xxscreeps/mods/creep/creep.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { loop } from './loop/index.js';
 
 // Register invader NPC
@@ -27,7 +27,7 @@ registerRoomTickProcessor(room => {
 		// Find raid origin
 		const exits = room.find(C.FIND_EXIT);
 		const origin = exits[Math.floor(exits.length * Math.random())];
-		exits.sort((a, b) => origin.getRangeTo(a) - origin.getRangeTo(b));
+		exits.sort((left, right) => origin.getRangeTo(left) - origin.getRangeTo(right));
 
 		// Send the boys
 		activateNPC(room, '2');
@@ -46,6 +46,7 @@ registerRoomTickProcessor(room => {
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { invader: typeof intent }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intent = registerIntentProcessor(Room, 'requestInvader', { internal: true }, (room, context, xx: number, yy: number, role: Role, strength: Strength) => {
 	const pos = new RoomPosition(xx, yy, room.name);
 	room['#insertObject'](create(pos, role, strength, Game.time + 200));
@@ -76,15 +77,15 @@ export function create(pos: RoomPosition, role: Role, strength: Strength, ageTim
 function createBody(parts: Partial<Record<Creep.PartType, number>>) {
 	const size = Fn.accumulate(Object.values(parts));
 	return [
-		...Array(parts[C.TOUGH] ?? 0).fill(C.TOUGH),
-		...Array(size - 1).fill(C.MOVE),
-		...Object.entries(parts).map(([ type, count ]) => {
+		...Fn.map(Fn.range(parts[C.TOUGH] ?? 0), () => C.TOUGH),
+		...Fn.map(Fn.range(size - 1), () => C.MOVE),
+		...Fn.transform(Object.entries(parts), ([ type, count ]) => {
 			if (type === C.TOUGH) {
 				return [];
 			} else {
-				return Array(count).fill(type);
+				return Fn.map(Fn.range(count), () => type as Creep.PartType);
 			}
-		}).flat(),
+		}),
 		C.MOVE,
 	];
 }

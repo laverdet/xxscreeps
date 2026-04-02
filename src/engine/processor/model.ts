@@ -6,7 +6,8 @@ import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 
 export function getProcessorChannel(shard: Shard) {
 	type Message =
@@ -127,7 +128,7 @@ export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userI
 export async function publishRunnerIntentsForRooms(
 	shard: Shard, userId: string, time: number, roomNames: string[], intents: Record<string, RoomIntentPayload | undefined>,
 ) {
-	const notify = [ ...Fn.filter(await Promise.all(Fn.map(roomNames, async roomName => {
+	const roomsWithIntents = Promise.all(Fn.map(roomNames, async roomName => {
 		const [ count ] = await Promise.all([
 			// Decrement count of users that this room is waiting for
 			shard.scratch.zadd(processRoomsSetKey(time), [ [ -1, roomName ] ], { if: 'xx', incr: true }),
@@ -142,7 +143,8 @@ export async function publishRunnerIntentsForRooms(
 			await shard.scratch.zadd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'xx' });
 		}
 		return roomName;
-	}))) ];
+	}));
+	const notify = [ ...Fn.filter(await roomsWithIntents, nonNullPredicate) ];
 	if (notify.length > 0) {
 		// Publish process task to workers
 		await getProcessorChannel(shard).publish({ type: 'process', time, roomNames: notify });
@@ -302,18 +304,21 @@ export async function updateUserRoomRelationships(shard: Shard, room: Room, prev
 	const visionPlayers = checkPlayers(users.vision, previous?.vision);
 	await Promise.all([
 		// Update intent, presence, and vision relationships
-		...Fn.concat(Fn.map([
-			[ intentPlayers, userToIntentRoomsSetKey ],
-			[ presencePlayers, userToPresenceRoomsSetKey ],
-			[ visionPlayers, userToVisibleRoomsSetKey ],
-		] as const, ([ players, toKey ]) => Fn.concat(
-			// Add new user associations
-			Fn.map(players.added, playerId =>
-				shard.scratch.sadd(toKey(playerId), [ roomName ])),
-			// Remove stale user associations
-			Fn.map(players.removed, playerId =>
-				shard.scratch.srem(toKey(playerId), [ roomName ])),
-		))),
+		...Fn.pipe(
+			[
+				[ intentPlayers, userToIntentRoomsSetKey ],
+				[ presencePlayers, userToPresenceRoomsSetKey ],
+				[ visionPlayers, userToVisibleRoomsSetKey ],
+			] as const,
+			$$ => Fn.transform($$, ([ players, toKey ]) => Fn.concat([
+				// Add new user associations
+				Fn.map(players.added, playerId =>
+					shard.scratch.sadd(toKey(playerId), [ roomName ])),
+				// Remove stale user associations
+				Fn.map(players.removed, playerId =>
+					shard.scratch.srem(toKey(playerId), [ roomName ])),
+			])),
+		),
 
 		// Mark players active for runner
 		shard.scratch.sadd('activeUsers', intentPlayers.added),

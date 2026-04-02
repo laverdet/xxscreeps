@@ -1,4 +1,4 @@
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { lateCallback } from './memoize.js';
 
 export function makeHookRegistration<keys extends Record<string, any>>() {
@@ -43,12 +43,14 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 				if (handlers) {
 					const { head, rest } = Fn.shift(handlers);
 					let fn = head;
-					for (const next of rest) {
-						const prev = fn;
-						fn = (...args: any[]) => {
-							prev(...args);
-							next(...args);
-						};
+					if (rest) {
+						for (const next of rest) {
+							const prev = fn;
+							fn = (...args: any[]) => {
+								prev(...args);
+								next(...args);
+							};
+						}
 					}
 					return fn;
 				} else {
@@ -77,9 +79,11 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 				if (handlers) {
 					const { head, rest } = Fn.shift(handlers);
 					let fn = head;
-					for (const next of rest) {
-						const prev = fn;
-						fn = (value: any) => next(prev(value));
+					if (rest) {
+						for (const next of rest) {
+							const prev = fn;
+							fn = (value: any) => next(prev(value));
+						}
 					}
 					return fn;
 				} else {

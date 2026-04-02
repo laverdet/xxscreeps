@@ -3,14 +3,14 @@ import { inspect } from 'node:util';
 import { flushGlobals } from 'xxscreeps/config/global.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import * as Code from 'xxscreeps/engine/db/user/code-schema.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { Nullable } from 'xxscreeps/functional/types.js';
 import { Game, GameState, hooks, initializeGameEnvironment, runForPlayer, userInfo } from 'xxscreeps/game/index.js';
 import { World } from 'xxscreeps/game/map.js';
 import { detach } from 'xxscreeps/schema/buffer-object.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { setupConsole } from './console.js';
 import { makeEnvironment } from './module.js';
 import { flush, print, resultPrefix } from './print.js';
-// eslint-disable-next-line @typescript-eslint/no-duplicate-imports
 
 export type Compiler<Type = any> = {
 	compile: (source: string, filename: string) => Type;
@@ -21,7 +21,7 @@ export type Evaluate = (source: string, filename: string) => any;
 function freezeClass(constructor: abstract new(...args: any[]) => any) {
 	freezeProperty(constructor, 'prototype');
 	for (
-		let prototype = constructor.prototype;
+		let prototype = constructor.prototype as unknown;
 		prototype !== null && prototype !== Object.prototype;
 		prototype = Object.getPrototypeOf(prototype)
 	) {
@@ -29,7 +29,7 @@ function freezeClass(constructor: abstract new(...args: any[]) => any) {
 	}
 }
 
-function freezeProperty(object: {}, key: keyof any) {
+function freezeProperty(object: unknown, key: keyof any) {
 	const info = Object.getOwnPropertyDescriptor(object, key)!;
 	info.configurable = false;
 	info.writable = false;
@@ -58,14 +58,18 @@ for (const key of typedArrays) {
 
 const hooksComposed = function() {
 	const mapped = [ ...hooks.map('runtimeConnector') ];
+	const make = <Type extends (hook: typeof mapped[0]) => Nullable<(...args: any[]) => unknown>>(select: Type) => Fn.pipe(
+		mapped,
+		$$ => Fn.map($$, select),
+		$$ => Fn.filter($$),
+		$$ => Fn.fold($$, () => {}, (left, right) => Fn.chain(left, right, Fn.chainSequenceVoid1)));
 	return {
-		initialize: Fn.chain(Fn.filter(Fn.map(mapped, hook => hook.initialize))),
-		receive: Fn.chain(Fn.filter(Fn.map(mapped, hook => hook.receive))),
-		send: Fn.chain(Fn.filter(Fn.map(mapped, hook => hook.send)), true),
+		initialize: make(hook => hook.initialize),
+		receive: make(hook => hook.receive),
+		send: make(hook => hook.send),
 	};
 }();
 
-declare const globalThis: any;
 let me: string;
 let world: World;
 let loop: (() => any) | undefined;
@@ -112,6 +116,7 @@ export function tick(data: TickPayload) {
 			hooksComposed.receive(data);
 
 			// Run player loop
+			// @ts-expect-error
 			globalThis.Game = Game;
 			try {
 				(function thisIsWhereThePlayerCodeStarts() {
@@ -167,6 +172,7 @@ export function tick(data: TickPayload) {
 					}
 				}
 			});
+			// @ts-expect-error
 			globalThis.Game = undefined;
 		});
 
@@ -183,12 +189,16 @@ export function tick(data: TickPayload) {
 		}
 
 		// Write room intents into blobs
-		tickResult.intentPayloads = Fn.fromEntries(Fn.filter(Fn.map(rooms, ({ name }) => {
-			const intentsForRoom = intents.getIntentsForRoom(name);
-			if (intentsForRoom) {
-				return [ name, intentsForRoom ];
-			}
-		})));
+		tickResult.intentPayloads = Fn.pipe(
+			rooms,
+			$$ => Fn.map($$, ({ name }) => {
+				const intentsForRoom = intents.getIntentsForRoom(name);
+				if (intentsForRoom) {
+					return [ name, intentsForRoom ] as const;
+				}
+			}),
+			$$ => Fn.filter($$),
+			$$ => Fn.fromEntries($$));
 
 		// Gather tick results from runtimeConnector
 		hooksComposed.send(tickResult as TickResult);

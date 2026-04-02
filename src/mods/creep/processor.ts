@@ -8,6 +8,8 @@ import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { writeRoomObject } from 'xxscreeps/engine/db/room.js';
 import { hooks, registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
+import { numericComparator } from 'xxscreeps/functional/comparator.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
@@ -15,7 +17,6 @@ import { isBorder } from 'xxscreeps/game/terrain.js';
 import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { clamp, filterInPlace } from 'xxscreeps/utility/utility.js';
 import { Creep, calculateCarry } from './creep.js';
@@ -40,7 +41,7 @@ export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) 
 			context.didUpdate();
 		}
 		if (actionLog.length > 0) {
-			const minimum = Fn.minimum(Fn.map(actionLog, action => action.time))!;
+			const minimum = Fn.minimum(Fn.map(actionLog, action => action.time), numericComparator)!;
 			context.wakeAt(minimum + kRetainActionsTime);
 		}
 	}
@@ -110,7 +111,7 @@ const intents = [
 					let weight = 0;
 					let member: Creep | undefined = creep;
 					while (true) {
-						power += CreepLib.calculatePower(member, C.MOVE, 1);
+						power += CreepLib.calculatePower(member, C.MOVE, 1, 'fatigue');
 						weight += CreepLib.calculateWeight(member);
 						const puller = pulledToPuller.get(member);
 						if (puller) {
@@ -290,7 +291,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 	const puller = pulledToPuller.get(creep);
 	if (creep.fatigue > 0 || puller) {
 		// Calculate power, reduce own fatigue
-		let power = CreepLib.calculatePower(creep, C.MOVE, 2);
+		let power = CreepLib.calculatePower(creep, C.MOVE, 2, 'fatigue');
 		const delta = Math.min(creep.fatigue, power);
 		creep.fatigue -= delta;
 		power -= delta;

@@ -1,14 +1,16 @@
 import type { Effect } from 'xxscreeps/utility/types.js';
 import config from 'xxscreeps/config/index.js';
-import * as Async from 'xxscreeps/utility/async.js';
-import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
+import * as Async from 'xxscreeps/utility/async.js';
+import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
+import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { tickSpeed, watch } from './tick.js';
+import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+
 checkIsEntry();
 
 // Open channels
@@ -68,11 +70,10 @@ try {
 	await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
 
 	// Game loop
-	// eslint-disable-next-line no-unmodified-loop-condition
 	while (!halted) {
 		const timeStartedLoop = Date.now();
 		performanceTimer.start();
-		await gameMutex.scope(async() => {
+		await gameMutex.scope(async () => {
 			// Initialize
 			const time = shard.time + 1;
 			const serviceMessages = serviceChannel.iterable();
@@ -83,20 +84,24 @@ try {
 			await runnerChannel.publish({ type: 'run', time });
 
 			// Wait for tick to finish
-			const timeout = setTimeout(() => mustNotReject(async() => {
-				const rooms = await abandonIntentsForTick(shard, time);
-				console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
-			}), config.processor.intentAbandonTimeout);
-			for await (const message of serviceMessages) {
-				if (message.type === 'processorInitialized') {
-					await processorChannel.publish({ type: 'process', time });
-				} else if (message.type === 'runnerConnected') {
-					await runnerChannel.publish({ type: 'run', time });
-				} else if (message.type === 'tickFinished') {
-					break;
+			{
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+				using timeout = acquireTimeout(
+					config.processor.intentAbandonTimeout,
+					() => mustNotReject(async () => {
+						const rooms = await abandonIntentsForTick(shard, time);
+						console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
+					}));
+				for await (const message of serviceMessages) {
+					if (message.type === 'processorInitialized') {
+						await processorChannel.publish({ type: 'process', time });
+					} else if (message.type === 'runnerConnected') {
+						await runnerChannel.publish({ type: 'run', time });
+					} else if (message.type === 'tickFinished') {
+						break;
+					}
 				}
 			}
-			clearTimeout(timeout);
 
 			// Update game state
 			await shard.data.set('time', time);
@@ -128,7 +133,7 @@ try {
 
 		// Add delay
 		const delay = Math.max(0, tickSpeed - (Date.now() - timeStartedLoop));
-		tickDelay = new Deferred;
+		tickDelay = new Deferred();
 		const { promise, resolve } = tickDelay;
 		setTimeout(() => resolve(true), delay).unref();
 		if (!await promise) {

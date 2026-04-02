@@ -1,6 +1,7 @@
 import type { Direction } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { ALL_DIRECTIONS } from 'xxscreeps/game/direction.js';
 import { Game, me } from 'xxscreeps/game/index.js';
@@ -11,22 +12,26 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
+import { buryCreep } from 'xxscreeps/mods/creep/tombstone.js';
+import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
+import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { StructureExtension } from './extension.js';
 import { StructureSpawn, calculateRenewAmount, calculateRenewCost, checkDirections, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn.js';
-import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
-import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 
 type EnergyStructure = StructureExtension | StructureSpawn;
 function getEnergyStructures(spawn: StructureSpawn, ids?: string[]) {
 	if (ids) {
-		return [ ...new Set(Fn.filter(Fn.map(ids, id => {
-			const object = Game.getObjectById(id);
-			if (object instanceof StructureExtension || object instanceof StructureSpawn) {
-				return object;
-			}
-		}))) ];
+		return Fn.pipe(
+			ids,
+			$$ => Fn.map($$, id => {
+				const object = Game.getObjectById(id);
+				if (object instanceof StructureExtension || object instanceof StructureSpawn) {
+					return object;
+				}
+			}),
+			$$ => Fn.filter($$),
+			$$ => [ ...new Set($$) ]);
 	} else {
 		const comparator = (left: EnergyStructure, right: EnergyStructure) =>
 			spawn.pos.getRangeTo(left) - spawn.pos.getRangeTo(right);
@@ -196,19 +201,44 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 					user: creep['#user'],
 				});
 				const directions = new Set(spawn.spawning.directions ?? ALL_DIRECTIONS);
-				const direction = Fn.firstMatching(directions, direction => check(getPositionInDirection(creep.pos, direction)));
 
-				// If no direction was found then defer this creep
-				// TODO: Spawn stomp hostile creeps
-				if (direction === undefined) {
+				// Find first open preferred direction, remembering first hostile encountered
+				let spawnPos: RoomPosition | undefined;
+				let hostileCreep: Creep | undefined;
+				for (const dir of directions) {
+					const pos = getPositionInDirection(creep.pos, dir);
+					if (check(pos)) {
+						spawnPos = pos;
+						break;
+					}
+					if (!hostileCreep) {
+						const hostile = creep.room['#lookAt'](pos).find(
+							object => object instanceof Creep && object['#user'] !== spawn['#user']);
+						if (hostile) {
+							hostileCreep = hostile as Creep;
+						}
+					}
+				}
+
+				// All preferred directions blocked — only stomp if non-preferred are also blocked
+				if (!spawnPos && hostileCreep) {
+					const otherDirections = Fn.reject(ALL_DIRECTIONS, d => directions.has(d));
+					if (!Fn.some(otherDirections, dir => check(getPositionInDirection(creep.pos, dir)))) {
+						spawnPos = hostileCreep.pos;
+						buryCreep(hostileCreep);
+					}
+				}
+
+				if (!spawnPos) {
+					// No valid position — retry next tick
 					spawn.spawning['#spawnTime'] = Game.time + 1;
 					return;
 				}
 
-				// Creep can be spawned
+				// Place the creep
 				const hasClaim = creep.body.some(part => part.type === C.CLAIM);
 				creep['#ageTime'] = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME) - 1;
-				creep.room['#moveObject'](creep, getPositionInDirection(creep.pos, direction));
+				creep.room['#moveObject'](creep, spawnPos);
 			}
 			spawn.spawning = null;
 			context.setActive();

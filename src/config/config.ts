@@ -98,6 +98,12 @@ export type Schema = {
 		 * @default 5000
 		 */
 		intentAbandonTimeout?: number;
+
+		/**
+		 * Show processor log messages when running from main thread.
+		 * @default false
+		 */
+		log?: boolean;
 	};
 
 	/**
@@ -132,6 +138,12 @@ export type Schema = {
 		 * hyper-threaded) + 1
 		 */
 		concurrency?: number;
+
+		/**
+		 * Show runner log messages when running from main thread.
+		 * @default false
+		 */
+		log?: boolean;
 
 		/**
 		 * How long an idle runner will wait before migrating a player sandbox into that runner, causing

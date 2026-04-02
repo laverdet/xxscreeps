@@ -30,17 +30,17 @@ const shape = struct(ownedStructureFormat, {
  * Terminals are used in the [Market system](https://docs.screeps.com/market.html).
  */
 export class StructureTerminal extends withOverlay(OwnedStructure, shape) {
-	override get hitsMax() { return C.TERMINAL_HITS; }
-	override get structureType() { return C.STRUCTURE_TERMINAL; }
-
-	/** @deprecated  */
-	get storeCapacity() { return this.store.getCapacity(); }
-
 	/**
 	 * The remaining amount of ticks while this terminal cannot be used to make
 	 * `StructureTerminal.send` or `Game.market.deal` calls.
 	 */
 	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
+
+	override get hitsMax() { return C.TERMINAL_HITS; }
+	override get structureType() { return C.STRUCTURE_TERMINAL; }
+
+	/** @deprecated  */
+	get storeCapacity() { return this.store.getCapacity(); }
 
 	/**
 	 * Sends resource to a Terminal in another room with the specified name.
@@ -79,7 +79,7 @@ export function checkSend(terminal: StructureTerminal, resourceType: ResourceTyp
 			() => chainIntentChecks(
 				() => checkHasResource(terminal, C.RESOURCE_ENERGY, energyCost),
 				() => checkHasResource(terminal, resourceType, amount)),
-		() => description ? checkString(description, 100) : C.OK,
+		() => description == null ? C.OK : checkString(description, 100),
 		() => {
 			if (!(range < Infinity) || range === 0) {
 				return C.ERR_INVALID_ARGS;

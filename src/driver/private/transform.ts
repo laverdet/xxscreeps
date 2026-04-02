@@ -22,7 +22,7 @@ function extractPrivate(node: Node) {
 	return {};
 }
 
-export default function(): PluginObj {
+export default function transform(): PluginObj {
 	const runtimePath = `${new URL('./runtime.js', import.meta.url)}`;
 	type State = {
 		library?: {
@@ -78,7 +78,7 @@ export default function(): PluginObj {
 			} else {
 				path.replaceWith(t.callExpression(
 					injectMaker(path.state, 'makeInvoke', `call${methodKey}`, [ name, optional ]),
-					[ object!, ...node.arguments ]));
+					[ object, ...node.arguments ]));
 			}
 		}
 	};
@@ -93,7 +93,7 @@ export default function(): PluginObj {
 			const methodKey = `${name.value.substr(1)}${isOptional ? 'Opt' : ''}`;
 			path.replaceWith(t.callExpression(
 				injectMaker(path.state, 'makeGetter', `get${methodKey}`, [ name, optional ]),
-				[ object! ]));
+				[ object ]));
 		}
 	};
 
@@ -124,14 +124,14 @@ export default function(): PluginObj {
 					// Replace `obj['#foo'] = val` -> `makeSetter('foo')(obj, val)`
 					path.replaceWith(t.callExpression(
 						injectMaker(path.state, 'makeSetter', `set${name.value.substr(1)}`, [ name ]),
-						[ object!, node.right ]));
+						[ object, node.right ]));
 
 				} else if (/^.=$/.test(node.operator)) {
 					// Replace `obj['#foo'] += val` -> `makeMutator('foo')(obj, val => val + 1)`
 					const id = path.state.program.scope.generateUidIdentifier('val');
 					path.replaceWith(t.callExpression(
 						injectMaker(path.state, 'makeMutator', `mut${name.value.substr(1)}`, [ name ]),
-						[ object!, makeLambda([ id ], t.binaryExpression(
+						[ object, makeLambda([ id ], t.binaryExpression(
 							node.operator.charAt(0) as any,
 							id,
 							node.right)) ]));
@@ -148,7 +148,7 @@ export default function(): PluginObj {
 				const methodKey = `mut${name.value.substr(1)}${node.prefix ? '' : 'Post'}`;
 				path.replaceWith(t.callExpression(
 					injectMaker(path.state, 'makeMutator', methodKey, [ name, t.booleanLiteral(!node.prefix) ]),
-					[ object!, makeLambda([ id ], t.binaryExpression(
+					[ object, makeLambda([ id ], t.binaryExpression(
 						node.operator.charAt(0) as any,
 						id,
 						t.numericLiteral(1),

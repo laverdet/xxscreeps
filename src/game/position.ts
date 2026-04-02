@@ -4,8 +4,8 @@ import type { FindConstants, FindType, RoomFindOptions } from './room/find.js';
 import type { LookConstants } from './room/look.js';
 import type { FindPathOptions, RoomPath } from './room/path.js';
 import type { InspectOptionsStylized } from 'node:util';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { compose, declare } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { iteratee } from 'xxscreeps/utility/iteratee.js';
 import { getDirection } from './direction.js';
 import * as PathFinder from './path-finder/index.js';
@@ -81,22 +81,8 @@ export class RoomPosition {
 			) {
 				throw new TypeError('Invalid arguments in `RoomPosition` constructor');
 			}
-			this.#id = yy << 24 | xx << 16 | ry << 8 | rx;
+			this.#id = (yy << 24) | (xx << 16) | (ry << 8) | rx;
 		}
-	}
-
-	static '#create'(pos: number) {
-		return new RoomPosition(RawPositionId, pos);
-	}
-
-	get '#id'() {
-		return this.#id;
-	}
-
-	/** @deprecated */
-	get __packedPos() {
-		const id = this['#id'];
-		return (id & 0xffff) << 16 | (id >>> 8) & 0xff00 | id >>> 24;
 	}
 
 	/**
@@ -104,6 +90,56 @@ export class RoomPosition {
 	 */
 	@enumerable get roomName() {
 		return generateRoomNameFromId(this.#id & 0xffff);
+	}
+
+	/**
+	 * X position in the room.
+	 */
+	// eslint-disable-next-line id-length
+	@enumerable get x() {
+		return (this.#id >>> 16) & 0xff;
+	}
+
+	/**
+	 * Y position in the room.
+	 */
+	// eslint-disable-next-line id-length
+	@enumerable get y() {
+		return this.#id >>> 24;
+	}
+
+	/** @deprecated */
+	get __packedPos() {
+		const id = this['#id'];
+		return ((id & 0xffff) << 16) | ((id >>> 8) & 0xff00) | (id >>> 24);
+	}
+
+	get '#id'() {
+		return this.#id;
+	}
+
+	get '#rx'() {
+		return this.#id & 0xff;
+	}
+
+	get '#ry'() {
+		return (this.#id >>> 8) & 0xff;
+	}
+
+	// eslint-disable-next-line id-length
+	set x(xx: number) {
+		if (!(xx >= 0 && xx < 50)) {
+			throw new TypeError('Invalid `x`');
+		}
+		this.#id = (this.#id & ~(0xff << 16)) | (xx << 16);
+	}
+
+	// eslint-disable-next-line id-length
+	set y(yy: number) {
+		if (!(yy >= 0 && yy < 50)) {
+			throw new TypeError('Invalid `y`');
+		}
+		this.#id = (this.#id & ~(0xff << 24)) | (yy << 24);
 	}
 
 	set roomName(roomName: string) {
@@ -114,43 +150,11 @@ export class RoomPosition {
 		) {
 			throw new TypeError('Invalid `roomName`');
 		}
-		this.#id = this.#id & ~0xffff | ry << 8 | rx;
+		this.#id = (this.#id & ~0xffff) | (ry << 8) | rx;
 	}
 
-	/**
-	 * X position in the room.
-	 */
-	@enumerable get x() {
-		return (this.#id >>> 16) & 0xff;
-	}
-
-	set x(xx: number) {
-		if (!(xx >= 0 && xx < 50)) {
-			throw new TypeError('Invalid `x`');
-		}
-		this.#id = this.#id & ~(0xff << 16) | xx << 16;
-	}
-
-	/**
-	 * Y position in the room.
-	 */
-	@enumerable get y() {
-		return this.#id >>> 24;
-	}
-
-	set y(yy: number) {
-		if (!(yy >= 0 && yy < 50)) {
-			throw new TypeError('Invalid `y`');
-		}
-		this.#id = this.#id & ~(0xff << 24) | yy << 24;
-	}
-
-	get '#rx'() {
-		return this.#id & 0xff;
-	}
-
-	get '#ry'() {
-		return (this.#id >>> 8) & 0xff;
+	static '#create'(pos: number) {
+		return new RoomPosition(RawPositionId, pos);
 	}
 
 	getDirectionTo(x: number, y: number): Direction;
@@ -253,7 +257,7 @@ export class RoomPosition {
 		// Match position to object
 		const { path } = result;
 		const last = path[path.length - 1] ?? this;
-		return Fn.firstMatching(filtered, object => last.isNearTo(object)) ?? null;
+		return Fn.find(filtered, object => last.isNearTo(object)) ?? null;
 	}
 
 	/**
@@ -407,7 +411,7 @@ export function fetchPositionArgument<Extra = any>(
 			extra: arg3,
 			rest,
 		};
-	} catch (err) {
+	} catch {
 		return {
 			pos: undefined,
 			extra: undefined,
@@ -432,7 +436,7 @@ export function fetchPositionArgumentRest<Rest extends any[]>(
 			pos: new RoomPosition(arg1, arg2, fromRoom),
 			rest,
 		};
-	} catch (err) {
+	} catch {
 		return {
 			pos: undefined,
 			rest,

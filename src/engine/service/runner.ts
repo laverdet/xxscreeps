@@ -13,6 +13,9 @@ import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
 
 await importMods('driver');
 const isEntry = checkIsEntry();
+const log = config.runner.log ?? isEntry
+	? (message: string) => process.stderr.write(message)
+	: () => {};
 
 // Interrupt handler
 let break1: Effect | undefined;
@@ -55,7 +58,7 @@ try {
 				// Set up metadata and iterators for this tick
 				const { time } = message;
 				if (isEntry) {
-					process.stdout.write(`Tick ${time}: `);
+					process.stderr.write(`Tick ${time}: `);
 				}
 				const seen = new Set<string>();
 				const affinity = [ ...playerInstances.keys() ];
@@ -99,13 +102,9 @@ try {
 					if (intentRooms.length === 0) {
 						await shard.scratch.srem('activeUsers', [ userId ]);
 					} else {
-						if (isEntry) {
-							process.stdout.write(`+${instance.username}, `);
-						}
+						log(`+${instance.username}, `);
 						await instance.run(time, visibleRooms, intentRooms);
-						if (isEntry) {
-							process.stdout.write(`-${instance.username}, `);
-						}
+						log(`-${instance.username}, `);
 					}
 				});
 
@@ -116,9 +115,7 @@ try {
 						instance.disconnect();
 					}
 				}
-				if (isEntry) {
-					console.log('... done');
-				}
+				log('ran\n');
 				break;
 			}
 		}

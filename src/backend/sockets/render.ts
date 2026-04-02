@@ -1,9 +1,9 @@
 import type { ActionLog } from 'xxscreeps/game/object.js';
 import { bindRenderer } from 'xxscreeps/backend/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
 import { Variant } from 'xxscreeps/schema/index.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 
 // Base object renderer
 bindRenderer(RoomObject, object => ({

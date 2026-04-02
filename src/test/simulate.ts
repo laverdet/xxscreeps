@@ -10,10 +10,10 @@ import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
 import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 import 'xxscreeps/config/mods/import/game.js';
@@ -87,6 +87,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 
 			// Run simulation
 			const intentsByRoom = new Map<string, { userId: string; intents: RoomIntentPayload }[]>();
+			const playersThisTick = new Set<string>();
 			let roomInstances = new Map<string, Room>();
 			const that: Simulation = {
 				db,
@@ -113,6 +114,9 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 				},
 
 				async player(userId, task) {
+					assert(!playersThisTick.has(userId), `player '${userId}' already invoked this tick`);
+					playersThisTick.add(userId);
+
 					// Fetch game state for player
 					const [ intentRooms, visibleRooms ] = await Promise.all([
 						shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
@@ -137,6 +141,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						for (const [ userId, task ] of Object.entries(players)) {
 							await that.player(userId, task);
 						}
+						playersThisTick.clear();
 
 						// Initialize processor queue
 						const time = shard.time + 1;

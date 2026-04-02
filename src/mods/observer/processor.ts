@@ -9,6 +9,7 @@ declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { observer: typeof intents }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureObserver, 'observeRoom', {}, (observer, context, target: string) => {
 		if (checkObserveRoom(observer, target) === C.OK) {

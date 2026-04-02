@@ -123,7 +123,7 @@ export function compose(format: Format, interceptor: Interceptor) {
 }
 
 // Holds a constant that doesn't even get stored into the blob
-export function constant<Type extends number | string | {}>(value: Type): WithShapeAndType<any, Type> {
+export function constant<Type extends number | string>(value: Type): WithShapeAndType<any, Type> {
 	const format: ConstantFormat = { constant: value };
 	return format as never;
 }

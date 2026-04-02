@@ -4,13 +4,16 @@ import config from 'xxscreeps/config/index.js';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { negotiateResponderClient } from 'xxscreeps/utility/responder.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
 
 const isEntry = checkIsEntry();
+const log = config.processor.log ?? isEntry
+	? (message: string) => process.stderr.write(message)
+	: () => {};
 
 // Interrupt handler
 let halt: Effect | undefined;
@@ -64,8 +67,8 @@ async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
 		// Yield non-affinity rooms until there's no more, or it's time to check affinity again
 		for await (const roomName of consumeSortedSet(shard.scratch, queueKey, 0, 0)) {
 			yield roomName;
-
-			if (worker.checkAffinity) {
+			// nb: eslint ignore is automatically removed
+			if (worker.checkAffinity as unknown) {
 				continue loop;
 			}
 		}
@@ -145,9 +148,7 @@ try {
 							for await (const roomName of consumeRoomsQueue(worker, time)) {
 								worker.processed.push(roomName);
 								await worker.responder({ type: 'process', roomName, time });
-								if (isEntry) {
-									process.stdout.write(`${roomName}, `);
-								}
+								log(`${roomName}, `);
 							}
 							worker.idle = true;
 						});
@@ -162,15 +163,13 @@ try {
 			// Second processing phase. This waits until all player code and first phase processing has
 			// run.
 			case 'finalize':
+				log(`finalized tick ${currentTime}\n`);
 				// Run finalization in worker
-				await Fn.mapAsync(workers, async worker => {
+				await Promise.all(Fn.map(workers, async worker => {
 					if (worker.processed.length > 0) {
 						await worker.responder({ type: 'finalize', time: currentTime });
 					}
-				});
-				if (isEntry) {
-					console.log(`...completed tick ${currentTime}`);
-				}
+				}));
 				processing = false;
 				if (halted) {
 					// We check for interrupts at the end of tick
@@ -191,10 +190,10 @@ try {
 
 } finally {
 	// Close workers
-	await Fn.mapAsync(workers, async worker => {
+	await Promise.all(Fn.map(workers, async worker => {
 		worker.close();
 		return worker.wait();
-	});
+	}));
 
 	// Close connections
 	processorSubscription.disconnect();

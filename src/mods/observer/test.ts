@@ -1,5 +1,3 @@
-import type { GameConstructor } from 'xxscreeps/game/index.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
@@ -32,8 +30,8 @@ describe('Observer', () => {
 
 		await tick();
 
-		await poke('W2N2', undefined, (game: GameConstructor, room: Room) => {
-			assert.ok(room['#objects'].filter(o => o.constructor.name === 'ObserverSpy').length === 1, 'there should be one ObserverSpy in the room');
+		await poke('W2N2', undefined, (game, room) => {
+			assert.ok(room['#objects'].filter(object => object.constructor.name === 'ObserverSpy').length === 1, 'there should be one ObserverSpy in the room');
 		});
 
 		await player('100', Game => {
@@ -42,8 +40,8 @@ describe('Observer', () => {
 
 		await tick();
 
-		await poke('W2N2', undefined, (game: GameConstructor, room: Room) => {
-			assert.ok(!room['#objects'].some(o => o.constructor.name === 'ObserverSpy'), 'there should be no ObserverSpy anymore');
+		await poke('W2N2', undefined, (game, room) => {
+			assert.ok(!room['#objects'].some(object => object.constructor.name === 'ObserverSpy'), 'there should be no ObserverSpy anymore');
 		});
 
 		await player('100', Game => {

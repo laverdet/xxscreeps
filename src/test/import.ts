@@ -5,6 +5,7 @@ import { loadTerrain } from 'xxscreeps/driver/path-finder.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { processorTimeKey } from 'xxscreeps/engine/processor/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -14,7 +15,6 @@ import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
 import { Source } from 'xxscreeps/mods/source/source.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 
 // Read file
 const root = new URL('../../test/', import.meta.url);
@@ -29,7 +29,7 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 	let ii = 0;
 	type Metadata = Extract<Payload[string]['objects'], any[]>[any];
 	const saveObject = (object: RoomObject, xx: number, yy: number, fn?: (metadata: Metadata) => void) => {
-		const metadata = info.objects![ii++]!;
+		const metadata = info.objects![ii++];
 		object.id = metadata.id;
 		object.pos = new RoomPosition(xx, yy, room.name);
 		object['#posId'] = object.pos['#id'];

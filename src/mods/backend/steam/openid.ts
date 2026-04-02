@@ -23,7 +23,7 @@ SteamStrategy.prototype.authenticate = function(authenticate) {
 
 declare module 'openid/index.js' {
 	interface RelyingParty {
-		update(): void;
+		update: () => void;
 	}
 }
 

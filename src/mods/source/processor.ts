@@ -1,6 +1,7 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { search } from 'xxscreeps/driver/path-finder.js';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { iterateNeighbors } from 'xxscreeps/game/position.js';
@@ -10,12 +11,11 @@ import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor.j
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { StructureKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';
 
 registerHarvestProcessor(Source, (creep, source) => {
-	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER);
+	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER, 'harvest');
 	const energy = Math.min(source.energy, power);
 	const overflow = Math.max(energy - creep.store.getFreeCapacity('energy'), 0);
 	creep.store['#add'](C.RESOURCE_ENERGY, energy - overflow);
@@ -71,7 +71,10 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 		const body = [
 			...Fn.map(Fn.range(17), () => C.TOUGH),
 			...Fn.map(Fn.range(13), () => C.MOVE),
-			...Fn.concat(Fn.map(Fn.range(10), () => [ C.ATTACK, C.RANGED_ATTACK ])),
+			...Fn.pipe(
+				Fn.range(10),
+				$$ => Fn.map($$, () => [ C.ATTACK, C.RANGED_ATTACK ]),
+				$$ => Fn.concat($$)),
 		];
 		const newKeeper = Creep.create(keeperLair.pos, body, keeperName, '3');
 		newKeeper['#ageTime'] = Game.time + C.CREEP_LIFE_TIME - 1;

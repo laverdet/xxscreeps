@@ -12,8 +12,8 @@ import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { acquire } from 'xxscreeps/utility/async.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility.js';
 import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model.js';
 import { hooks } from './symbols.js';
@@ -164,6 +164,13 @@ export class PlayerInstance {
 					},
 					time,
 				};
+				// This means `processor.intentAbandonTimeout` is too fast for `runner.cpu.tickLimit` *
+				// `runner.concurrency` * active players * runner services. The user must be hard reset in
+				// this case because we don't know if their loop has been setup.
+				if (this.shard.time + 1 !== time) {
+					throw new Error(`User '${this.username}' has been left behind`);
+				}
+
 				// Allow driver connectors to access room blobs by waiting on this promise
 				await Promise.all([
 					(async () => {
@@ -171,14 +178,18 @@ export class PlayerInstance {
 						payload.roomBlobs = await Promise.all(Fn.map(visibleRooms,
 							roomName => this.shard.loadRoomBlob(roomName, time - 1)));
 						// Load unseen users
-						const userIds = Fn.concat(Fn.map(payload.roomBlobs, blob => {
-							const users = RoomSchema.read(blob)['#users'];
-							return Fn.concat(users.presence, users.extra);
-						}));
-						const newUserIds = Fn.reject(userIds, userId => this.seenUsers.has(userId));
-						const entries: [ string, string ][] = await Promise.all(Fn.map(newUserIds, async userId => {
+						const newUserIds = Fn.pipe(
+							payload.roomBlobs,
+							$$ => Fn.map($$, blob => {
+								const users = RoomSchema.read(blob)['#users'];
+								return Fn.concat([ users.presence, users.extra ]);
+							}),
+							$$ => Fn.concat($$),
+							$$ => Fn.reject($$, userId => this.seenUsers.has(userId)),
+						);
+						const entries = await Promise.all(Fn.map(newUserIds, async userId => {
 							this.seenUsers.add(userId);
-							return [ userId, (await this.shard.db.data.hget(User.infoKey(userId), 'username'))! ];
+							return [ userId, (await this.shard.db.data.hget(User.infoKey(userId), 'username'))! ] as const;
 						}));
 						if (entries.length !== 0) {
 							payload.usernames = Fn.fromEntries(entries);

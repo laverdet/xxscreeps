@@ -7,9 +7,9 @@ import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js
 import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { hooks } from 'xxscreeps/engine/processor/symbols.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import { World } from 'xxscreeps/game/map.js';
-import { Fn } from 'xxscreeps/utility/fn.js';
 import { makeBasicResponderHost } from 'xxscreeps/utility/responder.js';
 
 import 'xxscreeps/config/mods/import/game.js';
