@@ -105,7 +105,6 @@ export function getReactionProduct(mineral1: string, mineral2: string): Resource
 }
 
 export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefined, bodyPartsCount?: number) {
-	let mineralType: ResourceType;
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
 		() => checkTarget(creep, Creep),
@@ -116,22 +115,22 @@ export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefin
 		},
 		() => checkRange(lab, creep!, 1),
 		() => {
-			const nextMineralType = lab.mineralType;
+			const mineralType = lab.mineralType;
 			if (lab.store[C.RESOURCE_ENERGY] < C.LAB_BOOST_ENERGY) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
-			if (nextMineralType === undefined || lab.store[nextMineralType] < C.LAB_BOOST_MINERAL) {
+			if (mineralType === undefined || lab.store[mineralType] < C.LAB_BOOST_MINERAL) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
-			mineralType = nextMineralType;
-		},
-		() => {
-			const boosts: BoostsLookup = C.BOOSTS;
-			const nonBoostedCount = creep!.body.filter(
-				part => !part.boost && boosts[part.type]?.[mineralType]).length;
-			if (!nonBoostedCount || (bodyPartsCount && bodyPartsCount > nonBoostedCount)) {
-				return C.ERR_NOT_FOUND;
-			}
+			return chainIntentChecks(
+				() => {
+					const boosts: BoostsLookup = C.BOOSTS;
+					const nonBoostedCount = creep!.body.filter(
+						part => !part.boost && boosts[part.type]?.[mineralType]).length;
+					if (!nonBoostedCount || (bodyPartsCount && bodyPartsCount > nonBoostedCount)) {
+						return C.ERR_NOT_FOUND;
+					}
+				});
 		});
 }
 
