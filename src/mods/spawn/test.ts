@@ -1,7 +1,7 @@
 import type { StructureExtension } from './extension.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { Creep } from 'xxscreeps/mods/creep/creep.js';
+import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createExtension } from './extension.js';
 import { create } from './spawn.js';
@@ -127,4 +127,131 @@ describe('Spawn', () => {
 			assert(!Game.rooms.W1N1.controller?.my);
 		});
 	}));
+
+	describe('spawn stomping', () => {
+		// Spawn at (25,25), surrounded by hostile creeps on all 8 tiles
+		const surrounded = simulate({
+			W1N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(24, 24, 'W1N1'), [ C.MOVE ], 'h1', '101'));
+				room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.MOVE ], 'h2', '101'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 24, 'W1N1'), [ C.MOVE ], 'h3', '101'));
+				room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W1N1'), [ C.MOVE ], 'h4', '101'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.MOVE ], 'h5', '101'));
+				room['#insertObject'](createCreep(new RoomPosition(24, 26, 'W1N1'), [ C.MOVE ], 'h6', '101'));
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'h7', '101'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 26, 'W1N1'), [ C.MOVE ], 'h8', '101'));
+			},
+		});
+
+		test('stomp hostile when fully surrounded', () => surrounded(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'newCreep'), C.OK);
+			});
+			await tick(C.CREEP_SPAWN_TIME);
+			await player('100', Game => {
+				assert.ok(Game.creeps.newCreep);
+				assert(!Game.creeps.newCreep.spawning);
+				// Should spawn at TOP (25,24) — first direction in default order
+				assert(Game.creeps.newCreep.pos.isEqualTo(25, 24));
+				assert.strictEqual(Game.rooms.W1N1.find(C.FIND_TOMBSTONES).length, 1);
+			});
+			await player('101', Game => {
+				// h2 at TOP (25,24) should be stomped — first hostile in direction order
+				assert.strictEqual(Object.values(Game.creeps).length, 7);
+				assert(!Game.creeps.h2);
+			});
+		}));
+
+		// Preferred direction TOP blocked by hostile, but other directions open
+		const partialBlock = simulate({
+			W1N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.MOVE ], 'hostile', '101'));
+			},
+		});
+
+		test('no stomp when non-preferred directions are open', () => partialBlock(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'newCreep', {
+					directions: [ C.TOP ],
+				}), C.OK);
+			});
+			await tick(C.CREEP_SPAWN_TIME);
+			await player('101', Game => {
+				assert.ok(Game.creeps.hostile);
+			});
+			await player('100', Game => {
+				assert.ok(Game.spawns.Spawn1.spawning);
+				assert.strictEqual(Game.rooms.W1N1.find(C.FIND_TOMBSTONES).length, 0);
+			});
+		}));
+
+		// Surrounded by own creeps — no stomp target
+		const ownCreeps = simulate({
+			W1N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(24, 24, 'W1N1'), [ C.MOVE ], 'f1', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.MOVE ], 'f2', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 24, 'W1N1'), [ C.MOVE ], 'f3', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W1N1'), [ C.MOVE ], 'f4', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.MOVE ], 'f5', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(24, 26, 'W1N1'), [ C.MOVE ], 'f6', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'f7', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 26, 'W1N1'), [ C.MOVE ], 'f8', '100'));
+			},
+		});
+
+		test('no stomp when surrounded by own creeps', () => ownCreeps(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'newCreep'), C.OK);
+			});
+			await tick(C.CREEP_SPAWN_TIME);
+			await player('100', Game => {
+				// Spawn deferred — no hostile to stomp
+				assert.ok(Game.spawns.Spawn1.spawning);
+				// No tombstones — nobody died
+				assert.strictEqual(Game.rooms.W1N1.find(C.FIND_TOMBSTONES).length, 0);
+			});
+		}));
+
+		// 7 tiles blocked by own creeps, 1 by hostile — stomp the hostile
+		const mixedBlock = simulate({
+			W1N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(24, 24, 'W1N1'), [ C.MOVE ], 'f1', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.MOVE ], 'f2', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 24, 'W1N1'), [ C.MOVE ], 'f3', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W1N1'), [ C.MOVE ], 'f4', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.MOVE ], 'f5', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(24, 26, 'W1N1'), [ C.MOVE ], 'f6', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'f7', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(26, 26, 'W1N1'), [ C.MOVE ], 'hostile', '101'));
+			},
+		});
+
+		test('stomp hostile when all tiles blocked and one is hostile', () => mixedBlock(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1.spawnCreep([ C.MOVE ], 'newCreep'), C.OK);
+			});
+			await tick(C.CREEP_SPAWN_TIME);
+			await player('101', Game => {
+				assert.strictEqual(Object.values(Game.creeps).length, 0);
+			});
+			await player('100', Game => {
+				assert.ok(Game.creeps.newCreep);
+				assert(!Game.creeps.newCreep.spawning);
+				assert(Game.creeps.newCreep.pos.isEqualTo(26, 26));
+				assert.strictEqual(Game.rooms.W1N1.find(C.FIND_TOMBSTONES).length, 1);
+			});
+		}));
+	});
 });

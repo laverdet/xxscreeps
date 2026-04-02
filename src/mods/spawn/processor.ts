@@ -12,6 +12,7 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { buryCreep } from 'xxscreeps/mods/creep/tombstone.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assign } from 'xxscreeps/utility/utility.js';
@@ -200,19 +201,44 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 					user: creep['#user'],
 				});
 				const directions = new Set(spawn.spawning.directions ?? ALL_DIRECTIONS);
-				const direction = Fn.find(directions, direction => check(getPositionInDirection(creep.pos, direction)));
 
-				// If no direction was found then defer this creep
-				// TODO: Spawn stomp hostile creeps
-				if (direction === undefined) {
+				// Find first open preferred direction, remembering first hostile encountered
+				let spawnPos: RoomPosition | undefined;
+				let hostileCreep: Creep | undefined;
+				for (const dir of directions) {
+					const pos = getPositionInDirection(creep.pos, dir);
+					if (check(pos)) {
+						spawnPos = pos;
+						break;
+					}
+					if (!hostileCreep) {
+						const hostile = creep.room['#lookAt'](pos).find(
+							object => object instanceof Creep && object['#user'] !== spawn['#user']);
+						if (hostile) {
+							hostileCreep = hostile as Creep;
+						}
+					}
+				}
+
+				// All preferred directions blocked — only stomp if non-preferred are also blocked
+				if (!spawnPos && hostileCreep) {
+					const otherDirections = Fn.reject(ALL_DIRECTIONS, d => directions.has(d));
+					if (!Fn.some(otherDirections, dir => check(getPositionInDirection(creep.pos, dir)))) {
+						spawnPos = hostileCreep.pos;
+						buryCreep(hostileCreep);
+					}
+				}
+
+				if (!spawnPos) {
+					// No valid position — retry next tick
 					spawn.spawning['#spawnTime'] = Game.time + 1;
 					return;
 				}
 
-				// Creep can be spawned
+				// Place the creep
 				const hasClaim = creep.body.some(part => part.type === C.CLAIM);
 				creep['#ageTime'] = Game.time + (hasClaim ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME) - 1;
-				creep.room['#moveObject'](creep, getPositionInDirection(creep.pos, direction));
+				creep.room['#moveObject'](creep, spawnPos);
 			}
 			spawn.spawning = null;
 			context.setActive();
