@@ -2,6 +2,7 @@ import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game/index.js';
@@ -10,7 +11,6 @@ import { registerObstacleChecker } from 'xxscreeps/game/path-finder/index.js';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { compose, declare, optional, struct, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { createRuin } from './ruin.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;

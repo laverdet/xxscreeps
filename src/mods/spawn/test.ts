@@ -2,7 +2,6 @@ import type { StructureExtension } from './extension.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
-import { create as createExtractor } from 'xxscreeps/mods/mineral/extractor.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createExtension } from './extension.js';
