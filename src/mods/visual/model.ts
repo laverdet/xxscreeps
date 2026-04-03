@@ -1,4 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { VisualEntry } from 'xxscreeps/mods/visual/visual.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Visual from 'xxscreeps/mods/visual/visual.js';
@@ -10,7 +11,40 @@ export function getVisualChannel(shard: Shard, userId: string) {
 	return new Channel<Message>(shard.pubsub, `user/${userId}/visual`);
 }
 
-const visualsReader = makeReader(Visual.schema);
+export const visualsReader = makeReader(Visual.schema);
+
+export function decodeMapVisuals(visuals: Iterable<VisualEntry>) {
+	return Fn.map(visuals, visual => {
+		switch (visual[Variant]) {
+			case 'l': {
+				assertVariant(visual, 'l');
+				const p1 = Visual.decodeRoomPosition({ x: visual.x1, y: visual.y1 });
+				const p2 = Visual.decodeRoomPosition({ x: visual.x2, y: visual.y2 });
+				return Object.assign(visual, {
+					x1: p1.x,
+					y1: p1.y,
+					n1: p1.n,
+					x2: p2.x,
+					y2: p2.y,
+					n2: p2.n,
+				});
+			}
+			case 'p': {
+				assertVariant(visual, 'p');
+				return Object.assign(visual, {
+					points: visual.points.map(point => Visual.decodeRoomPosition({ x: point[0], y: point[1] })),
+				});
+			}
+			case 'c':
+			case 'r':
+			case 't': {
+				const pos = Visual.decodeRoomPosition({ x: visual.x, y: visual.y });
+				return Object.assign(visual, { x: pos.x, y: pos.y, n: pos.n });
+			}
+			default: return visual;
+		}
+	});
+}
 
 export async function loadVisuals(shard: Shard, userId: string, roomName: string) {
 	const fragment = `user/${userId}/visual${shard.time % 2}`;
@@ -24,35 +58,9 @@ export async function loadVisuals(shard: Shard, userId: string, roomName: string
 		let visualsString = '';
 		if (blob) {
 			const visuals = visualsReader(blob);
-			const decoded = isMapVisual ? Fn.map(visuals, visual => {
-				switch (visual[Variant]) {
-					case 'l': {
-						assertVariant(visual, 'l');
-						const p1 = Visual.decodeRoomPosition({ x: visual.x1, y: visual.y1 });
-						const p2 = Visual.decodeRoomPosition({ x: visual.x2, y: visual.y2 });
-						return Object.assign(visual, {
-							x1: p1.x,
-							y1: p1.y,
-							n1: p1.n,
-							x2: p2.x,
-							y2: p2.y,
-							n2: p2.n,
-						});
-					}
-					case 'p': {
-						assertVariant(visual, 'p');
-						return Object.assign(visual, {
-							...visual,
-							points: visual.points.map(point => Visual.decodeRoomPosition({ x: point[0], y: point[1] })),
-						});
-					}
-					default: return visual;
-				}
-			}) : visuals;
+			const decoded = isMapVisual ? decodeMapVisuals(visuals) : visuals;
 			for (const visual of decoded) {
-				// @ts-expect-error
-				visual.t = visual[Variant];
-				visualsString += stringifyInherited(visual) + '\n';
+				visualsString += stringifyInherited(Object.assign(visual, { t: visual[Variant] })) + '\n';
 			}
 		}
 		return visualsString;

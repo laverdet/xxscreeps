@@ -2,14 +2,17 @@ import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { GameMap } from 'xxscreeps/game/map.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { extend } from 'xxscreeps/utility/utility.js';
-import { RoomVisual, flush } from './visual.js';
+import { MapVisual, RoomVisual, flush } from './visual.js';
 
-// Export `RoomVisual` to runtime globals
+// Export `RoomVisual` and `MapVisual` to runtime globals
 registerGlobal(RoomVisual);
+registerGlobal(MapVisual);
 declare module 'xxscreeps/game/runtime.js' {
-	interface Global { RoomVisual: typeof RoomVisual }
+	interface Global {
+		RoomVisual: typeof RoomVisual;
+		MapVisual: typeof MapVisual;
+	}
 }
-registerGlobal(RoomVisual);
 
 // Receive and send visuals payload from driver
 hooks.register('runtimeConnector', {
@@ -42,17 +45,17 @@ extend(Room, {
 declare module 'xxscreeps/game/map.js' {
 	interface GameMap {
 		/**
-		 * A `RoomVisual` object for the map. You can use this object to draw simple shapes (lines,
+		 * A `MapVisual` object for the map. You can use this object to draw simple shapes (lines,
 		 * circles, text labels).
 		 */
-		readonly visual: RoomVisual;
+		readonly visual: MapVisual;
 	}
 }
 
 extend(GameMap, {
 	visual: {
 		get() {
-			const value = new RoomVisual('map');
+			const value = new MapVisual();
 			Object.defineProperty(this, 'visual', {
 				value,
 				configurable: true,
