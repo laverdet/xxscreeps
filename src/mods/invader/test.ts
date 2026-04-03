@@ -8,19 +8,20 @@ import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 //   BOTTOM -> W7N6 (y=49 edge), LEFT -> W8N7 (x=0 edge)
 
 describe('Invader exit filtering', () => {
-	const minerPos = new RoomPosition(25, 25, 'W7N7');
+	const dummyPos = new RoomPosition(25, 25, 'W7N7');
 
 	// Baseline: all neighbors uncontrolled — invaders should spawn
 	const uncontrolled = simulate({
 		W7N7: room => {
-			room['#insertObject'](createCreep(minerPos, [ C.MOVE ], 'miner', '100'));
+			// Player creep activates the room for processing; energy threshold triggers invaders
+			room['#insertObject'](createCreep(dummyPos, [ C.MOVE ], 'dummy', '100'));
 			room['#cumulativeEnergyHarvested'] = C.INVADERS_ENERGY_GOAL * 3;
 		},
 	});
 
 	test('invaders spawn in uncontrolled room', () => uncontrolled(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.miner.move(C.TOP);
+			Game.creeps.dummy.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
@@ -32,7 +33,8 @@ describe('Invader exit filtering', () => {
 	// All exits lead to owned rooms — no invaders should spawn
 	const allOwned = simulate({
 		W7N7: room => {
-			room['#insertObject'](createCreep(minerPos, [ C.MOVE ], 'miner', '100'));
+			// Player creep activates the room for processing; energy threshold triggers invaders
+			room['#insertObject'](createCreep(dummyPos, [ C.MOVE ], 'dummy', '100'));
 			room['#cumulativeEnergyHarvested'] = C.INVADERS_ENERGY_GOAL * 3;
 		},
 		W7N8: room => {
@@ -55,7 +57,7 @@ describe('Invader exit filtering', () => {
 
 	test('no invaders when all exits lead to owned rooms', () => allOwned(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.miner.move(C.TOP);
+			Game.creeps.dummy.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
@@ -67,7 +69,8 @@ describe('Invader exit filtering', () => {
 	// All exits lead to reserved rooms — no invaders should spawn
 	const allReserved = simulate({
 		W7N7: room => {
-			room['#insertObject'](createCreep(minerPos, [ C.MOVE ], 'miner', '100'));
+			// Player creep activates the room for processing; energy threshold triggers invaders
+			room['#insertObject'](createCreep(dummyPos, [ C.MOVE ], 'dummy', '100'));
 			room['#cumulativeEnergyHarvested'] = C.INVADERS_ENERGY_GOAL * 3;
 		},
 		W7N8: room => {
@@ -90,7 +93,7 @@ describe('Invader exit filtering', () => {
 
 	test('no invaders when all exits lead to reserved rooms', () => allReserved(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.miner.move(C.TOP);
+			Game.creeps.dummy.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
@@ -103,7 +106,8 @@ describe('Invader exit filtering', () => {
 	// LEFT exit positions have x=0
 	const partialBlock = simulate({
 		W7N7: room => {
-			room['#insertObject'](createCreep(minerPos, [ C.MOVE ], 'miner', '100'));
+			// Player creep activates the room for processing; energy threshold triggers invaders
+			room['#insertObject'](createCreep(dummyPos, [ C.MOVE ], 'dummy', '100'));
 			room['#cumulativeEnergyHarvested'] = C.INVADERS_ENERGY_GOAL * 3;
 		},
 		W7N8: room => {
@@ -121,9 +125,40 @@ describe('Invader exit filtering', () => {
 		// W8N7 LEFT — not configured, stays uncontrolled
 	});
 
+	// W1N1 has exits TOP -> W1N2 (has controller) and BOTTOM -> W1N0 (highway, no controller).
+	// TOP is owned, so invaders should only spawn at BOTTOM (y=49) — the highway exit.
+	// This exercises the #user === undefined case (rooms without controllers).
+	const highwayExit = simulate({
+		W1N1: room => {
+			// Player creep activates the room for processing; energy threshold triggers invaders
+			room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W1N1'), [ C.MOVE ], 'dummy', '100'));
+			room['#cumulativeEnergyHarvested'] = C.INVADERS_ENERGY_GOAL * 3;
+		},
+		W1N2: room => {
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#level'] = 3;
+		},
+		// W1N0 is a highway room (no controller, #user === undefined) — not configured
+	});
+
+	test('invaders spawn at exits to highway rooms', () => highwayExit(async ({ player, tick }) => {
+		await player('100', Game => {
+			Game.creeps.dummy.move(C.TOP);
+		});
+		await tick();
+		await player('100', Game => {
+			const invaders = Game.rooms.W1N1.find(C.FIND_HOSTILE_CREEPS);
+			assert.ok(invaders.length > 0, 'invaders should spawn at exits to highway rooms');
+			for (const invader of invaders) {
+				assert.strictEqual(invader.pos.y, 49,
+					`invader at (${invader.pos.x},${invader.pos.y}) should be on BOTTOM exit (y=49)`);
+			}
+		});
+	}));
+
 	test('invaders only at exits to uncontrolled rooms', () => partialBlock(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.miner.move(C.TOP);
+			Game.creeps.dummy.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {

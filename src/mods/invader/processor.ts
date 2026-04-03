@@ -1,4 +1,5 @@
 import { registerIntentProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
@@ -27,46 +28,46 @@ registerRoomTickProcessor((room, context) => {
 		if (!exitDirections) {
 			return;
 		}
-		const directions = Object.entries(exitDirections);
-		context.task(
-			Promise.all(directions.map(([ , neighborName ]) =>
-				context.shard.loadRoom(neighborName, undefined, true).catch(() => null))),
-			neighbors => {
-				// Build set of allowed directions (neighbor is uncontrolled)
-				const allowedDirs = new Set(
-					directions
-						.filter((_, ii) => neighbors[ii]?.['#user'] === null)
-						.map(([ dir ]) => Number(dir)));
+		const entries = Object.entries(exitDirections);
+		// Load neighbor rooms; #user: string = owned/reserved, null = unowned, undefined = no controller
+		context.task(async function() {
+			const results = await Promise.all(
+				Fn.map(entries, async ([ dir, neighborName ]) => {
+					const neighbor = await context.shard.loadRoom(neighborName, undefined, true).catch(() => null);
+					const user = neighbor?.['#user'];
+					return user === null || user === undefined ? Number(dir) : undefined;
+				}));
+			return new Set(Fn.filter(results, (dir): dir is number => dir !== undefined));
+		}(), (allowedDirs: Set<number>) => {
+			// Filter exit positions to allowed directions only
+			const validExits = [ ...Fn.filter(room.find(C.FIND_EXIT), pos => {
+				if (pos.x === 0) return allowedDirs.has(C.LEFT);
+				if (pos.x === 49) return allowedDirs.has(C.RIGHT);
+				if (pos.y === 0) return allowedDirs.has(C.TOP);
+				if (pos.y === 49) return allowedDirs.has(C.BOTTOM);
+				return false;
+			}) ];
+			if (validExits.length === 0) {
+				return;
+			}
 
-				// Filter exit positions to allowed directions only
-				const validExits = room.find(C.FIND_EXIT).filter(pos => {
-					if (pos.x === 0) return allowedDirs.has(C.LEFT);
-					if (pos.x === 49) return allowedDirs.has(C.RIGHT);
-					if (pos.y === 0) return allowedDirs.has(C.TOP);
-					return allowedDirs.has(C.BOTTOM);
-				});
-				if (validExits.length === 0) {
-					return;
+			// Only consume the energy budget when invaders actually spawn
+			room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
+
+			// Find raid origin from valid exits
+			const origin = validExits[Math.floor(validExits.length * Math.random())];
+			validExits.sort(mappedNumericComparator(pos => origin.getRangeTo(pos)));
+
+			// Send the boys
+			activateNPC(room, '2');
+			for (let ii = 0; ii < 3; ++ii) {
+				const role = ([ 'melee', 'healer', 'ranged' ] as Role[])[ii % 3];
+				if (ii >= validExits.length) {
+					break;
 				}
-
-				// Only consume the energy budget when invaders actually spawn
-				room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
-
-				// Find raid origin from valid exits
-				const origin = validExits[Math.floor(validExits.length * Math.random())];
-				validExits.sort((a, b) => origin.getRangeTo(a) - origin.getRangeTo(b));
-
-				// Send the boys
-				activateNPC(room, '2');
-				for (let ii = 0; ii < 3; ++ii) {
-					const role = ([ 'melee', 'healer', 'ranged' ] as Role[])[ii % 3];
-					if (ii >= validExits.length) {
-						break;
-					}
-					room['#insertObject'](create(validExits[ii], role, 'small', Game.time + C.CREEP_LIFE_TIME));
-				}
-			},
-		);
+				room['#insertObject'](create(validExits[ii], role, 'small', Game.time + C.CREEP_LIFE_TIME));
+			}
+		});
 	}
 });
 
