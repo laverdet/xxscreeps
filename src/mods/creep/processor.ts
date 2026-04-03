@@ -299,9 +299,11 @@ registerObjectPreTickProcessor(Creep, (creep, context) => {
 registerObjectTickProcessor(Creep, (creep, context) => {
 
 	// Check creep death — apply TOUGH damage reduction before updating hits
-	if (creep.tickRawDamage > 0 || creep.tickHealing > 0) {
-		const effectiveDamage = creep.tickRawDamage > 0 ? calculateEffectiveDamage(creep, creep.tickRawDamage) : 0;
-		creep.hits += creep.tickHealing - effectiveDamage;
+	const rawDamage = creep.tickRawDamage ?? 0;
+	const healing = creep.tickHealing ?? 0;
+	if (rawDamage > 0 || healing > 0) {
+		const effectiveDamage = rawDamage > 0 ? calculateEffectiveDamage(creep, rawDamage) : 0;
+		creep.hits += healing - effectiveDamage;
 		creep.tickRawDamage = 0;
 		creep.tickHealing = 0;
 		recalculateBody(creep);

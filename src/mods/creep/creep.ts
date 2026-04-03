@@ -59,9 +59,9 @@ const shape = struct(objectFormat, {
 
 export class Creep extends withOverlay(RoomObject, shape) {
 	/** @internal — raw incoming damage this tick (before TOUGH reduction), always >= 0 */
-	tickRawDamage = 0;
+	declare tickRawDamage: number | undefined;
 	/** @internal — raw healing received this tick, always >= 0 */
-	tickHealing = 0;
+	declare tickHealing: number | undefined;
 
 	constructor(idOrArg1?: any, arg2?: any) {
 		super(typeof idOrArg1 === 'string' ? undefined : idOrArg1, arg2);
@@ -119,7 +119,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		if (this.spawning) {
 			return;
 		}
-		this.tickRawDamage += power;
+		this.tickRawDamage = (this.tickRawDamage ?? 0) + power;
 		if (source) {
 			appendEventLog(this.room, {
 				event: C.EVENT_ATTACK,
