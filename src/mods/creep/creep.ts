@@ -26,7 +26,7 @@ import { assign } from 'xxscreeps/utility/utility.js';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 type BoostEffects = Partial<Record<string, number>>;
-type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
+export type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
 
 type MoveToOptions = FindPathOptions & {
 	noPathFinding?: boolean;
@@ -58,10 +58,10 @@ const shape = struct(objectFormat, {
 });
 
 export class Creep extends withOverlay(RoomObject, shape) {
-	/** @internal */
-	declare tickHitsDelta: number | undefined;
 	/** @internal — raw incoming damage this tick (before TOUGH reduction), always >= 0 */
-	declare tickDamageTaken: number | undefined;
+	tickRawDamage = 0;
+	/** @internal — raw healing received this tick, always >= 0 */
+	tickHealing = 0;
 
 	constructor(idOrArg1?: any, arg2?: any) {
 		super(typeof idOrArg1 === 'string' ? undefined : idOrArg1, arg2);
@@ -119,8 +119,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		if (this.spawning) {
 			return;
 		}
-		this.tickHitsDelta = (this.tickHitsDelta ?? 0) - power;
-		this.tickDamageTaken = (this.tickDamageTaken ?? 0) + power;
+		this.tickRawDamage += power;
 		if (source) {
 			appendEventLog(this.room, {
 				event: C.EVENT_ATTACK,
