@@ -1,5 +1,5 @@
 import { importMods } from 'xxscreeps/config/mods/index.js';
-import { flush } from './context.js';
+import { flush, summary } from './context.js';
 import './import.js';
 
 await importMods('test');
@@ -7,4 +7,8 @@ try {
 	await flush();
 } catch (err) {
 	console.log(err);
+	process.exitCode = 1;
 }
+summary();
+// Force exit — test modules hold db/shard connections that keep the event loop alive
+process.exit();

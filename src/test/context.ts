@@ -20,6 +20,15 @@ const checkFilter = (name: string) => {
 
 let context: Context | undefined = makeFrame();
 const stack: Context[] = [];
+let passed = 0;
+let failed = 0;
+const testTimeout = 10000;
+
+// Catch unhandled rejections so async failures don't vanish silently
+process.on('unhandledRejection', reason => {
+	++failed;
+	console.log('\nUnhandled rejection:', reason);
+});
 
 export async function flush() {
 	if (!context) {
@@ -28,11 +37,20 @@ export async function flush() {
 	for (const test of context.tests) {
 		await test();
 	}
-	console.log();
+	if (argv.length === 0 && context.tests.length > 0) {
+		process.stdout.write('\n');
+	}
 	for (const child of context.children) {
 		await child();
 	}
 	context = undefined;
+}
+
+export function summary() {
+	console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed`);
+	if (failed > 0) {
+		process.exitCode = 1;
+	}
 }
 
 export function describe(name: string, fn: Callback): void {
@@ -43,7 +61,7 @@ export function describe(name: string, fn: Callback): void {
 	}
 	context.children.push(async () => {
 		if (argv.length === 0) {
-			process.stdout.write('  '.repeat(stack.length) + name);
+			process.stdout.write('  '.repeat(stack.length) + name + ' ');
 		}
 		const frame = makeFrame(name);
 		stack.push(context!);
@@ -65,16 +83,25 @@ export function test(name: string, fn: Callback) {
 	}
 	context.tests.push(async () => {
 		try {
-			await fn();
+			let timer: NodeJS.Timeout;
+			await Promise.race([
+				Promise.resolve(fn()).finally(() => clearTimeout(timer)),
+				new Promise((_resolve, reject) => {
+					timer = setTimeout(() => reject(new Error(`Test "${name}" timed out after ${testTimeout}ms`)), testTimeout);
+				}),
+			]);
+			++passed;
 			if (argv.length === 0) {
 				process.stdout.write('.');
 			}
-		} catch (err: any) {
+		} catch (err) {
+			++failed;
 			const names = [ ...stack.map(frame => frame.name), context?.name, name ].filter(nonNullPredicate);
 			if (argv.length === 0) {
-				console.log(`\nTest "${name}" failed. Isolate with: npx xxscreeps test ${names.map(name => `"${name}"`).join(' ')}`);
+				console.log(`\n  FAIL: ${name}`);
+				console.log(`  Isolate with: npx xxscreeps test ${names.map(nn => `"${nn}"`).join(' ')}`);
 			}
-			console.log(err.stack);
+			console.log(err);
 		}
 	});
 }
