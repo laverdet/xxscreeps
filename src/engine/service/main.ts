@@ -32,6 +32,7 @@ handleInterrupt(() => {
 	halted = true;
 	halt?.();
 	tickDelay?.resolve(false);
+	serviceChannel.publish({ type: 'shutdown' });
 	unwatch?.();
 });
 
@@ -71,9 +72,11 @@ try {
 
 	// Game loop
 	while (!halted) {
-		const timeStartedLoop = Date.now();
-		performanceTimer.start();
+		let timeStartedLoop!: number;
 		await gameMutex.scope(async () => {
+			timeStartedLoop = Date.now();
+			performanceTimer.start();
+
 			// Initialize
 			const time = shard.time + 1;
 			const serviceMessages = serviceChannel.iterable();

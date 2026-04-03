@@ -26,6 +26,7 @@ initializeGameEnvironment();
 
 // Initialize services
 const backendContext = await BackendContext.connect();
+hooks.makeIterated('backendReady')(backendContext.db, backendContext.shard);
 const koa = new Koa<State, Context>();
 const router = new Router<State, Context>();
 
