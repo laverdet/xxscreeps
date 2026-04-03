@@ -1,4 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { VisualEntry } from 'xxscreeps/mods/visual/visual.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Visual from 'xxscreeps/mods/visual/visual.js';
@@ -12,7 +13,7 @@ export function getVisualChannel(shard: Shard, userId: string) {
 
 export const visualsReader = makeReader(Visual.schema);
 
-export function decodeMapVisuals(visuals: Iterable<any>) {
+export function decodeMapVisuals(visuals: Iterable<VisualEntry>) {
 	return Fn.map(visuals, visual => {
 		switch (visual[Variant]) {
 			case 'l': {
@@ -31,15 +32,14 @@ export function decodeMapVisuals(visuals: Iterable<any>) {
 			case 'p': {
 				assertVariant(visual, 'p');
 				return Object.assign(visual, {
-					...visual,
-					points: visual.points.map((point: any) => Visual.decodeRoomPosition({ x: point[0], y: point[1] })),
+					points: visual.points.map(point => Visual.decodeRoomPosition({ x: point[0], y: point[1] })),
 				});
 			}
 			case 'c':
 			case 'r':
 			case 't': {
-				const p = Visual.decodeRoomPosition({ x: visual.x, y: visual.y });
-				return Object.assign(visual, { x: p.x, y: p.y, n: p.n });
+				const pos = Visual.decodeRoomPosition({ x: visual.x, y: visual.y });
+				return Object.assign(visual, { x: pos.x, y: pos.y, n: pos.n });
 			}
 			default: return visual;
 		}
@@ -60,8 +60,7 @@ export async function loadVisuals(shard: Shard, userId: string, roomName: string
 			const visuals = visualsReader(blob);
 			const decoded = isMapVisual ? decodeMapVisuals(visuals) : visuals;
 			for (const visual of decoded) {
-				visual.t = visual[Variant];
-				visualsString += stringifyInherited(visual) + '\n';
+				visualsString += stringifyInherited(Object.assign(visual, { t: visual[Variant] })) + '\n';
 			}
 		}
 		return visualsString;
