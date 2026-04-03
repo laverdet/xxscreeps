@@ -11,63 +11,82 @@ open the source files listed at the end.
 ## The Big Picture
 
 ```text
-      ┌──────────────────────────────────────────────────────────────┐
-      │                          Database                            │
-      │                      (keyval / binary)                       │
-      └────────┬──────────────────▲──────────────────┬───────────────┘
-               │                  │                  │
-           read blob          save blob          read blob
-               │                  │                  │
-               ▼                  │                  ▼
+                            ┌───────────────┐
+                            │   Main Loop   │
+                            │  (tick clock) │
+                            │               │
+                            │ advances time │
+                            │ sends events  │
+                            │ to services   │
+                            └──┬─────┬────┬─┘
+                       run     │  process │ tick
+                 ┌─────────────┘     │    └──────────────┐
+                 ▼                   ▼                   ▼
       ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
       │     Runner      │  │    Processor    │  │     Backend     │
       │  (player code)  │  │   (game logic)  │  │   (HTTP + WS)   │
       │                 │  │                 │  │                 │
-      │  binary blob    │  │  binary blob    │  │  subscribes to  │
-      │    ▼            │  │    ▼            │  │  room channels  │
-      │  withOverlay    │  │  withOverlay    │  │                 │
-      │  ┌───────────┐  │  │  ┌───────────┐  │  │  loads blob     │
-      │  │ Creep     │  │  │  │ Creep     │  │  │    ▼            │
-      │  │ .hits     │  │  │  │ .hits     │  │  │  pushes diffs   │
-      │  │ .name     │  │  │  │ .tickRaw  │  │  │  to browser     │
-      │  └───────────┘  │  │  │  Damage   │  │  │  via websocket  │
-      │                 │  │  └───────────┘  │  │                 │
-      │  player code    │  │                 │  └─────────────────┘
-      │  runs here      │  │  intent procs   │          ▲
-      │                 │  │  tick procs     │          │
-      └────────┬────────┘  └────────┬────────┘      didUpdate
-               │ intents          ▲ └─────────────► (channel)
-               └──────────────────┘
-```
+      │  binary blob    │  │  binary blob    │  │  loads blob     │
+      │    ▼            │  │    ▼            │  │    ▼            │
+      │  withOverlay    │  │  withOverlay    │  │  pushes diffs   │
+      │  ┌───────────┐  │  │  ┌───────────┐  │  │  to browser     │
+      │  │ Creep     │  │  │  │ Creep     │  │  │  via websocket  │
+      │  │ .hits     │  │  │  │ .hits     │  │  │                 │
+      │  │ .name     │  │  │  │ .tickRaw  │  │  │  uses didUpdate │
+      │  └───────────┘  │  │  │  Damage   │  │  │  to skip rooms  │
+      │                 │  │  └───────────┘  │  │  that didn't    │
+      │  player code    │  │                 │  │  change         │
+      │  runs here      │  │  intent procs   │  └────────▲────────┘
+      │                 │  │  tick procs     │           │
+      └────────▲────────┘  └────────▲────────┘           │
+               │                    │                    │
+         read blobs +      read blobs + intents       read blobs
+         write intents        save blobs                 │
+               │                    │                    │
+      ┌────────▼────────────────────▼────────────────────┴───────────┐
+      │                          Database                            │
+      │                      (keyval / binary)                       │
+      └──────────────────────────────────────────────────────────────┘
 ```
 
-- Three separate services with separate JS heaps.
-- Binary room blobs are the only shared state.
-- Each service rebuilds its own overlay-backed objects over the shared
-  bytes. JS object instances never cross the boundary.
-- Processor publishes `didUpdate` on room channels after saving. The
-  backend subscribes, loads the new blob, and pushes diffs to the client.
+- Four services, each with its own JS heap: main loop, runner,
+  processor, and backend.
+- The main loop is the tick clock. It is the only service that updates
+  the shard's `"time"` and sends tick events to the other three.
+- Binary room blobs are the data exchange format — each service loads
+  its own readonly copy. `withOverlay()` lazily materializes JS objects
+  from the binary buffer (see [Why Blobs Matter](#why-blobs-matter)).
+  JS object instances never cross service boundaries.
+- Backend listens to the main loop's `tick` event to know when to
+  refresh. It uses `didUpdate` as an optimization to skip refetching
+  rooms that haven't changed. Backend is optional — the launcher
+  supports `--no-backend` for headless operation.
+- All services can run on different machines. All except the main loop
+  can have multiple instances.
 
 ---
 
 ## Tick Flow
 
 ```text
-  main loop
+  main loop (src/engine/service/main.ts)
      │
-     ├─ advance tick
+     ├─ advance shard time (only service that writes time)
+     ├─ publish `tick` ────────────► backend (push new state to browser)
      ├─ publish `run` ─────────────► runner
      └─ publish `process` ─────────► processor
           │                            │
-          │  (both run concurrently)   │
+          │  (runner + processor run   │
+          │    concurrently)           │
           │                            │
           │  runner:                   │  processor:
-          │   load room blobs T-1      │  wait for intents or timeout
-          │   execute player code      │  pre-tick hooks
-          │   publish intents ────────►   intent processors
-          │                            │  movement + tick processors
-          │                            │  finalize room
-          │                            │  save room blob at T
+          │   load room blobs T-1      │   load room blobs T-1
+          │   execute player code      │   wait for intents or timeout
+          │   publish intents ─────────►   pre-tick hooks
+          │                            │   intent processors
+          │                            │   movement + tick processors
+          │                            │   finalize room
+          │                            │   save room blob at T
           │                            │
           └─ wait for both to finish  ─┘
 ```
@@ -75,10 +94,14 @@ open the source files listed at the end.
 - Player code runs inside `isolated-vm`, a separate V8 isolate with its
   own heap. This is how CPU limits are enforced and why the runner can
   be safely abandoned — crashing player code cannot affect the engine.
+- There is also an `unsafeSandbox` mode that runs player code in `vm`
+  instead of `isolated-vm`. This is faster and useful when you're only
+  running your own code, but it uses regular `Symbol` primitives instead
+  of private symbols, so the player could access otherwise-hidden
+  engine state.
 - Runner work is best-effort. It can crash or miss the deadline.
 - Processor work is authoritative. Rooms must always be processed.
 - Slow runner intents can be abandoned so the shard keeps moving.
-- Runner and processor can run on different machines.
 
 ---
 
@@ -211,6 +234,24 @@ Design flags so the zero value is the common/default case — e.g.,
 `#inactive` (default `false` = active) rather than `#active` (which
 would need to be set on every object).
 
+### Schema Archive
+
+The schema system archives previously-seen binary formats in
+`screeps/archive/`. If you touch any part of a schema — by modifying
+the source or changing which mods are loaded — the binary format will be
+unrecognizable to code expecting the old layout.
+
+Each room blob stores a version alongside its data. When a service
+encounters a blob with an outdated format, it uses the archive to
+transparently upgrade: removed fields are dropped, new fields are
+zero-initialized. This keeps rooms readable across schema changes
+without requiring a manual migration step.
+
+The archive also contains [Kaitai](https://kaitai.io/) (`.ksy`) format
+descriptors. You can take a blob and its `.ksy` file to
+https://ide.kaitai.io and visually inspect every field in the binary
+layout — a very useful debugging tool.
+
 ---
 
 ## Overlay-Backed Fields Need `declare`
@@ -289,18 +330,25 @@ Common hook surfaces in this architecture:
 | --- | --- | --- | --- |
 | `#field` | No | No (class-scoped only) | True JS private slot |
 | `declare field` | Depends on who assigns it | Yes | None (TypeScript-only) |
-| `this['#field']` | No (babel strips from enumeration) | Yes | Regular property, hidden by convention |
+| `this['#field']` | No | Yes | Private-symbol property, truly hidden |
 
 **`#field`** is true JS privacy — only the class that defines it can
 touch it. Too restrictive for engine state that multiple mods or
 processor files need to coordinate on.
 
-**`this['#field']`** solves that. It's a normal string-keyed property
-that any file can read or write (`this['#ageTime']` is set in
-`creep.ts`, read in `processor.ts`). A babel transform converts these
-to symbol-based access at runtime — symbols don't appear in
-enumeration, so player code won't see them. It's hidden, not enforced.
-This is the workhorse for cross-file engine internals.
+**`this['#field']`** solves that. It's readable and writable from any
+file (`this['#ageTime']` is set in `creep.ts`, read in
+`processor.ts`). A babel transform converts these to **private symbol**
+access at runtime. Private symbols are a v8 / `isolated-vm` feature
+distinct from regular `Symbol` primitives — they are accessible only if
+you hold a handle to the symbol and cannot be discovered through
+enumeration or any other mechanism. This is important because it
+protects sensitive engine state (room observers, `creep.saying`, etc.)
+from player code.
+
+In `unsafeSandbox` mode (`vm` instead of `isolated-vm`), regular
+`Symbol` primitives are used instead. The properties are still hidden
+from enumeration, but a determined player could discover them.
 
 **`declare field`** has no runtime presence at all. It tells TypeScript
 a property exists without emitting constructor code, so it won't shadow
@@ -340,6 +388,7 @@ a prototype getter installed by `withOverlay()`.
 | Processor | `src/engine/processor/room.ts` |
 | Room persistence | `src/engine/db/shard.ts` |
 | Overlay system | `src/schema/overlay.ts` |
+| Schema archive | `screeps/archive/` |
 | Backend room socket | `src/backend/sockets/room.ts` |
 | Backend server | `src/backend/server.ts` |
 | Base game object | `src/game/object.ts` |
