@@ -34,9 +34,9 @@ open the source files listed at the end.
       │                 │  │  └───────────┘  │  │                 │
       │  player code    │  │                 │  └─────────────────┘
       │  runs here      │  │  intent procs   │          ▲
-      │                 │  │  tick procs      │          │
-      └────────┬────────┘  └────────┬─────────┘   didUpdate
-               │ intents          ▲ └──────────►  (channel)
+      │                 │  │  tick procs     │          │
+      └────────┬────────┘  └────────┬────────┘      didUpdate
+               │ intents          ▲ └─────────────► (channel)
                └──────────────────┘
 ```
 ```
@@ -62,14 +62,14 @@ open the source files listed at the end.
           │  (both run concurrently)   │
           │                            │
           │  runner:                   │  processor:
-          │   load room blobs T-1     │   wait for intents or timeout
-          │   execute player code     │   pre-tick hooks
+          │   load room blobs T-1      │  wait for intents or timeout
+          │   execute player code      │  pre-tick hooks
           │   publish intents ────────►   intent processors
-          │                           │   movement + tick processors
-          │                           │   finalize room
-          │                           │   save room blob at T
-          │                           │
-          └─ wait for both to finish ─┘
+          │                            │  movement + tick processors
+          │                            │  finalize room
+          │                            │  save room blob at T
+          │                            │
+          └─ wait for both to finish  ─┘
 ```
 
 - Player code runs inside `isolated-vm`, a separate V8 isolate with its
