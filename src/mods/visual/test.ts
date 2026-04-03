@@ -10,8 +10,8 @@ import { MapVisual, RoomVisual, flush, schema } from './visual.js';
 // for decode verification.
 
 // Round-trip helper: draw on map visual, flush to binary, deserialize, decode
-function roundTrip(draw: (vis: RoomVisual) => void) {
-	const vis = new RoomVisual('map');
+function roundTrip(draw: (vis: MapVisual) => void) {
+	const vis = new MapVisual();
 	draw(vis);
 	const flushed = flush();
 	assert.strictEqual(flushed.length, 1);
@@ -154,52 +154,65 @@ describe('RoomVisual getSize', () => {
 });
 
 describe('Visual size limits', () => {
-	test('room visuals throw at 512000 bytes', () => {
+	test('room visuals throw at 500 KB', () => {
 		const vis = new RoomVisual('test_limit_room');
-		const bigText = 'x'.repeat(1000);
-		assert.throws(() => {
-			for (let i = 0; i < 1000; i++) {
-				vis.text(bigText, 25, 25);
-			}
-		}, /RoomVisual size .* exceeded 500 KB limit/);
+		const limit = 500 << 10;
+		// Measure a single entry
+		vis.circle(25, 25);
+		const entrySize = vis.getSize();
+		// Fill to just under the limit
+		while (vis.getSize() + entrySize <= limit) {
+			vis.circle(25, 25);
+		}
+		assert(vis.getSize() <= limit, `size ${vis.getSize()} should be at or under ${limit}`);
+		assert(vis.getSize() + entrySize > limit, 'next entry should exceed limit');
+		assert.throws(() => vis.circle(25, 25), /RoomVisual in room .* exceeded 500 KB limit/);
 	});
 
-	test('map visuals throw at 1024000 bytes', () => {
+	test('map visuals throw at 1000 KB', () => {
 		const mv = new MapVisual();
 		mv.clear();
-		const bigText = 'x'.repeat(1000);
-		assert.throws(() => {
-			for (let i = 0; i < 2000; i++) {
-				mv.text(bigText, { x: 25, y: 25, roomName: 'W1N1' });
-			}
-		}, /MapVisual size .* exceeded 1000 KB limit/);
+		const limit = 1000 << 10;
+		const pos = { x: 25, y: 25, roomName: 'W1N1' };
+		mv.circle(pos);
+		const entrySize = mv.getSize();
+		while (mv.getSize() + entrySize <= limit) {
+			mv.circle(pos);
+		}
+		assert(mv.getSize() <= limit, `size ${mv.getSize()} should be at or under ${limit}`);
+		assert(mv.getSize() + entrySize > limit, 'next entry should exceed limit');
+		assert.throws(() => mv.circle(pos), /MapVisual .* exceeded 1000 KB limit/);
 	});
 
 	test('import respects size limits', () => {
-		const source = new RoomVisual('test_limit_import_source');
-		const bigText = 'x'.repeat(1000);
-		for (let i = 0; i < 400; i++) {
-			source.text(bigText, 25, 25);
+		// Build a chunk to import
+		const chunk = new RoomVisual('test_limit_import_chunk');
+		while (chunk.getSize() < 10000) {
+			chunk.circle(25, 25);
 		}
-		const exported = source.export();
+		const exported = chunk.export();
+		const chunkSize = chunk.getSize();
+		const limit = 500 << 10;
+		// Import chunks until the next one would exceed
 		const vis = new RoomVisual('test_limit_import');
-		vis.import(exported);
-		assert.throws(() => {
+		while (vis.getSize() + chunkSize <= limit) {
 			vis.import(exported);
-		}, /RoomVisual size .* exceeded 500 KB limit/);
+		}
+		assert(vis.getSize() <= limit);
+		assert.throws(() => vis.import(exported), /RoomVisual in room .* exceeded 500 KB limit/);
 	});
 
-	test('visuals drawn before limit are preserved', () => {
+	test('failed push does not change size', () => {
 		const vis = new RoomVisual('test_limit_preserve');
+		const limit = 500 << 10;
 		vis.circle(25, 25);
-		const sizeAfterCircle = vis.getSize();
-		const bigText = 'x'.repeat(1000);
-		try {
-			for (let i = 0; i < 1000; i++) {
-				vis.text(bigText, 25, 25);
-			}
-		} catch {}
-		assert(vis.getSize() >= sizeAfterCircle, 'early visuals should be preserved');
+		const entrySize = vis.getSize();
+		while (vis.getSize() + entrySize <= limit) {
+			vis.circle(25, 25);
+		}
+		const sizeAtLimit = vis.getSize();
+		assert.throws(() => vis.circle(25, 25), /exceeded 500 KB limit/);
+		assert.strictEqual(vis.getSize(), sizeAtLimit, 'size should not change after failed push');
 	});
 });
 
@@ -212,7 +225,7 @@ describe('MapVisual class', () => {
 		assert.strictEqual(rv.getSize(), mv.getSize(), 'MapVisual and RoomVisual("map") should share size');
 	});
 
-	test('methods are chainable', () => {
+	test('methods are chainable and draw all types', () => {
 		const mv = new MapVisual();
 		mv.clear();
 		const pos = { x: 25, y: 25, roomName: 'W1N1' };
@@ -223,17 +236,28 @@ describe('MapVisual class', () => {
 			.text('hi', pos)
 			.poly([ pos, pos ]);
 		assert(result instanceof MapVisual, 'chained methods should return MapVisual');
+		const flushed = flush();
+		const mapEntry = flushed.find(entry => entry.roomName === 'map');
+		assert(mapEntry !== undefined, 'should have map visuals');
+		const visuals = [ ...visualsReader(mapEntry.blob) ];
+		assert.strictEqual(visuals.length, 5);
+		assert.strictEqual(visuals[0][Variant], 'c');
+		assert.strictEqual(visuals[1][Variant], 'l');
+		assert.strictEqual(visuals[2][Variant], 'r');
+		assert.strictEqual(visuals[3][Variant], 't');
+		assert.strictEqual(visuals[4][Variant], 'p');
 	});
 
-	test('clear, export, and import work', () => {
+	test('clear, export, and import preserve size', () => {
 		const mv = new MapVisual();
 		mv.clear();
 		mv.circle({ x: 25, y: 25, roomName: 'W1N1' });
+		const sizeBeforeExport = mv.getSize();
 		const exported = mv.export();
 		assert(exported.length > 0, 'export should return non-empty string');
 		mv.clear();
 		assert.strictEqual(mv.getSize(), 0, 'clear should reset size');
 		mv.import(exported);
-		assert(mv.getSize() > 0, 'import should restore size');
+		assert.strictEqual(mv.getSize(), sizeBeforeExport, 'import should restore original size');
 	});
 });
