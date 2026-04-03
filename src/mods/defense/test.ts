@@ -5,6 +5,7 @@ import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createRampart } from './rampart.js';
+import { create as createTower } from './tower.js';
 
 describe('ramparts', () => {
 	const roomWithUnbuiltRamparts = simulate({
@@ -86,6 +87,28 @@ describe('setPublic', () => {
 		await tick();
 		await player('101', Game => {
 			assert(Game.creeps.hostile.pos.isEqualTo(25, 25), 'hostile creep should have moved through public rampart');
+		});
+	}));
+});
+
+describe('Tower isActive', () => {
+	// Tower has energy so the energy check passes first (matching official check ordering),
+	// verifying that ERR_RCL_NOT_ENOUGH comes from the isActive check in the intent chain
+	const simulation = simulate({
+		W3N2: room => {
+			const tower = createTower(new RoomPosition(25, 25, 'W3N2'), '100');
+			tower.store['#add'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
+			room['#insertObject'](tower);
+			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W3N2'), [ C.MOVE ], 'target', '101'));
+			room['#level'] = 2;
+			room['#user'] = room.controller!['#user'] = '100';
+		},
+	});
+
+	test('tower attack returns ERR_RCL_NOT_ENOUGH when inactive', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const tower = lookForStructures(Game.rooms.W3N2, C.STRUCTURE_TOWER)[0];
+			assert.strictEqual(tower.attack(Game.rooms.W3N2.find(C.FIND_HOSTILE_CREEPS)[0]), C.ERR_RCL_NOT_ENOUGH);
 		});
 	}));
 });

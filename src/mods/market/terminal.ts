@@ -7,7 +7,7 @@ import { Game, intents } from 'xxscreeps/game/index.js';
 import { create as createObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { OpenStore, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
@@ -74,6 +74,7 @@ export function checkSend(terminal: StructureTerminal, resourceType: ResourceTyp
 	const energyCost = calculateEnergyCost(amount, range);
 	return chainIntentChecks(
 		() => checkMyStructure(terminal, StructureTerminal),
+		() => checkIsActive(terminal),
 		resourceType === C.RESOURCE_ENERGY
 			? () => checkHasResource(terminal, C.RESOURCE_ENERGY, amount + energyCost) :
 			() => chainIntentChecks(

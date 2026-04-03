@@ -6,6 +6,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
+import { checkActiveStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 import * as CreepLib from './creep.js';
 
@@ -52,6 +53,7 @@ function updateRoomStatus(context: ProcessorContext, room: Room, level: number, 
 	for (const object of room['#objects']) {
 		object['#roomStatusDidChange'](level, userId);
 	}
+	checkActiveStructures(room);
 }
 
 // Register intent processors

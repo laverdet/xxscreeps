@@ -7,7 +7,7 @@ import { checkDestructible } from 'xxscreeps/mods/combat/creep.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { SingleStore, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, Structure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { OwnedStructure, Structure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
@@ -84,5 +84,6 @@ export function checkTower<Type extends Creep | Structure>(
 		() => checkTarget(target, targetType),
 		() => checkDestructible(target),
 		() => checkHasResource(tower, C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST),
+		() => checkIsActive(tower),
 		() => checkSameRoom(tower, target));
 }

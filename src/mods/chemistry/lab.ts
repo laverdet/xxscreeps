@@ -6,7 +6,7 @@ import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { checkHasResource } from '../resource/store.js';
@@ -107,6 +107,7 @@ export function getReactionProduct(mineral1: string, mineral2: string): Resource
 export function checkBoostCreep(lab: StructureLab, creep: Creep | null | undefined, bodyPartsCount?: number) {
 	return chainIntentChecks(
 		() => checkMyStructure(lab, StructureLab),
+		() => checkIsActive(lab),
 		() => checkTarget(creep, Creep),
 		() => {
 			if (creep!.spawning) {
@@ -154,6 +155,7 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 				return C.ERR_TIRED;
 			}
 		},
+		() => checkIsActive(lab),
 		() => checkTarget(lab1, StructureLab),
 		() => checkTarget(lab2, StructureLab),
 		() => checkRange(lab, lab1!, 2),
@@ -189,6 +191,7 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 	return chainIntentChecks(
 		() => checkTarget(creep, Creep),
 		() => checkMyStructure(lab, StructureLab),
+		() => checkIsActive(lab),
 		() => {
 			if (!creep!.my) {
 				return C.ERR_NOT_OWNER;
@@ -231,6 +234,7 @@ export function checkRunReaction(lab: StructureLab, left: StructureLab, right: S
 				return C.ERR_TIRED;
 			}
 		},
+		() => checkIsActive(lab),
 		() => checkTarget(left, StructureLab),
 		() => checkTarget(right, StructureLab),
 		() => checkRange(lab, left, 2),

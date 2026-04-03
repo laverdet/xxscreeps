@@ -5,7 +5,7 @@ import { Game, intents } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { SingleStore, calculateChecked, checkHasCapacity, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
@@ -66,6 +66,7 @@ registerBuildableStructure(C.STRUCTURE_LINK, {
 export function checkTransferEnergy(link: StructureLink, target: StructureLink, amount: number) {
 	return chainIntentChecks(
 		() => checkMyStructure(link, StructureLink),
+		() => checkIsActive(link),
 		() => checkTarget(target, StructureLink),
 		() => checkHasResource(link, C.RESOURCE_ENERGY, amount),
 		() => checkHasCapacity(target, C.RESOURCE_ENERGY, amount),

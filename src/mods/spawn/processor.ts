@@ -26,7 +26,7 @@ function getEnergyStructures(spawn: StructureSpawn, ids?: string[]) {
 			ids,
 			$$ => Fn.map($$, id => {
 				const object = Game.getObjectById(id);
-				if (object instanceof StructureExtension || object instanceof StructureSpawn) {
+				if ((object instanceof StructureExtension || object instanceof StructureSpawn) && object.isActive()) {
 					return object;
 				}
 			}),
@@ -36,8 +36,8 @@ function getEnergyStructures(spawn: StructureSpawn, ids?: string[]) {
 		const comparator = (left: EnergyStructure, right: EnergyStructure) =>
 			spawn.pos.getRangeTo(left) - spawn.pos.getRangeTo(right);
 		return [
-			...lookForStructures(spawn.room, C.STRUCTURE_SPAWN).sort(comparator),
-			...lookForStructures(spawn.room, C.STRUCTURE_EXTENSION).sort(comparator),
+			...lookForStructures(spawn.room, C.STRUCTURE_SPAWN).filter(structure => structure.isActive()).sort(comparator),
+			...lookForStructures(spawn.room, C.STRUCTURE_EXTENSION).filter(structure => structure.isActive()).sort(comparator),
 		];
 	}
 }
@@ -246,7 +246,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 	})();
 
 	// Add 1 energy per tick to spawns in low energy rooms
-	if (spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
+	if (spawn.isActive() && spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
 		++spawn.room.energyAvailable;
 		spawn.store['#add'](C.RESOURCE_ENERGY, 1);
 		context.setActive();
