@@ -1,4 +1,5 @@
 import { registerIntentProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
@@ -12,7 +13,7 @@ import { loop } from './loop/index.js';
 registerNPC('2', loop);
 
 // Register invader generator
-registerRoomTickProcessor(room => {
+registerRoomTickProcessor((room, context) => {
 	const target = room['#invaderEnergyTarget'] || C.INVADERS_ENERGY_GOAL;
 	const totalEnergy = room['#cumulativeEnergyHarvested'];
 	const energy = totalEnergy - room['#invaderEnergyTarget'];
@@ -22,23 +23,53 @@ registerRoomTickProcessor(room => {
 		if (Math.random() < 0.1) {
 			invaderGoal *= Math.floor(Math.random() > 0.5 ? 2 : 0.5);
 		}
-		room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
-
-		// Find raid origin
-		const exits = room.find(C.FIND_EXIT);
-		const origin = exits[Math.floor(exits.length * Math.random())];
-		exits.sort((left, right) => origin.getRangeTo(left) - origin.getRangeTo(right));
-
-		// Send the boys
-		activateNPC(room, '2');
-		for (let ii = 0; ii < 3; ++ii) {
-			const role = ([ 'melee', 'healer', 'ranged' ] as Role[])[ii % 3];
-			if (ii >= exits.length) {
-				break;
-			}
-			const pos = exits[ii];
-			room['#insertObject'](create(pos, role, 'small', Game.time + C.CREEP_LIFE_TIME));
+		// Check neighbor rooms to filter exits leading to owned/reserved rooms
+		const exitDirections = Game.map.describeExits(room.name);
+		// TODO: describeExits return type is `null as never` — fix upstream in map.ts
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
+		if (!exitDirections) {
+			return;
 		}
+		const entries = Object.entries(exitDirections);
+		// Load neighbor rooms; #user: string = owned/reserved, null = unowned, undefined = no controller
+		context.task(async function() {
+			const results = await Promise.all(
+				Fn.map(entries, async ([ dir, neighborName ]) => {
+					const neighbor = await context.shard.loadRoom(neighborName, undefined, true).catch(() => null);
+					const user = neighbor?.['#user'];
+					return user === null || user === undefined ? Number(dir) : undefined;
+				}));
+			return new Set(Fn.filter(results, (dir): dir is number => dir !== undefined));
+		}(), (allowedDirs: Set<number>) => {
+			// Filter exit positions to allowed directions only
+			const validExits = [ ...Fn.filter(room.find(C.FIND_EXIT), pos => {
+				if (pos.x === 0) return allowedDirs.has(C.LEFT);
+				if (pos.x === 49) return allowedDirs.has(C.RIGHT);
+				if (pos.y === 0) return allowedDirs.has(C.TOP);
+				if (pos.y === 49) return allowedDirs.has(C.BOTTOM);
+				return false;
+			}) ];
+			if (validExits.length === 0) {
+				return;
+			}
+
+			// Only consume the energy budget when invaders actually spawn
+			room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
+
+			// Find raid origin from valid exits
+			const origin = validExits[Math.floor(validExits.length * Math.random())];
+			validExits.sort(mappedNumericComparator(pos => origin.getRangeTo(pos)));
+
+			// Send the boys
+			activateNPC(room, '2');
+			for (let ii = 0; ii < 3; ++ii) {
+				const role = ([ 'melee', 'healer', 'ranged' ] as Role[])[ii % 3];
+				if (ii >= validExits.length) {
+					break;
+				}
+				room['#insertObject'](create(validExits[ii], role, 'small', Game.time + C.CREEP_LIFE_TIME));
+			}
+		});
 	}
 });
 
