@@ -420,13 +420,10 @@ describe('Chemistry', () => {
 				assert.strictEqual(labGO.boostCreep(Game.creeps.unboosted), C.OK);
 			});
 			await tick();
-			// Verify boost was applied
+			// Verify boost was applied, then unboost
 			await player('100', Game => {
 				const creep = Game.creeps.unboosted;
 				assert.ok(creep.body.some(part => part.boost === 'GO'), 'creep should be boosted');
-			});
-			// Now unboost
-			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const unboostLab = labs.find(lab => !lab.mineralType)!;
 				assert.strictEqual(unboostLab.unboostCreep(Game.creeps.unboosted), C.OK);

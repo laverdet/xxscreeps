@@ -25,9 +25,9 @@ let failed = 0;
 const testTimeout = 10000;
 
 // Catch unhandled rejections so async failures don't vanish silently
-process.on('unhandledRejection', (err: any) => {
+process.on('unhandledRejection', reason => {
 	++failed;
-	console.error('\nUnhandled rejection:', err?.stack ?? err);
+	console.log('\nUnhandled rejection:', reason);
 });
 
 export async function flush() {
@@ -86,7 +86,7 @@ export function test(name: string, fn: Callback) {
 			let timer: NodeJS.Timeout;
 			await Promise.race([
 				Promise.resolve(fn()).finally(() => clearTimeout(timer)),
-				new Promise((_, reject) => {
+				new Promise((_resolve, reject) => {
 					timer = setTimeout(() => reject(new Error(`Test "${name}" timed out after ${testTimeout}ms`)), testTimeout);
 				}),
 			]);
@@ -94,14 +94,14 @@ export function test(name: string, fn: Callback) {
 			if (argv.length === 0) {
 				process.stdout.write('.');
 			}
-		} catch (err: any) {
+		} catch (err) {
 			++failed;
 			const names = [ ...stack.map(frame => frame.name), context?.name, name ].filter(nonNullPredicate);
 			if (argv.length === 0) {
 				console.log(`\n  FAIL: ${name}`);
-				console.log(`  Isolate with: npx xxscreeps test ${names.map(name => `"${name}"`).join(' ')}`);
+				console.log(`  Isolate with: npx xxscreeps test ${names.map(nn => `"${nn}"`).join(' ')}`);
 			}
-			console.log(err.stack);
+			console.log(err);
 		}
 	});
 }

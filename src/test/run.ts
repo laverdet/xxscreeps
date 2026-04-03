@@ -7,6 +7,7 @@ try {
 	await flush();
 } catch (err) {
 	console.log(err);
+	process.exitCode = 1;
 }
 summary();
 // Force exit — test modules hold db/shard connections that keep the event loop alive
