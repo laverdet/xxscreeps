@@ -25,6 +25,8 @@ import { compose, declare, enumerated, optional, struct, variant, vector, withOv
 import { assign } from 'xxscreeps/utility/utility.js';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
+type BoostEffects = Partial<Record<string, number>>;
+type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
 
 type MoveToOptions = FindPathOptions & {
 	noPathFinding?: boolean;
@@ -424,12 +426,13 @@ export function create(pos: RoomPosition, parts: PartType[], name: string, owner
 }
 
 export function calculateCarry(body: Creep['body']) {
+	const boosts: BoostsLookup = C.BOOSTS;
 	return Fn.accumulate(
 		Fn.filter(body, part => part.hits > 0),
 		part => {
 			if (part.type !== C.CARRY) return 0;
 			if (part.boost) {
-				const multiplier = (C.BOOSTS as BoostsLookup)[C.CARRY]?.[part.boost]?.capacity;
+				const multiplier = boosts[C.CARRY]?.[part.boost]?.capacity;
 				if (multiplier !== undefined) {
 					return C.CARRY_CAPACITY * multiplier;
 				}
@@ -535,14 +538,12 @@ export function calculateCost(creep: Creep) {
 	return Fn.accumulate(creep.body, bodyPart => C.BODYPART_COST[bodyPart.type]);
 }
 
-type BoostEffects = Partial<Record<string, number>>;
-type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
-
 export function calculatePower(creep: Creep, part: PartType, power: number, boostMethod?: string) {
+	const boosts: BoostsLookup = C.BOOSTS;
 	return Fn.accumulate(creep.body, bodyPart => {
 		if (bodyPart.type === part && bodyPart.hits > 0) {
 			if (boostMethod !== undefined && bodyPart.boost) {
-				const multiplier = (C.BOOSTS as BoostsLookup)[part]?.[bodyPart.boost]?.[boostMethod];
+				const multiplier = boosts[part]?.[bodyPart.boost]?.[boostMethod];
 				if (multiplier !== undefined) {
 					return power * multiplier;
 				}
