@@ -159,7 +159,7 @@ hooks.register('route', {
 		}
 		const roomNames = await context.shard.scratch.smembers(userToPresenceRoomsSetKey(userId));
 		if (roomNames.length === 0) {
-			return { error: 'not spawned' };
+			return { error: 'invalid status' };
 		}
 		await Promise.all(roomNames.map(roomName => pushIntentsForRoomNextTick(context.shard, roomName, userId, {
 			local: { unspawn: [ [] ] },
