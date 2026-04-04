@@ -132,6 +132,39 @@ state.
       │                  │                │                  │ update blob
 ```
 
+### Dual Validation
+
+Every intent is validated twice — once in the runner to give the player
+a return value, once in the processor to enforce correctness. The same
+`check*` function is exported and called from both sites, guaranteeing
+the two answers agree.
+
+```ts
+// game-side API: runs in the player's sandbox
+produce(resourceType: ResourceType) {
+    return chainIntentChecks(
+        () => checkProduce(this, resourceType),
+        () => intents.save(this, 'produce', resourceType));
+}
+
+// processor-side: re-runs the same check before mutating state
+registerIntentProcessor(StructureFactory, 'produce', {}, (factory, context, resourceType) => {
+    if (checkProduce(factory, resourceType) !== C.OK) return;
+    // mutate store, set cooldown, etc.
+});
+```
+
+The runner-side check is a UX convenience, not a security boundary. A
+player could bypass `produce()` and call `intents.save()` directly, so
+the processor cannot trust anything the runner publishes. Re-validation
+also catches legitimate state changes between when the player's code ran
+and when the processor executes — another intent in the same tick may
+have consumed resources, destroyed the target, or changed ownership.
+
+The player's CPU budget pays only for the runner-side check; processor
+re-validation is on the server's time. The duplicated work is the price
+of the untrusted-runner architecture.
+
 ### Registration and Ordering
 
 Mods register intent processors with ordering constraints and conflict
