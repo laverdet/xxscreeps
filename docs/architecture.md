@@ -63,6 +63,11 @@ open the source files listed at the end.
   supports `--no-backend` for headless operation.
 - All services can run on different machines. All except the main loop
   can have multiple instances.
+- The **launcher** (`npx xxscreeps start`) bootstraps everything: reads
+  the config, sets up the database, and spawns the services. It is not
+  a service itself — once started, the main loop takes over tick
+  orchestration. Flags like `--no-backend` control which services the
+  launcher starts.
 
 ---
 
@@ -382,6 +387,7 @@ a prototype getter installed by `withOverlay()`.
 
 | Area | Files |
 | --- | --- |
+| Launcher | `src/engine/service/launcher.ts` |
 | Main loop | `src/engine/service/main.ts` |
 | Mod loading | `src/config/mods/index.ts` |
 | Runner | `src/engine/runner/instance.ts` |
