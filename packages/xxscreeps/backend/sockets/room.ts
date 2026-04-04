@@ -3,7 +3,7 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 import { hooks } from 'xxscreeps/backend/index.js';
-import { Render } from 'xxscreeps/backend/symbols.js';
+import { Render } from 'xxscreeps/game/render.js';
 import config from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getRoomChannel } from 'xxscreeps/engine/processor/model.js';

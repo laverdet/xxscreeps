@@ -9,7 +9,7 @@ import * as Async from 'xxscreeps/utility/async.js';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
 import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { tickSpeed, watch } from './tick.js';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+import { checkIsEntry, getServiceChannel } from './index.js';
 
 checkIsEntry();
 
@@ -27,13 +27,15 @@ const [ gameMutex, serviceChannel ] = await Promise.all([
 let halted = false as boolean;
 let halt: Effect | undefined;
 let tickDelay: Deferred<boolean> | undefined;
-handleInterrupt(() => {
-	console.log('Shutting down...');
+const stop = () => {
 	halted = true;
 	halt?.();
 	tickDelay?.resolve(false);
-	serviceChannel.publish({ type: 'shutdown' });
-	unwatch?.();
+};
+const shutdownEffect = serviceChannel.listen(message => {
+	if (message.type === 'shutdown') {
+		stop();
+	}
 });
 
 // Configure .screepsrc.yaml watcher to update tick speed immediately
@@ -61,14 +63,19 @@ try {
 	const processorMessages = serviceChannel.iterable();
 	await serviceChannel.publish({ type: 'mainConnected' });
 	for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
-		if (
+		if (message.type === 'shutdown') {
+			halted = true;
+			break;
+		} else if (
 			message.type === 'processorInitialized' &&
 			await shard.scratch.zcard(activeRoomsKey) === rooms.length
 		) {
 			break;
 		}
 	}
-	await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
+	if (!halted) {
+		await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
+	}
 
 	// Game loop
 	while (!halted) {
@@ -156,6 +163,9 @@ try {
 
 } finally {
 	// Clean up
+	shutdownEffect();
+	stop();
+	unwatch?.();
 	await gameMutex.disconnect();
 	await serviceChannel.publish({ type: 'mainDisconnected' });
 	serviceChannel.disconnect();

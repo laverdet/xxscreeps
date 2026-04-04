@@ -20,13 +20,13 @@ import { hooks } from './symbols.js';
 
 import 'xxscreeps/config/mods/import/game.js';
 
+await importMods('render');
 await importMods('backend');
 await importMods('processor');
 initializeGameEnvironment();
 
 // Initialize services
 const backendContext = await BackendContext.connect();
-hooks.makeIterated('backendReady')(backendContext.db, backendContext.shard);
 const koa = new Koa<State, Context>();
 const router = new Router<State, Context>();
 
@@ -85,4 +85,4 @@ for await (const message of Async.breakable(serviceChannel.iterable(), breaker =
 serviceChannel.disconnect();
 await unlistenServer();
 await socketHandler.flush();
-backendContext.disconnect();
+await backendContext.close();

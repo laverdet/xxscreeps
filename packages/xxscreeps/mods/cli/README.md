@@ -4,6 +4,8 @@ Admin console for xxscreeps. Provides a VM sandbox with helpers for inspecting a
 
 ## Usage
 
+### Server mode (requires running server)
+
 Start the server in one terminal:
 ```
 xxscreeps start
@@ -14,6 +16,16 @@ Connect the CLI client in another:
 xxscreeps
 ```
 
+The socket server runs in the launcher process. Each connection gets a persistent sandbox — variables survive between commands within the same session.
+
+### Offline mode (direct database access)
+
+```
+xxscreeps cli
+```
+
+Connects directly to the database without a running server. Works with any storage provider (Redis, file://, local://). With `local://`, the database starts empty since data is in-memory.
+
 Type `help()` at the prompt for available commands.
 
 ## Socket Protocol
@@ -22,25 +34,6 @@ The server listens on `screeps/cli.sock` in the project directory (Windows: `\\.
 
 **Request:** `{"expression": "<javascript>"}\n`
 **Response:** `{"result": "<output>"}\n` or `{"error": "<message>"}\n`
-
-Example with `nc`:
-```
-echo '{"expression":"rooms.list()"}' | nc -U screeps/cli.sock
-```
-
-### Programmatic client (Node.js)
-
-```js
-import net from 'node:net';
-
-const socket = net.connect({ path: 'screeps/cli.sock' });
-socket.write(JSON.stringify({ expression: 'rooms.list()' }) + '\n');
-socket.on('data', chunk => {
-    const { result, error } = JSON.parse(chunk.toString().trim());
-    console.log(error ?? result);
-    socket.end();
-});
-```
 
 ## Available Helpers
 
@@ -64,6 +57,14 @@ socket.on('data', chunk => {
 
 ## Architecture
 
-The socket server runs in the backend process, started via a `backendReady` hook. It shares the backend's database connection. Each command creates a fresh `vm.createContext` sandbox with the helpers above. Commands are processed sequentially per connection.
+The socket server runs in the launcher process (the single coordination point), started when `importMods('launcher')` loads this mod. It shares the launcher's database and shard connections via `launcher-context.ts`.
+
+Each socket connection creates a persistent `vm.createContext` sandbox. Commands execute in the connection's sandbox, so variables and state persist across commands within a session. Different connections have independent sandboxes.
 
 The CLI client (`xxscreeps` with no arguments) is a thin readline wrapper that connects to the socket. It has no game imports — just socket I/O with tab completion.
+
+## Security model
+
+The CLI evaluates arbitrary JavaScript via `vm.createContext`. The Unix domain socket transport restricts access to users with local filesystem permissions (the socket file lives inside the project directory), so the attack surface is equivalent to having shell access to the server process.
+
+Both synchronous execution (VM timeout) and async operations (Promise.race) are bounded to 5 seconds to prevent accidental hangs.

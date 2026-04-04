@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import { configDefaults } from 'xxscreeps/config/config.js';
 import config from 'xxscreeps/config/raw.js';
 
-type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'processor' | 'storage' | 'test';
+type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'launcher' | 'processor' | 'render' | 'storage' | 'test';
 export type Manifest = {
 	dependencies?: string[];
 	provides: Provide | Provide[] | null;

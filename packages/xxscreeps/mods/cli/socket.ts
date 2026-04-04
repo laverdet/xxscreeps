@@ -1,30 +1,41 @@
+import type { Sandbox } from './sandbox.js';
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import net from 'node:net';
+import * as Path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { configPath } from 'xxscreeps/config/raw.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
-import { executeCommand } from './sandbox.js';
+import { createSandbox, destroySandbox, executeCommand } from './sandbox.js';
 
 const maxBufferSize = 1 << 20; // 1 MiB per connection
 
-export const socketPath = process.platform === 'win32'
-	? `\\\\.\\pipe\\xxscreeps-${crypto.createHash('md5').update(configPath.href).digest('hex').slice(0, 8)}`
-	: fileURLToPath(new URL('screeps/cli.sock', configPath));
+export function socketPathFor(configUrl: URL) {
+	return process.platform === 'win32'
+		? `\\\\.\\pipe\\xxscreeps-${crypto.createHash('md5').update(configUrl.href).digest('hex').slice(0, 8)}`
+		: fileURLToPath(new URL('screeps/cli.sock', configUrl));
+}
+export const socketPath = socketPathFor(configPath);
 
 export async function startSocketServer(db: Database, shard: Shard, path = socketPath, log = console.log) {
 	// On Unix, check for a stale socket from a previous crash
 	if (process.platform !== 'win32') {
+		fs.mkdirSync(Path.dirname(path), { recursive: true });
 		await new Promise<void>((resolve, reject) => {
 			const probe = net.connect({ path }, () => {
 				probe.destroy();
 				reject(new Error(`Another server is already listening on ${path}`));
 			});
-			probe.on('error', () => {
-				// Connection refused or no such file — safe to clean up
-				try { fs.unlinkSync(path); } catch {}
-				resolve();
+			probe.on('error', (err: NodeJS.ErrnoException) => {
+				if (err.code === 'ECONNREFUSED') {
+					try { fs.unlinkSync(path); } catch {}
+					resolve();
+				} else if (err.code === 'ENOENT') {
+					resolve();
+				} else {
+					reject(err);
+				}
 			});
 		});
 	}
@@ -32,10 +43,19 @@ export async function startSocketServer(db: Database, shard: Shard, path = socke
 	const connections = new Set<net.Socket>();
 	const server = net.createServer(connection => {
 		connections.add(connection);
-		connection.on('close', () => connections.delete(connection));
+
+		// Persistent sandbox for this connection — variables survive between commands
+		const sandbox = createSandbox(db, shard);
 
 		let buffer = '';
 		let processing = Promise.resolve();
+		connection.on('error', () => {
+			connection.destroy();
+		});
+		connection.on('close', () => {
+			connections.delete(connection);
+			void processing.finally(() => destroySandbox(sandbox)).catch(console.error);
+		});
 
 		connection.on('data', chunk => {
 			buffer += chunk.toString();
@@ -51,12 +71,24 @@ export async function startSocketServer(db: Database, shard: Shard, path = socke
 			while ((newline = buffer.indexOf('\n')) !== -1) {
 				const line = buffer.slice(0, newline);
 				buffer = buffer.slice(newline + 1);
-				processing = processing.then(() => handleMessage(db, shard, connection, line, log));
+				processing = processing.then(() => handleMessage(sandbox, connection, line, log));
 			}
 		});
 	});
 
-	server.listen(path);
+	await new Promise<void>((resolve, reject) => {
+		const onError = (err: Error) => {
+			server.off('listening', onListening);
+			reject(err);
+		};
+		const onListening = () => {
+			server.off('error', onError);
+			resolve();
+		};
+		server.once('error', onError);
+		server.once('listening', onListening);
+		server.listen(path);
+	});
 
 	const serviceSubscription = await getServiceChannel(shard).subscribe();
 	serviceSubscription.listen(message => {
@@ -81,19 +113,20 @@ export async function startSocketServer(db: Database, shard: Shard, path = socke
 // Results that should be echoed to the server console
 const serverLogResults = new Set([ 'Simulation paused', 'Simulation resumed' ]);
 
-async function handleMessage(db: Database, shard: Shard, connection: net.Socket, line: string, log: typeof console.log) {
+async function handleMessage(sandbox: Sandbox, connection: net.Socket, line: string, log: typeof console.log) {
 	try {
-		const { expression } = JSON.parse(line);
-		const result = await executeCommand(db, shard, expression);
+		const { expression } = JSON.parse(line) as { expression: string };
+		const result = await executeCommand(sandbox, expression);
 		if (serverLogResults.has(result)) {
 			log(result);
 		}
 		if (connection.writable) {
 			connection.write(JSON.stringify({ result }) + '\n');
 		}
-	} catch (err: any) {
+	} catch (err: unknown) {
 		if (connection.writable) {
-			connection.write(JSON.stringify({ error: err.message }) + '\n');
+			const message = err instanceof Error ? err.message : String(err);
+			connection.write(JSON.stringify({ error: message }) + '\n');
 		}
 	}
 }

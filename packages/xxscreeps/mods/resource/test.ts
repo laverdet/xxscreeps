@@ -2,7 +2,7 @@ import type { Store } from './store.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { LabStore } from 'xxscreeps/mods/chemistry/store.js';
 import { assert, describe, reconstructor, test } from 'xxscreeps/test/index.js';
-import { renderStore } from './backend.js';
+import { renderStore } from './render.js';
 import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store.js';
 
 const keys = (object: {}) => [ ...function*() {

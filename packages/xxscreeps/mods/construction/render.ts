@@ -1,4 +1,4 @@
-import { bindRenderer } from 'xxscreeps/backend/index.js';
+import { bindRenderer } from 'xxscreeps/game/render.js';
 import { ConstructionSite } from './construction-site.js';
 
 bindRenderer(ConstructionSite, (constructionSite, next) => ({

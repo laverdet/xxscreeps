@@ -1,5 +1,5 @@
-import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend/index.js';
-import { renderStore } from 'xxscreeps/mods/resource/backend.js';
+import { bindMapRenderer, bindRenderer } from 'xxscreeps/game/render.js';
+import { renderStore } from 'xxscreeps/mods/resource/render.js';
 import { Ruin } from './ruin.js';
 import { Structure } from './structure.js';
 

@@ -21,6 +21,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: P.Value[]) => any>();
+	private saveChain = Promise.resolve();
 
 	constructor(
 		private readonly url: URL | undefined,
@@ -279,9 +280,10 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	sinter(key: string, keys: string[]) {
+		const allKeys = [ key, ...keys ];
 		const sets = Fn.pipe(
-			Fn.concat([ [ key ], keys ]),
-			$$ => Fn.map($$, (key): Set<string> | undefined => this.data.get(key)),
+			allKeys,
+			$$ => Fn.map($$, (entry): Set<string> | undefined => this.data.get(entry)),
 			$$ => Fn.filter($$),
 			$$ => [ ...$$ ]);
 		sets.sort((left, right) => left.size - right.size);
@@ -614,7 +616,13 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		this.data.clear();
 	}
 
-	async save() {
+	save() {
+		const save = this.saveChain.then(() => this.performSave());
+		this.saveChain = save.catch(() => {});
+		return save;
+	}
+
+	private async performSave() {
 		if (this.url) {
 			const payload = JSON.stringify(this.data, (key, value) => {
 				if (value === this.data) {

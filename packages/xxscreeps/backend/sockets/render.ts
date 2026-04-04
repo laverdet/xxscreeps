@@ -1,17 +1,6 @@
 import type { ActionLog } from 'xxscreeps/game/object.js';
-import { bindRenderer } from 'xxscreeps/backend/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomObject } from 'xxscreeps/game/object.js';
-import { Variant } from 'xxscreeps/schema/index.js';
-
-// Base object renderer
-bindRenderer(RoomObject, object => ({
-	_id: object.id,
-	type: object[Variant as never],
-	x: object.pos.x,
-	y: object.pos.y,
-}));
 
 export function renderActionLog(actionLog: ActionLog, previousTime: number | undefined): Record<string, any> {
 	return {

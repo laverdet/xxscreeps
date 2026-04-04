@@ -1,4 +1,4 @@
-import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/backend/index.js';
+import { bindMapRenderer, bindRenderer, bindTerrainRenderer } from 'xxscreeps/game/render.js';
 import { StructureExtractor } from './extractor.js';
 import { Mineral } from './mineral.js';
 

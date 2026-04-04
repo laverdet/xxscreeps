@@ -1,38 +1,6 @@
-import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks } from 'xxscreeps/backend/index.js';
+import { hooks } from 'xxscreeps/backend/index.js';
 import { userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
-import { StructureController } from './controller.js';
 import { controlledRoomKey as controlledRoomsKey, reservedRoomKey as reservedRoomsKey } from './processor.js';
-
-bindMapRenderer(StructureController, () => 'c');
-bindTerrainRenderer(StructureController, () => 0x505050);
-
-bindRenderer(StructureController, (controller, next) => {
-	const reservationEndTime = controller['#reservationEndTime'];
-	const sign = controller.room['#sign'];
-	return {
-		...next(),
-		level: controller.level,
-		progress: controller.progress,
-		downgradeTime: controller['#downgradeTime'],
-		safeMode: controller.room['#safeModeUntil'],
-		safeModeAvailable: controller.safeModeAvailable,
-		safeModeCooldown: controller['#safeModeCooldownTime'],
-		...reservationEndTime ? {
-			reservation: {
-				endTime: reservationEndTime,
-				user: controller.room['#user'],
-			},
-		} : undefined,
-		...sign ? {
-			sign: {
-				datetime: sign.datetime,
-				time: sign.time,
-				text: sign.text,
-				user: sign.userId,
-			},
-		} : undefined,
-	};
-});
 
 hooks.register('route', {
 	path: '/api/user/rooms',

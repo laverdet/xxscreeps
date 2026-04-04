@@ -24,6 +24,13 @@ export class BackendContext {
 		return context;
 	}
 
+	/** Save pending changes then disconnect. Use on graceful shutdown. */
+	async close() {
+		await Promise.all([ this.db.save(), this.shard.save() ]);
+		this.disconnect();
+	}
+
+	/** Disconnect without saving. Callers that need persistence should use close(). */
 	disconnect() {
 		this.db.disconnect();
 		this.shard.disconnect();

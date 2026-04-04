@@ -1,9 +1,8 @@
 import fs from 'node:fs';
 import net from 'node:net';
 import readline from 'node:readline';
-import { socketPath } from 'xxscreeps/mods/backend/cli/socket.js';
+import { socketPath } from 'xxscreeps/mods/cli/socket.js';
 
-// Verify socket exists before connecting (Unix only; named pipes don't have a file)
 if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 	console.error('Server is not running. Start it with: xxscreeps start');
 } else {
@@ -13,7 +12,7 @@ if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 	const topLevel = [
 		'db', 'shard', 'storage', 'users', 'rooms', 'system', 'shards', 'help',
 	];
-	const dotMembers: Record<string, string[]> = {
+	const dotMembers: Partial<Record<string, string[]>> = {
 		storage: [ 'db', 'shard', 'pubsub' ],
 		users: [ 'findByName', 'info' ],
 		rooms: [ 'list', 'load' ],
@@ -28,11 +27,11 @@ if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 			const partial = line.slice(dot + 1);
 			const members = dotMembers[obj];
 			if (members) {
-				const hits = members.filter(m => m.startsWith(partial)).map(m => `${obj}.${m}`);
+				const hits = members.filter(name => name.startsWith(partial)).map(name => `${obj}.${name}`);
 				return [ hits.length ? hits : [], line ];
 			}
 		}
-		const hits = topLevel.filter(t => t.startsWith(line));
+		const hits = topLevel.filter(name => name.startsWith(line));
 		return [ hits.length ? hits : [], line ];
 	}
 
@@ -42,6 +41,7 @@ if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 		prompt: '> ',
 		completer,
 	});
+	let closed = false;
 
 	socket.on('connect', () => {
 		console.log('Connected to xxscreeps server.');
@@ -56,17 +56,17 @@ if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 			const line = responseBuffer.slice(0, newline);
 			responseBuffer = responseBuffer.slice(newline + 1);
 			try {
-				const { result, error } = JSON.parse(line);
+				const { result, error } = JSON.parse(line) as { result?: string; error?: string };
 				console.log(error ?? result);
 			} catch {
 				console.log(line);
 			}
 			waiting = false;
-			rl.prompt();
+			if (!closed) rl.prompt();
 		}
 	});
 
-	socket.on('error', (err: any) => {
+	socket.on('error', (err: NodeJS.ErrnoException) => {
 		if (err.code === 'ECONNREFUSED' || err.code === 'ENOENT') {
 			console.error('Server is not running. Start it with: xxscreeps start');
 		} else {
@@ -98,6 +98,7 @@ if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 	});
 
 	rl.on('close', () => {
+		closed = true;
 		socket.end();
 	});
 }

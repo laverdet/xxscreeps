@@ -102,19 +102,7 @@ const users = {
 	101: 'Player 2',
 };
 
-export async function instantiateTestShard() {
-	// Create fake database
-	const db = await Database.connect({
-		data: 'local://data',
-		pubsub: 'local://pubsub',
-	});
-	const shard = await Shard.connectWith(db, {
-		name: 'shard0',
-		data: 'local://keyval',
-		pubsub: 'local://pubsub',
-		scratch: 'local://scratch',
-	});
-
+export async function seedTestShard(db: Database, shard: Shard) {
 	// Reset all stores so shared `local://` singletons start clean
 	await Promise.all([
 		db.data.flushdb(),
@@ -136,6 +124,22 @@ export async function instantiateTestShard() {
 		Promise.all(Fn.map(Object.entries(users), ([ userId, username ]) =>
 			User.create(db, userId, username))),
 	]);
+}
+
+export async function instantiateTestShard() {
+	// Create fake database
+	const db = await Database.connect({
+		data: 'local://data',
+		pubsub: 'local://pubsub',
+	});
+	const shard = await Shard.connectWith(db, {
+		name: 'shard0',
+		data: 'local://keyval',
+		pubsub: 'local://pubsub',
+		scratch: 'local://scratch',
+	});
+
+	await seedTestShard(db, shard);
 
 	return { db, shard, world };
 }

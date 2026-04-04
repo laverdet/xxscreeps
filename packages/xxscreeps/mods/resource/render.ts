@@ -1,6 +1,6 @@
 import type { Store } from './store.js';
-import { bindRenderer } from 'xxscreeps/backend/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { bindRenderer } from 'xxscreeps/game/render.js';
 import { StructureContainer } from './container.js';
 import { Resource } from './resource.js';
 
