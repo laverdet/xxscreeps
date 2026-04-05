@@ -4,6 +4,7 @@ export const manifest: Manifest = {
 	dependencies: [
 		'xxscreeps/mods/chemistry',
 		'xxscreeps/mods/defense',
+		'xxscreeps/mods/factory',
 		'xxscreeps/mods/flag',
 		'xxscreeps/mods/intershardResource',
 		'xxscreeps/mods/invader',
