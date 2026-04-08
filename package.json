@@ -2,6 +2,7 @@
   "name": "@xxscreeps/workspace",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@9.15.2",
   "license": "ISC",
   "repository": "https://github.com/laverdet/xxscreeps",
   "scripts": {
