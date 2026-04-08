@@ -7,7 +7,7 @@ RUN npm install
 COPY tsconfig*.json ./
 COPY src src
 RUN echo 'update-notifier=false' >> .npmrc && \
-	npm explore @xxscreeps/path-finder -- npm install && \
+	npm explore @xxscreeps/pathfinder -- npm install && \
 	npm run build
 
 FROM node:24-slim as run

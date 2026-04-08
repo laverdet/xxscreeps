@@ -32,10 +32,11 @@
 		"**/dist": true,
 		"**/node_modules": true,
 	},
+	"search.exclude": {
+		"pnpm-lock.yaml": true,
+	},
 	"files.insertFinalNewline": true,
 	"files.trimTrailingWhitespace": true,
-	"typescript.tsdk": "./node_modules/typescript/lib",
-	"typescript.enablePromptUseWorkspaceTsdk": true,
-	"typescript.preferences.importModuleSpecifier": "shortest",
-	"typescript.tsserver.experimental.enableProjectDiagnostics": false
+	"js/ts.preferences.importModuleSpecifier": "shortest",
+	"js/ts.tsdk.promptToUseWorkspaceVersion": true,
 }

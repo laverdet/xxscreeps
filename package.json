@@ -1,85 +1,26 @@
 {
-  "name": "xxscreeps",
-  "version": "0.0.6",
+  "name": "@xxscreeps/workspace",
+  "private": true,
   "type": "module",
   "license": "ISC",
   "repository": "https://github.com/laverdet/xxscreeps",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b",
     "eslint": "eslint --max-warnings 0 $(git ls-files '*.ts' '*.tsx')",
-    "test": "xxscreeps test",
-    "watch": "tsc -w"
-  },
-  "bin": {
-    "xxscreeps": "./bin/xxscreeps.js"
-  },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "exports": {
-    "./config/mods/import/*": "./dist/config/mods.static/*",
-    "./*": "./dist/*"
+    "test": "npx xxscreeps test",
+    "watch": "tsc -b -w"
   },
   "dependencies": {
-    "@babel/core": "~7.22.5",
-    "@screeps/launcher": "4.1.0",
-    "@types/argparse": "~2.0.10",
-    "@types/babel__core": "~7.20.1",
-    "@types/etag": "~1.8.1",
-    "@types/js-yaml": "~4.0.5",
-    "@types/koa": "~2.13.6",
-    "@types/koa-bodyparser": "~4.3.10",
-    "@types/koa-conditional-get": "~2.0.0",
-    "@types/koa-passport": "~4.0.2",
-    "@types/koa-router": "~7.4.4",
-    "@types/lodash": "~4.14.195",
-    "@types/lokijs": "~1.5.8",
-    "@types/node": "^24.10.13",
-    "@types/node-fetch": "~2.6.4",
-    "@types/openid": "~2.0.2",
-    "@types/passport-steam": "~1.0.1",
-    "@types/pngjs": "~6.0.1",
-    "@types/sockjs": "~0.3.33",
-    "@types/source-map-support": "~0.5.6",
-    "@xxscreeps/path-finder": "file:src/driver/path-finder",
-    "acorn": "8.9.0",
-    "acorn-class-fields": "1.0.0",
-    "acorn-private-methods": "1.0.0",
-    "argparse": "2.0.1",
-    "babel-loader": "9.1.2",
-    "etag": "1.8.1",
-    "isolated-vm": "6.0.2",
-    "ivm-inspect": "5.0.0",
-    "js-base64": "3.7.5",
-    "js-yaml": "4.1.0",
-    "json-schema": "0.4.0",
-    "koa": "2.14.2",
-    "koa-bodyparser": "4.4.1",
-    "koa-conditional-get": "3.0.0",
-    "koa-passport": "4.1.4",
-    "koa-router": "10.1.1",
-    "lodash": "3.10.1",
-    "lokijs": "1.5.12",
-    "nan": "2.25.0",
-    "node-fetch": "3.3.1",
-    "passport-steam": "1.0.18",
-    "path-browserify": "1.0.1",
-    "pngjs": "~6.0.0",
-    "sockjs": "~0.3.24",
-    "source-map-loader": "~3.0.2",
-    "source-map-support": "~0.5.21",
-    "stream-to-promise": "3.0.0",
-    "tslib": "~2.5.3",
-    "typescript": "^5.9.3",
-    "webpack": "5.88.0"
+    "xxscreeps": "workspace:*"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
     "eslint": "^9.39.4",
     "eslint-plugin-import": "^2.32.0",
-    "typescript-json-schema": "0.57.0",
-    "xxscreeps": "."
+    "typescript": "^6.0.2",
+    "typescript-json-schema": "0.57.0"
   }
 }

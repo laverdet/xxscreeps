@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - run: npm ci
-      - run: npm explore @xxscreeps/path-finder -- npm install
-      - run: npm run build
-      - run: npm test
+      - uses: pnpm/action-setup@v5
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - run: pnpm run test
