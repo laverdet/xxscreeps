@@ -1,7 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
-import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
@@ -30,16 +28,6 @@ export class StructureFactory extends withOverlay(OwnedStructure, shape) {
 
 	/** @deprecated */
 	@enumerable get storeCapacity() { return this.store.getCapacity(); }
-
-	override '#afterInsert'(room: Room) {
-		super['#afterInsert'](room);
-		room.factory = this;
-	}
-
-	override '#beforeRemove'() {
-		this.room.factory = undefined;
-		super['#beforeRemove']();
-	}
 
 	/**
 	 * Produces the specified commodity. All the required components should be available in the
@@ -88,11 +76,7 @@ export type CommodityRecipe = {
 };
 
 export function getCommodityRecipe(resource: string): CommodityRecipe | undefined {
-	const entry = C.COMMODITIES[resource];
-	if (entry === undefined) return undefined;
-	// components keys are always ResourceType; narrowed here from the stringly-typed
-	// base constant (game/constants can't import ResourceType from mods/resource)
-	return entry as CommodityRecipe;
+	return C.COMMODITIES[resource] as CommodityRecipe | undefined;
 }
 
 /**
@@ -141,15 +125,16 @@ export function checkProduce(factory: StructureFactory, resourceType: ResourceTy
 			if (levelCheck !== undefined) {
 				return levelCheck;
 			}
-			const componentsTotal = Fn.accumulate(Object.values(recipe.components));
-			const netChange = recipe.amount - componentsTotal;
-			if (netChange > 0 && factory.store.getFreeCapacity() < netChange) {
-				return C.ERR_FULL;
-			}
+			let componentsTotal = 0;
 			for (const [ component, amount ] of Object.entries(recipe.components)) {
 				if (factory.store[component as ResourceType] < amount) {
 					return C.ERR_NOT_ENOUGH_RESOURCES;
 				}
+				componentsTotal += amount;
+			}
+			const netChange = recipe.amount - componentsTotal;
+			if (netChange > 0 && factory.store.getFreeCapacity() < netChange) {
+				return C.ERR_FULL;
 			}
 		});
 }

@@ -5,6 +5,7 @@ export * from 'xxscreeps/mods/chemistry/constants.js';
 export * from 'xxscreeps/mods/combat/constants.js';
 export * from 'xxscreeps/mods/construction/constants.js';
 export * from 'xxscreeps/mods/controller/constants.js';
+export * from 'xxscreeps/mods/factory/constants.js';
 export * from 'xxscreeps/mods/creep/constants.js';
 export * from 'xxscreeps/mods/defense/constants.js';
 export * from 'xxscreeps/mods/flag/constants.js';

@@ -41,20 +41,13 @@ const resourceSchema = registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
 
 declare module 'xxscreeps/mods/resource/index.js' {
-	interface Schema { factory: typeof resourceSchema }
+	interface Schema { commodity: typeof resourceSchema }
 }
 
 // Register `RoomObject` schema
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const factorySchema = registerVariant('Room.objects', Factory.format);
 declare module 'xxscreeps/game/room/index.js' {
-	interface Room {
-		/**
-		 * The factory in this room, if present, otherwise undefined.
-		 */
-		factory?: Factory.StructureFactory | undefined;
-	}
-
 	interface Schema { factory: [ typeof factorySchema ] }
 }
 

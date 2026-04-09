@@ -10,15 +10,15 @@ declare module 'xxscreeps/engine/processor/index.js' {
 }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
-	registerIntentProcessor(StructureFactory, 'produce', {}, (factory, context, resourceType: string) => {
-		if (checkProduce(factory, resourceType as ResourceType) !== C.OK) {
+	registerIntentProcessor(StructureFactory, 'produce', {}, (factory, context, resourceType: ResourceType) => {
+		if (checkProduce(factory, resourceType) !== C.OK) {
 			return;
 		}
 		const recipe = getCommodityRecipe(resourceType)!;
 		for (const [ component, amount ] of Object.entries(recipe.components)) {
 			factory.store['#subtract'](component as ResourceType, amount);
 		}
-		factory.store['#add'](resourceType as ResourceType, recipe.amount);
+		factory.store['#add'](resourceType, recipe.amount);
 		factory['#cooldownTime'] = Game.time + recipe.cooldown;
 		saveAction(factory, 'produce', factory.pos);
 		context.didUpdate();
