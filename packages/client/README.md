@@ -8,9 +8,8 @@ app](https://store.steampowered.com/app/464350/Screeps/) on Steam.
 I personally run into a lot of issues with the official client, especially on macOS. The official
 client is simply an [NW.js](https://nwjs.io/) wrapper around an [AngularJS](https://angularjs.org/)
 app. The version of NW.js included with the client is fairly ancient; at the time of this writing it
-was based on Chrome 76 [July 2019] -- a two year old version. I made this package because I was
-experiencing frequent crashes in the official client, and I desired a native experience on my Apple
-M1-based computer.
+was based on Chrome 140 [September 2025] -- a seven month old version. I made this package because I
+was experiencing frequent crashes in the official client.
 
 This client just serves up the Screeps client files which are already sitting in your Steam folder.
 It also adds some basic endpoints for authentication via Steam OpenID. For all intents and purposes
@@ -26,6 +25,7 @@ installed as a peer to xxscreeps!
 
 From scratch instructions for installing xxscreeps + this client follows:
 ```
+# TODO: After monorepo republish
 mkdir xxscreeps
 cd xxscreeps
 npm init -y

@@ -1,12 +1,11 @@
-import type { Schema } from './config';
-import config from 'xxscreeps/config';
-import os from 'os';
+import type { Schema } from './config.js';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import { Transform } from 'node:stream';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import JSZip from 'jszip';
-import * as User from 'xxscreeps/engine/db/user';
-import { hooks } from 'xxscreeps/backend';
-import { promises as fs } from 'fs';
-import { fileURLToPath, pathToFileURL } from 'url';
-import { Transform } from 'stream';
+import { hooks } from 'xxscreeps/backend/index.js';
+import config from 'xxscreeps/config/index.js';
 
 // Locate and read `package.nw`
 const { data, stat } = await async function() {
@@ -32,20 +31,20 @@ const { data, stat } = await async function() {
 
 if (data) {
 	// Read package zip metadata
-	const zip = new JSZip;
+	const zip = new JSZip();
 	await zip.loadAsync(data);
 	const { files } = zip;
 	// HTTP header is only accurate to the minute
-	const lastModified = stat!.mtime;
+	const lastModified = stat.mtime;
 
 	hooks.register('middleware', koa => {
 
 		// Serve client assets directly from steam package
-		koa.use(async(context, next) => {
-			const path = context.request.path === '/' ?
-				'index.html' : context.request.path.substr(1);
+		koa.use(async (context, next) => {
+			const path = context.request.path === '/'
+				? 'index.html' : context.request.path.substr(1);
 			const file = files[path];
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 			if (!file) {
 				return next();
 			}
@@ -130,7 +129,7 @@ if (data) {
 				} else {
 					// JSZip doesn't implement their read stream correctly and it causes EPIPE crashes. Pass it
 					// through a no-op transform stream first to iron that out.
-					const stream = new Transform;
+					const stream = new Transform();
 					stream._transform = function(chunk, encoding, done) {
 						this.push(chunk, encoding);
 						done();
@@ -160,6 +159,7 @@ if (data) {
 			context.set('Last-Modified', `${new Date(lastModified)}`);
 
 			// Don't send any auth tokens for these requests
+			// @ts-expect-error
 			context.state.token = false;
 		});
 	});

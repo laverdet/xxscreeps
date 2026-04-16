@@ -12,6 +12,7 @@
     "watch": "tsc -b -w"
   },
   "dependencies": {
+    "@xxscreeps/client": "workspace:*",
     "@xxscreeps/redis": "workspace:*",
     "xxscreeps": "workspace:*"
   },
