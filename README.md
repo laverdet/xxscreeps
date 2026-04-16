@@ -151,7 +151,9 @@ any resources when `amount === 0`; these functions should transfer the maximum a
 this case" is extraordinarily helpful.
 
 If you are a professional developer and you want to help there's still a lot of features that need
-to be developed. Feel free to talk to me about the status of the project!
+to be developed. The [architecture overview](docs/architecture.md) explains how the major systems
+fit together — start there to build a mental model before diving into the source. Feel free to talk
+to me about the status of the project!
 
 
 ## Community

@@ -1,0 +1,15 @@
+{
+	"name": "@xxscreeps/pathfinder",
+	"main": "./index.cjs",
+	"scripts": {
+		"install": "node-gyp rebuild --release",
+		"postinstall": "node-gyp clean"
+	},
+	"dependencies": {
+    "isolated-vm": "6.0.2",
+    "nan": "2.25.0"
+	},
+	"devDependencies": {
+    "@types/node": "~24.12.2"
+	}
+}

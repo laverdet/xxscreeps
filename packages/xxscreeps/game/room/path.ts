@@ -1,0 +1,167 @@
+import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
+import type { Terrain } from 'xxscreeps/game/terrain.js';
+import { Game } from 'xxscreeps/game/index.js';
+import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
+import { getOffsetsFromDirection } from 'xxscreeps/game/position.js';
+import { extend } from 'xxscreeps/utility/utility.js';
+import { Room } from './room.js';
+
+export type FindPathOptions = PathFinder.RoomSearchOptions & {
+	serialize?: boolean;
+};
+
+export type RoomPath = {
+	x: number;
+	y: number;
+	dx: -1 | 0 | 1;
+	dy: -1 | 0 | 1;
+	direction: Direction;
+}[];
+
+declare module './room.js' {
+
+	namespace Room {
+		/**
+		 * Serialize a path array into a short string representation, which is suitable to store in memory
+		 * @param path A path array retrieved from Room.findPath
+		 */
+		const serializePath: (path: RoomPath) => string;
+
+		/**
+		 * Deserialize a short string path representation into an array form
+		 * @param path A serialized path string
+		 */
+		const deserializePath: (path: string) => RoomPath;
+	}
+
+	interface Room {
+		/**
+		 * Find the exit direction en route to another room. Please note that this method is not required
+		 * for inter-room movement, you can simply pass the target in another room into Creep.moveTo
+		 * method.
+		 * @param room Another room name or room object
+		 */
+		findExitTo: (room: Room | string) => any;
+
+		/**
+		 * Get a Room.Terrain object which provides fast access to static terrain data. This method works
+		 * for any room in the world even if you have no access to it.
+		 */
+		getTerrain: () => Terrain;
+
+		/**
+		 * Find an optimal path inside the room between fromPos and toPos using Jump Point Search algorithm.
+		 * @param origin The start position
+		 * @param goal The end position
+		 * @param options
+		 */
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
+		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize?: false }): RoomPath;
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
+		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize: true }): string;
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
+		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize?: boolean }): RoomPath | string;
+	}
+}
+
+Object.assign(Room, {
+	serializePath(path: RoomPath) {
+		if (!Array.isArray(path)) {
+			throw new Error('`path` is not an array');
+		}
+		if (path.length === 0) {
+			return '';
+		}
+		if (path[0].x < 0 || path[0].y < 0) {
+			throw new Error('path coordinates cannot be negative');
+		}
+		let result = `${path[0].x}`.padStart(2, '0') + `${path[0].y}`.padStart(2, '0');
+		for (const step of path) {
+			result += step.direction;
+		}
+		return result;
+	},
+
+	deserializePath(path: string) {
+		if (typeof path !== 'string') {
+			throw new Error('`path` is not a string');
+		}
+		const result: RoomPath = [];
+		if (path.length === 0) {
+			return result;
+		}
+
+		let xx = Number(path.substr(0, 2));
+		let yy = Number(path.substr(2, 2));
+		if (Number.isNaN(xx) || Number.isNaN(yy)) {
+			throw new Error('`path` is not a valid serialized path string');
+		}
+		for (let ii = 4; ii < path.length; ++ii) {
+			const direction = Number(path[ii]) as Direction;
+			const { dx, dy } = getOffsetsFromDirection(direction);
+			if (ii > 4) {
+				xx += dx;
+				yy += dy;
+			}
+			result.push({
+				x: xx,
+				y: yy,
+				dx, dy,
+				direction,
+			});
+		}
+		return result;
+	},
+});
+
+extend(Room, {
+	findExitTo(room: Room | string) {
+		const route = Game.map.findRoute(this, room);
+		if (typeof route === 'object') {
+			return route[0].exit;
+		} else {
+			return route;
+		}
+	},
+
+	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize?: boolean } = {}) {
+
+		// Delegate to `PathFinder` for main search
+		const result = PathFinder.roomSearch(origin, [ goal ], options);
+
+		// Add last position for automatic {range:1} paths
+		if (
+			(options.range ?? 0) === 0 &&
+			(result.path.length
+				? result.path[result.path.length - 1].getRangeTo(goal) === 1 :
+				origin.isNearTo(goal))
+		) {
+			result.path.push(goal);
+		}
+
+		// Convert to room path
+		const path: RoomPath = [];
+		let previous = origin;
+		for (const pos of result.path) {
+			if (pos.roomName !== this.name) {
+				break;
+			}
+			path.push({
+				x: pos.x,
+				y: pos.y,
+				dx: pos.x - previous.x as never,
+				dy: pos.y - previous.y as never,
+				direction: previous.getDirectionTo(pos),
+			});
+			previous = pos;
+		}
+		if (options.serialize) {
+			return Room.serializePath(path);
+		}
+		return path;
+	},
+
+	getTerrain() {
+		return Game.map.getRoomTerrain(this.name);
+	},
+});

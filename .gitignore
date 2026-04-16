@@ -1,5 +1,5 @@
 /.screepsrc.yaml*
-/dist
-/node_modules
 /screeps
 /types
+dist
+node_modules

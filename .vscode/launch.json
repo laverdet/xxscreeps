@@ -6,7 +6,7 @@
 		"request": "launch",
 		"internalConsoleOptions": "openOnSessionStart",
 		"envFile": "${workspaceFolder}/.env",
-		"program": "${workspaceFolder}/dist/config/entry.js",
+		"program": "${workspaceFolder}/packages/xxscreeps/dist/config/entry.js",
 		"args": [ "start" ],
 	}, {
 		"name": "Test",
@@ -14,7 +14,7 @@
 		"request": "launch",
 		"internalConsoleOptions": "openOnSessionStart",
 		"envFile": "${workspaceFolder}/.env",
-		"program": "${workspaceFolder}/dist/config/entry.js",
+		"program": "${workspaceFolder}/packages/xxscreeps/dist/config/entry.js",
 		"args": [ "test" ],
 	}, {
 		"name": "Script",
@@ -22,8 +22,8 @@
 		"request": "launch",
 		"internalConsoleOptions": "openOnSessionStart",
 		"envFile": "${workspaceFolder}/.env",
-		"program": "${workspaceFolder}/dist/config/entry.js",
-		"args": [ "${workspaceRoot}/dist/${input:scriptName}" ]
+		"program": "${workspaceFolder}/packages/xxscreeps/dist/config/entry.js",
+		"args": [ "${workspaceRoot}/packages/xxscreeps/dist/${input:scriptName}" ]
 	}	],
 	"inputs": [ {
 		"id": "scriptName",

@@ -1,0 +1,7 @@
+packages:
+  - packages/pathfinder
+  - packages/xxscreeps
+
+onlyBuiltDependencies:
+  - isolated-vm
+  - ivm-inspect

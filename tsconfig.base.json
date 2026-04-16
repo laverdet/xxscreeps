@@ -1,8 +1,15 @@
 {
 	"compilerOptions": {
-		// Output
-		"declaration": true,
+		// Enable project references
+		"composite": true,
+
+		// Sources
+		"rootDir": "${configDir}",
+		"outDir": "${configDir}/dist",
+
+		// Language & emit settings
 		"sourceMap": true,
+		"target": "esnext",
 
 		// Options
 		"allowJs": true,
@@ -11,12 +18,9 @@
 		"importHelpers": true,
 		"moduleResolution": "nodenext",
 		"module": "nodenext",
-		"paths": {
-			"xxscreeps/*": [ "*" ],
-		},
-		"target": "esnext",
-		"lib": [ "esnext", "dom", "dom.iterable" ],
+		"lib": [ "esnext", "dom" ],
 		"resolveJsonModule": true,
+		"types": [ "node" ],
 
 		// Strictness
 		"isolatedModules": true,
@@ -27,4 +31,8 @@
 		"skipLibCheck": true,
 		"strict": true,
 	},
+	"include": [ "${configDir}", "${configDir}/**/*.json" ],
+	"exclude": [ "**/dist", "**/node_modules", "**/package.json", "**/tsconfig.json" ],
+	"files": [],
+	"references": [],
 }

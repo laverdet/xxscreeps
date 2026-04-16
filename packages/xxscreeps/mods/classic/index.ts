@@ -1,0 +1,20 @@
+import type { Manifest } from 'xxscreeps/config/mods/index.js';
+
+export const manifest: Manifest = {
+	dependencies: [
+		'xxscreeps/mods/chemistry',
+		'xxscreeps/mods/defense',
+		'xxscreeps/mods/factory',
+		'xxscreeps/mods/flag',
+		'xxscreeps/mods/intershardResource',
+		'xxscreeps/mods/invader',
+		'xxscreeps/mods/logistics',
+		'xxscreeps/mods/market',
+		'xxscreeps/mods/observer',
+		'xxscreeps/mods/road',
+		'xxscreeps/mods/source',
+		'xxscreeps/mods/spawn',
+		'xxscreeps/mods/visual',
+	],
+	provides: null,
+};
