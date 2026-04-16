@@ -1,0 +1,23 @@
+{
+  "name": "@xxscreeps/client",
+  "version": "0.0.6",
+  "type": "module",
+  "xxscreeps": true,
+  "scripts": {
+    "build": "tsc",
+    "eslint": "eslint $(git ls-files '*.ts' '*.tsx')",
+    "watch": "tsc -w"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./dist/*"
+  },
+  "dependencies": {
+    "jszip": "^3.6.0"
+  },
+  "devDependencies": {
+    "@laverdet/eslint-config": "github:laverdet/eslint-config#a12fa0a782425b584992fc937eb0db43642b560a",
+    "@types/jszip": "^3.4.1",
+    "typescript": "4.3.2"
+  }
+}

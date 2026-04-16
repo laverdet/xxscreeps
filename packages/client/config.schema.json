@@ -1,0 +1,21 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "defaultProperties": [
+    ],
+    "properties": {
+        "browserClient": {
+            "defaultProperties": [
+            ],
+            "description": "Configuration for '@xxscreeps/client'",
+            "properties": {
+                "package": {
+                    "description": "Full path to `package.nw`. This has the following defaults:\nmacOS: ~/Library/Application Support/Steam/steamapps/common/Screeps/package.nw\nWindows: C:\\Program Files (x86)\\Steam\\steamapps\\common\\Screeps\\package.nw",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "type": "object"
+}
+
