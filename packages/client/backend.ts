@@ -159,7 +159,8 @@ if (data) {
 			context.set('Last-Modified', `${new Date(lastModified)}`);
 
 			// Don't send any auth tokens for these requests
-			// @ts-expect-error
+			// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+			// @ts-ignore -- Mismatching result from ci/cd, language server, and tsc
 			context.state.token = false;
 		});
 	});

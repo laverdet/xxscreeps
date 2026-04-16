@@ -77,7 +77,8 @@ if (steamApiKey) {
 
 		// Plug steam router into koa backend
 		// TODO: Why did this happen?
-		// @ts-expect-error
+		// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+		// @ts-ignore -- Mismatching result from ci/cd, language server, and tsc
 		router.use('/api/auth/steam',
 			Passport.initialize(),
 			Passport.authenticate('steam', {
