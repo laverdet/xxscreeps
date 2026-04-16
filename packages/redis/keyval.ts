@@ -1,7 +1,7 @@
-import type * as P from 'xxscreeps/engine/db/storage/provider';
-import * as Fn from 'xxscreeps/utility/functional';
-import { Buffer } from 'buffer';
-import { RedisHolder } from './client';
+import type * as P from 'xxscreeps/engine/db/storage/provider.js';
+import { Buffer } from 'node:buffer';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { RedisHolder } from './client.js';
 
 type Value = P.Value;
 function recv(value: Value) {
@@ -137,8 +137,8 @@ export class RedisProvider implements P.KeyValProvider {
 	}
 
 	async hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
-		const iterable = Symbol.iterator in fields ?
-			fields as Iterable<[ string, Value ]> :
+		const iterable = Symbol.iterator in fields
+			? fields as Iterable<[ string, Value ]> :
 			Object.entries(fields);
 		await this.redis.invoke<number>(cb => this.redis.batch(key).hset(key, [ ...Fn.map(Fn.concat(iterable), recv) ], cb));
 	}
@@ -218,7 +218,7 @@ export class RedisProvider implements P.KeyValProvider {
 				key,
 				...options?.if ? [ options.if ] : [],
 				...options?.incr ? [ 'incr' ] : [],
-				...Fn.concat(members),
+				...Fn.concat<number | string>(members),
 				cb));
 			return options?.incr ? Number(send(result)) : result;
 		}

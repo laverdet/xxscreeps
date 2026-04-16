@@ -34,6 +34,7 @@ export * from './iterable/fold/reduce.js';
 export * from './iterable/fold/some.js';
 export * from './iterable/intersperse.js';
 export * from './iterable/map.js';
+export * from './iterable/mapAwait.js';
 export * from './iterable/range.js';
 export * from './iterable/reject.js';
 export * from './iterable/scan.js';

@@ -3,6 +3,7 @@
 	"include": [],
 	"references": [
 		{ "path": "./packages/pathfinder/tsconfig.json" },
+		{ "path": "./packages/redis/tsconfig.json" },
 		{ "path": "./packages/xxscreeps/tsconfig.json" },
 	],
 }

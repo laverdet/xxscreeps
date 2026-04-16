@@ -1,8 +1,10 @@
 import type { Multi } from 'redis';
-import * as Fn from 'xxscreeps/utility/functional';
 import redis from 'redis';
-import { Deferred, listen, mustNotReject } from 'xxscreeps/utility/async';
-import { getOrSet } from 'xxscreeps/utility/utility';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
+import { Deferred, listen, mustNotReject } from 'xxscreeps/utility/async.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
+
 export type Redis = redis.RedisClient;
 
 declare module 'redis' {
@@ -46,9 +48,9 @@ export class RedisHolder {
 			retry_strategy: () => false,
 		});
 		await new Promise<void>((resolve, reject) => {
-			const unlisten1 = listen(client, 'ready', () => { unlisten(); resolve() });
-			const unlisten2 = listen(client, 'error', error => { unlisten(); reject(error) });
-			const unlisten = (): void => { unlisten1(); unlisten2() };
+			const unlisten1 = listen(client, 'ready', () => { unlisten(); resolve(); });
+			const unlisten2 = listen(client, 'error', error => { unlisten(); reject(error); });
+			const unlisten = (): void => { unlisten1(); unlisten2(); };
 		});
 		client.on('error', error => {
 			console.error(error.message);
@@ -59,8 +61,12 @@ export class RedisHolder {
 
 	batch(...keys: string[]): Multi {
 		const client = this.tickBatch ??= this.client.batch();
-		mustNotReject(Fn.mapAsync(new Set(
-			Fn.filter(Fn.map(keys, key => this.mergeByKey.get(key)))), merge => this.flush(merge)));
+		mustNotReject(Fn.pipe(
+			keys,
+			$$ => Fn.map($$, key => this.mergeByKey.get(key)),
+			$$ => Fn.filter($$, nonNullPredicate),
+			$$ => new Set($$),
+			$$ => Fn.mapAwait($$, merge => this.flush(merge))));
 		if (!this.tickBatchFresh) {
 			this.tickBatchFresh = true;
 			const id = ++this.tickBatchId;
@@ -68,7 +74,10 @@ export class RedisHolder {
 				if (id === this.tickBatchId) {
 					// Set flag so that a new batch client isn't created by merge handlers
 					this.tickBatchFresh = true;
-					mustNotReject(Fn.mapAsync(this.mergeByCommand.values(), merge => this.flush(merge)));
+					Fn.pipe(
+						this.mergeByCommand.values(),
+						$$ => Fn.mapAwait($$, merge => this.flush(merge)),
+						mustNotReject);
 					this.tickBatch = undefined;
 					this.task = this.invoke<any>(fn => client.exec(fn));
 				}
@@ -91,11 +100,11 @@ export class RedisHolder {
 			const existing = this.mergeByKey.get(key);
 			return existing === merge ? undefined : existing;
 		}));
-		mustNotReject(Fn.mapAsync(existing, merge => this.flush(merge)));
+		mustNotReject(Fn.mapAwait(existing, merge => this.flush(merge)));
 		for (const key of keys) {
 			this.mergeByKey.set(key, merge);
 		}
-		const deferred = new Deferred;
+		const deferred = new Deferred();
 		merge.argv.push(arg);
 		merge.deferred.push(deferred);
 		keys.forEach(key => merge.keys.add(key));

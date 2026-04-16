@@ -76,6 +76,8 @@ if (steamApiKey) {
 		});
 
 		// Plug steam router into koa backend
+		// TODO: Why did this happen?
+		// @ts-expect-error
 		router.use('/api/auth/steam',
 			Passport.initialize(),
 			Passport.authenticate('steam', {

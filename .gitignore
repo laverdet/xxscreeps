@@ -1,5 +1,5 @@
 /.screepsrc.yaml*
+/dump.rdb
 /screeps
-/types
 dist
 node_modules

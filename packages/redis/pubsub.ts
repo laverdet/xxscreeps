@@ -1,5 +1,5 @@
-import type { PubSubListener, PubSubProvider, PubSubSubscription } from 'xxscreeps/engine/db/storage/provider';
-import { RedisHolder } from './client';
+import type { PubSubListener, PubSubProvider, PubSubSubscription } from 'xxscreeps/engine/db/storage/provider.js';
+import { RedisHolder } from './client.js';
 
 export class RedisPubSubProvider implements PubSubProvider {
 	private readonly publishIgnore = new Map<string, {
@@ -43,7 +43,7 @@ export class RedisPubSubProvider implements PubSubProvider {
 		const [ effect1, client1 ] = await RedisHolder.connect(url, blob);
 		const [ effect2, client2 ] = await RedisHolder.connect(url, blob);
 		const provider = new RedisPubSubProvider(client1, client2);
-		return [ () => { effect1(); effect2() }, provider ] as const;
+		return [ () => { effect1(); effect2(); }, provider ] as const;
 	}
 
 	async publish(key: string, message: string) {
@@ -63,7 +63,7 @@ export class RedisPubSubProvider implements PubSubProvider {
 	async subscribe(key: string, listener: PubSubListener) {
 		let subscribers = this.subscribersByKey.get(key);
 		if (!subscribers) {
-			subscribers = new Set;
+			subscribers = new Set();
 			this.subscribersByKey.set(key, subscribers);
 			await this.listener.invoke(cb => this.listener.batch().subscribe(key, cb));
 		}
