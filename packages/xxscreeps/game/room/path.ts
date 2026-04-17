@@ -126,6 +126,10 @@ extend(Room, {
 
 	findPath(origin: RoomPosition, goal: RoomPosition, options: FindPathOptions & { serialize?: boolean } = {}) {
 
+		if (origin.isEqualTo(goal)) {
+			return options.serialize ? '' : [];
+		}
+
 		// Delegate to `PathFinder` for main search
 		const result = PathFinder.roomSearch(origin, [ goal ], options);
 
