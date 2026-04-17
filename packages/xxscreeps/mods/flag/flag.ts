@@ -78,7 +78,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			() => checkFlagPosition(pos!),
 			() => {
 				intents.push({ type: 'create', params: [
-					this.name, this.pos['#id'],
+					this.name, pos!['#id'],
 					this.color, this.secondaryColor,
 				] });
 			},
