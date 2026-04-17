@@ -310,10 +310,10 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		const next = function() {
 			if (creep.pos.x === 0) {
 				return new RoomPosition(49, creep.pos.y, generateRoomName(rx - 1, ry));
-			} else if (creep.pos.x === 49) {
-				return new RoomPosition(0, creep.pos.y, generateRoomName(rx + 1, ry));
 			} else if (creep.pos.y === 0) {
 				return new RoomPosition(creep.pos.x, 49, generateRoomName(rx, ry - 1));
+			} else if (creep.pos.x === 49) {
+				return new RoomPosition(0, creep.pos.y, generateRoomName(rx + 1, ry));
 			} else {
 				return new RoomPosition(creep.pos.x, 0, generateRoomName(rx, ry + 1));
 			}
