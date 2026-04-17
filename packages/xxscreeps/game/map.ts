@@ -159,9 +159,9 @@ export class GameMap {
 			[ origin ],
 			pos => Math.abs(destination.rx - pos.rx) + Math.abs(destination.ry - pos.ry),
 			routeCallback
-				? (to, from) => routeCallback(generateRoomName(from.rx, from.ry), generateRoomName(to.rx, to.ry)) :
+				? (to, from) => routeCallback(generateRoomName(to.rx, to.ry), generateRoomName(from.rx, from.ry)) :
 				() => 1,
-			pos => Fn.map(Object.values(this.describeExits(generateRoomName(pos.rx, pos.ry))), parseRoomName));
+			pos => Fn.map(Object.values(this.describeExits(generateRoomName(pos.rx, pos.ry)) ?? {}), parseRoomName));
 		if (route) {
 			return Fn.pipe(
 				route,
