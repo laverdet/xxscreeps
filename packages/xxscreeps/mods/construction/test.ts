@@ -67,6 +67,22 @@ describe('Construction', () => {
 		});
 	}));
 
+	// W1N1 (shard.json) at y=7: x=5 is plain, x=15 is wall, x=20 is swamp.
+	test('road site progressTotal scales by terrain', () => construction(async ({ player, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.rooms.W1N1.createConstructionSite(5, 7, 'road'), C.OK);
+			assert.strictEqual(Game.rooms.W1N1.createConstructionSite(20, 7, 'road'), C.OK);
+			assert.strictEqual(Game.rooms.W1N1.createConstructionSite(15, 7, 'road'), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			const sitesByPos = new Map(Object.values(Game.constructionSites).map(site => [ `${site.pos.x},${site.pos.y}`, site ]));
+			assert.strictEqual(sitesByPos.get('5,7')!.progressTotal, C.CONSTRUCTION_COST.road);
+			assert.strictEqual(sitesByPos.get('20,7')!.progressTotal, C.CONSTRUCTION_COST.road * C.CONSTRUCTION_COST_ROAD_SWAMP_RATIO);
+			assert.strictEqual(sitesByPos.get('15,7')!.progressTotal, C.CONSTRUCTION_COST.road * C.CONSTRUCTION_COST_ROAD_WALL_RATIO);
+		});
+	}));
+
 	describe('stomping', () => {
 		const stomping = simulate({
 			W1N1: room => {
@@ -75,7 +91,7 @@ describe('Construction', () => {
 				// Enemy creep one tile above the construction site
 				room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.MOVE ], 'enemy', '101'));
 				// Owner's construction site with some progress
-				const site = createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100');
+				const site = createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road);
 				site.progress = 200;
 				room['#insertObject'](site);
 			},
@@ -107,7 +123,7 @@ describe('Construction', () => {
 				room['#level'] = 1;
 				room['#user'] = room.controller!['#user'] = '100';
 				room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.MOVE ], 'own', '100'));
-				const site = createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100');
+				const site = createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road);
 				site.progress = 200;
 				room['#insertObject'](site);
 			},
@@ -129,7 +145,7 @@ describe('Construction', () => {
 				room['#level'] = 1;
 				room['#user'] = room.controller!['#user'] = '100';
 				room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.MOVE ], 'enemy', '101'));
-				const site = createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100');
+				const site = createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road);
 				// progress defaults to 0
 				room['#insertObject'](site);
 			},
@@ -153,7 +169,7 @@ describe('Construction', () => {
 				room['#user'] = room.controller!['#user'] = '100';
 				room['#safeModeUntil'] = 100;
 				room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.MOVE ], 'enemy', '101'));
-				const site = createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100');
+				const site = createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road);
 				site.progress = 200;
 				room['#insertObject'](site);
 			},
@@ -177,7 +193,7 @@ describe('Construction', () => {
 		const noController = simulate({
 			W0N0: room => {
 				room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W0N0'), [ C.MOVE ], 'enemy', '101'));
-				const site = createSite(new RoomPosition(25, 25, 'W0N0'), 'road', '100');
+				const site = createSite(new RoomPosition(25, 25, 'W0N0'), 'road', '100', C.CONSTRUCTION_COST.road);
 				site.progress = 100;
 				room['#insertObject'](site);
 			},

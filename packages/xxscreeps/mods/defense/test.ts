@@ -13,7 +13,7 @@ describe('ramparts', () => {
 			room['#level'] = 3;
 			room['#user'] = '100';
 			room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W0N0'), [ C.MOVE ], 'rampart_movement', '100'));
-			room['#insertObject'](createConstructionSite(new RoomPosition(25, 25, 'W0N0'), 'rampart', '100'));
+			room['#insertObject'](createConstructionSite(new RoomPosition(25, 25, 'W0N0'), 'rampart', '100', C.CONSTRUCTION_COST.rampart));
 		},
 	});
 
