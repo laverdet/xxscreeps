@@ -5,7 +5,7 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
-import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
+import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/creep/creep.js';
 import { checkActiveStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 import * as CreepLib from './creep.js';
@@ -168,17 +168,21 @@ const intents = [
 	registerIntentProcessor(Creep, 'upgradeController', { after: 'build' }, (creep, context, id: string) => {
 		const controller = Game.getObjectById<StructureController>(id)!;
 		if (CreepLib.checkUpgradeController(creep, controller) === C.OK) {
-			// Calculate power, deduct energy
+			// Energy cost is driven by unboosted WORK parts (vanilla: `buildEffect`);
+			// progress applied is the boosted output. Level-8 CONTROLLER_MAX_UPGRADE_PER_TICK
+			// caps the unboosted energy spend, matching vanilla's `target._upgraded`.
 			controller.upgradePowerThisTick ??= 0;
-			let power = calculatePower(creep, C.WORK, C.UPGRADE_CONTROLLER_POWER, 'upgradeController');
+			let cap = creep.store.energy;
 			if (controller.level === 8) {
-				power = Math.min(power, C.CONTROLLER_MAX_UPGRADE_PER_TICK - controller.upgradePowerThisTick);
+				cap = Math.min(cap, C.CONTROLLER_MAX_UPGRADE_PER_TICK - controller.upgradePowerThisTick);
 			}
-			const energy = Math.min(power, creep.store.energy);
+			const { unboosted: energy, boosted: progress } = calculateBoundedEffect(
+				creep, C.WORK, C.UPGRADE_CONTROLLER_POWER, 'upgradeController', cap,
+			);
 			creep.store['#subtract'](C.RESOURCE_ENERGY, energy);
 
 			// Update progress
-			controller['#progress'] += energy;
+			controller['#progress'] += progress;
 			controller.upgradePowerThisTick += energy;
 
 			if (controller.level < 8) {

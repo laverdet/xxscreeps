@@ -554,6 +554,49 @@ export function calculatePower(creep: Creep, part: PartType, power: number, boos
 	});
 }
 
+/**
+ * Split the unboosted (energy-cost-driving) effect from the boosted (output)
+ * effect for per-WORK-part-per-tick actions like build, repair, and
+ * upgradeController. Mirrors vanilla's behavior:
+ *  - unboosted effect = active-part count × `power`, capped by `cap`
+ *  - boosted effect = unboosted + sum(top-k boost deltas), where k = floor(
+ *    unboosted / power) so an energy-limited creep only applies its most-
+ *    boosted parts.
+ *
+ * Callers use `unboosted` as the energy basis (matching vanilla's
+ * `buildEffect`/`repairEffect`/`_upgraded` accounting) and `boosted` as the
+ * progress/hits applied to the target.
+ */
+export function calculateBoundedEffect(
+	creep: Creep, part: PartType, power: number, boostMethod: string, cap: number,
+) {
+	const boosts: BoostsLookup = C.BOOSTS;
+	const deltas: number[] = [];
+	for (const bodyPart of creep.body) {
+		if (bodyPart.type !== part || bodyPart.hits <= 0) continue;
+		let delta = 0;
+		if (bodyPart.boost) {
+			const multiplier = boosts[part]?.[bodyPart.boost]?.[boostMethod];
+			if (multiplier !== undefined && multiplier > 0) {
+				delta = (multiplier - 1) * power;
+			}
+		}
+		deltas.push(delta);
+	}
+	const unboosted = Math.min(deltas.length * power, cap);
+	if (unboosted <= 0) {
+		return { unboosted: 0, boosted: 0 };
+	}
+	deltas.sort((a, b) => b - a);
+	// Vanilla slices by the effect value (in power-units) rather than part
+	// count. Since `deltas.length * power >= unboosted` and `power >= 1` for
+	// all callers, slicing by `unboosted` keeps all parts when energy is
+	// sufficient and the top-k most-boosted parts otherwise.
+	const sliceCount = Math.floor(unboosted);
+	const boostedDelta = deltas.slice(0, sliceCount).reduce((sum, v) => sum + v, 0);
+	return { unboosted, boosted: Math.floor(unboosted + boostedDelta) };
+}
+
 export function calculateWeight(creep: Creep) {
 	let weight = Fn.accumulate(creep.body, part =>
 		part.type === C.CARRY || part.type === C.MOVE ? 0 : 1);
