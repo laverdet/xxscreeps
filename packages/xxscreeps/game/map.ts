@@ -161,6 +161,9 @@ export class GameMap {
 			routeCallback
 				? (to, from) => routeCallback(generateRoomName(to.rx, to.ry), generateRoomName(from.rx, from.ry)) :
 				() => 1,
+			// describeExits is typed `null as never` for player-facing ergonomics but
+			// can genuinely return null at runtime; `Object.values(null)` would throw.
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			pos => Fn.map(Object.values(this.describeExits(generateRoomName(pos.rx, pos.ry)) ?? {}), parseRoomName));
 		if (route) {
 			return Fn.pipe(
