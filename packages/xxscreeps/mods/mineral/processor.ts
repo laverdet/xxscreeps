@@ -18,8 +18,6 @@ registerHarvestProcessor(Mineral, (creep, mineral) => {
 		Resource.drop(creep.pos, mineral.mineralType, overflow);
 	}
 	const extractor = lookForStructureAt(mineral.room, mineral.pos, C.STRUCTURE_EXTRACTOR)!;
-	// No `-1` here: vanilla's extractor uses a raw counter (not cooldownTime), so
-	// the first observer tick reads the full EXTRACTOR_COOLDOWN — unlike labs/factories.
 	extractor['#cooldownTime'] = Game.time + C.EXTRACTOR_COOLDOWN;
 	return amount;
 });
