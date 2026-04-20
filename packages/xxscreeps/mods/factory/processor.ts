@@ -19,7 +19,11 @@ const intents = [
 			factory.store['#subtract'](component as ResourceType, amount);
 		}
 		factory.store['#add'](resourceType, recipe.amount);
-		factory['#cooldownTime'] = Game.time + recipe.cooldown;
+		// `-1` compensates for xxscreeps running intent processing and the cooldown
+		// getter at the same Game.time, which drops the implicit decrement vanilla
+		// gets from its tick split (processor writes at gameTime = T, user code
+		// reads at runtimeData.time = T+1). See `mods/chemistry/processor.ts`.
+		factory['#cooldownTime'] = Game.time + recipe.cooldown - 1;
 		saveAction(factory, 'produce', factory.pos);
 		context.didUpdate();
 	}),

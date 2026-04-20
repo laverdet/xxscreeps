@@ -29,7 +29,12 @@ const intents = [
 		lab.store['#add'](product, C.LAB_REACTION_AMOUNT);
 		left.store['#subtract'](left.mineralType!, C.LAB_REACTION_AMOUNT);
 		right.store['#subtract'](right.mineralType!, C.LAB_REACTION_AMOUNT);
-		lab['#cooldownTime'] = Game.time + reactionTime[product]!;
+		// `-1` compensates for xxscreeps running intent processing and the cooldown
+		// getter at the same Game.time, which drops the implicit decrement vanilla
+		// gets from its tick split (processor writes at gameTime = T, user code
+		// reads at runtimeData.time = T+1). Without it, the observer sees
+		// REACTION_TIME instead of REACTION_TIME-1.
+		lab['#cooldownTime'] = Game.time + reactionTime[product]! - 1;
 		saveAction(lab, 'reaction1', left.pos);
 		saveAction(lab, 'reaction2', right.pos);
 		context.didUpdate();
@@ -89,7 +94,8 @@ const intents = [
 		lab1.store['#add'](variant[0], C.LAB_REACTION_AMOUNT);
 		lab2.store['#add'](variant[1], C.LAB_REACTION_AMOUNT);
 		const reactionTime: ReactionTimeLookup = C.REACTION_TIME;
-		lab['#cooldownTime'] = Game.time + reactionTime[mineralType]!;
+		// See runReaction above for the `-1` rationale (no-implicit-decrement).
+		lab['#cooldownTime'] = Game.time + reactionTime[mineralType]! - 1;
 		saveAction(lab, 'reverseReaction1', lab1.pos);
 		saveAction(lab, 'reverseReaction2', lab2.pos);
 		context.didUpdate();
@@ -136,7 +142,8 @@ const intents = [
 		}
 
 		if (cooldown > 0) {
-			lab['#cooldownTime'] = Game.time + cooldown;
+			// See runReaction above for the `-1` rationale (no-implicit-decrement).
+			lab['#cooldownTime'] = Game.time + cooldown - 1;
 		}
 
 		context.didUpdate();
