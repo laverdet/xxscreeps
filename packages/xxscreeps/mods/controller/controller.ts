@@ -106,10 +106,21 @@ export function checkActivateSafeMode(controller: StructureController) {
 		() => {
 			if (controller.safeModeAvailable <= 0) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
-			} else if (controller.safeModeCooldown) {
+			}
+			const downgradeThreshold = C.CONTROLLER_DOWNGRADE[controller.level]! / 2
+				- C.CONTROLLER_DOWNGRADE_SAFEMODE_THRESHOLD;
+			if (
+				controller.safeModeCooldown ||
+				(controller.upgradeBlocked ?? 0) > 0 ||
+				(controller.ticksToDowngrade ?? Infinity) < downgradeThreshold
+			) {
 				return C.ERR_TIRED;
-			} else if (controller.safeMode) {
-				return C.ERR_BUSY;
+			}
+			for (const room of Object.values(Game.rooms)) {
+				const other = room.controller;
+				if (other?.my && other.safeMode) {
+					return C.ERR_BUSY;
+				}
 			}
 		});
 }
