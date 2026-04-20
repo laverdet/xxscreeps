@@ -16,6 +16,7 @@ const intents = [
 			target.store['#add'](C.RESOURCE_ENERGY, Math.floor(amount * (1 - C.LINK_LOSS_RATIO)));
 			link['#cooldownTime'] = Game.time + C.LINK_COOLDOWN * link.pos.getRangeTo(target) - 1;
 			saveAction(link, 'transferEnergy', target.pos);
+			context.didUpdate();
 		}
 	}),
 ];

@@ -27,6 +27,11 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 	 */
 	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
 
+	/** @deprecated */
+	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY]; }
+	/** @deprecated */
+	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
+
 	/**
 	 * Remotely transfer energy to another link at any location in the same room.
 	 * @param target The target object.
@@ -68,6 +73,12 @@ export function checkTransferEnergy(link: StructureLink, target: StructureLink, 
 		() => checkMyStructure(link, StructureLink),
 		() => checkIsActive(link),
 		() => checkTarget(target, StructureLink),
+		() => target === link ? C.ERR_INVALID_TARGET : C.OK,
+		() => {
+			if (!target.my) {
+				return C.ERR_NOT_OWNER;
+			}
+		},
 		() => checkHasResource(link, C.RESOURCE_ENERGY, amount),
 		() => checkHasCapacity(target, C.RESOURCE_ENERGY, amount),
 		() => checkSameRoom(link, target),
