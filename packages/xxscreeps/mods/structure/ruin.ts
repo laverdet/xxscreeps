@@ -67,6 +67,11 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 	 * The amount of game ticks before this ruin decays.
 	 */
 	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time); }
+
+	/**
+	 * One of the `STRUCTURE_*` constants — the type of the destroyed structure.
+	 */
+	@enumerable get structureType() { return this['#structure'].type; }
 }
 
 export function createRuin(structure: Structure, decay?: number) {

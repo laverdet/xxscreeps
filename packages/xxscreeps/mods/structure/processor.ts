@@ -2,7 +2,7 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
 import { Ruin } from './ruin.js';
-import { Structure, checkDestroy } from './structure.js';
+import { Structure, checkDestroy, checkNotifyWhenAttacked } from './structure.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { structure: typeof intents }
@@ -11,6 +11,14 @@ const intents = [
 	registerIntentProcessor(Structure, 'destroyStructure', {}, (structure, context) => {
 		if (checkDestroy(structure) === C.OK) {
 			structure['#destroy']();
+			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(Structure, 'notifyWhenAttacked', {}, (structure, context, enabled: boolean) => {
+		if (checkNotifyWhenAttacked(structure, enabled) === C.OK) {
+			// TODO: no consumer — damage processors should read '#noAttackNotify' to emit attack notifications.
+			structure['#noAttackNotify'] = !enabled;
 			context.didUpdate();
 		}
 	}),
