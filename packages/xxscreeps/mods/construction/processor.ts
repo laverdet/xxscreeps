@@ -23,7 +23,9 @@ const intents = [
 		(room, context, structureType: ConstructibleStructureType, xx: number, yy: number, name: string | null) => {
 			const pos = new RoomPosition(xx, yy, room.name);
 			if (checkCreateConstructionSite(room, pos, structureType, name) === C.OK) {
-				const site = create(pos, structureType, me, name);
+				// checkCreateConstructionSite guarantees checkPlacement returned a number (not null).
+				const progressTotal = structureFactories.get(structureType)!.checkPlacement(room, pos)!;
+				const site = create(pos, structureType, me, progressTotal, name);
 				room['#insertObject'](site, true);
 				context.didUpdate();
 			}
