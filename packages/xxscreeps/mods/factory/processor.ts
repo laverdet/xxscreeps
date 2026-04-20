@@ -19,7 +19,7 @@ const intents = [
 			factory.store['#subtract'](component as ResourceType, amount);
 		}
 		factory.store['#add'](resourceType, recipe.amount);
-		factory['#cooldownTime'] = Game.time + recipe.cooldown;
+		factory['#cooldownTime'] = Game.time + recipe.cooldown - 1;
 		saveAction(factory, 'produce', factory.pos);
 		context.didUpdate();
 	}),

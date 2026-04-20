@@ -45,7 +45,9 @@ describe('Factory', () => {
 				assert.strictEqual(factory.store[C.RESOURCE_UTRIUM_BAR], 100);
 				assert.strictEqual(factory.store[C.RESOURCE_UTRIUM], 0);
 				assert.strictEqual(factory.store[C.RESOURCE_ENERGY], 0);
-				assert.strictEqual(factory.cooldown, 20);
+				// recipe.cooldown is 20; observable cooldown is recipe.cooldown - 1
+				// (processor write at gameTime = T, user read at runtimeData.time = T+1).
+				assert.strictEqual(factory.cooldown, 19);
 			});
 		}));
 
@@ -70,7 +72,8 @@ describe('Factory', () => {
 				assert.strictEqual(factory.store[C.RESOURCE_UTRIUM], 500);
 				assert.strictEqual(factory.store[C.RESOURCE_UTRIUM_BAR], 0);
 				assert.strictEqual(factory.store[C.RESOURCE_ENERGY], 0);
-				assert.strictEqual(factory.cooldown, 20);
+				// See `produce bar from mineral` above for the `-1` rationale.
+				assert.strictEqual(factory.cooldown, 19);
 			});
 		}));
 

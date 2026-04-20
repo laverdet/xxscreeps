@@ -70,9 +70,12 @@ describe('Chemistry', () => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => lab.mineralType === 'OH')!;
-				// OH has REACTION_TIME of 20, not the generic LAB_COOLDOWN of 10
-				assert.strictEqual(output.cooldown, C.REACTION_TIME.OH,
-					`cooldown should be REACTION_TIME.OH (${C.REACTION_TIME.OH}), not LAB_COOLDOWN (${C.LAB_COOLDOWN})`);
+				// OH has REACTION_TIME of 20, not the generic LAB_COOLDOWN of 10. The
+				// observable cooldown is REACTION_TIME - 1: vanilla writes cooldownTime
+				// in the processor at gameTime = T and reads it in user code at
+				// runtimeData.time = T+1.
+				assert.strictEqual(output.cooldown, C.REACTION_TIME.OH - 1,
+					`cooldown should be REACTION_TIME.OH - 1 (${C.REACTION_TIME.OH - 1}), not LAB_COOLDOWN (${C.LAB_COOLDOWN})`);
 			});
 		}));
 
@@ -348,8 +351,9 @@ describe('Chemistry', () => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.pos.isEqualTo(25, 25))!;
-				assert.strictEqual(labOH.cooldown, C.REACTION_TIME.OH,
-					'cooldown should match REACTION_TIME for the compound');
+				// Observable cooldown is REACTION_TIME - 1; see runReaction test above.
+				assert.strictEqual(labOH.cooldown, C.REACTION_TIME.OH - 1,
+					'cooldown should match REACTION_TIME - 1 for the compound');
 			});
 		}));
 
