@@ -70,9 +70,15 @@ export abstract class Store extends BufferObjectWithResourcesType {
 	/**
 	 * A shorthand for `getCapacity(resource) - getUsedCapacity(resource)`.
 	 * @param resourceType The type of resource
+	 * @returns Free capacity, or null when the store cannot hold this resource type.
 	 */
-	getFreeCapacity(resourceType?: ResourceType) {
-		return this.getCapacity(resourceType)! - this.getUsedCapacity(resourceType)!;
+	getFreeCapacity(resourceType?: ResourceType): number | null {
+		const capacity = this.getCapacity(resourceType);
+		const used = this.getUsedCapacity(resourceType);
+		if (capacity === null || used === null) {
+			return null;
+		}
+		return capacity - used;
 	}
 
 	'#entries'(): Iterable<[ ResourceType, number ]> {
@@ -133,6 +139,10 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		} else {
 			return this._sum;
 		}
+	}
+
+	override getFreeCapacity(_resourceType?: ResourceType) {
+		return this['#capacity'] - this._sum;
 	}
 
 	'#add'(type: ResourceType, amount: number) {
@@ -329,7 +339,9 @@ export function calculateChecked(object1: WithStore | undefined, object2: WithSt
 }
 
 export function checkHasCapacity(target: WithStore, resourceType: ResourceType, amount: number) {
-	if (target.store.getFreeCapacity(resourceType) >= Math.max(1, amount)) {
+	if (target.store.getCapacity(resourceType) === null) {
+		return C.ERR_INVALID_TARGET;
+	} else if (target.store.getFreeCapacity(resourceType)! >= Math.max(1, amount)) {
 		return C.OK;
 	} else {
 		return C.ERR_FULL;
@@ -341,6 +353,8 @@ export function checkHasResource(target: WithStore, resourceType: ResourceType |
 		return C.ERR_INVALID_ARGS;
 	} else if (typeof amount !== 'number' || amount < 0) {
 		return C.ERR_INVALID_ARGS;
+	} else if (target.store.getCapacity(resourceType!) === null) {
+		return C.ERR_INVALID_TARGET;
 	} else if (target.store[resourceType!] >= Math.max(1, amount)) {
 		return C.OK;
 	} else {

@@ -384,7 +384,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	transfer(this: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			amount || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)));
+			amount || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)!));
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, intentAmount),
 			() => intents.save(this, 'transfer', target.id, resourceType, intentAmount),
