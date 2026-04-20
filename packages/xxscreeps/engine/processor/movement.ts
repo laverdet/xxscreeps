@@ -5,6 +5,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { makeObstacleChecker } from 'xxscreeps/game/pathfinder/obstacle.js';
 import { RoomPosition, getOffsetsFromDirection } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
 import { latin1ToBuffer } from 'xxscreeps/utility/string.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { registerIntentProcessor } from './index.js';
@@ -114,7 +115,10 @@ export function dispatch(room: Room) {
 
 		// Check terrain
 		const nextPosition = move.pos;
-		if (terrain.get(nextPosition.x, nextPosition.y) === C.TERRAIN_MASK_WALL) {
+		if (
+			terrain.get(nextPosition.x, nextPosition.y) === C.TERRAIN_MASK_WALL &&
+			!lookForStructureAt(room, nextPosition, C.STRUCTURE_ROAD)
+		) {
 			move.resolved = true;
 			return false;
 		}
