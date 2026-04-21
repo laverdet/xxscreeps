@@ -45,7 +45,7 @@ const intents = [
 		if (checkTower(tower, target, Creep) === C.OK) {
 			tower.store['#subtract'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
 			const power = C.TOWER_POWER_HEAL * calculateEfficiency(tower, target);
-			target.tickHitsDelta = (target.tickHitsDelta ?? 0) + power;
+			target.tickHealing = (target.tickHealing ?? 0) + power;
 			appendEventLog(target.room, {
 				event: C.EVENT_HEAL,
 				objectId: tower.id,

@@ -6,7 +6,7 @@ import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createLab } from './lab.js';
 
 // Helper to create a lab with resources pre-loaded
-function createLabWithResources(pos: RoomPosition, owner: string, mineral?: string, mineralAmount?: number, energy?: number) {
+export function createLabWithResources(pos: RoomPosition, owner: string, mineral?: string, mineralAmount?: number, energy?: number) {
 	const lab = createLab(pos, owner);
 	if (energy !== undefined) {
 		lab.store['#add'](C.RESOURCE_ENERGY, energy);
