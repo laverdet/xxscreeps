@@ -339,9 +339,10 @@ export function calculateChecked(object1: WithStore | undefined, object2: WithSt
 }
 
 export function checkHasCapacity(target: WithStore, resourceType: ResourceType, amount: number) {
-	if (target.store.getCapacity(resourceType) === null) {
+	const free = target.store.getFreeCapacity(resourceType);
+	if (free === null) {
 		return C.ERR_INVALID_TARGET;
-	} else if (target.store.getFreeCapacity(resourceType)! >= Math.max(1, amount)) {
+	} else if (free >= Math.max(1, amount)) {
 		return C.OK;
 	} else {
 		return C.ERR_FULL;
