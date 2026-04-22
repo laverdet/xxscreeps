@@ -21,6 +21,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: P.Value[]) => any>();
+	private saveChain = Promise.resolve();
 
 	constructor(
 		private readonly url: URL | undefined,
@@ -170,6 +171,17 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return value;
 	}
 
+	hdel(key: string, fields: string[]) {
+		const map = this.data.get(key) as Map<string, string> | undefined;
+		if (!map) return 0;
+		let removed = 0;
+		for (const field of fields) {
+			if (map.delete(field)) ++removed;
+		}
+		if (map.size === 0) this.remove(key);
+		return removed;
+	}
+
 	hget(key: string, field: string) {
 		const map: Map<string, string> | undefined = this.data.get(key);
 		return map?.get(field) ?? null;
@@ -279,9 +291,10 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	sinter(key: string, keys: string[]) {
+		const allKeys = [ key, ...keys ];
 		const sets = Fn.pipe(
-			Fn.concat([ [ key ], keys ]),
-			$$ => Fn.map($$, (key): Set<string> | undefined => this.data.get(key)),
+			allKeys,
+			$$ => Fn.map($$, (entry): Set<string> | undefined => this.data.get(entry)),
 			$$ => Fn.filter($$),
 			$$ => [ ...$$ ]);
 		sets.sort((left, right) => left.size - right.size);
@@ -614,7 +627,17 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		this.data.clear();
 	}
 
-	async save() {
+	save() {
+		const save = this.saveChain.then(() => this.performSave());
+		// The chain exists purely to serialize concurrent calls; the caller-returned
+		// promise rejects normally. The chain catches internally so a transient
+		// failure here doesn't poison subsequent saves — never log or swallow,
+		// that's the caller's problem.
+		this.saveChain = save.catch(() => {});
+		return save;
+	}
+
+	private async performSave() {
 		if (this.url) {
 			const payload = JSON.stringify(this.data, (key, value) => {
 				if (value === this.data) {

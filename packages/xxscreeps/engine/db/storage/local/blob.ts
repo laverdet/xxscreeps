@@ -15,6 +15,7 @@ export class BlobStorage {
 
 	private saveId = 0;
 	private readonly knownPaths = new Set<string>();
+	private saveChain = Promise.resolve();
 
 	constructor(private readonly path: string | null) {}
 
@@ -212,7 +213,17 @@ export class BlobStorage {
 		}
 	}
 
-	async save() {
+	save() {
+		const save = this.saveChain.then(() => this.performSave());
+		// The chain exists purely to serialize concurrent calls; the caller-returned
+		// promise rejects normally. The chain catches internally so a transient
+		// failure here doesn't poison subsequent saves — never log or swallow,
+		// that's the caller's problem.
+		this.saveChain = save.catch(() => {});
+		return save;
+	}
+
+	private async performSave() {
 		// Get changes since last save
 		if (this.path === null) {
 			return;

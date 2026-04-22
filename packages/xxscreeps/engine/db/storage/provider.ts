@@ -45,8 +45,9 @@ export type KeyValProvider = {
 	incr: (key: string) => Promise<number>;
 	incrBy: (key: string, value: number) => Promise<number>;
 	// hashes
+	hdel: (key: string, fields: string[]) => Promise<number>;
 	hget: (key: string, field: string) => Promise<string | null>;
-	hgetall: (key: string) => Promise<Record<string, string>>;
+	hgetall: (key: string) => Promise<Record<string, string | undefined>>;
 	hincrBy: (key: string, field: string, value: number) => Promise<number>;
 	hmget: ((key: string, fields: string[], options: { blob: true }) => Promise<Record<string, Readonly<Uint8Array> | null>>) & ((key: string, fields: string[], options?: AsBlob) => Promise<Record<string, string | null>>);
 	hset: (key: string, field: string, value: Value, options?: HSet) => Promise<boolean>;
