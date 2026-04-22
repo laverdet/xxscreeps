@@ -1,7 +1,10 @@
 import type { GameConstructor } from './index.js';
-import lodash from 'lodash';
+// @ts-expect-error
+import lodash_es from 'lodash-es';
 import * as C from './constants/index.js';
 import { globals, hooks, registerGlobal } from './symbols.js';
+
+const lodash = lodash_es as typeof import('lodash');
 
 registerGlobal('_', lodash);
 

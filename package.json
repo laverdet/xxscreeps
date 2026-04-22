@@ -25,5 +25,10 @@
     "eslint-plugin-import": "^2.32.0",
     "typescript": "^6.0.2",
     "typescript-json-schema": "0.57.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "lodash-es": "patches/lodash-es.patch"
+    }
   }
 }
