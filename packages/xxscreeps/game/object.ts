@@ -57,13 +57,9 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#providesVision'() { return false; }
 	get '#user'(): string | null { return null; }
-	get hits(): number | undefined { return undefined; }
-	get hitsMax(): number | undefined { return undefined; }
-	get my(): boolean | undefined { return undefined; }
 	abstract get ['#lookType'](): string | null;
 
 	set '#user'(_user: string | null) { throw new Error('Setting `#user` on unownable object'); }
-	set hits(_hits: number | undefined) { throw new Error('Setting `hits` on indestructible object'); }
 
 	'#addToMyGame'(_game: GameConstructor) {}
 	'#afterInsert'(room: Room) {
@@ -95,6 +91,14 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 			return `${options.stylize(`[${this.constructor.name}]`, 'special')} ${options.stylize('{released}', 'null')}`;
 		}
 	}
+}
+
+// Type-only merge: exposes `hits`/`hitsMax`/`my` at the base type without installing getters on the prototype.
+export declare interface RoomObject {
+	get hits(): number | undefined;
+	set hits(hits: number);
+	get hitsMax(): number | undefined;
+	get my(): boolean | undefined;
 }
 
 export function create<Type extends RoomObject>(instance: Type, pos: RoomPosition): Type {
