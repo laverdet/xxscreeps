@@ -31,6 +31,13 @@ export class Room extends withOverlay(BufferObject, shape) {
 	#removeObjects = new Set<RoomObject>();
 
 	/**
+	 * A [survival game](https://docs.screeps.com/survival.html) info, if the current game is
+	 * running in the Survival Mode. xxscreeps has no survival mode, so this is always `null`.
+	 */
+	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
+	@enumerable get survivalInfo(): null { return null; }
+
+	/**
 	 * Find all objects of the specified type in the room. Results are cached automatically for the
 	 * specified room and type before applying any custom filters. This automatic cache lasts until
 	 * the end of the tick.
