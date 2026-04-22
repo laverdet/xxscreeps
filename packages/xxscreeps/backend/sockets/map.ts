@@ -13,7 +13,7 @@ export const mapSubscription: SubscriptionEndpoint = {
 
 	async subscribe(parameters) {
 		const roomName = parameters.room;
-		if (!this.context.accessibleRooms.has(roomName)) {
+		if (!this.context.world.accessibleRooms?.has(roomName)) {
 			// The client sends subscription requests for rooms that don't exist. Filter those out here to
 			// avoid unneeded subscriptions.
 			return () => {};

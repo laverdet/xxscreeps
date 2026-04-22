@@ -15,9 +15,14 @@ export const MapStatsEndpoint: Endpoint = {
 		const { time } = context.backend.shard;
 		const userIds = new Set<string>();
 		const stats = Fn.fromEntries(Fn.filter(await Promise.all(Fn.map(roomNames, async roomName => {
+			const status = context.backend.world.map.getRoomStatus(roomName);
 			// The client spams requests for rooms that don't exist
-			if (!context.backend.world.map.getRoomStatus(roomName)) {
+			if (!status) {
 				return;
+			}
+			// Closed rooms carry no owner/level/sign — skip the blob load.
+			if (status.status !== 'normal') {
+				return [ roomName, { status: status.status } ] as const;
 			}
 
 			// TODO: A room status blob that doesn't change every tick would be good
@@ -25,7 +30,7 @@ export const MapStatsEndpoint: Endpoint = {
 
 			// Build rooms payload
 			return [ room.name, {
-				status: 'normal',
+				status: status.status,
 				// Owner, level information
 				...function() {
 					const user = room['#user'];

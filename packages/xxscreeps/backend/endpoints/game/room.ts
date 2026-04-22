@@ -15,11 +15,19 @@ hooks.register('route', {
 	path: '/api/game/room-status',
 
 	execute(context) {
+		const roomName = context.query.room;
+		if (typeof roomName !== 'string') {
+			return;
+		}
+		const status = context.backend.world.map.getRoomStatus(roomName);
+		if (!status) {
+			return;
+		}
 		return {
 			ok: 1,
 			room: {
-				_id: context.query.room,
-				status: 'normal',
+				_id: roomName,
+				status: status.status,
 				openTime: 0,
 			},
 		};

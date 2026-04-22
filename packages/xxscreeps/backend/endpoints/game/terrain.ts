@@ -9,6 +9,19 @@ const cache = new Map<string, {
 	terrain: string;
 	type: 'terrain';
 }>();
+
+/** Evict a single room from the terrain payload cache. Called from the
+ * backend's invalidation subscriber on a per-room signal. */
+export function evictTerrainCacheEntry(roomName: string) {
+	cache.delete(roomName);
+}
+
+/** Drop every cached terrain payload. Called when the world terrain blob
+ * itself has changed (import-world, remove-room). */
+export function clearTerrainCache() {
+	cache.clear();
+}
+
 function getTerrainPayload(world: World, roomName: string) {
 	const cached = cache.get(roomName);
 	if (cached) {
@@ -42,6 +55,8 @@ hooks.register('route', {
 		const roomName = `${context.query.room}`;
 		const terrain = getTerrainPayload(context.backend.world, roomName);
 		if (terrain) {
+			// Force revalidation; ETag keeps the unchanged case at 304.
+			context.set('Cache-Control', 'no-cache');
 			context.set('ETag', makeEtag(terrain.terrain));
 			return { ok: 1, terrain: [ terrain ] };
 		}
