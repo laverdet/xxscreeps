@@ -26,7 +26,7 @@ export function getRoomChannel(shard: Shard, roomName: string) {
 
 export const processorTimeKey = 'processor/time';
 export const activeRoomsKey = 'processor/activeRooms';
-const sleepingRoomsKey = 'processor/inactiveRooms';
+export const sleepingRoomsKey = 'processor/inactiveRooms';
 export const userToIntentRoomsSetKey = (userId: string) =>
 	`user/${userId}/intentRooms`;
 export const userToPresenceRoomsSetKey = (userId: string) =>
