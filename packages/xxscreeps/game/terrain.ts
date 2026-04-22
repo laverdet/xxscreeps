@@ -70,18 +70,16 @@ export class Terrain {
 			const buffer = destinationArray instanceof Uint8Array ? destinationArray : new Uint8Array(625);
 			buffer.set(this.#buffer);
 			return buffer;
-		} else {
-			const buffer = destinationArray ?? new Uint32Array(625);
-			for (let ii = 0; ii < 625; ++ii) {
-				const value = this.#buffer[ii];
-				buffer[ii] =
-					((value >>> ((ii << 3) & 0x06)) & 0x03) |
-					(((value >>> ((ii << 3) + 2 & 0x06)) & 0x03) << 8) |
-					(((value >>> ((ii << 3) + 4 & 0x06)) & 0x03) << 16) |
-					(((value >>> ((ii << 3) + 6 & 0x06)) & 0x03) << 24);
-			}
-			return new Uint8Array(buffer.buffer);
 		}
+		const buffer = destinationArray ?? new Uint8Array(2500);
+		for (let ii = 0, jj = 0; ii < 625; ++ii, jj += 4) {
+			const value = this.#buffer[ii];
+			buffer[jj] = value & 0x03;
+			buffer[jj + 1] = (value >>> 2) & 0x03;
+			buffer[jj + 2] = (value >>> 4) & 0x03;
+			buffer[jj + 3] = (value >>> 6) & 0x03;
+		}
+		return buffer;
 	}
 }
 
