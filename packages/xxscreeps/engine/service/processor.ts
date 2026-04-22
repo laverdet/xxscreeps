@@ -1,3 +1,4 @@
+import type { InvalidationMessage } from './invalidation.js';
 import type { ProcessorRequest } from 'xxscreeps/engine/processor/worker.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 import config from 'xxscreeps/config/index.js';
@@ -8,6 +9,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { negotiateResponderClient } from 'xxscreeps/utility/responder.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
+import { getInvalidationChannel } from './invalidation.js';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
 
 const isEntry = checkIsEntry();
@@ -31,6 +33,13 @@ const db = await Database.connect();
 const shard = await Shard.connect(db, 'shard0');
 const worldBlob = await shard.data.req('terrain', { blob: true });
 const processorSubscription = await getProcessorChannel(shard).subscribe();
+const invalidationSubscription = await getInvalidationChannel(shard).subscribe();
+// CLI publishes invalidations while holding gameMutex, so they arrive
+// between ticks when workers are idle. Queue them here and drain inline
+// at the top of the main loop; that preserves FIFO with processor-channel
+// messages without depending on cross-channel dispatch order.
+const pendingInvalidations: InvalidationMessage[] = [];
+invalidationSubscription.listen(message => pendingInvalidations.push(message));
 
 // Create processor workers
 type RoomWorker = typeof workers extends (infer Type)[] ? Type : never;
@@ -50,6 +59,10 @@ const affinityByRoom = new Map<string, RoomWorker>();
 // other rooms if needed.
 async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
 	const queueKey = processRoomsSetKey(time);
+	// TODO: `consumeSortedSet(..., 0, 0)` only pops score-0 rooms, but
+	// `updateUserRoomRelationships` scores `activeRoomsKey` by intent-capable
+	// user count — so spawn-owning rooms are permanently skipped. Masked by
+	// test seeds (no owned spawns); surfaces on cold boot of bot-owned worlds.
 	loop: while (true) {
 
 		// Yield affinity rooms first
@@ -109,6 +122,17 @@ try {
 
 	// Process messages
 	loop: for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
+
+		while (pendingInvalidations.length > 0) {
+			const inv = pendingInvalidations.shift()!;
+			// `accessibleRooms` doesn't change terrain or blobs; the processor
+			// doesn't consult the active-rooms set, so there's nothing to drop.
+			if (inv.type === 'accessibleRooms') continue;
+			const request: ProcessorRequest = inv.type === 'room'
+				? { type: 'invalidate', target: 'room', roomName: inv.roomName }
+				: { type: 'invalidate', target: 'world' };
+			await Promise.all(Fn.map(workers, worker => worker.responder(request)));
+		}
 
 		switch (message.type) {
 			case 'shutdown':
@@ -197,6 +221,7 @@ try {
 
 	// Close connections
 	processorSubscription.disconnect();
+	invalidationSubscription.disconnect();
 	shard.disconnect();
 	db.disconnect();
 }

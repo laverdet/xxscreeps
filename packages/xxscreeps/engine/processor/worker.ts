@@ -17,7 +17,7 @@ import 'xxscreeps/config/mods/import/game.js';
 await importMods('driver');
 await importMods('processor');
 
-export type ProcessorRequest = LoadWorldRequest | InitializeRequest | ProcessRequest | FinalizeRequest;
+export type ProcessorRequest = LoadWorldRequest | InitializeRequest | ProcessRequest | FinalizeRequest | InvalidateRequest;
 
 type LoadWorldRequest = {
 	type: 'world';
@@ -36,6 +36,11 @@ type FinalizeRequest = {
 	type: 'finalize';
 	time: number;
 };
+// 'room' drops a single cached Room; 'world' wipes every cache and reloads
+// terrain, since terrain is baked into `world`.
+type InvalidateRequest =
+	{ type: 'invalidate'; target: 'room'; roomName: string } |
+	{ type: 'invalidate'; target: 'world' };
 
 // Hooks
 const refreshRoom = hooks.makeMapped('refreshRoom');
@@ -110,6 +115,23 @@ try {
 				processedRooms.set(roomName, context);
 				nextRoomCache.set(roomName, room);
 				await context.process();
+				break;
+			}
+
+			// Cache eviction for out-of-band disk writes. 'world' must reload
+			// terrain so active-set and pathfinding see the new entries; 'room'
+			// just drops the cache so the next 'process' reloads from disk.
+			case 'invalidate': {
+				if (message.target === 'room') {
+					roomCache.delete(message.roomName);
+					nextRoomCache.delete(message.roomName);
+				} else {
+					roomCache.clear();
+					nextRoomCache.clear();
+					const worldBlob = await shard.data.req('terrain', { blob: true });
+					world = new World(shard.name, worldBlob);
+					loadTerrain(world);
+				}
 				break;
 			}
 

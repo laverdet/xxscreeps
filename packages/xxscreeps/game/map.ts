@@ -41,13 +41,15 @@ type FindRoute = {
  */
 export class GameMap {
 	readonly #terrain: TerrainByRoom;
+	readonly #accessibleRooms: ReadonlySet<string> | undefined;
 	readonly #left;
 	readonly #top;
 	readonly #height;
 	readonly #width;
 
-	constructor(terrain: TerrainByRoom) {
+	constructor(terrain: TerrainByRoom, accessibleRooms?: ReadonlySet<string>) {
 		this.#terrain = terrain;
+		this.#accessibleRooms = accessibleRooms;
 		let maxX = -Infinity;
 		let minX = Infinity;
 		let maxY = -Infinity;
@@ -207,9 +209,15 @@ export class GameMap {
 	 * from [this article](https://docs.screeps.com/start-areas.html).
 	 */
 	getRoomStatus(roomName: string) {
-		if (this.#terrain.has(roomName)) {
-			return { status: 'normal', timestamp: null };
+		if (!this.#terrain.has(roomName)) {
+			return;
 		}
+		// Callers that build a `World` without the active-rooms set (sandbox
+		// init, processor worker) see every terrain-backed room as `normal`.
+		if (this.#accessibleRooms !== undefined && !this.#accessibleRooms.has(roomName)) {
+			return { status: 'out of borders', timestamp: null };
+		}
+		return { status: 'normal', timestamp: null };
 	}
 
 	/**
@@ -260,12 +268,14 @@ export class World {
 	name;
 	terrain: TerrainByRoom;
 	terrainBlob;
+	accessibleRooms: ReadonlySet<string> | undefined;
 
-	constructor(name: string, terrainBlob: Readonly<Uint8Array>) {
+	constructor(name: string, terrainBlob: Readonly<Uint8Array>, accessibleRooms?: ReadonlySet<string>) {
 		this.name = name;
 		this.terrainBlob = terrainBlob;
 		this.terrain = reader(terrainBlob);
-		this.map = new GameMap(this.terrain);
+		this.accessibleRooms = accessibleRooms;
+		this.map = new GameMap(this.terrain, accessibleRooms);
 	}
 
 	/**

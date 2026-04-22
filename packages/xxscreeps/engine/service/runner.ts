@@ -1,3 +1,4 @@
+import type { InvalidationMessage } from 'xxscreeps/engine/service/invalidation.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 import * as Timers from 'node:timers/promises';
 import config from 'xxscreeps/config/index.js';
@@ -9,6 +10,7 @@ import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/eng
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import * as Async from 'xxscreeps/utility/async.js';
+import { getInvalidationChannel } from './invalidation.js';
 import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
 
 await importMods('driver');
@@ -38,18 +40,34 @@ const runnerSubscription = await getRunnerChannel(shard).subscribe();
 const maxConcurrency = config.runner.unsafeSandbox ? 1 : config.runner.concurrency;
 const { migrationTimeout } = config.runner;
 
-// Load shared terrain data
-const world = await shard.loadWorld();
-loadTerrain(world); // pathfinder
+// Mutable — world invalidations rebind this and drop instances so the
+// terrainBlob baked into each PlayerInstance sandbox is refreshed.
+let world = await shard.loadWorld();
+loadTerrain(world);
 
-// Persistent player instances
 const playerInstances = new Map<string, PlayerInstance>();
+
+// Per-room invalidations are ignored — instance.run loads room blobs fresh.
+const invalidationSubscription = await getInvalidationChannel(shard).subscribe();
+const pendingInvalidations: InvalidationMessage[] = [];
+invalidationSubscription.listen(message => pendingInvalidations.push(message));
 
 // Start the runner loop
 try {
 	const runnerMessages = runnerSubscription.iterable();
 	await getServiceChannel(shard).publish({ type: 'runnerConnected' });
 	loop: for await (const message of Async.breakable(runnerMessages, breaker => break1 = breaker)) {
+		while (pendingInvalidations.length > 0) {
+			const inv = pendingInvalidations.shift()!;
+			if (inv.type === 'world') {
+				world = await shard.loadWorld();
+				loadTerrain(world);
+				for (const instance of playerInstances.values()) {
+					instance.disconnect();
+				}
+				playerInstances.clear();
+			}
+		}
 		switch (message.type) {
 			case 'shutdown':
 				break loop;
@@ -126,6 +144,7 @@ try {
 		instance.disconnect();
 	}
 	runnerSubscription.disconnect();
+	invalidationSubscription.disconnect();
 	shard.disconnect();
 	db.disconnect();
 }

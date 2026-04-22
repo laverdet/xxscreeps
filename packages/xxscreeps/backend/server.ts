@@ -9,10 +9,12 @@ import Router from 'koa-router';
 import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { getServiceChannel, handleInterrupt } from 'xxscreeps/engine/service/index.js';
+import { getInvalidationChannel } from 'xxscreeps/engine/service/invalidation.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { authentication } from './auth/index.js';
 import { BackendContext } from './context.js';
+import { clearTerrainCache, evictTerrainCacheEntry } from './endpoints/game/terrain.js';
 import { installEndpointHandlers } from './endpoints/index.js';
 import { setupGracefulShutdown } from './graceful.js';
 import { installSocketHandlers, installUpgradeHandlers } from './socket.js';
@@ -26,7 +28,25 @@ initializeGameEnvironment();
 
 // Initialize services
 const backendContext = await BackendContext.connect();
-hooks.makeIterated('backendReady')(backendContext.db, backendContext.shard);
+
+// Drop per-request caches when out-of-band writers mutate blobs, terrain, or
+// the active-rooms set — otherwise /api/game/room-status and the terrain
+// endpoint serve pre-mutation state until restart.
+const invalidationSubscription = await getInvalidationChannel(backendContext.shard).subscribe();
+invalidationSubscription.listen(message => {
+	switch (message.type) {
+		case 'room':
+			evictTerrainCacheEntry(message.roomName);
+			break;
+		case 'world':
+			clearTerrainCache();
+			void backendContext.reloadWorld();
+			break;
+		case 'accessibleRooms':
+			void backendContext.reloadWorld();
+			break;
+	}
+});
 const koa = new Koa<State, Context>();
 const router = new Router<State, Context>();
 
@@ -83,6 +103,7 @@ for await (const message of Async.breakable(serviceChannel.iterable(), breaker =
 
 // Start graceful exit
 serviceChannel.disconnect();
+invalidationSubscription.disconnect();
 await unlistenServer();
 await socketHandler.flush();
-backendContext.disconnect();
+await backendContext.close();
