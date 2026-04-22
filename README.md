@@ -109,6 +109,32 @@ schema](src/config/config.ts).
 
 If you want to use your bot script, use `npx xxscreeps import --overwrite-code ../your-bot/dist` to replace builtin bots.
 
+## Admin & CLI
+
+xxscreeps ships an admin console with three entry points:
+
+- `xxscreeps admin <group> <command> [options]` — flag-based CLI for one-shot
+  admin tasks (user/bot management, world import, tick speed, map editing).
+  Run `xxscreeps admin --help` for the list of groups, `xxscreeps admin
+  <group> --help` for commands in a group, and `xxscreeps admin <group>
+  <command> --help` for per-command flags and examples. Requires a running
+  server. Install shell completion with `xxscreeps admin completion bash >
+  /etc/bash_completion.d/xxscreeps`.
+- `xxscreeps` (no arguments) — interactive JavaScript REPL that connects to
+  the running server over a Unix domain socket (Windows named pipe). Each
+  session gets a persistent VM sandbox with helpers like `users`, `bots`,
+  `rooms`, `map`, and `system`. Type `help()` for the full list.
+- `xxscreeps cli` — offline mode that talks directly to the database without
+  a running server. Useful for inspection or recovery. Note that `local://`
+  storage providers will appear empty because their data lives only inside
+  the running server process, and `file://` storage is held under an
+  exclusive `.lock` by the running server — stop the server first, switch
+  to Redis, or use the `xxscreeps` REPL (which shares the live socket).
+
+For the socket protocol, the complete helper reference, flag-translation
+rules, and the security model, see
+[packages/xxscreeps/mods/cli/README.md](packages/xxscreeps/mods/cli/README.md).
+
 ## Docker
 
 If you want to install xxscreeps via docker you can use the following `docker-compose.yaml` as an

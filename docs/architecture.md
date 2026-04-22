@@ -68,6 +68,12 @@ open the source files listed at the end.
   a service itself — once started, the main loop takes over tick
   orchestration. Flags like `--no-backend` control which services the
   launcher starts.
+- The **CLI socket** (from the `cli` mod) also runs inside the launcher
+  process. It exposes a Unix domain socket so the `xxscreeps` REPL and
+  `xxscreeps admin <group> <command>` invocations can drive admin tasks
+  against the live shard. See
+  [packages/xxscreeps/mods/cli/README.md](../packages/xxscreeps/mods/cli/README.md)
+  for usage, the socket protocol, and the command registration hook.
 
 ---
 
@@ -422,6 +428,7 @@ a prototype getter installed by `withOverlay()`.
 | --- | --- |
 | Launcher | `src/engine/service/launcher.ts` |
 | Main loop | `src/engine/service/main.ts` |
+| Admin & CLI | `packages/xxscreeps/mods/cli/README.md` |
 | Mod loading | `src/config/mods/index.ts` |
 | Runner | `src/engine/runner/instance.ts` |
 | Processor | `src/engine/processor/room.ts` |

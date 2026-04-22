@@ -88,6 +88,8 @@ if (missingFlags.length) {
 			runner: './dist/engine/service/runner.js',
 			'save-schema': './dist/engine/service/save-schema.js',
 			test: './dist/test/run.js',
+			cli: './dist/mods/cli/standalone.js',
+			admin: './dist/mods/cli/admin/main.js',
 		};
 
 		// Resolve entry script
