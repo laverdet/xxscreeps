@@ -203,7 +203,7 @@ export function checkWall(pos: RoomPosition) {
 export function checkMyStructure(structure: Structure, constructor: abstract new(...args: any[]) => any) {
 	if (!(structure instanceof constructor)) {
 		return C.ERR_INVALID_ARGS;
-	} else if (!structure.my && !structure.room.controller?.my) {
+	} else if (!structure.my) {
 		return C.ERR_NOT_OWNER;
 	}
 	return C.OK;
@@ -218,7 +218,8 @@ export function checkIsActive(structure: Structure) {
 
 export function checkDestroy(structure: Structure) {
 	return chainIntentChecks(
-		() => checkMyStructure(structure, Structure),
+		() => structure instanceof Structure ? C.OK : C.ERR_INVALID_ARGS,
+		() => structure.room.controller?.my ? C.OK : C.ERR_NOT_OWNER,
 		() => {
 			if ((structure.hits ?? 0) <= 0) {
 				return C.ERR_INVALID_TARGET;
