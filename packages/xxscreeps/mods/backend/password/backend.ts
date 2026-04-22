@@ -1,37 +1,11 @@
-import type { Database } from 'xxscreeps/engine/db/index.js';
-import crypto from 'node:crypto';
-import { promisify } from 'node:util';
 import { hooks } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { findUserByName, infoKey } from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { checkPassword, setPassword } from './model.js';
 
 const { allowEmailRegistration } = config.backend;
-
-async function checkPassword(db: Database, userId: string, password: string) {
-	const info = await async function() {
-		const payload = await db.data.hget(infoKey(userId), 'password');
-		try {
-			return JSON.parse(payload!);
-		} catch {}
-	}();
-	if (info) {
-		const hash = await promisify(crypto.pbkdf2)(password, Buffer.from(info.salt, 'latin1'), info.iterations, 64, 'sha512');
-		return hash.compare(Buffer.from(info.hash, 'latin1')) === 0;
-	}
-}
-
-async function setPassword(db: Database, userId: string, password: string) {
-	const iterations = 100000;
-	const salt = crypto.randomBytes(16);
-	const hash = await promisify(crypto.pbkdf2)(password, salt, iterations, 64, 'sha512');
-	await db.data.hset(infoKey(userId), 'password', JSON.stringify({
-		hash,
-		iterations,
-		salt: salt.toString('latin1'),
-	}));
-}
 
 // HTTP Basic Auth
 hooks.register('middleware', koa => {
