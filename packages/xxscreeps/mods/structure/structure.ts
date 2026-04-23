@@ -105,10 +105,7 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 	/**
 	 * Whether this is your own structure.
 	 */
-	@enumerable override get my() {
-		const user = this['#user'];
-		return user === null ? undefined : user === me;
-	}
+	@enumerable override get my() { return this['#user'] === me; }
 
 	// TODO: This may be invoked each tick until the processor calls isActive. The cache
 	// does not persist from runner into processor, only from processor into runtime.
