@@ -27,8 +27,6 @@ const shape = struct(ownedStructureFormat, {
 });
 
 export class StructureLab extends withOverlay(OwnedStructure, shape) {
-	override get hitsMax() { return C.LAB_HITS; }
-	override get structureType() { return C.STRUCTURE_LAB; }
 	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
 	@enumerable get mineralType() { return this.store['#mineralType']; }
 
@@ -40,6 +38,9 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 	@enumerable get mineralAmount() { const type = this.mineralType; return type ? this.store[type] : 0; }
 	/** @deprecated */
 	@enumerable get mineralCapacity() { return C.LAB_MINERAL_CAPACITY; }
+
+	override get hitsMax() { return C.LAB_HITS; }
+	override get structureType() { return C.STRUCTURE_LAB; }
 
 	/**
 	 * Produce mineral compounds using reagents from two other labs. The same input labs can be used

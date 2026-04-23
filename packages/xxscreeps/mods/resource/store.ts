@@ -48,6 +48,31 @@ hooks.register('environment', () => {
  * ```
  */
 export abstract class Store extends BufferObjectWithResourcesType {
+	/**
+	 * A shorthand for `getCapacity(resource) - getUsedCapacity(resource)`.
+	 * @param resourceType The type of resource
+	 * @returns Free capacity, or null when the store cannot hold this resource type.
+	 */
+	getFreeCapacity(resourceType?: ResourceType): number | null {
+		const capacity = this.getCapacity(resourceType);
+		const used = this.getUsedCapacity(resourceType);
+		if (capacity === null || used === null) {
+			return null;
+		}
+		return capacity - used;
+	}
+
+	'#entries'(): Iterable<[ ResourceType, number ]> {
+		return Object.entries(this) as never;
+	}
+
+	private [Symbol.for('nodejs.util.inspect.custom')]() {
+		return {
+			[Symbol('capacity')]: this['#storeCapacityResource']() ?? this.getCapacity(),
+			...Fn.fromEntries(this['#entries']()),
+		};
+	}
+
 	abstract ['#add'](type: ResourceType, amount: number): void;
 	abstract ['#subtract'](type: ResourceType, amount: number): void;
 
@@ -67,32 +92,7 @@ export abstract class Store extends BufferObjectWithResourcesType {
 	 */
 	abstract getUsedCapacity(resourceType?: ResourceType): number | null;
 
-	/**
-	 * A shorthand for `getCapacity(resource) - getUsedCapacity(resource)`.
-	 * @param resourceType The type of resource
-	 * @returns Free capacity, or null when the store cannot hold this resource type.
-	 */
-	getFreeCapacity(resourceType?: ResourceType): number | null {
-		const capacity = this.getCapacity(resourceType);
-		const used = this.getUsedCapacity(resourceType);
-		if (capacity === null || used === null) {
-			return null;
-		}
-		return capacity - used;
-	}
-
-	'#entries'(): Iterable<[ ResourceType, number ]> {
-		return Object.entries(this) as never;
-	}
-
 	abstract '#storeCapacityResource'(): Record<string, number> | null;
-
-	private [Symbol.for('nodejs.util.inspect.custom')]() {
-		return {
-			[Symbol('capacity')]: this['#storeCapacityResource']() ?? this.getCapacity(),
-			...Fn.fromEntries(this['#entries']()),
-		};
-	}
 }
 
 const shapeOpen = struct({

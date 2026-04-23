@@ -8,11 +8,12 @@ export class RedisPubSubProvider implements PubSubProvider {
 	}[]>();
 
 	private readonly subscribersByKey = new Map<string, Set<RedisSubscription>>();
+	private readonly listener;
+	private readonly publisher;
 
-	constructor(
-		private readonly listener: RedisHolder,
-		private readonly publisher: RedisHolder,
-	) {
+	constructor(listener: RedisHolder, publisher: RedisHolder) {
+		this.listener = listener;
+		this.publisher = publisher;
 		listener.client.on('message', (key, message) => {
 			const ignoreInfo = this.publishIgnore.get(key);
 			const ignore = (() => {
@@ -83,11 +84,15 @@ export class RedisPubSubProvider implements PubSubProvider {
 }
 
 class RedisSubscription implements PubSubSubscription {
-	constructor(
-		public readonly listener: (message: string) => void,
-		private readonly key: string,
-		private readonly parent: RedisPubSubProvider,
-	) {}
+	readonly listener;
+	private readonly key;
+	private readonly parent;
+
+	constructor(listener: (message: string) => void, key: string, parent: RedisPubSubProvider) {
+		this.listener = listener;
+		this.key = key;
+		this.parent = parent;
+	}
 
 	publish(message: string) {
 		return this.parent.publishFromClient(this.key, message, this);

@@ -45,18 +45,20 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 * One of the `STRUCTURE_*` constants.
 	 */
 	@enumerable get structureType(): string { throw new Error(); }
-	get '#lookType'() { return C.LOOK_STRUCTURES; }
 
 	/**
 	 * The current amount of hit points of the structure.
 	 */
 	@enumerable override get hits(): number | undefined { return undefined; }
-	override set hits(hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure'); }
 
 	/**
 	 * The total amount of hit points of the structure.
 	 */
 	@enumerable override get hitsMax(): number | undefined { return undefined; }
+
+	get '#lookType'() { return C.LOOK_STRUCTURES; }
+
+	override set hits(_hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure'); }
 
 	/**
 	 * Destroy this structure immediately.
@@ -94,9 +96,6 @@ export class Structure extends withOverlay(RoomObject, shape) {
  * `FIND_MY_STRUCTURES` and `FIND_HOSTILE_STRUCTURES` constants.
  */
 export class OwnedStructure extends withOverlay(Structure, ownedShape) {
-	override get '#hasIntent'() { return true; }
-	override get '#providesVision'() { return true; }
-
 	/**
 	 * An object with the structure's owner info
 	 */
@@ -109,6 +108,9 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 		const user = this['#user'];
 		return user === null ? undefined : user === me;
 	}
+
+	override get '#hasIntent'() { return true; }
+	override get '#providesVision'() { return true; }
 
 	// TODO: This may be invoked each tick until the processor calls isActive. The cache
 	// does not persist from runner into processor, only from processor into runtime.

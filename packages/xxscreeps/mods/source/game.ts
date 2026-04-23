@@ -8,8 +8,11 @@ import { format as keeperFormat } from './keeper-lair.js';
 import { Source, format } from './source.js';
 
 // Register schema extensions
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const sourceSchema = registerVariant('Room.objects', format);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const keeperLairSchema = registerVariant('Room.objects', keeperFormat);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const roomSchema = registerStruct('Room', {
 	'#cumulativeEnergyHarvested': 'int32',
 });
@@ -18,6 +21,7 @@ declare module 'xxscreeps/game/room/index.js' {
 }
 
 // Register FIND_ types for `Source`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_SOURCES]: room =>
 		room['#lookFor'](C.LOOK_SOURCES),
@@ -26,6 +30,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `Source`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Source>()(C.LOOK_SOURCES);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Find { source: typeof find }
@@ -33,6 +38,7 @@ declare module 'xxscreeps/game/room/index.js' {
 }
 
 // Register `Creep.harvest` target
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const harvest = registerHarvestable(Source, function(creep) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.WORK),

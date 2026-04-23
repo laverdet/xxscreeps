@@ -132,7 +132,7 @@ hooks.register('route', {
 				}
 			}
 			return { ok: 1, name: `Flag${Id.generateId(6)}` };
-		} catch (err) {
+		} catch {
 			return { ok: 1, name: 'Flag1' };
 		}
 	},

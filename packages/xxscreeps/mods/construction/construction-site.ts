@@ -29,9 +29,9 @@ export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) 
 		if (typeof idOrArg1 === 'string') assign<ConstructionSite>(this, RoomObject.getById(ConstructionSite, idOrArg1));
 	}
 
-	override get '#lookType'() { return C.LOOK_CONSTRUCTION_SITES; }
 	@enumerable override get my() { return this['#user'] === me; }
 	@enumerable get owner() { return userInfo.get(this['#user']); }
+	override get '#lookType'() { return C.LOOK_CONSTRUCTION_SITES; }
 
 	override '#addToMyGame'(game: GameConstructor) {
 		game.constructionSites[this.id] = this;

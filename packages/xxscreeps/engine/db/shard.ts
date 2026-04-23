@@ -15,17 +15,31 @@ type Message = { type: 'tick'; time: number } | { type: null };
 
 export class Shard {
 	time = -1;
+	readonly db;
+	readonly name;
+	readonly data;
+	readonly pubsub;
+	readonly scratch;
+	readonly channel;
 	private readonly gameTickEffect: Effect;
+	private readonly effect;
 
 	private constructor(
-		private readonly effect: Effect,
-		public readonly db: Database,
-		public readonly name: string,
-		public readonly data: KeyValProvider,
-		public readonly pubsub: PubSubProvider,
-		public readonly scratch: KeyValProvider,
-		public readonly channel: Subscription<Message>,
+		effect: Effect,
+		db: Database,
+		name: string,
+		data: KeyValProvider,
+		pubsub: PubSubProvider,
+		scratch: KeyValProvider,
+		channel: Subscription<Message>,
 	) {
+		this.effect = effect;
+		this.db = db;
+		this.name = name;
+		this.data = data;
+		this.pubsub = pubsub;
+		this.scratch = scratch;
+		this.channel = channel;
 		this.gameTickEffect = channel.listen(message => {
 			if (message.type === 'tick') {
 				this.time = message.time;

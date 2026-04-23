@@ -8,6 +8,7 @@ import * as Controller from './controller.js';
 import './creep.js';
 
 // Register schema
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const roomSchema = registerStruct('Room', {
 	'#level': 'int32',
 	'#safeModeUntil': 'int32',
@@ -20,15 +21,18 @@ const roomSchema = registerStruct('Room', {
 	// string = controlled/reserved; null = unowned; undefined = no controller
 	'#user': optional(Id.optionalFormat),
 });
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const controllerSchema = registerVariant('Room.objects', Controller.format);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { controller: [ typeof roomSchema, typeof controllerSchema ] }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const actionSchema = registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
 declare module 'xxscreeps/game/object.js' {
 	interface Schema { controller: typeof actionSchema }
 	interface RoomObject {
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		'#roomStatusDidChange'(level: number, userId: string | null | undefined): void;
 	}
 }

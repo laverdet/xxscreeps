@@ -21,12 +21,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: P.Value[]) => any>();
+	private readonly url;
+	private readonly blob;
 
-	constructor(
-		private readonly url: URL | undefined,
-		private readonly blob: BlobStorage,
-		payload: string | undefined,
-	) {
+	constructor(url: URL | undefined, blob: BlobStorage, payload: string | undefined) {
+		this.url = url;
+		this.blob = blob;
 		if (payload) {
 			const map = JSON.parse(payload, (key, value) => {
 				switch (value?.['#']) {

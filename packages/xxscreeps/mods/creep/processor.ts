@@ -102,6 +102,7 @@ function recalculateBody(creep: Creep) {
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { creep: typeof intents }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'drop', { before: 'transfer' }, (creep, context, resourceType: ResourceType, amount: number) => {
 		if (CreepLib.checkDrop(creep, resourceType, amount) === C.OK) {

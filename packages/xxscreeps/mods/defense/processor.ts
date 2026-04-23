@@ -15,6 +15,7 @@ function calculateEfficiency(tower: StructureTower, target: Creep | Structure) {
 	return 1 - C.TOWER_FALLOFF * (range - C.TOWER_OPTIMAL_RANGE) / (C.TOWER_FALLOFF_RANGE - C.TOWER_OPTIMAL_RANGE);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureTower, 'attack', { type: 'primary' }, (tower, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;

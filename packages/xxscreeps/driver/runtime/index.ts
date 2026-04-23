@@ -1,4 +1,4 @@
-import type { InitializationPayload, TickPayload, TickResult, TickUsageResult } from 'xxscreeps/engine/runner/index.js';
+import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import { inspect } from 'node:util';
 import { flushGlobals } from 'xxscreeps/config/global.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';

@@ -24,6 +24,7 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 // Register FIND_ types for `Creep` & `Tombstone`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_CREEPS]: room => room['#lookFor'](C.LOOK_CREEPS),
 	[C.FIND_MY_CREEPS]: room => room['#lookFor'](C.LOOK_CREEPS).filter(creep => creep.my),
@@ -32,6 +33,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `Creep` & `Tombstone`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = [
 	registerLook<Creep>()(C.LOOK_CREEPS),
 	registerLook<Tombstone>()(C.LOOK_TOMBSTONES),
@@ -42,7 +44,9 @@ declare module 'xxscreeps/game/room/index.js' {
 }
 
 // Schema types
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const creepSchema = registerVariant('Room.objects', creepFormat);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const tombstoneSchema = registerVariant('Room.objects', tombstoneFormat);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { creep: [ typeof creepSchema, typeof tombstoneSchema ] }

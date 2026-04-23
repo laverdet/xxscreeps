@@ -23,13 +23,16 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 // Schema types
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const actionSchema = registerEnumerated('ActionLog.action', 'build', 'repair');
 declare module 'xxscreeps/game/object.js' {
 	interface Schema { construction: typeof actionSchema }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const siteSchema = registerVariant('Room.objects', ConstructionSite.format);
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const buildEventSchema = registerVariant('Room.eventLog', struct({
 	...variant(C.EVENT_BUILD),
 	event: constant(C.EVENT_BUILD),
@@ -37,6 +40,7 @@ const buildEventSchema = registerVariant('Room.eventLog', struct({
 	amount: 'int32',
 	energySpent: 'int32',
 }));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const repairEventSchema = registerVariant('Room.eventLog', struct({
 	...variant(C.EVENT_REPAIR),
 	event: constant(C.EVENT_REPAIR),

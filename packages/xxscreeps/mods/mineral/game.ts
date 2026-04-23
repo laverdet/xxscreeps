@@ -10,25 +10,30 @@ const resources = [
 	C.RESOURCE_UTRIUM, C.RESOURCE_LEMERGIUM, C.RESOURCE_KEANIUM,
 	C.RESOURCE_ZYNTHIUM, C.RESOURCE_CATALYST, C.RESOURCE_GHODIUM,
 ];
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const resourceSchema = registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
 declare module 'xxscreeps/mods/resource/index.js' {
 	interface Schema { mineral: typeof resourceSchema }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const extractorSchema = registerVariant('Room.objects', Extractor.format);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const mineralSchema = registerVariant('Room.objects', Mineral.format);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { mineral: [ typeof extractorSchema, typeof mineralSchema ] }
 }
 
 // Register FIND_ type for `Mineral`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_MINERALS]: room =>
 		room['#lookFor'](C.LOOK_MINERALS),
 });
 
 // Register LOOK_ type for `Mineral`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Mineral.Mineral>()(C.LOOK_MINERALS);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Find { mineral: typeof find }

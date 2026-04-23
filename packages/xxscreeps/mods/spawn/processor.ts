@@ -62,6 +62,7 @@ function consumeEnergy(spawn: StructureSpawn, amount: number, structures = getEn
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { spawn: typeof intents }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Room, 'placeSpawn', { internal: true },
 		(room, context, xx: number, yy: number, name: string) => {

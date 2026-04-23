@@ -32,6 +32,7 @@ type Merge = {
 	fn: (argv: any[]) => Promise<void>;
 };
 export class RedisHolder {
+	readonly client;
 	private readonly mergeByCommand = new Map<string, Merge>();
 	private readonly mergeByKey = new Map<string, Merge>();
 	private task = Promise.resolve();
@@ -39,7 +40,9 @@ export class RedisHolder {
 	private tickBatchId = 0;
 	private tickBatchFresh = false;
 
-	private constructor(public readonly client: Redis) {}
+	private constructor(client: Redis) {
+		this.client = client;
+	}
 
 	static async connect(url: URL, blob = false) {
 		const client = redis.createClient(`${url}`, {

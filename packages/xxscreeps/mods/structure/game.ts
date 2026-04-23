@@ -19,6 +19,7 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 // Register FIND_ types for `Structure`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_STRUCTURES]: room => room['#lookFor'](C.LOOK_STRUCTURES),
 	[C.FIND_MY_STRUCTURES]: room =>
@@ -29,6 +30,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `Structure`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = [
 	registerLook<Ruin>()(C.LOOK_RUINS),
 	registerLook<AnyStructure>()(C.LOOK_STRUCTURES),
@@ -39,6 +41,7 @@ declare module 'xxscreeps/game/room/index.js' {
 }
 
 // Register schema type for `Ruin`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const schema = registerVariant('Room.objects', ruinFormat);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { structure: [ typeof schema ] }

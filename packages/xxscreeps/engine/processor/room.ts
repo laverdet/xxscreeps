@@ -66,9 +66,12 @@ export interface ProcessorContext {
 
 // Room processor context saved been phase 1 (process) and phase 2 (flush)
 export class RoomProcessor implements ProcessorContext {
-	receivedUpdate = false;
 	nextUpdate = Infinity;
+	readonly room;
+	readonly shard;
 	readonly state: GameState;
+	readonly time;
+	receivedUpdate = false;
 
 	private tasks: {
 		promise: Promise<any>;
@@ -79,12 +82,10 @@ export class RoomProcessor implements ProcessorContext {
 	private readonly intents = new Map<string, RoomIntentPayload>();
 	private readonly interRoomIntents = new Map<string, SingleIntent[]>();
 
-	constructor(
-		public readonly shard: Shard,
-		world: World,
-		public readonly room: Room,
-		public readonly time: number,
-	) {
+	constructor(shard: Shard, world: World, room: Room, time: number) {
+		this.shard = shard;
+		this.room = room;
+		this.time = time;
 		this.state = new GameState(world, time, [ room ]);
 	}
 

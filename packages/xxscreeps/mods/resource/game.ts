@@ -19,11 +19,13 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 // Register FIND_ types for `Resource`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_DROPPED_RESOURCES]: room => room['#lookFor'](C.LOOK_RESOURCES),
 });
 
 // Register LOOK_ type for `Resource`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Resource.Resource>()(C.LOOK_RESOURCES);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Find { resource: typeof find }
@@ -31,7 +33,9 @@ declare module 'xxscreeps/game/room/index.js' {
 }
 
 // These need to be declared separately I guess
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const containerSchema = registerVariant('Room.objects', Container.format);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const resourceSchema = registerVariant('Room.objects', Resource.format);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { resource: [ typeof containerSchema, typeof resourceSchema ] }

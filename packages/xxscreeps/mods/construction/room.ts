@@ -11,6 +11,7 @@ import { ConstructibleStructureType, ConstructionSite } from './construction-sit
 import { structureFactories } from './symbols.js';
 
 // Register FIND_ types for `ConstructionSite`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_CONSTRUCTION_SITES]: room =>
 		room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
@@ -21,6 +22,7 @@ const find = registerFindHandlers({
 });
 
 // Register LOOK_ type for `ConstructionSite`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<ConstructionSite>()(C.LOOK_CONSTRUCTION_SITES);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Find { construction: typeof find }
@@ -35,7 +37,9 @@ declare module 'xxscreeps/game/room/index.js' {
 		 * @param structureType One of the `STRUCTURE_*` constants.
 		 * @param name The name of the structure, for structures that support it (currently only spawns).
 		 */
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		createConstructionSite(x: number, y: number, structureType: ConstructibleStructureType, name?: string): number;
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		createConstructionSite(pos: RoomPosition, structureType: ConstructibleStructureType, name?: string): number;
 	}
 }

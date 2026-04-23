@@ -63,10 +63,15 @@ interface SubscriptionReference {
 }
 
 class ParentSubscription implements PubSubSubscription, SubscriptionReference {
-	constructor(
-		private readonly listener: Listener,
-		private readonly key: string,
-		private readonly provider: LocalPubSubProviderParent) {}
+	private readonly listener;
+	private readonly key;
+	private readonly provider;
+
+	constructor(listener: Listener, key: string, provider: LocalPubSubProviderParent) {
+		this.listener = listener;
+		this.key = key;
+		this.provider = provider;
+	}
 
 	async publish(message: string) {
 		this.provider.send(this.key, message, this);
@@ -79,9 +84,13 @@ class ParentSubscription implements PubSubSubscription, SubscriptionReference {
 }
 
 class WorkerSubscriptionReference implements SubscriptionReference {
-	constructor(
-		private readonly port: MessagePort,
-		public readonly key: string) {}
+	readonly key;
+	private readonly port;
+
+	constructor(port: MessagePort, key: string) {
+		this.port = port;
+		this.key = key;
+	}
 
 	close() {
 		this.port.close();
@@ -195,7 +204,10 @@ class LocalPubSubProviderWorker implements PubSubProvider {
 	private id = 0;
 	private readonly subscriptionsByKey = new Map<string, Set<WorkerSubscription>>();
 	private readonly syn: Deferred[] = [];
-	constructor(private readonly port: MessagePort) {
+	private readonly port;
+
+	constructor(port: MessagePort) {
+		this.port = port;
 		port.on('message', (message: AckMessage | PublishMessage) => {
 			switch (message.type) {
 				case 'ack':
@@ -307,10 +319,15 @@ class LocalPubSubProviderWorker implements PubSubProvider {
  * Active subscription to a message channel
  */
 class WorkerSubscription implements PubSubSubscription {
-	constructor(
-		public readonly listener: Listener,
-		private readonly key: string,
-		private readonly provider: LocalPubSubProviderWorker) {}
+	readonly listener;
+	private readonly key;
+	private readonly provider;
+
+	constructor(listener: Listener, key: string, provider: LocalPubSubProviderWorker) {
+		this.listener = listener;
+		this.key = key;
+		this.provider = provider;
+	}
 
 	async publish(message: string) {
 		return this.provider.send(this.key, message, this);

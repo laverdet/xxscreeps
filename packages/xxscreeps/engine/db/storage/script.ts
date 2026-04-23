@@ -9,7 +9,7 @@ export class KeyvalScript<Result extends Value | Value[] | null = any, Keys exte
 	readonly [provider: string]: string;
 	readonly local: string;
 	constructor(basicImpl: (keyval: LocalKeyValResponder, keys: Keys, argv: Argv) => Result, extra: Record<string, string> = {}) {
-		this.local = `${basicImpl}`;
+		this.local = basicImpl.toString();
 		Object.assign(this, extra);
 	}
 }

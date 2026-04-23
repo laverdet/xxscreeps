@@ -23,7 +23,7 @@ async function loadAndParse(shard: Shard, userId: string, path?: string) {
 		} else {
 			return memory;
 		}
-	} catch (err) {
+	} catch {
 		return invalidPath;
 	}
 }

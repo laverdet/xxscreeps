@@ -13,6 +13,7 @@ import { captureDamage, checkAttack, checkHeal, checkRangedAttack, checkRangedHe
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { combat: typeof intents }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'attack', {
 		before: 'harvest',

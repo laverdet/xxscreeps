@@ -19,9 +19,6 @@ const shape = declare('Link', struct(ownedStructureFormat, {
 }));
 
 export class StructureLink extends withOverlay(OwnedStructure, shape) {
-	override get hitsMax() { return C.LINK_HITS; }
-	override get structureType() { return C.STRUCTURE_LINK; }
-
 	/**
 	 * The amount of game ticks the link has to wait until the next transfer is possible.
 	 */
@@ -31,6 +28,9 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY]; }
 	/** @deprecated */
 	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
+
+	override get hitsMax() { return C.LINK_HITS; }
+	override get structureType() { return C.STRUCTURE_LINK; }
 
 	/**
 	 * Remotely transfer energy to another link at any location in the same room.

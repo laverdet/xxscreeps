@@ -9,12 +9,16 @@ export type MessageFor<Factory> = Factory extends ChannelFactory<infer Message> 
 export type SubscriptionFor<Factory> = Factory extends ChannelFactory<infer Message> ? Subscription<Message> : never;
 
 export class Channel<Message = string> {
+	private readonly pubsub;
+	private readonly name;
+	private readonly json;
+
 	constructor(pubsub: PubSubProvider, name: string, ...json: Message extends string ? [ false ] : [ true? ]);
-	constructor(
-		private readonly pubsub: PubSubProvider,
-		private readonly name: string,
-		private readonly json = true,
-	) {}
+	constructor(pubsub: PubSubProvider, name: string, json = true) {
+		this.pubsub = pubsub;
+		this.name = name;
+		this.json = json;
+	}
 
 	async listen<ForIf = false>(listener: Listener<Message | (ForIf extends true ? { type: null } : never)>) {
 		const subscription = await this.subscribe();
@@ -55,13 +59,17 @@ export class Channel<Message = string> {
 export class Subscription<Message> {
 	private didDisconnect = false;
 	private readonly disconnectListeners = new Set<Effect>();
+	private readonly json;
+	private readonly listeners;
+	private readonly subscription;
+	private readonly effect;
 
-	private constructor(
-		private readonly json: boolean,
-		private readonly listeners: Set<Listener<Message>>,
-		private readonly subscription: PubSubSubscription,
-		private readonly effect: Effect,
-	) {}
+	private constructor(json: boolean, listeners: Set<Listener<Message>>, subscription: PubSubSubscription, effect: Effect) {
+		this.json = json;
+		this.listeners = listeners;
+		this.subscription = subscription;
+		this.effect = effect;
+	}
 
 	static async subscribe<Message>(pubsub: PubSubProvider, name: string, json: boolean) {
 		const listeners = new Set<Listener<Message>>();

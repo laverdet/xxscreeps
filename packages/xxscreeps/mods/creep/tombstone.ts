@@ -37,6 +37,11 @@ export class Tombstone extends withOverlay(RoomObject, shape) {
 		if (typeof idOrArg1 === 'string') assign<Tombstone>(this, getById(Tombstone, idOrArg1));
 	}
 
+	/**
+	 * The amount of game ticks before this tombstone decays.
+	 */
+	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time); }
+
 	override get '#lookType'() { return C.LOOK_TOMBSTONES; }
 
 	/**
@@ -59,10 +64,6 @@ export class Tombstone extends withOverlay(RoomObject, shape) {
 		return creep;
 	}
 
-	/**
-	 * The amount of game ticks before this tombstone decays.
-	 */
-	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time); }
 }
 
 export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {

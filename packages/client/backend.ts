@@ -22,7 +22,7 @@ const { data, stat } = await async function() {
 			fs.stat(path),
 		]);
 		return { data, stat };
-	} catch (err) {}
+	} catch {}
 	console.error(
 		`@xxscreeps/client error: Could not read \`${fileURLToPath(path)}\`. ` +
 		'Please set `browserClient.package` in `.screepsrc.yaml` to the full path of your package.nw file');

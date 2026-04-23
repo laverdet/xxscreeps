@@ -9,6 +9,7 @@ import { StructureTerminal, calculateEnergyCost, checkSend } from './terminal.js
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { market: typeof intents }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureTerminal, 'send', {}, (
 		terminal, context, resourceType: ResourceType, amount: number, destination: string, description: string | null,

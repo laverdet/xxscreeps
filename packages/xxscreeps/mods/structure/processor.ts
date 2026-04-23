@@ -7,6 +7,7 @@ import { Structure, checkDestroy } from './structure.js';
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { structure: typeof intents }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Structure, 'destroyStructure', {}, (structure, context) => {
 		if (checkDestroy(structure) === C.OK) {

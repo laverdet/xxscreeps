@@ -156,7 +156,7 @@ export async function importMods(provides: Provide) {
 		if (mod.provides.includes(provides)) {
 			try {
 				await import(new URL(`./${provides}.js`, mod.url).href);
-			} catch (e) {
+			} catch {
 				await import(new URL(`./${provides}/index.js`, mod.url).href);
 			}
 		}

@@ -15,8 +15,11 @@ export class BlobStorage {
 
 	private saveId = 0;
 	private readonly knownPaths = new Set<string>();
+	private readonly path;
 
-	constructor(private readonly path: string | null) {}
+	constructor(path: string | null) {
+		this.path = path;
+	}
 
 	static async create(url: URL): Promise<[ Effect, BlobStorage ]> {
 		if (url.protocol === 'file:') {
