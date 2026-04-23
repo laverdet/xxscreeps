@@ -24,7 +24,7 @@
     "eslint": "^9.39.4",
     "eslint-plugin-import": "^2.32.0",
     "typescript": "^6.0.2",
-    "typescript-json-schema": "0.57.0"
+    "typescript-json-schema": "0.67.1"
   },
   "pnpm": {
     "patchedDependencies": {

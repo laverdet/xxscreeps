@@ -209,7 +209,8 @@ export class PlayerInstance {
 		// Save runtime results
 		if (result?.result === 'success') {
 			const { payload } = result;
-			this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - payload.usage.cpu + kCPU);
+			const tickCpu = payload.usage.cpu ?? NaN;
+			this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - tickCpu + kCPU);
 			await Promise.all([
 				// Publish intent blobs
 				publishRunnerIntentsForRooms(this.shard, this.userId, time, intentRooms, payload.intentPayloads),

@@ -138,7 +138,7 @@
                         },
                         "memoryLimit": {
                             "default": 256,
-                            "description": "Memory limit, in megabytes. The actual memory limit as reported by the isolate will be\nhigher, since it accounts for shared terrain data.\n\nThis option does nothing when `unsafeSandbox` is true.",
+                            "description": "Memory limit, in megabytes. The actual memory limit as reported by the isolate will be\nhigher, since it accounts for shared terrain data.\n\nThis option does nothing when `sandbox: unsafe` is set.",
                             "type": "number"
                         },
                         "tickLimit": {
@@ -159,10 +159,14 @@
                     "description": "How long an idle runner will wait before migrating a player sandbox into that runner, causing\na hard reset for the player.",
                     "type": "number"
                 },
-                "unsafeSandbox": {
-                    "default": false,
-                    "description": "Setting this to true will run user code using the nodejs `vm` module instead\nof `isolated-vm`. Do not enable this on public servers!",
-                    "type": "boolean"
+                "sandbox": {
+                    "default": "isolated",
+                    "description": "Select sandbox mode\n- 'isolated': `isolated-vm`\n- 'unsafe': `node:vm`. This will run player code directly in the nodejs isolate. Player scripts can achieve full\n  system-level access. It may make troubleshooting user scripts easier, though.",
+                    "enum": [
+                        "isolated",
+                        "unsafe"
+                    ],
+                    "type": "string"
                 }
             },
             "type": "object"

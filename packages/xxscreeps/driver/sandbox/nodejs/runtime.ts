@@ -1,12 +1,11 @@
 import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { CPU } from 'xxscreeps/game/game.js';
+import * as process from 'node:process';
 import * as Runtime from 'xxscreeps/driver/runtime/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
 
 export { tick } from 'xxscreeps/driver/runtime/index.js';
-
-export let process: typeof import('process');
 
 class NodejsCPU implements CPU {
 	bucket;
@@ -35,6 +34,5 @@ hooks.register('gameInitializer', (game, data) => {
 });
 
 export function initialize(require: NodeJS.Require, compiler: Compiler, evaluate: Evaluate, data: InitializationPayload) {
-	process = require('process') as typeof import('node:process');
 	Runtime.initialize(compiler, evaluate, data);
 }

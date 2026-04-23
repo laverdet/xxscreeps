@@ -19,6 +19,12 @@ declare module 'xxscreeps/game/room/index.js' {
 	}
 }
 
+declare module 'xxscreeps/engine/runner/index.js' {
+	interface TickUsageResult {
+		memory?: number;
+	}
+}
+
 extend(Room, {
 	memory: {
 		get(): unknown {

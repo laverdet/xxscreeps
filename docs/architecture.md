@@ -99,7 +99,7 @@ open the source files listed at the end.
 - Player code runs inside `isolated-vm`, a separate V8 isolate with its
   own heap. This is how CPU limits are enforced and why the runner can
   be safely abandoned — crashing player code cannot affect the engine.
-- There is also an `unsafeSandbox` mode that runs player code in `vm`
+- There is also an `sandbox: unsafe` mode that runs player code in `vm`
   instead of `isolated-vm`. This is faster and useful when you're only
   running your own code, but it uses regular `Symbol` primitives instead
   of private symbols, so the player could access otherwise-hidden
@@ -384,7 +384,7 @@ enumeration or any other mechanism. This is important because it
 protects sensitive engine state (room observers, `creep.saying`, etc.)
 from player code.
 
-In `unsafeSandbox` mode (`vm` instead of `isolated-vm`), regular
+In `sandbox: unsafe` mode (`vm` instead of `isolated-vm`), regular
 `Symbol` primitives are used instead. The properties are still hidden
 from enumeration, but a determined player could discover them.
 
