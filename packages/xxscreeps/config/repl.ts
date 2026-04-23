@@ -41,7 +41,7 @@ if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 		}
 		// Raw-value aliases injected by the CLI mod but not present in the schema.
 		for (const raw of [ 'db', 'shard', 'storage' ]) names.add(raw);
-		dotMembers.set('storage', [ 'db', 'shard', 'pubsub' ]);
+		dotMembers.set('storage', [ 'db', 'shard', 'scratch', 'pubsub' ]);
 		topLevel = [ ...names ].sort();
 	}
 

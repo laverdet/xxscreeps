@@ -68,7 +68,7 @@ Flag translation — how JavaScript helper signatures map to shell flags:
 
 Safety:
 
-- Commands flagged `destructive` (`importWorld`, `users.remove`, `bots.add`, `bots.remove`, `map.removeRoom`) trigger an interactive `DESTRUCTIVE: ... Continue? [y/N]` prompt. Pipe-based/non-TTY callers must pass `--force` to bypass it.
+- Commands flagged `destructive` (`system.importWorld`, `users.remove`) trigger an interactive `DESTRUCTIVE: ... Continue? [y/N]` prompt. Pipe-based/non-TTY callers must pass `--force` to bypass it. Single-target commands like `bots.remove`/`map.removeRoom` aren't flagged because the operator already named the target; the prompt is reserved for server-wide or cross-record wipes.
 - Commands flagged `requiresPause` (currently `system.importWorld`) cannot be scripted across three admin invocations because a pause releases when its socket closes. The admin CLI auto-wraps these in a single `pauseSimulation` / run / `resumeSimulation` IIFE inside one socket lifetime, so you get the safety guarantee without managing the pause yourself.
 - Commands flagged `interactiveOnly` (whose effect is tied to the CLI session, e.g., a manual `pauseSimulation`) are refused by the admin CLI and redirect to the interactive REPL.
 
@@ -87,7 +87,7 @@ Run `help()` in a session for the authoritative list. Summary:
 |---------|-------------|
 | `db` | Global database KeyValProvider |
 | `shard` | Shard KeyValProvider |
-| `storage.db / .shard / .pubsub` | Storage provider aliases |
+| `storage.db / .shard / .scratch / .pubsub` | Storage provider aliases |
 | `users.list()` | List all users |
 | `users.create(name)` | Create a new user |
 | `users.remove(nameOrId)` | Remove user and clean up all data |
@@ -113,7 +113,7 @@ Run `help()` in a session for the authoritative list. Summary:
 | `system.sendServerMessage(msg)` | Broadcast to all players |
 | `help()` | Show available commands |
 
-Destructive commands (`importWorld`, `users.remove`, `bots.add`, `bots.remove`, `map.removeRoom`) auto-acquire the game mutex for the duration of the call, serializing them against the processor tick loop. `importWorld` additionally demands `pauseSimulation` first because it flushes scratch (admin CLI auto-wraps; REPL users pause manually). Call `system.pauseSimulation()` first if you want to hold the lock across multiple commands.
+Commands that mutate shard state (`users.remove`, `bots.add`, `bots.remove`, `map.closeRoom`, `map.removeRoom`, `rooms.poke`, `system.importWorld`) auto-acquire the game mutex for the duration of the call, serializing them against the processor tick loop. This is separate from the `destructive` schema flag, which only gates the admin-CLI confirmation prompt. `system.importWorld` additionally demands `pauseSimulation` first because it flushes scratch (admin CLI auto-wraps; REPL users pause manually). Call `system.pauseSimulation()` first if you want to hold the lock across multiple commands.
 
 ## Architecture
 
