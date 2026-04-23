@@ -84,8 +84,9 @@ function recalculateBody(creep: Creep) {
 		hits += 100;
 		part.hits = clamp(0, 100, hits);
 	}
-	// Drop excess resources
+	// Dying creeps: leave the store intact so buryCreep can transfer it.
 	const capacity = creep.store['#capacity'] = calculateCarry(creep.body);
+	if (creep.hits <= 0) return;
 	let overflow = creep.store.getUsedCapacity() - capacity;
 	if (overflow > 0) {
 		for (const [ type, amount ] of creep.store['#entries']()) {
