@@ -21,7 +21,7 @@ The socket server runs in the launcher process. Each connection gets a persisten
 ### Offline mode (direct database access)
 
 ```
-xxscreeps cli
+xxscreeps offline
 ```
 
 Connects directly to the database without a running server. Works with any storage provider (Redis, file://, local://), with two caveats:
@@ -54,6 +54,7 @@ Global options (accepted before or after positionals):
 - `--force` — skip the confirmation prompt on `destructive` commands
 - `--verbose` — include stack traces on errors
 - `--socket <path>` — connect to a non-default CLI socket
+- `--shard <name>` — scope the session to a non-default shard (defaults to the first configured shard). Session-scoped: changing shards requires reconnecting. Same flag is accepted by `xxscreeps` (REPL) and `xxscreeps offline`.
 - `-h`, `--help` — print help and exit
 
 Flag translation — how JavaScript helper signatures map to shell flags:
@@ -75,8 +76,8 @@ Safety:
 
 The server listens on `screeps/cli.sock` in the project directory (Windows: `\\.\pipe\xxscreeps-<hash>`). Any tool can connect using the JSON line protocol:
 
-**Request:** `{"expression": "<javascript>"}\n`
-**Response:** `{"result": "<output>"}\n` or `{"error": "<message>"}\n`
+**Request:** `{"expression": "<javascript>"}\n`, optionally with `"shard": "<name>"` on the first message to scope the sandbox to a non-default shard.
+**Response:** `{"result": "<output>"}\n` or `{"error": "<message>"}\n`. A handshake-only message (`{"shard": "<name>"}` with no `expression`) acks with `{"ok": true}`.
 
 ## Available Helpers
 
@@ -103,8 +104,7 @@ Run `help()` in a session for the authoritative list. Summary:
 | `rooms.peek(name, task)` | Read-only game context: `task(room, Game) => result` |
 | `rooms.poke(name, userId, task)` | Mutating game context; writes both double-buffer slots. Bypasses intents / pre-tick / inter-room dispatch — prefer canonical intents for standard actions |
 | `shards.list()` | List configured shard names |
-| `shards.get(name)` | Get shard context (name, time, data, pubsub, rooms, system) — interactive-only; admin CLI redirects to the REPL |
-| `shards.info(name)` | Scriptable shard summary: `{ name, time, rooms }` — safe from admin CLI |
+| `shards.info(name)` | Scriptable shard summary: `{ name, time, rooms }`. Use `--shard <name>` at connect time to run the other groups against a non-default shard. |
 | `system.getTickDuration()` | Get current tick speed (ms) |
 | `system.setTickDuration(ms)` | Set tick speed (ms) |
 | `system.importWorld(opts?)` | Wipe all data and import a world. `opts` is `{ source?, empty? }`; default imports @screeps/launcher, `--source` loads a custom db.json, `--empty` leaves the world unimported. Requires `pauseSimulation`. |

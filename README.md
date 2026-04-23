@@ -124,7 +124,7 @@ xxscreeps ships an admin console with three entry points:
   the running server over a Unix domain socket (Windows named pipe). Each
   session gets a persistent VM sandbox with helpers like `users`, `bots`,
   `rooms`, `map`, and `system`. Type `help()` for the full list.
-- `xxscreeps cli` — offline mode that talks directly to the database without
+- `xxscreeps offline` — offline mode that talks directly to the database without
   a running server. Useful for inspection or recovery. Note that `local://`
   storage providers will appear empty because their data lives only inside
   the running server process, and `file://` storage is held under an

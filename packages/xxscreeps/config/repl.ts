@@ -5,6 +5,18 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { maxBufferSize, socketPath } from 'xxscreeps/mods/cli/socket.js';
 
+// Minimal arg parsing — only `--shard <name>` is recognized. The unused
+// positionals are ignored so the rest of the REPL path is unchanged.
+function parseShardFlag(argv: readonly string[]): string | undefined {
+	for (let idx = 0; idx < argv.length; ++idx) {
+		const arg = argv[idx];
+		if (arg === '--shard') return argv[idx + 1];
+		if (arg.startsWith('--shard=')) return arg.slice('--shard='.length);
+	}
+	return undefined;
+}
+const shardArg = parseShardFlag(process.argv.slice(2));
+
 if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 	console.error('Server is not running. Start it with: xxscreeps start');
 } else {
@@ -96,7 +108,9 @@ if (process.platform !== 'win32' && !fs.existsSync(socketPath)) {
 	const pending: string[] = [];
 
 	socket.on('connect', () => {
-		socket.write(JSON.stringify({ expression: 'JSON.stringify(commands())' }) + '\n');
+		const handshake: Record<string, unknown> = { expression: 'JSON.stringify(commands())' };
+		if (shardArg !== undefined) handshake.shard = shardArg;
+		socket.write(JSON.stringify(handshake) + '\n');
 	});
 
 	function prompt() {

@@ -175,7 +175,7 @@ describe('CLI', async () => {
 		test('help() includes mod-registered help lines', async () => {
 			const result = await run('help()');
 			assert.ok(result.includes('system.pauseSimulation'));
-			assert.ok(result.includes('shards.get'));
+			assert.ok(result.includes('shards.info'));
 		});
 	});
 
@@ -479,32 +479,6 @@ describe('CLI', async () => {
 			const names = JSON.parse(result) as string[];
 			assert.ok(Array.isArray(names));
 			assert.ok(names.includes('shard0'));
-		});
-
-		test('shards.get() returns shard context with name', async () => {
-			const result = await run('(await shards.get("shard0")).name');
-			assert.strictEqual(result, 'shard0');
-		});
-
-		test('shards.get() returns data provider', async () => {
-			const result = await run('typeof (await shards.get("shard0")).data.get');
-			assert.strictEqual(result, 'function');
-		});
-
-		test('shards.get() rooms.list() matches default rooms.list()', async () => {
-			const defaultResult = await run('JSON.stringify(await rooms.list())');
-			const shardResult = await run('JSON.stringify(await (await shards.get("shard0")).rooms.list())');
-			assert.strictEqual(shardResult, defaultResult);
-		});
-
-		test('shards.get() system.getTickDuration returns a number', async () => {
-			const result = await run('(await shards.get("shard0")).system.getTickDuration()');
-			assert.ok(!Number.isNaN(Number(result)));
-		});
-
-		test('shards.get() with invalid name throws echoing the supplied name', async () => {
-			const result = await run('await shards.get("nonexistent")');
-			assert.ok(result.includes('nonexistent'), `expected supplied name in error; got: ${result}`);
 		});
 
 		test('shards.info() returns a CLI-friendly POJO summary', async () => {

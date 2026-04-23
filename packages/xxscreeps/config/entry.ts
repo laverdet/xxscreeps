@@ -78,7 +78,9 @@ if (missingFlags.length) {
 		import('./global.js'),
 	]);
 
-	if (specifier) {
+	// A flag-prefixed first arg (e.g. `xxscreeps --shard shard1`) dispatches to
+	// the default REPL path; repl.ts reads its own argv. Plain words are subcommands.
+	if (specifier && !specifier.startsWith('-')) {
 		const commands: Record<string, string | undefined> = {
 			import: './dist/scripts/scrape-world.js',
 			start: './dist/engine/service/launcher.js',
@@ -88,7 +90,7 @@ if (missingFlags.length) {
 			runner: './dist/engine/service/runner.js',
 			'save-schema': './dist/engine/service/save-schema.js',
 			test: './dist/test/run.js',
-			cli: './dist/mods/cli/standalone.js',
+			offline: './dist/mods/cli/standalone.js',
 			admin: './dist/mods/cli/admin/main.js',
 		};
 

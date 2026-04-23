@@ -17,13 +17,14 @@ export function topHelp(groups: readonly CommandSchemaGroup[]): string {
 		'  --force              Skip confirmation on destructive commands',
 		'  --verbose            Include stack traces on errors',
 		'  --socket <path>      Connect to a specific CLI socket',
+		'  --shard <name>       Scope the session to a non-default shard',
 		'  -h, --help           Show help for a group or command',
 		'',
 		'For group details:     xxscreeps admin <group> --help',
 		'For command details:   xxscreeps admin <group> <command> --help',
 		'',
 		'Power-user REPL:       xxscreeps           (interactive JavaScript)',
-		'Offline direct mode:   xxscreeps cli       (direct DB access, no server)',
+		'Offline direct mode:   xxscreeps offline   (direct DB access, no server)',
 	].join('\n');
 }
 

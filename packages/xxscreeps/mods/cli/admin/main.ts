@@ -5,7 +5,7 @@
  * that register command groups are reachable with zero client-side work.
  *
  * This is the friendly surface for new users and one-shot admin tasks. The
- * interactive REPL (`xxscreeps`) and offline direct-DB mode (`xxscreeps cli`)
+ * interactive REPL (`xxscreeps`) and offline direct-DB mode (`xxscreeps offline`)
  * remain the tools for power users who want JavaScript expressions.
  */
 
@@ -38,7 +38,7 @@ async function main() {
 	// when the server is down so the shell doesn't spam errors.
 	if (parsed.globals.complete) {
 		try {
-			const groups = await fetchSchema(parsed.globals.socket);
+			const groups = await fetchSchema(parsed.globals.socket, parsed.globals.shard);
 			process.stdout.write(completeWords(parsed, groups));
 		} catch { /* ignore */ }
 		return;
@@ -51,7 +51,7 @@ async function main() {
 
 	if (parsed.positionals.length === 0) {
 		try {
-			const groups = await fetchSchema(parsed.globals.socket);
+			const groups = await fetchSchema(parsed.globals.socket, parsed.globals.shard);
 			console.log(topHelp(groups));
 		} catch (err: unknown) {
 			// Fall back to static help so `admin --help` works without a server.
@@ -61,7 +61,7 @@ async function main() {
 		return;
 	}
 
-	const groups = await fetchSchema(parsed.globals.socket);
+	const groups = await fetchSchema(parsed.globals.socket, parsed.globals.shard);
 	const groupName = parsed.positionals[0];
 	const group = groups.find(candidate => candidate.name === groupName);
 	if (group === undefined) {
@@ -116,7 +116,7 @@ async function main() {
 		? `(async () => { await system.pauseSimulation(); try { return await ${call}; } finally { await system.resumeSimulation(); } })()`
 		: call;
 	const expression = parsed.globals.json ? `JSON.stringify(await ${inner})` : inner;
-	const response = await callOnce(parsed.globals.socket, expression);
+	const response = await callOnce(parsed.globals.socket, expression, parsed.globals.shard);
 
 	if (response.ok === false || response.result === undefined) {
 		const error = response.error ?? 'Server returned no result';

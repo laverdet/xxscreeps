@@ -378,6 +378,43 @@ describe('Socket', async () => {
 			assert.ok(rooms.length > 0);
 		});
 
+		test('first message with matching shard name scopes sandbox normally', async () => {
+			const response = await new Promise<{ result?: string; error?: string }>(resolve => {
+				const client = net.connect({ path: testSocketPath }, () => {
+					client.write(JSON.stringify({ shard: 'shard0', expression: '"scoped"' }) + '\n');
+				});
+				let buffer = '';
+				client.on('data', chunk => {
+					buffer += chunk.toString();
+					const newline = buffer.indexOf('\n');
+					if (newline !== -1) {
+						client.destroy();
+						resolve(JSON.parse(buffer.slice(0, newline)) as { result?: string; error?: string });
+					}
+				});
+			});
+			assert.strictEqual(response.result, 'scoped');
+		});
+
+		test('handshake-only message acks without executing', async () => {
+			const response = await new Promise<Record<string, unknown>>(resolve => {
+				const client = net.connect({ path: testSocketPath }, () => {
+					client.write(JSON.stringify({ shard: 'shard0' }) + '\n');
+				});
+				let buffer = '';
+				client.on('data', chunk => {
+					buffer += chunk.toString();
+					const newline = buffer.indexOf('\n');
+					if (newline !== -1) {
+						client.destroy();
+						resolve(JSON.parse(buffer.slice(0, newline)) as Record<string, unknown>);
+					}
+				});
+			});
+			assert.strictEqual(response.ok, true);
+			assert.strictEqual(response.result, undefined);
+		});
+
 		test('db provider returns real data', async () => {
 			const response = await sendCommand(testSocketPath, 'await db.smembers("users")');
 			assert.ok(response.result?.includes('100'));
@@ -558,7 +595,7 @@ describe('Socket', async () => {
 		test('offline cli loads seeded room data through the standalone entrypoint', async () => {
 			const env = await createSmokeEnvironment();
 			try {
-				const cli = await runEntry(env.root, [ 'cli' ], 'await rooms.peek("W9N9", r => ({ hasController: r.controller !== undefined, sourceCount: r.find(FIND_SOURCES).length }))\nexit\n');
+				const cli = await runEntry(env.root, [ 'offline' ], 'await rooms.peek("W9N9", r => ({ hasController: r.controller !== undefined, sourceCount: r.find(FIND_SOURCES).length }))\nexit\n');
 				assert.strictEqual(cli.code, 0, cli.stderr);
 				assert.ok(cli.stdout.includes('xxscreeps CLI (offline'));
 				assert.ok(cli.stdout.includes('hasController: true'));

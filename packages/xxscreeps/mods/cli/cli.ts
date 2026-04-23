@@ -376,31 +376,6 @@ function shardsGroup(
 				handler: () => config.shards.map(sh => sh.name),
 			},
 			{
-				name: 'get',
-				description: 'Open a shard context (name, time, data, pubsub, rooms, system)',
-				args: [ { name: 'name', kind: 'string' } ],
-				// Returned handles (data/pubsub) are live connections — only
-				// callable from the REPL sandbox. One-shot admin mode gets a
-				// useless inspect dump, so gate it off.
-				interactiveOnly: true,
-				handler: async (name: string) => {
-					const shardEntries = getSandbox().shardEntries;
-					let shardEntry = shardEntries.get(name);
-					if (shardEntry === undefined) {
-						shardEntry = { shard: await Shard.connect(db, name) };
-						shardEntries.set(name, shardEntry);
-					}
-					return {
-						name: shardEntry.shard.name,
-						time: shardEntry.shard.time,
-						data: shardEntry.shard.data,
-						pubsub: shardEntry.shard.pubsub,
-						rooms: makeRoomHelpers(getSandbox, shardEntry),
-						system: makeSystemHelpers(db, getSandbox, shardEntry),
-					};
-				},
-			},
-			{
 				name: 'info',
 				description: 'Return a scriptable summary of a shard: name, current tick, and room count',
 				args: [ { name: 'name', kind: 'string' } ],

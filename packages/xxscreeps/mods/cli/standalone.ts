@@ -10,7 +10,22 @@ import 'xxscreeps/config/mods/import/game.js';
 await importMods('cli');
 initializeGameEnvironment();
 
-const shardConfig = config.shards[0];
+function parseShardFlag(argv: readonly string[]): string | undefined {
+	for (let idx = 0; idx < argv.length; ++idx) {
+		const arg = argv[idx];
+		if (arg === '--shard') return argv[idx + 1];
+		if (arg.startsWith('--shard=')) return arg.slice('--shard='.length);
+	}
+	return undefined;
+}
+const shardArg = parseShardFlag(process.argv.slice(2));
+const shardConfig = shardArg === undefined
+	? config.shards[0]
+	: config.shards.find(sh => sh.name === shardArg);
+if (shardConfig === undefined) {
+	console.error(`Shard "${shardArg}" not configured. Available: ${config.shards.map(sh => sh.name).join(', ')}`);
+	process.exit(2);
+}
 const db = await Database.connect();
 const shard = await Shard.connect(db, shardConfig.name);
 const sandbox = createSandbox(db, shard, new PauseCoordinator());

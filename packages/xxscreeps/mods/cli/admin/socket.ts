@@ -11,8 +11,12 @@ export interface SocketResponse {
 	echo?: boolean;
 }
 
-/** Open a connection, run a single expression, return the parsed response, close. */
-export function callOnce(path: string, expression: string): Promise<SocketResponse> {
+/**
+ * Open a connection, run a single expression, return the parsed response, close.
+ * Optional `shard` is included in the handshake so the server scopes the
+ * per-connection sandbox to that shard (default = first configured shard).
+ */
+export function callOnce(path: string, expression: string, shard?: string): Promise<SocketResponse> {
 	return new Promise((resolve, reject) => {
 		if (!fs.existsSync(path)) {
 			reject(new Error(`Server is not running (no socket at ${path}). Start it with: xxscreeps start`));
@@ -29,7 +33,9 @@ export function callOnce(path: string, expression: string): Promise<SocketRespon
 			else resolve(value!);
 		};
 		socket.on('connect', () => {
-			socket.write(`${JSON.stringify({ expression })}\n`);
+			const payload: Record<string, unknown> = { expression };
+			if (shard !== undefined) payload.shard = shard;
+			socket.write(`${JSON.stringify(payload)}\n`);
 		});
 		socket.on('data', chunk => {
 			buffer += chunk.toString();
@@ -51,8 +57,8 @@ export function callOnce(path: string, expression: string): Promise<SocketRespon
 	});
 }
 
-export async function fetchSchema(path: string): Promise<CommandSchemaGroup[]> {
-	const response = await callOnce(path, 'JSON.stringify(commands())');
+export async function fetchSchema(path: string, shard?: string): Promise<CommandSchemaGroup[]> {
+	const response = await callOnce(path, 'JSON.stringify(commands())', shard);
 	if (response.ok === false || response.error !== undefined) {
 		throw new Error(`Schema fetch failed: ${response.error ?? 'unknown error'}`);
 	}

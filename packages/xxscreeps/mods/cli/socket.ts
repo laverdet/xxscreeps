@@ -1,11 +1,12 @@
 import type { Sandbox } from './sandbox.js';
-import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import type { Database } from 'xxscreeps/engine/db/index.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import net from 'node:net';
 import * as Path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { configPath } from 'xxscreeps/config/raw.js';
+import { Shard } from 'xxscreeps/engine/db/index.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { PauseCoordinator, createSandbox, destroySandbox, executeExpression } from './sandbox.js';
 
@@ -20,7 +21,7 @@ export function socketPathFor(configUrl: URL) {
 }
 export const socketPath = socketPathFor(configPath);
 
-export async function startSocketServer(db: Database, shard: Shard, path = socketPath, log = console.log) {
+export async function startSocketServer(db: Database, defaultShard: Shard, path = socketPath, log = console.log) {
 	// Clear a stale socket from a prior crash (Unix only).
 	if (process.platform !== 'win32') {
 		fs.mkdirSync(Path.dirname(path), { recursive: true });
@@ -48,7 +49,11 @@ export async function startSocketServer(db: Database, shard: Shard, path = socke
 	const pause = new PauseCoordinator();
 	const server = net.createServer(connection => {
 		connections.add(connection);
-		const sandbox = createSandbox(db, shard, pause);
+		// Sandbox creation is deferred to the first message so the client can
+		// select a non-default shard via an optional `shard` field. `ownedShard`
+		// tracks a shard we opened on-demand (not the launcher-owned default) so
+		// we can disconnect it when the connection closes.
+		const state: ConnectionState = { db, defaultShard, pause, sandbox: null, ownedShard: null };
 
 		let buffer = '';
 		let processing = Promise.resolve();
@@ -58,7 +63,10 @@ export async function startSocketServer(db: Database, shard: Shard, path = socke
 		});
 		connection.on('close', () => {
 			connections.delete(connection);
-			void processing.finally(() => destroySandbox(sandbox)).catch(console.error);
+			void processing.finally(async () => {
+				if (state.sandbox !== null) await destroySandbox(state.sandbox);
+				if (state.ownedShard !== null) state.ownedShard.disconnect();
+			}).catch(console.error);
 		});
 
 		connection.on('data', chunk => {
@@ -79,7 +87,7 @@ export async function startSocketServer(db: Database, shard: Shard, path = socke
 				buffer = buffer.slice(newline + 1);
 				processing = processing
 					.catch(() => {})
-					.then(() => handleMessage(sandbox, connection, line, log));
+					.then(() => handleMessage(state, connection, line, log));
 			}
 		});
 	});
@@ -105,7 +113,7 @@ export async function startSocketServer(db: Database, shard: Shard, path = socke
 		fs.chmodSync(path, 0o600);
 	}
 
-	const serviceSubscription = await getServiceChannel(shard).subscribe();
+	const serviceSubscription = await getServiceChannel(defaultShard).subscribe();
 	serviceSubscription.listen(message => {
 		if (message.type === 'shutdown') void cleanup();
 	});
@@ -132,9 +140,47 @@ export async function startSocketServer(db: Database, shard: Shard, path = socke
 	return cleanup;
 }
 
-async function handleMessage(sandbox: Sandbox, connection: net.Socket, line: string, log: typeof console.log) {
+interface ConnectionState {
+	readonly db: Database;
+	readonly defaultShard: Shard;
+	readonly pause: PauseCoordinator;
+	sandbox: Sandbox | null;
+	ownedShard: Shard | null;
+}
+
+async function ensureSandbox(state: ConnectionState, shardName: string | undefined): Promise<Sandbox> {
+	if (state.sandbox !== null) return state.sandbox;
+	let shard = state.defaultShard;
+	if (shardName !== undefined && shardName !== state.defaultShard.name) {
+		shard = await Shard.connect(state.db, shardName);
+		state.ownedShard = shard;
+	}
+	state.sandbox = createSandbox(state.db, shard, state.pause);
+	return state.sandbox;
+}
+
+async function handleMessage(state: ConnectionState, connection: net.Socket, line: string, log: typeof console.log) {
 	try {
-		const { expression } = JSON.parse(line) as { expression: string };
+		const { shard, expression } = JSON.parse(line) as { shard?: string; expression?: string };
+		let sandbox: Sandbox;
+		try {
+			sandbox = await ensureSandbox(state, shard);
+		} catch (err: unknown) {
+			if (connection.writable) {
+				const message = err instanceof Error ? err.message : String(err);
+				connection.write(JSON.stringify({ ok: false, error: `Shard handshake failed: ${message}` }) + '\n');
+			}
+			connection.destroy();
+			return;
+		}
+		// Pure handshake — client asked for a shard without an expression. Ack so
+		// the client knows the shard was accepted before it sends the next message.
+		if (expression === undefined) {
+			if (connection.writable) {
+				connection.write(JSON.stringify({ ok: true }) + '\n');
+			}
+			return;
+		}
 		const outcome = await executeExpression(sandbox, expression);
 		if (outcome.ok && outcome.echo) {
 			log(outcome.result);

@@ -7,6 +7,7 @@ export interface GlobalFlags {
 	verbose: boolean;
 	help: boolean;
 	socket: string;
+	shard: string | undefined;
 	complete: boolean;
 	completeIndex: number;
 }
@@ -20,7 +21,7 @@ export interface ParsedArgv {
 export type SchemaCommand = CommandSchemaGroup['commands'][number];
 
 const GLOBAL_FLAGS = new Set([
-	'--json', '--force', '--verbose', '--help', '-h', '--socket', '--complete',
+	'--json', '--force', '--verbose', '--help', '-h', '--socket', '--shard', '--complete',
 ]);
 
 export function toKebab(camel: string): string {
@@ -31,6 +32,7 @@ export function parseArgv(raw: readonly string[]): ParsedArgv {
 	const globals: GlobalFlags = {
 		json: false, force: false, verbose: false, help: false,
 		socket: defaultSocketPath,
+		shard: undefined,
 		complete: false, completeIndex: -1,
 	};
 	const positionals: string[] = [];
@@ -44,6 +46,7 @@ export function parseArgv(raw: readonly string[]): ParsedArgv {
 		if (arg === '--force') { globals.force = true; continue; }
 		if (arg === '--verbose') { globals.verbose = true; continue; }
 		if (arg === '--socket') { globals.socket = raw[idx++] ?? ''; continue; }
+		if (arg === '--shard') { globals.shard = raw[idx++]; continue; }
 		if (arg === '--complete') {
 			globals.complete = true;
 			const parsedIdx = Number.parseInt(raw[idx++] ?? '', 10);
