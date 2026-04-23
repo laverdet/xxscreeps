@@ -1,5 +1,5 @@
 import type { PluginItem } from '@babel/core';
-import fs from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import * as Path from 'node:path';
 import { fileURLToPath } from 'node:url';

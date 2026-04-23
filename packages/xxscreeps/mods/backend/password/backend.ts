@@ -1,5 +1,5 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import crypto from 'node:crypto';
+import * as crypto from 'node:crypto';
 import { promisify } from 'node:util';
 import { hooks } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';

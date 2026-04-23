@@ -19,7 +19,7 @@ describe('Construction', () => {
 		await tick();
 		await player('100', Game => {
 			// Should create a site
-			assert(Object.values(Game.constructionSites).length === 1);
+			assert.ok(Object.values(Game.constructionSites).length === 1);
 		});
 	}));
 	test('max construction sites', () => construction(async ({ player, tick }) => {
@@ -59,7 +59,7 @@ describe('Construction', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(
+			assert.ok(
 				// Only the first command should create a site
 				Object.values(Game.constructionSites).length === 1 &&
                 Object.values(Game.constructionSites)[0]?.structureType === 'road',
@@ -104,7 +104,7 @@ describe('Construction', () => {
 			await tick();
 			await player('101', Game => {
 				// Creep should have moved
-				assert(Game.creeps.enemy.pos.isEqualTo(25, 25));
+				assert.ok(Game.creeps.enemy.pos.isEqualTo(25, 25));
 			});
 			await player('100', Game => {
 				// Construction site should be destroyed
@@ -112,7 +112,7 @@ describe('Construction', () => {
 				// Half of progress should be dropped as energy at the site position (minus 1 tick of decay)
 				const energy = Game.rooms.W1N1.find(C.FIND_DROPPED_RESOURCES);
 				assert.strictEqual(energy.length, 1);
-				assert(energy[0].pos.isEqualTo(25, 25));
+				assert.ok(energy[0].pos.isEqualTo(25, 25));
 				assert.strictEqual(energy[0].resourceType, C.RESOURCE_ENERGY);
 				assert.strictEqual(energy[0].amount, 100 - Math.ceil(100 / C.ENERGY_DECAY));
 			});
@@ -135,7 +135,7 @@ describe('Construction', () => {
 			});
 			await tick();
 			await player('100', Game => {
-				assert(Game.creeps.own.pos.isEqualTo(25, 25));
+				assert.ok(Game.creeps.own.pos.isEqualTo(25, 25));
 				assert.strictEqual(Object.values(Game.constructionSites).length, 1);
 			});
 		}));
@@ -182,7 +182,7 @@ describe('Construction', () => {
 			await tick();
 			await player('101', Game => {
 				// Creep should still move onto the tile
-				assert(Game.creeps.enemy.pos.isEqualTo(25, 25));
+				assert.ok(Game.creeps.enemy.pos.isEqualTo(25, 25));
 			});
 			await player('100', Game => {
 				// Construction site should survive during safe mode
@@ -205,7 +205,7 @@ describe('Construction', () => {
 			});
 			await tick();
 			await player('101', Game => {
-				assert(Game.creeps.enemy.pos.isEqualTo(25, 25));
+				assert.ok(Game.creeps.enemy.pos.isEqualTo(25, 25));
 			});
 			await player('100', Game => {
 				assert.strictEqual(Object.values(Game.constructionSites).length, 0);

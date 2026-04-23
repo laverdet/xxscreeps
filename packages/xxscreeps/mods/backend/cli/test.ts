@@ -1,6 +1,6 @@
-import net from 'node:net';
-import os from 'node:os';
-import path from 'node:path';
+import * as net from 'node:net';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';

@@ -4,7 +4,7 @@ import type { GameBase } from 'xxscreeps/game/game.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import assert from 'node:assert';
+import * as assert from 'node:assert';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
@@ -114,7 +114,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 				},
 
 				async player(userId, task) {
-					assert(!playersThisTick.has(userId), `player '${userId}' already invoked this tick`);
+					assert.ok(!playersThisTick.has(userId), `player '${userId}' already invoked this tick`);
 					playersThisTick.add(userId);
 
 					// Fetch game state for player

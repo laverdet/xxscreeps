@@ -1,7 +1,7 @@
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import crypto from 'node:crypto';
-import fs from 'node:fs';
-import net from 'node:net';
+import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
+import * as net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { configPath } from 'xxscreeps/config/raw.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';

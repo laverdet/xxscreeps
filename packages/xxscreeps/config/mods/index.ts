@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../../declarations.d.ts" />
-import fs from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { configDefaults } from 'xxscreeps/config/config.js';
 import config from 'xxscreeps/config/raw.js';
 

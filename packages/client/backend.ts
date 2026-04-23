@@ -1,6 +1,6 @@
 import type { Schema } from './config.js';
 import { promises as fs } from 'node:fs';
-import os from 'node:os';
+import * as os from 'node:os';
 import { Transform } from 'node:stream';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import JSZip from 'jszip';

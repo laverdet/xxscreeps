@@ -1,5 +1,5 @@
 // @ts-check
-import process from 'node:process';
+import * as process from 'node:process';
 import js from '@eslint/js';
 import stylisticPlugin from '@stylistic/eslint-plugin';
 import typeScriptPlugin from '@typescript-eslint/eslint-plugin';

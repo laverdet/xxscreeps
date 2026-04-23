@@ -1,7 +1,7 @@
 import type * as P from 'xxscreeps/engine/db/storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import fsSync from 'node:fs';
-import fs from 'node:fs/promises';
+import * as fsSync from 'node:fs';
+import * as fs from 'node:fs/promises';
 import * as Path from 'node:path';
 import { fileURLToPath } from 'url';
 import { Fn } from 'xxscreeps/functional/fn.js';

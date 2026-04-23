@@ -1,5 +1,5 @@
-import crypto from 'node:crypto';
-import os from 'node:os';
+import * as crypto from 'node:crypto';
+import * as os from 'node:os';
 
 // When making changes to the schema, remember to generate a new typescript json schema with the below command
 // pnpm -C packages/xxscreeps exec typescript-json-schema tsconfig.json Schema --include ./config/config.ts --defaultProps --required -o ./config/config.schema.json

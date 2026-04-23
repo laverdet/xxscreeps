@@ -1,6 +1,6 @@
-import fs from 'node:fs';
-import net from 'node:net';
-import readline from 'node:readline';
+import * as fs from 'node:fs';
+import * as net from 'node:net';
+import * as readline from 'node:readline';
 import { socketPath } from 'xxscreeps/mods/backend/cli/socket.js';
 
 // Verify socket exists before connecting (Unix only; named pipes don't have a file)

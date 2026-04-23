@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import * as fs from 'node:fs';
 import { loadTerrain, search } from 'xxscreeps/driver/pathfinder.js';
 import { World } from 'xxscreeps/game/map.js';
 import { CostMatrix } from 'xxscreeps/game/pathfinder/index.js';

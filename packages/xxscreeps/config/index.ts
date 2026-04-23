@@ -1,5 +1,5 @@
 import type { Schema } from './config.js';
-import fs from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
 import Config from 'xxscreeps/config/mods/import/config.js';

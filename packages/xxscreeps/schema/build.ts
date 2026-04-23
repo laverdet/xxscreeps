@@ -1,6 +1,6 @@
 import type { Format, ShapeOf, TypeOf, WithShapeAndType } from './format.js';
 import type { LayoutAndTraits } from './layout.js';
-import crypto from 'node:crypto';
+import * as crypto from 'node:crypto';
 import { getName } from 'xxscreeps/schema/format.js';
 import { archiveLayout } from './archive.js';
 import { getLayout } from './layout.js';

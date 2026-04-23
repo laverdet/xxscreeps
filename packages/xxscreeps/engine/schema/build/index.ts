@@ -1,7 +1,7 @@
 import type { Transform } from 'xxscreeps/driver/webpack.js';
 import type { Package } from 'xxscreeps/schema/build.js';
 import type { BufferView, Format } from 'xxscreeps/schema/index.js';
-import fs from 'node:fs';
+import * as fs from 'node:fs';
 import config, { configPath } from 'xxscreeps/config/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { restoreLayout } from 'xxscreeps/schema/archive.js';

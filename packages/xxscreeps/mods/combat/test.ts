@@ -92,7 +92,7 @@ describe('getEventLog', () => {
 		await tick();
 		await player('100', Game => {
 			const raw = Game.rooms.W1N1.getEventLog(true);
-			assert(typeof raw === 'string');
+			assert.ok(typeof raw === 'string');
 			const parsed: unknown = JSON.parse(raw);
 			assert.ok(Array.isArray(parsed));
 		});

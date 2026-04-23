@@ -1,5 +1,5 @@
 import type { Schema } from './config.js';
-import fs from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { isMainThread, workerData } from 'node:worker_threads';
 import jsYaml from 'js-yaml';
