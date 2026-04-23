@@ -77,14 +77,7 @@ function calculateEffectiveDamage(creep: Creep, totalDamage: number) {
 	return hitsLost;
 }
 
-function recalculateBody(creep: Creep) {
-	// Apply damage to body parts
-	let hits = creep.hits - creep.hitsMax;
-	for (const part of creep.body) {
-		hits += 100;
-		part.hits = clamp(0, 100, hits);
-	}
-	// Dying creeps: leave the store intact so buryCreep can transfer it.
+export function dropOverflowResources(creep: Creep) {
 	const capacity = creep.store['#capacity'] = calculateCarry(creep.body);
 	if (creep.hits <= 0) return;
 	let overflow = creep.store.getUsedCapacity() - capacity;
@@ -98,6 +91,16 @@ function recalculateBody(creep: Creep) {
 			}
 		}
 	}
+}
+
+function recalculateBody(creep: Creep) {
+	// Apply damage to body parts
+	let hits = creep.hits - creep.hitsMax;
+	for (const part of creep.body) {
+		hits += 100;
+		part.hits = clamp(0, 100, hits);
+	}
+	dropOverflowResources(creep);
 }
 
 declare module 'xxscreeps/engine/processor/index.js' {
