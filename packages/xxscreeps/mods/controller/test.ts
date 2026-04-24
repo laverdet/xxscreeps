@@ -63,4 +63,32 @@ describe('Controller', () => {
 			});
 		}));
 	});
+
+	describe('activateSafeMode', () => {
+
+		const ownedTwoRooms = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room.controller!.safeModeAvailable = 1;
+			},
+			W3N3: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room.controller!.safeModeAvailable = 1;
+			},
+		});
+
+		test('caps at one activation per tick across controllers', () => ownedTwoRooms(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1.controller!.activateSafeMode(), C.OK);
+				assert.strictEqual(Game.rooms.W3N3.controller!.activateSafeMode(), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1.controller!.safeMode, undefined);
+				assert.notStrictEqual(Game.rooms.W3N3.controller!.safeMode, undefined);
+			});
+		}));
+	});
 });

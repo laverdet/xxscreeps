@@ -152,7 +152,7 @@ export function checkClaimController(creep: Creep, target: StructureController) 
 
 export function checkGenerateSafeMode(creep: Creep, target: StructureController) {
 	return chainIntentChecks(
-		() => checkCommon(creep, C.WORK),
+		() => checkCommon(creep),
 		() => checkHasResource(creep, C.RESOURCE_GHODIUM, C.SAFE_MODE_COST),
 		() => checkTarget(target, StructureController),
 		() => checkRange(creep, target, 1));
