@@ -297,6 +297,53 @@ describe('Movement', () => {
 		}));
 	});
 
+	describe('Tombstone store', () => {
+		const boostedSuicide = simulate({
+			W7N7: room => {
+				const creep = create(new RoomPosition(25, 25, 'W7N7'), [ C.ATTACK ], 'boosted', '100');
+				creep.body[0].boost = C.RESOURCE_UTRIUM_HYDRIDE;
+				room['#insertObject'](creep);
+			},
+		});
+
+		test('suicide reclaims body energy and boost mineral', () => boostedSuicide(async ({ player, tick, peekRoom }) => {
+			await player('100', Game => {
+				Game.creeps.boosted.suicide();
+			});
+			await tick();
+			await peekRoom('W7N7', room => {
+				const tombs = room['#lookFor'](C.LOOK_TOMBSTONES);
+				assert.strictEqual(tombs.length, 1);
+				const tomb = tombs[0];
+				assert.strictEqual(tomb.store[C.RESOURCE_ENERGY], 19);
+				assert.strictEqual(tomb.store[C.RESOURCE_UTRIUM_HYDRIDE], 5);
+			});
+		}));
+
+		const claimSuicide = simulate({
+			W8N8: room => {
+				const creep = create(new RoomPosition(25, 25, 'W8N8'), [ C.CLAIM ], 'claimer', '100');
+				// Spawn code seats CLAIM creeps at CREEP_CLAIM_LIFE_TIME; create() only knows
+				// CREEP_LIFE_TIME. Retarget #ageTime so the reclaim rate picks the CLAIM branch.
+				creep['#ageTime'] = creep['#ageTime'] - C.CREEP_LIFE_TIME + C.CREEP_CLAIM_LIFE_TIME;
+				room['#insertObject'](creep);
+			},
+		});
+
+		test('CLAIM body uses CREEP_CLAIM_LIFE_TIME for the reclaim rate', () => claimSuicide(async ({ player, tick, peekRoom }) => {
+			await player('100', Game => {
+				Game.creeps.claimer.suicide();
+			});
+			await tick();
+			await peekRoom('W8N8', room => {
+				const tombs = room['#lookFor'](C.LOOK_TOMBSTONES);
+				assert.strictEqual(tombs.length, 1);
+				// Using CREEP_LIFE_TIME instead would yield floor(600 * 0.2 * (599/1500)) = 47.
+				assert.strictEqual(tombs[0].store[C.RESOURCE_ENERGY], 119);
+			});
+		}));
+	});
+
 	describe('Room', () => {
 		const sim = simulate({
 			W0N0: room => {
