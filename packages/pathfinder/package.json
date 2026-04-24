@@ -1,5 +1,6 @@
 {
 	"name": "@xxscreeps/pathfinder",
+	"version": "0.0.1",
 	"main": "./index.cjs",
 	"scripts": {
 		"install": "node-gyp rebuild --release",

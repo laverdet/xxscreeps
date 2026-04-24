@@ -19,4 +19,5 @@ jobs:
       - uses: changesets/action@v1
         with:
           createGithubReleases: false
-          publish: pnpm publish --no-git-checks --provenance --recursive
+          # publish: pnpm publish --no-git-checks --provenance --recursive
+          publish: cd packages/redis; npm publish --provenance
