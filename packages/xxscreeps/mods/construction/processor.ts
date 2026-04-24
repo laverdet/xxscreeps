@@ -6,7 +6,7 @@ import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
+import { Creep, calculateBoundedEffect, calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
 import { ConstructionSite, checkRemove, create } from './construction-site.js';
 import { checkBuild, checkDismantle, checkRepair } from './creep.js';
@@ -45,15 +45,16 @@ const intents = [
 	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<ConstructionSite>(id)!;
 		if (checkBuild(creep, target) === C.OK) {
-			const power = calculatePower(creep, C.WORK, C.BUILD_POWER, 'build');
-			const energy = Math.min(
-				target.progressTotal - target.progress,
-				creep.store.energy,
-				power,
+			// Vanilla semantics: energy cost derives from unboosted WORK parts,
+			// progress applied uses the boosted output.
+			const buildRemaining = target.progressTotal - target.progress;
+			const { unboosted: energy, boosted } = calculateBoundedEffect(
+				creep, C.WORK, C.BUILD_POWER, 'build',
+				Math.min(buildRemaining, creep.store.energy),
 			);
 			if (energy > 0) {
 				creep.store['#subtract'](C.RESOURCE_ENERGY, energy);
-				target.progress += energy;
+				target.progress += Math.min(boosted, buildRemaining);
 				saveAction(creep, 'build', target.pos);
 				context.didUpdate();
 			}
@@ -88,13 +89,17 @@ const intents = [
 	}, (creep, context, id: string) => {
 		const target = Game.getObjectById<DestructibleStructure>(id)!;
 		if (checkRepair(creep, target) === C.OK) {
-			const effect = Math.min(
-				calculatePower(creep, C.WORK, C.REPAIR_POWER, 'repair'),
-				target.hitsMax - target.hits,
-				creep.store.energy / C.REPAIR_COST);
+			// Vanilla semantics: `repairEffect` (unboosted) caps hits and drives
+			// energy cost; `boostedEffect` is the hits applied to the target.
+			const repairHitsMax = target.hitsMax - target.hits;
+			const { unboosted: effect, boosted } = calculateBoundedEffect(
+				creep, C.WORK, C.REPAIR_POWER, 'repair',
+				Math.min(repairHitsMax, creep.store.energy / C.REPAIR_COST),
+			);
 			if (effect > 0) {
-				creep.store['#subtract'](C.RESOURCE_ENERGY, effect * C.REPAIR_COST);
-				target.hits += effect;
+				const energyCost = Math.min(creep.store.energy, Math.ceil(effect * C.REPAIR_COST));
+				creep.store['#subtract'](C.RESOURCE_ENERGY, energyCost);
+				target.hits += Math.min(boosted, repairHitsMax);
 				saveAction(creep, 'repair', target.pos);
 				context.didUpdate();
 			}
