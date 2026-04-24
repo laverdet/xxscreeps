@@ -9,10 +9,11 @@ export const kMaxMemorySegmentLength = 100 * 1024;
 
 let activeSegments = new Map<number, string>();
 let didUpdateSegments = false;
-let requestedForeignSegment: null | {
-	id: number | undefined;
-	username: string;
-};
+// `undefined` = no call this tick, `null` = explicit clear, object = new request. Matches the
+// tri-state convention on the driver payload.
+let requestedForeignSegment: { id: number | undefined; username: string } | null | undefined;
+let requestedDefaultPublicSegment: number | null | undefined;
+let requestedPublicSegments: number[] | undefined;
 let memory: Uint16Array;
 let memoryLength = 0;
 let string: string | undefined;
@@ -66,6 +67,14 @@ export const RawMemory = {
 	segments: {} as Record<string, string>,
 
 	/**
+	 * An object with a memory segment of another user available on this tick. Use
+	 * `setActiveForeignSegment` to fetch this. The object contains the following keys: `username`,
+	 * `id`, and `data`. The segment is only available if the target user has marked it public via
+	 * `setPublicSegments`.
+	 */
+	foreignSegment: undefined as ForeignSegment | undefined,
+
+	/**
 	 * Get a raw string representation of the `Memory` object.
 	 */
 	get() {
@@ -116,7 +125,14 @@ export const RawMemory = {
 	 * @param id The ID of the requested segment from 0 to 99. If undefined, the user's default public
 	 * segment is requested as set by setDefaultPublicSegment.
 	 */
-	setActiveForeignSegment(username: string, id?: number) {
+	setActiveForeignSegment(username: string | null, id?: number) {
+		if (username === null) {
+			requestedForeignSegment = null;
+			return;
+		}
+		if (id !== undefined && !isValidSegmentId(id)) {
+			throw new Error(`"${id}" is not a valid segment ID`);
+		}
 		requestedForeignSegment = { id, username };
 	},
 
@@ -126,14 +142,29 @@ export const RawMemory = {
 	 * @param id The ID of the memory segment from 0 to 99. Pass `null` to remove your default public
 	 * segment.
 	 */
-	setDefaultPublicSegment(_id: number) { console.error('TODO: setDefaultPublicSegment'); },
+	setDefaultPublicSegment(id: number | null) {
+		if (id !== null && !isValidSegmentId(id)) {
+			throw new Error(`"${id}" is not a valid segment ID`);
+		}
+		requestedDefaultPublicSegment = id;
+	},
 
 	/**
 	 * Set specified segments as public. Other users will be able to request access to them using `setActiveForeignSegment`.
 	 * @param ids An array of segment IDs. Each ID should be a number from 0 to 99. Subsequent calls
 	 * of `setPublicSegments` override previous ones.
 	 */
-	setPublicSegments(_ids: number[]) { /*console.error('TODO: setPublicSegments')*/ },
+	setPublicSegments(ids: number[]) {
+		if (!Array.isArray(ids)) {
+			throw new TypeError(`"${ids}" is not an array`);
+		}
+		for (const id of ids) {
+			if (!isValidSegmentId(id)) {
+				throw new Error(`"${id}" is not a valid segment ID`);
+			}
+		}
+		requestedPublicSegments = [ ...ids ];
+	},
 };
 
 /**
@@ -237,6 +268,21 @@ export type SegmentPayload = {
 	payload: Readonly<Uint8Array> | null;
 };
 
+// Wire shape: bytes from the driver. The player-visible `RawMemory.foreignSegment.data` lives
+// behind a lazy getter installed by `loadForeignSegment` so the UTF-16 decode only runs if the
+// script actually reads the string.
+export type ForeignSegmentPayload = {
+	username: string;
+	id: number;
+	bytes: Readonly<Uint8Array>;
+};
+
+type ForeignSegment = {
+	username: string;
+	id: number;
+	data: string;
+};
+
 export function isValidSegmentId(id: number) {
 	return Number.isInteger(id) && id >= 0 && id < kMaxMemorySegmentId;
 }
@@ -254,12 +300,56 @@ export function flushActiveSegments() {
 }
 
 /**
- * Returns the request from `RawMemory.setActiveForeignSegment`
+ * Returns the request from `RawMemory.setActiveForeignSegment`. Tri-state:
+ * `undefined` = no call this tick, `null` = explicit clear, object = new request.
  */
 export function flushForeignSegment() {
 	const tmp = requestedForeignSegment;
-	requestedForeignSegment = null;
+	requestedForeignSegment = undefined;
 	return tmp;
+}
+
+/**
+ * Returns the update from `RawMemory.setDefaultPublicSegment`. Tri-state:
+ * `undefined` = no call this tick, `null` = explicit clear, number = new default.
+ */
+export function flushDefaultPublicSegment() {
+	const tmp = requestedDefaultPublicSegment;
+	requestedDefaultPublicSegment = undefined;
+	return tmp;
+}
+
+/**
+ * Returns the update from `RawMemory.setPublicSegments`
+ */
+export function flushPublicSegments() {
+	const tmp = requestedPublicSegments;
+	requestedPublicSegments = undefined;
+	return tmp;
+}
+
+export function loadForeignSegment(payload: ForeignSegmentPayload | null | undefined) {
+	// Tri-state: `undefined` = no change from driver, `null` = explicit clear, object = install
+	if (payload === undefined) {
+		return;
+	}
+	if (payload === null) {
+		RawMemory.foreignSegment = undefined;
+		return;
+	}
+	const { username, id, bytes } = payload;
+	let decoded: string | undefined;
+	RawMemory.foreignSegment = {
+		username,
+		id,
+		get data() {
+			if (decoded === undefined) {
+				const uint16 = new Uint16Array(bytes.buffer, bytes.byteOffset, bytes.length >>> 1);
+				decoded = typedArrayToString(uint16);
+			}
+			return decoded;
+		},
+	};
 }
 
 /**

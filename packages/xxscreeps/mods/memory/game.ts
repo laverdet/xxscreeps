@@ -1,7 +1,7 @@
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { extend } from 'xxscreeps/utility/utility.js';
-import { RawMemory, flush, flushActiveSegments, flushForeignSegment, flushSegments, get, initialize, loadSegments } from './memory.js';
+import { RawMemory, flush, flushActiveSegments, flushDefaultPublicSegment, flushForeignSegment, flushPublicSegments, flushSegments, get, initialize, loadForeignSegment, loadSegments } from './memory.js';
 
 // Export `Memory` and `RawMemory` to runtime globals
 declare module 'xxscreeps/game/runtime.js' {
@@ -37,6 +37,7 @@ hooks.register('runtimeConnector', {
 
 	receive(payload) {
 		loadSegments(payload.memorySegments);
+		loadForeignSegment(payload.foreignSegment);
 		// Redefine memory each tick, expected behavior from vanilla server
 		Object.defineProperty(globalThis, 'Memory', {
 			configurable: true,
@@ -53,5 +54,7 @@ hooks.register('runtimeConnector', {
 		payload.activeSegmentsRequest = flushActiveSegments();
 		payload.foreignSegmentRequest = flushForeignSegment();
 		payload.memorySegmentsUpdated = flushSegments();
+		payload.defaultPublicSegmentUpdate = flushDefaultPublicSegment();
+		payload.publicSegmentsUpdate = flushPublicSegments();
 	},
 });
