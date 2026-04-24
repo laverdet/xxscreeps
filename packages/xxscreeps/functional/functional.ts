@@ -40,5 +40,6 @@ export * from './iterable/reject.js';
 export * from './iterable/scan.js';
 export * from './iterable/shift.js';
 export * from './iterable/take.js';
+export * from './iterable/takeWhile.js';
 export * from './iterable/transform.js';
 export * from './nil.js';

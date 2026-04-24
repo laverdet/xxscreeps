@@ -6,7 +6,9 @@ import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
 import type { PolyStyle } from 'xxscreeps/mods/visual/visual.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { invertedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { Predicate } from 'xxscreeps/functional/predicate.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
@@ -158,7 +160,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 * @param type A body part type
 	 */
 	getActiveBodyparts(type: PartType) {
-		return Fn.accumulate(this.body, part => part.type === type && part.hits > 0 ? 1 : 0);
+		return Fn.accumulate(iterateActiveParts(this.body), part => part.type === type ? 1 : 0);
 	}
 
 	/**
@@ -430,7 +432,7 @@ export function create(pos: RoomPosition, parts: PartType[], name: string, owner
 export function calculateCarry(body: Creep['body']) {
 	const boosts: BoostsLookup = C.BOOSTS;
 	return Fn.accumulate(
-		Fn.filter(body, part => part.hits > 0),
+		iterateActiveParts(body),
 		part => {
 			if (part.type !== C.CARRY) return 0;
 			if (part.boost) {
@@ -441,6 +443,13 @@ export function calculateCarry(body: Creep['body']) {
 			}
 			return C.CARRY_CAPACITY;
 		});
+}
+
+const activePartPredicate: Predicate<Creep['body'][number]> = part => part.hits > 0;
+
+export function iterateActiveParts(body: Creep['body']) {
+	// Parts die from right to left so you can halt iteration at the first dead part
+	return Fn.takeWhile(body, activePartPredicate);
 }
 
 registerObstacleChecker(params => {
@@ -542,8 +551,8 @@ export function calculateCost(creep: Creep) {
 
 export function calculatePower(creep: Creep, part: PartType, power: number, boostMethod?: string) {
 	const boosts: BoostsLookup = C.BOOSTS;
-	return Fn.accumulate(creep.body, bodyPart => {
-		if (bodyPart.type === part && bodyPart.hits > 0) {
+	return Fn.accumulate(iterateActiveParts(creep.body), bodyPart => {
+		if (bodyPart.type === part) {
 			if (boostMethod !== undefined && bodyPart.boost) {
 				const multiplier = boosts[part]?.[bodyPart.boost]?.[boostMethod];
 				if (multiplier !== undefined) {
@@ -574,34 +583,36 @@ export function calculateBoundedEffect(
 ) {
 	const boosts: BoostsLookup = C.BOOSTS;
 	const deltas: number[] = [];
-	for (const bodyPart of creep.body) {
-		if (bodyPart.type !== part || bodyPart.hits <= 0) continue;
-		let delta = 0;
-		if (bodyPart.boost) {
-			const multiplier = boosts[part]?.[bodyPart.boost]?.[boostMethod];
-			if (multiplier !== undefined && multiplier > 0) {
-				delta = (multiplier - 1) * power;
-			}
+	for (const bodyPart of iterateActiveParts(creep.body)) {
+		if (bodyPart.type === part) {
+			deltas.push(function() {
+				if (bodyPart.boost) {
+					const multiplier = boosts[part]?.[bodyPart.boost]?.[boostMethod];
+					if (multiplier !== undefined && multiplier > 0) {
+						return (multiplier - 1) * power;
+					}
+				}
+				return 0;
+			}());
 		}
-		deltas.push(delta);
 	}
 	const unboosted = Math.min(deltas.length * power, cap);
 	if (unboosted <= 0) {
 		return { unboosted: 0, boosted: 0 };
 	}
-	deltas.sort((a, b) => b - a);
+	deltas.sort(invertedNumericComparator);
 	// Vanilla slices by the effect value (in power-units) rather than part
 	// count. Since `deltas.length * power >= unboosted` and `power >= 1` for
 	// all callers, slicing by `unboosted` keeps all parts when energy is
 	// sufficient and the top-k most-boosted parts otherwise.
 	const sliceCount = Math.floor(unboosted);
-	const boostedDelta = deltas.slice(0, sliceCount).reduce((sum, v) => sum + v, 0);
+	const boostedDelta = Fn.accumulate(Fn.slice(deltas, 0, sliceCount));
 	return { unboosted, boosted: Math.floor(unboosted + boostedDelta) };
 }
 
 export function calculateWeight(creep: Creep) {
-	let weight = Fn.accumulate(creep.body, part =>
-		part.type === C.CARRY || part.type === C.MOVE ? 0 : 1);
-	weight += Math.ceil(creep.carry.getUsedCapacity() / C.CARRY_CAPACITY);
-	return weight;
+	return Fn.pipe(
+		creep.body,
+		$$ => Fn.accumulate($$, part => part.type === C.CARRY || part.type === C.MOVE ? 0 : 1),
+		$$ => $$ + Math.ceil(creep.carry.getUsedCapacity() / C.CARRY_CAPACITY));
 }
