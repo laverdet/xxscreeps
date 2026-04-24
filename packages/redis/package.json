@@ -14,5 +14,10 @@
   "devDependencies": {
     "@types/node": "~24.12.2",
     "@types/redis": "~2.8.31"
+  },
+  "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/redis/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laverdet/xxscreeps.git"
   }
 }
