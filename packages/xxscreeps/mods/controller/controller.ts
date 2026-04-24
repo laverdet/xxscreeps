@@ -1,7 +1,7 @@
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Game, intents, userInfo } from 'xxscreeps/game/index.js';
+import { Game, hooks, intents, userInfo } from 'xxscreeps/game/index.js';
 import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 
@@ -65,7 +65,26 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	activateSafeMode() {
 		return chainIntentChecks(
 			() => checkActivateSafeMode(this),
-			() => intents.save(this, 'activateSafeMode'));
+			() => {
+				// Runtime-only world-wide scan; the processor's Game.rooms has only the target room.
+				for (const room of Object.values(Game.rooms)) {
+					const other = room.controller;
+					if (other?.my && other.safeMode !== undefined) {
+						return C.ERR_BUSY;
+					}
+				}
+			},
+			() => {
+				// Cap to one activateSafeMode intent per tick; safeMode only flips in the processor.
+				if (lastActivateSafeModeId !== undefined && lastActivateSafeModeId !== this.id) {
+					const previous = Game.getObjectById<StructureController>(lastActivateSafeModeId);
+					if (previous) {
+						intents.remove(previous, 'activateSafeMode');
+					}
+				}
+				lastActivateSafeModeId = this.id;
+				return intents.save(this, 'activateSafeMode');
+			});
 	}
 
 	/**
@@ -100,6 +119,11 @@ declare module 'xxscreeps/game/room/index.js' {
 	}
 }
 
+let lastActivateSafeModeId: string | undefined;
+hooks.register('gameInitializer', () => {
+	lastActivateSafeModeId = undefined;
+});
+
 export function checkActivateSafeMode(controller: StructureController) {
 	return chainIntentChecks(
 		() => checkMyStructure(controller, StructureController),
@@ -111,16 +135,13 @@ export function checkActivateSafeMode(controller: StructureController) {
 				- C.CONTROLLER_DOWNGRADE_SAFEMODE_THRESHOLD;
 			if (
 				controller.safeModeCooldown ||
-				(controller.upgradeBlocked ?? 0) > 0 ||
+				controller.upgradeBlocked !== undefined ||
 				(controller.ticksToDowngrade ?? Infinity) < downgradeThreshold
 			) {
 				return C.ERR_TIRED;
 			}
-			for (const room of Object.values(Game.rooms)) {
-				const other = room.controller;
-				if (other?.my && other.safeMode) {
-					return C.ERR_BUSY;
-				}
+			if (controller.safeMode !== undefined) {
+				return C.ERR_BUSY;
 			}
 		});
 }
