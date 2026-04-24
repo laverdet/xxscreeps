@@ -9,7 +9,8 @@
     "build": "tsc -b",
     "eslint": "eslint --max-warnings 0 $(git ls-files '*.ts' '*.tsx')",
     "test": "npx xxscreeps test",
-    "watch": "tsc -b -w"
+    "watch": "tsc -b -w",
+    "publish": "cd packages/redis; npm publish --provenance"
   },
   "dependencies": {
     "@changesets/cli": "^2.31.0",

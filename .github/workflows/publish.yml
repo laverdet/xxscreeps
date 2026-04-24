@@ -8,6 +8,10 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v6
@@ -20,4 +24,4 @@ jobs:
         with:
           createGithubReleases: false
           # publish: pnpm publish --no-git-checks --provenance --recursive
-          publish: cd packages/redis; npm publish --provenance
+          publish: pnpm run publish
