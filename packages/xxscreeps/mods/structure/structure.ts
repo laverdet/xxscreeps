@@ -79,12 +79,16 @@ export class Structure extends withOverlay(RoomObject, shape) {
 
 	/**
 	 * Toggle notifications for when this structure is attacked.
-	 * @param enabled Whether to receive email notifications on attack.
+	 * @param notifyWhenAttacked Whether to receive email notifications on attack.
 	 */
-	notifyWhenAttacked(this: Structure, enabled: boolean) {
+	notifyWhenAttacked(this: Structure, notifyWhenAttacked: boolean) {
 		return chainIntentChecks(
-			() => checkNotifyWhenAttacked(this, enabled),
-			() => intents.save(this, 'notifyWhenAttacked', Boolean(enabled)));
+			() => checkNotifyWhenAttacked(this, notifyWhenAttacked),
+			() => {
+				if (notifyWhenAttacked === this['#noAttackNotify']) {
+					intents.save(this, 'notifyWhenAttacked', Boolean(notifyWhenAttacked));
+				}
+			});
 	}
 
 	'#checkObstacle'(_user: string) {
@@ -240,10 +244,10 @@ export function checkDestroy(structure: Structure) {
 		});
 }
 
-export function checkNotifyWhenAttacked(structure: Structure, enabled: unknown) {
+export function checkNotifyWhenAttacked(structure: Structure, notifyWhenAttacked: unknown) {
 	if (structure.my === false || structure.room.controller?.my === false) {
 		return C.ERR_NOT_OWNER;
-	} else if (typeof enabled !== 'boolean') {
+	} else if (typeof notifyWhenAttacked !== 'boolean') {
 		return C.ERR_INVALID_ARGS;
 	}
 	return C.OK;

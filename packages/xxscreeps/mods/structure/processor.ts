@@ -15,10 +15,10 @@ const intents = [
 		}
 	}),
 
-	registerIntentProcessor(Structure, 'notifyWhenAttacked', {}, (structure, context, enabled: boolean) => {
-		if (checkNotifyWhenAttacked(structure, enabled) === C.OK) {
+	registerIntentProcessor(Structure, 'notifyWhenAttacked', {}, (structure, context, notifyWhenAttacked: boolean) => {
+		if (checkNotifyWhenAttacked(structure, notifyWhenAttacked) === C.OK) {
 			// TODO: no consumer — damage processors should read '#noAttackNotify' to emit attack notifications.
-			structure['#noAttackNotify'] = !enabled;
+			structure['#noAttackNotify'] = !notifyWhenAttacked;
 			context.didUpdate();
 		}
 	}),
