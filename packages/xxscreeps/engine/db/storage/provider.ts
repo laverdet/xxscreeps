@@ -35,6 +35,7 @@ export type KeyValProvider = {
 	// keys / strings
 	copy: (from: string, to: string, options?: Copy) => Promise<boolean>;
 	del: (key: string) => Promise<boolean>;
+	// 'vdel' returns no response and may be reordered in relation to other commands
 	vdel: (key: string) => Promise<void>;
 	get: ((key: string, options: { blob: true }) => Promise<Readonly<Uint8Array> | null>) & ((key: string, options?: AsBlob) => Promise<string | null>);
 	req: ((key: string, options: { blob: true }) => Promise<Readonly<Uint8Array>>) & ((key: string, options?: AsBlob) => Promise<string>);

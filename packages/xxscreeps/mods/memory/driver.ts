@@ -102,32 +102,34 @@ hooks.register('runnerConnector', player => {
 				nextSegments = new Set(Fn.take(payload.activeSegmentsRequest, kMaxActiveSegments));
 			}
 
-			const foreignRequest = payload.foreignSegmentRequest;
-			const segmentWrites = payload.memorySegmentsUpdated
-				? [ ...Fn.take(payload.memorySegmentsUpdated, kMaxActiveSegments) ]
-				: [];
-			const publicSegmentsChanged = payload.publicSegmentsUpdate !== undefined;
+			// Dispatch updates
 			const channel = getPublicSegmentChannel(shard, userId);
-
 			await Promise.all([
 				// Save primary memory blob
 				payload.memoryUpdated.payload && saveMemoryBlob(shard, userId, payload.memoryUpdated.payload),
+
 				// Save memory segments
-				...Fn.map(segmentWrites, segment => saveMemorySegmentBlob(shard, userId, segment.id, segment.payload)),
-				// Save default public segment
-				payload.defaultPublicSegmentUpdate !== undefined
-					&& saveDefaultPublicSegment(shard, userId, payload.defaultPublicSegmentUpdate),
+				...Fn.pipe(
+					payload.memorySegmentsUpdated ?? [],
+					$$ => Fn.take($$, kMaxActiveSegments),
+					$$ => Fn.transform($$, segment => [
+						saveMemorySegmentBlob(shard, userId, segment.id, segment.payload),
+						channel.publish({ type: 'segment', id: segment.id }),
+					])),
+
 				// Save public segment set
-				publicSegmentsChanged && savePublicSegments(shard, userId, payload.publicSegmentsUpdate!),
-				// Notify foreign readers alongside the writes — reads are tick-synchronized, so no
-				// race. Segment updates fire per-id; public-set changes fire once.
-				...Fn.map(segmentWrites, segment => channel.publish({ type: 'segment', id: segment.id })),
-				publicSegmentsChanged && channel.publish({ type: 'publicSet' }),
-				// Resolve + persist the foreign-segment request, then re-subscribe. These are
-				// serial; wrap in an IIFE so the rest of the Promise.all runs in parallel.
-				foreignRequest !== undefined && async function() {
-					activeForeignSegment = await saveActiveForeignSegment(shard, userId, activeForeignSegment, foreignRequest);
-					await syncForeignSubscription();
+				payload.publicSegmentsUpdate !== undefined && savePublicSegments(shard, userId, payload.publicSegmentsUpdate),
+				payload.publicSegmentsUpdate !== undefined && channel.publish({ type: 'publicSet' }),
+
+				// Save default public segment
+				payload.defaultPublicSegmentUpdate !== undefined && saveDefaultPublicSegment(shard, userId, payload.defaultPublicSegmentUpdate),
+
+				// Resolve + persist the foreign-segment request, then re-subscribe.
+				async function() {
+					if (payload.foreignSegmentRequest) {
+						activeForeignSegment = await saveActiveForeignSegment(shard, userId, activeForeignSegment, payload.foreignSegmentRequest);
+						await syncForeignSubscription();
+					}
 				}(),
 			]);
 		},

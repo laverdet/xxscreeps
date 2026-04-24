@@ -343,11 +343,10 @@ export function loadForeignSegment(payload: ForeignSegmentPayload | null | undef
 		username,
 		id,
 		get data() {
-			if (decoded === undefined) {
+			return decoded ?? function() {
 				const uint16 = new Uint16Array(bytes.buffer, bytes.byteOffset, bytes.length >>> 1);
-				decoded = typedArrayToString(uint16);
-			}
-			return decoded;
+				return typedArrayToString(uint16);
+			}();
 		},
 	};
 }

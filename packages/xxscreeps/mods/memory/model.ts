@@ -102,7 +102,7 @@ export async function saveActiveForeignSegment(
 ): Promise<StoredForeignSegmentRequest | null> {
 	const key = activeForeignSegmentKey(userId);
 	if (request === null) {
-		await shard.data.del(key);
+		await shard.data.vdel(key);
 		return null;
 	}
 	let resolved: StoredForeignSegmentRequest;
@@ -111,12 +111,12 @@ export async function saveActiveForeignSegment(
 	} else {
 		const targetUserId = await User.findUserByName(shard.db, request.username);
 		if (targetUserId === null) {
-			await shard.data.del(key);
+			await shard.data.vdel(key);
 			return null;
 		}
 		const segmentId = request.id ?? await loadDefaultPublicSegment(shard, targetUserId);
 		if (segmentId === null) {
-			await shard.data.del(key);
+			await shard.data.vdel(key);
 			return null;
 		}
 		resolved = { username: request.username, userId: targetUserId, segmentId };
@@ -142,7 +142,7 @@ export async function savePublicSegments(shard: Shard, userId: string, ids: numb
 		$$ => Fn.map($$, String),
 		$$ => [ ...$$ ]);
 	if (members.length === 0) {
-		await shard.data.del(key);
+		await shard.data.vdel(key);
 	} else {
 		await Promise.all([
 			shard.data.del(key),
