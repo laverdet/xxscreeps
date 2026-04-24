@@ -6,8 +6,8 @@ import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { Store } from 'xxscreeps/mods/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import jsYaml from 'js-yaml';
 import Loki from 'lokijs';
 

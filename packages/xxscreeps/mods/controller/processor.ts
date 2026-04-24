@@ -60,6 +60,7 @@ function updateRoomStatus(context: ProcessorContext, room: Room, level: number, 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { controller: typeof intents }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'attackController', {
 		before: [ 'dismantle', 'attack', 'harvest' ],

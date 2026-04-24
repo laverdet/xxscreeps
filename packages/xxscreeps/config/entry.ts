@@ -6,6 +6,7 @@ const nodeMajor = Number(process.versions.node.split('.')[0]);
 const requiredFlags = [
 	// import.meta.resolve stabilized in Node 20.6
 	...nodeMajor < 20 ? [ '--experimental-import-meta-resolve' ] : [],
+	'--experimental-vm-modules',
 ];
 const noWorkerFlags = [
 	'--no-node-snapshot',

@@ -26,7 +26,7 @@ import { assign } from 'xxscreeps/utility/utility.js';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 type BoostEffects = Partial<Record<string, number>>;
-type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
+export type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
 
 type MoveToOptions = FindPathOptions & {
 	noPathFinding?: boolean;
@@ -58,8 +58,10 @@ const shape = struct(objectFormat, {
 });
 
 export class Creep extends withOverlay(RoomObject, shape) {
-	/** @internal */
-	declare tickHitsDelta: number | undefined;
+	/** @internal — raw incoming damage this tick (before TOUGH reduction), always >= 0 */
+	declare tickRawDamage: number | undefined;
+	/** @internal — raw healing received this tick, always >= 0 */
+	declare tickHealing: number | undefined;
 
 	constructor(idOrArg1?: any, arg2?: any) {
 		super(typeof idOrArg1 === 'string' ? undefined : idOrArg1, arg2);
@@ -117,7 +119,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		if (this.spawning) {
 			return;
 		}
-		this.tickHitsDelta = (this.tickHitsDelta ?? 0) - power;
+		this.tickRawDamage = (this.tickRawDamage ?? 0) + power;
 		if (source) {
 			appendEventLog(this.room, {
 				event: C.EVENT_ATTACK,
@@ -384,7 +386,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	transfer(this: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			amount || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)));
+			amount || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)!));
 		return chainIntentChecks(
 			() => checkTransfer(this, target, resourceType, intentAmount),
 			() => intents.save(this, 'transfer', target.id, resourceType, intentAmount),

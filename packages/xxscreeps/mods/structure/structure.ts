@@ -47,18 +47,20 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 * One of the `STRUCTURE_*` constants.
 	 */
 	@enumerable get structureType(): string { throw new Error(); }
-	get '#lookType'() { return C.LOOK_STRUCTURES; }
 
 	/**
 	 * The current amount of hit points of the structure.
 	 */
 	@enumerable override get hits(): number | undefined { return undefined; }
-	override set hits(hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure'); }
 
 	/**
 	 * The total amount of hit points of the structure.
 	 */
 	@enumerable override get hitsMax(): number | undefined { return undefined; }
+
+	get '#lookType'() { return C.LOOK_STRUCTURES; }
+
+	override set hits(_hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure'); }
 
 	/**
 	 * Destroy this structure immediately.
@@ -110,9 +112,6 @@ export class Structure extends withOverlay(RoomObject, shape) {
  * `FIND_MY_STRUCTURES` and `FIND_HOSTILE_STRUCTURES` constants.
  */
 export class OwnedStructure extends withOverlay(Structure, ownedShape) {
-	override get '#hasIntent'() { return true; }
-	override get '#providesVision'() { return true; }
-
 	/**
 	 * An object with the structure's owner info
 	 */
@@ -121,10 +120,10 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 	/**
 	 * Whether this is your own structure.
 	 */
-	@enumerable override get my() {
-		const user = this['#user'];
-		return user === null ? undefined : user === me;
-	}
+	@enumerable override get my() { return this['#user'] === me; }
+
+	override get '#hasIntent'() { return true; }
+	override get '#providesVision'() { return true; }
 
 	// TODO: This may be invoked each tick until the processor calls isActive. The cache
 	// does not persist from runner into processor, only from processor into runtime.
@@ -219,7 +218,7 @@ export function checkWall(pos: RoomPosition) {
 export function checkMyStructure(structure: Structure, constructor: abstract new(...args: any[]) => any) {
 	if (!(structure instanceof constructor)) {
 		return C.ERR_INVALID_ARGS;
-	} else if (!structure.my && !structure.room.controller?.my) {
+	} else if (!structure.my) {
 		return C.ERR_NOT_OWNER;
 	}
 	return C.OK;
@@ -234,7 +233,8 @@ export function checkIsActive(structure: Structure) {
 
 export function checkDestroy(structure: Structure) {
 	return chainIntentChecks(
-		() => checkMyStructure(structure, Structure),
+		() => structure instanceof Structure ? C.OK : C.ERR_INVALID_ARGS,
+		() => structure.room.controller?.my ? C.OK : C.ERR_NOT_OWNER,
 		() => {
 			if ((structure.hits ?? 0) <= 0) {
 				return C.ERR_INVALID_TARGET;

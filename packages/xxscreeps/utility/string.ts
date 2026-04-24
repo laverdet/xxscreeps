@@ -4,6 +4,7 @@
 export function stringifyInherited(value: any): string {
 	if (typeof value === 'object') {
 		if (Array.isArray(value)) {
+			// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
 			return `[${value.map(stringifyInherited)}]`;
 		}
 		let str = '{';

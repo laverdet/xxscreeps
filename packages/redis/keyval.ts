@@ -15,7 +15,7 @@ function recv(value: Value) {
 			return Buffer.from(value.buffer, value.byteOffset, value.byteLength) as never as string;
 		}
 	} else {
-		return `${value}`;
+		return `${value as number | string}`;
 	}
 }
 
@@ -38,7 +38,11 @@ function sendv(values: string[], options?: P.AsBlob) {
 }
 
 export class RedisProvider implements P.KeyValProvider {
-	private constructor(private readonly redis: RedisHolder) {}
+	private readonly redis;
+
+	private constructor(redis: RedisHolder) {
+		this.redis = redis;
+	}
 
 	static async connect(url: URL) {
 		const [ effect, redis ] = await RedisHolder.connect(url, true);
@@ -322,6 +326,6 @@ export class RedisProvider implements P.KeyValProvider {
 		try {
 			// ERR Background save already in progress
 			await this.redis.invoke(cb => this.redis.client.save(cb));
-		} catch (err) {}
+		} catch {}
 	}
 }

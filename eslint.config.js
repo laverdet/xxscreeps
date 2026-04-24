@@ -1,5 +1,5 @@
 // @ts-check
-import process from 'node:process';
+import * as process from 'node:process';
 import js from '@eslint/js';
 import stylisticPlugin from '@stylistic/eslint-plugin';
 import typeScriptPlugin from '@typescript-eslint/eslint-plugin';
@@ -344,6 +344,10 @@ const typedTypeScriptRules = acceptTypeScriptRules({
 	'@typescript-eslint/prefer-string-starts-ends-with': 'warn',
 	'@typescript-eslint/require-array-sort-compare': 'warn',
 	'@typescript-eslint/restrict-template-expressions': [ 'warn', {
+		allow: [
+			{ name: [ 'URL' ], from: 'package', package: 'url' },
+			{ name: [ 'Date', 'Error', 'URLSearchParams' ], from: 'lib' },
+		],
 		allowAny: true,
 		allowNever: true,
 		allowNullish: true,

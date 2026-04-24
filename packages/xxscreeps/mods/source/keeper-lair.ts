@@ -16,8 +16,6 @@ const shape = struct(ownedStructureFormat, {
  * rooms. This structure cannot be destroyed.
  */
 export class StructureKeeperLair extends withOverlay(OwnedStructure, shape) {
-	override get structureType() { return C.STRUCTURE_KEEPER_LAIR; }
-
 	/**
 	 * Time to spawning of the next Source Keeper.
 	 */
@@ -25,6 +23,8 @@ export class StructureKeeperLair extends withOverlay(OwnedStructure, shape) {
 		const nextSpawnTime = this['#nextSpawnTime'];
 		return nextSpawnTime ? Math.max(0, nextSpawnTime - Game.time) : undefined;
 	}
+
+	override get structureType() { return C.STRUCTURE_KEEPER_LAIR; }
 }
 
 export function create(pos: RoomPosition) {

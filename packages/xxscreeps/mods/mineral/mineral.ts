@@ -41,6 +41,7 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 // Register `Creep.harvest` target
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const harvest = registerHarvestable(Mineral, function(creep) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.WORK),

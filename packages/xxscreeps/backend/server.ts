@@ -1,7 +1,7 @@
 import type { Context, State } from './index.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 
-import http from 'node:http';
+import * as http from 'node:http';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import ConditionalGet from 'koa-conditional-get';

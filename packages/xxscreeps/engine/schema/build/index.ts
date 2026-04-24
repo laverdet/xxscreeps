@@ -1,8 +1,9 @@
 import type { Transform } from 'xxscreeps/driver/webpack.js';
 import type { Package } from 'xxscreeps/schema/build.js';
 import type { BufferView, Format } from 'xxscreeps/schema/index.js';
-import fs from 'node:fs';
+import * as fs from 'node:fs';
 import config, { configPath } from 'xxscreeps/config/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { restoreLayout } from 'xxscreeps/schema/archive.js';
 import { build as buildSchema } from 'xxscreeps/schema/build.js';
 import { Builder } from 'xxscreeps/schema/index.js';
@@ -86,3 +87,17 @@ export const schemaTransform: Transform = {
 		}
 	},
 };
+
+/**
+ * Generates module source text for `xxscreeps/engine/schema/build/packages.js`
+ */
+export function makePackagesModule() {
+	const bundle = Fn.pipe(
+		packages,
+		$$ => Fn.map($$, ([ key, value ]) => [ key, { version: value.version } ] as const),
+		Object.fromEntries,
+		JSON.stringify);
+	// Yes, double stringify into JSON.parse! JSON parsing at runtime is faster than JavaScript
+	// parsing at compilation time.
+	return `export default JSON.parse(${JSON.stringify(bundle)});`;
+}

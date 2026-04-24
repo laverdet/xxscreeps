@@ -37,11 +37,13 @@ export type SubscriptionEndpoint = {
 
 // Used to mark HTTP upgrade requests
 class FakeResponse extends ServerResponse {
-	constructor(
-		public readonly upgradeSocket: Duplex,
-		public readonly head: Buffer,
-	) {
+	readonly upgradeSocket;
+	readonly head;
+
+	constructor(upgradeSocket: Duplex, head: Buffer) {
 		super(new IncomingMessage(new Socket()));
+		this.upgradeSocket = upgradeSocket;
+		this.head = head;
 	}
 }
 

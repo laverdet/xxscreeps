@@ -35,7 +35,7 @@ handleInterrupt(() => {
 const db = await Database.connect();
 const shard = await Shard.connect(db, 'shard0');
 const runnerSubscription = await getRunnerChannel(shard).subscribe();
-const maxConcurrency = config.runner.unsafeSandbox ? 1 : config.runner.concurrency;
+const maxConcurrency = config.runner.sandbox === 'unsafe' ? 1 : config.runner.concurrency;
 const { migrationTimeout } = config.runner;
 
 // Load shared terrain data

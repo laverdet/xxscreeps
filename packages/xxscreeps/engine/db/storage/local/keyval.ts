@@ -2,7 +2,7 @@
 import type { MaybePromises } from './responder.js';
 import type * as P from 'xxscreeps/engine/db/storage/provider.js';
 import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
-import fs from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { registerStorageProvider } from 'xxscreeps/engine/db/storage/register.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
@@ -21,12 +21,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: P.Value[]) => any>();
+	private readonly url;
+	private readonly blob;
 
-	constructor(
-		private readonly url: URL | undefined,
-		private readonly blob: BlobStorage,
-		payload: string | undefined,
-	) {
+	constructor(url: URL | undefined, blob: BlobStorage, payload: string | undefined) {
+		this.url = url;
+		this.blob = blob;
 		if (payload) {
 			const map = JSON.parse(payload, (key, value) => {
 				switch (value?.['#']) {

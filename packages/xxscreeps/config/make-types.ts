@@ -1,6 +1,6 @@
 import 'xxscreeps/engine/db/room.js';
 import { spawn } from 'node:child_process';
-import fs from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { configPath } from 'xxscreeps/config/index.js';
 import { mods } from 'xxscreeps/config/mods/index.js';

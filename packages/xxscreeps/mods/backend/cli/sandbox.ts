@@ -1,9 +1,9 @@
 import type { Subscription } from 'xxscreeps/engine/db/channel.js';
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import type { World } from 'xxscreeps/game/map.js';
-import fs from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { inspect } from 'node:util';
-import vm from 'node:vm';
+import * as vm from 'node:vm';
 import jsYaml from 'js-yaml';
 import { Render } from 'xxscreeps/backend/symbols.js';
 import config from 'xxscreeps/config/index.js';

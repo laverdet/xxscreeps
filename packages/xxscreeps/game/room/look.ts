@@ -46,6 +46,11 @@ declare module './room.js' {
 		lookAt: (...args: PositionParameter) => LookAtResult<any>[];
 
 		/**
+		 * Creates a RoomPosition object at the specified location.
+		 */
+		getPositionAt: (x: number, y: number) => RoomPosition;
+
+		/**
 		 * Get the list of objects at the specified room area.
 		 * @param top The top Y boundary of the area.
 		 * @param left The left X boundary of the area.
@@ -53,7 +58,9 @@ declare module './room.js' {
 		 * @param right The right X boundary of the area.
 		 * @param asArray Set to true if you want to get the result as a plain array.
 		 */
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		lookAtArea(top: number, left: number, bottom: number, right: number, asArray?: false): LookAtArea<LookAtResult<any>>;
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		lookAtArea(top: number, left: number, bottom: number, right: number, asArray: boolean): LookAsArray<LookAtResult<any>>;
 
 		/**
@@ -63,8 +70,10 @@ declare module './room.js' {
 		 * @param y Y position in the room
 		 * @param target Can be a RoomObject or RoomPosition
 		 */
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		lookForAt<Type extends LookConstants>(type: Type, ...rest: PositionParameter): TypeOfLook<Type>[];
 		// TypeScript can't figure out the rest parameter above which causes the `extend` below to fail.
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		lookForAt(type: LookConstants, x: number, y: number): never[];
 
 		/**
@@ -76,13 +85,10 @@ declare module './room.js' {
 		 * @param right The right X boundary of the area.
 		 * @param asArray Set to true if you want to get the result as a plain array.
 		 */
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		lookForAtArea<Type extends LookConstants>(type: Type, top: number, left: number, bottom: number, right: number, asArray?: false): LookAtArea<LookForAtArea<Type>>;
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		lookForAtArea<Type extends LookConstants>(type: Type, top: number, left: number, bottom: number, right: number, asArray: boolean): LookAsArray<LookForAtArea<Type>>;
-
-		/**
-		 * Creates a RoomPosition object at the specified location.
-		 */
-		getPositionAt: (x: number, y: number) => RoomPosition;
 	}
 }
 

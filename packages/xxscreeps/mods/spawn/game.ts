@@ -48,6 +48,7 @@ declare module 'xxscreeps/game/runtime.js' {
 }
 
 // Register FIND_ types for `Spawn`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_MY_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
 		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my!),
@@ -59,7 +60,9 @@ declare module 'xxscreeps/game/room/index.js' {
 }
 
 // Register schema
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const extensionSchema = registerVariant('Room.objects', Extension.format);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const spawnSchema = registerVariant('Room.objects', Spawn.format);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { spawn: [ typeof extensionSchema, typeof spawnSchema ] }

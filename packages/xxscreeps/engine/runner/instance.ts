@@ -36,13 +36,20 @@ const acquireConnectors = function(invoke) {
 const kCPU = 100;
 
 export class PlayerInstance {
+	readonly shard;
+	readonly world;
+	readonly userId;
+	readonly username;
 	private bucket = config.runner.cpu.bucket;
+	private branchName;
 	private cleanup!: Effect;
 	private connectors!: typeof acquireConnectors extends (...args: any[]) =>
-	Promise<readonly [ any, infer Type ]> ? Type : never;
+		Promise<readonly [ any, infer Type ]> ? Type : never;
 
 	private sandbox: Sandbox | undefined;
 	private stale = false;
+	private readonly channel;
+	private readonly codeChannel;
 	private readonly consoleEval: Exclude<TickPayload['eval'], undefined> = [];
 	private readonly consoleChannel;
 	private readonly intents: RunnerIntent[] = [];
@@ -50,14 +57,21 @@ export class PlayerInstance {
 	private readonly usageChannel;
 
 	private constructor(
-		public readonly shard: Shard,
-		public readonly world: World,
-		private readonly channel: SubscriptionFor<typeof getRunnerUserChannel>,
-		private readonly codeChannel: SubscriptionFor<typeof Code['getUserCodeChannel']>,
-		public readonly userId: string,
-		public readonly username: string,
-		private branchName: string | null,
+		shard: Shard,
+		world: World,
+		channel: SubscriptionFor<typeof getRunnerUserChannel>,
+		codeChannel: SubscriptionFor<typeof Code['getUserCodeChannel']>,
+		userId: string,
+		username: string,
+		branchName: string | null,
 	) {
+		this.shard = shard;
+		this.world = world;
+		this.channel = channel;
+		this.codeChannel = codeChannel;
+		this.userId = userId;
+		this.username = username;
+		this.branchName = branchName;
 		this.consoleChannel = getConsoleChannel(this.shard, this.userId);
 		this.usageChannel = getUsageChannel(this.shard, this.userId);
 
@@ -209,7 +223,8 @@ export class PlayerInstance {
 		// Save runtime results
 		if (result?.result === 'success') {
 			const { payload } = result;
-			this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - payload.usage.cpu + kCPU);
+			const tickCpu = payload.usage.cpu ?? NaN;
+			this.bucket = clamp(0, config.runner.cpu.bucket, this.bucket - tickCpu + kCPU);
 			await Promise.all([
 				// Publish intent blobs
 				publishRunnerIntentsForRooms(this.shard, this.userId, time, intentRooms, payload.intentPayloads),

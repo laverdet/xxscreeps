@@ -1,7 +1,7 @@
 import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
 import type { CodePayload } from 'xxscreeps/engine/db/user/code.js';
+import { loadSourceMap } from 'xxscreeps/driver/runtime/source-map.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { loadSourceMap } from './source-map.js';
 import { WASI } from './wasi/index.js';
 
 type Loader<Source> = {
@@ -254,7 +254,8 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 				};
 				const run = function() {
 					try {
-						const moduleFunction = evaluate(`(function(require,module,exports){${content}\n})`, url);
+						type Require = (require: unknown, module: unknown, exports: unknown) => void;
+						const moduleFunction = evaluate(`(function(require,module,exports){${content}\n})`, url) as Require;
 						const run = () => moduleFunction.apply(module, [ requireFrom(url), module, module.exports ]);
 						run();
 						return run;

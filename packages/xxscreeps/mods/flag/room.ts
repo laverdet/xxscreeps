@@ -24,7 +24,9 @@ declare module 'xxscreeps/game/room/index.js' {
 		 * @param secondaryColor The secondary color of a new flag. Should be one of the `COLOR_*`
 		 * constants. The default value is equal to `color`.
 		 */
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		createFlag(pos: RoomObject | RoomPosition, name?: string, color?: Color, secondaryColor?: Color): ReturnType<typeof checkCreateFlag> | string;
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		createFlag(x: number, y: number, name?: string, color?: Color, secondaryColor?: Color): ReturnType<typeof checkCreateFlag> | string;
 	}
 }
@@ -35,7 +37,6 @@ extend(Room, {
 		const flags = userGame!.flags;
 		const name = rest[0] ?? Fn.find(
 			Fn.map(Fn.range(), ii => `Flag${ii}`),
-
 			name => flags[name] === undefined)!;
 		const color = rest[1] ?? C.COLOR_WHITE;
 		const secondaryColor = rest[2] ?? color;
@@ -74,7 +75,7 @@ declare module 'xxscreeps/game/position.js' {
 		* @param secondaryColor The secondary color of a new flag. Should be one of the `COLOR_*`
 		* constants. The default value is equal to `color`.
 		*/
-		createFlag(name?: string, color?: Color, secondaryColor?: Color): ReturnType<typeof checkCreateFlag> | string;
+		createFlag: (name?: string, color?: Color, secondaryColor?: Color) => ReturnType<typeof checkCreateFlag> | string;
 	}
 }
 

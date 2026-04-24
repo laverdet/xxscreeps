@@ -9,6 +9,7 @@ import { assign } from 'xxscreeps/utility/utility.js';
 // Enum schema for resource types
 // HACK: If an enumerated schema contains `undefined` then TS collapses the result to `any` when
 // exporting as CommonJS. So we have to declare it twice here, once for TS and once for schema.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const extraResourceTypes = enumeratedForPath<Schema>()('ResourceType');
 export type ResourceType = typeof C.RESOURCE_ENERGY | typeof C.RESOURCE_POWER | typeof extraResourceTypes[number];
 export const optionalResourceEnumFormat = () => declare('ResourceType',

@@ -33,11 +33,11 @@ export class Flag extends withOverlay(RoomObject, shape) {
 		return (Memory.get().flags ??= {})[this.name] ??= {};
 	}
 
+	get '#lookType'() { return C.LOOK_FLAGS; }
+
 	set memory(memory: any) {
 		(Memory.get().flags ??= {})[this.name] ??= memory;
 	}
-
-	get '#lookType'() { return C.LOOK_FLAGS; }
 
 	/**
 	 * Remove the flag
@@ -92,7 +92,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 			const { pos, name } = this;
 			return `[Flag ${stylize(name, 'string')} ${stylize(pos.roomName, 'string')} ` +
 				`{${stylize(`${pos.x}`, 'number')}, ${stylize(`${pos.y}`, 'number')}}]`;
-		} catch (err) {
+		} catch {
 			// I'm not sure how this would be possible since the flag payload is only read once
 			return `${stylize('[Flag]', 'special')} ${stylize('{released}', 'null')}`;
 		}

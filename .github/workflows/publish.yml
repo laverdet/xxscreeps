@@ -1,12 +1,12 @@
-name: Test
+name: Release
 
 on:
   push:
     branches: [ main ]
-  pull_request:
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  test:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -16,4 +16,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
-      - run: pnpm run test
+      - uses: changesets/action@v1
+        with:
+          createGithubReleases: false
+          publish: pnpm publish --no-git-checks --provenance --recursive

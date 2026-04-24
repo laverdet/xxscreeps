@@ -51,12 +51,16 @@ export function compileRuntimeSource(path: string, transform: Transform) {
 
 export async function createSandbox(userId: string, payload: InitializationPayload): Promise<Sandbox> {
 	const sandbox = await async function() {
-		if (config.runner.unsafeSandbox) {
-			const { NodejsSandbox } = await import('./nodejs/index.js');
-			return new NodejsSandbox();
-		} else {
-			const { IsolatedSandbox } = await import('./isolated/index.js');
-			return new IsolatedSandbox(payload);
+		switch (config.runner.sandbox ?? 'isolated') {
+			case 'isolated': {
+				const { IsolatedSandbox } = await import('./isolated/index.js');
+				return new IsolatedSandbox(payload);
+			}
+			case 'unsafe': {
+				const { NodejsSandbox } = await import('./nodejs/index.js');
+				return new NodejsSandbox();
+			}
+			default: throw new Error(`Invalid sandbox mode: ${config.runner.sandbox}`);
 		}
 	}();
 	await sandbox.initialize(payload);

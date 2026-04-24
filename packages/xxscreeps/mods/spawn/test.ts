@@ -123,9 +123,9 @@ describe('Spawn', () => {
 		await player('100', Game => {
 			// This might fail in the future if we change room visibility rules in the tests, since the
 			// player controls no intent objects
-			assert(!Game.spawns.Spawn1);
+			assert.ok(!Game.spawns.Spawn1);
 			assert.strictEqual(Game.rooms.W1N1.find(C.FIND_MY_CREEPS).length, 0);
-			assert(!Game.rooms.W1N1.controller?.my);
+			assert.ok(!Game.rooms.W1N1.controller?.my);
 		});
 	}));
 
@@ -154,15 +154,15 @@ describe('Spawn', () => {
 			await tick(C.CREEP_SPAWN_TIME);
 			await player('100', Game => {
 				assert.ok(Game.creeps.newCreep);
-				assert(!Game.creeps.newCreep.spawning);
+				assert.ok(!Game.creeps.newCreep.spawning);
 				// Should spawn at TOP (25,24) — first direction in default order
-				assert(Game.creeps.newCreep.pos.isEqualTo(25, 24));
+				assert.ok(Game.creeps.newCreep.pos.isEqualTo(25, 24));
 				assert.strictEqual(Game.rooms.W1N1.find(C.FIND_TOMBSTONES).length, 1);
 			});
 			await player('101', Game => {
 				// h2 at TOP (25,24) should be stomped — first hostile in direction order
 				assert.strictEqual(Object.values(Game.creeps).length, 7);
-				assert(!Game.creeps.h2);
+				assert.ok(!Game.creeps.h2);
 			});
 		}));
 
@@ -249,8 +249,8 @@ describe('Spawn', () => {
 			});
 			await player('100', Game => {
 				assert.ok(Game.creeps.newCreep);
-				assert(!Game.creeps.newCreep.spawning);
-				assert(Game.creeps.newCreep.pos.isEqualTo(26, 26));
+				assert.ok(!Game.creeps.newCreep.spawning);
+				assert.ok(Game.creeps.newCreep.pos.isEqualTo(26, 26));
 				assert.strictEqual(Game.rooms.W1N1.find(C.FIND_TOMBSTONES).length, 1);
 			});
 		}));

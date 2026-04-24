@@ -5,8 +5,11 @@ import * as Tower from './tower.js';
 import * as Wall from './wall.js';
 
 // Register schema
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const rampartSchema = registerVariant('Room.objects', Rampart.format);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const towerSchema = registerVariant('Room.objects', Tower.format);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const wallSchema = registerVariant('Room.objects', Wall.format);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Schema { defense: [ typeof rampartSchema, typeof towerSchema, typeof wallSchema ] }

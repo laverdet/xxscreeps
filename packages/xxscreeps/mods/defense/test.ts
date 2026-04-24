@@ -64,7 +64,7 @@ describe('setPublic', () => {
 		});
 		await tick();
 		await player('101', Game => {
-			assert(Game.creeps.hostile.pos.isEqualTo(24, 25), 'hostile creep should not have moved');
+			assert.ok(Game.creeps.hostile.pos.isEqualTo(24, 25), 'hostile creep should not have moved');
 		});
 	}));
 
@@ -86,7 +86,7 @@ describe('setPublic', () => {
 		});
 		await tick();
 		await player('101', Game => {
-			assert(Game.creeps.hostile.pos.isEqualTo(25, 25), 'hostile creep should have moved through public rampart');
+			assert.ok(Game.creeps.hostile.pos.isEqualTo(25, 25), 'hostile creep should have moved through public rampart');
 		});
 	}));
 });

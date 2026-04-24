@@ -36,5 +36,9 @@ export interface TickResult {
 		};
 	}[];
 	intentPayloads: Record<string, RoomIntentPayload>;
-	usage: any;
+	usage: TickUsageResult;
+}
+
+export interface TickUsageResult {
+	cpu?: number;
 }

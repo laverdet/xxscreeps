@@ -20,14 +20,11 @@ const shape = struct(ownedStructureFormat, {
 export class StructureController extends withOverlay(OwnedStructure, shape) {
 	/** @internal */
 	declare upgradePowerThisTick?: number;
-	override get hits() { return undefined as never; }
-	override get hitsMax() { return undefined as never; }
 	@enumerable get level() { return this.room['#level']; }
 	@enumerable get progress() { return this.level > 0 ? this['#progress'] : undefined; }
 	@enumerable get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined; }
 	@enumerable get safeMode() { return Math.max(0, this.room['#safeModeUntil'] - Game.time) || undefined; }
 	@enumerable get safeModeCooldown() { return Math.max(0, this['#safeModeCooldownTime'] - Game.time) || undefined; }
-	override get structureType() { return C.STRUCTURE_CONTROLLER; }
 	@enumerable get ticksToDowngrade() { return this['#downgradeTime'] === 0 ? undefined : Math.max(0, this['#downgradeTime'] - Game.time); }
 	@enumerable get upgradeBlocked() { return Math.max(0, this['#upgradeBlockedUntil'] - Game.time) || undefined; }
 
@@ -59,6 +56,14 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 		return value;
 	}
 
+	override get hits() { return undefined; }
+	override get hitsMax() { return undefined; }
+	override get structureType() { return C.STRUCTURE_CONTROLLER; }
+	override get '#extraUsers'() {
+		const sign = this.room?.['#sign'];
+		return sign ? [ sign.userId ] : [];
+	}
+
 	/**
 	 * Activate safe mode if available.
 	 */
@@ -85,12 +90,6 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	override '#beforeRemove'() {
 		this.room.controller = undefined;
 		super['#beforeRemove']();
-	}
-
-	override get '#extraUsers'() {
-
-		const sign = this.room?.['#sign'];
-		return sign ? [ sign.userId ] : [];
 	}
 }
 

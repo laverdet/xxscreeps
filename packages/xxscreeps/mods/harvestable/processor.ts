@@ -13,7 +13,7 @@ import { checkHarvest } from './creep.js';
 const ProcessHarvest = Symbol('processHarvest');
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
-		[ProcessHarvest](creep: Creep, target: RoomObject): number;
+		[ProcessHarvest]: (creep: Creep, target: RoomObject) => number;
 	}
 }
 
@@ -22,13 +22,14 @@ export function registerHarvestProcessor<Type extends RoomObject>(
 	target: Implementation<Type>,
 	process: (creep: Creep, target: Type) => number,
 ) {
-	return target.prototype[ProcessHarvest] = process;
+	return target.prototype[ProcessHarvest] = process as RoomObject[typeof ProcessHarvest];
 }
 
 // Register `harvest` action processor
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { harvestable: typeof intent }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intent = registerIntentProcessor(Creep, 'harvest', {
 	before: 'move',
 	type: 'primary',

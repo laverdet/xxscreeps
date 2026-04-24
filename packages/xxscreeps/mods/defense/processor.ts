@@ -15,6 +15,7 @@ function calculateEfficiency(tower: StructureTower, target: Creep | Structure) {
 	return 1 - C.TOWER_FALLOFF * (range - C.TOWER_OPTIMAL_RANGE) / (C.TOWER_FALLOFF_RANGE - C.TOWER_OPTIMAL_RANGE);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureTower, 'attack', { type: 'primary' }, (tower, context, id: string) => {
 		const target = Game.getObjectById<Creep>(id)!;
@@ -45,7 +46,7 @@ const intents = [
 		if (checkTower(tower, target, Creep) === C.OK) {
 			tower.store['#subtract'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
 			const power = C.TOWER_POWER_HEAL * calculateEfficiency(tower, target);
-			target.tickHitsDelta = (target.tickHitsDelta ?? 0) + power;
+			target.tickHealing = (target.tickHealing ?? 0) + power;
 			appendEventLog(target.room, {
 				event: C.EVENT_HEAL,
 				objectId: tower.id,

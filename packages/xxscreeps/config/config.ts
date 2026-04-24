@@ -1,8 +1,8 @@
-import crypto from 'node:crypto';
-import os from 'node:os';
+import * as crypto from 'node:crypto';
+import * as os from 'node:os';
 
 // When making changes to the schema, remember to generate a new typescript json schema with the below command
-// npx typescript-json-schema tsconfig.json Schema --include ./config/config.ts --defaultProps --required -o ./config/config.schema.json
+// pnpm -C packages/xxscreeps exec typescript-json-schema tsconfig.json Schema --include ./config/config.ts --defaultProps --required -o ./config/config.schema.json
 export type Schema = {
 	/**
 	 * List of mods to load
@@ -121,7 +121,7 @@ export type Schema = {
 			 * Memory limit, in megabytes. The actual memory limit as reported by the isolate will be
 			 * higher, since it accounts for shared terrain data.
 			 *
-			 * This option does nothing when `unsafeSandbox` is true.
+			 * This option does nothing when `sandbox: unsafe` is set.
 			 * @default 256
 			 */
 			memoryLimit?: number;
@@ -153,11 +153,13 @@ export type Schema = {
 		migrationTimeout?: number;
 
 		/**
-		 * Setting this to true will run user code using the nodejs `vm` module instead
-		 * of `isolated-vm`. Do not enable this on public servers!
-		 * @default false
+		 * Select sandbox mode
+		 * - 'isolated': `isolated-vm`
+		 * - 'unsafe': `node:vm`. This will run player code directly in the nodejs isolate. Player scripts can achieve full
+		 *   system-level access. It may make troubleshooting user scripts easier, though.
+		 * @default isolated
 		 */
-		unsafeSandbox?: boolean;
+		sandbox?: 'isolated' | 'unsafe';
 	};
 
 	/**

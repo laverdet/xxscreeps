@@ -18,10 +18,10 @@ const shape = struct(structureFormat, {
 });
 
 export class StructureContainer extends withOverlay(Structure, shape) {
+	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
 	get storeCapacity() { return this.store.getCapacity(); }
 	override get hitsMax() { return C.CONTAINER_HITS; }
 	override get structureType() { return C.STRUCTURE_CONTAINER; }
-	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
 
 	override '#checkObstacle'() {
 		return false;

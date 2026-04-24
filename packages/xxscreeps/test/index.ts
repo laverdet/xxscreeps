@@ -1,4 +1,4 @@
-import assert from 'node:assert';
+import * as assert from 'node:assert';
 
 export { assert };
 export { describe, test } from './context.js';

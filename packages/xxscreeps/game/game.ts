@@ -14,14 +14,14 @@ const initializeRoom = hooks.makeIterated('roomInitializer');
  * per-room per-tick.
  */
 export class GameState {
+	readonly world;
+	readonly time;
 	readonly objects: Map<string, RoomObject>;
 	readonly rooms: Record<string, Room>;
 
-	constructor(
-		public readonly world: World,
-		public readonly time: number,
-		rooms: Room[],
-	) {
+	constructor(world: World, time: number, rooms: Room[]) {
+		this.world = world;
+		this.time = time;
 		this.objects = Fn.pipe(
 			rooms,
 			$$ => Fn.map($$, room => Fn.map(room['#objects'], object => [ object.id, object ] as const)),
@@ -75,6 +75,12 @@ export class Game extends GameBase {
 	declare cpu: CPU;
 
 	/**
+	 * A hash containing all your power creeps with their names as hash keys. xxscreeps does not
+	 * implement power creeps yet, so this is always an empty object.
+	 */
+	powerCreeps = Object.create(null) as Record<string, unknown>;
+
+	/**
 	 * An object describing the world shard where your script is currently being executed in.
 	 */
 	shard: { name: string; type: string; ptr: boolean };
@@ -101,6 +107,12 @@ export class Game extends GameBase {
 			}
 		}
 	}
+
+	/**
+	 * Your assigned CPU limit for the current shard.
+	 * @deprecated
+	 */
+	get cpuLimit(): number { return this.cpu.limit; }
 
 	/**
 	 * Send a custom message at your profile email. This way, you can set up notifications to yourself

@@ -16,13 +16,14 @@ const shape = struct(ownedStructureFormat, {
 });
 
 export class StructureRampart extends withOverlay(OwnedStructure, shape) {
+	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
+
 	override get hitsMax() {
 		return this['#user'] === this.room.controller?.['#user']
 			? C.RAMPART_HITS_MAX[this.room.controller.level] ?? 0 : 0;
 	}
 
 	override get structureType() { return C.STRUCTURE_RAMPART; }
-	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
 
 	/**
 	 * Make this rampart public to allow other players' creeps to pass through.

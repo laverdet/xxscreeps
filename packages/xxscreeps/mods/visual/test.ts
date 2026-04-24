@@ -1,7 +1,7 @@
 import { Variant } from 'xxscreeps/schema/index.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { decodeMapVisuals, visualsReader } from './model.js';
-import { MapVisual, RoomVisual, flush, schema } from './visual.js';
+import { MapVisual, RoomVisual, flush } from './visual.js';
 
 // Each test uses a unique room name or calls clear() to avoid shared state.
 // flush() is only called where it is the thing being tested (e.g. verifying
@@ -100,7 +100,7 @@ describe('RoomVisual getSize', () => {
 	test('returns non-zero after drawing', () => {
 		const vis = new RoomVisual('test_size_1');
 		vis.circle(25, 25);
-		assert(vis.getSize() > 0, 'getSize should return non-zero after drawing');
+		assert.ok(vis.getSize() > 0, 'getSize should return non-zero after drawing');
 	});
 
 	test('returns 0 when empty', () => {
@@ -114,13 +114,13 @@ describe('RoomVisual getSize', () => {
 		const size1 = vis.getSize();
 		vis.line(0, 0, 10, 10);
 		const size2 = vis.getSize();
-		assert(size2 > size1, 'size should increase with more visuals');
+		assert.ok(size2 > size1, 'size should increase with more visuals');
 	});
 
 	test('resets after clear', () => {
 		const vis = new RoomVisual('test_size_4');
 		vis.circle(25, 25);
-		assert(vis.getSize() > 0);
+		assert.ok(vis.getSize() > 0);
 		vis.clear();
 		assert.strictEqual(vis.getSize(), 0);
 	});
@@ -137,7 +137,7 @@ describe('RoomVisual getSize', () => {
 	test('fresh instance after flush has zero size', () => {
 		const vis = new RoomVisual('test_size_flush');
 		vis.circle(25, 25);
-		assert(vis.getSize() > 0);
+		assert.ok(vis.getSize() > 0);
 		// flush() is the thing being tested here — it clears tickVisuals
 		flush();
 		const vis2 = new RoomVisual('test_size_flush');
@@ -148,7 +148,7 @@ describe('RoomVisual getSize', () => {
 		const a = new RoomVisual('test_size_room_a');
 		const b = new RoomVisual('test_size_room_b');
 		a.circle(25, 25);
-		assert(a.getSize() > 0);
+		assert.ok(a.getSize() > 0);
 		assert.strictEqual(b.getSize(), 0, 'different room should not be affected');
 	});
 });
@@ -164,8 +164,8 @@ describe('Visual size limits', () => {
 		while (vis.getSize() + entrySize <= limit) {
 			vis.circle(25, 25);
 		}
-		assert(vis.getSize() <= limit, `size ${vis.getSize()} should be at or under ${limit}`);
-		assert(vis.getSize() + entrySize > limit, 'next entry should exceed limit');
+		assert.ok(vis.getSize() <= limit, `size ${vis.getSize()} should be at or under ${limit}`);
+		assert.ok(vis.getSize() + entrySize > limit, 'next entry should exceed limit');
 		assert.throws(() => vis.circle(25, 25), /RoomVisual in room .* exceeded 500 KB limit/);
 	});
 
@@ -179,8 +179,8 @@ describe('Visual size limits', () => {
 		while (mv.getSize() + entrySize <= limit) {
 			mv.circle(pos);
 		}
-		assert(mv.getSize() <= limit, `size ${mv.getSize()} should be at or under ${limit}`);
-		assert(mv.getSize() + entrySize > limit, 'next entry should exceed limit');
+		assert.ok(mv.getSize() <= limit, `size ${mv.getSize()} should be at or under ${limit}`);
+		assert.ok(mv.getSize() + entrySize > limit, 'next entry should exceed limit');
 		assert.throws(() => mv.circle(pos), /MapVisual .* exceeded 1000 KB limit/);
 	});
 
@@ -198,7 +198,7 @@ describe('Visual size limits', () => {
 		while (vis.getSize() + chunkSize <= limit) {
 			vis.import(exported);
 		}
-		assert(vis.getSize() <= limit);
+		assert.ok(vis.getSize() <= limit);
 		assert.throws(() => vis.import(exported), /RoomVisual in room .* exceeded 500 KB limit/);
 	});
 
@@ -235,10 +235,10 @@ describe('MapVisual class', () => {
 			.rect(pos, 1, 1)
 			.text('hi', pos)
 			.poly([ pos, pos ]);
-		assert(result instanceof MapVisual, 'chained methods should return MapVisual');
+		assert.ok(result instanceof MapVisual, 'chained methods should return MapVisual');
 		const flushed = flush();
 		const mapEntry = flushed.find(entry => entry.roomName === 'map');
-		assert(mapEntry !== undefined, 'should have map visuals');
+		assert.ok(mapEntry !== undefined, 'should have map visuals');
 		const visuals = [ ...visualsReader(mapEntry.blob) ];
 		assert.strictEqual(visuals.length, 5);
 		assert.strictEqual(visuals[0][Variant], 'c');
@@ -254,7 +254,7 @@ describe('MapVisual class', () => {
 		mv.circle({ x: 25, y: 25, roomName: 'W1N1' });
 		const sizeBeforeExport = mv.getSize();
 		const exported = mv.export();
-		assert(exported.length > 0, 'export should return non-empty string');
+		assert.ok(exported.length > 0, 'export should return non-empty string');
 		mv.clear();
 		assert.strictEqual(mv.getSize(), 0, 'clear should reset size');
 		mv.import(exported);

@@ -20,7 +20,9 @@ const schema = declare('Flags', compose(vector(format), {
 export const { read, write } = makeReaderAndWriter(schema, { materialize: true, release: true });
 
 // Register LOOK_ type for `Flag`
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Flag>()(C.LOOK_FLAGS);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_FLAGS]: room => room['#lookFor'](C.LOOK_FLAGS),
 });

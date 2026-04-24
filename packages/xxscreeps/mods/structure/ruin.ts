@@ -32,6 +32,16 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 		if (typeof idOrArg1 === 'string') assign<Ruin>(this, getById(Ruin, idOrArg1));
 	}
 
+	/**
+	 * The amount of game ticks before this ruin decays.
+	 */
+	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time); }
+
+	/**
+	 * One of the `STRUCTURE_*` constants — the type of the destroyed structure.
+	 */
+	@enumerable get structureType() { return this['#structure'].type; }
+
 	override get '#lookType'() { return C.LOOK_RUINS; }
 	override get '#extraUsers'() {
 		const user = this['#structure'].user;
@@ -62,16 +72,6 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 		Object.defineProperty(this, 'structure', { value: structure });
 		return structure;
 	}
-
-	/**
-	 * The amount of game ticks before this ruin decays.
-	 */
-	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time); }
-
-	/**
-	 * One of the `STRUCTURE_*` constants — the type of the destroyed structure.
-	 */
-	@enumerable get structureType() { return this['#structure'].type; }
 }
 
 export function createRuin(structure: Structure, decay?: number) {

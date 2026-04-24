@@ -21,13 +21,14 @@ const shape = struct(ownedStructureFormat, {
 });
 
 export class StructureFactory extends withOverlay(OwnedStructure, shape) {
-	override get hitsMax() { return C.FACTORY_HITS; }
-	override get structureType() { return C.STRUCTURE_FACTORY; }
 	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
 	@enumerable get level() { return this['#level'] === 0 ? undefined : this['#level']; }
 
 	/** @deprecated */
 	@enumerable get storeCapacity() { return this.store.getCapacity(); }
+
+	override get hitsMax() { return C.FACTORY_HITS; }
+	override get structureType() { return C.STRUCTURE_FACTORY; }
 
 	/**
 	 * Produces the specified commodity. All the required components should be available in the

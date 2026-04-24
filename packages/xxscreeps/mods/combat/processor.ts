@@ -13,6 +13,7 @@ import { captureDamage, checkAttack, checkHeal, checkRangedAttack, checkRangedHe
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { combat: typeof intents }
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'attack', {
 		before: 'harvest',
@@ -115,7 +116,7 @@ const intents = [
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkHeal(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.HEAL, C.HEAL_POWER, 'heal');
-			target.tickHitsDelta = (target.tickHitsDelta ?? 0) + power;
+			target.tickHealing = (target.tickHealing ?? 0) + power;
 			appendEventLog(target.room, {
 				event: C.EVENT_HEAL,
 				objectId: creep.id,
@@ -137,7 +138,7 @@ const intents = [
 		const target = Game.getObjectById<Creep>(id)!;
 		if (checkRangedHeal(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.HEAL, C.RANGED_HEAL_POWER, 'rangedHeal');
-			target.tickHitsDelta = (target.tickHitsDelta ?? 0) + power;
+			target.tickHealing = (target.tickHealing ?? 0) + power;
 			appendEventLog(target.room, {
 				event: C.EVENT_HEAL,
 				objectId: creep.id,

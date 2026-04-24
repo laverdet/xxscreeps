@@ -31,7 +31,7 @@ echo '{"expression":"rooms.list()"}' | nc -U screeps/cli.sock
 ### Programmatic client (Node.js)
 
 ```js
-import net from 'node:net';
+import * as net from 'node:net';
 
 const socket = net.connect({ path: 'screeps/cli.sock' });
 socket.write(JSON.stringify({ expression: 'rooms.list()' }) + '\n');

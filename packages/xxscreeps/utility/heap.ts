@@ -2,12 +2,15 @@ import { typedArrayFor } from './pack.js';
 
 export class Heap {
 	size = 0;
+	private readonly cost;
 	private readonly heap: Record<number, number>;
+
 	constructor(
 		maxId: number,
 		capacity: number,
-		private readonly cost: (id: number) => number,
+		cost: (id: number) => number,
 	) {
+		this.cost = cost;
 		const Store = typedArrayFor(maxId);
 		this.heap = new Store(capacity + 1);
 	}

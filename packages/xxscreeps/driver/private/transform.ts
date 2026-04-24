@@ -63,6 +63,12 @@ export default function transform(): PluginObj {
 		});
 	}
 
+	// Remove line number metadata from the token. Since we move these around and retain lines it will
+	// cause a cascade of newlines.
+	function stripString(string: t.StringLiteral) {
+		return t.stringLiteral(string.value);
+	}
+
 	// Replace `obj['#foo'](val)` -> `makeInvoke('foo')(obj, val)`
 	const visitCallExpression: VisitNode<State, t.CallExpression | t.OptionalCallExpression> = path => {
 		const { node } = path;
@@ -73,11 +79,11 @@ export default function transform(): PluginObj {
 			const methodKey = `${name.value.substr(1)}${isOptional ? 'Opt' : ''}`;
 			if (t.isSuper(object)) {
 				path.replaceWith(t.callExpression(
-					injectMaker(path.state, 'makeInvoke', `super${methodKey}`, [ name, optional, t.booleanLiteral(true) ]),
+					injectMaker(path.state, 'makeInvoke', `super${methodKey}`, [ stripString(name), optional, t.booleanLiteral(true) ]),
 					[ t.thisExpression(), ...node.arguments ]));
 			} else {
 				path.replaceWith(t.callExpression(
-					injectMaker(path.state, 'makeInvoke', `call${methodKey}`, [ name, optional ]),
+					injectMaker(path.state, 'makeInvoke', `call${methodKey}`, [ stripString(name), optional ]),
 					[ object, ...node.arguments ]));
 			}
 		}
@@ -92,7 +98,7 @@ export default function transform(): PluginObj {
 			const optional = t.booleanLiteral(isOptional);
 			const methodKey = `${name.value.substr(1)}${isOptional ? 'Opt' : ''}`;
 			path.replaceWith(t.callExpression(
-				injectMaker(path.state, 'makeGetter', `get${methodKey}`, [ name, optional ]),
+				injectMaker(path.state, 'makeGetter', `get${methodKey}`, [ stripString(name), optional ]),
 				[ object ]));
 		}
 	};
@@ -123,14 +129,14 @@ export default function transform(): PluginObj {
 				if (node.operator === '=') {
 					// Replace `obj['#foo'] = val` -> `makeSetter('foo')(obj, val)`
 					path.replaceWith(t.callExpression(
-						injectMaker(path.state, 'makeSetter', `set${name.value.substr(1)}`, [ name ]),
+						injectMaker(path.state, 'makeSetter', `set${name.value.substr(1)}`, [ stripString(name) ]),
 						[ object, node.right ]));
 
 				} else if (/^.=$/.test(node.operator)) {
 					// Replace `obj['#foo'] += val` -> `makeMutator('foo')(obj, val => val + 1)`
 					const id = path.state.program.scope.generateUidIdentifier('val');
 					path.replaceWith(t.callExpression(
-						injectMaker(path.state, 'makeMutator', `mut${name.value.substr(1)}`, [ name ]),
+						injectMaker(path.state, 'makeMutator', `mut${name.value.substr(1)}`, [ stripString(name) ]),
 						[ object, makeLambda([ id ], t.binaryExpression(
 							node.operator.charAt(0) as any,
 							id,
@@ -147,7 +153,7 @@ export default function transform(): PluginObj {
 				const id = path.state.program.scope.generateUidIdentifier('val');
 				const methodKey = `mut${name.value.substr(1)}${node.prefix ? '' : 'Post'}`;
 				path.replaceWith(t.callExpression(
-					injectMaker(path.state, 'makeMutator', methodKey, [ name, t.booleanLiteral(!node.prefix) ]),
+					injectMaker(path.state, 'makeMutator', methodKey, [ stripString(name), t.booleanLiteral(!node.prefix) ]),
 					[ object, makeLambda([ id ], t.binaryExpression(
 						node.operator.charAt(0) as any,
 						id,

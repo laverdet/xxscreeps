@@ -16,7 +16,7 @@ export type Compiler<Type = any> = {
 	compile: (source: string, filename: string) => Type;
 	evaluate: (module: Type, linker: (specifier: string, referrer?: string) => Type) => any;
 };
-export type Evaluate = (source: string, filename: string) => any;
+export type Evaluate = (source: string, filename: string) => unknown;
 
 function freezeClass(constructor: abstract new(...args: any[]) => any) {
 	freezeProperty(constructor, 'prototype');

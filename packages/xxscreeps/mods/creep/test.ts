@@ -20,8 +20,8 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.topLeft.pos.isEqualTo(26, 25));
-			assert(Game.creeps.topRight.pos.isEqualTo(27, 25));
+			assert.ok(Game.creeps.topLeft.pos.isEqualTo(26, 25));
+			assert.ok(Game.creeps.topRight.pos.isEqualTo(27, 25));
 		});
 	}));
 
@@ -34,10 +34,10 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.topLeft.pos.isEqualTo(26, 25));
-			assert(Game.creeps.topRight.pos.isEqualTo(25, 25));
-			assert(Game.creeps.bottomLeft.pos.isEqualTo(25, 26));
-			assert(Game.creeps.bottomRight.pos.isEqualTo(26, 26));
+			assert.ok(Game.creeps.topLeft.pos.isEqualTo(26, 25));
+			assert.ok(Game.creeps.topRight.pos.isEqualTo(25, 25));
+			assert.ok(Game.creeps.bottomLeft.pos.isEqualTo(25, 26));
+			assert.ok(Game.creeps.bottomRight.pos.isEqualTo(26, 26));
 		});
 	}));
 
@@ -50,10 +50,10 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.topLeft.pos.isEqualTo(26, 25));
-			assert(Game.creeps.topRight.pos.isEqualTo(25, 25));
-			assert(Game.creeps.bottomLeft.pos.isEqualTo(25, 26));
-			assert(Game.creeps.bottomRight.pos.isEqualTo(26, 26));
+			assert.ok(Game.creeps.topLeft.pos.isEqualTo(26, 25));
+			assert.ok(Game.creeps.topRight.pos.isEqualTo(25, 25));
+			assert.ok(Game.creeps.bottomLeft.pos.isEqualTo(25, 26));
+			assert.ok(Game.creeps.bottomRight.pos.isEqualTo(26, 26));
 		});
 	}));
 
@@ -65,9 +65,9 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.topLeft.pos.isEqualTo(26, 25));
-			assert(Game.creeps.topRight.pos.isEqualTo(25, 25));
-			assert(Game.creeps.bottomRight.pos.isEqualTo(26, 26));
+			assert.ok(Game.creeps.topLeft.pos.isEqualTo(26, 25));
+			assert.ok(Game.creeps.topRight.pos.isEqualTo(25, 25));
+			assert.ok(Game.creeps.bottomRight.pos.isEqualTo(26, 26));
 		});
 	}));
 
@@ -81,8 +81,8 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.topLeft.pos.isEqualTo(24, 25, 'W0N0'));
-			assert(Game.creeps.bottomLeft.pos.isEqualTo(25, 26, 'W0N0'));
+			assert.ok(Game.creeps.topLeft.pos.isEqualTo(24, 25, 'W0N0'));
+			assert.ok(Game.creeps.bottomLeft.pos.isEqualTo(25, 26, 'W0N0'));
 		});
 	}));
 	*/
@@ -101,8 +101,8 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.bottomLeft.pos.isEqualTo(25, 26));
-			assert(Game.creeps.topLeft.pos.isEqualTo(24, 25));
+			assert.ok(Game.creeps.bottomLeft.pos.isEqualTo(25, 26));
+			assert.ok(Game.creeps.topLeft.pos.isEqualTo(24, 25));
 		});
 	}));
 
@@ -121,7 +121,7 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.creep.pos.isEqualTo(25, 26));
+			assert.ok(Game.creeps.creep.pos.isEqualTo(25, 26));
 			assert.strictEqual(Game.creeps.creep.move(C.TOP), C.OK);
 		});
 		await player('101', Game => {
@@ -129,7 +129,7 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.creep.pos.isEqualTo(25, 25));
+			assert.ok(Game.creeps.creep.pos.isEqualTo(25, 25));
 		});
 	}));
 
@@ -152,11 +152,11 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.ownerObstacle.pos.isEqualTo(20, 21));
-			assert(Game.creeps.owner.pos.isEqualTo(20, 20));
+			assert.ok(Game.creeps.ownerObstacle.pos.isEqualTo(20, 21));
+			assert.ok(Game.creeps.owner.pos.isEqualTo(20, 20));
 		});
 		await player('101', Game => {
-			assert(Game.creeps.hostile2.pos.isEqualTo(20, 22));
+			assert.ok(Game.creeps.hostile2.pos.isEqualTo(20, 22));
 		});
 	}));
 
@@ -179,11 +179,11 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.owner.pos.isEqualTo(20, 21));
+			assert.ok(Game.creeps.owner.pos.isEqualTo(20, 21));
 		});
 		await player('101', Game => {
-			assert(Game.creeps.hostileObstacle.pos.isEqualTo(20, 21));
-			assert(Game.creeps.hostile2.pos.isEqualTo(20, 22));
+			assert.ok(Game.creeps.hostileObstacle.pos.isEqualTo(20, 21));
+			assert.ok(Game.creeps.hostile2.pos.isEqualTo(20, 22));
 		});
 	}));
 
@@ -201,7 +201,7 @@ describe('Movement', () => {
 	test('safe mode - hostile obstacle w/ follower', () => enterPossiblyFreeTile(async ({ player, tick }) => {
 		await player('100', Game => {
 			// try to move into hostile position
-			assert(Game.creeps.owner.pos.isEqualTo(20, 20));
+			assert.ok(Game.creeps.owner.pos.isEqualTo(20, 20));
 			assert.strictEqual(Game.creeps.owner.move(C.BOTTOM), C.OK);
 		});
 		await player('101', Game => {
@@ -213,13 +213,13 @@ describe('Movement', () => {
 		await tick();
 		await player('101', Game => {
 			// hostile & hostile2 did not move
-			assert(Game.creeps.hostile.pos.isEqualTo(20, 21));
-			assert(Game.creeps.hostile2.pos.isEqualTo(20, 22));
+			assert.ok(Game.creeps.hostile.pos.isEqualTo(20, 21));
+			assert.ok(Game.creeps.hostile2.pos.isEqualTo(20, 22));
 		});
 		await player('100', Game => {
 			// owner moved to hostile position
-			assert(Game.creeps.owner.pos.isEqualTo(20, 21));
-			assert(Game.creeps.ownerObstacle.pos.isEqualTo(19, 21));
+			assert.ok(Game.creeps.owner.pos.isEqualTo(20, 21));
+			assert.ok(Game.creeps.ownerObstacle.pos.isEqualTo(19, 21));
 		});
 	}));
 
@@ -236,11 +236,11 @@ describe('Movement', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			assert(Game.creeps.owner.pos.isEqualTo(21, 21));
+			assert.ok(Game.creeps.owner.pos.isEqualTo(21, 21));
 		});
 		await player('101', Game => {
-			assert(Game.creeps.hostile.pos.isEqualTo(20, 21));
-			assert(Game.creeps.hostile2.pos.isEqualTo(20, 22));
+			assert.ok(Game.creeps.hostile.pos.isEqualTo(20, 21));
+			assert.ok(Game.creeps.hostile2.pos.isEqualTo(20, 22));
 		});
 	}));
 
@@ -311,7 +311,7 @@ describe('Movement', () => {
 				},
 			});
 			await player('100', ({ creeps: { slow } }) => {
-				assert(slow.pos.isEqualTo(24, 48));
+				assert.ok(slow.pos.isEqualTo(24, 48));
 			});
 		}));
 	});
@@ -338,8 +338,8 @@ describe('Movement', () => {
 			});
 			await tick();
 			await player('100', ({ creeps: { halfSpeed, fullSpeed } }) => {
-				assert(fullSpeed.pos.isEqualTo(24, 6));
-				assert(halfSpeed.pos.isEqualTo(24, 5));
+				assert.ok(fullSpeed.pos.isEqualTo(24, 6));
+				assert.ok(halfSpeed.pos.isEqualTo(24, 5));
 				assert.strictEqual(halfSpeed.fatigue, 0);
 				assert.strictEqual(fullSpeed.fatigue, 2);
 			});
@@ -353,8 +353,8 @@ describe('Movement', () => {
 			});
 			await tick();
 			await player('100', ({ creeps: { halfSpeed, fullSpeed } }) => {
-				assert(fullSpeed.pos.isEqualTo(24, 6));
-				assert(halfSpeed.pos.isEqualTo(24, 5));
+				assert.ok(fullSpeed.pos.isEqualTo(24, 6));
+				assert.ok(halfSpeed.pos.isEqualTo(24, 5));
 				assert.strictEqual(halfSpeed.fatigue, 0);
 				assert.strictEqual(fullSpeed.fatigue, 2);
 			});
@@ -368,8 +368,8 @@ describe('Movement', () => {
 			});
 			await tick();
 			await player('100', ({ creeps: { halfSpeed, fullSpeed } }) => {
-				assert(fullSpeed.pos.isEqualTo(24, 6));
-				assert(halfSpeed.pos.isEqualTo(23, 3));
+				assert.ok(fullSpeed.pos.isEqualTo(24, 6));
+				assert.ok(halfSpeed.pos.isEqualTo(23, 3));
 				assert.strictEqual(halfSpeed.fatigue, 2);
 				assert.strictEqual(fullSpeed.fatigue, 0);
 			});
@@ -383,8 +383,8 @@ describe('Movement', () => {
 			});
 			await tick();
 			await player('100', ({ creeps: { noMove, fullSpeed } }) => {
-				assert(fullSpeed.pos.isEqualTo(23, 4));
-				assert(noMove.pos.isEqualTo(24, 5));
+				assert.ok(fullSpeed.pos.isEqualTo(23, 4));
+				assert.ok(noMove.pos.isEqualTo(24, 5));
 				assert.strictEqual(noMove.fatigue, 0);
 				assert.strictEqual(fullSpeed.fatigue, 2);
 			});
@@ -401,8 +401,8 @@ describe('Movement', () => {
 			});
 			await tick();
 			await player('100', ({ creeps: { halfSpeed, fullSpeed } }) => {
-				assert(fullSpeed.pos.isEqualTo(24, 6));
-				assert(halfSpeed.pos.isEqualTo(24, 5));
+				assert.ok(fullSpeed.pos.isEqualTo(24, 6));
+				assert.ok(halfSpeed.pos.isEqualTo(24, 5));
 				assert.strictEqual(halfSpeed.fatigue, 0);
 				assert.strictEqual(fullSpeed.fatigue, 4);
 			});
@@ -417,9 +417,9 @@ describe('Movement', () => {
 			});
 			await tick();
 			await player('100', ({ creeps: { halfSpeed, halfSpeed2 } }) => {
-				assert(halfSpeed.pos.isEqualTo(25, 3));
-				assert(halfSpeed2.pos.isEqualTo(24, 4));
-				assert((halfSpeed.fatigue === 0) !== (halfSpeed2.fatigue === 0));
+				assert.ok(halfSpeed.pos.isEqualTo(25, 3));
+				assert.ok(halfSpeed2.pos.isEqualTo(24, 4));
+				assert.ok((halfSpeed.fatigue === 0) !== (halfSpeed2.fatigue === 0));
 			});
 		}));
 
@@ -433,9 +433,9 @@ describe('Movement', () => {
 			});
 			await tick();
 			await player('100', ({ creeps: { halfSpeed, halfSpeed2, fullSpeed } }) => {
-				assert(fullSpeed.pos.isEqualTo(24, 6));
-				assert(halfSpeed.pos.isEqualTo(24, 5));
-				assert(halfSpeed2.pos.isEqualTo(24, 4));
+				assert.ok(fullSpeed.pos.isEqualTo(24, 6));
+				assert.ok(halfSpeed.pos.isEqualTo(24, 5));
+				assert.ok(halfSpeed2.pos.isEqualTo(24, 4));
 				assert.strictEqual(fullSpeed.fatigue, 4);
 				assert.strictEqual(halfSpeed.fatigue, 0);
 				assert.strictEqual(halfSpeed2.fatigue, 0);
@@ -456,9 +456,9 @@ describe('Movement', () => {
 			});
 			await tick();
 			await player('100', ({ creeps: { halfSpeed, halfSpeed2, fullSpeed } }) => {
-				assert(fullSpeed.pos.isEqualTo(24, 6));
-				assert(halfSpeed.pos.isEqualTo(24, 5));
-				assert(halfSpeed2.pos.isEqualTo(24, 4));
+				assert.ok(fullSpeed.pos.isEqualTo(24, 6));
+				assert.ok(halfSpeed.pos.isEqualTo(24, 5));
+				assert.ok(halfSpeed2.pos.isEqualTo(24, 4));
 				assert.strictEqual(fullSpeed.fatigue, 8);
 				assert.strictEqual(halfSpeed.fatigue, 0);
 				assert.strictEqual(halfSpeed2.fatigue, 0);
