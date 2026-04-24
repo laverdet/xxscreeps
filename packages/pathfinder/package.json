@@ -1,16 +1,21 @@
 {
-	"name": "@xxscreeps/pathfinder",
-	"version": "0.0.1",
-	"main": "./index.cjs",
-	"scripts": {
-		"install": "node-gyp rebuild --release",
-		"postinstall": "node-gyp clean"
-	},
-	"dependencies": {
+  "name": "@xxscreeps/pathfinder",
+  "version": "0.0.1",
+  "main": "./index.cjs",
+  "scripts": {
+    "install": "node-gyp rebuild --release",
+    "postinstall": "node-gyp clean"
+  },
+  "dependencies": {
     "isolated-vm": "6.0.2",
     "nan": "2.25.0"
-	},
-	"devDependencies": {
+  },
+  "devDependencies": {
     "@types/node": "~24.12.2"
-	}
+  },
+  "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/pathfinder/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laverdet/xxscreeps.git"
+  }
 }
