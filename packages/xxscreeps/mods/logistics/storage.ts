@@ -19,6 +19,9 @@ export class StructureStorage extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return C.STORAGE_HITS; }
 	override get structureType() { return C.STRUCTURE_STORAGE; }
 
+	/** @deprecated */
+	@enumerable get storeCapacity() { return this.store.getCapacity(); }
+
 	override '#afterInsert'(room: Room) {
 		super['#afterInsert'](room);
 		room.storage = this;

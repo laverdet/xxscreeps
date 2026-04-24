@@ -21,7 +21,9 @@ export interface DestructibleStructure extends Structure {
 }
 
 export const structureFormat = declare('Structure', () => compose(shape, Structure));
-const shape = objectFormat;
+const shape = struct(objectFormat, {
+	'#noAttackNotify': 'bool',
+});
 
 export const ownedStructureFormat = declare('OwnedStructure', () => compose(ownedShape, OwnedStructure));
 const ownedShape = struct(structureFormat, {
@@ -75,6 +77,20 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 */
 	isActive(): boolean {
 		return true;
+	}
+
+	/**
+	 * Toggle notifications for when this structure is attacked.
+	 * @param notifyWhenAttacked Whether to receive email notifications on attack.
+	 */
+	notifyWhenAttacked(this: Structure, notifyWhenAttacked: boolean) {
+		return chainIntentChecks(
+			() => checkNotifyWhenAttacked(this, notifyWhenAttacked),
+			() => {
+				if (notifyWhenAttacked === this['#noAttackNotify']) {
+					intents.save(this, 'notifyWhenAttacked', Boolean(notifyWhenAttacked));
+				}
+			});
 	}
 
 	'#checkObstacle'(_user: string) {
@@ -226,6 +242,15 @@ export function checkDestroy(structure: Structure) {
 				return C.ERR_BUSY;
 			}
 		});
+}
+
+export function checkNotifyWhenAttacked(structure: Structure, notifyWhenAttacked: unknown) {
+	if (structure.my === false || structure.room.controller?.my === false) {
+		return C.ERR_NOT_OWNER;
+	} else if (typeof notifyWhenAttacked !== 'boolean') {
+		return C.ERR_INVALID_ARGS;
+	}
+	return C.OK;
 }
 
 export function checkPlacement(room: Room, pos: RoomPosition) {

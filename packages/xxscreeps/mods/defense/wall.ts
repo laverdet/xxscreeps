@@ -19,6 +19,8 @@ export class StructureWall extends withOverlay(Structure, shape) {
 	}
 
 	override get structureType() { return C.STRUCTURE_WALL; }
+
+	@enumerable get ticksToLive(): number | undefined { return undefined; }
 }
 
 export function create(pos: RoomPosition) {
