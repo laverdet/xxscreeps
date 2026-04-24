@@ -19,6 +19,7 @@
   "dependencies": {
     "@babel/core": "~7.22.5",
     "@babel/types": "^7.29.0",
+    "@loaderkit/resolve": "^1.0.4",
     "@screeps/launcher": "4.1.0",
     "@types/convert-source-map": "^2.0.3",
     "@xxscreeps/lodash3": "workspace:*",
