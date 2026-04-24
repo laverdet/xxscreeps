@@ -25,15 +25,11 @@ installed as a peer to xxscreeps!
 
 From scratch instructions for installing xxscreeps + this client follows:
 ```
-# TODO: After monorepo republish
 mkdir xxscreeps
 cd xxscreeps
-npm init -y
-npm install github:laverdet/xxscreeps github:laverdet/xxscreeps-client
-npm explore xxscreeps -- npm run build
-npm explore @xxscreeps/client -- npm run build    # Ignore these errors :)
-# Save .screepsrc.yaml (see below)
+npm install xxscreeps @screeps/launcher @xxscreeps/client
 npx xxscreeps import
+# Save .screepsrc.yaml (see below)
 npx xxscreeps start
 ```
 
@@ -43,9 +39,9 @@ backend:
   secret: 'you can make up anything you want'
   steamApiKey: # Get your key from http://steamcommunity.com/dev/apikey
 mods:
-  - 'xxscreeps/mods/classic'
-  - 'xxscreeps/mods/backend/password'
-  - 'xxscreeps/mods/backend/steam'
+  - xxscreeps/mods/classic
+  - xxscreeps/mods/backend/password
+  - xxscreeps/mods/backend/steam
   - '@xxscreeps/client'
 ```
 
@@ -58,7 +54,8 @@ signed in as user Guest and your icon will belong to the Invader user. To sign i
 account you need to select "Sign Out" first, which will sign you out of Guest and bring you to the
 real login page. Click the Steam icon towards the bottom to sign-in with your Steam account and play
 the game as normal. If you want to turn guest access off you can disable it in your
-`.screepsrc.yaml` file, and you will be required to login each time.
+`.screepsrc.yaml` file (backend.allowGuestAccess = false), and you will be required to login each
+time.
 
 If you run into problems try running `delete localStorage.auth` in the developer console and
 restarting.
