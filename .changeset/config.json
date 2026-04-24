@@ -4,5 +4,6 @@
   "commit": false,
   "access": "public",
   "baseBranch": "main",
-  "updateInternalDependencies": "patch"
+  "ignore": [ "xxscreeps", "@xxscreeps/client", "@xxscreeps/redis" ],
+  "updateInternalDependencies": "minor"
 }

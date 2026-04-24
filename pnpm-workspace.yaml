@@ -1,5 +1,6 @@
 packages:
   - packages/client
+  - packages/lodash3
   - packages/pathfinder
   - packages/redis
   - packages/xxscreeps

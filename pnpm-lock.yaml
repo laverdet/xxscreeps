@@ -67,6 +67,16 @@ importers:
         specifier: ~24.12.2
         version: 24.12.2
 
+  packages/lodash3:
+    dependencies:
+      lodash-es:
+        specifier: 3.10.1
+        version: 3.10.1(patch_hash=6ru5e5xk474axabvgz2iangufm)
+    devDependencies:
+      '@types/lodash':
+        specifier: 3.10.1
+        version: 3.10.1
+
   packages/pathfinder:
     dependencies:
       isolated-vm:
@@ -110,6 +120,9 @@ importers:
       '@types/convert-source-map':
         specifier: ^2.0.3
         version: 2.0.3
+      '@xxscreeps/lodash3':
+        specifier: workspace:*
+        version: link:../lodash3
       '@xxscreeps/pathfinder':
         specifier: workspace:*
         version: link:../pathfinder
@@ -167,9 +180,6 @@ importers:
       koa-router:
         specifier: 10.1.1
         version: 10.1.1
-      lodash-es:
-        specifier: 3.10.1
-        version: 3.10.1(patch_hash=6ru5e5xk474axabvgz2iangufm)
       lokijs:
         specifier: 1.5.12
         version: 1.5.12
@@ -237,9 +247,6 @@ importers:
       '@types/koa-router':
         specifier: ~7.4.4
         version: 7.4.9
-      '@types/lodash':
-        specifier: 3.10.1
-        version: 3.10.1
       '@types/lokijs':
         specifier: ~1.5.8
         version: 1.5.14

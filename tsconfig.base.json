@@ -20,7 +20,7 @@
 		"module": "nodenext",
 		"lib": [ "esnext", "dom" ],
 		"resolveJsonModule": true,
-		"types": [ "node" ],
+		"types": [],
 
 		// Strictness
 		"isolatedModules": true,
