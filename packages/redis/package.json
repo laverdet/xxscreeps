@@ -8,11 +8,18 @@
     "./*": "./dist/*"
   },
   "dependencies": {
-    "redis": "3.1.2",
-    "xxscreeps": "workspace:*"
+    "redis": "3.1.2"
   },
   "devDependencies": {
     "@types/node": "~24.12.2",
     "@types/redis": "~2.8.31"
+  },
+  "peerDependencies": {
+    "xxscreeps": "workspace:*"
+  },
+  "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/redis/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laverdet/xxscreeps.git"
   }
 }
