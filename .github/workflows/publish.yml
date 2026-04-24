@@ -20,4 +20,4 @@ jobs:
         with:
           createGithubReleases: false
           # publish: pnpm publish --no-git-checks --provenance --recursive
-          publish: cd packages/redis; npm publish --provenance
+          publish: pnpm run publish
