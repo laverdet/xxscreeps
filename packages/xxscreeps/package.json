@@ -3,7 +3,6 @@
   "version": "0.0.6",
   "type": "module",
   "license": "ISC",
-  "repository": "https://github.com/laverdet/xxscreeps",
   "scripts": {
     "test": "xxscreeps test"
   },
@@ -74,5 +73,10 @@
     "@types/pngjs": "~6.0.1",
     "@types/sockjs": "~0.3.33",
     "@types/source-map-support": "~0.5.6"
+  },
+  "homepage": "https://github.com/laverdet/xxscreeps/blob/main/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laverdet/xxscreeps.git"
   }
 }
