@@ -1,0 +1,8 @@
+**/test.js
+**/test.js.map
+**/test.ts
+dist/shard.json
+dist/tsconfig.tsbuildinfo
+shard.json
+test
+tsconfig.json

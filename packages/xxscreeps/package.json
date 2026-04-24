@@ -1,9 +1,8 @@
 {
   "name": "xxscreeps",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "license": "ISC",
-  "repository": "https://github.com/laverdet/xxscreeps",
   "scripts": {
     "test": "xxscreeps test"
   },
@@ -20,8 +19,10 @@
   "dependencies": {
     "@babel/core": "~7.22.5",
     "@babel/types": "^7.29.0",
+    "@loaderkit/resolve": "^1.0.4",
     "@screeps/launcher": "4.1.0",
     "@types/convert-source-map": "^2.0.3",
+    "@xxscreeps/lodash3": "workspace:*",
     "@xxscreeps/pathfinder": "workspace:*",
     "acorn": "8.9.0",
     "acorn-class-fields": "1.0.0",
@@ -41,7 +42,6 @@
     "koa-conditional-get": "3.0.0",
     "koa-passport": "4.1.4",
     "koa-router": "10.1.1",
-    "lodash-es": "3.10.1",
     "lokijs": "1.5.12",
     "node-fetch": "3.3.1",
     "openid": "2.0.14",
@@ -66,7 +66,6 @@
     "@types/koa-conditional-get": "~2.0.0",
     "@types/koa-passport": "~4.0.2",
     "@types/koa-router": "~7.4.4",
-    "@types/lodash": "3.10.1",
     "@types/lokijs": "~1.5.8",
     "@types/node": "~24.12.2",
     "@types/node-fetch": "~2.6.4",
@@ -75,5 +74,10 @@
     "@types/pngjs": "~6.0.1",
     "@types/sockjs": "~0.3.33",
     "@types/source-map-support": "~0.5.6"
+  },
+  "homepage": "https://github.com/laverdet/xxscreeps/blob/main/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laverdet/xxscreeps.git"
   }
 }

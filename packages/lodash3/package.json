@@ -1,0 +1,23 @@
+{
+  "name": "@xxscreeps/lodash3",
+  "version": "0.0.2",
+  "type": "module",
+  "exports": {
+    ".": "./dist/lodash.js",
+    "./*": "./dist/*.js"
+  },
+  "scripts": {
+    "prepublishOnly": "find node_modules/lodash-es/ -name '*.js' -print0 | xargs -0 tar c | tar x --strip-components=2 -C dist"
+  },
+  "dependencies": {
+    "lodash-es": "3.10.1"
+  },
+  "devDependencies": {
+    "@types/lodash": "3.10.1"
+  },
+  "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/lodash3/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laverdet/xxscreeps.git"
+  }
+}

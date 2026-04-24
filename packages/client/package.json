@@ -1,6 +1,6 @@
 {
   "name": "@xxscreeps/client",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "xxscreeps": true,
   "exports": {
@@ -8,11 +8,18 @@
     "./*": "./dist/*"
   },
   "dependencies": {
-    "jszip": "^3.6.0",
-    "xxscreeps": "workspace:*"
+    "jszip": "^3.6.0"
   },
   "devDependencies": {
     "@types/jszip": "^3.4.1",
     "@types/node": "~24.12.2"
+  },
+  "peerDependencies": {
+    "xxscreeps": "workspace:*"
+  },
+  "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/client/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laverdet/xxscreeps.git"
   }
 }

@@ -2,7 +2,11 @@
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
 		"paths": {
+			"@xxscreeps/lodash3": [ "../lodash3/lodash.ts" ],
 			"xxscreeps/*.js": [ "../xxscreeps/*.ts" ],
 		},
 	},
+	"references": [
+		{ "path": "../lodash3" },
+	],
 }

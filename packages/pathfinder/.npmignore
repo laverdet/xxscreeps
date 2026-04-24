@@ -1,2 +1,4 @@
+.clang-tidy
 dist/tsconfig.tsbuildinfo
+out
 tsconfig.json

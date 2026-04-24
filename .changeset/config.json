@@ -4,6 +4,6 @@
   "commit": false,
   "access": "public",
   "baseBranch": "main",
-  "ignore": [ "@xxscreeps/pathfinder", "xxscreeps" ],
-  "updateInternalDependencies": "patch"
+  "ignore": [ "@xxscreeps/redis" ],
+  "updateInternalDependencies": "minor"
 }

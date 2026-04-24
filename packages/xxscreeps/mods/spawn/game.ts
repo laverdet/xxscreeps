@@ -51,9 +51,9 @@ declare module 'xxscreeps/game/runtime.js' {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_MY_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
-		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my!),
+		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my),
 	[C.FIND_HOSTILE_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
-		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my === false),
+		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && !structure.my),
 });
 declare module 'xxscreeps/game/room/index.js' {
 	interface Find { spawn: typeof find }

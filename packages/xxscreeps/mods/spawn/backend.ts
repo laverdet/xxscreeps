@@ -128,10 +128,10 @@ hooks.register('route', {
 		const room = await context.shard.loadRoom(roomName);
 		runOneShot(context.backend.world, room, context.shard.time, userId, () => {
 			// Check room eligibility
-			if (!room.controller || room.controller.reservation || room.controller.my === false) {
+			if (!room.controller || room.controller.reservation || room.controller.owner) {
 				throw new Error('Room is owned');
 			}
-			room['#user'] = userId;
+			room['#user'] = room.controller['#user'] = userId;
 			room['#level'] = 1;
 			if (checkCreateConstructionSite(room, pos, 'spawn', name) !== C.OK) {
 				throw new Error('Invalid intent');

@@ -86,22 +86,34 @@ to information about game APIs.
 ## Getting Started
 
 To get xxscreeps running here's what you need to do. This should work on Linux, macOS, and Windows.
-First step is make sure nodejs v20.x is installed, older versions will not work.
+First step is make sure nodejs v24.x is installed, older versions will probably not work.
 ```
-git clone https://github.com/laverdet/xxscreeps.git
+mkdir xxscreeps
 cd xxscreeps
-npm install
-npm run build
+# note: we use @screeps/launcher to generate terrain
+npm install xxscreeps @screeps/launcher
 npx xxscreeps import
+npx xxscreeps start
 ```
 
-After that you can start xxscreeps via `NODE_OPTIONS='--no-node-snapshot' npx xxscreeps start`
-except you won't be able to connect with the Steam client. You'll need to create a file
-`.screepsrc.yaml` with content:
-```
+Now there is a Screeps server running at http://localhost:21025.
+
+If you want to use the Steam client you need to go here: https://steamcommunity.com/dev/apikey and
+get an API key. Then add it to `.screepsrc.yaml`:
+```yaml
 backend:
   steamApiKey: <your steam key>
 ```
+
+You can also this to your `.screepsrc.yaml` file to enable email + password registration.
+```yaml
+backend:
+  allowEmailRegistration: true
+```
+
+You might also consider installing the xxscreeps client backend, which will allow you to view the
+world directly in your browser:
+[@xxscreeps/client](https://github.com/laverdet/xxscreeps/blob/main/packages/client/README.md).
 
 If you're using VS Code and you have the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) installed all the options should
 autocomplete. If not you can read the [config

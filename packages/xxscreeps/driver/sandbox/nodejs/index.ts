@@ -7,6 +7,8 @@ import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import * as vm from 'node:vm';
 import { TransformOptions, transformSync } from '@babel/core';
+import { resolve } from '@loaderkit/resolve/esm';
+import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
 import convertSourceMap from 'convert-source-map';
 import Privates from 'xxscreeps/driver/private/transform.js';
 import { makePackagesModule } from 'xxscreeps/engine/schema/build/index.js';
@@ -24,13 +26,13 @@ function makeCachedData(module: vm.SourceTextModule): Buffer {
 
 // Resolve specifier & referrer to canonical URL
 const resolver = function() {
-	const cache = new Map<string, string>();
+	const cache = new Map<string, Promise<string>>();
 	return (specifier: string, referrer?: string) => {
 		const key = `${referrer ?? ''}::${specifier}`;
 		switch (specifier) {
-			case '@xxscreeps/pathfinder': return specifier;
+			case '@xxscreeps/pathfinder': return 'xxscreeps:pathfinder';
 			case 'xxscreeps/engine/schema/build/packages.js': return 'xxscreeps:packages';
-			default: return getOrSet(cache, key, () => {
+			default: return getOrSet(cache, key, async () => {
 				const alias = function() {
 					switch (specifier) {
 						case 'tslib': return 'tslib/tslib.es6.mjs';
@@ -41,11 +43,15 @@ const resolver = function() {
 						default: return specifier;
 					}
 				}();
-				if (alias.startsWith('.')) {
-					return new URL(alias, referrer).href;
-				} else {
-					return import.meta.resolve(alias, referrer);
-				}
+				const refUrl = function() {
+					if (referrer === undefined || referrer.startsWith('xxscreeps:')) {
+						return new URL(import.meta.url);
+					} else {
+						return new URL(referrer);
+					}
+				}();
+				const resolution = await resolve(defaultAsyncFileSystem, alias, refUrl);
+				return resolution.url.href;
 			});
 		}
 	};
@@ -178,7 +184,7 @@ const hostLoaders = await async function() {
 		make('node:util'),
 	]);
 	return {
-		'@xxscreeps/pathfinder': pathfinder,
+		'xxscreeps:pathfinder': pathfinder,
 		'node:process': process,
 		'node:util': util,
 	};
@@ -234,12 +240,12 @@ export class NodejsSandbox implements Sandbox {
 			);
 			const resolutions = new Map<string, Promise<vm.Module>>();
 			await module.link(async (specifier, referencingModule) => {
-				const url = resolver(specifier, referencingModule.identifier);
+				const url = await resolver(specifier, referencingModule.identifier);
 				return getOrSet(resolutions, url, async () => {
 					switch (url) {
-						case '@xxscreeps/pathfinder':
 						case 'node:process':
 						case 'node:util':
+						case 'xxscreeps:pathfinder':
 							return hostLoaders[url](context);
 						case 'xxscreeps:packages':
 							return packageLoader(context);
