@@ -606,7 +606,7 @@ export function calculateBoundedEffect(
 	// all callers, slicing by `unboosted` keeps all parts when energy is
 	// sufficient and the top-k most-boosted parts otherwise.
 	const sliceCount = Math.floor(unboosted);
-	const boostedDelta = Fn.accumulate(Fn.slice(deltas, 0, sliceCount));
+	const boostedDelta = Fn.accumulate(Fn.take(deltas, sliceCount));
 	return { unboosted, boosted: Math.floor(unboosted + boostedDelta) };
 }
 
