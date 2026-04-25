@@ -21,6 +21,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: P.Value[]) => any>();
+	private saveChain: Promise<void> = Promise.resolve();
 	private readonly url;
 	private readonly blob;
 
@@ -614,7 +615,13 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		this.data.clear();
 	}
 
-	async save() {
+	save() {
+		const promise = this.saveChain.then(() => this.performSave());
+		this.saveChain = promise.catch(() => {});
+		return promise;
+	}
+
+	private async performSave() {
 		if (this.url) {
 			const payload = JSON.stringify(this.data, (key, value) => {
 				if (value === this.data) {

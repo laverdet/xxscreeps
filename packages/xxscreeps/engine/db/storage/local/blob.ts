@@ -15,6 +15,7 @@ export class BlobStorage {
 
 	private saveId = 0;
 	private readonly knownPaths = new Set<string>();
+	private saveChain: Promise<void> = Promise.resolve();
 	private readonly path;
 
 	constructor(path: string | null) {
@@ -215,7 +216,13 @@ export class BlobStorage {
 		}
 	}
 
-	async save() {
+	save() {
+		const promise = this.saveChain.then(() => this.performSave());
+		this.saveChain = promise.catch(() => {});
+		return promise;
+	}
+
+	private async performSave() {
 		// Get changes since last save
 		if (this.path === null) {
 			return;
