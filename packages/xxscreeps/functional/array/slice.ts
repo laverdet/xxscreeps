@@ -5,7 +5,8 @@ import { toIterable } from 'xxscreeps/functional/iterable/intrinsicIterator.js';
  */
 export function slice<Type>(array: readonly Type[], start: number, end: number = array.length): Iterable<Type> {
 	return toIterable(function*() {
-		for (let ii = start; ii < end; ++ii) {
+		const adjustedEnd = Math.min(end, array.length);
+		for (let ii = start; ii < adjustedEnd; ++ii) {
 			yield array[ii];
 		}
 	}());
