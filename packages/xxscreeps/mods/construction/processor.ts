@@ -76,7 +76,10 @@ const intents = [
 					Resource.drop(creep.pos, 'energy', overflow);
 				}
 				target.hits -= effect;
-				// TODO: dismantle event + destroy hook
+				if (target.hits <= 0) {
+					target['#destroy']();
+				}
+				// TODO: dismantle event
 				// saveAction(creep, 'dismantle', target.pos.x, target.pos.y);
 				context.didUpdate();
 			}
