@@ -13,9 +13,10 @@ export function drop(pos: RoomPosition, resourceType: ResourceType, amount: numb
 	const room = Game.rooms[pos.roomName];
 	let remaining = amount;
 
-	// Is there a container to catch the resource?
+	// Skip a container that is being destroyed so it doesn't catch its own
+	// spill. Matches vanilla _create-energy.
 	const container = lookForStructureAt(room, pos, C.STRUCTURE_CONTAINER);
-	if (container) {
+	if (container && container.hits > 0) {
 		const capacity = container.store.getFreeCapacity(resourceType);
 		if (capacity > 0) {
 			const amount = Math.min(remaining, capacity);
