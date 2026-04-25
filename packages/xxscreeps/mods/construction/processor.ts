@@ -6,6 +6,7 @@ import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { captureDamage } from 'xxscreeps/mods/combat/creep.js';
 import { Creep, calculateBoundedEffect, calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
 import { ConstructionSite, checkRemove, create } from './construction-site.js';
@@ -75,7 +76,8 @@ const intents = [
 				if (overflow > 0) {
 					Resource.drop(creep.pos, 'energy', overflow);
 				}
-				target.hits -= effect;
+				const damage = captureDamage(target, effect, C.EVENT_ATTACK_TYPE_DISMANTLE, creep);
+				target.hits -= damage;
 				if (target.hits <= 0) {
 					target['#destroy']();
 				}

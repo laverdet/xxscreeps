@@ -25,6 +25,16 @@ export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 
 	override get structureType() { return C.STRUCTURE_RAMPART; }
 
+	override get '#layer'() { return 1; }
+
+	override '#captureDamage'(power: number, type: number, source: RoomObject.RoomObject | null) {
+		const absorbed = Math.min(power, this.hits);
+		if (absorbed > 0) {
+			this['#applyDamage'](absorbed, type, source ?? undefined);
+		}
+		return power - absorbed;
+	}
+
 	/**
 	 * Make this rampart public to allow other players' creeps to pass through.
 	 * @param isPublic Whether this rampart should be public or non-public.
