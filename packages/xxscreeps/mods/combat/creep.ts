@@ -166,24 +166,24 @@ export function checkDestructible(target: Creep | Structure) {
 }
 
 /**
- * Invokes damage capture callback from top to bottom and returns the remaining power which should
- * be applied to the target.
+ * Walks `objects` descending by `#layer`; `onObject` returns the residual past each one.
+ * `stopAt` ends iteration at that object (throws if absent).
  */
-export function captureDamage(target: RoomObject, initialPower: number, type: number, source: RoomObject | null) {
-	// Sort objects by layer
-	const objects = [ ...Fn.reject(target.room['#lookAt'](target.pos),
-		object => object['#layer'] === undefined || object.hits === undefined) ];
-	objects.sort((left, right) => right['#layer']! - left['#layer']!);
-
-	// Calculate total power, allowing objects on higher layers to deduct damage [ramparts]
+export function walkLayers<T extends RoomObject>(
+	objects: T[],
+	initialPower: number,
+	onObject: (object: T, layerPower: number) => number,
+	stopAt?: T,
+): number {
 	let power = initialPower;
 	let iterationPower = power;
 	let layer: number | undefined;
 	for (const object of objects) {
+		if (object === stopAt) {
+			return iterationPower;
+		}
 		const objectLayer = object['#layer'];
-		if (object === target) {
-			return power;
-		} else if (layer !== objectLayer) {
+		if (layer !== objectLayer) {
 			layer = objectLayer;
 			power = iterationPower;
 			if (power <= 0) {
@@ -193,7 +193,23 @@ export function captureDamage(target: RoomObject, initialPower: number, type: nu
 		// The idea here is that multiple objects on the same layer can capture damage simultaneously,
 		// and whichever one captures more will be used. This doesn't apply to any existing game
 		// objects, but idk maybe it could be interesting.
-		iterationPower = Math.min(iterationPower, target['#captureDamage'](power, C.EVENT_ATTACK_TYPE_MELEE, source));
+		iterationPower = Math.min(iterationPower, onObject(object, power));
 	}
-	throw new Error('Object was never found');
+	if (stopAt !== undefined) {
+		throw new Error('Object was never found');
+	}
+	return iterationPower;
+}
+
+/**
+ * Invokes damage capture callback from top to bottom and returns the remaining power which should
+ * be applied to the target.
+ */
+export function captureDamage(target: RoomObject, initialPower: number, type: number, source: RoomObject | null) {
+	const objects = [ ...Fn.reject(target.room['#lookAt'](target.pos),
+		object => object['#layer'] === undefined || object.hits === undefined) ];
+	objects.sort((left, right) => right['#layer']! - left['#layer']!);
+	return walkLayers(objects, initialPower,
+		(object, layerPower) => object['#captureDamage'](layerPower, type, source),
+		target);
 }

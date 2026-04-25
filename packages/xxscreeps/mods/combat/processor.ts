@@ -8,7 +8,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { mapArea } from 'xxscreeps/game/room/look.js';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
-import { captureDamage, checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep.js';
+import { captureDamage, checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack, walkLayers } from './creep.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { combat: typeof intents }
@@ -74,35 +74,25 @@ const intents = [
 				(xx, yy) => new RoomPosition(xx, yy, creep.room.name));
 			const basePower = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER, 'rangedMassAttack');
 			for (const pos of area) {
-
-				// Sort objects by layer
 				const objects = [ ...Fn.reject(creep.room['#lookAt'](pos),
 					object => object['#layer'] === undefined || object.hits === undefined || object.my !== false) ];
 				objects.sort((left, right) => right['#layer']! - left['#layer']!);
-
-				// Apply and capture damage
-				let power = basePower * [ 1, 1, 0.4, 0.1 ][creep.pos.getRangeTo(pos)];
-				let iterationPower = power;
-				let layer: number | undefined;
-				for (const object of objects) {
-					const objectLayer = object['#layer'];
-					if (layer !== objectLayer) {
-						layer = objectLayer;
-						power = iterationPower;
-						if (power <= 0) {
-							break;
-						}
+				const power = basePower * [ 1, 1, 0.4, 0.1 ][creep.pos.getRangeTo(pos)];
+				walkLayers(objects, power, (object, layerPower) => {
+					const remaining = object['#captureDamage'](layerPower, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep);
+					const absorbed = layerPower - remaining;
+					if (absorbed === 0) {
+						object['#applyDamage'](layerPower, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep);
 					}
-					iterationPower = Math.min(iterationPower, object['#captureDamage'](power, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep));
-					object['#applyDamage'](power, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep);
 					appendEventLog(object.room, {
 						event: C.EVENT_ATTACK,
 						objectId: creep.id,
 						targetId: object.id,
 						attackType: C.EVENT_ATTACK_TYPE_RANGED_MASS,
-						damage: power,
+						damage: absorbed > 0 ? absorbed : layerPower,
 					});
-				}
+					return remaining;
+				});
 			}
 			saveAction(creep, 'rangedMassAttack', creep.pos);
 			context.didUpdate();
