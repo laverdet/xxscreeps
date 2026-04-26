@@ -144,8 +144,10 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	 * square. The target should not have CLAIM body parts. The spawn should not be busy with the
 	 * spawning process. Each execution increases the creep's timer by amount of ticks according to
 	 * this formula: `floor(600 / body.length)`. Energy required for each execution is determined
-	 * using this formula: `ceil(creepCost / 2.5 / body.length)`. Renewing a creep removes all of its
-	 * boosts.
+	 * using this formula: `ceil(creepCost / 2.5 / body.length)`.
+	 *
+	 * Renewing a creep removes all of its boosts. Calling this on a boosted creep is deprecated
+	 * in the official API — prefer `StructureLab.unboostCreep` first.
 	 * @param creep The target creep object.
 	 */
 	renewCreep(creep: Creep) {
@@ -270,6 +272,7 @@ export function checkRecycleCreep(spawn: StructureSpawn, creep: Creep) {
 export function checkRenewCreep(spawn: StructureSpawn, creep: Creep) {
 	return chainIntentChecks(
 		() => checkMyStructure(spawn, StructureSpawn),
+		() => spawn.spawning ? C.ERR_BUSY : C.OK,
 		() => checkIsActive(spawn),
 		() => checkTarget(creep, Creep),
 		() => checkCommon(creep),
@@ -277,10 +280,7 @@ export function checkRenewCreep(spawn: StructureSpawn, creep: Creep) {
 		() => {
 			if (spawn.room.energyAvailable < calculateRenewCost(creep)) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
-			} else if (
-				creep.body.some(bodyPart => bodyPart.type === C.CLAIM) ||
-				creep.body.some(bodyPart => bodyPart.boost !== undefined)
-			) {
+			} else if (creep.body.some(bodyPart => bodyPart.type === C.CLAIM)) {
 				return C.ERR_NO_BODYPART;
 			} else if (creep.ticksToLive! + calculateRenewAmount(creep) > C.CREEP_LIFE_TIME) {
 				return C.ERR_FULL;
@@ -306,7 +306,6 @@ export function checkSpawnCreep(
 ) {
 	return chainIntentChecks(
 		() => checkMyStructure(spawn, StructureSpawn),
-		() => checkIsActive(spawn),
 		() => checkString(name, 100, true),
 		() => {
 			if (userGame?.creeps[name] !== undefined) {
@@ -318,7 +317,9 @@ export function checkSpawnCreep(
 			if (spawn.spawning) {
 				return C.ERR_BUSY;
 			}
-
+		},
+		() => checkIsActive(spawn),
+		() => {
 			if (
 				!Array.isArray(body) ||
 				body.length === 0 ||
