@@ -445,11 +445,11 @@ export function calculateCarry(body: Creep['body']) {
 		});
 }
 
-const activePartPredicate: Predicate<Creep['body'][number]> = part => part.hits > 0;
+const deadPartPredicate: Predicate<Creep['body'][number]> = part => part.hits === 0;
 
 export function iterateActiveParts(body: Creep['body']) {
-	// Parts die from right to left so you can halt iteration at the first dead part
-	return Fn.takeWhile(body, activePartPredicate);
+	// Damage propagates front-to-back, so dead parts cluster at the front of body.
+	return Fn.dropWhile(body, deadPartPredicate);
 }
 
 registerObstacleChecker(params => {

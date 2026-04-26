@@ -19,6 +19,7 @@ export * from './function/chain.js';
 export * from './function/identity.js';
 export * from './function/pipe.js';
 export * from './iterable/concat.js';
+export * from './iterable/dropWhile.js';
 export * from './iterable/filter.js';
 export * from './iterable/fold/accumulate.js';
 export * from './iterable/fold/every.js';
