@@ -23,6 +23,7 @@ import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/re
 import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
@@ -386,6 +387,9 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	 * amount is used.
 	 */
 	transfer(this: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount?: number) {
+		if (target instanceof StructureController && resourceType === C.RESOURCE_ENERGY) {
+			return this.upgradeController(target);
+		}
 		const intentAmount = calculateChecked(this, target, () =>
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 			amount || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)!));
@@ -509,7 +513,8 @@ export function checkPull(creep: Creep, target: Creep | null | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Creep),
-		() => checkRange(creep, target!, 1));
+		() => checkRange(creep, target!, 1),
+		() => target!.spawning ? C.ERR_INVALID_TARGET : C.OK);
 }
 
 export function checkPickup(creep: Creep, target: Resource) {
