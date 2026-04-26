@@ -14,6 +14,15 @@ const noWorkerFlags = [
 const extraFlags = (process.env.NODE_OPTIONS ?? '').split(/ /g).filter(flag => flag !== '');
 const isMissingFlag = (flag: string) => !process.execArgv.includes(flag) && !extraFlags.includes(flag);
 const missingFlags = isMainThread ? requiredFlags.filter(isMissingFlag) : [];
+async function bootstrapRuntimeImports() {
+	// Built-in commands link modules that resolve through config/mods.static.
+	// Generate those files before importing the command module itself.
+	await Promise.all([
+		import('./mods/index.js'),
+		import('./global.js'),
+	]);
+}
+
 if (missingFlags.length) {
 	// In this case we are missing a required flag
 	const niceToHaveFlags = [
@@ -105,6 +114,7 @@ if (missingFlags.length) {
 
 		// Run it outside of try / catch
 		if (modulePath !== undefined) {
+			await bootstrapRuntimeImports();
 			await import(modulePath);
 		}
 
