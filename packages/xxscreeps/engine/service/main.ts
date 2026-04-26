@@ -93,7 +93,9 @@ try {
 					config.processor.intentAbandonTimeout,
 					() => mustNotReject(async () => {
 						const rooms = await abandonIntentsForTick(shard, time);
-						console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
+						if (rooms.length > 0) {
+							console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
+						}
 					}));
 				for await (const message of serviceMessages) {
 					if (message.type === 'processorInitialized') {

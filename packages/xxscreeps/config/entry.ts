@@ -53,7 +53,6 @@ if (missingFlags.length) {
 } else {
 
 	// All required flags were passed
-
 	if (!isMainThread && workerData?.isTopThread) {
 		// This is a fake top-thread, so the real top thread will send SIGINT messages
 		parentPort!.on('message', message => {
@@ -65,19 +64,9 @@ if (missingFlags.length) {
 		}).unref();
 	}
 
-	// `registerStorageProvider` needs to be imported early to allow local keyval/blob providers to
-	// register
-	await import('xxscreeps/engine/db/storage/register.js');
-
 	// Get script and remove `dist/config/entry.js` from args
 	process.argv.splice(1, 1);
 	const specifier = process.argv[1];
-
-	// Load mods
-	await Promise.all([
-		import('./mods/index.js'),
-		import('./global.js'),
-	]);
 
 	if (specifier) {
 		const commands: Record<string, string | undefined> = {
