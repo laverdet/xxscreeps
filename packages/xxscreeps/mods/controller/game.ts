@@ -3,7 +3,7 @@ import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/e
 import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
-import { optional, struct } from 'xxscreeps/schema/index.js';
+import { constant, optional, struct, variant } from 'xxscreeps/schema/index.js';
 import * as Controller from './controller.js';
 import './creep.js';
 
@@ -23,8 +23,38 @@ const roomSchema = registerStruct('Room', {
 });
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const controllerSchema = registerVariant('Room.objects', Controller.format);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const attackControllerEventSchema = registerVariant('Room.eventLog', struct({
+	...variant(C.EVENT_ATTACK_CONTROLLER),
+	event: constant(C.EVENT_ATTACK_CONTROLLER),
+	objectId: Id.format,
+}));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const reserveControllerEventSchema = registerVariant('Room.eventLog', struct({
+	...variant(C.EVENT_RESERVE_CONTROLLER),
+	event: constant(C.EVENT_RESERVE_CONTROLLER),
+	objectId: Id.format,
+	amount: 'int32',
+}));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const upgradeControllerEventSchema = registerVariant('Room.eventLog', struct({
+	...variant(C.EVENT_UPGRADE_CONTROLLER),
+	event: constant(C.EVENT_UPGRADE_CONTROLLER),
+	objectId: Id.format,
+	amount: 'int32',
+	energySpent: 'int32',
+}));
 declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { controller: [ typeof roomSchema, typeof controllerSchema ] }
+	interface Schema {
+		controller: [
+			typeof roomSchema,
+			typeof controllerSchema,
+			typeof attackControllerEventSchema,
+			typeof reserveControllerEventSchema,
+			typeof upgradeControllerEventSchema,
+		];
+	}
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -91,4 +91,64 @@ describe('Controller', () => {
 			});
 		}));
 	});
+
+	describe('event log emissions', () => {
+
+		test('attackController emits EVENT_ATTACK_CONTROLLER with no data', () => hostileReservation(async ({ player, tick }) => {
+			await player('100', Game => {
+				Game.creeps.claimer.attackController(Game.rooms.W3N3.controller!);
+			});
+			await tick();
+			await player('100', Game => {
+				const log = Game.rooms.W3N3.getEventLog();
+				const event = log.find(entry => entry.event === C.EVENT_ATTACK_CONTROLLER);
+				assert.ok(event, 'expected EVENT_ATTACK_CONTROLLER');
+				assert.strictEqual(event.objectId, Game.creeps.claimer.id);
+				assert.ok(!('data' in event),
+					'EVENT_ATTACK_CONTROLLER must omit data field to match vanilla shape');
+			});
+		}));
+
+		test('reserveController emits EVENT_RESERVE_CONTROLLER with amount', () => ownReservation(async ({ player, tick }) => {
+			await player('100', Game => {
+				Game.creeps.claimer.reserveController(Game.rooms.W3N3.controller!);
+			});
+			await tick();
+			await player('100', Game => {
+				const log = Game.rooms.W3N3.getEventLog();
+				const event = log.find(entry => entry.event === C.EVENT_RESERVE_CONTROLLER);
+				assert.ok(event, 'expected EVENT_RESERVE_CONTROLLER');
+				assert.strictEqual(event.objectId, Game.creeps.claimer.id);
+				assert.strictEqual(event.data.amount, C.CONTROLLER_RESERVE);
+			});
+		}));
+
+		// Controller at (33,32); worker at (34,32) holds 50 energy and one WORK.
+		const upgradeSim = simulate({
+			W3N3: room => {
+				room['#user'] = '100';
+				room['#level'] = 1;
+				room.controller!['#user'] = '100';
+				room.controller!['#downgradeTime'] = 1000;
+				const worker = create(new RoomPosition(34, 32, 'W3N3'), [ C.WORK, C.CARRY ], 'worker', '100');
+				worker.store['#add'](C.RESOURCE_ENERGY, 50);
+				room['#insertObject'](worker);
+			},
+		});
+
+		test('upgradeController emits EVENT_UPGRADE_CONTROLLER with amount and energySpent', () => upgradeSim(async ({ player, tick }) => {
+			await player('100', Game => {
+				Game.creeps.worker.upgradeController(Game.rooms.W3N3.controller!);
+			});
+			await tick();
+			await player('100', Game => {
+				const log = Game.rooms.W3N3.getEventLog();
+				const event = log.find(entry => entry.event === C.EVENT_UPGRADE_CONTROLLER);
+				assert.ok(event, 'expected EVENT_UPGRADE_CONTROLLER');
+				assert.strictEqual(event.objectId, Game.creeps.worker.id);
+				assert.strictEqual(event.data.amount, C.UPGRADE_CONTROLLER_POWER);
+				assert.strictEqual(event.data.energySpent, C.UPGRADE_CONTROLLER_POWER);
+			});
+		}));
+	});
 });

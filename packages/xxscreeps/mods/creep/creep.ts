@@ -117,19 +117,12 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		game.creeps[this.name] = this;
 	}
 
-	override '#applyDamage'(power: number, type: number, source?: RoomObject) {
+	override '#applyDamage'(power: number, _type: number, source?: RoomObject) {
 		if (this.spawning) {
 			return;
 		}
 		this.tickRawDamage = (this.tickRawDamage ?? 0) + power;
 		if (source) {
-			appendEventLog(this.room, {
-				event: C.EVENT_ATTACK,
-				objectId: source.id,
-				targetId: this.id,
-				attackType: type,
-				damage: power,
-			});
 			saveAction(this, 'attacked', source.pos);
 		}
 	}

@@ -1,6 +1,8 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
+import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createSite } from './construction-site.js';
 
@@ -209,6 +211,94 @@ describe('Construction', () => {
 			});
 			await player('100', Game => {
 				assert.strictEqual(Object.values(Game.constructionSites).length, 0);
+			});
+		}));
+	});
+
+	describe('event log emissions', () => {
+		const buildSim = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				const builder = createCreep(new RoomPosition(25, 25, 'W1N1'), [ C.WORK, C.CARRY ], 'builder', '100');
+				builder.store['#add'](C.RESOURCE_ENERGY, 50);
+				room['#insertObject'](builder);
+				room['#insertObject'](createSite(new RoomPosition(26, 25, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road));
+			},
+		});
+
+		test('build emits EVENT_BUILD with amount and energySpent', () => buildSim(async ({ player, tick }) => {
+			await player('100', Game => {
+				const site = Object.values(Game.constructionSites)[0]!;
+				assert.strictEqual(Game.creeps.builder.build(site), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				const log = Game.rooms.W1N1.getEventLog();
+				const build = log.find(entry => entry.event === C.EVENT_BUILD);
+				assert.ok(build, 'expected EVENT_BUILD');
+				assert.strictEqual(build.objectId, Game.creeps.builder.id);
+				assert.strictEqual(build.data.amount, C.BUILD_POWER);
+				assert.strictEqual(build.data.energySpent, C.BUILD_POWER);
+			});
+		}));
+
+		const repairSim = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				const fixer = createCreep(new RoomPosition(25, 25, 'W1N1'), [ C.WORK, C.CARRY ], 'fixer', '100');
+				fixer.store['#add'](C.RESOURCE_ENERGY, 50);
+				room['#insertObject'](fixer);
+				const container = createContainer(new RoomPosition(26, 25, 'W1N1'));
+				container.hits = 100;
+				room['#insertObject'](container);
+			},
+		});
+
+		test('creep repair emits EVENT_REPAIR with amount and energySpent', () => repairSim(async ({ player, tick }) => {
+			await player('100', Game => {
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
+				assert.strictEqual(Game.creeps.fixer.repair(container), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				const log = Game.rooms.W1N1.getEventLog();
+				const repair = log.find(entry => entry.event === C.EVENT_REPAIR);
+				assert.ok(repair, 'expected EVENT_REPAIR');
+				assert.strictEqual(repair.objectId, Game.creeps.fixer.id);
+				assert.strictEqual(repair.data.amount, C.REPAIR_POWER);
+				assert.strictEqual(repair.data.energySpent, Math.ceil(C.REPAIR_COST));
+			});
+		}));
+
+		// Dismantle reaches structure death via #applyDamage so EVENT_OBJECT_DESTROYED
+		// fires from Structure's override; without that path the destroyed-event
+		// would be silently dropped on dismantle-kills.
+		const dismantleKill = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				const dismantler = createCreep(new RoomPosition(25, 25, 'W1N1'), [ C.WORK, C.MOVE ], 'dismantler', '100');
+				room['#insertObject'](dismantler);
+				const container = createContainer(new RoomPosition(26, 25, 'W1N1'));
+				container.hits = 10;
+				room['#insertObject'](container);
+			},
+		});
+
+		test('dismantle to death emits EVENT_OBJECT_DESTROYED with structureType', () => dismantleKill(async ({ player, tick }) => {
+			await player('100', Game => {
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
+				assert.strictEqual(Game.creeps.dismantler.dismantle(container), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				const log = Game.rooms.W1N1.getEventLog();
+				const destroyed = log.find(entry => entry.event === C.EVENT_OBJECT_DESTROYED);
+				assert.ok(destroyed, 'expected EVENT_OBJECT_DESTROYED for dismantled structure');
+				assert.ok(destroyed.data, 'expected nested data payload');
+				assert.strictEqual(destroyed.data.type, C.STRUCTURE_CONTAINER);
 			});
 		}));
 	});

@@ -13,6 +13,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
@@ -267,6 +268,13 @@ const intents = [
 		if (CreepLib.checkTransfer(creep, target, resourceType, amount) === C.OK) {
 			creep.store['#subtract'](resourceType, amount);
 			target.store['#add'](resourceType, amount);
+			appendEventLog(creep.room, {
+				event: C.EVENT_TRANSFER,
+				objectId: creep.id,
+				targetId: target.id,
+				resourceType,
+				amount,
+			});
 			context.didUpdate();
 		}
 	}),
@@ -276,6 +284,13 @@ const intents = [
 		if (CreepLib.checkWithdraw(creep, target, resourceType, amount) === C.OK) {
 			target.store['#subtract'](resourceType, amount);
 			creep.store['#add'](resourceType, amount);
+			appendEventLog(creep.room, {
+				event: C.EVENT_TRANSFER,
+				objectId: target.id,
+				targetId: creep.id,
+				resourceType,
+				amount,
+			});
 			context.didUpdate();
 		}
 	}),
@@ -354,6 +369,13 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 				return new RoomPosition(creep.pos.x, 0, generateRoomName(rx, ry + 1));
 			}
 		}();
+		appendEventLog(creep.room, {
+			event: C.EVENT_EXIT,
+			objectId: creep.id,
+			room: next.roomName,
+			x: next.x,
+			y: next.y,
+		});
 		creep.room['#removeObject'](creep);
 		// Update `creep.pos` for the import command but set it back so that `#flushObjects` can safely
 		// update the internal indices.

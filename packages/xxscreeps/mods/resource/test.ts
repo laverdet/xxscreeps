@@ -1,8 +1,11 @@
 import type { Store } from './store.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
 import { LabStore } from 'xxscreeps/mods/chemistry/store.js';
-import { assert, describe, reconstructor, test } from 'xxscreeps/test/index.js';
+import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { assert, describe, reconstructor, simulate, test } from 'xxscreeps/test/index.js';
 import { renderStore } from './backend.js';
+import { create as createContainer } from './container.js';
 import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store.js';
 
 const keys = (object: {}) => [ ...function*() {
@@ -139,4 +142,48 @@ describe('Store', () => {
 			assert.deepStrictEqual({ ...rendered.storeCapacityResource }, { [C.RESOURCE_ENERGY]: C.LAB_ENERGY_CAPACITY, [C.RESOURCE_HYDROXIDE]: C.LAB_MINERAL_CAPACITY });
 		});
 	});
+});
+
+describe('Container decay', () => {
+	const decaySim = simulate({
+		W1N1: room => {
+			room['#user'] = room.controller!['#user'] = '100';
+			// Owned creep keeps the room in the active processing queue so the
+			// container's tick processor is invoked.
+			room['#insertObject'](createCreep(
+				new RoomPosition(0, 0, 'W1N1'),
+				[ C.MOVE ], 'witness', '100',
+			));
+			const container = createContainer(new RoomPosition(25, 25, 'W1N1'));
+			container.hits = 1;
+			container.store['#add'](C.RESOURCE_ENERGY, 100);
+			container['#nextDecayTime'] = 1;
+			room['#insertObject'](container);
+		},
+	});
+
+	test('decayed container spills its store to the ground', () => decaySim(async ({ peekRoom, tick }) => {
+		await tick();
+		await peekRoom('W1N1', room => {
+			const containers = room.find(C.FIND_STRUCTURES)
+				.filter(structure => structure.structureType === C.STRUCTURE_CONTAINER);
+			assert.strictEqual(containers.length, 0, 'decayed container should be removed');
+			const dropped = room.find(C.FIND_DROPPED_RESOURCES)
+				.filter(resource => resource.pos.x === 25 && resource.pos.y === 25);
+			const energy = dropped.find(resource => resource.resourceType === C.RESOURCE_ENERGY);
+			assert.ok(energy, 'expected dropped energy at the decayed container position');
+			assert.strictEqual(energy.amount, 100);
+		});
+	}));
+
+	test('decayed container emits EVENT_OBJECT_DESTROYED with structureType', () => decaySim(async ({ peekRoom, tick }) => {
+		await tick();
+		await peekRoom('W1N1', room => {
+			const log = room.getEventLog();
+			const destroyed = log.find(entry => entry.event === C.EVENT_OBJECT_DESTROYED);
+			assert.ok(destroyed, 'expected EVENT_OBJECT_DESTROYED on container decay');
+			assert.ok(destroyed.data, 'expected nested data payload');
+			assert.strictEqual(destroyed.data.type, C.STRUCTURE_CONTAINER);
+		});
+	}));
 });

@@ -1,6 +1,7 @@
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { StructureContainer } from '../container.js';
 import { drop } from './resource.js';
 
@@ -12,6 +13,11 @@ registerObjectTickProcessor(StructureContainer, (container, context) => {
 			for (const [ resourceType, amount ] of container.store['#entries']()) {
 				drop(container.pos, resourceType, amount);
 			}
+			appendEventLog(container.room, {
+				event: C.EVENT_OBJECT_DESTROYED,
+				objectId: container.id,
+				type: container.structureType,
+			});
 			container.room['#removeObject'](container);
 		}
 		container['#nextDecayTime'] = Game.time + (ownedController

@@ -36,9 +36,14 @@ const siteSchema = registerVariant('Room.objects', ConstructionSite.format);
 const buildEventSchema = registerVariant('Room.eventLog', struct({
 	...variant(C.EVENT_BUILD),
 	event: constant(C.EVENT_BUILD),
+	objectId: Id.format,
 	targetId: Id.format,
 	amount: 'int32',
 	energySpent: 'int32',
+	structureType: 'string',
+	x: 'int8',
+	y: 'int8',
+	incomplete: 'bool',
 }));
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const repairEventSchema = registerVariant('Room.eventLog', struct({
