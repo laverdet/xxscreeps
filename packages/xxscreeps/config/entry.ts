@@ -68,6 +68,9 @@ if (missingFlags.length) {
 	process.argv.splice(1, 1);
 	const specifier = process.argv[1];
 
+	// Load mods (regenerates mods.static)
+	await import('./mods/index.js');
+
 	if (specifier) {
 		const commands: Record<string, string | undefined> = {
 			import: './dist/scripts/scrape-world.js',
