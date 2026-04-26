@@ -1,4 +1,5 @@
-import type { LooseBoolean, Union } from './types.js';
+import type { Effect, LooseBoolean, Union } from './types.js';
+import { mustNotReject } from './async.js';
 
 // Wrapper around Object.assign that enforces assigned types already exist
 export function assign<
@@ -29,6 +30,18 @@ export function bifurcate(iterator: Iterable<any>, callback: (value: any) => Loo
 // Clamps a number to a given range
 export function clamp(min: number, max: number, value: number) {
 	return Math.max(min, Math.min(max, value));
+}
+
+// Convert a Disposable to a plain 'Effect'
+export function disposableToEffect(disposable: Disposable) {
+	const dispose = disposable[Symbol.dispose];
+	return () => dispose.call(disposable);
+}
+
+// Convert an AsyncDisposable to a plain `Effect` (which must not reject)
+export function asyncDisposableToEffect(disposable: AsyncDisposable): Effect {
+	const dispose = disposable[Symbol.asyncDispose];
+	return () => mustNotReject(dispose.call(disposable));
 }
 
 // Replace a value on an object with a new one, and returns the old one.

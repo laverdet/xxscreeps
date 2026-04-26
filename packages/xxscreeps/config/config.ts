@@ -174,13 +174,21 @@ export type Schema = {
 	database?: {
 		/**
 		 * Persistent storage provider URI
-		 * @default ./screeps/db
+		 * @default ./screeps/db?socket=.db
 		 */
 		data: string;
 
 		/**
+		 * Path used for local process lock. Note that the 'file:' database providers also each acquire
+		 * their own lock on the data store. This is mainly used to coordinate inter-process
+		 * communication. You can set this to `null` while using the redis provider.
+		 * @default ./screeps/.lock
+		 */
+		lock?: string | null;
+
+		/**
 		 * Pubsub storage provider URI
-		 * @default local://db
+		 * @default local://db?socket=./screeps/.db.pubsub
 		 */
 		pubsub: string;
 
@@ -195,9 +203,9 @@ export type Schema = {
 	 * Configuration for shard-specific storage
 	 * @default `[ {
 	 *   name: 'shard0',
-	 *   data: './screeps/shard0',
-	 *   pubsub: 'local://shard0',
-	 *   scratch: 'local://shard0',
+	 *   data: './screeps/shard0?socket=.shard0.db',
+	 *   pubsub: 'local://shard0?socket=./screeps/.shard0.pubsub',
+	 *   scratch: 'local://shard0?socket=./screeps/.shard0.scratch',
 	 * } ]`
 	 */
 	shards?: {
@@ -250,15 +258,16 @@ export const defaults = {
 	},
 	schemaArchive: './screeps/archive',
 	database: {
-		data: './screeps/db',
-		pubsub: 'local://db',
+		data: './screeps/db?socket=.db',
+		lock: './screeps/.lock',
+		pubsub: 'local://db?socket=./screeps/.db.pubsub',
 		saveInterval: 2,
 	},
 	shards: [ {
 		name: 'shard0',
-		data: './screeps/shard0',
-		pubsub: 'local://shard0',
-		scratch: 'local://shard0',
+		data: './screeps/shard0?socket=.shard0.db',
+		pubsub: 'local://shard0?socket=./screeps/.shard0.pubsub',
+		scratch: 'local://shard0?socket=./screeps/.shard0.scratch',
 	} ],
 };
 

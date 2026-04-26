@@ -4,8 +4,11 @@ import { pathToFileURL } from 'node:url';
 import { isMainThread, workerData } from 'node:worker_threads';
 import jsYaml from 'js-yaml';
 
-export const isTopThread: boolean = isMainThread || workerData?.isTopThread;
+// "Top thread" is either the main nodejs process, or the worker thread spawned by 'entry.ts'
+// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+export const isTopThread: boolean = isMainThread || Boolean(workerData?.isTopThread);
 
+// Load configuration
 export const configPath = new URL('.screepsrc.yaml', `${pathToFileURL(process.cwd())}/`);
 const content = await async function() {
 	try {
@@ -13,13 +16,13 @@ const content = await async function() {
 	} catch {}
 }();
 const config = function(): Schema {
-	if (content) {
-		return jsYaml.load(content) as Schema;
-	} else {
+	if (content === undefined) {
 		if (isTopThread) {
 			console.warn('`.screepsrc.yaml` not found; using default configuration');
 		}
 		return {};
+	} else {
+		return jsYaml.load(content) as Schema;
 	}
 }();
 export default config;

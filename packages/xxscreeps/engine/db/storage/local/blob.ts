@@ -1,11 +1,12 @@
-import type * as P from 'xxscreeps/engine/db/storage/provider.js';
+import type * as Storage from 'xxscreeps/engine/db/storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import * as fsSync from 'node:fs';
+import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as Path from 'node:path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { listen, spread } from 'xxscreeps/utility/async.js';
+import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
 
 export class BlobStorage {
 	private readonly cache = new Map<string, {
@@ -14,86 +15,39 @@ export class BlobStorage {
 	}>();
 
 	private saveId = 0;
+	private readonly lock;
 	private readonly knownPaths = new Set<string>();
 	private readonly path;
 
-	constructor(path: string | null) {
+	constructor(path: string | null, lock: FileSystemLock | undefined) {
 		this.path = path;
+		this.lock = lock;
 	}
 
 	static async create(url: URL): Promise<[ Effect, BlobStorage ]> {
 		if (url.protocol === 'file:') {
+			// Ensure directory exists
+			assert.ok(url.pathname.endsWith('/'));
 			const path = fileURLToPath(url);
-			await BlobStorage.initializeDirectory(path);
-			const host = new BlobStorage(path);
-			const unlisten = () => listen(process, 'exit', () => host.checkMissingFlush());
-			return [
-				() => {
-					unlisten();
-					host.checkMissingFlush();
-					fsSync.unlinkSync(Path.join(path, '.lock'));
-				},
-				host,
-			];
+			await fs.mkdir(path, { recursive: true });
+
+			// Acquire lock
+			const disposable = new DisposableStack();
+			const lock = disposable.use(await FileSystemLock.acquire(new URL('.lock', url)));
+
+			// Watch for missing `save`
+			disposable.defer(listen(process, 'exit', () => host.checkMissingFlush()));
+			disposable.defer(() => host.checkMissingFlush());
+
+			// Return effect & blob provider
+			const host = new BlobStorage(path, lock);
+			return [ () => disposable.dispose(), host ];
 		} else {
-			return [ () => {}, new BlobStorage(null) ];
+			return [ () => {}, new BlobStorage(null, undefined) ];
 		}
 	}
 
-	private static async initializeDirectory(path: string) {
-		// Ensure directory exists, or make it
-		await fs.mkdir(path, { recursive: true });
-
-		// Lock file maker
-		const lockFile = Path.join(path, '.lock');
-		const tryLock = async () => {
-			const file = await fs.open(lockFile, 'wx');
-			await file.write(`${process.pid}`);
-			await file.close();
-		};
-
-		await (async () => {
-			// Try lock
-			try {
-				await tryLock();
-				return;
-			} catch {}
-
-			// On failure get locked pid
-			const pid = await async function() {
-				try {
-					return JSON.parse(await fs.readFile(lockFile, 'utf8'));
-				} catch {
-					// Lock format unrecognized
-				}
-			}();
-
-			// See if process still exists. On Docker the pid will probably always be the same, so just
-			// ignore it in this case.
-			if (pid !== undefined && pid !== process.pid) {
-				const exists = function() {
-					try {
-						process.kill(pid, 0); // does *not* kill the process, just tries to send a signal
-						return true;
-					} catch {
-						return false;
-					}
-				}();
-				if (exists) {
-					throw new Error(`pid ${pid} has locked ${path}`);
-				}
-			}
-
-			// The lock is dead and can be removed
-			// nb: This unlink is definitely a race condition
-			await fs.unlink(lockFile);
-
-			// Try once more
-			await tryLock();
-		})();
-	}
-
-	async copy(from: string, to: string, options?: P.Copy) {
+	async copy(from: string, to: string, options?: Storage.Copy) {
 		this.check(to);
 		const value = await this.get(from);
 		if (options?.if === 'nx' && await this.get(to)) {
@@ -190,7 +144,7 @@ export class BlobStorage {
 		return value;
 	}
 
-	set(key: string, value: Readonly<Uint8Array>, options?: P.Set) {
+	set(key: string, value: Readonly<Uint8Array>, options?: Storage.Set) {
 		this.check(key);
 		this.cache.set(key, {
 			saveId: this.saveId,
@@ -211,7 +165,8 @@ export class BlobStorage {
 		this.knownPaths.clear();
 		if (this.path !== null) {
 			await fs.rm(this.path, { recursive: true });
-			await BlobStorage.initializeDirectory(this.path);
+			await fs.mkdir(this.path);
+			await this.lock?.replace();
 		}
 	}
 
@@ -231,7 +186,8 @@ export class BlobStorage {
 				if (!this.knownPaths.has(dirname)) {
 					try {
 						await fs.mkdir(dirname, { recursive: true });
-					} catch (err: any) {
+					} catch (err: unknown) {
+						// @ts-expect-error
 						if (err.code !== 'EEXIST') {
 							throw err;
 						}
