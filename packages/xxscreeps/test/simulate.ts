@@ -13,6 +13,7 @@ import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
+import { RawMemory, initialize as initializeMemory } from 'xxscreeps/mods/memory/memory.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
@@ -70,6 +71,13 @@ type Simulation = {
 export function simulate(rooms: Record<string, (room: Room) => void>) {
 	return async (body: (refs: Simulation) => Promise<void>) => {
 
+		// Reset module-level Memory state between simulations. The `json` / `string`
+		// caches and `RawMemory._parsed` are module-scoped in `mods/memory/memory.ts`
+		// and would otherwise carry over from the previous test's `runForUser`
+		// invocations. Each `simulate(...)` body is a logically isolated test, so
+		// match that boundary.
+		initializeMemory(null);
+		RawMemory._parsed = undefined;
 		const { db, shard, world } = await instantiateTestShard();
 		try {
 			// Initialize world
