@@ -9,7 +9,7 @@ import * as Async from 'xxscreeps/utility/async.js';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
 import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { tickSpeed, watch } from './tick.js';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+import { checkIsEntry, getServiceChannel } from './index.js';
 
 checkIsEntry();
 
@@ -23,17 +23,21 @@ const [ gameMutex, serviceChannel ] = await Promise.all([
 	getServiceChannel(shard).subscribe(),
 ]);
 
-// Interrupt handler
+// Shutdown is published on the service channel (by the launcher's SIGINT
+// handler or by an admin-CLI command running in a sibling process). Listening
+// here lets main exit cleanly regardless of where the publish came from.
 let halted = false as boolean;
 let halt: Effect | undefined;
 let tickDelay: Deferred<boolean> | undefined;
-handleInterrupt(() => {
-	console.log('Shutting down...');
+const stop = () => {
 	halted = true;
 	halt?.();
 	tickDelay?.resolve(false);
-	serviceChannel.publish({ type: 'shutdown' });
-	unwatch?.();
+};
+const shutdownEffect = serviceChannel.listen(message => {
+	if (message.type === 'shutdown' && !halted) {
+		stop();
+	}
 });
 
 // Configure .screepsrc.yaml watcher to update tick speed immediately
@@ -61,19 +65,30 @@ try {
 	const processorMessages = serviceChannel.iterable();
 	await serviceChannel.publish({ type: 'mainConnected' });
 	for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
-		if (
+		if (message.type === 'shutdown') {
+			halted = true;
+			break;
+		} else if (
 			message.type === 'processorInitialized' &&
 			await shard.scratch.zcard(activeRoomsKey) === rooms.length
 		) {
 			break;
 		}
 	}
-	await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
+	if (!halted) {
+		await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
+	}
 
 	// Game loop
 	while (!halted) {
 		let timeStartedLoop!: number;
+		let tickCompleted = false;
 		await gameMutex.scope(async () => {
+			// Shutdown can land while we're blocked acquiring the mutex (e.g. an
+			// admin-CLI command holds it to mutate state, then publishes shutdown
+			// before releasing). Running a tick body against the post-mutation
+			// state would corrupt shard.time and stall on the abandon timeout.
+			if (halted) return;
 			timeStartedLoop = Date.now();
 			performanceTimer.start();
 
@@ -86,7 +101,8 @@ try {
 			]);
 			await runnerChannel.publish({ type: 'run', time });
 
-			// Wait for tick to finish
+			// Wait for tick to finish. `breakable` so a mid-tick shutdown
+			// interrupts the wait instead of burning the full intentAbandonTimeout.
 			{
 				// eslint-disable-next-line @typescript-eslint/no-unused-vars
 				using timeout = acquireTimeout(
@@ -97,16 +113,21 @@ try {
 							console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
 						}
 					}));
-				for await (const message of serviceMessages) {
+				for await (const message of Async.breakable(serviceMessages, breaker => halt = breaker)) {
 					if (message.type === 'processorInitialized') {
 						await processorChannel.publish({ type: 'process', time });
 					} else if (message.type === 'runnerConnected') {
 						await runnerChannel.publish({ type: 'run', time });
 					} else if (message.type === 'tickFinished') {
+						tickCompleted = true;
 						break;
 					}
 				}
 			}
+
+			// Shutdown (not tickFinished) broke the loop — skip the state update
+			// so shard.time doesn't advance past unrun work.
+			if (!tickCompleted) return;
 
 			// Update game state
 			await shard.data.set('time', time);
@@ -158,6 +179,9 @@ try {
 
 } finally {
 	// Clean up
+	shutdownEffect();
+	stop();
+	unwatch?.();
 	await gameMutex.disconnect();
 	await serviceChannel.publish({ type: 'mainDisconnected' });
 	serviceChannel.disconnect();
