@@ -123,8 +123,7 @@ const intents = [
 	registerIntentProcessor(StructureSpawn, 'recycleCreep', {}, (spawn, context, id: string) => {
 		const creep = Game.getObjectById<Creep>(id)!;
 		if (checkRecycleCreep(spawn, creep) === C.OK) {
-			// TODO: This stuff
-			creep.hits = 0;
+			buryCreep(creep, 1);
 			context.didUpdate();
 		}
 	}),
