@@ -452,8 +452,7 @@ export function calculateCarry(body: Creep['body']) {
 const activePartPredicate: Predicate<Creep['body'][number]> = part => part.hits > 0;
 
 export function iterateActiveParts(body: Creep['body']) {
-	// Parts die from right to left so you can halt iteration at the first dead part
-	return Fn.takeWhile(body, activePartPredicate);
+	return Fn.filter(body, activePartPredicate);
 }
 
 registerObstacleChecker(params => {
