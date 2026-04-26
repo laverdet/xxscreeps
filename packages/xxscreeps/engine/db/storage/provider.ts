@@ -46,6 +46,7 @@ export type KeyValProvider = {
 	incr: (key: string) => Promise<number>;
 	incrBy: (key: string, value: number) => Promise<number>;
 	// hashes
+	hdel: (key: string, fields: string[]) => Promise<number>;
 	hget: (key: string, field: string) => Promise<string | null>;
 	hgetall: (key: string) => Promise<Record<string, string>>;
 	hincrBy: (key: string, field: string, value: number) => Promise<number>;

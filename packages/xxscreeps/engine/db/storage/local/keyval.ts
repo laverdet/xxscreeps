@@ -184,6 +184,14 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return value;
 	}
 
+	hdel(key: string, fields: string[]) {
+		const map = this.data.get(key) as Map<string, string> | undefined;
+		if (!map) return 0;
+		const removed = Fn.accumulate(fields, field => map.delete(field) ? 1 : 0);
+		if (map.size === 0) this.remove(key);
+		return removed;
+	}
+
 	hget(key: string, field: string) {
 		const map: Map<string, string> | undefined = this.data.get(key);
 		return map?.get(field) ?? null;

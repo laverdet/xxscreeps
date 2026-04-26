@@ -114,6 +114,10 @@ export class RedisProvider implements P.KeyValProvider {
 
 	//
 	// hashes
+	async hdel(key: string, fields: string[]) {
+		return this.redis.invoke<number>(cb => this.redis.batch(key).hdel(key, fields, cb));
+	}
+
 	async hget(key: string, field: string) {
 		return send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).hget(key, field, cb)));
 	}
