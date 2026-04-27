@@ -22,7 +22,7 @@ import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
-import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
@@ -551,7 +551,6 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 }
 
 function checkInteractionBlocked(creep: Creep, target: Structure & WithStore) {
-	if (!(target instanceof OwnedStructure) || target.my) return C.OK;
 	const user = creep['#user'];
 	const blocked = target.room.lookForAt(C.LOOK_STRUCTURES, target.pos)
 		.some(structure => structure['#doesPreventInteraction'](user));
