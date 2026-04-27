@@ -20,9 +20,6 @@ const shape = struct(structureFormat, {
 });
 
 export class StructurePortal extends withOverlay(Structure, shape) {
-	override get structureType() { return C.STRUCTURE_PORTAL; }
-	override get '#lookType'() { return C.LOOK_STRUCTURES; }
-
 	@enumerable get destination(): RoomPosition | { shard: string; room: string } {
 		if (this['#destShard'] !== '') {
 			return { shard: this['#destShard'], room: this['#destRoom'] };
@@ -36,6 +33,9 @@ export class StructurePortal extends withOverlay(Structure, shape) {
 		return Math.max(0, decayTime - Game.time);
 	}
 
+	override get structureType() { return C.STRUCTURE_PORTAL; }
+	override get '#lookType'() { return C.LOOK_STRUCTURES; }
+
 	override '#checkObstacle'() {
 		return false;
 	}
@@ -43,16 +43,16 @@ export class StructurePortal extends withOverlay(Structure, shape) {
 
 export function create(pos: RoomPosition, destination: Destination, decayTime = 0) {
 	const portal = RoomObject.create(new StructurePortal(), pos);
-	if (destination.shard !== undefined) {
-		portal['#destShard'] = destination.shard;
-		portal['#destRoom'] = destination.room;
-		portal['#destX'] = 0;
-		portal['#destY'] = 0;
-	} else {
+	if (destination.shard === undefined) {
 		portal['#destShard'] = '';
 		portal['#destRoom'] = destination.room;
 		portal['#destX'] = destination.x;
 		portal['#destY'] = destination.y;
+	} else {
+		portal['#destShard'] = destination.shard;
+		portal['#destRoom'] = destination.room;
+		portal['#destX'] = 0;
+		portal['#destY'] = 0;
 	}
 	portal['#decayTime'] = decayTime;
 	return portal;

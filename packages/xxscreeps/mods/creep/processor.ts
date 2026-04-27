@@ -367,7 +367,9 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 // across rooms (e.g. portals). The creep is removed from its current room and an import-payload
 // intent is queued for the destination room.
 export function teleportCreep(creep: Creep, next: RoomPosition, context: ProcessorContext) {
-	creep.room['#removeObject'](creep);
+	if (!creep.room['#removeObject'](creep)) {
+		return;
+	}
 	// Update `creep.pos` for the import command but set it back so that `#flushObjects` can safely
 	// update the internal indices.
 	const oldPos = creep.pos;

@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { RoomObject } from 'xxscreeps/game/object.js';
+import type { Destination } from 'xxscreeps/mods/portal/portal.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { Store } from 'xxscreeps/mods/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
@@ -32,6 +33,7 @@ import { StructureWall } from 'xxscreeps/mods/defense/wall.js';
 import { saveMemoryBlob } from 'xxscreeps/mods/memory/model.js';
 import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
+import { StructurePortal } from 'xxscreeps/mods/portal/portal.js';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store.js';
 import { StructureRoad } from 'xxscreeps/mods/road/road.js';
 import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair.js';
@@ -75,6 +77,35 @@ function withStore(from: any, into: { store: Store }) {
 	for (const type in from.store) {
 		into.store['#add'](type as ResourceType, from.store[type]);
 	}
+}
+
+function getPortalDestination(object: any): Destination | undefined {
+	const rawDestination = object.destination as unknown;
+	const destination = rawDestination !== null && typeof rawDestination === 'object'
+		? rawDestination as Record<string, unknown>
+		: {};
+	const shard = destination.shard ?? object.destShard as unknown;
+	const room = destination.room ?? object.destRoom as unknown;
+	if (typeof shard === 'string' && typeof room === 'string') {
+		return { shard, room };
+	}
+	const xx = destination.x ?? object.destX as unknown;
+	const yy = destination.y ?? object.destY as unknown;
+	if (typeof room === 'string' && typeof xx === 'number' && typeof yy === 'number') {
+		return { room, x: xx, y: yy };
+	}
+}
+
+function getPortalDecayTime(object: any): number {
+	const decayTime = object.decayTime as unknown;
+	if (typeof decayTime === 'number') {
+		return decayTime;
+	}
+	const ticksToDecay = object.ticksToDecay as unknown;
+	if (typeof ticksToDecay === 'number') {
+		return gameTime + ticksToDecay;
+	}
+	return 0;
 }
 
 // Create .screepsrc.yaml
@@ -130,7 +161,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 	const preamble = schema === undefined ? '' : `# yaml-language-server: $schema=${schema}\n`;
 	const defaultConfig: any = {};
 	for (const modConfig of Configs) {
-		merge(defaultConfig, modConfig.configDefaults ?? {});
+		merge(defaultConfig, modConfig.configDefaults);
 	}
 	defaultConfig.mods = [ ...mods ];
 	await fs.writeFile(configPath, preamble + jsYaml.dump(defaultConfig));
@@ -258,6 +289,28 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 				return mineral;
 			}
 
+			case 'portal': {
+				const destination = getPortalDestination(object);
+				if (destination === undefined) {
+					return;
+				}
+				const portal = new StructurePortal();
+				withStructure(object, portal);
+				if (destination.shard === undefined) {
+					portal['#destShard'] = '';
+					portal['#destRoom'] = destination.room;
+					portal['#destX'] = destination.x;
+					portal['#destY'] = destination.y;
+				} else {
+					portal['#destShard'] = destination.shard;
+					portal['#destRoom'] = destination.room;
+					portal['#destX'] = 0;
+					portal['#destY'] = 0;
+				}
+				portal['#decayTime'] = getPortalDecayTime(object);
+				return portal;
+			}
+
 			case 'rampart': {
 				const rampart = new StructureRampart();
 				withStructure(object, rampart);
@@ -334,7 +387,7 @@ if (!shardOnly) {
 	// Save user code content
 	const overwriteModules = new Map<string, string>();
 	const codePath = argv['overwrite-code'];
-	if (codePath) {
+	if (codePath !== undefined) {
 		const names = await fs.readdir(codePath);
 		const files = await Promise.all(names.map(async name => {
 			const data = await fs.readFile(path.join(codePath, name), 'utf8');

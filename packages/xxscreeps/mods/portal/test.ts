@@ -1,14 +1,17 @@
+import type { Room } from 'xxscreeps/game/room/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { StructurePortal, create } from './portal.js';
+import { StructurePortal, create as createPortal } from './portal.js';
 
-const findPortal = (room: any) =>
-	room['#objects'].find((object: any) => object instanceof StructurePortal) as StructurePortal | undefined;
+const findPortal = (room: Room) =>
+	room.find(C.FIND_STRUCTURES).find(object => object instanceof StructurePortal);
 
 describe('Portal', () => {
 	test('decaying portal exposes positive ticksToDecay', () => simulate({
 		W1N1: room => {
-			room['#insertObject'](create(
+			room['#insertObject'](createPortal(
 				new RoomPosition(25, 25, 'W1N1'),
 				{ room: 'W2N2', x: 30, y: 30 },
 				/* decayTime */ 100,
@@ -18,7 +21,7 @@ describe('Portal', () => {
 		await peekRoom('W1N1', (room, game) => {
 			const portal = findPortal(room);
 			assert.ok(portal, 'portal should exist');
-			const ttd = portal!.ticksToDecay;
+			const ttd = portal.ticksToDecay;
 			assert.ok(typeof ttd === 'number' && ttd > 0 && ttd <= 100,
 				`ticksToDecay should count down from #decayTime; got ${ttd}`);
 			assert.strictEqual(ttd, 100 - game.time);
@@ -27,7 +30,7 @@ describe('Portal', () => {
 
 	test('permanent portal has undefined ticksToDecay', () => simulate({
 		W1N1: room => {
-			room['#insertObject'](create(
+			room['#insertObject'](createPortal(
 				new RoomPosition(25, 25, 'W1N1'),
 				{ room: 'W2N2', x: 30, y: 30 },
 				/* decayTime */ 0,
@@ -37,13 +40,13 @@ describe('Portal', () => {
 		await peekRoom('W1N1', room => {
 			const portal = findPortal(room);
 			assert.ok(portal, 'permanent portal should exist');
-			assert.strictEqual(portal!.ticksToDecay, undefined);
+			assert.strictEqual(portal.ticksToDecay, undefined);
 		});
 	}));
 
 	test('same-shard destination is a RoomPosition with x/y/roomName', () => simulate({
 		W1N1: room => {
-			room['#insertObject'](create(
+			room['#insertObject'](createPortal(
 				new RoomPosition(25, 25, 'W1N1'),
 				{ room: 'W3N3', x: 17, y: 23 },
 			));
@@ -51,7 +54,9 @@ describe('Portal', () => {
 	})(async ({ peekRoom }) => {
 		await peekRoom('W1N1', room => {
 			const portal = findPortal(room);
-			const dest = portal!.destination as RoomPosition;
+			assert.ok(portal, 'portal should exist');
+			const dest = portal.destination;
+			assert.ok(dest instanceof RoomPosition);
 			assert.strictEqual(dest.roomName, 'W3N3');
 			assert.strictEqual(dest.x, 17);
 			assert.strictEqual(dest.y, 23);
@@ -60,7 +65,7 @@ describe('Portal', () => {
 
 	test('cross-shard destination is { shard, room }', () => simulate({
 		W1N1: room => {
-			room['#insertObject'](create(
+			room['#insertObject'](createPortal(
 				new RoomPosition(25, 25, 'W1N1'),
 				{ shard: 'shard1', room: 'W5N5' },
 			));
@@ -68,9 +73,40 @@ describe('Portal', () => {
 	})(async ({ peekRoom }) => {
 		await peekRoom('W1N1', room => {
 			const portal = findPortal(room);
-			const dest = portal!.destination as { shard: string; room: string };
-			assert.strictEqual(dest.shard, 'shard1');
-			assert.strictEqual(dest.room, 'W5N5');
+			assert.ok(portal, 'portal should exist');
+			assert.deepStrictEqual(portal.destination, { shard: 'shard1', room: 'W5N5' });
+		});
+	}));
+
+	test('overlapping portals only import a creep once', () => simulate({
+		W1N1: room => {
+			room['#insertObject'](createPortal(
+				new RoomPosition(25, 25, 'W1N1'),
+				{ room: 'W2N2', x: 20, y: 20 },
+			));
+			room['#insertObject'](createPortal(
+				new RoomPosition(25, 25, 'W1N1'),
+				{ room: 'W2N2', x: 21, y: 21 },
+			));
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 25, 'W1N1'),
+				[ C.MOVE ],
+				'traveler',
+				'100',
+			));
+		},
+	})(async ({ peekRoom, tick }) => {
+		await tick();
+		await peekRoom('W2N2', room => {
+			const creeps = room.find(C.FIND_CREEPS).filter(creep => creep.name === 'traveler');
+			assert.strictEqual(creeps.length, 1);
+			assert.ok(creeps[0].pos.isEqualTo(20, 20));
+		});
+		await peekRoom('W1N1', room => {
+			assert.strictEqual(
+				room.find(C.FIND_CREEPS).some(creep => creep.name === 'traveler'),
+				false,
+			);
 		});
 	}));
 });
