@@ -29,6 +29,7 @@ describe('Link', () => {
 			const transfer = log.find(event => event.event === C.EVENT_TRANSFER);
 			assert.ok(transfer, 'expected EVENT_TRANSFER from link transfer');
 			assert.strictEqual(transfer.objectId, sender.id);
+			assert.ok(transfer.data, 'expected nested data payload');
 			assert.strictEqual(transfer.data.targetId, receiver.id);
 			assert.strictEqual(transfer.data.resourceType, C.RESOURCE_ENERGY);
 			assert.strictEqual(transfer.data.amount, 400);

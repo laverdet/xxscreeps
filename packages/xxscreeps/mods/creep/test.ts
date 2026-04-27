@@ -532,6 +532,7 @@ describe('Event log events', () => {
 				const log = room.getEventLog();
 				const destroyed = log.find(event => event.event === C.EVENT_OBJECT_DESTROYED);
 				assert.ok(destroyed, 'expected a death event on the tick the creep aged out');
+				assert.ok(destroyed.data, 'expected nested data payload');
 				assert.strictEqual(destroyed.data.type, 'creep');
 			});
 		}));
@@ -563,6 +564,7 @@ describe('Event log events', () => {
 				const transfer = log.find(event => event.event === C.EVENT_TRANSFER);
 				assert.ok(transfer, 'expected EVENT_TRANSFER');
 				assert.strictEqual(transfer.objectId, Game.creeps.giver.id);
+				assert.ok(transfer.data, 'expected nested data payload');
 				assert.strictEqual(transfer.data.targetId, Game.creeps.receiver.id);
 				assert.strictEqual(transfer.data.resourceType, C.RESOURCE_ENERGY);
 				assert.strictEqual(transfer.data.amount, 5);
@@ -595,6 +597,7 @@ describe('Event log events', () => {
 				const transfer = log.find(event => event.event === C.EVENT_TRANSFER);
 				assert.ok(transfer, 'expected EVENT_TRANSFER');
 				assert.strictEqual(transfer.objectId, container.id);
+				assert.ok(transfer.data, 'expected nested data payload');
 				assert.strictEqual(transfer.data.targetId, Game.creeps.taker.id);
 				assert.strictEqual(transfer.data.resourceType, C.RESOURCE_ENERGY);
 				assert.strictEqual(transfer.data.amount, 7);

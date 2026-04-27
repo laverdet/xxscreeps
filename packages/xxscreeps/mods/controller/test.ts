@@ -119,6 +119,7 @@ describe('Controller', () => {
 				const event = log.find(entry => entry.event === C.EVENT_RESERVE_CONTROLLER);
 				assert.ok(event, 'expected EVENT_RESERVE_CONTROLLER');
 				assert.strictEqual(event.objectId, Game.creeps.claimer.id);
+				assert.ok(event.data, 'expected nested data payload');
 				assert.strictEqual(event.data.amount, C.CONTROLLER_RESERVE);
 			});
 		}));
@@ -146,6 +147,7 @@ describe('Controller', () => {
 				const event = log.find(entry => entry.event === C.EVENT_UPGRADE_CONTROLLER);
 				assert.ok(event, 'expected EVENT_UPGRADE_CONTROLLER');
 				assert.strictEqual(event.objectId, Game.creeps.worker.id);
+				assert.ok(event.data, 'expected nested data payload');
 				assert.strictEqual(event.data.amount, C.UPGRADE_CONTROLLER_POWER);
 				assert.strictEqual(event.data.energySpent, C.UPGRADE_CONTROLLER_POWER);
 			});

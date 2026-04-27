@@ -238,6 +238,7 @@ describe('Construction', () => {
 				const build = log.find(entry => entry.event === C.EVENT_BUILD);
 				assert.ok(build, 'expected EVENT_BUILD');
 				assert.strictEqual(build.objectId, Game.creeps.builder.id);
+				assert.ok(build.data, 'expected nested data payload');
 				assert.strictEqual(build.data.amount, C.BUILD_POWER);
 				assert.strictEqual(build.data.energySpent, C.BUILD_POWER);
 			});
@@ -267,6 +268,7 @@ describe('Construction', () => {
 				const repair = log.find(entry => entry.event === C.EVENT_REPAIR);
 				assert.ok(repair, 'expected EVENT_REPAIR');
 				assert.strictEqual(repair.objectId, Game.creeps.fixer.id);
+				assert.ok(repair.data, 'expected nested data payload');
 				assert.strictEqual(repair.data.amount, C.REPAIR_POWER);
 				assert.strictEqual(repair.data.energySpent, Math.ceil(C.REPAIR_COST));
 			});
