@@ -145,14 +145,14 @@ const env = loki.getCollection('env').findOne().data;
 const gameTime: number = env.gameTime - 1;
 
 // Initialize and connect to database & shard
-const db = await Database.connect();
+using db = await Database.connect();
 if (dontOverwrite && await db.data.scard('users') > 0) {
 	console.log('Found existing data, exiting');
 	process.exit(0);
 }
 {
 	// Flush databases at the same time because they may point to the same service
-	const shard = await Shard.connect(db, 'shard0');
+	using shard = await Shard.connect(db, 'shard0');
 	await Promise.all([
 		shardOnly ? undefined : db.data.flushdb(),
 		shard.data.flushdb(),
@@ -163,9 +163,8 @@ if (dontOverwrite && await db.data.scard('users') > 0) {
 		shardOnly ? undefined : db.data.save(),
 		shard.data.save(),
 	]);
-	shard.disconnect();
 }
-const shard = await Shard.connect(db, 'shard0');
+using shard = await Shard.connect(db, 'shard0');
 const { data } = shard;
 
 // Save terrain data
@@ -354,7 +353,4 @@ if (!shardOnly) {
 }
 
 // Finish up
-await db.save();
-await shard.save();
-db.disconnect();
-shard.disconnect();
+await Promise.all([ db.save(), shard.save() ]);

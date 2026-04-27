@@ -12,59 +12,52 @@ const argv = checkArguments({
 });
 
 // Connect to shard
-const db = await Database.connect();
-const shard = await Shard.connect(db, 'shard0');
+using db = await Database.connect();
+using shard = await Shard.connect(db, 'shard0');
 
-try {
-
-	// Attach console for given user
-	if (argv['attach-console']) {
-		const id = await User.findUserByName(db, argv['attach-console']);
-		if (!id) {
-			throw new Error(`User: ${argv['attach-console']} not found`);
-		}
-		const channel = await getConsoleChannel(shard, id).subscribe();
-		channel.listen(message => {
-			for (const line of JSON.parse(message)) {
-				if (line.fd !== 2) {
-					console.log(line.data);
-				} else {
-					console.error(line.data);
-				}
-			}
-		});
+// Attach console for given user
+if (argv['attach-console']) {
+	const id = await User.findUserByName(db, argv['attach-console']);
+	if (!id) {
+		throw new Error(`User: ${argv['attach-console']} not found`);
 	}
-
-	// Start main service
-	const [ , waitForMain ] = getServiceChannel(shard).listenFor(message => message.type === 'mainConnected');
-	const main = import('./main.js');
-	await Promise.race([ main, waitForMain ]);
-
-	// Start workers
-	const singleThreaded = config.launcher?.singleThreaded;
-	const { services, backend } = await async function() {
-		if (singleThreaded) {
-			const backend = argv['no-backend'] ? undefined : import('xxscreeps/backend/server.js');
-			const processor = argv['no-processor'] ? undefined : import('./processor.js');
-			const runner = argv['no-runner'] ? undefined : import('./runner.js');
-			const services = Promise.all([ main, processor, runner ]);
-			return { services, backend };
-		} else {
-			const [ backend, processor, runner ] = await Promise.all([
-				argv['no-backend'] ? undefined : Worker.create('xxscreeps/backend/server.js'),
-				argv['no-processor'] ? undefined : Worker.create('xxscreeps/engine/service/processor.js'),
-				argv['no-runner'] ? undefined : Worker.create('xxscreeps/engine/service/runner.js'),
-			]);
-			const services = Promise.all([ main, processor && waitForWorker(processor), runner && waitForWorker(runner) ]);
-			return { services, backend };
+	const channel = await getConsoleChannel(shard, id).subscribe();
+	channel.listen(message => {
+		for (const line of JSON.parse(message)) {
+			if (line.fd !== 2) {
+				console.log(line.data);
+			} else {
+				console.error(line.data);
+			}
 		}
-	}();
-	await Promise.all([
-		services.then(() => console.log('💾 Engine shut down successfully.')),
-		backend,
-	]);
-
-} finally {
-	db.disconnect();
-	shard.disconnect();
+	});
 }
+
+// Start main service
+const [ , waitForMain ] = getServiceChannel(shard).listenFor(message => message.type === 'mainConnected');
+const main = import('./main.js');
+await Promise.race([ main, waitForMain ]);
+
+// Start workers
+const singleThreaded = config.launcher?.singleThreaded;
+const { services, backend } = await async function() {
+	if (singleThreaded) {
+		const backend = argv['no-backend'] ? undefined : import('xxscreeps/backend/server.js');
+		const processor = argv['no-processor'] ? undefined : import('./processor.js');
+		const runner = argv['no-runner'] ? undefined : import('./runner.js');
+		const services = Promise.all([ main, processor, runner ]);
+		return { services, backend };
+	} else {
+		const [ backend, processor, runner ] = await Promise.all([
+			argv['no-backend'] ? undefined : Worker.create('xxscreeps/backend/server.js'),
+			argv['no-processor'] ? undefined : Worker.create('xxscreeps/engine/service/processor.js'),
+			argv['no-runner'] ? undefined : Worker.create('xxscreeps/engine/service/runner.js'),
+		]);
+		const services = Promise.all([ main, processor && waitForWorker(processor), runner && waitForWorker(runner) ]);
+		return { services, backend };
+	}
+}();
+await Promise.all([
+	services.then(() => console.log('💾 Engine shut down successfully.')),
+	backend,
+]);

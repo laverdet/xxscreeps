@@ -2,6 +2,7 @@ import type { Subscription } from './channel.js';
 import type { KeyValProvider, PubSubProvider } from './storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
+import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { Channel } from './channel.js';
 import { KeyvalScript } from './storage/script.js';
 
@@ -39,6 +40,7 @@ export class Mutex {
 	}
 
 	async lock() {
+		using disposable = new DisposableStack();
 		if (this.lockedOrPending) {
 			// Already locked locally
 			const lockDefer = new Deferred();
@@ -82,21 +84,17 @@ export class Mutex {
 			}, lockDefer.reject);
 		};
 		// Listen for unlock messages and try to lock again
-		const unlisten = this.channel.listen(message => {
+		disposable.defer(this.channel.listen(message => {
 			if (message === 'unlocked') {
 				tryLock();
 			}
-		});
+		}));
 		// Also keep trying in case the peer gave up
-		const timer = setInterval(tryLock, 500);
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		using _timer = acquireTimeout(500, tryLock);
 		// Wait on the lock
-		try {
-			tryLock();
-			await lockDefer.promise;
-		} finally {
-			clearInterval(timer);
-			unlisten();
-		}
+		tryLock();
+		await lockDefer.promise;
 	}
 
 	async unlock() {

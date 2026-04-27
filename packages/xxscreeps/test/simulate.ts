@@ -70,121 +70,118 @@ type Simulation = {
 export function simulate(rooms: Record<string, (room: Room) => void>) {
 	return async (body: (refs: Simulation) => Promise<void>) => {
 
-		const { db, shard, world } = await instantiateTestShard();
-		try {
-			// Initialize world
-			await Promise.all(Fn.map(Object.entries(rooms), async ([ roomName, callback ]) => {
-				const room = await shard.loadRoom(roomName, shard.time);
-				runOneShot(world, room, shard.time, '', () => callback(room));
-				room['#flushObjects'](null);
+		using testShard = await instantiateTestShard();
+		const { db, shard, world } = testShard;
+
+		// Initialize world
+		await Promise.all(Fn.map(Object.entries(rooms), async ([ roomName, callback ]) => {
+			const room = await shard.loadRoom(roomName, shard.time);
+			runOneShot(world, room, shard.time, '', () => callback(room));
+			room['#flushObjects'](null);
+			const previousUsers = flushUsers(room);
+			await Promise.all([
+				shard.saveRoom(room.name, shard.time + 1, room),
+				shard.saveRoom(room.name, shard.time, room),
+				updateUserRoomRelationships(shard, room, previousUsers),
+			]);
+		}));
+
+		// Run simulation
+		const intentsByRoom = new Map<string, { userId: string; intents: RoomIntentPayload }[]>();
+		const playersThisTick = new Set<string>();
+		let roomInstances = new Map<string, Room>();
+		const that: Simulation = {
+			db,
+			shard,
+			world,
+
+			async peekRoom(roomName, task) {
+				const room = await shard.loadRoom(roomName);
+				return runOneShot(world, room, shard.time, '', () => task(room, Game));
+			},
+
+			async poke(roomName, userId, task) {
+				const room = await shard.loadRoom(roomName);
+				const state = new GameState(world, shard.time, [ room ]);
+				const [ , result ] = runWithState(state, () => runForUser(userId ?? '', state, Game => task(Game, room)));
+				room['#flushObjects'](state);
 				const previousUsers = flushUsers(room);
 				await Promise.all([
-					shard.saveRoom(room.name, shard.time + 1, room),
 					shard.saveRoom(room.name, shard.time, room),
 					updateUserRoomRelationships(shard, room, previousUsers),
 				]);
-			}));
+				roomInstances.delete(roomName);
+				return result;
+			},
 
-			// Run simulation
-			const intentsByRoom = new Map<string, { userId: string; intents: RoomIntentPayload }[]>();
-			const playersThisTick = new Set<string>();
-			let roomInstances = new Map<string, Room>();
-			const that: Simulation = {
-				db,
-				shard,
-				world,
+			async player(userId, task) {
+				assert.ok(!playersThisTick.has(userId), `player '${userId}' already invoked this tick`);
+				playersThisTick.add(userId);
 
-				async peekRoom(roomName, task) {
-					const room = await shard.loadRoom(roomName);
-					return runOneShot(world, room, shard.time, '', () => task(room, Game));
-				},
+				// Fetch game state for player
+				const [ intentRooms, visibleRooms ] = await Promise.all([
+					shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
+					shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
+				]);
+				const rooms = await Promise.all(Fn.map(visibleRooms, roomName => shard.loadRoom(roomName)));
+				const state = new GameState(world, shard.time, rooms);
+				const [ intents ] = runForUser(userId, state, task);
 
-				async poke(roomName, userId, task) {
-					const room = await shard.loadRoom(roomName);
-					const state = new GameState(world, shard.time, [ room ]);
-					const [ , result ] = runWithState(state, () => runForUser(userId ?? '', state, Game => task(Game, room)));
-					room['#flushObjects'](state);
-					const previousUsers = flushUsers(room);
-					await Promise.all([
-						shard.saveRoom(room.name, shard.time, room),
-						updateUserRoomRelationships(shard, room, previousUsers),
-					]);
-					roomInstances.delete(roomName);
-					return result;
-				},
-
-				async player(userId, task) {
-					assert.ok(!playersThisTick.has(userId), `player '${userId}' already invoked this tick`);
-					playersThisTick.add(userId);
-
-					// Fetch game state for player
-					const [ intentRooms, visibleRooms ] = await Promise.all([
-						shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
-						shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
-					]);
-					const rooms = await Promise.all(Fn.map(visibleRooms, roomName => shard.loadRoom(roomName)));
-					const state = new GameState(world, shard.time, rooms);
-					const [ intents ] = runForUser(userId, state, task);
-
-					// Save intents
-					for (const roomName of intentRooms) {
-						const roomIntents = intents.getIntentsForRoom(roomName);
-						if (roomIntents) {
-							getOrSet(intentsByRoom, roomName, () => []).push({ userId, intents: roomIntents });
-						}
+				// Save intents
+				for (const roomName of intentRooms) {
+					const roomIntents = intents.getIntentsForRoom(roomName);
+					if (roomIntents) {
+						getOrSet(intentsByRoom, roomName, () => []).push({ userId, intents: roomIntents });
 					}
-				},
+				}
+			},
 
-				async tick(count = 1, players = {}) {
-					for (let ii = 0; ii < count; ++ii) {
-						// Run player code
-						for (const [ userId, task ] of Object.entries(players)) {
-							await that.player(userId, task);
-						}
-						playersThisTick.clear();
-
-						// Initialize processor queue
-						const time = shard.time + 1;
-						const processorTime = await begetRoomProcessQueue(shard, time, time - 1);
-						assert.equal(time, processorTime);
-						const nextRoomInstances = new Map<string, Room>();
-						const contexts = new Map<string, RoomProcessor>();
-
-						// First phase
-						for await (const roomName of consumeSortedSet(shard.scratch, processRoomsSetKey(time), 0, Infinity)) {
-							const room = roomInstances.get(roomName) ?? await shard.loadRoom(roomName);
-							nextRoomInstances.set(roomName, room);
-							const context = new RoomProcessor(shard, world, room, time);
-							contexts.set(roomName, context);
-							for (const { userId, intents } of intentsByRoom.get(roomName) ?? []) {
-								context.saveIntents(userId, intents);
-							}
-							await context.process();
-						}
-						roomInstances = nextRoomInstances;
-						intentsByRoom.clear();
-
-						// Second phase
-						await Promise.all(Fn.map(contexts.values(), context => context.finalize(false)));
-						for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
-							const room = roomInstances.get(roomName) ?? await shard.loadRoom(roomName);
-							const context = new RoomProcessor(shard, world, room, time);
-							await context.process(true);
-							await context.finalize(true);
-							nextRoomInstances.set(roomName, room);
-						}
-
-						// Increment time
-						await shard.data.set('time', time);
-						await shard.channel.publish({ type: 'tick', time });
-						shard.time = time;
+			async tick(count = 1, players = {}) {
+				for (let ii = 0; ii < count; ++ii) {
+					// Run player code
+					for (const [ userId, task ] of Object.entries(players)) {
+						await that.player(userId, task);
 					}
-				},
-			};
-			await body(that);
-		} finally {
-			shard.disconnect();
-			db.disconnect();
-		}
+					playersThisTick.clear();
+
+					// Initialize processor queue
+					const time = shard.time + 1;
+					const processorTime = await begetRoomProcessQueue(shard, time, time - 1);
+					assert.equal(time, processorTime);
+					const nextRoomInstances = new Map<string, Room>();
+					const contexts = new Map<string, RoomProcessor>();
+
+					// First phase
+					for await (const roomName of consumeSortedSet(shard.scratch, processRoomsSetKey(time), 0, Infinity)) {
+						const room = roomInstances.get(roomName) ?? await shard.loadRoom(roomName);
+						nextRoomInstances.set(roomName, room);
+						const context = new RoomProcessor(shard, world, room, time);
+						contexts.set(roomName, context);
+						for (const { userId, intents } of intentsByRoom.get(roomName) ?? []) {
+							context.saveIntents(userId, intents);
+						}
+						await context.process();
+					}
+					roomInstances = nextRoomInstances;
+					intentsByRoom.clear();
+
+					// Second phase
+					await Promise.all(Fn.map(contexts.values(), context => context.finalize(false)));
+					for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
+						const room = roomInstances.get(roomName) ?? await shard.loadRoom(roomName);
+						const context = new RoomProcessor(shard, world, room, time);
+						await context.process(true);
+						await context.finalize(true);
+						nextRoomInstances.set(roomName, room);
+					}
+
+					// Increment time
+					await shard.data.set('time', time);
+					await shard.channel.publish({ type: 'tick', time });
+					shard.time = time;
+				}
+			},
+		};
+		await body(that);
 	};
 }

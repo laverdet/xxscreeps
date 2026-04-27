@@ -9,7 +9,9 @@
 
 		// Language & emit settings
 		"sourceMap": true,
-		"target": "esnext",
+		// nb: There was a v8 bug in earlier versions of nodejs v24.x affecting explicit resource
+		// management. So we'll rely on 'tslib' until nodejs v26.
+		"target": "es2022",
 
 		// Options
 		"allowJs": true,

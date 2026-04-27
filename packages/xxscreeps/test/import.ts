@@ -15,6 +15,7 @@ import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
 import { Source } from 'xxscreeps/mods/source/source.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
+import { disposableToEffect } from 'xxscreeps/utility/utility.js';
 
 // Read file
 const root = new URL('../../test/', import.meta.url);
@@ -104,16 +105,17 @@ const users = {
 
 export async function instantiateTestShard() {
 	// Create fake database
-	const db = await Database.connect({
+	using disposable = new DisposableStack();
+	const db = disposable.use(await Database.connect({
 		data: 'local://data',
 		pubsub: 'local://pubsub',
-	});
-	const shard = await Shard.connectWith(db, {
+	}));
+	const shard = disposable.use(await Shard.connectWith(db, {
 		name: 'shard0',
 		data: 'local://keyval',
 		pubsub: 'local://pubsub',
 		scratch: 'local://scratch',
-	});
+	}));
 
 	// Reset all stores so shared `local://` singletons start clean
 	await Promise.all([
@@ -137,5 +139,10 @@ export async function instantiateTestShard() {
 			User.create(db, userId, username))),
 	]);
 
-	return { db, shard, world };
+	return {
+		[Symbol.dispose]: disposableToEffect(disposable.move()),
+		db,
+		shard,
+		world,
+	};
 }

@@ -313,12 +313,13 @@ export async function makeSocketPortConnection<Send, Receive>(url: URL): Promise
 		},
 		[Symbol.asyncDispose]: function(dispose) {
 			return async () => {
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+				await using _dispose = dispose;
 				connection.end();
 				await new Promise<void>((resolve, reject) => {
 					connection.on('error', reject);
 					connection.on('close', resolve);
 				});
-				await dispose.disposeAsync();
 			};
 		}(disposable.move()),
 	};
@@ -338,6 +339,8 @@ interface WorkerConnectedMessage {
 
 // Iterates messages from a MessagePort
 async function *messagePortToIterable<Message>(port: MessagePort): AsyncIterable<Message> {
+	using disposable = new DisposableStack();
+	disposable.defer(() => port.close());
 	let deferred = Promise.withResolvers<boolean>();
 	let queue: Message[] = [];
 	port.on('close', () => { deferred.resolve(false); });
@@ -347,14 +350,10 @@ async function *messagePortToIterable<Message>(port: MessagePort): AsyncIterable
 		deferred.resolve(true);
 		deferred = Promise.withResolvers();
 	});
-	try {
-		while (await deferred.promise) {
-			const next = queue;
-			queue = [];
-			yield* next;
-		}
-	} finally {
-		port.close();
+	while (await deferred.promise) {
+		const next = queue;
+		queue = [];
+		yield* next;
 	}
 }
 
