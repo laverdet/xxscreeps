@@ -13,7 +13,7 @@ describe('Portal', () => {
 		W1N1: room => {
 			room['#insertObject'](createPortal(
 				new RoomPosition(25, 25, 'W1N1'),
-				{ room: 'W2N2', x: 30, y: 30 },
+				new RoomPosition(30, 30, 'W2N2'),
 				/* decayTime */ 100,
 			));
 		},
@@ -32,7 +32,7 @@ describe('Portal', () => {
 		W1N1: room => {
 			room['#insertObject'](createPortal(
 				new RoomPosition(25, 25, 'W1N1'),
-				{ room: 'W2N2', x: 30, y: 30 },
+				new RoomPosition(30, 30, 'W2N2'),
 				/* decayTime */ 0,
 			));
 		},
@@ -48,7 +48,7 @@ describe('Portal', () => {
 		W1N1: room => {
 			room['#insertObject'](createPortal(
 				new RoomPosition(25, 25, 'W1N1'),
-				{ room: 'W3N3', x: 17, y: 23 },
+				new RoomPosition(17, 23, 'W3N3'),
 			));
 		},
 	})(async ({ peekRoom }) => {
@@ -82,11 +82,11 @@ describe('Portal', () => {
 		W1N1: room => {
 			room['#insertObject'](createPortal(
 				new RoomPosition(25, 25, 'W1N1'),
-				{ room: 'W2N2', x: 20, y: 20 },
+				new RoomPosition(20, 20, 'W2N2'),
 			));
 			room['#insertObject'](createPortal(
 				new RoomPosition(25, 25, 'W1N1'),
-				{ room: 'W2N2', x: 21, y: 21 },
+				new RoomPosition(21, 21, 'W2N2'),
 			));
 			room['#insertObject'](createCreep(
 				new RoomPosition(25, 25, 'W1N1'),

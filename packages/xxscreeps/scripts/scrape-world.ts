@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { RoomObject } from 'xxscreeps/game/object.js';
-import type { Destination } from 'xxscreeps/mods/portal/portal.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import type { Store } from 'xxscreeps/mods/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
@@ -77,35 +76,6 @@ function withStore(from: any, into: { store: Store }) {
 	for (const type in from.store) {
 		into.store['#add'](type as ResourceType, from.store[type]);
 	}
-}
-
-function getPortalDestination(object: any): Destination | undefined {
-	const rawDestination = object.destination as unknown;
-	const destination = rawDestination !== null && typeof rawDestination === 'object'
-		? rawDestination as Record<string, unknown>
-		: {};
-	const shard = destination.shard ?? object.destShard as unknown;
-	const room = destination.room ?? object.destRoom as unknown;
-	if (typeof shard === 'string' && typeof room === 'string') {
-		return { shard, room };
-	}
-	const xx = destination.x ?? object.destX as unknown;
-	const yy = destination.y ?? object.destY as unknown;
-	if (typeof room === 'string' && typeof xx === 'number' && typeof yy === 'number') {
-		return { room, x: xx, y: yy };
-	}
-}
-
-function getPortalDecayTime(object: any): number {
-	const decayTime = object.decayTime as unknown;
-	if (typeof decayTime === 'number') {
-		return decayTime;
-	}
-	const ticksToDecay = object.ticksToDecay as unknown;
-	if (typeof ticksToDecay === 'number') {
-		return gameTime + ticksToDecay;
-	}
-	return 0;
 }
 
 // Create .screepsrc.yaml
@@ -290,12 +260,9 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 
 			case 'portal': {
-				const destination = getPortalDestination(object);
-				if (destination === undefined) {
-					return;
-				}
 				const portal = new StructurePortal();
 				withStructure(object, portal);
+				const { destination } = object;
 				if (destination.shard === undefined) {
 					portal['#destShard'] = '';
 					portal['#destRoom'] = destination.room;
@@ -307,7 +274,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 					portal['#destX'] = 0;
 					portal['#destY'] = 0;
 				}
-				portal['#decayTime'] = getPortalDecayTime(object);
+				portal['#decayTime'] = object.decayTime ?? 0;
 				return portal;
 			}
 

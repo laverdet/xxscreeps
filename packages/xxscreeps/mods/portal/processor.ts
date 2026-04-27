@@ -1,12 +1,10 @@
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { teleportCreep } from 'xxscreeps/mods/creep/processor.js';
 import { StructurePortal } from './portal.js';
 
 registerObjectTickProcessor(StructurePortal, (portal, context) => {
-	// Decay
 	const decayTime = portal['#decayTime'];
 	if (decayTime !== 0 && Game.time >= decayTime) {
 		portal.room['#removeObject'](portal);
@@ -15,8 +13,8 @@ registerObjectTickProcessor(StructurePortal, (portal, context) => {
 	}
 
 	// Cross-shard portals are not yet supported (single-shard server)
-	if (portal['#destShard'] === '') {
-		const dest = new RoomPosition(portal['#destX'], portal['#destY'], portal['#destRoom']);
+	const dest = portal.destination;
+	if (dest.shard === undefined) {
 		for (const object of portal.room['#lookAt'](portal.pos)) {
 			if (object instanceof Creep && object['#user'].length > 2) {
 				teleportCreep(object, dest, context);

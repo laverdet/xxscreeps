@@ -5,9 +5,9 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 
-export type SameShardDestination = { shard?: undefined; room: string; x: number; y: number };
-export type CrossShardDestination = { shard: string; room: string };
-export type Destination = SameShardDestination | CrossShardDestination;
+export interface PortalDestination extends RoomPosition { shard?: undefined }
+export interface RemotePortalDestination { shard: string; room: string }
+export type Destination = PortalDestination | RemotePortalDestination;
 
 export const format = declare('Portal', () => compose(shape, StructurePortal));
 const shape = struct(structureFormat, {
@@ -20,17 +20,15 @@ const shape = struct(structureFormat, {
 });
 
 export class StructurePortal extends withOverlay(Structure, shape) {
-	@enumerable get destination(): RoomPosition | { shard: string; room: string } {
-		if (this['#destShard'] !== '') {
-			return { shard: this['#destShard'], room: this['#destRoom'] };
+	@enumerable get destination(): Destination {
+		if (this['#destShard'] === '') {
+			return new RoomPosition(this['#destX'], this['#destY'], this['#destRoom']);
 		}
-		return new RoomPosition(this['#destX'], this['#destY'], this['#destRoom']);
+		return { shard: this['#destShard'], room: this['#destRoom'] };
 	}
 
 	@enumerable get ticksToDecay(): number | undefined {
-		const decayTime = this['#decayTime'];
-		if (decayTime === 0) return undefined;
-		return Math.max(0, decayTime - Game.time);
+		return this['#decayTime'] === 0 ? undefined : Math.max(0, this['#decayTime'] - Game.time);
 	}
 
 	override get structureType() { return C.STRUCTURE_PORTAL; }
@@ -45,7 +43,7 @@ export function create(pos: RoomPosition, destination: Destination, decayTime = 
 	const portal = RoomObject.create(new StructurePortal(), pos);
 	if (destination.shard === undefined) {
 		portal['#destShard'] = '';
-		portal['#destRoom'] = destination.room;
+		portal['#destRoom'] = destination.roomName;
 		portal['#destX'] = destination.x;
 		portal['#destY'] = destination.y;
 	} else {
