@@ -41,7 +41,7 @@ type FindRoute = {
  */
 export class GameMap {
 	readonly #terrain: TerrainByRoom;
-	readonly #accessibleRooms: ReadonlySet<string> | undefined;
+	readonly #accessibleRooms;
 	readonly #left;
 	readonly #top;
 	readonly #height;
@@ -267,13 +267,11 @@ export class World {
 	name;
 	terrain: TerrainByRoom;
 	terrainBlob;
-	accessibleRooms: ReadonlySet<string> | undefined;
 
 	constructor(name: string, terrainBlob: Readonly<Uint8Array>, accessibleRooms?: ReadonlySet<string>) {
 		this.name = name;
 		this.terrainBlob = terrainBlob;
 		this.terrain = reader(terrainBlob);
-		this.accessibleRooms = accessibleRooms;
 		this.map = new GameMap(this.terrain, accessibleRooms);
 	}
 
