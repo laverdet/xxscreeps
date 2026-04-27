@@ -22,7 +22,7 @@ import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
-import { OwnedStructure, Structure, lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
+import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
@@ -543,17 +543,19 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
-		() => checkEnemyRampart(target),
+		() => checkInteractionBlocked(creep, target),
 		() => checkRange(creep, target, 1),
 		() => checkHasResource(target, resourceType, amount),
 		() => checkHasCapacity(creep, resourceType, amount),
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
 }
 
-function checkEnemyRampart(target: Structure & WithStore) {
+function checkInteractionBlocked(creep: Creep, target: Structure & WithStore) {
 	if (!(target instanceof OwnedStructure) || target.my) return C.OK;
-	const rampart = lookForStructureAt(target.room, target.pos, C.STRUCTURE_RAMPART);
-	return rampart && !rampart.my && !rampart.isPublic ? C.ERR_NOT_OWNER : C.OK;
+	const user = creep['#user'];
+	const blocked = target.room.lookForAt(C.LOOK_STRUCTURES, target.pos)
+		.some(structure => structure['#doesPreventInteraction'](user));
+	return blocked ? C.ERR_NOT_OWNER : C.OK;
 }
 
 export function calculateCost(creep: Creep) {
