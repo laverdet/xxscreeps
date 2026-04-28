@@ -512,6 +512,7 @@ export function checkPull(creep: Creep, target: Creep | null | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Creep),
+		() => target === creep ? C.ERR_INVALID_TARGET : C.OK,
 		() => checkRange(creep, target!, 1),
 		() => target!.spawning ? C.ERR_INVALID_TARGET : C.OK);
 }
