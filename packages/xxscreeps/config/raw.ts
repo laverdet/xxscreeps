@@ -1,12 +1,8 @@
 import type { Schema } from './config.js';
 import * as fs from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { isMainThread, workerData } from 'node:worker_threads';
 import jsYaml from 'js-yaml';
-
-// "Top thread" is either the main nodejs process, or the worker thread spawned by 'entry.ts'
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-export const isTopThread: boolean = isMainThread || Boolean(workerData?.isTopThread);
+import { isTopThread } from 'xxscreeps/engine/service/index.js';
 
 // Load configuration
 export const configPath = new URL('.screepsrc.yaml', `${pathToFileURL(process.cwd())}/`);

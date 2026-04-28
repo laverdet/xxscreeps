@@ -8,7 +8,8 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { negotiateResponderClient } from 'xxscreeps/utility/responder.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+import { handleInterruptSignal } from './signal.js';
+import { checkIsEntry, getServiceChannel } from './index.js';
 
 const isEntry = checkIsEntry();
 const log = config.processor.log ?? isEntry
@@ -19,7 +20,7 @@ const log = config.processor.log ?? isEntry
 let halt: Effect | undefined;
 let halted = false as boolean;
 let processing = false;
-handleInterrupt(() => {
+using _signal = handleInterruptSignal(() => {
 	halted = true;
 	if (!processing) {
 		halt?.();

@@ -2,11 +2,11 @@ import type { Worker } from 'node:worker_threads';
 import type { Effect, MaybePromise } from 'xxscreeps/utility/types.js';
 import { parentPort } from 'node:worker_threads';
 import config, { configPath } from 'xxscreeps/config/index.js';
+import { isTopThread } from 'xxscreeps/engine/service/index.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 import { asyncDisposableToEffect, disposableToEffect } from 'xxscreeps/utility/utility.js';
-import { isTopThread } from 'xxscreeps/utility/worker.js';
 import { LocalPayloadPort, UnknownMessage, WorkerConnectMessage, makeSocketPortConnection, makeSocketPortListener, makeWorkerPortConnection, makeWorkerPortListener } from './port.js';
 
 /**

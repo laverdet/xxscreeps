@@ -5,7 +5,8 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { Worker, waitForWorker } from 'xxscreeps/utility/worker.js';
-import { getServiceChannel, handleInterrupt } from './index.js';
+import { handleInterruptSignal } from './signal.js';
+import { getServiceChannel } from './index.js';
 
 const argv = checkArguments({
 	boolean: [ 'no-backend', 'no-processor', 'no-runner' ] as const,
@@ -22,7 +23,7 @@ await using disposable = new AsyncDisposableStack();
 // on its own, saving even on ungraceful exit brings them more in line.
 disposable.defer(async () => {
 	await Promise.all([ db.save(), shard.save()	]);
-	console.log('💾 Service shut down successfully.');
+	console.log('💾 Engine shut down successfully.');
 });
 
 // Attach console for given user
@@ -58,10 +59,10 @@ const [ main ] = await async function() {
 
 // Interrupt handler (after 'main' initialized). If it hasn't initialized then the default 'SIGINT'
 // will just terminate.
-disposable.defer(handleInterrupt(() => {
+using _signal = handleInterruptSignal(() => {
 	console.log('Shutting down...');
 	mustNotReject(getServiceChannel(shard).publish({ type: 'shutdown' }));
-}));
+});
 
 // Start workers
 const singleThreaded = config.launcher?.singleThreaded;

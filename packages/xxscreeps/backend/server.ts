@@ -8,7 +8,8 @@ import ConditionalGet from 'koa-conditional-get';
 import Router from 'koa-router';
 import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
-import { getServiceChannel, handleInterrupt } from 'xxscreeps/engine/service/index.js';
+import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
+import { handleInterruptSignal } from 'xxscreeps/engine/service/signal.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { authentication } from './auth/index.js';
@@ -70,19 +71,11 @@ addr.reverse();
 httpServer.listen(...addr, () => console.log('🌎 Listening'));
 
 // Interrupt handler
-let halt: Effect | undefined;
-handleInterrupt(() => halt?.());
-
-// Wait for shutdown message
-const serviceChannel = await getServiceChannel(backendContext.shard).subscribe();
-for await (const message of Async.breakable(serviceChannel.iterable(), breaker => halt = breaker)) {
-	if (message.type === 'shutdown') {
-		break;
-	}
-}
+const halt = Promise.withResolvers<void>();
+using _signal = handleInterruptSignal(halt.resolve);
+await halt.promise;
 
 // Start graceful exit
-serviceChannel.disconnect();
 await unlistenServer();
 await socketHandler.flush();
 backendContext.disconnect();

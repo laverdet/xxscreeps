@@ -8,9 +8,10 @@ import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
-import * as Async from 'xxscreeps/utility/async.js';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import * as Async from 'xxscreeps/utility/async.js';
+import { handleInterruptSignal } from './signal.js';
+import { checkIsEntry, getServiceChannel } from './index.js';
 
 await importMods('driver');
 const isEntry = checkIsEntry();
@@ -22,7 +23,7 @@ const log = config.runner.log ?? isEntry
 let break1: Effect | undefined;
 let break2: Effect | undefined;
 let break3: Effect | undefined;
-handleInterrupt(() => {
+using _signal = handleInterruptSignal(() => {
 	break1?.();
 	break2?.();
 	break3?.();

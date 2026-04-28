@@ -3,8 +3,9 @@ import * as fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
 import Config from 'xxscreeps/config/mods/import/config.js';
+import { isTopThread } from 'xxscreeps/engine/service/index.js';
 import { merge } from 'xxscreeps/utility/utility.js';
-import data, { configPath, isTopThread } from './raw.js';
+import data, { configPath } from './raw.js';
 import './global.js';
 import './mods/index.js';
 

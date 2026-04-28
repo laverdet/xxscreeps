@@ -1,7 +1,10 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import { isTopThread } from 'xxscreeps/config/raw.js';
+import { isMainThread, workerData } from 'node:worker_threads';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
-import { listen } from 'xxscreeps/utility/async.js';
+
+// "Top thread" is either the main nodejs process, or the worker thread spawned by 'entry.ts'
+// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+export const isTopThread: boolean = isMainThread || Boolean(workerData?.isTopThread);
 
 export function getServiceChannel(shard: Shard) {
 	type Message =
@@ -19,14 +22,4 @@ export function checkIsEntry() {
 	const result = isEntry;
 	isEntry = false;
 	return result;
-}
-
-export function handleInterrupt(fn: () => void) {
-	const unlisten = listen(process, 'SIGINT', () => {
-		unlisten();
-		fn();
-		process.on('SIGINT', () => {});
-		setTimeout(() => process.removeAllListeners('SIGINT'), 250);
-	});
-	return unlisten;
 }
