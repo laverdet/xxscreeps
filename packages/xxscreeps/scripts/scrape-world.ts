@@ -32,6 +32,7 @@ import { StructureWall } from 'xxscreeps/mods/defense/wall.js';
 import { saveMemoryBlob } from 'xxscreeps/mods/memory/model.js';
 import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
+import { StructurePortal } from 'xxscreeps/mods/portal/portal.js';
 import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store.js';
 import { StructureRoad } from 'xxscreeps/mods/road/road.js';
 import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair.js';
@@ -130,7 +131,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 	const preamble = schema === undefined ? '' : `# yaml-language-server: $schema=${schema}\n`;
 	const defaultConfig: any = {};
 	for (const modConfig of Configs) {
-		merge(defaultConfig, modConfig.configDefaults ?? {});
+		merge(defaultConfig, modConfig.configDefaults);
 	}
 	defaultConfig.mods = [ ...mods ];
 	await fs.writeFile(configPath, preamble + jsYaml.dump(defaultConfig));
@@ -257,6 +258,25 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 				return mineral;
 			}
 
+			case 'portal': {
+				const portal = new StructurePortal();
+				withStructure(object, portal);
+				const { destination } = object;
+				if (destination.shard === undefined) {
+					portal['#destShard'] = '';
+					portal['#destRoom'] = destination.room;
+					portal['#destX'] = destination.x;
+					portal['#destY'] = destination.y;
+				} else {
+					portal['#destShard'] = destination.shard;
+					portal['#destRoom'] = destination.room;
+					portal['#destX'] = 0;
+					portal['#destY'] = 0;
+				}
+				portal['#decayTime'] = object.decayTime ?? 0;
+				return portal;
+			}
+
 			case 'rampart': {
 				const rampart = new StructureRampart();
 				withStructure(object, rampart);
@@ -333,7 +353,7 @@ if (!shardOnly) {
 	// Save user code content
 	const overwriteModules = new Map<string, string>();
 	const codePath = argv['overwrite-code'];
-	if (codePath) {
+	if (codePath !== undefined) {
 		const names = await fs.readdir(codePath);
 		const files = await Promise.all(names.map(async name => {
 			const data = await fs.readFile(path.join(codePath, name), 'utf8');

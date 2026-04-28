@@ -15,7 +15,6 @@ registerGlobal(function StructureNuker() {});
 registerGlobal(function StructureObserver() {});
 registerGlobal(function StructurePowerBank() {});
 registerGlobal(function StructurePowerSpawn() {});
-registerGlobal(function StructurePortal() {});
 
 declare const globalThis: any;
 hooks.register('runtimeConnector', {

@@ -357,23 +357,32 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 				return new RoomPosition(creep.pos.x, 0, generateRoomName(rx, ry + 1));
 			}
 		}();
-		creep.room['#removeObject'](creep);
-		// Update `creep.pos` for the import command but set it back so that `#flushObjects` can safely
-		// update the internal indices.
-		const oldPos = creep.pos;
-		creep.pos = next;
-		// Creeps are revitalized when moving to a new room
-		creep.fatigue = 0;
-		// Reset actionLog since the actions were in the previous room
-		creep['#actionLog'] = [];
-		const importPayload = writeRoomObject(creep);
-		creep.pos = oldPos;
-		context.sendRoomIntent(next.roomName, 'import', typedArrayToString(importPayload));
-		context.didUpdate();
+		teleportCreep(creep, next, context);
 	} else {
 		context.wakeAt(creep['#ageTime']);
 	}
 });
+
+// Move a creep to another room. Used by border crossing and by structures that transport creeps
+// across rooms (e.g. portals). The creep is removed from its current room and an import-payload
+// intent is queued for the destination room.
+export function teleportCreep(creep: Creep, next: RoomPosition, context: ProcessorContext) {
+	if (!creep.room['#removeObject'](creep)) {
+		return;
+	}
+	// Update `creep.pos` for the import command but set it back so that `#flushObjects` can safely
+	// update the internal indices.
+	const oldPos = creep.pos;
+	creep.pos = next;
+	// Creeps are revitalized when moving to a new room
+	creep.fatigue = 0;
+	// Reset actionLog since the actions were in the previous room
+	creep['#actionLog'] = [];
+	const importPayload = writeRoomObject(creep);
+	creep.pos = oldPos;
+	context.sendRoomIntent(next.roomName, 'import', typedArrayToString(importPayload));
+	context.didUpdate();
+}
 
 registerObjectTickProcessor(Tombstone, (tombstone, context) => {
 	if (tombstone.ticksToDecay === 0) {
