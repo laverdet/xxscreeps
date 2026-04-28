@@ -219,25 +219,46 @@ export function makeEventPublisher<Message extends any[]>(onDrain = () => {}) {
 	};
 }
 
+interface WithEventEmitter<Message extends string, Listener extends (...params: any[]) => void> {
+	addListener: (message: Message, listener: Listener) => void;
+	removeListener: (message: Message, listener: Listener) => void;
+}
+
 // Attaches a listener to an EventEmitter and returns a lambda which removes the listener
 export function listen<
 	Message extends string,
 	Listener extends (...params: any[]) => void,
-	Type extends {
-		on: (message: Message, listener: Listener) => void;
-		removeListener: (message: Message, listener: Listener) => void;
-	},
+	Type extends WithEventEmitter<Message, Listener>,
 >(emitter: Type, message: Message, listener: Listener): Effect {
-	emitter.on(message, listener);
+	emitter.addListener(message, listener);
 	return () => emitter.removeListener(message, listener);
 }
 
+interface WithListenEvent<Message extends string, Listener extends (...params: any[]) => void> {
+	addEventListener: (message: Message, listener: Listener) => void;
+	removeEventListener: (message: Message, listener: Listener) => void;
+}
+
+// Attaches a listener to an EventEmitter and returns a lambda which removes the listener
+export function listenEvent<
+	Message extends string,
+	Listener extends (...params: any[]) => void,
+	Type extends WithListenEvent<Message, Listener>,
+>(emitter: Type, message: Message, listener: Listener): Effect {
+	emitter.addEventListener(message, listener);
+	return () => emitter.removeEventListener(message, listener);
+}
+
 // Exits immediately if a promise rejects
-export function mustNotReject(task: (() => Promise<any>) | Promise<any>) {
-	(typeof task === 'function' ? task() : task).catch(error => {
-		console.error(error);
-		process.exit();
-	});
+export function mustNotReject(task: (() => PromiseLike<any>) | PromiseLike<any>) {
+	void (async function() {
+		try {
+			await (typeof task === 'function' ? task() : task);
+		} catch (error) {
+			console.error(error);
+			process.exit();
+		}
+	})();
 }
 
 // For when a plain promise is just too unwieldy

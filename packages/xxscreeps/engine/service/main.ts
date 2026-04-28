@@ -13,15 +13,29 @@ import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
 
 checkIsEntry();
 
+// Open databases, saving on exit (graceful or not). The local database providers save
+// asynchronously so the "disconnect" effect can't do it. Since the redis provider continually saves
+// on its own, forcing a save even on ungraceful exit brings them more in line.
+using db = await Database.connect();
+using shard = await Shard.connect(db, 'shard0');
+await using disposable = new AsyncDisposableStack();
+disposable.defer(async () => {
+	await Promise.all([
+		db.save(),
+		shard.save(),
+	]);
+});
+
 // Open channels
-const db = await Database.connect();
-const shard = await Shard.connect(db, 'shard0');
 const processorChannel = getProcessorChannel(shard);
 const runnerChannel = getRunnerChannel(shard);
 const [ gameMutex, serviceChannel ] = await Promise.all([
 	Mutex.connect('game', shard.data, shard.pubsub),
 	getServiceChannel(shard).subscribe(),
 ]);
+disposable.defer(() => serviceChannel.disconnect());
+disposable.defer(() => serviceChannel.publish({ type: 'mainDisconnected' }));
+disposable.defer(() => gameMutex.disconnect());
 
 // Interrupt handler
 let halted = false as boolean;
@@ -32,7 +46,6 @@ handleInterrupt(() => {
 	halted = true;
 	halt?.();
 	tickDelay?.resolve(false);
-	serviceChannel.publish({ type: 'shutdown' });
 	unwatch?.();
 });
 
@@ -46,119 +59,109 @@ const unwatch = await watch(() => {
 const performanceTimer = new AveragingTimer(100);
 const saveInterval = config.database.saveInterval * 60000;
 let lastSave = Date.now();
-try {
-	// Initialize scratch state
-	const [ rooms ] = await Promise.all([
-		shard.data.smembers('rooms'),
-		shard.scratch.flushdb(),
-	]);
-	await Promise.all([
-		shard.scratch.sadd('initializeRooms', rooms),
-		shard.scratch.set(processorTimeKey, shard.time),
-	]);
 
-	// Wait for processors to connect and initialize world state
-	const processorMessages = serviceChannel.iterable();
-	await serviceChannel.publish({ type: 'mainConnected' });
-	for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
-		if (
-			message.type === 'processorInitialized' &&
-			await shard.scratch.zcard(activeRoomsKey) === rooms.length
-		) {
-			break;
-		}
+// Initialize scratch state
+const [ rooms ] = await Promise.all([
+	shard.data.smembers('rooms'),
+	shard.scratch.flushdb(),
+]);
+await Promise.all([
+	shard.scratch.sadd('initializeRooms', rooms),
+	shard.scratch.set(processorTimeKey, shard.time),
+]);
+
+// Wait for processors to connect and initialize world state
+const processorMessages = serviceChannel.iterable();
+await serviceChannel.publish({ type: 'mainConnected' });
+for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
+	if (
+		message.type === 'processorInitialized' &&
+		await shard.scratch.zcard(activeRoomsKey) === rooms.length
+	) {
+		break;
 	}
-	await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
+}
+await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
 
-	// Game loop
-	while (!halted) {
-		let timeStartedLoop!: number;
-		await gameMutex.scope(async () => {
-			timeStartedLoop = Date.now();
-			performanceTimer.start();
+// Game loop
+while (!halted) {
+	let timeStartedLoop!: number;
+	await gameMutex.scope(async () => {
+		timeStartedLoop = Date.now();
+		performanceTimer.start();
 
-			// Initialize
-			const time = shard.time + 1;
-			const serviceMessages = serviceChannel.iterable();
-			await Promise.all([
-				shard.scratch.copy('activeUsers', runnerUsersSetKey(time)),
-				processorChannel.publish({ type: 'process', time }),
-			]);
-			await runnerChannel.publish({ type: 'run', time });
+		// Initialize
+		const time = shard.time + 1;
+		const serviceMessages = serviceChannel.iterable();
+		await Promise.all([
+			shard.scratch.copy('activeUsers', runnerUsersSetKey(time)),
+			processorChannel.publish({ type: 'process', time }),
+		]);
+		await runnerChannel.publish({ type: 'run', time });
 
-			// Wait for tick to finish
-			{
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				using timeout = acquireTimeout(
-					config.processor.intentAbandonTimeout,
-					() => mustNotReject(async () => {
-						const rooms = await abandonIntentsForTick(shard, time);
+		// Wait for tick to finish
+		{
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			using timeout = acquireTimeout(
+				config.processor.intentAbandonTimeout,
+				() => mustNotReject(async () => {
+					const rooms = await abandonIntentsForTick(shard, time);
+					if (rooms.length > 0) {
 						console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
-					}));
-				for await (const message of serviceMessages) {
-					if (message.type === 'processorInitialized') {
-						await processorChannel.publish({ type: 'process', time });
-					} else if (message.type === 'runnerConnected') {
-						await runnerChannel.publish({ type: 'run', time });
-					} else if (message.type === 'tickFinished') {
-						break;
 					}
+				}));
+			for await (const message of serviceMessages) {
+				if (message.type === 'processorInitialized') {
+					await processorChannel.publish({ type: 'process', time });
+				} else if (message.type === 'runnerConnected') {
+					await runnerChannel.publish({ type: 'run', time });
+				} else if (message.type === 'tickFinished') {
+					break;
 				}
 			}
-
-			// Update game state
-			await shard.data.set('time', time);
-
-			// Display statistics
-			const now = Date.now();
-			const timeTaken = now - timeStartedLoop;
-			const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
-			await shard.channel.publish({ type: 'tick', time });
-			shard.time = time;
-			console.log(`Tick ${time} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
-		});
-
-		// Shutdown request came in during game loop
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (halted) {
-			break;
 		}
 
-		// Maybe save
+		// Update game state
+		await shard.data.set('time', time);
+
+		// Display statistics
 		const now = Date.now();
-		if (lastSave + saveInterval < now) {
-			lastSave = now;
-			mustNotReject(Promise.all([
-				db.save(),
-				shard.save(),
-			]));
-		}
+		const timeTaken = now - timeStartedLoop;
+		const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
+		await shard.channel.publish({ type: 'tick', time });
+		shard.time = time;
+		console.log(`Tick ${time} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
+	});
 
-		// Add delay
-		const delay = Math.max(0, tickSpeed - (Date.now() - timeStartedLoop));
-		tickDelay = new Deferred();
-		const { promise, resolve } = tickDelay;
-		setTimeout(() => resolve(true), delay).unref();
-		if (!await promise) {
-			break;
-		}
+	// Shutdown request came in during game loop
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+	if (halted) {
+		break;
 	}
 
-	await Promise.all([
-		// Forward shutdown message to all services
-		getProcessorChannel(shard).publish({ type: 'shutdown' }),
-		getRunnerChannel(shard).publish({ type: 'shutdown' }),
-		serviceChannel.publish({ type: 'shutdown' }),
-		// Save on graceful shutdown
-		db.save(),
-		shard.save(),
-	]);
+	// Maybe save
+	const now = Date.now();
+	if (lastSave + saveInterval < now) {
+		lastSave = now;
+		mustNotReject(Promise.all([
+			db.save(),
+			shard.save(),
+		]));
+	}
 
-} finally {
-	// Clean up
-	await gameMutex.disconnect();
-	await serviceChannel.publish({ type: 'mainDisconnected' });
-	serviceChannel.disconnect();
-	shard.disconnect();
-	db.disconnect();
+	// Add delay
+	const delay = Math.max(0, tickSpeed - (Date.now() - timeStartedLoop));
+	tickDelay = new Deferred();
+	const { promise, resolve } = tickDelay;
+	setTimeout(() => resolve(true), delay).unref();
+	if (!await promise) {
+		break;
+	}
 }
+
+// Forward shutdown message to all services
+await Promise.all([
+	getProcessorChannel(shard).publish({ type: 'shutdown' }),
+	getRunnerChannel(shard).publish({ type: 'shutdown' }),
+	serviceChannel.publish({ type: 'shutdown' }),
+]);

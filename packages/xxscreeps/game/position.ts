@@ -126,6 +126,11 @@ export class RoomPosition {
 		return (this.#id >>> 8) & 0xff;
 	}
 
+	/** @deprecated */
+	set __packedPos(value: number) {
+		this.#id = ((value & 0xff) << 24) | ((value & 0xff00) << 8) | ((value >>> 16) & 0xffff);
+	}
+
 	// eslint-disable-next-line id-length
 	set x(xx: number) {
 		if (!(xx >= 0 && xx < 50)) {

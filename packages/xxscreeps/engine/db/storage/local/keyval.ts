@@ -2,6 +2,7 @@
 import type { MaybePromises } from './responder.js';
 import type * as P from 'xxscreeps/engine/db/storage/provider.js';
 import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
+import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import { registerStorageProvider } from 'xxscreeps/engine/db/storage/register.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -12,19 +13,23 @@ import { connect, makeClient, makeHost } from './responder.js';
 import { SortedSet } from './sorted-set.js';
 
 registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
-	const path = url.pathname.endsWith('/') ? url : new URL(`${url}/`);
-	return connect(`${path}`, LocalKeyValClient, LocalKeyValHost, () =>
-		LocalKeyValResponder.create(path));
+	const create = () => LocalKeyValResponder.create(url);
+	return connect(url, LocalKeyValClient, LocalKeyValHost, create);
 });
 
 export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
+	private readonly blob;
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: P.Value[]) => any>();
 	private readonly url;
-	private readonly blob;
+	private saveWait: Promise<void> | undefined;
 
-	constructor(url: URL | undefined, blob: BlobStorage, payload: string | undefined) {
+	constructor(
+		url: URL | undefined,
+		blob: BlobStorage,
+		payload: string | undefined,
+	) {
 		this.url = url;
 		this.blob = blob;
 		if (payload) {
@@ -43,22 +48,31 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	static async create(path: URL) {
+	static async create(pathArg: URL) {
+		// Copy URL, ensure it ends with '/', and strip query parameters
+		let path = new URL(pathArg);
+		assert.ok(!path.pathname.endsWith('/'));
+		path.pathname += '/';
+		path = new URL('./', path);
+
+		// Instantiate blob storage, also acquires lock
 		const [ blobEffect, blob ] = await BlobStorage.create(path);
+
+		// Load saved payload
 		const [ url, payload ] = await async function() {
 			if (path.protocol === 'file:') {
 				const url = new URL('data.json', path);
-				return [
-					url,
-					await async function() {
-						try {
-							return await fs.readFile(new URL('data.json', path), 'utf8');
-						} catch {}
-					}(),
-				] as const;
+				const payload = await async function() {
+					try {
+						return await fs.readFile(new URL('data.json', path), 'utf8');
+					} catch {}
+				}();
+				return [ url, payload ] as const;
 			}
 			return [];
 		}();
+
+		// Make host, convert disposable to effect
 		const host = new LocalKeyValResponder(url, blob, payload);
 		return [ blobEffect, host ] as const;
 	}
@@ -168,6 +182,14 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		})();
 		this.data.set(key, value);
 		return value;
+	}
+
+	hdel(key: string, fields: string[]) {
+		const map = this.data.get(key) as Map<string, string> | undefined;
+		if (!map) return 0;
+		const removed = Fn.accumulate(fields, field => map.delete(field) ? 1 : 0);
+		if (map.size === 0) this.remove(key);
+		return removed;
 	}
 
 	hget(key: string, field: string) {
@@ -616,33 +638,42 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 
 	async save() {
 		if (this.url) {
-			const payload = JSON.stringify(this.data, (key, value) => {
-				if (value === this.data) {
-					return {
-						'#': 'map',
-						$: Object.fromEntries(Fn.reject(this.data.entries(), entry => this.expires.has(entry[0]))),
-					};
-				} else if (value instanceof Map) {
-					return { '#': 'map', $: Object.fromEntries(value.entries()) };
-				} else if (value instanceof Set) {
-					return { '#': 'set', $: [ ...value ] };
-				} else if (value instanceof SortedSet) {
-					return { '#': 'zset', $: [ ...value.entries() ] };
-				} else if (ArrayBuffer.isView(value)) {
-					return { '#': 'uint8', $: typedArrayToString(value as Uint8Array) };
-				} else {
-					return value;
-				}
-			});
-			const original = new URL(this.url);
-			const tmp = new URL(`./.${original.pathname.substr(original.pathname.lastIndexOf('/') + 1)}.swp`, original);
-			await Promise.all([
-				this.blob.save(),
-				async function() {
-					await fs.writeFile(tmp, payload, 'utf8');
-					await fs.rename(tmp, original);
-				}(),
-			]);
+			// eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+			const { promise, resolve } = Promise.withResolvers<void>();
+			const { saveWait } = this;
+			this.saveWait = promise;
+			try {
+				await saveWait;
+				const payload = JSON.stringify(this.data, (key, value) => {
+					if (value === this.data) {
+						return {
+							'#': 'map',
+							$: Object.fromEntries(Fn.reject(this.data.entries(), entry => this.expires.has(entry[0]))),
+						};
+					} else if (value instanceof Map) {
+						return { '#': 'map', $: Object.fromEntries(value.entries()) };
+					} else if (value instanceof Set) {
+						return { '#': 'set', $: [ ...value ] };
+					} else if (value instanceof SortedSet) {
+						return { '#': 'zset', $: [ ...value.entries() ] };
+					} else if (ArrayBuffer.isView(value)) {
+						return { '#': 'uint8', $: typedArrayToString(value as Uint8Array) };
+					} else {
+						return value;
+					}
+				});
+				const original = new URL(this.url);
+				const tmp = new URL(`./.${original.pathname.substr(original.pathname.lastIndexOf('/') + 1)}.swp`, original);
+				await Promise.all([
+					this.blob.save(),
+					async function() {
+						await fs.writeFile(tmp, payload, 'utf8');
+						await fs.rename(tmp, original);
+					}(),
+				]);
+			} finally {
+				resolve();
+			}
 		}
 	}
 

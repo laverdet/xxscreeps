@@ -128,37 +128,34 @@ export class Subscription<Message> {
 		const that = this;
 		return {
 			async *[Symbol.asyncIterator]() {
-				try {
-					do {
-						// Immediately yield any queued messages
-						while (queue.length !== 0) {
-							yield queue.shift()!;
-							if (that.didDisconnect) {
-								return;
-							}
-						}
-						// Make promise to await on
-						deferred = new Deferred();
-						const { promise } = deferred;
-						const disconnectListener = () => deferred!.resolve();
-						that.disconnectListeners.add(disconnectListener);
-						// Wait for new messages
-						const value = await promise;
-						that.disconnectListeners.delete(disconnectListener);
-						// Check for `undefined` from disconnect listener
-						if (value === undefined) {
-							return;
-						}
-						// Yield back to loop
-						yield value;
+				using disposable = new DisposableStack();
+				disposable.defer(unlisten);
+				do {
+					// Immediately yield any queued messages
+					while (queue.length !== 0) {
+						yield queue.shift()!;
 						if (that.didDisconnect) {
 							return;
 						}
-					} while (true);
-				} finally {
-					// Clean up listeners when it's all done
-					unlisten();
-				}
+					}
+					// Make promise to await on
+					deferred = new Deferred();
+					const { promise } = deferred;
+					const disconnectListener = () => deferred!.resolve();
+					that.disconnectListeners.add(disconnectListener);
+					// Wait for new messages
+					const value = await promise;
+					that.disconnectListeners.delete(disconnectListener);
+					// Check for `undefined` from disconnect listener
+					if (value === undefined) {
+						return;
+					}
+					// Yield back to loop
+					yield value;
+					if (that.didDisconnect) {
+						return;
+					}
+				} while (true);
 			},
 		};
 	}

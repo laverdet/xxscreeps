@@ -1,82 +1,110 @@
-import type { MessagePort, Worker } from 'node:worker_threads';
+import type { Worker } from 'node:worker_threads';
 import type { Effect, MaybePromise } from 'xxscreeps/utility/types.js';
-import { MessageChannel, parentPort } from 'node:worker_threads';
-import { Deferred, listen } from 'xxscreeps/utility/async.js';
-import { staticCast } from 'xxscreeps/utility/utility.js';
+import * as assert from 'node:assert';
+import { parentPort } from 'node:worker_threads';
+import config, { configPath } from 'xxscreeps/config/index.js';
+import { handleInterrupt } from 'xxscreeps/engine/service/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
+import { asyncDisposableToEffect, disposableToEffect, staticCast } from 'xxscreeps/utility/utility.js';
 import { isTopThread } from 'xxscreeps/utility/worker.js';
+import { LocalPayloadPort, UnknownMessage, WorkerConnectMessage, makeSocketPortConnection, makeSocketPortListener, makeWorkerPortConnection, makeWorkerPortListener } from './port.js';
+
+/**
+ * "Sibling process" is a process running on the same machine, but which did not acquire a responder
+ * lock.
+ */
+export const isSiblingProcess = runOnce(async () => {
+	if (isTopThread) {
+		const { lock } = config.database;
+		if (lock == null) {
+			return false;
+		} else {
+			try {
+				const path = new URL(lock, configPath);
+				process.on('exit', disposableToEffect(await FileSystemLock.acquire(path)));
+				return false;
+			} catch {
+				return true;
+			}
+		}
+	} else {
+		return false;
+	}
+});
+
+/** @internal */
+export function getResponderSocketPath(url: URL) {
+	const socket = url.searchParams.get('socket');
+	if (socket !== null) {
+		if (url.protocol === 'local:') {
+			return new URL(socket, configPath);
+		} else {
+			return new URL(socket, url);
+		}
+	}
+}
 
 /**
  * Responders generalizes the client/server request/response model for inter-thread/process
  * communication.
  */
-type UnknownMessage = { type: null };
-type ConnectMessage = {
-	type: 'responderConnect';
-	name: string;
-	port: MessagePort;
-};
-type ConnectedMessage = {
-	type: 'responderConnected';
-};
-type RequestMessage = {
+interface RequestMessage {
 	requestId: number;
 	method: string;
 	payload: unknown[];
-};
-type ResponseMessage = {
+}
+interface ResponseCompletionMessage {
 	requestId: number;
-} & ({
+}
+interface ResponseResolveMessage extends ResponseCompletionMessage {
 	payload: unknown;
 	rejection?: false;
-} | {
+}
+interface ResponseRejectMessage extends ResponseCompletionMessage {
 	payload: string;
 	rejection: true;
-});
+}
+
+type ResponseMessage = ResponseResolveMessage | ResponseRejectMessage;
+
+type SocketResponderSend = (message: RequestMessage) => void;
 
 // Used in host isolate
 const responderHostsByName = new Map<string, { effect: Effect; host: ResponderHost }>();
 
 abstract class ResponderClient {
 	#disconnected = false;
-	#queue: RequestMessage[] = [];
 	#requestId = 0;
-	readonly #channel = new MessageChannel();
-	readonly #port = this.#channel.port1;
-	readonly #requests = new Map<number, Deferred<any>>();
+	readonly #send;
+	readonly #requests = new Map<number, PromiseWithResolvers<unknown>>();
 
-	static async connect<Type extends ResponderClient>(constructor: new() => Type, name: string) {
-		// Instantiate client & port
-		const client = new constructor();
-		const effect: Effect = () => client.#disconnect();
-		const port = client.#channel.port2;
+	constructor(send: SocketResponderSend) {
+		this.#send = send;
+	}
 
-		// Connect to responder
-		const result = await new Promise<[ Effect, Type ]>((resolve, reject) => {
-			// Set up connection ack handler
-			client.#port.once('message', (message: ConnectedMessage | UnknownMessage) => {
-				if (message.type === 'responderConnected') {
-					closeEffect();
-					resolve([ effect, client ]);
-				} else {
-					reject(new Error(`Responder ${name} sent weird ack`));
+	static async connect<Type extends ResponderClient>(constructor: new(send: SocketResponderSend) => Type, url: URL) {
+		// Connect to port by socket or worker request
+		await using disposable = new AsyncDisposableStack();
+		const port = await function() {
+			if (isTopThread) {
+				const path = getResponderSocketPath(url);
+				if (!path) {
+					throw new Error('No responder configured');
 				}
-			});
+				return makeSocketPortConnection<RequestMessage, ResponseMessage>(path);
+			} else {
+				return makeWorkerPortConnection<RequestMessage, ResponseMessage>(`${url}`);
+			}
+		}();
+		disposable.use(port);
 
-			// Failure handler
-			const closeEffect = listen(client.#port, 'close', () =>
-				reject(new Error(`Responder ${name} does not exist`)));
-
-			// Send "connection" request to main thread
-			parentPort!.postMessage(staticCast<ConnectMessage>({
-				type: 'responderConnect',
-				name,
-				port,
-			}), [ port ]);
-		});
-
-		// Add listener for responses from host
-		client.#port.on('message', (messages: ResponseMessage[]) => {
-			for (const message of messages) {
+		// Forward requests to port
+		const client = disposable.adopt(new constructor(port.send), client => client.#disconnect());
+		mustNotReject(async function() {
+			for await (const message of port.messages) {
 				const { requestId } = message;
 				const request = client.#requests.get(requestId)!;
 				client.#requests.delete(requestId);
@@ -86,9 +114,10 @@ abstract class ResponderClient {
 					request.resolve(message.payload);
 				}
 			}
-		});
+		}());
 
-		return result;
+		// Return effect and client
+		return [ asyncDisposableToEffect(disposable.move()), client ] as const;
 	}
 
 	static request(client: ResponderClient, method: string, payload: unknown[]) {
@@ -96,19 +125,9 @@ abstract class ResponderClient {
 			return Promise.reject(new Error('Disconnected from responder'));
 		}
 		const requestId = ++client.#requestId;
-		const deferred = new Deferred<unknown>();
+		const deferred = Promise.withResolvers();
 		client.#requests.set(requestId, deferred);
-		if (client.#queue.length === 0) {
-			process.nextTick(() => {
-				client.#port.postMessage(client.#queue);
-				client.#queue = [];
-			});
-		}
-		client.#queue.push({
-			requestId,
-			method,
-			payload,
-		});
+		client.#send({ requestId, method, payload });
 		return deferred.promise;
 	}
 
@@ -123,48 +142,42 @@ abstract class ResponderClient {
 			deferred.promise.catch(() => {});
 		}
 		this.#requests.clear();
-		this.#port.close();
 	}
 }
 
 abstract class ResponderHost<Type = any> {
 	#refs = 0;
+	readonly #disposable = new AsyncDisposableStack();
 	readonly #instance: Type | Record<string, (...args: unknown[]) => unknown>;
 	readonly #name: string;
 
-	constructor(name: string, instance: Type) {
+	constructor(name: string, instance: Type, maybeServer: AsyncDisposable | undefined) {
 		this.#instance = instance;
 		this.#name = name;
+		this.#disposable.use(maybeServer);
 	}
 
-	static connect(host: ResponderHost, port: MessagePort) {
-		let queue: ResponseMessage[] = [];
+	static connect(host: ResponderHost, port: LocalPayloadPort<ResponseMessage, RequestMessage>) {
 		const instance = host.#instance;
-		const respond = (message: ResponseMessage) => {
-			if (queue.length === 0) {
-				process.nextTick(() => {
-					port.postMessage(queue);
-					queue = [];
-				});
-			}
-			queue.push(message);
-		};
-		port.on('close', host.#ref());
-		port.on('message', (messages: RequestMessage[]) => {
-			for (const message of messages) {
+		mustNotReject(async function() {
+			for await (const message of port.messages) {
 				const { method, payload, requestId } = message;
-				(async function() {
-					respond({
-						requestId,
-						payload: await instance[method](...payload),
-					});
-				})().catch(err => respond({
-					requestId,
-					payload: err.stack,
-					rejection: true,
-				}));
+				mustNotReject(async function() {
+					try {
+						port.send({
+							requestId,
+							payload: await instance[method](...payload),
+						});
+					} catch (error: any) {
+						port.send({
+							requestId,
+							payload: error.stack,
+							rejection: true,
+						});
+					}
+				}());
 			}
-		});
+		}());
 	}
 
 	static invoke(host: ResponderHost, method: string, payload: unknown[]) {
@@ -187,6 +200,7 @@ abstract class ResponderHost<Type = any> {
 				const { effect } = responderHostsByName.get(this.#name)!;
 				responderHostsByName.delete(this.#name);
 				effect();
+				mustNotReject(this.#disposable.disposeAsync());
 			}
 		};
 	}
@@ -205,20 +219,21 @@ export type MaybePromises<Type> = {
 // Connect to an existing responder
 export async function connect<
 	Client extends ResponderClient,
-	Host extends ResponderHost<Type>,
+	Host extends ResponderHost,
 	Type,
 >(
-	name: string,
+	url: URL,
 	clientConstructor: new() => Client,
-	hostConstructor: new(name: string, instance: Type) => Host,
+	hostConstructor: new(name: string, instance: Type, maybeServer: AsyncDisposable | undefined) => Host,
 	create: () => MaybePromise<readonly [ Effect, Type ]>,
-): Promise<[ Effect, Host | Client ]> {
-	if (isTopThread) {
+): Promise<readonly [ Effect, Client | Host ]> {
+	const name = `${url}`;
+	if (isTopThread && !await isSiblingProcess()) {
 		const responder = responderHostsByName.get(name);
 		if (responder) {
 			// Connecting to a responder from the parent just returns the host object
 			const effect = ResponderHost.ref(responder.host);
-			return [ effect, responder.host as Host ];
+			return [ effect, responder.host as Host ] as const;
 		} else {
 			// Only one responder per name should exist
 			if (responderHostsByName.has(name)) {
@@ -227,89 +242,88 @@ export async function connect<
 			responderHostsByName.set(name, undefined as never);
 			// Instantiate a new Responder
 			try {
+				const maybeServer = await function() {
+					const socketPath = getResponderSocketPath(url);
+					if (socketPath) {
+						return makeSocketPortListener<ResponseMessage, RequestMessage>(socketPath, port => ResponderHost.connect(host, port));
+					}
+				}();
 				const [ effect, instance ] = await create();
-				const host = new hostConstructor(name, instance);
+				const host = new hostConstructor(name, instance, maybeServer);
 				responderHostsByName.set(name, { effect, host });
 				return [ ResponderHost.ref(host), host ];
-			} catch (err) {
+			} catch (error) {
 				responderHostsByName.delete(name);
-				throw err;
+				throw error;
 			}
 		}
-
 	} else {
-		// Attempt to connect as a client
-		return ResponderClient.connect(clientConstructor, name);
+		// Attempt to connect as a socket or worker client
+		return ResponderClient.connect(clientConstructor, url);
 	}
 }
 
 // Called on the parent thread, once per worker created
 export function initializeWorker(worker: Worker) {
 	if (isTopThread) {
-		worker.on('message', (message: ConnectMessage | UnknownMessage) => {
-			if (message.type === 'responderConnect') {
-				// Child worker is connecting to parent
-				const responder = responderHostsByName.get(message.name);
-				const { port } = message;
-				if (responder) {
-					// Connect to responder
-					ResponderHost.connect(responder.host, port);
-					port.postMessage(staticCast<ConnectedMessage>({
-						type: 'responderConnected',
-					}));
-				} else {
-					// Doesn't exist
-					port.close();
-				}
+		// Respond to worker requests
+		makeWorkerPortListener(worker, name => {
+			const responder = responderHostsByName.get(name);
+			if (responder) {
+				return port => ResponderHost.connect(responder.host, port as LocalPayloadPort<ResponseMessage, RequestMessage>);
 			}
 		});
 	} else {
-		worker.on('message', (message: ConnectMessage | UnknownMessage) => {
-			// Forward message up to top thread
-			if (message.type === 'responderConnect') {
+		// Forward connection requests up to top thread
+		// nb: This also passes connections for `pubsub`
+		worker.on('message', (message: WorkerConnectMessage | UnknownMessage) => {
+			if (message.type === 'workerConnect') {
 				parentPort!.postMessage(message, [ message.port ]);
 			}
 		});
 	}
 }
 
+function applyResponderMethods(
+	constructorFrom: abstract new(...args: any[]) => unknown,
+	constructorTo: abstract new(...args: any[]) => unknown,
+	make: (name: string) => unknown,
+) {
+	for (const name of Object.getOwnPropertyNames(constructorFrom.prototype)) {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+		const fn = constructorFrom.prototype[name];
+		if (name !== 'constructor' && typeof fn === 'function') {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			constructorTo.prototype[name] = make(name);
+		}
+	}
+}
+
+/** @internal */
 export function makeClient<Type>(constructor: abstract new(...args: any[]) => Type) {
 
 	// Create client wrapper class for this responder
 	class Client extends ResponderClient {
 		[Method: string]: (...args: unknown[]) => Promise<unknown>;
 	}
-
-	// Extend wrapper with request-returning methods
-	for (const name of Object.getOwnPropertyNames(constructor.prototype)) {
-		const fn = constructor.prototype[name];
-		if (name !== 'constructor' && typeof fn === 'function') {
-			Client.prototype[name] = function(...args: any[]) {
-				return ResponderClient.request(this, name, args);
-			};
-		}
-	}
+	applyResponderMethods(constructor, Client, name => function(this: Client, ...args: any[]) {
+		return ResponderClient.request(this, name, args);
+	});
 
 	// Add in types
 	return Client as never as new() => ResponderClient & WithPromises<Type>;
 }
 
+/** @internal */
 export function makeHost<Type>(constructor: abstract new(...args: any[]) => Type) {
 
 	// Create host wrapper class for this responder
 	class Host extends ResponderHost {
 		[Method: string]: (...args: unknown[]) => Promise<unknown>;
 	}
-
-	// Extend wrapper with Promise-returning methods
-	for (const name of Object.getOwnPropertyNames(constructor.prototype)) {
-		const fn = constructor.prototype[name];
-		if (name !== 'constructor' && typeof fn === 'function') {
-			Host.prototype[name] = function(...args: any[]) {
-				return Promise.resolve(ResponderHost.invoke(this, name, args));
-			};
-		}
-	}
+	applyResponderMethods(constructor, Host, name => function(this: Host, ...args: any[]) {
+		return Promise.resolve(ResponderHost.invoke(this, name, args));
+	});
 
 	// Add in types
 	return Host as never as new(name: string, instance: Type) => ResponderHost & WithPromises<Type>;

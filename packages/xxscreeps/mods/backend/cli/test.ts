@@ -12,7 +12,8 @@ import 'xxscreeps/backend/sockets/render.js';
 await importMods('backend');
 initializeGameEnvironment();
 
-const { db, shard } = await instantiateTestShard();
+using testShard = await instantiateTestShard();
+const { db, shard } = testShard;
 const run = (expression: string) => executeCommand(db, shard, expression);
 
 describe('CLI', () => {

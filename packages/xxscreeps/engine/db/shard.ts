@@ -2,7 +2,6 @@ import type { Subscription } from './channel.js';
 import type { Database } from './database.js';
 import type { KeyValProvider, PubSubProvider } from './storage/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { Effect } from 'xxscreeps/utility/types.js';
 import config from 'xxscreeps/config/index.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
@@ -21,11 +20,10 @@ export class Shard {
 	readonly pubsub;
 	readonly scratch;
 	readonly channel;
-	private readonly gameTickEffect: Effect;
-	private readonly effect;
+	private readonly disposable: DisposableStack;
 
 	private constructor(
-		effect: Effect,
+		disposable: DisposableStack,
 		db: Database,
 		name: string,
 		data: KeyValProvider,
@@ -33,25 +31,25 @@ export class Shard {
 		scratch: KeyValProvider,
 		channel: Subscription<Message>,
 	) {
-		this.effect = effect;
+		this.disposable = disposable;
 		this.db = db;
 		this.name = name;
 		this.data = data;
 		this.pubsub = pubsub;
 		this.scratch = scratch;
 		this.channel = channel;
-		this.gameTickEffect = channel.listen(message => {
+		disposable.defer(channel.listen(message => {
 			if (message.type === 'tick') {
 				this.time = message.time;
 			}
-		});
+		}));
 	}
 
 	static async connect(db: Database, name: string) {
 		// Connect to shard, load const data
 		const shard = config.shards.find(shard => shard.name === name);
 		if (!shard) {
-			throw new Error(`Unknown shard: ${shard}`);
+			throw new Error(`Unknown shard: ${name}`);
 		}
 		return this.connectWith(db, shard);
 	}
@@ -62,23 +60,30 @@ export class Shard {
 		pubsub: string;
 		scratch: string;
 	}) {
+		using disposable = new DisposableStack();
 		const [ effect, [ data, pubsub, scratch ] ] = await acquire(
 			connectToProvider(info.data, 'keyval'),
 			connectToProvider(info.pubsub, 'pubsub'),
 			connectToProvider(info.scratch, 'keyval'),
 		);
-		const channel = await new Channel<Message>(pubsub, 'channel/game').subscribe();
+		disposable.defer(effect);
+		const channel = disposable.adopt(
+			await new Channel<Message>(pubsub, 'channel/game').subscribe(),
+			subscription => subscription.disconnect(),
+		);
 		// Create instance (which subscribes to tick notification) and then read current info
-		const instance = new Shard(effect, db, info.name, data, pubsub, scratch, channel);
 		const time = Number(await data.get('time'));
+		const instance = new Shard(disposable.move(), db, info.name, data, pubsub, scratch, channel);
 		instance.time = Math.max(time, instance.time);
 		return instance;
 	}
 
+	[Symbol.dispose]() {
+		this.disposable.dispose();
+	}
+
 	disconnect() {
-		this.gameTickEffect();
-		this.channel.disconnect();
-		this.effect();
+		this.disposable.dispose();
 	}
 
 	save() {
@@ -86,10 +91,15 @@ export class Shard {
 	}
 
 	/**
-	 * Load and parse shard terrain data
+	 * Load and parse shard terrain data together with the active-rooms set so
+	 * `World.map.getRoomStatus()` can distinguish closed rooms from normal ones.
 	 */
 	async loadWorld() {
-		return new World(this.name, await this.data.req('terrain', { blob: true }));
+		const [ terrainBlob, rooms ] = await Promise.all([
+			this.data.req('terrain', { blob: true }),
+			this.data.smembers('rooms'),
+		]);
+		return new World(this.name, terrainBlob, new Set(rooms));
 	}
 
 	/**

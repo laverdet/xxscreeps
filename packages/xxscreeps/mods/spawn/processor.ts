@@ -12,6 +12,7 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { dropOverflowResources } from 'xxscreeps/mods/creep/processor.js';
 import { buryCreep } from 'xxscreeps/mods/creep/tombstone.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
@@ -123,8 +124,7 @@ const intents = [
 	registerIntentProcessor(StructureSpawn, 'recycleCreep', {}, (spawn, context, id: string) => {
 		const creep = Game.getObjectById<Creep>(id)!;
 		if (checkRecycleCreep(spawn, creep) === C.OK) {
-			// TODO: This stuff
-			creep.hits = 0;
+			buryCreep(creep, 1);
 			context.didUpdate();
 		}
 	}),
@@ -136,6 +136,12 @@ const intents = [
 			if (consumeEnergy(spawn, cost)) {
 				saveAction(creep, 'healed', spawn.pos);
 				creep['#ageTime'] += calculateRenewAmount(creep);
+				if (creep.body.some(part => part.boost)) {
+					for (const part of creep.body) {
+						part.boost = undefined;
+					}
+					dropOverflowResources(creep);
+				}
 				context.didUpdate();
 			}
 		}

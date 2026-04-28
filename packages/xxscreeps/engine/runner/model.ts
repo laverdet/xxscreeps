@@ -39,6 +39,7 @@ export function getUsageChannel(shard: Shard, user: string) {
  * Sends an eval expression to the user's runner instance and waits for a reply.
  */
 export async function requestRunnerEval(shard: Shard, userId: string, expr: string, echo: boolean) {
+	using disposable = new DisposableStack();
 	// Response timeout
 	const timer = Promise.withResolvers<never>();
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -49,19 +50,16 @@ export async function requestRunnerEval(shard: Shard, userId: string, expr: stri
 
 	// Response promise
 	const id = `${Math.random()}`;
-	const [ cancel, promise ] = getAckChannel(shard, userId).listenFor(message => message.id === id);
+	const [ effect, promise ] = getAckChannel(shard, userId).listenFor(message => message.id === id);
+	disposable.defer(effect);
 
-	try {
-		// Send the request
-		await getRunnerUserChannel(shard, userId).publish({ type: 'eval', payload: { ack: id, echo, expr } });
-		const { result } = (await Promise.race([ timer.promise, promise ]))!;
-		if (result.error) {
-			throw new Error(result.value);
-		} else {
-			return result.value;
-		}
-	} finally {
-		cancel();
+	// Send the request
+	await getRunnerUserChannel(shard, userId).publish({ type: 'eval', payload: { ack: id, echo, expr } });
+	const { result } = (await Promise.race([ timer.promise, promise ]))!;
+	if (result.error) {
+		throw new Error(result.value);
+	} else {
+		return result.value;
 	}
 }
 

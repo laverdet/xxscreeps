@@ -28,7 +28,7 @@ export class Database {
 		return new Database(effect, data, pubsub);
 	}
 
-	disconnect() {
+	[Symbol.dispose]() {
 		this.effect();
 	}
 

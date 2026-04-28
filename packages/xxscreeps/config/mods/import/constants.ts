@@ -1,5 +1,6 @@
 // All constants from mods are added here for TypeScript's eyes only. nodejs will include
 // `constants.ts`.
+// It's in package.json
 throw new Error('nodejs is misconfigured');
 export * from 'xxscreeps/mods/chemistry/constants.js';
 export * from 'xxscreeps/mods/combat/constants.js';
