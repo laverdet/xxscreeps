@@ -4,6 +4,7 @@
 export * from './array/reverse.js';
 export * from './array/slice.js';
 export * from './asyncIterable/collect.js';
+export * from './asyncIterable/concat.js';
 export * from './asyncIterable/distribute.js';
 export * from './asyncIterable/divide.js';
 export * from './asyncIterable/filter.js';

@@ -72,7 +72,8 @@ async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
 			const endOfAffinity = async function*() {
 				worker.checkAffinity = false;
 			}();
-			for await (const roomName of Async.lookAhead(Async.concat(affinityIterator, endOfAffinity), 1)) {
+			const iterators = Fn.concatAsync([ affinityIterator, endOfAffinity ]);
+			for await (const roomName of Fn.lookAhead(iterators, 1)) {
 				yield roomName;
 			}
 		}

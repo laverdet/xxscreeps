@@ -133,11 +133,6 @@ export function removeOne<Type>(list: Type[], element: Type) {
 	list.pop();
 }
 
-// Used to inline upcast a value to another Type. This is *more* restrictive than `as Type`
-export function staticCast<Type>(value: Type) {
-	return value;
-}
-
 export function throttle(fn: () => void) {
 	let timeout: ReturnType<typeof setTimeout> | undefined;
 	return {
@@ -176,11 +171,6 @@ export function acquireTimeout(timeout: number, fn: () => void) {
 			}
 		},
 	};
-}
-
-// Accepts an instance function an returns a free function where the first argument becomes `this`
-export function uncurryThis<This, Args extends any[], Return>(callback: (this: This, ...args: Args) => Return) {
-	return (that: This, ...args: Args): Return => Reflect.apply(callback, that, args);
 }
 
 // Explodes a union type into all possible types inline
