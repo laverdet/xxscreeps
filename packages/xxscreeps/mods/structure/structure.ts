@@ -98,6 +98,10 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return true;
 	}
 
+	'#doesPreventInteraction'(_user: string) {
+		return false;
+	}
+
 	override '#destroy'() {
 		if (super['#destroy']()) {
 			this.room['#insertObject'](createRuin(this));

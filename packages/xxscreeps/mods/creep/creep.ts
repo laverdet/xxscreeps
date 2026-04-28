@@ -308,7 +308,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		// Move to the target
 		const path = searchOrFetchPath();
 		if (!path) {
-			return C.ERR_NO_PATH;
+			return C.ERR_NOT_FOUND;
 		}
 		visualize(path);
 		if (path.length === 0) {
@@ -537,10 +537,18 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
+		() => checkInteractionBlocked(creep, target),
 		() => checkRange(creep, target, 1),
 		() => checkHasResource(target, resourceType, amount),
 		() => checkHasCapacity(creep, resourceType, amount),
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
+}
+
+function checkInteractionBlocked(creep: Creep, target: Structure & WithStore) {
+	const user = creep['#user'];
+	const blocked = target.room.lookForAt(C.LOOK_STRUCTURES, target.pos)
+		.some(structure => structure['#doesPreventInteraction'](user));
+	return blocked ? C.ERR_NOT_OWNER : C.OK;
 }
 
 export function calculateCost(creep: Creep) {
