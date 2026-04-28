@@ -91,7 +91,7 @@ async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
 }
 
 // Initialize workers and rooms
-await Promise.all(Fn.map(workers, async worker => {
+await Fn.mapAwait(workers, async worker => {
 	await worker.responder({ type: 'world', worldBlob });
 	for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
 		await worker.responder({ type: 'initialize', roomName });
@@ -99,7 +99,7 @@ await Promise.all(Fn.map(workers, async worker => {
 			break;
 		}
 	}
-}));
+});
 
 // Wait for initialization signal from main
 const processorMessages = processorSubscription.iterable();

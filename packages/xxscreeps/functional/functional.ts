@@ -17,6 +17,7 @@ export * from './asyncIterable/lookAhead.js';
 export * from './asyncIterable/map.js';
 export * from './asyncIterable/shift.js';
 export * from './asyncIterable/transform.js';
+export * from './asyncIterable/unbreak.js';
 export * from './function/chain.js';
 export * from './function/identity.js';
 export * from './function/pipe.js';

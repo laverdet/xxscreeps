@@ -82,6 +82,7 @@ const javaScriptRules = {
 		argsIgnorePattern: '^_',
 		caughtErrors: 'all',
 		ignoreRestSiblings: true,
+		ignoreUsingDeclarations: true,
 		varsIgnorePattern: '^_',
 	} ],
 	'no-use-before-define': [ 'warn', {
@@ -258,6 +259,7 @@ const typeScriptRules = acceptTypeScriptRules({
 		argsIgnorePattern: '^_',
 		caughtErrors: 'all',
 		ignoreRestSiblings: true,
+		ignoreUsingDeclarations: true,
 		varsIgnorePattern: '^_',
 	} ],
 	'@typescript-eslint/no-use-before-define': [ 'warn', {

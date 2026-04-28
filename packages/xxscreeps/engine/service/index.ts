@@ -28,4 +28,5 @@ export function handleInterrupt(fn: () => void) {
 		process.on('SIGINT', () => {});
 		setTimeout(() => process.removeAllListeners('SIGINT'), 250);
 	});
+	return unlisten;
 }

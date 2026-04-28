@@ -27,14 +27,18 @@ export class Worker extends NodeWorker {
 	}
 }
 
-export function waitForWorker(worker: Worker) {
-	return new Promise<void>((resolve, reject) => {
-		worker.on('exit', code => {
-			if (code === 0) {
-				resolve();
-			} else {
-				reject(new Error(`Worker exitted with code: ${code}`));
-			}
+export function waitForWorker(worker: Worker): Promise<void>;
+export function waitForWorker(worker: Worker | null): Promise<void> | undefined;
+export function waitForWorker(worker: Worker | null) {
+	if (worker) {
+		return new Promise<void>((resolve, reject) => {
+			worker.on('exit', code => {
+				if (code === 0) {
+					resolve();
+				} else {
+					reject(new Error(`Worker exitted with code: ${code}`));
+				}
+			});
 		});
-	});
+	}
 }
