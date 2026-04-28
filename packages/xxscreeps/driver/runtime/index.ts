@@ -200,6 +200,12 @@ export function tick(data: TickPayload) {
 			$$ => Fn.filter($$),
 			$$ => Fn.fromEntries($$));
 
+		// Bundle user-scope intents (notify, eventually global) for runner-side dispatch.
+		const userIntents = intents.getIntentsForUser();
+		if (Object.keys(userIntents).length !== 0) {
+			tickResult.userIntents = userIntents;
+		}
+
 		// Gather tick results from runtimeConnector
 		hooksComposed.send(tickResult as TickResult);
 		tickResult.console = flush();

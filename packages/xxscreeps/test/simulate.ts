@@ -2,12 +2,13 @@ import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/room.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
+import type { UserIntentPayload } from 'xxscreeps/game/intents.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import * as assert from 'node:assert';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
-import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
+import { dispatchUserIntents, initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
 import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -88,6 +89,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 
 		// Run simulation
 		const intentsByRoom = new Map<string, { userId: string; intents: RoomIntentPayload }[]>();
+		const userIntentsByUser: { userId: string; userIntents: UserIntentPayload }[] = [];
 		const playersThisTick = new Set<string>();
 		let roomInstances = new Map<string, Room>();
 		const that: Simulation = {
@@ -134,6 +136,10 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						getOrSet(intentsByRoom, roomName, () => []).push({ userId, intents: roomIntents });
 					}
 				}
+				const userIntents = intents.getIntentsForUser();
+				if (Object.keys(userIntents).length !== 0) {
+					userIntentsByUser.push({ userId, userIntents });
+				}
 			},
 
 			async tick(count = 1, players = {}) {
@@ -143,6 +149,12 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						await that.player(userId, task);
 					}
 					playersThisTick.clear();
+
+					// Dispatch user-scope intents (notify, eventually global) before per-room
+					// processing — this is the simulate analog of the runner→processor boundary.
+					const queuedUserIntents = userIntentsByUser.splice(0);
+					await Promise.all(queuedUserIntents.map(({ userId, userIntents }) =>
+						dispatchUserIntents(shard, userId, userIntents)));
 
 					// Initialize processor queue
 					const time = shard.time + 1;
