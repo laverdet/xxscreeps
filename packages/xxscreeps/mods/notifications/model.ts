@@ -36,8 +36,15 @@ export async function getNotifications(shard: Shard, userId: string): Promise<No
 export async function upsertNotification(
 	shard: Shard, userId: string, message: string, date: number, type: NotificationType,
 ) {
+	if (typeof message !== 'string') {
+		throw new TypeError('notification message must be a string');
+	}
+	if (!Number.isFinite(date)) {
+		throw new TypeError('notification date must be a finite number');
+	}
 	const id = rowIdFor(type, date, message);
 	const key = rowKey(userId, id);
+	// Read-then-write is safe because the runner serializes save() per user.
 	const existing = await shard.data.hget(key, 'count');
 	if (existing === null) {
 		await Promise.all([

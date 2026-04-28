@@ -1,19 +1,19 @@
-import type { Shard } from 'xxscreeps/engine/db/index.js';
-import { registerUserIntentProcessor } from 'xxscreeps/engine/processor/index.js';
+import { registerUserIntentHandler } from 'xxscreeps/engine/runner/intents.js';
 import { upsertNotification } from './model.js';
 
-type NotifyData = { message: unknown; groupInterval: unknown };
-
-registerUserIntentProcessor('notify', async (shard: Shard, userId: string, data: NotifyData) => {
-	let groupInterval = data.groupInterval as number;
-	if (groupInterval < 0) {
-		groupInterval = 0;
-	} else if (groupInterval > 1440) {
-		groupInterval = 1440;
+declare module 'xxscreeps/game/intents.js' {
+	interface UserIntent {
+		notify: [ message: string, groupInterval: number | undefined ];
 	}
-	const intervalMs = Math.floor(groupInterval * 60_000);
+}
+
+registerUserIntentHandler('notify', async (shard, userId, message, groupInterval) => {
+	const interval = typeof groupInterval === 'number' && Number.isFinite(groupInterval)
+		? Math.min(1440, Math.max(0, groupInterval)) : 0;
+	const intervalMs = interval * 60_000;
 	const now = Date.now();
 	const date = intervalMs > 0 ? Math.ceil(now / intervalMs) * intervalMs : now;
-	const message = String(data.message).substring(0, 500);
-	await upsertNotification(shard, userId, message, date, 'msg');
+	// Vanilla parity: engine uses `'' + i.message`.
+	const text = ('' + message).substring(0, 500);
+	await upsertNotification(shard, userId, text, date, 'msg');
 });

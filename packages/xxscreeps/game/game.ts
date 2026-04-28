@@ -121,7 +121,7 @@ export class Game extends GameBase {
 	 * Not available in the Simulation Room.
 	 */
 	notify(message: string, groupInterval?: number) {
-		return intents.pushUser('notify', [ { message, groupInterval } ], 20);
+		return intents.pushUser('notify', [ message, groupInterval ], 20);
 	}
 }
 

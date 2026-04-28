@@ -1,5 +1,4 @@
 import type { ProcessorContext } from './room.js';
-import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/utility/types.js';
@@ -85,41 +84,6 @@ type IntentsForHelper<Type extends IntentReceivers> =
 export type IntentListFor<Type extends IntentReceivers> = {
 	[Key in IntentsForHelper<Type>['intent']]?: IntentParameters<Type, Key>[];
 };
-
-// User-scope intent processors. These run once per (user, tick), independent of any room. Notify
-// is the first user; the surface is shaped so a future `global` intent slots in the same way.
-type UserIntentProcessor = (shard: Shard, userId: string, ...data: any) => Promise<void> | void;
-const userIntentProcessors = new Map<string, UserIntentProcessor>();
-
-export function registerUserIntentProcessor<Args extends any[]>(
-	intent: string,
-	process: (shard: Shard, userId: string, ...args: Args) => Promise<void> | void,
-) {
-	userIntentProcessors.set(intent, process as UserIntentProcessor);
-}
-
-export function getUserIntentProcessor(intent: string) {
-	return userIntentProcessors.get(intent);
-}
-
-export async function dispatchUserIntents(
-	shard: Shard, userId: string, userIntents: Record<string, any[][]> | undefined,
-) {
-	if (!userIntents) {
-		return;
-	}
-	// Serial within a user so that upserts coalescing on the same key do not race against each
-	// other. Different users still parallelize at the caller.
-	for (const [ intent, calls ] of Object.entries(userIntents)) {
-		const processor = userIntentProcessors.get(intent);
-		if (!processor) {
-			continue;
-		}
-		for (const args of calls) {
-			await processor(shard, userId, ...args);
-		}
-	}
-}
 
 // Register per-tick per-object processor
 export function registerObjectPreTickProcessor<Type extends RoomObject>(

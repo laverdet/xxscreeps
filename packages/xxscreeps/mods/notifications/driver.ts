@@ -1,5 +1,5 @@
-import { dispatchUserIntents } from 'xxscreeps/engine/processor/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
+import { dispatchUserIntents } from 'xxscreeps/engine/runner/intents.js';
 import './processor.js';
 
 hooks.register('runnerConnector', player => [ undefined, {

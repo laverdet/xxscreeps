@@ -8,9 +8,10 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import * as assert from 'node:assert';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
-import { dispatchUserIntents, initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
+import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
 import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
+import { dispatchUserIntents } from 'xxscreeps/engine/runner/intents.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
@@ -136,10 +137,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						getOrSet(intentsByRoom, roomName, () => []).push({ userId, intents: roomIntents });
 					}
 				}
-				const userIntents = intents.getIntentsForUser();
-				if (Object.keys(userIntents).length !== 0) {
-					userIntentsByUser.push({ userId, userIntents });
-				}
+				userIntentsByUser.push({ userId, userIntents: intents.getIntentsForUser() });
 			},
 
 			async tick(count = 1, players = {}) {
@@ -150,8 +148,8 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 					}
 					playersThisTick.clear();
 
-					// Dispatch user-scope intents (notify, eventually global) before per-room
-					// processing — this is the simulate analog of the runner→processor boundary.
+					// Dispatch user-scope intents before per-room processing — simulate analog of
+					// the runner-side connector save hook.
 					const queuedUserIntents = userIntentsByUser.splice(0);
 					await Promise.all(queuedUserIntents.map(({ userId, userIntents }) =>
 						dispatchUserIntents(shard, userId, userIntents)));

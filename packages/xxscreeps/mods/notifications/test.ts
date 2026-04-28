@@ -9,8 +9,8 @@ const empty = simulate({
 });
 
 // Manual clock control. xxscreeps' test runner has no fake-timer integration, so we patch
-// `Date.now` for the duration of the closure. This is the bucket-date oracle for the driver-side
-// upsert; vanilla calls `Date.now()` directly.
+// `Date.now` globally for the duration of the closure. Safe only because vitest runs tests within
+// a describe serially; two parallel callers would clobber each other's restore.
 async function withFrozenTime<Type>(now: number, fn: () => Promise<Type>) {
 	const original = Date.now;
 	Date.now = () => now;
@@ -121,8 +121,8 @@ describe('Game.notify', () => {
 
 	test('message coercion via "" + i.message', () => empty(async ({ player, tick, shard }) => {
 		await player(user, Game => {
-			Game.notify(null as any);
-			Game.notify({ a: 1 } as any);
+			Game.notify(null as unknown as string);
+			Game.notify({ a: 1 } as unknown as string);
 		});
 		await tick();
 		const rows = await getNotifications(shard, user);
@@ -135,7 +135,7 @@ describe('Game.notify', () => {
 		const frozen = 1_234_567;
 		await withFrozenTime(frozen, async () => {
 			await player(user, Game => {
-				assert.strictEqual((Game.notify as () => number)(), C.OK);
+				assert.strictEqual((Game.notify as unknown as () => number)(), C.OK);
 			});
 			await tick();
 			const rows = await getNotifications(shard, user);
@@ -151,7 +151,7 @@ describe('Game.notify', () => {
 		const frozen = 1_234_567;
 		await withFrozenTime(frozen, async () => {
 			await player(user, Game => {
-				Game.notify('strInterval', 'abc' as any);
+				Game.notify('strInterval', 'abc' as unknown as number);
 				Game.notify('nanInterval', NaN);
 			});
 			await tick();
