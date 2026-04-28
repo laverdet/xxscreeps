@@ -439,7 +439,9 @@ export default [
 	{
 		files: [ ...tsGlob ],
 		plugins: {
+			'@stylistic': stylisticPlugin,
 			'@typescript-eslint': /** @type {any} */(typeScriptPlugin),
+			import: importPlugin,
 		},
 		languageOptions: {
 			parser: typeScriptParser,

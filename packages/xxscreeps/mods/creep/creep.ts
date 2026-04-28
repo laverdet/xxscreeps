@@ -17,13 +17,13 @@ import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
-import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
