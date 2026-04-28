@@ -5,6 +5,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { captureDamage } from 'xxscreeps/mods/combat/creep.js';
 import { Creep, calculateBoundedEffect, calculatePower } from 'xxscreeps/mods/creep/creep.js';
@@ -54,9 +55,21 @@ const intents = [
 				Math.min(buildRemaining, creep.store.energy),
 			);
 			if (energy > 0) {
+				const applied = Math.min(boosted, buildRemaining);
 				creep.store['#subtract'](C.RESOURCE_ENERGY, energy);
-				target.progress += Math.min(boosted, buildRemaining);
+				target.progress += applied;
 				saveAction(creep, 'build', target.pos);
+				appendEventLog(target.room, {
+					event: C.EVENT_BUILD,
+					objectId: creep.id,
+					targetId: target.id,
+					amount: applied,
+					energySpent: energy,
+					structureType: target.structureType,
+					x: target.pos.x,
+					y: target.pos.y,
+					incomplete: target.progress < target.progressTotal,
+				});
 				context.didUpdate();
 			}
 		}
@@ -77,11 +90,17 @@ const intents = [
 					Resource.drop(creep.pos, 'energy', overflow);
 				}
 				const damage = captureDamage(target, effect, C.EVENT_ATTACK_TYPE_DISMANTLE, creep);
-				target.hits -= damage;
-				if (target.hits <= 0) {
-					target['#destroy']();
+				if (damage > 0) {
+					target['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_DISMANTLE, creep);
+					appendEventLog(target.room, {
+						event: C.EVENT_ATTACK,
+						objectId: creep.id,
+						targetId: target.id,
+						attackType: C.EVENT_ATTACK_TYPE_DISMANTLE,
+						damage,
+					});
 				}
-				// TODO: dismantle event
+				// TODO: dismantle action animation
 				// saveAction(creep, 'dismantle', target.pos.x, target.pos.y);
 				context.didUpdate();
 			}
@@ -103,9 +122,17 @@ const intents = [
 			);
 			if (effect > 0) {
 				const energyCost = Math.min(creep.store.energy, Math.ceil(effect * C.REPAIR_COST));
+				const applied = Math.min(boosted, repairHitsMax);
 				creep.store['#subtract'](C.RESOURCE_ENERGY, energyCost);
-				target.hits += Math.min(boosted, repairHitsMax);
+				target.hits += applied;
 				saveAction(creep, 'repair', target.pos);
+				appendEventLog(target.room, {
+					event: C.EVENT_REPAIR,
+					objectId: creep.id,
+					targetId: target.id,
+					amount: applied,
+					energySpent: energyCost,
+				});
 				context.didUpdate();
 			}
 		}

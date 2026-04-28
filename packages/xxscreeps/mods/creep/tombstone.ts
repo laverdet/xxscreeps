@@ -3,6 +3,7 @@ import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject, create as createObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
@@ -116,6 +117,11 @@ export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
 		user: creep['#user'],
 	};
 	tombstone['#decayTime'] = Game.time + creep.body.length * C.TOMBSTONE_DECAY_PER_PART;
+	appendEventLog(creep.room, {
+		event: C.EVENT_OBJECT_DESTROYED,
+		objectId: creep.id,
+		type: 'creep',
+	});
 	creep.room['#insertObject'](tombstone);
 	creep.room['#removeObject'](creep);
 }

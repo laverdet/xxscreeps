@@ -1,5 +1,7 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
+import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create } from './creep.js';
 
@@ -509,6 +511,96 @@ describe('Movement', () => {
 				assert.strictEqual(fullSpeed.fatigue, 8);
 				assert.strictEqual(halfSpeed.fatigue, 0);
 				assert.strictEqual(halfSpeed2.fatigue, 0);
+			});
+		}));
+	});
+});
+
+describe('Event log events', () => {
+	describe('EVENT_OBJECT_DESTROYED on creep death', () => {
+		const ageOut = simulate({
+			W5N5: room => {
+				const creep = create(new RoomPosition(25, 25, 'W5N5'), [ C.MOVE ], 'mortal', '100');
+				creep['#ageTime'] = 2;
+				room['#insertObject'](creep);
+			},
+		});
+
+		test('ageTime expiry emits EVENT_OBJECT_DESTROYED with type creep', () => ageOut(async ({ tick, peekRoom }) => {
+			await tick();
+			await peekRoom('W5N5', room => {
+				const log = room.getEventLog();
+				const destroyed = log.find(event => event.event === C.EVENT_OBJECT_DESTROYED);
+				assert.ok(destroyed, 'expected a death event on the tick the creep aged out');
+				assert.ok(destroyed.data, 'expected nested data payload');
+				assert.strictEqual(destroyed.data.type, 'creep');
+			});
+		}));
+	});
+
+	describe('EVENT_TRANSFER on creep-to-creep transfer', () => {
+		const sim = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				const giver = create(new RoomPosition(25, 25, 'W1N1'), [ C.CARRY ], 'giver', '100');
+				giver.store['#add'](C.RESOURCE_ENERGY, 10);
+				room['#insertObject'](giver);
+				const receiver = create(new RoomPosition(26, 25, 'W1N1'), [ C.CARRY ], 'receiver', '100');
+				room['#insertObject'](receiver);
+			},
+		});
+
+		test('creep transfer emits EVENT_TRANSFER with source and target ids', () => sim(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(
+					Game.creeps.giver.transfer(Game.creeps.receiver, C.RESOURCE_ENERGY, 5),
+					C.OK,
+				);
+			});
+			await tick();
+			await player('100', Game => {
+				const log = Game.rooms.W1N1.getEventLog();
+				const transfer = log.find(event => event.event === C.EVENT_TRANSFER);
+				assert.ok(transfer, 'expected EVENT_TRANSFER');
+				assert.strictEqual(transfer.objectId, Game.creeps.giver.id);
+				assert.ok(transfer.data, 'expected nested data payload');
+				assert.strictEqual(transfer.data.targetId, Game.creeps.receiver.id);
+				assert.strictEqual(transfer.data.resourceType, C.RESOURCE_ENERGY);
+				assert.strictEqual(transfer.data.amount, 5);
+			});
+		}));
+	});
+
+	describe('EVENT_TRANSFER on withdraw', () => {
+		const sim = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				const container = createContainer(new RoomPosition(25, 25, 'W1N1'));
+				container.store['#add'](C.RESOURCE_ENERGY, 50);
+				room['#insertObject'](container);
+				room['#insertObject'](create(new RoomPosition(26, 25, 'W1N1'), [ C.CARRY ], 'taker', '100'));
+			},
+		});
+
+		// Vanilla flips the roles on withdraw: source structure is `objectId`, creep is `targetId`.
+		test('withdraw flips objectId/targetId vs transfer', () => sim(async ({ player, tick }) => {
+			await player('100', Game => {
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
+				assert.strictEqual(Game.creeps.taker.withdraw(container, C.RESOURCE_ENERGY, 7), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
+				const log = Game.rooms.W1N1.getEventLog();
+				const transfer = log.find(event => event.event === C.EVENT_TRANSFER);
+				assert.ok(transfer, 'expected EVENT_TRANSFER');
+				assert.strictEqual(transfer.objectId, container.id);
+				assert.ok(transfer.data, 'expected nested data payload');
+				assert.strictEqual(transfer.data.targetId, Game.creeps.taker.id);
+				assert.strictEqual(transfer.data.resourceType, C.RESOURCE_ENERGY);
+				assert.strictEqual(transfer.data.amount, 7);
 			});
 		}));
 	});

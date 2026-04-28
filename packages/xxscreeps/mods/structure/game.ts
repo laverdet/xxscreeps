@@ -1,8 +1,10 @@
 import type { AnyStructure } from './structure.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import { constant, struct, variant } from 'xxscreeps/schema/index.js';
 import { Ruin, format as ruinFormat } from './ruin.js';
 import { OwnedStructure, Structure } from './structure.js';
 
@@ -42,7 +44,15 @@ declare module 'xxscreeps/game/room/index.js' {
 
 // Register schema type for `Ruin`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const schema = registerVariant('Room.objects', ruinFormat);
+const ruinSchema = registerVariant('Room.objects', ruinFormat);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const destroyedEventSchema = registerVariant('Room.eventLog', struct({
+	...variant(C.EVENT_OBJECT_DESTROYED),
+	event: constant(C.EVENT_OBJECT_DESTROYED),
+	objectId: Id.format,
+	type: 'string',
+}));
 declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { structure: [ typeof schema ] }
+	interface Schema { structure: [ typeof ruinSchema, typeof destroyedEventSchema ] }
 }

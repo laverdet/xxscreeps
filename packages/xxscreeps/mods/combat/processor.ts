@@ -45,9 +45,9 @@ const intents = [
 		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkRangedAttack(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER, 'rangedAttack');
-			const damage = captureDamage(target, power, C.RANGED_ATTACK_POWER, creep);
+			const damage = captureDamage(target, power, C.EVENT_ATTACK_TYPE_RANGED, creep);
 			if (damage > 0) {
-				target['#applyDamage'](damage, C.RANGED_ATTACK_POWER, creep);
+				target['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_RANGED, creep);
 				appendEventLog(target.room, {
 					event: C.EVENT_ATTACK,
 					objectId: creep.id,

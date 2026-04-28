@@ -5,6 +5,7 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/creep/creep.js';
 import { checkActiveStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
@@ -77,6 +78,10 @@ const intents = [
 				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE - 1;
 			}
 			saveAction(creep, 'attack', controller.pos);
+			appendEventLog(controller.room, {
+				event: C.EVENT_ATTACK_CONTROLLER,
+				objectId: creep.id,
+			});
 			context.didUpdate();
 		}
 	}),
@@ -148,6 +153,11 @@ const intents = [
 				context.task(context.shard.scratch.sadd(reservedRoomKey(userId), [ controller.room.name ]));
 			}
 			saveAction(creep, 'reserveController', controller.pos);
+			appendEventLog(controller.room, {
+				event: C.EVENT_RESERVE_CONTROLLER,
+				objectId: creep.id,
+				amount: power,
+			});
 			context.didUpdate();
 		}
 	}),
@@ -201,6 +211,14 @@ const intents = [
 				}
 			}
 			saveAction(creep, 'upgradeController', controller.pos);
+			// Vanilla emits amount=upgrade output (boosted), energySpent=energy
+			// debited from the creep (unboosted).
+			appendEventLog(controller.room, {
+				event: C.EVENT_UPGRADE_CONTROLLER,
+				objectId: creep.id,
+				amount: progress,
+				energySpent: energy,
+			});
 			context.didUpdate();
 		}
 	}),
