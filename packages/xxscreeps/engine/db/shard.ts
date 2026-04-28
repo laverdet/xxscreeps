@@ -49,7 +49,7 @@ export class Shard {
 		// Connect to shard, load const data
 		const shard = config.shards.find(shard => shard.name === name);
 		if (!shard) {
-			throw new Error(`Unknown shard: ${shard}`);
+			throw new Error(`Unknown shard: ${name}`);
 		}
 		return this.connectWith(db, shard);
 	}
@@ -91,10 +91,15 @@ export class Shard {
 	}
 
 	/**
-	 * Load and parse shard terrain data
+	 * Load and parse shard terrain data together with the active-rooms set so
+	 * `World.map.getRoomStatus()` can distinguish closed rooms from normal ones.
 	 */
 	async loadWorld() {
-		return new World(this.name, await this.data.req('terrain', { blob: true }));
+		const [ terrainBlob, rooms ] = await Promise.all([
+			this.data.req('terrain', { blob: true }),
+			this.data.smembers('rooms'),
+		]);
+		return new World(this.name, terrainBlob, new Set(rooms));
 	}
 
 	/**
