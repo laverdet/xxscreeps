@@ -30,6 +30,11 @@ import { assign } from 'xxscreeps/utility/utility.js';
 export type PartType = typeof C.BODYPARTS_ALL[number];
 type BoostEffects = Partial<Record<string, number>>;
 export type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
+export interface BodyPart {
+	boost?: ResourceType;
+	hits: number;
+	type: PartType;
+}
 
 type MoveToOptions = FindPathOptions & {
 	noPathFinding?: boolean;
@@ -41,7 +46,7 @@ type MoveToOptions = FindPathOptions & {
 export const format = declare('Creep', () => compose(shape, Creep));
 const shape = struct(objectFormat, {
 	...variant('creep'),
-	body: vector(declare('BodyPart', compose(
+	body: vector(compose(
 		struct({
 			boost: optionalResourceEnumFormat,
 			hits: 'int8',
@@ -49,12 +54,11 @@ const shape = struct(objectFormat, {
 		}),
 		{
 			// Vanilla omits `boost` from unboosted parts; only set after applyBoost.
-			compose: ({ boost, hits, type }): { boost?: ResourceType; hits: number; type: PartType } =>
+			compose: ({ boost, hits, type }): BodyPart =>
 				boost === undefined ? { hits, type } : { boost, hits, type },
-			decompose: (part: { boost?: ResourceType; hits: number; type: PartType }) =>
-				({ boost: part.boost, hits: part.hits, type: part.type }),
+			decompose: (part: BodyPart) => ({ boost: part.boost, hits: part.hits, type: part.type }),
 		},
-	))),
+	)),
 	fatigue: 'int32',
 	hits: 'int32',
 	name: 'string',

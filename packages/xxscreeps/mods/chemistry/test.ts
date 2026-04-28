@@ -206,6 +206,28 @@ describe('Chemistry', () => {
 			});
 		}));
 
+		test('body parts match vanilla own-property shape', () => boostSim(async ({ player, tick }) => {
+			await player('100', Game => {
+				// Pre-boost: every part is `{ hits, type }` — no `boost` own property
+				for (const part of Game.creeps.boostme.body) {
+					assert.ok(!('boost' in part), `unboosted ${part.type} part must not have own 'boost' property`);
+				}
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				labs.find(lab => lab.mineralType === 'GO')!.boostCreep(Game.creeps.boostme);
+			});
+			await tick();
+			await player('100', Game => {
+				// Post-boost: only the boosted (TOUGH) parts gain a `boost` own property
+				for (const part of Game.creeps.boostme.body) {
+					if (part.type === C.TOUGH) {
+						assert.ok('boost' in part, 'boosted TOUGH part must have own `boost` property');
+					} else {
+						assert.ok(!('boost' in part), `unboosted ${part.type} part must not have own 'boost' property`);
+					}
+				}
+			});
+		}));
+
 		test('boostCreep deducts resources from lab', () => boostSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
@@ -438,6 +460,10 @@ describe('Chemistry', () => {
 				const creep = Game.creeps.unboosted;
 				const boostedParts = creep.body.filter(part => part.boost);
 				assert.strictEqual(boostedParts.length, 0, 'all boosts should be removed');
+				// Vanilla parity: unboost must drop the `boost` own property entirely, not leave it set to undefined.
+				for (const part of creep.body) {
+					assert.ok(!('boost' in part), `unboosted ${part.type} part must not have own 'boost' property`);
+				}
 			});
 		}));
 
