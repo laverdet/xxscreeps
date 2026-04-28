@@ -111,7 +111,7 @@ const intents = [
 
 		// Strip all boosts
 		for (const part of creep.body) {
-			part.boost = undefined;
+			delete part.boost;
 		}
 
 		// Recalculate carry capacity

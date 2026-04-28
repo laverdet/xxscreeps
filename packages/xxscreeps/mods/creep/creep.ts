@@ -41,11 +41,20 @@ type MoveToOptions = FindPathOptions & {
 export const format = declare('Creep', () => compose(shape, Creep));
 const shape = struct(objectFormat, {
 	...variant('creep'),
-	body: vector(struct({
-		boost: optionalResourceEnumFormat,
-		hits: 'int8',
-		type: enumerated(...C.BODYPARTS_ALL),
-	})),
+	body: vector(declare('BodyPart', compose(
+		struct({
+			boost: optionalResourceEnumFormat,
+			hits: 'int8',
+			type: enumerated(...C.BODYPARTS_ALL),
+		}),
+		{
+			// Vanilla omits `boost` from unboosted parts; only set after applyBoost.
+			compose: ({ boost, hits, type }): { boost?: ResourceType; hits: number; type: PartType } =>
+				boost === undefined ? { hits, type } : { boost, hits, type },
+			decompose: (part: { boost?: ResourceType; hits: number; type: PartType }) =>
+				({ boost: part.boost, hits: part.hits, type: part.type }),
+		},
+	))),
 	fatigue: 'int32',
 	hits: 'int32',
 	name: 'string',
@@ -419,7 +428,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 }
 
 export function create(pos: RoomPosition, parts: PartType[], name: string, owner: string) {
-	const body = parts.map(type => ({ type, hits: 100, boost: undefined }));
+	const body = parts.map(type => ({ type, hits: 100 }));
 	const creep = assign(createObject(new Creep(), pos), {
 		body,
 		hits: body.length * 100,

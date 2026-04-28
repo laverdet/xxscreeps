@@ -138,7 +138,7 @@ const intents = [
 				creep['#ageTime'] += calculateRenewAmount(creep);
 				if (creep.body.some(part => part.boost)) {
 					for (const part of creep.body) {
-						part.boost = undefined;
+						delete part.boost;
 					}
 					dropOverflowResources(creep);
 				}
