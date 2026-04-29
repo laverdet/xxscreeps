@@ -106,9 +106,14 @@ export class RoomProcessor implements ProcessorContext {
 			}
 			this.room['#flushObjects'](this.state);
 
-			// Run `registerRoomTickProcessor` hooks
+			// Run `registerRoomTickProcessor` hooks. Each callback is isolated: a throw is logged
+			// and does not break siblings or abort the rest of room processing.
 			for (const process of roomTickProcessors) {
-				process(this.room, this);
+				try {
+					process(this.room, this);
+				} catch (err) {
+					console.error(`room tick processor threw on ${this.room.name} at ${this.time}:`, err);
+				}
 			}
 			this.room['#flushObjects'](this.state);
 

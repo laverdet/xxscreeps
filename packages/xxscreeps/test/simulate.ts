@@ -10,6 +10,7 @@ import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
 import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
+import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
@@ -174,6 +175,9 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						await context.finalize(true);
 						nextRoomInstances.set(roomName, room);
 					}
+
+					// Run shard tick processors before next-tick snapshot.
+					await runShardTickProcessors(shard, time);
 
 					// Increment time
 					await shard.data.set('time', time);
