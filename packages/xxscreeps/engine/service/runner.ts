@@ -8,8 +8,10 @@ import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+import { handleInterruptSignal } from './signal.js';
+import { checkIsEntry, getServiceChannel } from './index.js';
 
 await importMods('driver');
 const isEntry = checkIsEntry();
@@ -21,7 +23,7 @@ const log = config.runner.log ?? isEntry
 let break1: Effect | undefined;
 let break2: Effect | undefined;
 let break3: Effect | undefined;
-handleInterrupt(() => {
+using _signal = handleInterruptSignal(() => {
 	break1?.();
 	break2?.();
 	break3?.();
@@ -84,33 +86,33 @@ loop: for await (const message of Async.breakable(runnerMessages, breaker => bre
 				}
 			}();
 			// Run player code
-			const userQueue = Async.concat(
-				Async.lookAhead(affinityIterator, 1),
-				pauseIfMoreRemain,
-				fallbackIterator,
-			);
-			await Async.spread(maxConcurrency, userQueue, async userId => {
-				// Get or create player instance
-				seen.add(userId);
-				const instance = playerInstances.get(userId) ?? await async function() {
-					const instance = await PlayerInstance.create(shard, world, userId);
-					playerInstances.set(userId, instance);
-					return instance;
-				}();
+			await Fn.pipe(
+				Fn.concatAsync([ Fn.lookAhead(affinityIterator, 1), pauseIfMoreRemain, fallbackIterator ]),
+				$$ => Fn.divide($$, maxConcurrency),
+				$$ => Fn.mapAwait($$, async userIds => {
+					for await (const userId of userIds) {
+						// Get or create player instance
+						seen.add(userId);
+						const instance = playerInstances.get(userId) ?? await async function() {
+							const instance = await PlayerInstance.create(shard, world, userId);
+							playerInstances.set(userId, instance);
+							return instance;
+						}();
 
-				// Run user code
-				const [ intentRooms, visibleRooms ] = await Promise.all([
-					shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
-					shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
-				]);
-				if (intentRooms.length === 0) {
-					await shard.scratch.srem('activeUsers', [ userId ]);
-				} else {
-					log(`+${instance.username}, `);
-					await instance.run(time, visibleRooms, intentRooms);
-					log(`-${instance.username}, `);
-				}
-			});
+						// Run user code
+						const [ intentRooms, visibleRooms ] = await Promise.all([
+							shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
+							shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
+						]);
+						if (intentRooms.length === 0) {
+							await shard.scratch.srem('activeUsers', [ userId ]);
+						} else {
+							log(`+${instance.username}, `);
+							await instance.run(time, visibleRooms, intentRooms);
+							log(`-${instance.username}, `);
+						}
+					}
+				}));
 
 			// Throwaway migrated player sandboxes
 			for (const [ userId, instance ] of playerInstances) {

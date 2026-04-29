@@ -19,7 +19,6 @@ export class Mutex {
 	constructor(channel: Subscription<Message>, lockable: Lock) {
 		this.channel = channel;
 		this.lockable = lockable;
-
 	}
 
 	static async connect(name: string, keyval: KeyValProvider, pubsub: PubSubProvider) {
@@ -28,7 +27,7 @@ export class Mutex {
 		return new Mutex(channel, lock);
 	}
 
-	async disconnect() {
+	async [Symbol.asyncDispose]() {
 		if (this.lockedOrPending) {
 			throw new Error('Can\'t disconnect while mutex locked');
 		} else if (this.waitingListener) {
@@ -39,8 +38,13 @@ export class Mutex {
 		this.channel.disconnect();
 	}
 
+	async acquire() {
+		await this.lock();
+		const unlock = () => this.unlock();
+		return { [Symbol.asyncDispose]: unlock };
+	}
+
 	async lock() {
-		using disposable = new DisposableStack();
 		if (this.lockedOrPending) {
 			// Already locked locally
 			const lockDefer = new Deferred();
@@ -84,14 +88,16 @@ export class Mutex {
 			}, lockDefer.reject);
 		};
 		// Listen for unlock messages and try to lock again
+		using disposable = new DisposableStack();
 		disposable.defer(this.channel.listen(message => {
 			if (message === 'unlocked') {
 				tryLock();
 			}
 		}));
+
 		// Also keep trying in case the peer gave up
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		using _timer = acquireTimeout(500, tryLock);
+
 		// Wait on the lock
 		tryLock();
 		await lockDefer.promise;
@@ -111,15 +117,6 @@ export class Mutex {
 			}
 		} else {
 			throw new Error('Not locked');
-		}
-	}
-
-	async scope<Type>(callback: () => Promise<Type>): Promise<Type> {
-		await this.lock();
-		try {
-			return await callback();
-		} finally {
-			await this.unlock();
 		}
 	}
 

@@ -1,5 +1,6 @@
 import { join } from 'node:path';
-import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
+import { Worker, isMainThread } from 'node:worker_threads';
+import { initializeInterruptSignal } from 'xxscreeps/engine/service/signal.js';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not
 const nodeMajor = Number(process.versions.node.split('.')[0]);
@@ -26,6 +27,9 @@ if (missingFlags.length) {
 		...missingFlags,
 		...niceToHaveFlags.filter(isMissingFlag),
 	];
+
+	// Start fake top thread and wait for exit
+	initializeInterruptSignal();
 	process.exit(await new Promise<number>((resolve, reject) => {
 		const worker = new Worker(new URL(import.meta.url), {
 			argv: process.argv.slice(2),
@@ -33,7 +37,7 @@ if (missingFlags.length) {
 			stdin: true,
 			workerData: { isTopThread: true },
 		});
-		worker.on('error', error => reject(error));
+		worker.on('error', reject);
 		worker.on('exit', code => resolve(code));
 		worker.on('message', message => {
 			if (message === 'EXIT') {
@@ -43,26 +47,13 @@ if (missingFlags.length) {
 				process.exit(1);
 			}
 		});
-		process.on('SIGINT', () => {
-			worker.postMessage('SIGINT');
-			setTimeout(() => process.removeAllListeners('SIGINT'), 250);
-		});
 		process.stdin.pipe(worker.stdin!);
 	}));
 
 } else {
 
 	// All required flags were passed
-	if (!isMainThread && workerData?.isTopThread) {
-		// This is a fake top-thread, so the real top thread will send SIGINT messages
-		parentPort!.on('message', message => {
-			if (message === 'SIGINT') {
-				if (!process.emit('SIGINT' as never)) {
-					parentPort!.postMessage('EXIT');
-				}
-			}
-		}).unref();
-	}
+	process.execArgv = process.execArgv.filter(flag => !noWorkerFlags.includes(flag));
 
 	// Get script and remove `dist/config/entry.js` from args
 	process.argv.splice(1, 1);
@@ -99,6 +90,7 @@ if (missingFlags.length) {
 					return import.meta.resolve(`${new URL(command, new URL('../..', import.meta.url))}`);
 				}
 			} catch (error: any) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 				if (error.code !== 'ERR_MODULE_NOT_FOUND') {
 					throw error;
 				}

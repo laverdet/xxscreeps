@@ -39,7 +39,7 @@ export async function releasePause() {
 	pauseChannel = undefined;
 	channel?.disconnect();
 	await mutex.unlock();
-	await mutex.disconnect();
+	await mutex[Symbol.asyncDispose]();
 }
 
 export function makeSystemHelpers(db: Database, entry: ShardEntry) {

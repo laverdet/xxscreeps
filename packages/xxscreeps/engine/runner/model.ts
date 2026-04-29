@@ -42,8 +42,7 @@ export async function requestRunnerEval(shard: Shard, userId: string, expr: stri
 	using disposable = new DisposableStack();
 	// Response timeout
 	const timer = Promise.withResolvers<never>();
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	using timeout = acquireTimeout(
+	using _timeout = acquireTimeout(
 		Math.max(500, tickSpeed * 4),
 		() => timer.reject(new Error('Runner did not respond')),
 	);

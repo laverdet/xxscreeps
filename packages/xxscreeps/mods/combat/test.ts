@@ -78,12 +78,16 @@ describe('getEventLog', () => {
 		await tick();
 		await player('100', Game => {
 			const log = Game.rooms.W1N1.getEventLog();
-			const attackEvent: unknown = log.find(event => event.event === C.EVENT_ATTACK);
+			const attackEvent = log.find(event => event.event === C.EVENT_ATTACK);
 			assert.ok(attackEvent, 'expected an attack event in the event log');
+			assert.strictEqual(attackEvent.objectId, Game.creeps.attacker.id);
+			assert.ok(attackEvent.data, 'expected nested data payload');
+			assert.strictEqual(attackEvent.data.attackType, C.EVENT_ATTACK_TYPE_MELEE);
+			assert.ok(typeof attackEvent.data.damage === 'number');
 		});
 	}));
 
-	test('raw mode returns JSON string', () => sim(async ({ player, tick }) => {
+	test('raw mode returns vanilla-shaped JSON string', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
 			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
 				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
@@ -93,8 +97,79 @@ describe('getEventLog', () => {
 		await player('100', Game => {
 			const raw = Game.rooms.W1N1.getEventLog(true);
 			assert.ok(typeof raw === 'string');
-			const parsed: unknown = JSON.parse(raw);
+			const parsed = JSON.parse(raw) as { event: number; objectId: string; data?: Record<string, unknown> }[];
 			assert.ok(Array.isArray(parsed));
+			const attack = parsed.find(event => event.event === C.EVENT_ATTACK);
+			assert.ok(attack, 'attack event missing from raw log');
+			assert.ok(attack.data && typeof attack.data === 'object', 'attack event data must be an object');
+		});
+	}));
+});
+
+describe('getEventLog missing events', () => {
+	// Structure destruction (EVENT_OBJECT_DESTROYED) from damage.
+	const structureKill = simulate({
+		W1N1: room => {
+			room['#level'] = 7;
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), '100'));
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 24, 'W1N1'),
+				[ ...Fn.map(Fn.range(17), () => C.ATTACK) ],
+				'warrior', '100',
+			));
+		},
+	});
+
+	test('structure death emits EVENT_OBJECT_DESTROYED with structureType', () => structureKill(async ({ player, tick }) => {
+		await player('100', Game => {
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
+			Game.creeps.warrior.attack(lab);
+		});
+		await tick();
+		await player('100', Game => {
+			const log = Game.rooms.W1N1.getEventLog();
+			const destroyed = log.find(event => event.event === C.EVENT_OBJECT_DESTROYED);
+			assert.ok(destroyed, 'expected an EVENT_OBJECT_DESTROYED entry');
+			assert.ok(destroyed.data, 'expected nested data payload');
+			assert.strictEqual(destroyed.data.type, C.STRUCTURE_LAB);
+		});
+	}));
+
+	// Two attackers landing on the same structure on the same tick must produce
+	// exactly one EVENT_OBJECT_DESTROYED — the destroyed-event must gate on the
+	// alive→dead transition, not on the post-damage hits value.
+	const multiAttackerKill = simulate({
+		W1N1: room => {
+			room['#level'] = 7;
+			room['#user'] = room.controller!['#user'] = '100';
+			const lab = createLab(new RoomPosition(25, 25, 'W1N1'), '100');
+			room['#insertObject'](lab);
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 24, 'W1N1'),
+				[ ...Fn.map(Fn.range(17), () => C.ATTACK) ],
+				'warriorA', '100',
+			));
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 26, 'W1N1'),
+				[ ...Fn.map(Fn.range(17), () => C.ATTACK) ],
+				'warriorB', '100',
+			));
+		},
+	});
+
+	test('multi-attacker kill emits EVENT_OBJECT_DESTROYED exactly once', () => multiAttackerKill(async ({ player, tick }) => {
+		await player('100', Game => {
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
+			Game.creeps.warriorA.attack(lab);
+			Game.creeps.warriorB.attack(lab);
+		});
+		await tick();
+		await player('100', Game => {
+			const log = Game.rooms.W1N1.getEventLog();
+			const destroyed = log.filter(event => event.event === C.EVENT_OBJECT_DESTROYED);
+			assert.strictEqual(destroyed.length, 1,
+				`expected exactly one EVENT_OBJECT_DESTROYED for one structure death, got ${destroyed.length}`);
 		});
 	}));
 });

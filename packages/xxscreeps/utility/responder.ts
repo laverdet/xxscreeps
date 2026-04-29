@@ -3,7 +3,6 @@ import type { MessagePort } from 'node:worker_threads';
 import { EventEmitter } from 'node:events';
 import { MessageChannel, parentPort } from 'node:worker_threads';
 import { Deferred, mustNotReject } from './async.js';
-import { staticCast } from './utility.js';
 import { Worker, waitForWorker } from './worker.js';
 
 type RequestMessage = {
@@ -127,16 +126,16 @@ export async function makeBasicResponderHost<Type>(url: string, implementation: 
 			const { payload, id } = message;
 			++pending;
 			try {
-				port.postMessage(staticCast<ResponseMessage>({
+				port.postMessage({
 					id,
 					payload: await implementation(payload as Type),
-				}));
+				} satisfies ResponseMessage);
 			} catch (err: any) {
-				port.postMessage(staticCast<ResponseMessage>({
+				port.postMessage({
 					id,
 					payload: err.stack,
 					rejection: true,
-				}));
+				} satisfies ResponseMessage);
 			} finally {
 				if (--pending === 0 && !alive) {
 					resolve();

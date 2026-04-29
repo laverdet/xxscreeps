@@ -4,6 +4,7 @@
 export * from './array/reverse.js';
 export * from './array/slice.js';
 export * from './asyncIterable/collect.js';
+export * from './asyncIterable/concat.js';
 export * from './asyncIterable/distribute.js';
 export * from './asyncIterable/divide.js';
 export * from './asyncIterable/filter.js';
@@ -16,6 +17,7 @@ export * from './asyncIterable/lookAhead.js';
 export * from './asyncIterable/map.js';
 export * from './asyncIterable/shift.js';
 export * from './asyncIterable/transform.js';
+export * from './asyncIterable/unbreak.js';
 export * from './function/chain.js';
 export * from './function/identity.js';
 export * from './function/pipe.js';

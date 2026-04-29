@@ -99,53 +99,6 @@ AsyncIterable<Type> | [ Effect, AsyncIterable<Type> ] {
 const breakToken: Record<any, never> = {};
 
 /**
- * Concatenates the supplied async generators sequentially.
- */
-export async function *concat<Type>(...generators: AsyncIterable<Type>[]) {
-	for (const generator of generators) {
-		for await (const value of generator) {
-			yield value;
-		}
-	}
-}
-
-/**
- * Returns an iterator which proxies the given generator, requesting up to `count` elements in
- * advance. If you break ouf of this loop there will be abandoned values!
- */
-export function lookAhead<Type>(iterable: AsyncIterable<Type>, count: number) {
-	if (count <= 0) {
-		return iterable;
-	}
-	return async function*() {
-		const generator = iterable[Symbol.asyncIterator]();
-		try {
-			const push = (result: IteratorResult<Type>) => {
-				if (!result.done && queue.length <= count) {
-					const next = generator.next();
-					void next.then(push);
-					queue.push(next);
-				}
-			};
-			const first = generator.next();
-			void first.then(push);
-			const queue = [ first ];
-			while (true) {
-				const next = await queue[0];
-				if (next.done) {
-					return;
-				}
-				void queue.shift();
-				push(next);
-				yield next.value;
-			}
-		} finally {
-			void generator.return?.();
-		}
-	}();
-}
-
-/**
  * Maps over the iterable with up to `concurrency` parallel tasks.
  */
 export async function spread<Type>(

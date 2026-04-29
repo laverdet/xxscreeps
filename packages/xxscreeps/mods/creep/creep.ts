@@ -17,13 +17,13 @@ import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
-import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
@@ -118,19 +118,12 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		game.creeps[this.name] = this;
 	}
 
-	override '#applyDamage'(power: number, type: number, source?: RoomObject) {
+	override '#applyDamage'(power: number, _type: number, source?: RoomObject) {
 		if (this.spawning) {
 			return;
 		}
 		this.tickRawDamage = (this.tickRawDamage ?? 0) + power;
 		if (source) {
-			appendEventLog(this.room, {
-				event: C.EVENT_ATTACK,
-				objectId: source.id,
-				targetId: this.id,
-				attackType: type,
-				damage: power,
-			});
 			saveAction(this, 'attacked', source.pos);
 		}
 	}
@@ -315,7 +308,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		// Move to the target
 		const path = searchOrFetchPath();
 		if (!path) {
-			return C.ERR_NO_PATH;
+			return C.ERR_NOT_FOUND;
 		}
 		visualize(path);
 		if (path.length === 0) {
@@ -512,6 +505,7 @@ export function checkPull(creep: Creep, target: Creep | null | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Creep),
+		() => target === creep ? C.ERR_INVALID_TARGET : C.OK,
 		() => checkRange(creep, target!, 1),
 		() => target!.spawning ? C.ERR_INVALID_TARGET : C.OK);
 }
@@ -543,10 +537,18 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
+		() => checkInteractionBlocked(creep, target),
 		() => checkRange(creep, target, 1),
 		() => checkHasResource(target, resourceType, amount),
 		() => checkHasCapacity(creep, resourceType, amount),
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
+}
+
+function checkInteractionBlocked(creep: Creep, target: Structure & WithStore) {
+	const user = creep['#user'];
+	const blocked = target.room.lookForAt(C.LOOK_STRUCTURES, target.pos)
+		.some(structure => structure['#doesPreventInteraction'](user));
+	return blocked ? C.ERR_NOT_OWNER : C.OK;
 }
 
 export function calculateCost(creep: Creep) {

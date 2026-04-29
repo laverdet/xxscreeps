@@ -9,6 +9,7 @@ import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { compose, declare, optional, struct, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { createRuin } from './ruin.js';
@@ -97,9 +98,18 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return true;
 	}
 
+	'#doesPreventInteraction'(_user: string) {
+		return false;
+	}
+
 	override '#destroy'() {
 		if (super['#destroy']()) {
 			this.room['#insertObject'](createRuin(this));
+			appendEventLog(this.room, {
+				event: C.EVENT_OBJECT_DESTROYED,
+				objectId: this.id,
+				type: this.structureType,
+			});
 			return true;
 		} else {
 			return false;

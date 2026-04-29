@@ -8,7 +8,8 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { negotiateResponderClient } from 'xxscreeps/utility/responder.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+import { handleInterruptSignal } from './signal.js';
+import { checkIsEntry, getServiceChannel } from './index.js';
 
 const isEntry = checkIsEntry();
 const log = config.processor.log ?? isEntry
@@ -19,7 +20,7 @@ const log = config.processor.log ?? isEntry
 let halt: Effect | undefined;
 let halted = false as boolean;
 let processing = false;
-handleInterrupt(() => {
+using _signal = handleInterruptSignal(() => {
 	halted = true;
 	if (!processing) {
 		halt?.();
@@ -72,7 +73,8 @@ async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
 			const endOfAffinity = async function*() {
 				worker.checkAffinity = false;
 			}();
-			for await (const roomName of Async.lookAhead(Async.concat(affinityIterator, endOfAffinity), 1)) {
+			const iterators = Fn.concatAsync([ affinityIterator, endOfAffinity ]);
+			for await (const roomName of Fn.lookAhead(iterators, 1)) {
 				yield roomName;
 			}
 		}
@@ -90,7 +92,7 @@ async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
 }
 
 // Initialize workers and rooms
-await Promise.all(Fn.map(workers, async worker => {
+await Fn.mapAwait(workers, async worker => {
 	await worker.responder({ type: 'world', worldBlob });
 	for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
 		await worker.responder({ type: 'initialize', roomName });
@@ -98,7 +100,7 @@ await Promise.all(Fn.map(workers, async worker => {
 			break;
 		}
 	}
-}));
+});
 
 // Wait for initialization signal from main
 const processorMessages = processorSubscription.iterable();

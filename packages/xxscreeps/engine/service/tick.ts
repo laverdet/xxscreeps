@@ -32,6 +32,6 @@ export async function watch(onUpdate?: () => void) {
 					}
 				} catch {}
 			}), 100));
-		return () => handle.close();
+		handle.unref();
 	} catch {}
 }

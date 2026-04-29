@@ -82,6 +82,8 @@ const javaScriptRules = {
 		argsIgnorePattern: '^_',
 		caughtErrors: 'all',
 		ignoreRestSiblings: true,
+		ignoreUsingDeclarations: true,
+		varsIgnorePattern: '^_',
 	} ],
 	'no-use-before-define': [ 'warn', {
 		functions: false,
@@ -257,6 +259,8 @@ const typeScriptRules = acceptTypeScriptRules({
 		argsIgnorePattern: '^_',
 		caughtErrors: 'all',
 		ignoreRestSiblings: true,
+		ignoreUsingDeclarations: true,
+		varsIgnorePattern: '^_',
 	} ],
 	'@typescript-eslint/no-use-before-define': [ 'warn', {
 		classes: false,
@@ -439,7 +443,9 @@ export default [
 	{
 		files: [ ...tsGlob ],
 		plugins: {
+			'@stylistic': stylisticPlugin,
 			'@typescript-eslint': /** @type {any} */(typeScriptPlugin),
+			import: importPlugin,
 		},
 		languageOptions: {
 			parser: typeScriptParser,

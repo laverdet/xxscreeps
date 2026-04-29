@@ -6,6 +6,20 @@ import { Room } from './room.js';
 type RemoveVariant<T> = T extends any ? Omit<T, typeof Variant> : never;
 export type AnyEventLog = RemoveVariant<Room['#eventLog'][number]>;
 
+export interface GameEvent {
+	event: number;
+	objectId: string;
+	data?: Record<string, unknown>;
+	[key: string]: unknown;
+}
+
+function toPlayerShape(entry: AnyEventLog): GameEvent {
+	const { event, objectId, ...data } = entry;
+	return Object.keys(data).length === 0
+		? { event, objectId }
+		: { event, objectId, data };
+}
+
 // Event log mutator
 export function appendEventLog(room: Room, event: AnyEventLog) {
 	room['#eventLog'].push({
@@ -23,18 +37,15 @@ declare module './room.js' {
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		getEventLog(raw: true): string;
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		getEventLog(raw?: false): AnyEventLog[];
+		getEventLog(raw?: false): GameEvent[];
 	}
 }
 
 extend(Room, {
 	// @ts-expect-error
 	getEventLog(raw = false) {
+		const translated = (this['#eventLog'] as AnyEventLog[]).map(toPlayerShape);
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (raw) {
-			return JSON.stringify(this['#eventLog']);
-		} else {
-			return this['#eventLog'];
-		}
+		return raw ? JSON.stringify(translated) : translated;
 	},
 });

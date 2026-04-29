@@ -1,66 +1,47 @@
-import type { Effect } from 'xxscreeps/utility/types.js';
 import config from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
-import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
-import * as Async from 'xxscreeps/utility/async.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
 import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { tickSpeed, watch } from './tick.js';
-import { checkIsEntry, getServiceChannel, handleInterrupt } from './index.js';
+import { checkIsEntry, getServiceChannel } from './index.js';
 
 checkIsEntry();
 
-// Open databases, saving on exit (graceful or not). The local database providers save
-// asynchronously so the "disconnect" effect can't do it. Since the redis provider continually saves
-// on its own, forcing a save even on ungraceful exit brings them more in line.
 using db = await Database.connect();
 using shard = await Shard.connect(db, 'shard0');
 await using disposable = new AsyncDisposableStack();
-disposable.defer(async () => {
-	await Promise.all([
-		db.save(),
-		shard.save(),
-	]);
-});
 
 // Open channels
 const processorChannel = getProcessorChannel(shard);
 const runnerChannel = getRunnerChannel(shard);
-const [ gameMutex, serviceChannel ] = await Promise.all([
+const [ mainMutex, gameMutex, serviceChannel ] = await Promise.all([
+	Mutex.connect('main', shard.data, shard.pubsub),
 	Mutex.connect('game', shard.data, shard.pubsub),
 	getServiceChannel(shard).subscribe(),
 ]);
 disposable.defer(() => serviceChannel.disconnect());
 disposable.defer(() => serviceChannel.publish({ type: 'mainDisconnected' }));
-disposable.defer(() => gameMutex.disconnect());
-
-// Interrupt handler
-let halted = false as boolean;
-let halt: Effect | undefined;
-let tickDelay: Deferred<boolean> | undefined;
-handleInterrupt(() => {
-	console.log('Shutting down...');
-	halted = true;
-	halt?.();
-	tickDelay?.resolve(false);
-	unwatch?.();
-});
+disposable.use(mainMutex);
+disposable.use(gameMutex);
 
 // Configure .screepsrc.yaml watcher to update tick speed immediately
-const unwatch = await watch(() => {
+let tickDelay: PromiseWithResolvers<boolean>['resolve'] | undefined;
+await watch(() => {
 	console.log(`Tick speed changed to ${tickSpeed}ms`);
-	tickDelay?.resolve(true);
+	tickDelay?.(true);
 });
 
-// Run main game processing loop
+// Bookkeeping
 const performanceTimer = new AveragingTimer(100);
 const saveInterval = config.database.saveInterval * 60000;
-let lastSave = Date.now();
 
 // Initialize scratch state
+await using _main = await mainMutex.acquire();
 const [ rooms ] = await Promise.all([
 	shard.data.smembers('rooms'),
 	shard.scratch.flushdb(),
@@ -71,91 +52,112 @@ await Promise.all([
 ]);
 
 // Wait for processors to connect and initialize world state
-const processorMessages = serviceChannel.iterable();
+await using serviceMessages = Fn.unbreak(serviceChannel.iterable());
 await serviceChannel.publish({ type: 'mainConnected' });
-for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
-	if (
-		message.type === 'processorInitialized' &&
-		await shard.scratch.zcard(activeRoomsKey) === rooms.length
-	) {
-		break;
+const didInitialize = await async function() {
+	for await (const message of serviceMessages) {
+		// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
+		switch (message.type) {
+			case 'processorInitialized':
+				if (await shard.scratch.zcard(activeRoomsKey) === rooms.length) {
+					await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
+					return true;
+				}
+				break;
+			case 'shutdown': return false;
+		}
+	}
+}();
+
+// Process a game tick
+async function tick() {
+	await using lock = await gameMutex.acquire();
+	performanceTimer.start();
+
+	// Initialize tick
+	const time = shard.time + 1;
+	await Promise.all([
+		shard.scratch.copy('activeUsers', runnerUsersSetKey(time)),
+		processorChannel.publish({ type: 'process', time }),
+	]);
+	await runnerChannel.publish({ type: 'run', time });
+
+	// Wait for tick to finish
+	using timeout = acquireTimeout(
+		config.processor.intentAbandonTimeout,
+		() => mustNotReject(async () => {
+			const rooms = await abandonIntentsForTick(shard, time);
+			if (rooms.length > 0) {
+				console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
+			}
+		}));
+	let willContinue = true;
+	for await (const message of serviceMessages) {
+		// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
+		switch (message.type) {
+			case 'processorInitialized':
+				await processorChannel.publish({ type: 'process', time });
+				break;
+
+			case 'runnerConnected':
+				await runnerChannel.publish({ type: 'run', time });
+				break;
+
+			case 'tickFinished': {
+				// Update game state
+				await shard.data.set('time', time);
+
+				// Display statistics
+				await shard.channel.publish({ type: 'tick', time });
+				shard.time = time;
+				return willContinue;
+			}
+
+			case 'shutdown':
+				willContinue = false;
+				break;
+		}
 	}
 }
-await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
 
-// Game loop
-while (!halted) {
-	let timeStartedLoop!: number;
-	await gameMutex.scope(async () => {
-		timeStartedLoop = Date.now();
-		performanceTimer.start();
+// Main loop
+if (didInitialize) {
+	// Watch for shutdown and halt tick delay
+	disposable.defer(serviceChannel.listen(message => {
+		if (message.type === 'shutdown') {
+			tickDelay?.(false);
+		}
+	}));
 
-		// Initialize
-		const time = shard.time + 1;
-		const serviceMessages = serviceChannel.iterable();
-		await Promise.all([
-			shard.scratch.copy('activeUsers', runnerUsersSetKey(time)),
-			processorChannel.publish({ type: 'process', time }),
-		]);
-		await runnerChannel.publish({ type: 'run', time });
+	let lastSave = Date.now();
+	while (true) {
+		// Tick
+		const tickShardTime = shard.time;
+		const tickWallTime = Date.now();
+		if (!await tick()) {
+			break;
+		}
+		const now = Date.now();
+		const timeTaken = now - tickWallTime;
+		const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
+		console.log(`Tick ${tickShardTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
 
-		// Wait for tick to finish
-		{
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			using timeout = acquireTimeout(
-				config.processor.intentAbandonTimeout,
-				() => mustNotReject(async () => {
-					const rooms = await abandonIntentsForTick(shard, time);
-					if (rooms.length > 0) {
-						console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
-					}
-				}));
-			for await (const message of serviceMessages) {
-				if (message.type === 'processorInitialized') {
-					await processorChannel.publish({ type: 'process', time });
-				} else if (message.type === 'runnerConnected') {
-					await runnerChannel.publish({ type: 'run', time });
-				} else if (message.type === 'tickFinished') {
-					break;
-				}
-			}
+		// Maybe save
+		if (lastSave + saveInterval < now) {
+			lastSave = now;
+			mustNotReject(Promise.all([ db.save(), shard.save() ]));
 		}
 
-		// Update game state
-		await shard.data.set('time', time);
-
-		// Display statistics
-		const now = Date.now();
-		const timeTaken = now - timeStartedLoop;
-		const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
-		await shard.channel.publish({ type: 'tick', time });
-		shard.time = time;
-		console.log(`Tick ${time} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
-	});
-
-	// Shutdown request came in during game loop
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	if (halted) {
-		break;
-	}
-
-	// Maybe save
-	const now = Date.now();
-	if (lastSave + saveInterval < now) {
-		lastSave = now;
-		mustNotReject(Promise.all([
-			db.save(),
-			shard.save(),
-		]));
-	}
-
-	// Add delay
-	const delay = Math.max(0, tickSpeed - (Date.now() - timeStartedLoop));
-	tickDelay = new Deferred();
-	const { promise, resolve } = tickDelay;
-	setTimeout(() => resolve(true), delay).unref();
-	if (!await promise) {
-		break;
+		// Add delay
+		const delay = Math.max(0, tickSpeed - (Date.now() - tickWallTime));
+		if (delay > 0) {
+			using timer = acquireTimeout(delay, () => resolve(true));
+			const { promise, resolve } = Promise.withResolvers<boolean>();
+			tickDelay = resolve;
+			if (!await promise) {
+				break;
+			}
+		}
 	}
 }
 
@@ -163,5 +165,4 @@ while (!halted) {
 await Promise.all([
 	getProcessorChannel(shard).publish({ type: 'shutdown' }),
 	getRunnerChannel(shard).publish({ type: 'shutdown' }),
-	serviceChannel.publish({ type: 'shutdown' }),
 ]);

@@ -3,6 +3,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
@@ -105,6 +106,13 @@ Creep.prototype['#applyDamage'] = function(this: Creep, power, type, source) {
 		if (counterAttack) {
 			const damage = captureDamage(source, counterAttack, C.EVENT_ATTACK_TYPE_HIT_BACK, null);
 			if (damage > 0) {
+				appendEventLog(this.room, {
+					event: C.EVENT_ATTACK,
+					objectId: this.id,
+					targetId: source.id,
+					attackType: C.EVENT_ATTACK_TYPE_HIT_BACK,
+					damage,
+				});
 				source['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_HIT_BACK, this);
 			}
 		}

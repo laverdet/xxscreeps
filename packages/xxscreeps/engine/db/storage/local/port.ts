@@ -313,7 +313,6 @@ export async function makeSocketPortConnection<Send, Receive>(url: URL): Promise
 		},
 		[Symbol.asyncDispose]: function(dispose) {
 			return async () => {
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
 				await using _dispose = dispose;
 				connection.end();
 				await new Promise<void>((resolve, reject) => {

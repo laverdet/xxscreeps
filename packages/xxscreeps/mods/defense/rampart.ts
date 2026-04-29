@@ -51,6 +51,10 @@ export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 	override '#checkObstacle'(user: string) {
 		return !this.isPublic && user !== this['#user'];
 	}
+
+	override '#doesPreventInteraction'(user: string) {
+		return !this.isPublic && user !== this['#user'];
+	}
 }
 
 export function create(pos: RoomPosition, owner: string) {
