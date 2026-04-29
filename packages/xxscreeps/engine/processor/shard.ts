@@ -47,7 +47,11 @@ export class ShardProcessor implements ShardProcessorContext {
 			for (const [ ii, task ] of tasks.entries()) {
 				const result = results[ii];
 				if (result.status === 'fulfilled') {
-					task.finalize?.(result.value);
+					try {
+						task.finalize?.(result.value);
+					} catch (err) {
+						console.error(`shard tick processor task finalize threw on tick ${this.time}:`, err);
+					}
 				} else {
 					console.error('shard tick processor task threw:', result.reason);
 				}

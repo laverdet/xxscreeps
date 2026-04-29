@@ -19,7 +19,7 @@ const rowKey = (userId: string, rowId: string) => `user/${userId}/notifications/
 const dueUsersKey = 'notifications/dueUsers';
 
 function rowIdFor(type: NotificationType, timeGroup: number, message: string) {
-	return createHash('sha1').update(`${type}${timeGroup}${message}`).digest('hex');
+	return createHash('sha1').update(JSON.stringify([ type, timeGroup, message ])).digest('hex');
 }
 
 export async function getNotifications(

@@ -154,6 +154,22 @@ describe('ShardProcessorContext', () => {
 			`expected W2N2 processed at time 3, got ${JSON.stringify(seen)}`);
 	}));
 
+	test('task finalize throw isolated from sibling finalizers and commit', () => empty(async ({ tick, shard }) => {
+		using _capture = captureConsoleLog();
+		using _shard = installShard((_shard2, ctx) => {
+			ctx.task(Promise.resolve('W1N1'), roomName => {
+				ctx.activateRoom(roomName);
+				throw new Error('finalize boom');
+			});
+			ctx.task(Promise.resolve('W2N2'), roomName => {
+				ctx.activateRoom(roomName);
+			});
+		});
+		await tick(1);
+		assert.deepStrictEqual((await shard.scratch.zrange(activeRoomsKey, 0, -1)).sort(),
+			[ 'W1N1', 'W2N2' ]);
+	}));
+
 	test('wakeAt lands room at the specified tick', () => empty(async ({ tick, shard }) => {
 		const seen: number[] = [];
 		using _room = installRoom((room, ctx) => {
