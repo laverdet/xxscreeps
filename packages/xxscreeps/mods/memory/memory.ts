@@ -17,8 +17,8 @@ let requestedPublicSegments: number[] | undefined;
 let memory: Uint16Array;
 let memoryLength = 0;
 let string: string | undefined;
-let accessedJson = false;
 let json: object | undefined;
+let setCalled = false;
 let isBufferOutOfDate = false;
 
 function align(address: number) {
@@ -92,7 +92,12 @@ export const RawMemory = {
 		if (typeof value !== 'string') {
 			throw new TypeError('Memory value must be a string');
 		}
-		RawMemory._parsed = json = undefined;
+		if (value.length > kMaxMemoryLength) {
+			throw new Error(`Reached maximum \`Memory\` limit. Requested: ${value.length} out of ${kMaxMemoryLength}`);
+		}
+		// Keep `json` so in-tick `Memory` reads stay pinned. `setCalled` separates this from a `delete _parsed` memhack-skip.
+		RawMemory._parsed = undefined;
+		setCalled = true;
 		string = value;
 		isBufferOutOfDate = true;
 	},
@@ -171,7 +176,6 @@ export const RawMemory = {
  * `Game.memory` getter
  */
 export function get(): any {
-	accessedJson = true;
 	if (json) {
 		return json;
 	}
@@ -198,21 +202,15 @@ export function flush() {
 		return { size: 0 };
 	}
 
-	// Check for JSON-based `Memory` object
-	if (json) {
-		// "Memhack" - https://wiki.screepspl.us/index.php/MemHack
-		const memhack = RawMemory._parsed;
-		const accessedJsonThisTick = accessedJson;
-		accessedJson = false;
-		if (!memhack) {
-			// User wants to skip saving memory this tick
-			RawMemory._parsed = json;
-			return { size: memoryLength };
-		} else if (accessedJsonThisTick && json === memhack) {
-			// User did not mess with `Memory`, simulate vanilla reconstruction
+	// Vanilla precedence: `_parsed` > setCalled-saves-string > memhack-skip > fall-through.
+	const memhack = RawMemory._parsed;
+	const wasSet = setCalled;
+	setCalled = false;
+	if (memhack) {
+		if (json === memhack) {
 			crunch(json);
 		} else {
-			// User wants to reuse memory object
+			// "Memhack" - https://wiki.screepspl.us/index.php/MemHack
 			json = memhack;
 		}
 		try {
@@ -221,6 +219,17 @@ export function flush() {
 		} catch (err) {
 			console.error(err);
 		}
+		// Drop the cache; next tick re-parses from `string` so JSON-coerced values (functions, NaN, Infinity) match vanilla.
+		json = undefined;
+	} else if (!wasSet && json) {
+		// Memhack-skip: don't save, restore `_parsed` for next tick. Drop the cache —
+		// in-tick mutations live in `json` but never reached raw.
+		RawMemory._parsed = json;
+		json = undefined;
+		return { size: memoryLength };
+	} else if (wasSet) {
+		// `set()` replaced raw; the cached parse is now stale. Next tick re-reads.
+		json = undefined;
 	}
 
 	// Update the uint16 buffer
@@ -253,6 +262,8 @@ export function flush() {
 export function initialize(value: Readonly<Uint8Array> | null) {
 	json = undefined;
 	string = undefined;
+	setCalled = false;
+	isBufferOutOfDate = false;
 	if (value) {
 		memoryLength = value.length >>> 1;
 		memory = new Uint16Array(new SharedArrayBuffer(align(value.length)));

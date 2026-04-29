@@ -44,11 +44,19 @@ hooks.register('runtimeConnector', {
 	receive(payload) {
 		loadSegments(payload.memorySegments);
 		loadForeignSegment(payload.foreignSegment);
-		// Redefine memory each tick, expected behavior from vanilla server
+		// Self-replacing getter — first access pins Memory to a value descriptor (vanilla parity).
 		Object.defineProperty(globalThis, 'Memory', {
 			configurable: true,
 			enumerable: true,
-			get,
+			get() {
+				const value: unknown = get();
+				Object.defineProperty(globalThis, 'Memory', {
+					configurable: true,
+					enumerable: true,
+					value,
+				});
+				return value;
+			},
 		});
 	},
 
