@@ -200,8 +200,6 @@ export function tick(data: TickPayload) {
 			$$ => Fn.filter($$),
 			$$ => Fn.fromEntries($$));
 
-		tickResult.userIntents = intents.getIntentsForUser();
-
 		// Gather tick results from runtimeConnector
 		hooksComposed.send(tickResult as TickResult);
 		tickResult.console = flush();

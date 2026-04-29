@@ -10,16 +10,10 @@ type NamedReceivers = Exclude<IntentReceivers, RoomObject | Room>;
 type NamedIntent = Partial<Record<IntentsForReceiver<NamedReceivers>, any[]>>;
 type NamedIntentPayload = Partial<Record<NamedReceivers, NamedIntent>>;
 
-// Mods extend `UserIntent` via module-augmentation to declare typed user-scope intents — same
-// shape as the room-scoped `Intent` interface. Each entry is the args tuple for that intent name.
-export interface UserIntent {}
-export type UserIntentPayload = { [Name in keyof UserIntent]?: UserIntent[Name][] };
-
 export class IntentManager {
 	cpu = 0;
 	intentsByName: NamedIntentPayload = {};
 	intentsByRoom: Dictionary<RoomIntentPayload> = {};
-	intentsByUser: UserIntentPayload = {};
 
 	getIntentsForName(name: NamedReceivers) {
 		return this.intentsByName[name];
@@ -27,25 +21,6 @@ export class IntentManager {
 
 	getIntentsForRoom(roomName: string) {
 		return this.intentsByRoom[roomName];
-	}
-
-	getIntentsForUser() {
-		return this.intentsByUser;
-	}
-
-	/**
-	 * Push a user-scoped intent (no room or object receiver), with a per-tick cap on the named
-	 * bucket. Mirrors vanilla's `intents.push(name, data, maxLen)` semantics: returns OK on accept,
-	 * ERR_FULL once the bucket reaches `maxLen`. The 21st call to a 20-cap bucket is rejected.
-	 */
-	pushUser<Name extends keyof UserIntent>(intent: Name, args: UserIntent[Name], maxLen: number) {
-		const list = this.intentsByUser[intent] ??= [] as never;
-		if (list.length >= maxLen) {
-			return C.ERR_FULL;
-		}
-		list.push(args as never);
-		this.cpu += kCpuCost;
-		return C.OK;
 	}
 
 	/**

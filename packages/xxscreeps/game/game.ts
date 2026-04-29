@@ -3,7 +3,7 @@ import type { RoomObject } from './object.js';
 import type { AnyRoomObject, Room } from './room/index.js';
 import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { intents } from 'xxscreeps/game/index.js';
+import * as C from './constants/index.js';
 import { hooks } from './symbols.js';
 
 const initializeGame = hooks.makeIterated('gameInitializer');
@@ -120,8 +120,9 @@ export class Game extends GameBase {
 	 * on any occasion within the game. You can schedule up to 20 notifications during one game tick.
 	 * Not available in the Simulation Room.
 	 */
-	notify(message: string, groupInterval?: number) {
-		return intents.pushUser('notify', [ message, groupInterval ], 20);
+	notify(_message: string, _groupInterval?: number): number {
+		console.warn('Game.notify: notifications mod not installed');
+		return C.OK;
 	}
 }
 

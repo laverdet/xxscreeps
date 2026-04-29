@@ -2,7 +2,6 @@ import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/room.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
-import type { UserIntentPayload } from 'xxscreeps/game/intents.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import * as assert from 'node:assert';
@@ -11,7 +10,6 @@ import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
 import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
-import { dispatchUserIntents } from 'xxscreeps/engine/runner/intents.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
@@ -90,7 +88,6 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 
 		// Run simulation
 		const intentsByRoom = new Map<string, { userId: string; intents: RoomIntentPayload }[]>();
-		const userIntentsByUser: { userId: string; userIntents: UserIntentPayload }[] = [];
 		const playersThisTick = new Set<string>();
 		let roomInstances = new Map<string, Room>();
 		const that: Simulation = {
@@ -137,7 +134,6 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						getOrSet(intentsByRoom, roomName, () => []).push({ userId, intents: roomIntents });
 					}
 				}
-				userIntentsByUser.push({ userId, userIntents: intents.getIntentsForUser() });
 			},
 
 			async tick(count = 1, players = {}) {
@@ -147,12 +143,6 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						await that.player(userId, task);
 					}
 					playersThisTick.clear();
-
-					// Dispatch user-scope intents before per-room processing — simulate analog of
-					// the runner-side connector save hook.
-					const queuedUserIntents = userIntentsByUser.splice(0);
-					await Promise.all(queuedUserIntents.map(({ userId, userIntents }) =>
-						dispatchUserIntents(shard, userId, userIntents)));
 
 					// Initialize processor queue
 					const time = shard.time + 1;
