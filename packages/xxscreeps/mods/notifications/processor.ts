@@ -29,9 +29,7 @@ async function drainUser(shard: Shard, userId: string) {
 			return;
 		}
 		const rows = items.map(item => item.row);
-		for (const fn of getHooks('sendUserNotifications')) {
-			await fn(userId, rows);
-		}
+		await Promise.all(Fn.map(getHooks('sendUserNotifications'), async fn => fn(userId, rows)));
 		await Promise.all([
 			removeNotifications(shard, userId, items.map(item => item.id)),
 			setLastNotifyDate(shard, userId, now),

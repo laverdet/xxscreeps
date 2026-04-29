@@ -81,6 +81,17 @@ describe('Game.notify', () => {
 		assert.strictEqual(rows[0].date, 1_000_000);
 	}));
 
+	test('row id does not collide across time/message boundaries', () => empty(async ({ shard }) => {
+		using clock = withFakeNow(1234);
+		await upsertNotification(shard, user, 'msg', '5hi', 0);
+		clock.set(12345);
+		await upsertNotification(shard, user, 'msg', 'hi', 0);
+		const rows = await getRows(shard, user);
+		assert.strictEqual(rows.length, 2);
+		const messages = rows.map(row => row.message).sort();
+		assert.deepStrictEqual(messages, [ '5hi', 'hi' ]);
+	}));
+
 	test('600-char message stored as 500 chars', () => empty(async ({ player, shard }) => {
 		await player(user, Game => {
 			Game.notify('a'.repeat(600));
@@ -111,7 +122,7 @@ describe('Game.notify', () => {
 		}
 	}));
 
-	test('message coercion via `${i.message}`', () => empty(async ({ player, shard }) => {
+	test('message coercion via String(message)', () => empty(async ({ player, shard }) => {
 		await player(user, Game => {
 			Game.notify(null as unknown as string);
 			Game.notify({ a: 1 } as unknown as string);
