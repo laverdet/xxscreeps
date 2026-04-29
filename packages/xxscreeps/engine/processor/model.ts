@@ -8,6 +8,7 @@ import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
+import { runShardTickProcessors } from './shard.js';
 
 export function getProcessorChannel(shard: Shard) {
 	type Message =
@@ -26,7 +27,7 @@ export function getRoomChannel(shard: Shard, roomName: string) {
 
 export const processorTimeKey = 'processor/time';
 export const activeRoomsKey = 'processor/activeRooms';
-const sleepingRoomsKey = 'processor/inactiveRooms';
+export const sleepingRoomsKey = 'processor/inactiveRooms';
 export const userToIntentRoomsSetKey = (userId: string) =>
 	`user/${userId}/intentRooms`;
 export const userToPresenceRoomsSetKey = (userId: string) =>
@@ -267,6 +268,9 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 		// Decrement number of finalization rooms remaining
 		const remaining = await shard.scratch.decrBy(finalizedRoomsPendingKey(time), roomsCount);
 		if (remaining === 0) {
+			// Run shard tick processors before snapshotting tick N+1's queue, so any activateRoom
+			// or wakeAt issued from a callback lands on tick N+1.
+			await runShardTickProcessors(shard, time);
 			const [ nextTime ] = await Promise.all([
 				// Set up state for next tick
 				begetRoomProcessQueue(shard, time + 1, time, true),

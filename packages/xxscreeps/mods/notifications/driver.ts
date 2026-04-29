@@ -4,9 +4,9 @@ import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { upsertNotification } from './model.js';
 
 /**
- * Coerce a queued entry (vanilla `'' + i.message` semantics + 500-char truncation, groupInterval
- * clamp [0, 1440] minutes with non-numeric → 0) and persist via `upsertNotification`. The save hook
- * and the test path both go through here.
+ * Coerce each queued entry: stringify message and truncate to 500 chars, clamp groupInterval to
+ * [0, 1440] minutes (non-numeric → 0), then persist via `upsertNotification`. The save hook and
+ * the test path both go through here.
  */
 export async function dispatchQueuedNotifications(
 	shard: Shard, userId: string, queued: Iterable<QueuedNotification>,
