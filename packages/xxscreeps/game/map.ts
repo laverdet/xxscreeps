@@ -63,8 +63,9 @@ export class GameMap {
 		}
 		this.#left = minX;
 		this.#top = minY;
-		this.#width = maxX - minX;
-		this.#height = maxY - minY;
+		// Inclusive room counts; `getWorldSize()` and the continuous-wrap math in `getRoomLinearDistance` consume these directly.
+		this.#width = maxX - minX + 1;
+		this.#height = maxY - minY + 1;
 	}
 
 	'#getCenterRoom'() {
