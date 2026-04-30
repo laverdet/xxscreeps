@@ -68,6 +68,7 @@ if (missingFlags.length) {
 			start: './dist/engine/service/launcher.js',
 			main: './dist/engine/service/main.js',
 			backend: './dist/backend/server.js',
+			cli: './dist/mods/cli/cli.js',
 			processor: './dist/engine/service/processor.js',
 			runner: './dist/engine/service/runner.js',
 			'save-schema': './dist/engine/service/save-schema.js',
