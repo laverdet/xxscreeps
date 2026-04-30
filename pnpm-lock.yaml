@@ -57,7 +57,7 @@ importers:
         specifier: ^3.6.0
         version: 3.10.1
       xxscreeps:
-        specifier: workspace:*
+        specifier: workspace:~
         version: link:../xxscreeps
     devDependencies:
       '@types/jszip':
@@ -96,7 +96,7 @@ importers:
         specifier: 3.1.2
         version: 3.1.2
       xxscreeps:
-        specifier: workspace:*
+        specifier: workspace:~
         version: link:../xxscreeps
     devDependencies:
       '@types/node':
