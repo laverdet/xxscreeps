@@ -19,15 +19,21 @@ function withFrozenTime(now: number): Disposable {
 	return { [Symbol.dispose]() { Date.now = original; } };
 }
 
+// The notify queue is module-level state that persists between tests (the test framework runs
+// sequentially in one process and `simulate.tick()` does not fire runtimeConnector.send to drain
+// it, the way prod does). Each test calls `flush()` first to start with a clean queue, mirroring
+// the visual mod's "calls clear() to avoid shared state" pattern.
 describe('Game.notify', () => {
 
 	test('returns OK on accept', () => empty(async ({ player }) => {
+		flush();
 		await player(user, Game => {
 			assert.strictEqual(Game.notify('hi'), C.OK);
 		});
 	}));
 
 	test('21st call in a tick returns ERR_FULL', () => empty(async ({ player }) => {
+		flush();
 		await player(user, Game => {
 			for (let ii = 0; ii < 20; ++ii) {
 				assert.strictEqual(Game.notify(`msg${ii}`), C.OK,
@@ -39,13 +45,13 @@ describe('Game.notify', () => {
 	}));
 
 	test('cap resets across ticks', () => empty(async ({ player, tick }) => {
+		flush();
 		await player(user, Game => {
 			for (let ii = 0; ii < 20; ++ii) {
 				assert.strictEqual(Game.notify(`a${ii}`), C.OK);
 			}
 		});
-		// `simulate.tick()` doesn't fire the runtimeConnector hooks, so drain the queue here the
-		// same way `runtimeConnector.send` would in production.
+		// Simulate runtimeConnector.send draining at tick boundary (simulate.tick() doesn't).
 		flush();
 		await tick();
 		await player(user, Game => {
@@ -57,6 +63,7 @@ describe('Game.notify', () => {
 	}));
 
 	test('notify intent lands a documented row', () => empty(async ({ player, shard }) => {
+		flush();
 		await player(user, Game => {
 			Game.notify('hi');
 		});
@@ -72,6 +79,7 @@ describe('Game.notify', () => {
 	}));
 
 	test('groupInterval=1 coalesces same-message calls in the bucket window', () => empty(async ({ player, shard }) => {
+		flush();
 		using _frozen = withFrozenTime(1_000_000);
 		await player(user, Game => {
 			Game.notify('hi', 1);
@@ -87,6 +95,7 @@ describe('Game.notify', () => {
 	}));
 
 	test('600-char message stored as 500 chars', () => empty(async ({ player, shard }) => {
+		flush();
 		await player(user, Game => {
 			Game.notify('a'.repeat(600));
 		});
@@ -98,6 +107,7 @@ describe('Game.notify', () => {
 	}));
 
 	test('groupInterval clamp ([0, 1440]) reflected in bucket placement', () => empty(async ({ player, shard }) => {
+		flush();
 		using _frozen = withFrozenTime(1_000_000);
 		await player(user, Game => {
 			Game.notify('low', -5);
@@ -117,6 +127,7 @@ describe('Game.notify', () => {
 	}));
 
 	test('message coercion via `${i.message}`', () => empty(async ({ player, shard }) => {
+		flush();
 		await player(user, Game => {
 			Game.notify(null as unknown as string);
 			Game.notify({ a: 1 } as unknown as string);
@@ -129,6 +140,7 @@ describe('Game.notify', () => {
 	}));
 
 	test('no-args Game.notify() stores "undefined" with current-date', () => empty(async ({ player, shard }) => {
+		flush();
 		using _frozen = withFrozenTime(1_234_567);
 		await player(user, Game => {
 			assert.strictEqual((Game.notify as unknown as () => number)(), C.OK);
@@ -143,6 +155,7 @@ describe('Game.notify', () => {
 	}));
 
 	test('non-numeric groupInterval falls through to current-date', () => empty(async ({ player, shard }) => {
+		flush();
 		using _frozen = withFrozenTime(1_234_567);
 		await player(user, Game => {
 			Game.notify('strInterval', 'abc' as unknown as number);
