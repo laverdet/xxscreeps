@@ -1,6 +1,6 @@
 import type { QueuedNotification } from './notifications.js';
 import { hooks } from 'xxscreeps/game/index.js';
-import { flush, notify, reset } from './notifications.js';
+import { flush, notify } from './notifications.js';
 
 declare module 'xxscreeps/engine/runner/index.js' {
 	interface TickResult {
@@ -9,7 +9,6 @@ declare module 'xxscreeps/engine/runner/index.js' {
 }
 
 hooks.register('gameInitializer', Game => {
-	reset();
 	Game.notify = notify;
 });
 

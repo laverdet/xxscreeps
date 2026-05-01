@@ -44,6 +44,9 @@ describe('Game.notify', () => {
 				assert.strictEqual(Game.notify(`a${ii}`), C.OK);
 			}
 		});
+		// `simulate.tick()` doesn't fire the runtimeConnector hooks, so drain the queue here the
+		// same way `runtimeConnector.send` would in production.
+		flush();
 		await tick();
 		await player(user, Game => {
 			for (let ii = 0; ii < 20; ++ii) {
