@@ -21,7 +21,7 @@ function createDeposit(pos: RoomPosition, depositType: ResourceType, harvested: 
 	deposit.depositType = depositType;
 	deposit['#harvested'] = harvested;
 	deposit['#cooldownTime'] = 0;
-	deposit['#lastCooldown'] = 0;
+	deposit.lastCooldown = 0;
 	deposit['#nextDecayTime'] = nextDecayTime;
 	return deposit;
 }

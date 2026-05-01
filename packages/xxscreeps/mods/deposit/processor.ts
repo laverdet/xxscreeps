@@ -16,7 +16,7 @@ registerHarvestProcessor(Deposit, (creep, deposit) => {
 	}
 	deposit['#harvested'] += amount;
 	const cooldown = Math.ceil(DEPOSIT_EXHAUST_MULTIPLY * deposit['#harvested'] ** DEPOSIT_EXHAUST_POW);
-	deposit['#lastCooldown'] = cooldown;
+	deposit.lastCooldown = cooldown;
 	if (cooldown > 1) {
 		deposit['#cooldownTime'] = Game.time + cooldown;
 	}
