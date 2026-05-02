@@ -8,6 +8,7 @@ import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import jsYaml from 'js-yaml';
 import Loki from 'lokijs';
 
@@ -92,8 +93,11 @@ if ((rcInfo?.size ?? 0) === 0) {
 		}
 		fetched.add(specifier);
 		try {
-			// Find `package.json` for this specifier
-			const indexPath = new URL(import.meta.resolve(specifier));
+			// Find `package.json` for this specifier. Anchor `.` on cwd;
+			// `import.meta.resolve('.')` would point at this package, not the user's project.
+			const indexPath = specifier === '.'
+				? pathToFileURL(`${process.cwd()}/`)
+				: new URL(import.meta.resolve(specifier));
 			const packagePath = await async function() {
 				let path = indexPath;
 				while (true) {
