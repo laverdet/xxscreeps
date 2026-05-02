@@ -94,7 +94,6 @@ if ((rcInfo?.size ?? 0) === 0) {
 		fetched.add(specifier);
 		try {
 			// Find `package.json` for this specifier. Anchor `.` on cwd;
-			// `import.meta.resolve('.')` would point at this package, not the user's project.
 			const indexPath = specifier === '.'
 				? pathToFileURL(`${process.cwd()}/`)
 				: new URL(import.meta.resolve(specifier));
