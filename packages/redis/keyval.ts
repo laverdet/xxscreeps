@@ -218,17 +218,28 @@ export class RedisProvider implements P.KeyValProvider {
 
 	//
 	// sorted sets
+	zadd(key: string, members: [ number, string ][], options: { incr: true } & P.ZAdd): Promise<number | null>;
+	zadd(key: string, members: [ number, string ][], options?: P.ZAdd): Promise<number>;
 	async zadd(key: string, members: [ number, string ][], options?: P.ZAdd) {
 		if (members.length === 0) {
 			return Promise.resolve(0);
+		} else if (options?.incr) {
+			const result = await this.redis.invoke<Buffer | string | null>(cb => this.redis.batch(key).zadd(
+				key,
+				...options.if ? [ options.if ] : [],
+				'incr',
+				...Fn.concat<number | string>(members),
+				(err, result) => {
+					cb(err, result as unknown as Buffer | string | null);
+				}));
+			return result === null ? null : Number(send(result));
 		} else {
 			const result = await this.redis.invoke<number>(cb => this.redis.batch(key).zadd(
 				key,
 				...options?.if ? [ options.if ] : [],
-				...options?.incr ? [ 'incr' ] : [],
 				...Fn.concat<number | string>(members),
 				cb));
-			return options?.incr ? Number(send(result)) : result;
+			return result;
 		}
 	}
 
