@@ -8,5 +8,5 @@ export type { Look } from './look.js';
 export type { AnyRoomObject } from './room.js';
 
 export { Room } from './room.js';
-export { registerFindHandlers, registerLook } from './symbols.js';
+export { registerFindHandlers, registerLook, registerLookAlias } from './symbols.js';
 export interface Schema {}

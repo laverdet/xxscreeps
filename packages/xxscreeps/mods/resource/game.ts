@@ -1,7 +1,7 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
-import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import { registerFindHandlers, registerLook, registerLookAlias } from 'xxscreeps/game/room/index.js';
 import * as Container from './container.js';
 import * as Resource from './resource.js';
 import { Store } from './store.js';
@@ -27,9 +27,17 @@ const find = registerFindHandlers({
 // Register LOOK_ type for `Resource`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Resource.Resource>()(C.LOOK_RESOURCES);
+const lookEnergy = registerLookAlias<Resource.Resource>()(
+	C.LOOK_RESOURCES,
+	C.LOOK_ENERGY,
+	(object): object is Resource.Resource =>
+		object instanceof Resource.Resource && object.resourceType === C.RESOURCE_ENERGY);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Find { resource: typeof find }
-	interface Look { resource: typeof look }
+	interface Look {
+		resource: typeof look;
+		energy: typeof lookEnergy;
+	}
 }
 
 // These need to be declared separately I guess

@@ -1,5 +1,6 @@
 import type { PositionParameter } from 'xxscreeps/game/position.js';
 import type { UnwrapArray } from 'xxscreeps/utility/types.js';
+import type { AnyRoomObject } from './room.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { iterateArea } from 'xxscreeps/game/direction.js';
@@ -7,7 +8,7 @@ import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js'
 import { terrainMaskToString } from 'xxscreeps/game/terrain.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from './room.js';
-import { lookConstants } from './symbols.js';
+import { lookAliasesByLook, lookAliasesBySource, lookConstants } from './symbols.js';
 
 // All LOOK_ constants
 export interface Look {}
@@ -33,6 +34,14 @@ type LookAtArea<Type> = Record<number, Record<number, Type[]>>;
 
 // Result of `room.lookForAtArea`. This is the same as `LookAtResult` but without `type`
 type LookForAtArea<Type extends LookConstants> = Record<LookConstants, TypeOfLook<Type>>;
+interface LookEntry {
+	type: string;
+	[key: string]: unknown;
+}
+interface LookAreaEntry extends LookEntry {
+	x: number;
+	y: number;
+}
 
 declare module './room.js' {
 	interface Room {
@@ -99,10 +108,7 @@ extend(Room, {
 			return [];
 		}
 		return [
-			...Fn.map(this['#lookAt'](pos), object => {
-				const type = object['#lookType'];
-				return { type, [type]: object };
-			}),
+			...Fn.transform(this['#lookAt'](pos), lookAtEntries),
 			{ type: 'terrain', terrain: terrainMaskToString[this.getTerrain().get(pos.x, pos.y)] },
 		] as never;
 	},
@@ -126,10 +132,7 @@ extend(Room, {
 		const terrain = this.getTerrain();
 		const results = Fn.concat([
 			// Iterate objects
-			Fn.map(objects, object => {
-				const type = object['#lookType'];
-				return { x: object.pos.x, y: object.pos.y, type, [type]: object };
-			}),
+			Fn.transform(objects, object => lookAtAreaEntries(object)),
 			// Add terrain data
 			mapArea(top, left, bottom, right, (x, y) =>
 				({ x, y, type: 'terrain', terrain: terrainMaskToString[terrain.get(x, y)] })),
@@ -150,7 +153,7 @@ extend(Room, {
 			// TODO: Set this back once all game objects have been implemented (?)
 			// return C.ERR_INVALID_ARGS as any;
 		}
-		return [ ...Fn.filter(this['#lookAt'](pos), object => object['#lookType'] === type) ];
+		return [ ...Fn.filter(this['#lookAt'](pos), object => lookMatches(type, object)) ];
 	},
 
 	lookForAtArea(type: LookConstants, top: number, left: number, bottom: number, right: number, asArray = false) {
@@ -174,7 +177,7 @@ extend(Room, {
 						return Fn.pipe(
 							iterateArea(this.name, top, left, bottom, right),
 							$$ => Fn.transform($$, pos => this['#lookAt'](pos)),
-							$$ => Fn.filter($$, object => object['#lookType'] === type));
+							$$ => Fn.filter($$, object => lookMatches(type, object)));
 					}
 				})();
 				// Add position and type information
@@ -195,6 +198,39 @@ export function *mapArea<Type>(top: number, left: number, bottom: number, right:
 			yield fn(xx, yy);
 		}
 	}
+}
+
+function lookMatches(type: LookConstants, object: AnyRoomObject) {
+	const alias = lookAliasesByLook.get(type);
+	return alias === undefined ?
+		object['#lookType'] === type :
+		object['#lookType'] === alias.source && alias.matches(object);
+}
+
+function *lookAtEntries(object: AnyRoomObject): Iterable<LookEntry> {
+	const type = object['#lookType'];
+	const aliases = lookAliasesBySource.get(type);
+	if (aliases !== undefined) {
+		for (const alias of aliases) {
+			if (alias.matches(object)) {
+				yield { type: alias.look, [alias.look]: object };
+			}
+		}
+	}
+	yield { type, [type]: object };
+}
+
+function *lookAtAreaEntries(object: AnyRoomObject): Iterable<LookAreaEntry> {
+	const type = object['#lookType'];
+	const aliases = lookAliasesBySource.get(type);
+	if (aliases !== undefined) {
+		for (const alias of aliases) {
+			if (alias.matches(object)) {
+				yield { x: object.pos.x, y: object.pos.y, type: alias.look, [alias.look]: object };
+			}
+		}
+	}
+	yield { x: object.pos.x, y: object.pos.y, type, [type]: object };
 }
 
 function withAsArray(values: Iterable<{ x: number; y: number }>, top: number, left: number, bottom: number, right: number, asArray: boolean, nest: boolean) {
