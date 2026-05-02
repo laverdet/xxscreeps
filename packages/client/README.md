@@ -47,6 +47,14 @@ mods:
 
 After that you can now visit: http://localhost:21025/.
 
+The client automatically looks for Steam's Screeps `package.nw` in the default Steam library
+locations on macOS, Windows, and Linux, including secondary libraries from `libraryfolders.vdf`. If
+your install lives somewhere else, set the path explicitly:
+```
+browserClient:
+  package: /full/path/to/package.nw
+```
+
 ## Tips
 This client makes use of "guest mode" which is enabled by default in xxscreeps. This will provide
 you with a read-only view of the server when you are not signed in. The client will show you as

@@ -53,9 +53,15 @@ importers:
 
   packages/client:
     dependencies:
+      '@node-steam/vdf':
+        specifier: ^2.2.0
+        version: 2.2.0
       jszip:
         specifier: ^3.6.0
         version: 3.10.1
+      tslib:
+        specifier: ~2.8.1
+        version: 2.8.1
       xxscreeps:
         specifier: workspace:~
         version: link:../xxscreeps
@@ -511,6 +517,10 @@ packages:
 
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
+
+  '@node-steam/vdf@2.2.0':
+    resolution: {integrity: sha512-YCfIPsIpyrtOP5AdsarjPqjTElVFrXJlWedWNzjCaIeam06v9ebYgApRAcw9b93awNDboTEiHFMnCvlJJHqKcA==}
+    engines: {node: '>=8.0.0'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -3182,6 +3192,8 @@ snapshots:
       fs-extra: 8.1.0
       globby: 11.1.0
       read-yaml-file: 1.1.0
+
+  '@node-steam/vdf@2.2.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

@@ -9,7 +9,7 @@
             "description": "Configuration for '@xxscreeps/client'",
             "properties": {
                 "package": {
-                    "description": "Full path to `package.nw`. This has the following defaults:\nmacOS: ~/Library/Application Support/Steam/steamapps/common/Screeps/package.nw\nWindows: C:\\Program Files (x86)\\Steam\\steamapps\\common\\Screeps\\package.nw",
+                    "description": "Full path to `package.nw`. If unset, @xxscreeps/client searches Steam's default library roots and `libraryfolders.vdf` for Screeps.",
                     "type": "string"
                 }
             },

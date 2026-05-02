@@ -5,9 +5,8 @@ export type Schema = {
 	 */
 	browserClient?: {
 		/**
-		 * Full path to `package.nw`. This has the following defaults:
-		 * macOS: ~/Library/Application Support/Steam/steamapps/common/Screeps/package.nw
-		 * Windows: C:\Program Files (x86)\Steam\steamapps\common\Screeps\package.nw
+		 * Full path to `package.nw`. If unset, @xxscreeps/client searches Steam's default
+		 * library roots and `libraryfolders.vdf` for Screeps.
 		 */
 		package?: string;
 	};

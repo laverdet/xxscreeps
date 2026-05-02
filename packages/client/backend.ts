@@ -1,35 +1,16 @@
 import type { Schema } from './config.js';
-import { promises as fs } from 'node:fs';
-import * as os from 'node:os';
 import { Transform } from 'node:stream';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import JSZip from 'jszip';
 import { hooks } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
+import { findClientPackage, packageNotFoundMessage } from './package-nw.js';
 
 // Locate and read `package.nw`
-const { data, stat } = await async function() {
-	const path = (config as Schema).browserClient?.package ?? function() {
-		switch (process.platform) {
-			case 'darwin': return new URL('./Library/Application Support/Steam/steamapps/common/Screeps/package.nw', `${pathToFileURL(os.homedir())}/`);
-			case 'win32': return 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Screeps\\package.nw';
-			default: return new URL('./.steam/steam/SteamApps/common/Screeps/package.nw', `${pathToFileURL(os.homedir())}/`);
-		}
-	}();
-	try {
-		const [ data, stat ] = await Promise.all([
-			fs.readFile(path),
-			fs.stat(path),
-		]);
-		return { data, stat };
-	} catch {}
-	console.error(
-		`@xxscreeps/client error: Could not read \`${fileURLToPath(path)}\`. ` +
-		'Please set `browserClient.package` in `.screepsrc.yaml` to the full path of your package.nw file');
-	return {};
-}();
-
-if (data) {
+const { attemptedPaths, clientPackage } = await findClientPackage((config as Schema).browserClient?.package);
+if (clientPackage === undefined) {
+	console.error(packageNotFoundMessage(attemptedPaths));
+} else {
+	const { data, stat } = clientPackage;
 	// Read package zip metadata
 	const zip = new JSZip();
 	await zip.loadAsync(data);
