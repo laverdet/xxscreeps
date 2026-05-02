@@ -80,13 +80,13 @@ describe('@xxscreeps/client package discovery', () => {
 			},
 			readTextFile: path => path === libraryFolders
 				? Promise.resolve(libraryFoldersVdf(secondaryLibrary))
-				: Promise.reject(new Error(`Unexpected read: ${path}`)),
+				: Promise.reject(new Error('ENOENT')),
 		});
 		assert.ok(paths.includes(packagePath(Path.win32, secondaryLibrary, 'steamapps')));
 		assert.ok(paths.includes(packagePath(Path.win32, secondaryLibrary, 'SteamApps')));
 	});
 
-	test('discovers Linux defaults and lowercase steamapps secondary libraries', async () => {
+	test('discovers Linux Steam roots and libraryfolders.vdf secondaries', async () => {
 		await using tmp = await temporaryHome();
 		const steamRoot = Path.posix.join(tmp.home, '.steam', 'steam');
 		const secondaryLibrary = Path.posix.join(tmp.home, 'SteamLibrary');
@@ -113,12 +113,8 @@ describe('@xxscreeps/client package discovery', () => {
 	});
 
 	test('configured package path is attempted exactly', async () => {
-		await using tmp = await temporaryHome();
 		const configuredPath = 'D:\\Games\\Screeps\\package.nw';
-		const result = await findClientPackage(configuredPath, {
-			platform: 'linux',
-			home: tmp.home,
-		});
+		const result = await findClientPackage(configuredPath);
 		assert.strictEqual(result.clientPackage, undefined);
 		assert.deepStrictEqual(result.attemptedPaths, [ configuredPath ]);
 	});
