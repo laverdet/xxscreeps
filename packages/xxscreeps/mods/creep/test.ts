@@ -1,9 +1,9 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
-import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
+import { Structure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { create } from './creep.js';
+import { Creep, create } from './creep.js';
 
 describe('Movement', () => {
 	const movement = simulate({
@@ -604,4 +604,61 @@ describe('Event log events', () => {
 			});
 		}));
 	});
+});
+
+describe('Id-string constructor', () => {
+	const sim = simulate({
+		W3N3: room => {
+			const creep = create(new RoomPosition(25, 25, 'W3N3'), [ C.WORK ], 'subject', '100');
+			creep.fatigue = 3;
+			creep.store['#add'](C.RESOURCE_ENERGY, 25);
+			room['#insertObject'](creep);
+			room['#insertObject'](createContainer(new RoomPosition(26, 25, 'W3N3')));
+		},
+	});
+
+	test('Creep view reads match the canonical handle', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const original = Game.creeps.subject;
+			const view = new Creep(original.id);
+			assert.ok(view instanceof Creep);
+			assert.strictEqual(view.id, original.id);
+			assert.strictEqual(view.name, original.name);
+			assert.strictEqual(view.body.length, original.body.length);
+			assert.strictEqual(view.pos.x, original.pos.x);
+			assert.strictEqual(view.pos.y, original.pos.y);
+			assert.strictEqual(view.pos.roomName, original.pos.roomName);
+			assert.strictEqual(view.store[C.RESOURCE_ENERGY], original.store[C.RESOURCE_ENERGY]);
+			assert.strictEqual(view.hits, original.hits);
+			assert.strictEqual(view.fatigue, original.fatigue);
+		});
+	}));
+
+	test('Structure base reads delegate to the concrete object', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const original = Game.rooms.W3N3.find(C.FIND_STRUCTURES)[0];
+			const structure = new Structure(original.id);
+			assert.strictEqual(structure.structureType, original.structureType);
+			assert.strictEqual(structure.hits, original.hits);
+			assert.strictEqual(structure.hitsMax, original.hitsMax);
+		});
+	}));
+
+	test('writes on a view do not propagate to the canonical handle', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const original = Game.creeps.subject;
+			const hits = original.hits;
+			const fatigue = original.fatigue;
+			const view = new Creep(original.id);
+			const markedView = view as Creep & { _marker?: string };
+			view.hits = 50;
+			view.fatigue = 1;
+			markedView._marker = 'view';
+			assert.strictEqual(original.hits, hits);
+			assert.strictEqual(original.fatigue, fatigue);
+			assert.strictEqual(view.hits, hits);
+			assert.strictEqual(view.fatigue, fatigue);
+			assert.strictEqual(markedView._marker, 'view');
+		});
+	}));
 });

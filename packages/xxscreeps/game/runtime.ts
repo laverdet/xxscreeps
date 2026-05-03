@@ -8,7 +8,6 @@ registerGlobal('_', lodash);
 registerGlobal(function Deposit() {});
 registerGlobal(function Nuke() {});
 registerGlobal(function PowerCreep() {});
-registerGlobal(function Ruin() {});
 registerGlobal(function StructureFactory() {});
 registerGlobal(function StructureInvaderCore() {});
 registerGlobal(function StructureNuker() {});

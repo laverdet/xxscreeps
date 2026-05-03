@@ -6,12 +6,11 @@ import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game/index.js';
-import { RoomObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
+import { RoomObject, format as objectFormat } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { compose, declare, optional, struct, withOverlay } from 'xxscreeps/schema/index.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 import { createRuin } from './ruin.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
@@ -38,26 +37,30 @@ const ownedShape = struct(structureFormat, {
  * The base prototype object of all structures.
  */
 export class Structure extends withOverlay(RoomObject, shape) {
-
-	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2);
-		if (typeof idOrArg1 === 'string') assign<Structure>(this, getById(Structure, idOrArg1));
-	}
-
 	/**
 	 * One of the `STRUCTURE_*` constants.
 	 */
-	@enumerable get structureType(): string { throw new Error(); }
+	@enumerable get structureType(): string {
+		// `new Structure(id)` views delegate to the canonical concrete object —
+		// `structureType`/`hits`/`hitsMax` are overlay-backed only on concrete subclass prototypes.
+		const live = this['#liveHandle'];
+		if (live === undefined) throw new Error();
+		return (live as Structure).structureType;
+	}
 
 	/**
 	 * The current amount of hit points of the structure.
 	 */
-	@enumerable override get hits(): number | undefined { return undefined; }
+	@enumerable override get hits(): number | undefined {
+		return (this['#liveHandle'] as Structure | undefined)?.hits;
+	}
 
 	/**
 	 * The total amount of hit points of the structure.
 	 */
-	@enumerable override get hitsMax(): number | undefined { return undefined; }
+	@enumerable override get hitsMax(): number | undefined {
+		return (this['#liveHandle'] as Structure | undefined)?.hitsMax;
+	}
 
 	get '#lookType'() { return C.LOOK_STRUCTURES; }
 

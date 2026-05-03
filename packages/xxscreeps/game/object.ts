@@ -3,15 +3,17 @@ import type { RoomPosition } from './position.js';
 import type { Room } from './room/index.js';
 import type { InspectOptionsStylized } from 'node:util';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
-import { inspect } from 'node:util';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
 import * as BufferObject from 'xxscreeps/schema/buffer-object.js';
 import { compose, declare, enumerated, struct, union, vector, withOverlay } from 'xxscreeps/schema/index.js';
+import { ReadOnlyView } from 'xxscreeps/schema/overlay.js';
 import { expandGetters } from 'xxscreeps/utility/inspect.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { format as roomPositionFormat } from './position.js';
 import { Game, registerGlobal } from './index.js';
+
+const getPrototypeOf = Object.getPrototypeOf as (value: object) => object | null;
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Schema {}
@@ -30,6 +32,11 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	 */
 	declare room: Room;
 
+	/** Set on id-string-constructed views to the canonical handle from the registry. */
+	declare '#liveHandle'?: RoomObject;
+
+	/** @internal */
+	constructor(id: string);
 	/** @internal */
 	constructor(buffer?: BufferView, offset?: number);
 	/** @deprecated */
@@ -43,6 +50,17 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 			this.pos.y = offsetOrYy as number;
 			this.pos.roomName = roomName as string;
 			this.room = Game.rooms[roomName as string];
+		} else if (typeof viewOrXx === 'string') {
+			const object = Game.getObjectById(viewOrXx);
+			if (object === null) {
+				throw new Error('Could not find an object with ID ' + viewOrXx);
+			}
+			const pos = object.pos;
+			super(BufferObject.getBuffer(object), BufferObject.getOffset(object));
+			installReadOnlyView(this, object, new.target.prototype, viewOrXx, pos);
+			(this as RoomObject & { [ReadOnlyView]?: true })[ReadOnlyView] = true;
+			this.room = object.room;
+			this['#liveHandle'] = object;
 		} else {
 			super(viewOrXx as BufferView, offsetOrYy as number);
 		}
@@ -90,6 +108,76 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		} else {
 			return `${options.stylize(`[${this.constructor.name}]`, 'special')} ${options.stylize('{released}', 'null')}`;
 		}
+	}
+}
+
+function defineReadOnlyGetter(object: object, key: string, enumerable: boolean, get: () => unknown) {
+	Object.defineProperty(object, key, {
+		enumerable,
+		configurable: true,
+		get,
+		set() {},
+	});
+}
+
+function enumerableGetterKeys(prototype: object) {
+	const keys = new Set<string>();
+	for (
+		let current: object | null = prototype;
+		current !== null && current !== Object.prototype;
+		current = getPrototypeOf(current)
+	) {
+		for (const key of Object.getOwnPropertyNames(current)) {
+			if (key === 'constructor' || key.startsWith('#')) {
+				continue;
+			}
+			const descriptor = Object.getOwnPropertyDescriptor(current, key)!;
+			if (descriptor.enumerable && descriptor.get !== undefined) {
+				keys.add(key);
+			}
+		}
+	}
+	return keys;
+}
+
+function installReadOnlyView(target: RoomObject, source: RoomObject, prototype: object, id: string, pos: RoomPosition) {
+	const sourceRecord = source as unknown as Record<string, unknown>;
+	const expanded = expandGetters(source) as Record<string, unknown>;
+	const copied = new Set<string>();
+	const copy = (key: string) => {
+		if (key === 'room') {
+			return;
+		}
+		let value: unknown;
+		try {
+			value = sourceRecord[key];
+		} catch {
+			return;
+		}
+		if (value === undefined || copied.has(key)) {
+			return;
+		}
+		copied.add(key);
+		defineReadOnlyGetter(target, key, true, () => sourceRecord[key]);
+	};
+	copied.add('id');
+	defineReadOnlyGetter(target, 'id', true, () => id);
+	copied.add('pos');
+	defineReadOnlyGetter(target, 'pos', true, () => pos);
+	for (const key of Object.keys(expanded)) {
+		copy(key);
+	}
+	const sourcePrototype = getPrototypeOf(source);
+	if (sourcePrototype !== null) {
+		for (const key of enumerableGetterKeys(sourcePrototype)) {
+			copy(key);
+		}
+	}
+	for (const key of enumerableGetterKeys(prototype)) {
+		if (copied.has(key) || key === 'room') {
+			continue;
+		}
+		defineReadOnlyGetter(target, key, true, () => undefined);
 	}
 }
 
@@ -141,10 +229,12 @@ export function saveAction(object: WithActionLog, type: ActionLog[number]['type'
 	actionLog.push({ type, x: pos.x, y: pos.y, time: Game.time });
 }
 
-export function getById<T>(Type: new (...args: any) => T, id: string): T {
-	const it = Game.getObjectById(id);
-	if (!it || !(it instanceof Type)) throw new Error('Could not find an object with ID ' + id);
-	// Render all properties
-	inspect(it, true, 1);
-	return it as T;
+type RoomObjectConstructor<Type extends RoomObject = RoomObject> = abstract new (...args: never[]) => Type;
+
+export function getById<Type extends RoomObject>(Type: RoomObjectConstructor<Type>, id: string): Type {
+	const object = Game.getObjectById(id);
+	if (object !== null && object instanceof Type) {
+		return object;
+	}
+	throw new Error('Could not find an object with ID ' + id);
 }

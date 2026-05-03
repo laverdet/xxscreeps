@@ -11,7 +11,12 @@ import { entriesWithSymbols } from './symbol.js';
 const { defineProperty } = Object;
 const { apply } = Reflect;
 
+export const ReadOnlyView = Symbol('ReadOnlyView');
+
 type GetterReader = (this: BufferObject) => any;
+interface ReadOnlyBufferObject extends BufferObject {
+	[ReadOnlyView]?: true;
+}
 
 const injected = new WeakSet();
 export function injectGetters(layout: StructLayout, prototype: object, builder: Builder) {
@@ -48,11 +53,13 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 			)) {
 				return function() {
 					const value = apply(get, this, []);
-					defineProperty(this, key, {
-						enumerable,
-						writable: true,
-						value,
-					});
+					if ((this as ReadOnlyBufferObject)[ReadOnlyView] !== true) {
+						defineProperty(this, key, {
+							enumerable,
+							writable: true,
+							value,
+						});
+					}
 					return value;
 				};
 			}
@@ -67,6 +74,9 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 			enumerable,
 			get,
 			set(value) {
+				if ((this as ReadOnlyBufferObject)[ReadOnlyView] === true) {
+					return;
+				}
 				defineProperty(this, key, {
 					enumerable,
 					writable: true,
@@ -90,11 +100,16 @@ type AbstractBufferObjectSubclass<Instance extends BufferObject = any> =
 	abstract new(view?: BufferView, offset?: number) => Instance;
 type BufferObjectSubclass<Instance extends BufferObject> =
 	new(view?: BufferView, offset?: number) => Instance;
+type AbstractIdStringObjectSubclass<Instance extends BufferObject = BufferObject> =
+	abstract new(id: string) => Instance;
+type IdStringObjectSubclass<Instance extends BufferObject> =
+	new(id: string) => Instance;
 type BufferObjectConstructor<
 	Base extends AbstractBufferObjectSubclass,
 	Instance extends BufferObject,
 > = Omit<Base, 'prototype'> & (Base extends BufferObjectSubclass<any>
-	? BufferObjectSubclass<Instance> : AbstractBufferObjectSubclass<Instance>);
+	? BufferObjectSubclass<Instance> : AbstractBufferObjectSubclass<Instance>) &
+	(Base extends AbstractIdStringObjectSubclass ? IdStringObjectSubclass<Instance> : unknown);
 
 /**
  * Injects types inherited from format into class prototype. Just passes the base class back

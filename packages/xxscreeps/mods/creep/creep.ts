@@ -12,7 +12,7 @@ import { Predicate } from 'xxscreeps/functional/predicate.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
-import { RoomObject, actionLogFormat, create as createObject, getById, format as objectFormat, saveAction } from 'xxscreeps/game/object.js';
+import { RoomObject, actionLogFormat, create as createObject, format as objectFormat, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
@@ -65,17 +65,6 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	declare tickRawDamage: number | undefined;
 	/** @internal — raw healing received this tick, always >= 0 */
 	declare tickHealing: number | undefined;
-
-	constructor(idOrArg1?: any, arg2?: any) {
-		super(typeof idOrArg1 === 'string' ? undefined : idOrArg1, arg2);
-		if (typeof idOrArg1 === 'string') {
-			const it = getById(Creep, idOrArg1);
-			this['#ageTime'] = it['#ageTime'];
-			this['#user'] = it['#user'];
-			assign<Creep>(this, it);
-		}
-
-	}
 
 	@enumerable override get hitsMax() { return this.body.length * 100; }
 	@enumerable get owner() { return userInfo.get(this['#user']); }
