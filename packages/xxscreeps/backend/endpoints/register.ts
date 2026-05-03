@@ -13,7 +13,7 @@ const CheckEmailEndpoint: Endpoint = {
 		if (typeof email !== 'string' || !validateEmail(email)) {
 			return { error: 'invalid' };
 		}
-		if (await User.findUserByProvider(context.db, 'email', email)) {
+		if (await User.findUserByProvider(context.db, 'email', email) !== null) {
 			return { error: 'exists' };
 		}
 		return { ok: 1 };
@@ -24,11 +24,14 @@ const CheckUsernameEndpoint: Endpoint = {
 	path: '/api/register/check-username',
 
 	async execute(context) {
-		const username = `${context.query.username}`;
+		const { username } = context.query;
+		if (typeof username !== 'string') {
+			return { error: 'invalid' };
+		}
 		if (!User.checkUsername(username)) {
 			return { error: 'invalid' };
 		}
-		if (await User.findUserByName(context.db, username)) {
+		if (await User.findUserByName(context.db, username) !== null) {
 			return { error: 'exists' };
 		}
 		return { ok: 1 };
@@ -43,7 +46,11 @@ const SetUsernameEndpoint: Endpoint = {
 
 		// Check for new reg provider
 		const { provider, providerId, userId, newUserId } = context.state;
-		const { username, email } = context.request.body;
+		interface Body {
+			username: unknown;
+			email?: unknown;
+		}
+		const { username, email } = context.request.body as Body;
 		if (provider === undefined || providerId === undefined) {
 			return { error: 'not authenticated' };
 		} else if (userId !== undefined || newUserId === undefined) {
@@ -51,14 +58,23 @@ const SetUsernameEndpoint: Endpoint = {
 		}
 
 		// Sanity check
-		if (!User.checkUsername(username) || (email && !validateEmail(email))) {
+		if (
+			typeof username !== 'string' ||
+			!User.checkUsername(username) ||
+			(
+				email !== undefined &&
+				email !== '' &&
+				(typeof email !== 'string' || !validateEmail(email))
+			)
+		) {
 			return { error: 'invalid' };
 		}
 
 		// Register
-		const providers = [ { provider, id: providerId } ];
-		if (email) providers.push({ provider: 'email', id: email });
-		await User.create(context.db, newUserId, username, providers);
+		await User.create(context.db, newUserId, username, [
+			{ provider, id: providerId },
+			...typeof email === 'string' && email !== '' ? [ { provider: 'email', id: email } ] : [],
+		]);
 		context.state.userId = newUserId;
 		context.state.newUserId = undefined;
 		context.state.provider = undefined;
