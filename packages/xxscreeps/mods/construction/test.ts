@@ -2,6 +2,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
+import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createSite } from './construction-site.js';
@@ -68,6 +69,30 @@ describe('Construction', () => {
 			);
 		});
 	}));
+
+	test('create site on ruin with same structure type', () => {
+		const ruin = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createRuin(createContainer(new RoomPosition(25, 25, 'W1N1'))));
+			},
+		});
+		return ruin(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(25, 25, C.STRUCTURE_CONTAINER), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
+				const site = Object.values(Game.constructionSites)[0];
+				assert.ok(site);
+				assert.strictEqual(site.structureType, C.STRUCTURE_CONTAINER);
+				assert.ok(site.pos.isEqualTo(25, 25));
+			});
+		});
+	});
 
 	// W1N1 (shard.json) at y=7: x=5 is plain, x=15 is wall, x=20 is swamp.
 	test('road site progressTotal scales by terrain', () => construction(async ({ player, tick }) => {
