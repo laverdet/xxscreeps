@@ -422,6 +422,10 @@ export default [
 			'**/dist',
 			'**/node_modules',
 		],
+		linterOptions: {
+			// Disable this "temporarily" since the vscode extension drops required suppressions
+			reportUnusedDisableDirectives: false,
+		},
 	},
 
 	// Settings
