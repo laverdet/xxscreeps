@@ -4,9 +4,10 @@ export const findHandlers = new Map<number, FindHandler>();
 export const lookConstants = new Set<string>();
 
 // Registers a FIND_ constant and its respective handler
-export function registerFindHandlers<Find extends Record<number, FindHandler>>(handlers: Find): void | Find {
-	for (const key in handlers) {
-		findHandlers.set(Number(key), handlers[key]);
+// eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+export function registerFindHandlers<Find extends Record<number, FindHandler>>(handlers: Find): Find | void {
+	for (const [ key, handler ] of Object.entries(handlers)) {
+		findHandlers.set(Number(key), handler);
 	}
 }
 

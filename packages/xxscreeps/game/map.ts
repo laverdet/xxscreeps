@@ -114,10 +114,14 @@ export class GameMap {
 		const route = this.findRoute(fromRoom, toRoom, opts);
 		if (typeof route === 'number') {
 			return route;
-		} else if (route.length === 0) {
-			return C.ERR_INVALID_ARGS;
+		} else {
+			const [ first ] = route;
+			if (first === undefined) {
+				return C.ERR_INVALID_ARGS;
+			} else {
+				return first.exit;
+			}
 		}
-		return route[0].exit;
 	}
 
 	/**

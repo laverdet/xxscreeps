@@ -112,7 +112,7 @@ async function *iterateMessages(socket: AsyncIterable<Buffer>) {
 	const unshiftSize = (size: number) => {
 		let length = size;
 		while (length > 0) {
-			const chunk = buffers[0];
+			const chunk = buffers[0]!;
 			if (chunk.length <= length) {
 				buffers.shift();
 				length -= chunk.length;
@@ -127,7 +127,7 @@ async function *iterateMessages(socket: AsyncIterable<Buffer>) {
 			Fn.concat<number>(buffers),
 			$$ => Fn.take($$, 4),
 			$$ => new Uint8Array($$),
-			$$ => new Uint32Array($$.buffer)[0]);
+			$$ => new Uint32Array($$.buffer)[0]!);
 		unshiftSize(4);
 		return value;
 	};
@@ -136,7 +136,7 @@ async function *iterateMessages(socket: AsyncIterable<Buffer>) {
 		const span = new Uint8Array(buffer);
 		let ii = 0;
 		while (ii < length) {
-			const chunk = buffers[0];
+			const chunk = buffers[0]!;
 			const copyLength = Math.min(chunk.length, length - ii);
 			span.set(chunk.subarray(0, copyLength), ii);
 			if (copyLength < chunk.length) {
@@ -154,7 +154,6 @@ async function *iterateMessages(socket: AsyncIterable<Buffer>) {
 		_readHostObject(): unknown {
 			type ConstructorType = new (array: ArrayBufferLike) => ArrayBufferView;
 			const constructor: ConstructorType | undefined = arrayBufferViews[this.readUint32()];
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (constructor === undefined) {
 				throw new Error('Unsupported host object type');
 			}

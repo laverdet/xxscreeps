@@ -76,8 +76,7 @@ hooks.register('gameInitializer', (Game, data) => {
 		Game.flags = flags;
 		const rooms = new Set<Room>();
 		for (const flag of Object.values(flags)) {
-			const room: Room = Game.rooms[flag.pos.roomName];
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
+			const room = Game.rooms[flag.pos.roomName];
 			if (room) {
 				room['#insertObject'](flag);
 				rooms.add(room);

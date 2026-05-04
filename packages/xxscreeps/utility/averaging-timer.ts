@@ -25,7 +25,7 @@ export class AveragingTimer {
 			return Number(duration * bigAccuracy) / accuracy;
 		}
 		const ii = this.index % this.size;
-		const previous = this.samples[ii];
+		const previous = this.samples[ii]!;
 		this.samples[ii] = duration;
 		this.sum += duration - previous;
 		const samplesCount = BigInt(Math.min(this.size, this.index - this.ignoreFirst));

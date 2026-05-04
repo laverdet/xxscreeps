@@ -1,4 +1,5 @@
 import type { Endpoint } from 'xxscreeps/backend/index.js';
+import * as assert from 'node:assert';
 import { JSONSchemaType } from 'ajv';
 import { makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as Badge from 'xxscreeps/engine/db/user/badge.js';
@@ -67,7 +68,9 @@ const BadgeSvgEndpoint: Endpoint = {
 		const { path1, path2, rotate } = function() {
 			if (Badge.isUserBadge(badge)) {
 				const { flip, param, type } = badge;
-				const { rotate, path1, path2 } = BadgePaths[type - 1](param);
+				const makePath = BadgePaths[type - 1];
+				assert.ok(makePath);
+				const { rotate, path1, path2 } = makePath(param);
 				return {
 					path1, path2,
 					rotate: flip ? rotate ?? 0 : 0,

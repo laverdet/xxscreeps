@@ -59,7 +59,6 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 			const costMatrix = getOrSet(cachedCostMatrices, `${roomName}:${costMatrixKey}`, () => {
 				// Return early if there's no access to this room
 				const room = Game.rooms[roomName];
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
 				if (!room) {
 					return;
 				}

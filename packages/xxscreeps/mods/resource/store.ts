@@ -168,9 +168,10 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		}
 		const resources = this['#resources'];
 		const ii = resources.findIndex(info => info.type === type);
-		const info = resources[ii];
+		// nb: We assume it is an invariant to invoke this function with an undefined resource
+		const info = resources[ii]!;
 		if ((info.amount -= amount) === 0) {
-			resources[ii] = resources[resources.length - 1];
+			resources[ii] = resources.at(-1)!;
 			resources.pop();
 			delete this[type];
 		} else {

@@ -213,8 +213,7 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 
 function hasSpawn(userGame: GameConstructor, name: string) {
 	return Boolean(
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
-		userGame.spawns[name] ||
+		userGame.spawns[name] ??
 		Object.values(userGame.constructionSites).some(site => site.name === name));
 }
 
@@ -373,9 +372,9 @@ const names = [
 function getUniqueName(exists: (name: string) => boolean) {
 	let ii = 0;
 	do {
-		let name = names[Math.floor(Math.random() * names.length)];
+		let name = names[Math.floor(Math.random() * names.length)]!;
 		if (++ii > 4) {
-			name += names[Math.floor(Math.random() * names.length)];
+			name += names[Math.floor(Math.random() * names.length)]!;
 		}
 		if (!exists(name)) {
 			return name;

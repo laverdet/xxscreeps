@@ -2,11 +2,13 @@ import type { PubSubListener, PubSubProvider, PubSubSubscription } from 'xxscree
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { RedisHolder } from './client.js';
 
+interface PublishIgnore {
+	client: RedisSubscription;
+	message: string;
+}
+
 export class RedisPubSubProvider implements PubSubProvider {
-	private readonly publishIgnore = new Map<string, {
-		client: RedisSubscription;
-		message: string;
-	}[]>();
+	private readonly publishIgnore = new Map<string, [ PublishIgnore, ...PublishIgnore[] ]>();
 
 	private readonly subscribersByKey = new Map<string, Set<RedisSubscription>>();
 	private readonly listener;

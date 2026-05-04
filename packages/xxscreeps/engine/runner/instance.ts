@@ -117,7 +117,7 @@ export class PlayerInstance {
 			Code.getUserCodeChannel(shard.db, userId).subscribe(),
 			shard.db.data.hmget(User.infoKey(userId), [ 'branch', 'username' ]),
 		]);
-		const instance = new PlayerInstance(shard, world, channel, codeChannel, userId, userInfo.username!, userInfo.branch);
+		const instance = new PlayerInstance(shard, world, channel, codeChannel, userId, userInfo.username!, userInfo.branch ?? null);
 		try {
 			[ instance.cleanup, instance.connectors ] = await acquireConnectors(instance);
 			return instance;

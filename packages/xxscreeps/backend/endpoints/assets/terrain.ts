@@ -40,20 +40,19 @@ function generate(map: GameMap, grid: (Room | null)[][], zoom: number) {
 	// Most of the time we don't need transparency. It's only needed for zoom grids near the edges, so
 	// transparency is turned off when possible
 	const hasTransparency = grid.some(row => row.some(terrain => !terrain));
+	const gh = grid.length;
+	const gw = grid[0]?.length ?? NaN;
 	const png = new PNG({
 		colorType: hasTransparency ? 6 : 2,
 		inputColorType: 6,
-		width: 50 * zoom * grid[0].length,
-		height: 50 * zoom * grid.length,
+		width: 50 * zoom * gw,
+		height: 50 * zoom * gh,
 	});
 	const data32 = new Uint32Array(png.data.buffer, png.data.byteOffset);
-	const gh = grid.length;
-	const gw = grid[0].length;
 	const iwidth = gw * 50 * zoom;
-	for (let gy = 0; gy < gh; ++gy) {
-		for (let gx = 0; gx < gw; ++gx) {
+	for (const [ gy, rooms ] of grid.entries()) {
+		for (const [ gx, room ] of rooms.entries()) {
 			// Check color returned by room objects
-			const room = grid[gy][gx];
 			const colorsByPosition = new Map<number, number>();
 			const terrain = room && map.getRoomTerrain(room.name);
 			if (room) {
@@ -162,7 +161,7 @@ function register(paths: string[], fn: (shard: Shard, map: GameMap, room: string
 
 			async execute(context) {
 				// Fetch PNG from cache, or generate fresh
-				const room = context.params.room;
+				const room = context.params.room!;
 				const data = cache.get(room) ?? await async function() {
 					const payload = await fn(context.shard, context.backend.world.map, room);
 					if (payload === null) {
@@ -219,14 +218,17 @@ for (const [ fragment, grid, align, zoom ] of [ [ 'zoom1', 10, 2, 0.4 ], [ 'zoom
 		let didFindRoom = false as boolean;
 		const { rx: left, ry: top } = parseRoomName(room);
 		if ((left + align) % grid === 0 && (top + align) % grid === 0) {
-			const rooms = await Promise.all(Fn.map(Fn.range(top, top + grid), yy =>
-				Promise.all(Fn.map(Fn.range(left, left + grid), async xx => {
-					const roomName = generateRoomName(xx, yy);
-					const room = map.getRoomStatus(roomName) ? await shard.loadRoom(roomName) : null;
-					didFindRoom ||= room !== null;
-					return room;
-				})),
-			));
+			const rooms = await Fn.mapAwait(
+				Fn.range(top, top + grid), yy =>
+					Fn.mapAwait(
+						Fn.range(left, left + grid),
+						async xx => {
+							const roomName = generateRoomName(xx, yy);
+							const room = map.getRoomStatus(roomName) ? await shard.loadRoom(roomName) : null;
+							didFindRoom ||= room !== null;
+							return room;
+						}),
+			);
 			// Render the grid
 			if (didFindRoom) {
 				return generate(map, rooms, zoom);

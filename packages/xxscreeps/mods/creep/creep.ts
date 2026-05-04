@@ -37,6 +37,30 @@ type MoveToOptions = FindPathOptions & {
 	visualizePathStyle?: Partial<PolyStyle>;
 };
 
+interface SavedMoveStorage {
+	dest: {
+		room: string;
+		x: number;
+		y: number;
+	};
+	path: string | RoomPath;
+	room: string;
+	time: number;
+}
+
+/** @internal */
+export interface SavedMoveSerialized extends SavedMoveStorage {
+	path: string;
+}
+
+/** @internal */
+export interface SavedMovePath extends SavedMoveStorage {
+	path: RoomPath;
+}
+
+/** @internal */
+type SavedMove = SavedMoveSerialized | SavedMovePath;
+
 export const format = declare('Creep', () => compose(shape, Creep));
 const shape = struct(objectFormat, {
 	...variant('creep'),
@@ -84,7 +108,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	get carry() { return this.store; }
 	get carryCapacity() { return this.store.getCapacity(); }
 
-	get memory() {
+	get memory(): Record<string, unknown> | undefined {
 		if (!this.my) {
 			return;
 		}
@@ -176,7 +200,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 			entry instanceof RoomPosition
 				? entry : new RoomPosition(entry.x, entry.y, this.pos.roomName);
 		let ii = path.findIndex((pos: AnyPosition) => this.pos.isEqualTo(convert(pos)));
-		if (ii === -1 && !this.pos.isNearTo(convert(path[0]))) {
+		if (ii === -1 && !this.pos.isNearTo(convert(path[0]!))) {
 			return C.ERR_NOT_FOUND;
 		}
 
@@ -184,7 +208,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 		if (++ii >= path.length) {
 			return C.ERR_NOT_FOUND;
 		}
-		return this.move(this.pos.getDirectionTo(convert(path[ii])));
+		return this.move(this.pos.getDirectionTo(convert(path[ii]!)));
 	}
 
 	/**
@@ -210,22 +234,11 @@ export class Creep extends withOverlay(RoomObject, shape) {
 			// Reuse saved path
 			const reusePath = extra?.reusePath ?? 5;
 			const serializeMemory = extra?.serializeMemory ?? true;
-			type SavedMove = {
-				dest: {
-					room: string;
-					x: number;
-					y: number;
-				};
-				path: string | RoomPath;
-				room: string;
-				time: number;
-			};
 			if (reusePath > 0) {
-				const { _move }: { _move?: SavedMove } = this.memory;
+				const { _move } = this.memory as { _move?: SavedMove };
 				if (_move !== undefined) {
 					if (Game.time > _move.time + reusePath || _move.room !== this.pos.roomName) {
-						delete this.memory._move;
-
+						delete this.memory!._move;
 					} else if (_move.dest.room === pos.roomName && _move.dest.x === pos.x && _move.dest.y === pos.y) {
 						const path = typeof _move.path === 'string' ? Room.deserializePath(_move.path) : _move.path;
 						const ii = path.findIndex(pos => this.pos.x === pos.x && this.pos.y === pos.y);
@@ -233,7 +246,8 @@ export class Creep extends withOverlay(RoomObject, shape) {
 							path.splice(0, ii + 1);
 							_move.path = serializeMemory ? Room.serializePath(path) : path;
 						}
-						if (path.length === 0 || this.pos.isNearTo(path[0].x, path[0].y)) {
+						const [ next ] = path;
+						if (next === undefined || this.pos.isNearTo(next.x, next.y)) {
 							return path;
 						}
 					}
@@ -251,7 +265,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 			// Cache path in memory
 			if (reusePath > 0) {
-				const _move: SavedMove = {
+				(this.memory as { _move?: SavedMoveStorage })._move = {
 					dest: {
 						x: pos.x,
 						y: pos.y,
@@ -261,7 +275,6 @@ export class Creep extends withOverlay(RoomObject, shape) {
 					path: serializeMemory ? Room.serializePath(path) : path,
 					room: this.pos.roomName,
 				};
-				this.memory._move = _move;
 			}
 			return path;
 		};
@@ -299,10 +312,12 @@ export class Creep extends withOverlay(RoomObject, shape) {
 			return C.ERR_NOT_FOUND;
 		}
 		visualize(path);
-		if (path.length === 0) {
+		const [ next ] = path;
+		if (next === undefined) {
 			return this.pos.isNearTo(pos) ? C.OK : C.ERR_NO_PATH;
+		} else {
+			return this.move(next.direction);
 		}
-		return this.move(path[0].direction);
 	}
 
 	/**

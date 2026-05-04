@@ -21,14 +21,14 @@ export class StructureExtension extends withOverlay(OwnedStructure, shape) {
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
 
 	override '#roomStatusDidChange'(level: number) {
-		this.store['#capacity'] = C.EXTENSION_ENERGY_CAPACITY[level];
+		this.store['#capacity'] = C.EXTENSION_ENERGY_CAPACITY[level]!;
 	}
 }
 
 export function create(pos: RoomPosition, level: number, owner: string) {
 	const extension = assign(RoomObject.create(new StructureExtension(), pos), {
 		hits: C.EXTENSION_HITS,
-		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.EXTENSION_ENERGY_CAPACITY[level]),
+		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.EXTENSION_ENERGY_CAPACITY[level]!),
 	});
 	extension['#user'] = owner;
 	return extension;

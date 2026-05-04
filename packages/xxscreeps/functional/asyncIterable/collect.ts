@@ -7,7 +7,7 @@ import { mapAwait } from 'xxscreeps/functional/iterable/mapAwait.js';
 export function collect<Type>(iterables: readonly AsyncIterable<Type>[]): AsyncIterable<Type> {
 	switch (iterables.length) {
 		case 0: return async function*() {}();
-		case 1: return iterables[0];
+		case 1: return iterables[0]!;
 		default: return async function*() {
 			type Accept = () => Type;
 			let count = iterables.length;

@@ -42,7 +42,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 			this.pos.x = viewOrIdOrXx;
 			this.pos.y = offsetOrYy as number;
 			this.pos.roomName = roomName as string;
-			this.room = Game.rooms[roomName as string];
+			this.room = Game.rooms[roomName as string]!;
 		} else if (typeof viewOrIdOrXx === 'string') {
 			// The terrible id-string constructor
 			const object = Game.getObjectById(viewOrIdOrXx);

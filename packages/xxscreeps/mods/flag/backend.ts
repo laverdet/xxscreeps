@@ -105,7 +105,6 @@ hooks.register('route', {
 		}
 		const { name } = context.request.body;
 		const flags = await loadUserFlags(context.shard, userId);
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
 		if (flags[name]) {
 			return { error: 'name exists' };
 		} else {
@@ -178,7 +177,6 @@ hooks.register('route', {
 			const flags = await loadUserFlags(context.shard, userId);
 			for (let ii = 0; ii < 100; ++ii) {
 				const name = `Flag${ii}`;
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
 				if (!flags[name]) {
 					return { ok: 1, name };
 				}

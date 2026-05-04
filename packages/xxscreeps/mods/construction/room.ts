@@ -106,7 +106,7 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		room['#lookFor'](C.LOOK_STRUCTURES),
 		room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
 	]), object => object.structureType === structureType ? 1 : 0);
-	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][room.controller.level]) {
+	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][room.controller.level]!) {
 		return C.ERR_RCL_NOT_ENOUGH;
 	}
 

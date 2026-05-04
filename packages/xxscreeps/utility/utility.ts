@@ -82,8 +82,8 @@ export function extend<Type, Proto extends {
 export function filterInPlace<Type>(array: Type[], fn: (value: Type) => boolean) {
 	let cursor = array.length - 1;
 	for (let ii = cursor; ii >= 0; --ii) {
-		if (!fn(array[ii])) {
-			array[ii] = array[cursor--];
+		if (!fn(array[ii]!)) {
+			array[ii] = array[cursor--]!;
 		}
 	}
 	array.splice(cursor + 1);
@@ -129,7 +129,7 @@ export function removeOne<Type>(list: Type[], element: Type) {
 	if (index === -1) {
 		throw new Error('Element was not found');
 	}
-	list[index] = list[list.length - 1];
+	list[index] = list.at(-1)!;
 	list.pop();
 }
 
@@ -147,7 +147,7 @@ export function throttle(fn: () => void) {
 			this.set(time);
 		},
 		set(time: number) {
-			timeout ||= setTimeout(() => {
+			timeout ??= setTimeout(() => {
 				timeout = undefined;
 				fn();
 			}, time);

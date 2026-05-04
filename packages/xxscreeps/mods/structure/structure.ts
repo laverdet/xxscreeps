@@ -184,8 +184,8 @@ export function checkActiveStructures(room: Room) {
 			}
 		} else {
 			structures.sort(mappedNumericComparator(structure => structure.pos.getRangeTo(controller!.pos)));
-			for (let ii = 0; ii < structures.length; ++ii) {
-				structures[ii]['#active'] = ii < maxCount && structures[ii]['#user'] === userId;
+			for (const [ ii, structure ] of structures.entries()) {
+				structure['#active'] = ii < maxCount && structure['#user'] === userId;
 			}
 		}
 	}

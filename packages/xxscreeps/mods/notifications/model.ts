@@ -19,18 +19,18 @@ function rowIdFor(type: NotificationType, timeGroup: number, message: string) {
 	return createHash('sha1').update(`${type}${timeGroup}${message}`).digest('hex');
 }
 
-export function getNotifications(shard: Shard, userId: string): Promise<NotificationRow[]> {
-	return shard.data.smembers(userIndexKey(userId)).then(ids =>
-		Fn.mapAwait(ids, async id => {
-			const fields = await shard.data.hgetall(rowKey(userId, id));
-			return {
-				user: userId,
-				message: fields.message,
-				date: Number(fields.date),
-				count: Number(fields.count),
-				type: fields.type as NotificationType,
-			};
-		}));
+export async function getNotifications(shard: Shard, userId: string): Promise<NotificationRow[]> {
+	const ids = await shard.data.smembers(userIndexKey(userId));
+	return Fn.mapAwait(ids, async (id): Promise<NotificationRow> => {
+		const fields = await shard.data.hgetall(rowKey(userId, id));
+		return {
+			user: userId,
+			message: fields.message!,
+			date: Number(fields.date),
+			count: Number(fields.count),
+			type: fields.type as NotificationType,
+		};
+	});
 }
 
 /**

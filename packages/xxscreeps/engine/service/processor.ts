@@ -62,7 +62,7 @@ const affinityByRoom = new Map<string, RoomWorker>();
 
 // Pulls rooms from process queue for a given worker. Prioritizes affinity rooms, but will return
 // other rooms if needed.
-async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
+async function *consumeRoomsQueue(worker: RoomWorker, time: number): AsyncIterable<string> {
 	const queueKey = processRoomsSetKey(time);
 	loop: while (true) {
 

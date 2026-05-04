@@ -119,19 +119,19 @@ export async function spread<Type>(
 		while (true) {
 			const next = await iterator.next();
 			if (next.done) {
-				await Promise.all(Fn.map(pending, deferred => deferred.promise));
+				await Fn.mapAwait(pending, ({ promise }) => promise);
 				return;
 			}
 			pending.push(new Deferred());
 			if (pending.length > concurrency) {
-				await pending[0].promise;
-				pending[0] = pending[offset--];
-				pending[offset] = pending[pending.length - 1];
+				await pending[0]!.promise;
+				pending[0] = pending[offset--]!;
+				pending[offset] = pending.at(-1)!;
 				pending.pop();
 			}
 			Promise.resolve(fn(next.value)).then(
-				() => pending[offset++].resolve(),
-				err => pending[offset++].reject(err));
+				() => pending[offset++]!.resolve(),
+				err => pending[offset++]!.reject(err));
 		}
 	} finally {
 		iterator.return?.();

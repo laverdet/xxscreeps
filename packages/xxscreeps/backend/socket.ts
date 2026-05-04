@@ -187,10 +187,10 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 					// Execute subscription request
 					const { name } = subscriptionRequest.groups!;
 					for (const handler of handlers) {
-						const result = handler.pattern.exec(name);
+						const result = handler.pattern.exec(name!);
 						if (result) {
 							// Don't let subscriptions collide
-							if (subscriptions.has(name)) {
+							if (subscriptions.has(name!)) {
 								return;
 							}
 							const encodedName = JSON.stringify(name);
@@ -200,7 +200,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 								send: jsonEncodedMessage => connection.write(`[${encodedName},${jsonEncodedMessage}]`),
 							};
 							const subscription = Promise.resolve(handler.subscribe.call(instance, result.groups!));
-							subscriptions.set(name, subscription);
+							subscriptions.set(name!, subscription);
 							subscription.catch(error => {
 								console.error(error);
 								close();
@@ -213,9 +213,9 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 				const unsubscriptionRequest = /^unsubscribe (?<name>.+)$/.exec(message);
 				if (unsubscriptionRequest) {
 					const { name } = unsubscriptionRequest.groups!;
-					const unlistener = subscriptions.get(name);
+					const unlistener = subscriptions.get(name!);
 					if (unlistener) {
-						subscriptions.delete(name);
+						subscriptions.delete(name!);
 						unlistener.then(unlistener => unlistener(), console.error);
 					}
 				}

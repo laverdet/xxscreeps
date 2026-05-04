@@ -255,8 +255,8 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 			while (entries.length !== 0) {
 				let minimum = -1;
 				let minimumPadding = Infinity;
-				for (let ii = 0; ii < entries.length; ++ii) {
-					const padding = paddingFor(entries[ii]);
+				for (const [ ii, entry ] of entries.entries()) {
+					const padding = paddingFor(entry);
 					if (padding === 0) {
 						minimum = ii;
 						break;
@@ -266,7 +266,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 						minimumPadding = padding;
 					}
 				}
-				const member = entries.splice(minimum, 1)[0];
+				const member = entries.splice(minimum, 1)[0]!;
 				const { key, layout, traits } = member;
 				offset = alignTo(offset, traits.align);
 				members.push({
@@ -282,14 +282,14 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 
 			// Calculate struct traits
 			const align = Math.max(...members.map(member => member.traits.align));
-			const lastMember = members[members.length - 1];
+			const lastMember = members.at(-1)!;
 			const size = lastMember.info.offset + lastMember.traits.size;
 			const isFixedSize = (!baseLayout || baseLayout.traits.stride !== undefined) &&
 				members.every(member => member.traits.stride !== undefined);
 
 			// Add union entries
 			for (const [ key, union ] of unionReferences) {
-				const [ referencedKey, unionFormat ] = entriesWithSymbols(union.union)[0];
+				const [ referencedKey, unionFormat ] = entriesWithSymbols(union.union)[0]!;
 				const { layout, traits } = getLayout(unionFormat, cache);
 				const referencedMember = members.find(info => info.key === referencedKey)!;
 				if (traits.align > referencedMember.traits.align) {

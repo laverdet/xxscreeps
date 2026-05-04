@@ -7,12 +7,16 @@ export const optionalFormat = declare('Id', compose(array(4, 'uint32'), {
 		// into 4 bytes. This could be increased to 30 characters if needed by putting more in the
 		// front.
 		const offset32 = offset >>> 2;
-		const length = view.int8[offset];
-		return length === 0 ? null : (
-			view.uint32[offset32 + 1].toString(16).padStart(8, '0') +
-			view.uint32[offset32 + 2].toString(16).padStart(8, '0') +
-			view.uint32[offset32 + 3].toString(16).padStart(8, '0')
-		).substr(24 - view.int8[offset]);
+		const length = view.int8[offset]!;
+		if (length === 0) {
+			return null;
+		} else {
+			return (
+				view.uint32[offset32 + 1]!.toString(16).padStart(8, '0') +
+				view.uint32[offset32 + 2]!.toString(16).padStart(8, '0') +
+				view.uint32[offset32 + 3]!.toString(16).padStart(8, '0')
+			).slice(24 - view.int8[offset]!);
+		}
 	},
 
 	decomposeIntoBuffer(value: string | null, view: BufferView, offset: number) {

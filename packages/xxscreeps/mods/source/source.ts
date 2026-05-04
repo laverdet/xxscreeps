@@ -1,7 +1,6 @@
 import { Game, registerGlobal } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 import * as C from './constants.js';
 
 export const format = declare('Source', () => compose(shape, Source));

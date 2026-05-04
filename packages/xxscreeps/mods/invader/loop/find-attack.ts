@@ -1,16 +1,17 @@
 import type * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import type { Creep } from 'xxscreeps/mods/creep/creep.js';
+import type { Creep, SavedMovePath } from 'xxscreeps/mods/creep/creep.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import flee from './flee.js';
 
 function checkPath(pos1: RoomPosition, pos2: RoomPosition) {
-	const path = pos1.findPathTo(pos2, { maxRooms: 1 });
-	if (path.length === 0) {
+	const target = pos1.findPathTo(pos2, { maxRooms: 1 }).at(-1);
+	if (target === undefined) {
 		return false;
+	} else {
+		return pos1.isNearTo(target.x, target.y);
 	}
-	return pos2.isNearTo(path[path.length - 1].x, path[path.length - 1].y);
 }
 
 function costCallbackIgnoreRamparts(fortifications: Structure[], roomName: string, cm: PathFinder.CostMatrix): undefined {
@@ -63,25 +64,23 @@ export default function findAttack(creep: Creep, healers: Creep[], hostiles: Cre
 	}
 
 	const target = unreachableSpawns[0];
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
 	if (target) {
 		creep.moveTo(target, { ...pathOptions, ignoreDestructibleStructures: true });
 		return;
 	}
 
-	if ((haveAttack || creep.getActiveBodyparts(C.WORK) > 0) && creep.memory._move?.path !== undefined) {
-		if (creep.memory._move.path.length === 0) {
-			return;
-		}
-
-		const pos = creep.memory._move.path[0];
-		const structures = creep.room.lookForAt(C.LOOK_STRUCTURES, pos.x, pos.y).filter(
-			look => look.structureType !== 'spawn');
-		if (structures.length > 0) {
-			if (creep.getActiveBodyparts(C.WORK) > 0) {
-				// creep.dismantle(structures[0].structure);
-			} else {
-				creep.attack(structures[0]);
+	const { _move } = creep.memory as { _move?: SavedMovePath };
+	if ((haveAttack || creep.getActiveBodyparts(C.WORK) > 0) && _move?.path !== undefined) {
+		const [ pos ] = _move.path;
+		if (pos !== undefined) {
+			const [ target ] = creep.room.lookForAt(C.LOOK_STRUCTURES, pos.x, pos.y).filter(
+				look => look.structureType !== 'spawn');
+			if (target) {
+				if (creep.getActiveBodyparts(C.WORK) > 0) {
+					// creep.dismantle(target);
+				} else {
+					creep.attack(target);
+				}
 			}
 		}
 	}

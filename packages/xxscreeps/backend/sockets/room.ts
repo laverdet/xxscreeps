@@ -120,21 +120,22 @@ export const roomSubscription: SubscriptionEndpoint = {
 		let skipUntil = 0;
 		const { shard } = this.context;
 		const seenUsers = new Set<string>();
-		if (!this.context.world.map.getRoomStatus(parameters.room)) {
+		const roomName = parameters.room!;
+		if (!this.context.world.map.getRoomStatus(roomName)) {
 			return () => {};
 		}
 
 		// Resolve room socket handlers
 		// HACK: TypeScript doesn't infer types correctly for iterable types into a rest spread. The
 		// `hookMap` cast here shouldn't be needed but it is.
-		const mappedHooks = invokeSocketHooks(shard, this.user, parameters.room);
+		const mappedHooks = invokeSocketHooks(shard, this.user, roomName);
 		hackyIterableToArray(mappedHooks);
 		const [ hookEffect, hookResults ] = await acquire(...mappedHooks);
 		const hookRunners = [ ...Fn.filter(hookResults) ];
 
 		// Listen for room updates. Must be done after hooks are resolved because `update` will call hooks.
 		const [ effect ] = await acquire(
-			subscribeToRoom(shard, parameters.room, (room, time, didUpdate) => mustNotReject(async () => {
+			subscribeToRoom(shard, roomName, (room, time, didUpdate) => mustNotReject(async () => {
 				if (Date.now() < skipUntil) {
 					return;
 				}
@@ -192,7 +193,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 				previousTime = time;
 			})),
 
-			getRoomChannel(shard, parameters.room).listen(event => {
+			getRoomChannel(shard, roomName).listen(event => {
 				if (event.type === 'willSpawn') {
 					// There is a race condition in the client where if you send an update while placing your
 					// initial spawn the renderer will break until next refresh. It happens because the client

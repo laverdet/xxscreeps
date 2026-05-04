@@ -32,14 +32,14 @@ describe('Combat', () => {
 
 	test('attack + rangedAttack killing a structure produces exactly one ruin', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
+			const lab = Game.rooms.W1N1!.find(C.FIND_STRUCTURES)
 				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
-			assert.strictEqual(Game.creeps.warrior.attack(lab), C.OK);
-			assert.strictEqual(Game.creeps.warrior.rangedAttack(lab), C.OK);
+			assert.strictEqual(Game.creeps.warrior!.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.warrior!.rangedAttack(lab), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
-			const ruins = Game.rooms.W1N1.find(C.FIND_RUINS);
+			const ruins = Game.rooms.W1N1!.find(C.FIND_RUINS);
 			const labRuins = ruins.filter(ruin => ruin.pos.x === 25 && ruin.pos.y === 25);
 			assert.strictEqual(labRuins.length, 1,
 				`expected 1 ruin at lab position, got ${labRuins.length}`);
@@ -64,23 +64,23 @@ describe('getEventLog', () => {
 
 	test('returns an array', () => sim(async ({ player }) => {
 		await player('100', Game => {
-			const log = Game.rooms.W1N1.getEventLog();
+			const log = Game.rooms.W1N1!.getEventLog();
 			assert.ok(Array.isArray(log));
 		});
 	}));
 
 	test('records attack events after processing', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
+			const lab = Game.rooms.W1N1!.find(C.FIND_STRUCTURES)
 				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
-			assert.strictEqual(Game.creeps.attacker.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.attacker!.attack(lab), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
-			const log = Game.rooms.W1N1.getEventLog();
+			const log = Game.rooms.W1N1!.getEventLog();
 			const attackEvent = log.find(event => event.event === C.EVENT_ATTACK);
 			assert.ok(attackEvent, 'expected an attack event in the event log');
-			assert.strictEqual(attackEvent.objectId, Game.creeps.attacker.id);
+			assert.strictEqual(attackEvent.objectId, Game.creeps.attacker!.id);
 			assert.ok(attackEvent.data, 'expected nested data payload');
 			assert.strictEqual(attackEvent.data.attackType, C.EVENT_ATTACK_TYPE_MELEE);
 			assert.ok(typeof attackEvent.data.damage === 'number');
@@ -89,13 +89,13 @@ describe('getEventLog', () => {
 
 	test('raw mode returns vanilla-shaped JSON string', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = Game.rooms.W1N1.find(C.FIND_STRUCTURES)
+			const lab = Game.rooms.W1N1!.find(C.FIND_STRUCTURES)
 				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
-			Game.creeps.attacker.attack(lab);
+			Game.creeps.attacker!.attack(lab);
 		});
 		await tick();
 		await player('100', Game => {
-			const raw = Game.rooms.W1N1.getEventLog(true);
+			const raw = Game.rooms.W1N1!.getEventLog(true);
 			assert.ok(typeof raw === 'string');
 			const parsed = JSON.parse(raw) as { event: number; objectId: string; data?: Record<string, unknown> }[];
 			assert.ok(Array.isArray(parsed));
@@ -123,12 +123,12 @@ describe('getEventLog missing events', () => {
 
 	test('structure death emits EVENT_OBJECT_DESTROYED with structureType', () => structureKill(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0];
-			Game.creeps.warrior.attack(lab);
+			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)[0]!;
+			Game.creeps.warrior!.attack(lab);
 		});
 		await tick();
 		await player('100', Game => {
-			const log = Game.rooms.W1N1.getEventLog();
+			const log = Game.rooms.W1N1!.getEventLog();
 			const destroyed = log.find(event => event.event === C.EVENT_OBJECT_DESTROYED);
 			assert.ok(destroyed, 'expected an EVENT_OBJECT_DESTROYED entry');
 			assert.ok(destroyed.data, 'expected nested data payload');
@@ -160,13 +160,13 @@ describe('getEventLog missing events', () => {
 
 	test('multi-attacker kill emits EVENT_OBJECT_DESTROYED exactly once', () => multiAttackerKill(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0];
-			Game.creeps.warriorA.attack(lab);
-			Game.creeps.warriorB.attack(lab);
+			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)[0]!;
+			Game.creeps.warriorA!.attack(lab);
+			Game.creeps.warriorB!.attack(lab);
 		});
 		await tick();
 		await player('100', Game => {
-			const log = Game.rooms.W1N1.getEventLog();
+			const log = Game.rooms.W1N1!.getEventLog();
 			const destroyed = log.filter(event => event.event === C.EVENT_OBJECT_DESTROYED);
 			assert.strictEqual(destroyed.length, 1,
 				`expected exactly one EVENT_OBJECT_DESTROYED for one structure death, got ${destroyed.length}`);
@@ -218,11 +218,11 @@ describe('TOUGH damage reduction', () => {
 
 	test('unboosted TOUGH takes full damage (baseline)', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.attacker.attack(Game.creeps.defender);
+			Game.creeps.attacker!.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.defender.hits,
+			assert.strictEqual(Game.creeps.defender!.hits,
 				4 * HITS_PER_PART - C.ATTACK_POWER,
 				'unboosted defender should take full ATTACK_POWER damage');
 		});
@@ -230,18 +230,18 @@ describe('TOUGH damage reduction', () => {
 
 	test('GO-boosted TOUGH reduces melee damage', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GO')!;
-			lab.boostCreep(Game.creeps.defender);
+			lab.boostCreep(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker.attack(Game.creeps.defender);
+			Game.creeps.attacker!.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.ATTACK_POWER * C.BOOSTS.tough.GO.damage;
-			assert.strictEqual(Game.creeps.defender.hits,
+			assert.strictEqual(Game.creeps.defender!.hits,
 				4 * HITS_PER_PART - effectiveDmg,
 				'GO-boosted TOUGH should reduce damage by GO multiplier');
 		});
@@ -249,18 +249,18 @@ describe('TOUGH damage reduction', () => {
 
 	test('GHO2-boosted TOUGH reduces melee damage', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GHO2')!;
-			lab.boostCreep(Game.creeps.defender);
+			lab.boostCreep(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker.attack(Game.creeps.defender);
+			Game.creeps.attacker!.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.ATTACK_POWER * C.BOOSTS.tough.GHO2.damage;
-			assert.strictEqual(Game.creeps.defender.hits,
+			assert.strictEqual(Game.creeps.defender!.hits,
 				4 * HITS_PER_PART - effectiveDmg,
 				'GHO2-boosted TOUGH should reduce damage by GHO2 multiplier');
 		});
@@ -268,18 +268,18 @@ describe('TOUGH damage reduction', () => {
 
 	test('XGHO2-boosted TOUGH reduces melee damage', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'XGHO2')!;
-			lab.boostCreep(Game.creeps.defender);
+			lab.boostCreep(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker.attack(Game.creeps.defender);
+			Game.creeps.attacker!.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.ATTACK_POWER * C.BOOSTS.tough.XGHO2.damage;
-			assert.strictEqual(Game.creeps.defender.hits,
+			assert.strictEqual(Game.creeps.defender!.hits,
 				4 * HITS_PER_PART - effectiveDmg,
 				'XGHO2-boosted TOUGH should reduce damage by XGHO2 multiplier');
 		});
@@ -287,18 +287,18 @@ describe('TOUGH damage reduction', () => {
 
 	test('TOUGH reduction applies to ranged attack', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GO')!;
-			lab.boostCreep(Game.creeps.defender);
+			lab.boostCreep(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.ranger.rangedAttack(Game.creeps.defender);
+			Game.creeps.ranger!.rangedAttack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.RANGED_ATTACK_POWER * C.BOOSTS.tough.GO.damage;
-			assert.strictEqual(Game.creeps.defender.hits,
+			assert.strictEqual(Game.creeps.defender!.hits,
 				4 * HITS_PER_PART - effectiveDmg,
 				'GO-boosted TOUGH should reduce ranged damage by GO multiplier');
 		});
@@ -306,19 +306,19 @@ describe('TOUGH damage reduction', () => {
 
 	test('TOUGH reduction with same-tick healing', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GO')!;
-			lab.boostCreep(Game.creeps.defender);
+			lab.boostCreep(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker.attack(Game.creeps.defender);
-			Game.creeps.healer.heal(Game.creeps.defender);
+			Game.creeps.attacker!.attack(Game.creeps.defender!);
+			Game.creeps.healer!.heal(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.ATTACK_POWER * C.BOOSTS.tough.GO.damage;
-			assert.strictEqual(Game.creeps.defender.hits,
+			assert.strictEqual(Game.creeps.defender!.hits,
 				4 * HITS_PER_PART - effectiveDmg + C.HEAL_POWER,
 				'TOUGH reduction applies to gross damage, healing added independently');
 		});
@@ -346,13 +346,13 @@ describe('TOUGH damage reduction', () => {
 
 	test('damage overflows past destroyed TOUGH to non-TOUGH parts', () => overflowSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GHO2')!;
-			lab.boostCreep(Game.creeps.defender);
+			lab.boostCreep(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker.attack(Game.creeps.defender);
+			Game.creeps.attacker!.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
@@ -362,7 +362,7 @@ describe('TOUGH damage reduction', () => {
 			const toughAbsorbs = HITS_PER_PART / boostFactor;
 			const overflow = totalIncoming - toughAbsorbs;
 			const effectiveLoss = HITS_PER_PART + overflow;
-			assert.strictEqual(Game.creeps.defender.hits,
+			assert.strictEqual(Game.creeps.defender!.hits,
 				3 * HITS_PER_PART - effectiveLoss,
 				'overflow damage past exhausted TOUGH should hit remaining parts at full rate');
 		});
@@ -401,27 +401,27 @@ describe('TOUGH damage reduction', () => {
 
 		// Boost
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GO')!;
-			lab.boostCreep(Game.creeps.defender);
+			lab.boostCreep(Game.creeps.defender!);
 		});
 		await tick();
 		// Pre-damage so TOUGH gain doesn't hit hitsMax cap
 		await player('100', Game => {
-			Game.creeps.attacker.attack(Game.creeps.defender);
+			Game.creeps.attacker!.attack(Game.creeps.defender!);
 		});
 		await tick();
 		const afterPreDmg = defenderHits - effectiveDmg;
 		// Assert pre-damage, then attack + heal in same tick
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.defender.hits, afterPreDmg,
+			assert.strictEqual(Game.creeps.defender!.hits, afterPreDmg,
 				'pre-damage should reduce hits by boosted attack damage');
-			Game.creeps.attacker.attack(Game.creeps.defender);
-			Game.creeps.healer.heal(Game.creeps.defender);
+			Game.creeps.attacker!.attack(Game.creeps.defender!);
+			Game.creeps.healer!.heal(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.defender.hits,
+			assert.strictEqual(Game.creeps.defender!.hits,
 				afterPreDmg - effectiveDmg + healAmount,
 				'TOUGH reduction must apply even when raw damage equals healing');
 		});

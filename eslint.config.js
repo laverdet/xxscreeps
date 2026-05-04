@@ -433,10 +433,6 @@ export default [
 				sourceType: 'module',
 			},
 		},
-		linterOptions: {
-			// Disable this "temporarily" since the vscode extension drops required suppressions
-			reportUnusedDisableDirectives: false,
-		},
 		plugins: {
 			'@stylistic': stylisticPlugin,
 			import: importPlugin,

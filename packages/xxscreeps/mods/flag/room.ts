@@ -38,7 +38,6 @@ extend(Room, {
 		const name = rest[0] ?? Fn.pipe(
 			Fn.range(),
 			$$ => Fn.map($$, ii => `Flag${ii}`),
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			$$ => Fn.find($$, name => flags[name] === undefined)!);
 		const color = rest[1] ?? C.COLOR_WHITE;
 		const secondaryColor = rest[2] ?? color;

@@ -211,7 +211,7 @@ function withAsArray(values: Iterable<{ x: number; y: number }>, top: number, le
 			}
 		}
 		for (const value of values) {
-			(results[value.y][value.x] ??= []).push(value);
+			results[value.y]![value.x]!.push(value);
 		}
 		return results;
 	}

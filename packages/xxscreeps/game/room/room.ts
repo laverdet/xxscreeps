@@ -117,10 +117,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 			this.#removeObjects = new Set();
 			let cursor = objects.length - 1;
 			for (let ii = cursor; ii >= 0; --ii) {
-				const object = objects[ii];
+				const object = objects[ii]!;
 				if (removeObjects.has(object)) {
 					this.#beforeRemove(object);
-					objects[ii] = objects[cursor--];
+					objects[ii] = objects[cursor--]!;
 					if (--removeCount === 0) {
 						break;
 					}

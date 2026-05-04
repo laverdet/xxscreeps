@@ -133,7 +133,7 @@ export class RedisProvider implements P.KeyValProvider {
 
 	async hmget(key: string, fields: string[], options?: P.AsBlob) {
 		const payload = await this.redis.invoke<string[]>(cb => this.redis.batch(key).hmget(key, fields, cb));
-		return Fn.fromEntries(payload.map((value, ii) => [ fields[ii], send(value, options) ])) as never;
+		return Fn.fromEntries(payload.map((value, ii) => [ fields[ii]!, send(value, options) ])) as never;
 	}
 
 	async hset(key: string, field: string, value: Value, options?: P.HSet) {
@@ -321,8 +321,8 @@ export class RedisProvider implements P.KeyValProvider {
 	}
 
 	async load(script: P.KeyvalScript) {
-		if (!script.sha) {
-			const loaded = await this.redis.invoke<string>(cb => this.redis.client.script('LOAD', script.lua, cb));
+		if (script.sha === undefined) {
+			const loaded = await this.redis.invoke<string>(cb => this.redis.client.script('LOAD', script.lua!, cb));
 			// @ts-expect-error
 			script.sha = loaded;
 		}

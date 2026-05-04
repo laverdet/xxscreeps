@@ -45,7 +45,7 @@ export function validate(badge: object): UserBadge {
 	// @ts-expect-error
 	delete badge._watching;
 	if (!validator(badge)) {
-		throw new Error(`Invalid badge\n${validator.errors![0].message}`);
+		throw new Error(`Invalid badge\n${validator.errors![0]!.message}`);
 	}
 	return badge;
 }

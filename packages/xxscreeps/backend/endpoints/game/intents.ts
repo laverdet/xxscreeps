@@ -50,16 +50,18 @@ const AddObjectIntentEndpoint: Endpoint = {
 			return;
 		}
 		const { room, name, intent } = context.request.body;
-		const { id } = Array.isArray(intent) ? intent[0] : intent;
-		const realIntentName = {
-			removeConstructionSite: 'remove',
-		}[name] ?? name;
-		await pushIntentsForRoomNextTick(context.shard, room, userId, {
-			local: {},
-			object: {
-				[id]: { [realIntentName]: [] },
-			},
-		});
+		for (const oneIntent of Array.isArray(intent) ? intent : [ intent ]) {
+			const { id } = oneIntent;
+			const realIntentName = {
+				removeConstructionSite: 'remove',
+			}[name] ?? name;
+			await pushIntentsForRoomNextTick(context.shard, room, userId, {
+				local: {},
+				object: {
+					[id]: { [realIntentName]: [] },
+				},
+			});
+		}
 		return { ok: 1 };
 	}),
 };

@@ -261,7 +261,7 @@ export class RoomPosition {
 
 		// Match position to object
 		const { path } = result;
-		const last = path[path.length - 1] ?? this;
+		const last = path.at(-1) ?? this;
 		return Fn.find(filtered, object => last.isNearTo(object)) ?? null;
 	}
 
@@ -451,7 +451,6 @@ export function fetchPositionArgumentRest<Rest extends any[]>(
 
 export function fetchRoom(roomName: string) {
 	const room = Game.rooms[roomName];
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (room === undefined) {
 		throw new Error(`Could not access room ${roomName}`);
 	}

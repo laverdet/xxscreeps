@@ -18,7 +18,6 @@ describe('Structure isActive', () => {
 	test('structure inactive when controller owner differs', () => ownerMismatchSim(async ({ player }) => {
 		await player('100', Game => {
 			const spawn = Game.spawns.ConqueredSpawn;
-			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 			assert.ok(spawn, 'should see own spawn');
 			assert.strictEqual(spawn.isActive(), false, 'spawn should be inactive when controller owned by another player');
 		});
@@ -42,7 +41,6 @@ describe('Structure isActive', () => {
 		await player('100', Game => {
 			const close = Game.spawns.CloseSpawn;
 			const far = Game.spawns.FarSpawn;
-			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unnecessary-condition
 			assert.ok(close && far, 'both spawns should exist');
 			assert.strictEqual(close.isActive(), true, 'closer spawn should be active');
 			assert.strictEqual(far.isActive(), false, 'farther spawn should be inactive');
@@ -52,7 +50,7 @@ describe('Structure isActive', () => {
 	// Extractor isActive check on mineral harvest — use room's existing mineral
 	const extractorSim = simulate({
 		W6N1: room => {
-			const mineral = room.find(C.FIND_MINERALS)[0];
+			const mineral = room.find(C.FIND_MINERALS)[0]!;
 			mineral.mineralAmount = 1000;
 			room['#insertObject'](createExtractor(mineral.pos, '100'));
 			room['#insertObject'](createCreep(mineral.pos, [ C.WORK, C.CARRY, C.MOVE ], 'miner', '100'));
@@ -63,9 +61,8 @@ describe('Structure isActive', () => {
 
 	test('harvest returns ERR_RCL_NOT_ENOUGH with inactive extractor', () => extractorSim(async ({ player }) => {
 		await player('100', Game => {
-			const creep = Game.creeps.miner;
-			const mineral = Game.rooms.W6N1.find(C.FIND_MINERALS)[0];
-			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+			const creep = Game.creeps.miner!;
+			const mineral = Game.rooms.W6N1!.find(C.FIND_MINERALS)[0];
 			assert.ok(mineral, 'mineral should exist');
 			assert.strictEqual(creep.harvest(mineral), C.ERR_RCL_NOT_ENOUGH);
 		});

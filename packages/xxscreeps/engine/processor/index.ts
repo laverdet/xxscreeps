@@ -123,8 +123,8 @@ export function initializeIntentConstraints() {
 		return 0;
 	};
 	const swap = (ii: number, jj: number) => {
-		const tmp = intentProcessors[ii];
-		intentProcessors[ii] = intentProcessors[jj];
+		const tmp = intentProcessors[ii]!;
+		intentProcessors[ii] = intentProcessors[jj]!;
 		intentProcessors[jj] = tmp;
 	};
 	const masks = new Map<string, number>();
@@ -137,7 +137,7 @@ export function initializeIntentConstraints() {
 		let end = intentProcessors.length;
 		loop: while (true) {
 			for (let jj = ii + 1; jj < end; ++jj) {
-				if (cmp(intentProcessors[min], intentProcessors[jj]) > 0) {
+				if (cmp(intentProcessors[min]!, intentProcessors[jj]!) > 0) {
 					swap(min, --end);
 					min = jj;
 					continue loop;
@@ -147,7 +147,7 @@ export function initializeIntentConstraints() {
 		}
 		swap(min, ii);
 		// Add in calculated data, once per element
-		const info = intentProcessors[ii];
+		const info = intentProcessors[ii]!;
 		info.mask = info.constraints.type.reduce(
 			(mask, type) => mask | getOrSet(masks, type, () => 2 ** masks.size),
 			0);
@@ -157,7 +157,7 @@ export function initializeIntentConstraints() {
 
 	// Generate getters
 	for (const [ intent, infos ] of intentProcessorsByName) {
-		const first = infos[0];
+		const first = infos[0]!;
 		intentProcessorGetters.set(intent, infos.length === 0
 			// If there is only one intent with this name the getter is simple
 			? () => first :

@@ -15,8 +15,8 @@ function roundTrip(draw: (vis: MapVisual) => void) {
 	draw(vis);
 	const flushed = flush();
 	assert.strictEqual(flushed.length, 1);
-	assert.strictEqual(flushed[0].roomName, 'map');
-	const visuals = visualsReader(flushed[0].blob);
+	assert.strictEqual(flushed[0]!.roomName, 'map');
+	const visuals = visualsReader(flushed[0]!.blob);
 	return [ ...decodeMapVisuals(visuals) ];
 }
 
@@ -241,11 +241,11 @@ describe('MapVisual class', () => {
 		assert.ok(mapEntry !== undefined, 'should have map visuals');
 		const visuals = [ ...visualsReader(mapEntry.blob) ];
 		assert.strictEqual(visuals.length, 5);
-		assert.strictEqual(visuals[0][Variant], 'c');
-		assert.strictEqual(visuals[1][Variant], 'l');
-		assert.strictEqual(visuals[2][Variant], 'r');
-		assert.strictEqual(visuals[3][Variant], 't');
-		assert.strictEqual(visuals[4][Variant], 'p');
+		assert.strictEqual(visuals[0]![Variant], 'c');
+		assert.strictEqual(visuals[1]![Variant], 'l');
+		assert.strictEqual(visuals[2]![Variant], 'r');
+		assert.strictEqual(visuals[3]![Variant], 't');
+		assert.strictEqual(visuals[4]![Variant], 'p');
 	});
 
 	test('clear, export, and import preserve size', () => {
