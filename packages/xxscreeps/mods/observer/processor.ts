@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { ObserverSpy, create as createObserverSpy } from 'xxscreeps/mods/observer/observer-spy.js';
-import { StructureObserver, checkObserveRoomName, checkObserveRoomRange } from 'xxscreeps/mods/observer/observer.js';
+import { StructureObserver, checkObserveRoom } from 'xxscreeps/mods/observer/observer.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { observer: typeof intents }
@@ -12,7 +12,7 @@ declare module 'xxscreeps/engine/processor/index.js' {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(StructureObserver, 'observeRoom', {}, (observer, context, target: string) => {
-		if (checkObserveRoomName(target) === C.OK && checkObserveRoomRange(observer, target) === C.OK) {
+		if (checkObserveRoom(observer, target) === C.OK) {
 			context.sendRoomIntent(target, 'observerObserve', observer['#user']!);
 		}
 	}),
