@@ -129,7 +129,7 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		asUnion(object);
 		if (
 			object['#lookType'] === C.LOOK_CONSTRUCTION_SITES ||
-			object.structureType === structureType ||
+			object instanceof Structure && object.structureType === structureType ||
 			(obstacle && obstacleChecker(object))
 		) {
 			return C.ERR_INVALID_TARGET;

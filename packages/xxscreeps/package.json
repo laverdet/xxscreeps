@@ -1,6 +1,6 @@
 {
   "name": "xxscreeps",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "type": "module",
   "license": "ISC",
   "scripts": {
@@ -27,7 +27,7 @@
     "acorn": "8.9.0",
     "acorn-class-fields": "1.0.0",
     "acorn-private-methods": "1.0.0",
-    "ajv": "^6.14.0",
+    "ajv": "^8.20.0",
     "argparse": "2.0.1",
     "babel-loader": "9.1.2",
     "convert-source-map": "^2.0.0",

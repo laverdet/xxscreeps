@@ -1,5 +1,5 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import Ajv from 'ajv';
+import { Ajv } from 'ajv';
 import jsonSchema from './badge.schema.json' with { type: 'json' };
 import * as User from './index.js';
 
@@ -9,7 +9,7 @@ import * as User from './index.js';
 /** @pattern ^#[a-f0-9]{6}$ */
 type Color = string;
 
-export type UserBadge = {
+export interface UserBadge {
 	color1: Color;
 	color2: Color;
 	color3: Color;
@@ -20,9 +20,9 @@ export type UserBadge = {
 
 	/** @minimum 1 @maximum 24 */
 	type: number;
-};
+}
 
-export type Badge = UserBadge | {
+interface SvgBadge {
 	color1: Color;
 	color2: Color;
 	color3: Color;
@@ -30,12 +30,19 @@ export type Badge = UserBadge | {
 		path1: string;
 		path2: string;
 	};
-};
+}
+
+export type Badge = UserBadge | SvgBadge;
 
 const ajv = new Ajv();
-const validator = ajv.compile(jsonSchema);
+const validator = ajv.compile<UserBadge>(jsonSchema);
 
-export function validate(badge: any): UserBadge {
+export function isUserBadge(badge: Badge): badge is UserBadge {
+	return typeof badge.type === 'number';
+}
+
+export function validate(badge: object): UserBadge {
+	// @ts-expect-error
 	delete badge._watching;
 	if (!validator(badge)) {
 		throw new Error(`Invalid badge\n${validator.errors![0].message}`);

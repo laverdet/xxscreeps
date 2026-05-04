@@ -15,7 +15,7 @@
     "@types/node": "~24.12.2"
   },
   "peerDependencies": {
-    "xxscreeps": "workspace:*"
+    "xxscreeps": "workspace:~"
   },
   "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/client/README.md",
   "repository": {

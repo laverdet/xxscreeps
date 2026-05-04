@@ -2,7 +2,7 @@ import type { StructureExtension } from './extension.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
-import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
+import { Structure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createExtension } from './extension.js';
 import { create } from './spawn.js';
@@ -342,6 +342,25 @@ describe('Spawn isActive', () => {
 			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0];
 			assert.strictEqual(ext.isActive(), false);
 			assert.strictEqual(Game.creeps.worker.withdraw(ext, C.RESOURCE_ENERGY, 1), C.OK);
+		});
+	}));
+});
+
+describe('Id-string constructor', () => {
+	const sim = simulate({
+		W3N3: room => {
+			room['#insertObject'](create(new RoomPosition(26, 25, 'W3N3'), '100', 'Spawn1'));
+		},
+	});
+
+	test('Structure base reads delegate to the concrete object', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const original = Game.rooms.W3N3.lookForAt(C.LOOK_STRUCTURES, 26, 25)[0];
+			// @ts-expect-error
+			const structure = new Structure(original.id);
+			assert.strictEqual(structure.structureType, original.structureType);
+			assert.strictEqual(structure.hits, original.hits);
+			assert.strictEqual(structure.hitsMax, original.hitsMax);
 		});
 	}));
 });
