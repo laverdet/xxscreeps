@@ -6,7 +6,6 @@ import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 
 export const format = declare('Deposit', () => compose(shape, Deposit));
 const shape = struct(RoomObject.format, {
@@ -19,12 +18,6 @@ const shape = struct(RoomObject.format, {
 });
 
 export class Deposit extends withOverlay(RoomObject.RoomObject, shape) {
-
-	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2);
-		if (typeof idOrArg1 === 'string') assign<Deposit>(this, RoomObject.getById(Deposit, idOrArg1));
-	}
-
 	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
 	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
 
