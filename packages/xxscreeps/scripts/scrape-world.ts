@@ -95,7 +95,7 @@ if ((rcInfo?.size ?? 0) === 0) {
 		try {
 			// Find `package.json` for this specifier. Anchor `.` on cwd;
 			const indexPath = specifier === '.'
-				? pathToFileURL(`${process.cwd()}/`)
+				? pathToFileURL(process.cwd() + path.sep)
 				: new URL(import.meta.resolve(specifier));
 			const packagePath = await async function() {
 				let path = indexPath;
