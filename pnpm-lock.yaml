@@ -53,9 +53,15 @@ importers:
 
   packages/client:
     dependencies:
+      '@types/winreg':
+        specifier: ^1.2.36
+        version: 1.2.36
       jszip:
         specifier: ^3.6.0
         version: 3.10.1
+      winreg:
+        specifier: ^1.2.5
+        version: 1.2.5
       xxscreeps:
         specifier: workspace:~
         version: link:../xxscreeps
@@ -698,6 +704,9 @@ packages:
 
   '@types/source-map-support@0.5.10':
     resolution: {integrity: sha512-tgVP2H469x9zq34Z0m/fgPewGhg/MLClalNOiPIzQlXrSS2YrKu/xCdSCKnEDwkFha51VKEKB6A9wW26/ZNwzA==}
+
+  '@types/winreg@1.2.36':
+    resolution: {integrity: sha512-DtafHy5A8hbaosXrbr7YdjQZaqVewXmiasRS5J4tYMzt3s1gkh40ixpxgVFfKiQ0JIYetTJABat47v9cpr/sQg==}
 
   '@typescript-eslint/eslint-plugin@8.59.1':
     resolution: {integrity: sha512-BOziFIfE+6osHO9FoJG4zjoHUcvI7fTNBSpdAwrNH0/TLvzjsk2oo8XSSOT2HhqUyhZPfHv4UOffoJ9oEEQ7Ag==}
@@ -2771,6 +2780,9 @@ packages:
     engines: {node: '>= 8'}
     hasBin: true
 
+  winreg@1.2.5:
+    resolution: {integrity: sha512-uf7tHf+tw0B1y+x+mKTLHkykBgK2KMs3g+KlzmyMbLvICSHQyB/xOFjTT8qZ3oeTFyU7Bbj4FzXitGG6jvKhYw==}
+
   winston@2.4.7:
     resolution: {integrity: sha512-vLB4BqzCKDnnZH9PHGoS2ycawueX4HLqENXQitvFHczhgW2vFpSOn31LZtVr1KU8YTw7DS4tM+cqyovxo8taVg==}
     engines: {node: '>= 0.10.0'}
@@ -3418,6 +3430,8 @@ snapshots:
   '@types/source-map-support@0.5.10':
     dependencies:
       source-map: 0.6.1
+
+  '@types/winreg@1.2.36': {}
 
   '@typescript-eslint/eslint-plugin@8.59.1(@typescript-eslint/parser@8.59.1(eslint@9.39.4)(typescript@6.0.3))(eslint@9.39.4)(typescript@6.0.3)':
     dependencies:
@@ -5690,6 +5704,8 @@ snapshots:
   which@2.0.2:
     dependencies:
       isexe: 2.0.0
+
+  winreg@1.2.5: {}
 
   winston@2.4.7:
     dependencies:
