@@ -1,7 +1,9 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create } from 'xxscreeps/mods/creep/creep.js';
+import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { StructureController } from './controller.js';
 
 describe('Controller', () => {
 
@@ -43,6 +45,34 @@ describe('Controller', () => {
 			await player('100', Game => {
 				const controller = Game.rooms.W3N3.controller!;
 				assert.strictEqual(Game.creeps.claimer.attackController(controller), C.ERR_INVALID_TARGET);
+			});
+		}));
+	});
+
+	describe('signController', () => {
+
+		const wrongTypeOutOfRange = simulate({
+			W3N3: room => {
+				room['#insertObject'](create(new RoomPosition(10, 10, 'W3N3'), [ C.MOVE ], 'signer', '100'));
+				room['#insertObject'](createContainer(new RoomPosition(34, 32, 'W3N3')));
+			},
+		});
+
+		test('out-of-range non-controller target returns ERR_NOT_IN_RANGE', () => wrongTypeOutOfRange(async ({ player }) => {
+			await player('100', Game => {
+				const container = Game.rooms.W3N3.find(C.FIND_STRUCTURES)
+					.find(structure => structure.structureType === C.STRUCTURE_CONTAINER)!;
+				assert.strictEqual(
+					Game.creeps.signer.signController(container as unknown as StructureController, 'hello'),
+					C.ERR_NOT_IN_RANGE);
+			});
+		}));
+
+		test('null target returns ERR_INVALID_TARGET', () => wrongTypeOutOfRange(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(
+					Game.creeps.signer.signController(null as unknown as StructureController, 'hello'),
+					C.ERR_INVALID_TARGET);
 			});
 		}));
 	});
