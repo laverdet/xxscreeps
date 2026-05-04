@@ -1,11 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "defaultProperties": [
-    ],
     "properties": {
         "browserClient": {
-            "defaultProperties": [
-            ],
             "description": "Configuration for '@xxscreeps/client'",
             "properties": {
                 "package": {

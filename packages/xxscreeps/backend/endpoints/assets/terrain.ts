@@ -117,7 +117,7 @@ function generate(map: GameMap, grid: (Room | null)[][], zoom: number) {
 								rr = (rr / pixelCount) ** 0.5;
 								gg = (gg / pixelCount) ** 0.5;
 								bb = (bb / pixelCount) ** 0.5;
-								if (objectColor) {
+								if (objectColor !== undefined) {
 									rr = ((rr ** 2 + (objectColor & 0xff) ** 2) / 2) ** 0.5;
 									gg = ((gg ** 2 + ((objectColor >>> 8) & 0xff) ** 2) / 2) ** 0.5;
 									bb = ((bb ** 2 + ((objectColor >>> 16) & 0xff) ** 2) / 2) ** 0.5;
@@ -178,15 +178,15 @@ function register(paths: string[], fn: (shard: Shard, map: GameMap, room: string
 				// The Screeps client adds a very impolite cache bust to all map URLs. We can make better use
 				// of the browser cache by redirecting to a resource which can be cached
 				if (
-					context.query.bust ||
-					(context.query.etag && context.query.etag !== data.etag)
+					Boolean(context.query.bust) ||
+					(Boolean(context.query.etag) && context.query.etag !== data.etag)
 				) {
 					// This seems like a risk for infinite redirects at some point, oh well!
 					context.status = 301;
 					context.redirect(`${context.path}?etag=${encodeURIComponent(data.etag)}`);
 					context.set('Cache-Control', 'no-store');
 				} else {
-					if (context.query.etag) {
+					if (Boolean(context.query.etag)) {
 						// The redirect above acts as our revalidation in this case
 						context.set('Cache-Control', 'public,max-age=31536000,immutable');
 					} else {
@@ -216,7 +216,7 @@ register([ '/assets/map/:room.png', '/assets/map/:shard/:room.png' ], async (sha
 for (const [ fragment, grid, align, zoom ] of [ [ 'zoom1', 10, 2, 0.4 ], [ 'zoom2', 4, 0, 1 ] ] as const) {
 	register([ `/assets/map/${fragment}/:room.png`, `/assets/map/:shard/${fragment}/:room.png` ], async (shard, map, room) => {
 		// Fetch rooms if request is valid
-		let didFindRoom = false;
+		let didFindRoom = false as boolean;
 		const { rx: left, ry: top } = parseRoomName(room);
 		if ((left + align) % grid === 0 && (top + align) % grid === 0) {
 			const rooms = await Promise.all(Fn.map(Fn.range(top, top + grid), yy =>
@@ -228,7 +228,6 @@ for (const [ fragment, grid, align, zoom ] of [ [ 'zoom1', 10, 2, 0.4 ], [ 'zoom
 				})),
 			));
 			// Render the grid
-
 			if (didFindRoom) {
 				return generate(map, rooms, zoom);
 			}

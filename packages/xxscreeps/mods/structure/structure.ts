@@ -6,12 +6,11 @@ import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game/index.js';
-import { RoomObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
+import { RoomObject, format as objectFormat } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { compose, declare, optional, struct, withOverlay } from 'xxscreeps/schema/index.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 import { createRuin } from './ruin.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
@@ -38,11 +37,6 @@ const ownedShape = struct(structureFormat, {
  * The base prototype object of all structures.
  */
 export class Structure extends withOverlay(RoomObject, shape) {
-
-	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2);
-		if (typeof idOrArg1 === 'string') assign<Structure>(this, getById(Structure, idOrArg1));
-	}
 
 	/**
 	 * One of the `STRUCTURE_*` constants.

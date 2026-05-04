@@ -1,43 +1,72 @@
 import type { Endpoint } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as Badge from 'xxscreeps/engine/db/user/badge.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
+
+interface BadgeRequest {
+	badge: Record<string, unknown>;
+}
+
+const badgeRequestSchema: JSONSchemaType<BadgeRequest> = {
+	type: 'object',
+	properties: {
+		badge: { type: 'object', required: [] },
+	},
+	required: [ 'badge' ],
+};
 
 const BadgeEndpoint: Endpoint = {
 	path: '/api/user/badge',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(badgeRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId === undefined) {
 			return { error: 'not logged in' };
 		}
 		const badge = Badge.validate(context.request.body.badge);
 		await Badge.save(context.db, userId, JSON.stringify(badge));
 		return { ok: 1 };
+	}),
+};
+
+interface BadgeSvgRequest {
+	username: string;
+	border?: string | null;
+}
+
+const badgeSvgRequestSchema: JSONSchemaType<BadgeSvgRequest> = {
+	type: 'object',
+	properties: {
+		username: { type: 'string' },
+		border: { type: 'string', nullable: true },
 	},
+	required: [ 'username' ],
 };
 
 const BadgeSvgEndpoint: Endpoint = {
 	path: '/api/user/badge-svg',
+	method: 'get',
 
-	async execute(context) {
+	execute: makeValidatedQueryRoute(badgeSvgRequestSchema, async context => {
 		// Look up userid
-		const userId = await User.findUserByName(context.db, `${context.query.username}`);
-		if (!userId) {
+		const userId = await User.findUserByName(context.db, context.request.query.username);
+		if (userId === null) {
 			return;
 		}
-		const border = context.query.border === '1';
+		const border = context.request.query.border === '1';
 		const badgeData = await context.db.data.hget(User.infoKey(userId), 'badge');
-		if (!badgeData) {
+		if (badgeData === null) {
 			return;
 		}
-		const badge: Badge.Badge = JSON.parse(badgeData);
+		const badge = JSON.parse(badgeData) as Badge.Badge;
 
 		// Extract or calculate paths
 		const { color1, color2, color3 } = badge;
 		const { path1, path2, rotate } = function() {
-			if (typeof badge.type === 'number') {
-				const { flip, param, type } = badge as Badge.UserBadge;
+			if (Badge.isUserBadge(badge)) {
+				const { flip, param, type } = badge;
 				const { rotate, path1, path2 } = BadgePaths[type - 1](param);
 				return {
 					path1, path2,
@@ -62,7 +91,7 @@ const BadgeSvgEndpoint: Endpoint = {
 			(path2 === '' ? '' : `<path d="${path2}" fill="${color3}" clip-path="url(#clip)" />`) +
 			(border ? '<circle cx="50" cy="50" r="47.5" fill="transparent" stroke="#000" stroke-width="5"></circle>' : '') +
 			'</g></svg>';
-	},
+	}),
 };
 
 const endpoints = [ BadgeEndpoint, BadgeSvgEndpoint ];
@@ -81,11 +110,11 @@ const BadgePaths: ((param: number) => { rotate?: number; path1: string; path2: s
 	},
 
 	param => {
-		const x = param > 0 ? param * 30 / 100 : 0;
-		const y = param < 0 ? -param * 30 / 100 : 0;
+		const xx = param > 0 ? param * 30 / 100 : 0;
+		const yy = param < 0 ? -param * 30 / 100 : 0;
 		return {
-			path1: `M ${x} ${y} L 50 50 L ${100 - x} ${y} V -1 H -1 Z`,
-			path2: `M ${x} ${100 - y} L 50 50 L ${100 - x} ${100 - y} V 101 H -1 Z`,
+			path1: `M ${xx} ${yy} L 50 50 L ${100 - xx} ${yy} V -1 H -1 Z`,
+			path2: `M ${xx} ${100 - yy} L 50 50 L ${100 - xx} ${100 - yy} V 101 H -1 Z`,
 		};
 	},
 
@@ -166,13 +195,13 @@ const BadgePaths: ((param: number) => { rotate?: number; path1: string; path2: s
 	},
 
 	param => {
-		let r = 30;
-		let d = 7;
-		if (param > 0) r += param * 50 / 100;
-		if (param < 0) d -= param * 20 / 100;
+		let rr = 30;
+		let dd = 7;
+		if (param > 0) rr += param * 50 / 100;
+		if (param < 0) dd -= param * 20 / 100;
 		return {
-			path1: `M ${50 + d + r} ${50 - r} A ${r} ${r} 0 0 0 ${50 + d + r} ${50 + r} H 101 V ${50 - r} Z`,
-			path2: `M ${50 - d - r} ${50 - r} A ${r} ${r} 0 0 1 ${50 - d - r} ${50 + r} H -1 V ${50 - r} Z`,
+			path1: `M ${50 + dd + rr} ${50 - rr} A ${rr} ${rr} 0 0 0 ${50 + dd + rr} ${50 + rr} H 101 V ${50 - rr} Z`,
+			path2: `M ${50 - dd - rr} ${50 - rr} A ${rr} ${rr} 0 0 1 ${50 - dd - rr} ${50 + rr} H -1 V ${50 - rr} Z`,
 			rotate: 90,
 		};
 	},
@@ -209,13 +238,13 @@ const BadgePaths: ((param: number) => { rotate?: number; path1: string; path2: s
 	},
 
 	param => {
-		let r = 30;
-		let d = 0;
-		if (param > 0) r += param * 50 / 100;
-		if (param < 0) d -= param * 20 / 100;
+		let rr = 30;
+		let dd = 0;
+		if (param > 0) rr += param * 50 / 100;
+		if (param < 0) dd -= param * 20 / 100;
 		return {
 			path1: 'M 0 0 H 50 V 100 H 0 Z',
-			path2: `M ${50 - r} ${50 - d - r} A ${r} ${r} 0 0 0 ${50 + r} ${50 - r - d} V 0 H ${50 - r} Z`,
+			path2: `M ${50 - rr} ${50 - dd - rr} A ${rr} ${rr} 0 0 0 ${50 + rr} ${50 - rr - dd} V 0 H ${50 - rr} Z`,
 			rotate: 180,
 		};
 
@@ -234,35 +263,35 @@ const BadgePaths: ((param: number) => { rotate?: number; path1: string; path2: s
 		const width = 13 + param * 6 / 100;
 		const r1 = 80;
 		const r2 = 45;
-		const d = 10;
+		const dd = 10;
 		return {
-			path1: `M ${50 - r1 - width} ${100 + d} A ${r1 + width} ${r1 + width} 0 0 1 ${50 + r1 + width} ${100 + d} H ${50 + r1 - width} A ${r1 - width} ${r1 - width} 0 1 0 ${50 - r1 + width} ${100 + d}`,
-			path2: `M ${50 - r2 - width} ${100 + d} A ${r2 + width} ${r2 + width} 0 0 1 ${50 + r2 + width} ${100 + d} H ${50 + r2 - width} A ${r2 - width} ${r2 - width} 0 1 0 ${50 - r2 + width} ${100 + d}`,
+			path1: `M ${50 - r1 - width} ${100 + dd} A ${r1 + width} ${r1 + width} 0 0 1 ${50 + r1 + width} ${100 + dd} H ${50 + r1 - width} A ${r1 - width} ${r1 - width} 0 1 0 ${50 - r1 + width} ${100 + dd}`,
+			path2: `M ${50 - r2 - width} ${100 + dd} A ${r2 + width} ${r2 + width} 0 0 1 ${50 + r2 + width} ${100 + dd} H ${50 + r2 - width} A ${r2 - width} ${r2 - width} 0 1 0 ${50 - r2 + width} ${100 + dd}`,
 			rotate: 180,
 		};
 	},
 
 	param => {
 		let angle = 30 * Math.PI / 180;
-		let d = 25;
+		let dd = 25;
 		if (param > 0) {
 			angle += 30 * Math.PI / 180 * param / 100;
 		}
 		if (param < 0) {
-			d += param * 25 / 100;
+			dd += param * 25 / 100;
 		}
 		let path1 = '';
 		for (let ii = 0; ii < 3; ii++) {
 			const angle1 = ii * Math.PI * 2 / 3 + angle / 2 - Math.PI / 2;
 			const angle2 = ii * Math.PI * 2 / 3 - angle / 2 - Math.PI / 2;
-			path1 += `M ${50 + 100 * Math.cos(angle1)} ${50 + 100 * Math.sin(angle1)} L ${50 + 100 * Math.cos(angle2)} ${50 + 100 * Math.sin(angle2)} L ${50 + d * Math.cos(angle2)} ${50 + d * Math.sin(angle2)} A ${d} ${d} 0 0 1 ${50 + d * Math.cos(angle1)} ${50 + d * Math.sin(angle1)} Z`;
+			path1 += `M ${50 + 100 * Math.cos(angle1)} ${50 + 100 * Math.sin(angle1)} L ${50 + 100 * Math.cos(angle2)} ${50 + 100 * Math.sin(angle2)} L ${50 + dd * Math.cos(angle2)} ${50 + dd * Math.sin(angle2)} A ${dd} ${dd} 0 0 1 ${50 + dd * Math.cos(angle1)} ${50 + dd * Math.sin(angle1)} Z`;
 		}
 
 		let path2 = '';
 		for (let ii = 0; ii < 3; ii++) {
 			const angle1 = ii * Math.PI * 2 / 3 + angle / 2 + Math.PI / 2;
 			const angle2 = ii * Math.PI * 2 / 3 - angle / 2 + Math.PI / 2;
-			path2 += `M ${50 + 100 * Math.cos(angle1)} ${50 + 100 * Math.sin(angle1)} L ${50 + 100 * Math.cos(angle2)} ${50 + 100 * Math.sin(angle2)} L ${50 + d * Math.cos(angle2)} ${50 + d * Math.sin(angle2)} A ${d} ${d} 0 0 1 ${50 + d * Math.cos(angle1)} ${50 + d * Math.sin(angle1)} Z`;
+			path2 += `M ${50 + 100 * Math.cos(angle1)} ${50 + 100 * Math.sin(angle1)} L ${50 + 100 * Math.cos(angle2)} ${50 + 100 * Math.sin(angle2)} L ${50 + dd * Math.cos(angle2)} ${50 + dd * Math.sin(angle2)} A ${dd} ${dd} 0 0 1 ${50 + dd * Math.cos(angle1)} ${50 + dd * Math.sin(angle1)} Z`;
 		}
 		return { path1, path2 };
 	},
@@ -284,19 +313,19 @@ const BadgePaths: ((param: number) => { rotate?: number; path1: string; path2: s
 
 	param => {
 		let angle = 90 * Math.PI / 180;
-		let d = 10;
+		let dd = 10;
 		if (param > 0) {
 			angle -= 60 / 180 * Math.PI * param / 100;
 		}
 		if (param < 0) {
-			d -= param * 15 / 100;
+			dd -= param * 15 / 100;
 		}
 		let path1 = '';
 		let path2 = '';
 		for (let ii = 0; ii < 3; ii++) {
 			const angle1 = Math.PI * 2 / 3 * ii + angle / 2 - Math.PI / 2;
 			const angle2 = Math.PI * 2 / 3 * ii - angle / 2 - Math.PI / 2;
-			const path = `M ${50 + 100 * Math.cos(angle1)} ${50 + 100 * Math.sin(angle1)} L ${50 + 100 * Math.cos(angle2)} ${50 + 100 * Math.sin(angle2)} L ${50 + d * Math.cos((angle1 + angle2) / 2)} ${50 + d * Math.sin((angle1 + angle2) / 2)} Z`;
+			const path = `M ${50 + 100 * Math.cos(angle1)} ${50 + 100 * Math.sin(angle1)} L ${50 + 100 * Math.cos(angle2)} ${50 + 100 * Math.sin(angle2)} L ${50 + dd * Math.cos((angle1 + angle2) / 2)} ${50 + dd * Math.sin((angle1 + angle2) / 2)} Z`;
 			if (ii === 0) {
 				path1 += path;
 			} else {
