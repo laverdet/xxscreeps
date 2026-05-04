@@ -128,15 +128,8 @@ export function checkCreateFlag(
 ) {
 	return chainIntentChecks(
 		pos ? () => checkFlagPosition(pos) : () => C.OK,
+		() => Object.keys(flags).length >= C.FLAGS_LIMIT ? C.ERR_FULL : C.OK,
 		() => checkFlagColors(color, secondaryColor),
-		() => {
-			if (checkString(name, 100, true)) {
-				return C.ERR_INVALID_ARGS;
-			} else if (checkName && (name in flags)) {
-				return C.ERR_NAME_EXISTS;
-
-			} else if (Object.keys(flags).length >= C.FLAGS_LIMIT) {
-				return C.ERR_FULL;
-			}
-		});
+		() => checkName && (name in flags) ? C.ERR_NAME_EXISTS : C.OK,
+		() => checkString(name, 100, true));
 }
