@@ -57,6 +57,14 @@ describe('Observer', () => {
 		});
 	}));
 
+	test('observer_illegal_arg_before_min_level', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const observer = lookForStructures(Game.rooms.W1N2, C.STRUCTURE_OBSERVER)[0];
+			const result = observer.observeRoom('not_a_room');
+			assert.strictEqual(result, C.ERR_INVALID_ARGS, 'observeRoom should validate roomName before observer RCL');
+		});
+	}));
+
 	test('observer_range', () => simulation(async ({ player }) => {
 		await player('100', Game => {
 			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];

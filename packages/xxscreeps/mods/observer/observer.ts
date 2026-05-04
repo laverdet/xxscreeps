@@ -21,8 +21,9 @@ export class StructureObserver extends withOverlay(OwnedStructure, shape) {
 	observeRoom(roomName: string) {
 		return chainIntentChecks(
 			() => checkMyStructure(this, StructureObserver),
+			() => checkObserveRoomName(roomName),
 			() => checkIsActive(this),
-			() => checkObserveRoom(this, roomName),
+			() => checkObserveRoomRange(this, roomName),
 			() => intents.save(this, 'observeRoom', roomName));
 	}
 }
@@ -49,11 +50,13 @@ registerBuildableStructure(C.STRUCTURE_OBSERVER, {
 
 //
 // Intent checks
-export function checkObserveRoom(observer: StructureObserver, target: string) {
+export function checkObserveRoomName(target: string) {
+	return /^(W|E)\d+(S|N)\d+$/.test(target) ? C.OK : C.ERR_INVALID_ARGS;
+}
+
+export function checkObserveRoomRange(observer: StructureObserver, target: string) {
 	const range = Game.map.getRoomLinearDistance(observer.room.name, target);
-	if (Object.is(range, NaN)) {
-		return C.ERR_INVALID_ARGS;
-	} else if (range > C.OBSERVER_RANGE || Game.map.getRoomStatus(target) === undefined) {
+	if (range > C.OBSERVER_RANGE || Game.map.getRoomStatus(target) === undefined) {
 		return C.ERR_NOT_IN_RANGE;
 	}
 	return C.OK;
