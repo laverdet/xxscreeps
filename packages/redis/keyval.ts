@@ -224,14 +224,13 @@ export class RedisProvider implements P.KeyValProvider {
 		if (members.length === 0) {
 			return Promise.resolve(0);
 		} else if (options?.incr) {
+			type CallbackType = (err: Error | null, value: unknown) => void;
 			const result = await this.redis.invoke<Buffer | string | null>(cb => this.redis.batch(key).zadd(
 				key,
 				...options.if ? [ options.if ] : [],
 				'incr',
-				...Fn.concat<number | string>(members),
-				(err, result) => {
-					cb(err, result as unknown as Buffer | string | null);
-				}));
+				...Fn.concat<string | number>(members),
+				cb as CallbackType));
 			return result === null ? null : Number(send(result));
 		} else {
 			const result = await this.redis.invoke<number>(cb => this.redis.batch(key).zadd(
