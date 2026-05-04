@@ -1,34 +1,54 @@
 import type { BackendContext } from './context.js';
 import type Koa from 'koa';
-import type Router from 'koa-router';
+import type { RouterContext } from 'koa-router';
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Implementation } from 'xxscreeps/utility/types.js';
+import { Ajv, JSONSchemaType } from 'ajv';
 import { MapRender, Render, TerrainRender } from './symbols.js';
 
 export { hooks } from './symbols.js';
 
 // Koa middleware & generic backend route types
-
-/// <reference path="./auth/index.ts" />
 export interface Context {
 	backend: BackendContext;
 	db: Database;
-	request: {
-		body: any;
-	};
 	shard: Shard;
+	request: RequestType;
 }
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface State {}
 export type Method = 'delete' | 'get' | 'post' | 'put';
 export type Middleware = Koa.Middleware<State, Context>;
 
-export type Endpoint = {
+type ExecuteRoute<RouteContext = Context> = (context: RouterContext<State, RouteContext>) => unknown;
+type ValidatedExecuteRoute<Request extends RequestType> = ExecuteRoute<ValidatedRequestContext<Request>>;
+
+// Endpoint middleware shape
+interface RequestType {
+	body?: unknown;
+	query?: unknown;
+}
+
+interface ValidatedQueryRequest<Query> extends RequestType {
+	body?: unknown;
+	query: Query;
+}
+
+interface ValidatedPayloadRequest<Body> extends RequestType {
+	body: Body;
+	query?: unknown;
+}
+
+interface ValidatedRequestContext<Request extends RequestType> extends Context {
+	request: Request;
+}
+
+export interface Endpoint {
 	path: string;
 	method?: Method;
-
-	execute: (context: Router.RouterContext<State, Context>) => any;
-};
+	execute: ExecuteRoute;
+}
 
 // `RoomObject` render symbols
 type RenderedRoomObject = {
@@ -44,6 +64,10 @@ declare module 'xxscreeps/game/object.js' {
 		[TerrainRender]: (object: any) => number | undefined;
 	}
 }
+
+// Note: `ajv` doesn't properly support `undefined`....
+// https://github.com/ajv-validator/ajv/issues/2040
+const ajv = new Ajv();
 
 // Backend render hooks
 export function bindRenderer<Type extends RoomObject>(
@@ -63,4 +87,32 @@ export function bindMapRenderer<Type extends RoomObject>(object: Implementation<
 
 export function bindTerrainRenderer<Type extends RoomObject>(object: Implementation<Type>, render: (object: Type) => number | undefined) {
 	object.prototype[TerrainRender] = render;
+}
+
+export function makeValidatedPayloadRoute<Body>(
+	schema: JSONSchemaType<Body>,
+	execute: ValidatedExecuteRoute<ValidatedPayloadRequest<Body>>,
+): ExecuteRoute {
+	const validate = ajv.compile(schema);
+	return context => {
+		if (validate(context.request.body)) {
+			return execute(context as RouterContext<State, ValidatedRequestContext<ValidatedPayloadRequest<Body>>>);
+		} else {
+			return { error: 'invalid' };
+		}
+	};
+}
+
+export function makeValidatedQueryRoute<Query>(
+	schema: JSONSchemaType<Query>,
+	execute: ValidatedExecuteRoute<ValidatedQueryRequest<Query>>,
+): ExecuteRoute {
+	const validate = ajv.compile(schema);
+	return context => {
+		if (validate(context.request.query)) {
+			return execute(context as RouterContext<State, ValidatedRequestContext<ValidatedQueryRequest<Query>>>);
+		} else {
+			return { error: 'invalid' };
+		}
+	};
 }

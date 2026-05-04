@@ -1,14 +1,29 @@
 import type { Endpoint } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
+import { UserBadge } from 'xxscreeps/engine/db/user/badge.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+
+interface MapStatsRequest {
+	rooms: string[];
+}
+
+const mapStatsSchema: JSONSchemaType<MapStatsRequest> = {
+	type: 'object',
+	properties: {
+		rooms: { type: 'array', items: { type: 'string' } },
+	},
+	required: [ 'rooms' ],
+};
 
 export const MapStatsEndpoint: Endpoint = {
 	method: 'post',
 	path: '/api/game/map-stats',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(mapStatsSchema, async context => {
 		const { rooms: roomNames } = context.request.body;
-		if (!Array.isArray(roomNames) || !roomNames.every(room => /^[EW][0-9]+[NS][0-9]+$/.test(room))) {
+		if (!roomNames.every(room => /^[EW][0-9]+[NS][0-9]+$/.test(room))) {
 			throw new Error('Invalid room payload');
 		}
 
@@ -29,7 +44,7 @@ export const MapStatsEndpoint: Endpoint = {
 				// Owner, level information
 				...function() {
 					const user = room['#user'];
-					if (user) {
+					if (user != null) {
 						userIds.add(user);
 						return {
 							own: {
@@ -66,7 +81,7 @@ export const MapStatsEndpoint: Endpoint = {
 		const users = Fn.fromEntries(userObjects, user => [
 			user.id, {
 				_id: user.id,
-				badge: JSON.parse(user.info.badge!),
+				badge: user.info.badge == null ? null : (JSON.parse(user.info.badge) as UserBadge),
 				username: user.info.username!,
 			},
 		]);
@@ -78,5 +93,5 @@ export const MapStatsEndpoint: Endpoint = {
 			stats,
 			users,
 		};
-	},
+	}),
 };

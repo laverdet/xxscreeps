@@ -1,5 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import { hooks } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getConsoleChannel, requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
@@ -24,11 +25,11 @@ async function getBranchNameFromQuery(db: Database, userId: string, branchName: 
 	return branchName;
 }
 
-function getModulePayloadFromQuery(query: any) {
+function getModulePayloadFromQuery(query: object | null | undefined) {
 	if (!query) {
 		return new Map([ [ 'main', '' ] ]);
 	}
-	const entries = Fn.map(Object.entries<any>(query), ([ name, content ]): [ string, any ] => {
+	const entries = Fn.map(Object.entries(query), ([ name, content ]): [ string, any ] => {
 		const decoded = function() {
 			if (content === null) {
 				return;
@@ -52,7 +53,7 @@ function getModulePayloadFromQuery(query: any) {
 			if (typeof content === 'string') {
 				return content.length;
 			} else {
-			// Vanilla Screeps stores these in base64, so add fake encoding overhead to match
+				// Vanilla Screeps stores these in base64, so add fake encoding overhead to match
 				return content.byteLength * 1.333;
 			}
 		}),
@@ -77,9 +78,9 @@ hooks.register('route', {
 
 	async execute(context) {
 		const { userId } = context.state;
-		const branches = userId ? await context.db.data.smembers(Code.branchManifestKey(userId)) : undefined;
+		const branches = userId == null ? undefined : await context.db.data.smembers(Code.branchManifestKey(userId));
 
-		if (!userId || !branches || branches.length === 0) {
+		if (userId == null || !branches || branches.length === 0) {
 			// Fake module list. `default` will be created on save
 			return {
 				ok: 1,
@@ -110,19 +111,37 @@ hooks.register('route', {
 	},
 });
 
+interface CloneBranchRequest {
+	branch?: string | null;
+	defaultModules?: object | null;
+	newName: string;
+}
+
+const cloneBranchRequestSchema: JSONSchemaType<CloneBranchRequest> = {
+	type: 'object',
+	properties: {
+		branch: { type: 'string', nullable: true },
+		newName: { type: 'string' },
+		defaultModules: { type: 'object', nullable: true },
+	},
+	required: [ 'newName' ],
+};
+
 hooks.register('route', {
 	path: '/api/user/clone-branch',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(cloneBranchRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 
 		// Check request
-		const reqBranch: string | undefined = context.request.body.branch;
-		const branch = reqBranch && await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
+		const branch = await async function() {
+			const { branch } = context.request.body;
+			return branch && getBranchNameFromQuery(context.db, userId, branch);
+		}();
 		const { newName } = context.request.body;
 		checkBranchName(newName);
 		const key = Code.branchManifestKey(userId);
@@ -160,16 +179,28 @@ hooks.register('route', {
 		await context.db.data.sadd(Code.branchManifestKey(userId), [ newName ]);
 
 		return { ok: 1, timestamp };
-	},
+	}),
 });
+
+interface DeleteBranchRequest {
+	branch: string;
+}
+
+const deleteBranchRequestSchema: JSONSchemaType<DeleteBranchRequest> = {
+	type: 'object',
+	properties: {
+		branch: { type: 'string' },
+	},
+	required: [ 'branch' ],
+};
 
 hooks.register('route', {
 	path: '/api/user/delete-branch',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(deleteBranchRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		const [ branch, currentBranch ] = await Promise.all([
@@ -185,16 +216,28 @@ hooks.register('route', {
 			context.db.data.vdel(Code.stringsKey(userId, branch)),
 		]);
 		return { ok: 1 };
-	},
+	}),
 });
+
+interface SetActiveBranchRequest {
+	branch: string;
+}
+
+const setActiveBranchRequestSchema: JSONSchemaType<SetActiveBranchRequest> = {
+	type: 'object',
+	properties: {
+		branch: { type: 'string' },
+	},
+	required: [ 'branch' ],
+};
 
 hooks.register('route', {
 	path: '/api/user/set-active-branch',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(setActiveBranchRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		const branch = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
@@ -204,18 +247,30 @@ hooks.register('route', {
 		await context.db.data.hset(User.infoKey(userId), 'branch', branch);
 		await Code.getUserCodeChannel(context.db, userId).publish({ type: 'switch', branch });
 		return { ok: 1 };
-	},
+	}),
 });
+
+interface GetCodeRequest {
+	branch: string;
+}
+
+const getCodeRequestSchema: JSONSchemaType<GetCodeRequest> = {
+	type: 'object',
+	properties: {
+		branch: { type: 'string' },
+	},
+	required: [ 'branch' ],
+};
 
 hooks.register('route', {
 	path: '/api/user/code',
 
-	async execute(context) {
+	execute: makeValidatedQueryRoute(getCodeRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return { ok: 1, branch: kDefaultBranch, modules: { main: '' } };
 		}
-		const branchName = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
+		const branchName = await getBranchNameFromQuery(context.db, userId, context.request.query.branch);
 		const payload = await Code.loadContent(context.db, userId, branchName);
 		if (!payload) {
 			if (branchName === kDefaultBranch) {
@@ -225,17 +280,31 @@ hooks.register('route', {
 			}
 		}
 		return { ok: 1, branch: branchName, modules: toModulesContent(payload) };
-	},
+	}),
 });
+
+interface SaveCodeRequest {
+	branch: string;
+	modules: object;
+}
+
+const saveCodeRequestSchema: JSONSchemaType<SaveCodeRequest> = {
+	type: 'object',
+	properties: {
+		branch: { type: 'string' },
+		modules: { type: 'object' },
+	},
+	required: [ 'branch', 'modules' ],
+};
 
 hooks.register('route', {
 	path: '/api/user/code',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(saveCodeRequestSchema, async context => {
 		// Validate this code payload
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		const modules = getModulePayloadFromQuery(context.request.body.modules);
@@ -244,30 +313,39 @@ hooks.register('route', {
 		const branchName = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
 		await Code.saveContent(context.db, userId, branchName, modules);
 		return { ok: 1 };
-	},
+	}),
 });
+
+interface ConsoleRequest {
+	expression: string;
+}
+
+const consoleRequestRequestSchema: JSONSchemaType<ConsoleRequest> = {
+	type: 'object',
+	properties: {
+		expression: { type: 'string' },
+	},
+	required: [ 'expression' ],
+};
 
 hooks.register('route', {
 	path: '/api/user/console',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(consoleRequestRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		const { expression } = context.request.body;
-		if (typeof expression !== 'string') {
-			throw new TypeError('Invalid expression');
-		}
 		try {
 			// Try to parse it
-			// eslint-disable-next-line no-new, @typescript-eslint/no-implied-eval
+			// eslint-disable-next-line no-new, @typescript-eslint/no-implied-eval, no-new-func
 			new Function(expression);
-			await requestRunnerEval(context.shard, userId, context.request.body.expression, true);
+			await requestRunnerEval(context.shard, userId, expression, true);
 		} catch (err: any) {
 			await getConsoleChannel(context.shard, userId).publish(JSON.stringify([ { fd: 2, data: err.message } ]));
 		}
 		return { ok: 1 };
-	},
+	}),
 });

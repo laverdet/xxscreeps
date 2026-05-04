@@ -1,7 +1,9 @@
 import type { World } from 'xxscreeps/game/map.js';
+import { JSONSchemaType } from 'ajv';
 import makeEtag from 'etag';
-import { hooks } from 'xxscreeps/backend/index.js';
+import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { Terrain } from 'xxscreeps/game/terrain.js';
 
 const cache = new Map<string, {
 	_id: string;
@@ -9,13 +11,13 @@ const cache = new Map<string, {
 	terrain: string;
 	type: 'terrain';
 }>();
+
 function getTerrainPayload(world: World, roomName: string) {
 	const cached = cache.get(roomName);
 	if (cached) {
 		return cached;
 	}
-	const terrain = world.map.getRoomTerrain(roomName);
-
+	const terrain = world.map.getRoomTerrain(roomName) satisfies Terrain as Terrain | null;
 	if (!terrain) {
 		return;
 	}
@@ -35,31 +37,52 @@ function getTerrainPayload(world: World, roomName: string) {
 	return payload;
 }
 
+interface RoomTerrainRequest {
+	room: string;
+}
+
+const roomTerrainRequestSchema: JSONSchemaType<RoomTerrainRequest> = {
+	type: 'object',
+	properties: {
+		room: { type: 'string' },
+	},
+	required: [ 'room' ],
+};
+
 hooks.register('route', {
 	path: '/api/game/room-terrain',
 
-	execute(context) {
-		const roomName = `${context.query.room}`;
-		const terrain = getTerrainPayload(context.backend.world, roomName);
+	execute: makeValidatedQueryRoute(roomTerrainRequestSchema, context => {
+		const terrain = getTerrainPayload(context.backend.world, context.request.query.room);
 		if (terrain) {
 			context.set('ETag', makeEtag(terrain.terrain));
 			return { ok: 1, terrain: [ terrain ] };
 		}
-	},
+	}),
 });
+
+interface RoomsRequest {
+	rooms: string[];
+}
+
+const roomsRequestSchema: JSONSchemaType<RoomsRequest> = {
+	type: 'object',
+	properties: {
+		rooms: { type: 'array', items: { type: 'string' } },
+	},
+	required: [ 'rooms' ],
+};
 
 hooks.register('route', {
 	path: '/api/game/rooms',
 	method: 'post',
 
-	execute(context) {
-		return {
-			ok: 1,
-			rooms: Fn.pipe(
-				context.request.body.rooms,
-				$$ => Fn.map($$, roomQuery => getTerrainPayload(context.backend.world, `${roomQuery}`)),
-				$$ => Fn.filter($$),
-				$$ => [ ...$$ ]),
-		};
-	},
+	execute: makeValidatedPayloadRoute(roomsRequestSchema, context => ({
+		ok: 1,
+		rooms: Fn.pipe(
+			context.request.body.rooms,
+			$$ => Fn.map($$, roomQuery => getTerrainPayload(context.backend.world, roomQuery)),
+			$$ => Fn.filter($$),
+			$$ => [ ...$$ ]),
+	})),
 });

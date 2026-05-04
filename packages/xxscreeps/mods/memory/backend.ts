@@ -1,6 +1,7 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { gzip } from 'node:zlib';
-import { hooks } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
 import { requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
 import { loadUserMemoryString } from 'xxscreeps/mods/memory/model.js';
@@ -55,15 +56,27 @@ hooks.register('subscription', {
 	},
 });
 
+interface MemoryGetRequest {
+	path?: string | null;
+}
+
+const memoryGetRequestSchema: JSONSchemaType<MemoryGetRequest> = {
+	type: 'object',
+	properties: {
+		path: { type: 'string', nullable: true },
+	},
+	required: [],
+};
+
 hooks.register('route', {
 	path: '/api/user/memory',
 
-	async execute(context) {
+	execute: makeValidatedQueryRoute(memoryGetRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
-		const memory = await loadAndParse(context.shard, userId, context.request.query.path as string);
+		const memory = await loadAndParse(context.shard, userId, context.request.query.path ?? undefined);
 		if (memory === undefined) {
 			return { ok: 1 };
 		}
@@ -74,22 +87,40 @@ hooks.register('route', {
 				(err, value) => err ? reject(err) : resolve(value.toString('base64')));
 		});
 		return { ok: 1, data: `gz:${gzipBase64}` };
-	},
+	}),
 });
+
+interface MemoryPostRequest {
+	path?: string | null;
+	value?: string | null;
+}
+
+const memoryPostRequestSchema: JSONSchemaType<MemoryPostRequest> = {
+	type: 'object',
+	properties: {
+		path: { type: 'string', nullable: true },
+		value: { type: 'string', nullable: true },
+	},
+	required: [],
+};
 
 hooks.register('route', {
 	path: '/api/user/memory',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(memoryPostRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
-		const path: string = context.request.body.path;
-		const rawValue = context.request.body.value;
-		const value = rawValue && JSON.stringify(rawValue);
-		if (value && value.length > 1024 * 1024) {
+		const { path } = context.request.body;
+		const value = function() {
+			const { value } = context.request.body;
+			if (value !== undefined) {
+				return JSON.stringify(value);
+			}
+		}();
+		if (value !== undefined && value.length > 1024 * 1024) {
 			throw new Error('Memory size is too large');
 		}
 		const expression = function() {
@@ -102,5 +133,5 @@ hooks.register('route', {
 		}();
 		await requestRunnerEval(context.shard, userId, expression, false);
 		return { ok: 1 };
-	},
+	}),
 });
