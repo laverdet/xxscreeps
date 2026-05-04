@@ -2,11 +2,10 @@ import type { Store } from 'xxscreeps/mods/resource/store.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomObject, create as createObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
+import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object.js';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 
 export const format = declare('Ruin', () => compose(shape, Ruin));
 const shape = struct(objectFormat, {
@@ -26,11 +25,6 @@ const shape = struct(objectFormat, {
  * A destroyed structure. This is a walkable object.
  */
 export class Ruin extends withOverlay(RoomObject, shape) {
-
-	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2);
-		if (typeof idOrArg1 === 'string') assign<Ruin>(this, getById(Ruin, idOrArg1));
-	}
 
 	/**
 	 * The amount of game ticks before this ruin decays.

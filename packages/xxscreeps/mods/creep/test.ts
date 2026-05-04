@@ -3,7 +3,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { create } from './creep.js';
+import { Creep, create } from './creep.js';
 
 describe('Movement', () => {
 	const movement = simulate({
@@ -604,4 +604,50 @@ describe('Event log events', () => {
 			});
 		}));
 	});
+});
+
+describe('Id-string constructor', () => {
+	const sim = simulate({
+		W3N3: room => {
+			const creep = create(new RoomPosition(25, 25, 'W3N3'), [ C.WORK ], 'subject', '100');
+			creep.fatigue = 3;
+			creep.store['#add'](C.RESOURCE_ENERGY, 25);
+			room['#insertObject'](creep);
+		},
+	});
+
+	test('Creep view reads match the canonical handle', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const original = Game.creeps.subject;
+			// @ts-expect-error
+			const view = new Creep(original.id);
+			assert.ok(view instanceof Creep);
+			assert.strictEqual(view.id, original.id);
+			assert.strictEqual(view.name, original.name);
+			assert.strictEqual(view.body.length, original.body.length);
+			assert.strictEqual(view.pos.x, original.pos.x);
+			assert.strictEqual(view.pos.y, original.pos.y);
+			assert.strictEqual(view.pos.roomName, original.pos.roomName);
+			assert.strictEqual(view.store[C.RESOURCE_ENERGY], original.store[C.RESOURCE_ENERGY]);
+			assert.strictEqual(view.hits, original.hits);
+			assert.strictEqual(view.fatigue, original.fatigue);
+		});
+	}));
+
+	test('writes on a view do not propagate to the canonical handle', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const original = Game.creeps.subject;
+			const hits = original.hits;
+			const fatigue = original.fatigue;
+			// @ts-expect-error
+			const view = new Creep(original.id);
+			view.hits = 50;
+			view.fatigue = 1;
+			assert.strictEqual(original.hits, hits);
+			assert.strictEqual(original.fatigue, fatigue);
+			// nb: Diverges from vanilla, which defines most getters as non-configurable
+			assert.strictEqual(view.hits, 50);
+			assert.strictEqual(view.fatigue, 1);
+		});
+	}));
 });
