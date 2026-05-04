@@ -1,6 +1,7 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
+import { create as createResource } from 'xxscreeps/mods/resource/resource.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create } from './creep.js';
@@ -514,6 +515,26 @@ describe('Movement', () => {
 			});
 		}));
 	});
+});
+
+describe('Pickup', () => {
+	const fullAndOutOfRange = simulate({
+		W1N1: room => {
+			room['#level'] = 1;
+			room['#user'] = room.controller!['#user'] = '100';
+			const picker = create(new RoomPosition(25, 25, 'W1N1'), [ C.CARRY, C.MOVE ], 'picker', '100');
+			picker.store['#add'](C.RESOURCE_ENERGY, C.CARRY_CAPACITY);
+			room['#insertObject'](picker);
+			room['#insertObject'](createResource(new RoomPosition(30, 30, 'W1N1'), C.RESOURCE_ENERGY, 50));
+		},
+	});
+
+	test('full creep returns ERR_FULL before ERR_NOT_IN_RANGE', () => fullAndOutOfRange(async ({ player }) => {
+		await player('100', Game => {
+			const pile = Game.rooms.W1N1.find(C.FIND_DROPPED_RESOURCES)[0];
+			assert.strictEqual(Game.creeps.picker.pickup(pile), C.ERR_FULL);
+		});
+	}));
 });
 
 describe('Event log events', () => {
