@@ -52,6 +52,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 				if (ObjectGetPrototypeOf(this) !== prototype) {
 					ObjectSetPrototypeOf(this, prototype);
 				}
+				this.room = object.room;
 			} else {
 				super();
 			}
