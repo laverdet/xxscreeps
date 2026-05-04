@@ -123,7 +123,7 @@ describe('getEventLog missing events', () => {
 
 	test('structure death emits EVENT_OBJECT_DESTROYED with structureType', () => structureKill(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0];
 			Game.creeps.warrior.attack(lab);
 		});
 		await tick();
@@ -160,7 +160,7 @@ describe('getEventLog missing events', () => {
 
 	test('multi-attacker kill emits EVENT_OBJECT_DESTROYED exactly once', () => multiAttackerKill(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0];
 			Game.creeps.warriorA.attack(lab);
 			Game.creeps.warriorB.attack(lab);
 		});

@@ -39,7 +39,7 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 	override get '#lookType'() { return C.LOOK_RUINS; }
 	override get '#extraUsers'() {
 		const user = this['#structure'].user;
-		return user ? [ user ] : [];
+		return user === null ? [] : [ user ];
 	}
 
 	/**
@@ -48,12 +48,12 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 	get structure() {
 		const info = this['#structure'];
 		const structure = (() => {
-			if (info.user) {
+			if (info.user === null) {
+				return new Structure();
+			} else {
 				const structure = new OwnedStructure();
 				structure['#user'] = info.user;
 				return structure;
-			} else {
-				return new Structure();
 			}
 		})();
 		Object.defineProperties(structure, {
@@ -79,7 +79,7 @@ export function createRuin(structure: Structure, decay?: number) {
 	}
 	ruin.destroyTime = Game.time;
 
-	const decayTimeout = decay ?? (C.RUIN_DECAY_STRUCTURES[structure.structureType as keyof typeof C.RUIN_DECAY_STRUCTURES] ?? C.RUIN_DECAY);
+	const decayTimeout = decay ?? (C.RUIN_DECAY_STRUCTURES[structure.structureType] ?? C.RUIN_DECAY);
 	ruin['#decayTime'] = Game.time + decayTimeout;
 	ruin['#structure'] = {
 		id: structure.id,

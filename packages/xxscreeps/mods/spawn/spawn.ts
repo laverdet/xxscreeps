@@ -190,7 +190,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 
 				// Save intent
 				const energyStructureIds = options.energyStructures?.map(structure => structure.id) ?? null;
-				intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
+				intents.save(this, 'spawn', body, name, energyStructureIds, directions);
 
 				// Fake creep
 				const creep = createCreep(this.pos, body, name, this['#user']!);
@@ -213,7 +213,7 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 
 function hasSpawn(userGame: GameConstructor, name: string) {
 	return Boolean(
-
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
 		userGame.spawns[name] ||
 		Object.values(userGame.constructionSites).some(site => site.name === name));
 }
@@ -221,7 +221,7 @@ function hasSpawn(userGame: GameConstructor, name: string) {
 registerBuildableStructure(C.STRUCTURE_SPAWN, {
 	obstacle: true,
 	checkName(room, name) {
-		if (name) {
+		if (name != null) {
 			if (checkString(name, 100, true) !== C.OK) {
 				return null;
 			}

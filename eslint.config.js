@@ -422,10 +422,6 @@ export default [
 			'**/dist',
 			'**/node_modules',
 		],
-		linterOptions: {
-			// Disable this "temporarily" since the vscode extension drops required suppressions
-			reportUnusedDisableDirectives: false,
-		},
 	},
 
 	// Settings
@@ -436,6 +432,10 @@ export default [
 			parserOptions: {
 				sourceType: 'module',
 			},
+		},
+		linterOptions: {
+			// Disable this "temporarily" since the vscode extension drops required suppressions
+			reportUnusedDisableDirectives: false,
 		},
 		plugins: {
 			'@stylistic': stylisticPlugin,

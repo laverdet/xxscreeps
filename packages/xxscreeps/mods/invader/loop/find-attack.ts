@@ -13,7 +13,7 @@ function checkPath(pos1: RoomPosition, pos2: RoomPosition) {
 	return pos2.isNearTo(path[path.length - 1].x, path[path.length - 1].y);
 }
 
-function costCallbackIgnoreRamparts(fortifications: Structure[], roomName: string, cm: PathFinder.CostMatrix) {
+function costCallbackIgnoreRamparts(fortifications: Structure[], roomName: string, cm: PathFinder.CostMatrix): undefined {
 	fortifications.forEach(ii => cm.set(ii.pos.x, ii.pos.y, 0));
 }
 
@@ -63,7 +63,7 @@ export default function findAttack(creep: Creep, healers: Creep[], hostiles: Cre
 	}
 
 	const target = unreachableSpawns[0];
-
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
 	if (target) {
 		creep.moveTo(target, { ...pathOptions, ignoreDestructibleStructures: true });
 		return;

@@ -3,7 +3,6 @@ import type { RoomPosition } from './position.js';
 import type { Room } from './room/index.js';
 import type { InspectOptionsStylized } from 'node:util';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
-import { inspect } from 'node:util';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
 import * as BufferObject from 'xxscreeps/schema/buffer-object.js';

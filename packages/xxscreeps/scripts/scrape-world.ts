@@ -323,7 +323,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 const roomNames = new Set(Fn.map(rooms, room => room.name));
 await shard.data.sadd('rooms', [ ...roomNames ]);
 for (const room of rooms) {
-	await shard.saveRoom(room.name, gameTime, room as never);
+	await shard.saveRoom(room.name, gameTime, room);
 }
 
 // Save users

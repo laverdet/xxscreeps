@@ -77,7 +77,7 @@ export type CommodityRecipe = {
 };
 
 export function getCommodityRecipe(resource: string): CommodityRecipe | undefined {
-	return C.COMMODITIES[resource] as CommodityRecipe | undefined;
+	return C.COMMODITIES[resource];
 }
 
 /**

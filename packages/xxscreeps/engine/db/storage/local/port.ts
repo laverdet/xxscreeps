@@ -154,6 +154,7 @@ async function *iterateMessages(socket: AsyncIterable<Buffer>) {
 		_readHostObject(): unknown {
 			type ConstructorType = new (array: ArrayBufferLike) => ArrayBufferView;
 			const constructor: ConstructorType | undefined = arrayBufferViews[this.readUint32()];
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (constructor === undefined) {
 				throw new Error('Unsupported host object type');
 			}
