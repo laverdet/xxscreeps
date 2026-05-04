@@ -64,6 +64,28 @@ describe('Controller', () => {
 		}));
 	});
 
+	describe('upgradeController', () => {
+
+		const upgradeBlockedOutOfRange = simulate({
+			W3N3: room => {
+				room['#user'] = '100';
+				room['#level'] = 1;
+				room.controller!['#user'] = '100';
+				room.controller!['#upgradeBlockedUntil'] = 1000;
+				const worker = create(new RoomPosition(28, 32, 'W3N3'), [ C.WORK, C.CARRY ], 'worker', '100');
+				worker.store['#add'](C.RESOURCE_ENERGY, 50);
+				room['#insertObject'](worker);
+			},
+		});
+
+		test('upgrade-blocked controller returns ERR_INVALID_TARGET before ERR_NOT_IN_RANGE', () => upgradeBlockedOutOfRange(async ({ player }) => {
+			await player('100', Game => {
+				const controller = Game.rooms.W3N3.controller!;
+				assert.strictEqual(Game.creeps.worker.upgradeController(controller), C.ERR_INVALID_TARGET);
+			});
+		}));
+	});
+
 	describe('activateSafeMode', () => {
 
 		const ownedTwoRooms = simulate({

@@ -185,12 +185,7 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 		() => checkCommon(creep, C.WORK),
 		() => checkHasResource(creep, C.RESOURCE_ENERGY),
 		() => checkTarget(target, StructureController),
+		() => target.upgradeBlocked ? C.ERR_INVALID_TARGET : C.OK,
 		() => checkRange(creep, target, 3),
-		() => {
-			if (target.upgradeBlocked) {
-				return C.ERR_INVALID_TARGET;
-			} else if (!target.my) {
-				return C.ERR_NOT_OWNER;
-			}
-		});
+		() => target.my ? C.OK : C.ERR_NOT_OWNER);
 }
