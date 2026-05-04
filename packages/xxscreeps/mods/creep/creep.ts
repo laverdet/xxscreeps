@@ -502,9 +502,9 @@ export function checkPickup(creep: Creep, target: Resource) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
 		() => checkTarget(target, Resource),
-		() => checkRange(creep, target, 1),
 		() => creep.store.getFreeCapacity(target.resourceType) > 0
-			? C.OK : C.ERR_FULL);
+			? C.OK : C.ERR_FULL,
+		() => checkRange(creep, target, 1));
 }
 
 export function checkTransfer(creep: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount: number) {
