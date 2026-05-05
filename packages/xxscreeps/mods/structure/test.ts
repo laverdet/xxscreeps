@@ -80,7 +80,7 @@ describe('FIND_ constants for structures', () => {
 			room['#insertObject'](createSpawn(new RoomPosition(23, 25, 'W7N1'), '100', 'MySpawn'));
 			room['#insertObject'](createSpawn(new RoomPosition(25, 25, 'W7N1'), '101', 'HostileSpawn'));
 			room['#insertObject'](createRoad(new RoomPosition(20, 25, 'W7N1')));
-			room['#insertObject'](createRuin(createRoad(new RoomPosition(27, 25, 'W7N1'))));
+			room['#insertObject'](createRuin(createSpawn(new RoomPosition(27, 25, 'W7N1'), '100', 'RuinedSpawn')));
 		},
 	});
 
@@ -116,7 +116,7 @@ describe('FIND_ constants for structures', () => {
 			const ruins = Game.rooms.W7N1?.find(C.FIND_RUINS);
 			assert.ok(ruins);
 			assert.strictEqual(ruins.length, 1);
-			assert.strictEqual(ruins[0]!.structureType, C.STRUCTURE_ROAD);
+			assert.strictEqual(ruins[0]!.structureType, C.STRUCTURE_SPAWN);
 			assert.ok(ruins[0]!.ticksToDecay! > 0, 'ruin should have ticksToDecay property');
 		});
 	}));
