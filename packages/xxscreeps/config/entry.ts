@@ -1,9 +1,11 @@
+import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { Worker, isMainThread } from 'node:worker_threads';
 import { initializeInterruptSignal } from 'xxscreeps/engine/service/signal.js';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not
 const nodeMajor = Number(process.versions.node.split('.')[0]);
+const initialSpecifier = process.argv.length > 2 ? process.argv[2] : undefined;
 const requiredFlags = [
 	// import.meta.resolve stabilized in Node 20.6
 	...nodeMajor < 20 ? [ '--experimental-import-meta-resolve' ] : [],
@@ -27,6 +29,24 @@ if (missingFlags.length) {
 		...missingFlags,
 		...niceToHaveFlags.filter(isMissingFlag),
 	];
+
+	// The Worker re-spawn pipes stdin, which loses the controlling tty needed by `xxscreeps cli`.
+	// Re-exec the same node binary directly with stdio inherited so the REPL talks to the terminal.
+	if (initialSpecifier === undefined || initialSpecifier === 'cli') {
+		const env = { ...process.env };
+		delete env.NODE_OPTIONS;
+		process.exit(await new Promise<number>((resolve, reject) => {
+			const child = spawn(process.execPath, [
+				...execArgv,
+				...process.argv.slice(1),
+			], {
+				env,
+				stdio: 'inherit',
+			});
+			child.on('error', reject);
+			child.on('exit', code => resolve(code ?? 1));
+		}));
+	}
 
 	// Start fake top thread and wait for exit
 	initializeInterruptSignal();
@@ -68,6 +88,8 @@ if (missingFlags.length) {
 			start: './dist/engine/service/launcher.js',
 			main: './dist/engine/service/main.js',
 			backend: './dist/backend/server.js',
+			cli: './dist/cli/cli.js',
+			eval: './dist/cli/eval.js',
 			processor: './dist/engine/service/processor.js',
 			runner: './dist/engine/service/runner.js',
 			'save-schema': './dist/engine/service/save-schema.js',
@@ -104,7 +126,7 @@ if (missingFlags.length) {
 		}
 
 	} else {
-		// Start CLI client — connects to the server's Unix socket
-		await import('./repl.js');
+		// Bare `xxscreeps` opens the interactive REPL.
+		await import('../cli/cli.js');
 	}
 }
