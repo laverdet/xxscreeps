@@ -1,7 +1,7 @@
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { hooks, intents, me, userGame } from 'xxscreeps/game/index.js';
+import { Game, hooks, intents, me, userGame } from 'xxscreeps/game/index.js';
 import { makeObstacleChecker } from 'xxscreeps/game/pathfinder/obstacle.js';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
@@ -96,9 +96,19 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		return C.ERR_INVALID_ARGS;
 	}
 
-	// Can't build in someone else's room
-	if (!room.controller?.my) {
-		return C.ERR_RCL_NOT_ENOUGH;
+	// Reject foreign-owned and foreign-reserved rooms; unowned and self-reserved
+	// fall through to the rcl=0 cap, which permits road/container.
+	const controller = room.controller;
+	if (controller) {
+		const ownerId = controller['#user'];
+		if (ownerId != null && ownerId !== me) {
+			return C.ERR_NOT_OWNER;
+		}
+		const reserverId = room['#user'];
+		if (reserverId != null && reserverId !== me &&
+			controller['#reservationEndTime'] > Game.time) {
+			return C.ERR_NOT_OWNER;
+		}
 	}
 
 	// Check structure count for this RCL

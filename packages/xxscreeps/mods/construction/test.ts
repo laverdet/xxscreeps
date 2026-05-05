@@ -14,6 +14,81 @@ describe('Construction', () => {
 		},
 	});
 
+	describe('createConstructionSite controller-ownership gating', () => {
+		// A scout creep gives the player visibility so `Game.rooms.W1N1` is populated.
+		const scout = (roomName: string) => createCreep(new RoomPosition(40, 40, roomName), [ C.MOVE ], 'scout', '100');
+
+		// Unowned controller (no owner, no reservation): vanilla allows road/container at rcl=0
+		// but rejects everything else with ERR_RCL_NOT_ENOUGH.
+		const unowned = simulate({
+			W1N1: room => {
+				room['#insertObject'](scout('W1N1'));
+			},
+		});
+		test('unowned controller allows road/container, rejects rcl>0 structures', () => unowned(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(25, 25, 'road'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(26, 25, 'container'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(27, 25, 'spawn', 'S1'), C.ERR_RCL_NOT_ENOUGH);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(28, 25, 'extension'), C.ERR_RCL_NOT_ENOUGH);
+			});
+			await tick();
+			await player('100', Game => {
+				const types = Object.values(Game.constructionSites).map(site => site.structureType).sort();
+				assert.deepStrictEqual(types, [ 'container', 'road' ]);
+			});
+		}));
+
+		// Self-reserved controller behaves like an unowned one for placement: rcl is still 0,
+		// so road/container succeed and the rest fail with ERR_RCL_NOT_ENOUGH.
+		const ownReservation = simulate({
+			W1N1: room => {
+				room['#user'] = '100';
+				room.controller!['#reservationEndTime'] = 5000;
+				room['#insertObject'](scout('W1N1'));
+			},
+		});
+		test('self-reserved controller allows road/container, rejects rcl>0 structures', () => ownReservation(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(25, 25, 'road'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(26, 25, 'container'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(27, 25, 'spawn', 'S1'), C.ERR_RCL_NOT_ENOUGH);
+			});
+		}));
+
+		// Hostile-reserved controller: vanilla returns ERR_NOT_OWNER for every structureType.
+		const hostileReservation = simulate({
+			W1N1: room => {
+				room['#user'] = '101';
+				room.controller!['#reservationEndTime'] = 5000;
+				room['#insertObject'](scout('W1N1'));
+			},
+		});
+		test('hostile-reserved controller rejects every structureType with ERR_NOT_OWNER', () => hostileReservation(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(26, 25, 'container'), C.ERR_NOT_OWNER);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(27, 25, 'spawn', 'S1'), C.ERR_NOT_OWNER);
+			});
+		}));
+
+		// Hostile-owned controller: vanilla returns ERR_NOT_OWNER for every structureType.
+		const hostileOwned = simulate({
+			W1N1: room => {
+				room['#level'] = 4;
+				room['#user'] = room.controller!['#user'] = '101';
+				room['#insertObject'](scout('W1N1'));
+			},
+		});
+		test('hostile-owned controller rejects every structureType with ERR_NOT_OWNER', () => hostileOwned(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(26, 25, 'container'), C.ERR_NOT_OWNER);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(27, 25, 'spawn', 'S1'), C.ERR_NOT_OWNER);
+			});
+		}));
+	});
+
 	test('create site', () => construction(async ({ player, tick }) => {
 		await player('100', Game => {
 			Game.rooms.W1N1.createConstructionSite(25, 25, 'road');
