@@ -6,6 +6,7 @@ import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { assert, describe, reconstructor, simulate, test } from 'xxscreeps/test/index.js';
 import { renderStore } from './backend.js';
 import { create as createContainer } from './container.js';
+import { Resource, create as createResource } from './resource.js';
 import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store.js';
 
 const keys = (object: {}) => [ ...function*() {
@@ -142,6 +143,49 @@ describe('Store', () => {
 			assert.deepStrictEqual({ ...rendered.storeCapacityResource }, { [C.RESOURCE_ENERGY]: C.LAB_ENERGY_CAPACITY, [C.RESOURCE_HYDROXIDE]: C.LAB_MINERAL_CAPACITY });
 		});
 	});
+});
+
+describe('Dropped resource look aliases', () => {
+	const simulation = simulate({
+		W1N1: room => {
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#insertObject'](createResource(new RoomPosition(25, 25, 'W1N1'), C.RESOURCE_POWER, 20));
+		},
+	});
+
+	test('LOOK_ENERGY resolves every dropped resource', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const room = Game.rooms.W1N1;
+			const byEnergy = room.lookForAt(C.LOOK_ENERGY, 25, 25);
+			const byResource = room.lookForAt(C.LOOK_RESOURCES, 25, 25);
+			assert.strictEqual(byEnergy.length, 1);
+			assert.strictEqual(byEnergy[0], byResource[0]);
+			assert.strictEqual(byEnergy[0].resourceType, C.RESOURCE_POWER);
+		});
+	}));
+
+	test('lookForAtArea uses the requested legacy key', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const entries = Game.rooms.W1N1.lookForAtArea(C.LOOK_ENERGY, 25, 25, 25, 25, true);
+			assert.strictEqual(entries.length, 1);
+			assert.ok(entries[0].energy instanceof Resource);
+			assert.strictEqual(entries[0].energy.resourceType, C.RESOURCE_POWER);
+			assert.strictEqual('resource' in entries[0], false);
+		});
+	}));
+
+	test('lookAt emits both resource look entries', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const entries = Game.rooms.W1N1.lookAt(25, 25)
+				.filter(entry => entry.type === C.LOOK_ENERGY || entry.type === C.LOOK_RESOURCES);
+			assert.strictEqual(entries.length, 2);
+			const energy = entries.find(entry => entry.type === C.LOOK_ENERGY)!;
+			const resource = entries.find(entry => entry.type === C.LOOK_RESOURCES)!;
+			assert.strictEqual(energy.energy, resource.resource);
+			assert.ok(energy.energy instanceof Resource);
+			assert.strictEqual(energy.energy.resourceType, C.RESOURCE_POWER);
+		});
+	}));
 });
 
 describe('Container decay', () => {

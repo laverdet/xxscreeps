@@ -1,6 +1,6 @@
+import type { AnyRoomObject } from './room.js';
 import type { PositionParameter } from 'xxscreeps/game/position.js';
 import type { UnwrapArray } from 'xxscreeps/utility/types.js';
-import type { AnyRoomObject } from './room.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { iterateArea } from 'xxscreeps/game/direction.js';
@@ -8,7 +8,7 @@ import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js'
 import { terrainMaskToString } from 'xxscreeps/game/terrain.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from './room.js';
-import { lookAliasesByLook, lookAliasesBySource, lookConstants } from './symbols.js';
+import { lookConstants } from './symbols.js';
 
 // All LOOK_ constants
 export interface Look {}
@@ -35,8 +35,8 @@ type LookAtArea<Type> = Record<number, Record<number, Type[]>>;
 // Result of `room.lookForAtArea`. This is the same as `LookAtResult` but without `type`
 type LookForAtArea<Type extends LookConstants> = Record<LookConstants, TypeOfLook<Type>>;
 interface LookEntry {
-	type: string;
 	[key: string]: unknown;
+	type: string;
 }
 interface LookAreaEntry extends LookEntry {
 	x: number;
@@ -115,10 +115,11 @@ extend(Room, {
 
 	lookAtArea(top: number, left: number, bottom: number, right: number, asArray = false) {
 		const size = (bottom - top + 1) * (right - left + 1);
-		const objects: Iterable<any> = (() => {
+		const objects: Iterable<AnyRoomObject> = (() => {
 			if (size < this['#objects'].length) {
 				// Iterate all objects
-				return Fn.filter(this['#objects'], object =>
+				return Fn.filter(this['#objects'], (object): object is AnyRoomObject =>
+					object['#lookType'] !== null &&
 					object.pos.x >= left && object.pos.x <= right &&
 					object.pos.y >= top && object.pos.y <= bottom);
 			} else {
@@ -201,35 +202,24 @@ export function *mapArea<Type>(top: number, left: number, bottom: number, right:
 }
 
 function lookMatches(type: LookConstants, object: AnyRoomObject) {
-	const alias = lookAliasesByLook.get(type);
-	return alias === undefined ?
-		object['#lookType'] === type :
-		object['#lookType'] === alias.source && alias.matches(object);
+	return object['#lookType'] === type || object['#secondaryLookType'] === type;
 }
 
 function *lookAtEntries(object: AnyRoomObject): Iterable<LookEntry> {
-	const type = object['#lookType'];
-	const aliases = lookAliasesBySource.get(type);
-	if (aliases !== undefined) {
-		for (const alias of aliases) {
-			if (alias.matches(object)) {
-				yield { type: alias.look, [alias.look]: object };
-			}
-		}
+	const secondaryLookType = object['#secondaryLookType'];
+	if (secondaryLookType !== null) {
+		yield { type: secondaryLookType, [secondaryLookType]: object };
 	}
+	const type = object['#lookType'];
 	yield { type, [type]: object };
 }
 
 function *lookAtAreaEntries(object: AnyRoomObject): Iterable<LookAreaEntry> {
-	const type = object['#lookType'];
-	const aliases = lookAliasesBySource.get(type);
-	if (aliases !== undefined) {
-		for (const alias of aliases) {
-			if (alias.matches(object)) {
-				yield { x: object.pos.x, y: object.pos.y, type: alias.look, [alias.look]: object };
-			}
-		}
+	const secondaryLookType = object['#secondaryLookType'];
+	if (secondaryLookType !== null) {
+		yield { x: object.pos.x, y: object.pos.y, type: secondaryLookType, [secondaryLookType]: object };
 	}
+	const type = object['#lookType'];
 	yield { x: object.pos.x, y: object.pos.y, type, [type]: object };
 }
 

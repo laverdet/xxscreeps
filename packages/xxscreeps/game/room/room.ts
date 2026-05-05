@@ -11,7 +11,7 @@ import { BufferObject, withOverlay } from 'xxscreeps/schema/index.js';
 import { iteratee } from 'xxscreeps/utility/iteratee.js';
 import { getOrSet, removeOne } from 'xxscreeps/utility/utility.js';
 import { shape } from './schema.js';
-import { findHandlers, lookAliasesByLook, lookConstants } from './symbols.js';
+import { findHandlers, lookConstants } from './symbols.js';
 
 export type AnyRoomObject = Exclude<Room['#objects'][number], { '#lookType': null }>;
 
@@ -77,10 +77,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Returns a plain array of all room objects matching `type`
 	 */
 	'#lookFor'<Look extends LookConstants>(type: Look): readonly TypeOfLook<Look>[] {
-		const alias = lookAliasesByLook.get(type);
-		if (alias !== undefined) {
-			return [ ...Fn.filter(this.#lookIndex.get(alias.source)!, alias.matches) ] as never[];
-		}
 		return this.#lookIndex.get(type)! as never[];
 	}
 
@@ -228,6 +224,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (lookType !== null) {
 			this.#lookIndex.get(lookType)!.push(object);
 		}
+		const secondaryLookType = object['#secondaryLookType'];
+		if (secondaryLookType !== null) {
+			this.#lookIndex.get(secondaryLookType)!.push(object);
+		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos);
 		if (list) {
@@ -246,6 +246,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 		const lookType = object['#lookType'];
 		if (lookType !== null) {
 			removeOne(this.#lookIndex.get(lookType)!, object);
+		}
+		const secondaryLookType = object['#secondaryLookType'];
+		if (secondaryLookType !== null) {
+			removeOne(this.#lookIndex.get(secondaryLookType)!, object);
 		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos)!;

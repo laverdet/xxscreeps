@@ -33,6 +33,7 @@ export class Resource extends withOverlay(RoomObject.RoomObject, shape) {
 	}
 
 	get energy() { return this.resourceType === C.RESOURCE_ENERGY ? this.amount : undefined; }
+	override get '#secondaryLookType'() { return C.LOOK_ENERGY; }
 	get '#lookType'() { return C.LOOK_RESOURCES; }
 }
 
