@@ -61,10 +61,10 @@ describe('Structure isActive', () => {
 
 	test('harvest returns ERR_RCL_NOT_ENOUGH with inactive extractor', () => extractorSim(async ({ player }) => {
 		await player('100', Game => {
-			const creep = Game.creeps.miner!;
-			const mineral = Game.rooms.W6N1!.find(C.FIND_MINERALS)[0];
+			const creep = Game.creeps.miner;
+			const mineral = Game.rooms.W6N1?.find(C.FIND_MINERALS)[0];
 			assert.ok(mineral, 'mineral should exist');
-			assert.strictEqual(creep.harvest(mineral), C.ERR_RCL_NOT_ENOUGH);
+			assert.strictEqual(creep?.harvest(mineral), C.ERR_RCL_NOT_ENOUGH);
 		});
 	}));
 });

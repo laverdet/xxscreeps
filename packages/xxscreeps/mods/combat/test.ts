@@ -34,8 +34,8 @@ describe('Combat', () => {
 		await player('100', Game => {
 			const lab = Game.rooms.W1N1!.find(C.FIND_STRUCTURES)
 				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
-			assert.strictEqual(Game.creeps.warrior!.attack(lab), C.OK);
-			assert.strictEqual(Game.creeps.warrior!.rangedAttack(lab), C.OK);
+			assert.strictEqual(Game.creeps.warrior?.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.warrior.rangedAttack(lab), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
@@ -73,14 +73,14 @@ describe('getEventLog', () => {
 		await player('100', Game => {
 			const lab = Game.rooms.W1N1!.find(C.FIND_STRUCTURES)
 				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
-			assert.strictEqual(Game.creeps.attacker!.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.attacker?.attack(lab), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
 			const log = Game.rooms.W1N1!.getEventLog();
 			const attackEvent = log.find(event => event.event === C.EVENT_ATTACK);
 			assert.ok(attackEvent, 'expected an attack event in the event log');
-			assert.strictEqual(attackEvent.objectId, Game.creeps.attacker!.id);
+			assert.strictEqual(attackEvent.objectId, Game.creeps.attacker?.id);
 			assert.ok(attackEvent.data, 'expected nested data payload');
 			assert.strictEqual(attackEvent.data.attackType, C.EVENT_ATTACK_TYPE_MELEE);
 			assert.ok(typeof attackEvent.data.damage === 'number');
@@ -91,7 +91,7 @@ describe('getEventLog', () => {
 		await player('100', Game => {
 			const lab = Game.rooms.W1N1!.find(C.FIND_STRUCTURES)
 				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
-			Game.creeps.attacker!.attack(lab);
+			Game.creeps.attacker?.attack(lab);
 		});
 		await tick();
 		await player('100', Game => {
@@ -124,7 +124,7 @@ describe('getEventLog missing events', () => {
 	test('structure death emits EVENT_OBJECT_DESTROYED with structureType', () => structureKill(async ({ player, tick }) => {
 		await player('100', Game => {
 			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
-			Game.creeps.warrior!.attack(lab);
+			Game.creeps.warrior?.attack(lab);
 		});
 		await tick();
 		await player('100', Game => {
@@ -161,8 +161,8 @@ describe('getEventLog missing events', () => {
 	test('multi-attacker kill emits EVENT_OBJECT_DESTROYED exactly once', () => multiAttackerKill(async ({ player, tick }) => {
 		await player('100', Game => {
 			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
-			Game.creeps.warriorA!.attack(lab);
-			Game.creeps.warriorB!.attack(lab);
+			Game.creeps.warriorA?.attack(lab);
+			Game.creeps.warriorB?.attack(lab);
 		});
 		await tick();
 		await player('100', Game => {
@@ -218,11 +218,11 @@ describe('TOUGH damage reduction', () => {
 
 	test('unboosted TOUGH takes full damage (baseline)', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.attacker!.attack(Game.creeps.defender!);
+			Game.creeps.attacker?.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.defender!.hits,
+			assert.strictEqual(Game.creeps.defender?.hits,
 				4 * HITS_PER_PART - C.ATTACK_POWER,
 				'unboosted defender should take full ATTACK_POWER damage');
 		});
@@ -236,12 +236,12 @@ describe('TOUGH damage reduction', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker!.attack(Game.creeps.defender!);
+			Game.creeps.attacker?.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.ATTACK_POWER * C.BOOSTS.tough.GO.damage;
-			assert.strictEqual(Game.creeps.defender!.hits,
+			assert.strictEqual(Game.creeps.defender?.hits,
 				4 * HITS_PER_PART - effectiveDmg,
 				'GO-boosted TOUGH should reduce damage by GO multiplier');
 		});
@@ -255,12 +255,12 @@ describe('TOUGH damage reduction', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker!.attack(Game.creeps.defender!);
+			Game.creeps.attacker?.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.ATTACK_POWER * C.BOOSTS.tough.GHO2.damage;
-			assert.strictEqual(Game.creeps.defender!.hits,
+			assert.strictEqual(Game.creeps.defender?.hits,
 				4 * HITS_PER_PART - effectiveDmg,
 				'GHO2-boosted TOUGH should reduce damage by GHO2 multiplier');
 		});
@@ -274,12 +274,12 @@ describe('TOUGH damage reduction', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker!.attack(Game.creeps.defender!);
+			Game.creeps.attacker?.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.ATTACK_POWER * C.BOOSTS.tough.XGHO2.damage;
-			assert.strictEqual(Game.creeps.defender!.hits,
+			assert.strictEqual(Game.creeps.defender?.hits,
 				4 * HITS_PER_PART - effectiveDmg,
 				'XGHO2-boosted TOUGH should reduce damage by XGHO2 multiplier');
 		});
@@ -293,12 +293,12 @@ describe('TOUGH damage reduction', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.ranger!.rangedAttack(Game.creeps.defender!);
+			Game.creeps.ranger?.rangedAttack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.RANGED_ATTACK_POWER * C.BOOSTS.tough.GO.damage;
-			assert.strictEqual(Game.creeps.defender!.hits,
+			assert.strictEqual(Game.creeps.defender?.hits,
 				4 * HITS_PER_PART - effectiveDmg,
 				'GO-boosted TOUGH should reduce ranged damage by GO multiplier');
 		});
@@ -312,13 +312,13 @@ describe('TOUGH damage reduction', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker!.attack(Game.creeps.defender!);
-			Game.creeps.healer!.heal(Game.creeps.defender!);
+			Game.creeps.attacker?.attack(Game.creeps.defender!);
+			Game.creeps.healer?.heal(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
 			const effectiveDmg = C.ATTACK_POWER * C.BOOSTS.tough.GO.damage;
-			assert.strictEqual(Game.creeps.defender!.hits,
+			assert.strictEqual(Game.creeps.defender?.hits,
 				4 * HITS_PER_PART - effectiveDmg + C.HEAL_POWER,
 				'TOUGH reduction applies to gross damage, healing added independently');
 		});
@@ -352,7 +352,7 @@ describe('TOUGH damage reduction', () => {
 		});
 		await tick();
 		await player('100', Game => {
-			Game.creeps.attacker!.attack(Game.creeps.defender!);
+			Game.creeps.attacker?.attack(Game.creeps.defender!);
 		});
 		await tick();
 		await player('100', Game => {
@@ -362,7 +362,7 @@ describe('TOUGH damage reduction', () => {
 			const toughAbsorbs = HITS_PER_PART / boostFactor;
 			const overflow = totalIncoming - toughAbsorbs;
 			const effectiveLoss = HITS_PER_PART + overflow;
-			assert.strictEqual(Game.creeps.defender!.hits,
+			assert.strictEqual(Game.creeps.defender?.hits,
 				3 * HITS_PER_PART - effectiveLoss,
 				'overflow damage past exhausted TOUGH should hit remaining parts at full rate');
 		});
@@ -408,20 +408,20 @@ describe('TOUGH damage reduction', () => {
 		await tick();
 		// Pre-damage so TOUGH gain doesn't hit hitsMax cap
 		await player('100', Game => {
-			Game.creeps.attacker!.attack(Game.creeps.defender!);
+			Game.creeps.attacker?.attack(Game.creeps.defender!);
 		});
 		await tick();
 		const afterPreDmg = defenderHits - effectiveDmg;
 		// Assert pre-damage, then attack + heal in same tick
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.defender!.hits, afterPreDmg,
+			assert.strictEqual(Game.creeps.defender?.hits, afterPreDmg,
 				'pre-damage should reduce hits by boosted attack damage');
-			Game.creeps.attacker!.attack(Game.creeps.defender!);
-			Game.creeps.healer!.heal(Game.creeps.defender!);
+			Game.creeps.attacker?.attack(Game.creeps.defender);
+			Game.creeps.healer?.heal(Game.creeps.defender);
 		});
 		await tick();
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.defender!.hits,
+			assert.strictEqual(Game.creeps.defender?.hits,
 				afterPreDmg - effectiveDmg + healAmount,
 				'TOUGH reduction must apply even when raw damage equals healing');
 		});
