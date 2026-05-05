@@ -185,6 +185,10 @@ jobs:
       # Setup
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v6
+        with:
+          # Modern npm version required for nested package OIDC & provenance. This version can be removed when that is
+          # standard.
+          node-version: 24
       - uses: pnpm/action-setup@v6
       - shell: sh
         run: |
@@ -205,16 +209,18 @@ jobs:
           npx napi artifacts
 
       # Publish
-      - if: github.event_name == 'push' && github.repository == 'laverdet/xxscreeps'
+      - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'main' && github.event_name == 'push'
         id: publish
         working-directory: packages/pathfinder
         shell: sh
-        run: pnpm publish --filter . --no-git-checks --provenance
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm publish --filter . --provenance
       - if: steps.publish.outcome == 'skipped'
         working-directory: packages/pathfinder
         shell: sh
         run: |
-          pnpm pack
+          pnpm publish --dry-run --filter .
           for ii in $(ls npm); do
             cat "npm/$ii/package.json"
             pnpm -C "npm/$ii" pack

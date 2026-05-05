@@ -23,4 +23,12 @@ jobs:
       - uses: changesets/action@v1
         with:
           createGithubReleases: false
-          publish: pnpm publish --filter '!@xxscreeps/pathfinder' --no-git-checks --provenance --recursive
+      - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'main' && github.event_name == 'push'
+        id: publish
+        shell: sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm publish --filter '!@xxscreeps/pathfinder' --provenance --recursive
+      - if: steps.publish.outcome == 'skipped'
+        shell: sh
+        run: pnpm publish --dry-run --filter '!@xxscreeps/pathfinder'
