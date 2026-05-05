@@ -12,12 +12,12 @@
     "watch": "tsc -b -w"
   },
   "dependencies": {
-    "@changesets/cli": "^2.31.0",
     "@xxscreeps/client": "workspace:*",
     "@xxscreeps/redis": "workspace:*",
     "xxscreeps": "workspace:*"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@eslint/js": "^9.39.4",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@typescript-eslint/eslint-plugin": "^8.59.1",

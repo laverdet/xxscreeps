@@ -1,0 +1,221 @@
+name: '@xxscreeps/pathfinder'
+
+on:
+  push:
+    paths:
+      - .github/workflows/pathfinder.yml
+      - packages/pathfinder/**
+  pull_request:
+    paths:
+      - .github/workflows/pathfinder.yml
+      - packages/pathfinder/**
+
+jobs:
+  build:
+    name: Build
+    strategy:
+      fail-fast: false
+      matrix:
+        host:
+          # aarch64
+          - runs-on: ubuntu-24.04-arm
+            container: alpine:3
+            triplet: aarch64-alpine-linux-musl
+          - runs-on: macos-15
+            platform: darwin
+            triplet: aarch64-apple-darwin
+          - runs-on: ubuntu-24.04-arm
+            container: debian:trixie
+            triplet: aarch64-unknown-linux-gnu
+          # x86_64
+          - runs-on: ubuntu-24.04
+            container: alpine:3
+            triplet: x86_64-alpine-linux-musl
+          - runs-on: macos-15-intel
+            platform: darwin
+            triplet: x86_64-apple-darwin
+          - runs-on: windows-2025
+            platform: windows
+            triplet: x86_64-pc-windows
+          - runs-on: ubuntu-24.04
+            container: debian:trixie
+            triplet: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.host.runs-on }}
+    container: ${{ matrix.host.container }}
+
+    steps:
+      # Fix Alpine on aarch64
+      - if: matrix.host.triplet == 'aarch64-alpine-linux-musl'
+        uses: laverdet/alpine-arm64@v1
+
+      # Install compiler & dependencies
+      - if: matrix.host.container == 'alpine:3'
+        shell: sh
+        run: |
+          apk add cmake g++ make ninja-is-really-ninja nodejs npm python3
+          echo "CXX=g++" >> "$GITHUB_ENV"
+      - if: matrix.host.container == 'debian:trixie'
+        run: |
+          cat <<"EOF" > /etc/apt/sources.list.d/debian-backports.sources
+          Types: deb deb-src
+          URIs: http://deb.debian.org/debian
+          Suites: trixie-backports
+          Components: main
+          Enabled: yes
+          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+          EOF
+          apt update
+          apt install -y clang-21 cmake ninja-build nodejs npm python3
+          echo "CXX=clang++-21" >> "$GITHUB_ENV"
+      - if: matrix.host.platform == 'darwin'
+        run: |
+          brew install cmake ninja
+          ln -s $(brew --prefix)/etc/clang ~/.config/clang
+          echo "CXX=clang++" >> "$GITHUB_ENV"
+      - if: matrix.host.platform == 'windows'
+        shell: bash
+        run: |
+          winget install --accept-source-agreements --silent -e --id=LLVM.LLVM --version=21.1.6 | tr '\r' '\n' | grep -Ev --line-buffered '^[ -\/|]+$'
+          /c/msys64/usr/bin/pacman -Sy --noconfirm \
+            "mingw64/mingw-w64-$(uname -m)-cmake>=4.3.0" \
+            mingw64/mingw-w64-$(uname -m)-ninja \
+          ;
+          echo "/c/msys64/mingw64/bin" >> "$GITHUB_PATH"
+          echo "/c/msys64/usr/bin" >> "$GITHUB_PATH"
+          echo "CXX=clang++.exe" >> "$GITHUB_ENV"
+
+      # Setup repository
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - shell: sh
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Build
+      - shell: sh
+        working-directory: packages/pathfinder
+        run: npx node-gyp rebuild --release --target=v24.15.0
+
+      # Upload build artifacts
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.host.triplet }}
+          path: packages/pathfinder/module/node_modules/@xxscreeps
+          if-no-files-found: error
+
+      # Console on failure
+      - if: failure()
+        uses: laverdet/console@v1
+
+  test:
+    name: Test
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        # nb: The Linux hosts are different. We build in Debian and test in Ubuntu LTS.
+        host:
+          # aarch64
+          - runs-on: ubuntu-24.04-arm
+            container: alpine:3
+            triplet: aarch64-alpine-linux-musl
+          - runs-on: macos-15
+            platform: darwin
+            triplet: aarch64-apple-darwin
+          - runs-on: ubuntu-24.04-arm
+            triplet: aarch64-unknown-linux-gnu
+          # x86_64
+          - runs-on: ubuntu-24.04
+            container: alpine:3
+            triplet: x86_64-alpine-linux-musl
+          - runs-on: macos-15-intel
+            platform: darwin
+            triplet: x86_64-apple-darwin
+          - runs-on: windows-2025
+            platform: windows
+            triplet: x86_64-pc-windows
+          - runs-on: ubuntu-24.04
+            triplet: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.host.runs-on }}
+    container: ${{ matrix.host.container }}
+
+    steps:
+      - if: matrix.host.triplet == 'aarch64-alpine-linux-musl'
+        uses: laverdet/alpine-arm64@v1
+
+      # Install nodejs
+      - if: matrix.host.container == 'alpine:3'
+        id: musl
+        shell: sh
+        run: apk add nodejs npm
+      - if: steps.musl.outcome == 'skipped'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      # Setup
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - shell: sh
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.host.triplet }}
+          path: packages/pathfinder/module/node_modules/@xxscreeps
+
+      # Test
+      - shell: sh
+        working-directory: packages/pathfinder
+        run: node -e 'require(".").loadTerrain({})'
+      - shell: sh
+        working-directory: packages/xxscreeps
+        run: pnpm install '@xxscreeps/pathfinder@workspace:*'
+      - shell: sh
+        run: |
+          pnpm run build
+          pnpm run test
+
+  release:
+    name: Release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # Setup
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+      - uses: pnpm/action-setup@v6
+      - shell: sh
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm run build
+
+      # Receive artifacts
+      - id: artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: packages/pathfinder/artifacts
+
+      # Assemble @xxscreeps/pathfinder
+      - working-directory: packages/pathfinder
+        run: |
+          set -ux
+          npx napi create-npm-dirs
+          npx napi artifacts
+
+      # Publish
+      - if: github.event_name == 'push' && github.repository == 'laverdet/xxscreeps'
+        id: publish
+        working-directory: packages/pathfinder
+        shell: sh
+        run: pnpm publish --filter . --no-git-checks --provenance
+      - if: steps.publish.outcome == 'skipped'
+        working-directory: packages/pathfinder
+        shell: sh
+        run: |
+          pnpm pack
+          for ii in $(ls npm); do
+            cat "npm/$ii/package.json"
+            pnpm -C "npm/$ii" pack
+          done
