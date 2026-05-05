@@ -19,31 +19,29 @@ describe('ramparts', () => {
 
 	test('moveTo should be able to pass trough rampart csite', () => roomWithUnbuiltRamparts(async ({ player, tick }) => {
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.rampart_movement!.moveTo(25, 25), C.OK);
+			assert.strictEqual(Game.creeps.rampart_movement?.moveTo(25, 25), C.OK);
 		});
 
 		await tick();
 
 		await player('100', Game => {
-			const pos = Game.creeps.rampart_movement!.pos;
-			const { x, y } = pos;
-			assert.strictEqual(x, 25);
-			assert.strictEqual(y, 25);
+			const pos = Game.creeps.rampart_movement?.pos;
+			assert.strictEqual(pos?.x, 25);
+			assert.strictEqual(pos.y, 25);
 		});
 	}));
 
 	test('move should be able to pass trough rampart csite', () => roomWithUnbuiltRamparts(async ({ player, tick }) => {
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.rampart_movement!.move(C.RIGHT), C.OK);
+			assert.strictEqual(Game.creeps.rampart_movement?.move(C.RIGHT), C.OK);
 		});
 
 		await tick();
 
 		await player('100', Game => {
-			const pos = Game.creeps.rampart_movement!.pos;
-			const { x, y } = pos;
-			assert.strictEqual(x, 25);
-			assert.strictEqual(y, 25);
+			const pos = Game.creeps.rampart_movement?.pos;
+			assert.strictEqual(pos?.x, 25);
+			assert.strictEqual(pos.y, 25);
 		});
 	}));
 });
@@ -60,33 +58,33 @@ describe('setPublic', () => {
 
 	test('private rampart blocks hostile creep', () => roomWithRampart(async ({ player, tick }) => {
 		await player('101', Game => {
-			assert.strictEqual(Game.creeps.hostile!.move(C.RIGHT), C.OK);
+			assert.strictEqual(Game.creeps.hostile?.move(C.RIGHT), C.OK);
 		});
 		await tick();
 		await player('101', Game => {
-			assert.ok(Game.creeps.hostile!.pos.isEqualTo(24, 25), 'hostile creep should not have moved');
+			assert.ok(Game.creeps.hostile?.pos.isEqualTo(24, 25), 'hostile creep should not have moved');
 		});
 	}));
 
 	test('setPublic returns ERR_NOT_OWNER for non-owner', () => roomWithRampart(async ({ player }) => {
 		await player('101', Game => {
-			const rampart = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_RAMPART)[0]!;
-			assert.strictEqual(rampart.setPublic(true), C.ERR_NOT_OWNER);
+			const rampart = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_RAMPART)[0];
+			assert.strictEqual(rampart?.setPublic(true), C.ERR_NOT_OWNER);
 		});
 	}));
 
 	test('public rampart allows hostile creep', () => roomWithRampart(async ({ player, tick }) => {
 		await player('100', Game => {
-			const rampart = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_RAMPART)[0]!;
-			assert.strictEqual(rampart.setPublic(true), C.OK);
+			const rampart = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_RAMPART)[0];
+			assert.strictEqual(rampart?.setPublic(true), C.OK);
 		});
 		await tick();
 		await player('101', Game => {
-			assert.strictEqual(Game.creeps.hostile!.move(C.RIGHT), C.OK);
+			assert.strictEqual(Game.creeps.hostile?.move(C.RIGHT), C.OK);
 		});
 		await tick();
 		await player('101', Game => {
-			assert.ok(Game.creeps.hostile!.pos.isEqualTo(25, 25), 'hostile creep should have moved through public rampart');
+			assert.ok(Game.creeps.hostile?.pos.isEqualTo(25, 25), 'hostile creep should have moved through public rampart');
 		});
 	}));
 });
@@ -107,8 +105,8 @@ describe('Tower isActive', () => {
 
 	test('tower attack returns ERR_RCL_NOT_ENOUGH when inactive', () => simulation(async ({ player }) => {
 		await player('100', Game => {
-			const tower = lookForStructures(Game.rooms.W3N2, C.STRUCTURE_TOWER)[0]!;
-			assert.strictEqual(tower.attack(Game.rooms.W3N2!.find(C.FIND_HOSTILE_CREEPS)[0]!), C.ERR_RCL_NOT_ENOUGH);
+			const tower = lookForStructures(Game.rooms.W3N2, C.STRUCTURE_TOWER)[0];
+			assert.strictEqual(tower?.attack(Game.rooms.W3N2!.find(C.FIND_HOSTILE_CREEPS)[0]!), C.ERR_RCL_NOT_ENOUGH);
 		});
 	}));
 });

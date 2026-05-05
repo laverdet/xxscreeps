@@ -21,7 +21,7 @@ describe('Invader exit filtering', () => {
 
 	test('invaders spawn in uncontrolled room', () => uncontrolled(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy!.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
@@ -57,7 +57,7 @@ describe('Invader exit filtering', () => {
 
 	test('no invaders when all exits lead to owned rooms', () => allOwned(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy!.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
@@ -93,7 +93,7 @@ describe('Invader exit filtering', () => {
 
 	test('no invaders when all exits lead to reserved rooms', () => allReserved(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy!.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
@@ -143,7 +143,7 @@ describe('Invader exit filtering', () => {
 
 	test('invaders spawn at exits to highway rooms', () => highwayExit(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy!.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
@@ -158,7 +158,7 @@ describe('Invader exit filtering', () => {
 
 	test('invaders only at exits to uncontrolled rooms', () => partialBlock(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy!.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
