@@ -43,7 +43,7 @@ describe('Chemistry', () => {
 
 		test('runReaction produces correct compound', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType)!;
 				const labH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROGEN)!;
 				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
@@ -51,7 +51,7 @@ describe('Chemistry', () => {
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => lab.mineralType === 'OH')!;
 				assert.ok(output, 'output lab should contain OH');
 				assert.strictEqual(output.store[C.RESOURCE_HYDROXIDE], C.LAB_REACTION_AMOUNT);
@@ -60,7 +60,7 @@ describe('Chemistry', () => {
 
 		test('runReaction uses per-product cooldown', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType)!;
 				const labH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROGEN)!;
 				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
@@ -68,7 +68,7 @@ describe('Chemistry', () => {
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => lab.mineralType === 'OH')!;
 				// OH has REACTION_TIME of 20, not the generic LAB_COOLDOWN of 10. The
 				// observable cooldown is REACTION_TIME - 1: vanilla writes cooldownTime
@@ -81,7 +81,7 @@ describe('Chemistry', () => {
 
 		test('runReaction deducts reagents from source labs', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType)!;
 				const labH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROGEN)!;
 				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
@@ -89,7 +89,7 @@ describe('Chemistry', () => {
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROGEN)!;
 				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
 				assert.strictEqual(labH.store[C.RESOURCE_HYDROGEN], 100 - C.LAB_REACTION_AMOUNT);
@@ -99,7 +99,7 @@ describe('Chemistry', () => {
 
 		test('runReaction action log points to correct source labs', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType)!;
 				const labH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROGEN)!;
 				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
@@ -107,7 +107,7 @@ describe('Chemistry', () => {
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => lab.mineralType === 'OH')!;
 				const labH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROGEN)!;
 				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
@@ -124,7 +124,7 @@ describe('Chemistry', () => {
 
 		test('runReaction fails on cooldown', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType)!;
 				const labH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROGEN)!;
 				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
@@ -132,7 +132,7 @@ describe('Chemistry', () => {
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => lab.mineralType === 'OH')!;
 				const labH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROGEN)!;
 				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
@@ -173,7 +173,7 @@ describe('Chemistry', () => {
 
 		test('boostCreep method exists', () => boostSim(async ({ player }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const lab = labs[0]!;
 				assert.strictEqual(typeof lab.boostCreep, 'function',
 					'StructureLab should have a boostCreep method');
@@ -182,7 +182,7 @@ describe('Chemistry', () => {
 
 		test('boostCreep returns OK for valid target', () => boostSim(async ({ player }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
 				const result = labGO.boostCreep(Game.creeps.boostme!);
 				assert.strictEqual(result, C.OK, 'boostCreep should return OK');
@@ -191,7 +191,7 @@ describe('Chemistry', () => {
 
 		test('boostCreep applies boost to body parts', () => boostSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
 				labGO.boostCreep(Game.creeps.boostme!);
 			});
@@ -208,13 +208,13 @@ describe('Chemistry', () => {
 
 		test('boostCreep deducts resources from lab', () => boostSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
 				labGO.boostCreep(Game.creeps.boostme!);
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
 				// 2 TOUGH parts * LAB_BOOST_MINERAL (30) = 60 mineral consumed
 				assert.strictEqual(labGO.store[C.RESOURCE_GHODIUM_OXIDE], 300 - (2 * C.LAB_BOOST_MINERAL));
@@ -225,7 +225,7 @@ describe('Chemistry', () => {
 
 		test('boostCreep respects bodyPartsCount limit', () => boostSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labUO = labs.find(lab => lab.mineralType === 'UO')!;
 				// Only boost 1 of 3 WORK parts
 				labUO.boostCreep(Game.creeps.boostme!, 1);
@@ -240,7 +240,7 @@ describe('Chemistry', () => {
 
 		test('boostCreep fails out of range', () => boostSim(async ({ player }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
 				const result = labGO.boostCreep(Game.creeps.faraway!);
 				assert.strictEqual(result, C.ERR_NOT_IN_RANGE);
@@ -249,7 +249,7 @@ describe('Chemistry', () => {
 
 		test('boostCreep fails with insufficient resources', () => boostSim(async ({ player }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				// Lab with GO has enough for TOUGH, but let's test with UO lab on a creep without WORK
 				// Actually test: bodyPartsCount > available matching unboosted parts
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
@@ -261,7 +261,7 @@ describe('Chemistry', () => {
 
 		test('boostCreep TOUGH parts boosted first, others last-to-first', () => boostSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labUO = labs.find(lab => lab.mineralType === 'UO')!;
 				// Boost 2 of 3 WORK parts — should boost last two (reversed order)
 				labUO.boostCreep(Game.creeps.boostme!, 2);
@@ -301,7 +301,7 @@ describe('Chemistry', () => {
 
 		test('reverseReaction method exists', () => reverseSim(async ({ player }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const lab = labs[0]!;
 				assert.strictEqual(typeof lab.reverseReaction, 'function',
 					'StructureLab should have a reverseReaction method');
@@ -310,7 +310,7 @@ describe('Chemistry', () => {
 
 		test('reverseReaction returns OK for valid decomposition', () => reverseSim(async ({ player }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH')!;
 				const empties = labs.filter(lab => !lab.mineralType);
 				const result = labOH.reverseReaction(empties[0]!, empties[1]!);
@@ -320,14 +320,14 @@ describe('Chemistry', () => {
 
 		test('reverseReaction decomposes compound into reagents', () => reverseSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH')!;
 				const empties = labs.filter(lab => !lab.mineralType);
 				labOH.reverseReaction(empties[0]!, empties[1]!);
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				// OH decomposes to H + O
 				const labOH = labs.find(lab => lab.pos.isEqualTo(25, 25))!;
 				assert.strictEqual(labOH.store[C.RESOURCE_HYDROXIDE], 100 - C.LAB_REACTION_AMOUNT,
@@ -342,14 +342,14 @@ describe('Chemistry', () => {
 
 		test('reverseReaction sets cooldown', () => reverseSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH')!;
 				const empties = labs.filter(lab => !lab.mineralType);
 				labOH.reverseReaction(empties[0]!, empties[1]!);
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.pos.isEqualTo(25, 25))!;
 				// Observable cooldown is REACTION_TIME - 1; see runReaction test above.
 				assert.strictEqual(labOH.cooldown, C.REACTION_TIME.OH - 1,
@@ -359,7 +359,7 @@ describe('Chemistry', () => {
 
 		test('reverseReaction fails with lab1 == lab2', () => reverseSim(async ({ player }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH')!;
 				const empty = labs.find(lab => !lab.mineralType)!;
 				const result = labOH.reverseReaction(empty, empty);
@@ -369,14 +369,14 @@ describe('Chemistry', () => {
 
 		test('reverseReaction fails on cooldown', () => reverseSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH')!;
 				const empties = labs.filter(lab => !lab.mineralType);
 				labOH.reverseReaction(empties[0]!, empties[1]!);
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.pos.isEqualTo(25, 25))!;
 				const others = labs.filter(lab => !lab.pos.isEqualTo(25, 25));
 				assert.strictEqual(labOH.reverseReaction(others[0]!, others[1]!), C.ERR_TIRED);
@@ -409,7 +409,7 @@ describe('Chemistry', () => {
 
 		test('unboostCreep method exists', () => unboostSim(async ({ player }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const lab = labs[0]!;
 				assert.strictEqual(typeof lab.unboostCreep, 'function',
 					'StructureLab should have an unboostCreep method');
@@ -419,7 +419,7 @@ describe('Chemistry', () => {
 		test('unboostCreep removes all boosts', () => unboostSim(async ({ player, tick }) => {
 			// First boost the creep
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
 				assert.strictEqual(labGO.boostCreep(Game.creeps.unboosted!), C.OK);
 			});
@@ -428,7 +428,7 @@ describe('Chemistry', () => {
 			await player('100', Game => {
 				const creep = Game.creeps.unboosted!;
 				assert.ok(creep.body.some(part => part.boost === 'GO'), 'creep should be boosted');
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const unboostLab = labs.find(lab => !lab.mineralType)!;
 				assert.strictEqual(unboostLab.unboostCreep(Game.creeps.unboosted!), C.OK);
 			});
@@ -444,13 +444,13 @@ describe('Chemistry', () => {
 		test('unboostCreep drops resources at creep position', () => unboostSim(async ({ player, tick }) => {
 			// Boost then unboost
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
 				labGO.boostCreep(Game.creeps.unboosted!);
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const unboostLab = labs.find(lab => !lab.mineralType)!;
 				unboostLab.unboostCreep(Game.creeps.unboosted!);
 			});
@@ -471,19 +471,19 @@ describe('Chemistry', () => {
 
 		test('unboostCreep sets cooldown on lab', () => unboostSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
 				labGO.boostCreep(Game.creeps.unboosted!);
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const unboostLab = labs.find(lab => !lab.mineralType)!;
 				unboostLab.unboostCreep(Game.creeps.unboosted!);
 			});
 			await tick();
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const unboostLab = labs.find(lab => lab.pos.isEqualTo(25, 25))!;
 				assert.ok(unboostLab.cooldown > 0, 'lab should have a cooldown after unboosting');
 			});
@@ -491,7 +491,7 @@ describe('Chemistry', () => {
 
 		test('unboostCreep fails on unboosted creep', () => unboostSim(async ({ player }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const lab = labs.find(lab => !lab.mineralType)!;
 				const result = lab.unboostCreep(Game.creeps.unboosted!);
 				assert.strictEqual(result, C.ERR_NOT_FOUND,
@@ -502,7 +502,7 @@ describe('Chemistry', () => {
 		test('unboostCreep fails out of range', () => unboostSim(async ({ player, tick, poke }) => {
 			// Boost the creep first
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO')!;
 				labGO.boostCreep(Game.creeps.unboosted!);
 			});
@@ -514,7 +514,7 @@ describe('Chemistry', () => {
 				creep.pos.y = 10;
 			});
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const lab = labs.find(lab => !lab.mineralType)!;
 				const result = lab.unboostCreep(Game.creeps.unboosted!);
 				assert.strictEqual(result, C.ERR_NOT_IN_RANGE);
@@ -562,7 +562,7 @@ describe('Chemistry', () => {
 
 		test('carry boost increases store capacity', () => boostEffectSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labKH = labs.find(lab => lab.mineralType === 'KH')!;
 				labKH.boostCreep(Game.creeps.worker!);
 			});
@@ -578,7 +578,7 @@ describe('Chemistry', () => {
 
 		test('harvest boost increases work power', () => boostEffectSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labUO = labs.find(lab => lab.mineralType === 'UO')!;
 				labUO.boostCreep(Game.creeps.worker!);
 			});
@@ -594,7 +594,7 @@ describe('Chemistry', () => {
 
 		test('move boost increases fatigue reduction', () => boostEffectSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labZO = labs.find(lab => lab.mineralType === 'ZO')!;
 				labZO.boostCreep(Game.creeps.worker!);
 			});
@@ -610,7 +610,7 @@ describe('Chemistry', () => {
 
 		test('attack boost increases attack power', () => boostEffectSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const labs = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB);
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labUH = labs.find(lab => lab.mineralType === 'UH')!;
 				labUH.boostCreep(Game.creeps.attacker!);
 			});

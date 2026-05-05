@@ -123,7 +123,7 @@ describe('getEventLog missing events', () => {
 
 	test('structure death emits EVENT_OBJECT_DESTROYED with structureType', () => structureKill(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)[0]!;
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 			Game.creeps.warrior!.attack(lab);
 		});
 		await tick();
@@ -160,7 +160,7 @@ describe('getEventLog missing events', () => {
 
 	test('multi-attacker kill emits EVENT_OBJECT_DESTROYED exactly once', () => multiAttackerKill(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)[0]!;
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 			Game.creeps.warriorA!.attack(lab);
 			Game.creeps.warriorB!.attack(lab);
 		});
@@ -230,7 +230,7 @@ describe('TOUGH damage reduction', () => {
 
 	test('GO-boosted TOUGH reduces melee damage', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GO')!;
 			lab.boostCreep(Game.creeps.defender!);
 		});
@@ -249,7 +249,7 @@ describe('TOUGH damage reduction', () => {
 
 	test('GHO2-boosted TOUGH reduces melee damage', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GHO2')!;
 			lab.boostCreep(Game.creeps.defender!);
 		});
@@ -268,7 +268,7 @@ describe('TOUGH damage reduction', () => {
 
 	test('XGHO2-boosted TOUGH reduces melee damage', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'XGHO2')!;
 			lab.boostCreep(Game.creeps.defender!);
 		});
@@ -287,7 +287,7 @@ describe('TOUGH damage reduction', () => {
 
 	test('TOUGH reduction applies to ranged attack', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GO')!;
 			lab.boostCreep(Game.creeps.defender!);
 		});
@@ -306,7 +306,7 @@ describe('TOUGH damage reduction', () => {
 
 	test('TOUGH reduction with same-tick healing', () => standardSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GO')!;
 			lab.boostCreep(Game.creeps.defender!);
 		});
@@ -346,7 +346,7 @@ describe('TOUGH damage reduction', () => {
 
 	test('damage overflows past destroyed TOUGH to non-TOUGH parts', () => overflowSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GHO2')!;
 			lab.boostCreep(Game.creeps.defender!);
 		});
@@ -401,7 +401,7 @@ describe('TOUGH damage reduction', () => {
 
 		// Boost
 		await player('100', Game => {
-			const lab = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LAB)
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)
 				.find(lab => lab.mineralType === 'GO')!;
 			lab.boostCreep(Game.creeps.defender!);
 		});

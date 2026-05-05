@@ -75,7 +75,7 @@ describe('Spawn', () => {
 		await player('100', Game => {
 			assert.strictEqual(Game.spawns.Spawn1!.store[C.RESOURCE_ENERGY], C.SPAWN_ENERGY_START);
 			assert.strictEqual(Game.getObjectById<StructureExtension>(extensionId)!.store[C.RESOURCE_ENERGY],
-				C.EXTENSION_ENERGY_CAPACITY[8]! - C.BODYPART_COST[C.MOVE]!);
+				C.EXTENSION_ENERGY_CAPACITY[8]! - C.BODYPART_COST[C.MOVE]);
 		});
 	}));
 
@@ -103,13 +103,13 @@ describe('Spawn', () => {
 
 	test('renewCreep undefined', () => simulation(async ({ player }) => {
 		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1!.renewCreep(undefined as any), C.ERR_INVALID_TARGET);
+			assert.strictEqual(Game.spawns.Spawn1!.renewCreep(undefined as never), C.ERR_INVALID_TARGET);
 		});
 	}));
 
 	test('recycleCreep undefined', () => simulation(async ({ player }) => {
 		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1!.recycleCreep(undefined as any), C.ERR_INVALID_TARGET);
+			assert.strictEqual(Game.spawns.Spawn1!.recycleCreep(undefined as never), C.ERR_INVALID_TARGET);
 		});
 	}));
 
@@ -154,9 +154,9 @@ describe('Spawn', () => {
 			await tick(C.CREEP_SPAWN_TIME);
 			await player('100', Game => {
 				assert.ok(Game.creeps.newCreep);
-				assert.ok(!Game.creeps.newCreep!.spawning);
+				assert.ok(!Game.creeps.newCreep.spawning);
 				// Should spawn at TOP (25,24) — first direction in default order
-				assert.ok(Game.creeps.newCreep!.pos.isEqualTo(25, 24));
+				assert.ok(Game.creeps.newCreep.pos.isEqualTo(25, 24));
 				assert.strictEqual(Game.rooms.W1N1!.find(C.FIND_TOMBSTONES).length, 1);
 			});
 			await player('101', Game => {
@@ -249,8 +249,8 @@ describe('Spawn', () => {
 			});
 			await player('100', Game => {
 				assert.ok(Game.creeps.newCreep);
-				assert.ok(!Game.creeps.newCreep!.spawning);
-				assert.ok(Game.creeps.newCreep!.pos.isEqualTo(26, 26));
+				assert.ok(!Game.creeps.newCreep.spawning);
+				assert.ok(Game.creeps.newCreep.pos.isEqualTo(26, 26));
 				assert.strictEqual(Game.rooms.W1N1!.find(C.FIND_TOMBSTONES).length, 1);
 			});
 		}));
@@ -269,7 +269,7 @@ describe('Spawn isActive', () => {
 
 	test('excess spawns at RCL 1 — one inactive', () => excessSpawnSim(async ({ player }) => {
 		await player('100', Game => {
-			const spawns = lookForStructures(Game.rooms.W3N1!, C.STRUCTURE_SPAWN);
+			const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
 			assert.strictEqual(spawns.length, 2, 'should have 2 spawns');
 			const activeCount = spawns.filter(spawn => spawn.isActive()).length;
 			assert.strictEqual(activeCount, 1, 'exactly 1 spawn should be active at RCL 1');
@@ -278,8 +278,8 @@ describe('Spawn isActive', () => {
 
 	test('inactive spawn returns ERR_RCL_NOT_ENOUGH', () => excessSpawnSim(async ({ player }) => {
 		await player('100', Game => {
-			const spawns = lookForStructures(Game.rooms.W3N1!, C.STRUCTURE_SPAWN);
-			const inactive = spawns.find(spawn => !spawn.isActive())!;
+			const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
+			const inactive = spawns.find(spawn => !spawn.isActive());
 			assert.ok(inactive, 'should find an inactive spawn');
 			assert.strictEqual(inactive.spawnCreep([ C.MOVE ], 'test'), C.ERR_RCL_NOT_ENOUGH);
 		});
@@ -287,8 +287,8 @@ describe('Spawn isActive', () => {
 
 	test('inactive spawn can still be destroyed', () => excessSpawnSim(async ({ player }) => {
 		await player('100', Game => {
-			const spawns = lookForStructures(Game.rooms.W3N1!, C.STRUCTURE_SPAWN);
-			const inactive = spawns.find(spawn => !spawn.isActive())!;
+			const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
+			const inactive = spawns.find(spawn => !spawn.isActive());
 			assert.ok(inactive, 'should find an inactive spawn');
 			assert.strictEqual(inactive.destroy(), C.OK, 'inactive structures should be destroyable');
 		});
@@ -308,7 +308,7 @@ describe('Spawn isActive', () => {
 
 	test('energyAvailable excludes inactive extensions', () => energySim(async ({ player }) => {
 		await player('100', Game => {
-			const ext = lookForStructures(Game.rooms.W3N1!, C.STRUCTURE_EXTENSION)[0]!;
+			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0]!;
 			assert.strictEqual(ext.isActive(), false, 'extension should be inactive at RCL 1');
 			assert.strictEqual(Game.rooms.W3N1!.energyAvailable, C.SPAWN_ENERGY_START,
 				'energyAvailable should exclude inactive extension');
@@ -331,7 +331,7 @@ describe('Spawn isActive', () => {
 
 	test('stores on inactive buildings still work — transfer', () => transferSim(async ({ player }) => {
 		await player('100', Game => {
-			const ext = lookForStructures(Game.rooms.W3N1!, C.STRUCTURE_EXTENSION)[0]!;
+			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0]!;
 			assert.strictEqual(ext.isActive(), false);
 			assert.strictEqual(Game.creeps.worker!.transfer(ext, C.RESOURCE_ENERGY, 1), C.OK);
 		});
@@ -339,7 +339,7 @@ describe('Spawn isActive', () => {
 
 	test('stores on inactive buildings still work — withdraw', () => transferSim(async ({ player }) => {
 		await player('100', Game => {
-			const ext = lookForStructures(Game.rooms.W3N1!, C.STRUCTURE_EXTENSION)[0]!;
+			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0]!;
 			assert.strictEqual(ext.isActive(), false);
 			assert.strictEqual(Game.creeps.worker!.withdraw(ext, C.RESOURCE_ENERGY, 1), C.OK);
 		});

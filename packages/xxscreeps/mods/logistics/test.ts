@@ -19,12 +19,12 @@ describe('Link', () => {
 	// Vanilla emits the pre-loss amount; LINK_LOSS_RATIO is applied to receiver only.
 	test('transferEnergy emits EVENT_TRANSFER with the pre-loss amount', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const [ sender, receiver ] = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LINK);
+			const [ sender, receiver ] = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LINK);
 			assert.strictEqual(sender!.transferEnergy(receiver!, 400), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
-			const [ sender, receiver ] = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LINK);
+			const [ sender, receiver ] = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LINK);
 			const log = Game.rooms.W1N1!.getEventLog();
 			const transfer = log.find(event => event.event === C.EVENT_TRANSFER);
 			assert.ok(transfer, 'expected EVENT_TRANSFER from link transfer');

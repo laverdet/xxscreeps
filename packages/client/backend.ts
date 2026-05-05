@@ -26,7 +26,6 @@ if (clientPackage) {
 			const path = context.request.path === '/'
 				? 'index.html' : context.request.path.substr(1);
 			const file = files[path];
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (file === undefined) {
 				return next();
 			}
