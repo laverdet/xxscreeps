@@ -156,34 +156,46 @@ describe('Dropped resource look aliases', () => {
 	test('LOOK_ENERGY resolves every dropped resource', () => simulation(async ({ player }) => {
 		await player('100', Game => {
 			const room = Game.rooms.W1N1;
+			assert.ok(room);
 			const byEnergy = room.lookForAt(C.LOOK_ENERGY, 25, 25);
 			const byResource = room.lookForAt(C.LOOK_RESOURCES, 25, 25);
 			assert.strictEqual(byEnergy.length, 1);
-			assert.strictEqual(byEnergy[0], byResource[0]);
-			assert.strictEqual(byEnergy[0].resourceType, C.RESOURCE_POWER);
+			const energy = byEnergy[0];
+			assert.ok(energy);
+			assert.strictEqual(energy, byResource[0]);
+			assert.strictEqual(energy.resourceType, C.RESOURCE_POWER);
 		});
 	}));
 
 	test('lookForAtArea uses the requested legacy key', () => simulation(async ({ player }) => {
 		await player('100', Game => {
-			const entries = Game.rooms.W1N1.lookForAtArea(C.LOOK_ENERGY, 25, 25, 25, 25, true);
+			const room = Game.rooms.W1N1;
+			assert.ok(room);
+			const entries = room.lookForAtArea(C.LOOK_ENERGY, 25, 25, 25, 25, true);
 			assert.strictEqual(entries.length, 1);
-			assert.ok(entries[0].energy instanceof Resource);
-			assert.strictEqual(entries[0].energy.resourceType, C.RESOURCE_POWER);
-			assert.strictEqual('resource' in entries[0], false);
+			const entry = entries[0];
+			assert.ok(entry);
+			assert.ok(entry.energy instanceof Resource);
+			assert.strictEqual(entry.energy.resourceType, C.RESOURCE_POWER);
+			assert.strictEqual('resource' in entry, false);
 		});
 	}));
 
 	test('lookAt emits both resource look entries', () => simulation(async ({ player }) => {
 		await player('100', Game => {
-			const entries = Game.rooms.W1N1.lookAt(25, 25)
+			const room = Game.rooms.W1N1;
+			assert.ok(room);
+			const entries = room.lookAt(25, 25)
 				.filter(entry => entry.type === C.LOOK_ENERGY || entry.type === C.LOOK_RESOURCES);
 			assert.strictEqual(entries.length, 2);
-			const energy = entries.find(entry => entry.type === C.LOOK_ENERGY)!;
-			const resource = entries.find(entry => entry.type === C.LOOK_RESOURCES)!;
-			assert.strictEqual(energy.energy, resource.resource);
-			assert.ok(energy.energy instanceof Resource);
-			assert.strictEqual(energy.energy.resourceType, C.RESOURCE_POWER);
+			const energyEntry = entries.find(entry => entry.type === C.LOOK_ENERGY);
+			const resourceEntry = entries.find(entry => entry.type === C.LOOK_RESOURCES);
+			assert.ok(energyEntry);
+			assert.ok(resourceEntry);
+			const energy = energyEntry.energy;
+			assert.ok(energy instanceof Resource);
+			assert.strictEqual(energy, resourceEntry.resource);
+			assert.strictEqual(energy.resourceType, C.RESOURCE_POWER);
 		});
 	}));
 });
