@@ -145,9 +145,7 @@ export class RedisProvider implements P.KeyValProvider {
 	}
 
 	async hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
-		const iterable = Symbol.iterator in fields
-			? fields as Iterable<[ string, Value ]> :
-			Object.entries(fields);
+		const iterable = Symbol.iterator in fields ? fields : Object.entries(fields);
 		await this.redis.invoke<number>(cb => this.redis.batch(key).hset(key, [ ...Fn.map(Fn.concat(iterable), recv) ], cb));
 	}
 

@@ -284,7 +284,7 @@ describe('Construction', () => {
 
 		test('creep repair emits EVENT_REPAIR with amount and energySpent', () => repairSim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const container = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_CONTAINER)[0]!;
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
 				assert.strictEqual(Game.creeps.fixer!.repair(container), C.OK);
 			});
 			await tick();
@@ -316,7 +316,7 @@ describe('Construction', () => {
 
 		test('dismantle to death emits EVENT_OBJECT_DESTROYED with structureType', () => dismantleKill(async ({ player, tick }) => {
 			await player('100', Game => {
-				const container = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_CONTAINER)[0]!;
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
 				assert.strictEqual(Game.creeps.dismantler!.dismantle(container), C.OK);
 			});
 			await tick();

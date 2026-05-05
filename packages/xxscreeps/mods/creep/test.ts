@@ -608,12 +608,12 @@ describe('Event log events', () => {
 		// Vanilla flips the roles on withdraw: source structure is `objectId`, creep is `targetId`.
 		test('withdraw flips objectId/targetId vs transfer', () => sim(async ({ player, tick }) => {
 			await player('100', Game => {
-				const container = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_CONTAINER)[0]!;
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
 				assert.strictEqual(Game.creeps.taker!.withdraw(container, C.RESOURCE_ENERGY, 7), C.OK);
 			});
 			await tick();
 			await player('100', Game => {
-				const container = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_CONTAINER)[0]!;
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
 				const log = Game.rooms.W1N1!.getEventLog();
 				const transfer = log.find(event => event.event === C.EVENT_TRANSFER);
 				assert.ok(transfer, 'expected EVENT_TRANSFER');

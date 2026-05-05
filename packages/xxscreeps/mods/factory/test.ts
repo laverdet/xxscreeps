@@ -15,7 +15,7 @@ function createFactoryWithResources(pos: RoomPosition, owner: string, resources:
 }
 
 function getFactory(game: { rooms: Record<string, Room> }) {
-	return lookForStructures(game.rooms.W1N1!, C.STRUCTURE_FACTORY)[0]!;
+	return lookForStructures(game.rooms.W1N1, C.STRUCTURE_FACTORY)[0]!;
 }
 
 describe('Factory', () => {

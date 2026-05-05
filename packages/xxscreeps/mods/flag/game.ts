@@ -97,7 +97,6 @@ export function createFlag(name: string, posInt: number | null, color: Color, se
 	// Run create / move / setColor intent
 	if (checkCreateFlag(flags, pos, name, color, secondaryColor) === C.OK) {
 		const flag = flags[name];
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
 		if (flag) {
 			// Modifying an existing flag
 			// nb: This branch will be taken in the case `Room#createFlag` is called since that function

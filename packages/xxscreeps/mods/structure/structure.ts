@@ -264,10 +264,14 @@ export function checkPlacement(room: Room, pos: RoomPosition) {
 	);
 }
 
-export function lookForStructures<Type extends string>(room: Room, structureType: Type) {
+export function lookForStructures<Type extends string>(room: Room | undefined, structureType: Type) {
 	type Object = Extract<AnyStructure, { structureType: Type }>;
-	return room.find(C.FIND_STRUCTURES).filter(
-		(structure): structure is Object => structure.structureType === structureType);
+	if (room) {
+		return room.find(C.FIND_STRUCTURES).filter(
+			(structure): structure is Object => structure.structureType === structureType);
+	} else {
+		return [];
+	}
 }
 
 export function lookForStructureAt<Type extends string>(room: Room, pos: RoomPosition, structureType: Type) {
