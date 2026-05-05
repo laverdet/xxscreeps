@@ -110,6 +110,88 @@ describe('Construction', () => {
 		});
 	}));
 
+	describe('creep intent precedence', () => {
+		const noEnergyWorker = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.CARRY ], 'worker', '100'));
+			},
+		});
+
+		test('REPAIR-010:not-enough-before-invalid-target', () => noEnergyWorker(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.creeps.worker!.repair(undefined as never), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		test('BUILD-011:not-enough-before-invalid-target', () => noEnergyWorker(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.creeps.worker!.build(undefined as never), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		const noEnergyOutOfRange = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.CARRY ], 'worker', '100'));
+				room['#insertObject'](createContainer(new RoomPosition(20, 20, 'W1N1')));
+				room['#insertObject'](createSite(new RoomPosition(20, 21, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road));
+			},
+		});
+
+		test('REPAIR-010:not-enough-before-range', () => noEnergyOutOfRange(async ({ player }) => {
+			await player('100', Game => {
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
+				assert.strictEqual(Game.creeps.worker!.repair(container), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		test('BUILD-011:not-enough-before-range', () => noEnergyOutOfRange(async ({ player }) => {
+			await player('100', Game => {
+				const site = Object.values(Game.constructionSites)[0]!;
+				assert.strictEqual(Game.creeps.worker!.build(site), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		const noEnergyBlockedTarget = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.CARRY ], 'builder', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(12, 10, 'W1N1'), [ C.MOVE ], 'blocker', '100'));
+				room['#insertObject'](createSite(new RoomPosition(12, 10, 'W1N1'), C.STRUCTURE_EXTENSION, '100', C.CONSTRUCTION_COST.extension));
+			},
+		});
+
+		test('BUILD-011:not-enough-before-blocked-target', () => noEnergyBlockedTarget(async ({ player }) => {
+			await player('100', Game => {
+				const site = Object.values(Game.constructionSites)[0]!;
+				assert.strictEqual(Game.creeps.builder!.build(site), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		const blockedTargetOutOfRange = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				const builder = createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.CARRY ], 'builder', '100');
+				builder.store['#add'](C.RESOURCE_ENERGY, 50);
+				room['#insertObject'](builder);
+				room['#insertObject'](createCreep(new RoomPosition(20, 20, 'W1N1'), [ C.MOVE ], 'blocker', '100'));
+				room['#insertObject'](createSite(new RoomPosition(20, 20, 'W1N1'), C.STRUCTURE_EXTENSION, '100', C.CONSTRUCTION_COST.extension));
+			},
+		});
+
+		test('BUILD-011:range-before-blocked-target', () => blockedTargetOutOfRange(async ({ player }) => {
+			await player('100', Game => {
+				const site = Object.values(Game.constructionSites)[0]!;
+				assert.strictEqual(Game.creeps.builder!.build(site), C.ERR_NOT_IN_RANGE);
+			});
+		}));
+	});
+
 	describe('stomping', () => {
 		const stomping = simulate({
 			W1N1: room => {
