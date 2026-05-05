@@ -1,5 +1,5 @@
 // Author: Marcel Laverdet <https://github.com/laverdet>
-#include <nan.h>
+#include "nan.h"
 #include <isolated_vm.h>
 #include <array>
 #include <memory>

@@ -25,7 +25,7 @@ jobs:
             platform: darwin
             triplet: aarch64-apple-darwin
           - runs-on: ubuntu-24.04-arm
-            container: debian:trixie
+            container: debian:sid
             triplet: aarch64-unknown-linux-gnu
           # x86_64
           - runs-on: ubuntu-24.04
@@ -38,7 +38,7 @@ jobs:
             platform: windows
             triplet: x86_64-pc-windows
           - runs-on: ubuntu-24.04
-            container: debian:trixie
+            container: debian:sid
             triplet: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.host.runs-on }}
     container: ${{ matrix.host.container }}
@@ -52,26 +52,18 @@ jobs:
       - if: matrix.host.container == 'alpine:3'
         shell: sh
         run: |
-          apk add cmake g++ make ninja-is-really-ninja nodejs npm python3
-          echo "CXX=g++" >> "$GITHUB_ENV"
-      - if: matrix.host.container == 'debian:trixie'
+          apk add clang21 clang21-extra-tools cmake ninja-is-really-ninja nodejs npm
+          echo "CXX=clang++-21" >> "$GITHUB_ENV"
+      - if: matrix.host.container == 'debian:sid'
         run: |
-          cat <<"EOF" > /etc/apt/sources.list.d/debian-backports.sources
-          Types: deb deb-src
-          URIs: http://deb.debian.org/debian
-          Suites: trixie-backports
-          Components: main
-          Enabled: yes
-          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-          EOF
           apt update
-          apt install -y clang-21 cmake ninja-build nodejs npm python3
+          apt install -y clang-21 cmake ninja-build nodejs npm
           echo "CXX=clang++-21" >> "$GITHUB_ENV"
       - if: matrix.host.platform == 'darwin'
         run: |
-          brew install cmake ninja
+          brew install cmake llvm ninja
           ln -s $(brew --prefix)/etc/clang ~/.config/clang
-          echo "CXX=clang++" >> "$GITHUB_ENV"
+          echo "CXX=$(brew --prefix llvm)/bin/clang++" >> "$GITHUB_ENV"
       - if: matrix.host.platform == 'windows'
         shell: bash
         run: |
@@ -86,14 +78,18 @@ jobs:
 
       # Setup repository
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
       - shell: sh
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: |
+          npm config set script-shell /bin/sh
+          npm install -g pnpm
+          pnpm install --frozen-lockfile --ignore-scripts
 
       # Build
       - shell: sh
         working-directory: packages/pathfinder
-        run: npx node-gyp rebuild --release --target=v24.15.0
+        run: |
+          npm run configure:dev
+          ninja -C build
 
       # Upload build artifacts
       - uses: actions/upload-artifact@v7
@@ -154,9 +150,10 @@ jobs:
 
       # Setup
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
       - shell: sh
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: |
+          npm install -g pnpm
+          pnpm install --frozen-lockfile --ignore-scripts
       - uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.host.triplet }}
@@ -189,9 +186,9 @@ jobs:
           # Modern npm version required for nested package OIDC & provenance. This version can be removed when that is
           # standard.
           node-version: 24
-      - uses: pnpm/action-setup@v6
       - shell: sh
         run: |
+          npm install -g pnpm
           pnpm install --frozen-lockfile --ignore-scripts
           pnpm run build
 

@@ -30,6 +30,7 @@
 	],
 	"files.exclude": {
 		".pnpm": true,
+		"**/.cache": true,
 		"**/dist": true,
 		"**/node_modules": true,
 	},
