@@ -2,6 +2,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { create as createResource } from 'xxscreeps/mods/resource/resource.js';
+import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { Creep, create } from './creep.js';
@@ -533,6 +534,80 @@ describe('Pickup', () => {
 		await player('100', Game => {
 			const pile = Game.rooms.W1N1!.find(C.FIND_DROPPED_RESOURCES)[0]!;
 			assert.strictEqual(Game.creeps.picker!.pickup(pile), C.ERR_FULL);
+		});
+	}));
+});
+
+describe('Withdraw validation precedence', () => {
+	const safeModeHostile = simulate({
+		W9N9: room => {
+			room['#level'] = 3;
+			room['#user'] = room.controller!['#user'] = '101';
+			room['#safeModeUntil'] = 100;
+
+			room['#insertObject'](create(new RoomPosition(25, 25, 'W9N9'), [ C.CARRY, C.MOVE ], 'invalidCapacity', '100'));
+			room['#insertObject'](createExtension(new RoomPosition(26, 25, 'W9N9'), 3, '100'));
+
+			room['#insertObject'](create(new RoomPosition(10, 10, 'W9N9'), [ C.CARRY, C.MOVE ], 'range', '100'));
+			const farContainer = createContainer(new RoomPosition(20, 20, 'W9N9'));
+			farContainer.store['#add'](C.RESOURCE_ENERGY, 50);
+			room['#insertObject'](farContainer);
+
+			const full = create(new RoomPosition(25, 30, 'W9N9'), [ C.CARRY, C.MOVE ], 'full', '100');
+			full.store['#add'](C.RESOURCE_ENERGY, C.CARRY_CAPACITY);
+			room['#insertObject'](full);
+			const fullContainer = createContainer(new RoomPosition(26, 30, 'W9N9'));
+			fullContainer.store['#add'](C.RESOURCE_ENERGY, 50);
+			room['#insertObject'](fullContainer);
+
+			const fullAmount = create(new RoomPosition(25, 32, 'W9N9'), [ C.CARRY, C.MOVE ], 'fullAmount', '100');
+			fullAmount.store['#add'](C.RESOURCE_ENERGY, C.CARRY_CAPACITY - 1);
+			room['#insertObject'](fullAmount);
+			const fullAmountContainer = createContainer(new RoomPosition(26, 32, 'W9N9'));
+			fullAmountContainer.store['#add'](C.RESOURCE_ENERGY, 50);
+			room['#insertObject'](fullAmountContainer);
+
+			room['#insertObject'](create(new RoomPosition(25, 34, 'W9N9'), [ C.CARRY, C.MOVE ], 'notEnough', '100'));
+			room['#insertObject'](createContainer(new RoomPosition(26, 34, 'W9N9')));
+		},
+	});
+
+	test('WITHDRAW-017:safemode-not-owner-before-invalid-capacity', () => safeModeHostile(async ({ player }) => {
+		await player('100', Game => {
+			const extension = lookForStructures(Game.rooms.W9N9, C.STRUCTURE_EXTENSION)[0]!;
+			assert.strictEqual(Game.creeps.invalidCapacity!.withdraw(extension, C.RESOURCE_HYDROGEN), C.ERR_NOT_OWNER);
+		});
+	}));
+
+	test('WITHDRAW-017:safemode-not-owner-before-range', () => safeModeHostile(async ({ player }) => {
+		await player('100', Game => {
+			const container = lookForStructures(Game.rooms.W9N9, C.STRUCTURE_CONTAINER)
+				.find(container => container.pos.isEqualTo(20, 20))!;
+			assert.strictEqual(Game.creeps.range!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_NOT_OWNER);
+		});
+	}));
+
+	test('WITHDRAW-017:safemode-not-owner-before-full', () => safeModeHostile(async ({ player }) => {
+		await player('100', Game => {
+			const container = lookForStructures(Game.rooms.W9N9, C.STRUCTURE_CONTAINER)
+				.find(container => container.pos.isEqualTo(26, 30))!;
+			assert.strictEqual(Game.creeps.full!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_NOT_OWNER);
+		});
+	}));
+
+	test('WITHDRAW-017:safemode-not-owner-before-full-amount', () => safeModeHostile(async ({ player }) => {
+		await player('100', Game => {
+			const container = lookForStructures(Game.rooms.W9N9, C.STRUCTURE_CONTAINER)
+				.find(container => container.pos.isEqualTo(26, 32))!;
+			assert.strictEqual(Game.creeps.fullAmount!.withdraw(container, C.RESOURCE_ENERGY, 2), C.ERR_NOT_OWNER);
+		});
+	}));
+
+	test('WITHDRAW-017:safemode-not-owner-before-not-enough', () => safeModeHostile(async ({ player }) => {
+		await player('100', Game => {
+			const container = lookForStructures(Game.rooms.W9N9, C.STRUCTURE_CONTAINER)
+				.find(container => container.pos.isEqualTo(26, 34))!;
+			assert.strictEqual(Game.creeps.notEnough!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_NOT_OWNER);
 		});
 	}));
 });
