@@ -1,7 +1,8 @@
+import type { Shard } from 'xxscreeps/engine/db/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { dispatchQueuedNotifications } from './driver.js';
-import { getNotifications } from './model.js';
 import { flush } from './notifications.js';
 
 const user = '100';
@@ -10,8 +11,32 @@ const empty = simulate({
 	W0N0: () => {},
 });
 
+interface NotificationRow {
+	user: string;
+	message: string;
+	date: number;
+	count: number;
+	type: 'msg' | 'error';
+}
+
+function getNotifications(shard: Shard, userId: string): Promise<NotificationRow[]> {
+	return shard.data.smembers(`user/${userId}/notifications`).then(ids =>
+		Fn.mapAwait(ids, async id => {
+			const fields = await shard.data.hgetall(`user/${userId}/notifications/${id}`);
+			const type = fields.type;
+			assert.ok(type === 'msg' || type === 'error');
+			return {
+				user: userId,
+				message: fields.message,
+				date: Number(fields.date),
+				count: Number(fields.count),
+				type,
+			};
+		}));
+}
+
 // Disposable clock override. Patches `Date.now` for the lifetime of the binding so callers can
-// `using _ = withFrozenTime(now)` and have it restored on scope exit. Tests in a single describe
+// `using frozen = withFrozenTime(now)` and have it restored on scope exit. Tests in a single describe
 // block run serially; concurrent uses would clobber each other's restore.
 function withFrozenTime(now: number): Disposable {
 	const original = Date.now;
@@ -80,7 +105,7 @@ describe('Game.notify', () => {
 
 	test('groupInterval=1 coalesces same-message calls in the bucket window', () => empty(async ({ player, shard }) => {
 		flush();
-		using _frozen = withFrozenTime(1_000_000);
+		using frozen = withFrozenTime(1_000_000);
 		await player(user, Game => {
 			Game.notify('hi', 1);
 			Game.notify('hi', 1);
@@ -108,7 +133,7 @@ describe('Game.notify', () => {
 
 	test('groupInterval clamp ([0, 1440]) reflected in bucket placement', () => empty(async ({ player, shard }) => {
 		flush();
-		using _frozen = withFrozenTime(1_000_000);
+		using frozen = withFrozenTime(1_000_000);
 		await player(user, Game => {
 			Game.notify('low', -5);
 			Game.notify('high', 5000);
@@ -126,7 +151,7 @@ describe('Game.notify', () => {
 		}
 	}));
 
-	test('message coercion via `${i.message}`', () => empty(async ({ player, shard }) => {
+	test('message coercion via template string', () => empty(async ({ player, shard }) => {
 		flush();
 		await player(user, Game => {
 			Game.notify(null as unknown as string);
@@ -141,7 +166,7 @@ describe('Game.notify', () => {
 
 	test('no-args Game.notify() stores "undefined" with current-date', () => empty(async ({ player, shard }) => {
 		flush();
-		using _frozen = withFrozenTime(1_234_567);
+		using frozen = withFrozenTime(1_234_567);
 		await player(user, Game => {
 			assert.strictEqual((Game.notify as unknown as () => number)(), C.OK);
 		});
@@ -156,7 +181,7 @@ describe('Game.notify', () => {
 
 	test('non-numeric groupInterval falls through to current-date', () => empty(async ({ player, shard }) => {
 		flush();
-		using _frozen = withFrozenTime(1_234_567);
+		using frozen = withFrozenTime(1_234_567);
 		await player(user, Game => {
 			Game.notify('strInterval', 'abc' as unknown as number);
 			Game.notify('nanInterval', NaN);

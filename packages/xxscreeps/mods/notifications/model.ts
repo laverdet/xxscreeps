@@ -1,36 +1,13 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { createHash } from 'node:crypto';
-import { Fn } from 'xxscreeps/functional/fn.js';
 
 export type NotificationType = 'msg' | 'error';
-
-export type NotificationRow = {
-	user: string;
-	message: string;
-	date: number;
-	count: number;
-	type: NotificationType;
-};
 
 const userIndexKey = (userId: string) => `user/${userId}/notifications`;
 const rowKey = (userId: string, rowId: string) => `user/${userId}/notifications/${rowId}`;
 
 function rowIdFor(type: NotificationType, timeGroup: number, message: string) {
 	return createHash('sha1').update(`${type}${timeGroup}${message}`).digest('hex');
-}
-
-export function getNotifications(shard: Shard, userId: string): Promise<NotificationRow[]> {
-	return shard.data.smembers(userIndexKey(userId)).then(ids =>
-		Fn.mapAwait(ids, async id => {
-			const fields = await shard.data.hgetall(rowKey(userId, id));
-			return {
-				user: userId,
-				message: fields.message,
-				date: Number(fields.date),
-				count: Number(fields.count),
-				type: fields.type as NotificationType,
-			};
-		}));
 }
 
 /**
