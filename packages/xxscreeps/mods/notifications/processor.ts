@@ -47,6 +47,4 @@ async function drainAndDeliver(shard: Shard) {
 	await Fn.mapAwait(userIds, userId => drainUser(shard, userId));
 }
 
-registerShardTickProcessor(everyNTicks(10, (shard, ctx) => {
-	ctx.task(drainAndDeliver(shard));
-}));
+registerShardTickProcessor(everyNTicks(10, shard => drainAndDeliver(shard)));

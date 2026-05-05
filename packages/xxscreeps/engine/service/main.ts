@@ -105,8 +105,7 @@ async function tick() {
 				break;
 
 			case 'tickFinished': {
-				// Run shard-level tick processors (and drain any tasks they queue) before
-				// snapshotting the next tick's room queue.
+				// Run shard-level tick processors before snapshotting the next tick's room queue.
 				await runShardTickProcessors(shard, time);
 				await begetRoomProcessQueue(shard, time + 1, time, true);
 
