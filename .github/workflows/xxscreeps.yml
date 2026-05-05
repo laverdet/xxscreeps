@@ -1,25 +1,34 @@
-name: Release
+name: Test
 
 on:
   push:
     branches: [ main ]
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+  pull_request:
 
 jobs:
-  release:
+  build-test-release:
+    name: Build, Test, Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
       pull-requests: write
     steps:
+      # Setup
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v6
         with:
           node-version: 24
       - uses: pnpm/action-setup@v6
+        with:
+          cache: true
+
+      # Build & test
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
+      - run: pnpm run test
+
+      # Publish
       - uses: changesets/action@v1
         with:
           createGithubReleases: false

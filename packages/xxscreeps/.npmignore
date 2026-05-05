@@ -1,6 +1,7 @@
 **/test.js
 **/test.js.map
 **/test.ts
+dist/driver/.cache
 dist/shard.json
 dist/tsconfig.tsbuildinfo
 shard.json
