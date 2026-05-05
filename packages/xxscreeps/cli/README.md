@@ -11,7 +11,7 @@ Interactive REPL backed by `node:repl`. Bare `xxscreeps` (no subcommand) is an a
 - Variables persist across turns: `var x = 1; x` then `x + 1` works.
 - Top-level `await` works at the prompt.
 - Multi-line input is recoverable: typing `if (x) {` reprompts until the block closes.
-- `node:repl` meta-commands are intact: `.help`, `.exit`, `.load`, `.save`.
+- `node:repl` defaults are unchanged — meta-commands (`.help`, `.exit`, `.load`, `.save`, `.editor`, `.clear`) work as in plain `node`.
 
 ### `xxscreeps eval`
 
@@ -40,7 +40,7 @@ interface EvalEnvelope {
 }
 ```
 
-Same exit codes as plain mode. Nothing is written to stderr in JSON mode.
+Same exit codes as plain mode. Only the script-stage outcome is wrapped in the envelope; host-side failures (argparse usage errors, unreadable `--file`, stdin read errors) print plain-text messages to stderr and exit non-zero without emitting JSON.
 
 ## Curated context
 
@@ -49,7 +49,7 @@ Exposed to evaluated code:
 - Standard JS built-ins (`Math`, `JSON`, `Promise`, `Date`, `Map`, `Set`, `Symbol`, `RegExp`, `Array`, `Object`, …) — fresh per realm via `vm.createContext`.
 - Web APIs: `URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`.
 - Timers: `setTimeout`, `setInterval`, `clearTimeout`, `clearInterval`, `queueMicrotask`, `setImmediate`, `clearImmediate`.
-- `console`, routed per mode.
+- A minimal `console` with `log`, `info`, `warn`, and `error` only (no `debug`, `dir`, `table`, `time`, `trace`, etc.), routed per mode.
 - `argv: string[]` (eval only) populated from trailing positionals.
 
 Intentionally absent: `process`, `require`, dynamic `import()`, `Buffer`, `__dirname`, `__filename`, and any engine state (`Game`, `Memory`, `shard`, `db`). A live-mode bridge exposing engine state from a running server is a planned follow-up.
