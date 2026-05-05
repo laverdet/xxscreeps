@@ -107,8 +107,9 @@ function checkRecipeLevel(factory: StructureFactory, recipe: CommodityRecipe) {
 	}
 }
 
-// Validation order matches lab's checkRunReaction (ownership, cooldown, isActive, then recipe-dependent checks)
+// Validation order: ownership, cooldown, recipe checks, then RCL gate.
 export function checkProduce(factory: StructureFactory, resourceType: ResourceType) {
+	let recipe: CommodityRecipe | undefined;
 	return chainIntentChecks(
 		() => checkMyStructure(factory, StructureFactory),
 		() => {
@@ -116,15 +117,20 @@ export function checkProduce(factory: StructureFactory, resourceType: ResourceTy
 				return C.ERR_TIRED;
 			}
 		},
-		() => checkIsActive(factory),
 		() => {
-			const recipe = getCommodityRecipe(resourceType);
+			recipe = getCommodityRecipe(resourceType);
 			if (recipe === undefined) {
 				return C.ERR_INVALID_ARGS;
 			}
 			const levelCheck = checkRecipeLevel(factory, recipe);
 			if (levelCheck !== undefined) {
 				return levelCheck;
+			}
+		},
+		() => checkIsActive(factory),
+		() => {
+			if (recipe === undefined) {
+				return C.ERR_INVALID_ARGS;
 			}
 			let componentsTotal = 0;
 			for (const [ component, amount ] of Object.entries(recipe.components)) {
