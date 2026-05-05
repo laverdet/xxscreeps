@@ -51,7 +51,7 @@ hooks.register('route', {
 		const result = runOneShot(context.backend.world, room, context.shard.time, userId,
 			() => checkCreateConstructionSite(room, pos, structureType as ConstructibleStructureType, name));
 		if (result === C.OK) {
-			return pushIntentsForRoomNextTick(context.shard, roomName, userId, {
+			await pushIntentsForRoomNextTick(context.shard, roomName, userId, {
 				local: {
 					createConstructionSite: [
 						[ structureType, pos.x, pos.y, name ],
@@ -59,7 +59,12 @@ hooks.register('route', {
 				},
 				object: {},
 			});
+			// nb: Screeps actually just inserts this object directly into the database from the backend,
+			// so it can give the client an id immediately. Instead, we return an error and rely on the
+			// socket to show the construction site on tick.
+			return { error: 'actually, it was fine' };
+		} else {
+			return { error: 'invalid' };
 		}
-		return { ok: 1 };
 	}),
 });
