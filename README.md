@@ -121,6 +121,16 @@ schema](src/config/config.ts).
 
 If you want to use your bot script, use `npx xxscreeps import --overwrite-code ../your-bot/dist` to replace builtin bots.
 
+## Operator CLI
+
+`xxscreeps cli` opens an interactive JavaScript REPL inside a curated `node:vm`
+context, and `xxscreeps eval` runs one-shot scripts with `-e`, `--file`, or
+`--stdin`, plus an optional `--json` envelope mode for tooling. The curated
+context exposes standard JS built-ins, common web APIs, timers, and a routed
+`console` — but not `process`, `require`, dynamic `import()`, or `Buffer`. See
+[packages/xxscreeps/cli/README.md](packages/xxscreeps/cli/README.md) for flags
+and the JSON envelope schema.
+
 ## Docker
 
 If you want to install xxscreeps via docker you can use the following `docker-compose.yaml` as an
