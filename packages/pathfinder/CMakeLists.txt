@@ -1,4 +1,4 @@
-# CXX=/opt/homebrew/Cellar/llvm/22.1.0/bin/clang++ npm run configure:dev; ninja -C build
+# CXX=/opt/homebrew/Cellar/llvm/22.1.0/bin/clang++ npm run configure:dev && ninja -C build
 cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
 project(pathfinder LANGUAGES CXX)
 
@@ -14,6 +14,7 @@ add_compile_options(
 )
 
 # compilation settings
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET "13.3")

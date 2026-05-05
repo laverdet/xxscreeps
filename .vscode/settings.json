@@ -1,4 +1,10 @@
 {
+	"[cpp]": {
+		"editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+	},
+	"clangd.arguments": [
+		"--compile-commands-dir=packages/pathfinder/build",
+	],
 	"editor.rulers": [
 		// Comments wrap to 100
 		{ "column": 100, "color": "#0000" },
@@ -28,6 +34,10 @@
 		"javascript",
 		"typescript",
 	],
+	"files.associations": {
+		".clang-format": "yaml",
+		".clang-tidy": "yaml",
+	},
 	"files.exclude": {
 		".pnpm": true,
 		"**/.cache": true,
