@@ -1,14 +1,26 @@
-import { hooks } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
+
+interface LeaderboardFindRequest {
+	season?: string | null;
+}
+
+const leaderboardFindSchema: JSONSchemaType<LeaderboardFindRequest> = {
+	type: 'object',
+	properties: {
+		season: { type: 'string', nullable: true },
+	},
+};
 
 hooks.register('route', {
 	path: '/api/leaderboard/find',
-	execute(context) {
-		if (context.query.season) {
+	execute: makeValidatedQueryRoute(leaderboardFindSchema, context => {
+		if (context.request.query.season === undefined) {
 			return { error: 'Result not found' };
 		} else {
 			return { ok: 1, list: [] };
 		}
-	},
+	}),
 });
 
 hooks.register('route', {

@@ -23,12 +23,6 @@ const shape = () => struct(RoomObject.format, {
 });
 
 export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) {
-
-	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2);
-		if (typeof idOrArg1 === 'string') assign<ConstructionSite>(this, RoomObject.getById(ConstructionSite, idOrArg1));
-	}
-
 	@enumerable override get my() { return this['#user'] === me; }
 	@enumerable get owner() { return userInfo.get(this['#user']); }
 	override get '#lookType'() { return C.LOOK_CONSTRUCTION_SITES; }

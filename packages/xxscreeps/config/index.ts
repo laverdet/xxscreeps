@@ -1,7 +1,7 @@
 import type { Schema } from './config.js';
 import * as fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import Ajv from 'ajv';
+import { Ajv } from 'ajv';
 import Config from 'xxscreeps/config/mods/import/config.js';
 import { isTopThread } from 'xxscreeps/engine/service/index.js';
 import { merge } from 'xxscreeps/utility/utility.js';
@@ -18,7 +18,7 @@ if (isTopThread) {
 	}();
 	if (schema) {
 		const ajv = new Ajv();
-		if (ajv.validate(schema, data) !== true) {
+		if (!ajv.validate(schema, data)) {
 			throw new Error(`\`${fileURLToPath(configPath)}\`: ${ajv.errorsText()}`);
 		}
 	} else {

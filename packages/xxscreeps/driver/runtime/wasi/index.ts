@@ -12,17 +12,17 @@ function readUTF8(buffers: Uint8Array[]) {
 	let str = '';
 	for (const buffer of buffers) {
 		for (let ii = 0; ii < buffer.length;) {
-			let u0 = buffer[ii++];
+			let u0 = buffer[ii++]!;
 			if (u0 & 0x80) {
-				const u1 = buffer[ii++] & 63;
+				const u1 = buffer[ii++]! & 63;
 				if ((u0 & 0xe0) === 0xc0) {
 					str += String.fromCharCode(((u0 & 31) << 6) | u1);
 				} else {
-					const u2 = buffer[ii++] & 63;
+					const u2 = buffer[ii++]! & 63;
 					if ((u0 & 0xf0) === 0xe0) {
 						u0 = ((u0 & 15) << 12) | (u1 << 6) | u2;
 					} else if ((u0 & 0xf8) === 0xf0) {
-						u0 = ((u0 & 7) << 18) | (u1 << 12) | (u2 << 6) | (buffer[ii++] & 63);
+						u0 = ((u0 & 7) << 18) | (u1 << 12) | (u2 << 6) | (buffer[ii++]! & 63);
 					} else {
 						// Replacement character, invalid UTF-8
 						u0 = 0xfffd;
@@ -201,24 +201,25 @@ export class WASI {
 		for (let ii = 0; ii < iovs; ++ii) {
 			// Read iovector
 			const iovN = (iov >>> 2) + (ii << 1);
-			const size = this.#i32[iovN + 1];
+			const size = this.#i32[iovN + 1]!;
 			totalSize += size;
-			let addr = this.#i32[iovN];
+			let addr = this.#i32[iovN]!;
 			const end = addr + size;
 
 			// Check for newlines
+			const file = this.#output[fd]!;
 			for (let ii = addr; ii < end; ++ii) {
 				if (this.#u8[ii] === 0x0a) {
-					this.#output[fd].push(this.#u8.subarray(addr, ii));
+					file.push(this.#u8.subarray(addr, ii));
 					addr = ii + 1;
-					const string = readUTF8(this.#output[fd].splice(0));
+					const string = readUTF8(file.splice(0));
 					(fd === 1 ? console.log : console.error)(string);
 				}
 			}
 
 			// Save remaining buffer
 			if (addr !== end) {
-				this.#output[fd].push(new Uint8Array(this.#u8.subarray(addr, end)));
+				file.push(new Uint8Array(this.#u8.subarray(addr, end)));
 			}
 		}
 		this.#i32[size >>> 2] = totalSize;

@@ -8,7 +8,9 @@
     "./*": "./dist/*"
   },
   "dependencies": {
-    "jszip": "^3.6.0"
+    "@types/winreg": "^1.2.36",
+    "jszip": "^3.6.0",
+    "winreg": "^1.2.5"
   },
   "devDependencies": {
     "@types/jszip": "^3.4.1",

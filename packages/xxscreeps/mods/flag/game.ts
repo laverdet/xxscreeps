@@ -36,7 +36,7 @@ declare module 'xxscreeps/game/runtime.js' {
 	interface Global { Flag: typeof Flag }
 }
 registerGlobal(Flag);
-let flags: TypeOf<typeof schema> = Object.create(null);
+let flags = Object.create(null) as TypeOf<typeof schema>;
 
 // Update user flag blob
 hooks.register('runtimeConnector', {
@@ -76,8 +76,7 @@ hooks.register('gameInitializer', (Game, data) => {
 		Game.flags = flags;
 		const rooms = new Set<Room>();
 		for (const flag of Object.values(flags)) {
-			const room: Room = Game.rooms[flag.pos.roomName];
-
+			const room = Game.rooms[flag.pos.roomName];
 			if (room) {
 				room['#insertObject'](flag);
 				rooms.add(room);
@@ -94,11 +93,11 @@ hooks.register('gameInitializer', (Game, data) => {
 // This flag mock-processor runs in the runner sandbox and simply sends back a blob if the flags have changed
 let didUpdateFlags = false;
 export function createFlag(name: string, posInt: number | null, color: Color, secondaryColor: Color) {
-	const pos = posInt ? RoomPosition['#create'](posInt) : undefined;
+	const pos = posInt === null ? undefined : RoomPosition['#create'](posInt);
 	// Run create / move / setColor intent
 	if (checkCreateFlag(flags, pos, name, color, secondaryColor) === C.OK) {
 		const flag = flags[name];
-
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
 		if (flag) {
 			// Modifying an existing flag
 			// nb: This branch will be taken in the case `Room#createFlag` is called since that function

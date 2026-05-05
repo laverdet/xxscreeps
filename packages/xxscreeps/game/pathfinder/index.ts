@@ -26,7 +26,7 @@ export type SearchOptions = CommonSearchOptions & {
 };
 
 export type RoomSearchOptions = CommonSearchOptions & {
-	costCallback?: (roomName: string, costMatrix: CostMatrix) => CostMatrix | undefined | void;
+	costCallback?: (roomName: string, costMatrix: CostMatrix) => CostMatrix | undefined;
 	ignoreCreeps?: boolean;
 	ignoreDestructibleStructures?: boolean;
 	ignoreRoads?: boolean;
@@ -59,7 +59,6 @@ export function roomSearch(origin: RoomPosition, goals: RoomPosition[], options:
 			const costMatrix = getOrSet(cachedCostMatrices, `${roomName}:${costMatrixKey}`, () => {
 				// Return early if there's no access to this room
 				const room = Game.rooms[roomName];
-
 				if (!room) {
 					return;
 				}

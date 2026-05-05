@@ -1,69 +1,70 @@
 import type { Endpoint } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
-import * as C from 'xxscreeps/game/constants/index.js';
-import { runOneShot } from 'xxscreeps/game/index.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
-import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';
 
-const AddObjectIntentEndpoint: Endpoint = {
-	path: '/api/game/add-object-intent',
-	method: 'post',
+interface IntentRequest {
+	id: string;
+}
 
-	async execute(context) {
-		const { userId } = context.state;
-		if (userId === undefined) {
-			return;
-		}
-		interface Body {
-			room: unknown;
-			name: unknown;
-			intent: unknown;
-		}
-		const { room, name, intent } = context.request.body as Body;
-		const { id } = Array.isArray(intent) ? intent[0] : intent;
-		if (typeof room !== 'string' || typeof name !== 'string' || typeof id !== 'string') {
-			throw new TypeError('Invalid parameters');
-		}
-		const realIntentName = {
-			removeConstructionSite: 'remove',
-		}[name] ?? name;
-		await pushIntentsForRoomNextTick(context.shard, room, userId, {
-			local: {},
-			object: {
-				[id]: { [realIntentName]: [] },
-			},
-		});
-		return { ok: 1 };
+const intentSchema: JSONSchemaType<IntentRequest> = {
+	type: 'object',
+	properties: {
+		id: { type: 'string' },
 	},
+	required: [ 'id' ],
 };
 
-const CreateConstructionIntentEndpoint: Endpoint = {
-	path: '/api/game/create-construction',
-	method: 'post',
+interface AddObjectIntentRequest {
+	room: string;
+	name: string;
+	intent: IntentRequest | IntentRequest[];
+}
 
-	async execute(context) {
+const addObjectIntentSchema: JSONSchemaType<AddObjectIntentRequest> = {
+	type: 'object',
+	properties: {
+		room: { type: 'string' },
+		name: { type: 'string' },
+		intent: {
+			anyOf: [
+				{
+					type: 'array',
+					items: intentSchema,
+					minItems: 1,
+				},
+				intentSchema,
+			],
+		},
+	},
+	required: [ 'room', 'name', 'intent' ],
+};
+
+const AddObjectIntentEndpoint: Endpoint = {
+	method: 'post',
+	path: '/api/game/add-object-intent',
+
+	execute: makeValidatedPayloadRoute(addObjectIntentSchema, async context => {
 		const { userId } = context.state;
 		if (userId === undefined) {
 			return;
 		}
-		const { name, room: roomName, x, y, structureType } = context.request.body;
-		const pos = new RoomPosition(x, y, roomName);
-		const room = await context.shard.loadRoom(pos.roomName);
-		const result = runOneShot(context.backend.world, room, context.shard.time, userId,
-			() => checkCreateConstructionSite(room, pos, structureType, name));
-		if (result === C.OK) {
-			return pushIntentsForRoomNextTick(context.shard, roomName, userId, {
-				local: {
-					createConstructionSite: [
-						[ structureType, pos.x, pos.y, name ],
-					],
+		const { room, name, intent } = context.request.body;
+		for (const oneIntent of Array.isArray(intent) ? intent : [ intent ]) {
+			const { id } = oneIntent;
+			const realIntentName = {
+				removeConstructionSite: 'remove',
+			}[name] ?? name;
+			await pushIntentsForRoomNextTick(context.shard, room, userId, {
+				local: {},
+				object: {
+					[id]: { [realIntentName]: [] },
 				},
-				object: {},
 			});
 		}
 		return { ok: 1 };
-	},
+	}),
 };
 
-const endpoints = [ AddObjectIntentEndpoint, CreateConstructionIntentEndpoint ];
+const endpoints = [ AddObjectIntentEndpoint ];
 export default endpoints;

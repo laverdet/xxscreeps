@@ -95,7 +95,7 @@ describe('Game.notify', () => {
 		await dispatchQueuedNotifications(shard, user, flush());
 		const rows = await getNotifications(shard, user);
 		assert.strictEqual(rows.length, 1);
-		const row = rows[0];
+		const row = rows[0]!;
 		assert.strictEqual(row.user, user);
 		assert.strictEqual(row.message, 'hi');
 		assert.strictEqual(typeof row.date, 'number');
@@ -113,10 +113,10 @@ describe('Game.notify', () => {
 		await dispatchQueuedNotifications(shard, user, flush());
 		const rows = await getNotifications(shard, user);
 		assert.strictEqual(rows.length, 1, 'same-bucket calls collapse to one row');
-		assert.strictEqual(rows[0].message, 'hi');
-		assert.strictEqual(rows[0].count, 2);
+		assert.strictEqual(rows[0]!.message, 'hi');
+		assert.strictEqual(rows[0]!.count, 2);
 		// Stored `date` is the actual write time, not the bucket boundary.
-		assert.strictEqual(rows[0].date, 1_000_000);
+		assert.strictEqual(rows[0]!.date, 1_000_000);
 	}));
 
 	test('600-char message stored as 500 chars', () => empty(async ({ player, shard }) => {
@@ -127,8 +127,8 @@ describe('Game.notify', () => {
 		await dispatchQueuedNotifications(shard, user, flush());
 		const rows = await getNotifications(shard, user);
 		assert.strictEqual(rows.length, 1);
-		assert.strictEqual(rows[0].message.length, 500);
-		assert.strictEqual(rows[0].message, 'a'.repeat(500));
+		assert.strictEqual(rows[0]!.message.length, 500);
+		assert.strictEqual(rows[0]!.message, 'a'.repeat(500));
 	}));
 
 	test('groupInterval clamp ([0, 1440]) reflected in bucket placement', () => empty(async ({ player, shard }) => {
@@ -173,10 +173,10 @@ describe('Game.notify', () => {
 		await dispatchQueuedNotifications(shard, user, flush());
 		const rows = await getNotifications(shard, user);
 		assert.strictEqual(rows.length, 1);
-		assert.strictEqual(rows[0].message, 'undefined');
-		assert.strictEqual(rows[0].date, 1_234_567);
-		assert.strictEqual(rows[0].count, 1);
-		assert.strictEqual(rows[0].type, 'msg');
+		assert.strictEqual(rows[0]!.message, 'undefined');
+		assert.strictEqual(rows[0]!.date, 1_234_567);
+		assert.strictEqual(rows[0]!.count, 1);
+		assert.strictEqual(rows[0]!.type, 'msg');
 	}));
 
 	test('non-numeric groupInterval falls through to current-date', () => empty(async ({ player, shard }) => {

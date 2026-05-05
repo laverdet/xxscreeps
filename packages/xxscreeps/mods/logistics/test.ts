@@ -19,21 +19,21 @@ describe('Link', () => {
 	// Vanilla emits the pre-loss amount; LINK_LOSS_RATIO is applied to receiver only.
 	test('transferEnergy emits EVENT_TRANSFER with the pre-loss amount', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const [ sender, receiver ] = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LINK);
-			assert.strictEqual(sender.transferEnergy(receiver, 400), C.OK);
+			const [ sender, receiver ] = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LINK);
+			assert.strictEqual(sender!.transferEnergy(receiver!, 400), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
-			const [ sender, receiver ] = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LINK);
-			const log = Game.rooms.W1N1.getEventLog();
+			const [ sender, receiver ] = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_LINK);
+			const log = Game.rooms.W1N1!.getEventLog();
 			const transfer = log.find(event => event.event === C.EVENT_TRANSFER);
 			assert.ok(transfer, 'expected EVENT_TRANSFER from link transfer');
-			assert.strictEqual(transfer.objectId, sender.id);
+			assert.strictEqual(transfer.objectId, sender!.id);
 			assert.ok(transfer.data, 'expected nested data payload');
-			assert.strictEqual(transfer.data.targetId, receiver.id);
+			assert.strictEqual(transfer.data.targetId, receiver!.id);
 			assert.strictEqual(transfer.data.resourceType, C.RESOURCE_ENERGY);
 			assert.strictEqual(transfer.data.amount, 400);
-			assert.strictEqual(receiver.store[C.RESOURCE_ENERGY], Math.floor(400 * (1 - C.LINK_LOSS_RATIO)));
+			assert.strictEqual(receiver!.store[C.RESOURCE_ENERGY], Math.floor(400 * (1 - C.LINK_LOSS_RATIO)));
 		});
 	}));
 });

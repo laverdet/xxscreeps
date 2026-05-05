@@ -190,7 +190,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 
 				// Save intent
 				const energyStructureIds = options.energyStructures?.map(structure => structure.id) ?? null;
-				intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
+				intents.save(this, 'spawn', body, name, energyStructureIds, directions);
 
 				// Fake creep
 				const creep = createCreep(this.pos, body, name, this['#user']!);
@@ -213,15 +213,14 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 
 function hasSpawn(userGame: GameConstructor, name: string) {
 	return Boolean(
-
-		userGame.spawns[name] ||
+		userGame.spawns[name] ??
 		Object.values(userGame.constructionSites).some(site => site.name === name));
 }
 
 registerBuildableStructure(C.STRUCTURE_SPAWN, {
 	obstacle: true,
 	checkName(room, name) {
-		if (name) {
+		if (name != null) {
 			if (checkString(name, 100, true) !== C.OK) {
 				return null;
 			}
@@ -373,9 +372,9 @@ const names = [
 function getUniqueName(exists: (name: string) => boolean) {
 	let ii = 0;
 	do {
-		let name = names[Math.floor(Math.random() * names.length)];
+		let name = names[Math.floor(Math.random() * names.length)]!;
 		if (++ii > 4) {
-			name += names[Math.floor(Math.random() * names.length)];
+			name += names[Math.floor(Math.random() * names.length)]!;
 		}
 		if (!exists(name)) {
 			return name;

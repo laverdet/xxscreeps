@@ -2,6 +2,7 @@ import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { build } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
+import { WithShapeAndType } from 'xxscreeps/schema/format.js';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
@@ -61,7 +62,7 @@ const rectSchema = struct({
 export type PolyStyle = Partial<TypeOf<typeof polySchema>['s']>;
 const polySchema = struct({
 	...variant('p'),
-	points: vector(array(2, 'double')),
+	points: vector(array(2, 'double') as WithShapeAndType<[ number, number ]>),
 	s: struct({
 		...line,
 		...stroke,

@@ -44,7 +44,7 @@ registerStorageProvider('local', 'pubsub', async url => {
 				if (providersByName.has(id)) {
 					throw new Error(`Pubsub: ${id} already exists`);
 				}
-				providersByName.set(id, undefined as never);
+				providersByName.set(id, undefined);
 				const instance = await LocalPubSubProviderParent.create(url);
 				const info = { instance, refs: 0 };
 				providersByName.set(id, info);

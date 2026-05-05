@@ -22,7 +22,7 @@ describe('Observer', () => {
 
 	test('observer_visibility', () => simulation(async ({ player, tick, poke }) => {
 		await player('100', Game => {
-			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
+			const observer = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_OBSERVER)[0]!;
 			const result = observer.observeRoom('W2N2');
 			assert.strictEqual(result, C.OK, 'observeRoom return value should be OK');
 			assert.strictEqual(Game.rooms.W2N2, undefined, 'room should not be visible');
@@ -51,15 +51,23 @@ describe('Observer', () => {
 
 	test('observer_illegal_arg', () => simulation(async ({ player }) => {
 		await player('100', Game => {
-			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
+			const observer = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_OBSERVER)[0]!;
 			const result = observer.observeRoom('INVALID');
 			assert.strictEqual(result, C.ERR_INVALID_ARGS, 'observeRoom return value should be ERR_INVALID_ARGS');
 		});
 	}));
 
+	test('observer_illegal_arg_before_min_level', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const observer = lookForStructures(Game.rooms.W1N2, C.STRUCTURE_OBSERVER)[0];
+			const result = observer.observeRoom('not_a_room');
+			assert.strictEqual(result, C.ERR_INVALID_ARGS, 'observeRoom should validate roomName before observer RCL');
+		});
+	}));
+
 	test('observer_range', () => simulation(async ({ player }) => {
 		await player('100', Game => {
-			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
+			const observer = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_OBSERVER)[0]!;
 			// W12N1 exists in the world (distance 11 from W1N1) but exceeds OBSERVER_RANGE (10)
 			const result = observer.observeRoom('W12N1');
 			assert.strictEqual(result, C.ERR_NOT_IN_RANGE, 'observeRoom return value should be ERR_NOT_IN_RANGE');
@@ -68,7 +76,7 @@ describe('Observer', () => {
 
 	test('observer_min_level', () => simulation(async ({ player }) => {
 		await player('100', Game => {
-			const observer = lookForStructures(Game.rooms.W1N2, C.STRUCTURE_OBSERVER)[0];
+			const observer = lookForStructures(Game.rooms.W1N2!, C.STRUCTURE_OBSERVER)[0]!;
 			const result = observer.observeRoom('W2N2');
 			assert.strictEqual(result, C.ERR_RCL_NOT_ENOUGH, 'observeRoom return value should be ERR_RCL_NOT_ENOUGH');
 		});
@@ -76,10 +84,10 @@ describe('Observer', () => {
 
 	test('observer_nonexistent_room', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {
-			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
+			const observer = lookForStructures(Game.rooms.W1N1!, C.STRUCTURE_OBSERVER)[0]!;
 			// W1N11 is within observer range but does not exist in the world
 			const result = observer.observeRoom('W1N11');
-			assert.strictEqual(result, C.ERR_NOT_IN_RANGE, 'observeRoom to non-existent room should be ERR_NOT_IN_RANGE');
+			assert.strictEqual(result, C.ERR_INVALID_ARGS, 'observeRoom to non-existent room should be ERR_INVALID_ARGS');
 		});
 		// Tick should not crash even if the check were bypassed
 		await tick();

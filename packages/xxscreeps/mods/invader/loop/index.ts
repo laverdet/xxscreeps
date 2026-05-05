@@ -7,7 +7,6 @@ import shootAtWill from './shoot-at-will.js';
 export function loop(Game: GameConstructor) {
 	const creeps = Object.values(Game.creeps);
 	const room = creeps[0]?.room;
-
 	if (!room) {
 		return false;
 	}

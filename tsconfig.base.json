@@ -25,10 +25,11 @@
 		"types": [],
 
 		// Strictness
-		"isolatedModules": true,
 		"exactOptionalPropertyTypes": true,
+		"isolatedModules": true,
 		"noEmitOnError": false,
 		"noImplicitOverride": true,
+		"noUncheckedIndexedAccess": true,
 		// TODO: Re-enable this when nodejs types have been fixed
 		"skipLibCheck": true,
 		"strict": true,

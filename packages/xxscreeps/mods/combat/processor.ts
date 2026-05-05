@@ -77,7 +77,7 @@ const intents = [
 				const objects = [ ...Fn.reject(creep.room['#lookAt'](pos),
 					object => object['#layer'] === undefined || object.hits === undefined || object.my !== false) ];
 				objects.sort((left, right) => right['#layer']! - left['#layer']!);
-				const power = basePower * [ 1, 1, 0.4, 0.1 ][creep.pos.getRangeTo(pos)];
+				const power = basePower * ([ 1, 1, 0.4, 0.1 ][creep.pos.getRangeTo(pos)] ?? 0);
 				walkLayers(objects, power, (object, layerPower) => {
 					const remaining = object['#captureDamage'](layerPower, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep);
 					const absorbed = layerPower - remaining;

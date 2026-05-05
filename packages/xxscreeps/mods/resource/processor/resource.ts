@@ -10,7 +10,7 @@ export function drop(pos: RoomPosition, resourceType: ResourceType, amount: numb
 	if (amount < 0) {
 		return;
 	}
-	const room = Game.rooms[pos.roomName];
+	const room = Game.rooms[pos.roomName]!;
 	let remaining = amount;
 
 	// Skip a container that is being destroyed so it doesn't catch its own
