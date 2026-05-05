@@ -1,20 +1,35 @@
 import type { BufferedConsole } from './console.js';
 import * as util from 'node:util';
 
+interface ThrownShape {
+	name?: unknown;
+	message?: unknown;
+	stack?: unknown;
+}
+
 export interface EvalThrown {
 	name: string;
 	message: string;
 	stack: string;
 }
 
-export interface EvalEnvelope {
-	ok: boolean;
-	result?: unknown;
+interface EvalEnvelopeBase {
 	logs: string[];
 	warnings: string[];
 	errors: string[];
-	thrown?: EvalThrown;
 }
+
+export interface EvalEnvelopeOk extends EvalEnvelopeBase {
+	ok: true;
+	result: unknown;
+}
+
+export interface EvalEnvelopeErr extends EvalEnvelopeBase {
+	ok: false;
+	thrown: EvalThrown;
+}
+
+export type EvalEnvelope = EvalEnvelopeOk | EvalEnvelopeErr;
 
 export type EvalOutcome =
 	{ ok: true; result: unknown } |
@@ -43,7 +58,7 @@ function wrapResult(value: unknown) {
 // constructor, so host-side `instanceof Error` returns false. Read the shape directly.
 export function describeThrown(err: unknown): EvalThrown {
 	if (typeof err === 'object' && err !== null) {
-		const fields = err as { name?: unknown; message?: unknown; stack?: unknown };
+		const fields = err as ThrownShape;
 		return {
 			message: typeof fields.message === 'string' ? fields.message : util.inspect(err, { colors: false }),
 			name: typeof fields.name === 'string' ? fields.name : 'Error',
@@ -54,18 +69,14 @@ export function describeThrown(err: unknown): EvalThrown {
 }
 
 export function buildEnvelope(outcome: EvalOutcome, sink: BufferedConsole): EvalEnvelope {
-	const envelope: EvalEnvelope = {
+	const base: EvalEnvelopeBase = {
 		errors: sink.errors,
 		logs: sink.logs,
-		ok: outcome.ok,
 		warnings: sink.warnings,
 	};
-	if (outcome.ok) {
-		envelope.result = wrapResult(outcome.result);
-	} else {
-		envelope.thrown = describeThrown(outcome.thrown);
-	}
-	return envelope;
+	return outcome.ok
+		? { ...base, ok: true, result: wrapResult(outcome.result) }
+		: { ...base, ok: false, thrown: describeThrown(outcome.thrown) };
 }
 
 export function serializeEnvelope(envelope: EvalEnvelope) {

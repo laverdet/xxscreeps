@@ -32,6 +32,8 @@ function customEval(
 		return;
 	}
 	const next = pending.then(() => evaluateInContext(context, cmd, 'repl'));
+	// Errors are reported via the parallel `.then` below; absorbing them here keeps
+	// `pending` resolved so the next turn chains off a clean promise.
 	pending = next.catch(() => {});
 	next.then(
 		value => callback(null, value),

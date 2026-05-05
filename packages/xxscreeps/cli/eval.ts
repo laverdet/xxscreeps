@@ -22,12 +22,12 @@ sourceGroup.add_argument('--stdin', { action: 'store_true', dest: 'stdin' });
 parser.add_argument('--json', { action: 'store_true', dest: 'json' });
 parser.add_argument('argv', { help: 'Positional arguments exposed to the script as `argv`', nargs: '*' });
 
-const args = parser.parse_args() as ParsedArgs;
+const args = parser.parse_args() as unknown as ParsedArgs;
 
 async function readStdin() {
 	const chunks: Buffer[] = [];
-	for await (const chunk of process.stdin) {
-		chunks.push(chunk as Buffer);
+	for await (const chunk of process.stdin as AsyncIterable<Buffer>) {
+		chunks.push(chunk);
 	}
 	return Buffer.concat(chunks).toString('utf8');
 }

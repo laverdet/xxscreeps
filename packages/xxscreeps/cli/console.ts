@@ -3,6 +3,7 @@ import * as util from 'node:util';
 
 export interface CliWriteStream {
 	write: (chunk: string) => unknown;
+	isTTY?: boolean;
 }
 
 export interface CliStreams {
@@ -16,13 +17,15 @@ export interface BufferedConsole extends ContextConsole {
 	errors: string[];
 }
 
-function format(args: readonly unknown[]) {
-	return util.formatWithOptions({ colors: false }, ...args);
+function format(args: readonly unknown[], colors: boolean) {
+	return util.formatWithOptions({ colors }, ...args);
 }
 
 export function createStreamingConsole(streams: CliStreams): ContextConsole {
-	const writeOut = (...args: unknown[]) => streams.stdout.write(`${format(args)}\n`);
-	const writeErr = (...args: unknown[]) => streams.stderr.write(`${format(args)}\n`);
+	const outColors = streams.stdout.isTTY === true;
+	const errColors = streams.stderr.isTTY === true;
+	const writeOut = (...args: unknown[]) => streams.stdout.write(`${format(args, outColors)}\n`);
+	const writeErr = (...args: unknown[]) => streams.stderr.write(`${format(args, errColors)}\n`);
 	return {
 		error: writeErr,
 		info: writeOut,
@@ -35,7 +38,7 @@ export function createBufferedConsole(): BufferedConsole {
 	const logs: string[] = [];
 	const warnings: string[] = [];
 	const errors: string[] = [];
-	const append = (bucket: string[]) => (...args: unknown[]) => bucket.push(format(args));
+	const append = (bucket: string[]) => (...args: unknown[]) => bucket.push(format(args, false));
 	return {
 		errors,
 		logs,

@@ -30,9 +30,7 @@ export function createCuratedContext(options: ContextOptions) {
 		TextEncoder,
 		URL,
 		URLSearchParams,
+		...options.argv === undefined ? {} : { argv: [ ...options.argv ] },
 	};
-	if (options.argv !== undefined) {
-		sandbox.argv = [ ...options.argv ];
-	}
 	return vm.createContext(sandbox, { name: 'xxscreeps cli' });
 }

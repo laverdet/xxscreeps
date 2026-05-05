@@ -8,7 +8,7 @@ import { buildEnvelope, describeThrown, serializeEnvelope } from './envelope.js'
 // Compilation candidates: raw source, async-wrapped expression, async-wrapped block.
 // The expression form supports `await foo()`, the block form supports statements with
 // top-level `await`, and falling through covers `var x = 1` and similar declarations.
-export function asyncEvalCandidates(source: string): readonly [string, string, string] {
+function asyncEvalCandidates(source: string): readonly [string, string, string] {
 	return [
 		source,
 		`(async()=>(${source}\n))()`,

@@ -43,8 +43,8 @@ function spawnXxscreeps(args: readonly string[], stdin?: string) {
 		});
 		const stdoutChunks: Buffer[] = [];
 		const stderrChunks: Buffer[] = [];
-		child.stdout.on('data', chunk => stdoutChunks.push(chunk as Buffer));
-		child.stderr.on('data', chunk => stderrChunks.push(chunk as Buffer));
+		child.stdout.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
+		child.stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
 		child.on('error', reject);
 		child.on('exit', code => resolve({
 			exitCode: code ?? 1,
@@ -68,6 +68,19 @@ describe('cli', () => {
 		const context = createCuratedContext({ console: noopConsole });
 		const value = await evaluateInContext(context, 'await Promise.resolve(99)');
 		assert.strictEqual(value, 99);
+	});
+
+	test('repl: statement with top-level await falls through to async-block', async () => {
+		// Raw fails (await outside async), expression fails (`let` in expression position),
+		// only the async-block candidate compiles and runs.
+		const logs: unknown[][] = [];
+		const recordingConsole: ContextConsole = {
+			error() {}, info() {}, log: (...args) => logs.push(args), warn() {},
+		};
+		const context = createCuratedContext({ console: recordingConsole });
+		const result = await evaluateInContext(context, 'let y = await Promise.resolve(99); console.log(y)');
+		assert.strictEqual(result, undefined);
+		assert.deepStrictEqual(logs, [ [ 99 ] ]);
 	});
 
 	test('repl: incomplete input is reported recoverable', () => {
@@ -131,13 +144,14 @@ describe('cli', () => {
 			streams: success,
 		});
 		assert.strictEqual(okExit, 0);
-		const okEnvelope = JSON.parse(success.stdoutText().trim()) as EvalEnvelope;
-		assert.strictEqual(okEnvelope.ok, true);
+		const okEnvelope = JSON.parse(success.stdoutText().trim()) as unknown as EvalEnvelope;
+		if (!okEnvelope.ok) {
+			assert.fail(`expected ok envelope, got ${JSON.stringify(okEnvelope)}`);
+		}
 		assert.strictEqual(okEnvelope.result, 7);
 		assert.deepStrictEqual(okEnvelope.logs, [ 'note' ]);
 		assert.deepStrictEqual(okEnvelope.warnings, [ 'careful' ]);
 		assert.deepStrictEqual(okEnvelope.errors, [ 'oops' ]);
-		assert.strictEqual(okEnvelope.thrown, undefined);
 
 		const failure = captureStreams();
 		const errExit = await runEval({
@@ -147,12 +161,13 @@ describe('cli', () => {
 			streams: failure,
 		});
 		assert.strictEqual(errExit, 1);
-		const errEnvelope = JSON.parse(failure.stdoutText().trim()) as EvalEnvelope;
-		assert.strictEqual(errEnvelope.ok, false);
-		assert.strictEqual(errEnvelope.thrown?.name, 'Error');
+		const errEnvelope = JSON.parse(failure.stdoutText().trim()) as unknown as EvalEnvelope;
+		if (errEnvelope.ok) {
+			assert.fail(`expected err envelope, got ${JSON.stringify(errEnvelope)}`);
+		}
+		assert.strictEqual(errEnvelope.thrown.name, 'Error');
 		assert.strictEqual(errEnvelope.thrown.message, 'kaboom');
 		assert.ok(errEnvelope.thrown.stack.includes('kaboom'));
-		assert.strictEqual(errEnvelope.result, undefined);
 	});
 
 	test('eval: --json marks non-JSON-serializable results', async () => {
@@ -164,8 +179,10 @@ describe('cli', () => {
 			streams,
 		});
 		assert.strictEqual(exitCode, 0);
-		const envelope = JSON.parse(streams.stdoutText().trim()) as EvalEnvelope;
-		assert.strictEqual(envelope.ok, true);
+		const envelope = JSON.parse(streams.stdoutText().trim()) as unknown as EvalEnvelope;
+		if (!envelope.ok) {
+			assert.fail(`expected ok envelope, got ${JSON.stringify(envelope)}`);
+		}
 		assert.deepStrictEqual(envelope.result, { __nonJsonResult: '1n' });
 	});
 
