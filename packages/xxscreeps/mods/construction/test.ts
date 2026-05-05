@@ -1,3 +1,4 @@
+import type { Room } from 'xxscreeps/game/room/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
@@ -54,6 +55,45 @@ describe('Construction', () => {
 			assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(1, 4, 'road'), C.OK);
 		});
 	}));
+
+	describe('intent precedence', () => {
+		const fillSites = (room: Room, owner: string, count: number) => {
+			for (let ii = 0; ii < count; ++ii) {
+				const xx = 1 + (ii % 48);
+				const yy = 1 + Math.floor(ii / 48);
+				room['#insertObject'](createSite(new RoomPosition(xx, yy, room.name), 'road', owner, C.CONSTRUCTION_COST.road));
+			}
+		};
+
+		const rclCappedAndFull = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				fillSites(room, '100', C.MAX_CONSTRUCTION_SITES);
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:rcl-or-structure-cap-before-site-cap-full', () => rclCappedAndFull(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(45, 45, 'tower'), C.ERR_RCL_NOT_ENOUGH);
+			});
+		}));
+
+		const sameTypeAndFull = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road));
+				fillSites(room, '100', C.MAX_CONSTRUCTION_SITES - 1);
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:invalid-target-before-site-cap-full', () => sameTypeAndFull(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_INVALID_TARGET);
+			});
+		}));
+	});
 
 	test('create two sites at same position', () => construction(async ({ player, tick }) => {
 		await player('100', Game => {

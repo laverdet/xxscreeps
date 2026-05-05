@@ -71,11 +71,6 @@ extend(Room, {
 			createdNames.add(name);
 		}
 
-		// Check global construction site limit
-		if (userGame && Object.keys(userGame.constructionSites).length + createdConstructionSites >= C.MAX_CONSTRUCTION_SITES) {
-			return C.ERR_FULL;
-		}
-
 		// Send it off
 		const result = chainIntentChecks(
 			() => checkCreateConstructionSite(this, pos, structureType, name),
@@ -89,52 +84,57 @@ extend(Room, {
 
 // Intent check
 export function checkCreateConstructionSite(room: Room, pos: RoomPosition, structureType: ConstructibleStructureType, name: string | null | undefined) {
-	// Check `structureType` is buildable
 	const factory = structureFactories.get(structureType);
-	if (!factory) {
-		console.log(`TODO: create ${structureType}`);
-		return C.ERR_INVALID_ARGS;
-	}
-
-	// Can't build in someone else's room
-	if (room.controller?.owner && !room.controller.my) {
-		return C.ERR_RCL_NOT_ENOUGH;
-	}
-
-	// Check structure count for this RCL
-	const existingCount = Fn.accumulate(Fn.concat<Structure | ConstructionSite>([
-		room['#lookFor'](C.LOOK_STRUCTURES),
-		room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
-	]), object => object.structureType === structureType ? 1 : 0);
-	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][room.controller?.level ?? 0]!) {
-		return C.ERR_RCL_NOT_ENOUGH;
-	}
-
-	// checkPlacement hook
-	if (factory.checkPlacement(room, pos) === null) {
-		return C.ERR_INVALID_TARGET;
-	} else if (factory.checkName?.(room, name) === null) {
-		return C.ERR_INVALID_ARGS;
-	}
-
-	// No structures on top of others
-	const { obstacle } = factory;
-	const obstacleChecker = makeObstacleChecker({
-		checkTerrain: false,
-		ignoreCreeps: true,
-		room,
-		user: me,
-	});
-	for (const object of room['#lookAt'](pos)) {
-		asUnion(object);
-		if (
-			object['#lookType'] === C.LOOK_CONSTRUCTION_SITES ||
-			(object instanceof Structure && object.structureType === structureType) ||
-			(obstacle && obstacleChecker(object))
-		) {
-			return C.ERR_INVALID_TARGET;
-		}
-	}
-
-	return C.OK;
+	return chainIntentChecks(
+		() => {
+			if (!factory) {
+				console.log(`TODO: create ${structureType}`);
+				return C.ERR_INVALID_ARGS;
+			}
+		},
+		() => {
+			if (room.controller?.owner && !room.controller.my) {
+				return C.ERR_RCL_NOT_ENOUGH;
+			}
+		},
+		() => {
+			const existingCount = Fn.accumulate(Fn.concat<Structure | ConstructionSite>([
+				room['#lookFor'](C.LOOK_STRUCTURES),
+				room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
+			]), object => object.structureType === structureType ? 1 : 0);
+			if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][room.controller?.level ?? 0]!) {
+				return C.ERR_RCL_NOT_ENOUGH;
+			}
+		},
+		() => {
+			if (factory!.checkPlacement(room, pos) === null) {
+				return C.ERR_INVALID_TARGET;
+			} else if (factory!.checkName?.(room, name) === null) {
+				return C.ERR_INVALID_ARGS;
+			}
+		},
+		() => {
+			const obstacleChecker = makeObstacleChecker({
+				checkTerrain: false,
+				ignoreCreeps: true,
+				room,
+				user: me,
+			});
+			for (const object of room['#lookAt'](pos)) {
+				asUnion(object);
+				if (
+					object['#lookType'] === C.LOOK_CONSTRUCTION_SITES ||
+					(object instanceof Structure && object.structureType === structureType) ||
+					(factory!.obstacle && obstacleChecker(object))
+				) {
+					return C.ERR_INVALID_TARGET;
+				}
+			}
+		},
+		() => {
+			if (userGame && Object.keys(userGame.constructionSites).length + createdConstructionSites >= C.MAX_CONSTRUCTION_SITES) {
+				return C.ERR_FULL;
+			}
+			return C.OK;
+		});
 }
