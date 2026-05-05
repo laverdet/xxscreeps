@@ -1,3 +1,4 @@
+import type { GameConstructor } from 'xxscreeps/game/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create } from 'xxscreeps/mods/creep/creep.js';
@@ -9,6 +10,25 @@ describe('Controller', () => {
 
 	// Controller in W3N3 is at (33, 32)
 	const pos = new RoomPosition(34, 32, 'W3N3');
+	const farPos = new RoomPosition(10, 10, 'W3N3');
+
+	function setGclRoomCount(Game: GameConstructor, roomCount: number) {
+		Game.gcl = {
+			level: 1,
+			progress: 0,
+			progressTotal: C.GCL_MULTIPLY,
+			'#roomCount': roomCount,
+		};
+	}
+
+	function exhaustGcl(Game: GameConstructor) {
+		setGclRoomCount(Game, 1);
+	}
+
+	function findContainer(Game: GameConstructor) {
+		return Game.rooms.W3N3!.find(C.FIND_STRUCTURES)
+			.find(structure => structure.structureType === C.STRUCTURE_CONTAINER)!;
+	}
 
 	const hostileReservation = simulate({
 		W3N3: room => {
@@ -21,6 +41,31 @@ describe('Controller', () => {
 	const neutralRoom = simulate({
 		W3N3: room => {
 			room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+		},
+	});
+
+	const claimPrecedence = simulate({
+		W3N3: room => {
+			room['#insertObject'](create(pos, [ C.CLAIM ], 'claimer', '100'));
+			room['#insertObject'](create(new RoomPosition(32, 32, 'W3N3'), [ C.MOVE ], 'worker', '100'));
+			room['#insertObject'](create(farPos, [ C.CLAIM ], 'distantClaimer', '100'));
+			room['#insertObject'](createContainer(pos));
+		},
+	});
+
+	const neutralNoClaim = simulate({
+		W3N3: room => {
+			room['#insertObject'](create(pos, [ C.MOVE ], 'worker', '100'));
+			room['#insertObject'](create(farPos, [ C.MOVE ], 'distantWorker', '100'));
+			room['#insertObject'](createContainer(pos));
+		},
+	});
+
+	const hostileNoClaim = simulate({
+		W3N3: room => {
+			room['#user'] = '101';
+			room.controller!['#reservationEndTime'] = 5000;
+			room['#insertObject'](create(pos, [ C.MOVE ], 'worker', '100'));
 		},
 	});
 
@@ -45,6 +90,51 @@ describe('Controller', () => {
 			await player('100', Game => {
 				const controller = Game.rooms.W3N3!.controller!;
 				assert.strictEqual(Game.creeps.claimer!.attackController(controller), C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		test('CTRL-ATTACK-007:invalid-target-before-no-bodypart', () => neutralNoClaim(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(
+					Game.creeps.worker!.attackController(findContainer(Game) as unknown as StructureController),
+					C.ERR_INVALID_TARGET);
+			});
+		}));
+	});
+
+	describe('claimController', () => {
+
+		test('CTRL-CLAIM-008:gcl-not-enough-before-invalid-target', () => claimPrecedence(async ({ player }) => {
+			await player('100', Game => {
+				exhaustGcl(Game);
+				assert.strictEqual(
+					Game.creeps.claimer!.claimController(findContainer(Game) as unknown as StructureController),
+					C.ERR_GCL_NOT_ENOUGH);
+			});
+		}));
+
+		test('CTRL-CLAIM-008:gcl-not-enough-before-no-bodypart', () => claimPrecedence(async ({ player }) => {
+			await player('100', Game => {
+				exhaustGcl(Game);
+				const controller = Game.rooms.W3N3!.controller!;
+				assert.strictEqual(Game.creeps.worker!.claimController(controller), C.ERR_GCL_NOT_ENOUGH);
+			});
+		}));
+
+		test('CTRL-CLAIM-008:gcl-not-enough-before-range', () => claimPrecedence(async ({ player }) => {
+			await player('100', Game => {
+				exhaustGcl(Game);
+				const controller = Game.rooms.W3N3!.controller!;
+				assert.strictEqual(Game.creeps.distantClaimer!.claimController(controller), C.ERR_GCL_NOT_ENOUGH);
+			});
+		}));
+
+		test('CTRL-CLAIM-008:invalid-target-before-no-bodypart', () => neutralNoClaim(async ({ player }) => {
+			await player('100', Game => {
+				setGclRoomCount(Game, 0);
+				assert.strictEqual(
+					Game.creeps.worker!.claimController(findContainer(Game) as unknown as StructureController),
+					C.ERR_INVALID_TARGET);
 			});
 		}));
 	});
@@ -90,6 +180,28 @@ describe('Controller', () => {
 			await player('100', Game => {
 				const controller = Game.rooms.W3N3!.controller!;
 				assert.strictEqual(Game.creeps.claimer!.reserveController(controller), C.OK);
+			});
+		}));
+
+		test('CTRL-RESERVE-008:invalid-target-before-no-bodypart', () => neutralNoClaim(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(
+					Game.creeps.worker!.reserveController(findContainer(Game) as unknown as StructureController),
+					C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		test('CTRL-RESERVE-008:range-before-no-bodypart', () => neutralNoClaim(async ({ player }) => {
+			await player('100', Game => {
+				const controller = Game.rooms.W3N3!.controller!;
+				assert.strictEqual(Game.creeps.distantWorker!.reserveController(controller), C.ERR_NOT_IN_RANGE);
+			});
+		}));
+
+		test('CTRL-RESERVE-008:invalid-controller-state-before-no-bodypart', () => hostileNoClaim(async ({ player }) => {
+			await player('100', Game => {
+				const controller = Game.rooms.W3N3!.controller!;
+				assert.strictEqual(Game.creeps.worker!.reserveController(controller), C.ERR_INVALID_TARGET);
 			});
 		}));
 	});
