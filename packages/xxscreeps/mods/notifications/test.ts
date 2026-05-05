@@ -23,11 +23,12 @@ function getNotifications(shard: Shard, userId: string): Promise<NotificationRow
 	return shard.data.smembers(`user/${userId}/notifications`).then(ids =>
 		Fn.mapAwait(ids, async id => {
 			const fields = await shard.data.hgetall(`user/${userId}/notifications/${id}`);
-			const type = fields.type;
+			const { type, message } = fields;
 			assert.ok(type === 'msg' || type === 'error');
+			assert.ok(typeof message === 'string');
 			return {
 				user: userId,
-				message: fields.message,
+				message,
 				date: Number(fields.date),
 				count: Number(fields.count),
 				type,
