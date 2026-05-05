@@ -2,7 +2,6 @@ import { importMods } from 'xxscreeps/config/mods/index.js';
 import { flush, summary } from './context.js';
 import './import.js';
 import 'xxscreeps/game/test.js';
-import 'xxscreeps/engine/processor/test.js';
 
 await importMods('test');
 try {

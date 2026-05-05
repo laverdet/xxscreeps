@@ -1,15 +1,15 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 
-export type NotifyPrefs = {
-	disabled?: boolean;
-	disabledOnMessages?: boolean;
-	sendOnline?: boolean;
+export interface NotifyPrefs {
+	disabled: boolean;
+	disabledOnMessages: boolean;
+	sendOnline: boolean;
 	interval?: number;
 	errorsInterval?: number;
-};
+}
 
-const prefsKey = (userId: string) => `user/${userId}/notifications-prefs`;
-const lastNotifyDateKey = (userId: string) => `user/${userId}/notifications-lastDate`;
+const prefsKey = (userId: string) => `user/${userId}/notifications/prefs`;
+const lastNotifyDateKey = (userId: string) => `user/${userId}/notifications/lastDate`;
 
 export const DEFAULT_INTERVAL_MIN = 60;
 
@@ -22,16 +22,16 @@ export async function getNotifyPrefs(shard: Shard, userId: string): Promise<Noti
 		errorsInterval?: string;
 	}
 	const fields = await shard.data.hgetall(prefsKey(userId)) as PrefsFields;
-	const out: NotifyPrefs = {};
-	if (fields.disabled === '1') out.disabled = true;
-	if (fields.disabledOnMessages === '1') out.disabledOnMessages = true;
-	if (fields.sendOnline === '1') out.sendOnline = true;
-	if (fields.interval !== undefined) out.interval = Number(fields.interval);
-	if (fields.errorsInterval !== undefined) out.errorsInterval = Number(fields.errorsInterval);
-	return out;
+	return {
+		disabled: fields.disabled === '1',
+		disabledOnMessages: fields.disabledOnMessages === '1',
+		sendOnline: fields.sendOnline === '1',
+		...fields.interval === undefined ? {} : { interval: Number(fields.interval) },
+		...fields.errorsInterval === undefined ? {} : { errorsInterval: Number(fields.errorsInterval) },
+	};
 }
 
-export async function setNotifyPrefs(shard: Shard, userId: string, prefs: NotifyPrefs) {
+export async function setNotifyPrefs(shard: Shard, userId: string, prefs: Partial<NotifyPrefs>) {
 	const fields: Record<string, string> = {};
 	if (prefs.disabled !== undefined) fields.disabled = prefs.disabled ? '1' : '0';
 	if (prefs.disabledOnMessages !== undefined) fields.disabledOnMessages = prefs.disabledOnMessages ? '1' : '0';

@@ -8,7 +8,6 @@ import { runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
-import { runShardTickProcessors } from './shard.js';
 
 export function getProcessorChannel(shard: Shard) {
 	type Message =
@@ -268,21 +267,14 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 		// Decrement number of finalization rooms remaining
 		const remaining = await shard.scratch.decrBy(finalizedRoomsPendingKey(time), roomsCount);
 		if (remaining === 0) {
-			// Run shard tick processors before snapshotting tick N+1's queue, so any activateRoom
-			// or wakeAt issued from a callback lands on tick N+1.
-			await runShardTickProcessors(shard, time);
-			const [ nextTime ] = await Promise.all([
-				// Set up state for next tick
-				begetRoomProcessQueue(shard, time + 1, time, true),
+			await Promise.all([
 				// Delete "0" value from scratch
 				shard.scratch.vdel(finalizedRoomsPendingKey(time)),
+				// Notify main loop that room finalization is complete
+				getServiceChannel(shard).publish({ type: 'tickFinished', time }),
 			]);
-			// Notify main loop that we're ready for the next tick
-			await getServiceChannel(shard).publish({ type: 'tickFinished', time });
-			return nextTime;
 		}
 	}
-	return time;
 }
 
 const isSystemUser = (userId: string) => userId.length <= 2;
