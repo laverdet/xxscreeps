@@ -1,5 +1,4 @@
 import type { StructureExtension } from './extension.js';
-import type { StructureSpawn } from './spawn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
@@ -117,49 +116,43 @@ describe('Spawn', () => {
 		},
 	});
 
-	test('SPAWN-CREATE-014:invalid-name-or-options-before-not-owner', () => foreignSpawnSim(async ({ player, peekRoom }) => {
-		const spawnId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 25)[0]!.id);
+	test('SPAWN-CREATE-014:invalid-name-or-options-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
 		await player('101', Game => {
-			const spawn = Game.getObjectById<StructureSpawn>(spawnId)!;
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
 			assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'x'.repeat(101)), C.ERR_INVALID_ARGS);
 		});
 	}));
 
-	test('SPAWN-CREATE-014:name-exists-before-not-owner', () => foreignSpawnSim(async ({ player, peekRoom }) => {
-		const spawnId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 25)[0]!.id);
+	test('SPAWN-CREATE-014:name-exists-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
 		await player('101', Game => {
-			const spawn = Game.getObjectById<StructureSpawn>(spawnId)!;
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
 			assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'worker'), C.ERR_NAME_EXISTS);
 		});
 	}));
 
-	test('SPAWN-CREATE-014:invalid-directions-before-not-owner', () => foreignSpawnSim(async ({ player, peekRoom }) => {
-		const spawnId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 25)[0]!.id);
+	test('SPAWN-CREATE-014:invalid-directions-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
 		await player('101', Game => {
-			const spawn = Game.getObjectById<StructureSpawn>(spawnId)!;
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
 			assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'newCreep', {
 				directions: [ 99 as never ],
 			}), C.ERR_INVALID_ARGS);
 		});
 	}));
 
-	test('RENEW-CREEP-011:busy-before-not-owner', () => foreignSpawnSim(async ({ player, peekRoom, tick }) => {
-		const spawnId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 25)[0]!.id);
+	test('RENEW-CREEP-011:busy-before-not-owner', () => foreignSpawnSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const spawn = Game.getObjectById<StructureSpawn>(spawnId)!;
-			assert.strictEqual(spawn.spawnCreep([ C.MOVE, C.MOVE, C.MOVE ], 'busy'), C.OK);
+			assert.strictEqual(Game.spawns.Spawn1!.spawnCreep([ C.MOVE, C.MOVE, C.MOVE ], 'busy'), C.OK);
 		});
 		await tick();
 		await player('101', Game => {
-			const spawn = Game.getObjectById<StructureSpawn>(spawnId)!;
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
 			assert.strictEqual(spawn.renewCreep(Game.creeps.worker!), C.ERR_BUSY);
 		});
 	}));
 
-	test('RENEW-CREEP-011:invalid-target-before-not-owner', () => foreignSpawnSim(async ({ player, peekRoom }) => {
-		const spawnId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 25)[0]!.id);
+	test('RENEW-CREEP-011:invalid-target-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
 		await player('101', Game => {
-			const spawn = Game.getObjectById<StructureSpawn>(spawnId)!;
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
 			assert.strictEqual(spawn.renewCreep(spawn as never), C.ERR_INVALID_TARGET);
 		});
 	}));
