@@ -552,12 +552,12 @@ export function checkTransfer(creep: Creep, target: RoomObject & WithStore, reso
 export function checkWithdraw(creep: Creep, target: Structure & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
+		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
 		() => checkInteractionBlocked(creep, target),
 		() => checkRange(creep, target, 1),
 		() => checkHasResource(target, resourceType, amount),
-		() => checkHasCapacity(creep, resourceType, amount),
-		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
+		() => checkHasCapacity(creep, resourceType, amount));
 }
 
 function checkInteractionBlocked(creep: Creep, target: Structure & WithStore) {

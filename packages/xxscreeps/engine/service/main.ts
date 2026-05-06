@@ -13,7 +13,7 @@ import { checkIsEntry, getServiceChannel } from './index.js';
 checkIsEntry();
 
 using db = await Database.connect();
-using shard = await Shard.connect(db, 'shard0');
+using shard = await Shard.connect(db, config.shards[0]!.name);
 await using disposable = new AsyncDisposableStack();
 
 // Open channels

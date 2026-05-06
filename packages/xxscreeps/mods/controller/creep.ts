@@ -113,10 +113,15 @@ extend(Creep, {
 });
 
 // Intent checkers
+function checkClaimPart(creep: Creep) {
+	return creep.getActiveBodyparts(C.CLAIM) > 0 ? C.OK : C.ERR_NO_BODYPART;
+}
+
 export function checkAttackController(creep: Creep, target: StructureController) {
 	return chainIntentChecks(
-		() => checkCommon(creep, C.CLAIM),
+		() => checkCommon(creep),
 		() => checkTarget(target, StructureController),
+		() => checkClaimPart(creep),
 		() => checkRange(creep, target, 1),
 		() => checkSafeMode(target.room, C.ERR_NO_BODYPART),
 		() => {
@@ -131,13 +136,16 @@ export function checkAttackController(creep: Creep, target: StructureController)
 
 export function checkClaimController(creep: Creep, target: StructureController) {
 	return chainIntentChecks(
-		() => checkCommon(creep, C.CLAIM),
-		() => checkTarget(target, StructureController),
-		() => checkRange(creep, target, 1),
+		() => checkCommon(creep),
 		() => {
 			if (userGame && userGame.gcl.level <= userGame.gcl['#roomCount']) {
 				return C.ERR_GCL_NOT_ENOUGH;
 			}
+		},
+		() => checkTarget(target, StructureController),
+		() => checkClaimPart(creep),
+		() => checkRange(creep, target, 1),
+		() => {
 			const user = target['#user'];
 			if (user !== null) {
 				return C.ERR_INVALID_TARGET;
@@ -161,7 +169,7 @@ export function checkGenerateSafeMode(creep: Creep, target: StructureController)
 
 export function checkReserveController(creep: Creep, target: StructureController) {
 	return chainIntentChecks(
-		() => checkCommon(creep, C.CLAIM),
+		() => checkCommon(creep),
 		() => checkTarget(target, StructureController),
 		() => checkRange(creep, target, 1),
 		() => {
@@ -170,7 +178,8 @@ export function checkReserveController(creep: Creep, target: StructureController
 			if ((user !== null && user !== me) || (roomUser !== null && roomUser !== me) || target.level !== 0) {
 				return C.ERR_INVALID_TARGET;
 			}
-		});
+		},
+		() => checkClaimPart(creep));
 }
 
 export function checkSignController(creep: Creep, target: StructureController, message: string | null | undefined) {
