@@ -1,5 +1,11 @@
-import type { ContextConsole } from './context.js';
 import * as util from 'node:util';
+
+export interface CliConsole {
+	log: (...args: unknown[]) => void;
+	info: (...args: unknown[]) => void;
+	warn: (...args: unknown[]) => void;
+	error: (...args: unknown[]) => void;
+}
 
 export interface CliWriteStream {
 	write: (chunk: string) => unknown;
@@ -11,7 +17,7 @@ export interface CliStreams {
 	stderr: CliWriteStream;
 }
 
-export interface BufferedConsole extends ContextConsole {
+export interface BufferedConsole extends CliConsole {
 	logs: string[];
 	warnings: string[];
 	errors: string[];
@@ -21,7 +27,7 @@ function format(args: readonly unknown[], colors: boolean) {
 	return util.formatWithOptions({ colors }, ...args);
 }
 
-export function createStreamingConsole(streams: CliStreams): ContextConsole {
+export function createStreamingConsole(streams: CliStreams): CliConsole {
 	const outColors = streams.stdout.isTTY === true;
 	const errColors = streams.stderr.isTTY === true;
 	const writeOut = (...args: unknown[]) => streams.stdout.write(`${format(args, outColors)}\n`);

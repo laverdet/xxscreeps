@@ -35,27 +35,7 @@ export type EvalOutcome =
 	{ ok: true; result: unknown } |
 	{ ok: false; thrown: unknown };
 
-const nonJsonKey = '__nonJsonResult';
-
-function jsonSerializable(value: unknown) {
-	try {
-		// JSON.stringify returns undefined for undefined/functions/symbols despite its
-		// `string` return type; launder via `as unknown` so the check is honest.
-		return JSON.stringify(value) as unknown !== undefined;
-	} catch {
-		return false;
-	}
-}
-
-function wrapResult(value: unknown) {
-	if (jsonSerializable(value)) {
-		return value;
-	}
-	return { [nonJsonKey]: util.inspect(value, { colors: false }) };
-}
-
-// Cross-realm safe: errors thrown inside the curated vm.Context use that realm's `Error`
-// constructor, so host-side `instanceof Error` returns false. Read the shape directly.
+// Handles thrown non-Errors and any future cross-realm `Error` whose `instanceof` would fail.
 export function describeThrown(err: unknown): EvalThrown {
 	if (typeof err === 'object' && err !== null) {
 		const fields = err as ThrownShape;
@@ -68,17 +48,24 @@ export function describeThrown(err: unknown): EvalThrown {
 	return { message: String(err), name: 'Error', stack: '' };
 }
 
-export function buildEnvelope(outcome: EvalOutcome, sink: BufferedConsole): EvalEnvelope {
+export function serializeEnvelope(outcome: EvalOutcome, sink: BufferedConsole): string {
 	const base: EvalEnvelopeBase = {
 		errors: sink.errors,
 		logs: sink.logs,
 		warnings: sink.warnings,
 	};
-	return outcome.ok
-		? { ...base, ok: true, result: wrapResult(outcome.result) }
-		: { ...base, ok: false, thrown: describeThrown(outcome.thrown) };
-}
-
-export function serializeEnvelope(envelope: EvalEnvelope) {
-	return JSON.stringify(envelope);
+	if (!outcome.ok) {
+		return JSON.stringify({ ...base, ok: false, thrown: describeThrown(outcome.thrown) });
+	}
+	const { result } = outcome;
+	// `undefined`/function/symbol drop silently and BigInt throws; substitute to keep `result` present.
+	if (typeof result !== 'undefined' && typeof result !== 'function' && typeof result !== 'symbol') {
+		try {
+			return JSON.stringify({ ...base, ok: true, result });
+		} catch {}
+	}
+	return JSON.stringify({
+		...base, ok: true,
+		result: { __nonJsonResult: util.inspect(result, { colors: false }) },
+	});
 }

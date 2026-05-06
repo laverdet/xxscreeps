@@ -1,5 +1,4 @@
-import type { CliStreams } from './console.js';
-import type { ContextConsole } from './context.js';
+import type { CliConsole, CliStreams } from './console.js';
 import type { EvalEnvelope } from './envelope.js';
 import { spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
@@ -7,12 +6,10 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
-import { createCuratedContext } from './context.js';
-import { evaluateInContext, recoverableSyntaxError, runEval } from './evaluate.js';
+import { evaluateOffline, runEval } from './eval-offline.js';
+import { recoverableSyntaxError } from './recoverable.js';
 
 const xxscreepsBin = fileURLToPath(new URL('../../bin/xxscreeps.js', import.meta.url));
-
-const noopConsole: ContextConsole = { error() {}, info() {}, log() {}, warn() {} };
 
 interface CapturedStreams extends CliStreams {
 	stderrText: () => string;
@@ -55,32 +52,78 @@ function spawnXxscreeps(args: readonly string[], stdin?: string) {
 	});
 }
 
+function installConsole(replacement: CliConsole) {
+	const previous = globalThis.console;
+	globalThis.console = replacement as unknown as Console;
+	return {
+		[Symbol.dispose]() {
+			globalThis.console = previous;
+		},
+	};
+}
+
 describe('cli', () => {
 	test('repl: vars persist across turns', async () => {
-		const context = createCuratedContext({ console: noopConsole });
-		const first = await evaluateInContext(context, 'var counter = 41; counter');
-		assert.strictEqual(first, 41);
-		const second = await evaluateInContext(context, 'counter += 1');
-		assert.strictEqual(second, 42);
+		try {
+			const first = await evaluateOffline('var __cliReplCounter = 41; __cliReplCounter');
+			assert.strictEqual(first, 41);
+			const second = await evaluateOffline('__cliReplCounter += 1');
+			assert.strictEqual(second, 42);
+		} finally {
+			delete (globalThis as Record<string, unknown>).__cliReplCounter;
+		}
 	});
 
 	test('repl: top-level await resolves', async () => {
-		const context = createCuratedContext({ console: noopConsole });
-		const value = await evaluateInContext(context, 'await Promise.resolve(99)');
+		const value = await evaluateOffline('await Promise.resolve(99)');
 		assert.strictEqual(value, 99);
 	});
 
 	test('repl: statement with top-level await falls through to async-block', async () => {
-		// Raw fails (await outside async), expression fails (`let` in expression position),
-		// only the async-block candidate compiles and runs.
+		// Indirect eval rejects await; expression wrap rejects let-statement;
+		// only the async-block wrap parses and runs.
 		const logs: unknown[][] = [];
-		const recordingConsole: ContextConsole = {
+		const recordingConsole: CliConsole = {
 			error() {}, info() {}, log: (...args) => logs.push(args), warn() {},
 		};
-		const context = createCuratedContext({ console: recordingConsole });
-		const result = await evaluateInContext(context, 'let y = await Promise.resolve(99); console.log(y)');
+		using shared = installConsole(recordingConsole);
+		const result = await evaluateOffline('let y = await Promise.resolve(99); console.log(y)');
 		assert.strictEqual(result, undefined);
 		assert.deepStrictEqual(logs, [ [ 99 ] ]);
+	});
+
+	test('repl: top-level await whose awaited callback throws SyntaxError runs source once', async () => {
+		// Regression for the wrap-retry double-execution shape: indirect eval rejects
+		// for top-level await, so `evaluateOffline` falls through to the AsyncFunction
+		// wrap. If that wrap parses but the awaited callback throws a SyntaxError at
+		// runtime, the error must propagate — not trigger a wrapBlock retry that
+		// re-runs the side effect.
+		const logs: unknown[][] = [];
+		const recordingConsole: CliConsole = {
+			error() {}, info() {}, log: (...args) => logs.push(args), warn() {},
+		};
+		using shared = installConsole(recordingConsole);
+		await assert.rejects(
+			() => evaluateOffline(
+				'await Promise.resolve().then(() => { console.log("once"); throw new SyntaxError("boom"); })'),
+			/boom/);
+		assert.deepStrictEqual(logs, [ [ 'once' ] ]);
+	});
+
+	test('repl: parenthesised top-level await falls through to async wrap', async () => {
+		// In script mode `await` lexes as an identifier, so `(await Promise...)` errors
+		// on the next token ("Unexpected identifier 'Promise'") instead of "await is only
+		// valid". The cascade must still retry through the async wrap.
+		const value = await evaluateOffline('(await Promise.resolve(99)).valueOf()');
+		assert.strictEqual(value, 99);
+	});
+
+	test('repl: SyntaxError unrelated to top-level await still rejects', async () => {
+		// Guard that the cascade doesn't swallow real syntax errors: both async wraps
+		// will fail to parse this too, and the final error must propagate.
+		await assert.rejects(
+			() => evaluateOffline('1 + )'),
+			(err: unknown) => err instanceof SyntaxError);
 	});
 
 	test('repl: incomplete input is reported recoverable', () => {
@@ -95,16 +138,22 @@ describe('cli', () => {
 		assert.strictEqual(result.exitCode, 0);
 	});
 
-	test('eval: curated context omits host globals', async () => {
+	test('eval: runtime SyntaxError does not retrigger console.log', async () => {
+		// Regression for the candidate-retry double-execution shape laverdet flagged
+		// on an earlier revision: when the source parses cleanly but throws a runtime
+		// SyntaxError (here `JSON.parse("}")`), the eval primitive must not mistake
+		// the runtime throw for a parse failure and re-execute the source. `1` must
+		// log exactly once, not 3-4 times.
 		const streams = captureStreams();
 		const exitCode = await runEval({
 			argv: [],
 			json: false,
-			source: '[ typeof process, typeof require, typeof Buffer ]',
+			source: 'console.log(1); JSON.parse("}");',
 			streams,
 		});
-		assert.strictEqual(exitCode, 0);
-		assert.match(streams.stdoutText(), /'undefined',\s*'undefined',\s*'undefined'/);
+		assert.strictEqual(exitCode, 1);
+		const ones = (streams.stdoutText().match(/^1$/gm) ?? []).length;
+		assert.strictEqual(ones, 1, `expected '1' logged exactly once, got stdout: ${JSON.stringify(streams.stdoutText())}`);
 	});
 
 	test('eval: -e prints inspected result with exit 0', async () => {

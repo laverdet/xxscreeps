@@ -1,6 +1,6 @@
 # xxscreeps CLI
 
-Operator-facing JavaScript REPL and one-shot evaluator. Both run inside a curated `node:vm` context isolated from the host process and the engine sandbox.
+Operator-facing JavaScript REPL and one-shot evaluator. Both run inside the CLI process's host realm — operator typing has the same access the launcher does. There is no `vm.Context`, no curated globals list.
 
 ## Commands
 
@@ -42,14 +42,10 @@ interface EvalEnvelope {
 
 Same exit codes as plain mode. Only the script-stage outcome is wrapped in the envelope; host-side failures (argparse usage errors, unreadable `--file`, stdin read errors) print plain-text messages to stderr and exit non-zero without emitting JSON.
 
-## Curated context
+## Realm
 
-Exposed to evaluated code:
+Operator code runs in the CLI process's host realm. `process`, `require`, dynamic `import()`, `Buffer`, `__dirname`, `__filename`, every node built-in, and every npm dependency the launcher loads are all reachable. Operators already have shell access to the same machine — the prompt isn't a security boundary.
 
-- Standard JS built-ins (`Math`, `JSON`, `Promise`, `Date`, `Map`, `Set`, `Symbol`, `RegExp`, `Array`, `Object`, …) — fresh per realm via `vm.createContext`.
-- Web APIs: `URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`.
-- Timers: `setTimeout`, `setInterval`, `clearTimeout`, `clearInterval`, `queueMicrotask`, `setImmediate`, `clearImmediate`.
-- A minimal `console` with `log`, `info`, `warn`, and `error` only (no `debug`, `dir`, `table`, `time`, `trace`, etc.), routed per mode.
-- `argv: string[]` (eval only) populated from trailing positionals.
+`argv` (eval only) is exposed as a global populated from trailing positionals. `console` is intercepted in `eval` so output flows into the streaming or JSON envelope contracts; in `cli` the host console is used directly.
 
-Intentionally absent: `process`, `require`, dynamic `import()`, `Buffer`, `__dirname`, `__filename`, and any engine state (`Game`, `Memory`, `shard`, `db`). A live-mode bridge exposing engine state from a running server is a planned follow-up.
+No engine state is exposed: `Game`, `Memory`, `shard`, and `db` are absent because the engine is not running. A live-mode bridge that runs eval on the engine side and exposes that state through a Unix socket is a planned follow-up.

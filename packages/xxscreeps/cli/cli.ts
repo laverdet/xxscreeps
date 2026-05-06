@@ -1,20 +1,16 @@
+import type * as vm from 'node:vm';
 import * as repl from 'node:repl';
-import * as vm from 'node:vm';
 import { ArgumentParser } from 'argparse';
-import { createStreamingConsole } from './console.js';
-import { createCuratedContext } from './context.js';
-import { evaluateInContext, recoverableSyntaxError } from './evaluate.js';
+import { evaluateOffline, installHostShims } from './eval-offline.js';
+import { recoverableSyntaxError } from './recoverable.js';
 
 const parser = new ArgumentParser({
-	description: 'Interactive REPL evaluating in a curated JS context.',
+	description: 'Interactive REPL evaluating in the host JS realm.',
 	prog: 'xxscreeps cli',
 });
 parser.parse_args();
 
-const sink = createStreamingConsole({ stderr: process.stderr, stdout: process.stdout });
-const context = createCuratedContext({ console: sink });
-
-let pending: Promise<unknown> = Promise.resolve();
+installHostShims();
 
 function customEval(
 	cmd: string,
@@ -31,11 +27,7 @@ function customEval(
 		callback(new repl.Recoverable(recoverable));
 		return;
 	}
-	const next = pending.then(() => evaluateInContext(context, cmd, 'repl'));
-	// Errors are reported via the parallel `.then` below; absorbing them here keeps
-	// `pending` resolved so the next turn chains off a clean promise.
-	pending = next.catch(() => {});
-	next.then(
+	void evaluateOffline(cmd).then(
 		value => callback(null, value),
 		err => callback(err instanceof Error ? err : new Error(String(err))),
 	);
@@ -44,9 +36,7 @@ function customEval(
 const server = repl.start({
 	eval: customEval,
 	prompt: 'xxscreeps> ',
-	useGlobal: false,
+	useGlobal: true,
 });
 
-server.on('exit', () => {
-	void pending.finally(() => process.exit(0));
-});
+server.on('exit', () => process.exit(0));

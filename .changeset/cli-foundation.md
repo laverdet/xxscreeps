@@ -2,4 +2,4 @@
 "xxscreeps": patch
 ---
 
-Replace `mods/backend/cli` socket REPL with sandboxed `xxscreeps cli`/`eval`; admin commands deferred to runtime-bridge follow-up.
+Run CLI eval in the host realm without a curated VM context.

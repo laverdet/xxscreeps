@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { ArgumentParser } from 'argparse';
-import { runEval } from './evaluate.js';
+import { runEval } from './eval-offline.js';
 
 interface ParsedArgs {
 	expression: string | null;
@@ -12,7 +12,7 @@ interface ParsedArgs {
 }
 
 const parser = new ArgumentParser({
-	description: 'Evaluate one program in a curated JS context.',
+	description: 'Evaluate one program in the host JS realm.',
 	prog: 'xxscreeps eval',
 });
 const sourceGroup = parser.add_mutually_exclusive_group({ required: true });
