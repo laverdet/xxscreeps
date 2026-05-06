@@ -215,12 +215,12 @@ jobs:
         shell: sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm publish --filter . --provenance
+        run: pnpm publish --filter . --no-git-checks --provenance
       - if: steps.publish.outcome == 'skipped'
         working-directory: packages/pathfinder
         shell: sh
         run: |
-          pnpm publish --dry-run --filter .
+          pnpm publish --dry-run --filter . --no-git-checks
           for ii in $(ls npm); do
             cat "npm/$ii/package.json"
             pnpm -C "npm/$ii" pack

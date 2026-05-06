@@ -38,7 +38,7 @@ jobs:
         shell: sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm publish --filter '!@xxscreeps/pathfinder' --provenance --recursive
+        run: pnpm publish --filter '!@xxscreeps/pathfinder' --no-git-checks --provenance --recursive
       - if: steps.changesets.outcome == 'skipped'
         shell: sh
-        run: pnpm publish --dry-run --filter '!@xxscreeps/pathfinder'
+        run: pnpm publish --dry-run --filter '!@xxscreeps/pathfinder' --no-git-checks
