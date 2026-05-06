@@ -219,10 +219,10 @@ export function calcTotalReactionsTime(mineral: string): number {
 			reagents[product] = [ r2, r1 ];
 		}
 	}
-	const calcStep = (m: string): number => {
-		const time = reactionTime[m];
+	const calcStep = (mineral: string): number => {
+		const time = reactionTime[mineral];
 		if (!time) return 0;
-		return time + calcStep(reagents[m][0]) + calcStep(reagents[m][1]);
+		return time + calcStep(reagents[mineral]![0]) + calcStep(reagents[mineral]![1]);
 	};
 	return calcStep(mineral);
 }

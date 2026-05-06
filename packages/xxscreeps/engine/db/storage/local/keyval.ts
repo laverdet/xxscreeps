@@ -242,7 +242,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 		if (list.length === 1) {
 			this.remove(key);
-			return list[0];
+			return list[0]!;
 		} else {
 			return list.shift()!;
 		}
@@ -441,12 +441,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			return new SortedSet(function*(): Iterable<[ number, string ]> {
 				loop: for (const member of smallest.values()) {
 					let nextScore = 0;
-					for (let ii = 0; ii < sets.length; ++ii) {
-						const score = sets[ii].score(member);
+					for (const [ ii, set ] of sets.entries()) {
+						const score = set.score(member);
 						if (score === undefined) {
 							continue loop;
 						}
-						nextScore += score * weights[ii];
+						nextScore += score * weights[ii]!;
 					}
 					yield [ nextScore, member ];
 				}

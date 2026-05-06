@@ -1,4 +1,8 @@
 {
+	'variables': {
+		# Internal quotes must be double quotes for Windows, I guess
+		'triplet': '<!(node -e "console.log(require(\'./module/triplet.js\'))")',
+	},
 	'target_defaults': {
 		'default_configuration': 'Release',
 		'configurations': {
@@ -51,7 +55,7 @@
 	},
 	'targets': [
 		{
-			'target_name': 'pf',
+			'target_name': 'pf.<@(triplet)',
 			'include_dirs': [
 				'<!(node -e "require(\'nan\')")',
 				'<!(node -e "require(\'isolated-vm/include\')")',
@@ -63,10 +67,10 @@
 		}, {
 			'target_name': 'action_after_build',
 			'type': 'none',
-			'dependencies': [ 'pf' ],
+			'dependencies': [ 'pf.<@(triplet)' ],
 			'copies': [ {
-				'files': [ '<(PRODUCT_DIR)/pf.node' ],
-				'destination': 'out/<!(node -e "console.log(process.arch + \'-\' + process.platform + \'-\' + process.version)")',
+				'files': [ '<(PRODUCT_DIR)/pf.<@(triplet).node' ],
+				'destination': 'module/node_modules/@xxscreeps/pathfinder-<@(triplet)/',
 			} ],
 		},
 	],

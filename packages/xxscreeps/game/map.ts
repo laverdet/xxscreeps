@@ -36,6 +36,18 @@ type FindRoute = {
 	routeCallback?: (roomName: string, fromRoomName: string) => number;
 };
 
+type RoomStatus = RoomOutOfBorders | NormalRoom;
+
+interface RoomOutOfBorders {
+	status: 'out of borders';
+	timestamp: number | null;
+}
+
+interface NormalRoom {
+	status: 'normal';
+	timestamp: number | null;
+}
+
 /**
  * A global object representing world map. Use it to navigate between rooms.
  */
@@ -102,10 +114,14 @@ export class GameMap {
 		const route = this.findRoute(fromRoom, toRoom, opts);
 		if (typeof route === 'number') {
 			return route;
-		} else if (route.length === 0) {
-			return C.ERR_INVALID_ARGS;
+		} else {
+			const [ first ] = route;
+			if (first === undefined) {
+				return C.ERR_INVALID_ARGS;
+			} else {
+				return first.exit;
+			}
 		}
-		return route[0].exit;
 	}
 
 	/**
@@ -205,11 +221,15 @@ export class GameMap {
 		return Math.max(dx, dy);
 	}
 
+	/** @internal */
+	getRoomStatus(roomName: string): RoomStatus | undefined;
+
 	/**
 	 * Gets availability status of the room with the specified name. Learn more about starting areas
 	 * from [this article](https://docs.screeps.com/start-areas.html).
 	 */
-	getRoomStatus(roomName: string) {
+	getRoomStatus(roomName: string): RoomStatus;
+	getRoomStatus(roomName: string): RoomStatus | undefined {
 		if (!this.#terrain.has(roomName)) {
 			return;
 		}

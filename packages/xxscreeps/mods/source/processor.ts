@@ -1,6 +1,7 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { search } from 'xxscreeps/driver/pathfinder.js';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { mappedInvertedNumericComparator, mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
@@ -97,14 +98,13 @@ registerNPC('3', Game => {
 	for (const creep of creeps) {
 
 		// Find resource to protect
-		const resource = Game.getObjectById<Source>(creep.memory.id ??= function() {
+		const resourceId = creep.memory!.id ??= function() {
 			const resources = [ ...creep.room.find(C.FIND_SOURCES), ...creep.room.find(C.FIND_MINERALS) ];
-			const resource = resources.filter(resource =>
+			const resource = resources.find(resource =>
 				creep.pos.inRangeTo(resource, 5) &&
-				!creeps.some(creep => creep.memory.id === resource.id));
-
-			if (resource.length === 1) {
-				return resource[0].id;
+				!creeps.some(creep => creep.memory!.id === resource.id));
+			if (resource) {
+				return resource.id;
 			} else {
 				// Multiple resources nearby. This is a more complete solution than the vanilla server
 				// implements. The goal is to allow keepers to settle on a source so those rooms can idle
@@ -125,7 +125,7 @@ registerNPC('3', Game => {
 					cost: costTo(home.pos, resource.pos),
 					resource,
 				}));
-				resources.sort((left, right) => costTo(home.pos, right.pos) - costTo(home.pos, left.pos));
+				resources.sort(mappedInvertedNumericComparator(resource => costTo(home.pos, resource.pos)));
 				for (const { resource } of Fn.reject(resourceInfo, info => info.cost === Infinity)) {
 					// Find distance to each lair from this resource
 					const localLairs = lairs.filter(lair => resource.pos.inRangeTo(lair, 5)).map(lair => ({
@@ -133,8 +133,8 @@ registerNPC('3', Game => {
 						lair,
 					}));
 					// Sort and iterate over all minimum equal-cost lairs
-					localLairs.sort((left, right) => left.cost - right.cost);
-					const closeLairs = Fn.filter(localLairs, lair => lair.cost === localLairs[0].cost);
+					localLairs.sort(mappedNumericComparator(lair => lair.cost));
+					const closeLairs = Fn.filter(localLairs, lair => lair.cost === localLairs[0]!.cost);
 					for (const lair of closeLairs) {
 						if (lair.lair === home) {
 							return resource.id;
@@ -142,7 +142,8 @@ registerNPC('3', Game => {
 					}
 				}
 			}
-		}()!);
+		}();
+		const resource = Game.getObjectById<Source>(resourceId as string);
 
 		// Move towards it
 		if (resource && !creep.pos.isNearTo(resource)) {
@@ -164,7 +165,7 @@ registerNPC('3', Game => {
 		// Find ranged targets
 		const rangedTargets = [ ...Fn.filter(enemies, enemy => creep.pos.inRangeTo(enemy, 3)) ];
 		const damageByRange = [ 10, 10, 4, 1 ];
-		const massAttackDamage = Fn.accumulate(enemies, enemy => damageByRange[creep.pos.getRangeTo(enemy)]);
+		const massAttackDamage = Fn.accumulate(enemies, enemy => damageByRange[creep.pos.getRangeTo(enemy)] ?? 0);
 		if (massAttackDamage > 13) {
 			creep.rangedMassAttack();
 		} else {

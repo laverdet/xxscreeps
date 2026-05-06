@@ -15,7 +15,7 @@ function createFactoryWithResources(pos: RoomPosition, owner: string, resources:
 }
 
 function getFactory(game: { rooms: Record<string, Room> }) {
-	return lookForStructures(game.rooms.W1N1, C.STRUCTURE_FACTORY)[0];
+	return lookForStructures(game.rooms.W1N1, C.STRUCTURE_FACTORY)[0]!;
 }
 
 describe('Factory', () => {
@@ -224,7 +224,7 @@ describe('Factory', () => {
 			await player('100', Game => {
 				const factory = getFactory(Game);
 				// silicon is a deposit resource with no commodity recipe
-				assert.strictEqual(factory.produce(C.RESOURCE_SILICON as ResourceType), C.ERR_INVALID_ARGS);
+				assert.strictEqual(factory.produce(C.RESOURCE_SILICON), C.ERR_INVALID_ARGS);
 			});
 		}));
 
@@ -237,6 +237,20 @@ describe('Factory', () => {
 				room['#user'] = room.controller!['#user'] = '100';
 			},
 		});
+
+		test('invalid resource type before rcl gate', () => lowRclSim(async ({ player }) => {
+			await player('100', Game => {
+				const factory = getFactory(Game);
+				assert.strictEqual(factory.produce('not_a_real_resource' as ResourceType), C.ERR_INVALID_ARGS);
+			});
+		}));
+
+		test('level-mismatched recipe before rcl gate', () => lowRclSim(async ({ player }) => {
+			await player('100', Game => {
+				const factory = getFactory(Game);
+				assert.strictEqual(factory.produce(C.RESOURCE_COMPOSITE), C.ERR_INVALID_TARGET);
+			});
+		}));
 
 		test('inactive factory at low RCL', () => lowRclSim(async ({ player }) => {
 			await player('100', Game => {

@@ -1,5 +1,6 @@
 import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
 import type { Terrain } from 'xxscreeps/game/terrain.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
 import { getOffsetsFromDirection } from 'xxscreeps/game/position.js';
@@ -69,13 +70,14 @@ Object.assign(Room, {
 		if (!Array.isArray(path)) {
 			throw new Error('`path` is not an array');
 		}
-		if (path.length === 0) {
+		const [ origin ] = path;
+		if (origin === undefined) {
 			return '';
 		}
-		if (path[0].x < 0 || path[0].y < 0) {
+		if (origin.x < 0 || origin.y < 0) {
 			throw new Error('path coordinates cannot be negative');
 		}
-		let result = `${path[0].x}`.padStart(2, '0') + `${path[0].y}`.padStart(2, '0');
+		let result = `${origin.x}`.padStart(2, '0') + `${origin.y}`.padStart(2, '0');
 		for (const step of path) {
 			result += step.direction;
 		}
@@ -117,10 +119,10 @@ Object.assign(Room, {
 extend(Room, {
 	findExitTo(room: Room | string) {
 		const route = Game.map.findRoute(this, room);
-		if (typeof route === 'object') {
-			return route[0].exit;
-		} else {
+		if (typeof route === 'number') {
 			return route;
+		} else {
+			return route[0]?.exit ?? C.ERR_NO_PATH;
 		}
 	},
 
@@ -137,7 +139,7 @@ extend(Room, {
 		if (
 			(options.range ?? 0) === 0 &&
 			(result.path.length
-				? result.path[result.path.length - 1].getRangeTo(goal) === 1 :
+				? result.path.at(-1)?.getRangeTo(goal) === 1 :
 				origin.isNearTo(goal))
 		) {
 			result.path.push(goal);

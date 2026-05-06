@@ -100,7 +100,7 @@ describe('Portal', () => {
 		await peekRoom('W2N2', room => {
 			const creeps = room.find(C.FIND_CREEPS).filter(creep => creep.name === 'traveler');
 			assert.strictEqual(creeps.length, 1);
-			assert.ok(creeps[0].pos.isEqualTo(20, 20));
+			assert.ok(creeps[0]?.pos.isEqualTo(20, 20));
 		});
 		await peekRoom('W1N1', room => {
 			assert.strictEqual(

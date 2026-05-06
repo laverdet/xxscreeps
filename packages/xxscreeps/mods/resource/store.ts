@@ -168,9 +168,10 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		}
 		const resources = this['#resources'];
 		const ii = resources.findIndex(info => info.type === type);
-		const info = resources[ii];
+		// nb: We assume it is an invariant to invoke this function with an undefined resource
+		const info = resources[ii]!;
 		if ((info.amount -= amount) === 0) {
-			resources[ii] = resources[resources.length - 1];
+			resources[ii] = resources.at(-1)!;
 			resources.pop();
 			delete this[type];
 		} else {
@@ -219,7 +220,7 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 	}
 
 	'#storeCapacityResource'() {
-		const result: Record<string, number> = Object.create(null);
+		const result = Object.create(null) as Record<string, number>;
 		for (const info of this['#resources']) {
 			result[info.type] = info.capacity;
 		}
@@ -285,7 +286,7 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 	}
 
 	'#storeCapacityResource'() {
-		const result: Record<string, number> = Object.create(null);
+		const result = Object.create(null) as Record<string, number>;
 		result[this['#type']] = this['#capacity'];
 		return result;
 	}
@@ -354,7 +355,7 @@ export function checkHasResource(target: WithStore, resourceType: ResourceType |
 		return C.ERR_INVALID_ARGS;
 	} else if (typeof amount !== 'number' || amount < 0) {
 		return C.ERR_INVALID_ARGS;
-	} else if (target.store.getCapacity(resourceType!) === null) {
+	} else if (target.store.getCapacity(resourceType) === null) {
 		return C.ERR_INVALID_TARGET;
 	} else if (target.store[resourceType!] >= Math.max(1, amount)) {
 		return C.OK;

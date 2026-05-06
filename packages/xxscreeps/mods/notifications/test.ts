@@ -70,7 +70,7 @@ describe('Game.notify', () => {
 		await dispatchQueuedNotifications(shard, user, flush());
 		const rows = await getNotifications(shard, user);
 		assert.strictEqual(rows.length, 1);
-		const row = rows[0];
+		const row = rows[0]!;
 		assert.strictEqual(row.user, user);
 		assert.strictEqual(row.message, 'hi');
 		assert.strictEqual(typeof row.date, 'number');
@@ -88,7 +88,7 @@ describe('Game.notify', () => {
 		await dispatchQueuedNotifications(shard, user, flush());
 		const rows = await getNotifications(shard, user);
 		assert.strictEqual(rows.length, 1, 'same-bucket calls collapse to one row');
-		assert.strictEqual(rows[0].message, 'hi');
+		assert.strictEqual(rows[0]?.message, 'hi');
 		assert.strictEqual(rows[0].count, 2);
 		// Stored `date` is the actual write time, not the bucket boundary.
 		assert.strictEqual(rows[0].date, 1_000_000);
@@ -102,7 +102,7 @@ describe('Game.notify', () => {
 		await dispatchQueuedNotifications(shard, user, flush());
 		const rows = await getNotifications(shard, user);
 		assert.strictEqual(rows.length, 1);
-		assert.strictEqual(rows[0].message.length, 500);
+		assert.strictEqual(rows[0]?.message.length, 500);
 		assert.strictEqual(rows[0].message, 'a'.repeat(500));
 	}));
 
@@ -126,7 +126,8 @@ describe('Game.notify', () => {
 		}
 	}));
 
-	test('message coercion via `${i.message}`', () => empty(async ({ player, shard }) => {
+	// eslint-disable-next-line no-template-curly-in-string
+	test('message coercion via ${i.message}`', () => empty(async ({ player, shard }) => {
 		flush();
 		await player(user, Game => {
 			Game.notify(null as unknown as string);
@@ -148,7 +149,7 @@ describe('Game.notify', () => {
 		await dispatchQueuedNotifications(shard, user, flush());
 		const rows = await getNotifications(shard, user);
 		assert.strictEqual(rows.length, 1);
-		assert.strictEqual(rows[0].message, 'undefined');
+		assert.strictEqual(rows[0]?.message, 'undefined');
 		assert.strictEqual(rows[0].date, 1_234_567);
 		assert.strictEqual(rows[0].count, 1);
 		assert.strictEqual(rows[0].type, 'msg');

@@ -21,11 +21,11 @@ describe('Invader exit filtering', () => {
 
 	test('invaders spawn in uncontrolled room', () => uncontrolled(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
-			const invaders = Game.rooms.W7N7.find(C.FIND_HOSTILE_CREEPS);
+			const invaders = Game.rooms.W7N7!.find(C.FIND_HOSTILE_CREEPS);
 			assert.ok(invaders.length > 0, 'invaders should spawn when all neighbors are uncontrolled');
 		});
 	}));
@@ -57,11 +57,11 @@ describe('Invader exit filtering', () => {
 
 	test('no invaders when all exits lead to owned rooms', () => allOwned(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
-			const invaders = Game.rooms.W7N7.find(C.FIND_HOSTILE_CREEPS);
+			const invaders = Game.rooms.W7N7!.find(C.FIND_HOSTILE_CREEPS);
 			assert.strictEqual(invaders.length, 0, 'invaders should not spawn when all exits lead to owned rooms');
 		});
 	}));
@@ -93,11 +93,11 @@ describe('Invader exit filtering', () => {
 
 	test('no invaders when all exits lead to reserved rooms', () => allReserved(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
-			const invaders = Game.rooms.W7N7.find(C.FIND_HOSTILE_CREEPS);
+			const invaders = Game.rooms.W7N7!.find(C.FIND_HOSTILE_CREEPS);
 			assert.strictEqual(invaders.length, 0, 'invaders should not spawn when all exits lead to reserved rooms');
 		});
 	}));
@@ -143,11 +143,11 @@ describe('Invader exit filtering', () => {
 
 	test('invaders spawn at exits to highway rooms', () => highwayExit(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
-			const invaders = Game.rooms.W1N1.find(C.FIND_HOSTILE_CREEPS);
+			const invaders = Game.rooms.W1N1!.find(C.FIND_HOSTILE_CREEPS);
 			assert.ok(invaders.length > 0, 'invaders should spawn at exits to highway rooms');
 			for (const invader of invaders) {
 				assert.strictEqual(invader.pos.y, 49,
@@ -158,11 +158,11 @@ describe('Invader exit filtering', () => {
 
 	test('invaders only at exits to uncontrolled rooms', () => partialBlock(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.creeps.dummy.move(C.TOP);
+			Game.creeps.dummy?.move(C.TOP);
 		});
 		await tick();
 		await player('100', Game => {
-			const invaders = Game.rooms.W7N7.find(C.FIND_HOSTILE_CREEPS);
+			const invaders = Game.rooms.W7N7!.find(C.FIND_HOSTILE_CREEPS);
 			assert.ok(invaders.length > 0, 'invaders should spawn at unblocked exits');
 			for (const invader of invaders) {
 				assert.strictEqual(invader.pos.x, 0,

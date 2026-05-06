@@ -19,8 +19,8 @@ export async function *consumeSet(keyval: KeyValProvider, key: string) {
  * the index of the remove member or `null` if none were found.
  */
 const RemOne = new KeyvalScript((keyval, [ key ]: [ string ], members: string[]) => {
-	for (let ii = 0; ii < members.length; ++ii) {
-		if (keyval.srem(key, [ members[ii] ]) === 1) {
+	for (const [ ii, member ] of members.entries()) {
+		if (keyval.srem(key, [ member ]) === 1) {
 			return ii;
 		}
 	}
@@ -39,14 +39,14 @@ end`,
  * modifies the `members` array in place, removing those elements from it as well as the database
  * set.
  */
-export async function *consumeSetMembers(keyval: KeyValProvider, key: string, members: string[]) {
+export async function *consumeSetMembers(keyval: KeyValProvider, key: string, members: string[]): AsyncIterable<string> {
 	while (members.length > 0) {
 		const ii = await keyval.eval(RemOne, [ key ], members);
 		if (ii === null) {
 			return;
 		}
-		const member = members[ii];
-		members[ii] = members[members.length - 1];
+		const member = members[ii]!;
+		members[ii] = members.at(-1)!;
 		members.pop();
 		yield member;
 	}
@@ -56,16 +56,18 @@ export async function *consumeSetMembers(keyval: KeyValProvider, key: string, me
  * Removes a single member from the sorted set within range [min, max]. Returns the removed member
  * or `null` if none matched the range.
  */
-const ZPopByScore = new KeyvalScript((keyval, [ key ]: [ string ], [ min, max ]: [ number, number ]) => {
-	const range: string[] = keyval.zrange(key, min, max, { by: 'score', limit: [ 0, 1 ] });
-	if (range.length === 0) {
-		return null;
-	} else {
-		keyval.zrem(key, range);
-		return range[0];
-	}
-}, {
-	lua:
+const ZPopByScore = new KeyvalScript(
+	(keyval, [ key ]: [ string ], [ min, max ]: [ number, number ]) => {
+		const range: string[] = keyval.zrange(key, min, max, { by: 'score', limit: [ 0, 1 ] });
+		const [ first ] = range;
+		if (first === undefined) {
+			return null;
+		} else {
+			keyval.zrem(key, range);
+			return first;
+		}
+	}, {
+		lua:
 `local range = redis.call('zrange', KEYS[1], ARGV[1], ARGV[2], 'BYSCORE', 'LIMIT', 0, 1)
 if #range == 0 then
 	return
@@ -73,7 +75,7 @@ else
 	redis.call('zrem', KEYS[1], range[1])
 	return range[1]
 end`,
-});
+	});
 
 /**
  * Removes each member from the sorted set within range [min, max], yield the members one by one.
@@ -97,12 +99,11 @@ const ZRemOneInRange = new KeyvalScript((
 	keyval,
 	[ key ]: [ string ],
 	[ min, max, ...members ]: [ number, number, ...string[] ],
-): number[] => {
-	const result = [ -1 ];
+): [ number, ...number[] ] => {
+	const result: [ number, ...number[] ] = [ -1 ];
 	for (let ii = 0; ii < members.length; ii += 16) {
 		const scores = keyval.zmscore(key, members.slice(ii, ii + 16));
-		for (let jj = 0; jj < scores.length; ++jj) {
-			const score = scores[jj];
+		for (const [ jj, score ] of scores.entries()) {
 			if (score === null) {
 				result.push(ii + jj);
 			} else if (score >= min && score <= max) {
@@ -110,7 +111,7 @@ const ZRemOneInRange = new KeyvalScript((
 			}
 		}
 		if (result[0] !== -1) {
-			keyval.zrem(key, [ members[result[0]] ]);
+			keyval.zrem(key, [ members[result[0]]! ]);
 			break;
 		}
 	}
@@ -144,17 +145,17 @@ return result
  * yielding them one by one. This modifies the `members` array in place, removing those elements
  * from it as well as the database set.
  */
-export async function *consumeSortedSetMembers(keyval: KeyValProvider, key: string, members: string[], min = -Infinity, max = Infinity) {
+export async function *consumeSortedSetMembers(keyval: KeyValProvider, key: string, members: string[], min = -Infinity, max = Infinity): AsyncIterable<string> {
 	while (members.length > 0) {
 		const result = await keyval.eval(ZRemOneInRange, [ key ], [ min, max, ...members ]);
 		let cursor = members.length;
 		const index = result[0];
 		if (index !== -1) {
-			yield members[index];
-			members[index] = members[--cursor];
+			yield members[index]!;
+			members[index] = members[--cursor]!;
 		}
 		for (let ii = 1; ii < result.length; ++ii) {
-			members[result[ii]] = members[--cursor];
+			members[result[ii]!] = members[--cursor]!;
 		}
 		members.splice(cursor);
 		if (index === -1) {

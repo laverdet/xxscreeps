@@ -2,7 +2,7 @@
   "name": "@xxscreeps/workspace",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@9.15.2",
+  "packageManager": "pnpm@10.33.3",
   "license": "ISC",
   "repository": "https://github.com/laverdet/xxscreeps",
   "scripts": {
@@ -12,12 +12,12 @@
     "watch": "tsc -b -w"
   },
   "dependencies": {
-    "@changesets/cli": "^2.31.0",
     "@xxscreeps/client": "workspace:*",
     "@xxscreeps/redis": "workspace:*",
     "xxscreeps": "workspace:*"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@eslint/js": "^9.39.4",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@typescript-eslint/eslint-plugin": "^8.59.1",

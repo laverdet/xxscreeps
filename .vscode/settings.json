@@ -29,6 +29,7 @@
 		"typescript",
 	],
 	"files.exclude": {
+		".pnpm": true,
 		"**/dist": true,
 		"**/node_modules": true,
 	},

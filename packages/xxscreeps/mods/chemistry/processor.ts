@@ -1,5 +1,4 @@
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
-import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
@@ -44,12 +43,11 @@ const intents = [
 
 		// Find non-boosted parts matching this mineral's boost type
 		const boosts: BoostsLookup = C.BOOSTS;
-		let nonBoostedParts = creep.body.filter(
-			part => !part.boost && boosts[part.type]?.[mineralType]);
+		let nonBoostedParts = creep.body.filter(part => part.boost === undefined && boosts[part.type]?.[mineralType] !== undefined);
 
 		// TOUGH parts boosted first (ascending index), all others last-to-first (reversed)
-		if (nonBoostedParts.length > 0 && nonBoostedParts[0].type !== C.TOUGH) {
-			nonBoostedParts = [ ...nonBoostedParts ].reverse();
+		if (nonBoostedParts.length > 0 && nonBoostedParts[0]!.type !== C.TOUGH) {
+			nonBoostedParts.reverse();
 		}
 
 		if (bodyPartsCount) {
@@ -57,11 +55,11 @@ const intents = [
 		}
 
 		// Apply boosts while resources allow
-		for (const ii of Fn.range(nonBoostedParts.length)) {
+		for (const part of nonBoostedParts) {
 			if (lab.store[C.RESOURCE_ENERGY] < C.LAB_BOOST_ENERGY || lab.store[mineralType] < C.LAB_BOOST_MINERAL) {
 				break;
 			}
-			nonBoostedParts[ii].boost = mineralType;
+			part.boost = mineralType;
 			lab.store['#subtract'](mineralType, C.LAB_BOOST_MINERAL);
 			lab.store['#subtract'](C.RESOURCE_ENERGY, C.LAB_BOOST_ENERGY);
 		}
@@ -121,7 +119,7 @@ const intents = [
 		let cooldown = 0;
 		for (const resource of C.RESOURCES_ALL) {
 			const count = boostedParts[resource];
-			if (!count) continue;
+			if (count === undefined) continue;
 
 			const energyReturn = count * C.LAB_UNBOOST_ENERGY;
 			if (energyReturn > 0) {

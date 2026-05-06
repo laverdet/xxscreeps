@@ -3,6 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { intents, me, userGame } from 'xxscreeps/game/index.js';
 import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { checkHasResource } from 'xxscreeps/mods/resource/store.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { StructureController } from './controller.js';
 
@@ -175,8 +176,9 @@ export function checkReserveController(creep: Creep, target: StructureController
 export function checkSignController(creep: Creep, target: StructureController, message: string | null | undefined) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => checkTarget(target, StructureController),
+		() => checkTarget(target, Structure),
 		() => checkRange(creep, target, 1),
+		() => target instanceof StructureController ? C.OK : C.ERR_INVALID_TARGET,
 		() => message ? checkString(message, 100) : C.OK);
 }
 
@@ -185,12 +187,7 @@ export function checkUpgradeController(creep: Creep, target: StructureController
 		() => checkCommon(creep, C.WORK),
 		() => checkHasResource(creep, C.RESOURCE_ENERGY),
 		() => checkTarget(target, StructureController),
+		() => target.upgradeBlocked ? C.ERR_INVALID_TARGET : C.OK,
 		() => checkRange(creep, target, 3),
-		() => {
-			if (target.upgradeBlocked) {
-				return C.ERR_INVALID_TARGET;
-			} else if (!target.my) {
-				return C.ERR_NOT_OWNER;
-			}
-		});
+		() => target.my ? C.OK : C.ERR_NOT_OWNER);
 }

@@ -1,6 +1,4 @@
 import type { Context, State } from './index.js';
-import type { Effect } from 'xxscreeps/utility/types.js';
-
 import * as http from 'node:http';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
@@ -8,10 +6,8 @@ import ConditionalGet from 'koa-conditional-get';
 import Router from 'koa-router';
 import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
-import { getServiceChannel } from 'xxscreeps/engine/service/index.js';
 import { handleInterruptSignal } from 'xxscreeps/engine/service/signal.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
-import * as Async from 'xxscreeps/utility/async.js';
 import { authentication } from './auth/index.js';
 import { BackendContext } from './context.js';
 import { installEndpointHandlers } from './endpoints/index.js';

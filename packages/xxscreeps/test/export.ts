@@ -72,7 +72,7 @@ const payload = Fn.fromEntries(await Fn.pipe(
 	$$ => Promise.all($$)));
 
 const file = process.argv[2];
-if (!file.endsWith('.json')) {
+if (!file?.endsWith('.json')) {
 	throw new Error('Destination must be .json file');
 }
 await fs.writeFile(file, JSON.stringify(payload, null, 1));

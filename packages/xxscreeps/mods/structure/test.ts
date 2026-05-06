@@ -50,7 +50,7 @@ describe('Structure isActive', () => {
 	// Extractor isActive check on mineral harvest — use room's existing mineral
 	const extractorSim = simulate({
 		W6N1: room => {
-			const mineral = room.find(C.FIND_MINERALS)[0];
+			const mineral = room.find(C.FIND_MINERALS)[0]!;
 			mineral.mineralAmount = 1000;
 			room['#insertObject'](createExtractor(mineral.pos, '100'));
 			room['#insertObject'](createCreep(mineral.pos, [ C.WORK, C.CARRY, C.MOVE ], 'miner', '100'));
@@ -62,9 +62,9 @@ describe('Structure isActive', () => {
 	test('harvest returns ERR_RCL_NOT_ENOUGH with inactive extractor', () => extractorSim(async ({ player }) => {
 		await player('100', Game => {
 			const creep = Game.creeps.miner;
-			const mineral = Game.rooms.W6N1.find(C.FIND_MINERALS)[0];
+			const mineral = Game.rooms.W6N1?.find(C.FIND_MINERALS)[0];
 			assert.ok(mineral, 'mineral should exist');
-			assert.strictEqual(creep.harvest(mineral), C.ERR_RCL_NOT_ENOUGH);
+			assert.strictEqual(creep?.harvest(mineral), C.ERR_RCL_NOT_ENOUGH);
 		});
 	}));
 });

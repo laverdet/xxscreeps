@@ -1,4 +1,6 @@
-import { hooks } from 'xxscreeps/backend/index.js';
+import type { Color } from './flag.js';
+import { JSONSchemaType } from 'ajv';
+import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -7,7 +9,7 @@ import { checkCreateFlag } from './flag.js';
 import { getFlagChannel, loadUserFlags } from './model.js';
 
 hooks.register('roomSocket', async (shard, userId, roomName) => {
-	if (!userId) {
+	if (userId == null) {
 		return;
 	}
 
@@ -35,13 +37,29 @@ hooks.register('roomSocket', async (shard, userId, roomName) => {
 	];
 });
 
+interface FlagColorRequest {
+	name: string;
+	color: Color;
+	secondaryColor: Color;
+}
+
+const flagColorRequestSchema: JSONSchemaType<FlagColorRequest> = {
+	type: 'object',
+	properties: {
+		name: { type: 'string' },
+		color: { type: 'integer', minimum: 1, maximum: 10 },
+		secondaryColor: { type: 'integer', minimum: 1, maximum: 10 },
+	},
+	required: [ 'name', 'color', 'secondaryColor' ],
+};
+
 hooks.register('route', {
 	path: '/api/game/change-flag-color',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(flagColorRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		const { name, color, secondaryColor } = context.request.body;
@@ -61,48 +79,81 @@ hooks.register('route', {
 		} else {
 			return { error: 'Invalid intent' };
 		}
-	},
+	}),
 });
+
+interface FlagNameRequest {
+	name: string;
+}
+
+const flagNameRequestSchema: JSONSchemaType<FlagNameRequest> = {
+	type: 'object',
+	properties: {
+		name: { type: 'string' },
+	},
+	required: [ 'name' ],
+};
 
 hooks.register('route', {
 	path: '/api/game/check-unique-flag-name',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(flagNameRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		const { name } = context.request.body;
 		const flags = await loadUserFlags(context.shard, userId);
-
 		if (flags[name]) {
 			return { error: 'name exists' };
 		} else {
 			return { ok: 1 };
 		}
-	},
+	}),
 });
+
+interface CreateFlagRequest {
+	name: string;
+	color: number;
+	secondaryColor: number;
+	room: string;
+	x: number;
+	y: number;
+}
+
+const createFlagRequestSchema: JSONSchemaType<CreateFlagRequest> = {
+	type: 'object',
+	properties: {
+		name: { type: 'string' },
+		color: { type: 'number' },
+		secondaryColor: { type: 'number' },
+		room: { type: 'string' },
+		x: { type: 'number' },
+		y: { type: 'number' },
+	},
+	required: [ 'name', 'color', 'secondaryColor', 'room', 'x', 'y' ],
+};
 
 hooks.register('route', {
 	path: '/api/game/create-flag',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(createFlagRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		const { name, color, secondaryColor, room, x, y } = context.request.body;
 		const pos = new RoomPosition(x, y, room);
-		if (checkCreateFlag({}, pos, name, color, secondaryColor) === C.OK) {
+		if (checkCreateFlag({}, pos, name, color as Color, secondaryColor as Color) === C.OK) {
 			await getFlagChannel(context.shard, userId).publish({
 				type: 'intent',
 				intent: {
 					type: 'create',
 					params: [
 						name, pos['#id'],
-						color, secondaryColor,
+						color as Color, secondaryColor as Color,
 					],
 				},
 			});
@@ -110,7 +161,7 @@ hooks.register('route', {
 		} else {
 			return { error: 'Invalid intent' };
 		}
-	},
+	}),
 });
 
 hooks.register('route', {
@@ -119,14 +170,13 @@ hooks.register('route', {
 
 	async execute(context) {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		try {
 			const flags = await loadUserFlags(context.shard, userId);
 			for (let ii = 0; ii < 100; ++ii) {
 				const name = `Flag${ii}`;
-
 				if (!flags[name]) {
 					return { ok: 1, name };
 				}
@@ -142,9 +192,9 @@ hooks.register('route', {
 	path: '/api/game/remove-flag',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(flagNameRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		const { name } = context.request.body;
@@ -157,5 +207,5 @@ hooks.register('route', {
 				},
 			});
 		return { ok: 1 };
-	},
+	}),
 });

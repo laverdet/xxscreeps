@@ -60,7 +60,7 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return undefined; }
 	override get structureType() { return C.STRUCTURE_CONTROLLER; }
 	override get '#extraUsers'() {
-		const sign = this.room?.['#sign'];
+		const sign = this.room['#sign'];
 		return sign ? [ sign.userId ] : [];
 	}
 
@@ -130,10 +130,10 @@ export function checkActivateSafeMode(controller: StructureController) {
 			if (controller.safeModeAvailable <= 0) {
 				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
-			const downgradeThreshold = C.CONTROLLER_DOWNGRADE[controller.level]! / 2
-				- C.CONTROLLER_DOWNGRADE_SAFEMODE_THRESHOLD;
+			const downgradeThreshold = C.CONTROLLER_DOWNGRADE[controller.level]! / 2 -
+				C.CONTROLLER_DOWNGRADE_SAFEMODE_THRESHOLD;
 			if (
-				controller.safeModeCooldown ||
+				Boolean(controller.safeModeCooldown) ||
 				controller.upgradeBlocked !== undefined ||
 				(controller.ticksToDowngrade ?? Infinity) < downgradeThreshold
 			) {

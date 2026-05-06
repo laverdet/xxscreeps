@@ -17,12 +17,12 @@ SourceMap.install({
 			};
 		}
 		const content = sourceContent.get(fileName);
-		if (content) {
+		if (content !== undefined) {
 			// Match final inline source map
 			const matches = [ ...content.matchAll(/\/\/# sourceMappingURL=data:application\/json;(?:charset=utf-8;)?base64,(?<map>.+)/g) ];
 			if (matches.length !== 0) {
-				const sourceMapContent = matches[matches.length - 1].groups!.map;
-				if (sourceMapContent) {
+				const sourceMapContent = matches.at(-1)!.groups!.map;
+				if (sourceMapContent !== undefined) {
 					return {
 						url: fileName,
 						map: Base64.decode(sourceMapContent),

@@ -133,7 +133,7 @@ export class RedisProvider implements P.KeyValProvider {
 
 	async hmget(key: string, fields: string[], options?: P.AsBlob) {
 		const payload = await this.redis.invoke<string[]>(cb => this.redis.batch(key).hmget(key, fields, cb));
-		return Fn.fromEntries(payload.map((value, ii) => [ fields[ii], send(value, options) ])) as never;
+		return Fn.fromEntries(payload.map((value, ii) => [ fields[ii]!, send(value, options) ])) as never;
 	}
 
 	async hset(key: string, field: string, value: Value, options?: P.HSet) {
@@ -145,9 +145,7 @@ export class RedisProvider implements P.KeyValProvider {
 	}
 
 	async hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
-		const iterable = Symbol.iterator in fields
-			? fields as Iterable<[ string, Value ]> :
-			Object.entries(fields);
+		const iterable = Symbol.iterator in fields ? fields : Object.entries(fields);
 		await this.redis.invoke<number>(cb => this.redis.batch(key).hset(key, [ ...Fn.map(Fn.concat(iterable), recv) ], cb));
 	}
 
@@ -218,17 +216,27 @@ export class RedisProvider implements P.KeyValProvider {
 
 	//
 	// sorted sets
+	zadd(key: string, members: [ number, string ][], options: { incr: true } & P.ZAdd): Promise<number | null>;
+	zadd(key: string, members: [ number, string ][], options?: P.ZAdd): Promise<number>;
 	async zadd(key: string, members: [ number, string ][], options?: P.ZAdd) {
 		if (members.length === 0) {
 			return Promise.resolve(0);
+		} else if (options?.incr) {
+			type CallbackType = (err: Error | null, value: unknown) => void;
+			const result = await this.redis.invoke<Buffer | string | null>(cb => this.redis.batch(key).zadd(
+				key,
+				...options.if ? [ options.if ] : [],
+				'incr',
+				...Fn.concat<string | number>(members),
+				cb as CallbackType));
+			return result === null ? null : Number(send(result));
 		} else {
 			const result = await this.redis.invoke<number>(cb => this.redis.batch(key).zadd(
 				key,
 				...options?.if ? [ options.if ] : [],
-				...options?.incr ? [ 'incr' ] : [],
 				...Fn.concat<number | string>(members),
 				cb));
-			return options?.incr ? Number(send(result)) : result;
+			return result;
 		}
 	}
 
@@ -311,8 +319,8 @@ export class RedisProvider implements P.KeyValProvider {
 	}
 
 	async load(script: P.KeyvalScript) {
-		if (!script.sha) {
-			const loaded = await this.redis.invoke<string>(cb => this.redis.client.script('LOAD', script.lua, cb));
+		if (script.sha === undefined) {
+			const loaded = await this.redis.invoke<string>(cb => this.redis.client.script('LOAD', script.lua!, cb));
 			// @ts-expect-error
 			script.sha = loaded;
 		}

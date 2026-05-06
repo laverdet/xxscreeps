@@ -12,7 +12,7 @@ function toId(name: string | symbol): string {
 	} else if (/^[A-Z0-9]+$/.test(name)) {
 		return name.toLowerCase();
 	} else {
-		return name.replace(/.[A-Z]/g, match => `${match[0]}_${match[1].toLowerCase()}`).replace(/^_+/, '').toLowerCase();
+		return name.replace(/.[A-Z]/g, match => `${match[0]}_${match[1]!.toLowerCase()}`).replace(/^_+/, '').toLowerCase();
 	}
 }
 

@@ -45,7 +45,7 @@ registerObjectTickProcessor(Mineral, (mineral, context) => {
 				// Reaccumulate probabilities
 				const accumulated = [ ...Fn.scan(adjusted, 0, (result, value) => result + value) ];
 				// Update density
-				const random = Math.random() * accumulated[accumulated.length - 1];
+				const random = Math.random() * accumulated.at(-1)!;
 				mineral.density = accumulated.findIndex(value => random <= value);
 			}
 			context.didUpdate();
