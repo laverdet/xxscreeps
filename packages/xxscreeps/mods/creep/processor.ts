@@ -49,33 +49,34 @@ export function flushActionLog(actionLog: ActionLog, context: ProcessorContext) 
 }
 
 /**
- * Calculates effective HP lost after TOUGH boost damage reduction.
+ * Calculates effective damage for hit settlement after TOUGH boost reduction.
  * Walks body parts front-to-back: boosted TOUGH parts absorb more incoming
  * damage per HP lost (each point of incoming damage costs only `multiplier` HP).
- * Non-TOUGH and unboosted parts take damage at 1:1.
+ * Non-TOUGH and unboosted parts take damage at 1:1. Damage left after all live
+ * parts are exhausted is still lethal overkill for creep hits.
  */
 function calculateEffectiveDamage(creep: Creep, totalDamage: number) {
-	let remaining = totalDamage;
-	let hitsLost = 0;
+	let remainingDamage = totalDamage;
+	let effectiveDamage = 0;
 	for (const part of creep.body) {
-		if (remaining <= 0) break;
+		if (remainingDamage <= 0) break;
 		if (part.hits <= 0) continue;
 		if (part.type === C.TOUGH && part.boost) {
 			const multiplier = (C.BOOSTS as CreepLib.BoostsLookup)[C.TOUGH]?.[part.boost]?.damage;
 			if (multiplier) {
 				// This part can absorb part.hits/multiplier incoming damage
-				const absorbed = Math.min(remaining, part.hits / multiplier);
-				hitsLost += absorbed * multiplier;
-				remaining -= absorbed;
+				const rawDamageToPart = Math.min(remainingDamage, part.hits / multiplier);
+				remainingDamage -= rawDamageToPart;
+				effectiveDamage += rawDamageToPart * multiplier;
 				continue;
 			}
 		}
 		// Non-TOUGH or unboosted: 1:1
-		const absorbed = Math.min(remaining, part.hits);
-		hitsLost += absorbed;
-		remaining -= absorbed;
+		const rawDamageToPart = Math.min(remainingDamage, part.hits);
+		remainingDamage -= rawDamageToPart;
+		effectiveDamage += rawDamageToPart;
 	}
-	return hitsLost;
+	return effectiveDamage + remainingDamage;
 }
 
 export function dropOverflowResources(creep: Creep) {
