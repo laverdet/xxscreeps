@@ -39,10 +39,11 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 	 */
 	transferEnergy(target: StructureLink, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
-			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-			amount || Math.min(this.store[C.RESOURCE_ENERGY], target.store.getFreeCapacity(C.RESOURCE_ENERGY)!));
+			(amount === undefined || amount === 0)
+				? Math.min(this.store[C.RESOURCE_ENERGY], target.store.getFreeCapacity(C.RESOURCE_ENERGY)!)
+				: amount);
 		return chainIntentChecks(
-			() => checkTransferEnergy(this, target, intentAmount),
+			() => checkTransferEnergy(this, target, amount, intentAmount),
 			() => intents.save(this, 'transferEnergy', target.id, intentAmount));
 	}
 }
@@ -68,10 +69,11 @@ registerBuildableStructure(C.STRUCTURE_LINK, {
 	},
 });
 
-export function checkTransferEnergy(link: StructureLink, target: StructureLink, amount: number) {
+export function checkTransferEnergy(
+	link: StructureLink, target: StructureLink, amount: number | undefined, intentAmount: number = amount ?? NaN,
+) {
 	return chainIntentChecks(
-		() => checkMyStructure(link, StructureLink),
-		() => checkIsActive(link),
+		() => amount !== undefined && amount < 0 ? C.ERR_INVALID_ARGS : C.OK,
 		() => checkTarget(target, StructureLink),
 		() => target === link ? C.ERR_INVALID_TARGET : C.OK,
 		() => {
@@ -79,15 +81,11 @@ export function checkTransferEnergy(link: StructureLink, target: StructureLink, 
 				return C.ERR_NOT_OWNER;
 			}
 		},
-		() => checkHasResource(link, C.RESOURCE_ENERGY, amount),
-		() => checkHasCapacity(target, C.RESOURCE_ENERGY, amount),
+		() => checkMyStructure(link, StructureLink),
+		() => link.cooldown ? C.ERR_TIRED : C.OK,
+		() => checkIsActive(link),
+		() => checkHasResource(link, C.RESOURCE_ENERGY, intentAmount),
+		() => checkHasCapacity(target, C.RESOURCE_ENERGY, intentAmount),
 		() => checkSameRoom(link, target),
-		() => {
-			if (link.cooldown) {
-				return C.ERR_TIRED;
-			} else if (link.room !== target.room) {
-				return C.ERR_NOT_IN_RANGE;
-			}
-		},
 	);
 }
