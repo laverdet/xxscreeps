@@ -2,4 +2,4 @@
 "xxscreeps": patch
 ---
 
-Run CLI eval in the host realm without a curated VM context.
+Drop the backend CLI sandbox and REPL, replacing eval with host-realm execution.
