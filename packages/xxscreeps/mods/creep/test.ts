@@ -1,7 +1,10 @@
 import * as C from 'xxscreeps/game/constants/index.js';
+import { create as createObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { create as createResource } from 'xxscreeps/mods/resource/resource.js';
+import { Source } from 'xxscreeps/mods/source/source.js';
+import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
@@ -516,6 +519,196 @@ describe('Movement', () => {
 			});
 		}));
 	});
+});
+
+describe('Transfer precedence', () => {
+	function transferFixture(opts: {
+		target: 'source' | 'spawn';
+		targetFar?: boolean;
+		spawnEnergy?: number;
+		creepEnergy?: number;
+		creepHydrogen?: number;
+	}) {
+		return simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				const carrier = create(new RoomPosition(25, 25, 'W1N1'), [ C.CARRY ], 'carrier', '100');
+				if (opts.creepEnergy !== undefined) carrier.store['#add'](C.RESOURCE_ENERGY, opts.creepEnergy);
+				if (opts.creepHydrogen !== undefined) carrier.store['#add'](C.RESOURCE_HYDROGEN, opts.creepHydrogen);
+				room['#insertObject'](carrier);
+				const targetPos = new RoomPosition(opts.targetFar ? 35 : 25, opts.targetFar ? 35 : 26, 'W1N1');
+				if (opts.target === 'source') {
+					const src = createObject(new Source(), targetPos);
+					src.energy = src.energyCapacity = C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
+					room['#insertObject'](src);
+				} else {
+					const spawn = createSpawn(targetPos, '100', 'destination');
+					spawn.store['#subtract'](C.RESOURCE_ENERGY, C.SPAWN_ENERGY_START);
+					if (opts.spawnEnergy !== undefined) spawn.store['#add'](C.RESOURCE_ENERGY, opts.spawnEnergy);
+					room['#insertObject'](spawn);
+				}
+			},
+		});
+	}
+
+	test('TRANSFER-015:invalidTarget rejects a target without a Store', () => transferFixture({
+		target: 'source', creepEnergy: 50,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			const target = Game.rooms.W1N1?.lookForAt(C.LOOK_SOURCES, 25, 26)[0];
+			assert.strictEqual(Game.creeps.carrier?.transfer(target as never, C.RESOURCE_ENERGY), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidTargetBeforeInvalidCapacity', () => transferFixture({
+		target: 'source', creepHydrogen: 50,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			const target = Game.rooms.W1N1?.lookForAt(C.LOOK_SOURCES, 25, 26)[0];
+			assert.strictEqual(Game.creeps.carrier?.transfer(target as never, C.RESOURCE_HYDROGEN), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidTargetBeforeRange', () => transferFixture({
+		target: 'source', targetFar: true, creepEnergy: 50,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			const target = Game.rooms.W1N1?.lookForAt(C.LOOK_SOURCES, 35, 35)[0];
+			assert.strictEqual(Game.creeps.carrier?.transfer(target as never, C.RESOURCE_ENERGY), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidTargetBeforeNotEnough', () => transferFixture({
+		target: 'source',
+	})(async ({ player }) => {
+		await player('100', Game => {
+			const target = Game.rooms.W1N1?.lookForAt(C.LOOK_SOURCES, 25, 26)[0];
+			assert.strictEqual(Game.creeps.carrier?.transfer(target as never, C.RESOURCE_ENERGY), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidTargetBeforeFull', () => transferFixture({
+		target: 'source', creepEnergy: 50,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			const target = Game.rooms.W1N1?.lookForAt(C.LOOK_SOURCES, 25, 26)[0];
+			assert.strictEqual(Game.creeps.carrier?.transfer(target as never, C.RESOURCE_ENERGY), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidTargetBeforeNotEnoughAmount', () => transferFixture({
+		target: 'source', creepEnergy: 10,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			const target = Game.rooms.W1N1?.lookForAt(C.LOOK_SOURCES, 25, 26)[0];
+			assert.strictEqual(Game.creeps.carrier?.transfer(target as never, C.RESOURCE_ENERGY, 20), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidTargetBeforeFullAmount', () => transferFixture({
+		target: 'source', creepEnergy: 50,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			const target = Game.rooms.W1N1?.lookForAt(C.LOOK_SOURCES, 25, 26)[0];
+			assert.strictEqual(Game.creeps.carrier?.transfer(target as never, C.RESOURCE_ENERGY, 20), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidCapacityBeforeRange', () => transferFixture({
+		target: 'spawn', targetFar: true, creepHydrogen: 50,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.carrier?.transfer(Game.spawns.destination!, C.RESOURCE_HYDROGEN), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidCapacityBeforeNotEnough', () => transferFixture({
+		target: 'spawn',
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.carrier?.transfer(Game.spawns.destination!, C.RESOURCE_HYDROGEN), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidCapacityBeforeNotEnoughAmount', () => transferFixture({
+		target: 'spawn', creepEnergy: 10,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.carrier?.transfer(Game.spawns.destination!, C.RESOURCE_HYDROGEN, 20), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('TRANSFER-015:invalidArgsBeforeRange', () => transferFixture({
+		target: 'spawn', targetFar: true, creepEnergy: 50,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(
+				Game.creeps.carrier?.transfer(Game.spawns.destination!, 'not_a_resource' as never, -1),
+				C.ERR_INVALID_ARGS,
+			);
+		});
+	}));
+
+	test('TRANSFER-015:notEnoughBeforeFull', () => transferFixture({
+		target: 'spawn', spawnEnergy: C.SPAWN_ENERGY_CAPACITY,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(
+				Game.creeps.carrier?.transfer(Game.spawns.destination!, C.RESOURCE_ENERGY),
+				C.ERR_NOT_ENOUGH_RESOURCES,
+			);
+		});
+	}));
+
+	test('TRANSFER-015:notEnoughBeforeNotEnoughAmount', () => transferFixture({
+		target: 'spawn',
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(
+				Game.creeps.carrier?.transfer(Game.spawns.destination!, C.RESOURCE_ENERGY, 20),
+				C.ERR_NOT_ENOUGH_RESOURCES,
+			);
+		});
+	}));
+
+	test('TRANSFER-015:notEnoughBeforeFullAmount', () => transferFixture({
+		target: 'spawn', spawnEnergy: C.SPAWN_ENERGY_CAPACITY - 10,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(
+				Game.creeps.carrier?.transfer(Game.spawns.destination!, C.RESOURCE_ENERGY, 20),
+				C.ERR_NOT_ENOUGH_RESOURCES,
+			);
+		});
+	}));
+
+	test('TRANSFER-015:fullBeforeNotEnoughAmount', () => transferFixture({
+		target: 'spawn', spawnEnergy: C.SPAWN_ENERGY_CAPACITY, creepEnergy: 10,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.carrier?.transfer(Game.spawns.destination!, C.RESOURCE_ENERGY, 20), C.ERR_FULL);
+		});
+	}));
+
+	test('TRANSFER-015:fullBeforeFullAmount', () => transferFixture({
+		target: 'spawn', spawnEnergy: C.SPAWN_ENERGY_CAPACITY, creepEnergy: 50,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.carrier?.transfer(Game.spawns.destination!, C.RESOURCE_ENERGY, 20), C.ERR_FULL);
+		});
+	}));
+
+	test('TRANSFER-015:notEnoughAmountBeforeFullAmount', () => transferFixture({
+		target: 'spawn', spawnEnergy: C.SPAWN_ENERGY_CAPACITY - 10, creepEnergy: 10,
+	})(async ({ player }) => {
+		await player('100', Game => {
+			assert.strictEqual(
+				Game.creeps.carrier?.transfer(Game.spawns.destination!, C.RESOURCE_ENERGY, 20),
+				C.ERR_NOT_ENOUGH_RESOURCES,
+			);
+		});
+	}));
 });
 
 describe('Pickup', () => {
