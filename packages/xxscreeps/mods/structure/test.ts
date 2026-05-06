@@ -82,6 +82,10 @@ describe('FIND_ constants for structures', () => {
 			room['#insertObject'](createRoad(new RoomPosition(20, 25, 'W7N1')));
 			room['#insertObject'](createRuin(createSpawn(new RoomPosition(27, 25, 'W7N1'), '100', 'RuinedSpawn')));
 		},
+		W8N1: room => {
+			// Unowned controller, no structures, a creep to provide vision
+			room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W8N1'), [ C.MOVE ], 'Explorer', '100'));
+		},
 	});
 
 	test('FIND_STRUCTURES returns all structures including unowned', () => sim(async ({ player }) => {
@@ -118,6 +122,31 @@ describe('FIND_ constants for structures', () => {
 			assert.strictEqual(ruins.length, 1);
 			assert.strictEqual(ruins[0]!.structureType, C.STRUCTURE_SPAWN);
 			assert.ok(ruins[0]!.ticksToDecay! > 0, 'ruin should have ticksToDecay property');
+		});
+	}));
+
+	test('FIND_STRUCTURES in unowned room returns controller', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const structures = Game.rooms.W8N1?.find(C.FIND_STRUCTURES);
+			assert.ok(structures);
+			assert.strictEqual(structures.length, 1, 'should return only the controller');
+			assert.strictEqual(structures[0]!.structureType, C.STRUCTURE_CONTROLLER);
+		});
+	}));
+
+	test('FIND_MY_STRUCTURES in unowned room returns empty array', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const mine = Game.rooms.W8N1?.find(C.FIND_MY_STRUCTURES);
+			assert.ok(mine);
+			assert.strictEqual(mine.length, 0, 'should return empty array in unowned room');
+		});
+	}));
+
+	test('FIND_HOSTILE_STRUCTURES in unowned room returns empty array', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const hostile = Game.rooms.W8N1?.find(C.FIND_HOSTILE_STRUCTURES);
+			assert.ok(hostile);
+			assert.strictEqual(hostile.length, 0, 'should return empty array in unowned room');
 		});
 	}));
 });
