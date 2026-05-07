@@ -329,4 +329,30 @@ describe('Construction', () => {
 			});
 		}));
 	});
+
+	describe('dismantle validation', () => {
+		// W1N1 controller in test fixtures sits at (42, 22).
+		const controllerSim = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(43, 22, 'W1N1'), [ C.WORK, C.MOVE ], 'near', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.MOVE ], 'far', '100'));
+			},
+		});
+
+		test('dismantle(controller) returns ERR_INVALID_TARGET', () => controllerSim(async ({ player }) => {
+			await player('100', Game => {
+				const controller = Game.rooms.W1N1!.controller!;
+				assert.strictEqual(Game.creeps.near?.dismantle(controller), C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		test('dismantle(controller) returns ERR_INVALID_TARGET before ERR_NOT_IN_RANGE', () => controllerSim(async ({ player }) => {
+			await player('100', Game => {
+				const controller = Game.rooms.W1N1!.controller!;
+				assert.strictEqual(Game.creeps.far?.dismantle(controller), C.ERR_INVALID_TARGET);
+			});
+		}));
+	});
 });
