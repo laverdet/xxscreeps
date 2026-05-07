@@ -1,5 +1,5 @@
 ---
-'xxscreeps': patch
+'xxscreeps': minor
 ---
 
-Move construction-site cap into checkCreateConstructionSite
+Reorder `createConstructionSite` checks; return `NOT_OWNER` on foreign rooms and `INVALID_ARGS` on bad spawn names
