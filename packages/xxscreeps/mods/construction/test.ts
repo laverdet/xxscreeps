@@ -331,13 +331,13 @@ describe('Construction', () => {
 	});
 
 	describe('dismantle validation', () => {
-		// W1N1 controller in test fixtures sits at (42, 22).
 		const controllerSim = simulate({
 			W1N1: room => {
 				room['#level'] = 1;
 				room['#user'] = room.controller!['#user'] = '100';
-				room['#insertObject'](createCreep(new RoomPosition(43, 22, 'W1N1'), [ C.WORK, C.MOVE ], 'near', '100'));
-				room['#insertObject'](createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.MOVE ], 'far', '100'));
+				const controllerPos = room.controller!.pos;
+				room['#insertObject'](createCreep(new RoomPosition(controllerPos.x - 1, controllerPos.y, 'W1N1'), [ C.WORK ], 'near', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(1, 1, 'W1N1'), [ C.WORK ], 'far', '100'));
 			},
 		});
 
