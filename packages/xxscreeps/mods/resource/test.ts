@@ -198,6 +198,24 @@ describe('Dropped resource look aliases', () => {
 			assert.strictEqual(energy.resourceType, C.RESOURCE_POWER);
 		});
 	}));
+
+	test('lookAtArea emits both resource look entries', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const room = Game.rooms.W1N1;
+			assert.ok(room);
+			const entries = room.lookAtArea(25, 25, 25, 25)[25][25]
+				.filter(entry => entry.type === C.LOOK_ENERGY || entry.type === C.LOOK_RESOURCES);
+			assert.strictEqual(entries.length, 2);
+			const energyEntry = entries.find(entry => entry.type === C.LOOK_ENERGY);
+			const resourceEntry = entries.find(entry => entry.type === C.LOOK_RESOURCES);
+			assert.ok(energyEntry);
+			assert.ok(resourceEntry);
+			const energy = energyEntry.energy;
+			assert.ok(energy instanceof Resource);
+			assert.strictEqual(energy, resourceEntry.resource);
+			assert.strictEqual(energy.resourceType, C.RESOURCE_POWER);
+		});
+	}));
 });
 
 describe('Container decay', () => {
