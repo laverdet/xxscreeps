@@ -315,6 +315,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 		}
 	})) ];
+	instance['#initialize']();
 	flushUsers(instance);
 	return instance;
 });

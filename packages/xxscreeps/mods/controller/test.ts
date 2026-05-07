@@ -1,4 +1,10 @@
 import type { GameConstructor } from 'xxscreeps/game/index.js';
+import { execFile } from 'node:child_process';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Loki from 'lokijs';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create } from 'xxscreeps/mods/creep/creep.js';
@@ -29,6 +35,71 @@ describe('Controller', () => {
 		return Game.rooms.W3N3!.find(C.FIND_STRUCTURES)
 			.find(structure => structure.structureType === C.STRUCTURE_CONTAINER)!;
 	}
+
+	function saveDatabase(loki: Loki) {
+		const saved = Promise.withResolvers<undefined>();
+		loki.saveDatabase(error => error ? saved.reject(error) : saved.resolve(undefined));
+		return saved.promise;
+	}
+
+	function runImport(cwd: string, source: string) {
+		const done = Promise.withResolvers<undefined>();
+		execFile(process.execPath, [
+			fileURLToPath(new URL('../../../bin/xxscreeps.js', import.meta.url)),
+			'import',
+			'--shard-only',
+			source,
+		], { cwd, timeout: 10000 }, error => error ? done.reject(error) : done.resolve(undefined));
+		return done.promise;
+	}
+
+	async function writeImportFixture(file: string) {
+		const loki = new Loki(file);
+		loki.addCollection('env').insert({ data: { gameTime: 2 } });
+		loki.addCollection('rooms').insert({ _id: 'W1N1' });
+		loki.addCollection('rooms.terrain').insert({
+			room: 'W1N1',
+			terrain: '0'.repeat(2500),
+		});
+		loki.addCollection('rooms.objects').insert({
+			_id: '100000000000000000000001',
+			room: 'W1N1',
+			type: 'controller',
+			x: 25,
+			y: 25,
+			level: 0,
+			safeMode: 0,
+			user: null,
+			isPowerEnabled: false,
+			safeModeAvailable: 0,
+			downgradeTime: 0,
+			progress: 0,
+			safeModeCooldown: 0,
+			upgradeBlocked: 0,
+		});
+		await saveDatabase(loki);
+	}
+
+	test('xxscreeps import initializes controllers before flushing users', async () => {
+		const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'xxscreeps-import-'));
+		try {
+			const source = path.join(cwd, 'db.json');
+			await fs.writeFile(path.join(cwd, '.screepsrc.yaml'), `
+database:
+  data: local://issue207-db
+  pubsub: local://issue207-pubsub
+shards:
+  - name: shard0
+    data: local://issue207-shard
+    pubsub: local://issue207-shard-pubsub
+    scratch: local://issue207-scratch
+`);
+			await writeImportFixture(source);
+			await runImport(cwd, source);
+		} finally {
+			await fs.rm(cwd, { force: true, recursive: true });
+		}
+	});
 
 	const hostileReservation = simulate({
 		W3N3: room => {
