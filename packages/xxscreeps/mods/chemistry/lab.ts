@@ -192,12 +192,12 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 	return chainIntentChecks(
 		() => checkTarget(creep, Creep),
 		() => checkMyStructure(lab, StructureLab),
-		() => checkIsActive(lab),
 		() => {
 			if (!creep!.my) {
 				return C.ERR_NOT_OWNER;
 			}
 		},
+		() => checkIsActive(lab),
 		() => {
 			if (lab.cooldown) {
 				return C.ERR_TIRED;
