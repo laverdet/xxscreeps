@@ -203,7 +203,7 @@ describe('Dropped resource look aliases', () => {
 		await player('100', Game => {
 			const room = Game.rooms.W1N1;
 			assert.ok(room);
-			const entries = room.lookAtArea(25, 25, 25, 25)[25][25]
+			const entries = room.lookAtArea(25, 25, 25, 25, true)
 				.filter(entry => entry.type === C.LOOK_ENERGY || entry.type === C.LOOK_RESOURCES);
 			assert.strictEqual(entries.length, 2);
 			const energyEntry = entries.find(entry => entry.type === C.LOOK_ENERGY);
