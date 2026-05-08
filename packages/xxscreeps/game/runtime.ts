@@ -6,12 +6,10 @@ import { globals, hooks, registerGlobal } from './symbols.js';
 registerGlobal('_', lodash);
 
 registerGlobal(function Deposit() {});
-registerGlobal(function Nuke() {});
 registerGlobal(function PowerCreep() {});
 registerGlobal(function Ruin() {});
 registerGlobal(function StructureFactory() {});
 registerGlobal(function StructureInvaderCore() {});
-registerGlobal(function StructureNuker() {});
 registerGlobal(function StructureObserver() {});
 registerGlobal(function StructurePowerBank() {});
 registerGlobal(function StructurePowerSpawn() {});
