@@ -1,18 +1,13 @@
-// Author: Marcel Laverdet <https://github.com/laverdet>
+module;
 #include <nan.h>
-#include <array>
-#include <iostream>
-#include <limits>
-#include <memory>
-#include <stdexcept>
-#include <unordered_set>
-#include <vector>
+export module screeps;
+import std;
 
 namespace screeps {
 
-using cost_t = int;				// maximum: longest chebyshev distance of whole map
-using pos_index_t = int;	// maximum: k_max_rooms * 2500
-using room_index_t = int; // maximum: k_max_rooms (32 bits tested faster than uint8_t)
+export using cost_t = int; // maximum: longest chebyshev distance of whole map
+using pos_index_t = int;	 // maximum: k_max_rooms * 2500
+using room_index_t = int;	 // maximum: k_max_rooms (32 bits tested faster than uint8_t)
 constexpr auto k_max_rooms = 64;
 
 static_assert(std::numeric_limits<pos_index_t>::max() > 2'500 * k_max_rooms, "pos_index_t is too small");
@@ -223,11 +218,11 @@ class open_closed_t {
 
 //
 // Stores context about a room, specific to each search
-struct room_info_t {
+export struct room_info_t {
 		uint8_t* terrain;
 		uint8_t (*cost_matrix)[ 50 ];
 		room_location_t pos;
-		static uint8_t cost_matrix0[ 2'500 ];
+		constexpr static uint8_t cost_matrix0[ 2'500 ] = {0};
 
 		room_info_t() = default;
 		room_info_t(uint8_t* terrain, uint8_t* cost_matrix, room_location_t pos) :
@@ -342,7 +337,7 @@ class heap_t {
 
 //
 // Path finder encapsulation. Multiple instances are thread-safe
-class path_finder_t {
+export class path_finder_t {
 	private:
 		constexpr static size_t map_position_size = 1 << sizeof(room_location_t) * 8;
 		constexpr static cost_t obstacle = std::numeric_limits<cost_t>::max();

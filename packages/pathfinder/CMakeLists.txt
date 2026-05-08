@@ -1,11 +1,13 @@
 # CXX=/opt/homebrew/Cellar/llvm/22.1.0/bin/clang++ npm run configure:dev && ninja -C build
-cmake_minimum_required(VERSION 3.30.0 FATAL_ERROR)
+set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "451f2fe2-a8a2-47c3-bc32-94786d8fc91b")
+cmake_minimum_required(VERSION 4.3.0 FATAL_ERROR)
 project(pathfinder LANGUAGES CXX)
 
 # language settings
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_MODULE_STD ON)
+set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # disable legacy isolated-vm warnings
 add_compile_options(
@@ -36,6 +38,8 @@ target_link_libraries(pathfinder PUBLIC auto_js nodejs utility_js)
 
 # sources
 target_sources(pathfinder
+	PUBLIC FILE_SET CXX_MODULES FILES
+		src/pf.h.cc
 	PRIVATE
 		src/main.cc
 		src/pf.cc

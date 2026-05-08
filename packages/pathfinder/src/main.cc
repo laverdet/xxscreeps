@@ -1,9 +1,8 @@
 // Author: Marcel Laverdet <https://github.com/laverdet>
 #include "nan.h"
-#include "pf.h"
 #include <isolated_vm.h>
-#include <array>
-#include <memory>
+import screeps;
+import std;
 
 namespace screeps {
 
@@ -11,7 +10,6 @@ namespace screeps {
 // finder are useful. Any more than 2 deep recursion will have to allocate a new path finder at a
 // cost of 2.16mb(!)
 thread_local std::array<path_finder_t, 2> path_finders;
-uint8_t room_info_t::cost_matrix0[ 2'500 ] = {0};
 
 NAN_METHOD(search) {
 	// Find an inactive path finder

@@ -1,9 +1,11 @@
+module;
 // Author: Marcel Laverdet <https://github.com/laverdet>
-#include "pf.h"
+#include "nan.h"
 #include <algorithm>
 #include <iostream>
 #include <mutex>
 #include <stdexcept>
+module screeps;
 
 using namespace screeps;
 
