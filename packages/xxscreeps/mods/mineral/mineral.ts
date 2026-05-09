@@ -47,11 +47,11 @@ const harvest = registerHarvestable(Mineral, function(creep) {
 			const extractor = lookForStructureAt(this.room, this.pos, C.STRUCTURE_EXTRACTOR);
 			if (!extractor) {
 				return C.ERR_NOT_FOUND;
-			} else if (extractor['#user'] && extractor['#user'] !== creep['#user']) {
+			} else if (extractor.my === false || !creep.my) {
 				return C.ERR_NOT_OWNER;
 			} else if (!extractor.isActive()) {
 				return C.ERR_RCL_NOT_ENOUGH;
-			} else if (extractor.cooldown > 0 && extractor.cooldown < C.EXTRACTOR_COOLDOWN) {
+			} else if (extractor.cooldown !== 0) {
 				return C.ERR_TIRED;
 			}
 		});
