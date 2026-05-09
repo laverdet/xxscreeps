@@ -39,11 +39,11 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 	 */
 	transferEnergy(target: StructureLink, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
-			(amount === undefined || amount === 0)
-				? Math.min(this.store[C.RESOURCE_ENERGY], target.store.getFreeCapacity(C.RESOURCE_ENERGY)!)
-				: amount);
+			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+			amount || Math.min(this.store[C.RESOURCE_ENERGY], target.store.getFreeCapacity(C.RESOURCE_ENERGY)!));
 		return chainIntentChecks(
-			() => checkTransferEnergy(this, target, amount, intentAmount),
+			() => amount !== undefined && amount < 0 ? C.ERR_INVALID_ARGS : C.OK,
+			() => checkTransferEnergy(this, target, intentAmount),
 			() => intents.save(this, 'transferEnergy', target.id, intentAmount));
 	}
 }
@@ -69,11 +69,8 @@ registerBuildableStructure(C.STRUCTURE_LINK, {
 	},
 });
 
-export function checkTransferEnergy(
-	link: StructureLink, target: StructureLink, amount: number | undefined, intentAmount: number = amount ?? NaN,
-) {
+export function checkTransferEnergy(link: StructureLink, target: StructureLink, amount: number) {
 	return chainIntentChecks(
-		() => amount !== undefined && amount < 0 ? C.ERR_INVALID_ARGS : C.OK,
 		() => checkTarget(target, StructureLink),
 		() => target === link ? C.ERR_INVALID_TARGET : C.OK,
 		() => {
@@ -84,8 +81,8 @@ export function checkTransferEnergy(
 		() => checkMyStructure(link, StructureLink),
 		() => link.cooldown ? C.ERR_TIRED : C.OK,
 		() => checkIsActive(link),
-		() => checkHasResource(link, C.RESOURCE_ENERGY, intentAmount),
-		() => checkHasCapacity(target, C.RESOURCE_ENERGY, intentAmount),
+		() => checkHasResource(link, C.RESOURCE_ENERGY, amount),
+		() => checkHasCapacity(target, C.RESOURCE_ENERGY, amount),
 		() => checkSameRoom(link, target),
 	);
 }

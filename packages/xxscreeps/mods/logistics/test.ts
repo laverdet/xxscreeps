@@ -34,54 +34,28 @@ describe('Link', () => {
 		},
 	});
 
+	// Layout shared across precedence tests:
+	//   25,25  source link, owned '100', 800 energy
+	//   27,25  friendly target link, owned '100', empty
+	//   29,25  hostile link, owned '101', empty
+	// W1N1 is RCL 5 (links active), W1N3 is RCL 4 (links inactive).
+	// W2N1 / W2N2 form a cross-room pair for the range test.
 	const precedence = simulate({
 		W1N1: room => {
 			own(room, 5);
 			insertLink(room, 25, 25, '100', 800);
 			insertLink(room, 27, 25, '100');
-		},
-		W1N2: room => {
-			own(room, 5);
-			insertLink(room, 25, 25, '100', 800);
-			insertLink(room, 27, 25, '101');
+			insertLink(room, 29, 25, '101');
 		},
 		W1N3: room => {
 			own(room, 4);
 			insertLink(room, 25, 25, '100', 800);
 			insertLink(room, 27, 25, '100');
-		},
-		W1N4: room => {
-			own(room, 4);
-			insertLink(room, 25, 25, '100', 800);
-			insertLink(room, 27, 25, '101');
-		},
-		W1N5: room => {
-			own(room, 5);
-			insertLink(room, 25, 25, '101', 800);
-			insertLink(room, 27, 25, '100');
-		},
-		W1N6: room => {
-			own(room, 4);
-			const source = insertLink(room, 25, 25, '100', 800);
-			source['#cooldownTime'] = 100;
-			insertLink(room, 27, 25, '100');
-		},
-		W1N7: room => {
-			own(room, 5);
-			const source = insertLink(room, 25, 25, '100');
-			source['#cooldownTime'] = 100;
-			insertLink(room, 27, 25, '100');
-		},
-		W1N8: room => {
-			own(room, 5);
-			const source = insertLink(room, 25, 25, '100', 800);
-			source['#cooldownTime'] = 100;
-			insertLink(room, 27, 25, '100', 800);
+			insertLink(room, 29, 25, '101');
 		},
 		W2N1: room => {
 			own(room, 5);
-			const source = insertLink(room, 25, 25, '100', 800);
-			source['#cooldownTime'] = 100;
+			insertLink(room, 25, 25, '100', 800);
 		},
 		W2N2: room => {
 			own(room, 5);
@@ -112,8 +86,9 @@ describe('Link', () => {
 
 	test('LINK-014:cooldown-before-rcl', () => precedence(async ({ player }) => {
 		await player('100', Game => {
-			const source = getLink(Game.rooms.W1N6, 25, 25);
-			const target = getLink(Game.rooms.W1N6, 27, 25);
+			const source = getLink(Game.rooms.W1N3, 25, 25);
+			const target = getLink(Game.rooms.W1N3, 27, 25);
+			source['#cooldownTime'] = Game.time + 100;
 			assert.strictEqual(source.transferEnergy(target, 1), C.ERR_TIRED);
 		});
 	}));
@@ -122,22 +97,27 @@ describe('Link', () => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W2N1, 25, 25);
 			const target = getLink(Game.rooms.W2N2, 27, 25);
+			source['#cooldownTime'] = Game.time + 100;
 			assert.strictEqual(source.transferEnergy(target, 1), C.ERR_TIRED);
 		});
 	}));
 
 	test('cooldown-before-not-enough', () => precedence(async ({ player }) => {
 		await player('100', Game => {
-			const source = getLink(Game.rooms.W1N7, 25, 25);
-			const target = getLink(Game.rooms.W1N7, 27, 25);
+			const source = getLink(Game.rooms.W1N1, 25, 25);
+			const target = getLink(Game.rooms.W1N1, 27, 25);
+			source.store['#subtract'](C.RESOURCE_ENERGY, source.store[C.RESOURCE_ENERGY]);
+			source['#cooldownTime'] = Game.time + 100;
 			assert.strictEqual(source.transferEnergy(target, 1), C.ERR_TIRED);
 		});
 	}));
 
 	test('cooldown-before-full', () => precedence(async ({ player }) => {
 		await player('100', Game => {
-			const source = getLink(Game.rooms.W1N8, 25, 25);
-			const target = getLink(Game.rooms.W1N8, 27, 25);
+			const source = getLink(Game.rooms.W1N1, 25, 25);
+			const target = getLink(Game.rooms.W1N1, 27, 25);
+			target.store['#add'](C.RESOURCE_ENERGY, target.store.getFreeCapacity(C.RESOURCE_ENERGY)!);
+			source['#cooldownTime'] = Game.time + 100;
 			assert.strictEqual(source.transferEnergy(target, 1), C.ERR_TIRED);
 		});
 	}));
@@ -161,25 +141,27 @@ describe('Link', () => {
 
 	test('target-not-owner-before-rcl', () => precedence(async ({ player }) => {
 		await player('100', Game => {
-			const source = getLink(Game.rooms.W1N4, 25, 25);
-			const target = getLink(Game.rooms.W1N4, 27, 25);
+			const source = getLink(Game.rooms.W1N3, 25, 25);
+			const target = getLink(Game.rooms.W1N3, 29, 25);
 			assert.strictEqual(source.transferEnergy(target, 1), C.ERR_NOT_OWNER);
 		});
 	}));
 
+	// Player '101' owns only the hostile link at 29,25 in W1N1, so the source at 25,25
+	// is hostile from their perspective. INVALID_ARGS / INVALID_TARGET must still win.
 	test('invalid-args-before-source-not-owner', () => precedence(async ({ player }) => {
-		await player('100', Game => {
-			const source = getLink(Game.rooms.W1N5, 25, 25);
-			const target = getLink(Game.rooms.W1N5, 27, 25);
+		await player('101', Game => {
+			const source = getLink(Game.rooms.W1N1, 25, 25);
+			const target = getLink(Game.rooms.W1N1, 29, 25);
 			assert.strictEqual(source.transferEnergy(target, -1), C.ERR_INVALID_ARGS);
 		});
 	}));
 
 	test('invalid-target-before-source-not-owner', () => precedence(async ({ player }) => {
-		await player('100', Game => {
-			const source = getLink(Game.rooms.W1N5, 25, 25);
+		await player('101', Game => {
+			const source = getLink(Game.rooms.W1N1, 25, 25);
 			assert.strictEqual(
-				source.transferEnergy(Game.rooms.W1N5!.controller as unknown as StructureLink, 1),
+				source.transferEnergy(Game.rooms.W1N1!.controller as unknown as StructureLink, 1),
 				C.ERR_INVALID_TARGET);
 		});
 	}));
@@ -195,8 +177,8 @@ describe('Link', () => {
 
 	test('invalid-args-before-target-not-owner', () => precedence(async ({ player }) => {
 		await player('100', Game => {
-			const source = getLink(Game.rooms.W1N2, 25, 25);
-			const target = getLink(Game.rooms.W1N2, 27, 25);
+			const source = getLink(Game.rooms.W1N1, 25, 25);
+			const target = getLink(Game.rooms.W1N1, 29, 25);
 			assert.strictEqual(source.transferEnergy(target, -1), C.ERR_INVALID_ARGS);
 		});
 	}));
