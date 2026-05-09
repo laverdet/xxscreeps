@@ -32,6 +32,8 @@ export class StructureNuker extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return C.NUKER_HITS; }
 	override get structureType() { return C.STRUCTURE_NUKER; }
 
+	override '#doesPreventWithdraw'() { return true; }
+
 	/**
 	 * Launch a nuke to the specified position. The target must be at most `NUKE_RANGE`
 	 * rooms away (Chebyshev distance). Consumes the nuker's full store and starts a

@@ -159,7 +159,7 @@ describe('Nuker', () => {
 		},
 	});
 
-	test('nuke impact applies cleanup and damage at landTime - 1', () => impact(async ({ player, tick, poke }) => {
+	test('nuke impact applies cleanup and damage at landTime', () => impact(async ({ player, tick, poke }) => {
 		await player('100', Game => {
 			const nuker = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_NUKER)[0]!;
 			assert.strictEqual(nuker.launchNuke(new RoomPosition(25, 25, 'W2N1')), C.OK);
@@ -170,7 +170,7 @@ describe('Nuker', () => {
 		await tick();
 		const rampartId = await poke('W2N1', '200', (Game, room) => {
 			const nuke = room['#lookFor'](C.LOOK_NUKES)[0]!;
-			nuke['#landTime'] = Game.time + 2;
+			nuke['#landTime'] = Game.time + 1;
 			return lookForStructures(room, C.STRUCTURE_RAMPART)[0]!.id;
 		});
 		await tick();
@@ -218,8 +218,8 @@ describe('Nuker', () => {
 
 	test('same-tick multiple nuke impacts do not reuse queued removals', () => doubleImpact(async ({ player, tick, poke }) => {
 		const creepId = await poke('W2N1', '200', (Game, room) => {
-			room['#insertObject'](createNuke(new RoomPosition(25, 25, 'W2N1'), 'W1N1', Game.time + 2));
-			room['#insertObject'](createNuke(new RoomPosition(25, 25, 'W2N1'), 'W1N1', Game.time + 2));
+			room['#insertObject'](createNuke(new RoomPosition(25, 25, 'W2N1'), 'W1N1', Game.time + 1));
+			room['#insertObject'](createNuke(new RoomPosition(25, 25, 'W2N1'), 'W1N1', Game.time + 1));
 			return Game.creeps.target!.id;
 		});
 		await tick();

@@ -88,15 +88,15 @@ const intents = [
 
 registerObjectTickProcessor(Nuke, (nuke, context) => {
 	const landTime = nuke['#landTime'];
-	if (Game.time === landTime - 1) {
+	if (Game.time === landTime) {
 		applyNukeImpact(nuke);
 		context.didUpdate();
-		context.wakeAt(landTime);
-	} else if (Game.time >= landTime) {
+		context.wakeAt(landTime + 1);
+	} else if (Game.time > landTime) {
 		nuke.room['#removeObject'](nuke);
 		context.didUpdate();
 	} else {
-		context.wakeAt(landTime - 1);
+		context.wakeAt(landTime);
 	}
 });
 

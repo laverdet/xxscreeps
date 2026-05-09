@@ -96,6 +96,10 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return false;
 	}
 
+	'#doesPreventWithdraw'() {
+		return false;
+	}
+
 	override '#destroy'(type?: number) {
 		if (super['#destroy']()) {
 			if (type === undefined || type !== C.EVENT_ATTACK_TYPE_NUKE) {

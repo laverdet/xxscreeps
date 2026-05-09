@@ -566,6 +566,7 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
 		() => checkInteractionBlocked(creep, target),
+		() => target instanceof Structure && target['#doesPreventWithdraw']() ? C.ERR_INVALID_TARGET : C.OK,
 		() => checkRange(creep, target, 1),
 		() => checkHasResource(target, resourceType, amount),
 		() => checkHasCapacity(creep, resourceType, amount));
