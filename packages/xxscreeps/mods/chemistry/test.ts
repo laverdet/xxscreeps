@@ -518,6 +518,27 @@ describe('Chemistry', () => {
 			});
 		}));
 
+		test('unboostCreep returns ERR_NOT_OWNER for foreign creep before checkIsActive', () => simulate({
+			W1N1: room => {
+				room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), '100'));
+				room['#insertObject'](createCreep(
+					new RoomPosition(25, 26, 'W1N1'),
+					[ C.TOUGH ],
+					'foreign', '101'));
+				// Lab needs RCL 6 to be active; place at 5 so checkIsActive would otherwise gate first.
+				room['#level'] = 5;
+				room['#user'] =
+					room.controller!['#user'] = '100';
+			},
+		})(async ({ player }) => {
+			await player('100', Game => {
+				const room = Game.rooms.W1N1!;
+				const lab = lookForStructures(room, C.STRUCTURE_LAB)[0]!;
+				const foreign = room.find(C.FIND_HOSTILE_CREEPS)[0]!;
+				assert.strictEqual(lab.unboostCreep(foreign), C.ERR_NOT_OWNER);
+			});
+		}));
+
 		test('unboostCreep fails out of range', () => unboostSim(async ({ player, tick, poke }) => {
 			// Boost the creep first
 			await player('100', Game => {
