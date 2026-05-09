@@ -2,4 +2,4 @@
 "xxscreeps": patch
 ---
 
-Send structure attack notifications
+Send attack notifications for owned creeps and structures
