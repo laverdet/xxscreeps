@@ -20,7 +20,7 @@ import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
-import { OpenStore, Store, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { OpenStore, Store, calculateChecked, checkHasCapacity, checkHasResource, checkHasResourceAmount, checkResourceArgs, checkStoreAccepts, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
@@ -552,15 +552,14 @@ export function checkTransfer(creep: Creep, target: RoomObject & WithStore, reso
 export function checkWithdraw(creep: Creep, target: Structure & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => C.RESOURCES_ALL.includes(resourceType) && amount >= 0 ? C.OK : C.ERR_INVALID_ARGS,
+		() => checkResourceArgs(resourceType, amount),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
 		() => checkInteractionBlocked(creep, target),
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER),
-		() => target.store.getCapacity(resourceType) === null ? C.ERR_INVALID_TARGET : C.OK,
+		() => checkStoreAccepts(target, resourceType),
 		() => checkRange(creep, target, 1),
 		() => checkHasCapacity(creep, resourceType, amount),
-		() => (target.store.getUsedCapacity(resourceType) ?? 0) >= Math.max(1, amount)
-			? C.OK : C.ERR_NOT_ENOUGH_RESOURCES);
+		() => checkHasResourceAmount(target, resourceType, amount));
 }
 
 function checkInteractionBlocked(creep: Creep, target: Structure & WithStore) {

@@ -1,6 +1,7 @@
 import type { ResourceType } from './resource.js';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
@@ -350,16 +351,28 @@ export function checkHasCapacity(target: WithStore, resourceType: ResourceType, 
 	}
 }
 
-export function checkHasResource(target: WithStore, resourceType: ResourceType | undefined, amount = 1) {
+export function checkResourceArgs(resourceType: ResourceType | undefined, amount: number) {
 	if (!C.RESOURCES_ALL.includes(resourceType!)) {
 		return C.ERR_INVALID_ARGS;
 	} else if (typeof amount !== 'number' || amount < 0) {
 		return C.ERR_INVALID_ARGS;
-	} else if (target.store.getCapacity(resourceType) === null) {
-		return C.ERR_INVALID_TARGET;
-	} else if (target.store[resourceType!] >= Math.max(1, amount)) {
-		return C.OK;
-	} else {
-		return C.ERR_NOT_ENOUGH_RESOURCES;
 	}
+	return C.OK;
+}
+
+export function checkStoreAccepts(target: WithStore, resourceType: ResourceType) {
+	return target.store.getCapacity(resourceType) === null
+		? C.ERR_INVALID_TARGET : C.OK;
+}
+
+export function checkHasResourceAmount(target: WithStore, resourceType: ResourceType, amount: number) {
+	return target.store[resourceType] >= Math.max(1, amount)
+		? C.OK : C.ERR_NOT_ENOUGH_RESOURCES;
+}
+
+export function checkHasResource(target: WithStore, resourceType: ResourceType | undefined, amount = 1) {
+	return chainIntentChecks(
+		() => checkResourceArgs(resourceType, amount),
+		() => checkStoreAccepts(target, resourceType!),
+		() => checkHasResourceAmount(target, resourceType!, amount));
 }
