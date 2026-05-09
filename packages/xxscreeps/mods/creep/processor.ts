@@ -61,20 +61,14 @@ function calculateEffectiveDamage(creep: Creep, totalDamage: number) {
 	for (const part of creep.body) {
 		if (remainingDamage <= 0) break;
 		if (part.hits <= 0) continue;
-		if (part.type === C.TOUGH && part.boost) {
-			const multiplier = (C.BOOSTS as CreepLib.BoostsLookup)[C.TOUGH]?.[part.boost]?.damage;
-			if (multiplier) {
-				// This part can absorb part.hits/multiplier incoming damage
-				const rawDamageToPart = Math.min(remainingDamage, part.hits / multiplier);
-				remainingDamage -= rawDamageToPart;
-				effectiveDamage += rawDamageToPart * multiplier;
-				continue;
+		const multiplier = function() {
+			if (part.type === C.TOUGH && part.boost !== undefined) {
+				return (C.BOOSTS as CreepLib.BoostsLookup)[C.TOUGH]?.[part.boost]?.damage;
 			}
-		}
-		// Non-TOUGH or unboosted: 1:1
-		const rawDamageToPart = Math.min(remainingDamage, part.hits);
+		}() ?? 1;
+		const rawDamageToPart = Math.min(remainingDamage, part.hits / multiplier);
 		remainingDamage -= rawDamageToPart;
-		effectiveDamage += rawDamageToPart;
+		effectiveDamage += rawDamageToPart * multiplier;
 	}
 	return effectiveDamage + remainingDamage;
 }
