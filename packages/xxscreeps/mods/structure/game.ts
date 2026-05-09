@@ -27,7 +27,7 @@ const find = registerFindHandlers({
 	[C.FIND_MY_STRUCTURES]: room =>
 		room['#lookFor'](C.LOOK_STRUCTURES).filter(structure => structure.my) as OwnedStructure[],
 	[C.FIND_HOSTILE_STRUCTURES]: room =>
-		room['#lookFor'](C.LOOK_STRUCTURES).filter(structure => !structure.my) as OwnedStructure[],
+		room['#lookFor'](C.LOOK_STRUCTURES).filter(structure => structure.my === false) as OwnedStructure[],
 	[C.FIND_RUINS]: room => room['#lookFor'](C.LOOK_RUINS),
 });
 
