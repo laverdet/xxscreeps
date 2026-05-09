@@ -42,7 +42,7 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 			amount || Math.min(this.store[C.RESOURCE_ENERGY], target.store.getFreeCapacity(C.RESOURCE_ENERGY)!));
 		return chainIntentChecks(
-			() => amount !== undefined && amount < 0 ? C.ERR_INVALID_ARGS : C.OK,
+			() => checkAmount(amount),
 			() => checkTransferEnergy(this, target, intentAmount),
 			() => intents.save(this, 'transferEnergy', target.id, intentAmount));
 	}
@@ -69,17 +69,29 @@ registerBuildableStructure(C.STRUCTURE_LINK, {
 	},
 });
 
+function checkAmount(amount: number | undefined) {
+	return amount !== undefined && amount < 0 ? C.ERR_INVALID_ARGS : C.OK;
+}
+
+function checkNotSelf(source: StructureLink, target: StructureLink) {
+	return source === target ? C.ERR_INVALID_TARGET : C.OK;
+}
+
+function checkTargetOwner(target: StructureLink) {
+	return target.my ? C.OK : C.ERR_NOT_OWNER;
+}
+
+function checkCooldown(link: StructureLink) {
+	return link.cooldown ? C.ERR_TIRED : C.OK;
+}
+
 export function checkTransferEnergy(link: StructureLink, target: StructureLink, amount: number) {
 	return chainIntentChecks(
 		() => checkTarget(target, StructureLink),
-		() => target === link ? C.ERR_INVALID_TARGET : C.OK,
-		() => {
-			if (!target.my) {
-				return C.ERR_NOT_OWNER;
-			}
-		},
+		() => checkNotSelf(link, target),
+		() => checkTargetOwner(target),
 		() => checkMyStructure(link, StructureLink),
-		() => link.cooldown ? C.ERR_TIRED : C.OK,
+		() => checkCooldown(link),
 		() => checkIsActive(link),
 		() => checkHasResource(link, C.RESOURCE_ENERGY, amount),
 		() => checkHasCapacity(target, C.RESOURCE_ENERGY, amount),
