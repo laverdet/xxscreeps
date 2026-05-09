@@ -1,5 +1,12 @@
 # xxscreeps
 
+## 0.0.10
+
+### Patch Changes
+
+- a7b346b: Reorder controller action validation precedence.
+- f37a886: Hoist withdraw safe-mode validation before target and capacity checks.
+
 ## 0.0.9
 
 ### Patch Changes
