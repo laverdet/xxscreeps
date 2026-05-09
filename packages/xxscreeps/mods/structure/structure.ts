@@ -15,9 +15,10 @@ import { compose, declare, optional, struct, withOverlay } from 'xxscreeps/schem
 import { createRuin } from './ruin.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
+export type AttackNotificationTarget = RoomObject & { '#noAttackNotify'?: boolean };
 type AttackNotificationHandler = (
 	context: ProcessorContext,
-	structure: Structure,
+	target: AttackNotificationTarget,
 	source: RoomObject | undefined,
 ) => void;
 
@@ -276,10 +277,10 @@ export function registerAttackNotification(handler: AttackNotificationHandler) {
 	attackNotificationHandlers.push(handler);
 }
 
-export function notifyAttacked(structure: Structure, context: ProcessorContext, source: RoomObject | undefined) {
-	if (!structure['#noAttackNotify']) {
+export function notifyAttacked(target: AttackNotificationTarget, context: ProcessorContext, source: RoomObject | undefined) {
+	if (!target['#noAttackNotify']) {
 		for (const handler of attackNotificationHandlers) {
-			handler(context, structure, source);
+			handler(context, target, source);
 		}
 	}
 }

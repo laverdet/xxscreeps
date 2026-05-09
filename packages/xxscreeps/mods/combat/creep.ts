@@ -177,7 +177,7 @@ export function checkDestructible(target: Creep | Structure) {
 }
 
 export function notifyAttackDamage(target: RoomObject, context: ProcessorContext, source: RoomObject | null) {
-	if (target instanceof Structure) {
+	if (target instanceof Structure || target instanceof Creep) {
 		notifyAttacked(target, context, source ?? undefined);
 	}
 }
