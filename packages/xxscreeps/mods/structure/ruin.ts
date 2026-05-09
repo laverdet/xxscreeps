@@ -44,6 +44,7 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 
 	override '#applyNukeImpact'() {
 		this.room['#removeObject'](this);
+		return true;
 	}
 
 	/**

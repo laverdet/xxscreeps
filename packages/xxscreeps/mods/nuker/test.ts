@@ -13,6 +13,7 @@ import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { create as createNuke } from './nuke.js';
 import { create as createNuker } from './nuker.js';
 
 function createLoadedNuker(pos: RoomPosition) {
@@ -197,6 +198,38 @@ describe('Nuker', () => {
 			assert.ok(destroyedIndex >= 0, 'expected destroyed event for rampart');
 			assert.ok(attackIndex >= 0, 'expected attack event for rampart');
 			assert.ok(destroyedIndex < attackIndex, 'destroyed event should be recorded before attack');
+		});
+	}));
+
+	const doubleImpact = simulate({
+		W2N1: room => {
+			const rampart = createRampart(new RoomPosition(25, 25, 'W2N1'), '200');
+			rampart.hits = 1;
+			const wall = createWall(new RoomPosition(25, 25, 'W2N1'));
+			wall.hits = C.NUKE_DAMAGE[0]! * 2 + 5;
+			room['#insertObject'](rampart);
+			room['#insertObject'](wall);
+			room['#insertObject'](createCreep(new RoomPosition(20, 20, 'W2N1'), [ C.MOVE ], 'target', '200'));
+			room['#level'] = 8;
+			room['#user'] =
+				room.controller!['#user'] = '200';
+		},
+	});
+
+	test('same-tick multiple nuke impacts do not reuse queued removals', () => doubleImpact(async ({ player, tick, poke }) => {
+		const creepId = await poke('W2N1', '200', (Game, room) => {
+			room['#insertObject'](createNuke(new RoomPosition(25, 25, 'W2N1'), 'W1N1', Game.time + 2));
+			room['#insertObject'](createNuke(new RoomPosition(25, 25, 'W2N1'), 'W1N1', Game.time + 2));
+			return Game.creeps.target!.id;
+		});
+		await tick();
+		await player('200', Game => {
+			const room = Game.rooms.W2N1!;
+			assert.strictEqual(lookForStructures(room, C.STRUCTURE_RAMPART).length, 0);
+			assert.strictEqual(lookForStructures(room, C.STRUCTURE_WALL)[0]?.hits, 6);
+			const destroyedEvents = room.getEventLog().filter(event =>
+				event.event === C.EVENT_OBJECT_DESTROYED && event.objectId === creepId);
+			assert.strictEqual(destroyedEvents.length, 1);
 		});
 	}));
 });

@@ -104,6 +104,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 			}
 			this.spawning = null;
 		}
+		return false;
 	}
 
 	override '#beforeRemove'() {

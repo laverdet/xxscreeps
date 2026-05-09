@@ -1,4 +1,4 @@
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { hooks, registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
@@ -16,13 +16,20 @@ declare module 'xxscreeps/engine/processor/index.js' {
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		'#applyNukeImpact'(nuke: RoomObject): void;
+		'#applyNukeImpact'(nuke: RoomObject): boolean;
 	}
 }
 
-RoomObject.prototype['#applyNukeImpact'] = function(_nuke: RoomObject) {};
+RoomObject.prototype['#applyNukeImpact'] = function(_nuke: RoomObject) { return false; };
 
 type DamageableStructure = Structure & { hits: number };
+interface NukeImpactState {
+	readonly removed: Set<RoomObject>;
+	time: number;
+}
+
+const nukeImpactState = new Map<Room, NukeImpactState>();
+hooks.register('flushContext', () => nukeImpactState.clear());
 
 function isValidNukeCoordinates(xx: unknown, yy: unknown) {
 	return (
@@ -39,6 +46,16 @@ function isValidNukeCoordinates(xx: unknown, yy: unknown) {
 
 function isDamageable(target: RoomObject): target is DamageableStructure {
 	return target instanceof Structure && typeof target.hits === 'number';
+}
+
+function getNukeImpactRemoved(room: Room) {
+	const state = nukeImpactState.get(room);
+	if (state?.time === Game.time) {
+		return state.removed;
+	}
+	const removed = new Set<RoomObject>();
+	nukeImpactState.set(room, { removed, time: Game.time });
+	return removed;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -85,11 +102,16 @@ registerObjectTickProcessor(Nuke, (nuke, context) => {
 
 function applyNukeImpact(nuke: Nuke) {
 	const room = nuke.room;
-	const removed = new Set<RoomObject>();
+	const removed = getNukeImpactRemoved(room);
 
 	// Iterate over a snapshot since `#removeObject` queues but doesn't immediately mutate.
 	for (const object of [ ...room['#objects'] ]) {
-		object['#applyNukeImpact'](nuke);
+		if (removed.has(object)) {
+			continue;
+		}
+		if (object['#applyNukeImpact'](nuke)) {
+			removed.add(object);
+		}
 	}
 
 	// 5x5 blast: rampart on tile absorbs first, residual hits non-rampart structures.

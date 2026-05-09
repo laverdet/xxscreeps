@@ -138,6 +138,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 			type: 'creep',
 		});
 		this.room['#removeObject'](this);
+		return true;
 	}
 
 	override '#applyDamage'(power: number, _type: number, source?: RoomObject) {

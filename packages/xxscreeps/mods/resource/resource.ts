@@ -31,6 +31,7 @@ export class Resource extends withOverlay(RoomObject.RoomObject, shape) {
 
 	override '#applyNukeImpact'() {
 		this.room['#removeObject'](this);
+		return true;
 	}
 }
 
