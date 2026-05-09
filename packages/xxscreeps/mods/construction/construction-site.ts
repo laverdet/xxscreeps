@@ -31,6 +31,10 @@ export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) 
 		game.constructionSites[this.id] = this;
 	}
 
+	override '#applyNukeImpact'() {
+		this.room['#removeObject'](this);
+	}
+
 	/**
 	 * Remove the construction site.
 	 */

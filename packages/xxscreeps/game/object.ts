@@ -83,9 +83,9 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		this.room = undefined as never;
 	}
 
-	'#applyDamage'(power: number, _type: number, _source?: RoomObject) {
+	'#applyDamage'(power: number, type: number, _source?: RoomObject) {
 		if ((this.hits! -= power) <= 0) {
-			this['#destroy']();
+			this['#destroy'](type);
 		}
 	}
 
@@ -93,7 +93,7 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		return power;
 	}
 
-	'#destroy'() {
+	'#destroy'(_type?: number) {
 		return this.room['#removeObject'](this);
 	}
 

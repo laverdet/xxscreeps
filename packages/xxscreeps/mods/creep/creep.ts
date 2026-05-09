@@ -15,6 +15,7 @@ import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, actionLogFormat, create as createObject, format as objectFormat, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
@@ -128,6 +129,15 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 	override '#addToMyGame'(game: GameConstructor) {
 		game.creeps[this.name] = this;
+	}
+
+	override '#applyNukeImpact'() {
+		appendEventLog(this.room, {
+			event: C.EVENT_OBJECT_DESTROYED,
+			objectId: this.id,
+			type: 'creep',
+		});
+		this.room['#removeObject'](this);
 	}
 
 	override '#applyDamage'(power: number, _type: number, source?: RoomObject) {

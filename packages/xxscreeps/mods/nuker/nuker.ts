@@ -5,9 +5,9 @@ import * as RoomObject from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { NukerStore, nukerStoreFormat } from './store.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { NukerStore, nukerStoreFormat } from './store.js';
 
 export const format = declare('Nuker', () => compose(shape, StructureNuker));
 const shape = struct(ownedStructureFormat, {
@@ -104,6 +104,8 @@ export function checkLaunchNuke(nuker: StructureNuker, target: RoomPosition) {
 		() => checkLaunchTarget(target),
 		() => checkLaunchCooldown(nuker),
 		() => checkIsActive(nuker),
+		// TODO: Return ERR_INVALID_TARGET for novice and respawn-area source or
+		// destination rooms once room start areas are modeled.
 		() => checkLaunchRange(nuker, target),
 		() => checkLaunchResources(nuker),
 	);

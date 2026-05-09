@@ -1,30 +1,51 @@
-import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
+import { RoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { Room } from 'xxscreeps/game/room/index.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
-import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site.js';
-import { StructureController } from 'xxscreeps/mods/controller/controller.js';
-import { Creep } from 'xxscreeps/mods/creep/creep.js';
-import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
+import { Room } from 'xxscreeps/game/room/index.js';
 import { StructureRampart } from 'xxscreeps/mods/defense/rampart.js';
-import { Resource } from 'xxscreeps/mods/resource/resource.js';
-import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn.js';
-import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
-import { create as createNuke, Nuke } from './nuke.js';
+import { Nuke, create as createNuke } from './nuke.js';
 import { StructureNuker, checkLaunchNuke } from './nuker.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { nuker: typeof intents }
 }
+declare module 'xxscreeps/game/object.js' {
+	interface RoomObject {
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
+		'#applyNukeImpact'(nuke: RoomObject): void;
+	}
+}
+
+RoomObject.prototype['#applyNukeImpact'] = function(_nuke: RoomObject) {};
+
+type DamageableStructure = Structure & { hits: number };
+
+function isValidNukeCoordinates(xx: unknown, yy: unknown) {
+	return (
+		typeof xx === 'number' &&
+		typeof yy === 'number' &&
+		Number.isInteger(xx) &&
+		Number.isInteger(yy) &&
+		xx >= 0 &&
+		xx <= 49 &&
+		yy >= 0 &&
+		yy <= 49
+	);
+}
+
+function isDamageable(target: RoomObject): target is DamageableStructure {
+	return target instanceof Structure && typeof target.hits === 'number';
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
-	registerIntentProcessor(StructureNuker, 'launchNuke', {}, (nuker, context, roomName: string, x: number, y: number) => {
-		const target = new RoomPosition(x, y, roomName);
+	registerIntentProcessor(StructureNuker, 'launchNuke', {}, (nuker, context, roomName: string, xx: number, yy: number) => {
+		if (!isValidNukeCoordinates(xx, yy) || !context.state.world.map.getRoomStatus(roomName)) return;
+		const target = new RoomPosition(xx, yy, roomName);
 		if (checkLaunchNuke(nuker, target) !== C.OK) return;
 
 		const energyCapacity = nuker.store.getCapacity(C.RESOURCE_ENERGY) ?? 0;
@@ -34,15 +55,15 @@ const intents = [
 		nuker['#cooldownTime'] = Game.time + C.NUKER_COOLDOWN - 1;
 
 		context.sendRoomIntent(roomName, 'nukeArrive',
-			x, y, nuker.room.name, Game.time + C.NUKE_LAND_TIME);
+			xx, yy, nuker.room.name, Game.time + C.NUKE_LAND_TIME - 1);
 
 		// TODO: notify the launching player (`Game.notify`); requires processor-side
 		// notification queueing once a shard tick processor lands.
 		context.didUpdate();
 	}),
 
-	registerIntentProcessor(Room, 'nukeArrive', { internal: true }, (room, context, x: number, y: number, launchRoomName: string, landTime: number) => {
-		const nuke = createNuke(new RoomPosition(x, y, room.name), launchRoomName, landTime);
+	registerIntentProcessor(Room, 'nukeArrive', { internal: true }, (room, context, xx: number, yy: number, launchRoomName: string, landTime: number) => {
+		const nuke = createNuke(new RoomPosition(xx, yy, room.name), launchRoomName, landTime);
 		room['#insertObject'](nuke);
 		context.setActive();
 	}),
@@ -51,7 +72,7 @@ const intents = [
 registerObjectTickProcessor(Nuke, (nuke, context) => {
 	const landTime = nuke['#landTime'];
 	if (Game.time === landTime - 1) {
-		applyNukeImpact(nuke, context);
+		applyNukeImpact(nuke);
 		context.didUpdate();
 		context.wakeAt(landTime);
 	} else if (Game.time >= landTime) {
@@ -62,37 +83,13 @@ registerObjectTickProcessor(Nuke, (nuke, context) => {
 	}
 });
 
-function applyNukeImpact(nuke: Nuke, context: ProcessorContext) {
+function applyNukeImpact(nuke: Nuke) {
 	const room = nuke.room;
-	const removed = new Set<unknown>();
+	const removed = new Set<RoomObject>();
 
-	// Room-wide cleanup: kill creeps, zero powerCreeps, remove transient objects, cancel spawning.
 	// Iterate over a snapshot since `#removeObject` queues but doesn't immediately mutate.
 	for (const object of [ ...room['#objects'] ]) {
-		if (object instanceof Creep) {
-			appendEventLog(room, {
-				event: C.EVENT_OBJECT_DESTROYED,
-				objectId: object.id,
-				type: 'creep',
-			});
-			room['#removeObject'](object);
-			removed.add(object);
-		} else if (
-			object instanceof ConstructionSite ||
-			object instanceof Resource ||
-			object instanceof Tombstone ||
-			object instanceof Ruin
-		) {
-			room['#removeObject'](object);
-			removed.add(object);
-		} else if (object instanceof StructureSpawn && object.spawning) {
-			const spawningCreep = Game.getObjectById(object.spawning['#spawningCreepId']);
-			if (spawningCreep) {
-				room['#removeObject'](spawningCreep);
-				removed.add(spawningCreep);
-			}
-			object.spawning = null;
-		}
+		object['#applyNukeImpact'](nuke);
 	}
 
 	// 5x5 blast: rampart on tile absorbs first, residual hits non-rampart structures.
@@ -109,9 +106,8 @@ function applyNukeImpact(nuke: Nuke, context: ProcessorContext) {
 			const targets: DamageableStructure[] = [];
 			let rampart: StructureRampart | undefined;
 			for (const target of room['#lookAt'](tilePos)) {
-				if (removed.has(target) || !(target instanceof Structure) || typeof target.hits !== 'number') continue;
-				const damageable = target as DamageableStructure;
-				targets.push(damageable);
+				if (removed.has(target) || !isDamageable(target)) continue;
+				targets.push(target);
 				if (target instanceof StructureRampart && rampart === undefined) {
 					rampart = target;
 				}
@@ -120,7 +116,7 @@ function applyNukeImpact(nuke: Nuke, context: ProcessorContext) {
 			let residual = damage;
 			if (rampart) {
 				const rampartHits = rampart.hits;
-				applyNukeDamage(nuke, rampart as DamageableStructure, damage, removed);
+				applyNukeDamage(nuke, rampart, damage, removed);
 				residual = damage - rampartHits;
 			}
 			if (residual > 0) {
@@ -147,15 +143,14 @@ function applyNukeImpact(nuke: Nuke, context: ProcessorContext) {
 			}
 		}
 	}
-
-	void context;
 }
 
-type DamageableStructure = Structure & { hits: number };
-
-function applyNukeDamage(nuke: Nuke, target: DamageableStructure, damage: number, removed: Set<unknown>) {
+function applyNukeDamage(nuke: Nuke, target: DamageableStructure, damage: number, removed: Set<RoomObject>) {
 	const room = target.room;
-	target.hits -= damage;
+	target['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_NUKE, nuke);
+	if (target.hits <= 0) {
+		removed.add(target);
+	}
 	appendEventLog(room, {
 		event: C.EVENT_ATTACK,
 		objectId: nuke.id,
@@ -163,13 +158,4 @@ function applyNukeDamage(nuke: Nuke, target: DamageableStructure, damage: number
 		attackType: C.EVENT_ATTACK_TYPE_NUKE,
 		damage,
 	});
-	if (target.hits <= 0) {
-		room['#removeObject'](target);
-		removed.add(target);
-		appendEventLog(room, {
-			event: C.EVENT_OBJECT_DESTROYED,
-			objectId: target.id,
-			type: target.structureType,
-		});
-	}
 }

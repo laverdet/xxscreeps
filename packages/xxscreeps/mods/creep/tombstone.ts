@@ -41,6 +41,10 @@ export class Tombstone extends withOverlay(RoomObject, shape) {
 
 	override get '#lookType'() { return C.LOOK_TOMBSTONES; }
 
+	override '#applyNukeImpact'() {
+		this.room['#removeObject'](this);
+	}
+
 	/**
 	 * An object containing the deceased creep.
 	 */

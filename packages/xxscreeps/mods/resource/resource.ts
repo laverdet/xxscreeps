@@ -28,6 +28,10 @@ const shape = struct(RoomObject.format, {
 export class Resource extends withOverlay(RoomObject.RoomObject, shape) {
 	get energy() { return this.resourceType === C.RESOURCE_ENERGY ? this.amount : undefined; }
 	get '#lookType'() { return C.LOOK_RESOURCES; }
+
+	override '#applyNukeImpact'() {
+		this.room['#removeObject'](this);
+	}
 }
 
 export function create(pos: RoomPosition, resourceType: ResourceType, amount: number) {

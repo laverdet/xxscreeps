@@ -96,9 +96,11 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return false;
 	}
 
-	override '#destroy'() {
+	override '#destroy'(type?: number) {
 		if (super['#destroy']()) {
-			this.room['#insertObject'](createRuin(this));
+			if (type === undefined || type !== C.EVENT_ATTACK_TYPE_NUKE) {
+				this.room['#insertObject'](createRuin(this));
+			}
 			appendEventLog(this.room, {
 				event: C.EVENT_OBJECT_DESTROYED,
 				objectId: this.id,
@@ -138,13 +140,13 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 		return this['#active'] ?? true;
 	}
 
-	override '#destroy'() {
-		if (super['#destroy']()) {
+	override '#destroy'(type?: number) {
+		if (super['#destroy'](type)) {
 			// Invalidate active flags for same-type structures so the lazy
 			// fallback in isActive() recomputes after this structure is flushed
-			const type = this.structureType;
+			const structureType = this.structureType;
 			for (const object of this.room['#objects']) {
-				if (object instanceof OwnedStructure && object.structureType === type) {
+				if (object instanceof OwnedStructure && object.structureType === structureType) {
 					object['#active'] = undefined;
 				}
 			}

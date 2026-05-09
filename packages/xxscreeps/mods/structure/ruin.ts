@@ -42,6 +42,10 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 		return user === null ? [] : [ user ];
 	}
 
+	override '#applyNukeImpact'() {
+		this.room['#removeObject'](this);
+	}
+
 	/**
 	 * An object containing basic data of the destroyed structure.
 	 */

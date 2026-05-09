@@ -10,6 +10,10 @@ const shape = struct({
 });
 export const nukerStoreFormat = () => compose(shape, NukerStore);
 
+function deleteResource(store: Partial<Record<ResourceType, number>>, type: ResourceType) {
+	delete store[type];
+}
+
 export class NukerStore extends withOverlay(Store, shape) {
 	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
@@ -57,13 +61,13 @@ export class NukerStore extends withOverlay(Store, shape) {
 			this['#energy'] =
 				this[C.RESOURCE_ENERGY] -= amount;
 			if (this[C.RESOURCE_ENERGY] === 0) {
-				delete this[C.RESOURCE_ENERGY as ResourceType];
+				deleteResource(this, C.RESOURCE_ENERGY);
 			}
 		} else if (type === C.RESOURCE_GHODIUM) {
 			this['#ghodium'] =
 				this[C.RESOURCE_GHODIUM] -= amount;
 			if (this[C.RESOURCE_GHODIUM] === 0) {
-				delete this[C.RESOURCE_GHODIUM as ResourceType];
+				deleteResource(this, C.RESOURCE_GHODIUM);
 			}
 		}
 	}
