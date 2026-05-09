@@ -804,122 +804,66 @@ describe('Withdraw validation precedence', () => {
 			assert.strictEqual(Game.creeps.notEnough!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_NOT_OWNER);
 		});
 	}));
-});
-
-describe('Withdraw validation precedence', () => {
-	const safeModeHostile = simulate({
-		W9N9: room => {
-			room['#level'] = 3;
-			room['#user'] = room.controller!['#user'] = '101';
-			room['#safeModeUntil'] = 100;
-
-			room['#insertObject'](create(new RoomPosition(25, 25, 'W9N9'), [ C.CARRY ], 'notEnough', '100'));
-			room['#insertObject'](createContainer(new RoomPosition(26, 25, 'W9N9')));
-		},
-	});
-
-	test('WITHDRAW-017:safemode-not-owner-before-not-enough', () => safeModeHostile(async ({ player }) => {
-		await player('100', Game => {
-			const container = lookForStructures(Game.rooms.W9N9, C.STRUCTURE_CONTAINER)
-				.find(container => container.pos.isEqualTo(26, 25))!;
-			assert.strictEqual(Game.creeps.notEnough!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_NOT_OWNER);
-		});
-	}));
 
 	const friendly = simulate({
 		W7N7: room => {
 			room['#level'] = 3;
 			room['#user'] = room.controller!['#user'] = '100';
-
-			room['#insertObject'](create(new RoomPosition(25, 20, 'W7N7'), [ C.CARRY ], 'argsInvalidTarget', '100'));
-
-			room['#insertObject'](create(new RoomPosition(25, 22, 'W7N7'), [ C.CARRY ], 'argsRange', '100'));
-			const farContainer = createContainer(new RoomPosition(45, 45, 'W7N7'));
-			farContainer.store['#add'](C.RESOURCE_ENERGY, 50);
-			room['#insertObject'](farContainer);
-
-			room['#insertObject'](create(new RoomPosition(25, 24, 'W7N7'), [ C.CARRY ], 'argsRampart', '100'));
-			const blockedContainer = createContainer(new RoomPosition(26, 24, 'W7N7'));
-			blockedContainer.store['#add'](C.RESOURCE_ENERGY, 50);
-			room['#insertObject'](blockedContainer);
-			room['#insertObject'](createRampart(new RoomPosition(26, 24, 'W7N7'), '101'));
-
-			room['#insertObject'](create(new RoomPosition(25, 26, 'W7N7'), [ C.CARRY ], 'capRange', '100'));
+			room['#insertObject'](create(new RoomPosition(25, 25, 'W7N7'), [ C.CARRY ], 'creep', '100'));
+			room['#insertObject'](createContainer(new RoomPosition(26, 25, 'W7N7')));
+			room['#insertObject'](createContainer(new RoomPosition(24, 25, 'W7N7')));
+			room['#insertObject'](createRampart(new RoomPosition(24, 25, 'W7N7'), '101'));
 			room['#insertObject'](createExtension(new RoomPosition(45, 30, 'W7N7'), 3, '100'));
-
-			const full = create(new RoomPosition(25, 28, 'W7N7'), [ C.CARRY ], 'full', '100');
-			full.store['#add'](C.RESOURCE_ENERGY, C.CARRY_CAPACITY);
-			room['#insertObject'](full);
-			room['#insertObject'](createContainer(new RoomPosition(26, 28, 'W7N7')));
-
-			room['#insertObject'](create(new RoomPosition(25, 30, 'W7N7'), [ C.CARRY ], 'emptyContainer', '100'));
-			room['#insertObject'](createContainer(new RoomPosition(26, 30, 'W7N7')));
 		},
 	});
 
 	test('WITHDRAW-017:invalid-args-before-invalid-target', () => friendly(async ({ player }) => {
 		await player('100', Game => {
-			assert.strictEqual(
-				// @ts-expect-error
-				Game.creeps.argsInvalidTarget!.withdraw(null, 'fake'),
-				C.ERR_INVALID_ARGS,
-			);
+			// @ts-expect-error
+			assert.strictEqual(Game.creeps.creep!.withdraw(null, 'fake'), C.ERR_INVALID_ARGS);
 		});
 	}));
 
 	test('WITHDRAW-017:invalid-args-before-target-not-owner', () => friendly(async ({ player }) => {
 		await player('100', Game => {
 			const blocked = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_CONTAINER)
-				.find(container => container.pos.isEqualTo(26, 24))!;
-			assert.strictEqual(
-				// @ts-expect-error
-				Game.creeps.argsRampart!.withdraw(blocked, 'fake'),
-				C.ERR_INVALID_ARGS,
-			);
+				.find(container => container.pos.isEqualTo(24, 25))!;
+			// @ts-expect-error
+			assert.strictEqual(Game.creeps.creep!.withdraw(blocked, 'fake'), C.ERR_INVALID_ARGS);
 		});
 	}));
 
 	test('WITHDRAW-017:invalid-args-before-range', () => friendly(async ({ player }) => {
 		await player('100', Game => {
-			const far = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_CONTAINER)
-				.find(container => container.pos.isEqualTo(45, 45))!;
-			assert.strictEqual(
-				// @ts-expect-error
-				Game.creeps.argsRange!.withdraw(far, 'fake'),
-				C.ERR_INVALID_ARGS,
-			);
+			const far = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_EXTENSION)[0]!;
+			// @ts-expect-error
+			assert.strictEqual(Game.creeps.creep!.withdraw(far, 'fake'), C.ERR_INVALID_ARGS);
 		});
 	}));
 
 	test('WITHDRAW-017:invalid-capacity-before-range', () => friendly(async ({ player }) => {
 		await player('100', Game => {
-			const extension = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_EXTENSION)[0]!;
-			assert.strictEqual(
-				Game.creeps.capRange!.withdraw(extension, C.RESOURCE_HYDROGEN),
-				C.ERR_INVALID_TARGET,
-			);
+			const far = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_EXTENSION)[0]!;
+			assert.strictEqual(Game.creeps.creep!.withdraw(far, C.RESOURCE_HYDROGEN), C.ERR_INVALID_TARGET);
 		});
 	}));
 
-	test('WITHDRAW-017:full-before-not-enough', () => friendly(async ({ player }) => {
+	test('WITHDRAW-017:full-before-not-enough', () => friendly(async ({ player, poke }) => {
+		await poke('W7N7', '100', Game => {
+			Game.creeps.creep!.store['#add'](C.RESOURCE_ENERGY, C.CARRY_CAPACITY);
+		});
 		await player('100', Game => {
 			const container = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_CONTAINER)
-				.find(container => container.pos.isEqualTo(26, 28))!;
-			assert.strictEqual(
-				Game.creeps.full!.withdraw(container, C.RESOURCE_ENERGY),
-				C.ERR_FULL,
-			);
+				.find(container => container.pos.isEqualTo(26, 25))!;
+			assert.strictEqual(Game.creeps.creep!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_FULL);
 		});
 	}));
 
 	test('WITHDRAW-017:not-enough-when-creep-has-room', () => friendly(async ({ player }) => {
 		await player('100', Game => {
 			const container = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_CONTAINER)
-				.find(container => container.pos.isEqualTo(26, 30))!;
-			assert.strictEqual(
-				Game.creeps.emptyContainer!.withdraw(container, C.RESOURCE_ENERGY),
-				C.ERR_NOT_ENOUGH_RESOURCES,
-			);
+				.find(container => container.pos.isEqualTo(26, 25))!;
+			assert.strictEqual(Game.creeps.creep!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_NOT_ENOUGH_RESOURCES);
 		});
 	}));
 });
