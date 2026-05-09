@@ -1,10 +1,14 @@
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
+import { invertedNumericComparator, mappedComparator } from 'xxscreeps/functional/comparator.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
-import { captureDamage } from 'xxscreeps/game/processor.js';
+import { captureDamage, walkLayers } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/creep/creep.js';
-import { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { Structure, notifyAttacked } from 'xxscreeps/mods/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 
 // Creep extension declaration
@@ -170,4 +174,47 @@ export function checkDestructible(target: Creep | Structure) {
 		return C.ERR_INVALID_TARGET;
 	}
 	return target.hits === undefined ? C.ERR_INVALID_TARGET : C.OK;
+}
+
+export function notifyAttackDamage(target: RoomObject, context: ProcessorContext, source: RoomObject | null) {
+	if (target instanceof Structure) {
+		notifyAttacked(target, context, source ?? undefined);
+	}
+}
+
+export function applyAttackDamage(
+	target: RoomObject,
+	power: number,
+	type: number,
+	source: RoomObject | null,
+	context: ProcessorContext,
+) {
+	target['#applyDamage'](power, type, source ?? undefined);
+	notifyAttackDamage(target, context, source);
+}
+
+/**
+ * Like `captureDamage`, but also notifies any intermediate layer object (e.g. a rampart) that
+ * absorbed some damage on the way to `target`.
+ */
+export function captureDamageWithNotify(
+	target: RoomObject,
+	initialPower: number,
+	type: number,
+	source: RoomObject | null,
+	context: ProcessorContext,
+) {
+	const objects = Fn.pipe(
+		target.room['#lookAt'](target.pos),
+		$$ => Fn.reject($$, object =>
+			object['#layer'] === undefined || object.hits === undefined),
+		$$ => [ ...$$ ],
+		$$ => $$.sort(mappedComparator(invertedNumericComparator, object => object['#layer']!)));
+	return walkLayers(objects, initialPower, (object, layerPower) => {
+		const remaining = object['#captureDamage'](layerPower, type, source);
+		if (remaining < layerPower) {
+			notifyAttackDamage(object, context, source);
+		}
+		return remaining;
+	}, target);
 }

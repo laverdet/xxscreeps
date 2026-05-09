@@ -6,10 +6,10 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { positionsInRangeTo } from 'xxscreeps/game/position.js';
-import { captureDamage, walkLayers } from 'xxscreeps/game/processor.js';
+import { walkLayers } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
-import { checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep.js';
+import { applyAttackDamage, captureDamageWithNotify, checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack, notifyAttackDamage } from './creep.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { combat: typeof intents }
@@ -26,9 +26,9 @@ const intents = [
 		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkAttack(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.ATTACK, C.ATTACK_POWER, 'attack');
-			const damage = captureDamage(target, power, C.EVENT_ATTACK_TYPE_MELEE, creep);
+			const damage = captureDamageWithNotify(target, power, C.EVENT_ATTACK_TYPE_MELEE, creep, context);
 			if (damage > 0) {
-				target['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_MELEE, creep);
+				applyAttackDamage(target, damage, C.EVENT_ATTACK_TYPE_MELEE, creep, context);
 				appendEventLog(target.room, {
 					event: C.EVENT_ATTACK,
 					objectId: creep.id,
@@ -49,9 +49,9 @@ const intents = [
 		const target = Game.getObjectById<Creep | DestructibleStructure>(id)!;
 		if (checkRangedAttack(creep, target) === C.OK) {
 			const power = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER, 'rangedAttack');
-			const damage = captureDamage(target, power, C.EVENT_ATTACK_TYPE_RANGED, creep);
+			const damage = captureDamageWithNotify(target, power, C.EVENT_ATTACK_TYPE_RANGED, creep, context);
 			if (damage > 0) {
-				target['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_RANGED, creep);
+				applyAttackDamage(target, damage, C.EVENT_ATTACK_TYPE_RANGED, creep, context);
 				appendEventLog(target.room, {
 					event: C.EVENT_ATTACK,
 					objectId: creep.id,
@@ -83,7 +83,9 @@ const intents = [
 					const remaining = object['#captureDamage'](layerPower, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep);
 					const absorbed = layerPower - remaining;
 					if (absorbed === 0) {
-						object['#applyDamage'](layerPower, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep);
+						applyAttackDamage(object, layerPower, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep, context);
+					} else {
+						notifyAttackDamage(object, context, creep);
 					}
 					appendEventLog(object.room, {
 						event: C.EVENT_ATTACK,

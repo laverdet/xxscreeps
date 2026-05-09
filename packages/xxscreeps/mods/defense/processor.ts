@@ -2,8 +2,8 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
-import { captureDamage } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
+import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/combat/creep.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
@@ -22,9 +22,9 @@ const intents = [
 		if (checkTower(tower, target, Creep) === C.OK) {
 			tower.store['#subtract'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
 			const power = C.TOWER_POWER_ATTACK * calculateEfficiency(tower, target);
-			const damage = captureDamage(target, power, C.EVENT_ATTACK_TYPE_RANGED, tower);
+			const damage = captureDamageWithNotify(target, power, C.EVENT_ATTACK_TYPE_RANGED, tower, context);
 			if (damage > 0) {
-				target['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_RANGED, tower);
+				applyAttackDamage(target, damage, C.EVENT_ATTACK_TYPE_RANGED, tower, context);
 				appendEventLog(target.room, {
 					event: C.EVENT_ATTACK,
 					objectId: tower.id,
