@@ -141,6 +141,15 @@ describe('Chemistry', () => {
 				assert.strictEqual(output?.runReaction(labH, labO), C.ERR_TIRED);
 			});
 		}));
+
+		test('LAB-RUN-013:invalid-target-before-not-enough-reagent', () => reactionSim(async ({ player }) => {
+			await player('100', Game => {
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				const output = labs.find(lab => !lab.mineralType)!;
+				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
+				assert.strictEqual(output.runReaction(output, labO), C.ERR_INVALID_TARGET);
+			});
+		}));
 	});
 
 	// =========================================================================
@@ -366,6 +375,14 @@ describe('Chemistry', () => {
 				const empty = labs.find(lab => !lab.mineralType)!;
 				const result = labOH?.reverseReaction(empty, empty);
 				assert.strictEqual(result, C.ERR_INVALID_ARGS);
+			});
+		}));
+
+		test('LAB-REVERSE-013:invalid-target-before-same-lab', () => reverseSim(async ({ player }) => {
+			await player('100', Game => {
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				const labOH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROXIDE)!;
+				assert.strictEqual(labOH.reverseReaction(labOH, labOH), C.ERR_INVALID_TARGET);
 			});
 		}));
 
