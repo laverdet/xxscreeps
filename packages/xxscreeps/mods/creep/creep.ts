@@ -527,16 +527,13 @@ function checkTransferTarget(target: RoomObject & WithStore, resourceType: Resou
 		() => checkTarget(target, RoomObject),
 		() => target.store instanceof Store ? C.OK : C.ERR_INVALID_TARGET,
 		() => target instanceof Creep && target.spawning ? C.ERR_INVALID_TARGET : C.OK,
-		() => target.store.getFreeCapacity(resourceType) === null ? C.ERR_INVALID_TARGET : C.OK);
+		() => checkStoreAccepts(target, resourceType));
 }
 
 export function checkTransfer(creep: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => {
-			if (!C.RESOURCES_ALL.includes(resourceType)) return C.ERR_INVALID_ARGS;
-			if (typeof amount !== 'number' || amount < 0) return C.ERR_INVALID_ARGS;
-		},
+		() => checkResourceArgs(resourceType, amount),
 		() => checkTransferTarget(target, resourceType),
 		() => checkRange(creep, target, 1),
 		() => {
