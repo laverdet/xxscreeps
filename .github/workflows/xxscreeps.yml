@@ -28,17 +28,20 @@ jobs:
       - run: pnpm run build
       - run: pnpm run test
 
-      # Publish
+      # Publish to npm
       - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'main' && github.event_name == 'push'
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          createGithubReleases: false
-      - if: steps.changesets.outcome == 'success'
+        id: publish
         shell: sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm publish --filter '!@xxscreeps/pathfinder' --no-git-checks --provenance --recursive
-      - if: steps.changesets.outcome == 'skipped'
+      - if: steps.publish.outcome == 'skipped'
         shell: sh
         run: pnpm publish --dry-run --filter '!@xxscreeps/pathfinder' --no-git-checks
+
+      # Open version package PR. Do this last because it modifies package.json in all monorepo
+      # packages, which would cause the above 'pnpm publish' command to go wild.
+      - if: steps.publish.outcome == 'success'
+        uses: changesets/action@v1
+        with:
+          createGithubReleases: false
