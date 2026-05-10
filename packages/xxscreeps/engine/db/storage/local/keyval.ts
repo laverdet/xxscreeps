@@ -385,15 +385,6 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 					default: return members;
 				}
 			}();
-			const up = function() {
-				// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
-				switch (options?.up) {
-					case 'gt': return Math.max;
-					case 'lt': return Math.min;
-					default: return (left: unknown, right: number) => right;
-				}
-			}();
-
 			if (options?.incr) {
 				if (members.length > 1) {
 					throw new Error('ZADD with INCR option cannot be used with multiple elements');
@@ -412,7 +403,23 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 				}
 			}
 
-			return set.insert(range, up);
+			// Redis ZADD GT/LT only constrains *updates* to existing members. New members are
+			// always added at the given score regardless of GT/LT.
+			if (options?.up) {
+				const cmp = options.up === 'gt' ? Math.max : Math.min;
+				let added = 0;
+				for (const [ score, member ] of range) {
+					const current = set.score(member);
+					if (current === undefined) {
+						added += set.add(member, score);
+					} else {
+						set.add(member, cmp(current, score));
+					}
+				}
+				return added;
+			}
+
+			return set.insert(range, (left, right) => right);
 		} finally {
 			if (set.size === 0) {
 				this.data.delete(key);
