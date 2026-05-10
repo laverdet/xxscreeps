@@ -234,6 +234,7 @@ export class RedisProvider implements P.KeyValProvider {
 			const result = await this.redis.invoke<number>(cb => this.redis.batch(key).zadd(
 				key,
 				...options?.if ? [ options.if ] : [],
+				...options?.up ? [ options.up ] : [],
 				...Fn.concat<number | string>(members),
 				cb));
 			return result;

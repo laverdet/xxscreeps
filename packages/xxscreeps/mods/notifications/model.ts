@@ -41,10 +41,6 @@ export async function getNotifications(
 	});
 }
 
-export async function getNotificationIds(shard: Shard, userId: string): Promise<string[]> {
-	return shard.data.smembers(userIndexKey(userId));
-}
-
 export async function removeNotifications(shard: Shard, userId: string, ids: string[]) {
 	if (ids.length === 0) return;
 	await Promise.all([
@@ -66,10 +62,11 @@ export async function consumeDueUsers(shard: Shard, nowMs: number): Promise<stri
 }
 
 /**
- * Schedule (or re-schedule) a user's next drain. Overwrites any existing entry.
+ * Schedule (or re-schedule) a user's next drain. Overwrites any existing entry, selecting the
+ * sooner time.
  */
 export async function scheduleUserDrain(shard: Shard, userId: string, dueAt: number) {
-	await shard.data.zadd(dueUsersKey, [ [ dueAt, userId ] ]);
+	await shard.data.zadd(dueUsersKey, [ [ dueAt, userId ] ], { up: 'lt' });
 }
 
 /**
@@ -97,7 +94,7 @@ export async function upsertNotification(
 		await Promise.all([
 			shard.data.hmset(key, { message, date: now, count: 1, type }),
 			shard.data.sadd(userIndexKey(userId), [ id ]),
-			shard.data.zadd(dueUsersKey, [ [ now, userId ] ], { if: 'nx' }),
+			scheduleUserDrain(shard, userId, timeGroup),
 		]);
 	} else {
 		await shard.data.hincrBy(key, 'count', 1);
