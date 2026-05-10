@@ -366,11 +366,13 @@ describe('Controller', () => {
 				const warnings = rows.filter(entry => entry.message.includes('will be downgraded'));
 				const total = warnings.reduce((sum, entry) => sum + entry.count, 0);
 				assert.strictEqual(total, 1, 'warning should fire exactly once even when room stays active');
-				assert.strictEqual(warnings[0].message,
+				const [ warning ] = warnings;
+				assert.ok(warning);
+				assert.strictEqual(warning.message,
 					'Attention! Your Controller in room W3N3 will be downgraded to level 4 in 3000 ticks (~2 hours)! ' +
 					'Upgrade it to prevent losing of this room. ' +
 					"<a href='http://support.screeps.com/hc/en-us/articles/203086021-Territory-control'>Learn more</a>");
-				assert.strictEqual(warnings[0].type, 'msg');
+				assert.strictEqual(warning.type, 'msg');
 			}));
 
 		// Controller hits the downgrade tick on the first tick processed.
