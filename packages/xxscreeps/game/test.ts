@@ -1,4 +1,5 @@
 import { assert, describe, test } from 'xxscreeps/test/index.js';
+import { RoomObject } from './object.js';
 import { RoomPosition } from './position.js';
 
 describe('RoomPosition', () => {
@@ -17,6 +18,19 @@ describe('RoomPosition', () => {
 			assert.strictEqual(target.y, original.y);
 			assert.strictEqual(target.roomName, original.roomName);
 			assert.strictEqual(target.__packedPos, original.__packedPos);
+		}
+	});
+});
+
+describe('RoomObject', () => {
+	// Substrate must not live on the base prototype — would leak 'effects' onto every RoomObject.
+	test('effects is not a property on the base RoomObject prototype chain', () => {
+		for (let proto: object | null = RoomObject.prototype; proto !== null; proto = Reflect.getPrototypeOf(proto)) {
+			assert.strictEqual(
+				Object.getOwnPropertyDescriptor(proto, 'effects'),
+				undefined,
+				"'effects' unexpectedly defined on RoomObject prototype chain",
+			);
 		}
 	});
 });
