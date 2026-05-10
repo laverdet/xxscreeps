@@ -26,7 +26,7 @@ export function getRoomChannel(shard: Shard, roomName: string) {
 
 export const processorTimeKey = 'processor/time';
 export const activeRoomsKey = 'processor/activeRooms';
-const sleepingRoomsKey = 'processor/inactiveRooms';
+export const sleepingRoomsKey = 'processor/inactiveRooms';
 export const userToIntentRoomsSetKey = (userId: string) =>
 	`user/${userId}/intentRooms`;
 export const userToPresenceRoomsSetKey = (userId: string) =>
@@ -267,18 +267,14 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 		// Decrement number of finalization rooms remaining
 		const remaining = await shard.scratch.decrBy(finalizedRoomsPendingKey(time), roomsCount);
 		if (remaining === 0) {
-			const [ nextTime ] = await Promise.all([
-				// Set up state for next tick
-				begetRoomProcessQueue(shard, time + 1, time, true),
+			await Promise.all([
 				// Delete "0" value from scratch
 				shard.scratch.vdel(finalizedRoomsPendingKey(time)),
+				// Notify main loop that room finalization is complete
+				getServiceChannel(shard).publish({ type: 'tickFinished', time }),
 			]);
-			// Notify main loop that we're ready for the next tick
-			await getServiceChannel(shard).publish({ type: 'tickFinished', time });
-			return nextTime;
 		}
 	}
-	return time;
 }
 
 const isSystemUser = (userId: string) => userId.length <= 2;

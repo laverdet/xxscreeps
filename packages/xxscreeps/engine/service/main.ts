@@ -2,6 +2,7 @@ import config from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model.js';
+import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
@@ -104,6 +105,10 @@ async function tick() {
 				break;
 
 			case 'tickFinished': {
+				// Run shard-level tick processors before snapshotting the next tick's room queue.
+				await runShardTickProcessors(shard, time);
+				await begetRoomProcessQueue(shard, time + 1, time, true);
+
 				// Update game state
 				await shard.data.set('time', time);
 
