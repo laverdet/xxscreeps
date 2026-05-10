@@ -3,7 +3,6 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { captureConsoleLog, parseNotifyLines, withFakeNow } from 'xxscreeps/test/console-capture.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { dispatchQueuedNotifications } from './driver.js';
-import { notifyHooks } from './hooks.js';
 import { getNotifications, upsertNotification } from './model.js';
 import { flush } from './notifications.js';
 import { setNotifyPrefs } from './prefs.js';
@@ -202,7 +201,7 @@ describe('Notification delivery worker', () => {
 		await tick(next - shardTime);
 	}
 
-	test('drains user at next cadence tick after upsert', () => empty(async ({ shard, tick }) => {
+	test('drains user at cadence boundary with full row shape', () => empty(async ({ shard, tick }) => {
 		using _clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
 		await alignToCadence(tick, shard.time);
@@ -210,10 +209,13 @@ describe('Notification delivery worker', () => {
 		await tick(10);
 		const lines = parseNotifyLines(stdout.lines);
 		assert.strictEqual(lines.length, 1);
-		assert.strictEqual(lines[0]!.userId, userA);
-		assert.strictEqual(lines[0]!.message, 'hi');
-		assert.strictEqual(lines[0]!.count, 1);
-		assert.strictEqual(lines[0]!.type, 'msg');
+		const line = lines[0]!;
+		assert.strictEqual(line.event, 'notify');
+		assert.strictEqual(line.userId, userA);
+		assert.strictEqual(line.message, 'hi');
+		assert.strictEqual(line.count, 1);
+		assert.strictEqual(line.type, 'msg');
+		assert.strictEqual(typeof line.date, 'number');
 		assert.strictEqual((await getRows(shard, userA)).length, 0);
 	}));
 
@@ -278,57 +280,36 @@ describe('Notification delivery worker', () => {
 		assert.strictEqual(byUser.get(userB)?.message, 'b-msg');
 	}));
 
-	test('one user throw does not block others', () => empty(async ({ shard, tick }) => {
-		using _clock = withFakeNow(baseTime);
+	test('short group does not drag long group when its deadline elapses', () => empty(async ({ shard, tick }) => {
+		using clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
-		using _hook = notifyHooks.register('sendUserNotifications', userId => {
-			if (userId === userA) {
-				throw new Error('transport boom');
-			}
-		});
+		// Disable the per-user throttle so delivery depends only on each row's group deadline.
+		await setNotifyPrefs(shard, userA, { interval: 0 });
 		await alignToCadence(tick, shard.time);
-		await seedRow(shard, userA, 'a-msg');
-		await seedRow(shard, userB, 'b-msg');
+		// 60-minute group → due at the next 60-minute boundary.
+		await upsertNotification(shard, userA, 'msg', 'long', 60);
+		// 1-minute group (smallest non-zero `groupInterval`) → due at the next 1-minute boundary.
+		await upsertNotification(shard, userA, 'msg', 'short', 1);
+
+		// Advance past the short group's bucket boundary; the long group's bucket is still ahead.
+		const shortBucket = Math.ceil(baseTime / 60_000) * 60_000;
+		clock.advance(shortBucket - baseTime + 1);
 		await tick(10);
-		const aRows = await getRows(shard, userA);
-		const bRows = await getRows(shard, userB);
-		assert.strictEqual(aRows.length, 1, 'failing transport → A row stays');
-		assert.strictEqual(bRows.length, 0, 'B row removed normally');
-		const byUser = new Map(parseNotifyLines(stdout.lines).map(line => [ line.userId, line ]));
-		assert.strictEqual(byUser.get(userB)?.message, 'b-msg');
-	}));
+		const firstPass = parseNotifyLines(stdout.lines);
+		assert.strictEqual(firstPass.length, 1, 'only the short group fires at its bucket boundary');
+		assert.strictEqual(firstPass[0]!.message, 'short');
+		const remaining = await getRows(shard, userA);
+		assert.strictEqual(remaining.length, 1, 'long group stays queued under its own deadline');
+		assert.strictEqual(remaining[0]!.message, 'long');
 
-});
-
-describe('Default stdout transport', () => {
-
-	test('emits one line per user with correct shape', () => empty(async ({ shard, tick }) => {
-		using _clock = withFakeNow(10_000_000);
-		using stdout = captureConsoleLog();
-		const next = (Math.floor(shard.time / 10) + 1) * 10;
-		await tick(next - shard.time);
-		await upsertNotification(shard, userA, 'msg', 'hello', 0);
+		// Advance past the 60-minute group's bucket boundary.
+		const longBucket = Math.ceil(baseTime / (60 * 60_000)) * (60 * 60_000);
+		clock.advance(longBucket - shortBucket);
 		await tick(10);
-		const lines = parseNotifyLines(stdout.lines);
-		assert.strictEqual(lines.length, 1);
-		const line = lines[0]!;
-		assert.strictEqual(line.event, 'notify');
-		assert.strictEqual(line.userId, userA);
-		assert.strictEqual(line.message, 'hello');
-		assert.strictEqual(line.count, 1);
-		assert.strictEqual(line.type, 'msg');
-		assert.strictEqual(typeof line.date, 'number');
-	}));
-
-	test('fires with no extra listeners registered', () => empty(async ({ shard, tick }) => {
-		using _clock = withFakeNow(10_000_000);
-		using stdout = captureConsoleLog();
-		const next = (Math.floor(shard.time / 10) + 1) * 10;
-		await tick(next - shard.time);
-		await upsertNotification(shard, userA, 'msg', 'solo', 0);
-		await tick(10);
-		assert.strictEqual(parseNotifyLines(stdout.lines).length, 1,
-			'default stdout transport should fire even without operator-registered transports');
+		const secondPass = parseNotifyLines(stdout.lines);
+		assert.strictEqual(secondPass.length, 2, 'long group fires once its deadline elapses');
+		assert.strictEqual(secondPass[1]!.message, 'long');
+		assert.strictEqual((await getRows(shard, userA)).length, 0);
 	}));
 
 });

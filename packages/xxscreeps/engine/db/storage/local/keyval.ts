@@ -407,16 +407,10 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			// always added at the given score regardless of GT/LT.
 			if (options?.up) {
 				const cmp = options.up === 'gt' ? Math.max : Math.min;
-				let added = 0;
-				for (const [ score, member ] of range) {
+				return Fn.accumulate(range, ([ score, member ]) => {
 					const current = set.score(member);
-					if (current === undefined) {
-						added += set.add(member, score);
-					} else {
-						set.add(member, cmp(current, score));
-					}
-				}
-				return added;
+					return set.add(member, current === undefined ? score : cmp(current, score));
+				});
 			}
 
 			return set.insert(range, (left, right) => right);
@@ -558,7 +552,8 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			switch (options?.by) {
 				case 'lex': throw new Error('Invalid request');
 				case 'score': return [ ...set.entries(min, max) ];
-				default: return [ ...Fn.map(set.values(), (value): [ number, string ] => [ set.score(value)!, value ]) ];
+				default: return this.zrange(key, min, max, options)
+					.map((value: string): [ number, string ] => [ set.score(value)!, value ]);
 			}
 		} else {
 			return [];

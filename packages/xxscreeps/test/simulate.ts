@@ -176,13 +176,12 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						nextRoomInstances.set(roomName, room);
 					}
 
-					// Run shard tick processors before next-tick snapshot.
-					await runShardTickProcessors(shard, time);
+					shard.time = time;
+					await runShardTickProcessors(shard);
 
 					// Increment time
 					await shard.data.set('time', time);
 					await shard.channel.publish({ type: 'tick', time });
-					shard.time = time;
 				}
 			},
 		};

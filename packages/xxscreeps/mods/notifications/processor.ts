@@ -1,43 +1,45 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { everyNTicks, registerShardTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { getHooks } from './hooks.js';
-import { consumeDueUsers, getNotifications, removeNotifications, scheduleUserDrain } from './model.js';
+import {
+	consumeDueUsers, getDueNotifications, getNotificationIds, nextPendingDueAt, removeNotifications,
+	scheduleUserDrain,
+} from './model.js';
 import { DEFAULT_INTERVAL_MIN, getLastNotifyDate, getNotifyPrefs, setLastNotifyDate } from './prefs.js';
+import { transports } from './transports.js';
 import './transport-stdout.js';
 
 async function drainUser(shard: Shard, userId: string) {
-	try {
-		const [ prefs, items, lastNotifyDate ] = await Promise.all([
-			getNotifyPrefs(shard, userId),
-			getNotifications(shard, userId),
-			getLastNotifyDate(shard, userId),
-		]);
-		if (items.length === 0) return;
-
-		if (prefs.disabled) {
-			await removeNotifications(shard, userId, items.map(item => item.id));
-			return;
-		}
-		const intervalMs = (prefs.interval ?? DEFAULT_INTERVAL_MIN) * 60_000;
-		const dueAt = lastNotifyDate + intervalMs;
-		const now = Date.now();
-		if (dueAt > now) {
-			// Throttled — reschedule at the precise next-due time and exit. The next drain cycle
-			// will pick this user up exactly when the per-user interval elapses.
-			await scheduleUserDrain(shard, userId, dueAt);
-			return;
-		}
+	const [ prefs, lastNotifyDate ] = await Promise.all([
+		getNotifyPrefs(shard, userId),
+		getLastNotifyDate(shard, userId),
+	]);
+	if (prefs.disabled) {
+		const ids = await getNotificationIds(shard, userId);
+		await removeNotifications(shard, userId, ids);
+		return;
+	}
+	const intervalMs = (prefs.interval ?? DEFAULT_INTERVAL_MIN) * 60_000;
+	const now = Date.now();
+	const throttleEndsAt = lastNotifyDate + intervalMs;
+	if (throttleEndsAt > now) {
+		// Throttled — push the user's drain to the throttle deadline. Row groups maturing in
+		// the meantime will be picked up at the same drain pass.
+		await scheduleUserDrain(shard, userId, throttleEndsAt);
+		return;
+	}
+	const items = await getDueNotifications(shard, userId, now);
+	if (items.length > 0) {
 		const rows = items.map(item => item.row);
-		await Promise.all(Fn.map(getHooks('sendUserNotifications'), async fn => fn(userId, rows)));
+		await Promise.all(Fn.map(transports, async fn => fn(userId, rows)));
 		await Promise.all([
 			removeNotifications(shard, userId, items.map(item => item.id)),
 			setLastNotifyDate(shard, userId, now),
 		]);
-	} catch (err) {
-		console.error(`notify drain failed for user ${userId}:`, err);
-		// Reschedule a retry one default-interval out so a failing transport doesn't busy-loop.
-		await scheduleUserDrain(shard, userId, Date.now() + DEFAULT_INTERVAL_MIN * 60_000);
+	}
+	const next = await nextPendingDueAt(shard, userId);
+	if (next !== undefined) {
+		await scheduleUserDrain(shard, userId, next);
 	}
 }
 
