@@ -11,7 +11,7 @@ import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
-import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
@@ -215,7 +215,12 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						nextRoomInstances.set(roomName, room);
 						const context = new RoomProcessor(shard, world, room, time);
 						contexts.set(roomName, context);
-						for (const { userId, intents } of intentsByRoom.get(roomName) ?? []) {
+						// Player intents come from `player()` callbacks (in-memory). Cross-tick intents
+						// from `pushIntentsForRoomNextTick` land in scratch and must be drained the
+						// same way the production worker does — otherwise tests bypass them silently.
+						const scratchIntents = await acquireIntentsForRoom(shard, roomName);
+						const inMemoryIntents = intentsByRoom.get(roomName) ?? [];
+						for (const { userId, intents } of [ ...inMemoryIntents, ...scratchIntents ]) {
 							context.saveIntents(userId, intents);
 						}
 						await context.process();
