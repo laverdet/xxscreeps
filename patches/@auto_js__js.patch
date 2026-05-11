@@ -11,16 +11,6 @@ index cdd608f36a8cebdc2c9224b557bf579d92319290..7863176f4d00680aceeae4cb3e626b99
  
  namespace js {
  
-diff --git a/cmake/cmake_include.mjs b/cmake/cmake_include.mjs
-index 09f4d93376ca41b98bfda222c28d8c1a151eb835..67a10da9e67f0099ca43b1e0bd4eaf09d95b6c12 100755
---- a/cmake/cmake_include.mjs
-+++ b/cmake/cmake_include.mjs
-@@ -1,2 +1,4 @@
- #!/usr/bin/env node
--console.log(new URL(".", import.meta.url).pathname);
-+import { fileURLToPath } from "node:url";
-+
-+process.stdout.write(fileURLToPath(new URL(".", import.meta.url)));
 diff --git a/enum/accept.cc b/enum/accept.cc
 index acb6cf7746c4505c019668760aed3ad1b8f2ec87..0961660779d3f00f04dfb100155ca1d0f4b0159b 100644
 --- a/enum/accept.cc

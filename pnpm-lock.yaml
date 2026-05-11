@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@auto_js/js':
-    hash: 57cccce2bf3691faf74d7cbb697b0a5968831afa7a5b4a06a104bd4d8da5cfef
+    hash: 7443a31c43505f95704ec4e0dfb2f20936fb92e565bf8e9cb95d00f7d157882c
     path: patches/@auto_js__js.patch
   '@auto_js/napi_exports':
     hash: 363022cb03c8454ebcba93f9c66f38106c8a90488c150d15652aa29db7ab4208
@@ -93,7 +93,7 @@ importers:
     devDependencies:
       '@auto_js/js':
         specifier: ^0.0.1
-        version: 0.0.1(patch_hash=57cccce2bf3691faf74d7cbb697b0a5968831afa7a5b4a06a104bd4d8da5cfef)
+        version: 0.0.1(patch_hash=7443a31c43505f95704ec4e0dfb2f20936fb92e565bf8e9cb95d00f7d157882c)
       '@auto_js/napi_exports':
         specifier: ^0.0.1
         version: 0.0.1(patch_hash=363022cb03c8454ebcba93f9c66f38106c8a90488c150d15652aa29db7ab4208)
@@ -3503,7 +3503,7 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
-  '@auto_js/js@0.0.1(patch_hash=57cccce2bf3691faf74d7cbb697b0a5968831afa7a5b4a06a104bd4d8da5cfef)':
+  '@auto_js/js@0.0.1(patch_hash=7443a31c43505f95704ec4e0dfb2f20936fb92e565bf8e9cb95d00f7d157882c)':
     dependencies:
       '@auto_js/utility': 0.0.1
 

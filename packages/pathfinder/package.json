@@ -4,12 +4,7 @@
   "version": "0.1.0",
   "main": "./module/index.js",
   "scripts": {
-    "configure": "cmake -DCMAKE_BUILD_TYPE=Release \"-DCMAKE_MODULE_PATH:PATH=$(pnpm exec auto_js_cmake_include)\" -G Ninja -B build",
-    "configure:dev": "cmake -DCMAKE_BUILD_TYPE=Debug \"-DCMAKE_MODULE_PATH:PATH=$(pnpm exec auto_js_cmake_include)\" -G Ninja -B build",
-    "build": "npm run configure && cmake --build build",
-    "clean": "cmake -B build --target clean",
-    "prepublishOnly": "napi prepublish --no-gh-release",
-    "install": "echo congratulations"
+    "prepublishOnly": "napi prepublish --no-gh-release"
   },
   "napi": {
     "binaryName": "pf",
