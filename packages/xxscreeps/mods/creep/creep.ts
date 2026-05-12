@@ -132,13 +132,17 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	}
 
 	override '#applyNukeImpact'() {
+		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
+		return true;
+	}
+
+	override '#destroy'(type?: number) {
 		appendEventLog(this.room, {
 			event: C.EVENT_OBJECT_DESTROYED,
 			objectId: this.id,
 			type: 'creep',
 		});
-		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
-		return true;
+		return super['#destroy'](type);
 	}
 
 	override '#applyDamage'(power: number, _type: number, source?: RoomObject) {
