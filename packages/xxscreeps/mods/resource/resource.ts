@@ -30,7 +30,7 @@ export class Resource extends withOverlay(RoomObject.RoomObject, shape) {
 	get '#lookType'() { return C.LOOK_RESOURCES; }
 
 	override '#applyNukeImpact'() {
-		this.room['#removeObject'](this);
+		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
 		return true;
 	}
 }

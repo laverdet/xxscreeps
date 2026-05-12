@@ -42,7 +42,7 @@ export class Tombstone extends withOverlay(RoomObject, shape) {
 	override get '#lookType'() { return C.LOOK_TOMBSTONES; }
 
 	override '#applyNukeImpact'() {
-		this.room['#removeObject'](this);
+		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
 		return true;
 	}
 

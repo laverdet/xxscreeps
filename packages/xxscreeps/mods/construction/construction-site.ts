@@ -32,7 +32,7 @@ export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) 
 	}
 
 	override '#applyNukeImpact'() {
-		this.room['#removeObject'](this);
+		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
 		return true;
 	}
 
