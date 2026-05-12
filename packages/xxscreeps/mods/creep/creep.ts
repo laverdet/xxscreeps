@@ -137,7 +137,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 			objectId: this.id,
 			type: 'creep',
 		});
-		this.room['#removeObject'](this);
+		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
 		return true;
 	}
 
