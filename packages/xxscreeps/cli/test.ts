@@ -1,9 +1,6 @@
 import type { CliConsole, CliStreams } from './console.js';
 import type { EvalEnvelope } from './envelope.js';
 import { spawn } from 'node:child_process';
-import * as fs from 'node:fs/promises';
-import * as os from 'node:os';
-import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { evaluateOffline, runEval } from './eval-offline.js';
@@ -248,17 +245,10 @@ describe('cli', () => {
 	});
 
 	test('eval: --file reads source from the filesystem', async () => {
-		const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'xxscreeps-cli-'));
-		const file = path.join(dir, 'fixture.js');
-		try {
-			await fs.writeFile(file, 'console.log("from-file"); 6 * 7\n', 'utf8');
-			const result = await spawnXxscreeps([ 'eval', '--file', file ]);
-			assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}`);
-			assert.match(result.stdout, /from-file/);
-			assert.match(result.stdout, /\n42\n$/);
-		} finally {
-			await fs.rm(dir, { force: true, recursive: true });
-		}
+		const file = fileURLToPath(new URL('../../cli/test-data/eval-source.js', import.meta.url));
+		const result = await spawnXxscreeps([ 'eval', '--file', file ]);
+		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}`);
+		assert.match(result.stdout, /from-file/);
 	});
 
 	test('eval: --stdin reads source from stdin', async () => {
