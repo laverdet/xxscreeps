@@ -1,5 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { text } from 'node:stream/consumers';
 import { ArgumentParser } from 'argparse';
 import { runEval } from './eval-offline.js';
 
@@ -24,14 +25,6 @@ parser.add_argument('argv', { help: 'Positional arguments exposed to the script 
 
 const args = parser.parse_args() as unknown as ParsedArgs;
 
-async function readStdin() {
-	const chunks: Buffer[] = [];
-	for await (const chunk of process.stdin as AsyncIterable<Buffer>) {
-		chunks.push(chunk);
-	}
-	return Buffer.concat(chunks).toString('utf8');
-}
-
 async function readSource() {
 	if (args.expression != null) {
 		return args.expression;
@@ -40,7 +33,7 @@ async function readSource() {
 		const filePath = path.isAbsolute(args.file) ? args.file : path.resolve(process.cwd(), args.file);
 		return fs.readFile(filePath, 'utf8');
 	}
-	return readStdin();
+	return text(process.stdin);
 }
 
 let source: string;
