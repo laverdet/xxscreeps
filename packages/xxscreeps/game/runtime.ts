@@ -5,14 +5,11 @@ import { globals, hooks, registerGlobal } from './symbols.js';
 
 registerGlobal('_', lodash);
 
-registerGlobal(function Deposit() {});
+// Placeholders for unimplemented features; remove each when its real class lands.
 registerGlobal(function Nuke() {});
 registerGlobal(function PowerCreep() {});
-registerGlobal(function Ruin() {});
-registerGlobal(function StructureFactory() {});
 registerGlobal(function StructureInvaderCore() {});
 registerGlobal(function StructureNuker() {});
-registerGlobal(function StructureObserver() {});
 registerGlobal(function StructurePowerBank() {});
 registerGlobal(function StructurePowerSpawn() {});
 
