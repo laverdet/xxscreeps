@@ -36,6 +36,10 @@ function escape(html: string) {
 const ConsoleSubscription: SubscriptionEndpoint = {
 	pattern: /^user:(?<user>[^/]+)\/console$/,
 
+	id(params) {
+		return `console:${params.user}`;
+	},
+
 	subscribe(params) {
 		if (!this.user || params.user !== this.user) {
 			return () => {};
@@ -86,6 +90,10 @@ const ConsoleSubscription: SubscriptionEndpoint = {
 
 const UsageSubscription: SubscriptionEndpoint = {
 	pattern: /^user:(?<user>[^/]+)\/cpu$/,
+
+	id(params) {
+		return `cpu:${params.user}`;
+	},
 
 	async subscribe(params) {
 		if (!this.user || params.user !== this.user) {

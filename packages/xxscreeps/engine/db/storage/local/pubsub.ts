@@ -213,8 +213,9 @@ class LocalPubSubProviderParent implements PubSubProvider {
  * @internal
  */
 export class LocalPubSubProviderClient implements PubSubProvider {
-	private id = 0;
+	private nextId = 0;
 	private readonly subscriptionsByKey = new Map<string, Set<ClientSubscription>>();
+	private readonly parentSubscriptionIdByKey = new Map<string, number>();
 	private readonly syn: Deferred[] = [];
 	private readonly port;
 
@@ -282,23 +283,28 @@ export class LocalPubSubProviderClient implements PubSubProvider {
 	async subscribe(key: string, listener: PubSubListener) {
 
 		// Send subscription request
-		const id = ++this.id;
-		const deferred = new Deferred();
-		this.syn.push(deferred);
-		this.port.send({ type: 'subscribe', key, id });
+		let id = this.parentSubscriptionIdByKey.get(key);
+		if (id === undefined) {
+			id = ++this.nextId;
+			this.parentSubscriptionIdByKey.set(key, id);
+			const deferred = new Deferred();
+			this.syn.push(deferred);
+			this.port.send({ type: 'subscribe', key, id });
+			// Wait for response before returning
+			await deferred.promise;
+		}
 
-		// Wait for response before returning
-		await deferred.promise;
 		const subscription = new ClientSubscription(listener, key, this);
 		const subscriptions = getOrSet(this.subscriptionsByKey, key, () => new Set());
 		subscriptions.add(subscription);
 		const effect: Effect = () => {
 			if (subscriptions.size === 1) {
 				this.subscriptionsByKey.delete(key);
+				this.parentSubscriptionIdByKey.delete(key);
+				this.port.send({ type: 'unsubscribe', id: id! });
 			} else {
 				subscriptions.delete(subscription);
 			}
-			this.port.send({ type: 'unsubscribe', id });
 		};
 		return [ effect, subscription ] as const;
 	}

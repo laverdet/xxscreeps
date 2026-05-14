@@ -33,6 +33,7 @@ type SubscriptionInstance = {
 export type SubscriptionEndpoint = {
 	pattern: RegExp;
 	subscribe: (this: SubscriptionInstance, parameters: Record<string, string>) => Promise<Effect> | Effect;
+	id?: (parameters: Record<string, string>) => string;
 };
 
 // Used to mark HTTP upgrade requests
@@ -132,9 +133,11 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 		// Set up subscription bookkeeping for this socket
 		let user: string | undefined;
 		const subscriptions = new Map<string, Promise<Effect>>();
+		const subscriptionsById = new Map<string, string>();
 		function close() {
 			for (const [ name, unlistener ] of subscriptions) {
 				subscriptions.delete(name);
+				subscriptionsById.delete(name);
 				const teardown = unlistener.then(unlistener => unlistener(), () => {});
 				pendingTeardowns.add(teardown);
 				void teardown.finally(() => pendingTeardowns.delete(teardown));
@@ -193,6 +196,11 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 							if (subscriptions.has(name!)) {
 								return;
 							}
+							const id = handler.id?.(result.groups!) ?? name!;
+							if ([ ...subscriptionsById.values() ].includes(id)) {
+								return;
+							}
+
 							const encodedName = JSON.stringify(name);
 							const instance: SubscriptionInstance = {
 								context,
@@ -201,6 +209,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 							};
 							const subscription = Promise.resolve(handler.subscribe.call(instance, result.groups!));
 							subscriptions.set(name!, subscription);
+							subscriptionsById.set(name!, id);
 							subscription.catch(error => {
 								console.error(error);
 								close();
@@ -216,6 +225,7 @@ export function installSocketHandlers(koa: Koa<State, Context>, context: Backend
 					const unlistener = subscriptions.get(name!);
 					if (unlistener) {
 						subscriptions.delete(name!);
+						subscriptionsById.delete(name!);
 						unlistener.then(unlistener => unlistener(), console.error);
 					}
 				}

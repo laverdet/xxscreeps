@@ -11,6 +11,10 @@ bindTerrainRenderer(RoomObject, () => undefined);
 export const mapSubscription: SubscriptionEndpoint = {
 	pattern: /^roomMap2:(?:(?<shard>[A-Za-z0-9]+)\/)?(?<room>[A-Z0-9]+)$/,
 
+	id(parameters) {
+		return parameters.shard ? `roomMap2:${parameters.shard}/${parameters.room}` : `roomMap2:${parameters.room}`;
+	},
+
 	async subscribe(parameters) {
 		const roomName = parameters.room!;
 		if (!this.context.accessibleRooms.has(roomName)) {

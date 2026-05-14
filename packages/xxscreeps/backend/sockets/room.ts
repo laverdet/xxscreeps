@@ -58,19 +58,25 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 		};
 
 		// Set up publisher
+		let processing = false;
 		const { listen, publish } = makeEventPublisher<Parameters<RoomListener>>(() => effect());
 		const timer = throttle(() => {
-			if (state.time === time) {
+			if (processing || state.time === time) {
 				return;
 			}
+			processing = true;
 			mustNotReject(async () => {
-				if (didUpdate) {
-					state.room = await shard.loadRoom(roomName, time);
+				try {
+					if (didUpdate) {
+						state.room = await shard.loadRoom(roomName, time);
+					}
+					state.time = time;
+					publish(state.room, time, didUpdate);
+					didUpdate = false;
+				} finally {
+					processing = false;
+					timer.set(config.backend.socketThrottle);
 				}
-				state.time = time;
-				publish(state.room, time, didUpdate);
-				didUpdate = false;
-				timer.set(config.backend.socketThrottle);
 			});
 		});
 
@@ -113,6 +119,10 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 
 export const roomSubscription: SubscriptionEndpoint = {
 	pattern: /^room:(?:(?<shard>[A-Za-z0-9]+)\/)?(?<room>[A-Z0-9]+)$/,
+
+	id(parameters) {
+		return parameters.shard ? `room:${parameters.shard}/${parameters.room}` : `room:${parameters.room}`;
+	},
 
 	async subscribe(parameters) {
 		let previous: any;
