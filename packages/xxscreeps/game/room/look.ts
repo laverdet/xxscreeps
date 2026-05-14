@@ -138,7 +138,8 @@ extend(Room, {
 			mapArea(top, left, bottom, right, (x, y) =>
 				({ x, y, type: 'terrain', terrain: terrainMaskToString[terrain.get(x, y)] })),
 		]);
-		return withAsArray(results, top, left, bottom, right, asArray, true) as never;
+		return withAsArray(results, top, left, bottom, right, asArray, true,
+			({ x: _x, y: _y, ...rest }) => rest) as never;
 	},
 
 	lookForAt(type: LookConstants, ...rest: PositionParameter) {
@@ -159,10 +160,13 @@ extend(Room, {
 
 	lookForAtArea(type: LookConstants, top: number, left: number, bottom: number, right: number, asArray = false) {
 		const size = (bottom - top + 1) * (right - left + 1);
+		type Wrapper = { [k: string]: unknown; x: number; y: number };
+		let extract: (value: Wrapper) => unknown;
 		const results = (() => {
 			if (type === C.LOOK_TERRAIN) {
 				// Simply return terrain data
 				const terrain = this.getTerrain();
+				extract = value => value.terrain;
 				return mapArea(top, left, bottom, right, (x, y) =>
 					({ x, y, terrain: terrainMaskToString[terrain.get(x, y)] }));
 			} else {
@@ -182,10 +186,11 @@ extend(Room, {
 					}
 				})();
 				// Add position and type information
+				extract = value => value[type];
 				return Fn.map(objects, object => ({ x: object.pos.x, y: object.pos.y, [type]: object }));
 			}
 		})();
-		return withAsArray(results, top, left, bottom, right, asArray, false) as never;
+		return withAsArray(results, top, left, bottom, right, asArray, false, extract!) as never;
 	},
 
 	getPositionAt(xx: number, yy: number) {
@@ -223,7 +228,12 @@ function *lookAtAreaEntries(object: AnyRoomObject): Iterable<LookAreaEntry> {
 	yield { x: object.pos.x, y: object.pos.y, type, [type]: object };
 }
 
-function withAsArray(values: Iterable<{ x: number; y: number }>, top: number, left: number, bottom: number, right: number, asArray: boolean, nest: boolean) {
+function withAsArray<T extends { x: number; y: number }>(
+	values: Iterable<T>,
+	top: number, left: number, bottom: number, right: number,
+	asArray: boolean, nest: boolean,
+	extract: (value: T) => any,
+) {
 	if (asArray) {
 		return [ ...values ];
 	} else {
@@ -237,7 +247,7 @@ function withAsArray(values: Iterable<{ x: number; y: number }>, top: number, le
 			}
 		}
 		for (const value of values) {
-			results[value.y]![value.x]!.push(value);
+			((results[value.y]!)[value.x] ??= []).push(extract(value));
 		}
 		return results;
 	}

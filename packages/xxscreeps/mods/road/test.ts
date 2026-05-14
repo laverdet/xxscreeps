@@ -1,5 +1,6 @@
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
+import { LOOK_STRUCTURES } from 'xxscreeps/mods/structure/constants.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create } from './road.js';
 
@@ -33,5 +34,24 @@ describe('Roads', () => {
 		// Don't care about roads
 		const path3 = room.findPath(new RoomPosition(21, 22, 'W0N0'), new RoomPosition(25, 26, 'W0N0'), { ignoreRoads: true });
 		assert.strictEqual(path3.length, 4);
+	})));
+});
+
+describe('Room.lookForAtArea', () => {
+	test('asArray=false returns sparse map of raw objects (vanilla shape)', () => simulate({
+		W0N0: room => {
+			room['#insertObject'](create(new RoomPosition(25, 25, 'W0N0')));
+		},
+	})(({ peekRoom }) => peekRoom('W0N0', room => {
+		type CellMap = Record<number, Record<number, { structureType: string }[]>>;
+		const result = room.lookForAtArea(LOOK_STRUCTURES, 24, 24, 26, 26) as unknown as CellMap;
+		const row24 = result[24];
+		assert.ok(row24, 'rows pre-initialized for every y in range');
+		assert.strictEqual(row24[24], undefined, 'cells without matches stay undefined');
+		const cell = result[25]![25]!;
+		assert.strictEqual(cell.length, 1);
+		const entry = cell[0]!;
+		assert.strictEqual(entry.structureType, 'road');
+		assert.strictEqual(LOOK_STRUCTURES in entry, false, 'no wrapper key');
 	})));
 });
