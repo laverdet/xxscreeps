@@ -1,3 +1,4 @@
+import { LOOK_TERRAIN } from 'xxscreeps/game/constants/find.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { LOOK_STRUCTURES } from 'xxscreeps/mods/structure/constants.js';
@@ -43,15 +44,35 @@ describe('Room.lookForAtArea', () => {
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W0N0')));
 		},
 	})(({ peekRoom }) => peekRoom('W0N0', room => {
-		type CellMap = Record<number, Record<number, { structureType: string }[]>>;
-		const result = room.lookForAtArea(LOOK_STRUCTURES, 24, 24, 26, 26) as unknown as CellMap;
-		const row24 = result[24];
-		assert.ok(row24, 'rows pre-initialized for every y in range');
-		assert.strictEqual(row24[24], undefined, 'cells without matches stay undefined');
-		const cell = result[25]![25]!;
-		assert.strictEqual(cell.length, 1);
-		const entry = cell[0]!;
-		assert.strictEqual(entry.structureType, 'road');
-		assert.strictEqual(LOOK_STRUCTURES in entry, false, 'no wrapper key');
+		const result = room.lookForAtArea(LOOK_STRUCTURES, 24, 24, 26, 26) as unknown as
+			Record<number, Record<number, { structureType: string }[]>>;
+		assert.ok(result[24], 'rows pre-initialized for every y in range');
+		assert.strictEqual(result[24][24], undefined, 'cells without matches stay undefined');
+		const matches = result[25]![25]!;
+		assert.deepStrictEqual(matches.map(structure => structure.structureType), [ 'road' ]);
+		assert.strictEqual(LOOK_STRUCTURES in matches[0]!, false, 'cells hold raw objects, no wrapper key');
+	})));
+
+	test('asArray=false LOOK_TERRAIN extracts the terrain string into the cell', () => simulate({})(({ peekRoom }) => peekRoom('W0N0', room => {
+		const result = room.lookForAtArea(LOOK_TERRAIN, 10, 10, 10, 10) as unknown as
+			Record<number, Record<number, string[]>>;
+		assert.strictEqual(result[10]![10]!.length, 1);
+		assert.ok([ 'plain', 'swamp', 'wall' ].includes(result[10]![10]![0]!));
+	})));
+});
+
+describe('Room.lookAtArea', () => {
+	test('asArray=false cells wrap entries without spurious x/y keys', () => simulate({
+		W0N0: room => {
+			room['#insertObject'](create(new RoomPosition(25, 25, 'W0N0')));
+		},
+	})(({ peekRoom }) => peekRoom('W0N0', room => {
+		const cell = (room.lookAtArea(25, 25, 25, 25) as unknown as
+			Record<number, Record<number, { type: string }[]>>)[25]![25]!;
+		assert.deepStrictEqual(cell.map(entry => entry.type).sort(), [ 'structure', 'terrain' ]);
+		for (const entry of cell) {
+			assert.strictEqual('x' in entry, false);
+			assert.strictEqual('y' in entry, false);
+		}
 	})));
 });
