@@ -89,13 +89,13 @@ void path_finder_t::push_node(pos_index_t parent_index, world_position_t node, c
 	cost_t f_cost = h_cost + g_cost;
 
 	if (open_closed.is_open(index)) {
-		if (heap.priority(index) > f_cost) {
-			heap.update(index, f_cost);
+		if (heap.score(index) > f_cost) {
+			heap.update(std::pair{index, f_cost});
 			parents[ index ] = parent_index;
 			// std::cout <<"~ " <<node <<": h(" <<h_cost <<") + " <<"g(" <<g_cost <<") = f(" <<f_cost <<")\n";
 		}
 	} else {
-		heap.insert(index, f_cost);
+		heap.push(std::pair{index, f_cost});
 		open_closed.open(index);
 		parents[ index ] = parent_index;
 		// std::cout <<"+ " <<node <<": h(" <<h_cost <<") + " <<"g(" <<g_cost <<") = f(" <<f_cost <<")\n";
@@ -530,7 +530,8 @@ auto path_finder_t::search(
 		while (!heap.empty() && ops_remaining > 0) {
 
 			// Pull cheapest open node off the heap and close the node
-			std::pair<pos_index_t, cost_t> current = heap.pop();
+			auto current = heap.top();
+			heap.pop();
 			open_closed.close(current.first);
 
 			// Calculate costs

@@ -40,7 +40,7 @@ export class path_finder_t {
 		std::unordered_set<room_location_t, room_location_t::hash_t> blocked_rooms;
 		std::array<pos_index_t, 2'500 * k_max_rooms> parents;
 		open_closed_t<2'500 * k_max_rooms> open_closed;
-		heap_t<pos_index_t, cost_t, 2'500 * k_max_rooms> heap;
+		heap_t<pos_index_t, cost_t, 2'500 * k_max_rooms, 2'500 * k_max_rooms / 8> heap;
 		std::vector<goal_t> goals;
 		std::array<cost_t, 4> look_table = {{obstacle, obstacle, obstacle, obstacle}};
 		double heuristic_weight;
