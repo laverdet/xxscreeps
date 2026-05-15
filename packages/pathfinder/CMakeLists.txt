@@ -1,4 +1,3 @@
-# CXX=/opt/homebrew/Cellar/llvm/22.1.0/bin/clang++ cmake -DCMAKE_MODULE_PATH="$(pnpm exec auto_js_cmake_include)" -G Ninja -B build && ninja -C build
 message(STATUS "Cmake version: ${CMAKE_VERSION}")
 
 # `import std` configuration (before project)
@@ -56,7 +55,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
 	add_compile_options(-fdiagnostics-color -Wall -Wextra -Wpedantic)
 endif()
 
-# napi configuration
+# auto_js & napi configuration
+set(EXPORT_IS_EXPORT ON)
+add_definitions(-DEXPORT_IS_EXPORT)
 include(FindNpmPackage)
 set(NAPI_VERSION 10)
 find_package_from_npm(@auto_js/napi)
