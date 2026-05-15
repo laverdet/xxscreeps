@@ -64,4 +64,7 @@ void init(v8::Local<v8::Object> target) {
 	InitForContext(isolate, isolate->GetCurrentContext(), target);
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
 NAN_MODULE_WORKER_ENABLED(pf, init) // NOLINT
+#pragma clang diagnostic pop

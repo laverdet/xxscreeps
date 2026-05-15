@@ -52,12 +52,12 @@ jobs:
       - if: matrix.host.container == 'alpine:3'
         shell: sh
         run: |
-          apk add clang21 clang21-extra-tools cmake llvm21 ninja-is-really-ninja nodejs npm
+          apk add clang21 clang21-extra-tools cmake lld21 llvm21 ninja-is-really-ninja nodejs npm
           echo "CXX=clang++-21" >> "$GITHUB_ENV"
       - if: matrix.host.container == 'debian:sid'
         run: |
           apt update
-          apt install -y clang-21 cmake llvm-21 ninja-build nodejs npm
+          apt install -y clang-21 cmake lld-21 llvm-21 ninja-build nodejs npm
           echo "CXX=clang++-21" >> "$GITHUB_ENV"
       - if: matrix.host.platform == 'darwin'
         run: |

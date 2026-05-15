@@ -24,6 +24,11 @@ project(pathfinder LANGUAGES CXX)
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# if(NOT CMAKE_BUILD_TYPE STREQUAL Debug)
+# 	set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
+# endif()
+
+# important compilation settings
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(APPLE)
 	set(CMAKE_LINKER_TYPE LLD)
@@ -33,12 +38,30 @@ elseif(WIN32)
 	add_compile_definitions(NOMINMAX NOMSG WIN32_LEAN_AND_MEAN)
 endif()
 
+# optimization settings
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+# linker settings
+set(CMAKE_LINKER_TYPE LLD)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+add_compile_options(-fdata-sections -ffunction-sections)
+add_link_options(-Wl,--icf=all)
+if(LINUX)
+	# Not supported in ld64 [darwin], or lld-link [windows]
+	add_link_options(-Wl,--gc-sections)
+endif()
+
 # clang & gcc diagnostic flags
 if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
 	add_compile_options(-fdiagnostics-color -Wall -Wextra -Wpedantic)
-	if(NOT CMAKE_BUILD_TYPE STREQUAL Debug)
+	if(CMAKE_BUILD_TYPE STREQUAL Debug)
 		# Soften common development warnings
-		add_compile_options(-Wno-unused-but-set-variable -Wno-unused-result)
+		add_compile_options(
+			-Wno-unused-but-set-variable
+			-Wno-unused-local-typedef
+			-Wno-unused-parameter
+			-Wno-unused-result
+		)
 	endif()
 endif()
 
