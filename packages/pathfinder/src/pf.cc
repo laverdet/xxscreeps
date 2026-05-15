@@ -1,9 +1,11 @@
+module;
 // Author: Marcel Laverdet <https://github.com/laverdet>
-#include "pf.h"
-#include <iostream>
+#include "nan.h"
 #include <algorithm>
-#include <stdexcept>
+#include <iostream>
 #include <mutex>
+#include <stdexcept>
+module screeps;
 
 using namespace screeps;
 
@@ -15,11 +17,11 @@ constexpr auto is_near_border_pos(int val) -> bool {
 	return (val + 2) % 50 < 4;
 }
 
-decltype(path_finder_t::terrain) path_finder_t::terrain = {{ nullptr }};
+decltype(path_finder_t::terrain) path_finder_t::terrain = {{nullptr}};
 
 // Return room index from a map position, allocates a new room index if needed and possible
 auto path_finder_t::room_index_from_pos(const room_location_t map_pos) -> room_index_t {
-	room_index_t room_index = reverse_room_table[flatten(map_pos)];
+	room_index_t room_index = reverse_room_table[ flatten(map_pos) ];
 	if (room_index == 0) {
 		if (room_table_size >= max_rooms) {
 			return 0;
@@ -27,7 +29,7 @@ auto path_finder_t::room_index_from_pos(const room_location_t map_pos) -> room_i
 		if (blocked_rooms.find(map_pos) != blocked_rooms.end()) {
 			return 0;
 		}
-		uint8_t* terrain_ptr = terrain[flatten(map_pos)];
+		uint8_t* terrain_ptr = terrain[ flatten(map_pos) ];
 		if (terrain_ptr == nullptr) {
 			Nan::ThrowError("Could not load terrain data");
 			throw js_error{};
@@ -35,8 +37,8 @@ auto path_finder_t::room_index_from_pos(const room_location_t map_pos) -> room_i
 		uint8_t* cost_matrix = nullptr;
 		if (room_callback != nullptr) {
 			Nan::TryCatch try_catch;
-			v8::Local<v8::Value> argv[1];
-			argv[0] = Nan::New(flatten(map_pos));
+			v8::Local<v8::Value> argv[ 1 ];
+			argv[ 0 ] = Nan::New(flatten(map_pos));
 			Nan::MaybeLocal<v8::Value> ret = Nan::Call(*room_callback, v8::Local<v8::Object>::Cast(Nan::Undefined()), 1, argv);
 			if (try_catch.HasCaught()) {
 				try_catch.ReThrow();
@@ -48,15 +50,15 @@ auto path_finder_t::room_index_from_pos(const room_location_t map_pos) -> room_i
 					blocked_rooms.insert(map_pos);
 					return 0;
 				}
-				room_data_handles[room_table_size] = ret_local;
-				Nan::TypedArrayContents<uint8_t> cost_matrix_js{room_data_handles[room_table_size]};
-				if (cost_matrix_js.length() == 2500) {
+				room_data_handles[ room_table_size ] = ret_local;
+				Nan::TypedArrayContents<uint8_t> cost_matrix_js{room_data_handles[ room_table_size ]};
+				if (cost_matrix_js.length() == 2'500) {
 					cost_matrix = *cost_matrix_js;
 				}
 			}
 		}
-		room_table[room_table_size++] = room_info_t{terrain_ptr, cost_matrix, map_pos};
-		return reverse_room_table[flatten(map_pos)] = room_table_size;
+		room_table[ room_table_size++ ] = room_info_t{terrain_ptr, cost_matrix, map_pos};
+		return reverse_room_table[ flatten(map_pos) ] = room_table_size;
 	}
 	return room_index;
 }
@@ -72,7 +74,7 @@ auto path_finder_t::index_from_pos(const world_position_t pos) -> pos_index_t {
 
 auto path_finder_t::pos_from_index(pos_index_t index) const -> world_position_t {
 	room_index_t room_index = index / (50 * 50);
-	const room_info_t& terrain = room_table[room_index];
+	const room_info_t& terrain = room_table[ room_index ];
 	int coord = index - room_index * 50 * 50;
 	return {coord % 50 + terrain.pos.xx * 50, coord / 50 + terrain.pos.yy * 50};
 }
@@ -87,15 +89,15 @@ void path_finder_t::push_node(pos_index_t parent_index, world_position_t node, c
 	cost_t f_cost = h_cost + g_cost;
 
 	if (open_closed.is_open(index)) {
-		if (heap.priority(index) > f_cost) {
-			heap.update(index, f_cost);
-			parents[index] = parent_index;
+		if (heap.score(index) > f_cost) {
+			heap.update(std::pair{index, f_cost});
+			parents[ index ] = parent_index;
 			// std::cout <<"~ " <<node <<": h(" <<h_cost <<") + " <<"g(" <<g_cost <<") = f(" <<f_cost <<")\n";
 		}
 	} else {
-		heap.insert(index, f_cost);
+		heap.push(std::pair{index, f_cost});
 		open_closed.open(index);
-		parents[index] = parent_index;
+		parents[ index ] = parent_index;
 		// std::cout <<"+ " <<node <<": h(" <<h_cost <<") + " <<"g(" <<g_cost <<") = f(" <<f_cost <<")\n";
 	}
 }
@@ -106,9 +108,9 @@ auto path_finder_t::look(const world_position_t pos) -> cost_t {
 	if (room_index == 0) {
 		return obstacle;
 	}
-	const room_info_t& terrain = room_table[room_index - 1];
+	const room_info_t& terrain = room_table[ room_index - 1 ];
 	if (terrain.cost_matrix != nullptr) {
-		int tmp = terrain.cost_matrix[pos.xx % 50][pos.yy % 50];
+		int tmp = terrain.cost_matrix[ pos.xx % 50 ][ pos.yy % 50 ];
 		if (tmp != 0) {
 			if (tmp == 0xff) {
 				return obstacle;
@@ -117,7 +119,7 @@ auto path_finder_t::look(const world_position_t pos) -> cost_t {
 			}
 		}
 	}
-	return look_table[terrain.terrain_look(pos.xx % 50, pos.yy % 50)];
+	return look_table[ terrain.terrain_look(pos.xx % 50, pos.yy % 50) ];
 }
 
 // Returns the minimum Chebyshev distance to a goal
@@ -125,18 +127,18 @@ auto path_finder_t::heuristic(const world_position_t pos) const -> cost_t {
 	if (flee) {
 		cost_t ret = 0;
 		for (size_t ii = 0; ii < goals.size(); ++ii) {
-			cost_t dist = pos.range_to(goals[ii].pos);
-			if (dist < goals[ii].range) {
-				ret = std::max<cost_t>(ret, goals[ii].range - dist);
+			cost_t dist = pos.range_to(goals[ ii ].pos);
+			if (dist < goals[ ii ].range) {
+				ret = std::max<cost_t>(ret, goals[ ii ].range - dist);
 			}
 		}
 		return ret;
 	} else {
 		cost_t ret = std::numeric_limits<cost_t>::max();
 		for (size_t ii = 0; ii < goals.size(); ++ii) {
-			cost_t dist = pos.range_to(goals[ii].pos);
-			if (dist > goals[ii].range) {
-				ret = std::min<cost_t>(ret, dist - goals[ii].range);
+			cost_t dist = pos.range_to(goals[ ii ].pos);
+			if (dist > goals[ ii ].range) {
+				ret = std::min<cost_t>(ret, dist - goals[ ii ].range);
 			} else {
 				ret = 0;
 			}
@@ -304,51 +306,51 @@ auto path_finder_t::jump(cost_t cost, world_position_t pos, int dx, int dy) -> w
 }
 
 void path_finder_t::jps(pos_index_t index, world_position_t pos, cost_t g_cost) {
-	world_position_t parent = pos_from_index(parents[index]);
+	world_position_t parent = pos_from_index(parents[ index ]);
 	int dx = pos.xx > parent.xx ? 1 : (pos.xx < parent.xx ? -1 : 0);
 	int dy = pos.yy > parent.yy ? 1 : (pos.yy < parent.yy ? -1 : 0);
 
 	// First check to see if we're jumping to/from a border, options are limited in this case
-	world_position_t neighbors[3];
+	world_position_t neighbors[ 3 ];
 	int neighbor_count = 0;
 	if (pos.xx % 50 == 0) {
 		if (dx == -1) {
-			neighbors[0] = world_position_t{pos.xx - 1, pos.yy};
+			neighbors[ 0 ] = world_position_t{pos.xx - 1, pos.yy};
 			neighbor_count = 1;
 		} else if (dx == 1) {
-			neighbors[0] = world_position_t{pos.xx + 1, pos.yy - 1};
-			neighbors[1] = world_position_t{pos.xx + 1, pos.yy};
-			neighbors[2] = world_position_t{pos.xx + 1, pos.yy + 1};
+			neighbors[ 0 ] = world_position_t{pos.xx + 1, pos.yy - 1};
+			neighbors[ 1 ] = world_position_t{pos.xx + 1, pos.yy};
+			neighbors[ 2 ] = world_position_t{pos.xx + 1, pos.yy + 1};
 			neighbor_count = 3;
 		}
 	} else if (pos.xx % 50 == 49) {
 		if (dx == 1) {
-			neighbors[0] = world_position_t{pos.xx + 1, pos.yy};
+			neighbors[ 0 ] = world_position_t{pos.xx + 1, pos.yy};
 			neighbor_count = 1;
 		} else if (dx == -1) {
-			neighbors[0] = world_position_t{pos.xx - 1, pos.yy - 1};
-			neighbors[1] = world_position_t{pos.xx - 1, pos.yy};
-			neighbors[2] = world_position_t{pos.xx - 1, pos.yy + 1};
+			neighbors[ 0 ] = world_position_t{pos.xx - 1, pos.yy - 1};
+			neighbors[ 1 ] = world_position_t{pos.xx - 1, pos.yy};
+			neighbors[ 2 ] = world_position_t{pos.xx - 1, pos.yy + 1};
 			neighbor_count = 3;
 		}
 	} else if (pos.yy % 50 == 0) {
 		if (dy == -1) {
-			neighbors[0] = world_position_t{pos.xx, pos.yy - 1};
+			neighbors[ 0 ] = world_position_t{pos.xx, pos.yy - 1};
 			neighbor_count = 1;
 		} else if (dy == 1) {
-			neighbors[0] = world_position_t{pos.xx - 1, pos.yy + 1};
-			neighbors[1] = world_position_t{pos.xx, pos.yy + 1};
-			neighbors[2] = world_position_t{pos.xx + 1, pos.yy + 1};
+			neighbors[ 0 ] = world_position_t{pos.xx - 1, pos.yy + 1};
+			neighbors[ 1 ] = world_position_t{pos.xx, pos.yy + 1};
+			neighbors[ 2 ] = world_position_t{pos.xx + 1, pos.yy + 1};
 			neighbor_count = 3;
 		}
 	} else if (pos.yy % 50 == 49) {
 		if (dy == 1) {
-			neighbors[0] = world_position_t{pos.xx, pos.yy + 1};
+			neighbors[ 0 ] = world_position_t{pos.xx, pos.yy + 1};
 			neighbor_count = 1;
 		} else if (dy == -1) {
-			neighbors[0] = world_position_t{pos.xx - 1, pos.yy - 1};
-			neighbors[1] = world_position_t{pos.xx, pos.yy - 1};
-			neighbors[2] = world_position_t{pos.xx + 1, pos.yy - 1};
+			neighbors[ 0 ] = world_position_t{pos.xx - 1, pos.yy - 1};
+			neighbors[ 1 ] = world_position_t{pos.xx, pos.yy - 1};
+			neighbors[ 2 ] = world_position_t{pos.xx + 1, pos.yy - 1};
 			neighbor_count = 3;
 		}
 	}
@@ -356,11 +358,11 @@ void path_finder_t::jps(pos_index_t index, world_position_t pos, cost_t g_cost) 
 	// Add special nodes from the above blocks to the heap
 	if (neighbor_count != 0) {
 		for (int ii = 0; ii < neighbor_count; ++ii) {
-			cost_t n_cost = look(neighbors[ii]);
+			cost_t n_cost = look(neighbors[ ii ]);
 			if (n_cost == obstacle) {
 				continue;
 			}
-			push_node(index, neighbors[ii], g_cost + n_cost);
+			push_node(index, neighbors[ ii ], g_cost + n_cost);
 		}
 		return;
 	}
@@ -470,7 +472,7 @@ auto path_finder_t::search(
 
 	// Clean up from previous iteration
 	for (int ii = 0; ii < room_table_size; ++ii) {
-		reverse_room_table[flatten(room_table[ii].pos)] = 0;
+		reverse_room_table[ flatten(room_table[ ii ].pos) ] = 0;
 	}
 	room_table_size = 0;
 	blocked_rooms.clear();
@@ -485,7 +487,7 @@ auto path_finder_t::search(
 
 	// These aren't ever accessed, this is just a place to put the handles for the CostMatrix data
 	// so it doesn't get gc'd
-	v8::Local<v8::Value> room_data_handle_holder[k_max_rooms];
+	v8::Local<v8::Value> room_data_handle_holder[ k_max_rooms ];
 	room_data_handles = room_data_handle_holder;
 	if (room_callback->IsUndefined()) {
 		this->room_callback = nullptr;
@@ -494,8 +496,8 @@ auto path_finder_t::search(
 	}
 
 	// Other initialization
-	look_table[0] = plain_cost;
-	look_table[2] = swamp_cost;
+	look_table[ 0 ] = plain_cost;
+	look_table[ 2 ] = swamp_cost;
 	this->max_rooms = max_rooms;
 	this->heuristic_weight = heuristic_weight;
 	uint32_t ops_remaining = max_ops;
@@ -528,7 +530,8 @@ auto path_finder_t::search(
 		while (!heap.empty() && ops_remaining > 0) {
 
 			// Pull cheapest open node off the heap and close the node
-			std::pair<pos_index_t, cost_t> current = heap.pop();
+			auto current = heap.top();
+			heap.pop();
 			open_closed.close(current.first);
 
 			// Calculate costs
@@ -576,7 +579,7 @@ auto path_finder_t::search(
 	while (pos != origin) {
 		Nan::Set(path, ii, v8::Local<v8::Value>{pos});
 		++ii;
-		index = parents[index];
+		index = parents[ index ];
 		world_position_t next = pos_from_index(index);
 		if (next.range_to(pos) > 1) {
 			world_position_t::direction_t dir = pos.direction_to(next);
@@ -610,6 +613,6 @@ void path_finder_t::load_terrain(v8::Local<v8::Object> world) {
 		auto name = Nan::Get(keys, ii).ToLocalChecked();
 		auto id = Nan::To<uint32_t>(name).FromJust();
 		auto terrain = Nan::Get(world, name).ToLocalChecked();
-		path_finder_t::terrain[id] = *Nan::TypedArrayContents<uint8_t>(terrain);
+		path_finder_t::terrain[ id ] = *Nan::TypedArrayContents<uint8_t>(terrain);
 	}
 }

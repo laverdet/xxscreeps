@@ -1,0 +1,36 @@
+diff --git a/assertions.cc b/assertions.cc
+index cdd608f36a8cebdc2c9224b557bf579d92319290..7863176f4d00680aceeae4cb3e626b993131e6c0 100644
+--- a/assertions.cc
++++ b/assertions.cc
+@@ -10,7 +10,7 @@
+ import auto_js;
+ import util;
+ using namespace std::literals;
+-#if __clang_major__ >= 19
++#if __clang_major__ >= 19 && defined(__GLIBCXX__)
+ 
+ namespace js {
+ 
+diff --git a/enum/accept.cc b/enum/accept.cc
+index acb6cf7746c4505c019668760aed3ad1b8f2ec87..0961660779d3f00f04dfb100155ca1d0f4b0159b 100644
+--- a/enum/accept.cc
++++ b/enum/accept.cc
+@@ -1,4 +1,5 @@
+ module;
++#include <string>
+ #include <string_view>
+ #include <type_traits>
+ #include <utility>
+diff --git a/reference/visit.cc b/reference/visit.cc
+index 53c9daad1674a358e5d69fa6bdc70a86002db0c3..ec93ba3b94b83087e1789b31a47799f735fe7de9 100644
+--- a/reference/visit.cc
++++ b/reference/visit.cc
+@@ -17,7 +17,7 @@ struct reference_vector_of {
+ 		using reference_type = reference_of<Subject>;
+ 
+ 	public:
+-		constexpr auto emplace_subject(reference_type reference, const auto& value) -> void {
++		constexpr auto emplace_subject([[maybe_unused]] reference_type reference, const auto& value) -> void {
+ 			assert(values_storage_.size() == reference.id());
+ 			values_storage_.emplace_back(value);
+ 		}

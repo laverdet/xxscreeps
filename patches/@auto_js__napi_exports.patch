@@ -1,0 +1,29 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f6e0c2fa69bb75a86e46f0fc84bf136ad3cb9e4d..03f7960651e05735b9195f896f8cbf8f5bef0464 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -24,12 +24,24 @@ if(NOT DEFINED NODE_DIST_DIR)
+ 	FetchContent_MakeAvailable(node_headers)
+ 	set(NODE_DIST_DIR "${node_headers_SOURCE_DIR}" CACHE STRING "")
+ endif()
++if(WIN32)
++	string(TOLOWER ${CMAKE_HOST_SYSTEM_PROCESSOR} NODE_ARCH)
++	if(NODE_ARCH STREQUAL amd64)
++		set(NODE_ARCH x64)
++	endif()
++	file(DOWNLOAD "https://nodejs.org/download/release/v24.0.0/win-${NODE_ARCH}/node.lib" "${NODE_DIST_DIR}/node.lib")
++endif()
+ if(NOT EXISTS "${NODE_DIST_DIR}/include/node/node.h")
+ 	message(FATAL_ERROR "Missing ${NODE_DIST_DIR}/include/node/node.h")
+ endif()
+ message(STATUS "Using Node.js headers from '${NODE_DIST_DIR}'")
+ target_include_directories(nodejs SYSTEM PUBLIC "${NODE_DIST_DIR}/include/node")
+ 
++if(WIN32)
++	target_link_directories(nodejs PUBLIC ${NODE_DIST_DIR})
++	target_link_libraries(nodejs PUBLIC dbghelp node winmm)
++endif()
++
+ target_sources(nodejs
+ 	PUBLIC FILE_SET CXX_MODULES FILES
+ 		js_native_api_types.cc

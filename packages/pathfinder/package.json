@@ -4,9 +4,7 @@
   "version": "0.1.0",
   "main": "./module/index.js",
   "scripts": {
-    "prepublishOnly": "napi prepublish --no-gh-release",
-    "build": "node-gyp rebuild --release",
-    "install": "echo congratulations"
+    "prepublishOnly": "napi prepublish --no-gh-release"
   },
   "napi": {
     "binaryName": "pf",
@@ -21,11 +19,12 @@
     ]
   },
   "devDependencies": {
+    "@auto_js/js": "^0.0.1",
+    "@auto_js/napi_exports": "^0.0.1",
     "@napi-rs/cli": "^3.6.2",
     "@types/node": "~24.12.2",
     "isolated-vm": "6.0.2",
-    "nan": "2.25.0",
-    "node-gyp": "^12.3.0"
+    "nan": "2.25.0"
   },
   "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/pathfinder/README.md",
   "repository": {
