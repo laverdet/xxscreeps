@@ -42,11 +42,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
 	endif()
 endif()
 
-# disable legacy isolated-vm warnings
-if(CXX_COMPILER_ID STREQUAL Clang OR CXX_COMPILER_ID STREQUAL GNU)
-	add_compile_definitions(-Wno-deprecated-declarations)
-endif()
-
 # napi configuration
 include(FindNpmPackage)
 set(NAPI_VERSION 10)
@@ -81,7 +76,7 @@ if(NOT DEFINED NAN_LOCATION)
 	set(NAN_LOCATION "${NAN_LOCATION}" CACHE STRING "")
 	message(STATUS "Found 'nan' at ${NAN_LOCATION}")
 endif()
-target_include_directories(pathfinder PRIVATE "${NAN_LOCATION}")
+target_include_directories(pathfinder SYSTEM PRIVATE "${NAN_LOCATION}")
 
 # isolated-vm
 if(NOT DEFINED ISOLATED_VM_LOCATION)
@@ -92,7 +87,7 @@ if(NOT DEFINED ISOLATED_VM_LOCATION)
 	message(STATUS "Found 'isolated-vm' at ${ISOLATED_VM_LOCATION}")
 	set(ISOLATED_VM_LOCATION "${ISOLATED_VM_LOCATION}" CACHE STRING "")
 endif()
-target_include_directories(pathfinder PRIVATE "${ISOLATED_VM_LOCATION}")
+target_include_directories(pathfinder SYSTEM PRIVATE "${ISOLATED_VM_LOCATION}")
 
 # copy to destination
 if(NOT DEFINED TRIPLET)
