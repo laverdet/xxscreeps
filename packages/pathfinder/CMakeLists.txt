@@ -54,27 +54,18 @@ endif()
 # clang & gcc diagnostic flags
 if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
 	add_compile_options(-fdiagnostics-color -Wall -Wextra -Wpedantic)
-	if(CMAKE_BUILD_TYPE STREQUAL Debug)
-		# Soften common development warnings
-		add_compile_options(
-			-Wno-unused-but-set-variable
-			-Wno-unused-local-typedef
-			-Wno-unused-parameter
-			-Wno-unused-result
-		)
-	endif()
 endif()
 
 # napi configuration
 include(FindNpmPackage)
 set(NAPI_VERSION 10)
-find_package_from_npm(@auto_js/js)
-find_package_from_npm(@auto_js/napi_exports)
+find_package_from_npm(@auto_js/napi)
+find_package_from_npm(@auto_js/v8)
 
 # target
 add_library(pathfinder SHARED)
 set_target_properties(pathfinder PROPERTIES PREFIX "" SUFFIX ".node")
-target_link_libraries(pathfinder PUBLIC auto_js nodejs utility_js)
+target_link_libraries(pathfinder PUBLIC auto_js nodejs nodejs_v8 utility_js v8_js)
 
 # sources
 target_sources(pathfinder

@@ -5,12 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@auto_js/js':
-    hash: 11225731b6a358db538a569c4fc87399971aa4e45cfe9bbb62c0b23e61967602
-    path: patches/@auto_js__js.patch
-  '@auto_js/napi_exports':
-    hash: 363022cb03c8454ebcba93f9c66f38106c8a90488c150d15652aa29db7ab4208
-    path: patches/@auto_js__napi_exports.patch
   lodash-es:
     hash: 338fe3adff79ba4474af007241bc736fe9822c4fb9f5afe806ccddc569812066
     path: patches/lodash-es.patch
@@ -92,11 +86,14 @@ importers:
   packages/pathfinder:
     devDependencies:
       '@auto_js/js':
-        specifier: ^0.0.1
-        version: 0.0.1(patch_hash=11225731b6a358db538a569c4fc87399971aa4e45cfe9bbb62c0b23e61967602)
-      '@auto_js/napi_exports':
-        specifier: ^0.0.1
-        version: 0.0.1(patch_hash=363022cb03c8454ebcba93f9c66f38106c8a90488c150d15652aa29db7ab4208)
+        specifier: ^0.0.2
+        version: 0.0.2
+      '@auto_js/napi':
+        specifier: ^0.0.2
+        version: 0.0.2
+      '@auto_js/v8':
+        specifier: ^0.0.2
+        version: 0.0.2
       '@napi-rs/cli':
         specifier: ^3.6.2
         version: 3.6.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@24.12.2)
@@ -301,15 +298,24 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
 
-  '@auto_js/js@0.0.1':
-    resolution: {integrity: sha512-CZ/v4tvLJVHHYUKOQaGMMYL0jEnTpcI7R8k6yNjGqQcwZSh7gtW4hjdztQkDBU9sLlFRRSEMaRgTSBB+HG+5AQ==}
+  '@auto_js/js@0.0.2':
+    resolution: {integrity: sha512-anqJz7rXhSAY1ZNBS/vyTW+VXxg/QqVw1hQE/ysurret3u5PPF/50H+fftjuOZ09JbpE2S6scscOZoOmlrVlGg==}
     hasBin: true
 
-  '@auto_js/napi_exports@0.0.1':
-    resolution: {integrity: sha512-hEVippQB4iOSq4TNsT+ohzm5tFxv+Q6TyOdr6K5gLkx/4DFKf5Tqt+PLVOHPozVP9+DdQ9JLaYPPqELxD8WIQQ==}
+  '@auto_js/napi@0.0.2':
+    resolution: {integrity: sha512-m6JJx+AdEnmGcCXzhcB9i7hx7mmaHmPW8IIetHifYoKCA7yuwR+W0vUbGvxVXDizn3j2+Z9ujm42Q2gOdEP8Pw==}
 
-  '@auto_js/utility@0.0.1':
-    resolution: {integrity: sha512-/nFuFoA08fyjBvsHItizQZPTjQNNb7Z/FAhMbS4vrWuvZkhHYia3fxrda2n8FXEsrMxsygm0vFUualLEdE50Tg==}
+  '@auto_js/napi_exports@0.0.2':
+    resolution: {integrity: sha512-n76ikP51rcz49tUyUQsJetR2fO481xBN/+s+pxS03Rp9Jl68GOYaIHhM2eiqTjKcxuACSw6S3riV4cpu4r0hPQ==}
+
+  '@auto_js/utility@0.0.2':
+    resolution: {integrity: sha512-BKQDz5IHgHUjAon0V77OIvwfiCvBGEabJ4OZ4s1TF0SJjDDKicGXUtLvQalzEmgzZkBxjPaUXQfrF00dNhTBdg==}
+
+  '@auto_js/v8@0.0.2':
+    resolution: {integrity: sha512-WlogtUS1SuPSbWGfF1J3ZlWUf8NqxYM9S+HpuGLdl/SNbKk9IFn3Ywv2mPQrGlmmaX6zEzY0HwlDRXrleYNaEA==}
+
+  '@auto_js/v8_exports@0.0.2':
+    resolution: {integrity: sha512-2FWB2DB4hFwEMyFoEk0Vk29QuzwF6Iu1Seji1uaqF32qP+YB2Zdzm54BbVuKlWvS7e19GtGjt5ynhdooWBnKvQ==}
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -3503,13 +3509,26 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
-  '@auto_js/js@0.0.1(patch_hash=11225731b6a358db538a569c4fc87399971aa4e45cfe9bbb62c0b23e61967602)':
+  '@auto_js/js@0.0.2':
     dependencies:
-      '@auto_js/utility': 0.0.1
+      '@auto_js/utility': 0.0.2
 
-  '@auto_js/napi_exports@0.0.1(patch_hash=363022cb03c8454ebcba93f9c66f38106c8a90488c150d15652aa29db7ab4208)': {}
+  '@auto_js/napi@0.0.2':
+    dependencies:
+      '@auto_js/js': 0.0.2
+      '@auto_js/napi_exports': 0.0.2
+      '@auto_js/v8_exports': 0.0.2
 
-  '@auto_js/utility@0.0.1': {}
+  '@auto_js/napi_exports@0.0.2': {}
+
+  '@auto_js/utility@0.0.2': {}
+
+  '@auto_js/v8@0.0.2':
+    dependencies:
+      '@auto_js/js': 0.0.2
+      '@auto_js/v8_exports': 0.0.2
+
+  '@auto_js/v8_exports@0.0.2': {}
 
   '@babel/code-frame@7.29.0':
     dependencies:
