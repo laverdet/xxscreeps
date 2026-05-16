@@ -370,6 +370,8 @@ export function checkHasResourceAmount(target: WithStore, resourceType: Resource
 		? C.OK : C.ERR_NOT_ENOUGH_RESOURCES;
 }
 
+// TODO: `checkResourceArgs` and `checkStoreAccepts` should be called individually before invoking
+// this one. If all call sites are ok then the nested intent checks here should be removed
 export function checkHasResource(target: WithStore, resourceType: ResourceType | undefined, amount = 1) {
 	return chainIntentChecks(
 		() => checkResourceArgs(resourceType, amount),
