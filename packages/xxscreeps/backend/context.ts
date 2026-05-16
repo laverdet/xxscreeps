@@ -1,5 +1,6 @@
 import type { World } from 'xxscreeps/game/map.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import config from 'xxscreeps/config/index.js';
 
 export class BackendContext {
 	readonly disposable;
@@ -20,7 +21,7 @@ export class BackendContext {
 		// Connect to services
 		using disposable = new DisposableStack();
 		const db = disposable.use(await Database.connect());
-		const shard = disposable.use(await Shard.connect(db, 'shard0'));
+		const shard = disposable.use(await Shard.connect(db, config.shards[0]!.name));
 		const world = await shard.loadWorld();
 		const rooms = await shard.data.smembers('rooms');
 		const context = new BackendContext(disposable.move(), db, shard, world, new Set(rooms));

@@ -30,7 +30,7 @@ using _signal = handleInterruptSignal(() => {
 // Connect to main & storage
 await using disposable = new AsyncDisposableStack();
 using db = await Database.connect();
-using shard = await Shard.connect(db, 'shard0');
+using shard = await Shard.connect(db, config.shards[0]!.name);
 const worldBlob = await shard.data.req('terrain', { blob: true });
 const processorSubscription =	disposable.adopt(
 	await getProcessorChannel(shard).subscribe(),
@@ -62,7 +62,7 @@ const affinityByRoom = new Map<string, RoomWorker>();
 
 // Pulls rooms from process queue for a given worker. Prioritizes affinity rooms, but will return
 // other rooms if needed.
-async function *consumeRoomsQueue(worker: RoomWorker, time: number) {
+async function *consumeRoomsQueue(worker: RoomWorker, time: number): AsyncIterable<string> {
 	const queueKey = processRoomsSetKey(time);
 	loop: while (true) {
 

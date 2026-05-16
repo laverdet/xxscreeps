@@ -11,10 +11,7 @@ type Runtime = typeof import('xxscreeps/driver/sandbox/isolated/runtime.js');
 
 const useInspector = [ ...hooks.map('isolateInspector') ].some(use => use);
 
-const getPathFinderModule = runOnce(() => {
-	const module = new ivm.NativeModule(pathFinderBinaryPath);
-	return { path: pathFinderBinaryPath, module };
-});
+const getPathFinderModule = runOnce(() => new ivm.NativeModule(pathFinderBinaryPath));
 
 const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime', {
 	alias: {
@@ -52,8 +49,8 @@ export class IsolatedSandbox implements Sandbox {
 				return isolate.compileScript(source, { filename: 'runtime.js' });
 			}(),
 			async function() {
-				const instance = await pf.module.create(context);
-				await context.global.set(pf.path, instance.derefInto());
+				const instance = await pf.create(context);
+				await context.global.set('@xxscreeps/pathfinder', instance.derefInto());
 			}(),
 			async function() {
 				const util = await ivmInspect.create(isolate, context);
@@ -73,7 +70,7 @@ export class IsolatedSandbox implements Sandbox {
 		const [ initialize, tick ] = await Promise.all([
 			runtime.get('initialize', { accessors: true, reference: true }),
 			runtime.get('tick', { accessors: true, reference: true }),
-			context.global.delete(pf.path),
+			context.global.delete('@xxscreeps/pathfinder'),
 			context.global.delete('ivm'),
 			context.global.delete('nodeUtilImport'),
 		]);

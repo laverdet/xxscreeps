@@ -53,12 +53,12 @@ const positions = [
 const start = process.hrtime();
 let checksum = 0;
 for (let count = 0; count < 20; ++count) {
-	for (let ii = 0; ii < positions.length; ++ii) {
-		for (let jj = 0; jj < positions.length; ++jj) {
+	for (const [ ii, one ] of positions.entries()) {
+		for (const [ jj, two ] of positions.entries()) {
 			if (ii === jj) continue;
 			const ret = search(
-				positions[ii],
-				[ { range: ii % 3, pos: positions[jj] } ],
+				one,
+				[ { range: ii % 3, pos: two } ],
 				{
 					plainCost: 1,
 					swampCost: 5,

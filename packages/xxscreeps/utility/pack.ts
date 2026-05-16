@@ -7,7 +7,7 @@ function ilog2(number: number) {
 }
 
 function typedArrayByBytes(bytes: number) {
-	return [ Uint8Array, Uint16Array, Uint32Array ][32 - Math.clz32(bytes - 1)];
+	return [ Uint8Array, Uint16Array, Uint32Array ][32 - Math.clz32(bytes - 1)]!;
 }
 
 export function typedArrayFor(maxValue: number) {

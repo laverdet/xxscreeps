@@ -19,6 +19,7 @@ export type HSet = {
 };
 export type ZAdd = {
 	if?: 'nx' | 'xx';
+	up?: 'gt' | 'lt';
 	incr?: boolean;
 };
 export type ZAggregate = {

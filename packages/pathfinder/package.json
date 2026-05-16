@@ -1,17 +1,31 @@
 {
   "name": "@xxscreeps/pathfinder",
-  "version": "0.0.2",
-  "main": "./index.cjs",
+  "type": "commonjs",
+  "version": "0.1.0",
+  "main": "./module/index.js",
   "scripts": {
-    "install": "node-gyp rebuild --release",
-    "postinstall": "node-gyp clean"
+    "prepublishOnly": "napi prepublish --no-gh-release"
   },
-  "dependencies": {
-    "isolated-vm": "6.0.2",
-    "nan": "2.25.0"
+  "napi": {
+    "binaryName": "pf",
+    "targets": [
+      "aarch64-alpine-linux-musl",
+      "aarch64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-alpine-linux-musl",
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows",
+      "x86_64-unknown-linux-gnu"
+    ]
   },
   "devDependencies": {
-    "@types/node": "~24.12.2"
+    "@auto_js/js": "^0.0.2",
+    "@auto_js/napi": "^0.0.2",
+    "@auto_js/v8": "^0.0.2",
+    "@napi-rs/cli": "^3.6.2",
+    "@types/node": "~24.12.2",
+    "isolated-vm": "6.0.2",
+    "nan": "2.25.0"
   },
   "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/pathfinder/README.md",
   "repository": {

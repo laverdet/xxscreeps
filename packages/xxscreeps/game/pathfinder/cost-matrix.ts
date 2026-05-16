@@ -13,7 +13,7 @@ export class CostMatrix {
 	}
 
 	get(xx: number, yy: number) {
-		return this._bits[xx * 50 + yy];
+		return this._bits[xx * 50 + yy]!;
 	}
 
 	clone() {

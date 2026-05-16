@@ -29,7 +29,7 @@ export const FACTORY_HITS = 1000;
 export const FACTORY_CAPACITY = 50000;
 
 export const RUIN_DECAY = 500;
-export const RUIN_DECAY_STRUCTURES = {
+export const RUIN_DECAY_STRUCTURES: Record<string, number> = {
 	powerBank: 10,
 };
 

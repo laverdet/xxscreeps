@@ -57,17 +57,19 @@ registerRoomTickProcessor((room, context) => {
 			room['#invaderEnergyTarget'] = totalEnergy + invaderGoal;
 
 			// Find raid origin from valid exits
-			const origin = validExits[Math.floor(validExits.length * Math.random())];
+			const origin = validExits[Math.floor(validExits.length * Math.random())]!;
 			validExits.sort(mappedNumericComparator(pos => origin.getRangeTo(pos)));
 
 			// Send the boys
 			activateNPC(room, '2');
 			for (let ii = 0; ii < 3; ++ii) {
-				const role = ([ 'melee', 'healer', 'ranged' ] as Role[])[ii % 3];
-				if (ii >= validExits.length) {
+				const role = ([ 'melee', 'healer', 'ranged' ] as const)[ii % 3]!;
+				const exit = validExits[ii];
+				if (exit) {
+					room['#insertObject'](create(exit, role, 'small', Game.time + C.CREEP_LIFE_TIME));
+				} else {
 					break;
 				}
-				room['#insertObject'](create(validExits[ii], role, 'small', Game.time + C.CREEP_LIFE_TIME));
 			}
 		});
 	}

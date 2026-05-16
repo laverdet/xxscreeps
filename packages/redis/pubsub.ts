@@ -1,11 +1,14 @@
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from 'xxscreeps/engine/db/storage/provider.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { RedisHolder } from './client.js';
 
+interface PublishIgnore {
+	client: RedisSubscription;
+	message: string;
+}
+
 export class RedisPubSubProvider implements PubSubProvider {
-	private readonly publishIgnore = new Map<string, {
-		client: RedisSubscription;
-		message: string;
-	}[]>();
+	private readonly publishIgnore = new Map<string, [ PublishIgnore, ...PublishIgnore[] ]>();
 
 	private readonly subscribersByKey = new Map<string, Set<RedisSubscription>>();
 	private readonly listener;
@@ -77,6 +80,8 @@ export class RedisPubSubProvider implements PubSubProvider {
 		const subscribers = this.subscribersByKey.get(key)!;
 		if (subscribers.size === 1) {
 			this.subscribersByKey.delete(key);
+			this.publishIgnore.delete(key);
+			mustNotReject(this.listener.invoke(cb => this.listener.batch().unsubscribe(key, cb)));
 		} else {
 			subscribers.delete(subscriber);
 		}

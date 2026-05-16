@@ -104,8 +104,8 @@ export function tick(data: TickPayload) {
 			return room;
 		});
 		if (data.usernames) {
-			for (const userId in data.usernames) {
-				userInfo.set(userId, { username: data.usernames[userId] });
+			for (const [ userId, userName ] of Object.entries(data.usernames)) {
+				userInfo.set(userId, { username: userName });
 			}
 		}
 		const state = new GameState(world, data.time, rooms);

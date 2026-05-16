@@ -26,13 +26,8 @@ const shape = struct(RoomObject.format, {
 
 // Game object
 export class Resource extends withOverlay(RoomObject.RoomObject, shape) {
-
-	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2);
-		if (typeof idOrArg1 === 'string') assign<Resource>(this, RoomObject.getById(Resource, idOrArg1));
-	}
-
 	get energy() { return this.resourceType === C.RESOURCE_ENERGY ? this.amount : undefined; }
+	override get '#secondaryLookType'() { return C.LOOK_ENERGY; }
 	get '#lookType'() { return C.LOOK_RESOURCES; }
 }
 

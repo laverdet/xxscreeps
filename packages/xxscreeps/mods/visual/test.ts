@@ -15,7 +15,7 @@ function roundTrip(draw: (vis: MapVisual) => void) {
 	draw(vis);
 	const flushed = flush();
 	assert.strictEqual(flushed.length, 1);
-	assert.strictEqual(flushed[0].roomName, 'map');
+	assert.strictEqual(flushed[0]?.roomName, 'map');
 	const visuals = visualsReader(flushed[0].blob);
 	return [ ...decodeMapVisuals(visuals) ];
 }
@@ -26,8 +26,8 @@ describe('MapVisual coordinate decode', () => {
 			vis.circle({ x: 25, y: 25, roomName: 'W1N1' });
 		});
 		assert.strictEqual(decoded.length, 1);
-		const circle: any = decoded[0];
-		assert.strictEqual(circle[Variant], 'c');
+		const circle = decoded[0];
+		assert.strictEqual(circle?.[Variant], 'c');
 		assert.strictEqual(circle.n, 'W1N1');
 		assert.strictEqual(circle.x, 25);
 		assert.strictEqual(circle.y, 25);
@@ -38,8 +38,8 @@ describe('MapVisual coordinate decode', () => {
 			vis.rect({ x: 10, y: 20, roomName: 'E0S0' }, 5, 3);
 		});
 		assert.strictEqual(decoded.length, 1);
-		const rect: any = decoded[0];
-		assert.strictEqual(rect[Variant], 'r');
+		const rect = decoded[0];
+		assert.strictEqual(rect?.[Variant], 'r');
 		assert.strictEqual(rect.n, 'E0S0');
 		assert.strictEqual(rect.x, 10);
 		assert.strictEqual(rect.y, 20);
@@ -52,8 +52,8 @@ describe('MapVisual coordinate decode', () => {
 			vis.text('hello', { x: 30, y: 40, roomName: 'W5N5' });
 		});
 		assert.strictEqual(decoded.length, 1);
-		const text: any = decoded[0];
-		assert.strictEqual(text[Variant], 't');
+		const text = decoded[0];
+		assert.strictEqual(text?.[Variant], 't');
 		assert.strictEqual(text.n, 'W5N5');
 		assert.strictEqual(text.x, 30);
 		assert.strictEqual(text.y, 40);
@@ -67,8 +67,8 @@ describe('MapVisual coordinate decode', () => {
 			);
 		});
 		assert.strictEqual(decoded.length, 1);
-		const line: any = decoded[0];
-		assert.strictEqual(line[Variant], 'l');
+		const line = decoded[0];
+		assert.strictEqual(line?.[Variant], 'l');
 		assert.strictEqual(line.n1, 'W1N1');
 		assert.strictEqual(line.x1, 0);
 		assert.strictEqual(line.y1, 0);
@@ -85,12 +85,12 @@ describe('MapVisual coordinate decode', () => {
 			]);
 		});
 		assert.strictEqual(decoded.length, 1);
-		const poly: any = decoded[0];
-		assert.strictEqual(poly[Variant], 'p');
-		assert.strictEqual(poly.points[0].n, 'W1N1');
+		const poly = decoded[0];
+		assert.strictEqual(poly?.[Variant], 'p');
+		assert.strictEqual(poly.points[0]?.n, 'W1N1');
 		assert.strictEqual(poly.points[0].x, 10);
 		assert.strictEqual(poly.points[0].y, 10);
-		assert.strictEqual(poly.points[1].n, 'W1N1');
+		assert.strictEqual(poly.points[1]?.n, 'W1N1');
 		assert.strictEqual(poly.points[1].x, 20);
 		assert.strictEqual(poly.points[1].y, 20);
 	});
@@ -126,12 +126,12 @@ describe('RoomVisual getSize', () => {
 	});
 
 	test('shared across instances for same room', () => {
-		const a = new RoomVisual('test_size_shared');
-		const b = new RoomVisual('test_size_shared');
-		a.circle(25, 25);
-		assert.strictEqual(a.getSize(), b.getSize(), 'two instances for same room should share size');
-		b.line(0, 0, 10, 10);
-		assert.strictEqual(a.getSize(), b.getSize(), 'size should stay in sync after either draws');
+		const one = new RoomVisual('test_size_shared');
+		const two = new RoomVisual('test_size_shared');
+		one.circle(25, 25);
+		assert.strictEqual(one.getSize(), two.getSize(), 'two instances for same room should share size');
+		two.line(0, 0, 10, 10);
+		assert.strictEqual(one.getSize(), two.getSize(), 'size should stay in sync after either draws');
 	});
 
 	test('fresh instance after flush has zero size', () => {
@@ -145,11 +145,11 @@ describe('RoomVisual getSize', () => {
 	});
 
 	test('rooms are independent', () => {
-		const a = new RoomVisual('test_size_room_a');
-		const b = new RoomVisual('test_size_room_b');
-		a.circle(25, 25);
-		assert.ok(a.getSize() > 0);
-		assert.strictEqual(b.getSize(), 0, 'different room should not be affected');
+		const one = new RoomVisual('test_size_room_a');
+		const two = new RoomVisual('test_size_room_b');
+		one.circle(25, 25);
+		assert.ok(one.getSize() > 0);
+		assert.strictEqual(two.getSize(), 0, 'different room should not be affected');
 	});
 });
 
@@ -241,11 +241,11 @@ describe('MapVisual class', () => {
 		assert.ok(mapEntry !== undefined, 'should have map visuals');
 		const visuals = [ ...visualsReader(mapEntry.blob) ];
 		assert.strictEqual(visuals.length, 5);
-		assert.strictEqual(visuals[0][Variant], 'c');
-		assert.strictEqual(visuals[1][Variant], 'l');
-		assert.strictEqual(visuals[2][Variant], 'r');
-		assert.strictEqual(visuals[3][Variant], 't');
-		assert.strictEqual(visuals[4][Variant], 'p');
+		assert.strictEqual(visuals[0]?.[Variant], 'c');
+		assert.strictEqual(visuals[1]?.[Variant], 'l');
+		assert.strictEqual(visuals[2]?.[Variant], 'r');
+		assert.strictEqual(visuals[3]?.[Variant], 't');
+		assert.strictEqual(visuals[4]?.[Variant], 'p');
 	});
 
 	test('clear, export, and import preserve size', () => {

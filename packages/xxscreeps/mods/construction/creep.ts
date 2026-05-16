@@ -78,6 +78,7 @@ export function checkDismantle(creep: Creep, target: Structure) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.WORK),
 		() => checkTarget(target, Structure),
+		() => target.structureType in C.CONSTRUCTION_COST ? C.OK : C.ERR_INVALID_TARGET,
 		() => checkRange(creep, target, 1),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART));
 }

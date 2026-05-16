@@ -8,6 +8,7 @@ import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import jsYaml from 'js-yaml';
 import Loki from 'lokijs';
 
@@ -92,8 +93,10 @@ if ((rcInfo?.size ?? 0) === 0) {
 		}
 		fetched.add(specifier);
 		try {
-			// Find `package.json` for this specifier
-			const indexPath = new URL(import.meta.resolve(specifier));
+			// Find `package.json` for this specifier. Anchor `.` on cwd;
+			const indexPath = specifier === '.'
+				? pathToFileURL(process.cwd() + path.sep)
+				: new URL(import.meta.resolve(specifier));
 			const packagePath = await async function() {
 				let path = indexPath;
 				while (true) {
@@ -153,7 +156,7 @@ if (dontOverwrite && await db.data.scard('users') > 0) {
 }
 {
 	// Flush databases at the same time because they may point to the same service
-	using shard = await Shard.connect(db, 'shard0');
+	using shard = await Shard.connect(db, config.shards[0]!.name);
 	await Promise.all([
 		shardOnly ? undefined : db.data.flushdb(),
 		shard.data.flushdb(),
@@ -165,7 +168,7 @@ if (dontOverwrite && await db.data.scard('users') > 0) {
 		shard.data.save(),
 	]);
 }
-using shard = await Shard.connect(db, 'shard0');
+using shard = await Shard.connect(db, config.shards[0]!.name);
 const { data } = shard;
 
 // Save terrain data
@@ -312,6 +315,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 		}
 	})) ];
+	instance['#initialize']();
 	flushUsers(instance);
 	return instance;
 });
@@ -320,7 +324,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 const roomNames = new Set(Fn.map(rooms, room => room.name));
 await shard.data.sadd('rooms', [ ...roomNames ]);
 for (const room of rooms) {
-	await shard.saveRoom(room.name, gameTime, room as never);
+	await shard.saveRoom(room.name, gameTime, room);
 }
 
 // Save users

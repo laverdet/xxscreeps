@@ -21,28 +21,28 @@ export class Heap {
 
 	pop() {
 		const value = this.heap[1];
-		this.heap[1] = this.heap[this.size];
+		this.heap[1] = this.heap[this.size]!;
 		--this.size;
 		let vv = 1;
 		do {
 			const uu = vv;
 			if ((uu << 1) + 1 <= this.size) {
-				if (this.cost(this.heap[uu]) >= this.cost(this.heap[uu << 1])) {
+				if (this.cost(this.heap[uu]!) >= this.cost(this.heap[uu << 1]!)) {
 					vv = uu << 1;
 				}
-				if (this.cost(this.heap[vv]) >= this.cost(this.heap[(uu << 1) + 1])) {
+				if (this.cost(this.heap[vv]!) >= this.cost(this.heap[(uu << 1) + 1]!)) {
 					vv = (uu << 1) + 1;
 				}
 			} else if (uu << 1 <= this.size) {
-				if (this.cost(this.heap[uu]) >= this.cost(this.heap[uu << 1])) {
+				if (this.cost(this.heap[uu]!) >= this.cost(this.heap[uu << 1]!)) {
 					vv = uu << 1;
 				}
 			}
 			if (uu === vv) {
 				break;
 			} else {
-				const tmp = this.heap[uu];
-				this.heap[uu] = this.heap[vv];
+				const tmp = this.heap[uu]!;
+				this.heap[uu] = this.heap[vv]!;
 				this.heap[vv] = tmp;
 			}
 		} while (true);
@@ -67,10 +67,10 @@ export class Heap {
 	private bubbleUp(id: number) {
 		let ii = id;
 		while (ii !== 1) {
-			if (this.cost(this.heap[ii]) <= this.cost(this.heap[ii >>> 1])) {
+			if (this.cost(this.heap[ii]!) <= this.cost(this.heap[ii >>> 1]!)) {
 				const tmp = this.heap[ii];
-				this.heap[ii] = this.heap[ii >>> 1];
-				this.heap[ii >>>= 1] = tmp;
+				this.heap[ii] = this.heap[ii >>> 1]!;
+				this.heap[ii >>>= 1] = tmp!;
 			} else {
 				return;
 			}

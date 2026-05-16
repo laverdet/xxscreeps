@@ -2,7 +2,8 @@
  * Returns an iterator which proxies the given generator, requesting up to `count` elements in
  * advance. If you break out of this loop there will be abandoned values!
  */
-export function lookAhead<Type>(iterable: AsyncIterable<Type>, count = 1) {
+export function lookAhead<Type>(iterable: AsyncIterable<Type>, count = 1): AsyncIterable<Type> {
+	type QueueItem = Promise<IteratorResult<Type>>;
 	if (count <= 0) {
 		return iterable;
 	}
@@ -18,7 +19,7 @@ export function lookAhead<Type>(iterable: AsyncIterable<Type>, count = 1) {
 			};
 			const first = iterator.next();
 			void first.then(push);
-			const queue = [ first ];
+			const queue: [ QueueItem, ...QueueItem[] ] = [ first ];
 			while (true) {
 				const next = await queue[0];
 				if (next.done) {

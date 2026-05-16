@@ -42,9 +42,11 @@ export function compileRuntimeSource(path: string, transform: Transform) {
 				'xxscreeps/engine/processor': 'xxscreeps/driver/runtime/tripwire',
 			},
 			babel: Privates,
-			externals: ({ context, request }) =>
-				request?.endsWith('.node')
-					? `globalThis[${JSON.stringify(Path.join(context!, request))}]` : undefined,
+			externals: ({ request }) => {
+				if (request === '@xxscreeps/pathfinder') {
+					return 'globalThis["@xxscreeps/pathfinder"]';
+				}
+			},
 		},
 	]);
 }

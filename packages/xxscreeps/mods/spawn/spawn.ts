@@ -190,7 +190,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 
 				// Save intent
 				const energyStructureIds = options.energyStructures?.map(structure => structure.id) ?? null;
-				intents.save(this as StructureSpawn, 'spawn', body, name, energyStructureIds, directions);
+				intents.save(this, 'spawn', body, name, energyStructureIds, directions);
 
 				// Fake creep
 				const creep = createCreep(this.pos, body, name, this['#user']!);
@@ -213,15 +213,14 @@ export function create(pos: RoomPosition, owner: string, name: string) {
 
 function hasSpawn(userGame: GameConstructor, name: string) {
 	return Boolean(
-
-		userGame.spawns[name] ||
+		userGame.spawns[name] ??
 		Object.values(userGame.constructionSites).some(site => site.name === name));
 }
 
 registerBuildableStructure(C.STRUCTURE_SPAWN, {
 	obstacle: true,
 	checkName(room, name) {
-		if (name) {
+		if (name != null) {
 			if (checkString(name, 100, true) !== C.OK) {
 				return null;
 			}
@@ -271,10 +270,11 @@ export function checkRecycleCreep(spawn: StructureSpawn, creep: Creep) {
 
 export function checkRenewCreep(spawn: StructureSpawn, creep: Creep) {
 	return chainIntentChecks(
-		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkSpawnType(spawn),
 		() => spawn.spawning ? C.ERR_BUSY : C.OK,
-		() => checkIsActive(spawn),
 		() => checkTarget(creep, Creep),
+		() => checkSpawnOwner(spawn),
+		() => checkIsActive(spawn),
 		() => checkCommon(creep),
 		() => checkRange(spawn, creep, 1),
 		() => {
@@ -297,6 +297,14 @@ export function checkDirections(directions: Direction[] | null) {
 	);
 }
 
+function checkSpawnType(spawn: StructureSpawn) {
+	return spawn instanceof StructureSpawn ? C.OK : C.ERR_INVALID_ARGS;
+}
+
+function checkSpawnOwner(spawn: StructureSpawn) {
+	return spawn.my ? C.OK : C.ERR_NOT_OWNER;
+}
+
 export function checkSpawnCreep(
 	spawn: StructureSpawn,
 	body: PartType[],
@@ -305,7 +313,7 @@ export function checkSpawnCreep(
 	energyStructures: (StructureExtension | StructureSpawn)[] | null,
 ) {
 	return chainIntentChecks(
-		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkSpawnType(spawn),
 		() => checkString(name, 100, true),
 		() => {
 			if (userGame?.creeps[name] !== undefined) {
@@ -314,6 +322,9 @@ export function checkSpawnCreep(
 			if (directions !== null && !checkDirections(directions)) {
 				return C.ERR_INVALID_ARGS;
 			}
+		},
+		() => checkSpawnOwner(spawn),
+		() => {
 			if (spawn.spawning) {
 				return C.ERR_BUSY;
 			}
@@ -373,9 +384,9 @@ const names = [
 function getUniqueName(exists: (name: string) => boolean) {
 	let ii = 0;
 	do {
-		let name = names[Math.floor(Math.random() * names.length)];
+		let name = names[Math.floor(Math.random() * names.length)]!;
 		if (++ii > 4) {
-			name += names[Math.floor(Math.random() * names.length)];
+			name += names[Math.floor(Math.random() * names.length)]!;
 		}
 		if (!exists(name)) {
 			return name;

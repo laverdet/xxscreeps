@@ -159,6 +159,11 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 		() => checkIsActive(lab),
 		() => checkTarget(lab1, StructureLab),
 		() => checkTarget(lab2, StructureLab),
+		() => {
+			if (lab1!.id === lab.id || lab2!.id === lab.id) {
+				return C.ERR_INVALID_TARGET;
+			}
+		},
 		() => checkRange(lab, lab1!, 2),
 		() => checkRange(lab, lab2!, 2),
 		() => {
@@ -192,12 +197,12 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 	return chainIntentChecks(
 		() => checkTarget(creep, Creep),
 		() => checkMyStructure(lab, StructureLab),
-		() => checkIsActive(lab),
 		() => {
 			if (!creep!.my) {
 				return C.ERR_NOT_OWNER;
 			}
 		},
+		() => checkIsActive(lab),
 		() => {
 			if (lab.cooldown) {
 				return C.ERR_TIRED;
@@ -219,10 +224,10 @@ export function calcTotalReactionsTime(mineral: string): number {
 			reagents[product] = [ r2, r1 ];
 		}
 	}
-	const calcStep = (m: string): number => {
-		const time = reactionTime[m];
+	const calcStep = (mineral: string): number => {
+		const time = reactionTime[mineral];
 		if (!time) return 0;
-		return time + calcStep(reagents[m][0]) + calcStep(reagents[m][1]);
+		return time + calcStep(reagents[mineral]![0]) + calcStep(reagents[mineral]![1]);
 	};
 	return calcStep(mineral);
 }
@@ -238,6 +243,11 @@ export function checkRunReaction(lab: StructureLab, left: StructureLab, right: S
 		() => checkIsActive(lab),
 		() => checkTarget(left, StructureLab),
 		() => checkTarget(right, StructureLab),
+		() => {
+			if (left.id === lab.id || right.id === lab.id) {
+				return C.ERR_INVALID_TARGET;
+			}
+		},
 		() => checkRange(lab, left, 2),
 		() => checkRange(lab, right, 2),
 		() => {

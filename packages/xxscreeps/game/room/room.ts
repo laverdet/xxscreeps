@@ -117,10 +117,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 			this.#removeObjects = new Set();
 			let cursor = objects.length - 1;
 			for (let ii = cursor; ii >= 0; --ii) {
-				const object = objects[ii];
+				const object = objects[ii]!;
 				if (removeObjects.has(object)) {
 					this.#beforeRemove(object);
-					objects[ii] = objects[cursor--];
+					objects[ii] = objects[cursor--]!;
 					if (--removeCount === 0) {
 						break;
 					}
@@ -224,6 +224,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (lookType !== null) {
 			this.#lookIndex.get(lookType)!.push(object);
 		}
+		const secondaryLookType = object['#secondaryLookType'];
+		if (secondaryLookType !== null) {
+			this.#lookIndex.get(secondaryLookType)!.push(object);
+		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos);
 		if (list) {
@@ -242,6 +246,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 		const lookType = object['#lookType'];
 		if (lookType !== null) {
 			removeOne(this.#lookIndex.get(lookType)!, object);
+		}
+		const secondaryLookType = object['#secondaryLookType'];
+		if (secondaryLookType !== null) {
+			removeOne(this.#lookIndex.get(secondaryLookType)!, object);
 		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos)!;

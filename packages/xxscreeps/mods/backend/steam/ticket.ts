@@ -1,14 +1,59 @@
+import { Ajv, JSONSchemaType } from 'ajv';
 import fetch from 'node-fetch';
-import { hooks } from 'xxscreeps/backend/index.js';
+import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
 
+const ajv = new Ajv();
+
+interface SteamTicketRequest {
+	ticket: string;
+}
+
+const steamTicketRequestSchema: JSONSchemaType<SteamTicketRequest> = {
+	type: 'object',
+	properties: {
+		ticket: { type: 'string' },
+	},
+	required: [ 'ticket' ],
+};
+
+interface SteamAuthenticateResponse {
+	response: {
+		params: {
+			result: string;
+			steamid: string;
+		};
+	};
+}
+
+const validateSteamAuthenticateResponseSchema = ajv.compile<SteamAuthenticateResponse>({
+	type: 'object',
+	properties: {
+		response: {
+			type: 'object',
+			properties: {
+				params: {
+					type: 'object',
+					properties: {
+						result: { type: 'string' },
+						steamid: { type: 'string' },
+					},
+					required: [ 'result', 'steamid' ],
+				},
+			},
+			required: [ 'params' ],
+		},
+	},
+	required: [ 'response' ],
+});
+
 const { steamApiKey } = config.backend;
-if (steamApiKey) {
+if (steamApiKey !== undefined) {
 	hooks.register('route', {
 		method: 'post',
 		path: '/api/auth/steam-ticket',
 
-		async execute(context) {
+		execute: makeValidatedPayloadRoute(steamTicketRequestSchema, async context => {
 			// Native auth not implemented, get an API key!
 			if (context.query.useNativeAuth !== undefined) {
 				context.status = 501;
@@ -23,8 +68,10 @@ if (steamApiKey) {
 			})}`);
 			if (response.status === 200) {
 				const json = await response.json();
-				const { result, steamid } = (json as any)?.response?.params ?? {};
-
+				if (!validateSteamAuthenticateResponseSchema(json)) {
+					throw new Error('Invalid Steam authentication response');
+				}
+				const { result, steamid } = json.response.params;
 				if (result !== 'OK') {
 					throw new Error('Steam authentication failure');
 				}
@@ -38,6 +85,6 @@ if (steamApiKey) {
 			} else {
 				throw new Error('Steam failure. Check `backend.steamApiKey`');
 			}
-		},
+		}),
 	});
 }

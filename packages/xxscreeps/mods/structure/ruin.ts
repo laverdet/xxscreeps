@@ -2,11 +2,10 @@ import type { Store } from 'xxscreeps/mods/resource/store.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomObject, create as createObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
+import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object.js';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 
 export const format = declare('Ruin', () => compose(shape, Ruin));
 const shape = struct(objectFormat, {
@@ -27,11 +26,6 @@ const shape = struct(objectFormat, {
  */
 export class Ruin extends withOverlay(RoomObject, shape) {
 
-	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2);
-		if (typeof idOrArg1 === 'string') assign<Ruin>(this, getById(Ruin, idOrArg1));
-	}
-
 	/**
 	 * The amount of game ticks before this ruin decays.
 	 */
@@ -45,7 +39,7 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 	override get '#lookType'() { return C.LOOK_RUINS; }
 	override get '#extraUsers'() {
 		const user = this['#structure'].user;
-		return user ? [ user ] : [];
+		return user === null ? [] : [ user ];
 	}
 
 	/**
@@ -54,12 +48,12 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 	get structure() {
 		const info = this['#structure'];
 		const structure = (() => {
-			if (info.user) {
+			if (info.user === null) {
+				return new Structure();
+			} else {
 				const structure = new OwnedStructure();
 				structure['#user'] = info.user;
 				return structure;
-			} else {
-				return new Structure();
 			}
 		})();
 		Object.defineProperties(structure, {
@@ -85,7 +79,7 @@ export function createRuin(structure: Structure, decay?: number) {
 	}
 	ruin.destroyTime = Game.time;
 
-	const decayTimeout = decay ?? (C.RUIN_DECAY_STRUCTURES[structure.structureType as keyof typeof C.RUIN_DECAY_STRUCTURES] ?? C.RUIN_DECAY);
+	const decayTimeout = decay ?? (C.RUIN_DECAY_STRUCTURES[structure.structureType] ?? C.RUIN_DECAY);
 	ruin['#decayTime'] = Game.time + decayTimeout;
 	ruin['#structure'] = {
 		id: structure.id,

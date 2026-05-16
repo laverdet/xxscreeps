@@ -16,8 +16,9 @@ export default function flee(creep: Creep, range: number) {
 			flee: true,
 			roomCallback: getCostMatrix,
 		});
-		if (ret.path.length > 0) {
-			creep.move(creep.pos.getDirectionTo(ret.path[0]));
+		const [ next ] = ret.path;
+		if (next) {
+			creep.move(creep.pos.getDirectionTo(next));
 			creep.say('flee');
 			return true;
 		}

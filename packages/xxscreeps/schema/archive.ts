@@ -169,7 +169,7 @@ export function restoreLayout(archive: string, layoutTemplate: Layout) {
 	const exports: Record<string, Layout> = {};
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 	exec(exports);
-	const exportedLayout = exports.default;
+	const exportedLayout = exports.default!;
 	delete exports.default;
 	const namedExports = new Map<Layout, string>(Object.entries(exports).map(entry => [ entry[1], entry[0] ]));
 

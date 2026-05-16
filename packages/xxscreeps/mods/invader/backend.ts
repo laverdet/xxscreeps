@@ -1,19 +1,40 @@
-import { hooks } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+
+interface CreateInvaderRequest {
+	room: string;
+	x: number;
+	y: number;
+	size: string;
+	type: string;
+}
+
+const createInvaderRequestSchema: JSONSchemaType<CreateInvaderRequest> = {
+	type: 'object',
+	properties: {
+		room: { type: 'string' },
+		x: { type: 'number' },
+		y: { type: 'number' },
+		size: { type: 'string' },
+		type: { type: 'string' },
+	},
+	required: [ 'room', 'x', 'y', 'size', 'type' ],
+};
 
 hooks.register('route', {
 	path: '/api/game/create-invader',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(createInvaderRequestSchema, async context => {
 		const { userId } = context.state;
-		const { room: roomName, x, y, size } = context.request.body;
-		const type = context.request.body.type?.toLowerCase();
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
+		const { room: roomName, x, y, size, type: rawType } = context.request.body;
+		const type = rawType.toLowerCase();
 
 		// Sanity check
 		const pos = new RoomPosition(x, y, roomName);
@@ -43,5 +64,5 @@ hooks.register('route', {
 		});
 
 		return { ok: 1 };
-	},
+	}),
 });

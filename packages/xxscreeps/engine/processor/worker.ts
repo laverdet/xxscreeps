@@ -1,4 +1,5 @@
 import type { Room } from 'xxscreeps/game/room/room.js';
+import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { loadTerrain } from 'xxscreeps/driver/pathfinder.js';
 import { consumeSet } from 'xxscreeps/engine/db/async.js';
@@ -51,7 +52,7 @@ let world: World;
 
 // Connect to storage
 using db = await Database.connect();
-using shard = await Shard.connect(db, 'shard0');
+using shard = await Shard.connect(db, config.shards[0]!.name);
 
 // Create responder host and listen for requests
 await makeBasicResponderHost<ProcessorRequest>(import.meta.url, async message => {

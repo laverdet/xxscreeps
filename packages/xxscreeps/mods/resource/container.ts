@@ -29,13 +29,13 @@ export class StructureContainer extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition) {
-	const ownedController = Game.rooms[pos.roomName].controller?.['#user'];
+	const ownedController = Game.rooms[pos.roomName]?.controller?.['#user'];
 	const container = assign(RoomObject.create(new StructureContainer(), pos), {
 		hits: C.CONTAINER_HITS,
 		store: OpenStore['#create'](C.CONTAINER_CAPACITY),
 	});
-	container['#nextDecayTime'] = Game.time + (ownedController
-		? C.CONTAINER_DECAY_TIME_OWNED : C.CONTAINER_DECAY_TIME) - 1;
+	container['#nextDecayTime'] =
+		Game.time + (ownedController === undefined ? C.CONTAINER_DECAY_TIME : C.CONTAINER_DECAY_TIME_OWNED) - 1;
 	return container;
 }
 

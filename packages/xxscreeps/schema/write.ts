@@ -48,25 +48,25 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 			const remaining = writers.length - ii;
 			const next = function(): MemberWriter {
 				if (remaining >= 4) {
-					const [ fn0, fn1, fn2, fn3 ] = writers.slice(ii, ii += 4);
+					const [ fn0, fn1, fn2, fn3 ] = writers.slice(ii, ii += 4) as [ MemberWriter, MemberWriter, MemberWriter, MemberWriter ];
 					return (value, view, instanceOffset, heap) =>
 						fn3(value, view, instanceOffset,
 							fn2(value, view, instanceOffset,
 								fn1(value, view, instanceOffset,
 									fn0(value, view, instanceOffset, heap))));
 				} else if (remaining >= 3) {
-					const [ fn0, fn1, fn2 ] = writers.slice(ii, ii += 3);
+					const [ fn0, fn1, fn2 ] = writers.slice(ii, ii += 3) as [ MemberWriter, MemberWriter, MemberWriter ];
 					return (value, view, instanceOffset, heap) =>
 						fn2(value, view, instanceOffset,
 							fn1(value, view, instanceOffset,
 								fn0(value, view, instanceOffset, heap)));
 				} else if (remaining >= 2) {
-					const [ fn0, fn1 ] = writers.slice(ii, ii += 2);
+					const [ fn0, fn1 ] = writers.slice(ii, ii += 2) as [ MemberWriter, MemberWriter ];
 					return (value, view, instanceOffset, heap) =>
 						fn1(value, view, instanceOffset,
 							fn0(value, view, instanceOffset, heap));
 				} else {
-					return writers[ii++];
+					return writers[ii++]!;
 				}
 			}();
 
@@ -98,16 +98,24 @@ function makeTypeWriter(layout: Layout, builder: Builder): Writer {
 		if (typeof layout === 'string') {
 			// Basic types
 			switch (layout) {
-				case 'int8': return (value, view, offset, heap) => (view.int8[offset] = value, heap);
-				case 'int16': return (value, view, offset, heap) => (view.int16[offset >>> 1] = value, heap);
-				case 'int32': return (value, view, offset, heap) => (view.int32[offset >>> 2] = value, heap);
+				// eslint-disable-next-line no-sequences
+				case 'int8': return (value: number, view, offset, heap) => (view.int8[offset] = value, heap);
+				// eslint-disable-next-line no-sequences
+				case 'int16': return (value: number, view, offset, heap) => (view.int16[offset >>> 1] = value, heap);
+				// eslint-disable-next-line no-sequences
+				case 'int32': return (value: number, view, offset, heap) => (view.int32[offset >>> 2] = value, heap);
 
-				case 'uint8': return (value, view, offset, heap) => (view.uint8[offset] = value, heap);
-				case 'uint16': return (value, view, offset, heap) => (view.uint16[offset >>> 1] = value, heap);
-				case 'uint32': return (value, view, offset, heap) => (view.uint32[offset >>> 2] = value, heap);
+				// eslint-disable-next-line no-sequences
+				case 'uint8': return (value: number, view, offset, heap) => (view.uint8[offset] = value, heap);
+				// eslint-disable-next-line no-sequences
+				case 'uint16': return (value: number, view, offset, heap) => (view.uint16[offset >>> 1] = value, heap);
+				// eslint-disable-next-line no-sequences
+				case 'uint32': return (value: number, view, offset, heap) => (view.uint32[offset >>> 2] = value, heap);
 
-				case 'double': return (value, view, offset, heap) => (view.double[offset >>> 3] = value, heap);
+				// eslint-disable-next-line no-sequences
+				case 'double': return (value: number, view, offset, heap) => (view.double[offset >>> 3] = value, heap);
 
+				// eslint-disable-next-line no-sequences
 				case 'bool': return (value: boolean, view, offset, heap) => (view.int8[offset] = value ? 1 : 0, heap);
 
 				case 'buffer': return (value: Uint8Array, view, offset, heap) => {
