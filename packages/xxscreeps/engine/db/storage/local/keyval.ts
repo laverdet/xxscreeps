@@ -119,6 +119,17 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
+	pttl(key: string) {
+		if (this.expires.has(key)) {
+			// they don't actually have a ttl, it will expire on restart
+			return 99_000;
+		} else if (this.data.has(key)) {
+			return -1;
+		} else {
+			return -2;
+		}
+	}
+
 	req(key: string, options?: P.AsBlob) {
 		if (options?.blob) {
 			return this.blob.req(key) as never;

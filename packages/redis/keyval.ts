@@ -71,6 +71,10 @@ export class RedisProvider implements P.KeyValProvider {
 		return send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).get(key, cb)), options);
 	}
 
+	pttl(key: string) {
+		return this.redis.invoke<number>(cb => this.redis.batch(key).pttl(key, cb));
+	}
+
 	async req(key: string, options?: P.AsBlob): Promise<any> {
 		const value = await this.get(key, options);
 		if (value === null) {

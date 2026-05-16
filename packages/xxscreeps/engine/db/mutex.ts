@@ -1,18 +1,20 @@
 import type { Subscription } from './channel.js';
 import type { KeyValProvider, PubSubProvider } from './storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
-import { acquireTimeout } from 'xxscreeps/utility/utility.js';
+import * as assert from 'node:assert/strict';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { acquireInterval, acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { Channel } from './channel.js';
 import { KeyvalScript } from './storage/script.js';
 
 type Message = 'waiting' | 'unlocked';
+const kLockTimeout = 10_000;
 
 export class Mutex {
+	private internalLock = false;
 	private lockedOrPending = false;
 	private yieldPromise: Promise<void> | undefined;
 	private waitingListener: Effect | undefined;
-	private readonly localQueue: (Effect)[] = [];
 	private readonly channel;
 	private readonly lockable;
 
@@ -30,11 +32,10 @@ export class Mutex {
 	async [Symbol.asyncDispose]() {
 		if (this.lockedOrPending) {
 			throw new Error('Can\'t disconnect while mutex locked');
-		} else if (this.waitingListener) {
-			await this.lockable.unlock();
-			await this.channel.publish('unlocked');
-			this.waitingListener = undefined;
+		} else if (this.internalLock) {
+			await this.yieldLock();
 		}
+		this.waitingListener?.();
 		this.channel.disconnect();
 	}
 
@@ -46,47 +47,59 @@ export class Mutex {
 
 	async lock() {
 		if (this.lockedOrPending) {
-			// Already locked locally
-			const lockDefer = new Deferred();
-			this.localQueue.push(lockDefer.resolve);
-			return lockDefer.promise;
-		} else if (this.waitingListener) {
-			// If the listener is still attached it means no one else wanted the lock
-			this.lockedOrPending = true;
-			return;
+			throw new Error('Already locked');
 		}
 		this.lockedOrPending = true;
+
+		// If the listener is still attached it means no one else wanted the lock
+		if (this.waitingListener) {
+			return;
+		}
+
 		// If we're yielding send message that we want the lock back
 		if (this.yieldPromise) {
 			await this.channel.publish('waiting');
 			await this.yieldPromise;
 		}
+
 		// Listen for peers who want the lock
-		this.waitingListener = this.channel.listen(message => {
-			if (message === 'waiting') {
-				this.waitingListener!();
-				this.waitingListener = undefined;
-				if (!this.lockedOrPending) {
-					// If a peer is waiting while this is soft locked then yield next time we try to lock
-					this.yieldLock().catch(console.error);
+		this.waitingListener = (() => {
+			const waitingListener = this.channel.listen(message => {
+				if (message === 'waiting') {
+					this.waitingListener = undefined;
+					waitingListener();
+					if (!this.lockedOrPending) {
+						// If a peer is waiting while this is soft locked then yield next time we try to lock
+						this.yieldLock().catch(console.error);
+					}
 				}
-			}
-		});
+			});
+			return waitingListener;
+		})();
 		if (await this.lockable.lock()) {
 			// Lock with no contention
+			this.internalLock = true;
 			return;
 		}
+
 		// Must wait for lock
-		const lockDefer = new Deferred();
+		const lockDefer: PromiseWithResolvers<void> = Promise.withResolvers();
 		const tryLock = () => {
-			this.lockable.lock().then(locked => {
-				if (locked) {
-					lockDefer.resolve();
-				} else {
-					this.channel.publish('waiting').catch(lockDefer.reject);
+			mustNotReject(async () => {
+				try {
+					const locked = await this.lockable.lock();
+					if (locked) {
+						this.internalLock = true;
+						lockDefer.resolve();
+					} else {
+						await this.channel.publish('waiting');
+					}
+				} catch (error) {
+					lockDefer.reject(error);
 				}
-			}, lockDefer.reject);
+			});
 		};
+
 		// Listen for unlock messages and try to lock again
 		using disposable = new DisposableStack();
 		disposable.defer(this.channel.listen(message => {
@@ -96,7 +109,7 @@ export class Mutex {
 		}));
 
 		// Also keep trying in case the peer gave up
-		using _timer = acquireTimeout(500, tryLock);
+		disposable.use(acquireInterval(500, tryLock));
 
 		// Wait on the lock
 		tryLock();
@@ -105,11 +118,6 @@ export class Mutex {
 
 	async unlock() {
 		if (this.lockedOrPending) {
-			// If there's more waiting locally then run them
-			if (this.localQueue.length !== 0) {
-				this.localQueue.shift()!();
-				return;
-			}
 			this.lockedOrPending = false;
 			if (!this.waitingListener) {
 				// If there's a peer waiting for the lock then give them a chance to get it
@@ -121,20 +129,23 @@ export class Mutex {
 	}
 
 	private async yieldLock() {
-		this.yieldPromise = new Promise(resolve => {
-			const finish = () => {
-				clearInterval(timer);
-				unlisten();
-				this.yieldPromise = undefined;
-				resolve();
-			};
-			const timer = setTimeout(finish, 500);
-			const unlisten = this.channel.listen(message => {
-				if (message === 'unlocked') {
-					finish();
-				}
+		assert.equal(this.yieldPromise, undefined);
+		this.yieldPromise = (async () => {
+			using disposable = new DisposableStack();
+			const timer = new Promise<void>(resolve => {
+				disposable.use(acquireTimeout(500, resolve));
 			});
-		});
+			const unlocked = new Promise<void>(resolve => {
+				disposable.defer(this.channel.listen(message => {
+					if (message === 'unlocked') {
+						resolve();
+					}
+				}));
+			});
+			await Promise.race([ timer, unlocked ]);
+			this.yieldPromise = undefined;
+		})();
+		this.internalLock = false;
 		await this.lockable.unlock();
 		await this.channel.publish('unlocked');
 	}
@@ -158,31 +169,38 @@ const CompareAndDelete = new KeyvalScript((keyval, [ key ]: [ string ], [ value 
 
 class Lock {
 	private interval: ReturnType<typeof setInterval> | undefined;
-	private readonly value = `${Math.random()}`;
+	private readonly value = `${Math.random() * (Number.MAX_SAFE_INTEGER + 1)}`;
 	private readonly keyval;
 	private readonly name;
+
 	constructor(keyval: KeyValProvider, name: string) {
 		this.keyval = keyval;
 		this.name = name;
-
 	}
 
 	async lock() {
-		if (await this.keyval.set(this.name, this.value, { px: 30000, if: 'nx' }) === null) {
+		if (await this.keyval.set(this.name, this.value, { px: kLockTimeout, if: 'nx' }) === null) {
+			const ttl = await this.keyval.pttl(this.name);
+			if (ttl > 0) {
+				console.warn(`Lock contention '${this.name}' -> ${ttl}ms`);
+			}
 			return false;
 		} else {
 			this.interval = setInterval(() => mustNotReject(async () => {
-				if (await this.keyval.set(this.name, this.value, { px: 30000, if: 'xx' }) === null) {
+				if (await this.keyval.set(this.name, this.value, { px: kLockTimeout, if: 'xx' }) === null) {
 					throw new Error('Lock expired unexpectedly');
 				}
-			}), 15000);
+			}), kLockTimeout / 2);
 			return true;
 		}
 	}
 
-	unlock() {
+	async unlock() {
 		clearInterval(this.interval);
 		this.interval = undefined;
-		return this.keyval.eval(CompareAndDelete, [ this.name ], [ this.value ]);
+		const result = await this.keyval.eval(CompareAndDelete, [ this.name ], [ this.value ]);
+		if (result !== 1) {
+			throw new Error('Lock not owned');
+		}
 	}
 }

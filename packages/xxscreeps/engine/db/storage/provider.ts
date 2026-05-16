@@ -39,6 +39,7 @@ export type KeyValProvider = {
 	// 'vdel' returns no response and may be reordered in relation to other commands
 	vdel: (key: string) => Promise<void>;
 	get: ((key: string, options: { blob: true }) => Promise<Readonly<Uint8Array> | null>) & ((key: string, options?: AsBlob) => Promise<string | null>);
+	pttl: (key: string) => Promise<number>;
 	req: ((key: string, options: { blob: true }) => Promise<Readonly<Uint8Array>>) & ((key: string, options?: AsBlob) => Promise<string>);
 	set: ((key: string, value: Value, options: { get: true } & Set) => Promise<string | null>) & ((key: string, value: Value, options: { if: string } & Set) => Promise<undefined | null>) & ((key: string, value: Value, options?: Set) => Promise<void>);
 	// numbers
