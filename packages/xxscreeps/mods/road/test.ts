@@ -48,16 +48,16 @@ describe('Room.lookForAtArea', () => {
 			Record<number, Record<number, { structureType: string }[]>>;
 		assert.ok(result[24], 'rows pre-initialized for every y in range');
 		assert.strictEqual(result[24][24], undefined, 'cells without matches stay undefined');
-		const matches = result[25]![25]!;
-		assert.deepStrictEqual(matches.map(structure => structure.structureType), [ 'road' ]);
+		const matches = result[25]?.[25];
+		assert.deepStrictEqual(matches?.map(structure => structure.structureType), [ 'road' ]);
 		assert.strictEqual(LOOK_STRUCTURES in matches[0]!, false, 'cells hold raw objects, no wrapper key');
 	})));
 
 	test('asArray=false LOOK_TERRAIN extracts the terrain string into the cell', () => simulate({})(({ peekRoom }) => peekRoom('W0N0', room => {
 		const result = room.lookForAtArea(LOOK_TERRAIN, 10, 10, 10, 10) as unknown as
 			Record<number, Record<number, string[]>>;
-		assert.strictEqual(result[10]![10]!.length, 1);
-		assert.ok([ 'plain', 'swamp', 'wall' ].includes(result[10]![10]![0]!));
+		assert.strictEqual(result[10]?.[10]?.length, 1);
+		assert.ok([ 'plain', 'swamp', 'wall' ].includes(result[10][10][0]!));
 	})));
 });
 
