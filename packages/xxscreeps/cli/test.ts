@@ -1,27 +1,45 @@
-import type { CliConsole, CliStreams } from './console.js';
-import type { EvalEnvelope } from './envelope.js';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import * as util from 'node:util';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { evaluateOffline, runEval } from './eval-offline.js';
 import { recoverableSyntaxError } from './recoverable.js';
 
 const xxscreepsBin = fileURLToPath(new URL('../../bin/xxscreeps.js', import.meta.url));
 
-interface CapturedStreams extends CliStreams {
-	stderrText: () => string;
-	stdoutText: () => string;
-}
+class TestConsole {
+	readonly #previous;
+	readonly #logs: string[] = [];
+	readonly #errors: string[] = [];
 
-function captureStreams(): CapturedStreams {
-	const stdoutChunks: string[] = [];
-	const stderrChunks: string[] = [];
-	return {
-		stderr: { write: chunk => stderrChunks.push(chunk) },
-		stdout: { write: chunk => stdoutChunks.push(chunk) },
-		stderrText: () => stderrChunks.join(''),
-		stdoutText: () => stdoutChunks.join(''),
-	};
+	constructor() {
+		this.#previous = globalThis.console;
+		// @ts-expect-error
+		globalThis.console = this;
+	}
+
+	get logs() { return this.#logs.join('\n'); }
+	get errors() { return this.#errors.join('\n'); }
+
+	static flatten(this: void, subject: unknown) {
+		if (typeof subject === 'string') {
+			return subject;
+		} else {
+			return util.inspect(subject);
+		}
+	}
+
+	[Symbol.dispose]() {
+		globalThis.console = this.#previous;
+	}
+
+	log(...args: unknown[]) {
+		this.#logs.push(args.map(TestConsole.flatten).join(' '));
+	}
+
+	error(...args: unknown[]) {
+		this.#errors.push(args.map(TestConsole.flatten).join(' '));
+	}
 }
 
 interface SpawnResult {
@@ -49,16 +67,6 @@ function spawnXxscreeps(args: readonly string[], stdin?: string) {
 	});
 }
 
-function installConsole(replacement: CliConsole) {
-	const previous = globalThis.console;
-	globalThis.console = replacement as unknown as Console;
-	return {
-		[Symbol.dispose]() {
-			globalThis.console = previous;
-		},
-	};
-}
-
 describe('cli', () => {
 	test('repl: vars persist across turns', async () => {
 		try {
@@ -79,14 +87,10 @@ describe('cli', () => {
 	test('repl: statement with top-level await falls through to async-block', async () => {
 		// Indirect eval rejects await; expression wrap rejects let-statement;
 		// only the async-block wrap parses and runs.
-		const logs: unknown[][] = [];
-		const recordingConsole: CliConsole = {
-			error() {}, info() {}, log: (...args) => logs.push(args), warn() {},
-		};
-		using shared = installConsole(recordingConsole);
+		using console = new TestConsole();
 		const result = await evaluateOffline('let y = await Promise.resolve(99); console.log(y)');
 		assert.strictEqual(result, undefined);
-		assert.deepStrictEqual(logs, [ [ 99 ] ]);
+		assert.deepStrictEqual(console.logs, '99');
 	});
 
 	test('repl: top-level await whose awaited callback throws SyntaxError runs source once', async () => {
@@ -95,16 +99,12 @@ describe('cli', () => {
 		// wrap. If that wrap parses but the awaited callback throws a SyntaxError at
 		// runtime, the error must propagate — not trigger a wrapBlock retry that
 		// re-runs the side effect.
-		const logs: unknown[][] = [];
-		const recordingConsole: CliConsole = {
-			error() {}, info() {}, log: (...args) => logs.push(args), warn() {},
-		};
-		using shared = installConsole(recordingConsole);
+		using console = new TestConsole();
 		await assert.rejects(
 			() => evaluateOffline(
 				'await Promise.resolve().then(() => { console.log("once"); throw new SyntaxError("boom"); })'),
 			/boom/);
-		assert.deepStrictEqual(logs, [ [ 'once' ] ]);
+		assert.deepStrictEqual(console.logs, 'once');
 	});
 
 	test('repl: parenthesised top-level await falls through to async wrap', async () => {
@@ -141,107 +141,47 @@ describe('cli', () => {
 		// SyntaxError (here `JSON.parse("}")`), the eval primitive must not mistake
 		// the runtime throw for a parse failure and re-execute the source. `1` must
 		// log exactly once, not 3-4 times.
-		const streams = captureStreams();
+		using console = new TestConsole();
 		const exitCode = await runEval({
 			argv: [],
-			json: false,
 			source: 'console.log(1); JSON.parse("}");',
-			streams,
 		});
 		assert.strictEqual(exitCode, 1);
-		const ones = (streams.stdoutText().match(/^1$/gm) ?? []).length;
-		assert.strictEqual(ones, 1, `expected '1' logged exactly once, got stdout: ${JSON.stringify(streams.stdoutText())}`);
+		const ones = (console.logs.match(/^1$/gm) ?? []).length;
+		assert.strictEqual(ones, 1, `expected '1' logged exactly once, got stdout: ${JSON.stringify(console.logs)}`);
 	});
 
 	test('eval: -e prints inspected result with exit 0', async () => {
-		const streams = captureStreams();
+		using console = new TestConsole();
 		const exitCode = await runEval({
 			argv: [],
-			json: false,
 			source: 'console.log("hello"); 1 + 41',
-			streams,
 		});
 		assert.strictEqual(exitCode, 0);
-		assert.strictEqual(streams.stderrText(), '');
-		const stdout = streams.stdoutText();
-		assert.match(stdout, /^hello\n/);
-		assert.match(stdout, /\n42\n$/);
+		assert.strictEqual(console.errors, '');
+		assert.match(console.logs, /^hello\n/);
+		assert.match(console.logs, /\n42$/);
 	});
 
 	test('eval: thrown error writes to stderr with exit 1', async () => {
-		const streams = captureStreams();
+		using console = new TestConsole();
 		const exitCode = await runEval({
 			argv: [],
-			json: false,
 			source: 'throw new Error("boom")',
-			streams,
 		});
 		assert.strictEqual(exitCode, 1);
-		assert.strictEqual(streams.stdoutText(), '');
-		assert.match(streams.stderrText(), /boom/);
-	});
-
-	test('eval: --json envelope shape on success and on throw', async () => {
-		const success = captureStreams();
-		const okExit = await runEval({
-			argv: [],
-			json: true,
-			source: 'console.log("note"); console.warn("careful"); console.error("oops"); 7',
-			streams: success,
-		});
-		assert.strictEqual(okExit, 0);
-		const okEnvelope = JSON.parse(success.stdoutText().trim()) as unknown as EvalEnvelope;
-		if (!okEnvelope.ok) {
-			assert.fail(`expected ok envelope, got ${JSON.stringify(okEnvelope)}`);
-		}
-		assert.strictEqual(okEnvelope.result, 7);
-		assert.deepStrictEqual(okEnvelope.logs, [ 'note' ]);
-		assert.deepStrictEqual(okEnvelope.warnings, [ 'careful' ]);
-		assert.deepStrictEqual(okEnvelope.errors, [ 'oops' ]);
-
-		const failure = captureStreams();
-		const errExit = await runEval({
-			argv: [],
-			json: true,
-			source: 'throw new Error("kaboom")',
-			streams: failure,
-		});
-		assert.strictEqual(errExit, 1);
-		const errEnvelope = JSON.parse(failure.stdoutText().trim()) as unknown as EvalEnvelope;
-		if (errEnvelope.ok) {
-			assert.fail(`expected err envelope, got ${JSON.stringify(errEnvelope)}`);
-		}
-		assert.strictEqual(errEnvelope.thrown.name, 'Error');
-		assert.strictEqual(errEnvelope.thrown.message, 'kaboom');
-		assert.ok(errEnvelope.thrown.stack.includes('kaboom'));
-	});
-
-	test('eval: --json marks non-JSON-serializable results', async () => {
-		const streams = captureStreams();
-		const exitCode = await runEval({
-			argv: [],
-			json: true,
-			source: '1n',
-			streams,
-		});
-		assert.strictEqual(exitCode, 0);
-		const envelope = JSON.parse(streams.stdoutText().trim()) as unknown as EvalEnvelope;
-		if (!envelope.ok) {
-			assert.fail(`expected ok envelope, got ${JSON.stringify(envelope)}`);
-		}
-		assert.deepStrictEqual(envelope.result, { __nonJsonResult: '1n' });
+		assert.strictEqual(console.logs, '');
+		assert.match(console.errors, /boom/);
 	});
 
 	test('eval: argv is exposed to the script', async () => {
-		const streams = captureStreams();
+		using console = new TestConsole();
 		const exitCode = await runEval({
 			argv: [ 'one', 'two' ],
-			json: false,
 			source: 'argv.join("|")',
-			streams,
 		});
 		assert.strictEqual(exitCode, 0);
-		assert.match(streams.stdoutText(), /'one\|two'/);
+		assert.strictEqual(console.logs, 'one|two');
 	});
 
 	test('eval: --file reads source from the filesystem', async () => {

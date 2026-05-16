@@ -8,7 +8,6 @@ interface ParsedArgs {
 	expression: string | null;
 	file: string | null;
 	stdin: boolean;
-	json: boolean;
 	argv: string[];
 }
 
@@ -20,7 +19,6 @@ const sourceGroup = parser.add_mutually_exclusive_group({ required: true });
 sourceGroup.add_argument('-e', '--expression', { dest: 'expression' });
 sourceGroup.add_argument('--file', { dest: 'file' });
 sourceGroup.add_argument('--stdin', { action: 'store_true', dest: 'stdin' });
-parser.add_argument('--json', { action: 'store_true', dest: 'json' });
 parser.add_argument('argv', { help: 'Positional arguments exposed to the script as `argv`', nargs: '*' });
 
 const args = parser.parse_args() as unknown as ParsedArgs;
@@ -47,8 +45,6 @@ try {
 
 const exitCode = await runEval({
 	argv: args.argv,
-	json: args.json,
 	source,
-	streams: { stderr: process.stderr, stdout: process.stdout },
 });
 process.exit(exitCode);

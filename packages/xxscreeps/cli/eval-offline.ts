@@ -1,10 +1,7 @@
-import type { CliConsole, CliStreams } from './console.js';
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
-import * as util from 'node:util';
 import { wrapBlock, wrapExpression } from './await-wrap.js';
-import { createBufferedConsole, createStreamingConsole } from './console.js';
-import { describeThrown, serializeEnvelope } from './envelope.js';
+import { describeThrown } from './envelope.js';
 
 const asyncProto = Object.getPrototypeOf(async () => {}) as {
 	constructor: new (body: string) => () => Promise<unknown>;
@@ -48,13 +45,12 @@ export function installHostShims(): void {
 	globals.__dirname ??= cwd;
 }
 
-function shareGlobals(cliConsole: CliConsole, argv: readonly string[]) {
+function shareGlobals(argv: readonly string[]) {
 	installHostShims();
 	const globals = globalThis as Record<string, unknown>;
 	const previousConsole = globals.console;
 	const hadArgv = 'argv' in globals;
 	const previousArgv = globals.argv;
-	globals.console = cliConsole;
 	globals.argv = [ ...argv ];
 	return {
 		[Symbol.dispose]() {
@@ -70,34 +66,18 @@ function shareGlobals(cliConsole: CliConsole, argv: readonly string[]) {
 
 export interface RunEvalOptions {
 	source: string;
-	json: boolean;
 	argv: readonly string[];
-	streams: CliStreams;
 }
 
 export async function runEval(options: RunEvalOptions): Promise<number> {
-	if (options.json) {
-		const sink = createBufferedConsole();
-		try {
-			using shared = shareGlobals(sink, options.argv);
-			const result = await evaluateOffline(options.source);
-			options.streams.stdout.write(`${serializeEnvelope({ ok: true, result }, sink)}\n`);
-			return 0;
-		} catch (thrown) {
-			options.streams.stdout.write(`${serializeEnvelope({ ok: false, thrown }, sink)}\n`);
-			return 1;
-		}
-	}
-	const sink = createStreamingConsole(options.streams);
 	try {
-		using shared = shareGlobals(sink, options.argv);
-		const result = await evaluateOffline(options.source);
-		options.streams.stdout.write(`${util.inspect(result, { colors: false })}\n`);
+		using shared = shareGlobals(options.argv);
+		console.log(await evaluateOffline(options.source));
 		return 0;
 	} catch (thrown) {
 		const described = describeThrown(thrown);
 		const message = described.stack === '' ? `${described.name}: ${described.message}` : described.stack;
-		options.streams.stderr.write(`${message}\n`);
+		console.error(message);
 		return 1;
 	}
 }
