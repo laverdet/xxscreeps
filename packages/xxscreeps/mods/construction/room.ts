@@ -101,13 +101,9 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		return C.ERR_INVALID_ARGS;
 	}
 
-	// `controller.reservation` dereferences `userInfo`, which the processor may not have loaded;
-	// read `#reservationEndTime` directly to keep this check usable in both contexts.
+	// Can't build in someone else's room
 	const { controller } = room;
-	if (
-		controller && room['#user'] !== me &&
-		(controller.level > 0 || controller['#reservationEndTime'] > Game.time)
-	) {
+	if (controller?.my === false) {
 		return C.ERR_NOT_OWNER;
 	}
 
