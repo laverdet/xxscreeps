@@ -69,7 +69,7 @@ export class RedisPubSubProvider implements PubSubProvider {
 		if (!subscribers) {
 			subscribers = new Set();
 			this.subscribersByKey.set(key, subscribers);
-			await this.listener.invoke(cb => this.listener.batch().subscribe(key, cb));
+			await this.listener.invoke(cb => this.listener.client.subscribe(key, cb));
 		}
 		const subscriber = new RedisSubscription(listener, key, this);
 		subscribers.add(subscriber);
@@ -81,7 +81,7 @@ export class RedisPubSubProvider implements PubSubProvider {
 		if (subscribers.size === 1) {
 			this.subscribersByKey.delete(key);
 			this.publishIgnore.delete(key);
-			mustNotReject(this.listener.invoke(cb => this.listener.batch().unsubscribe(key, cb)));
+			mustNotReject(this.listener.invoke(cb => this.listener.client.unsubscribe(key, cb)));
 		} else {
 			subscribers.delete(subscriber);
 		}
