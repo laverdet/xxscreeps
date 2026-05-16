@@ -224,6 +224,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 		if (lookType !== null) {
 			this.#lookIndex.get(lookType)!.push(object);
 		}
+		const secondaryLookType = object['#secondaryLookType'];
+		if (secondaryLookType !== null) {
+			this.#lookIndex.get(secondaryLookType)!.push(object);
+		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos);
 		if (list) {
@@ -242,6 +246,10 @@ export class Room extends withOverlay(BufferObject, shape) {
 		const lookType = object['#lookType'];
 		if (lookType !== null) {
 			removeOne(this.#lookIndex.get(lookType)!, object);
+		}
+		const secondaryLookType = object['#secondaryLookType'];
+		if (secondaryLookType !== null) {
+			removeOne(this.#lookIndex.get(secondaryLookType)!, object);
 		}
 		const pos = object['#posId'];
 		const list = this.#spatialIndex.get(pos)!;

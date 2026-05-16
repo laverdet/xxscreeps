@@ -156,7 +156,7 @@ if (dontOverwrite && await db.data.scard('users') > 0) {
 }
 {
 	// Flush databases at the same time because they may point to the same service
-	using shard = await Shard.connect(db, 'shard0');
+	using shard = await Shard.connect(db, config.shards[0]!.name);
 	await Promise.all([
 		shardOnly ? undefined : db.data.flushdb(),
 		shard.data.flushdb(),
@@ -168,7 +168,7 @@ if (dontOverwrite && await db.data.scard('users') > 0) {
 		shard.data.save(),
 	]);
 }
-using shard = await Shard.connect(db, 'shard0');
+using shard = await Shard.connect(db, config.shards[0]!.name);
 const { data } = shard;
 
 // Save terrain data
@@ -315,6 +315,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 		}
 	})) ];
+	instance['#initialize']();
 	flushUsers(instance);
 	return instance;
 });

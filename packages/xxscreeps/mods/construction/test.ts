@@ -19,7 +19,7 @@ describe('Construction', () => {
 
 	test('create site', () => construction(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.rooms.W1N1!.createConstructionSite(25, 25, 'road');
+			Game.rooms.W1N1?.createConstructionSite(25, 25, 'road');
 		});
 		await tick();
 		await player('100', Game => {
@@ -34,7 +34,7 @@ describe('Construction', () => {
 			for (let pos = 0; pos < firstBatch; ++pos) {
 				const xx = 1 + (pos % 48);
 				const yy = 1 + Math.floor(pos / 48);
-				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(xx, yy, 'road'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(xx, yy, 'road'), C.OK);
 			}
 		});
 		await tick();
@@ -44,16 +44,16 @@ describe('Construction', () => {
 			for (let pos = firstBatch; pos < C.MAX_CONSTRUCTION_SITES; ++pos) {
 				const xx = 1 + (pos % 48);
 				const yy = 1 + Math.floor(pos / 48);
-				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(xx, yy, 'road'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(xx, yy, 'road'), C.OK);
 			}
-			assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(1, 4, 'road'), C.ERR_FULL);
+			assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(1, 4, 'road'), C.ERR_FULL);
 			// Remove one site, then creating should succeed again
-			Object.values(Game.constructionSites)[0]!.remove();
+			Object.values(Game.constructionSites)[0]?.remove();
 		});
 		await tick();
 		await player('100', Game => {
 			assert.strictEqual(Object.keys(Game.constructionSites).length, C.MAX_CONSTRUCTION_SITES - 1);
-			assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(1, 4, 'road'), C.OK);
+			assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(1, 4, 'road'), C.OK);
 		});
 	}));
 
@@ -220,8 +220,8 @@ describe('Construction', () => {
 
 	test('create two sites at same position', () => construction(async ({ player, tick }) => {
 		await player('100', Game => {
-			Game.rooms.W1N1!.createConstructionSite(25, 25, 'road');
-			Game.rooms.W1N1!.createConstructionSite(25, 25, 'rampart');
+			Game.rooms.W1N1?.createConstructionSite(25, 25, 'road');
+			Game.rooms.W1N1?.createConstructionSite(25, 25, 'rampart');
 		});
 		await tick();
 		await player('100', Game => {
@@ -243,12 +243,12 @@ describe('Construction', () => {
 		});
 		return ruin(async ({ player, tick }) => {
 			await player('100', Game => {
-				assert.strictEqual(Game.rooms.W1N1!.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
-				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, C.STRUCTURE_CONTAINER), C.OK);
+				assert.strictEqual(Game.rooms.W1N1?.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(25, 25, C.STRUCTURE_CONTAINER), C.OK);
 			});
 			await tick();
 			await player('100', Game => {
-				assert.strictEqual(Game.rooms.W1N1!.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
+				assert.strictEqual(Game.rooms.W1N1?.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
 				const site = Object.values(Game.constructionSites)[0];
 				assert.ok(site);
 				assert.strictEqual(site.structureType, C.STRUCTURE_CONTAINER);
@@ -260,9 +260,9 @@ describe('Construction', () => {
 	// W1N1 (shard.json) at y=7: x=5 is plain, x=15 is wall, x=20 is swamp.
 	test('road site progressTotal scales by terrain', () => construction(async ({ player, tick }) => {
 		await player('100', Game => {
-			assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(5, 7, 'road'), C.OK);
-			assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(20, 7, 'road'), C.OK);
-			assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(15, 7, 'road'), C.OK);
+			assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(5, 7, 'road'), C.OK);
+			assert.strictEqual(Game.rooms.W1N1.createConstructionSite(20, 7, 'road'), C.OK);
+			assert.strictEqual(Game.rooms.W1N1.createConstructionSite(15, 7, 'road'), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
@@ -289,12 +289,12 @@ describe('Construction', () => {
 
 		test('enemy creep destroys hostile construction site on move', () => stomping(async ({ player, tick }) => {
 			await player('101', Game => {
-				assert.strictEqual(Game.creeps.enemy!.move(C.BOTTOM), C.OK);
+				assert.strictEqual(Game.creeps.enemy?.move(C.BOTTOM), C.OK);
 			});
 			await tick();
 			await player('101', Game => {
 				// Creep should have moved
-				assert.ok(Game.creeps.enemy!.pos.isEqualTo(25, 25));
+				assert.ok(Game.creeps.enemy?.pos.isEqualTo(25, 25));
 			});
 			await player('100', Game => {
 				// Construction site should be destroyed
@@ -302,9 +302,9 @@ describe('Construction', () => {
 				// Half of progress should be dropped as energy at the site position (minus 1 tick of decay)
 				const energy = Game.rooms.W1N1!.find(C.FIND_DROPPED_RESOURCES);
 				assert.strictEqual(energy.length, 1);
-				assert.ok(energy[0]!.pos.isEqualTo(25, 25));
-				assert.strictEqual(energy[0]!.resourceType, C.RESOURCE_ENERGY);
-				assert.strictEqual(energy[0]!.amount, 100 - Math.ceil(100 / C.ENERGY_DECAY));
+				assert.ok(energy[0]?.pos.isEqualTo(25, 25));
+				assert.strictEqual(energy[0]?.resourceType, C.RESOURCE_ENERGY);
+				assert.strictEqual(energy[0].amount, 100 - Math.ceil(100 / C.ENERGY_DECAY));
 			});
 		}));
 
@@ -321,11 +321,11 @@ describe('Construction', () => {
 
 		test('own creep does not destroy own construction site', () => ownStomp(async ({ player, tick }) => {
 			await player('100', Game => {
-				assert.strictEqual(Game.creeps.own!.move(C.BOTTOM), C.OK);
+				assert.strictEqual(Game.creeps.own?.move(C.BOTTOM), C.OK);
 			});
 			await tick();
 			await player('100', Game => {
-				assert.ok(Game.creeps.own!.pos.isEqualTo(25, 25));
+				assert.ok(Game.creeps.own?.pos.isEqualTo(25, 25));
 				assert.strictEqual(Object.values(Game.constructionSites).length, 1);
 			});
 		}));
@@ -343,7 +343,7 @@ describe('Construction', () => {
 
 		test('stomps site with no progress, drops no energy', () => zeroProgress(async ({ player, tick }) => {
 			await player('101', Game => {
-				assert.strictEqual(Game.creeps.enemy!.move(C.BOTTOM), C.OK);
+				assert.strictEqual(Game.creeps.enemy?.move(C.BOTTOM), C.OK);
 			});
 			await tick();
 			await player('100', Game => {
@@ -367,12 +367,12 @@ describe('Construction', () => {
 
 		test('safe mode prevents stomping', () => stompingSafeMode(async ({ player, tick }) => {
 			await player('101', Game => {
-				assert.strictEqual(Game.creeps.enemy!.move(C.BOTTOM), C.OK);
+				assert.strictEqual(Game.creeps.enemy?.move(C.BOTTOM), C.OK);
 			});
 			await tick();
 			await player('101', Game => {
 				// Creep should still move onto the tile
-				assert.ok(Game.creeps.enemy!.pos.isEqualTo(25, 25));
+				assert.ok(Game.creeps.enemy?.pos.isEqualTo(25, 25));
 			});
 			await player('100', Game => {
 				// Construction site should survive during safe mode
@@ -391,11 +391,11 @@ describe('Construction', () => {
 
 		test('stomps in unowned room with no controller', () => noController(async ({ player, tick }) => {
 			await player('101', Game => {
-				assert.strictEqual(Game.creeps.enemy!.move(C.BOTTOM), C.OK);
+				assert.strictEqual(Game.creeps.enemy?.move(C.BOTTOM), C.OK);
 			});
 			await tick();
 			await player('101', Game => {
-				assert.ok(Game.creeps.enemy!.pos.isEqualTo(25, 25));
+				assert.ok(Game.creeps.enemy?.pos.isEqualTo(25, 25));
 			});
 			await player('100', Game => {
 				assert.strictEqual(Object.values(Game.constructionSites).length, 0);
@@ -418,14 +418,14 @@ describe('Construction', () => {
 		test('build emits EVENT_BUILD with amount and energySpent', () => buildSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const site = Object.values(Game.constructionSites)[0]!;
-				assert.strictEqual(Game.creeps.builder!.build(site), C.OK);
+				assert.strictEqual(Game.creeps.builder?.build(site), C.OK);
 			});
 			await tick();
 			await player('100', Game => {
 				const log = Game.rooms.W1N1!.getEventLog();
 				const build = log.find(entry => entry.event === C.EVENT_BUILD);
 				assert.ok(build, 'expected EVENT_BUILD');
-				assert.strictEqual(build.objectId, Game.creeps.builder!.id);
+				assert.strictEqual(build.objectId, Game.creeps.builder?.id);
 				assert.ok(build.data, 'expected nested data payload');
 				assert.strictEqual(build.data.amount, C.BUILD_POWER);
 				assert.strictEqual(build.data.energySpent, C.BUILD_POWER);
@@ -448,14 +448,14 @@ describe('Construction', () => {
 		test('creep repair emits EVENT_REPAIR with amount and energySpent', () => repairSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
-				assert.strictEqual(Game.creeps.fixer!.repair(container), C.OK);
+				assert.strictEqual(Game.creeps.fixer?.repair(container), C.OK);
 			});
 			await tick();
 			await player('100', Game => {
 				const log = Game.rooms.W1N1!.getEventLog();
 				const repair = log.find(entry => entry.event === C.EVENT_REPAIR);
 				assert.ok(repair, 'expected EVENT_REPAIR');
-				assert.strictEqual(repair.objectId, Game.creeps.fixer!.id);
+				assert.strictEqual(repair.objectId, Game.creeps.fixer?.id);
 				assert.ok(repair.data, 'expected nested data payload');
 				assert.strictEqual(repair.data.amount, C.REPAIR_POWER);
 				assert.strictEqual(repair.data.energySpent, Math.ceil(C.REPAIR_COST));
@@ -480,7 +480,7 @@ describe('Construction', () => {
 		test('dismantle to death emits EVENT_OBJECT_DESTROYED with structureType', () => dismantleKill(async ({ player, tick }) => {
 			await player('100', Game => {
 				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
-				assert.strictEqual(Game.creeps.dismantler!.dismantle(container), C.OK);
+				assert.strictEqual(Game.creeps.dismantler?.dismantle(container), C.OK);
 			});
 			await tick();
 			await player('100', Game => {
@@ -489,6 +489,32 @@ describe('Construction', () => {
 				assert.ok(destroyed, 'expected EVENT_OBJECT_DESTROYED for dismantled structure');
 				assert.ok(destroyed.data, 'expected nested data payload');
 				assert.strictEqual(destroyed.data.type, C.STRUCTURE_CONTAINER);
+			});
+		}));
+	});
+
+	describe('dismantle validation', () => {
+		const controllerSim = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				const controllerPos = room.controller!.pos;
+				room['#insertObject'](createCreep(new RoomPosition(controllerPos.x - 1, controllerPos.y, 'W1N1'), [ C.WORK ], 'near', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(1, 1, 'W1N1'), [ C.WORK ], 'far', '100'));
+			},
+		});
+
+		test('dismantle(controller) returns ERR_INVALID_TARGET', () => controllerSim(async ({ player }) => {
+			await player('100', Game => {
+				const controller = Game.rooms.W1N1!.controller!;
+				assert.strictEqual(Game.creeps.near?.dismantle(controller), C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		test('dismantle(controller) returns ERR_INVALID_TARGET before ERR_NOT_IN_RANGE', () => controllerSim(async ({ player }) => {
+			await player('100', Game => {
+				const controller = Game.rooms.W1N1!.controller!;
+				assert.strictEqual(Game.creeps.far?.dismantle(controller), C.ERR_INVALID_TARGET);
 			});
 		}));
 	});
