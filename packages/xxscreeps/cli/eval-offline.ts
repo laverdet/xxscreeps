@@ -1,40 +1,7 @@
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
-import { wrapBlock, wrapExpression } from './await-wrap.js';
-import { describeThrown } from './envelope.js';
-
-const asyncProto = Object.getPrototypeOf(async () => {}) as {
-	constructor: new (body: string) => () => Promise<unknown>;
-};
-const AsyncFunction = asyncProto.constructor;
-
-// Indirect eval gives completion-value + globalThis-var semantics. Parse-check via
-// the Function constructor before invoking so a runtime SyntaxError from
-// already-running source (e.g. `JSON.parse("}")`) can't trigger a re-execute, and
-// so script-mode lexer quirks (`(await x)` reports "Unexpected identifier" because
-// `await` lexes as identifier) don't fool a message-substring filter.
-export async function evaluateOffline(source: string): Promise<unknown> {
-	let parses = true;
-	try {
-		// eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
-		Function(source);
-	} catch (err) {
-		if (!(err instanceof SyntaxError)) throw err;
-		parses = false;
-	}
-	if (parses) {
-		// eslint-disable-next-line no-eval
-		return (0, eval)(source) as unknown;
-	}
-	let fn: () => Promise<unknown>;
-	try {
-		fn = new AsyncFunction(`return ${wrapExpression(source)}`);
-	} catch (err) {
-		if (!(err instanceof SyntaxError)) throw err;
-		fn = new AsyncFunction(`return ${wrapBlock(source)}`);
-	}
-	return fn();
-}
+import * as util from 'node:util';
+import { evaluateUnsafeGlobal } from './unsafe.js';
 
 export function installHostShims(): void {
 	const globals = globalThis as Record<string, unknown>;
@@ -64,7 +31,26 @@ function shareGlobals(argv: readonly string[]) {
 	};
 }
 
-export interface RunEvalOptions {
+interface EvalThrown {
+	name: string;
+	message: string;
+	stack: string;
+}
+
+// Handles thrown non-Errors and any future cross-realm `Error` whose `instanceof` would fail.
+function describeThrown(err: unknown): EvalThrown {
+	if (typeof err === 'object' && err !== null) {
+		const fields = err as Record<string, unknown>;
+		return {
+			message: typeof fields.message === 'string' ? fields.message : util.inspect(err, { colors: false }),
+			name: typeof fields.name === 'string' ? fields.name : 'Error',
+			stack: typeof fields.stack === 'string' ? fields.stack : '',
+		};
+	}
+	return { message: String(err), name: 'Error', stack: '' };
+}
+
+interface RunEvalOptions {
 	source: string;
 	argv: readonly string[];
 }
@@ -72,7 +58,7 @@ export interface RunEvalOptions {
 export async function runEval(options: RunEvalOptions): Promise<number> {
 	try {
 		using shared = shareGlobals(options.argv);
-		console.log(await evaluateOffline(options.source));
+		console.log(await evaluateUnsafeGlobal(options.source));
 		return 0;
 	} catch (thrown) {
 		const described = describeThrown(thrown);

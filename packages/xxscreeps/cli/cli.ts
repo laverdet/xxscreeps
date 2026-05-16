@@ -1,8 +1,8 @@
 import type * as vm from 'node:vm';
 import * as repl from 'node:repl';
 import { ArgumentParser } from 'argparse';
-import { evaluateOffline, installHostShims } from './eval-offline.js';
-import { recoverableSyntaxError } from './recoverable.js';
+import { installHostShims } from './eval-offline.js';
+import { makeUnsafeGlobalEvaluator } from './unsafe.js';
 
 const parser = new ArgumentParser({
 	description: 'Interactive REPL evaluating in the host JS realm.',
@@ -22,15 +22,15 @@ function customEval(
 		callback(null, undefined);
 		return;
 	}
-	const recoverable = recoverableSyntaxError(cmd);
-	if (recoverable !== undefined) {
-		callback(new repl.Recoverable(recoverable));
-		return;
+	const result = makeUnsafeGlobalEvaluator(cmd);
+	if (typeof result === 'function') {
+		result().then(
+			value => callback(null, value),
+			err => callback(err instanceof Error ? err : new Error(String(err))),
+		);
+	} else {
+		callback(new repl.Recoverable(result));
 	}
-	void evaluateOffline(cmd).then(
-		value => callback(null, value),
-		err => callback(err instanceof Error ? err : new Error(String(err))),
-	);
 }
 
 const server = repl.start({

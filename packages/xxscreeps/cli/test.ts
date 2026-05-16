@@ -2,8 +2,8 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as util from 'node:util';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
-import { evaluateOffline, runEval } from './eval-offline.js';
-import { recoverableSyntaxError } from './recoverable.js';
+import { runEval } from './eval-offline.js';
+import { evaluateUnsafeGlobal, makeUnsafeGlobalEvaluator } from './unsafe.js';
 
 const xxscreepsBin = fileURLToPath(new URL('../../bin/xxscreeps.js', import.meta.url));
 
@@ -70,9 +70,9 @@ function spawnXxscreeps(args: readonly string[], stdin?: string) {
 describe('cli', () => {
 	test('repl: vars persist across turns', async () => {
 		try {
-			const first = await evaluateOffline('var __cliReplCounter = 41; __cliReplCounter');
+			const first = await evaluateUnsafeGlobal('var __cliReplCounter = 41; __cliReplCounter');
 			assert.strictEqual(first, 41);
-			const second = await evaluateOffline('__cliReplCounter += 1');
+			const second = await evaluateUnsafeGlobal('__cliReplCounter += 1');
 			assert.strictEqual(second, 42);
 		} finally {
 			delete (globalThis as Record<string, unknown>).__cliReplCounter;
@@ -80,7 +80,7 @@ describe('cli', () => {
 	});
 
 	test('repl: top-level await resolves', async () => {
-		const value = await evaluateOffline('await Promise.resolve(99)');
+		const value = await evaluateUnsafeGlobal('await Promise.resolve(99)');
 		assert.strictEqual(value, 99);
 	});
 
@@ -88,7 +88,7 @@ describe('cli', () => {
 		// Indirect eval rejects await; expression wrap rejects let-statement;
 		// only the async-block wrap parses and runs.
 		using console = new TestConsole();
-		const result = await evaluateOffline('let y = await Promise.resolve(99); console.log(y)');
+		const result = await evaluateUnsafeGlobal('let y = await Promise.resolve(99); console.log(y)');
 		assert.strictEqual(result, undefined);
 		assert.deepStrictEqual(console.logs, '99');
 	});
@@ -101,7 +101,7 @@ describe('cli', () => {
 		// re-runs the side effect.
 		using console = new TestConsole();
 		await assert.rejects(
-			() => evaluateOffline(
+			() => evaluateUnsafeGlobal(
 				'await Promise.resolve().then(() => { console.log("once"); throw new SyntaxError("boom"); })'),
 			/boom/);
 		assert.deepStrictEqual(console.logs, 'once');
@@ -111,7 +111,7 @@ describe('cli', () => {
 		// In script mode `await` lexes as an identifier, so `(await Promise...)` errors
 		// on the next token ("Unexpected identifier 'Promise'") instead of "await is only
 		// valid". The cascade must still retry through the async wrap.
-		const value = await evaluateOffline('(await Promise.resolve(99)).valueOf()');
+		const value = await evaluateUnsafeGlobal('(await Promise.resolve(99)).valueOf()');
 		assert.strictEqual(value, 99);
 	});
 
@@ -119,15 +119,15 @@ describe('cli', () => {
 		// Guard that the cascade doesn't swallow real syntax errors: both async wraps
 		// will fail to parse this too, and the final error must propagate.
 		await assert.rejects(
-			() => evaluateOffline('1 + )'),
+			() => evaluateUnsafeGlobal('1 + )'),
 			(err: unknown) => err instanceof SyntaxError);
 	});
 
 	test('repl: incomplete input is reported recoverable', () => {
-		assert.ok(recoverableSyntaxError('if (true) {') instanceof SyntaxError);
-		assert.ok(recoverableSyntaxError('await Promise.resolve(') instanceof SyntaxError);
-		assert.strictEqual(recoverableSyntaxError('1 + 1'), undefined);
-		assert.strictEqual(recoverableSyntaxError('await Promise.resolve(1)'), undefined);
+		assert.ok(makeUnsafeGlobalEvaluator('if (true) {') instanceof SyntaxError);
+		assert.ok(makeUnsafeGlobalEvaluator('await Promise.resolve(') instanceof SyntaxError);
+		assert.ok(makeUnsafeGlobalEvaluator('1 + 1') instanceof Function);
+		assert.ok(makeUnsafeGlobalEvaluator('await Promise.resolve(1)') instanceof Function);
 	});
 
 	test('repl: meta-commands work in a real session', async () => {

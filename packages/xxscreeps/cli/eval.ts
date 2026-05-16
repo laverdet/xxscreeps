@@ -23,25 +23,22 @@ parser.add_argument('argv', { help: 'Positional arguments exposed to the script 
 
 const args = parser.parse_args() as unknown as ParsedArgs;
 
-async function readSource() {
-	if (args.expression != null) {
-		return args.expression;
+const source = await async function() {
+	try {
+		if (args.expression != null) {
+			return args.expression;
+		}
+		if (args.file != null) {
+			const filePath = path.isAbsolute(args.file) ? args.file : path.resolve(process.cwd(), args.file);
+			return await fs.readFile(filePath, 'utf8');
+		}
+		return await text(process.stdin);
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		process.stderr.write(`xxscreeps eval: ${message}\n`);
+		process.exit(1);
 	}
-	if (args.file != null) {
-		const filePath = path.isAbsolute(args.file) ? args.file : path.resolve(process.cwd(), args.file);
-		return fs.readFile(filePath, 'utf8');
-	}
-	return text(process.stdin);
-}
-
-let source: string;
-try {
-	source = await readSource();
-} catch (err) {
-	const message = err instanceof Error ? err.message : String(err);
-	process.stderr.write(`xxscreeps eval: ${message}\n`);
-	process.exit(1);
-}
+}();
 
 const exitCode = await runEval({
 	argv: args.argv,
