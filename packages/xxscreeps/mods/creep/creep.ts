@@ -20,7 +20,7 @@ import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
-import { OpenStore, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { OpenStore, Store, calculateChecked, checkHasCapacity, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
@@ -522,29 +522,42 @@ export function checkPickup(creep: Creep, target: Resource) {
 		() => checkRange(creep, target, 1));
 }
 
+function checkTransferTarget(target: RoomObject & WithStore, resourceType: ResourceType) {
+	return chainIntentChecks(
+		() => checkTarget(target, RoomObject),
+		() => target.store instanceof Store ? C.OK : C.ERR_INVALID_TARGET,
+		() => target instanceof Creep && target.spawning ? C.ERR_INVALID_TARGET : C.OK,
+		() => target.store.getFreeCapacity(resourceType) === null ? C.ERR_INVALID_TARGET : C.OK);
+}
+
 export function checkTransfer(creep: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
-		() => checkTarget(target, RoomObject),
-		() => checkRange(creep, target, 1),
-		() => checkHasResource(creep, resourceType, amount),
-		() => checkHasCapacity(target, resourceType, amount),
 		() => {
-			if (target instanceof Creep && target.spawning) {
-				return C.ERR_INVALID_TARGET;
-			}
+			if (!C.RESOURCES_ALL.includes(resourceType)) return C.ERR_INVALID_ARGS;
+			if (typeof amount !== 'number' || amount < 0) return C.ERR_INVALID_ARGS;
+		},
+		() => checkTransferTarget(target, resourceType),
+		() => checkRange(creep, target, 1),
+		() => {
+			const have = creep.store[resourceType];
+			const free = target.store.getFreeCapacity(resourceType)!;
+			if (have <= 0) return C.ERR_NOT_ENOUGH_RESOURCES;
+			if (free <= 0) return C.ERR_FULL;
+			if (have < amount) return C.ERR_NOT_ENOUGH_RESOURCES;
+			if (free < amount) return C.ERR_FULL;
 		});
 }
 
 export function checkWithdraw(creep: Creep, target: Structure & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
 		() => checkCommon(creep),
+		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
 		() => checkInteractionBlocked(creep, target),
 		() => checkRange(creep, target, 1),
 		() => checkHasResource(target, resourceType, amount),
-		() => checkHasCapacity(creep, resourceType, amount),
-		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER));
+		() => checkHasCapacity(creep, resourceType, amount));
 }
 
 function checkInteractionBlocked(creep: Creep, target: Structure & WithStore) {

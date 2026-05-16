@@ -1,18 +1,20 @@
-FROM node:24 as build
-WORKDIR /usr/app/xxscreeps
-RUN touch .screepsrc.yaml
-COPY package*.json ./
-COPY bin bin
-RUN npm install
-COPY tsconfig*.json ./
-COPY src src
-RUN echo 'update-notifier=false' >> .npmrc && \
-	npm explore @xxscreeps/pathfinder -- npm install && \
-	npm run build
+FROM node:24-trixie AS build
+WORKDIR /xxscreeps
+COPY patches ./patches
+COPY package.json pnpm-lock.yaml .npmrc .
+RUN <<DONE
+	corepack enable pnpm
+	pnpm fetch
+DONE
+COPY . .
+RUN <<DONE
+	pnpm install --frozen-lockfile --offline
+	pnpm run build
+DONE
 
-FROM node:24-slim as run
-WORKDIR /usr/app/xxscreeps
-COPY --from=build /usr/app/xxscreeps/ ./
+FROM node:24-trixie-slim
+COPY --from=build /xxscreeps /xxscreeps
+WORKDIR /data
 EXPOSE 21025
-ENV NODE_OPTIONS="--no-node-snapshot"
-ENTRYPOINT /bin/sh -c 'npx xxscreeps import --dont-overwrite && npx xxscreeps start'
+ENV NODE_OPTIONS="--no-node-snapshot --experimental-vm-modules --enable-source-maps --no-warnings"
+ENTRYPOINT [ "/xxscreeps/node_modules/.bin/xxscreeps" ]

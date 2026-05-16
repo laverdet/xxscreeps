@@ -131,29 +131,13 @@ and the JSON envelope schema.
 
 ## Docker
 
-If you want to install xxscreeps via docker you can use the following `docker-compose.yaml` as an
-example.
-```yaml
-version: "3"
-services:
-  xxscreeps:
-    image: nilskri/xxscreeps
-    ports:
-      - "21025:21025"
-    volumes:
-      - <your path to the .screepsrc.yaml you want to use>:/usr/app/xxscreeps/.screepsrc.yaml
-# set this if you want to persist the content
-#      - <path to persistence>:/usr/app/xxscreeps/screeps
+If you want to run xxscreeps in Docker, you can do this:
 ```
-
-Or you can use this short script in a fresh copy of the git source to start a new container which
-persists data to the current working directory.
-```
-docker build -t xxscreeps .
-docker run -it -p 21025:21025 \
-  --mount type=bind,source="$(pwd)"/.screepsrc.yaml,target=/usr/app/xxscreeps/.screepsrc.yaml \
-  --mount type=bind,source="$(pwd)"/screeps,target=/usr/app/xxscreeps/screeps \
-  xxscreeps
+git clone https://github.com/laverdet/xxscreeps.git
+cd xxscreeps
+docker build . -t xxscreeps
+docker run -t -v .:/data xxscreeps import
+docker run -t -v .:/data xxscreeps start
 ```
 
 

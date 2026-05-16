@@ -2,7 +2,9 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createExtractor } from 'xxscreeps/mods/mineral/extractor.js';
+import { create as createRoad } from 'xxscreeps/mods/road/road.js';
 import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
+import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
 describe('Structure isActive', () => {
@@ -61,10 +63,90 @@ describe('Structure isActive', () => {
 
 	test('harvest returns ERR_RCL_NOT_ENOUGH with inactive extractor', () => extractorSim(async ({ player }) => {
 		await player('100', Game => {
-			const creep = Game.creeps.miner!;
-			const mineral = Game.rooms.W6N1!.find(C.FIND_MINERALS)[0];
+			const creep = Game.creeps.miner;
+			const mineral = Game.rooms.W6N1?.find(C.FIND_MINERALS)[0];
 			assert.ok(mineral, 'mineral should exist');
-			assert.strictEqual(creep.harvest(mineral), C.ERR_RCL_NOT_ENOUGH);
+			assert.strictEqual(creep?.harvest(mineral), C.ERR_RCL_NOT_ENOUGH);
+		});
+	}));
+});
+
+describe('FIND_ constants for structures', () => {
+	// Room W7N1: owned spawn (player 100), hostile spawn (player 101), unowned road, and a ruin
+	const sim = simulate({
+		W7N1: room => {
+			room['#level'] = 3;
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#insertObject'](createSpawn(new RoomPosition(23, 25, 'W7N1'), '100', 'MySpawn'));
+			room['#insertObject'](createSpawn(new RoomPosition(25, 25, 'W7N1'), '101', 'HostileSpawn'));
+			room['#insertObject'](createRoad(new RoomPosition(20, 25, 'W7N1')));
+			room['#insertObject'](createRuin(createSpawn(new RoomPosition(27, 25, 'W7N1'), '100', 'RuinedSpawn')));
+		},
+		W8N1: room => {
+			// Unowned controller, no structures, a creep to provide vision
+			room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W8N1'), [ C.MOVE ], 'Explorer', '100'));
+		},
+	});
+
+	test('FIND_STRUCTURES returns all structures including unowned', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const structures = Game.rooms.W7N1?.find(C.FIND_STRUCTURES);
+			assert.ok(structures);
+			assert.strictEqual(structures.length, 4, 'should return all structures including unowned and controller');
+		});
+	}));
+
+	test('FIND_MY_STRUCTURES returns only my owned structures', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const mine = Game.rooms.W7N1?.find(C.FIND_MY_STRUCTURES);
+			assert.ok(mine);
+			assert.strictEqual(mine.length, 2, 'should return only my owned structures, including controller');
+			assert.ok(mine.some(s => (s as { name?: string }).name === 'MySpawn'));
+			assert.ok(mine.every(s => s.my));
+		});
+	}));
+
+	test('FIND_HOSTILE_STRUCTURES returns only hostile owned structures', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const hostile = Game.rooms.W7N1?.find(C.FIND_HOSTILE_STRUCTURES);
+			assert.ok(hostile);
+			assert.strictEqual(hostile.length, 1, 'only the hostile spawn should be returned');
+			assert.strictEqual((hostile[0] as { name?: string }).name, 'HostileSpawn');
+		});
+	}));
+
+	test('FIND_RUINS returns ruins and not living structures', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const ruins = Game.rooms.W7N1?.find(C.FIND_RUINS);
+			assert.ok(ruins);
+			assert.strictEqual(ruins.length, 1);
+			assert.strictEqual(ruins[0]!.structureType, C.STRUCTURE_SPAWN);
+			assert.ok(ruins[0]!.ticksToDecay! > 0, 'ruin should have ticksToDecay property');
+		});
+	}));
+
+	test('FIND_STRUCTURES in unowned room returns controller', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const structures = Game.rooms.W8N1?.find(C.FIND_STRUCTURES);
+			assert.ok(structures);
+			assert.strictEqual(structures.length, 1, 'should return only the controller');
+			assert.strictEqual(structures[0]!.structureType, C.STRUCTURE_CONTROLLER);
+		});
+	}));
+
+	test('FIND_MY_STRUCTURES in unowned room returns empty array', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const mine = Game.rooms.W8N1?.find(C.FIND_MY_STRUCTURES);
+			assert.ok(mine);
+			assert.strictEqual(mine.length, 0, 'should return empty array in unowned room');
+		});
+	}));
+
+	test('FIND_HOSTILE_STRUCTURES in unowned room returns empty array', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const hostile = Game.rooms.W8N1?.find(C.FIND_HOSTILE_STRUCTURES);
+			assert.ok(hostile);
+			assert.strictEqual(hostile.length, 0, 'should return empty array in unowned room');
 		});
 	}));
 });

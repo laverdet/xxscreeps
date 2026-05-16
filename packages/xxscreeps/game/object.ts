@@ -69,6 +69,8 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	get '#pathCost'(): undefined | number { return undefined; }
 	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#providesVision'() { return false; }
+	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
+	get '#secondaryLookType'(): string | null { return null; }
 	get '#user'(): string | null { return null; }
 	abstract get ['#lookType'](): string | null;
 

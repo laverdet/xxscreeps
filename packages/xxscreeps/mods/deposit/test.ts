@@ -57,15 +57,15 @@ describe('Deposit', () => {
 	})(async ({ player, poke, tick }) => {
 		await player('100', Game => {
 			const deposit = Game.rooms.W1N1!.find(C.FIND_DEPOSITS)[0]!;
-			assert.strictEqual(Game.creeps.harvester!.harvest(deposit), C.OK);
+			assert.strictEqual(Game.creeps.harvester?.harvest(deposit), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.harvester!.store[C.RESOURCE_SILICON], 3);
+			assert.strictEqual(Game.creeps.harvester?.store[C.RESOURCE_SILICON], 3);
 		});
 		await poke('W1N1', '100', (_Game, room) => {
-			const deposit = room['#lookFor'](C.LOOK_DEPOSITS)[0]!;
-			assert.strictEqual(deposit.lastCooldown, cooldown(1000));
+			const deposit = room['#lookFor'](C.LOOK_DEPOSITS)[0];
+			assert.strictEqual(deposit?.lastCooldown, cooldown(1000));
 			assert.strictEqual(deposit.cooldown, cooldown(1000));
 		});
 	}));
@@ -75,11 +75,11 @@ describe('Deposit', () => {
 	})(async ({ player, tick }) => {
 		await player('100', Game => {
 			const deposit = Game.rooms.W1N1!.find(C.FIND_DEPOSITS)[0]!;
-			assert.strictEqual(Game.creeps.harvester!.harvest(deposit), C.ERR_TIRED);
+			assert.strictEqual(Game.creeps.harvester?.harvest(deposit), C.ERR_TIRED);
 		});
 		await tick();
 		await player('100', Game => {
-			assert.strictEqual(Game.creeps.harvester!.store[C.RESOURCE_SILICON], 0);
+			assert.strictEqual(Game.creeps.harvester?.store[C.RESOURCE_SILICON], 0);
 		});
 	}));
 
@@ -88,7 +88,7 @@ describe('Deposit', () => {
 	})(async ({ player, tick }) => {
 		await tick(2);
 		await player('100', Game => {
-			assert.strictEqual(Game.rooms.W1N1!.find(C.FIND_DEPOSITS).length, 0);
+			assert.strictEqual(Game.rooms.W1N1?.find(C.FIND_DEPOSITS).length, 0);
 		});
 	}));
 
@@ -97,12 +97,12 @@ describe('Deposit', () => {
 	})(async ({ player, tick }) => {
 		await player('100', Game => {
 			const deposit = Game.rooms.W1N1!.find(C.FIND_DEPOSITS)[0]!;
-			assert.strictEqual(Game.creeps.harvester!.harvest(deposit), C.OK);
+			assert.strictEqual(Game.creeps.harvester?.harvest(deposit), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
-			const deposit = Game.rooms.W1N1!.find(C.FIND_DEPOSITS)[0]!;
-			assert.strictEqual(deposit.ticksToDecay, DEPOSIT_DECAY_TIME);
+			const deposit = Game.rooms.W1N1!.find(C.FIND_DEPOSITS)[0];
+			assert.strictEqual(deposit?.ticksToDecay, DEPOSIT_DECAY_TIME);
 		});
 	}));
 });
