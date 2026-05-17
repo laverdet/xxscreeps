@@ -52,7 +52,7 @@ export async function loadVisuals(shard: Shard, userId: string, roomName: string
 	if (roomName !== 'map') {
 		fields.push('*');
 	}
-	const payload = await shard.scratch.hmget(fragment, fields, { blob: true });
+	const payload = await shard.scratch.hmGet(fragment, fields, { blob: true });
 
 	function stringify(blob: Readonly<Uint8Array> | null | undefined, isMapVisual = false) {
 		let visualsString = '';

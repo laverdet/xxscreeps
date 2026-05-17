@@ -121,8 +121,8 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 
 				// Fetch game state for player
 				const [ intentRooms, visibleRooms ] = await Promise.all([
-					shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
-					shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
+					shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
+					shard.scratch.sMembers(userToVisibleRoomsSetKey(userId)),
 				]);
 				const rooms = await Promise.all(Fn.map(visibleRooms, roomName => shard.loadRoom(roomName)));
 				const state = new GameState(world, shard.time, rooms);

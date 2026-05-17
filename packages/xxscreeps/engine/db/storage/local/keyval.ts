@@ -81,7 +81,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		const value = this.data.get(from);
 		if (value === undefined) {
 			return this.blob.copy(from, to, options) as never;
-		} else if (options?.if === 'nx' && this.data.has(to)) {
+		} else if (options?.if === 'NX' && this.data.has(to)) {
 			return false;
 		} else if (value instanceof Array) {
 			this.data.set(to, [ ...value ]);
@@ -106,6 +106,15 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
+	delEx(key: string, options: P.DelEx) {
+		if (this.data.get(key) === options.eq) {
+			this.remove(key);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	vdel(key: string) {
 		this.del(key);
 	}
@@ -119,7 +128,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	pttl(key: string) {
+	pTTL(key: string) {
 		if (this.expires.has(key)) {
 			// they don't actually have a ttl, it will expire on restart
 			return 99_000;
@@ -146,11 +155,13 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		if (ArrayBuffer.isView(value)) {
 			return this.blob.set(key, value, options) as never;
 		}
-		if (
-			options?.if === 'nx' ? this.data.has(key) :
-			options?.if === 'xx' ? !this.data.has(key) : false
-		) {
-			return null;
+		if (options?.if) {
+			switch (options.if.if) {
+				case 'EQ': if (this.data.get(key) !== options.if.value) return false; break;
+				case 'NE': if (this.data.get(key) === options.if.value) return false; break;
+				case 'NX': if (this.data.has(key)) return false; break;
+				case 'XX': if (!this.data.has(key)) return false; break;
+			}
 		}
 		if (options?.px) {
 			this.expires.add(key);
@@ -195,7 +206,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return value;
 	}
 
-	hdel(key: string, fields: string[]) {
+	hDel(key: string, fields: string[]) {
 		const map = this.data.get(key) as Map<string, string> | undefined;
 		if (!map) return 0;
 		const removed = Fn.accumulate(fields, field => map.delete(field) ? 1 : 0);
@@ -203,12 +214,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return removed;
 	}
 
-	hget(key: string, field: string) {
+	hGet(key: string, field: string) {
 		const map: Map<string, string> | undefined = this.data.get(key);
 		return map?.get(field) ?? null;
 	}
 
-	hgetall(key: string) {
+	hGetAll(key: string) {
 		const map: Map<string, string> | undefined = this.data.get(key);
 		return map ? Fn.fromEntries(map.entries()) : {};
 	}
@@ -220,15 +231,15 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return result;
 	}
 
-	hmget(key: string, fields: Iterable<string>) {
+	hmGet(key: string, fields: Iterable<string>) {
 		const map: Map<string, string | Readonly<Uint8Array>> | undefined = this.data.get(key);
 		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ])) as never;
 	}
 
-	hset(key: string, field: string, value: P.Value, options?: P.HSet) {
+	hSet(key: string, field: string, value: P.Value, options?: P.HSet) {
 		const map: Map<string, any> = getOrSet(this.data, key, () => new Map());
 		const has = map.has(field);
-		if (options?.if === 'nx' && has) {
+		if (options?.if === 'NX' && has) {
 			return false;
 		} else {
 			map.set(field, value);
@@ -246,7 +257,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	lpop(key: string) {
+	lPop(key: string) {
 		const list: string[] | undefined = this.data.get(key);
 		if (!list) {
 			return null;
@@ -259,7 +270,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	lrange(key: string, start: number, stop: number) {
+	lRange(key: string, start: number, stop: number) {
 		const list: string[] | undefined = this.data.get(key);
 		if (!list) {
 			return [];
@@ -270,7 +281,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		);
 	}
 
-	rpush(key: string, elements: P.Value[]) {
+	rPush(key: string, elements: P.Value[]) {
 		const list: string[] | undefined = this.data.get(key);
 		const strings = Fn.map(elements, element => element) as string[];
 		if (list) {
@@ -282,7 +293,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	sadd(key: string, members: string[]) {
+	sAdd(key: string, members: string[]) {
 		const set: Set<string> | undefined = this.data.get(key);
 		if (set) {
 			const { size } = set;
@@ -296,12 +307,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	scard(key: string) {
+	sCard(key: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		return set ? set.size : 0;
 	}
 
-	sdiff(key: string, keys: string[]) {
+	sDiff(key: string, keys: string[]) {
 		const set: Set<string> | undefined = this.data.get(key);
 		if (set) {
 			const sets: (Set<string> | undefined)[] = keys.map(key => this.data.get(key));
@@ -311,7 +322,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	sinter(key: string, keys: string[]) {
+	sInter(key: string, keys: string[]) {
 		const sets = Fn.pipe(
 			Fn.concat([ [ key ], keys ]),
 			$$ => Fn.map($$, (key): Set<string> | undefined => this.data.get(key)),
@@ -326,12 +337,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	sismember(key: string, member: string) {
+	sIsMember(key: string, member: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		return set?.has(member) ?? false;
 	}
 
-	smismember(key: string, members: string[]) {
+	smIsMember(key: string, members: string[]) {
 		const set: Set<string> | undefined = this.data.get(key);
 		if (set) {
 			return members.map(member => set.has(member));
@@ -340,12 +351,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	smembers(key: string) {
+	sMembers(key: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		return set ? [ ...set ] : [];
 	}
 
-	spop(key: string) {
+	sPop(key: string) {
 		const set: Set<string> | undefined = this.data.get(key);
 		if (set) {
 			const { value } = set.values().next();
@@ -359,7 +370,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return null;
 	}
 
-	srem(key: string, members: string[]) {
+	sRem(key: string, members: string[]) {
 		const set = this.data.get(key);
 		if (set) {
 			const { size } = set;
@@ -374,7 +385,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	sunionStore(key: string, keys: string[]) {
+	sUnionStore(key: string, keys: string[]) {
 		const out = Fn.pipe(
 			keys,
 			$$ => Fn.map($$, (key): Set<string> => this.data.get(key)),
@@ -385,22 +396,22 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return out.size;
 	}
 
-	zadd(key: string, members: [ number, string ][], options?: P.ZAdd): any {
+	zAdd(key: string, members: [ number, string ][], options?: P.ZAdd): any {
 		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet());
 		try {
 			const range = function() {
 				// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 				switch (options?.if) {
-					case 'nx': return Fn.reject(members, member => set.has(member[1]));
-					case 'xx': return Fn.filter(members, member => set.has(member[1]));
+					case 'NX': return Fn.reject(members, member => set.has(member[1]));
+					case 'XX': return Fn.filter(members, member => set.has(member[1]));
 					default: return members;
 				}
 			}();
 			const up = function() {
 				// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 				switch (options?.up) {
-					case 'gt': return Math.max;
-					case 'lt': return Math.min;
+					case 'GT': return Math.max;
+					case 'LT': return Math.min;
 					default: return (left: unknown, right: number) => right;
 				}
 			}();
@@ -431,19 +442,19 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	zcard(key: string) {
+	zCard(key: string) {
 		const set: SortedSet | undefined = this.data.get(key);
 		return set ? set.size : 0;
 	}
 
-	zincrBy(key: string, delta: number, member: string) {
+	zIncrBy(key: string, delta: number, member: string) {
 		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet());
 		const score = (set.score(member) ?? 0) + delta;
 		set.add(member, score);
 		return score;
 	}
 
-	zinterStore(key: string, keys: string[], options?: P.ZAggregate) {
+	zInterStore(key: string, keys: string[], options?: P.ZAggregate) {
 		// Fetch sets first because you can use this command to store a set back into itself
 		const sets = Fn.pipe(
 			keys,
@@ -482,7 +493,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		return out.size;
 	}
 
-	zmscore(key: string, members: string[]) {
+	zmScore(key: string, members: string[]) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			return members.map(member => set.score(member) ?? null);
@@ -491,12 +502,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	zrange(key: string, min: number | string, max: number | string, options?: P.ZRange): any {
+	zRange(key: string, min: number | string, max: number | string, options?: P.ZRange): any {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			const allMatching = function() {
 				switch (options?.by) {
-					case 'lex': {
+					case 'LEX': {
 						const parse = (value: string): [ string, boolean ] => {
 							if (value === '-') {
 								return [ '', true ];
@@ -514,7 +525,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 						const [ maxVal, maxInc ] = parse(max as string);
 						return [ ...set.entriesByLex(minInc, minVal, maxInc, maxVal) ];
 					}
-					case 'score': return [ ...Fn.map(set.entries(min as number, max as number), entry => entry[1]) ];
+					case 'SCORE': return [ ...Fn.map(set.entries(min as number, max as number), entry => entry[1]) ];
 					default: {
 						const convert = (value: number) => {
 							if (value === Infinity || value === -Infinity) {
@@ -539,10 +550,10 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	zrangeStore(into: string, from: string, min: number | string, max: number | string, options?: P.ZRange) {
+	zRangeStore(into: string, from: string, min: number | string, max: number | string, options?: P.ZRange) {
 		const set: SortedSet | undefined = this.data.get(from);
 		if (set) {
-			const range: string[] = this.zrange(from, min, max, options);
+			const range: string[] = this.zRange(from, min, max, options);
 			const out = new SortedSet();
 			out.insert(Fn.map(range, member => [ set.score(member)!, member ]));
 			if (out.size === 0) {
@@ -556,12 +567,12 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	zrangeWithScores(key: string, min: number, max: number, options?: P.ZRange) {
+	zRangeWithScores(key: string, min: number, max: number, options?: P.ZRange) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			switch (options?.by) {
-				case 'lex': throw new Error('Invalid request');
-				case 'score': return [ ...set.entries(min, max) ];
+				case 'LEX': throw new Error('Invalid request');
+				case 'SCORE': return [ ...set.entries(min, max) ];
 				default: return [ ...Fn.map(set.values(), (value): [ number, string ] => [ set.score(value)!, value ]) ];
 			}
 		} else {
@@ -569,7 +580,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	zrem(key: string, members: string[]) {
+	zRem(key: string, members: string[]) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			const result = Fn.accumulate(members, member => set.delete(member));
@@ -582,7 +593,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	zremRange(key: string, min: number, max: number) {
+	zRemRange(key: string, min: number, max: number) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			const result = Fn.accumulate(
@@ -598,7 +609,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	zscore(key: string, member: string) {
+	zScore(key: string, member: string) {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
 			return set.score(member) ?? null;
@@ -607,7 +618,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
-	zunionStore(key: string, keys: string[], options?: P.ZAggregate) {
+	zUnionStore(key: string, keys: string[], options?: P.ZAggregate) {
 		const out = new SortedSet();
 		if (options?.weights) {
 			// With WEIGHTS each set needs to be applied one at a time

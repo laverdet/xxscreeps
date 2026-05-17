@@ -25,9 +25,9 @@ function rowIdFor(type: NotificationType, timeGroup: number, message: string) {
 export async function getNotifications(
 	shard: Shard, userId: string,
 ): Promise<{ id: string; row: NotificationRow }[]> {
-	const ids = await shard.data.smembers(userIndexKey(userId));
+	const ids = await shard.data.sMembers(userIndexKey(userId));
 	return Fn.mapAwait(ids, async (id): Promise<{ id: string; row: NotificationRow }> => {
-		const fields = await shard.data.hgetall(rowKey(userId, id));
+		const fields = await shard.data.hGetAll(rowKey(userId, id));
 		return {
 			id,
 			row: {
@@ -44,7 +44,7 @@ export async function getNotifications(
 export async function removeNotifications(shard: Shard, userId: string, ids: string[]) {
 	if (ids.length === 0) return;
 	await Promise.all([
-		shard.data.srem(userIndexKey(userId), ids),
+		shard.data.sRem(userIndexKey(userId), ids),
 		...ids.map(id => shard.data.del(rowKey(userId, id))),
 	]);
 }
@@ -54,9 +54,9 @@ export async function removeNotifications(shard: Shard, userId: string, ids: str
  * isn't fully drained (throttle, transport failure) is re-added by `scheduleUserDrain`.
  */
 export async function consumeDueUsers(shard: Shard, nowMs: number): Promise<string[]> {
-	const userIds = await shard.data.zrange(dueUsersKey, 0, nowMs, { by: 'score' });
+	const userIds = await shard.data.zRange(dueUsersKey, 0, nowMs, { by: 'SCORE' });
 	if (userIds.length > 0) {
-		await shard.data.zrem(dueUsersKey, userIds);
+		await shard.data.zRem(dueUsersKey, userIds);
 	}
 	return userIds;
 }
@@ -66,7 +66,7 @@ export async function consumeDueUsers(shard: Shard, nowMs: number): Promise<stri
  * sooner time.
  */
 export async function scheduleUserDrain(shard: Shard, userId: string, dueAt: number) {
-	await shard.data.zadd(dueUsersKey, [ [ dueAt, userId ] ], { up: 'lt' });
+	await shard.data.zAdd(dueUsersKey, [ [ dueAt, userId ] ], { up: 'LT' });
 }
 
 /**
@@ -89,11 +89,11 @@ export async function upsertNotification(
 	const id = rowIdFor(type, timeGroup, message);
 	const key = rowKey(userId, id);
 	// Read-then-write is safe because the runner serializes save() per user.
-	const existing = await shard.data.hget(key, 'count');
+	const existing = await shard.data.hGet(key, 'count');
 	if (existing === null) {
 		await Promise.all([
 			shard.data.hmset(key, { message, date: now, count: 1, type }),
-			shard.data.sadd(userIndexKey(userId), [ id ]),
+			shard.data.sAdd(userIndexKey(userId), [ id ]),
 			scheduleUserDrain(shard, userId, timeGroup),
 		]);
 	} else {

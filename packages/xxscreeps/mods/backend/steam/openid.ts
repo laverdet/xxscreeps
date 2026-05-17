@@ -67,7 +67,7 @@ if (steamApiKey) {
 				const userId = context.state.newUserId ?? context.state.userId;
 				if (userId !== undefined) {
 					const key = User.infoKey(userId);
-					const username = await context.db.data.hget(key, 'username');
+					const username = await context.db.data.hGet(key, 'username');
 					return username ?? 'New User';
 				}
 			}();

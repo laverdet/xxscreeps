@@ -5,7 +5,6 @@ import * as assert from 'node:assert/strict';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { acquireInterval, acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { Channel } from './channel.js';
-import { KeyvalScript } from './storage/script.js';
 
 type Message = 'waiting' | 'unlocked';
 const kLockTimeout = 10_000;
@@ -151,22 +150,6 @@ export class Mutex {
 	}
 }
 
-const CompareAndDelete = new KeyvalScript((keyval, [ key ]: [ string ], [ value ]: [ string ]) => {
-	if (keyval.get(key) === value) {
-		keyval.del(key);
-		return 1;
-	} else {
-		return 0;
-	}
-}, {
-	lua:
-		`if redis.call('get', KEYS[1]) == ARGV[1] then
-			return redis.call('del', KEYS[1])
-		else
-			return 0
-		end`,
-});
-
 class Lock {
 	private interval: ReturnType<typeof setInterval> | undefined;
 	private readonly value = `${Math.random() * (Number.MAX_SAFE_INTEGER + 1)}`;
@@ -179,27 +162,26 @@ class Lock {
 	}
 
 	async lock() {
-		if (await this.keyval.set(this.name, this.value, { px: kLockTimeout, if: 'nx' }) === null) {
-			const ttl = await this.keyval.pttl(this.name);
-			if (ttl > 0) {
-				console.warn(`Lock contention '${this.name}' -> ${ttl}ms`);
-			}
-			return false;
-		} else {
+		if (await this.keyval.set(this.name, this.value, { px: kLockTimeout, if: { if: 'NX' } }) === undefined) {
 			this.interval = setInterval(() => mustNotReject(async () => {
-				if (await this.keyval.set(this.name, this.value, { px: kLockTimeout, if: 'xx' }) === null) {
+				if (await this.keyval.set(this.name, this.value, { px: kLockTimeout, if: { if: 'EQ', value: this.value } }) !== undefined) {
 					throw new Error('Lock expired unexpectedly');
 				}
 			}), kLockTimeout / 2);
 			return true;
+		} else {
+			const ttl = await this.keyval.pTTL(this.name);
+			if (ttl > 0) {
+				console.warn(`Lock contention '${this.name}' -> ${ttl}ms`);
+			}
+			return false;
 		}
 	}
 
 	async unlock() {
 		clearInterval(this.interval);
 		this.interval = undefined;
-		const result = await this.keyval.eval(CompareAndDelete, [ this.name ], [ this.value ]);
-		if (result !== 1) {
+		if (!await this.keyval.delEx(this.name, { eq: this.value })) {
 			throw new Error('Lock not owned');
 		}
 	}

@@ -21,7 +21,7 @@ export async function getNotifyPrefs(shard: Shard, userId: string): Promise<Noti
 		interval?: string;
 		errorsInterval?: string;
 	}
-	const fields = await shard.data.hgetall(prefsKey(userId)) as PrefsFields;
+	const fields = await shard.data.hGetAll(prefsKey(userId)) as PrefsFields;
 	return {
 		disabled: fields.disabled === '1',
 		disabledOnMessages: fields.disabledOnMessages === '1',

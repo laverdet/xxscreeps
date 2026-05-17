@@ -1,25 +1,27 @@
-import type * as P from 'xxscreeps/engine/db/storage/provider.js';
+import type * as Pr from 'xxscreeps/engine/db/storage/provider.js';
 import { Buffer } from 'node:buffer';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { RedisHolder } from './client.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { disposableToEffect } from 'xxscreeps/utility/utility.js';
+import { RedisBlobClient, RedisClient, acquireRedisClient } from './client.js';
 
-type Value = P.Value;
+type Value = Pr.Value;
+
 function recv(value: Value) {
 	// Convert value to type for redis
 	if (value instanceof Uint8Array) {
 		if (Buffer.isBuffer(value)) {
-			// node-redis accepts buffers, but the types usually specify only string
-			return value as never as string;
+			return value;
 		} else {
-			// this does not make a copy
-			return Buffer.from(value.buffer, value.byteOffset, value.byteLength) as never as string;
+			// this does not make a copy (still needed with redis client v5.12.1)
+			return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
 		}
 	} else {
 		return `${value as number | string}`;
 	}
 }
 
-function send<Type>(value: Type, options?: P.AsBlob): Type | string {
+function send<Type>(value: Type, options?: Pr.AsBlob): Type | string {
 	// Convert value from redis
 	if (Buffer.isBuffer(value)) {
 		if (options?.blob) {
@@ -33,299 +35,350 @@ function send<Type>(value: Type, options?: P.AsBlob): Type | string {
 	return value;
 }
 
-function sendv(values: string[], options?: P.AsBlob) {
-	return values.map(value => send(value, options));
+function sendBlob(value: Buffer | null) {
+	if (Buffer.isBuffer(value)) {
+		const copy = new Uint8Array(new SharedArrayBuffer(value.byteLength));
+		copy.set(value);
+		return copy;
+	} else {
+		return value;
+	}
 }
 
-export class RedisProvider implements P.KeyValProvider {
-	private readonly redis;
+function sendOk(value: string | null) {
+	if (value === null) {
+		return false;
+	} else if (value === 'OK') {
+		return undefined;
+	} else {
+		throw new Error(`Unexpected simple reply from Redis: '${value}'`);
+	}
+}
 
-	private constructor(redis: RedisHolder) {
-		this.redis = redis;
+function zAggregate(keys: string[], aggregate?: Pr.ZAggregate) {
+	const weights = aggregate?.weights;
+	if (weights) {
+		const keysAndWeights = keys.map((key, ii) => ({ key, weight: weights[ii]! } as const));
+		type KeysAndWeights = (typeof keysAndWeights)[number];
+		return keysAndWeights as [ KeysAndWeights, ...KeysAndWeights[] ];
+	} else {
+		return keys as [ string, ...string[] ];
+	}
+}
+
+function zRangeOptions(options?: Pr.ZRange) {
+	return options && {
+		...options.by !== undefined && { BY: options.by },
+		...options.limit !== undefined && {
+			LIMIT: { offset: options.limit[0], count: options.limit[1] },
+		},
+	};
+}
+
+export class RedisProvider implements Pr.KeyValProvider {
+	private readonly keyval;
+	private readonly blob;
+	private readonly withSave;
+
+	private constructor(keyval: RedisClient, blob: RedisBlobClient, withSave: boolean) {
+		this.keyval = keyval;
+		this.blob = blob;
+		this.withSave = withSave;
 	}
 
 	static async connect(url: URL) {
-		const [ effect, redis ] = await RedisHolder.connect(url, true);
-		const provider = new RedisProvider(redis);
-		return [ effect, provider ] as const;
+		using disposable = new DisposableStack();
+		const [ keyval, blob ] = await Promise.all([
+			async function() {
+				return disposable.adopt(await acquireRedisClient(url), client => mustNotReject(client.close()));
+			}(),
+			async function() {
+				return disposable.adopt(await acquireRedisClient(url, true), client => mustNotReject(client.close()));
+			}(),
+		]);
+		const provider = new RedisProvider(keyval, blob, url.searchParams.has('save'));
+		return [ disposableToEffect(disposable.move()), provider ] as const;
 	}
 
 	//
 	// keys / strings
-	async copy(from: string, to: string, options?: P.Copy) {
-		return await this.redis.invoke<number>(cb => this.redis.batch(from, to)
-			.copy(from, to, ...options?.if === 'nx' ? [] : [ 'replace' ], cb)) !== 0;
+	async copy(from: string, to: string, options?: Pr.Copy) {
+		const result = await this.keyval.copy(from, to, options?.if === 'NX' ? undefined : { REPLACE: true });
+		return result === 1;
 	}
 
 	async del(key: string) {
-		return await this.redis.invoke<number>(cb => this.redis.batch(key).del(key, cb)) !== 0;
+		return await this.keyval.del(key) !== 0;
 	}
 
-	vdel(key: string) {
-		return this.redis.merge('del', [ key ], key, async argv => {
-			await this.redis.invoke<number>(cb => this.redis.batch().del(argv, cb));
-		});
+	async delEx(key: string, options: Pr.DelEx) {
+		return await this.keyval.delEx(key, { condition: 'IFEQ', matchValue: options.eq }) === 1;
 	}
 
-	async get(key: string, options?: P.AsBlob): Promise<any> {
-		return send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).get(key, cb)), options);
+	async vdel(key: string) {
+		await this.keyval.del(key);
 	}
 
-	pttl(key: string) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).pttl(key, cb));
+	get(key: string, options: { blob: true }): Promise<Readonly<Uint8Array> | null>;
+	get(key: string, options?: Pr.AsBlob): Promise<string | null>;
+	async get(key: string, options?: Pr.AsBlob): Promise<Readonly<Uint8Array> | string | null> {
+		if (options?.blob) {
+			return sendBlob(await this.blob.get(key)) satisfies Uint8Array | null;
+		} else {
+			return this.keyval.get(key) satisfies Promise<string | null>;
+		}
 	}
 
-	async req(key: string, options?: P.AsBlob): Promise<any> {
-		const value = await this.get(key, options);
+	async pTTL(key: string) {
+		return Number(await this.keyval.pTTL(key));
+	}
+
+	async req(key: string, options?: Pr.AsBlob): Promise<any> {
+		const value: unknown = await this.get(key, options);
 		if (value === null) {
 			throw new Error(`"${key}" does not exist`);
 		}
 		return send(value, options);
 	}
 
-	async set(key: string, value: Value, options?: P.Set): Promise<any>;
-	async set(key: string, value: Value, options?: P.Set) {
-		const extra: any[] = [
-			...options?.px ? [ 'px', options.px ] : [],
-			...options?.if ? [ options.if ] : [],
-		];
+	set(key: string, value: Value, options: { get: true } & Pr.Set): Promise<string | null>;
+	set(key: string, value: Value, options: { if: Pr.Condition; get?: undefined } & Pr.Set): Promise<false | undefined>;
+	set(key: string, value: Value, options?: Pr.Set): Promise<undefined>;
+	async set(key: string, value: Value, options?: Pr.Set) {
+		const result = await this.keyval.set(key, recv(value), options && {
+			...options.px !== undefined && { PX: options.px },
+			...options.if && function() {
+				switch (options.if.if) {
+					case 'EQ': return { condition: 'IFEQ', matchValue: options.if.value };
+					case 'NE': return { condition: 'IFNE', matchValue: options.if.value };
+					case 'NX': return { condition: 'NX' };
+					case 'XX': return { condition: 'XX' };
+				}
+			}(),
+		});
 		if (options?.get) {
-			return send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).set(key, recv(value), ...extra, 'get', cb)));
-		} else {
-			const result = await this.redis.invoke<'OK' | null>(cb => this.redis.batch(key).set(key, recv(value), ...extra, cb));
-			// Avoid sending back 'OK'
-			return result === null ? null : undefined;
+			return send(result) satisfies string | null;
+		} else if (options?.if !== undefined) {
+			return sendOk(result) satisfies false | undefined;
 		}
 	}
 
 	//
 	// numbers
 	decr(key: string) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).decr(key, cb));
+		return this.keyval.decr(key);
 	}
 
 	decrBy(key: string, value: number) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).decrby(key, value, cb));
+		return this.keyval.decrBy(key, value);
 	}
 
 	incr(key: string) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).incr(key, cb));
+		return this.keyval.incr(key);
 	}
 
 	incrBy(key: string, value: number) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).incrby(key, value, cb));
+		return this.keyval.incrBy(key, value);
 	}
 
 	//
 	// hashes
-	async hdel(key: string, fields: string[]) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).hdel(key, fields, cb));
+	hDel(key: string, fields: string[]) {
+		return this.keyval.hDel(key, fields);
 	}
 
-	async hget(key: string, field: string) {
-		return send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).hget(key, field, cb)));
+	hGet(key: string, field: string) {
+		return this.keyval.hGet(key, field);
 	}
 
-	async hgetall(key: string) {
-		const result = await this.redis.invoke<Record<string, string> | null>(cb => this.redis.batch(key).hgetall(key, cb));
-		return Fn.fromEntries(Object.entries(result ?? {}), ([ key, val ]) => [ key, send(val) ]);
+	hGetAll(key: string) {
+		return this.keyval.hGetAll(key);
 	}
 
 	hincrBy(key: string, field: string, value: number) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).hincrby(key, field, value, cb));
+		return this.keyval.hIncrBy(key, field, value);
 	}
 
-	async hmget(key: string, fields: string[], options?: P.AsBlob) {
-		const payload = await this.redis.invoke<string[]>(cb => this.redis.batch(key).hmget(key, fields, cb));
-		return Fn.fromEntries(payload.map((value, ii) => [ fields[ii]!, send(value, options) ])) as never;
-	}
-
-	async hset(key: string, field: string, value: Value, options?: P.HSet) {
-		if (options?.if === 'nx') {
-			return await this.redis.invoke<number>(cb => this.redis.batch(key).hsetnx(key, field, recv(value), cb)) !== 0;
+	async hmGet(key: string, fields: string[], options?: Pr.AsBlob): Promise<any> {
+		const make = <Type, Result>(values: readonly Type[], send: (value: Type) => Result) =>
+			Fn.pipe(
+				fields,
+				$$ => Fn.map($$, (field, ii) => [ field, send(values[ii]!) ] as const),
+				$$ => Fn.fromEntries($$));
+		if (options?.blob) {
+			return make(await this.blob.hmGet(key, fields), sendBlob) satisfies Record<string, Uint8Array | null>;
 		} else {
-			return await this.redis.invoke<number>(cb => this.redis.batch(key).hset(key, field, recv(value), cb)) !== 0;
+			return make(await this.keyval.hmGet(key, fields), send) satisfies Record<string, string | null>;
+		}
+	}
+
+	async hSet(key: string, field: string, value: Value, options?: Pr.HSet) {
+		if (options?.if === 'NX') {
+			return await this.keyval.hSetNX(key, field, recv(value)) !== 0;
+		} else {
+			return await this.keyval.hSet(key, field, recv(value)) !== 0;
 		}
 	}
 
 	async hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
 		const iterable = Symbol.iterator in fields ? fields : Object.entries(fields);
-		await this.redis.invoke<number>(cb => this.redis.batch(key).hset(key, [ ...Fn.map(Fn.concat(iterable), recv) ], cb));
+		await Fn.mapAwait(iterable, async ([ field, value ]) => this.keyval.hSet(key, field, recv(value)));
 	}
 
 	//
 	// lists
-	async lpop(key: string) {
-		return send(await this.redis.invoke<string>(cb => this.redis.batch(key).lpop(key, cb)));
+	lPop(key: string) {
+		return this.keyval.lPop(key);
 	}
 
-	async lrange(key: string, start: number, stop: number) {
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key).lrange(key, start, stop, cb)));
+	lRange(key: string, start: number, stop: number) {
+		return this.keyval.lRange(key, start, stop);
 	}
 
-	rpush(key: string, elements: Value[]) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).rpush(key, elements.map(recv), cb));
+	rPush(key: string, elements: Value[]) {
+		return this.keyval.rPush(key, elements.map(recv));
 	}
 
 	//
 	// sets
-	async sadd(key: string, members: string[]) {
+	sAdd(key: string, members: string[]) {
 		if (members.length === 0) {
 			return Promise.resolve(0);
 		} else {
-			return this.redis.invoke<number>(cb => this.redis.batch(key).sadd(key, members, cb));
+			return this.keyval.sAdd(key, members);
 		}
 	}
 
-	scard(key: string) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).scard(key, cb));
+	sCard(key: string) {
+		return this.keyval.sCard(key);
 	}
 
-	async sdiff(key: string, keys: string[]) {
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key).sdiff(key, keys, cb)));
+	sDiff(key: string, keys: string[]) {
+		return this.keyval.sDiff([ key, ...keys ]);
 	}
 
-	async sinter(key: string, keys: string[]) {
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key, ...keys).sinter(key, keys, cb)));
+	sInter(key: string, keys: string[]) {
+		return this.keyval.sInter([ key, ...keys ]);
 	}
 
-	async sismember(key: string, member: string) {
-		return await this.redis.invoke<number>(cb => this.redis.batch(key).sismember(key, member, cb)) !== 0;
+	async sIsMember(key: string, member: string) {
+		return await this.keyval.sIsMember(key, member) !== 0;
 	}
 
-	async smembers(key: string) {
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key).smembers(key, cb)));
+	sMembers(key: string) {
+		return this.keyval.sMembers(key);
 	}
 
-	async smismember(key: string, members: string[]) {
-		const result = await this.redis.invoke<number[]>(cb => this.redis.batch(key).smismember(key, members, cb));
-		return result.map(value => value !== 0);
+	async smIsMember(key: string, members: string[]) {
+		const areMembers = await this.keyval.smIsMember(key, members);
+		return areMembers.map(result => result !== 0);
 	}
 
-	async spop(key: string) {
-		return send(await this.redis.invoke<string>(cb => this.redis.batch(key).spop(key, cb)));
+	sPop(key: string) {
+		return this.keyval.sPop(key);
 	}
 
-	srem(key: string, members: string[]) {
+	sRem(key: string, members: string[]) {
 		if (members.length === 0) {
 			return Promise.resolve(0);
 		} else {
-			return this.redis.invoke<number>(cb => this.redis.batch(key).srem(key, members, cb));
+			return this.keyval.sRem(key, members);
 		}
 	}
 
-	sunionStore(key: string, keys: string[]) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).sunionstore(key, keys, cb));
+	sUnionStore(key: string, keys: string[]) {
+		return this.keyval.sUnionStore(key, keys);
 	}
 
 	//
 	// sorted sets
-	zadd(key: string, members: [ number, string ][], options: { incr: true } & P.ZAdd): Promise<number | null>;
-	zadd(key: string, members: [ number, string ][], options?: P.ZAdd): Promise<number>;
-	async zadd(key: string, members: [ number, string ][], options?: P.ZAdd) {
+	zAdd(key: string, members: [ number, string ][], options: { incr: true } & Pr.ZAdd): Promise<number | null>;
+	zAdd(key: string, members: [ number, string ][], options?: Pr.ZAdd): Promise<number>;
+	async zAdd(key: string, members: [ number, string ][], options?: Pr.ZAdd) {
 		if (members.length === 0) {
-			return Promise.resolve(0);
-		} else if (options?.incr) {
-			type CallbackType = (err: Error | null, value: unknown) => void;
-			const result = await this.redis.invoke<Buffer | string | null>(cb => this.redis.batch(key).zadd(
-				key,
-				...options.if ? [ options.if ] : [],
-				'incr',
-				...Fn.concat<string | number>(members),
-				cb as CallbackType));
-			return result === null ? null : Number(send(result));
+			return 0;
+		}
+		const mapped = members.map(([ score, value ]) => ({ score, value }));
+		const zAddOptions = options && {
+			...options.if !== undefined && { condition: options.if },
+			...options.up !== undefined && { comparison: options.up },
+		};
+		if (options?.incr) {
+			return this.keyval.zAddIncr(key, mapped, zAddOptions) satisfies Promise<number | null>;
 		} else {
-			const result = await this.redis.invoke<number>(cb => this.redis.batch(key).zadd(
-				key,
-				...options?.if ? [ options.if ] : [],
-				...options?.up ? [ options.up ] : [],
-				...Fn.concat<number | string>(members),
-				cb));
-			return result;
+			return this.keyval.zAdd(key, mapped, zAddOptions) satisfies Promise<number>;
 		}
 	}
 
-	zcard(key: string) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).zcard(key, cb));
+	zCard(key: string) {
+		return this.keyval.zCard(key);
 	}
 
-	async zincrBy(key: string, delta: number, member: string) {
-		return Number(await this.redis.invoke<string>(cb => this.redis.batch(key).zincrby(key, delta, member, cb)));
+	zIncrBy(key: string, delta: number, member: string) {
+		return this.keyval.zIncrBy(key, delta, member);
 	}
 
-	zinterStore(key: string, keys: string[], options?: P.ZAggregate) {
-		if (options?.weights) {
-			return this.redis.invoke<number>(cb => this.redis.batch(key, ...keys).zinterstore(key, keys.length, ...keys, 'weights', ...options.weights!, cb));
-		} else {
-			return this.redis.invoke<number>(cb => this.redis.batch(key, ...keys).zinterstore(key, keys.length, ...keys, cb));
-		}
+	zInterStore(key: string, keys: string[], options?: Pr.ZAggregate) {
+		return this.keyval.zInterStore(key, zAggregate(keys, options));
 	}
 
-	async zmscore(key: string, members: string[]) {
-		type T = (number | null)[]; // Raises an eslint condition which deletes the parenthesis below..
-		const scores = await this.redis.invoke<T>(cb => this.redis.batch(key).zmscore(key, members, cb));
-		return scores.map(score => score === null ? null : Number(score));
+	zmScore(key: string, members: string[]) {
+		return this.keyval.zmScore(key, members);
 	}
 
-	async zrange(key: string, min: any, max: any, options?: P.ZRange) {
-		const by: any = options?.by === 'lex' ? [ 'BYLEX' ] :
-			options?.by === 'score' ? [ 'BYSCORE' ] : [];
-		return sendv(await this.redis.invoke<string[]>(cb => this.redis.batch(key).zrange(key, min, max, ...by, cb)));
+	zRange(key: string, min: string, max: string, options: Pr.ZRange & { by: 'LEX' }): Promise<string[]>;
+	zRange(key: string, min: number, max: number, options?: Pr.ZRange): Promise<string[]>;
+	zRange(key: string, min: number | string, max: number | string, options?: Pr.ZRange) {
+		return this.keyval.zRange(key, min, max, zRangeOptions(options));
 	}
 
-	async zrangeStore(into: string, from: string, min: any, max: any, options?: P.ZRange) {
-		const by: any = options?.by === 'lex' ? [ 'BYLEX' ] :
-			options?.by === 'score' ? [ 'BYSCORE' ] : [];
-		return this.redis.invoke<number>(cb => this.redis.batch(into, from).zrangestore(into, from, min, max, ...by, cb));
+	zRangeStore(into: string, from: string, min: number, max: number, options?: Pr.ZRange) {
+		return this.keyval.zRangeStore(into, from, min, max, zRangeOptions(options));
 	}
 
-	zrangeWithScores(key: string, min: number, max: number, options?: P.ZRange): any {
-		const by: any = options?.by === 'lex' ? [ 'BYLEX' ] :
-			options?.by === 'score' ? [ 'BYSCORE' ] : [];
-		return this.redis.invoke<number>(cb => this.redis.batch(key).zrange(key, min, max, ...by, 'WITHSCORES', cb));
+	async zRangeWithScores(key: string, min: number, max: number, options?: Pr.ZRange): Promise<[ number, string ][]> {
+		const result = await this.keyval.zRangeWithScores(key, min, max, zRangeOptions(options));
+		return result.map(({ score, value }) => [ score, value ]);
 	}
 
-	zrem(key: string, members: string[]) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).zrem(key, members, cb));
+	zRem(key: string, members: string[]) {
+		return this.keyval.zRem(key, members);
 	}
 
-	zremRange(key: string, min: number, max: number) {
-		return this.redis.invoke<number>(cb => this.redis.batch(key).zremrangebyscore(key, min, max, cb));
+	zRemRange(key: string, min: number, max: number) {
+		return this.keyval.zRemRangeByScore(key, min, max);
 	}
 
-	async zscore(key: string, member: string) {
-		const score = send(await this.redis.invoke<string | null>(cb => this.redis.batch(key).zscore(key, member, cb)));
-		return score === null ? null : Number(score);
+	zScore(key: string, member: string) {
+		return this.keyval.zScore(key, member);
 	}
 
-	zunionStore(key: string, keys: string[], options?: P.ZAggregate): Promise<number> {
-		if (options?.weights) {
-			return this.redis.invoke<number>(cb => this.redis.batch(key, ...keys).zunionstore(key, keys.length, ...keys, 'weights', ...options.weights!, cb));
-		} else {
-			return this.redis.invoke<number>(cb => this.redis.batch(key, ...keys).zunionstore(key, keys.length, ...keys, cb));
-		}
+	zUnionStore(key: string, keys: string[], options?: Pr.ZAggregate) {
+		return this.keyval.zUnionStore(key, zAggregate(keys, options));
 	}
 
 	//
 	// scripting
-	async eval(script: P.KeyvalScript, keys: string[], argv: Value[]): Promise<any> {
+	async eval<Result extends Value[] | Value | null, Keys extends string[], Argv extends Value[]>(
+		script: Pr.KeyvalScript<Result, Keys, Argv>, keys: Keys, argv: Argv,
+	): Promise<Result> {
 		const { sha } = script;
-		if (sha) {
-			const result = await this.redis.invoke<any>(cb =>
-				this.redis.batch(...keys).evalsha(sha, keys.length, ...keys, ...Fn.map(argv, recv), cb));
+		if (sha === undefined) {
+			await this.load(script);
+			return this.eval(script, keys, argv);
+		} else {
+			const result = await this.keyval.evalSha(sha, { keys, arguments: argv.map(recv) });
 			if (Array.isArray(result)) {
-				return sendv(result);
+				return result.map(value => send(value)) satisfies unknown[] as Result;
 			} else {
-				return send(result);
+				return send(result) as Result;
 			}
 		}
-		await this.load(script);
-		return this.eval(script, keys, argv);
 	}
 
-	async load(script: P.KeyvalScript) {
+	async load(script: Pr.KeyvalScript) {
 		if (script.sha === undefined) {
-			const loaded = await this.redis.invoke<string>(cb => this.redis.client.script('LOAD', script.lua!, cb));
+			const loaded = await this.keyval.scriptLoad(script.lua!);
 			// @ts-expect-error
 			script.sha = loaded;
 		}
@@ -334,15 +387,10 @@ export class RedisProvider implements P.KeyValProvider {
 	//
 	// management
 	async flushdb() {
-		await this.redis.sync();
-		await this.redis.invoke(cb => this.redis.client.flushdb(cb));
+		await this.keyval.flushDb();
 	}
 
 	async save() {
-		await this.redis.sync();
-		try {
-			// ERR Background save already in progress
-			await this.redis.invoke(cb => this.redis.client.save(cb));
-		} catch {}
+		// redis manages it for us
 	}
 }

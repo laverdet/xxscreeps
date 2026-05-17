@@ -18,8 +18,8 @@ export const reservedRoomKey = (userId: string) => `user/${userId}/reservedRooms
 export function claim(context: ProcessorContext, controller: StructureController, userId: string) {
 	const { room } = controller;
 	context.task(Promise.all([
-		context.shard.scratch.sadd(controlledRoomKey(userId), [ room.name ]),
-		context.shard.scratch.srem(reservedRoomKey(userId), [ room.name ]),
+		context.shard.scratch.sAdd(controlledRoomKey(userId), [ room.name ]),
+		context.shard.scratch.sRem(reservedRoomKey(userId), [ room.name ]),
 	]));
 	controller['#reservationEndTime'] = 0;
 	controller['#user'] = userId;
@@ -32,7 +32,7 @@ export function release(context: ProcessorContext, controller: StructureControll
 	const userId = room['#user'];
 	if (userId != null) {
 		const key = controller.level === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);
-		context.task(context.shard.scratch.srem(key, [ controller.room.name ]));
+		context.task(context.shard.scratch.sRem(key, [ controller.room.name ]));
 	}
 	controller['#downgradeTime'] = 0;
 	controller['#progress'] = 0;
@@ -97,20 +97,20 @@ const intents = [
 			context.task(async function() {
 				// Fetch current GCL & controlled room count from database
 				const [ roomCount, gcl ] = await Promise.all([
-					context.shard.scratch.scard(controlledRoomKey(userId)),
-					context.shard.db.data.hget(User.infoKey(userId), 'gcl'),
+					context.shard.scratch.sCard(controlledRoomKey(userId)),
+					context.shard.db.data.hGet(User.infoKey(userId), 'gcl'),
 				]);
 				// Check GCL, and save the newly-controlled room
 				const roomCapacity = Math.floor((Number(gcl) / C.GCL_MULTIPLY) ** (1 / C.GCL_POW)) + 1;
 				if (roomCapacity > Number(roomCount)) {
 					const [ , count ] = await Promise.all([
-						context.shard.scratch.sadd(controlledRoomKey(userId), [ roomName ]),
-						context.shard.scratch.scard(controlledRoomKey(userId)),
+						context.shard.scratch.sAdd(controlledRoomKey(userId), [ roomName ]),
+						context.shard.scratch.sCard(controlledRoomKey(userId)),
 					]);
 					if (roomCapacity >= count) {
 						return true;
 					} else {
-						await context.shard.scratch.srem(controlledRoomKey(userId), [ roomName ]);
+						await context.shard.scratch.sRem(controlledRoomKey(userId), [ roomName ]);
 						return false;
 					}
 				}
@@ -150,7 +150,7 @@ const intents = [
 				const userId = creep['#user'];
 				controller['#reservationEndTime'] = Game.time + power + 1;
 				updateRoomStatus(context, controller.room, 0, userId);
-				context.task(context.shard.scratch.sadd(reservedRoomKey(userId), [ controller.room.name ]));
+				context.task(context.shard.scratch.sAdd(reservedRoomKey(userId), [ controller.room.name ]));
 			}
 			saveAction(creep, 'reserveController', controller.pos);
 			appendEventLog(controller.room, {
