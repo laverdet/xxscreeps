@@ -115,6 +115,15 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		}
 	}
 
+	mdel(...keys: string[]) {
+		return Fn.pipe(
+			keys,
+			$$ => Fn.filter($$, key => this.data.has(key)),
+			// eslint-disable-next-line no-sequences
+			$$ => Fn.map($$, key => (this.remove(key), 1)),
+			$$ => Fn.accumulate($$));
+	}
+
 	vdel(key: string) {
 		this.del(key);
 	}

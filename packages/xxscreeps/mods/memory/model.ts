@@ -145,7 +145,7 @@ export async function savePublicSegments(shard: Shard, userId: string, ids: numb
 		await shard.data.vdel(key);
 	} else {
 		await Promise.all([
-			shard.data.del(key),
+			shard.data.vdel(key),
 			shard.data.sAdd(key, members),
 		]);
 	}

@@ -115,6 +115,14 @@ export class RedisProvider implements Pr.KeyValProvider {
 		return await this.keyval.delEx(key, { condition: 'IFEQ', matchValue: options.eq }) === 1;
 	}
 
+	async mdel(...keys: string[]) {
+		if (keys.length === 0) {
+			return 0;
+		} else {
+			return this.keyval.del(keys);
+		}
+	}
+
 	async vdel(key: string) {
 		await this.keyval.del(key);
 	}

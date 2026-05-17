@@ -63,7 +63,7 @@ export async function removeNotifications(shard: Shard, userId: string, ids: str
 	if (ids.length === 0) return;
 	await Promise.all([
 		shard.data.zRem(userIndexKey(userId), ids),
-		...ids.map(id => shard.data.del(rowKey(userId, id))),
+		shard.data.mdel(...ids.map(id => rowKey(userId, id))),
 	]);
 }
 

@@ -47,7 +47,10 @@ export interface KeyValProvider {
 	del(key: string): Promise<boolean>;
 	delEx(key: string, options: DelEx): Promise<boolean>;
 	pTTL(key: string): Promise<number>;
+	mdel(...keys: string[]): Promise<number>;
 	// 'vdel' returns no response and may be reordered in relation to other commands
+	// it used to coalesce multiple same-tick invocations into the same del redis command. i'm not
+	// sure if that's still plausible or even worthwhile but there it is.
 	vdel(key: string): Promise<void>;
 	get(key: string, options: { blob: true }): Promise<Readonly<Uint8Array> | null>;
 	get(key: string, options?: AsBlob): Promise<string | null>;
