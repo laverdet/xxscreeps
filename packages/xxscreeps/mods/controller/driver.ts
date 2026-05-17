@@ -14,7 +14,7 @@ processorHooks.register('refreshRoom', async (shard, room) => {
 	const userId = room['#user'];
 	if (userId != null) {
 		const key = room['#level'] === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);
-		await shard.scratch.sadd(key, [ room.name ]);
+		await shard.scratch.sAdd(key, [ room.name ]);
 	}
 });
 
@@ -26,9 +26,9 @@ hooks.register('runnerConnector', player => {
 				payload.controlledRoomCount,
 				payload.gcl,
 			] = await Promise.all([
-				shard.scratch.scard(controlledRoomKey(userId)),
+				shard.scratch.sCard(controlledRoomKey(userId)),
 				async function() {
-					return Number(await shard.db.data.hget(User.infoKey(userId), 'gcl')) || 0;
+					return Number(await shard.db.data.hGet(User.infoKey(userId), 'gcl')) || 0;
 				}(),
 			]);
 		},

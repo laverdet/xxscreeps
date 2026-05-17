@@ -53,8 +53,8 @@ hooks.register('route', {
 		const { shard } = context;
 		const { id: userId } = context.request.query;
 		const [ controlled, reserved ] = await Promise.all([
-			shard.scratch.smembers(controlledRoomsKey(userId)),
-			shard.scratch.smembers(reservedRoomsKey(userId)),
+			shard.scratch.sMembers(controlledRoomsKey(userId)),
+			shard.scratch.sMembers(reservedRoomsKey(userId)),
 		]);
 		return {
 			ok: 1,
@@ -77,9 +77,9 @@ hooks.register('route', {
 			return { ok: 1, status: 'normal' };
 		}
 		const [ controlled, intents, presence ] = await Promise.all([
-			context.shard.scratch.scard(controlledRoomsKey(userId)),
-			context.shard.scratch.scard(userToIntentRoomsSetKey(userId)),
-			context.shard.scratch.scard(userToPresenceRoomsSetKey(userId)),
+			context.shard.scratch.sCard(controlledRoomsKey(userId)),
+			context.shard.scratch.sCard(userToIntentRoomsSetKey(userId)),
+			context.shard.scratch.sCard(userToPresenceRoomsSetKey(userId)),
 		]);
 		if (presence > 0) {
 			if (intents > 0 && controlled > 0) {

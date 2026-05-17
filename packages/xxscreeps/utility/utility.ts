@@ -156,22 +156,21 @@ export function throttle(fn: () => void) {
 }
 
 // Disposable timeout, clears on scope exit with `using`
-export function acquireTimeout(timeout: number, fn: () => void) {
-	let handle: NodeJS.Timeout | undefined = setTimeout(
-		() => {
-			handle = undefined;
-			fn();
-		},
-		timeout,
-	);
-	return {
-		[Symbol.dispose]() {
-			if (handle) {
-				clearTimeout(handle);
-			}
-		},
+function makeAcquireTimer(
+	makeTimer: (fn: () => void, ms: number) => NodeJS.Timeout,
+	clearTimer: (handle: NodeJS.Timeout) => void,
+) {
+	return (ms: number, fn: () => void) => {
+		const disposable = new DisposableStack();
+		disposable.adopt(makeTimer(fn, ms), handle => clearTimer(handle));
+		return disposable;
 	};
 }
+
+// nb: `globalThis` access because runner does not have these functions. If you invoke
+// `acquireTimeout` it will throw.
+export const acquireTimeout = makeAcquireTimer(globalThis.setTimeout, globalThis.clearTimeout);
+export const acquireInterval = makeAcquireTimer(globalThis.setInterval, globalThis.clearInterval);
 
 // Explodes a union type into all possible types inline
 export function asUnion<Type>(_value: Type): asserts _value is Union<Type> {}

@@ -61,7 +61,7 @@ hooks.register('route', {
 			return;
 		}
 		const rooms = await Promise.all(Fn.map(
-			await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
+			await context.shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
 			roomName => context.shard.loadRoom(roomName)));
 		for (const room of rooms) {
 			for (const structure of room.find(C.FIND_STRUCTURES)) {
@@ -91,7 +91,7 @@ hooks.register('route', {
 			return;
 		}
 		const rooms = await Promise.all(Fn.map(
-			await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
+			await context.shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
 			roomName => context.shard.loadRoom(roomName)));
 		let max = 0;
 		for (const room of rooms) {
@@ -143,7 +143,7 @@ hooks.register('route', {
 
 		// Check last spawn time
 		const now = Date.now();
-		const lastSpawn = await context.shard.data.hget(User.infoKey(userId), 'lastSpawnTime');
+		const lastSpawn = await context.shard.data.hGet(User.infoKey(userId), 'lastSpawnTime');
 		if (lastSpawn !== null && now < Number(lastSpawn) + config.game.respawnTimeout * 3600 * 1000) {
 			throw new Error('Too soon after last respawn');
 		}
@@ -152,7 +152,7 @@ hooks.register('route', {
 		await getRoomChannel(context.shard, roomName).publish({ type: 'willSpawn' });
 
 		// Ensure user has no objects
-		const roomNames = await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId));
+		const roomNames = await context.shard.scratch.sMembers(userToIntentRoomsSetKey(userId));
 		if (roomNames.length !== 0) {
 			throw new Error('User has presence');
 		}
@@ -178,7 +178,7 @@ hooks.register('route', {
 		});
 
 		// Update last spawn time
-		await context.shard.data.hset(User.infoKey(userId), 'lastSpawnTime', Date.now());
+		await context.shard.data.hSet(User.infoKey(userId), 'lastSpawnTime', Date.now());
 		return { ok: 1 };
 	}),
 });
@@ -192,7 +192,7 @@ hooks.register('route', {
 		if (userId == null) {
 			return;
 		}
-		const roomNames = await context.shard.scratch.smembers(userToPresenceRoomsSetKey(userId));
+		const roomNames = await context.shard.scratch.sMembers(userToPresenceRoomsSetKey(userId));
 		if (roomNames.length === 0) {
 			return { error: 'invalid status' };
 		}

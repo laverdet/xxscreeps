@@ -44,11 +44,11 @@ const saveInterval = config.database.saveInterval * 60000;
 // Initialize scratch state
 await using _main = await mainMutex.acquire();
 const [ rooms ] = await Promise.all([
-	shard.data.smembers('rooms'),
+	shard.data.sMembers('rooms'),
 	shard.scratch.flushdb(),
 ]);
 await Promise.all([
-	shard.scratch.sadd('initializeRooms', rooms),
+	shard.scratch.sAdd('initializeRooms', rooms),
 	shard.scratch.set(processorTimeKey, shard.time),
 ]);
 
@@ -60,7 +60,7 @@ const didInitialize = await async function() {
 		// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 		switch (message.type) {
 			case 'processorInitialized':
-				if (await shard.scratch.zcard(activeRoomsKey) === rooms.length) {
+				if (await shard.scratch.zCard(activeRoomsKey) === rooms.length) {
 					await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
 					return true;
 				}
@@ -105,14 +105,13 @@ async function tick() {
 				break;
 
 			case 'tickFinished': {
-				// Run shard-level tick processors before snapshotting the next tick's room queue.
-				await runShardTickProcessors(shard, time);
+				await runShardTickProcessors(shard);
 				await begetRoomProcessQueue(shard, time + 1, time, true);
 
 				// Update game state
 				await shard.data.set('time', time);
 
-				// Display statistics
+				// Setup for next tick
 				await shard.channel.publish({ type: 'tick', time });
 				shard.time = time;
 				return willContinue;

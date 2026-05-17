@@ -1,6 +1,7 @@
 {
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
+		"target": "esnext",
 		"types": [ "node" ],
 		"paths": {
 			"xxscreeps/*.js": [ "../xxscreeps/*.ts" ],

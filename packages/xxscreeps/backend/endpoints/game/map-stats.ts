@@ -77,7 +77,7 @@ export const MapStatsEndpoint: Endpoint = {
 
 		// Read users
 		const userObjects = await Promise.all(Fn.map(userIds, async id =>
-			({ id, info: await context.db.data.hmget(User.infoKey(id), [ 'badge', 'username' ]) })));
+			({ id, info: await context.db.data.hmGet(User.infoKey(id), [ 'badge', 'username' ]) })));
 		const users = Fn.fromEntries(userObjects, user => [
 			user.id, {
 				_id: user.id,

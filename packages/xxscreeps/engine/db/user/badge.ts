@@ -51,5 +51,5 @@ export function validate(badge: object): UserBadge {
 }
 
 export async function save(db: Database, userId: string, badge: string) {
-	await db.data.hset(User.infoKey(userId), 'badge', badge);
+	await db.data.hSet(User.infoKey(userId), 'badge', badge);
 }

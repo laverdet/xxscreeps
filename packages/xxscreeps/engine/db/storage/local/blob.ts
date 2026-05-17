@@ -50,7 +50,7 @@ export class BlobStorage {
 	async copy(from: string, to: string, options?: Storage.Copy) {
 		this.check(to);
 		const value = await this.get(from);
-		if (options?.if === 'nx' && await this.get(to)) {
+		if (options?.if === 'NX' && await this.get(to)) {
 			return false;
 		} else if (value === null) {
 			return false;

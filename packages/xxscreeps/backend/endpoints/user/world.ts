@@ -19,7 +19,7 @@ hooks.register('route', {
 		const { userId } = context.state;
 		const { map } = context.backend.world;
 		if (userId) {
-			const lastRoom = await context.db.data.hget(User.infoKey(userId), 'lastViewedRoom');
+			const lastRoom = await context.db.data.hGet(User.infoKey(userId), 'lastViewedRoom');
 			if (lastRoom !== null && map.getRoomStatus(lastRoom)) {
 				return {
 					ok: 1,
@@ -36,6 +36,6 @@ hooks.register('route', {
 
 hooks.register('roomSocket', async (shard, userId, roomName) => {
 	if (userId !== undefined) {
-		await shard.db.data.hset(User.infoKey(userId), 'lastViewedRoom', roomName);
+		await shard.db.data.hSet(User.infoKey(userId), 'lastViewedRoom', roomName);
 	}
 });

@@ -231,7 +231,7 @@ export class RoomProcessor implements ProcessorContext {
 			if (this.nextUpdate === this.time + 1) {
 				if (didWake) {
 					// Room was woken this tick by an inter-room intent, and will remain active
-					await this.shard.scratch.zadd(activeRoomsKey, [ [ 0, this.room.name ] ]);
+					await this.shard.scratch.zAdd(activeRoomsKey, [ [ 0, this.room.name ] ]);
 				}
 			} else {
 				// Mark inactive if needed. Must be *after* saving room, because this copies from current tick.

@@ -1,7 +1,7 @@
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider.js';
 import type { Worker } from 'node:worker_threads';
 import { isTopThread } from 'xxscreeps/engine/service/index.js';
-import { Deferred, mustNotReject } from 'xxscreeps/utility/async.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { Effect } from 'xxscreeps/utility/types.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { registerStorageProvider } from '../register.js';
@@ -14,23 +14,24 @@ interface PublishMessage {
 	type: 'publish';
 	key: string;
 	message: string;
-	id?: number;
 }
 interface SubscriptionRequest {
 	type: 'subscribe';
 	key: string;
-	id: number;
 }
 interface UnsubscriptionRequest {
 	type: 'unsubscribe';
-	id: number;
+	key: string;
 }
 interface AckMessage {
 	type: 'ack';
 }
+interface SynRequest {
+	type: 'syn';
+}
 
 type Sends = AckMessage | PublishMessage;
-type Receives = PublishMessage | SubscriptionRequest | UnsubscriptionRequest;
+type Receives = PublishMessage | SynRequest | SubscriptionRequest | UnsubscriptionRequest;
 
 const providersByName = new Map<string, { instance: LocalPubSubProviderParent; refs: number } | undefined>();
 registerStorageProvider('local', 'pubsub', async url => {
@@ -172,14 +173,18 @@ class LocalPubSubProviderParent implements PubSubProvider {
 	}
 
 	private handle(port: LocalPayloadPort<Sends, Receives>) {
-		const subscriptionsById = new Map<number, WorkerSubscriptionReference>();
+		const subscriptionsByKey = new Map<string, WorkerSubscriptionReference>();
 		mustNotReject((async () => {
 			for await (const message of port.messages) {
 				switch (message.type) {
 					case 'publish': {
-						const { id } = message;
-						const source = id === undefined ? undefined : subscriptionsById.get(id);
+						const source = subscriptionsByKey.get(message.key);
 						this.send(message.key, message.message, source);
+						port.send({ type: 'ack' });
+						break;
+					}
+
+					case 'syn': {
 						port.send({ type: 'ack' });
 						break;
 					}
@@ -187,14 +192,14 @@ class LocalPubSubProviderParent implements PubSubProvider {
 					case 'subscribe': {
 						const { key } = message;
 						const ref = new WorkerSubscriptionReference(port, key);
-						subscriptionsById.set(message.id, ref);
+						subscriptionsByKey.set(key, ref);
 						getOrSet(this.subscriptionsByKey, key, () => new Set()).add(ref);
 						port.send({ type: 'ack' });
 						break;
 					}
 
 					case 'unsubscribe': {
-						const source = subscriptionsById.get(message.id)!;
+						const source = subscriptionsByKey.get(message.key)!;
 						const sources = this.subscriptionsByKey.get(source.key)!;
 						if (sources.size === 1) {
 							this.subscriptionsByKey.delete(source.key);
@@ -213,12 +218,11 @@ class LocalPubSubProviderParent implements PubSubProvider {
  * @internal
  */
 export class LocalPubSubProviderClient implements PubSubProvider {
-	private id = 0;
 	private readonly subscriptionsByKey = new Map<string, Set<ClientSubscription>>();
-	private readonly syn: Deferred[] = [];
+	private readonly syn: PromiseWithResolvers<void>[] = [];
 	private readonly port;
 
-	constructor(port: DisposableLocalPayloadPort<Receives, Sends>) {
+	private constructor(port: DisposableLocalPayloadPort<Receives, Sends>) {
 		this.port = port;
 		mustNotReject((async () => {
 			for await (const message of port.messages) {
@@ -264,10 +268,11 @@ export class LocalPubSubProviderClient implements PubSubProvider {
 
 	async send(key: string, message: string, source?: ClientSubscription) {
 		// Send message to top thread and wait for ack
-		const deferred = new Deferred();
+		const deferred: PromiseWithResolvers<void> = Promise.withResolvers();
 		this.syn.push(deferred);
 		this.port.send({ type: 'publish', key, message });
 		await deferred.promise;
+
 		// Forward message to local subscribers
 		const subscriptions = this.subscriptionsByKey.get(key);
 		if (subscriptions) {
@@ -282,23 +287,26 @@ export class LocalPubSubProviderClient implements PubSubProvider {
 	async subscribe(key: string, listener: PubSubListener) {
 
 		// Send subscription request
-		const id = ++this.id;
-		const deferred = new Deferred();
+		const deferred: PromiseWithResolvers<void> = Promise.withResolvers();
 		this.syn.push(deferred);
-		this.port.send({ type: 'subscribe', key, id });
+		const subscriptions = getOrSet(this.subscriptionsByKey, key, () => new Set());
+		if (subscriptions.size === 0) {
+			this.port.send({ type: 'subscribe', key });
+		} else {
+			this.port.send({ type: 'syn' });
+		}
 
 		// Wait for response before returning
 		await deferred.promise;
 		const subscription = new ClientSubscription(listener, key, this);
-		const subscriptions = getOrSet(this.subscriptionsByKey, key, () => new Set());
 		subscriptions.add(subscription);
 		const effect: Effect = () => {
 			if (subscriptions.size === 1) {
 				this.subscriptionsByKey.delete(key);
+				this.port.send({ type: 'unsubscribe', key });
 			} else {
 				subscriptions.delete(subscription);
 			}
-			this.port.send({ type: 'unsubscribe', id });
 		};
 		return [ effect, subscription ] as const;
 	}

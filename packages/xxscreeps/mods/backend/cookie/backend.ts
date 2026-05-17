@@ -33,7 +33,7 @@ hooks.register('middleware', koa => koa.use(async (context, next): Promise<unkno
 				}
 			} else if (
 				/^[0-9a-f]{1,32}$/.test(cookieUserId) &&
-				context.cookies.get('session') === await context.db.data.hget(User.infoKey(cookieUserId), 'session')
+				context.cookies.get('session') === await context.db.data.hGet(User.infoKey(cookieUserId), 'session')
 			) {
 				context.state.userId = cookieUserId;
 				await context.flushToken();
@@ -48,7 +48,7 @@ hooks.register('middleware', koa => koa.use(async (context, next): Promise<unkno
 			const sessionId = Crypto.randomBytes(16).toString('hex');
 			context.cookies.set('id', userId, { httpOnly: false });
 			context.cookies.set('session', sessionId, { httpOnly: false });
-			await context.db.data.hset(User.infoKey(userId), 'session', sessionId);
+			await context.db.data.hSet(User.infoKey(userId), 'session', sessionId);
 		}
 	}
 	return next();
