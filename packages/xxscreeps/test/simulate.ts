@@ -176,8 +176,8 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 						nextRoomInstances.set(roomName, room);
 					}
 
-					// Run shard tick processors before next-tick snapshot.
-					await runShardTickProcessors(shard, time);
+					// Shard phase
+					await runShardTickProcessors(shard);
 
 					// Increment time
 					await shard.data.set('time', time);

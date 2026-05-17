@@ -105,14 +105,13 @@ async function tick() {
 				break;
 
 			case 'tickFinished': {
-				// Run shard-level tick processors before snapshotting the next tick's room queue.
-				await runShardTickProcessors(shard, time);
+				await runShardTickProcessors(shard);
 				await begetRoomProcessQueue(shard, time + 1, time, true);
 
 				// Update game state
 				await shard.data.set('time', time);
 
-				// Display statistics
+				// Setup for next tick
 				await shard.channel.publish({ type: 'tick', time });
 				shard.time = time;
 				return willContinue;

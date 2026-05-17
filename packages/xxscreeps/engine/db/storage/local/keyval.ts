@@ -573,7 +573,8 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			switch (options?.by) {
 				case 'LEX': throw new Error('Invalid request');
 				case 'SCORE': return [ ...set.entries(min, max) ];
-				default: return [ ...Fn.map(set.values(), (value): [ number, string ] => [ set.score(value)!, value ]) ];
+				default: return this.zRange(key, min, max, options)
+					.map((value: string): [ number, string ] => [ set.score(value)!, value ]);
 			}
 		} else {
 			return [];
