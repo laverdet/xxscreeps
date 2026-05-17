@@ -57,7 +57,7 @@ const BadgeSvgEndpoint: Endpoint = {
 			return;
 		}
 		const border = context.request.query.border === '1';
-		const badgeData = await context.db.data.hget(User.infoKey(userId), 'badge');
+		const badgeData = await context.db.data.hGet(User.infoKey(userId), 'badge');
 		if (badgeData === null) {
 			return;
 		}

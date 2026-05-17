@@ -5,10 +5,12 @@ on:
     paths:
       - .github/workflows/pathfinder.yml
       - packages/pathfinder/**
+      - pnpm-lock.yaml
   pull_request:
     paths:
       - .github/workflows/pathfinder.yml
       - packages/pathfinder/**
+      - pnpm-lock.yaml
 
 jobs:
   build:
@@ -52,18 +54,18 @@ jobs:
       - if: matrix.host.container == 'alpine:3'
         shell: sh
         run: |
-          apk add clang21 clang21-extra-tools cmake llvm21 ninja-is-really-ninja nodejs npm
+          apk add boost-dev clang21 clang21-extra-tools cmake lld21 llvm21 ninja-is-really-ninja nodejs npm
           echo "CXX=clang++-21" >> "$GITHUB_ENV"
       - if: matrix.host.container == 'debian:sid'
         run: |
           apt update
-          apt install -y clang-21 cmake llvm-21 ninja-build nodejs npm
+          apt install -y clang-21 cmake libboost-all-dev lld-21 llvm-21 ninja-build nodejs npm
           echo "CXX=clang++-21" >> "$GITHUB_ENV"
       - if: matrix.host.platform == 'darwin'
         run: |
           # https://github.com/orgs/Homebrew/discussions/5602
           brew install --quiet cmake ninja
-          brew install lld llvm
+          brew install boost lld llvm
           # https://github.com/Homebrew/homebrew-core/issues/221782#issuecomment-3245658786
           ln -s $(brew --prefix)/etc/clang ~/.config/clang
           LLVM=$(brew --prefix llvm)
@@ -73,12 +75,15 @@ jobs:
         shell: bash
         run: |
           winget install --accept-source-agreements --silent -e --id=LLVM.LLVM --version=21.1.6 | tr '\r' '\n' | grep -Ev --line-buffered '^[ -\/|]+$'
+          ARCH=$(uname -m)
           /c/msys64/usr/bin/pacman -Sy --noconfirm \
-            "mingw64/mingw-w64-$(uname -m)-cmake>=4.3.0" \
-            mingw64/mingw-w64-$(uname -m)-ninja \
+            "mingw-w64-$ARCH-boost" \
+            "mingw64/mingw-w64-$ARCH-cmake>=4.3.0" \
+            "mingw64/mingw-w64-$ARCH-ninja" \
           ;
           echo "/c/msys64/mingw64/bin" >> "$GITHUB_PATH"
           echo "/c/msys64/usr/bin" >> "$GITHUB_PATH"
+          echo "CMAKE_PREFIX_PATH=C:/msys64/mingw64/lib/cmake" >> "$GITHUB_ENV"
           echo "CXX=clang++.exe" >> "$GITHUB_ENV"
 
           # Make the `import std` ecostd manifest
@@ -86,11 +91,22 @@ jobs:
           VISUAL_STUDIO_PATH=$(cygpath "$(vswhere | grep installationPath: | cut -c19-)")
           # /c/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717
           MSVC_PATH="$VISUAL_STUDIO_PATH/VC/Tools/MSVC/$(ls "$VISUAL_STUDIO_PATH/VC/Tools/MSVC" | sort -V | tail -1)"
-          MODULES_STD_FRAGMENT='{ "logical-name": "std", "source-path": "'"$(cygpath -w "$MSVC_PATH/modules/std.ixx" | sed 's \\ \\\\\\\\ g')"'", "is-std-library": true }'
-          MODULES_STD_COMPAT_FRAGMENT='{ "logical-name": "std", "source-path": "'"$(cygpath -w "$MSVC_PATH/modules/std.compat.ixx" | sed 's \\ \\\\\\\\ g')"'", "is-std-library": true }'
-          ARGUMENTS_FRAGMENT='"local-arguments": { "system-include-directories": [ "'"$MSVC_PATH/modules"'" ] }'
-          MANIFEST_JSON='{ "version": 1, "revision": 1, "modules": [ '"$MODULES_STD_FRAGMENT"', '"$MODULES_STD_COMPAT_FRAGMENT"' ], '"$ARGUMENTS_FRAGMENT"' }'
-          echo "$MANIFEST_JSON" > "$RUNNER_TOOL_CACHE/stl.modules.json"
+          # Make the `import std` ecostd manifest
+          internal_escape() { cat | sed 's \\ \\\\ g'; }
+          json_string() { echo "\"$(cat | internal_escape)\""; }
+          cat <<EOF > "$RUNNER_TOOL_CACHE/stl.modules.json"
+          {
+            "version": 1,
+            "revision": 1,
+            "local-arguments": {
+              "system-include-directories": [ $(echo "$MSVC_PATH/modules" | json_string) ]
+            },
+            "modules": [
+              { "logical-name": "std", "is-std-library": true, "source-path": $(cygpath -w "$MSVC_PATH/modules/std.ixx" | internal_escape | json_string) },
+              { "logical-name": "std", "is-std-library": true, "source-path": $(cygpath -w "$MSVC_PATH/modules/std.compat.ixx" | internal_escape | json_string) }
+            ]
+          }
+          EOF
           echo "ECO_STD=/$(cygpath.exe -m "$RUNNER_TOOL_CACHE/stl.modules.json")" >> "$GITHUB_ENV"
 
           # Patch cmake
@@ -122,6 +138,8 @@ jobs:
         working-directory: packages/pathfinder
         run: |
           set -ux
+          # TODO: must be environment variable for auto_js, fix it later
+          export NODE_VERSION=24.15.0
           cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_MODULE_PATH="$(pnpm exec auto_js_cmake_include)" \
@@ -142,7 +160,7 @@ jobs:
         uses: laverdet/console@v1
 
   test:
-    name: Build [${{ matrix.host.triplet }}]
+    name: Test [${{ matrix.host.triplet }}]
     needs: build
     strategy:
       fail-fast: false

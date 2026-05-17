@@ -1,4 +1,3 @@
-# CXX=/opt/homebrew/Cellar/llvm/22.1.0/bin/clang++ cmake -DCMAKE_MODULE_PATH="$(pnpm exec auto_js_cmake_include)" -G Ninja -B build && ninja -C build
 message(STATUS "Cmake version: ${CMAKE_VERSION}")
 
 # `import std` configuration (before project)
@@ -24,6 +23,11 @@ project(pathfinder LANGUAGES CXX)
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# if(NOT CMAKE_BUILD_TYPE STREQUAL Debug)
+# 	set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
+# endif()
+
+# important compilation settings
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(APPLE)
 	set(CMAKE_LINKER_TYPE LLD)
@@ -33,30 +37,36 @@ elseif(WIN32)
 	add_compile_definitions(NOMINMAX NOMSG WIN32_LEAN_AND_MEAN)
 endif()
 
+# optimization settings
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+# linker settings
+set(CMAKE_LINKER_TYPE LLD)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+add_compile_options(-fdata-sections -ffunction-sections)
+add_link_options(-Wl,--icf=all)
+if(LINUX)
+	# Not supported in ld64 [darwin], or lld-link [windows]
+	add_link_options(-Wl,--gc-sections)
+endif()
+
 # clang & gcc diagnostic flags
 if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
 	add_compile_options(-fdiagnostics-color -Wall -Wextra -Wpedantic)
-	if(NOT CMAKE_BUILD_TYPE STREQUAL Debug)
-		# Soften common development warnings
-		add_compile_options(-Wno-unused-but-set-variable -Wno-unused-result)
-	endif()
 endif()
 
-# disable legacy isolated-vm warnings
-if(CXX_COMPILER_ID STREQUAL Clang OR CXX_COMPILER_ID STREQUAL GNU)
-	add_compile_definitions(-Wno-deprecated-declarations)
-endif()
-
-# napi configuration
+# auto_js & napi configuration
+set(EXPORT_IS_EXPORT ON)
+add_definitions(-DEXPORT_IS_EXPORT)
 include(FindNpmPackage)
 set(NAPI_VERSION 10)
-find_package_from_npm(@auto_js/js)
-find_package_from_npm(@auto_js/napi_exports)
+find_package_from_npm(@auto_js/napi)
+find_package_from_npm(@auto_js/v8)
 
 # target
 add_library(pathfinder SHARED)
 set_target_properties(pathfinder PROPERTIES PREFIX "" SUFFIX ".node")
-target_link_libraries(pathfinder PUBLIC auto_js nodejs utility_js)
+target_link_libraries(pathfinder PUBLIC auto_js nodejs nodejs_v8 utility_js v8_js)
 
 # sources
 target_sources(pathfinder
@@ -81,7 +91,7 @@ if(NOT DEFINED NAN_LOCATION)
 	set(NAN_LOCATION "${NAN_LOCATION}" CACHE STRING "")
 	message(STATUS "Found 'nan' at ${NAN_LOCATION}")
 endif()
-target_include_directories(pathfinder PRIVATE "${NAN_LOCATION}")
+target_include_directories(pathfinder SYSTEM PRIVATE "${NAN_LOCATION}")
 
 # isolated-vm
 if(NOT DEFINED ISOLATED_VM_LOCATION)
@@ -92,7 +102,7 @@ if(NOT DEFINED ISOLATED_VM_LOCATION)
 	message(STATUS "Found 'isolated-vm' at ${ISOLATED_VM_LOCATION}")
 	set(ISOLATED_VM_LOCATION "${ISOLATED_VM_LOCATION}" CACHE STRING "")
 endif()
-target_include_directories(pathfinder PRIVATE "${ISOLATED_VM_LOCATION}")
+target_include_directories(pathfinder SYSTEM PRIVATE "${ISOLATED_VM_LOCATION}")
 
 # copy to destination
 if(NOT DEFINED TRIPLET)

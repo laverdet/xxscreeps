@@ -38,7 +38,7 @@ const processorSubscription =	disposable.adopt(
 
 // Create processor workers
 type RoomWorker = typeof workers extends (infer Type)[] ? Type : never;
-const userCount = Number(await db.data.scard('users')) - 3; // minus Invader, Source Keeper, Screeps
+const userCount = Number(await db.data.sCard('users')) - 3; // minus Invader, Source Keeper, Screeps
 const singleThreaded = config.launcher?.singleThreaded;
 const processorCount = clamp(1, config.processor.concurrency, singleThreaded ? 1 : Math.ceil(userCount / 2));
 const workers = await Fn.pipe(

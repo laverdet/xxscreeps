@@ -1,6 +1,6 @@
-import { notifyHooks } from './hooks.js';
+import { registerSendUserNotifications } from './transports.js';
 
-notifyHooks.register('sendUserNotifications', (userId, notifications) => {
+registerSendUserNotifications((userId, notifications) => {
 	for (const row of notifications) {
 		console.log(JSON.stringify({
 			event: 'notify',

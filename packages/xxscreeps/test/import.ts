@@ -131,7 +131,7 @@ export async function instantiateTestShard() {
 	await Promise.all([
 		shard.data.set('terrain', terrain),
 		shard.data.set('time', shard.time),
-		shard.data.sadd('rooms', [ ...Fn.map(rooms, room => room.room.name) ]),
+		shard.data.sAdd('rooms', [ ...Fn.map(rooms, room => room.room.name) ]),
 		shard.scratch.set(processorTimeKey, shard.time),
 		Promise.all(Fn.map(rooms, ({ room }) =>
 			shard.saveRoom(room.name, shard.time, room))),

@@ -8,18 +8,18 @@ template <class Type>
 constexpr auto pop_heap(std::span<Type> container, auto compare, auto projection) {
 	std::swap(container.front(), container.back());
 	auto size = container.size() - 1;
-	auto vv = 1;
+	auto vv = 1UZ;
 	while (true) {
 		auto uu = vv;
 		if ((uu * 2) + 1 <= size) {
-			if (compare(projection(container[ uu - 1 ]), projection(container[ (uu * 2) - 1 ]))) {
+			if (!compare(projection(container[ (uu * 2) - 1 ]), projection(container[ uu - 1 ]))) {
 				vv = uu * 2;
 			}
-			if (compare(projection(container[ vv - 1 ]), projection(container[ (uu * 2) ]))) {
+			if (!compare(projection(container[ (uu * 2) ]), projection(container[ vv - 1 ]))) {
 				vv = (uu * 2) + 1;
 			}
 		} else if (uu * 2 <= size) {
-			if (compare(projection(container[ uu - 1 ]), projection(container[ (uu * 2) - 1 ]))) {
+			if (!compare(projection(container[ (uu * 2) - 1 ]), projection(container[ uu - 1 ]))) {
 				vv = uu * 2;
 			}
 		}
@@ -72,7 +72,8 @@ class heap_t {
 		}
 
 		constexpr auto update(value_type value) -> void {
-			auto search = range() | std::views::enumerate | std::views::reverse;
+			// auto search = range() | std::views::enumerate | std::views::reverse;
+			auto search = std::views::zip(std::views::iota(0UZ, size_), range()) | std::views::reverse;
 			auto found = std::ranges::find(search, value.first, [](const auto& pair) { return get<1>(pair); });
 			auto ii = static_cast<std::size_t>(get<0>(*found));
 			score_[ value.first ] = value.second;

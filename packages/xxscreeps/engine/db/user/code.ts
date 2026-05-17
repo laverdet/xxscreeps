@@ -51,8 +51,8 @@ export async function saveContent(db: Database, userId: string, branchName: stri
 	const bufferBlob = buffers.length === 0 ? undefined : Schema.writeBuffers(new Map(buffers as [ string, Uint8Array ][]));
 	const stringBlob = strings.length === 0 ? undefined : Schema.writeStrings(new Map(strings));
 	const [ didSwitch ] = await Promise.all([
-		db.data.hset(User.infoKey(userId), 'branch', branchName, { if: 'nx' }),
-		db.data.sadd(branchManifestKey(userId), [ branchName ]),
+		db.data.hSet(User.infoKey(userId), 'branch', branchName, { if: 'NX' }),
+		db.data.sAdd(branchManifestKey(userId), [ branchName ]),
 		bufferBlob
 			? db.data.set(buffersKey(userId, branchName), bufferBlob) :
 			db.data.vdel(buffersKey(userId, branchName)) as Promise<never>,

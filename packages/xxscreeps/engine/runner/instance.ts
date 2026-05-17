@@ -115,7 +115,7 @@ export class PlayerInstance {
 		const [ channel, codeChannel, userInfo ] = await Promise.all([
 			getRunnerUserChannel(shard, userId).subscribe(),
 			Code.getUserCodeChannel(shard.db, userId).subscribe(),
-			shard.db.data.hmget(User.infoKey(userId), [ 'branch', 'username' ]),
+			shard.db.data.hmGet(User.infoKey(userId), [ 'branch', 'username' ]),
 		]);
 		const instance = new PlayerInstance(shard, world, channel, codeChannel, userId, userInfo.username!, userInfo.branch ?? null);
 		try {
@@ -203,7 +203,7 @@ export class PlayerInstance {
 						);
 						const entries = await Promise.all(Fn.map(newUserIds, async userId => {
 							this.seenUsers.add(userId);
-							return [ userId, (await this.shard.db.data.hget(User.infoKey(userId), 'username'))! ] as const;
+							return [ userId, (await this.shard.db.data.hGet(User.infoKey(userId), 'username'))! ] as const;
 						}));
 						if (entries.length !== 0) {
 							payload.usernames = Fn.fromEntries(entries);

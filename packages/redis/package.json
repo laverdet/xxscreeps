@@ -8,11 +8,11 @@
     "./*": "./dist/*"
   },
   "dependencies": {
-    "redis": "3.1.2"
+    "redis": "5.12.1"
   },
   "devDependencies": {
     "@types/node": "~24.12.2",
-    "@types/redis": "~2.8.31"
+    "@types/redis": "~4.0.11"
   },
   "peerDependencies": {
     "xxscreeps": "workspace:~"

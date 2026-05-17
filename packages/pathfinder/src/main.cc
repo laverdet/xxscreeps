@@ -1,8 +1,17 @@
 // Author: Marcel Laverdet <https://github.com/laverdet>
+// macos:
+// CXX=/opt/homebrew/Cellar/llvm/22.1.0/bin/clang++ cmake -DCMAKE_MODULE_PATH="$(pnpm exec auto_js_cmake_include)" -DCMAKE_CXX_STDLIB_MODULES_JSON=/opt/homebrew/opt/llvm/lib/c++/libc++.modules.json -G Ninja -B build && ninja -C build
+// linux:
+// CXX=/lib/llvm-22/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_PATH="$(pnpm exec auto_js_cmake_include)" -G Ninja -B build; ninja -C build
+
+// NODE_OPTIONS='--no-node-snapshot --experimental-vm-modules --enable-source-maps' lldb-22 node packages/xxscreeps/bin/xxscreeps.js test
 #include "nan.h"
 #include <isolated_vm.h>
+import auto_js;
 import screeps;
 import std;
+import util;
+import v8_js;
 
 namespace screeps {
 
@@ -11,7 +20,19 @@ namespace screeps {
 // cost of 2.16mb(!)
 thread_local std::array<path_finder_t, 2> path_finders;
 
-NAN_METHOD(search) {
+auto search(
+	js::forward<v8::Local<v8::Value>> origin_js,
+	js::forward<v8::Local<v8::Object>> goals_js,
+	js::forward<v8::Local<v8::Value>> room_callback,
+	// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+	int plain_cost,
+	int swamp_cost,
+	int max_rooms,
+	int max_ops,
+	unsigned max_cost,
+	bool flee,
+	double heuristic_weight
+) -> js::forward<v8::Local<v8::Value>> {
 	// Find an inactive path finder
 	path_finder_t* pf = nullptr;
 	std::unique_ptr<path_finder_t> pf_holder;
@@ -27,36 +48,28 @@ NAN_METHOD(search) {
 	}
 
 	// Get the values from v8 and run the search
-	cost_t plain_cost = Nan::To<int32_t>(info[ 3 ]).FromJust();
-	cost_t swamp_cost = Nan::To<int32_t>(info[ 4 ]).FromJust();
-	int max_rooms = Nan::To<int32_t>(info[ 5 ]).FromJust();
-	int max_ops = Nan::To<int32_t>(info[ 6 ]).FromJust();
-	unsigned max_cost = Nan::To<uint32_t>(info[ 7 ]).FromJust();
-	bool flee = Nan::To<bool>(info[ 8 ]).FromJust();
-	double heuristic_weight = Nan::To<double>(info[ 9 ]).FromJust();
-	info.GetReturnValue().Set(pf->search(
-		info[ 0 ], v8::Local<v8::Array>::Cast(info[ 1 ]), // origin + goals
-		v8::Local<v8::Function>::Cast(info[ 2 ]),					// callback
-		plain_cost,
-		swamp_cost,
-		max_rooms,
-		max_ops,
-		max_cost,
-		flee,
-		heuristic_weight
-	));
+	auto result = pf->search(*origin_js, goals_js->As<v8::Array>(), room_callback->As<v8::Function>(), plain_cost, swamp_cost, max_rooms, max_ops, max_cost, flee, heuristic_weight);
+	return js::forward{result};
 }
 
-NAN_METHOD(load_terrain) {
-	path_finder_t::load_terrain(v8::Local<v8::Array>::Cast(info[ 0 ]));
+auto load_terrain(js::forward<v8::Local<v8::Object>> world) -> void {
+	path_finder_t::load_terrain(*world);
 }
 
 }; // namespace screeps
 
-ISOLATED_VM_MODULE void InitForContext(v8::Isolate* /*isolate*/, v8::Local<v8::Context> /*context*/, v8::Local<v8::Object> target) {
-	Nan::Set(target, Nan::New("search").ToLocalChecked(), Nan::GetFunction(Nan::New<v8::FunctionTemplate>(screeps::search)).ToLocalChecked());
-	Nan::Set(target, Nan::New("loadTerrain").ToLocalChecked(), Nan::GetFunction(Nan::New<v8::FunctionTemplate>(screeps::load_terrain)).ToLocalChecked());
-	Nan::Set(target, Nan::New("version").ToLocalChecked(), Nan::New<v8::Number>(11));
+ISOLATED_VM_MODULE void InitForContext(v8::Isolate* isolate, v8::Local<v8::Context> context, v8::Local<v8::Object> target) {
+	auto isolate_witness = js::iv8::isolate_lock_witness::make_witness(isolate);
+	auto context_witness = js::iv8::context_lock_witness::make_witness(isolate_witness, context);
+	js::iv8::object_assign(
+		context_witness,
+		target,
+		std::tuple{
+			std::pair{util::cw<"search">, js::free_function{screeps::search}},
+			std::pair{util::cw<"loadTerrain">, js::free_function{screeps::load_terrain}},
+			std::pair{util::cw<"version">, 11},
+		}
+	);
 }
 
 void init(v8::Local<v8::Object> target) {
@@ -64,4 +77,7 @@ void init(v8::Local<v8::Object> target) {
 	InitForContext(isolate, isolate->GetCurrentContext(), target);
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
 NAN_MODULE_WORKER_ENABLED(pf, init) // NOLINT
+#pragma clang diagnostic pop
