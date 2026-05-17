@@ -29,7 +29,8 @@ type LookAtResult<Type extends LookConstants> = Record<LookConstants, TypeOfLook
 };
 
 // Helpers for `room.lookAtArea` and `room.lookForAtArea`
-type LookAsArray<Type> = (Type & { x: number; y: number })[];
+interface LookArrayPos { x: number; y: number }
+type LookAsArray<Type> = (Type & LookArrayPos)[];
 type LookAtArea<Type> = Record<number, Record<number, Type[]>>;
 
 // Result of `room.lookForAtArea`. This is the same as `LookAtResult` but without `type`
@@ -138,7 +139,8 @@ extend(Room, {
 			mapArea(top, left, bottom, right, (x, y) =>
 				({ x, y, type: 'terrain', terrain: terrainMaskToString[terrain.get(x, y)] })),
 		]);
-		return withAsArray(results, top, left, bottom, right, asArray, true) as never;
+		return withAsArray(results, top, left, bottom, right, asArray, true,
+			({ x: _x, y: _y, ...rest }) => rest) as never;
 	},
 
 	lookForAt(type: LookConstants, ...rest: PositionParameter) {
@@ -159,33 +161,32 @@ extend(Room, {
 
 	lookForAtArea(type: LookConstants, top: number, left: number, bottom: number, right: number, asArray = false) {
 		const size = (bottom - top + 1) * (right - left + 1);
-		const results = (() => {
-			if (type === C.LOOK_TERRAIN) {
-				// Simply return terrain data
-				const terrain = this.getTerrain();
-				return mapArea(top, left, bottom, right, (x, y) =>
-					({ x, y, terrain: terrainMaskToString[terrain.get(x, y)] }));
-			} else {
-				const objects = (() => {
-					const objects = this['#lookFor'](type);
-					if (size < objects.length) {
-						// Iterate all objects by type
-						return Fn.filter(objects, object =>
-							object.pos.x >= left && object.pos.x <= right &&
-							object.pos.y >= top && object.pos.y <= bottom);
-					} else {
-						// Filter on spatial index
-						return Fn.pipe(
-							iterateArea(this.name, top, left, bottom, right),
-							$$ => Fn.transform($$, pos => this['#lookAt'](pos)),
-							$$ => Fn.filter($$, object => lookMatches(type, object)));
-					}
-				})();
-				// Add position and type information
-				return Fn.map(objects, object => ({ x: object.pos.x, y: object.pos.y, [type]: object }));
-			}
-		})();
-		return withAsArray(results, top, left, bottom, right, asArray, false) as never;
+		if (type === C.LOOK_TERRAIN) {
+			// Simply return terrain data
+			const terrain = this.getTerrain();
+			const results = mapArea(top, left, bottom, right, (x, y) =>
+				({ x, y, terrain: terrainMaskToString[terrain.get(x, y)] }));
+			return withAsArray(results, top, left, bottom, right, asArray, false, value => value.terrain) as never;
+		} else {
+			const objects = (() => {
+				const objects = this['#lookFor'](type);
+				if (size < objects.length) {
+					// Iterate all objects by type
+					return Fn.filter(objects, object =>
+						object.pos.x >= left && object.pos.x <= right &&
+						object.pos.y >= top && object.pos.y <= bottom);
+				} else {
+					// Filter on spatial index
+					return Fn.pipe(
+						iterateArea(this.name, top, left, bottom, right),
+						$$ => Fn.transform($$, pos => this['#lookAt'](pos)),
+						$$ => Fn.filter($$, object => lookMatches(type, object)));
+				}
+			})();
+			// Add position and type information
+			const results = Fn.map(objects, object => ({ x: object.pos.x, y: object.pos.y, [type]: object }));
+			return withAsArray(results, top, left, bottom, right, asArray, false, value => value[type]) as never;
+		}
 	},
 
 	getPositionAt(xx: number, yy: number) {
@@ -223,7 +224,12 @@ function *lookAtAreaEntries(object: AnyRoomObject): Iterable<LookAreaEntry> {
 	yield { x: object.pos.x, y: object.pos.y, type, [type]: object };
 }
 
-function withAsArray(values: Iterable<{ x: number; y: number }>, top: number, left: number, bottom: number, right: number, asArray: boolean, nest: boolean) {
+function withAsArray<T extends LookArrayPos>(
+	values: Iterable<T>,
+	top: number, left: number, bottom: number, right: number,
+	asArray: boolean, nest: boolean,
+	extract: (value: T) => any,
+) {
 	if (asArray) {
 		return [ ...values ];
 	} else {
@@ -236,8 +242,14 @@ function withAsArray(values: Iterable<{ x: number; y: number }>, top: number, le
 				}
 			}
 		}
-		for (const value of values) {
-			results[value.y]![value.x]!.push(value);
+		if (nest) {
+			for (const value of values) {
+				results[value.y]![value.x]!.push(extract(value));
+			}
+		} else {
+			for (const value of values) {
+				(results[value.y]![value.x] ??= []).push(extract(value));
+			}
 		}
 		return results;
 	}

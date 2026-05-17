@@ -5,14 +5,16 @@ on:
     paths:
       - .github/workflows/pathfinder.yml
       - packages/pathfinder/**
+      - pnpm-lock.yaml
   pull_request:
     paths:
       - .github/workflows/pathfinder.yml
       - packages/pathfinder/**
+      - pnpm-lock.yaml
 
 jobs:
   build:
-    name: Build
+    name: Build [${{ matrix.host.triplet }}]
     strategy:
       fail-fast: false
       matrix:
@@ -25,7 +27,7 @@ jobs:
             platform: darwin
             triplet: aarch64-apple-darwin
           - runs-on: ubuntu-24.04-arm
-            container: debian:trixie
+            container: debian:sid
             triplet: aarch64-unknown-linux-gnu
           # x86_64
           - runs-on: ubuntu-24.04
@@ -38,7 +40,7 @@ jobs:
             platform: windows
             triplet: x86_64-pc-windows
           - runs-on: ubuntu-24.04
-            container: debian:trixie
+            container: debian:sid
             triplet: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.host.runs-on }}
     container: ${{ matrix.host.container }}
@@ -52,48 +54,99 @@ jobs:
       - if: matrix.host.container == 'alpine:3'
         shell: sh
         run: |
-          apk add cmake g++ make ninja-is-really-ninja nodejs npm python3
-          echo "CXX=g++" >> "$GITHUB_ENV"
-      - if: matrix.host.container == 'debian:trixie'
+          apk add boost-dev clang21 clang21-extra-tools cmake lld21 llvm21 ninja-is-really-ninja nodejs npm
+          echo "CXX=clang++-21" >> "$GITHUB_ENV"
+      - if: matrix.host.container == 'debian:sid'
         run: |
-          cat <<"EOF" > /etc/apt/sources.list.d/debian-backports.sources
-          Types: deb deb-src
-          URIs: http://deb.debian.org/debian
-          Suites: trixie-backports
-          Components: main
-          Enabled: yes
-          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-          EOF
           apt update
-          apt install -y clang-21 cmake ninja-build nodejs npm python3
+          apt install -y clang-21 cmake libboost-all-dev lld-21 llvm-21 ninja-build nodejs npm
           echo "CXX=clang++-21" >> "$GITHUB_ENV"
       - if: matrix.host.platform == 'darwin'
         run: |
-          brew install cmake ninja
+          # https://github.com/orgs/Homebrew/discussions/5602
+          brew install --quiet cmake ninja
+          brew install boost lld llvm
+          # https://github.com/Homebrew/homebrew-core/issues/221782#issuecomment-3245658786
           ln -s $(brew --prefix)/etc/clang ~/.config/clang
-          echo "CXX=clang++" >> "$GITHUB_ENV"
+          LLVM=$(brew --prefix llvm)
+          echo "CXX=$LLVM/bin/clang++" >> "$GITHUB_ENV"
+          echo "ECO_STD=$LLVM/lib/c++/libc++.modules.json" >> "$GITHUB_ENV"
       - if: matrix.host.platform == 'windows'
         shell: bash
         run: |
           winget install --accept-source-agreements --silent -e --id=LLVM.LLVM --version=21.1.6 | tr '\r' '\n' | grep -Ev --line-buffered '^[ -\/|]+$'
+          ARCH=$(uname -m)
           /c/msys64/usr/bin/pacman -Sy --noconfirm \
-            "mingw64/mingw-w64-$(uname -m)-cmake>=4.3.0" \
-            mingw64/mingw-w64-$(uname -m)-ninja \
+            "mingw-w64-$ARCH-boost" \
+            "mingw64/mingw-w64-$ARCH-cmake>=4.3.0" \
+            "mingw64/mingw-w64-$ARCH-ninja" \
           ;
           echo "/c/msys64/mingw64/bin" >> "$GITHUB_PATH"
           echo "/c/msys64/usr/bin" >> "$GITHUB_PATH"
+          echo "CMAKE_PREFIX_PATH=C:/msys64/mingw64/lib/cmake" >> "$GITHUB_ENV"
           echo "CXX=clang++.exe" >> "$GITHUB_ENV"
+
+          # Make the `import std` ecostd manifest
+          # /c/Program Files/Microsoft Visual Studio/18/Enterprise
+          VISUAL_STUDIO_PATH=$(cygpath "$(vswhere | grep installationPath: | cut -c19-)")
+          # /c/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717
+          MSVC_PATH="$VISUAL_STUDIO_PATH/VC/Tools/MSVC/$(ls "$VISUAL_STUDIO_PATH/VC/Tools/MSVC" | sort -V | tail -1)"
+          # Make the `import std` ecostd manifest
+          internal_escape() { cat | sed 's \\ \\\\ g'; }
+          json_string() { echo "\"$(cat | internal_escape)\""; }
+          cat <<EOF > "$RUNNER_TOOL_CACHE/stl.modules.json"
+          {
+            "version": 1,
+            "revision": 1,
+            "local-arguments": {
+              "system-include-directories": [ $(echo "$MSVC_PATH/modules" | json_string) ]
+            },
+            "modules": [
+              { "logical-name": "std", "is-std-library": true, "source-path": $(cygpath -w "$MSVC_PATH/modules/std.ixx" | internal_escape | json_string) },
+              { "logical-name": "std", "is-std-library": true, "source-path": $(cygpath -w "$MSVC_PATH/modules/std.compat.ixx" | internal_escape | json_string) }
+            ]
+          }
+          EOF
+          echo "ECO_STD=/$(cygpath.exe -m "$RUNNER_TOOL_CACHE/stl.modules.json")" >> "$GITHUB_ENV"
+
+          # Patch cmake
+          # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/12053
+          patch --batch --forward --unified /c/msys64/mingw64/share/cmake/Modules/Compiler/Clang-CXX-CXXImportStd.cmake <<"EOF"
+          @@ -4,8 +4,7 @@
+             elseif (CMAKE_CXX_STANDARD_LIBRARY STREQUAL "libstdc++")
+               set(_clang_modules_json_impl "libstdc++")
+             else ()
+          -    set(CMAKE_CXX_COMPILER_IMPORT_STD_ERROR_MESSAGE "Only `libc++` and `libstdc++` are supported" PARENT_SCOPE)
+          -    return ()
+          +    set(_clang_modules_json_impl "libc++")
+             endif ()
+
+             if (NOT CMAKE_CXX_STDLIB_MODULES_JSON)
+          EOF
+          echo ::endgroup::
 
       # Setup repository
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
       - shell: sh
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: |
+          npm config set script-shell /bin/sh
+          npm install -g pnpm
+          pnpm install --frozen-lockfile --ignore-scripts
 
       # Build
       - shell: sh
         working-directory: packages/pathfinder
-        run: npx node-gyp rebuild --release --target=v24.15.0
+        run: |
+          set -ux
+          # TODO: must be environment variable for auto_js, fix it later
+          export NODE_VERSION=24.15.0
+          cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_MODULE_PATH="$(pnpm exec auto_js_cmake_include)" \
+            ${ECO_STD:+"-DCMAKE_CXX_STDLIB_MODULES_JSON=${ECO_STD}"} \
+            -G Ninja -B build \
+          ;
+          ninja -C build
 
       # Upload build artifacts
       - uses: actions/upload-artifact@v7
@@ -107,7 +160,7 @@ jobs:
         uses: laverdet/console@v1
 
   test:
-    name: Test
+    name: Test [${{ matrix.host.triplet }}]
     needs: build
     strategy:
       fail-fast: false
@@ -154,9 +207,10 @@ jobs:
 
       # Setup
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6
       - shell: sh
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: |
+          npm install -g pnpm
+          pnpm install --frozen-lockfile --ignore-scripts
       - uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.host.triplet }}
@@ -189,9 +243,9 @@ jobs:
           # Modern npm version required for nested package OIDC & provenance. This version can be removed when that is
           # standard.
           node-version: 24
-      - uses: pnpm/action-setup@v6
       - shell: sh
         run: |
+          npm install -g pnpm
           pnpm install --frozen-lockfile --ignore-scripts
           pnpm run build
 

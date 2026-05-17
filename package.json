@@ -30,6 +30,11 @@
   "pnpm": {
     "patchedDependencies": {
       "lodash-es": "patches/lodash-es.patch"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@xxscreeps/pathfinder",
+      "isolated-vm",
+      "ivm-inspect"
+    ]
   }
 }

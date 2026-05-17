@@ -1,0 +1,8 @@
+.git
+.pnpm
+.screepsrc.yaml*
+**/dist
+**/node_modules
+dump.rdb
+packages/pathfinder/build
+screeps

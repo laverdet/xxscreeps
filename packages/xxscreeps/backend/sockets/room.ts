@@ -174,7 +174,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 
 				// Get users not yet seen
 				const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async (id): Promise<[ string, any ]> => {
-					const info = await shard.db.data.hmget(User.infoKey(id), [ 'badge', 'username' ]);
+					const info = await shard.db.data.hmGet(User.infoKey(id), [ 'badge', 'username' ]);
 					return [ id, {
 						username: info.username,
 						badge: info.badge ? JSON.parse(info.badge) : {},

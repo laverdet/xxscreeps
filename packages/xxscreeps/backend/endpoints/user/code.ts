@@ -19,7 +19,7 @@ function checkBranchName(branchName: string): asserts branchName is string {
 
 async function getBranchNameFromQuery(db: Database, userId: string, branchName: string) {
 	if (!branchName || branchName === '$activeWorld') {
-		return await db.data.hget(User.infoKey(userId), 'branch') ?? kDefaultBranch;
+		return await db.data.hGet(User.infoKey(userId), 'branch') ?? kDefaultBranch;
 	}
 	checkBranchName(branchName);
 	return branchName;
@@ -78,7 +78,7 @@ hooks.register('route', {
 
 	async execute(context) {
 		const { userId } = context.state;
-		const branches = userId == null ? undefined : await context.db.data.smembers(Code.branchManifestKey(userId));
+		const branches = userId == null ? undefined : await context.db.data.sMembers(Code.branchManifestKey(userId));
 
 		if (userId == null || !branches || branches.length === 0) {
 			// Fake module list. `default` will be created on save
@@ -94,7 +94,7 @@ hooks.register('route', {
 		}
 
 		// First save has occurred
-		const currentBranch = await context.shard.data.hget(User.infoKey(userId), 'branch');
+		const currentBranch = await context.shard.data.hGet(User.infoKey(userId), 'branch');
 		const withCode = Boolean(context.request.query.withCode);
 		return {
 			ok: 1,
@@ -145,7 +145,7 @@ hooks.register('route', {
 		const { newName } = context.request.body;
 		checkBranchName(newName);
 		const key = Code.branchManifestKey(userId);
-		const branches = await context.db.data.smembers(key);
+		const branches = await context.db.data.sMembers(key);
 		if (branches.length >= kMaxBranches) {
 			throw new Error('Too many branches');
 		} else if (branches.includes(newName)) {
@@ -176,7 +176,7 @@ hooks.register('route', {
 		if (!updated) {
 			throw new Error('Failed to copy');
 		}
-		await context.db.data.sadd(Code.branchManifestKey(userId), [ newName ]);
+		await context.db.data.sAdd(Code.branchManifestKey(userId), [ newName ]);
 
 		return { ok: 1, timestamp };
 	}),
@@ -205,13 +205,13 @@ hooks.register('route', {
 		}
 		const [ branch, currentBranch ] = await Promise.all([
 			getBranchNameFromQuery(context.db, userId, context.request.body.branch),
-			context.shard.data.hget(User.infoKey(userId), 'branch'),
+			context.shard.data.hGet(User.infoKey(userId), 'branch'),
 		]);
 		if (branch === currentBranch) {
 			return;
 		}
 		await Promise.all([
-			context.db.data.srem(Code.branchManifestKey(userId), [ branch ]),
+			context.db.data.sRem(Code.branchManifestKey(userId), [ branch ]),
 			context.db.data.vdel(Code.buffersKey(userId, branch)),
 			context.db.data.vdel(Code.stringsKey(userId, branch)),
 		]);
@@ -241,10 +241,10 @@ hooks.register('route', {
 			return;
 		}
 		const branch = await getBranchNameFromQuery(context.db, userId, context.request.body.branch);
-		if (!await context.db.data.sismember(Code.branchManifestKey(userId), branch)) {
+		if (!await context.db.data.sIsMember(Code.branchManifestKey(userId), branch)) {
 			return;
 		}
-		await context.db.data.hset(User.infoKey(userId), 'branch', branch);
+		await context.db.data.hSet(User.infoKey(userId), 'branch', branch);
 		await Code.getUserCodeChannel(context.db, userId).publish({ type: 'switch', branch });
 		return { ok: 1 };
 	}),

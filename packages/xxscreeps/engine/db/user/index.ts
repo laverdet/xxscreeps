@@ -30,39 +30,39 @@ export async function create(db: Database, userId: string, username: string, pro
 		...providers,
 	];
 	const providerConflicts = await Promise.all(Fn.map(allProviders,
-		({ provider, id }) => db.data.hget(providerMembersKey(provider), id)));
+		({ provider, id }) => db.data.hGet(providerMembersKey(provider), id)));
 	if (Fn.some(providerConflicts, value => value !== null)) {
 		throw new Error('Already associated');
 	}
 
 	// Make user
 	const key = infoKey(userId);
-	const result = await db.data.hset(key, 'username', username, { if: 'nx' });
+	const result = await db.data.hSet(key, 'username', username, { if: 'NX' });
 	if (!result) {
 		throw new Error('User already created');
 	}
 	await Promise.all<any>([
-		db.data.sadd('users', [ userId ]),
+		db.data.sAdd('users', [ userId ]),
 		db.data.hmset(key, {
 			registeredDate: Date.now(),
 		}),
 		db.data.hmset(userProvidersKey(userId),
 			[ ...Fn.map(allProviders, ({ provider, id }): [ string, string ] => [ provider, id ]) ]),
 		...Fn.map(allProviders, ({ provider, id }) =>
-			db.data.hset(providerMembersKey(provider), id, userId)),
+			db.data.hSet(providerMembersKey(provider), id, userId)),
 	]);
 }
 
 export function findProvidersForUser(db: Database, userId: string) {
-	return db.data.hgetall(userProvidersKey(userId));
+	return db.data.hGetAll(userProvidersKey(userId));
 }
 
 export function providerIdForUser(db: Database, provider: string, userId: string) {
-	return db.data.hget(userProvidersKey(userId), provider);
+	return db.data.hGet(userProvidersKey(userId), provider);
 }
 
 export async function findUserByProvider(db: Database, provider: string, providerId: string) {
-	return db.data.hget(providerMembersKey(provider), providerId);
+	return db.data.hGet(providerMembersKey(provider), providerId);
 }
 
 export async function findUserByName(db: Database, username: string) {

@@ -26,7 +26,7 @@ async function readRows(
 	shard: Shard, userId: string, ids: Iterable<string>,
 ): Promise<{ id: string; row: NotificationRow }[]> {
 	return Fn.mapAwait(ids, async (id): Promise<{ id: string; row: NotificationRow }> => {
-		const fields = await shard.data.hgetall(rowKey(userId, id));
+		const fields = await shard.data.hGetAll(rowKey(userId, id));
 		return {
 			id,
 			row: {
@@ -48,43 +48,43 @@ export async function getNotifications(
 }
 
 export async function getNotificationIds(shard: Shard, userId: string): Promise<string[]> {
-	return shard.data.zrange(userIndexKey(userId), 0, -1);
+	return shard.data.zRange(userIndexKey(userId), 0, -1);
 }
 
 // Rows whose group due time has elapsed (score ≤ `nowMs`).
 export async function getDueNotifications(
 	shard: Shard, userId: string, nowMs: number,
 ): Promise<{ id: string; row: NotificationRow }[]> {
-	const ids = await shard.data.zrange(userIndexKey(userId), 0, nowMs, { by: 'score' });
+	const ids = await shard.data.zRange(userIndexKey(userId), 0, nowMs, { by: 'SCORE' });
 	return readRows(shard, userId, ids);
 }
 
 // When the user's next group becomes due, or undefined if nothing is queued.
 export async function nextPendingDueAt(shard: Shard, userId: string): Promise<number | undefined> {
-	const head = await shard.data.zrangeWithScores(userIndexKey(userId), 0, 0);
+	const head = await shard.data.zRangeWithScores(userIndexKey(userId), 0, 0);
 	return head[0]?.[0];
 }
 
 export async function removeNotifications(shard: Shard, userId: string, ids: string[]) {
 	if (ids.length === 0) return;
 	await Promise.all([
-		shard.data.zrem(userIndexKey(userId), ids),
+		shard.data.zRem(userIndexKey(userId), ids),
 		...ids.map(id => shard.data.del(rowKey(userId, id))),
 	]);
 }
 
 // Pop users whose scheduled drain time has elapsed. Caller owns rescheduling via `scheduleUserDrain`.
 export async function consumeDueUsers(shard: Shard, nowMs: number): Promise<string[]> {
-	const userIds = await shard.data.zrange(dueUsersKey, 0, nowMs, { by: 'score' });
+	const userIds = await shard.data.zRange(dueUsersKey, 0, nowMs, { by: 'SCORE' });
 	if (userIds.length > 0) {
-		await shard.data.zrem(dueUsersKey, userIds);
+		await shard.data.zRem(dueUsersKey, userIds);
 	}
 	return userIds;
 }
 
 // Schedule a user's next drain, keeping the sooner of any existing entry.
 export async function scheduleUserDrain(shard: Shard, userId: string, dueAt: number) {
-	await shard.data.zadd(dueUsersKey, [ [ dueAt, userId ] ], { up: 'lt' });
+	await shard.data.zAdd(dueUsersKey, [ [ dueAt, userId ] ], { up: 'LT' });
 }
 
 /**
@@ -103,11 +103,11 @@ export async function upsertNotification(
 	const id = rowIdFor(type, timeGroup, message);
 	const key = rowKey(userId, id);
 	// Read-then-write is safe because the runner serializes save() per user.
-	const existing = await shard.data.hget(key, 'count');
+	const existing = await shard.data.hGet(key, 'count');
 	if (existing === null) {
 		await Promise.all([
 			shard.data.hmset(key, { message, date: now, count: 1, type }),
-			shard.data.zadd(userIndexKey(userId), [ [ timeGroup, id ] ]),
+			shard.data.zAdd(userIndexKey(userId), [ [ timeGroup, id ] ]),
 			scheduleUserDrain(shard, userId, timeGroup),
 		]);
 	} else {

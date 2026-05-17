@@ -6,7 +6,7 @@ import { KeyvalScript } from './storage/script.js';
  */
 export async function *consumeSet(keyval: KeyValProvider, key: string) {
 	while (true) {
-		const next = await keyval.spop(key);
+		const next = await keyval.sPop(key);
 		if (next === null) {
 			return;
 		}
@@ -20,7 +20,7 @@ export async function *consumeSet(keyval: KeyValProvider, key: string) {
  */
 const RemOne = new KeyvalScript((keyval, [ key ]: [ string ], members: string[]) => {
 	for (const [ ii, member ] of members.entries()) {
-		if (keyval.srem(key, [ member ]) === 1) {
+		if (keyval.sRem(key, [ member ]) === 1) {
 			return ii;
 		}
 	}
@@ -58,12 +58,12 @@ export async function *consumeSetMembers(keyval: KeyValProvider, key: string, me
  */
 const ZPopByScore = new KeyvalScript(
 	(keyval, [ key ]: [ string ], [ min, max ]: [ number, number ]) => {
-		const range: string[] = keyval.zrange(key, min, max, { by: 'score', limit: [ 0, 1 ] });
+		const range: string[] = keyval.zRange(key, min, max, { by: 'SCORE', limit: [ 0, 1 ] });
 		const [ first ] = range;
 		if (first === undefined) {
 			return null;
 		} else {
-			keyval.zrem(key, range);
+			keyval.zRem(key, range);
 			return first;
 		}
 	}, {
@@ -102,7 +102,7 @@ const ZRemOneInRange = new KeyvalScript((
 ): [ number, ...number[] ] => {
 	const result: [ number, ...number[] ] = [ -1 ];
 	for (let ii = 0; ii < members.length; ii += 16) {
-		const scores = keyval.zmscore(key, members.slice(ii, ii + 16));
+		const scores = keyval.zmScore(key, members.slice(ii, ii + 16));
 		for (const [ jj, score ] of scores.entries()) {
 			if (score === null) {
 				result.push(ii + jj);
@@ -111,7 +111,7 @@ const ZRemOneInRange = new KeyvalScript((
 			}
 		}
 		if (result[0] !== -1) {
-			keyval.zrem(key, [ members[result[0]]! ]);
+			keyval.zRem(key, [ members[result[0]]! ]);
 			break;
 		}
 	}
