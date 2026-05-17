@@ -1,11 +1,5 @@
-import { hooks } from 'xxscreeps/game/index.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { RoomPosition } from './position.js';
-
-// Replay driver/runtime/index.ts: last-registered runtimeConnector hook runs last.
-for (const hook of [ ...hooks.map('runtimeConnector') ].reverse()) {
-	hook.initialize?.({} as never);
-}
 
 describe('RoomPosition', () => {
 	test('__packedPos setter round-trips through the getter', () => {
