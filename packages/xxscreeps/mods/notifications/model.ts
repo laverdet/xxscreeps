@@ -40,15 +40,9 @@ async function readRows(
 	});
 }
 
-export async function getNotifications(
-	shard: Shard, userId: string,
-): Promise<{ id: string; row: NotificationRow }[]> {
-	const ids = await getNotificationIds(shard, userId);
-	return readRows(shard, userId, ids);
-}
-
-export async function getNotificationIds(shard: Shard, userId: string): Promise<string[]> {
-	return shard.data.zRange(userIndexKey(userId), 0, -1);
+export async function flushNotifications(shard: Shard, userId: string) {
+	const ids = await shard.data.zRange(userIndexKey(userId), 0, -1);
+	await removeNotifications(shard, userId, ids);
 }
 
 // Rows whose group due time has elapsed (score ≤ `nowMs`).

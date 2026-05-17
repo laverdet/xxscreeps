@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { captureConsoleLog, parseNotifyLines, withFakeNow } from 'xxscreeps/test/console-capture.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { dispatchQueuedNotifications } from './driver.js';
-import { getNotifications, upsertNotification } from './model.js';
+import { getDueNotifications, upsertNotification } from './model.js';
 import { flush } from './notifications.js';
 import { setNotifyPrefs } from './prefs.js';
 
@@ -14,7 +14,7 @@ const empty = simulate({
 });
 
 const getRows = (shard: Shard, userId: string) =>
-	getNotifications(shard, userId).then(items => items.map(item => item.row));
+	getDueNotifications(shard, userId, Infinity).then(items => items.map(item => item.row));
 
 // The notify queue is module-level state that persists between tests (the test framework runs
 // sequentially in one process and `simulate.tick()` does not fire runtimeConnector.send to drain
@@ -197,7 +197,7 @@ describe('Notification delivery worker', () => {
 	// Advance shard.time to the next cadence-10 boundary so the subsequent `tick(10)` lands on
 	// one. Tests start at shard.time=1, so the first cadence trigger is at time=10.
 	async function alignToCadence(tick: (n: number) => Promise<void>, shardTime: number) {
-		const next = (Math.floor(shardTime / 10) + 1) * 10;
+		const next = Math.floor(shardTime / 10) * 10;
 		await tick(next - shardTime);
 	}
 
@@ -224,9 +224,7 @@ describe('Notification delivery worker', () => {
 		using stdout = captureConsoleLog();
 		await alignToCadence(tick, shard.time);
 		await seedRow(shard, userA, 'hi');
-		const time = shard.time;
-		const next = (Math.floor(time / 10) + 1) * 10;
-		await tick(next - time - 1);
+		await tick(9);
 		assert.strictEqual(parseNotifyLines(stdout.lines).length, 0,
 			'no drain expected before reaching cadence tick');
 		await tick(1);

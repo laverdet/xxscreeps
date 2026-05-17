@@ -1,10 +1,7 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { everyNTicks, registerShardTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import {
-	consumeDueUsers, getDueNotifications, getNotificationIds, nextPendingDueAt, removeNotifications,
-	scheduleUserDrain,
-} from './model.js';
+import { consumeDueUsers, flushNotifications, getDueNotifications, nextPendingDueAt, removeNotifications, scheduleUserDrain } from './model.js';
 import { DEFAULT_INTERVAL_MIN, getLastNotifyDate, getNotifyPrefs, setLastNotifyDate } from './prefs.js';
 import { transports } from './transports.js';
 import './transport-stdout.js';
@@ -15,8 +12,7 @@ async function drainUser(shard: Shard, userId: string) {
 		getLastNotifyDate(shard, userId),
 	]);
 	if (prefs.disabled) {
-		const ids = await getNotificationIds(shard, userId);
-		await removeNotifications(shard, userId, ids);
+		await flushNotifications(shard, userId);
 		return;
 	}
 	const intervalMs = (prefs.interval ?? DEFAULT_INTERVAL_MIN) * 60_000;
