@@ -1,4 +1,5 @@
 import config from 'xxscreeps/config/index.js';
+import { importMods } from 'xxscreeps/config/mods/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model.js';
@@ -12,6 +13,8 @@ import { tickSpeed, watch } from './tick.js';
 import { checkIsEntry, getServiceChannel } from './index.js';
 
 checkIsEntry();
+
+await importMods('shardTick');
 
 using db = await Database.connect();
 using shard = await Shard.connect(db, config.shards[0]!.name);
