@@ -1,6 +1,8 @@
 .cache
+/.pnpm-store
 /.screepsrc.yaml*
 /dump.rdb
+/package.nw
 /screeps
 dist
 node_modules

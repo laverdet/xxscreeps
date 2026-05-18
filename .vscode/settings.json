@@ -43,12 +43,13 @@
 		"**/.cache": true,
 		"**/dist": true,
 		"**/node_modules": true,
+		"package.nw": true,
 	},
+	"files.trimTrailingWhitespace": true,
+	"files.insertFinalNewline": true,
+	"js/ts.preferences.importModuleSpecifier": "shortest",
+	"js/ts.tsdk.promptToUseWorkspaceVersion": true,
 	"search.exclude": {
 		"pnpm-lock.yaml": true,
 	},
-	"files.insertFinalNewline": true,
-	"files.trimTrailingWhitespace": true,
-	"js/ts.preferences.importModuleSpecifier": "shortest",
-	"js/ts.tsdk.promptToUseWorkspaceVersion": true,
 }
