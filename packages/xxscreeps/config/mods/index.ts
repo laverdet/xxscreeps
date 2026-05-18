@@ -1,6 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../../declarations.d.ts" />
 import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { resolve } from '@loaderkit/resolve/esm';
+import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
 import { configDefaults } from 'xxscreeps/config/config.js';
 import config from 'xxscreeps/config/raw.js';
 
@@ -10,6 +14,21 @@ export type Manifest = {
 	provides: Provide | Provide[] | null;
 };
 
+const from = pathToFileURL(process.cwd() + path.sep);
+async function resolveMaybeIndex(specifier: string, from: URL) {
+	try {
+		const { url } = await resolve(defaultAsyncFileSystem, `${specifier}/index.js`, from);
+		return url;
+	} catch (suppressed) {
+		try {
+			const { url } = await resolve(defaultAsyncFileSystem, `${specifier}.js`, from);
+			return url;
+		} catch (error) {
+			throw new SuppressedError(error, suppressed);
+		}
+	}
+}
+
 // Resolve module dependencies in a hopefully deterministic order
 const mods: {
 	provides: Provide[];
@@ -18,28 +37,24 @@ const mods: {
 const stack: string[] = [];
 const resolved = new Set<string>();
 const version = 5;
-async function resolve(specifiers: string[]) {
+async function resolveMods(specifiers: string[]) {
 	const imports = await Promise.all([ ...specifiers ].sort().map(async specifier => {
-		// Node 24 ignores the second argument to import.meta.resolve, so bare
-		// specifiers always resolve from *this* file's package scope. That
-		// happens to work for built-in xxscreeps/* mods but would break for
-		// third-party mods installed outside this package tree.
 		const url = await async function() {
 			try {
-				return import.meta.resolve(`${specifier}/index.js`);
-			} catch {
+				// First, import bare module specifier [@xxscreeps/redis]
+				const { url } = await resolve(defaultAsyncFileSystem, specifier, from);
+				return url;
+			} catch (suppressed) {
 				try {
-					return import.meta.resolve(`${specifier}.js`);
-				} catch {
-					return import.meta.resolve(specifier);
+					// Second, try unnamed module exports [xxscreeps/mods/chemistry]
+					return await resolveMaybeIndex(specifier, from);
+				} catch (error) {
+					throw new SuppressedError(error, suppressed);
 				}
 			}
 		}();
-		return {
-			manifest: (await import(url)).manifest as Manifest,
-			specifier,
-			url,
-		};
+		const { manifest } = await import(url.href) as { manifest: Manifest };
+		return { manifest, specifier, url };
 	}));
 	for (const { manifest, specifier, url } of imports) {
 		if (resolved.has(specifier)) {
@@ -48,7 +63,7 @@ async function resolve(specifiers: string[]) {
 			throw new Error(`Detected cyclic dependency: ${stack.join(' -> ')} -> ${specifier}`);
 		} else {
 			stack.push(specifier);
-			await resolve(manifest.dependencies ?? []);
+			await resolveMods(manifest.dependencies ?? []);
 			stack.pop();
 			mods.push({
 				provides: Array.isArray(manifest.provides) ? manifest.provides :
@@ -59,7 +74,7 @@ async function resolve(specifiers: string[]) {
 		}
 	}
 }
-await resolve(config.mods ?? configDefaults.mods);
+await resolveMods(config.mods ?? configDefaults.mods);
 
 // Ensure module imports are up to date on the filesystem
 const cached = await async function() {
@@ -73,19 +88,10 @@ const cached = await async function() {
 }();
 if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 	// Given a specifier fragment this return all mods which export it.
-	// Uses new URL() instead of import.meta.resolve because these are
-	// relative paths against each mod's URL — import.meta.resolve's
-	// second argument is ignored on Node 24.
 	const resolveWithinMods = async (specifier: string) => {
 		const resolved = await Promise.all(mods.map(async ({ provides, url }) => {
 			if (provides.includes(specifier as never)) {
-				const primary = new URL(`./${specifier}.js`, url);
-				try {
-					await fs.access(primary);
-					return `${primary}`;
-				} catch {
-					return `${new URL(`./${specifier}/index.js`, url)}`;
-				}
+				return `${await resolveMaybeIndex(`./${specifier}`, url)}`;
 			}
 		}));
 		return resolved.filter((mod): mod is string => mod !== undefined);
@@ -93,13 +99,7 @@ if (cached?.json !== JSON.stringify(mods) || cached.version !== version) {
 
 	// Create output directory
 	const outDir = new URL('../mods.static/', import.meta.url);
-	try {
-		await fs.mkdir(outDir);
-	} catch (err: any) {
-		if (err.code !== 'EEXIST') {
-			throw err;
-		}
-	}
+	await fs.mkdir(outDir, { recursive: true });
 
 	// Save mod bundles
 	await Promise.all([
@@ -154,11 +154,7 @@ export { mods };
 export async function importMods(provides: Provide) {
 	for (const mod of mods) {
 		if (mod.provides.includes(provides)) {
-			try {
-				await import(new URL(`./${provides}.js`, mod.url).href);
-			} catch {
-				await import(new URL(`./${provides}/index.js`, mod.url).href);
-			}
+			return `${await resolveMaybeIndex(`./${provides}`, mod.url)}`;
 		}
 	}
 }
