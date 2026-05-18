@@ -17,6 +17,9 @@
   "peerDependencies": {
     "xxscreeps": "workspace:~"
   },
+  "engines": {
+    "redis": ">=8.2"
+  },
   "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/redis/README.md",
   "repository": {
     "type": "git",
