@@ -154,7 +154,8 @@ export { mods };
 export async function importMods(provides: Provide) {
 	for (const mod of mods) {
 		if (mod.provides.includes(provides)) {
-			return `${await resolveMaybeIndex(`./${provides}`, mod.url)}`;
+			const url = await resolveMaybeIndex(`./${provides}`, mod.url);
+			await import(url.href);
 		}
 	}
 }
