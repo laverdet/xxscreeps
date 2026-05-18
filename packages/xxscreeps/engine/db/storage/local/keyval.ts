@@ -636,7 +636,9 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 				[ options.weights![index] ?? 1, this.data.get(key) ]);
 			const sets = Fn.filter(maybeSets, entry => entry[1]);
 			for (const [ weight, set ] of sets) {
-				out.insert(set.entries(), (left, right) => left + right * weight);
+				const weighted = Fn.map(set.entries(), ([ score, member ]): [ number, string ] =>
+					[ score * weight, member ]);
+				out.insert(weighted, (left, right) => left + right);
 			}
 		} else {
 			// Without WEIGHTS insert can happen at once
