@@ -216,7 +216,6 @@ export class PlayerInstance {
 				return await this.sandbox.run(payload as TickPayload);
 			} catch (err: any) {
 				console.error(err.stack);
-				this.stale = true;
 			}
 		})();
 
@@ -242,6 +241,10 @@ export class PlayerInstance {
 				this.connectors.save(payload),
 			]);
 		} else {
+			if (result) {
+				// Severe error, user loses a tick
+				this.stale = true;
+			}
 			const tasks: Promise<void>[] = [];
 			if (result) {
 				// Deduct CPU limit in case of severe failure

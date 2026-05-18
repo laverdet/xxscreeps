@@ -1,4 +1,4 @@
-import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
+import type { Sandbox, TickCompletion } from 'xxscreeps/driver/sandbox/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
@@ -88,27 +88,28 @@ export class IsolatedSandbox implements Sandbox {
 		} catch {}
 	}
 
-	async run(args: TickPayload) {
+	async run(args: TickPayload): Promise<TickCompletion> {
 		try {
-			const payload = await this.tick!.apply(
+			const completion = await this.tick!.apply(
 				undefined,
 				[ args ], {
 					arguments: { copy: true },
 					result: { copy: true },
 					timeout: args.cpu.tickLimit,
 				});
-			if (payload.error) {
-				return { result: 'error' as const, console: payload.console };
+			if (completion.result === 'success') {
+				const totalTime = this.isolate.cpuTime;
+				completion.payload.usage.cpu = Number(totalTime - this.totalTime) / 1e6;
+				this.totalTime = totalTime;
+				return completion;
+			} else {
+				return completion;
 			}
-			const totalTime = this.isolate.cpuTime;
-			payload.usage.cpu = Number(totalTime - this.totalTime) / 1e6;
-			this.totalTime = totalTime;
-			return { result: 'success' as const, payload };
 		} catch (err: any) {
 			if (err.message === 'Script execution timed out.') {
-				return { result: 'timedOut' as const, stack: err.stack };
+				return { result: 'timedOut', stack: err.stack };
 			} else if (err.message === 'Isolate is disposed') {
-				return { result: 'disposed' as const };
+				return { result: 'disposed' };
 			}
 			throw err;
 		}

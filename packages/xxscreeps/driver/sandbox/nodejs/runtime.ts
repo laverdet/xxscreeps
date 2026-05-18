@@ -5,8 +5,15 @@ import * as assert from 'node:assert/strict';
 import * as process from 'node:process';
 import * as Runtime from 'xxscreeps/driver/runtime/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
+import { TickCompletion } from '../index.js';
 
-export { tick } from 'xxscreeps/driver/runtime/index.js';
+const kPleaseHalt = 'Please halt this sandbox.';
+
+declare module 'xxscreeps/engine/runner/index.js' {
+	interface TickResult {
+		unsafeSandboxDidHalt?: boolean;
+	}
+}
 
 class NodejsCPU implements CPU {
 	bucket;
@@ -26,7 +33,7 @@ class NodejsCPU implements CPU {
 	getUsed = () => Number(process.hrtime.bigint() - this.#startTime) / 1e6;
 
 	halt = (): never => {
-		throw new Error('Cannot halt()');
+		throw new Error(kPleaseHalt);
 	};
 }
 
@@ -39,4 +46,23 @@ globalThis.__assert = assert;
 
 export function initialize(require: NodeJS.Require, compiler: Compiler, evaluate: Evaluate, data: InitializationPayload) {
 	Runtime.initialize(compiler, evaluate, data);
+}
+
+export function tick(data: TickPayload): TickCompletion {
+	let didHalt = false as boolean;
+	const completion = Runtime.tick(data, fn => {
+		try {
+			fn();
+		} catch (error) {
+			if (error instanceof Error && error.message === kPleaseHalt) {
+				didHalt = true;
+			} else {
+				throw error;
+			}
+		}
+	});
+	if (completion.result === 'success') {
+		completion.payload.unsafeSandboxDidHalt = didHalt;
+	}
+	return completion;
 }
