@@ -416,12 +416,11 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 					default: return members;
 				}
 			}();
-			const up = function() {
-				// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
+			const up = function(): (left: number | undefined, right: number) => number {
 				switch (options?.up) {
-					case 'GT': return Math.max;
-					case 'LT': return Math.min;
-					default: return (left: unknown, right: number) => right;
+					case 'GT': return (left, right) => left === undefined ? right : Math.max(left, right);
+					case 'LT': return (left, right) => left === undefined ? right : Math.min(left, right);
+					case undefined: return (left, right) => right;
 				}
 			}();
 
@@ -629,26 +628,27 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 	}
 
 	zUnionStore(key: string, keys: string[], options?: P.ZAggregate) {
-		const out = new SortedSet();
-		if (options?.weights) {
-			// With WEIGHTS each set needs to be applied one at a time
-			const maybeSets = Fn.map(keys.entries(), ([ index, key ]): [number, SortedSet] =>
-				[ options.weights![index] ?? 1, this.data.get(key) ]);
-			const sets = Fn.filter(maybeSets, entry => entry[1]);
-			for (const [ weight, set ] of sets) {
-				out.insert(set.entries(), (left, right) => left + right * weight);
+		const out = new SortedSet((() => {
+			if (options?.weights) {
+				// With WEIGHTS each set needs to be applied one at a time
+				const { weights } = options;
+				return Fn.pipe(
+					keys.entries(),
+					$$ => Fn.map($$, ([ index, key ]) =>
+						[ weights[index] ?? 1, this.data.get(key) as SortedSet | undefined ] as const),
+					$$ => Fn.filter($$, (entry): entry is [ number, SortedSet ] => Boolean(entry[1])),
+					$$ => Fn.transform($$, ([ weight, set ]) =>
+						Fn.map(set.entries(), ([ score, member ]) => [ score * weight, member ] as const)));
+			} else {
+				// Without WEIGHTS insert can happen at once
+				return Fn.pipe(
+					keys,
+					$$ => Fn.map($$, key => this.data.get(key) as SortedSet),
+					$$ => Fn.filter($$),
+					$$ => [ ...$$ ],
+					$$ => Fn.transform($$, set => set.entries()));
 			}
-		} else {
-			// Without WEIGHTS insert can happen at once
-			const entries = Fn.pipe(
-				keys,
-				$$ => Fn.map($$, (key): SortedSet => this.data.get(key)),
-				$$ => Fn.filter($$),
-				$$ => [ ...$$ ],
-				$$ => Fn.map($$, set => set.entries()),
-				$$ => Fn.concat($$));
-			out.insert(entries);
-		}
+		})());
 		if (out.size === 0) {
 			this.data.delete(key);
 		} else {
