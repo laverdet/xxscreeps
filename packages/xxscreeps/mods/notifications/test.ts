@@ -194,17 +194,9 @@ describe('Notification delivery worker', () => {
 		await upsertNotification(shard, userId, 'msg', message, 0);
 	}
 
-	// Advance shard.time to the next cadence-10 boundary so the subsequent `tick(10)` lands on
-	// one. Tests start at shard.time=1, so the first cadence trigger is at time=10.
-	async function alignToCadence(tick: (n: number) => Promise<void>, shardTime: number) {
-		const next = Math.floor(shardTime / 10) * 10;
-		await tick(next - shardTime);
-	}
-
 	test('drains user at cadence boundary with full row shape', () => empty(async ({ shard, tick }) => {
 		using _clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
-		await alignToCadence(tick, shard.time);
 		await seedRow(shard, userA, 'hi');
 		await tick(10);
 		const lines = parseNotifyLines(stdout.lines);
@@ -222,7 +214,6 @@ describe('Notification delivery worker', () => {
 	test('drain does not fire between cadence boundaries', () => empty(async ({ shard, tick }) => {
 		using _clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
-		await alignToCadence(tick, shard.time);
 		await seedRow(shard, userA, 'hi');
 		await tick(9);
 		assert.strictEqual(parseNotifyLines(stdout.lines).length, 0,
@@ -234,7 +225,6 @@ describe('Notification delivery worker', () => {
 	test('respects notifyPrefs.disabled (drops without emit)', () => empty(async ({ shard, tick }) => {
 		using _clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
-		await alignToCadence(tick, shard.time);
 		await setNotifyPrefs(shard, userA, { disabled: true });
 		await seedRow(shard, userA, 'hi');
 		await tick(10);
@@ -245,7 +235,6 @@ describe('Notification delivery worker', () => {
 	test('respects notifyPrefs.interval throttle', () => empty(async ({ shard, tick }) => {
 		using clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
-		await alignToCadence(tick, shard.time);
 		await seedRow(shard, userA, 'first');
 		await tick(10);
 		assert.strictEqual(parseNotifyLines(stdout.lines).length, 1);
@@ -267,7 +256,6 @@ describe('Notification delivery worker', () => {
 	test('drains multiple users independently', () => empty(async ({ shard, tick }) => {
 		using _clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
-		await alignToCadence(tick, shard.time);
 		await seedRow(shard, userA, 'a-msg');
 		await seedRow(shard, userB, 'b-msg');
 		await tick(10);
@@ -283,7 +271,6 @@ describe('Notification delivery worker', () => {
 		using stdout = captureConsoleLog();
 		// Disable the per-user throttle so delivery depends only on each row's group deadline.
 		await setNotifyPrefs(shard, userA, { interval: 0 });
-		await alignToCadence(tick, shard.time);
 		// 60-minute group → due at the next 60-minute boundary.
 		await upsertNotification(shard, userA, 'msg', 'long', 60);
 		// 1-minute group (smallest non-zero `groupInterval`) → due at the next 1-minute boundary.

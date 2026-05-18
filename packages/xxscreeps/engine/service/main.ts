@@ -105,7 +105,7 @@ async function tick() {
 				break;
 
 			case 'tickFinished': {
-				await runShardTickProcessors(shard);
+				await runShardTickProcessors(shard, time);
 				await begetRoomProcessQueue(shard, time + 1, time, true);
 
 				// Update game state
@@ -136,7 +136,6 @@ if (didInitialize) {
 	let lastSave = Date.now();
 	while (true) {
 		// Tick
-		const tickShardTime = shard.time;
 		const tickWallTime = Date.now();
 		if (!await tick()) {
 			break;
@@ -144,7 +143,7 @@ if (didInitialize) {
 		const now = Date.now();
 		const timeTaken = now - tickWallTime;
 		const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
-		console.log(`Tick ${tickShardTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
+		console.log(`Tick ${shard.time} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
 
 		// Maybe save
 		if (lastSave + saveInterval < now) {

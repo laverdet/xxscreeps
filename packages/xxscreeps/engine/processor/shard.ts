@@ -7,12 +7,12 @@ export function registerShardTickProcessor(tick: ShardTickProcessor) {
 }
 
 export const everyNTicks = (period: number, fn: ShardTickProcessor): ShardTickProcessor =>
-	shard => {
-		if (shard.time % period === 0) {
-			return fn(shard);
+	(shard, time) => {
+		if (time % period === 0) {
+			return fn(shard, time);
 		}
 	};
 
-export async function runShardTickProcessors(shard: Shard) {
-	await Promise.all(shardTickProcessors.map(fn => fn(shard)));
+export async function runShardTickProcessors(shard: Shard, time: number) {
+	await Promise.all(shardTickProcessors.map(fn => fn(shard, time)));
 }

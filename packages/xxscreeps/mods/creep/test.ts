@@ -5,8 +5,8 @@ import { create as createRampart } from 'xxscreeps/mods/defense/rampart.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { create as createResource } from 'xxscreeps/mods/resource/resource.js';
 import { Source } from 'xxscreeps/mods/source/source.js';
-import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
+import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { Creep, create } from './creep.js';
@@ -261,7 +261,7 @@ describe('Movement', () => {
 		const dying = simulate({
 			W5N5: room => {
 				const creep = create(new RoomPosition(25, 25, 'W5N5'), [ C.MOVE ], 'mortal', '100');
-				creep['#ageTime'] = 3;
+				creep['#ageTime'] = 2;
 				room['#insertObject'](creep);
 			},
 		});
@@ -287,7 +287,7 @@ describe('Movement', () => {
 		const firstTickDeath = simulate({
 			W4N4: room => {
 				const creep = create(new RoomPosition(25, 25, 'W4N4'), [ C.MOVE ], 'ephemeral', '100');
-				creep['#ageTime'] = 2;
+				creep['#ageTime'] = 1;
 				room['#insertObject'](creep);
 			},
 		});
@@ -873,7 +873,7 @@ describe('Event log events', () => {
 		const ageOut = simulate({
 			W5N5: room => {
 				const creep = create(new RoomPosition(25, 25, 'W5N5'), [ C.MOVE ], 'mortal', '100');
-				creep['#ageTime'] = 2;
+				creep['#ageTime'] = 1;
 				room['#insertObject'](creep);
 			},
 		});

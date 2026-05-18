@@ -12,7 +12,7 @@ export const Tick = Symbol('tick');
 export type RoomTickProcessor = (room: Room, context: RoomProcessor) => void;
 export const roomTickProcessors: RoomTickProcessor[] = [];
 
-export type ShardTickProcessor = (shard: Shard) => Promise<void> | void;
+export type ShardTickProcessor = (shard: Shard, time: number) => Promise<void> | void;
 export const shardTickProcessors: ShardTickProcessor[] = [];
 
 export const hooks = makeHookRegistration<{

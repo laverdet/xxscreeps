@@ -228,7 +228,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 					}
 
 					// Shard phase
-					await runShardTickProcessors(shard);
+					await runShardTickProcessors(shard, time);
 
 					// Increment time
 					await shard.data.set('time', time);

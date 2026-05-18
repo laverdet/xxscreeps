@@ -127,7 +127,7 @@ export async function instantiateTestShard() {
 	// Save to fake database
 	// nb: This skips the `refreshRoom` stage. This step may need to be added later but isn't
 	// needed right now.
-	shard.time = 1;
+	shard.time = 0;
 	await Promise.all([
 		shard.data.set('terrain', terrain),
 		shard.data.set('time', shard.time),
