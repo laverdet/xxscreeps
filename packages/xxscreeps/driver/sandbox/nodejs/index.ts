@@ -178,13 +178,15 @@ const hostLoaders = await async function() {
 			}
 		};
 	};
-	const [ pathfinder, process, util ] = await Promise.all([
+	const [ pathfinder, assert, process, util ] = await Promise.all([
 		make('@xxscreeps/pathfinder'),
+		make('node:assert/strict'),
 		make('node:process'),
 		make('node:util'),
 	]);
 	return {
 		'xxscreeps:pathfinder': pathfinder,
+		'node:assert/strict': assert,
 		'node:process': process,
 		'node:util': util,
 	};
@@ -243,6 +245,7 @@ export class NodejsSandbox implements Sandbox {
 				const url = await resolver(specifier, referencingModule.identifier);
 				return getOrSet(resolutions, url, async () => {
 					switch (url) {
+						case 'node:assert/strict':
 						case 'node:process':
 						case 'node:util':
 						case 'xxscreeps:pathfinder':

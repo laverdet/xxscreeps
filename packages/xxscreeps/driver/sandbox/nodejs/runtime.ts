@@ -1,6 +1,7 @@
 import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { CPU } from 'xxscreeps/game/game.js';
+import * as assert from 'node:assert/strict';
 import * as process from 'node:process';
 import * as Runtime from 'xxscreeps/driver/runtime/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
@@ -32,6 +33,9 @@ class NodejsCPU implements CPU {
 hooks.register('gameInitializer', (game, data) => {
 	game.cpu = new NodejsCPU(data!);
 });
+
+// @ts-expect-error
+globalThis.__assert = assert;
 
 export function initialize(require: NodeJS.Require, compiler: Compiler, evaluate: Evaluate, data: InitializationPayload) {
 	Runtime.initialize(compiler, evaluate, data);

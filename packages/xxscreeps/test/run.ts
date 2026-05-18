@@ -5,6 +5,7 @@ import 'xxscreeps/cli/test.js';
 import 'xxscreeps/engine/db/storage/local/test.js';
 import 'xxscreeps/game/test.js';
 
+await importMods('driver');
 await importMods('test');
 try {
 	await flush();
