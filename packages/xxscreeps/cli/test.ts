@@ -85,20 +85,30 @@ describe('cli', () => {
 	});
 
 	test('repl: statement with top-level await falls through to async-block', async () => {
-		// Indirect eval rejects await; expression wrap rejects let-statement;
-		// only the async-block wrap parses and runs.
+		// Only the async-block wrap parses this; block form has no completion value, so the IIFE returns undefined.
 		using console = new TestConsole();
-		const result = await evaluateUnsafeGlobal('let y = await Promise.resolve(99); console.log(y)');
-		assert.strictEqual(result, undefined);
-		assert.deepStrictEqual(console.logs, '99');
+		try {
+			const result = await evaluateUnsafeGlobal('let __cliReplY = await Promise.resolve(99); console.log(__cliReplY)');
+			assert.strictEqual(result, undefined);
+			assert.deepStrictEqual(console.logs, '99');
+		} finally {
+			delete (globalThis as Record<string, unknown>).__cliReplY;
+		}
+	});
+
+	test('repl: let + await declarations persist across turns', async () => {
+		try {
+			const first = await evaluateUnsafeGlobal('let __cliReplAsync = await Promise.resolve(41); __cliReplAsync');
+			assert.strictEqual(first, undefined);
+			const second = await evaluateUnsafeGlobal('__cliReplAsync + 1');
+			assert.strictEqual(second, 42);
+		} finally {
+			delete (globalThis as Record<string, unknown>).__cliReplAsync;
+		}
 	});
 
 	test('repl: top-level await whose awaited callback throws SyntaxError runs source once', async () => {
-		// Regression for the wrap-retry double-execution shape: indirect eval rejects
-		// for top-level await, so `evaluateOffline` falls through to the AsyncFunction
-		// wrap. If that wrap parses but the awaited callback throws a SyntaxError at
-		// runtime, the error must propagate — not trigger a wrapBlock retry that
-		// re-runs the side effect.
+		// A runtime SyntaxError from inside the wrap must propagate, not retrigger a wrap retry.
 		using console = new TestConsole();
 		await assert.rejects(
 			() => evaluateUnsafeGlobal(
@@ -108,16 +118,12 @@ describe('cli', () => {
 	});
 
 	test('repl: parenthesised top-level await falls through to async wrap', async () => {
-		// In script mode `await` lexes as an identifier, so `(await Promise...)` errors
-		// on the next token ("Unexpected identifier 'Promise'") instead of "await is only
-		// valid". The cascade must still retry through the async wrap.
+		// In script mode `await` lexes as an identifier; the cascade must still retry through the async wrap.
 		const value = await evaluateUnsafeGlobal('(await Promise.resolve(99)).valueOf()');
 		assert.strictEqual(value, 99);
 	});
 
 	test('repl: SyntaxError unrelated to top-level await still rejects', async () => {
-		// Guard that the cascade doesn't swallow real syntax errors: both async wraps
-		// will fail to parse this too, and the final error must propagate.
 		await assert.rejects(
 			() => evaluateUnsafeGlobal('1 + )'),
 			(err: unknown) => err instanceof SyntaxError);
@@ -136,11 +142,7 @@ describe('cli', () => {
 	});
 
 	test('eval: runtime SyntaxError does not retrigger console.log', async () => {
-		// Regression for the candidate-retry double-execution shape laverdet flagged
-		// on an earlier revision: when the source parses cleanly but throws a runtime
-		// SyntaxError (here `JSON.parse("}")`), the eval primitive must not mistake
-		// the runtime throw for a parse failure and re-execute the source. `1` must
-		// log exactly once, not 3-4 times.
+		// A runtime SyntaxError must not be mistaken for a parse failure and re-execute the source.
 		using console = new TestConsole();
 		const exitCode = await runEval({
 			argv: [],
