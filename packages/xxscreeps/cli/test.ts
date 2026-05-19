@@ -6,7 +6,7 @@ import * as fsp from 'node:fs/promises';
 import net from 'node:net';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as util from 'node:util';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
@@ -58,9 +58,15 @@ interface SpawnResult {
 	stderr: string;
 }
 
-function spawnXxscreeps(args: readonly string[], stdin?: string) {
+// Neutralize `FORCE_COLOR` so the child's `util.inspect` / `console.log` don't ANSI-wrap output
+// the assertions match on; dev terminals frequently inherit a non-zero value.
+const childEnv: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '0' };
+
+function spawnXxscreeps(args: readonly string[], stdin?: string, options: { cwd?: string } = {}) {
 	return new Promise<SpawnResult>((resolve, reject) => {
 		const child = spawn(process.execPath, [ xxscreepsBin, ...args ], {
+			cwd: options.cwd,
+			env: childEnv,
 			stdio: [ 'pipe', 'pipe', 'pipe' ],
 		});
 		const stdoutChunks: Buffer[] = [];
@@ -74,6 +80,67 @@ function spawnXxscreeps(args: readonly string[], stdin?: string) {
 			stdout: Buffer.concat(stdoutChunks).toString('utf8'),
 		}));
 		child.stdin.end(stdin ?? '');
+	});
+}
+
+// Per-line stdin so each turn's response renders before the next line lands; `stdin.end(text)`
+// would deliver atomically and race the REPL. The per-line gate waits for any new output (the
+// previous turn's response or banner) plus a short settling window, with a hard timeout.
+function spawnXxscreepsInteractive(
+	args: readonly string[],
+	lines: readonly string[],
+	{ cwd, settleMs = 25, perLineTimeoutMs = 5000 }:
+		{ cwd?: string; settleMs?: number; perLineTimeoutMs?: number } = {},
+) {
+	return new Promise<SpawnResult>((resolve, reject) => {
+		const child = spawn(process.execPath, [ xxscreepsBin, ...args ], {
+			cwd,
+			env: childEnv,
+			stdio: [ 'pipe', 'pipe', 'pipe' ],
+		});
+		const stdoutChunks: Buffer[] = [];
+		const stderrChunks: Buffer[] = [];
+		let outputBytes = 0;
+		child.stdout.on('data', (chunk: Buffer) => {
+			stdoutChunks.push(chunk);
+			outputBytes += chunk.length;
+		});
+		child.stderr.on('data', (chunk: Buffer) => {
+			stderrChunks.push(chunk);
+			outputBytes += chunk.length;
+		});
+		child.on('error', reject);
+		child.on('exit', code => resolve({
+			exitCode: code ?? 1,
+			stderr: Buffer.concat(stderrChunks).toString('utf8'),
+			stdout: Buffer.concat(stdoutChunks).toString('utf8'),
+		}));
+		const waitForOutput = (before: number) => new Promise<void>(resolveWait => {
+			let settleTimer: NodeJS.Timeout | undefined;
+			const cleanup = () => {
+				child.stdout.off('data', onData);
+				child.stderr.off('data', onData);
+				clearTimeout(hardTimer);
+				if (settleTimer) clearTimeout(settleTimer);
+			};
+			const onData = () => {
+				if (outputBytes <= before) return;
+				if (settleTimer) clearTimeout(settleTimer);
+				settleTimer = setTimeout(() => { cleanup(); resolveWait(); }, settleMs);
+			};
+			const hardTimer = setTimeout(() => { cleanup(); resolveWait(); }, perLineTimeoutMs);
+			child.stdout.on('data', onData);
+			child.stderr.on('data', onData);
+			onData();
+		});
+		void (async () => {
+			for (const line of lines) {
+				const before = outputBytes;
+				child.stdin.write(`${line}\n`);
+				await waitForOutput(before);
+			}
+			child.stdin.end();
+		})();
 	});
 }
 
@@ -112,6 +179,49 @@ async function startLauncherRpcHarness(): Promise<LauncherRpcHarness> {
 async function oneShot(socketPath: string, request: LauncherRpcRequest): Promise<LauncherRpcResponse> {
 	await using client = await connectLauncherRpc(socketPath);
 	return await client.send(request);
+}
+
+interface CliHarness extends LauncherRpcHarness {
+	// Spawned CLI's `socketPathFor(cwd/.screepsrc.yaml)` must match the launcher RPC's path.
+	cwd: string;
+}
+
+async function startCliHarness(): Promise<CliHarness> {
+	// `realpathSync` to canonicalize macOS `/var` → `/private/var` so the child finds the socket.
+	// `.screepsrc.yaml` is left empty so the child inherits the parent's mod list — otherwise its
+	// import of `xxscreeps/config/mods/index.js` would rewrite the shared `mods.static/` bundle.
+	const raw = await fsp.mkdtemp(path.join(os.tmpdir(), 'xxsk-'));
+	const cwd = fs.realpathSync(raw);
+	await fsp.writeFile(path.join(cwd, '.screepsrc.yaml'), '{}\n');
+	const configUrl = new URL('.screepsrc.yaml', `${pathToFileURL(cwd).href}/`);
+	const socketPath = fileURLToPath(new URL('screeps/cli.sock', configUrl));
+	const testShard = await instantiateTestShard();
+	const stop = await startLauncherRpcServer(testShard.db, testShard.shard, { socketPath });
+	let stopped = false as boolean;
+	return {
+		cwd,
+		db: testShard.db,
+		shard: testShard.shard,
+		socketPath,
+		[Symbol.asyncDispose]: async () => {
+			if (stopped) return;
+			stopped = true;
+			await stop();
+			testShard[Symbol.dispose]();
+			fs.rmSync(cwd, { force: true, recursive: true });
+		},
+	};
+}
+
+async function withTempCwd<T>(fn: (cwd: string) => Promise<T>): Promise<T> {
+	const raw = await fsp.mkdtemp(path.join(os.tmpdir(), 'xxsh-'));
+	const cwd = fs.realpathSync(raw);
+	await fsp.writeFile(path.join(cwd, '.screepsrc.yaml'), '{}\n');
+	try {
+		return await fn(cwd);
+	} finally {
+		fs.rmSync(cwd, { force: true, recursive: true });
+	}
 }
 
 describe('cli', () => {
@@ -184,7 +294,7 @@ describe('cli', () => {
 	});
 
 	test('repl: meta-commands work in a real session', async () => {
-		const result = await spawnXxscreeps([ 'cli' ], '.exit\n');
+		const result = await withTempCwd(async cwd => spawnXxscreeps([ 'cli' ], '.exit\n', { cwd }));
 		assert.strictEqual(result.exitCode, 0);
 	});
 
@@ -235,13 +345,13 @@ describe('cli', () => {
 
 	test('eval: --file reads source from the filesystem', async () => {
 		const file = fileURLToPath(new URL('../../cli/test-data/eval-source.js', import.meta.url));
-		const result = await spawnXxscreeps([ 'eval', '--file', file ]);
+		const result = await withTempCwd(async cwd => spawnXxscreeps([ 'eval', '--file', file ], undefined, { cwd }));
 		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}`);
 		assert.match(result.stdout, /from-file/);
 	});
 
 	test('eval: --stdin reads source from stdin', async () => {
-		const result = await spawnXxscreeps([ 'eval', '--stdin' ], '2 + 3');
+		const result = await withTempCwd(async cwd => spawnXxscreeps([ 'eval', '--stdin' ], '2 + 3', { cwd }));
 		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}`);
 		assert.match(result.stdout, /^5\n$/);
 	});
@@ -648,5 +758,95 @@ describe('launcher RPC', () => {
 		});
 		assert.strictEqual(response.ok, true, `output: ${response.output}`);
 		assert.strictEqual(response.output, `'${process.platform}'`);
+	});
+});
+
+describe('cli live', () => {
+	test('detects the launcher RPC and evaluates over it', async () => {
+		await using harness = await startCliHarness();
+		const result = await spawnXxscreeps([ 'cli' ], '1 + 1\n', { cwd: harness.cwd });
+		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+		assert.match(result.stderr, /connected to launcher RPC/);
+		assert.match(result.stdout, /\b2\b/);
+	});
+
+	test('drains in-flight RPC responses before EOF tears down the socket', async () => {
+		// `node:repl` fires 'exit' on stdin EOF before queued eval callbacks fire; atomic stdin.end
+		// races line 2's response against socket teardown, so without cli.ts's drain `42` is lost.
+		await using harness = await startCliHarness();
+		const result = await spawnXxscreeps(
+			[ 'cli' ], 'var x = 41\nx + 1\n', { cwd: harness.cwd });
+		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}`);
+		assert.match(result.stdout, /\b42\b/);
+	});
+
+	test('streams console.log to stdout and the result follows', async () => {
+		await using harness = await startCliHarness();
+		const result = await spawnXxscreeps(
+			[ 'cli' ], 'console.log("hi"); 42\n', { cwd: harness.cwd });
+		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}`);
+		assert.match(result.stdout, /hi/);
+		assert.match(result.stdout, /\b42\b/);
+	});
+
+	test('thrown error prints to stderr without ending the session', async () => {
+		await using harness = await startCliHarness();
+		const result = await spawnXxscreepsInteractive(
+			[ 'cli' ], [ 'throw new Error("zap")', '1 + 1' ], { cwd: harness.cwd });
+		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}`);
+		assert.match(result.stderr, /zap/);
+		assert.match(result.stdout, /\b2\b/);
+	});
+
+	test('multi-line input recovers until the block closes', async () => {
+		await using harness = await startCliHarness();
+		const result = await spawnXxscreeps(
+			[ 'cli' ], 'if (true) {\n  1 + 2\n}\n', { cwd: harness.cwd });
+		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}`);
+		assert.match(result.stdout, /\b3\b/);
+	});
+
+	test('falls back to host-realm REPL when no launcher RPC is present', async () => {
+		const result = await withTempCwd(async cwd => spawnXxscreepsInteractive(
+			[ 'cli' ], [ '1 + 1' ], { cwd }));
+		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+		assert.match(result.stderr, /launcher RPC unavailable/);
+		assert.match(result.stderr, /running direct REPL/);
+		assert.match(result.stdout, /\b2\b/);
+	});
+
+	test('skips the RPC probe entirely on networked providers', async () => {
+		const raw = await fsp.mkdtemp(path.join(os.tmpdir(), 'xxsn-'));
+		const cwd = fs.realpathSync(raw);
+		try {
+			// Only `data` matters here; the rest are dummies for the merged-schema required block.
+			await fsp.writeFile(path.join(cwd, '.screepsrc.yaml'), [
+				'database:',
+				'  data: redis://localhost/0',
+				'  pubsub: redis://localhost/0',
+				'  lock: ./screeps/.lock',
+				'  saveInterval: 2',
+				'',
+			].join('\n'));
+			const result = await spawnXxscreepsInteractive([ 'cli' ], [ '1 + 1' ], { cwd });
+			assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}\nstdout: ${result.stdout}`);
+			assert.match(result.stderr, /database provider 'redis' is not local/);
+			assert.match(result.stderr, /running direct REPL/);
+			assert.match(result.stdout, /\b2\b/);
+		} finally {
+			fs.rmSync(cwd, { force: true, recursive: true });
+		}
+	});
+
+	test('two parallel REPLs against the same launcher have isolated globals', async () => {
+		await using harness = await startCliHarness();
+		const [ first, second ] = await Promise.all([
+			spawnXxscreeps([ 'cli' ], 'var iso = "first"; iso\n', { cwd: harness.cwd }),
+			spawnXxscreeps([ 'cli' ], 'typeof iso\n', { cwd: harness.cwd }),
+		]);
+		assert.strictEqual(first.exitCode, 0, `stderr: ${first.stderr}`);
+		assert.strictEqual(second.exitCode, 0, `stderr: ${second.stderr}`);
+		assert.match(first.stdout, /'first'/);
+		assert.match(second.stdout, /'undefined'/);
 	});
 });
