@@ -3,27 +3,34 @@ import * as vm from 'node:vm';
 
 const Acorn = createRequire(import.meta.url)('acorn') as typeof import('acorn');
 
-const context = vm.createContext(globalThis);
 const importModuleDynamically = (specifier: string) => import(specifier);
 
 const isRecoverableSyntaxError = (error: unknown): error is SyntaxError =>
 	error instanceof SyntaxError && error.message === 'Unexpected end of input';
 
-function parseSyncSource(source: string) {
+interface UnsafeEvaluatorTarget {
+	readonly context: vm.Context;
+}
+
+const globalTarget: UnsafeEvaluatorTarget = {
+	context: vm.createContext(globalThis),
+};
+
+function parseSyncSource(source: string, target: UnsafeEvaluatorTarget) {
 	// Parse plain for clear error messages
 	// eslint-disable-next-line no-new
 	new vm.Script(source);
 	// Parse again w/ "use strict"
 	const script = new vm.Script(`"use strict"; undefined; ${source}`, { importModuleDynamically });
 	// eslint-disable-next-line @typescript-eslint/require-await
-	return async (): Promise<unknown> => script.runInContext(context);
+	return async (): Promise<unknown> => script.runInContext(target.context);
 }
 
-function parseAsyncSource(source: string) {
+function parseAsyncSource(source: string, target: UnsafeEvaluatorTarget) {
 	// `SourceTextModule` is parse-only here: it validates top-level await and rejects static imports.
 	const module = function() {
 		try {
-			return new vm.SourceTextModule(source, { context, importModuleDynamically });
+			return new vm.SourceTextModule(source, { context: target.context, importModuleDynamically });
 		} catch (error) {
 			// `SourceTextModule` throws foreign realm `SyntaxError` instances, I guess
 			// @ts-expect-error
@@ -44,7 +51,7 @@ function parseAsyncSource(source: string) {
 	// Expression form keeps the IIFE's completion value; statements fall through to the block form.
 	try {
 		const script = new vm.Script(`(async () => (${source}\n))()`, { importModuleDynamically });
-		return async (): Promise<unknown> => script.runInContext(context) as Promise<unknown>;
+		return async (): Promise<unknown> => script.runInContext(target.context) as Promise<unknown>;
 	} catch (error) {
 		if (!(error instanceof SyntaxError)) throw error;
 	}
@@ -54,7 +61,7 @@ function parseAsyncSource(source: string) {
 		`${hoisted}(async () => { ${body}\n })()`,
 		{ importModuleDynamically },
 	);
-	return async (): Promise<unknown> => script.runInContext(context) as Promise<unknown>;
+	return async (): Promise<unknown> => script.runInContext(target.context) as Promise<unknown>;
 }
 
 // Acorn's `.d.ts` only exports the base `Node`; estree shapes redeclared for the few we read.
@@ -198,13 +205,15 @@ function parseRecoverable<Fn extends () => unknown>(
 
 // Returns a `Function` (may be invoked) or `SyntaxError` (recoverable). Throws on unrecoverable
 // syntax errors.
-export function makeUnsafeGlobalEvaluator(source: string) {
+export function makeUnsafeEvaluator(source: string, target: UnsafeEvaluatorTarget = globalTarget) {
 	try {
-		return parseRecoverable(source, parseSyncSource);
+		return parseRecoverable(source, src => parseSyncSource(src, target));
 	} catch {
-		return parseRecoverable(source, parseAsyncSource);
+		return parseRecoverable(source, src => parseAsyncSource(src, target));
 	}
 }
+
+export const makeUnsafeGlobalEvaluator = (source: string) => makeUnsafeEvaluator(source);
 
 // Evaluates the given source text and returns the "last" expression. Globals dump out into the
 // current context.

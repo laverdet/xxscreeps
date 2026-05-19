@@ -1,3 +1,4 @@
+import { startLauncherRpcServer } from 'xxscreeps/cli/launcher-rpc.js';
 import { checkArguments } from 'xxscreeps/config/arguments.js';
 import config from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
@@ -9,7 +10,7 @@ import { handleInterruptSignal } from './signal.js';
 import { getServiceChannel } from './index.js';
 
 const argv = checkArguments({
-	boolean: [ 'no-backend', 'no-processor', 'no-runner' ] as const,
+	boolean: [ 'no-backend', 'no-launcher-rpc', 'no-processor', 'no-runner' ] as const,
 	string: [ 'attach-console' ] as const,
 });
 
@@ -25,6 +26,12 @@ disposable.defer(async () => {
 	await Promise.all([ db.save(), shard.save()	]);
 	console.log('💾 Engine shut down successfully.');
 });
+
+// Registered after the save defer; LIFO disposal means RPC drain runs first so in-flight
+// requests can't mutate state between the flush and shutdown.
+if (!argv['no-launcher-rpc']) {
+	disposable.defer(await startLauncherRpcServer(db, shard));
+}
 
 // Attach console for given user
 if (argv['attach-console'] !== undefined) {
