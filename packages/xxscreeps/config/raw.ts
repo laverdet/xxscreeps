@@ -5,7 +5,19 @@ import jsYaml from 'js-yaml';
 import { isTopThread } from 'xxscreeps/engine/service/index.js';
 
 // Load configuration
-export const configPath = new URL('.screepsrc.yaml', `${pathToFileURL(process.cwd())}/`);
+const configCandidates = [
+	new URL('.screepsrc.yaml', `${pathToFileURL(process.cwd())}/`),
+	new URL('.screepsrc.yaml', pathToFileURL('/data/')),
+];
+export const configPath = await async function() {
+	for (const candidate of configCandidates) {
+		try {
+			await fs.stat(candidate);
+			return candidate;
+		} catch {}
+	}
+	return configCandidates[0];
+}();
 const content = await async function() {
 	try {
 		return await fs.readFile(configPath, 'utf8');

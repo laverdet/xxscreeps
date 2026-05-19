@@ -17,7 +17,7 @@ DONE
 
 FROM node:24-trixie-slim
 COPY --from=build /xxscreeps /xxscreeps
-WORKDIR /data
+WORKDIR /xxscreeps
 EXPOSE 21025
 ENV NODE_OPTIONS="--no-node-snapshot --experimental-vm-modules --enable-source-maps --no-warnings"
-CMD [ "/xxscreeps/node_modules/.bin/xxscreeps" ]
+ENTRYPOINT [ "node", "packages/xxscreeps/bin/xxscreeps.js" ]
