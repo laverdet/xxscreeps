@@ -1,5 +1,6 @@
 .git
 .pnpm
+.pnpm-store
 .screepsrc.yaml*
 **/dist
 **/node_modules
