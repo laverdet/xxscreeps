@@ -1,9 +1,7 @@
 import type { PubSubProvider, PubSubSubscription } from './storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import { Deferred } from 'xxscreeps/utility/async.js';
 
-type MessageType<Message> = Message;
-type Listener<Message> = (message: MessageType<Message>) => void;
+type Listener<Message> = (message: Message) => void;
 type ChannelFactory<Message = any> = (...args: any[]) => Channel<Message>;
 export type MessageFor<Factory> = Factory extends ChannelFactory<infer Message> ? Message : never;
 export type SubscriptionFor<Factory> = Factory extends ChannelFactory<infer Message> ? Subscription<Message> : never;
@@ -22,7 +20,7 @@ export class Channel<Message = string> {
 
 	async listen<ForIf = false>(listener: Listener<Message | (ForIf extends true ? { type: null } : never)>) {
 		const subscription = await this.subscribe();
-		subscription.listen(listener as any);
+		subscription.listen(listener);
 		return () => subscription.disconnect();
 	}
 
@@ -47,7 +45,7 @@ export class Channel<Message = string> {
 	}
 
 	publish(message: Message) {
-		const value: any = this.json ? JSON.stringify(message) : message;
+		const value = this.json ? JSON.stringify(message) : (message as string);
 		return this.pubsub.publish(this.name, value);
 	}
 
@@ -110,13 +108,16 @@ export class Subscription<Message> {
 	}
 
 	// Iterates over all messages in a `for await` loop
-	iterable(): AsyncIterable<MessageType<Message>> {
+	iterable(): AsyncIterable<Message> {
 		// Create listener to save incoming messages
-		let deferred: Deferred<MessageType<Message> | void> | undefined;
-		const queue: MessageType<Message>[] = [];
+		type DeferredAny = DeferredMessage | DeferredReturn;
+		type DeferredMessage = PromiseWithResolvers<Message | undefined>;
+		type DeferredReturn = PromiseWithResolvers<void>;
+		let deferred: DeferredAny | undefined;
+		const queue: Message[] = [];
 		const unlisten = this.listen(message => {
 			if (deferred) {
-				deferred.resolve(message);
+				(deferred satisfies DeferredAny as DeferredMessage).resolve(message);
 				deferred = undefined;
 			} else {
 				queue.push(message);
@@ -139,9 +140,9 @@ export class Subscription<Message> {
 						}
 					}
 					// Make promise to await on
-					deferred = new Deferred();
+					deferred = Promise.withResolvers<Message | undefined>();
 					const { promise } = deferred;
-					const disconnectListener = () => deferred!.resolve();
+					const disconnectListener = () => (deferred! satisfies DeferredAny as DeferredReturn).resolve();
 					that.disconnectListeners.add(disconnectListener);
 					// Wait for new messages
 					const value = await promise;

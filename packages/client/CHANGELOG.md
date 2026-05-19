@@ -1,5 +1,11 @@
 # @xxscreeps/client
 
+## 0.0.8
+
+### Patch Changes
+
+- 5dad80f: Update package.nw search
+
 ## 0.0.7
 
 ### Patch Changes

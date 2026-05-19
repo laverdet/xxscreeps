@@ -12,7 +12,7 @@ export const mapSubscription: SubscriptionEndpoint = {
 	pattern: /^roomMap2:(?:(?<shard>[A-Za-z0-9]+)\/)?(?<room>[A-Z0-9]+)$/,
 
 	async subscribe(parameters) {
-		const roomName = parameters.room;
+		const roomName = parameters.room!;
 		if (!this.context.accessibleRooms.has(roomName)) {
 			// The client sends subscription requests for rooms that don't exist. Filter those out here to
 			// avoid unneeded subscriptions.

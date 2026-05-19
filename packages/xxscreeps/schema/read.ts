@@ -77,13 +77,13 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 				case 'bool': return (view, offset) => view.int8[offset] !== 0;
 
 				case 'buffer': return (view, offset) => {
-					const start = view.int32[offset >>> 2];
-					return view.uint8.subarray(start, start + view.int32[(offset >>> 2) + 1]);
+					const start = view.int32[offset >>> 2]!;
+					return view.uint8.subarray(start, start + view.int32[(offset >>> 2) + 1]!);
 				};
 
 				case 'string': return (view, offset) => {
-					const stringOffset = view.int32[offset >>> 2];
-					const length = view.int32[(offset >>> 2) + 1];
+					const stringOffset = view.int32[offset >>> 2]!;
+					const length = view.int32[(offset >>> 2) + 1]!;
 					if (length > 0) {
 						return typedArrayToString(view.uint8.slice(stringOffset, stringOffset + length));
 					} else if (length < 0) {
@@ -146,7 +146,7 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 		} else if ('enum' in layout) {
 			// Enumerated types
 			const { enum: values } = layout;
-			return (view, offset) => values[view.uint8[offset]];
+			return (view, offset) => values[view.uint8[offset]!];
 
 		} else if ('list' in layout) {
 			// Vector with dynamic element size
@@ -154,10 +154,10 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
 				const value = [];
-				let currentOffset = view.int32[offset >>> 2];
+				let currentOffset = view.int32[offset >>> 2]!;
 				while (currentOffset !== 0) {
 					value.push(read(view, currentOffset));
-					currentOffset = view.int32[currentOffset - kPointerSize >>> 2];
+					currentOffset = view.int32[currentOffset - kPointerSize >>> 2]!;
 				}
 				return value;
 			};
@@ -183,7 +183,7 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 			const { pointer: elementLayout, uninitialized } = layout;
 			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
-				const payloadOffset = view.int32[offset >>> 2];
+				const payloadOffset = view.int32[offset >>> 2]!;
 				if (payloadOffset === 0) {
 					return uninitialized;
 				} else {
@@ -220,15 +220,15 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 			if (variantReaders.length !== layout.variant.length) {
 				throw new Error('Missing or duplicated variant key');
 			}
-			return (view, offset) => variantReaders[view.uint8[offset + kPointerSize]](view, view.int32[offset >>> 2]);
+			return (view, offset) => variantReaders[view.uint8[offset + kPointerSize]!]!(view, view.int32[offset >>> 2]!);
 
 		} else if ('vector' in layout) {
 			// Vector with fixed element size
 			const { stride, vector: elementLayout } = layout;
 			const read = makeTypeReader(elementLayout, builder);
 			return (view, offset) => {
-				let currentOffset = view.int32[offset >>> 2];
-				const length = view.int32[(offset >>> 2) + 1];
+				let currentOffset = view.int32[offset >>> 2]!;
+				const length = view.int32[(offset >>> 2) + 1]!;
 				const value: any[] = [];
 				for (let ii = 0; ii < length; ++ii) {
 					value.push(read(view, currentOffset));
@@ -254,7 +254,7 @@ export function initializeView(buffer: Readonly<Uint8Array>) {
 	} else if (view.uint32[2] !== buffer.length) {
 		throw new Error('Truncated blob');
 	}
-	return { version: view.uint32[1], view };
+	return { version: view.uint32[1]!, view };
 }
 
 export function makeViewReader<Type extends Readable>(info: Type, builder = new Builder()) {

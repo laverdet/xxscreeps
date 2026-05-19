@@ -7,7 +7,7 @@ export function slice<Type>(array: readonly Type[], start: number, end: number =
 	return toIterable(function*() {
 		const adjustedEnd = Math.min(end, array.length);
 		for (let ii = start; ii < adjustedEnd; ++ii) {
-			yield array[ii];
+			yield array[ii]!;
 		}
 	}());
 }

@@ -3,6 +3,30 @@ import { listen } from 'xxscreeps/utility/async.js';
 
 let didSetupBroadcast = false;
 
+// Just an awful debugging experience by default. These properties are not enumerable and nodejs
+// doesn't bother to show them to you.
+Object.assign(SuppressedError.prototype, {
+	[Symbol.for('nodejs.util.inspect.custom')](this: SuppressedError) {
+		if (this.error) {
+			Object.defineProperty(this, 'error', { enumerable: true, value: this.error });
+		}
+		if (this.suppressed) {
+			Object.defineProperty(this, 'suppressed', { enumerable: true, value: this.suppressed });
+		}
+		return this;
+	},
+});
+
+process.on('uncaughtException', error => {
+	console.error(error);
+	process.exit(1);
+});
+
+process.on('unhandledRejection', error => {
+	console.error(error);
+	process.exit(1);
+});
+
 /** @internal */
 export function initializeInterruptSignal() {
 	if (!parentPort && !didSetupBroadcast) {

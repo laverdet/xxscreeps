@@ -19,7 +19,7 @@ export function astar<Type>(
 	const maxId = adapter.sizeof();
 	const terminalId = maxId + 1;
 	const costs = new Float64Array(maxId);
-	const heap = new Heap(maxId, maxId >>> 3, id => costs[id]);
+	const heap = new Heap(maxId, maxId >>> 3, id => costs[id]!);
 	const openClosed = new OpenClosed(maxId);
 	const parents = new (typedArrayFor(terminalId))(terminalId);
 
@@ -38,10 +38,10 @@ export function astar<Type>(
 	}
 	while (heap.size) {
 		// Fetch and close
-		const id = heap.pop();
+		const id = heap.pop()!;
 		openClosed.close(id);
 		const value = adapter.value(id);
-		const fCost = costs[id];
+		const fCost = costs[id]!;
 		const hCost = heuristic(value);
 		const gCost = fCost - hCost;
 
@@ -50,7 +50,7 @@ export function astar<Type>(
 			const route: Type[] = [ value ];
 			let currentId = id;
 			while (parents[currentId] !== terminalId) {
-				currentId = parents[currentId];
+				currentId = parents[currentId]!;
 				route.push(adapter.value(currentId));
 			}
 			route.reverse();
@@ -76,7 +76,7 @@ export function astar<Type>(
 			// Update or add to heap
 			const fCost = gCost + heuristic(next) + cost;
 			if (openClosed.isOpen(nextId)) {
-				if (fCost < costs[nextId]) {
+				if (fCost < costs[nextId]!) {
 					costs[nextId] = fCost;
 					parents[nextId] = id;
 					heap.update(nextId);

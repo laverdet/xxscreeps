@@ -99,10 +99,13 @@ export class RoomProcessor implements ProcessorContext {
 
 			// Pre-intent processor
 			const objects = this.room['#objects'];
-			for (let length = objects.length, ii = 0; ii < length; ++ii) {
-				// Iterated manually to avoid including newly-pushed `now` objects
-				const object = objects[ii];
-				object[PreTick]?.(object, this);
+			{
+				const { length } = objects;
+				for (let ii = 0; ii < length; ++ii) {
+					// Iterated manually to avoid including newly-pushed `now` objects
+					const object = objects[ii]!;
+					object[PreTick]?.(object, this);
+				}
 			}
 			this.room['#flushObjects'](this.state);
 
@@ -160,10 +163,13 @@ export class RoomProcessor implements ProcessorContext {
 
 			// Post-intent processor
 			Movement.dispatch(this.room);
-			for (let length = objects.length, ii = 0; ii < length; ++ii) {
-				// Iterated manually to avoid including newly-pushed `now` objects
-				const object = objects[ii];
-				object[Tick]?.(object, this);
+			{
+				const { length } = objects;
+				for (let ii = 0; ii < length; ++ii) {
+					// Iterated manually to avoid including newly-pushed `now` objects
+					const object = objects[ii]!;
+					object[Tick]?.(object, this);
+				}
 			}
 			this.room['#flushObjects'](this.state);
 		});
@@ -225,7 +231,7 @@ export class RoomProcessor implements ProcessorContext {
 			if (this.nextUpdate === this.time + 1) {
 				if (didWake) {
 					// Room was woken this tick by an inter-room intent, and will remain active
-					await this.shard.scratch.zadd(activeRoomsKey, [ [ 0, this.room.name ] ]);
+					await this.shard.scratch.zAdd(activeRoomsKey, [ [ 0, this.room.name ] ]);
 				}
 			} else {
 				// Mark inactive if needed. Must be *after* saving room, because this copies from current tick.

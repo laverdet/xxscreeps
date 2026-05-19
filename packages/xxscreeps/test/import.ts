@@ -30,7 +30,7 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 	let ii = 0;
 	type Metadata = Extract<Payload[string]['objects'], any[]>[any];
 	const saveObject = (object: RoomObject, xx: number, yy: number, fn?: (metadata: Metadata) => void) => {
-		const metadata = info.objects![ii++];
+		const metadata = info.objects![ii++]!;
 		object.id = metadata.id;
 		object.pos = new RoomPosition(xx, yy, room.name);
 		object['#posId'] = object.pos['#id'];
@@ -127,11 +127,11 @@ export async function instantiateTestShard() {
 	// Save to fake database
 	// nb: This skips the `refreshRoom` stage. This step may need to be added later but isn't
 	// needed right now.
-	shard.time = 1;
+	shard.time = 0;
 	await Promise.all([
 		shard.data.set('terrain', terrain),
 		shard.data.set('time', shard.time),
-		shard.data.sadd('rooms', [ ...Fn.map(rooms, room => room.room.name) ]),
+		shard.data.sAdd('rooms', [ ...Fn.map(rooms, room => room.room.name) ]),
 		shard.scratch.set(processorTimeKey, shard.time),
 		Promise.all(Fn.map(rooms, ({ room }) =>
 			shard.saveRoom(room.name, shard.time, room))),

@@ -27,9 +27,14 @@ const find = registerFindHandlers({
 // Register LOOK_ type for `Resource`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Resource.Resource>()(C.LOOK_RESOURCES);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const lookEnergy = registerLook<Resource.Resource>()(C.LOOK_ENERGY);
 declare module 'xxscreeps/game/room/index.js' {
 	interface Find { resource: typeof find }
-	interface Look { resource: typeof look }
+	interface Look {
+		resource: typeof look;
+		energy: typeof lookEnergy;
+	}
 }
 
 // These need to be declared separately I guess

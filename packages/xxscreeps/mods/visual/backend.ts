@@ -5,7 +5,7 @@ import { throttle } from 'xxscreeps/utility/utility.js';
 import { getVisualChannel, loadVisuals } from './model.js';
 
 hooks.register('roomSocket', async (shard, userId, roomName) => {
-	if (!userId) {
+	if (userId == null) {
 		return;
 	}
 

@@ -1,6 +1,7 @@
 import type { ResourceType } from './resource.js';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
@@ -168,9 +169,10 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 		}
 		const resources = this['#resources'];
 		const ii = resources.findIndex(info => info.type === type);
-		const info = resources[ii];
+		// nb: We assume it is an invariant to invoke this function with an undefined resource
+		const info = resources[ii]!;
 		if ((info.amount -= amount) === 0) {
-			resources[ii] = resources[resources.length - 1];
+			resources[ii] = resources.at(-1)!;
 			resources.pop();
 			delete this[type];
 		} else {
@@ -219,7 +221,7 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 	}
 
 	'#storeCapacityResource'() {
-		const result: Record<string, number> = Object.create(null);
+		const result = Object.create(null) as Record<string, number>;
 		for (const info of this['#resources']) {
 			result[info.type] = info.capacity;
 		}
@@ -285,7 +287,7 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, s
 	}
 
 	'#storeCapacityResource'() {
-		const result: Record<string, number> = Object.create(null);
+		const result = Object.create(null) as Record<string, number>;
 		result[this['#type']] = this['#capacity'];
 		return result;
 	}
@@ -349,16 +351,30 @@ export function checkHasCapacity(target: WithStore, resourceType: ResourceType, 
 	}
 }
 
-export function checkHasResource(target: WithStore, resourceType: ResourceType | undefined, amount = 1) {
+export function checkResourceArgs(resourceType: ResourceType | undefined, amount: number) {
 	if (!C.RESOURCES_ALL.includes(resourceType!)) {
 		return C.ERR_INVALID_ARGS;
 	} else if (typeof amount !== 'number' || amount < 0) {
 		return C.ERR_INVALID_ARGS;
-	} else if (target.store.getCapacity(resourceType!) === null) {
-		return C.ERR_INVALID_TARGET;
-	} else if (target.store[resourceType!] >= Math.max(1, amount)) {
-		return C.OK;
-	} else {
-		return C.ERR_NOT_ENOUGH_RESOURCES;
 	}
+	return C.OK;
+}
+
+export function checkStoreAccepts(target: WithStore, resourceType: ResourceType) {
+	return target.store.getCapacity(resourceType) === null
+		? C.ERR_INVALID_TARGET : C.OK;
+}
+
+export function checkHasResourceAmount(target: WithStore, resourceType: ResourceType, amount: number) {
+	return target.store[resourceType] >= Math.max(1, amount)
+		? C.OK : C.ERR_NOT_ENOUGH_RESOURCES;
+}
+
+// TODO: `checkResourceArgs` and `checkStoreAccepts` should be called individually before invoking
+// this one. If all call sites are ok then the nested intent checks here should be removed
+export function checkHasResource(target: WithStore, resourceType: ResourceType | undefined, amount = 1) {
+	return chainIntentChecks(
+		() => checkResourceArgs(resourceType, amount),
+		() => checkStoreAccepts(target, resourceType!),
+		() => checkHasResourceAmount(target, resourceType!, amount));
 }

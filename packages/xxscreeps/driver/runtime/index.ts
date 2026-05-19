@@ -8,6 +8,7 @@ import { Nullable } from 'xxscreeps/functional/types.js';
 import { Game, GameState, hooks, initializeGameEnvironment, runForPlayer, userInfo } from 'xxscreeps/game/index.js';
 import { World } from 'xxscreeps/game/map.js';
 import { detach } from 'xxscreeps/schema/buffer-object.js';
+import { TickCompletion } from '../sandbox/index.js';
 import { setupConsole } from './console.js';
 import { makeEnvironment } from './module.js';
 import { flush, print, resultPrefix } from './print.js';
@@ -94,7 +95,7 @@ export function initialize(compiler: Compiler, evaluate: Evaluate, data: Initial
 	requireMain = makeEnvironment(modules, evaluate, compiler);
 }
 
-export function tick(data: TickPayload) {
+export function tick(data: TickPayload, player = (fn: () => void) => fn()): TickCompletion {
 	try {
 		// Initialize rooms and data about users in those rooms
 		const { time } = data;
@@ -104,8 +105,8 @@ export function tick(data: TickPayload) {
 			return room;
 		});
 		if (data.usernames) {
-			for (const userId in data.usernames) {
-				userInfo.set(userId, { username: data.usernames[userId] });
+			for (const [ userId, userName ] of Object.entries(data.usernames)) {
+				userInfo.set(userId, { username: userName });
 			}
 		}
 		const state = new GameState(world, data.time, rooms);
@@ -119,7 +120,7 @@ export function tick(data: TickPayload) {
 			// @ts-expect-error
 			globalThis.Game = Game;
 			try {
-				(function thisIsWhereThePlayerCodeStarts() {
+				player(function thisIsWhereThePlayerCodeStarts() {
 					if (loop) {
 						loop();
 					} else {
@@ -131,7 +132,7 @@ export function tick(data: TickPayload) {
 							throw new Error('No `loop` function exported by `main` module');
 						}
 					}
-				}());
+				});
 			} catch (err: any) {
 				const lines: string[] = err.stack.split(/\n/g);
 				const index = lines.findIndex(line => line.includes('thisIsWhereThePlayerCodeStarts'));
@@ -209,7 +210,10 @@ export function tick(data: TickPayload) {
 			detach(room, () => new Error(`Accessed a released object from a previous tick[${time}]`));
 		}
 
-		return tickResult as TickResult;
+		return {
+			result: 'success',
+			payload: tickResult satisfies Partial<TickResult> as TickResult,
+		};
 
 	} catch (err) {
 		try {
@@ -217,11 +221,11 @@ export function tick(data: TickPayload) {
 				'An error was caught in the game runtime. This may be due to unsafe modifications to game prototypes by the player.',
 				err);
 			return {
-				error: true as const,
+				result: 'error',
 				console: flush(),
 			};
 		} catch {
-			return { error: true as const };
+			return { result: 'error' };
 		}
 	}
 }

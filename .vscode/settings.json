@@ -1,4 +1,10 @@
 {
+	"[cpp]": {
+		"editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+	},
+	"clangd.arguments": [
+		"--compile-commands-dir=packages/pathfinder/build",
+	],
 	"editor.rulers": [
 		// Comments wrap to 100
 		{ "column": 100, "color": "#0000" },
@@ -28,15 +34,22 @@
 		"javascript",
 		"typescript",
 	],
+	"files.associations": {
+		".clang-format": "yaml",
+		".clang-tidy": "yaml",
+	},
 	"files.exclude": {
+		".pnpm": true,
+		"**/.cache": true,
 		"**/dist": true,
 		"**/node_modules": true,
+		"package.nw": true,
 	},
+	"files.trimTrailingWhitespace": true,
+	"files.insertFinalNewline": true,
+	"js/ts.preferences.importModuleSpecifier": "shortest",
+	"js/ts.tsdk.promptToUseWorkspaceVersion": true,
 	"search.exclude": {
 		"pnpm-lock.yaml": true,
 	},
-	"files.insertFinalNewline": true,
-	"files.trimTrailingWhitespace": true,
-	"js/ts.preferences.importModuleSpecifier": "shortest",
-	"js/ts.tsdk.promptToUseWorkspaceVersion": true,
 }

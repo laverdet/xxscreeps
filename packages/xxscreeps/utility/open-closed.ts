@@ -25,12 +25,12 @@ export class OpenClosed {
 	}
 
 	private get(id: number) {
-		return (this.data[id >> indexShift] >> ((id & indexMask) << indexBitShift)) & mask;
+		return (this.data[id >> indexShift]! >> ((id & indexMask) << indexBitShift)) & mask;
 	}
 
 	private set(id: number, value: number) {
 		const bitPos = (id & indexMask) << indexBitShift;
 		const shiftedIndex = id >> indexShift;
-		this.data[shiftedIndex] = (this.data[shiftedIndex] & ~(mask << bitPos)) | ((value & mask) << bitPos);
+		this.data[shiftedIndex] = (this.data[shiftedIndex]! & ~(mask << bitPos)) | ((value & mask) << bitPos);
 	}
 }

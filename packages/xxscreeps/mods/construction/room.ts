@@ -1,7 +1,7 @@
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { hooks, intents, me, userGame } from 'xxscreeps/game/index.js';
+import { Game, hooks, intents, me, userGame } from 'xxscreeps/game/index.js';
 import { makeObstacleChecker } from 'xxscreeps/game/pathfinder/obstacle.js';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
@@ -63,17 +63,19 @@ extend(Room, {
 		}
 		const pos = new RoomPosition(xx, yy, this.name);
 		const [ structureType, nameArg ] = rest;
-		const name = structureFactories.get(structureType)?.checkName?.(this, nameArg);
-		if (name) {
+		const factory = structureFactories.get(structureType);
+		const validatedName = factory?.checkName?.(this, nameArg);
+		// Without this the wrapper would silently drop a rejected name and fall through to
+		// auto-generation, hiding the bad input from the player.
+		if (factory && typeof nameArg === 'string' && validatedName === null) {
+			return C.ERR_INVALID_ARGS;
+		}
+		const name = validatedName ?? null;
+		if (name !== null) {
 			if (createdNames.has(name)) {
 				return C.ERR_NAME_EXISTS;
 			}
 			createdNames.add(name);
-		}
-
-		// Check global construction site limit
-		if (userGame && Object.keys(userGame.constructionSites).length + createdConstructionSites >= C.MAX_CONSTRUCTION_SITES) {
-			return C.ERR_FULL;
 		}
 
 		// Send it off
@@ -89,16 +91,20 @@ extend(Room, {
 
 // Intent check
 export function checkCreateConstructionSite(room: Room, pos: RoomPosition, structureType: ConstructibleStructureType, name: string | null | undefined) {
-	// Check `structureType` is buildable
 	const factory = structureFactories.get(structureType);
+	// Check `structureType` is buildable
 	if (!factory) {
 		console.log(`TODO: create ${structureType}`);
 		return C.ERR_INVALID_ARGS;
 	}
+	if (factory.checkName?.(room, name) === null) {
+		return C.ERR_INVALID_ARGS;
+	}
 
 	// Can't build in someone else's room
-	if (!room.controller?.my) {
-		return C.ERR_RCL_NOT_ENOUGH;
+	const { controller } = room;
+	if (controller?.my === false) {
+		return C.ERR_NOT_OWNER;
 	}
 
 	// Check structure count for this RCL
@@ -106,15 +112,13 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		room['#lookFor'](C.LOOK_STRUCTURES),
 		room['#lookFor'](C.LOOK_CONSTRUCTION_SITES),
 	]), object => object.structureType === structureType ? 1 : 0);
-	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][room.controller?.level ?? 0]) {
+	if (existingCount >= C.CONTROLLER_STRUCTURES[structureType][controller?.level ?? 0]!) {
 		return C.ERR_RCL_NOT_ENOUGH;
 	}
 
 	// checkPlacement hook
 	if (factory.checkPlacement(room, pos) === null) {
 		return C.ERR_INVALID_TARGET;
-	} else if (factory.checkName?.(room, name) === null) {
-		return C.ERR_INVALID_ARGS;
 	}
 
 	// No structures on top of others
@@ -129,11 +133,16 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		asUnion(object);
 		if (
 			object['#lookType'] === C.LOOK_CONSTRUCTION_SITES ||
-			object.structureType === structureType ||
+			(object instanceof Structure && object.structureType === structureType) ||
 			(obstacle && obstacleChecker(object))
 		) {
 			return C.ERR_INVALID_TARGET;
 		}
+	}
+
+	// Check global construction site limit
+	if (userGame && Object.keys(userGame.constructionSites).length + createdConstructionSites >= C.MAX_CONSTRUCTION_SITES) {
+		return C.ERR_FULL;
 	}
 
 	return C.OK;

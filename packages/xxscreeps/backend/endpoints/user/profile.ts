@@ -1,4 +1,5 @@
-import { hooks } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 
@@ -19,7 +20,7 @@ hooks.register('route', {
 			const { userId } = context.state;
 			const info = {};
 			const [ user ] = await Promise.all([
-				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
+				context.db.data.hmGet(User.infoKey(userId), [ 'badge', 'username' ]),
 				User.findProvidersForUser(context.db, userId),
 				Promise.all(sendUserInfo(context.db, userId, info, true)),
 			]);
@@ -54,15 +55,27 @@ hooks.register('route', {
 	},
 });
 
+interface FindUserRequest {
+	username: string;
+}
+
+const findQueryQuerySchema: JSONSchemaType<FindUserRequest> = {
+	type: 'object',
+	properties: {
+		username: { type: 'string' },
+	},
+	required: [ 'username' ],
+};
+
 hooks.register('route', {
 	path: '/api/user/find',
 
-	async execute(context) {
-		const userId = await User.findUserByName(context.db, String(context.query.username));
-		if (userId) {
+	execute: makeValidatedQueryRoute(findQueryQuerySchema, async context => {
+		const userId = await User.findUserByName(context.db, context.request.query.username);
+		if (userId !== null) {
 			const info = {};
 			const [ user ] = await Promise.all([
-				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
+				context.db.data.hmGet(User.infoKey(userId), [ 'badge', 'username' ]),
 				Promise.all(sendUserInfo(context.db, userId, info, false)),
 			]);
 			return {
@@ -74,5 +87,5 @@ hooks.register('route', {
 				}),
 			};
 		}
-	},
+	}),
 });

@@ -18,6 +18,7 @@ export function build<Type extends Format>(format: Type, cache = new Map<Format,
 	}
 	const layout = getLayout(format, cache);
 
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	const { archive, version } = crypto.createHash === undefined ? {
 		archive: '?',
 		version: -1,

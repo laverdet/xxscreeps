@@ -3,13 +3,13 @@ import type { RoomPosition } from './position.js';
 import type { Room } from './room/index.js';
 import type { InspectOptionsStylized } from 'node:util';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
-import { inspect } from 'node:util';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
 import * as BufferObject from 'xxscreeps/schema/buffer-object.js';
 import { compose, declare, enumerated, struct, union, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { expandGetters } from 'xxscreeps/utility/inspect.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { ObjectGetPrototypeOf, ObjectSetPrototypeOf } from './intrinsics.js';
 import { format as roomPositionFormat } from './position.js';
 import { Game, registerGlobal } from './index.js';
 
@@ -35,16 +35,29 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	/** @deprecated */
 	constructor(xx: number, yy: number, roomName: string);
 
-	constructor(viewOrXx?: unknown, offsetOrYy?: unknown, roomName?: unknown) {
-		if (typeof viewOrXx === 'number') {
+	constructor(viewOrIdOrXx?: unknown, offsetOrYy?: unknown, roomName?: unknown) {
+		if (typeof viewOrIdOrXx === 'number') {
 			// Undocumented constructor of fake object
 			super();
-			this.pos.x = viewOrXx;
+			this.pos.x = viewOrIdOrXx;
 			this.pos.y = offsetOrYy as number;
 			this.pos.roomName = roomName as string;
-			this.room = Game.rooms[roomName as string];
+			this.room = Game.rooms[roomName as string]!;
+		} else if (typeof viewOrIdOrXx === 'string') {
+			// The terrible id-string constructor
+			const object = Game.getObjectById(viewOrIdOrXx);
+			if (object && object instanceof new.target) {
+				super(BufferObject.getBuffer(object), BufferObject.getOffset(object));
+				const prototype = ObjectGetPrototypeOf(object) as object;
+				if (ObjectGetPrototypeOf(this) !== prototype) {
+					ObjectSetPrototypeOf(this, prototype);
+				}
+				this.room = object.room;
+			} else {
+				super();
+			}
 		} else {
-			super(viewOrXx as BufferView, offsetOrYy as number);
+			super(viewOrIdOrXx as BufferView, offsetOrYy as number);
 		}
 	}
 
@@ -56,6 +69,8 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	get '#pathCost'(): undefined | number { return undefined; }
 	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#providesVision'() { return false; }
+	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
+	get '#secondaryLookType'(): string | null { return null; }
 	get '#user'(): string | null { return null; }
 	abstract get ['#lookType'](): string | null;
 
@@ -139,12 +154,4 @@ export function saveAction(object: WithActionLog, type: ActionLog[number]['type'
 		}
 	}
 	actionLog.push({ type, x: pos.x, y: pos.y, time: Game.time });
-}
-
-export function getById<T>(Type: new (...args: any) => T, id: string): T {
-	const it = Game.getObjectById(id);
-	if (!it || !(it instanceof Type)) throw new Error('Could not find an object with ID ' + id);
-	// Render all properties
-	inspect(it, true, 1);
-	return it as T;
 }

@@ -1,4 +1,5 @@
-import { bindRenderer, hooks } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getRoomChannel, pushIntentsForRoomNextTick, userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
@@ -33,20 +34,34 @@ bindRenderer(Spawn.StructureSpawn, (spawn, next) => ({
 	},
 }));
 
+interface ObjectNameRequest {
+	type: string;
+	name?: string | null;
+}
+
+const objectNameRequestSchema: JSONSchemaType<ObjectNameRequest> = {
+	type: 'object',
+	properties: {
+		type: { type: 'string' },
+		name: { type: 'string', nullable: true },
+	},
+	required: [ 'type' ],
+};
+
 hooks.register('route', {
 	path: '/api/game/check-unique-object-name',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(objectNameRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		if (context.request.body.type !== 'spawn') {
 			return;
 		}
 		const rooms = await Promise.all(Fn.map(
-			await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
+			await context.shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
 			roomName => context.shard.loadRoom(roomName)));
 		for (const room of rooms) {
 			for (const structure of room.find(C.FIND_STRUCTURES)) {
@@ -60,23 +75,23 @@ hooks.register('route', {
 			}
 		}
 		return { ok: 1 };
-	},
+	}),
 });
 
 hooks.register('route', {
 	path: '/api/game/gen-unique-object-name',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(objectNameRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		if (context.request.body.type !== 'spawn') {
 			return;
 		}
 		const rooms = await Promise.all(Fn.map(
-			await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
+			await context.shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
 			roomName => context.shard.loadRoom(roomName)));
 		let max = 0;
 		for (const room of rooms) {
@@ -93,16 +108,34 @@ hooks.register('route', {
 			}
 		}
 		return { ok: 1, name: `Spawn${max + 1}` };
-	},
+	}),
 });
+
+interface PlaceSpawnRequest {
+	name: string;
+	room: string;
+	x: number;
+	y: number;
+}
+
+const placeSpawnBodyRequestSchema: JSONSchemaType<PlaceSpawnRequest> = {
+	type: 'object',
+	properties: {
+		name: { type: 'string' },
+		room: { type: 'string' },
+		x: { type: 'number' },
+		y: { type: 'number' },
+	},
+	required: [ 'name', 'room', 'x', 'y' ],
+};
 
 hooks.register('route', {
 	path: '/api/game/place-spawn',
 	method: 'post',
 
-	async execute(context) {
+	execute: makeValidatedPayloadRoute(placeSpawnBodyRequestSchema, async context => {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
 		const { name, room: roomName, x, y } = context.request.body;
@@ -110,7 +143,7 @@ hooks.register('route', {
 
 		// Check last spawn time
 		const now = Date.now();
-		const lastSpawn = await context.shard.data.hget(User.infoKey(userId), 'lastSpawnTime');
+		const lastSpawn = await context.shard.data.hGet(User.infoKey(userId), 'lastSpawnTime');
 		if (lastSpawn !== null && now < Number(lastSpawn) + config.game.respawnTimeout * 3600 * 1000) {
 			throw new Error('Too soon after last respawn');
 		}
@@ -119,7 +152,7 @@ hooks.register('route', {
 		await getRoomChannel(context.shard, roomName).publish({ type: 'willSpawn' });
 
 		// Ensure user has no objects
-		const roomNames = await context.shard.scratch.smembers(userToIntentRoomsSetKey(userId));
+		const roomNames = await context.shard.scratch.sMembers(userToIntentRoomsSetKey(userId));
 		if (roomNames.length !== 0) {
 			throw new Error('User has presence');
 		}
@@ -145,9 +178,9 @@ hooks.register('route', {
 		});
 
 		// Update last spawn time
-		await context.shard.data.hset(User.infoKey(userId), 'lastSpawnTime', Date.now());
+		await context.shard.data.hSet(User.infoKey(userId), 'lastSpawnTime', Date.now());
 		return { ok: 1 };
-	},
+	}),
 });
 
 hooks.register('route', {
@@ -156,10 +189,10 @@ hooks.register('route', {
 
 	async execute(context) {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return;
 		}
-		const roomNames = await context.shard.scratch.smembers(userToPresenceRoomsSetKey(userId));
+		const roomNames = await context.shard.scratch.sMembers(userToPresenceRoomsSetKey(userId));
 		if (roomNames.length === 0) {
 			return { error: 'invalid status' };
 		}

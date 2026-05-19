@@ -1,4 +1,5 @@
-import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks } from 'xxscreeps/backend/index.js';
+import { JSONSchemaType } from 'ajv';
+import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { StructureController } from './controller.js';
 import { controlledRoomKey as controlledRoomsKey, reservedRoomKey as reservedRoomsKey } from './processor.js';
@@ -34,14 +35,26 @@ bindRenderer(StructureController, (controller, next) => {
 	};
 });
 
+interface RoomStatusQuery {
+	id: string;
+}
+
+const userRoomsQuerySchema: JSONSchemaType<RoomStatusQuery> = {
+	type: 'object',
+	properties: {
+		id: { type: 'string' },
+	},
+	required: [ 'id' ],
+};
+
 hooks.register('route', {
 	path: '/api/user/rooms',
-	async execute(context) {
+	execute: makeValidatedQueryRoute(userRoomsQuerySchema, async context => {
 		const { shard } = context;
-		const userId = context.query.id as string;
+		const { id: userId } = context.request.query;
 		const [ controlled, reserved ] = await Promise.all([
-			shard.scratch.smembers(controlledRoomsKey(userId)),
-			shard.scratch.smembers(reservedRoomsKey(userId)),
+			shard.scratch.sMembers(controlledRoomsKey(userId)),
+			shard.scratch.sMembers(reservedRoomsKey(userId)),
 		]);
 		return {
 			ok: 1,
@@ -52,7 +65,7 @@ hooks.register('route', {
 				[shard.name]: reserved,
 			},
 		};
-	},
+	}),
 });
 
 hooks.register('route', {
@@ -60,13 +73,13 @@ hooks.register('route', {
 
 	async execute(context) {
 		const { userId } = context.state;
-		if (!userId) {
+		if (userId == null) {
 			return { ok: 1, status: 'normal' };
 		}
 		const [ controlled, intents, presence ] = await Promise.all([
-			context.shard.scratch.scard(controlledRoomsKey(userId)),
-			context.shard.scratch.scard(userToIntentRoomsSetKey(userId)),
-			context.shard.scratch.scard(userToPresenceRoomsSetKey(userId)),
+			context.shard.scratch.sCard(controlledRoomsKey(userId)),
+			context.shard.scratch.sCard(userToIntentRoomsSetKey(userId)),
+			context.shard.scratch.sCard(userToPresenceRoomsSetKey(userId)),
 		]);
 		if (presence > 0) {
 			if (intents > 0 && controlled > 0) {

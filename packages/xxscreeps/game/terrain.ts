@@ -52,7 +52,7 @@ export class Terrain {
 	get(xx: number, yy: number) {
 		const index = yy * 50 + xx;
 		if (index >= 0 && index < 2500) {
-			return (this.#buffer[index >>> 2] >>> ((index & 0x03) << 1)) & 0x03;
+			return (this.#buffer[index >>> 2]! >>> ((index & 0x03) << 1)) & 0x03;
 		}
 		return NaN;
 	}
@@ -73,7 +73,7 @@ export class Terrain {
 		}
 		const buffer = destinationArray ?? new Uint8Array(2500);
 		for (let ii = 0, jj = 0; ii < 625; ++ii, jj += 4) {
-			const value = this.#buffer[ii];
+			const value = this.#buffer[ii]!;
 			buffer[jj] = value & 0x03;
 			buffer[jj + 1] = (value >>> 2) & 0x03;
 			buffer[jj + 2] = (value >>> 4) & 0x03;
@@ -94,7 +94,7 @@ export class TerrainWriter extends Terrain {
 		if (index >= 0 && index < 2500) {
 			const byte = index >>> 2;
 			const shift = (index & 0x03) << 1;
-			buffer[byte] = (buffer[byte] & ~(0x03 << shift)) | ((value & 0x03) << shift);
+			buffer[byte] = (buffer[byte]! & ~(0x03 << shift)) | ((value & 0x03) << shift);
 		}
 	}
 }

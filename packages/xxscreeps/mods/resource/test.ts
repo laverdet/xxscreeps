@@ -6,6 +6,7 @@ import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { assert, describe, reconstructor, simulate, test } from 'xxscreeps/test/index.js';
 import { renderStore } from './backend.js';
 import { create as createContainer } from './container.js';
+import { Resource, create as createResource } from './resource.js';
 import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store.js';
 
 const keys = (object: {}) => [ ...function*() {
@@ -142,6 +143,79 @@ describe('Store', () => {
 			assert.deepStrictEqual({ ...rendered.storeCapacityResource }, { [C.RESOURCE_ENERGY]: C.LAB_ENERGY_CAPACITY, [C.RESOURCE_HYDROXIDE]: C.LAB_MINERAL_CAPACITY });
 		});
 	});
+});
+
+describe('Dropped resource look aliases', () => {
+	const simulation = simulate({
+		W1N1: room => {
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#insertObject'](createResource(new RoomPosition(25, 25, 'W1N1'), C.RESOURCE_POWER, 20));
+		},
+	});
+
+	test('LOOK_ENERGY resolves every dropped resource', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const room = Game.rooms.W1N1;
+			assert.ok(room);
+			const byEnergy = room.lookForAt(C.LOOK_ENERGY, 25, 25);
+			const byResource = room.lookForAt(C.LOOK_RESOURCES, 25, 25);
+			assert.strictEqual(byEnergy.length, 1);
+			const energy = byEnergy[0];
+			assert.ok(energy);
+			assert.strictEqual(energy, byResource[0]);
+			assert.strictEqual(energy.resourceType, C.RESOURCE_POWER);
+		});
+	}));
+
+	test('lookForAtArea uses the requested legacy key', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const room = Game.rooms.W1N1;
+			assert.ok(room);
+			const entries = room.lookForAtArea(C.LOOK_ENERGY, 25, 25, 25, 25, true);
+			assert.strictEqual(entries.length, 1);
+			const entry = entries[0];
+			assert.ok(entry);
+			assert.ok(entry.energy instanceof Resource);
+			assert.strictEqual(entry.energy.resourceType, C.RESOURCE_POWER);
+			assert.strictEqual('resource' in entry, false);
+		});
+	}));
+
+	test('lookAt emits both resource look entries', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const room = Game.rooms.W1N1;
+			assert.ok(room);
+			const entries = room.lookAt(25, 25)
+				.filter(entry => entry.type === C.LOOK_ENERGY || entry.type === C.LOOK_RESOURCES);
+			assert.strictEqual(entries.length, 2);
+			const energyEntry = entries.find(entry => entry.type === C.LOOK_ENERGY);
+			const resourceEntry = entries.find(entry => entry.type === C.LOOK_RESOURCES);
+			assert.ok(energyEntry);
+			assert.ok(resourceEntry);
+			const energy = energyEntry.energy;
+			assert.ok(energy instanceof Resource);
+			assert.strictEqual(energy, resourceEntry.resource);
+			assert.strictEqual(energy.resourceType, C.RESOURCE_POWER);
+		});
+	}));
+
+	test('lookAtArea emits both resource look entries', () => simulation(async ({ player }) => {
+		await player('100', Game => {
+			const room = Game.rooms.W1N1;
+			assert.ok(room);
+			const entries = room.lookAtArea(25, 25, 25, 25, true)
+				.filter(entry => entry.type === C.LOOK_ENERGY || entry.type === C.LOOK_RESOURCES);
+			assert.strictEqual(entries.length, 2);
+			const energyEntry = entries.find(entry => entry.type === C.LOOK_ENERGY);
+			const resourceEntry = entries.find(entry => entry.type === C.LOOK_RESOURCES);
+			assert.ok(energyEntry);
+			assert.ok(resourceEntry);
+			const energy = energyEntry.energy;
+			assert.ok(energy instanceof Resource);
+			assert.strictEqual(energy, resourceEntry.resource);
+			assert.strictEqual(energy.resourceType, C.RESOURCE_POWER);
+		});
+	}));
 });
 
 describe('Container decay', () => {

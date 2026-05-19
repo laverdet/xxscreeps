@@ -1,9 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "defaultProperties": [],
     "properties": {
         "backend": {
-            "defaultProperties": [],
             "description": "Backend server settings",
             "properties": {
                 "allowEmailRegistration": {
@@ -38,7 +36,6 @@
             "type": "object"
         },
         "database": {
-            "defaultProperties": [],
             "description": "Configuration for global database storage",
             "properties": {
                 "data": {
@@ -64,7 +61,6 @@
             "type": "object"
         },
         "game": {
-            "defaultProperties": [],
             "description": "Game settings",
             "properties": {
                 "respawnTimeout": {
@@ -81,7 +77,6 @@
             "type": "object"
         },
         "launcher": {
-            "defaultProperties": [],
             "description": "Launcher settings",
             "properties": {
                 "singleThreaded": {
@@ -100,7 +95,6 @@
             "type": "array"
         },
         "processor": {
-            "defaultProperties": [],
             "description": "Processor settings",
             "properties": {
                 "concurrency": {
@@ -121,7 +115,6 @@
             "type": "object"
         },
         "runner": {
-            "defaultProperties": [],
             "description": "Runner settings",
             "properties": {
                 "concurrency": {
@@ -129,7 +122,6 @@
                     "type": "number"
                 },
                 "cpu": {
-                    "defaultProperties": [],
                     "properties": {
                         "bucket": {
                             "default": ": 10000",
@@ -180,7 +172,6 @@
             "default": "`[ {\nname: 'shard0',\ndata: './screeps/shard0',\npubsub: 'local://shard0',\nscratch: 'local://shard0',\n} ]`",
             "description": "Configuration for shard-specific storage",
             "items": {
-                "defaultProperties": [],
                 "properties": {
                     "data": {
                         "description": "Persistent storage provider URI",

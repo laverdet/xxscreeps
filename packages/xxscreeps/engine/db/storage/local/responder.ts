@@ -16,6 +16,7 @@ import { LocalPayloadPort, UnknownMessage, WorkerConnectMessage, makeSocketPortC
 export const isSiblingProcess = runOnce(async () => {
 	if (isTopThread) {
 		const { lock } = config.database;
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (lock == null) {
 			return false;
 		} else {

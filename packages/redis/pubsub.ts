@@ -1,84 +1,90 @@
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from 'xxscreeps/engine/db/storage/provider.js';
-import { RedisHolder } from './client.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { disposableToEffect } from 'xxscreeps/utility/utility.js';
+import { RedisClient, acquireRedisClient } from './client.js';
+
+interface PublishIgnore {
+	client: RedisSubscription;
+	message: string;
+}
+
+interface SubscriptionDelegate {
+	ignore: PublishIgnore[];
+	subscribers: Set<RedisSubscription>;
+}
 
 export class RedisPubSubProvider implements PubSubProvider {
-	private readonly publishIgnore = new Map<string, {
-		client: RedisSubscription;
-		message: string;
-	}[]>();
+	private readonly prefix;
+	private readonly client;
+	private readonly subscribersByKey = new Map<string, SubscriptionDelegate>();
 
-	private readonly subscribersByKey = new Map<string, Set<RedisSubscription>>();
-	private readonly listener;
-	private readonly publisher;
-
-	constructor(listener: RedisHolder, publisher: RedisHolder) {
-		this.listener = listener;
-		this.publisher = publisher;
-		listener.client.on('message', (key, message) => {
-			const ignoreInfo = this.publishIgnore.get(key);
-			const ignore = (() => {
-				if (ignoreInfo) {
-					const first = ignoreInfo[0];
-					if (first.message === message) {
-						if (ignoreInfo.length === 1) {
-							this.publishIgnore.delete(key);
-						} else {
-							ignoreInfo.shift();
-						}
-						return first.client;
-					}
-				}
-			})();
-			const subscribers = this.subscribersByKey.get(key);
-			if (subscribers) {
-				for (const subscriber of subscribers) {
-					if (subscriber !== ignore) {
-						subscriber.listener(message);
-					}
-				}
-			}
-		});
+	constructor(prefix: string, client: RedisClient) {
+		this.prefix = prefix;
+		this.client = client;
 	}
 
-	static async connect(url: URL, blob = false) {
-		const [ effect1, client1 ] = await RedisHolder.connect(url, blob);
-		const [ effect2, client2 ] = await RedisHolder.connect(url, blob);
-		const provider = new RedisPubSubProvider(client1, client2);
-		return [ () => { effect1(); effect2(); }, provider ] as const;
+	static async connect(url: URL) {
+		const prefix = `${Number(url.pathname.slice(1)) || 0}/`;
+		using disposable = new DisposableStack();
+		const client = disposable.adopt(await acquireRedisClient(url), client => mustNotReject(client.close()));
+		const provider = new RedisPubSubProvider(prefix, client);
+		return [ disposableToEffect(disposable.move()), provider ] as const;
 	}
 
 	async publish(key: string, message: string) {
-		await this.publisher.invoke(cb => this.publisher.batch().publish(key, message, cb));
+		const prefixKey = `${this.prefix}${key}`;
+		await this.client.sPublish(prefixKey, message);
 	}
 
 	async publishFromClient(key: string, message: string, client: RedisSubscription) {
-		const ignore = this.publishIgnore.get(key);
-		if (ignore) {
-			ignore.push({ client, message });
-		} else {
-			this.publishIgnore.set(key, [ { client, message } ]);
+		const prefixKey = `${this.prefix}${key}`;
+		const subscribersInfo = this.subscribersByKey.get(prefixKey);
+		if (subscribersInfo) {
+			subscribersInfo.ignore.push({ client, message });
 		}
-		await this.publisher.invoke(cb => this.publisher.batch().publish(key, message, cb));
+		await this.client.sPublish(prefixKey, message);
 	}
 
 	async subscribe(key: string, listener: PubSubListener) {
-		let subscribers = this.subscribersByKey.get(key);
-		if (!subscribers) {
-			subscribers = new Set();
-			this.subscribersByKey.set(key, subscribers);
-			await this.listener.invoke(cb => this.listener.batch().subscribe(key, cb));
-		}
+		const prefixKey = `${this.prefix}${key}`;
+		const subscribers = await (async () => {
+			const subscribersInfo = this.subscribersByKey.get(prefixKey);
+			if (subscribersInfo) {
+				return subscribersInfo.subscribers;
+			} else {
+				const ignore: PublishIgnore[] = [];
+				const subscribers = new Set<RedisSubscription>();
+				this.subscribersByKey.set(prefixKey, { ignore, subscribers });
+				await this.client.sSubscribe(prefixKey, message => {
+					const ignoreClient = (() => {
+						const first = ignore[0];
+						if (first?.message === message) {
+							ignore.shift();
+							return first.client;
+						}
+					})();
+					for (const subscriber of subscribers) {
+						if (subscriber !== ignoreClient) {
+							subscriber.listener(message);
+						}
+					}
+				});
+				return subscribers;
+			}
+		})();
 		const subscriber = new RedisSubscription(listener, key, this);
 		subscribers.add(subscriber);
 		return [ () => this.unsubscribe(key, subscriber), subscriber ] as const;
 	}
 
-	unsubscribe(key: string, subscriber: RedisSubscription) {
-		const subscribers = this.subscribersByKey.get(key)!;
-		if (subscribers.size === 1) {
-			this.subscribersByKey.delete(key);
+	async unsubscribe(key: string, subscriber: RedisSubscription) {
+		const prefixKey = `${this.prefix}${key}`;
+		const subscribersInfo = this.subscribersByKey.get(prefixKey)!;
+		if (subscribersInfo.subscribers.size === 1) {
+			this.subscribersByKey.delete(prefixKey);
+			await this.client.sUnsubscribe(prefixKey);
 		} else {
-			subscribers.delete(subscriber);
+			subscribersInfo.subscribers.delete(subscriber);
 		}
 	}
 }

@@ -82,8 +82,8 @@ export function extend<Type, Proto extends {
 export function filterInPlace<Type>(array: Type[], fn: (value: Type) => boolean) {
 	let cursor = array.length - 1;
 	for (let ii = cursor; ii >= 0; --ii) {
-		if (!fn(array[ii])) {
-			array[ii] = array[cursor--];
+		if (!fn(array[ii]!)) {
+			array[ii] = array[cursor--]!;
 		}
 	}
 	array.splice(cursor + 1);
@@ -129,7 +129,7 @@ export function removeOne<Type>(list: Type[], element: Type) {
 	if (index === -1) {
 		throw new Error('Element was not found');
 	}
-	list[index] = list[list.length - 1];
+	list[index] = list.at(-1)!;
 	list.pop();
 }
 
@@ -147,7 +147,7 @@ export function throttle(fn: () => void) {
 			this.set(time);
 		},
 		set(time: number) {
-			timeout ||= setTimeout(() => {
+			timeout ??= setTimeout(() => {
 				timeout = undefined;
 				fn();
 			}, time);
@@ -156,22 +156,21 @@ export function throttle(fn: () => void) {
 }
 
 // Disposable timeout, clears on scope exit with `using`
-export function acquireTimeout(timeout: number, fn: () => void) {
-	let handle: NodeJS.Timeout | undefined = setTimeout(
-		() => {
-			handle = undefined;
-			fn();
-		},
-		timeout,
-	);
-	return {
-		[Symbol.dispose]() {
-			if (handle) {
-				clearTimeout(handle);
-			}
-		},
+function makeAcquireTimer(
+	makeTimer: (fn: () => void, ms: number) => NodeJS.Timeout,
+	clearTimer: (handle: NodeJS.Timeout) => void,
+) {
+	return (ms: number, fn: () => void) => {
+		const disposable = new DisposableStack();
+		disposable.adopt(makeTimer(fn, ms), handle => clearTimer(handle));
+		return disposable;
 	};
 }
+
+// nb: `globalThis` access because runner does not have these functions. If you invoke
+// `acquireTimeout` it will throw.
+export const acquireTimeout = makeAcquireTimer(globalThis.setTimeout, globalThis.clearTimeout);
+export const acquireInterval = makeAcquireTimer(globalThis.setInterval, globalThis.clearInterval);
 
 // Explodes a union type into all possible types inline
 export function asUnion<Type>(_value: Type): asserts _value is Union<Type> {}

@@ -1,4 +1,11 @@
 .clang-tidy
+*.node
+*.tar.gz
+artifacts
+build
 dist/tsconfig.tsbuildinfo
+npm
 out
+profile.mts
+run-pgo
 tsconfig.json

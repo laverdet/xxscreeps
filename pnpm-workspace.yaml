@@ -8,3 +8,5 @@ packages:
 onlyBuiltDependencies:
   - isolated-vm
   - ivm-inspect
+
+storeDir: ./.pnpm-store

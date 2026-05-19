@@ -56,17 +56,18 @@ const ConsoleSubscription: SubscriptionEndpoint = {
 					line.data = escape(line.data);
 				}
 				if (line.fd !== 2) {
+					const previous = frames.at(-1)?.messages;
 					if (line.data.startsWith(resultPrefix)) {
-						if (frames[frames.length - 1]?.messages?.results.length) {
+						if (previous?.results.length) {
 							// Eval response
-							frames[frames.length - 1].messages!.results.push(colorize(line.data.substr(resultPrefix.length)));
+							previous.results.push(colorize(line.data.substr(resultPrefix.length)));
 						} else {
 							// Repeated eval response
 							frames.push({ messages: { log: [], results: [ colorize(line.data.substr(resultPrefix.length)) ] } });
 						}
-					} else if (frames[frames.length - 1]?.messages?.log.length) {
+					} else if (previous?.log.length) {
 						// console.log
-						frames[frames.length - 1].messages!.log.push(colorize(line.data));
+						previous.log.push(colorize(line.data));
 					} else {
 						// Repeated console.log
 						frames.push({ messages: { log: [ colorize(line.data) ], results: [] } });

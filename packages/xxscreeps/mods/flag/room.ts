@@ -35,9 +35,10 @@ extend(Room, {
 	createFlag(arg1, arg2, ...args) {
 		const { pos, rest } = fetchPositionArgumentRest(this.name, arg1, arg2, ...args);
 		const flags = userGame!.flags;
-		const name = rest[0] ?? Fn.find(
-			Fn.map(Fn.range(), ii => `Flag${ii}`),
-			name => flags[name] === undefined)!;
+		const name = rest[0] ?? Fn.pipe(
+			Fn.range(),
+			$$ => Fn.map($$, ii => `Flag${ii}`),
+			$$ => Fn.find($$, name => flags[name] === undefined)!);
 		const color = rest[1] ?? C.COLOR_WHITE;
 		const secondaryColor = rest[2] ?? color;
 		const result = chainIntentChecks(

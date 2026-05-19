@@ -63,13 +63,13 @@ export class SortedSet {
 		return this.#scores.has(member);
 	}
 
-	insert(entries: Iterable<[ number, string ]>, accumulator = (left: number, right: number) => left + right) {
+	insert(entries: Iterable<readonly [ number, string ]>, accumulator = (left: number | undefined, right: number) => (left ?? 0) + right) {
 		let count = 0;
 		for (const [ score, member ] of entries) {
 			const currentScore = this.#scores.get(member);
 			if (currentScore === undefined) {
 				this.#members.push(member);
-				this.#scores.set(member, accumulator(0, score));
+				this.#scores.set(member, accumulator(undefined, score));
 				++count;
 			} else {
 				this.#scores.set(member, accumulator(currentScore, score));

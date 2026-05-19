@@ -2,12 +2,11 @@ import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomObject, create as createObject, getById, format as objectFormat } from 'xxscreeps/game/object.js';
+import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 import { Creep } from './creep.js';
 
 export const format = declare('Tombstone', () => compose(shape, Tombstone));
@@ -34,11 +33,6 @@ const shape = struct(objectFormat, {
  * A remnant of dead creeps. This is a walkable object.
  */
 export class Tombstone extends withOverlay(RoomObject, shape) {
-
-	constructor(idOrArg1?: any, arg2?: any) {
-		super(idOrArg1, arg2);
-		if (typeof idOrArg1 === 'string') assign<Tombstone>(this, getById(Tombstone, idOrArg1));
-	}
 
 	/**
 	 * The amount of game ticks before this tombstone decays.
