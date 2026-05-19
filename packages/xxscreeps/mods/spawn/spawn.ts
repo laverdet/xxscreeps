@@ -78,12 +78,13 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 
 	get memory() {
 		if (!this.my) {
+			// @ts-expect-error
 			return;
 		}
 		return (Memory.get().spawns ??= {})[this.name] ??= {};
 	}
 
-	set memory(memory: any) {
+	set memory(memory: Record<string, unknown>) {
 		if (!this.my) {
 			return;
 		}
@@ -282,10 +283,11 @@ export function checkRecycleCreep(spawn: StructureSpawn, creep: Creep) {
 
 export function checkRenewCreep(spawn: StructureSpawn, creep: Creep) {
 	return chainIntentChecks(
-		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkSpawnType(spawn),
 		() => spawn.spawning ? C.ERR_BUSY : C.OK,
-		() => checkIsActive(spawn),
 		() => checkTarget(creep, Creep),
+		() => checkSpawnOwner(spawn),
+		() => checkIsActive(spawn),
 		() => checkCommon(creep),
 		() => checkRange(spawn, creep, 1),
 		() => {
@@ -308,6 +310,14 @@ export function checkDirections(directions: Direction[] | null) {
 	);
 }
 
+function checkSpawnType(spawn: StructureSpawn) {
+	return spawn instanceof StructureSpawn ? C.OK : C.ERR_INVALID_ARGS;
+}
+
+function checkSpawnOwner(spawn: StructureSpawn) {
+	return spawn.my ? C.OK : C.ERR_NOT_OWNER;
+}
+
 export function checkSpawnCreep(
 	spawn: StructureSpawn,
 	body: PartType[],
@@ -316,7 +326,7 @@ export function checkSpawnCreep(
 	energyStructures: (StructureExtension | StructureSpawn)[] | null,
 ) {
 	return chainIntentChecks(
-		() => checkMyStructure(spawn, StructureSpawn),
+		() => checkSpawnType(spawn),
 		() => checkString(name, 100, true),
 		() => {
 			if (userGame?.creeps[name] !== undefined) {
@@ -325,6 +335,9 @@ export function checkSpawnCreep(
 			if (directions !== null && !checkDirections(directions)) {
 				return C.ERR_INVALID_ARGS;
 			}
+		},
+		() => checkSpawnOwner(spawn),
+		() => {
 			if (spawn.spawning) {
 				return C.ERR_BUSY;
 			}

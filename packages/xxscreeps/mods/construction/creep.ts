@@ -56,9 +56,9 @@ extend(Creep, {
 export function checkBuild(creep: Creep, target: ConstructionSite) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.WORK),
+		() => checkHasResource(creep, C.RESOURCE_ENERGY),
 		() => checkTarget(target, ConstructionSite),
 		() => checkRange(creep, target, 3),
-		() => checkHasResource(creep, C.RESOURCE_ENERGY),
 		() => {
 			// A friendly creep sitting on top of a construction site for an obstacle structure prevents
 			// `build`
@@ -78,6 +78,7 @@ export function checkDismantle(creep: Creep, target: Structure) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.WORK),
 		() => checkTarget(target, Structure),
+		() => target.structureType in C.CONSTRUCTION_COST ? C.OK : C.ERR_INVALID_TARGET,
 		() => checkRange(creep, target, 1),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART));
 }
@@ -85,7 +86,7 @@ export function checkDismantle(creep: Creep, target: Structure) {
 export function checkRepair(creep: Creep, target: Structure) {
 	return chainIntentChecks(
 		() => checkCommon(creep, C.WORK),
+		() => checkHasResource(creep, C.RESOURCE_ENERGY),
 		() => checkTarget(target, Structure),
-		() => checkRange(creep, target, 3),
-		() => checkHasResource(creep, C.RESOURCE_ENERGY));
+		() => checkRange(creep, target, 3));
 }

@@ -26,7 +26,7 @@ export function getRoomChannel(shard: Shard, roomName: string) {
 
 export const processorTimeKey = 'processor/time';
 export const activeRoomsKey = 'processor/activeRooms';
-const sleepingRoomsKey = 'processor/inactiveRooms';
+export const sleepingRoomsKey = 'processor/inactiveRooms';
 export const userToIntentRoomsSetKey = (userId: string) =>
 	`user/${userId}/intentRooms`;
 export const userToPresenceRoomsSetKey = (userId: string) =>
@@ -72,7 +72,7 @@ const CompareAndSwap = new KeyvalScript((
 
 const SCardStore = new KeyvalScript(
 	(keyval, [ into, from ]: [ string, string ]) => {
-		const result = keyval.scard(from);
+		const result = keyval.sCard(from);
 		keyval.set(into, result);
 		return result;
 	}, {
@@ -85,7 +85,7 @@ const SCardStore = new KeyvalScript(
 
 const ZCardStore = new KeyvalScript(
 	(keyval, [ into, from ]: [ string, string ]) => {
-		const result = keyval.zcard(from);
+		const result = keyval.zCard(from);
 		keyval.set(into, result);
 		return result;
 	}, {
@@ -97,7 +97,7 @@ const ZCardStore = new KeyvalScript(
 );
 
 const ZSetToSet = new KeyvalScript(
-	(keyval, [ into, from ]: [string, string]) => keyval.sadd(into, keyval.zrange(from, 0, -1)),
+	(keyval, [ into, from ]: [string, string]) => keyval.sAdd(into, keyval.zRange(from, 0, -1)),
 	{
 		lua:
 			`local members = redis.call('zrange', KEYS[2], 0, -1)
@@ -109,13 +109,13 @@ const ZSetToSet = new KeyvalScript(
 	});
 
 async function pushIntentsForRoom(shard: Shard, roomName: string, userId: string, intents?: RoomIntentPayload) {
-	return intents && shard.scratch.rpush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
+	return intents && shard.scratch.rPush(intentsListForRoomKey(roomName), [ JSON.stringify({ userId, intents }) ]);
 }
 
 export function pushIntentsForRoomNextTick(shard: Shard, roomName: string, userId: string, intents: Partial<RoomIntentPayload>) {
 	return Promise.all([
 		// Add this room to the active set
-		shard.scratch.zadd(sleepingRoomsKey, [ [ shard.time + 1, roomName ] ]),
+		shard.scratch.zAdd(sleepingRoomsKey, [ [ shard.time + 1, roomName ] ]),
 		// Save intents
 		pushIntentsForRoom(shard, roomName, userId, {
 			local: {},
@@ -131,7 +131,7 @@ export async function publishRunnerIntentsForRooms(
 	const roomsWithIntents = Promise.all(Fn.map(roomNames, async roomName => {
 		const [ count ] = await Promise.all([
 			// Decrement count of users that this room is waiting for
-			shard.scratch.zadd(processRoomsSetKey(time), [ [ -1, roomName ] ], { if: 'xx', incr: true }),
+			shard.scratch.zAdd(processRoomsSetKey(time), [ [ -1, roomName ] ], { if: 'XX', incr: true }),
 			// Add intents to list
 			pushIntentsForRoom(shard, roomName, userId, intents[roomName]),
 		]);
@@ -140,7 +140,7 @@ export async function publishRunnerIntentsForRooms(
 		} else if (count < 0) {
 			// Reset count back to 0 in the case we've published intents for an abandoned tick
 			// NOTE: These intents will still be processed at some point, which is probably not desired.
-			await shard.scratch.zadd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'xx' });
+			await shard.scratch.zAdd(processRoomsSetKey(time), [ [ 0, roomName ] ], { if: 'XX' });
 		}
 		return roomName;
 	}));
@@ -154,20 +154,20 @@ export async function publishRunnerIntentsForRooms(
 export async function publishInterRoomIntents(shard: Shard, roomName: string, time: number, intents: SingleIntent[]) {
 	const [ count ] = await Promise.all([
 		// Mark this room as active for this tick
-		shard.scratch.sadd(activeRoomsProcessingKey(time), [ roomName ]),
+		shard.scratch.sAdd(activeRoomsProcessingKey(time), [ roomName ]),
 		// Save intents
-		shard.scratch.rpush(finalIntentsListForRoomKey(roomName), [ JSON.stringify(intents) ]),
+		shard.scratch.rPush(finalIntentsListForRoomKey(roomName), [ JSON.stringify(intents) ]),
 	]);
 	if (count) {
 		// Save this room to the set of rooms that need to finalize
-		await shard.scratch.sadd(finalizeExtraRoomsSetKey(time), [ roomName ]);
+		await shard.scratch.sAdd(finalizeExtraRoomsSetKey(time), [ roomName ]);
 	}
 }
 
 export async function acquireIntentsForRoom(shard: Shard, roomName: string) {
 	const key = intentsListForRoomKey(roomName);
 	const [ payloads ] = await Promise.all([
-		shard.scratch.lrange(key, 0, -1),
+		shard.scratch.lRange(key, 0, -1),
 		shard.scratch.vdel(key),
 	]);
 	return payloads.map(json => {
@@ -179,7 +179,7 @@ export async function acquireIntentsForRoom(shard: Shard, roomName: string) {
 export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string) {
 	const key = finalIntentsListForRoomKey(roomName);
 	const [ payloads ] = await Promise.all([
-		shard.scratch.lrange(key, 0, -1),
+		shard.scratch.lRange(key, 0, -1),
 		shard.scratch.vdel(key),
 	]);
 	return payloads.map((json): SingleIntent[] => JSON.parse(json));
@@ -210,13 +210,13 @@ export async function begetRoomProcessQueue(shard: Shard, time: number, processo
 		const processSet = processRoomsSetKey(time);
 		const [ , count ] = await Promise.all([
 			// Save waking rooms to temporary key
-			shard.scratch.zrangeStore(tmpKey, sleepingRoomsKey, 0, time, { by: 'score' }),
+			shard.scratch.zRangeStore(tmpKey, sleepingRoomsKey, 0, time, { by: 'SCORE' }),
 			// Combine active rooms and waking rooms into current processing queue
-			shard.scratch.zunionStore(processSet, [ activeRoomsKey, tmpKey ], { weights: [ 1, 0 ] }),
+			shard.scratch.zUnionStore(processSet, [ activeRoomsKey, tmpKey ], { weights: [ 1, 0 ] }),
 			// Remove temporary key
 			shard.scratch.vdel(tmpKey),
 			// Remove waking rooms from sleeping rooms
-			shard.scratch.zremRange(sleepingRoomsKey, 0, time),
+			shard.scratch.zRemRange(sleepingRoomsKey, 0, time),
 			// Initialize counter for rooms that need to be processed
 			shard.scratch.eval(ZCardStore, [ processRoomsPendingKey(time), processSet ], []),
 			// Copy processing queue into active rooms set
@@ -267,18 +267,14 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 		// Decrement number of finalization rooms remaining
 		const remaining = await shard.scratch.decrBy(finalizedRoomsPendingKey(time), roomsCount);
 		if (remaining === 0) {
-			const [ nextTime ] = await Promise.all([
-				// Set up state for next tick
-				begetRoomProcessQueue(shard, time + 1, time, true),
+			await Promise.all([
 				// Delete "0" value from scratch
 				shard.scratch.vdel(finalizedRoomsPendingKey(time)),
+				// Notify main loop that room finalization is complete
+				getServiceChannel(shard).publish({ type: 'tickFinished', time }),
 			]);
-			// Notify main loop that we're ready for the next tick
-			await getServiceChannel(shard).publish({ type: 'tickFinished', time });
-			return nextTime;
 		}
 	}
-	return time;
 }
 
 const isSystemUser = (userId: string) => userId.length <= 2;
@@ -313,19 +309,19 @@ export async function updateUserRoomRelationships(shard: Shard, room: Room, prev
 			$$ => Fn.transform($$, ([ players, toKey ]) => Fn.concat([
 				// Add new user associations
 				Fn.map(players.added, playerId =>
-					shard.scratch.sadd(toKey(playerId), [ roomName ])),
+					shard.scratch.sAdd(toKey(playerId), [ roomName ])),
 				// Remove stale user associations
 				Fn.map(players.removed, playerId =>
-					shard.scratch.srem(toKey(playerId), [ roomName ])),
+					shard.scratch.sRem(toKey(playerId), [ roomName ])),
 			])),
 		),
 
 		// Mark players active for runner
-		shard.scratch.sadd('activeUsers', intentPlayers.added),
+		shard.scratch.sAdd('activeUsers', intentPlayers.added),
 
 		// Update user count in processing queue
 		previous && (intentPlayers.added.length + intentPlayers.removed.length) === 0 ? undefined :
-		shard.scratch.zadd(activeRoomsKey, [ [ intentPlayers.players.length, roomName ] ]),
+		shard.scratch.zAdd(activeRoomsKey, [ [ intentPlayers.players.length, roomName ] ]),
 	]);
 }
 
@@ -334,10 +330,10 @@ export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wak
 		// Copy current room state to buffer0 and buffer1
 		shard.copyRoomFromPreviousTick(roomName, time + 1),
 		// Remove from active room set
-		shard.scratch.zrem(activeRoomsKey, [ roomName ]),
+		shard.scratch.zRem(activeRoomsKey, [ roomName ]),
 		// Set alarm to wake up
 		wakeTime === Infinity
-			? undefined : shard.scratch.zadd(sleepingRoomsKey, [ [ wakeTime, roomName ] ], { if: 'nx' }),
+			? undefined : shard.scratch.zAdd(sleepingRoomsKey, [ [ wakeTime, roomName ] ], { if: 'NX' }),
 	]);
 }
 
@@ -345,9 +341,9 @@ export async function abandonIntentsForTick(shard: Shard, time: number) {
 	const key = processRoomsSetKey(time);
 	const [ pending ] = await Promise.all([
 		// Fetch which rooms we're waiting on, for diagnostics
-		shard.scratch.zrange(key, 0, 1000),
+		shard.scratch.zRange(key, 0, 1000),
 		// Update all processor pending counts to 0
-		shard.scratch.zinterStore(key, [ key ], { weights: [ 0 ] }),
+		shard.scratch.zInterStore(key, [ key ], { weights: [ 0 ] }),
 		// Clear runner queue
 		shard.scratch.vdel(runnerUsersSetKey(time)),
 	]);

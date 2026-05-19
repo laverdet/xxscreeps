@@ -45,6 +45,44 @@ describe('Combat', () => {
 				`expected 1 ruin at lab position, got ${labRuins.length}`);
 		});
 	}));
+
+	const overkillHealSim = simulate({
+		W1N1: room => {
+			room['#level'] = 7;
+			room['#user'] = room.controller!['#user'] = '100';
+			const target = createCreep(
+				new RoomPosition(25, 25, 'W1N1'),
+				[ C.MOVE, C.HEAL ],
+				'target',
+				'100',
+			);
+			target.hits = 12;
+			target.body[0]!.hits = 0;
+			target.body[1]!.hits = 12;
+			room['#insertObject'](target);
+			room['#insertObject'](createCreep(
+				new RoomPosition(26, 25, 'W1N1'),
+				[ C.ATTACK, C.MOVE ],
+				'attacker',
+				'101',
+			));
+		},
+	});
+
+	test('lethal overkill kills creep after same-tick healing', () => overkillHealSim(async ({ player, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.target?.heal(Game.creeps.target), C.OK);
+		});
+		await player('101', Game => {
+			const target = Game.rooms.W1N1!.find(C.FIND_HOSTILE_CREEPS)[0]!;
+			assert.strictEqual(Game.creeps.attacker?.attack(target), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.target, undefined);
+			assert.strictEqual(Game.rooms.W1N1?.find(C.FIND_TOMBSTONES).length, 1);
+		});
+	}));
 });
 
 describe('getEventLog', () => {

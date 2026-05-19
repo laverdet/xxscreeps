@@ -12,7 +12,7 @@ const { allowEmailRegistration } = config.backend;
 
 async function checkPassword(db: Database, userId: string, password: string) {
 	const info = await async function() {
-		const payload = await db.data.hget(infoKey(userId), 'password');
+		const payload = await db.data.hGet(infoKey(userId), 'password');
 		try {
 			return JSON.parse(payload!);
 		} catch {}
@@ -27,7 +27,7 @@ async function setPassword(db: Database, userId: string, password: string) {
 	const iterations = 100000;
 	const salt = crypto.randomBytes(16);
 	const hash = await promisify(crypto.pbkdf2)(password, salt, iterations, 64, 'sha512');
-	await db.data.hset(infoKey(userId), 'password', JSON.stringify({
+	await db.data.hSet(infoKey(userId), 'password', JSON.stringify({
 		hash,
 		iterations,
 		salt: salt.toString('latin1'),
@@ -165,7 +165,7 @@ hooks.register('route', {
 // Add password flag and email to user info payload
 hooks.register('sendUserInfo', async (db, userId, userInfo, privateSelf) => {
 	if (privateSelf) {
-		const password = await db.data.hget(infoKey(userId), 'password');
+		const password = await db.data.hGet(infoKey(userId), 'password');
 		if (password !== null) {
 			userInfo.password = true;
 		}

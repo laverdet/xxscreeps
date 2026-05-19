@@ -2,7 +2,6 @@ import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/check
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, registerGlobal } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
-import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
@@ -32,7 +31,6 @@ declare module 'xxscreeps/game/runtime.js' {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const harvest = registerHarvestable(Deposit, function(creep) {
 	return chainIntentChecks(
-		() => checkCommon(creep, C.WORK),
 		() => checkTarget(this, Deposit),
 		() => checkRange(creep, this, 1),
 		() => this.cooldown === 0 ? undefined : C.ERR_TIRED);

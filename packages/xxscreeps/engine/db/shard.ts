@@ -97,7 +97,7 @@ export class Shard {
 	async loadWorld() {
 		const [ terrainBlob, rooms ] = await Promise.all([
 			this.data.req('terrain', { blob: true }),
-			this.data.smembers('rooms'),
+			this.data.sMembers('rooms'),
 		]);
 		return new World(this.name, terrainBlob, new Set(rooms));
 	}

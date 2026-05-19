@@ -130,7 +130,10 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 	/**
 	 * Whether this is your own structure.
 	 */
-	@enumerable override get my() { return this['#user'] === me; }
+	@enumerable override get my() {
+		const user = this['#user'];
+		return user === null ? undefined : user === me;
+	}
 
 	override get '#hasIntent'() { return true; }
 	override get '#providesVision'() { return true; }

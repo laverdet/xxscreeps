@@ -80,7 +80,7 @@ function activeForeignSegmentKey(userId: string) {
 }
 
 export async function loadActiveForeignSegment(shard: Shard, userId: string): Promise<StoredForeignSegmentRequest | null> {
-	const fields = await shard.data.hgetall(activeForeignSegmentKey(userId));
+	const fields = await shard.data.hGetAll(activeForeignSegmentKey(userId));
 	const { username, userId: storedUserId, segmentId } = fields;
 	if (!username || !storedUserId || !segmentId) {
 		return null;
@@ -145,12 +145,12 @@ export async function savePublicSegments(shard: Shard, userId: string, ids: numb
 		await shard.data.vdel(key);
 	} else {
 		await Promise.all([
-			shard.data.del(key),
-			shard.data.sadd(key, members),
+			shard.data.vdel(key),
+			shard.data.sAdd(key, members),
 		]);
 	}
 }
 
 export function isPublicSegment(shard: Shard, userId: string, id: number) {
-	return shard.data.sismember(publicSegmentsKey(userId), String(id));
+	return shard.data.sIsMember(publicSegmentsKey(userId), String(id));
 }

@@ -1,6 +1,6 @@
 import type { tick } from './runtime.js';
 import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
-import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
+import type { Sandbox, TickCompletion } from 'xxscreeps/driver/sandbox/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
@@ -178,13 +178,15 @@ const hostLoaders = await async function() {
 			}
 		};
 	};
-	const [ pathfinder, process, util ] = await Promise.all([
+	const [ pathfinder, assert, process, util ] = await Promise.all([
 		make('@xxscreeps/pathfinder'),
+		make('node:assert/strict'),
 		make('node:process'),
 		make('node:util'),
 	]);
 	return {
 		'xxscreeps:pathfinder': pathfinder,
+		'node:assert/strict': assert,
 		'node:process': process,
 		'node:util': util,
 	};
@@ -243,6 +245,7 @@ export class NodejsSandbox implements Sandbox {
 				const url = await resolver(specifier, referencingModule.identifier);
 				return getOrSet(resolutions, url, async () => {
 					switch (url) {
+						case 'node:assert/strict':
 						case 'node:process':
 						case 'node:util':
 						case 'xxscreeps:pathfinder':
@@ -291,21 +294,24 @@ export class NodejsSandbox implements Sandbox {
 	}
 
 	// eslint-disable-next-line @typescript-eslint/require-await
-	async run(data: TickPayload) {
+	async run(data: TickPayload): Promise<TickCompletion> {
 		const start = process.hrtime.bigint();
 		try {
-			const payload = this.tick!(data);
-			if (payload.error) {
-				return { result: 'error' as const, console: payload.console };
+			const completion = this.tick!(data);
+			if (completion.result === 'success') {
+				if (completion.payload.unsafeSandboxDidHalt) {
+					return { result: 'disposed' };
+				}
+				completion.payload.usage.cpu = Number(process.hrtime.bigint() - start) / 1e6;
 			}
-			payload.usage.cpu = Number(process.hrtime.bigint() - start) / 1e6;
-			return { result: 'success' as const, payload };
+			return completion;
 		} catch (err: any) {
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 			if (err.message.startsWith('Script execution timed out after')) {
 				return { result: 'timedOut' as const };
+			} else {
+				throw err;
 			}
-			throw err;
 		}
 	}
 }

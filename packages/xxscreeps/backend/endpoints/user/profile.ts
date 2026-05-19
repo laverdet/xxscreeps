@@ -20,7 +20,7 @@ hooks.register('route', {
 			const { userId } = context.state;
 			const info = {};
 			const [ user ] = await Promise.all([
-				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
+				context.db.data.hmGet(User.infoKey(userId), [ 'badge', 'username' ]),
 				User.findProvidersForUser(context.db, userId),
 				Promise.all(sendUserInfo(context.db, userId, info, true)),
 			]);
@@ -75,7 +75,7 @@ hooks.register('route', {
 		if (userId !== null) {
 			const info = {};
 			const [ user ] = await Promise.all([
-				context.db.data.hmget(User.infoKey(userId), [ 'badge', 'username' ]),
+				context.db.data.hmGet(User.infoKey(userId), [ 'badge', 'username' ]),
 				Promise.all(sendUserInfo(context.db, userId, info, false)),
 			]);
 			return {

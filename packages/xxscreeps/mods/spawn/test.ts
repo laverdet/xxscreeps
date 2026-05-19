@@ -107,6 +107,56 @@ describe('Spawn', () => {
 		});
 	}));
 
+	const foreignSpawnSim = simulate({
+		W1N1: room => {
+			room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
+			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.WORK, C.CARRY, C.MOVE ], 'worker', '101'));
+			room['#level'] = 8;
+			room['#user'] = room.controller!['#user'] = '100';
+		},
+	});
+
+	test('SPAWN-CREATE-014:invalid-name-or-options-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
+		await player('101', Game => {
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+			assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'x'.repeat(101)), C.ERR_INVALID_ARGS);
+		});
+	}));
+
+	test('SPAWN-CREATE-014:name-exists-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
+		await player('101', Game => {
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+			assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'worker'), C.ERR_NAME_EXISTS);
+		});
+	}));
+
+	test('SPAWN-CREATE-014:invalid-directions-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
+		await player('101', Game => {
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+			assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'newCreep', {
+				directions: [ 99 as never ],
+			}), C.ERR_INVALID_ARGS);
+		});
+	}));
+
+	test('RENEW-CREEP-011:busy-before-not-owner', () => foreignSpawnSim(async ({ player, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.spawns.Spawn1!.spawnCreep([ C.MOVE, C.MOVE, C.MOVE ], 'busy'), C.OK);
+		});
+		await tick();
+		await player('101', Game => {
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+			assert.strictEqual(spawn.renewCreep(Game.creeps.worker!), C.ERR_BUSY);
+		});
+	}));
+
+	test('RENEW-CREEP-011:invalid-target-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
+		await player('101', Game => {
+			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+			assert.strictEqual(spawn.renewCreep(spawn as never), C.ERR_INVALID_TARGET);
+		});
+	}));
+
 	test('recycleCreep undefined', () => simulation(async ({ player }) => {
 		await player('100', Game => {
 			assert.strictEqual(Game.spawns.Spawn1?.recycleCreep(undefined as never), C.ERR_INVALID_TARGET);

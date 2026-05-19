@@ -1,0 +1,9 @@
+{
+	"recommendations": [
+		"dbaeumer.vscode-eslint",
+	],
+	"unwantedRecommendations": [
+		"ms-azuretools.vscode-containers",
+		"ms-vscode.cmake-tools",
+	]
+}

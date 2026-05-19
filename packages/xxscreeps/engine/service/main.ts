@@ -2,6 +2,7 @@ import config from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model.js';
+import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
@@ -43,11 +44,11 @@ const saveInterval = config.database.saveInterval * 60000;
 // Initialize scratch state
 await using _main = await mainMutex.acquire();
 const [ rooms ] = await Promise.all([
-	shard.data.smembers('rooms'),
+	shard.data.sMembers('rooms'),
 	shard.scratch.flushdb(),
 ]);
 await Promise.all([
-	shard.scratch.sadd('initializeRooms', rooms),
+	shard.scratch.sAdd('initializeRooms', rooms),
 	shard.scratch.set(processorTimeKey, shard.time),
 ]);
 
@@ -59,7 +60,7 @@ const didInitialize = await async function() {
 		// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 		switch (message.type) {
 			case 'processorInitialized':
-				if (await shard.scratch.zcard(activeRoomsKey) === rooms.length) {
+				if (await shard.scratch.zCard(activeRoomsKey) === rooms.length) {
 					await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
 					return true;
 				}
@@ -104,10 +105,13 @@ async function tick() {
 				break;
 
 			case 'tickFinished': {
+				await runShardTickProcessors(shard, time);
+				await begetRoomProcessQueue(shard, time + 1, time, true);
+
 				// Update game state
 				await shard.data.set('time', time);
 
-				// Display statistics
+				// Setup for next tick
 				await shard.channel.publish({ type: 'tick', time });
 				shard.time = time;
 				return willContinue;
@@ -132,7 +136,6 @@ if (didInitialize) {
 	let lastSave = Date.now();
 	while (true) {
 		// Tick
-		const tickShardTime = shard.time;
 		const tickWallTime = Date.now();
 		if (!await tick()) {
 			break;
@@ -140,7 +143,7 @@ if (didInitialize) {
 		const now = Date.now();
 		const timeTaken = now - tickWallTime;
 		const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
-		console.log(`Tick ${tickShardTime} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
+		console.log(`Tick ${shard.time} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
 
 		// Maybe save
 		if (lastSave + saveInterval < now) {

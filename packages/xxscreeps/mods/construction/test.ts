@@ -1,7 +1,9 @@
+import type { Room } from 'xxscreeps/game/room/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
+import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
@@ -54,6 +56,167 @@ describe('Construction', () => {
 			assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(1, 4, 'road'), C.OK);
 		});
 	}));
+
+	describe('intent precedence', () => {
+		const fillSites = (room: Room, owner: string, count: number) => {
+			for (let ii = 0; ii < count; ++ii) {
+				const xx = 1 + (ii % 48);
+				const yy = 1 + Math.floor(ii / 48);
+				room['#insertObject'](createSite(new RoomPosition(xx, yy, room.name), 'road', owner, C.CONSTRUCTION_COST.road));
+			}
+		};
+
+		const rclCappedAndFull = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				fillSites(room, '100', C.MAX_CONSTRUCTION_SITES);
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:rcl-or-structure-cap-before-site-cap-full', () => rclCappedAndFull(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(45, 45, 'tower'), C.ERR_RCL_NOT_ENOUGH);
+			});
+		}));
+
+		const sameTypeAndFull = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road));
+				fillSites(room, '100', C.MAX_CONSTRUCTION_SITES - 1);
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:invalid-target-before-site-cap-full', () => sameTypeAndFull(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		const oversizedName = 'x'.repeat(101);
+		const setupForeignRoom = (room: Room, level = 8) => {
+			room['#level'] = level;
+			room['#user'] = room.controller!['#user'] = '101';
+			// Visiting creep so player '100' has vision into the room.
+			room['#insertObject'](createCreep(new RoomPosition(20, 20, room.name), [ C.MOVE ], 'visitor', '100'));
+		};
+
+		const foreignOwned = simulate({
+			W1N1: room => setupForeignRoom(room),
+		});
+
+		test('CONSTRUCTION-SITE-011:not-owner', () => foreignOwned(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
+			});
+		}));
+
+		const foreignOwnedRclCapped = simulate({
+			W1N1: room => setupForeignRoom(room, 1),
+		});
+
+		test('CONSTRUCTION-SITE-011:not-owner-before-rcl-or-structure-cap', () => foreignOwnedRclCapped(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'tower'), C.ERR_NOT_OWNER);
+			});
+		}));
+
+		const foreignOwnedInvalidTarget = simulate({
+			W1N1: room => {
+				setupForeignRoom(room);
+				room['#insertObject'](createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '101', C.CONSTRUCTION_COST.road));
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:not-owner-before-invalid-target', () => foreignOwnedInvalidTarget(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
+			});
+		}));
+
+		const foreignOwnedAndFull = simulate({
+			W1N1: room => setupForeignRoom(room),
+			W2N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				fillSites(room, '100', C.MAX_CONSTRUCTION_SITES);
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:not-owner-before-site-cap-full', () => foreignOwnedAndFull(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
+			});
+		}));
+
+		const ownedRcl8 = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:invalid-args', () => ownedRcl8(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', oversizedName), C.ERR_INVALID_ARGS);
+			});
+		}));
+
+		test('CONSTRUCTION-SITE-011:invalid-args-before-not-owner', () => foreignOwned(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(
+					Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', oversizedName),
+					C.ERR_INVALID_ARGS,
+				);
+			});
+		}));
+
+		const ownedRcl1WithSpawn = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createSpawn(new RoomPosition(24, 25, 'W1N1'), '100', 'Spawn1'));
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:invalid-args-before-rcl-or-structure-cap', () => ownedRcl1WithSpawn(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', oversizedName), C.ERR_INVALID_ARGS);
+			});
+		}));
+
+		const ownedWithRoadSite = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createSite(new RoomPosition(25, 25, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road));
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:invalid-args-before-invalid-target', () => ownedWithRoadSite(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', oversizedName), C.ERR_INVALID_ARGS);
+			});
+		}));
+
+		const ownedAndFull = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				fillSites(room, '100', C.MAX_CONSTRUCTION_SITES);
+			},
+		});
+
+		test('CONSTRUCTION-SITE-011:invalid-args-before-site-cap-full', () => ownedAndFull(async ({ player }) => {
+			await player('100', Game => {
+				// (49, 49) is outside `fillSites`' (1,1)-(4,3) range, so any non-INVALID_ARGS slip-up
+				// would fall through to the cap and surface ERR_FULL.
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(49, 49, 'spawn', oversizedName), C.ERR_INVALID_ARGS);
+			});
+		}));
+	});
 
 	test('create two sites at same position', () => construction(async ({ player, tick }) => {
 		await player('100', Game => {
@@ -109,6 +272,88 @@ describe('Construction', () => {
 			assert.strictEqual(sitesByPos.get('15,7')!.progressTotal, C.CONSTRUCTION_COST.road * C.CONSTRUCTION_COST_ROAD_WALL_RATIO);
 		});
 	}));
+
+	describe('creep intent precedence', () => {
+		const noEnergyWorker = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.CARRY ], 'worker', '100'));
+			},
+		});
+
+		test('REPAIR-010:not-enough-before-invalid-target', () => noEnergyWorker(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.creeps.worker!.repair(undefined as never), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		test('BUILD-011:not-enough-before-invalid-target', () => noEnergyWorker(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.creeps.worker!.build(undefined as never), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		const noEnergyOutOfRange = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.CARRY ], 'worker', '100'));
+				room['#insertObject'](createContainer(new RoomPosition(20, 20, 'W1N1')));
+				room['#insertObject'](createSite(new RoomPosition(20, 21, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road));
+			},
+		});
+
+		test('REPAIR-010:not-enough-before-range', () => noEnergyOutOfRange(async ({ player }) => {
+			await player('100', Game => {
+				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
+				assert.strictEqual(Game.creeps.worker!.repair(container), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		test('BUILD-011:not-enough-before-range', () => noEnergyOutOfRange(async ({ player }) => {
+			await player('100', Game => {
+				const site = Object.values(Game.constructionSites)[0]!;
+				assert.strictEqual(Game.creeps.worker!.build(site), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		const noEnergyBlockedTarget = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.CARRY ], 'builder', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(12, 10, 'W1N1'), [ C.MOVE ], 'blocker', '100'));
+				room['#insertObject'](createSite(new RoomPosition(12, 10, 'W1N1'), C.STRUCTURE_EXTENSION, '100', C.CONSTRUCTION_COST.extension));
+			},
+		});
+
+		test('BUILD-011:not-enough-before-blocked-target', () => noEnergyBlockedTarget(async ({ player }) => {
+			await player('100', Game => {
+				const site = Object.values(Game.constructionSites)[0]!;
+				assert.strictEqual(Game.creeps.builder!.build(site), C.ERR_NOT_ENOUGH_RESOURCES);
+			});
+		}));
+
+		const blockedTargetOutOfRange = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				const builder = createCreep(new RoomPosition(10, 10, 'W1N1'), [ C.WORK, C.CARRY ], 'builder', '100');
+				builder.store['#add'](C.RESOURCE_ENERGY, 50);
+				room['#insertObject'](builder);
+				room['#insertObject'](createCreep(new RoomPosition(20, 20, 'W1N1'), [ C.MOVE ], 'blocker', '100'));
+				room['#insertObject'](createSite(new RoomPosition(20, 20, 'W1N1'), C.STRUCTURE_EXTENSION, '100', C.CONSTRUCTION_COST.extension));
+			},
+		});
+
+		test('BUILD-011:range-before-blocked-target', () => blockedTargetOutOfRange(async ({ player }) => {
+			await player('100', Game => {
+				const site = Object.values(Game.constructionSites)[0]!;
+				assert.strictEqual(Game.creeps.builder!.build(site), C.ERR_NOT_IN_RANGE);
+			});
+		}));
+	});
 
 	describe('stomping', () => {
 		const stomping = simulate({
@@ -326,6 +571,32 @@ describe('Construction', () => {
 				assert.ok(destroyed, 'expected EVENT_OBJECT_DESTROYED for dismantled structure');
 				assert.ok(destroyed.data, 'expected nested data payload');
 				assert.strictEqual(destroyed.data.type, C.STRUCTURE_CONTAINER);
+			});
+		}));
+	});
+
+	describe('dismantle validation', () => {
+		const controllerSim = simulate({
+			W1N1: room => {
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+				const controllerPos = room.controller!.pos;
+				room['#insertObject'](createCreep(new RoomPosition(controllerPos.x - 1, controllerPos.y, 'W1N1'), [ C.WORK ], 'near', '100'));
+				room['#insertObject'](createCreep(new RoomPosition(1, 1, 'W1N1'), [ C.WORK ], 'far', '100'));
+			},
+		});
+
+		test('dismantle(controller) returns ERR_INVALID_TARGET', () => controllerSim(async ({ player }) => {
+			await player('100', Game => {
+				const controller = Game.rooms.W1N1!.controller!;
+				assert.strictEqual(Game.creeps.near?.dismantle(controller), C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		test('dismantle(controller) returns ERR_INVALID_TARGET before ERR_NOT_IN_RANGE', () => controllerSim(async ({ player }) => {
+			await player('100', Game => {
+				const controller = Game.rooms.W1N1!.controller!;
+				assert.strictEqual(Game.creeps.far?.dismantle(controller), C.ERR_INVALID_TARGET);
 			});
 		}));
 	});

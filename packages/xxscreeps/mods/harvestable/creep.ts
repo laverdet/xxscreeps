@@ -8,7 +8,7 @@ import { extend } from 'xxscreeps/utility/utility.js';
 // `harvest` intent check
 export function checkHarvest(creep: Creep, target: Harvestable | undefined) {
 	return chainIntentChecks(
-		() => checkCommon(creep),
+		() => checkCommon(creep, C.WORK),
 		() => target?.['#checkHarvest'] ? target['#checkHarvest'](creep) : C.ERR_INVALID_TARGET,
 	) as HarvestResult;
 }

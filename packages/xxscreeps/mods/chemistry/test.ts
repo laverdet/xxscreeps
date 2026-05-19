@@ -141,6 +141,15 @@ describe('Chemistry', () => {
 				assert.strictEqual(output?.runReaction(labH, labO), C.ERR_TIRED);
 			});
 		}));
+
+		test('LAB-RUN-013:invalid-target-before-not-enough-reagent', () => reactionSim(async ({ player }) => {
+			await player('100', Game => {
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				const output = labs.find(lab => !lab.mineralType)!;
+				const labO = labs.find(lab => lab.mineralType === C.RESOURCE_OXYGEN)!;
+				assert.strictEqual(output.runReaction(output, labO), C.ERR_INVALID_TARGET);
+			});
+		}));
 	});
 
 	// =========================================================================
@@ -369,6 +378,14 @@ describe('Chemistry', () => {
 			});
 		}));
 
+		test('LAB-REVERSE-013:invalid-target-before-same-lab', () => reverseSim(async ({ player }) => {
+			await player('100', Game => {
+				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
+				const labOH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROXIDE)!;
+				assert.strictEqual(labOH.reverseReaction(labOH, labOH), C.ERR_INVALID_TARGET);
+			});
+		}));
+
 		test('reverseReaction fails on cooldown', () => reverseSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
@@ -498,6 +515,27 @@ describe('Chemistry', () => {
 				const result = lab?.unboostCreep(Game.creeps.unboosted!);
 				assert.strictEqual(result, C.ERR_NOT_FOUND,
 					'should fail when creep has no boosts');
+			});
+		}));
+
+		test('unboostCreep returns ERR_NOT_OWNER for foreign creep before checkIsActive', () => simulate({
+			W1N1: room => {
+				room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), '100'));
+				room['#insertObject'](createCreep(
+					new RoomPosition(25, 26, 'W1N1'),
+					[ C.TOUGH ],
+					'foreign', '101'));
+				// Lab needs RCL 6 to be active; place at 5 so checkIsActive would otherwise gate first.
+				room['#level'] = 5;
+				room['#user'] =
+					room.controller!['#user'] = '100';
+			},
+		})(async ({ player }) => {
+			await player('100', Game => {
+				const room = Game.rooms.W1N1!;
+				const lab = lookForStructures(room, C.STRUCTURE_LAB)[0]!;
+				const foreign = room.find(C.FIND_HOSTILE_CREEPS)[0]!;
+				assert.strictEqual(lab.unboostCreep(foreign), C.ERR_NOT_OWNER);
 			});
 		}));
 

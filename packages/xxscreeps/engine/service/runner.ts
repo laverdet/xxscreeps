@@ -76,7 +76,7 @@ loop: for await (const message of Async.breakable(runnerMessages, breaker => bre
 				if (migrationTimeout > 0) {
 					const [ cancel, tickFinished ] = getServiceChannel(shard).listenFor(message =>
 						message.type === 'tickFinished' && message.time === time);
-					const count = await shard.scratch.scard(key);
+					const count = await shard.scratch.sCard(key);
 					if (count > 0) {
 						// This will insert a configurable timeout before taking on new player sandboxes
 						const timeout = Timers.setTimeout(migrationTimeout);
@@ -101,11 +101,11 @@ loop: for await (const message of Async.breakable(runnerMessages, breaker => bre
 
 						// Run user code
 						const [ intentRooms, visibleRooms ] = await Promise.all([
-							shard.scratch.smembers(userToIntentRoomsSetKey(userId)),
-							shard.scratch.smembers(userToVisibleRoomsSetKey(userId)),
+							shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
+							shard.scratch.sMembers(userToVisibleRoomsSetKey(userId)),
 						]);
 						if (intentRooms.length === 0) {
-							await shard.scratch.srem('activeUsers', [ userId ]);
+							await shard.scratch.sRem('activeUsers', [ userId ]);
 						} else {
 							log(`+${instance.username}, `);
 							await instance.run(time, visibleRooms, intentRooms);

@@ -1,4 +1,4 @@
-import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
+import type { Sandbox, TickCompletion } from 'xxscreeps/driver/sandbox/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
@@ -11,10 +11,7 @@ type Runtime = typeof import('xxscreeps/driver/sandbox/isolated/runtime.js');
 
 const useInspector = [ ...hooks.map('isolateInspector') ].some(use => use);
 
-const getPathFinderModule = runOnce(() => {
-	const module = new ivm.NativeModule(pathFinderBinaryPath);
-	return { path: pathFinderBinaryPath, module };
-});
+const getPathFinderModule = runOnce(() => new ivm.NativeModule(pathFinderBinaryPath));
 
 const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime', {
 	alias: {
@@ -52,8 +49,8 @@ export class IsolatedSandbox implements Sandbox {
 				return isolate.compileScript(source, { filename: 'runtime.js' });
 			}(),
 			async function() {
-				const instance = await pf.module.create(context);
-				await context.global.set(pf.path, instance.derefInto());
+				const instance = await pf.create(context);
+				await context.global.set('@xxscreeps/pathfinder', instance.derefInto());
 			}(),
 			async function() {
 				const util = await ivmInspect.create(isolate, context);
@@ -73,7 +70,7 @@ export class IsolatedSandbox implements Sandbox {
 		const [ initialize, tick ] = await Promise.all([
 			runtime.get('initialize', { accessors: true, reference: true }),
 			runtime.get('tick', { accessors: true, reference: true }),
-			context.global.delete(pf.path),
+			context.global.delete('@xxscreeps/pathfinder'),
 			context.global.delete('ivm'),
 			context.global.delete('nodeUtilImport'),
 		]);
@@ -91,27 +88,28 @@ export class IsolatedSandbox implements Sandbox {
 		} catch {}
 	}
 
-	async run(args: TickPayload) {
+	async run(args: TickPayload): Promise<TickCompletion> {
 		try {
-			const payload = await this.tick!.apply(
+			const completion = await this.tick!.apply(
 				undefined,
 				[ args ], {
 					arguments: { copy: true },
 					result: { copy: true },
 					timeout: args.cpu.tickLimit,
 				});
-			if (payload.error) {
-				return { result: 'error' as const, console: payload.console };
+			if (completion.result === 'success') {
+				const totalTime = this.isolate.cpuTime;
+				completion.payload.usage.cpu = Number(totalTime - this.totalTime) / 1e6;
+				this.totalTime = totalTime;
+				return completion;
+			} else {
+				return completion;
 			}
-			const totalTime = this.isolate.cpuTime;
-			payload.usage.cpu = Number(totalTime - this.totalTime) / 1e6;
-			this.totalTime = totalTime;
-			return { result: 'success' as const, payload };
 		} catch (err: any) {
 			if (err.message === 'Script execution timed out.') {
-				return { result: 'timedOut' as const, stack: err.stack };
+				return { result: 'timedOut', stack: err.stack };
 			} else if (err.message === 'Isolate is disposed') {
-				return { result: 'disposed' as const };
+				return { result: 'disposed' };
 			}
 			throw err;
 		}

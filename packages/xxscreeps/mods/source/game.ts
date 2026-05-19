@@ -2,7 +2,6 @@ import { registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.j
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
-import { checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
 import { format as keeperFormat } from './keeper-lair.js';
 import { Source, format } from './source.js';
@@ -41,15 +40,17 @@ declare module 'xxscreeps/game/room/index.js' {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const harvest = registerHarvestable(Source, function(creep) {
 	return chainIntentChecks(
-		() => checkCommon(creep, C.WORK),
 		() => checkTarget(this, Source),
+		() => {
+			if (this.energy <= 0) {
+				return C.ERR_NOT_ENOUGH_RESOURCES;
+			}
+		},
 		() => checkRange(creep, this, 1),
 		() => {
 			const roomUser = this.room['#user'];
 			if (roomUser != null && roomUser !== creep['#user']) {
 				return C.ERR_NOT_OWNER;
-			} else if (this.energy <= 0) {
-				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
 		});
 });

@@ -23,7 +23,7 @@ export class BackendContext {
 		const db = disposable.use(await Database.connect());
 		const shard = disposable.use(await Shard.connect(db, config.shards[0]!.name));
 		const world = await shard.loadWorld();
-		const rooms = await shard.data.smembers('rooms');
+		const rooms = await shard.data.sMembers('rooms');
 		const context = new BackendContext(disposable.move(), db, shard, world, new Set(rooms));
 		return context;
 	}

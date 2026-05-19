@@ -1,11 +1,12 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 import { create as createObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { create as createRampart } from 'xxscreeps/mods/defense/rampart.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { create as createResource } from 'xxscreeps/mods/resource/resource.js';
 import { Source } from 'xxscreeps/mods/source/source.js';
-import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
+import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { Creep, create } from './creep.js';
@@ -260,7 +261,7 @@ describe('Movement', () => {
 		const dying = simulate({
 			W5N5: room => {
 				const creep = create(new RoomPosition(25, 25, 'W5N5'), [ C.MOVE ], 'mortal', '100');
-				creep['#ageTime'] = 3;
+				creep['#ageTime'] = 2;
 				room['#insertObject'](creep);
 			},
 		});
@@ -286,7 +287,7 @@ describe('Movement', () => {
 		const firstTickDeath = simulate({
 			W4N4: room => {
 				const creep = create(new RoomPosition(25, 25, 'W4N4'), [ C.MOVE ], 'ephemeral', '100');
-				creep['#ageTime'] = 2;
+				creep['#ageTime'] = 1;
 				room['#insertObject'](creep);
 			},
 		});
@@ -803,6 +804,68 @@ describe('Withdraw validation precedence', () => {
 			assert.strictEqual(Game.creeps.notEnough!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_NOT_OWNER);
 		});
 	}));
+
+	const friendly = simulate({
+		W7N7: room => {
+			room['#level'] = 3;
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#insertObject'](create(new RoomPosition(25, 25, 'W7N7'), [ C.CARRY ], 'creep', '100'));
+			room['#insertObject'](createContainer(new RoomPosition(26, 25, 'W7N7')));
+			room['#insertObject'](createContainer(new RoomPosition(24, 25, 'W7N7')));
+			room['#insertObject'](createRampart(new RoomPosition(24, 25, 'W7N7'), '101'));
+			room['#insertObject'](createExtension(new RoomPosition(45, 30, 'W7N7'), 3, '100'));
+		},
+	});
+
+	test('WITHDRAW-017:invalid-args-before-invalid-target', () => friendly(async ({ player }) => {
+		await player('100', Game => {
+			// @ts-expect-error
+			assert.strictEqual(Game.creeps.creep!.withdraw(null, 'fake'), C.ERR_INVALID_ARGS);
+		});
+	}));
+
+	test('WITHDRAW-017:invalid-args-before-target-not-owner', () => friendly(async ({ player }) => {
+		await player('100', Game => {
+			const blocked = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_CONTAINER)
+				.find(container => container.pos.isEqualTo(24, 25))!;
+			// @ts-expect-error
+			assert.strictEqual(Game.creeps.creep!.withdraw(blocked, 'fake'), C.ERR_INVALID_ARGS);
+		});
+	}));
+
+	test('WITHDRAW-017:invalid-args-before-range', () => friendly(async ({ player }) => {
+		await player('100', Game => {
+			const far = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_EXTENSION)[0]!;
+			// @ts-expect-error
+			assert.strictEqual(Game.creeps.creep!.withdraw(far, 'fake'), C.ERR_INVALID_ARGS);
+		});
+	}));
+
+	test('WITHDRAW-017:invalid-capacity-before-range', () => friendly(async ({ player }) => {
+		await player('100', Game => {
+			const far = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_EXTENSION)[0]!;
+			assert.strictEqual(Game.creeps.creep!.withdraw(far, C.RESOURCE_HYDROGEN), C.ERR_INVALID_TARGET);
+		});
+	}));
+
+	test('WITHDRAW-017:full-before-not-enough', () => friendly(async ({ player, poke }) => {
+		await poke('W7N7', '100', Game => {
+			Game.creeps.creep!.store['#add'](C.RESOURCE_ENERGY, C.CARRY_CAPACITY);
+		});
+		await player('100', Game => {
+			const container = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_CONTAINER)
+				.find(container => container.pos.isEqualTo(26, 25))!;
+			assert.strictEqual(Game.creeps.creep!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_FULL);
+		});
+	}));
+
+	test('WITHDRAW-017:not-enough-when-creep-has-room', () => friendly(async ({ player }) => {
+		await player('100', Game => {
+			const container = lookForStructures(Game.rooms.W7N7, C.STRUCTURE_CONTAINER)
+				.find(container => container.pos.isEqualTo(26, 25))!;
+			assert.strictEqual(Game.creeps.creep!.withdraw(container, C.RESOURCE_ENERGY), C.ERR_NOT_ENOUGH_RESOURCES);
+		});
+	}));
 });
 
 describe('Event log events', () => {
@@ -810,7 +873,7 @@ describe('Event log events', () => {
 		const ageOut = simulate({
 			W5N5: room => {
 				const creep = create(new RoomPosition(25, 25, 'W5N5'), [ C.MOVE ], 'mortal', '100');
-				creep['#ageTime'] = 2;
+				creep['#ageTime'] = 1;
 				room['#insertObject'](creep);
 			},
 		});

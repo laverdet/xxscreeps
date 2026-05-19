@@ -159,6 +159,11 @@ export function checkReverseReaction(lab: StructureLab, lab1: StructureLab | nul
 		() => checkIsActive(lab),
 		() => checkTarget(lab1, StructureLab),
 		() => checkTarget(lab2, StructureLab),
+		() => {
+			if (lab1!.id === lab.id || lab2!.id === lab.id) {
+				return C.ERR_INVALID_TARGET;
+			}
+		},
 		() => checkRange(lab, lab1!, 2),
 		() => checkRange(lab, lab2!, 2),
 		() => {
@@ -192,12 +197,12 @@ export function checkUnboostCreep(lab: StructureLab, creep: Creep | null | undef
 	return chainIntentChecks(
 		() => checkTarget(creep, Creep),
 		() => checkMyStructure(lab, StructureLab),
-		() => checkIsActive(lab),
 		() => {
 			if (!creep!.my) {
 				return C.ERR_NOT_OWNER;
 			}
 		},
+		() => checkIsActive(lab),
 		() => {
 			if (lab.cooldown) {
 				return C.ERR_TIRED;
@@ -238,6 +243,11 @@ export function checkRunReaction(lab: StructureLab, left: StructureLab, right: S
 		() => checkIsActive(lab),
 		() => checkTarget(left, StructureLab),
 		() => checkTarget(right, StructureLab),
+		() => {
+			if (left.id === lab.id || right.id === lab.id) {
+				return C.ERR_INVALID_TARGET;
+			}
+		},
 		() => checkRange(lab, left, 2),
 		() => checkRange(lab, right, 2),
 		() => {

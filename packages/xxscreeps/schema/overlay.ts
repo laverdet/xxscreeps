@@ -34,7 +34,7 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 				const reader: GetterReader = function() {
 					return read(getBuffer(this), offset + getOffset(this));
 				};
-				Object.defineProperty(read, 'name', {
+				defineProperty(read, 'name', {
 					value: `${typeof key === 'symbol' ? key.description : key}`,
 				});
 				return reader;
@@ -63,7 +63,7 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 
 		// Define getter on proto
 		const enumerable = typeof key === 'string' && !key.startsWith('#');
-		Object.defineProperty(prototype, key, {
+		defineProperty(prototype, key, {
 			enumerable,
 			get,
 			set(value) {
@@ -79,7 +79,7 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 	// Add Variant key
 	const variant = layout.variant;
 	if (variant !== undefined) {
-		Object.defineProperty(prototype, Variant, {
+		defineProperty(prototype, Variant, {
 			value: variant,
 		});
 	}

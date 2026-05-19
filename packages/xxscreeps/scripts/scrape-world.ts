@@ -150,7 +150,7 @@ const gameTime: number = env.gameTime - 1;
 
 // Initialize and connect to database & shard
 using db = await Database.connect();
-if (dontOverwrite && await db.data.scard('users') > 0) {
+if (dontOverwrite && await db.data.sCard('users') > 0) {
 	console.log('Found existing data, exiting');
 	process.exit(0);
 }
@@ -315,13 +315,14 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			}
 		}
 	})) ];
+	instance['#initialize']();
 	flushUsers(instance);
 	return instance;
 });
 
 // Save rooms
 const roomNames = new Set(Fn.map(rooms, room => room.name));
-await shard.data.sadd('rooms', [ ...roomNames ]);
+await shard.data.sAdd('rooms', [ ...roomNames ]);
 for (const room of rooms) {
 	await shard.saveRoom(room.name, gameTime, room);
 }

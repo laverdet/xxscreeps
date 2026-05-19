@@ -7,10 +7,7 @@ registerGlobal('_', lodash);
 
 registerGlobal(function Deposit() {});
 registerGlobal(function PowerCreep() {});
-registerGlobal(function Ruin() {});
-registerGlobal(function StructureFactory() {});
 registerGlobal(function StructureInvaderCore() {});
-registerGlobal(function StructureObserver() {});
 registerGlobal(function StructurePowerBank() {});
 registerGlobal(function StructurePowerSpawn() {});
 
