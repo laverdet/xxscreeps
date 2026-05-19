@@ -119,7 +119,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	override get '#lookType'() { return C.LOOK_CREEPS; }
 	override get '#providesVision'() { return true; }
 
-	set memory(memory: any) {
+	set memory(memory: Record<string, unknown>) {
 		if (!this.my) {
 			return;
 		}

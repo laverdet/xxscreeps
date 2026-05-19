@@ -4,6 +4,7 @@ import type { GameBase } from 'xxscreeps/game/game.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
+import type { RawMemory } from 'xxscreeps/mods/memory/memory.js';
 import * as assert from 'node:assert';
 import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
@@ -20,6 +21,7 @@ import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
+import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { disposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
 
@@ -32,6 +34,7 @@ initializeIntentConstraints();
 interface SimulationGlobals {
 	Game: GameConstructor;
 	Memory: Record<string, unknown>;
+	RawMemory: typeof RawMemory;
 	// [...] add anything else defined by the game runtime which is needed for testing
 
 	// nb: 'node:assert/strict' is exported as well but we get an exotic 'Assertions require every
@@ -92,6 +95,7 @@ interface Simulation {
 export function simulate(rooms: Record<string, (room: Room) => void>) {
 	return async (body: (refs: Simulation) => Promise<void>) => {
 
+		Memory.initialize(null);
 		using testShard = await instantiateTestShard();
 		const { db, shard, world } = testShard;
 

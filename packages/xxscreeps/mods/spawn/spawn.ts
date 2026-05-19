@@ -78,12 +78,13 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 
 	get memory() {
 		if (!this.my) {
+			// @ts-expect-error
 			return;
 		}
 		return (Memory.get().spawns ??= {})[this.name] ??= {};
 	}
 
-	set memory(memory: any) {
+	set memory(memory: Record<string, unknown>) {
 		if (!this.my) {
 			return;
 		}

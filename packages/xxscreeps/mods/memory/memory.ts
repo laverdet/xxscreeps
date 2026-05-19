@@ -1,11 +1,20 @@
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { typedArrayToString, utf16ToBuffer } from 'xxscreeps/utility/string.js';
+import { typedArrayToString, utf16IntoBuffer, utf16ToBuffer } from 'xxscreeps/utility/string.js';
 
+const { defineProperty } = Object;
 const kMemoryGrowthSize = 4096;
 export const kMaxMemoryLength = 2 * 1024 * 1024;
 export const kMaxActiveSegments = 10;
 export const kMaxMemorySegmentId = 100;
 export const kMaxMemorySegmentLength = 100 * 1024;
+
+interface MemoryRecord {
+	[key: string]: unknown;
+	creeps?: Record<string, Record<string, unknown>>;
+	flags?: Record<string, Record<string, unknown>>;
+	rooms?: Record<string, Record<string, unknown>>;
+	spawns?: Record<string, Record<string, unknown>>;
+}
 
 let activeSegments = new Map<number, string>();
 let didUpdateSegments = false;
@@ -17,8 +26,8 @@ let requestedPublicSegments: number[] | undefined;
 let memory: Uint16Array;
 let memoryLength = 0;
 let string: string | undefined;
-let accessedJson = false;
-let json: object | undefined;
+let json: MemoryRecord | undefined;
+let previousJson: MemoryRecord | undefined;
 let isBufferOutOfDate = false;
 
 function align(address: number) {
@@ -32,7 +41,7 @@ function align(address: number) {
  * object fields, and of course copying the entire object. This function aims to simulate some of
  * those effects without the cost of deserializing the whole memory payload.
 */
-function crunch(payload: any) {
+function crunch(payload: unknown) {
 	if (typeof payload === 'object') {
 		if (Array.isArray(payload)) {
 			for (const [ key, value ] of payload.entries()) {
@@ -45,6 +54,7 @@ function crunch(payload: any) {
 		} else if (payload !== null) {
 			for (const [ key, value ] of Object.entries(payload)) {
 				if (value === undefined) {
+					// @ts-expect-error
 					delete payload[key];
 				} else {
 					crunch(value);
@@ -56,7 +66,7 @@ function crunch(payload: any) {
 
 export const RawMemory = {
 	/** @deprecated */
-	_parsed: undefined as any,
+	_parsed: undefined as unknown,
 
 	/**
 	 * An object with asynchronous memory segments available on this tick. Each object key is the
@@ -78,10 +88,7 @@ export const RawMemory = {
 	 * Get a raw string representation of the `Memory` object.
 	 */
 	get() {
-		if (string === undefined) {
-			string = typedArrayToString(memory.subarray(0, memoryLength));
-		}
-		return string;
+		return string ??= typedArrayToString(memory.subarray(0, memoryLength));
 	},
 
 	/**
@@ -89,10 +96,14 @@ export const RawMemory = {
 	 * @param value New memory value as a string.
 	 */
 	set(value: string) {
+		// `RawMemory._parsed` is reset, `value` becomes next canonical string.
+		// https://github.com/screeps/driver/blob/cf63d8adf902663e2ebddd7f8c5b7baa425dc928/lib/runtime/runtime.js#L108-L121
 		if (typeof value !== 'string') {
 			throw new TypeError('Memory value must be a string');
+		} else if (value.length > kMaxMemoryLength) {
+			throw new Error('Raw memory length exceeded 2 MB limit');
 		}
-		RawMemory._parsed = json = undefined;
+		previousJson = RawMemory._parsed = undefined;
 		string = value;
 		isBufferOutOfDate = true;
 	},
@@ -168,78 +179,92 @@ export const RawMemory = {
 };
 
 /**
- * `Game.memory` getter
+ * `Memory` getter.
  */
-export function get(): any {
-	accessedJson = true;
+export let get = getIsDefault;
+
+// Default value of `get Memory`
+function getIsDefault(): MemoryRecord {
 	if (json) {
 		return json;
+	} else if (previousJson) {
+		return json = previousJson;
 	}
+
+	// https://github.com/screeps/engine/blob/1b9b1541923f061311474a2f1bac0fea37911f70/src/game/game.js#L479-L500
 	try {
 		const memory = RawMemory.get();
-		if (memory === '') {
-			// Prevent annoying debugger breaks on the subsequent caught exception
-			json = {};
-		} else {
-			json = JSON.parse(RawMemory.get());
-		}
+		return json = RawMemory._parsed = memory === '' ? {} : JSON.parse(memory) as MemoryRecord;
 	} catch {
-		json = {};
+		// @ts-expect-error
+		return json = RawMemory._parsed = null as MemoryRecord;
 	}
-	return RawMemory._parsed = json;
+}
+
+// `Object.defineProperty` hook sets `get` to this function on `Memory` tampering.
+function getIsClobbered(): MemoryRecord {
+	// @ts-expect-error
+	return globalThis.Memory as MemoryRecord;
 }
 
 /**
  * Flush non-segment `RawMemory` payload back to driver as `Uint8Array`
  */
 export function flush() {
-	// Memory was never used
-	if (string === undefined) {
-		return { size: 0 };
+	get = getIsDefault;
+	// Screeps checks two memory locations to flush back to the database, basically:
+	// `(RawMemory._parsed && JSON.stringify(RawMemory._parsed)) || data.userMemory`
+	// https://github.com/screeps/driver/blob/cf63d8adf902663e2ebddd7f8c5b7baa425dc928/lib/runtime/runtime.js#L246-L248
+	// https://github.com/screeps/driver/blob/cf63d8adf902663e2ebddd7f8c5b7baa425dc928/lib/runtime/runtime.js#L276
+
+	// The user has no direct control over `data.userMemory`, but it can be reset with
+	// `RawMemory.set`. It is set to the database contents at the start of the tick.
+
+	// The user has direct access to `RawMemory._parsed`, and at the beginning of
+	// each tick it is reset to `undefined`.
+
+	// Reset for next tick
+	const { _parsed } = RawMemory;
+	RawMemory._parsed = json = undefined;
+
+	// Memory has not been used (at all, during this whole reset)
+	if (string === undefined && _parsed === undefined) {
+		return { size: memoryLength };
 	}
 
-	// Check for JSON-based `Memory` object
-	if (json) {
-		// "Memhack" - https://wiki.screepspl.us/index.php/MemHack
-		const memhack = RawMemory._parsed;
-		const accessedJsonThisTick = accessedJson;
-		accessedJson = false;
-		if (!memhack) {
-			// User wants to skip saving memory this tick
-			RawMemory._parsed = json;
-			return { size: memoryLength };
-		} else if (accessedJsonThisTick && json === memhack) {
-			// User did not mess with `Memory`, simulate vanilla reconstruction
-			crunch(json);
-		} else {
-			// User wants to reuse memory object
-			json = memhack;
-		}
+	// Handle spooky Memory behaviors
+	if (_parsed) {
+		// Typical case: user accessed `Memory`, so we simulate vanilla reconstruction and save the
+		// string.
+		crunch(previousJson = _parsed as MemoryRecord);
 		try {
-			string = JSON.stringify(json);
+			string = JSON.stringify(previousJson);
 			isBufferOutOfDate = true;
 		} catch (err) {
 			console.error(err);
+			return { size: memoryLength };
 		}
+	} else if (!isBufferOutOfDate || string === undefined) {
+		// This is either the Memhack case, or the user simply didn't look at `Memory` at all this tick.
+		// In either case there is no more work to do.
+		// "Memhack" - https://wiki.screepspl.us/index.php/MemHack
+		return { size: memoryLength };
 	}
 
 	// Update the uint16 buffer
-	if (isBufferOutOfDate) {
-		const { length } = string;
-		if (length > memory.length) {
-			// Need to increase size of current buffer
-			if (length > kMaxMemoryLength) {
-				throw new Error(`Reached maximum \`Memory\` limit. Requested: ${length} out of ${kMaxMemoryLength}`);
-			}
-			// Leave a little wiggle room
-			memory = new Uint16Array(new SharedArrayBuffer(align(length) << 1));
+	const { length } = string;
+	if (length > memory.length) {
+		// Need to increase size of current buffer
+		if (length > kMaxMemoryLength) {
+			throw new Error(`Reached maximum \`Memory\` limit. Requested: ${length} out of ${kMaxMemoryLength}`);
 		}
-		// Copy string into buffer
-		for (let ii = 0; ii < length; ++ii) {
-			memory[ii] = string.charCodeAt(ii);
-		}
-		memoryLength = length;
+		// Leave a little wiggle room
+		memory = new Uint16Array(new SharedArrayBuffer(Math.min(kMaxMemoryLength, align(length)) << 1));
 	}
+
+	// Copy string into buffer & flush to driver
+	utf16IntoBuffer(string, memory);
+	memoryLength = length;
 	return {
 		payload: new Uint8Array(memory.buffer, 0, memoryLength << 1),
 		size: memoryLength,
@@ -252,6 +277,7 @@ export function flush() {
  */
 export function initialize(value: Readonly<Uint8Array> | null) {
 	json = undefined;
+	previousJson = undefined;
 	string = undefined;
 	if (value) {
 		memoryLength = value.length >>> 1;
@@ -261,6 +287,14 @@ export function initialize(value: Readonly<Uint8Array> | null) {
 		memoryLength = 0;
 		memory = new Uint16Array(new SharedArrayBuffer(kMemoryGrowthSize));
 	}
+	// Yes, I know about `Object.defineProperties` and `Reflect.defineProperty`. The intent is to
+	// handle Memhack correctly, which would always take this path.
+	Object.defineProperty = (target, key, descriptor) => {
+		if (target === globalThis && key === 'Memory') {
+			get = getIsClobbered;
+		}
+		return defineProperty(target, key, descriptor);
+	};
 }
 
 export type SegmentPayload = {

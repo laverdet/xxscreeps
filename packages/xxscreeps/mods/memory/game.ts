@@ -30,7 +30,7 @@ extend(Room, {
 		get(): unknown {
 			return (get().rooms ??= {})[this.name] ??= {};
 		},
-		set(memory: unknown) {
+		set(memory: Record<string, unknown>) {
 			(get().rooms ??= {})[this.name] ??= memory;
 		},
 	},
@@ -44,7 +44,10 @@ hooks.register('runtimeConnector', {
 	receive(payload) {
 		loadSegments(payload.memorySegments);
 		loadForeignSegment(payload.foreignSegment);
-		// Redefine memory each tick, expected behavior from vanilla server
+		// Redefine memory each tick, expected behavior from vanilla server.
+		// https://github.com/screeps/engine/blob/1b9b1541923f061311474a2f1bac0fea37911f70/src/game/game.js#L479-L500
+		// We don't bother setting `RawMemory` each tick because it would be stupid for a player to
+		// reset it.
 		Object.defineProperty(globalThis, 'Memory', {
 			configurable: true,
 			enumerable: true,
