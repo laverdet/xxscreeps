@@ -123,11 +123,11 @@ If you want to use your bot script, use `npx xxscreeps import --overwrite-code .
 
 ## Operator CLI
 
-`xxscreeps cli` opens a JavaScript REPL in the CLI process's host realm, and
-`xxscreeps eval` runs one-shot scripts with `-e`, `--file`, or `--stdin`, plus
-an optional `--json` envelope mode for tooling. See
-[packages/xxscreeps/cli/README.md](packages/xxscreeps/cli/README.md) for flags
-and the JSON envelope schema.
+`xxscreeps cli` opens a JavaScript REPL that auto-detects a running launcher
+and forwards over its RPC socket when available, falling back to a host-realm
+REPL otherwise. `xxscreeps eval` runs one-shot scripts with `-e`, `--file`, or
+`--stdin`. See [packages/xxscreeps/cli/README.md](packages/xxscreeps/cli/README.md)
+for flags and launcher-mode details.
 
 ## Docker
 

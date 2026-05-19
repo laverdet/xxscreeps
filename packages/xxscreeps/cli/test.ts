@@ -298,6 +298,18 @@ describe('cli', () => {
 		assert.strictEqual(result.exitCode, 0);
 	});
 
+	test('repl: direct-mode async eval result survives piped-stdin EOF', async () => {
+		// Piped stdin closes immediately, so node:repl fires 'exit' before the awaited callback
+		// fires. The host-realm REPL must drain in-flight evals before `process.exit(0)`.
+		const result = await withTempCwd(async cwd => spawnXxscreeps(
+			[ 'cli' ],
+			'await new Promise(r => setTimeout(() => r("delayed-result"), 50))\n',
+			{ cwd }));
+		assert.strictEqual(result.exitCode, 0, `stderr: ${result.stderr}`);
+		assert.match(result.stderr, /running direct REPL/);
+		assert.match(result.stdout, /delayed-result/);
+	});
+
 	test('eval: runtime SyntaxError does not retrigger console.log', async () => {
 		// A runtime SyntaxError must not be mistaken for a parse failure and re-execute the source.
 		using console = new TestConsole();

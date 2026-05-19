@@ -119,31 +119,39 @@ function renderRpcResponse(response: LauncherRpcResponse): void {
 function startHostRealmRepl(mode: HostMode): void {
 	process.stderr.write(`xxscreeps cli: ${mode.reason}; running direct REPL\n`);
 	installHostShims();
+	// `repl` fires 'exit' before queued eval callbacks; drain so piped input doesn't lose its tail.
+	const inFlight = new Set<Promise<unknown>>();
 	const server = repl.start({
-		eval: hostRealmEval,
+		eval: createHostRealmEvaluator(inFlight),
 		prompt: 'xxscreeps> ',
 		useGlobal: true,
 	});
-	server.on('exit', () => process.exit(0));
+	server.on('exit', () => {
+		void Promise.allSettled(inFlight).finally(() => process.exit(0));
+	});
 }
 
-function hostRealmEval(
-	cmd: string,
-	_context: vm.Context,
-	_filename: string,
-	callback: (err: Error | null, result?: unknown) => void,
-) {
-	if (cmd.trim() === '') {
-		callback(null, undefined);
-		return;
-	}
-	const result = makeUnsafeGlobalEvaluator(cmd);
-	if (typeof result === 'function') {
-		result().then(
+function createHostRealmEvaluator(inFlight: Set<Promise<unknown>>) {
+	return (
+		cmd: string,
+		_context: vm.Context,
+		_filename: string,
+		callback: (err: Error | null, result?: unknown) => void,
+	) => {
+		if (cmd.trim() === '') {
+			callback(null, undefined);
+			return;
+		}
+		const result = makeUnsafeGlobalEvaluator(cmd);
+		if (typeof result !== 'function') {
+			callback(new repl.Recoverable(result));
+			return;
+		}
+		const pending = result().then(
 			value => callback(null, value),
 			err => callback(err instanceof Error ? err : new Error(String(err))),
 		);
-	} else {
-		callback(new repl.Recoverable(result));
-	}
+		inFlight.add(pending);
+		void pending.finally(() => inFlight.delete(pending));
+	};
 }
