@@ -76,11 +76,11 @@ describe('Nuker', () => {
 			const nuker = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_NUKER)[0]!;
 			assert.strictEqual(nuker.energy, 0);
 			assert.strictEqual(nuker.ghodium, 0);
-			assert.strictEqual(nuker.cooldown, C.NUKER_COOLDOWN - 1);
+			assert.strictEqual(nuker.cooldown, C.NUKER_COOLDOWN);
 		});
 		await player('101', Game => {
 			const nuke = Game.rooms.W2N1!['#lookFor'](C.LOOK_NUKES)[0]!;
-			assert.strictEqual(nuke.timeToLand, C.NUKE_LAND_TIME - 1);
+			assert.strictEqual(nuke.timeToLand, C.NUKE_LAND_TIME);
 		});
 	}));
 

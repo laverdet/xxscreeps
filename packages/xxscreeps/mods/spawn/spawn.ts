@@ -108,14 +108,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 	}
 
 	override '#applyNukeImpact'() {
-		const spawning = this.spawning;
-		if (spawning) {
-			const creep = Game.getObjectById(spawning['#spawningCreepId']);
-			if (creep) {
-				this.room['#removeObject'](creep);
-			}
-			this.spawning = null;
-		}
+		this.spawning = null;
 	}
 
 	/**

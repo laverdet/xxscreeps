@@ -99,6 +99,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 
 	override '#destroy'(type?: number) {
 		if (super['#destroy']()) {
+			// TODO: Mod concern leak
 			if (type === undefined || type !== C.EVENT_ATTACK_TYPE_NUKE) {
 				this.room['#insertObject'](createRuin(this));
 			}

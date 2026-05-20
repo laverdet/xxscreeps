@@ -37,14 +37,14 @@ const intents = [
 		const target = RoomPosition['#create'](targetPosId);
 		if (checkLaunchNuke(nuker, target) !== C.OK) return;
 
-		const energyCapacity = nuker.store.getCapacity(C.RESOURCE_ENERGY);
-		const ghodiumCapacity = nuker.store.getCapacity(C.RESOURCE_GHODIUM);
+		const energyCapacity = C.NUKER_ENERGY_CAPACITY;
+		const ghodiumCapacity = C.NUKER_GHODIUM_CAPACITY;
 		nuker.store['#subtract'](C.RESOURCE_ENERGY, energyCapacity);
 		nuker.store['#subtract'](C.RESOURCE_GHODIUM, ghodiumCapacity);
-		nuker['#cooldownTime'] = Game.time + C.NUKER_COOLDOWN - 1;
+		nuker['#cooldownTime'] = Game.time + C.NUKER_COOLDOWN;
 
 		context.sendRoomIntent(target.roomName, 'nukeArrive',
-			target.x, target.y, nuker.room.name, Game.time + C.NUKE_LAND_TIME - 1);
+			target.x, target.y, nuker.room.name, Game.time + C.NUKE_LAND_TIME);
 
 		// TODO: notify the launching player (`Game.notify`); requires processor-side
 		// notification queueing once a shard tick processor lands.
@@ -59,16 +59,16 @@ const intents = [
 ];
 
 registerObjectTickProcessor(Nuke, (nuke, context) => {
-	const landTime = nuke['#landTime'];
-	if (Game.time === landTime) {
+	const { timeToLand } = nuke;
+	if (timeToLand === 0) {
+		nuke['#landTime'] = 0;
 		applyNukeImpact(nuke);
-		context.didUpdate();
-		context.wakeAt(landTime + 1);
-	} else if (Game.time > landTime) {
+		context.setActive();
+	} else if (timeToLand === -1) {
 		nuke.room['#removeObject'](nuke);
 		context.didUpdate();
 	} else {
-		context.wakeAt(landTime);
+		context.wakeAt(nuke['#landTime']);
 	}
 });
 
@@ -102,7 +102,6 @@ function applyNukeImpact(nuke: Nuke) {
 				attackType: C.EVENT_ATTACK_TYPE_NUKE,
 				damage,
 			});
-			console.log(remaining);
 			return remaining;
 		});
 	}
@@ -110,14 +109,11 @@ function applyNukeImpact(nuke: Nuke) {
 	// Controller: cancel active safe mode, set upgradeBlocked unless a longer block is already active.
 	const controller = room.controller;
 	if (controller) {
-		if (room['#safeModeUntil'] > Game.time) {
-			room['#safeModeUntil'] = Game.time;
-			controller['#safeModeCooldownTime'] = 0;
-		}
+		room['#safeModeUntil'] = 0;
+		controller['#safeModeCooldownTime'] = 0;
 		// TODO: gate on EFFECT_INVULNERABILITY once effects substrate lands.
 		if (controller['#user'] !== null) {
-			const blockedUntil = controller['#upgradeBlockedUntil'];
-			if (blockedUntil === 0 || blockedUntil < Game.time) {
+			if (controller.upgradeBlocked === undefined) {
 				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_NUKE_BLOCKED_UPGRADE;
 			}
 		}
