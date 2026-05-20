@@ -63,6 +63,8 @@ export abstract class Store extends BufferObjectWithResourcesType {
 		return capacity - used;
 	}
 
+	'#doesAllowWithdraw'() { return true; }
+
 	'#entries'(): Iterable<[ ResourceType, number ]> {
 		return Object.entries(this) as never;
 	}

@@ -15,6 +15,7 @@ import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
 import { RoomObject, actionLogFormat, create as createObject, format as objectFormat, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
@@ -129,6 +130,19 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 	override '#addToMyGame'(game: GameConstructor) {
 		game.creeps[this.name] = this;
+	}
+
+	override '#applyNukeImpact'() {
+		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
+	}
+
+	override '#destroy'(type?: number) {
+		appendEventLog(this.room, {
+			event: C.EVENT_OBJECT_DESTROYED,
+			objectId: this.id,
+			type: 'creep',
+		});
+		return super['#destroy'](type);
 	}
 
 	override '#applyDamage'(power: number, _type: number, source?: RoomObject) {
@@ -553,6 +567,7 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 		() => checkResourceArgs(resourceType, amount),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
 		() => checkInteractionBlocked(creep, target),
+		() => target.store['#doesAllowWithdraw']() ? C.OK : C.ERR_INVALID_TARGET,
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER),
 		() => checkStoreAccepts(target, resourceType),
 		() => checkRange(creep, target, 1),

@@ -107,6 +107,10 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 		super['#afterRemove']();
 	}
 
+	override '#applyNukeImpact'() {
+		this.spawning = null;
+	}
+
 	/**
 	 * Check if a creep can be created.
 	 * @deprecated
