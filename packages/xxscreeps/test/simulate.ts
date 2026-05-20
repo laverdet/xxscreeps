@@ -27,7 +27,9 @@ import { disposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
 
 import 'xxscreeps/config/mods/import/game.js';
 
+// Simulate runs both main and worker logic in one process; load every slot either service would.
 await importMods('processor');
+await importMods('shardTick');
 initializeGameEnvironment();
 initializeIntentConstraints();
 
