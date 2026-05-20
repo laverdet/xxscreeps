@@ -4,7 +4,7 @@ import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
-import { create as createObject } from 'xxscreeps/game/object.js';
+import { cooldownTime, create as createObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { OpenStore, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
@@ -34,7 +34,7 @@ export class StructureTerminal extends withOverlay(OwnedStructure, shape) {
 	 * The remaining amount of ticks while this terminal cannot be used to make
 	 * `StructureTerminal.send` or `Game.market.deal` calls.
 	 */
-	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
+	@enumerable get cooldown() { return cooldownTime(Game, this['#cooldownTime']); }
 
 	override get hitsMax() { return C.TERMINAL_HITS; }
 	override get structureType() { return C.STRUCTURE_TERMINAL; }
@@ -56,14 +56,14 @@ export class StructureTerminal extends withOverlay(OwnedStructure, shape) {
 			() => intents.save(this, 'send', resourceType, amount, destination, description));
 	}
 
-	override '#afterInsert'(room: Room) {
-		super['#afterInsert'](room);
-		room.terminal = this;
+	override '#afterRemove'() {
+		this.room.terminal = undefined;
+		super['#afterRemove']();
 	}
 
-	override '#beforeRemove'() {
-		this.room.terminal = undefined;
-		super['#beforeRemove']();
+	override '#beforeInsert'(room: Room) {
+		super['#beforeInsert'](room);
+		room.terminal = this;
 	}
 }
 

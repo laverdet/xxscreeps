@@ -456,3 +456,19 @@ export function fetchRoom(roomName: string) {
 	}
 	return room;
 }
+
+/**
+ * Iterate all positions within some range to the given position. It sweeps left to right, top to
+ * bottom.
+ */
+export function *positionsInRangeTo(origin: RoomPosition, range: number) {
+	const left = Math.max(0, origin.x - range);
+	const right = Math.min(49, origin.x + range);
+	const top = Math.max(0, origin.y - range);
+	const bottom = Math.min(49, origin.y + range);
+	for (let yy = top; yy <= bottom; ++yy) {
+		for (let xx = left; xx <= right; ++xx) {
+			yield new RoomPosition(xx, yy, origin.roomName);
+		}
+	}
+}

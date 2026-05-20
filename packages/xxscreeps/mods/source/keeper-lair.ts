@@ -19,10 +19,7 @@ export class StructureKeeperLair extends withOverlay(OwnedStructure, shape) {
 	/**
 	 * Time to spawning of the next Source Keeper.
 	 */
-	@enumerable get ticksToSpawn() {
-		const nextSpawnTime = this['#nextSpawnTime'];
-		return nextSpawnTime ? Math.max(0, nextSpawnTime - Game.time) : undefined;
-	}
+	@enumerable get ticksToSpawn() { return RoomObject.optionalExpiryTime(Game, this['#nextSpawnTime']); }
 
 	override get structureType() { return C.STRUCTURE_KEEPER_LAIR; }
 }

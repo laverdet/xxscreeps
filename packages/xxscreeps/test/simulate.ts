@@ -106,7 +106,6 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 			room['#flushObjects'](null);
 			const previousUsers = flushUsers(room);
 			await Promise.all([
-				shard.saveRoom(room.name, shard.time + 1, room),
 				shard.saveRoom(room.name, shard.time, room),
 				updateUserRoomRelationships(shard, room, previousUsers),
 			]);
@@ -181,12 +180,16 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 				});
 			},
 
-			async tick(count = 1, players = {}) {
+			async tick(count = 1, players) {
+				playersThisTick.clear();
 				for (let ii = 0; ii < count; ++ii) {
-					// Run player code
-					// `player('100', () => { ... })`
-					for (const [ userId, task ] of Object.entries(players)) {
-						await that.player(userId, task);
+					const time = shard.time;
+
+					// `tick(10, { '100': Game => { ... }) }`
+					if (players) {
+						for (const [ userId, task ] of Object.entries(players)) {
+							await that.player(userId, task);
+						}
 					}
 					playersThisTick.clear();
 
@@ -197,13 +200,11 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 							shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
 							shard.scratch.sMembers(userToVisibleRoomsSetKey(userId)),
 						]);
-						await instance.run(shard.time + 1, visibleRooms, intentRooms);
+						await instance.run(time, visibleRooms, intentRooms);
 					}
 
 					// Initialize processor queue
-					const time = shard.time + 1;
-					const processorTime = await begetRoomProcessQueue(shard, time, time - 1);
-					assert.equal(time, processorTime);
+					await begetRoomProcessQueue(shard, time);
 					const nextRoomInstances = new Map<string, Room>();
 					const contexts = new Map<string, RoomProcessor>();
 
@@ -235,9 +236,10 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 					await runShardTickProcessors(shard, time);
 
 					// Increment time
-					await shard.data.set('time', time);
-					await shard.channel.publish({ type: 'tick', time });
-					shard.time = time;
+					const nextTime = time + 1;
+					await shard.data.set('time', nextTime);
+					await shard.channel.publish({ type: 'tick', time: nextTime });
+					shard.time = nextTime;
 				}
 			},
 		};

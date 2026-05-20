@@ -24,7 +24,6 @@ export function getRoomChannel(shard: Shard, roomName: string) {
 	return new Channel<Message>(shard.pubsub, `processor/room/${roomName}`);
 }
 
-export const processorTimeKey = 'processor/time';
 export const activeRoomsKey = 'processor/activeRooms';
 export const sleepingRoomsKey = 'processor/inactiveRooms';
 export const userToIntentRoomsSetKey = (userId: string) =>
@@ -48,27 +47,6 @@ const intentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/intents`;
 const finalIntentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/finalIntents`;
-
-const CompareAndSwap = new KeyvalScript((
-	keyval,
-	[ key ]: [ string, string],
-	[ expected, desired ]: [ expected: number | string, desired: number | string ],
-) => {
-	const current = keyval.get(key);
-	if (`${current}` === `${expected}`) {
-		keyval.set(key, desired);
-		return 1;
-	} else {
-		return 0;
-	}
-}, {
-	lua:
-		`if redis.call('get', KEYS[1]) == ARGV[1] then
-			return redis.call('set', KEYS[1], ARGV[2])
-		else
-			return 0
-		end`,
-});
 
 const SCardStore = new KeyvalScript(
 	(keyval, [ into, from ]: [ string, string ]) => {
@@ -182,65 +160,43 @@ export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string)
 		shard.scratch.lRange(key, 0, -1),
 		shard.scratch.vdel(key),
 	]);
-	return payloads.map((json): SingleIntent[] => JSON.parse(json));
+	return payloads.map(json => JSON.parse(json) as SingleIntent[]);
 }
 
-export async function begetRoomProcessQueue(shard: Shard, time: number, processorTime: number, early?: boolean) {
-	if (processorTime > time) {
-		// The processor has lagged and is running through old `process` messages
-		return processorTime;
-	}
-	const currentTime = Number(await shard.scratch.get(processorTimeKey));
-	if (currentTime === time) {
-		// Already in sync
-		return time;
-	} else if (currentTime !== time - 1) {
-		// First iteration of laggy processor
-		return currentTime;
-	}
-	if (await shard.scratch.eval(CompareAndSwap, [ processorTimeKey ], [ time - 1, time ])) {
-		// Guarantee atomicity of the following transaction
-		await Promise.all([
-			shard.scratch.load(ZCardStore),
-			shard.scratch.load(ZSetToSet),
-		]);
+export async function begetRoomProcessQueue(shard: Shard, time: number) {
+	// Guarantee atomicity of the following transaction
+	await Promise.all([
+		shard.scratch.load(ZCardStore),
+		shard.scratch.load(ZSetToSet),
+	]);
 
-		// Copy active and waking rooms into current processing queue
-		const tmpKey = 'processorWakeUp';
-		const processSet = processRoomsSetKey(time);
-		const [ , count ] = await Promise.all([
-			// Save waking rooms to temporary key
-			shard.scratch.zRangeStore(tmpKey, sleepingRoomsKey, 0, time, { by: 'SCORE' }),
-			// Combine active rooms and waking rooms into current processing queue
-			shard.scratch.zUnionStore(processSet, [ activeRoomsKey, tmpKey ], { weights: [ 1, 0 ] }),
-			// Remove temporary key
-			shard.scratch.vdel(tmpKey),
-			// Remove waking rooms from sleeping rooms
-			shard.scratch.zRemRange(sleepingRoomsKey, 0, time),
-			// Initialize counter for rooms that need to be processed
-			shard.scratch.eval(ZCardStore, [ processRoomsPendingKey(time), processSet ], []),
-			// Copy processing queue into active rooms set
-			shard.scratch.eval(ZSetToSet, [ activeRoomsProcessingKey(time), processSet ], []),
-		]);
-		if (count === 0) {
-			// In this case there are *no* rooms to process so we take care to make sure processing
-			// doesn't halt.
-			// Delete "0" value
-			await shard.scratch.vdel(processRoomsPendingKey(time));
-			if (early) {
-				// We're invoking the function at the end of the previous queue, and the main loop is not
-				// currently ready for the next tick. We'll set the processor time back the way it was so
-				// that this code will be invoked again at the start of the next tick.
-				await shard.scratch.eval(CompareAndSwap, [ processorTimeKey ], [ time, time - 1 ]);
-				return time - 1;
-			} else {
-				// The current processor tick has started, so we can now send the finished notification.
-				await getServiceChannel(shard).publish({ type: 'tickFinished', time });
-			}
-		}
-		return time;
-	} else {
-		return Number(await shard.scratch.get(processorTimeKey));
+	// Copy active and waking rooms into current processing queue
+	const tmpKey = 'processorWakeUp';
+	const processSet = processRoomsSetKey(time);
+	const [ , count ] = await Promise.all([
+		// Save waking rooms to temporary key
+		shard.scratch.zRangeStore(tmpKey, sleepingRoomsKey, 0, time, { by: 'SCORE' }),
+		// Add waking rooms to active set
+		shard.scratch.zUnionStore(activeRoomsKey, [ activeRoomsKey, tmpKey ], { weights: [ 1, 0 ] }),
+		// The active rooms set is now the processing queue
+		shard.scratch.copy(activeRoomsKey, processSet),
+		// Remove temporary key
+		shard.scratch.vdel(tmpKey),
+		// Remove waking rooms from sleeping rooms
+		shard.scratch.zRemRange(sleepingRoomsKey, 0, time),
+		// Initialize counter for rooms that need to be processed
+		shard.scratch.eval(ZCardStore, [ processRoomsPendingKey(time), processSet ], []),
+		// Copy processing queue into active rooms set
+		shard.scratch.eval(ZSetToSet, [ activeRoomsProcessingKey(time), processSet ], []),
+	]);
+	if (count === 0) {
+		// In this case there are *no* rooms to process so we take care to make sure processing doesn't
+		// halt.
+		// Delete "0" value
+		await shard.scratch.vdel(processRoomsPendingKey(time));
+		// Additionally, send the 'tickFinished' message, which the main loop will sit on and eventually
+		// process after the tick delay timeout.
+		await getServiceChannel(shard).publish({ type: 'tickFinished', time });
 	}
 }
 

@@ -14,7 +14,17 @@ export type Manifest = {
 	provides: Provide | Provide[] | null;
 };
 
-const from = pathToFileURL(process.cwd() + path.sep);
+const from = await async function() {
+	// Mods are resolved from cwd unless there is no package.json here. In that case it's probably
+	// Docker or `npm install -g xxscreeps`. Idk, this is messy.
+	const cwd = pathToFileURL(process.cwd() + path.sep);
+	try {
+		await fs.stat(new URL('package.json', cwd));
+		return cwd;
+	} catch {
+		return new URL(import.meta.url);
+	}
+}();
 async function resolveMaybeIndex(specifier: string, from: URL) {
 	try {
 		const { url } = await resolve(defaultAsyncFileSystem, `${specifier}/index.js`, from);

@@ -2,7 +2,7 @@ import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object.js';
+import { RoomObject, create as createObject, format as objectFormat, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
@@ -36,7 +36,7 @@ export class Tombstone extends withOverlay(RoomObject, shape) {
 	/**
 	 * The amount of game ticks before this tombstone decays.
 	 */
-	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time); }
+	@enumerable get ticksToDecay() { return requiredExpiryTime(Game, this['#decayTime']); }
 
 	override get '#lookType'() { return C.LOOK_TOMBSTONES; }
 

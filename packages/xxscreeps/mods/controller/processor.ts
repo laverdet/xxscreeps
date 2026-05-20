@@ -250,9 +250,10 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			}
 		}
 	} else {
+		const { ticksToDowngrade } = controller;
 		const upgradePower = controller.upgradePowerThisTick ?? 0;
 		controller.upgradePowerThisTick = 0;
-		if (controller['#downgradeTime'] === 0) {
+		if (ticksToDowngrade === undefined) {
 			controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!;
 			context.didUpdate();
 		} else if (upgradePower > 0) {
@@ -261,7 +262,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 				Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!);
 			context.task(context.shard.db.data.hincrBy(User.infoKey(controller['#user']!), 'gcl', upgradePower));
 			context.didUpdate();
-		} else if (controller.ticksToDowngrade === 0) {
+		} else if (ticksToDowngrade === 0) {
 			const { room } = controller;
 			const level = --room['#level'];
 			controller.safeModeAvailable = 0;

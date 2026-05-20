@@ -22,14 +22,14 @@ export class StructureStorage extends withOverlay(OwnedStructure, shape) {
 	/** @deprecated */
 	@enumerable get storeCapacity() { return this.store.getCapacity(); }
 
-	override '#afterInsert'(room: Room) {
-		super['#afterInsert'](room);
-		room.storage = this;
+	override '#afterRemove'() {
+		this.room.storage = undefined;
+		super['#afterRemove']();
 	}
 
-	override '#beforeRemove'() {
-		this.room.storage = undefined;
-		super['#beforeRemove']();
+	override '#beforeInsert'(room: Room) {
+		super['#beforeInsert'](room);
+		room.storage = this;
 	}
 }
 

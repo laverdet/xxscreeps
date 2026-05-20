@@ -21,7 +21,7 @@ const shape = struct(ownedStructureFormat, {
 });
 
 export class StructureFactory extends withOverlay(OwnedStructure, shape) {
-	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
+	@enumerable get cooldown() { return RoomObject.cooldownTime(Game, this['#cooldownTime']); }
 	@enumerable get level() { return this['#level'] === 0 ? undefined : this['#level']; }
 
 	/** @deprecated */
