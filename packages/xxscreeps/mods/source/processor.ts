@@ -15,6 +15,8 @@ import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';
 
+const kKeeperUserId = '3';
+
 registerHarvestProcessor(Source, (creep, source) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER, 'harvest');
 	const energy = Math.min(source.energy, power);
@@ -32,16 +34,17 @@ registerObjectTickProcessor(Source, (source, context) => {
 
 	// Regenerate energy
 	if (source.energy < source.energyCapacity) {
-		if (source['#nextRegenerationTime'] === 0) {
+		const { ticksToRegeneration } = source;
+		if (ticksToRegeneration === undefined) {
 			source['#nextRegenerationTime'] = Game.time + C.ENERGY_REGEN_TIME - 1;
 			context.didUpdate();
-		} else if (source.ticksToRegeneration === 0) {
+		} else if (ticksToRegeneration === 0) {
 			source.energy = source.energyCapacity;
 			source['#nextRegenerationTime'] = 0;
 			context.didUpdate();
 		}
 		context.wakeAt(source['#nextRegenerationTime']);
-	} else if (source['#nextRegenerationTime'] !== 0) {
+	} else if (source.ticksToRegeneration !== undefined) {
 		source['#nextRegenerationTime'] = 0;
 		context.didUpdate();
 	}
@@ -50,21 +53,16 @@ registerObjectTickProcessor(Source, (source, context) => {
 registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 	const keeperName = `Keeper${keeperLair.id}`;
 	const keeper = keeperLair.room['#lookFor'](C.LOOK_CREEPS).find(creep =>
-		creep['#user'] === '3' && creep.name === keeperName);
+		creep['#user'] === kKeeperUserId && creep.name === keeperName);
 
-	if (keeperLair['#nextSpawnTime'] === 0) {
+	const { ticksToSpawn } = keeperLair;
+	if (ticksToSpawn === undefined) {
 		// Start respawn timer
 		if (!keeper || keeper.hits < 5000) {
 			keeperLair['#nextSpawnTime'] = Game.time + C.ENERGY_REGEN_TIME - 1;
 			context.didUpdate();
 		}
-		if (keeper) {
-			const ageTime = keeper['#ageTime'];
-			if (ageTime >= Game.time) {
-				context.wakeAt(keeper['#ageTime'] + 1);
-			}
-		}
-	} else if (keeperLair.ticksToSpawn === 0) {
+	} else if (ticksToSpawn === 0) {
 		// Respawn keeper
 		if (keeper) {
 			keeperLair.room['#removeObject'](keeper);
@@ -77,22 +75,18 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 				$$ => Fn.map($$, () => [ C.ATTACK, C.RANGED_ATTACK ]),
 				$$ => Fn.concat($$)),
 		];
-		const newKeeper = Creep.create(keeperLair.pos, body, keeperName, '3');
+		const newKeeper = Creep.create(keeperLair.pos, body, keeperName, kKeeperUserId);
 		newKeeper['#ageTime'] = Game.time + C.CREEP_LIFE_TIME - 1;
 		keeperLair.room['#insertObject'](newKeeper);
 		keeperLair['#nextSpawnTime'] = 0;
-		activateNPC(keeperLair.room, '3');
-		context.setActive();
-	} else if (keeperLair.room['#users'].presence.length > 1) {
-		// Always activate NPC when player is in room
-		activateNPC(keeperLair.room, '3');
+		activateNPC(keeperLair.room, kKeeperUserId);
 		context.setActive();
 	}
 	// Make sure to wake room when it's time to spawn a new keeper
 	context.wakeAt(keeperLair['#nextSpawnTime']);
 });
 
-registerNPC('3', Game => {
+registerNPC(kKeeperUserId, Game => {
 	let loop = false;
 	const creeps = Object.values(Game.creeps);
 	for (const creep of creeps) {

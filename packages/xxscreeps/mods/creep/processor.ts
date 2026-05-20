@@ -324,10 +324,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		recalculateBody(creep);
 		context.didUpdate();
 	}
-	if (
-		(Game.time >= creep['#ageTime'] && creep['#ageTime'] !== 0) ||
-		creep.hits <= 0
-	) {
+	if (creep.ticksToLive === 0 || creep.hits <= 0) {
 		buryCreep(creep);
 		context.setActive();
 		return;
