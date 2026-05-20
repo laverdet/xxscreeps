@@ -53,6 +53,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 */
 	@enumerable override get hitsMax(): number | undefined { return undefined; }
 
+	override get '#layer'() { return 0; }
 	get '#lookType'() { return C.LOOK_STRUCTURES; }
 
 	override set hits(_hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure'); }

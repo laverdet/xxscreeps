@@ -116,6 +116,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	}
 
 	override get '#hasIntent'() { return true; }
+	override get '#layer'() { return 0; }
 	override get '#lookType'() { return C.LOOK_CREEPS; }
 	override get '#providesVision'() { return true; }
 
