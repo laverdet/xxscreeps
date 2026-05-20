@@ -1,3 +1,4 @@
+import type { RoomObjectEffect } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -16,6 +17,7 @@ const shape = struct(ownedStructureFormat, {
 	'#reservationEndTime': 'int32',
 	'#safeModeCooldownTime': 'int32',
 	'#upgradeBlockedUntil': 'int32',
+	'#upgradeInvulnerableUntil': 'int32',
 });
 
 export class StructureController extends withOverlay(OwnedStructure, shape) {
@@ -55,6 +57,11 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 		} : undefined;
 		Object.defineProperty(this, 'sign', { value });
 		return value;
+	}
+
+	@enumerable override get effects(): RoomObjectEffect[] | undefined {
+		const ticksRemaining = optionalExpiryTime(Game, this['#upgradeInvulnerableUntil']);
+		return ticksRemaining === undefined ? undefined : [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining } ];
 	}
 
 	override get hits() { return undefined; }

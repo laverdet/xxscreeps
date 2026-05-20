@@ -47,6 +47,15 @@ export function release(context: ProcessorContext, controller: StructureControll
 	context.didUpdate();
 }
 
+export function reserve(context: ProcessorContext, controller: StructureController, userId: string, endTime: number) {
+	if (controller['#reservationEndTime'] === 0) {
+		updateRoomStatus(controller.room, 0, userId);
+		context.task(context.shard.scratch.sAdd(reservedRoomKey(userId), [ controller.room.name ]));
+	}
+	controller['#reservationEndTime'] = endTime;
+	context.didUpdate();
+}
+
 /**
  * Update room owner and/or level, and notify all objects of the change
  */
@@ -145,24 +154,16 @@ const intents = [
 		if (CreepLib.checkReserveController(creep, controller) === C.OK) {
 			const power = creep.getActiveBodyparts(C.CLAIM) * C.CONTROLLER_RESERVE;
 			const reservationEndTime = controller['#reservationEndTime'];
-			if (reservationEndTime) {
-				controller['#reservationEndTime'] = Math.min(
-					Game.time + C.CONTROLLER_RESERVE_MAX,
-					reservationEndTime + power + 1,
-				);
-			} else {
-				const userId = creep['#user'];
-				controller['#reservationEndTime'] = Game.time + power + 1;
-				updateRoomStatus(controller.room, 0, userId);
-				context.task(context.shard.scratch.sAdd(reservedRoomKey(userId), [ controller.room.name ]));
-			}
+			const endTime = reservationEndTime
+				? Math.min(Game.time + C.CONTROLLER_RESERVE_MAX, reservationEndTime + power + 1)
+				: Game.time + power + 1;
+			reserve(context, controller, creep['#user'], endTime);
 			saveAction(creep, 'reserveController', controller.pos);
 			appendEventLog(controller.room, {
 				event: C.EVENT_RESERVE_CONTROLLER,
 				objectId: creep.id,
 				amount: power,
 			});
-			context.didUpdate();
 		}
 	}),
 
