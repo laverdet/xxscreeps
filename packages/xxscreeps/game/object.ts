@@ -78,16 +78,17 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	set '#user'(_user: string | null) { throw new Error('Setting `#user` on unownable object'); }
 
 	'#addToMyGame'(_game: GameConstructor) {}
-	'#afterInsert'(room: Room) {
-		this.room = room;
-	}
 
-	'#beforeRemove'() {
+	'#afterRemove'() {
 		this.room = undefined as never;
 	}
 
+	'#beforeInsert'(room: Room) {
+		this.room = room;
+	}
+
 	'#applyDamage'(power: number, _type: number, _source?: RoomObject) {
-		if ((this.hits! -= power) <= 0) {
+		if (this.hits! > 0 && (this.hits! -= power) <= 0) {
 			this['#destroy']();
 		}
 	}

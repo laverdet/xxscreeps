@@ -102,14 +102,14 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 			() => intents.save(this, 'unclaim'));
 	}
 
-	override '#afterInsert'(room: Room) {
-		super['#afterInsert'](room);
-		room.controller = this;
+	override '#afterRemove'() {
+		this.room.controller = undefined;
+		super['#afterRemove']();
 	}
 
-	override '#beforeRemove'() {
-		this.room.controller = undefined;
-		super['#beforeRemove']();
+	override '#beforeInsert'(room: Room) {
+		super['#beforeInsert'](room);
+		room.controller = this;
 	}
 }
 

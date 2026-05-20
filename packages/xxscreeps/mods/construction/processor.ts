@@ -35,6 +35,7 @@ const intents = [
 
 	registerIntentProcessor(ConstructionSite, 'remove', {}, (site, context) => {
 		if (checkRemove(site) === C.OK) {
+			// TODO(?): Intent injection would dupe the resources
 			Resource.drop(site.pos, C.RESOURCE_ENERGY, site.progress / 2);
 			site.room['#removeObject'](site);
 			context.didUpdate();

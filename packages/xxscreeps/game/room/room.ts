@@ -62,7 +62,21 @@ export class Room extends withOverlay(BufferObject, shape) {
 		this.#didInitialize = true;
 		for (const object of this['#objects']) {
 			this.#afterInsert(object);
+			object['#beforeInsert'](this);
 		}
+	}
+
+	/**
+	 * Iterates all objects in the room, including those which have not been flushed.
+	 */
+	'#immediateObjects'() {
+		const withoutRemoved = this.#removeObjects.size === 0
+			? this['#objects']
+			:	Fn.filter(this['#objects'], object => !this.#removeObjects.has(object));
+		const withInserted = this.#insertObjects.length === 0
+			? withoutRemoved
+			: Fn.concat([ withoutRemoved, this.#insertObjects ]);
+		return withInserted;
 	}
 
 	/**
@@ -98,8 +112,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 		const objects = this['#objects'];
 		this.#findCache.clear();
 		// Insert objects
-		// nb: This is done before object removal intentionally because objects may reference other
-		// objects in the '#beforeRemove' hook
 		const insertObjects = this.#insertObjects;
 		if (insertObjects.length) {
 			this.#insertObjects = [];
@@ -120,13 +132,13 @@ export class Room extends withOverlay(BufferObject, shape) {
 				if (removeObjects.has(object)) {
 					this.#beforeRemove(object);
 					objects[ii] = objects[cursor--]!;
+					object['#afterRemove']();
 					if (--removeCount === 0) {
 						break;
 					}
 				}
 			}
 			objects.splice(cursor + 1);
-
 			if (removeCount !== 0) {
 				throw new Error('Removed objects mismatch');
 			}
@@ -145,6 +157,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Queue an object to be inserted into this room. This is flushed via `FlushObjects`.
 	 */
 	'#insertObject'(this: Room, object: RoomObject, now = false) {
+		object['#beforeInsert'](this);
 		if (now) {
 			this.#findCache.clear();
 			this['#objects'].push(object as never);
@@ -234,14 +247,12 @@ export class Room extends withOverlay(BufferObject, shape) {
 		} else {
 			this.#spatialIndex.set(pos, [ object ]);
 		}
-		object['#afterInsert'](this);
 	}
 
 	/**
 	 * Remove an object from the look and spatial indices
 	 */
 	#beforeRemove(object: RoomObject) {
-		object['#beforeRemove']();
 		const lookType = object['#lookType'];
 		if (lookType !== null) {
 			removeOne(this.#lookIndex.get(lookType)!, object);

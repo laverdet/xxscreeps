@@ -56,14 +56,14 @@ export class StructureTerminal extends withOverlay(OwnedStructure, shape) {
 			() => intents.save(this, 'send', resourceType, amount, destination, description));
 	}
 
-	override '#afterInsert'(room: Room) {
-		super['#afterInsert'](room);
-		room.terminal = this;
+	override '#afterRemove'() {
+		this.room.terminal = undefined;
+		super['#afterRemove']();
 	}
 
-	override '#beforeRemove'() {
-		this.room.terminal = undefined;
-		super['#beforeRemove']();
+	override '#beforeInsert'(room: Room) {
+		super['#beforeInsert'](room);
+		room.terminal = this;
 	}
 }
 
