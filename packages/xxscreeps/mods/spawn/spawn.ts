@@ -7,7 +7,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkString, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, userGame } from 'xxscreeps/game/index.js';
-import { create as createObject } from 'xxscreeps/game/object.js';
+import { create as createObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
@@ -35,7 +35,7 @@ const spawningFormat = struct({
 
 class Spawning extends withOverlay(BufferObject, spawningFormat) {
 	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name; }
-	@enumerable get remainingTime() { return Math.max(0, this['#spawnTime'] - Game.time); }
+	@enumerable get remainingTime() { return requiredExpiryTime(Game, this['#spawnTime']); }
 	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])!; }
 
 	/**

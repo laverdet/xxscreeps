@@ -2,6 +2,7 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, hooks, intents, userInfo } from 'xxscreeps/game/index.js';
+import { optionalExpiryTime, untilTime } from 'xxscreeps/game/object.js';
 import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 
@@ -23,20 +24,20 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	@enumerable get level() { return this.room['#level']; }
 	@enumerable get progress() { return this.level > 0 ? this['#progress'] : undefined; }
 	@enumerable get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined; }
-	@enumerable get safeMode() { return Math.max(0, this.room['#safeModeUntil'] - Game.time) || undefined; }
-	@enumerable get safeModeCooldown() { return Math.max(0, this['#safeModeCooldownTime'] - Game.time) || undefined; }
-	@enumerable get ticksToDowngrade() { return this['#downgradeTime'] === 0 ? undefined : Math.max(0, this['#downgradeTime'] - Game.time); }
-	@enumerable get upgradeBlocked() { return Math.max(0, this['#upgradeBlockedUntil'] - Game.time) || undefined; }
+	@enumerable get safeMode() { return untilTime(Game, this.room['#safeModeUntil']); }
+	@enumerable get safeModeCooldown() { return untilTime(Game, this['#safeModeCooldownTime']); }
+	@enumerable get ticksToDowngrade() { return optionalExpiryTime(Game, this['#downgradeTime']); }
+	@enumerable get upgradeBlocked() { return untilTime(Game, this['#upgradeBlockedUntil']); }
 
 	/**
 	 * An object with the controller reservation info if present
 	 */
 	@enumerable get reservation() {
-		const ticksToEnd = this['#reservationEndTime'] - Game.time;
-		const value = ticksToEnd > 0 ? {
+		const ticksToEnd = optionalExpiryTime(Game, this['#reservationEndTime']);
+		const value = ticksToEnd === undefined ? undefined : {
 			ticksToEnd,
 			username: userInfo.get(this.room['#user']!)!.username,
-		} : undefined;
+		};
 		Object.defineProperty(this, 'reservation', { value });
 		return value;
 	}

@@ -34,7 +34,6 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * A [survival game](https://docs.screeps.com/survival.html) info, if the current game is
 	 * running in the Survival Mode. xxscreeps has no survival mode, so this is always `undefined`.
 	 */
-	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	@enumerable get survivalInfo(): undefined { return undefined; }
 
 	/**

@@ -14,9 +14,7 @@ const shape = struct(RoomObject.format, {
 // Game object declaration
 export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 
-	@enumerable get ticksToRegeneration() {
-		return this['#nextRegenerationTime'] === 0 ? undefined : Math.max(0, this['#nextRegenerationTime'] - Game.time);
-	}
+	@enumerable get ticksToRegeneration() { return RoomObject.optionalExpiryTime(Game, this['#nextRegenerationTime']); }
 
 	get '#lookType'() { return C.LOOK_SOURCES; }
 

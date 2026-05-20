@@ -5,6 +5,7 @@ import type { InspectOptionsStylized } from 'node:util';
 import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
+import { GameBase } from 'xxscreeps/game/game.js';
 import * as BufferObject from 'xxscreeps/schema/buffer-object.js';
 import { compose, declare, enumerated, struct, union, vector, withOverlay } from 'xxscreeps/schema/index.js';
 import { expandGetters } from 'xxscreeps/utility/inspect.js';
@@ -123,6 +124,31 @@ export function create<Type extends RoomObject>(instance: Type, pos: RoomPositio
 	});
 	object['#posId'] = pos['#id'];
 	return object;
+}
+
+export function cooldownTime(Game: GameBase, time: number) {
+	// Cooldowns are not reset at expiry
+	return time > Game.time ? time - Game.time : 0;
+}
+
+export function untilTime(Game: GameBase, time: number) {
+	// Untils expire at 0
+	return time > Game.time ? time - Game.time : undefined;
+}
+
+export function requiredExpiryTime(Game: GameBase, time: number) {
+	// An overdue expiry time represents invalid game state
+	if (time > Game.time) {
+		return cooldownTime(Game, time);
+	} else {
+		// throw new Error(`Invalid expiry time ${time} vs ${Game.time}`);
+		return 0;
+	}
+}
+
+export function optionalExpiryTime(Game: GameBase, time: number) {
+	// Optional expiry times may be `undefined`
+	return time === 0 ? undefined : requiredExpiryTime(Game, time);
 }
 
 // Export `RoomObject` to runtime globals

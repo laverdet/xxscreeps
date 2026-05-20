@@ -16,7 +16,7 @@ const shape = struct(ownedStructureFormat, {
 });
 
 export class StructureRampart extends withOverlay(OwnedStructure, shape) {
-	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
+	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(Game, this['#nextDecayTime']); }
 
 	override get hitsMax() {
 		return this['#user'] === this.room.controller?.['#user']

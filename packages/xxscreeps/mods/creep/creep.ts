@@ -12,7 +12,7 @@ import { Predicate } from 'xxscreeps/functional/predicate.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
-import { RoomObject, actionLogFormat, create as createObject, format as objectFormat, saveAction } from 'xxscreeps/game/object.js';
+import { RoomObject, actionLogFormat, create as createObject, format as objectFormat, requiredExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
@@ -92,7 +92,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	@enumerable override get hitsMax() { return this.body.length * 100; }
 	@enumerable get owner() { return userInfo.get(this['#user']); }
 	@enumerable get spawning() { return this['#ageTime'] === 0; }
-	@enumerable get ticksToLive() { return Math.max(0, this['#ageTime'] - Game.time) || undefined; }
+	@enumerable get ticksToLive() { return requiredExpiryTime(Game, this['#ageTime']); }
 	@enumerable override get my() { return this['#user'] === me; }
 
 	/**

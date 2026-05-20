@@ -2,7 +2,7 @@ import type { Store } from 'xxscreeps/mods/resource/store.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomObject, create as createObject, format as objectFormat } from 'xxscreeps/game/object.js';
+import { RoomObject, cooldownTime, create as createObject, format as objectFormat } from 'xxscreeps/game/object.js';
 import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
@@ -29,7 +29,7 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 	/**
 	 * The amount of game ticks before this ruin decays.
 	 */
-	@enumerable get ticksToDecay() { return Math.max(0, this['#decayTime'] - Game.time); }
+	@enumerable get ticksToDecay() { return cooldownTime(Game, this['#decayTime']); }
 
 	/**
 	 * One of the `STRUCTURE_*` constants — the type of the destroyed structure.
