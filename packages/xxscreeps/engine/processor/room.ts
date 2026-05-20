@@ -71,6 +71,7 @@ export class RoomProcessor implements ProcessorContext {
 	readonly shard;
 	readonly state: GameState;
 	readonly time;
+	readonly nextTime;
 	receivedUpdate = false;
 
 	private tasks: {
@@ -86,7 +87,8 @@ export class RoomProcessor implements ProcessorContext {
 		this.shard = shard;
 		this.room = room;
 		this.time = time;
-		this.state = new GameState(world, time, [ room ]);
+		this.nextTime = time + 1;
+		this.state = new GameState(world, this.nextTime, [ room ]);
 	}
 
 	async process(isFinalization = false) {
@@ -215,7 +217,7 @@ export class RoomProcessor implements ProcessorContext {
 		// Finalize room object
 		this.room['#flushObjects'](this.state);
 		const previousUsers = flushUsers(this.room);
-		const hasPlayer = Fn.some(this.room['#users'].intents, userId => userId.length > 2);
+		const hasNoPlayers = Fn.every(this.room['#users'].intents, userId => userId.length <= 2);
 		flushContext();
 
 		await Promise.all([
@@ -223,20 +225,17 @@ export class RoomProcessor implements ProcessorContext {
 			updateUserRoomRelationships(this.shard, this.room, previousUsers),
 			// Save updated room blob
 			this.receivedUpdate
-				? this.shard.saveRoom(this.room.name, this.time, this.room) :
-				this.shard.copyRoomFromPreviousTick(this.room.name, this.time),
+				? this.shard.saveRoom(this.room.name, this.nextTime, this.room) :
+				this.shard.copyRoomFromPreviousTick(this.room.name, this.nextTime),
+			// Update room processor status
+			hasNoPlayers && didWake && this.nextUpdate === this.nextTime &&
+				// Room was woken this tick by an inter-room intent, and will remain active
+				this.shard.scratch.zAdd(activeRoomsKey, [ [ 0, this.room.name ] ]),
 		]);
 		// Update room processor status
-		if (!hasPlayer) {
-			if (this.nextUpdate === this.time + 1) {
-				if (didWake) {
-					// Room was woken this tick by an inter-room intent, and will remain active
-					await this.shard.scratch.zAdd(activeRoomsKey, [ [ 0, this.room.name ] ]);
-				}
-			} else {
-				// Mark inactive if needed. Must be *after* saving room, because this copies from current tick.
-				return sleepRoomUntil(this.shard, this.room.name, this.time, this.nextUpdate);
-			}
+		if (hasNoPlayers && this.nextUpdate !== this.nextTime) {
+			// Mark inactive if needed. Must be *after* saving room, because this copies from current tick.
+			return sleepRoomUntil(this.shard, this.room.name, this.nextTime, this.nextUpdate - 1);
 		}
 	}
 
@@ -273,7 +272,7 @@ export class RoomProcessor implements ProcessorContext {
 
 	setActive() {
 		this.didUpdate();
-		this.wakeAt(this.time + 1);
+		this.wakeAt(this.nextTime);
 	}
 
 	task(promise: Promise<any>, finalize?: (result: any) => void) {
@@ -282,7 +281,7 @@ export class RoomProcessor implements ProcessorContext {
 
 	wakeAt(time: number) {
 		if (time !== 0) {
-			if (time < this.time + 1) {
+			if (time < this.nextTime) {
 				throw new Error(`Invalid wake time ${time}; current ${this.time}`);
 			}
 			this.nextUpdate = Math.min(time, this.nextUpdate);

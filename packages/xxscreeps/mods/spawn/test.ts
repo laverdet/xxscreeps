@@ -1,4 +1,5 @@
 import type { StructureExtension } from './extension.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
@@ -22,6 +23,24 @@ describe('Spawn', () => {
 				room.controller!['#user'] = '100';
 		},
 	});
+
+	test('creep birth ticksToLive', () => simulation(async ({ player, tick }) => {
+		await player('100', Game => {
+			Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep', {
+				directions: [ C.RIGHT ],
+			});
+		});
+		for (const _ii of Fn.range(2)) {
+			await tick(1);
+			await player('100', Game => {
+				assert.strictEqual(Game.creeps.creep?.ticksToLive, undefined);
+			});
+		}
+		await tick(1);
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.creep?.ticksToLive, 1499);
+		});
+	}));
 
 	test('spawn direction', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {

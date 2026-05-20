@@ -1,7 +1,7 @@
 import config from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
-import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel, processorTimeKey } from 'xxscreeps/engine/processor/model.js';
+import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel } from 'xxscreeps/engine/processor/model.js';
 import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -47,10 +47,7 @@ const [ rooms ] = await Promise.all([
 	shard.data.sMembers('rooms'),
 	shard.scratch.flushdb(),
 ]);
-await Promise.all([
-	shard.scratch.sAdd('initializeRooms', rooms),
-	shard.scratch.set(processorTimeKey, shard.time),
-]);
+await shard.scratch.sAdd('initializeRooms', rooms);
 
 // Wait for processors to connect and initialize world state
 await using serviceMessages = Fn.unbreak(serviceChannel.iterable());
@@ -61,7 +58,7 @@ const didInitialize = await async function() {
 		switch (message.type) {
 			case 'processorInitialized':
 				if (await shard.scratch.zCard(activeRoomsKey) === rooms.length) {
-					await begetRoomProcessQueue(shard, shard.time + 1, shard.time);
+					await begetRoomProcessQueue(shard, shard.time);
 					return true;
 				}
 				break;
@@ -76,7 +73,8 @@ async function tick() {
 	performanceTimer.start();
 
 	// Initialize tick
-	const time = shard.time + 1;
+	const time = shard.time;
+	const nextTime = time + 1;
 	await Promise.all([
 		shard.scratch.copy('activeUsers', runnerUsersSetKey(time)),
 		processorChannel.publish({ type: 'process', time }),
@@ -89,7 +87,7 @@ async function tick() {
 		() => mustNotReject(async () => {
 			const rooms = await abandonIntentsForTick(shard, time);
 			if (rooms.length > 0) {
-				console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${time}`);
+				console.log(`Abandoning intents in rooms [${rooms.join(', ')}] for tick ${nextTime}`);
 			}
 		}));
 	let willContinue = true;
@@ -106,14 +104,16 @@ async function tick() {
 
 			case 'tickFinished': {
 				await runShardTickProcessors(shard, time);
-				await begetRoomProcessQueue(shard, time + 1, time, true);
-
-				// Update game state
-				await shard.data.set('time', time);
-
-				// Setup for next tick
-				await shard.channel.publish({ type: 'tick', time });
-				shard.time = time;
+				await Promise.all([
+					// Setup for next tick
+					begetRoomProcessQueue(shard, nextTime),
+					// Update game state
+					async function() {
+						await shard.data.set('time', nextTime);
+						await shard.channel.publish({ type: 'tick', time: nextTime });
+						shard.time = nextTime;
+					}(),
+				]);
 				return willContinue;
 			}
 

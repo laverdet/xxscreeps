@@ -138,11 +138,11 @@ export function untilTime(Game: GameBase, time: number) {
 
 export function requiredExpiryTime(Game: GameBase, time: number) {
 	// An overdue expiry time represents invalid game state
-	if (time > Game.time) {
+	if (time >= Game.time) {
+		// nb: An expiry time of `0` should only be seen by the processor.
 		return cooldownTime(Game, time);
 	} else {
-		// throw new Error(`Invalid expiry time ${time} vs ${Game.time}`);
-		return 0;
+		throw new Error(`Invalid expiry time ${time} vs ${Game.time}`);
 	}
 }
 
