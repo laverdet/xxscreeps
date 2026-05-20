@@ -1,12 +1,19 @@
-import { registerIntentProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import type { StructureTower } from 'xxscreeps/mods/defense/tower.js';
+import { registerIntentProcessor, registerObjectTickProcessor, registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
+import { saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { StructureController } from 'xxscreeps/mods/controller/controller.js';
+import { release, reserve } from 'xxscreeps/mods/controller/processor.js';
 import * as Creep from 'xxscreeps/mods/creep/creep.js';
+import { flushActionLog } from 'xxscreeps/mods/creep/processor.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
+import { StructureInvaderCore, checkAttackController, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
 import { loop } from './loop/index.js';
 
 // Register invader NPC
@@ -75,16 +82,115 @@ registerRoomTickProcessor((room, context) => {
 	}
 });
 
-// Add backend-only Invader request
+// Intent processors. Includes the backend-only `requestInvader` (Room) and the four
+// invader-core actions driven by the NPC loop.
 declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { invader: typeof intent }
+	interface Intent { invader: typeof intents }
 }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const intent = registerIntentProcessor(Room, 'requestInvader', { internal: true }, (room, context, xx: number, yy: number, role: Role, strength: Strength) => {
-	const pos = new RoomPosition(xx, yy, room.name);
-	room['#insertObject'](create(pos, role, strength, Game.time + 200));
-	activateNPC(room, '2');
-	context.setActive();
+const intents = [
+	registerIntentProcessor(Room, 'requestInvader', { internal: true }, (room, context, xx: number, yy: number, role: Role, strength: Strength) => {
+		const pos = new RoomPosition(xx, yy, room.name);
+		room['#insertObject'](create(pos, role, strength, Game.time + 200));
+		activateNPC(room, '2');
+		context.setActive();
+	}),
+
+	registerIntentProcessor(StructureInvaderCore, 'reserveController', {}, (core, context, id: string) => {
+		const controller = Game.getObjectById<StructureController>(id)!;
+		if (checkReserveController(core, controller) === C.OK) {
+			const power = C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE;
+			const endTime = (controller['#reservationEndTime'] || Game.time + 1) + power;
+			if (endTime > Game.time + C.CONTROLLER_RESERVE_MAX) {
+				return;
+			}
+			reserve(context, controller, '2', endTime);
+			saveAction(core, 'reserveController', controller.pos);
+			appendEventLog(controller.room, {
+				event: C.EVENT_RESERVE_CONTROLLER,
+				objectId: core.id,
+				amount: power,
+			});
+		}
+	}),
+
+	registerIntentProcessor(StructureInvaderCore, 'attackController', {}, (core, context, id: string) => {
+		const controller = Game.getObjectById<StructureController>(id)!;
+		if (checkAttackController(core, controller) === C.OK) {
+			if (controller.level > 0) {
+				controller['#downgradeTime'] -= C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_CLAIM_DOWNGRADE;
+				controller['#upgradeBlockedUntil'] = Game.time + C.CONTROLLER_ATTACK_BLOCKED_UPGRADE - 1;
+			} else {
+				const reduced = controller['#reservationEndTime'] - C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE;
+				if (reduced <= Game.time) {
+					release(context, controller);
+				} else {
+					controller['#reservationEndTime'] = reduced;
+				}
+			}
+			saveAction(core, 'attack', controller.pos);
+			appendEventLog(controller.room, {
+				event: C.EVENT_ATTACK_CONTROLLER,
+				objectId: core.id,
+			});
+			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(StructureInvaderCore, 'upgradeController', {}, (core, context, id: string) => {
+		const controller = Game.getObjectById<StructureController>(id)!;
+		if (checkUpgradeController(core, controller) === C.OK) {
+			const expiry = Game.time + C.INVADER_CORE_CONTROLLER_DOWNGRADE;
+			controller['#downgradeTime'] = expiry;
+			controller['#upgradeInvulnerableUntil'] = expiry;
+			saveAction(core, 'upgradeController', controller.pos);
+			appendEventLog(controller.room, {
+				event: C.EVENT_UPGRADE_CONTROLLER,
+				objectId: core.id,
+				amount: 1,
+				energySpent: 0,
+			});
+			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(StructureInvaderCore, 'transferEnergy', {}, (core, context, id: string, amount: number) => {
+		const target = Game.getObjectById<StructureTower | Creep.Creep>(id);
+		if (target && checkTransferEnergy(core, target, amount) === C.OK) {
+			const free = target.store.getFreeCapacity(C.RESOURCE_ENERGY)!;
+			const actual = Math.min(amount, free);
+			if (actual > 0) {
+				target.store['#add'](C.RESOURCE_ENERGY, actual);
+				saveAction(core, 'transferEnergy', target.pos);
+				appendEventLog(core.room, {
+					event: C.EVENT_TRANSFER,
+					objectId: core.id,
+					targetId: target.id,
+					resourceType: C.RESOURCE_ENERGY,
+					amount: actual,
+				});
+				context.didUpdate();
+			}
+		}
+	}),
+];
+
+registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
+	const collapseTime = core['#collapseTime'];
+	if (collapseTime > 0 && collapseTime <= Game.time) {
+		// Collapse expiry is a silent removal: no ruin, no EVENT_OBJECT_DESTROYED. Those
+		// only emit from the damage-destroy path, which collapse doesn't traverse. The NPC
+		// reservation is left to run out; the controller's tick processor releases it at expiry.
+		core.room['#removeObject'](core);
+		context.setActive();
+		return;
+	}
+
+	flushActionLog(core['#actionLog'], context);
+
+	const deployTime = core['#deployTime'];
+	if (deployTime > Game.time) context.wakeAt(deployTime);
+	if (collapseTime > Game.time) context.wakeAt(collapseTime);
 });
 
 // Creep factory for invaders
