@@ -12,6 +12,7 @@ const shape = struct(ownedStructureFormat, {
 	isPowerEnabled: 'bool',
 	safeModeAvailable: 'int32',
 	'#downgradeTime': 'int32',
+	'#downgradeWarningSent': 'bool',
 	'#progress': 'int32',
 	'#reservationEndTime': 'int32',
 	'#safeModeCooldownTime': 'int32',

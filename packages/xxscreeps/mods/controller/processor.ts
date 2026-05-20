@@ -7,9 +7,12 @@ import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/creep/creep.js';
+import { upsertNotification } from 'xxscreeps/mods/notifications/model.js';
 import { checkActiveStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 import * as CreepLib from './creep.js';
+
+const PRE_DOWNGRADE_WARNING_TICKS = 3000;
 
 export const controlledRoomKey = (userId: string) => `user/${userId}/controlledRooms`;
 export const reservedRoomKey = (userId: string) => `user/${userId}/reservedRooms`;
@@ -35,6 +38,7 @@ export function release(context: ProcessorContext, controller: StructureControll
 		context.task(context.shard.scratch.sRem(key, [ controller.room.name ]));
 	}
 	controller['#downgradeTime'] = 0;
+	controller['#downgradeWarningSent'] = false;
 	controller['#progress'] = 0;
 	controller['#reservationEndTime'] = 0;
 	controller['#safeModeCooldownTime'] = 0;
@@ -206,7 +210,10 @@ const intents = [
 						controller['#progress'] -= nextLevel;
 					}
 					controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]! / 2;
+					controller['#downgradeWarningSent'] = false;
 					++controller.safeModeAvailable;
+					context.task(upsertNotification(context.shard, controller['#user']!, 'msg',
+						`Your Controller in room ${controller.room.name} has been upgraded to level ${level}.`, 0));
 					updateRoomStatus(context, controller.room, level, controller['#user']);
 				}
 			}
@@ -255,26 +262,47 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 		controller.upgradePowerThisTick = 0;
 		if (ticksToDowngrade === undefined) {
 			controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!;
+			controller['#downgradeWarningSent'] = false;
 			context.didUpdate();
 		} else if (upgradePower > 0) {
 			controller['#downgradeTime'] = 1 + Math.min(
 				controller['#downgradeTime'] + C.CONTROLLER_DOWNGRADE_RESTORE,
 				Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!);
+			controller['#downgradeWarningSent'] = false;
 			context.task(context.shard.db.data.hincrBy(User.infoKey(controller['#user']!), 'gcl', upgradePower));
 			context.didUpdate();
 		} else if (ticksToDowngrade === 0) {
 			const { room } = controller;
+			const userId = controller['#user']!;
 			const level = --room['#level'];
 			controller.safeModeAvailable = 0;
+			context.task(upsertNotification(context.shard, userId, 'msg',
+				`Your Controller in room ${room.name} has been downgraded to level ${level} due to absence of upgrading activity!`, 0));
 			if (level === 0) {
 				release(context, controller);
 			} else {
 				controller['#downgradeTime'] = Game.time + C.CONTROLLER_DOWNGRADE[level]! / 2;
+				controller['#downgradeWarningSent'] = false;
 				controller['#progress'] = Math.round(C.CONTROLLER_LEVELS[level]! * 0.9);
 				controller['#safeModeCooldownTime'] = Game.time + C.SAFE_MODE_COOLDOWN - 1;
 				updateRoomStatus(context, controller.room, level, controller['#user']);
 			}
 			context.didUpdate();
+		}
+		if (!controller['#downgradeWarningSent']
+			&& controller['#downgradeTime'] > Game.time
+			&& controller['#downgradeTime'] - Game.time <= PRE_DOWNGRADE_WARNING_TICKS
+		) {
+			context.task(upsertNotification(context.shard, controller['#user']!, 'msg',
+				`Attention! Your Controller in room ${controller.room.name} will be downgraded to level ${controller.level - 1} in 3000 ticks (~2 hours)! Upgrade it to prevent losing of this room. <a href='http://support.screeps.com/hc/en-us/articles/203086021-Territory-control'>Learn more</a>`, 0));
+			controller['#downgradeWarningSent'] = true;
+			context.didUpdate();
+		}
+		if (!controller['#downgradeWarningSent']) {
+			const warnAt = controller['#downgradeTime'] - PRE_DOWNGRADE_WARNING_TICKS;
+			if (warnAt > Game.time) {
+				context.wakeAt(warnAt);
+			}
 		}
 		context.wakeAt(controller['#downgradeTime']);
 	}
