@@ -1,7 +1,10 @@
+import type { StructureInvaderCore } from './invader-core.js';
+import type { GameConstructor } from 'xxscreeps/game/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { create as createInvaderCore } from './invader-core.js';
 
 // W7N7 has exits in all 4 directions and all neighbors have controllers:
 //   TOP -> W7N8 (y=0 edge), RIGHT -> W6N7 (x=49 edge),
@@ -168,6 +171,96 @@ describe('Invader exit filtering', () => {
 				assert.strictEqual(invader.pos.x, 0,
 					`invader at (${invader.pos.x},${invader.pos.y}) should be on LEFT exit (x=0)`);
 			}
+		});
+	}));
+});
+
+describe('Invader core', () => {
+	const corePos = new RoomPosition(25, 25, 'W1N1');
+
+	const findCore = (Game: GameConstructor) => {
+		const structures = Game.rooms.W1N1!.find(C.FIND_HOSTILE_STRUCTURES);
+		const core = structures.find((structure): structure is StructureInvaderCore =>
+			structure.structureType === C.STRUCTURE_INVADER_CORE);
+		assert.ok(core, 'invader core should be visible to player');
+		return core;
+	};
+
+	const deploying = simulate({
+		W1N1: room => {
+			room['#insertObject'](createInvaderCore(corePos, 2, 5000));
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 26, 'W1N1'),
+				[ C.ATTACK, C.RANGED_ATTACK, C.WORK ],
+				'attacker',
+				'100',
+			));
+		},
+	});
+
+	test('reports EFFECT_INVULNERABILITY while deploying', () => deploying(async ({ player }) => {
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.strictEqual(core.level, 2);
+			assert.strictEqual(core.ticksToDeploy, 5000 - Game.time);
+			assert.strictEqual(core.spawning, null);
+			assert.deepStrictEqual(core.effects, [
+				{
+					effect: C.EFFECT_INVULNERABILITY,
+					ticksRemaining: 5000 - Game.time,
+				},
+			]);
+		});
+	}));
+
+	test('damage paths are all blocked while deploying', () => deploying(async ({ player, tick }) => {
+		await player('100', Game => {
+			const core = findCore(Game);
+			const attacker = Game.creeps.attacker!;
+			assert.strictEqual(core.hits, core.hitsMax, 'core should start at full hits');
+			assert.strictEqual(attacker.attack(core), C.ERR_INVALID_TARGET);
+			assert.strictEqual(attacker.rangedAttack(core), C.ERR_INVALID_TARGET);
+			assert.strictEqual(attacker.dismantle(core), C.ERR_INVALID_TARGET);
+			// rangedMassAttack has no per-target intent check; #applyDamage is the backstop.
+			assert.strictEqual(attacker.rangedMassAttack(), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.strictEqual(core.hits, core.hitsMax, 'invulnerable core should take no damage');
+		});
+	}));
+
+	const deployed = simulate({
+		W1N1: room => {
+			room['#insertObject'](createInvaderCore(corePos, 2, 0));
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 26, 'W1N1'),
+				[ C.ATTACK ],
+				'attacker',
+				'100',
+			));
+		},
+	});
+
+	test('reports no effects once deployed', () => deployed(async ({ player }) => {
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.strictEqual(core.ticksToDeploy, undefined);
+			assert.strictEqual(core.effects, undefined);
+		});
+	}));
+
+	test('attack on deployed core deals damage', () => deployed(async ({ player, tick }) => {
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.strictEqual(core.hits, core.hitsMax, 'core should start at full hits');
+			assert.strictEqual(Game.creeps.attacker!.attack(core), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.strictEqual(core.hits, core.hitsMax! - C.ATTACK_POWER);
 		});
 	}));
 });

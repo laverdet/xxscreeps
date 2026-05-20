@@ -24,6 +24,13 @@ const shape = struct({
 	'#posId': union({ pos: 'int32' }),
 });
 
+export interface RoomObjectEffect {
+	effect: number;
+	power?: number;
+	level?: number;
+	ticksRemaining: number;
+}
+
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	/**
 	 * The link to the Room object. May be `undefined` in case if an object is a flag or a construction
@@ -110,12 +117,17 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	}
 }
 
-// Type-only merge: exposes `hits`/`hitsMax`/`my` at the base type without installing getters on the prototype.
+// Typing-only declarations on the base; runtime getters live on subclasses.
 export declare interface RoomObject {
 	get hits(): number | undefined;
+	get effects(): RoomObjectEffect[] | undefined;
 	set hits(hits: number);
 	get hitsMax(): number | undefined;
 	get my(): boolean | undefined;
+}
+
+export function hasEffect(object: RoomObject, effectType: number) {
+	return object.effects?.some(effect => effect.effect === effectType && effect.ticksRemaining > 0) ?? false;
 }
 
 export function create<Type extends RoomObject>(instance: Type, pos: RoomPosition): Type {
