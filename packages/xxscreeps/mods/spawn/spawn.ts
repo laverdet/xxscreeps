@@ -96,18 +96,6 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 		game.spawns[this.name] = this;
 	}
 
-	override '#applyNukeImpact'() {
-		const spawning = this.spawning;
-		if (spawning) {
-			const creep = Game.getObjectById(spawning['#spawningCreepId']);
-			if (creep) {
-				this.room['#removeObject'](creep);
-			}
-			this.spawning = null;
-		}
-		return false;
-	}
-
 	override '#afterRemove'() {
 		const { spawning } = this;
 		if (spawning) {
@@ -117,6 +105,17 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 			}
 		}
 		super['#afterRemove']();
+	}
+
+	override '#applyNukeImpact'() {
+		const spawning = this.spawning;
+		if (spawning) {
+			const creep = Game.getObjectById(spawning['#spawningCreepId']);
+			if (creep) {
+				this.room['#removeObject'](creep);
+			}
+			this.spawning = null;
+		}
 	}
 
 	/**

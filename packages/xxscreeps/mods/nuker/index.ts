@@ -8,8 +8,9 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/defense',
 		'xxscreeps/mods/notifications',
 		'xxscreeps/mods/resource',
-		'xxscreeps/mods/spawn',
 		'xxscreeps/mods/structure',
 	],
-	provides: [ 'backend', 'game', 'processor', 'test' ],
+	// TODO: dev dependencies?
+	// 'xxscreeps/mods/spawn',
+	provides: [ 'backend', 'constants', 'game', 'processor', 'test' ],
 };

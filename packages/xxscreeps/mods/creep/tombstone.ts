@@ -42,7 +42,6 @@ export class Tombstone extends withOverlay(RoomObject, shape) {
 
 	override '#applyNukeImpact'() {
 		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
-		return true;
 	}
 
 	/**

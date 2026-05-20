@@ -134,7 +134,6 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 	override '#applyNukeImpact'() {
 		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
-		return true;
 	}
 
 	override '#destroy'(type?: number) {
@@ -568,7 +567,7 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 		() => checkResourceArgs(resourceType, amount),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
 		() => checkInteractionBlocked(creep, target),
-		() => target instanceof Structure && target['#doesPreventWithdraw']() ? C.ERR_INVALID_TARGET : C.OK,
+		() => target.store['#doesAllowWithdraw']() ? C.OK : C.ERR_INVALID_TARGET,
 		() => checkSafeMode(creep.room, C.ERR_NOT_OWNER),
 		() => checkStoreAccepts(target, resourceType),
 		() => checkRange(creep, target, 1),

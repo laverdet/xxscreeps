@@ -32,7 +32,6 @@ export class Resource extends withOverlay(RoomObject.RoomObject, shape) {
 
 	override '#applyNukeImpact'() {
 		this['#destroy'](C.EVENT_ATTACK_TYPE_NUKE);
-		return true;
 	}
 }
 

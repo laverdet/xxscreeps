@@ -32,8 +32,6 @@ export class StructureNuker extends withOverlay(OwnedStructure, shape) {
 	override get hitsMax() { return C.NUKER_HITS; }
 	override get structureType() { return C.STRUCTURE_NUKER; }
 
-	override '#doesPreventWithdraw'() { return true; }
-
 	/**
 	 * Launch a nuke to the specified position. The target must be at most `NUKE_RANGE`
 	 * rooms away (Chebyshev distance). Consumes the nuker's full store and starts a
@@ -43,7 +41,7 @@ export class StructureNuker extends withOverlay(OwnedStructure, shape) {
 	launchNuke(target: RoomPosition) {
 		return chainIntentChecks(
 			() => checkLaunchNuke(this, target),
-			() => intents.save(this, 'launchNuke', target.roomName, target.x, target.y));
+			() => intents.save(this, 'launchNuke', target['#id']));
 	}
 }
 
@@ -89,11 +87,9 @@ function checkLaunchRange(nuker: StructureNuker, target: RoomPosition) {
 }
 
 function checkLaunchResources(nuker: StructureNuker) {
-	const energyCapacity = nuker.store.getCapacity(C.RESOURCE_ENERGY) ?? 0;
-	const ghodiumCapacity = nuker.store.getCapacity(C.RESOURCE_GHODIUM) ?? 0;
 	if (
-		nuker.store[C.RESOURCE_ENERGY] < energyCapacity ||
-		nuker.store[C.RESOURCE_GHODIUM] < ghodiumCapacity
+		nuker.store[C.RESOURCE_ENERGY] < C.NUKER_ENERGY_CAPACITY ||
+		nuker.store[C.RESOURCE_GHODIUM] < C.NUKER_GHODIUM_CAPACITY
 	) {
 		return C.ERR_NOT_ENOUGH_RESOURCES;
 	}

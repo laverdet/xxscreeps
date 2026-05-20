@@ -29,7 +29,7 @@ registerGlobal(Nuker.StructureNuker);
 registerGlobal(Nuke.Nuke);
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global {
-		StructureNuker: typeof Nuker.StructureNuker;
 		Nuke: typeof Nuke.Nuke;
+		StructureNuker: typeof Nuker.StructureNuker;
 	}
 }

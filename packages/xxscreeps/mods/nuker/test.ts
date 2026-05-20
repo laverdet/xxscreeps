@@ -44,13 +44,11 @@ describe('Nuker', () => {
 		W1N1: room => {
 			room['#insertObject'](createLoadedNuker(new RoomPosition(25, 25, 'W1N1')));
 			room['#level'] = 8;
-			room['#user'] =
-				room.controller!['#user'] = '100';
+			room['#user'] = room.controller!['#user'] = '100';
 		},
 		W2N1: room => {
 			room['#level'] = 1;
-			room['#user'] =
-				room.controller!['#user'] = '200';
+			room['#user'] = room.controller!['#user'] = '101';
 		},
 	});
 
@@ -80,7 +78,7 @@ describe('Nuker', () => {
 			assert.strictEqual(nuker.ghodium, 0);
 			assert.strictEqual(nuker.cooldown, C.NUKER_COOLDOWN - 1);
 		});
-		await player('200', Game => {
+		await player('101', Game => {
 			const nuke = Game.rooms.W2N1!['#lookFor'](C.LOOK_NUKES)[0]!;
 			assert.strictEqual(nuke.timeToLand, C.NUKE_LAND_TIME - 1);
 		});
@@ -132,17 +130,17 @@ describe('Nuker', () => {
 				room.controller!['#user'] = '100';
 		},
 		W2N1: room => {
-			const rampart = createRampart(new RoomPosition(25, 25, 'W2N1'), '200');
-			rampart.hits = C.NUKE_DAMAGE[0]! - 25;
+			const rampart = createRampart(new RoomPosition(25, 25, 'W2N1'), '101');
+			rampart.hits = C.NUKE_DAMAGE[0] - 25;
 			const wall = createWall(new RoomPosition(25, 25, 'W2N1'));
 			wall.hits = 100;
 			room['#insertObject'](rampart);
 			room['#insertObject'](wall);
-			room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W2N1'), [ C.MOVE ], 'target', '200'));
+			room['#insertObject'](createCreep(new RoomPosition(24, 25, 'W2N1'), [ C.MOVE ], 'target', '101'));
 			room['#insertObject'](createConstructionSite(
 				new RoomPosition(30, 30, 'W2N1'),
 				C.STRUCTURE_ROAD,
-				'200',
+				'101',
 				C.CONSTRUCTION_COST.road,
 			));
 			room['#insertObject'](createResource(new RoomPosition(31, 30, 'W2N1'), C.RESOURCE_ENERGY, 100));
@@ -150,11 +148,10 @@ describe('Nuker', () => {
 			const ruinedWall = createWall(new RoomPosition(33, 30, 'W2N1'));
 			ruinedWall.room = room;
 			room['#insertObject'](createRuin(ruinedWall));
-			room['#insertObject'](createSpawn(new RoomPosition(10, 10, 'W2N1'), '200', 'Spawn1'));
+			room['#insertObject'](createSpawn(new RoomPosition(10, 10, 'W2N1'), '101', 'Spawn1'));
 			room['#level'] = 8;
 			room['#safeModeUntil'] = 100;
-			room['#user'] =
-				room.controller!['#user'] = '200';
+			room['#user'] = room.controller!['#user'] = '101';
 			room.controller!['#safeModeCooldownTime'] = 100;
 		},
 	});
@@ -164,17 +161,17 @@ describe('Nuker', () => {
 			const nuker = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_NUKER)[0]!;
 			assert.strictEqual(nuker.launchNuke(new RoomPosition(25, 25, 'W2N1')), C.OK);
 		});
-		await player('200', Game => {
+		await player('101', Game => {
 			assert.strictEqual(Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'spawning'), C.OK);
 		});
 		await tick();
-		const rampartId = await poke('W2N1', '200', (Game, room) => {
+		const rampartId = await poke('W2N1', '101', (Game, room) => {
 			const nuke = room['#lookFor'](C.LOOK_NUKES)[0]!;
 			nuke['#landTime'] = Game.time + 1;
 			return lookForStructures(room, C.STRUCTURE_RAMPART)[0]!.id;
 		});
 		await tick();
-		await player('200', Game => {
+		await player('101', Game => {
 			const room = Game.rooms.W2N1!;
 			assert.strictEqual(room['#lookFor'](C.LOOK_NUKES).length, 1);
 			assert.strictEqual(room['#lookFor'](C.LOOK_CREEPS).length, 0);
@@ -203,27 +200,26 @@ describe('Nuker', () => {
 
 	const doubleImpact = simulate({
 		W2N1: room => {
-			const rampart = createRampart(new RoomPosition(25, 25, 'W2N1'), '200');
+			const rampart = createRampart(new RoomPosition(25, 25, 'W2N1'), '101');
 			rampart.hits = 1;
 			const wall = createWall(new RoomPosition(25, 25, 'W2N1'));
-			wall.hits = C.NUKE_DAMAGE[0]! * 2 + 5;
+			wall.hits = C.NUKE_DAMAGE[0] * 2 + 5;
 			room['#insertObject'](rampart);
 			room['#insertObject'](wall);
-			room['#insertObject'](createCreep(new RoomPosition(20, 20, 'W2N1'), [ C.MOVE ], 'target', '200'));
+			room['#insertObject'](createCreep(new RoomPosition(20, 20, 'W2N1'), [ C.MOVE ], 'target', '101'));
 			room['#level'] = 8;
-			room['#user'] =
-				room.controller!['#user'] = '200';
+			room['#user'] = room.controller!['#user'] = '101';
 		},
 	});
 
 	test('same-tick multiple nuke impacts do not reuse queued removals', () => doubleImpact(async ({ player, tick, poke }) => {
-		const creepId = await poke('W2N1', '200', (Game, room) => {
+		const creepId = await poke('W2N1', '101', (Game, room) => {
 			room['#insertObject'](createNuke(new RoomPosition(25, 25, 'W2N1'), 'W1N1', Game.time + 1));
 			room['#insertObject'](createNuke(new RoomPosition(25, 25, 'W2N1'), 'W1N1', Game.time + 1));
-			return Game.creeps.target!.id;
+			return Game.creeps.target?.id;
 		});
 		await tick();
-		await player('200', Game => {
+		await player('101', Game => {
 			const room = Game.rooms.W2N1!;
 			assert.strictEqual(lookForStructures(room, C.STRUCTURE_RAMPART).length, 0);
 			assert.strictEqual(lookForStructures(room, C.STRUCTURE_WALL)[0]?.hits, 6);
