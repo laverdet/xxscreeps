@@ -1,5 +1,6 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { createHash } from 'node:crypto';
+import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 
 export type NotificationType = 'msg' | 'error';
@@ -107,4 +108,49 @@ export async function upsertNotification(
 	} else {
 		await shard.data.hincrBy(key, 'count', 1);
 	}
+}
+
+// Atomic upsert for engine-fired rows. Same-tick events on the same row (e.g. two attackers in
+// one room) race the read-then-write pattern in `upsertNotification`; the runner serializes
+// `Game.notify`, but the processor fans out parallel `context.task` promises.
+const RecordEngineNotification = new KeyvalScript((
+	keyval,
+	[ indexKey, key, dueKey ]: [ string, string, string ],
+	[ id, userId, message, type, score ]: [ string, string, string, NotificationType, number ],
+) => {
+	const existing = keyval.hGet(key, 'count');
+	if (existing === null) {
+		keyval.hmset(key, { message, date: score, count: 1, type });
+		keyval.zAdd(indexKey, [ [ score, id ] ]);
+		keyval.zAdd(dueKey, [ [ score, userId ] ], { up: 'LT' });
+		return 1;
+	} else {
+		return keyval.hincrBy(key, 'count', 1);
+	}
+}, {
+	lua:
+		`local existing = redis.call('hget', KEYS[2], 'count')
+		if existing == false then
+			redis.call('hset', KEYS[2], 'message', ARGV[3], 'date', ARGV[5], 'count', 1, 'type', ARGV[4])
+			redis.call('zadd', KEYS[1], ARGV[5], ARGV[1])
+			redis.call('zadd', KEYS[3], 'LT', ARGV[5], ARGV[2])
+			return 1
+		else
+			return redis.call('hincrby', KEYS[2], 'count', 1)
+		end`,
+});
+
+/**
+ * Engine-fired notification: one row per (user, type, message), count++ per call.
+ * Used by attack/event handlers; `upsertNotification` is for `Game.notify` with a
+ * user-supplied `groupInterval`.
+ */
+export async function sendNotification(
+	shard: Shard, userId: string, type: NotificationType, message: string,
+) {
+	const id = rowIdFor(type, 0, message);
+	const now = Date.now();
+	await shard.data.eval(RecordEngineNotification,
+		[ userIndexKey(userId), rowKey(userId, id), dueUsersKey ],
+		[ id, userId, message, type, now ]);
 }

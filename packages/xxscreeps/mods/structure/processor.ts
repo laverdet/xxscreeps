@@ -18,7 +18,6 @@ const intents = [
 
 	registerIntentProcessor(Structure, 'notifyWhenAttacked', {}, (structure, context, notifyWhenAttacked: boolean) => {
 		if (checkNotifyWhenAttacked(structure, notifyWhenAttacked) === C.OK) {
-			// TODO: no consumer — damage processors should read '#noAttackNotify' to emit attack notifications.
 			structure['#noAttackNotify'] = !notifyWhenAttacked;
 			context.didUpdate();
 		}
