@@ -186,10 +186,8 @@ const intents = [
 						if (road) {
 							// Wear-out advances decay but must not slip past `Game.time` — the road's
 							// Tick handler throws on overdue `ticksToDecay`.
-							road['#nextDecayTime'] = Math.max(
-								Game.time,
-								road['#nextDecayTime'] - C.ROAD_WEAROUT * creep.body.length,
-							);
+							road['#nextDecayTime'] =
+								Math.max(Game.time, road['#nextDecayTime'] - C.ROAD_WEAROUT * creep.body.length);
 							return 1;
 						}
 						const terrain = creep.room.getTerrain().get(pos.x, pos.y);

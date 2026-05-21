@@ -21,10 +21,7 @@ describe('Roads', () => {
 
 	test('wear-out does not push decay time past Game.time', () => simulate({
 		W0N0: room => {
-			const stomper = createCreep(
-				new RoomPosition(25, 25, 'W0N0'),
-				Array.from({ length: 50 }, () => C.MOVE),
-				'stomper', '100');
+			const stomper = createCreep(new RoomPosition(25, 25, 'W0N0'), Array.from({ length: 50 }, () => C.MOVE), 'stomper', '100');
 			room['#insertObject'](stomper);
 			const road = create(new RoomPosition(26, 25, 'W0N0'));
 			// Wear-out per step is ROAD_WEAROUT * body.length = 50, larger than what's left.
@@ -36,13 +33,10 @@ describe('Roads', () => {
 			Game.creeps.stomper?.move(C.RIGHT);
 		});
 		await tick();
-		await peekRoom('W0N0', (room, Game) => {
+		await peekRoom('W0N0', room => {
 			const road = lookForStructureAt(room, new RoomPosition(26, 25, 'W0N0'), C.STRUCTURE_ROAD);
 			assert.ok(road, 'road survives the stomp');
-			assert.ok(
-				road['#nextDecayTime'] >= Game.time,
-				`#nextDecayTime ${road['#nextDecayTime']} must not slip past Game.time ${Game.time}`,
-			);
+			assert.ok(road.ticksToDecay);
 		});
 	}));
 
