@@ -122,7 +122,7 @@ await makeBasicResponderHost<ProcessorRequest>(import.meta.url, async message =>
 			// Also finalize rooms which were sent inter-room intents
 			for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
 				const room = await shard.loadRoom(roomName, time);
-				const context = new RoomProcessor(shard, world, room, time + 1);
+				const context = new RoomProcessor(shard, world, room, time);
 				await context.process(true);
 				await context.finalize(true);
 				nextRoomCache.set(roomName, room);
