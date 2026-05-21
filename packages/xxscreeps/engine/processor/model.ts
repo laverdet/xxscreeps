@@ -289,7 +289,7 @@ export function sleepRoomUntil(shard: Shard, roomName: string, time: number, wak
 		shard.scratch.zRem(activeRoomsKey, [ roomName ]),
 		// Set alarm to wake up
 		wakeTime === Infinity
-			? undefined : shard.scratch.zAdd(sleepingRoomsKey, [ [ wakeTime, roomName ] ], { if: 'NX' }),
+			? undefined : shard.scratch.zAdd(sleepingRoomsKey, [ [ wakeTime, roomName ] ], { up: 'LT' }),
 	]);
 }
 
