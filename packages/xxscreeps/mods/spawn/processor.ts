@@ -237,6 +237,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				if (!spawnPos) {
 					// No valid position — retry next tick
 					spawn.spawning['#spawnTime'] = Game.time + 1;
+					context.setActive();
 					return;
 				}
 
