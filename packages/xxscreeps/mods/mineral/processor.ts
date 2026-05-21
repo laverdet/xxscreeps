@@ -1,4 +1,4 @@
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { registerObjectTickProcessor, registerObjectWakeField } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
@@ -21,6 +21,8 @@ registerHarvestProcessor(Mineral, (creep, mineral) => {
 	extractor['#cooldownTime'] = Game.time + C.EXTRACTOR_COOLDOWN;
 	return amount;
 });
+
+registerObjectWakeField(Mineral, mineral => mineral['#nextRegenerationTime']);
 
 registerObjectTickProcessor(Mineral, (mineral, context) => {
 

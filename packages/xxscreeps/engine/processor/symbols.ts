@@ -8,6 +8,7 @@ export const intentProcessors: IntentProcessorInfo[] = [];
 export const intentProcessorGetters = new Map<string, (instance: any) => IntentProcessorInfo>();
 export const PreTick = Symbol('preTick');
 export const Tick = Symbol('tick');
+export const WakeField = Symbol('wakeField');
 
 export type RoomTickProcessor = (room: Room, context: RoomProcessor) => void;
 export const roomTickProcessors: RoomTickProcessor[] = [];

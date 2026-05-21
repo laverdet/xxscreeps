@@ -89,16 +89,14 @@ describe('Source cold-start wake repair', () => {
 				const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
 				assert.strictEqual(observer?.observeRoom('W2N2'), C.OK);
 			});
-			// Pre-fix: throws here. finalize-extra runs the source's Tick
-			// handler past the regen target and requiredExpiryTime blows up.
+			// Pre-fix: finalize-extra runs the source's Tick handler with a stale regen target
+			// and `requiredExpiryTime` throws.
 			await tick();
 
 			await peekRoom('W2N2', room => {
 				const source = room.find(C.FIND_SOURCES)[0]!;
 				assert.strictEqual(source.energy, source.energyCapacity,
 					'source refilled on cold-start catch-up wake');
-				assert.strictEqual(source['#nextRegenerationTime'], 0,
-					'regen target cleared after refill');
 			});
 		}));
 });

@@ -1,4 +1,4 @@
-import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { registerIntentProcessor, registerObjectTickProcessor, registerObjectWakeField } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
@@ -91,6 +91,8 @@ const intents = [
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { defense: typeof intents }
 }
+
+registerObjectWakeField(StructureRampart, rampart => rampart['#nextDecayTime']);
 
 registerObjectTickProcessor(StructureRampart, (rampart, context) => {
 	if (rampart.ticksToDecay === 0) {

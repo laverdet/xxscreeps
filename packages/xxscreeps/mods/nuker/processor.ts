@@ -1,4 +1,4 @@
-import { hooks, registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { hooks, registerIntentProcessor, registerObjectTickProcessor, registerObjectWakeField } from 'xxscreeps/engine/processor/index.js';
 import { invertedNumericComparator, mappedComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -57,6 +57,8 @@ const intents = [
 		context.setActive();
 	}),
 ];
+
+registerObjectWakeField(Nuke, nuke => nuke['#landTime']);
 
 registerObjectTickProcessor(Nuke, (nuke, context) => {
 	const { timeToLand } = nuke;

@@ -6,7 +6,7 @@ import type { Resource } from 'xxscreeps/mods/resource/resource.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { writeRoomObject } from 'xxscreeps/engine/db/room.js';
-import { hooks, registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { hooks, registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor, registerObjectWakeField } from 'xxscreeps/engine/processor/index.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { numericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -399,6 +399,8 @@ export function teleportCreep(creep: Creep, next: RoomPosition, context: Process
 	context.sendRoomIntent(next.roomName, 'import', typedArrayToString(importPayload));
 	context.didUpdate();
 }
+
+registerObjectWakeField(Tombstone, tombstone => tombstone['#decayTime']);
 
 registerObjectTickProcessor(Tombstone, (tombstone, context) => {
 	if (tombstone.ticksToDecay === 0) {

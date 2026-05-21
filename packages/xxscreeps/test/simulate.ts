@@ -11,7 +11,7 @@ import { importMods } from 'xxscreeps/config/mods/index.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
+import { hooks, initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
 import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
@@ -30,6 +30,7 @@ import 'xxscreeps/config/mods/import/game.js';
 await importMods('processor');
 initializeGameEnvironment();
 initializeIntentConstraints();
+const refreshRoom = hooks.makeMapped('refreshRoom');
 
 interface SimulationGlobals {
 	Game: GameConstructor;
@@ -108,6 +109,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 			await Promise.all([
 				shard.saveRoom(room.name, shard.time, room),
 				updateUserRoomRelationships(shard, room, previousUsers),
+				...refreshRoom(shard, room),
 			]);
 		}));
 

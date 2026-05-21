@@ -1,6 +1,6 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { search } from 'xxscreeps/driver/pathfinder.js';
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { registerObjectTickProcessor, registerObjectWakeField } from 'xxscreeps/engine/processor/index.js';
 import { mappedInvertedNumericComparator, mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -30,6 +30,8 @@ registerHarvestProcessor(Source, (creep, source) => {
 	return energy;
 });
 
+registerObjectWakeField(Source, source => source['#nextRegenerationTime']);
+
 registerObjectTickProcessor(Source, (source, context) => {
 
 	// Regenerate energy
@@ -49,6 +51,8 @@ registerObjectTickProcessor(Source, (source, context) => {
 		context.didUpdate();
 	}
 });
+
+registerObjectWakeField(StructureKeeperLair, keeperLair => keeperLair['#nextSpawnTime']);
 
 registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 	const keeperName = `Keeper${keeperLair.id}`;

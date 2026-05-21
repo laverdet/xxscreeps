@@ -1,9 +1,11 @@
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { registerObjectTickProcessor, registerObjectWakeField } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { StructureContainer } from '../container.js';
 import { drop } from './resource.js';
+
+registerObjectWakeField(StructureContainer, container => container['#nextDecayTime']);
 
 registerObjectTickProcessor(StructureContainer, (container, context) => {
 	if (container.ticksToDecay === 0) {

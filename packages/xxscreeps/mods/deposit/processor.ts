@@ -1,4 +1,4 @@
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { registerObjectTickProcessor, registerObjectWakeField } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { calculatePower } from 'xxscreeps/mods/creep/creep.js';
@@ -23,6 +23,8 @@ registerHarvestProcessor(Deposit, (creep, deposit) => {
 	deposit['#nextDecayTime'] = Game.time + DEPOSIT_DECAY_TIME;
 	return amount;
 });
+
+registerObjectWakeField(Deposit, deposit => deposit['#nextDecayTime']);
 
 registerObjectTickProcessor(Deposit, (deposit, context) => {
 	if (deposit.ticksToDecay === 0) {

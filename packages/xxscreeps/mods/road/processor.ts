@@ -1,7 +1,9 @@
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { registerObjectTickProcessor, registerObjectWakeField } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { StructureRoad } from './road.js';
+
+registerObjectWakeField(StructureRoad, road => road['#nextDecayTime']);
 
 registerObjectTickProcessor(StructureRoad, (road, context) => {
 	if (road.ticksToDecay === 0) {

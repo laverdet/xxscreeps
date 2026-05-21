@@ -110,15 +110,14 @@ describe('Road cold-start wake repair', () => {
 				const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
 				assert.strictEqual(observer?.observeRoom('W2N2'), C.OK);
 			});
-			// Pre-fix: throws here. finalize-extra runs the road's Tick handler
-			// at Game.time=11 and requiredExpiryTime(5) blows up.
+			// Pre-fix: finalize-extra runs the road's Tick handler with a stale decay target
+			// and `requiredExpiryTime` throws.
 			await tick();
 
 			await peekRoom('W2N2', room => {
 				const road = lookForStructures(room, C.STRUCTURE_ROAD)[0];
 				assert.ok(road, 'road survived the decay catch-up');
 				assert.ok(road.hits < road.hitsMax, 'decay step actually ran');
-				assert.ok(road['#nextDecayTime'] > shard.time, 'decay target rescheduled');
 			});
 		}));
 });

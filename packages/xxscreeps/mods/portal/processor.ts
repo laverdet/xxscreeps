@@ -1,7 +1,9 @@
-import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { registerObjectTickProcessor, registerObjectWakeField } from 'xxscreeps/engine/processor/index.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { teleportCreep } from 'xxscreeps/mods/creep/processor.js';
 import { StructurePortal } from './portal.js';
+
+registerObjectWakeField(StructurePortal, portal => portal['#decayTime']);
 
 registerObjectTickProcessor(StructurePortal, (portal, context) => {
 	if (portal.ticksToDecay === 0) {

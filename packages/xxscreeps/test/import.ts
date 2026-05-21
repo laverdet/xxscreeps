@@ -123,9 +123,8 @@ export async function instantiateTestShard() {
 		shard.scratch.flushdb(),
 	]);
 
-	// Save to fake database
-	// nb: This skips the `refreshRoom` stage. This step may need to be added later but isn't
-	// needed right now.
+	// Save to fake database. Test rooms have `refreshRoom` hooks run by `simulate.ts` after each
+	// callback runs, so we do not run them here on the raw shard fixture.
 	shard.time = 0;
 	await Promise.all([
 		shard.data.set('terrain', terrain),

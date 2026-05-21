@@ -3,7 +3,9 @@ import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { CounterExtract, Implementation, UnwrapArray } from 'xxscreeps/utility/types.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbols.js';
+import { PreTick, Tick, WakeField, intentProcessorGetters, intentProcessors } from './symbols.js';
+
+import './wake.js';
 
 export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room.js';
 export { registerRoomTickProcessor } from './room.js';
@@ -26,10 +28,12 @@ export type IntentProcessorInfo = {
 	receiver: abstract new(...args: any[]) => any;
 };
 type TickProcessor<Type = any> = (receiver: Type, context: ProcessorContext) => void;
+type WakeFieldGetter<Type = any> = (receiver: Type) => number;
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		[PreTick]?: TickProcessor;
 		[Tick]?: TickProcessor;
+		[WakeField]?: WakeFieldGetter;
 	}
 }
 
@@ -97,6 +101,12 @@ export function registerObjectTickProcessor<Type extends RoomObject>(
 	receiver: Implementation<Type>, fn: TickProcessor<Type>,
 ) {
 	receiver.prototype[Tick] = fn;
+}
+
+export function registerObjectWakeField<Type extends RoomObject>(
+	receiver: Implementation<Type>, getter: WakeFieldGetter<Type>,
+) {
+	receiver.prototype[WakeField] = getter;
 }
 
 export function initializeIntentConstraints() {
