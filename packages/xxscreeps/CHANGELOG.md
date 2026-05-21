@@ -1,5 +1,38 @@
 # xxscreeps
 
+## 0.1.0
+
+### Minor Changes
+
+- 4178109: Reorder `createConstructionSite` checks; return `NOT_OWNER` on foreign rooms and `INVALID_ARGS` on bad spawn names
+- 782525c: Reject reaction labs passed as their own reagent inputs.
+- 123a1c5: Add nuker mod with launch, flight, and impact
+
+### Patch Changes
+
+- ac31320: Drop the backend CLI sandbox and REPL, replacing eval with host-realm execution.
+- dab3531: Reorder construction creep build and repair validation precedence.
+- a7b346b: Reorder controller action validation precedence.
+- d8f2cc5: Reject indestructible structures from `Creep.dismantle` with `ERR_INVALID_TARGET` before range.
+- 6873b3c: Fix several timing issues (dead keeper rooms, ticksToLive == 0, etc)
+- c887938: Game.cpu.halt() in unsafe sandbox
+- 3dbb1fc: Align Creep.harvest validation precedence with vanilla
+- d34460f: Reorder link transferEnergy validation precedence
+- e5d6090: Fix local `zUnionStore` to apply WEIGHTS to members present in only one input set.
+- 15c7e95: Fix `Room.lookForAtArea` and `Room.lookAtArea` cell shape when `asArray` is `false`.
+- 6fdd96b: Per-group notification delivery, plain transports array, fix local zadd GT/LT and zrangeWithScores ranging.
+- f1e737e: Restore `rangedMassAttack` 3-tile radius and own/unowned target filter.
+- 5cd5760: Floor road wear-out at `Game.time` so creep stomps can't push `#nextDecayTime` into the past.
+- 1b22ba2: Match vanilla: Room.survivalInfo returns undefined instead of null.
+- 5724c76: Drop game/runtime.ts stubs that shadowed real Ruin, Deposit, StructureFactory, and StructureObserver registrations.
+- 7a97cd4: Add registerShardTickProcessor; deliver Game.notify queues
+- 32c9fdb: Memory accuracy improvements
+- a0a9beb: Defer spawn ownership checks until after argument validation.
+- b4587b0: Align `checkTransfer` precedence with vanilla: source-empty → target-full → amount-aware NOT_ENOUGH → amount-aware FULL
+- 75cbfb7: Hoist checkUnboostCreep target ownership above the active-structure gate.
+- f37a886: Hoist withdraw safe-mode validation before target and capacity checks.
+- 5d37e1b: Reorder `withdraw` validation so invalid args, safe mode, target store compatibility, and full creep capacity take precedence over missing target resources.
+
 ## 0.0.9
 
 ### Patch Changes
