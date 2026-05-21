@@ -2,10 +2,10 @@ import type { Room } from 'xxscreeps/game/room/room.js';
 import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { loadTerrain } from 'xxscreeps/driver/pathfinder.js';
-import { consumeSet } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { finalizeExtraRooms } from 'xxscreeps/engine/processor/finalize-extra.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
-import { acquireIntentsForRoom, finalizeExtraRoomsSetKey, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
+import { acquireIntentsForRoom, roomsDidFinalize, updateUserRoomRelationships } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { hooks } from 'xxscreeps/engine/processor/symbols.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -120,11 +120,7 @@ await makeBasicResponderHost<ProcessorRequest>(import.meta.url, async message =>
 			await Promise.all(Fn.map(processedRooms.values(), context => context.finalize(false)));
 			let count = processedRooms.size;
 			// Also finalize rooms which were sent inter-room intents
-			for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
-				const room = await shard.loadRoom(roomName, time);
-				const context = new RoomProcessor(shard, world, room, time + 1);
-				await context.process(true);
-				await context.finalize(true);
+			for await (const [ roomName, room ] of finalizeExtraRooms(shard, world, time, name => shard.loadRoom(name, time))) {
 				nextRoomCache.set(roomName, room);
 				++count;
 			}

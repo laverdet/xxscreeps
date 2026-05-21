@@ -8,11 +8,12 @@ import type { RawMemory } from 'xxscreeps/mods/memory/memory.js';
 import * as assert from 'node:assert';
 import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
-import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
+import { consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
+import { finalizeExtraRooms } from 'xxscreeps/engine/processor/finalize-extra.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
-import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { begetRoomProcessQueue, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
@@ -224,11 +225,10 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 
 					// Second phase
 					await Promise.all(Fn.map(contexts.values(), context => context.finalize(false)));
-					for await (const roomName of consumeSet(shard.scratch, finalizeExtraRoomsSetKey(time))) {
-						const room = roomInstances.get(roomName) ?? await shard.loadRoom(roomName);
-						const context = new RoomProcessor(shard, world, room, time);
-						await context.process(true);
-						await context.finalize(true);
+					for await (const [ roomName, room ] of finalizeExtraRooms(
+						shard, world, time,
+						async name => roomInstances.get(name) ?? await shard.loadRoom(name),
+					)) {
 						nextRoomInstances.set(roomName, room);
 					}
 
