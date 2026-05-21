@@ -479,26 +479,11 @@ describe('rangedMassAttack', () => {
 		W1N1: room => {
 			room['#level'] = 7;
 			room['#user'] = room.controller!['#user'] = '100';
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 25, 'W1N1'),
-				[ C.RANGED_ATTACK ],
-				'attacker', '101'));
-			room['#insertObject'](createCreep(
-				new RoomPosition(26, 25, 'W1N1'),
-				[ C.MOVE ],
-				'enemyR1', '100'));
-			room['#insertObject'](createCreep(
-				new RoomPosition(27, 25, 'W1N1'),
-				[ C.MOVE ],
-				'enemyR2', '100'));
-			room['#insertObject'](createCreep(
-				new RoomPosition(28, 25, 'W1N1'),
-				[ C.MOVE ],
-				'enemyR3', '100'));
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 26, 'W1N1'),
-				[ C.MOVE ],
-				'ally', '101'));
+			room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W1N1'), [ C.RANGED_ATTACK ], 'attacker', '101'));
+			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.MOVE ], 'enemyR1', '100'));
+			room['#insertObject'](createCreep(new RoomPosition(27, 25, 'W1N1'), [ C.MOVE ], 'enemyR2', '100'));
+			room['#insertObject'](createCreep(new RoomPosition(28, 25, 'W1N1'), [ C.MOVE ], 'enemyR3', '100'));
+			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'ally', '101'));
 			room['#insertObject'](createContainer(new RoomPosition(24, 25, 'W1N1')));
 			room['#insertObject'](createLab(new RoomPosition(25, 24, 'W1N1'), '100'));
 		},
