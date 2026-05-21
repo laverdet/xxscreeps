@@ -1,7 +1,10 @@
+import * as C from 'xxscreeps/game/constants/index.js';
 import { LOOK_TERRAIN } from 'xxscreeps/game/constants/find.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { create as createObserver } from 'xxscreeps/mods/observer/observer.js';
 import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { LOOK_STRUCTURES } from 'xxscreeps/mods/structure/constants.js';
+import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create } from './road.js';
 
@@ -75,4 +78,47 @@ describe('Room.lookAtArea', () => {
 			assert.strictEqual('y' in entry, false);
 		}
 	})));
+});
+
+describe('Road cold-start wake repair', () => {
+	const dormantRoad = simulate({
+		W1N1: room => {
+			room['#insertObject'](createObserver(new RoomPosition(25, 25, 'W1N1'), '100'));
+			room['#level'] = 8;
+			room['#user'] = '100';
+			room.controller!['#user'] = '100';
+		},
+		W2N2: room => {
+			const road = create(new RoomPosition(25, 25, 'W2N2'));
+			road['#nextDecayTime'] = 5;
+			room['#insertObject'](road);
+		},
+	});
+
+	test('dormant road survives inter-room intent past its decay target', () =>
+		dormantRoad(async ({ peekRoom, player, shard, tick }) => {
+			const startTime = shard.time;
+			await shard.copyRoomFromPreviousTick('W2N2', startTime + 1);
+
+			// Drift past #nextDecayTime. W2N2 has no players, so without
+			// cold-start wake repair it stays out of every tracking set and the
+			// decay target rots in the saved blob.
+			await tick(10);
+			assert.strictEqual(shard.time, startTime + 10);
+
+			await player('100', Game => {
+				const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
+				assert.strictEqual(observer?.observeRoom('W2N2'), C.OK);
+			});
+			// Pre-fix: throws here. finalize-extra runs the road's Tick handler
+			// at Game.time=11 and requiredExpiryTime(5) blows up.
+			await tick();
+
+			await peekRoom('W2N2', room => {
+				const road = lookForStructures(room, C.STRUCTURE_ROAD)[0];
+				assert.ok(road, 'road survived the decay catch-up');
+				assert.ok(road.hits < road.hitsMax, 'decay step actually ran');
+				assert.ok(road['#nextDecayTime'] > shard.time, 'decay target rescheduled');
+			});
+		}));
 });
