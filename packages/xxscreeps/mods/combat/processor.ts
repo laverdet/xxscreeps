@@ -71,12 +71,12 @@ const intents = [
 	}, (creep, context) => {
 		if (checkRangedMassAttack(creep) === C.OK) {
 			const basePower = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER, 'rangedMassAttack');
-			for (const pos of positionsInRangeTo(creep.pos, 2)) {
+			for (const pos of positionsInRangeTo(creep.pos, 3)) {
 				const power = basePower * (kRangedMassAttackPower[creep.pos.getRangeTo(pos)] ?? 0);
 				const objects = Fn.pipe(
 					creep.room['#lookAt'](pos),
 					$$ => Fn.reject($$, object =>
-						object['#layer'] === undefined || object.hits === undefined),
+						object['#layer'] === undefined || object.hits === undefined || object.my !== false),
 					$$ => [ ...$$ ],
 					$$ => $$.sort(mappedComparator(invertedNumericComparator, object => object['#layer']!)));
 				walkLayers(objects, power, (object, layerPower) => {
