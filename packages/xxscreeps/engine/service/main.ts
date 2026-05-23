@@ -1,4 +1,5 @@
 import config from 'xxscreeps/config/index.js';
+import { importMods } from 'xxscreeps/config/mods/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel } from 'xxscreeps/engine/processor/model.js';
@@ -10,8 +11,10 @@ import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
 import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { tickSpeed, watch } from './tick.js';
 import { checkIsEntry, getServiceChannel } from './index.js';
+import { hooks } from './symbols.js';
 
 checkIsEntry();
+await importMods('service');
 
 using db = await Database.connect();
 using shard = await Shard.connect(db, config.shards[0]!.name);
@@ -36,6 +39,10 @@ await watch(() => {
 	console.log(`Tick speed changed to ${tickSpeed}ms`);
 	tickDelay?.(true);
 });
+
+// Hook invocators (handlers are locked in at first call, after importMods above)
+const invokeServiceInitialized = hooks.makeMapped('serviceInitialized');
+const invokeAfterTick = hooks.makeMapped('afterTick');
 
 // Bookkeeping
 const performanceTimer = new AveragingTimer(100);
@@ -126,6 +133,14 @@ async function tick() {
 
 // Main loop
 if (didInitialize) {
+	// Notify mods that the service is ready; collect and register cleanup effects
+	const effects = await Promise.all([ ...invokeServiceInitialized(shard) ]);
+	for (const effect of effects) {
+		if (effect) {
+			disposable.defer(effect);
+		}
+	}
+
 	// Watch for shutdown and halt tick delay
 	disposable.defer(serviceChannel.listen(message => {
 		if (message.type === 'shutdown') {
@@ -144,6 +159,8 @@ if (didInitialize) {
 		const timeTaken = now - tickWallTime;
 		const averageTime = Math.floor(performanceTimer.stop() / 10000) / 100;
 		console.log(`Tick ${shard.time} ran in ${timeTaken}ms; avg: ${averageTime}ms`);
+
+		mustNotReject(Promise.all([ ...invokeAfterTick({ shard, timeTaken, averageTime }) ]));
 
 		// Maybe save
 		if (lastSave + saveInterval < now) {

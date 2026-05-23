@@ -8,7 +8,7 @@ import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
 import { configDefaults } from 'xxscreeps/config/config.js';
 import config from 'xxscreeps/config/raw.js';
 
-type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'processor' | 'storage' | 'test';
+type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'processor' | 'service' | 'storage' | 'test';
 export type Manifest = {
 	dependencies?: string[];
 	provides: Provide | Provide[] | null;
