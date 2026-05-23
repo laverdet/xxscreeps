@@ -101,13 +101,9 @@ export class RoomProcessor implements ProcessorContext {
 
 			// Pre-intent processor
 			const objects = this.room['#objects'];
-			{
-				const { length } = objects;
-				for (let ii = 0; ii < length; ++ii) {
-					// Iterated manually to avoid including newly-pushed `now` objects
-					const object = objects[ii]!;
-					object[PreTick]?.(object, this);
-				}
+			// Snapshot to skip newly-pushed `now` objects and tolerate mid-loop `#flushObjects`.
+			for (const object of objects.slice()) {
+				object[PreTick]?.(object, this);
 			}
 			this.room['#flushObjects'](this.state);
 
@@ -165,13 +161,8 @@ export class RoomProcessor implements ProcessorContext {
 
 			// Post-intent processor
 			Movement.dispatch(this.room);
-			{
-				const { length } = objects;
-				for (let ii = 0; ii < length; ++ii) {
-					// Iterated manually to avoid including newly-pushed `now` objects
-					const object = objects[ii]!;
-					object[Tick]?.(object, this);
-				}
+			for (const object of objects.slice()) {
+				object[Tick]?.(object, this);
 			}
 			this.room['#flushObjects'](this.state);
 		});
