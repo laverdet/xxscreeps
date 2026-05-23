@@ -204,7 +204,7 @@ function register(paths: string[], fn: (shard: Shard, map: GameMap, room: string
 
 // Full thumbnail
 register([ '/assets/map/:room.png', '/assets/map/:shard/:room.png' ], async (shard, map, roomName) => {
-	if (map.getRoomStatus(roomName)) {
+	if (map.hasRoom(roomName)) {
 		return generate(map, [ [ await shard.loadRoom(roomName) ] ], 3);
 	} else {
 		return null;
@@ -224,7 +224,7 @@ for (const [ fragment, grid, align, zoom ] of [ [ 'zoom1', 10, 2, 0.4 ], [ 'zoom
 						Fn.range(left, left + grid),
 						async xx => {
 							const roomName = generateRoomName(xx, yy);
-							const room = map.getRoomStatus(roomName) ? await shard.loadRoom(roomName) : null;
+							const room = map.hasRoom(roomName) ? await shard.loadRoom(roomName) : null;
 							didFindRoom ||= room !== null;
 							return room;
 						}),

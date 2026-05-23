@@ -36,10 +36,10 @@ type FindRoute = {
 	routeCallback?: (roomName: string, fromRoomName: string) => number;
 };
 
-type RoomStatus = RoomOutOfBorders | NormalRoom;
+type RoomStatus = ClosedRoom | NormalRoom;
 
-interface RoomOutOfBorders {
-	status: 'out of borders';
+interface ClosedRoom {
+	status: 'closed';
 	timestamp: number | null;
 }
 
@@ -230,14 +230,24 @@ export class GameMap {
 	 */
 	getRoomStatus(roomName: string): RoomStatus;
 	getRoomStatus(roomName: string): RoomStatus | undefined {
-		if (!this.#terrain.has(roomName)) {
+		if (!/^[WE]\d+[NS]\d+$/.test(roomName)) {
 			return;
+		}
+		if (!this.#terrain.has(roomName)) {
+			return { status: 'closed', timestamp: null };
 		}
 		// Callers without the active-rooms set (sandbox init, processor worker) see every terrain-backed room as `normal`.
 		if (this.#accessibleRooms !== undefined && !this.#accessibleRooms.has(roomName)) {
-			return { status: 'out of borders', timestamp: null };
+			return { status: 'closed', timestamp: null };
 		}
 		return { status: 'normal', timestamp: null };
+	}
+
+	/**
+	 * Returns true if `roomName` refers to a terrain-backed room known to this world.
+	 */
+	hasRoom(roomName: string) {
+		return this.#terrain.has(roomName);
 	}
 
 	/**

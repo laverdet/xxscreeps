@@ -31,7 +31,7 @@ export const MapStatsEndpoint: Endpoint = {
 		const userIds = new Set<string>();
 		const stats = Fn.fromEntries(Fn.filter(await Promise.all(Fn.map(roomNames, async roomName => {
 			// The client spams requests for rooms that don't exist
-			if (!context.backend.world.map.getRoomStatus(roomName)) {
+			if (!context.backend.world.map.hasRoom(roomName)) {
 				return;
 			}
 

@@ -20,7 +20,7 @@ hooks.register('route', {
 		const { map } = context.backend.world;
 		if (userId) {
 			const lastRoom = await context.db.data.hGet(User.infoKey(userId), 'lastViewedRoom');
-			if (lastRoom !== null && map.getRoomStatus(lastRoom)) {
+			if (lastRoom !== null && map.hasRoom(lastRoom)) {
 				return {
 					ok: 1,
 					room: [ lastRoom ],

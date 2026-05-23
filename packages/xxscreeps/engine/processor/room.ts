@@ -261,7 +261,7 @@ export class RoomProcessor implements ProcessorContext {
 	}
 
 	sendRoomIntent(roomName: string, intent: string, ...args: any[]) {
-		if (this.state.world.map.getRoomStatus(roomName)) {
+		if (this.state.world.map.hasRoom(roomName)) {
 			getOrSet(this.interRoomIntents, roomName, () => []).push({ intent, args });
 		}
 	}
