@@ -3,6 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
+import { create as createRoad } from 'xxscreeps/mods/road/road.js';
 import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
@@ -232,6 +233,33 @@ describe('Construction', () => {
 			);
 		});
 	}));
+
+	describe('stacking against on-tile structures', () => {
+		const overStructure = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room['#insertObject'](createContainer(new RoomPosition(25, 25, 'W1N1')));
+				room['#insertObject'](createSpawn(new RoomPosition(26, 25, 'W1N1'), '100', 'Spawn1'));
+				room['#insertObject'](createRoad(new RoomPosition(27, 25, 'W1N1')));
+			},
+		});
+
+		test('non-road, non-rampart pair on the same tile is rejected', () => overStructure(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', 'Spawn2'), C.ERR_INVALID_TARGET);
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(26, 25, 'container'), C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		test('road or rampart on either side allows stacking', () => overStructure(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(26, 25, 'rampart'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(27, 25, 'container'), C.OK);
+			});
+		}));
+	});
 
 	test('create site on ruin with same structure type', () => {
 		const ruin = simulate({

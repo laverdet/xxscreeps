@@ -5,6 +5,8 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 
 export type ConstructionTraits = {
 	obstacle: boolean | undefined;
+	// May share a tile with other buildable structures (road, rampart).
+	stackable?: boolean;
 	checkName?: (room: Room, name?: string | null) => string | undefined | null;
 	checkPlacement: (room: Room, pos: RoomPosition) => number | null;
 	create: (constructionSite: ConstructionSite, name?: string) => RoomObject;

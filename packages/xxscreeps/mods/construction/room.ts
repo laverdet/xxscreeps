@@ -1,8 +1,7 @@
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Game, hooks, intents, me, userGame } from 'xxscreeps/game/index.js';
-import { makeObstacleChecker } from 'xxscreeps/game/pathfinder/obstacle.js';
+import { hooks, intents, userGame } from 'xxscreeps/game/index.js';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
@@ -121,22 +120,22 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		return C.ERR_INVALID_TARGET;
 	}
 
-	// No structures on top of others
-	const { obstacle } = factory;
-	const obstacleChecker = makeObstacleChecker({
-		checkTerrain: false,
-		ignoreCreeps: true,
-		room,
-		user: me,
-	});
+	// No structures on top of others. A stackable structure (road, rampart) may
+	// share a tile with any other buildable structure; every other buildable pair
+	// on the same tile is rejected.
 	for (const object of room['#lookAt'](pos)) {
 		asUnion(object);
-		if (
-			object['#lookType'] === C.LOOK_CONSTRUCTION_SITES ||
-			(object instanceof Structure && object.structureType === structureType) ||
-			(obstacle && obstacleChecker(object))
-		) {
+		if (object['#lookType'] === C.LOOK_CONSTRUCTION_SITES) {
 			return C.ERR_INVALID_TARGET;
+		}
+		if (object instanceof Structure) {
+			if (object.structureType === structureType) {
+				return C.ERR_INVALID_TARGET;
+			}
+			const existing = structureFactories.get(object.structureType);
+			if (existing && !factory.stackable && !existing.stackable) {
+				return C.ERR_INVALID_TARGET;
+			}
 		}
 	}
 
