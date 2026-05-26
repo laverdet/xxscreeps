@@ -2,4 +2,4 @@
 "xxscreeps": patch
 ---
 
-Snapshot Tick/PreTick loops in the room processor to tolerate mid-loop `#flushObjects`.
+Fix processor crash when a controller downgrades on the same tick as a queued object removal.

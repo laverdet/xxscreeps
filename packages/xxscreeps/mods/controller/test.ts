@@ -3,6 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create } from 'xxscreeps/mods/creep/creep.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
+import { StructureExtension, create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { StructureController } from './controller.js';
 
@@ -316,5 +317,58 @@ describe('Controller', () => {
 				assert.strictEqual(event.data.energySpent, C.UPGRADE_CONTROLLER_POWER);
 			});
 		}));
+	});
+
+	describe('room status side effects', () => {
+
+		const reserveNeutral = simulate({
+			W3N3: room => {
+				room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
+			},
+		});
+
+		test('reserveController updates source.energyCapacity via #roomStatusDidChange',
+			() => reserveNeutral(async ({ peekRoom, player, tick }) => {
+				await peekRoom('W3N3', room => {
+					const source = room.find(C.FIND_SOURCES)[0];
+					assert.ok(source, 'source should exist');
+					assert.strictEqual(source.energyCapacity, C.SOURCE_ENERGY_NEUTRAL_CAPACITY);
+				});
+				await player('100', Game => {
+					assert.strictEqual(Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!), C.OK);
+				});
+				await tick();
+				await peekRoom('W3N3', room => {
+					const source = room.find(C.FIND_SOURCES)[0]!;
+					assert.strictEqual(source.energyCapacity, C.SOURCE_ENERGY_CAPACITY);
+				});
+			}));
+
+		const downgradeWithExtension = simulate({
+			W3N3: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+				room.controller!['#downgradeTime'] = 1;
+				room['#insertObject'](createExtension(new RoomPosition(32, 32, 'W3N3'), 8, '100'));
+			},
+		});
+
+		test('downgrade updates extension.energyCapacity via #roomStatusDidChange',
+			() => downgradeWithExtension(async ({ peekRoom, tick }) => {
+				await peekRoom('W3N3', room => {
+					const ext = room.find(C.FIND_STRUCTURES)
+						.find((s): s is StructureExtension => s instanceof StructureExtension);
+					assert.ok(ext, 'extension should exist');
+					assert.strictEqual(ext.energyCapacity, C.EXTENSION_ENERGY_CAPACITY[8]);
+				});
+				await tick();
+				await peekRoom('W3N3', room => {
+					assert.strictEqual(room.controller!.level, 7);
+					const ext = room.find(C.FIND_STRUCTURES)
+						.find((s): s is StructureExtension => s instanceof StructureExtension);
+					assert.ok(ext, 'extension should still exist');
+					assert.strictEqual(ext.energyCapacity, C.EXTENSION_ENERGY_CAPACITY[7]);
+				});
+			}));
 	});
 });
