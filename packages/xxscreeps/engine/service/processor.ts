@@ -1,4 +1,5 @@
 import type { ProcessorRequest } from 'xxscreeps/engine/processor/worker.js';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import config from 'xxscreeps/config/index.js';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
@@ -15,10 +16,16 @@ const log = config.processor.log ?? isEntry
 	? (message: string) => process.stderr.write(message)
 	: () => {};
 
-// Interrupt handler. Don't break the message loop on SIGINT — main exits the processor via a `shutdown` publish on the processor channel.
+// Interrupt handler. Standalone-only self-halt: under the launcher, main owns shutdown via the
+// processor channel, and breaking iterators here races its next-tick `process` publish.
+let halt: Effect | undefined;
 let halted = false as boolean;
+let processing = false;
 using _signal = handleInterruptSignal(() => {
 	halted = true;
+	if (isEntry && !processing) {
+		halt?.();
+	}
 });
 
 // Connect to main & storage
@@ -102,7 +109,7 @@ await Promise.all([
 	getServiceChannel(shard).publish({ type: 'processorInitialized' }),
 	async function() {
 		const messages = processorSubscription.iterable();
-		for await (const message of messages) {
+		for await (const message of Async.breakable(messages, breaker => halt = breaker)) {
 			if (message.type === 'shutdown' || halted) {
 				throw new Error('Processor initialization failure');
 			} else if (message.type === 'process') {
@@ -114,13 +121,14 @@ await Promise.all([
 ]);
 
 // Process messages
-loop: for await (const message of processorMessages) {
+loop: for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
 	switch (message.type) {
 		case 'shutdown':
 			break loop;
 
 		case 'process': {
 			const { time, roomNames } = message;
+			processing = true;
 
 			// Update checkAffinity flag on workers
 			let activations = function() {
@@ -170,6 +178,7 @@ loop: for await (const message of processorMessages) {
 					await worker.responder({ type: 'finalize', time });
 				}
 			}));
+			processing = false;
 			if (halted) {
 				// We check for interrupts at the end of tick
 				break loop;
