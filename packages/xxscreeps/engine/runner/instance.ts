@@ -217,6 +217,10 @@ export class PlayerInstance {
 				return await this.sandbox.run(payload as TickPayload);
 			} catch (err: any) {
 				console.error(err.stack);
+				// Force a sandbox reset on the next tick; without this the broken
+				// sandbox stays alive one extra tick (returning 'disposed') before
+				// the normal stale path fires.
+				this.stale = true;
 			}
 		})();
 

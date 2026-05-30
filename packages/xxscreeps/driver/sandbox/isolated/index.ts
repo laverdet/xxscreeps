@@ -132,7 +132,10 @@ export class IsolatedSandbox implements Sandbox {
 		} catch (err: any) {
 			if (err.message === 'Script execution timed out.') {
 				return { result: 'timedOut', stack: err.stack };
-			} else if (err.message === 'Isolate is disposed') {
+			} else if (err.message === 'Isolate is disposed' || err.message?.startsWith('Isolate was disposed')) {
+				// 'Isolate was disposed during execution' (external dispose or OOM) must be caught
+				// here so it never propagates to callers wrapping sandbox.run (e.g. prometheus),
+				// which would leave the error unhandled and keep the broken sandbox alive.
 				return { result: 'disposed' };
 			}
 			throw err;
