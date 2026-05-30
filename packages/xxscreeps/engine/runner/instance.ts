@@ -131,6 +131,7 @@ export class PlayerInstance {
 		this.channel.disconnect();
 		this.codeChannel.disconnect();
 		this.sandbox?.dispose();
+		this.sandbox = undefined;
 		this.cleanup();
 	}
 

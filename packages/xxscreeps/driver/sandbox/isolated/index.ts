@@ -24,9 +24,9 @@ const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sa
 }));
 
 export class IsolatedSandbox implements Sandbox {
-	private tick?: ivm.Reference<Runtime['tick']>;
+	private tick?: ivm.Reference<Runtime['tick']> | undefined;
 	private totalTime = 0n;
-	private readonly isolate;
+	private isolate: ivm.Isolate;
 
 	constructor(data: InitializationPayload) {
 		// Initialize isolate and context
@@ -83,9 +83,12 @@ export class IsolatedSandbox implements Sandbox {
 	}
 
 	dispose() {
+		this.tick?.release();
+		this.tick = undefined;
 		try {
 			this.isolate.dispose();
 		} catch {}
+		this.isolate = undefined as unknown as ivm.Isolate;
 	}
 
 	async run(args: TickPayload): Promise<TickCompletion> {
