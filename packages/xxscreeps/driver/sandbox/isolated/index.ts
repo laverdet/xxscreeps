@@ -26,7 +26,7 @@ const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sa
 export class IsolatedSandbox implements Sandbox {
 	private tick?: ivm.Reference<Runtime['tick']> | undefined;
 	private totalTime = 0n;
-	private isolate: ivm.Isolate;
+	private isolate?: ivm.Isolate | undefined;
 
 	constructor(data: InitializationPayload) {
 		// Initialize isolate and context
@@ -38,6 +38,9 @@ export class IsolatedSandbox implements Sandbox {
 
 	async initialize(data: InitializationPayload) {
 		const { isolate } = this;
+		if (!isolate) {
+			throw new Error('Isolate is disposed');
+		}
 		const context = await isolate.createContext({ inspector: useInspector });
 
 		// Set up required globals
@@ -66,19 +69,32 @@ export class IsolatedSandbox implements Sandbox {
 		]);
 
 		// Initialize runtime.ts and load player code + memory
-		const runtime: ivm.Reference<Runtime> = await script.run(context, { reference: true });
-		const [ initialize, tick ] = await Promise.all([
-			runtime.get('initialize', { accessors: true, reference: true }),
-			runtime.get('tick', { accessors: true, reference: true }),
-			context.global.delete('@xxscreeps/pathfinder'),
-			context.global.delete('ivm'),
-			context.global.delete('nodeUtilImport'),
-		]);
-		this.tick = tick;
-		await initialize.apply(undefined, [ isolate, context, data ], { arguments: { copy: true } });
+		let runtime: ivm.Reference<Runtime> | undefined;
+		let initialize: ivm.Reference<Runtime['initialize']> | undefined;
+		let tick: ivm.Reference<Runtime['tick']> | undefined;
+		try {
+			runtime = await script.run(context, { reference: true });
+			initialize = await runtime.get('initialize', { accessors: true, reference: true });
+			tick = await runtime.get('tick', { accessors: true, reference: true });
+			await Promise.all([
+				context.global.delete('@xxscreeps/pathfinder'),
+				context.global.delete('ivm'),
+				context.global.delete('nodeUtilImport'),
+			]);
+			this.tick = tick;
+			tick = undefined;
+			await initialize.apply(undefined, [ isolate, context, data ], { arguments: { copy: true } });
+		} finally {
+			tick?.release();
+			initialize?.release();
+			runtime?.release();
+		}
 	}
 
 	createInspectorSession() {
+		if (!this.isolate) {
+			throw new Error('Isolate is disposed');
+		}
 		return this.isolate.createInspectorSession();
 	}
 
@@ -86,20 +102,23 @@ export class IsolatedSandbox implements Sandbox {
 		this.tick?.release();
 		this.tick = undefined;
 		try {
-			this.isolate.dispose();
+			this.isolate?.dispose();
 		} catch {}
-		this.isolate = undefined as unknown as ivm.Isolate;
+		this.isolate = undefined;
 	}
 
 	async run(args: TickPayload): Promise<TickCompletion> {
+		if (!this.tick || !this.isolate) {
+			return { result: 'disposed' };
+		}
 		try {
-			const completion = await this.tick!.apply(
+			const completion = await this.tick.apply(
 				undefined,
 				[ args ], {
 					arguments: { copy: true },
 					result: { copy: true },
 					timeout: args.cpu.tickLimit,
-				});
+			});
 			if (completion.result === 'success') {
 				const totalTime = this.isolate.cpuTime;
 				completion.payload.usage.cpu = Number(totalTime - this.totalTime) / 1e6;
