@@ -16,9 +16,7 @@ struct room_location_t {
 				xx{static_cast<std::uint8_t>(pos.xx / 50U)},
 				yy{static_cast<std::uint8_t>(pos.yy / 50U)} {}
 
-		auto operator==(room_location_t right) const -> bool {
-			return flatten(*this) == flatten(right);
-		}
+		auto operator==(const room_location_t& right) const -> bool = default;
 
 		auto operator<(room_location_t right) const -> bool {
 			return flatten(*this) < flatten(right);

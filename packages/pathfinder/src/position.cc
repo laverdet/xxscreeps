@@ -1,15 +1,41 @@
 module;
 #include "nan.h"
+#include <cstdint>
+#include <limits>
 export module screeps:position;
-import std;
 import :utility;
+import auto_js;
+import std;
+import util;
+import v8_js;
 
 namespace screeps {
+
+// Format matching the packed layout of `RoomPosition` in JS.
+struct packed_position {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+		packed_position(std::uint8_t rx, std::uint8_t ry, std::uint8_t xx, std::uint8_t yy) : rx{rx}, ry{ry}, xx{xx}, yy{yy} {}
+		std::uint8_t rx;
+		std::uint8_t ry;
+		std::uint8_t xx;
+		std::uint8_t yy;
+#elif __BYTE_ORDER == __BIG_ENDIAN
+		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+		packed_position(std::uint8_t rx, std::uint8_t ry, std::uint8_t xx, std::uint8_t yy) : yy{yy}, xx{xx}, ry{ry}, rx{rx} {}
+		std::uint8_t yy;
+		std::uint8_t xx;
+		std::uint8_t ry;
+		std::uint8_t rx;
+#else
+#error "Unsupported endianness"
+#endif
+};
 
 //
 // Similar to a RoomPosition object, but stores coordinates in a continuous global plane.
 // Conversions to/from this coordinate plane are handled on the JS side
-struct world_position_t {
+export struct world_position_t {
 		int xx, yy; // maximum: world_size[255] * 50 (32 bits tested faster than uint16_t)
 
 		enum direction_t { TOP,
@@ -22,41 +48,55 @@ struct world_position_t {
 											 TOP_LEFT };
 
 		world_position_t() = default;
+		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 		world_position_t(int xx, int yy) : xx{xx}, yy{yy} {}
-		explicit world_position_t(v8::Local<v8::Value> pos) {
-			auto value = Nan::To<std::int32_t>(pos.As<v8::Number>()).FromJust();
-			xx = ((value >> 16) & 0xff) + (value & 0xff) * 50;
-			yy = ((value >> 24) & 0xff) + ((value >> 8) & 0xff) * 50;
-		}
+
+		explicit world_position_t(v8::Local<v8::Value> pos) :
+				world_position_t{std::bit_cast<packed_position>(Nan::To<std::int32_t>(pos.As<v8::Number>()).FromJust())} {}
 
 		explicit operator v8::Local<v8::Value>() {
-			return Nan::New((yy % 50) << 24 | (xx % 50) << 16 | (yy / 50) << 8 | xx / 50);
+			return Nan::New(std::bit_cast<std::int32_t>(packed_position{*this}));
+		}
+
+		explicit world_position_t(packed_position pos) :
+				xx{pos.xx + (pos.rx * 50)},
+				yy{pos.yy + (pos.ry * 50)} {}
+
+		explicit operator packed_position() const {
+			return packed_position{
+				static_cast<std::uint8_t>(xx / 50),
+				static_cast<std::uint8_t>(yy / 50),
+				static_cast<std::uint8_t>(xx % 50),
+				static_cast<std::uint8_t>(yy % 50),
+			};
 		}
 
 		static auto null() -> world_position_t {
-			return unflatten<world_position_t>(0U);
+			return world_position_t{std::numeric_limits<int>::min(), std::numeric_limits<int>::max()};
 		}
 
 		friend auto operator<<(std::ostream& os, const world_position_t& that) -> std::ostream& {
-			int xx = static_cast<int>(that.xx / 50);
-			int yy = static_cast<int>(that.yy / 50);
-			bool w = xx <= 127;
-			bool n = yy <= 127;
+			auto rx = (that.xx / 50) - 0x80;
+			auto ry = (that.yy / 50) - 0x80;
+			bool ww = rx < 0;
+			bool nn = ry < 0;
 			os << "world_position_t(["
-				 << (w ? 'W' : 'E')
-				 << (w ? 127 - xx : xx - 128)
-				 << (n ? 'N' : 'S')
-				 << (n ? 127 - yy : yy - 128)
-				 << "] " << that.xx % 50 << ", " << that.yy % 50 << ")";
+				 << (ww ? 'W' : 'E')
+				 << (ww ? -1 - rx : rx)
+				 << (nn ? 'N' : 'S')
+				 << (nn ? -1 - ry : ry)
+				 << "] "
+				 << that.xx % 50
+				 << ", "
+				 << that.yy % 50
+				 << ")";
 			return os;
 		}
 
-		auto operator!=(world_position_t right) const -> bool {
-			return flatten(*this) != flatten(right);
-		}
+		auto operator==(const world_position_t& right) const -> bool = default;
 
 		auto is_null() const -> bool {
-			return flatten(*this) == 0;
+			return *this == null();
 		}
 
 		auto position_in_direction(direction_t dir) const -> world_position_t {
@@ -116,3 +156,27 @@ struct world_position_t {
 };
 
 }; // namespace screeps
+
+namespace js {
+using namespace screeps;
+
+template <>
+struct visit<void, world_position_t> {
+		template <class Accept>
+		constexpr auto operator()(world_position_t subject, const Accept& accept) const -> accept_target_t<Accept> {
+			return accept(number_tag_of<std::int32_t>{}, *this, std::bit_cast<std::int32_t>(packed_position{subject}));
+		}
+
+		consteval static auto types(auto /*recursive*/) { return util::type_pack{}; }
+};
+
+template <>
+struct accept<void, world_position_t> {
+		constexpr auto operator()(number_tag /*tag*/, visit_holder /*visit*/, std::int32_t subject) const -> world_position_t {
+			return world_position_t{std::bit_cast<packed_position>(subject)};
+		}
+
+		consteval static auto types(auto /*recursive*/) { return util::type_pack{}; }
+};
+
+} // namespace js

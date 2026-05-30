@@ -6,11 +6,12 @@ import type { Adapter } from 'xxscreeps/utility/astar.js';
 import { build } from 'xxscreeps/engine/schema/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
 import * as C from './constants/index.js';
 import { getDirection } from './direction.js';
-import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from './position.js';
+import { RoomPosition, getOffsetsFromDirection } from './position.js';
 import * as Terrain from './terrain.js';
 
 // Schema
@@ -81,7 +82,7 @@ export class GameMap {
 	}
 
 	'#getCenterRoom'() {
-		return generateRoomName(this.#left + Math.floor(this.#width / 2), this.#top + Math.floor(this.#height / 2));
+		return makeRoomName(this.#left + Math.floor(this.#width / 2), this.#top + Math.floor(this.#height / 2));
 	}
 
 	/**
@@ -97,7 +98,7 @@ export class GameMap {
 				$$ => Fn.reject($$, direction => (info.exits & (2 ** ((direction - 1) >>> 1))) === 0),
 				$$ => Fn.map($$, direction => {
 					const offsets = getOffsetsFromDirection(direction);
-					return [ direction, generateRoomName(room.rx + offsets.dx, room.ry + offsets.dy) ] as const;
+					return [ direction, makeRoomName(room.rx + offsets.dx, room.ry + offsets.dy) ] as const;
 				}),
 				$$ => Fn.fromEntries($$));
 		}
@@ -178,12 +179,12 @@ export class GameMap {
 			[ origin ],
 			pos => Math.abs(destination.rx - pos.rx) + Math.abs(destination.ry - pos.ry),
 			routeCallback
-				? (to, from) => routeCallback(generateRoomName(to.rx, to.ry), generateRoomName(from.rx, from.ry)) :
+				? (to, from) => routeCallback(makeRoomName(to.rx, to.ry), makeRoomName(from.rx, from.ry)) :
 				() => 1,
 			// describeExits is typed `null as never` for player-facing ergonomics but
 			// can genuinely return null at runtime; `Object.values(null)` would throw.
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			pos => Fn.map(Object.values(this.describeExits(generateRoomName(pos.rx, pos.ry)) ?? {}), parseRoomName));
+			pos => Fn.map(Object.values(this.describeExits(makeRoomName(pos.rx, pos.ry)) ?? {}), parseRoomName));
 		if (route) {
 			return Fn.pipe(
 				route,
@@ -191,7 +192,7 @@ export class GameMap {
 				$$ => Fn.shift($$).rest ?? [],
 				$$ => Fn.map($$, ([ prev, next ]) => ({
 					exit: getDirection(next.rx - prev.rx, next.ry - prev.ry) as ExitType,
-					room: generateRoomName(next.rx, next.ry),
+					room: makeRoomName(next.rx, next.ry),
 				})),
 				$$ => [ ...$$ ]);
 		} else {

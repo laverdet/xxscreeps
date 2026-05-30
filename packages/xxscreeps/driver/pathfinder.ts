@@ -2,7 +2,8 @@ import type { World } from 'xxscreeps/game/map.js';
 import type { Goal, SearchOptions } from 'xxscreeps/game/pathfinder/index.js';
 import type { OneOrMany } from 'xxscreeps/utility/types.js';
 import pf from '@xxscreeps/pathfinder';
-import { RoomPosition, generateRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/position.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { makeRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/room/name.js';
 import { getBuffer } from 'xxscreeps/game/terrain.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
 
@@ -51,7 +52,7 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 	// Setup room callback
 	const { roomCallback } = options;
 	const callback = roomCallback === undefined ? undefined : (roomId: number) => {
-		const ret = roomCallback(generateRoomNameFromId(roomId));
+		const ret = roomCallback(makeRoomNameFromId(roomId));
 		if (ret === false) {
 			return ret;
 		} else if (ret) {

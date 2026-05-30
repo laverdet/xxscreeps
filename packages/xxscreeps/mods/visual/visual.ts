@@ -1,7 +1,7 @@
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { build } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
+import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { WithShapeAndType } from 'xxscreeps/schema/format.js';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
@@ -107,10 +107,10 @@ function encodeRoomPosition(pos: RoomPoint) {
 }
 
 export function decodeRoomPosition(coord: { x: number; y: number }) {
-	const rx = Math.trunc(coord.x);
-	const ry = Math.trunc(coord.y);
+	const rx = Math.floor(coord.x);
+	const ry = Math.floor(coord.y);
 	return {
-		n: generateRoomName(rx, ry),
+		n: makeRoomName(rx, ry),
 		x: Math.round((coord.x - rx) * 50),
 		y: Math.round((coord.y - ry) * 50),
 	};
