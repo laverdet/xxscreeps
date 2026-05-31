@@ -1,7 +1,37 @@
 export module screeps:utility;
 import std;
+import util;
 
 namespace screeps {
+
+// Convert a contiguous 'enum class' into an iterator
+template <class Enum>
+struct contiguous_enum_iterator : public util::random_access_iterator_facade<int, unsigned> {
+	public:
+		using util::random_access_iterator_facade<int, unsigned>::operator+;
+		using iterator = contiguous_enum_iterator;
+		using size_type = std::underlying_type_t<Enum>;
+		using value_type = Enum;
+		contiguous_enum_iterator() = default;
+		explicit constexpr contiguous_enum_iterator(Enum value) : value_{value} {};
+
+		constexpr auto operator*() const -> value_type { return value_; }
+		constexpr auto operator+=(difference_type offset) -> iterator& {
+			value_ = static_cast<Enum>(static_cast<size_type>(value_) + offset);
+			return *this;
+		}
+		constexpr auto operator==(const iterator& right) const -> bool { return value_ == right.value_; }
+		constexpr auto operator<=>(const iterator& right) const -> std::strong_ordering { return value_ <=> right.value_; }
+
+	private:
+		constexpr auto operator+() const -> size_type { return static_cast<size_type>(value_); }
+		Enum value_;
+};
+
+export template <class Enum>
+auto contiguous_enum_range(Enum min, Enum max) {
+	return std::ranges::subrange(contiguous_enum_iterator{min}, contiguous_enum_iterator{max} + 1);
+}
 
 export using cost_t = int; // maximum: longest chebyshev distance of whole map
 

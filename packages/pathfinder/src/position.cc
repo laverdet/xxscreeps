@@ -23,20 +23,23 @@ struct packed_position {
 #endif
 };
 
+// Cardinal movement directions
+enum class direction_t : std::uint8_t {
+	TOP,
+	TOP_RIGHT,
+	RIGHT,
+	BOTTOM_RIGHT,
+	BOTTOM,
+	BOTTOM_LEFT,
+	LEFT,
+	TOP_LEFT
+};
+
 //
 // Similar to a RoomPosition object, but stores coordinates in a continuous global plane.
 // Conversions to/from this coordinate plane are handled on the JS side
 export struct world_position_t {
 		int xx, yy; // maximum: world_size[255] * 50 (32 bits tested faster than uint16_t)
-
-		enum direction_t { TOP,
-											 TOP_RIGHT,
-											 RIGHT,
-											 BOTTOM_RIGHT,
-											 BOTTOM,
-											 BOTTOM_LEFT,
-											 LEFT,
-											 TOP_LEFT };
 
 		world_position_t() = default;
 		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
@@ -78,21 +81,21 @@ export struct world_position_t {
 
 		auto position_in_direction(direction_t dir) const -> world_position_t {
 			switch (dir) {
-				case TOP:
+				case direction_t::TOP:
 					return {xx, yy - 1};
-				case TOP_RIGHT:
+				case direction_t::TOP_RIGHT:
 					return {xx + 1, yy - 1};
-				case RIGHT:
+				case direction_t::RIGHT:
 					return {xx + 1, yy};
-				case BOTTOM_RIGHT:
+				case direction_t::BOTTOM_RIGHT:
 					return {xx + 1, yy + 1};
-				case BOTTOM:
+				case direction_t::BOTTOM:
 					return {xx, yy + 1};
-				case BOTTOM_LEFT:
+				case direction_t::BOTTOM_LEFT:
 					return {xx - 1, yy + 1};
-				case LEFT:
+				case direction_t::LEFT:
 					return {xx - 1, yy};
-				case TOP_LEFT:
+				case direction_t::TOP_LEFT:
 					return {xx - 1, yy - 1};
 			}
 		}
@@ -103,25 +106,25 @@ export struct world_position_t {
 			int dy = pos.yy - yy;
 			if (dx > 0) {
 				if (dy > 0) {
-					return BOTTOM_RIGHT;
+					return direction_t::BOTTOM_RIGHT;
 				} else if (dy < 0) {
-					return TOP_RIGHT;
+					return direction_t::TOP_RIGHT;
 				} else {
-					return RIGHT;
+					return direction_t::RIGHT;
 				}
 			} else if (dx < 0) {
 				if (dy > 0) {
-					return BOTTOM_LEFT;
+					return direction_t::BOTTOM_LEFT;
 				} else if (dy < 0) {
-					return TOP_LEFT;
+					return direction_t::TOP_LEFT;
 				} else {
-					return LEFT;
+					return direction_t::LEFT;
 				}
 			} else {
 				if (dy > 0) {
-					return BOTTOM;
+					return direction_t::BOTTOM;
 				} else if (dy < 0) {
-					return TOP;
+					return direction_t::TOP;
 				}
 			}
 			return (direction_t)-1;

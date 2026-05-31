@@ -6,6 +6,7 @@ module;
 #include <mutex>
 #include <stdexcept>
 module screeps;
+import :utility;
 
 using namespace screeps;
 
@@ -149,8 +150,8 @@ auto path_finder_t::heuristic(const world_position_t pos) const -> cost_t {
 
 // Run an iteration of basic A*
 void path_finder_t::astar(pos_index_t index, world_position_t pos, cost_t g_cost) {
-	for (int dir = world_position_t::TOP; dir <= world_position_t::TOP_LEFT; ++dir) {
-		world_position_t neighbor = pos.position_in_direction(static_cast<world_position_t::direction_t>(dir));
+	for (auto dir : contiguous_enum_range(direction_t::TOP, direction_t::TOP_LEFT)) {
+		world_position_t neighbor = pos.position_in_direction(dir);
 
 		// If this is a portal node there are some moves which will be impossible, and should be discarded
 		if (pos.xx % 50 == 0) {
