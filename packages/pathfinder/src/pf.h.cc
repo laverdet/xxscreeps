@@ -76,7 +76,7 @@ export class path_finder_t {
 
 	public:
 		auto search(
-			v8::Local<v8::Value> origin_js,
+			world_position_t origin,
 			v8::Local<v8::Array> goals_js,
 			v8::Local<v8::Function> room_callback,
 			cost_t plain_cost,

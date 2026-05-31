@@ -11,22 +11,18 @@ import v8_js;
 
 namespace screeps {
 
-// Format matching the packed layout of `RoomPosition` in JS.
+// Packed integer layout of "WorldPosition" type, from JS
 struct packed_position {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-		packed_position(std::uint8_t rx, std::uint8_t ry, std::uint8_t xx, std::uint8_t yy) : rx{rx}, ry{ry}, xx{xx}, yy{yy} {}
-		std::uint8_t rx;
-		std::uint8_t ry;
-		std::uint8_t xx;
-		std::uint8_t yy;
+		packed_position(std::uint16_t xx, std::uint16_t yy) : xx{xx}, yy{yy} {}
+		std::uint16_t xx;
+		std::uint16_t yy;
 #elif __BYTE_ORDER == __BIG_ENDIAN
 		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-		packed_position(std::uint8_t rx, std::uint8_t ry, std::uint8_t xx, std::uint8_t yy) : yy{yy}, xx{xx}, ry{ry}, rx{rx} {}
-		std::uint8_t yy;
-		std::uint8_t xx;
-		std::uint8_t ry;
-		std::uint8_t rx;
+		packed_position(std::uint16_t xx, std::uint16_t yy) : xx{xx}, yy{yy} {}
+		std::uint16_t yy;
+		std::uint16_t xx;
 #else
 #error "Unsupported endianness"
 #endif
@@ -58,17 +54,10 @@ export struct world_position_t {
 			return Nan::New(std::bit_cast<std::int32_t>(packed_position{*this}));
 		}
 
-		explicit world_position_t(packed_position pos) :
-				xx{pos.xx + (pos.rx * 50)},
-				yy{pos.yy + (pos.ry * 50)} {}
+		explicit world_position_t(packed_position pos) : xx{pos.xx}, yy{pos.yy} {}
 
 		explicit operator packed_position() const {
-			return packed_position{
-				static_cast<std::uint8_t>(xx / 50),
-				static_cast<std::uint8_t>(yy / 50),
-				static_cast<std::uint8_t>(xx % 50),
-				static_cast<std::uint8_t>(yy % 50),
-			};
+			return packed_position{static_cast<std::uint16_t>(xx), static_cast<std::uint16_t>(yy)};
 		}
 
 		static auto null() -> world_position_t {
@@ -164,7 +153,8 @@ template <>
 struct visit<void, world_position_t> {
 		template <class Accept>
 		constexpr auto operator()(world_position_t subject, const Accept& accept) const -> accept_target_t<Accept> {
-			return accept(number_tag_of<std::int32_t>{}, *this, std::bit_cast<std::int32_t>(packed_position{subject}));
+			auto value = std::bit_cast<std::int32_t>(packed_position{subject});
+			return accept(number_tag_of<std::int32_t>{}, *this, value);
 		}
 
 		consteval static auto types(auto /*recursive*/) { return util::type_pack{}; }
@@ -172,8 +162,9 @@ struct visit<void, world_position_t> {
 
 template <>
 struct accept<void, world_position_t> {
-		constexpr auto operator()(number_tag /*tag*/, visit_holder /*visit*/, std::int32_t subject) const -> world_position_t {
-			return world_position_t{std::bit_cast<packed_position>(subject)};
+		constexpr auto operator()(number_tag /*tag*/, visit_holder /*visit*/, auto&& subject) const -> world_position_t {
+			auto value = std::int32_t{std::forward<decltype(subject)>(subject)};
+			return world_position_t{std::bit_cast<packed_position>(value)};
 		}
 
 		consteval static auto types(auto /*recursive*/) { return util::type_pack{}; }

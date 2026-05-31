@@ -458,7 +458,7 @@ void path_finder_t::jump_neighbor(world_position_t pos, pos_index_t index, world
 }
 
 auto path_finder_t::search(
-	v8::Local<v8::Value> origin_js,
+	world_position_t origin,
 	v8::Local<v8::Array> goals_js,
 	v8::Local<v8::Function> room_callback,
 	cost_t plain_cost,
@@ -502,7 +502,6 @@ auto path_finder_t::search(
 	this->heuristic_weight = heuristic_weight;
 	uint32_t ops_remaining = max_ops;
 	this->flee = flee;
-	world_position_t origin(origin_js);
 	cost_t min_node_h_cost = std::numeric_limits<cost_t>::max();
 	cost_t min_node_g_cost = std::numeric_limits<cost_t>::max();
 	pos_index_t min_node = 0;

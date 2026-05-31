@@ -21,7 +21,8 @@ namespace screeps {
 thread_local std::array<path_finder_t, 2> path_finders;
 
 auto search(
-	js::forward<v8::Local<v8::Value>> origin_js,
+	js::iv8::context_lock_witness lock,
+	world_position_t origin,
 	js::forward<v8::Local<v8::Object>> goals_js,
 	js::forward<v8::Local<v8::Value>> room_callback,
 	// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
@@ -48,7 +49,7 @@ auto search(
 	}
 
 	// Get the values from v8 and run the search
-	auto result = pf->search(*origin_js, goals_js->As<v8::Array>(), room_callback->As<v8::Function>(), plain_cost, swamp_cost, max_rooms, max_ops, max_cost, flee, heuristic_weight);
+	auto result = pf->search(origin, goals_js->As<v8::Array>(), room_callback->As<v8::Function>(), plain_cost, swamp_cost, max_rooms, max_ops, max_cost, flee, heuristic_weight);
 	return js::forward{result};
 }
 
@@ -67,7 +68,7 @@ ISOLATED_VM_MODULE void InitForContext(v8::Isolate* isolate, v8::Local<v8::Conte
 		std::tuple{
 			std::pair{util::cw<"search">, js::free_function{screeps::search}},
 			std::pair{util::cw<"loadTerrain">, js::free_function{screeps::load_terrain}},
-			std::pair{util::cw<"version">, 11},
+			std::pair{util::cw<"version">, 12},
 		}
 	);
 }

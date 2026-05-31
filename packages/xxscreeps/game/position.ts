@@ -29,6 +29,15 @@ export const kMaxRoomCoordinate = kRoomSize - 1;
 
 export type PositionParameter = [ position: RoomPosition ] | [ target: RoomObject ] | [ x: number, y: number ];
 
+export interface PositionLike {
+	['#id']?: undefined;
+	['#rx']?: undefined;
+	['#ry']?: undefined;
+	x: number;
+	y: number;
+	roomName: string;
+}
+
 export function format() {
 	return declare('RoomPosition', compose('int32', {
 		compose: pos => RoomPosition['#create'](pos),
