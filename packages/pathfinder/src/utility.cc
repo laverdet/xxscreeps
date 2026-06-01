@@ -35,24 +35,21 @@ auto contiguous_enum_range(Enum min, Enum max) {
 
 export using cost_t = int; // maximum: longest chebyshev distance of whole map
 
-// Safely converts an arbitrary position struct into a word
-template <int> struct int_for_size;
-template <> struct int_for_size<2> {
-		using int_t = std::uint16_t;
-};
-template <> struct int_for_size<4> {
-		using int_t = std::uint32_t;
-};
-template <> struct int_for_size<8> {
-		using int_t = std::uint64_t;
-};
+// Returns the given unsigned type for an arbitrary size
+template <std::size_t> struct uint_for_size;
+template <std::size_t Size>
+using uint_for_size_t = uint_for_size<Size>::type;
+template <> struct uint_for_size<1> : std::type_identity<std::uint8_t> {};
+template <> struct uint_for_size<2> : std::type_identity<std::uint16_t> {};
+template <> struct uint_for_size<4> : std::type_identity<std::uint32_t> {};
+template <> struct uint_for_size<8> : std::type_identity<std::uint64_t> {};
 
 template <class Type>
 constexpr auto flatten(Type location) {
 	union union_t {
 			constexpr explicit union_t(Type location) : location{location} {}
 			Type location;
-			typename int_for_size<sizeof(location)>::int_t integer;
+			uint_for_size_t<sizeof(location)> integer;
 	};
 	return union_t{location}.integer;
 }
@@ -62,9 +59,54 @@ constexpr auto unflatten(Integral integer) {
 	union union_t {
 			constexpr explicit union_t(Integral integer) : integer{integer} {}
 			Type location;
-			typename int_for_size<sizeof(Type)>::int_t integer;
+			uint_for_size_t<sizeof(Type)> integer;
 	};
 	return union_t{integer}.location;
 }
+
+// Holder for nominal types which cannot be implicitly converted between otherwise compatible
+// values.
+template <class Type, class>
+class nominal {
+	public:
+		constexpr nominal() = default;
+		explicit constexpr nominal(Type value) : value{value} {}
+
+		explicit constexpr operator Type() const { return **this; }
+		constexpr auto operator*() const -> Type { return value; }
+		constexpr auto operator==(const nominal& right) const -> bool = default;
+
+	private:
+		Type value;
+};
+
+// Minimal polyfill for std::inplace_vector
+template <class Type, std::size_t Size>
+class inplace_vector {
+	public:
+		static_assert(std::is_trivially_destructible_v<Type>);
+
+		[[nodiscard]] constexpr auto empty() const -> bool { return size_ == 0; }
+		[[nodiscard]] constexpr auto operator[](this auto& self, std::size_t index) -> auto& { return self.data_[ index ]; }
+		[[nodiscard]] constexpr auto size() const -> std::size_t { return size_; }
+		constexpr auto back(this auto& self) -> auto& { return self.data_[ self.size_ - 1 ]; }
+		constexpr auto begin(this auto& self) { return self.data_.begin(); }
+		constexpr auto clear() -> void { size_ = 0; }
+		constexpr auto end(this auto& self) { return self.data_.begin() + self.size_; }
+		constexpr auto front(this auto& self) -> auto& { return self.data_.front(); }
+		constexpr auto pop_back() -> void { --size_; }
+
+		constexpr auto emplace_back(auto&&... args) -> void {
+			if (size_ >= Size) {
+				throw std::range_error{"capacity exceeded"};
+			}
+			data_[ size_ ] = Type{std::forward<decltype(args)>(args)...};
+			++size_;
+		}
+
+	private:
+		std::array<Type, Size> data_;
+		std::size_t size_ = 0;
+};
 
 }; // namespace screeps
