@@ -20,7 +20,7 @@ type CommonSearchOptions = {
 };
 
 export type SearchOptions = CommonSearchOptions & {
-	roomCallback?: (roomName: string) => CostMatrix | false | undefined;
+	roomCallback?: ((roomName: string) => CostMatrix | false | undefined) | undefined;
 	flee?: boolean;
 	maxCost?: number;
 };
