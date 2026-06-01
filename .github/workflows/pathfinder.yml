@@ -138,11 +138,10 @@ jobs:
         working-directory: packages/pathfinder
         run: |
           set -ux
-          # TODO: must be environment variable for auto_js, fix it later
-          export NODE_VERSION=24.15.0
           cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_MODULE_PATH="$(pnpm exec auto_js_cmake_include)" \
+            -DNODE_VERSION=24.15.0 \
             ${ECO_STD:+"-DCMAKE_CXX_STDLIB_MODULES_JSON=${ECO_STD}"} \
             -G Ninja -B build \
           ;

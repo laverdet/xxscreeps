@@ -98,7 +98,7 @@ for (let count = 0; count < iterations; ++count) {
 const time = process.hrtime(start);
 const checksum = hash.digest('hex').slice(0, 8);
 console.log(time[0] + time[1] / 1e9);
-if (iterations === 1 && checksum !== 'a2bfc848') {
+if (iterations === 1 && checksum !== '3cba520b') {
 	console.error('Incorrect results! ' + checksum);
 	process.exit(1);
 }

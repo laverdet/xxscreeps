@@ -459,7 +459,7 @@ void path_finder_t::jump_neighbor(world_position_t pos, pos_index_t index, world
 
 auto path_finder_t::search(
 	world_position_t origin,
-	v8::Local<v8::Array> goals_js,
+	std::vector<path_finder_t::goal> goals,
 	v8::Local<v8::Function> room_callback,
 	cost_t plain_cost,
 	cost_t swamp_cost,
@@ -468,7 +468,7 @@ auto path_finder_t::search(
 	unsigned max_cost,
 	bool flee,
 	double heuristic_weight
-) -> v8::Local<v8::Value> {
+) -> std::optional<result> {
 
 	// Clean up from previous iteration
 	for (int ii = 0; ii < room_table_size; ++ii) {
@@ -476,14 +476,8 @@ auto path_finder_t::search(
 	}
 	room_table_size = 0;
 	blocked_rooms.clear();
-	goals.clear();
 	open_closed.clear();
 	heap.clear();
-
-	// Construct goal objects
-	for (uint32_t ii = 0; ii < goals_js->Length(); ++ii) {
-		goals.emplace_back(Nan::Get(goals_js, ii).ToLocalChecked());
-	}
 
 	// These aren't ever accessed, this is just a place to put the handles for the CostMatrix data
 	// so it doesn't get gc'd
@@ -496,6 +490,7 @@ auto path_finder_t::search(
 	}
 
 	// Other initialization
+	this->goals = std::move(goals);
 	look_table[ 0 ] = plain_cost;
 	look_table[ 2 ] = swamp_cost;
 	this->max_rooms = max_rooms;
@@ -509,7 +504,15 @@ auto path_finder_t::search(
 	// Special case for searching to same node, otherwise it searches everywhere because origin node
 	// is closed
 	if (heuristic(origin) == 0) {
-		return Nan::Undefined();
+		return result{
+			.path = std::ranges::subrange{
+				path_iterator{*this, std::numeric_limits<pos_index_t>::max()},
+				sentinel_path_iterator{},
+			},
+			.cost = 0,
+			.ops = 0,
+			.incomplete = false,
+		};
 	}
 
 	_is_in_use = true;
@@ -518,11 +521,21 @@ auto path_finder_t::search(
 		if (room_index_from_pos(room_location_t{origin}) == 0) {
 			// Initial room is inaccessible
 			_is_in_use = false;
-			return Nan::New(-1);
+			return result{
+				.path = std::ranges::subrange{
+					path_iterator{*this, std::numeric_limits<pos_index_t>::max()},
+					sentinel_path_iterator{},
+				},
+				.cost = 0,
+				.ops = 0,
+				.incomplete = true,
+			};
 		}
 
 		// Initial A* iteration
 		min_node = index_from_pos(origin);
+		open_closed.close(min_node);
+		parents[ min_node ] = std::numeric_limits<pos_index_t>::max();
 		astar(min_node, origin, 0);
 
 		// Loop until we have a solution
@@ -561,42 +574,26 @@ auto path_finder_t::search(
 			// Check termination
 			if (v8::Isolate::GetCurrent()->IsExecutionTerminating()) {
 				_is_in_use = false;
-				return Nan::Undefined();
+				return std::nullopt;
 			}
 		}
 	} catch (const js_error&) {
 		// Whoever threw the `js_error` should set the exception for v8
 		_is_in_use = false;
-		return Nan::Undefined();
+		return std::nullopt;
 	}
 
 	// Reconstruct path from A* graph
-	v8::Local<v8::Array> path = Nan::New<v8::Array>(0);
-	pos_index_t index = min_node;
-	world_position_t pos = pos_from_index(index);
-	uint32_t ii = 0;
-	while (pos != origin) {
-		Nan::Set(path, ii, v8::Local<v8::Value>{pos});
-		++ii;
-		index = parents[ index ];
-		world_position_t next = pos_from_index(index);
-		if (next.range_to(pos) > 1) {
-			world_position_t::direction_t dir = pos.direction_to(next);
-			do {
-				pos = pos.position_in_direction(dir);
-				Nan::Set(path, ii, v8::Local<v8::Value>{pos});
-				++ii;
-			} while (pos.range_to(next) > 1);
-		}
-		pos = next;
-	}
-	v8::Local<v8::Object> ret = Nan::New<v8::Object>();
-	Nan::Set(ret, Nan::New("path").ToLocalChecked(), path);
-	Nan::Set(ret, Nan::New("ops").ToLocalChecked(), Nan::New(max_ops - ops_remaining));
-	Nan::Set(ret, Nan::New("cost").ToLocalChecked(), Nan::New(min_node_g_cost));
-	Nan::Set(ret, Nan::New("incomplete").ToLocalChecked(), Nan::New<v8::Boolean>(min_node_h_cost != 0));
 	_is_in_use = false;
-	return ret;
+	return result{
+		.path = std::ranges::subrange{
+			path_iterator{*this, min_node},
+			sentinel_path_iterator{},
+		},
+		.cost = min_node_g_cost,
+		.ops = static_cast<int>(max_ops - ops_remaining),
+		.incomplete = min_node_h_cost != 0,
+	};
 }
 
 // Loads static terrain data into module upfront

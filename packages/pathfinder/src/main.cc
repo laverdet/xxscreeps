@@ -23,7 +23,7 @@ thread_local std::array<path_finder_t, 2> path_finders;
 auto search(
 	js::iv8::context_lock_witness lock,
 	world_position_t origin,
-	js::forward<v8::Local<v8::Object>> goals_js,
+	std::vector<path_finder_t::goal> goals,
 	js::forward<v8::Local<v8::Value>> room_callback,
 	// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 	int plain_cost,
@@ -33,7 +33,7 @@ auto search(
 	unsigned max_cost,
 	bool flee,
 	double heuristic_weight
-) -> js::forward<v8::Local<v8::Value>> {
+) -> std::optional<path_finder_t::result> {
 	// Find an inactive path finder
 	path_finder_t* pf = nullptr;
 	std::unique_ptr<path_finder_t> pf_holder;
@@ -49,8 +49,7 @@ auto search(
 	}
 
 	// Get the values from v8 and run the search
-	auto result = pf->search(origin, goals_js->As<v8::Array>(), room_callback->As<v8::Function>(), plain_cost, swamp_cost, max_rooms, max_ops, max_cost, flee, heuristic_weight);
-	return js::forward{result};
+	return pf->search(origin, std::move(goals), room_callback->As<v8::Function>(), plain_cost, swamp_cost, max_rooms, max_ops, max_cost, flee, heuristic_weight);
 }
 
 auto load_terrain(js::forward<v8::Local<v8::Object>> world) -> void {

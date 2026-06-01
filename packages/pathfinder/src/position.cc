@@ -1,13 +1,8 @@
-module;
-#include "nan.h"
-#include <cstdint>
-#include <limits>
 export module screeps:position;
 import :utility;
 import auto_js;
 import std;
 import util;
-import v8_js;
 
 namespace screeps {
 
@@ -46,13 +41,6 @@ export struct world_position_t {
 		world_position_t() = default;
 		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 		world_position_t(int xx, int yy) : xx{xx}, yy{yy} {}
-
-		explicit world_position_t(v8::Local<v8::Value> pos) :
-				world_position_t{std::bit_cast<packed_position>(Nan::To<std::int32_t>(pos.As<v8::Number>()).FromJust())} {}
-
-		explicit operator v8::Local<v8::Value>() {
-			return Nan::New(std::bit_cast<std::int32_t>(packed_position{*this}));
-		}
 
 		explicit world_position_t(packed_position pos) : xx{pos.xx}, yy{pos.yy} {}
 
