@@ -184,8 +184,10 @@ const intents = [
 					const baseFatigue = (() => {
 						const road = lookForStructureAt(creep.room, pos, C.STRUCTURE_ROAD);
 						if (road) {
-							// Update road decay
-							road['#nextDecayTime'] -= C.ROAD_WEAROUT * creep.body.length;
+							// Wear-out advances decay but must not slip past `Game.time` — the road's
+							// Tick handler throws on overdue `ticksToDecay`.
+							road['#nextDecayTime'] =
+								Math.max(Game.time, road['#nextDecayTime'] - C.ROAD_WEAROUT * creep.body.length);
 							return 1;
 						}
 						const terrain = creep.room.getTerrain().get(pos.x, pos.y);
@@ -324,10 +326,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		recalculateBody(creep);
 		context.didUpdate();
 	}
-	if (
-		(Game.time >= creep['#ageTime'] && creep['#ageTime'] !== 0) ||
-		creep.hits <= 0
-	) {
+	if (creep.ticksToLive === 0 || creep.hits <= 0) {
 		buryCreep(creep);
 		context.setActive();
 		return;
@@ -377,9 +376,10 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 // across rooms (e.g. portals). The creep is removed from its current room and an import-payload
 // intent is queued for the destination room.
 export function teleportCreep(creep: Creep, next: RoomPosition, context: ProcessorContext) {
-	if (!creep.room['#removeObject'](creep)) {
+	if (creep.room === undefined as never) {
 		return;
 	}
+	creep.room['#removeObject'](creep);
 	appendEventLog(creep.room, {
 		event: C.EVENT_EXIT,
 		objectId: creep.id,
@@ -391,6 +391,7 @@ export function teleportCreep(creep: Creep, next: RoomPosition, context: Process
 	// update the internal indices.
 	const oldPos = creep.pos;
 	creep.pos = next;
+	creep.room = undefined as never;
 	// Creeps are revitalized when moving to a new room
 	creep.fatigue = 0;
 	// Reset actionLog since the actions were in the previous room

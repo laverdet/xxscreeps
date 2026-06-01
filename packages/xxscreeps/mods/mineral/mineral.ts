@@ -18,10 +18,7 @@ const shape = struct(RoomObject.format, {
 
 // Game object declaration
 export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
-	@enumerable get ticksToRegeneration() {
-		const nextTime = this['#nextRegenerationTime'];
-		return nextTime === 0 ? undefined : Math.max(0, nextTime - Game.time);
-	}
+	@enumerable get ticksToRegeneration() { return RoomObject.optionalExpiryTime(Game, this['#nextRegenerationTime']); }
 
 	get '#lookType'() { return C.LOOK_MINERALS; }
 }

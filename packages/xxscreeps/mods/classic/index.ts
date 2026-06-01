@@ -12,6 +12,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/logistics',
 		'xxscreeps/mods/market',
 		'xxscreeps/mods/notifications',
+		'xxscreeps/mods/nuker',
 		'xxscreeps/mods/observer',
 		'xxscreeps/mods/portal',
 		'xxscreeps/mods/road',

@@ -16,7 +16,7 @@ const shape = struct(structureFormat, {
 });
 
 export class StructureRoad extends withOverlay(Structure, shape) {
-	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
+	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(Game, this['#nextDecayTime']); }
 	override get hitsMax() { return C.ROAD_HITS * this['#multiplier']; }
 	override get structureType() { return C.STRUCTURE_ROAD; }
 	override get '#pathCost'() { return 1; }

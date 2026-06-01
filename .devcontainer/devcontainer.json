@@ -36,10 +36,10 @@
 			"version": "24"
 		}
 	},
-	"forwardPorts": [ 21025 ],
 	// '_devcontainer_init' may be defined by dotfiles. this is different than the 'install' script
 	// because dotfiles runs before the repo is setup.
 	"postStartCommand": [ "/bin/sh", "-cl", "which -s _devcontainer_init && _devcontainer_init || true" ],
+	"runArgs": [ "--net=host" ],
 	"workspaceMount": "source=${localWorkspaceFolder},target=/xxscreeps,type=bind",
 	"workspaceFolder": "/xxscreeps"
 }

@@ -1,6 +1,12 @@
 # @xxscreeps/redis
 
-Sample configuration:
+## Requirements
+
+Redis >= 8.2. The mutex uses `SET ... IFEQ` (compare-and-set), which was
+introduced in Redis 8.2; older servers fail at startup with a clear version
+error.
+
+## Sample configuration
 
 ```yaml
 mods:

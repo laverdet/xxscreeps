@@ -17,14 +17,6 @@ export const POWER_SPAWN_ENERGY_CAPACITY = 5000;
 export const POWER_SPAWN_POWER_CAPACITY = 100;
 export const POWER_SPAWN_ENERGY_RATIO = 50;
 
-export const NUKER_HITS = 1000;
-export const NUKER_COOLDOWN = 100000;
-export const NUKER_ENERGY_CAPACITY = 300000;
-export const NUKER_GHODIUM_CAPACITY = 5000;
-export const NUKE_LAND_TIME = 50000;
-export const NUKE_RANGE = 10;
-export const NUKE_DAMAGE = [ 10000000, undefined, 5000000 ];
-
 export const FACTORY_HITS = 1000;
 export const FACTORY_CAPACITY = 50000;
 

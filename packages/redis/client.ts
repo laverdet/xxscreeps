@@ -29,5 +29,14 @@ export async function acquireRedisClient(url: URL, blob = false): Promise<RedisC
 		}
 	}();
 	await client.connect();
+
+	// check required version
+	const match = /^redis_version:(?<major>\d+)\.(?<minor>\d+)/m.exec(String(await client.info('server')));
+	if (!match) throw new Error('@xxscreeps/redis: could not read redis_version from INFO server');
+	const { major, minor } = match.groups ?? {};
+	if (Number(major) < 8 || (Number(major) === 8 && Number(minor) < 2)) {
+		throw new Error(`@xxscreeps/redis requires Redis >= 8.2 (found ${major}.${minor})`);
+	}
+
 	return client;
 }

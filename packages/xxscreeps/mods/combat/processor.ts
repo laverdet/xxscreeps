@@ -1,18 +1,22 @@
 import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
+import { invertedNumericComparator, mappedComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { positionsInRangeTo } from 'xxscreeps/game/position.js';
+import { captureDamage, walkLayers } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
-import { mapArea } from 'xxscreeps/game/room/look.js';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
-import { captureDamage, checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack, walkLayers } from './creep.js';
+import { checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { combat: typeof intents }
 }
+
+const kRangedMassAttackPower = [ 1, 1, 0.4, 0.1 ];
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
 	registerIntentProcessor(Creep, 'attack', {
@@ -66,18 +70,15 @@ const intents = [
 		type: 'laser',
 	}, (creep, context) => {
 		if (checkRangedMassAttack(creep) === C.OK) {
-			const area = mapArea(
-				Math.max(0, creep.pos.y - 3),
-				Math.max(0, creep.pos.x - 3),
-				Math.min(49, creep.pos.y + 3),
-				Math.min(49, creep.pos.x + 3),
-				(xx, yy) => new RoomPosition(xx, yy, creep.room.name));
 			const basePower = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER, 'rangedMassAttack');
-			for (const pos of area) {
-				const objects = [ ...Fn.reject(creep.room['#lookAt'](pos),
-					object => object['#layer'] === undefined || object.hits === undefined || object.my !== false) ];
-				objects.sort((left, right) => right['#layer']! - left['#layer']!);
-				const power = basePower * ([ 1, 1, 0.4, 0.1 ][creep.pos.getRangeTo(pos)] ?? 0);
+			for (const pos of positionsInRangeTo(creep.pos, 3)) {
+				const power = basePower * (kRangedMassAttackPower[creep.pos.getRangeTo(pos)] ?? 0);
+				const objects = Fn.pipe(
+					creep.room['#lookAt'](pos),
+					$$ => Fn.reject($$, object =>
+						object['#layer'] === undefined || object.hits === undefined || object.my !== false),
+					$$ => [ ...$$ ],
+					$$ => $$.sort(mappedComparator(invertedNumericComparator, object => object['#layer']!)));
 				walkLayers(objects, power, (object, layerPower) => {
 					const remaining = object['#captureDamage'](layerPower, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep);
 					const absorbed = layerPower - remaining;
@@ -89,7 +90,7 @@ const intents = [
 						objectId: creep.id,
 						targetId: object.id,
 						attackType: C.EVENT_ATTACK_TYPE_RANGED_MASS,
-						damage: absorbed > 0 ? absorbed : layerPower,
+						damage: absorbed || layerPower,
 					});
 					return remaining;
 				});

@@ -214,6 +214,7 @@ describe('Notification delivery worker', () => {
 	test('drain does not fire between cadence boundaries', () => empty(async ({ shard, tick }) => {
 		using _clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
+		await tick(1);
 		await seedRow(shard, userA, 'hi');
 		await tick(9);
 		assert.strictEqual(parseNotifyLines(stdout.lines).length, 0,
