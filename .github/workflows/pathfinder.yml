@@ -54,13 +54,15 @@ jobs:
       - if: matrix.host.container == 'alpine:3'
         shell: sh
         run: |
-          apk add boost-dev clang21 clang21-extra-tools cmake lld21 llvm21 ninja-is-really-ninja nodejs npm
+          apk add boost-dev clang21 clang21-extra-tools cmake compiler-rt lld21 llvm21 ninja-is-really-ninja nodejs npm
           echo "CXX=clang++-21" >> "$GITHUB_ENV"
+          echo "LLVM_PROFDATA=llvm21-profdata" >> "$GITHUB_ENV"
       - if: matrix.host.container == 'debian:sid'
         run: |
           apt update
-          apt install -y clang-21 cmake libboost-all-dev lld-21 llvm-21 ninja-build nodejs npm
+          apt install -y clang-21 cmake libboost-all-dev lld-21 llvm-21 ninja-build npm
           echo "CXX=clang++-21" >> "$GITHUB_ENV"
+          echo "LLVM_PROFDATA=llvm-profdata-21" >> "$GITHUB_ENV"
       - if: matrix.host.platform == 'darwin'
         run: |
           # https://github.com/orgs/Homebrew/discussions/5602
@@ -70,6 +72,7 @@ jobs:
           ln -s $(brew --prefix)/etc/clang ~/.config/clang
           LLVM=$(brew --prefix llvm)
           echo "CXX=$LLVM/bin/clang++" >> "$GITHUB_ENV"
+          echo "LLVM_PROFDATA=$LLVM/bin/llvm-profdata" >> "$GITHUB_ENV"
           echo "ECO_STD=$LLVM/lib/c++/libc++.modules.json" >> "$GITHUB_ENV"
       - if: matrix.host.platform == 'windows'
         shell: bash
@@ -85,6 +88,7 @@ jobs:
           echo "/c/msys64/usr/bin" >> "$GITHUB_PATH"
           echo "CMAKE_PREFIX_PATH=C:/msys64/mingw64/lib/cmake" >> "$GITHUB_ENV"
           echo "CXX=clang++.exe" >> "$GITHUB_ENV"
+          echo "LLVM_PROFDATA=llvm-profdata.exe" >> "$GITHUB_ENV"
 
           # Make the `import std` ecostd manifest
           # /c/Program Files/Microsoft Visual Studio/18/Enterprise
@@ -125,6 +129,12 @@ jobs:
           EOF
           echo ::endgroup::
 
+      # Setup desired nodejs version (except alpine, which will have to deal with what it got)
+      - if: matrix.host.container != 'alpine:3'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
       # Setup repository
       - uses: actions/checkout@v5
       - shell: sh
@@ -132,20 +142,53 @@ jobs:
           npm config set script-shell /bin/sh
           npm install -g pnpm
           pnpm install --frozen-lockfile --ignore-scripts
+          npx tsc -b
 
       # Build
       - shell: sh
         working-directory: packages/pathfinder
         run: |
           set -ux
+
+          # Generate PGO instrumentation
+          if node --version | grep -q 'v24' && command -v "$LLVM_PROFDATA" >/dev/null; then
+            PGO_OUT="$PWD/pgo"
+            cmake \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_MODULE_PATH="$(pnpm exec auto_js_cmake_include)" \
+              -DNODE_VERSION=24.15.0 \
+              -DPGO_OUT="$PGO_OUT" \
+              ${ECO_STD:+"-DCMAKE_CXX_STDLIB_MODULES_JSON=${ECO_STD}"} \
+              -G Ninja -B build \
+            ;
+            if ninja -C build; then
+              pnpm -C ../xxscreeps install '@xxscreeps/pathfinder@workspace:^'
+              npx xxscreeps import
+              cp screeps/shard0/terrain .
+              node dist/profile.mjs
+              "$LLVM_PROFDATA" merge -output="$PGO_OUT/default.profdata" "$PGO_OUT"/*.profraw
+            else
+              # The build failed. It could be an issue with PGO, or with the build itself.
+              unset PGO_OUT
+            fi
+            rm -rf build
+          fi
+
+          # Build, maybe with PGO instrumentation
           cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_MODULE_PATH="$(pnpm exec auto_js_cmake_include)" \
             -DNODE_VERSION=24.15.0 \
             ${ECO_STD:+"-DCMAKE_CXX_STDLIB_MODULES_JSON=${ECO_STD}"} \
+            ${PGO_OUT:+"-DPGO_IN=${PGO_OUT}"} \
             -G Ninja -B build \
           ;
           ninja -C build
+
+          # The warning goes here because otherwise build failures throw the PGO warning each time.
+          if ! [ "${PGO_OUT+-}" ]; then
+            echo "::warning::PGO was not enabled."
+          fi
 
       # Upload build artifacts
       - uses: actions/upload-artifact@v7
