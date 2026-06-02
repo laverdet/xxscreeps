@@ -4,10 +4,12 @@ import :utility;
 
 namespace screeps {
 
-// CostMatrix is a [50, 50] mdspan (missing library support)
-// using cost_matrix_type = std::mdspan<const std::uint8_t, std::extents<std::size_t, 50, 50>>;
+// CostMatrix is a [50, 50] multi-dimensional array (mdspan cannot be nulled)
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 using cost_matrix_type = const std::uint8_t (*)[ 50 ];
+
+// Terrain data is packed 2 bits per tile, 2500 * 2 / 8 = 625
+using terrain_type = const std::uint8_t*;
 
 // maximum: longest chebyshev distance of whole map
 using cost_t = int;
@@ -35,17 +37,15 @@ struct room_location_t::hash : std::hash<std::int16_t> {
 		}
 };
 
-//
-// Stores context about a room, specific to each search
-export struct room_info_t {
+// Stores room terrain data, specific to each search
+struct room_terrain {
 	public:
-		constexpr room_info_t() = default;
-		constexpr room_info_t(std::uint8_t* terrain, cost_matrix_type cost_matrix, room_location_t pos) :
+		constexpr room_terrain() = default;
+		constexpr room_terrain(terrain_type terrain, cost_matrix_type cost_matrix) :
 				terrain_{terrain},
-				cost_matrix_{cost_matrix},
-				pos{pos} {}
+				cost_matrix_{cost_matrix} {}
 
-		[[nodiscard]] constexpr auto operator()(const terrain_cost_type& costs, unsigned xx, unsigned yy) const -> unsigned {
+		[[nodiscard]] constexpr auto operator()(const terrain_cost_type& costs, unsigned xx, unsigned yy) const -> cost_t {
 			if (cost_matrix_ == nullptr) {
 				return terrain_look(costs, xx, yy);
 			} else {
@@ -54,23 +54,62 @@ export struct room_info_t {
 		}
 
 	private:
-		[[nodiscard]] constexpr auto terrain_look(const terrain_cost_type& costs, unsigned xx, unsigned yy) const -> unsigned {
+		[[nodiscard]] constexpr auto terrain_look(const terrain_cost_type& costs, unsigned xx, unsigned yy) const -> cost_t {
 			auto index = (yy * 50) + xx;
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
 			return costs[ (unsigned{terrain_[ index / 4 ]} >> (index % 4 * 2)) & 0x03 ];
 		}
 
-		[[nodiscard]] constexpr auto cost_matrix_look(const terrain_cost_type& costs, unsigned xx, unsigned yy) const -> unsigned {
+		[[nodiscard]] constexpr auto cost_matrix_look(const terrain_cost_type& costs, unsigned xx, unsigned yy) const -> cost_t {
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 			int cost = cost_matrix_[ xx % 50 ][ yy % 50 ];
 			return cost == 0 ? terrain_look(costs, xx, yy) : cost;
 		}
 
-		std::uint8_t* terrain_{};
+		terrain_type terrain_{};
 		cost_matrix_type cost_matrix_{nullptr};
+};
 
+// Stores room terrain data with incrementing 1-based index. You can lookup by index or "scope"
+// (which is room_location_t).
+template <class Type, class Scope, std::size_t Capacity>
+class scope_table {
 	public:
-		room_location_t pos{};
+		using index_type = uint_for_size_t<sizeof(Scope)>;
+		using value_type = std::pair<Scope, Type>;
+
+		constexpr scope_table() {
+			std::ranges::fill(reverse_table_, sentinel);
+		}
+
+		constexpr auto begin(this auto& self) { return self.table_.begin(); }
+		constexpr auto end(this auto& self) { return self.table_.end(); }
+		[[nodiscard]] constexpr auto size() const { return table_.size(); }
+		[[nodiscard]] constexpr auto operator[](this auto& self, std::size_t index) -> auto& { return self.table_[ index ]; }
+
+		constexpr auto clear() -> void {
+			for (const auto& value : table_) {
+				reverse_table_[ std::bit_cast<index_type>(value.first) ] = sentinel;
+			}
+			table_.clear();
+		}
+
+		constexpr auto find(Scope scope) const -> index_type {
+			return reverse_table_[ std::bit_cast<index_type>(scope) ];
+		}
+
+		constexpr auto insert(value_type value) -> index_type {
+			auto index = table_.size() + 1;
+			table_.emplace_back(value);
+			reverse_table_[ std::bit_cast<index_type>(value.first) ] = index;
+			return static_cast<index_type>(index);
+		}
+
+		constexpr static auto sentinel = 0;
+
+	private:
+		inplace_vector<value_type, Capacity> table_;
+		std::array<index_type, 1 << (sizeof(Scope) * 8)> reverse_table_;
 };
 
 }; // namespace screeps

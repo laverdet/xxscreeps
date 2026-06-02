@@ -15,19 +15,20 @@ constexpr auto is_near_border_pos(int val) -> bool {
 	return (val + 2) % 50 < 4;
 }
 
-decltype(path_finder_t::terrain) path_finder_t::terrain = {{nullptr}};
+// Per-process terrain data
+path_finder_t::terrain_map_type terrain_map;
 
 // Return room index from a map position, allocates a new room index if needed and possible
-auto path_finder_t::room_index_from_pos(const room_location_t map_pos) -> room_index_t {
-	room_index_t room_index = reverse_room_table_[ flatten(map_pos) ];
-	if (room_index == room_index_sentinel) {
-		if (room_table_size_ >= max_rooms) {
+auto path_finder_t::room_index_from_pos(room_location_t map_pos) -> room_index_t {
+	auto room_index = room_table_.find(map_pos);
+	if (room_index == room_scope_table::sentinel) {
+		if (room_table_.size() >= max_rooms) {
 			return room_index_sentinel;
 		}
 		if (blocked_rooms.contains(map_pos)) {
 			return room_index_sentinel;
 		}
-		uint8_t* terrain_ptr = terrain[ flatten(map_pos) ];
+		terrain_type terrain_ptr = terrain_map[ flatten(map_pos) ];
 		if (terrain_ptr == nullptr) {
 			blocked_rooms.insert(map_pos);
 			return room_index_sentinel;
@@ -54,8 +55,8 @@ auto path_finder_t::room_index_from_pos(const room_location_t map_pos) -> room_i
 				}
 			}
 		}
-		room_table_[ room_table_size_++ ] = room_info_t{terrain_ptr, cost_matrix, map_pos};
-		return room_index_t{reverse_room_table_[ flatten(map_pos) ] = room_index_t{room_table_size_}};
+		auto index = room_table_.insert(std::pair{map_pos, room_terrain{terrain_ptr, cost_matrix}});
+		return room_index_t{index};
 	} else {
 		return room_index_t{room_index};
 	}
@@ -72,7 +73,7 @@ auto path_finder_t::index_from_pos(world_position_t pos) -> pos_index_t {
 
 auto path_finder_t::pos_from_index(pos_index_t index) const -> world_position_t {
 	auto room_index = index / (50 * 50);
-	auto location = room_table_[ room_index ].pos;
+	auto location = room_table_[ room_index ].first;
 	int coord = index - (room_index * 50 * 50);
 	return {(coord % 50) + (location.xx * 50), (coord / 50) + (location.yy * 50)};
 }
@@ -87,13 +88,13 @@ void path_finder_t::push_node(pos_index_t parent_index, world_position_t node, c
 	auto f_cost = h_cost + g_cost;
 
 	if (open_closed.is_open(index)) {
-		if (heap.score(index) > f_cost) {
-			heap.update(std::pair{index, f_cost});
+		if (heap.key_proj()(index) > f_cost) {
+			heap.update(index, [ & ](auto& score) { return score[ index ] = f_cost; });
 			parents[ index ] = parent_index;
 			// std::cout <<"~ " <<node <<": h(" <<h_cost <<") + " <<"g(" <<g_cost <<") = f(" <<f_cost <<")\n";
 		}
 	} else {
-		heap.push(std::pair{index, f_cost});
+		heap.push(index, [ & ](auto& score) { return score[ index ] = f_cost; });
 		open_closed.open(index);
 		parents[ index ] = parent_index;
 		// std::cout <<"+ " <<node <<": h(" <<h_cost <<") + " <<"g(" <<g_cost <<") = f(" <<f_cost <<")\n";
@@ -106,7 +107,7 @@ auto path_finder_t::look(world_position_t pos) -> cost_t {
 	if (room_index == room_index_sentinel) {
 		return obstacle;
 	}
-	return room_table_[ *room_index - 1 ](look_table, pos.xx % 50, pos.yy % 50);
+	return room_table_[ *room_index - 1 ].second(look_table, pos.xx % 50, pos.yy % 50);
 }
 
 // Run an iteration of basic A*
@@ -430,10 +431,7 @@ auto path_finder_t::search(
 ) -> std::optional<result> {
 
 	// Clean up from previous iteration
-	for (int ii = 0; ii < room_table_size_; ++ii) {
-		reverse_room_table_[ flatten(room_table_[ ii ].pos) ] = room_index_sentinel;
-	}
-	room_table_size_ = 0;
+	room_table_.clear();
 	blocked_rooms.clear();
 	open_closed.clear();
 	heap.clear();
@@ -497,23 +495,24 @@ auto path_finder_t::search(
 
 			// Pull cheapest open node off the heap and close the node
 			auto current = heap.top();
+			auto score = heap.key_proj()(current);
 			heap.pop();
-			open_closed.close(current.first);
+			open_closed.close(current);
 
 			// Calculate costs
-			world_position_t pos = pos_from_index(current.first);
+			world_position_t pos = pos_from_index(current);
 			cost_t h_cost = heuristic_(pos);
-			cost_t g_cost = current.second - cost_t(h_cost * heuristic_weight);
-			// std::cout <<"\n* " <<pos <<": h(" << h_cost <<") + " <<"g(" <<g_cost <<") = f(" <<current.second <<")\n";
+			cost_t g_cost = score - cost_t(h_cost * heuristic_weight);
+			// std::cout << "\n* " << pos << ": h(" << h_cost << ") + " << "g(" << g_cost << ") = f(" << score << ")\n";
 
 			// Reached destination?
 			if (h_cost == 0) {
-				min_node = current.first;
+				min_node = current;
 				min_node_h_cost = 0;
 				min_node_g_cost = g_cost;
 				break;
 			} else if (h_cost < min_node_h_cost) {
-				min_node = current.first;
+				min_node = current;
 				min_node_h_cost = h_cost;
 				min_node_g_cost = g_cost;
 			}
@@ -522,7 +521,7 @@ auto path_finder_t::search(
 			}
 
 			// Add next neighbors to heap
-			jps(current.first, pos, g_cost);
+			jps(current, pos, g_cost);
 			--ops_remaining;
 
 			// Check termination
@@ -563,6 +562,6 @@ void path_finder_t::load_terrain(v8::Local<v8::Object> world) {
 		auto name = Nan::Get(keys, ii).ToLocalChecked();
 		auto id = Nan::To<uint32_t>(name).FromJust();
 		auto terrain = Nan::Get(world, name).ToLocalChecked();
-		path_finder_t::terrain[ id ] = *Nan::TypedArrayContents<uint8_t>(terrain);
+		terrain_map[ id ] = *Nan::TypedArrayContents<uint8_t>(terrain);
 	}
 }

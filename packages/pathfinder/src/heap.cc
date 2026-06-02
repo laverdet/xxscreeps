@@ -1,3 +1,5 @@
+module;
+#include <cassert>
 export module screeps:heap;
 import :utility;
 import std;
@@ -43,50 +45,63 @@ constexpr auto push_heap(auto&& container, auto compare, auto projection) {
 	}
 }
 
-// Priority queue implementation w/ support for updating priorities
-template <class Index, class Score, std::size_t Capacity, std::size_t Range>
-class heap_t {
+// Storage for scores used as the projection type of `heap_t`
+template <class Key, class Value, std::size_t Capacity>
+class score_table_t {
 	public:
-		using index_type = Index;
-		using score_type = Score;
-		using value_type = std::pair<index_type, score_type>;
+		using key_type = Key;
+		using value_type = Value;
+
+		[[nodiscard]] constexpr auto operator()(key_type index) const -> value_type { return score_[ index ]; }
+		constexpr auto operator[](key_type index) -> value_type& { return score_[ index ]; }
+
+	private:
+		std::array<Value, Capacity> score_;
+};
+
+// Priority queue implementation w/ support for updating priorities
+template <class Type, class Compare, class Projection, std::size_t Capacity>
+class heap_t : private Compare, private Projection {
+	public:
+		using value_type = Type;
+		using key_compare = Compare;
+		using key_project = Projection;
+
+		explicit constexpr heap_t(key_compare&& compare = {}, key_project projection = {}) :
+				key_compare{std::move(compare)},
+				key_project{std::move(projection)} {}
 
 		[[nodiscard]] constexpr auto empty() const -> bool { return heap_.empty(); }
-		[[nodiscard]] constexpr auto score(index_type index) const -> score_type { return score_[ index ]; }
-		[[nodiscard]] constexpr auto top() const -> value_type { return {heap_[ 0 ], score_[ heap_[ 0 ] ]}; }
+		[[nodiscard]] constexpr auto key_comp() const -> const key_compare& { return *this; }
+		[[nodiscard]] constexpr auto key_proj() const -> const key_project& { return *this; }
+		[[nodiscard]] constexpr auto top() const -> value_type { return heap_[ 0 ]; }
 		constexpr auto clear() -> void { heap_.clear(); }
 
 		constexpr auto pop() -> void {
-			pop_heap(heap_, compare, projection());
+			pop_heap(heap_, std::cref(key_comp()), std::cref(key_proj()));
 			heap_.pop_back();
 		}
 
-		constexpr auto push(value_type value) -> void {
-			score_[ value.first ] = value.second;
-			heap_.emplace_back(value.first);
-			push_heap(heap_, compare, projection());
+		constexpr auto push(value_type value, const auto& update) -> void {
+			update(reinterpret_cast<key_project&>(*this));
+			heap_.emplace_back(value);
+			push_heap(heap_, std::cref(key_comp()), std::cref(key_proj()));
 		}
 
-		constexpr auto update(value_type value) -> void {
+		// nb: It only supports decreasing the score
+		constexpr auto update(value_type value, const auto& update) -> void {
 			// auto search = heap_ | std::views::enumerate | std::views::reverse;
 			auto search = std::views::zip(std::views::iota(0UZ, heap_.size()), heap_) | std::views::reverse;
-			auto found = std::ranges::find(search, value.first, [](const auto& pair) { return get<1>(pair); });
+			auto found = std::ranges::find(search, value, [](const auto& pair) { return get<1>(pair); });
 			auto ii = get<0>(*found);
-			score_[ value.first ] = value.second;
-			push_heap(std::ranges::subrange{heap_.begin(), heap_.begin() + ii + 1}, compare, projection());
+			[[maybe_unused]] auto previous_score = key_proj()(value);
+			update(reinterpret_cast<key_project&>(*this));
+			assert(previous_score >= key_proj()(value));
+			push_heap(std::ranges::subrange{heap_.begin(), heap_.begin() + ii + 1}, std::cref(key_comp()), std::cref(key_proj()));
 		}
 
 	private:
-		constexpr static auto compare = std::greater{};
-
-		constexpr auto projection() {
-			return [ this ](index_type index) {
-				return score_[ index ];
-			};
-		}
-
-		std::array<score_type, Capacity> score_;
-		inplace_vector<index_type, Range> heap_;
+		inplace_vector<value_type, Capacity> heap_;
 };
 
 } // namespace screeps

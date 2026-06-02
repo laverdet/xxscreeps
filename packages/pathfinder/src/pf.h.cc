@@ -32,22 +32,25 @@ export class path_finder_t {
 		constexpr static size_t map_position_size = 1 << sizeof(room_location_t) * 8;
 		constexpr static cost_t obstacle = 0;
 		constexpr static auto room_index_sentinel = room_index_t{0};
+		constexpr static auto room_size = 50 * 50;
+		constexpr static auto search_capacity = room_size * k_max_rooms;
 
-		std::array<room_info_t, k_max_rooms> room_table_;
-		int room_table_size_ = 0;
-		std::array<room_index_t, map_position_size> reverse_room_table_;
+		using room_scope_table = scope_table<room_terrain, room_location_t, k_max_rooms>;
+		using open_closed_type = open_closed_t<search_capacity>;
+		using heap_score_type = score_table_t<pos_index_t, cost_t, search_capacity>;
+		using heap_type = heap_t<pos_index_t, std::greater<>, heap_score_type, search_capacity / 8>;
+
+		room_scope_table room_table_;
 		std::unordered_set<room_location_t, room_location_t::hash> blocked_rooms;
 		std::array<pos_index_t, 2'500 * k_max_rooms> parents;
-		open_closed_t<2'500 * k_max_rooms> open_closed;
-		heap_t<pos_index_t, cost_t, 2'500 * k_max_rooms, 2'500 * k_max_rooms / 8> heap;
+		open_closed_type open_closed;
+		heap_type heap;
 		heuristic_t heuristic_;
-		std::array<cost_t, 4> look_table = {{obstacle, obstacle, obstacle, obstacle}};
+		terrain_cost_type look_table = {{obstacle, obstacle, obstacle, obstacle}};
 		double heuristic_weight;
-		int max_rooms;
+		unsigned max_rooms;
 		v8::Local<v8::Function> room_callback_;
 		bool _is_in_use = false;
-
-		static std::array<uint8_t*, map_position_size> terrain;
 
 		class js_error : public std::runtime_error {
 			public:
@@ -70,6 +73,8 @@ export class path_finder_t {
 		void jump_neighbor(world_position_t pos, pos_index_t index, world_position_t neighbor, cost_t g_cost, cost_t cost, cost_t n_cost);
 
 	public:
+		using terrain_map_type = std::array<terrain_type, map_position_size>;
+
 		auto lookup(pos_index_t index) const -> pos_index_t { return parents[ index ]; };
 		auto pos_from_index(pos_index_t index) const -> world_position_t;
 

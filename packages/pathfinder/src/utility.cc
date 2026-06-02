@@ -28,7 +28,7 @@ struct contiguous_enum_iterator : public util::random_access_iterator_facade<int
 		Enum value_;
 };
 
-export template <class Enum>
+template <class Enum>
 auto contiguous_enum_range(Enum min, Enum max) {
 	return std::ranges::subrange(contiguous_enum_iterator{min}, contiguous_enum_iterator{max} + 1);
 }
