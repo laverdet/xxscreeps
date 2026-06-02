@@ -55,7 +55,7 @@ export struct world_position_t {
 			return packed_position{static_cast<std::uint16_t>(xx), static_cast<std::uint16_t>(yy)};
 		}
 
-		friend auto operator<<(std::ostream& os, const world_position_t& that) -> std::ostream& {
+		friend auto operator<<(std::ostream& os, world_position_t that) -> std::ostream& {
 			auto rx = (that.xx / 50) - 0x80;
 			auto ry = (that.yy / 50) - 0x80;
 			auto ww = rx < 0;

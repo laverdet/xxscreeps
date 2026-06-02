@@ -35,8 +35,14 @@ auto contiguous_enum_range(Enum min, Enum max) {
 
 // Returns the sign of the value (-1, 0, or 1)
 template <class Type>
-auto sign(Type value) -> int {
-	return (Type{0} < value) - (value < Type{0});
+constexpr auto sign(Type value) -> int {
+	if (value > 0) {
+		return 1;
+	} else if (value < 0) {
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
 // Returns the given unsigned type for an arbitrary size
@@ -50,22 +56,7 @@ template <> struct uint_for_size<8> : std::type_identity<std::uint64_t> {};
 
 template <class Type>
 constexpr auto flatten(Type location) {
-	union union_t {
-			constexpr explicit union_t(Type location) : location{location} {}
-			Type location;
-			uint_for_size_t<sizeof(location)> integer;
-	};
-	return union_t{location}.integer;
-}
-
-template <class Type, class Integral>
-constexpr auto unflatten(Integral integer) {
-	union union_t {
-			constexpr explicit union_t(Integral integer) : integer{integer} {}
-			Type location;
-			uint_for_size_t<sizeof(Type)> integer;
-	};
-	return union_t{integer}.location;
+	return std::bit_cast<uint_for_size_t<sizeof(location)>>(location);
 }
 
 // Holder for nominal types which cannot be implicitly converted between otherwise compatible
@@ -73,6 +64,8 @@ constexpr auto unflatten(Integral integer) {
 template <class Type, class>
 class nominal {
 	public:
+		using value_type = Type;
+
 		constexpr nominal() = default;
 		explicit constexpr nominal(Type value) : value{value} {}
 

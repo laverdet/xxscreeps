@@ -2,6 +2,7 @@ module;
 #include <nan.h>
 export module screeps;
 export import :heap;
+export import :heuristic;
 export import :open_closed;
 export import :position;
 export import :room;
@@ -10,9 +11,10 @@ import std;
 
 namespace screeps {
 
-using pos_index_t = int;	// maximum: k_max_rooms * 2500
-using room_index_t = int; // maximum: k_max_rooms (32 bits tested faster than uint8_t)
-using cost_t = int;				// maximum: longest chebyshev distance of whole map
+// maximum: k_max_rooms * 2500
+using pos_index_t = int;
+// maximum: k_max_rooms (32 bits tested faster than uint8_t)
+using room_index_t = nominal<int, struct _room_index>;
 constexpr auto k_max_rooms = 64;
 
 static_assert(std::numeric_limits<pos_index_t>::max() > 2'500 * k_max_rooms, "pos_index_t is too small");
@@ -21,28 +23,28 @@ static_assert(std::numeric_limits<pos_index_t>::max() > 2'500 * k_max_rooms, "po
 // Path finder encapsulation. Multiple instances are thread-safe
 export class path_finder_t {
 	public:
-		struct goal;
-		struct result;
 		class path_iterator;
 		class sentinel_path_iterator;
+		struct result;
+		struct search_options;
 
 	private:
 		constexpr static size_t map_position_size = 1 << sizeof(room_location_t) * 8;
-		constexpr static cost_t obstacle = std::numeric_limits<cost_t>::max();
-		std::array<room_info_t, k_max_rooms> room_table;
-		int room_table_size = 0;
-		std::array<room_index_t, map_position_size> reverse_room_table;
-		std::unordered_set<room_location_t, room_location_t::hash_t> blocked_rooms;
+		constexpr static cost_t obstacle = 0;
+		constexpr static auto room_index_sentinel = room_index_t{0};
+
+		std::array<room_info_t, k_max_rooms> room_table_;
+		int room_table_size_ = 0;
+		std::array<room_index_t, map_position_size> reverse_room_table_;
+		std::unordered_set<room_location_t, room_location_t::hash> blocked_rooms;
 		std::array<pos_index_t, 2'500 * k_max_rooms> parents;
 		open_closed_t<2'500 * k_max_rooms> open_closed;
 		heap_t<pos_index_t, cost_t, 2'500 * k_max_rooms, 2'500 * k_max_rooms / 8> heap;
-		std::vector<goal> goals;
+		heuristic_t heuristic_;
 		std::array<cost_t, 4> look_table = {{obstacle, obstacle, obstacle, obstacle}};
 		double heuristic_weight;
-		room_index_t max_rooms;
-		bool flee;
-		v8::Local<v8::Value>* room_data_handles;
-		v8::Local<v8::Function>* room_callback;
+		int max_rooms;
+		v8::Local<v8::Function> room_callback_;
 		bool _is_in_use = false;
 
 		static std::array<uint8_t*, map_position_size> terrain;
@@ -57,7 +59,6 @@ export class path_finder_t {
 		void push_node(pos_index_t parent_index, world_position_t node, cost_t g_cost);
 
 		auto look(world_position_t pos) -> cost_t;
-		auto heuristic(world_position_t pos) const -> cost_t;
 
 		void astar(pos_index_t index, world_position_t pos, cost_t g_cost);
 
@@ -74,15 +75,9 @@ export class path_finder_t {
 
 		auto search(
 			world_position_t origin,
-			std::vector<path_finder_t::goal> goals,
+			std::vector<heuristic_t::goal_t> goals,
 			v8::Local<v8::Function> room_callback,
-			cost_t plain_cost,
-			cost_t swamp_cost,
-			int max_rooms,
-			int max_ops,
-			unsigned max_cost,
-			bool flee,
-			double heuristic_weight
+			const search_options& options
 		) -> std::optional<result>;
 
 		auto is_in_use() const -> bool {
@@ -90,17 +85,6 @@ export class path_finder_t {
 		}
 
 		static void load_terrain(v8::Local<v8::Object> world);
-};
-
-// Stores information about a pathfinding goal, just a position + range
-struct path_finder_t::goal {
-		cost_t range{};
-		world_position_t pos{};
-
-		constexpr static auto struct_template = js::struct_template{
-			js::struct_member{util::cw<"pos">, &goal::pos},
-			js::struct_member{util::cw<"range">, &goal::range},
-		};
 };
 
 // path_iterator
@@ -129,6 +113,17 @@ class path_finder_t::sentinel_path_iterator {
 };
 
 using path_range_type = std::ranges::subrange<path_finder_t::path_iterator, path_finder_t::sentinel_path_iterator>;
+
+// Options for `search`
+struct path_finder_t::search_options {
+		double heuristic_weight;
+		cost_t plain_cost;
+		cost_t swamp_cost;
+		int max_ops;
+		int max_rooms;
+		unsigned max_cost;
+		bool flee;
+};
 
 // Result of `search`
 struct path_finder_t::result {

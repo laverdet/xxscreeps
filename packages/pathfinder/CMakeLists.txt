@@ -72,6 +72,7 @@ target_link_libraries(pathfinder PUBLIC auto_js nodejs nodejs_v8 utility_js v8_j
 target_sources(pathfinder
 	PUBLIC FILE_SET CXX_MODULES FILES
 		src/heap.cc
+		src/heuristic.cc
 		src/open-closed.cc
 		src/pf.h.cc
 		src/position.cc
