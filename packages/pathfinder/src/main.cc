@@ -6,6 +6,7 @@
 
 // NODE_OPTIONS='--no-node-snapshot --experimental-vm-modules --enable-source-maps' lldb-22 node packages/xxscreeps/bin/xxscreeps.js test
 #include "nan.h"
+#include <auto_js/export_tag.h>
 #include <isolated_vm.h>
 import auto_js;
 import screeps;
@@ -71,7 +72,7 @@ auto load_terrain(js::forward<v8::Local<v8::Object>> world) -> void {
 
 }; // namespace screeps
 
-ISOLATED_VM_MODULE void InitForContext(v8::Isolate* isolate, v8::Local<v8::Context> context, v8::Local<v8::Object> target) {
+EXPORT ISOLATED_VM_MODULE void InitForContext(v8::Isolate* isolate, v8::Local<v8::Context> context, v8::Local<v8::Object> target) {
 	auto isolate_witness = js::iv8::isolate_lock_witness::make_witness(isolate);
 	auto context_witness = js::iv8::context_lock_witness::make_witness(isolate_witness, context);
 	js::iv8::object_assign(
