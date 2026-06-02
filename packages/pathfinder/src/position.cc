@@ -1,27 +1,11 @@
 export module screeps:position;
+import :room;
 import :utility;
 import auto_js;
 import std;
 import util;
 
 namespace screeps {
-
-// Packed integer layout of "WorldPosition" type, from JS
-struct packed_position {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-		packed_position(std::uint16_t xx, std::uint16_t yy) : xx{xx}, yy{yy} {}
-		std::uint16_t xx;
-		std::uint16_t yy;
-#elif __BYTE_ORDER == __BIG_ENDIAN
-		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-		packed_position(std::uint16_t xx, std::uint16_t yy) : xx{xx}, yy{yy} {}
-		std::uint16_t yy;
-		std::uint16_t xx;
-#else
-#error "Unsupported endianness"
-#endif
-};
 
 // Cardinal movement directions
 enum class direction_t : std::uint8_t {
@@ -35,31 +19,47 @@ enum class direction_t : std::uint8_t {
 	TOP_LEFT
 };
 
+// Packed integer layout of "WorldPosition" type, from JS
+struct packed_position {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+		constexpr packed_position(std::uint16_t xx, std::uint16_t yy) : xx{xx}, yy{yy} {}
+		std::uint16_t xx;
+		std::uint16_t yy;
+#elif __BYTE_ORDER == __BIG_ENDIAN
+		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+		constexpr packed_position(std::uint16_t xx, std::uint16_t yy) : xx{xx}, yy{yy} {}
+		std::uint16_t yy;
+		std::uint16_t xx;
+#else
+#error "Exotic endianness?"
+#endif
+};
+
 //
 // Similar to a RoomPosition object, but stores coordinates in a continuous global plane.
 // Conversions to/from this coordinate plane are handled on the JS side
 export struct world_position_t {
-		int xx, yy; // maximum: world_size[255] * 50 (32 bits tested faster than uint16_t)
+		// xx & yy components are aligned to the register size because otherwise both get passed on the
+		// same register and it ends up slower
+		alignas(std::ptrdiff_t) int xx{};
+		alignas(std::ptrdiff_t) int yy{};
 
-		world_position_t() = default;
+		constexpr world_position_t() = default;
 		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-		world_position_t(int xx, int yy) : xx{xx}, yy{yy} {}
+		constexpr world_position_t(int xx, int yy) : xx{xx}, yy{yy} {}
 
-		explicit world_position_t(packed_position pos) : xx{pos.xx}, yy{pos.yy} {}
+		explicit constexpr world_position_t(packed_position pos) : xx{pos.xx}, yy{pos.yy} {}
 
-		explicit operator packed_position() const {
+		explicit constexpr operator packed_position() const {
 			return packed_position{static_cast<std::uint16_t>(xx), static_cast<std::uint16_t>(yy)};
-		}
-
-		static auto null() -> world_position_t {
-			return world_position_t{std::numeric_limits<int>::min(), std::numeric_limits<int>::max()};
 		}
 
 		friend auto operator<<(std::ostream& os, const world_position_t& that) -> std::ostream& {
 			auto rx = (that.xx / 50) - 0x80;
 			auto ry = (that.yy / 50) - 0x80;
-			bool ww = rx < 0;
-			bool nn = ry < 0;
+			auto ww = rx < 0;
+			auto nn = ry < 0;
 			os << "world_position_t(["
 				 << (ww ? 'W' : 'E')
 				 << (ww ? -1 - rx : rx)
@@ -73,65 +73,46 @@ export struct world_position_t {
 			return os;
 		}
 
-		auto operator==(const world_position_t& right) const -> bool = default;
+		constexpr auto operator==(const world_position_t& right) const -> bool = default;
 
-		auto is_null() const -> bool {
-			return *this == null();
-		}
-
-		auto position_in_direction(direction_t dir) const -> world_position_t {
-			switch (dir) {
-				case direction_t::TOP:
-					return {xx, yy - 1};
-				case direction_t::TOP_RIGHT:
-					return {xx + 1, yy - 1};
-				case direction_t::RIGHT:
-					return {xx + 1, yy};
-				case direction_t::BOTTOM_RIGHT:
-					return {xx + 1, yy + 1};
-				case direction_t::BOTTOM:
-					return {xx, yy + 1};
-				case direction_t::BOTTOM_LEFT:
-					return {xx - 1, yy + 1};
-				case direction_t::LEFT:
-					return {xx - 1, yy};
-				case direction_t::TOP_LEFT:
-					return {xx - 1, yy - 1};
-			}
+		[[nodiscard]] constexpr auto position_in_direction(direction_t dir) const -> world_position_t {
+			constexpr auto delta = std::array{
+				std::pair{0, -1},
+				std::pair{1, -1},
+				std::pair{1, 0},
+				std::pair{1, 1},
+				std::pair{0, 1},
+				std::pair{-1, 1},
+				std::pair{-1, 0},
+				std::pair{-1, -1},
+			};
+			auto ii = static_cast<std::underlying_type_t<direction_t>>(dir);
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+			return {xx + delta[ ii ].first, yy + delta[ ii ].second};
 		}
 
 		// Gets the linear direction to a tile
-		auto direction_to(world_position_t pos) const -> direction_t {
-			int dx = pos.xx - xx;
-			int dy = pos.yy - yy;
-			if (dx > 0) {
-				if (dy > 0) {
-					return direction_t::BOTTOM_RIGHT;
-				} else if (dy < 0) {
-					return direction_t::TOP_RIGHT;
-				} else {
-					return direction_t::RIGHT;
-				}
-			} else if (dx < 0) {
-				if (dy > 0) {
-					return direction_t::BOTTOM_LEFT;
-				} else if (dy < 0) {
-					return direction_t::TOP_LEFT;
-				} else {
-					return direction_t::LEFT;
-				}
-			} else {
-				if (dy > 0) {
-					return direction_t::BOTTOM;
-				} else if (dy < 0) {
-					return direction_t::TOP;
-				}
-			}
-			return (direction_t)-1;
+		[[nodiscard]] constexpr auto direction_to(world_position_t pos) const -> direction_t {
+			constexpr auto delta = std::array{
+				std::array{direction_t::TOP_LEFT, direction_t::TOP, direction_t::TOP_RIGHT},
+				std::array{direction_t::LEFT, static_cast<direction_t>(-1), direction_t::RIGHT},
+				std::array{direction_t::BOTTOM_LEFT, direction_t::BOTTOM, direction_t::BOTTOM_RIGHT},
+			};
+			auto dx = sign(pos.xx - xx) + 1;
+			auto dy = sign(pos.yy - yy) + 1;
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+			return delta[ dx ][ dy ];
 		}
 
-		auto range_to(const world_position_t pos) const -> cost_t {
+		[[nodiscard]] constexpr auto range_to(world_position_t pos) const -> int {
 			return std::max(std::abs(pos.xx - xx), std::abs(pos.yy - yy));
+		}
+
+		[[nodiscard]] constexpr auto room() const -> room_location_t {
+			return room_location_t{
+				static_cast<std::uint8_t>(xx / 50U),
+				static_cast<std::uint8_t>(yy / 50U),
+			};
 		}
 };
 

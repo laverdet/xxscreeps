@@ -33,7 +33,11 @@ auto contiguous_enum_range(Enum min, Enum max) {
 	return std::ranges::subrange(contiguous_enum_iterator{min}, contiguous_enum_iterator{max} + 1);
 }
 
-export using cost_t = int; // maximum: longest chebyshev distance of whole map
+// Returns the sign of the value (-1, 0, or 1)
+template <class Type>
+auto sign(Type value) -> int {
+	return (Type{0} < value) - (value < Type{0});
+}
 
 // Returns the given unsigned type for an arbitrary size
 template <std::size_t> struct uint_for_size;

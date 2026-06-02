@@ -1,12 +1,9 @@
 module;
 // Author: Marcel Laverdet <https://github.com/laverdet>
 #include "nan.h"
-#include <algorithm>
-#include <iostream>
-#include <mutex>
-#include <stdexcept>
 module screeps;
 import :utility;
+import std;
 
 using namespace screeps;
 
@@ -66,7 +63,7 @@ auto path_finder_t::room_index_from_pos(const room_location_t map_pos) -> room_i
 
 // Conversions to/from index & world_position_t
 auto path_finder_t::index_from_pos(const world_position_t pos) -> pos_index_t {
-	room_index_t room_index = room_index_from_pos(room_location_t{pos});
+	room_index_t room_index = room_index_from_pos(pos.room());
 	if (room_index == 0) {
 		throw std::runtime_error("Invalid invocation of index_from_pos");
 	}
@@ -105,7 +102,7 @@ void path_finder_t::push_node(pos_index_t parent_index, world_position_t node, c
 
 // Return cost of moving to a node
 auto path_finder_t::look(const world_position_t pos) -> cost_t {
-	room_index_t room_index = room_index_from_pos(room_location_t{pos});
+	room_index_t room_index = room_index_from_pos(pos.room());
 	if (room_index == 0) {
 		return obstacle;
 	}
@@ -217,7 +214,7 @@ auto path_finder_t::jump_x(cost_t cost, world_position_t pos, int dx) -> world_p
 
 		cost_t jump_cost = look(pos);
 		if (jump_cost == obstacle) {
-			pos = world_position_t::null();
+			pos = {};
 			break;
 		} else if (jump_cost != cost) {
 			break;
@@ -248,7 +245,7 @@ auto path_finder_t::jump_y(cost_t cost, world_position_t pos, int dy) -> world_p
 
 		cost_t jump_cost = look(pos);
 		if (jump_cost == obstacle) {
-			pos = world_position_t::null();
+			pos = {};
 			break;
 		} else if (jump_cost != cost) {
 			break;
@@ -274,8 +271,8 @@ auto path_finder_t::jump_xy(cost_t cost, world_position_t pos, int dx, int dy) -
 		prev_cost_x = look(world_position_t{pos.xx, pos.yy + dy});
 		prev_cost_y = look(world_position_t{pos.xx + dx, pos.yy});
 		if (
-			(prev_cost_y != obstacle && !jump_x(cost, world_position_t{pos.xx + dx, pos.yy}, dx).is_null()) ||
-			(prev_cost_x != obstacle && !jump_y(cost, world_position_t{pos.xx, pos.yy + dy}, dy).is_null())
+			(prev_cost_y != obstacle && jump_x(cost, world_position_t{pos.xx + dx, pos.yy}, dx) != world_position_t{}) ||
+			(prev_cost_x != obstacle && jump_y(cost, world_position_t{pos.xx, pos.yy + dy}, dy) != world_position_t{})
 		) {
 			break;
 		}
@@ -285,7 +282,7 @@ auto path_finder_t::jump_xy(cost_t cost, world_position_t pos, int dx, int dy) -
 
 		cost_t jump_cost = look(pos);
 		if (jump_cost == obstacle) {
-			pos = world_position_t::null();
+			pos = {};
 			break;
 		} else if (jump_cost != cost) {
 			break;
@@ -449,7 +446,7 @@ void path_finder_t::jump_neighbor(world_position_t pos, pos_index_t index, world
 		g_cost += n_cost;
 	} else {
 		neighbor = jump(n_cost, neighbor, neighbor.xx - pos.xx, neighbor.yy - pos.yy);
-		if (neighbor.is_null()) {
+		if (neighbor == world_position_t{}) {
 			return;
 		}
 		g_cost += n_cost * (pos.range_to(neighbor) - 1) + look(neighbor);
@@ -519,7 +516,7 @@ auto path_finder_t::search(
 	_is_in_use = true;
 	try {
 		// Prime data for `index_from_pos`
-		if (room_index_from_pos(room_location_t{origin}) == 0) {
+		if (room_index_from_pos(origin.room()) == 0) {
 			// Initial room is inaccessible
 			_is_in_use = false;
 			return result{

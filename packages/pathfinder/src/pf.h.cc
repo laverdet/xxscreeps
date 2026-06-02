@@ -12,6 +12,7 @@ namespace screeps {
 
 using pos_index_t = int;	// maximum: k_max_rooms * 2500
 using room_index_t = int; // maximum: k_max_rooms (32 bits tested faster than uint8_t)
+using cost_t = int;				// maximum: longest chebyshev distance of whole map
 constexpr auto k_max_rooms = 64;
 
 static_assert(std::numeric_limits<pos_index_t>::max() > 2'500 * k_max_rooms, "pos_index_t is too small");

@@ -71,7 +71,7 @@ class heap_t {
 			// auto search = heap_ | std::views::enumerate | std::views::reverse;
 			auto search = std::views::zip(std::views::iota(0UZ, heap_.size()), heap_) | std::views::reverse;
 			auto found = std::ranges::find(search, value.first, [](const auto& pair) { return get<1>(pair); });
-			auto ii = static_cast<std::size_t>(get<0>(*found));
+			auto ii = get<0>(*found);
 			score_[ value.first ] = value.second;
 			push_heap(std::ranges::subrange{heap_.begin(), heap_.begin() + ii + 1}, compare, projection());
 		}
