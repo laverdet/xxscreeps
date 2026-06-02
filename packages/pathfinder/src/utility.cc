@@ -107,3 +107,11 @@ class inplace_vector {
 };
 
 }; // namespace screeps
+
+namespace std {
+
+// Footgun: `std::numeric_limits<T>::max()` is defined for non-numeric types!
+template <class Type, class Tag>
+struct numeric_limits<screeps::nominal<Type, Tag>> : numeric_limits<Type> {};
+
+} // namespace std

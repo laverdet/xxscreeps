@@ -4,6 +4,10 @@ import :utility;
 
 namespace screeps {
 
+// maximum: k_max_rooms (32 bits tested faster than uint8_t)
+using room_index_t = nominal<int, struct _room_index>;
+constexpr auto room_index_sentinel = room_index_t{0};
+
 // CostMatrix is a [50, 50] multi-dimensional array (mdspan cannot be nulled)
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 using cost_matrix_type = const std::uint8_t (*)[ 50 ];
@@ -113,3 +117,27 @@ class scope_table {
 };
 
 }; // namespace screeps
+
+namespace std {
+using namespace screeps;
+
+template <>
+struct formatter<room_location_t> : formatter<std::string> {
+		using formatter<std::string>::format;
+		auto format(room_location_t room, std::format_context& context) const {
+			auto rx =room.xx - 0x80;
+			auto ry = room.yy  - 0x80;
+			auto ww = rx < 0;
+			auto nn = ry < 0;
+			auto output = std::format(
+				"{}{}{}{}",
+				ww ? 'W' : 'E',
+				ww ? -1 - rx : rx,
+				nn ? 'N' : 'S',
+				nn ? -1 - ry : ry
+			);
+			return format(output, context);
+		}
+};
+
+} // namespace std

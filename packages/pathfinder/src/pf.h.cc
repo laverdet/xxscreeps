@@ -11,13 +11,11 @@ import std;
 
 namespace screeps {
 
-// maximum: k_max_rooms * 2500
-using pos_index_t = int;
-// maximum: k_max_rooms (32 bits tested faster than uint8_t)
-using room_index_t = nominal<int, struct _room_index>;
 constexpr auto k_max_rooms = 64;
+constexpr auto k_room_size = 50 * 50;
+constexpr auto k_search_capacity = k_room_size * k_max_rooms;
 
-static_assert(std::numeric_limits<pos_index_t>::max() > 2'500 * k_max_rooms, "pos_index_t is too small");
+static_assert(std::numeric_limits<pos_index_t>::max() > k_search_capacity, "pos_index_t is too small");
 
 //
 // Path finder encapsulation. Multiple instances are thread-safe
@@ -31,18 +29,15 @@ export class path_finder_t {
 	private:
 		constexpr static size_t map_position_size = 1 << sizeof(room_location_t) * 8;
 		constexpr static cost_t obstacle = 0;
-		constexpr static auto room_index_sentinel = room_index_t{0};
-		constexpr static auto room_size = 50 * 50;
-		constexpr static auto search_capacity = room_size * k_max_rooms;
 
 		using room_scope_table = scope_table<room_terrain, room_location_t, k_max_rooms>;
-		using open_closed_type = open_closed_t<search_capacity>;
-		using heap_score_type = score_table_t<pos_index_t, cost_t, search_capacity>;
-		using heap_type = heap_t<pos_index_t, std::greater<>, heap_score_type, search_capacity / 8>;
+		using open_closed_type = open_closed_t<k_search_capacity>;
+		using heap_score_type = score_table_t<pos_index_t::value_type, cost_t, k_search_capacity>;
+		using heap_type = heap_t<pos_index_t::value_type, std::greater<>, heap_score_type, k_search_capacity / 8>;
 
 		room_scope_table room_table_;
 		std::unordered_set<room_location_t, room_location_t::hash> blocked_rooms;
-		std::array<pos_index_t, 2'500 * k_max_rooms> parents;
+		std::array<pos_index_t, k_search_capacity> parents;
 		open_closed_type open_closed;
 		heap_type heap;
 		heuristic_t heuristic_;
@@ -57,26 +52,27 @@ export class path_finder_t {
 				js_error() : std::runtime_error("js error") {}
 		};
 
-		auto room_index_from_pos(room_location_t map_pos) -> room_index_t;
-		auto index_from_pos(world_position_t pos) -> pos_index_t;
-		void push_node(pos_index_t parent_index, world_position_t node, cost_t g_cost);
+		auto index_from_pos(world_position_t pos) -> indexed_position_t;
+		auto room_index_from_location(room_location_t location) -> room_index_t;
+		auto push_node(indexed_position_t node, pos_index_t parent_index, cost_t g_cost) -> void;
 
-		auto look(world_position_t pos) -> cost_t;
+		auto look(indexed_position_t pos) -> cost_t;
+		auto look_open(world_position_t pos) -> std::pair<room_index_t, cost_t>;
 
-		void astar(pos_index_t index, world_position_t pos, cost_t g_cost);
+		auto astar(indexed_position_t pos, pos_index_t index, cost_t g_cost) -> void;
 
-		auto jump_x(cost_t cost, world_position_t pos, int dx) -> world_position_t;
-		auto jump_y(cost_t cost, world_position_t pos, int dy) -> world_position_t;
-		auto jump_xy(cost_t cost, world_position_t pos, int dx, int dy) -> world_position_t;
-		auto jump(cost_t cost, world_position_t pos, int dx, int dy) -> world_position_t;
-		void jps(pos_index_t index, world_position_t pos, cost_t g_cost);
-		void jump_neighbor(world_position_t pos, pos_index_t index, world_position_t neighbor, cost_t g_cost, cost_t cost, cost_t n_cost);
+		auto jump_x(indexed_position_t pos, int dx, cost_t cost) -> indexed_position_t;
+		auto jump_y(indexed_position_t pos, int dy, cost_t cost) -> indexed_position_t;
+		auto jump_xy(indexed_position_t pos, int dx, int dy, cost_t cost) -> indexed_position_t;
+		auto jump(indexed_position_t pos, int dx, int dy, cost_t cost) -> indexed_position_t;
+		auto jps(indexed_position_t pos, pos_index_t index, cost_t g_cost) -> void;
+		auto jump_neighbor(indexed_position_t neighbor, indexed_position_t pos, pos_index_t index, cost_t g_cost, cost_t cost, cost_t n_cost) -> void;
 
 	public:
 		using terrain_map_type = std::array<terrain_type, map_position_size>;
 
-		auto lookup(pos_index_t index) const -> pos_index_t { return parents[ index ]; };
-		auto pos_from_index(pos_index_t index) const -> world_position_t;
+		auto lookup(pos_index_t index) const -> pos_index_t { return parents[ *index ]; };
+		auto room_table() const -> const room_scope_table& { return room_table_; }
 
 		auto search(
 			world_position_t origin,
@@ -89,7 +85,7 @@ export class path_finder_t {
 			return _is_in_use;
 		}
 
-		static void load_terrain(v8::Local<v8::Object> world);
+		static auto load_terrain(v8::Local<v8::Object> world) -> void;
 };
 
 // path_iterator
@@ -102,7 +98,8 @@ class path_finder_t::path_iterator : public util::incrementable_facade {
 		constexpr path_iterator(const path_finder_t& pf, pos_index_t index) : pf_{pf}, index_{index} {}
 		constexpr auto operator++() -> auto& { return (index_ = pf_.get().lookup(index_), *this); }
 		constexpr auto operator==(const path_iterator& right) const -> bool { return index_ == right.index_; }
-		constexpr auto operator*() const -> world_position_t { return pf_.get().pos_from_index(index_); }
+		// NOLINTNEXTLINE(cppcoreguidelines-slicing)
+		constexpr auto operator*() const -> world_position_t { return indexed_position_t{pf_.get().room_table(), index_}; }
 
 	private:
 		std::reference_wrapper<const path_finder_t> pf_;
@@ -113,7 +110,7 @@ class path_finder_t::path_iterator : public util::incrementable_facade {
 class path_finder_t::sentinel_path_iterator {
 	public:
 		constexpr auto operator==(const path_iterator& right) const -> bool {
-			return right.index_ == std::numeric_limits<pos_index_t>::max();
+			return right.index_ == pos_index_t{std::numeric_limits<pos_index_t::value_type>::max()};
 		}
 };
 

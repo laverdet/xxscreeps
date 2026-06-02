@@ -1,3 +1,5 @@
+module;
+#include <cassert>
 export module screeps:position;
 import :room;
 import :utility;
@@ -6,6 +8,18 @@ import std;
 import util;
 
 namespace screeps {
+
+// maximum: k_max_rooms * 2500
+using pos_index_t = nominal<int, struct _pos_index>;
+
+// coordinate utilities
+constexpr auto is_border_coord(int xy) -> bool {
+	return (xy + 1) % 50 < 2;
+}
+
+constexpr auto is_near_border_coord(int xy) -> bool {
+	return (xy + 2) % 50 < 4;
+}
 
 // Cardinal movement directions
 enum class direction_t : std::uint8_t {
@@ -36,15 +50,9 @@ struct packed_position {
 #endif
 };
 
-//
 // Similar to a RoomPosition object, but stores coordinates in a continuous global plane.
 // Conversions to/from this coordinate plane are handled on the JS side
 export struct world_position_t {
-		// xx & yy components are aligned to the register size because otherwise both get passed on the
-		// same register and it ends up slower
-		alignas(std::ptrdiff_t) int xx{};
-		alignas(std::ptrdiff_t) int yy{};
-
 		constexpr world_position_t() = default;
 		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 		constexpr world_position_t(int xx, int yy) : xx{xx}, yy{yy} {}
@@ -53,24 +61,6 @@ export struct world_position_t {
 
 		explicit constexpr operator packed_position() const {
 			return packed_position{static_cast<std::uint16_t>(xx), static_cast<std::uint16_t>(yy)};
-		}
-
-		friend auto operator<<(std::ostream& os, world_position_t that) -> std::ostream& {
-			auto rx = (that.xx / 50) - 0x80;
-			auto ry = (that.yy / 50) - 0x80;
-			auto ww = rx < 0;
-			auto nn = ry < 0;
-			os << "world_position_t(["
-				 << (ww ? 'W' : 'E')
-				 << (ww ? -1 - rx : rx)
-				 << (nn ? 'N' : 'S')
-				 << (nn ? -1 - ry : ry)
-				 << "] "
-				 << that.xx % 50
-				 << ", "
-				 << that.yy % 50
-				 << ")";
-			return os;
 		}
 
 		constexpr auto operator==(const world_position_t& right) const -> bool = default;
@@ -114,6 +104,48 @@ export struct world_position_t {
 				static_cast<std::uint8_t>(yy / 50U),
 			};
 		}
+
+		// xx & yy components are aligned to the register size because otherwise both get passed on the
+		// same register and it ends up slower
+		alignas(std::ptrdiff_t) int xx{};
+		alignas(std::ptrdiff_t) int yy{};
+};
+
+// World position which also carries around room index
+struct indexed_position_t : public world_position_t {
+		constexpr indexed_position_t() : room_index{room_index_sentinel} {}
+
+		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+		constexpr indexed_position_t(room_index_t index, int xx, int yy) :
+				world_position_t{xx, yy},
+				room_index{index} {}
+
+		constexpr indexed_position_t(room_index_t index, world_position_t pos) :
+				world_position_t{pos},
+				room_index{index} {}
+
+		constexpr indexed_position_t(const auto& room_table, pos_index_t pos) :
+				indexed_position_t{[ & ] {
+					auto room_index = *pos / (50 * 50);
+					auto location = room_table[ room_index ].first;
+					int coord = *pos - (room_index * 50 * 50);
+					return indexed_position_t{
+						room_index_t{room_index + 1},
+						(coord % 50) + (location.xx * 50),
+						(coord / 50) + (location.yy * 50)
+					};
+				}()} {}
+
+		constexpr explicit operator pos_index_t() const {
+			return pos_index_t{((*room_index - 1) * 50 * 50) + (yy % 50 * 50) + (xx % 50)};
+		}
+
+		[[nodiscard]] constexpr auto translate(int dx, int dy) const -> indexed_position_t {
+			assert(!is_border_coord(xx) && !is_border_coord(yy));
+			return indexed_position_t{room_index, xx + dx, yy + dy};
+		}
+
+		room_index_t room_index;
 };
 
 }; // namespace screeps
@@ -143,3 +175,24 @@ struct accept<void, world_position_t> {
 };
 
 } // namespace js
+
+namespace std {
+using namespace screeps;
+
+template <>
+struct formatter<world_position_t> : formatter<std::string> {
+		using formatter<std::string>::format;
+		auto format(world_position_t pos, std::format_context& context) const {
+			return format(std::format("world_position_t({}, {}, {})", pos.room(), pos.xx % 50, pos.yy % 50), context);
+		}
+};
+
+template <>
+struct formatter<indexed_position_t> : formatter<std::string> {
+		using formatter<std::string>::format;
+		auto format(indexed_position_t pos, std::format_context& context) const {
+			return format(std::format("indexed_position_t({}, {}, {}, {})", pos.room(), *pos.room_index, pos.xx % 50, pos.yy % 50), context);
+		}
+};
+
+} // namespace std
