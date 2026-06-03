@@ -59,15 +59,15 @@ const intents = [
 ];
 
 registerObjectTickProcessor(Nuke, (nuke, context) => {
-	// Two-tick lifecycle: impact at landTime keeps the nuke visible with `timeToLand === 0`
-	// for the player to observe; removal happens on the following tick.
-	const landTime = nuke['#landTime'];
-	if (Game.time < landTime) {
-		context.wakeAt(landTime - 1);
-	} else if (Game.time === landTime) {
+	// Two-tick lifecycle: impact at landTime keeps the nuke visible with `timeToLand === 0` for the
+	// player to observe; removal happens on the following tick.
+	const { timeToLand } = nuke;
+	if (timeToLand > 0) {
+		context.wakeAt(timeToLand - 1);
+	} else if (timeToLand === 0) {
 		applyNukeImpact(nuke);
 		context.setActive();
-	} else {
+	} else if (timeToLand === -1) {
 		nuke.room['#removeObject'](nuke);
 		context.didUpdate();
 	}

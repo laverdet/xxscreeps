@@ -175,7 +175,7 @@ describe('Nuker', () => {
 			const room = Game.rooms.W2N1!;
 			const nukes = room['#lookFor'](C.LOOK_NUKES);
 			assert.strictEqual(nukes.length, 1);
-			assert.strictEqual(nukes[0]!.timeToLand, 0);
+			assert.strictEqual(nukes[0]?.timeToLand, 0);
 			assert.strictEqual(room['#lookFor'](C.LOOK_CREEPS).length, 0);
 			assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 0);
 			assert.strictEqual(room['#lookFor'](C.LOOK_CONSTRUCTION_SITES).length, 0);
