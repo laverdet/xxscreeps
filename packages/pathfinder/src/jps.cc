@@ -5,6 +5,8 @@ module screeps;
 using namespace screeps;
 
 // JPS dragons
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 auto path_finder_t::jump_x(indexed_position_t pos, int dx, cost_t cost) -> indexed_position_t {
 	cost_t prev_cost_u = look(pos.translate(0, -1));
 	cost_t prev_cost_d = look(pos.translate(0, 1));
@@ -36,6 +38,7 @@ auto path_finder_t::jump_x(indexed_position_t pos, int dx, cost_t cost) -> index
 	return pos;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 auto path_finder_t::jump_y(indexed_position_t pos, int dy, cost_t cost) -> indexed_position_t {
 	cost_t prev_cost_l = look(pos.translate(-1, 0));
 	cost_t prev_cost_r = look(pos.translate(1, 0));
@@ -118,6 +121,7 @@ auto path_finder_t::jump(indexed_position_t pos, int dx, int dy, cost_t cost) ->
 
 auto path_finder_t::jps(const indexed_position_t pos, const pos_index_t index, cost_t g_cost) -> void {
 	assert(pos_index_t{pos} == index);
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
 	auto parent = indexed_position_t{room_table_, parents[ *index ]};
 	int dx = sign(pos.xx - parent.xx);
 	int dy = sign(pos.yy - parent.yy);
@@ -254,6 +258,7 @@ auto path_finder_t::jps(const indexed_position_t pos, const pos_index_t index, c
 	}
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 auto path_finder_t::jump_neighbor(indexed_position_t neighbor, const indexed_position_t pos, const pos_index_t index, cost_t g_cost, cost_t cost, cost_t n_cost) -> void {
 	assert(pos_index_t{pos} == index);
 	if (n_cost != cost || is_border_coord(neighbor.xx) || is_border_coord(neighbor.yy)) {
@@ -266,6 +271,7 @@ auto path_finder_t::jump_neighbor(indexed_position_t neighbor, const indexed_pos
 		if (neighbor == indexed_position_t{}) {
 			return;
 		}
+		// NOLINTNEXTLINE(cppcoreguidelines-slicing)
 		g_cost += (n_cost * (pos.range_to(neighbor) - 1)) + look(neighbor);
 	}
 

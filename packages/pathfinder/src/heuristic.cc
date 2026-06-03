@@ -34,6 +34,11 @@ export class heuristic_t {
 			return (this->*callback_)(pos);
 		}
 
+		constexpr auto operator()(indexed_position_t pos) const -> cost_t {
+			// NOLINTNEXTLINE(cppcoreguidelines-slicing)
+			return (*this)(world_position_t{pos});
+		}
+
 	private:
 		[[nodiscard]] constexpr auto flee_n(world_position_t pos) const -> cost_t {
 			return std::ranges::fold_left(goals_, cost_t{0}, [ & ](cost_t cost, goal_t goal) -> cost_t {

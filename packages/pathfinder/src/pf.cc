@@ -21,7 +21,9 @@ auto path_finder_t::room_index_from_location(room_location_t location) -> room_i
 		if (blocked_rooms.contains(location)) {
 			return room_index_sentinel;
 		}
-		terrain_type terrain_ptr = terrain_map[ flatten(location) ];
+		auto room_id = std::bit_cast<std::uint16_t>(location);
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+		terrain_type terrain_ptr = terrain_map[ room_id ];
 		if (terrain_ptr == nullptr) {
 			blocked_rooms.insert(location);
 			return room_index_sentinel;
@@ -30,7 +32,7 @@ auto path_finder_t::room_index_from_location(room_location_t location) -> room_i
 		if (!room_callback_.IsEmpty()) {
 			Nan::TryCatch try_catch;
 			v8::Local<v8::Value> argv[ 1 ];
-			argv[ 0 ] = Nan::New(flatten(location));
+			argv[ 0 ] = Nan::New(room_id);
 			Nan::MaybeLocal<v8::Value> ret = Nan::Call(room_callback_, v8::Local<v8::Object>::Cast(Nan::Undefined()), 1, argv);
 			if (try_catch.HasCaught()) {
 				try_catch.ReThrow();
@@ -76,12 +78,14 @@ auto path_finder_t::push_node(indexed_position_t node, pos_index_t parent_index,
 	if (open_closed.is_open(*index)) {
 		if (heap.key_proj()(*index) > f_cost) {
 			heap.update(*index, [ & ](auto& score) { return score[ *index ] = f_cost; });
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
 			parents[ *index ] = parent_index;
 			// std::print("~ {}: h({}) + g({}) = f({})\n", node, h_cost, g_cost, f_cost);
 		}
 	} else {
 		heap.push(*index, [ & ](auto& score) { return score[ *index ] = f_cost; });
 		open_closed.open(*index);
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
 		parents[ *index ] = parent_index;
 		// std::print("+ {}: h({}) + g({}) = f({})\n", node, h_cost, g_cost, f_cost);
 	}
@@ -214,6 +218,7 @@ auto path_finder_t::search(
 		min_node = index_from_pos(origin);
 		auto index = pos_index_t{min_node};
 		open_closed.close(*index);
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
 		parents[ *index ] = pos_index_t{std::numeric_limits<pos_index_t>::max()};
 		astar(min_node, index, 0);
 
@@ -229,7 +234,7 @@ auto path_finder_t::search(
 			// Calculate costs
 			auto pos = indexed_position_t{room_table_, current};
 			cost_t h_cost = heuristic_(pos);
-			cost_t g_cost = score - cost_t(h_cost * heuristic_weight);
+			cost_t g_cost = score - static_cast<int>(h_cost * heuristic_weight);
 			// std::print("\n* {}: h({}) + g({}) = f({})\n", pos, h_cost, g_cost, score);
 
 			// Reached destination?
@@ -289,6 +294,7 @@ auto path_finder_t::load_terrain(v8::Local<v8::Object> world) -> void {
 		auto name = Nan::Get(keys, ii).ToLocalChecked();
 		auto id = Nan::To<uint32_t>(name).FromJust();
 		auto terrain = Nan::Get(world, name).ToLocalChecked();
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
 		terrain_map[ id ] = *Nan::TypedArrayContents<uint8_t>(terrain);
 	}
 }

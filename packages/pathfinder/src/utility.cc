@@ -54,11 +54,6 @@ template <> struct uint_for_size<2> : std::type_identity<std::uint16_t> {};
 template <> struct uint_for_size<4> : std::type_identity<std::uint32_t> {};
 template <> struct uint_for_size<8> : std::type_identity<std::uint64_t> {};
 
-template <class Type>
-constexpr auto flatten(Type location) {
-	return std::bit_cast<uint_for_size_t<sizeof(location)>>(location);
-}
-
 // Holder for nominal types which cannot be implicitly converted between otherwise compatible
 // values.
 template <class Type, class>

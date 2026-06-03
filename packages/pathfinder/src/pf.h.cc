@@ -71,8 +71,9 @@ export class path_finder_t {
 	public:
 		using terrain_map_type = std::array<terrain_type, map_position_size>;
 
-		auto lookup(pos_index_t index) const -> pos_index_t { return parents[ *index ]; };
-		auto room_table() const -> const room_scope_table& { return room_table_; }
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+		[[nodiscard]] auto lookup(pos_index_t index) const -> pos_index_t { return parents[ *index ]; };
+		[[nodiscard]] auto room_table() const -> const room_scope_table& { return room_table_; }
 
 		auto search(
 			world_position_t origin,
