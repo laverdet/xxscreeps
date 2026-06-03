@@ -1,7 +1,7 @@
 {
   "name": "@xxscreeps/pathfinder",
   "type": "commonjs",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "./module/index.js",
   "scripts": {
     "prepublishOnly": "napi prepublish --no-gh-release"
