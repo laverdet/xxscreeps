@@ -113,6 +113,7 @@ export struct world_position_t {
 
 // World position which also carries around room index
 struct indexed_position_t : public world_position_t {
+		using room_table_type = const std::pair<room_location_t, room_terrain>*;
 		constexpr indexed_position_t() : room_index{room_index_sentinel} {}
 
 		// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
@@ -127,6 +128,7 @@ struct indexed_position_t : public world_position_t {
 		constexpr indexed_position_t(const auto& room_table, pos_index_t pos) :
 				indexed_position_t{[ & ] {
 					auto room_index = *pos / (50 * 50);
+					// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 					auto location = room_table[ room_index ].first;
 					int coord = *pos - (room_index * 50 * 50);
 					return indexed_position_t{
@@ -149,6 +151,8 @@ struct indexed_position_t : public world_position_t {
 };
 
 }; // namespace screeps
+
+// ---
 
 namespace js {
 using namespace screeps;
@@ -175,6 +179,8 @@ struct accept<void, world_position_t> {
 };
 
 } // namespace js
+
+// ---
 
 namespace std {
 using namespace screeps;

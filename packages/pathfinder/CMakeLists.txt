@@ -82,15 +82,15 @@ target_sources(pathfinder
 	PUBLIC FILE_SET CXX_MODULES FILES
 		src/heap.cc
 		src/heuristic.cc
+		src/jps.cc
 		src/open-closed.cc
+		src/pf.cc
 		src/pf.h.cc
 		src/position.cc
 		src/room.cc
 		src/utility.cc
 	PRIVATE
-		src/jps.cc
 		src/main.cc
-		src/pf.cc
 )
 
 # nan

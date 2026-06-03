@@ -1,17 +1,66 @@
 module;
 #include <cassert>
-module screeps;
-
+export module screeps:jps;
+import :pf;
 using namespace screeps;
 
-// JPS dragons
+// Run an iteration of basic A*
+template <auto Check, class Callback, std::size_t RoomCapacity>
+auto pathfinder<Check, Callback, RoomCapacity>::astar(const indexed_position_t pos, const pos_index_t index, cost_t g_cost) -> void {
+	assert(pos_index_t{pos} == index);
+	for (auto dir : contiguous_enum_range(direction_t::TOP, direction_t::TOP_LEFT)) {
+		auto neighbor = pos.position_in_direction(dir);
 
+		// If this is a portal node there are some moves which will be impossible, and should be discarded
+		if (pos.xx % 50 == 0) {
+			if (
+				(neighbor.xx % 50 == 49 && pos.yy != neighbor.yy) ||
+				pos.xx == neighbor.xx
+			) {
+				continue;
+			}
+		} else if (pos.xx % 50 == 49) {
+			if (
+				(neighbor.xx % 50 == 0 && pos.yy != neighbor.yy) ||
+				pos.xx == neighbor.xx
+			) {
+				continue;
+			}
+		} else if (pos.yy % 50 == 0) {
+			if (
+				(neighbor.yy % 50 == 49 && pos.xx != neighbor.xx) ||
+				pos.yy == neighbor.yy
+			) {
+				continue;
+			}
+		} else if (pos.yy % 50 == 49) {
+			if (
+				(neighbor.yy % 50 == 0 && pos.xx != neighbor.xx) ||
+				pos.yy == neighbor.yy
+			) {
+				continue;
+			}
+		}
+
+		// Calculate cost of this move
+		auto [ room_index, n_cost ] = look_open(neighbor);
+		if (n_cost == obstacle) {
+			// std::print("# {}\n", neighbor);
+			continue;
+		}
+		push_node({room_index, neighbor}, index, g_cost + n_cost);
+	}
+}
+
+// ~ JPS dragons ~
+
+template <auto Check, class Callback, std::size_t RoomCapacity>
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-auto path_finder_t::jump_x(indexed_position_t pos, int dx, cost_t cost) -> indexed_position_t {
+auto pathfinder<Check, Callback, RoomCapacity>::jump_x(indexed_position_t pos, int dx, cost_t cost) -> indexed_position_t {
 	cost_t prev_cost_u = look(pos.translate(0, -1));
 	cost_t prev_cost_d = look(pos.translate(0, 1));
 	while (true) {
-		if (heuristic_(pos) == 0 || is_near_border_coord(pos.xx)) {
+		if (heuristic(pos) == 0 || is_near_border_coord(pos.xx)) {
 			break;
 		}
 
@@ -38,12 +87,13 @@ auto path_finder_t::jump_x(indexed_position_t pos, int dx, cost_t cost) -> index
 	return pos;
 }
 
+template <auto Check, class Callback, std::size_t RoomCapacity>
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-auto path_finder_t::jump_y(indexed_position_t pos, int dy, cost_t cost) -> indexed_position_t {
+auto pathfinder<Check, Callback, RoomCapacity>::jump_y(indexed_position_t pos, int dy, cost_t cost) -> indexed_position_t {
 	cost_t prev_cost_l = look(pos.translate(-1, 0));
 	cost_t prev_cost_r = look(pos.translate(1, 0));
 	while (true) {
-		if (heuristic_(pos) == 0 || is_near_border_coord(pos.yy)) {
+		if (heuristic(pos) == 0 || is_near_border_coord(pos.yy)) {
 			break;
 		}
 
@@ -70,11 +120,12 @@ auto path_finder_t::jump_y(indexed_position_t pos, int dy, cost_t cost) -> index
 	return pos;
 }
 
-auto path_finder_t::jump_xy(indexed_position_t pos, int dx, int dy, cost_t cost) -> indexed_position_t {
+template <auto Check, class Callback, std::size_t RoomCapacity>
+auto pathfinder<Check, Callback, RoomCapacity>::jump_xy(indexed_position_t pos, int dx, int dy, cost_t cost) -> indexed_position_t {
 	cost_t prev_cost_x = look(pos.translate(-dx, 0));
 	cost_t prev_cost_y = look(pos.translate(0, -dy));
 	while (true) {
-		if (heuristic_(pos) == 0 || is_near_border_coord(pos.xx) || is_near_border_coord(pos.yy)) {
+		if (heuristic(pos) == 0 || is_near_border_coord(pos.xx) || is_near_border_coord(pos.yy)) {
 			break;
 		}
 
@@ -107,7 +158,8 @@ auto path_finder_t::jump_xy(indexed_position_t pos, int dx, int dy, cost_t cost)
 	return pos;
 }
 
-auto path_finder_t::jump(indexed_position_t pos, int dx, int dy, cost_t cost) -> indexed_position_t {
+template <auto Check, class Callback, std::size_t RoomCapacity>
+auto pathfinder<Check, Callback, RoomCapacity>::jump(indexed_position_t pos, int dx, int dy, cost_t cost) -> indexed_position_t {
 	if (dx != 0) {
 		if (dy != 0) {
 			return jump_xy(pos, dx, dy, cost);
@@ -119,10 +171,10 @@ auto path_finder_t::jump(indexed_position_t pos, int dx, int dy, cost_t cost) ->
 	}
 }
 
-auto path_finder_t::jps(const indexed_position_t pos, const pos_index_t index, cost_t g_cost) -> void {
+template <auto Check, class Callback, std::size_t RoomCapacity>
+auto pathfinder<Check, Callback, RoomCapacity>::jps(const indexed_position_t pos, const pos_index_t index, cost_t g_cost) -> void {
 	assert(pos_index_t{pos} == index);
-	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-	auto parent = indexed_position_t{room_table_, parents[ *index ]};
+	auto parent = indexed_position_t{room_table_, parents_[ *index ]};
 	int dx = sign(pos.xx - parent.xx);
 	int dy = sign(pos.yy - parent.yy);
 
@@ -258,8 +310,9 @@ auto path_finder_t::jps(const indexed_position_t pos, const pos_index_t index, c
 	}
 }
 
+template <auto Check, class Callback, std::size_t RoomCapacity>
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-auto path_finder_t::jump_neighbor(indexed_position_t neighbor, const indexed_position_t pos, const pos_index_t index, cost_t g_cost, cost_t cost, cost_t n_cost) -> void {
+auto pathfinder<Check, Callback, RoomCapacity>::jump_neighbor(indexed_position_t neighbor, const indexed_position_t pos, const pos_index_t index, cost_t g_cost, cost_t cost, cost_t n_cost) -> void {
 	assert(pos_index_t{pos} == index);
 	if (n_cost != cost || is_border_coord(neighbor.xx) || is_border_coord(neighbor.yy)) {
 		if (n_cost == obstacle) {

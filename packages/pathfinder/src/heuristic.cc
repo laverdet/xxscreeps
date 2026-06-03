@@ -1,5 +1,3 @@
-module;
-#include <nan.h>
 export module screeps:heuristic;
 import :position;
 import std;

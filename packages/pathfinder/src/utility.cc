@@ -79,12 +79,13 @@ class inplace_vector {
 		static_assert(std::is_trivially_destructible_v<Type>);
 
 		[[nodiscard]] constexpr auto empty() const -> bool { return size_ == 0; }
-		[[nodiscard]] constexpr auto operator[](this auto& self, std::size_t index) -> auto& { return self.data_[ index ]; }
 		[[nodiscard]] constexpr auto size() const -> std::size_t { return size_; }
 		constexpr auto back(this auto& self) -> auto& { return self.data_[ self.size_ - 1 ]; }
 		constexpr auto begin(this auto& self) { return self.data_.begin(); }
 		constexpr auto clear() -> void { size_ = 0; }
 		constexpr auto end(this auto& self) { return self.data_.begin() + self.size_; }
+		constexpr auto data(this auto& self) { return self.data_.data(); }
+		constexpr auto operator[](this auto& self, std::size_t index) -> auto& { return self.data_[ index ]; }
 		constexpr auto front(this auto& self) -> auto& { return self.data_.front(); }
 		constexpr auto pop_back() -> void { --size_; }
 
