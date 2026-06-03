@@ -4,7 +4,6 @@ import * as fs from 'node:fs/promises';
 import { loadTerrain } from 'xxscreeps/driver/pathfinder.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { processorTimeKey } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
@@ -127,12 +126,11 @@ export async function instantiateTestShard() {
 	// Save to fake database
 	// nb: This skips the `refreshRoom` stage. This step may need to be added later but isn't
 	// needed right now.
-	shard.time = 1;
+	shard.time = 0;
 	await Promise.all([
 		shard.data.set('terrain', terrain),
 		shard.data.set('time', shard.time),
 		shard.data.sAdd('rooms', [ ...Fn.map(rooms, room => room.room.name) ]),
-		shard.scratch.set(processorTimeKey, shard.time),
 		Promise.all(Fn.map(rooms, ({ room }) =>
 			shard.saveRoom(room.name, shard.time, room))),
 		Promise.all(Fn.map(Object.entries(users), ([ userId, username ]) =>

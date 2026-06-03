@@ -7,7 +7,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkString, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, userGame } from 'xxscreeps/game/index.js';
-import { create as createObject } from 'xxscreeps/game/object.js';
+import { create as createObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
@@ -35,7 +35,7 @@ const spawningFormat = struct({
 
 class Spawning extends withOverlay(BufferObject, spawningFormat) {
 	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name; }
-	@enumerable get remainingTime() { return Math.max(0, this['#spawnTime'] - Game.time); }
+	@enumerable get remainingTime() { return requiredExpiryTime(Game, this['#spawnTime']); }
 	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])!; }
 
 	/**
@@ -78,12 +78,13 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 
 	get memory() {
 		if (!this.my) {
+			// @ts-expect-error
 			return;
 		}
 		return (Memory.get().spawns ??= {})[this.name] ??= {};
 	}
 
-	set memory(memory: any) {
+	set memory(memory: Record<string, unknown>) {
 		if (!this.my) {
 			return;
 		}
@@ -95,7 +96,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 		game.spawns[this.name] = this;
 	}
 
-	override '#beforeRemove'() {
+	override '#afterRemove'() {
 		const { spawning } = this;
 		if (spawning) {
 			const creep = Game.getObjectById(spawning['#spawningCreepId'])!;
@@ -103,7 +104,11 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 				creep.room['#removeObject'](creep);
 			}
 		}
-		super['#beforeRemove']();
+		super['#afterRemove']();
+	}
+
+	override '#applyNukeImpact'() {
+		this.spawning = null;
 	}
 
 	/**

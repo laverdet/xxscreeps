@@ -1,4 +1,5 @@
 import type { StructureExtension } from './extension.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
@@ -22,6 +23,24 @@ describe('Spawn', () => {
 				room.controller!['#user'] = '100';
 		},
 	});
+
+	test('creep birth ticksToLive', () => simulation(async ({ player, tick }) => {
+		await player('100', Game => {
+			Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep', {
+				directions: [ C.RIGHT ],
+			});
+		});
+		for (const _ii of Fn.range(2)) {
+			await tick(1);
+			await player('100', Game => {
+				assert.strictEqual(Game.creeps.creep?.ticksToLive, undefined);
+			});
+		}
+		await tick(1);
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.creep?.ticksToLive, 1499);
+		});
+	}));
 
 	test('spawn direction', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {
@@ -176,6 +195,31 @@ describe('Spawn', () => {
 			assert.ok(!Game.spawns.Spawn1);
 			assert.strictEqual(Game.rooms.W1N1?.find(C.FIND_MY_CREEPS).length, 0);
 			assert.ok(!Game.rooms.W1N1.controller?.my);
+		});
+	}));
+
+	// it's located in the terrain wall
+	const spawnInTheWall = simulate({
+		W1N1: room => {
+			room['#insertObject'](create(new RoomPosition(2, 2, 'W1N1'), '100', 'Spawn1'));
+			room['#level'] = 1;
+			room['#user'] = room.controller!['#user'] = '100';
+		},
+	});
+
+	test('abandoned spawn crash', () => spawnInTheWall(async ({ player, poke, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'newCreep'), C.OK);
+		});
+		await tick(C.CREEP_SPAWN_TIME);
+		// fill up the energy, to avoid spawn energy keeping the room active
+		await poke('W1N1', '100', Game => {
+			assert.ok(Game.spawns.Spawn1?.spawning);
+			Game.spawns.Spawn1.store['#add']('energy', C.BODYPART_COST[C.MOVE]);
+		});
+		await tick(3);
+		await poke('W1N1', '100', Game => {
+			assert.strictEqual(Game.spawns.Spawn1?.spawning?.remainingTime, 1);
 		});
 	}));
 

@@ -100,7 +100,7 @@ hooks.register('route', {
 				room.find(C.FIND_CONSTRUCTION_SITES),
 			])) {
 				if (structure.structureType === 'spawn' && structure['#user'] === userId) {
-					const number = Number(/^Spawn(?<count>[0-9]+)$/.exec(structure.name)?.groups?.number);
+					const number = Number(/^Spawn(?<count>[0-9]+)$/.exec(structure.name)?.groups?.count);
 					if (number > max) {
 						max = number;
 					}

@@ -181,7 +181,7 @@ export class PlayerInstance {
 				// This means `processor.intentAbandonTimeout` is too fast for `runner.cpu.tickLimit` *
 				// `runner.concurrency` * active players * runner services. The user must be hard reset in
 				// this case because we don't know if their loop has been setup.
-				if (this.shard.time + 1 !== time) {
+				if (time !== this.shard.time) {
 					throw new Error(`User '${this.username}' has been left behind`);
 				}
 
@@ -190,7 +190,7 @@ export class PlayerInstance {
 					(async () => {
 						// Wait for room blobs
 						payload.roomBlobs = await Promise.all(Fn.map(visibleRooms,
-							roomName => this.shard.loadRoomBlob(roomName, time - 1)));
+							roomName => this.shard.loadRoomBlob(roomName, time)));
 						// Load unseen users
 						const newUserIds = Fn.pipe(
 							payload.roomBlobs,
@@ -216,7 +216,6 @@ export class PlayerInstance {
 				return await this.sandbox.run(payload as TickPayload);
 			} catch (err: any) {
 				console.error(err.stack);
-				this.stale = true;
 			}
 		})();
 
@@ -242,6 +241,10 @@ export class PlayerInstance {
 				this.connectors.save(payload),
 			]);
 		} else {
+			if (result) {
+				// Severe error, user loses a tick
+				this.stale = true;
+			}
 			const tasks: Promise<void>[] = [];
 			if (result) {
 				// Deduct CPU limit in case of severe failure

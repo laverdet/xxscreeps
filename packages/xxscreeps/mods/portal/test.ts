@@ -103,10 +103,7 @@ describe('Portal', () => {
 			assert.ok(creeps[0]?.pos.isEqualTo(20, 20));
 		});
 		await peekRoom('W1N1', room => {
-			assert.strictEqual(
-				room.find(C.FIND_CREEPS).some(creep => creep.name === 'traveler'),
-				false,
-			);
+			assert.strictEqual(room.find(C.FIND_CREEPS).length, 0);
 		});
 	}));
 });

@@ -27,9 +27,7 @@ export class StructurePortal extends withOverlay(Structure, shape) {
 		return { shard: this['#destShard'], room: this['#destRoom'] };
 	}
 
-	@enumerable get ticksToDecay(): number | undefined {
-		return this['#decayTime'] === 0 ? undefined : Math.max(0, this['#decayTime'] - Game.time);
-	}
+	@enumerable get ticksToDecay(): number | undefined { return RoomObject.optionalExpiryTime(Game, this['#decayTime']); }
 
 	override get structureType() { return C.STRUCTURE_PORTAL; }
 	override get '#lookType'() { return C.LOOK_STRUCTURES; }

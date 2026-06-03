@@ -35,7 +35,7 @@ export class Flag extends withOverlay(RoomObject, shape) {
 
 	get '#lookType'() { return C.LOOK_FLAGS; }
 
-	set memory(memory: any) {
+	set memory(memory: Record<string, unknown>) {
 		(Memory.get().flags ??= {})[this.name] ??= memory;
 	}
 

@@ -102,10 +102,8 @@ const intents = [
 					object['#user'] = '1';
 					const ruin = createRuin(object, 500000);
 					room['#insertObject'](ruin);
-					room['#removeObject'](object);
-				} else {
-					room['#removeObject'](object);
 				}
+				room['#removeObject'](object);
 				context.didUpdate();
 			}
 		}
@@ -239,6 +237,7 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				if (!spawnPos) {
 					// No valid position — retry next tick
 					spawn.spawning['#spawnTime'] = Game.time + 1;
+					context.setActive();
 					return;
 				}
 

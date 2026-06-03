@@ -8,7 +8,7 @@ import streamToPromise from 'stream-to-promise';
 import { hooks } from 'xxscreeps/backend/index.js';
 import { TerrainRender } from 'xxscreeps/backend/symbols.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
+import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { TERRAIN_MASK_SWAMP, TERRAIN_MASK_WALL, isBorder } from 'xxscreeps/game/terrain.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 
@@ -223,7 +223,7 @@ for (const [ fragment, grid, align, zoom ] of [ [ 'zoom1', 10, 2, 0.4 ], [ 'zoom
 					Fn.mapAwait(
 						Fn.range(left, left + grid),
 						async xx => {
-							const roomName = generateRoomName(xx, yy);
+							const roomName = makeRoomName(xx, yy);
 							const room = map.getRoomStatus(roomName) ? await shard.loadRoom(roomName) : null;
 							didFindRoom ||= room !== null;
 							return room;

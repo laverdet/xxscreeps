@@ -2,21 +2,70 @@ import type { World } from 'xxscreeps/game/map.js';
 import type { Goal, SearchOptions } from 'xxscreeps/game/pathfinder/index.js';
 import type { OneOrMany } from 'xxscreeps/utility/types.js';
 import pf from '@xxscreeps/pathfinder';
-import { RoomPosition, generateRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/position.js';
+import { PositionLike, RoomPosition } from 'xxscreeps/game/position.js';
+import { makeRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/room/name.js';
 import { getBuffer } from 'xxscreeps/game/terrain.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
 
-function flattenPosition(pos: any): number {
-	// Internal position bits
-	const positionInteger = pos['#id'];
+const makePositionIn: (pos: RoomPosition | PositionLike) => number =
+	// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+	// @ts-ignore
+	pf.version === 11
+		? function make(pos) {
+			// Assume it is RoomPosition
+			const positionInteger = pos['#id'];
+			if (positionInteger !== undefined) {
+				return positionInteger | 0;
+			}
 
-	if (positionInteger !== undefined) {
-		return positionInteger | 0;
-	}
+			// Try to cast to RoomPosition
+			return make(new RoomPosition(pos.x, pos.y, pos.roomName));
+		}
+		: function make(pos) {
+			// Assume it is RoomPosition
+			const rx = pos['#rx'];
+			if (rx !== undefined) {
+				const xx = rx * 50 + pos.x;
+				const yy = pos['#ry'] * 50 + pos.y;
+				return (yy << 16) | xx;
+			}
 
-	// Try to cast to RoomPosition
-	return flattenPosition(new RoomPosition(pos.x, pos.y, pos.roomName));
-}
+			// Try to cast to RoomPosition
+			return make(new RoomPosition(pos.x, pos.y, pos.roomName));
+		};
+
+const makeCompletePath: (path: readonly number[]) => RoomPosition[] =
+	// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+	// @ts-ignore
+	pf.version === 11
+		? path => path.map(pos => RoomPosition['#create'](pos)).reverse()
+		: path => {
+			const iterable = function*() {
+				const first = path[0];
+				const make = (xx: number, yy: number) =>
+					RoomPosition['#create'](((yy % 50) << 24) | ((xx % 50) << 16) | ((yy / 50) << 8) | (xx / 50));
+				if (first !== undefined) {
+					let xx = first & 0xffff;
+					let yy = first >> 16;
+					yield make(xx, yy);
+					for (let ii = 1; ii < path.length; ++ii) {
+						const next = path[ii]!;
+						const nx = next & 0xffff;
+						const ny = next >> 16;
+						const dx = Math.sign(nx - xx);
+						const dy = Math.sign(ny - yy);
+						while (nx !== xx || ny !== yy) {
+							xx += dx;
+							yy += dy;
+							yield make(xx, yy);
+						}
+					}
+				}
+			}();
+			const result = [ ...iterable ];
+			result.pop();
+			return result.reverse();
+		};
 
 export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: SearchOptions = {}) {
 
@@ -32,14 +81,14 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 	const goals = (Array.isArray(goal) ? goal : [ goal ]).map((goal: any) => {
 		if (goal.x !== undefined && goal.y !== undefined && goal.roomName !== undefined) {
 			return {
-				pos: flattenPosition(goal),
+				pos: makePositionIn(goal),
 				range: 0,
 			};
 		} else {
 			// This case detects `Goal` and `RoomObject`. The path finder was never meant to accept game
 			// objects but it did by accident, so I guess here we are.
 			return {
-				pos: flattenPosition(goal.pos),
+				pos: makePositionIn(goal.pos),
 				range: Math.max(0, goal.range | 0),
 			};
 		}
@@ -51,7 +100,7 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 	// Setup room callback
 	const { roomCallback } = options;
 	const callback = roomCallback === undefined ? undefined : (roomId: number) => {
-		const ret = roomCallback(generateRoomNameFromId(roomId));
+		const ret = roomCallback(makeRoomNameFromId(roomId));
 		if (ret === false) {
 			return ret;
 		} else if (ret) {
@@ -61,7 +110,7 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 
 	// Invoke native code
 	const ret = pf.search(
-		flattenPosition(origin), goals,
+		makePositionIn(origin), goals,
 		callback,
 		plainCost, swampCost,
 		maxRooms, maxOps, maxCost,
@@ -70,6 +119,7 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 	);
 
 	// Translate results
+	// TODO: Remove undefined results after pf upgrade
 	if (ret === undefined) {
 		return { path: [], ops: 0, cost: 0, incomplete: false };
 	} else if (ret === -1) {
@@ -77,7 +127,7 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 	}
 	return {
 		...ret,
-		path: ret.path.map(pos => RoomPosition['#create'](pos)).reverse(),
+		path: makeCompletePath(ret.path),
 	};
 }
 

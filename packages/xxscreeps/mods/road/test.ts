@@ -1,7 +1,10 @@
 import { LOOK_TERRAIN } from 'xxscreeps/game/constants/find.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { LOOK_STRUCTURES } from 'xxscreeps/mods/structure/constants.js';
+import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create } from './road.js';
 
@@ -15,6 +18,27 @@ describe('Roads', () => {
 		const path = room.findPath(new RoomPosition(24, 24, 'W0N0'), new RoomPosition(26, 26, 'W0N0'));
 		assert.strictEqual(path.length, 3);
 	})));
+
+	test('wear-out does not push decay time past Game.time', () => simulate({
+		W0N0: room => {
+			const stomper = createCreep(new RoomPosition(25, 25, 'W0N0'), Array.from({ length: 50 }, () => C.MOVE), 'stomper', '100');
+			room['#insertObject'](stomper);
+			const road = create(new RoomPosition(26, 25, 'W0N0'));
+			// Wear-out per step is ROAD_WEAROUT * body.length = 50, larger than what's left.
+			road['#nextDecayTime'] = 30;
+			room['#insertObject'](road);
+		},
+	})(async ({ player, tick, peekRoom }) => {
+		await player('100', Game => {
+			Game.creeps.stomper?.move(C.RIGHT);
+		});
+		await tick();
+		await peekRoom('W0N0', room => {
+			const road = lookForStructureAt(room, new RoomPosition(26, 25, 'W0N0'), C.STRUCTURE_ROAD);
+			assert.ok(road, 'road survives the stomp');
+			assert.ok(road.ticksToDecay);
+		});
+	}));
 
 	test('path cost', () => simulate({
 		W0N0: room => {

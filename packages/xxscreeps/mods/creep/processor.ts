@@ -12,8 +12,9 @@ import { numericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
+import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
@@ -184,8 +185,10 @@ const intents = [
 					const baseFatigue = (() => {
 						const road = lookForStructureAt(creep.room, pos, C.STRUCTURE_ROAD);
 						if (road) {
-							// Update road decay
-							road['#nextDecayTime'] -= C.ROAD_WEAROUT * creep.body.length;
+							// Wear-out advances decay but must not slip past `Game.time` — the road's
+							// Tick handler throws on overdue `ticksToDecay`.
+							road['#nextDecayTime'] =
+								Math.max(Game.time, road['#nextDecayTime'] - C.ROAD_WEAROUT * creep.body.length);
 							return 1;
 						}
 						const terrain = creep.room.getTerrain().get(pos.x, pos.y);
@@ -324,10 +327,7 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		recalculateBody(creep);
 		context.didUpdate();
 	}
-	if (
-		(Game.time >= creep['#ageTime'] && creep['#ageTime'] !== 0) ||
-		creep.hits <= 0
-	) {
+	if (creep.ticksToLive === 0 || creep.hits <= 0) {
 		buryCreep(creep);
 		context.setActive();
 		return;
@@ -358,13 +358,13 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		const { rx, ry } = parseRoomName(creep.pos.roomName);
 		const next = function() {
 			if (creep.pos.x === 0) {
-				return new RoomPosition(49, creep.pos.y, generateRoomName(rx - 1, ry));
+				return new RoomPosition(49, creep.pos.y, makeRoomName(rx - 1, ry));
 			} else if (creep.pos.x === 49) {
-				return new RoomPosition(0, creep.pos.y, generateRoomName(rx + 1, ry));
+				return new RoomPosition(0, creep.pos.y, makeRoomName(rx + 1, ry));
 			} else if (creep.pos.y === 0) {
-				return new RoomPosition(creep.pos.x, 49, generateRoomName(rx, ry - 1));
+				return new RoomPosition(creep.pos.x, 49, makeRoomName(rx, ry - 1));
 			} else {
-				return new RoomPosition(creep.pos.x, 0, generateRoomName(rx, ry + 1));
+				return new RoomPosition(creep.pos.x, 0, makeRoomName(rx, ry + 1));
 			}
 		}();
 		teleportCreep(creep, next, context);
@@ -377,9 +377,10 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 // across rooms (e.g. portals). The creep is removed from its current room and an import-payload
 // intent is queued for the destination room.
 export function teleportCreep(creep: Creep, next: RoomPosition, context: ProcessorContext) {
-	if (!creep.room['#removeObject'](creep)) {
+	if (creep.room === undefined as never) {
 		return;
 	}
+	creep.room['#removeObject'](creep);
 	appendEventLog(creep.room, {
 		event: C.EVENT_EXIT,
 		objectId: creep.id,
@@ -391,6 +392,7 @@ export function teleportCreep(creep: Creep, next: RoomPosition, context: Process
 	// update the internal indices.
 	const oldPos = creep.pos;
 	creep.pos = next;
+	creep.room = undefined as never;
 	// Creeps are revitalized when moving to a new room
 	creep.fatigue = 0;
 	// Reset actionLog since the actions were in the previous room

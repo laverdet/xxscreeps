@@ -22,7 +22,7 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 	/**
 	 * The amount of game ticks the link has to wait until the next transfer is possible.
 	 */
-	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
+	@enumerable get cooldown() { return RoomObject.cooldownTime(Game, this['#cooldownTime']); }
 
 	/** @deprecated */
 	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY]; }

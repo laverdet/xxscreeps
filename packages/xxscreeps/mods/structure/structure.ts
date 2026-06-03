@@ -53,6 +53,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
 	 */
 	@enumerable override get hitsMax(): number | undefined { return undefined; }
 
+	override get '#layer'() { return 0; }
 	get '#lookType'() { return C.LOOK_STRUCTURES; }
 
 	override set hits(_hits: number | undefined) { throw new Error('Adjusting hits on invulnerable structure'); }
@@ -96,9 +97,12 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return false;
 	}
 
-	override '#destroy'() {
+	override '#destroy'(type?: number) {
 		if (super['#destroy']()) {
-			this.room['#insertObject'](createRuin(this));
+			// TODO: Mod concern leak
+			if (type === undefined || type !== C.EVENT_ATTACK_TYPE_NUKE) {
+				this.room['#insertObject'](createRuin(this));
+			}
 			appendEventLog(this.room, {
 				event: C.EVENT_OBJECT_DESTROYED,
 				objectId: this.id,
@@ -141,13 +145,13 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 		return this['#active'] ?? true;
 	}
 
-	override '#destroy'() {
-		if (super['#destroy']()) {
+	override '#destroy'(type?: number) {
+		if (super['#destroy'](type)) {
 			// Invalidate active flags for same-type structures so the lazy
 			// fallback in isActive() recomputes after this structure is flushed
-			const type = this.structureType;
+			const structureType = this.structureType;
 			for (const object of this.room['#objects']) {
-				if (object instanceof OwnedStructure && object.structureType === type) {
+				if (object instanceof OwnedStructure && object.structureType === structureType) {
 					object['#active'] = undefined;
 				}
 			}
@@ -173,7 +177,7 @@ export function checkActiveStructures(room: Room) {
 	const controllerStructures = C.CONTROLLER_STRUCTURES as Record<string, number[] | undefined>;
 	// Single pass: collect owned structures by type
 	const byType: Record<string, OwnedStructure[]> = {};
-	for (const object of room['#objects']) {
+	for (const object of room['#immediateObjects']()) {
 		if (object instanceof OwnedStructure && object.structureType in controllerStructures) {
 			(byType[object.structureType] ??= []).push(object);
 		}

@@ -5,11 +5,56 @@ import { create as createRampart } from 'xxscreeps/mods/defense/rampart.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { create as createResource } from 'xxscreeps/mods/resource/resource.js';
 import { Source } from 'xxscreeps/mods/source/source.js';
-import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
+import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { Creep, create } from './creep.js';
+
+describe('Creep', () => {
+	const nearDeath = simulate({
+		W0N0: room => {
+			const creep = create(new RoomPosition(25, 25, 'W0N0'), [ C.MOVE ], 'creep', '100');
+			creep['#ageTime'] = 2;
+			room['#insertObject'](creep);
+		},
+	});
+
+	test('dies of old age', () => nearDeath(async ({ player, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.creep?.ticksToLive, 2);
+		});
+		await tick(2);
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.creep?.ticksToLive, undefined);
+		});
+	}));
+
+	const tombstoneAwaken = simulate({
+		W1N1: room => {
+			const creep = create(new RoomPosition(20, 3, 'W1N1'), [ C.MOVE ], 'creep', '100');
+			room['#insertObject'](creep);
+		},
+		W1N2: room => {
+			const creep = create(new RoomPosition(10, 10, 'W1N2'), [ C.TOUGH, C.TOUGH ], 'goodbye', '100');
+			creep['#ageTime'] = 1;
+			room['#insertObject'](creep);
+		},
+	});
+	test('creep dies in an empty room with a tombstone', () => tombstoneAwaken(async ({ player, tick }) => {
+		await tick(3, {
+			100: ({ creeps: { creep } }) => {
+				creep?.moveTo(new RoomPosition(10, 10, 'W1N2'));
+			},
+		});
+		// this is actually a test of the processing sleeping queue. 'creep' enters the room while
+		// 'goodbye's tombstone has slept the room. this wakes the room during the finalization stage.
+		await player('100', Game => {
+			Game.creeps.creep?.suicide();
+		});
+		await tick(8);
+	}));
+});
 
 describe('Movement', () => {
 	const movement = simulate({
@@ -252,6 +297,7 @@ describe('Movement', () => {
 		});
 	}));
 
+	// TODO: Why in the HECK is this under "Movement"
 	// https://github.com/laverdet/xxscreeps/issues/58
 	// When a creep dies, buryCreep() inserts a tombstone via deferred #insertObject.
 	// The Tick loop captures array length before iterating, so the new tombstone's
@@ -261,7 +307,7 @@ describe('Movement', () => {
 		const dying = simulate({
 			W5N5: room => {
 				const creep = create(new RoomPosition(25, 25, 'W5N5'), [ C.MOVE ], 'mortal', '100');
-				creep['#ageTime'] = 3;
+				creep['#ageTime'] = 2;
 				room['#insertObject'](creep);
 			},
 		});
@@ -276,8 +322,8 @@ describe('Movement', () => {
 				assert.strictEqual(room['#lookFor'](C.LOOK_CREEPS).length, 0, 'creep should be dead');
 				assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 1, 'tombstone should exist');
 			});
-			// 1 MOVE part × TOMBSTONE_DECAY_PER_PART ticks, plus buffer
-			await tick(C.TOMBSTONE_DECAY_PER_PART + 5);
+			// 1 MOVE part × TOMBSTONE_DECAY_PER_PART ticks
+			await tick(C.TOMBSTONE_DECAY_PER_PART);
 			await peekRoom('W5N5', room => {
 				assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 0,
 					'tombstone should be cleaned up after decay window');
@@ -287,7 +333,7 @@ describe('Movement', () => {
 		const firstTickDeath = simulate({
 			W4N4: room => {
 				const creep = create(new RoomPosition(25, 25, 'W4N4'), [ C.MOVE ], 'ephemeral', '100');
-				creep['#ageTime'] = 2;
+				creep['#ageTime'] = 1;
 				room['#insertObject'](creep);
 			},
 		});
@@ -873,7 +919,7 @@ describe('Event log events', () => {
 		const ageOut = simulate({
 			W5N5: room => {
 				const creep = create(new RoomPosition(25, 25, 'W5N5'), [ C.MOVE ], 'mortal', '100');
-				creep['#ageTime'] = 2;
+				creep['#ageTime'] = 1;
 				room['#insertObject'](creep);
 			},
 		});

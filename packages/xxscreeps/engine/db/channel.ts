@@ -45,7 +45,7 @@ export class Channel<Message = string> {
 	}
 
 	publish(message: Message) {
-		const value: any = this.json ? JSON.stringify(message) : message;
+		const value = this.json ? JSON.stringify(message) : (message as string);
 		return this.pubsub.publish(this.name, value);
 	}
 

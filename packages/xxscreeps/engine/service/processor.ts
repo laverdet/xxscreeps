@@ -3,7 +3,7 @@ import type { Effect } from 'xxscreeps/utility/types.js';
 import config from 'xxscreeps/config/index.js';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { begetRoomProcessQueue, getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { negotiateResponderClient } from 'xxscreeps/utility/responder.js';
@@ -16,13 +16,14 @@ const log = config.processor.log ?? isEntry
 	? (message: string) => process.stderr.write(message)
 	: () => {};
 
-// Interrupt handler
+// Interrupt handler. Standalone-only self-halt: under the launcher, main owns shutdown via the
+// processor channel, and breaking iterators here races its next-tick `process` publish.
 let halt: Effect | undefined;
 let halted = false as boolean;
 let processing = false;
 using _signal = handleInterruptSignal(() => {
 	halted = true;
-	if (!processing) {
+	if (isEntry && !processing) {
 		halt?.();
 	}
 });
@@ -104,21 +105,20 @@ await Fn.mapAwait(workers, async worker => {
 
 // Wait for initialization signal from main
 const processorMessages = processorSubscription.iterable();
-const waitForSync = function() {
-	const messages = processorSubscription.iterable();
-	return async function() {
+await Promise.all([
+	getServiceChannel(shard).publish({ type: 'processorInitialized' }),
+	async function() {
+		const messages = processorSubscription.iterable();
 		for await (const message of Async.breakable(messages, breaker => halt = breaker)) {
 			if (message.type === 'shutdown' || halted) {
 				throw new Error('Processor initialization failure');
 			} else if (message.type === 'process') {
-				return message.time;
+				return;
 			}
 		}
 		throw new Error('End of message stream');
-	}();
-}();
-await getServiceChannel(shard).publish({ type: 'processorInitialized' });
-let currentTime = await waitForSync;
+	}(),
+]);
 
 // Process messages
 loop: for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {
@@ -127,12 +127,7 @@ loop: for await (const message of Async.breakable(processorMessages, breaker => 
 			break loop;
 
 		case 'process': {
-			// Ensure processor time is in sync
 			const { time, roomNames } = message;
-			currentTime = await begetRoomProcessQueue(shard, message.time, currentTime);
-			if (time !== currentTime) {
-				break;
-			}
 			processing = true;
 
 			// Update checkAffinity flag on workers
@@ -174,12 +169,13 @@ loop: for await (const message of Async.breakable(processorMessages, breaker => 
 
 		// Second processing phase. This waits until all player code and first phase processing has
 		// run.
-		case 'finalize':
-			log(`finalized tick ${currentTime}\n`);
+		case 'finalize': {
+			const { time } = message;
+			log(`finalized tick ${time}\n`);
 			// Run finalization in worker
 			await Promise.all(Fn.map(workers, async worker => {
 				if (worker.processed.length > 0) {
-					await worker.responder({ type: 'finalize', time: currentTime });
+					await worker.responder({ type: 'finalize', time });
 				}
 			}));
 			processing = false;
@@ -197,5 +193,6 @@ loop: for await (const message of Async.breakable(processorMessages, breaker => 
 				}
 			}
 			break;
+		}
 	}
 }

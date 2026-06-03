@@ -14,6 +14,7 @@ export interface PathResult {
 }
 
 export const path: string;
+export const version: number;
 
 export function loadTerrain(world: WorldTerrain): void;
 

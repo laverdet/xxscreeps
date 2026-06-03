@@ -17,8 +17,8 @@ const shape = struct(RoomObject.format, {
 });
 
 export class Deposit extends withOverlay(RoomObject.RoomObject, shape) {
-	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
-	@enumerable get ticksToDecay() { return Math.max(0, this['#nextDecayTime'] - Game.time); }
+	@enumerable get cooldown() { return RoomObject.cooldownTime(Game, this['#cooldownTime']); }
+	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(Game, this['#nextDecayTime']); }
 
 	get '#lookType'() { return C.LOOK_DEPOSITS; }
 }

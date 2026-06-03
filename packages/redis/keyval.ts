@@ -9,15 +9,13 @@ type Value = Pr.Value;
 
 function recv(value: Value) {
 	// Convert value to type for redis
-	if (value instanceof Uint8Array) {
-		if (Buffer.isBuffer(value)) {
-			return value;
-		} else {
-			// this does not make a copy (still needed with redis client v5.12.1)
-			return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-		}
-	} else {
-		return `${value as number | string}`;
+	switch (value.constructor.name) {
+		case 'Buffer': return value as Buffer;
+		// this does not make a copy (still needed with redis client v5.12.1)
+		// @ts-expect-error
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+		case 'Uint8Array': return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+		default: return `${value as number | string}`;
 	}
 }
 

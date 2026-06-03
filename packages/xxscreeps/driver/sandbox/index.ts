@@ -1,7 +1,6 @@
 import type { Transform } from '../webpack.js';
 import type { InspectorSession } from 'isolated-vm';
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
-import * as Path from 'node:path';
 import config from 'xxscreeps/config/index.js';
 import { configTransform } from 'xxscreeps/config/webpack.js';
 import { hooks } from 'xxscreeps/driver/index.js';
@@ -12,24 +11,35 @@ import { compile } from '../webpack.js';
 
 const didMakeSandbox = hooks.makeIterated('sandboxCreated');
 
+interface TickSuccessCompletion {
+	result: 'success';
+	payload: TickResult;
+}
+
+interface TickHaltCompletion {
+	result: 'disposed';
+}
+
+interface TickTimedOutCompletion {
+	result: 'timedOut';
+	stack?: string;
+}
+
+interface TickErrorCompletion {
+	result: 'error';
+	console?: string | undefined;
+}
+
+export type TickCompletion =
+	TickSuccessCompletion | TickHaltCompletion | TickTimedOutCompletion | TickErrorCompletion;
+
 export interface Sandbox {
 	createInspectorSession: () => InspectorSession;
 
 	dispose: () => void;
 
 	initialize: (data: InitializationPayload) => Promise<void>;
-	run: (data: TickPayload) => Promise<{
-		result: 'error';
-		console: string | undefined;
-	} | {
-		result: 'disposed';
-	} | {
-		result: 'timedOut';
-		stack?: string;
-	} | {
-		result: 'success';
-		payload: TickResult;
-	}>;
+	run: (data: TickPayload) => Promise<TickCompletion>;
 }
 
 export function compileRuntimeSource(path: string, transform: Transform) {

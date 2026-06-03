@@ -86,14 +86,14 @@ importers:
   packages/pathfinder:
     devDependencies:
       '@auto_js/js':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.4
+        version: 0.0.4
       '@auto_js/napi':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.4
+        version: 0.0.4
       '@auto_js/v8':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.4
+        version: 0.0.4
       '@napi-rs/cli':
         specifier: ^3.6.2
         version: 3.6.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@24.12.2)
@@ -298,21 +298,21 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
 
-  '@auto_js/js@0.0.2':
-    resolution: {integrity: sha512-anqJz7rXhSAY1ZNBS/vyTW+VXxg/QqVw1hQE/ysurret3u5PPF/50H+fftjuOZ09JbpE2S6scscOZoOmlrVlGg==}
+  '@auto_js/js@0.0.4':
+    resolution: {integrity: sha512-AyI+oIcV+3F7hrjhJdAu0b7v697xMrWIIyIa6A4CYgLVGLu+wDPzcvi5hRobOG7SHehZOgLoqv5mYhLn0D7a5w==}
     hasBin: true
 
-  '@auto_js/napi@0.0.2':
-    resolution: {integrity: sha512-m6JJx+AdEnmGcCXzhcB9i7hx7mmaHmPW8IIetHifYoKCA7yuwR+W0vUbGvxVXDizn3j2+Z9ujm42Q2gOdEP8Pw==}
+  '@auto_js/napi@0.0.4':
+    resolution: {integrity: sha512-RVkYPgGASExMkvPHwRisqE2k59p7Q4BeAUlf2RII+NDOVv4lXR0p6Anw7bGQRIB2GQF+penlsxjDjyRbi5/r2Q==}
 
-  '@auto_js/napi_exports@0.0.2':
-    resolution: {integrity: sha512-n76ikP51rcz49tUyUQsJetR2fO481xBN/+s+pxS03Rp9Jl68GOYaIHhM2eiqTjKcxuACSw6S3riV4cpu4r0hPQ==}
+  '@auto_js/napi_exports@0.0.4':
+    resolution: {integrity: sha512-giLYec1/MmbJ4kh9eVkn1KV/6zgU3y1TYKPiKZd8ARM00P3gQ4W4u+AHWXyFuvew1KpnlTxg7Q1//WN7ljIgFg==}
 
-  '@auto_js/utility@0.0.2':
-    resolution: {integrity: sha512-BKQDz5IHgHUjAon0V77OIvwfiCvBGEabJ4OZ4s1TF0SJjDDKicGXUtLvQalzEmgzZkBxjPaUXQfrF00dNhTBdg==}
+  '@auto_js/utility@0.0.4':
+    resolution: {integrity: sha512-5+1uFIm/s/Y3xkkPi55e+Mt70XvSK8mwcIFIqsIymABfjgliK4UuyV5mhRSPB6lBB8KbXQwgbKV24fDfXkQUBA==}
 
-  '@auto_js/v8@0.0.2':
-    resolution: {integrity: sha512-WlogtUS1SuPSbWGfF1J3ZlWUf8NqxYM9S+HpuGLdl/SNbKk9IFn3Ywv2mPQrGlmmaX6zEzY0HwlDRXrleYNaEA==}
+  '@auto_js/v8@0.0.4':
+    resolution: {integrity: sha512-0vwe3KLwV/53TnVaYTBctYJ5U+zxnWbZcI35Wu94sn5cB1RtvdDJ6qz0T21gbtVkrkkrKGVenXa1yYvsEyN0fg==}
 
   '@auto_js/v8_exports@0.0.2':
     resolution: {integrity: sha512-2FWB2DB4hFwEMyFoEk0Vk29QuzwF6Iu1Seji1uaqF32qP+YB2Zdzm54BbVuKlWvS7e19GtGjt5ynhdooWBnKvQ==}
@@ -3535,23 +3535,23 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
-  '@auto_js/js@0.0.2':
+  '@auto_js/js@0.0.4':
     dependencies:
-      '@auto_js/utility': 0.0.2
+      '@auto_js/utility': 0.0.4
 
-  '@auto_js/napi@0.0.2':
+  '@auto_js/napi@0.0.4':
     dependencies:
-      '@auto_js/js': 0.0.2
-      '@auto_js/napi_exports': 0.0.2
+      '@auto_js/js': 0.0.4
+      '@auto_js/napi_exports': 0.0.4
       '@auto_js/v8_exports': 0.0.2
 
-  '@auto_js/napi_exports@0.0.2': {}
+  '@auto_js/napi_exports@0.0.4': {}
 
-  '@auto_js/utility@0.0.2': {}
+  '@auto_js/utility@0.0.4': {}
 
-  '@auto_js/v8@0.0.2':
+  '@auto_js/v8@0.0.4':
     dependencies:
-      '@auto_js/js': 0.0.2
+      '@auto_js/js': 0.0.4
       '@auto_js/v8_exports': 0.0.2
 
   '@auto_js/v8_exports@0.0.2': {}

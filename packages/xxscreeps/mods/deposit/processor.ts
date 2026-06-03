@@ -25,11 +25,10 @@ registerHarvestProcessor(Deposit, (creep, deposit) => {
 });
 
 registerObjectTickProcessor(Deposit, (deposit, context) => {
-	const nextDecayTime = deposit['#nextDecayTime'];
-	if (nextDecayTime !== 0 && Game.time >= nextDecayTime) {
+	if (deposit.ticksToDecay === 0) {
 		deposit.room['#removeObject'](deposit);
 		context.didUpdate();
-	} else if (nextDecayTime !== 0) {
-		context.wakeAt(nextDecayTime);
+	} else {
+		context.wakeAt(deposit['#nextDecayTime']);
 	}
 });

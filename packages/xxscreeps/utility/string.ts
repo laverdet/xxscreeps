@@ -46,11 +46,15 @@ export function latin1ToBuffer(value: string, ctor: AnyArrayBuffer = ArrayBuffer
 	return uint8;
 }
 
-export function utf16ToBuffer(value: string, ctor: AnyArrayBuffer = ArrayBuffer) {
-	const buffer = new ctor(value.length << 1);
-	const uint16 = new Uint16Array(buffer);
+export function utf16IntoBuffer(value: string, uint16: Uint16Array) {
 	for (let ii = 0; ii < value.length; ++ii) {
 		uint16[ii] = value.charCodeAt(ii);
 	}
+}
+
+export function utf16ToBuffer(value: string, ctor: AnyArrayBuffer = ArrayBuffer) {
+	const buffer = new ctor(value.length << 1);
+	const uint16 = new Uint16Array(buffer);
+	utf16IntoBuffer(value, uint16);
 	return new Uint8Array(buffer);
 }

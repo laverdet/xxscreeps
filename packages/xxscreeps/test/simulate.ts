@@ -4,18 +4,26 @@ import type { GameBase } from 'xxscreeps/game/game.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
+import type { RawMemory } from 'xxscreeps/mods/memory/memory.js';
 import * as assert from 'node:assert';
+import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
+import * as Code from 'xxscreeps/engine/db/user/code.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
 import { begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
+import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
+import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
+import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
-import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { disposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
 
 import 'xxscreeps/config/mods/import/game.js';
 
@@ -25,7 +33,18 @@ await importMods('processor');
 initializeGameEnvironment();
 initializeIntentConstraints();
 
-type Simulation = {
+interface SimulationGlobals {
+	Game: GameConstructor;
+	Memory: Record<string, unknown>;
+	RawMemory: typeof RawMemory;
+	// [...] add anything else defined by the game runtime which is needed for testing
+
+	// nb: 'node:assert/strict' is exported as well but we get an exotic 'Assertions require every
+	// name in the call target to be declared with an explicit type annotation.' error by placing it
+	// in this interface.
+}
+
+interface Simulation {
 	db: Database;
 	shard: Shard;
 	world: World;
@@ -45,6 +64,11 @@ type Simulation = {
 	poke: <Type>(roomName: string, userId: string | undefined, task: (game: GameConstructor, room: Room) => Type) => Promise<Type>;
 
 	/**
+	 * Create a player whose code will run in the sandbox automatically every tick.
+	 */
+	sandbox: (userId: string, unsafeMain: (global: SimulationGlobals) => void) => Promise<PlayerInstance & Disposable>;
+
+	/**
 	 * Invokes the game processor to dispatch intents.
 	 * @param count How many ticks to process.
 	 * @param players Player implementations to run each tick.
@@ -55,7 +79,7 @@ type Simulation = {
 
 	// I think this was a bad idea, I would just recommend using `player` instead.
 	peekRoom: <Type>(roomName: string, task: (room: Room, game: GameBase) => Type) => Promise<Type>;
-};
+}
 
 /**
  * `simulate` creates a factory for a test shard. The shard terrain and initial objects are imported
@@ -73,6 +97,7 @@ type Simulation = {
 export function simulate(rooms: Record<string, (room: Room) => void>) {
 	return async (body: (refs: Simulation) => Promise<void>) => {
 
+		Memory.initialize(null);
 		using testShard = await instantiateTestShard();
 		const { db, shard, world } = testShard;
 
@@ -83,7 +108,6 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 			room['#flushObjects'](null);
 			const previousUsers = flushUsers(room);
 			await Promise.all([
-				shard.saveRoom(room.name, shard.time + 1, room),
 				shard.saveRoom(room.name, shard.time, room),
 				updateUserRoomRelationships(shard, room, previousUsers),
 			]);
@@ -92,6 +116,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 		// Run simulation
 		const intentsByRoom = new Map<string, { userId: string; intents: RoomIntentPayload }[]>();
 		const playersThisTick = new Set<string>();
+		const sandboxPlayers: PlayerInstance[] = [];
 		let roomInstances = new Map<string, Room>();
 		const that: Simulation = {
 			db,
@@ -139,18 +164,49 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 				}
 			},
 
-			async tick(count = 1, players = {}) {
+			async sandbox(userId: string, unsafeMain: (global: SimulationGlobals) => void) {
+				config.runner.sandbox = 'unsafe';
+				const userName = Id.generateId(12);
+				await User.create(db, userId, userName, []);
+				const main =
+					`const main = ${String(unsafeMain)};
+					globalThis.assert = __assert;
+					module.exports.loop = () => main(globalThis);`;
+				await Code.saveContent(db, userId, 'main', new Map([ [ 'main', main ] ]));
+				using disposable = new DisposableStack();
+				const instance = disposable.adopt(await PlayerInstance.create(shard, world, userId), instance => instance.disconnect());
+				disposable.use(await assertPlayerWithoutErrors(instance));
+				sandboxPlayers.push(instance);
+				return Object.assign(instance, {
+					[Symbol.dispose]: disposableToEffect(disposable.move()),
+				});
+			},
+
+			async tick(count = 1, players) {
+				playersThisTick.clear();
 				for (let ii = 0; ii < count; ++ii) {
-					// Run player code
-					for (const [ userId, task ] of Object.entries(players)) {
-						await that.player(userId, task);
+					const time = shard.time;
+
+					// `tick(10, { '100': Game => { ... }) }`
+					if (players) {
+						for (const [ userId, task ] of Object.entries(players)) {
+							await that.player(userId, task);
+						}
 					}
 					playersThisTick.clear();
 
+					// `sandbox('user', globals => { ... })`
+					for (const instance of sandboxPlayers) {
+						const { userId } = instance;
+						const [ intentRooms, visibleRooms ] = await Promise.all([
+							shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
+							shard.scratch.sMembers(userToVisibleRoomsSetKey(userId)),
+						]);
+						await instance.run(time, visibleRooms, intentRooms);
+					}
+
 					// Initialize processor queue
-					const time = shard.time + 1;
-					const processorTime = await begetRoomProcessQueue(shard, time, time - 1);
-					assert.equal(time, processorTime);
+					await begetRoomProcessQueue(shard, time);
 					const nextRoomInstances = new Map<string, Room>();
 					const contexts = new Map<string, RoomProcessor>();
 
@@ -179,15 +235,47 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 					}
 
 					// Shard phase
-					await runShardTickProcessors(shard);
+					await runShardTickProcessors(shard, time);
 
 					// Increment time
-					await shard.data.set('time', time);
-					await shard.channel.publish({ type: 'tick', time });
-					shard.time = time;
+					const nextTime = time + 1;
+					await shard.data.set('time', nextTime);
+					await shard.channel.publish({ type: 'tick', time: nextTime });
+					shard.time = nextTime;
 				}
 			},
 		};
 		await body(that);
 	};
+}
+
+async function assertPlayerWithoutErrors(instance: PlayerInstance) {
+	const errors: string[] = [];
+	const disposable = new DisposableStack();
+	const toError = (message: string) => {
+		const lines = message.split('\n');
+		const error = new Error(lines[0]);
+		error.stack = message;
+		return error;
+	};
+	disposable.defer(await getConsoleChannel(instance.shard, instance.userId).listen(payload => {
+		const frames: unknown = JSON.parse(payload);
+		for (const frame of frames as unknown[]) {
+			// @ts-expect-error
+			const { data, fd } = frame;
+			if (process.env.TEST_LOG_PLAYER === instance.userId) {
+				console.log(data);
+			}
+			if (fd === 2 && data !== 'Script was disposed') {
+				errors.push(data as string);
+			}
+		}
+	}));
+	disposable.defer(() => {
+		if (errors.length !== 0) {
+			// `AggregateError` also serves the purpose of collecting a stack
+			throw new AggregateError(errors.map(toError));
+		}
+	});
+	return disposable.move();
 }
