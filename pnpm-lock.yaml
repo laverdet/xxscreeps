@@ -144,8 +144,8 @@ importers:
         specifier: workspace:*
         version: link:../lodash3
       '@xxscreeps/pathfinder':
-        specifier: 0.1.0
-        version: 0.1.0
+        specifier: 0.2.0
+        version: 0.2.0
       acorn:
         specifier: 8.9.0
         version: 8.9.0
@@ -1440,47 +1440,47 @@ packages:
   '@xtuc/long@4.2.2':
     resolution: {integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==}
 
-  '@xxscreeps/pathfinder-darwin-arm64@0.1.0':
-    resolution: {integrity: sha512-oxRbfSOrQJLBl2SIsuiwP44Cbna3/O6uVZepoNc+4nKwA4rFD+yYS/LiDOQsQv0+iT0Vb8OLnh1RzwG9WVYRQA==}
+  '@xxscreeps/pathfinder-darwin-arm64@0.2.0':
+    resolution: {integrity: sha512-YpPuulOytJKmIs2TADf29SaF51bQ3NVV28Sx4tqq/wLYKh31Bbt0oKyT/ABzx7lKPbEApe78U7WyP7khOIdsyw==}
     cpu: [arm64]
     os: [darwin]
 
-  '@xxscreeps/pathfinder-darwin-x64@0.1.0':
-    resolution: {integrity: sha512-/NNFV7W/45g1g7EyIV0C3UvDvW6RxFlG3aI0iF0+zENZXKQYhZcu8YoqYpOvLthuV8JjbP0pXuGWox1mrU6SFg==}
+  '@xxscreeps/pathfinder-darwin-x64@0.2.0':
+    resolution: {integrity: sha512-0+qEFpRIh3LFigAnumR1BOCEXxo0wq32wnFhehs4B8IP4D4XkA+5zN/iKf7LOpOt6HGWlwYi1mPi/ildIujE/Q==}
     cpu: [x64]
     os: [darwin]
 
-  '@xxscreeps/pathfinder-linux-arm64-gnu@0.1.0':
-    resolution: {integrity: sha512-XNaJ93qgpBIPiqqR3luwpwZN296T7BecX9cjS2DrVjzkSbyQSIME+sZ4hvCMjPbkZbL+GRCJpibqpf7nTfq8Pg==}
+  '@xxscreeps/pathfinder-linux-arm64-gnu@0.2.0':
+    resolution: {integrity: sha512-QkIEgrzSXRfnT23P4f0kEIM+sPdL19f+WLtss8TBpmHel9VrssLdHb+eyIDKe86J6aNX5YZT6hIB5mRJWtPPbg==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@xxscreeps/pathfinder-linux-arm64-musl@0.1.0':
-    resolution: {integrity: sha512-mJZilW8DLAjI9micZvR0DAVlGDuzR7zB0xIr8NTLa+TfHZOWbBbIMXiYR1IE4PsMWIzxaLMb/Cn/CidHXKq1mw==}
+  '@xxscreeps/pathfinder-linux-arm64-musl@0.2.0':
+    resolution: {integrity: sha512-ER5meHBexIdxfZRxyjR+fF16rIqOvVGMWxqKFK6EOdDQ/a4hvwNfLS/dvSj1Jcpu/U1cGaADe/ekJJWfUD2Eug==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@xxscreeps/pathfinder-linux-x64-gnu@0.1.0':
-    resolution: {integrity: sha512-61nt8ph7WZS93jsKTARhaWpp+atjTkTlGJtwcSO6fIiPSNi3f7xY3eu6IEglk8OzWZ/1BX2LC8sE+cd7Ba6aMg==}
+  '@xxscreeps/pathfinder-linux-x64-gnu@0.2.0':
+    resolution: {integrity: sha512-b5MJg6XWB9fbjmeNcWFkJhregtYf/KLfRPln7iyM+l25SxRJDK++JNA1FEjeuzXnjum4nriOsjBhQmHZp7ROKw==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@xxscreeps/pathfinder-linux-x64-musl@0.1.0':
-    resolution: {integrity: sha512-rJmzDycpZoN6DRWsnx0IwGqIkH8TootVuLzcPy2R4/mtom9YUiVOv7UScSBlwAIC9iZ6FLopYq6LI8TxnmrkTw==}
+  '@xxscreeps/pathfinder-linux-x64-musl@0.2.0':
+    resolution: {integrity: sha512-Fdl0Dcw+HJnMethEb2ZKM96m7VFzmpgPAdLCcCR5UrR5OxX7rL8wPN3PGkfFiPtLFN/Njshv75GFfZVMeBf0pQ==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@xxscreeps/pathfinder-win32-x64@0.1.0':
-    resolution: {integrity: sha512-hFvHQBuqW/oQRCf8CjsEDRglUs4vUfI0OPHpmgcZE2q0JZiKw76mHu+aYLrYGZP9C9PktHSEdGVpyc3Ky9dOjQ==}
+  '@xxscreeps/pathfinder-win32-x64@0.2.0':
+    resolution: {integrity: sha512-9Okpv4LtbGg3o/vokTapDHeAsODIDZ2jRBm4HtxUyX5GQQAx09a/QxQNbkSXEPGhehlYfVsTN1fnthb5Aus9Vw==}
     cpu: [x64]
     os: [win32]
 
-  '@xxscreeps/pathfinder@0.1.0':
-    resolution: {integrity: sha512-7dhCbiZB2vp1pTbVvKZJj3lhbz95SXtHrLGdqYpEXCYNsxKiMl4bZa1FlK/GiugO1ND/dRRmlaPCpbkHJD2jIQ==}
+  '@xxscreeps/pathfinder@0.2.0':
+    resolution: {integrity: sha512-UwEyD+bKppVMBuz8LuNtzirXKsa2ILNuk4shbsF8ijIEfg3sy3Ri5AWTfn6ZTewqeutdpgLAgnJhjV5fF+9xog==}
 
   abab@2.0.6:
     resolution: {integrity: sha512-j2afSsaIENvHZN2B8GOpF566vZ5WVk5opAiMTvWgaQT8DkbOqsTfvNAvHoRGU2zzP8cPoqys+xHTRDWW8L+/BA==}
@@ -4822,36 +4822,36 @@ snapshots:
 
   '@xtuc/long@4.2.2': {}
 
-  '@xxscreeps/pathfinder-darwin-arm64@0.1.0':
+  '@xxscreeps/pathfinder-darwin-arm64@0.2.0':
     optional: true
 
-  '@xxscreeps/pathfinder-darwin-x64@0.1.0':
+  '@xxscreeps/pathfinder-darwin-x64@0.2.0':
     optional: true
 
-  '@xxscreeps/pathfinder-linux-arm64-gnu@0.1.0':
+  '@xxscreeps/pathfinder-linux-arm64-gnu@0.2.0':
     optional: true
 
-  '@xxscreeps/pathfinder-linux-arm64-musl@0.1.0':
+  '@xxscreeps/pathfinder-linux-arm64-musl@0.2.0':
     optional: true
 
-  '@xxscreeps/pathfinder-linux-x64-gnu@0.1.0':
+  '@xxscreeps/pathfinder-linux-x64-gnu@0.2.0':
     optional: true
 
-  '@xxscreeps/pathfinder-linux-x64-musl@0.1.0':
+  '@xxscreeps/pathfinder-linux-x64-musl@0.2.0':
     optional: true
 
-  '@xxscreeps/pathfinder-win32-x64@0.1.0':
+  '@xxscreeps/pathfinder-win32-x64@0.2.0':
     optional: true
 
-  '@xxscreeps/pathfinder@0.1.0':
+  '@xxscreeps/pathfinder@0.2.0':
     optionalDependencies:
-      '@xxscreeps/pathfinder-darwin-arm64': 0.1.0
-      '@xxscreeps/pathfinder-darwin-x64': 0.1.0
-      '@xxscreeps/pathfinder-linux-arm64-gnu': 0.1.0
-      '@xxscreeps/pathfinder-linux-arm64-musl': 0.1.0
-      '@xxscreeps/pathfinder-linux-x64-gnu': 0.1.0
-      '@xxscreeps/pathfinder-linux-x64-musl': 0.1.0
-      '@xxscreeps/pathfinder-win32-x64': 0.1.0
+      '@xxscreeps/pathfinder-darwin-arm64': 0.2.0
+      '@xxscreeps/pathfinder-darwin-x64': 0.2.0
+      '@xxscreeps/pathfinder-linux-arm64-gnu': 0.2.0
+      '@xxscreeps/pathfinder-linux-arm64-musl': 0.2.0
+      '@xxscreeps/pathfinder-linux-x64-gnu': 0.2.0
+      '@xxscreeps/pathfinder-linux-x64-musl': 0.2.0
+      '@xxscreeps/pathfinder-win32-x64': 0.2.0
 
   abab@2.0.6: {}
 

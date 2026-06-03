@@ -29,4 +29,4 @@ export function search(
 	maxCost: number,
 	flee: boolean,
 	heuristicWeight: number,
-): PathResult | undefined | -1;
+): PathResult;

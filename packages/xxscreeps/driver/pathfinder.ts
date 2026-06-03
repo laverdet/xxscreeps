@@ -7,68 +7,48 @@ import { makeRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/room/name.
 import { getBuffer } from 'xxscreeps/game/terrain.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
 
-const makePositionIn: (pos: RoomPosition | PositionLike) => number =
-	// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
-	// @ts-ignore
-	pf.version === 11
-		? function make(pos) {
-			// Assume it is RoomPosition
-			const positionInteger = pos['#id'];
-			if (positionInteger !== undefined) {
-				return positionInteger | 0;
-			}
+function makePositionIn(pos: RoomPosition | PositionLike): number {
+	// Assume it is RoomPosition
+	const rx = pos['#rx'];
+	if (rx !== undefined) {
+		const xx = rx * 50 + pos.x;
+		const yy = pos['#ry'] * 50 + pos.y;
+		return (yy << 16) | xx;
+	}
 
-			// Try to cast to RoomPosition
-			return make(new RoomPosition(pos.x, pos.y, pos.roomName));
-		}
-		: function make(pos) {
-			// Assume it is RoomPosition
-			const rx = pos['#rx'];
-			if (rx !== undefined) {
-				const xx = rx * 50 + pos.x;
-				const yy = pos['#ry'] * 50 + pos.y;
-				return (yy << 16) | xx;
-			}
+	// Try to cast to RoomPosition
+	return makePositionIn(new RoomPosition(pos.x, pos.y, pos.roomName));
+}
 
-			// Try to cast to RoomPosition
-			return make(new RoomPosition(pos.x, pos.y, pos.roomName));
-		};
-
-const makeCompletePath: (path: readonly number[]) => RoomPosition[] =
-	// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
-	// @ts-ignore
-	pf.version === 11
-		? path => path.map(pos => RoomPosition['#create'](pos)).reverse()
-		: path => {
-			const iterable = function*() {
-				const first = path[0];
-				const make = (xx: number, yy: number) =>
-					RoomPosition['#create'](((yy % 50) << 24) | ((xx % 50) << 16) | ((yy / 50) << 8) | (xx / 50));
-				if (first !== undefined) {
-					let xx = first & 0xffff;
-					let yy = first >> 16;
+function makeCompletePath(path: readonly number[]): RoomPosition[] {
+	const iterable = function*() {
+		const first = path[0];
+		const make = (xx: number, yy: number) =>
+			RoomPosition['#create'](((yy % 50) << 24) | ((xx % 50) << 16) | ((yy / 50) << 8) | (xx / 50));
+		if (first !== undefined) {
+			let xx = first & 0xffff;
+			let yy = first >> 16;
+			yield make(xx, yy);
+			for (let ii = 1; ii < path.length; ++ii) {
+				const next = path[ii]!;
+				const nx = next & 0xffff;
+				const ny = next >> 16;
+				const dx = Math.sign(nx - xx);
+				const dy = Math.sign(ny - yy);
+				while (nx !== xx || ny !== yy) {
+					xx += dx;
+					yy += dy;
 					yield make(xx, yy);
-					for (let ii = 1; ii < path.length; ++ii) {
-						const next = path[ii]!;
-						const nx = next & 0xffff;
-						const ny = next >> 16;
-						const dx = Math.sign(nx - xx);
-						const dy = Math.sign(ny - yy);
-						while (nx !== xx || ny !== yy) {
-							xx += dx;
-							yy += dy;
-							yield make(xx, yy);
-						}
-					}
 				}
-			}();
-			const result = [ ...iterable ];
-			result.pop();
-			return result.reverse();
-		};
+			}
+		}
+	}();
+	const result = [ ...iterable ];
+	result.pop();
+	return result.reverse();
+}
 
 export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: SearchOptions = {}) {
-
 	const plainCost = clamp(1, 254, Number(options.plainCost) || 1) | 0;
 	const swampCost = clamp(1, 254, Number(options.swampCost) || 5) | 0;
 	const heuristicWeight = clamp(1, 9, Number(options.heuristicWeight) || 1.2);
@@ -78,18 +58,19 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 	const flee = Boolean(options.flee) || false;
 
 	// Convert one-or-many goal into standard format for native extension
-	const goals = (Array.isArray(goal) ? goal : [ goal ]).map((goal: any) => {
-		if (goal.x !== undefined && goal.y !== undefined && goal.roomName !== undefined) {
-			return {
-				pos: makePositionIn(goal),
-				range: 0,
-			};
-		} else {
+	const goals = (Array.isArray(goal) ? goal : [ goal ]).map(goal => {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		if (goal.roomName === undefined && goal.x === undefined && goal.y === undefined) {
 			// This case detects `Goal` and `RoomObject`. The path finder was never meant to accept game
 			// objects but it did by accident, so I guess here we are.
 			return {
 				pos: makePositionIn(goal.pos),
 				range: Math.max(0, goal.range | 0),
+			};
+		} else {
+			return {
+				pos: makePositionIn(goal),
+				range: 0,
 			};
 		}
 	});
@@ -109,7 +90,8 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 	};
 
 	// Invoke native code
-	const ret = pf.search(
+	// TODO: remove pf.PathResult annotation after fixed .d.ts
+	const ret: pf.PathResult = pf.search(
 		makePositionIn(origin), goals,
 		callback,
 		plainCost, swampCost,
@@ -119,12 +101,6 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 	);
 
 	// Translate results
-	// TODO: Remove undefined results after pf upgrade
-	if (ret === undefined) {
-		return { path: [], ops: 0, cost: 0, incomplete: false };
-	} else if (ret === -1) {
-		return { path: [], ops: 0, cost: 0, incomplete: true };
-	}
 	return {
 		...ret,
 		path: makeCompletePath(ret.path),
