@@ -1,7 +1,6 @@
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { flush, summary } from './context.js';
 import './import.js';
-import 'xxscreeps/backend/sockets/test.js';
 import 'xxscreeps/cli/test.js';
 import 'xxscreeps/engine/db/storage/local/test.js';
 import 'xxscreeps/game/test.js';
