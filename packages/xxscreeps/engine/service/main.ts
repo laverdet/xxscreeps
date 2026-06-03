@@ -14,7 +14,7 @@ import { checkIsEntry, getServiceChannel } from './index.js';
 
 checkIsEntry();
 
-await importMods('shardTick');
+await importMods('main');
 
 using db = await Database.connect();
 using shard = await Shard.connect(db, config.shards[0]!.name);
