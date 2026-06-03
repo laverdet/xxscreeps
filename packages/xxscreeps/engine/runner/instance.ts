@@ -131,7 +131,6 @@ export class PlayerInstance {
 		this.channel.disconnect();
 		this.codeChannel.disconnect();
 		this.sandbox?.dispose();
-		this.sandbox = undefined;
 		this.cleanup();
 	}
 
@@ -140,10 +139,7 @@ export class PlayerInstance {
 			// Dispose the current sandbox if the user has pushed new code
 			const wasStale = this.stale;
 			if (wasStale) {
-				this.sandbox?.dispose();
-				this.sandbox = undefined;
-				this.seenUsers.clear();
-				this.stale = false;
+				this.reset();
 			}
 
 			// If there's no sandbox load the required data and initialize
@@ -217,10 +213,6 @@ export class PlayerInstance {
 				return await this.sandbox.run(payload as TickPayload);
 			} catch (err: any) {
 				console.error(err.stack);
-				// Force a sandbox reset on the next tick; without this the broken
-				// sandbox stays alive one extra tick (returning 'disposed') before
-				// the normal stale path fires.
-				this.stale = true;
 			}
 		})();
 
@@ -249,6 +241,10 @@ export class PlayerInstance {
 			if (result) {
 				// Severe error, user loses a tick
 				this.stale = true;
+			} else {
+				// Internal error, user resets immediately. CPU bucket refund should also go here. The error
+				// has been logged above.
+				this.reset();
 			}
 			const tasks: Promise<void>[] = [];
 			if (result) {
@@ -273,5 +269,12 @@ export class PlayerInstance {
 			tasks.push(publishRunnerIntentsForRooms(this.shard, this.userId, time, intentRooms, {}));
 			await Promise.all(tasks);
 		}
+	}
+
+	private reset() {
+		this.sandbox?.dispose();
+		this.sandbox = undefined;
+		this.seenUsers.clear();
+		this.stale = false;
 	}
 }

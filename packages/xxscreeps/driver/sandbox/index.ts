@@ -75,12 +75,7 @@ export async function createSandbox(userId: string, payload: InitializationPaylo
 			default: throw new Error(`Invalid sandbox mode: ${config.runner.sandbox}`);
 		}
 	}();
-	try {
-		await sandbox.initialize(payload);
-	} catch (err) {
-		sandbox.dispose();
-		throw err;
-	}
+	await sandbox.initialize(payload);
 	didMakeSandbox(sandbox, userId);
 	return sandbox;
 }

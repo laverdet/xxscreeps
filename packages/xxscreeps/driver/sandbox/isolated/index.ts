@@ -24,103 +24,80 @@ const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sa
 }));
 
 export class IsolatedSandbox implements Sandbox {
-	private tick?: ivm.Reference<Runtime['tick']> | undefined;
+	private tick?: ivm.Reference<Runtime['tick']>;
 	private totalTime = 0n;
-	private isolate?: ivm.Isolate | undefined;
+	private readonly isolate;
 
 	constructor(data: InitializationPayload) {
 		// Initialize isolate and context
-		// terrainBlob.length is in bytes; memoryLimit is in MB — convert before adding
 		this.isolate = new ivm.Isolate({
 			inspector: useInspector,
-			memoryLimit: config.runner.cpu.memoryLimit + Math.ceil(data.terrainBlob.byteLength / (1024 * 1024)),
+			memoryLimit: config.runner.cpu.memoryLimit + data.terrainBlob.byteLength >> 20,
 		});
 	}
 
 	async initialize(data: InitializationPayload) {
 		const { isolate } = this;
-		if (!isolate) {
-			throw new Error('Isolate is disposed');
-		}
 		const context = await isolate.createContext({ inspector: useInspector });
 
-		// Set up required globals sequentially so that an OOM in any step does not
-		// leave concurrent in-flight IVM operations on the same (now-disposed) isolate,
-		// which would crash with an IsolateEnvironment::GetCurrent() assertion.
+		// Set up required globals
 		const pf = getPathFinderModule();
-
-		// ivm-inspect runs its own Promise.all internally; run it first and alone so
-		// nothing else is racing on the isolate if it triggers an OOM disposal.
-		const util = await ivmInspect.create(isolate, context);
-		await context.global.set('nodeUtilImport', {
-			formatWithOptions: util.formatWithOptions.derefInto({ release: true }),
-			inspect: util.inspect.derefInto({ release: true }),
-		}, { copy: true });
-
-		const instance = await pf.create(context);
-		await context.global.set('@xxscreeps/pathfinder', instance.derefInto({ release: true }));
-
-		const { source, map } = await getRuntimeSource();
-		context.global.setIgnored('runtimeSourceMap', map);
-		const script = await isolate.compileScript(source, { filename: 'runtime.js' });
-
-		await Promise.all([
+		const [ script ] = await Promise.all([
+			async function() {
+				const { source, map } = await getRuntimeSource();
+				context.global.setIgnored('runtimeSourceMap', map);
+				return isolate.compileScript(source, { filename: 'runtime.js' });
+			}(),
+			async function() {
+				const instance = await pf.create(context);
+				await context.global.set('@xxscreeps/pathfinder', instance.derefInto());
+			}(),
+			async function() {
+				const util = await ivmInspect.create(isolate, context);
+				const deref = {
+					formatWithOptions: util.formatWithOptions.derefInto({ release: true }),
+					inspect: util.inspect.derefInto({ release: true }),
+				};
+				await context.global.set('nodeUtilImport', deref, { copy: true });
+			}(),
 			context.global.set('global', context.global.derefInto()),
 			context.global.set('ivm', ivm),
 			context.global.set('exports', {}, { copy: true }),
 		]);
 
 		// Initialize runtime.ts and load player code + memory
-		let runtime: ivm.Reference<Runtime> | undefined;
-		let initialize: ivm.Reference<Runtime['initialize']> | undefined;
-		let tick: ivm.Reference<Runtime['tick']> | undefined;
-		try {
-			runtime = await script.run(context, { release: true, reference: true });
-			initialize = await runtime.get('initialize', { accessors: true, reference: true });
-			tick = await runtime.get('tick', { accessors: true, reference: true });
-			await Promise.all([
-				context.global.delete('@xxscreeps/pathfinder'),
-				context.global.delete('ivm'),
-				context.global.delete('nodeUtilImport'),
-			]);
-			this.tick = tick;
-			tick = undefined;
-			await initialize.apply(undefined, [ isolate, context, data ], { arguments: { copy: true } });
-		} finally {
-			tick?.release();
-			initialize?.release();
-			runtime?.release();
-		}
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+		const runtime: ivm.Reference<Runtime> = await script.run(context, { release: true, reference: true });
+		const [ initialize, tick ] = await Promise.all([
+			runtime.get('initialize', { accessors: true, reference: true }),
+			runtime.get('tick', { accessors: true, reference: true }),
+			context.global.delete('@xxscreeps/pathfinder'),
+			context.global.delete('ivm'),
+			context.global.delete('nodeUtilImport'),
+		]);
+		this.tick = tick;
+		await initialize.apply(undefined, [ isolate, context, data ], { arguments: { copy: true } });
 	}
 
 	createInspectorSession() {
-		if (!this.isolate) {
-			throw new Error('Isolate is disposed');
-		}
 		return this.isolate.createInspectorSession();
 	}
 
 	dispose() {
-		this.tick?.release();
-		this.tick = undefined;
 		try {
-			this.isolate?.dispose();
+			this.isolate.dispose();
 		} catch {}
-		this.isolate = undefined;
 	}
 
 	async run(args: TickPayload): Promise<TickCompletion> {
-		if (!this.tick || !this.isolate) {
-			return { result: 'disposed' };
-		}
 		try {
-			const completion = await this.tick.apply(
+			const completion = await this.tick!.apply(
 				undefined,
 				[ args ], {
 					arguments: { copy: true },
 					result: { copy: true },
 					timeout: args.cpu.tickLimit,
-			});
+				});
 			if (completion.result === 'success') {
 				const totalTime = this.isolate.cpuTime;
 				completion.payload.usage.cpu = Number(totalTime - this.totalTime) / 1e6;
@@ -132,10 +109,11 @@ export class IsolatedSandbox implements Sandbox {
 		} catch (err: any) {
 			if (err.message === 'Script execution timed out.') {
 				return { result: 'timedOut', stack: err.stack };
-			} else if (err.message === 'Isolate is disposed' || err.message?.startsWith('Isolate was disposed')) {
-				// 'Isolate was disposed during execution' (external dispose or OOM) must be caught
-				// here so it never propagates to callers wrapping sandbox.run (e.g. prometheus),
-				// which would leave the error unhandled and keep the broken sandbox alive.
+			} else if (
+				err.message === 'Isolate is disposed' ||
+				err.message === 'Isolate was disposed during execution' ||
+				err.message === 'Isolate was disposed during execution due to memory limit'
+			) {
 				return { result: 'disposed' };
 			}
 			throw err;
