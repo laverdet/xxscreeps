@@ -2,8 +2,8 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createExtractor } from 'xxscreeps/mods/mineral/extractor.js';
-import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { create as createRoad } from 'xxscreeps/mods/road/road.js';
+import { create as createExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
@@ -79,25 +79,25 @@ describe('Structure isActive', () => {
 			room['#user'] = room.controller!['#user'] = '100';
 			room.controller!['#downgradeTime'] = 1;
 			for (let dx = 1; dx <= 6; ++dx) {
-				room['#insertObject'](createExtension(new RoomPosition(33 - dx, 32, 'W3N3'), 3, '100'));
+				room['#insertObject'](createExtension(new RoomPosition(28 + dx, 32, 'W3N3'), 3, '100'));
 			}
 		},
 	});
 
 	test('downgrade transition flips #active on over-cap extension', () => downgradeSim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const exts = Game.rooms.W3N3!.find(C.FIND_MY_STRUCTURES)
-				.filter(s => s.structureType === C.STRUCTURE_EXTENSION);
-			assert.strictEqual(exts.length, 6);
-			assert.ok(exts.every(s => s.isActive()), 'all 6 extensions active at RCL3');
+			const extensions = Game.rooms.W3N3?.find(C.FIND_MY_STRUCTURES)
+				.filter(({ structureType }) => structureType === C.STRUCTURE_EXTENSION);
+			assert.strictEqual(extensions?.length, 6);
+			assert.ok(extensions.every(structure => structure.isActive()), 'all 6 extensions active at RCL3');
 		});
 		await tick();
 		await player('100', Game => {
-			const exts = Game.rooms.W3N3!.find(C.FIND_MY_STRUCTURES)
-				.filter(s => s.structureType === C.STRUCTURE_EXTENSION);
-			assert.strictEqual(Game.rooms.W3N3!.controller!.level, 2);
-			assert.strictEqual(exts.filter(s => s.isActive()).length, 5, 'only 5 active at RCL2');
-			assert.strictEqual(exts.filter(s => !s.isActive()).length, 1, 'farthest extension inactive');
+			const extensions = Game.rooms.W3N3?.find(C.FIND_MY_STRUCTURES)
+				.filter(({ structureType }) => structureType === C.STRUCTURE_EXTENSION);
+			assert.strictEqual(Game.rooms.W3N3?.controller!.level, 2);
+			assert.strictEqual(extensions?.filter(structure => structure.isActive()).length, 5, 'only 5 active at RCL2');
+			assert.strictEqual(extensions.filter(structure => !structure.isActive()).length, 1, 'farthest extension inactive');
 		});
 	}));
 });

@@ -320,7 +320,6 @@ describe('Controller', () => {
 	});
 
 	describe('room status side effects', () => {
-
 		const reserveNeutral = simulate({
 			W3N3: room => {
 				room['#insertObject'](create(pos, [ C.CLAIM, C.MOVE ], 'claimer', '100'));
@@ -339,8 +338,8 @@ describe('Controller', () => {
 				});
 				await tick();
 				await peekRoom('W3N3', room => {
-					const source = room.find(C.FIND_SOURCES)[0]!;
-					assert.strictEqual(source.energyCapacity, C.SOURCE_ENERGY_CAPACITY);
+					const source = room.find(C.FIND_SOURCES)[0];
+					assert.strictEqual(source?.energyCapacity, C.SOURCE_ENERGY_CAPACITY);
 				});
 			}));
 

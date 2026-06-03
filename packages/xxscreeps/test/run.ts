@@ -3,7 +3,6 @@ import { flush, summary } from './context.js';
 import './import.js';
 import 'xxscreeps/cli/test.js';
 import 'xxscreeps/engine/db/storage/local/test.js';
-import 'xxscreeps/engine/processor/test.js';
 import 'xxscreeps/game/test.js';
 
 await importMods('driver');
