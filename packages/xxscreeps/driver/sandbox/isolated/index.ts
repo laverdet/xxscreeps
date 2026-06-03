@@ -32,7 +32,7 @@ export class IsolatedSandbox implements Sandbox {
 		// Initialize isolate and context
 		this.isolate = new ivm.Isolate({
 			inspector: useInspector,
-			memoryLimit: config.runner.cpu.memoryLimit + data.terrainBlob.byteLength >> 20,
+			memoryLimit: config.runner.cpu.memoryLimit + (data.terrainBlob.byteLength >> 20),
 		});
 	}
 
