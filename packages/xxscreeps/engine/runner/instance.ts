@@ -139,10 +139,7 @@ export class PlayerInstance {
 			// Dispose the current sandbox if the user has pushed new code
 			const wasStale = this.stale;
 			if (wasStale) {
-				this.sandbox?.dispose();
-				this.sandbox = undefined;
-				this.seenUsers.clear();
-				this.stale = false;
+				this.reset();
 			}
 
 			// If there's no sandbox load the required data and initialize
@@ -244,6 +241,10 @@ export class PlayerInstance {
 			if (result) {
 				// Severe error, user loses a tick
 				this.stale = true;
+			} else {
+				// Internal error, user resets immediately. CPU bucket refund should also go here. The error
+				// has been logged above.
+				this.reset();
 			}
 			const tasks: Promise<void>[] = [];
 			if (result) {
@@ -268,5 +269,12 @@ export class PlayerInstance {
 			tasks.push(publishRunnerIntentsForRooms(this.shard, this.userId, time, intentRooms, {}));
 			await Promise.all(tasks);
 		}
+	}
+
+	private reset() {
+		this.sandbox?.dispose();
+		this.sandbox = undefined;
+		this.seenUsers.clear();
+		this.stale = false;
 	}
 }
