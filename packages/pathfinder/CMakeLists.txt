@@ -88,6 +88,7 @@ target_sources(pathfinder
 		src/room.cc
 		src/utility.cc
 	PRIVATE
+		src/jps.cc
 		src/main.cc
 		src/pf.cc
 )
