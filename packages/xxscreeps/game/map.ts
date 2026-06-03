@@ -38,6 +38,7 @@ type FindRoute = {
 };
 
 type RoomStatus = RoomClosed | NormalRoom;
+type ExitsDescriptor = Record<typeof C.TOP | typeof C.RIGHT | typeof C.BOTTOM | typeof C.LEFT, string>;
 
 interface RoomClosed {
 	status: 'closed';
@@ -89,7 +90,7 @@ export class GameMap {
 	 * List all exits available from the room with the given name.
 	 * @param roomName The room name.
 	 */
-	describeExits(roomName: string) {
+	describeExits(roomName: string): ExitsDescriptor | null {
 		const info = this.#terrain.get(roomName);
 		if (info) {
 			const room = parseRoomName(roomName);
@@ -102,7 +103,7 @@ export class GameMap {
 				}),
 				$$ => Fn.fromEntries($$));
 		}
-		return null as never;
+		return null;
 	}
 
 	/**
@@ -183,7 +184,6 @@ export class GameMap {
 				() => 1,
 			// describeExits is typed `null as never` for player-facing ergonomics but
 			// can genuinely return null at runtime; `Object.values(null)` would throw.
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			pos => Fn.map(Object.values(this.describeExits(makeRoomName(pos.rx, pos.ry)) ?? {}), parseRoomName));
 		if (route) {
 			return Fn.pipe(
@@ -223,32 +223,44 @@ export class GameMap {
 	}
 
 	/** @internal */
-	getRoomStatus(roomName: string): RoomStatus | undefined;
+	getRoomStatus(roomName: string, actually: true): RoomStatus | undefined;
 
 	/**
 	 * Gets availability status of the room with the specified name. Learn more about starting areas
 	 * from [this article](https://docs.screeps.com/start-areas.html).
 	 */
 	getRoomStatus(roomName: string): RoomStatus;
-	getRoomStatus(roomName: string): RoomStatus | undefined {
+
+	getRoomStatus(roomName: string, actually?: boolean): RoomStatus | undefined {
 		const room = parseRoomName(roomName);
 		if (Number.isNaN(room.rx) || Number.isNaN(room.ry)) {
 			return undefined;
 		} else if (this.#accessibleRooms.has(roomName)) {
 			return { status: 'normal', timestamp: null };
-		} else {
+		} else if (!actually || this.#terrain.has(roomName)) {
 			return { status: 'closed', timestamp: null };
+		} else {
+			return undefined;
 		}
 	}
+
+	/** @internal */
+	getRoomTerrain(roomName: string, graceful: true): Terrain.Terrain | undefined;
 
 	/**
 	 * Get a `Room.Terrain` object which provides fast access to static terrain data. This method works
 	 * for any room in the world even if you have no access to it.
 	 * @param roomName The room name.
 	 */
-	getRoomTerrain(roomName: string) {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-		return this.#terrain.get(roomName)?.terrain!;
+	getRoomTerrain(roomName: string): Terrain.Terrain;
+
+	getRoomTerrain(roomName: string, graceful?: boolean) {
+		const terrain = this.#terrain.get(roomName)?.terrain;
+		if (terrain) {
+			return terrain;
+		} else if (!graceful) {
+			throw new Error(`Could not access room ${roomName}`);
+		}
 	}
 
 	/**
@@ -277,7 +289,7 @@ export class GameMap {
 	 * @deprecated
 	 */
 	isRoomAvailable(roomName: string) {
-		return this.getRoomStatus(roomName)?.status === 'normal';
+		return this.#accessibleRooms.has(roomName);
 	}
 }
 

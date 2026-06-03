@@ -125,7 +125,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		const { shard } = this.context;
 		const seenUsers = new Set<string>();
 		const roomName = parameters.room!;
-		if (!this.context.world.map.getRoomStatus(roomName)) {
+		if (!this.context.world.map.getRoomStatus(roomName, true)) {
 			return () => {};
 		}
 
