@@ -20,4 +20,4 @@ COPY --from=build /xxscreeps /xxscreeps
 WORKDIR /data
 EXPOSE 21025
 ENV NODE_OPTIONS="--no-node-snapshot --experimental-vm-modules --enable-source-maps --no-warnings"
-CMD [ "/xxscreeps/node_modules/.bin/xxscreeps" ]
+ENTRYPOINT [ "/xxscreeps/node_modules/.bin/xxscreeps" ]

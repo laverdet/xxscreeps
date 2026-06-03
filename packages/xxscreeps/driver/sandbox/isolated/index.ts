@@ -13,7 +13,7 @@ const useInspector = [ ...hooks.map('isolateInspector') ].some(use => use);
 
 const getPathFinderModule = runOnce(() => new ivm.NativeModule(pathFinderBinaryPath));
 
-const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime', {
+const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime.js', {
 	alias: {
 		process: 'xxscreeps/driver/sandbox/isolated/process',
 		'xxscreeps/driver/private/symbol.js': 'xxscreeps/driver/private/symbol/isolated-vm.js',

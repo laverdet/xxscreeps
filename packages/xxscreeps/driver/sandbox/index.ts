@@ -43,7 +43,7 @@ export interface Sandbox {
 }
 
 export function compileRuntimeSource(path: string, transform: Transform) {
-	return compile(path, [
+	return compile(import.meta.resolve(path), [
 		transform,
 		configTransform,
 		schemaTransform,
