@@ -85,8 +85,7 @@ describe('Observer', () => {
 	test('observer_nonexistent_room', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {
 			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
-			// W1N11 is within observer range but does not exist in the world
-			const result = observer?.observeRoom('W1N11');
+			const result = observer?.observeRoom('xyz');
 			assert.strictEqual(result, C.ERR_INVALID_ARGS, 'observeRoom to non-existent room should be ERR_INVALID_ARGS');
 		});
 		// Tick should not crash even if the check were bypassed

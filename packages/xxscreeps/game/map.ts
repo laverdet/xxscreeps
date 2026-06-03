@@ -37,10 +37,10 @@ type FindRoute = {
 	routeCallback?: (roomName: string, fromRoomName: string) => number;
 };
 
-type RoomStatus = RoomOutOfBorders | NormalRoom;
+type RoomStatus = RoomClosed | NormalRoom;
 
-interface RoomOutOfBorders {
-	status: 'out of borders';
+interface RoomClosed {
+	status: 'closed';
 	timestamp: number | null;
 }
 
@@ -62,7 +62,7 @@ export class GameMap {
 
 	constructor(terrain: TerrainByRoom, accessibleRooms?: ReadonlySet<string>) {
 		this.#terrain = terrain;
-		this.#accessibleRooms = accessibleRooms;
+		this.#accessibleRooms = accessibleRooms ?? new Set(Object.keys(terrain));
 		let maxX = -Infinity;
 		let minX = Infinity;
 		let maxY = -Infinity;
@@ -231,14 +231,14 @@ export class GameMap {
 	 */
 	getRoomStatus(roomName: string): RoomStatus;
 	getRoomStatus(roomName: string): RoomStatus | undefined {
-		if (!this.#terrain.has(roomName)) {
-			return;
+		const room = parseRoomName(roomName);
+		if (Number.isNaN(room.rx) || Number.isNaN(room.ry)) {
+			return undefined;
+		} else if (this.#accessibleRooms.has(roomName)) {
+			return { status: 'normal', timestamp: null };
+		} else {
+			return { status: 'closed', timestamp: null };
 		}
-		// Callers without the active-rooms set (sandbox init, processor worker) see every terrain-backed room as `normal`.
-		if (this.#accessibleRooms !== undefined && !this.#accessibleRooms.has(roomName)) {
-			return { status: 'out of borders', timestamp: null };
-		}
-		return { status: 'normal', timestamp: null };
 	}
 
 	/**

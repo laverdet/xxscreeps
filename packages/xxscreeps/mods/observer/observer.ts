@@ -52,10 +52,11 @@ function checkObserveRoomName(target: string) {
 }
 
 function checkObserveRoomRange(observer: StructureObserver, target: string) {
-	if (Game.map.getRoomLinearDistance(observer.room.name, target) > C.OBSERVER_RANGE) {
+	if (Game.map.getRoomLinearDistance(observer.room.name, target) <= C.OBSERVER_RANGE) {
+		return C.OK;
+	} else {
 		return C.ERR_NOT_IN_RANGE;
 	}
-	return C.OK;
 }
 
 export function checkObserveRoom(observer: StructureObserver, target: string) {
