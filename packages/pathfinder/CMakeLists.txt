@@ -50,6 +50,15 @@ if(LINUX)
 	add_link_options(-Wl,--gc-sections)
 endif()
 
+# performance-guided optimizations
+if(DEFINED PGO_OUT)
+	add_compile_options(-fprofile-generate=${PGO_OUT})
+	add_link_options(-fprofile-generate=${PGO_OUT})
+elseif(DEFINED PGO_IN)
+	add_compile_options(-fprofile-use=${PGO_IN})
+	add_link_options(-fprofile-use=${PGO_IN})
+endif()
+
 # clang & gcc diagnostic flags
 if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
 	add_compile_options(-fdiagnostics-color -Wall -Wextra -Wpedantic)
@@ -72,6 +81,7 @@ target_link_libraries(pathfinder PUBLIC auto_js nodejs nodejs_v8 utility_js v8_j
 target_sources(pathfinder
 	PUBLIC FILE_SET CXX_MODULES FILES
 		src/heap.cc
+		src/heuristic.cc
 		src/open-closed.cc
 		src/pf.h.cc
 		src/position.cc

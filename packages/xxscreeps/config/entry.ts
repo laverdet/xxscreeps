@@ -4,11 +4,8 @@ import { Worker, isMainThread } from 'node:worker_threads';
 import { initializeInterruptSignal } from 'xxscreeps/engine/service/signal.js';
 
 // Ensure that required node flags have been supplied, spawn a sub-thread if not
-const nodeMajor = Number(process.versions.node.split('.')[0]);
 const initialSpecifier = process.argv[2];
 const requiredFlags = [
-	// import.meta.resolve stabilized in Node 20.6
-	...nodeMajor < 20 ? [ '--experimental-import-meta-resolve' ] : [],
 	'--experimental-vm-modules',
 ];
 const noWorkerFlags = [

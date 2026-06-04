@@ -6,6 +6,7 @@
 
 // NODE_OPTIONS='--no-node-snapshot --experimental-vm-modules --enable-source-maps' lldb-22 node packages/xxscreeps/bin/xxscreeps.js test
 #include "nan.h"
+#include <auto_js/export_tag.h>
 #include <isolated_vm.h>
 import auto_js;
 import screeps;
@@ -21,8 +22,9 @@ namespace screeps {
 thread_local std::array<path_finder_t, 2> path_finders;
 
 auto search(
-	js::forward<v8::Local<v8::Value>> origin_js,
-	js::forward<v8::Local<v8::Object>> goals_js,
+	js::iv8::context_lock_witness lock,
+	world_position_t origin,
+	std::vector<heuristic_t::goal_t> goals,
 	js::forward<v8::Local<v8::Value>> room_callback,
 	// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 	int plain_cost,
@@ -32,7 +34,7 @@ auto search(
 	unsigned max_cost,
 	bool flee,
 	double heuristic_weight
-) -> js::forward<v8::Local<v8::Value>> {
+) -> std::optional<path_finder_t::result> {
 	// Find an inactive path finder
 	path_finder_t* pf = nullptr;
 	std::unique_ptr<path_finder_t> pf_holder;
@@ -48,8 +50,20 @@ auto search(
 	}
 
 	// Get the values from v8 and run the search
-	auto result = pf->search(*origin_js, goals_js->As<v8::Array>(), room_callback->As<v8::Function>(), plain_cost, swamp_cost, max_rooms, max_ops, max_cost, flee, heuristic_weight);
-	return js::forward{result};
+	return pf->search(
+		origin,
+		std::move(goals),
+		room_callback->As<v8::Function>(),
+		{
+			.heuristic_weight = heuristic_weight,
+			.plain_cost = plain_cost,
+			.swamp_cost = swamp_cost,
+			.max_ops = max_ops,
+			.max_rooms = max_rooms,
+			.max_cost = max_cost,
+			.flee = flee,
+		}
+	);
 }
 
 auto load_terrain(js::forward<v8::Local<v8::Object>> world) -> void {
@@ -58,7 +72,7 @@ auto load_terrain(js::forward<v8::Local<v8::Object>> world) -> void {
 
 }; // namespace screeps
 
-ISOLATED_VM_MODULE void InitForContext(v8::Isolate* isolate, v8::Local<v8::Context> context, v8::Local<v8::Object> target) {
+EXPORT ISOLATED_VM_MODULE void InitForContext(v8::Isolate* isolate, v8::Local<v8::Context> context, v8::Local<v8::Object> target) {
 	auto isolate_witness = js::iv8::isolate_lock_witness::make_witness(isolate);
 	auto context_witness = js::iv8::context_lock_witness::make_witness(isolate_witness, context);
 	js::iv8::object_assign(
@@ -67,7 +81,7 @@ ISOLATED_VM_MODULE void InitForContext(v8::Isolate* isolate, v8::Local<v8::Conte
 		std::tuple{
 			std::pair{util::cw<"search">, js::free_function{screeps::search}},
 			std::pair{util::cw<"loadTerrain">, js::free_function{screeps::load_terrain}},
-			std::pair{util::cw<"version">, 11},
+			std::pair{util::cw<"version">, 12},
 		}
 	);
 }

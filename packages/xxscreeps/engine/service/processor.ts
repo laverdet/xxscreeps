@@ -16,13 +16,14 @@ const log = config.processor.log ?? isEntry
 	? (message: string) => process.stderr.write(message)
 	: () => {};
 
-// Interrupt handler
+// Interrupt handler. Standalone-only self-halt: under the launcher, main owns shutdown via the
+// processor channel, and breaking iterators here races its next-tick `process` publish.
 let halt: Effect | undefined;
 let halted = false as boolean;
 let processing = false;
 using _signal = handleInterruptSignal(() => {
 	halted = true;
-	if (!processing) {
+	if (isEntry && !processing) {
 		halt?.();
 	}
 });

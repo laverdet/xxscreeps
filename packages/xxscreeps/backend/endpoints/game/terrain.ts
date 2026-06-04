@@ -3,7 +3,6 @@ import { JSONSchemaType } from 'ajv';
 import makeEtag from 'etag';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { Terrain } from 'xxscreeps/game/terrain.js';
 
 const cache = new Map<string, {
 	_id: string;
@@ -17,7 +16,7 @@ function getTerrainPayload(world: World, roomName: string) {
 	if (cached) {
 		return cached;
 	}
-	const terrain = world.map.getRoomTerrain(roomName) satisfies Terrain as Terrain | null;
+	const terrain = world.map.getRoomTerrain(roomName, true);
 	if (!terrain) {
 		return;
 	}

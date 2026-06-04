@@ -12,8 +12,9 @@ import { numericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomPosition, generateRoomName, parseRoomName } from 'xxscreeps/game/position.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
+import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { isBorder } from 'xxscreeps/game/terrain.js';
 import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
@@ -364,13 +365,13 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		const { rx, ry } = parseRoomName(creep.pos.roomName);
 		const next = function() {
 			if (creep.pos.x === 0) {
-				return new RoomPosition(49, creep.pos.y, generateRoomName(rx - 1, ry));
+				return new RoomPosition(49, creep.pos.y, makeRoomName(rx - 1, ry));
 			} else if (creep.pos.x === 49) {
-				return new RoomPosition(0, creep.pos.y, generateRoomName(rx + 1, ry));
+				return new RoomPosition(0, creep.pos.y, makeRoomName(rx + 1, ry));
 			} else if (creep.pos.y === 0) {
-				return new RoomPosition(creep.pos.x, 49, generateRoomName(rx, ry - 1));
+				return new RoomPosition(creep.pos.x, 49, makeRoomName(rx, ry - 1));
 			} else {
-				return new RoomPosition(creep.pos.x, 0, generateRoomName(rx, ry + 1));
+				return new RoomPosition(creep.pos.x, 0, makeRoomName(rx, ry + 1));
 			}
 		}();
 		teleportCreep(creep, next, context);
