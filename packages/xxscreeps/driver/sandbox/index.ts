@@ -4,9 +4,9 @@ import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/e
 import config from 'xxscreeps/config/index.js';
 import { configTransform } from 'xxscreeps/config/webpack.js';
 import { hooks } from 'xxscreeps/driver/index.js';
+import { path } from 'xxscreeps/driver/pathfinder.js';
 import Privates from 'xxscreeps/driver/private/transform.js';
 import { schemaTransform } from 'xxscreeps/engine/schema/build/index.js';
-import { locateModule } from '../pathfinder.js';
 import { compile } from '../webpack.js';
 
 const didMakeSandbox = hooks.makeIterated('sandboxCreated');
@@ -80,4 +80,4 @@ export async function createSandbox(userId: string, payload: InitializationPaylo
 	return sandbox;
 }
 
-export const pathFinderBinaryPath = locateModule();
+export const pathFinderBinaryPath = path;

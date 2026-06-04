@@ -312,8 +312,8 @@ export class World {
 	/**
 	 * Returns an iterator of all rooms and terrain.
 	 */
-	entries() {
-		return Fn.map(this.terrain.entries(), ([ roomName, info ]) => [ roomName, info.terrain ] as const);
+	entries(): Iterable<[ string, Terrain.Terrain ]> {
+		return Fn.map(this.terrain, ([ roomName, info ]) => [ roomName, info.terrain ]);
 	}
 }
 

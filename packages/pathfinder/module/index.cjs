@@ -1,4 +1,4 @@
-const triplet = require('./triplet.js');
+const triplet = require('./triplet.cjs');
 
 const name = `@xxscreeps/pathfinder-${triplet}/pf.${triplet}.node`;
 const path = require.resolve(name);

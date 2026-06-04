@@ -117,7 +117,7 @@ target_include_directories(pathfinder SYSTEM PRIVATE "${ISOLATED_VM_LOCATION}")
 
 # copy to destination
 if(NOT DEFINED TRIPLET)
-	execute_process(COMMAND sh -c "node -e 'console.log(require(\"./module/triplet.js\"))'" OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE TRIPLET RESULT_VARIABLE RESULT)
+	execute_process(COMMAND sh -c "node -e 'console.log(require(\"./module/triplet.cjs\"))'" OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE TRIPLET RESULT_VARIABLE RESULT)
 	if(NOT RESULT STREQUAL 0)
 		message(FATAL_ERROR "Failed to get triplet")
 	endif()

@@ -20,7 +20,7 @@ export function loadTerrain(world: WorldTerrain): void;
 
 export function search(
 	origin: number,
-	goals: Goal[],
+	goals: readonly Goal[],
 	roomCallback: RoomCallback | undefined,
 	plainCost: number,
 	swampCost: number,
