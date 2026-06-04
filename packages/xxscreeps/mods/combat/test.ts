@@ -227,12 +227,7 @@ describe('Structure.notifyWhenAttacked attack notifications', () => {
 			room['#level'] = 7;
 			room['#user'] = room.controller!['#user'] = user;
 			room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), user));
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 24, 'W1N1'),
-				[ C.ATTACK ],
-				'attacker',
-				attackerUser,
-			));
+			room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.ATTACK ], 'attacker', attackerUser));
 		},
 	});
 	const selfAttack = simulate({
@@ -240,12 +235,7 @@ describe('Structure.notifyWhenAttacked attack notifications', () => {
 			room['#level'] = 7;
 			room['#user'] = room.controller!['#user'] = user;
 			room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), user));
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 24, 'W1N1'),
-				[ C.ATTACK ],
-				'attacker',
-				user,
-			));
+			room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.ATTACK ], 'attacker', user));
 		},
 	});
 	const sameTickAttack = simulate({
@@ -253,18 +243,8 @@ describe('Structure.notifyWhenAttacked attack notifications', () => {
 			room['#level'] = 7;
 			room['#user'] = room.controller!['#user'] = user;
 			room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), user));
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 24, 'W1N1'),
-				[ C.ATTACK ],
-				'attackerA',
-				attackerUser,
-			));
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 26, 'W1N1'),
-				[ C.ATTACK ],
-				'attackerB',
-				attackerUser,
-			));
+			room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.ATTACK ], 'attackerA', attackerUser));
+			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.ATTACK ], 'attackerB', attackerUser));
 		},
 	});
 
@@ -335,12 +315,7 @@ describe('Structure.notifyWhenAttacked attack notifications', () => {
 			room['#level'] = 7;
 			room['#user'] = room.controller!['#user'] = user;
 			room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), user));
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 24, 'W1N1'),
-				[ C.WORK, C.MOVE ],
-				'wrecker',
-				attackerUser,
-			));
+			room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.WORK, C.MOVE ], 'wrecker', attackerUser));
 		},
 	});
 
@@ -366,36 +341,16 @@ describe('Creep.notifyWhenAttacked attack notifications', () => {
 		W1N1: room => {
 			room['#level'] = 7;
 			room['#user'] = room.controller!['#user'] = user;
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 25, 'W1N1'),
-				[ C.MOVE, C.MOVE ],
-				'target',
-				user,
-			));
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 24, 'W1N1'),
-				[ C.ATTACK ],
-				'attacker',
-				attackerUser,
-			));
+			room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W1N1'), [ C.MOVE, C.MOVE ], 'target', user));
+			room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.ATTACK ], 'attacker', attackerUser));
 		},
 	});
 	const selfAttack = simulate({
 		W1N1: room => {
 			room['#level'] = 7;
 			room['#user'] = room.controller!['#user'] = user;
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 25, 'W1N1'),
-				[ C.MOVE, C.MOVE ],
-				'target',
-				user,
-			));
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 24, 'W1N1'),
-				[ C.ATTACK ],
-				'attacker',
-				user,
-			));
+			room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W1N1'), [ C.MOVE, C.MOVE ], 'target', user));
+			room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.ATTACK ], 'attacker', user));
 		},
 	});
 
@@ -443,12 +398,7 @@ describe('Creep.notifyWhenAttacked attack notifications', () => {
 			const tower = createTower(new RoomPosition(25, 25, 'W1N1'), user);
 			tower.store['#add'](C.RESOURCE_ENERGY, C.TOWER_ENERGY_COST);
 			room['#insertObject'](tower);
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 24, 'W1N1'),
-				[ C.MOVE ],
-				'victim',
-				attackerUser,
-			));
+			room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W1N1'), [ C.MOVE ], 'victim', attackerUser));
 		},
 	});
 

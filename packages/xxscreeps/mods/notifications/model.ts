@@ -1,6 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { createHash } from 'node:crypto';
-import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 
 export type NotificationType = 'msg' | 'error';
@@ -83,6 +82,30 @@ export async function scheduleUserDrain(shard: Shard, userId: string, dueAt: num
 }
 
 /**
+ * Race-safe upsert. The per-occurrence fields claim their slot with `hSet … NX` (`count` seeds to
+ * 1, `date` keeps the first occurrence), the content-derived fields and idempotent zadds fire
+ * alongside, so the optimistic (new-row) path is a single round trip. Only an already-present row
+ * pays the extra `hincrBy`. Same-tick events on one row — two attackers in a room, or the
+ * processor's parallel `context.task` fan-out — converge on the right count without a read-then-write.
+ */
+async function recordNotification(
+	shard: Shard, userId: string, type: NotificationType, message: string, timeGroup: number, date: number,
+) {
+	const id = rowIdFor(type, timeGroup, message);
+	const key = rowKey(userId, id);
+	const [ created ] = await Promise.all([
+		shard.data.hSet(key, 'count', 1, { if: 'NX' }),
+		shard.data.hSet(key, 'date', date, { if: 'NX' }),
+		shard.data.hmset(key, { message, type }),
+		shard.data.zAdd(userIndexKey(userId), [ [ timeGroup, id ] ]),
+		scheduleUserDrain(shard, userId, timeGroup),
+	]);
+	if (!created) {
+		await shard.data.hincrBy(key, 'count', 1);
+	}
+}
+
+/**
  * Persist a notification, coalescing within `groupInterval` minutes (clamped to [0, 1440]).
  * `message` and `groupInterval` are assumed already coerced by the caller.
  *
@@ -95,50 +118,8 @@ export async function upsertNotification(
 	const intervalMs = groupInterval * 60_000;
 	const now = Date.now();
 	const timeGroup = intervalMs > 0 ? Math.ceil(now / intervalMs) * intervalMs : now;
-	const id = rowIdFor(type, timeGroup, message);
-	const key = rowKey(userId, id);
-	// Read-then-write is safe because the runner serializes save() per user.
-	const existing = await shard.data.hGet(key, 'count');
-	if (existing === null) {
-		await Promise.all([
-			shard.data.hmset(key, { message, date: now, count: 1, type }),
-			shard.data.zAdd(userIndexKey(userId), [ [ timeGroup, id ] ]),
-			scheduleUserDrain(shard, userId, timeGroup),
-		]);
-	} else {
-		await shard.data.hincrBy(key, 'count', 1);
-	}
+	await recordNotification(shard, userId, type, message, timeGroup, now);
 }
-
-// Atomic upsert for engine-fired rows. Same-tick events on the same row (e.g. two attackers in
-// one room) race the read-then-write pattern in `upsertNotification`; the runner serializes
-// `Game.notify`, but the processor fans out parallel `context.task` promises.
-const RecordEngineNotification = new KeyvalScript((
-	keyval,
-	[ indexKey, key, dueKey ]: [ string, string, string ],
-	[ id, userId, message, type, score ]: [ string, string, string, NotificationType, number ],
-) => {
-	const existing = keyval.hGet(key, 'count');
-	if (existing === null) {
-		keyval.hmset(key, { message, date: score, count: 1, type });
-		keyval.zAdd(indexKey, [ [ score, id ] ]);
-		keyval.zAdd(dueKey, [ [ score, userId ] ], { up: 'LT' });
-		return 1;
-	} else {
-		return keyval.hincrBy(key, 'count', 1);
-	}
-}, {
-	lua:
-		`local existing = redis.call('hget', KEYS[2], 'count')
-		if existing == false then
-			redis.call('hset', KEYS[2], 'message', ARGV[3], 'date', ARGV[5], 'count', 1, 'type', ARGV[4])
-			redis.call('zadd', KEYS[1], ARGV[5], ARGV[1])
-			redis.call('zadd', KEYS[3], 'LT', ARGV[5], ARGV[2])
-			return 1
-		else
-			return redis.call('hincrby', KEYS[2], 'count', 1)
-		end`,
-});
 
 /**
  * Engine-fired notification: one row per (user, type, message), count++ per call.
@@ -148,9 +129,5 @@ const RecordEngineNotification = new KeyvalScript((
 export async function sendNotification(
 	shard: Shard, userId: string, type: NotificationType, message: string,
 ) {
-	const id = rowIdFor(type, 0, message);
-	const now = Date.now();
-	await shard.data.eval(RecordEngineNotification,
-		[ userIndexKey(userId), rowKey(userId, id), dueUsersKey ],
-		[ id, userId, message, type, now ]);
+	await recordNotification(shard, userId, type, message, 0, Date.now());
 }

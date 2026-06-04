@@ -326,8 +326,4 @@ declare module 'xxscreeps/game/game.js' {
 		structures: Record<string, AnyStructure>;
 	}
 }
-hooks.register('gameInitializer', Game => {
-	const structures: Record<string, AnyStructure> = {};
-	Object.setPrototypeOf(structures, null);
-	Game.structures = structures;
-});
+hooks.register('gameInitializer', Game => Game.structures = Object.create(null));

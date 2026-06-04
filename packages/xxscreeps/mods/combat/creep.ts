@@ -1,11 +1,9 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
-import { invertedNumericComparator, mappedComparator } from 'xxscreeps/functional/comparator.js';
-import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
-import { captureDamage, walkLayers } from 'xxscreeps/game/processor.js';
+import { captureDamage } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { Structure, notifyAttacked } from 'xxscreeps/mods/structure/structure.js';
@@ -204,17 +202,6 @@ export function captureDamageWithNotify(
 	source: RoomObject | null,
 	context: ProcessorContext,
 ) {
-	const objects = Fn.pipe(
-		target.room['#lookAt'](target.pos),
-		$$ => Fn.reject($$, object =>
-			object['#layer'] === undefined || object.hits === undefined),
-		$$ => [ ...$$ ],
-		$$ => $$.sort(mappedComparator(invertedNumericComparator, object => object['#layer']!)));
-	return walkLayers(objects, initialPower, (object, layerPower) => {
-		const remaining = object['#captureDamage'](layerPower, type, source);
-		if (remaining < layerPower) {
-			notifyAttackDamage(object, context, source);
-		}
-		return remaining;
-	}, target);
+	return captureDamage(target, initialPower, type, source,
+		object => notifyAttackDamage(object, context, source));
 }

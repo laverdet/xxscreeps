@@ -1,6 +1,7 @@
 import type { QueuedNotification } from './notifications.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { upsertNotification } from './model.js';
 
 /**
@@ -11,14 +12,12 @@ import { upsertNotification } from './model.js';
 export async function dispatchQueuedNotifications(
 	shard: Shard, userId: string, queued: Iterable<QueuedNotification>,
 ) {
-	// Keep same-save entries sequenced: duplicate type/message/group buckets share a row, and
-	// parallel read-then-write upserts would lose increments when both reads see an empty row.
-	for (const entry of queued) {
+	await Fn.mapAwait(queued, entry => {
 		const message = String(entry.message).slice(0, 500);
 		const groupInterval = typeof entry.groupInterval === 'number' && Number.isFinite(entry.groupInterval)
 			? Math.min(1440, Math.max(0, entry.groupInterval)) : 0;
-		await upsertNotification(shard, userId, entry.type, message, groupInterval);
-	}
+		return upsertNotification(shard, userId, entry.type, message, groupInterval);
+	});
 }
 
 hooks.register('runnerConnector', player => [ undefined, {
