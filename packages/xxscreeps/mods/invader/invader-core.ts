@@ -30,18 +30,21 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	@enumerable get spawning(): null { return null; }
 
 	@enumerable get ticksToDeploy(): number | undefined {
-		const deployTime = this['#deployTime'];
-		return deployTime > Game.time ? deployTime - Game.time : undefined;
+		return RoomObject.optionalExpiryTime(Game, this['#deployTime']);
 	}
 
-	override get hitsMax(): number | undefined {
+	override get hitsMax(): number {
 		return C.INVADER_CORE_HITS;
 	}
 
 	override get structureType() { return C.STRUCTURE_INVADER_CORE; }
 
+	override get '#invulnerable'() {
+		return this.ticksToDeploy !== undefined;
+	}
+
 	override '#applyDamage'(power: number, type: number, source?: RoomObject.RoomObject) {
-		if (RoomObject.hasEffect(this, C.EFFECT_INVULNERABILITY)) {
+		if (this['#invulnerable']) {
 			return;
 		}
 		super['#applyDamage'](power, type, source);

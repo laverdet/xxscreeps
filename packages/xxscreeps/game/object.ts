@@ -25,7 +25,7 @@ const shape = struct({
 });
 
 export interface RoomObjectEffect {
-	effect: number;
+	effect?: number;
 	power?: number;
 	level?: number;
 	ticksRemaining: number;
@@ -72,6 +72,8 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	get '#extraUsers'(): string[] { return []; }
 	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#hasIntent'() { return false; }
+	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
+	get '#invulnerable'() { return false; }
 	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#layer'(): number | undefined { return 0.5; }
 	get '#pathCost'(): undefined | number { return undefined; }
@@ -124,10 +126,6 @@ export declare interface RoomObject {
 	set hits(hits: number);
 	get hitsMax(): number | undefined;
 	get my(): boolean | undefined;
-}
-
-export function hasEffect(object: RoomObject, effectType: number) {
-	return object.effects?.some(effect => effect.effect === effectType && effect.ticksRemaining > 0) ?? false;
 }
 
 export function create<Type extends RoomObject>(instance: Type, pos: RoomPosition): Type {

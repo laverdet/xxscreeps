@@ -1,7 +1,6 @@
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
-import { hasEffect } from 'xxscreeps/game/object.js';
 import { captureDamage } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/creep/creep.js';
@@ -127,7 +126,7 @@ export function checkAttack(creep: Creep, target: AttackTarget) {
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
 		() => checkTarget(target, Creep, Structure),
 		() => checkDestructible(target),
-		() => hasEffect(target, C.EFFECT_INVULNERABILITY) ? C.ERR_INVALID_TARGET : C.OK,
+		() => target['#invulnerable'] ? C.ERR_INVALID_TARGET : C.OK,
 		() => checkRange(creep, target, 1),
 	);
 }
@@ -139,7 +138,7 @@ export function checkRangedAttack(creep: Creep, target: AttackTarget) {
 		() => checkTarget(target, Creep, Structure),
 		() => checkDestructible(target),
 		() => checkRange(creep, target, 3),
-		() => hasEffect(target, C.EFFECT_INVULNERABILITY) ? C.ERR_INVALID_TARGET : C.OK,
+		() => target['#invulnerable'] ? C.ERR_INVALID_TARGET : C.OK,
 	);
 }
 

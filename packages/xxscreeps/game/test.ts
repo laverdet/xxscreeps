@@ -23,14 +23,8 @@ describe('RoomPosition', () => {
 });
 
 describe('RoomObject', () => {
-	// Substrate must not live on the base prototype — would leak 'effects' onto every RoomObject.
-	test('effects is not a property on the base RoomObject prototype chain', () => {
-		for (let proto: object | null = RoomObject.prototype; proto !== null; proto = Reflect.getPrototypeOf(proto)) {
-			assert.strictEqual(
-				Object.getOwnPropertyDescriptor(proto, 'effects'),
-				undefined,
-				"'effects' unexpectedly defined on RoomObject prototype chain",
-			);
-		}
+	// `effects` is a producer-only surface; it must not leak onto the base prototype.
+	test('effects is not installed on the base prototype', () => {
+		assert.equal('effects' in RoomObject.prototype, false);
 	});
 });

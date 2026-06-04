@@ -1,7 +1,6 @@
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
-import { hasEffect } from 'xxscreeps/game/object.js';
 import { Creep, checkCommon } from 'xxscreeps/mods/creep/creep.js';
 import { checkHasResource } from 'xxscreeps/mods/resource/store.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
@@ -82,7 +81,7 @@ export function checkDismantle(creep: Creep, target: Structure) {
 		() => target.structureType in C.CONSTRUCTION_COST ? C.OK : C.ERR_INVALID_TARGET,
 		() => checkRange(creep, target, 1),
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
-		() => hasEffect(target, C.EFFECT_INVULNERABILITY) ? C.ERR_INVALID_TARGET : C.OK);
+		() => target['#invulnerable'] ? C.ERR_INVALID_TARGET : C.OK);
 }
 
 export function checkRepair(creep: Creep, target: Structure) {

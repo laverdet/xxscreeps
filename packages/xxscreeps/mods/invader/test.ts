@@ -260,7 +260,7 @@ describe('Invader core', () => {
 		await tick();
 		await player('100', Game => {
 			const core = findCore(Game);
-			assert.strictEqual(core.hits, core.hitsMax! - C.ATTACK_POWER);
+			assert.strictEqual(core.hits, core.hitsMax - C.ATTACK_POWER);
 		});
 	}));
 });
