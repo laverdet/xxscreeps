@@ -29,6 +29,31 @@ describe('Creep', () => {
 			assert.strictEqual(Game.creeps.creep?.ticksToLive, undefined);
 		});
 	}));
+
+	const tombstoneAwaken = simulate({
+		W1N1: room => {
+			const creep = create(new RoomPosition(20, 3, 'W1N1'), [ C.MOVE ], 'creep', '100');
+			room['#insertObject'](creep);
+		},
+		W1N2: room => {
+			const creep = create(new RoomPosition(10, 10, 'W1N2'), [ C.TOUGH, C.TOUGH ], 'goodbye', '100');
+			creep['#ageTime'] = 1;
+			room['#insertObject'](creep);
+		},
+	});
+	test('creep dies in an empty room with a tombstone', () => tombstoneAwaken(async ({ player, tick }) => {
+		await tick(3, {
+			100: ({ creeps: { creep } }) => {
+				creep?.moveTo(new RoomPosition(10, 10, 'W1N2'));
+			},
+		});
+		// this is actually a test of the processing sleeping queue. 'creep' enters the room while
+		// 'goodbye's tombstone has slept the room. this wakes the room during the finalization stage.
+		await player('100', Game => {
+			Game.creeps.creep?.suicide();
+		});
+		await tick(8);
+	}));
 });
 
 describe('Movement', () => {

@@ -5,7 +5,7 @@ import { JSONSchemaType } from 'ajv';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import config from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { findUserByName, infoKey } from 'xxscreeps/engine/db/user/index.js';
+import { findUserByName, findUserByProvider, infoKey } from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 
 const { allowEmailRegistration } = config.backend;
@@ -34,6 +34,13 @@ async function setPassword(db: Database, userId: string, password: string) {
 	}));
 }
 
+async function findUserByUsernameOrEmail(db: Database, value: string) {
+	if (value.includes('@')) {
+		return findUserByProvider(db, 'email', value);
+	}
+	return findUserByName(db, value);
+}
+
 // HTTP Basic Auth
 hooks.register('middleware', koa => {
 	koa.use(async (context, next): Promise<unknown> => {
@@ -43,7 +50,7 @@ hooks.register('middleware', koa => {
 			const colon = auth.indexOf(':');
 			const username = auth.substr(0, colon);
 			const password = auth.substr(colon + 1);
-			const userId = await findUserByName(context.db, username);
+			const userId = await findUserByUsernameOrEmail(context.db, username);
 			if (userId !== null && await checkPassword(context.db, userId, password)) {
 				context.state.userId = userId;
 			}
@@ -73,7 +80,7 @@ hooks.register('route', {
 
 	execute: makeValidatedPayloadRoute(signinRequestSchema, async context => {
 		const { email, password } = context.request.body;
-		const userId = await findUserByName(context.db, email);
+		const userId = await findUserByUsernameOrEmail(context.db, email);
 		if (userId !== null) {
 			if (await checkPassword(context.db, userId, password)) {
 				context.state.userId = userId;

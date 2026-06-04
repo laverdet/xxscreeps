@@ -1,15 +1,23 @@
-import type { RoomPosition } from '../position.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
 
 import { search } from 'xxscreeps/driver/pathfinder.js';
 import { Game, me } from 'xxscreeps/game/index.js';
+import { registerGlobal } from 'xxscreeps/game/symbols.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { registerGlobal } from '../symbols.js';
 import { CostMatrix } from './cost-matrix.js';
 import { makeObstacleChecker } from './obstacle.js';
 
 export { registerObstacleChecker } from './obstacle.js';
 export { CostMatrix, search };
-export type Goal = RoomPosition | { pos: RoomPosition; range: number };
+
+interface GoalWithRange {
+	pos: RoomPosition;
+	range: number;
+	roomName?: undefined;
+	x?: undefined;
+	y?: undefined;
+}
+export type Goal = RoomPosition | GoalWithRange;
 
 type CommonSearchOptions = {
 	plainCost?: number | undefined;
@@ -20,7 +28,7 @@ type CommonSearchOptions = {
 };
 
 export type SearchOptions = CommonSearchOptions & {
-	roomCallback?: (roomName: string) => CostMatrix | false | undefined;
+	roomCallback?: ((roomName: string) => CostMatrix | false | undefined) | undefined;
 	flee?: boolean;
 	maxCost?: number;
 };

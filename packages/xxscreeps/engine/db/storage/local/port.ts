@@ -234,6 +234,16 @@ async function *iterateMessages(socket: AsyncIterable<Buffer>) {
 	}
 }
 
+/** Make named pipe path for windows */
+function namedPipe(url: URL) {
+	if (process.platform === 'win32') {
+		// https://nodejs.org/api/net.html#identifying-paths-for-ipc-connections
+		return `\\\\.\\pipe\\${url.pathname}`;
+	} else {
+		return fileURLToPath(url);
+	}
+}
+
 /** @internal */
 export interface LocalPayloadPort<Send, Receive> {
 	messages: AsyncIterable<Receive>;
@@ -257,14 +267,16 @@ export async function makeSocketPortListener<Send, Receive>(
 	const server = net.createServer();
 	await async function() {
 		using disposeListen = new DisposableStack();
-		const path = fileURLToPath(url);
-		try {
-			await fs.unlink(path);
-		} catch {}
+		if (process.platform !== 'win32') {
+			try {
+				const path = fileURLToPath(url);
+				await fs.unlink(path);
+			} catch {}
+		}
 		await new Promise<void>((resolve, reject) => {
 			disposeListen.defer(listen(server, 'error', reject));
 			disposeListen.defer(listen(server, 'listening', resolve));
-			server.listen(fileURLToPath(url));
+			server.listen(namedPipe(url));
 		});
 	}();
 	disposable.use(server);
@@ -290,7 +302,7 @@ export async function makeSocketPortConnection<Send, Receive>(url: URL): Promise
 	await using disposable = new AsyncDisposableStack();
 
 	// Connect to server
-	const connection = net.connect(fileURLToPath(url));
+	const connection = net.connect(namedPipe(url));
 	await async function() {
 		using disposeConnect = new DisposableStack();
 		await new Promise<void>((resolve, reject) => {

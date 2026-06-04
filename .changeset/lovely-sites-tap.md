@@ -1,0 +1,5 @@
+---
+"xxscreeps": patch
+---
+
+faster pathfinder

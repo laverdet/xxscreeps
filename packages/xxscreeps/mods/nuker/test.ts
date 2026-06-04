@@ -76,11 +76,11 @@ describe('Nuker', () => {
 			const nuker = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_NUKER)[0]!;
 			assert.strictEqual(nuker.energy, 0);
 			assert.strictEqual(nuker.ghodium, 0);
-			assert.strictEqual(nuker.cooldown, C.NUKER_COOLDOWN);
+			assert.strictEqual(nuker.cooldown, C.NUKER_COOLDOWN - 1);
 		});
 		await player('101', Game => {
 			const nuke = Game.rooms.W2N1!['#lookFor'](C.LOOK_NUKES)[0]!;
-			assert.strictEqual(nuke.timeToLand, C.NUKE_LAND_TIME);
+			assert.strictEqual(nuke.timeToLand, C.NUKE_LAND_TIME - 1);
 		});
 	}));
 
@@ -173,7 +173,9 @@ describe('Nuker', () => {
 		await tick();
 		await player('101', Game => {
 			const room = Game.rooms.W2N1!;
-			assert.strictEqual(room['#lookFor'](C.LOOK_NUKES).length, 1);
+			const nukes = room['#lookFor'](C.LOOK_NUKES);
+			assert.strictEqual(nukes.length, 1);
+			assert.strictEqual(nukes[0]?.timeToLand, 0);
 			assert.strictEqual(room['#lookFor'](C.LOOK_CREEPS).length, 0);
 			assert.strictEqual(room['#lookFor'](C.LOOK_TOMBSTONES).length, 0);
 			assert.strictEqual(room['#lookFor'](C.LOOK_CONSTRUCTION_SITES).length, 0);
@@ -195,6 +197,11 @@ describe('Nuker', () => {
 			assert.ok(destroyedIndex >= 0, 'expected destroyed event for rampart');
 			assert.ok(attackIndex >= 0, 'expected attack event for rampart');
 			assert.ok(destroyedIndex < attackIndex, 'destroyed event should be recorded before attack');
+		});
+		await tick();
+		await player('101', Game => {
+			assert.strictEqual(Game.rooms.W2N1!['#lookFor'](C.LOOK_NUKES).length, 0,
+				'nuke must be removed on the tick after impact');
 		});
 	}));
 
@@ -226,6 +233,26 @@ describe('Nuker', () => {
 			const destroyedEvents = room.getEventLog().filter(event =>
 				event.event === C.EVENT_OBJECT_DESTROYED && event.objectId === creepId);
 			assert.strictEqual(destroyedEvents.length, 1);
+		});
+	}));
+
+	const safeModeWithdraw = simulate({
+		W3N3: room => {
+			const nuker = createNuker(new RoomPosition(25, 25, 'W3N3'), '100');
+			nuker.store['#add'](C.RESOURCE_ENERGY, C.NUKER_ENERGY_CAPACITY);
+			nuker.store['#add'](C.RESOURCE_GHODIUM, C.NUKER_GHODIUM_CAPACITY);
+			room['#insertObject'](nuker);
+			room['#insertObject'](createCreep(new RoomPosition(25, 24, 'W3N3'), [ C.CARRY, C.MOVE ], 'raider', '101'));
+			room['#level'] = 8;
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#safeModeUntil'] = 100;
+		},
+	});
+
+	test('hostile withdraw from nuker in safe mode returns ERR_NOT_OWNER', () => safeModeWithdraw(async ({ player }) => {
+		await player('101', Game => {
+			const nuker = lookForStructures(Game.rooms.W3N3, C.STRUCTURE_NUKER)[0]!;
+			assert.strictEqual(Game.creeps.raider!.withdraw(nuker, C.RESOURCE_GHODIUM), C.ERR_NOT_OWNER);
 		});
 	}));
 });

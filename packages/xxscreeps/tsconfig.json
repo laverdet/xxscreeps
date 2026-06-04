@@ -2,6 +2,8 @@
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
 		"paths": {
+			// TODO: remove pf.PathResult annotation after fixed .d.ts
+			"@xxscreeps/pathfinder": [ "../pathfinder/module/index.d.ts" ],
 			"@xxscreeps/lodash3": [ "../lodash3/lodash.ts" ],
 			"xxscreeps/*.js": [ "../xxscreeps/*.ts" ],
 		},

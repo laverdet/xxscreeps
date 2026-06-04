@@ -13,7 +13,7 @@ const useInspector = [ ...hooks.map('isolateInspector') ].some(use => use);
 
 const getPathFinderModule = runOnce(() => new ivm.NativeModule(pathFinderBinaryPath));
 
-const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime', {
+const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime.js', {
 	alias: {
 		process: 'xxscreeps/driver/sandbox/isolated/process',
 		'xxscreeps/driver/private/symbol.js': 'xxscreeps/driver/private/symbol/isolated-vm.js',
@@ -32,7 +32,7 @@ export class IsolatedSandbox implements Sandbox {
 		// Initialize isolate and context
 		this.isolate = new ivm.Isolate({
 			inspector: useInspector,
-			memoryLimit: config.runner.cpu.memoryLimit + data.terrainBlob.length,
+			memoryLimit: config.runner.cpu.memoryLimit + (data.terrainBlob.byteLength >> 20),
 		});
 	}
 
@@ -66,7 +66,8 @@ export class IsolatedSandbox implements Sandbox {
 		]);
 
 		// Initialize runtime.ts and load player code + memory
-		const runtime: ivm.Reference<Runtime> = await script.run(context, { reference: true });
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+		const runtime: ivm.Reference<Runtime> = await script.run(context, { release: true, reference: true });
 		const [ initialize, tick ] = await Promise.all([
 			runtime.get('initialize', { accessors: true, reference: true }),
 			runtime.get('tick', { accessors: true, reference: true }),
@@ -108,7 +109,11 @@ export class IsolatedSandbox implements Sandbox {
 		} catch (err: any) {
 			if (err.message === 'Script execution timed out.') {
 				return { result: 'timedOut', stack: err.stack };
-			} else if (err.message === 'Isolate is disposed') {
+			} else if (
+				err.message === 'Isolate is disposed' ||
+				err.message === 'Isolate was disposed during execution' ||
+				err.message === 'Isolate was disposed during execution due to memory limit'
+			) {
 				return { result: 'disposed' };
 			}
 			throw err;

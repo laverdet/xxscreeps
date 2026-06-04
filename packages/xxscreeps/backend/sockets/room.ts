@@ -64,11 +64,15 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 				return;
 			}
 			mustNotReject(async () => {
+				// `time` is advanced by the tick channel during the `await loadRoom` below. Snapshot the
+				// tick so the blob is rendered at its own tick, not a later one — otherwise decay fields
+				// (e.g. rampart `#nextDecayTime`) read as overdue and throw `Invalid expiry time`.
+				const renderTime = time;
 				if (didUpdate) {
-					state.room = await shard.loadRoom(roomName, time);
+					state.room = await shard.loadRoom(roomName, renderTime);
 				}
-				state.time = time;
-				publish(state.room, time, didUpdate);
+				state.time = renderTime;
+				publish(state.room, renderTime, didUpdate);
 				didUpdate = false;
 				timer.set(config.backend.socketThrottle);
 			});
@@ -121,7 +125,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		const { shard } = this.context;
 		const seenUsers = new Set<string>();
 		const roomName = parameters.room!;
-		if (!this.context.world.map.getRoomStatus(roomName)) {
+		if (!this.context.world.map.getRoomStatus(roomName, true)) {
 			return () => {};
 		}
 

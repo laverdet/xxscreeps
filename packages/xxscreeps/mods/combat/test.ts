@@ -4,6 +4,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createLab } from 'xxscreeps/mods/chemistry/lab.js';
 import { createLabWithResources } from 'xxscreeps/mods/chemistry/test.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
@@ -462,6 +463,99 @@ describe('TOUGH damage reduction', () => {
 			assert.strictEqual(Game.creeps.defender?.hits,
 				afterPreDmg - effectiveDmg + healAmount,
 				'TOUGH reduction must apply even when raw damage equals healing');
+		});
+	}));
+});
+
+// =========================================================================
+// rangedMassAttack range and target filter
+// =========================================================================
+
+describe('rangedMassAttack', () => {
+	// Attacker at (25,25) is player '101' with one RANGED_ATTACK part (base
+	// power 10). Targets surround at ranges 1/2/3 and varied ownership; the
+	// range rates 1/0.4/0.1 yield 10/4/1 damage.
+	const sim = simulate({
+		W1N1: room => {
+			room['#level'] = 7;
+			room['#user'] = room.controller!['#user'] = '100';
+			room['#insertObject'](createCreep(new RoomPosition(25, 25, 'W1N1'), [ C.RANGED_ATTACK ], 'attacker', '101'));
+			room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.MOVE ], 'enemyR1', '100'));
+			room['#insertObject'](createCreep(new RoomPosition(27, 25, 'W1N1'), [ C.MOVE ], 'enemyR2', '100'));
+			room['#insertObject'](createCreep(new RoomPosition(28, 25, 'W1N1'), [ C.MOVE ], 'enemyR3', '100'));
+			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'ally', '101'));
+			room['#insertObject'](createContainer(new RoomPosition(24, 25, 'W1N1')));
+			room['#insertObject'](createLab(new RoomPosition(25, 24, 'W1N1'), '100'));
+		},
+	});
+
+	const HITS_PER_PART = 100;
+
+	test('hostile creep at range 1 takes 10 damage', () => sim(async ({ player, tick }) => {
+		await player('101', Game => {
+			assert.strictEqual(Game.creeps.attacker?.rangedMassAttack(), C.OK);
+		});
+		await tick();
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.enemyR1?.hits, HITS_PER_PART - 10,
+				'range-1 hostile creep should take 10 damage');
+		});
+	}));
+
+	test('hostile creep at range 2 takes 4 damage', () => sim(async ({ player, tick }) => {
+		await player('101', Game => {
+			Game.creeps.attacker?.rangedMassAttack();
+		});
+		await tick();
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.enemyR2?.hits, HITS_PER_PART - 4,
+				'range-2 hostile creep should take 4 damage');
+		});
+	}));
+
+	test('hostile creep at range 3 takes 1 damage', () => sim(async ({ player, tick }) => {
+		await player('101', Game => {
+			Game.creeps.attacker?.rangedMassAttack();
+		});
+		await tick();
+		await player('100', Game => {
+			assert.strictEqual(Game.creeps.enemyR3?.hits, HITS_PER_PART - 1,
+				'range-3 hostile creep should take 1 damage');
+		});
+	}));
+
+	test('own creep is not damaged', () => sim(async ({ player, tick }) => {
+		await player('101', Game => {
+			Game.creeps.attacker?.rangedMassAttack();
+		});
+		await tick();
+		await player('101', Game => {
+			assert.strictEqual(Game.creeps.ally?.hits, HITS_PER_PART,
+				'own creep must not be damaged by rangedMassAttack');
+		});
+	}));
+
+	test('unowned structure is not damaged', () => sim(async ({ player, tick }) => {
+		await player('101', Game => {
+			Game.creeps.attacker?.rangedMassAttack();
+		});
+		await tick();
+		await player('100', Game => {
+			const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
+			assert.strictEqual(container.hits, C.CONTAINER_HITS,
+				'unowned container must not be damaged');
+		});
+	}));
+
+	test('hostile owned structure is damaged', () => sim(async ({ player, tick }) => {
+		await player('101', Game => {
+			Game.creeps.attacker?.rangedMassAttack();
+		});
+		await tick();
+		await player('100', Game => {
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
+			assert.strictEqual(lab.hits, lab.hitsMax - 10,
+				'range-1 hostile lab should take 10 damage');
 		});
 	}));
 });

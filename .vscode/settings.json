@@ -13,6 +13,14 @@
 	],
 	"editor.insertSpaces": false,
 	"editor.trimAutoWhitespace": true,
+	// The VS Code extension keeps stripping eslint-disable comments even though they are in use
+	"eslint.codeActionsOnSave.options": {
+		"baseConfig": {
+    	"linterOptions": {
+        "reportUnusedDisableDirectives": "off"
+      },
+    },
+	},
 	"eslint.codeActionsOnSave.rules": [
 		// This can change the semantic meaning of a condition without consulting the developer
 		// first.

@@ -198,6 +198,31 @@ describe('Spawn', () => {
 		});
 	}));
 
+	// it's located in the terrain wall
+	const spawnInTheWall = simulate({
+		W1N1: room => {
+			room['#insertObject'](create(new RoomPosition(2, 2, 'W1N1'), '100', 'Spawn1'));
+			room['#level'] = 1;
+			room['#user'] = room.controller!['#user'] = '100';
+		},
+	});
+
+	test('abandoned spawn crash', () => spawnInTheWall(async ({ player, poke, tick }) => {
+		await player('100', Game => {
+			assert.strictEqual(Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'newCreep'), C.OK);
+		});
+		await tick(C.CREEP_SPAWN_TIME);
+		// fill up the energy, to avoid spawn energy keeping the room active
+		await poke('W1N1', '100', Game => {
+			assert.ok(Game.spawns.Spawn1?.spawning);
+			Game.spawns.Spawn1.store['#add']('energy', C.BODYPART_COST[C.MOVE]);
+		});
+		await tick(3);
+		await poke('W1N1', '100', Game => {
+			assert.strictEqual(Game.spawns.Spawn1?.spawning?.remainingTime, 1);
+		});
+	}));
+
 	describe('spawn stomping', () => {
 		// Spawn at (25,25), surrounded by hostile creeps on all 8 tiles
 		const surrounded = simulate({
