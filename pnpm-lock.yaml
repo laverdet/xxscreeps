@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  '@auto_js/js':
+    hash: 53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a
+    path: patches/@auto_js__js.patch
   lodash-es:
     hash: 338fe3adff79ba4474af007241bc736fe9822c4fb9f5afe806ccddc569812066
     path: patches/lodash-es.patch
@@ -86,14 +89,14 @@ importers:
   packages/pathfinder:
     devDependencies:
       '@auto_js/js':
-        specifier: ^0.0.4
-        version: 0.0.4
+        specifier: ^0.0.5
+        version: 0.0.5(patch_hash=53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a)
       '@auto_js/napi':
-        specifier: ^0.0.4
-        version: 0.0.4
+        specifier: ^0.0.5
+        version: 0.0.5
       '@auto_js/v8':
-        specifier: ^0.0.4
-        version: 0.0.4
+        specifier: ^0.0.5
+        version: 0.0.5
       '@napi-rs/cli':
         specifier: ^3.6.2
         version: 3.6.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@24.12.2)
@@ -298,24 +301,24 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
 
-  '@auto_js/js@0.0.4':
-    resolution: {integrity: sha512-AyI+oIcV+3F7hrjhJdAu0b7v697xMrWIIyIa6A4CYgLVGLu+wDPzcvi5hRobOG7SHehZOgLoqv5mYhLn0D7a5w==}
+  '@auto_js/js@0.0.5':
+    resolution: {integrity: sha512-wQdSRhq7zVM+zFTHHnPxj0j4yx8gRD0OC1fVaXaHG47JKe2T+23QU4jF1E2GbpFIWD9mBvAAjRMFHp77qv21pA==}
     hasBin: true
 
-  '@auto_js/napi@0.0.4':
-    resolution: {integrity: sha512-RVkYPgGASExMkvPHwRisqE2k59p7Q4BeAUlf2RII+NDOVv4lXR0p6Anw7bGQRIB2GQF+penlsxjDjyRbi5/r2Q==}
+  '@auto_js/napi@0.0.5':
+    resolution: {integrity: sha512-wEVcDIoojS4Pyr38kmmaaU7nOVSAnR+GOMiUOqe7Eh/ftyvav0tz3YdQLXt43uwudTHr8I24gQLHQUPSPUGUuQ==}
 
-  '@auto_js/napi_exports@0.0.4':
-    resolution: {integrity: sha512-giLYec1/MmbJ4kh9eVkn1KV/6zgU3y1TYKPiKZd8ARM00P3gQ4W4u+AHWXyFuvew1KpnlTxg7Q1//WN7ljIgFg==}
+  '@auto_js/napi_exports@0.0.5':
+    resolution: {integrity: sha512-x3TdPwgjZf4ShKyvNOXJPGQ4guFk0QHVzK1rzCWpp2dLCaynau+VCdExgxXk5fu76d3+kEe3YGG/PrAR24iSww==}
 
-  '@auto_js/utility@0.0.4':
-    resolution: {integrity: sha512-5+1uFIm/s/Y3xkkPi55e+Mt70XvSK8mwcIFIqsIymABfjgliK4UuyV5mhRSPB6lBB8KbXQwgbKV24fDfXkQUBA==}
+  '@auto_js/utility@0.0.5':
+    resolution: {integrity: sha512-QzYftGocEasx5iDDm+97cs8dPQsnYc+/sLMDUEkXnG4n2/4EQydSXc+8MJEl5J1s4sf5ZYneFApqbIzT4XVWIA==}
 
-  '@auto_js/v8@0.0.4':
-    resolution: {integrity: sha512-0vwe3KLwV/53TnVaYTBctYJ5U+zxnWbZcI35Wu94sn5cB1RtvdDJ6qz0T21gbtVkrkkrKGVenXa1yYvsEyN0fg==}
+  '@auto_js/v8@0.0.5':
+    resolution: {integrity: sha512-3t0kBODm3QLSPsR9iLJuBzZmMxO2iS4lgxvR1pPb+0vyi/yo7jDVAc2iX8DQwdJwuI4K4Uhh8KFML9o43BuxLg==}
 
-  '@auto_js/v8_exports@0.0.2':
-    resolution: {integrity: sha512-2FWB2DB4hFwEMyFoEk0Vk29QuzwF6Iu1Seji1uaqF32qP+YB2Zdzm54BbVuKlWvS7e19GtGjt5ynhdooWBnKvQ==}
+  '@auto_js/v8_exports@0.0.3':
+    resolution: {integrity: sha512-Xk6aaECJiXOrekyFsKV9v1h7Gfeuru6m6EQZRLD5FSfAp2PjnsE7AhJ/CIQXLOUWVxgpRmVOmpdIvCSCJdYPIw==}
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -3535,26 +3538,26 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
-  '@auto_js/js@0.0.4':
+  '@auto_js/js@0.0.5(patch_hash=53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a)':
     dependencies:
-      '@auto_js/utility': 0.0.4
+      '@auto_js/utility': 0.0.5
 
-  '@auto_js/napi@0.0.4':
+  '@auto_js/napi@0.0.5':
     dependencies:
-      '@auto_js/js': 0.0.4
-      '@auto_js/napi_exports': 0.0.4
-      '@auto_js/v8_exports': 0.0.2
+      '@auto_js/js': 0.0.5(patch_hash=53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a)
+      '@auto_js/napi_exports': 0.0.5
+      '@auto_js/v8_exports': 0.0.3
 
-  '@auto_js/napi_exports@0.0.4': {}
+  '@auto_js/napi_exports@0.0.5': {}
 
-  '@auto_js/utility@0.0.4': {}
+  '@auto_js/utility@0.0.5': {}
 
-  '@auto_js/v8@0.0.4':
+  '@auto_js/v8@0.0.5':
     dependencies:
-      '@auto_js/js': 0.0.4
-      '@auto_js/v8_exports': 0.0.2
+      '@auto_js/js': 0.0.5(patch_hash=53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a)
+      '@auto_js/v8_exports': 0.0.3
 
-  '@auto_js/v8_exports@0.0.2': {}
+  '@auto_js/v8_exports@0.0.3': {}
 
   '@babel/code-frame@7.29.0':
     dependencies:

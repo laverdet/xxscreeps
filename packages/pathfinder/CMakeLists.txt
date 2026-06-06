@@ -30,7 +30,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # important compilation settings
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(APPLE)
-	set(CMAKE_LINKER_TYPE LLD)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET "13.3")
 	set(CMAKE_SHARED_LINKER_FLAGS "-dynamiclib -undefined dynamic_lookup")
 elseif(WIN32)
@@ -64,17 +63,16 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
 	add_compile_options(-fdiagnostics-color -Wall -Wextra -Wpedantic)
 endif()
 
-# auto_js & napi configuration
-set(EXPORT_IS_EXPORT ON)
-add_definitions(-DEXPORT_IS_EXPORT)
-include(FindNpmPackage)
-set(NAPI_VERSION 10)
-find_package_from_npm(@auto_js/napi)
-find_package_from_npm(@auto_js/v8)
-
-# target
+# nodejs + legacy isolated-vm target
 add_library(pathfinder SHARED)
 set_target_properties(pathfinder PROPERTIES PREFIX "" SUFFIX ".node")
+
+# auto_js & napi (which provides v8) configuration
+include(FindNpmPackage)
+set(NAPI_VERSION 10)
+set(EXPORT_IS_EXPORT ON)
+find_package_from_npm(@auto_js/napi)
+find_package_from_npm(@auto_js/v8)
 target_link_libraries(pathfinder PUBLIC auto_js nodejs nodejs_v8 utility_js v8_js)
 
 # sources
@@ -92,6 +90,13 @@ target_sources(pathfinder
 	PRIVATE
 		src/main.cc
 )
+
+# get nodejs host triplet [darwin-x64, linux-arm64-gnu, win32-x64]
+include(TripletUtil)
+if(NOT DEFINED TRIPLET)
+	triplet_util(TRIPLET %p)
+	set(TRIPLET "${TRIPLET}" CACHE STRING "")
+endif()
 
 # nan
 if(NOT DEFINED NAN_LOCATION)
@@ -116,13 +121,6 @@ endif()
 target_include_directories(pathfinder SYSTEM PRIVATE "${ISOLATED_VM_LOCATION}")
 
 # copy to destination
-if(NOT DEFINED TRIPLET)
-	execute_process(COMMAND sh -c "node -e 'console.log(require(\"./module/triplet.cjs\"))'" OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE TRIPLET RESULT_VARIABLE RESULT)
-	if(NOT RESULT STREQUAL 0)
-		message(FATAL_ERROR "Failed to get triplet")
-	endif()
-	set(TRIPLET "${TRIPLET}" CACHE STRING "")
-endif()
 add_custom_command(
 	TARGET pathfinder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy
 	"$<TARGET_FILE:pathfinder>"

@@ -14,42 +14,29 @@ import std;
 import util;
 import v8_js;
 using namespace screeps;
+namespace iv8 = js::iv8;
+
+constexpr auto k_max_rooms = 64;
 
 // Invoke the user `roomCallback` and adapt for the pathfinder
 class room_callback_type {
 	public:
-		using result_type = std::variant<cost_matrix_type, util::constant_wrapper<false>, std::monostate>;
-
 		room_callback_type() = default;
-		explicit room_callback_type(v8::Local<v8::Value> maybe_room_callback) :
-				callback_{maybe_room_callback->IsFunction() ? maybe_room_callback.As<v8::Function>() : v8::Local<v8::Function>{}} {}
+		explicit room_callback_type(iv8::context_lock_witness& lock, v8::Local<iv8::Function> maybe_room_callback) :
+				lock_{&lock},
+				maybe_room_callback{maybe_room_callback} {}
 
-		auto operator()(room_location_t room) -> result_type {
-			if (!callback_.IsEmpty()) {
-				auto room_id = std::bit_cast<std::uint16_t>(room);
-				Nan::TryCatch try_catch;
-				std::array<v8::Local<v8::Value>, 1> argv = {Nan::New(room_id)};
-				Nan::MaybeLocal<v8::Value> ret = Nan::Call(callback_, v8::Local<v8::Object>::Cast(Nan::Undefined()), 1, argv.data());
-				if (try_catch.HasCaught()) {
-					try_catch.ReThrow();
-					throw js::iv8::pending_error{};
-				}
-				if (!ret.IsEmpty()) {
-					v8::Local<v8::Value> ret_local = ret.ToLocalChecked();
-					if (ret_local->IsBoolean() && ret_local->IsFalse()) {
-						return util::cw<false>;
-					}
-					Nan::TypedArrayContents<uint8_t> cost_matrix_js{ret_local};
-					if (cost_matrix_js.length() == 2'500) {
-						return reinterpret_cast<cost_matrix_type>(*cost_matrix_js);
-					}
-				}
+		auto operator()(room_location_t room) -> room_callback_result_type {
+			if (maybe_room_callback.IsEmpty()) {
+				return std::monostate{};
+			} else {
+				return maybe_room_callback->call<room_callback_result_type>(*lock_, room);
 			}
-			return std::monostate{};
 		}
 
 	private:
-		v8::Local<v8::Function> callback_;
+		iv8::context_lock_witness* lock_{};
+		v8::Local<iv8::Function> maybe_room_callback;
 };
 
 // Invoked once per operation
@@ -59,7 +46,7 @@ auto check_termination() -> void {
 	}
 }
 
-using pathfinder_type = pathfinder<check_termination, room_callback_type, 64>;
+using pathfinder_type = pathfinder<check_termination, room_callback_type, k_max_rooms>;
 
 // Init 2 Pathfinders per thread. We do 2 here because sometimes recursive calls to the path
 // finder are useful. Any more than 2 deep recursion will have to allocate a new path finder at a
@@ -67,9 +54,10 @@ using pathfinder_type = pathfinder<check_termination, room_callback_type, 64>;
 thread_local std::array<std::pair<bool, pathfinder_type>, 2> pathfinders;
 
 auto search(
+	iv8::context_lock_witness lock,
 	world_position_t origin,
 	std::vector<heuristic_t::goal_t> goals,
-	js::forward<v8::Local<v8::Value>> room_callback,
+	std::optional<js::forward<v8::Local<iv8::Function>>> room_callback,
 	// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 	int plain_cost,
 	int swamp_cost,
@@ -93,7 +81,7 @@ auto search(
 
 	// Get the values from v8 and run the search
 	return pf.second.search(
-		room_callback_type{*room_callback},
+		room_callback_type{lock, *room_callback.value_or({})},
 		origin,
 		std::move(goals),
 		{
@@ -106,22 +94,6 @@ auto search(
 			.flee = flee,
 		}
 	);
-}
-
-auto load_terrain(js::forward<v8::Local<v8::Object>> world_local) -> void {
-	// Parse out terrain by rooms
-	world_type world;
-	auto keys = Nan::GetOwnPropertyNames(*world_local).ToLocalChecked();
-	for (uint32_t ii = 0; ii < keys->Length(); ++ii) {
-		auto name = Nan::Get(keys, ii).ToLocalChecked();
-		auto id = Nan::To<uint32_t>(name).FromJust();
-		auto terrain = Nan::Get(*world_local, name).ToLocalChecked();
-		world.emplace_back(
-			std::bit_cast<room_location_t>(static_cast<uint16_t>(id)),
-			static_cast<terrain_type>(*Nan::TypedArrayContents<uint8_t>(terrain))
-		);
-	}
-	pathfinder_type::load_terrain(world);
 }
 
 EXPORT ISOLATED_VM_MODULE void InitForContext(v8::Isolate* isolate, v8::Local<v8::Context> context, v8::Local<v8::Object> target) {

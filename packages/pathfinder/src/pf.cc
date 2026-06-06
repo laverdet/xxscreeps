@@ -4,10 +4,22 @@ export module screeps;
 export import :jps;
 export import :pf;
 import std;
-using namespace screeps;
+
+namespace screeps {
 
 // Per-process terrain data
 terrain_map_type terrain_map;
+
+// Loads static terrain data into module upfront
+std::mutex terrain_lock;
+auto load_terrain(const world_type& world) -> void {
+	std::lock_guard<std::mutex> lock{terrain_lock};
+	// Parse out terrain by rooms
+	for (const auto& entry : world) {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+		terrain_map[ std::bit_cast<std::uint16_t>(entry.room) ] = entry.terrain.data();
+	}
+}
 
 // Return room index from a map position, allocates a new room index if needed and possible
 template <auto Check, class Callback, std::size_t RoomCapacity>
@@ -25,14 +37,15 @@ auto pathfinder<Check, Callback, RoomCapacity>::room_index_from_location(room_lo
 			return room_index_sentinel;
 		}
 		auto callback_result = room_callback_(location);
-		if (std::holds_alternative<util::constant_wrapper<false>>(callback_result)) {
+		if (std::holds_alternative<bool>(callback_result) && !std::get<bool>(callback_result)) {
 			blocked_rooms_.insert(location);
 			return room_index_sentinel;
 		}
 		constexpr auto unwrap = util::overloaded{
-			[](cost_matrix_type cost_matrix) -> cost_matrix_type { return cost_matrix; },
-			[](std::monostate /*undefined*/) -> cost_matrix_type { return nullptr; },
-			[](util::constant_wrapper<false> /*false*/) -> cost_matrix_type { std::unreachable(); },
+			[](auto /* undefined_or_true */) -> cost_matrix_type { return nullptr; },
+			[](std::span<const std::uint8_t> data) -> cost_matrix_type {
+				return data.size() == 2'500 ? reinterpret_cast<cost_matrix_type>(data.data()) : nullptr;
+			},
 		};
 		auto terrain = room_terrain{terrain_ptr, std::visit(unwrap, callback_result)};
 		return room_index_t{room_table_.insert(std::pair{location, terrain})};
@@ -105,9 +118,10 @@ auto pathfinder<Check, Callback, RoomCapacity>::heuristic(world_position_t pos) 
 	return heuristic_(pos);
 }
 
-// Update state for a new search
+// Perform the search~
 template <auto Check, class Callback, std::size_t RoomCapacity>
-auto pathfinder<Check, Callback, RoomCapacity>::reset(Callback callback, goals_type goals, const options& options) -> void {
+auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, world_position_t origin, goals_type goals, const options& options) -> std::optional<result> {
+
 	// Clean up from previous iteration
 	room_table_.clear();
 	blocked_rooms_.clear();
@@ -115,20 +129,13 @@ auto pathfinder<Check, Callback, RoomCapacity>::reset(Callback callback, goals_t
 	heap_.clear();
 
 	// Other initialization
-	room_callback_ = std::move(callback);
+	room_callback_ = std::move(room_callback);
+	auto reset_room_callback = util::scope_exit{[ & ] { room_callback_ = {}; }};
 	heuristic_.reset(std::move(goals), options.flee);
 	look_table_[ 0 ] = std::clamp(options.plain_cost, 1, 0xfe);
 	look_table_[ 2 ] = std::clamp(options.swamp_cost, 1, 0xfe);
 	max_rooms_ = std::clamp(options.max_rooms, 1, static_cast<int>(RoomCapacity));
 	heuristic_weight_ = std::clamp(options.heuristic_weight, 1., 9.);
-}
-
-// Perform the search~
-template <auto Check, class Callback, std::size_t RoomCapacity>
-auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, world_position_t origin, goals_type goals, const options& options) -> std::optional<result> {
-
-	// Initialize storage
-	reset(std::move(room_callback), std::move(goals), options);
 
 	// State
 	auto max_cost = std::clamp(options.max_cost, 1, std::numeric_limits<cost_t>::max());
@@ -223,14 +230,4 @@ auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, w
 	};
 }
 
-// Loads static terrain data into module upfront
-std::mutex terrain_lock;
-template <auto Check, class Callback, std::size_t RoomCapacity>
-auto pathfinder<Check, Callback, RoomCapacity>::load_terrain(const world_type& world) -> void {
-	std::lock_guard<std::mutex> lock{terrain_lock};
-	// Parse out terrain by rooms
-	for (auto [ location, terrain ] : world) {
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-		terrain_map[ std::bit_cast<std::uint16_t>(location) ] = terrain;
-	}
-}
+}; // namespace screeps

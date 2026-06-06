@@ -29,7 +29,7 @@ export type RoomCallback = (roomId: number) => Uint8Array | false | undefined;
  * W0N0 = { rx: 0x7f, ry: 0x7f }
  * W0S0 = { rx: 0x7f, ry: 0x80 }
  */
-export type WorldTerrain = Iterable<readonly [ number, Readonly<Uint8Array> ]>;
+export type WorldTerrain = IteratorObject<readonly [ number, Readonly<Uint8Array> ]>;
 
 export interface Result<Position> {
 	path: Position[];
@@ -42,11 +42,7 @@ export const path = pf.path;
 export const version = pf.version;
 
 export function loadTerrain(world: WorldTerrain) {
-	const rooms: Record<number, Readonly<Uint8Array>> = {};
-	for (const [ roomId, terrain ] of world) {
-		rooms[roomId] = terrain;
-	}
-	pf.loadTerrain(rooms);
+	pf.loadTerrain([ ...world.map(([ room, terrain ]) => ({ room, terrain })) ]);
 }
 
 /**

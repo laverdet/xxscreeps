@@ -20,7 +20,7 @@
 		"importHelpers": true,
 		"moduleResolution": "nodenext",
 		"module": "nodenext",
-		"lib": [ "esnext", "dom" ],
+		"lib": [ "esnext", "dom", "dom.iterable" ],
 		"resolveJsonModule": true,
 		"types": [],
 

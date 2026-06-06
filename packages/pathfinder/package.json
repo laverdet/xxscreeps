@@ -25,9 +25,9 @@
     ]
   },
   "devDependencies": {
-    "@auto_js/js": "^0.0.4",
-    "@auto_js/napi": "^0.0.4",
-    "@auto_js/v8": "^0.0.4",
+    "@auto_js/js": "^0.0.5",
+    "@auto_js/napi": "^0.0.5",
+    "@auto_js/v8": "^0.0.5",
     "@napi-rs/cli": "^3.6.2",
     "@types/node": "~24.12.2",
     "isolated-vm": "6.0.2",

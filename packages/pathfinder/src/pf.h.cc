@@ -13,6 +13,7 @@ constexpr auto k_room_size = 50 * 50;
 constexpr auto map_position_size = 1 << sizeof(room_location_t) * 8;
 constexpr auto obstacle = cost_t{0};
 constexpr auto sentinel_pos_index = pos_index_t{std::numeric_limits<pos_index_t::value_type>::max()};
+export using room_callback_result_type = std::variant<std::monostate, bool, std::span<const std::uint8_t>>;
 
 // Params for `search`
 using goals_type = std::vector<heuristic_t::goal_t>;
@@ -27,8 +28,20 @@ struct options {
 };
 
 // Params for `load_terrain`
-export using world_type = std::vector<std::pair<room_location_t, terrain_type>>;
+struct room_entry {
+		room_location_t room;
+		terrain_span_type terrain;
+
+		constexpr static auto struct_template = js::struct_template{
+			js::struct_member{util::cw<"room">, &room_entry::room},
+			js::struct_member{util::cw<"terrain">, &room_entry::terrain},
+		};
+};
+export using world_type = std::vector<room_entry>;
 using terrain_map_type = std::array<terrain_type, map_position_size>;
+
+// Load process-wide shared terrain
+export auto load_terrain(const world_type& world) -> void;
 
 // path_iterator
 class path_iterator : public util::incrementable_facade {
@@ -96,7 +109,6 @@ class pathfinder {
 		[[nodiscard]] auto look(indexed_position_t pos) const -> cost_t;
 		auto look_open(world_position_t pos) -> std::pair<room_index_t, cost_t>;
 		auto push_node(indexed_position_t node, pos_index_t parent_index, cost_t g_cost) -> void;
-		auto reset(Callback callback, goals_type goals, const options& options) -> void;
 		auto room_index_from_location(room_location_t location) -> room_index_t;
 
 		// Logic
@@ -111,7 +123,6 @@ class pathfinder {
 	public:
 		// Module interface
 		auto search(Callback room_callback, world_position_t origin, goals_type goals, const options& options) -> std::optional<result>;
-		static auto load_terrain(const world_type& world) -> void;
 
 	private:
 		room_scope_table room_table_;

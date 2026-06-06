@@ -34,7 +34,7 @@ class open_closed_t {
 
 	private:
 		using value_type = unsigned;
-		std::array<value_type, Capacity> list{};
+		std::array<value_type, Capacity> list;
 		value_type marker = 1;
 };
 

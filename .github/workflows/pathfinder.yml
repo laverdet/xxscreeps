@@ -21,7 +21,7 @@ jobs:
         host:
           # aarch64
           - runs-on: ubuntu-24.04-arm
-            container: alpine:3
+            container: alpine:edge
             triplet: aarch64-alpine-linux-musl
           - runs-on: macos-15
             platform: darwin
@@ -31,7 +31,7 @@ jobs:
             triplet: aarch64-unknown-linux-gnu
           # x86_64
           - runs-on: ubuntu-24.04
-            container: alpine:3
+            container: alpine:edge
             triplet: x86_64-alpine-linux-musl
           - runs-on: macos-15-intel
             platform: darwin
@@ -51,18 +51,18 @@ jobs:
         uses: laverdet/alpine-arm64@v1
 
       # Install compiler & dependencies
-      - if: matrix.host.container == 'alpine:3'
+      - if: matrix.host.container == 'alpine:edge'
         shell: sh
         run: |
-          apk add boost-dev clang21 clang21-extra-tools cmake compiler-rt lld21 llvm21 ninja-is-really-ninja nodejs npm
-          echo "CXX=clang++-21" >> "$GITHUB_ENV"
-          echo "LLVM_PROFDATA=llvm21-profdata" >> "$GITHUB_ENV"
+          apk add build-base boost-dev clang22 clang22-extra-tools cmake compiler-rt lld22 llvm22 ninja-is-really-ninja nodejs npm
+          echo "CXX=clang++-22" >> "$GITHUB_ENV"
+          echo "LLVM_PROFDATA=llvm22-profdata" >> "$GITHUB_ENV"
       - if: matrix.host.container == 'debian:sid'
         run: |
           apt update
-          apt install -y clang-21 cmake libboost-all-dev lld-21 llvm-21 ninja-build npm
-          echo "CXX=clang++-21" >> "$GITHUB_ENV"
-          echo "LLVM_PROFDATA=llvm-profdata-21" >> "$GITHUB_ENV"
+          apt install -y clang-22 cmake libboost-all-dev lld-22 llvm-22 ninja-build npm
+          echo "CXX=clang++-22" >> "$GITHUB_ENV"
+          echo "LLVM_PROFDATA=llvm-profdata-22" >> "$GITHUB_ENV"
       - if: matrix.host.platform == 'darwin'
         run: |
           # https://github.com/orgs/Homebrew/discussions/5602
@@ -77,7 +77,7 @@ jobs:
       - if: matrix.host.platform == 'windows'
         shell: bash
         run: |
-          winget install --accept-source-agreements --silent -e --id=LLVM.LLVM --version=21.1.6 | tr '\r' '\n' | grep -Ev --line-buffered '^[ -\/|]+$'
+          winget install --accept-source-agreements --silent -e --id=LLVM.LLVM --version=22.1.6 | tr '\r' '\n' | grep -Ev --line-buffered '^[ -\/|]+$'
           ARCH=$(uname -m)
           /c/msys64/usr/bin/pacman -Sy --noconfirm \
             "mingw-w64-$ARCH-boost" \
@@ -130,7 +130,7 @@ jobs:
           echo ::endgroup::
 
       # Setup desired nodejs version (except alpine, which will have to deal with what it got)
-      - if: matrix.host.container != 'alpine:3'
+      - if: matrix.host.container != 'alpine:edge'
         uses: actions/setup-node@v6
         with:
           node-version: 24

@@ -14,7 +14,8 @@ constexpr auto room_index_sentinel = room_index_t{0};
 export using cost_matrix_type = const std::uint8_t (*)[ 50 ];
 
 // Terrain data is packed 2 bits per tile, 2500 * 2 / 8 = 625
-export using terrain_type = const std::uint8_t*;
+export using terrain_span_type = std::span<const std::uint8_t>;
+export using terrain_type = terrain_span_type::pointer;
 
 // maximum: longest chebyshev distance of whole map
 using cost_t = int;
@@ -139,7 +140,7 @@ struct visit<void, room_location_t> {
 template <>
 struct accept<void, room_location_t> {
 		constexpr auto operator()(number_tag /*tag*/, visit_holder /*visit*/, auto&& subject) const -> room_location_t {
-			auto value = std::uint16_t{std::int32_t{std::forward<decltype(subject)>(subject)}};
+			auto value = static_cast<std::uint16_t>(std::int32_t{std::forward<decltype(subject)>(subject)});
 			return std::bit_cast<room_location_t>(value);
 		}
 

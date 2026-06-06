@@ -31,6 +31,9 @@ export function loadTerrain(world: World) {
 		const buffer = getBuffer(terrain);
 		return [ roomId, buffer ] as const;
 	});
+	// TODO: Remove the ignore
+	// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+	// @ts-ignore
 	pf.loadTerrain(worldTerrain);
 }
 

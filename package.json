@@ -29,7 +29,8 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "lodash-es": "patches/lodash-es.patch"
+      "lodash-es": "patches/lodash-es.patch",
+      "@auto_js/js": "patches/@auto_js__js.patch"
     },
     "onlyBuiltDependencies": [
       "@xxscreeps/pathfinder",

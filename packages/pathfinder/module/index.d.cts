@@ -1,12 +1,16 @@
 export const path: string;
 
-export type WorldTerrain = Record<string, Readonly<Uint8Array>>;
-export type RoomCallback = (roomName: number) => Readonly<Uint8Array> | boolean | undefined;
-export interface Goal {
+interface RoomEntry {
+	room: number;
+	terrain: Readonly<Uint8Array>;
+}
+type WorldTerrain = readonly RoomEntry[];
+type RoomCallback = (roomName: number) => Readonly<Uint8Array> | boolean | undefined;
+interface Goal {
 	pos: number;
 	range: number;
 }
-export interface PathResult {
+interface PathResult {
 	path: number[];
 	ops: number;
 	cost: number;
