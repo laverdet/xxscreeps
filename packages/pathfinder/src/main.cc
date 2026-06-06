@@ -46,12 +46,13 @@ auto check_termination() -> void {
 	}
 }
 
-using pathfinder_type = pathfinder<check_termination, room_callback_type, k_max_rooms>;
-
-// Init 2 Pathfinders per thread. We do 2 here because sometimes recursive calls to the path
-// finder are useful. Any more than 2 deep recursion will have to allocate a new path finder at a
-// cost of 2.03mb(!)
-thread_local std::array<std::pair<bool, pathfinder_type>, 2> pathfinders;
+// Each thread gets two pathfinders. The first can search 64 rooms and is 2.03mb, and the second can
+// only search room but is 159kb. A recursive call will give you the smaller pathfinder, and then
+// any after that will throw.
+using pathfinder_one_type = pathfinder<check_termination, room_callback_type, k_max_rooms>;
+using pathfinder_two_type = pathfinder<check_termination, room_callback_type, 1>;
+using pathfinder_stack_type = resource_recursion_stack<pathfinder_one_type, pathfinder_two_type>;
+thread_local pathfinder_stack_type pathfinders;
 
 auto search(
 	iv8::context_lock_witness lock,
@@ -67,31 +68,26 @@ auto search(
 	bool flee,
 	double heuristic_weight
 ) -> std::optional<result> {
-	// Find an inactive path finder
-	auto& pf = [ & ] -> auto& {
-		for (auto& ii : pathfinders) {
-			if (!ii.first) {
-				return ii;
-			}
-		}
-		throw js::runtime_error{u"too many concurrent pathfinder searches"};
-	}();
-	pf.first = true;
-	auto atdone = util::scope_exit{[ & ] -> void { pf.first = false; }};
-
-	// Get the values from v8 and run the search
-	return pf.second.search(
-		room_callback_type{lock, *room_callback.value_or({})},
-		origin,
-		std::move(goals),
-		{
-			.heuristic_weight = heuristic_weight,
-			.plain_cost = plain_cost,
-			.swamp_cost = swamp_cost,
-			.max_cost = max_cost,
-			.max_ops = max_ops,
-			.max_rooms = max_rooms,
-			.flee = flee,
+	return pathfinders(
+		util::overloaded{
+			[]() -> std::optional<result> { throw js::runtime_error{u"too many concurrent pathfinder searches"}; },
+			[ & ](auto& pf) -> std::optional<result> {
+				// Get the values from v8 and run the search
+				return pf.search(
+					room_callback_type{lock, *room_callback.value_or({})},
+					origin,
+					std::move(goals),
+					{
+						.heuristic_weight = heuristic_weight,
+						.plain_cost = plain_cost,
+						.swamp_cost = swamp_cost,
+						.max_cost = max_cost,
+						.max_ops = max_ops,
+						.max_rooms = max_rooms,
+						.flee = flee,
+					}
+				);
+			},
 		}
 	);
 }

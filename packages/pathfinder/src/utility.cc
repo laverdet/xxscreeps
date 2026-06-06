@@ -118,6 +118,31 @@ class inplace_vector : private std::allocator<Type> {
 		std::size_t size_ = 0;
 };
 
+// Recursive invocations will invoke the callback with subsequently later references of `Type...`
+// until there are no more. Then it will invoke it with no parameter.
+export template <class... Type>
+class resource_recursion_stack {
+	public:
+		constexpr auto operator()(const auto& callback) -> decltype(auto) {
+			auto index = index_++;
+			auto after = util::scope_exit{[ & ] { --index_; }};
+			return util::template_switch(
+				index,
+				util::sequence<sizeof...(Type)>,
+				util::overloaded{
+					[ & ] -> decltype(auto) { return callback(); },
+					[ & ]<std::size_t Index>(std::integral_constant<std::size_t, Index> /*index*/) -> decltype(auto) {
+						return callback(std::get<Index>(resources_));
+					},
+				}
+			);
+		}
+
+	private:
+		int index_ = 0;
+		std::tuple<Type...> resources_;
+};
+
 }; // namespace screeps
 
 namespace std {
