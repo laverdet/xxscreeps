@@ -19,6 +19,8 @@ export using terrain_type = const std::uint8_t*;
 // maximum: longest chebyshev distance of whole map
 using cost_t = int;
 
+constexpr auto obstacle = cost_t{0};
+
 // Table of terrain costs [ plain, swamp, wall, [??] ]
 using terrain_cost_type = std::array<cost_t, 4>;
 
@@ -68,6 +70,7 @@ struct room_terrain {
 		[[nodiscard]] constexpr auto cost_matrix_look(const terrain_cost_type& costs, unsigned xx, unsigned yy) const -> cost_t {
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 			int cost = cost_matrix_[ xx % 50 ][ yy % 50 ];
+			if (cost == 0xff) return obstacle;
 			return cost == 0 ? terrain_look(costs, xx, yy) : cost;
 		}
 
