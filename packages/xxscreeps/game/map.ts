@@ -63,7 +63,7 @@ export class GameMap {
 
 	constructor(terrain: TerrainByRoom, accessibleRooms?: ReadonlySet<string>) {
 		this.#terrain = terrain;
-		this.#accessibleRooms = accessibleRooms ?? new Set(Object.keys(terrain));
+		this.#accessibleRooms = accessibleRooms ?? new Set(terrain.keys());
 		let maxX = -Infinity;
 		let minX = Infinity;
 		let maxY = -Infinity;
