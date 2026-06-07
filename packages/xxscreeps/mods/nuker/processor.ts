@@ -63,7 +63,7 @@ registerObjectTickProcessor(Nuke, (nuke, context) => {
 	// player to observe; removal happens on the following tick.
 	const { timeToLand } = nuke;
 	if (timeToLand > 0) {
-		context.wakeAt(timeToLand - 1);
+		context.wakeAt(nuke['#landTime']);
 	} else if (timeToLand === 0) {
 		applyNukeImpact(nuke);
 		context.setActive();
