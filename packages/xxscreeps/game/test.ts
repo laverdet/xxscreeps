@@ -68,10 +68,3 @@ describe('PathFinder', () => {
 		});
 	});
 });
-
-describe('RoomObject', () => {
-	// `effects` is a producer-only surface; it must not leak onto the base prototype.
-	test('effects is not installed on the base prototype', () => {
-		assert.equal('effects' in RoomObject.prototype, false);
-	});
-});

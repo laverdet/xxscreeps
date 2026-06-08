@@ -4,6 +4,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { lookForStructures } from '../structure/structure.js';
 import { create as createInvaderCore } from './invader-core.js';
 
 // W7N7 has exits in all 4 directions and all neighbors have controllers:
@@ -179,9 +180,7 @@ describe('Invader core', () => {
 	const corePos = new RoomPosition(25, 25, 'W1N1');
 
 	const findCore = (Game: GameConstructor) => {
-		const structures = Game.rooms.W1N1!.find(C.FIND_HOSTILE_STRUCTURES);
-		const core = structures.find((structure): structure is StructureInvaderCore =>
-			structure.structureType === C.STRUCTURE_INVADER_CORE);
+		const [ core ] = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_INVADER_CORE);
 		assert.ok(core, 'invader core should be visible to player');
 		return core;
 	};
