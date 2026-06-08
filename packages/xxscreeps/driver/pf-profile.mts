@@ -29,7 +29,7 @@ const costMatrix = (roomName: string) => {
 		for (let xx = 0; xx < 50; ++xx) {
 			const ii = xx * 50 + yy;
 			if (terrain.get(xx, yy) !== TERRAIN_MASK_WALL) {
-				matrix.set(xx, yy, ii % 11);
+				matrix.set(xx, yy, ii % 193 ? ii % 15 : 0xff);
 			}
 		}
 	}
@@ -98,7 +98,7 @@ for (let count = 0; count < iterations; ++count) {
 const time = process.hrtime(start);
 const checksum = hash.digest('hex').slice(0, 8);
 console.log(time[0] + time[1] / 1e9);
-if (iterations === 1 && checksum !== '3cba520b') {
+if (iterations === 1 && checksum !== '6254dc11') {
 	console.error('Incorrect results! ' + checksum);
 	process.exit(1);
 }

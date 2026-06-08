@@ -11,7 +11,6 @@ namespace screeps {
 
 constexpr auto k_room_size = 50 * 50;
 constexpr auto map_position_size = 1 << sizeof(room_location_t) * 8;
-constexpr auto obstacle = cost_t{0};
 constexpr auto sentinel_pos_index = pos_index_t{std::numeric_limits<pos_index_t::value_type>::max()};
 export using room_callback_result_type = std::variant<std::monostate, bool, std::span<const std::uint8_t>>;
 
