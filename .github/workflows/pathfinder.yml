@@ -165,7 +165,7 @@ jobs:
               pnpm -C ../xxscreeps install '@xxscreeps/pathfinder@workspace:^'
               npx xxscreeps import
               cp screeps/shard0/terrain .
-              node dist/profile.mjs
+              node ../xxscreeps/dist/driver/pf-profile.mjs
               "$LLVM_PROFDATA" merge -output="$PGO_OUT/default.profdata" "$PGO_OUT"/*.profraw
             else
               # The build failed. It could be an issue with PGO, or with the build itself.
@@ -253,6 +253,7 @@ jobs:
         run: |
           npm install -g pnpm
           pnpm install --frozen-lockfile --ignore-scripts
+          npx tsc -b
       - uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.host.triplet }}
@@ -261,7 +262,7 @@ jobs:
       # Test
       - shell: sh
         working-directory: packages/pathfinder
-        run: node -e 'require(".").loadTerrain({})'
+        run: node -e 'require(".").loadTerrain([])'
       - shell: sh
         working-directory: packages/xxscreeps
         run: pnpm install '@xxscreeps/pathfinder@workspace:*'

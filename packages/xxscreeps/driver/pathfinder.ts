@@ -1,11 +1,11 @@
 import type { World } from 'xxscreeps/game/map.js';
-import type { Goal, SearchOptions } from 'xxscreeps/game/pathfinder/index.js';
 import type { OneOrMany } from 'xxscreeps/utility/types.js';
-import pf from '@xxscreeps/pathfinder';
+import * as pf from '@xxscreeps/pathfinder';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { Goal, SearchOptions } from 'xxscreeps/game/pathfinder/index.js';
 import { PositionLike, RoomPosition } from 'xxscreeps/game/position.js';
 import { makeRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/room/name.js';
 import { getBuffer } from 'xxscreeps/game/terrain.js';
-import { clamp } from 'xxscreeps/utility/utility.js';
 
 function makePositionIn(pos: RoomPosition | PositionLike): number {
 	// Assume it is RoomPosition
@@ -20,43 +20,21 @@ function makePositionIn(pos: RoomPosition | PositionLike): number {
 	return makePositionIn(new RoomPosition(pos.x, pos.y, pos.roomName));
 }
 
-function makeCompletePath(path: readonly number[]): RoomPosition[] {
-	const iterable = function*() {
-		const first = path[0];
-		const make = (xx: number, yy: number) =>
-			RoomPosition['#create'](((yy % 50) << 24) | ((xx % 50) << 16) | ((yy / 50) << 8) | (xx / 50));
-		if (first !== undefined) {
-			let xx = first & 0xffff;
-			let yy = first >> 16;
-			yield make(xx, yy);
-			for (let ii = 1; ii < path.length; ++ii) {
-				const next = path[ii]!;
-				const nx = next & 0xffff;
-				const ny = next >> 16;
-				const dx = Math.sign(nx - xx);
-				const dy = Math.sign(ny - yy);
-				while (nx !== xx || ny !== yy) {
-					xx += dx;
-					yy += dy;
-					yield make(xx, yy);
-				}
-			}
-		}
-	}();
-	const result = [ ...iterable ];
-	result.pop();
-	return result.reverse();
+const makePositionOut = (xx: number, yy: number) =>
+	RoomPosition['#create'](((yy % 50) << 24) | ((xx % 50) << 16) | ((yy / 50) << 8) | (xx / 50));
+
+export const path = pf.path;
+
+export function loadTerrain(world: World) {
+	const worldTerrain = Fn.map(world.entries(), ([ name, terrain ]) => {
+		const roomId = parseRoomNameToId(name);
+		const buffer = getBuffer(terrain);
+		return [ roomId, buffer ] as const;
+	});
+	pf.loadTerrain(worldTerrain);
 }
 
 export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: SearchOptions = {}) {
-	const plainCost = clamp(1, 254, Number(options.plainCost) || 1) | 0;
-	const swampCost = clamp(1, 254, Number(options.swampCost) || 5) | 0;
-	const heuristicWeight = clamp(1, 9, Number(options.heuristicWeight) || 1.2);
-	const maxOps = clamp(1, 0xffffffff, Number(options.maxOps) || 2000) >>> 0;
-	const maxCost = clamp(1, 0xffffffff, Number(options.maxCost) || 0xffffffff) >>> 0;
-	const maxRooms = clamp(1, 64, Number(options.maxRooms) || 16) | 0;
-	const flee = Boolean(options.flee) || false;
-
 	// Convert one-or-many goal into standard format for native extension
 	const goals = (Array.isArray(goal) ? goal : [ goal ]).map(goal => {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -74,9 +52,6 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 			};
 		}
 	});
-	if (goals.length === 0) {
-		return { path: [], ops: 0, cost: 0, incomplete: false };
-	}
 
 	// Setup room callback
 	const { roomCallback } = options;
@@ -90,31 +65,10 @@ export function search(origin: RoomPosition, goal: OneOrMany<Goal>, options: Sea
 	};
 
 	// Invoke native code
-	// TODO: remove pf.PathResult annotation after fixed .d.ts
-	const ret: pf.PathResult = pf.search(
+	return pf.search(
 		makePositionIn(origin), goals,
 		callback,
-		plainCost, swampCost,
-		maxRooms, maxOps, maxCost,
-		flee,
-		heuristicWeight,
+		makePositionOut,
+		options,
 	);
-
-	// Translate results
-	return {
-		...ret,
-		path: makeCompletePath(ret.path),
-	};
-}
-
-export function loadTerrain(world: World) {
-	const rooms: Record<string, Readonly<Uint8Array>> = {};
-	for (const [ name, terrain ] of world.entries()) {
-		rooms[parseRoomNameToId(name)] = getBuffer(terrain);
-	}
-	pf.loadTerrain(rooms);
-}
-
-export function locateModule() {
-	return pf.path;
 }

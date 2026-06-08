@@ -1,8 +1,14 @@
 {
   "name": "@xxscreeps/pathfinder",
   "type": "commonjs",
-  "version": "0.2.0",
-  "main": "./module/index.js",
+  "version": "0.3.0",
+  "main": "./dist/pathfinder.mjs",
+  "imports": {
+    "#pf": {
+      "import": "./module/index.cjs",
+      "types": "./module/index.d.cts"
+    }
+  },
   "scripts": {
     "prepublishOnly": "napi prepublish --no-gh-release"
   },

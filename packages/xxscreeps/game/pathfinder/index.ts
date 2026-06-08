@@ -10,6 +10,7 @@ import { makeObstacleChecker } from './obstacle.js';
 export { registerObstacleChecker } from './obstacle.js';
 export { CostMatrix, search };
 
+export type Goal = RoomPosition | GoalWithRange;
 interface GoalWithRange {
 	pos: RoomPosition;
 	range: number;
@@ -17,29 +18,28 @@ interface GoalWithRange {
 	x?: undefined;
 	y?: undefined;
 }
-export type Goal = RoomPosition | GoalWithRange;
 
-type CommonSearchOptions = {
+interface CommonSearchOptions {
 	plainCost?: number | undefined;
 	swampCost?: number | undefined;
 	maxOps?: number | undefined;
 	maxRooms?: number | undefined;
 	heuristicWeight?: number | undefined;
-};
+}
 
-export type SearchOptions = CommonSearchOptions & {
+export interface SearchOptions extends CommonSearchOptions {
 	roomCallback?: ((roomName: string) => CostMatrix | false | undefined) | undefined;
 	flee?: boolean;
 	maxCost?: number;
-};
+}
 
-export type RoomSearchOptions = CommonSearchOptions & {
+export interface RoomSearchOptions extends CommonSearchOptions {
 	costCallback?: (roomName: string, costMatrix: CostMatrix) => CostMatrix | undefined;
 	ignoreCreeps?: boolean;
 	ignoreDestructibleStructures?: boolean;
 	ignoreRoads?: boolean;
 	range?: number;
-};
+}
 
 const cachedCostMatrices = new Map<string, CostMatrix | undefined>();
 

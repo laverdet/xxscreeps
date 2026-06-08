@@ -1,5 +1,3 @@
-module;
-#include <nan.h>
 export module screeps:heuristic;
 import :position;
 import std;
@@ -32,6 +30,11 @@ export class heuristic_t {
 		// Returns the minimum Chebyshev distance to a goal
 		constexpr auto operator()(world_position_t pos) const -> cost_t {
 			return (this->*callback_)(pos);
+		}
+
+		constexpr auto operator()(indexed_position_t pos) const -> cost_t {
+			// NOLINTNEXTLINE(cppcoreguidelines-slicing)
+			return (*this)(world_position_t{pos});
 		}
 
 	private:

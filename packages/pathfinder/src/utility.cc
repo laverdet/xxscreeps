@@ -54,11 +54,6 @@ template <> struct uint_for_size<2> : std::type_identity<std::uint16_t> {};
 template <> struct uint_for_size<4> : std::type_identity<std::uint32_t> {};
 template <> struct uint_for_size<8> : std::type_identity<std::uint64_t> {};
 
-template <class Type>
-constexpr auto flatten(Type location) {
-	return std::bit_cast<uint_for_size_t<sizeof(location)>>(location);
-}
-
 // Holder for nominal types which cannot be implicitly converted between otherwise compatible
 // values.
 template <class Type, class>
@@ -84,12 +79,13 @@ class inplace_vector {
 		static_assert(std::is_trivially_destructible_v<Type>);
 
 		[[nodiscard]] constexpr auto empty() const -> bool { return size_ == 0; }
-		[[nodiscard]] constexpr auto operator[](this auto& self, std::size_t index) -> auto& { return self.data_[ index ]; }
 		[[nodiscard]] constexpr auto size() const -> std::size_t { return size_; }
 		constexpr auto back(this auto& self) -> auto& { return self.data_[ self.size_ - 1 ]; }
 		constexpr auto begin(this auto& self) { return self.data_.begin(); }
 		constexpr auto clear() -> void { size_ = 0; }
 		constexpr auto end(this auto& self) { return self.data_.begin() + self.size_; }
+		constexpr auto data(this auto& self) { return self.data_.data(); }
+		constexpr auto operator[](this auto& self, std::size_t index) -> auto& { return self.data_[ index ]; }
 		constexpr auto front(this auto& self) -> auto& { return self.data_.front(); }
 		constexpr auto pop_back() -> void { --size_; }
 
