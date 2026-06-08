@@ -133,7 +133,7 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 				return C.ERR_INVALID_TARGET;
 			}
 			const existing = structureFactories.get(object.structureType);
-			if (existing && !factory.stackable && !existing.stackable) {
+			if (!factory.stackable && !existing?.stackable) {
 				return C.ERR_INVALID_TARGET;
 			}
 		}

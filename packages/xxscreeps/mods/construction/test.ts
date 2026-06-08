@@ -247,16 +247,16 @@ describe('Construction', () => {
 
 		test('non-road, non-rampart pair on the same tile is rejected', () => overStructure(async ({ player }) => {
 			await player('100', Game => {
-				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', 'Spawn2'), C.ERR_INVALID_TARGET);
-				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(26, 25, 'container'), C.ERR_INVALID_TARGET);
+				assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(25, 25, 'spawn', 'Spawn2'), C.ERR_INVALID_TARGET);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(26, 25, 'container'), C.ERR_INVALID_TARGET);
 			});
 		}));
 
 		test('road or rampart on either side allows stacking', () => overStructure(async ({ player }) => {
 			await player('100', Game => {
-				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.OK);
-				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(26, 25, 'rampart'), C.OK);
-				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(27, 25, 'container'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(25, 25, 'road'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(26, 25, 'rampart'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(27, 25, 'container'), C.OK);
 			});
 		}));
 	});
