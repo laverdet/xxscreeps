@@ -80,7 +80,8 @@ export function checkDismantle(creep: Creep, target: Structure) {
 		() => checkTarget(target, Structure),
 		() => target.structureType in C.CONSTRUCTION_COST ? C.OK : C.ERR_INVALID_TARGET,
 		() => checkRange(creep, target, 1),
-		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART));
+		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
+		() => target['#invulnerable'] ? C.ERR_INVALID_TARGET : C.OK);
 }
 
 export function checkRepair(creep: Creep, target: Structure) {

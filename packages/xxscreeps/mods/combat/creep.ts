@@ -126,6 +126,7 @@ export function checkAttack(creep: Creep, target: AttackTarget) {
 		() => checkSafeMode(creep.room, C.ERR_NO_BODYPART),
 		() => checkTarget(target, Creep, Structure),
 		() => checkDestructible(target),
+		() => target['#invulnerable'] ? C.ERR_INVALID_TARGET : C.OK,
 		() => checkRange(creep, target, 1),
 	);
 }
@@ -137,6 +138,7 @@ export function checkRangedAttack(creep: Creep, target: AttackTarget) {
 		() => checkTarget(target, Creep, Structure),
 		() => checkDestructible(target),
 		() => checkRange(creep, target, 3),
+		() => target['#invulnerable'] ? C.ERR_INVALID_TARGET : C.OK,
 	);
 }
 

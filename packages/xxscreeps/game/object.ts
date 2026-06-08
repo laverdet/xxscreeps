@@ -24,6 +24,13 @@ const shape = struct({
 	'#posId': union({ pos: 'int32' }),
 });
 
+export interface RoomObjectEffect {
+	effect?: number;
+	power?: number;
+	level?: number;
+	ticksRemaining: number;
+}
+
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	/**
 	 * The link to the Room object. May be `undefined` in case if an object is a flag or a construction
@@ -65,6 +72,8 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	get '#extraUsers'(): string[] { return []; }
 	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#hasIntent'() { return false; }
+	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
+	get '#invulnerable'() { return false; }
 	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get '#layer'(): number | undefined { return 0.5; }
 	get '#pathCost'(): undefined | number { return undefined; }
@@ -110,9 +119,10 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 	}
 }
 
-// Type-only merge: exposes `hits`/`hitsMax`/`my` at the base type without installing getters on the prototype.
+// Typing-only declarations on the base; runtime getters live on subclasses.
 export declare interface RoomObject {
 	get hits(): number | undefined;
+	get effects(): RoomObjectEffect[] | undefined;
 	set hits(hits: number);
 	get hitsMax(): number | undefined;
 	get my(): boolean | undefined;
