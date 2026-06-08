@@ -1,8 +1,15 @@
+import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
+import * as util from 'node:util';
 import { loadTerrain, search } from 'xxscreeps/driver/pathfinder.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { World } from 'xxscreeps/game/map.js';
 import { CostMatrix } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { TERRAIN_MASK_WALL } from 'xxscreeps/game/terrain.js';
+
+const iterations = Number(process.argv.at(-1)) || 1;
+const log = process.argv.includes('--log');
 
 /**
  * This script is a standalone test for the path finder. It runs a whole bunch of path finding
@@ -11,15 +18,27 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
  */
 
 // Load terrain into module
-loadTerrain(new World('test', fs.readFileSync(`${__dirname}/terrain`)));
+const world = new World('test', fs.readFileSync('terrain'));
+loadTerrain(world);
 
-// Generate a deterministic CostMatrix
-const costMatrix = new CostMatrix();
-for (let ii = 0; ii < 2500; ++ii) {
-	if (ii % 7 === 0) {
-		costMatrix._bits[ii] = ii % 11;
+// Generate deterministic CostMatrix's
+const costMatrix = (roomName: string) => {
+	const matrix = new CostMatrix();
+	const terrain = world.map.getRoomTerrain(roomName);
+	for (let yy = 0; yy < 50; ++yy) {
+		for (let xx = 0; xx < 50; ++xx) {
+			const ii = xx * 50 + yy;
+			if (terrain.get(xx, yy) !== TERRAIN_MASK_WALL) {
+				matrix.set(xx, yy, ii % 11);
+			}
+		}
 	}
-}
+	return matrix;
+};
+const matrices = Fn.pipe(
+	[ 'W1N1', 'W2N2', 'W3N3', 'W3N7', 'W4N1', 'W4N8', 'W5N3', 'W5N5', 'W6N5', 'W7N5', 'W8N5', 'W9N8' ],
+	$$ => Fn.map($$, roomName => [ roomName, costMatrix(roomName) ] as const),
+	$$ => Fn.fromEntries($$));
 
 // Various rooms around my world
 const positions = [
@@ -50,9 +69,9 @@ const positions = [
 ];
 
 // Find every point to every other point
+const hash = crypto.createHash('sha256');
 const start = process.hrtime();
-let checksum = 0;
-for (let count = 0; count < 20; ++count) {
+for (let count = 0; count < iterations; ++count) {
 	for (const [ ii, one ] of positions.entries()) {
 		for (const [ jj, two ] of positions.entries()) {
 			if (ii === jj) continue;
@@ -66,15 +85,20 @@ for (let count = 0; count < 20; ++count) {
 					maxCost: 100000,
 					maxOps: 100000,
 					heuristicWeight: 1.2,
+					roomCallback: ii % 2 === 0 ? roomName => matrices[roomName] : undefined,
 				},
 			);
-			checksum += ret.path.length + ret.ops;
+			hash.update(JSON.stringify(ret));
+			if (log) {
+				console.log(util.inspect(ret, { depth: null, maxArrayLength: null }));
+			}
 		}
 	}
 }
 const time = process.hrtime(start);
-if (checksum !== 17779280) {
-	console.error('Incorrect results!');
+const checksum = hash.digest('hex').slice(0, 8);
+console.log(time[0] + time[1] / 1e9);
+if (iterations === 1 && checksum !== '3cba520b') {
+	console.error('Incorrect results! ' + checksum);
 	process.exit(1);
 }
-console.log(time[0] + time[1] / 1e9);

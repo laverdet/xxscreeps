@@ -177,7 +177,7 @@ export function checkActiveStructures(room: Room) {
 	const controllerStructures = C.CONTROLLER_STRUCTURES as Record<string, number[] | undefined>;
 	// Single pass: collect owned structures by type
 	const byType: Record<string, OwnedStructure[]> = {};
-	for (const object of room['#objects']) {
+	for (const object of room['#immediateObjects']()) {
 		if (object instanceof OwnedStructure && object.structureType in controllerStructures) {
 			(byType[object.structureType] ??= []).push(object);
 		}

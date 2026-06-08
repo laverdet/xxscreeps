@@ -14,12 +14,13 @@ export interface PathResult {
 }
 
 export const path: string;
+export const version: number;
 
 export function loadTerrain(world: WorldTerrain): void;
 
 export function search(
 	origin: number,
-	goals: Goal[],
+	goals: readonly Goal[],
 	roomCallback: RoomCallback | undefined,
 	plainCost: number,
 	swampCost: number,
@@ -28,4 +29,4 @@ export function search(
 	maxCost: number,
 	flee: boolean,
 	heuristicWeight: number,
-): PathResult | undefined | -1;
+): PathResult;

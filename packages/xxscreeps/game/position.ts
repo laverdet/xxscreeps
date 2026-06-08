@@ -9,13 +9,12 @@ import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
 import { compose, declare } from 'xxscreeps/schema/index.js';
 import { iteratee } from 'xxscreeps/utility/iteratee.js';
 import { getDirection } from './direction.js';
-import { generateRoomNameFromId, kMaxWorldSize, parseRoomName } from './room/name.js';
+import { kMaxWorldSize, makeRoomNameFromId, parseRoomName } from './room/name.js';
 import { Game, registerGlobal } from './index.js';
 
 export type { Direction } from './direction.js';
 export { isBorder, isNearBorder } from './terrain.js';
 export { getOffsetsFromDirection, getPositionInDirection, iterateNeighbors } from './direction.js';
-export { generateRoomName, generateRoomNameFromId, parseRoomName, parseRoomNameToId } from './room/name.js';
 
 type FindClosestByPathOptions<Type> =
 	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;
@@ -25,7 +24,19 @@ type PositionFindType<Type> =
 	Type extends FindConstants ? FindType<Type> :
 	never;
 
+export const kRoomSize = 50;
+export const kMaxRoomCoordinate = kRoomSize - 1;
+
 export type PositionParameter = [ position: RoomPosition ] | [ target: RoomObject ] | [ x: number, y: number ];
+
+export interface PositionLike {
+	['#id']?: undefined;
+	['#rx']?: undefined;
+	['#ry']?: undefined;
+	x: number;
+	y: number;
+	roomName: string;
+}
 
 export function format() {
 	return declare('RoomPosition', compose('int32', {
@@ -33,10 +44,10 @@ export function format() {
 		decompose: (pos: RoomPosition) => pos['#id'],
 		kaitai: [ {
 			id: 'rx',
-			type: 's1',
+			type: 'u1',
 		}, {
 			id: 'ry',
-			type: 's1',
+			type: 'u1',
 		}, {
 			id: 'x',
 			type: 's1',
@@ -76,8 +87,8 @@ export class RoomPosition {
 			if (
 				!(rx >= 0 && rx < kMaxWorldSize) ||
 				!(ry >= 0 && ry < kMaxWorldSize) ||
-				!(xx >= 0 && xx < 50) ||
-				!(yy >= 0 && yy < 50)
+				!(xx >= 0 && xx <= kMaxRoomCoordinate) ||
+				!(yy >= 0 && yy <= kMaxRoomCoordinate)
 			) {
 				throw new TypeError('Invalid arguments in `RoomPosition` constructor');
 			}
@@ -89,7 +100,7 @@ export class RoomPosition {
 	 * The name of the room.
 	 */
 	@enumerable get roomName() {
-		return generateRoomNameFromId(this.#id & 0xffff);
+		return makeRoomNameFromId(this.#id & 0xffff);
 	}
 
 	/**
@@ -133,7 +144,7 @@ export class RoomPosition {
 
 	// eslint-disable-next-line id-length
 	set x(xx: number) {
-		if (!(xx >= 0 && xx < 50)) {
+		if (!(xx >= 0 && xx <= kMaxRoomCoordinate)) {
 			throw new TypeError('Invalid `x`');
 		}
 		this.#id = (this.#id & ~(0xff << 16)) | (xx << 16);
@@ -141,7 +152,7 @@ export class RoomPosition {
 
 	// eslint-disable-next-line id-length
 	set y(yy: number) {
-		if (!(yy >= 0 && yy < 50)) {
+		if (!(yy >= 0 && yy <= kMaxRoomCoordinate)) {
 			throw new TypeError('Invalid `y`');
 		}
 		this.#id = (this.#id & ~(0xff << 24)) | (yy << 24);
@@ -168,7 +179,10 @@ export class RoomPosition {
 		const { pos } = fetchPositionArgument(this.roomName, ...args);
 		if (!pos) return undefined;
 
-		return getDirection(pos['#rx'] * 50 + pos.x - this['#rx'] * 50 - this.x, pos['#ry'] * 50 + pos.y - this['#ry'] * 50 - this.y);
+		return getDirection(
+			pos['#rx'] * kRoomSize + pos.x - this['#rx'] * kRoomSize - this.x,
+			pos['#ry'] * kRoomSize + pos.y - this['#ry'] * kRoomSize - this.y,
+		);
 	}
 
 	/**
@@ -463,9 +477,9 @@ export function fetchRoom(roomName: string) {
  */
 export function *positionsInRangeTo(origin: RoomPosition, range: number) {
 	const left = Math.max(0, origin.x - range);
-	const right = Math.min(49, origin.x + range);
+	const right = Math.min(kMaxRoomCoordinate, origin.x + range);
 	const top = Math.max(0, origin.y - range);
-	const bottom = Math.min(49, origin.y + range);
+	const bottom = Math.min(kMaxRoomCoordinate, origin.y + range);
 	for (let yy = top; yy <= bottom; ++yy) {
 		for (let xx = left; xx <= right; ++xx) {
 			yield new RoomPosition(xx, yy, origin.roomName);

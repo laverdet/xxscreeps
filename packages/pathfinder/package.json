@@ -1,8 +1,14 @@
 {
   "name": "@xxscreeps/pathfinder",
   "type": "commonjs",
-  "version": "0.1.0",
-  "main": "./module/index.js",
+  "version": "0.3.0",
+  "main": "./dist/pathfinder.mjs",
+  "imports": {
+    "#pf": {
+      "import": "./module/index.cjs",
+      "types": "./module/index.d.cts"
+    }
+  },
   "scripts": {
     "prepublishOnly": "napi prepublish --no-gh-release"
   },
@@ -19,9 +25,9 @@
     ]
   },
   "devDependencies": {
-    "@auto_js/js": "^0.0.2",
-    "@auto_js/napi": "^0.0.2",
-    "@auto_js/v8": "^0.0.2",
+    "@auto_js/js": "^0.0.4",
+    "@auto_js/napi": "^0.0.4",
+    "@auto_js/v8": "^0.0.4",
     "@napi-rs/cli": "^3.6.2",
     "@types/node": "~24.12.2",
     "isolated-vm": "6.0.2",

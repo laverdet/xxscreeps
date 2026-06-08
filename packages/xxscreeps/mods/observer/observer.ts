@@ -48,14 +48,15 @@ registerBuildableStructure(C.STRUCTURE_OBSERVER, {
 //
 // Intent checks
 function checkObserveRoomName(target: string) {
-	return Game.map.getRoomStatus(target) ? C.OK : C.ERR_INVALID_ARGS;
+	return Game.map.getRoomStatus(target, true) ? C.OK : C.ERR_INVALID_ARGS;
 }
 
 function checkObserveRoomRange(observer: StructureObserver, target: string) {
-	if (Game.map.getRoomLinearDistance(observer.room.name, target) > C.OBSERVER_RANGE) {
+	if (Game.map.getRoomLinearDistance(observer.room.name, target) <= C.OBSERVER_RANGE) {
+		return C.OK;
+	} else {
 		return C.ERR_NOT_IN_RANGE;
 	}
-	return C.OK;
 }
 
 export function checkObserveRoom(observer: StructureObserver, target: string) {

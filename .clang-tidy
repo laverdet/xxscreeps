@@ -79,6 +79,7 @@ Checks: >
 
 HeaderFilterRegex: 'packages/*'
 CheckOptions:
+  bugprone-implicit-widening-of-multiplication-result.IgnoreConstantIntExpr: true
   bugprone-unchecked-optional-access.IgnoreValueCalls: true
   bugprone-unused-return-value.AllowCastToVoid: true
   cppcoreguidelines-avoid-non-const-global-variables.AllowInternalLinkage: true

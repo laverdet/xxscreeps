@@ -8,5 +8,6 @@
 	},
 	"references": [
 		{ "path": "../lodash3" },
+		{ "path": "../pathfinder" },
 	],
 }

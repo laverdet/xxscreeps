@@ -1,37 +1,45 @@
-import type { RoomPosition } from '../position.js';
+import type { RoomPosition } from 'xxscreeps/game/position.js';
 
 import { search } from 'xxscreeps/driver/pathfinder.js';
 import { Game, me } from 'xxscreeps/game/index.js';
+import { registerGlobal } from 'xxscreeps/game/symbols.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { registerGlobal } from '../symbols.js';
 import { CostMatrix } from './cost-matrix.js';
 import { makeObstacleChecker } from './obstacle.js';
 
 export { registerObstacleChecker } from './obstacle.js';
 export { CostMatrix, search };
-export type Goal = RoomPosition | { pos: RoomPosition; range: number };
 
-type CommonSearchOptions = {
+export type Goal = RoomPosition | GoalWithRange;
+interface GoalWithRange {
+	pos: RoomPosition;
+	range: number;
+	roomName?: undefined;
+	x?: undefined;
+	y?: undefined;
+}
+
+interface CommonSearchOptions {
 	plainCost?: number | undefined;
 	swampCost?: number | undefined;
 	maxOps?: number | undefined;
 	maxRooms?: number | undefined;
 	heuristicWeight?: number | undefined;
-};
+}
 
-export type SearchOptions = CommonSearchOptions & {
-	roomCallback?: (roomName: string) => CostMatrix | false | undefined;
+export interface SearchOptions extends CommonSearchOptions {
+	roomCallback?: ((roomName: string) => CostMatrix | false | undefined) | undefined;
 	flee?: boolean;
 	maxCost?: number;
-};
+}
 
-export type RoomSearchOptions = CommonSearchOptions & {
+export interface RoomSearchOptions extends CommonSearchOptions {
 	costCallback?: (roomName: string, costMatrix: CostMatrix) => CostMatrix | undefined;
 	ignoreCreeps?: boolean;
 	ignoreDestructibleStructures?: boolean;
 	ignoreRoads?: boolean;
 	range?: number;
-};
+}
 
 const cachedCostMatrices = new Map<string, CostMatrix | undefined>();
 

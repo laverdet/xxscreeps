@@ -17,12 +17,12 @@ import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
 import { compose, declare, optional, struct, variant, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
-type SpawnCreepOptions = {
+interface SpawnCreepOptions {
 	directions?: Direction[];
 	dryRun?: boolean;
 	energyStructures?: (StructureExtension | StructureSpawn)[];
-	memory?: any;
-};
+	memory?: unknown;
+}
 
 // `StructureSpawn.Spawning` format and definition
 const spawningFormat = struct({
@@ -188,9 +188,14 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 				}
 
 				// Save memory option to Memory
-				if (options.memory !== undefined) {
-					const memory = Memory.get();
-					(memory.creeps ??= {})[name] = options.memory;
+				const memory = Memory.get();
+				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+				if (memory.creeps === undefined) {
+					memory.creeps = {};
+				}
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+				if (memory.creeps != null && typeof memory.creeps === 'object') {
+					memory.creeps[name] = options.memory as never;
 				}
 
 				// Save intent

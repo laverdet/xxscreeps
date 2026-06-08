@@ -6,11 +6,12 @@ import type { Adapter } from 'xxscreeps/utility/astar.js';
 import { build } from 'xxscreeps/engine/schema/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
 import * as C from './constants/index.js';
 import { getDirection } from './direction.js';
-import { RoomPosition, generateRoomName, getOffsetsFromDirection, parseRoomName } from './position.js';
+import { RoomPosition, getOffsetsFromDirection } from './position.js';
 import * as Terrain from './terrain.js';
 
 // Schema
@@ -36,10 +37,11 @@ type FindRoute = {
 	routeCallback?: (roomName: string, fromRoomName: string) => number;
 };
 
-type RoomStatus = RoomOutOfBorders | NormalRoom;
+type RoomStatus = RoomClosed | NormalRoom;
+type ExitsDescriptor = Record<typeof C.TOP | typeof C.RIGHT | typeof C.BOTTOM | typeof C.LEFT, string>;
 
-interface RoomOutOfBorders {
-	status: 'out of borders';
+interface RoomClosed {
+	status: 'closed';
 	timestamp: number | null;
 }
 
@@ -61,7 +63,7 @@ export class GameMap {
 
 	constructor(terrain: TerrainByRoom, accessibleRooms?: ReadonlySet<string>) {
 		this.#terrain = terrain;
-		this.#accessibleRooms = accessibleRooms;
+		this.#accessibleRooms = accessibleRooms ?? new Set(Object.keys(terrain));
 		let maxX = -Infinity;
 		let minX = Infinity;
 		let maxY = -Infinity;
@@ -81,14 +83,14 @@ export class GameMap {
 	}
 
 	'#getCenterRoom'() {
-		return generateRoomName(this.#left + Math.floor(this.#width / 2), this.#top + Math.floor(this.#height / 2));
+		return makeRoomName(this.#left + Math.floor(this.#width / 2), this.#top + Math.floor(this.#height / 2));
 	}
 
 	/**
 	 * List all exits available from the room with the given name.
 	 * @param roomName The room name.
 	 */
-	describeExits(roomName: string) {
+	describeExits(roomName: string): ExitsDescriptor | null {
 		const info = this.#terrain.get(roomName);
 		if (info) {
 			const room = parseRoomName(roomName);
@@ -97,11 +99,11 @@ export class GameMap {
 				$$ => Fn.reject($$, direction => (info.exits & (2 ** ((direction - 1) >>> 1))) === 0),
 				$$ => Fn.map($$, direction => {
 					const offsets = getOffsetsFromDirection(direction);
-					return [ direction, generateRoomName(room.rx + offsets.dx, room.ry + offsets.dy) ] as const;
+					return [ direction, makeRoomName(room.rx + offsets.dx, room.ry + offsets.dy) ] as const;
 				}),
 				$$ => Fn.fromEntries($$));
 		}
-		return null as never;
+		return null;
 	}
 
 	/**
@@ -178,12 +180,11 @@ export class GameMap {
 			[ origin ],
 			pos => Math.abs(destination.rx - pos.rx) + Math.abs(destination.ry - pos.ry),
 			routeCallback
-				? (to, from) => routeCallback(generateRoomName(to.rx, to.ry), generateRoomName(from.rx, from.ry)) :
+				? (to, from) => routeCallback(makeRoomName(to.rx, to.ry), makeRoomName(from.rx, from.ry)) :
 				() => 1,
 			// describeExits is typed `null as never` for player-facing ergonomics but
 			// can genuinely return null at runtime; `Object.values(null)` would throw.
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			pos => Fn.map(Object.values(this.describeExits(generateRoomName(pos.rx, pos.ry)) ?? {}), parseRoomName));
+			pos => Fn.map(Object.values(this.describeExits(makeRoomName(pos.rx, pos.ry)) ?? {}), parseRoomName));
 		if (route) {
 			return Fn.pipe(
 				route,
@@ -191,7 +192,7 @@ export class GameMap {
 				$$ => Fn.shift($$).rest ?? [],
 				$$ => Fn.map($$, ([ prev, next ]) => ({
 					exit: getDirection(next.rx - prev.rx, next.ry - prev.ry) as ExitType,
-					room: generateRoomName(next.rx, next.ry),
+					room: makeRoomName(next.rx, next.ry),
 				})),
 				$$ => [ ...$$ ]);
 		} else {
@@ -222,32 +223,44 @@ export class GameMap {
 	}
 
 	/** @internal */
-	getRoomStatus(roomName: string): RoomStatus | undefined;
+	getRoomStatus(roomName: string, actually: true): RoomStatus | undefined;
 
 	/**
 	 * Gets availability status of the room with the specified name. Learn more about starting areas
 	 * from [this article](https://docs.screeps.com/start-areas.html).
 	 */
 	getRoomStatus(roomName: string): RoomStatus;
-	getRoomStatus(roomName: string): RoomStatus | undefined {
-		if (!this.#terrain.has(roomName)) {
-			return;
+
+	getRoomStatus(roomName: string, actually?: boolean): RoomStatus | undefined {
+		const room = parseRoomName(roomName);
+		if (Number.isNaN(room.rx) || Number.isNaN(room.ry)) {
+			return undefined;
+		} else if (this.#accessibleRooms.has(roomName)) {
+			return { status: 'normal', timestamp: null };
+		} else if (!actually || this.#terrain.has(roomName)) {
+			return { status: 'closed', timestamp: null };
+		} else {
+			return undefined;
 		}
-		// Callers without the active-rooms set (sandbox init, processor worker) see every terrain-backed room as `normal`.
-		if (this.#accessibleRooms !== undefined && !this.#accessibleRooms.has(roomName)) {
-			return { status: 'out of borders', timestamp: null };
-		}
-		return { status: 'normal', timestamp: null };
 	}
+
+	/** @internal */
+	getRoomTerrain(roomName: string, graceful: true): Terrain.Terrain | undefined;
 
 	/**
 	 * Get a `Room.Terrain` object which provides fast access to static terrain data. This method works
 	 * for any room in the world even if you have no access to it.
 	 * @param roomName The room name.
 	 */
-	getRoomTerrain(roomName: string) {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-		return this.#terrain.get(roomName)?.terrain!;
+	getRoomTerrain(roomName: string): Terrain.Terrain;
+
+	getRoomTerrain(roomName: string, graceful?: boolean) {
+		const terrain = this.#terrain.get(roomName)?.terrain;
+		if (terrain) {
+			return terrain;
+		} else if (!graceful) {
+			throw new Error(`Could not access room ${roomName}`);
+		}
 	}
 
 	/**
@@ -276,7 +289,7 @@ export class GameMap {
 	 * @deprecated
 	 */
 	isRoomAvailable(roomName: string) {
-		return this.getRoomStatus(roomName)?.status === 'normal';
+		return this.#accessibleRooms.has(roomName);
 	}
 }
 
@@ -299,8 +312,8 @@ export class World {
 	/**
 	 * Returns an iterator of all rooms and terrain.
 	 */
-	entries() {
-		return Fn.map(this.terrain.entries(), ([ roomName, info ]) => [ roomName, info.terrain ] as const);
+	entries(): Iterable<[ string, Terrain.Terrain ]> {
+		return Fn.map(this.terrain, ([ roomName, info ]) => [ roomName, info.terrain ]);
 	}
 }
 
