@@ -1,4 +1,3 @@
-import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -6,13 +5,10 @@ import { create as createLab } from 'xxscreeps/mods/chemistry/lab.js';
 import { createLabWithResources } from 'xxscreeps/mods/chemistry/test.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createTower } from 'xxscreeps/mods/defense/tower.js';
-import { getDueNotifications } from 'xxscreeps/mods/notifications/model.js';
+import { getAllRowsForTesting } from 'xxscreeps/mods/notifications/model.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-
-const getRows = (shard: Shard, userId: string) =>
-	getDueNotifications(shard, userId, Infinity).then(items => items.map(item => item.row));
 
 describe('Combat', () => {
 	// 17 ATTACK (510 dmg), 1 RANGED_ATTACK (10 dmg)
@@ -39,8 +35,7 @@ describe('Combat', () => {
 
 	test('attack + rangedAttack killing a structure produces exactly one ruin', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = Game.rooms.W1N1!.find(C.FIND_STRUCTURES)
-				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 			assert.strictEqual(Game.creeps.warrior?.attack(lab), C.OK);
 			assert.strictEqual(Game.creeps.warrior.rangedAttack(lab), C.OK);
 		});
@@ -116,8 +111,7 @@ describe('getEventLog', () => {
 
 	test('records attack events after processing', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = Game.rooms.W1N1!.find(C.FIND_STRUCTURES)
-				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 			assert.strictEqual(Game.creeps.attacker?.attack(lab), C.OK);
 		});
 		await tick();
@@ -134,8 +128,7 @@ describe('getEventLog', () => {
 
 	test('raw mode returns vanilla-shaped JSON string', () => sim(async ({ player, tick }) => {
 		await player('100', Game => {
-			const lab = Game.rooms.W1N1!.find(C.FIND_STRUCTURES)
-				.find(structure => structure.structureType === C.STRUCTURE_LAB)!;
+			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 			Game.creeps.attacker?.attack(lab);
 		});
 		await tick();
@@ -255,22 +248,22 @@ describe('Structure.notifyWhenAttacked attack notifications', () => {
 		await player(attackerUser, Game => {
 			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 			labId = lab.id;
-			assert.strictEqual(Game.creeps.attacker!.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.attacker?.attack(lab), C.OK);
 		});
 		await tick();
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 1);
-		assert.strictEqual(rows[0]!.message, `Your lab #${labId} in room W1N1 is under attack!`);
-		assert.strictEqual(rows[0]!.type, 'msg');
+		assert.strictEqual(rows[0]?.message, `Your lab #${labId} in room W1N1 is under attack!`);
+		assert.strictEqual(rows[0].type, 'msg');
 	}));
 
 	test('own attacks do not queue owner notifications', () => selfAttack(async ({ player, shard, tick }) => {
 		await player(user, Game => {
 			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
-			assert.strictEqual(Game.creeps.attacker!.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.attacker?.attack(lab), C.OK);
 		});
 		await tick();
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 0);
 	}));
 
@@ -280,19 +273,19 @@ describe('Structure.notifyWhenAttacked attack notifications', () => {
 		await player(attackerUser, Game => {
 			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 			labId = lab.id;
-			assert.strictEqual(Game.creeps.attackerA!.attack(lab), C.OK);
-			assert.strictEqual(Game.creeps.attackerB!.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.attackerA?.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.attackerB?.attack(lab), C.OK);
 		});
 		await tick();
 		await player(attackerUser, Game => {
 			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
-			assert.strictEqual(Game.creeps.attackerA!.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.attackerA?.attack(lab), C.OK);
 		});
 		await tick();
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 1, 'attacks share a single notification row');
-		assert.strictEqual(rows[0]!.message, `Your lab #${labId} in room W1N1 is under attack!`);
-		assert.strictEqual(rows[0]!.count, 3, '2 attackers in tick 1 + 1 attacker in tick 2');
+		assert.strictEqual(rows[0]?.message, `Your lab #${labId} in room W1N1 is under attack!`);
+		assert.strictEqual(rows[0].count, 3, '2 attackers in tick 1 + 1 attacker in tick 2');
 	}));
 
 	test('notifyWhenAttacked(false) suppresses owner notifications', () => sim(async ({ player, shard, tick }) => {
@@ -303,10 +296,10 @@ describe('Structure.notifyWhenAttacked attack notifications', () => {
 		await tick();
 		await player(attackerUser, Game => {
 			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
-			assert.strictEqual(Game.creeps.attacker!.attack(lab), C.OK);
+			assert.strictEqual(Game.creeps.attacker?.attack(lab), C.OK);
 		});
 		await tick();
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 0);
 	}));
 
@@ -325,12 +318,12 @@ describe('Structure.notifyWhenAttacked attack notifications', () => {
 		await player(attackerUser, Game => {
 			const lab = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB)[0]!;
 			labId = lab.id;
-			assert.strictEqual(Game.creeps.wrecker!.dismantle(lab), C.OK);
+			assert.strictEqual(Game.creeps.wrecker?.dismantle(lab), C.OK);
 		});
 		await tick();
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 1);
-		assert.strictEqual(rows[0]!.message, `Your lab #${labId} in room W1N1 is under attack!`);
+		assert.strictEqual(rows[0]?.message, `Your lab #${labId} in room W1N1 is under attack!`);
 	}));
 });
 
@@ -358,36 +351,36 @@ describe('Creep.notifyWhenAttacked attack notifications', () => {
 		await tick(1);
 		await player(attackerUser, Game => {
 			const target = Game.rooms.W1N1!.lookForAt(C.LOOK_CREEPS, 25, 25)[0]!;
-			assert.strictEqual(Game.creeps.attacker!.attack(target), C.OK);
+			assert.strictEqual(Game.creeps.attacker?.attack(target), C.OK);
 		});
 		await tick();
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 1);
-		assert.strictEqual(rows[0]!.message, 'Your creep target in room W1N1 is under attack!');
-		assert.strictEqual(rows[0]!.type, 'msg');
+		assert.strictEqual(rows[0]?.message, 'Your creep target in room W1N1 is under attack!');
+		assert.strictEqual(rows[0].type, 'msg');
 	}));
 
 	test('own attacks do not queue owner notifications', () => selfAttack(async ({ player, shard, tick }) => {
 		await player(user, Game => {
 			const target = Game.rooms.W1N1!.lookForAt(C.LOOK_CREEPS, 25, 25)[0]!;
-			assert.strictEqual(Game.creeps.attacker!.attack(target), C.OK);
+			assert.strictEqual(Game.creeps.attacker?.attack(target), C.OK);
 		});
 		await tick();
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 0);
 	}));
 
 	test('notifyWhenAttacked(false) suppresses owner notifications', () => sim(async ({ player, shard, tick }) => {
 		await player(user, Game => {
-			assert.strictEqual(Game.creeps.target!.notifyWhenAttacked(false), C.OK);
+			assert.strictEqual(Game.creeps.target?.notifyWhenAttacked(false), C.OK);
 		});
 		await tick();
 		await player(attackerUser, Game => {
 			const target = Game.rooms.W1N1!.lookForAt(C.LOOK_CREEPS, 25, 25)[0]!;
-			assert.strictEqual(Game.creeps.attacker!.attack(target), C.OK);
+			assert.strictEqual(Game.creeps.attacker?.attack(target), C.OK);
 		});
 		await tick();
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 0);
 	}));
 
@@ -410,9 +403,9 @@ describe('Creep.notifyWhenAttacked attack notifications', () => {
 			assert.strictEqual(tower.attack(victim), C.OK);
 		});
 		await tick();
-		const rows = await getRows(shard, attackerUser);
+		const rows = await getAllRowsForTesting(shard, attackerUser);
 		assert.strictEqual(rows.length, 1);
-		assert.strictEqual(rows[0]!.message, 'Your creep victim in room W1N1 is under attack!');
+		assert.strictEqual(rows[0]?.message, 'Your creep victim in room W1N1 is under attack!');
 	}));
 });
 

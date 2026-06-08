@@ -53,6 +53,11 @@ export async function getDueNotifications(
 	return readRows(shard, userId, ids);
 }
 
+export async function getAllRowsForTesting(shard: Shard, userId: string) {
+	const notifications = await getDueNotifications(shard, userId, Infinity);
+	return notifications.map(item => item.row);
+}
+
 // When the user's next group becomes due, or undefined if nothing is queued.
 export async function nextPendingDueAt(shard: Shard, userId: string): Promise<number | undefined> {
 	const head = await shard.data.zRangeWithScores(userIndexKey(userId), 0, 0);
