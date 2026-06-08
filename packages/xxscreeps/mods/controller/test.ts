@@ -374,7 +374,6 @@ describe('Controller', () => {
 	});
 
 	describe('lifecycle notifications', () => {
-
 		// One UPGRADE_CONTROLLER_POWER pushes #progress to CONTROLLER_LEVELS[1] (=200) and triggers a level-up.
 		const onCuspOfLevelUp = simulate({
 			W3N3: room => {
