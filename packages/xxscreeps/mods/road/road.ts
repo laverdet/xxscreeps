@@ -44,6 +44,7 @@ export function create(pos: RoomPosition) {
 
 registerBuildableStructure(C.STRUCTURE_ROAD, {
 	obstacle: false,
+	stackable: true,
 	checkPlacement(room, pos) {
 		if (isBorder(pos.x, pos.y)) {
 			return null;
