@@ -1,3 +1,4 @@
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room/index.js';
@@ -14,11 +15,19 @@ import { compose, declare, optional, struct, withOverlay } from 'xxscreeps/schem
 import { createRuin } from './ruin.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
+export type AttackNotificationTarget = RoomObject & { '#noAttackNotify'?: boolean };
+type AttackNotificationHandler = (
+	context: ProcessorContext,
+	target: AttackNotificationTarget,
+	source: RoomObject | undefined,
+) => void;
 
 export interface DestructibleStructure extends Structure {
 	hits: number;
 	hitsMax: number;
 }
+
+const attackNotificationHandlers: AttackNotificationHandler[] = [];
 
 export const structureFormat = declare('Structure', () => compose(shape, Structure));
 const shape = struct(objectFormat, {
@@ -262,6 +271,18 @@ export function checkNotifyWhenAttacked(structure: Structure, notifyWhenAttacked
 		return C.ERR_INVALID_ARGS;
 	}
 	return C.OK;
+}
+
+export function registerAttackNotification(handler: AttackNotificationHandler) {
+	attackNotificationHandlers.push(handler);
+}
+
+export function notifyAttacked(target: AttackNotificationTarget, context: ProcessorContext, source: RoomObject | undefined) {
+	if (!target['#noAttackNotify']) {
+		for (const handler of attackNotificationHandlers) {
+			handler(context, target, source);
+		}
+	}
 }
 
 export function checkPlacement(room: Room, pos: RoomPosition) {

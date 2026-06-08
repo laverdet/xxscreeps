@@ -1,6 +1,6 @@
 import type { Manifest } from 'xxscreeps/config/mods/index.js';
 
 export const manifest: Manifest = {
-	dependencies: [],
-	provides: [ 'driver', 'game', 'main', 'test' ],
+	dependencies: [ 'xxscreeps/mods/creep', 'xxscreeps/mods/structure' ],
+	provides: [ 'driver', 'game', 'main', 'processor', 'test' ],
 };

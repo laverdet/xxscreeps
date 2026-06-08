@@ -228,6 +228,13 @@ const intents = [
 		}
 	}),
 
+	registerIntentProcessor(Creep, 'notifyWhenAttacked', {}, (creep, context, enabled: boolean) => {
+		if (CreepLib.checkNotifyWhenAttacked(creep, enabled) === C.OK) {
+			creep['#noAttackNotify'] = !enabled;
+			context.didUpdate();
+		}
+	}),
+
 	registerIntentProcessor(Creep, 'pickup', {}, (creep, context, id: string) => {
 		const resource = Game.getObjectById<Resource>(id)!;
 		if (CreepLib.checkPickup(creep, resource) === C.OK) {

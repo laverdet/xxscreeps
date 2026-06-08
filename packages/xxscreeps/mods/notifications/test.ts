@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { captureConsoleLog, parseNotifyLines, withFakeNow } from 'xxscreeps/test/console-capture.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { dispatchQueuedNotifications } from './driver.js';
-import { getDueNotifications, upsertNotification } from './model.js';
+import { getAllRowsForTesting, upsertNotification } from './model.js';
 import { flush } from './notifications.js';
 import { setNotifyPrefs } from './prefs.js';
 
@@ -12,9 +12,6 @@ const user = '100';
 const empty = simulate({
 	W0N0: () => {},
 });
-
-const getRows = (shard: Shard, userId: string) =>
-	getDueNotifications(shard, userId, Infinity).then(items => items.map(item => item.row));
 
 // The notify queue is module-level state that persists between tests (the test framework runs
 // sequentially in one process and `simulate.tick()` does not fire runtimeConnector.send to drain
@@ -65,7 +62,7 @@ describe('Game.notify', () => {
 			Game.notify('hi');
 		});
 		await dispatchQueuedNotifications(shard, user, flush());
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 1);
 		const row = rows[0]!;
 		assert.strictEqual(row.user, user);
@@ -83,7 +80,7 @@ describe('Game.notify', () => {
 			Game.notify('hi', 1);
 		});
 		await dispatchQueuedNotifications(shard, user, flush());
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 1, 'same-bucket calls collapse to one row');
 		assert.strictEqual(rows[0]?.message, 'hi');
 		assert.strictEqual(rows[0].count, 2);
@@ -96,7 +93,7 @@ describe('Game.notify', () => {
 		await upsertNotification(shard, user, 'msg', '5hi', 0);
 		clock.set(12345);
 		await upsertNotification(shard, user, 'msg', 'hi', 0);
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 2);
 		const messages = rows.map(row => row.message).sort();
 		assert.deepStrictEqual(messages, [ '5hi', 'hi' ]);
@@ -108,7 +105,7 @@ describe('Game.notify', () => {
 			Game.notify('a'.repeat(600));
 		});
 		await dispatchQueuedNotifications(shard, user, flush());
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 1);
 		assert.strictEqual(rows[0]?.message.length, 500);
 		assert.strictEqual(rows[0].message, 'a'.repeat(500));
@@ -122,7 +119,7 @@ describe('Game.notify', () => {
 			Game.notify('high', 5000);
 		});
 		await dispatchQueuedNotifications(shard, user, flush());
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		// Two distinct row ids: low → groupInterval clamps to 0 (bucket = now); high → clamps to
 		// 1440 (bucket = ceil(now/86_400_000) * 86_400_000). Different timeGroup → different hash.
 		assert.strictEqual(rows.length, 2);
@@ -142,7 +139,7 @@ describe('Game.notify', () => {
 			Game.notify({ a: 1 } as unknown as string);
 		});
 		await dispatchQueuedNotifications(shard, user, flush());
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 2);
 		const messages = rows.map(row => row.message).sort();
 		assert.deepStrictEqual(messages, [ '[object Object]', 'null' ]);
@@ -155,7 +152,7 @@ describe('Game.notify', () => {
 			assert.strictEqual((Game.notify as unknown as () => number)(), C.OK);
 		});
 		await dispatchQueuedNotifications(shard, user, flush());
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 1);
 		assert.strictEqual(rows[0]?.message, 'undefined');
 		assert.strictEqual(rows[0].date, 1_234_567);
@@ -171,7 +168,7 @@ describe('Game.notify', () => {
 			Game.notify('nanInterval', NaN);
 		});
 		await dispatchQueuedNotifications(shard, user, flush());
-		const rows = await getRows(shard, user);
+		const rows = await getAllRowsForTesting(shard, user);
 		assert.strictEqual(rows.length, 2);
 		for (const row of rows) {
 			assert.strictEqual(row.date, 1_234_567,
@@ -208,7 +205,7 @@ describe('Notification delivery worker', () => {
 		assert.strictEqual(line.count, 1);
 		assert.strictEqual(line.type, 'msg');
 		assert.strictEqual(typeof line.date, 'number');
-		assert.strictEqual((await getRows(shard, userA)).length, 0);
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
 	}));
 
 	test('drain does not fire between cadence boundaries', () => empty(async ({ shard, tick }) => {
@@ -230,7 +227,7 @@ describe('Notification delivery worker', () => {
 		await seedRow(shard, userA, 'hi');
 		await tick(10);
 		assert.strictEqual(parseNotifyLines(stdout.lines).length, 0, 'disabled user → no emit');
-		assert.strictEqual((await getRows(shard, userA)).length, 0, 'disabled user → rows dropped');
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0, 'disabled user → rows dropped');
 	}));
 
 	test('respects notifyPrefs.interval throttle', () => empty(async ({ shard, tick }) => {
@@ -244,14 +241,14 @@ describe('Notification delivery worker', () => {
 		clock.advance(30 * 60_000);
 		await tick(10);
 		assert.strictEqual(parseNotifyLines(stdout.lines).length, 1, 'still under throttle');
-		assert.strictEqual((await getRows(shard, userA)).length, 1);
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 1);
 		// Advance past the 60-min throttle.
 		clock.advance(31 * 60_000);
 		await tick(10);
 		const lines = parseNotifyLines(stdout.lines);
 		assert.strictEqual(lines.length, 2);
 		assert.strictEqual(lines[1]!.message, 'second');
-		assert.strictEqual((await getRows(shard, userA)).length, 0);
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
 	}));
 
 	test('drains multiple users independently', () => empty(async ({ shard, tick }) => {
@@ -284,7 +281,7 @@ describe('Notification delivery worker', () => {
 		const firstPass = parseNotifyLines(stdout.lines);
 		assert.strictEqual(firstPass.length, 1, 'only the short group fires at its bucket boundary');
 		assert.strictEqual(firstPass[0]!.message, 'short');
-		const remaining = await getRows(shard, userA);
+		const remaining = await getAllRowsForTesting(shard, userA);
 		assert.strictEqual(remaining.length, 1, 'long group stays queued under its own deadline');
 		assert.strictEqual(remaining[0]!.message, 'long');
 
@@ -295,7 +292,7 @@ describe('Notification delivery worker', () => {
 		const secondPass = parseNotifyLines(stdout.lines);
 		assert.strictEqual(secondPass.length, 2, 'long group fires once its deadline elapses');
 		assert.strictEqual(secondPass[1]!.message, 'long');
-		assert.strictEqual((await getRows(shard, userA)).length, 0);
+		assert.strictEqual((await getAllRowsForTesting(shard, userA)).length, 0);
 	}));
 
 });

@@ -76,6 +76,7 @@ const shape = struct(objectFormat, {
 	store: openStoreFormat,
 	'#actionLog': actionLogFormat,
 	'#ageTime': 'int32',
+	'#noAttackNotify': 'bool',
 	'#saying': optional(struct({
 		isPublic: 'bool',
 		message: 'string',
@@ -336,11 +337,19 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	}
 
 	/**
-	 * Toggle auto notification when the structure is under attack. The notification will be sent to
-	 * your account email. Turned on by default.
+	 * Toggle auto notification when the creep is under attack. The notification will be sent to your
+	 * account email. Turned on by default.
 	 * @param enabled Whether to enable notification or disable.
 	 */
-	notifyWhenAttacked(_enabled = true) {}
+	notifyWhenAttacked(this: Creep, enabled = true) {
+		return chainIntentChecks(
+			() => checkNotifyWhenAttacked(this, enabled),
+			() => {
+				if (enabled === this['#noAttackNotify']) {
+					intents.save(this, 'notifyWhenAttacked', Boolean(enabled));
+				}
+			});
+	}
 
 	/**
 	 * Pick up an item (a dropped piece of energy). Requires the `CARRY` body part. The target has to be
@@ -498,6 +507,17 @@ export function checkCommon(creep: Creep, part?: PartType) {
 
 function checkFatigue(creep: Creep) {
 	return creep.fatigue > 0 ? C.ERR_TIRED : C.OK;
+}
+
+export function checkNotifyWhenAttacked(creep: Creep, enabled: unknown) {
+	if (!creep.my) {
+		return C.ERR_NOT_OWNER;
+	} else if (creep.spawning) {
+		return C.ERR_BUSY;
+	} else if (typeof enabled !== 'boolean') {
+		return C.ERR_INVALID_ARGS;
+	}
+	return C.OK;
 }
 
 export function checkDrop(creep: Creep, resourceType: ResourceType, amount: number) {

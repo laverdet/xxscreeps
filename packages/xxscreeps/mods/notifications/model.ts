@@ -53,6 +53,11 @@ export async function getDueNotifications(
 	return readRows(shard, userId, ids);
 }
 
+export async function getAllRowsForTesting(shard: Shard, userId: string) {
+	const notifications = await getDueNotifications(shard, userId, Infinity);
+	return notifications.map(item => item.row);
+}
+
 // When the user's next group becomes due, or undefined if nothing is queued.
 export async function nextPendingDueAt(shard: Shard, userId: string): Promise<number | undefined> {
 	const head = await shard.data.zRangeWithScores(userIndexKey(userId), 0, 0);
@@ -82,6 +87,30 @@ export async function scheduleUserDrain(shard: Shard, userId: string, dueAt: num
 }
 
 /**
+ * Race-safe upsert. The per-occurrence fields claim their slot with `hSet … NX` (`count` seeds to
+ * 1, `date` keeps the first occurrence), the content-derived fields and idempotent zadds fire
+ * alongside, so the optimistic (new-row) path is a single round trip. Only an already-present row
+ * pays the extra `hincrBy`. Same-tick events on one row — two attackers in a room, or the
+ * processor's parallel `context.task` fan-out — converge on the right count without a read-then-write.
+ */
+async function recordNotification(
+	shard: Shard, userId: string, type: NotificationType, message: string, timeGroup: number, date: number,
+) {
+	const id = rowIdFor(type, timeGroup, message);
+	const key = rowKey(userId, id);
+	const [ created ] = await Promise.all([
+		shard.data.hSet(key, 'count', 1, { if: 'NX' }),
+		shard.data.hSet(key, 'date', date, { if: 'NX' }),
+		shard.data.hmset(key, { message, type }),
+		shard.data.zAdd(userIndexKey(userId), [ [ timeGroup, id ] ]),
+		scheduleUserDrain(shard, userId, timeGroup),
+	]);
+	if (!created) {
+		await shard.data.hincrBy(key, 'count', 1);
+	}
+}
+
+/**
  * Persist a notification, coalescing within `groupInterval` minutes (clamped to [0, 1440]).
  * `message` and `groupInterval` are assumed already coerced by the caller.
  *
@@ -94,17 +123,16 @@ export async function upsertNotification(
 	const intervalMs = groupInterval * 60_000;
 	const now = Date.now();
 	const timeGroup = intervalMs > 0 ? Math.ceil(now / intervalMs) * intervalMs : now;
-	const id = rowIdFor(type, timeGroup, message);
-	const key = rowKey(userId, id);
-	// Read-then-write is safe because the runner serializes save() per user.
-	const existing = await shard.data.hGet(key, 'count');
-	if (existing === null) {
-		await Promise.all([
-			shard.data.hmset(key, { message, date: now, count: 1, type }),
-			shard.data.zAdd(userIndexKey(userId), [ [ timeGroup, id ] ]),
-			scheduleUserDrain(shard, userId, timeGroup),
-		]);
-	} else {
-		await shard.data.hincrBy(key, 'count', 1);
-	}
+	await recordNotification(shard, userId, type, message, timeGroup, now);
+}
+
+/**
+ * Engine-fired notification: one row per (user, type, message), count++ per call.
+ * Used by attack/event handlers; `upsertNotification` is for `Game.notify` with a
+ * user-supplied `groupInterval`.
+ */
+export async function sendNotification(
+	shard: Shard, userId: string, type: NotificationType, message: string,
+) {
+	await recordNotification(shard, userId, type, message, 0, Date.now());
 }

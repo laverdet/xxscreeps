@@ -1,10 +1,12 @@
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
+import type { RoomObject } from 'xxscreeps/game/object.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { captureDamage } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower, checkCommon } from 'xxscreeps/mods/creep/creep.js';
-import { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { Structure, notifyAttacked } from 'xxscreeps/mods/structure/structure.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 
 // Creep extension declaration
@@ -172,4 +174,36 @@ export function checkDestructible(target: Creep | Structure) {
 		return C.ERR_INVALID_TARGET;
 	}
 	return target.hits === undefined ? C.ERR_INVALID_TARGET : C.OK;
+}
+
+export function notifyAttackDamage(target: RoomObject, context: ProcessorContext, source: RoomObject | null) {
+	if (target instanceof Structure || target instanceof Creep) {
+		notifyAttacked(target, context, source ?? undefined);
+	}
+}
+
+export function applyAttackDamage(
+	target: RoomObject,
+	power: number,
+	type: number,
+	source: RoomObject | null,
+	context: ProcessorContext,
+) {
+	target['#applyDamage'](power, type, source ?? undefined);
+	notifyAttackDamage(target, context, source);
+}
+
+/**
+ * Like `captureDamage`, but also notifies any intermediate layer object (e.g. a rampart) that
+ * absorbed some damage on the way to `target`.
+ */
+export function captureDamageWithNotify(
+	target: RoomObject,
+	initialPower: number,
+	type: number,
+	source: RoomObject | null,
+	context: ProcessorContext,
+) {
+	return captureDamage(target, initialPower, type, source,
+		object => notifyAttackDamage(object, context, source));
 }

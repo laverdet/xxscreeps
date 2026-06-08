@@ -5,9 +5,9 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { captureDamage } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/combat/creep.js';
 import { Creep, calculateBoundedEffect, calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
 import { ConstructionSite, checkRemove, create } from './construction-site.js';
@@ -90,9 +90,9 @@ const intents = [
 				if (overflow > 0) {
 					Resource.drop(creep.pos, 'energy', overflow);
 				}
-				const damage = captureDamage(target, effect, C.EVENT_ATTACK_TYPE_DISMANTLE, creep);
+				const damage = captureDamageWithNotify(target, effect, C.EVENT_ATTACK_TYPE_DISMANTLE, creep, context);
 				if (damage > 0) {
-					target['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_DISMANTLE, creep);
+					applyAttackDamage(target, damage, C.EVENT_ATTACK_TYPE_DISMANTLE, creep, context);
 					appendEventLog(target.room, {
 						event: C.EVENT_ATTACK,
 						objectId: creep.id,

@@ -40,9 +40,16 @@ export function walkLayers<T extends RoomObject>(
 
 /**
  * Invokes damage capture callback from top to bottom and returns the remaining power which should
- * be applied to the target.
+ * be applied to the target. `onCapture` is invoked for each intermediate layer object (e.g. a
+ * rampart) that absorbs some of the damage on the way to `target`.
  */
-export function captureDamage(target: RoomObject, initialPower: number, type: number, source: RoomObject | null) {
+export function captureDamage(
+	target: RoomObject,
+	initialPower: number,
+	type: number,
+	source: RoomObject | null,
+	onCapture?: (object: RoomObject) => void,
+) {
 	const objects = Fn.pipe(
 		target.room['#lookAt'](target.pos),
 		$$ => Fn.reject($$, object =>
@@ -51,6 +58,12 @@ export function captureDamage(target: RoomObject, initialPower: number, type: nu
 		$$ => $$.sort(mappedComparator(invertedNumericComparator, object => object['#layer']!)));
 	return walkLayers(
 		objects, initialPower,
-		(object, layerPower) => object['#captureDamage'](layerPower, type, source),
+		(object, layerPower) => {
+			const remaining = object['#captureDamage'](layerPower, type, source);
+			if (remaining < layerPower) {
+				onCapture?.(object);
+			}
+			return remaining;
+		},
 		target);
 }
