@@ -3,17 +3,27 @@ import * as path from 'node:path';
 import * as util from 'node:util';
 import { evaluateUnsafeGlobal } from './unsafe.js';
 
-export function installHostShims(): void {
+export function installHostShims(): Disposable {
 	const globals = globalThis as Record<string, unknown>;
 	const cwd = process.cwd();
 	const syntheticFile = path.join(cwd, '[eval]');
-	globals.require ??= createRequire(syntheticFile);
-	globals.__filename ??= syntheticFile;
-	globals.__dirname ??= cwd;
+	const setRequire = !('require' in globals);
+	const setFilename = !('__filename' in globals);
+	const setDirname = !('__dirname' in globals);
+	if (setRequire) globals.require = createRequire(syntheticFile);
+	if (setFilename) globals.__filename = syntheticFile;
+	if (setDirname) globals.__dirname = cwd;
+	return {
+		[Symbol.dispose]() {
+			if (setRequire) delete globals.require;
+			if (setFilename) delete globals.__filename;
+			if (setDirname) delete globals.__dirname;
+		},
+	};
 }
 
 function shareGlobals(argv: readonly string[]) {
-	installHostShims();
+	const shims = installHostShims();
 	const globals = globalThis as Record<string, unknown>;
 	const previousConsole = globals.console;
 	const hadArgv = 'argv' in globals;
@@ -27,6 +37,7 @@ function shareGlobals(argv: readonly string[]) {
 			} else {
 				delete globals.argv;
 			}
+			shims[Symbol.dispose]();
 		},
 	};
 }
