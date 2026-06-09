@@ -30,10 +30,9 @@ One-shot evaluator. Source comes from exactly one of `-e/--expression`, `--file`
 
 ## Realm
 
-Operator code runs in the CLI process's host realm. `process`, `require`, dynamic `import()`,
-`Buffer`, `__dirname`, `__filename`, every node built-in, and every npm dependency the launcher
-loads are all reachable. Operators already have shell access to the same machine — the prompt isn't
-a security boundary.
+Operator code runs in the CLI process's host realm. `process`, dynamic `import()`, `Buffer`, every
+node built-in, and every npm dependency the launcher loads are all reachable. Operators already have
+shell access to the same machine — the prompt isn't a security boundary.
 
 `argv` (eval only) is exposed as a global populated from trailing positionals.
 
