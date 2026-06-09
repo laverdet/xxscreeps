@@ -25,8 +25,7 @@ export class GameState {
 		this.time = time;
 		this.objects = Fn.pipe(
 			rooms,
-			$$ => Fn.map($$, room => Fn.map(room['#objects'], object => [ object.id, object ] as const)),
-			$$ => Fn.concat($$),
+			$$ => Fn.transform($$, room => Fn.map(room['#objects'], object => [ object.id, object ] as const)),
 			$$ => new Map($$));
 		this.rooms = Fn.fromEntries(Fn.map(rooms, room => [ room.name, room ]));
 		for (const room of Object.values(this.rooms)) {

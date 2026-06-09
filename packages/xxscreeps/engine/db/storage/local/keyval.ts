@@ -292,7 +292,7 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 
 	rPush(key: string, elements: P.Value[]) {
 		const list: string[] | undefined = this.data.get(key);
-		const strings = Fn.map(elements, element => element) as string[];
+		const strings = Fn.map(elements, element => element) as Iterable<string>;
 		if (list) {
 			list.push(...strings);
 			return list.length;

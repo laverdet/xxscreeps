@@ -70,10 +70,7 @@ registerObjectTickProcessor(StructureKeeperLair, (keeperLair, context) => {
 		const body = [
 			...Fn.map(Fn.range(17), () => C.TOUGH),
 			...Fn.map(Fn.range(13), () => C.MOVE),
-			...Fn.pipe(
-				Fn.range(10),
-				$$ => Fn.map($$, () => [ C.ATTACK, C.RANGED_ATTACK ]),
-				$$ => Fn.concat($$)),
+			...Fn.transform(Fn.range(10), () => [ C.ATTACK, C.RANGED_ATTACK ]),
 		];
 		const newKeeper = Creep.create(keeperLair.pos, body, keeperName, kKeeperUserId);
 		newKeeper['#ageTime'] = Game.time + C.CREEP_LIFE_TIME - 1;
