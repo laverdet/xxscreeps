@@ -5,9 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@auto_js/js':
-    hash: 53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a
-    path: patches/@auto_js__js.patch
   lodash-es:
     hash: 338fe3adff79ba4474af007241bc736fe9822c4fb9f5afe806ccddc569812066
     path: patches/lodash-es.patch
@@ -87,16 +84,20 @@ importers:
         version: 3.10.1
 
   packages/pathfinder:
+    dependencies:
+      '@isolated-vm/experimental':
+        specifier: 0.0.6
+        version: 0.0.6
     devDependencies:
       '@auto_js/js':
-        specifier: ^0.0.5
-        version: 0.0.5(patch_hash=53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a)
+        specifier: 0.0.6
+        version: 0.0.6
       '@auto_js/napi':
-        specifier: ^0.0.5
-        version: 0.0.5
+        specifier: 0.0.6
+        version: 0.0.6
       '@auto_js/v8':
-        specifier: ^0.0.5
-        version: 0.0.5
+        specifier: 0.0.6
+        version: 0.0.6
       '@napi-rs/cli':
         specifier: ^3.6.2
         version: 3.6.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@24.12.2)
@@ -134,6 +135,9 @@ importers:
       '@babel/types':
         specifier: ^7.29.0
         version: 7.29.0
+      '@isolated-vm/experimental':
+        specifier: ^0.0.4
+        version: 0.0.4
       '@loaderkit/resolve':
         specifier: ^1.0.6
         version: 1.0.6
@@ -301,24 +305,24 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
 
-  '@auto_js/js@0.0.5':
-    resolution: {integrity: sha512-wQdSRhq7zVM+zFTHHnPxj0j4yx8gRD0OC1fVaXaHG47JKe2T+23QU4jF1E2GbpFIWD9mBvAAjRMFHp77qv21pA==}
+  '@auto_js/js@0.0.6':
+    resolution: {integrity: sha512-vJg1pHTh1GrdoSO81O5lYhbdmmxFGsPMT+mKk+er6oiBvu32xc4VJ8oS/qtTltB+kPX0DP1stHG76SHzDhkx5g==}
     hasBin: true
 
-  '@auto_js/napi@0.0.5':
-    resolution: {integrity: sha512-wEVcDIoojS4Pyr38kmmaaU7nOVSAnR+GOMiUOqe7Eh/ftyvav0tz3YdQLXt43uwudTHr8I24gQLHQUPSPUGUuQ==}
+  '@auto_js/napi@0.0.6':
+    resolution: {integrity: sha512-43ApNP1aZpCxgkfuFb+VE2AiBqKInHA6kM9yQtGmBGCIPV/pbnon2OEjvRAHxpSYohthyaH//akWwIFoDOzI9w==}
 
-  '@auto_js/napi_exports@0.0.5':
-    resolution: {integrity: sha512-x3TdPwgjZf4ShKyvNOXJPGQ4guFk0QHVzK1rzCWpp2dLCaynau+VCdExgxXk5fu76d3+kEe3YGG/PrAR24iSww==}
+  '@auto_js/napi_exports@0.0.6':
+    resolution: {integrity: sha512-OrgBd1etDTAQPYqUzEy64MD1rsmiqA4QWoOdvKZDFqyjobLfjz9GSLeEzzoOSMkDZIcdc8XGeCn8T0xcsWudvQ==}
 
   '@auto_js/utility@0.0.5':
     resolution: {integrity: sha512-QzYftGocEasx5iDDm+97cs8dPQsnYc+/sLMDUEkXnG4n2/4EQydSXc+8MJEl5J1s4sf5ZYneFApqbIzT4XVWIA==}
 
-  '@auto_js/v8@0.0.5':
-    resolution: {integrity: sha512-3t0kBODm3QLSPsR9iLJuBzZmMxO2iS4lgxvR1pPb+0vyi/yo7jDVAc2iX8DQwdJwuI4K4Uhh8KFML9o43BuxLg==}
+  '@auto_js/v8@0.0.6':
+    resolution: {integrity: sha512-Ad482+QCWSY/iOABXPS9zNOnLou4W4A7T4RppbzXp8qb1vfRnAXVVMIPxEeIYuufcSai6x+Wq3vo0FUzI4mpvw==}
 
-  '@auto_js/v8_exports@0.0.3':
-    resolution: {integrity: sha512-Xk6aaECJiXOrekyFsKV9v1h7Gfeuru6m6EQZRLD5FSfAp2PjnsE7AhJ/CIQXLOUWVxgpRmVOmpdIvCSCJdYPIw==}
+  '@auto_js/v8_exports@0.0.4':
+    resolution: {integrity: sha512-t1PD+KjgZ7HLDrhYpJte9JDAacs4X+2O8Y6I31nwfm7jA3wo7jAVNOBB4i73i2NAt+fIsY83fg438Do7l/nHFQ==}
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -665,6 +669,90 @@ packages:
     peerDependenciesMeta:
       '@types/node':
         optional: true
+
+  '@isolated-vm/experimental-darwin-arm64@0.0.4':
+    resolution: {integrity: sha512-4BEjhHwkzs/lQ/v/J2ivcAzoHTvuBmcyukxiSz+8PWK7XtiDVnmL+jEkCp2U95w3MXGccWlTQa9Lbrq106UpCQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@isolated-vm/experimental-darwin-arm64@0.0.6':
+    resolution: {integrity: sha512-XvJNRpdRXmQj0RFPL3U+L0d2C6CAky5ZwQ1rIgWTiEZnWPcMyATFXjQrzRWRtdARRV8BdmJQC1VohT6wfEag0w==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@isolated-vm/experimental-darwin-x64@0.0.4':
+    resolution: {integrity: sha512-1BHhtBw0yjuLN1N0VN/KV6XEOSSV/YSmgGPygU4DkqgNnRVZbmiRG3bxMoV11ikVt52G0OIu0pdXr+HTk39DNA==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@isolated-vm/experimental-darwin-x64@0.0.6':
+    resolution: {integrity: sha512-wUCFM+2vDZUfR4Dl4/QqVG9VigoXu8xn9HGL+hOLuTYB/XQZPwBhXaNHPXG3FLzt72BDEVs9dwcF+wr2DFMlrg==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@isolated-vm/experimental-linux-arm64-gnu@0.0.4':
+    resolution: {integrity: sha512-aUz50qVpTG1KQzbMgrnJ7zPzwMwDWPxFgvXOY+T64L/adG5YloouxPqUGNDZ/fi7wmux4nvKzMCi9264OMnrKA==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@isolated-vm/experimental-linux-arm64-gnu@0.0.6':
+    resolution: {integrity: sha512-StUnEcCqQHOteb0kNCaxCWfoB8MSAwm6TOAxzocdvxCP4cD2wp6kfgDl9nVBj38naZb0VzQ9e7KEInd5lvbcUA==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@isolated-vm/experimental-linux-arm64-musl@0.0.4':
+    resolution: {integrity: sha512-2SMVb7gIR9IV6FyUWBvZ2rh16IWVugrrtffHg3YCcqUUcV6phBEQAd8bFP6HNFHFI2chQ4rLrxh2KnRNgdqVvg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@isolated-vm/experimental-linux-arm64-musl@0.0.6':
+    resolution: {integrity: sha512-kc04D20AJdj+7e+Kt2zUgrpAlRAAb0oNKzD1nBmPARuvzPPx3Zk+ubO3mkLyGKqgcoizs1Wuiq3RJwg1IPHQCw==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@isolated-vm/experimental-linux-x64-gnu@0.0.4':
+    resolution: {integrity: sha512-iKoeL/M8arAVXwGIe+EDaMBgfp7DdugF1PqENARrydgyYcNNk/jxUe2/5EIjV0FRueBiqm1VeqAmo4U4/vz1JA==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@isolated-vm/experimental-linux-x64-gnu@0.0.6':
+    resolution: {integrity: sha512-ghBzN0uef/p0VL7Hh1aD3wuLEIrAg9aoWJoKEvRdKJhd3yu/b56fRYxYVgqxX4SCz2Lmki3YcsoElfRUA8SqKw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@isolated-vm/experimental-linux-x64-musl@0.0.4':
+    resolution: {integrity: sha512-g9Xo9OQzH6x/naM1dMTnbxdizoGU13+Wei4Lmy2Pc00PZEz4jAusILG7SF7V8T8ijGcW1z/qwvI03QS4gi/Lkw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@isolated-vm/experimental-linux-x64-musl@0.0.6':
+    resolution: {integrity: sha512-5Fp7Ezoi4sunV8/z7/DqqL8iqUH9KCBdtsaPPCy5NnY/0l2mtgAPXa6Abhw9sYeaCuonFGjVrK46Z6+KbTvHfg==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@isolated-vm/experimental-win32-x64@0.0.4':
+    resolution: {integrity: sha512-MDz8S8r/3JEpwvU988MwdFDnO/CR+jNPOI7ME5x9i04SOQOfb6nTlNrY78azqZ5HCg9ik+PVgXWYVfshkrO9gw==}
+    cpu: [x64]
+    os: [win32]
+
+  '@isolated-vm/experimental-win32-x64@0.0.6':
+    resolution: {integrity: sha512-xotcY9V653F4vVlLs/NWZLDpTMO2zZ6sz4/a9hPlRLsvi60KlzfAQfY5BWwkB73QBXPvF810WgtXrYjXtEvLjw==}
+    cpu: [x64]
+    os: [win32]
+
+  '@isolated-vm/experimental@0.0.4':
+    resolution: {integrity: sha512-9V+Igy6wzgXVRJ02NPo61iZN2T3z7Za4nYy6cfSunjrjYcizFB9/zvRNnh7iepFZNzkb7Npw7CZjyMFqdt5i7w==}
+
+  '@isolated-vm/experimental@0.0.6':
+    resolution: {integrity: sha512-C6+U+NqT8E6J71wwgJYW5A5JAbxnXqtgeajpKAqtdR8c6dsKmsuVSudLGIhgMrsUCSQDms/ZvAwzCIO58XGRkA==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -3538,26 +3626,26 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
-  '@auto_js/js@0.0.5(patch_hash=53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a)':
+  '@auto_js/js@0.0.6':
     dependencies:
       '@auto_js/utility': 0.0.5
 
-  '@auto_js/napi@0.0.5':
+  '@auto_js/napi@0.0.6':
     dependencies:
-      '@auto_js/js': 0.0.5(patch_hash=53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a)
-      '@auto_js/napi_exports': 0.0.5
-      '@auto_js/v8_exports': 0.0.3
+      '@auto_js/js': 0.0.6
+      '@auto_js/napi_exports': 0.0.6
+      '@auto_js/v8_exports': 0.0.4
 
-  '@auto_js/napi_exports@0.0.5': {}
+  '@auto_js/napi_exports@0.0.6': {}
 
   '@auto_js/utility@0.0.5': {}
 
-  '@auto_js/v8@0.0.5':
+  '@auto_js/v8@0.0.6':
     dependencies:
-      '@auto_js/js': 0.0.5(patch_hash=53914c895da5f54dfd5e7910298f16373bd00d8fde75f5f935b4400d027bec7a)
-      '@auto_js/v8_exports': 0.0.3
+      '@auto_js/js': 0.0.6
+      '@auto_js/v8_exports': 0.0.4
 
-  '@auto_js/v8_exports@0.0.3': {}
+  '@auto_js/v8_exports@0.0.4': {}
 
   '@babel/code-frame@7.29.0':
     dependencies:
@@ -4012,6 +4100,72 @@ snapshots:
   '@inquirer/type@4.0.5(@types/node@24.12.2)':
     optionalDependencies:
       '@types/node': 24.12.2
+
+  '@isolated-vm/experimental-darwin-arm64@0.0.4':
+    optional: true
+
+  '@isolated-vm/experimental-darwin-arm64@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental-darwin-x64@0.0.4':
+    optional: true
+
+  '@isolated-vm/experimental-darwin-x64@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental-linux-arm64-gnu@0.0.4':
+    optional: true
+
+  '@isolated-vm/experimental-linux-arm64-gnu@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental-linux-arm64-musl@0.0.4':
+    optional: true
+
+  '@isolated-vm/experimental-linux-arm64-musl@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental-linux-x64-gnu@0.0.4':
+    optional: true
+
+  '@isolated-vm/experimental-linux-x64-gnu@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental-linux-x64-musl@0.0.4':
+    optional: true
+
+  '@isolated-vm/experimental-linux-x64-musl@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental-win32-x64@0.0.4':
+    optional: true
+
+  '@isolated-vm/experimental-win32-x64@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental@0.0.4':
+    dependencies:
+      tslib: 2.8.1
+    optionalDependencies:
+      '@isolated-vm/experimental-darwin-arm64': 0.0.4
+      '@isolated-vm/experimental-darwin-x64': 0.0.4
+      '@isolated-vm/experimental-linux-arm64-gnu': 0.0.4
+      '@isolated-vm/experimental-linux-arm64-musl': 0.0.4
+      '@isolated-vm/experimental-linux-x64-gnu': 0.0.4
+      '@isolated-vm/experimental-linux-x64-musl': 0.0.4
+      '@isolated-vm/experimental-win32-x64': 0.0.4
+
+  '@isolated-vm/experimental@0.0.6':
+    dependencies:
+      tslib: 2.8.1
+    optionalDependencies:
+      '@isolated-vm/experimental-darwin-arm64': 0.0.6
+      '@isolated-vm/experimental-darwin-x64': 0.0.6
+      '@isolated-vm/experimental-linux-arm64-gnu': 0.0.6
+      '@isolated-vm/experimental-linux-arm64-musl': 0.0.6
+      '@isolated-vm/experimental-linux-x64-gnu': 0.0.6
+      '@isolated-vm/experimental-linux-x64-musl': 0.0.6
+      '@isolated-vm/experimental-win32-x64': 0.0.6
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

@@ -1,7 +1,7 @@
 import type { Payload } from './export.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import * as fs from 'node:fs/promises';
-import { loadTerrain } from 'xxscreeps/driver/pathfinder.js';
+import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';

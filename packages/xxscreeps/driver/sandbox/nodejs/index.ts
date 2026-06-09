@@ -30,7 +30,7 @@ const resolver = function() {
 	return (specifier: string, referrer?: string) => {
 		const key = `${referrer ?? ''}::${specifier}`;
 		switch (specifier) {
-			case '@xxscreeps/pathfinder': return 'xxscreeps:pathfinder';
+			case 'xxscreeps/driver/pathfinder/pf.js': return 'xxscreeps:pathfinder';
 			case 'xxscreeps/engine/schema/build/packages.js': return 'xxscreeps:packages';
 			default: return getOrSet(cache, key, async () => {
 				const alias = function() {

@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as util from 'node:util';
-import { loadTerrain, search } from 'xxscreeps/driver/pathfinder.js';
+import { loadTerrain, search } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { World } from 'xxscreeps/game/map.js';
 import { CostMatrix } from 'xxscreeps/game/pathfinder/index.js';
@@ -20,6 +20,21 @@ const log = process.argv.includes('--log');
 // Load terrain into module
 const world = new World('test', fs.readFileSync('terrain'));
 loadTerrain(world);
+// if (sandbox) {
+// 	const pf = await import('@xxscreeps/pathfinder/iv');
+// 	await using agent = await Agent.create();
+// 	const realm = await agent.createRealm();
+// 	const module = expectComplete(await agent.compileModule(`
+// 		import * as pf from 'xxscreeps:pathfinder';
+// 		globalThis.result = pf.search(408885224, [ { pos: 404363251, range: 0 } ], undefined, 1, 5, 16, 100000, 100000, false, 1.2);
+// 	`));
+// 	const loader = makeStaticLoader({ 'xxscreeps:pathfinder': await pf.module.instantiate(realm) });
+// 	await module.link(realm, makeLinker(makeDirectResolver(), loader));
+// 	expectComplete(await module.evaluate(realm));
+// 	const result = await (await (await realm.acquireGlobalObject()).get('result')).copy();
+// 	console.log(result);
+// 	process.exit(0);
+// }
 
 // Generate deterministic CostMatrix's
 const costMatrix = (roomName: string) => {

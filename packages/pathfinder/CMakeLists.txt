@@ -72,8 +72,9 @@ include(FindNpmPackage)
 set(NAPI_VERSION 10)
 set(EXPORT_IS_EXPORT ON)
 find_package_from_npm(@auto_js/napi)
-find_package_from_npm(@auto_js/v8)
-target_link_libraries(pathfinder PUBLIC auto_js nodejs nodejs_v8 utility_js v8_js)
+find_package_from_npm(@auto_js/v8 PROPAGATE auto_js v8_js)
+target_compile_definitions(pathfinder PRIVATE EXPORT_IS_EXPORT)
+target_link_libraries(pathfinder PRIVATE ${auto_js} ${v8_js} nodejs utility_js)
 
 # sources
 target_sources(pathfinder
@@ -125,3 +126,33 @@ add_custom_command(
 	TARGET pathfinder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy
 	"$<TARGET_FILE:pathfinder>"
 	"${CMAKE_SOURCE_DIR}/module/node_modules/@xxscreeps/pathfinder-${TRIPLET}/pf.${TRIPLET}.node")
+
+# @isolated-vm/experimental target
+# nb: The invocation here is a bit strange because we want a napi module & isolated-vm module in the
+# same dylib. For only one or the other `AUTO_JS_PREFIX` would not be needed.
+set(AUTO_JS_PREFIX isolated_)
+set(EXPORT_IS_EXPORT OFF)
+find_package_from_npm(@auto_js/napi AS @auto_js/isolated_napi PROPAGATE napi_js)
+find_package_from_npm(@isolated-vm/experimental PROPAGATE auto_js)
+add_library(pathfinder_iv SHARED)
+set_target_properties(pathfinder_iv PROPERTIES PREFIX "" SUFFIX ".node" SKIP_BUILD_RPATH TRUE)
+target_link_libraries(pathfinder_iv PRIVATE ${auto_js} ${napi_js} isolated_vm utility_js)
+
+target_sources(pathfinder_iv
+	PUBLIC FILE_SET CXX_MODULES FILES
+		src/heap.cc
+		src/heuristic.cc
+		src/jps.cc
+		src/open-closed.cc
+		src/pf.cc
+		src/pf.h.cc
+		src/position.cc
+		src/room.cc
+		src/utility.cc
+	PRIVATE
+		src/iv.cc
+)
+add_custom_command(
+	TARGET pathfinder_iv POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy
+	"$<TARGET_FILE:pathfinder_iv>"
+	"${CMAKE_SOURCE_DIR}/module/node_modules/@xxscreeps/pathfinder-${TRIPLET}/iv.${TRIPLET}.node")

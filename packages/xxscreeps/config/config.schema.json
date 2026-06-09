@@ -155,6 +155,7 @@
                     "default": "isolated",
                     "description": "Select sandbox mode\n- 'isolated': `isolated-vm`\n- 'unsafe': `node:vm`. This will run player code directly in the nodejs isolate. Player scripts can achieve full\n  system-level access. It may make troubleshooting user scripts easier, though.",
                     "enum": [
+                        "experimental",
                         "isolated",
                         "unsafe"
                     ],

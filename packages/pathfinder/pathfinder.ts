@@ -1,4 +1,4 @@
-import pf from '#pf';
+import type * as pf from '#pf';
 
 export interface Options {
 	flee?: boolean | undefined;
@@ -38,12 +38,19 @@ export interface Result<Position> {
 	incomplete: boolean;
 }
 
-export const path = pf.path;
-export const version = pf.version;
+export type LoadTerrain = (world: WorldTerrain) => void;
 
-export function loadTerrain(world: WorldTerrain) {
-	pf.loadTerrain([ ...world.map(([ room, terrain ]) => ({ room, terrain })) ]);
-}
+export const makeLoadTerrain = (
+	loadTerrain: typeof pf.loadTerrain,
+	save: (terrain: unknown) => void,
+): LoadTerrain =>
+	world => {
+		const terrain = [ ...world.map(([ room, terrain ]) => ({ room, terrain })) ];
+		// We must ensure that the terrain data is not garbage collected. The easiest way to make that
+		// happen is to reexport it. This is handled by each module individually.
+		save(terrain);
+		loadTerrain(terrain);
+	};
 
 /**
  * `position` format is little-endian backed "world position" type:
@@ -56,44 +63,47 @@ export function loadTerrain(world: WorldTerrain) {
  * RoomPosition(0, 0, 'W127N127') = { wx: 0, wy: 0 }
  * RoomPosition(49, 49, 'E127S127') = { xx: 12799, yy: 12799 }
  */
-export function search<Position>(
+export type Search = <Position>(
 	origin: number,
 	goals: readonly Goal[],
 	roomCallback: RoomCallback | undefined,
 	makePosition: MakePosition<Position>,
 	options: Options,
-): Result<Position> {
+) => Result<Position>;
 
-	// Short circuit if there are no goals
-	if (goals.length === 0) {
-		return { path: [], ops: 0, cost: 0, incomplete: false };
-	}
+export const makeSearch = (search: typeof pf.search): Search =>
+	(origin, goals, roomCallback, makePosition, options) => {
 
-	// Extract and cast options
-	const plainCost = Number(options.plainCost ?? 1) | 0;
-	const swampCost = Number(options.swampCost ?? 5) | 0;
-	const heuristicWeight = Number(options.heuristicWeight) || 1.2;
-	const maxOps = Number(options.maxOps ?? 0x7fffffff) | 0;
-	const maxCost = Number(options.maxCost ?? 0x7fffffff) | 0;
-	const maxRooms = Number(options.maxRooms ?? 16) | 0;
-	const flee = Boolean(options.flee);
+		// Short circuit if there are no goals
+		if (goals.length === 0) {
+			return { path: [], ops: 0, cost: 0, incomplete: false };
+		}
 
-	// Invoke native code
-	const ret = pf.search(
-		origin, goals,
-		roomCallback,
-		plainCost, swampCost,
-		maxRooms, maxOps, maxCost,
-		flee,
-		heuristicWeight,
-	);
+		// Extract and cast options
+		const plainCost = Number(options.plainCost ?? 1) | 0;
+		const swampCost = Number(options.swampCost ?? 5) | 0;
+		const heuristicWeight = Number(options.heuristicWeight) || 1.2;
+		const maxOps = Number(options.maxOps ?? 0x7fffffff) | 0;
+		const maxCost = Number(options.maxCost ?? 0x7fffffff) | 0;
+		const maxRooms = Number(options.maxRooms ?? 16) | 0;
+		const flee = Boolean(options.flee);
 
-	// Translate results
-	return {
-		...ret,
-		path: makeCompletePath(makePosition, ret.path),
+		// Invoke native code
+		const ret = search(
+			origin, goals,
+			roomCallback,
+			plainCost, swampCost,
+			maxRooms, maxOps, maxCost,
+			flee,
+			heuristicWeight,
+		);
+
+		// Translate results
+		return {
+			...ret,
+			path: makeCompletePath(makePosition, ret.path),
+		};
 	};
-}
 
 function makeCompletePath<Type>(make: MakePosition<Type>, path: readonly number[]): Type[] {
 	const iterable = function*() {

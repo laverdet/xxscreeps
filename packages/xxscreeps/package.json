@@ -14,11 +14,13 @@
   },
   "exports": {
     "./config/mods/import/*": "./dist/config/mods.static/*",
+    "./driver/pathfinder/pf.js": "./dist/driver/pathfinder/active.js",
     "./*": "./dist/*"
   },
   "dependencies": {
     "@babel/core": "~7.22.5",
     "@babel/types": "^7.29.0",
+    "@isolated-vm/experimental": "^0.0.4",
     "@loaderkit/resolve": "^1.0.6",
     "@screeps/launcher": "4.1.0",
     "@types/convert-source-map": "^2.0.3",

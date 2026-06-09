@@ -76,8 +76,11 @@ if (missingFlags.length) {
 	process.argv.splice(1, 1);
 	const specifier = process.argv[1];
 
-	// Load mods (regenerates mods.static)
-	await import('./mods/index.js');
+	// Load pathfinder & mods (regenerates mods.static)
+	await Promise.all([
+		import('../driver/pathfinder/select.js'),
+		import('./mods/index.js'),
+	]);
 
 	if (specifier) {
 		const commands: Record<string, string | undefined> = {

@@ -4,7 +4,7 @@ import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/e
 import config from 'xxscreeps/config/index.js';
 import { configTransform } from 'xxscreeps/config/webpack.js';
 import { hooks } from 'xxscreeps/driver/index.js';
-import { path } from 'xxscreeps/driver/pathfinder.js';
+import { path } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import Privates from 'xxscreeps/driver/private/transform.js';
 import { schemaTransform } from 'xxscreeps/engine/schema/build/index.js';
 import { compile } from '../webpack.js';
@@ -53,7 +53,7 @@ export function compileRuntimeSource(path: string, transform: Transform) {
 			},
 			babel: Privates,
 			externals: ({ request }) => {
-				if (request === '@xxscreeps/pathfinder') {
+				if (request === 'xxscreeps/driver/pathfinder/pf.js') {
 					return 'globalThis["@xxscreeps/pathfinder"]';
 				}
 			},
@@ -64,6 +64,9 @@ export function compileRuntimeSource(path: string, transform: Transform) {
 export async function createSandbox(userId: string, payload: InitializationPayload): Promise<Sandbox> {
 	const sandbox = await async function() {
 		switch (config.runner.sandbox ?? 'isolated') {
+			case 'experimental': {
+				throw new Error('Not implemented');
+			}
 			case 'isolated': {
 				const { IsolatedSandbox } = await import('./isolated/index.js');
 				return new IsolatedSandbox(payload);

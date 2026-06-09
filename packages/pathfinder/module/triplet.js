@@ -1,7 +1,7 @@
-const { readFileSync } = require('node:fs');
-const { arch, platform } = require('node:process');
+import { readFileSync } from 'node:fs';
+import { arch, platform } from 'node:process';
 
-module.exports = function() {
+const triplet = function() {
 	if (platform === 'linux') {
 		try {
 			if (readFileSync('/usr/bin/ldd', 'latin1').includes('ld-musl-')) {
@@ -13,3 +13,4 @@ module.exports = function() {
 		return `${platform}-${arch}`;
 	}
 }();
+export default triplet;

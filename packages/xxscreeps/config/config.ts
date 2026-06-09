@@ -154,12 +154,13 @@ export type Schema = {
 
 		/**
 		 * Select sandbox mode
+		 * - 'experimental': `@isolated-vm/experimental`
 		 * - 'isolated': `isolated-vm`
 		 * - 'unsafe': `node:vm`. This will run player code directly in the nodejs isolate. Player scripts can achieve full
 		 *   system-level access. It may make troubleshooting user scripts easier, though.
 		 * @default isolated
 		 */
-		sandbox?: 'isolated' | 'unsafe';
+		sandbox?: 'experimental' | 'isolated' | 'unsafe';
 	};
 
 	/**

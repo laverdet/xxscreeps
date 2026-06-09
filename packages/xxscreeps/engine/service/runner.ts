@@ -2,7 +2,7 @@ import type { Effect } from 'xxscreeps/utility/types.js';
 import * as Timers from 'node:timers/promises';
 import config from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
-import { loadTerrain } from 'xxscreeps/driver/pathfinder.js';
+import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';

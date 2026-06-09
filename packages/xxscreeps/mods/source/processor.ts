@@ -1,5 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import { search } from 'xxscreeps/driver/pathfinder.js';
+import { search } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { mappedInvertedNumericComparator, mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
