@@ -2,7 +2,7 @@ import type { Sandbox, TickCompletion } from 'xxscreeps/driver/sandbox/index.js'
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { hooks } from 'xxscreeps/driver/index.js';
 import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox/index.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';

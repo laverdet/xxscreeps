@@ -1,7 +1,7 @@
 import type { Worker } from 'node:worker_threads';
 import type { Effect, MaybePromise } from 'xxscreeps/utility/types.js';
 import { parentPort } from 'node:worker_threads';
-import config, { configPath } from 'xxscreeps/config/index.js';
+import { config, configPath } from 'xxscreeps/config/index.js';
 import { isTopThread } from 'xxscreeps/engine/service/index.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';

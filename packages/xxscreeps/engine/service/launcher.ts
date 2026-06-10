@@ -1,5 +1,5 @@
 import { checkArguments } from 'xxscreeps/config/arguments.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';

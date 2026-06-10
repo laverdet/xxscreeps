@@ -9,6 +9,8 @@ import data, { configPath } from './raw.js';
 import './global.js';
 import './mods/index.js';
 
+export { configPath } from './raw.js';
+
 if (isTopThread) {
 	const schema = await async function(): Promise<unknown> {
 		try {
@@ -27,7 +29,7 @@ if (isTopThread) {
 }
 
 // Merge defaults into config data
-const config = {};
+export const config = {} as MergedSchema;
 for (const entry of Config) {
 	merge(config, entry.defaults ?? {});
 	merge(config, entry.configDefaults ?? {});
@@ -36,6 +38,3 @@ for (const entry of Config) {
 merge(config, data);
 type ConfigInfo = typeof Config[number];
 type MergedSchema = Schema & ConfigInfo['configDefaults'] & ConfigInfo['defaults'];
-
-export default config as MergedSchema;
-export { configPath };

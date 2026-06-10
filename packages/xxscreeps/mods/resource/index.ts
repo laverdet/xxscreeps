@@ -1,4 +1,4 @@
-import type { Manifest } from 'xxscreeps/config/mods/index.js';
+import type { Manifest } from 'xxscreeps/config/mods.js';
 
 export type { ResourceType } from './resource.js';
 export const manifest: Manifest = {

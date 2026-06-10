@@ -6,7 +6,7 @@ import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RawMemory } from 'xxscreeps/mods/memory/memory.js';
 import * as assert from 'node:assert';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';

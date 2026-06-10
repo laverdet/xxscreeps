@@ -7,12 +7,7 @@ import { resolve } from '@loaderkit/resolve/esm';
 import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
 import { configDefaults } from 'xxscreeps/config/config.js';
 import config from 'xxscreeps/config/raw.js';
-
-type Provide = 'backend' | 'config' | 'constants' | 'driver' | 'game' | 'main' | 'processor' | 'storage' | 'test';
-export type Manifest = {
-	dependencies?: string[];
-	provides: Provide | Provide[] | null;
-};
+import { Manifest, Provide } from '../mods.js';
 
 const from = await async function() {
 	// Mods are resolved from cwd unless there is no package.json here. In that case it's probably

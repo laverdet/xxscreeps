@@ -4,7 +4,7 @@ import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import ConditionalGet from 'koa-conditional-get';
 import Router from 'koa-router';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { handleInterruptSignal } from 'xxscreeps/engine/service/signal.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';

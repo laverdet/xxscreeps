@@ -8,7 +8,7 @@ import { EventEmitter } from 'node:events';
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { Socket } from 'node:net';
 import sockjs from 'sockjs';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { checkToken, makeToken } from './auth/token.js';
 import { CodeSubscriptions } from './sockets/code.js';

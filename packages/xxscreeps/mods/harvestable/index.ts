@@ -1,4 +1,4 @@
-import type { Manifest } from 'xxscreeps/config/mods/index.js';
+import type { Manifest } from 'xxscreeps/config/mods.js';
 import type * as C from 'xxscreeps/game/constants/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Creep } from 'xxscreeps/mods/creep/creep.js';

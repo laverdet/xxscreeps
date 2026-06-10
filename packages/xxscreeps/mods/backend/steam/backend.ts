@@ -1,5 +1,5 @@
 import { hooks } from 'xxscreeps/backend/index.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import './openid.js';
 import './ticket.js';

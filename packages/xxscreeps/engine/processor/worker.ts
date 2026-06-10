@@ -1,5 +1,5 @@
 import type { Room } from 'xxscreeps/game/room/room.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { importMods } from 'xxscreeps/config/mods/index.js';
 import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { consumeSet } from 'xxscreeps/engine/db/async.js';

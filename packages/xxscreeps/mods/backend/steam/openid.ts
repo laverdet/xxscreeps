@@ -4,7 +4,7 @@ import Router from 'koa-router';
 import * as OpenId from 'openid';
 import { Strategy as SteamStrategy } from 'passport-steam';
 import { hooks } from 'xxscreeps/backend/index.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 
 const { RelyingParty } = (OpenId as never as Record<'default', typeof OpenId>).default;

@@ -1,5 +1,5 @@
 import { hooks } from 'xxscreeps/backend/index.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { acquire, mustNotReject } from 'xxscreeps/utility/async.js';
 import { throttle } from 'xxscreeps/utility/utility.js';
 import { getVisualChannel, loadVisuals } from './model.js';

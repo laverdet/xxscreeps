@@ -1,6 +1,6 @@
 import type { ProcessorRequest } from 'xxscreeps/engine/processor/worker.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';

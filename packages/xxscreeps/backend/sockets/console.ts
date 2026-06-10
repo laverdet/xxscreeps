@@ -1,6 +1,6 @@
 
 import type { SubscriptionEndpoint } from '../socket.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { resultPrefix, unescapedFd } from 'xxscreeps/driver/runtime/print.js';
 import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model.js';
 import { throttle } from 'xxscreeps/utility/utility.js';

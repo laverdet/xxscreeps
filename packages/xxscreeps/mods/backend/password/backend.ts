@@ -3,7 +3,7 @@ import * as crypto from 'node:crypto';
 import { promisify } from 'node:util';
 import { JSONSchemaType } from 'ajv';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { findUserByName, findUserByProvider, infoKey } from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';

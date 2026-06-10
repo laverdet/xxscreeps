@@ -13,7 +13,7 @@ import jsYaml from 'js-yaml';
 import Loki from 'lokijs';
 
 import { checkArguments } from 'xxscreeps/config/arguments.js';
-import config, { configPath } from 'xxscreeps/config/index.js';
+import { config, configPath } from 'xxscreeps/config/index.js';
 import Configs from 'xxscreeps/config/mods/import/config.js';
 
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';

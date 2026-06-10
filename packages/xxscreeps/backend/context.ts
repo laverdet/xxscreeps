@@ -1,6 +1,6 @@
 import type { World } from 'xxscreeps/game/map.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 
 export class BackendContext {
 	readonly disposable;

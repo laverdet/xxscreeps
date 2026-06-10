@@ -5,7 +5,7 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { createSandbox } from 'xxscreeps/driver/sandbox/index.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';

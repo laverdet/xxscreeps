@@ -1,7 +1,7 @@
 import type { Transform } from '../webpack.js';
 import type { InspectorSession } from 'isolated-vm';
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { configTransform } from 'xxscreeps/config/webpack.js';
 import { hooks } from 'xxscreeps/driver/index.js';
 import { path } from 'xxscreeps/driver/pathfinder/pathfinder.js';

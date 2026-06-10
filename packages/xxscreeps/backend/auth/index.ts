@@ -1,5 +1,5 @@
 import type { Middleware } from 'xxscreeps/backend/index.js';
-import config from 'xxscreeps/config/index.js';
+import { config } from 'xxscreeps/config/index.js';
 import { findUserByProvider } from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { checkToken, makeToken } from './token.js';
