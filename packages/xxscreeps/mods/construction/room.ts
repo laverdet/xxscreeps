@@ -1,3 +1,4 @@
+import type { ConstructibleStructureType } from './construction-site.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -6,7 +7,7 @@ import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { asUnion, extend } from 'xxscreeps/utility/utility.js';
-import { ConstructibleStructureType, ConstructionSite } from './construction-site.js';
+import { ConstructionSite } from './construction-site.js';
 import { structureFactories } from './symbols.js';
 
 // Register FIND_ types for `ConstructionSite`

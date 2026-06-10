@@ -1,3 +1,4 @@
+import type { Predicate } from 'xxscreeps/functional/predicate.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomSearchOptions } from 'xxscreeps/game/pathfinder/index.js';
 import type { Direction } from 'xxscreeps/game/position.js';
@@ -8,7 +9,6 @@ import type { PolyStyle } from 'xxscreeps/mods/visual/visual.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { invertedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { Predicate } from 'xxscreeps/functional/predicate.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';

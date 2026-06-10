@@ -1,5 +1,5 @@
+import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
-import { JSONSchemaType } from 'ajv';
 import { makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 

@@ -1,8 +1,8 @@
+import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { calculatePower, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
-import { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createLab } from './lab.js';

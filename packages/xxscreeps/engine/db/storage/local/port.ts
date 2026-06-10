@@ -1,4 +1,5 @@
 import type { MessagePort, Worker } from 'node:worker_threads';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as net from 'node:net';
@@ -7,7 +8,6 @@ import * as v8 from 'node:v8';
 import { MessageChannel, parentPort } from 'node:worker_threads';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { listen, listenEvent } from 'xxscreeps/utility/async.js';
-import { Effect } from 'xxscreeps/utility/types.js';
 
 const arrayBufferViews = [
 	BigInt64Array,

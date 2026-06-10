@@ -1,6 +1,7 @@
+import type { TransformOptions } from '@babel/core';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
-import { TransformOptions, transformSync } from '@babel/core';
+import { transformSync } from '@babel/core';
 import convertSourceMap from 'convert-source-map';
 import Privates from 'xxscreeps/driver/private/plugin.js';
 

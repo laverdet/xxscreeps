@@ -1,5 +1,5 @@
+import type { JSONSchemaType } from 'ajv';
 import type { World } from 'xxscreeps/game/map.js';
-import { JSONSchemaType } from 'ajv';
 import makeEtag from 'etag';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';

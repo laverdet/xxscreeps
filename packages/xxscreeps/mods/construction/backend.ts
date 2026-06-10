@@ -1,11 +1,12 @@
-import { JSONSchemaType } from 'ajv';
+import type { ConstructibleStructureType } from './construction-site.js';
+import type { JSONSchemaType } from 'ajv';
 import { bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { runOneShot } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';
-import { ConstructibleStructureType, ConstructionSite } from './construction-site.js';
+import { ConstructionSite } from './construction-site.js';
 
 bindRenderer(ConstructionSite, (constructionSite, next) => ({
 	...next(),

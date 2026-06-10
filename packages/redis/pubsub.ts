@@ -1,7 +1,8 @@
+import type { RedisClient } from './client.js';
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from 'xxscreeps/engine/db/storage/provider.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { disposableToEffect } from 'xxscreeps/utility/utility.js';
-import { RedisClient, acquireRedisClient } from './client.js';
+import { acquireRedisClient } from './client.js';
 
 interface PublishIgnore {
 	client: RedisSubscription;

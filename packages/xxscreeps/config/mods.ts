@@ -1,4 +1,5 @@
 import type { Provide } from './loader.js';
+import type { LoaderConfig } from './nodejs.js';
 import * as fs from 'node:fs/promises';
 import { register } from 'node:module';
 import * as path from 'node:path';
@@ -8,7 +9,6 @@ import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
 import { initializationDefaults } from 'xxscreeps/config/config.js';
 import rawConfig from 'xxscreeps/config/raw.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { LoaderConfig } from './nodejs.js';
 import 'xxscreeps/engine/service/signal.js';
 
 /** Type of each mod's index.ts */

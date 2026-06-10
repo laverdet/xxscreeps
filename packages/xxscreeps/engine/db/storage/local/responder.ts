@@ -1,3 +1,4 @@
+import type { LocalPayloadPort, UnknownMessage, WorkerConnectMessage } from './port.js';
 import type { Worker } from 'node:worker_threads';
 import type { Effect, MaybePromise } from 'xxscreeps/utility/types.js';
 import { parentPort } from 'node:worker_threads';
@@ -7,7 +8,7 @@ import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 import { asyncDisposableToEffect, disposableToEffect } from 'xxscreeps/utility/utility.js';
-import { LocalPayloadPort, UnknownMessage, WorkerConnectMessage, makeSocketPortConnection, makeSocketPortListener, makeWorkerPortConnection, makeWorkerPortListener } from './port.js';
+import { makeSocketPortConnection, makeSocketPortListener, makeWorkerPortConnection, makeWorkerPortListener } from './port.js';
 
 /**
  * "Sibling process" is a process running on the same machine, but which did not acquire a responder

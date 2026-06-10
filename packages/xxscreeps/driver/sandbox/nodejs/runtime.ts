@@ -1,3 +1,4 @@
+import type { TickCompletion } from '../index.js';
 import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { CPU } from 'xxscreeps/game/game.js';
@@ -5,7 +6,6 @@ import * as assert from 'node:assert/strict';
 import * as process from 'node:process';
 import * as Runtime from 'xxscreeps/driver/runtime/index.js';
 import { hooks } from 'xxscreeps/game/index.js';
-import { TickCompletion } from '../index.js';
 
 const kPleaseHalt = 'Please halt this sandbox.';
 

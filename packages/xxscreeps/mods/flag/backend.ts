@@ -1,5 +1,5 @@
 import type { Color } from './flag.js';
-import { JSONSchemaType } from 'ajv';
+import type { JSONSchemaType } from 'ajv';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';

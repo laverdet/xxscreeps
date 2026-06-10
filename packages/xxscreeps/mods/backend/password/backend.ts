@@ -1,7 +1,7 @@
+import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import * as crypto from 'node:crypto';
 import { promisify } from 'node:util';
-import { JSONSchemaType } from 'ajv';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';

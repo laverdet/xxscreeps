@@ -1,6 +1,6 @@
+import type { JSONSchemaType } from 'ajv';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { gzip } from 'node:zlib';
-import { JSONSchemaType } from 'ajv';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import { requestRunnerEval } from 'xxscreeps/engine/runner/model.js';

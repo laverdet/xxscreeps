@@ -1,7 +1,7 @@
+import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
-import { JSONSchemaType } from 'ajv';
+import type { UserBadge } from 'xxscreeps/engine/db/user/badge.js';
 import { makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
-import { UserBadge } from 'xxscreeps/engine/db/user/badge.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 

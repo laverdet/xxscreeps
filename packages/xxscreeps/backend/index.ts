@@ -1,10 +1,11 @@
 import type { BackendContext } from './context.js';
+import type { JSONSchemaType } from 'ajv';
 import type Koa from 'koa';
 import type { RouterContext } from 'koa-router';
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Implementation } from 'xxscreeps/utility/types.js';
-import { Ajv, JSONSchemaType } from 'ajv';
+import { Ajv } from 'ajv';
 import { MapRender, Render, TerrainRender } from './symbols.js';
 
 export { hooks } from './symbols.js';

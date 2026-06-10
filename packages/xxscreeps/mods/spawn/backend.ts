@@ -1,4 +1,5 @@
-import { JSONSchemaType } from 'ajv';
+import type { JSONSchemaType } from 'ajv';
+import type { AnyStructure } from 'xxscreeps/mods/structure/structure.js';
 import { bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
@@ -11,7 +12,6 @@ import { ConstructionSite } from 'xxscreeps/mods/construction/construction-site.
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';
 import { saveUserFlagBlobForNextTick } from 'xxscreeps/mods/flag/model.js';
 import { renderStore } from 'xxscreeps/mods/resource/backend.js';
-import { AnyStructure } from 'xxscreeps/mods/structure/structure.js';
 import { StructureExtension } from './extension.js';
 import * as Spawn from './spawn.js';
 

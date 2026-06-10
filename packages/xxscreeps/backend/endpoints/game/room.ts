@@ -1,4 +1,4 @@
-import { JSONSchemaType } from 'ajv';
+import type { JSONSchemaType } from 'ajv';
 import { hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 
 hooks.register('route', {

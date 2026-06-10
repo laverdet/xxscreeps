@@ -1,9 +1,10 @@
 import type { World } from 'xxscreeps/game/map.js';
+import type { Goal, SearchOptions } from 'xxscreeps/game/pathfinder/index.js';
+import type { PositionLike } from 'xxscreeps/game/position.js';
 import type { OneOrMany } from 'xxscreeps/utility/types.js';
 import * as pf from '@xxscreeps/pathfinder';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { Goal, SearchOptions } from 'xxscreeps/game/pathfinder/index.js';
-import { PositionLike, RoomPosition } from 'xxscreeps/game/position.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
 import { makeRoomNameFromId, parseRoomNameToId } from 'xxscreeps/game/room/name.js';
 import { getBuffer } from 'xxscreeps/game/terrain.js';
 

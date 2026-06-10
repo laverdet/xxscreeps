@@ -1,8 +1,8 @@
+import type { WithShapeAndType } from 'xxscreeps/schema/format.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import { build } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
-import { WithShapeAndType } from 'xxscreeps/schema/format.js';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 

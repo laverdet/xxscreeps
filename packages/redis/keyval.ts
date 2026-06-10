@@ -1,9 +1,10 @@
+import type { RedisBlobClient, RedisClient } from './client.js';
 import type * as Pr from 'xxscreeps/engine/db/storage/provider.js';
 import { Buffer } from 'node:buffer';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { disposableToEffect } from 'xxscreeps/utility/utility.js';
-import { RedisBlobClient, RedisClient, acquireRedisClient } from './client.js';
+import { acquireRedisClient } from './client.js';
 
 type Value = Pr.Value;
 

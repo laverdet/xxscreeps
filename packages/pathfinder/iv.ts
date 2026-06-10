@@ -1,5 +1,6 @@
+import type { LoadTerrain, Search } from './pathfinder.js';
 import * as pf from '#iv';
-import { LoadTerrain, Search, makeLoadTerrain, makeSearch } from './pathfinder.js';
+import { makeLoadTerrain, makeSearch } from './pathfinder.js';
 
 export type { Goal, RoomCallback, WorldTerrain } from './pathfinder.js';
 export { module, path, version } from '#iv';

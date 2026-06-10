@@ -1,11 +1,12 @@
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from '../provider.js';
+import type { DisposableLocalPayloadPort, LocalPayloadPort } from './port.js';
 import type { Worker } from 'node:worker_threads';
+import type { Effect } from 'xxscreeps/utility/types.js';
 import { isTopThread } from 'xxscreeps/engine/service/index.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
-import { Effect } from 'xxscreeps/utility/types.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { registerStorageProvider } from '../register.js';
-import { DisposableLocalPayloadPort, LocalPayloadPort, makeSocketPortConnection, makeSocketPortListener, makeWorkerPortConnection, makeWorkerPortListener } from './port.js';
+import { makeSocketPortConnection, makeSocketPortListener, makeWorkerPortConnection, makeWorkerPortListener } from './port.js';
 import { getResponderSocketPath, isSiblingProcess } from './responder.js';
 
 type Listener = (message: string) => void;
