@@ -384,14 +384,15 @@ describe('Invader core', () => {
 	});
 
 	test('transferEnergy accepts in-room tower target', () => refillScene(async ({ poke }) => {
-		const result = await poke('W1N1', '2', (Game, room) => {
+		const results = await poke('W1N1', '2', (Game, room) => {
 			const core = findRoomCore(room)!;
 			const tower = room.find(C.FIND_STRUCTURES).find(
 				(structure): structure is StructureTower => structure.structureType === C.STRUCTURE_TOWER,
 			)!;
-			return core.transferEnergy(tower, 100);
+			// Oversized amounts pass the check and clamp at the processor
+			return [ core.transferEnergy(tower, 100), core.transferEnergy(tower, C.TOWER_CAPACITY + 100) ];
 		});
-		assert.strictEqual(result, C.OK);
+		assert.deepStrictEqual(results, [ C.OK, C.OK ]);
 	}));
 
 	const collapsing = simulate({

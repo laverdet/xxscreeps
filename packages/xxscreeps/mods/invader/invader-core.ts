@@ -61,7 +61,6 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	 */
 	reserveController(target: StructureController) {
 		return chainIntentChecks(
-			() => checkMyStructure(this, StructureInvaderCore),
 			() => checkReserveController(this, target),
 			() => intents.save(this, 'reserveController', target.id));
 	}
@@ -71,7 +70,6 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	 */
 	attackController(target: StructureController) {
 		return chainIntentChecks(
-			() => checkMyStructure(this, StructureInvaderCore),
 			() => checkAttackController(this, target),
 			() => intents.save(this, 'attackController', target.id));
 	}
@@ -81,18 +79,17 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	 */
 	upgradeController(target: StructureController) {
 		return chainIntentChecks(
-			() => checkMyStructure(this, StructureInvaderCore),
 			() => checkUpgradeController(this, target),
 			() => intents.save(this, 'upgradeController', target.id));
 	}
 
 	/**
 	 * Push energy into a tower or creep in the same room. `amount` defaults to the target's free
-	 * capacity for energy.
+	 * capacity for energy; oversized amounts clamp at the processor. The stronghold refill
+	 * behaviors are this action's driver and arrive in a later slice.
 	 */
 	transferEnergy(target: StructureTower | Creep, amount?: number) {
 		return chainIntentChecks(
-			() => checkMyStructure(this, StructureInvaderCore),
 			() => checkTransferEnergy(this, target, amount),
 			() => intents.save(this, 'transferEnergy', target.id,
 				amount ?? target.store.getFreeCapacity(C.RESOURCE_ENERGY)!));
@@ -130,6 +127,7 @@ const checkSourceAlive = (core: StructureInvaderCore) =>
 
 export function checkReserveController(core: StructureInvaderCore, target: StructureController) {
 	return chainIntentChecks(
+		() => checkMyStructure(core, StructureInvaderCore),
 		() => checkSourceAlive(core),
 		() => checkTarget(target, StructureController),
 		() => checkSameRoom(core, target),
@@ -145,6 +143,7 @@ export function checkReserveController(core: StructureInvaderCore, target: Struc
 
 export function checkAttackController(core: StructureInvaderCore, target: StructureController) {
 	return chainIntentChecks(
+		() => checkMyStructure(core, StructureInvaderCore),
 		() => checkSourceAlive(core),
 		() => checkTarget(target, StructureController),
 		() => checkSameRoom(core, target),
@@ -171,6 +170,7 @@ export function checkAttackController(core: StructureInvaderCore, target: Struct
 
 export function checkUpgradeController(core: StructureInvaderCore, target: StructureController) {
 	return chainIntentChecks(
+		() => checkMyStructure(core, StructureInvaderCore),
 		() => checkSourceAlive(core),
 		() => checkTarget(target, StructureController),
 		() => checkSameRoom(core, target),
@@ -186,6 +186,7 @@ export function checkUpgradeController(core: StructureInvaderCore, target: Struc
 
 export function checkTransferEnergy(core: StructureInvaderCore, target: StructureTower | Creep, amount: number | undefined) {
 	return chainIntentChecks(
+		() => checkMyStructure(core, StructureInvaderCore),
 		() => checkSourceAlive(core),
 		() => checkTarget(target, StructureTower, Creep),
 		() => checkSameRoom(core, target),
@@ -199,9 +200,6 @@ export function checkTransferEnergy(core: StructureInvaderCore, target: Structur
 			}
 			if (free === 0) {
 				return C.ERR_FULL;
-			}
-			if (amount !== undefined && amount > free) {
-				return C.ERR_NOT_ENOUGH_RESOURCES;
 			}
 		});
 }
