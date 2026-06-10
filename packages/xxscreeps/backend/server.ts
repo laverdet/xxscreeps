@@ -5,7 +5,6 @@ import bodyParser from 'koa-bodyparser';
 import ConditionalGet from 'koa-conditional-get';
 import Router from 'koa-router';
 import { config } from 'xxscreeps/config/index.js';
-import { importMods } from 'xxscreeps/config/mods/index.js';
 import { handleInterruptSignal } from 'xxscreeps/engine/service/signal.js';
 import { initializeGameEnvironment } from 'xxscreeps/game/index.js';
 import { authentication } from './auth/index.js';
@@ -14,11 +13,10 @@ import { installEndpointHandlers } from './endpoints/index.js';
 import { setupGracefulShutdown } from './graceful.js';
 import { installSocketHandlers, installUpgradeHandlers } from './socket.js';
 import { hooks } from './symbols.js';
+import 'xxscreeps:mods/backend';
+import 'xxscreeps:mods/game';
+import 'xxscreeps:mods/processor';
 
-import 'xxscreeps/config/mods/import/game.js';
-
-await importMods('backend');
-await importMods('processor');
 initializeGameEnvironment();
 
 // Initialize services

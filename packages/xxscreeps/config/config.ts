@@ -1,167 +1,234 @@
 import * as crypto from 'node:crypto';
 import * as os from 'node:os';
+import schema from './config.schema.json' with { type: 'json' };
 
-// When making changes to the schema, remember to generate a new typescript json schema with the below command
-// pnpm -C packages/xxscreeps exec typescript-json-schema tsconfig.json Schema --include ./config/config.ts --defaultProps --required -o ./config/config.schema.json
-export type Schema = {
+export { schema };
+
+export interface BackendConfig {
+	/**
+	 * Whether to allow read-only access to the API without logging in.
+	 * @default true
+	 */
+	allowGuestAccess?: boolean;
+
+	/**
+	 * Whether to allow users sign up without steam with only their email address.
+	 * Note: there is currently no confirmation mail send to the user to verify the address.
+	 * @default false
+	 */
+	allowEmailRegistration?: boolean;
+
+	/**
+	 * Network interface to bind server to. Format is: "host" or "host:port". Host can be * to bind
+	 * to all interfaces: "*:port". Port is 21025, if not specified.
+	 * @default *
+	 */
+	bind?: string;
+
+	/**
+	 * Secret used for session authentication. If not specified a new secret will be generated each
+	 * restart.
+	 */
+	secret?: string;
+
+	/**
+	 * Minimum time between socket updates, in milliseconds. Setting this lower may cause
+	 * performance issues in the client.
+	 * @default 125
+	 */
+	socketThrottle?: number;
+
+	/**
+	 * Steam Web API key used to authenticate users. You can get a key here:
+	 * http://steamcommunity.com/dev/apikey
+	 */
+	steamApiKey?: string;
+}
+
+export interface DatabaseConfig {
+	/**
+	 * Persistent storage provider URI
+	 * @default ./screeps/db?socket=.db
+	 */
+	data: string;
+
+	/**
+	 * Path used for local process lock. Note that the 'file:' database providers also each acquire
+	 * their own lock on the data store. This is mainly used to coordinate inter-process
+	 * communication. You can set this to `null` while using the redis provider.
+	 * @default ./screeps/.lock
+	 */
+	lock?: string | null;
+
+	/**
+	 * Pubsub storage provider URI
+	 * @default local://db?socket=./screeps/.db.pubsub
+	 */
+	pubsub: string;
+
+	/**
+	 * How often (in wall time minutes) to save the main database
+	 * @default 120
+	 */
+	saveInterval?: number;
+}
+
+export interface ShardConfig {
+	/**
+	 * Name of this shard
+	 */
+	name: string;
+
+	/**
+	 * Persistent storage provider URI
+	 */
+	data: string;
+
+	/**
+	 * Pubsub storage provider URI
+	 */
+	pubsub: string;
+
+	/**
+	 * Temporary storage provider URI
+	 */
+	scratch: string;
+}
+
+export interface GameConfig {
+	/**
+	 * Amount of time in hours before a user is allowed to respawn, counted from the time of their
+	 * initial spawn placement.
+	 * @default 0
+	 */
+	respawnTimeout?: number;
+
+	/**
+	 * Minimum length of a game tick in milliseconds.
+	 * @default 250
+	 */
+	tickSpeed?: number;
+}
+
+export interface LauncherConfig {
+	/**
+	 * Set true to run all services in a single nodejs isolate. This does *not* affect the runner's
+	 * isolates.
+	 * @default false
+	 */
+	singleThreaded?: boolean;
+}
+
+export interface ProcessorConfig {
+	/**
+	 * Total number of processor tasks to run at a time. The default is the number of CPU cores
+	 * (including hyper-threaded) + 1
+	 */
+	concurrency?: number;
+
+	/**
+	 * Timeout in milliseconds before the processors give up on waiting for intents from the Runner
+	 * service and continue processing all outstanding rooms.
+	 * @default 5000
+	 */
+	intentAbandonTimeout?: number;
+
+	/**
+	 * Show processor log messages when running from main thread.
+	 * @default false
+	 */
+	log?: boolean;
+}
+
+export interface RunnerConfig {
+	/**
+	 * Per-user CPU settings
+	 */
+	cpu?: RunnerCPUConfig;
+
+	/**
+	 * Total number of run tasks to run at a time. The default is the number of CPU cores (including
+	 * hyper-threaded) + 1
+	 */
+	concurrency?: number;
+
+	/**
+	 * Show runner log messages when running from main thread.
+	 * @default false
+	 */
+	log?: boolean;
+
+	/**
+	 * How long an idle runner will wait before migrating a player sandbox into that runner, causing
+	 * a hard reset for the player.
+	 * @default 50
+	 */
+	migrationTimeout?: number;
+
+	/**
+	 * Select sandbox mode
+	 * - 'experimental': `@isolated-vm/experimental`
+	 * - 'isolated': `isolated-vm`
+	 * - 'unsafe': `node:vm`. This will run player code directly in the nodejs isolate. Player scripts can achieve full
+	 *   system-level access. It may make troubleshooting user scripts easier, though.
+	 * @default isolated
+	 */
+	sandbox?: 'experimental' | 'isolated' | 'unsafe' | undefined;
+}
+
+export interface RunnerCPUConfig {
+	/**
+	 * CPU bucket size per user
+	 * @default: 10000
+	 */
+	bucket?: number;
+
+	/**
+	 * Memory limit, in megabytes. The actual memory limit as reported by the isolate will be
+	 * higher, since it accounts for shared terrain data.
+	 *
+	 * This option does nothing when `sandbox: unsafe` is set.
+	 * @default 256
+	 */
+	memoryLimit?: number;
+
+	/**
+	 * Maximum amount of time in milliseconds that a user's runtime may run for.
+	 * @default: 500
+	 */
+	tickLimit?: number;
+}
+
+export interface Config {
+	/**
+	 * Backend server settings
+	 */
+	backend?: BackendConfig;
+
+	/**
+	 * Game settings
+	 */
+	game?: GameConfig;
+
+	/**
+	 * Launcher settings
+	 */
+	launcher?: LauncherConfig;
+
 	/**
 	 * List of mods to load
 	 */
 	mods?: string[];
 
 	/**
-	 * Backend server settings
-	 */
-	backend?: {
-		/**
-		 * Whether to allow read-only access to the API without logging in.
-		 * @default true
-		 */
-		allowGuestAccess?: boolean;
-
-		/**
-		 * Whether to allow users sign up without steam with only their email address.
-		 * Note: there is currently no confirmation mail send to the user to verify the address.
-		 * @default false
-		 */
-		allowEmailRegistration?: boolean;
-		/**
-		 * Network interface to bind server to. Format is: "host" or "host:port". Host can be * to bind
-		 * to all interfaces: "*:port". Port is 21025, if not specified.
-		 * @default *
-		 */
-		bind?: string;
-
-		/**
-		 * Secret used for session authentication. If not specified a new secret will be generated each
-		 * restart.
-		 */
-		secret?: string;
-
-		/**
-		 * Minimum time between socket updates, in milliseconds. Setting this lower may cause
-		 * performance issues in the client.
-		 * @default 125
-		 */
-		socketThrottle?: number;
-
-		/**
-		 * Steam Web API key used to authenticate users. You can get a key here:
-		 * http://steamcommunity.com/dev/apikey
-		 */
-		steamApiKey?: string;
-	};
-
-	/**
-	 * Game settings
-	 */
-	game?: {
-		/**
-		 * Amount of time in hours before a user is allowed to respawn, counted from the time of their
-		 * initial spawn placement.
-		 * @default 0
-		 */
-		respawnTimeout?: number;
-
-		/**
-		 * Minimum length of a game tick in milliseconds.
-		 * @default 250
-		 */
-		tickSpeed?: number;
-	};
-
-	/**
-	 * Launcher settings
-	 */
-	launcher?: {
-		/**
-		 * Set true to run all services in a single nodejs isolate. This does *not* affect the runner's
-		 * isolates.
-		 * @default false
-		 */
-		singleThreaded?: boolean;
-	};
-
-	/**
 	 * Processor settings
 	 */
-	processor?: {
-		/**
-		 * Total number of processor tasks to run at a time. The default is the number of CPU cores
-		 * (including hyper-threaded) + 1
-		 */
-		concurrency?: number;
-
-		/**
-		 * Timeout in milliseconds before the processors give up on waiting for intents from the Runner
-		 * service and continue processing all outstanding rooms.
-		 * @default 5000
-		 */
-		intentAbandonTimeout?: number;
-
-		/**
-		 * Show processor log messages when running from main thread.
-		 * @default false
-		 */
-		log?: boolean;
-	};
+	processor?: ProcessorConfig;
 
 	/**
 	 * Runner settings
 	 */
-	runner?: {
-		cpu?: {
-			/**
-			 * CPU bucket size per user
-			 * @default: 10000
-			 */
-			bucket?: number;
-
-			/**
-			 * Memory limit, in megabytes. The actual memory limit as reported by the isolate will be
-			 * higher, since it accounts for shared terrain data.
-			 *
-			 * This option does nothing when `sandbox: unsafe` is set.
-			 * @default 256
-			 */
-			memoryLimit?: number;
-
-			/**
-			 * Maximum amount of time in milliseconds that a user's runtime may run for.
-			 * @default: 500
-			 */
-			tickLimit?: number;
-		};
-
-		/**
-		 * Total number of run tasks to run at a time. The default is the number of CPU cores (including
-		 * hyper-threaded) + 1
-		 */
-		concurrency?: number;
-
-		/**
-		 * Show runner log messages when running from main thread.
-		 * @default false
-		 */
-		log?: boolean;
-
-		/**
-		 * How long an idle runner will wait before migrating a player sandbox into that runner, causing
-		 * a hard reset for the player.
-		 * @default 50
-		 */
-		migrationTimeout?: number;
-
-		/**
-		 * Select sandbox mode
-		 * - 'experimental': `@isolated-vm/experimental`
-		 * - 'isolated': `isolated-vm`
-		 * - 'unsafe': `node:vm`. This will run player code directly in the nodejs isolate. Player scripts can achieve full
-		 *   system-level access. It may make troubleshooting user scripts easier, though.
-		 * @default isolated
-		 */
-		sandbox?: 'experimental' | 'isolated' | 'unsafe';
-	};
+	runner?: RunnerConfig;
 
 	/**
 	 * Where to save descriptions of the binary format used to write game data.
@@ -172,33 +239,7 @@ export type Schema = {
 	/**
 	 * Configuration for global database storage
 	 */
-	database?: {
-		/**
-		 * Persistent storage provider URI
-		 * @default ./screeps/db?socket=.db
-		 */
-		data: string;
-
-		/**
-		 * Path used for local process lock. Note that the 'file:' database providers also each acquire
-		 * their own lock on the data store. This is mainly used to coordinate inter-process
-		 * communication. You can set this to `null` while using the redis provider.
-		 * @default ./screeps/.lock
-		 */
-		lock?: string | null;
-
-		/**
-		 * Pubsub storage provider URI
-		 * @default local://db?socket=./screeps/.db.pubsub
-		 */
-		pubsub: string;
-
-		/**
-		 * How often (in wall time minutes) to save the main database
-		 * @default 120
-		 */
-		saveInterval?: number;
-	};
+	database?: DatabaseConfig;
 
 	/**
 	 * Configuration for shard-specific storage
@@ -209,35 +250,15 @@ export type Schema = {
 	 *   scratch: 'local://shard0?socket=./screeps/.shard0.scratch',
 	 * } ]`
 	 */
-	shards?: {
-		/**
-		 * Name of this shard
-		 */
-		name: string;
-
-		/**
-		 * Persistent storage provider URI
-		 */
-		data: string;
-
-		/**
-		 * Pubsub storage provider URI
-		 */
-		pubsub: string;
-
-		/**
-		 * Temporary storage provider URI
-		 */
-		scratch: string;
-	}[];
-};
+	shards?: readonly ShardConfig[];
+}
 
 /**
  * These defaults will be merged into `xxscreepts/config` at runtime
  */
 export const defaults = {
 	backend: {
-		allowGuestAccess: true as boolean,
+		allowGuestAccess: true,
 		bind: '*',
 		socketThrottle: 125,
 	},
@@ -256,6 +277,8 @@ export const defaults = {
 			tickLimit: 500,
 		},
 		migrationTimeout: 50,
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+		sandbox: 'isolated' as RunnerConfig['sandbox'],
 	},
 	schemaArchive: './screeps/archive',
 	database: {
@@ -270,13 +293,13 @@ export const defaults = {
 		pubsub: 'local://shard0?socket=./screeps/.shard0.pubsub',
 		scratch: 'local://shard0?socket=./screeps/.shard0.scratch',
 	} ],
-};
+} satisfies Config;
 
 /**
  * These defaults will be written to `.screepsrc.yaml` on import, as a guide for the user. They will
  * also be merged into the `config` defaults.
  */
-export const configDefaults = {
+export const initializationDefaults = {
 	mods: [
 		'xxscreeps/mods/classic',
 		'xxscreeps/mods/backend/cookie',
@@ -289,4 +312,4 @@ export const configDefaults = {
 	game: {
 		tickSpeed: 250,
 	},
-};
+} satisfies Config;

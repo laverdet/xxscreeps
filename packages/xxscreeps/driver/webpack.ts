@@ -8,8 +8,6 @@ import { fileURLToPath } from 'node:url';
 import AcornClassFields from 'acorn-class-fields';
 import AcornPrivateMethods from 'acorn-private-methods';
 import Webpack from 'webpack';
-import { Fn } from 'xxscreeps/functional/fn.js';
-import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 
 const Acorn = createRequire(import.meta.url)('acorn') as typeof import('acorn');
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -21,8 +19,9 @@ type ExternalsCallback = (...args: Parameters<ExternalsPromise>) =>
 	ReturnType<ExternalsPromise> extends Promise<infer Result> ? Result | void | Promise<Result | void> : never;
 export type Transform = {
 	alias?: Record<string, false | string>;
-	babel?: PluginItem;
+	babel?: PluginItem[];
 	externals?: ExternalsCallback;
+	plugins?: Webpack.WebpackPluginInstance[];
 };
 
 function resolve(module: string) {
@@ -31,14 +30,9 @@ function resolve(module: string) {
 
 const IS_DEV = true as boolean;
 
-export async function compile(moduleName: string, transforms: Transform[]) {
+export async function compile(moduleName: string, transform: Transform) {
 	const baseName = Path.basename(moduleName);
 	const output = new URL(`${baseName}.webpack.js`, import.meta.url);
-	const babelPlugins = Fn.pipe(
-		transforms,
-		$$ => Fn.map($$, transform => transform.babel),
-		$$ => Fn.filter($$, nonNullPredicate),
-		$$ => [ ...$$ ]);
 	const babelLoader = resolve('babel-loader');
 	const sourceMapLoader = resolve('source-map-loader');
 	await new Promise<Webpack.StatsCompilation>((resolve, reject) => {
@@ -50,11 +44,9 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 			devtool: IS_DEV ? 'hidden-source-map' : 'hidden-nosources-source-map',
 			externals(data, callback) {
 				(async function() {
-					for (const transform of transforms) {
-						const result = await transform.externals?.(data);
-						if (result) {
-							return result;
-						}
+					const result = await transform.externals?.(data);
+					if (result !== undefined) {
+						return result;
 					}
 				})().then(value => callback(undefined, value), callback);
 			},
@@ -71,12 +63,12 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 					type: 'javascript/esm',
 					resolve: { fullySpecified: false },
 					use: [
-						...babelPlugins.length === 0 ? [] : [ {
+						...(transform.babel?.length ?? 0) === 0 ? [] : [ {
 							loader: babelLoader,
 							options: {
 								cacheCompression: false,
 								cacheDirectory: fileURLToPath(new URL('.cache', import.meta.url)),
-								plugins: babelPlugins,
+								plugins: transform.babel,
 							},
 						} ],
 						sourceMapLoader,
@@ -89,7 +81,7 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 					'buffer-from': false,
 					fs: false,
 					path: 'path-browserify',
-					...Object.fromEntries(transforms.map(transform => Object.entries(transform.alias ?? {})).flat()),
+					...transform.alias,
 				},
 			},
 
@@ -114,9 +106,15 @@ export async function compile(moduleName: string, transforms: Transform[]) {
 						version: ${JSON.stringify(process.version)},
 					})`,
 				}),
+				// Global `process` is used by `node:path` which is used by `source-map-support`
 				new Webpack.ProvidePlugin({
 					process: 'process',
 				}),
+				// Webpack chokes on the `node:` scheme even with a resolution alias (except for externals)
+				new Webpack.NormalModuleReplacementPlugin(/^node:.+/, resource => {
+					resource.request = resource.request.replace(/^node:/, '');
+				}),
+				...transform.plugins ?? [],
 			],
 
 		}, (error, stats) => {

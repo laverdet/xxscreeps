@@ -1,3 +1,4 @@
+import './room.js';
 import './event-log.js';
 import './find.js';
 import './path.js';

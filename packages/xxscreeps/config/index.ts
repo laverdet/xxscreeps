@@ -1,40 +1,43 @@
-import type { Schema } from './config.js';
-import * as fs from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import type { Config } from './config.js';
 import { Ajv } from 'ajv';
-import Config from 'xxscreeps/config/mods/import/config.js';
-import { isTopThread } from 'xxscreeps/engine/service/index.js';
 import { merge } from 'xxscreeps/utility/utility.js';
-import data, { configPath } from './raw.js';
-import './global.js';
-import './mods/index.js';
+import { defaults, initializationDefaults, schemas } from 'xxscreeps:mods/config';
+import * as Base from './config.js';
+import raw, { configPath } from './raw.js';
 
 export { configPath } from './raw.js';
 
-if (isTopThread) {
-	const schema = await async function(): Promise<unknown> {
-		try {
-			const path = import.meta.resolve('./mods.static/config.schema.json');
-			return JSON.parse(await fs.readFile(new URL(path), 'utf8'));
-		} catch {}
-	}();
-	if (schema) {
-		const ajv = new Ajv();
-		if (!ajv.validate(schema, data)) {
-			throw new Error(`\`${fileURLToPath(configPath)}\`: ${ajv.errorsText()}`);
-		}
-	} else {
-		console.log('Failed to load config schema. `.screepsrc.yaml` validity will *not* be checked!');
+/**
+ * Generate a default '.screepsrc.yaml' config
+ * @internal
+ */
+export function makeInitializationDefaults(): Config {
+	const config = {};
+	merge(config, Base.initializationDefaults);
+	for (const from of initializationDefaults) {
+		merge(config, from);
 	}
+	return config;
 }
 
 // Merge defaults into config data
-export const config = {} as MergedSchema;
-for (const entry of Config) {
-	merge(config, entry.defaults ?? {});
-	merge(config, entry.configDefaults ?? {});
+type MergedConfig = Config & typeof import('./config.js').defaults & typeof import('./config.js').initializationDefaults;
+export const config = {} as MergedConfig;
+merge(config, makeInitializationDefaults());
+merge(config, Base.defaults);
+for (const from of defaults) {
+	merge(config, from);
 }
+merge(config, raw);
 
-merge(config, data);
-type ConfigInfo = typeof Config[number];
-type MergedSchema = Schema & ConfigInfo['configDefaults'] & ConfigInfo['defaults'];
+// Merge config schemas
+export const schema = {
+	$schema: Base.schema.$schema,
+	allOf: [ Base.schema, ...schemas ].map(({ $schema, ...content }) => content),
+};
+
+// Check '.screepsrc.yaml' validity
+const ajv = new Ajv();
+if (!ajv.validate(schema, config)) {
+	throw new Error(`'${configPath.pathname}': ${ajv.errorsText()}`);
+}

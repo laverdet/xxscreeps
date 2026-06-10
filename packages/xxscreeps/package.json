@@ -7,19 +7,18 @@
     "test": "xxscreeps test"
   },
   "bin": {
-    "xxscreeps": "./bin/xxscreeps.js"
+    "xxscreeps": "./xxscreeps.js"
   },
   "engines": {
     "node": ">=20.0.0"
   },
   "exports": {
-    "./config/mods/import/*": "./dist/config/mods.static/*",
-    "./driver/pathfinder/pf.js": "./dist/driver/pathfinder/active.js",
-    "./*": "./dist/*"
+    "./*": "./dist/*",
+    "./loader": "./dist/config/resolver/mods.js"
   },
   "dependencies": {
-    "@babel/core": "~7.22.5",
-    "@babel/types": "^7.29.0",
+    "@babel/core": "~7.29.7",
+    "@babel/types": "^7.29.7",
     "@isolated-vm/experimental": "^0.0.4",
     "@loaderkit/resolve": "^1.0.6",
     "@screeps/launcher": "4.1.0",
@@ -31,7 +30,7 @@
     "acorn-private-methods": "1.0.0",
     "ajv": "^8.20.0",
     "argparse": "2.0.1",
-    "babel-loader": "9.1.2",
+    "babel-loader": "10.1.1",
     "convert-source-map": "^2.0.0",
     "etag": "1.8.1",
     "isolated-vm": "6.0.2",
@@ -55,7 +54,8 @@
     "source-map-support": "~0.5.21",
     "stream-to-promise": "3.0.0",
     "tslib": "~2.8.1",
-    "webpack": "5.88.0"
+    "webpack": "5.107.2",
+    "webpack-virtual-modules": "^0.6.2"
   },
   "devDependencies": {
     "@types/argparse": "~2.0.10",

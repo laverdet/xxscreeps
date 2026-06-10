@@ -5,7 +5,7 @@ import 'xxscreeps/game/room/index.js';
 import { build, makeUpgrader } from 'xxscreeps/engine/schema/index.js';
 import { format, objectFormat } from 'xxscreeps/game/room/schema.js';
 import { Builder, makeReader, makeWriter } from 'xxscreeps/schema/index.js';
-import 'xxscreeps/config/mods/import/game.js';
+import 'xxscreeps:mods/game';
 
 // Base room reader & writer
 const formatCache = new Map();

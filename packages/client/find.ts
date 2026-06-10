@@ -8,8 +8,7 @@ import { config } from 'xxscreeps/config/index.js';
  * Get the path to the Screeps game files.
  */
 export async function loadScreepsClientPackage() {
-	// @ts-expect-error
-	const configuredPackage = config?.browserClient?.package;
+	const configuredPackage = config.browserClient?.package;
 	if (configuredPackage !== undefined) {
 		const result = await loadScreepsClientPackageFrom(configuredPackage);
 		if (result) {

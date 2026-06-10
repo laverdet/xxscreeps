@@ -1,4 +1,4 @@
-import type { Schema } from './config.js';
+import type { Config } from './config.js';
 import * as fs from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import jsYaml from 'js-yaml';
@@ -11,14 +11,14 @@ const content = await async function() {
 		return await fs.readFile(configPath, 'utf8');
 	} catch {}
 }();
-const config = function(): Schema {
+const config = function(): Config {
 	if (content === undefined) {
 		if (isTopThread) {
 			console.warn('`.screepsrc.yaml` not found; using default configuration');
 		}
 		return {};
 	} else {
-		return jsYaml.load(content) as Schema;
+		return jsYaml.load(content) as Config;
 	}
 }();
 export default config;

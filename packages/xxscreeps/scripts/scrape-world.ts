@@ -13,9 +13,7 @@ import jsYaml from 'js-yaml';
 import Loki from 'lokijs';
 
 import { checkArguments } from 'xxscreeps/config/arguments.js';
-import { config, configPath } from 'xxscreeps/config/index.js';
-import Configs from 'xxscreeps/config/mods/import/config.js';
-
+import { config, configPath, makeInitializationDefaults } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import * as Badge from 'xxscreeps/engine/db/user/badge.js';
 import * as CodeSchema from 'xxscreeps/engine/db/user/code.js';
@@ -42,7 +40,6 @@ import { StructureExtension } from 'xxscreeps/mods/spawn/extension.js';
 import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
-import { merge } from 'xxscreeps/utility/utility.js';
 
 const argv = checkArguments({
 	argv: true,
@@ -128,14 +125,11 @@ if ((rcInfo?.size ?? 0) === 0) {
 	// Write yaml content
 	const schema = function() {
 		try {
-			return import.meta.resolve('xxscreeps/config/mods.static/config.schema.json');
+			return import.meta.resolve('xxscreeps/config.schema.json');
 		} catch {}
 	}();
 	const preamble = schema === undefined ? '' : `# yaml-language-server: $schema=${schema}\n`;
-	const defaultConfig: any = {};
-	for (const modConfig of Configs) {
-		merge(defaultConfig, modConfig.configDefaults);
-	}
+	const defaultConfig = makeInitializationDefaults();
 	defaultConfig.mods = [ ...mods ];
 	await fs.writeFile(configPath, preamble + jsYaml.dump(defaultConfig));
 }

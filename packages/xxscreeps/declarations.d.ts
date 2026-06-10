@@ -11,16 +11,6 @@ interface Function {
 	displayName: string;
 }
 
-// Stupid declaration to make node and dom version of `URL` compatible
-interface URLSearchParams {
-	entries: () => IterableIterator<[ string, string ]>;
-	keys: () => IterableIterator<string>;
-	values: () => IterableIterator<string>;
-	[Symbol.iterator]: () => IterableIterator<[ string, string ]>;
-}
-
-declare function enumerable(target: any, key: string, descriptor: PropertyDescriptor): void;
-
 interface String {
 	// Prevent `for (const ii of 'hello')` bugs because who would ever do that
 	[Symbol.iterator]: never;

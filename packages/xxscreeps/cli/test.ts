@@ -5,7 +5,7 @@ import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { runEval } from './eval-offline.js';
 import { evaluateUnsafeGlobal, makeUnsafeGlobalEvaluator } from './unsafe.js';
 
-const xxscreepsBin = fileURLToPath(new URL('../../bin/xxscreeps.js', import.meta.url));
+const xxscreepsBin = fileURLToPath(new URL('../../xxscreeps.js', import.meta.url));
 
 class TestConsole {
 	readonly #previous;

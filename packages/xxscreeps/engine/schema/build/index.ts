@@ -73,23 +73,7 @@ export function makeUpgrader(info: Package, write: (value: any) => Readonly<Uint
 }
 
 /**
- * Webpack transformation which replaces this file with `./runtime.ts`.
- */
-export const schemaTransform: Transform = {
-	alias: {
-		'xxscreeps/engine/schema/build/index.js': 'xxscreeps/engine/schema/build/runtime.js',
-	},
-	externals: ({ request }) => {
-		if (request === 'xxscreeps/engine/schema/build/packages.js') {
-			return JSON.stringify(Object.fromEntries([ ...packages ].map(entry => [ entry[0], {
-				version: entry[1].version,
-			} ])));
-		}
-	},
-};
-
-/**
- * Generates module source text for `xxscreeps/engine/schema/build/packages.js`
+ * Generates module source text for `xxscreeps:packages`
  */
 export function makePackagesModule() {
 	const bundle = Fn.pipe(

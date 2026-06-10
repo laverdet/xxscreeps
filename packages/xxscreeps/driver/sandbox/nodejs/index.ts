@@ -2,15 +2,15 @@ import type { tick } from './runtime.js';
 import type { Compiler, Evaluate } from 'xxscreeps/driver/runtime/index.js';
 import type { Sandbox, TickCompletion } from 'xxscreeps/driver/sandbox/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
-import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import * as process from 'node:process';
 import * as vm from 'node:vm';
-import { TransformOptions, transformSync } from '@babel/core';
 import { resolve } from '@loaderkit/resolve/esm';
 import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
-import convertSourceMap from 'convert-source-map';
-import Privates from 'xxscreeps/driver/private/transform.js';
+import { makeModSourceText } from 'xxscreeps/config/loader.js';
+import { mods } from 'xxscreeps/config/mods.js';
+import { privateTransformLoader } from 'xxscreeps/driver/private/transform.js';
 import { makePackagesModule } from 'xxscreeps/engine/schema/build/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
@@ -30,28 +30,22 @@ const resolver = function() {
 	return (specifier: string, referrer?: string) => {
 		const key = `${referrer ?? ''}::${specifier}`;
 		switch (specifier) {
-			case 'xxscreeps/driver/pathfinder/pf.js': return 'xxscreeps:pathfinder';
+			case '@xxscreeps/pathfinder': return '@xxscreeps/pathfinder';
+			case 'xxscreeps:mods/constants': return 'xxscreeps:mods/constants';
+			case 'xxscreeps:mods/game': return 'xxscreeps:mods/game';
 			case 'xxscreeps/engine/schema/build/packages.js': return 'xxscreeps:packages';
 			default: return getOrSet(cache, key, async () => {
 				const alias = function() {
 					switch (specifier) {
 						case 'tslib': return 'tslib/tslib.es6.mjs';
-						case 'xxscreeps/config/mods/import/game.js': return 'xxscreeps/config/mods.static/game.js';
 						case 'xxscreeps/driver/runtime/source-map.js': return 'xxscreeps/driver/sandbox/nodejs/source-map.js';
 						case 'xxscreeps/engine/processor/index.js': throw new Error('processor required from runtime');
 						case 'xxscreeps/engine/schema/build/index.js': return 'xxscreeps/engine/schema/build/runtime.js';
 						default: return specifier;
 					}
 				}();
-				const refUrl = function() {
-					if (referrer === undefined || referrer.startsWith('xxscreeps:')) {
-						return new URL(import.meta.url);
-					} else {
-						return new URL(referrer);
-					}
-				}();
-				const resolution = await resolve(defaultAsyncFileSystem, alias, refUrl);
-				return resolution.url.href;
+				const { url } = await resolve(defaultAsyncFileSystem, alias, new URL(referrer ?? import.meta.url));
+				return url.href;
 			});
 		}
 	};
@@ -75,55 +69,15 @@ const loader = function() {
 		} else {
 			const xxPath = new URL('../../..', import.meta.url).href;
 			const sourceText = await async function() {
-				if (url.startsWith(xxPath)) {
-					// Load file & source map
-					const [ sourceText, sourceMap ] = await Promise.all([
-						fs.readFile(new URL(url), 'utf8'),
-						async function() {
-							// 'xxscreeps/config/mods.static/game.js' has no map
-							try {
-								const source = await fs.readFile(new URL(`${url}.map`), 'utf8');
-								return JSON.parse(source) as TransformOptions['inputSourceMap'];
-							} catch {}
-						}(),
-					]);
-
-					// Parse, transform & generate
-					const result = function() {
-						try {
-							const result = transformSync(sourceText, {
-								babelrc: false,
-								configFile: false,
-								filename: url,
-								inputSourceMap: sourceMap,
-								plugins: [ Privates ],
-								retainLines: true,
-								sourceMaps: true,
-								sourceType: 'module',
-							});
-							assert.ok(result);
-							return result;
-						} finally {
-							// nb: Babel has uncharacteristically poor hygiene here and assigns `Error.prepareStackTrace`
-							// when you invoke `parse` and doesn't even bother to put it back. This causes nodejs's source
-							// map feature to bail out and show plain source files.
-							// https://github.com/babel/babel/blob/74b5ac21d0fb516ecc8d8375cc75b4446b6c9735/packages/babel-core/src/errors/rewrite-stack-trace.ts#L140
-							// @ts-expect-error
-							delete Error.prepareStackTrace;
-						}
-					}();
-
-					// Build final module source
-					assert.ok(result.code != null);
-					assert.ok(result.map);
-					const lastLine = result.code.lastIndexOf('\n');
-					assert.ok(lastLine !== -1);
-					const plainSourceText = result.code.slice(0, lastLine + 1) + convertSourceMap.removeMapFileComments(result.code.slice(lastLine + 1));
-					const sourceMapComment = convertSourceMap.fromObject(result.map).toComment();
-					// TODO: I'm not sure source maps are actually working. Line numbers look correct, but I
-					// think that's from the `retainLines` option above. Additionally, it would be nice to
-					// split source map blobs from the source text to keep this out of the main source text.
-					return `${plainSourceText}\n${sourceMapComment}\n`;
+				if (url.startsWith('xxscreeps:')) {
+					switch (url) {
+						case 'xxscreeps:mods/constants': return makeModSourceText(mods, 'constants');
+						case 'xxscreeps:mods/game': return makeModSourceText(mods, 'game');
+						case 'xxscreeps:packages': return makePackagesModule();
+						default: throw new Error(`Unknown virtual module: ${url}`);
+					}
+				} else if (url.startsWith(xxPath)) {
+					return privateTransformLoader(url);
 				} else {
 					return fs.readFile(new URL(url), 'utf8');
 				}
@@ -185,26 +139,10 @@ const hostLoaders = await async function() {
 		make('node:util'),
 	]);
 	return {
-		'xxscreeps:pathfinder': pathfinder,
+		'@xxscreeps/pathfinder': pathfinder,
 		'node:assert/strict': assert,
 		'node:process': process,
 		'node:util': util,
-	};
-}();
-
-// Loader for 'xxscreeps/engine/schema/build/packages.js'
-const packageLoader = function() {
-	let cachedData: Buffer | undefined;
-	const identifier = 'xxscreeps:packages';
-	const sourceText = makePackagesModule();
-	return (context: vm.Context) => {
-		if (cachedData) {
-			return new vm.SourceTextModule(sourceText, { cachedData, context, identifier });
-		} else {
-			const module = new vm.SourceTextModule(sourceText, { context, identifier });
-			cachedData = makeCachedData(module);
-			return module;
-		}
 	};
 }();
 
@@ -233,30 +171,25 @@ export class NodejsSandbox implements Sandbox {
 
 		// Load & link game runtime modules
 		const runtime = await async function() {
-			const module = new vm.SourceTextModule(
-				'export * from "xxscreeps/driver/sandbox/nodejs/runtime.js";',
-				{
-					context,
-					identifier: 'xxscreeps:runtime',
-				},
-			);
 			const resolutions = new Map<string, Promise<vm.Module>>();
-			await module.link(async (specifier, referencingModule) => {
-				const url = await resolver(specifier, referencingModule.identifier);
+			const linker = async (specifier: string, referencingModule?: vm.Module) => {
+				const url = await resolver(specifier, referencingModule?.identifier);
 				return getOrSet(resolutions, url, async () => {
 					switch (url) {
+						// Smuggled host modules
 						case 'node:assert/strict':
 						case 'node:process':
 						case 'node:util':
-						case 'xxscreeps:pathfinder':
+						case '@xxscreeps/pathfinder':
 							return hostLoaders[url](context);
-						case 'xxscreeps:packages':
-							return packageLoader(context);
-						default:
-							return loader(context, url);
+
+						// All others
+						default: return loader(context, url);
 					}
 				});
-			});
+			};
+			const module = await linker('xxscreeps/driver/sandbox/nodejs/runtime.js');
+			await module.link(linker);
 			await module.evaluate(context);
 			return module.namespace as unknown as typeof import('./runtime.js');
 		}();

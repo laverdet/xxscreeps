@@ -1,6 +1,6 @@
 import type { World } from 'xxscreeps/game/map.js';
 import type { OneOrMany } from 'xxscreeps/utility/types.js';
-import * as pf from 'xxscreeps/driver/pathfinder/pf.js';
+import * as pf from '@xxscreeps/pathfinder';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Goal, SearchOptions } from 'xxscreeps/game/pathfinder/index.js';
 import { PositionLike, RoomPosition } from 'xxscreeps/game/position.js';

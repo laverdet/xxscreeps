@@ -7,7 +7,6 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RawMemory } from 'xxscreeps/mods/memory/memory.js';
 import * as assert from 'node:assert';
 import { config } from 'xxscreeps/config/index.js';
-import { importMods } from 'xxscreeps/config/mods/index.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
@@ -25,11 +24,11 @@ import * as Memory from 'xxscreeps/mods/memory/memory.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { disposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
 
-import 'xxscreeps/config/mods/import/game.js';
-
 // Simulate runs both main and worker logic in one process; load every slot either service would.
-await importMods('main');
-await importMods('processor');
+import 'xxscreeps:mods/game';
+import 'xxscreeps:mods/main';
+import 'xxscreeps:mods/processor';
+
 initializeGameEnvironment();
 initializeIntentConstraints();
 

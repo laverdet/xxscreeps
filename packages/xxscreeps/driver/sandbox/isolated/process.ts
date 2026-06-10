@@ -1,7 +1,7 @@
 import ivm from 'isolated-vm';
 import { isolate } from './runtime.js';
 
-declare const processInfo: any;
+declare const processInfo: typeof import('node:process');
 
 const { lib } = ivm as any;
 export const { arch, platform, version } = processInfo;

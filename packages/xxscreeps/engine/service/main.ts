@@ -1,5 +1,4 @@
 import { config } from 'xxscreeps/config/index.js';
-import { importMods } from 'xxscreeps/config/mods/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel } from 'xxscreeps/engine/processor/model.js';
@@ -11,10 +10,9 @@ import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
 import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { tickSpeed, watch } from './tick.js';
 import { checkIsEntry, getServiceChannel } from './index.js';
+import 'xxscreeps:mods/main';
 
 checkIsEntry();
-
-await importMods('main');
 
 using db = await Database.connect();
 using shard = await Shard.connect(db, config.shards[0]!.name);

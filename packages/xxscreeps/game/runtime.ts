@@ -1,7 +1,12 @@
-import type { GameConstructor } from './index.js';
 import lodash from '@xxscreeps/lodash3';
 import * as C from './constants/index.js';
-import { globals, hooks, registerGlobal } from './symbols.js';
+import { hooks, registerGlobal } from './symbols.js';
+
+declare global {
+	function enumerable(target: object, key: string, descriptor: PropertyDescriptor): void;
+}
+
+globalThis.enumerable = (target: object, key: string, descriptor: PropertyDescriptor) => ({ ...descriptor, enumerable: true });
 
 registerGlobal('_', lodash);
 
@@ -10,21 +15,16 @@ registerGlobal(function PowerCreep() {});
 registerGlobal(function StructurePowerBank() {});
 registerGlobal(function StructurePowerSpawn() {});
 
-declare const globalThis: any;
 hooks.register('runtimeConnector', {
 	initialize() {
-		Object.entries(C).forEach(([ identifier, value ]) => globalThis[identifier] = value);
+		for (const [ identifier, value ] of Object.entries(C)) {
+			// @ts-expect-error
+			globalThis[identifier] = value;
+		}
 	},
 });
 
-// Used to extract type information from bundled dts file, via make-types.ts
-export interface Global {
-	Game: GameConstructor;
-	console: Console;
-}
-export function globalNames() {
-	return [ 'Game', 'console', ...globals ];
-}
-export function globalTypes(): Global {
-	return undefined as never;
+export function flushGlobals() {
+	// @ts-expect-error
+	delete globalThis.enumerable;
 }

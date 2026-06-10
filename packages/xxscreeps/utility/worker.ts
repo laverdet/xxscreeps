@@ -13,8 +13,12 @@ export class Worker extends NodeWorker {
 	}
 
 	static create(module: string, options: WorkerOptions = {}) {
-		const url = new URL(import.meta.resolve(module));
-		return new Worker(url, options);
+		const trampoline = new URL(import.meta.resolve('xxscreeps/xxscreeps.js'));
+		const url = import.meta.resolve(module);
+		return new Worker(trampoline, {
+			...options,
+			argv: [ url ],
+		});
 	}
 }
 

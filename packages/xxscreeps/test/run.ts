@@ -1,12 +1,11 @@
-import { importMods } from 'xxscreeps/config/mods/index.js';
 import { flush, summary } from './context.js';
 import './import.js';
-import 'xxscreeps/cli/test.js';
-import 'xxscreeps/engine/db/storage/local/test.js';
-import 'xxscreeps/game/test.js';
+import 'xxscreeps:mods/driver';
 
-await importMods('driver');
-await importMods('test');
+await import('xxscreeps/engine/db/storage/local/test.js');
+await import('xxscreeps/game/test.js');
+await import('xxscreeps:mods/test');
+await import('xxscreeps/cli/test.js');
 try {
 	await flush();
 } catch (err) {

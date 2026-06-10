@@ -2,9 +2,16 @@ import type { Sandbox, TickCompletion } from 'xxscreeps/driver/sandbox/index.js'
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import ivm from 'isolated-vm';
 import * as ivmInspect from 'ivm-inspect';
+import Webpack from 'webpack';
+import VirtualModulesPlugin from 'webpack-virtual-modules';
 import { config } from 'xxscreeps/config/index.js';
+import { makeModSourceText } from 'xxscreeps/config/loader.js';
+import { mods } from 'xxscreeps/config/mods.js';
 import { hooks } from 'xxscreeps/driver/index.js';
-import { compileRuntimeSource, pathFinderBinaryPath } from 'xxscreeps/driver/sandbox/index.js';
+import Privates from 'xxscreeps/driver/private/plugin.js';
+import { pathFinderBinaryPath } from 'xxscreeps/driver/sandbox/index.js';
+import { compile } from 'xxscreeps/driver/webpack.js';
+import { makePackagesModule } from 'xxscreeps/engine/schema/build/index.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 
 type Runtime = typeof import('xxscreeps/driver/sandbox/isolated/runtime.js');
@@ -13,15 +20,38 @@ const useInspector = [ ...hooks.map('isolateInspector') ].some(use => use);
 
 const getPathFinderModule = runOnce(() => new ivm.NativeModule(pathFinderBinaryPath));
 
-const getRuntimeSource = runOnce(() => compileRuntimeSource('xxscreeps/driver/sandbox/isolated/runtime.js', {
-	alias: {
-		process: 'xxscreeps/driver/sandbox/isolated/process',
-		'xxscreeps/driver/private/symbol.js': 'xxscreeps/driver/private/symbol/isolated-vm.js',
-	},
-	externals: ({ request }) =>
-		request === 'node:util' ? 'nodeUtilImport' :
-		request === 'isolated-vm' ? 'ivm' : undefined,
-}));
+const getRuntimeSource = runOnce(() => {
+	const runtime = import.meta.resolve('xxscreeps/driver/sandbox/isolated/runtime.js');
+	return compile(runtime, {
+		babel: [ Privates ],
+		alias: {
+			process: 'xxscreeps/driver/sandbox/isolated/process.js',
+			'xxscreeps/driver/private/symbol.js': 'xxscreeps/driver/private/symbol/isolated-vm.js',
+			'xxscreeps/engine/schema/build/index.js': 'xxscreeps/engine/schema/build/runtime.js',
+		},
+		externals: ({ request }) => {
+			// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
+			switch (request) {
+				case '#pf': return "globalThis['@xxscreeps/pathfinder']";
+				case 'isolated-vm': return 'ivm';
+				case 'node:util': return 'nodeUtilImport';
+				case 'xxscreeps/config/mods.js': throw new Error('config required from runtime');
+				case 'xxscreeps/engine/processor/index.js': throw new Error('processor required from runtime');
+				default: return undefined;
+			}
+		},
+		plugins: [
+			new Webpack.NormalModuleReplacementPlugin(/^xxscreeps:.+/, resource => {
+				resource.request = '/' + resource.request;
+			}),
+			new VirtualModulesPlugin({
+				'/xxscreeps:mods/constants': makeModSourceText(mods, 'constants'),
+				'/xxscreeps:mods/game': makeModSourceText(mods, 'game'),
+				'/xxscreeps:packages': makePackagesModule(),
+			}),
+		],
+	});
+});
 
 export class IsolatedSandbox implements Sandbox {
 	private tick?: ivm.Reference<Runtime['tick']>;

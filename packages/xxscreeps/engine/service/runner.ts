@@ -1,7 +1,6 @@
 import type { Effect } from 'xxscreeps/utility/types.js';
 import * as Timers from 'node:timers/promises';
 import { config } from 'xxscreeps/config/index.js';
-import { importMods } from 'xxscreeps/config/mods/index.js';
 import { loadTerrain } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { consumeSet, consumeSetMembers } from 'xxscreeps/engine/db/async.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
@@ -12,8 +11,8 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { handleInterruptSignal } from './signal.js';
 import { checkIsEntry, getServiceChannel } from './index.js';
+import 'xxscreeps:mods/driver';
 
-await importMods('driver');
 const isEntry = checkIsEntry();
 const log = config.runner.log ?? isEntry
 	? (message: string) => process.stderr.write(message)

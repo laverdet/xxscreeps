@@ -1,5 +1,5 @@
-// npx typescript-json-schema tsconfig.json Schema --include ./src/config.ts --defaultProps --required -o ./src/config.schema.json
-export type Schema = {
+// npx typescript-json-schema tsconfig.json ClientConfig --include ./config.ts --defaultProps --required -o ./config.schema.json
+export interface ClientConfig {
 	/**
 	 * Configuration for '@xxscreeps/client'
 	 */
@@ -11,4 +11,9 @@ export type Schema = {
 		 */
 		package?: string;
 	};
-};
+}
+
+declare module 'xxscreeps/config/config.js' {
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+	interface Config extends ClientConfig {}
+}

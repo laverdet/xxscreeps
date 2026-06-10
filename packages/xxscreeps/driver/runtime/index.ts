@@ -1,12 +1,12 @@
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import { inspect } from 'node:util';
-import { flushGlobals } from 'xxscreeps/config/global.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import * as Code from 'xxscreeps/engine/db/user/code-schema.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Nullable } from 'xxscreeps/functional/types.js';
 import { Game, GameState, hooks, initializeGameEnvironment, runForPlayer, userInfo } from 'xxscreeps/game/index.js';
 import { World } from 'xxscreeps/game/map.js';
+import { flushGlobals } from 'xxscreeps/game/runtime.js';
 import { detach } from 'xxscreeps/schema/buffer-object.js';
 import { TickCompletion } from '../sandbox/index.js';
 import { setupConsole } from './console.js';
