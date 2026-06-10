@@ -14,7 +14,7 @@
   },
   "exports": {
     "./*": "./dist/*",
-    "./loader": "./dist/config/resolver/mods.js"
+    "./loader": "./dist/config/mods.js"
   },
   "dependencies": {
     "@babel/core": "~7.29.7",
