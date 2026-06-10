@@ -36,7 +36,7 @@ using _signal = handleInterruptSignal(() => {
 using disposable = new DisposableStack();
 using db = await Database.connect();
 using shard = await Shard.connect(db, config.shards[0]!.name);
-const runnerSubscription =	disposable.adopt(
+const runnerSubscription = disposable.adopt(
 	await getRunnerChannel(shard).subscribe(),
 	subscription => subscription.disconnect());
 const maxConcurrency = config.runner.sandbox === 'unsafe' ? 1 : config.runner.concurrency;

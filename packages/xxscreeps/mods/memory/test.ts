@@ -17,7 +17,7 @@ describe('Memory', () => {
 	test('Smoke test', () => sim(async ({ sandbox, tick }) => {
 		using player = await sandbox('200', global => {
 			switch (global.Game.time) {
-				case 1:	global.Memory.test = 'foo'; break;
+				case 1: global.Memory.test = 'foo'; break;
 				case 2: assert.equal(global.Memory.test, 'foo'); break;
 				case 3: global.Game.cpu.halt(); break;
 				case 5: assert.equal(global.Memory.test, 'foo'); break;
@@ -58,7 +58,7 @@ describe('Memory', () => {
 	test('RawMemory._parsed becomes undefined', () => sim(async ({ sandbox, tick }) => {
 		using player = await sandbox('200', global => {
 			switch (global.Game.time) {
-				case 1:	global.Memory.test = 'foo'; break;
+				case 1: global.Memory.test = 'foo'; break;
 				case 2: assert.equal(global.RawMemory._parsed, undefined); break;
 			}
 		});
@@ -85,7 +85,7 @@ describe('Memory', () => {
 	test('RawMemory._parsed assigns Memory', () => sim(async ({ sandbox, tick }) => {
 		using player = await sandbox('200', global => {
 			switch (global.Game.time) {
-				case 1:	global.RawMemory._parsed = { test: 'foo' }; break;
+				case 1: global.RawMemory._parsed = { test: 'foo' }; break;
 				case 2: assert.equal(global.Memory.test, 'foo'); break;
 			}
 		});

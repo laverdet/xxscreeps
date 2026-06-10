@@ -22,7 +22,7 @@ await using disposable = new AsyncDisposableStack();
 // asynchronously so the "disconnect" effect can't do it. Since the redis provider continually saves
 // on its own, saving even on ungraceful exit brings them more in line.
 disposable.defer(async () => {
-	await Promise.all([ db.save(), shard.save()	]);
+	await Promise.all([ db.save(), shard.save() ]);
 	console.log('💾 Engine shut down successfully.');
 });
 

@@ -56,7 +56,7 @@ export const makeLoadTerrain = (
  * `position` format is little-endian backed "world position" type:
  *
  *     struct { u16 wx, wy; };
- * 		 wx = rx * 50 + xx;
+ *  	 wx = rx * 50 + xx;
  *     wy = ry * 50 + yy;
  *     position = (yy << 16) | xx
  *

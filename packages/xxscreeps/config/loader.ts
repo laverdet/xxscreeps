@@ -7,7 +7,7 @@ export type Provide = typeof providesNames[number];
 export const isProvide = (value: string): value is Provide => providesNames.includes(value as Provide);
 
 // `makeModSourceText` helpers
-const makeMakeGenericSource =	(
+const makeMakeGenericSource = (
 	make: (url: string, ii: number) => string,
 	fold: (sources: string[]) => string = sources => sources.join('\n') + '\n',
 ) =>

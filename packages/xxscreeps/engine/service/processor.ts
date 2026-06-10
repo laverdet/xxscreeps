@@ -33,7 +33,7 @@ await using disposable = new AsyncDisposableStack();
 using db = await Database.connect();
 using shard = await Shard.connect(db, config.shards[0]!.name);
 const worldBlob = await shard.data.req('terrain', { blob: true });
-const processorSubscription =	disposable.adopt(
+const processorSubscription = disposable.adopt(
 	await getProcessorChannel(shard).subscribe(),
 	subscription => subscription.disconnect());
 

@@ -72,7 +72,7 @@ export class Room extends withOverlay(BufferObject, shape) {
 	'#immediateObjects'() {
 		const withoutRemoved = this.#removeObjects.size === 0
 			? this['#objects']
-			:	Fn.filter(this['#objects'], object => !this.#removeObjects.has(object));
+			: Fn.filter(this['#objects'], object => !this.#removeObjects.has(object));
 		const withInserted = this.#insertObjects.length === 0
 			? withoutRemoved
 			: Fn.concat([ withoutRemoved, this.#insertObjects ]);
