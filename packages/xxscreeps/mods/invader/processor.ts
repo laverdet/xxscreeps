@@ -128,6 +128,8 @@ const intents = [
 					controller['#reservationEndTime'] = reduced;
 				}
 			}
+			// Divergence from Screeps, which logs this under `reserveController` — a copy/paste slip
+			// in its core intent; the creep intent logs `attack`.
 			saveAction(core, 'attack', controller.pos);
 			appendEventLog(controller.room, {
 				event: C.EVENT_ATTACK_CONTROLLER,
@@ -181,6 +183,8 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 		// Collapse expiry is a silent removal: no ruin, no EVENT_OBJECT_DESTROYED. Those
 		// only emit from the damage-destroy path, which collapse doesn't traverse. The NPC
 		// reservation is left to run out; the controller's tick processor releases it at expiry.
+		// TODO: Reset an NPC-owned controller here (user/level/effects) once stronghold
+		// deployment can create one.
 		core.room['#removeObject'](core);
 		context.setActive();
 		return;
