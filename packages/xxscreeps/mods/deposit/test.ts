@@ -181,18 +181,20 @@ describe('Deposit spawn', () => {
 	}));
 
 	test('decay path schedules the sector for prompt re-eval', () => simulate({
-		// Plant a decayable deposit on the W5N5 sector edge. A player-owned creep keeps the
-		// room active so its tick processor (and therefore the deposit's decay path) runs.
+		// Plant a decayable deposit on the W5N5 sector edge, inside the sector's 250-tile
+		// radius (for W0N0 that's the x,y < 24 quadrant facing the central room). A
+		// player-owned creep keeps the room active so its tick processor (and therefore the
+		// deposit's decay path) runs.
 		W0N0: room => {
 			const deposit = createDeposit(
-				new RoomPosition(25, 25, 'W0N0'),
+				new RoomPosition(20, 20, 'W0N0'),
 				C.RESOURCE_SILICON,
 				0,
 				Game.time + 1, // decays at the end of next tick
 			);
 			room['#insertObject'](deposit);
 			room['#insertObject'](createCreep(
-				new RoomPosition(25, 26, 'W0N0'), [ C.MOVE ], 'parker', '100'));
+				new RoomPosition(20, 21, 'W0N0'), [ C.MOVE ], 'parker', '100'));
 		},
 	})(async ({ shard, tick }) => {
 		using _rng = withFixedSpawnRng();
@@ -204,5 +206,27 @@ describe('Deposit spawn', () => {
 		await tick(1);
 		const due = await inspectDueSectorsForTest(shard);
 		assert.deepStrictEqual(due, [ [ shard.time + 1, 'W5N5' ] ]);
+	}));
+
+	test('decay outside the sector radius schedules nothing', () => simulate({
+		// Official placement doesn't enforce the 250-tile radius, so out-of-radius deposits
+		// exist in the wild. They're invisible to every sector's throughput tally, so their
+		// decay must not prompt a re-eval.
+		W0N0: room => {
+			const deposit = createDeposit(
+				new RoomPosition(30, 30, 'W0N0'), // outside W5N5's 250-tile radius
+				C.RESOURCE_SILICON,
+				0,
+				Game.time + 1,
+			);
+			room['#insertObject'](deposit);
+			room['#insertObject'](createCreep(
+				new RoomPosition(30, 31, 'W0N0'), [ C.MOVE ], 'parker', '100'));
+		},
+	})(async ({ shard, tick }) => {
+		using _rng = withFixedSpawnRng();
+		await markBootstrappedForTest(shard);
+		await tick(1);
+		assert.deepStrictEqual(await inspectDueSectorsForTest(shard), []);
 	}));
 });

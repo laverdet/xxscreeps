@@ -9,15 +9,17 @@ import { Game } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
-import { isCentralRoom, sectorContainsTile, sectorEdgeRooms, sectorsForRoom } from 'xxscreeps/game/room/sector.js';
-import { RESOURCE_BIOMASS, RESOURCE_METAL, RESOURCE_MIST, RESOURCE_SILICON } from 'xxscreeps/mods/factory/constants.js';
+import { isCentralRoom, sectorContainsTile, sectorEdgeRooms } from 'xxscreeps/game/room/sector.js';
 import {
 	DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW,
 } from 'xxscreeps/mods/mineral/constants.js';
 import { Deposit } from './deposit.js';
 
-// Cadence ceiling for re-checking a sector when no deposit will decay sooner (~5 min at
-// typical tickrate).
+// Port of the official backend's `genDeposits` cron: sector geometry, throughput target, and
+// wall-tile rejection sampling all match, adapted here to shard ticks + room intents.
+
+// Cadence ceiling for re-checking a sector when no deposit will decay sooner. The official
+// cron runs every 5 wall-clock minutes; this is the tick-domain equivalent.
 const DEPOSIT_CHECK_INTERVAL = 3000;
 
 // A sector needs total throughput below this to gain a new deposit.
@@ -36,7 +38,7 @@ function fnv1a(str: string): number {
 }
 
 // TODO: hash-derived; imported worlds don't carry the per-room deposit type real Screeps pins at world-gen.
-const DEPOSIT_TYPES = [ RESOURCE_SILICON, RESOURCE_METAL, RESOURCE_BIOMASS, RESOURCE_MIST ] as const;
+const DEPOSIT_TYPES = [ C.RESOURCE_SILICON, C.RESOURCE_METAL, C.RESOURCE_BIOMASS, C.RESOURCE_MIST ] as const;
 type DepositResource = typeof DEPOSIT_TYPES[number];
 
 export function depositTypeForRoom(roomName: string): DepositResource {
@@ -47,9 +49,6 @@ export function depositTypeForRoom(roomName: string): DepositResource {
 // room name (e.g. `W5N5`). One row per sector, regardless of how many highway rooms it owns.
 const dueSectorsKey = 'deposits/dueSectors';
 const bootstrapFlagKey = 'deposits/bootstrapped';
-// Hash {centralRoom -> count} of live deposits per sector. Updated on spawn-intent insert and on
-// decay; lets `evaluateSector` skip the 40-room throughput scan when a sector is provably empty.
-const sectorCountKey = 'deposits/sectorCount';
 
 // `{ earliest: true }` only lowers the existing score (decay path); otherwise the score is
 // overwritten (evaluator path pushing the next check forward).
@@ -129,14 +128,7 @@ function findSpawnTile(
 			}
 		}
 		if (!hasExit) continue;
-		let near = false;
-		for (const obj of objects) {
-			if (Math.abs(obj.pos.x - xx) <= 2 && Math.abs(obj.pos.y - yy) <= 2) {
-				near = true;
-				break;
-			}
-		}
-		if (near) continue;
+		if (Fn.some(objects, obj => Math.abs(obj.pos.x - xx) <= 2 && Math.abs(obj.pos.y - yy) <= 2)) continue;
 		return { x: xx, y: yy };
 	}
 	return undefined;
@@ -157,23 +149,6 @@ export function setDepositBootstrapScatterForTest(fn: ScatterFn | undefined) {
 	bootstrapScatter = fn ?? defaultScatter;
 }
 
-// Helpers for count bookkeeping. Called from the spawn intent (`+1`) and the decay processor
-// (`-1`); the count is a precise running total that lets us short-circuit when provably empty.
-export async function incrementSectorCount(shard: Shard, centralRoom: string) {
-	await shard.data.hincrBy(sectorCountKey, centralRoom, 1);
-}
-export async function decrementSectorCountForTile(
-	shard: Shard, roomName: string, xx: number, yy: number,
-) {
-	// A given deposit tile belongs to exactly one sector (the 250-tile radius doesn't overlap).
-	// Out of the 1–4 candidate sectors for this room, pick the one whose membership predicate
-	// actually contains the tile.
-	const owning = sectorsForRoom(roomName).find(sector => sectorContainsTile(sector, roomName)(xx, yy));
-	if (owning !== undefined) {
-		await shard.data.hincrBy(sectorCountKey, owning, -1);
-	}
-}
-
 function pickRandomFreeRoom(edges: string[], busyRooms: Set<string>): string | undefined {
 	const free = edges.filter(name => !busyRooms.has(name));
 	if (free.length === 0) return undefined;
@@ -184,7 +159,8 @@ function pickRandomFreeRoom(edges: string[], busyRooms: Set<string>): string | u
 async function pushSpawnIntent(shard: Shard, candidate: string, centralRoom: string) {
 	const depositType = depositTypeForRoom(candidate);
 	// Tile selection happens in the room intent processor so it can read terrain via the live
-	// world map — keeps the shard-tick processor purely keyval-bound.
+	// world map — keeps the shard-tick processor purely keyval-bound. Any id of length <= 2 is
+	// a system user (`isSystemUser`), keeping the intent off the player pipeline.
 	await pushIntentsForRoomNextTick(shard, candidate, '1', {
 		local: { spawnDeposit: [ [ depositType, centralRoom ] ] },
 		internal: true,
@@ -194,19 +170,6 @@ async function pushSpawnIntent(shard: Shard, candidate: string, centralRoom: str
 async function evaluateSector(
 	shard: Shard, world: World, centralRoom: string, currentTick: number,
 ): Promise<number> {
-	// Precise short-circuit: if no deposits are tracked, throughput is exactly 0 — skip the
-	// 40-room scan and push a spawn intent immediately.
-	const countStr = await shard.data.hGet(sectorCountKey, centralRoom);
-	const count = countStr === null ? 0 : Number(countStr);
-	if (count <= 0) {
-		const normalEdges = sectorEdgeRooms(centralRoom).filter(name =>
-			world.map.getRoomStatus(name).status === 'normal');
-		const candidate = pickRandomFreeRoom(normalEdges, new Set());
-		if (candidate !== undefined) {
-			await pushSpawnIntent(shard, candidate, centralRoom);
-		}
-		return currentTick + DEPOSIT_CHECK_INTERVAL;
-	}
 	const { throughput, depositsByRoom, earliestDecayTick, normalEdges } = await loadSectorDeposits(shard, world, centralRoom);
 	if (throughput >= SECTOR_THROUGHPUT_TARGET) {
 		// Saturated. Next change must come from decay or accrued mining; schedule for the
@@ -222,15 +185,15 @@ async function evaluateSector(
 	return currentTick + DEPOSIT_CHECK_INTERVAL;
 }
 
-async function bootstrap(shard: Shard, world: World) {
+async function bootstrap(shard: Shard, world: World, time: number) {
 	// Stagger seeds across the cadence interval so all centrals don't re-evaluate on the same
-	// tick. Relative to `shard.time` so a world imported well past tick 0 (e.g., mod added to
-	// an existing shard) still spreads its first wave forward instead of firing all at once.
+	// tick. Relative to the current tick so a world imported well past tick 0 (e.g., mod added
+	// to an existing shard) still spreads its first wave forward instead of firing all at once.
 	// `up: 'LT'` keeps a partial bootstrap from clobbering entries already advanced.
 	const seeds: [ number, string ][] = [];
 	for (const [ roomName ] of world.entries()) {
 		if (isCentralRoom(roomName)) {
-			seeds.push([ shard.time + bootstrapScatter(roomName), roomName ]);
+			seeds.push([ time + bootstrapScatter(roomName), roomName ]);
 		}
 	}
 	if (seeds.length > 0) {
@@ -241,23 +204,23 @@ async function bootstrap(shard: Shard, world: World) {
 
 // Peek-and-reschedule (no zrem): a crash between peek and reschedule leaves the original entry
 // for retry next tick instead of dropping it silently.
-registerShardTickProcessor(async shard => {
+registerShardTickProcessor(async (shard, time) => {
 	const bootstrapDone = await shard.data.get(bootstrapFlagKey);
 	let world: World;
 	let due: string[];
 	if (bootstrapDone === null) {
 		// First-time setup. Pay the world load once to seed the schedule.
 		world = await shard.loadWorld();
-		await bootstrap(shard, world);
-		due = await shard.data.zRange(dueSectorsKey, 0, shard.time, { by: 'SCORE' });
+		await bootstrap(shard, world, time);
+		due = await shard.data.zRange(dueSectorsKey, 0, time, { by: 'SCORE' });
 	} else {
 		// Steady state: cheap keyval check first — skip the world blob fetch on idle ticks.
-		due = await shard.data.zRange(dueSectorsKey, 0, shard.time, { by: 'SCORE' });
+		due = await shard.data.zRange(dueSectorsKey, 0, time, { by: 'SCORE' });
 		if (due.length === 0) return;
 		world = await shard.loadWorld();
 	}
 	await Fn.mapAwait(due, async sector => {
-		const nextTick = await evaluateSector(shard, world, sector, shard.time);
+		const nextTick = await evaluateSector(shard, world, sector, time);
 		await scheduleSector(shard, sector, nextTick);
 	});
 });
@@ -273,7 +236,6 @@ const spawnDepositIntent = registerIntentProcessor(
 		deposit.depositType = depositType;
 		deposit['#nextDecayTime'] = Game.time + DEPOSIT_DECAY_TIME;
 		room['#insertObject'](deposit);
-		context.task(incrementSectorCount(context.shard, centralRoom));
 		// The just-inserted deposit's #Tick doesn't fire this tick (post-intent loop iterates a
 		// captured `#objects` snapshot), so the explicit wakeAt keeps the room scheduled.
 		context.didUpdate();

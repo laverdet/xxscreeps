@@ -1,14 +1,13 @@
 import { registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
-import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { sectorsForRoom } from 'xxscreeps/game/room/sector.js';
+import { sectorContainsTile, sectorsForRoom } from 'xxscreeps/game/room/sector.js';
 import { calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor.js';
 import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
 import { Deposit } from './deposit.js';
-import { decrementSectorCountForTile, scheduleSector } from './spawn.js';
+import { scheduleSector } from './spawn.js';
 
 registerHarvestProcessor(Deposit, (creep, deposit) => {
 	const amount = calculatePower(creep, C.WORK, C.HARVEST_DEPOSIT_POWER, 'harvest');
@@ -29,14 +28,15 @@ registerHarvestProcessor(Deposit, (creep, deposit) => {
 
 registerObjectTickProcessor(Deposit, (deposit, context) => {
 	if (deposit.ticksToDecay === 0) {
-		// Decay just freed throughput; bump each owning sector's re-eval to the next shard tick.
-		const sectors = sectorsForRoom(deposit.pos.roomName);
-		if (sectors.length > 0) {
-			context.task(Fn.mapAwait(sectors, sector =>
-				scheduleSector(context.shard, sector, Game.time + 1, { earliest: true })));
+		// Decay just freed throughput in the owning sector — of the 1–4 candidate sectors for
+		// this room, the one whose 250-tile radius contains the tile. Bump its re-eval to the
+		// next shard tick.
+		const { roomName } = deposit.pos;
+		const owning = sectorsForRoom(roomName).find(sector =>
+			sectorContainsTile(sector, roomName)(deposit.pos.x, deposit.pos.y));
+		if (owning !== undefined) {
+			context.task(scheduleSector(context.shard, owning, Game.time + 1, { earliest: true }));
 		}
-		context.task(decrementSectorCountForTile(
-			context.shard, deposit.pos.roomName, deposit.pos.x, deposit.pos.y));
 		deposit.room['#removeObject'](deposit);
 		context.didUpdate();
 	} else {
