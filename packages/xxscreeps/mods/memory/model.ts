@@ -42,6 +42,10 @@ export function saveMemoryBlob(shard: Shard, userId: string, blob: Readonly<Uint
 	}
 }
 
+export function deleteUserMemoryBlob(shard: Shard, userId: string) {
+	return shard.data.vdel(`user/${userId}/memory`);
+}
+
 export function loadMemorySegmentBlob(shard: Shard, userId: string, segmentId: number) {
 	return shard.data.get(`user/${userId}/segment${segmentId}`, { blob: true });
 }
