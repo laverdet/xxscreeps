@@ -63,9 +63,21 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL Clang OR CMAKE_CXX_COMPILER_ID STREQUAL GNU)
 	add_compile_options(-fdiagnostics-color -Wall -Wextra -Wpedantic)
 endif()
 
+# get nodejs host triplet [darwin-x64, linux-arm64-gnu, win32-x64]
+include(TripletUtil)
+if(NOT DEFINED TRIPLET)
+	triplet_util(TRIPLET %p)
+	set(TRIPLET "${TRIPLET}" CACHE STRING "")
+endif()
+set(pathfinder "pf.${TRIPLET}")
+set(pathfinder_iv "iv.${TRIPLET}")
+set(node_modules "${CMAKE_SOURCE_DIR}/module/node_modules/@xxscreeps/pathfinder-${TRIPLET}")
+
 # nodejs + legacy isolated-vm target
-add_library(pathfinder SHARED)
-set_target_properties(pathfinder PROPERTIES PREFIX "" SUFFIX ".node")
+add_library(${pathfinder} SHARED)
+add_custom_target(pf)
+add_dependencies(pf ${pathfinder})
+set_target_properties(${pathfinder} PROPERTIES PREFIX "" SUFFIX ".node")
 
 # auto_js & napi (which provides v8) configuration
 include(FindNpmPackage)
@@ -73,11 +85,11 @@ set(NAPI_VERSION 10)
 set(EXPORT_IS_EXPORT ON)
 find_package_from_npm(@auto_js/napi)
 find_package_from_npm(@auto_js/v8 PROPAGATE auto_js v8_js)
-target_compile_definitions(pathfinder PRIVATE EXPORT_IS_EXPORT)
-target_link_libraries(pathfinder PRIVATE ${auto_js} ${v8_js} nodejs utility_js)
+target_compile_definitions(${pathfinder} PRIVATE EXPORT_IS_EXPORT)
+target_link_libraries(${pathfinder} PRIVATE ${auto_js} ${v8_js} nodejs utility_js)
 
 # sources
-target_sources(pathfinder
+target_sources(${pathfinder}
 	PUBLIC FILE_SET CXX_MODULES FILES
 		src/heap.cc
 		src/heuristic.cc
@@ -92,13 +104,6 @@ target_sources(pathfinder
 		src/main.cc
 )
 
-# get nodejs host triplet [darwin-x64, linux-arm64-gnu, win32-x64]
-include(TripletUtil)
-if(NOT DEFINED TRIPLET)
-	triplet_util(TRIPLET %p)
-	set(TRIPLET "${TRIPLET}" CACHE STRING "")
-endif()
-
 # nan
 if(NOT DEFINED NAN_LOCATION)
 	execute_process(COMMAND sh -c "node -e 'require(\"nan\")'" OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE NAN_LOCATION RESULT_VARIABLE RESULT)
@@ -108,7 +113,7 @@ if(NOT DEFINED NAN_LOCATION)
 	set(NAN_LOCATION "${NAN_LOCATION}" CACHE STRING "")
 	message(STATUS "Found 'nan' at ${NAN_LOCATION}")
 endif()
-target_include_directories(pathfinder SYSTEM PRIVATE "${NAN_LOCATION}")
+target_include_directories(${pathfinder} SYSTEM PRIVATE "${NAN_LOCATION}")
 
 # isolated-vm
 if(NOT DEFINED ISOLATED_VM_LOCATION)
@@ -119,13 +124,13 @@ if(NOT DEFINED ISOLATED_VM_LOCATION)
 	message(STATUS "Found 'isolated-vm' at ${ISOLATED_VM_LOCATION}")
 	set(ISOLATED_VM_LOCATION "${ISOLATED_VM_LOCATION}" CACHE STRING "")
 endif()
-target_include_directories(pathfinder SYSTEM PRIVATE "${ISOLATED_VM_LOCATION}")
+target_include_directories(${pathfinder} SYSTEM PRIVATE "${ISOLATED_VM_LOCATION}")
 
 # copy to destination
+add_custom_command(TARGET ${pathfinder} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${node_modules}")
 add_custom_command(
-	TARGET pathfinder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy
-	"$<TARGET_FILE:pathfinder>"
-	"${CMAKE_SOURCE_DIR}/module/node_modules/@xxscreeps/pathfinder-${TRIPLET}/pf.${TRIPLET}.node")
+	TARGET ${pathfinder} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy
+	"$<TARGET_FILE:${pathfinder}>" "${node_modules}/")
 
 # @isolated-vm/experimental target
 # nb: The invocation here is a bit strange because we want a napi module & isolated-vm module in the
@@ -134,11 +139,13 @@ set(AUTO_JS_PREFIX isolated_)
 set(EXPORT_IS_EXPORT OFF)
 find_package_from_npm(@auto_js/napi AS @auto_js/isolated_napi PROPAGATE napi_js)
 find_package_from_npm(@isolated-vm/experimental PROPAGATE auto_js)
-add_library(pathfinder_iv SHARED)
-set_target_properties(pathfinder_iv PROPERTIES PREFIX "" SUFFIX ".node" SKIP_BUILD_RPATH TRUE)
-target_link_libraries(pathfinder_iv PRIVATE ${auto_js} ${napi_js} isolated_vm utility_js)
+add_library(${pathfinder_iv} SHARED)
+add_custom_target(iv)
+add_dependencies(iv ${pathfinder_iv})
+set_target_properties(${pathfinder_iv} PROPERTIES PREFIX "" SUFFIX ".node" SKIP_BUILD_RPATH TRUE)
+target_link_libraries(${pathfinder_iv} PRIVATE ${auto_js} ${napi_js} isolated_vm utility_js)
 
-target_sources(pathfinder_iv
+target_sources(${pathfinder_iv}
 	PUBLIC FILE_SET CXX_MODULES FILES
 		src/heap.cc
 		src/heuristic.cc
@@ -152,7 +159,7 @@ target_sources(pathfinder_iv
 	PRIVATE
 		src/iv.cc
 )
+add_custom_command(TARGET ${pathfinder_iv} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E make_directory "${node_modules}")
 add_custom_command(
-	TARGET pathfinder_iv POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy
-	"$<TARGET_FILE:pathfinder_iv>"
-	"${CMAKE_SOURCE_DIR}/module/node_modules/@xxscreeps/pathfinder-${TRIPLET}/iv.${TRIPLET}.node")
+	TARGET ${pathfinder_iv} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy
+	"$<TARGET_FILE:${pathfinder_iv}>" "${node_modules}/")

@@ -21,4 +21,17 @@ const config = function(): Config {
 		return jsYaml.load(content) as Config;
 	}
 }();
+
+// Allow `runner.sandbox` override via global command-line flag
+const sandbox = process.argv.indexOf('--sandbox');
+if (sandbox !== -1) {
+	const value = process.argv.splice(sandbox, 2)[1];
+	if (value === 'experimental' || value === 'unsafe' || value === 'isolated') {
+		config.runner ??= {};
+		config.runner.sandbox = value;
+	} else {
+		throw new Error(`Invalid argument: --sandbox '${value}'`);
+	}
+}
+
 export default config;

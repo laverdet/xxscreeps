@@ -8,4 +8,5 @@ npm
 out
 profile.mts
 run-pgo
+src
 tsconfig.json

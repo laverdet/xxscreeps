@@ -165,7 +165,15 @@ jobs:
               pnpm -C ../xxscreeps install '@xxscreeps/pathfinder@workspace:^'
               npx xxscreeps import
               cp screeps/shard0/terrain .
+              # classic v8 + isolated-vm module
               node --import xxscreeps/loader ../xxscreeps/dist/driver/pathfinder/profile.js
+              # TODO: (segfault on alpine & windows)
+              if [ "${{ matrix.host.container }}" != "alpine:edge" ] && [ "${{ matrix.host.platform }}" != "windows" ]; then
+                # auto_js napi module
+                node --import xxscreeps/loader ../xxscreeps/dist/driver/pathfinder/profile.js --sandbox experimental
+                # '@isolated-vm/experimental' sandbox module
+                node --import xxscreeps/loader ../xxscreeps/dist/driver/pathfinder/profile.js --sandbox experimental --with-sandbox
+              fi
               "$LLVM_PROFDATA" merge -output="$PGO_OUT/default.profdata" "$PGO_OUT"/*.profraw
             else
               # The build failed. It could be an issue with PGO, or with the build itself.
@@ -304,6 +312,12 @@ jobs:
           set -ux
           npx napi create-npm-dirs
           npx napi artifacts
+          for PLATFORM in $(ls npm); do
+            ARTIFACT=iv.$PLATFORM.node
+            cp artifacts/*/pathfinder-$PLATFORM/$ARTIFACT npm/$PLATFORM/
+            PACKAGE=$(jq '.files += [ "'"$ARTIFACT"'" ]' npm/$PLATFORM/package.json)
+            (set +x; echo "$PACKAGE" > npm/$PLATFORM/package.json)
+          done
 
       # Publish
       - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'main' && github.event_name == 'push'
@@ -319,6 +333,5 @@ jobs:
         run: |
           pnpm publish --dry-run --filter . --no-git-checks
           for ii in $(ls npm); do
-            cat "npm/$ii/package.json"
             pnpm -C "npm/$ii" pack
           done

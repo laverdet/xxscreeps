@@ -1,6 +1,10 @@
 import * as crypto from 'node:crypto';
-import * as fs from 'node:fs';
+import * as fs from 'node:fs/promises';
 import * as util from 'node:util';
+import { Agent, expectComplete } from '@isolated-vm/experimental';
+import { makeCachedLoader, makeLinker } from '@isolated-vm/experimental/utility/linker';
+import { resolve } from '@loaderkit/resolve/esm';
+import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
 import { loadTerrain, search } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { World } from 'xxscreeps/game/map.js';
@@ -10,6 +14,7 @@ import { TERRAIN_MASK_WALL } from 'xxscreeps/game/terrain.js';
 
 const iterations = Number(process.argv.at(-1)) || 1;
 const log = process.argv.includes('--log');
+const expectedResult = 'd8a9ddc8';
 
 /**
  * This script is a standalone test for the path finder. It runs a whole bunch of path finding
@@ -18,45 +23,32 @@ const log = process.argv.includes('--log');
  */
 
 // Load terrain into module
-const world = new World('test', fs.readFileSync('terrain'));
+const world = new World('test', await fs.readFile('terrain'));
 loadTerrain(world);
-// if (sandbox) {
-// 	const pf = await import('@xxscreeps/pathfinder/iv');
-// 	await using agent = await Agent.create();
-// 	const realm = await agent.createRealm();
-// 	const module = expectComplete(await agent.compileModule(`
-// 		import * as pf from 'xxscreeps:pathfinder';
-// 		globalThis.result = pf.search(408885224, [ { pos: 404363251, range: 0 } ], undefined, 1, 5, 16, 100000, 100000, false, 1.2);
-// 	`));
-// 	const loader = makeStaticLoader({ 'xxscreeps:pathfinder': await pf.module.instantiate(realm) });
-// 	await module.link(realm, makeLinker(makeDirectResolver(), loader));
-// 	expectComplete(await module.evaluate(realm));
-// 	const result = await (await (await realm.acquireGlobalObject()).get('result')).copy();
-// 	console.log(result);
-// 	process.exit(0);
-// }
 
 // Generate deterministic CostMatrix's
-const costMatrix = (roomName: string) => {
-	const matrix = new CostMatrix();
-	const terrain = world.map.getRoomTerrain(roomName);
-	for (let yy = 0; yy < 50; ++yy) {
-		for (let xx = 0; xx < 50; ++xx) {
-			const ii = xx * 50 + yy;
-			if (terrain.get(xx, yy) !== TERRAIN_MASK_WALL) {
-				matrix.set(xx, yy, ii % 193 ? ii % 15 : 0xff);
+const matrices = function() {
+	const costMatrix = (roomName: string) => {
+		const matrix = new CostMatrix();
+		const terrain = world.map.getRoomTerrain(roomName);
+		for (let yy = 0; yy < 50; ++yy) {
+			for (let xx = 0; xx < 50; ++xx) {
+				const ii = xx * 50 + yy;
+				if (terrain.get(xx, yy) !== TERRAIN_MASK_WALL) {
+					matrix.set(xx, yy, ii % 193 ? ii % 15 : 0xff);
+				}
 			}
 		}
-	}
-	return matrix;
-};
-const matrices = Fn.pipe(
-	[ 'W1N1', 'W2N2', 'W3N3', 'W3N7', 'W4N1', 'W4N8', 'W5N3', 'W5N5', 'W6N5', 'W7N5', 'W8N5', 'W9N8' ],
-	$$ => Fn.map($$, roomName => [ roomName, costMatrix(roomName) ] as const),
-	$$ => Fn.fromEntries($$));
+		return matrix;
+	};
+	return Fn.pipe(
+		[ 'W1N1', 'W2N2', 'W3N3', 'W3N7', 'W4N1', 'W4N8', 'W5N3', 'W5N5', 'W6N5', 'W7N5', 'W8N5', 'W9N8' ],
+		$$ => Fn.map($$, roomName => [ roomName, costMatrix(roomName) ] as const),
+		$$ => Fn.fromEntries($$));
+}();
 
-// Various rooms around my world
-const positions = [
+// Various rooms around my world (stringified function)
+const makePositions = () => [
 	new RoomPosition(20, 39, 'W5N3'),
 	new RoomPosition(31, 20, 'W5N4'),
 	new RoomPosition(15, 30, 'W6N5'),
@@ -83,37 +75,137 @@ const positions = [
 	new RoomPosition(44, 32, 'W3N7'),
 ];
 
-// Find every point to every other point
-const hash = crypto.createHash('sha256');
-const start = process.hrtime();
-for (let count = 0; count < iterations; ++count) {
-	for (const [ ii, one ] of positions.entries()) {
-		for (const [ jj, two ] of positions.entries()) {
-			if (ii === jj) continue;
-			const ret = search(
-				one,
-				[ { range: ii % 3, pos: two } ],
-				{
-					plainCost: 1,
-					swampCost: 5,
-					maxRooms: 16,
-					maxCost: 100000,
-					maxOps: 100000,
-					heuristicWeight: 1.2,
-					roomCallback: ii % 2 === 0 ? roomName => matrices[roomName] : undefined,
-				},
-			);
-			hash.update(JSON.stringify(ret));
-			if (log) {
-				console.log(util.inspect(ret, { depth: null, maxArrayLength: null }));
+// Dispatch pathfinding profile
+const dispatch = (update: (result: unknown) => void) => {
+	const positions = makePositions();
+	for (let count = 0; count < iterations; ++count) {
+		// Find every point to every other point
+		for (const [ ii, one ] of positions.entries()) {
+			for (const [ jj, two ] of positions.entries()) {
+				if (ii === jj) continue;
+				const ret = search(
+					one,
+					[ { range: ii % 3, pos: two } ],
+					{
+						plainCost: 1,
+						swampCost: 5,
+						maxRooms: 16,
+						roomCallback: ii % 2 === 0 ? roomName => matrices[roomName] : undefined,
+					},
+				);
+				update(ret);
 			}
 		}
 	}
-}
-const time = process.hrtime(start);
-const checksum = hash.digest('hex').slice(0, 8);
-console.log(time[0] + time[1] / 1e9);
-if (iterations === 1 && checksum !== '6254dc11') {
-	console.error('Incorrect results! ' + checksum);
-	process.exit(1);
+	// Perform one recursive search
+	const pos1 = new RoomPosition(17, 47, 'W4N2');
+	const pos2 = new RoomPosition(36, 9, 'W4N2');
+	search(pos1, pos2, {
+		roomCallback: () => {
+			update(search(pos1, pos2));
+		},
+	});
+};
+
+if (process.argv.includes('--with-sandbox')) {
+
+	// Initialize a minimal sandbox for pathfinding
+	// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+	// @ts-ignore - TODO
+	const pf = await import('@xxscreeps/pathfinder/iv');
+	await using agent = await Agent.create();
+	const realm = await agent.createRealm();
+	const hash = crypto.createHash('sha256');
+	const hook = await realm.createCapability(
+		() => ({
+			update: result => {
+				const string = String(result);
+				hash.update(string);
+				if (log) {
+					console.log(util.inspect(JSON.parse(string), { depth: null, maxArrayLength: null }));
+				}
+			},
+		}),
+		{ origin: 'xxscreeps:pathfinder' });
+	const resolver = async (specifier: string, referrer?: string) => {
+		switch (specifier) {
+			case '#iv': return 'xxscreeps:pathfinder';
+			default: return async function() {
+				const alias = function() {
+					switch (specifier) {
+						case '@xxscreeps/pathfinder': return '@xxscreeps/pathfinder/iv';
+						case 'tslib': return 'tslib/tslib.es6.mjs';
+						case 'xxscreeps:hook': return 'xxscreeps:hook';
+						case 'xxscreeps/engine/schema/build/index.js': return 'xxscreeps/engine/schema/build/runtime.js';
+						default: return specifier;
+					}
+				}();
+				const { url } = await resolve(defaultAsyncFileSystem, alias, new URL(referrer ?? import.meta.url));
+				return url.href;
+			}();
+		}
+	};
+	const loader = async (url: string) => {
+		switch (url) {
+			case 'xxscreeps:hook': return hook;
+			case 'xxscreeps:pathfinder': return pf.module.instantiate(realm);
+			default: {
+				const sourceText = await async function() {
+					if (url.startsWith('xxscreeps:')) {
+						switch (url) {
+							case 'xxscreeps:mods/constants': return 'export {};';
+							case 'xxscreeps:packages': return 'export default [];';
+							default: throw new Error(`Unknown virtual module: ${url}`);
+						}
+					} else {
+						return fs.readFile(new URL(url), 'utf8');
+					}
+				}();
+				const module = agent.compileModule(sourceText, { origin: { name: url } });
+				return expectComplete(await module);
+			}
+		}
+	};
+	const module = expectComplete(await agent.compileModule(`
+		import { update } from 'xxscreeps:hook';
+		import { CostMatrix } from 'xxscreeps/game/pathfinder/index.js';
+		import { RoomPosition } from 'xxscreeps/game/position.js';
+		import { search } from 'xxscreeps/driver/pathfinder/pathfinder.js';
+		import { Fn } from 'xxscreeps/functional/fn.js';
+		const iterations = ${iterations};
+		const makePositions = ${String(makePositions)};
+		const dispatch = ${String(dispatch)};
+		dispatch(result => update(JSON.stringify(result)));
+	`));
+	const global = await realm.acquireGlobalObject();
+	await global.set('matrices', matrices);
+	await module.link(realm, makeLinker(resolver, makeCachedLoader(loader)));
+	const start = process.hrtime();
+	expectComplete(await module.evaluate(realm));
+	const time = process.hrtime(start);
+	console.log(time[0] + time[1] / 1e9);
+	const checksum = hash.digest('hex').slice(0, 8);
+	if (iterations === 1 && checksum !== expectedResult) {
+		console.error('Incorrect results! ' + checksum);
+		process.exit(1);
+	}
+
+} else {
+	// Local pathfinder module
+	const hash = crypto.createHash('sha256');
+	const update = (result: unknown) => {
+		hash.update(JSON.stringify(result));
+		if (log) {
+			console.log(util.inspect(result, { depth: null, maxArrayLength: null }));
+		}
+	};
+	const start = process.hrtime();
+	dispatch(update);
+	const time = process.hrtime(start);
+	const checksum = hash.digest('hex').slice(0, 8);
+	console.log(time[0] + time[1] / 1e9);
+	if (iterations === 1 && checksum !== expectedResult) {
+		console.error('Incorrect results! ' + checksum);
+		process.exit(1);
+	}
 }
