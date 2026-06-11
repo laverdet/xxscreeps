@@ -136,8 +136,8 @@ importers:
         specifier: ^7.29.7
         version: 7.29.7
       '@isolated-vm/experimental':
-        specifier: ^0.0.4
-        version: 0.0.4
+        specifier: ^0.0.6
+        version: 0.0.6
       '@loaderkit/resolve':
         specifier: ^1.0.6
         version: 1.0.6
@@ -674,19 +674,9 @@ packages:
       '@types/node':
         optional: true
 
-  '@isolated-vm/experimental-darwin-arm64@0.0.4':
-    resolution: {integrity: sha512-4BEjhHwkzs/lQ/v/J2ivcAzoHTvuBmcyukxiSz+8PWK7XtiDVnmL+jEkCp2U95w3MXGccWlTQa9Lbrq106UpCQ==}
-    cpu: [arm64]
-    os: [darwin]
-
   '@isolated-vm/experimental-darwin-arm64@0.0.6':
     resolution: {integrity: sha512-XvJNRpdRXmQj0RFPL3U+L0d2C6CAky5ZwQ1rIgWTiEZnWPcMyATFXjQrzRWRtdARRV8BdmJQC1VohT6wfEag0w==}
     cpu: [arm64]
-    os: [darwin]
-
-  '@isolated-vm/experimental-darwin-x64@0.0.4':
-    resolution: {integrity: sha512-1BHhtBw0yjuLN1N0VN/KV6XEOSSV/YSmgGPygU4DkqgNnRVZbmiRG3bxMoV11ikVt52G0OIu0pdXr+HTk39DNA==}
-    cpu: [x64]
     os: [darwin]
 
   '@isolated-vm/experimental-darwin-x64@0.0.6':
@@ -694,23 +684,11 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@isolated-vm/experimental-linux-arm64-gnu@0.0.4':
-    resolution: {integrity: sha512-aUz50qVpTG1KQzbMgrnJ7zPzwMwDWPxFgvXOY+T64L/adG5YloouxPqUGNDZ/fi7wmux4nvKzMCi9264OMnrKA==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
   '@isolated-vm/experimental-linux-arm64-gnu@0.0.6':
     resolution: {integrity: sha512-StUnEcCqQHOteb0kNCaxCWfoB8MSAwm6TOAxzocdvxCP4cD2wp6kfgDl9nVBj38naZb0VzQ9e7KEInd5lvbcUA==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
-
-  '@isolated-vm/experimental-linux-arm64-musl@0.0.4':
-    resolution: {integrity: sha512-2SMVb7gIR9IV6FyUWBvZ2rh16IWVugrrtffHg3YCcqUUcV6phBEQAd8bFP6HNFHFI2chQ4rLrxh2KnRNgdqVvg==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
 
   '@isolated-vm/experimental-linux-arm64-musl@0.0.6':
     resolution: {integrity: sha512-kc04D20AJdj+7e+Kt2zUgrpAlRAAb0oNKzD1nBmPARuvzPPx3Zk+ubO3mkLyGKqgcoizs1Wuiq3RJwg1IPHQCw==}
@@ -718,23 +696,11 @@ packages:
     os: [linux]
     libc: [musl]
 
-  '@isolated-vm/experimental-linux-x64-gnu@0.0.4':
-    resolution: {integrity: sha512-iKoeL/M8arAVXwGIe+EDaMBgfp7DdugF1PqENARrydgyYcNNk/jxUe2/5EIjV0FRueBiqm1VeqAmo4U4/vz1JA==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
   '@isolated-vm/experimental-linux-x64-gnu@0.0.6':
     resolution: {integrity: sha512-ghBzN0uef/p0VL7Hh1aD3wuLEIrAg9aoWJoKEvRdKJhd3yu/b56fRYxYVgqxX4SCz2Lmki3YcsoElfRUA8SqKw==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
-
-  '@isolated-vm/experimental-linux-x64-musl@0.0.4':
-    resolution: {integrity: sha512-g9Xo9OQzH6x/naM1dMTnbxdizoGU13+Wei4Lmy2Pc00PZEz4jAusILG7SF7V8T8ijGcW1z/qwvI03QS4gi/Lkw==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
 
   '@isolated-vm/experimental-linux-x64-musl@0.0.6':
     resolution: {integrity: sha512-5Fp7Ezoi4sunV8/z7/DqqL8iqUH9KCBdtsaPPCy5NnY/0l2mtgAPXa6Abhw9sYeaCuonFGjVrK46Z6+KbTvHfg==}
@@ -742,18 +708,10 @@ packages:
     os: [linux]
     libc: [musl]
 
-  '@isolated-vm/experimental-win32-x64@0.0.4':
-    resolution: {integrity: sha512-MDz8S8r/3JEpwvU988MwdFDnO/CR+jNPOI7ME5x9i04SOQOfb6nTlNrY78azqZ5HCg9ik+PVgXWYVfshkrO9gw==}
-    cpu: [x64]
-    os: [win32]
-
   '@isolated-vm/experimental-win32-x64@0.0.6':
     resolution: {integrity: sha512-xotcY9V653F4vVlLs/NWZLDpTMO2zZ6sz4/a9hPlRLsvi60KlzfAQfY5BWwkB73QBXPvF810WgtXrYjXtEvLjw==}
     cpu: [x64]
     os: [win32]
-
-  '@isolated-vm/experimental@0.0.4':
-    resolution: {integrity: sha512-9V+Igy6wzgXVRJ02NPo61iZN2T3z7Za4nYy6cfSunjrjYcizFB9/zvRNnh7iepFZNzkb7Npw7CZjyMFqdt5i7w==}
 
   '@isolated-vm/experimental@0.0.6':
     resolution: {integrity: sha512-C6+U+NqT8E6J71wwgJYW5A5JAbxnXqtgeajpKAqtdR8c6dsKmsuVSudLGIhgMrsUCSQDms/ZvAwzCIO58XGRkA==}
@@ -4115,59 +4073,26 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.12.2
 
-  '@isolated-vm/experimental-darwin-arm64@0.0.4':
-    optional: true
-
   '@isolated-vm/experimental-darwin-arm64@0.0.6':
-    optional: true
-
-  '@isolated-vm/experimental-darwin-x64@0.0.4':
     optional: true
 
   '@isolated-vm/experimental-darwin-x64@0.0.6':
     optional: true
 
-  '@isolated-vm/experimental-linux-arm64-gnu@0.0.4':
-    optional: true
-
   '@isolated-vm/experimental-linux-arm64-gnu@0.0.6':
-    optional: true
-
-  '@isolated-vm/experimental-linux-arm64-musl@0.0.4':
     optional: true
 
   '@isolated-vm/experimental-linux-arm64-musl@0.0.6':
     optional: true
 
-  '@isolated-vm/experimental-linux-x64-gnu@0.0.4':
-    optional: true
-
   '@isolated-vm/experimental-linux-x64-gnu@0.0.6':
-    optional: true
-
-  '@isolated-vm/experimental-linux-x64-musl@0.0.4':
     optional: true
 
   '@isolated-vm/experimental-linux-x64-musl@0.0.6':
     optional: true
 
-  '@isolated-vm/experimental-win32-x64@0.0.4':
-    optional: true
-
   '@isolated-vm/experimental-win32-x64@0.0.6':
     optional: true
-
-  '@isolated-vm/experimental@0.0.4':
-    dependencies:
-      tslib: 2.8.1
-    optionalDependencies:
-      '@isolated-vm/experimental-darwin-arm64': 0.0.4
-      '@isolated-vm/experimental-darwin-x64': 0.0.4
-      '@isolated-vm/experimental-linux-arm64-gnu': 0.0.4
-      '@isolated-vm/experimental-linux-arm64-musl': 0.0.4
-      '@isolated-vm/experimental-linux-x64-gnu': 0.0.4
-      '@isolated-vm/experimental-linux-x64-musl': 0.0.4
-      '@isolated-vm/experimental-win32-x64': 0.0.4
 
   '@isolated-vm/experimental@0.0.6':
     dependencies:

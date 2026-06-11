@@ -113,7 +113,7 @@ export class IsolatedSandbox implements Sandbox {
 		return this.isolate.createInspectorSession();
 	}
 
-	dispose() {
+	dispose(): undefined {
 		try {
 			this.isolate.dispose();
 		} catch {}

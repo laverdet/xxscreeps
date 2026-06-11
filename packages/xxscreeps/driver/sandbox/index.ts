@@ -1,7 +1,6 @@
 import type { InspectorSession } from 'isolated-vm';
 import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import { config } from 'xxscreeps/config/index.js';
-
 import { hooks } from 'xxscreeps/driver/index.js';
 import { path } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 
@@ -31,10 +30,7 @@ export type TickCompletion =
 
 export interface Sandbox {
 	createInspectorSession: () => InspectorSession;
-
-	dispose: () => void;
-
-	initialize: (data: InitializationPayload) => Promise<void>;
+	dispose: () => Promise<void> | undefined;
 	run: (data: TickPayload) => Promise<TickCompletion>;
 }
 
@@ -42,20 +38,24 @@ export async function createSandbox(userId: string, payload: InitializationPaylo
 	const sandbox = await async function() {
 		switch (config.runner.sandbox ?? 'isolated') {
 			case 'experimental': {
-				throw new Error('Not implemented');
+				const { ExperimentalSandbox } = await import('./experimental/index.js');
+				return ExperimentalSandbox.create(payload);
 			}
 			case 'isolated': {
 				const { IsolatedSandbox } = await import('./isolated/index.js');
-				return new IsolatedSandbox(payload);
+				const sandbox = new IsolatedSandbox(payload);
+				await sandbox.initialize(payload);
+				return sandbox;
 			}
 			case 'unsafe': {
 				const { NodejsSandbox } = await import('./nodejs/index.js');
-				return new NodejsSandbox();
+				const sandbox = new NodejsSandbox();
+				await sandbox.initialize(payload);
+				return sandbox;
 			}
 			default: throw new Error(`Invalid sandbox mode: ${config.runner.sandbox}`);
 		}
 	}();
-	await sandbox.initialize(payload);
 	didMakeSandbox(sandbox, userId);
 	return sandbox;
 }

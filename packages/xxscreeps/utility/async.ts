@@ -203,15 +203,17 @@ export function listenEvent<
 }
 
 // Exits immediately if a promise rejects
-export function mustNotReject(task: (() => PromiseLike<any>) | PromiseLike<any>) {
-	void (async function() {
-		try {
-			await (typeof task === 'function' ? task() : task);
-		} catch (error) {
-			console.error(error);
-			process.exit();
-		}
-	})();
+export function mustNotReject(task: (() => PromiseLike<any>) | PromiseLike<any> | undefined) {
+	if (task) {
+		void (async function() {
+			try {
+				await (typeof task === 'function' ? task() : task);
+			} catch (error) {
+				console.error(error);
+				process.exit();
+			}
+		})();
+	}
 }
 
 // For when a plain promise is just too unwieldy

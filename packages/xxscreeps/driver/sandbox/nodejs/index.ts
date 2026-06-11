@@ -33,7 +33,7 @@ const resolver = function() {
 			case '@xxscreeps/pathfinder': return '@xxscreeps/pathfinder';
 			case 'xxscreeps:mods/constants': return 'xxscreeps:mods/constants';
 			case 'xxscreeps:mods/game': return 'xxscreeps:mods/game';
-			case 'xxscreeps/engine/schema/build/packages.js': return 'xxscreeps:packages';
+			case 'xxscreeps:packages': return 'xxscreeps:packages';
 			default: return getOrSet(cache, key, async () => {
 				const alias = function() {
 					switch (specifier) {
@@ -158,7 +158,7 @@ export class NodejsSandbox implements Sandbox {
 		throw new Error('Inspector not supported with `sandbox: unsafe`');
 	}
 
-	dispose() {}
+	dispose(): undefined {}
 
 	async initialize(data: InitializationPayload) {
 

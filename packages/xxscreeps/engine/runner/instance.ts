@@ -13,7 +13,7 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { acquire } from 'xxscreeps/utility/async.js';
+import { acquire, mustNotReject } from 'xxscreeps/utility/async.js';
 import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility.js';
 import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model.js';
 import { hooks } from './symbols.js';
@@ -130,7 +130,7 @@ export class PlayerInstance {
 	disconnect() {
 		this.channel.disconnect();
 		this.codeChannel.disconnect();
-		this.sandbox?.dispose();
+		mustNotReject(this.sandbox?.dispose());
 		this.cleanup();
 	}
 
@@ -272,7 +272,7 @@ export class PlayerInstance {
 	}
 
 	private reset() {
-		this.sandbox?.dispose();
+		mustNotReject(this.sandbox?.dispose());
 		this.sandbox = undefined;
 		this.seenUsers.clear();
 		this.stale = false;

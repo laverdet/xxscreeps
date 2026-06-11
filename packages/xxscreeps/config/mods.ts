@@ -112,7 +112,10 @@ export const mods = await async function() {
 // Register nodejs loader
 const data: LoaderConfig = {
 	mods,
-	pathfinder: '@xxscreeps/pathfinder',
+	pathfinder:
+	 rawConfig.runner?.sandbox === 'experimental'
+	 	? '@xxscreeps/pathfinder/iv'
+	 	: '@xxscreeps/pathfinder',
 };
 register('./nodejs.js', import.meta.url, { data });
 
