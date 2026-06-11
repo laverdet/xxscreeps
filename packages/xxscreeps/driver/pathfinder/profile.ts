@@ -110,8 +110,6 @@ const dispatch = (update: (result: unknown) => void) => {
 if (process.argv.includes('--with-sandbox')) {
 
 	// Initialize a minimal sandbox for pathfinding
-	// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
-	// @ts-ignore - TODO
 	const pf = await import('@xxscreeps/pathfinder/iv');
 	await using agent = await Agent.create();
 	const realm = await agent.createRealm();

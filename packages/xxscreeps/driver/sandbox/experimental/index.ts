@@ -6,8 +6,6 @@ import { Agent, Module, Realm, expectComplete } from '@isolated-vm/experimental'
 import { makeCachedLoader, makeLinker } from '@isolated-vm/experimental/utility/linker';
 import { resolve } from '@loaderkit/resolve/esm';
 import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
-// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
-// @ts-ignore - TODO
 import * as pf from '@xxscreeps/pathfinder/iv';
 import { makeModSourceText } from 'xxscreeps/config/loader.js';
 import { mods } from 'xxscreeps/config/mods.js';
