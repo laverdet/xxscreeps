@@ -3,6 +3,7 @@ import type { Room } from './room/index.js';
 import type { IntentParameters, IntentReceivers, IntentsForReceiver } from 'xxscreeps/engine/processor/index.js';
 import type { ObjectReceivers, RoomIntentPayload } from 'xxscreeps/engine/processor/room.js';
 import type { Dictionary } from 'xxscreeps/utility/types.js';
+import * as BufferObject from 'xxscreeps/schema/buffer-object.js';
 import * as C from './constants/index.js';
 
 const kCpuCost = 0.2;
@@ -47,6 +48,9 @@ export class IntentManager {
 		Action extends IntentsForReceiver<any>,
 		//Action extends IntentsForReceiver<Receiver>,
 	>(receiver: Receiver, intent: Action, ...args: IntentParameters<Receiver, Action>) {
+		if (!BufferObject.check(receiver)) {
+			throw new Error(`Could not find an object with ID ${receiver.id}`);
+		}
 		const intents = this.makeIntentsForRoom(receiver.room.name).object[receiver.id] ??= {};
 		if (intents[intent as keyof typeof intents] === undefined) {
 			this.cpu += kCpuCost;
