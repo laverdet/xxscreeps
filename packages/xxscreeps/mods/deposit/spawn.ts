@@ -119,6 +119,7 @@ function findSpawnTile(
 		const xx = Math.floor(rng() * 40) + 5;
 		const yy = Math.floor(rng() * 40) + 5;
 		if ((terrain.get(xx, yy) & C.TERRAIN_MASK_WALL) === 0) continue;
+		// Divergence from the official cron, which computes this check but never enforces it.
 		if (!inSector(xx, yy)) continue;
 		let hasExit = false;
 		for (let dx = -1; dx <= 1 && !hasExit; ++dx) {
