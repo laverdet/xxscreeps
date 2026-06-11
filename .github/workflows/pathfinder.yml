@@ -320,7 +320,7 @@ jobs:
           done
 
       # Publish
-      - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'main' && github.event_name == 'push'
+      - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'pf' && github.event_name == 'push'
         id: publish
         working-directory: packages/pathfinder
         shell: sh
