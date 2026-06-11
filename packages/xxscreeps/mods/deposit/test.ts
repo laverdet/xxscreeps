@@ -172,15 +172,16 @@ describe('Deposit spawn', () => {
 		await tick(2); // first deposit spawns
 		const afterSpawn = await findDepositsInSector(shard, 'W5N5');
 		assert.strictEqual(afterSpawn.length, 1);
-		// Force a sector re-eval by bumping its score down to 0. The production cadence is
-		// 3000 ticks, but `{ earliest: true }` matches the decay-path's bump-down semantics.
+		// Force a sector re-eval by bumping its score down to 0 (= due immediately). The
+		// production cadence is the 5-minute wall-clock ceiling, but `{ earliest: true }`
+		// matches the decay-path's bump-down semantics.
 		await scheduleSector(shard, 'W5N5', 0, { earliest: true });
 		await tick(2);
 		const afterReeval = await findDepositsInSector(shard, 'W5N5');
 		assert.strictEqual(afterReeval.length, 1, 'saturated sector should not gain a second deposit');
 	}));
 
-	test('decay path schedules the sector for prompt re-eval', () => simulate({
+	test('decay prompts an immediate re-eval and refill', () => simulate({
 		// Plant a decayable deposit on the W5N5 sector edge, inside the sector's 250-tile
 		// radius (for W0N0 that's the x,y < 24 quadrant facing the central room). A
 		// player-owned creep keeps the room active so its tick processor (and therefore the
@@ -201,11 +202,16 @@ describe('Deposit spawn', () => {
 		// Skip the bootstrap seed so the decay path is the sole scheduler of W5N5.
 		await markBootstrappedForTest(shard);
 
-		// Decay fires this tick, scheduling W5N5 at score = shard.time + 1; the shard processor's
-		// peek (score ≤ shard.time) doesn't drain that entry, so it survives until next tick.
+		// Decay fires during this tick and marks W5N5 due immediately (score 0); the shard
+		// processor drains it the same tick, tallies the sector without the corpse, and pushes
+		// a refill intent. The surviving due entry is the cadence reschedule.
 		await tick(1);
 		const due = await inspectDueSectorsForTest(shard);
-		assert.deepStrictEqual(due, [ [ shard.time + 1, 'W5N5' ] ]);
+		assert.strictEqual(due.length, 1);
+		assert.strictEqual(due[0]![1], 'W5N5');
+		// The refill intent lands next tick.
+		await tick(1);
+		assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 1);
 	}));
 
 	test('decay outside the sector radius schedules nothing', () => simulate({

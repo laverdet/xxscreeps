@@ -16,11 +16,13 @@ import {
 import { Deposit } from './deposit.js';
 
 // Port of the official backend's `genDeposits` cron: sector geometry, throughput target, and
-// wall-tile rejection sampling all match, adapted here to shard ticks + room intents.
+// wall-tile rejection sampling all match, adapted here to the shard-tick substrate + room
+// intents. The schedule keeps the official wall-clock cadence; tick-domain events (decay)
+// pull it forward.
 
-// Cadence ceiling for re-checking a sector when no deposit will decay sooner.
-// TODO: the official cron is 5 wall-clock minutes; a fixed tick count drifts with tickrate.
-const DEPOSIT_CHECK_INTERVAL = 3000;
+// Cadence ceiling for re-checking a sector, in wall-clock ms (the official cron period).
+// Tick speeds vary and rarely run at their configured pace, so the schedule stays wall-clock.
+const DEPOSIT_CHECK_INTERVAL = 5 * 60_000;
 
 // A sector needs total throughput below this to gain a new deposit.
 const SECTOR_THROUGHPUT_TARGET = 2.5;
@@ -45,17 +47,18 @@ export function depositTypeForRoom(roomName: string): DepositResource {
 	return DEPOSIT_TYPES[fnv1a(roomName) % DEPOSIT_TYPES.length]!;
 }
 
-// Sorted set: score = shard tick when this sector should be re-evaluated, member = central
-// room name (e.g. `W5N5`). One row per sector, regardless of how many highway rooms it owns.
+// Sorted set: score = wall-clock ms when this sector should be re-evaluated (0 = immediately),
+// member = central room name (e.g. `W5N5`). One row per sector, regardless of how many highway
+// rooms it owns.
 const dueSectorsKey = 'deposits/dueSectors';
 const bootstrapFlagKey = 'deposits/bootstrapped';
 
 // `{ earliest: true }` only lowers the existing score (decay path); otherwise the score is
 // overwritten (evaluator path pushing the next check forward).
 export async function scheduleSector(
-	shard: Shard, sector: string, dueAtTick: number, options?: { earliest?: boolean },
+	shard: Shard, sector: string, dueAt: number, options?: { earliest?: boolean },
 ) {
-	await shard.data.zAdd(dueSectorsKey, [ [ dueAtTick, sector ] ],
+	await shard.data.zAdd(dueSectorsKey, [ [ dueAt, sector ] ],
 		options?.earliest === true ? { up: 'LT' } : undefined);
 }
 
@@ -66,25 +69,27 @@ function depositThroughput(harvested: number): number {
 type SectorEvalResult = {
 	throughput: number;
 	depositsByRoom: Map<string, Deposit[]>;
-	earliestDecayTick: number;
 };
 
 async function loadSectorDeposits(
-	shard: Shard, world: World, centralRoom: string,
+	shard: Shard, world: World, centralRoom: string, time: number,
 ): Promise<SectorEvalResult & { normalEdges: string[] }> {
 	// Out-of-borders / closed rooms are excluded from both throughput tallying and spawning.
 	const normalEdges = sectorEdgeRooms(centralRoom).filter(name =>
 		world.map.getRoomStatus(name).status === 'normal');
 	const depositsByRoom = new Map<string, Deposit[]>();
 	let throughput = 0;
-	let earliestDecayTick = Infinity;
 	await Fn.mapAwait(normalEdges, async edgeRoom => {
 		const room = await shard.loadRoom(edgeRoom).catch(() => undefined);
 		if (room === undefined) return;
 		const inSector = sectorContainsTile(centralRoom, edgeRoom);
 		const all: Deposit[] = [];
 		for (const object of room['#objects']) {
-			if (object instanceof Deposit && inSector(object.pos.x, object.pos.y)) {
+			// Rooms process tick `time` with Game.time = time + 1, so a deposit whose decay
+			// time has arrived (<= time + 1) was removed by this tick's room pass — exclude
+			// the corpse so the decay path's same-tick re-eval doesn't tally it.
+			if (object instanceof Deposit && object['#nextDecayTime'] > time + 1 &&
+				inSector(object.pos.x, object.pos.y)) {
 				all.push(object);
 			}
 		}
@@ -95,13 +100,9 @@ async function loadSectorDeposits(
 	for (const deposits of depositsByRoom.values()) {
 		for (const deposit of deposits) {
 			throughput += depositThroughput(deposit['#harvested']);
-			const decay = deposit['#nextDecayTime'];
-			if (decay > 0 && decay < earliestDecayTick) {
-				earliestDecayTick = decay;
-			}
 		}
 	}
-	return { throughput, depositsByRoom, earliestDecayTick, normalEdges };
+	return { throughput, depositsByRoom, normalEdges };
 }
 
 type RngFn = () => number;
@@ -141,7 +142,7 @@ export function setDepositSpawnRng(fn: RngFn | undefined) {
 }
 
 // Bootstrap scatter: spread initial sector seeds across the cadence so all centrals don't
-// re-evaluate on the same tick forever. Tests override to a fixed offset for determinism.
+// come due at the same time forever. Tests override to a fixed offset for determinism.
 type ScatterFn = (roomName: string) => number;
 const defaultScatter: ScatterFn = roomName => fnv1a(roomName) % DEPOSIT_CHECK_INTERVAL;
 let bootstrapScatter: ScatterFn = defaultScatter;
@@ -167,33 +168,27 @@ async function pushSpawnIntent(shard: Shard, candidate: string, centralRoom: str
 	});
 }
 
-async function evaluateSector(
-	shard: Shard, world: World, centralRoom: string, currentTick: number,
-): Promise<number> {
-	const { throughput, depositsByRoom, earliestDecayTick, normalEdges } = await loadSectorDeposits(shard, world, centralRoom);
+async function evaluateSector(shard: Shard, world: World, centralRoom: string, time: number) {
+	const { throughput, depositsByRoom, normalEdges } = await loadSectorDeposits(shard, world, centralRoom, time);
 	if (throughput >= SECTOR_THROUGHPUT_TARGET) {
-		// Saturated. Next change must come from decay or accrued mining; schedule for the
-		// earlier of "next decay" or the cadence ceiling.
-		return Math.min(currentTick + DEPOSIT_CHECK_INTERVAL, earliestDecayTick);
+		// Saturated. The decay hook pulls the schedule forward the moment capacity frees.
+		return;
 	}
 	const candidate = pickRandomFreeRoom(normalEdges, new Set(depositsByRoom.keys()));
 	if (candidate !== undefined) {
 		await pushSpawnIntent(shard, candidate, centralRoom);
 	}
-	// Whether the room actually accepts the spawn (a stray construction site, etc. could fail
-	// tile selection), we re-poll the sector at the cadence ceiling.
-	return currentTick + DEPOSIT_CHECK_INTERVAL;
 }
 
-async function bootstrap(shard: Shard, world: World, time: number) {
-	// Stagger seeds across the cadence interval so all centrals don't re-evaluate on the same
-	// tick. Relative to the current tick so a world imported well past tick 0 (e.g., mod added
-	// to an existing shard) still spreads its first wave forward instead of firing all at once.
-	// `up: 'LT'` keeps a partial bootstrap from clobbering entries already advanced.
+async function bootstrap(shard: Shard, world: World, now: number) {
+	// Stagger seeds across the cadence interval so all centrals don't re-evaluate at the same
+	// time. Relative to the current wall clock so a world imported well past tick 0 (e.g., mod
+	// added to an existing shard) still spreads its first wave forward instead of firing all
+	// at once. `up: 'LT'` keeps a partial bootstrap from clobbering entries already advanced.
 	const seeds: [ number, string ][] = [];
 	for (const [ roomName ] of world.entries()) {
 		if (isCentralRoom(roomName)) {
-			seeds.push([ time + bootstrapScatter(roomName), roomName ]);
+			seeds.push([ now + bootstrapScatter(roomName), roomName ]);
 		}
 	}
 	if (seeds.length > 0) {
@@ -205,23 +200,26 @@ async function bootstrap(shard: Shard, world: World, time: number) {
 // Peek-and-reschedule (no zrem): a crash between peek and reschedule leaves the original entry
 // for retry next tick instead of dropping it silently.
 registerShardTickProcessor(async (shard, time) => {
+	const now = Date.now();
 	const bootstrapDone = await shard.data.get(bootstrapFlagKey);
 	let world: World;
 	let due: string[];
 	if (bootstrapDone === null) {
 		// First-time setup. Pay the world load once to seed the schedule.
 		world = await shard.loadWorld();
-		await bootstrap(shard, world, time);
-		due = await shard.data.zRange(dueSectorsKey, 0, time, { by: 'SCORE' });
+		await bootstrap(shard, world, now);
+		due = await shard.data.zRange(dueSectorsKey, 0, now, { by: 'SCORE' });
 	} else {
 		// Steady state: cheap keyval check first — skip the world blob fetch on idle ticks.
-		due = await shard.data.zRange(dueSectorsKey, 0, time, { by: 'SCORE' });
+		due = await shard.data.zRange(dueSectorsKey, 0, now, { by: 'SCORE' });
 		if (due.length === 0) return;
 		world = await shard.loadWorld();
 	}
 	await Fn.mapAwait(due, async sector => {
-		const nextTick = await evaluateSector(shard, world, sector, time);
-		await scheduleSector(shard, sector, nextTick);
+		await evaluateSector(shard, world, sector, time);
+		// Whether or not the spawn lands (tile selection can fail), re-poll at the cadence
+		// ceiling; decay pulls the schedule forward sooner.
+		await scheduleSector(shard, sector, now + DEPOSIT_CHECK_INTERVAL);
 	});
 });
 

@@ -29,13 +29,14 @@ registerHarvestProcessor(Deposit, (creep, deposit) => {
 registerObjectTickProcessor(Deposit, (deposit, context) => {
 	if (deposit.ticksToDecay === 0) {
 		// Decay just freed throughput in the owning sector — of the 1–4 candidate sectors for
-		// this room, the one whose 250-tile radius contains the tile. Bump its re-eval to the
-		// next shard tick.
+		// this room, the one whose 250-tile radius contains the tile. Score 0 = due
+		// immediately; the evaluator excludes deposits at their decay tick from the tally, so
+		// the same-tick re-eval already sees this one gone.
 		const { roomName } = deposit.pos;
 		const owning = sectorsForRoom(roomName).find(sector =>
 			sectorContainsTile(sector, roomName)(deposit.pos.x, deposit.pos.y));
 		if (owning !== undefined) {
-			context.task(scheduleSector(context.shard, owning, Game.time + 1, { earliest: true }));
+			context.task(scheduleSector(context.shard, owning, 0, { earliest: true }));
 		}
 		deposit.room['#removeObject'](deposit);
 		context.didUpdate();
