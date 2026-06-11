@@ -18,8 +18,8 @@ import { Deposit } from './deposit.js';
 // Port of the official backend's `genDeposits` cron: sector geometry, throughput target, and
 // wall-tile rejection sampling all match, adapted here to shard ticks + room intents.
 
-// Cadence ceiling for re-checking a sector when no deposit will decay sooner. The official
-// cron runs every 5 wall-clock minutes; this is the tick-domain equivalent.
+// Cadence ceiling for re-checking a sector when no deposit will decay sooner.
+// TODO: the official cron is 5 wall-clock minutes; a fixed tick count drifts with tickrate.
 const DEPOSIT_CHECK_INTERVAL = 3000;
 
 // A sector needs total throughput below this to gain a new deposit.
