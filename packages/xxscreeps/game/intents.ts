@@ -4,6 +4,7 @@ import type { IntentParameters, IntentReceivers, IntentsForReceiver } from 'xxsc
 import type { ObjectReceivers, RoomIntentPayload } from 'xxscreeps/engine/processor/room.js';
 import type { Dictionary } from 'xxscreeps/utility/types.js';
 import * as C from './constants/index.js';
+import { Game } from './index.js';
 
 const kCpuCost = 0.2;
 type NamedReceivers = Exclude<IntentReceivers, RoomObject | Room>;
@@ -47,6 +48,9 @@ export class IntentManager {
 		Action extends IntentsForReceiver<any>,
 		//Action extends IntentsForReceiver<Receiver>,
 	>(receiver: Receiver, intent: Action, ...args: IntentParameters<Receiver, Action>) {
+		if (Game.getObjectById(receiver.id) === null) {
+			throw new Error(`Could not find an object with ID ${receiver.id}`);
+		}
 		const intents = this.makeIntentsForRoom(receiver.room.name).object[receiver.id] ??= {};
 		if (intents[intent as keyof typeof intents] === undefined) {
 			this.cpu += kCpuCost;
