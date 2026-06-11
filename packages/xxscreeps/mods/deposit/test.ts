@@ -1,11 +1,12 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { sectorEdgeRooms } from 'xxscreeps/game/room/sector.js';
+import { sectorContainsTile, sectorEdgeRooms } from 'xxscreeps/game/room/sector.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
@@ -160,9 +161,16 @@ describe('Deposit spawn', () => {
 		const found = await findDepositsInSector(shard, 'W5N5');
 		assert.strictEqual(found.length, 1, 'exactly one deposit per evaluator pass');
 		const { roomName, deposit } = found[0]!;
-		// Deterministic per-room assignment — assert the spawned type matches the helper.
+		// Round-trip: the type survives intent serialization and the schema enum write/read.
 		assert.strictEqual(deposit.depositType, depositTypeForRoom(roomName));
 		assert.strictEqual(deposit['#nextDecayTime'], shard.time + DEPOSIT_DECAY_TIME);
+		// Ported placement predicates: wall terrain, inside the sector's 250-tile radius.
+		const world = await shard.loadWorld();
+		const terrain = world.map.getRoomTerrain(roomName);
+		assert.ok((terrain.get(deposit.pos.x, deposit.pos.y) & C.TERRAIN_MASK_WALL) !== 0,
+			'deposit spawns on wall terrain');
+		assert.ok(sectorContainsTile('W5N5', roomName)(deposit.pos.x, deposit.pos.y),
+			'deposit spawns inside the sector radius');
 	}));
 
 	test('saturated sector does not spawn more', () => emptySector(async ({ shard, tick }) => {
@@ -179,6 +187,37 @@ describe('Deposit spawn', () => {
 		await tick(2);
 		const afterReeval = await findDepositsInSector(shard, 'W5N5');
 		assert.strictEqual(afterReeval.length, 1, 'saturated sector should not gain a second deposit');
+	}));
+
+	// Every ring room but one holds a heavily-harvested deposit: 39 × 20/(0.001·50000^1.2)
+	// ≈ 1.8 total throughput keeps the sector below the 2.5 target, so the evaluator spawns
+	// again — and the busy-room exclusion leaves it exactly one legal destination. The four
+	// candidate spots cover each room's in-radius quadrant, whichever side of the sector it
+	// sits on.
+	const freeRoom = 'W0N5';
+	const occupiedRing = Object.fromEntries(sectorEdgeRooms('W5N5')
+		.filter(name => name !== freeRoom)
+		.map(name => [ name, (room: Room) => {
+			const inSector = sectorContainsTile('W5N5', name);
+			const spot = [ [ 20, 20 ], [ 20, 30 ], [ 30, 20 ], [ 30, 30 ] ]
+				.find(([ xx, yy ]) => inSector(xx!, yy!))!;
+			room['#insertObject'](createDeposit(
+				new RoomPosition(spot[0]!, spot[1]!, name),
+				C.RESOURCE_SILICON,
+				50_000,
+				Game.time + DEPOSIT_DECAY_TIME,
+			));
+		} ]));
+
+	test('occupied rooms are excluded from spawn candidates', () => simulate(occupiedRing)(async ({ shard, tick }) => {
+		using _rng = withFixedSpawnRng();
+		await markBootstrappedForTest(shard);
+		await scheduleSector(shard, 'W5N5', 0, { earliest: true });
+		await tick(2);
+		const found = await findDepositsInSector(shard, 'W5N5');
+		assert.strictEqual(found.length, 40);
+		assert.strictEqual(found.filter(({ roomName }) => roomName === freeRoom).length, 1,
+			'the only free room receives the spawn');
 	}));
 
 	test('decay prompts an immediate re-eval and refill', () => simulate({
