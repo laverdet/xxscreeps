@@ -48,22 +48,48 @@ jobs:
     steps:
       # Fix Alpine on aarch64
       - if: matrix.host.triplet == 'aarch64-alpine-linux-musl'
+        name: Alpine aarch64 Fix
         uses: laverdet/alpine-arm64@v1
 
       # Install compiler & dependencies
       - if: matrix.host.container == 'alpine:edge'
-        shell: sh
-        run: |
-          apk add build-base boost-dev clang22 clang22-extra-tools cmake compiler-rt lld22 llvm22 ninja-is-really-ninja nodejs npm
-          echo "CXX=clang++-22" >> "$GITHUB_ENV"
-          echo "LLVM_PROFDATA=llvm22-profdata" >> "$GITHUB_ENV"
+        name: Toolchain [Alpine]
+        uses: laverdet/install@v1
+        with:
+          packages: |
+            boost-dev
+            build-base
+            clang22
+            clang22-extra-tools
+            cmake
+            compiler-rt
+            lld22
+            llvm22
+            ninja-is-really-ninja
+            nodejs
+            npm
+          export: |
+            CXX=clang++-22
+            LLVM_PROFDATA=llvm22-profdata
+
       - if: matrix.host.container == 'debian:sid'
-        run: |
-          apt update
-          apt install -y clang-22 cmake libboost-all-dev lld-22 llvm-22 ninja-build npm
-          echo "CXX=clang++-22" >> "$GITHUB_ENV"
-          echo "LLVM_PROFDATA=llvm-profdata-22" >> "$GITHUB_ENV"
+        name: Toolchain [Debian]
+        uses: laverdet/install@v1
+        with:
+          packages: |
+            clang-22
+            cmake
+            libboost-all-dev
+            lld-22
+            llvm-22
+            ninja-build
+            npm
+          export: |
+            CXX=clang++-22
+            LLVM_PROFDATA=llvm-profdata-22
+
       - if: matrix.host.platform == 'darwin'
+        name: Toolchain [macOS]
         run: |
           # https://github.com/orgs/Homebrew/discussions/5602
           brew install --quiet cmake ninja
@@ -74,23 +100,34 @@ jobs:
           echo "CXX=$LLVM/bin/clang++" >> "$GITHUB_ENV"
           echo "LLVM_PROFDATA=$LLVM/bin/llvm-profdata" >> "$GITHUB_ENV"
           echo "ECO_STD=$LLVM/lib/c++/libc++.modules.json" >> "$GITHUB_ENV"
+
       - if: matrix.host.platform == 'windows'
+        name: Toolchain [Windows]
+        uses: laverdet/install@v1
+        with:
+          tool: /c/msys64/usr/bin/pacman
+          packages: |
+            mingw-w64-%a-boost
+            mingw64/mingw-w64-%a-cmake>=4.3.0
+            mingw64/mingw-w64-%a-ninja
+          path: |
+            /c/msys64/usr/bin
+            /c/msys64/mingw64/bin
+      - if: matrix.host.platform == 'windows'
+        name: Toolchain [Windows]
         shell: bash
         run: |
+          set -ux
+          echo ::group::Toolchain
+          # Look for existing version (diagnostics)
+          clang++ --version || true
+          # Install updated LLVM (and hide spammy progress bar)
           winget install --accept-source-agreements --silent -e --id=LLVM.LLVM --version=22.1.6 | tr '\r' '\n' | grep -Ev --line-buffered '^[ -\/|]+$'
-          ARCH=$(uname -m)
-          /c/msys64/usr/bin/pacman -Sy --noconfirm \
-            "mingw-w64-$ARCH-boost" \
-            "mingw64/mingw-w64-$ARCH-cmake>=4.3.0" \
-            "mingw64/mingw-w64-$ARCH-ninja" \
-          ;
-          echo "/c/msys64/mingw64/bin" >> "$GITHUB_PATH"
-          echo "/c/msys64/usr/bin" >> "$GITHUB_PATH"
-          echo "CMAKE_PREFIX_PATH=C:/msys64/mingw64/lib/cmake" >> "$GITHUB_ENV"
           echo "CXX=clang++.exe" >> "$GITHUB_ENV"
           echo "LLVM_PROFDATA=llvm-profdata.exe" >> "$GITHUB_ENV"
+          echo ::endgroup::
 
-          # Make the `import std` ecostd manifest
+          echo ::group::import std hack
           # /c/Program Files/Microsoft Visual Studio/18/Enterprise
           VISUAL_STUDIO_PATH=$(cygpath "$(vswhere | grep installationPath: | cut -c19-)")
           # /c/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.50.35717
@@ -138,6 +175,7 @@ jobs:
       # Setup repository
       - uses: actions/checkout@v5
       - shell: sh
+        name: pnpm install
         run: |
           npm config set script-shell /bin/sh
           npm install -g pnpm
@@ -146,9 +184,11 @@ jobs:
 
       # Build
       - shell: sh
+        name: Build
         working-directory: packages/pathfinder
         run: |
           set -ux
+          export CXX=$(command -v "$CXX")
 
           # Generate PGO instrumentation
           if node --version | grep -q 'v24' && command -v "$LLVM_PROFDATA" >/dev/null; then
@@ -247,6 +287,7 @@ jobs:
 
       # Install nodejs
       - if: matrix.host.container == 'alpine:3'
+        name: Setup Node [Alpine]
         id: musl
         shell: sh
         run: apk add nodejs npm
@@ -258,6 +299,7 @@ jobs:
       # Setup
       - uses: actions/checkout@v5
       - shell: sh
+        name: pnpm install
         run: |
           npm install -g pnpm
           pnpm install --frozen-lockfile --ignore-scripts
@@ -269,12 +311,15 @@ jobs:
 
       # Test
       - shell: sh
+        name: Quick test
         working-directory: packages/pathfinder
         run: node -e 'require("@xxscreeps/pathfinder").loadTerrain([])'
       - shell: sh
+        name: Select '@xxscreeps/pathfinder'
         working-directory: packages/xxscreeps
         run: pnpm install '@xxscreeps/pathfinder@workspace:*'
       - shell: sh
+        name: Test
         run: |
           pnpm run build
           pnpm run test
@@ -295,6 +340,7 @@ jobs:
           # standard.
           node-version: 24
       - shell: sh
+        name: pnpm install
         run: |
           npm install -g pnpm
           pnpm install --frozen-lockfile --ignore-scripts
@@ -307,7 +353,8 @@ jobs:
           path: packages/pathfinder/artifacts
 
       # Assemble @xxscreeps/pathfinder
-      - working-directory: packages/pathfinder
+      - name: Assemble '@xxscreeps/pathfinder'
+        working-directory: packages/pathfinder
         run: |
           set -ux
           npx napi create-npm-dirs
@@ -322,12 +369,14 @@ jobs:
       # Publish
       - if: github.repository == 'laverdet/xxscreeps' && github.ref_name == 'main' && github.event_name == 'push'
         id: publish
+        name: Publish
         working-directory: packages/pathfinder
         shell: sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm publish --filter . --no-git-checks --provenance
       - if: steps.publish.outcome == 'skipped'
+        name: Publish [Dry Run]
         working-directory: packages/pathfinder
         shell: sh
         run: |
