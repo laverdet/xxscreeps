@@ -192,8 +192,19 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 
 	flushActionLog(core['#actionLog'], context);
 
+	// Clear the deploy timer the tick after it elapses. `ticksToDeploy`/`effects` read `#deployTime`
+	// through `optionalExpiryTime`, which throws on a past time, so this branches on the raw field
+	// rather than the getter. Zeroing lands in the blob read at `deployTime + 1` — one tick past the
+	// core's last invulnerable tick (`Game.time === deployTime`, `ticksToDeploy === 0`).
 	const deployTime = core['#deployTime'];
-	if (deployTime > Game.time) context.wakeAt(deployTime);
+	if (deployTime !== 0) {
+		if (deployTime < Game.time) {
+			core['#deployTime'] = 0;
+			context.didUpdate();
+		} else {
+			context.wakeAt(deployTime + 1);
+		}
+	}
 	if (collapseTime > Game.time) context.wakeAt(collapseTime);
 });
 
