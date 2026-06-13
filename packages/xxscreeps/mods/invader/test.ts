@@ -270,6 +270,35 @@ describe('Invader core', () => {
 		});
 	}));
 
+	// Deploy completes at Game.time === 2; an observer keeps the room visible across the boundary.
+	const deployBoundary = simulate({
+		W1N1: room => {
+			room['#insertObject'](createInvaderCore(corePos, 2, 2));
+			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'observer', '100'));
+		},
+	});
+
+	test('clears the deploy timer the tick after it elapses', () => deployBoundary(async ({ player, tick }) => {
+		// Game.time === deployTime: final invulnerable tick, `ticksToDeploy === 0`.
+		await tick(2);
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.strictEqual(Game.time, 2);
+			assert.strictEqual(core.ticksToDeploy, 0, 'invulnerable through Game.time === deployTime');
+			assert.deepStrictEqual(core.effects, [
+				{ effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 0 },
+			]);
+		});
+		// Game.time === deployTime + 1: cleared. Reading the expiry getters must not throw.
+		await tick();
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.strictEqual(Game.time, 3);
+			assert.strictEqual(core.ticksToDeploy, undefined, 'deploy timer cleared after it elapses');
+			assert.strictEqual(core.effects, undefined);
+		});
+	}));
+
 	const deployingWithCollapse = simulate({
 		W1N1: room => {
 			const core = createInvaderCore(corePos, 2, 5000);

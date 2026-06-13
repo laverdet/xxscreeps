@@ -2,4 +2,4 @@
 "xxscreeps": minor
 ---
 
-Add `StructureInvaderCore` NPC actions, collapse expiry, action log, and invulnerable rangedMassAttack skip.
+Add `StructureInvaderCore` NPC actions, deploy/collapse expiry, action log, and invulnerable rangedMassAttack skip.
