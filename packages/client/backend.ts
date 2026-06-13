@@ -107,6 +107,17 @@ if (clientPackage) {
 					// Replace official CDN with local assets
 					const content = await file.async('text');
 					return content.replace(/https:\/\/d3os7yery2usni\.cloudfront\.net\//g, '/assets/');
+				} else if (path === 'components/game/room/effect-icon/effect-icon.html') {
+					// The effect icon's countdown lives in a native `title`, which the browser
+					// re-arms on every tick the text changes, so the tooltip never settles long
+					// enough to render. Reuse the same expression as a `uib-tooltip`
+					// directive — the tooltip directive this client's ui-bootstrap 2.5.0 actually
+					// registers (legacy unprefixed `tooltip-html-unsafe` is not), which shows on
+					// mouseenter and re-interpolates each digest so the countdown stays live.
+					const content = await file.async('text');
+					return content.replace(
+						/(<div class='effect-icon')\s+title="([^"]*)"/,
+						(full: string, div: string, expr: string) => `${div} tooltip-append-to-body='true' tooltip-placement='top' uib-tooltip="${expr.replace(/\\n/g, ' ')}"`);
 				} else {
 					// JSZip doesn't implement their read stream correctly and it causes EPIPE crashes. Pass it
 					// through a no-op transform stream first to iron that out.
