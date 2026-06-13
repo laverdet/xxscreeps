@@ -1,8 +1,11 @@
 import type { StructureInvaderCore } from './invader-core.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
+import type { Room } from 'xxscreeps/game/room/index.js';
+import type { StructureTower } from 'xxscreeps/mods/defense/tower.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { create as createTower } from 'xxscreeps/mods/defense/tower.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { lookForStructures } from '../structure/structure.js';
 import { create as createInvaderCore } from './invader-core.js';
@@ -212,7 +215,7 @@ describe('Invader core', () => {
 		});
 	}));
 
-	test('damage paths are all blocked while deploying', () => deploying(async ({ player, tick }) => {
+	test('damage paths are all blocked while deploying', () => deploying(async ({ player, tick, peekRoom }) => {
 		await player('100', Game => {
 			const core = findCore(Game);
 			const attacker = Game.creeps.attacker!;
@@ -220,13 +223,17 @@ describe('Invader core', () => {
 			assert.strictEqual(attacker.attack(core), C.ERR_INVALID_TARGET);
 			assert.strictEqual(attacker.rangedAttack(core), C.ERR_INVALID_TARGET);
 			assert.strictEqual(attacker.dismantle(core), C.ERR_INVALID_TARGET);
-			// rangedMassAttack has no per-target intent check; #applyDamage is the backstop.
+			// rangedMassAttack has no per-target intent check; the processor-level invulnerability skip is the backstop.
 			assert.strictEqual(attacker.rangedMassAttack(), C.OK);
 		});
 		await tick();
 		await player('100', Game => {
 			const core = findCore(Game);
 			assert.strictEqual(core.hits, core.hitsMax, 'invulnerable core should take no damage');
+		});
+		await peekRoom('W1N1', room => {
+			const attacked = room.getEventLog().some(event => event.event === C.EVENT_ATTACK);
+			assert.strictEqual(attacked, false, 'skipped rangedMassAttack must not emit EVENT_ATTACK');
 		});
 	}));
 
@@ -262,4 +269,221 @@ describe('Invader core', () => {
 			assert.strictEqual(core.hits, core.hitsMax - C.ATTACK_POWER);
 		});
 	}));
+
+	// Deploy completes at Game.time === 2; an observer keeps the room visible across the boundary.
+	const deployBoundary = simulate({
+		W1N1: room => {
+			room['#insertObject'](createInvaderCore(corePos, 2, 2));
+			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'observer', '100'));
+		},
+	});
+
+	test('clears the deploy timer the tick after it elapses', () => deployBoundary(async ({ player, tick }) => {
+		// Game.time === deployTime: final invulnerable tick, `ticksToDeploy === 0`.
+		await tick(2);
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.strictEqual(Game.time, 2);
+			assert.strictEqual(core.ticksToDeploy, 0, 'invulnerable through Game.time === deployTime');
+			assert.deepStrictEqual(core.effects, [
+				{ effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 0 },
+			]);
+		});
+		// Game.time === deployTime + 1: cleared. Reading the expiry getters must not throw.
+		await tick();
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.strictEqual(Game.time, 3);
+			assert.strictEqual(core.ticksToDeploy, undefined, 'deploy timer cleared after it elapses');
+			assert.strictEqual(core.effects, undefined);
+		});
+	}));
+
+	const deployingWithCollapse = simulate({
+		W1N1: room => {
+			const core = createInvaderCore(corePos, 2, 5000);
+			core['#collapseTime'] = 10000;
+			room['#insertObject'](core);
+			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'observer', '100'));
+		},
+	});
+
+	test('effects compose deploy + collapse timers', () => deployingWithCollapse(async ({ player }) => {
+		await player('100', Game => {
+			const core = findCore(Game);
+			assert.deepStrictEqual(core.effects, [
+				{ effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 5000 - Game.time },
+				{ effect: C.EFFECT_COLLAPSE_TIMER, ticksRemaining: 10000 - Game.time },
+			]);
+		});
+	}));
+
+	const findRoomCore = (room: Room) =>
+		room.find(C.FIND_STRUCTURES).find(
+			(structure): structure is StructureInvaderCore => structure.structureType === C.STRUCTURE_INVADER_CORE);
+
+	// A presence creep activates the room for processing; NPC '2' alone is filtered out by
+	// `updateUserRoomRelationships`, so without a human user the room never enters the process queue.
+	const presencePos = new RoomPosition(10, 10, 'W1N1');
+	const placePresenceCreep = (room: Room) =>
+		room['#insertObject'](createCreep(presencePos, [ C.MOVE ], 'dummy', '100'));
+
+	const coreInNeutralRoom = simulate({
+		W1N1: room => {
+			placePresenceCreep(room);
+			room['#insertObject'](createInvaderCore(corePos, 2, 0));
+		},
+	});
+
+	test('NPC reserves a neutral controller and logs the action', () => coreInNeutralRoom(async ({ tick, peekRoom }) => {
+		await tick();
+		await peekRoom('W1N1', (room, Game) => {
+			const controller = room.controller!;
+			const expectedFirst = Game.time + C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE + 1;
+			assert.strictEqual(controller['#reservationEndTime'], expectedFirst);
+			assert.strictEqual(room['#user'], '2', 'room user becomes 2 once reserved');
+			const core = findRoomCore(room)!;
+			const action = [ ...core['#actionLog'] ].find(entry => entry.type === 'reserveController');
+			assert.ok(action, 'expected reserveController action log entry');
+			assert.strictEqual(action.time, Game.time);
+			assert.strictEqual(action.x, controller.pos.x);
+			assert.strictEqual(action.y, controller.pos.y);
+		});
+	}));
+
+	test('extending own reservation accumulates by INVADER_CORE_CONTROLLER_POWER * CONTROLLER_RESERVE',
+		() => coreInNeutralRoom(async ({ tick, peekRoom }) => {
+			await tick();
+			const first = await peekRoom('W1N1', room => room.controller!['#reservationEndTime']);
+			await tick();
+			const second = await peekRoom('W1N1', room => room.controller!['#reservationEndTime']);
+			assert.strictEqual(second - first, C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE);
+		}));
+
+	const hostileReservation = simulate({
+		W1N1: room => {
+			room['#user'] = '101';
+			room.controller!['#reservationEndTime'] = 5000;
+			placePresenceCreep(room);
+			room['#insertObject'](createInvaderCore(corePos, 2, 0));
+		},
+	});
+
+	test('NPC attacks a hostile reservation', () => hostileReservation(async ({ tick, peekRoom }) => {
+		await tick();
+		await peekRoom('W1N1', room => {
+			const controller = room.controller!;
+			const expected = 5000 - C.INVADER_CORE_CONTROLLER_POWER * C.CONTROLLER_RESERVE;
+			assert.strictEqual(controller['#reservationEndTime'], expected,
+				'attackController should subtract INVADER_CORE_CONTROLLER_POWER * CONTROLLER_RESERVE');
+		});
+	}));
+
+	// Synthetic state: invader "owns" the controller (level > 0 with #user='2'). No code path
+	// reaches this state today; the upgradeController processor exists for the stronghold
+	// deployment path that will set it.
+	const coreOwnsController = simulate({
+		W1N1: room => {
+			room['#level'] = 1;
+			room['#user'] = '2';
+			room.controller!['#user'] = '2';
+			room.controller!['#downgradeTime'] = 1000;
+			placePresenceCreep(room);
+			room['#insertObject'](createInvaderCore(corePos, 2, 0));
+		},
+	});
+
+	test('NPC upgrades an own controller and applies invulnerability', () => coreOwnsController(async ({ tick, peekRoom }) => {
+		await tick();
+		await peekRoom('W1N1', (room, Game) => {
+			const controller = room.controller!;
+			const expiry = Game.time + C.INVADER_CORE_CONTROLLER_DOWNGRADE;
+			assert.strictEqual(controller['#downgradeTime'], expiry);
+			const invulnerability = controller.effects?.find(effect => effect.effect === C.EFFECT_INVULNERABILITY);
+			assert.ok(invulnerability, 'controller should report EFFECT_INVULNERABILITY after upgradeController');
+			assert.strictEqual(invulnerability.ticksRemaining, C.INVADER_CORE_CONTROLLER_DOWNGRADE);
+		});
+	}));
+
+	const refillScene = simulate({
+		W1N1: room => {
+			room['#insertObject'](createInvaderCore(corePos, 2, 0));
+			room['#insertObject'](createTower(new RoomPosition(26, 25, 'W1N1'), '2'));
+		},
+	});
+
+	test('transferEnergy accepts in-room tower target', () => refillScene(async ({ poke }) => {
+		const results = await poke('W1N1', '2', (Game, room) => {
+			const core = findRoomCore(room)!;
+			const tower = room.find(C.FIND_STRUCTURES).find(
+				(structure): structure is StructureTower => structure.structureType === C.STRUCTURE_TOWER,
+			)!;
+			// Oversized amounts pass the check and clamp at the processor
+			return [ core.transferEnergy(tower, 100), core.transferEnergy(tower, C.TOWER_CAPACITY + 100) ];
+		});
+		assert.deepStrictEqual(results, [ C.OK, C.OK ]);
+	}));
+
+	const collapsing = simulate({
+		W1N1: room => {
+			room['#user'] = '2';
+			room.controller!['#reservationEndTime'] = 5000;
+			const core = createInvaderCore(corePos, 2, 0);
+			core['#collapseTime'] = 1; // expires by Game.time === 1 on the first processed tick
+			placePresenceCreep(room);
+			room['#insertObject'](core);
+		},
+	});
+
+	test('collapse expiry removes the core and leaves the reservation ticking', () => collapsing(async ({ tick, peekRoom }) => {
+		await tick();
+		await peekRoom('W1N1', (room, Game) => {
+			assert.strictEqual(findRoomCore(room), undefined, 'core should be removed after collapse');
+			assert.ok(room.controller!['#reservationEndTime'] > Game.time, 'reservation is left to expire on its own');
+			assert.strictEqual(room['#user'], '2', 'room stays reserved by the NPC');
+		});
+	}));
+
+	test('collapse expiry leaves no ruin and emits no destroyed event', () => collapsing(async ({ tick, peekRoom }) => {
+		await tick();
+		await peekRoom('W1N1', room => {
+			const ruins = room.find(C.FIND_RUINS);
+			assert.strictEqual(ruins.length, 0, 'collapse expiry must not leave a Ruin');
+			const destroyed = room.getEventLog().find(event => event.event === C.EVENT_OBJECT_DESTROYED);
+			assert.strictEqual(destroyed, undefined, 'collapse must not emit EVENT_OBJECT_DESTROYED');
+		});
+	}));
+
+	const reservedThenKilled = simulate({
+		W1N1: room => {
+			room['#user'] = '2';
+			room.controller!['#reservationEndTime'] = 5000;
+			const core = createInvaderCore(corePos, 2, 0);
+			core.hits = 1; // single attack drops it; the kill path is what we're exercising
+			room['#insertObject'](core);
+			room['#insertObject'](createCreep(
+				new RoomPosition(25, 26, 'W1N1'),
+				[ C.ATTACK ],
+				'killer',
+				'100',
+			));
+		},
+	});
+
+	test('damage-destroy leaves a Ruin and the reservation ticking',
+		() => reservedThenKilled(async ({ player, tick, peekRoom }) => {
+			await player('100', Game => {
+				const core = findCore(Game);
+				assert.strictEqual(Game.creeps.killer!.attack(core), C.OK);
+			});
+			await tick();
+			await peekRoom('W1N1', (room, Game) => {
+				assert.strictEqual(findRoomCore(room), undefined, 'core should be removed');
+				assert.ok(room.controller!['#reservationEndTime'] > Game.time, 'reservation is left to expire on its own');
+				assert.strictEqual(room['#user'], '2', 'room stays reserved by the NPC');
+				assert.strictEqual(room.find(C.FIND_RUINS).length, 1, 'damage-destroy leaves a Ruin');
+				const destroyed = room.getEventLog().find(event => event.event === C.EVENT_OBJECT_DESTROYED);
+				assert.ok(destroyed, 'damage-destroy emits EVENT_OBJECT_DESTROYED');
+			});
+		}));
 });
