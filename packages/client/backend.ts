@@ -30,10 +30,18 @@ if (clientPackage) {
 				return next();
 			}
 
+			// effect-icon.html is rewritten from server-side template logic, so its content
+			// can change while the Steam package — and the `?bust` token baked into the
+			// client — stays the same. Caching it on the package version would freeze
+			// returning clients on a stale rewrite, so it's always re-fetched.
+			const serverDependent = path === 'components/game/room/effect-icon/effect-icon.html';
+
 			// Check cached response based on zip file modification
-			context.lastModified = lastModified;
-			if (context.fresh) {
-				return;
+			if (!serverDependent) {
+				context.lastModified = lastModified;
+				if (context.fresh) {
+					return;
+				}
 			}
 
 			context.body = await async function() {
@@ -144,11 +152,15 @@ if (clientPackage) {
 				'.woff2': 'font/woff2',
 			}[/\.[^.]+$/.exec(path.toLowerCase())?.[0] ?? '.html']!);
 
-			// We can safely cache explicitly-versioned resources forever
-			if (Boolean(context.query.bust)) {
-				context.set('Cache-Control', 'public,max-age=31536000,immutable');
+			if (serverDependent) {
+				context.set('Cache-Control', 'no-store');
+			} else {
+				// We can safely cache explicitly-versioned resources forever
+				if (Boolean(context.query.bust)) {
+					context.set('Cache-Control', 'public,max-age=31536000,immutable');
+				}
+				context.set('Last-Modified', `${new Date(lastModified)}`);
 			}
-			context.set('Last-Modified', `${new Date(lastModified)}`);
 
 			// Don't send any auth tokens for these requests
 			// eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
