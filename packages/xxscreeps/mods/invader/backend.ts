@@ -1,8 +1,23 @@
 import type { JSONSchemaType } from 'ajv';
-import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
+import { bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { StructureInvaderCore } from './invader-core.js';
+
+bindRenderer(StructureInvaderCore, (core, next) => {
+	const deployTime = core['#deployTime'];
+	return {
+		...next(),
+		level: core.level,
+		...deployTime > 0 && {
+			deployTime,
+			// The client divides remaining ticks by `duration` for the effect countdown; vanilla's
+			// backend stamps the fixed 5000-tick stronghold deploy window here.
+			effects: [ { effect: C.EFFECT_INVULNERABILITY, endTime: deployTime, duration: 5000 } ],
+		},
+	};
+});
 
 interface CreateInvaderRequest {
 	room: string;
