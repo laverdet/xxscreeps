@@ -251,7 +251,7 @@ export class RoomProcessor implements ProcessorContext {
 			}
 			for (const [ id, intents ] of Object.entries(intentsForUser.object)) {
 				existing.object[id] = {
-					...existing.object[id] ?? {},
+					...existing.object[id],
 					...intents,
 				};
 			}

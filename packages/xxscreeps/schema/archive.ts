@@ -70,7 +70,7 @@ class ModuleArchiver {
 								// eslint-disable-next-line no-new-wrappers
 								offset: new String(`0x${value.offset.toString(16)}`),
 								member: this.archive(value.member),
-								...value.union ? { union: true } : undefined,
+								...value.union && { union: true },
 							};
 							return [ key, result ] as const;
 						}),
@@ -238,9 +238,9 @@ function mapLayout(layout: Layout, fn: (layout: Layout, path: string) => Layout)
 			} else if ('struct' in layout) {
 				layout = {
 					...layout,
-					...layout.inherit ? {
+					...layout.inherit && {
 						inherit: (path[path.length - 1] = '^', walk(layout.inherit) as StructLayout),
-					} : undefined,
+					},
 					struct: Fn.fromEntries(Fn.map(entriesWithSymbols(layout.struct), ([ key, value ]) => {
 						const str = typeof key === 'symbol' ? `%${key.description}` : key;
 						path[path.length - 1] = str;

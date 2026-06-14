@@ -18,20 +18,20 @@ bindRenderer(StructureController, (controller, next) => {
 		safeMode: controller.room['#safeModeUntil'],
 		safeModeAvailable: controller.safeModeAvailable,
 		safeModeCooldown: controller['#safeModeCooldownTime'],
-		...reservationEndTime ? {
+		...reservationEndTime > 0 && {
 			reservation: {
 				endTime: reservationEndTime,
 				user: controller.room['#user'],
 			},
-		} : undefined,
-		...sign ? {
+		},
+		...sign && {
 			sign: {
 				datetime: sign.datetime,
 				time: sign.time,
 				text: sign.text,
 				user: sign.userId,
 			},
-		} : undefined,
+		},
 	};
 });
 

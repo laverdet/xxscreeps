@@ -26,8 +26,8 @@ export async function getNotifyPrefs(shard: Shard, userId: string): Promise<Noti
 		disabled: fields.disabled === '1',
 		disabledOnMessages: fields.disabledOnMessages === '1',
 		sendOnline: fields.sendOnline === '1',
-		...fields.interval === undefined ? {} : { interval: Number(fields.interval) },
-		...fields.errorsInterval === undefined ? {} : { errorsInterval: Number(fields.errorsInterval) },
+		...fields.interval !== undefined && { interval: Number(fields.interval) },
+		...fields.errorsInterval !== undefined && { errorsInterval: Number(fields.errorsInterval) },
 	};
 }
 
