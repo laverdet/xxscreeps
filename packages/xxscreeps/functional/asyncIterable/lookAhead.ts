@@ -10,15 +10,18 @@ export function lookAhead<Type>(iterable: AsyncIterable<Type>, count = 1): Async
 	return async function*() {
 		const iterator = iterable[Symbol.asyncIterator]();
 		try {
+			// The prefetch is floated to pump the queue ahead of the consumer; a rejection
+			// still surfaces through the awaited `queue[0]`, so each float takes a no-op
+			// rejection handler to avoid leaking a duplicate unhandled rejection.
 			const push = (result: IteratorResult<Type>) => {
 				if (!result.done && queue.length <= count) {
 					const next = iterator.next();
-					void next.then(push);
+					void next.then(push, () => {});
 					queue.push(next);
 				}
 			};
 			const first = iterator.next();
-			void first.then(push);
+			void first.then(push, () => {});
 			const queue: [ QueueItem, ...QueueItem[] ] = [ first ];
 			while (true) {
 				const next = await queue[0];
