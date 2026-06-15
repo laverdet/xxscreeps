@@ -1,11 +1,16 @@
+import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
+import { runShardInitializers } from 'xxscreeps/engine/processor/shard.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
+import { isHighwayRoom } from 'xxscreeps/game/room/sector.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { create as createPowerBank } from './powerbank.js';
+import { hashMix } from 'xxscreeps/utility/utility.js';
+import { inspectDuePowerBankRoomsForTest, scheduleRoom, setPowerBankPlaceRandomForTesting } from './place.js';
+import { StructurePowerBank, create as createPowerBank } from './powerbank.js';
 
 interface PowerBankSimOptions {
 	body?: PartType[];
@@ -118,5 +123,106 @@ describe('PowerBank', () => {
 			assert.ok(log.some(event =>
 				event.event === C.EVENT_ATTACK && event.data?.attackType === C.EVENT_ATTACK_TYPE_HIT_BACK));
 		});
+	}));
+});
+
+// Tiny LCG so tests pick positions deterministically.
+function makeRng(seed = 1): () => number {
+	let state = hashMix(seed);
+	return () => (state = hashMix(state)) / 0xffffffff + 0.5;
+}
+
+// Scripted values for the first calls, then the LCG — steers the base/crit rolls while leaving
+// placement free to vary.
+function makeRngWithPrefix(prefix: number[], seed = 1): () => number {
+	const lcg = makeRng(seed);
+	let index = 0;
+	return () => index < prefix.length ? prefix[index++]! : lcg();
+}
+
+async function findPowerBank(shard: Shard, roomName: string): Promise<StructurePowerBank | undefined> {
+	const room = await shard.loadRoom(roomName);
+	for (const object of room['#objects']) {
+		if (object instanceof StructurePowerBank) {
+			return object;
+		}
+	}
+	return undefined;
+}
+
+const emptyWorld = simulate({});
+
+describe('PowerBank placement', () => {
+	test('bootstrap seeds every highway room without placing', () => emptyWorld(async ({ shard }) => {
+		using _rng = setPowerBankPlaceRandomForTesting(makeRng());
+		const seededAt = shard.time;
+		await runShardInitializers(shard);
+		const due = await inspectDuePowerBankRoomsForTest(shard);
+		assert.ok(due.length > 0, 'highway rooms were seeded');
+		for (const [ score, roomName ] of due) {
+			assert.ok(isHighwayRoom(roomName), `${roomName} should be a highway room`);
+			const ahead = score - seededAt;
+			assert.ok(ahead >= C.POWER_BANK_RESPAWN_TIME * 0.75 && ahead <= C.POWER_BANK_RESPAWN_TIME * 1.25,
+				`${roomName} scheduled ${ahead} ticks ahead`);
+		}
+		assert.ok(due.some(([ , roomName ]) => roomName === 'W0N0'), 'W0N0 is a seeded highway room');
+		// First touch seeds the timer but places nothing.
+		assert.strictEqual(await findPowerBank(shard, 'W0N0'), undefined);
+	}));
+
+	test('a due highway room places one valid power bank', () => emptyWorld(async ({ shard, tick }) => {
+		using _rng = setPowerBankPlaceRandomForTesting(makeRng());
+		const scheduledAt = shard.time;
+		await scheduleRoom(shard, 'W0N0', 0);
+		// Tick 1: the shard processor pushes a placement intent and reschedules. Tick 2: the room
+		// processor receives the intent and inserts the bank.
+		await tick(2);
+		const bank = await findPowerBank(shard, 'W0N0');
+		assert.ok(bank, 'a power bank was placed in the due room');
+		// Placement: a wall position in 5..44 with at least one non-wall neighbour.
+		const world = await shard.loadWorld();
+		const terrain = world.map.getRoomTerrain('W0N0');
+		assert.ok(bank.pos.x >= 5 && bank.pos.x <= 44 && bank.pos.y >= 5 && bank.pos.y <= 44, 'position within 5..44');
+		assert.ok(terrain.get(bank.pos.x, bank.pos.y) === C.TERRAIN_MASK_WALL, 'placed on wall terrain');
+		const hasExit = (() => {
+			for (let dx = -1; dx <= 1; ++dx) {
+				for (let dy = -1; dy <= 1; ++dy) {
+					if (terrain.get(bank.pos.x + dx, bank.pos.y + dy) !== C.TERRAIN_MASK_WALL) {
+						return true;
+					}
+				}
+			}
+			return false;
+		})();
+		assert.ok(hasExit, 'placed next to a non-wall position');
+		// Object fidelity. Seed-1 rng may or may not crit, so allow the crit ceiling.
+		assert.ok(bank.power >= C.POWER_BANK_CAPACITY_MIN && bank.power < 2 * C.POWER_BANK_CAPACITY_MAX,
+			'power within capacity range');
+		assert.strictEqual(bank.hits, C.POWER_BANK_HITS);
+		assert.strictEqual(bank['#nextDecayTime'], shard.time + C.POWER_BANK_DECAY);
+		// The room's timer advanced into the future instead of staying due.
+		const due = await inspectDuePowerBankRoomsForTest(shard);
+		const entry = due.find(([ , roomName ]) => roomName === 'W0N0');
+		assert.ok(entry, 'W0N0 remains scheduled');
+		assert.ok(entry[0] - scheduledAt >= C.POWER_BANK_RESPAWN_TIME * 0.75, 'rescheduled into the future');
+	}));
+
+	test('non-highway rooms are never seeded', () => emptyWorld(async ({ shard }) => {
+		using _rng = setPowerBankPlaceRandomForTesting(makeRng());
+		await runShardInitializers(shard);
+		const seeded = new Set((await inspectDuePowerBankRoomsForTest(shard)).map(([ , roomName ]) => roomName));
+		assert.ok(!seeded.has('W5N5'), 'sector center is not seeded');
+		assert.ok(!seeded.has('W3N3'), 'interior room is not seeded');
+	}));
+
+	test('a critical roll adds the max-capacity bonus', () => emptyWorld(async ({ shard, tick }) => {
+		// base roll 0.5 -> 2750; crit roll 0.1 < POWER_BANK_CAPACITY_CRIT adds POWER_BANK_CAPACITY_MAX.
+		using _rng = setPowerBankPlaceRandomForTesting(makeRngWithPrefix([ 0.5, 0.1 ]));
+		await scheduleRoom(shard, 'W0N0', 0);
+		await tick(2);
+		const bank = await findPowerBank(shard, 'W0N0');
+		assert.ok(bank, 'a power bank was placed');
+		assert.ok(bank.power >= C.POWER_BANK_CAPACITY_MAX, 'crit pushed power past the non-crit ceiling');
+		assert.strictEqual(bank.power, 7750);
 	}));
 });

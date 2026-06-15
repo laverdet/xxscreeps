@@ -17,6 +17,19 @@ export function isCentralRoom(roomName: string): boolean {
 	return isCentralCoord(rx, ry);
 }
 
+// A highway axis sits exactly 5 rooms from a sector-center axis (the `…0` boundary). Defined off
+// `isCentralAxis` so the W/N sign phase-shift is handled in one place rather than re-derived.
+function isHighwayAxis(coord: number): boolean {
+	return isCentralAxis(coord - 5) || isCentralAxis(coord + 5);
+}
+
+// A highway room borders a sector on at least one axis — equivalently, `sectorsForRoom` is
+// non-empty. Centers and interior rooms are not highways.
+export function isHighwayRoom(roomName: string): boolean {
+	const { rx, ry } = parseSignedRoomName(roomName);
+	return isHighwayAxis(rx) || isHighwayAxis(ry);
+}
+
 // 11-room ring around a sector center: 4 corners + 9 rooms per side = 40 rooms total. Emission
 // order is load-bearing (deposit placement consumes it), so corners precede the interleaved sides.
 export function *sectorEdgeRooms(centralRoom: string): Iterable<string> {
