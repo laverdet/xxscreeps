@@ -1,8 +1,9 @@
 import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, UnionDeclaration } from './format.js';
+import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { bifurcate, getOrSet } from 'xxscreeps/utility/utility.js';
 import { Variant } from './format.js';
-import { entriesWithSymbols } from './symbol.js';
 
 export const kPointerSize = 4;
 export const kHeaderSize = kPointerSize * 4;
@@ -219,8 +220,8 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 
 		} else if ('struct' in format) {
 			// Grab layout for structure members
-			const allEntries = entriesWithSymbols(format.struct).filter(
-				entry => entry[0] !== Variant) as ([ string, Format] | [ string, UnionDeclaration])[];
+			const allEntries =
+				[ ...ownEntriesIncludingPrivate(format.struct).filter(entry => entry[0] !== Variant) ] as ([ string, Format] | [ string, UnionDeclaration])[];
 			const [ unionReferences, memberDeclarations ] = bifurcate(allEntries,
 				(entry): entry is [ string, UnionDeclaration ] => typeof entry[1] === 'object' && 'union' in entry[1]);
 			const entries = memberDeclarations.map(([ key, member ]) => ({
@@ -289,7 +290,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 
 			// Add union entries
 			for (const [ key, union ] of unionReferences) {
-				const [ referencedKey, unionFormat ] = entriesWithSymbols(union.union)[0]!;
+				const [ referencedKey, unionFormat ] = Fn.first(ownEntriesIncludingPrivate(union.union))!;
 				const { layout, traits } = getLayout(unionFormat, cache);
 				const referencedMember = members.find(info => info.key === referencedKey)!;
 				if (traits.align > referencedMember.traits.align) {

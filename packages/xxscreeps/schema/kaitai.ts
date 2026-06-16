@@ -1,6 +1,7 @@
 import type { Layout } from './layout.js';
 import jsYaml from 'js-yaml';
-import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
+import { mappedNumericComparator, primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 
@@ -272,7 +273,8 @@ export class KaitaiArchiver {
 			holder.size += 4;
 
 		} else if ('struct' in layout) {
-			const members = entriesWithSymbols(layout.struct).sort((left, right) => left[1].offset - right[1].offset);
+			const members = [ ...ownEntriesIncludingPrivate(layout.struct) ];
+			members.sort(mappedNumericComparator(([ ,value ]) => value.offset));
 			const struct = holder.child(id);
 			holder.seq.push({
 				id,

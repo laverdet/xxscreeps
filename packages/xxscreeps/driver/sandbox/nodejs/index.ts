@@ -38,6 +38,7 @@ const resolver = function() {
 				const alias = function() {
 					switch (specifier) {
 						case 'tslib': return 'tslib/tslib.es6.mjs';
+						case 'xxscreeps:private-symbol': return 'xxscreeps/driver/private/symbol/unsafe.js';
 						case 'xxscreeps/driver/runtime/source-map.js': return 'xxscreeps/driver/sandbox/nodejs/source-map.js';
 						case 'xxscreeps/engine/processor/index.js': throw new Error('processor required from runtime');
 						case 'xxscreeps/engine/schema/build/index.js': return 'xxscreeps/engine/schema/build/runtime.js';

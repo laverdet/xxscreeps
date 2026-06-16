@@ -26,11 +26,10 @@ const getRuntimeSource = runOnce(() => {
 		babel: [ Privates ],
 		alias: {
 			process: 'xxscreeps/driver/sandbox/isolated/process.js',
-			'xxscreeps/driver/private/symbol.js': 'xxscreeps/driver/private/symbol/isolated-vm.js',
+			'/xxscreeps:private-symbol': 'xxscreeps/driver/private/symbol/isolated-vm.js',
 			'xxscreeps/engine/schema/build/index.js': 'xxscreeps/engine/schema/build/runtime.js',
 		},
 		externals: ({ request }) => {
-			// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 			switch (request) {
 				case '#pf': return "globalThis['@xxscreeps/pathfinder']";
 				case 'isolated-vm': return 'ivm';

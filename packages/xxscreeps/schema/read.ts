@@ -1,12 +1,12 @@
 import type { TypeOf } from './format.js';
 import type { Layout, StructLayout } from './layout.js';
+import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { BufferView } from './buffer-view.js';
 import { Variant } from './format.js';
 import { kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout.js';
 import { injectGetters } from './overlay.js';
-import { entriesWithSymbols } from './symbol.js';
 import { Builder } from './index.js';
 
 export type Reader<Type = any> = (view: Readonly<BufferView>, offset: number) => Type;
@@ -16,7 +16,7 @@ function getMemberReader(layout: StructLayout, builder: Builder): MemberReader {
 	return getOrSet(builder.memberReader, layout, () => {
 
 		let readMembers: MemberReader | undefined;
-		for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
+		for (const [ key, member ] of ownEntriesIncludingPrivate(layout.struct)) {
 
 			// Make reader for single field
 			const next = function(): MemberReader {

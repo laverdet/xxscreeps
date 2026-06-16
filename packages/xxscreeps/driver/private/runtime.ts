@@ -1,19 +1,21 @@
-import { isPrivate, makeSymbol } from 'xxscreeps/driver/private/symbol/index.js'; // Use full path for webpack rewrite
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { isPrivate, makeSymbol } from 'xxscreeps:private-symbol';
 
-const { apply, defineProperty, get, getPrototypeOf, set } = Reflect;
-const inherits = function(): boolean {
+type Subject = Record<keyof any, unknown>;
+
+const { apply, defineProperty, get, getPrototypeOf, ownKeys, set } = Reflect;
+const inherits = function() {
 	// v8 private symbols don't follow prototype chain. This tests the implementation's behavior.
 	const symbol = makeSymbol();
 	const test = { [symbol]: true };
-	return Object.create(test)[symbol] ?? false;
+	const value = Object.create(test) satisfies object as Record<keyof any, boolean>;
+	return value[symbol] ?? false;
 }();
 
-function asOptional(optional: boolean, factory: () => (...args: any[]) => any) {
-	const fn = factory();
+function asOptional<Result, Args extends unknown[]>(optional: boolean, fn: (...args: Args) => Result) {
 	if (optional) {
-		return (...args: any[]) => {
+		return (...args: Args): Result | undefined => {
 			if (args[0]) {
 				return apply(fn, undefined, args);
 			}
@@ -24,28 +26,38 @@ function asOptional(optional: boolean, factory: () => (...args: any[]) => any) {
 }
 
 const symbols = new Map<string, symbol>();
-export function getSymbol(name: string) {
+export function getSymbol(name: string): symbol {
 	return getOrSet(symbols, name, () => makeSymbol(name));
 }
 
-export function getOwnPrivateEntries(object: any) {
+export const ownKeysIncludingPrivate = function(): <Type extends Subject>(object: Type) => Iterable<keyof Type, undefined> {
+	// nb: `inherits == !isPrivate` but this is unspecified and v8 is allowed to change it.
 	if (isPrivate) {
-		return Fn.map(
-			Fn.filter(symbols.values(), symbol => symbol in object),
-			symbol => [ symbol, object[symbol] ],
-		);
+		return object => Fn.concat([ ownKeys(object), Fn.filter(symbols.values(), symbol => symbol in object) ]);
 	} else {
-		return [];
+		return ownKeys;
+	}
+}();
+
+export function *ownValuesIncludingPrivate<Type extends Subject>(object: Type): IteratorObject<Type[keyof Type], undefined> {
+	for (const key of ownKeysIncludingPrivate(object)) {
+		yield object[key];
 	}
 }
 
-export function makeGetter(name: string, optional: boolean): (object: any) => any {
+export function *ownEntriesIncludingPrivate<Type extends Subject>(object: Type): IteratorObject<[ keyof Type, Type[keyof Type] ], undefined> {
+	for (const key of ownKeysIncludingPrivate(object)) {
+		yield [ key, object[key] ];
+	}
+}
+
+export function makeGetter(name: string, optional: boolean): (object: Subject) => unknown {
 	const symbol = getSymbol(name);
-	return asOptional(optional, () => {
+	return asOptional<unknown, [ Subject ]>(optional, function() {
 		if (inherits) {
 			return object => object[symbol];
 		} else {
-			return object => {
+			return (object): unknown => {
 				if (symbol in object) {
 					return object[symbol];
 				}
@@ -57,10 +69,10 @@ export function makeGetter(name: string, optional: boolean): (object: any) => an
 				}
 			};
 		}
-	});
+	}());
 }
 
-export function makeSetter(name: string): (object: any, value: any) => any {
+export function makeSetter(name: string): (object: Subject, value: unknown) => unknown {
 	const symbol = getSymbol(name);
 	if (inherits) {
 		return (object, value) => object[symbol] = value;
@@ -77,10 +89,10 @@ export function makeSetter(name: string): (object: any, value: any) => any {
 			}
 			defineProperty(object, symbol, {
 				get() { return value; },
-				set(value) {
+				set(this: object, value) {
 					defineProperty(this, symbol, {
-						writable: true,
 						value,
+						writable: true,
 					});
 				},
 			});
@@ -89,7 +101,7 @@ export function makeSetter(name: string): (object: any, value: any) => any {
 	}
 }
 
-export function makeMutator(name: string, postfix = false): (object: any, fn: (value: any) => any) => any {
+export function makeMutator(name: string, postfix = false): (object: Subject, fn: (value: unknown) => unknown) => unknown {
 	const get = makeGetter(name, false);
 	const set = makeSetter(name);
 	if (postfix) {
@@ -103,36 +115,46 @@ export function makeMutator(name: string, postfix = false): (object: any, fn: (v
 	}
 }
 
-export function makeInvoke(name: string, optional: boolean, isSuper = false): (object: any, ...args: any[]) => any {
+export function makeInvoke(name: string, optional: boolean, isSuper = false): (object: Subject, ...args: unknown[]) => unknown {
 	const symbol = getSymbol(name);
-	return asOptional(optional, () => {
+	type Constructor = (...args: unknown[]) => void;
+	type Function = (...args: unknown[]) => unknown;
+	return asOptional(optional, function() {
 		if (inherits) {
 			if (isSuper) {
-				return (object, ...args) => apply((getPrototypeOf(getPrototypeOf(object)!) as any)[symbol], object, args);
+				return (object, ...args) => {
+					const proto = getPrototypeOf(object)!;
+					const parent = getPrototypeOf(proto) satisfies object | null as Subject;
+					apply(parent[symbol] as Constructor, object, args);
+				};
 			} else {
-				return (object, ...args) => apply(object[symbol], object, args);
+				return (object, ...args) => apply(object[symbol] as Function, object, args);
 			}
 		} else {
 			// eslint-disable-next-line no-lonely-if
 			if (isSuper) {
 				return (object, ...args) => {
-					for (let instance = getPrototypeOf(getPrototypeOf(object)!); instance !== null; instance = getPrototypeOf(instance)) {
+					const proto = getPrototypeOf(object)!;
+					for (let instance = getPrototypeOf(proto); instance !== null; instance = getPrototypeOf(instance)) {
 						if (symbol in instance) {
-							return apply((instance as any)[symbol], object, args);
+							const parent = instance satisfies object as Subject;
+							apply(parent[symbol] as Constructor, object, args);
+							return;
 						}
 					}
 					throw new Error(`${symbol.description} is undefined`);
 				};
 			} else {
 				return (object, ...args) => {
-					for (let instance = object; instance !== null; instance = getPrototypeOf(instance)) {
+					for (let instance: object | null = object; instance !== null; instance = getPrototypeOf(instance)) {
 						if (symbol in instance) {
-							return apply(instance[symbol], object, args);
+							const parent = instance satisfies object as Subject;
+							return apply(parent[symbol] as Function, object, args);
 						}
 					}
 					throw new Error(`${symbol.description} is undefined`);
 				};
 			}
 		}
-	});
+	}());
 }

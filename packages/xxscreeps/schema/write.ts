@@ -1,6 +1,7 @@
 import type { Package } from './build.js';
 import type { ShapeOf } from './format.js';
 import type { Layout, StructLayout } from './layout.js';
+import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
@@ -8,7 +9,6 @@ import { BufferView } from './buffer-view.js';
 import { Variant } from './format.js';
 import { alignTo, kHeaderSize, kMagic, kPointerSize, unpackWrappedStruct } from './layout.js';
 import { makeTypeScanner } from './scan.js';
-import { entriesWithSymbols } from './symbol.js';
 import { Builder } from './index.js';
 
 export type Writer<Type = any> = (value: Type, view: BufferView, offset: number, heap: number) => number;
@@ -19,7 +19,7 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 
 		// Get writer for each member
 		const writers = Fn.pipe(
-			entriesWithSymbols(layout.struct),
+			ownEntriesIncludingPrivate(layout.struct),
 			$$ => Fn.map($$, ([ key, member ]): MemberWriter | undefined => {
 				// Don't bother writing union members
 				if (member.union) {

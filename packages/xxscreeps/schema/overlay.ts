@@ -3,10 +3,10 @@ import type { BufferView } from './buffer-view.js';
 import type { TypeOf } from './format.js';
 import type { Builder } from './index.js';
 import type { StructLayout } from './layout.js';
+import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { getBuffer, getOffset } from './buffer-object.js';
 import { Variant } from './format.js';
 import { makeTypeReader } from './read.js';
-import { entriesWithSymbols } from './symbol.js';
 
 const { defineProperty } = Object;
 const { apply } = Reflect;
@@ -22,7 +22,7 @@ export function injectGetters(layout: StructLayout, prototype: object, builder: 
 	}
 	injected.add(prototype);
 
-	for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
+	for (const [ key, member ] of ownEntriesIncludingPrivate(layout.struct)) {
 		const { member: layout, offset } = member;
 
 		// Make getter
