@@ -27,6 +27,9 @@ export class StructurePowerBank extends withOverlay(Structure, shape) {
 	override get structureType() { return C.STRUCTURE_POWER_BANK; }
 
 	override '#applyDamage'(power: number, type: number, source?: RoomObject.RoomObject) {
+		// FIXME: removal is deferred to the object flush, so a creep can still attack this bank the
+		// tick it dies; bail to suppress the spurious second hit-back. Remove once intents stop
+		// resolving queued-for-removal targets.
 		if (this.hits <= 0) {
 			return;
 		}
