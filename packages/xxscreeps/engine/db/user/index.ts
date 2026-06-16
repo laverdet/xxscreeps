@@ -1,5 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { branchManifestKey, buffersKey, stringsKey } from './code.js';
 
 const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
@@ -50,6 +51,29 @@ export async function create(db: Database, userId: string, username: string, pro
 			[ ...Fn.map(allProviders, ({ provider, id }): [ string, string ] => [ provider, id ]) ]),
 		...Fn.map(allProviders, ({ provider, id }) =>
 			db.data.hSet(providerMembersKey(provider), id, userId)),
+	]);
+}
+
+/**
+ * Deletes a user's database records: lookup entries, info, and code. Room objects owned by the
+ * user are unaffected.
+ */
+export async function remove(db: Database, userId: string) {
+	const [ providers, branches ] = await Promise.all([
+		findProvidersForUser(db, userId),
+		db.data.sMembers(branchManifestKey(userId)),
+	]);
+	await Promise.all([
+		db.data.sRem('users', [ userId ]),
+		db.data.del(infoKey(userId)),
+		db.data.del(userProvidersKey(userId)),
+		db.data.del(branchManifestKey(userId)),
+		...Fn.map(Object.entries(providers), ([ provider, providerId ]) =>
+			db.data.hDel(providerMembersKey(provider), [ providerId ])),
+		...Fn.transform(branches, branchName => [
+			db.data.vdel(buffersKey(userId, branchName)),
+			db.data.vdel(stringsKey(userId, branchName)),
+		]),
 	]);
 }
 
