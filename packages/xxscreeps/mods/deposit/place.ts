@@ -13,7 +13,7 @@ import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } fro
 import { Deposit } from './deposit.js';
 import { dueSectorsAt, scheduleSector, seedSectors } from './model.js';
 
-// Deposits precipitate in highway-room sectors: a per-sector wall-clock schedule drives periodic
+// Deposits are placed in highway-room sectors: a per-sector wall-clock schedule drives periodic
 // evaluation, and a sector below its throughput target gains a deposit. Decay events pull a
 // sector's next evaluation forward the moment capacity frees.
 
@@ -24,7 +24,7 @@ const DEPOSIT_CHECK_INTERVAL = 5 * 60_000;
 // A sector needs total throughput below this to gain a new deposit.
 const SECTOR_THROUGHPUT_TARGET = 2.5;
 
-const MAX_TILE_ATTEMPTS = 1000;
+const MAX_PLACEMENT_ATTEMPTS = 1000;
 
 // FNV-1a used both to pin deposit types and to scatter bootstrap scores per sector.
 function fnv1a(str: string): number {
@@ -61,10 +61,10 @@ function loadSectorDeposits(shard: Shard, centralRoom: string, time: number, nor
 	});
 }
 
-// Tests swap in a seeded RNG via `setDepositPrecipitateRandomForTesting`.
+// Tests swap in a seeded RNG via `setDepositPlaceRandomForTesting`.
 type RngFn = () => number;
 let rng: RngFn = Math.random;
-export function setDepositPrecipitateRandomForTesting(fn: RngFn): Disposable {
+export function setDepositPlaceRandomForTesting(fn: RngFn): Disposable {
 	const previous = rng;
 	rng = fn;
 	return { [Symbol.dispose]() { rng = previous; } };
@@ -81,13 +81,13 @@ export function setDepositBootstrapScatterForTesting(scatter: ScatterFn): Dispos
 	return { [Symbol.dispose]() { bootstrapScatter = previous; } };
 }
 
-// Picks a wall tile in 5..44 with at least one non-wall neighbour (incl. diagonals), inside the
-// 250-tile sector radius, and 2 tiles clear of any other room object.
-function findSpawnTile(world: World, centralRoom: string, targetRoom: RoomClass) {
+// Picks a wall position in 5..44 with at least one non-wall neighbour (incl. diagonals), inside the
+// sector's 250-square radius, and 2 squares clear of any other room object.
+function findPlacement(world: World, centralRoom: string, targetRoom: RoomClass) {
 	const terrain = world.map.getRoomTerrain(targetRoom.name);
 	const objects = targetRoom['#objects'];
 	const inSector = makeSectorRadiusFilter(centralRoom, targetRoom.name);
-	for (let attempt = 0; attempt < MAX_TILE_ATTEMPTS; ++attempt) {
+	for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; ++attempt) {
 		const xx = Math.floor(rng() * 40) + 5;
 		const yy = Math.floor(rng() * 40) + 5;
 		if (terrain.get(xx, yy) !== C.TERRAIN_MASK_WALL) {
@@ -122,20 +122,20 @@ function pickRandomFreeRoom(edges: string[], busyRooms: Set<string>): string | u
 	return free[Math.floor(rng() * free.length)];
 }
 
-// Push a precipitate intent for `candidate` (chosen edge room) into the next tick's processor queue.
-async function pushPrecipitateIntent(shard: Shard, candidate: string, centralRoom: string) {
+// Push a placement intent for `candidate` (chosen edge room) into the next tick's processor queue.
+async function pushPlaceIntent(shard: Shard, candidate: string, centralRoom: string) {
 	const depositType = depositTypeForRoom(candidate);
-	// Tile selection happens in the room intent processor so it can read terrain via the live world
+	// Placement happens in the room intent processor so it can read terrain via the live world
 	// map — keeps the shard-tick processor purely keyval-bound. Any id of length <= 2 is a system
 	// user (`isSystemUser`), keeping the intent off the player pipeline.
 	await pushIntentsForRoomNextTick(shard, candidate, '1', {
-		local: { precipitateDeposit: [ [ depositType, centralRoom ] ] },
+		local: { placeDeposit: [ [ depositType, centralRoom ] ] },
 		internal: true,
 	});
 }
 
 async function evaluateSector(shard: Shard, world: World, centralRoom: string, time: number) {
-	// Out-of-borders / closed rooms are excluded from both throughput tallying and spawning.
+	// Out-of-borders / closed rooms are excluded from both throughput tallying and placement.
 	const normalEdges = [ ...Fn.filter(sectorEdgeRooms(centralRoom), name =>
 		world.map.getRoomStatus(name).status === 'normal') ];
 	const deposits = await loadSectorDeposits(shard, centralRoom, time, normalEdges);
@@ -147,7 +147,7 @@ async function evaluateSector(shard: Shard, world: World, centralRoom: string, t
 	const busyRooms = new Set(Fn.transform(deposits, group => Fn.map(group, deposit => deposit.room.name)));
 	const candidate = pickRandomFreeRoom(normalEdges, busyRooms);
 	if (candidate !== undefined) {
-		await pushPrecipitateIntent(shard, candidate, centralRoom);
+		await pushPlaceIntent(shard, candidate, centralRoom);
 	}
 }
 
@@ -181,22 +181,22 @@ registerShardTickProcessor(async (shard, time) => {
 	const world = await shard.loadWorld();
 	await Fn.mapAwait(due, async sector => {
 		await evaluateSector(shard, world, sector, time);
-		// Re-poll at the cadence ceiling whether or not the spawn lands (tile selection can fail);
+		// Re-poll at the cadence ceiling whether or not a deposit lands (placement can fail);
 		// decay pulls the schedule forward sooner.
 		await scheduleSector(shard, sector, now + DEPOSIT_CHECK_INTERVAL);
 	});
 });
 
-// Tile selection runs at the room intent stage so it can read terrain via the live `world.map`.
+// Placement runs at the room intent stage so it can read terrain via the live `world.map`.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const precipitateDepositIntent = registerIntentProcessor(
-	RoomClass, 'precipitateDeposit', { internal: true },
+const placeDepositIntent = registerIntentProcessor(
+	RoomClass, 'placeDeposit', { internal: true },
 	(room, context, depositType: DepositResource, centralRoom: string) => {
-		const tile = findSpawnTile(context.state.world, centralRoom, room);
-		if (tile === undefined) {
+		const pos = findPlacement(context.state.world, centralRoom, room);
+		if (pos === undefined) {
 			return;
 		}
-		const deposit = RoomObject.create(new Deposit(), new RoomPosition(tile.xx, tile.yy, room.name));
+		const deposit = RoomObject.create(new Deposit(), new RoomPosition(pos.xx, pos.yy, room.name));
 		deposit.depositType = depositType;
 		deposit['#nextDecayTime'] = Game.time + DEPOSIT_DECAY_TIME;
 		room['#insertObject'](deposit);
@@ -206,5 +206,5 @@ const precipitateDepositIntent = registerIntentProcessor(
 		context.wakeAt(deposit['#nextDecayTime']);
 	});
 declare module 'xxscreeps/engine/processor/index.js' {
-	interface Intent { deposit: typeof precipitateDepositIntent }
+	interface Intent { deposit: typeof placeDepositIntent }
 }

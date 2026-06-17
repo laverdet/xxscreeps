@@ -58,7 +58,7 @@ export function *sectorsForRoom(roomName: string): Iterable<string> {
 const SECTOR_HALF_EXTENT = 250;
 
 // `roomName` must be a highway ring member of `centralRoom` (see `sectorsForRoom`). Returns a
-// position predicate for the sector's 250-tile radius. The radius only clips boundary rooms: a
+// position predicate for the sector's 250-square radius. The radius only clips boundary rooms: a
 // room whose extent on an axis stays within the radius is wholly inside on that axis, and one
 // inside on both axes needs no test at all.
 export function makeSectorRadiusFilter(centralRoom: string, roomName: string): (xx: number, yy: number) => boolean {

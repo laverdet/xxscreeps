@@ -1,1 +1,1 @@
-import './precipitate.js';
+import './place.js';

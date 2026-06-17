@@ -14,7 +14,7 @@ import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } fro
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { Deposit } from './deposit.js';
 import { scheduleSector } from './model.js';
-import { depositTypeForRoom, setDepositBootstrapScatterForTesting, setDepositPrecipitateRandomForTesting } from './precipitate.js';
+import { depositTypeForRoom, setDepositBootstrapScatterForTesting, setDepositPlaceRandomForTesting } from './place.js';
 
 interface DepositSimOptions {
 	body?: PartType[];
@@ -114,7 +114,7 @@ describe('Deposit', () => {
 	}));
 });
 
-// Tiny LCG so tests pick rooms/tiles deterministically.
+// Tiny LCG so tests pick rooms/positions deterministically.
 function makeRng(seed = 1): () => number {
 	let state = seed >>> 0;
 	return () => {
@@ -125,9 +125,9 @@ function makeRng(seed = 1): () => number {
 
 // Deterministic placement RNG plus a zero-scatter bootstrap (so the single-sector test world's
 // W5N5 comes due the moment it's seeded), scoped to the test and restored on disposal.
-function withFixedPrecipitation(seed = 1): Disposable {
+function withFixedPlacement(seed = 1): Disposable {
 	const stack = new DisposableStack();
-	stack.use(setDepositPrecipitateRandomForTesting(makeRng(seed)));
+	stack.use(setDepositPlaceRandomForTesting(makeRng(seed)));
 	stack.use(setDepositBootstrapScatterForTesting(() => 0));
 	return stack;
 }
@@ -149,11 +149,11 @@ async function findDepositsInSector(shard: Shard, centralRoom: string) {
 // `tick()` runs the shard tick processor once, which can place at most one deposit.
 const emptySector = simulate({});
 
-describe('Deposit spawn', () => {
+describe('Deposit placement', () => {
 	test('seeds a deposit on first tick below threshold', () => emptySector(async ({ shard, tick }) => {
-		using _precipitation = withFixedPrecipitation();
+		using _placement = withFixedPlacement();
 		assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 0);
-		// The initializer queues W5N5; tick 1's evaluator picks a candidate and pushes a spawn
+		// The initializer queues W5N5; tick 1's evaluator picks a candidate and pushes a placement
 		// intent; tick 2's room processor receives it and inserts the Deposit.
 		await runShardInitializers(shard);
 		await tick(2);
@@ -163,21 +163,21 @@ describe('Deposit spawn', () => {
 		// Round-trip: the type survives intent serialization and the schema enum write/read.
 		assert.strictEqual(deposit.depositType, depositTypeForRoom(roomName));
 		assert.strictEqual(deposit['#nextDecayTime'], shard.time + DEPOSIT_DECAY_TIME);
-		// Ported placement predicates: wall terrain, inside the sector's 250-tile radius.
+		// Ported placement predicates: wall terrain, inside the sector's 250-square radius.
 		const world = await shard.loadWorld();
 		const terrain = world.map.getRoomTerrain(roomName);
 		assert.strictEqual(terrain.get(deposit.pos.x, deposit.pos.y), C.TERRAIN_MASK_WALL,
-			'deposit spawns on wall terrain');
+			'deposit is placed on wall terrain');
 		assert.ok(makeSectorRadiusFilter('W5N5', roomName)(deposit.pos.x, deposit.pos.y),
-			'deposit spawns inside the sector radius');
+			'deposit is placed inside the sector radius');
 	}));
 
-	test('saturated sector does not spawn more', () => emptySector(async ({ shard, tick }) => {
-		using _precipitation = withFixedPrecipitation();
+	test('saturated sector does not place more', () => emptySector(async ({ shard, tick }) => {
+		using _placement = withFixedPlacement();
 		// Throughput from one fresh deposit (harvested=0): 20/max(1, M·0^P) = 20. A single deposit
-		// blows past the 2.5 threshold, so re-evaluation should stop spawning.
+		// blows past the 2.5 threshold, so re-evaluation should stop placing.
 		await runShardInitializers(shard);
-		await tick(2); // first deposit spawns
+		await tick(2); // first deposit is placed
 		assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 1);
 		// Force a sector re-eval by bumping its score to 0 (= due immediately); `earliest` matches
 		// the decay path's bump-down semantics.
@@ -188,7 +188,7 @@ describe('Deposit spawn', () => {
 	}));
 
 	// Every ring room but one holds a heavily-harvested deposit: 39 × 20/(0.001·50000^1.2) ≈ 1.8
-	// total throughput keeps the sector below the 2.5 target, so the evaluator spawns again — and the
+	// total throughput keeps the sector below the 2.5 target, so the evaluator places again — and the
 	// busy-room exclusion leaves it exactly one legal destination. The four candidate spots cover
 	// each room's in-radius quadrant, whichever side of the sector it sits on.
 	const freeRoom = 'W0N5';
@@ -204,18 +204,18 @@ describe('Deposit spawn', () => {
 					Game.time + DEPOSIT_DECAY_TIME));
 			} ]));
 
-	test('occupied rooms are excluded from spawn candidates', () => simulate(occupiedRing)(async ({ shard, tick }) => {
-		using _precipitation = withFixedPrecipitation();
+	test('occupied rooms are excluded from placement candidates', () => simulate(occupiedRing)(async ({ shard, tick }) => {
+		using _placement = withFixedPlacement();
 		await runShardInitializers(shard);
 		await tick(2);
 		const found = await findDepositsInSector(shard, 'W5N5');
 		assert.strictEqual(found.length, 40);
 		assert.strictEqual(found.filter(({ roomName }) => roomName === freeRoom).length, 1,
-			'the only free room receives the spawn');
+			'the only free room receives the deposit');
 	}));
 
 	test('decay prompts an immediate re-eval and refill', () => simulate({
-		// Plant a decayable deposit on the W5N5 sector edge, inside the sector's 250-tile radius (for
+		// Plant a decayable deposit on the W5N5 sector edge, inside the sector's 250-square radius (for
 		// W0N0 that's the x,y < 24 quadrant facing the central room). A player-owned creep keeps the
 		// room active so its tick processor (and therefore the deposit's decay path) runs.
 		W0N0: room => {
@@ -230,7 +230,7 @@ describe('Deposit spawn', () => {
 				new RoomPosition(20, 21, 'W0N0'), [ C.MOVE ], 'parker', '100'));
 		},
 	})(async ({ shard, tick }) => {
-		using _rng = setDepositPrecipitateRandomForTesting(makeRng());
+		using _rng = setDepositPlaceRandomForTesting(makeRng());
 		// No bootstrap: the decay path is the sole scheduler of W5N5. Decay fires this tick and marks
 		// W5N5 due immediately (score 0); the shard processor drains it the same tick, tallies the
 		// sector without the corpse, and pushes a refill intent.
@@ -240,13 +240,13 @@ describe('Deposit spawn', () => {
 		assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 1);
 	}));
 
-	test('decay outside the sector radius spawns no refill', () => simulate({
-		// Official placement doesn't enforce the 250-tile radius, so out-of-radius deposits exist in
+	test('decay outside the sector radius places no refill', () => simulate({
+		// Official placement doesn't enforce the 250-square radius, so out-of-radius deposits exist in
 		// the wild. They're invisible to every sector's throughput tally, so their decay must not
 		// prompt a re-eval — no refill may appear.
 		W0N0: room => {
 			const deposit = createDeposit(
-				new RoomPosition(30, 30, 'W0N0'), // outside W5N5's 250-tile radius
+				new RoomPosition(30, 30, 'W0N0'), // outside W5N5's 250-square radius
 				C.RESOURCE_SILICON,
 				0,
 				Game.time + 1,

@@ -9,8 +9,8 @@ import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } fro
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
 import { Deposit } from './deposit.js';
 import { scheduleSector } from './model.js';
-// Registers the `precipitateDeposit` intent processor in the processor service, which applies it.
-import './precipitate.js';
+// Registers the `placeDeposit` intent processor in the processor service, which applies it.
+import './place.js';
 
 registerHarvestProcessor(Deposit, (creep, deposit) => {
 	const amount = calculatePower(creep, C.WORK, C.HARVEST_DEPOSIT_POWER, 'harvest');
@@ -32,7 +32,7 @@ registerHarvestProcessor(Deposit, (creep, deposit) => {
 registerObjectTickProcessor(Deposit, (deposit, context) => {
 	if (deposit.ticksToDecay === 0) {
 		// Decay just freed throughput in the owning sector — of the 1–4 candidate sectors for
-		// this room, the one whose 250-tile radius contains the tile. Score 0 = due
+		// this room, the one whose 250-square radius contains the position. Score 0 = due
 		// immediately; the evaluator excludes deposits at their decay tick from the tally, so
 		// the same-tick re-eval already sees this one gone.
 		const { roomName } = deposit.pos;
