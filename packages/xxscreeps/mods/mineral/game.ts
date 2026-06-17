@@ -13,7 +13,7 @@ const resources = [
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const resourceSchema = registerEnumerated('ResourceType', ...resources);
 C.RESOURCES_ALL.push(...resources);
-declare module 'xxscreeps/mods/resource/index.js' {
+declare module 'xxscreeps/mods/resource/game.js' {
 	interface Schema { mineral: typeof resourceSchema }
 }
 

@@ -1,9 +1,19 @@
 import type { Node, NodePath, PluginObj, Visitor } from '@babel/core';
 import type { VisitNode } from '@babel/traverse';
+// eslint-disable-next-line id-length
 import * as t from '@babel/types';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
-function extractPrivateName(node: Node) {
+interface State {
+	library?: {
+		declaration: NodePath<t.ImportDeclaration>;
+		namespace: t.Identifier;
+	};
+	program: NodePath<t.Program>;
+	methods: Map<string, t.Identifier>;
+}
+
+function extractPrivateName(node: t.Expression | t.PrivateName) {
 	if (t.isStringLiteral(node) && node.value.startsWith('#')) {
 		return node;
 	}
@@ -22,16 +32,21 @@ function extractPrivate(node: Node) {
 	return {};
 }
 
+const findParent = <As extends NodePath>(path: NodePath, predicate: (path: NodePath) => path is As) =>
+	path.findParent(predicate) as NodePath<As extends NodePath<infer A> ? A : never> | null;
+
+const makeLambda = (params: t.Identifier[], expr: t.Expression) =>
+	t.functionExpression(undefined, params,
+		t.blockStatement([ t.returnStatement(expr) ]));
+
+// Remove line number metadata from the token. Since we move these around and retain lines it will
+// cause a cascade of newlines.
+function stripString(string: t.StringLiteral) {
+	return t.stringLiteral(string.value);
+}
+
 export default function transform(): PluginObj {
 	const runtimePath = `${new URL('./runtime.js', import.meta.url)}`;
-	type State = {
-		library?: {
-			declaration: NodePath<t.ImportDeclaration>;
-			namespace: t.Identifier;
-		};
-		program: NodePath<t.Program>;
-		methods: Map<string, any>;
-	};
 
 	// Node build which invokes a method from `./runtime.ts`
 	function invokeRuntime(state: State, name: string, args: t.Expression[]) {
@@ -63,62 +78,62 @@ export default function transform(): PluginObj {
 		});
 	}
 
-	// Remove line number metadata from the token. Since we move these around and retain lines it will
-	// cause a cascade of newlines.
-	function stripString(string: t.StringLiteral) {
-		return t.stringLiteral(string.value);
-	}
-
-	// Replace `obj['#foo'](val)` -> `makeInvoke('foo')(obj, val)`
-	const visitCallExpression: VisitNode<State, t.CallExpression | t.OptionalCallExpression> = path => {
+	// Replace:
+	// `obj['#foo'](val)` -> `makeInvoke('foo')(obj, val)`
+	// `super['#foo'](val)` -> `makeSuperInvoke('foo')(home, obj, val)`
+	const visitCallExpression: VisitNode<State, t.CallExpression | t.OptionalCallExpression> = function(path) {
 		const { node } = path;
 		const { name, object } = extractPrivate(node.callee);
 		if (name) {
 			const isOptional = (node.optional === true) || t.isOptionalCallExpression(node);
 			const optional = t.booleanLiteral(isOptional);
-			const methodKey = `${name.value.substr(1)}${isOptional ? 'Opt' : ''}`;
+			const methodKey = `${name.value.slice(1)}${isOptional ? 'Opt' : ''}`;
 			if (t.isSuper(object)) {
-				path.replaceWith(t.callExpression(
-					injectMaker(path.state, 'makeInvoke', `super${methodKey}`, [ stripString(name), optional, t.booleanLiteral(true) ]),
-					[ t.thisExpression(), ...node.arguments ]));
+				const fn = path.getFunctionParent();
+				const home = fn && findParent(fn, path => path.isClassDeclaration() || path.isObjectExpression());
+				if (home?.isClassDeclaration()) {
+					const homeName = home.node.id;
+					if (homeName) {
+						const runtimeValue = injectMaker(this, 'makeSuperInvoke', `super${methodKey}`, [ stripString(name), optional ]);
+						const next = t.callExpression(runtimeValue, [ t.identifier(homeName.name), t.thisExpression(), ...node.arguments ]);
+						path.replaceWith(next);
+					}
+				}
 			} else {
-				path.replaceWith(t.callExpression(
-					injectMaker(path.state, 'makeInvoke', `call${methodKey}`, [ stripString(name), optional ]),
-					[ object, ...node.arguments ]));
+				const runtimeValue = injectMaker(this, 'makeInvoke', `call${methodKey}`, [ stripString(name), optional ]);
+				const next = t.callExpression(runtimeValue, [ object, ...node.arguments ]);
+				path.replaceWith(next);
 			}
 		}
 	};
 
 	// Replace `obj['#foo'] = val` -> `makeGetter('foo')(obj)`
-	const visitMemberExpression: VisitNode<State, t.MemberExpression | t.OptionalMemberExpression> = path => {
+	const visitMemberExpression: VisitNode<State, t.MemberExpression | t.OptionalMemberExpression> = function(path) {
 		const { node } = path;
 		const { name, object } = extractPrivate(node);
 		if (name) {
 			const isOptional = (node.optional === true) || t.isOptionalMemberExpression(node);
 			const optional = t.booleanLiteral(isOptional);
-			const methodKey = `${name.value.substr(1)}${isOptional ? 'Opt' : ''}`;
-			path.replaceWith(t.callExpression(
-				injectMaker(path.state, 'makeGetter', `get${methodKey}`, [ stripString(name), optional ]),
-				[ object ]));
+			const methodKey = `${name.value.slice(1)}${isOptional ? 'Opt' : ''}`;
+			const runtimeValue = injectMaker(this, 'makeGetter', `get${methodKey}`, [ stripString(name), optional ]);
+			const next = t.callExpression(runtimeValue, [ object ]);
+			path.replaceWith(next);
 		}
 	};
 
-	// Replace `{ ['#foo']: true }` -> `{ [getSymbol('foo')]: true }`
-	const visitProperty: VisitNode<State, t.Method | t.Property> = path => {
+	// Replace:
+	// `{ ['#foo']: true }` -> `{ [getSymbol('foo')]: true }`
+	type MethodExceptPrivate = Exclude<t.Method | t.Property, t.ClassPrivateMethod | t.ClassPrivateProperty>;
+	const visitProperty: VisitNode<State, MethodExceptPrivate> = function(path) {
 		const { node } = path;
-		if (t.isClassPrivateProperty(node)) {
+		const name = extractPrivateName(node.key);
+		if (!name) {
 			return;
 		}
-		const name = extractPrivateName(node.key);
-		if (name) {
-			node.computed = true;
-			path.get('key').replaceWith(invokeRuntime(path.state, 'getSymbol', [ name ]));
-		}
+		node.computed = true;
+		const runtimeValue = injectMaker(this, 'getSymbol', `symbol${name.value.slice(1)}`, [ name ]);
+		path.get('key').replaceWith(runtimeValue);
 	};
-
-	const makeLambda = (params: t.Identifier[], expr: t.Expression) =>
-		t.functionExpression(undefined, params,
-			t.blockStatement([ t.returnStatement(expr) ]));
 
 	const visitor: Visitor<State> = {
 
@@ -128,19 +143,17 @@ export default function transform(): PluginObj {
 			if (name) {
 				if (node.operator === '=') {
 					// Replace `obj['#foo'] = val` -> `makeSetter('foo')(obj, val)`
-					path.replaceWith(t.callExpression(
-						injectMaker(path.state, 'makeSetter', `set${name.value.substr(1)}`, [ stripString(name) ]),
-						[ object, node.right ]));
+					const runtimeValue = injectMaker(this, 'makeSetter', `set${name.value.slice(1)}`, [ stripString(name) ]);
+					const next = t.callExpression(runtimeValue, [ object, node.right ]);
+					path.replaceWith(next);
 
 				} else if (/^.=$/.test(node.operator)) {
 					// Replace `obj['#foo'] += val` -> `makeMutator('foo')(obj, val => val + 1)`
-					const id = path.state.program.scope.generateUidIdentifier('val');
-					path.replaceWith(t.callExpression(
-						injectMaker(path.state, 'makeMutator', `mut${name.value.substr(1)}`, [ stripString(name) ]),
-						[ object, makeLambda([ id ], t.binaryExpression(
-							node.operator.charAt(0) as any,
-							id,
-							node.right)) ]));
+					const id = this.program.scope.generateUidIdentifier('val');
+					const runtimeValue = injectMaker(this, 'makeMutator', `mut${name.value.slice(1)}`, [ stripString(name) ]);
+					const operator = node.operator.charAt(0) satisfies string as t.BinaryExpression['operator'];
+					const next = t.callExpression(runtimeValue, [ object, makeLambda([ id ], t.binaryExpression(operator, id, node.right)) ]);
+					path.replaceWith(next);
 				}
 			}
 		},
@@ -150,15 +163,12 @@ export default function transform(): PluginObj {
 			const { name, object } = extractPrivate(node.argument);
 			if (name) {
 				// Replace `++obj['#foo']` -> `makeMutator('foo')(obj, val => val + 1)`
-				const id = path.state.program.scope.generateUidIdentifier('val');
-				const methodKey = `mut${name.value.substr(1)}${node.prefix ? '' : 'Post'}`;
-				path.replaceWith(t.callExpression(
-					injectMaker(path.state, 'makeMutator', methodKey, [ stripString(name), t.booleanLiteral(!node.prefix) ]),
-					[ object, makeLambda([ id ], t.binaryExpression(
-						node.operator.charAt(0) as any,
-						id,
-						t.numericLiteral(1),
-					)) ]));
+				const id = this.program.scope.generateUidIdentifier('val');
+				const methodKey = `mut${name.value.slice(1)}${node.prefix ? '' : 'Post'}`;
+				const runtimeValue = injectMaker(this, 'makeMutator', methodKey, [ stripString(name), t.booleanLiteral(!node.prefix) ]);
+				const operator = node.operator.charAt(0) satisfies string as t.BinaryExpression['operator'];
+				const next = t.callExpression(runtimeValue, [ object, makeLambda([ id ], t.binaryExpression(operator, id, t.numericLiteral(1))) ]);
+				path.replaceWith(next);
 			}
 		},
 
@@ -168,8 +178,10 @@ export default function transform(): PluginObj {
 		CallExpression: visitCallExpression,
 		OptionalCallExpression: visitCallExpression,
 
-		Method: visitProperty,
-		Property: visitProperty,
+		ClassMethod: visitProperty,
+		ClassProperty: visitProperty,
+		ObjectMethod: visitProperty,
+		ObjectProperty: visitProperty,
 	};
 	return {
 		visitor: {

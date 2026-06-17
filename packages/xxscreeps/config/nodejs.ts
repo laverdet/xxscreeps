@@ -1,33 +1,46 @@
 import type { ResolvedMod } from './mods.js';
 import type { InitializeHook, LoadHook, ResolveHook } from 'node:module';
+import { privateTransformLoader } from 'xxscreeps/driver/private/transform.js';
 import { isProvide, makeModSourceText } from './loader.js';
 
 /** @internal */
 export interface LoaderConfig {
-	pathfinder: string;
 	mods: readonly ResolvedMod[];
+	pathfinder: string;
+	privateSymbolImplementation?: string;
+	privateTransformBase?: string;
 }
 
 let mods: readonly ResolvedMod[];
 let pathfinder: string;
+let privateSymbolImplementation: string;
+let privateTransformBase: string | undefined;
 
 /** @internal */
 export let initialize: InitializeHook<LoaderConfig> = data => {
 	initialize = () => { throw new Error('Loader already initialized'); };
-	({ mods, pathfinder } = data);
+	({
+		mods,
+		pathfinder,
+		privateSymbolImplementation = 'xxscreeps/driver/private/symbol/unsafe.js',
+		privateTransformBase,
+	} = data);
 };
 
 /** @internal */
 export const resolve: ResolveHook = (specifier, context, nextResolve) => {
-	if (specifier.startsWith('xxscreeps:')) {
-		return {
-			url: specifier,
-			shortCircuit: true,
-		};
-	} else if (specifier === '@xxscreeps/pathfinder') {
-		return nextResolve(pathfinder, context);
-	} else {
-		return nextResolve(specifier, context);
+	switch (specifier) {
+		case '@xxscreeps/pathfinder': return nextResolve(pathfinder, context);
+		case 'xxscreeps:private-symbol': return nextResolve(privateSymbolImplementation, context);
+		default:
+			if (specifier.startsWith('xxscreeps:')) {
+				return {
+					url: specifier,
+					shortCircuit: true,
+				};
+			} else {
+				return nextResolve(specifier, context);
+			}
 	}
 };
 
@@ -43,6 +56,14 @@ export const load: LoadHook = (urlString, context, nextLoad) => {
 			shortCircuit: true,
 			source: makeModSourceText(mods, provide),
 		};
+	} else if (privateTransformBase !== undefined && urlString.startsWith(privateTransformBase)) {
+		return async function() {
+			return {
+				format: 'module',
+				shortCircuit: true,
+				source: await privateTransformLoader(urlString),
+			};
+		}();
 	} else {
 		return nextLoad(urlString, context);
 	}

@@ -1,7 +1,7 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { ActionLog, RoomObject } from 'xxscreeps/game/object.js';
 import type { Direction } from 'xxscreeps/game/position.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import type { Resource } from 'xxscreeps/mods/resource/resource.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';

@@ -3,7 +3,7 @@ import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomSearchOptions } from 'xxscreeps/game/pathfinder/index.js';
 import type { Direction } from 'xxscreeps/game/position.js';
 import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
 import type { PolyStyle } from 'xxscreeps/mods/visual/visual.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';

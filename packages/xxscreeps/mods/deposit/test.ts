@@ -1,7 +1,7 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { runShardInitializers } from 'xxscreeps/engine/processor/shard.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';

@@ -110,12 +110,27 @@ export const mods = await async function() {
 }();
 
 // Register nodejs loader
+const privateTransform = process.argv.indexOf('--private-transform=nodejs');
+if (privateTransform !== -1) {
+	process.argv.splice(privateTransform, 1);
+}
+const privateIsolatedTransform = process.argv.indexOf('--private-transform=isolated-vm');
+if (privateIsolatedTransform !== -1) {
+	process.argv.splice(privateIsolatedTransform, 1);
+}
 const data: LoaderConfig = {
 	mods,
 	pathfinder:
 	 rawConfig.runner?.sandbox === 'experimental'
 	 	? '@xxscreeps/pathfinder/iv'
 	 	: '@xxscreeps/pathfinder',
+	...privateTransform !== -1 && {
+		privateTransformBase: new URL('..', import.meta.url).href,
+	},
+	...privateIsolatedTransform !== -1 && {
+		privateSymbolImplementation: 'xxscreeps/driver/private/symbol/isolated-vm.js',
+		privateTransformBase: new URL('..', import.meta.url).href,
+	},
 };
 register('./nodejs.js', import.meta.url, { data });
 

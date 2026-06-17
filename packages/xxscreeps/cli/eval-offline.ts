@@ -1,19 +1,7 @@
-import { createRequire } from 'node:module';
-import * as path from 'node:path';
 import * as util from 'node:util';
 import { evaluateUnsafeGlobal } from './unsafe.js';
 
-export function installHostShims(): void {
-	const globals = globalThis as Record<string, unknown>;
-	const cwd = process.cwd();
-	const syntheticFile = path.join(cwd, '[eval]');
-	globals.require ??= createRequire(syntheticFile);
-	globals.__filename ??= syntheticFile;
-	globals.__dirname ??= cwd;
-}
-
 function shareGlobals(argv: readonly string[]) {
-	installHostShims();
 	const globals = globalThis as Record<string, unknown>;
 	const previousConsole = globals.console;
 	const hadArgv = 'argv' in globals;
