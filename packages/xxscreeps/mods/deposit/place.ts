@@ -49,16 +49,14 @@ function depositThroughput(harvested: number): number {
 }
 
 // Surviving in-sector deposits per normal edge room (one group per room, empties included).
-function loadSectorDeposits(shard: Shard, centralRoom: string, time: number, normalEdges: string[]): Promise<Deposit[][]> {
-	return Fn.mapAwait(normalEdges, async edgeRoom => {
+export async function loadSectorDeposits(shard: Shard, centralRoom: string, normalEdges: string[]): Promise<Deposit[]> {
+	const depositsByRoom = await Fn.mapAwait(normalEdges, async edgeRoom => {
 		const room = await shard.loadRoom(edgeRoom);
 		const inSector = makeSectorRadiusFilter(centralRoom, edgeRoom);
-		// Rooms process tick `time` with Game.time = time + 1, so a deposit whose decay time has
-		// arrived (<= time + 1) was removed by this tick's room pass — exclude the corpse so the
-		// decay path's same-tick re-eval doesn't tally it.
 		return room['#objects'].filter((object): object is Deposit =>
-			object instanceof Deposit && object['#nextDecayTime'] > time + 1 && inSector(object.pos.x, object.pos.y));
+			object instanceof Deposit && inSector(object.pos.x, object.pos.y));
 	});
+	return [ ...Fn.concat<Deposit>(depositsByRoom) ];
 }
 
 // Tests swap in a seeded RNG via `setDepositPlaceRandomForTesting`.
@@ -81,7 +79,7 @@ export function setDepositBootstrapScatterForTesting(scatter: ScatterFn): Dispos
 	return { [Symbol.dispose]() { bootstrapScatter = previous; } };
 }
 
-// Picks a wall position in 5..44 with at least one non-wall neighbour (incl. diagonals), inside the
+// Picks a wall position in 5..44 with at least one non-wall neighbor (incl. diagonals), inside the
 // sector's 250-square radius, and 2 squares clear of any other room object.
 function findPlacement(world: World, centralRoom: string, targetRoom: RoomClass) {
 	const terrain = world.map.getRoomTerrain(targetRoom.name);
@@ -134,17 +132,17 @@ async function pushPlaceIntent(shard: Shard, candidate: string, centralRoom: str
 	});
 }
 
-async function evaluateSector(shard: Shard, world: World, centralRoom: string, time: number) {
+async function evaluateSector(shard: Shard, world: World, centralRoom: string) {
 	// Out-of-borders / closed rooms are excluded from both throughput tallying and placement.
 	const normalEdges = [ ...Fn.filter(sectorEdgeRooms(centralRoom), name =>
 		world.map.getRoomStatus(name).status === 'normal') ];
-	const deposits = await loadSectorDeposits(shard, centralRoom, time, normalEdges);
-	const throughput = Fn.accumulate(Fn.transform(deposits, group => Fn.map(group, deposit => depositThroughput(deposit['#harvested']))));
+	const deposits = await loadSectorDeposits(shard, centralRoom, normalEdges);
+	const throughput = Fn.accumulate(Fn.map(deposits, deposit => depositThroughput(deposit['#harvested'])));
 	if (throughput >= SECTOR_THROUGHPUT_TARGET) {
 		// Saturated. The decay hook pulls the schedule forward the moment capacity frees.
 		return;
 	}
-	const busyRooms = new Set(Fn.transform(deposits, group => Fn.map(group, deposit => deposit.room.name)));
+	const busyRooms = new Set(Fn.map(deposits, deposit => deposit.room.name));
 	const candidate = pickRandomFreeRoom(normalEdges, busyRooms);
 	if (candidate !== undefined) {
 		await pushPlaceIntent(shard, candidate, centralRoom);
@@ -172,7 +170,7 @@ registerShardInitializer(async shard => {
 
 // Peek-and-reschedule (no zrem): a crash between peek and reschedule leaves the original entry for
 // retry next tick instead of dropping it silently.
-registerShardTickProcessor(async (shard, time) => {
+registerShardTickProcessor(async shard => {
 	const now = Date.now();
 	const due = await dueSectorsAt(shard, now);
 	if (due.length === 0) {
@@ -180,7 +178,7 @@ registerShardTickProcessor(async (shard, time) => {
 	}
 	const world = await shard.loadWorld();
 	await Fn.mapAwait(due, async sector => {
-		await evaluateSector(shard, world, sector, time);
+		await evaluateSector(shard, world, sector);
 		// Re-poll at the cadence ceiling whether or not a deposit lands (placement can fail);
 		// decay pulls the schedule forward sooner.
 		await scheduleSector(shard, sector, now + DEPOSIT_CHECK_INTERVAL);

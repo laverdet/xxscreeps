@@ -22,12 +22,8 @@ function makeRoomNameFromXY(rx: number, ry: number) {
 	return makeSignedRoomName(rx - kMaxWorldSize2, ry - kMaxWorldSize2);
 }
 
-// Signed room coordinates: W/N are negative (W0 = -1 … W127 = -128), E/S non-negative
-// (E0 = 0 … E127 = 127). The int8 range "pays for" the missing 0 on the W/N side, so the world
-// spans W127N127 … E127S127 with no half-world offset — the offset-free primitive geometry math
-// can build on without baking in a 256x256 world bound.
 export function makeSignedRoomName(rx: number, ry: number) {
-	return (rx < 0 ? `W${-1 - rx}` : `E${rx}`) + (ry < 0 ? `N${-1 - ry}` : `S${ry}`);
+	return `${rx < 0 ? `W${-1 - rx}` : `E${rx}`}${ry < 0 ? `N${-1 - ry}` : `S${ry}`}`;
 }
 
 export function parseSignedRoomName(name: string) {
@@ -39,10 +35,13 @@ export function parseSignedRoomName(name: string) {
 	} else if (rx >= 10) {
 		verticalPos = 3;
 	}
-	// Parse Y and return signed coordinates
+	// Parse Y and return adjusted coordinates
 	const ry = parseInt(name.slice(verticalPos + 1), 10);
 	const horizontalDir = name.charAt(0);
 	const verticalDir = name.charAt(verticalPos);
+	// The range of int8 is -128 to 127, since someone has to "pay" for 0 and it's the positive side.
+	// We pay it back here by accounting for it on the W and N (negative) sides. So the range is a
+	// nice round W127N127 to E127S127.
 	return {
 		rx: horizontalDir === 'W' || horizontalDir === 'w' ? -1 - rx : rx,
 		ry: verticalDir === 'N' || verticalDir === 'n' ? -1 - ry : ry,

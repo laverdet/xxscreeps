@@ -12,9 +12,10 @@ import { makeSectorRadiusFilter, sectorEdgeRooms } from 'xxscreeps/game/room/sec
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
+import { hashMix } from 'xxscreeps/utility/utility.js';
 import { Deposit } from './deposit.js';
 import { scheduleSector } from './model.js';
-import { depositTypeForRoom, setDepositBootstrapScatterForTesting, setDepositPlaceRandomForTesting } from './place.js';
+import { depositTypeForRoom, loadSectorDeposits, setDepositBootstrapScatterForTesting, setDepositPlaceRandomForTesting } from './place.js';
 
 interface DepositSimOptions {
 	body?: PartType[];
@@ -116,11 +117,8 @@ describe('Deposit', () => {
 
 // Tiny LCG so tests pick rooms/positions deterministically.
 function makeRng(seed = 1): () => number {
-	let state = seed >>> 0;
-	return () => {
-		state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-		return state / 0x100000000;
-	};
+	let state = hashMix(seed);
+	return () => state = hashMix(state);
 }
 
 // Deterministic placement RNG plus a zero-scatter bootstrap (so the single-sector test world's
@@ -136,13 +134,9 @@ function withFixedPlacement(seed = 1): Disposable {
 // unfiltered (no radius/decay test) — that filtering is the scheduler's job; this just sees what
 // landed.
 async function findDepositsInSector(shard: Shard, centralRoom: string) {
-	const perRoom = await Fn.mapAwait(sectorEdgeRooms(centralRoom), async edgeRoom => {
-		const room = await shard.loadRoom(edgeRoom);
-		return [ ...Fn.map(
-			Fn.filter(room['#objects'], (object): object is Deposit => object instanceof Deposit),
-			deposit => ({ roomName: edgeRoom, deposit })) ];
-	});
-	return perRoom.flat();
+	const normalEdges = [ ...sectorEdgeRooms(centralRoom) ];
+	const deposits = await loadSectorDeposits(shard, centralRoom, normalEdges);
+	return deposits.map(deposit => ({ roomName: deposit.pos.roomName, deposit }));
 }
 
 // All test world rooms (W0..W10 × N0..N10) carry the sector W5N5 — the only central room. Each
@@ -151,7 +145,7 @@ const emptySector = simulate({});
 
 describe('Deposit placement', () => {
 	test('seeds a deposit on first tick below threshold', () => emptySector(async ({ shard, tick }) => {
-		using _placement = withFixedPlacement();
+		using placement = withFixedPlacement();
 		assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 0);
 		// The initializer queues W5N5; tick 1's evaluator picks a candidate and pushes a placement
 		// intent; tick 2's room processor receives it and inserts the Deposit.
@@ -173,7 +167,7 @@ describe('Deposit placement', () => {
 	}));
 
 	test('saturated sector does not place more', () => emptySector(async ({ shard, tick }) => {
-		using _placement = withFixedPlacement();
+		using placement = withFixedPlacement();
 		// Throughput from one fresh deposit (harvested=0): 20/max(1, M·0^P) = 20. A single deposit
 		// blows past the 2.5 threshold, so re-evaluation should stop placing.
 		await runShardInitializers(shard);
@@ -197,15 +191,13 @@ describe('Deposit placement', () => {
 			(name): [ string, (room: Room) => void ] => [ name, room => {
 				const inSector = makeSectorRadiusFilter('W5N5', name);
 				const spot = [ [ 20, 20 ], [ 20, 30 ], [ 30, 20 ], [ 30, 30 ] ].find(([ xx, yy ]) => inSector(xx!, yy!))!;
-				room['#insertObject'](createDeposit(
-					new RoomPosition(spot[0]!, spot[1]!, name),
-					C.RESOURCE_SILICON,
-					50_000,
-					Game.time + DEPOSIT_DECAY_TIME));
+				const deposit =
+					createDeposit(new RoomPosition(spot[0]!, spot[1]!, name), C.RESOURCE_SILICON, 50_000, Game.time + DEPOSIT_DECAY_TIME);
+				room['#insertObject'](deposit);
 			} ]));
 
 	test('occupied rooms are excluded from placement candidates', () => simulate(occupiedRing)(async ({ shard, tick }) => {
-		using _placement = withFixedPlacement();
+		using placement = withFixedPlacement();
 		await runShardInitializers(shard);
 		await tick(2);
 		const found = await findDepositsInSector(shard, 'W5N5');
@@ -219,18 +211,13 @@ describe('Deposit placement', () => {
 		// W0N0 that's the x,y < 24 quadrant facing the central room). A player-owned creep keeps the
 		// room active so its tick processor (and therefore the deposit's decay path) runs.
 		W0N0: room => {
-			const deposit = createDeposit(
-				new RoomPosition(20, 20, 'W0N0'),
-				C.RESOURCE_SILICON,
-				0,
-				Game.time + 1, // decays at the end of next tick
-			);
+			// decays at the end of next tick
+			const deposit = createDeposit(new RoomPosition(20, 20, 'W0N0'), C.RESOURCE_SILICON, 0, Game.time + 1);
 			room['#insertObject'](deposit);
-			room['#insertObject'](createCreep(
-				new RoomPosition(20, 21, 'W0N0'), [ C.MOVE ], 'parker', '100'));
+			room['#insertObject'](createCreep(new RoomPosition(20, 21, 'W0N0'), [ C.MOVE ], 'parker', '100'));
 		},
 	})(async ({ shard, tick }) => {
-		using _rng = setDepositPlaceRandomForTesting(makeRng());
+		using rng = setDepositPlaceRandomForTesting(makeRng());
 		// No bootstrap: the decay path is the sole scheduler of W5N5. Decay fires this tick and marks
 		// W5N5 due immediately (score 0); the shard processor drains it the same tick, tallies the
 		// sector without the corpse, and pushes a refill intent.
@@ -245,15 +232,10 @@ describe('Deposit placement', () => {
 		// the wild. They're invisible to every sector's throughput tally, so their decay must not
 		// prompt a re-eval — no refill may appear.
 		W0N0: room => {
-			const deposit = createDeposit(
-				new RoomPosition(30, 30, 'W0N0'), // outside W5N5's 250-square radius
-				C.RESOURCE_SILICON,
-				0,
-				Game.time + 1,
-			);
+			// outside W5N5's 250-square radius
+			const deposit = createDeposit(new RoomPosition(30, 30, 'W0N0'), C.RESOURCE_SILICON, 0, Game.time + 1);
 			room['#insertObject'](deposit);
-			room['#insertObject'](createCreep(
-				new RoomPosition(30, 31, 'W0N0'), [ C.MOVE ], 'parker', '100'));
+			room['#insertObject'](createCreep(new RoomPosition(30, 31, 'W0N0'), [ C.MOVE ], 'parker', '100'));
 		},
 	})(async ({ shard, tick }) => {
 		await tick(2);
