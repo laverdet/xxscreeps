@@ -66,8 +66,6 @@ export async function compile(moduleName: string, transform: Transform) {
 						...(transform.babel?.length ?? 0) === 0 ? [] : [ {
 							loader: babelLoader,
 							options: {
-								cacheCompression: false,
-								cacheDirectory: fileURLToPath(new URL('.cache', import.meta.url)),
 								plugins: transform.babel,
 							},
 						} ],

@@ -32,6 +32,9 @@ function extractPrivate(node: Node) {
 	return {};
 }
 
+const findParent = <As extends NodePath>(path: NodePath, predicate: (path: NodePath) => path is As) =>
+	path.findParent(predicate) as NodePath<As extends NodePath<infer A> ? A : never> | null;
+
 const makeLambda = (params: t.Identifier[], expr: t.Expression) =>
 	t.functionExpression(undefined, params,
 		t.blockStatement([ t.returnStatement(expr) ]));
@@ -75,7 +78,9 @@ export default function transform(): PluginObj {
 		});
 	}
 
-	// Replace `obj['#foo'](val)` -> `makeInvoke('foo')(obj, val)`
+	// Replace:
+	// `obj['#foo'](val)` -> `makeInvoke('foo')(obj, val)`
+	// `super['#foo'](val)` -> `makeSuperInvoke('foo')(home, obj, val)`
 	const visitCallExpression: VisitNode<State, t.CallExpression | t.OptionalCallExpression> = function(path) {
 		const { node } = path;
 		const { name, object } = extractPrivate(node.callee);
@@ -84,9 +89,16 @@ export default function transform(): PluginObj {
 			const optional = t.booleanLiteral(isOptional);
 			const methodKey = `${name.value.slice(1)}${isOptional ? 'Opt' : ''}`;
 			if (t.isSuper(object)) {
-				const runtimeValue = injectMaker(this, 'makeInvoke', `super${methodKey}`, [ stripString(name), optional, t.booleanLiteral(true) ]);
-				const next = t.callExpression(runtimeValue, [ t.thisExpression(), ...node.arguments ]);
-				path.replaceWith(next);
+				const fn = path.getFunctionParent();
+				const home = fn && findParent(fn, path => path.isClassDeclaration() || path.isObjectExpression());
+				if (home?.isClassDeclaration()) {
+					const homeName = home.node.id;
+					if (homeName) {
+						const runtimeValue = injectMaker(this, 'makeSuperInvoke', `super${methodKey}`, [ stripString(name), optional ]);
+						const next = t.callExpression(runtimeValue, [ t.identifier(homeName.name), t.thisExpression(), ...node.arguments ]);
+						path.replaceWith(next);
+					}
+				}
 			} else {
 				const runtimeValue = injectMaker(this, 'makeInvoke', `call${methodKey}`, [ stripString(name), optional ]);
 				const next = t.callExpression(runtimeValue, [ object, ...node.arguments ]);

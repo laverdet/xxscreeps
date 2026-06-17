@@ -3,6 +3,8 @@ import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { isPrivate, makeSymbol } from 'xxscreeps:private-symbol';
 
 type Subject = Record<keyof any, unknown>;
+type Prototype = { prototype: Subject };
+type AnyFunction = (...args: unknown[]) => unknown;
 
 const { apply, defineProperty, get, getPrototypeOf, ownKeys, set } = Reflect;
 const inherits = function() {
@@ -115,46 +117,43 @@ export function makeMutator(name: string, postfix = false): (object: Subject, fn
 	}
 }
 
-export function makeInvoke(name: string, optional: boolean, isSuper = false): (object: Subject, ...args: unknown[]) => unknown {
+export function makeInvoke(name: string, optional: boolean): (object: Subject, ...args: unknown[]) => unknown {
 	const symbol = getSymbol(name);
-	type Constructor = (...args: unknown[]) => void;
-	type Function = (...args: unknown[]) => unknown;
 	return asOptional(optional, function() {
 		if (inherits) {
-			if (isSuper) {
-				return (object, ...args) => {
-					const proto = getPrototypeOf(object)!;
-					const parent = getPrototypeOf(proto) satisfies object | null as Subject;
-					apply(parent[symbol] as Constructor, object, args);
-				};
-			} else {
-				return (object, ...args) => apply(object[symbol] as Function, object, args);
-			}
+			return (object, ...args) => apply(object[symbol] as AnyFunction, object, args);
 		} else {
-			// eslint-disable-next-line no-lonely-if
-			if (isSuper) {
-				return (object, ...args) => {
-					const proto = getPrototypeOf(object)!;
-					for (let instance = getPrototypeOf(proto); instance !== null; instance = getPrototypeOf(instance)) {
-						if (symbol in instance) {
-							const parent = instance satisfies object as Subject;
-							apply(parent[symbol] as Constructor, object, args);
-							return;
-						}
+			return (object, ...args) => {
+				for (let instance: object | null = object; instance !== null; instance = getPrototypeOf(instance)) {
+					if (symbol in instance) {
+						const parent = instance satisfies object as Subject;
+						return apply(parent[symbol] as AnyFunction, object, args);
 					}
-					throw new Error(`${symbol.description} is undefined`);
-				};
-			} else {
-				return (object, ...args) => {
-					for (let instance: object | null = object; instance !== null; instance = getPrototypeOf(instance)) {
-						if (symbol in instance) {
-							const parent = instance satisfies object as Subject;
-							return apply(parent[symbol] as Function, object, args);
-						}
+				}
+				throw new Error(`${symbol.description} is undefined`);
+			};
+		}
+	}());
+}
+
+export function makeSuperInvoke(name: string, optional: boolean): (home: object, object: unknown, ...args: unknown[]) => unknown {
+	const symbol = getSymbol(name);
+	return asOptional(optional, function() {
+		if (inherits) {
+			return (home, object, ...args) => {
+				const { prototype } = getPrototypeOf(home)! satisfies object as Prototype;
+				return apply(prototype[symbol] as AnyFunction, object, args);
+			};
+		} else {
+			return (home, object, ...args) => {
+				for (let instance = getPrototypeOf(home); instance !== null; instance = getPrototypeOf(instance)) {
+					const { prototype } = instance satisfies object as Prototype;
+					if (symbol in prototype) {
+						return apply(prototype[symbol] as AnyFunction, object, args);
 					}
-					throw new Error(`${symbol.description} is undefined`);
-				};
-			}
+				}
+				throw new Error(`${symbol.description} is undefined`);
+			};
 		}
 	}());
 }

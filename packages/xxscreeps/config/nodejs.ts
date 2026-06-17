@@ -12,11 +12,16 @@ export interface LoaderConfig {
 
 let mods: readonly ResolvedMod[];
 let pathfinder: string;
+let privateTransformBase: string | undefined;
 
 /** @internal */
 export let initialize: InitializeHook<LoaderConfig> = data => {
 	initialize = () => { throw new Error('Loader already initialized'); };
-	({ mods, pathfinder } = data);
+	({
+		mods,
+		pathfinder,
+		privateTransformBase,
+	} = data);
 };
 
 /** @internal */
@@ -48,6 +53,14 @@ export const load: LoadHook = (urlString, context, nextLoad) => {
 			shortCircuit: true,
 			source: makeModSourceText(mods, provide),
 		};
+	} else if (privateTransformBase !== undefined && urlString.startsWith(privateTransformBase)) {
+		return async function() {
+			return {
+				format: 'module',
+				shortCircuit: true,
+				source: await privateTransformLoader(urlString),
+			};
+		}();
 	} else {
 		return nextLoad(urlString, context);
 	}

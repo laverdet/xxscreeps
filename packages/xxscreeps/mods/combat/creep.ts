@@ -93,32 +93,31 @@ extend(Creep, {
 });
 
 // Add counter attack
-// TODO: Look into why passing `applyDamage` as an argument to an anonymous function breaks the
-// babel transform
-const applyDamage = Creep.prototype['#applyDamage'];
-Creep.prototype['#applyDamage'] = function(this: Creep, power, type, source) {
-	applyDamage.call(this, power, type, source);
-	if (
-		type === C.EVENT_ATTACK_TYPE_MELEE &&
-			source instanceof Creep &&
-			!this.room.controller?.safeMode
-	) {
-		const counterAttack = calculatePower(this, C.ATTACK, C.ATTACK_POWER, 'attack');
-		if (counterAttack) {
-			const damage = captureDamage(source, counterAttack, C.EVENT_ATTACK_TYPE_HIT_BACK, null);
-			if (damage > 0) {
-				appendEventLog(this.room, {
-					event: C.EVENT_ATTACK,
-					objectId: this.id,
-					targetId: source.id,
-					attackType: C.EVENT_ATTACK_TYPE_HIT_BACK,
-					damage,
-				});
-				source['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_HIT_BACK, this);
+Creep.prototype['#applyDamage'] = function(applyDamage) {
+	return function(this: Creep, power, type, source) {
+		applyDamage.call(this, power, type, source);
+		if (
+			type === C.EVENT_ATTACK_TYPE_MELEE &&
+				source instanceof Creep &&
+				!this.room.controller?.safeMode
+		) {
+			const counterAttack = calculatePower(this, C.ATTACK, C.ATTACK_POWER, 'attack');
+			if (counterAttack) {
+				const damage = captureDamage(source, counterAttack, C.EVENT_ATTACK_TYPE_HIT_BACK, null);
+				if (damage > 0) {
+					appendEventLog(this.room, {
+						event: C.EVENT_ATTACK,
+						objectId: this.id,
+						targetId: source.id,
+						attackType: C.EVENT_ATTACK_TYPE_HIT_BACK,
+						damage,
+					});
+					source['#applyDamage'](damage, C.EVENT_ATTACK_TYPE_HIT_BACK, this);
+				}
 			}
 		}
-	}
-};
+	};
+}(Creep.prototype['#applyDamage']);
 
 // Intent checks
 export type AttackTarget = Creep | Structure;

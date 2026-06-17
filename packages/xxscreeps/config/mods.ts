@@ -110,12 +110,19 @@ export const mods = await async function() {
 }();
 
 // Register nodejs loader
+const privateTransform = process.argv.indexOf('--private-transform');
+if (privateTransform !== -1) {
+	process.argv.splice(privateTransform, 1);
+}
 const data: LoaderConfig = {
 	mods,
 	pathfinder:
 	 rawConfig.runner?.sandbox === 'experimental'
 	 	? '@xxscreeps/pathfinder/iv'
 	 	: '@xxscreeps/pathfinder',
+	...privateTransform !== -1 && {
+		privateTransformBase: new URL('..', import.meta.url).href,
+	},
 };
 register('./nodejs.js', import.meta.url, { data });
 
