@@ -7,7 +7,7 @@ import { PreTick, Tick, intentProcessorGetters, intentProcessors } from './symbo
 
 export type { ObjectReceivers, RoomIntentPayload, SingleIntent } from './room.js';
 export { registerRoomTickProcessor } from './room.js';
-export { everyNTicks, registerShardTickProcessor } from './shard.js';
+export { everyNTicks, registerShardInitializer, registerShardTickProcessor } from './shard.js';
 export { hooks } from './symbols.js';
 
 // Intent type definitions

@@ -124,6 +124,21 @@ export function merge(result: any, subject: any) {
 	}
 }
 
+export function hashMix(value: number) {
+	let hash = value;
+	hash ^= hash >> 16;
+	hash = Math.imul(hash, 0x21f0aaad);
+	hash ^= hash >> 15;
+	hash = Math.imul(hash, 0x735a2d97);
+	hash ^= hash >> 15;
+	return hash;
+}
+
+export function hashCombine(left: number, right: number) {
+	const seed = (left + 0x9e3779b9) | 0;
+	return hashMix((seed + right) | 0);
+}
+
 export function removeOne<Type>(list: Type[], element: Type) {
 	const index = list.indexOf(element);
 	if (index === -1) {
