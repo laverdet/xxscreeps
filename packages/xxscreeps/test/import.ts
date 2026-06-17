@@ -131,6 +131,9 @@ export async function instantiateTestShard() {
 		shard.data.set('terrain', terrain),
 		shard.data.set('time', shard.time),
 		shard.data.sAdd('rooms', [ ...Fn.map(rooms, room => room.room.name) ]),
+		// Seed both double-buffer slots (production boot processes every room once, populating both;
+		// this harness skips that), so a room first woken at the opposite tick parity — e.g. by a
+		// cross-tick `pushIntentsForRoomNextTick` — reads a populated slot rather than an empty one.
 		Promise.all(Fn.map(rooms, async ({ room }) => {
 			await shard.saveRoom(room.name, shard.time, room);
 			await shard.copyRoomFromPreviousTick(room.name, shard.time + 1);
