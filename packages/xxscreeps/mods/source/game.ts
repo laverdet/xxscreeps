@@ -2,7 +2,7 @@ import { registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.j
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
-import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
+import { registerHarvestable } from 'xxscreeps/mods/harvestable/game.js';
 import { format as keeperFormat } from './keeper-lair.js';
 import { Source, format } from './source.js';
 
@@ -54,6 +54,6 @@ const harvest = registerHarvestable(Source, function(creep) {
 			}
 		});
 });
-declare module 'xxscreeps/mods/harvestable/index.js' {
+declare module 'xxscreeps/mods/harvestable/game.js' {
 	interface Harvest { source: typeof harvest }
 }

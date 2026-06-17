@@ -1,7 +1,7 @@
 import type { Package } from './build.js';
 import type { ShapeOf } from './format.js';
 import type { Layout, StructLayout } from './layout.js';
-import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
+import { makeGetterFromSymbol, ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
@@ -34,8 +34,11 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 				});
 
 				// Wrap to write this field at reserved address
+				const get = typeof key === 'symbol'
+					? makeGetterFromSymbol(key)
+					: (object: Record<string, unknown>) => object[key];
 				return (value, view, instanceOffset, heap) =>
-					write(value[key], view, instanceOffset + offset, heap);
+					write(get(value), view, instanceOffset + offset, heap);
 			}),
 			$$ => Fn.filter($$),
 			$$ => [ ...$$ ]);

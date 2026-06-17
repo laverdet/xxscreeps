@@ -6,6 +6,8 @@ import * as Container from './container.js';
 import * as Resource from './resource.js';
 import { Store } from './store.js';
 
+export interface Schema {}
+
 // Export `StructureContainer`, `Resource` & `Store` to runtime globals
 registerGlobal(Container.StructureContainer);
 registerGlobal(Resource.Resource);

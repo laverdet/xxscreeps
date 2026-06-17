@@ -1,11 +1,10 @@
 import type { Creep } from 'xxscreeps/mods/creep/creep.js';
-import type { ContextType } from 'xxscreeps/utility/types.js';
+import type { ContextType, Implementation } from 'xxscreeps/utility/types.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
 import { constant, struct, variant } from 'xxscreeps/schema/index.js';
-import { registerHarvestable } from './index.js';
 import './creep.js';
 
 // `RoomObject` intent check symbol
@@ -13,6 +12,13 @@ declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		'#checkHarvest': (creep: Creep) => C.ErrorCode;
 	}
+}
+
+export function registerHarvestable<Type extends RoomObject, Error extends C.ErrorCode>(
+	target: Implementation<Type>,
+	check: (this: Type, creep: Creep) => Error,
+) {
+	return target.prototype['#checkHarvest'] = check;
 }
 
 // Creep.harvest runtime registration hook

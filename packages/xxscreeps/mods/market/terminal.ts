@@ -1,6 +1,6 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/index.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';

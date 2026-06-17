@@ -15,7 +15,7 @@ const inherits = function() {
 	return value[symbol] ?? false;
 }();
 
-function asOptional<Result, Args extends unknown[]>(optional: boolean, fn: (...args: Args) => Result) {
+function asOptional<Result, Args extends unknown[]>(optional: boolean | undefined, fn: (...args: Args) => Result) {
 	if (optional) {
 		return (...args: Args): Result | undefined => {
 			if (args[0]) {
@@ -53,25 +53,27 @@ export function *ownEntriesIncludingPrivate<Type extends Subject>(object: Type):
 	}
 }
 
-export function makeGetter(name: string, optional: boolean): (object: Subject) => unknown {
+export function makeGetterFromSymbol(key: symbol): (object: Subject) => unknown {
+	if (inherits) {
+		return object => object[key];
+	} else {
+		return (object): unknown => {
+			if (key in object) {
+				return object[key];
+			}
+			for (let instance = getPrototypeOf(object); instance !== null; instance = getPrototypeOf(instance)) {
+				if (key in instance) {
+					// This only works for getters. Inherited non-getter properties should not be used.
+					return get(instance, key, object);
+				}
+			}
+		};
+	}
+}
+
+export function makeGetter(name: string, optional?: boolean): (object: Subject) => unknown {
 	const symbol = getSymbol(name);
-	return asOptional<unknown, [ Subject ]>(optional, function() {
-		if (inherits) {
-			return object => object[symbol];
-		} else {
-			return (object): unknown => {
-				if (symbol in object) {
-					return object[symbol];
-				}
-				for (let instance = getPrototypeOf(object); instance !== null; instance = getPrototypeOf(instance)) {
-					if (symbol in instance) {
-						// This only works for getters. Inherited non-getter properties should not be used.
-						return get(instance, symbol, object);
-					}
-				}
-			};
-		}
-	}());
+	return asOptional<unknown, [ Subject ]>(optional, makeGetterFromSymbol(symbol));
 }
 
 export function makeSetter(name: string): (object: Subject, value: unknown) => unknown {
@@ -117,7 +119,7 @@ export function makeMutator(name: string, postfix = false): (object: Subject, fn
 	}
 }
 
-export function makeInvoke(name: string, optional: boolean): (object: Subject, ...args: unknown[]) => unknown {
+export function makeInvoke(name: string, optional?: boolean): (object: Subject, ...args: unknown[]) => unknown {
 	const symbol = getSymbol(name);
 	return asOptional(optional, function() {
 		if (inherits) {
@@ -136,7 +138,7 @@ export function makeInvoke(name: string, optional: boolean): (object: Subject, .
 	}());
 }
 
-export function makeSuperInvoke(name: string, optional: boolean): (home: object, object: unknown, ...args: unknown[]) => unknown {
+export function makeSuperInvoke(name: string, optional?: boolean): (home: object, object: unknown, ...args: unknown[]) => unknown {
 	const symbol = getSymbol(name);
 	return asOptional(optional, function() {
 		if (inherits) {

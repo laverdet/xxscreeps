@@ -1,17 +1,4 @@
 import type { Manifest } from 'xxscreeps/config/mods.js';
-import type * as C from 'xxscreeps/game/constants/index.js';
-import type { RoomObject } from 'xxscreeps/game/object.js';
-import type { Creep } from 'xxscreeps/mods/creep/creep.js';
-import type { Implementation } from 'xxscreeps/utility/types.js';
-
-export type { Harvest } from './game.js';
-
-export function registerHarvestable<Type extends RoomObject, Error extends C.ErrorCode>(
-	target: Implementation<Type>,
-	check: (this: Type, creep: Creep) => Error,
-) {
-	return target.prototype['#checkHarvest'] = check;
-}
 
 export const manifest: Manifest = {
 	dependencies: [ 'xxscreeps/mods/creep' ],

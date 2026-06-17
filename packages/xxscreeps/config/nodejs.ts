@@ -5,13 +5,15 @@ import { isProvide, makeModSourceText } from './loader.js';
 
 /** @internal */
 export interface LoaderConfig {
-	pathfinder: string;
-	privateTransformBase?: string;
 	mods: readonly ResolvedMod[];
+	pathfinder: string;
+	privateSymbolImplementation?: string;
+	privateTransformBase?: string;
 }
 
 let mods: readonly ResolvedMod[];
 let pathfinder: string;
+let privateSymbolImplementation: string;
 let privateTransformBase: string | undefined;
 
 /** @internal */
@@ -20,6 +22,7 @@ export let initialize: InitializeHook<LoaderConfig> = data => {
 	({
 		mods,
 		pathfinder,
+		privateSymbolImplementation = 'xxscreeps/driver/private/symbol/unsafe.js',
 		privateTransformBase,
 	} = data);
 };
@@ -28,7 +31,7 @@ export let initialize: InitializeHook<LoaderConfig> = data => {
 export const resolve: ResolveHook = (specifier, context, nextResolve) => {
 	switch (specifier) {
 		case '@xxscreeps/pathfinder': return nextResolve(pathfinder, context);
-		case 'xxscreeps:private-symbol': return nextResolve('xxscreeps/driver/private/symbol/unsafe.js', context);
+		case 'xxscreeps:private-symbol': return nextResolve(privateSymbolImplementation, context);
 		default:
 			if (specifier.startsWith('xxscreeps:')) {
 				return {
