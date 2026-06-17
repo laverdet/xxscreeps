@@ -158,7 +158,7 @@ const intents = [
 
 	registerIntentProcessor(StructureInvaderCore, 'transferEnergy', {}, (core, context, id: string, amount: number) => {
 		const target = Game.getObjectById<StructureTower | Creep.Creep>(id);
-		if (target && checkTransferEnergy(core, target, amount) === C.OK) {
+		if (target && checkTransferEnergy(core, target) === C.OK) {
 			const free = target.store.getFreeCapacity(C.RESOURCE_ENERGY)!;
 			const actual = Math.min(amount, free);
 			if (actual > 0) {

@@ -90,7 +90,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	 */
 	transferEnergy(target: StructureTower | Creep, amount?: number) {
 		return chainIntentChecks(
-			() => checkTransferEnergy(this, target, amount),
+			() => checkTransferEnergy(this, target),
 			() => intents.save(this, 'transferEnergy', target.id,
 				amount ?? target.store.getFreeCapacity(C.RESOURCE_ENERGY)!));
 	}
@@ -184,16 +184,13 @@ export function checkUpgradeController(core: StructureInvaderCore, target: Struc
 		});
 }
 
-export function checkTransferEnergy(core: StructureInvaderCore, target: StructureTower | Creep, amount: number | undefined) {
+export function checkTransferEnergy(core: StructureInvaderCore, target: StructureTower | Creep) {
 	return chainIntentChecks(
 		() => checkMyStructure(core, StructureInvaderCore),
 		() => checkSourceAlive(core),
 		() => checkTarget(target, StructureTower, Creep),
 		() => checkSameRoom(core, target),
 		() => {
-			if (amount !== undefined && (typeof amount !== 'number' || amount < 0)) {
-				return C.ERR_INVALID_ARGS;
-			}
 			const free = target.store.getFreeCapacity(C.RESOURCE_ENERGY);
 			if (free === null) {
 				return C.ERR_INVALID_TARGET;
