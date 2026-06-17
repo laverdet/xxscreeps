@@ -1,7 +1,6 @@
 import type * as vm from 'node:vm';
 import * as repl from 'node:repl';
 import { ArgumentParser } from 'argparse';
-import { installHostShims } from './eval-offline.js';
 import { makeUnsafeGlobalEvaluator } from './unsafe.js';
 
 const parser = new ArgumentParser({
@@ -9,8 +8,6 @@ const parser = new ArgumentParser({
 	prog: 'xxscreeps cli',
 });
 parser.parse_args();
-
-installHostShims();
 
 function customEval(
 	cmd: string,
