@@ -24,11 +24,7 @@ function powerBankSim(options: PowerBankSimOptions = {}) {
 				bank.hits = options.hits;
 			}
 			room['#insertObject'](bank);
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 26, 'W1N1'),
-				options.body ?? [ C.ATTACK ],
-				'attacker',
-				'100'));
+			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), options.body ?? [ C.ATTACK ], 'attacker', '100'));
 		},
 	});
 }
