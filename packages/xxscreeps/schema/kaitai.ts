@@ -3,7 +3,6 @@ import jsYaml from 'js-yaml';
 import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { mappedNumericComparator, primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 
 function toId(name: string | symbol): string {
 	if (typeof name === 'symbol') {
