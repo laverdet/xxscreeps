@@ -1,5 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
+import type { Room } from 'xxscreeps/game/room/room.js';
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { runShardInitializers } from 'xxscreeps/engine/processor/shard.js';
@@ -118,7 +118,7 @@ describe('Deposit', () => {
 // Tiny LCG so tests pick rooms/positions deterministically.
 function makeRng(seed = 1): () => number {
 	let state = hashMix(seed);
-	return () => state = hashMix(state);
+	return () => (state = hashMix(state)) / 0xffffffff + 0.5;
 }
 
 // Deterministic placement RNG plus a zero-scatter bootstrap (so the single-sector test world's
