@@ -54,7 +54,9 @@ export async function loadSectorDeposits(shard: Shard, centralRoom: string, norm
 		const room = await shard.loadRoom(edgeRoom);
 		const inSector = makeSectorRadiusFilter(centralRoom, edgeRoom);
 		return room['#objects'].filter((object): object is Deposit =>
-			object instanceof Deposit && inSector(object.pos.x, object.pos.y));
+			object instanceof Deposit &&
+			object['#nextDecayTime'] > shard.time + 1 &&
+			inSector(object.pos.x, object.pos.y));
 	});
 	return [ ...Fn.concat<Deposit>(depositsByRoom) ];
 }
