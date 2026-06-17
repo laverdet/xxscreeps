@@ -1,4 +1,4 @@
-import type { Schema } from './index.js';
+import type { Schema } from './game.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';

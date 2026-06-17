@@ -1,7 +1,7 @@
 import type { Layout, StructLayout } from './layout.js';
+import { ownEntriesIncludingPrivate, ownValuesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 import { unpackWrappedStruct } from './layout.js';
 
 class ModuleArchiver {
@@ -64,7 +64,7 @@ class ModuleArchiver {
 					...layout,
 					...layout.inherit && { inherit: this.archive(layout.inherit) },
 					struct: Fn.pipe(
-						entriesWithSymbols(layout.struct),
+						ownEntriesIncludingPrivate(layout.struct),
 						$$ => Fn.map($$, ([ key, value ]) => {
 							const result = {
 								// eslint-disable-next-line no-new-wrappers
@@ -122,7 +122,7 @@ function render(value: any, indent = 1): string {
 			return `[ ${rendered.map(value => value.replace(/^\t/gm, '')).join(', ')} ]`;
 		}
 	} else if (value) {
-		const entries = entriesWithSymbols(value).filter(entry => entry[1] !== undefined);
+		const entries = [ ...ownEntriesIncludingPrivate(value).filter(([ ,value ]) => value !== undefined) ];
 		const preRendered = entries.map(([ key, value ]) => [ key, render(value, indent + 1) ] as const);
 		preRendered.sort((left, right) => {
 			const hasNewLine = (value: typeof left) => value[1].includes('\n') ? 1 : 0;
@@ -241,12 +241,15 @@ function mapLayout(layout: Layout, fn: (layout: Layout, path: string) => Layout)
 					...layout.inherit && {
 						inherit: (path[path.length - 1] = '^', walk(layout.inherit) as StructLayout),
 					},
-					struct: Fn.fromEntries(Fn.map(entriesWithSymbols(layout.struct), ([ key, value ]) => {
-						const str = typeof key === 'symbol' ? `%${key.description}` : key;
-						path[path.length - 1] = str;
-						const next = walk(value.member);
-						return [ key, { ...value, member: next } ];
-					})),
+					struct: Fn.pipe(
+						ownEntriesIncludingPrivate(layout.struct),
+						$$ => Fn.map($$, ([ key, value ]) => {
+							const str = typeof key === 'symbol' ? `%${key.description}` : key;
+							path[path.length - 1] = str;
+							const next = walk(value.member);
+							return [ key, { ...value, member: next } ] as const;
+						}),
+						$$ => Fn.fromEntries($$)),
 				};
 			} else if ('variant' in layout) {
 				layout = {

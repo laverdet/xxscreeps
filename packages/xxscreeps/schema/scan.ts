@@ -1,10 +1,10 @@
 import type { Builder } from './index.js';
 import type { Layout, StructLayout } from './layout.js';
+import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { Variant } from './format.js';
 import { alignTo, kPointerSize, unpackWrappedStruct } from './layout.js';
-import { entriesWithSymbols } from './symbol.js';
 
 export type Scanner<Type = any> = (value: Type, heap: number) => number;
 
@@ -14,7 +14,7 @@ function makeMemberScanner(layout: StructLayout, builder: Builder): Scanner | un
 	return getOrSet(builder.scanner, layout, () => {
 
 		let scanMembers: Scanner | undefined;
-		for (const [ key, member ] of entriesWithSymbols(layout.struct)) {
+		for (const [ key, member ] of ownEntriesIncludingPrivate(layout.struct)) {
 			// Don't bother scanning union members
 			if (member.union) {
 				continue;

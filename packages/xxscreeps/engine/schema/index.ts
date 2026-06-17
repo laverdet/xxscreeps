@@ -2,9 +2,9 @@ import type { StructDeclaration, struct, variant } from 'xxscreeps/schema/format
 import type { BuilderOptions, Format } from 'xxscreeps/schema/index.js';
 import type { ReadOptions } from 'xxscreeps/schema/read.js';
 import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types.js';
+import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { build, makeUpgrader } from 'xxscreeps/engine/schema/build/index.js';
 import { Builder, makeReader, makeWriter } from 'xxscreeps/schema/index.js';
-import { entriesWithSymbols } from 'xxscreeps/schema/symbol.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 // Use full path here so we can rewrite it in webpack
 export { build, makeUpgrader };
@@ -48,7 +48,7 @@ export function structForPath<Schema>() {
 		const schema: any = format;
 		const formats = schemaByPath.get(path) ?? [];
 		for (const format of formats) {
-			for (const [ key, member ] of entriesWithSymbols(format)) {
+			for (const [ key, member ] of ownEntriesIncludingPrivate(format)) {
 				schema[key] = member;
 			}
 		}

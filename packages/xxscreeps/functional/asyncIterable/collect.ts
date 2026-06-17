@@ -36,6 +36,7 @@ export function collect<Type>(iterables: readonly AsyncIterable<Type>[]): AsyncI
 					queue.push(accept);
 				} else {
 					deferred.resolve(accept);
+					deferred = undefined;
 				}
 			};
 
@@ -65,7 +66,6 @@ export function collect<Type>(iterables: readonly AsyncIterable<Type>[]): AsyncI
 						if (next === null) {
 							break;
 						} else {
-							deferred = undefined;
 							yield next();
 						}
 					}

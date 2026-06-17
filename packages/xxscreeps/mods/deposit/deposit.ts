@@ -2,7 +2,7 @@ import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/check
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, registerGlobal } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
-import { registerHarvestable } from 'xxscreeps/mods/harvestable/index.js';
+import { registerHarvestable } from 'xxscreeps/mods/harvestable/game.js';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 
@@ -35,6 +35,6 @@ const harvest = registerHarvestable(Deposit, function(creep) {
 		() => checkRange(creep, this, 1),
 		() => this.cooldown === 0 ? undefined : C.ERR_TIRED);
 });
-declare module 'xxscreeps/mods/harvestable/index.js' {
+declare module 'xxscreeps/mods/harvestable/game.js' {
 	interface Harvest { deposit: typeof harvest }
 }

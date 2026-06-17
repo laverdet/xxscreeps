@@ -26,11 +26,10 @@ const getRuntimeSource = runOnce(() => {
 		babel: [ Privates ],
 		alias: {
 			process: 'xxscreeps/driver/sandbox/isolated/process.js',
-			'xxscreeps/driver/private/symbol.js': 'xxscreeps/driver/private/symbol/isolated-vm.js',
+			'/xxscreeps:private-symbol': 'xxscreeps/driver/private/symbol/isolated-vm.js',
 			'xxscreeps/engine/schema/build/index.js': 'xxscreeps/engine/schema/build/runtime.js',
 		},
 		externals: ({ request }) => {
-			// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 			switch (request) {
 				case '#pf': return "globalThis['@xxscreeps/pathfinder']";
 				case 'isolated-vm': return 'ivm';
@@ -142,7 +141,11 @@ export class IsolatedSandbox implements Sandbox {
 			} else if (
 				err.message === 'Isolate is disposed' ||
 				err.message === 'Isolate was disposed during execution' ||
-				err.message === 'Isolate was disposed during execution due to memory limit'
+				err.message === 'Isolate was disposed during execution due to memory limit' ||
+				// The memory-limit reaper can dispose the isolate while a tick payload is being
+				// deserialized on its thread, which surfaces as v8's generic clone error rather than
+				// one of the disposal messages above.
+				(err.message === 'Unable to deserialize cloned data.' && this.isolate.isDisposed)
 			) {
 				return { result: 'disposed' };
 			}
