@@ -205,6 +205,8 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 				// Fake creep
 				const creep = createCreep(this.pos, body, name, this['#user']!);
 				creep.room = this.room;
+				// Spawning this tick; the processor assigns the real age
+				creep['#ageTime'] = 0;
 				userGame!.creeps[name] = creep;
 				return C.OK;
 			});

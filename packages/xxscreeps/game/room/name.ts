@@ -19,13 +19,14 @@ export function makeRoomNameFromId(id: number) {
 }
 
 function makeRoomNameFromXY(rx: number, ry: number) {
-	return (
-		(rx < kMaxWorldSize2 ? `W${kMaxWorldSize2 - 1 - rx}` : `E${rx - kMaxWorldSize2}`) +
-		(ry < kMaxWorldSize2 ? `N${kMaxWorldSize2 - 1 - ry}` : `S${ry - kMaxWorldSize2}`)
-	);
+	return makeSignedRoomName(rx - kMaxWorldSize2, ry - kMaxWorldSize2);
 }
 
-export function parseRoomName(name: string) {
+export function makeSignedRoomName(rx: number, ry: number) {
+	return `${rx < 0 ? `W${-1 - rx}` : `E${rx}`}${ry < 0 ? `N${-1 - ry}` : `S${ry}`}`;
+}
+
+export function parseSignedRoomName(name: string) {
 	// Parse X and calculate str position of Y
 	const rx = parseInt(name.slice(1), 10);
 	let verticalPos = 2;
@@ -38,10 +39,18 @@ export function parseRoomName(name: string) {
 	const ry = parseInt(name.slice(verticalPos + 1), 10);
 	const horizontalDir = name.charAt(0);
 	const verticalDir = name.charAt(verticalPos);
+	// The range of int8 is -128 to 127, since someone has to "pay" for 0 and it's the positive side.
+	// We pay it back here by accounting for it on the W and N (negative) sides. So the range is a
+	// nice round W127N127 to E127S127.
 	return {
-		rx: kMaxWorldSize2 + (horizontalDir === 'W' || horizontalDir === 'w' ? -1 - rx : rx),
-		ry: kMaxWorldSize2 + (verticalDir === 'N' || verticalDir === 'n' ? -1 - ry : ry),
+		rx: horizontalDir === 'W' || horizontalDir === 'w' ? -1 - rx : rx,
+		ry: verticalDir === 'N' || verticalDir === 'n' ? -1 - ry : ry,
 	};
+}
+
+export function parseRoomName(name: string) {
+	const { rx, ry } = parseSignedRoomName(name);
+	return { rx: kMaxWorldSize2 + rx, ry: kMaxWorldSize2 + ry };
 }
 
 export function parseRoomNameToId(name: string) {

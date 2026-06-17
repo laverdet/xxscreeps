@@ -12,7 +12,6 @@ registerGlobal('_', lodash);
 
 registerGlobal(function Deposit() {});
 registerGlobal(function PowerCreep() {});
-registerGlobal(function StructurePowerBank() {});
 
 hooks.register('runtimeConnector', {
 	initialize() {

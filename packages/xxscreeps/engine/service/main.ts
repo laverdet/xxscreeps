@@ -2,7 +2,7 @@ import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import { abandonIntentsForTick, activeRoomsKey, begetRoomProcessQueue, getProcessorChannel } from 'xxscreeps/engine/processor/model.js';
-import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
+import { runShardInitializers, runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { getRunnerChannel, runnerUsersSetKey } from 'xxscreeps/engine/runner/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
@@ -127,6 +127,10 @@ async function tick() {
 
 // Main loop
 if (didInitialize) {
+	// Seed one-time per-shard state (e.g. periodic-sweep schedules) before the first tick. Runs
+	// after the scratch flush above so the seed survives into the steady state.
+	await runShardInitializers(shard);
+
 	// Watch for shutdown and halt tick delay
 	disposable.defer(serviceChannel.listen(message => {
 		if (message.type === 'shutdown') {
