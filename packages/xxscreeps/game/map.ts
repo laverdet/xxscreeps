@@ -232,6 +232,11 @@ export class GameMap {
 	getRoomStatus(roomName: string): RoomStatus;
 
 	getRoomStatus(roomName: string, actually?: boolean): RoomStatus | undefined {
+		// Player code may pass a non-string despite the typed signature; `parseRoomName` would
+		// throw on it, where a malformed string name already falls through to `undefined`.
+		if (typeof roomName !== 'string') {
+			return undefined;
+		}
 		const room = parseRoomName(roomName);
 		if (Number.isNaN(room.rx) || Number.isNaN(room.ry)) {
 			return undefined;
