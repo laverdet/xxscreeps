@@ -1,5 +1,4 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import type { Room } from 'xxscreeps/game/room/index.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
@@ -42,7 +41,15 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	@enumerable get spawning(): null { return null; }
 
 	@enumerable get ticksToDeploy(): number | undefined {
-		return RoomObject.optionalExpiryTime(Game, this['#deployTime']);
+		// `+ 1 - 1` like nuke's `timeToLand`: yields `0` on the final invulnerable tick
+		// (`Game.time === #deployTime`) and clamps to `undefined` from the tick after, so reads at
+		// `#deployTime + 1` don't throw before the processor zeroes the field.
+		const deployTime = this['#deployTime'];
+		if (deployTime === 0) {
+			return undefined;
+		}
+		const ticks = RoomObject.requiredExpiryTime(Game, deployTime + 1) - 1;
+		return ticks < 0 ? undefined : ticks;
 	}
 
 	override get hitsMax(): number {
@@ -55,11 +62,14 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 		return this.ticksToDeploy !== undefined;
 	}
 
+	// These four actions are NPC-internal — only the invader loop calls them — so they're private
+	// rather than part of the player-facing structure API.
+
 	/**
 	 * Block claim/reservation of the target controller.
 	 * @param target Neutral or invader-reserved controller in the same room.
 	 */
-	reserveController(target: StructureController) {
+	'#reserveController'(target: StructureController) {
 		return chainIntentChecks(
 			() => checkReserveController(this, target),
 			() => intents.save(this, 'reserveController', target.id));
@@ -68,7 +78,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	/**
 	 * Reduce a hostile controller's downgrade/reservation timer.
 	 */
-	attackController(target: StructureController) {
+	'#attackController'(target: StructureController) {
 		return chainIntentChecks(
 			() => checkAttackController(this, target),
 			() => intents.save(this, 'attackController', target.id));
@@ -77,7 +87,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	/**
 	 * Reset the downgrade timer on a controller already owned by this NPC.
 	 */
-	upgradeController(target: StructureController) {
+	'#upgradeController'(target: StructureController) {
 		return chainIntentChecks(
 			() => checkUpgradeController(this, target),
 			() => intents.save(this, 'upgradeController', target.id));
@@ -88,7 +98,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	 * capacity for energy; oversized amounts clamp at the processor. The stronghold refill
 	 * behaviors are this action's driver and arrive in a later slice.
 	 */
-	transferEnergy(target: StructureTower | Creep, amount?: number) {
+	'#transferEnergy'(target: StructureTower | Creep, amount?: number) {
 		return chainIntentChecks(
 			() => checkTransferEnergy(this, target),
 			() => intents.save(this, 'transferEnergy', target.id,
@@ -101,15 +111,10 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 		}
 		super['#applyDamage'](power, type, source);
 	}
-
-	override '#beforeInsert'(room: Room) {
-		super['#beforeInsert'](room);
-		// Keep NPC '2' active in any room that hosts a core; inlined to avoid pulling the
-		// processor entry-point into the runtime sandbox.
-		room['#npcData'].users.add('2');
-	}
 }
 
+// Callers insert the returned core and are responsible for waking the invader NPC that drives it
+// (`activateNPC(room, '2')` + `context.setActive()`), the same way `requestInvader` does for creeps.
 export function create(pos: RoomPosition, level: number, deployTime: number) {
 	const core = assign(RoomObject.create(new StructureInvaderCore(), pos), {
 		hits: C.INVADER_CORE_HITS,

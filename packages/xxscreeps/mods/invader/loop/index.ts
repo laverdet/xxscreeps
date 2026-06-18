@@ -16,15 +16,15 @@ function handleController(core: StructureInvaderCore) {
 	}
 	if (controller['#user'] === '2' && controller.level > 0) {
 		if ((controller.ticksToDowngrade ?? Infinity) < C.INVADER_CORE_CONTROLLER_DOWNGRADE - 25) {
-			core.upgradeController(controller);
+			core['#upgradeController'](controller);
 		}
 		return;
 	}
 	const reserved = controller['#reservationEndTime'] > Game.time;
 	if (!reserved || controller.room['#user'] === '2') {
-		core.reserveController(controller);
+		core['#reserveController'](controller);
 	} else {
-		core.attackController(controller);
+		core['#attackController'](controller);
 	}
 }
 

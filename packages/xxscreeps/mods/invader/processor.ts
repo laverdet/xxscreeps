@@ -186,16 +186,17 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 		// TODO: Reset an NPC-owned controller here (user/level/effects) once stronghold
 		// deployment can create one.
 		core.room['#removeObject'](core);
-		context.setActive();
+		// Persist the removal; nothing's left to process here next tick, so don't re-wake the room.
+		context.didUpdate();
 		return;
 	}
 
 	flushActionLog(core['#actionLog'], context);
 
-	// Clear the deploy timer the tick after it elapses. `ticksToDeploy`/`effects` read `#deployTime`
-	// through `optionalExpiryTime`, which throws on a past time, so this branches on the raw field
-	// rather than the getter. Zeroing lands in the blob read at `deployTime + 1` — one tick past the
-	// core's last invulnerable tick (`Game.time === deployTime`, `ticksToDeploy === 0`).
+	// Zero the deploy timer once it elapses. `ticksToDeploy` already clamps to `undefined` from
+	// `deployTime + 1`, but the raw field has to be cleared by `deployTime + 2` or its
+	// `requiredExpiryTime` read throws; the `wakeAt` below guarantees a processing tick at
+	// `deployTime + 1` to do it.
 	const deployTime = core['#deployTime'];
 	if (deployTime !== 0) {
 		if (deployTime < Game.time) {

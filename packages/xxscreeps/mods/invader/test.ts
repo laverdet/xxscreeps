@@ -6,6 +6,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createTower } from 'xxscreeps/mods/defense/tower.js';
+import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { lookForStructures } from '../structure/structure.js';
 import { create as createInvaderCore } from './invader-core.js';
@@ -322,16 +323,13 @@ describe('Invader core', () => {
 		room.find(C.FIND_STRUCTURES).find(
 			(structure): structure is StructureInvaderCore => structure.structureType === C.STRUCTURE_INVADER_CORE);
 
-	// A presence creep activates the room for processing; NPC '2' alone is filtered out by
-	// `updateUserRoomRelationships`, so without a human user the room never enters the process queue.
-	const presencePos = new RoomPosition(10, 10, 'W1N1');
-	const placePresenceCreep = (room: Room) =>
-		room['#insertObject'](createCreep(presencePos, [ C.MOVE ], 'dummy', '100'));
-
+	// `activateNPC` registers invader NPC '2' as this room's loop driver; the `simulate` harness
+	// seeds rooms with an active NPC into the processor queue (mirroring the main-service boot), so
+	// these `peekRoom` cases process without a stand-in human presence creep.
 	const coreInNeutralRoom = simulate({
 		W1N1: room => {
-			placePresenceCreep(room);
 			room['#insertObject'](createInvaderCore(corePos, 2, 0));
+			activateNPC(room, '2');
 		},
 	});
 
@@ -364,8 +362,8 @@ describe('Invader core', () => {
 		W1N1: room => {
 			room['#user'] = '101';
 			room.controller!['#reservationEndTime'] = 5000;
-			placePresenceCreep(room);
 			room['#insertObject'](createInvaderCore(corePos, 2, 0));
+			activateNPC(room, '2');
 		},
 	});
 
@@ -388,8 +386,8 @@ describe('Invader core', () => {
 			room['#user'] = '2';
 			room.controller!['#user'] = '2';
 			room.controller!['#downgradeTime'] = 1000;
-			placePresenceCreep(room);
 			room['#insertObject'](createInvaderCore(corePos, 2, 0));
+			activateNPC(room, '2');
 		},
 	});
 
@@ -419,7 +417,7 @@ describe('Invader core', () => {
 				(structure): structure is StructureTower => structure.structureType === C.STRUCTURE_TOWER,
 			)!;
 			// Oversized amounts pass the check and clamp at the processor
-			return [ core.transferEnergy(tower, 100), core.transferEnergy(tower, C.TOWER_CAPACITY + 100) ];
+			return [ core['#transferEnergy'](tower, 100), core['#transferEnergy'](tower, C.TOWER_CAPACITY + 100) ];
 		});
 		assert.deepStrictEqual(results, [ C.OK, C.OK ]);
 	}));
@@ -430,8 +428,8 @@ describe('Invader core', () => {
 			room.controller!['#reservationEndTime'] = 5000;
 			const core = createInvaderCore(corePos, 2, 0);
 			core['#collapseTime'] = 1; // expires by Game.time === 1 on the first processed tick
-			placePresenceCreep(room);
 			room['#insertObject'](core);
+			activateNPC(room, '2');
 		},
 	});
 
