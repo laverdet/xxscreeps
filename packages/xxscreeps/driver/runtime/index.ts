@@ -73,7 +73,6 @@ const hooksComposed = function() {
 
 let me: string;
 let world: World;
-let loop: (() => any) | undefined;
 let requireMain: () => any;
 
 export function initialize(compiler: Compiler, evaluate: Evaluate, data: InitializationPayload) {
@@ -121,16 +120,14 @@ export function tick(data: TickPayload, player = (fn: () => void) => fn()): Tick
 			globalThis.Game = Game;
 			try {
 				player(function thisIsWhereThePlayerCodeStarts() {
-					if (loop) {
-						loop();
+					// Read `main.loop` fresh each tick rather than caching the reference: a bot may swap
+					// `module.exports.loop` after first-tick setup (e.g. the rustyscreeps wasm loader replaces
+					// its bootstrap with the real loop). `require('main')` is a cache hit after the first tick.
+					const main = requireMain();
+					if (main.loop) {
+						main.loop();
 					} else {
-						const main = requireMain();
-						if (main.loop) {
-							loop = main.loop;
-							loop!();
-						} else {
-							throw new Error('No `loop` function exported by `main` module');
-						}
+						throw new Error('No `loop` function exported by `main` module');
 					}
 				});
 			} catch (err: any) {
