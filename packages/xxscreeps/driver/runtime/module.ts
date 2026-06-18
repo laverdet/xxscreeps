@@ -227,11 +227,12 @@ function splitLocator(url: string): [ string, string ] {
 
 function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 
-	// Create `require` factory
+	// A single `require` for `globalThis.require`, `main`, and every submodule: the flat loader resolves a
+	// specifier independently of the requiring module, so a referrer-bound `require` per module adds nothing.
 	const cache = new Map<string, null | { error?: any; exports?: any }>();
-	const requireFrom = (referrer?: string) => (specifier: string) => {
+	const require = (specifier: string) => {
 		// Resolve and check for existing or pending module
-		const url = loader.resolve(specifier, referrer);
+		const url = loader.resolve(specifier);
 		const cached = cache.get(url);
 		if (cached !== undefined) {
 			if (cached === null) {
@@ -243,7 +244,7 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 		}
 		const content = loader.compile(url);
 		if (content === undefined) {
-			throw new Error(`Cannot find module '${specifier}' imported from '${referrer}'`);
+			throw new Error(`Cannot find module '${specifier}'`);
 		}
 		cache.set(url, null);
 		const exports = function() {
@@ -256,7 +257,7 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 					try {
 						type Require = (require: unknown, module: unknown, exports: unknown) => void;
 						const moduleFunction = evaluate(`(function(require,module,exports){${content}\n})`, url) as Require;
-						const run = () => moduleFunction.apply(module, [ requireFrom(url), module, module.exports ]);
+						const run = () => moduleFunction.apply(module, [ require, module, module.exports ]);
 						run();
 						return run;
 					} catch (error) {
@@ -281,7 +282,32 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 		cache.set(url, { exports });
 		return exports;
 	};
-	return requireFrom();
+	// `require.cache`: a live view keyed by the names `require` accepts, so an entry required as `foo` is
+	// reachable at `require.cache.foo` though stored under the resolved `foo.js`.
+	return Object.assign(require, {
+		cache: new Proxy<Record<string, unknown>>({}, {
+			get: (target, key) => (typeof key === 'string' ? cache.get(loader.resolve(key))?.exports : Reflect.get(target, key)) as unknown,
+			has: (target, key) => typeof key === 'string' ? cache.has(loader.resolve(key)) : Reflect.has(target, key),
+			deleteProperty: (target, key) => {
+				if (typeof key === 'string') {
+					cache.delete(loader.resolve(key));
+				} else {
+					Reflect.deleteProperty(target, key);
+				}
+				return true;
+			},
+			ownKeys: () => [ ...cache.keys() ],
+			getOwnPropertyDescriptor: (target, key) => {
+				if (typeof key === 'string') {
+					const url = loader.resolve(key);
+					return cache.has(url)
+						? { configurable: true, enumerable: true, value: cache.get(url)?.exports as unknown }
+						: undefined;
+				}
+				return Reflect.getOwnPropertyDescriptor(target, key);
+			},
+		}),
+	});
 }
 
 export function makeModule<Module>(compiler: Compiler<Module>, loader: Loader<Module>) {
