@@ -11,7 +11,7 @@ type Loader<Source> = {
 
 export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compiler: Compiler) {
 	const main = [ 'main.js', 'main.mjs', 'main.wasm', 'main' ].find(entry => modules.has(entry));
-	if (main === 'main' || main == 'main.js') {
+	if (main === 'main' || main === 'main.js') {
 		// Use flat CommonJS loader
 		const require = makeRequire(evaluate, {
 			resolve(specifier) {
@@ -227,11 +227,11 @@ function splitLocator(url: string): [ string, string ] {
 
 function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 
-	// Create `require` factory
-	const cache = new Map<string, null | { error?: any; exports?: any }>();
-	const requireFrom = (referrer?: string) => (specifier: string) => {
+	// Screeps `require` operates on a flat namespace, independent of the requiring module.
+	const cache = new Map<string | symbol, null | { error?: any; exports?: any }>();
+	const require = (specifier: string) => {
 		// Resolve and check for existing or pending module
-		const url = loader.resolve(specifier, referrer);
+		const url = loader.resolve(specifier);
 		const cached = cache.get(url);
 		if (cached !== undefined) {
 			if (cached === null) {
@@ -243,7 +243,7 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 		}
 		const content = loader.compile(url);
 		if (content === undefined) {
-			throw new Error(`Cannot find module '${specifier}' imported from '${referrer}'`);
+			throw new Error(`Cannot find module '${specifier}'`);
 		}
 		cache.set(url, null);
 		const exports = function() {
@@ -256,7 +256,7 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 					try {
 						type Require = (require: unknown, module: unknown, exports: unknown) => void;
 						const moduleFunction = evaluate(`(function(require,module,exports){${content}\n})`, url) as Require;
-						const run = () => moduleFunction.apply(module, [ requireFrom(url), module, module.exports ]);
+						const run = () => moduleFunction.apply(module, [ require, module, module.exports ]);
 						run();
 						return run;
 					} catch (error) {
@@ -281,7 +281,22 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 		cache.set(url, { exports });
 		return exports;
 	};
-	return requireFrom();
+	// `require.cache`: a live view keyed by the names `require` accepts, so an entry required as `foo` is
+	// reachable at `require.cache.foo` though stored under the resolved `foo.js`.
+	return Object.assign(require, {
+		cache: new Proxy<Record<string, unknown>>({}, {
+			get: (target, key) => cache.get(typeof key === 'string' ? loader.resolve(key) : key)?.exports,
+			has: (target, key) => cache.has(typeof key === 'string' ? loader.resolve(key) : key),
+			deleteProperty: (target, key) => cache.delete(typeof key === 'string' ? loader.resolve(key) : key),
+			ownKeys: () => [ ...cache.keys() ],
+			getOwnPropertyDescriptor: (target, key) => {
+				const resolvedKey = typeof key === 'string' ? loader.resolve(key) : key;
+				if (cache.has(resolvedKey)) {
+					return { configurable: true, enumerable: true, value: cache.get(resolvedKey)?.exports };
+				}
+			},
+		}),
+	});
 }
 
 export function makeModule<Module>(compiler: Compiler<Module>, loader: Loader<Module>) {
