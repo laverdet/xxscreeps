@@ -231,9 +231,7 @@ export class GameMap {
 	 */
 	getRoomStatus(roomName: string): RoomStatus;
 
-	getRoomStatus(roomName: string, actually?: boolean): RoomStatus | undefined {
-		// Player code may pass a non-string despite the typed signature; `parseRoomName` would
-		// throw on it, where a malformed string name already falls through to `undefined`.
+	getRoomStatus(roomName: unknown, actually?: boolean): RoomStatus | undefined {
 		if (typeof roomName !== 'string') {
 			return undefined;
 		}
