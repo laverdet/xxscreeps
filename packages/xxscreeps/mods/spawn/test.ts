@@ -6,7 +6,7 @@ import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { Structure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createExtension } from './extension.js';
-import { create } from './spawn.js';
+import { StructureSpawn, create } from './spawn.js';
 
 describe('Spawn', () => {
 	const simulation = simulate({
@@ -447,11 +447,23 @@ describe('Id-string constructor', () => {
 		},
 	});
 
-	test('Structure base reads delegate to the concrete object', () => sim(async ({ player }) => {
+	test('Structure super reads delegate to the concrete object', () => sim(async ({ player }) => {
 		await player('100', Game => {
 			const original = Game.rooms.W3N3!.lookForAt(C.LOOK_STRUCTURES, 26, 25)[0]!;
 			// @ts-expect-error
 			const structure = new Structure(original.id);
+			assert.strictEqual(structure.structureType, original.structureType);
+			assert.strictEqual(structure.hits, original.hits);
+			assert.strictEqual(structure.hitsMax, original.hitsMax);
+		});
+	}));
+
+	test('Structure subclass reads delegate to the concrete object', () => sim(async ({ player }) => {
+		await player('100', Game => {
+			const original = Game.rooms.W3N3!.lookForAt(C.LOOK_STRUCTURES, 26, 25)[0]!;
+			const MySpawn = class extends StructureSpawn {};
+			// @ts-expect-error
+			const structure = new MySpawn(original.id);
 			assert.strictEqual(structure.structureType, original.structureType);
 			assert.strictEqual(structure.hits, original.hits);
 			assert.strictEqual(structure.hitsMax, original.hitsMax);

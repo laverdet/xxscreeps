@@ -54,7 +54,11 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		} else if (typeof viewOrIdOrXx === 'string') {
 			// The terrible id-string constructor
 			const object = Game.getObjectById(viewOrIdOrXx);
-			if (object && object instanceof new.target) {
+			// `new Structure(id).hits`
+			const isSuperClass = (object: RoomObject) => object instanceof new.target;
+			// `new MyCreep(id).hits`
+			const isSubClass = (object: RoomObject) => new.target.prototype instanceof object.constructor;
+			if (object && (isSuperClass(object) || isSubClass(object))) {
 				super(BufferObject.getBuffer(object), BufferObject.getOffset(object));
 				const prototype = ObjectGetPrototypeOf(object) as object;
 				if (ObjectGetPrototypeOf(this) !== prototype) {
