@@ -4,6 +4,8 @@ import type { UserBadge } from 'xxscreeps/engine/db/user/badge.js';
 import { makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
+import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
 
 interface MapStatsRequest {
 	rooms: string[];
@@ -65,6 +67,18 @@ export const MapStatsEndpoint: Endpoint = {
 								text: sign.text,
 								time: sign.time,
 								user: sign.userId,
+							},
+						};
+					}
+				}(),
+				// Mineral info
+				...function() {
+					const mineral = room['#objects'].find(instanceOfPredicate(Mineral));
+					if (mineral) {
+						return {
+							minerals0: {
+								type: mineral.mineralType,
+								density: mineral.density,
 							},
 						};
 					}
