@@ -4,7 +4,7 @@ import { registerIntentProcessor, registerShardInitializer, registerShardTickPro
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { RoomPosition, positionsInRangeTo } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
 import { isHighwayRoom } from 'xxscreeps/game/room/sector.js';
 import { create } from './powerbank.js';
@@ -20,25 +20,15 @@ const MAX_PLACEMENT_ATTEMPTS = 1000;
 // Sorted set: score = the tick a room is next due, member = highway room name. One row per room.
 const dueRoomsKey = 'powerbanks/dueRooms';
 
-type RngFn = () => number;
-
-// Tests swap in a seeded RNG via `setPowerBankPlaceRandomForTesting`.
-let rng: RngFn = Math.random;
-export function setPowerBankPlaceRandomForTesting(fn: RngFn): Disposable {
-	const previous = rng;
-	rng = fn;
-	return { [Symbol.dispose]() { rng = previous; } };
-}
-
 // 0.75x–1.25x of the base respawn time.
 function respawnTime(): number {
-	return Math.round(rng() * (C.POWER_BANK_RESPAWN_TIME / 2) + C.POWER_BANK_RESPAWN_TIME * 0.75);
+	return Math.round(Math.random() * (C.POWER_BANK_RESPAWN_TIME / 2) + C.POWER_BANK_RESPAWN_TIME * 0.75);
 }
 
 // Capacity in [MIN, MAX), plus a MAX bonus on a critical roll.
 function rollPower(): number {
-	const base = Math.floor(rng() * (C.POWER_BANK_CAPACITY_MAX - C.POWER_BANK_CAPACITY_MIN) + C.POWER_BANK_CAPACITY_MIN);
-	return rng() < C.POWER_BANK_CAPACITY_CRIT ? base + C.POWER_BANK_CAPACITY_MAX : base;
+	const base = Math.floor(Math.random() * (C.POWER_BANK_CAPACITY_MAX - C.POWER_BANK_CAPACITY_MIN)) + C.POWER_BANK_CAPACITY_MIN;
+	return base + (Math.random() < C.POWER_BANK_CAPACITY_CRIT ? C.POWER_BANK_CAPACITY_MAX : 0);
 }
 
 // A wall position in 5..44 with at least one non-wall neighbour (incl. diagonals). The bounded loop
@@ -46,21 +36,13 @@ function rollPower(): number {
 function findPlacement(world: World, roomName: string) {
 	const terrain = world.map.getRoomTerrain(roomName);
 	for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; ++attempt) {
-		const xx = Math.floor(rng() * 40) + 5;
-		const yy = Math.floor(rng() * 40) + 5;
+		const xx = Math.floor(Math.random() * 40) + 5;
+		const yy = Math.floor(Math.random() * 40) + 5;
 		if (terrain.get(xx, yy) !== C.TERRAIN_MASK_WALL) continue;
-		const hasExit = (() => {
-			for (let dx = -1; dx <= 1; ++dx) {
-				for (let dy = -1; dy <= 1; ++dy) {
-					if (terrain.get(xx + dx, yy + dy) !== C.TERRAIN_MASK_WALL) {
-						return true;
-					}
-				}
-			}
-			return false;
-		})();
+		const from = new RoomPosition(xx, yy, roomName);
+		const hasExit = Fn.some(positionsInRangeTo(from, 1), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL);
 		if (!hasExit) continue;
-		return { xx, yy } as const;
+		return from;
 	}
 }
 
@@ -115,10 +97,8 @@ const placePowerBankIntent = registerIntentProcessor(
 		if (context.state.world.map.getRoomStatus(room.name).status !== 'normal') return;
 		const placement = findPlacement(context.state.world, room.name);
 		if (placement === undefined) return;
-		const bank = create(new RoomPosition(placement.xx, placement.yy, room.name), power);
+		const bank = create(placement, power);
 		room['#insertObject'](bank);
-		// The just-inserted bank's #Tick doesn't fire this tick (the post-intent loop iterates a
-		// captured snapshot), so the explicit wakeAt keeps the room scheduled for decay.
 		context.didUpdate();
 		context.wakeAt(bank['#nextDecayTime']);
 	});

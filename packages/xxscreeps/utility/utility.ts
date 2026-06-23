@@ -195,3 +195,12 @@ export function asUnion<Type>(_value: Type): asserts _value is Union<Type> {}
 export function hackyIterableToArray<Type>(value: Iterable<Type>): asserts value is Type[] {
 	return value as never;
 }
+
+export function deterministicRandomForTesting(seed = 1) {
+	const disposable = new DisposableStack();
+	const { random } = Math;
+	disposable.defer(() => Math.random = random);
+	let state = hashMix(seed);
+	Math.random = () => (state = hashMix(state)) / 0xffffffff + 0.5;
+	return disposable;
+}
