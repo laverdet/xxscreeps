@@ -66,7 +66,7 @@ const RawPositionId = Symbol('defaultRoomPosition');
  * using the `Room.getPositionAt` method or using the constructor.
  */
 export class RoomPosition {
-	declare '#id': number;
+	declare private '#id': number;
 
 	/** @internal */
 	constructor(xx: typeof RawPositionId, id: number, roomName?: unknown);
