@@ -9,14 +9,14 @@ bindMapRenderer(Creep, creep => creep['#user']);
 
 bindRenderer(Creep, (creep, next, previousTime) => {
 	// Inject `saying` into `actionLog`
-	const actionLog = renderActionLog(creep['#actionLog'], previousTime);
+	const actionLog: Record<string, unknown> = renderActionLog(creep['#actionLog'], previousTime);
 	const saying = creep['#saying'];
 	if (
 		saying &&
 		(!previousTime || previousTime < saying.time) &&
 		(saying.isPublic || creep.my)
 	) {
-		actionLog.actionLog.say = {
+		actionLog.say = {
 			isPublic: saying.isPublic,
 			message: saying.message,
 		};
@@ -24,7 +24,7 @@ bindRenderer(Creep, (creep, next, previousTime) => {
 	return {
 		...next(),
 		...renderStore(creep.store),
-		...actionLog,
+		actionLog,
 		name: creep.name,
 		body: creep.body,
 		hits: creep.hits,

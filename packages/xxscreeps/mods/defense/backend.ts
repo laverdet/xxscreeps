@@ -17,5 +17,5 @@ bindRenderer(StructureRampart, (rampart, next) => ({
 bindRenderer(StructureTower, (tower, next, previousTime) => ({
 	...next(),
 	...renderStore(tower.store),
-	...renderActionLog(tower['#actionLog'], previousTime),
+	actionLog: renderActionLog(tower['#actionLog'], previousTime),
 }));

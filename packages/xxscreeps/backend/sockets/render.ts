@@ -1,9 +1,16 @@
-import type { ActionLog } from 'xxscreeps/game/object.js';
+import type { ActionLog, ActionLogType } from 'xxscreeps/game/object.js';
 import { bindRenderer } from 'xxscreeps/backend/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
 import { Variant } from 'xxscreeps/schema/index.js';
+
+interface CoordinatesObject {
+	x: number;
+	y: number;
+}
+
+type RenderedActionLog = Partial<Record<ActionLogType, CoordinatesObject>>;
 
 // Base object renderer
 bindRenderer(RoomObject, object => ({
@@ -13,12 +20,11 @@ bindRenderer(RoomObject, object => ({
 	y: object.pos.y,
 }));
 
-export function renderActionLog(actionLog: ActionLog, previousTime: number | undefined): Record<string, any> {
-	return {
-		actionLog: Fn.fromEntries(
-			Fn.filter(actionLog, previousTime
-				? action => action.time > previousTime :
-				action => action.time === Game.time),
-			action => [ action.type, { x: action.x, y: action.y } ]),
-	};
+export function renderActionLog(actionLog: ActionLog, previousTime: number | undefined): RenderedActionLog {
+	return Fn.pipe(
+		actionLog,
+		$$ => Fn.filter($$, previousTime === undefined
+			? action => action.time === Game.time
+			: action => action.time > previousTime),
+		$$ => Fn.fromEntries($$, action => [ action.type, { x: action.x, y: action.y } ]));
 }
