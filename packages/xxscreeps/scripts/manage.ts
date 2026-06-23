@@ -6,13 +6,16 @@
 // processed until it owns an object in a room. `remove` deletes records only — owned room objects
 // are left alone — and is safe for inactive users; pause the engine first if the user is live.
 
+import * as fs from 'node:fs/promises';
 import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import * as Badge from 'xxscreeps/engine/db/user/badge.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { setPassword } from 'xxscreeps/mods/backend/password/model.js';
 import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/memory/model.js';
 
 using db = await Database.connect();
@@ -91,12 +94,53 @@ async function userRemove(who: string) {
 	out(`Removed user ${who} (${id}).`);
 }
 
+// `source` is inline JSON or a path to a `.json` file holding a badge object (the same shape the
+// `/api/user/badge` endpoint accepts). The standard 24 numbered badges are `{ color1, color2,
+// color3, flip, param, type }`; see engine/db/user/badge.ts for the schema.
+async function userBadge(who: string, source: string) {
+	const id = await resolveUserId(who);
+	const json = source.endsWith('.json') ? await fs.readFile(source, 'utf8') : source;
+	const badge = Badge.validate(JSON.parse(json) as object);
+	await Badge.save(db, id, JSON.stringify(badge));
+	await save();
+	out(`Set badge for ${who} (${id}).`);
+}
+
+// Operator password reset; there is no online path that sets a password without the old one. Only
+// meaningful when the password backend mod is enabled. Mirrors its 8-character minimum.
+async function userPassword(who: string, password: string) {
+	if (password.length < 8) {
+		throw new Error('Password must be at least 8 characters');
+	}
+	const id = await resolveUserId(who);
+	await setPassword(db, id, password);
+	await save();
+	out(`Set password for ${who} (${id}).`);
+}
+
+// Switch the active code branch, mirroring `/api/user/set-active-branch`: persist then publish so a
+// running runner reloads it next tick; a no-op publish on a stopped server.
+async function userBranch(who: string, branch: string) {
+	const id = await resolveUserId(who);
+	if (!await db.data.sIsMember(Code.branchManifestKey(id), branch)) {
+		const branches = await db.data.sMembers(Code.branchManifestKey(id));
+		throw new Error(`No such branch: ${branch} (have: ${branches.length > 0 ? branches.join(', ') : 'none'})`);
+	}
+	await db.data.hSet(User.infoKey(id), 'branch', branch);
+	await save();
+	await Code.getUserCodeChannel(db, id).publish({ type: 'switch', branch });
+	out(`Set active branch for ${who} (${id}) to '${branch}'.`);
+}
+
 function usage(): never {
 	process.stderr.write(`Usage:
   user list
-  user show   <name|id>
-  user create <name> [email]
-  user remove <name|id>
+  user show     <name|id>
+  user create   <name> [email]
+  user remove   <name|id>
+  user badge    <name|id> <json|file>
+  user password <name|id> <password>
+  user branch   <name|id> <branch>
 `);
 	process.exit(2);
 }
@@ -108,6 +152,9 @@ try {
 		case 'user show': if (rest[0] === undefined) usage(); await userShow(rest[0]); break;
 		case 'user create': if (rest[0] === undefined) usage(); await userCreate(rest[0], rest[1]); break;
 		case 'user remove': if (rest[0] === undefined) usage(); await userRemove(rest[0]); break;
+		case 'user badge': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBadge(rest[0], rest[1]); break;
+		case 'user password': if (rest[0] === undefined || rest[1] === undefined) usage(); await userPassword(rest[0], rest[1]); break;
+		case 'user branch': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBranch(rest[0], rest[1]); break;
 		default: usage();
 	}
 } catch (err) {
