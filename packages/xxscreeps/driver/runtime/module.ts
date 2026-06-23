@@ -11,7 +11,7 @@ type Loader<Source> = {
 
 export function makeEnvironment(modules: CodePayload, evaluate: Evaluate, compiler: Compiler) {
 	const main = [ 'main.js', 'main.mjs', 'main.wasm', 'main' ].find(entry => modules.has(entry));
-	if (main === 'main' || main == 'main.js') {
+	if (main === 'main' || main === 'main.js') {
 		// Use flat CommonJS loader
 		const require = makeRequire(evaluate, {
 			resolve(specifier) {
@@ -227,9 +227,8 @@ function splitLocator(url: string): [ string, string ] {
 
 function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 
-	// A single `require` for `globalThis.require`, `main`, and every submodule: the flat loader resolves a
-	// specifier independently of the requiring module, so a referrer-bound `require` per module adds nothing.
-	const cache = new Map<string, null | { error?: any; exports?: any }>();
+	// Screeps `require` operates on a flat namespace, independent of the requiring module.
+	const cache = new Map<string | symbol, null | { error?: any; exports?: any }>();
 	const require = (specifier: string) => {
 		// Resolve and check for existing or pending module
 		const url = loader.resolve(specifier);
@@ -286,25 +285,15 @@ function makeRequire(evaluate: Evaluate, loader: Loader<any>) {
 	// reachable at `require.cache.foo` though stored under the resolved `foo.js`.
 	return Object.assign(require, {
 		cache: new Proxy<Record<string, unknown>>({}, {
-			get: (target, key) => (typeof key === 'string' ? cache.get(loader.resolve(key))?.exports : Reflect.get(target, key)) as unknown,
-			has: (target, key) => typeof key === 'string' ? cache.has(loader.resolve(key)) : Reflect.has(target, key),
-			deleteProperty: (target, key) => {
-				if (typeof key === 'string') {
-					cache.delete(loader.resolve(key));
-				} else {
-					Reflect.deleteProperty(target, key);
-				}
-				return true;
-			},
+			get: (target, key) => cache.get(typeof key === 'string' ? loader.resolve(key) : key)?.exports,
+			has: (target, key) => cache.has(typeof key === 'string' ? loader.resolve(key) : key),
+			deleteProperty: (target, key) => cache.delete(typeof key === 'string' ? loader.resolve(key) : key),
 			ownKeys: () => [ ...cache.keys() ],
 			getOwnPropertyDescriptor: (target, key) => {
-				if (typeof key === 'string') {
-					const url = loader.resolve(key);
-					return cache.has(url)
-						? { configurable: true, enumerable: true, value: cache.get(url)?.exports as unknown }
-						: undefined;
+				const resolvedKey = typeof key === 'string' ? loader.resolve(key) : key;
+				if (cache.has(resolvedKey)) {
+					return { configurable: true, enumerable: true, value: cache.get(resolvedKey)?.exports };
 				}
-				return Reflect.getOwnPropertyDescriptor(target, key);
 			},
 		}),
 	});
