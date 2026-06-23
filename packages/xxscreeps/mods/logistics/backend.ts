@@ -7,7 +7,7 @@ import { StructureStorage } from './storage.js';
 bindRenderer(StructureLink, (link, next, previousTime) => ({
 	...next(),
 	...renderStore(link.store),
-	...renderActionLog(link['#actionLog'], previousTime),
+	actionLog: renderActionLog(link['#actionLog'], previousTime),
 	cooldown: link.cooldown,
 }));
 

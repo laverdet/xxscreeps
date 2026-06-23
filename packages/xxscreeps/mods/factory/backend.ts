@@ -6,7 +6,7 @@ import { StructureFactory } from './factory.js';
 bindRenderer(StructureFactory, (factory, next, previousTime) => ({
 	...next(),
 	...renderStore(factory.store),
-	...renderActionLog(factory['#actionLog'], previousTime),
+	actionLog: renderActionLog(factory['#actionLog'], previousTime),
 	cooldown: factory.cooldown,
 	level: factory.level,
 }));
