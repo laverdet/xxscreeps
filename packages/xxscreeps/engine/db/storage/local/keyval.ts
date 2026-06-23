@@ -5,6 +5,7 @@ import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import { registerStorageProvider } from 'xxscreeps/engine/db/storage/register.js';
+import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
@@ -335,12 +336,11 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 		const sets = Fn.pipe(
 			Fn.concat([ [ key ], keys ]),
 			$$ => Fn.map($$, (key): Set<string> | undefined => this.data.get(key)),
-			$$ => Fn.filter($$),
 			$$ => [ ...$$ ]);
-		sets.sort((left, right) => left.size - right.size);
-		const first = sets.shift();
-		if (sets.length > 0) {
-			return [ ...Fn.filter(first!, member => sets.every(set => set.has(member))) ];
+		if (sets.every(set => set !== undefined)) {
+			sets.sort(mappedNumericComparator(set => set.size));
+			const first = sets.shift()!;
+			return [ ...Fn.filter(first, member => sets.every(set => set.has(member))) ];
 		} else {
 			return [];
 		}
@@ -401,7 +401,11 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 			$$ => Fn.filter($$),
 			$$ => Fn.concat($$),
 			$$ => new Set($$));
-		this.data.set(key, out);
+		if (out.size === 0) {
+			this.data.delete(key);
+		} else {
+			this.data.set(key, out);
+		}
 		return out.size;
 	}
 
@@ -464,13 +468,9 @@ export class LocalKeyValResponder implements MaybePromises<P.KeyValProvider> {
 
 	zInterStore(key: string, keys: string[], options?: P.ZAggregate) {
 		// Fetch sets first because you can use this command to store a set back into itself
-		const sets = Fn.pipe(
-			keys,
-			$$ => Fn.map($$, (key): SortedSet => this.data.get(key)),
-			$$ => Fn.filter($$),
-			$$ => [ ...$$ ]);
+		const sets = [ ...Fn.map(keys, (key): SortedSet => this.data.get(key)) ];
 		const out = function() {
-			const smallest = Fn.minimum(sets, (left, right) => left.size - right.size);
+			const smallest = Fn.minimum(sets, mappedNumericComparator(set => set.size));
 			if (!smallest) {
 				return new SortedSet();
 			}
