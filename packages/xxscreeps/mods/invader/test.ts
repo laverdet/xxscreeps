@@ -1,7 +1,5 @@
-import type { StructureInvaderCore } from './invader-core.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { StructureTower } from 'xxscreeps/mods/defense/tower.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
@@ -286,9 +284,7 @@ describe('Invader core', () => {
 			const core = findCore(Game);
 			assert.strictEqual(Game.time, 2);
 			assert.strictEqual(core.ticksToDeploy, 0, 'invulnerable through Game.time === deployTime');
-			assert.deepStrictEqual(core.effects, [
-				{ effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 0 },
-			]);
+			assert.deepStrictEqual(core.effects, [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 0 } ]);
 		});
 		// Game.time === deployTime + 1: cleared. Reading the expiry getters must not throw.
 		await tick();
@@ -319,9 +315,7 @@ describe('Invader core', () => {
 		});
 	}));
 
-	const findRoomCore = (room: Room) =>
-		room.find(C.FIND_STRUCTURES).find(
-			(structure): structure is StructureInvaderCore => structure.structureType === C.STRUCTURE_INVADER_CORE);
+	const findRoomCore = (room: Room) => lookForStructures(room, C.STRUCTURE_INVADER_CORE)[0];
 
 	// `activateNPC` registers invader NPC '2' as this room's loop driver; the `simulate` harness
 	// seeds rooms with an active NPC into the processor queue (mirroring the main-service boot), so
@@ -341,7 +335,7 @@ describe('Invader core', () => {
 			assert.strictEqual(controller['#reservationEndTime'], expectedFirst);
 			assert.strictEqual(room['#user'], '2', 'room user becomes 2 once reserved');
 			const core = findRoomCore(room)!;
-			const action = [ ...core['#actionLog'] ].find(entry => entry.type === 'reserveController');
+			const action = core['#actionLog'].find(entry => entry.type === 'reserveController');
 			assert.ok(action, 'expected reserveController action log entry');
 			assert.strictEqual(action.time, Game.time);
 			assert.strictEqual(action.x, controller.pos.x);
@@ -413,9 +407,7 @@ describe('Invader core', () => {
 	test('transferEnergy accepts in-room tower target', () => refillScene(async ({ poke }) => {
 		const results = await poke('W1N1', '2', (Game, room) => {
 			const core = findRoomCore(room)!;
-			const tower = room.find(C.FIND_STRUCTURES).find(
-				(structure): structure is StructureTower => structure.structureType === C.STRUCTURE_TOWER,
-			)!;
+			const tower = lookForStructures(room, C.STRUCTURE_TOWER)[0]!;
 			// Oversized amounts pass the check and clamp at the processor
 			return [ core['#transferEnergy'](tower, 100), core['#transferEnergy'](tower, C.TOWER_CAPACITY + 100) ];
 		});
@@ -459,12 +451,7 @@ describe('Invader core', () => {
 			const core = createInvaderCore(corePos, 2, 0);
 			core.hits = 1; // single attack drops it; the kill path is what we're exercising
 			room['#insertObject'](core);
-			room['#insertObject'](createCreep(
-				new RoomPosition(25, 26, 'W1N1'),
-				[ C.ATTACK ],
-				'killer',
-				'100',
-			));
+			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.ATTACK ], 'killer', '100'));
 		},
 	});
 

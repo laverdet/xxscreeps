@@ -32,8 +32,6 @@ registerRoomTickProcessor((room, context) => {
 		}
 		// Check neighbor rooms to filter exits leading to owned/reserved rooms
 		const exitDirections = Game.map.describeExits(room.name);
-		// TODO: describeExits return type is `null as never` — fix upstream in map.ts
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
 		if (!exitDirections) {
 			return;
 		}
@@ -190,6 +188,7 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 		context.didUpdate();
 		return;
 	}
+	context.wakeAt(collapseTime);
 
 	flushActionLog(core['#actionLog'], context);
 
@@ -206,7 +205,6 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 			context.wakeAt(deployTime + 1);
 		}
 	}
-	if (collapseTime > Game.time) context.wakeAt(collapseTime);
 });
 
 // Creep factory for invaders

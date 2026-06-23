@@ -41,15 +41,8 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 	@enumerable get spawning(): null { return null; }
 
 	@enumerable get ticksToDeploy(): number | undefined {
-		// `+ 1 - 1` like nuke's `timeToLand`: yields `0` on the final invulnerable tick
-		// (`Game.time === #deployTime`) and clamps to `undefined` from the tick after, so reads at
-		// `#deployTime + 1` don't throw before the processor zeroes the field.
 		const deployTime = this['#deployTime'];
-		if (deployTime === 0) {
-			return undefined;
-		}
-		const ticks = RoomObject.requiredExpiryTime(Game, deployTime + 1) - 1;
-		return ticks < 0 ? undefined : ticks;
+		return deployTime === 0 ? undefined : RoomObject.requiredExpiryTime(Game, deployTime + 1) - 1;
 	}
 
 	override get hitsMax(): number {
@@ -127,6 +120,8 @@ export function create(pos: RoomPosition, level: number, deployTime: number) {
 
 // Block invader-core intents whose source was destroyed earlier in the same intent pass,
 // before `#flushObjects` removes the core from the object map.
+// TODO: Intents check is not the place to do this. Also, do other objects in the game have the same
+// condition?
 const checkSourceAlive = (core: StructureInvaderCore) =>
 	core.hits > 0 ? undefined : C.ERR_INVALID_TARGET;
 
