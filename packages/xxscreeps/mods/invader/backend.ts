@@ -1,14 +1,16 @@
 import type { JSONSchemaType } from 'ajv';
 import { bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
+import { renderActionLog } from 'xxscreeps/backend/sockets/render.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { StructureInvaderCore } from './invader-core.js';
 
-bindRenderer(StructureInvaderCore, (core, next) => {
+bindRenderer(StructureInvaderCore, (core, next, previousTime) => {
 	const deployTime = core['#deployTime'];
 	return {
 		...next(),
+		...renderActionLog(core['#actionLog'], previousTime),
 		level: core.level,
 		...deployTime > 0 && {
 			deployTime,

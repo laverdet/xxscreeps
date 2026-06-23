@@ -11,7 +11,7 @@ import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js';
-import { acquireIntentsForRoom, begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { acquireIntentsForRoom, activeRoomsKey, begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
 import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
@@ -109,6 +109,12 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 			await Promise.all([
 				shard.saveRoom(room.name, shard.time, room),
 				updateUserRoomRelationships(shard, room, previousUsers),
+				// The main service boots by processing every room once, which seeds NPC-driven rooms
+				// into the active set. `updateUserRoomRelationships` only adds rooms via their (non-NPC)
+				// players, so mirror the boot here: a room with an active NPC gets a first processing
+				// tick without needing a stand-in presence creep.
+				room['#npcData'].users.size > 0 &&
+					shard.scratch.zAdd(activeRoomsKey, [ [ 0, roomName ] ]),
 			]);
 		}));
 

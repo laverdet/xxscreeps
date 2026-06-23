@@ -80,6 +80,10 @@ const intents = [
 					$$ => [ ...$$ ],
 					$$ => $$.sort(mappedComparator(invertedNumericComparator, object => object['#layer']!)));
 				walkLayers(objects, power, (object, layerPower) => {
+					// Invulnerable targets pass full power through to lower layers and emit no event.
+					if (object['#invulnerable']) {
+						return layerPower;
+					}
 					const remaining = object['#captureDamage'](layerPower, C.EVENT_ATTACK_TYPE_RANGED_MASS, creep);
 					const absorbed = layerPower - remaining;
 					if (absorbed === 0) {
