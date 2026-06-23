@@ -231,7 +231,10 @@ export class GameMap {
 	 */
 	getRoomStatus(roomName: string): RoomStatus;
 
-	getRoomStatus(roomName: string, actually?: boolean): RoomStatus | undefined {
+	getRoomStatus(roomName: unknown, actually?: boolean): RoomStatus | undefined {
+		if (typeof roomName !== 'string') {
+			return undefined;
+		}
 		const room = parseRoomName(roomName);
 		if (Number.isNaN(room.rx) || Number.isNaN(room.ry)) {
 			return undefined;
