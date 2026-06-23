@@ -29,6 +29,12 @@ function positionAssertions(manifest: PositionAssertion) {
 	next.y = manifest.yy;
 	next.roomName = manifest.roomName;
 	assert.equal(next.__packedPos, manifest.packed);
+	// wasm bindings build positions via `Object.create` + `__packedPos`, never the constructor
+	const foreign = Object.create(RoomPosition.prototype) as RoomPosition;
+	foreign.__packedPos = manifest.packed;
+	assert.equal(foreign.x, manifest.xx);
+	assert.equal(foreign.y, manifest.yy);
+	assert.equal(foreign.roomName, manifest.roomName);
 }
 
 test('RoomPosition', () => {

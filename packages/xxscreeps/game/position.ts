@@ -66,7 +66,7 @@ const RawPositionId = Symbol('defaultRoomPosition');
  * using the `Room.getPositionAt` method or using the constructor.
  */
 export class RoomPosition {
-	#id;
+	declare private '#id': number;
 
 	/** @internal */
 	constructor(xx: typeof RawPositionId, id: number, roomName?: unknown);
@@ -81,7 +81,7 @@ export class RoomPosition {
 
 	constructor(xx: number | typeof RawPositionId, yy: number, roomName: string) {
 		if (xx === RawPositionId) {
-			this.#id = yy;
+			this['#id'] = yy;
 		} else {
 			const { rx, ry } = parseRoomName(roomName);
 			if (
@@ -92,7 +92,7 @@ export class RoomPosition {
 			) {
 				throw new TypeError('Invalid arguments in `RoomPosition` constructor');
 			}
-			this.#id = (yy << 24) | (xx << 16) | (ry << 8) | rx;
+			this['#id'] = (yy << 24) | (xx << 16) | (ry << 8) | rx;
 		}
 	}
 
@@ -100,7 +100,7 @@ export class RoomPosition {
 	 * The name of the room.
 	 */
 	@enumerable get roomName() {
-		return makeRoomNameFromId(this.#id & 0xffff);
+		return makeRoomNameFromId(this['#id'] & 0xffff);
 	}
 
 	/**
@@ -108,7 +108,7 @@ export class RoomPosition {
 	 */
 	// eslint-disable-next-line id-length
 	@enumerable get x() {
-		return (this.#id >>> 16) & 0xff;
+		return (this['#id'] >>> 16) & 0xff;
 	}
 
 	/**
@@ -116,7 +116,7 @@ export class RoomPosition {
 	 */
 	// eslint-disable-next-line id-length
 	@enumerable get y() {
-		return this.#id >>> 24;
+		return this['#id'] >>> 24;
 	}
 
 	/** @deprecated */
@@ -125,21 +125,17 @@ export class RoomPosition {
 		return ((id & 0xffff) << 16) | ((id >>> 8) & 0xff00) | (id >>> 24);
 	}
 
-	get '#id'() {
-		return this.#id;
-	}
-
 	get '#rx'() {
-		return this.#id & 0xff;
+		return this['#id'] & 0xff;
 	}
 
 	get '#ry'() {
-		return (this.#id >>> 8) & 0xff;
+		return (this['#id'] >>> 8) & 0xff;
 	}
 
 	/** @deprecated */
 	set __packedPos(value: number) {
-		this.#id = ((value & 0xff) << 24) | ((value & 0xff00) << 8) | ((value >>> 16) & 0xffff);
+		this['#id'] = ((value & 0xff) << 24) | ((value & 0xff00) << 8) | ((value >>> 16) & 0xffff);
 	}
 
 	// eslint-disable-next-line id-length
@@ -147,7 +143,7 @@ export class RoomPosition {
 		if (!(xx >= 0 && xx <= kMaxRoomCoordinate)) {
 			throw new TypeError('Invalid `x`');
 		}
-		this.#id = (this.#id & ~(0xff << 16)) | (xx << 16);
+		this['#id'] = (this['#id'] & ~(0xff << 16)) | (xx << 16);
 	}
 
 	// eslint-disable-next-line id-length
@@ -155,7 +151,7 @@ export class RoomPosition {
 		if (!(yy >= 0 && yy <= kMaxRoomCoordinate)) {
 			throw new TypeError('Invalid `y`');
 		}
-		this.#id = (this.#id & ~(0xff << 24)) | (yy << 24);
+		this['#id'] = (this['#id'] & ~(0xff << 24)) | (yy << 24);
 	}
 
 	set roomName(roomName: string) {
@@ -166,7 +162,7 @@ export class RoomPosition {
 		) {
 			throw new TypeError('Invalid `roomName`');
 		}
-		this.#id = (this.#id & ~0xffff) | (ry << 8) | rx;
+		this['#id'] = (this['#id'] & ~0xffff) | (ry << 8) | rx;
 	}
 
 	static '#create'(pos: number) {
@@ -195,7 +191,7 @@ export class RoomPosition {
 	getRangeTo(target: RoomObject | RoomPosition): number;
 	getRangeTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { xx, yy, room } = fetchArguments(...args);
-		if (room !== 0 && (this.#id & 0xffff) !== room) {
+		if (room !== 0 && (this['#id'] & 0xffff) !== room) {
 			return Infinity;
 		}
 		return Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));
@@ -211,7 +207,7 @@ export class RoomPosition {
 	isEqualTo(target: RoomObject | RoomPosition): boolean;
 	isEqualTo(...args: [ number, number ] | [ RoomObject | RoomPosition ]) {
 		const { pos } = fetchPositionArgument(this.roomName, ...args);
-		return this.#id === (pos ? pos.#id : 0);
+		return this['#id'] === (pos ? pos['#id'] : 0);
 	}
 
 	/**
@@ -238,7 +234,7 @@ export class RoomPosition {
 	inRangeTo(target: RoomObject | RoomPosition, range: number): boolean;
 	inRangeTo(...args: [ number, number, number ] | [ RoomObject | RoomPosition, number ]) {
 		const { xx, yy, room, rest } = fetchArguments(...args);
-		if (room !== 0 && (this.#id & 0xffff) !== room) {
+		if (room !== 0 && (this['#id'] & 0xffff) !== room) {
 			return false;
 		}
 		const range = Math.max(Math.abs(this.x - xx), Math.abs(this.y - yy));

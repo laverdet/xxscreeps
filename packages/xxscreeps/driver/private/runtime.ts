@@ -92,6 +92,7 @@ export function makeSetter(name: string): (object: Subject, value: unknown) => u
 				}
 			}
 			defineProperty(object, symbol, {
+				configurable: true,
 				get() { return value; },
 				set(this: object, value) {
 					defineProperty(this, symbol, {
