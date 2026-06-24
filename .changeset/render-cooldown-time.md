@@ -2,4 +2,4 @@
 "xxscreeps": patch
 ---
 
-Render structures' absolute `cooldownTime` so the client's cooldown effects show.
+Render absolute `cooldownTime` so client cooldown effects show; fix deposit cooldown off by one.
