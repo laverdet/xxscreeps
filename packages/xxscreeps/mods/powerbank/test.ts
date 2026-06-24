@@ -11,7 +11,7 @@ import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { deterministicRandomForTesting } from 'xxscreeps/utility/utility.js';
-import { inspectDuePowerBankRoomsForTest, scheduleRoom } from './place.js';
+import { inspectDuePowerBankRoomsForTest, scheduleRoom } from './model.js';
 import { StructurePowerBank, create as createPowerBank } from './powerbank.js';
 
 interface PowerBankSimOptions {
@@ -189,6 +189,9 @@ describe('PowerBank placement', () => {
 		const entry = due.find(([ , roomName ]) => roomName === 'W0N0');
 		assert.ok(entry, 'W0N0 remains scheduled');
 		assert.ok(entry[0] - scheduledAt >= C.POWER_BANK_RESPAWN_TIME * 0.75, 'rescheduled into the future');
+		// The next-due tick is authoritative on the room itself, matching the scratch schedule.
+		const room = await shard.loadRoom('W0N0');
+		assert.strictEqual(room['#nextPowerBankTime'], entry[0], 'next-due tick persisted on the room');
 	}));
 
 	test('non-highway rooms are never seeded', () => emptyWorld(async ({ shard }) => {
@@ -208,5 +211,18 @@ describe('PowerBank placement', () => {
 		assert.ok(bank, 'a power bank was placed');
 		assert.ok(bank.power >= C.POWER_BANK_CAPACITY_MAX, 'crit pushed power past the non-crit ceiling');
 		assert.strictEqual(bank.power, 7750);
+	}));
+
+	test('shard init rebuilds the schedule from the room\'s persisted deadline', () => simulate({
+		// A future deadline below the respawn window's floor — impossible to reach by a fresh roll, so
+		// a match proves the schedule was repopulated from the room rather than rolled from scratch.
+		W0N0: room => { room['#nextPowerBankTime'] = 12345; },
+	})(async ({ shard }) => {
+		using rng = deterministicRandomForTesting();
+		await runShardInitializers(shard);
+		const due = await inspectDuePowerBankRoomsForTest(shard);
+		const entry = due.find(([ , roomName ]) => roomName === 'W0N0');
+		assert.ok(entry, 'W0N0 was seeded');
+		assert.strictEqual(entry[0], 12345, 'seeded from the persisted deadline, not a fresh roll');
 	}));
 });
