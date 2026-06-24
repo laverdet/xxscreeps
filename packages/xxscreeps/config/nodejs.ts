@@ -56,7 +56,10 @@ export const load: LoadHook = (urlString, context, nextLoad) => {
 			shortCircuit: true,
 			source: makeModSourceText(mods, provide),
 		};
-	} else if (privateTransformBase !== undefined && urlString.startsWith(privateTransformBase)) {
+	} else if (privateTransformBase !== undefined && urlString.startsWith(privateTransformBase) && context.importAttributes.type !== 'json') {
+		// JSON imports (`with { type: 'json' }`) aren't JavaScript, so they must skip the private
+		// transform and load through nodejs. `config.schema.json` only avoids this by loading before
+		// the hook installs; later JSON imports (e.g. `badge.schema.json`) hit the transform.
 		return async function() {
 			return {
 				format: 'module',
