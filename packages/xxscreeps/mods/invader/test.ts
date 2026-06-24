@@ -1,7 +1,9 @@
+import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
+import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createTower } from 'xxscreeps/mods/defense/tower.js';
 import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
@@ -471,4 +473,105 @@ describe('Invader core', () => {
 				assert.ok(destroyed, 'damage-destroy emits EVENT_OBJECT_DESTROYED');
 			});
 		}));
+});
+
+describe('Invader core spawning', () => {
+	const corePos = new RoomPosition(25, 25, 'W1N1');
+	const findRoomCore = (room: Room) => lookForStructures(room, C.STRUCTURE_INVADER_CORE)[0]!;
+	const findCreep = (room: Room, name: string) => room.find(C.FIND_CREEPS).find(creep => creep.name === name);
+	// Level 5 spawns one tick per body part (`INVADER_CORE_CREEP_SPAWN_TIME[5] === 1`), so a 2-part
+	// body needs 2 ticks — the shortest countdown the mechanism still exercises.
+	const body = [ C.MOVE, C.ATTACK ];
+
+	// A deployed (deployTime 0), NPC-driven core. `activateNPC` keeps the room processing every
+	// tick; the loop only drives the controller, so spawning happens solely via the injected intent.
+	const spawnScene = (level = 5, decorate?: (room: Room) => void) => simulate({
+		W1N1: room => {
+			room['#insertObject'](createInvaderCore(corePos, level, 0));
+			activateNPC(room, '2');
+			decorate?.(room);
+		},
+	});
+
+	// Inject the NPC-internal `createCreep` intent. NPCs are filtered out of the player intent
+	// pipeline, so the processor is otherwise only reachable from the (slice 5) behavior loop.
+	const requestCreep = (shard: Shard, coreId: string, creepBody = body, name = 'def') =>
+		pushIntentsForRoomNextTick(shard, 'W1N1', '2', { object: { [coreId]: { createCreep: [ creepBody, name ] } } });
+
+	test('createCreep inserts a spawning defender and records the spawn', () => spawnScene()(async ({ shard, tick, peekRoom }) => {
+		const coreId = await peekRoom('W1N1', room => findRoomCore(room).id);
+		await requestCreep(shard, coreId);
+		await tick();
+		await peekRoom('W1N1', room => {
+			const core = findRoomCore(room);
+			assert.ok(core.spawning, 'core reports a spawning record');
+			assert.strictEqual(core.spawning.name, 'def');
+			assert.strictEqual(core.spawning.needTime, C.INVADER_CORE_CREEP_SPAWN_TIME[5]! * body.length);
+			assert.ok(core.spawning.remainingTime > 0, 'spawn timer is still counting down');
+			const def = findCreep(room, 'def');
+			assert.ok(def, 'defender creep is inserted');
+			assert.strictEqual(def['#user'], '2', 'defender is owned by the invader NPC');
+			assert.ok(def.spawning, 'defender is still incubating');
+			assert.ok(def.pos.isEqualTo(corePos), 'incubating defender sits on the core tile');
+		});
+	}));
+
+	test('the defender materializes adjacent once the timer elapses', () => spawnScene()(async ({ shard, tick, peekRoom }) => {
+		const coreId = await peekRoom('W1N1', room => findRoomCore(room).id);
+		await requestCreep(shard, coreId);
+		await tick(3);
+		await peekRoom('W1N1', room => {
+			const core = findRoomCore(room);
+			assert.strictEqual(core.spawning, null, 'spawning record clears once the defender spawns');
+			const def = findCreep(room, 'def');
+			assert.ok(def, 'defender survives the spawn');
+			assert.strictEqual(def.spawning, false, 'defender has finished spawning');
+			assert.ok(!def.pos.isEqualTo(corePos), 'spawned defender steps off the core tile');
+			assert.strictEqual(def.pos.getRangeTo(corePos), 1, 'spawned defender lands adjacent to the core');
+		});
+	}));
+
+	// All eight neighbors occupied by friendly (non-stompable) creeps: the spawn can find no open
+	// tile and must keep retrying without dropping the defender.
+	const blockedScene = spawnScene(5, room => {
+		for (const pos of iterateNeighbors(corePos)) {
+			room['#insertObject'](createCreep(pos, [ C.MOVE ], `block_${pos.x}_${pos.y}`, '2'));
+		}
+	});
+
+	test('a fully blocked core keeps the spawn pending, then spawns when a tile frees', () => blockedScene(async ({ shard, tick, peekRoom, poke }) => {
+		const coreId = await peekRoom('W1N1', room => findRoomCore(room).id);
+		await requestCreep(shard, coreId);
+		await tick(4);
+		await peekRoom('W1N1', room => {
+			const core = findRoomCore(room);
+			assert.ok(core.spawning, 'spawn stays pending while every neighbor is blocked');
+			assert.ok(findCreep(room, 'def')!.spawning, 'defender keeps incubating on the core tile');
+			assert.ok(findCreep(room, 'def')!.pos.isEqualTo(corePos), 'blocked defender has not moved off the core');
+		});
+		// Free one neighbor; the next tick should spawn the defender into the opening.
+		await poke('W1N1', undefined, (Game, room) => room['#removeObject'](findCreep(room, 'block_26_25')!));
+		await tick(2);
+		await peekRoom('W1N1', room => {
+			const core = findRoomCore(room);
+			assert.strictEqual(core.spawning, null, 'spawn completes once a tile opens');
+			const def = findCreep(room, 'def')!;
+			assert.strictEqual(def.spawning, false, 'defender finished spawning');
+			assert.ok(def.pos.isEqualTo(new RoomPosition(26, 25, 'W1N1')), 'defender spawns into the freed tile');
+		});
+	}));
+
+	test('createCreep is rejected while the core is already spawning', () => spawnScene()(async ({ shard, tick, peekRoom, poke }) => {
+		const coreId = await peekRoom('W1N1', room => findRoomCore(room).id);
+		await requestCreep(shard, coreId);
+		await tick();
+		const result = await poke('W1N1', '2', (Game, room) => findRoomCore(room)['#createCreep'](body, 'other'));
+		assert.strictEqual(result, C.ERR_BUSY, 'a busy core rejects a second createCreep');
+	}));
+
+	test('createCreep is rejected on a core level that cannot spawn', () => spawnScene(1)(async ({ poke }) => {
+		// `INVADER_CORE_CREEP_SPAWN_TIME[1] === 0` — level 1 cores never spawn defenders.
+		const result = await poke('W1N1', '2', (Game, room) => findRoomCore(room)['#createCreep'](body, 'def'));
+		assert.strictEqual(result, C.ERR_INVALID_TARGET, 'a non-spawning level is rejected');
+	}));
 });

@@ -24,8 +24,9 @@ interface SpawnCreepOptions {
 	memory?: unknown;
 }
 
-// `StructureSpawn.Spawning` format and definition
-const spawningFormat = struct({
+// `StructureSpawn.Spawning` format and definition. Exported because `StructureInvaderCore` reuses
+// the same record for its NPC defender spawns.
+export const spawningFormat = struct({
 	directions: optional(vector(withType<Direction>('int8'))),
 	needTime: 'int32',
 	'#spawnId': Id.format,
@@ -33,7 +34,7 @@ const spawningFormat = struct({
 	'#spawnTime': 'int32',
 });
 
-class Spawning extends withOverlay(BufferObject, spawningFormat) {
+export class Spawning extends withOverlay(BufferObject, spawningFormat) {
 	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name; }
 	@enumerable get remainingTime() { return requiredExpiryTime(Game, this['#spawnTime']); }
 	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])!; }

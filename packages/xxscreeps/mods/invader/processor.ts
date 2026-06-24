@@ -13,7 +13,10 @@ import { release, reserve } from 'xxscreeps/mods/controller/processor.js';
 import * as Creep from 'xxscreeps/mods/creep/creep.js';
 import { flushActionLog } from 'xxscreeps/mods/creep/processor.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
-import { StructureInvaderCore, checkAttackController, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
+import { birthSpawnCreep } from 'xxscreeps/mods/spawn/processor.js';
+import { Spawning } from 'xxscreeps/mods/spawn/spawn.js';
+import { assign } from 'xxscreeps/utility/utility.js';
+import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
 import { loop } from './loop/index.js';
 
 // Register invader NPC
@@ -154,6 +157,22 @@ const intents = [
 		}
 	}),
 
+	registerIntentProcessor(StructureInvaderCore, 'createCreep', {}, (core, context, body: Creep.PartType[], name: string) => {
+		if (checkCreateCreep(core) === C.OK) {
+			// Incubate the defender on the core's own tile (`#ageTime === 0` marks it spawning); the
+			// object tick processor spawns it onto an adjacent tile once the timer elapses.
+			const creep = Creep.create(core.pos, body, name, '2');
+			creep['#ageTime'] = 0;
+			core.room['#insertObject'](creep);
+			const needTime = C.INVADER_CORE_CREEP_SPAWN_TIME[core.level]! * body.length;
+			const spawning = core.spawning = assign(new Spawning(), { needTime });
+			spawning['#spawnId'] = core.id;
+			spawning['#spawningCreepId'] = creep.id;
+			spawning['#spawnTime'] = Game.time + needTime - 1;
+			context.didUpdate();
+		}
+	}),
+
 	registerIntentProcessor(StructureInvaderCore, 'transferEnergy', {}, (core, context, id: string, amount: number) => {
 		const target = Game.getObjectById<StructureTower | Creep.Creep>(id);
 		if (target && checkTransferEnergy(core, target) === C.OK) {
@@ -203,6 +222,17 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 			context.didUpdate();
 		} else {
 			context.wakeAt(deployTime + 1);
+		}
+	}
+
+	// Advance an in-progress defender spawn. A player spawn's room is kept ticking by its energy
+	// regen; this NPC core has none, so wake it at completion.
+	const { spawning } = core;
+	if (spawning) {
+		if (spawning.remainingTime === 0) {
+			birthSpawnCreep(core, context, () => core['#collapseTime'] || Game.time + C.CREEP_LIFE_TIME - 1);
+		} else {
+			context.wakeAt(spawning['#spawnTime']);
 		}
 	}
 });
