@@ -6,7 +6,7 @@ bindTerrainRenderer(Deposit, () => 0x777777);
 
 bindRenderer(Deposit, (deposit, next) => ({
 	...next(),
-	cooldown: deposit.cooldown,
+	cooldownTime: deposit['#cooldownTime'],
 	depositType: deposit.depositType,
 	lastCooldown: deposit.lastCooldown,
 	nextDecayTime: deposit['#nextDecayTime'],

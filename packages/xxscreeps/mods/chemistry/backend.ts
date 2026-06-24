@@ -37,6 +37,6 @@ bindRenderer(StructureLab, (lab, next, previousTime) => {
 		...next(),
 		...renderStore(lab.store),
 		actionLog,
-		cooldown: lab.cooldown,
+		cooldownTime: lab['#cooldownTime'],
 	};
 });

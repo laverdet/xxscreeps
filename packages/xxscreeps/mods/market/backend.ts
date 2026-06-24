@@ -5,5 +5,5 @@ import { StructureTerminal } from './terminal.js';
 bindRenderer(StructureTerminal, (terminal, next) => ({
 	...next(),
 	...renderStore(terminal.store),
-	cooldown: terminal.cooldown,
+	cooldownTime: terminal['#cooldownTime'],
 }));
