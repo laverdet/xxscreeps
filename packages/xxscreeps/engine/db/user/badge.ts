@@ -53,3 +53,17 @@ export function validate(badge: object): UserBadge {
 export async function save(db: Database, userId: string, badge: string) {
 	await db.data.hSet(User.infoKey(userId), 'badge', badge);
 }
+
+// Mirrors the vanilla private-server bot CLI (genRandomBadge) so freshly-added bots get a
+// distinct badge on the map instead of the default blank one.
+export function generateRandom(): UserBadge {
+	const color = () => `#${Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0')}`;
+	return {
+		color1: color(),
+		color2: color(),
+		color3: color(),
+		flip: Math.random() > 0.5,
+		param: Math.floor(Math.random() * 200) - 100,
+		type: Math.floor(Math.random() * 24) + 1,
+	};
+}
