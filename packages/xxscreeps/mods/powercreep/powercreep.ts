@@ -53,15 +53,18 @@ Object.defineProperty(PowerCreep.prototype, 'ticksToLive', { value: undefined })
 /** Build a fresh, unspawned roster member. */
 export function createPowerCreep(id: string, name: string, className: string) {
 	const pos = new RoomPosition(0, 0, 'E0S0');
-	return instantiate(PowerCreep, {
+	const creep = instantiate(PowerCreep, {
 		id,
 		pos,
-		'#posId': pos['#id'],
 		name,
 		className,
-		'#powers': {},
 		spawnCooldownTime: 0,
 	});
+	// Private-symbol fields are assigned by member access, not as object-literal keys: the private
+	// transform only rewrites `obj['#x']` accesses, so a literal `'#x'` key would miss the symbol slot.
+	creep['#posId'] = pos['#id'];
+	creep['#powers'] = {};
+	return creep;
 }
 
 // The roster is stored as a single per-user blob: a vector of power creeps.
