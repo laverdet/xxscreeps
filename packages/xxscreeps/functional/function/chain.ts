@@ -32,6 +32,16 @@ export function chainSequenceInto<Arg>(prev: (arg: Arg) => Arg, next: (arg: Arg)
 	return (arg: Arg) => next(prev(arg));
 }
 
+export function chainSequenceVoidN<Params extends unknown[]>(
+	prev: (...args: Params) => void,
+	next: (...args: Params) => void,
+) {
+	return (...args: Params): void => {
+		next(...args);
+		prev(...args);
+	};
+}
+
 export function chainSequenceVoid0(prev: () => void, next: () => void) {
 	return (): void => {
 		next();

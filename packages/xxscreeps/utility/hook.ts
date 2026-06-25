@@ -1,100 +1,82 @@
+import type { AsyncEffectAndResult } from './types.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
+import { acquireWith } from 'xxscreeps/utility/async.js';
 import { lateCallback } from './memoize.js';
 
-export function makeHookRegistration<keys extends Record<string, any>>() {
-	const hooksByName = new Map<keyof any, any[]>();
-	const took = new Set<keyof any>();
+export function makeHookRegistration<Keys extends Record<string, unknown>>() {
+	const hooksByName = new Map<keyof Keys, UnknownCallback[]>();
+	const took = new Set<keyof Keys>();
 
+	type UnknownCallback = (...args: unknown[]) => unknown;
 	type Hook = {
 		/**
 		 * Makes an invocator which iterates through all hooks unconditionally.
 		 */
-		makeIterated: <Key extends keyof keys>(key: Key) => (() => void) extends keys[Key] ? keys[Key] extends (...args: infer Args) => void
-			? (...args: Args) => void : never : never;
+		makeIterated: <Key extends keyof Keys>(key: Key) =>
+			(() => void) extends Keys[Key]
+				? Keys[Key] extends (...args: infer Args) => void
+					? (...args: Args) => void
+					: never
+				: never;
 
 		/**
 		 * Makes an invocator which maps the hooks with arguments.
 		 */
-		makeMapped: <Key extends keyof keys>(key: Key) => keys[Key] extends (...args: infer Params) => infer Result
-			? (...args: Params) => Iterable<Result> : never;
+		makeMapped: <Key extends keyof Keys>(key: Key) =>
+			Keys[Key] extends (...args: infer Params) => infer Result
+				? (...args: Params) => Iterable<Result>
+				: never;
 
 		/**
 		 * Makes an invocator which passes a value through each hooks and returns the final result.
 		 */
-		makeReduced: <Key extends keyof keys>(key: Key) => keys[Key] extends (arg: infer Type) => infer Type
-			? (arg: Type) => Type : never;
+		makeReduced: <Key extends keyof Keys>(key: Key) =>
+				Keys[Key] extends (arg: infer Type) => infer Type
+					? (arg: Type) => Type
+					: never;
 
 		/**
 		 * Iterates over each hook.
 		 */
-		map: (<Key extends keyof keys>(key: Key) => Iterable<keys[Key]>) & (<Key extends keyof keys, Type>(key: Key, fn: (value: keys[Key]) => Type) => Iterable<Type>);
+		map:
+			(<Key extends keyof Keys>(key: Key) => Iterable<Keys[Key]>) &
+			(<Key extends keyof Keys, Type>(key: Key, fn: (value: Keys[Key]) => Type) => Iterable<Type>);
 
 		/**
 		 * Register a hook
 		 */
-		register: <Key extends keyof keys>(key: Key, handler: keys[Key]) => void;
+		register: <Key extends keyof Keys>(key: Key, handler: Keys[Key]) => void;
 	};
 
 	const hookable: Hook = {
-		makeIterated(key) {
+		makeIterated(key): any {
 			return lateCallback(() => {
-				const handlers = hooksByName.get(key);
 				took.add(key);
-				if (handlers) {
-					const { head, rest } = Fn.shift(handlers);
-					let fn = head;
-					if (rest) {
-						for (const next of rest) {
-							const prev = fn;
-							fn = (...args: any[]) => {
-								prev(...args);
-								next(...args);
-							};
-						}
-					}
-					return fn;
-				} else {
-					return () => {};
-				}
-			}) as never;
+				const handlers = [ ...hooksByName.get(key) ?? [] ];
+				return Fn.fold(handlers, () => {}, (prev, next) => Fn.chainSequenceVoidN(prev, next));
+			});
 		},
 
 		makeMapped(key): any {
 			return lateCallback(() => {
-				const handlers = hooksByName.get(key);
 				took.add(key);
-				if (handlers) {
-					const savedHandlers = [ ...handlers ];
-					return (...args: any[]) => Fn.map(savedHandlers, fn => fn(...args));
-				} else {
-					return function*() {};
-				}
+				const handlers = [ ...hooksByName.get(key) ?? [] ];
+				return (...args: unknown[]) => Fn.map(handlers, fn => fn(...args));
 			});
 		},
 
-		makeReduced(key) {
+		makeReduced(key): any {
 			return lateCallback(() => {
-				const handlers = hooksByName.get(key);
+				const handlers = [ ...hooksByName.get(key) ?? [] ];
 				took.add(key);
-				if (handlers) {
-					const { head, rest } = Fn.shift(handlers);
-					let fn = head;
-					if (rest) {
-						for (const next of rest) {
-							const prev = fn;
-							fn = (value: any) => next(prev(value));
-						}
-					}
-					return fn;
-				} else {
-					return (value: any) => value;
-				}
-			}) as never;
+				return Fn.fold(handlers, (value: unknown) => value, (prev, next) => Fn.chainSequenceInto(prev, next));
+			});
 		},
 
-		map(key: keyof any, fn = (value: any) => value) {
-			const handlers = hooksByName.get(key) ?? [];
-			return Fn.map(handlers, fn);
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		map(key: keyof Keys, fn = (value: any) => value): any {
+			return Fn.map(hooksByName.get(key) ?? [], fn);
 		},
 
 		register(key, handler) {
@@ -103,12 +85,30 @@ export function makeHookRegistration<keys extends Record<string, any>>() {
 			}
 			const handlers = hooksByName.get(key);
 			if (handlers) {
-				handlers.push(handler);
+				handlers.push(handler as UnknownCallback);
 			} else {
-				hooksByName.set(key, [ handler ]);
+				hooksByName.set(key, [ handler as UnknownCallback ]);
 			}
 		},
 	};
 
 	return hookable;
+}
+
+export async function acquireHookEffects<Type>(disposable: DisposableStack, hooks: Iterable<AsyncEffectAndResult<Type | undefined>>) {
+	return Fn.pipe(
+		await acquireWith(
+			value => {
+				if (value) {
+					const [ effect ] = value;
+					if (effect) {
+						disposable.defer(effect);
+					}
+				}
+			},
+			...Fn.map(hooks, hook => Promise.resolve(hook)),
+		),
+		$$ => Fn.map($$, result => result?.[1]),
+		$$ => Fn.filter($$, nonNullPredicate),
+		$$ => [ ...$$ ]);
 }

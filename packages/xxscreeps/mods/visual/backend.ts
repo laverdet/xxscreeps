@@ -1,7 +1,7 @@
 import { hooks } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
-import { acquire, mustNotReject } from 'xxscreeps/utility/async.js';
-import { throttle } from 'xxscreeps/utility/utility.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { disposableToEffect, throttle } from 'xxscreeps/utility/utility.js';
 import { getVisualChannel, loadVisuals } from './model.js';
 
 hooks.register('roomSocket', async (shard, userId, roomName) => {
@@ -37,9 +37,10 @@ hooks.register('subscription', {
 	pattern: /^mapVisual:(?<user>[^/]+)\/(?<shard>[^/]+)$/,
 
 	async subscribe(params) {
+		using disposable = new DisposableStack();
 		const { user } = params;
 		const { shard } = this.context;
-		if (!this.user || user !== this.user) {
+		if (this.user == null || user !== this.user) {
 			return () => {};
 		}
 
@@ -49,27 +50,23 @@ hooks.register('subscription', {
 			this.send(JSON.stringify(visual));
 		}));
 
-		const [ effect ] = await acquire(
-			// Subscribe to visuals channel and listen for map publishes
-			function() {
-				return getVisualChannel(shard, user).listen<true>(message => {
-					if (message.type === 'publish') {
-						if (message.roomNames.includes('map')) {
-							lastTime = message.time;
-						}
-					}
-				});
-			}(),
-			function() {
-				// Subscribe to game tick updates
-				return shard.channel.listen(message => {
-					if (message.type === 'tick' && message.time >= lastTime) {
-						check.set(config.backend.socketThrottle);
-					}
-				});
-			}(),
-			() => check.clear(),
-		);
-		return effect;
+		// Subscribe to visuals channel and listen for map publishes
+		disposable.defer(await getVisualChannel(shard, user).listen<true>(message => {
+			if (message.type === 'publish') {
+				if (message.roomNames.includes('map')) {
+					lastTime = message.time;
+				}
+			}
+		}));
+
+		// Subscribe to game tick updates
+		disposable.defer(shard.channel.listen(message => {
+			if (message.type === 'tick' && message.time >= lastTime) {
+				check.set(config.backend.socketThrottle);
+			}
+		}));
+		disposable.defer(() => check.clear());
+
+		return disposableToEffect(disposable.move());
 	},
 });

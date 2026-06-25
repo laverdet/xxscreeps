@@ -9,21 +9,23 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { getRoomChannel } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { runOneShot } from 'xxscreeps/game/index.js';
-import { acquire, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async.js';
-import { asUnion, getOrSet, hackyIterableToArray, throttle } from 'xxscreeps/utility/utility.js';
+import { acquireWith, makeEventPublisher, mustNotReject } from 'xxscreeps/utility/async.js';
+import { acquireHookEffects } from 'xxscreeps/utility/hook.js';
+import { asUnion, disposableToEffect, getOrSet, throttle } from 'xxscreeps/utility/utility.js';
 import './render.js';
 
-function diff(previous: any, next: any) {
+function diff(previous: unknown, next: unknown): Record<string, unknown> | null | undefined {
 	if (previous === next) {
 		return;
 	}
 	if (previous == null || next == null || typeof previous !== typeof next) {
-		return next == null ? null : next;
+		return (next ?? null) satisfies object | null as Record<string, unknown> | null;
 	}
 	if (typeof previous === 'object') {
-		const result: any = {};
+		const result: Record<string, unknown> = {};
 		let didAdd = false;
 		for (const key of new Set([ ...Object.keys(previous), ...Object.keys(next) ])) {
+			// @ts-expect-error
 			const dval = diff(previous[key], next[key]);
 			if (dval !== undefined) {
 				result[key] = dval;
@@ -32,7 +34,7 @@ function diff(previous: any, next: any) {
 		}
 		return didAdd ? result : undefined;
 	}
-	return next;
+	return next satisfies object as Record<string, unknown>;
 }
 
 type RoomListener = (room: Room, time: number, didUpdate: boolean) => void;
@@ -47,8 +49,10 @@ const invokeSocketHooks = hooks.makeMapped('roomSocket');
  * Listen for updates to a room. Some work is shared between multiple listeners. If game time is
  * updated without any change to the room the listener is invoked with `room` === `undefined`.
  */
-export async function subscribeToRoom(shard: Shard, roomName: string, listener: RoomListener) {
+export async function subscribeToRoom(shard: Shard, roomName: string, listener: RoomListener): Promise<Effect> {
 	const task = getOrSet(globalSubscriptionsByRoom, roomName, async () => {
+		using disposable = new DisposableStack();
+
 		// Initialize current state
 		let { time } = shard;
 		let didUpdate = false;
@@ -57,8 +61,33 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 			time,
 		};
 
+		// Listen for room updates
+		disposable.defer(await getRoomChannel(shard, roomName).listen(event => {
+			if (event.type === 'didUpdate') {
+				// This happens before the tick is totally done
+				didUpdate = true;
+			}
+		}));
+
+		// Listen for game time updates
+		disposable.defer(shard.channel.listen(event => {
+			if (event.type === 'tick') {
+				time = event.time;
+				timer.set(0);
+			}
+		}));
+
+		// Clean up this publisher
+		disposable.defer(() => globalSubscriptionsByRoom.delete(roomName));
+
+		// Disable pending listen timeout
+		disposable.defer(() => timer.clear());
+
 		// Set up publisher
-		const { listen, publish } = makeEventPublisher<Parameters<RoomListener>>(() => effect());
+		const { listen, publish } =
+			makeEventPublisher<Parameters<RoomListener>>(function(disposable) {
+				return () => disposable.dispose();
+			}(disposable.move()));
 		const timer = throttle(() => {
 			if (state.time === time) {
 				return;
@@ -78,29 +107,6 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 			});
 		});
 
-		// Listen for game state
-		const [ effect ] = await acquire(
-			// Listen for game time updates
-			shard.channel.listen(event => {
-				if (event.type === 'tick') {
-					time = event.time;
-					timer.set(0);
-				}
-			}),
-			// Listen for room updates
-			getRoomChannel(shard, roomName).listen(event => {
-				if (event.type === 'didUpdate') {
-					// This happens before the tick is totally done
-					didUpdate = true;
-				}
-			}),
-			() => {
-				// Clean up this publisher
-				globalSubscriptionsByRoom.delete(roomName);
-				// Disable pending listen timeout
-				timer.clear();
-			},
-		);
 		return { listen, state };
 	});
 
@@ -110,8 +116,7 @@ export async function subscribeToRoom(shard: Shard, roomName: string, listener: 
 		return listen(listener);
 	} else {
 		// Avoid invoking `listen` on a dead event publisher
-		const result: any = subscribeToRoom(shard, roomName, listener);
-		return result;
+		return subscribeToRoom(shard, roomName, listener);
 	}
 }
 
@@ -130,29 +135,23 @@ export const roomSubscription: SubscriptionEndpoint = {
 		}
 
 		// Resolve room socket handlers
-		// HACK: TypeScript doesn't infer types correctly for iterable types into a rest spread. The
-		// `hookMap` cast here shouldn't be needed but it is.
-		const mappedHooks = invokeSocketHooks(shard, this.user, roomName);
-		hackyIterableToArray(mappedHooks);
-		const [ hookEffect, hookResults ] = await acquire(...mappedHooks);
-		const hookRunners = [ ...Fn.filter(hookResults) ];
+		using disposable = new DisposableStack();
+		const hookRunners = await acquireHookEffects(disposable, invokeSocketHooks(shard, this.user, roomName));
 
 		// Listen for room updates. Must be done after hooks are resolved because `update` will call hooks.
-		const [ effect ] = await acquire(
+		await acquireWith(
+			fn => disposable.defer(fn),
 			subscribeToRoom(shard, roomName, (room, time, didUpdate) => mustNotReject(async () => {
 				if (Date.now() < skipUntil) {
 					return;
 				}
-
-				// Invoke room socket handlers
-				const extra = await Promise.all(hookRunners.map(fn => fn(time)));
 
 				// Render current room state
 				room['#initialize']();
 				const visibleUsers = new Set<string>();
 				const dval = didUpdate ? runOneShot(this.context.world, room, time, this.user ?? '0', () => {
 					// Render all RoomObjects
-					const objects: any = {};
+					const objects: Record<string, unknown> = {};
 					for (const object of room['#objects']) {
 						asUnion(object);
 						const value = object[Render](previousTime === -1 ? undefined : previousTime);
@@ -176,23 +175,35 @@ export const roomSubscription: SubscriptionEndpoint = {
 					return dval;
 				}) : {};
 
-				// Get users not yet seen
-				const users = Fn.fromEntries(await Promise.all(Fn.map(visibleUsers, async (id): Promise<[ string, any ]> => {
-					const info = await shard.db.data.hmGet(User.infoKey(id), [ 'badge', 'username' ]);
-					return [ id, {
-						username: info.username,
-						badge: info.badge ? JSON.parse(info.badge) : {},
-					} ];
-				})));
-				visibleUsers.clear();
+				const [ extra, users ] = await Promise.all([
+					// Invoke room socket handlers
+					Fn.mapAwait(hookRunners, fn => fn(time)),
+
+					// Get users not yet seen
+					async function() {
+						const entries = await Fn.mapAwait(visibleUsers, async id => {
+							const info = await shard.db.data.hmGet(User.infoKey(id), [ 'badge', 'username' ]);
+							const rendered = {
+								username: info.username,
+								badge: info.badge == null ? {} : JSON.parse(info.badge) as unknown,
+							};
+							return [ id, rendered ] as const;
+						});
+						visibleUsers.clear();
+						return Fn.fromEntries(entries);
+					}(),
+				]);
 
 				// Diff with previous room state and return response
-				const response = Object.assign({
-					objects: dval,
-					info: { mode: 'world' },
-					gameTime: time,
-					users,
-				}, ...extra);
+				const response: unknown = Object.assign(
+					{
+						objects: dval,
+						info: { mode: 'world' },
+						gameTime: time,
+						users,
+					},
+					...extra,
+				);
 				this.send(JSON.stringify(response));
 				previousTime = time;
 			})),
@@ -208,11 +219,9 @@ export const roomSubscription: SubscriptionEndpoint = {
 					skipUntil = Date.now() + 1000;
 				}
 			}),
-
-			() => hookEffect,
 		);
 
 		// Disconnect on socket hangup
-		return effect;
+		return disposableToEffect(disposable.move());
 	},
 };

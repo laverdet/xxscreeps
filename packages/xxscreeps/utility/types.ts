@@ -16,8 +16,8 @@ export type KeyFor<Type, Key extends keyof any> = Extract<Type, WithKey<Key>>[Ke
 
 // React style unlistener
 export type Effect = () => void;
-export type EffectWithResult<Type = any> = Effect | void | readonly [ Effect | void, Type ];
-export type AsyncEffectAndResult<Type = any> = MaybePromise<EffectWithResult<Type>> | void;
+export type EffectWithResult<Type = unknown> = readonly [ Effect | undefined, Type ] | undefined;
+export type AsyncEffectAndResult<Type = unknown> = MaybePromise<EffectWithResult<Type>> | undefined;
 
 // Helper for passing around prototypes
 export type Implementation<Type = {}> = { prototype: Type };
@@ -31,9 +31,6 @@ export type MaybePromise<Type> = Type | Promise<Type>;
 // For functions that accept an array or just one element
 export type OneOrMany<Type> = Type | Type[];
 
-// Excludes from a union only *exact* types. Exclude<1, number> -> never  ::  StrictExclude<1, number> -> 1
-export type StrictExclude<T, U> = T extends any ? T extends U ? U extends T ? never : T : T : never;
-
 // Allow access to any property on a union
 export type Union<T, K extends keyof any = T extends any ? keyof T : never> =
 	T extends any ? T & Partial<Record<Exclude<K, keyof T>, never>> : never;
@@ -44,13 +41,6 @@ export type UnionToIntersection<Union> =
 
 // Turns `T[]` into `T`, or returns `T` if it's not an array
 export type UnwrapArray<Type> = Type extends (infer Element)[] ? Element : Type;
-
-export type RecursivePartial<T> = {
-	[P in keyof T]?: T[P] extends (infer U)[]
-		? RecursivePartial<U>[] :
-		T[P] extends object ? RecursivePartial<T[P]> :
-		T[P];
-};
 
 // Returns an object with a given key
 export type WithKey<Path extends keyof any> = Record<Path, any>;

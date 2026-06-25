@@ -13,23 +13,24 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { acquire, mustNotReject } from 'xxscreeps/utility/async.js';
-import { clamp, hackyIterableToArray } from 'xxscreeps/utility/utility.js';
+import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { acquireHookEffects } from 'xxscreeps/utility/hook.js';
+import { clamp, disposableToEffect } from 'xxscreeps/utility/utility.js';
 import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model.js';
 import { hooks } from './symbols.js';
 
 const acquireConnectors = function(invoke) {
 	return async (instance: PlayerInstance) => {
-		const connectorPromises = invoke(instance);
-		hackyIterableToArray(connectorPromises);
-		const [ effect, connectors ] = await acquire(...connectorPromises);
+		using disposable = new DisposableStack();
+		const connectors = await acquireHookEffects(disposable, invoke(instance));
 		const initialize = [ ...Fn.filter(Fn.map(connectors, hook => hook.initialize)) ];
 		const refresh = [ ...Fn.filter(Fn.map(connectors, hook => hook.refresh)) ];
 		const save = [ ...Fn.filter(Fn.map(connectors, hook => hook.save)) ].reverse();
-		return [ effect, {
-			initialize: (payload: InitializationPayload) => Promise.all(Fn.map(initialize, fn => fn(payload))),
-			refresh: (payload: TickPayload) => Promise.all(Fn.map(refresh, fn => fn(payload))),
-			save: (payload: TickResult) => Promise.all(Fn.map(save, fn => fn(payload))),
+		const effect = disposableToEffect(disposable.move());
+		return [ () => effect(), {
+			initialize: (payload: InitializationPayload) => Fn.mapAwait(initialize, fn => fn(payload)),
+			refresh: (payload: TickPayload) => Fn.mapAwait(refresh, fn => fn(payload)),
+			save: (payload: TickResult) => Fn.mapAwait(save, fn => fn(payload)),
 		} ] as const;
 	};
 }(hooks.makeMapped('runnerConnector'));
@@ -150,7 +151,7 @@ export class PlayerInstance {
 					terrainBlob: this.world.terrainBlob,
 				} as never;
 				const [ codeBlob ] = await Promise.all([
-					this.branchName ? Code.loadBlobs(this.shard.db, this.userId, this.branchName) : undefined,
+					this.branchName == null ? undefined : Code.loadBlobs(this.shard.db, this.userId, this.branchName),
 					this.connectors.initialize(payload),
 				]);
 				payload.codeBlob = codeBlob;
@@ -212,6 +213,7 @@ export class PlayerInstance {
 				// Send payload off to runtime and execute user code
 				return await this.sandbox.run(payload as TickPayload);
 			} catch (err: any) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 				console.error(err.stack);
 			}
 		})();
@@ -229,10 +231,8 @@ export class PlayerInstance {
 				this.usageChannel.publish(payload.usage),
 
 				// Publish console
-				payload.console ? this.consoleChannel.publish(payload.console) : undefined,
-				payload.evalAck ? Promise.all(payload.evalAck.map(ack =>
-					getAckChannel(this.shard, this.userId).publish(ack),
-				)) : undefined,
+				payload.console == null ? undefined : this.consoleChannel.publish(payload.console),
+				payload.evalAck && Fn.mapAwait(payload.evalAck, ack => getAckChannel(this.shard, this.userId).publish(ack)),
 
 				// Save driver connector information [memory, flags, visual, whatever]
 				this.connectors.save(payload),
@@ -261,7 +261,7 @@ export class PlayerInstance {
 				} else if (result.result === 'timedOut') {
 					tasks.push(this.consoleChannel.publish(JSON.stringify([ {
 						fd: 2,
-						data: `Script timed out${result.stack ? `; ${result.stack}` : ''}`,
+						data: `Script timed out${result.stack == null ? '' : `; ${result.stack}`}`,
 					} ])));
 				}
 			}
