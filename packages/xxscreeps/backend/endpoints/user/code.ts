@@ -146,10 +146,8 @@ hooks.register('route', {
 		checkBranchName(newName);
 		const key = Code.branchManifestKey(userId);
 		const branches = await context.db.data.sMembers(key);
-		if (branches.length >= kMaxBranches) {
+		if (branches.length >= kMaxBranches && !branches.includes(newName)) {
 			throw new Error('Too many branches');
-		} else if (branches.includes(newName)) {
-			throw new Error('Branch already exists');
 		} else if (branch && !branches.includes(branch)) {
 			return;
 		}
@@ -176,7 +174,10 @@ hooks.register('route', {
 		if (!updated) {
 			throw new Error('Failed to copy');
 		}
-		await context.db.data.sAdd(Code.branchManifestKey(userId), [ newName ]);
+		await Promise.all([
+			context.db.data.sAdd(Code.branchManifestKey(userId), [ newName ]),
+			Code.getUserCodeChannel(context.db, userId).publish({ type: 'update', branch: newName }),
+		]);
 
 		return { ok: 1, timestamp };
 	}),
