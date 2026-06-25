@@ -188,7 +188,7 @@ function getIsDefault(): MemoryRecord {
 	if (json) {
 		return json;
 	} else if (previousJson) {
-		return json = previousJson;
+		return json = RawMemory._parsed = previousJson;
 	}
 
 	// https://github.com/screeps/engine/blob/1b9b1541923f061311474a2f1bac0fea37911f70/src/game/game.js#L479-L500
