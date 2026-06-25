@@ -1,18 +1,35 @@
-import type { PowerCreepRecord } from './record.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
-import { loadRoster } from './model.js';
+import { getPowerCreepChannel, loadPowerCreepsBlob } from './model.js';
 
+// The roster blob is transferred to the runtime verbatim — the runner never parses it. It is sent
+// once on sandbox boot and again only when the backend publishes a mutation, so idle ticks are free.
 declare module 'xxscreeps/engine/runner/index.js' {
+	interface InitializationPayload {
+		powerCreepsBlob: Readonly<Uint8Array> | null;
+	}
 	interface TickPayload {
-		powerCreeps: PowerCreepRecord[];
+		powerCreepsBlob?: Readonly<Uint8Array> | null;
 	}
 }
 
-hooks.register('runnerConnector', player => {
-	const { shard, userId } = player;
-	return [ undefined, {
+hooks.register('runnerConnector', async player => {
+	const { userId } = player;
+	const { db } = player.shard;
+	let dirty = false;
+	const channel = await getPowerCreepChannel(db, userId).subscribe();
+	channel.listen(() => {
+		dirty = true;
+	});
+	return [ () => channel.disconnect(), {
+		async initialize(payload) {
+			payload.powerCreepsBlob = await loadPowerCreepsBlob(db, userId);
+		},
+
 		async refresh(payload) {
-			payload.powerCreeps = await loadRoster(shard.db, userId);
+			if (dirty) {
+				dirty = false;
+				payload.powerCreepsBlob = await loadPowerCreepsBlob(db, userId);
+			}
 		},
 	} ];
 });

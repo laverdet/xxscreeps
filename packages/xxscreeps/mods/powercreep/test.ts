@@ -3,8 +3,7 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as Model from './model.js';
-import { PowerCreep } from './powercreep.js';
-import { levelOf } from './record.js';
+import { createPowerCreep, read, write } from './powercreep.js';
 
 const owner = '100';
 
@@ -38,8 +37,8 @@ describe('PowerCreep account', () => {
 		const creep = await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
 		await Model.upgrade(shard.db, owner, creep.id, { [C.PWR_GENERATE_OPS]: 1 });
 		const updated = (await Model.loadRoster(shard.db, owner))[0]!;
-		assert.strictEqual(levelOf(updated), 1);
-		assert.strictEqual(updated.powers[C.PWR_GENERATE_OPS], 1);
+		assert.strictEqual(updated.level, 1);
+		assert.strictEqual(updated.powers[C.PWR_GENERATE_OPS]!.level, 1);
 	}));
 
 	test('upgrade rejects an unreachable rank jump', () => sim(async ({ shard }) => {
@@ -62,7 +61,7 @@ describe('PowerCreep account', () => {
 		const alice = await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
 		await Model.create(shard.db, owner, 'Bob', C.POWER_CLASS.OPERATOR);
 		await Model.rename(shard.db, owner, alice.id, 'Alice2');
-		const names = (await Model.loadRoster(shard.db, owner)).map(record => record.name).sort();
+		const names = (await Model.loadRoster(shard.db, owner)).map(creep => creep.name).sort();
 		assert.deepStrictEqual(names, [ 'Alice2', 'Bob' ]);
 		await assert.rejects(Model.rename(shard.db, owner, alice.id, 'Bob'), /exists/);
 	}));
@@ -80,14 +79,24 @@ describe('PowerCreep account', () => {
 		await assert.rejects(Model.cancelDelete(shard.db, owner, creep.id), /Not being deleted/);
 	}));
 
-	test('the runtime view expands the stored record', () => {
-		const view = new PowerCreep({
-			id: 'a', name: 'Alice', className: C.POWER_CLASS.OPERATOR,
-			powers: { [C.PWR_GENERATE_OPS]: 2 }, spawnCooldownTime: 0,
-		});
-		assert.strictEqual(view.level, 2);
-		assert.deepStrictEqual(view.powers, { [C.PWR_GENERATE_OPS]: { level: 2 } });
-		assert.strictEqual(view.shard, null);
-		assert.strictEqual(view.ticksToLive, undefined);
+	test('the driver blob materializes an unspawned roster member', () => sim(async ({ shard }) => {
+		await setPower(shard.db, 4000);
+		await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
+		const blob = await Model.loadPowerCreepsBlob(shard.db, owner);
+		assert.ok(blob);
+		const [ view ] = read(blob);
+		assert.strictEqual(view!.name, 'Alice');
+		// Unspawned creeps sit at the all-zero signed position so spawning is a copy into a room.
+		assert.strictEqual(view!.pos.roomName, 'E0S0');
+		assert.strictEqual(view!.shard, null);
+		assert.strictEqual(view!.ticksToLive, undefined);
+	}));
+
+	test('the stored object round-trips its powers through the blob', () => {
+		const creep = createPowerCreep('a', 'Alice', C.POWER_CLASS.OPERATOR);
+		creep['#powers'] = { [C.PWR_GENERATE_OPS]: 2 };
+		const [ view ] = read(write([ creep ]));
+		assert.strictEqual(view!.level, 2);
+		assert.deepStrictEqual(view!.powers, { [C.PWR_GENERATE_OPS]: { level: 2 } });
 	});
 });
