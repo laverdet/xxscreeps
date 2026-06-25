@@ -502,12 +502,8 @@ export const iterateArea = function() {
  */
 export const iterateWithRangeTo = function() {
 	const iterate = makeAbstractIterateWithRangeTo(0, 49);
-	return function*(origin: RoomPosition, range: number) {
-		const { x, y, roomName } = origin;
-		for (const [ xx, yy ] of iterate(x, y, range)) {
-			yield new RoomPosition(xx, yy, roomName);
-		}
-	};
+	return (origin: RoomPosition, range: number) =>
+		iterateLocalPositions(iterate(origin.x, origin.y, range), origin.roomName);
 }();
 
 /**
