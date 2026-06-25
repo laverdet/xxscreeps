@@ -15,7 +15,7 @@ export const hooks = makeHookRegistration<{
 	middleware: (koa: Koa<State, Context>, router: Router<State, Context>) => void;
 	roomSocket: (shard: Shard, userId: string | undefined, roomName: string) =>
 		AsyncEffectAndResult<((time: number) => MaybePromise<object>) | undefined>;
-	sendUserInfo: (db: Database, userId: string, userInfo: any, privateSelf: boolean) => Promise<void>;
+	sendUserInfo: (db: Database, userId: string, userInfo: Record<string, unknown>, privateSelf: boolean) => Promise<void>;
 	route: Endpoint;
 	subscription: SubscriptionEndpoint;
 }>();

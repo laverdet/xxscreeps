@@ -1,5 +1,6 @@
 import type { JSONSchemaType } from 'ajv';
 import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { StructureController } from './controller.js';
 import { controlledRoomKey as controlledRoomsKey, reservedRoomKey as reservedRoomsKey } from './processor.js';
@@ -33,6 +34,11 @@ bindRenderer(StructureController, (controller, next) => {
 			},
 		},
 	};
+});
+
+// Surface accumulated control points (GCL experience) so the client can display the Global Control Level.
+hooks.register('sendUserInfo', async (db, userId, userInfo) => {
+	userInfo.gcl = Number(await db.data.hGet(User.infoKey(userId), 'gcl')) || 0;
 });
 
 interface RoomStatusQuery {

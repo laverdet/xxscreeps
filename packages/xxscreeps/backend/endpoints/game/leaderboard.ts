@@ -15,11 +15,10 @@ const leaderboardFindSchema: JSONSchemaType<LeaderboardFindRequest> = {
 hooks.register('route', {
 	path: '/api/leaderboard/find',
 	execute: makeValidatedQueryRoute(leaderboardFindSchema, context => {
-		if (context.request.query.season === undefined) {
+		if (context.request.query.season !== undefined) {
 			return { error: 'Result not found' };
-		} else {
-			return { ok: 1, list: [] };
 		}
+		return { ok: 1, list: [] };
 	}),
 });
 
