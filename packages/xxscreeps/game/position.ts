@@ -8,7 +8,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
 import { compose, declare } from 'xxscreeps/schema/index.js';
 import { iteratee } from 'xxscreeps/utility/iteratee.js';
-import { ALL_DIRECTIONS, getDirection, getOffsetsFromDirection } from './direction.js';
+import { getDirection, getOffsetsFromDirection, makeAbstractIterateWithRangeTo, makeLocalIterateArea, makeLocalIterateInRangeTo } from './direction.js';
 import { kMaxWorldSize, makeRoomNameFromId, parseRoomName } from './room/name.js';
 import { Game, registerGlobal } from './index.js';
 
@@ -467,36 +467,59 @@ export function fetchRoom(roomName: string) {
 }
 
 /**
+ * Return the position from the given direction, or `undefined` if it would be invalid.
+ */
+export function getPositionInDirection(position: RoomPosition, direction: Direction) {
+	const { x, y, roomName } = position;
+	const { dx, dy } = getOffsetsFromDirection(direction);
+	try {
+		return new RoomPosition(x + dx, y + dy, roomName);
+	} catch {}
+}
+
+/**
  * Iterate all positions within some range to the given position. It sweeps left to right, top to
  * bottom.
  */
-export function iterateInRangeTo(origin: RoomPosition, range: number) {
-	return iterateArea(
-		origin.roomName,
-		Math.max(0, origin.y - range),
-		Math.max(0, origin.x - range),
-		Math.min(kMaxRoomCoordinate, origin.y + range),
-		Math.min(kMaxRoomCoordinate, origin.x + range));
-}
+export const iterateInRangeTo = function() {
+	const iterate = makeLocalIterateInRangeTo(0, 49);
+	return (origin: RoomPosition, range: number) =>
+		iterateLocalPositions(iterate(origin.x, origin.y, range), origin.roomName);
+}();
 
-export function *iterateArea(roomName: string, top: number, left: number, bottom: number, right: number) {
-	for (let yy = top; yy <= bottom; ++yy) {
-		for (let xx = left; xx <= right; ++xx) {
+/**
+ * Iterate the given rectangular area in a room.
+ */
+export const iterateArea = function() {
+	const iterate = makeLocalIterateArea(0, 49);
+	return (roomName: string, top: number, left: number, bottom: number, right: number) =>
+		iterateLocalPositions(iterate(top, left, bottom, right), roomName);
+}();
+
+/**
+ * Iterate all positions with exactly the range to the given position. It iterates clockwise
+ * starting from top left.
+ */
+export const iterateWithRangeTo = function() {
+	const iterate = makeAbstractIterateWithRangeTo(0, 49);
+	return function*(origin: RoomPosition, range: number) {
+		const { x, y, roomName } = origin;
+		for (const [ xx, yy ] of iterate(x, y, range)) {
 			yield new RoomPosition(xx, yy, roomName);
 		}
-	}
+	};
+}();
+
+/**
+ * Iterate all direct neighbors of the given position.
+ */
+export function iterateNeighbors(position: RoomPosition) {
+	return iterateWithRangeTo(position, 1);
 }
 
-export function iterateNeighbors(position: RoomPosition) {
-	return function*() {
-		const { x, y, roomName } = position;
-		for (const direction of ALL_DIRECTIONS) {
-			const { dx, dy } = getOffsetsFromDirection(direction);
-			const posX = x + dx;
-			const posY = y + dy;
-			if (posX >= 0 && posX < 50 && posY >= 0 && posY < 50) {
-				yield new RoomPosition(posX, posY, roomName);
-			}
-		}
-	}();
+// Helper which translates a local position iterable to `RoomPosition`s
+function *iterateLocalPositions(localPositions: Iterable<readonly [number, number]>, roomName: string) {
+	for (const [ xx, yy ] of localPositions) {
+		yield new RoomPosition(xx, yy, roomName);
+	}
 }

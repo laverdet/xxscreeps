@@ -155,8 +155,8 @@ extend(Room, {
 			path.push({
 				x: pos.x,
 				y: pos.y,
-				dx: pos.x - previous.x as never,
-				dy: pos.y - previous.y as never,
+				dx: pos.x - previous.x as -1 | 0 | 1,
+				dy: pos.y - previous.y as -1 | 0 | 1,
 				direction: previous.getDirectionTo(pos),
 			});
 			previous = pos;

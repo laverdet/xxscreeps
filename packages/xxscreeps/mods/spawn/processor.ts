@@ -3,11 +3,11 @@ import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { ALL_DIRECTIONS, getPositionInDirection } from 'xxscreeps/game/direction.js';
+import { ALL_DIRECTIONS } from 'xxscreeps/game/direction.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { makePositionChecker } from 'xxscreeps/game/pathfinder/obstacle.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
@@ -212,7 +212,9 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 				let hostileCreep: Creep | undefined;
 				for (const dir of directions) {
 					const pos = getPositionInDirection(creep.pos, dir);
-					if (check(pos)) {
+					if (!pos) {
+						continue;
+					} else if (check(pos)) {
 						spawnPos = pos;
 						break;
 					}
@@ -227,8 +229,13 @@ registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
 
 				// All preferred directions blocked — only stomp if non-preferred are also blocked
 				if (!spawnPos && hostileCreep) {
-					const otherDirections = Fn.reject(ALL_DIRECTIONS, d => directions.has(d));
-					if (!Fn.some(otherDirections, dir => check(getPositionInDirection(creep.pos, dir)))) {
+					const hasOtherDirection = Fn.pipe(
+						ALL_DIRECTIONS,
+						$$ => Fn.reject($$, dir => directions.has(dir)),
+						$$ => Fn.map($$, dir => getPositionInDirection(creep.pos, dir)),
+						$$ => Fn.filter($$),
+						$$ => Fn.some($$, pos => check(pos)));
+					if (!hasOtherDirection) {
 						spawnPos = hostileCreep.pos;
 						buryCreep(hostileCreep);
 					}

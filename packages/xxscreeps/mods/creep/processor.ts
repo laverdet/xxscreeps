@@ -1,8 +1,7 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { ActionLog, RoomObject } from 'xxscreeps/game/object.js';
 import type { Direction } from 'xxscreeps/game/position.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
-import type { Resource } from 'xxscreeps/mods/resource/resource.js';
+import type { Resource, ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
 import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { writeRoomObject } from 'xxscreeps/engine/db/room.js';
@@ -206,7 +205,7 @@ const intents = [
 					) {
 						for (const object of creep.room['#lookAt'](pos)) {
 							if (object['#lookType'] === 'constructionSite' && object['#user'] !== creep['#user']) {
-								const { progress } = object as any;
+								const { progress } = object;
 								if (progress > 1) {
 									ResourceIntent.drop(pos, C.RESOURCE_ENERGY, Math.floor(progress / 2));
 								}
