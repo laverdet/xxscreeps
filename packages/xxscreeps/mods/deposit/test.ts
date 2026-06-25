@@ -12,10 +12,10 @@ import { makeSectorRadiusFilter, sectorEdgeRooms } from 'xxscreeps/game/room/sec
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { deterministicRandomForTesting, hashMix } from 'xxscreeps/utility/utility.js';
+import { deterministicRandomForTesting } from 'xxscreeps/utility/utility.js';
 import { Deposit } from './deposit.js';
+import { depositTypeForRoom, loadSectorDeposits, setDepositBootstrapScatterForTesting } from './main.js';
 import { scheduleSector } from './model.js';
-import { depositTypeForRoom, loadSectorDeposits, setDepositBootstrapScatterForTesting } from './place.js';
 
 interface DepositSimOptions {
 	body?: PartType[];
@@ -116,12 +116,6 @@ describe('Deposit', () => {
 		});
 	}));
 });
-
-// Tiny LCG so tests pick rooms/positions deterministically.
-function makeRng(seed = 1): () => number {
-	let state = hashMix(seed);
-	return () => (state = hashMix(state)) / 0xffffffff + 0.5;
-}
 
 // Deterministic placement RNG plus a zero-scatter bootstrap (so the single-sector test world's
 // W5N5 comes due the moment it's seeded), scoped to the test and restored on disposal.
