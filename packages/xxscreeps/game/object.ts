@@ -60,9 +60,13 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 			const isSubClass = (object: RoomObject) => new.target.prototype instanceof object.constructor;
 			if (object && (isSuperClass(object) || isSubClass(object))) {
 				super(BufferObject.getBuffer(object), BufferObject.getOffset(object));
-				const prototype = ObjectGetPrototypeOf(object) as object;
-				if (ObjectGetPrototypeOf(this) !== prototype) {
-					ObjectSetPrototypeOf(this, prototype);
+				// Specialize a generic super class (`new Structure(id)`) down to the concrete
+				// object's prototype. A subclass already derives from it, so leave its prototype.
+				if (isSuperClass(object)) {
+					const prototype = ObjectGetPrototypeOf(object) as object;
+					if (ObjectGetPrototypeOf(this) !== prototype) {
+						ObjectSetPrototypeOf(this, prototype);
+					}
 				}
 				this.room = object.room;
 			} else {

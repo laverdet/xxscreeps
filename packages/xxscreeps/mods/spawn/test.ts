@@ -461,12 +461,17 @@ describe('Id-string constructor', () => {
 	test('Structure subclass reads delegate to the concrete object', () => sim(async ({ player }) => {
 		await player('100', Game => {
 			const original = Game.rooms.W3N3!.lookForAt(C.LOOK_STRUCTURES, 26, 25)[0]!;
-			const MySpawn = class extends StructureSpawn {};
+			const MySpawn = class extends StructureSpawn {
+				doubleHits() { return this.hits * 2; }
+			};
 			// @ts-expect-error
 			const structure = new MySpawn(original.id);
 			assert.strictEqual(structure.structureType, original.structureType);
 			assert.strictEqual(structure.hits, original.hits);
 			assert.strictEqual(structure.hitsMax, original.hitsMax);
+			// The subclass prototype must survive — `instanceof` holds and subclass methods stay live.
+			assert.ok(structure instanceof MySpawn);
+			assert.strictEqual(structure.doubleHits(), original.hits! * 2);
 		});
 	}));
 });
