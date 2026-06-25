@@ -1,9 +1,9 @@
 import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
 import type { Terrain } from 'xxscreeps/game/terrain.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { getOffsetsFromDirection } from 'xxscreeps/game/direction.js';
 import { Game } from 'xxscreeps/game/index.js';
 import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
-import { getOffsetsFromDirection } from 'xxscreeps/game/position.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from './room.js';
 

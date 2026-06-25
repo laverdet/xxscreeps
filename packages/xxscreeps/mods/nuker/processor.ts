@@ -4,7 +4,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
-import { RoomPosition, positionsInRangeTo } from 'xxscreeps/game/position.js';
+import { RoomPosition, iterateInRangeTo } from 'xxscreeps/game/position.js';
 import { walkLayers } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Room } from 'xxscreeps/game/room/index.js';
@@ -82,7 +82,7 @@ function applyNukeImpact(nuke: Nuke) {
 	}
 
 	// 5x5 blast: rampart on tile absorbs first, residual hits non-rampart structures.
-	for (const pos of positionsInRangeTo(nuke.pos, 2)) {
+	for (const pos of iterateInRangeTo(nuke.pos, 2)) {
 		const damage = C.NUKE_DAMAGE[nuke.pos.getRangeTo(pos)] ?? 0;
 		const objects = Fn.pipe(
 			nuke.room['#lookAt'](pos),

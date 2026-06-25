@@ -8,13 +8,12 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
 import { compose, declare } from 'xxscreeps/schema/index.js';
 import { iteratee } from 'xxscreeps/utility/iteratee.js';
-import { getDirection } from './direction.js';
+import { ALL_DIRECTIONS, getDirection, getOffsetsFromDirection } from './direction.js';
 import { kMaxWorldSize, makeRoomNameFromId, parseRoomName } from './room/name.js';
 import { Game, registerGlobal } from './index.js';
 
 export type { Direction } from './direction.js';
 export { isBorder, isNearBorder } from './terrain.js';
-export { getOffsetsFromDirection, getPositionInDirection, iterateNeighbors } from './direction.js';
 
 type FindClosestByPathOptions<Type> =
 	RoomFindOptions<Type> & Omit<PathFinder.RoomSearchOptions, 'range'>;
@@ -471,14 +470,33 @@ export function fetchRoom(roomName: string) {
  * Iterate all positions within some range to the given position. It sweeps left to right, top to
  * bottom.
  */
-export function *positionsInRangeTo(origin: RoomPosition, range: number) {
-	const left = Math.max(0, origin.x - range);
-	const right = Math.min(kMaxRoomCoordinate, origin.x + range);
-	const top = Math.max(0, origin.y - range);
-	const bottom = Math.min(kMaxRoomCoordinate, origin.y + range);
+export function iterateInRangeTo(origin: RoomPosition, range: number) {
+	return iterateArea(
+		origin.roomName,
+		Math.max(0, origin.y - range),
+		Math.max(0, origin.x - range),
+		Math.min(kMaxRoomCoordinate, origin.y + range),
+		Math.min(kMaxRoomCoordinate, origin.x + range));
+}
+
+export function *iterateArea(roomName: string, top: number, left: number, bottom: number, right: number) {
 	for (let yy = top; yy <= bottom; ++yy) {
 		for (let xx = left; xx <= right; ++xx) {
-			yield new RoomPosition(xx, yy, origin.roomName);
+			yield new RoomPosition(xx, yy, roomName);
 		}
 	}
+}
+
+export function iterateNeighbors(position: RoomPosition) {
+	return function*() {
+		const { x, y, roomName } = position;
+		for (const direction of ALL_DIRECTIONS) {
+			const { dx, dy } = getOffsetsFromDirection(direction);
+			const posX = x + dx;
+			const posY = y + dy;
+			if (posX >= 0 && posX < 50 && posY >= 0 && posY < 50) {
+				yield new RoomPosition(posX, posY, roomName);
+			}
+		}
+	}();
 }

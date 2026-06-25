@@ -5,7 +5,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
-import { RoomPosition, positionsInRangeTo } from 'xxscreeps/game/position.js';
+import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
 import { makeSectorRadiusFilter, sectorsForRoom } from 'xxscreeps/game/room/sector.js';
 import { calculatePower } from 'xxscreeps/mods/creep/creep.js';
@@ -34,7 +34,7 @@ function findPlacement(world: World, centralRoom: string, targetRoom: RoomClass)
 			continue;
 		}
 		const from = new RoomPosition(xx, yy, targetRoom.name);
-		const hasExit = Fn.some(positionsInRangeTo(from, 1), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL);
+		const hasExit = Fn.some(iterateNeighbors(from), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL);
 		if (!hasExit) {
 			continue;
 		}

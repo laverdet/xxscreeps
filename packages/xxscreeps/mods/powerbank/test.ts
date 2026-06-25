@@ -5,7 +5,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomPosition, positionsInRangeTo } from 'xxscreeps/game/position.js';
+import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { isHighwayRoom } from 'xxscreeps/game/room/sector.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
@@ -177,7 +177,7 @@ describe('PowerBank placement', () => {
 		const terrain = world.map.getRoomTerrain('W0N0');
 		assert.ok(bank.pos.x >= 5 && bank.pos.x <= 44 && bank.pos.y >= 5 && bank.pos.y <= 44, 'position within 5..44');
 		assert.ok(terrain.get(bank.pos.x, bank.pos.y) === C.TERRAIN_MASK_WALL, 'placed on wall terrain');
-		const hasExit = Fn.some(positionsInRangeTo(bank.pos, 1), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL);
+		const hasExit = Fn.some(iterateNeighbors(bank.pos), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL);
 		assert.ok(hasExit, 'placed next to a non-wall position');
 		// Object fidelity. Seed-1 rng may or may not crit, so allow the crit ceiling.
 		assert.ok(bank.power >= C.POWER_BANK_CAPACITY_MIN && bank.power < 2 * C.POWER_BANK_CAPACITY_MAX,

@@ -3,14 +3,14 @@ import type { PositionParameter } from 'xxscreeps/game/position.js';
 import type { UnwrapArray } from 'xxscreeps/utility/types.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { iterateArea } from 'xxscreeps/game/direction.js';
-import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
+import { RoomPosition, fetchPositionArgument, iterateArea } from 'xxscreeps/game/position.js';
 import { terrainMaskToString } from 'xxscreeps/game/terrain.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from './room.js';
 import { lookConstants } from './symbols.js';
 
 // All LOOK_ constants
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Look {}
 export type LookConstants = LookInfo['look'] | typeof C.LOOK_TERRAIN;
 
@@ -136,6 +136,7 @@ extend(Room, {
 			// Iterate objects
 			Fn.transform(objects, object => lookAtAreaEntries(object)),
 			// Add terrain data
+			// eslint-disable-next-line id-length
 			mapArea(top, left, bottom, right, (x, y) =>
 				({ x, y, type: 'terrain', terrain: terrainMaskToString[terrain.get(x, y)] })),
 		]);
@@ -164,6 +165,7 @@ extend(Room, {
 		if (type === C.LOOK_TERRAIN) {
 			// Simply return terrain data
 			const terrain = this.getTerrain();
+			// eslint-disable-next-line id-length
 			const results = mapArea(top, left, bottom, right, (x, y) =>
 				({ x, y, terrain: terrainMaskToString[terrain.get(x, y)] }));
 			return withAsArray(results, top, left, bottom, right, asArray, false, value => value.terrain) as never;

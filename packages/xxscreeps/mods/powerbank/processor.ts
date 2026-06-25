@@ -2,7 +2,7 @@ import type { World } from 'xxscreeps/game/map.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { RoomPosition, positionsInRangeTo } from 'xxscreeps/game/position.js';
+import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
 import { StructurePowerBank, create } from './powerbank.js';
 
@@ -26,7 +26,7 @@ function findPlacement(world: World, roomName: string) {
 		const yy = Math.floor(Math.random() * 40) + 5;
 		if (terrain.get(xx, yy) !== C.TERRAIN_MASK_WALL) continue;
 		const from = new RoomPosition(xx, yy, roomName);
-		const hasExit = Fn.some(positionsInRangeTo(from, 1), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL);
+		const hasExit = Fn.some(iterateNeighbors(from), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL);
 		if (!hasExit) continue;
 		return from;
 	}

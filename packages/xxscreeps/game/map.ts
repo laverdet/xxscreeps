@@ -10,8 +10,8 @@ import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
 import * as C from './constants/index.js';
-import { getDirection } from './direction.js';
-import { RoomPosition, getOffsetsFromDirection } from './position.js';
+import { getDirection, getOffsetsFromDirection } from './direction.js';
+import { RoomPosition } from './position.js';
 import * as Terrain from './terrain.js';
 
 // Schema

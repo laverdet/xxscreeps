@@ -5,7 +5,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
-import { positionsInRangeTo } from 'xxscreeps/game/position.js';
+import { iterateInRangeTo } from 'xxscreeps/game/position.js';
 import { walkLayers } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
@@ -71,7 +71,7 @@ const intents = [
 	}, (creep, context) => {
 		if (checkRangedMassAttack(creep) === C.OK) {
 			const basePower = calculatePower(creep, C.RANGED_ATTACK, C.RANGED_ATTACK_POWER, 'rangedMassAttack');
-			for (const pos of positionsInRangeTo(creep.pos, 3)) {
+			for (const pos of iterateInRangeTo(creep.pos, 3)) {
 				const power = basePower * (kRangedMassAttackPower[creep.pos.getRangeTo(pos)] ?? 0);
 				const objects = Fn.pipe(
 					creep.room['#lookAt'](pos),
