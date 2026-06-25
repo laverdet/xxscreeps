@@ -56,7 +56,7 @@ export const load: LoadHook = (urlString, context, nextLoad) => {
 			shortCircuit: true,
 			source: makeModSourceText(mods, provide),
 		};
-	} else if (privateTransformBase !== undefined && urlString.startsWith(privateTransformBase)) {
+	} else if (privateTransformBase !== undefined && urlString.startsWith(privateTransformBase) && context.importAttributes.type === undefined) {
 		return async function() {
 			return {
 				format: 'module',

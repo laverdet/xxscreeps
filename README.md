@@ -121,6 +121,29 @@ schema](src/config/config.ts).
 
 If you want to use your bot script, use `npx xxscreeps import --overwrite-code ../your-bot/dist` to replace builtin bots.
 
+### Adding bots
+
+`import --overwrite-code` replaces the built-in bots. To add a *named* bot — and optionally place
+its first spawn — without touching the built-ins, use the `manage` subcommand:
+
+```
+npx xxscreeps manage bot add <name> <dir> --spawn <room>
+```
+
+`<dir>` is a flat directory of a bot's built modules — `main.js` (CommonJS), `main.mjs` (ESM), or a
+`main.wasm`/`*.wasm` binary. Subdirectories are ignored, so point it at the build output (often `src`
+or `dist`), not the source tree of a bot that still needs compiling. `--spawn` also places the bot's
+first spawn, whether or not a server is running; drop it to just save the code. Open-source bots
+published for vanilla servers work as-is:
+
+```
+npm install screeps-bot-tooangel
+npx xxscreeps manage bot add tooangel node_modules/screeps-bot-tooangel/src --spawn W5N5
+```
+
+`manage` also has `user` verbs plus `bot update`/`bot remove`; run `xxscreeps manage` with no
+arguments to print the full command list.
+
 ## Operator CLI
 
 `xxscreeps cli` opens a JavaScript REPL in the CLI process's host realm, and

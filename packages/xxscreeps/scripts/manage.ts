@@ -1,22 +1,41 @@
-// Ops tool for managing users on a self-hosted xxscreeps server — connects to the configured
-// storage provider directly, like scripts/scrape-world.ts. Run after `tsc -b`:
-// `node packages/xxscreeps/dist/scripts/manage.js user <verb> ...` (usage() lists commands).
+// Ops tool for managing users and bots on a self-hosted xxscreeps server — connects to the
+// configured storage provider directly, like scripts/scrape-world.ts. Registered as the `manage`
+// subcommand; run after `tsc -b`: `xxscreeps manage <user|bot> <verb> ...` (usage() lists commands).
 //
 // The running engine caches state: list/show/create read storage per request, but a new user isn't
-// processed until it owns an object in a room. `remove` deletes records only — owned room objects
-// are left alone — and is safe for inactive users; pause the engine first if the user is live.
+// processed until it owns an object in a room — `bot add --spawn` covers that by acquiring the game
+// mutex and applying the same claim/spawn mutation the `placeSpawn` intent performs, in between ticks,
+// so it works whether or not the server is running (a running server hands off the mutex between ticks).
+// Code saves are picked up by the runner on the next tick via the code channel. `remove` deletes
+// records only — owned room objects are left alone — and is safe for inactive users; pause the
+// engine first if the user is live.
 
 import * as fs from 'node:fs/promises';
+import * as nodePath from 'node:path';
 import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { Mutex } from 'xxscreeps/engine/db/mutex.js';
 import * as Badge from 'xxscreeps/engine/db/user/badge.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
+import { updateUserRoomRelationships, userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { Game, GameState, runAsUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
+import { RoomPosition } from 'xxscreeps/game/position.js';
+import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { setPassword } from 'xxscreeps/mods/backend/password/model.js';
+import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';
+import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
 import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/memory/model.js';
+import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
+import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
+import { OwnedStructure } from 'xxscreeps/mods/structure/structure.js';
+
+import 'xxscreeps:mods/game';
 
 await using db = await Database.connect();
 await using shard = await Shard.connect(db, config.shards[0]!.name);
@@ -132,6 +151,169 @@ async function userBranch(who: string, branch: string) {
 	out(`Set active branch for ${who} (${id}) to '${branch}'.`);
 }
 
+// Modules are keyed by filename (`main.js`, ...) — the same shape the backend saves for players.
+async function loadCodeDir(dir: string) {
+	const names = await fs.readdir(dir);
+	const entries = await Fn.mapAwait(names, async name => {
+		const path = nodePath.join(dir, name);
+		if (!(await fs.stat(path)).isFile()) {
+			// Bots are a flat module map; a nested build tree would load partially and fail
+			// cryptically in the sandbox, so surface what's dropped instead of skipping silently.
+			process.stderr.write(`Warning: skipping non-file '${name}'; subdirectories are not loaded.\n`);
+			return undefined;
+		}
+		// `.wasm` modules are binary; reading them as utf8 corrupts the bytes. Store the raw bytes
+		// and key a required wasm module without the extension — `require('foo')` resolves `foo`,
+		// never `foo.wasm` — matching the upload format real bots use. The `main.wasm` WASI entry
+		// keeps its name so the runtime's entry detection still finds it.
+		const wasm = nodePath.extname(name) === '.wasm';
+		const content: string | Uint8Array = wasm ? await fs.readFile(path) : await fs.readFile(path, 'utf8');
+		const key = wasm && name !== 'main.wasm' ? nodePath.basename(name, '.wasm') : name;
+		return [ key, content ] as const;
+	});
+	const modules: Code.CodePayload = new Map(Fn.filter(entries, nonNullPredicate));
+	if (modules.size === 0) {
+		throw new Error(`No code files in ${dir}`);
+	}
+	if (![ 'main.js', 'main', 'main.mjs', 'main.wasm' ].some(name => modules.has(name))) {
+		process.stderr.write(`Warning: no main module in ${dir}; the bot has no entry point.\n`);
+	}
+	return modules;
+}
+
+// Shared by `bot add` and `bot update`. Code loads before any database write so a bad directory
+// can't leave a half-registered user.
+async function botSave(who: string, dir: string, branchArg: string | undefined, create: boolean) {
+	const modules = await loadCodeDir(dir);
+	const id = await async function() {
+		if (create) {
+			if (!User.checkUsername(who)) {
+				throw new Error(`Invalid username: ${who}`);
+			}
+			const existing = await User.findUserByName(db, who);
+			if (existing !== null) {
+				process.stderr.write(`User ${who} already exists (${existing}); updating its code.\n`);
+				return existing;
+			}
+			const id = Id.generateId(12);
+			await User.create(db, id, who);
+			// A new bot has no badge and renders blank on the map; assign a random one, as the
+			// vanilla bot CLI does. Existing users keep theirs.
+			await Badge.save(db, id, JSON.stringify(Badge.generateRandom()));
+			return id;
+		}
+		return resolveUserId(who);
+	}();
+	const branch = branchArg ?? await db.data.hGet(User.infoKey(id), 'branch') ?? 'default';
+	await Code.saveContent(db, id, branch, modules);
+	await save();
+	out(`Saved ${modules.size} module(s) to ${who} (${id}) branch '${branch}'.`);
+	return id;
+}
+
+async function botSpawn(userId: string, roomName: string, coords?: string) {
+	const position = function() {
+		if (coords === undefined) {
+			return undefined;
+		}
+		const [ xx = NaN, yy = NaN ] = coords.split(',').map(Number);
+		return new RoomPosition(xx, yy, roomName);
+	}();
+
+	// Hold the game mutex so no tick runs while we mutate the room. A running server releases it
+	// between ticks; with no server it's uncontended and acquired immediately.
+	await using gameMutex = await Mutex.connect('game', shard.data, shard.pubsub);
+	await using lock = await gameMutex.acquire();
+
+	// Authoritative under the lock: the previous tick committed `time` before releasing the mutex,
+	// and no tick can start while we hold it.
+	const time = Number(await shard.data.get('time'));
+	const [ intentRooms, world ] = await Promise.all([
+		shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
+		shard.loadWorld(),
+	]);
+	if (intentRooms.length !== 0) {
+		throw new Error(`User has presence in: ${intentRooms.join(', ')}`);
+	}
+
+	// Validate the position (and pick a random one) against an owned copy of the room; this room is
+	// discarded — `runOneShot` mutates only in memory, nothing here is persisted.
+	const validateRoom = await shard.loadRoom(roomName, time);
+	const spawnPos = runOneShot(world, validateRoom, time, userId, () => {
+		if (!validateRoom.controller) {
+			throw new Error(`No controller in ${roomName}`);
+		}
+		if (validateRoom.controller.reservation || validateRoom.controller.owner) {
+			throw new Error(`Room is owned: ${roomName}`);
+		}
+		validateRoom['#user'] = validateRoom.controller['#user'] = userId;
+		validateRoom['#level'] = 1;
+		if (position) {
+			if (checkCreateConstructionSite(validateRoom, position, 'spawn', 'Spawn1') !== C.OK) {
+				throw new Error(`Invalid spawn position: ${position.x},${position.y}`);
+			}
+			return position;
+		}
+		const random = () => 3 + Math.floor(Math.random() * 46);
+		const found = Fn.find(
+			Fn.map(Fn.range(1000), () => new RoomPosition(random(), random(), roomName)),
+			pos => checkCreateConstructionSite(validateRoom, pos, 'spawn', 'Spawn1') === C.OK);
+		if (!found) {
+			throw new Error(`No valid spawn position found in ${roomName}`);
+		}
+		return found;
+	});
+
+	// Apply the spawn directly on a fresh, still-unowned room — the same mutation the `placeSpawn`
+	// intent performs (drop neutral objects, claim the controller, insert the spawn), but without the
+	// processor. `claim` queues its scratch writes through a minimal context we drain afterwards.
+	const room = await shard.loadRoom(roomName, time);
+	const state = new GameState(world, time + 1, [ room ]);
+	const tasks: Promise<unknown>[] = [];
+	const context = {
+		shard,
+		state,
+		didUpdate() {},
+		setActive() {},
+		wakeAt() {},
+		sendRoomIntent() {},
+		task(task: Promise<unknown>) {
+			tasks.push(task);
+		},
+	};
+	runWithState(state, () => runAsUser(userId, () => {
+		for (const object of room['#objects']) {
+			if (object['#user'] === null) {
+				if (object.hits !== undefined) {
+					room['#removeObject'](object);
+				}
+			} else if (object instanceof OwnedStructure) {
+				room['#insertObject'](createRuin(object, 100000));
+				room['#removeObject'](object);
+			} else {
+				room['#removeObject'](object);
+			}
+		}
+		ControllerProc.claim(context, room.controller!, userId);
+		room['#insertObject'](createSpawn(spawnPos, userId, 'Spawn1'));
+		room['#cumulativeEnergyHarvested'] = 0;
+		room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
+		room['#flushObjects'](state);
+	}));
+	await Promise.all(tasks);
+
+	// Persist both double-buffer slots so the room reads correctly whichever tick first processes it,
+	// and register the user/room relationship so the server keeps the room active.
+	const previousUsers = flushUsers(room);
+	await Promise.all([
+		updateUserRoomRelationships(shard, room, previousUsers),
+		shard.saveRoom(roomName, time, room),
+		shard.saveRoom(roomName, time + 1, room),
+	]);
+	await save();
+	out(`Placed spawn at ${spawnPos.x},${spawnPos.y} in ${roomName} (tick ${time}).`);
+}
+
 function usage(): never {
 	process.stderr.write(`Usage:
   user list
@@ -141,6 +323,9 @@ function usage(): never {
   user badge    <name|id> <json|file>
   user password <name|id> <password>
   user branch   <name|id> <branch>
+  bot  add    <name> <codeDir> [branch] [--spawn <room> [x,y]]
+  bot  update <name|id> <codeDir> [branch]
+  bot  remove <name|id>
 `);
 	process.exit(2);
 }
@@ -155,6 +340,20 @@ try {
 		case 'user badge': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBadge(rest[0], rest[1]); break;
 		case 'user password': if (rest[0] === undefined || rest[1] === undefined) usage(); await userPassword(rest[0], rest[1]); break;
 		case 'user branch': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBranch(rest[0], rest[1]); break;
+		case 'bot add': {
+			const spawnIndex = rest.indexOf('--spawn');
+			const args = spawnIndex === -1 ? rest : rest.slice(0, spawnIndex);
+			const spawnArgs = spawnIndex === -1 ? undefined : rest.slice(spawnIndex + 1);
+			if (args[0] === undefined || args[1] === undefined) usage();
+			const userId = await botSave(args[0], args[1], args[2], true);
+			if (spawnArgs !== undefined) {
+				if (spawnArgs[0] === undefined) usage();
+				await botSpawn(userId, spawnArgs[0], spawnArgs[1]);
+			}
+			break;
+		}
+		case 'bot update': if (rest[0] === undefined || rest[1] === undefined) usage(); await botSave(rest[0], rest[1], rest[2], false); break;
+		case 'bot remove': if (rest[0] === undefined) usage(); await userRemove(rest[0]); break;
 		default: usage();
 	}
 } catch (err) {

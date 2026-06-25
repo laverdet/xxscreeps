@@ -8,6 +8,7 @@ const specifier = process.argv[1];
 // Launch entry command
 const commands = {
 	import: './dist/scripts/scrape-world.js',
+	manage: './dist/scripts/manage.js',
 	start: './dist/engine/service/launcher.js',
 	main: './dist/engine/service/main.js',
 	backend: './dist/backend/server.js',
