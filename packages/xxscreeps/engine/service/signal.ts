@@ -33,6 +33,9 @@ export function initializeInterruptSignal() {
 		didSetupBroadcast = true;
 		// Broadcast SIGINT to workers
 		const broadcast = new BroadcastChannel('SIGINT');
+		// @ts-expect-error
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+		broadcast.unref();
 		const unlisten = listen(process, 'SIGINT', () => {
 			broadcast.postMessage('SIGINT');
 			setTimeout(() => {
@@ -52,5 +55,8 @@ export function handleInterruptSignal(fn: () => void) {
 		fn();
 		disposable.dispose();
 	};
+	// @ts-expect-error
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+	broadcast.unref();
 	return disposable;
 }

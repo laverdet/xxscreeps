@@ -2,7 +2,9 @@ import type { Effect } from './types.js';
 import type { MessagePort } from 'node:worker_threads';
 import { EventEmitter } from 'node:events';
 import { MessageChannel, parentPort } from 'node:worker_threads';
-import { Deferred, mustNotReject } from './async.js';
+import { messagePortToIterable } from 'xxscreeps/engine/db/storage/local/port.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import { Deferred } from './async.js';
 import { Worker, waitForWorker } from './worker.js';
 
 type RequestMessage = {
@@ -23,11 +25,12 @@ type ResponderResult<Type, Result> = [ Effect, (payload: Type) => Promise<Result
 const localEmitter = new EventEmitter();
 
 export async function negotiateResponderClient<Type, Result>(path: string, singleThread?: boolean) {
-	const { onMessage, onClose, wait } = await async function(): Promise<{
+	interface Adapter {
 		onMessage: (fn: (message: any) => void) => void;
-		onClose: (fn: (err: any) => void) => void;
+		onClose: (fn: (err: unknown) => void) => void;
 		wait: () => Promise<void>;
-	}> {
+	}
+	const { onMessage, onClose, wait } = function(): Adapter {
 		if (singleThread) {
 			const worker = import(`${path}?singleThread=1`);
 			return {
@@ -102,45 +105,27 @@ export function makeBasicResponderClient<Type, Result>(port: MessagePort): Respo
 }
 
 export async function makeBasicResponderHost<Type>(url: string, implementation: (payload: Type) => Promise<any>) {
-	const channel = new MessageChannel();
+	const { port1, port2 } = new MessageChannel();
 	const readyMessage = {
 		type: 'responderReady',
-		port: channel.port1,
+		port: port1,
 	};
-	if (new URL(url).searchParams.get('singleThread')) {
-		localEmitter.emit('message', readyMessage);
+	if (new URL(url).searchParams.get('singleThread') === null) {
+		parentPort!.postMessage(readyMessage, [ port1 ]);
 	} else {
-		parentPort!.postMessage(readyMessage, [ channel.port1 ]);
+		localEmitter.emit('message', readyMessage);
 	}
-	const port = channel.port2;
-	return new Promise<void>(resolve => {
-		let alive = true;
-		let pending = 0;
-		port.on('close', () => {
-			alive = false;
-			if (pending === 0) {
-				resolve();
-			}
-		});
-		port.on('message', (message: RequestMessage) => mustNotReject(async () => {
+	const responses = Fn.distribute(messagePortToIterable<RequestMessage>(port2), 16, async function*(messages): AsyncIterable<ResponseMessage> {
+		for await (const message of messages) {
 			const { payload, id } = message;
-			++pending;
 			try {
-				port.postMessage({
-					id,
-					payload: await implementation(payload as Type),
-				} satisfies ResponseMessage);
+				yield { id, payload: await implementation(payload as Type) };
 			} catch (err: any) {
-				port.postMessage({
-					id,
-					payload: err.stack,
-					rejection: true,
-				} satisfies ResponseMessage);
-			} finally {
-				if (--pending === 0 && !alive) {
-					resolve();
-				}
+				yield { id, payload: err.stack, rejection: true };
 			}
-		}));
+		}
 	});
+	for await (const response of responses) {
+		port2.postMessage(response);
+	}
 }

@@ -14,7 +14,7 @@ import { checkIsEntry, getServiceChannel } from './index.js';
 import 'xxscreeps:mods/driver';
 
 const isEntry = checkIsEntry();
-const log = config.runner.log ?? isEntry
+const log = isEntry || config.runner.log
 	? (message: string) => process.stderr.write(message)
 	: () => {};
 

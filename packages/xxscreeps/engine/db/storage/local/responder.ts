@@ -4,6 +4,7 @@ import type { MaybePromise } from 'xxscreeps/utility/types.js';
 import { parentPort } from 'node:worker_threads';
 import { config, configPath } from 'xxscreeps/config/index.js';
 import { isTopThread } from 'xxscreeps/engine/service/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
 import { runOnce } from 'xxscreeps/utility/memoize.js';
@@ -99,13 +100,15 @@ export abstract class SharedResponder implements AsyncDisposable {
 // Used in host isolate
 const responderHostsByName = new Map<string, ResponderHost>();
 
-abstract class ResponderClient {
+abstract class ResponderClient implements AsyncDisposable {
+	readonly #disposable;
 	#disconnected = false;
 	#requestId = 0;
 	readonly #send;
 	readonly #requests = new Map<number, PromiseWithResolvers<unknown>>();
 
-	constructor(send: SocketResponderSend) {
+	constructor(disposable: AsyncDisposable, send: SocketResponderSend) {
+		this.#disposable = disposable;
 		this.#send = send;
 	}
 
@@ -126,11 +129,7 @@ abstract class ResponderClient {
 		disposable.use(port);
 
 		// Forward requests to port
-		await using clientDispose = new AsyncDisposableStack();
-		const client = clientDispose.adopt(
-			new constructor(disposable.move(), port.send),
-			client => client.#disconnect());
-		disposable.use(clientDispose.move());
+		const client = new constructor(disposable.move(), port.send);
 		mustNotReject(async function() {
 			for await (const message of port.messages) {
 				const { requestId } = message;
@@ -159,7 +158,8 @@ abstract class ResponderClient {
 		return deferred.promise;
 	}
 
-	#disconnect() {
+	async [Symbol.asyncDispose]() {
+		await this.#disposable[Symbol.asyncDispose]();
 		if (this.#disconnected) {
 			throw new Error('Already disconnected responder client');
 		}
@@ -189,22 +189,28 @@ abstract class ResponderHost<Type extends ResponderImplementation = ResponderImp
 	static connect(host: ResponderHost, port: LocalPayloadPort<ResponseMessage, RequestMessage>) {
 		const instance = host.#instance;
 		mustNotReject(async function() {
-			for await (const message of port.messages) {
-				const { method, payload, requestId } = message;
-				mustNotReject(async function() {
+			// TODO: I want a version of `Fn.distribute` with unlimited throughput bound by the receiver's
+			// speed.
+			const responses = Fn.distribute(port.messages, 16, async function*(messages): AsyncIterable<ResponseMessage> {
+				for await (const message of messages) {
+					const { method, payload, requestId } = message;
 					try {
-						port.send({
+						yield {
 							requestId,
 							payload: await instance[method]!(...payload),
-						});
+						};
 					} catch (error: any) {
-						port.send({
+						yield {
 							requestId,
+							// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 							payload: error.stack,
 							rejection: true,
-						});
+						};
 					}
-				}());
+				}
+			});
+			for await (const response of responses) {
+				port.send(response);
 			}
 		}());
 	}
@@ -312,7 +318,7 @@ function applyResponderMethods(
 }
 
 /** @internal */
-export function makeClient<Type>(constructor: abstract new(...args: any[]) => Type) {
+export function makeClient<Type extends AsyncDisposable, Params extends unknown[]>(constructor: abstract new(...args: Params) => Type) {
 
 	// Create client wrapper class for this responder
 	class Client extends ResponderClient {
@@ -323,7 +329,7 @@ export function makeClient<Type>(constructor: abstract new(...args: any[]) => Ty
 	});
 
 	// Add in types
-	return Client as never as new() => ResponderClient & WithPromises<Type>;
+	return Client as unknown as new() => ResponderClient & WithPromises<Type>;
 }
 
 /** @internal */
@@ -338,5 +344,5 @@ export function makeHost<Type>(constructor: abstract new(...args: any[]) => Type
 	});
 
 	// Add in types
-	return Host as never as new(name: string, instance: Type) => ResponderHost & WithPromises<Type>;
+	return Host as unknown as new(name: string, instance: Type) => ResponderHost & WithPromises<Type>;
 }

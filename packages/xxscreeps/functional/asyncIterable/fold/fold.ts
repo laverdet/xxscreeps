@@ -11,9 +11,10 @@ export async function foldAsync<Type, Identity = never>(
 	identity: Identity,
 	operation: (left: Type, right: Type) => Type | PromiseLike<Type>,
 ): Promise<Type | Identity> {
-	const { head, rest } = await shiftAsync(iterable);
+	await using shift = await shiftAsync(iterable);
+	const { head, rest } = shift;
 	if (rest) {
-		return reduceAsync(rest, head, operation);
+		return await reduceAsync(rest, head, operation);
 	} else {
 		return identity;
 	}

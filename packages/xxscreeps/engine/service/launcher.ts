@@ -59,7 +59,7 @@ const [ main ] = await async function() {
 
 // Interrupt handler (after 'main' initialized). If it hasn't initialized then the default 'SIGINT'
 // will just terminate.
-using _signal = handleInterruptSignal(() => {
+using signal = handleInterruptSignal(() => {
 	console.log('Shutting down...');
 	mustNotReject(getServiceChannel(shard).publish({ type: 'shutdown' }));
 });
@@ -69,8 +69,10 @@ const singleThreaded = config.launcher?.singleThreaded;
 const { services, backend } = function() {
 	if (singleThreaded) {
 		const backend = argv['no-backend'] ? null : import('xxscreeps/backend/server.js');
-		const processor = argv['no-processor'] ? null : import('./processor.js');
-		const runner = argv['no-runner'] ? null : import('./runner.js');
+		// eslint-disable-next-line no-useless-concat
+		const processor = argv['no-processor'] ? null : import('./processor.js' + '?launcher');
+		// eslint-disable-next-line no-useless-concat
+		const runner = argv['no-runner'] ? null : import('./runner.js' + '?launcher');
 		const services = Promise.all([ main, processor, runner ]);
 		return { services, backend };
 	} else {

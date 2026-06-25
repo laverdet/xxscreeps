@@ -12,7 +12,7 @@ import { handleInterruptSignal } from './signal.js';
 import { checkIsEntry, getServiceChannel } from './index.js';
 
 const isEntry = checkIsEntry();
-const log = config.processor.log ?? isEntry
+const log = isEntry || config.processor.log
 	? (message: string) => process.stderr.write(message)
 	: () => {};
 
@@ -21,7 +21,7 @@ const log = config.processor.log ?? isEntry
 let halt: Effect | undefined;
 let halted = false as boolean;
 let processing = false;
-using _signal = handleInterruptSignal(() => {
+using signal = handleInterruptSignal(() => {
 	halted = true;
 	if (isEntry && !processing) {
 		halt?.();
@@ -37,6 +37,24 @@ const processorSubscription = disposable.adopt(
 	await getProcessorChannel(shard).subscribe(),
 	subscription => subscription.disconnect());
 
+// Sync with main
+await async function() {
+	await using disposable = new AsyncDisposableStack();
+	const channel = disposable.adopt(
+		await getServiceChannel(shard).subscribe(),
+		subscription => subscription.disconnect());
+	const messages = channel.iterable();
+	await channel.publish({ type: 'processorConnected' });
+	for await (const message of Async.breakable(messages, breaker => halt = breaker)) {
+		if (message.type === 'shutdown' || halted) {
+			break;
+		} else if (message.type === 'mainConnected') {
+			return;
+		}
+	}
+	throw new Error('Processor initialization failure');
+}();
+
 // Create processor workers
 type RoomWorker = typeof workers extends (infer Type)[] ? Type : never;
 const userCount = Number(await db.data.sCard('users')) - 3; // minus Invader, Source Keeper, Screeps
@@ -46,7 +64,7 @@ const workers = await Fn.pipe(
 	Fn.range(processorCount),
 	$$ => Fn.mapAwait($$, async () => {
 		const client = disposable.adopt(
-			await negotiateResponderClient<ProcessorRequest, void>('xxscreeps/engine/processor/worker.js', singleThreaded),
+			await negotiateResponderClient<ProcessorRequest, unknown>('xxscreeps/engine/processor/worker.js', singleThreaded),
 			client => {
 				client.close();
 				return client.wait();
@@ -102,23 +120,8 @@ await Fn.mapAwait(workers, async worker => {
 		}
 	}
 });
-
-// Wait for initialization signal from main
 const processorMessages = processorSubscription.iterable();
-await Promise.all([
-	getServiceChannel(shard).publish({ type: 'processorInitialized' }),
-	async function() {
-		const messages = processorSubscription.iterable();
-		for await (const message of Async.breakable(messages, breaker => halt = breaker)) {
-			if (message.type === 'shutdown' || halted) {
-				throw new Error('Processor initialization failure');
-			} else if (message.type === 'process') {
-				return;
-			}
-		}
-		throw new Error('End of message stream');
-	}(),
-]);
+await getServiceChannel(shard).publish({ type: 'processorInitialized' });
 
 // Process messages
 loop: for await (const message of Async.breakable(processorMessages, breaker => halt = breaker)) {

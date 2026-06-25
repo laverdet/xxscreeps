@@ -1,9 +1,9 @@
-interface ShiftAsyncEmpty {
+interface ShiftAsyncEmpty extends AsyncDisposable {
 	head: undefined;
 	rest: undefined;
 }
 
-interface ShiftAsyncResult<Type> {
+interface ShiftAsyncResult<Type> extends AsyncDisposable {
 	head: Type;
 	rest: AsyncIterable<Type>;
 }
@@ -19,16 +19,24 @@ export async function shiftAsync<Type>(iterable: AsyncIterable<Type, unknown>): 
 	const { done, value } = await iterator.next();
 	if (done) {
 		return {
+			async [Symbol.asyncDispose]() {},
 			head: undefined,
 			rest: undefined,
 		};
 	} else {
+		let didAccept = false;
 		const rest: AsyncIterable<Type> = {
 			[Symbol.asyncIterator]() {
+				didAccept = true;
 				return iterator;
 			},
 		};
 		return {
+			async [Symbol.asyncDispose]() {
+				if (!didAccept) {
+					await iterator.return?.();
+				}
+			},
 			head: value,
 			rest,
 		};

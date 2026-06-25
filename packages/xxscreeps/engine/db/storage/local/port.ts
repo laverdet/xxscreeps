@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import * as v8 from 'node:v8';
 import { MessageChannel, parentPort } from 'node:worker_threads';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { listen, listenEvent } from 'xxscreeps/utility/async.js';
+import { listen } from 'xxscreeps/utility/async.js';
 
 const arrayBufferViews = [
 	BigInt64Array,
@@ -282,10 +282,7 @@ export async function makeSocketPortListener<Send, Receive>(
 	disposable.use(server);
 
 	// Watch for connections
-	const signal = disposable.adopt(new AbortController(), controller => controller.abort()).signal;
 	server.on('connection', socket => {
-		const unlisten = listenEvent(signal, 'abort', () => socket.end());
-		socket.on('close', unlisten);
 		handler({
 			messages: iterateMessages(socket),
 			send: makeSendMessage(socket),
@@ -316,13 +313,7 @@ export async function makeSocketPortConnection<Send, Receive>(url: URL): Promise
 	const send = makeSendMessage(connection);
 	return {
 		messages: iterateMessages(connection),
-		send: message => {
-			if (connection.writable) {
-				send(message);
-			} else {
-				throw new Error('Connection closed');
-			}
-		},
+		send,
 		[Symbol.asyncDispose]: function(dispose) {
 			return async () => {
 				await using _dispose = dispose;
@@ -349,7 +340,7 @@ interface WorkerConnectedMessage {
 }
 
 // Iterates messages from a MessagePort
-async function *messagePortToIterable<Message>(port: MessagePort): AsyncIterable<Message> {
+export async function *messagePortToIterable<Message>(port: MessagePort): AsyncIterable<Message> {
 	using disposable = new DisposableStack();
 	disposable.defer(() => port.close());
 	let deferred = Promise.withResolvers<boolean>();
@@ -399,7 +390,7 @@ export function makeWorkerPortListener<Send, Receive>(
 				const { port } = message;
 				port.postMessage({ type: 'workerConnected' } satisfies WorkerConnectedMessage);
 				portHandler({
-					messages: Fn.transformAsync(messagePortToIterable<Receive[]>(port), Fn.identity),
+					messages: Fn.concatAsync(messagePortToIterable<Receive[]>(port)),
 					send: batchMessagePortSend(port),
 				});
 			}
@@ -419,12 +410,12 @@ export async function makeWorkerPortConnection<Send, Receive>(name: string): Pro
 		name,
 		port: port2,
 	} satisfies WorkerConnectMessage, [ port2 ]);
-	const shift = await Fn.shiftAsync(messagePortToIterable<Receive[] | WorkerConnectedMessage>(port1));
+	await using shift = await Fn.shiftAsync(messagePortToIterable<Receive[] | WorkerConnectedMessage>(port1));
 	const messages = function() {
 		if (shift.head) {
 			const message = shift.head as WorkerConnectedMessage | UnknownMessage;
 			if (message.type === 'workerConnected') {
-				return shift.rest;
+				return shift.rest satisfies AsyncIterable<WorkerConnectedMessage | Receive[]> as AsyncIterable<Receive[]>;
 			}
 		}
 	}();
@@ -434,11 +425,10 @@ export async function makeWorkerPortConnection<Send, Receive>(name: string): Pro
 			async [Symbol.asyncDispose]() {
 				port1.close();
 			},
-			messages: Fn.transformAsync(messages as AsyncIterable<Receive[]>, Fn.identity),
+			messages: Fn.concatAsync(messages),
 			send: batchMessagePortSend(port1),
 		};
 	} else {
-		await shift.rest?.[Symbol.asyncIterator]().return?.();
 		throw new Error(`Failed to connect to worker port ${name}.`);
 	}
 }

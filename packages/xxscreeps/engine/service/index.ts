@@ -11,6 +11,7 @@ export function getServiceChannel(shard: Shard) {
 		{ type: 'shutdown' } |
 		{ type: 'mainConnected' } |
 		{ type: 'mainDisconnected' } |
+		{ type: 'processorConnected' } |
 		{ type: 'processorInitialized' } |
 		{ type: 'runnerConnected' } |
 		{ type: 'tickFinished'; time: number };
