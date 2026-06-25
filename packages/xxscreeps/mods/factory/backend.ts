@@ -7,6 +7,6 @@ bindRenderer(StructureFactory, (factory, next, previousTime) => ({
 	...next(),
 	...renderStore(factory.store),
 	actionLog: renderActionLog(factory['#actionLog'], previousTime),
-	cooldown: factory.cooldown,
+	cooldownTime: factory['#cooldownTime'],
 	level: factory.level,
 }));

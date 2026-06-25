@@ -6,7 +6,7 @@ import { StructureNuker } from './nuker.js';
 bindRenderer(StructureNuker, (nuker, next) => ({
 	...next(),
 	...renderStore(nuker.store),
-	cooldown: nuker.cooldown,
+	cooldownTime: nuker['#cooldownTime'],
 }));
 
 bindRenderer(Nuke, (nuke, next) => ({

@@ -74,7 +74,9 @@ describe('Deposit', () => {
 		await poke('W1N1', '100', (_Game, room) => {
 			const deposit = room['#lookFor'](C.LOOK_DEPOSITS)[0];
 			assert.strictEqual(deposit?.lastCooldown, cooldown(1000));
-			assert.strictEqual(deposit.cooldown, cooldown(1000));
+			// Observable cooldown is the curve minus 1: written in the processor at gameTime T,
+			// read in user code at runtimeData.time T+1.
+			assert.strictEqual(deposit.cooldown, cooldown(1000) - 1);
 		});
 	}));
 
