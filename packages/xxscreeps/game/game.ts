@@ -75,12 +75,6 @@ export class Game extends GameBase {
 	declare cpu: CPU;
 
 	/**
-	 * A hash containing all your power creeps with their names as hash keys. xxscreeps does not
-	 * implement power creeps yet, so this is always an empty object.
-	 */
-	powerCreeps = Object.create(null) as Record<string, unknown>;
-
-	/**
 	 * An object describing the world shard where your script is currently being executed in.
 	 */
 	shard: { name: string; type: string; ptr: boolean };

@@ -16,6 +16,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/observer',
 		'xxscreeps/mods/portal',
 		'xxscreeps/mods/powerbank',
+		'xxscreeps/mods/powercreep',
 		'xxscreeps/mods/powerspawn',
 		'xxscreeps/mods/road',
 		'xxscreeps/mods/source',
