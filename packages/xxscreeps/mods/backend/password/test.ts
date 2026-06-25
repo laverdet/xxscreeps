@@ -5,7 +5,7 @@ import { checkPassword, setPassword } from './model.js';
 
 describe('password', () => {
 	test('set then check round-trips', async () => {
-		using testShard = await instantiateTestShard();
+		await using testShard = await instantiateTestShard();
 		const { db } = testShard;
 		await User.create(db, '300', 'PwUser');
 		await setPassword(db, '300', 'correct horse battery');

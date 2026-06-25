@@ -1,5 +1,4 @@
 import type * as Storage from 'xxscreeps/engine/db/storage/provider.js';
-import type { Effect } from 'xxscreeps/utility/types.js';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as Path from 'node:path';
@@ -8,23 +7,26 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { listen, spread } from 'xxscreeps/utility/async.js';
 import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
 
-export class BlobStorage {
+export class BlobStorage implements AsyncDisposable {
 	private readonly cache = new Map<string, {
 		saveId: number;
 		value: Readonly<Uint8Array> | null;
 	}>();
 
 	private saveId = 0;
+	private readonly disposable;
 	private readonly lock;
 	private readonly knownPaths = new Set<string>();
 	private readonly path;
 
-	constructor(path: string | null, lock: FileSystemLock | undefined) {
+	constructor(disposable: AsyncDisposableStack, path: string | null, lock: FileSystemLock | undefined) {
+		this.disposable = disposable;
 		this.path = path;
 		this.lock = lock;
 	}
 
-	static async create(url: URL): Promise<[ Effect, BlobStorage ]> {
+	static async create(url: URL): Promise<BlobStorage> {
+		await using disposable = new AsyncDisposableStack();
 		if (url.protocol === 'file:') {
 			// Ensure directory exists
 			assert.ok(url.pathname.endsWith('/'));
@@ -32,19 +34,24 @@ export class BlobStorage {
 			await fs.mkdir(path, { recursive: true });
 
 			// Acquire lock
-			const disposable = new DisposableStack();
 			const lock = disposable.use(await FileSystemLock.acquire(new URL('.lock', url)));
 
 			// Watch for missing `save`
-			disposable.defer(listen(process, 'exit', () => host.checkMissingFlush()));
-			disposable.defer(() => host.checkMissingFlush());
+			using checks = new DisposableStack();
+			checks.defer(listen(process, 'exit', () => host.checkMissingFlush()));
+			checks.defer(() => host.checkMissingFlush());
+			disposable.use(checks.move());
 
 			// Return effect & blob provider
-			const host = new BlobStorage(path, lock);
-			return [ () => disposable.dispose(), host ];
+			const host = new BlobStorage(disposable.move(), path, lock);
+			return host;
 		} else {
-			return [ () => {}, new BlobStorage(null, undefined) ];
+			return new BlobStorage(disposable.move(), null, undefined);
 		}
+	}
+
+	[Symbol.asyncDispose]() {
+		return this.disposable.disposeAsync();
 	}
 
 	async copy(from: string, to: string, options?: Storage.Copy) {

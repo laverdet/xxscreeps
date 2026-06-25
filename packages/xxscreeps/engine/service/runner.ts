@@ -33,9 +33,9 @@ using _signal = handleInterruptSignal(() => {
 });
 
 // Connect to main & storage
+await using db = await Database.connect();
+await using shard = await Shard.connect(db, config.shards[0]!.name);
 using disposable = new DisposableStack();
-using db = await Database.connect();
-using shard = await Shard.connect(db, config.shards[0]!.name);
 const runnerSubscription = disposable.adopt(
 	await getRunnerChannel(shard).subscribe(),
 	subscription => subscription.disconnect());

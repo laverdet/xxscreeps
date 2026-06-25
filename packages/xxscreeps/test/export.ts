@@ -7,8 +7,8 @@ import 'xxscreeps:mods/game';
 
 export type Payload = typeof payload;
 
-using db = await Database.connect();
-using shard = await Shard.connect(db, 'shard0');
+await using db = await Database.connect();
+await using shard = await Shard.connect(db, 'shard0');
 const map = await shard.loadWorld();
 const terrainMask = [ ' ', '#', ',', '?' ];
 

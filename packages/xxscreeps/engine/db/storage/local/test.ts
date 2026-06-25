@@ -3,7 +3,7 @@ import { assert, describe, test } from 'xxscreeps/test/index.js';
 
 describe('LocalKeyValResponder', () => {
 	test('zUnionStore applies WEIGHTS to single-set members', async () => {
-		using testShard = await instantiateTestShard();
+		await using testShard = await instantiateTestShard();
 		const { scratch } = testShard.shard;
 		await Promise.all([
 			scratch.zAdd('a', [ [ 5, 'only-a' ] ]),

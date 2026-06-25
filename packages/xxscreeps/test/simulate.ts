@@ -97,7 +97,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 	return async (body: (refs: Simulation) => Promise<void>) => {
 
 		Memory.initialize(null);
-		using testShard = await instantiateTestShard();
+		await using testShard = await instantiateTestShard();
 		const { db, shard, world } = testShard;
 
 		// Initialize world

@@ -118,7 +118,7 @@ export interface KeyValProvider {
 	save(): Promise<void>;
 }
 
-export interface PubSubProvider {
+export interface PubSubProvider extends AsyncDisposable {
 	// pub/sub
 	publish(key: string, message: string): Promise<void>;
 	subscribe(key: string, listener: PubSubListener): Promise<readonly [ Effect, PubSubSubscription ]>;

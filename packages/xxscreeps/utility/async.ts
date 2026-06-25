@@ -48,6 +48,34 @@ export function acquire(...async: AsyncEffectAndResult[]): Promise<[ Effect, any
 	});
 }
 
+export async function acquireWith<
+	Type extends PromiseLike<unknown>[],
+>(
+	acquire: (fn: Awaited<Type[number]>) => void,
+	...async: Type
+): Promise<{
+	[Key in keyof Type]: Awaited<Type[Key]>
+}>;
+
+export async function acquireWith(acquire: (fn: unknown) => void, ...async: PromiseLike<unknown>[]) {
+	const settled = await Promise.allSettled(async);
+	for (const result of settled) {
+		if (result.status === 'fulfilled') {
+			acquire(result.value);
+		}
+	}
+	if (settled.every(result => result.status === 'fulfilled')) {
+		return settled.map(result => result.value);
+	} else {
+		const threw = settled.filter(result => result.status === 'rejected');
+		if (threw.length === 1) {
+			throw threw[0]!.reason;
+		} else {
+			throw new AggregateError(threw);
+		}
+	}
+}
+
 /**
  * Returns a delegate generator which can be broken externally. This will cause the generator to
  * discard a result.

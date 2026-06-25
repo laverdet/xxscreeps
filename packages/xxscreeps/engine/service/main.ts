@@ -14,8 +14,8 @@ import 'xxscreeps:mods/main';
 
 checkIsEntry();
 
-using db = await Database.connect();
-using shard = await Shard.connect(db, config.shards[0]!.name);
+await using db = await Database.connect();
+await using shard = await Shard.connect(db, config.shards[0]!.name);
 await using disposable = new AsyncDisposableStack();
 
 // Open channels

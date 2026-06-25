@@ -18,8 +18,8 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { setPassword } from 'xxscreeps/mods/backend/password/model.js';
 import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/memory/model.js';
 
-using db = await Database.connect();
-using shard = await Shard.connect(db, config.shards[0]!.name);
+await using db = await Database.connect();
+await using shard = await Shard.connect(db, config.shards[0]!.name);
 
 const out = (line: string) => process.stdout.write(`${line}\n`);
 const save = () => Promise.all([ db.save(), shard.save() ]);

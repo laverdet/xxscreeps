@@ -2,8 +2,7 @@ import type { RedisBlobClient, RedisClient } from './client.js';
 import type * as Pr from 'xxscreeps/engine/db/storage/provider.js';
 import { Buffer } from 'node:buffer';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { mustNotReject } from 'xxscreeps/utility/async.js';
-import { disposableToEffect } from 'xxscreeps/utility/utility.js';
+import { acquireWith } from 'xxscreeps/utility/async.js';
 import { acquireRedisClient } from './client.js';
 
 type Value = Pr.Value;
@@ -75,28 +74,30 @@ function zRangeOptions(options?: Pr.ZRange) {
 }
 
 export class RedisProvider implements Pr.KeyValProvider {
+	private readonly disposable;
 	private readonly keyval;
 	private readonly blob;
 	private readonly withSave;
 
-	private constructor(keyval: RedisClient, blob: RedisBlobClient, withSave: boolean) {
+	private constructor(disposable: AsyncDisposableStack, keyval: RedisClient, blob: RedisBlobClient, withSave: boolean) {
+		this.disposable = disposable;
 		this.keyval = keyval;
 		this.blob = blob;
 		this.withSave = withSave;
 	}
 
 	static async connect(url: URL) {
-		using disposable = new DisposableStack();
-		const [ keyval, blob ] = await Promise.all([
-			async function() {
-				return disposable.adopt(await acquireRedisClient(url), client => mustNotReject(client.close()));
-			}(),
-			async function() {
-				return disposable.adopt(await acquireRedisClient(url, true), client => mustNotReject(client.close()));
-			}(),
-		]);
-		const provider = new RedisProvider(keyval, blob, url.searchParams.has('save'));
-		return [ disposableToEffect(disposable.move()), provider ] as const;
+		await using disposable = new AsyncDisposableStack();
+		const [ keyval, blob ] = await acquireWith(
+			client => disposable.adopt(client, client => client.close()),
+			acquireRedisClient(url),
+			acquireRedisClient(url, true),
+		);
+		return new RedisProvider(disposable.move(), keyval, blob, url.searchParams.has('save'));
+	}
+
+	async [Symbol.asyncDispose]() {
+		await this.disposable.disposeAsync();
 	}
 
 	//

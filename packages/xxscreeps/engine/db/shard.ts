@@ -6,7 +6,7 @@ import { config } from 'xxscreeps/config/index.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
 import { World } from 'xxscreeps/game/map.js';
-import { acquire } from 'xxscreeps/utility/async.js';
+import { acquireWith } from 'xxscreeps/utility/async.js';
 import { getRoomChannel } from '../processor/model.js';
 import { Channel } from './channel.js';
 
@@ -20,10 +20,10 @@ export class Shard {
 	readonly pubsub;
 	readonly scratch;
 	readonly channel;
-	private readonly disposable: DisposableStack;
+	private readonly disposable;
 
 	private constructor(
-		disposable: DisposableStack,
+		disposable: AsyncDisposableStack,
 		db: Database,
 		name: string,
 		data: KeyValProvider,
@@ -60,13 +60,13 @@ export class Shard {
 		pubsub: string;
 		scratch: string;
 	}) {
-		using disposable = new DisposableStack();
-		const [ effect, [ data, pubsub, scratch ] ] = await acquire(
+		await using disposable = new AsyncDisposableStack();
+		const [ data, pubsub, scratch ] = await acquireWith(
+			resource => disposable.use(resource),
 			connectToProvider(info.data, 'keyval'),
 			connectToProvider(info.pubsub, 'pubsub'),
 			connectToProvider(info.scratch, 'keyval'),
 		);
-		disposable.defer(effect);
 		const channel = disposable.adopt(
 			await new Channel<Message>(pubsub, 'channel/game').subscribe(),
 			subscription => subscription.disconnect(),
@@ -78,12 +78,8 @@ export class Shard {
 		return instance;
 	}
 
-	[Symbol.dispose]() {
-		this.disposable.dispose();
-	}
-
-	disconnect() {
-		this.disposable.dispose();
+	[Symbol.asyncDispose]() {
+		return this.disposable.disposeAsync();
 	}
 
 	save() {

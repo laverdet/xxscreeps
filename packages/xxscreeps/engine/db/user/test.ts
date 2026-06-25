@@ -4,7 +4,7 @@ import * as User from './index.js';
 
 describe('User.remove', () => {
 	test('removed user is no longer found', async () => {
-		using testShard = await instantiateTestShard();
+		await using testShard = await instantiateTestShard();
 		const { db } = testShard;
 		await User.create(db, '200', 'RemoveMe', [ { provider: 'email', id: 'remove@me.test' } ]);
 		await User.remove(db, '200');

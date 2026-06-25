@@ -20,7 +20,7 @@ import 'xxscreeps:mods/processor';
 initializeGameEnvironment();
 
 // Initialize services
-const backendContext = await BackendContext.connect();
+await using backendContext = await BackendContext.connect();
 hooks.makeIterated('backendReady')(backendContext.db, backendContext.shard);
 const koa = new Koa<State, Context>();
 const router = new Router<State, Context>();
@@ -72,4 +72,3 @@ await halt.promise;
 // Start graceful exit
 await unlistenServer();
 await socketHandler.flush();
-backendContext.disconnect();

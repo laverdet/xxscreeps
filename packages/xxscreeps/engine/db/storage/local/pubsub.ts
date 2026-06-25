@@ -7,7 +7,7 @@ import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { registerStorageProvider } from '../register.js';
 import { makeSocketPortConnection, makeSocketPortListener, makeWorkerPortConnection, makeWorkerPortListener } from './port.js';
-import { getResponderSocketPath, isSiblingProcess } from './responder.js';
+import { SharedResponder, getResponderSocketPath, isSiblingProcess } from './responder.js';
 
 type Listener = (message: string) => void;
 
@@ -34,36 +34,27 @@ interface SynRequest {
 type Sends = AckMessage | PublishMessage;
 type Receives = PublishMessage | SynRequest | SubscriptionRequest | UnsubscriptionRequest;
 
-const providersByName = new Map<string, { instance: LocalPubSubProviderParent; refs: number } | undefined>();
+const providersByName = new Map<string, LocalPubSubProviderParent | undefined>();
 registerStorageProvider('local', 'pubsub', async url => {
 	if (isTopThread && !await isSiblingProcess()) {
 		const id = `${url}`;
-		const info = await async function() {
-			const info = providersByName.get(id);
-			if (info) {
-				return info;
+		const instance = await async function() {
+			const provider = providersByName.get(id);
+			if (provider) {
+				return provider;
 			} else {
 				if (providersByName.has(id)) {
 					throw new Error(`Pubsub: ${id} already exists`);
 				}
 				providersByName.set(id, undefined);
 				const instance = await LocalPubSubProviderParent.create(url);
-				const info = { instance, refs: 0 };
-				providersByName.set(id, info);
-				return info;
+				providersByName.set(id, instance);
+				return instance;
 			}
 		}();
-		++info.refs;
-		const effect: Effect = () => {
-			if (--info.refs === 0) {
-				providersByName.delete(id);
-				info.instance.disconnect();
-			}
-		};
-		return [ effect, info.instance ];
+		return SharedResponder.ref(instance);
 	} else {
-		const instance = await LocalPubSubProviderClient.connect(url);
-		return [ () => instance.disconnect(), instance ];
+		return LocalPubSubProviderClient.connect(url);
 	}
 });
 
@@ -112,12 +103,19 @@ class WorkerSubscriptionReference implements SubscriptionReference {
 /**
  * Provider created within the top thread
  */
-class LocalPubSubProviderParent implements PubSubProvider {
+class LocalPubSubProviderParent extends SharedResponder implements PubSubProvider {
+	private readonly id;
 	private readonly disposable = new AsyncDisposableStack();
 	private readonly subscriptionsByKey = new Map<string, Set<SubscriptionReference>>();
 
+	private constructor(id: string) {
+		super();
+		this.id = id;
+	}
+
 	static async create(url: URL) {
-		const instance = new LocalPubSubProviderParent();
+		const id = `${url}`;
+		const instance = new LocalPubSubProviderParent(id);
 		const socket = getResponderSocketPath(url);
 		if (socket) {
 			instance.disposable.use(await makeSocketPortListener<Sends, Receives>(socket, port => {
@@ -131,7 +129,7 @@ class LocalPubSubProviderParent implements PubSubProvider {
 	static initializeWorker(this: void, worker: Worker) {
 		if (isTopThread) {
 			makeWorkerPortListener<Sends, Receives>(worker, name => {
-				const provider = providersByName.get(name)?.instance;
+				const provider = providersByName.get(name);
 				if (provider) {
 					return port => provider.handle(port);
 				}
@@ -139,8 +137,9 @@ class LocalPubSubProviderParent implements PubSubProvider {
 		}
 	}
 
-	disconnect() {
-		mustNotReject(this.disposable.disposeAsync());
+	protected async disposeAsync() {
+		providersByName.delete(this.id);
+		await this.disposable.disposeAsync();
 	}
 
 	publish(key: string, message: string) {
@@ -258,8 +257,8 @@ export class LocalPubSubProviderClient implements PubSubProvider {
 		}
 	}
 
-	disconnect() {
-		mustNotReject(this.port[Symbol.asyncDispose]());
+	async [Symbol.asyncDispose]() {
+		await using port = this.port;
 		this.syn.forEach(deferred => deferred.reject(new Error('PubSub hung up')));
 	}
 

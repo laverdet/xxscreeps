@@ -14,7 +14,6 @@ import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
 import { Source } from 'xxscreeps/mods/source/source.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
-import { disposableToEffect } from 'xxscreeps/utility/utility.js';
 
 // Read file
 const root = new URL('../../test/', import.meta.url);
@@ -104,7 +103,7 @@ const users = {
 
 export async function instantiateTestShard() {
 	// Create fake database
-	using disposable = new DisposableStack();
+	await using disposable = new AsyncDisposableStack();
 	const db = disposable.use(await Database.connect({
 		data: 'local://data',
 		pubsub: 'local://pubsub',
@@ -140,7 +139,9 @@ export async function instantiateTestShard() {
 	]);
 
 	return {
-		[Symbol.dispose]: disposableToEffect(disposable.move()),
+		[Symbol.asyncDispose]: function(disposable) {
+			return () => disposable.disposeAsync();
+		}(disposable.move()),
 		db,
 		shard,
 		world,

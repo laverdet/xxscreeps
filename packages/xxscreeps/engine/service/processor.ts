@@ -29,9 +29,9 @@ using _signal = handleInterruptSignal(() => {
 });
 
 // Connect to main & storage
+await using db = await Database.connect();
+await using shard = await Shard.connect(db, config.shards[0]!.name);
 await using disposable = new AsyncDisposableStack();
-using db = await Database.connect();
-using shard = await Shard.connect(db, config.shards[0]!.name);
 const worldBlob = await shard.data.req('terrain', { blob: true });
 const processorSubscription = disposable.adopt(
 	await getProcessorChannel(shard).subscribe(),

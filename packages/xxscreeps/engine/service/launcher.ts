@@ -14,8 +14,8 @@ const argv = checkArguments({
 });
 
 // Connect to shard
-using db = await Database.connect();
-using shard = await Shard.connect(db, config.shards[0]!.name);
+await using db = await Database.connect();
+await using shard = await Shard.connect(db, config.shards[0]!.name);
 await using disposable = new AsyncDisposableStack();
 
 // Open databases, saving on exit (graceful or not). The local database providers save

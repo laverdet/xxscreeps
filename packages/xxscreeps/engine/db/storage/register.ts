@@ -1,12 +1,11 @@
 import type { KeyValProvider, PubSubProvider } from './provider.js';
-import type { Effect } from 'xxscreeps/utility/types.js';
 
 type DispositionToProvider<T> =
-	T extends 'keyval' ? KeyValProvider :
-	T extends 'pubsub' ? PubSubProvider :
+	T extends 'keyval' ? AsyncDisposable & KeyValProvider :
+	T extends 'pubsub' ? AsyncDisposable & PubSubProvider :
 	never;
 
-type Provider = (url: URL, disposition: any) => Promise<readonly [ Effect, any ]>;
+type Provider = (url: URL, disposition: any) => Promise<AsyncDisposable>;
 const providers = new Map<string, Provider>();
 
 /**
@@ -19,7 +18,7 @@ const providers = new Map<string, Provider>();
 export function registerStorageProvider<Disposition extends 'keyval' | 'pubsub'>(
 	schemes: string | string[],
 	disposition: Disposition,
-	provider: (url: URL, disposition: Disposition) => Promise<readonly [ Effect, DispositionToProvider<Disposition> ]>,
+	provider: (url: URL, disposition: Disposition) => Promise<DispositionToProvider<Disposition>>,
 ) {
 	for (const scheme of Array.isArray(schemes) ? schemes : [ schemes ]) {
 		const key = `${scheme}:${disposition}`;
@@ -30,16 +29,17 @@ export function registerStorageProvider<Disposition extends 'keyval' | 'pubsub'>
 	}
 }
 
-export async function connectToProvider<Disposition extends string>(fragment: string, disposition: Disposition):
-Promise<readonly [ Effect, DispositionToProvider<Disposition> ]> {
+export async function connectToProvider<Disposition extends string>(fragment: string, disposition: Disposition): Promise<DispositionToProvider<Disposition>> {
 	const [ { configPath } ] = await Promise.all([
 		import('xxscreeps/config/index.js'),
 		import('xxscreeps:mods/storage'),
 	]);
 	const url = new URL(fragment, configPath);
 	const provider = providers.get(url.protocol + disposition);
-	if (!provider) {
+	if (provider) {
+		const host = await provider(url, disposition);
+		return host satisfies AsyncDisposable as DispositionToProvider<Disposition>;
+	} else {
 		throw new Error(`No storage provider for ${url.protocol}${disposition}`);
 	}
-	return provider(url, disposition);
 }
