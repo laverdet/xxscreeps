@@ -6,7 +6,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
+import { RoomPosition, positionsInRangeTo } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
 import { isCentralRoom, makeSectorRadiusFilter, sectorEdgeRooms } from 'xxscreeps/game/room/sector.js';
 import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
@@ -61,15 +61,6 @@ export async function loadSectorDeposits(shard: Shard, centralRoom: string, norm
 	return [ ...Fn.concat<Deposit>(depositsByRoom) ];
 }
 
-// Tests swap in a seeded RNG via `setDepositPlaceRandomForTesting`.
-type RngFn = () => number;
-let rng: RngFn = Math.random;
-export function setDepositPlaceRandomForTesting(fn: RngFn): Disposable {
-	const previous = rng;
-	rng = fn;
-	return { [Symbol.dispose]() { rng = previous; } };
-}
-
 // Bootstrap scatter spreads initial sector seeds across the cadence so all centrals don't come due
 // at the same wall time forever. Tests override to a fixed offset for determinism.
 type ScatterFn = (roomName: string) => number;
@@ -88,8 +79,8 @@ function findPlacement(world: World, centralRoom: string, targetRoom: RoomClass)
 	const objects = targetRoom['#objects'];
 	const inSector = makeSectorRadiusFilter(centralRoom, targetRoom.name);
 	for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; ++attempt) {
-		const xx = Math.floor(rng() * 40) + 5;
-		const yy = Math.floor(rng() * 40) + 5;
+		const xx = Math.floor(Math.random() * 40) + 5;
+		const yy = Math.floor(Math.random() * 40) + 5;
 		if (terrain.get(xx, yy) !== C.TERRAIN_MASK_WALL) {
 			continue;
 		}
@@ -97,16 +88,8 @@ function findPlacement(world: World, centralRoom: string, targetRoom: RoomClass)
 		if (!inSector(xx, yy)) {
 			continue;
 		}
-		const hasExit = (() => {
-			for (let dx = -1; dx <= 1; ++dx) {
-				for (let dy = -1; dy <= 1; ++dy) {
-					if (terrain.get(xx + dx, yy + dy) !== C.TERRAIN_MASK_WALL) {
-						return true;
-					}
-				}
-			}
-			return false;
-		})();
+		const from = new RoomPosition(xx, yy, targetRoom.name);
+		const hasExit = Fn.some(positionsInRangeTo(from, 1), pos => terrain.get(pos.x, pos.y) !== C.TERRAIN_MASK_WALL);
 		if (!hasExit) {
 			continue;
 		}
@@ -119,7 +102,7 @@ function findPlacement(world: World, centralRoom: string, targetRoom: RoomClass)
 
 function pickRandomFreeRoom(edges: string[], busyRooms: Set<string>): string | undefined {
 	const free = [ ...Fn.reject(edges, name => busyRooms.has(name)) ];
-	return free[Math.floor(rng() * free.length)];
+	return free[Math.floor(Math.random() * free.length)];
 }
 
 // Push a placement intent for `candidate` (chosen edge room) into the next tick's processor queue.
@@ -200,8 +183,6 @@ const placeDepositIntent = registerIntentProcessor(
 		deposit.depositType = depositType;
 		deposit['#nextDecayTime'] = Game.time + DEPOSIT_DECAY_TIME;
 		room['#insertObject'](deposit);
-		// The just-inserted deposit's #Tick doesn't fire this tick (post-intent loop iterates a
-		// captured `#objects` snapshot), so the explicit wakeAt keeps the room scheduled.
 		context.didUpdate();
 		context.wakeAt(deposit['#nextDecayTime']);
 	});
