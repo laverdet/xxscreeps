@@ -217,9 +217,6 @@ async function botSpawn(userId: string, roomName: string, coords?: string) {
 			return undefined;
 		}
 		const [ xx = NaN, yy = NaN ] = coords.split(',').map(Number);
-		if (!Number.isInteger(xx) || !Number.isInteger(yy)) {
-			throw new Error(`Invalid coords: ${coords} (expected 'x,y')`);
-		}
 		return new RoomPosition(xx, yy, roomName);
 	}();
 
