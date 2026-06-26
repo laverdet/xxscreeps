@@ -74,7 +74,7 @@ export function create(db: Database, userId: string, name: string, className: st
 	return mutate(db, userId, async roster => {
 		const code = checkCreatePowerCreep(await userPower(db, userId), roster, name, className);
 		if (code === C.OK) {
-			roster.push(createPowerCreep(Id.generateId(), name.slice(0, 50), className));
+			roster.push(createPowerCreep(Id.generateId(), name.slice(0, 50), className, userId));
 		}
 		return code;
 	});
@@ -112,11 +112,15 @@ export function rename(db: Database, userId: string, id: string, name: string) {
 	});
 }
 
-// delete / cancel-delete are idempotent and never fail: a repeated delete keeps the original timer, a
-// cancel clears it, and an unknown id is a no-op.
+// delete / cancel-delete are idempotent: a repeated delete keeps the original timer, a cancel clears
+// it, and an unknown id is a no-op. A spawned creep can't be scheduled — its roster entry would
+// silently vanish out from under the room object once the timer elapsed.
 export function scheduleDelete(db: Database, userId: string, id: string) {
 	return mutate(db, userId, roster => {
 		const creep = roster.find(entry => entry.id === id);
+		if (creep && creep['#ageTime'] > 0) {
+			return C.ERR_BUSY;
+		}
 		if (creep?.deleteTime === 0) {
 			creep.deleteTime = Date.now() + C.POWER_CREEP_DELETE_COOLDOWN;
 		}
@@ -129,6 +133,42 @@ export function cancelDelete(db: Database, userId: string, id: string) {
 		const creep = roster.find(entry => entry.id === id);
 		if (creep) {
 			creep.deleteTime = 0;
+		}
+		return C.OK;
+	});
+}
+
+// Claim a roster entry for spawning. The roster is the authority: the entry must exist, be
+// unspawned, and have an elapsed cooldown, so a forged, duplicate, or stale-runtime intent finds
+// nothing to claim. Stamping `#ageTime` marks the entry spawned until the death writeback clears
+// it; a pending deletion is cancelled by the spawn. Returns the claimed entry, whose stored
+// identity and powers seed the room object.
+export async function claimSpawn(db: Database, userId: string, id: string, ageTime: number) {
+	let claimed: PowerCreep | undefined;
+	const code = await mutate(db, userId, roster => {
+		const creep = roster.find(entry => entry.id === id);
+		if (!creep || creep['#ageTime'] > 0 || creep.spawnCooldownTime > Date.now()) {
+			return C.ERR_BUSY;
+		}
+		creep['#ageTime'] = ageTime;
+		creep.deleteTime = 0;
+		claimed = creep;
+		return C.OK;
+	});
+	if (code === C.OK) {
+		return claimed;
+	}
+}
+
+// Record a spawn cooldown on the roster entry when a spawned creep dies, releasing the spawned
+// marker. Called from the room processor through `context.task`, the same account-keyspace
+// writeback path the GPL/GCL credit uses.
+export function setSpawnCooldown(db: Database, userId: string, id: string, cooldownTime: number) {
+	return mutate(db, userId, roster => {
+		const creep = roster.find(entry => entry.id === id);
+		if (creep) {
+			creep.spawnCooldownTime = cooldownTime;
+			creep['#ageTime'] = 0;
 		}
 		return C.OK;
 	});

@@ -609,6 +609,31 @@ registerObstacleChecker(params => {
 
 //
 // Intent checks
+
+/**
+ * The shared carry/store verb surface. `Creep` and `PowerCreep` both satisfy it, so the
+ * transfer/withdraw/pickup/drop checks (and their processor arms) operate on this type rather than
+ * `Creep` — power creeps carry resources the same way but have no body or fatigue.
+ */
+export interface Carrier extends RoomObject {
+	my: boolean;
+	spawning?: boolean;
+	store: OpenStore;
+	'#user': string;
+}
+
+/** Room-presence preconditions every carry verb shares, with no body part involved. */
+export function checkCarrier(creep: Carrier) {
+	if (!creep.my) {
+		return C.ERR_NOT_OWNER;
+	} else if (creep.spawning) {
+		return C.ERR_BUSY;
+	} else if (!(creep.room as unknown)) {
+		return C.ERR_INVALID_ARGS;
+	}
+	return C.OK;
+}
+
 export function checkCommon(creep: Creep, part?: PartType) {
 	if (!creep.my) {
 		return C.ERR_NOT_OWNER;
@@ -626,9 +651,9 @@ function checkFatigue(creep: Creep) {
 	return creep.fatigue > 0 ? C.ERR_TIRED : C.OK;
 }
 
-export function checkDrop(creep: Creep, resourceType: ResourceType, amount: number) {
+export function checkDrop(creep: Carrier, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
-		() => checkCommon(creep),
+		() => checkCarrier(creep),
 		() => checkHasResource(creep, resourceType, amount));
 }
 
@@ -654,9 +679,9 @@ export function checkPull(creep: Creep, target: Creep | null | undefined) {
 		() => target!.spawning ? C.ERR_INVALID_TARGET : C.OK);
 }
 
-export function checkPickup(creep: Creep, target: Resource) {
+export function checkPickup(creep: Carrier, target: Resource) {
 	return chainIntentChecks(
-		() => checkCommon(creep),
+		() => checkCarrier(creep),
 		() => checkTarget(target, Resource),
 		() => creep.store.getFreeCapacity(target.resourceType) > 0
 			? C.OK : C.ERR_FULL,
@@ -671,9 +696,9 @@ function checkTransferTarget(target: RoomObject & WithStore, resourceType: Resou
 		() => checkStoreAccepts(target, resourceType));
 }
 
-export function checkTransfer(creep: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount: number) {
+export function checkTransfer(creep: Carrier, target: RoomObject & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
-		() => checkCommon(creep),
+		() => checkCarrier(creep),
 		() => checkResourceArgs(resourceType, amount),
 		() => checkTransferTarget(target, resourceType),
 		() => checkRange(creep, target, 1),
@@ -687,9 +712,9 @@ export function checkTransfer(creep: Creep, target: RoomObject & WithStore, reso
 		});
 }
 
-export function checkWithdraw(creep: Creep, target: Structure & WithStore, resourceType: ResourceType, amount: number) {
+export function checkWithdraw(creep: Carrier, target: Structure & WithStore, resourceType: ResourceType, amount: number) {
 	return chainIntentChecks(
-		() => checkCommon(creep),
+		() => checkCarrier(creep),
 		() => checkResourceArgs(resourceType, amount),
 		() => checkTarget(target, Ruin, Structure, Tombstone),
 		() => checkInteractionBlocked(creep, target),
@@ -701,7 +726,7 @@ export function checkWithdraw(creep: Creep, target: Structure & WithStore, resou
 		() => checkHasResourceAmount(target, resourceType, amount));
 }
 
-function checkInteractionBlocked(creep: Creep, target: Structure & WithStore) {
+function checkInteractionBlocked(creep: Carrier, target: Structure & WithStore) {
 	const user = creep['#user'];
 	const blocked = target.room.lookForAt(C.LOOK_STRUCTURES, target.pos)
 		.some(structure => structure['#doesPreventInteraction'](user));

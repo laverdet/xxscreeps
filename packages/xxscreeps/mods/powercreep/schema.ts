@@ -1,9 +1,18 @@
+import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { roomObjectShape } from 'xxscreeps/game/schema.js';
-import { declare, enumerated, struct, vector } from 'xxscreeps/schema/index.js';
+import { actionLogFormat, roomObjectShape } from 'xxscreeps/game/schema.js';
+import { openStoreFormat } from 'xxscreeps/mods/classic/resource/schema.js';
+import { declare, enumerated, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
 
+// A power creep is a `RoomObject` whether it is sitting in the account roster or spawned into a room,
+// so it gets a single serialized format. Unspawned creeps live at `RoomPosition(0, 0, 'E0S0')` (the
+// all-zero signed position); spawning is then just a matter of copying the object into a room. The
+// room-presence fields (`hits`/`store`/`#ageTime`/...) carry default/empty values until a spawn fills
+// them in.
 /** @internal */
 export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
+	...variant('powerCreep'),
+
 	/**
 	 * Power creep’s name. You can choose the name while creating a new power creep, and it cannot be
 	 * changed later. This name is a hash key to access the creep via the
@@ -26,6 +35,7 @@ export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
 	 * @public
 	 * @see https://docs.screeps.com/api/#PowerCreep.spawnCooldownTime
 	 */
+	// Wall-clock ms; set when a spawned creep dies, `0` while idle.
 	spawnCooldownTime: 'double',
 
 	/**
@@ -35,4 +45,16 @@ export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
 	 * @see https://docs.screeps.com/api/#PowerCreep.deleteTime
 	 */
 	deleteTime: 'double',
+	// Room presence — empty/`0` while unspawned, populated by a spawn into a room. On a roster entry
+	// a non-zero `#ageTime` marks the creep as currently spawned; death clears it back to `0`.
+	hits: 'int32',
+	store: openStoreFormat,
+	'#actionLog': actionLogFormat,
+	'#ageTime': 'int32',
+	'#saying': optional(struct({
+		isPublic: 'bool',
+		message: 'string',
+		time: 'int32',
+	})),
+	'#user': Id.format,
 }));
