@@ -35,6 +35,7 @@ const intents = [
 						terminal.store['#subtract'](C.RESOURCE_ENERGY, energyCost);
 						terminal.store['#subtract'](resourceType, amount);
 					}
+					terminal['#cooldownTime'] = Game.time + C.TERMINAL_COOLDOWN - 1;
 					context.didUpdate();
 
 					// Send intent to destination room
