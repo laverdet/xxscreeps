@@ -12,6 +12,7 @@ interface MemoryRecord {
 	[key: string]: unknown;
 	creeps?: Record<string, Record<string, unknown>>;
 	flags?: Record<string, Record<string, unknown>>;
+	powerCreeps?: Record<string, Record<string, unknown>>;
 	rooms?: Record<string, Record<string, unknown>>;
 	spawns?: Record<string, Record<string, unknown>>;
 }
