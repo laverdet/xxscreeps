@@ -4,6 +4,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
+import { recordTransaction } from './model.js';
 import { StructureTerminal, calculateEnergyCost, checkSend } from './terminal.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
@@ -18,6 +19,7 @@ const intents = [
 			// Calculate transfer
 			const range = Game.map.getRoomLinearDistance(terminal.room.name, destination);
 			const energyCost = calculateEnergyCost(amount, range);
+			const senderId = terminal['#user']!;
 			context.task(async function() {
 				// Check other outstanding sends to this terminal
 				const [ room, totalAmount ] = await Promise.all([
@@ -25,21 +27,36 @@ const intents = [
 					context.shard.scratch.incrBy(`room/${destination}/terminalIngress`, amount),
 				]);
 				const capacity = room.terminal?.store.getFreeCapacity() ?? 0;
-				return clamp(0, amount, capacity + amount - totalAmount);
-			}(), amount => {
-				if (amount > 0) {
+				const sent = clamp(0, amount, capacity + amount - totalAmount);
+				const recipientId = room.terminal?.['#user'];
+				return { sent, recipientId };
+			}(), ({ sent, recipientId }) => {
+				if (sent > 0) {
 					// Deduct energy from this terminal
 					if (resourceType === C.RESOURCE_ENERGY) {
-						terminal.store['#subtract'](C.RESOURCE_ENERGY, amount + energyCost);
+						terminal.store['#subtract'](C.RESOURCE_ENERGY, sent + energyCost);
 					} else {
 						terminal.store['#subtract'](C.RESOURCE_ENERGY, energyCost);
-						terminal.store['#subtract'](resourceType, amount);
+						terminal.store['#subtract'](resourceType, sent);
 					}
 					terminal['#cooldownTime'] = Game.time + C.TERMINAL_COOLDOWN - 1;
 					context.didUpdate();
 
 					// Send intent to destination room
-					context.sendRoomIntent(destination, 'terminalSend', resourceType, amount);
+					context.sendRoomIntent(destination, 'terminalSend', resourceType, sent);
+
+					// Log the transfer for both parties' market transaction history
+					if (recipientId != null) {
+						context.task(recordTransaction(context.shard, senderId, recipientId, {
+							// The processor runs one tick ahead of the code that issued the send.
+							time: Game.time - 1,
+							resourceType,
+							amount: sent,
+							from: terminal.room.name,
+							to: destination,
+							...description != null && { description },
+						}));
+					}
 				}
 			});
 		}

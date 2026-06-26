@@ -1,16 +1,19 @@
+import type { Transactions } from './transaction.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
 
 export class Market {
 	orders = [];
-	incomingTransactions = [];
-	outgoingTransactions = [];
 	readonly #map;
+	readonly #transactions;
 
-	constructor(game: GameBase) {
+	constructor(game: GameBase, transactions?: Transactions) {
 		this.#map = game.map;
+		this.#transactions = transactions;
 	}
 
 	get credits() { return 0; }
+	get incomingTransactions() { return this.#transactions?.incoming ?? []; }
+	get outgoingTransactions() { return this.#transactions?.outgoing ?? []; }
 	cancelOrder() {}
 	changeOrderPrice() {}
 	createOrder() {}

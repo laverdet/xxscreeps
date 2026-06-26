@@ -2,6 +2,7 @@ import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { Market } from './market.js';
 import * as Terminal from './terminal.js';
+import { readTransactions } from './transaction.js';
 
 // Export `StructureTerminal` to runtime globals
 registerGlobal(Terminal.StructureTerminal);
@@ -35,6 +36,6 @@ declare module 'xxscreeps/game/game.js' {
 		market: Market;
 	}
 }
-hooks.register('gameInitializer', game => {
-	game.market = new Market(game);
+hooks.register('gameInitializer', (game, data) => {
+	game.market = new Market(game, data?.transactions && readTransactions(data.transactions));
 });
