@@ -11,9 +11,14 @@ declare module 'xxscreeps/engine/runner/index.js' {
 	}
 }
 
+interface BlobCacheEntry {
+	time: number;
+	blobs: Map<string, Promise<Readonly<Uint8Array>>>;
+}
+
 // Transaction blobs are immutable, so cache them by id per (shard, tick): a transfer referenced by
 // both parties' runtimes is read once and handed out as the same SharedArrayBuffer.
-const blobCache = new WeakMap<Shard, { time: number; blobs: Map<string, Promise<Readonly<Uint8Array>>> }>();
+const blobCache = new WeakMap<Shard, BlobCacheEntry>();
 function loadBlobOnce(shard: Shard, time: number, id: string) {
 	let cache = blobCache.get(shard);
 	if (cache?.time !== time) {

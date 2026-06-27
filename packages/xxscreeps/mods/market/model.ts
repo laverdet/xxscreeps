@@ -10,7 +10,7 @@ import { Transaction, write } from './transaction.js';
 // keeps at most `kMaxTransactions` ids (newest last); a transfer is referenced by exactly two lists
 // when recorded, so `market/transactionRefs` counts the live references and the blob is freed once
 // both parties have evicted it.
-export const kMaxTransactions = 100;
+const kMaxTransactions = 100;
 export const kTransactionWindow = 24 * 60 * 60 * 1000;
 
 type Direction = 'incoming' | 'outgoing';
@@ -45,8 +45,9 @@ async function dropReference(shard: Shard, id: string) {
 
 async function pushReference(shard: Shard, userId: string, direction: Direction, entry: string) {
 	const key = listKey(userId, direction);
-	const length = await shard.data.rPush(key, [ entry ]);
-	for (let excess = length - kMaxTransactions; excess > 0; --excess) {
+	// One push adds one entry, so at most one is over the cap. Pop a single oldest; trimming by
+	// `length - kMaxTransactions` over-evicts when concurrent pushes each observe a racing length.
+	if (await shard.data.rPush(key, [ entry ]) > kMaxTransactions) {
 		const evicted = await shard.data.lPop(key);
 		if (evicted !== null) {
 			await dropReference(shard, idFromEntry(evicted));

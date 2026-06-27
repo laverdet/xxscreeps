@@ -16,7 +16,7 @@ const shape = struct({
 	'#description': optional('string'),
 });
 
-export const format = declare('MarketTransaction', () => compose(shape, Transaction));
+const format = declare('MarketTransaction', () => compose(shape, Transaction));
 
 /**
  * One terminal transfer, exposed through `Game.market.incomingTransactions` /
