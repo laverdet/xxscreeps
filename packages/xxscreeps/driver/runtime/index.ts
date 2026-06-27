@@ -181,7 +181,7 @@ export function tick(data: TickPayload, player = (fn: () => void) => fn()): Tick
 				if (receiver) {
 					intents.save(receiver as never, intent.intent as never, ...intent.params as never);
 				} else {
-					// intents.pushNamed(intent.receiver as never, intent.intent as never, ...intent.params);
+					intents.pushNamed(intent.receiver as never, intent.intent as never, ...intent.params as never);
 				}
 			}
 		}
@@ -197,6 +197,12 @@ export function tick(data: TickPayload, player = (fn: () => void) => fn()): Tick
 			}),
 			$$ => Fn.filter($$),
 			$$ => Fn.fromEntries($$));
+
+		// Write named intents into the tick result
+		const named = intents.getNamedIntents();
+		if (Object.keys(named).length > 0) {
+			tickResult.namedIntents = named;
+		}
 
 		// Gather tick results from runtimeConnector
 		hooksComposed.send(tickResult as TickResult);
