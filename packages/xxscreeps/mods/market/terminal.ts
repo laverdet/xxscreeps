@@ -97,7 +97,7 @@ export function calculateEnergyCost(amount: number, range: number) {
 
 //
 // Construction implementation
-function create(pos: RoomPosition, owner: string) {
+export function create(pos: RoomPosition, owner: string) {
 	const terminal = assign(createObject(new StructureTerminal(), pos), {
 		hits: C.TERMINAL_HITS,
 		store: OpenStore['#create'](C.TERMINAL_CAPACITY),
