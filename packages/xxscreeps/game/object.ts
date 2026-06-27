@@ -31,6 +31,21 @@ export interface RoomObjectEffect {
 	ticksRemaining: number;
 }
 
+// `new Structure(id).hits`
+const isSuperClass =
+	<Type extends object, Params extends unknown[]>(
+		instance: object,
+		target: abstract new(...args: Params) => Type,
+	): instance is Type => instance instanceof target;
+
+// `new MyCreep(id).hits`
+const isSubClass =
+	<Type extends object, Params extends unknown[]>(
+		instance: object,
+		target: abstract new(...args: Params) => Type,
+	): instance is Type =>
+		target.prototype instanceof instance.constructor;
+
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, shape) {
 	/**
 	 * The link to the Room object. May be `undefined` in case if an object is a flag or a construction
@@ -54,20 +69,24 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 		} else if (typeof viewOrIdOrXx === 'string') {
 			// The terrible id-string constructor
 			const object = Game.getObjectById(viewOrIdOrXx);
-			// `new Structure(id).hits`
-			const isSuperClass = (object: RoomObject) => object instanceof new.target;
-			// `new MyCreep(id).hits`
-			const isSubClass = (object: RoomObject) => new.target.prototype instanceof object.constructor;
-			if (object && (isSuperClass(object) || isSubClass(object))) {
-				super(BufferObject.getBuffer(object), BufferObject.getOffset(object));
-				const prototype = ObjectGetPrototypeOf(object) as object;
-				if (ObjectGetPrototypeOf(this) !== prototype) {
-					ObjectSetPrototypeOf(this, prototype);
+			if (object) {
+				if (isSuperClass(object satisfies object as object, new.target)) {
+					super(BufferObject.getBuffer(object), BufferObject.getOffset(object));
+					// Specialize a generic super class (`new Structure(id)`) down to the concrete
+					// object's prototype. A subclass already derives from it, so leave its prototype.
+					const prototype = ObjectGetPrototypeOf(object) as object;
+					if (ObjectGetPrototypeOf(this) !== prototype) {
+						ObjectSetPrototypeOf(this, prototype);
+					}
+					this.room = object.room;
+					return;
+				} else if (isSubClass(object, new.target)) {
+					super(BufferObject.getBuffer(object), BufferObject.getOffset(object));
+					this.room = object.room;
+					return;
 				}
-				this.room = object.room;
-			} else {
-				super();
 			}
+			super();
 		} else {
 			super(viewOrIdOrXx as BufferView, offsetOrYy as number);
 		}
