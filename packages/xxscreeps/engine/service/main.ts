@@ -8,6 +8,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { AveragingTimer } from 'xxscreeps/utility/averaging-timer.js';
 import { acquireTimeout } from 'xxscreeps/utility/utility.js';
+import { getGameControlChannel, isGamePaused } from './control.js';
 import { tickSpeed, watch } from './tick.js';
 import { checkIsEntry, getServiceChannel } from './index.js';
 import 'xxscreeps:mods/main';
@@ -20,12 +21,15 @@ await using disposable = new AsyncDisposableStack();
 // Open channels
 const processorChannel = getProcessorChannel(shard);
 const runnerChannel = getRunnerChannel(shard);
-const [ mainMutex, gameMutex, serviceChannel ] = await Promise.all([
+const gameControlChannel = getGameControlChannel(shard);
+const [ mainMutex, gameMutex, serviceChannel, gameControlSubscription ] = await Promise.all([
 	Mutex.connect('main', shard.data, shard.pubsub),
 	Mutex.connect('game', shard.data, shard.pubsub),
 	getServiceChannel(shard).subscribe(),
+	gameControlChannel.subscribe(),
 ]);
 disposable.defer(() => serviceChannel.disconnect());
+disposable.defer(() => gameControlSubscription.disconnect());
 disposable.defer(() => serviceChannel.publish({ type: 'mainDisconnected' }));
 disposable.use(mainMutex);
 disposable.use(gameMutex);
@@ -69,6 +73,25 @@ const didInitialize = await async function() {
 		}
 	}
 }();
+
+let pauseDelay: PromiseWithResolvers<boolean>['resolve'] | undefined;
+async function waitWhilePaused() {
+	while (await isGamePaused(shard)) {
+		console.log(`Game paused at tick ${shard.time}`);
+		const { promise, resolve } = Promise.withResolvers<boolean>();
+		pauseDelay = resolve;
+		if (!await isGamePaused(shard)) {
+			pauseDelay = undefined;
+			continue;
+		}
+		if (!await promise) {
+			pauseDelay = undefined;
+			return false;
+		}
+		pauseDelay = undefined;
+	}
+	return true;
+}
 
 // Process a game tick
 async function tick() {
@@ -141,11 +164,20 @@ if (didInitialize) {
 	disposable.defer(serviceChannel.listen(message => {
 		if (message.type === 'shutdown') {
 			tickDelay?.(false);
+			pauseDelay?.(false);
 		}
+	}));
+	disposable.defer(gameControlSubscription.listen(() => {
+		tickDelay?.(true);
+		pauseDelay?.(true);
 	}));
 
 	let lastSave = Date.now();
 	while (true) {
+		if (!await waitWhilePaused()) {
+			break;
+		}
+
 		// Tick
 		const tickWallTime = Date.now();
 		if (!await tick()) {

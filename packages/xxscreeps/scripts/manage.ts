@@ -20,6 +20,7 @@ import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { updateUserRoomRelationships, userToIntentRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { isGamePaused, setGamePaused } from 'xxscreeps/engine/service/control.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
@@ -149,6 +150,23 @@ async function userBranch(who: string, branch: string) {
 	await save();
 	await Code.getUserCodeChannel(db, id).publish({ type: 'switch', branch });
 	out(`Set active branch for ${who} (${id}) to '${branch}'.`);
+}
+
+async function gamePause() {
+	await setGamePaused(shard, true);
+	await save();
+	out(`Game paused at tick ${shard.time}.`);
+}
+
+async function gameResume() {
+	await setGamePaused(shard, false);
+	await save();
+	out(`Game resumed at tick ${shard.time}.`);
+}
+
+async function gameStatus() {
+	out(`game ${await isGamePaused(shard) ? 'paused' : 'running'}`);
+	out(`tick ${shard.time}`);
 }
 
 // Modules are keyed by filename (`main.js`, ...) — the same shape the backend saves for players.
@@ -323,6 +341,9 @@ function usage(): never {
   user badge    <name|id> <json|file>
   user password <name|id> <password>
   user branch   <name|id> <branch>
+  game pause
+  game resume
+  game status
   bot  add    <name> <codeDir> [branch] [--spawn <room> [x,y]]
   bot  update <name|id> <codeDir> [branch]
   bot  remove <name|id>
@@ -340,6 +361,9 @@ try {
 		case 'user badge': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBadge(rest[0], rest[1]); break;
 		case 'user password': if (rest[0] === undefined || rest[1] === undefined) usage(); await userPassword(rest[0], rest[1]); break;
 		case 'user branch': if (rest[0] === undefined || rest[1] === undefined) usage(); await userBranch(rest[0], rest[1]); break;
+		case 'game pause': await gamePause(); break;
+		case 'game resume': await gameResume(); break;
+		case 'game status': await gameStatus(); break;
 		case 'bot add': {
 			const spawnIndex = rest.indexOf('--spawn');
 			const args = spawnIndex === -1 ? rest : rest.slice(0, spawnIndex);
