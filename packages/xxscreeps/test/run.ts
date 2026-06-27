@@ -5,7 +5,6 @@ import 'xxscreeps:mods/driver';
 await import('xxscreeps/driver/private/test.js');
 await import('xxscreeps/engine/db/storage/local/test.js');
 await import('xxscreeps/engine/db/user/test.js');
-await import('xxscreeps/engine/processor/test.js');
 await import('xxscreeps/game/test.js');
 await import('xxscreeps:mods/test');
 await import('xxscreeps/cli/test.js');

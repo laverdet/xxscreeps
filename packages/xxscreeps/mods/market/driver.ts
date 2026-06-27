@@ -1,14 +1,19 @@
+import type { OrderPayload } from './order.js';
 import type { TransactionPayload } from './transaction.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { getTransactionChannel, loadTransactionBlob, loadTransactionEntries } from './model.js';
+import { getTransactionChannel, loadActiveOrderIds, loadMoney, loadOrderBlob, loadTransactionBlob, loadTransactionEntries, loadUserOrderIds } from './model.js';
 import { read } from './transaction.js';
 
 declare module 'xxscreeps/engine/runner/index.js' {
 	interface TickPayload {
 		transactions?: TransactionPayload;
+		// The active public order book plus this user's own orders, as shared unparsed blobs by id.
+		orders?: OrderPayload;
+		// Credit balance in millicredits; `Market.credits` divides by 1000.
+		money?: number;
 	}
 }
 
@@ -49,3 +54,43 @@ hooks.register('runnerConnector', async player => {
 		},
 	} ];
 });
+
+// Orders are mutable across ticks but stable within one (the market shard-tick pass is the only
+// writer and reads are tick-synchronized), so the active book's id list and every order blob are
+// read once per (shard, tick) and shared across this runner process's player instances: the book is
+// identical for every player, and an active order that is also one of yours is read once.
+interface OrderCache {
+	time: number;
+	active: Promise<string[]>;
+	blobs: Map<string, Promise<Readonly<Uint8Array> | null>>;
+}
+
+const orderCaches = new WeakMap<Shard, OrderCache>();
+function orderCacheFor(shard: Shard, time: number) {
+	let cache = orderCaches.get(shard);
+	if (cache?.time !== time) {
+		cache = { time, active: loadActiveOrderIds(shard), blobs: new Map() };
+		orderCaches.set(shard, cache);
+	}
+	return cache;
+}
+
+hooks.register('runnerConnector', player => [ undefined, {
+	async refresh(payload) {
+		const cache = orderCacheFor(player.shard, payload.time);
+		const [ active, mine, money ] = await Promise.all([
+			cache.active,
+			loadUserOrderIds(player.shard, player.userId),
+			loadMoney(player.shard, player.userId),
+		]);
+		const ids = [ ...new Set([ ...active, ...mine ]) ];
+		// An id can outlive its blob (the shard pass removes orders between the id-set read and this
+		// fetch), so missing blobs are dropped here and the runtime filters the id lists against them.
+		const entries = await Fn.mapAwait(ids, async id => {
+			const blob = await getOrSet(cache.blobs, id, () => loadOrderBlob(player.shard, id));
+			return blob && ([ id, blob ] as const);
+		});
+		payload.orders = { active, mine, blobs: Fn.fromEntries(Fn.filter(entries)) };
+		payload.money = money;
+	},
+} ]);
