@@ -5,5 +5,5 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/resource',
 		'xxscreeps/mods/structure',
 	],
-	provides: [ 'backend', 'constants', 'driver', 'game', 'processor', 'schema', 'test' ],
+	provides: [ 'backend', 'constants', 'driver', 'game', 'main', 'processor', 'schema', 'test' ],
 };

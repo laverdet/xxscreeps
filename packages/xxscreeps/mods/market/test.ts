@@ -1,14 +1,68 @@
+import type { OrderType } from './model.js';
+import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
+import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { deterministicClockForTesting } from 'xxscreeps/utility/utility.js';
+import { assign, deterministicClockForTesting } from 'xxscreeps/utility/utility.js';
 import { Market } from './market.js';
-import { loadTransactionBlob, loadTransactionEntries, recordTransaction } from './model.js';
+import { createOrder, loadActiveOrderIds, loadMoney, loadOrderBlob, loadOrders, loadTransactionBlob, loadTransactionEntries, recordTransaction, runOrderMaintenance } from './model.js';
+import { Order, Orders, orderSchemaVersion, write as writeOrder } from './order.js';
 import { create as createTerminal } from './terminal.js';
 import { Transactions, read } from './transaction.js';
+
+// Count order-blob writes so a test can assert the maintenance pass rewrites only the orders that
+// changed.
+function spyOnOrderWrites(shard: Shard) {
+	const { data } = shard;
+	const original = data.set.bind(data);
+	let count = 0;
+	data.set = ((...args: Parameters<typeof original>) => {
+		if (args[0].startsWith('market/order/')) {
+			++count;
+		}
+		return original(...args);
+	}) as typeof data.set;
+	return { get count() { return count; } };
+}
+
+interface OrderFields {
+	id: string;
+	type: OrderType;
+	resourceType: ResourceType;
+	price: number;
+	totalAmount: number;
+	remainingAmount: number;
+	amount: number;
+	roomName: string;
+	user: string;
+	created: number;
+	createdTimestamp: number;
+	active: boolean;
+}
+
+// Build an `Order` overlay from plain fields, mirroring the stored layout: `price` is in millicredits
+// and the owner lives in the hidden `#user`.
+function makeOrder(over: Partial<OrderFields>): Order {
+	const fields: OrderFields = {
+		id: 'a', type: C.ORDER_SELL, resourceType: C.RESOURCE_ENERGY, price: 500,
+		totalAmount: 1000, remainingAmount: 1000, amount: 1000, roomName: 'W1N1', user: '100',
+		created: 1, createdTimestamp: 2, active: true, ...over,
+	};
+	const order = assign(new Order(), {
+		id: fields.id, type: fields.type, resourceType: fields.resourceType,
+		totalAmount: fields.totalAmount, remainingAmount: fields.remainingAmount, amount: fields.amount,
+		roomName: fields.roomName, created: fields.created, createdTimestamp: fields.createdTimestamp,
+		active: fields.active,
+	});
+	order['#price'] = fields.price;
+	order['#user'] = fields.user;
+	return order;
+}
 
 describe('Market transactions', () => {
 
@@ -214,5 +268,287 @@ describe('Market', () => {
 		const market = new Market({ map: {} } as unknown as GameBase);
 		assert.deepStrictEqual(market.incomingTransactions, []);
 		assert.deepStrictEqual(market.outgoingTransactions, []);
+		assert.strictEqual(market.credits, 0);
+		assert.deepStrictEqual(market.orders, {});
+		assert.deepStrictEqual(market.getAllOrders(), []);
 	});
+
+	test('read getters split the active book from your own orders', () => {
+		// The connector ships the active public book and this user's own orders (active and inactive)
+		// separately, as unparsed blobs. Order 'b' is an inactive order of yours: present in your
+		// orders, absent from the public book.
+		const blobs = {
+			a: writeOrder(makeOrder({ id: 'a', resourceType: C.RESOURCE_ENERGY, price: 500 })),
+			b: writeOrder(makeOrder({ id: 'b', resourceType: C.RESOURCE_ENERGY, price: 1000, active: false, amount: 0 })),
+			c: writeOrder(makeOrder({ id: 'c', type: C.ORDER_BUY, resourceType: C.RESOURCE_POWER, price: 2000, user: '101' })),
+		};
+		const orders = new Orders({ active: [ 'a', 'c' ], mine: [ 'a', 'b' ], blobs });
+		const market = new Market({ map: {} } as unknown as GameBase, undefined, orders, 25_000);
+
+		// Credits and prices cross back to credits (÷1000) at this boundary.
+		assert.strictEqual(market.credits, 25);
+
+		// getAllOrders exposes the active book only — your inactive order 'b' is absent.
+		const all = market.getAllOrders();
+		assert.strictEqual(all.length, 2);
+		assert.ok(!all.some(order => order.id === 'b'));
+		// The owner is not exposed to readers.
+		assert.ok(!('user' in all[0]!));
+
+		// Your own orders include the inactive one.
+		assert.deepStrictEqual(Object.keys(market.orders).sort(), [ 'a', 'b' ]);
+
+		// getOrderById: your own first (so inactive 'b' resolves), then the public book, else null.
+		assert.strictEqual(market.getOrderById('a')!.price, 0.5);
+		assert.strictEqual(market.getOrderById('b')!.price, 1);
+		assert.strictEqual(market.getOrderById('b')!.active, false);
+		assert.strictEqual(market.getOrderById('c')!.price, 2);
+		assert.strictEqual(market.getOrderById('zzz'), null);
+
+		// Object filter matches every specified key; a function filter is also accepted.
+		const energy = market.getAllOrders({ resourceType: C.RESOURCE_ENERGY });
+		assert.strictEqual(energy.length, 1);
+		assert.strictEqual(energy[0]!.id, 'a');
+		assert.strictEqual(market.getAllOrders(order => order.type === C.ORDER_BUY).length, 1);
+	});
+});
+
+describe('Market orders', () => {
+
+	// User '100' owns a terminal in W1N1; '101' owns nothing here.
+	const orderSim = simulate({
+		W1N1: room => {
+			const terminal = createTerminal(new RoomPosition(25, 25, 'W1N1'), '100');
+			terminal.store['#add'](C.RESOURCE_ENERGY, 10000);
+			room['#insertObject'](terminal);
+			room['#level'] = 8;
+			room['#user'] = room.controller!['#user'] = '100';
+		},
+	});
+
+	// price is in millicredits; 500 mc = 0.5 credits. fee = ceil(500 * 1000 * 0.05) = 25_000 mc.
+	const sellParams = {
+		type: C.ORDER_SELL, resourceType: C.RESOURCE_ENERGY, price: 500, totalAmount: 1000, roomName: 'W1N1',
+	} as const;
+
+	test('createOrder records the order and charges the listing fee', () => orderSim(async ({ shard }) => {
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 50_000);
+		const order = await createOrder(shard, '100', 10, sellParams);
+		assert.ok(order);
+		assert.strictEqual(order.type, C.ORDER_SELL);
+		assert.strictEqual(order['#price'], 500);
+		assert.strictEqual(order.totalAmount, 1000);
+		assert.strictEqual(order.remainingAmount, 1000);
+		assert.strictEqual(order.amount, 0);
+		assert.strictEqual(order.active, false);
+		assert.strictEqual(order.roomName, 'W1N1');
+		assert.strictEqual(order['#user'], '100');
+		assert.strictEqual(order.created, 10);
+
+		const orders = await loadOrders(shard);
+		assert.strictEqual(orders.length, 1);
+		assert.strictEqual(orders[0]!.id, order.id);
+		// 50_000 seeded - 25_000 fee.
+		assert.strictEqual(await loadMoney(shard, '100'), 25_000);
+	}));
+
+	test('createOrder rejects when the fee exceeds available credits', () => orderSim(async ({ shard }) => {
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 10_000);
+		const order = await createOrder(shard, '100', 10, sellParams);
+		assert.strictEqual(order, undefined);
+		assert.strictEqual((await loadOrders(shard)).length, 0);
+		assert.strictEqual(await loadMoney(shard, '100'), 10_000);
+	}));
+
+	test('createOrder rejects a user who owns no terminal in the room', () => orderSim(async ({ shard }) => {
+		await shard.db.data.hincrBy(User.infoKey('101'), 'money', 50_000);
+		const order = await createOrder(shard, '101', 10, sellParams);
+		assert.strictEqual(order, undefined);
+		assert.strictEqual((await loadOrders(shard)).length, 0);
+		assert.strictEqual(await loadMoney(shard, '101'), 50_000);
+	}));
+
+	test('runOrderMaintenance expires aged orders and refunds the unspent fee', () => orderSim(async ({ shard }) => {
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 50_000);
+		assert.ok(await createOrder(shard, '100', 10, sellParams));
+		// Backdate the snapshot past the lifetime so the order is due for expiry.
+		const orders = await loadOrders(shard);
+		orders[0]!.createdTimestamp -= C.MARKET_ORDER_LIFE_TIME + 1;
+
+		await runOrderMaintenance(shard, orders);
+		assert.strictEqual((await loadOrders(shard)).length, 0);
+		// Refund = floor(1000 * 500 * 0.05) = 25_000, restoring the 50_000 seed.
+		assert.strictEqual(await loadMoney(shard, '100'), 50_000);
+	}));
+
+	test('runOrderMaintenance activates a sell order against terminal stock', () => orderSim(async ({ shard }) => {
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 50_000);
+		await createOrder(shard, '100', 10, sellParams);
+		await runOrderMaintenance(shard, await loadOrders(shard));
+		const [ order ] = await loadOrders(shard);
+		assert.strictEqual(order!.active, true);
+		// min(10_000 in the terminal, 1000 remaining).
+		assert.strictEqual(order!.amount, 1000);
+	}));
+
+	test('runOrderMaintenance activates a buy order against credits and free space', () => orderSim(async ({ shard }) => {
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 100_000);
+		assert.ok(await createOrder(shard, '100', 10, {
+			type: C.ORDER_BUY, resourceType: C.RESOURCE_ENERGY, price: 500, totalAmount: 100, roomName: 'W1N1',
+		}));
+		await runOrderMaintenance(shard, await loadOrders(shard));
+		const [ order ] = await loadOrders(shard);
+		assert.strictEqual(order!.active, true);
+		// min(floor(97_500 / 500) = 195, 100 remaining, free space) = 100.
+		assert.strictEqual(order!.amount, 100);
+	}));
+
+	test('runOrderMaintenance rewrites only orders whose state changed', () => orderSim(async ({ shard }) => {
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 50_000);
+		await createOrder(shard, '100', 10, sellParams);
+
+		const spy = spyOnOrderWrites(shard);
+		// First pass flips the order active (false → true): one blob write.
+		await runOrderMaintenance(shard, await loadOrders(shard));
+		assert.strictEqual(spy.count, 1);
+		// Nothing changed since (same terminal stock), so the order is not rewritten.
+		const baseline = spy.count;
+		await runOrderMaintenance(shard, await loadOrders(shard));
+		assert.strictEqual(spy.count, baseline);
+	}));
+
+	test('createOrder coerces fractional numerics to integers', () => orderSim(async ({ shard }) => {
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 50_000);
+		// Under one unit truncates to zero and rejects without charging.
+		assert.strictEqual(await createOrder(shard, '100', 10, { ...sellParams, totalAmount: 0.5 }), undefined);
+		assert.strictEqual(await loadMoney(shard, '100'), 50_000);
+		// A fractional price rounds before the fee and the stored order.
+		const order = await createOrder(shard, '100', 10, { ...sellParams, price: 500.4 });
+		assert.strictEqual(order?.['#price'], 500);
+		// 50_000 seeded − ceil(500 · 1000 · 0.05) from the rounded price.
+		assert.strictEqual(await loadMoney(shard, '100'), 25_000);
+	}));
+
+	test('createOrder rejects at MARKET_MAX_ORDERS without charging', () => orderSim(async ({ shard }) => {
+		// Each order's fee is 25_000; seed one fee more than the cap spends.
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 25_000 * (C.MARKET_MAX_ORDERS + 1));
+		for (const ii of Fn.range(C.MARKET_MAX_ORDERS)) {
+			assert.ok(await createOrder(shard, '100', 10, sellParams), `order ${ii}`);
+		}
+		assert.strictEqual(await createOrder(shard, '100', 10, sellParams), undefined);
+		assert.strictEqual((await loadOrders(shard)).length, C.MARKET_MAX_ORDERS);
+		assert.strictEqual(await loadMoney(shard, '100'), 25_000);
+	}));
+
+	test('a second same-tick createOrder at the cap returns ERR_FULL', () => orderSim(async ({ player }) => {
+		await player('100', Game => {
+			// One slot under the cap: the first call fits, the second counts the first's pending order.
+			const ids = [ ...Fn.map(Fn.range(C.MARKET_MAX_ORDERS - 1), index => index.toString(16)) ];
+			const blobs = Fn.fromEntries(ids, id => [ id, writeOrder(makeOrder({ id })) ] as const);
+			const market = new Market(Game, undefined, new Orders({ active: [], mine: ids, blobs }), 100_000);
+			const options = { type: C.ORDER_SELL, resourceType: C.RESOURCE_ENERGY, price: 0.5, totalAmount: 100, roomName: 'W1N1' } as const;
+			assert.strictEqual(market.createOrder(options), C.OK);
+			assert.strictEqual(market.createOrder(options), C.ERR_FULL);
+		});
+	}));
+
+	test('createOrder truncates a fractional totalAmount', () => orderSim(async ({ player }) => {
+		await player('100', Game => {
+			const market = new Market(Game, undefined, undefined, 100_000);
+			const options = { type: C.ORDER_SELL, resourceType: C.RESOURCE_ENERGY, price: 0.5, roomName: 'W1N1' } as const;
+			// Under one unit truncates to zero.
+			assert.strictEqual(market.createOrder({ ...options, totalAmount: 0.5 }), C.ERR_INVALID_ARGS);
+			assert.strictEqual(market.createOrder({ ...options, totalAmount: 1.5 }), C.OK);
+			// A negative amount passes the runtime and is rejected by the shard pass.
+			assert.strictEqual(market.createOrder({ ...options, totalAmount: -5 }), C.OK);
+		});
+	}));
+
+	test('runOrderMaintenance stores the recomputed amount when a buy order deactivates', () => orderSim(async ({ shard }) => {
+		// '101' owns no terminal in W1N1, so the order deactivates; its advertised volume still tracks
+		// the owner's credits, bounded by the room terminal's free space.
+		await shard.db.data.hincrBy(User.infoKey('101'), 'money', 50_000);
+		const order = makeOrder({ type: C.ORDER_BUY, price: 500, user: '101', createdTimestamp: Date.now() });
+		await runOrderMaintenance(shard, [ order ]);
+		assert.strictEqual(order.active, false);
+		// affordable = floor(50_000 / 500).
+		assert.strictEqual(order.amount, 100);
+	}));
+
+	test('loadOrders drops an order stored under a changed schema version', () => orderSim(async ({ shard }) => {
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 50_000);
+		const order = await createOrder(shard, '100', 10, sellParams);
+		assert.ok(order);
+		await runOrderMaintenance(shard, await loadOrders(shard));
+		assert.strictEqual((await loadActiveOrderIds(shard)).length, 1);
+
+		// Rewrite the blob with a bumped version, as if it had been written by an older build.
+		const blob = await loadOrderBlob(shard, order.id);
+		assert.ok(blob);
+		const corrupted = blob.slice();
+		new Uint32Array(corrupted.buffer, 0, 4)[1] = orderSchemaVersion + 1;
+		await shard.data.set(`market/order/${order.id}`, corrupted);
+
+		// The version probe drops the order and its index entries instead of throwing.
+		assert.deepStrictEqual(await loadOrders(shard), []);
+		assert.deepStrictEqual(await loadActiveOrderIds(shard), []);
+		assert.strictEqual(await loadOrderBlob(shard, order.id), null);
+
+		// The next pass over the cleaned book round-trips.
+		await runOrderMaintenance(shard, await loadOrders(shard));
+		assert.deepStrictEqual(await loadOrders(shard), []);
+	}));
+});
+
+describe('Market createOrder pipeline', () => {
+
+	// A fresh sandbox user that owns the room, so the ownership check and the runner connector apply.
+	// The terminal holds stock so the sell order can activate in a later maintenance pass.
+	const sandboxSim = simulate({
+		W1N1: room => {
+			const terminal = createTerminal(new RoomPosition(25, 25, 'W1N1'), '200');
+			terminal.store['#add'](C.RESOURCE_ENERGY, 10000);
+			room['#insertObject'](terminal);
+			room['#level'] = 8;
+			room['#user'] = room.controller!['#user'] = '200';
+		},
+	});
+
+	test('createOrder reaches the book; the connector ships the active book and your orders', () => sandboxSim(async ({ sandbox, shard, tick }) => {
+		await shard.db.data.hincrBy(User.infoKey('200'), 'money', 50_000);
+		using _player = await sandbox('200', global => {
+			const market = global.Game.market;
+			const ids = Object.keys(market.orders);
+			if (ids.length === 0) {
+				// First tick: place the order through the real runtime → transport → shard pass.
+				assert.strictEqual(market.createOrder({
+					type: 'sell', resourceType: 'energy', price: 0.5, totalAmount: 1000, roomName: 'W1N1',
+				}), 0);
+			} else {
+				// Later ticks: the connector shipped credits, your one order, and the active public
+				// book. The book is active-only, so your order is in it exactly when it is active.
+				assert.strictEqual(ids.length, 1);
+				assert.strictEqual(market.credits, 25);
+				const id = ids[0]!;
+				assert.strictEqual(market.getOrderById(id)!.price, 0.5);
+				const all = market.getAllOrders();
+				for (const order of all) {
+					assert.strictEqual(order.active, true);
+				}
+				assert.strictEqual(all.length, market.orders[id]!.active ? 1 : 0);
+			}
+		});
+		// Create (tick 1), read while still inactive (tick 2), read after activation (tick 3).
+		await tick(3);
+
+		const orders = await loadOrders(shard);
+		assert.strictEqual(orders.length, 1);
+		assert.strictEqual(orders[0]!['#user'], '200');
+		// 0.5 credits → 500 millicredits stored.
+		assert.strictEqual(orders[0]!['#price'], 500);
+		// Maintenance activated it against the terminal stock.
+		assert.strictEqual(orders[0]!.active, true);
+		// 50_000 seeded − ceil(500 · 1000 · 0.05) = 25_000 fee.
+		assert.strictEqual(await loadMoney(shard, '200'), 25_000);
+	}));
 });

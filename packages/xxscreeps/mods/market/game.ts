@@ -2,6 +2,7 @@ import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
 import { Market } from './market.js';
+import { Orders } from './order.js';
 import { terminalShape } from './schema.js';
 import { StructureTerminal } from './terminal.js';
 import { Transactions } from './transaction.js';
@@ -19,7 +20,11 @@ hooks.register('gameInitializer', (game, data) => {
 	if (data?.transactions) {
 		transactions = new Transactions(data.transactions);
 	}
-	game.market = new Market(game, transactions);
+	game.market = new Market(
+		game,
+		transactions,
+		data?.orders && new Orders(data.orders),
+		data?.money);
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
