@@ -7,38 +7,41 @@ import * as BufferObject from 'xxscreeps/schema/buffer-object.js';
 import * as C from './constants/index.js';
 
 const kCpuCost = 0.2;
+// Receivers addressed by a global name instead of a room or object: every registered intent whose
+// receiver is neither a `RoomObject` nor a `Room` (e.g. `market`), applied per-user outside the room
+// processor.
 type NamedReceivers = Exclude<IntentReceivers, RoomObject | Room>;
-type NamedIntent = Partial<Record<IntentsForReceiver<NamedReceivers>, any[]>>;
-type NamedIntentPayload = Partial<Record<NamedReceivers, NamedIntent>>;
+// Wire/storage form: receiver → intent → one arg-tuple per `pushNamed` call. The arg-tuples stay
+// untyped at the storage layer, like the room-intent payloads (`RoomIntentPayload`).
+type NamedIntent = Partial<Record<IntentsForReceiver<NamedReceivers>, any[][]>>;
+export type NamedIntentPayload = Partial<Record<NamedReceivers, NamedIntent>>;
 
 export class IntentManager {
 	cpu = 0;
 	intentsByName: NamedIntentPayload = {};
 	intentsByRoom: Dictionary<RoomIntentPayload> = {};
 
-	getIntentsForName(name: NamedReceivers) {
-		return this.intentsByName[name];
-	}
-
 	getIntentsForRoom(roomName: string) {
 		return this.intentsByRoom[roomName];
+	}
+
+	getNamedIntents() {
+		return this.intentsByName;
 	}
 
 	/**
 	 * Save an intent for a globally-scoped name, like "flag.create" or "market.createOrder".
 	 */
-	/*
 	pushNamed<
 		Receiver extends NamedReceivers,
-		Action extends IntentsForReceiver<Receiver>
+		Action extends IntentsForReceiver<Receiver>,
 	>(receiver: Receiver, intent: Action, ...args: IntentParameters<Receiver, Action>) {
-		const forName = this.intentsByName[receiver] ??= {} as never;
-		const intents = forName[intent] ??= [] as never;
+		const forName: NamedIntent = this.intentsByName[receiver] ??= {};
+		const intents = forName[intent as keyof typeof forName] ??= [];
 		this.cpu += kCpuCost;
 		intents.push(args);
 		return C.OK;
 	}
-	*/
 
 	/**
 	 * Save a unique intent for a RoomObject in an active room
