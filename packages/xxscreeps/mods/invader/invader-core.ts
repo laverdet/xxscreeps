@@ -1,4 +1,5 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
+import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
@@ -6,8 +7,9 @@ import * as RoomObject from 'xxscreeps/game/object.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { StructureTower } from 'xxscreeps/mods/defense/tower.js';
+import { Spawning, spawningFormat } from 'xxscreeps/mods/spawn/spawn.js';
 import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { compose, declare, optional, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 
 export const format = declare('InvaderCore', () => compose(shape, StructureInvaderCore));
@@ -15,6 +17,7 @@ const shape = struct(ownedStructureFormat, {
 	...variant('invaderCore'),
 	hits: 'int32',
 	level: 'int8',
+	spawning: optional(compose(spawningFormat, Spawning), null),
 	'#actionLog': RoomObject.actionLogFormat,
 	'#collapseTime': 'int32',
 	'#deployTime': 'int32',
@@ -35,10 +38,6 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 		];
 		return effects.length === 0 ? undefined : effects;
 	}
-
-	// TODO: stronghold spawning
-	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
-	@enumerable get spawning(): null { return null; }
 
 	@enumerable get ticksToDeploy(): number | undefined {
 		const deployTime = this['#deployTime'];
@@ -96,6 +95,18 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 			() => checkTransferEnergy(this, target),
 			() => intents.save(this, 'transferEnergy', target.id,
 				amount ?? target.store.getFreeCapacity(C.RESOURCE_ENERGY)!));
+	}
+
+	/**
+	 * Incubate an NPC defender on the core's own tile. The spawn takes
+	 * `INVADER_CORE_CREEP_SPAWN_TIME[level]` ticks per body part and materializes on an adjacent
+	 * tile once it elapses. The stronghold population behaviors that supply bodies and boosts arrive
+	 * in a later slice.
+	 */
+	'#createCreep'(body: PartType[], name: string) {
+		return chainIntentChecks(
+			() => checkCreateCreep(this),
+			() => intents.save(this, 'createCreep', body, name));
 	}
 
 	override '#applyDamage'(power: number, type: number, source?: RoomObject.RoomObject) {
@@ -182,6 +193,17 @@ export function checkUpgradeController(core: StructureInvaderCore, target: Struc
 				return C.ERR_INVALID_TARGET;
 			}
 		});
+}
+
+// The NPC loop is the only caller and supplies the body/name, so this validates core state only,
+// mirroring vanilla's invader core (which never rejects an internal `createCreep` on its arguments).
+export function checkCreateCreep(core: StructureInvaderCore) {
+	return chainIntentChecks(
+		() => checkMyStructure(core, StructureInvaderCore),
+		() => checkSourceAlive(core),
+		() => core.spawning ? C.ERR_BUSY : C.OK,
+		// Only levels with a configured spawn time (2+) field defenders.
+		() => (C.INVADER_CORE_CREEP_SPAWN_TIME[core.level] ?? 0) > 0 ? undefined : C.ERR_INVALID_TARGET);
 }
 
 export function checkTransferEnergy(core: StructureInvaderCore, target: StructureTower | Creep) {
