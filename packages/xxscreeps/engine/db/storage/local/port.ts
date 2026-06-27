@@ -410,7 +410,8 @@ export async function makeWorkerPortConnection<Send, Receive>(name: string): Pro
 		name,
 		port: port2,
 	} satisfies WorkerConnectMessage, [ port2 ]);
-	await using shift = await Fn.shiftAsync(messagePortToIterable<Receive[] | WorkerConnectedMessage>(port1));
+	// `rest` is handed to the caller and must outlive this scope; auto-disposing closes `port1`.
+	const shift = await Fn.shiftAsync(messagePortToIterable<Receive[] | WorkerConnectedMessage>(port1));
 	const messages = function() {
 		if (shift.head) {
 			const message = shift.head as WorkerConnectedMessage | UnknownMessage;
@@ -429,6 +430,7 @@ export async function makeWorkerPortConnection<Send, Receive>(name: string): Pro
 			send: batchMessagePortSend(port1),
 		};
 	} else {
+		await shift[Symbol.asyncDispose]();
 		throw new Error(`Failed to connect to worker port ${name}.`);
 	}
 }
