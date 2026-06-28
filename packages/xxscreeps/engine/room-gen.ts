@@ -1,7 +1,9 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { HighwayOrientation, RoomType } from 'xxscreeps/game/room/sector.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
@@ -9,7 +11,7 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { highwayOrientation } from 'xxscreeps/game/room/sector.js';
-import { Terrain, TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
+import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { create as createExtractor } from 'xxscreeps/mods/mineral/extractor.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
@@ -18,7 +20,7 @@ import { Source } from 'xxscreeps/mods/source/source.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 
 type ExitSide = 'top' | 'right' | 'bottom' | 'left';
-export type ExitMap = Record<ExitSide, number[]>;
+type ExitMap = Record<ExitSide, number[]>;
 
 // The world's per-room terrain map, as returned by `shard.loadWorld()`. The generation entry points
 // accumulate freshly built rooms into one of these and serialize it once, rather than once per room.
@@ -92,6 +94,14 @@ const swampTypes: Record<number, TerrainTypeParams> = {
 	14: { fill: 0.35, smooth: 3, factor: 5 },
 };
 
+const kWallTypeCount = Object.keys(wallTypes).length;
+const kSwampTypeCount = Object.keys(swampTypes).length;
+
+// Procedural rooms pick a wall type uniformly from the table.
+function randomWallType(): number {
+	return Math.floor(Math.random() * kWallTypeCount) + 1;
+}
+
 export const mineralPool: ResourceType[] = [
 	C.RESOURCE_HYDROGEN, C.RESOURCE_HYDROGEN, C.RESOURCE_HYDROGEN,
 	C.RESOURCE_HYDROGEN, C.RESOURCE_HYDROGEN, C.RESOURCE_HYDROGEN,
@@ -116,6 +126,10 @@ interface Cell {
 }
 
 type Grid = Cell[][];
+
+// Yields the in-bounds tiles within Chebyshev `range` of (xx, yy) (the tile itself included), clamped
+// to the 50x50 grid, so neighbour walks don't need their own bounds guards.
+const iterateGridInRange = makeLocalIterateInRangeTo(0, 49);
 
 function makeGrid(): Grid {
 	const grid: Grid = [];
@@ -158,7 +172,7 @@ function smoothTerrain(grid: Grid, factor: number, key: 'wall' | 'swamp'): Grid 
 			nextCell[key] = count >= factor;
 
 			if (key === 'wall') {
-				if (xx === 0 || xx === 49 || yy === 0 || yy === 49) {
+				if (isBorder(xx, yy)) {
 					nextCell.wall = true;
 				}
 				if (cell.forceOpen) {
@@ -197,15 +211,10 @@ function checkFlood(grid: Grid): boolean {
 
 	while (stack.length > 0) {
 		const [ cxx, cyy ] = stack.pop()!;
-		for (let dyy = -1; dyy <= 1; dyy++) {
-			for (let dxx = -1; dxx <= 1; dxx++) {
-				if (dxx === 0 && dyy === 0) continue;
-				const nxx = cxx + dxx;
-				const nyy = cyy + dyy;
-				if (nxx >= 0 && nxx <= 49 && nyy >= 0 && nyy <= 49 && !grid[nyy]![nxx]!.wall && !visited[nyy]![nxx]) {
-					visited[nyy]![nxx] = true;
-					stack.push([ nxx, nyy ]);
-				}
+		for (const [ nxx, nyy ] of iterateGridInRange(cxx, cyy, 1)) {
+			if (!grid[nyy]![nxx]!.wall && !visited[nyy]![nxx]) {
+				visited[nyy]![nxx] = true;
+				stack.push([ nxx, nyy ]);
 			}
 		}
 	}
@@ -278,50 +287,35 @@ function exitsArray(terrain: Terrain, axis: 'x' | 'y', fixed: number): number[] 
 }
 
 function hasPassableNeighbor(grid: Grid, xx: number, yy: number): boolean {
-	for (let dyy = -1; dyy <= 1; dyy++) {
-		for (let dxx = -1; dxx <= 1; dxx++) {
-			const nxx = xx + dxx;
-			const nyy = yy + dyy;
-			if (nxx >= 0 && nxx <= 49 && nyy >= 0 && nyy <= 49 && !grid[nyy]![nxx]!.wall) {
-				return true;
-			}
-		}
-	}
-	return false;
+	return Fn.some(iterateGridInRange(xx, yy, 1), ([ nxx, nyy ]) => !grid[nyy]![nxx]!.wall);
 }
 
 // BFS outward from (xx, yy) through passable terrain for a wall tile 3-5 steps away to host a keeper
 // lair, returning a uniformly random candidate or undefined when none exists.
 function findLairSpot(grid: Grid, xx: number, yy: number): [ number, number ] | undefined {
 	const lairSpots: [ number, number ][] = [];
-	const visited = new Map<string, number>();
+	const visited = new Map<number, number>();
 	const queue: [ number, number ][] = [ [ xx, yy ] ];
-	visited.set(`${xx},${yy}`, 0);
+	visited.set(yy * 50 + xx, 0);
 
 	while (queue.length > 0) {
 		const [ cxx, cyy ] = queue.shift()!;
-		const dist = visited.get(`${cxx},${cyy}`)!;
-		for (let dyy = -1; dyy <= 1; dyy++) {
-			for (let dxx = -1; dxx <= 1; dxx++) {
-				if (dxx === 0 && dyy === 0) continue;
-				const nxx = cxx + dxx;
-				const nyy = cyy + dyy;
-				const key = `${nxx},${nyy}`;
-				if (visited.has(key)) continue;
-				if (nxx < 0 || nyy < 0 || nxx > 49 || nyy > 49) continue;
+		const dist = visited.get(cyy * 50 + cxx)!;
+		for (const [ nxx, nyy ] of iterateGridInRange(cxx, cyy, 1)) {
+			const key = nyy * 50 + nxx;
+			if (visited.has(key)) continue;
 
-				const distance = dist + 1;
-				visited.set(key, distance);
+			const distance = dist + 1;
+			visited.set(key, distance);
 
-				const neighbor = grid[nyy]![nxx]!;
-				if (distance >= 3 && distance <= 5 &&
-					neighbor.wall && !neighbor.source &&
-					nxx > 0 && nxx < 49 && nyy > 0 && nyy < 49) {
-					lairSpots.push([ nxx, nyy ]);
-				}
-				if (!neighbor.wall && distance < 5) {
-					queue.push([ nxx, nyy ]);
-				}
+			const neighbor = grid[nyy]![nxx]!;
+			if (distance >= 3 && distance <= 5 &&
+				neighbor.wall && !neighbor.source &&
+				nxx > 0 && nxx < 49 && nyy > 0 && nyy < 49) {
+				lairSpots.push([ nxx, nyy ]);
+			}
+			if (!neighbor.wall && distance < 5) {
+				queue.push([ nxx, nyy ]);
 			}
 		}
 	}
@@ -377,16 +371,16 @@ function edgeNoise(wx: number, wy: number): number {
 		valueNoise(wx + 1000, wy + 1000, kHighwayDetailCell) * (1 - kHighwayMassWeight);
 }
 
-// Open tiles reachable from (xx, yy), as a set of `${xx},${yy}` keys.
-function reachableOpen(grid: Grid, xx: number, yy: number): Set<string> {
-	const reached = new Set([ `${xx},${yy}` ]);
+// Open tiles reachable from (xx, yy), as a set of packed `yy * 50 + xx` keys.
+function reachableOpen(grid: Grid, xx: number, yy: number): Set<number> {
+	const reached = new Set([ yy * 50 + xx ]);
 	const stack: [ number, number ][] = [ [ xx, yy ] ];
 	while (stack.length > 0) {
 		const [ cxx, cyy ] = stack.pop()!;
 		for (const [ dxx, dyy ] of [ [ 0, -1 ], [ 0, 1 ], [ -1, 0 ], [ 1, 0 ] ] as const) {
 			const nxx = cxx + dxx;
 			const nyy = cyy + dyy;
-			const key = `${nxx},${nyy}`;
+			const key = nyy * 50 + nxx;
 			if (nxx >= 0 && nyy >= 0 && nxx <= 49 && nyy <= 49 && !grid[nyy]![nxx]!.wall && !reached.has(key)) {
 				reached.add(key);
 				stack.push([ nxx, nyy ]);
@@ -400,16 +394,17 @@ function reachableOpen(grid: Grid, xx: number, yy: number): Set<string> {
 // search that may pass through walls finds the nearest already-open tile, then clears only the walls
 // on that shortest path — so a throat ringed by a lane blob opens with a one- or two-tile slot rather
 // than a corridor driven clear across the room. Carved tiles join `reached` for the next throat.
-function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<string>): void {
-	const start = `${sx},${sy}`;
-	const prev = new Map<string, string | null>([ [ start, null ] ]);
+function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<number>): void {
+	const start = sy * 50 + sx;
+	const prev = new Map<number, number>([ [ start, -1 ] ]);
 	// The queue grows as the search fans out; the array iterator keeps yielding the pushed tiles.
 	const queue: [ number, number ][] = [ [ sx, sy ] ];
 	for (const [ cxx, cyy ] of queue) {
-		const key = `${cxx},${cyy}`;
+		const key = cyy * 50 + cxx;
 		if (key !== start && reached.has(key)) {
-			for (let step: string | null = key; step !== null; step = prev.get(step) ?? null) {
-				const [ pxx, pyy ] = step.split(',').map(Number) as [ number, number ];
+			for (let step = key; step !== -1; step = prev.get(step) ?? -1) {
+				const pxx = step % 50;
+				const pyy = (step - pxx) / 50;
 				if (pxx >= 1 && pxx <= 48 && pyy >= 1 && pyy <= 48) grid[pyy]![pxx]!.wall = false;
 				reached.add(step);
 			}
@@ -418,10 +413,12 @@ function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<string>): 
 		for (const [ dxx, dyy ] of [ [ 0, -1 ], [ 0, 1 ], [ -1, 0 ], [ 1, 0 ] ] as const) {
 			const nxx = cxx + dxx;
 			const nyy = cyy + dyy;
-			const nkey = `${nxx},${nyy}`;
-			if (nxx >= 0 && nyy >= 0 && nxx <= 49 && nyy <= 49 && !prev.has(nkey)) {
-				prev.set(nkey, key);
-				queue.push([ nxx, nyy ]);
+			if (nxx >= 0 && nyy >= 0 && nxx <= 49 && nyy <= 49) {
+				const nkey = nyy * 50 + nxx;
+				if (!prev.has(nkey)) {
+					prev.set(nkey, key);
+					queue.push([ nxx, nyy ]);
+				}
 			}
 		}
 	}
@@ -440,7 +437,7 @@ function connectExits(grid: Grid, exits: ExitMap): void {
 	const [ ax, ay ] = throats[0]!;
 	const reached = reachableOpen(grid, ax, ay);
 	for (const [ bx, by ] of throats.slice(1)) {
-		if (!reached.has(`${bx},${by}`)) {
+		if (!reached.has(by * 50 + bx)) {
 			carveToOpen(grid, bx, by, reached);
 		}
 	}
@@ -628,24 +625,28 @@ function farthestSourceTile(grid: Grid, placed: [ number, number ][]): [ number,
 	return [ choice[0], choice[1] ];
 }
 
-function genTerrain(
-	wallType: number,
-	swampType: number,
-	exits: ExitMap,
-	sourceCount: number,
-	controller: boolean,
-	keeperLairs: boolean,
-	mineral = false,
-): Grid {
-	let tries = 0;
+interface TerrainParams {
+	wallType: number;
+	swampType: number;
+	sourceCount: number;
+	controller: boolean;
+	keeperLairs: boolean;
+	mineral: boolean;
+}
+
+const kMaxGenerateAttempts = 50;
+
+// Fills the room with cellular-automaton wall (and swamp) noise, rerolling the wall type until the
+// open terrain is fully connected, then smooths swamp the same way.
+function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): Grid {
 	let grid: Grid;
 	let activeWallType = wallType;
-
+	let tries = 0;
 	do {
 		grid = makeGrid();
 		tries++;
 		if (tries > 100) {
-			activeWallType = Math.floor(Math.random() * 27) + 1;
+			activeWallType = randomWallType();
 			tries = 0;
 		}
 
@@ -694,7 +695,13 @@ function genTerrain(
 			grid = smoothTerrain(grid, swampParams.factor, 'swamp');
 		}
 	}
+	return grid;
+}
 
+// Places sources, controller, and mineral (with keeper lairs) on the grid. Returns false when a
+// spacing constraint can't be satisfied on this terrain, signalling the caller to regenerate.
+function tryPlaceObjects(grid: Grid, params: TerrainParams): boolean {
+	const { sourceCount, controller, keeperLairs, mineral } = params;
 	const spreadSources = sourceCount >= kSpreadSourceThreshold;
 	const placedSources: [ number, number ][] = [];
 	for (let ii = 0; ii < sourceCount; ii++) {
@@ -704,7 +711,7 @@ function genTerrain(
 		if (spreadSources && placedSources.length > 0) {
 			const tile = farthestSourceTile(grid, placedSources);
 			if (!tile) {
-				return genTerrain(Math.floor(Math.random() * 27) + 1, swampType, exits, sourceCount, controller, keeperLairs, mineral);
+				return false;
 			}
 			[ sxx, syy ] = tile;
 		} else {
@@ -714,7 +721,7 @@ function genTerrain(
 				sxx = Math.floor(Math.random() * 44) + 3;
 				syy = Math.floor(Math.random() * 44) + 3;
 				if (sourceTries > 1000) {
-					return genTerrain(Math.floor(Math.random() * 27) + 1, swampType, exits, sourceCount, controller, keeperLairs, mineral);
+					return false;
 				}
 			} while (!grid[syy]![sxx]!.wall || !hasPassableNeighbor(grid, sxx, syy));
 		}
@@ -724,11 +731,10 @@ function genTerrain(
 
 		if (keeperLairs) {
 			const spot = findLairSpot(grid, sxx, syy);
-			if (spot) {
-				grid[spot[1]]![spot[0]]!.keeperLair = true;
-			} else {
-				return genTerrain(Math.floor(Math.random() * 27) + 1, swampType, exits, sourceCount, controller, keeperLairs, mineral);
+			if (!spot) {
+				return false;
 			}
+			grid[spot[1]]![spot[0]]!.keeperLair = true;
 		}
 	}
 
@@ -743,7 +749,7 @@ function genTerrain(
 			cyy = Math.floor(Math.random() * 40) + 5;
 			target = grid[cyy]![cxx]!;
 			if (controllerTries > 1000) {
-				return genTerrain(Math.floor(Math.random() * 27) + 1, swampType, exits, sourceCount, controller, keeperLairs, mineral);
+				return false;
 			}
 		} while (
 			!target.wall ||
@@ -759,15 +765,28 @@ function genTerrain(
 		grid[yy]![xx]!.mineral = true;
 		if (keeperLairs) {
 			const spot = findLairSpot(grid, xx, yy);
-			if (spot) {
-				grid[spot[1]]![spot[0]]!.keeperLair = true;
-			} else {
-				return genTerrain(Math.floor(Math.random() * 27) + 1, swampType, exits, sourceCount, controller, keeperLairs, mineral);
+			if (!spot) {
+				return false;
 			}
+			grid[spot[1]]![spot[0]]!.keeperLair = true;
 		}
 	}
 
-	return grid;
+	return true;
+}
+
+// Generates a normal room's terrain and object placements, retrying with a fresh wall type when the
+// layout can't satisfy its spacing constraints, and giving up (rather than looping forever) after a
+// bounded number of attempts.
+function genTerrain(exits: ExitMap, params: TerrainParams): Grid {
+	for (let attempt = 0; attempt < kMaxGenerateAttempts; attempt++) {
+		const wallType = attempt === 0 ? params.wallType : randomWallType();
+		const grid = buildBaseTerrain(exits, wallType, params.swampType);
+		if (tryPlaceObjects(grid, params)) {
+			return grid;
+		}
+	}
+	throw new Error(`Could not generate terrain after ${kMaxGenerateAttempts} attempts`);
 }
 
 function gridToTerrain(grid: Grid): TerrainWriter {
@@ -812,17 +831,10 @@ function pickMineralPosition(grid: Grid) {
 		myy = 4 + Math.floor(Math.random() * 42);
 		isWall = grid[myy]![mxx]!.wall;
 		hasSpot = hasPassableNeighbor(grid, mxx, myy);
-		tooClose = false;
-		for (let yy = 0; yy < 50 && !tooClose; yy++) {
-			const row = grid[yy]!;
-			for (let xx = 0; xx < 50 && !tooClose; xx++) {
-				const cell = row[xx]!;
-				if ((cell.source || cell.controller) &&
-					Math.abs(xx - mxx) < 5 && Math.abs(yy - myy) < 5) {
-					tooClose = true;
-				}
-			}
-		}
+		tooClose = Fn.some(iterateGridInRange(mxx, myy, 4), ([ xx, yy ]) => {
+			const cell = grid[yy]![xx]!;
+			return cell.source || cell.controller;
+		});
 	} while (!isWall || !hasSpot || tooClose);
 
 	return { xx: mxx, yy: myy };
@@ -925,9 +937,9 @@ function buildRoom(
 		}
 	}
 
-	const wallType = options?.terrainType ?? Math.floor(Math.random() * 27) + 1;
+	const wallType = options?.terrainType ?? randomWallType();
 	const swampType = options?.swampType ??
-		(options?.corridor ? rollHighwaySwamp() : Math.floor(Math.random() * 14));
+		(options?.corridor ? rollHighwaySwamp() : Math.floor(Math.random() * (kSwampTypeCount + 1)));
 	const sourceCount = options?.sources ?? (Math.random() > 0.5 ? 1 : 2);
 	const hasController = options?.controller ?? true;
 	const hasKeepers = options?.keeperLairs ?? false;
@@ -937,7 +949,14 @@ function buildRoom(
 
 	const grid = options?.corridor
 		? genHighwayTerrain(exits, rx, ry, highwayOrientation(roomName), swampType)
-		: genTerrain(wallType, swampType, exits, sourceCount, hasController, hasKeepers, mineralType !== false);
+		: genTerrain(exits, {
+			wallType,
+			swampType,
+			sourceCount,
+			controller: hasController,
+			keeperLairs: hasKeepers,
+			mineral: mineralType !== false,
+		});
 	const terrain = gridToTerrain(grid);
 
 	// Keeper-guarded sources (source-keeper and center rooms, which have no controller) hold 4000
