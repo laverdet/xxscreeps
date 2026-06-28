@@ -263,12 +263,17 @@ registerObjectPreTickProcessor(StructureInvaderCore, (core, context) => {
 });
 
 // The structures a deployed stronghold spawns around its core. A stub layout; the canonical bunker
-// templates and their reward containers land in a follow-up.
-function *strongholdTemplate(pos: RoomPosition) {
-	yield createTower(new RoomPosition(pos.x, pos.y - 1, pos.roomName), '2');
-	yield createRampart(new RoomPosition(pos.x + 1, pos.y, pos.roomName), '2');
-	yield createContainer(new RoomPosition(pos.x - 1, pos.y, pos.roomName));
-	yield createRoad(new RoomPosition(pos.x, pos.y + 1, pos.roomName));
+// templates and their reward containers land in a follow-up. Decaying peers are pinned to the
+// collapse time so they don't decay (and read a past expiry) while the room sleeps until collapse.
+function *strongholdTemplate(pos: RoomPosition, collapseTime: number) {
+	const tower = createTower(new RoomPosition(pos.x, pos.y - 1, pos.roomName), '2');
+	const rampart = createRampart(new RoomPosition(pos.x + 1, pos.y, pos.roomName), '2');
+	const container = createContainer(new RoomPosition(pos.x - 1, pos.y, pos.roomName));
+	const road = createRoad(new RoomPosition(pos.x, pos.y + 1, pos.roomName));
+	rampart['#nextDecayTime'] = collapseTime;
+	container['#nextDecayTime'] = collapseTime;
+	road['#nextDecayTime'] = collapseTime;
+	yield* [ tower, rampart, container, road ];
 }
 
 // Deploy the stronghold: drop the deploy timer, start the shared collapse timer, and spawn the
@@ -277,7 +282,7 @@ function deployStronghold(core: StructureInvaderCore, context: ProcessorContext)
 	core['#deployTime'] = 0;
 	const duration = Math.round(C.STRONGHOLD_DECAY_TICKS * (0.9 + Math.random() * 0.2));
 	const collapseTime = core['#collapseTime'] = Game.time + duration;
-	for (const peer of strongholdTemplate(core.pos)) {
+	for (const peer of strongholdTemplate(core.pos, collapseTime)) {
 		peer['#collapseTime'] = collapseTime;
 		core.room['#insertObject'](peer);
 	}

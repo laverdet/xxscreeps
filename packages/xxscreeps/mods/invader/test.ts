@@ -619,6 +619,11 @@ describe('Invader core stronghold deployment', () => {
 			for (const peer of [ tower, rampart, container, road ]) {
 				assert.strictEqual(peer['#collapseTime'], decayTime, 'peer shares the core collapse timer');
 			}
+			// Pinned to the collapse time so they don't decay (and read a past expiry, which throws)
+			// while the stronghold room sleeps between deploy and collapse.
+			for (const peer of [ rampart, container, road ]) {
+				assert.strictEqual(peer['#nextDecayTime'], decayTime, 'decaying peer will not decay before collapse');
+			}
 		});
 	}));
 
