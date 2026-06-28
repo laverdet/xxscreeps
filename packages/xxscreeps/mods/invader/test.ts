@@ -7,6 +7,7 @@ import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createTower } from 'xxscreeps/mods/defense/tower.js';
 import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
+import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { lookForStructures } from '../structure/structure.js';
 import { create as createInvaderCore } from './invader-core.js';
@@ -288,13 +289,17 @@ describe('Invader core', () => {
 			assert.strictEqual(core.ticksToDeploy, 0, 'invulnerable through Game.time === deployTime');
 			assert.deepStrictEqual(core.effects, [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining: 0 } ]);
 		});
-		// Game.time === deployTime + 1: cleared. Reading the expiry getters must not throw.
+		// Game.time === deployTime + 1: the elapsed timer deploys the stronghold, swapping
+		// invulnerability for a collapse timer. Reading the expiry getters must not throw.
 		await tick();
 		await player('100', Game => {
 			const core = findCore(Game);
 			assert.strictEqual(Game.time, 3);
 			assert.strictEqual(core.ticksToDeploy, undefined, 'deploy timer cleared after it elapses');
-			assert.strictEqual(core.effects, undefined);
+			const effects = core.effects!;
+			assert.strictEqual(effects.length, 1, 'a deployed core reports only the collapse timer');
+			assert.strictEqual(effects[0]!.effect, C.EFFECT_COLLAPSE_TIMER);
+			assert.ok(effects[0]!.ticksRemaining > 0, 'collapse timer is counting down');
 		});
 	}));
 
@@ -573,5 +578,94 @@ describe('Invader core spawning', () => {
 		// `INVADER_CORE_CREEP_SPAWN_TIME[1] === 0` — level 1 cores never spawn defenders.
 		const result = await poke('W1N1', '2', (Game, room) => findRoomCore(room)['#createCreep'](body, 'def'));
 		assert.strictEqual(result, C.ERR_INVALID_TARGET, 'a non-spawning level is rejected');
+	}));
+});
+
+describe('Invader core stronghold deployment', () => {
+	const corePos = new RoomPosition(25, 25, 'W1N1');
+	const findRoomCore = (room: Room) => lookForStructures(room, C.STRUCTURE_INVADER_CORE)[0];
+
+	// The deploy timer elapses the tick after `deployTime` (Game.time === 2); `activateNPC` keeps the
+	// room processing across the boundary.
+	const deployScene = simulate({
+		W1N1: room => {
+			room['#insertObject'](createInvaderCore(corePos, 2, 1));
+			activateNPC(room, '2');
+		},
+	});
+
+	test('deploy replaces the deploy timer with a collapse timer', () => deployScene(async ({ tick, peekRoom }) => {
+		await tick(2);
+		await peekRoom('W1N1', room => {
+			const core = findRoomCore(room)!;
+			assert.strictEqual(core.ticksToDeploy, undefined, 'deploy timer cleared once deployed');
+			const collapse = core.effects?.find(effect => effect.effect === C.EFFECT_COLLAPSE_TIMER);
+			assert.ok(collapse, 'deployed core reports a collapse timer');
+			assert.ok(collapse.ticksRemaining > 0, 'collapse timer is counting down');
+		});
+	}));
+
+	test('deploy spawns the stronghold template sharing the core collapse timer', () => deployScene(async ({ tick, peekRoom }) => {
+		await tick(2);
+		await peekRoom('W1N1', room => {
+			const decayTime = findRoomCore(room)!['#collapseTime'];
+			const tower = lookForStructures(room, C.STRUCTURE_TOWER)[0];
+			const rampart = lookForStructures(room, C.STRUCTURE_RAMPART)[0];
+			const container = lookForStructures(room, C.STRUCTURE_CONTAINER)[0];
+			const road = lookForStructures(room, C.STRUCTURE_ROAD)[0];
+			assert.ok(tower && rampart && container && road, 'deploy spawns every template structure');
+			assert.strictEqual(tower['#user'], '2', 'tower is owned by the invader NPC');
+			assert.strictEqual(rampart['#user'], '2', 'rampart is owned by the invader NPC');
+			for (const peer of [ tower, rampart, container, road ]) {
+				assert.strictEqual(peer['#collapseTime'], decayTime, 'peer shares the core collapse timer');
+			}
+		});
+	}));
+
+	// A lone unowned peer carrying an elapsed collapse timer: the shared base pre-tick must remove it,
+	// proving the mechanism works across structure types, not just the core.
+	const collapsingPeer = simulate({
+		W1N1: room => {
+			const container = createContainer(corePos);
+			container['#collapseTime'] = 1;
+			room['#insertObject'](container);
+			activateNPC(room, '2');
+		},
+	});
+
+	test('a deployed peer is removed silently when its collapse timer elapses', () => collapsingPeer(async ({ tick, peekRoom }) => {
+		await tick();
+		await peekRoom('W1N1', room => {
+			assert.strictEqual(lookForStructures(room, C.STRUCTURE_CONTAINER).length, 0, 'collapsed peer is removed');
+			assert.strictEqual(room.find(C.FIND_RUINS).length, 0, 'collapse leaves no Ruin');
+			const destroyed = room.getEventLog().find(event => event.event === C.EVENT_OBJECT_DESTROYED);
+			assert.strictEqual(destroyed, undefined, 'collapse emits no EVENT_OBJECT_DESTROYED');
+		});
+	}));
+
+	// A core that took over the room controller (level > 0, owned by '2'), then collapses: the
+	// controller is released to neutral while its reservation, when any, is left to expire on its own.
+	const ownedThenCollapsing = simulate({
+		W1N1: room => {
+			room['#level'] = 1;
+			room['#user'] = '2';
+			room.controller!['#user'] = '2';
+			room.controller!['#downgradeTime'] = 1000;
+			room.controller!['#upgradeInvulnerableUntil'] = 1000;
+			const core = createInvaderCore(corePos, 2, 0);
+			core['#collapseTime'] = 1;
+			room['#insertObject'](core);
+			activateNPC(room, '2');
+		},
+	});
+
+	test('collapse of a controller-owning core releases the controller to neutral', () => ownedThenCollapsing(async ({ tick, peekRoom }) => {
+		await tick();
+		await peekRoom('W1N1', room => {
+			assert.strictEqual(findRoomCore(room), undefined, 'core removed on collapse');
+			assert.strictEqual(room['#user'], null, 'room ownership released');
+			assert.strictEqual(room.controller!.level, 0, 'controller downgraded to neutral');
+			assert.strictEqual(room.controller!.effects, undefined, 'controller invulnerability cleared');
+		});
 	}));
 });
