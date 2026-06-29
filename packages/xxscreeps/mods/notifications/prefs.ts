@@ -1,4 +1,4 @@
-import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 
 export interface NotifyPrefs {
 	disabled: boolean;
@@ -13,7 +13,10 @@ const lastNotifyDateKey = (userId: string) => `user/${userId}/notifications/last
 
 export const DEFAULT_INTERVAL_MIN = 60;
 
-export async function getNotifyPrefs(shard: Shard, userId: string): Promise<NotifyPrefs> {
+// Prefs are a global, user-level setting (matching the original server's `db.users.notifyPrefs`),
+// so they live in the shared `db.data` store rather than per-shard. This lets `/api/auth/me`
+// surface them to the client via the `sendUserInfo` hook in ./backend.ts.
+export async function getNotifyPrefs(db: Database, userId: string): Promise<NotifyPrefs> {
 	interface PrefsFields {
 		disabled?: string;
 		disabledOnMessages?: string;
@@ -21,7 +24,7 @@ export async function getNotifyPrefs(shard: Shard, userId: string): Promise<Noti
 		interval?: string;
 		errorsInterval?: string;
 	}
-	const fields = await shard.data.hGetAll(prefsKey(userId)) as PrefsFields;
+	const fields = await db.data.hGetAll(prefsKey(userId)) as PrefsFields;
 	return {
 		disabled: fields.disabled === '1',
 		disabledOnMessages: fields.disabledOnMessages === '1',
@@ -31,7 +34,7 @@ export async function getNotifyPrefs(shard: Shard, userId: string): Promise<Noti
 	};
 }
 
-export async function setNotifyPrefs(shard: Shard, userId: string, prefs: Partial<NotifyPrefs>) {
+export async function setNotifyPrefs(db: Database, userId: string, prefs: Partial<NotifyPrefs>) {
 	const fields: Record<string, string> = {};
 	if (prefs.disabled !== undefined) fields.disabled = prefs.disabled ? '1' : '0';
 	if (prefs.disabledOnMessages !== undefined) fields.disabledOnMessages = prefs.disabledOnMessages ? '1' : '0';
@@ -39,7 +42,7 @@ export async function setNotifyPrefs(shard: Shard, userId: string, prefs: Partia
 	if (prefs.interval !== undefined) fields.interval = String(prefs.interval);
 	if (prefs.errorsInterval !== undefined) fields.errorsInterval = String(prefs.errorsInterval);
 	if (Object.keys(fields).length > 0) {
-		await shard.data.hmset(prefsKey(userId), fields);
+		await db.data.hmset(prefsKey(userId), fields);
 	}
 }
 
