@@ -71,11 +71,11 @@ describe('PowerCreep account', () => {
 		const creep = await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
 		await Model.scheduleDelete(shard.db, owner, creep.id);
 		const pending = (await Model.loadRoster(shard.db, owner))[0]!;
-		assert.ok(pending.deleteTime != null && pending.deleteTime > Date.now());
+		assert.ok(pending.deleteTime > Date.now());
 		await assert.rejects(Model.scheduleDelete(shard.db, owner, creep.id), /being deleted/);
 		await Model.cancelDelete(shard.db, owner, creep.id);
 		const restored = (await Model.loadRoster(shard.db, owner))[0]!;
-		assert.strictEqual(restored.deleteTime, undefined);
+		assert.strictEqual(restored.deleteTime, 0);
 		await assert.rejects(Model.cancelDelete(shard.db, owner, creep.id), /Not being deleted/);
 	}));
 
@@ -94,9 +94,21 @@ describe('PowerCreep account', () => {
 
 	test('the stored object round-trips its powers through the blob', () => {
 		const creep = createPowerCreep('a', 'Alice', C.POWER_CLASS.OPERATOR);
-		creep['#powers'] = { [C.PWR_GENERATE_OPS]: 2 };
+		creep['#powers'] = [ { power: C.PWR_GENERATE_OPS, level: 2 } ];
 		const [ view ] = read(write([ creep ]));
 		assert.strictEqual(view!.level, 2);
 		assert.deepStrictEqual(view!.powers, { [C.PWR_GENERATE_OPS]: { level: 2 } });
 	});
+
+	test('concurrent mutations both survive through blob compare-and-swap', () => sim(async ({ shard }) => {
+		// Two creates race on the same roster key. Without CAS one read-modify-write clobbers the other
+		// and a creep is lost; the `if: EQ`/`NX` retry loop forces the second writer to re-read first.
+		await setPower(shard.db, 9000);
+		await Promise.all([
+			Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR),
+			Model.create(shard.db, owner, 'Bob', C.POWER_CLASS.OPERATOR),
+		]);
+		const names = (await Model.loadRoster(shard.db, owner)).map(creep => creep.name).sort();
+		assert.deepStrictEqual(names, [ 'Alice', 'Bob' ]);
+	}));
 });

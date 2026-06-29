@@ -5,7 +5,6 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
 import { createPowerCreep, read, write } from './powercreep.js';
 
 // Account-scoped power creep roster. The whole roster is stored under one key as the serialized
@@ -23,22 +22,22 @@ export function getPowerCreepChannel(db: Database, userId: string) {
 }
 
 // A scheduled deletion that has elapsed is treated as gone; mutations re-serialize the live set, so
-// the physical entry is reclaimed the next time the roster is written.
-const isLive = (creep: PowerCreep) => creep.deleteTime == null || creep.deleteTime > Date.now();
+// the physical entry is reclaimed the next time the roster is written. `deleteTime` is `0` while the
+// creep is not scheduled for deletion.
+const isLive = (creep: PowerCreep) => creep.deleteTime === 0 || creep.deleteTime > Date.now();
 
-function parseRoster(raw: string | null): PowerCreep[] {
-	return raw == null ? [] : read(latin1ToBuffer(raw));
+function parseRoster(blob: Readonly<Uint8Array> | null): PowerCreep[] {
+	return blob == null ? [] : read(blob);
 }
 
 /** Live roster game objects, with elapsed scheduled-deletions filtered out. */
 export async function loadRoster(db: Database, userId: string) {
-	return parseRoster(await db.data.get(powerCreepsKey(userId))).filter(isLive);
+	return parseRoster(await db.data.get(powerCreepsKey(userId), { blob: true })).filter(isLive);
 }
 
-/** Raw roster blob for the runtime payload — handed across untouched, into a shared buffer to transfer. */
-export async function loadPowerCreepsBlob(db: Database, userId: string) {
-	const raw = await db.data.get(powerCreepsKey(userId));
-	return raw == null ? null : latin1ToBuffer(raw, SharedArrayBuffer);
+/** Raw roster blob for the runtime payload — read as a shared buffer and handed across untouched. */
+export function loadPowerCreepsBlob(db: Database, userId: string) {
+	return db.data.get(powerCreepsKey(userId), { blob: true });
 }
 
 // Apply `fn` to the live roster and commit it with a compare-and-swap, retrying if a concurrent
@@ -47,11 +46,11 @@ export async function loadPowerCreepsBlob(db: Database, userId: string) {
 async function mutate<Type>(db: Database, userId: string, fn: (roster: PowerCreep[]) => Type | Promise<Type>) {
 	const key = powerCreepsKey(userId);
 	for (let attempt = 0; ; ++attempt) {
-		const raw = await db.data.get(key);
-		const roster = parseRoster(raw).filter(isLive);
+		const prior = await db.data.get(key, { blob: true });
+		const roster = parseRoster(prior).filter(isLive);
 		const result = await fn(roster);
-		const stored = await db.data.set(key, typedArrayToString(write(roster)), {
-			if: raw == null ? { if: 'NX' } : { if: 'EQ', value: raw },
+		const stored = await db.data.set(key, write(roster), {
+			if: prior == null ? { if: 'NX' } : { if: 'EQ', value: prior },
 		});
 		if (stored !== false) {
 			await getPowerCreepChannel(db, userId).publish({ type: 'updated' });
@@ -72,8 +71,8 @@ function freeLevels(power: number, roster: PowerCreep[]) {
 	return gplLevel(power) - used;
 }
 
-function userPower(db: Database, userId: string) {
-	return db.data.hGet(User.infoKey(userId), 'power').then(power => Number(power) || 0);
+async function userPower(db: Database, userId: string) {
+	return Number(await db.data.hGet(User.infoKey(userId), 'power')) || 0;
 }
 
 /** Expand a roster member into the `/list` wire shape the client expects. */
@@ -90,7 +89,7 @@ export function renderRecord(creep: PowerCreep) {
 		storeCapacity: 100 * (level + 1),
 		spawnCooldownTime: creep.spawnCooldownTime,
 		powers: creep.powers,
-		...creep.deleteTime != null && { deleteTime: creep.deleteTime },
+		...creep.deleteTime !== 0 && { deleteTime: creep.deleteTime },
 	};
 }
 
@@ -114,19 +113,19 @@ export function create(db: Database, userId: string, name: unknown, className: u
 
 // Every requested level must be reachable by allocating one point at a time without ever exceeding a
 // power's per-rank level prerequisite.
-function powersAreReachable(powers: Record<number, number>) {
-	const target = Fn.accumulate(Object.values(powers));
-	const built = new Map<number, number>(Fn.map(Object.keys(C.POWER_INFO), power => [ Number(power), 0 ]));
+function powersAreReachable(powers: { power: number; level: number }[]) {
+	const target = Fn.accumulate(powers, entry => entry.level);
+	const built = new Map<number, number>(Fn.map(powers, entry => [ entry.power, 0 ]));
 	let level = 0;
 	while (level < target) {
-		const next = Object.keys(powers).map(Number).find(power => {
+		const next = powers.find(({ power, level: want }) => {
 			const have = built.get(power) ?? 0;
-			return have < 5 && have < (powers[power] ?? 0) && powerInfo(power)!.level[have]! <= level;
+			return have < 5 && have < want && powerInfo(power)!.level[have]! <= level;
 		});
 		if (next === undefined) {
 			return false;
 		}
-		built.set(next, (built.get(next) ?? 0) + 1);
+		built.set(next.power, (built.get(next.power) ?? 0) + 1);
 		level = Fn.accumulate(built.values());
 	}
 	return true;
@@ -141,10 +140,11 @@ export function upgrade(db: Database, userId: string, id: unknown, powers: unkno
 		if (typeof powers !== 'object' || powers === null) {
 			throw new Error('Invalid powers');
 		}
-		const current = creep['#powers'];
-		const desired: Record<number, number> = {};
+		const levelOf = (power: number) => creep['#powers'].find(entry => entry.power === power)?.level ?? 0;
+		const desired: { power: number; level: number }[] = [];
 		for (const [ key, value ] of Object.entries(powers)) {
-			const info = powerInfo(Number(key));
+			const power = Number(key);
+			const info = powerInfo(power);
 			if (!info) {
 				throw new Error(`Invalid power ${key}`);
 			}
@@ -154,32 +154,30 @@ export function upgrade(db: Database, userId: string, id: unknown, powers: unkno
 			if (typeof value !== 'number') {
 				throw new Error(`Invalid value for power ${key}`);
 			}
-			if (value < (current[Number(key)] ?? 0)) {
+			if (value < levelOf(power)) {
 				throw new Error(`Cannot downgrade power ${key}`);
 			}
 			if (value > 5) {
 				throw new Error(`Invalid max value for power ${key}`);
 			}
-			desired[Number(key)] = value;
-		}
-		for (const [ key, value ] of Object.entries(current)) {
-			if ((desired[Number(key)] ?? 0) < value) {
-				throw new Error(`Cannot downgrade power ${key}`);
+			if (value > 0) {
+				desired.push({ power, level: value });
 			}
 		}
-		const newLevel = Fn.accumulate(Object.values(desired));
+		// A power already learned may not be dropped by omitting it from the request.
+		for (const { power, level } of creep['#powers']) {
+			if ((desired.find(entry => entry.power === power)?.level ?? 0) < level) {
+				throw new Error(`Cannot downgrade power ${power}`);
+			}
+		}
+		const newLevel = Fn.accumulate(desired, entry => entry.level);
 		if (newLevel > C.POWER_CREEP_MAX_LEVEL) {
 			throw new Error('Max level');
 		}
-		const learned: Record<number, number> = {};
-		for (const [ key, value ] of Object.entries(desired)) {
-			if (value === 0) {
-				continue;
+		for (const { power, level } of desired) {
+			if (newLevel < powerInfo(power)!.level[level - 1]!) {
+				throw new Error(`Not enough level for power ${power}`);
 			}
-			if (newLevel < powerInfo(Number(key))!.level[value - 1]!) {
-				throw new Error(`Not enough level for power ${key}`);
-			}
-			learned[Number(key)] = value;
 		}
 		if (!powersAreReachable(desired)) {
 			throw new Error('Powers set is not valid');
@@ -187,7 +185,7 @@ export function upgrade(db: Database, userId: string, id: unknown, powers: unkno
 		if (freeLevels(await userPower(db, userId), roster) < newLevel - creep.level) {
 			throw new Error('Not enough power level');
 		}
-		creep['#powers'] = learned;
+		creep['#powers'] = desired;
 		return creep;
 	});
 }
@@ -213,7 +211,7 @@ export function scheduleDelete(db: Database, userId: string, id: unknown) {
 		if (!creep) {
 			throw new Error('Invalid id');
 		}
-		if (creep.deleteTime != null) {
+		if (creep.deleteTime !== 0) {
 			throw new Error('Already being deleted');
 		}
 		creep.deleteTime = Date.now() + C.POWER_CREEP_DELETE_COOLDOWN;
@@ -226,9 +224,9 @@ export function cancelDelete(db: Database, userId: string, id: unknown) {
 		if (!creep) {
 			throw new Error('Invalid id');
 		}
-		if (creep.deleteTime == null) {
+		if (creep.deleteTime === 0) {
 			throw new Error('Not being deleted');
 		}
-		creep.deleteTime = undefined;
+		creep.deleteTime = 0;
 	});
 }
