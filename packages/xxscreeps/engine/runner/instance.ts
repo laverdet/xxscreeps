@@ -183,33 +183,32 @@ export class PlayerInstance {
 					throw new Error(`User '${this.username}' has been left behind`);
 				}
 
-				// Allow driver connectors to access room blobs by waiting on this promise
-				await Promise.all([
-					(async () => {
-						// Wait for room blobs
-						payload.roomBlobs = await Promise.all(Fn.map(visibleRooms,
-							roomName => this.shard.loadRoomBlob(roomName, time)));
-						// Load unseen users
-						const newUserIds = Fn.pipe(
-							payload.roomBlobs,
-							$$ => Fn.map($$, blob => {
-								const users = RoomSchema.read(blob)['#users'];
-								return Fn.concat([ users.presence, users.extra ]);
-							}),
-							$$ => Fn.concat($$),
-							$$ => Fn.reject($$, userId => this.seenUsers.has(userId)),
-						);
-						const entries = await Promise.all(Fn.map(newUserIds, async userId => {
-							this.seenUsers.add(userId);
-							return [ userId, (await this.shard.db.data.hGet(User.infoKey(userId), 'username'))! ] as const;
-						}));
-						if (entries.length !== 0) {
-							payload.usernames = Fn.fromEntries(entries);
-						}
-					})(),
-					// Also run mod connectors
+				// Load room blobs and run mod connectors concurrently; both can contribute users to
+				// resolve (rooms via `#users`, connectors via `payload.userIds`).
+				const [ roomBlobs ] = await Promise.all([
+					Promise.all(Fn.map(visibleRooms, roomName => this.shard.loadRoomBlob(roomName, time))),
 					this.connectors.refresh(payload as TickPayload),
 				]);
+				payload.roomBlobs = roomBlobs;
+				// Resolve usernames for users newly seen this tick: those present in visible rooms plus
+				// any a connector requested.
+				const newUserIds = Fn.pipe(
+					roomBlobs,
+					$$ => Fn.map($$, blob => {
+						const users = RoomSchema.read(blob)['#users'];
+						return Fn.concat([ users.presence, users.extra ]);
+					}),
+					$$ => Fn.concat($$),
+					$$ => Fn.concat([ $$, payload.userIds ?? [] ]),
+					$$ => Fn.reject($$, userId => this.seenUsers.has(userId)),
+				);
+				const entries = await Promise.all(Fn.map(newUserIds, async userId => {
+					this.seenUsers.add(userId);
+					return [ userId, (await this.shard.db.data.hGet(User.infoKey(userId), 'username'))! ] as const;
+				}));
+				if (entries.length !== 0) {
+					payload.usernames = Fn.fromEntries(entries);
+				}
 				// Send payload off to runtime and execute user code
 				return await this.sandbox.run(payload as TickPayload);
 			} catch (err: any) {

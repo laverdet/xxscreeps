@@ -1,8 +1,7 @@
 import type { TransactionPayload } from './transaction.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import * as User from 'xxscreeps/engine/db/user/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
-import { loadTransactionBlob, loadTransactionRefs } from './model.js';
+import { getTransactionChannel, kTransactionWindow, loadTransactionBlob, loadTransactionEntries, selectRecent } from './model.js';
 import { read } from './transaction.js';
 
 declare module 'xxscreeps/engine/runner/index.js' {
@@ -11,43 +10,47 @@ declare module 'xxscreeps/engine/runner/index.js' {
 	}
 }
 
-interface BlobCacheEntry {
-	time: number;
-	blobs: Map<string, Promise<Readonly<Uint8Array>>>;
-}
-
-// Transaction blobs are immutable, so cache them by id per (shard, tick): a transfer referenced by
-// both parties' runtimes is read once and handed out as the same SharedArrayBuffer.
-const blobCache = new WeakMap<Shard, BlobCacheEntry>();
-function loadBlobOnce(shard: Shard, time: number, id: string) {
-	let cache = blobCache.get(shard);
-	if (cache?.time !== time) {
-		cache = { time, blobs: new Map() };
-		blobCache.set(shard, cache);
-	}
-	let blob = cache.blobs.get(id);
+// Transaction blobs are immutable and their ids are globally unique, so cache them by id: a transfer
+// referenced by both parties' runtimes is read once and handed out as the same SharedArrayBuffer.
+const blobCache = new Map<string, Promise<Readonly<Uint8Array>>>();
+function loadBlob(shard: Shard, id: string) {
+	let blob = blobCache.get(id);
 	if (blob === undefined) {
 		blob = loadTransactionBlob(shard, id);
-		cache.blobs.set(id, blob);
+		blobCache.set(id, blob);
 	}
 	return blob;
 }
 
-hooks.register('runnerConnector', player => [ undefined, {
-	async refresh(payload) {
-		const { incoming, outgoing } = await loadTransactionRefs(player.shard, player.userId);
-		const ids = [ ...new Set([ ...incoming, ...outgoing ]) ];
-		const blobList = await Promise.all(ids.map(id => loadBlobOnce(player.shard, payload.time, id)));
-		// Resolve every party so the read-time `sender` / `recipient` getters find a username.
-		const parties = new Set<string>();
-		for (const blob of blobList) {
-			const transaction = read(blob);
-			parties.add(transaction['#sender']);
-			parties.add(transaction['#recipient']);
-		}
-		const usernames = Object.fromEntries(await Promise.all([ ...parties ].map(async userId =>
-			[ userId, (await player.shard.db.data.hGet(User.infoKey(userId), 'username'))! ] as const)));
-		const blobs = Object.fromEntries(ids.map((id, index) => [ id, blobList[index]! ]));
-		payload.transactions = { incoming, outgoing, blobs, usernames };
-	},
-} ]);
+hooks.register('runnerConnector', async player => {
+	// Reload the user's transactions only when the processor signals a new transfer, not every tick.
+	const channel = await getTransactionChannel(player.shard, player.userId).subscribe();
+	let dirty = true;
+	channel.listen(() => { dirty = true; });
+	let entries: ReturnType<typeof loadTransactionEntries> | undefined;
+	return [ () => channel.disconnect(), {
+		async refresh(payload) {
+			if (dirty) {
+				dirty = false;
+				entries = loadTransactionEntries(player.shard, player.userId);
+			}
+			const { incoming, outgoing } = await entries!;
+			// Re-apply the window every tick so transfers age out without a reload.
+			const cutoff = Date.now() - kTransactionWindow;
+			const incomingIds = selectRecent(incoming, cutoff);
+			const outgoingIds = selectRecent(outgoing, cutoff);
+			const ids = [ ...new Set([ ...incomingIds, ...outgoingIds ]) ];
+			const blobList = await Promise.all(ids.map(id => loadBlob(player.shard, id)));
+			// Ask the runner to resolve the parties' usernames for the read-time getters.
+			const parties = new Set<string>();
+			for (const blob of blobList) {
+				const transaction = read(blob);
+				parties.add(transaction['#sender']);
+				parties.add(transaction['#recipient']);
+			}
+			(payload.userIds ??= []).push(...parties);
+			const blobs = Object.fromEntries(ids.map((id, index) => [ id, blobList[index]! ]));
+			payload.transactions = { incoming: incomingIds, outgoing: outgoingIds, blobs };
+		},
+	} ];
+});

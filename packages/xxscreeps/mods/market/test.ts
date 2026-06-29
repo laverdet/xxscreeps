@@ -2,10 +2,9 @@ import type { GameBase } from 'xxscreeps/game/game.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
-import { withFakeNow } from 'xxscreeps/test/console-capture.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { Market } from './market.js';
-import { kTransactionWindow, loadTransactionBlob, loadTransactionRefs, recordTransaction } from './model.js';
+import { kReadLimit, kTransactionWindow, loadTransactionBlob, loadTransactionEntries, recordTransaction, selectRecent } from './model.js';
 import { create as createTerminal } from './terminal.js';
 import { read } from './transaction.js';
 
@@ -20,8 +19,8 @@ describe('Market transactions', () => {
 	test('a transfer is stored once and referenced by both parties', () => storageSim(async ({ shard }) => {
 		await recordTransaction(shard, '100', '101', fields);
 		const [ sender, recipient ] = await Promise.all([
-			loadTransactionRefs(shard, '100'),
-			loadTransactionRefs(shard, '101'),
+			loadTransactionEntries(shard, '100'),
+			loadTransactionEntries(shard, '101'),
 		]);
 
 		// The sender references it as outgoing only; the recipient as incoming only.
@@ -29,8 +28,8 @@ describe('Market transactions', () => {
 		assert.strictEqual(sender.incoming.length, 0);
 		assert.strictEqual(recipient.incoming.length, 1);
 		assert.strictEqual(recipient.outgoing.length, 0);
-		const id = sender.outgoing[0]!;
-		assert.strictEqual(recipient.incoming[0], id);
+		const id = sender.outgoing[0]![1];
+		assert.strictEqual(recipient.incoming[0]![1], id);
 
 		// One shared blob holds the user ids and the raw (unescaped) description.
 		const transaction = read(await loadTransactionBlob(shard, id));
@@ -47,13 +46,24 @@ describe('Market transactions', () => {
 		assert.strictEqual(transaction.description, 'gift &lt;3');
 	}));
 
-	test('a transfer outside the 24h window is dropped from the read', () => storageSim(async ({ shard }) => {
-		using clock = withFakeNow(1_000_000);
-		await recordTransaction(shard, '100', '101', fields);
-		assert.strictEqual((await loadTransactionRefs(shard, '100')).outgoing.length, 1);
-		clock.advance(kTransactionWindow + 1);
-		assert.strictEqual((await loadTransactionRefs(shard, '100')).outgoing.length, 0);
-	}));
+	test('selectRecent keeps only ids within the window, newest-first', () => {
+		const now = 1_000_000_000;
+		const entries: [ number, string ][] = [
+			[ now - kTransactionWindow - 1, 'old' ],
+			[ now - 10, 'mid' ],
+			[ now, 'new' ],
+		];
+		assert.deepStrictEqual(selectRecent(entries, now - kTransactionWindow), [ 'new', 'mid' ]);
+	});
+
+	test('selectRecent caps at the read limit, newest-first', () => {
+		const entries: [ number, string ][] =
+			Array.from({ length: kReadLimit + 5 }, (value, index) => [ index, `t${index}` ]);
+		const ids = selectRecent(entries, 0);
+		assert.strictEqual(ids.length, kReadLimit);
+		assert.strictEqual(ids[0], `t${kReadLimit + 4}`);
+		assert.strictEqual(ids[kReadLimit - 1], 't5');
+	});
 
 	// User '200' owns terminals in both rooms, so a send to the neighbour is visible to itself from
 	// both ends — exercising the processor → driver → runtime read path with one sandbox.
@@ -103,10 +113,55 @@ describe('Market transactions', () => {
 		await tick(2);
 
 		// The transfer reached storage and is referenced from both of the user's lists.
-		const refs = await loadTransactionRefs(shard, '200');
+		const refs = await loadTransactionEntries(shard, '200');
 		assert.strictEqual(refs.outgoing.length, 1);
 		assert.strictEqual(refs.incoming.length, 1);
-		assert.strictEqual(refs.outgoing[0], refs.incoming[0]);
+		assert.strictEqual(refs.outgoing[0]![1], refs.incoming[0]![1]);
+	}));
+
+	// '201' owns W1N1 and '202' owns W2N1, so the sender is not visible in any of the recipient's
+	// rooms — its username can only resolve through the runner's `userIds` path.
+	const crossSendSim = simulate({
+		W1N1: room => {
+			const terminal = createTerminal(new RoomPosition(25, 25, 'W1N1'), '201');
+			terminal.store['#add'](C.RESOURCE_ENERGY, 10000);
+			room['#insertObject'](terminal);
+			room['#level'] = 8;
+			room['#user'] = room.controller!['#user'] = '201';
+		},
+		W2N1: room => {
+			room['#insertObject'](createTerminal(new RoomPosition(25, 25, 'W2N1'), '202'));
+			room['#level'] = 8;
+			room['#user'] = room.controller!['#user'] = '202';
+		},
+	});
+
+	test("the recipient resolves the sender's name though they share no room", () => crossSendSim(async ({ sandbox, shard, tick }) => {
+		using _sender = await sandbox('201', global => {
+			if (global.Memory.sent === undefined) {
+				global.Memory.sent = true;
+				global.Game.rooms.W1N1!.terminal!.send('energy', 1000, 'W2N1', 'gift <3');
+			}
+		});
+		using _recipient = await sandbox('202', global => {
+			const incoming = global.Game.market.incomingTransactions;
+			if (incoming.length > 0) {
+				const transaction = incoming[0]!;
+				assert.strictEqual(transaction.from, 'W1N1');
+				assert.strictEqual(transaction.to, 'W2N1');
+				assert.strictEqual(transaction.amount, 1000);
+				assert.strictEqual(transaction.description, 'gift &lt;3');
+				// The sender shares no room with the reader; its name resolves via `payload.userIds`.
+				assert.strictEqual(typeof transaction.sender!.username, 'string');
+			}
+		});
+		// Send (tick 1), then read once the connector ships it (tick 2).
+		await tick(2);
+
+		// The transfer reached the recipient's incoming list and no outgoing list.
+		const refs = await loadTransactionEntries(shard, '202');
+		assert.strictEqual(refs.incoming.length, 1);
+		assert.strictEqual(refs.outgoing.length, 0);
 	}));
 });
 

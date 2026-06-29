@@ -29,7 +29,7 @@ export class Transaction extends withOverlay(BufferObject, shape) {
 	@enumerable get recipient() { return userInfo.get(this['#recipient']); }
 	@enumerable get description() {
 		const description = this['#description'];
-		return description == null ? undefined : description.replace(/</g, '&lt;');
+		return description == null ? undefined : description.replaceAll('<', '&lt;');
 	}
 }
 
@@ -40,20 +40,16 @@ export interface Transactions {
 	outgoing: Transaction[];
 }
 
-// Per-tick payload: each direction lists transaction ids newest-first, `blobs` holds the referenced
-// schema blobs by id, and `usernames` resolves the parties for the read-time getters.
+// Per-tick payload: each direction lists transaction ids newest-first and `blobs` holds the
+// referenced schema blobs by id. The parties resolve through `userInfo`, which the runner populates
+// from the ids the connector contributes to `payload.userIds`.
 export interface TransactionPayload {
 	incoming: string[];
 	outgoing: string[];
 	blobs: Record<string, Readonly<Uint8Array>>;
-	usernames: Record<string, string>;
 }
 
-// Register each party so the getters resolve, then overlay each referenced blob.
 export function readTransactions(payload: TransactionPayload): Transactions {
-	for (const [ userId, username ] of Object.entries(payload.usernames)) {
-		userInfo.set(userId, { username });
-	}
 	const overlay = (ids: string[]) => ids.map(id => read(payload.blobs[id]!));
 	return { incoming: overlay(payload.incoming), outgoing: overlay(payload.outgoing) };
 }
