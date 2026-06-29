@@ -1,7 +1,6 @@
-import type { JSONSchemaType } from 'ajv';
 import type { NotifyPrefs } from './prefs.js';
-import { Ajv } from 'ajv';
-import { hooks } from 'xxscreeps/backend/index.js';
+import type { JSONSchemaType } from 'ajv';
+import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import { getNotifyPrefs, setNotifyPrefs } from './prefs.js';
 
 // Mirrors the allowed values from the original screeps-server `/api/user/notify-prefs` handler.
@@ -18,9 +17,8 @@ interface NotifyPrefsRequest {
 }
 
 // Note: unlike vanilla (which coerces booleans with `!!`, so "false" becomes true), these are
-// validated as real JSON booleans. coerceTypes handles numeric fields sent as strings (e.g. the
+// validated as real JSON booleans. `coerceTypes` handles numeric fields sent as strings (e.g. the
 // official client sends interval as "180" rather than 180).
-const ajv = new Ajv({ coerceTypes: true });
 const notifyPrefsRequestSchema: JSONSchemaType<NotifyPrefsRequest> = {
 	type: 'object',
 	properties: {
@@ -32,22 +30,17 @@ const notifyPrefsRequestSchema: JSONSchemaType<NotifyPrefsRequest> = {
 	},
 	additionalProperties: false,
 };
-const validatePrefsRequest = ajv.compile(notifyPrefsRequestSchema);
 
 hooks.register('route', {
 	path: '/api/user/notify-prefs',
 	method: 'post',
 
-	execute: async context => {
+	execute: makeValidatedPayloadRoute(notifyPrefsRequestSchema, async context => {
 		const { userId } = context.state;
 		if (userId == null) {
 			return;
 		}
-		// validatePrefsRequest mutates in place when coercing (e.g. "180" → 180).
-		if (!validatePrefsRequest(context.request.body)) {
-			return { error: 'invalid' };
-		}
-		const body = context.request.body as NotifyPrefsRequest;
+		const body = context.request.body;
 		const prefs: Partial<NotifyPrefs> = {};
 		if (body.disabled != null) {
 			prefs.disabled = body.disabled;
@@ -67,7 +60,7 @@ hooks.register('route', {
 		}
 		await setNotifyPrefs(context.db, userId, prefs);
 		return { ok: 1 };
-	},
+	}, { coerceTypes: true }),
 });
 
 // Surface the user's own notification prefs on `/api/auth/me` so the account UI can render the
