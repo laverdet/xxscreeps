@@ -358,11 +358,10 @@ function valueNoise(wx: number, wy: number, cell: number): number {
 	return top + (bottom - top) * sy;
 }
 
-// Two octaves of world-coordinate value noise drive a highway border's mass depth: a room-scale field
-// sets the depth (and varies it room to room within vanilla's tight band), a fine field offset off the
-// first makes the inner boundary organic. Sampling the same 2D field at each border tile keeps the mass
-// continuous across every shared sector edge — stacked highway rooms read one unbroken noise function
-// down the corridor — and rotationally symmetric, so vertical and horizontal lanes look alike.
+// Two octaves of world-coordinate value noise drive a border's mass depth: a coarse field sets the
+// depth, a fine field breaks the masses into the detached pieces the corpus carries (dropping it slabs
+// them together — see room-generation-plan.md). World-coord sampling keeps masses continuous across
+// every shared sector edge, so stacked highway rooms read one unbroken field down the corridor.
 const kHighwayMassCell = 22;
 const kHighwayMassWeight = 0.7;
 const kHighwayDetailCell = 6;
@@ -390,10 +389,9 @@ function reachableOpen(grid: Grid, xx: number, yy: number): Set<number> {
 	return reached;
 }
 
-// Breaches the thinnest seal between a cut-off exit throat and the open network. A breadth-first
-// search that may pass through walls finds the nearest already-open tile, then clears only the walls
-// on that shortest path — so a throat ringed by a lane blob opens with a one- or two-tile slot rather
-// than a corridor driven clear across the room. Carved tiles join `reached` for the next throat.
+// Breaches the thinnest seal between a cut-off exit throat and the open network: a wall-piercing BFS to
+// the nearest open tile, clearing only its shortest path so the throat opens with a slot, not a bored
+// channel. Carved tiles join `reached` for the next throat.
 function carveToOpen(grid: Grid, sx: number, sy: number, reached: Set<number>): void {
 	const start = sy * 50 + sx;
 	const prev = new Map<number, number>([ [ start, -1 ] ]);
@@ -475,37 +473,25 @@ function rollHighwaySwamp(): number {
 	return Math.random() < 0.5 ? 0 : kHighwaySwampType;
 }
 
-// Highway terrain, tuned to the live highway corpus (see room-generation-plan.md). A highway is the
-// travel lane between the surrounding sector blocks; the walls are those blocks intruding from the
-// room's sector-facing borders. Each such border carries a wall mass whose depth (in tiles) is driven
-// by `edgeNoise` into a heavy-tailed wedge — mostly a shallow few tiles, occasionally plunging deep —
-// so the mass tapers along the border as a smooth diagonal rather than a uniform band. Lane masses
-// (vertical: left+right; horizontal: top+bottom) run deeper; crossing masses sit shallower on all four
-// borders, deepest where two meet at a corner. The open lane is then studded with solid wall blobs —
-// a coarse value-noise field thresholded into chunky islands, the clutter real highway lanes carry;
-// on the borders these blobs merge into the mass and disappear.
+// Per-border wall-mass shape; lane masses (V/H) run deep, crossing-corner masses shallow. Each
+// {base,amp,expo} drives edgeDepth's heavy-tailed wedge, fit to the live corpus (room-generation-plan.md).
 interface HighwayMass { base: number; amp: number; expo: number }
 const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 26, expo: 2.9 };
 const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 8, expo: 2.5 };
-const kHighwayMaxDepth = 18;
 // A coarse value-noise field thresholded into solid wall blobs that stud the open lane.
 const kHighwayBlobCell = 6;
 const kHighwayBlobThreshold = 0.82;
 
-// Tiles the wall mass intrudes from the border at world position (wx, wy). The high exponent on a low
-// base makes a heavy-tailed wedge — most borders shallow, a few plunging deep — the smooth tapering
-// diagonal mass the live corpus carries, rather than a uniform band.
+// Tiles the wall mass intrudes from the border at world position (wx, wy): a heavy-tailed wedge (low
+// base, high exponent), mostly shallow with a rare deep plunge. edgeNoise ∈ [0, 1) bounds it to base+amp.
 function edgeDepth(wx: number, wy: number, mass: HighwayMass): number {
-	return Math.min(mass.base + mass.amp * edgeNoise(wx, wy) ** mass.expo, kHighwayMaxDepth);
+	return mass.base + mass.amp * edgeNoise(wx, wy) ** mass.expo;
 }
 
-// Near an exit a lane mass recedes to nothing and rises back to full depth over this radius, so a throat
-// the mass would otherwise seal opens as a tight natural mouth — the way the live world's masses part
-// where a lane crosses them — rather than the 1-wide tunnel a bored reconnect leaves. The concave easing
-// (sqrt) keeps the mass close to the exit, matching the live recede profile (depth ~2 one tile off an
-// exit, not a wide-cut hollow). Distance is 2D to every exit, so a mass also parts for a perpendicular
-// lane-side exit it would otherwise bury in the corner. Returns a [0, 1] multiplier on a border tile's
-// mass depth: 0 over an exit, 1 at the radius.
+// A [0, 1] multiplier on a border tile's mass depth that recedes the mass near an exit — 0 over the exit
+// rising to 1 at the radius — so a throat opens as a natural mouth, not the bored tunnel a reconnect cuts
+// (dropping it floods the lane with pinch tiles — see room-generation-plan.md). Concave (sqrt) easing
+// keeps the mass tight to the exit; 2D distance so a mass also parts for a perpendicular lane-side exit.
 const kHighwayExitClearRadius = 3;
 function exitClearance(bx: number, by: number, exitPoints: readonly (readonly [ number, number ])[]): number {
 	let nearest = Infinity;
@@ -517,12 +503,10 @@ function exitClearance(bx: number, by: number, exitPoints: readonly (readonly [ 
 	return Math.sqrt(nearest / kHighwayExitClearRadius);
 }
 
-// Generates highway-room terrain: an open travel lane flanked by the surrounding sector blocks, which
-// intrude from the room's sector-facing borders — left+right for a vertical lane, top+bottom for a
-// horizontal one, all four corners for a crossing. Mass depth comes from world-coordinate noise so it
-// flows continuously across the shared sector edge of stacked highway rooms, the way real inter-sector
-// lanes do. A final pass carves a slot to any exit a mass or lane blob would otherwise seal off, then
-// swamp is applied as in normal rooms.
+// Highway-room terrain: an open travel lane flanked by the surrounding sector blocks intruding from the
+// sector-facing borders — left+right for vertical, top+bottom for horizontal, all four for a crossing.
+// Wall masses (noise-driven wedge depth) + lane blobs + exit recede + a slot-carve reconnect, then swamp.
+// Every piece is corpus-justified; see room-generation-plan.md for the model and the ablation that fit it.
 function genHighwayTerrain(
 	exits: ExitMap,
 	rx: number,
@@ -532,19 +516,13 @@ function genHighwayTerrain(
 ): Grid {
 	const grid = makeGrid();
 	markExits(grid, exits);
-	// Room origin in world tiles; each border's depth is sampled at that border's own world coordinate
-	// (left at wox, right at wox+49; top at woy, bottom at woy+49), so the four masses decorrelate and
-	// every mass flows continuously into its neighbour across the shared sector edge.
+	// Room origin in world tiles; each border samples noise at its own world coordinate (left wox, right
+	// wox+49, top woy, bottom woy+49) so the masses decorrelate and flow across the shared sector edge.
 	const wox = rx * 50;
 	const woy = ry * 50;
-	// Each sector-facing border's mass depth, indexed by the tile along that border, with the mass receding
-	// toward its exits (see exitClearance). A vertical lane carries left+right masses, a horizontal one
-	// top+bottom, a crossing all four at the shallower corner depth; a border with no mass stays zeroed, so
-	// its term below is never the one that walls a tile.
 	const mass = orientation === 'crossing' ? kHighwayCornerMass : kHighwayLaneMass;
-	// A crossing's corner masses sit off the lanes the exits cross, so nothing seals a throat and no
-	// clearance is wanted (it would only erode the corners); its exit set stays empty. Vertical and
-	// horizontal lane masses span the exits, so they part for them.
+	// Crossing corners sit off the crossed lanes, so they seal nothing and want no clearance (its exit set
+	// stays empty); lane masses span the exits, so they recede for them.
 	const exitPoints: [ number, number ][] = orientation === 'crossing' ? [] : [
 		...exits.top.map((xx): [ number, number ] => [ xx, 0 ]),
 		...exits.bottom.map((xx): [ number, number ] => [ xx, 49 ]),
