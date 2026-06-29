@@ -16,6 +16,7 @@ export const hooks = makeHookRegistration<{
 	roomSocket: (shard: Shard, userId: string | undefined, roomName: string) =>
 		AsyncEffectAndResult<((time: number) => MaybePromise<object>) | undefined>;
 	sendUserInfo: (db: Database, userId: string, userInfo: Record<string, unknown>, privateSelf: boolean) => Promise<void>;
+	version: (serverData: Record<string, unknown>) => void;
 	route: Endpoint;
 	subscription: SubscriptionEndpoint;
 }>();
