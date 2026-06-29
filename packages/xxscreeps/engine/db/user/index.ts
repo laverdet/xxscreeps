@@ -1,6 +1,16 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
+import type { MaybePromise } from 'xxscreeps/utility/types.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 import { branchManifestKey, buffersKey, saveContent, stringsKey } from './code.js';
+
+// Lifecycle hooks for users. Mods register `remove` handlers to tear down their own per-user,
+// db-scoped state (e.g. private messages) when a user is deleted, so `remove` below stays
+// self-contained for every caller rather than each call site enumerating mod cleanups.
+export const hooks = makeHookRegistration<{
+	remove: (db: Database, userId: string) => MaybePromise<void>;
+}>();
+const removeHooks = hooks.makeMapped('remove');
 
 const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
@@ -76,6 +86,7 @@ export async function remove(db: Database, userId: string) {
 			db.data.vdel(buffersKey(userId, branchName)),
 			db.data.vdel(stringsKey(userId, branchName)),
 		]),
+		...removeHooks(db, userId),
 	]);
 }
 

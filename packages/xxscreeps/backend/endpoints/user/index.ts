@@ -1,14 +1,14 @@
 import type { JSONSchemaType } from 'ajv';
 import { hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import badge from './badge.js';
-import messages from './messages.js';
 import './auth.js';
 import './code.js';
 import './profile.js';
 import './stats.js';
 import './world.js';
 
-const endpoints = [ ...badge, ...messages ];
+// Private messaging endpoints (incl. `/api/user/messages/unread-count`) live in the `messages` mod.
+const endpoints = [ ...badge ];
 export default endpoints;
 
 hooks.register('route', {
