@@ -31,6 +31,8 @@ import { setPassword } from 'xxscreeps/mods/backend/password/model.js';
 import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
 import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/memory/model.js';
+// Side-effect import: registers the `User.remove` hook that tears down the user's private messages.
+import 'xxscreeps/mods/messages/model.js';
 import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { OwnedStructure } from 'xxscreeps/mods/structure/structure.js';
