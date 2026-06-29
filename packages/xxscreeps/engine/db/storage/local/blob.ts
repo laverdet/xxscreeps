@@ -7,6 +7,15 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { listen, spread } from 'xxscreeps/utility/async.js';
 import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
 
+// Byte-wise comparison for compare-and-swap conditions. A blob condition always carries the prior
+// buffer, so a `string` value (or an absent key) can never match.
+function bytesEqual(left: Readonly<Uint8Array> | null, right: string | Readonly<Uint8Array>) {
+	if (left === null || typeof right === 'string') {
+		return false;
+	}
+	return left.length === right.length && left.every((byte, index) => byte === right[index]);
+}
+
 export class BlobStorage implements AsyncDisposable {
 	private readonly cache = new Map<string, {
 		saveId: number;
@@ -18,6 +27,10 @@ export class BlobStorage implements AsyncDisposable {
 	private readonly lock;
 	private readonly knownPaths = new Set<string>();
 	private readonly path;
+	// Conditional writes run one at a time: a compare-and-swap reads the current value with `get`,
+	// which can yield on a disk read, so without serialization two swaps would both read the prior
+	// value and both commit. Unconditional reads and writes stay on the fast path.
+	private casChain: Promise<unknown> = Promise.resolve();
 
 	constructor(disposable: AsyncDisposableStack, path: string | null, lock: FileSystemLock | undefined) {
 		this.disposable = disposable;
@@ -153,18 +166,13 @@ export class BlobStorage implements AsyncDisposable {
 
 	set(key: string, value: Readonly<Uint8Array>, options?: Storage.Set) {
 		this.check(key);
-		this.cache.set(key, {
-			saveId: this.saveId,
-			value: function() {
-				if (value.buffer instanceof SharedArrayBuffer && !options?.retain) {
-					return value;
-				} else {
-					const copy = new Uint8Array(new SharedArrayBuffer(value.length));
-					copy.set(value);
-					return copy;
-				}
-			}(),
-		});
+		if (options?.if) {
+			const result = this.casChain.then(() =>
+				this.conditionalSet(key, value, options as Storage.Set & { if: Storage.Condition }));
+			this.casChain = result.catch(() => {});
+			return result;
+		}
+		this.store(key, value, options);
 	}
 
 	async flushdb() {
@@ -229,6 +237,33 @@ export class BlobStorage implements AsyncDisposable {
 				}
 			}
 		}));
+	}
+
+	private async conditionalSet(key: string, value: Readonly<Uint8Array>, options: Storage.Set & { if: Storage.Condition }) {
+		const current = await this.get(key);
+		switch (options.if.if) {
+			case 'NX': if (current !== null) return false; break;
+			case 'XX': if (current === null) return false; break;
+			case 'EQ': if (!bytesEqual(current, options.if.value)) return false; break;
+			case 'NE': if (bytesEqual(current, options.if.value)) return false; break;
+		}
+		this.store(key, value, options);
+		return undefined;
+	}
+
+	private store(key: string, value: Readonly<Uint8Array>, options?: Storage.Set) {
+		this.cache.set(key, {
+			saveId: this.saveId,
+			value: function() {
+				if (value.buffer instanceof SharedArrayBuffer && !options?.retain) {
+					return value;
+				} else {
+					const copy = new Uint8Array(new SharedArrayBuffer(value.length));
+					copy.set(value);
+					return copy;
+				}
+			}(),
+		});
 	}
 
 	private check(fragment: string) {
