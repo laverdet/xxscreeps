@@ -1,4 +1,5 @@
-import { hooks } from 'xxscreeps/backend/index.js';
+import type { JSONSchemaType } from 'ajv';
+import { hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import badge from './badge.js';
 import messages from './messages.js';
 import './auth.js';
@@ -18,4 +19,43 @@ hooks.register('route', {
 			list: [],
 		};
 	},
+});
+
+hooks.register('route', {
+	path: '/api/user/decorations/inventory',
+	execute() {
+		return {
+			ok: 1,
+			list: [],
+		};
+	},
+});
+
+hooks.register('route', {
+	path: '/api/user/tutorial-done',
+	method: 'post',
+	execute() {
+		return { ok: 1 };
+	},
+});
+
+interface MoneyHistoryRequest {
+	page?: string | null;
+}
+
+const moneyHistorySchema: JSONSchemaType<MoneyHistoryRequest> = {
+	type: 'object',
+	properties: {
+		page: { type: 'string', nullable: true },
+	},
+};
+
+hooks.register('route', {
+	path: '/api/user/money-history',
+	execute: makeValidatedQueryRoute(moneyHistorySchema, context => ({
+		ok: 1,
+		page: Number(context.request.query.page) || 0,
+		list: [],
+		hasMore: false,
+	})),
 });
