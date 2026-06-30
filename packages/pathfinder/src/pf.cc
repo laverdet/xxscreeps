@@ -211,7 +211,14 @@ auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, w
 		}
 
 		// Add next neighbors to heap
-		jps(pos, current, g_cost);
+		if (options.heuristic_weight == 1) {
+			// jps can sometimes produce suboptimal paths with non-uniform cost grids even with the added
+			// forced neighbor heuristic. so, for heuristicWeight == 1 we will use astar for the best
+			// paths.
+			astar(pos, current, g_cost);
+		} else {
+			jps(pos, current, g_cost);
+		}
 		--ops_remaining;
 
 		// Check termination
