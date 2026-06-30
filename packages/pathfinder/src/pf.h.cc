@@ -98,8 +98,13 @@ class pathfinder {
 	private:
 		using room_scope_table = scope_table<room_terrain, room_location_t, RoomCapacity>;
 		using open_closed_type = open_closed_t<search_capacity>;
-		using heap_score_type = score_table_t<pos_index_t::value_type, cost_t, search_capacity>;
-		using heap_type = heap_t<pos_index_t::value_type, std::greater<>, heap_score_type, search_capacity / 8>;
+
+		struct heap_node {
+				pos_index_t pos;
+				cost_t score;
+				constexpr static auto projection = [](const heap_node& node) -> cost_t { return node.score; };
+		};
+		using heap_type = heap_t<heap_node, std::greater<>, decltype(heap_node::projection), search_capacity / 8>;
 
 		// State
 		[[nodiscard]] auto heuristic(indexed_position_t pos) const -> cost_t;
@@ -127,6 +132,7 @@ class pathfinder {
 		room_scope_table room_table_;
 		std::unordered_set<room_location_t, room_location_t::hash> blocked_rooms_;
 		std::array<pos_index_t, search_capacity> parents_;
+		std::array<cost_t, search_capacity> scores_;
 		open_closed_type open_closed_;
 		heap_type heap_;
 		heuristic_t heuristic_;
