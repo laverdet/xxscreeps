@@ -160,7 +160,7 @@ and gives full TypeScript types on the operations you call.
 
 ```ts
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { generateRoom } from 'xxscreeps/engine/room-gen.js';
+import { generateRoom } from 'xxscreeps/scripts/room-gen.js';
 
 await using db = await Database.connect();
 await using shard = await Shard.connect(db, 'shard0');

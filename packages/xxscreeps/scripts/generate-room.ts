@@ -1,10 +1,10 @@
-import type { GenerateRoomOptions } from 'xxscreeps/engine/room-gen.js';
 import type { RoomType } from 'xxscreeps/game/room/sector.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import type { GenerateRoomOptions } from 'xxscreeps/scripts/room-gen.js';
 import { checkArguments } from 'xxscreeps/config/arguments.js';
 import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { generateRoom, mineralPool, roomTypeTemplates } from 'xxscreeps/engine/room-gen.js';
+import { generateRoom, mineralPool, roomTypeTemplates } from 'xxscreeps/scripts/room-gen.js';
 
 const mineralTypes = new Set<string>(mineralPool);
 
