@@ -75,6 +75,25 @@ hooks.register('route', {
 });
 
 hooks.register('route', {
+	path: '/api/user/overview',
+
+	async execute(context) {
+		const { userId } = context.state;
+		const { shard } = context;
+		const rooms = userId == null ? [] : await shard.scratch.sMembers(controlledRoomsKey(userId));
+		return {
+			ok: 1,
+			shards: {
+				[shard.name]: { rooms },
+			},
+			stats: {},
+			statsMax: {},
+			totals: {},
+		};
+	},
+});
+
+hooks.register('route', {
 	path: '/api/user/world-status',
 
 	async execute(context) {
