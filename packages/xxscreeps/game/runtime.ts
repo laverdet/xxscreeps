@@ -11,7 +11,6 @@ globalThis.enumerable = (target: object, key: string, descriptor: PropertyDescri
 registerGlobal('_', lodash);
 
 registerGlobal(function Deposit() {});
-registerGlobal(function PowerCreep() {});
 
 hooks.register('runtimeConnector', {
 	initialize() {
