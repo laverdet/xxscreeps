@@ -94,12 +94,10 @@ const swampTypes: Record<number, TerrainTypeParams> = {
 	14: { fill: 0.35, smooth: 3, factor: 5 },
 };
 
-const kWallTypeCount = Object.keys(wallTypes).length;
-const kSwampTypeCount = Object.keys(swampTypes).length;
-
-// Procedural rooms pick a wall type uniformly from the table.
+// Random generation rolls wall types 1-27; type 28 duplicates 2/3 and is reachable only by passing
+// terrainType explicitly, never at random.
 function randomWallType(): number {
-	return Math.floor(Math.random() * kWallTypeCount) + 1;
+	return Math.floor(Math.random() * 27) + 1;
 }
 
 export const mineralPool: ResourceType[] = [
@@ -360,8 +358,8 @@ function valueNoise(wx: number, wy: number, cell: number): number {
 
 // Two octaves of world-coordinate value noise drive a border's mass depth: a coarse field sets the
 // depth, a fine field breaks the masses into the detached pieces the corpus carries (dropping it slabs
-// them together — see room-generation-plan.md). World-coord sampling keeps masses continuous across
-// every shared sector edge, so stacked highway rooms read one unbroken field down the corridor.
+// them together). World-coord sampling keeps masses continuous across every shared sector edge, so
+// stacked highway rooms read one unbroken field down the corridor.
 const kHighwayMassCell = 22;
 const kHighwayMassWeight = 0.7;
 const kHighwayDetailCell = 6;
@@ -474,7 +472,7 @@ function rollHighwaySwamp(): number {
 }
 
 // Per-border wall-mass shape; lane masses (V/H) run deep, crossing-corner masses shallow. Each
-// {base,amp,expo} drives edgeDepth's heavy-tailed wedge, fit to the live corpus (room-generation-plan.md).
+// {base,amp,expo} drives edgeDepth's heavy-tailed wedge, fit to the live corpus.
 interface HighwayMass { base: number; amp: number; expo: number }
 const kHighwayLaneMass: HighwayMass = { base: 0.5, amp: 26, expo: 2.9 };
 const kHighwayCornerMass: HighwayMass = { base: 0.2, amp: 8, expo: 2.5 };
@@ -490,8 +488,8 @@ function edgeDepth(wx: number, wy: number, mass: HighwayMass): number {
 
 // A [0, 1] multiplier on a border tile's mass depth that recedes the mass near an exit — 0 over the exit
 // rising to 1 at the radius — so a throat opens as a natural mouth, not the bored tunnel a reconnect cuts
-// (dropping it floods the lane with pinch tiles — see room-generation-plan.md). Concave (sqrt) easing
-// keeps the mass tight to the exit; 2D distance so a mass also parts for a perpendicular lane-side exit.
+// (dropping it floods the lane with pinch tiles). Concave (sqrt) easing keeps the mass tight to the
+// exit; 2D distance so a mass also parts for a perpendicular lane-side exit.
 const kHighwayExitClearRadius = 3;
 function exitClearance(bx: number, by: number, exitPoints: readonly (readonly [ number, number ])[]): number {
 	let nearest = Infinity;
@@ -506,7 +504,7 @@ function exitClearance(bx: number, by: number, exitPoints: readonly (readonly [ 
 // Highway-room terrain: an open travel lane flanked by the surrounding sector blocks intruding from the
 // sector-facing borders — left+right for vertical, top+bottom for horizontal, all four for a crossing.
 // Wall masses (noise-driven wedge depth) + lane blobs + exit recede + a slot-carve reconnect, then swamp.
-// Every piece is corpus-justified; see room-generation-plan.md for the model and the ablation that fit it.
+// Every piece is tuned to the live highway corpus.
 function genHighwayTerrain(
 	exits: ExitMap,
 	rx: number,
@@ -516,8 +514,8 @@ function genHighwayTerrain(
 ): Grid {
 	const grid = makeGrid();
 	markExits(grid, exits);
-	// Room origin in world tiles; each border samples noise at its own world coordinate (left wox, right
-	// wox+49, top woy, bottom woy+49) so the masses decorrelate and flow across the shared sector edge.
+	// Room origin in world tiles. Each border samples the noise field at its own tiles' world positions,
+	// so the four masses decorrelate and every mass flows continuously across the shared sector edge.
 	const wox = rx * 50;
 	const woy = ry * 50;
 	const mass = orientation === 'crossing' ? kHighwayCornerMass : kHighwayLaneMass;
@@ -529,22 +527,23 @@ function genHighwayTerrain(
 		...exits.left.map((yy): [ number, number ] => [ 0, yy ]),
 		...exits.right.map((yy): [ number, number ] => [ 49, yy ]),
 	];
-	const leftDepth = new Array(50).fill(0);
-	const rightDepth = new Array(50).fill(0);
-	const topDepth = new Array(50).fill(0);
-	const bottomDepth = new Array(50).fill(0);
-	if (orientation !== 'horizontal') {
-		for (let yy = 0; yy < 50; yy++) {
-			leftDepth[yy] = edgeDepth(wox, woy + yy, mass) * exitClearance(0, yy, exitPoints);
-			rightDepth[yy] = edgeDepth(wox + 49, woy + yy, mass) * exitClearance(49, yy, exitPoints);
+	// Depth (in tiles) the mass intrudes along one border, indexed by the tile `at(i)`: the noise wedge
+	// sampled at that tile's world position, receding toward any nearby exit (see exitClearance). A border
+	// the lane runs along carries no mass and stays zeroed, so its term never walls a lane tile.
+	const depthAlongBorder = (active: boolean, at: (ii: number) => readonly [ number, number ]): number[] => {
+		const depth = new Array<number>(50).fill(0);
+		if (active) {
+			for (let ii = 0; ii < 50; ii++) {
+				const [ bx, by ] = at(ii);
+				depth[ii] = edgeDepth(wox + bx, woy + by, mass) * exitClearance(bx, by, exitPoints);
+			}
 		}
-	}
-	if (orientation !== 'vertical') {
-		for (let xx = 0; xx < 50; xx++) {
-			topDepth[xx] = edgeDepth(wox + xx, woy, mass) * exitClearance(xx, 0, exitPoints);
-			bottomDepth[xx] = edgeDepth(wox + xx, woy + 49, mass) * exitClearance(xx, 49, exitPoints);
-		}
-	}
+		return depth;
+	};
+	const leftDepth = depthAlongBorder(orientation !== 'horizontal', ii => [ 0, ii ]);
+	const rightDepth = depthAlongBorder(orientation !== 'horizontal', ii => [ 49, ii ]);
+	const topDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 0 ]);
+	const bottomDepth = depthAlongBorder(orientation !== 'vertical', ii => [ ii, 49 ]);
 	for (let yy = 1; yy < 49; yy++) {
 		const row = grid[yy]!;
 		for (let xx = 1; xx < 49; xx++) {
@@ -917,7 +916,7 @@ function buildRoom(
 
 	const wallType = options?.terrainType ?? randomWallType();
 	const swampType = options?.swampType ??
-		(options?.corridor ? rollHighwaySwamp() : Math.floor(Math.random() * (kSwampTypeCount + 1)));
+		(options?.corridor ? rollHighwaySwamp() : Math.floor(Math.random() * 14));
 	const sourceCount = options?.sources ?? (Math.random() > 0.5 ? 1 : 2);
 	const hasController = options?.controller ?? true;
 	const hasKeepers = options?.keeperLairs ?? false;
