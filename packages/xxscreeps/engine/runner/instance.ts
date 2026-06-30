@@ -194,18 +194,19 @@ export class PlayerInstance {
 				// any a connector requested.
 				const newUserIds = Fn.pipe(
 					roomBlobs,
-					$$ => Fn.map($$, blob => {
+					$$ => Fn.transform($$, blob => {
 						const users = RoomSchema.read(blob)['#users'];
 						return Fn.concat([ users.presence, users.extra ]);
 					}),
-					$$ => Fn.concat($$),
 					$$ => Fn.concat([ $$, payload.userIds ?? [] ]),
+					$$ => new Set($$),
 					$$ => Fn.reject($$, userId => this.seenUsers.has(userId)),
 				);
-				const entries = await Promise.all(Fn.map(newUserIds, async userId => {
+				const entries = await Fn.mapAwait(newUserIds, async userId => {
 					this.seenUsers.add(userId);
-					return [ userId, (await this.shard.db.data.hGet(User.infoKey(userId), 'username'))! ] as const;
-				}));
+					const username = await this.shard.db.data.hGet(User.infoKey(userId), 'username');
+					return [ userId, username! ] as const;
+				});
 				if (entries.length !== 0) {
 					payload.usernames = Fn.fromEntries(entries);
 				}

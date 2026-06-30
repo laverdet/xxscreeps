@@ -1,6 +1,7 @@
 import type { TransactionPayload } from './transaction.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { getTransactionChannel, kTransactionWindow, loadTransactionBlob, loadTransactionEntries, selectRecent } from './model.js';
 import { read } from './transaction.js';
 
@@ -12,18 +13,13 @@ declare module 'xxscreeps/engine/runner/index.js' {
 
 // Transaction blobs are immutable and their ids are globally unique, so cache them by id: a transfer
 // referenced by both parties' runtimes is read once and handed out as the same SharedArrayBuffer.
-const blobCache = new Map<string, Promise<Readonly<Uint8Array>>>();
-function loadBlob(shard: Shard, id: string) {
-	let blob = blobCache.get(id);
-	if (blob === undefined) {
-		blob = loadTransactionBlob(shard, id);
-		blobCache.set(id, blob);
-	}
-	return blob;
-}
+const loadBlob = function() {
+	const cache = new Map<string, Promise<Readonly<Uint8Array>>>();
+	return (shard: Shard, id: string) =>
+		getOrSet(cache, id, () => loadTransactionBlob(shard, id));
+}();
 
 hooks.register('runnerConnector', async player => {
-	// Reload the user's transactions only when the processor signals a new transfer, not every tick.
 	const channel = await getTransactionChannel(player.shard, player.userId).subscribe();
 	let dirty = true;
 	channel.listen(() => { dirty = true; });
