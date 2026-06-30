@@ -1,5 +1,7 @@
 import type * as Storage from 'xxscreeps/engine/db/storage/provider.js';
 import * as assert from 'node:assert';
+import { Buffer } from 'node:buffer';
+import * as fsSync from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as Path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,13 +9,11 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { listen, spread } from 'xxscreeps/utility/async.js';
 import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
 
-// Byte-wise comparison for compare-and-swap conditions. A blob condition always carries the prior
-// buffer, so a `string` value (or an absent key) can never match.
 function bytesEqual(left: Readonly<Uint8Array> | null, right: string | Readonly<Uint8Array>) {
 	if (left === null || typeof right === 'string') {
 		return false;
 	}
-	return left.length === right.length && left.every((byte, index) => byte === right[index]);
+	return Buffer.compare(left, right) === 0;
 }
 
 export class BlobStorage implements AsyncDisposable {
@@ -27,10 +27,6 @@ export class BlobStorage implements AsyncDisposable {
 	private readonly lock;
 	private readonly knownPaths = new Set<string>();
 	private readonly path;
-	// Conditional writes run one at a time: a compare-and-swap reads the current value with `get`,
-	// which can yield on a disk read, so without serialization two swaps would both read the prior
-	// value and both commit. Unconditional reads and writes stay on the fast path.
-	private casChain: Promise<unknown> = Promise.resolve();
 
 	constructor(disposable: AsyncDisposableStack, path: string | null, lock: FileSystemLock | undefined) {
 		this.disposable = disposable;
@@ -135,17 +131,20 @@ export class BlobStorage implements AsyncDisposable {
 		}();
 		if (handle) {
 			// An error here would be unexpected, so don't catch
-			const { size } = await handle.stat();
-			const value = new Uint8Array(new SharedArrayBuffer(size));
-			if ((await handle.read(value, 0, size)).bytesRead !== size) {
-				throw new Error('Read partial file');
+			try {
+				const { size } = await handle.stat();
+				const value = new Uint8Array(new SharedArrayBuffer(size));
+				if ((await handle.read(value, 0, size)).bytesRead !== size) {
+					throw new Error('Read partial file');
+				}
+				this.cache.set(key, {
+					saveId: -1,
+					value,
+				});
+				return value;
+			} finally {
+				await handle.close();
 			}
-			await handle.close();
-			this.cache.set(key, {
-				saveId: -1,
-				value,
-			});
-			return value;
 		} else {
 			// Cache the absence of this file
 			this.cache.set(key, {
@@ -153,6 +152,50 @@ export class BlobStorage implements AsyncDisposable {
 				value: null,
 			});
 			return null;
+		}
+	}
+
+	getSync(key: string) {
+		this.check(key);
+		// Check in-memory buffer
+		const cached = this.cache.get(key);
+		if (cached) {
+			return cached.value;
+		} else if (this.path === null) {
+			return null;
+		}
+		// Open handle from file system, we should catch this error
+		const path = Path.join(this.path, key);
+		const handle = function() {
+			try {
+				return fsSync.openSync(path, 'r');
+			} catch {
+				return null;
+			}
+		}();
+		if (handle === null) {
+			// Cache the absence of this file
+			this.cache.set(key, {
+				saveId: -1,
+				value: null,
+			});
+			return null;
+		} else {
+			try {
+				// An error here would be unexpected, so don't catch
+				const { size } = fsSync.fstatSync(handle);
+				const value = new Uint8Array(new SharedArrayBuffer(size));
+				if (fsSync.readSync(handle, value, 0, size, 0) !== size) {
+					throw new Error('Read partial file');
+				}
+				this.cache.set(key, {
+					saveId: -1,
+					value,
+				});
+				return value;
+			} finally {
+				fsSync.closeSync(handle);
+			}
 		}
 	}
 
@@ -167,12 +210,46 @@ export class BlobStorage implements AsyncDisposable {
 	set(key: string, value: Readonly<Uint8Array>, options?: Storage.Set) {
 		this.check(key);
 		if (options?.if) {
-			const result = this.casChain.then(() =>
-				this.conditionalSet(key, value, options as Storage.Set & { if: Storage.Condition }));
-			this.casChain = result.catch(() => {});
-			return result;
+			const current = this.getSync(key);
+			switch (options.if.if) {
+				case 'NX':
+					if (current === null) {
+						break;
+					} else {
+						return false;
+					}
+				case 'XX':
+					if (current === null) {
+						return false;
+					} else {
+						break;
+					}
+				case 'EQ':
+					if (bytesEqual(current, options.if.value)) {
+						break;
+					} else {
+						return false;
+					}
+				case 'NE':
+					if (bytesEqual(current, options.if.value)) {
+						return false;
+					} else {
+						break;
+					}
+			}
 		}
-		this.store(key, value, options);
+		this.cache.set(key, {
+			saveId: this.saveId,
+			value: function() {
+				if (value.buffer instanceof SharedArrayBuffer && !options?.retain) {
+					return value;
+				} else {
+					const copy = new Uint8Array(new SharedArrayBuffer(value.length));
+					copy.set(value);
+					return copy;
+				}
+			}(),
+		});
 	}
 
 	async flushdb() {
@@ -237,33 +314,6 @@ export class BlobStorage implements AsyncDisposable {
 				}
 			}
 		}));
-	}
-
-	private async conditionalSet(key: string, value: Readonly<Uint8Array>, options: Storage.Set & { if: Storage.Condition }) {
-		const current = await this.get(key);
-		switch (options.if.if) {
-			case 'NX': if (current !== null) return false; break;
-			case 'XX': if (current === null) return false; break;
-			case 'EQ': if (!bytesEqual(current, options.if.value)) return false; break;
-			case 'NE': if (bytesEqual(current, options.if.value)) return false; break;
-		}
-		this.store(key, value, options);
-		return undefined;
-	}
-
-	private store(key: string, value: Readonly<Uint8Array>, options?: Storage.Set) {
-		this.cache.set(key, {
-			saveId: this.saveId,
-			value: function() {
-				if (value.buffer instanceof SharedArrayBuffer && !options?.retain) {
-					return value;
-				} else {
-					const copy = new Uint8Array(new SharedArrayBuffer(value.length));
-					copy.set(value);
-					return copy;
-				}
-			}(),
-		});
 	}
 
 	private check(fragment: string) {

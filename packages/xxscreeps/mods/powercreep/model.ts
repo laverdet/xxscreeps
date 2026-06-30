@@ -7,14 +7,20 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { createPowerCreep, read, write } from './powercreep.js';
 
-// Account-scoped power creep roster. The whole roster is stored under one key as the serialized
-// `PowerCreep` blob (see `powercreep.js`) so mutations can go through keyval compare-and-swap. The
-// driver hands the same bytes straight to the runtime; nothing parses the roster on the runner side.
+// Account-scoped power creep roster.
 const powerCreepsKey = (userId: string) => `user/${userId}/powerCreeps`;
 
-interface PowerInfo { className: string; level: number[] }
+interface PowerInfo {
+	className: string;
+	level: number[];
+}
+
+interface PowerEntry {
+	power: number;
+	level: number;
+}
+
 const powerInfoTable: Record<number, PowerInfo> = C.POWER_INFO;
-const powerInfo = (power: number) => powerInfoTable[power];
 
 /** Channel the backend publishes to on every roster mutation; the runner refreshes when it fires. */
 export function getPowerCreepChannel(db: Database, userId: string) {
@@ -45,7 +51,7 @@ export function loadPowerCreepsBlob(db: Database, userId: string) {
 // which case nothing is written.
 async function mutate<Type>(db: Database, userId: string, fn: (roster: PowerCreep[]) => Type | Promise<Type>) {
 	const key = powerCreepsKey(userId);
-	for (let attempt = 0; ; ++attempt) {
+	for (let attempt = 0; attempt <= 4; ++attempt) {
 		const prior = await db.data.get(key, { blob: true });
 		const roster = parseRoster(prior).filter(isLive);
 		const result = await fn(roster);
@@ -56,10 +62,8 @@ async function mutate<Type>(db: Database, userId: string, fn: (roster: PowerCree
 			await getPowerCreepChannel(db, userId).publish({ type: 'updated' });
 			return result;
 		}
-		if (attempt >= 4) {
-			throw new Error('Roster busy');
-		}
 	}
+	throw new Error('Roster busy');
 }
 
 function gplLevel(power: number) {
@@ -75,33 +79,15 @@ async function userPower(db: Database, userId: string) {
 	return Number(await db.data.hGet(User.infoKey(userId), 'power')) || 0;
 }
 
-/** Expand a roster member into the `/list` wire shape the client expects. */
-export function renderRecord(creep: PowerCreep) {
-	const { level } = creep;
-	return {
-		_id: creep.id,
-		name: creep.name,
-		className: creep.className,
-		level,
-		hits: 1000 * (level + 1),
-		hitsMax: 1000 * (level + 1),
-		store: {},
-		storeCapacity: 100 * (level + 1),
-		spawnCooldownTime: creep.spawnCooldownTime,
-		powers: creep.powers,
-		...creep.deleteTime !== 0 && { deleteTime: creep.deleteTime },
-	};
-}
-
-export function create(db: Database, userId: string, name: unknown, className: unknown) {
+export function create(db: Database, userId: string, name: string, className: string) {
 	return mutate(db, userId, async roster => {
 		if (freeLevels(await userPower(db, userId), roster) <= 0) {
 			throw new Error('Not enough power level');
 		}
-		if (typeof className !== 'string' || !Object.values(C.POWER_CLASS).includes(className)) {
+		if (!Object.values(C.POWER_CLASS).includes(className)) {
 			throw new Error('Invalid class');
 		}
-		const truncated = String(name).substring(0, 50);
+		const truncated = String(name).slice(0, 50);
 		if (roster.some(creep => creep.name === truncated)) {
 			throw new Error('Name already exists');
 		}
@@ -113,14 +99,15 @@ export function create(db: Database, userId: string, name: unknown, className: u
 
 // Every requested level must be reachable by allocating one point at a time without ever exceeding a
 // power's per-rank level prerequisite.
-function powersAreReachable(powers: { power: number; level: number }[]) {
+function powersAreReachable(powers: PowerEntry[]) {
 	const target = Fn.accumulate(powers, entry => entry.level);
-	const built = new Map<number, number>(Fn.map(powers, entry => [ entry.power, 0 ]));
+	const built = new Map(Fn.map(powers, entry => [ entry.power, 0 ]));
 	let level = 0;
 	while (level < target) {
 		const next = powers.find(({ power, level: want }) => {
 			const have = built.get(power) ?? 0;
-			return have < 5 && have < want && powerInfo(power)!.level[have]! <= level;
+			const info = powerInfoTable[power];
+			return info && have < 5 && have < want && powerInfoTable[power]!.level[have]! <= level;
 		});
 		if (next === undefined) {
 			return false;
@@ -131,28 +118,22 @@ function powersAreReachable(powers: { power: number; level: number }[]) {
 	return true;
 }
 
-export function upgrade(db: Database, userId: string, id: unknown, powers: unknown) {
+export function upgrade(db: Database, userId: string, id: string, powers: Record<string, number>) {
 	return mutate(db, userId, async roster => {
 		const creep = roster.find(entry => entry.id === id);
 		if (!creep) {
 			throw new Error('Invalid id');
 		}
-		if (typeof powers !== 'object' || powers === null) {
-			throw new Error('Invalid powers');
-		}
 		const levelOf = (power: number) => creep['#powers'].find(entry => entry.power === power)?.level ?? 0;
-		const desired: { power: number; level: number }[] = [];
+		const desired: PowerEntry[] = [];
 		for (const [ key, value ] of Object.entries(powers)) {
 			const power = Number(key);
-			const info = powerInfo(power);
+			const info = powerInfoTable[power];
 			if (!info) {
 				throw new Error(`Invalid power ${key}`);
 			}
 			if (info.className !== creep.className) {
 				throw new Error(`Invalid class for power ${key}`);
-			}
-			if (typeof value !== 'number') {
-				throw new Error(`Invalid value for power ${key}`);
 			}
 			if (value < levelOf(power)) {
 				throw new Error(`Cannot downgrade power ${key}`);
@@ -175,7 +156,7 @@ export function upgrade(db: Database, userId: string, id: unknown, powers: unkno
 			throw new Error('Max level');
 		}
 		for (const { power, level } of desired) {
-			if (newLevel < powerInfo(power)!.level[level - 1]!) {
+			if (newLevel < powerInfoTable[power]!.level[level - 1]!) {
 				throw new Error(`Not enough level for power ${power}`);
 			}
 		}
@@ -196,7 +177,7 @@ export function rename(db: Database, userId: string, id: unknown, name: unknown)
 		if (!creep) {
 			throw new Error('Invalid id');
 		}
-		const truncated = String(name).substring(0, 50);
+		const truncated = String(name).slice(0, 50);
 		if (roster.some(entry => entry.name === truncated)) {
 			throw new Error('Name already exists');
 		}

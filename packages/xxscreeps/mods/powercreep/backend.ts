@@ -1,3 +1,4 @@
+import type { PowerCreep } from './powercreep.js';
 import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
@@ -24,13 +25,22 @@ function mutationRoute<Body>(
 	});
 }
 
-const idSchema: JSONSchemaType<{ id: string }> = {
+interface PowerCreepSubjectRequest {
+	id: string;
+}
+
+const idSchema: JSONSchemaType<PowerCreepSubjectRequest> = {
 	type: 'object',
 	properties: { id: { type: 'string' } },
 	required: [ 'id' ],
 };
 
-const createSchema: JSONSchemaType<{ name: string; className: string }> = {
+interface PowerCreepCreateRequest {
+	name: string;
+	className: string;
+}
+
+const createSchema: JSONSchemaType<PowerCreepCreateRequest> = {
 	type: 'object',
 	properties: {
 		name: { type: 'string' },
@@ -39,7 +49,12 @@ const createSchema: JSONSchemaType<{ name: string; className: string }> = {
 	required: [ 'name', 'className' ],
 };
 
-const upgradeSchema: JSONSchemaType<{ id: string; powers: Record<string, number> }> = {
+interface PowerCreepUpgradeRequest {
+	id: string;
+	powers: Record<string, number>;
+}
+
+const upgradeSchema: JSONSchemaType<PowerCreepUpgradeRequest> = {
 	type: 'object',
 	properties: {
 		id: { type: 'string' },
@@ -48,7 +63,12 @@ const upgradeSchema: JSONSchemaType<{ id: string; powers: Record<string, number>
 	required: [ 'id', 'powers' ],
 };
 
-const renameSchema: JSONSchemaType<{ id: string; name: string }> = {
+interface PowerCreepRenameRequest {
+	id: string;
+	name: string;
+}
+
+const renameSchema: JSONSchemaType<PowerCreepRenameRequest> = {
 	type: 'object',
 	properties: {
 		id: { type: 'string' },
@@ -57,12 +77,30 @@ const renameSchema: JSONSchemaType<{ id: string; name: string }> = {
 	required: [ 'id', 'name' ],
 };
 
+/** Expand a roster member into the `/list` wire shape the client expects. */
+function renderRecord(creep: PowerCreep) {
+	const { level } = creep;
+	return {
+		_id: creep.id,
+		name: creep.name,
+		className: creep.className,
+		level,
+		hits: 1000 * (level + 1),
+		hitsMax: 1000 * (level + 1),
+		store: {},
+		storeCapacity: 100 * (level + 1),
+		spawnCooldownTime: creep.spawnCooldownTime,
+		powers: creep.powers,
+		...creep.deleteTime !== 0 && { deleteTime: creep.deleteTime },
+	};
+}
+
 hooks.register('route', {
 	path: '/api/game/power-creeps/list',
 	async execute(context) {
 		const { userId } = context.state;
 		const roster = userId == null ? [] : await Model.loadRoster(context.db, userId);
-		return { ok: 1, list: roster.map(creep => Model.renderRecord(creep)) };
+		return { ok: 1, list: roster.map(creep => renderRecord(creep)) };
 	},
 });
 

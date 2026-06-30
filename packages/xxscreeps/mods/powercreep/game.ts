@@ -6,12 +6,16 @@ let roster: PowerCreep[] = [];
 // Materialize the roster blob the driver sends: once on boot, then again whenever a mutation lands.
 hooks.register('runtimeConnector', {
 	initialize(payload) {
-		roster = payload.powerCreepsBlob ? read(payload.powerCreepsBlob) : [];
+		if (payload.powerCreepsBlob) {
+			roster = read(payload.powerCreepsBlob);
+		}
 	},
 
 	receive(payload) {
-		if (payload.powerCreepsBlob !== undefined) {
-			roster = payload.powerCreepsBlob ? read(payload.powerCreepsBlob) : [];
+		if (payload.powerCreepsBlob === null) {
+			roster = [];
+		} else if (payload.powerCreepsBlob) {
+			roster = read(payload.powerCreepsBlob);
 		}
 	},
 });

@@ -1,8 +1,6 @@
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { getPowerCreepChannel, loadPowerCreepsBlob } from './model.js';
 
-// The roster blob is transferred to the runtime verbatim — the runner never parses it. It is sent
-// once on sandbox boot and again only when the backend publishes a mutation, so idle ticks are free.
 declare module 'xxscreeps/engine/runner/index.js' {
 	interface InitializationPayload {
 		powerCreepsBlob: Readonly<Uint8Array> | null;
