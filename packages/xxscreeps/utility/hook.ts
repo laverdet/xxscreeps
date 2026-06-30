@@ -4,6 +4,41 @@ import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 import { acquireWith } from 'xxscreeps/utility/async.js';
 import { lateCallback } from './memoize.js';
 
+export interface ProviderRegistration<Type extends object> {
+	/**
+	 * Replace the default implementation with `provider`. Throws if a provider was already registered,
+	 * so two mods fighting over the same domain fail loudly instead of one silently shadowing the
+	 * other.
+	 */
+	register: (provider: Type) => void;
+	/** The active implementation: the registered override if any, otherwise the default. */
+	readonly current: Type;
+}
+
+/**
+ * A single-implementation override hook. Unlike `makeHookRegistration` (which fans out to *every*
+ * registered handler), this resolves to exactly one implementation: a built-in `fallback` that at
+ * most one mod may replace wholesale via `register`.
+ *
+ * Use this when a mod owns a piece of functionality — e.g. how a domain persists its data — that
+ * another mod may want to swap out entirely (a SQL/document store instead of the default), as
+ * opposed to extending or observing. `name` is only used in the conflict error message.
+ */
+export function makeProviderRegistration<Type extends object>(name: string, fallback: Type): ProviderRegistration<Type> {
+	let override: Type | undefined;
+	return {
+		register(provider) {
+			if (override !== undefined) {
+				throw new Error(`Provider '${name}' is already registered`);
+			}
+			override = provider;
+		},
+		get current() {
+			return override ?? fallback;
+		},
+	};
+}
+
 export function makeHookRegistration<Keys extends Record<string, unknown>>() {
 	const hooksByName = new Map<keyof Keys, UnknownCallback[]>();
 	const took = new Set<keyof Keys>();
