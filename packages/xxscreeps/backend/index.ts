@@ -69,6 +69,9 @@ declare module 'xxscreeps/game/object.js' {
 // Note: `ajv` doesn't properly support `undefined`....
 // https://github.com/ajv-validator/ajv/issues/2040
 const ajv = new Ajv();
+// Separate instance for routes that opt into `coerceTypes` (e.g. the official client sends numeric
+// fields as strings). `coerceTypes` is an Ajv constructor option, so it can't be set per-schema.
+const coercingAjv = new Ajv({ coerceTypes: true });
 
 // Backend render hooks
 export function bindRenderer<Type extends RoomObject>(
@@ -93,8 +96,11 @@ export function bindTerrainRenderer<Type extends RoomObject>(object: Implementat
 export function makeValidatedPayloadRoute<Body>(
 	schema: JSONSchemaType<Body>,
 	execute: ValidatedExecuteRoute<ValidatedPayloadRequest<Body>>,
+	options?: { coerceTypes?: boolean },
 ): ExecuteRoute {
-	const validate = ajv.compile(schema);
+	// When `coerceTypes` is set the compiled validator mutates the body in place (e.g. "180" → 180),
+	// so `execute` sees the coerced values.
+	const validate = (options?.coerceTypes ? coercingAjv : ajv).compile(schema);
 	return context => {
 		if (validate(context.request.body)) {
 			return execute(context as RouterContext<State, ValidatedRequestContext<ValidatedPayloadRequest<Body>>>);

@@ -8,7 +8,7 @@ import './transport-stdout.js';
 
 async function drainUser(shard: Shard, userId: string) {
 	const [ prefs, lastNotifyDate ] = await Promise.all([
-		getNotifyPrefs(shard, userId),
+		getNotifyPrefs(shard.db, userId),
 		getLastNotifyDate(shard, userId),
 	]);
 	if (prefs.disabled) {
