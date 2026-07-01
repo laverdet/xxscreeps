@@ -2,6 +2,7 @@ import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { Market } from './market.js';
 import * as Terminal from './terminal.js';
+import { Transactions } from './transaction.js';
 
 // Export `StructureTerminal` to runtime globals
 registerGlobal(Terminal.StructureTerminal);
@@ -35,6 +36,12 @@ declare module 'xxscreeps/game/game.js' {
 		market: Market;
 	}
 }
-hooks.register('gameInitializer', game => {
-	game.market = new Market(game);
+// The runner ships transactions only when a transfer changes the list, so retain the last payload
+// and reuse it on the ticks it isn't resent.
+let transactions: Transactions | undefined;
+hooks.register('gameInitializer', (game, data) => {
+	if (data?.transactions) {
+		transactions = new Transactions(data.transactions);
+	}
+	game.market = new Market(game, transactions);
 });

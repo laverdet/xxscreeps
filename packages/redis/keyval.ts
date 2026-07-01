@@ -70,6 +70,7 @@ function zRangeOptions(options?: Pr.ZRange) {
 		...options.limit !== undefined && {
 			LIMIT: { offset: options.limit[0], count: options.limit[1] },
 		},
+		...options.rev && { REV: true } as const,
 	};
 }
 

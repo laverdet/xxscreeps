@@ -238,6 +238,8 @@ export class BlobStorage implements AsyncDisposable {
 					}
 			}
 		}
+		// TODO: honor `options.px` so callers can give blobs a TTL (e.g. market transactions expire
+		// after 24h instead of leaking once both parties have evicted them).
 		this.cache.set(key, {
 			saveId: this.saveId,
 			value: function() {
