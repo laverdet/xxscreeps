@@ -9,8 +9,8 @@ import {
 	getUnreadCount, markRead, sendMessage,
 } from './model.js';
 
-// Mirrors the original server's cap; longer payloads are rejected rather than truncated.
-const kMaxMessageLength = 2000;
+// Longer payloads are rejected rather than truncated.
+const kMaxMessageLength = 102400;
 
 const UnreadCountEndpoint: Endpoint = {
 	path: '/api/user/messages/unread-count',

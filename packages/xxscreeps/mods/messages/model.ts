@@ -56,9 +56,6 @@ const conversationsKey = (userId: string) => `user/${userId}/messages/conversati
 const threadKey = (userId: string, respondentId: string) => `user/${userId}/messages/with/${respondentId}`;
 // set of unread incoming messageIds. unread-count is an O(1) `sCard` over this.
 const unreadKey = (userId: string) => `user/${userId}/messages/unread`;
-// Strictly-increasing send counter, used as the zset score so message ordering is deterministic
-// even when several messages land in the same millisecond (which `date` cannot disambiguate).
-const sequenceKey = 'messages/sequence';
 
 // Client subscribes to `user:<id>/newMessage`; we publish on this internal channel name.
 export function getNewMessageChannel(db: Database, userId: string) {
@@ -108,11 +105,10 @@ const defaultMessageStore: MessageStore = {
 	 * Returns the recipient's `in` message so the caller (e.g. the notification hook) can act on it.
 	 */
 	async sendMessage(db, senderId, respondentId, text) {
-		const date = String(Date.now());
+		const now = Date.now();
+		const date = String(now);
 		const inId = generateId(24);
 		const outId = generateId(24);
-		// One increment per send gives a score that strictly increases in send order within any thread.
-		const seq = await db.data.incr(sequenceKey);
 
 		// `in` copy: owned by the recipient, unread until they read it.
 		// `out` copy: owned by the sender, `unread` here means "not yet read by the recipient" (the
@@ -124,10 +120,10 @@ const defaultMessageStore: MessageStore = {
 			db.data.hmset(messageKey(outId), {
 				user: senderId, respondent: respondentId, date, type: 'out', text, unread: '1', peer: inId,
 			}),
-			db.data.zAdd(threadKey(respondentId, senderId), [ [ seq, inId ] ]),
-			db.data.zAdd(threadKey(senderId, respondentId), [ [ seq, outId ] ]),
-			db.data.zAdd(conversationsKey(respondentId), [ [ seq, senderId ] ]),
-			db.data.zAdd(conversationsKey(senderId), [ [ seq, respondentId ] ]),
+			db.data.zAdd(threadKey(respondentId, senderId), [ [ now, inId ] ]),
+			db.data.zAdd(threadKey(senderId, respondentId), [ [ now, outId ] ]),
+			db.data.zAdd(conversationsKey(respondentId), [ [ now, senderId ] ]),
+			db.data.zAdd(conversationsKey(senderId), [ [ now, respondentId ] ]),
 			db.data.sAdd(unreadKey(respondentId), [ inId ]),
 		]);
 
@@ -186,22 +182,25 @@ const defaultMessageStore: MessageStore = {
 	 */
 	async markRead(db, userId, messageId) {
 		const row = await readMessage(db, messageId);
-		if (!row) {
+		if (!row || row.user !== userId || row.type !== 'in') {
 			return false;
 		}
-		if (row.user !== userId || row.type !== 'in' || row.unread !== '1') {
+		// `hDel` both clears the flag and reports whether it was still set, so a concurrent call for
+		// the same message can't double-fire the side effects below.
+		const wasUnread = await db.data.hDel(messageKey(messageId), [ 'unread' ]) > 0;
+		if (!wasUnread) {
 			return false;
 		}
-		await Promise.all([
-			db.data.hSet(messageKey(messageId), 'unread', '0'),
-			db.data.sRem(unreadKey(userId), [ messageId ]),
-		]);
-		// Flip the sender's read receipt and notify their open sessions.
-		const peer = await readMessage(db, row.peer);
-		if (peer?.unread === '1') {
-			await db.data.hSet(messageKey(row.peer), 'unread', '0');
-			const receipt = toMessage({ ...peer, unread: '0' });
-			await getMessageChannel(db, peer.user, peer.respondent).publish({ message: receipt });
+		await db.data.sRem(unreadKey(userId), [ messageId ]);
+		// Flip the sender's read receipt and notify their open sessions. The peer row is just the other
+		// view of this same message, so its `text`/`date` are already in hand — no need to read it back.
+		const peerWasUnread = await db.data.hDel(messageKey(row.peer), [ 'unread' ]) > 0;
+		if (peerWasUnread) {
+			const receipt = toMessage({
+				_id: row.peer, user: row.respondent, respondent: row.user, date: row.date, type: 'out', text: row.text,
+				unread: '0', peer: row._id,
+			});
+			await getMessageChannel(db, row.respondent, row.user).publish({ message: receipt });
 		}
 		return true;
 	},

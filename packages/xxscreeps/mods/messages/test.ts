@@ -76,6 +76,9 @@ describe('messages model', () => {
 		const { db } = testShard;
 
 		await sendMessage(db, alice, bob, 'first');
+		// Thread order is scored by wall-clock ms with no tiebreaker, so give these two sends
+		// distinguishable timestamps (real messages are human-paced and never collide like this).
+		await new Promise(resolve => setTimeout(resolve, 2));
 		await sendMessage(db, bob, alice, 'reply');
 
 		const { entries, respondents } = await getConversationIndex(db, alice);
