@@ -135,6 +135,7 @@ if (process.argv.includes('--with-sandbox')) {
 						case '@xxscreeps/pathfinder': return '@xxscreeps/pathfinder/iv';
 						case 'tslib': return 'tslib/tslib.es6.mjs';
 						case 'xxscreeps:hook': return 'xxscreeps:hook';
+						case 'xxscreeps:private-symbol': return 'xxscreeps/driver/private/symbol/unsafe.js';
 						case 'xxscreeps/engine/schema/build/index.js': return 'xxscreeps/engine/schema/build/runtime.js';
 						default: return specifier;
 					}

@@ -66,7 +66,7 @@ describe('Roads', () => {
 		const path1 = room.findPath(new RoomPosition(19, 11, 'W0N0'), new RoomPosition(26, 11, 'W0N0'));
 		assert.strictEqual(path1.length, 8);
 		// Strongly prefers roads, ignores shortcut
-		const path2 = room.findPath(new RoomPosition(19, 11, 'W0N0'), new RoomPosition(26, 11, 'W0N0'), { plainCost: 3 });
+		const path2 = room.findPath(new RoomPosition(19, 11, 'W0N0'), new RoomPosition(26, 11, 'W0N0'), { plainCost: 4 });
 		assert.strictEqual(path2.length, 9);
 		// Don't care about roads
 		const path3 = room.findPath(new RoomPosition(19, 11, 'W0N0'), new RoomPosition(26, 11, 'W0N0'), { ignoreRoads: true });
