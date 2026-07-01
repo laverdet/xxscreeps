@@ -2,7 +2,6 @@ import { registerShardInitializer, registerShardTickProcessor } from 'xxscreeps/
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { isHighwayRoom } from 'xxscreeps/game/room/sector.js';
 import { dueRoomsAt, scheduleRoom, seedRooms } from './model.js';
 
 // World-management placement policy for power banks. Each highway room runs an independent respawn
@@ -28,10 +27,10 @@ function rollPower(): number {
 // initial countdown rolled here. Seeding at startup, rather than behind a per-tick "already seeded?"
 // read, keeps the steady-state tick free of setup I/O.
 registerShardInitializer(async shard => {
+	const world = await shard.loadWorld();
 	const seeds = await Fn.pipe(
-		await shard.loadWorld(),
-		$$ => $$.entries(),
-		$$ => Fn.filter($$, ([ roomName ]) => isHighwayRoom(roomName)),
+		world.entries(),
+		$$ => Fn.filter($$, ([ roomName ]) => world.map.getRoomType(roomName) === 'highway'),
 		$$ => Fn.mapAwait($$, async ([ roomName ]): Promise<[ score: number, roomName: string ]> => {
 			const room = await shard.loadRoom(roomName, shard.time, true);
 			const deadline = room['#nextPowerBankTime'] || shard.time + respawnTime();
