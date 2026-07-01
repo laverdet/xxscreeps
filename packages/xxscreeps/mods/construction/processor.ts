@@ -10,6 +10,7 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/combat/processor.js';
 import { Creep, calculateBoundedEffect, calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
+import { addStat } from 'xxscreeps/mods/stats/model.js';
 import { ConstructionSite, checkRemove, create } from './construction-site.js';
 import { checkBuild, checkDismantle, checkRepair } from './creep.js';
 import { checkCreateConstructionSite } from './room.js';
@@ -59,6 +60,7 @@ const intents = [
 				const applied = Math.min(boosted, buildRemaining);
 				creep.store['#subtract'](C.RESOURCE_ENERGY, energy);
 				target.progress += applied;
+				addStat(context, creep['#user'], creep.room.name, 'energyConstruction', energy);
 				saveAction(creep, 'build', target.pos);
 				appendEventLog(target.room, {
 					event: C.EVENT_BUILD,
@@ -126,6 +128,7 @@ const intents = [
 				const applied = Math.min(boosted, repairHitsMax);
 				creep.store['#subtract'](C.RESOURCE_ENERGY, energyCost);
 				target.hits += applied;
+				addStat(context, creep['#user'], creep.room.name, 'energyConstruction', energyCost);
 				saveAction(creep, 'repair', target.pos);
 				appendEventLog(target.room, {
 					event: C.EVENT_REPAIR,

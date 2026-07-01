@@ -11,13 +11,14 @@ import { calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
+import { addStat } from 'xxscreeps/mods/stats/model.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';
 
 const kKeeperUserId = '3';
 
-registerHarvestProcessor(Source, (creep, source) => {
+registerHarvestProcessor(Source, (creep, source, context) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER, 'harvest');
 	const energy = Math.min(source.energy, power);
 	const overflow = Math.max(energy - creep.store.getFreeCapacity('energy'), 0);
@@ -27,6 +28,7 @@ registerHarvestProcessor(Source, (creep, source) => {
 		Resource.drop(creep.pos, 'energy', overflow);
 	}
 	creep.room['#cumulativeEnergyHarvested'] += energy;
+	addStat(context, creep['#user'], creep.room.name, 'energyHarvested', energy);
 	return energy;
 });
 

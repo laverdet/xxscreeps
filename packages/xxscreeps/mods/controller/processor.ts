@@ -8,6 +8,7 @@ import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/creep/creep.js';
 import { upsertNotification } from 'xxscreeps/mods/notifications/model.js';
+import { addStat } from 'xxscreeps/mods/stats/model.js';
 import { checkActiveStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 import * as CreepLib from './creep.js';
@@ -268,6 +269,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 				controller['#downgradeTime'] + C.CONTROLLER_DOWNGRADE_RESTORE,
 				Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!);
 			context.task(context.shard.db.data.hincrBy(User.infoKey(controller['#user']!), 'gcl', upgradePower));
+			addStat(context, controller['#user'], controller.room.name, 'energyControl', upgradePower);
 			context.didUpdate();
 		} else if (ticksToDowngrade === 0) {
 			const { room } = controller;

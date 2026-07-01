@@ -22,6 +22,7 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/road',
 		'xxscreeps/mods/source',
 		'xxscreeps/mods/spawn',
+		'xxscreeps/mods/stats',
 		'xxscreeps/mods/visual',
 	],
 	provides: null,

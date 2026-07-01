@@ -2,6 +2,7 @@ import type { JSONSchemaType } from 'ajv';
 import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
+import { isStatInterval, isStatName, readRoomPunchcard, readTotals } from 'xxscreeps/mods/stats/model.js';
 import { StructureController } from './controller.js';
 import { controlledRoomKey as controlledRoomsKey, reservedRoomKey as reservedRoomsKey } from './processor.js';
 
@@ -80,15 +81,30 @@ hooks.register('route', {
 	async execute(context) {
 		const { userId } = context.state;
 		const { shard } = context;
-		const rooms = userId == null ? [] : await shard.scratch.sMembers(controlledRoomsKey(userId));
+		const rawInterval = Number(context.request.query.interval);
+		const interval = isStatInterval(rawInterval) ? rawInterval : 8;
+		const statNameRaw = String(context.request.query.statName);
+		const statName = isStatName(statNameRaw) ? statNameRaw : 'energyControl';
+		if (userId == null) {
+			return { ok: 1, shards: { [shard.name]: { rooms: [] } }, stats: {}, statsMax: 0, totals: {} };
+		}
+		const [ rooms, totals ] = await Promise.all([
+			shard.scratch.sMembers(controlledRoomsKey(userId)),
+			readTotals(context.db, userId, interval),
+		]);
+		// Per-room punchcard for the selected stat, plus the max value across all of them for scaling.
+		const series = await Promise.all(rooms.map(async room =>
+			[ room, await readRoomPunchcard(shard.data, room, interval, statName) ] as const));
+		const stats = Object.fromEntries(series);
+		const statsMax = Math.max(0, ...series.flatMap(([ , points ]) => points));
 		return {
 			ok: 1,
 			shards: {
 				[shard.name]: { rooms },
 			},
-			stats: {},
-			statsMax: {},
-			totals: {},
+			stats,
+			statsMax,
+			totals,
 		};
 	},
 });

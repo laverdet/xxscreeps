@@ -5,7 +5,7 @@ import { makeHookRegistration } from 'xxscreeps/utility/hook.js';
 import { branchManifestKey, buffersKey, saveContent, stringsKey } from './code.js';
 
 // Lifecycle hooks for users. Mods register `remove` handlers to tear down their own per-user,
-// db-scoped state (e.g. private messages) when a user is deleted, so `remove` below stays
+// db-scoped state (e.g. private messages, stats) when a user is deleted, so `remove` below stays
 // self-contained for every caller rather than each call site enumerating mod cleanups.
 export const hooks = makeHookRegistration<{
 	remove: (db: Database, userId: string) => MaybePromise<void>;

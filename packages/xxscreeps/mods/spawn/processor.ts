@@ -14,6 +14,7 @@ import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { buryCreep, dropOverflowResources } from 'xxscreeps/mods/creep/processor.js';
+import { addStat } from 'xxscreeps/mods/stats/model.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assign } from 'xxscreeps/utility/utility.js';
@@ -132,6 +133,7 @@ const intents = [
 		if (checkRenewCreep(spawn, creep) === C.OK) {
 			const cost = calculateRenewCost(creep);
 			if (consumeEnergy(spawn, cost)) {
+				addStat(context, spawn['#user'], spawn.room.name, 'energyCreeps', cost);
 				saveAction(creep, 'healed', spawn.pos);
 				creep['#ageTime'] += calculateRenewAmount(creep);
 				if (creep.body.some(part => part.boost)) {
@@ -173,6 +175,8 @@ const intents = [
 		if (!consumeEnergy(spawn, cost, structures)) {
 			return;
 		}
+		addStat(context, me, spawn.room.name, 'energyCreeps', cost);
+		addStat(context, me, spawn.room.name, 'creepsProduced', body.length);
 
 		// Add new creep to room objects
 		const creep = createCreep(spawn.pos, body, name, me);
