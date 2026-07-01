@@ -32,6 +32,9 @@ const attackNotificationHandlers: AttackNotificationHandler[] = [];
 export const structureFormat = declare('Structure', () => compose(shape, Structure));
 const shape = struct(objectFormat, {
 	'#noAttackNotify': 'bool',
+	// End time of a stronghold collapse timer; while set the structure is removed silently once it
+	// elapses. Default 0 means no timer. Set on an invader core and its deployed peers.
+	'#collapseTime': 'int32',
 });
 
 export const ownedStructureFormat = declare('OwnedStructure', () => compose(ownedShape, OwnedStructure));
