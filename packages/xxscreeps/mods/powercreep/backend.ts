@@ -2,26 +2,23 @@ import type { PowerCreep } from './powercreep.js';
 import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import * as Model from './model.js';
 
 // The official client drives the power-creep screen through these routes (`/api/game/power-creeps/*`).
-// Each mutates account keyspace directly — there is no global-intent stage and no room presence yet.
-// The model is the sole validator; a thrown rejection maps to `{ error }`, success to `{ ok: 1 }`.
+// The body schema validates shape; the model runs the shared `check*` and commits under compare-and-swap.
+// A non-OK result code maps to `{ error }`, success to `{ ok: 1 }`.
 function mutationRoute<Body>(
 	schema: JSONSchemaType<Body>,
-	run: (db: Database, userId: string, body: Body) => Promise<unknown>,
+	run: (db: Database, userId: string, body: Body) => Promise<C.ErrorCode>,
 ) {
 	return makeValidatedPayloadRoute(schema, async context => {
 		const { userId } = context.state;
 		if (userId == null) {
 			return { error: 'not logged in' };
 		}
-		try {
-			await run(context.db, userId, context.request.body);
-			return { ok: 1 };
-		} catch (err) {
-			return { error: err instanceof Error ? err.message : 'error' };
-		}
+		const code = await run(context.db, userId, context.request.body);
+		return code === C.OK ? { ok: 1 } : { error: 'invalid' };
 	});
 }
 
