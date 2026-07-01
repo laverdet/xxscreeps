@@ -5,6 +5,7 @@ import type { UnionToIntersection, UnwrapArray } from 'xxscreeps/utility/types.j
 import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { build, makeUpgrader } from 'xxscreeps/engine/schema/build/index.js';
 import { Builder, makeReader, makeWriter } from 'xxscreeps/schema/index.js';
+import { makeOffsetOf } from 'xxscreeps/schema/read.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 // Use full path here so we can rewrite it in webpack
 export { build, makeUpgrader };
@@ -66,7 +67,9 @@ export function makeReaderAndWriter<Type extends Format>(format: Type, options?:
 	const info = build(format);
 	const builder = new Builder(options);
 	return {
+		offsetOf: makeOffsetOf(info),
 		read: makeReader(info, builder, options),
+		version: info.version,
 		write: makeWriter(info, builder),
 	};
 }

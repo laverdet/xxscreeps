@@ -7,7 +7,7 @@ import { Variant } from './format.js';
 
 export const kPointerSize = 4;
 export const kHeaderSize = kPointerSize * 4;
-export const kMagic = 0xfff35a00;
+export const kMagic = 0x00fff35a;
 
 export function alignTo(address: number, align: number) {
 	const alignMinusOne = align - 1;

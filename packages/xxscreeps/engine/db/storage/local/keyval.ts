@@ -19,8 +19,8 @@ registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
 });
 
 export class LocalKeyValResponder implements AsyncDisposable, MaybePromises<Pr.KeyValProvider> {
+	readonly blob;
 	private readonly disposable;
-	private readonly blob;
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: Pr.Value[]) => any>();

@@ -1,6 +1,7 @@
 import type { TypeOf } from './format.js';
 import type { Layout, StructLayout } from './layout.js';
 import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { BufferView } from './buffer-view.js';
@@ -280,5 +281,36 @@ export function makeReader<Type extends Readable>(info: Type, builder = new Buil
 			view.detach(() => Error('BufferView was automatically released'));
 		}
 		return result;
+	};
+}
+
+export function makeOffsetOf<Type extends Readable>(info: Type) {
+	const select = (key: string, layout: Layout): [ number, Layout ] => {
+		if (typeof layout !== 'string') {
+			if ('composed' in layout) {
+				return select(key, layout.composed);
+			} else if ('named' in layout) {
+				if (layout.named === key) {
+					return [ 0, layout.layout ];
+				} else {
+					throw new Error(`Key "${key}" not found in named layout`);
+				}
+			} else if ('struct' in layout) {
+				const property = layout.struct[key];
+				if (property === undefined) {
+					throw new Error(`Key "${key}" not found in struct layout`);
+				} else {
+					return [ property.offset, property.member ];
+				}
+			}
+		}
+		throw new Error(`Key "${key}" not found in layout`);
+	};
+	return (...keys: string[]) => {
+		const [ offset ] = Fn.reduce(keys, [ 0, info.layout ], ([ offset, layout ], key) => {
+			const [ relativeOffset, nextLayout ] = select(key, layout);
+			return [ offset + relativeOffset, nextLayout ];
+		});
+		return offset;
 	};
 }
