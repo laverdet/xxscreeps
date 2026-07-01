@@ -15,27 +15,28 @@ describe('PowerCreep account', () => {
 
 	test('create is gated by free GPL levels', () => sim(async ({ shard }) => {
 		await setPower(shard.db, 1000);
-		await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
 		assert.strictEqual((await Model.loadRoster(shard.db, owner)).length, 1);
-		await assert.rejects(Model.create(shard.db, owner, 'Bob', C.POWER_CLASS.OPERATOR), /power level/);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Bob', C.POWER_CLASS.OPERATOR), C.ERR_NOT_ENOUGH_RESOURCES);
 	}));
 
 	test('create with no GPL is rejected', () => sim(async ({ shard }) => {
 		await setPower(shard.db, 0);
-		await assert.rejects(Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), /power level/);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.ERR_NOT_ENOUGH_RESOURCES);
 	}));
 
 	test('create rejects an invalid class and a duplicate name', () => sim(async ({ shard }) => {
 		await setPower(shard.db, 4000);
-		await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
-		await assert.rejects(Model.create(shard.db, owner, 'X', 'wizard'), /class/);
-		await assert.rejects(Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), /exists/);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
+		assert.strictEqual(await Model.create(shard.db, owner, 'X', 'wizard'), C.ERR_INVALID_ARGS);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.ERR_NAME_EXISTS);
 	}));
 
 	test('upgrade learns a power and raises the level', () => sim(async ({ shard }) => {
 		await setPower(shard.db, 4000);
-		const creep = await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
-		await Model.upgrade(shard.db, owner, creep.id, { [C.PWR_GENERATE_OPS]: 1 });
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
+		const creep = (await Model.loadRoster(shard.db, owner))[0]!;
+		assert.strictEqual(await Model.upgrade(shard.db, owner, creep.id, { [C.PWR_GENERATE_OPS]: 1 }), C.OK);
 		const updated = (await Model.loadRoster(shard.db, owner))[0]!;
 		assert.strictEqual(updated.level, 1);
 		assert.strictEqual(updated.powers[C.PWR_GENERATE_OPS]!.level, 1);
@@ -45,43 +46,47 @@ describe('PowerCreep account', () => {
 		// gpl 3 leaves budget to spare, so the rejection is the reachability rule, not the GPL gate:
 		// reaching rank 2 of a power needs a total level >= 2 already allocated.
 		await setPower(shard.db, 9000);
-		const creep = await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
-		await assert.rejects(Model.upgrade(shard.db, owner, creep.id, { [C.PWR_GENERATE_OPS]: 2 }), /not valid/);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
+		const creep = (await Model.loadRoster(shard.db, owner))[0]!;
+		assert.strictEqual(await Model.upgrade(shard.db, owner, creep.id, { [C.PWR_GENERATE_OPS]: 2 }), C.ERR_FULL);
 	}));
 
 	test('upgrade rejects when over the free-level budget', () => sim(async ({ shard }) => {
 		// gpl 1; the create consumed the only free level, so any upgrade is over budget.
 		await setPower(shard.db, 1000);
-		const creep = await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
-		await assert.rejects(Model.upgrade(shard.db, owner, creep.id, { [C.PWR_GENERATE_OPS]: 1 }), /power level/);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
+		const creep = (await Model.loadRoster(shard.db, owner))[0]!;
+		assert.strictEqual(await Model.upgrade(shard.db, owner, creep.id, { [C.PWR_GENERATE_OPS]: 1 }), C.ERR_NOT_ENOUGH_RESOURCES);
 	}));
 
 	test('rename changes the name and rejects collisions', () => sim(async ({ shard }) => {
 		await setPower(shard.db, 4000);
-		const alice = await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
-		await Model.create(shard.db, owner, 'Bob', C.POWER_CLASS.OPERATOR);
-		await Model.rename(shard.db, owner, alice.id, 'Alice2');
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Bob', C.POWER_CLASS.OPERATOR), C.OK);
+		const alice = (await Model.loadRoster(shard.db, owner)).find(creep => creep.name === 'Alice')!;
+		assert.strictEqual(await Model.rename(shard.db, owner, alice.id, 'Alice2'), C.OK);
 		const names = (await Model.loadRoster(shard.db, owner)).map(creep => creep.name).sort();
 		assert.deepStrictEqual(names, [ 'Alice2', 'Bob' ]);
-		await assert.rejects(Model.rename(shard.db, owner, alice.id, 'Bob'), /exists/);
+		assert.strictEqual(await Model.rename(shard.db, owner, alice.id, 'Bob'), C.ERR_NAME_EXISTS);
 	}));
 
 	test('delete schedules a cooldown that cancel reverses', () => sim(async ({ shard }) => {
 		await setPower(shard.db, 1000);
-		const creep = await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
-		await Model.scheduleDelete(shard.db, owner, creep.id);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
+		const creep = (await Model.loadRoster(shard.db, owner))[0]!;
+		assert.strictEqual(await Model.scheduleDelete(shard.db, owner, creep.id), C.OK);
 		const pending = (await Model.loadRoster(shard.db, owner))[0]!;
 		assert.ok(pending.deleteTime > Date.now());
-		await assert.rejects(Model.scheduleDelete(shard.db, owner, creep.id), /being deleted/);
-		await Model.cancelDelete(shard.db, owner, creep.id);
-		const restored = (await Model.loadRoster(shard.db, owner))[0]!;
-		assert.strictEqual(restored.deleteTime, 0);
-		await assert.rejects(Model.cancelDelete(shard.db, owner, creep.id), /Not being deleted/);
+		// A repeated delete keeps the original timer rather than resetting it.
+		assert.strictEqual(await Model.scheduleDelete(shard.db, owner, creep.id), C.OK);
+		assert.strictEqual((await Model.loadRoster(shard.db, owner))[0]!.deleteTime, pending.deleteTime);
+		assert.strictEqual(await Model.cancelDelete(shard.db, owner, creep.id), C.OK);
+		assert.strictEqual((await Model.loadRoster(shard.db, owner))[0]!.deleteTime, 0);
 	}));
 
 	test('the driver blob materializes an unspawned roster member', () => sim(async ({ shard }) => {
 		await setPower(shard.db, 4000);
-		await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR);
+		assert.strictEqual(await Model.create(shard.db, owner, 'Alice', C.POWER_CLASS.OPERATOR), C.OK);
 		const blob = await Model.loadPowerCreepsBlob(shard.db, owner);
 		assert.ok(blob);
 		const [ view ] = read(blob);
