@@ -1,5 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { HighwayOrientation, RoomType } from 'xxscreeps/game/room/sector.js';
+import type { RoomMeta, RoomType } from 'xxscreeps/game/room/sector.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
@@ -8,9 +8,9 @@ import * as MapSchema from 'xxscreeps/game/map.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
+import { makeRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
-import { highwayOrientation } from 'xxscreeps/game/room/sector.js';
+import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { create as createExtractor } from 'xxscreeps/mods/mineral/extractor.js';
@@ -38,6 +38,9 @@ export interface GenerateRoomOptions {
 	// Generate open highway-corridor terrain (mostly open with sparse wall clusters) instead of the
 	// cellular-automaton terrain used for normal rooms.
 	corridor?: boolean;
+	// The room type stamped into the World `meta`, overriding the name-arithmetic classification so a
+	// type can be authored at a divergent location. Absent leaves `meta` at `computeRoomMeta(name)`.
+	roomType?: RoomType;
 }
 
 interface TerrainTypeParams {
@@ -499,6 +502,28 @@ function exitClearance(bx: number, by: number, exitPoints: readonly (readonly [ 
 	}
 	if (nearest >= kHighwayExitClearRadius) return 1;
 	return Math.sqrt(nearest / kHighwayExitClearRadius);
+}
+
+type HighwayOrientation = 'vertical' | 'horizontal' | 'crossing';
+
+// A sector-center axis is a `{..}5` room (W/N use the negative residue); a highway axis sits exactly 5
+// rooms off one. Mirrored from `sector.ts`, which keeps its axis helpers private: the generator builds
+// terrain from scratch, so a room's geometry is the input here, not authored `meta` to read back.
+function isCentralAxis(coord: number): boolean {
+	return coord < 0 ? coord % 10 === -6 : coord % 10 === 5;
+}
+function isHighwayAxis(coord: number): boolean {
+	return isCentralAxis(coord - 5) || isCentralAxis(coord + 5);
+}
+
+// Which sector-facing borders a highway room walls off: a vertical lane (its column rings a sector) is
+// bounded east+west, a horizontal lane top+bottom, a crossing (both axes ring) only in the diagonal
+// corners. A non-highway room defaults to 'vertical'.
+function highwayOrientation(roomName: string): HighwayOrientation {
+	const { rx, ry } = parseSignedRoomName(roomName);
+	const vertical = isHighwayAxis(rx);
+	const horizontal = isHighwayAxis(ry);
+	return vertical && horizontal ? 'crossing' : horizontal ? 'horizontal' : 'vertical';
 }
 
 // Highway-room terrain: an open travel lane flanked by the surrounding sector blocks intruding from the
@@ -991,20 +1016,22 @@ export async function generateRoom(
 	}
 
 	const terrainMap = new Map(world.terrain);
-	const { room, terrain } = buildRoom(roomName, options, neighborName => terrainMap.get(neighborName));
-	terrainMap.set(roomName, { exits: packExits(terrain), terrain });
+	const { room, terrain } = buildRoom(roomName, options, neighborName => terrainMap.get(neighborName)?.info);
+	const meta: RoomMeta = { ...computeRoomMeta(roomName), ...options?.roomType !== undefined && { roomType: options.roomType } };
+	terrainMap.set(roomName, { info: { exits: packExits(terrain), terrain }, meta });
 	await flushRooms(shard, terrainMap, [ room ]);
 
 	return room;
 }
 
 // Per-type object loadouts applied over the caller's base options, so the requested type's loadout
-// wins. Highways are object-free open corridors; source-keeper rooms hold three guarded sources and
-// a guarded mineral with no controller; center rooms are the same but keeper-free; normal rooms keep
-// the caller/default loadout (controller + 1-2 sources + mineral).
+// wins, and the authored `roomType` each stamps into the room's World `meta`. Highways are object-free
+// open corridors; source-keeper rooms hold three guarded sources and a guarded mineral with no
+// controller; center rooms are the same but keeper-free; normal rooms keep the caller/default loadout
+// (controller + 1-2 sources + mineral).
 export const roomTypeTemplates: Record<RoomType, GenerateRoomOptions> = {
-	highway: { controller: false, sources: 0, mineral: false, keeperLairs: false, corridor: true },
-	sourceKeeper: { controller: false, sources: 3, keeperLairs: true, extractor: true },
-	center: { controller: false, sources: 3, keeperLairs: false, extractor: true },
-	normal: {},
+	highway: { roomType: 'highway', controller: false, sources: 0, mineral: false, keeperLairs: false, corridor: true },
+	sourceKeeper: { roomType: 'sourceKeeper', controller: false, sources: 3, keeperLairs: true, extractor: true },
+	center: { roomType: 'center', controller: false, sources: 3, keeperLairs: false, extractor: true },
+	normal: { roomType: 'normal' },
 };
