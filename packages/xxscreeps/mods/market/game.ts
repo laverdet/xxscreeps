@@ -1,3 +1,4 @@
+import type { Transactions } from './transaction.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { Market } from './market.js';
@@ -36,6 +37,12 @@ declare module 'xxscreeps/game/game.js' {
 		market: Market;
 	}
 }
+// The runner ships transactions only when a transfer changes the list, so retain the last payload
+// and reuse it on the ticks it isn't resent.
+let transactions: Transactions | undefined;
 hooks.register('gameInitializer', (game, data) => {
-	game.market = new Market(game, data?.transactions && readTransactions(data.transactions));
+	if (data?.transactions) {
+		transactions = readTransactions(data.transactions);
+	}
+	game.market = new Market(game, transactions);
 });

@@ -20,31 +20,31 @@ const loadBlob = function() {
 }();
 
 hooks.register('runnerConnector', async player => {
+	// The processor publishes here whenever a transfer touches the user. Reload and resend only then;
+	// on quiet ticks the runtime keeps the last payload it was sent, so aged-out transfers linger
+	// until the next transfer rewindows the list.
 	const channel = await getTransactionChannel(player.shard, player.userId).subscribe();
 	let dirty = true;
 	channel.listen(() => { dirty = true; });
-	let entries: ReturnType<typeof loadTransactionEntries> | undefined;
 	return [ () => channel.disconnect(), {
+		// A fresh sandbox (first tick, or after a code reset) holds no transactions; resend next tick.
+		initialize() { dirty = true; },
 		async refresh(payload) {
-			if (dirty) {
-				dirty = false;
-				entries = loadTransactionEntries(player.shard, player.userId);
+			if (!dirty) {
+				return;
 			}
-			const { incoming, outgoing } = await entries!;
-			// Re-apply the window every tick so transfers age out without a reload.
+			dirty = false;
+			const { incoming, outgoing } = await loadTransactionEntries(player.shard, player.userId);
 			const cutoff = Date.now() - kTransactionWindow;
 			const incomingIds = selectRecent(incoming, cutoff);
 			const outgoingIds = selectRecent(outgoing, cutoff);
 			const ids = [ ...new Set([ ...incomingIds, ...outgoingIds ]) ];
 			const blobList = await Promise.all(ids.map(id => loadBlob(player.shard, id)));
-			// Ask the runner to resolve the parties' usernames for the read-time getters.
-			const parties = new Set<string>();
+			// Contribute both parties of every transfer; the runner resolves and dedupes the ids.
 			for (const blob of blobList) {
 				const transaction = read(blob);
-				parties.add(transaction['#sender']);
-				parties.add(transaction['#recipient']);
+				(payload.userIds ??= []).push(transaction['#sender'], transaction['#recipient']);
 			}
-			(payload.userIds ??= []).push(...parties);
 			const blobs = Object.fromEntries(ids.map((id, index) => [ id, blobList[index]! ]));
 			payload.transactions = { incoming: incomingIds, outgoing: outgoingIds, blobs };
 		},
