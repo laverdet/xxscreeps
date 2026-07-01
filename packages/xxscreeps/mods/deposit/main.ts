@@ -4,7 +4,7 @@ import { registerShardInitializer, registerShardTickProcessor } from 'xxscreeps/
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { isCentralRoom, makeSectorRadiusFilter, sectorEdgeRooms } from 'xxscreeps/game/room/sector.js';
+import { makeSectorRadiusFilter } from 'xxscreeps/game/room/sector.js';
 import { DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
 import { Deposit } from './deposit.js';
 import { dueSectorsAt, scheduleSector, seedSectors } from './model.js';
@@ -85,8 +85,8 @@ async function pushPlaceIntent(shard: Shard, candidate: string, centralRoom: str
 
 async function evaluateSector(shard: Shard, world: World, centralRoom: string) {
 	// Out-of-borders / closed rooms are excluded from both throughput tallying and placement.
-	const normalEdges = [ ...Fn.filter(sectorEdgeRooms(centralRoom), name =>
-		world.map.getRoomStatus(name).status === 'normal') ];
+	const normalEdges = world.map.getSectorMembers(centralRoom)
+		.filter(name => world.map.getRoomStatus(name).status === 'normal');
 	const deposits = await loadSectorDeposits(shard, centralRoom, normalEdges);
 	const throughput = Fn.accumulate(Fn.map(deposits, deposit => depositThroughput(deposit['#harvested'])));
 	if (throughput >= SECTOR_THROUGHPUT_TARGET) {
@@ -110,7 +110,7 @@ registerShardInitializer(async shard => {
 	// an existing shard) still spreads its first wave forward instead of firing all at once.
 	const seeds = Fn.pipe(
 		world.entries(),
-		$$ => Fn.filter($$, ([ roomName ]) => isCentralRoom(roomName)),
+		$$ => Fn.filter($$, ([ roomName ]) => world.map.getRoomType(roomName) === 'center'),
 		$$ => Fn.map($$, ([ roomName ]): [ score: number, sector: string ] => [ now + bootstrapScatter(roomName), roomName ]),
 		$$ => [ ...$$ ],
 	);

@@ -1,7 +1,14 @@
-import * as assert from 'node:assert/strict';
-import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeAbstractIterateWithRangeTo } from 'xxscreeps/game/direction.js';
 import { makeSignedRoomName, parseSignedRoomName } from './name.js';
+
+export type RoomType = 'normal' | 'highway' | 'sourceKeeper' | 'center';
+
+// A room's authored geometry, stamped into the World schema: its classification in the sector
+// template and the sector centers whose highway ring it sits on.
+export interface RoomMeta {
+	roomType: RoomType;
+	centers: string[];
+}
 
 // Sector centers are the rooms numbered `{..}5` on each axis; the highway ring sits on the `{..}0`
 // boundary rooms +-5 away. Keyed off the sign of the signed coordinate (W/N use the negative
@@ -10,42 +17,24 @@ function isCentralAxis(coord: number): boolean {
 	return coord < 0 ? coord % 10 === -6 : coord % 10 === 5;
 }
 
-function isCentralCoord(rx: number, ry: number): boolean {
-	return isCentralAxis(rx) && isCentralAxis(ry);
-}
-
-const iterateRoomCoordinatesWithRange = makeAbstractIterateWithRangeTo(-Infinity, Infinity);
-
-export function isCentralRoom(roomName: string): boolean {
-	const { rx, ry } = parseSignedRoomName(roomName);
-	return isCentralCoord(rx, ry);
-}
-
 // A highway axis sits exactly 5 rooms from a sector-center axis (the `…0` boundary). Defined off
 // `isCentralAxis` so the W/N sign phase-shift is handled in one place rather than re-derived.
 function isHighwayAxis(coord: number): boolean {
 	return isCentralAxis(coord - 5) || isCentralAxis(coord + 5);
 }
 
-// A highway room borders a sector on at least one axis — equivalently, `sectorsForRoom` is
-// non-empty. Centers and interior rooms are not highways.
-export function isHighwayRoom(roomName: string): boolean {
-	const { rx, ry } = parseSignedRoomName(roomName);
-	return isHighwayAxis(rx) || isHighwayAxis(ry);
+// The 3-wide central band of a sector — printed digits 4, 5, 6, sign-agnostic so W4 and E4 both
+// yield 4. Both axes in-band marks the 3x3 sector core: the center plus its 8 source-keeper rooms.
+function isCenterNineAxis(coord: number): boolean {
+	const digit = (coord < 0 ? -1 - coord : coord) % 10;
+	return digit >= 4 && digit <= 6;
 }
 
-// 11-room ring around a sector center: 4 corners + 9 rooms per side = 40 rooms total. Emission
-// order is load-bearing (deposit placement consumes it), so corners precede the interleaved sides.
-export function sectorEdgeRooms(centralRoom: string): Iterable<string> {
-	const { rx, ry } = parseSignedRoomName(centralRoom);
-	assert.ok(isCentralCoord(rx, ry));
-	return Fn.map(iterateRoomCoordinatesWithRange(rx, ry, 5), ([ xx, yy ]) => makeSignedRoomName(xx, yy));
-}
+const iterateRoomCoordinatesWithRange = makeAbstractIterateWithRangeTo(-Infinity, Infinity);
 
-// Inverse: which centers claim this room as a ring member. Edge rooms belong to 1-2 sectors;
-// corner rooms to 4. Centers and interior rooms yield nothing.
-export function *sectorsForRoom(roomName: string): Iterable<string> {
-	const { rx, ry } = parseSignedRoomName(roomName);
+// The sector centers whose ±5 highway ring contains this room. Edge rooms belong to 1-2 sectors,
+// corner rooms to 4; centers and interior rooms to none.
+function *sectorsForCoordinate(rx: number, ry: number): Iterable<string> {
 	for (const [ nx, ny ] of iterateRoomCoordinatesWithRange(rx, ry, 5)) {
 		if (isCentralAxis(nx) && isCentralAxis(ny)) {
 			yield makeSignedRoomName(nx, ny);
@@ -53,9 +42,30 @@ export function *sectorsForRoom(roomName: string): Iterable<string> {
 	}
 }
 
+function classify(rx: number, ry: number): RoomType {
+	if (isHighwayAxis(rx) || isHighwayAxis(ry)) {
+		return 'highway';
+	}
+	if (isCentralAxis(rx) && isCentralAxis(ry)) {
+		return 'center';
+	}
+	if (isCenterNineAxis(rx) && isCenterNineAxis(ry)) {
+		return 'sourceKeeper';
+	}
+	return 'normal';
+}
+
+// Derives a room's geometry from the mod-10 sector template. Terrain-authoring paths
+// (import, scrape, generation) stamp the result into the World schema; `GameMap` recomputes it here
+// for room names it has no stored metadata for (e.g. rooms outside the loaded world).
+export function computeRoomMeta(roomName: string): RoomMeta {
+	const { rx, ry } = parseSignedRoomName(roomName);
+	return { roomType: classify(rx, ry), centers: [ ...sectorsForCoordinate(rx, ry) ] };
+}
+
 const SECTOR_HALF_EXTENT = 250;
 
-// `roomName` must be a highway ring member of `centralRoom` (see `sectorsForRoom`). Returns a
+// `roomName` must be a highway ring member of `centralRoom` (see `RoomMeta.centers`). Returns a
 // position predicate for the sector's 250-square radius. The radius only clips boundary rooms: a
 // room whose extent on the central axis stays within the radius is wholly inside on that axis, and
 // one inside on both axes needs no test at all.

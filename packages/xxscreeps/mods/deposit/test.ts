@@ -8,9 +8,10 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { makeSectorRadiusFilter, sectorEdgeRooms } from 'xxscreeps/game/room/sector.js';
+import { makeSectorRadiusFilter } from 'xxscreeps/game/room/sector.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
+import { world } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { deterministicRandomForTesting } from 'xxscreeps/utility/utility.js';
 import { Deposit } from './deposit.js';
@@ -130,7 +131,7 @@ function withFixedPlacement(seed = 1): Disposable {
 // unfiltered (no radius/decay test) — that filtering is the scheduler's job; this just sees what
 // landed.
 async function findDepositsInSector(shard: Shard, centralRoom: string) {
-	const normalEdges = [ ...sectorEdgeRooms(centralRoom) ];
+	const normalEdges = world.map.getSectorMembers(centralRoom);
 	const deposits = await loadSectorDeposits(shard, centralRoom, normalEdges);
 	return deposits.map(deposit => ({ roomName: deposit.pos.roomName, deposit }));
 }
@@ -183,7 +184,7 @@ describe('Deposit placement', () => {
 	// each room's in-radius quadrant, whichever side of the sector it sits on.
 	const freeRoom = 'W0N5';
 	const occupiedRing: Record<string, (room: Room) => void> = Object.fromEntries(
-		Fn.map(Fn.reject(sectorEdgeRooms('W5N5'), name => name === freeRoom),
+		Fn.map(Fn.reject(world.map.getSectorMembers('W5N5'), name => name === freeRoom),
 			(name): [ string, (room: Room) => void ] => [ name, room => {
 				const inSector = makeSectorRadiusFilter('W5N5', name);
 				const spot = [ [ 20, 20 ], [ 20, 30 ], [ 30, 20 ], [ 30, 30 ] ].find(([ xx, yy ]) => inSector(xx!, yy!))!;

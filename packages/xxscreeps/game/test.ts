@@ -1,8 +1,11 @@
+import type { RoomType } from './room/sector.js';
 import * as assert from 'node:assert';
 import { search } from 'xxscreeps/driver/pathfinder/pathfinder.js';
+import { world } from 'xxscreeps/test/import.js';
 import { describe, test } from 'xxscreeps/test/index.js';
+import { GameMap } from './map.js';
 import { RoomPosition } from './position.js';
-import { isHighwayRoom, sectorsForRoom } from './room/sector.js';
+import { computeRoomMeta } from './room/sector.js';
 
 interface PositionAssertion {
 	xx: number;
@@ -47,30 +50,63 @@ test('RoomPosition', () => {
 	positionAssertions({ xx: 49, yy: 0, roomName: 'E127N127', packed: 16724224 });
 });
 
-describe('isHighwayRoom', () => {
-	test('pins highway rooms against the sector modulus', () => {
-		// Highways are the signed `%10===0` ring around each sector center.
-		for (const roomName of [ 'W0N0', 'W0N5', 'W10N0', 'W5N0', 'E0S5', 'E10S0', 'E0N0' ]) {
-			assert.ok(isHighwayRoom(roomName), `${roomName} should be a highway room`);
-		}
-		// Sector centers (`%10===5`) and interior rooms are not highways.
-		for (const roomName of [ 'W5N5', 'E5S5', 'W3N4', 'W2N2', 'E7S2' ]) {
-			assert.ok(!isHighwayRoom(roomName), `${roomName} should not be a highway room`);
+describe('computeRoomMeta', () => {
+	test('classifies the sector template', () => {
+		const cases: [ string, RoomType ][] = [
+			[ 'W0N0', 'highway' ], [ 'W5N0', 'highway' ], [ 'W10N5', 'highway' ], [ 'E0S7', 'highway' ],
+			[ 'W5N5', 'center' ], [ 'E5S5', 'center' ],
+			[ 'W4N4', 'sourceKeeper' ], [ 'W6N6', 'sourceKeeper' ], [ 'W4N6', 'sourceKeeper' ],
+			[ 'W5N4', 'sourceKeeper' ], [ 'E6S5', 'sourceKeeper' ],
+			[ 'W2N2', 'normal' ], [ 'W1N7', 'normal' ], [ 'E3S8', 'normal' ],
+		];
+		for (const [ roomName, expected ] of cases) {
+			assert.strictEqual(computeRoomMeta(roomName).roomType, expected, `${roomName} should be ${expected}`);
 		}
 	});
 
-	test('agrees with sectorsForRoom across a swept range', () => {
-		// A room is a highway iff it sits on some sector's edge ring, which is exactly what
-		// `sectorsForRoom` enumerates. Sweep across multiple sectors in every quadrant.
+	test('marks a room a highway exactly when it rings a sector', () => {
+		// A room is a highway iff it sits on at least one sector's edge ring. Sweep every quadrant.
 		for (let coord = 0; coord <= 20; ++coord) {
 			for (let other = 0; other <= 20; ++other) {
 				for (const roomName of [ `W${coord}N${other}`, `E${coord}S${other}`, `W${coord}S${other}`, `E${coord}N${other}` ]) {
-					assert.strictEqual(
-						isHighwayRoom(roomName), [ ...sectorsForRoom(roomName) ].length > 0,
-						`${roomName}: isHighwayRoom must match sectorsForRoom membership`);
+					const { roomType, centers } = computeRoomMeta(roomName);
+					assert.strictEqual(roomType === 'highway', centers.length > 0,
+						`${roomName}: highway classification must match ring membership`);
 				}
 			}
 		}
+	});
+});
+
+describe('GameMap sector metadata', () => {
+	test('inverts stamped centers into a sector\'s ring members', () => {
+		assert.strictEqual(world.map.getRoomType('W5N5'), 'center');
+		const members = world.map.getSectorMembers('W5N5');
+		assert.strictEqual(members.length, 40, 'a sector ring is 40 rooms');
+		assert.ok(members.includes('W0N5'), 'ring includes a mid-edge room');
+		assert.ok(members.includes('W0N0'), 'ring includes a corner room');
+		assert.ok(!members.includes('W5N5'), 'the center is not its own ring member');
+		for (const member of members) {
+			assert.ok(world.map.getSectorCenters(member).includes('W5N5'), `${member} claims W5N5 as a center`);
+		}
+	});
+
+	test('recomputes geometry for rooms with no stored metadata', () => {
+		// A world whose rooms carry no metadata (unstamped `roomType: undefined`) must fall back to
+		// the template and land on exactly the stamped world's answers — stamped == computed.
+		const unstampedTerrain: typeof world.terrain = new Map();
+		for (const [ roomName, entry ] of world.terrain) {
+			unstampedTerrain.set(roomName, { info: entry.info, meta: { roomType: undefined, centers: [] } });
+		}
+		const unstamped = new GameMap(unstampedTerrain);
+		for (const [ roomName ] of world.terrain) {
+			assert.strictEqual(world.map.getRoomType(roomName), unstamped.getRoomType(roomName), `${roomName}: roomType`);
+			assert.deepStrictEqual(world.map.getSectorCenters(roomName), unstamped.getSectorCenters(roomName), `${roomName}: centers`);
+		}
+		assert.deepStrictEqual(
+			[ ...world.map.getSectorMembers('W5N5') ].sort(),
+			[ ...unstamped.getSectorMembers('W5N5') ].sort(),
+			'ring members match under fallback');
 	});
 });
 
