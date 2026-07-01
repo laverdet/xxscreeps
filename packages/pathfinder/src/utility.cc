@@ -76,6 +76,7 @@ class nominal {
 template <class Type, std::size_t Size>
 class inplace_vector : private std::allocator<Type> {
 	public:
+		[[nodiscard]] constexpr auto operator==(const auto& right) const -> bool { return data_ == right.data_; }
 		[[nodiscard]] constexpr auto empty() const -> bool { return size_ == 0; }
 		[[nodiscard]] constexpr auto size() const -> std::size_t { return size_; }
 		constexpr auto back(this auto& self) -> auto& { return self.data_[ self.size_ - 1 ]; }

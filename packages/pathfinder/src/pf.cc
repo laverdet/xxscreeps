@@ -75,14 +75,19 @@ auto pathfinder<Check, Callback, RoomCapacity>::push_node(indexed_position_t nod
 	auto f_cost = h_cost + g_cost;
 
 	if (open_closed_.is_open(*index)) {
-		if (heap_.key_proj()(*index) > f_cost) {
-			heap_.update(*index, [ & ](auto& score) { return score[ *index ] = f_cost; });
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+		if (scores_[ *index ] > f_cost) {
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+			scores_[ *index ] = f_cost;
+			heap_.push({index, f_cost});
 			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
 			parents_[ *index ] = parent_index;
 			// std::print("~ {}: h({}) + g({}) = f({})\n", node, h_cost, g_cost, f_cost);
 		}
 	} else {
-		heap_.push(*index, [ & ](auto& score) { return score[ *index ] = f_cost; });
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+		scores_[ *index ] = f_cost;
+		heap_.push({index, f_cost});
 		open_closed_.open(*index);
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
 		parents_[ *index ] = parent_index;
@@ -181,41 +186,56 @@ auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, w
 	astar(min_node, index, 0);
 
 	// Loop until we have a solution
-	while (!heap_.empty() && ops_remaining > 0) {
+	try {
+		while (!heap_.empty() && ops_remaining > 0) {
 
-		// Pull cheapest open node off the heap and close the node
-		auto current = pos_index_t{heap_.top()};
-		auto score = heap_.key_proj()(*current);
-		heap_.pop();
-		open_closed_.close(*current);
+			// Pull cheapest open node off the heap; discard stale entries
+			auto [ current, score ] = heap_.top();
+			heap_.pop();
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+			if (scores_[ *current ] != score) {
+				continue;
+			}
+			open_closed_.close(*current);
 
-		// Calculate costs
-		auto pos = indexed_position_t{room_table_, current};
-		cost_t h_cost = heuristic(pos);
-		cost_t g_cost = score - static_cast<int>(h_cost * heuristic_weight_);
-		// std::print("\n* {}: h({}) + g({}) = f({})\n", pos, h_cost, g_cost, score);
+			// Calculate costs
+			auto pos = indexed_position_t{room_table_, current};
+			cost_t h_cost = heuristic(pos);
+			cost_t g_cost = score - static_cast<int>(h_cost * heuristic_weight_);
+			// std::print("\n* {}: h({}) + g({}) = f({})\n", pos, h_cost, g_cost, score);
 
-		// Reached destination?
-		if (h_cost == 0) {
-			min_node = pos;
-			min_node_h_cost = 0;
-			min_node_g_cost = g_cost;
-			break;
-		} else if (h_cost < min_node_h_cost) {
-			min_node = pos;
-			min_node_h_cost = h_cost;
-			min_node_g_cost = g_cost;
+			// Reached destination?
+			if (h_cost == 0) {
+				min_node = pos;
+				min_node_h_cost = 0;
+				min_node_g_cost = g_cost;
+				break;
+			} else if (h_cost < min_node_h_cost) {
+				min_node = pos;
+				min_node_h_cost = h_cost;
+				min_node_g_cost = g_cost;
+			}
+			if (g_cost + h_cost > max_cost) {
+				break;
+			}
+
+			// Add next neighbors to heap
+			if (options.heuristic_weight == 1) {
+				// jps can sometimes produce suboptimal paths with non-uniform cost grids even with the added
+				// forced neighbor heuristic. so, for heuristicWeight == 1 we will use astar for the best
+				// paths.
+				astar(pos, current, g_cost);
+			} else {
+				jps(pos, current, g_cost);
+			}
+			--ops_remaining;
+
+			// Check termination
+			Check();
 		}
-		if (g_cost + h_cost > max_cost) {
-			break;
-		}
-
-		// Add next neighbors to heap
-		jps(pos, current, g_cost);
-		--ops_remaining;
-
-		// Check termination
-		Check();
+		// NOLINTNEXTLINE(bugprone-empty-catch)
+	} catch (const std::range_error&) {
+		// This error is, probably, a heap overflow. In this case all we can do is return a partial path.
 	}
 
 	// Reconstruct path from A* graph
