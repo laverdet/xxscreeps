@@ -1,5 +1,6 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { userInfo } from 'xxscreeps/game/index.js';
 import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
 import { BufferObject, compose, declare, optional, struct, withOverlay } from 'xxscreeps/schema/index.js';
@@ -35,9 +36,29 @@ export class Transaction extends withOverlay(BufferObject, shape) {
 
 export const { read, write } = makeReaderAndWriter(format);
 
-export interface Transactions {
-	incoming: Transaction[];
-	outgoing: Transaction[];
+export class Transactions {
+	readonly payload;
+
+	constructor(payload: TransactionPayload) {
+		this.payload = payload;
+	}
+
+	@cached get incoming(): Transaction[] {
+		return this.overlay(this.payload.incoming);
+	}
+
+	@cached get outgoing(): Transaction[] {
+		return this.overlay(this.payload.outgoing);
+	}
+
+	private overlay(ids: string[]) {
+		return Fn.pipe(
+			ids,
+			$$ => Fn.map($$, id => this.payload.blobs[id]),
+			$$ => Fn.filter($$),
+			$$ => Fn.map($$, read),
+			$$ => [ ...$$ ]);
+	}
 }
 
 // Per-tick payload: each direction lists transaction ids newest-first and `blobs` holds the
@@ -47,9 +68,4 @@ export interface TransactionPayload {
 	incoming: string[];
 	outgoing: string[];
 	blobs: Record<string, Readonly<Uint8Array>>;
-}
-
-export function readTransactions(payload: TransactionPayload): Transactions {
-	const overlay = (ids: string[]) => ids.map(id => read(payload.blobs[id]!));
-	return { incoming: overlay(payload.incoming), outgoing: overlay(payload.outgoing) };
 }

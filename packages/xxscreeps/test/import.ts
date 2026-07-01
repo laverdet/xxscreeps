@@ -14,6 +14,7 @@ import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
 import { Source } from 'xxscreeps/mods/source/source.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
+import { testRedis } from './context.js';
 
 // Read file
 const root = new URL('../../test/', import.meta.url);
@@ -104,16 +105,33 @@ const users = {
 export async function instantiateTestShard() {
 	// Create fake database
 	await using disposable = new AsyncDisposableStack();
-	const db = disposable.use(await Database.connect({
-		data: 'local://data',
-		pubsub: 'local://pubsub',
-	}));
-	const shard = disposable.use(await Shard.connectWith(db, {
-		name: 'shard0',
-		data: 'local://keyval',
-		pubsub: 'local://pubsub',
-		scratch: 'local://scratch',
-	}));
+	const { db, shard } = await async function() {
+		if (testRedis) {
+			const db = disposable.use(await Database.connect({
+				data: 'redis://localhost/7',
+				pubsub: 'redis://localhost/7',
+			}));
+			const shard = disposable.use(await Shard.connectWith(db, {
+				name: 'shard0',
+				data: 'redis://localhost/8',
+				pubsub: 'redis://localhost/8',
+				scratch: 'redis://localhost/9',
+			}));
+			return { db, shard };
+		} else {
+			const db = disposable.use(await Database.connect({
+				data: 'local://data',
+				pubsub: 'local://pubsub',
+			}));
+			const shard = disposable.use(await Shard.connectWith(db, {
+				name: 'shard0',
+				data: 'local://keyval',
+				pubsub: 'local://pubsub',
+				scratch: 'local://scratch',
+			}));
+			return { db, shard };
+		}
+	}();
 
 	// Reset all stores so shared `local://` singletons start clean
 	await Promise.all([

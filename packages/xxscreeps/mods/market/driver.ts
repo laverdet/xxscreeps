@@ -1,8 +1,9 @@
 import type { TransactionPayload } from './transaction.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { getTransactionChannel, kTransactionWindow, loadTransactionBlob, loadTransactionEntries, selectRecent } from './model.js';
+import { getTransactionChannel, loadTransactionBlob, loadTransactionEntries } from './model.js';
 import { read } from './transaction.js';
 
 declare module 'xxscreeps/engine/runner/index.js' {
@@ -23,6 +24,8 @@ hooks.register('runnerConnector', async player => {
 	// The processor publishes here whenever a transfer touches the user. Reload and resend only then;
 	// on quiet ticks the runtime keeps the last payload it was sent, so aged-out transfers linger
 	// until the next transfer rewindows the list.
+	// TODO: Players making heavy use of the market could benefit from only receiving new transaction
+	// blobs.
 	const channel = await getTransactionChannel(player.shard, player.userId).subscribe();
 	let dirty = true;
 	channel.listen(() => { dirty = true; });
@@ -35,18 +38,14 @@ hooks.register('runnerConnector', async player => {
 			}
 			dirty = false;
 			const { incoming, outgoing } = await loadTransactionEntries(player.shard, player.userId);
-			const cutoff = Date.now() - kTransactionWindow;
-			const incomingIds = selectRecent(incoming, cutoff);
-			const outgoingIds = selectRecent(outgoing, cutoff);
-			const ids = [ ...new Set([ ...incomingIds, ...outgoingIds ]) ];
-			const blobList = await Promise.all(ids.map(id => loadBlob(player.shard, id)));
-			// Contribute both parties of every transfer; the runner resolves and dedupes the ids.
+			const ids = [ ...incoming, ...outgoing ];
+			const blobList = await Fn.mapAwait(ids, id => loadBlob(player.shard, id));
 			for (const blob of blobList) {
 				const transaction = read(blob);
 				(payload.userIds ??= []).push(transaction['#sender'], transaction['#recipient']);
 			}
-			const blobs = Object.fromEntries(ids.map((id, index) => [ id, blobList[index]! ]));
-			payload.transactions = { incoming: incomingIds, outgoing: outgoingIds, blobs };
+			const blobs = Fn.fromEntries(ids, (id, index) => [ id, blobList[index]! ]);
+			payload.transactions = { incoming, outgoing, blobs };
 		},
 	} ];
 });

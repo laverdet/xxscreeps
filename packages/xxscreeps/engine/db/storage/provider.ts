@@ -38,6 +38,7 @@ export interface ZAggregate {
 export interface ZRange {
 	by?: 'LEX' | 'SCORE';
 	limit?: [ number, number ];
+	rev?: boolean;
 }
 
 export type Value = number | string | Readonly<Uint8Array>;

@@ -9,10 +9,10 @@ import { Transaction, write } from './transaction.js';
 // `market/transaction/<id>` and referenced by id from each party's per-direction sorted set, scored
 // by wall-clock time. The blob carries a `px` TTL so it self-frees after the read window; the set
 // entries are score-trimmed to the same window. Both parties' runtimes are handed the same blob.
-export const kTransactionWindow = 24 * 60 * 60 * 1000;
+const kTransactionWindow = 24 * 60 * 60 * 1000;
 // `incomingTransactions` / `outgoingTransactions` expose the most recent transfers, capped at the
 // smaller of the 24h window or this count.
-export const kReadLimit = 100;
+const kReadLimit = 100;
 
 type Direction = 'incoming' | 'outgoing';
 
@@ -29,7 +29,7 @@ export interface TransactionFields {
 	amount: number;
 	from: string;
 	to: string;
-	description?: string | undefined;
+	description?: string | undefined | null;
 }
 
 export function loadTransactionBlob(shard: Shard, id: string) {
@@ -37,31 +37,17 @@ export function loadTransactionBlob(shard: Shard, id: string) {
 }
 
 // A user's transfer ids in one direction, oldest-first with their wall-clock scores.
-function loadDirection(shard: Shard, userId: string, direction: Direction) {
-	return shard.data.zRangeWithScores(setKey(userId, direction), 0, -1);
+function loadDirection(shard: Shard, userId: string, direction: Direction, cutoff: number) {
+	return shard.data.zRange(setKey(userId, direction), Infinity, cutoff, { by: 'SCORE', limit: [ 0, kReadLimit ], rev: true });
 }
 
 export async function loadTransactionEntries(shard: Shard, userId: string) {
+	const cutoff = Date.now() - kTransactionWindow;
 	const [ incoming, outgoing ] = await Promise.all([
-		loadDirection(shard, userId, 'incoming'),
-		loadDirection(shard, userId, 'outgoing'),
+		loadDirection(shard, userId, 'incoming', cutoff),
+		loadDirection(shard, userId, 'outgoing', cutoff),
 	]);
 	return { incoming, outgoing };
-}
-
-// Newest-first ids within the window, capped at `limit` — the API exposes whichever of the window /
-// count is smaller. `entries` are oldest-first (sorted-set order), so walk back from the newest.
-export function selectRecent(entries: [ number, string ][], cutoff: number, limit = kReadLimit) {
-	const ids: string[] = [];
-	for (let index = entries.length - 1; index >= 0 && ids.length < limit; --index) {
-		const [ score, id ] = entries[index]!;
-		if (score < cutoff) {
-			// Earlier entries are older still, so nothing more is in the window.
-			break;
-		}
-		ids.push(id);
-	}
-	return ids;
 }
 
 async function reference(shard: Shard, userId: string, direction: Direction, time: number, id: string) {
@@ -83,18 +69,17 @@ export async function recordTransaction(shard: Shard, senderId: string, recipien
 		from: fields.from,
 		to: fields.to,
 	});
-	// `#` fields are assigned through member access so the isolated-vm private transform rewrites them.
 	transaction['#sender'] = senderId;
 	transaction['#recipient'] = recipientId;
 	if (fields.description != null) {
 		transaction['#description'] = fields.description;
 	}
-	const time = Date.now();
+	const wallTime = Date.now();
 	await Promise.all([
 		// The blob expires after the read window; both parties reference the same id until then.
 		shard.data.set(blobKey(id), write(transaction), { px: kTransactionWindow }),
-		reference(shard, senderId, 'outgoing', time, id),
-		reference(shard, recipientId, 'incoming', time, id),
+		reference(shard, senderId, 'outgoing', wallTime, id),
+		reference(shard, recipientId, 'incoming', wallTime, id),
 		getTransactionChannel(shard, senderId).publish({ type: 'updated' }),
 		getTransactionChannel(shard, recipientId).publish({ type: 'updated' }),
 	]);

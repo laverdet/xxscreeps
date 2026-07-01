@@ -8,7 +8,10 @@ type Context = {
 	tests: Callback[];
 };
 const makeFrame = (name?: string) => ({ name, children: [], tests: [] });
-const { argv } = checkArguments({ argv: true });
+const { argv, 'test-redis': testRedis } = checkArguments({
+	argv: true,
+	boolean: [ 'test-redis' ],
+});
 const checkFilter = (name: string) => {
 	if (argv.length) {
 		const index = stack.filter(name => Boolean(name)).length;
@@ -23,6 +26,7 @@ const stack: Context[] = [];
 let passed = 0;
 let failed = 0;
 const testTimeout = 10000;
+export { testRedis };
 
 // Catch unhandled rejections so async failures don't vanish silently
 process.on('unhandledRejection', reason => {

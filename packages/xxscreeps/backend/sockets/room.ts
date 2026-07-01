@@ -163,7 +163,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 					}
 					// Check for new users
 					const users = room['#users'];
-					for (const userId of Fn.concat([ users.presence, users.extra ])) {
+					for (const userId of Fn.concat<string>([ users.presence, users.extra ])) {
 						if (!seenUsers.has(userId)) {
 							seenUsers.add(userId);
 							visibleUsers.add(userId);

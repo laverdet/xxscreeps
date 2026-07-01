@@ -48,13 +48,12 @@ const intents = [
 					// Log the transfer for both parties' market transaction history
 					if (recipientId != null) {
 						context.task(recordTransaction(context.shard, senderId, recipientId, {
-							// The processor runs one tick ahead of the code that issued the send.
 							time: Game.time - 1,
 							resourceType,
 							amount: sent,
 							from: terminal.room.name,
 							to: destination,
-							...description != null && { description },
+							description,
 						}));
 					}
 				}

@@ -6,8 +6,8 @@ import { map } from 'xxscreeps/functional/iterable/map.js';
 export function fromEntries<Type, Key extends keyof any>(
 	iterable: Iterable<readonly [ Key, Type ]>): Record<Key, Type>;
 export function fromEntries<Type, Key extends keyof any, Value>(
-	iterable: Iterable<Type>, callback: (value: Type) => readonly [ Key, Value ]): Record<Key, Value>;
-export function fromEntries(iterable: Iterable<any>, callback?: (value: any) => readonly [ any, any ]) {
+	iterable: Iterable<Type>, callback: (value: Type, index: number) => readonly [ Key, Value ]): Record<Key, Value>;
+export function fromEntries(iterable: Iterable<any>, callback?: (value: unknown, index: number) => readonly [ unknown, unknown ]) {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	const object: Record<string, unknown> = Object.create(null);
 	for (const [ key, value ] of callback ? map(iterable, callback) : iterable) {
