@@ -1,7 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import type { KeyValProvider } from 'xxscreeps/engine/db/storage/provider.js';
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
-import { Fn } from 'xxscreeps/functional/fn.js';
 
 // Gameplay statistics, matching the seven series the classic Angular client renders on the profile /
 // overview pages. Two parallel series are kept:
@@ -46,7 +45,11 @@ export function isStatName(value: string): value is StatName {
 }
 
 const userStatsKey = (userId: string, interval: StatInterval) => `user/${userId}/stats/${interval}`;
-const roomStatsKey = (roomName: string, interval: StatInterval) => `room/${roomName}/stats/${interval}`;
+// Per-room stats are split by contributing user so the world-map layer can show each user's share and
+// the overview/room-overview can pick out one user's activity. A set tracks who has contributed to a
+// room so the map layer can enumerate them.
+const roomUserStatsKey = (roomName: string, userId: string, interval: StatInterval) => `room/${roomName}/stats/${interval}/${userId}`;
+const roomUsersKey = (roomName: string) => `room/${roomName}/stats/users`;
 const bucketOf = (interval: StatInterval, now: number) => Math.floor(now / (interval * 60_000));
 const fieldOf = (stat: string, bucket: number) => `${stat}:${bucket}`;
 // The bucket indices, oldest first, that make up the window for `interval` at `now`.
@@ -57,42 +60,50 @@ function windowBuckets(interval: StatInterval, now: number) {
 }
 
 type StatDeltas = Iterable<readonly [ StatName, number ]>;
-type SubjectDeltas = Map<string, Map<StatName, number>>;
+type StatMap = Map<StatName, number>;
 
 // Per-processor-context (one room-tick) accumulator, so a room full of harvesters produces a handful
-// of `hincrBy`s per subject instead of one per creep per tick.
-type PendingDeltas = { users: SubjectDeltas; rooms: SubjectDeltas };
+// of `hincrBy`s per subject instead of one per creep per tick. Every contribution is keyed by both
+// the acting user (for the account-level totals) and the (room, user) pair (for the per-room series).
+type PendingDeltas = {
+	users: Map<string, StatMap>;
+	roomUsers: Map<string, Map<string, StatMap>>;
+};
 const pending = new WeakMap<ProcessorContext, PendingDeltas>();
 
-function accumulate(subjects: SubjectDeltas, key: string, stat: StatName, value: number) {
-	let stats = subjects.get(key);
-	if (!stats) {
-		stats = new Map();
-		subjects.set(key, stats);
-	}
+function accumulate(stats: StatMap, stat: StatName, value: number) {
 	stats.set(stat, (stats.get(stat) ?? 0) + value);
 }
 
+function getOrMakeMap<Value>(map: Map<string, Value>, key: string, make: () => Value) {
+	let value = map.get(key);
+	if (value === undefined) {
+		value = make();
+		map.set(key, value);
+	}
+	return value;
+}
+
 /**
- * Record a stat contribution from within a processor. The value is attributed both to `userId`
- * (unless it's an NPC — id of two chars or fewer) and to `roomName`, coalesced for the current
- * room-tick and flushed once processing completes.
+ * Record a stat contribution from within a processor. The value is attributed to the acting user
+ * (account-wide totals) and to that user's activity in `roomName` (per-room series), coalesced for
+ * the current room-tick and flushed once processing completes. NPC ids (two chars or fewer, e.g.
+ * invaders/keepers) and no-op values are ignored.
  */
 export function addStat(context: ProcessorContext, userId: string | null | undefined, roomName: string, stat: StatName, value: number) {
-	if (value === 0) {
+	if (value === 0 || userId == null || userId.length <= 2) {
 		return;
 	}
 	let deltas = pending.get(context);
 	if (!deltas) {
-		deltas = { users: new Map(), rooms: new Map() };
+		deltas = { users: new Map(), roomUsers: new Map() };
 		pending.set(context, deltas);
 		// Deferred (see `flush`) so every synchronous `addStat` this tick lands before we write.
 		context.task(flush(context, deltas));
 	}
-	if (userId != null && userId.length > 2) {
-		accumulate(deltas.users, userId, stat, value);
-	}
-	accumulate(deltas.rooms, roomName, stat, value);
+	accumulate(getOrMakeMap(deltas.users, userId, () => new Map<StatName, number>()), stat, value);
+	const roomUsers = getOrMakeMap(deltas.roomUsers, roomName, () => new Map<string, StatMap>());
+	accumulate(getOrMakeMap(roomUsers, userId, () => new Map<StatName, number>()), stat, value);
 }
 
 async function flush(context: ProcessorContext, deltas: PendingDeltas) {
@@ -102,12 +113,17 @@ async function flush(context: ProcessorContext, deltas: PendingDeltas) {
 	await Promise.resolve();
 	pending.delete(context);
 	const now = Date.now();
-	await Promise.all([
-		...Fn.map(deltas.users, ([ userId, stats ]) =>
-			writeStats(context.shard.db.data, userId, stats, now)),
-		...Fn.map(deltas.rooms, ([ roomName, stats ]) =>
-			writeRoomStats(context.shard.data, roomName, stats, now)),
-	]);
+	const { data } = context.shard;
+	const ops: Promise<unknown>[] = [];
+	for (const [ userId, stats ] of deltas.users) {
+		ops.push(writeStats(context.shard.db.data, userId, stats, now));
+	}
+	for (const [ roomName, users ] of deltas.roomUsers) {
+		for (const [ userId, stats ] of users) {
+			ops.push(writeRoomStats(data, roomName, userId, stats, now));
+		}
+	}
+	await Promise.all(ops);
 }
 
 // Shared bucketed-hash write: increment the current bucket and prune the one that just rolled out of
@@ -140,10 +156,14 @@ export function writeStats(data: KeyValProvider, userId: string, deltas: StatDel
 }
 
 /**
- * Persist a batch of stat deltas for one room across every interval resolution.
+ * Persist a batch of stat deltas for one user's activity in one room across every interval
+ * resolution, and record them as a contributor to the room so the map layer can enumerate them.
  */
-export function writeRoomStats(data: KeyValProvider, roomName: string, deltas: StatDeltas, now = Date.now()) {
-	return writeSeries(data, interval => roomStatsKey(roomName, interval), deltas, now);
+export async function writeRoomStats(data: KeyValProvider, roomName: string, userId: string, deltas: StatDeltas, now = Date.now()) {
+	await Promise.all([
+		data.sAdd(roomUsersKey(roomName), [ userId ]),
+		writeSeries(data, interval => roomUserStatsKey(roomName, userId, interval), deltas, now),
+	]);
 }
 
 export type StatTotals = Record<StatName, number>;
@@ -190,22 +210,58 @@ export function readPunchcard(db: Database, userId: string, interval: StatInterv
 }
 
 /**
- * A room's aggregated totals over the window (all seven series), for the room-overview tiles.
+ * One user's windowed totals for their activity in a room — the room-overview tiles (owner) draw
+ * from this.
  */
-export function readRoomTotals(data: KeyValProvider, roomName: string, interval: StatInterval, now = Date.now()): Promise<StatTotals> {
-	return readSeriesTotals(data, roomStatsKey(roomName, interval), interval, now);
+export function readRoomTotals(data: KeyValProvider, roomName: string, userId: string, interval: StatInterval, now = Date.now()): Promise<StatTotals> {
+	return readSeriesTotals(data, roomUserStatsKey(roomName, userId, interval), interval, now);
 }
 
 /**
- * A room's per-bucket series for a single stat, oldest bucket first — the overview / room-overview
- * punchcard.
+ * One user's per-bucket series for a single stat in a room, oldest bucket first — the overview
+ * punchcard (requesting user) and the room-overview punchcards (owner).
  */
-export function readRoomPunchcard(data: KeyValProvider, roomName: string, interval: StatInterval, stat: StatName, now = Date.now()): Promise<number[]> {
-	return readSeriesPunchcard(data, roomStatsKey(roomName, interval), interval, stat, now);
+export function readRoomPunchcard(data: KeyValProvider, roomName: string, userId: string, interval: StatInterval, stat: StatName, now = Date.now()): Promise<number[]> {
+	return readSeriesPunchcard(data, roomUserStatsKey(roomName, userId, interval), interval, stat, now);
+}
+
+export interface RoomStatContribution {
+	user: string;
+	value: number;
 }
 
 /**
- * Drop all of a user's stat series. Wired into `User.remove`.
+ * Every contributing user's windowed value for a single stat in a room, highest first — the
+ * world-map stat layer. Users whose window has aged out to zero are dropped.
+ */
+export async function readRoomLayer(data: KeyValProvider, roomName: string, interval: StatInterval, stat: StatName, now = Date.now()): Promise<RoomStatContribution[]> {
+	const users = await data.sMembers(roomUsersKey(roomName));
+	const contributions = await Promise.all(users.map(async user => {
+		const points = await readSeriesPunchcard(data, roomUserStatsKey(roomName, user, interval), interval, stat, now);
+		return { user, value: points.reduce((sum, value) => sum + value, 0) };
+	}));
+	return contributions
+		.filter(contribution => contribution.value > 0)
+		.sort((left, right) => right.value - left.value);
+}
+
+// The world-map requests a layer as `<statName><interval>`, e.g. `energyHarvested8`. The three
+// intervals are unambiguous suffixes (only `8` ends in 8; `180`/`1440` end in 0).
+export function parseStatLayer(layer: string): { stat: StatName; interval: StatInterval } | undefined {
+	for (const interval of statIntervals) {
+		const suffix = String(interval);
+		if (layer.endsWith(suffix)) {
+			const stat = layer.slice(0, -suffix.length);
+			if (isStatName(stat)) {
+				return { stat, interval };
+			}
+		}
+	}
+}
+
+/**
+ * Drop all of a user's account-level stat series. Wired into `User.remove`. Their contributions to
+ * per-room series are left in place (harmless — they age out via the window prune).
  */
 export async function removeAllForUser(db: Database, userId: string) {
 	await Promise.all(statIntervals.map(interval => db.data.del(userStatsKey(userId, interval))));

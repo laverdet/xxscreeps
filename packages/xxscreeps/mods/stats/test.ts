@@ -1,8 +1,8 @@
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import {
-	readPunchcard, readRoomPunchcard, readRoomTotals, readTotals,
-	removeAllForUser, statNames, writeRoomStats, writeStats,
+	parseStatLayer, readPunchcard, readRoomLayer, readRoomPunchcard, readRoomTotals,
+	readTotals, removeAllForUser, statNames, writeRoomStats, writeStats,
 } from './model.js';
 
 const alice = 'aaaaaaaaaaaa';
@@ -56,16 +56,35 @@ describe('stats model', () => {
 		assert.strictEqual((await readTotals(db, alice, 1440, t0)).energyHarvested, 0);
 	});
 
-	test('room series aggregate and read back independently of user series', async () => {
+	test('per-room-user series read back per user, independent of other rooms', async () => {
 		await using testShard = await instantiateTestShard();
 		const { shard } = testShard;
-		await writeRoomStats(shard.data, 'W1N1', [ [ 'energyHarvested', 30 ] ], t0);
-		await writeRoomStats(shard.data, 'W1N1', [ [ 'energyHarvested', 12 ] ], t0);
-		assert.strictEqual((await readRoomTotals(shard.data, 'W1N1', 8, t0)).energyHarvested, 42);
-		const series = await readRoomPunchcard(shard.data, 'W1N1', 8, 'energyHarvested', t0);
+		await writeRoomStats(shard.data, 'W1N1', alice, [ [ 'energyHarvested', 30 ] ], t0);
+		await writeRoomStats(shard.data, 'W1N1', alice, [ [ 'energyHarvested', 12 ] ], t0);
+		assert.strictEqual((await readRoomTotals(shard.data, 'W1N1', alice, 8, t0)).energyHarvested, 42);
+		const series = await readRoomPunchcard(shard.data, 'W1N1', alice, 8, 'energyHarvested', t0);
 		assert.strictEqual(series.length, 8);
 		assert.strictEqual(series.at(-1), 42);
 		// A different room shares nothing.
-		assert.strictEqual((await readRoomTotals(shard.data, 'W2N2', 8, t0)).energyHarvested, 0);
+		assert.strictEqual((await readRoomTotals(shard.data, 'W2N2', alice, 8, t0)).energyHarvested, 0);
+	});
+
+	test('room layer ranks contributing users and drops zero/aged-out ones', async () => {
+		await using testShard = await instantiateTestShard();
+		const { shard } = testShard;
+		const bob = 'bbbbbbbbbbbb';
+		await writeRoomStats(shard.data, 'W1N1', alice, [ [ 'energyHarvested', 100 ] ], t0);
+		await writeRoomStats(shard.data, 'W1N1', bob, [ [ 'energyHarvested', 250 ] ], t0);
+		const layer = await readRoomLayer(shard.data, 'W1N1', 8, 'energyHarvested', t0);
+		assert.deepStrictEqual(layer, [ { user: bob, value: 250 }, { user: alice, value: 100 } ]);
+		// Two hours on, alice's contribution has aged out of the 1h window entirely.
+		assert.deepStrictEqual(await readRoomLayer(shard.data, 'W1N1', 8, 'energyHarvested', t0 + 2 * hour), []);
+	});
+
+	test('parseStatLayer splits the client\'s `<stat><interval>` layer name', () => {
+		assert.deepStrictEqual(parseStatLayer('energyHarvested8'), { stat: 'energyHarvested', interval: 8 });
+		assert.deepStrictEqual(parseStatLayer('energyControl1440'), { stat: 'energyControl', interval: 1440 });
+		assert.strictEqual(parseStatLayer('energyHarvested7'), undefined);
+		assert.strictEqual(parseStatLayer('bogus8'), undefined);
 	});
 });

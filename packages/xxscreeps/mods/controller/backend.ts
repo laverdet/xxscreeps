@@ -92,9 +92,9 @@ hooks.register('route', {
 			shard.scratch.sMembers(controlledRoomsKey(userId)),
 			readTotals(context.db, userId, interval),
 		]);
-		// Per-room punchcard for the selected stat, plus the max value across all of them for scaling.
+		// Per-room punchcard of the user's own activity for the selected stat, plus the max across them.
 		const series = await Promise.all(rooms.map(async room =>
-			[ room, await readRoomPunchcard(shard.data, room, interval, statName) ] as const));
+			[ room, await readRoomPunchcard(shard.data, room, userId, interval, statName) ] as const));
 		const stats = Object.fromEntries(series);
 		const statsMax = Math.max(0, ...series.flatMap(([ , points ]) => points));
 		return {

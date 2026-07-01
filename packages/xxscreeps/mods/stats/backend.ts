@@ -3,7 +3,7 @@ import type { UserBadge } from 'xxscreeps/engine/db/user/badge.js';
 import { hooks, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import {
-	isStatInterval, readRoomPunchcard, readRoomTotals, readTotals,
+	bucketCount, isStatInterval, readRoomPunchcard, readRoomTotals, readTotals,
 	removeAllForUser, statNames,
 } from './model.js';
 
@@ -51,13 +51,14 @@ hooks.register('route', {
 		const interval = isStatInterval(rawInterval) ? rawInterval : 8;
 		const { shard } = context;
 
-		// Room owner, when the room exists and is claimed.
+		// Room owner, when the room exists and is claimed. The overview shows the owner's activity.
 		let owner: { username: string; badge: UserBadge | Record<string, never> } | undefined;
+		let ownerId: string | undefined;
 		if (context.backend.world.map.getRoomStatus(room, true)) {
 			const roomObject = await shard.loadRoom(room, undefined, true).catch(() => undefined);
-			const userId = roomObject?.['#user'];
-			if (userId != null) {
-				const info = await context.db.data.hmGet(User.infoKey(userId), [ 'badge', 'username' ]);
+			ownerId = roomObject?.['#user'] ?? undefined;
+			if (ownerId != null) {
+				const info = await context.db.data.hmGet(User.infoKey(ownerId), [ 'badge', 'username' ]);
 				owner = {
 					username: info.username!,
 					badge: info.badge == null ? {} : JSON.parse(info.badge) as UserBadge,
@@ -67,11 +68,12 @@ hooks.register('route', {
 
 		const now = Date.now();
 		const punchcards = await Promise.all(statNames.map(async stat =>
-			[ stat, await readRoomPunchcard(shard.data, room, interval, stat, now) ] as const));
+			[ stat, ownerId == null ? new Array(bucketCount[interval]).fill(0) as number[]
+			: await readRoomPunchcard(shard.data, room, ownerId, interval, stat, now) ] as const));
 		const stats = Object.fromEntries(punchcards);
 		const statsMax = Object.fromEntries(punchcards.map(([ stat, points ]) =>
 			[ `${stat}${interval}`, Math.max(0, ...points) ]));
-		const totals = await readRoomTotals(shard.data, room, interval, now);
+		const totals = ownerId == null ? {} : await readRoomTotals(shard.data, room, ownerId, interval, now);
 
 		return { ok: 1, owner, stats, statsMax, totals };
 	}),

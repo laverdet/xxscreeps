@@ -6,15 +6,21 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
+import { parseStatLayer, readRoomLayer } from 'xxscreeps/mods/stats/model.js';
 
 interface MapStatsRequest {
 	rooms: string[];
+	// A stat layer to overlay, e.g. `energyHarvested8` (`<statName><interval>`).
+	statName?: string | null;
+	shard?: string | null;
 }
 
 const mapStatsSchema: JSONSchemaType<MapStatsRequest> = {
 	type: 'object',
 	properties: {
 		rooms: { type: 'array', items: { type: 'string' } },
+		statName: { type: 'string', nullable: true },
+		shard: { type: 'string', nullable: true },
 	},
 	required: [ 'rooms' ],
 };
@@ -24,13 +30,16 @@ export const MapStatsEndpoint: Endpoint = {
 	path: '/api/game/map-stats',
 
 	execute: makeValidatedPayloadRoute(mapStatsSchema, async context => {
-		const { rooms: roomNames } = context.request.body;
+		const { rooms: roomNames, statName } = context.request.body;
 		if (!roomNames.every(room => /^[EW][0-9]+[NS][0-9]+$/.test(room))) {
 			throw new Error('Invalid room payload');
 		}
 
 		const { time } = context.backend.shard;
+		// A requested stat layer, if any, resolved to its stat + interval.
+		const layer = statName == null ? undefined : parseStatLayer(statName);
 		const userIds = new Set<string>();
+		let layerMax = 0;
 		const stats = Fn.fromEntries(Fn.filter(await Promise.all(Fn.map(roomNames, async roomName => {
 			// The client spams requests for rooms that don't exist
 			if (!context.backend.world.map.getRoomStatus(roomName, true)) {
@@ -39,6 +48,16 @@ export const MapStatsEndpoint: Endpoint = {
 
 			// TODO: A room status blob that doesn't change every tick would be good
 			const room = await context.backend.shard.loadRoom(roomName, undefined, true);
+
+			// Stat layer: each contributing user's windowed value for the requested stat.
+			const contributions = layer &&
+				await readRoomLayer(context.backend.shard.data, room.name, layer.interval, layer.stat);
+			if (contributions) {
+				for (const contribution of contributions) {
+					userIds.add(contribution.user);
+					layerMax = Math.max(layerMax, contribution.value);
+				}
+			}
 
 			// Build rooms payload
 			return [ room.name, {
@@ -86,6 +105,9 @@ export const MapStatsEndpoint: Endpoint = {
 				...room['#safeModeUntil'] > time && {
 					safeMode: true,
 				},
+				...contributions && contributions.length > 0 && {
+					[statName!]: contributions,
+				},
 			} ] as const;
 		}))));
 
@@ -105,6 +127,7 @@ export const MapStatsEndpoint: Endpoint = {
 			ok: 1,
 			gameTime: context.backend.shard.time,
 			stats,
+			statsMax: layer ? { [statName!]: layerMax } : {},
 			users,
 		};
 	}),
