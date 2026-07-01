@@ -7,17 +7,19 @@ import {
 	removeAllForUser, statNames,
 } from './model.js';
 
-// `GET /api/user/stats?interval=8|180|1440` — aggregated per-interval totals for the profile page.
+// `GET /api/user/stats?id=<userId>&interval=8|180|1440` — aggregated per-interval totals for the
+// profile page. The profile can show any user, so an explicit `id` wins over the logged-in user.
 hooks.register('route', {
 	path: '/api/user/stats',
 
 	async execute(context) {
-		const { userId } = context.state;
+		const queryId = context.request.query.id;
+		const targetId = (typeof queryId === 'string' && queryId) || context.state.userId;
 		const interval = Number(context.request.query.interval);
-		if (userId == null || !isStatInterval(interval)) {
+		if (targetId == null || !isStatInterval(interval)) {
 			return { ok: 1, stats: {} };
 		}
-		return { ok: 1, stats: await readTotals(context.db, userId, interval) };
+		return { ok: 1, stats: await readTotals(context.db, targetId, interval) };
 	},
 });
 
@@ -52,7 +54,7 @@ hooks.register('route', {
 		const { shard } = context;
 
 		// Room owner, when the room exists and is claimed. The overview shows the owner's activity.
-		let owner: { username: string; badge: UserBadge | Record<string, never> } | undefined;
+		let owner: { username: string; badge: UserBadge | null } | undefined;
 		let ownerId: string | undefined;
 		if (context.backend.world.map.getRoomStatus(room, true)) {
 			const roomObject = await shard.loadRoom(room, undefined, true).catch(() => undefined);
@@ -61,7 +63,7 @@ hooks.register('route', {
 				const info = await context.db.data.hmGet(User.infoKey(ownerId), [ 'badge', 'username' ]);
 				owner = {
 					username: info.username!,
-					badge: info.badge == null ? {} : JSON.parse(info.badge) as UserBadge,
+					badge: info.badge == null ? null : JSON.parse(info.badge) as UserBadge,
 				};
 			}
 		}

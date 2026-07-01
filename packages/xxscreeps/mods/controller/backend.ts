@@ -84,15 +84,16 @@ hooks.register('route', {
 		const rawInterval = Number(context.request.query.interval);
 		const interval = isStatInterval(rawInterval) ? rawInterval : 8;
 		const statNameRaw = String(context.request.query.statName);
-		const statName = isStatName(statNameRaw) ? statNameRaw : 'energyControl';
+		const statName = isStatName(statNameRaw) ? statNameRaw : 'energyHarvested';
 		if (userId == null) {
-			return { ok: 1, shards: { [shard.name]: { rooms: [] } }, stats: {}, statsMax: 0, totals: {} };
+			return { ok: 1, shards: { [shard.name]: { rooms: [], stats: {} } }, statsMax: 0, totals: {} };
 		}
 		const [ rooms, totals ] = await Promise.all([
 			shard.scratch.sMembers(controlledRoomsKey(userId)),
 			readTotals(context.db, userId, interval),
 		]);
 		// Per-room punchcard of the user's own activity for the selected stat, plus the max across them.
+		// The client reads the punchcards from `shards[name].stats[room]` and `statsMax` off the top.
 		const series = await Promise.all(rooms.map(async room =>
 			[ room, await readRoomPunchcard(shard.data, room, userId, interval, statName) ] as const));
 		const stats = Object.fromEntries(series);
@@ -100,9 +101,8 @@ hooks.register('route', {
 		return {
 			ok: 1,
 			shards: {
-				[shard.name]: { rooms },
+				[shard.name]: { rooms, stats },
 			},
-			stats,
 			statsMax,
 			totals,
 		};
