@@ -14,7 +14,7 @@ import { TERRAIN_MASK_WALL } from 'xxscreeps/game/terrain.js';
 
 const iterations = Number(process.argv.at(-1)) || 1;
 const log = process.argv.includes('--log');
-const expectedResult = '12b34096';
+const expectedResult = '156ef000';
 
 /**
  * This script is a standalone test for the path finder. It runs a whole bunch of path finding

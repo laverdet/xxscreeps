@@ -42,23 +42,35 @@ describe('Roads', () => {
 
 	test('path cost', () => simulate({
 		W0N0: room => {
-			room['#insertObject'](create(new RoomPosition(22, 23, 'W0N0')));
-			room['#insertObject'](create(new RoomPosition(22, 24, 'W0N0')));
-			room['#insertObject'](create(new RoomPosition(22, 25, 'W0N0')));
-			room['#insertObject'](create(new RoomPosition(22, 26, 'W0N0'))); // swamp
-			room['#insertObject'](create(new RoomPosition(23, 26, 'W0N0')));
-			room['#insertObject'](create(new RoomPosition(24, 26, 'W0N0')));
+			// "U" shape
+			room['#insertObject'](create(new RoomPosition(20, 12, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(20, 13, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(20, 14, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(20, 15, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(21, 16, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(22, 16, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(22, 16, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(22, 16, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(25, 15, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(25, 14, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(25, 13, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(25, 12, 'W0N0')));
+			// Shortcut with piece missing
+			room['#insertObject'](create(new RoomPosition(21, 14, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(22, 14, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(22, 14, 'W0N0')));
+			room['#insertObject'](create(new RoomPosition(24, 14, 'W0N0')));
 		},
 	})(({ peekRoom }) => peekRoom('W0N0', room => {
-		// Follows roads, except corner road
-		const path1 = room.findPath(new RoomPosition(21, 22, 'W0N0'), new RoomPosition(25, 26, 'W0N0'));
-		assert.strictEqual(path1.length, 5);
-		// Strongly prefers roads
-		const path2 = room.findPath(new RoomPosition(21, 22, 'W0N0'), new RoomPosition(25, 26, 'W0N0'), { plainCost: 3 });
-		assert.strictEqual(path2.length, 6);
+		// Follows roads, takes the shortcut
+		const path1 = room.findPath(new RoomPosition(19, 11, 'W0N0'), new RoomPosition(26, 11, 'W0N0'));
+		assert.strictEqual(path1.length, 8);
+		// Strongly prefers roads, ignores shortcut
+		const path2 = room.findPath(new RoomPosition(19, 11, 'W0N0'), new RoomPosition(26, 11, 'W0N0'), { plainCost: 3 });
+		assert.strictEqual(path2.length, 9);
 		// Don't care about roads
-		const path3 = room.findPath(new RoomPosition(21, 22, 'W0N0'), new RoomPosition(25, 26, 'W0N0'), { ignoreRoads: true });
-		assert.strictEqual(path3.length, 4);
+		const path3 = room.findPath(new RoomPosition(19, 11, 'W0N0'), new RoomPosition(26, 11, 'W0N0'), { ignoreRoads: true });
+		assert.strictEqual(path3.length, 7);
 	})));
 });
 

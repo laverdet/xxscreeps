@@ -100,6 +100,7 @@ class pathfinder {
 		using open_closed_type = open_closed_t<search_capacity>;
 
 		struct heap_node {
+				constexpr auto operator==(const heap_node& right) const -> bool = default;
 				pos_index_t pos;
 				cost_t score;
 				constexpr static auto projection = [](const heap_node& node) -> cost_t { return node.score; };

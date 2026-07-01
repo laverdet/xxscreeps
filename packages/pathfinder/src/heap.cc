@@ -6,43 +6,55 @@ import std;
 
 namespace screeps {
 
-// Produces identical results to 'std::ranges::pop_heap'
-constexpr auto pop_heap(auto&& container, auto compare, auto projection) {
-	std::swap(container.front(), container.back());
-	auto size = container.size() - 1;
-	auto vv = 1UZ;
-	while (true) {
-		auto uu = vv;
-		if ((uu * 2) + 1 <= size) {
-			if (!compare(projection(container[ (uu * 2) - 1 ]), projection(container[ uu - 1 ]))) {
-				vv = uu * 2;
-			}
-			if (!compare(projection(container[ (uu * 2) ]), projection(container[ vv - 1 ]))) {
-				vv = (uu * 2) + 1;
-			}
-		} else if (uu * 2 <= size) {
-			if (!compare(projection(container[ (uu * 2) - 1 ]), projection(container[ uu - 1 ]))) {
-				vv = uu * 2;
-			}
-		}
-		if (uu != vv) {
-			std::swap(container[ uu - 1 ], container[ vv - 1 ]);
+constexpr auto sift_up(auto& container, std::size_t pos, auto compare, auto projection) -> void {
+	auto val = std::move(container[ pos ]);
+	while (pos != 0) {
+		auto parent = (pos - 1) / 2;
+		if (compare(projection(container[ parent ]), projection(val))) {
+			container[ pos ] = std::move(container[ parent ]);
+			pos = parent;
 		} else {
 			break;
-		}
-	};
-}
-
-// Produces ~similar~ results to 'std::ranges::push_heap'. In some cases the std built-in produces
-// shorter paths which is certainly worth looking into.
-constexpr auto push_heap(auto&& container, auto compare, auto projection) {
-	for (auto ii = container.size(); ii != 1; ii /= 2) {
-		if (compare(projection(container[ ii - 1 ]), projection(container[ (ii / 2) - 1 ]))) {
-			break;
-		} else {
-			std::swap(container[ ii - 1 ], container[ (ii / 2) - 1 ]);
 		}
 	}
+	container[ pos ] = std::move(val);
+}
+
+// https://en.wikipedia.org/wiki/Heapsort#Bottom-up_heapsort
+constexpr auto sift_down(auto& container, std::size_t pos, auto compare, auto projection) -> auto {
+	auto hole = 0UZ;
+	while (true) {
+		auto left = (hole * 2) + 1;
+		auto right = (hole * 2) + 2;
+		if (right < pos) {
+			auto larger = compare(projection(container[ left ]), projection(container[ right ])) ? right : left;
+			container[ hole ] = std::move(container[ larger ]);
+			hole = larger;
+		} else if (left < pos) {
+			container[ hole ] = std::move(container[ left ]);
+			hole = left;
+			break;
+		} else {
+			break;
+		}
+	}
+	return hole;
+}
+
+// Produces identical results to 'std::ranges::pop_heap'
+constexpr auto pop_heap(auto& container, auto compare, auto projection) -> void {
+	auto size = container.size();
+	auto top = std::move(container[ 0 ]);
+	auto hole = sift_down(container, size, compare, projection);
+	auto last = size - 1;
+	container[ hole ] = std::move(container[ last ]);
+	sift_up(container, hole, compare, projection);
+	container[ last ] = std::move(top);
+}
+
+// Produces identical results to 'std::ranges::push_heap'
+constexpr auto push_heap(auto& container, auto compare, auto projection) -> void {
+	sift_up(container, container.size() - 1, compare, projection);
 }
 
 // Priority queue implementation using lazy deletion for score updates
