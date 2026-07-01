@@ -3,10 +3,9 @@ import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import {
-	checkCreatePowerCreep, checkRenamePowerCreep, checkUpgradePowerCreep, createPowerCreep, read, write,
-} from './powercreep.js';
+import {	checkCreatePowerCreep, checkRenamePowerCreep, checkUpgradePowerCreep, createPowerCreep, read, write } from './powercreep.js';
 
 // Account-scoped power creep roster.
 const powerCreepsKey = (userId: string) => `user/${userId}/powerCreeps`;
@@ -83,9 +82,11 @@ export function upgrade(db: Database, userId: string, id: string, powers: Record
 		}
 		const code = checkUpgradePowerCreep(await userPower(db, userId), roster, creep, powers);
 		if (code === C.OK) {
-			creep['#powers'] = Object.entries(powers)
-				.filter(([ , level ]) => level !== 0)
-				.map(([ power, level ]) => ({ power: Number(power), level }));
+			creep['#powers'] = Fn.pipe(
+				Object.entries(powers),
+				$$ => Fn.filter($$, ([ , level ]) => level !== 0),
+				$$ => Fn.map($$, ([ power, level ]) => ({ power: Number(power), level })),
+				$$ => [ ...$$ ]);
 		}
 		return code;
 	});
