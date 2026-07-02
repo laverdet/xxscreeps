@@ -3,7 +3,9 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
-import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
+import { create as createConstructionSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
+import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
+import { lookForStructureAt, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { create as createPowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import * as Model from './model.js';
@@ -131,6 +133,7 @@ describe('PowerCreep spawned', () => {
 			room['#level'] = 8;
 			room['#user'] = room.controller!['#user'] = owner;
 		},
+		W2N1: () => {},
 	});
 
 	// Seed the account roster with a creep named Alice and return her id. Spawning claims the
@@ -219,6 +222,77 @@ describe('PowerCreep spawned', () => {
 		await tick();
 		await player(owner, Game => {
 			assert.strictEqual(Game.powerCreeps.Alice!.pos.isEqualTo(target), true);
+		});
+	}));
+
+	test('a spawned power creep crosses a room border', () => sim(async ({ player, poke, peekRoom, tick, shard }) => {
+		const id = await createAlice(shard.db);
+		await player(owner, Game => {
+			const powerSpawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_POWER_SPAWN)[0]!;
+			assert.strictEqual(createPowerCreep(id, 'Alice', C.POWER_CLASS.OPERATOR, owner).spawn(powerSpawn), C.OK);
+		});
+		await tick();
+		await poke('W1N1', owner, (Game, room) => {
+			const alice = room['#lookFor'](C.LOOK_POWER_CREEPS)[0]!;
+			room['#moveObject'](alice, new RoomPosition(0, 25, 'W1N1'));
+		});
+		await tick();
+		await peekRoom('W1N1', room => {
+			assert.strictEqual(room['#lookFor'](C.LOOK_POWER_CREEPS).length, 0);
+		});
+		await peekRoom('W2N1', room => {
+			const alice = room['#lookFor'](C.LOOK_POWER_CREEPS)[0]!;
+			assert.strictEqual(alice.pos.isEqualTo(49, 25), true);
+		});
+	}));
+
+	test('a moving power creep wears out roads', () => sim(async ({ player, poke, peekRoom, tick, shard }) => {
+		const id = await createAlice(shard.db);
+		await player(owner, Game => {
+			const powerSpawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_POWER_SPAWN)[0]!;
+			assert.strictEqual(createPowerCreep(id, 'Alice', C.POWER_CLASS.OPERATOR, owner).spawn(powerSpawn), C.OK);
+		});
+		await tick();
+		const target = getPositionInDirection(spawnPos, C.TOP)!;
+		let decayTime: number;
+		await poke('W1N1', owner, (Game, room) => {
+			const road = createRoad(target);
+			decayTime = road['#nextDecayTime'];
+			room['#insertObject'](road);
+		});
+		await player(owner, Game => {
+			assert.strictEqual(Game.powerCreeps.Alice!.move(C.TOP), C.OK);
+		});
+		await tick();
+		await peekRoom('W1N1', room => {
+			const road = lookForStructureAt(room, target, C.STRUCTURE_ROAD)!;
+			assert.strictEqual(road['#nextDecayTime'], decayTime - C.ROAD_WEAROUT_POWER_CREEP);
+		});
+	}));
+
+	test('a moving power creep stomps hostile construction sites', () => sim(async ({ player, poke, peekRoom, tick, shard }) => {
+		const id = await createAlice(shard.db);
+		await player(owner, Game => {
+			const powerSpawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_POWER_SPAWN)[0]!;
+			assert.strictEqual(createPowerCreep(id, 'Alice', C.POWER_CLASS.OPERATOR, owner).spawn(powerSpawn), C.OK);
+		});
+		await tick();
+		const target = getPositionInDirection(spawnPos, C.TOP)!;
+		await poke('W1N1', owner, (Game, room) => {
+			const site = createConstructionSite(target, C.STRUCTURE_ROAD, hostile, 300);
+			site.progress = 100;
+			room['#insertObject'](site);
+		});
+		await player(owner, Game => {
+			assert.strictEqual(Game.powerCreeps.Alice!.move(C.TOP), C.OK);
+		});
+		await tick();
+		await peekRoom('W1N1', room => {
+			assert.strictEqual(room['#lookFor'](C.LOOK_CONSTRUCTION_SITES).length, 0);
+			// Half the progress hits the ground, minus the decay step of the tick it dropped in.
+			const dropped = room['#lookFor'](C.LOOK_RESOURCES)[0]!;
+			assert.strictEqual(dropped.amount, 49);
+			assert.strictEqual(dropped.pos.isEqualTo(target), true);
 		});
 	}));
 

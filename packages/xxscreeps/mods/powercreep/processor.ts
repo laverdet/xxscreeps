@@ -1,9 +1,5 @@
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
-import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Direction } from 'xxscreeps/game/position.js';
-import type { Resource, ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
-import type { WithStore } from 'xxscreeps/mods/classic/resource/store.js';
-import type { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { registerIntentProcessor, registerObjectPreTickProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as Movement from 'xxscreeps/engine/processor/movement.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -11,11 +7,10 @@ import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject, saveAction } from 'xxscreeps/game/object.js';
-import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
-import { checkCarrier, checkDrop, checkPickup, checkTransfer, checkWithdraw } from 'xxscreeps/mods/classic/creep/creep.js';
-import { flushActionLog } from 'xxscreeps/mods/classic/creep/processor.js';
+import { isBorder } from 'xxscreeps/game/terrain.js';
+import { checkCarrier } from 'xxscreeps/mods/classic/creep/creep.js';
+import { borderExitPosition, commitMove, flushActionLog, isHostileInSafeMode, processDrop, processPickup, processSay, processTransfer, processWithdraw, teleportCreep } from 'xxscreeps/mods/classic/creep/processor.js';
 import { Tombstone } from 'xxscreeps/mods/classic/creep/tombstone.js';
-import * as ResourceIntent from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import { OpenStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { StructurePowerBank } from 'xxscreeps/mods/modern/powerbank/powerbank.js';
@@ -81,77 +76,27 @@ const intents = [
 		});
 	}),
 
-	registerIntentProcessor(PowerCreep, 'drop', { before: 'transfer' }, (creep, context, resourceType: ResourceType, amount: number) => {
-		if (checkDrop(creep, resourceType, amount) === C.OK) {
-			creep.store['#subtract'](resourceType, amount);
-			ResourceIntent.drop(creep.pos, resourceType, amount);
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(PowerCreep, 'drop', { before: 'transfer' }, processDrop),
 
 	// Fatigue-free movement: no body, no weight, no pull chains. A single move request resolves through
 	// the shared movement arbiter at a fixed priority.
 	registerIntentProcessor(PowerCreep, 'move', {}, (creep, context, direction: Direction) => {
 		if (checkCarrier(creep) === C.OK) {
-			Movement.announce(creep, direction, commit => commit(1, pos => {
-				creep.room['#moveObject'](creep, pos);
+			const priority = 1 + (isHostileInSafeMode(creep) ? -500 : 0);
+			Movement.announce(creep, direction, commit => commit(priority, pos => {
+				commitMove(creep, pos, C.ROAD_WEAROUT_POWER_CREEP);
 				context.didUpdate();
 			}));
 		}
 	}),
 
-	registerIntentProcessor(PowerCreep, 'pickup', {}, (creep, context, id: string) => {
-		const resource = Game.getObjectById<Resource>(id)!;
-		if (checkPickup(creep, resource) === C.OK) {
-			const amount = Math.min(creep.store.getFreeCapacity(resource.resourceType), resource.amount);
-			creep.store['#add'](resource.resourceType, amount);
-			resource.amount -= amount;
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(PowerCreep, 'pickup', {}, processPickup),
 
-	registerIntentProcessor(PowerCreep, 'say', {}, (creep, context, message: string, isPublic: boolean) => {
-		if (checkCarrier(creep) === C.OK) {
-			creep['#saying'] = {
-				isPublic,
-				message: String(message).substring(0, 10),
-				time: Game.time,
-			};
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(PowerCreep, 'say', {}, processSay),
 
-	registerIntentProcessor(PowerCreep, 'transfer', { before: 'withdraw' }, (creep, context, id: string, resourceType: ResourceType, amount: number) => {
-		const target = Game.getObjectById<RoomObject & WithStore>(id)!;
-		if (checkTransfer(creep, target, resourceType, amount) === C.OK) {
-			creep.store['#subtract'](resourceType, amount);
-			target.store['#add'](resourceType, amount);
-			appendEventLog(creep.room, {
-				event: C.EVENT_TRANSFER,
-				objectId: creep.id,
-				targetId: target.id,
-				resourceType,
-				amount,
-			});
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(PowerCreep, 'transfer', { before: 'withdraw' }, processTransfer),
 
-	registerIntentProcessor(PowerCreep, 'withdraw', { before: 'pickup' }, (creep, context, id: string, resourceType: ResourceType, amount: number) => {
-		const target = Game.getObjectById<Structure & WithStore>(id)!;
-		if (checkWithdraw(creep, target, resourceType, amount) === C.OK) {
-			target.store['#subtract'](resourceType, amount);
-			creep.store['#add'](resourceType, amount);
-			appendEventLog(creep.room, {
-				event: C.EVENT_TRANSFER,
-				objectId: target.id,
-				targetId: creep.id,
-				resourceType,
-				amount,
-			});
-			context.didUpdate();
-		}
-	}),
+	registerIntentProcessor(PowerCreep, 'withdraw', { before: 'pickup' }, processWithdraw),
 
 	// Renew at an adjacent power spawn or power bank, resetting the creep to a full lifetime.
 	registerIntentProcessor(PowerCreep, 'renew', {}, (creep, context, id: string) => {
@@ -193,6 +138,8 @@ registerObjectTickProcessor(PowerCreep, (creep, context) => {
 	}
 	if (creep.ticksToLive === 0 || creep.hits <= 0) {
 		killPowerCreep(creep, context);
+	} else if (isBorder(creep.pos.x, creep.pos.y)) {
+		teleportCreep(creep, borderExitPosition(creep.pos), context);
 	} else {
 		context.wakeAt(creep['#ageTime']);
 	}
