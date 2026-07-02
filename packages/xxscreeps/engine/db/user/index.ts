@@ -1,6 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { branchManifestKey, buffersKey, stringsKey } from './code.js';
+import { branchManifestKey, buffersKey, saveContent, stringsKey } from './code.js';
 
 const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
@@ -52,6 +52,11 @@ export async function create(db: Database, userId: string, username: string, pro
 		...Fn.map(allProviders, ({ provider, id }) =>
 			db.data.hSet(providerMembersKey(provider), id, userId)),
 	]);
+
+	// A user with no committed code makes the runner throw "Cannot find module 'main'" every
+	// tick once it owns any room object. Seed an empty, valid script so ticking is a no-op until
+	// the player commits real code.
+	await saveContent(db, userId, 'main', new Map([ [ 'main', 'module.exports.loop = function () {};' ] ]));
 }
 
 /**
