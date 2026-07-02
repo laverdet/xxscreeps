@@ -1,27 +1,58 @@
+import type { GameConstructor } from 'xxscreeps/game/index.js';
+import type { Direction } from 'xxscreeps/game/position.js';
+import type { Resource, ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import type { WithStore } from 'xxscreeps/mods/resource/store.js';
+import type { Structure } from 'xxscreeps/mods/structure/structure.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
+import * as Id from 'xxscreeps/engine/schema/id.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { RoomObject, format as baseFormat } from 'xxscreeps/game/object.js';
+import { Game, intents, me, userGame, userInfo } from 'xxscreeps/game/index.js';
+import { RoomObject, actionLogFormat, format as baseFormat, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
+import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { compose, declare, enumerated, struct, vector, withOverlay } from 'xxscreeps/schema/index.js';
-import { instantiate } from 'xxscreeps/utility/utility.js';
+import { checkCarrier, checkDrop, checkPickup, checkTransfer, checkWithdraw } from 'xxscreeps/mods/creep/creep.js';
+import * as Memory from 'xxscreeps/mods/memory/memory.js';
+import { StructurePowerBank } from 'xxscreeps/mods/powerbank/powerbank.js';
+import { StructurePowerSpawn } from 'xxscreeps/mods/powerspawn/powerspawn.js';
+import { OpenStore, calculateChecked, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
+import { assign } from 'xxscreeps/utility/utility.js';
 
+// A power creep is a `RoomObject` whether it is sitting in the account roster or spawned into a room,
+// so it gets a single serialized format. Unspawned creeps live at `RoomPosition(0, 0, 'E0S0')` (the
+// all-zero signed position); spawning is then just a matter of copying the object into a room. The
+// room-presence fields (`hits`/`store`/`#ageTime`/...) carry default/empty values until a spawn fills
+// them in.
 export const format = declare('PowerCreep', () => compose(shape, PowerCreep));
 const shape = struct(baseFormat, {
+	...variant('powerCreep'),
 	name: 'string',
 	className: enumerated(...Object.values(C.POWER_CLASS)),
 	'#powers': vector(struct({ power: 'int8', level: 'int8' })),
+	// Wall-clock ms; `spawnCooldownTime` is set when a spawned creep dies, `0` while idle.
 	spawnCooldownTime: 'double',
+	// Wall-clock ms; deletion scheduled this far out, cancellable until it elapses.
 	deleteTime: 'double',
+	// Room presence — empty/`0` while unspawned, populated by a spawn into a room.
+	hits: 'int32',
+	store: openStoreFormat,
+	'#actionLog': actionLogFormat,
+	'#ageTime': 'int32',
+	'#noAttackNotify': 'bool',
+	'#saying': optional(struct({
+		isPublic: 'bool',
+		message: 'string',
+		time: 'int32',
+	})),
+	'#user': Id.format,
 });
 
 export class PowerCreep extends withOverlay(RoomObject, shape) {
-	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
-	get shard(): string | null { return null; }
-	get ticksToLive(): number | undefined { return undefined; }
-
-	override get '#lookType'() { return C.LOOK_POWER_CREEPS; }
+	/** @internal — raw incoming damage this tick; settled to `hits` in the tick processor. */
+	declare tickRawDamage: number | undefined;
 
 	get level() {
 		return Fn.accumulate(this['#powers'], power => power.level);
@@ -31,21 +62,233 @@ export class PowerCreep extends withOverlay(RoomObject, shape) {
 	get powers(): Record<number, { level: number }> {
 		return Object.fromEntries(Fn.map(this['#powers'], ({ power, level }) => [ power, { level } ]));
 	}
+
+	override get hitsMax() { return 1000 * (this.level + 1); }
+	override get my() { return this['#user'] === me; }
+	get owner() { return userInfo.get(this['#user']); }
+
+	// A power creep with no room presence is unspawned: `#ageTime` is `0`, so it has no remaining
+	// lifetime and no shard assignment.
+	get ticksToLive() { return optionalExpiryTime(Game, this['#ageTime']); }
+	get shard() { return this['#ageTime'] === 0 ? null : userGame?.shard.name ?? null; }
+
+	get saying() {
+		const saying = this['#saying'];
+		if (saying?.time === Game.time && (saying.isPublic || this.my)) {
+			return saying.message;
+		}
+	}
+
+	get carry() { return this.store; }
+	get carryCapacity() { return this.store.getCapacity(); }
+
+	get memory(): Record<string, unknown> | undefined {
+		if (!this.my) {
+			return;
+		}
+		return (Memory.get().powerCreeps ??= {})[this.name] ??= {};
+	}
+
+	override get '#hasIntent'() { return true; }
+	override get '#layer'() { return 0; }
+	override get '#lookType'() { return C.LOOK_POWER_CREEPS; }
+	override get '#providesVision'() { return true; }
+
+	set memory(memory: Record<string, unknown>) {
+		if (!this.my) {
+			return;
+		}
+		(Memory.get().powerCreeps ??= {})[this.name] ??= memory;
+	}
+
+	override '#addToMyGame'(game: GameConstructor) {
+		game.powerCreeps[this.name] = this;
+	}
+
+	// Defer incoming damage to the tick processor so death routes through the tombstone + respawn
+	// cooldown path, rather than the base immediate `#destroy`. Power creeps have no body to absorb it.
+	override '#applyDamage'(power: number, _type: number, source?: RoomObject) {
+		this.tickRawDamage = (this.tickRawDamage ?? 0) + power;
+		if (source) {
+			saveAction(this, 'attacked', source.pos);
+		}
+	}
+
+	// --- Room verbs. A power creep acts only once spawned into a room; the account-only roster form
+	// returns `ERR_BUSY`, mirroring vanilla's room guard before it delegates to the shared creep verb.
+	// Power creeps share the carry/store surface with creeps (`Carrier`) but have no body or fatigue. ---
+
+	/** Drop a resource on the ground. */
+	drop(resourceType: ResourceType, amount?: number) {
+		if (!(this.room as unknown)) {
+			return C.ERR_BUSY;
+		}
+		const intentAmount = (amount ?? 0) || this.store[resourceType];
+		return chainIntentChecks(
+			() => checkDrop(this, resourceType, intentAmount),
+			() => intents.save(this, 'drop', resourceType, intentAmount));
+	}
+
+	/** Move one square in the given direction. Power creeps move without fatigue. */
+	move(direction: Direction) {
+		if (!(this.room as unknown)) {
+			return C.ERR_BUSY;
+		}
+		return chainIntentChecks(
+			() => checkCarrier(this),
+			() => Number.isInteger(direction) && direction >= 1 && direction <= 8 ? C.OK : C.ERR_INVALID_ARGS,
+			() => intents.save(this, 'move', direction));
+	}
+
+	/** Pick up a dropped resource. */
+	pickup(resource: Resource) {
+		if (!(this.room as unknown)) {
+			return C.ERR_BUSY;
+		}
+		return chainIntentChecks(
+			() => checkPickup(this, resource),
+			() => intents.save(this, 'pickup', resource.id));
+	}
+
+	/** Display a speech bubble. */
+	say(message: string, isPublic = false) {
+		if (!(this.room as unknown)) {
+			return C.ERR_BUSY;
+		}
+		return chainIntentChecks(
+			() => checkCarrier(this),
+			() => intents.save(this, 'say', String(message).substring(0, 10), isPublic));
+	}
+
+	/** Transfer a resource to another object. */
+	transfer(target: RoomObject & WithStore, resourceType: ResourceType, amount?: number) {
+		if (!(this.room as unknown)) {
+			return C.ERR_BUSY;
+		}
+		const intentAmount = calculateChecked(this, target, () =>
+			(amount ?? 0) || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)!));
+		return chainIntentChecks(
+			() => checkTransfer(this, target, resourceType, intentAmount),
+			() => intents.save(this, 'transfer', target.id, resourceType, intentAmount));
+	}
+
+	/** Withdraw a resource from a structure or tombstone. */
+	withdraw(target: Structure & WithStore, resourceType: ResourceType, amount?: number) {
+		if (!(this.room as unknown)) {
+			return C.ERR_BUSY;
+		}
+		const intentAmount = calculateChecked(this, target, () =>
+			(amount ?? 0) || Math.min(this.store.getFreeCapacity(resourceType), target.store[resourceType]));
+		return chainIntentChecks(
+			() => checkWithdraw(this, target, resourceType, intentAmount),
+			() => intents.save(this, 'withdraw', target.id, resourceType, intentAmount));
+	}
+
+	/** Toggle the under-attack email notification. */
+	notifyWhenAttacked(enabled = true) {
+		if (!(this.room as unknown)) {
+			return C.ERR_BUSY;
+		}
+		return chainIntentChecks(
+			() => this.my ? C.OK : C.ERR_NOT_OWNER,
+			() => typeof enabled === 'boolean' ? C.OK : C.ERR_INVALID_ARGS,
+			() => {
+				if (enabled === this['#noAttackNotify']) {
+					intents.save(this, 'notifyWhenAttacked', Boolean(enabled));
+				}
+			});
+	}
+
+	/** Spawn this roster member into a room at the given power spawn. */
+	spawn(powerSpawn: StructurePowerSpawn) {
+		const powers = this['#powers'].map(({ power, level }) => [ power, level ] as [ number, number ]);
+		return chainIntentChecks(
+			() => this.room as unknown ? C.ERR_BUSY : C.OK,
+			() => checkTarget(powerSpawn, StructurePowerSpawn),
+			() => this.my && powerSpawn.my ? C.OK : C.ERR_NOT_OWNER,
+			() => this.spawnCooldownTime > Date.now() ? C.ERR_TIRED : C.OK,
+			() => intents.save(powerSpawn, 'spawnPowerCreep', this.id, this.name, this.className, powers));
+	}
+
+	/** Reset this creep's lifetime at an adjacent power spawn or power bank. */
+	renew(target: StructurePowerSpawn | StructurePowerBank) {
+		if (!(this.room as unknown)) {
+			return C.ERR_BUSY;
+		}
+		return chainIntentChecks(
+			() => this.my ? C.OK : C.ERR_NOT_OWNER,
+			() => checkTarget(target, StructurePowerSpawn, StructurePowerBank),
+			() => checkRange(this, target, 1),
+			() => intents.save(this, 'renew', target.id));
+	}
+
+	/** Kill this power creep immediately. */
+	suicide() {
+		if (!(this.room as unknown)) {
+			return C.ERR_BUSY;
+		}
+		return chainIntentChecks(
+			() => checkCarrier(this),
+			() => intents.save(this, 'suicide'));
+	}
 }
 
-/** Build a fresh, unspawned roster member. */
-export function createPowerCreep(id: string, name: string, className: string) {
-	const pos = new RoomPosition(0, 0, 'E0S0');
-	const creep = instantiate(PowerCreep, {
+// Power creeps block movement like creeps, deferring to the same safe-mode rules.
+registerObstacleChecker(params => {
+	const { room, user } = params;
+	if (params.ignoreCreeps) {
+		return null;
+	} else if (room.controller?.safeMode === undefined) {
+		return object => object instanceof PowerCreep;
+	} else {
+		const safeUser = room.controller['#user'];
+		if (safeUser !== user) {
+			return object => object instanceof PowerCreep;
+		}
+		return object => object instanceof PowerCreep && object['#user'] === user;
+	}
+});
+
+// Initialize the fields shared by spawned and unspawned creeps.
+function instantiatePowerCreep(
+	id: string, pos: RoomPosition, name: string, className: string, owner: string, storeCapacity: number,
+) {
+	const creep = assign(new PowerCreep(), {
 		id,
 		pos,
 		name,
 		className,
 		spawnCooldownTime: 0,
 		deleteTime: 0,
+		hits: 0,
+		store: OpenStore['#create'](storeCapacity),
 	});
+	// Private-symbol fields are assigned by member access, not as object-literal keys: the private
+	// transform only rewrites `obj['#x']` accesses, so a literal `'#x'` key would miss the symbol slot.
 	creep['#posId'] = pos['#id'];
 	creep['#powers'] = [];
+	creep['#user'] = owner;
+	creep['#actionLog'] = [];
+	creep['#ageTime'] = 0;
+	creep['#noAttackNotify'] = false;
+	return creep;
+}
+
+/** Build a fresh, unspawned roster member. */
+export function createPowerCreep(id: string, name: string, className: string, owner: string) {
+	return instantiatePowerCreep(id, new RoomPosition(0, 0, 'E0S0'), name, className, owner, 0);
+}
+
+/** Copy a roster member into a room: same identity and powers, with fresh room presence. */
+export function createSpawnedPowerCreep(
+	pos: RoomPosition, owner: string, id: string, name: string, className: string,
+	powers: [ number, number ][],
+) {
+	const level = Fn.accumulate(powers, ([ , level ]) => level);
+	const creep = instantiatePowerCreep(id, pos, name, className, owner, 100 * (level + 1));
+	creep['#powers'] = powers.map(([ power, level ]) => ({ power, level }));
+	creep.hits = 1000 * (level + 1);
+	creep['#ageTime'] = Game.time + C.POWER_CREEP_LIFE_TIME;
 	return creep;
 }
 

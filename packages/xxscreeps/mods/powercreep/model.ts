@@ -68,7 +68,7 @@ export function create(db: Database, userId: string, name: string, className: st
 	return mutate(db, userId, async roster => {
 		const code = checkCreatePowerCreep(await userPower(db, userId), roster, name, className);
 		if (code === C.OK) {
-			roster.push(createPowerCreep(Id.generateId(), name.slice(0, 50), className));
+			roster.push(createPowerCreep(Id.generateId(), name.slice(0, 50), className, userId));
 		}
 		return code;
 	});
@@ -123,6 +123,26 @@ export function cancelDelete(db: Database, userId: string, id: string) {
 		const creep = roster.find(entry => entry.id === id);
 		if (creep) {
 			creep.deleteTime = 0;
+		}
+		return C.OK;
+	});
+}
+
+// The authoritative spawn cooldown for a roster entry, or `undefined` if it is no longer present.
+// The room processor reads this to gate a spawn, because the runtime's roster view lags a death's
+// cooldown writeback by a tick or two.
+export async function getSpawnCooldown(db: Database, userId: string, id: string) {
+	const creep = (await loadRoster(db, userId)).find(entry => entry.id === id);
+	return creep?.spawnCooldownTime;
+}
+
+// Record a spawn cooldown on the roster entry when a spawned creep dies. Called from the room
+// processor through `context.task`, the same account-keyspace writeback path the GPL/GCL credit uses.
+export function setSpawnCooldown(db: Database, userId: string, id: string, cooldownTime: number) {
+	return mutate(db, userId, roster => {
+		const creep = roster.find(entry => entry.id === id);
+		if (creep) {
+			creep.spawnCooldownTime = cooldownTime;
 		}
 		return C.OK;
 	});

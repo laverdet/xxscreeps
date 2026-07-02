@@ -1,5 +1,8 @@
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
+import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
-import { PowerCreep, read } from './powercreep.js';
+import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import { PowerCreep, format, read } from './powercreep.js';
 
 let roster: PowerCreep[] = [];
 
@@ -20,7 +23,9 @@ hooks.register('runtimeConnector', {
 	},
 });
 
-// Add `powerCreeps` to the global `Game` object, keyed by name (including unspawned creeps).
+// Add `powerCreeps` to the global `Game` object, keyed by name (including unspawned creeps). A spawned
+// creep is a room object whose `#addToMyGame` overrides its roster entry here, so the spawned form wins
+// wherever the creep is visible.
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		/** A hash containing all your power creeps with their names as hash keys. */
@@ -33,6 +38,26 @@ hooks.register('gameInitializer', Game => {
 		Game.powerCreeps[creep.name] = creep;
 	}
 });
+
+// A power creep is a room object once spawned, so it joins the `Room.objects` union.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const powerCreepSchema = registerVariant('Room.objects', format);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const find = registerFindHandlers({
+	[C.FIND_POWER_CREEPS]: room => room['#lookFor'](C.LOOK_POWER_CREEPS),
+	[C.FIND_MY_POWER_CREEPS]: room => room['#lookFor'](C.LOOK_POWER_CREEPS).filter(creep => creep.my),
+	[C.FIND_HOSTILE_POWER_CREEPS]: room => room['#lookFor'](C.LOOK_POWER_CREEPS).filter(creep => !creep.my),
+});
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const look = [ registerLook<PowerCreep>()(C.LOOK_POWER_CREEPS) ];
+
+declare module 'xxscreeps/game/room/index.js' {
+	interface Find { powerCreep: typeof find }
+	interface Look { powerCreep: typeof look }
+	interface Schema { powerCreep: [ typeof powerCreepSchema ] }
+}
 
 registerGlobal(PowerCreep);
 declare module 'xxscreeps/game/runtime.js' {

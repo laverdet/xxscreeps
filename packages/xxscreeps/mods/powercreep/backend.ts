@@ -1,9 +1,43 @@
-import type { PowerCreep } from './powercreep.js';
 import type { JSONSchemaType } from 'ajv';
 import type { Database } from 'xxscreeps/engine/db/index.js';
-import { hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
+import { bindMapRenderer, bindRenderer, hooks, makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
+import { renderActionLog } from 'xxscreeps/backend/sockets/render.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { renderStore } from 'xxscreeps/mods/resource/backend.js';
 import * as Model from './model.js';
+import { PowerCreep } from './powercreep.js';
+
+// A spawned power creep is a room object; render the fields the official client shows for it (owner,
+// vitals, store, level, and the action log carrying `say`), mirroring the creep renderer.
+bindMapRenderer(PowerCreep, creep => creep['#user']);
+
+bindRenderer(PowerCreep, (creep, next, previousTime) => {
+	const actionLog: Record<string, unknown> = renderActionLog(creep['#actionLog'], previousTime);
+	const saying = creep['#saying'];
+	if (
+		saying &&
+		(previousTime === undefined || previousTime < saying.time) &&
+		(saying.isPublic || creep.my)
+	) {
+		actionLog.say = {
+			isPublic: saying.isPublic,
+			message: saying.message,
+		};
+	}
+	return {
+		...next(),
+		...renderStore(creep.store),
+		actionLog,
+		name: creep.name,
+		className: creep.className,
+		level: creep.level,
+		powers: creep.powers,
+		hits: creep.hits,
+		hitsMax: creep.hitsMax,
+		ageTime: creep['#ageTime'],
+		user: creep['#user'],
+	};
+});
 
 // The official client drives the power-creep screen through these routes (`/api/game/power-creeps/*`).
 // The body schema validates shape; the model runs the shared `check*` and commits under compare-and-swap.
