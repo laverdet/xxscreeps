@@ -41,6 +41,10 @@ export interface GenerateRoomOptions {
 	// The room type stamped into the World `meta`, overriding the name-arithmetic classification so a
 	// type can be authored at a divergent location. Absent leaves `meta` at `computeRoomMeta(name)`.
 	roomType?: RoomType;
+	// The sector centers stamped into the World `meta`, overriding the vanilla template's ring
+	// memberships so divergent (mini/mega-sector) geometry can be authored. A highway's wall-mass
+	// orientation derives from these (see `highwayOrientation`).
+	centers?: string[];
 }
 
 interface TerrainTypeParams {
@@ -506,24 +510,22 @@ function exitClearance(bx: number, by: number, exitPoints: readonly (readonly [ 
 
 type HighwayOrientation = 'vertical' | 'horizontal' | 'crossing';
 
-// A sector-center axis is a `{..}5` room (W/N use the negative residue); a highway axis sits exactly 5
-// rooms off one. Mirrored from `sector.ts`, which keeps its axis helpers private: the generator builds
-// terrain from scratch, so a room's geometry is the input here, not authored `meta` to read back.
-function isCentralAxis(coord: number): boolean {
-	return coord < 0 ? coord % 10 === -6 : coord % 10 === 5;
-}
-function isHighwayAxis(coord: number): boolean {
-	return isCentralAxis(coord - 5) || isCentralAxis(coord + 5);
-}
-
-// Which sector-facing borders a highway room walls off: a vertical lane (its column rings a sector) is
-// bounded east+west, a horizontal lane top+bottom, a crossing (both axes ring) only in the diagonal
-// corners. A non-highway room defaults to 'vertical'.
-function highwayOrientation(roomName: string): HighwayOrientation {
-	const { rx, ry } = parseSignedRoomName(roomName);
-	const vertical = isHighwayAxis(rx);
-	const horizontal = isHighwayAxis(ry);
-	return vertical && horizontal ? 'crossing' : horizontal ? 'horizontal' : 'vertical';
+// Which sector-facing borders a highway room walls off, read from its authored geometry: the room
+// rides the square ring of each center in `meta.centers`, and the axis with the greater coordinate
+// delta to that center is the edge it sits on — bounded east+west on a vertical edge, top+bottom on
+// a horizontal one, and only in the diagonal corners where the deltas tie. The comparison carries no
+// ring radius, so authored mini/mega-sector rings orient the same way vanilla's ±5 rings do. A
+// highway belonging to no ring has no sector-facing border and keeps just the shallow corner masses.
+function highwayOrientation(roomName: string, centers: readonly string[]): HighwayOrientation {
+	const center = centers[0];
+	if (center === undefined) {
+		return 'crossing';
+	}
+	const here = parseSignedRoomName(roomName);
+	const there = parseSignedRoomName(center);
+	const dx = Math.abs(here.rx - there.rx);
+	const dy = Math.abs(here.ry - there.ry);
+	return dx === dy ? 'crossing' : dx > dy ? 'vertical' : 'horizontal';
 }
 
 // Highway-room terrain: an open travel lane flanked by the surrounding sector blocks intruding from the
@@ -899,8 +901,8 @@ function placeObjects(
 	room['#flushObjects'](null);
 }
 
-// Builds a room's terrain and objects entirely in memory; performs no storage I/O. `lookupTerrain`
-// resolves an already-built neighbor's terrain so shared exits line up.
+// Builds a room's terrain, objects, and authored geometry (`meta`) entirely in memory; performs no
+// storage I/O. `lookupTerrain` resolves an already-built neighbor's terrain so shared exits line up.
 function buildRoom(
 	roomName: string,
 	options: GenerateRoomOptions | undefined,
@@ -949,8 +951,17 @@ function buildRoom(
 	const mineralType: ResourceType | false = options?.mineral ??
 		mineralPool[Math.floor(Math.random() * mineralPool.length)]!;
 
+	// The room's authored geometry: the template classification with any authored overrides applied.
+	// This is what the caller stamps into the World `meta`, and it is also the generation input — a
+	// highway's wall-mass orientation reads the same ring memberships the room will carry.
+	const meta: RoomMeta = {
+		...computeRoomMeta(roomName),
+		...options?.roomType !== undefined && { roomType: options.roomType },
+		...options?.centers !== undefined && { centers: options.centers },
+	};
+
 	const grid = options?.corridor
-		? genHighwayTerrain(exits, rx, ry, highwayOrientation(roomName), swampType)
+		? genHighwayTerrain(exits, rx, ry, highwayOrientation(roomName, meta.centers), swampType)
 		: genTerrain(exits, {
 			wallType,
 			swampType,
@@ -976,7 +987,7 @@ function buildRoom(
 	placeObjects(room, grid, roomName, mineralType, hasExtractor, sourceEnergyCapacity);
 	flushUsers(room);
 
-	return { room, terrain };
+	return { room, terrain, meta };
 }
 
 // A freshly-created shard has no world terrain blob; the strict (redis) provider then throws
@@ -1016,8 +1027,7 @@ export async function generateRoom(
 	}
 
 	const terrainMap = new Map(world.terrain);
-	const { room, terrain } = buildRoom(roomName, options, neighborName => terrainMap.get(neighborName)?.info);
-	const meta: RoomMeta = { ...computeRoomMeta(roomName), ...options?.roomType !== undefined && { roomType: options.roomType } };
+	const { room, terrain, meta } = buildRoom(roomName, options, neighborName => terrainMap.get(neighborName)?.info);
 	terrainMap.set(roomName, { info: { exits: packExits(terrain), terrain }, meta });
 	await flushRooms(shard, terrainMap, [ room ]);
 
