@@ -32,8 +32,11 @@ export class Order extends withOverlay(BufferObject, shape) {
 	@enumerable get price() { return this['#price'] / 1000; }
 }
 
-const { read, version, write } = makeReaderAndWriter(format);
+const { offsetOf, read, version, write } = makeReaderAndWriter(format);
 export { read, write };
+// `amount` is recomputed nearly every tick, so the maintenance pass patches it in place through
+// `UpdateSchemaBlob` instead of rewriting the blob.
+export const offsetOfAmount = offsetOf('MarketOrder', 'amount');
 export const orderSchemaVersion = version;
 
 export class Orders {

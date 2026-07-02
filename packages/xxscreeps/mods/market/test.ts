@@ -417,6 +417,26 @@ describe('Market orders', () => {
 		assert.strictEqual(spy.count, baseline);
 	}));
 
+	test('runOrderMaintenance patches an amount-only change in place', () => orderSim(async ({ shard }) => {
+		// A buy order's advertised volume tracks the owner's balance, so draining credits changes
+		// `amount` while the order stays active.
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 100_000);
+		assert.ok(await createOrder(shard, '100', 10, {
+			type: C.ORDER_BUY, resourceType: C.RESOURCE_ENERGY, price: 500, totalAmount: 100, roomName: 'W1N1',
+		}));
+		// Activates at amount = min(floor(97_500 / 500) = 195, 100 remaining) = 100.
+		await runOrderMaintenance(shard, await loadOrders(shard));
+
+		const spy = spyOnOrderWrites(shard);
+		// Down to 37_500: affordable = 75 < 100 remaining, still active.
+		await shard.db.data.hincrBy(User.infoKey('100'), 'money', -60_000);
+		await runOrderMaintenance(shard, await loadOrders(shard));
+		const [ order ] = await loadOrders(shard);
+		assert.strictEqual(order!.active, true);
+		assert.strictEqual(order!.amount, 75);
+		assert.strictEqual(spy.count, 0, 'an amount-only change is patched in place, not rewritten');
+	}));
+
 	test('createOrder coerces fractional numerics to integers', () => orderSim(async ({ shard }) => {
 		await shard.db.data.hincrBy(User.infoKey('100'), 'money', 50_000);
 		// Under one unit truncates to zero and rejects without charging.

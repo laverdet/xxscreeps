@@ -4,12 +4,12 @@ import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
+import { UpdateSchemaBlob, loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { initializeView } from 'xxscreeps/schema/read.js';
 import { assign, getOrSet } from 'xxscreeps/utility/utility.js';
-import { Order, orderSchemaVersion, read as readOrder, write as writeOrder } from './order.js';
+import { Order, offsetOfAmount, orderSchemaVersion, read as readOrder, write as writeOrder } from './order.js';
 import { Transaction, upgrade, write } from './transaction.js';
 
 // A terminal transfer is normalized: stored once as an immutable schema blob at
@@ -267,10 +267,15 @@ export async function runOrderMaintenance(shard: Shard, orders: Order[]) {
 			amount = Math.min(affordable, order.remainingAmount, terminal?.store.getFreeCapacity() ?? Infinity);
 			active = myTerminal !== undefined && amount > 0;
 		}
-		if (order.active !== active || order.amount !== amount) {
+		if (order.active !== active) {
 			order.active = active;
 			order.amount = amount;
 			await saveOrder(shard, order);
+		} else if (order.amount !== amount) {
+			// Only the advertised volume moved — the common case as stock and credits fluctuate — so
+			// patch the field in place instead of rewriting the blob.
+			await shard.data.eval(UpdateSchemaBlob, [ orderBlobKey(order.id) ],
+				[ orderSchemaVersion, offsetOfAmount, 'int32', amount, 'set' ]);
 		}
 	}
 }
