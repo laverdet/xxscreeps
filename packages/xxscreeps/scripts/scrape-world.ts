@@ -23,6 +23,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room, flushUsers } from 'xxscreeps/game/room/room.js';
+import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
@@ -176,8 +177,8 @@ const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ r
 		}
 	}
 	return [ room as string, {
-		exits: packExits(writer),
-		terrain: writer,
+		info: { exits: packExits(writer), terrain: writer },
+		meta: computeRoomMeta(room as string),
 	} ];
 }));
 await data.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
@@ -285,7 +286,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'road': {
 				const road = new StructureRoad();
 				withStructure(object, road);
-				road['#terrain'] = roomsTerrain.get(road.pos.roomName)!.terrain.get(road.pos.x, road.pos.y);
+				road['#terrain'] = roomsTerrain.get(road.pos.roomName)!.info.terrain.get(road.pos.x, road.pos.y);
 				road['#nextDecayTime'] = object.nextDecayTime;
 				return road;
 			}

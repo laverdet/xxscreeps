@@ -9,6 +9,7 @@ const specifier = process.argv[1];
 const commands = {
 	import: './dist/scripts/scrape-world.js',
 	manage: './dist/scripts/manage.js',
+	'generate-room': './dist/scripts/generate-room.js',
 	start: './dist/engine/service/launcher.js',
 	main: './dist/engine/service/main.js',
 	backend: './dist/backend/server.js',

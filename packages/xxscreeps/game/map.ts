@@ -1,17 +1,20 @@
 import type { ExitType } from './room/find.js';
 import type { Room } from './room/index.js';
+import type { RoomType } from './room/sector.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import type { Adapter } from 'xxscreeps/utility/astar.js';
 
 import { build } from 'xxscreeps/engine/schema/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
-import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
+import { makeRoomName, makeRoomNameFromId, parseRoomName, parseRoomNameToId } from 'xxscreeps/game/room/name.js';
+import { compose, declare, enumerated, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 import * as C from './constants/index.js';
 import { getDirection, getOffsetsFromDirection } from './direction.js';
 import { RoomPosition } from './position.js';
+import { computeRoomMeta } from './room/sector.js';
 import * as Terrain from './terrain.js';
 
 // Schema
@@ -19,13 +22,33 @@ const roomTerrain = () => struct({
 	exits: 'uint8',
 	terrain: Terrain.format,
 });
+// The sector centers a room rings, stored as packed room ids (`uint16`) rather than name strings to
+// keep the full-shard terrain blob compact; composed to/from names so callers deal in room names.
+const sectorCenters = () => compose(vector('uint16'), {
+	compose: (ids: number[]) => ids.map(makeRoomNameFromId),
+	decompose: (names: string[]) => names.map(parseRoomNameToId),
+});
+// Authored geometry, one record per room. `roomType` reserves enum index 0 for `undefined`, so a
+// room an authoring path leaves unstamped (or a hand-built world) reads back as unauthored and
+// `GameMap` recomputes it from the template instead of reporting it as `normal`.
+const roomMeta = () => struct({
+	roomType: enumerated(undefined, 'normal', 'highway', 'sourceKeeper', 'center'),
+	centers: sectorCenters,
+});
+
+interface RoomEntry {
+	info: TypeOf<typeof roomTerrain>;
+	meta: TypeOf<typeof roomMeta>;
+}
+
 export const schema = build(declare('World', compose(vector(struct({
 	name: 'string',
 	info: roomTerrain,
+	meta: roomMeta,
 })), {
-	compose: world => new Map(world.map(room => [ room.name, room.info ])),
-	decompose: (world: Map<string, TypeOf<typeof roomTerrain>>) => {
-		const vector = [ ...Fn.map(world.entries(), ([ name, info ]) => ({ name, info })) ];
+	compose: world => new Map(world.map(room => [ room.name, { info: room.info, meta: room.meta } ])),
+	decompose: (world: Map<string, RoomEntry>) => {
+		const vector = [ ...Fn.map(world.entries(), ([ name, { info, meta } ]) => ({ name, info, meta })) ];
 		vector.sort((left, right) => primitiveComparator(left.name, right.name));
 		return vector;
 	},
@@ -60,6 +83,8 @@ export class GameMap {
 	readonly #top;
 	readonly #height;
 	readonly #width;
+	// center room -> its highway ring members; built from `centers` on first `getSectorMembers`.
+	#sectorMembersIndex: Map<string, string[]> | undefined;
 
 	constructor(terrain: TerrainByRoom, accessibleRooms?: ReadonlySet<string>) {
 		this.#terrain = terrain;
@@ -86,17 +111,32 @@ export class GameMap {
 		return makeRoomName(this.#left + Math.floor(this.#width / 2), this.#top + Math.floor(this.#height / 2));
 	}
 
+	/** The room's classification in the sector template. */
+	getRoomType(roomName: string): RoomType {
+		return this.#storedMeta(roomName)?.roomType ?? computeRoomMeta(roomName).roomType;
+	}
+
+	/** The sector centers whose highway ring this room sits on — none (interior/center/keeper), one or two (edge), or four (crossing). */
+	getSectorCenters(roomName: string): string[] {
+		return this.#storedMeta(roomName)?.centers ?? computeRoomMeta(roomName).centers;
+	}
+
+	/** The rooms making up a sector center's highway ring, limited to those present in the world. */
+	getSectorMembers(centralRoom: string): string[] {
+		return (this.#sectorMembersIndex ??= this.#buildSectorMembersIndex()).get(centralRoom) ?? [];
+	}
+
 	/**
 	 * List all exits available from the room with the given name.
 	 * @param roomName The room name.
 	 */
 	describeExits(roomName: string): ExitsDescriptor | null {
-		const info = this.#terrain.get(roomName);
-		if (info) {
+		const entry = this.#terrain.get(roomName);
+		if (entry) {
 			const room = parseRoomName(roomName);
 			return Fn.pipe(
 				[ C.TOP, C.RIGHT, C.BOTTOM, C.LEFT ],
-				$$ => Fn.reject($$, direction => (info.exits & (2 ** ((direction - 1) >>> 1))) === 0),
+				$$ => Fn.reject($$, direction => (entry.info.exits & (2 ** ((direction - 1) >>> 1))) === 0),
 				$$ => Fn.map($$, direction => {
 					const offsets = getOffsetsFromDirection(direction);
 					return [ direction, makeRoomName(room.rx + offsets.dx, room.ry + offsets.dy) ] as const;
@@ -258,7 +298,7 @@ export class GameMap {
 	getRoomTerrain(roomName: string): Terrain.Terrain;
 
 	getRoomTerrain(roomName: string, graceful?: boolean) {
-		const terrain = this.#terrain.get(roomName)?.terrain;
+		const terrain = this.#terrain.get(roomName)?.info.terrain;
 		if (terrain) {
 			return terrain;
 		} else if (!graceful) {
@@ -273,9 +313,9 @@ export class GameMap {
 	 */
 	getTerrainAt(...args: [ position: RoomPosition ] | [ x: number, y: number, roomName: string ]) {
 		const pos = args.length === 1 ? args[0] : new RoomPosition(args[0], args[1], args[2]);
-		const info = this.#terrain.get(pos.roomName);
-		if (info) {
-			return Terrain.terrainMaskToString[info.terrain.get(pos.x, pos.y)];
+		const entry = this.#terrain.get(pos.roomName);
+		if (entry) {
+			return Terrain.terrainMaskToString[entry.info.terrain.get(pos.x, pos.y)];
 		}
 	}
 
@@ -293,6 +333,24 @@ export class GameMap {
 	 */
 	isRoomAvailable(roomName: string) {
 		return this.#accessibleRooms.has(roomName);
+	}
+
+	// The room's stored geometry, or `undefined` when this world has none for it — a room outside the
+	// loaded terrain, or one an authoring path left unstamped (its `roomType` reads back `undefined`).
+	// The accessors fall back to `computeRoomMeta` for that case.
+	#storedMeta(roomName: string) {
+		const meta = this.#terrain.get(roomName)?.meta;
+		return meta?.roomType === undefined ? undefined : meta;
+	}
+
+	#buildSectorMembersIndex(): Map<string, string[]> {
+		const members = new Map<string, string[]>();
+		for (const roomName of this.#terrain.keys()) {
+			for (const center of this.getSectorCenters(roomName)) {
+				getOrSet(members, center, () => []).push(roomName);
+			}
+		}
+		return members;
 	}
 }
 
@@ -316,7 +374,7 @@ export class World {
 	 * Returns an iterator of all rooms and terrain.
 	 */
 	entries(): Iterable<[ string, Terrain.Terrain ]> {
-		return Fn.map(this.terrain, ([ roomName, info ]) => [ roomName, info.terrain ]);
+		return Fn.map(this.terrain, ([ roomName, entry ]) => [ roomName, entry.info.terrain ]);
 	}
 }
 
