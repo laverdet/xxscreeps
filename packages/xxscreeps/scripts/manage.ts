@@ -35,6 +35,7 @@ import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/memory/
 import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { OwnedStructure } from 'xxscreeps/mods/structure/structure.js';
+import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 
 import 'xxscreeps:mods/game';
 
@@ -43,6 +44,30 @@ await using shard = await Shard.connect(db, config.shards[0]!.name);
 
 const out = (line: string) => process.stdout.write(`${line}\n`);
 const save = () => Promise.all([ db.save(), shard.save() ]);
+
+// The paused main loop honors one `pausedTick` per tick boundary and discards any that land while
+// a tick is in flight, so stepping publishes them one at a time, each gated on the previous tick
+// reaching the shard channel. The gate times out instead of hanging when no tick lands.
+async function pauseTick(count: number) {
+	const serviceChannel = getServiceChannel(shard);
+	const target = shard.time + count;
+	do {
+		const nextTick = Promise.withResolvers<number | undefined>();
+		using cleanup = new DisposableStack();
+		cleanup.defer(shard.channel.listen(message => {
+			if (message.type === 'tick') {
+				nextTick.resolve(message.time);
+			}
+		}));
+		cleanup.use(acquireTimeout(2000, () => nextTick.resolve(undefined)));
+		await serviceChannel.publish({ type: 'pausedTick' });
+		const time = await nextTick.promise;
+		if (time === undefined) {
+			throw new Error(`No tick within 2s (at tick ${shard.time}); the server may be stopped or busy`);
+		}
+		out(`Tick ${time}.`);
+	} while (shard.time < target);
+}
 
 // Accepts either a raw user id or a username.
 async function resolveUserId(who: string) {
@@ -318,7 +343,7 @@ async function botSpawn(userId: string, roomName: string, coords?: string) {
 function usage(): never {
 	process.stderr.write(`Usage:
 	game pause
-	game pause-tick
+	game pause-tick [count]
 	game unpause
   user list
   user show     <name|id>
@@ -338,7 +363,12 @@ const [ noun, verb, ...rest ] = process.argv.slice(2);
 try {
 	switch (`${noun} ${verb}`) {
 		case 'game pause': await getServiceChannel(shard).publish({ type: 'pause' }); break;
-		case 'game pause-tick': await getServiceChannel(shard).publish({ type: 'pausedTick' }); break;
+		case 'game pause-tick': {
+			const count = rest[0] === undefined ? 1 : Number(rest[0]);
+			if (!Number.isInteger(count) || count < 1) usage();
+			await pauseTick(count);
+			break;
+		}
 		case 'game unpause': await getServiceChannel(shard).publish({ type: 'unpause' }); break;
 		case 'user list': await userList(); break;
 		case 'user show': if (rest[0] === undefined) usage(); await userShow(rest[0]); break;
