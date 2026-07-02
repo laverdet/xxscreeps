@@ -17,10 +17,11 @@ export class heuristic_t {
 				};
 		};
 
-		constexpr auto reset(std::vector<goal_t> goals, bool flee) -> void {
-			this->goals_ = std::move(goals);
+		constexpr heuristic_t(std::vector<goal_t> goals, bool flee) :
+				goals_{std::move(goals)} {
 			if (goals_.size() == 1) {
 				one_goal_ = goals_[ 0 ];
+				goals_.clear();
 				callback_ = flee ? &heuristic_t::flee_one : &heuristic_t::forward_one;
 			} else {
 				callback_ = flee ? &heuristic_t::flee_n : &heuristic_t::forward_n;

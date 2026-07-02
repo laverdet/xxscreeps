@@ -91,6 +91,7 @@ target_link_libraries(${pathfinder} PRIVATE ${auto_js} ${v8_js} nodejs utility_j
 # sources
 target_sources(${pathfinder}
 	PUBLIC FILE_SET CXX_MODULES FILES
+		src/astar.cc
 		src/heap.cc
 		src/heuristic.cc
 		src/jps.cc
@@ -147,6 +148,7 @@ target_link_libraries(${pathfinder_iv} PRIVATE ${auto_js} ${napi_js} isolated_vm
 
 target_sources(${pathfinder_iv}
 	PUBLIC FILE_SET CXX_MODULES FILES
+		src/astar.cc
 		src/heap.cc
 		src/heuristic.cc
 		src/jps.cc
