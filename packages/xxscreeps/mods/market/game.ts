@@ -1,6 +1,7 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { Market } from './market.js';
+import { Orders } from './order.js';
 import * as Terminal from './terminal.js';
 import { Transactions } from './transaction.js';
 
@@ -43,5 +44,9 @@ hooks.register('gameInitializer', (game, data) => {
 	if (data?.transactions) {
 		transactions = new Transactions(data.transactions);
 	}
-	game.market = new Market(game, transactions);
+	game.market = new Market(
+		game,
+		transactions,
+		data?.orders && new Orders(data.orders),
+		data?.money);
 });

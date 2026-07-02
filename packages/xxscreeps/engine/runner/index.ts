@@ -2,6 +2,7 @@ import type { MessageFor } from 'xxscreeps/engine/db/channel.js';
 import type { CodeBlobs } from 'xxscreeps/engine/db/user/code-schema.js';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/index.js';
 import type { RunnerIntent, getRunnerUserChannel } from 'xxscreeps/engine/runner/model.js';
+import type { NamedIntentPayload } from 'xxscreeps/game/intents.js';
 
 export { hooks } from './symbols.js';
 
@@ -39,6 +40,7 @@ export interface TickResult {
 		};
 	}[];
 	intentPayloads: Record<string, RoomIntentPayload>;
+	namedIntents?: NamedIntentPayload;
 	usage: TickUsageResult;
 }
 
