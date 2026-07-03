@@ -231,7 +231,8 @@ export interface Config {
 	runner?: RunnerConfig;
 
 	/**
-	 * Where to save descriptions of the binary format used to write game data.
+	 * Directory of schema archives written by previous versions of the server. These are imported
+	 * into the database when connecting, after which the directory is no longer needed.
 	 * @default ./screeps/archive
 	 */
 	schemaArchive?: string | undefined;

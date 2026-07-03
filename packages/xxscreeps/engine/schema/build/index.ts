@@ -1,11 +1,14 @@
 import type { KeyValProvider } from 'xxscreeps/engine/db/storage/provider.js';
 import type { Package } from 'xxscreeps/schema/build.js';
 import type { BufferView, Format } from 'xxscreeps/schema/index.js';
+import * as fs from 'node:fs';
+import { config, configPath } from 'xxscreeps/config/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { restoreLayout } from 'xxscreeps/schema/archive.js';
 import { build as buildSchema } from 'xxscreeps/schema/build.js';
 import { Builder } from 'xxscreeps/schema/index.js';
 import { initializeView, makeViewReader } from 'xxscreeps/schema/read.js';
+import { runOnce } from 'xxscreeps/utility/memoize.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 const archivedSchemas = new Map<string, string>();
@@ -19,6 +22,36 @@ function archiveId(name: string, version: number | string) {
 function schemaKey(name: string) {
 	return `schema/${name.toLowerCase()}`;
 }
+
+/**
+ * Reads schema archives written to `config.schemaArchive` by previous versions of the server,
+ * keyed by lower-cased package name and version. These are seeded into the database by
+ * `initializeSchemaArchive` so existing deployments keep their upgrade history without carrying
+ * the archive directory around.
+ */
+const loadLegacySchemas = runOnce(() => {
+	const legacySchemas = new Map<string, Map<string, string>>();
+	if (config.schemaArchive) {
+		const archivePath = new URL(`${config.schemaArchive}/`, configPath);
+		const files = function() {
+			try {
+				return fs.readdirSync(archivePath);
+			} catch {
+				return [];
+			}
+		}();
+		for (const file of files) {
+			const match = /^(?<name>.+)-(?<version>[0-9a-f]{8})\.js$/.exec(file);
+			if (match) {
+				// File names encode the version as little-endian hex
+				const version = parseInt(match.groups!.version!.match(/[0-9a-f]{2}/g)!.reverse().join(''), 16);
+				const versions = getOrSet(legacySchemas, match.groups!.name!, () => new Map<string, string>());
+				versions.set(`${version}`, fs.readFileSync(new URL(file, archivePath), 'utf8'));
+			}
+		}
+	}
+	return legacySchemas;
+});
 
 /**
  * Builds a schema package from a format and retains the result which can be used later within the
@@ -43,6 +76,16 @@ export async function initializeSchemaArchive(keyval: KeyValProvider) {
 		const archived = await keyval.hGetAll(key);
 		for (const [ version, archive ] of Object.entries(archived)) {
 			archivedSchemas.set(archiveId(info.name, version), archive);
+		}
+		// Seed archives from the legacy `schemaArchive` directory
+		const legacy = loadLegacySchemas().get(info.name.toLowerCase());
+		if (legacy) {
+			await Promise.all(Fn.map(legacy, async ([ version, archive ]) => {
+				if (!(version in archived)) {
+					archivedSchemas.set(archiveId(info.name, version), archive);
+					await keyval.hSet(key, version, archive, { if: 'NX' });
+				}
+			}));
 		}
 		if (info.archive !== '?' && !(info.version in archived)) {
 			await keyval.hSet(key, `${info.version}`, info.archive, { if: 'NX' });
