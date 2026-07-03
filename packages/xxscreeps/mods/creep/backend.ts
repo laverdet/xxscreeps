@@ -1,6 +1,5 @@
 import { bindMapRenderer, bindRenderer } from 'xxscreeps/backend/index.js';
 import { renderActionLog } from 'xxscreeps/backend/sockets/render.js';
-import { me } from 'xxscreeps/game/index.js';
 import { renderStore } from 'xxscreeps/mods/resource/backend.js';
 import { Creep } from './creep.js';
 import { Tombstone } from './tombstone.js';
@@ -38,9 +37,6 @@ bindRenderer(Creep, (creep, next, previousTime) => {
 
 bindRenderer(Tombstone, (tombstone, next) => {
 	const creep = tombstone['#creep'];
-	const saying = creep.saying;
-	const creepSaying = saying && (saying.isPublic || creep.user === me)
-		? saying.message : undefined;
 	return {
 		...next(),
 		...renderStore(tombstone.store),
@@ -48,7 +44,7 @@ bindRenderer(Tombstone, (tombstone, next) => {
 		creepId: creep.id,
 		creepName: creep.name,
 		creepTicksToLive: creep.ticksToLive,
-		creepSaying,
+		creepSaying: creep.saying,
 		deathTime: tombstone.deathTime,
 		decayTime: tombstone['#decayTime'],
 		user: creep.user,
