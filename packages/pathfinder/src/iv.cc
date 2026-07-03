@@ -85,12 +85,12 @@ pathfinder_stack_type<Callback> pathfinders;
 template thread_local pathfinder_stack_type<napi_room_callback> pathfinders<napi_room_callback>;
 template thread_local pathfinder_stack_type<isolated_vm_room_callback> pathfinders<isolated_vm_room_callback>;
 
-template <class Lock, class Handle, class Callback>
+template <class Lock, template <class> class LocalOf, template <class> class ValueOf, class Callback>
 auto search(
 	Lock lock,
 	world_position_t origin,
-	std::vector<heuristic_t::goal_t> goals,
-	std::optional<js::forward<Handle>> room_callback,
+	ValueOf<js::list_tag> goals,
+	std::optional<js::forward<LocalOf<js::function_tag>>> room_callback,
 	// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 	int plain_cost,
 	int swamp_cost,
@@ -100,6 +100,7 @@ auto search(
 	bool flee,
 	double heuristic_weight
 ) -> std::optional<result> {
+	auto heuristic = heuristic_t::make_from_runtime(lock, goals, flee);
 	return pathfinders<Callback>(util::overloaded{
 		[]() -> std::optional<result> { throw js::runtime_error{u"too many concurrent pathfinder searches"}; },
 		[ & ](auto& pf) -> std::optional<result> {
@@ -107,7 +108,7 @@ auto search(
 			return pf.search(
 				Callback{lock, *room_callback.value_or({})},
 				origin,
-				std::move(goals),
+				heuristic,
 				{
 					.heuristic_weight = heuristic_weight,
 					.plain_cost = plain_cost,
@@ -115,7 +116,6 @@ auto search(
 					.max_cost = max_cost,
 					.max_ops = max_ops,
 					.max_rooms = max_rooms,
-					.flee = flee,
 				}
 			);
 		}
@@ -126,10 +126,11 @@ auto search(
 js::napi::napi_js_module module_namespace{
 	std::type_identity<environment>{},
 	[](auto& /*env*/) -> auto {
+		constexpr auto search = ::search<environment&, napi::local_of, napi::value_of, napi_room_callback>;
 		return std::tuple{
 			std::in_place,
 			std::pair{util::cw<"loadTerrain">, js::free_function{load_terrain}},
-			std::pair{util::cw<"search">, js::free_function{search<environment&, napi::local_of<js::function_tag>, napi_room_callback>}},
+			std::pair{util::cw<"search">, js::free_function{search}},
 			std::pair{util::cw<"version">, 12},
 		};
 	}
@@ -139,9 +140,10 @@ js::napi::napi_js_module module_namespace{
 isolated_vm::addon sandbox_namespace{
 	std::type_identity<std::monostate>{},
 	[]() -> auto {
+		constexpr auto search = ::search<const isolated_vm::runtime_lock&, isolated_vm::local_of, isolated_vm::value_of, isolated_vm_room_callback>;
 		return std::tuple{
 			std::in_place,
-			std::pair{util::cw<"search">, js::free_function{search<const isolated_vm::runtime_lock&, isolated_vm::local_of<js::function_tag>, isolated_vm_room_callback>}},
+			std::pair{util::cw<"search">, js::free_function{search}},
 			std::pair{util::cw<"version">, 12},
 		};
 	}

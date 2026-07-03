@@ -131,7 +131,7 @@ auto node_delegate<RoomCapacity>::push_node(indexed_position_t node, pos_index_t
 
 // Perform the search~
 template <auto Check, class Callback, std::size_t RoomCapacity>
-auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, world_position_t origin, goals_type goals, const options& options) -> std::optional<result> {
+auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, world_position_t origin, heuristic_t heuristic, const options& options) -> std::optional<result> {
 
 	// Clean up from previous iteration
 	instance_state_.room_table.clear();
@@ -142,7 +142,7 @@ auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, w
 	auto blocked_rooms = blocked_rooms_type{};
 	auto delegate = composite_delegate{
 		node_delegate{
-			.heuristic = {std::move(goals), options.flee},
+			.heuristic = std::move(heuristic),
 			.heuristic_weight = std::clamp(options.heuristic_weight, 1., 9.),
 			.state = std::ref(instance_state_),
 		},

@@ -57,7 +57,7 @@ thread_local pathfinder_stack_type pathfinders;
 auto search(
 	iv8::context_lock_witness lock,
 	world_position_t origin,
-	std::vector<heuristic_t::goal_t> goals,
+	iv8::value_of<js::list_tag> goals,
 	std::optional<js::forward<v8::Local<iv8::Function>>> room_callback,
 	// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 	int plain_cost,
@@ -68,6 +68,7 @@ auto search(
 	bool flee,
 	double heuristic_weight
 ) -> std::optional<result> {
+	auto heuristic = heuristic_t::make_from_runtime(lock, goals, flee);
 	return pathfinders(
 		util::overloaded{
 			[]() -> std::optional<result> { throw js::runtime_error{u"too many concurrent pathfinder searches"}; },
@@ -76,7 +77,7 @@ auto search(
 				return pf.search(
 					room_callback_type{lock, *room_callback.value_or({})},
 					origin,
-					std::move(goals),
+					heuristic,
 					{
 						.heuristic_weight = heuristic_weight,
 						.plain_cost = plain_cost,
@@ -84,7 +85,6 @@ auto search(
 						.max_cost = max_cost,
 						.max_ops = max_ops,
 						.max_rooms = max_rooms,
-						.flee = flee,
 					}
 				);
 			},

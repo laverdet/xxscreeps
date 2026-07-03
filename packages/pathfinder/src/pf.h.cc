@@ -39,7 +39,6 @@ struct options {
 		int max_cost;
 		int max_ops;
 		int max_rooms;
-		bool flee;
 };
 
 // Params for `load_terrain`
@@ -165,7 +164,7 @@ struct node_delegate {
 export template <auto Check, class Callback, std::size_t RoomCapacity>
 class pathfinder {
 	public:
-		auto search(Callback room_callback, world_position_t origin, goals_type goals, const options& options) -> std::optional<result>;
+		auto search(Callback room_callback, world_position_t origin, heuristic_t heuristic, const options& options) -> std::optional<result>;
 
 	private:
 		instance_state<RoomCapacity> instance_state_;

@@ -17,25 +17,38 @@ export class heuristic_t {
 				};
 		};
 
-		constexpr heuristic_t(std::vector<goal_t> goals, bool flee) :
-				goals_{std::move(goals)} {
-			if (goals_.size() == 1) {
-				one_goal_ = goals_[ 0 ];
-				goals_.clear();
-				callback_ = flee ? &heuristic_t::flee_one : &heuristic_t::forward_one;
-			} else {
-				callback_ = flee ? &heuristic_t::flee_n : &heuristic_t::forward_n;
-			}
-		}
+		constexpr heuristic_t(goal_t goal, bool flee) :
+				callback_{flee ? &heuristic_t::flee_one : &heuristic_t::forward_one},
+				one_goal_{goal} {}
+
+		constexpr heuristic_t(std::span<const goal_t> goals, bool flee) :
+				callback_{flee ? &heuristic_t::flee_n : &heuristic_t::forward_n},
+				goals_{goals} {}
 
 		// Returns the minimum Chebyshev distance to a goal
-		constexpr auto operator()(world_position_t pos) const -> cost_t {
+		[[nodiscard]] constexpr auto operator()(world_position_t pos) const -> cost_t {
 			return (this->*callback_)(pos);
 		}
 
-		constexpr auto operator()(indexed_position_t pos) const -> cost_t {
+		[[nodiscard]] constexpr auto operator()(indexed_position_t pos) const -> cost_t {
 			// NOLINTNEXTLINE(cppcoreguidelines-slicing)
 			return (*this)(world_position_t{pos});
+		}
+
+		// Extract 1 or N goals from passed runtime array, avoiding `std::vector` allocation in the
+		// common 1 case.
+		template <class Lock, class Range>
+		static auto make_from_runtime(Lock& lock, Range goals, bool flee) -> heuristic_t {
+			heuristic_t::goal_t one_goal;
+			std::vector<heuristic_t::goal_t> n_goals;
+			if (goals.size() == 1) {
+				auto element = (*util::into_range(goals).begin()).second;
+				one_goal = js::transfer_out<heuristic_t::goal_t>(element, lock);
+				return {one_goal, flee};
+			} else {
+				n_goals = js::transfer_out<std::vector<heuristic_t::goal_t>>(goals, lock);
+				return {std::span{n_goals}, flee};
+			}
 		}
 
 	private:
@@ -47,8 +60,7 @@ export class heuristic_t {
 		}
 
 		[[nodiscard]] constexpr auto flee_one(world_position_t pos) const -> cost_t {
-			auto dist = pos.range_to(one_goal_.pos);
-			return dist < one_goal_.range ? one_goal_.range - dist : 0;
+			return std::max(one_goal_.range - pos.range_to(one_goal_.pos), 0);
 		}
 
 		[[nodiscard]] constexpr auto forward_n(world_position_t pos) const -> cost_t {
@@ -59,14 +71,13 @@ export class heuristic_t {
 		}
 
 		[[nodiscard]] constexpr auto forward_one(world_position_t pos) const -> cost_t {
-			auto dist = pos.range_to(one_goal_.pos);
-			return (dist > one_goal_.range) ? dist - one_goal_.range : 0;
+			return std::max(pos.range_to(one_goal_.pos) - one_goal_.range, 0);
 		}
 
 		using callback_type = auto (heuristic_t::*)(world_position_t) const -> cost_t;
 
 		callback_type callback_;
-		std::vector<goal_t> goals_;
+		std::span<const goal_t> goals_;
 		goal_t one_goal_;
 };
 
