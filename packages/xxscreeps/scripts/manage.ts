@@ -35,7 +35,6 @@ import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/memory/
 import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { OwnedStructure } from 'xxscreeps/mods/structure/structure.js';
-import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 
 import 'xxscreeps:mods/game';
 
@@ -45,28 +44,21 @@ await using shard = await Shard.connect(db, config.shards[0]!.name);
 const out = (line: string) => process.stdout.write(`${line}\n`);
 const save = () => Promise.all([ db.save(), shard.save() ]);
 
-// The paused main loop honors one `pausedTick` per tick boundary and discards any that land while
-// a tick is in flight, so stepping publishes them one at a time, each gated on the previous tick
-// reaching the shard channel. The gate times out instead of hanging when no tick lands.
 async function pauseTick(count: number) {
 	const serviceChannel = getServiceChannel(shard);
 	const target = shard.time + count;
-	do {
-		const nextTick = Promise.withResolvers<number | undefined>();
-		using cleanup = new DisposableStack();
-		cleanup.defer(shard.channel.listen(message => {
-			if (message.type === 'tick') {
-				nextTick.resolve(message.time);
+	const tick = () => serviceChannel.publish({ type: 'pausedTick' });
+	await tick();
+	for await (const message of shard.channel.iterable()) {
+		if (message.type === 'tick') {
+			const { time } = message;
+			out(`Tick ${time}.`);
+			if (time === target) {
+				break;
 			}
-		}));
-		cleanup.use(acquireTimeout(2000, () => nextTick.resolve(undefined)));
-		await serviceChannel.publish({ type: 'pausedTick' });
-		const time = await nextTick.promise;
-		if (time === undefined) {
-			throw new Error(`No tick within 2s (at tick ${shard.time}); the server may be stopped or busy`);
+			await tick();
 		}
-		out(`Tick ${time}.`);
-	} while (shard.time < target);
+	}
 }
 
 // Accepts either a raw user id or a username.
