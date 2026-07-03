@@ -146,7 +146,7 @@ auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, w
 	auto max_cost = std::clamp(options.max_cost, 1, std::numeric_limits<cost_t>::max());
 	auto ops_remaining = std::clamp(options.max_ops, 1, std::numeric_limits<int>::max());
 	auto min_node_h_cost = std::numeric_limits<cost_t>::max();
-	auto min_node_g_cost = std::numeric_limits<cost_t>::max();
+	auto min_node_g_cost = 0;
 	auto min_node = indexed_position_t{};
 
 	// Special case for searching to same node, otherwise it searches everywhere because origin node
