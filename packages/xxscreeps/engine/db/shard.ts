@@ -5,6 +5,7 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
+import { initializeSchemaArchive } from 'xxscreeps/engine/schema/build/index.js';
 import { World, upgradeTerrain } from 'xxscreeps/game/map.js';
 import { acquireWith } from 'xxscreeps/utility/async.js';
 import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
@@ -68,6 +69,7 @@ export class Shard extends AsyncDisposableResource {
 			connectToProvider(info.pubsub, 'pubsub'),
 			connectToProvider(info.scratch, 'keyval'),
 		);
+		await initializeSchemaArchive(data);
 		const channel = disposable.adopt(
 			await new Channel<Message>(pubsub, 'channel/game').subscribe(),
 			subscription => subscription.disconnect(),

@@ -1,24 +1,23 @@
+import type { KeyValProvider } from 'xxscreeps/engine/db/storage/provider.js';
 import type { Package } from 'xxscreeps/schema/build.js';
 import type { BufferView, Format } from 'xxscreeps/schema/index.js';
-import * as fsSync from 'node:fs';
-import * as fs from 'node:fs/promises';
-import { config, configPath } from 'xxscreeps/config/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { restoreLayout } from 'xxscreeps/schema/archive.js';
 import { build as buildSchema } from 'xxscreeps/schema/build.js';
 import { Builder } from 'xxscreeps/schema/index.js';
-import { archiveStruct } from 'xxscreeps/schema/kaitai.js';
 import { initializeView, makeViewReader } from 'xxscreeps/schema/read.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
-const archivePath = new URL(`${config.schemaArchive}/`, configPath);
-const archivedReaders = new Map<number, Promise<(view: BufferView) => unknown>>();
+const archivedSchemas = new Map<string, string>();
+const archivedReaders = new Map<string, (view: BufferView) => any>();
 const packages = new Map<string, Package>();
 
-function makeArchivePath(name: string, version: number, ext = 'js') {
-	const versionId = version.toString(16).padStart(8, '0').split(/(?<hex>[0-9a-f]{2})/).reverse().join('');
-	const pathFragment = `${name.toLowerCase()}-${versionId}`;
-	return new URL(`./${pathFragment}.${ext}`, archivePath);
+function archiveId(name: string, version: number | string) {
+	return `${name}#${version}`;
+}
+
+function schemaKey(name: string) {
+	return `schema/${name.toLowerCase()}`;
 }
 
 /**
@@ -27,19 +26,28 @@ function makeArchivePath(name: string, version: number, ext = 'js') {
  */
 export function build<Type extends Format>(format: Type, cache = new Map()) {
 	const result = buildSchema(format, cache);
-	const file = makeArchivePath(result.name, result.version);
-	fsSync.mkdirSync(archivePath, { recursive: true });
-	try {
-		fsSync.statSync(file);
-	} catch {
-		fsSync.writeFileSync(file, result.archive);
-		fsSync.writeFileSync(makeArchivePath(result.name, result.version, 'ksy'), archiveStruct(result.layout, result.version));
-	}
-	packages.set(result.name, {
-		...result,
-		archive: '?',
-	});
+	packages.set(result.name, result);
+	archivedSchemas.set(archiveId(result.name, result.version), result.archive);
 	return result;
+}
+
+/**
+ * Synchronizes schema archives with the given keyval provider. Archives of previous schema
+ * versions are loaded into memory for use by `makeUpgrader`, and the current version of each
+ * package is stored if it's not already known. This runs when connecting to a database or shard so
+ * that every persistent store carries the schemas needed to read its own blobs.
+ */
+export async function initializeSchemaArchive(keyval: KeyValProvider) {
+	await Promise.all(Fn.map(packages.values(), async info => {
+		const key = schemaKey(info.name);
+		const archived = await keyval.hGetAll(key);
+		for (const [ version, archive ] of Object.entries(archived)) {
+			archivedSchemas.set(archiveId(info.name, version), archive);
+		}
+		if (info.archive !== '?' && !(info.version in archived)) {
+			await keyval.hSet(key, `${info.version}`, info.archive, { if: 'NX' });
+		}
+	}));
 }
 
 /**
@@ -53,14 +61,11 @@ export function makeUpgrader(info: Package, write: (value: any) => Readonly<Uint
 		if (expectedVersion === version) {
 			return buffer;
 		} else {
-			const reader = await getOrSet(archivedReaders, version, async () => {
-				const archive = await async function() {
-					try {
-						return await fs.readFile(makeArchivePath(name, version), 'utf8');
-					} catch {
-						throw new Error(`No archived schema found for ${name} ${version}`);
-					}
-				}();
+			const reader = getOrSet(archivedReaders, archiveId(name, version), () => {
+				const archive = archivedSchemas.get(archiveId(name, version));
+				if (archive === undefined) {
+					throw new Error(`No archived schema found for ${name} ${version}`);
+				}
 				const layout = restoreLayout(archive, info.layout);
 				return makeViewReader({ layout, version }, new Builder({ materialize: true }));
 			});
