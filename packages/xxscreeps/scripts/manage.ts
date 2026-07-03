@@ -44,6 +44,23 @@ await using shard = await Shard.connect(db, config.shards[0]!.name);
 const out = (line: string) => process.stdout.write(`${line}\n`);
 const save = () => Promise.all([ db.save(), shard.save() ]);
 
+async function pauseTick(count: number) {
+	const serviceChannel = getServiceChannel(shard);
+	const target = shard.time + count;
+	const tick = () => serviceChannel.publish({ type: 'pausedTick' });
+	await tick();
+	for await (const message of shard.channel.iterable()) {
+		if (message.type === 'tick') {
+			const { time } = message;
+			out(`Tick ${time}.`);
+			if (time === target) {
+				break;
+			}
+			await tick();
+		}
+	}
+}
+
 // Accepts either a raw user id or a username.
 async function resolveUserId(who: string) {
 	if (await db.data.sIsMember('users', who)) {
@@ -318,7 +335,7 @@ async function botSpawn(userId: string, roomName: string, coords?: string) {
 function usage(): never {
 	process.stderr.write(`Usage:
 	game pause
-	game pause-tick
+	game pause-tick [count]
 	game unpause
   user list
   user show     <name|id>
@@ -338,7 +355,12 @@ const [ noun, verb, ...rest ] = process.argv.slice(2);
 try {
 	switch (`${noun} ${verb}`) {
 		case 'game pause': await getServiceChannel(shard).publish({ type: 'pause' }); break;
-		case 'game pause-tick': await getServiceChannel(shard).publish({ type: 'pausedTick' }); break;
+		case 'game pause-tick': {
+			const count = rest[0] === undefined ? 1 : Number(rest[0]);
+			if (!Number.isInteger(count) || count < 1) usage();
+			await pauseTick(count);
+			break;
+		}
 		case 'game unpause': await getServiceChannel(shard).publish({ type: 'unpause' }); break;
 		case 'user list': await userList(); break;
 		case 'user show': if (rest[0] === undefined) usage(); await userShow(rest[0]); break;
