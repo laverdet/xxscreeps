@@ -126,7 +126,7 @@ hooks.register('runnerConnector', player => {
 
 				// Resolve + persist the foreign-segment request, then re-subscribe.
 				async function() {
-					if (payload.foreignSegmentRequest) {
+					if (payload.foreignSegmentRequest !== undefined) {
 						activeForeignSegment = await saveActiveForeignSegment(shard, userId, activeForeignSegment, payload.foreignSegmentRequest);
 						await syncForeignSubscription();
 					}
