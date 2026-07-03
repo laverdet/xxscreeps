@@ -1,6 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { branchManifestKey, buffersKey, stringsKey } from './code.js';
+import { branchManifestKey, buffersKey, saveContent, stringsKey } from './code.js';
 
 const providerMembersKey = (provider: string) => `usersByProvider/${provider}`;
 const userProvidersKey = (userId: string) => `user/${userId}/provider`;
@@ -52,6 +52,8 @@ export async function create(db: Database, userId: string, username: string, pro
 		...Fn.map(allProviders, ({ provider, id }) =>
 			db.data.hSet(providerMembersKey(provider), id, userId)),
 	]);
+
+	await saveContent(db, userId, 'main', new Map([ [ 'main', 'module.exports.loop = function () {};' ] ]));
 }
 
 /**
