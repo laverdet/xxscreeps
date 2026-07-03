@@ -33,13 +33,13 @@ class environment
 class napi_room_callback {
 	public:
 		napi_room_callback() = default;
-		explicit napi_room_callback(napi::environment& env, napi::value_of<js::function_tag> maybe_room_callback) :
+		explicit napi_room_callback(napi::environment& env, napi::local_of<js::function_tag> maybe_room_callback) :
 				env_{&env},
 				maybe_room_callback{maybe_room_callback} {}
 
 		auto operator()(room_location_t room) -> room_callback_result_type {
 			if (maybe_room_callback) {
-				return maybe_room_callback.call<room_callback_result_type>(*env_, room);
+				return maybe_room_callback->call<room_callback_result_type>(*env_, room);
 			} else {
 				return std::monostate{};
 			}
@@ -47,20 +47,20 @@ class napi_room_callback {
 
 	private:
 		napi::environment* env_{};
-		napi::value_of<js::function_tag> maybe_room_callback;
+		napi::local_of<js::function_tag> maybe_room_callback;
 };
 
 // @isolated-vm/experimental callback type
 class isolated_vm_room_callback {
 	public:
 		isolated_vm_room_callback() = default;
-		explicit isolated_vm_room_callback(const isolated_vm::runtime_lock& lock, isolated_vm::value_of<js::function_tag> maybe_room_callback) :
+		explicit isolated_vm_room_callback(const isolated_vm::runtime_lock& lock, isolated_vm::local_of<js::function_tag> maybe_room_callback) :
 				lock_{&lock},
 				maybe_room_callback{maybe_room_callback} {}
 
 		auto operator()(room_location_t room) -> room_callback_result_type {
 			if (maybe_room_callback) {
-				return maybe_room_callback.call<room_callback_result_type>(*lock_, room);
+				return maybe_room_callback->call<room_callback_result_type>(*lock_, room);
 			} else {
 				return std::monostate{};
 			}
@@ -68,7 +68,7 @@ class isolated_vm_room_callback {
 
 	private:
 		const isolated_vm::runtime_lock* lock_{};
-		isolated_vm::value_of<js::function_tag> maybe_room_callback;
+		isolated_vm::local_of<js::function_tag> maybe_room_callback;
 };
 
 auto check_termination() -> void {}
@@ -129,7 +129,7 @@ js::napi::napi_js_module module_namespace{
 		return std::tuple{
 			std::in_place,
 			std::pair{util::cw<"loadTerrain">, js::free_function{load_terrain}},
-			std::pair{util::cw<"search">, js::free_function{search<environment&, napi::value_of<js::function_tag>, napi_room_callback>}},
+			std::pair{util::cw<"search">, js::free_function{search<environment&, napi::local_of<js::function_tag>, napi_room_callback>}},
 			std::pair{util::cw<"version">, 12},
 		};
 	}
@@ -141,7 +141,7 @@ isolated_vm::addon sandbox_namespace{
 	[]() -> auto {
 		return std::tuple{
 			std::in_place,
-			std::pair{util::cw<"search">, js::free_function{search<const isolated_vm::runtime_lock&, isolated_vm::value_of<js::function_tag>, isolated_vm_room_callback>}},
+			std::pair{util::cw<"search">, js::free_function{search<const isolated_vm::runtime_lock&, isolated_vm::local_of<js::function_tag>, isolated_vm_room_callback>}},
 			std::pair{util::cw<"version">, 12},
 		};
 	}

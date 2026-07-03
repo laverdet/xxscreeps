@@ -2,7 +2,7 @@ import type { MaybeCompletionOf, Reference } from '@isolated-vm/experimental';
 import type { Sandbox, TickCompletion } from 'xxscreeps/driver/sandbox/index.js';
 import type { InitializationPayload, TickPayload } from 'xxscreeps/engine/runner/index.js';
 import * as fs from 'node:fs/promises';
-import { Agent, Module, Realm, expectComplete } from '@isolated-vm/experimental';
+import { Agent, Module, Realm, expect, expectComplete } from '@isolated-vm/experimental';
 import { makeCachedLoader, makeLinker } from '@isolated-vm/experimental/utility/linker';
 import { resolve } from '@loaderkit/resolve/esm';
 import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
@@ -54,7 +54,7 @@ const makeLoader = function() {
 	return (agent: Agent, realm: Realm) =>
 		async (url: string) => {
 			if (url === 'xxscreeps:pathfinder') {
-				return pf.module.instantiate(realm);
+				return expect(await pf.module.instantiate(realm));
 			} else {
 				const cached = cache.get(url);
 				if (cached) {
@@ -99,7 +99,7 @@ export class ExperimentalSandbox implements Sandbox {
 	static async create(data: InitializationPayload) {
 		// Load & link game runtime modules
 		const agent = await Agent.create();
-		const realm = await agent.createRealm();
+		const realm = expect(await agent.createRealm());
 		const loader = makeCachedLoader(makeLoader(agent, realm));
 		const linker = makeLinker(resolver, loader);
 		const module = await loader(await resolver('xxscreeps/driver/sandbox/experimental/runtime.js')) as Module;
@@ -122,7 +122,7 @@ export class ExperimentalSandbox implements Sandbox {
 
 	async dispose() {
 		try {
-			await this.isolate.dispose();
+			await this.isolate.disposeAsync();
 		} catch {}
 	}
 

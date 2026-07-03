@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as util from 'node:util';
-import { Agent, expectComplete } from '@isolated-vm/experimental';
+import { Agent, expect, expectComplete } from '@isolated-vm/experimental';
 import { makeCachedLoader, makeLinker } from '@isolated-vm/experimental/utility/linker';
 import { resolve } from '@loaderkit/resolve/esm';
 import { defaultAsyncFileSystem } from '@loaderkit/resolve/fs';
@@ -131,9 +131,9 @@ if (process.argv.includes('--with-sandbox')) {
 	// Initialize a minimal sandbox for pathfinding
 	const pf = await import('@xxscreeps/pathfinder/iv');
 	await using agent = await Agent.create();
-	const realm = await agent.createRealm();
+	const realm = expect(await agent.createRealm());
 	const hash = crypto.createHash('sha256');
-	const hook = await realm.createCapability(
+	const hook = expect(await realm.createCapability(
 		() => ({
 			update: result => {
 				const string = String(result);
@@ -143,7 +143,7 @@ if (process.argv.includes('--with-sandbox')) {
 				}
 			},
 		}),
-		{ origin: 'xxscreeps:pathfinder' });
+		{ origin: 'xxscreeps:pathfinder' }));
 	const resolver = async (specifier: string, referrer?: string) => {
 		switch (specifier) {
 			case '#iv': return 'xxscreeps:pathfinder';
@@ -166,7 +166,7 @@ if (process.argv.includes('--with-sandbox')) {
 	const loader = async (url: string) => {
 		switch (url) {
 			case 'xxscreeps:hook': return hook;
-			case 'xxscreeps:pathfinder': return pf.module.instantiate(realm);
+			case 'xxscreeps:pathfinder': return expect(await pf.module.instantiate(realm));
 			default: {
 				const sourceText = await async function() {
 					if (url.startsWith('xxscreeps:')) {

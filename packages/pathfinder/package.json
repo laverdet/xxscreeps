@@ -32,12 +32,12 @@
     ]
   },
   "dependencies": {
-    "@isolated-vm/experimental": "0.0.6"
+    "@isolated-vm/experimental": "^0.0.10"
   },
   "devDependencies": {
-    "@auto_js/js": "0.0.6",
-    "@auto_js/napi": "0.0.6",
-    "@auto_js/v8": "0.0.6",
+    "@auto_js/js": "^0.0.9",
+    "@auto_js/napi": "^0.0.9",
+    "@auto_js/v8": "^0.0.9",
     "@napi-rs/cli": "^3.6.2",
     "@types/node": "~24.12.2",
     "isolated-vm": "6.0.2",

@@ -86,18 +86,18 @@ importers:
   packages/pathfinder:
     dependencies:
       '@isolated-vm/experimental':
-        specifier: 0.0.6
-        version: 0.0.6
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@auto_js/js':
-        specifier: 0.0.6
-        version: 0.0.6
+        specifier: ^0.0.9
+        version: 0.0.9
       '@auto_js/napi':
-        specifier: 0.0.6
-        version: 0.0.6
+        specifier: ^0.0.9
+        version: 0.0.9
       '@auto_js/v8':
-        specifier: 0.0.6
-        version: 0.0.6
+        specifier: ^0.0.9
+        version: 0.0.9
       '@napi-rs/cli':
         specifier: ^3.6.2
         version: 3.6.2(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@24.12.2)
@@ -136,8 +136,8 @@ importers:
         specifier: ^7.29.7
         version: 7.29.7
       '@isolated-vm/experimental':
-        specifier: ^0.0.6
-        version: 0.0.6
+        specifier: ^0.0.10
+        version: 0.0.10
       '@loaderkit/resolve':
         specifier: ^1.0.6
         version: 1.0.6
@@ -304,24 +304,24 @@ importers:
 
 packages:
 
-  '@auto_js/js@0.0.6':
-    resolution: {integrity: sha512-vJg1pHTh1GrdoSO81O5lYhbdmmxFGsPMT+mKk+er6oiBvu32xc4VJ8oS/qtTltB+kPX0DP1stHG76SHzDhkx5g==}
+  '@auto_js/js@0.0.9':
+    resolution: {integrity: sha512-tzhUi9QgO3hoIrhL/5N9eFccygy3AQzpSZqEVor6sUdDJHnlZ1NEjfBI3yhrK6RGYJ3GMeVMhQtqEI2NniLYYg==}
     hasBin: true
 
-  '@auto_js/napi@0.0.6':
-    resolution: {integrity: sha512-43ApNP1aZpCxgkfuFb+VE2AiBqKInHA6kM9yQtGmBGCIPV/pbnon2OEjvRAHxpSYohthyaH//akWwIFoDOzI9w==}
+  '@auto_js/napi@0.0.9':
+    resolution: {integrity: sha512-zz9iRw7Y74YaTlCbHNkM6vpHHPdHhKpgBuLxof2ILqvfqItDeQ1pPcqSDIgW0lAyXYDjyK+z330pwVPY+4pNcg==}
 
-  '@auto_js/napi_exports@0.0.6':
-    resolution: {integrity: sha512-OrgBd1etDTAQPYqUzEy64MD1rsmiqA4QWoOdvKZDFqyjobLfjz9GSLeEzzoOSMkDZIcdc8XGeCn8T0xcsWudvQ==}
+  '@auto_js/napi_exports@0.0.9':
+    resolution: {integrity: sha512-6rC5rvzchxhr8v2qgTfQVmIpFZaRnEw72iLh189z3E0PAI401eNfeenbY1lNzHvjWGeU7+VmSNezaRaaKa4MoQ==}
 
-  '@auto_js/utility@0.0.5':
-    resolution: {integrity: sha512-QzYftGocEasx5iDDm+97cs8dPQsnYc+/sLMDUEkXnG4n2/4EQydSXc+8MJEl5J1s4sf5ZYneFApqbIzT4XVWIA==}
+  '@auto_js/utility@0.0.8':
+    resolution: {integrity: sha512-kb89JrUPgixYH1gv2ACYxttXCvosz1t9xm1mB1SWmImR053Q6AHlwH1z/nwPoVUtkR3y090+2eyEU0E4+dx4QQ==}
 
-  '@auto_js/v8@0.0.6':
-    resolution: {integrity: sha512-Ad482+QCWSY/iOABXPS9zNOnLou4W4A7T4RppbzXp8qb1vfRnAXVVMIPxEeIYuufcSai6x+Wq3vo0FUzI4mpvw==}
+  '@auto_js/v8@0.0.9':
+    resolution: {integrity: sha512-5fcKljv4b7GrRrWWmiBRVSWVfJmMhqpvhw5WoouYhVDfMC6Aq0JESUIliZw5zxwiNJymDAOayfL+j0JB/Xy6pw==}
 
-  '@auto_js/v8_exports@0.0.4':
-    resolution: {integrity: sha512-t1PD+KjgZ7HLDrhYpJte9JDAacs4X+2O8Y6I31nwfm7jA3wo7jAVNOBB4i73i2NAt+fIsY83fg438Do7l/nHFQ==}
+  '@auto_js/v8_exports@0.0.7':
+    resolution: {integrity: sha512-vHdp32692nHFNRmweR/LvJHP5tDVgQCc4LVGaEgiYUL5B+WifWAW6DBVS4nAkc6sUeWwrdEGyoug0v5MfQs4DA==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -674,9 +674,19 @@ packages:
       '@types/node':
         optional: true
 
+  '@isolated-vm/experimental-darwin-arm64@0.0.10':
+    resolution: {integrity: sha512-OMmoA+ovixgRBRzW7LKGJPuk52VX5C49nthHvEh2Wd9uu5PnvWQwLfS0DdKYRVvy2KPptKzQfki6FcCrtn2QMw==}
+    cpu: [arm64]
+    os: [darwin]
+
   '@isolated-vm/experimental-darwin-arm64@0.0.6':
     resolution: {integrity: sha512-XvJNRpdRXmQj0RFPL3U+L0d2C6CAky5ZwQ1rIgWTiEZnWPcMyATFXjQrzRWRtdARRV8BdmJQC1VohT6wfEag0w==}
     cpu: [arm64]
+    os: [darwin]
+
+  '@isolated-vm/experimental-darwin-x64@0.0.10':
+    resolution: {integrity: sha512-+ljb0xULKHYzfOwErx9CacwrfVJv300J5qVnGSZKJFvAZWgDi6Zgt34fUTwThlHxqlpoJ+C0orWCfvvY69ttFg==}
+    cpu: [x64]
     os: [darwin]
 
   '@isolated-vm/experimental-darwin-x64@0.0.6':
@@ -684,11 +694,23 @@ packages:
     cpu: [x64]
     os: [darwin]
 
+  '@isolated-vm/experimental-linux-arm64-gnu@0.0.10':
+    resolution: {integrity: sha512-4aLIbyPpwLDr1p/GbDa+6T+YdDQO/+Y4O0FOKcOdHVkY5eo8KZsoV6D67tK+1zu+wd2e4O7828RqmyztHD8Pnw==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
   '@isolated-vm/experimental-linux-arm64-gnu@0.0.6':
     resolution: {integrity: sha512-StUnEcCqQHOteb0kNCaxCWfoB8MSAwm6TOAxzocdvxCP4cD2wp6kfgDl9nVBj38naZb0VzQ9e7KEInd5lvbcUA==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
+
+  '@isolated-vm/experimental-linux-arm64-musl@0.0.10':
+    resolution: {integrity: sha512-eyvPZD5B/62d7AYWVzp8rup9Ru6BGc97f+4CJvpnFxo7ENljDkuvOTFVqFvKChEBOVaZrJPN/2bib/b+cTCcWA==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
 
   '@isolated-vm/experimental-linux-arm64-musl@0.0.6':
     resolution: {integrity: sha512-kc04D20AJdj+7e+Kt2zUgrpAlRAAb0oNKzD1nBmPARuvzPPx3Zk+ubO3mkLyGKqgcoizs1Wuiq3RJwg1IPHQCw==}
@@ -696,11 +718,23 @@ packages:
     os: [linux]
     libc: [musl]
 
+  '@isolated-vm/experimental-linux-x64-gnu@0.0.10':
+    resolution: {integrity: sha512-lCQrnyPcOJPm+4an3qRawxZw72HW1O4PpiNvx21FvL1yhsI7IfFPv3pc/oL4xy7O3SZ+IaSpviRre63cWk5OaQ==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
   '@isolated-vm/experimental-linux-x64-gnu@0.0.6':
     resolution: {integrity: sha512-ghBzN0uef/p0VL7Hh1aD3wuLEIrAg9aoWJoKEvRdKJhd3yu/b56fRYxYVgqxX4SCz2Lmki3YcsoElfRUA8SqKw==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
+
+  '@isolated-vm/experimental-linux-x64-musl@0.0.10':
+    resolution: {integrity: sha512-iVRVtFxyTXHubcW1FT0d/du2d6co6wDd2TUNn5v9drL80lQQ6LMvO6W21zZ9yntUC0fZdBiZYHR6sy1t5YAXMQ==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
 
   '@isolated-vm/experimental-linux-x64-musl@0.0.6':
     resolution: {integrity: sha512-5Fp7Ezoi4sunV8/z7/DqqL8iqUH9KCBdtsaPPCy5NnY/0l2mtgAPXa6Abhw9sYeaCuonFGjVrK46Z6+KbTvHfg==}
@@ -708,10 +742,18 @@ packages:
     os: [linux]
     libc: [musl]
 
+  '@isolated-vm/experimental-win32-x64@0.0.10':
+    resolution: {integrity: sha512-O2Xdbfl4s9K/yyeSQe6S6w8NC+eEumKRfAm08XubGV4TWEooJYiojh6JKdzpGNYhFiTSp85pR9+rSzQC7Y6jLA==}
+    cpu: [x64]
+    os: [win32]
+
   '@isolated-vm/experimental-win32-x64@0.0.6':
     resolution: {integrity: sha512-xotcY9V653F4vVlLs/NWZLDpTMO2zZ6sz4/a9hPlRLsvi60KlzfAQfY5BWwkB73QBXPvF810WgtXrYjXtEvLjw==}
     cpu: [x64]
     os: [win32]
+
+  '@isolated-vm/experimental@0.0.10':
+    resolution: {integrity: sha512-Zkp/la5gqgq+z4cm634ihQ0kunM+LcleyNKe5Uq3RRpDC5HWjpx92sN+b+LY9q0GAUEUyTa+nskFiia/iFvhag==}
 
   '@isolated-vm/experimental@0.0.6':
     resolution: {integrity: sha512-C6+U+NqT8E6J71wwgJYW5A5JAbxnXqtgeajpKAqtdR8c6dsKmsuVSudLGIhgMrsUCSQDms/ZvAwzCIO58XGRkA==}
@@ -3594,26 +3636,26 @@ packages:
 
 snapshots:
 
-  '@auto_js/js@0.0.6':
+  '@auto_js/js@0.0.9':
     dependencies:
-      '@auto_js/utility': 0.0.5
+      '@auto_js/utility': 0.0.8
 
-  '@auto_js/napi@0.0.6':
+  '@auto_js/napi@0.0.9':
     dependencies:
-      '@auto_js/js': 0.0.6
-      '@auto_js/napi_exports': 0.0.6
-      '@auto_js/v8_exports': 0.0.4
+      '@auto_js/js': 0.0.9
+      '@auto_js/napi_exports': 0.0.9
+      '@auto_js/v8_exports': 0.0.7
 
-  '@auto_js/napi_exports@0.0.6': {}
+  '@auto_js/napi_exports@0.0.9': {}
 
-  '@auto_js/utility@0.0.5': {}
+  '@auto_js/utility@0.0.8': {}
 
-  '@auto_js/v8@0.0.6':
+  '@auto_js/v8@0.0.9':
     dependencies:
-      '@auto_js/js': 0.0.6
-      '@auto_js/v8_exports': 0.0.4
+      '@auto_js/js': 0.0.9
+      '@auto_js/v8_exports': 0.0.7
 
-  '@auto_js/v8_exports@0.0.4': {}
+  '@auto_js/v8_exports@0.0.7': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -4073,26 +4115,59 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.12.2
 
+  '@isolated-vm/experimental-darwin-arm64@0.0.10':
+    optional: true
+
   '@isolated-vm/experimental-darwin-arm64@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental-darwin-x64@0.0.10':
     optional: true
 
   '@isolated-vm/experimental-darwin-x64@0.0.6':
     optional: true
 
+  '@isolated-vm/experimental-linux-arm64-gnu@0.0.10':
+    optional: true
+
   '@isolated-vm/experimental-linux-arm64-gnu@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental-linux-arm64-musl@0.0.10':
     optional: true
 
   '@isolated-vm/experimental-linux-arm64-musl@0.0.6':
     optional: true
 
+  '@isolated-vm/experimental-linux-x64-gnu@0.0.10':
+    optional: true
+
   '@isolated-vm/experimental-linux-x64-gnu@0.0.6':
+    optional: true
+
+  '@isolated-vm/experimental-linux-x64-musl@0.0.10':
     optional: true
 
   '@isolated-vm/experimental-linux-x64-musl@0.0.6':
     optional: true
 
+  '@isolated-vm/experimental-win32-x64@0.0.10':
+    optional: true
+
   '@isolated-vm/experimental-win32-x64@0.0.6':
     optional: true
+
+  '@isolated-vm/experimental@0.0.10':
+    dependencies:
+      tslib: 2.8.1
+    optionalDependencies:
+      '@isolated-vm/experimental-darwin-arm64': 0.0.10
+      '@isolated-vm/experimental-darwin-x64': 0.0.10
+      '@isolated-vm/experimental-linux-arm64-gnu': 0.0.10
+      '@isolated-vm/experimental-linux-arm64-musl': 0.0.10
+      '@isolated-vm/experimental-linux-x64-gnu': 0.0.10
+      '@isolated-vm/experimental-linux-x64-musl': 0.0.10
+      '@isolated-vm/experimental-win32-x64': 0.0.10
 
   '@isolated-vm/experimental@0.0.6':
     dependencies:

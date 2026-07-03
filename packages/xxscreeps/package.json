@@ -19,7 +19,7 @@
   "dependencies": {
     "@babel/core": "~7.29.7",
     "@babel/types": "^7.29.7",
-    "@isolated-vm/experimental": "^0.0.6",
+    "@isolated-vm/experimental": "^0.0.10",
     "@loaderkit/resolve": "^1.0.6",
     "@screeps/launcher": "4.1.0",
     "@types/convert-source-map": "^2.0.3",
