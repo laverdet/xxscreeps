@@ -53,9 +53,6 @@ export async function create(db: Database, userId: string, username: string, pro
 			db.data.hSet(providerMembersKey(provider), id, userId)),
 	]);
 
-	// A user with no committed code makes the runner throw "Cannot find module 'main'" every
-	// tick once it owns any room object. Seed an empty, valid script so ticking is a no-op until
-	// the player commits real code.
 	await saveContent(db, userId, 'main', new Map([ [ 'main', 'module.exports.loop = function () {};' ] ]));
 }
 
