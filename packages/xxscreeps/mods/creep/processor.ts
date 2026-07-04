@@ -383,7 +383,9 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		context.didUpdate();
 	}
 	if (creep.ticksToLive === 0 || creep.hits <= 0) {
-		addStat(context, creep['#user'], creep.room.name, 'creepsLost', creep.body.length);
+		if (creep.hits <= 0) {
+			addStat(context, creep['#user'], creep.room.name, 'creepsLost', creep.body.length);
+		}
 		buryCreep(creep);
 		context.setActive();
 		return;
