@@ -1,5 +1,6 @@
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomObject, create as createObject, format as objectFormat, requiredExpiryTime } from 'xxscreeps/game/object.js';
@@ -17,11 +18,7 @@ const shape = struct(objectFormat, {
 		body: vector(enumerated(...C.BODYPARTS_ALL)),
 		id: Id.format,
 		name: 'string',
-		saying: optional(struct({
-			isPublic: 'bool',
-			message: 'string',
-			time: 'int32',
-		})),
+		saying: optional('string'),
 		ticksToLive: 'int32',
 		user: Id.format,
 	}),
@@ -50,14 +47,17 @@ export class Tombstone extends withOverlay(RoomObject, shape) {
 	get creep() {
 		const creep = new Creep();
 		const creepInfo = this['#creep'];
+		const carryCapacity = Fn.accumulate(creepInfo.body, type => type === C.CARRY ? C.CARRY_CAPACITY : 0);
 		creep['#posId'] = this['#posId'];
 		creep['#user'] = creepInfo.user;
 		Object.defineProperties(creep, {
-			body: { enumerable: true, get: () => creepInfo.body },
+			body: { enumerable: true, value: creepInfo.body.map(type => ({ type, hits: 0 })) },
 			id: { enumerable: true, get: () => creepInfo.id },
 			name: { enumerable: true, get: () => creepInfo.name },
 			pos: { enumerable: true, get: () => this.pos },
-			store: { enumerable: true, get: () => this.store },
+			saying: { enumerable: true, value: creepInfo.saying },
+			spawning: { enumerable: true, value: false },
+			store: { enumerable: true, value: OpenStore['#create'](carryCapacity) },
 			ticksToLive: { enumerable: true, get: () => creepInfo.ticksToLive },
 		});
 		Object.defineProperty(this, 'creep', { value: creep });
@@ -105,11 +105,12 @@ export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
 		for (const [ type, amount ] of creep.store['#entries']()) deposit(type, amount);
 	}
 
+	const saying = creep['#saying'];
 	tombstone['#creep'] = {
 		body: creep.body.map(bodyPart => bodyPart.type),
 		id: creep.id,
 		name: creep.name,
-		saying: creep['#saying'],
+		saying: saying?.isPublic && saying.time === Game.time ? saying.message : undefined,
 		ticksToLive: creep.ticksToLive!,
 		user: creep['#user'],
 	};
