@@ -19,6 +19,20 @@
                     "description": "Network interface to bind server to. Format is: \"host\" or \"host:port\". Host can be * to bind\nto all interfaces: \"*:port\". Port is 21025, if not specified.",
                     "type": "string"
                 },
+                "maxIpsCount": {
+                    "default": 0,
+                    "description": "Maximum number of `X-Forwarded-For` entries to trust, counted from the proxy inward, when\n`proxy` is enabled. This limits IP spoofing by ignoring any addresses a client prepends beyond\nthe known number of proxy hops. `0` (the default) trusts the whole chain, so set it to the\nnumber of proxies in front of the backend.",
+                    "type": "number"
+                },
+                "proxy": {
+                    "default": false,
+                    "description": "Trust `X-Forwarded-*` headers set by a reverse proxy. When enabled, the backend derives the\nrequest protocol from `X-Forwarded-Proto` (so `ctx.secure`/`ctx.protocol` correctly report\n`https` when TLS is terminated at the proxy), the host from `X-Forwarded-Host`, and the client\nIP from `X-Forwarded-For`.\n\nOnly enable this when the backend is exclusively reachable through a trusted proxy that sets\nthese headers. A direct client can forge them otherwise (e.g. spoofing `https`).",
+                    "type": "boolean"
+                },
+                "proxyIpHeader": {
+                    "description": "Header used to read the client IP when `proxy` is enabled. Defaults to `X-Forwarded-For`. Set\nthis if your proxy uses a different header, e.g. `X-Real-IP`.",
+                    "type": "string"
+                },
                 "secret": {
                     "description": "Secret used for session authentication. If not specified a new secret will be generated each\nrestart.",
                     "type": "string"

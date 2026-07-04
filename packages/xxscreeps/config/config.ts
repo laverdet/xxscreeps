@@ -26,6 +26,33 @@ export interface BackendConfig {
 	bind?: string;
 
 	/**
+	 * Trust `X-Forwarded-*` headers set by a reverse proxy. When enabled, the backend derives the
+	 * request protocol from `X-Forwarded-Proto` (so `ctx.secure`/`ctx.protocol` correctly report
+	 * `https` when TLS is terminated at the proxy), the host from `X-Forwarded-Host`, and the client
+	 * IP from `X-Forwarded-For`.
+	 *
+	 * Only enable this when the backend is exclusively reachable through a trusted proxy that sets
+	 * these headers. A direct client can forge them otherwise (e.g. spoofing `https`).
+	 * @default false
+	 */
+	proxy?: boolean;
+
+	/**
+	 * Header used to read the client IP when `proxy` is enabled. Defaults to `X-Forwarded-For`. Set
+	 * this if your proxy uses a different header, e.g. `X-Real-IP`.
+	 */
+	proxyIpHeader?: string;
+
+	/**
+	 * Maximum number of `X-Forwarded-For` entries to trust, counted from the proxy inward, when
+	 * `proxy` is enabled. This limits IP spoofing by ignoring any addresses a client prepends beyond
+	 * the known number of proxy hops. `0` (the default) trusts the whole chain, so set it to the
+	 * number of proxies in front of the backend.
+	 * @default 0
+	 */
+	maxIpsCount?: number;
+
+	/**
 	 * Secret used for session authentication. If not specified a new secret will be generated each
 	 * restart.
 	 */
@@ -260,6 +287,7 @@ export const defaults = {
 	backend: {
 		allowGuestAccess: true,
 		bind: '*',
+		proxy: false,
 		socketThrottle: 125,
 	},
 	game: {

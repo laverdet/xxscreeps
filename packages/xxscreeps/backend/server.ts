@@ -22,7 +22,11 @@ initializeGameEnvironment();
 // Initialize services
 await using backendContext = await BackendContext.connect();
 hooks.makeIterated('backendReady')(backendContext.db, backendContext.shard);
-const koa = new Koa<State, Context>();
+const koa = new Koa<State, Context>({
+	proxy: config.backend.proxy,
+	...config.backend.proxyIpHeader !== undefined && { proxyIpHeader: config.backend.proxyIpHeader },
+	...config.backend.maxIpsCount !== undefined && { maxIpsCount: config.backend.maxIpsCount },
+});
 const router = new Router<State, Context>();
 
 // Set up endpoints
