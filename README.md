@@ -152,6 +152,30 @@ an optional `--json` envelope mode for tooling. See
 [packages/xxscreeps/cli/README.md](packages/xxscreeps/cli/README.md) for flags
 and the JSON envelope schema.
 
+## Scripting
+
+The CLI is for quick tinkering; for anything heavier, import the engine
+modules directly from a Node script. This avoids the CLI's eval surface
+and gives full TypeScript types on the operations you call.
+
+```ts
+import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { generateRoom } from 'xxscreeps/scripts/room-gen.js';
+
+await using db = await Database.connect();
+await using shard = await Shard.connect(db, 'shard0');
+
+await generateRoom(shard, 'W12N5');
+await generateRoom(shard, 'W11N5', { terrainType: 3, swampType: 2 });
+await Promise.all([ db.save(), shard.save() ]);
+```
+
+`generateRoom` adds a room with procedurally generated terrain to the shard's
+terrain blob and `rooms` set. Like `npx xxscreeps import`, it is an offline
+operation — stop the server before running it so cached world state in the
+backend, processor, and runner workers doesn't go stale. Exits are read from
+any already-generated neighbor, so adjacent generated rooms connect.
+
 ## Docker
 
 If you want to run xxscreeps in Docker, you can do this:
