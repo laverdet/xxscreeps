@@ -1,3 +1,4 @@
+import { compose, declare } from 'xxscreeps/schema/index.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 export const kMaxWorldSize = 0x100;
@@ -61,3 +62,10 @@ export function parseRoomNameToId(name: string) {
 function roomIdFromCoordinates(rx: number, ry: number) {
 	return (ry << 8) | rx;
 }
+
+// A room name stored as its packed id (`uint16`), composed to/from the string form so schemas
+// stay compact while callers deal in names.
+export const roomNameFormat = declare('RoomName', compose('uint16', {
+	compose: (id: number) => makeRoomNameFromId(id),
+	decompose: (name: string) => parseRoomNameToId(name),
+}));

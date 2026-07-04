@@ -1,20 +1,18 @@
 import type { ExitType } from './room/find.js';
 import type { Room } from './room/index.js';
-import type { RoomType } from './room/sector.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import type { Adapter } from 'xxscreeps/utility/astar.js';
 
-import { build } from 'xxscreeps/engine/schema/index.js';
+import { build, structForPath } from 'xxscreeps/engine/schema/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { makeRoomName, makeRoomNameFromId, parseRoomName, parseRoomNameToId } from 'xxscreeps/game/room/name.js';
-import { compose, declare, enumerated, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
+import { makeRoomName, parseRoomName, roomNameFormat } from 'xxscreeps/game/room/name.js';
+import { compose, declare, makeReader, optional, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import * as C from './constants/index.js';
 import { getDirection, getOffsetsFromDirection } from './direction.js';
 import { RoomPosition } from './position.js';
-import { computeRoomMeta } from './room/sector.js';
 import * as Terrain from './terrain.js';
 
 // Schema
@@ -22,24 +20,24 @@ const roomTerrain = () => struct({
 	exits: 'uint8',
 	terrain: Terrain.format,
 });
-// The sector centers a room rings, stored as packed room ids (`uint16`) rather than name strings to
-// keep the full-shard terrain blob compact; composed to/from names so callers deal in room names.
-const sectorCenters = () => compose(vector('uint16'), {
-	compose: (ids: number[]) => ids.map(makeRoomNameFromId),
-	decompose: (names: string[]) => names.map(parseRoomNameToId),
-});
-// Authored geometry, one record per room. `roomType` reserves enum index 0 for `undefined`, so a
-// room an authoring path leaves unstamped (or a hand-built world) reads back as unauthored and
-// `GameMap` recomputes it from the template instead of reporting it as `normal`.
-const roomMeta = () => struct({
-	roomType: enumerated(undefined, 'normal', 'highway', 'sourceKeeper', 'center'),
-	centers: sectorCenters,
-});
+// Authored world geometry, extensible by mods through the `RoomMeta` path (the World reader is
+// built at module load, so a registrant must be evaluated before this module). A sector is
+// anchored on the one room that carries its record — the center room is in charge of the ring.
+export interface Schema {}
+const roomMeta = () => struct(structForPath<Schema>()('RoomMeta', {
+	sector: optional(struct({
+		// The highway ring at range 5, shared with adjacent sectors.
+		edges: vector(roomNameFormat),
+		// The 9x9 interior at range <= 4, the center itself included; exclusive to this sector.
+		members: vector(roomNameFormat),
+	})),
+}));
 
 interface RoomEntry {
 	info: TypeOf<typeof roomTerrain>;
 	meta: TypeOf<typeof roomMeta>;
 }
+type SectorRecord = NonNullable<RoomEntry['meta']['sector']>;
 
 export const schema = build(declare('World', compose(vector(struct({
 	name: 'string',
@@ -83,8 +81,9 @@ export class GameMap {
 	readonly #top;
 	readonly #height;
 	readonly #width;
-	// center room -> its highway ring members; built from `centers` on first `getSectorMembers`.
-	#sectorMembersIndex: Map<string, string[]> | undefined;
+	// room -> the sector centers that register it; built from the stored records on first
+	// `getSectorCenters`.
+	#sectorCentersIndex: Map<string, string[]> | undefined;
 
 	constructor(terrain: TerrainByRoom, accessibleRooms?: ReadonlySet<string>) {
 		this.#terrain = terrain;
@@ -111,19 +110,24 @@ export class GameMap {
 		return makeRoomName(this.#left + Math.floor(this.#width / 2), this.#top + Math.floor(this.#height / 2));
 	}
 
-	/** The room's classification in the sector template. */
-	getRoomType(roomName: string): RoomType {
-		return this.#storedMeta(roomName)?.roomType ?? computeRoomMeta(roomName).roomType;
+	/** The sector record anchored on this room, or `undefined` when the room is not a sector center. */
+	getSector(roomName: string): SectorRecord | undefined {
+		return this.#terrain.get(roomName)?.meta.sector;
 	}
 
-	/** The sector centers whose highway ring this room sits on — none (interior/center/keeper), one or two (edge), or four (crossing). */
+	/** The sector centers this room is registered to — one (member), up to four (edge), or none. */
 	getSectorCenters(roomName: string): string[] {
-		return this.#storedMeta(roomName)?.centers ?? computeRoomMeta(roomName).centers;
+		return (this.#sectorCentersIndex ??= this.#buildSectorCentersIndex()).get(roomName) ?? [];
 	}
 
-	/** The rooms making up a sector center's highway ring, limited to those present in the world. */
-	getSectorMembers(centralRoom: string): string[] {
-		return (this.#sectorMembersIndex ??= this.#buildSectorMembersIndex()).get(centralRoom) ?? [];
+	/** Every sector in the world, keyed by the center room that owns it. */
+	*sectors(): IterableIterator<[ center: string, sector: SectorRecord ]> {
+		for (const [ roomName, entry ] of this.#terrain) {
+			const { sector } = entry.meta;
+			if (sector !== undefined) {
+				yield [ roomName, sector ];
+			}
+		}
 	}
 
 	/**
@@ -335,22 +339,14 @@ export class GameMap {
 		return this.#accessibleRooms.has(roomName);
 	}
 
-	// The room's stored geometry, or `undefined` when this world has none for it — a room outside the
-	// loaded terrain, or one an authoring path left unstamped (its `roomType` reads back `undefined`).
-	// The accessors fall back to `computeRoomMeta` for that case.
-	#storedMeta(roomName: string) {
-		const meta = this.#terrain.get(roomName)?.meta;
-		return meta?.roomType === undefined ? undefined : meta;
-	}
-
-	#buildSectorMembersIndex(): Map<string, string[]> {
-		const members = new Map<string, string[]>();
-		for (const roomName of this.#terrain.keys()) {
-			for (const center of this.getSectorCenters(roomName)) {
-				getOrSet(members, center, () => []).push(roomName);
+	#buildSectorCentersIndex(): Map<string, string[]> {
+		const centers = new Map<string, string[]>();
+		for (const [ center, sector ] of this.sectors()) {
+			for (const roomName of Fn.concat([ sector.members, sector.edges ])) {
+				getOrSet(centers, roomName, () => []).push(center);
 			}
 		}
-		return members;
+		return centers;
 	}
 }
 

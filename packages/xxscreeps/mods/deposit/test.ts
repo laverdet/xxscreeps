@@ -131,7 +131,7 @@ function withFixedPlacement(seed = 1): Disposable {
 // unfiltered (no radius/decay test) — that filtering is the scheduler's job; this just sees what
 // landed.
 async function findDepositsInSector(shard: Shard, centralRoom: string) {
-	const normalEdges = world.map.getSectorMembers(centralRoom);
+	const normalEdges = world.map.getSector(centralRoom)?.edges ?? [];
 	const deposits = await loadSectorDeposits(shard, centralRoom, normalEdges);
 	return deposits.map(deposit => ({ roomName: deposit.pos.roomName, deposit }));
 }
@@ -184,7 +184,7 @@ describe('Deposit placement', () => {
 	// each room's in-radius quadrant, whichever side of the sector it sits on.
 	const freeRoom = 'W0N5';
 	const occupiedRing: Record<string, (room: Room) => void> = Object.fromEntries(
-		Fn.map(Fn.reject(world.map.getSectorMembers('W5N5'), name => name === freeRoom),
+		Fn.map(Fn.reject(world.map.getSector('W5N5')?.edges ?? [], name => name === freeRoom),
 			(name): [ string, (room: Room) => void ] => [ name, room => {
 				const inSector = makeSectorRadiusFilter('W5N5', name);
 				const spot = [ [ 20, 20 ], [ 20, 30 ], [ 30, 20 ], [ 30, 30 ] ].find(([ xx, yy ]) => inSector(xx!, yy!))!;

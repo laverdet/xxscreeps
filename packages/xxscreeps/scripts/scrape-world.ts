@@ -167,7 +167,9 @@ await using shard = await Shard.connect(db, config.shards[0]!.name);
 const { data } = shard;
 
 // Save terrain data
-const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ room, terrain }) => {
+const terrainRows = loki.getCollection('rooms.terrain').find();
+const terrainRoomNames = new Set(Fn.map(terrainRows, ({ room }) => room as string));
+const roomsTerrain = new Map(terrainRows.map(({ room, terrain }) => {
 	const writer = new TerrainWriter();
 	for (let xx = 0; xx < 50; ++xx) {
 		for (let yy = 0; yy < 50; ++yy) {
@@ -178,7 +180,7 @@ const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ r
 	}
 	return [ room as string, {
 		info: { exits: packExits(writer), terrain: writer },
-		meta: computeRoomMeta(room as string),
+		meta: computeRoomMeta(room as string, terrainRoomNames),
 	} ];
 }));
 await data.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));

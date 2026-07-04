@@ -83,10 +83,11 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 });
 
 // Initialize world terrain blob & path finder
+const roomNames = new Set(Fn.map(rooms, ({ room }) => room.name));
 const terrainMap = new Map(Fn.map(rooms, ({ room, terrain }) => [
 	room.name, {
 		info: { exits: packExits(terrain), terrain },
-		meta: computeRoomMeta(room.name),
+		meta: computeRoomMeta(room.name, roomNames),
 	},
 ]));
 const terrain = makeWriter(MapSchema.schema)(terrainMap);

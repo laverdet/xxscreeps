@@ -85,7 +85,7 @@ async function pushPlaceIntent(shard: Shard, candidate: string, centralRoom: str
 
 async function evaluateSector(shard: Shard, world: World, centralRoom: string) {
 	// Out-of-borders / closed rooms are excluded from both throughput tallying and placement.
-	const normalEdges = world.map.getSectorMembers(centralRoom)
+	const normalEdges = (world.map.getSector(centralRoom)?.edges ?? [])
 		.filter(name => world.map.getRoomStatus(name).status === 'normal');
 	const deposits = await loadSectorDeposits(shard, centralRoom, normalEdges);
 	const throughput = Fn.accumulate(Fn.map(deposits, deposit => depositThroughput(deposit['#harvested'])));
@@ -109,9 +109,8 @@ registerShardInitializer(async shard => {
 	// Relative to the current wall clock so a world imported well past tick 0 (e.g. the mod added to
 	// an existing shard) still spreads its first wave forward instead of firing all at once.
 	const seeds = Fn.pipe(
-		world.entries(),
-		$$ => Fn.filter($$, ([ roomName ]) => world.map.getRoomType(roomName) === 'center'),
-		$$ => Fn.map($$, ([ roomName ]): [ score: number, sector: string ] => [ now + bootstrapScatter(roomName), roomName ]),
+		world.map.sectors(),
+		$$ => Fn.map($$, ([ center ]): [ score: number, sector: string ] => [ now + bootstrapScatter(center), center ]),
 		$$ => [ ...$$ ],
 	);
 	if (seeds.length > 0) {

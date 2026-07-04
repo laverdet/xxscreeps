@@ -29,9 +29,11 @@ function rollPower(): number {
 registerShardInitializer(async shard => {
 	const world = await shard.loadWorld();
 	const seeds = await Fn.pipe(
-		world.entries(),
-		$$ => Fn.filter($$, ([ roomName ]) => world.map.getRoomType(roomName) === 'highway'),
-		$$ => Fn.mapAwait($$, async ([ roomName ]): Promise<[ score: number, roomName: string ]> => {
+		world.map.sectors(),
+		$$ => Fn.transform($$, ([ , sector ]) => sector.edges),
+		// Edge rooms are shared between adjacent sectors; each seeds one timer.
+		$$ => new Set($$),
+		$$ => Fn.mapAwait($$, async (roomName): Promise<[ score: number, roomName: string ]> => {
 			const room = await shard.loadRoom(roomName, shard.time, true);
 			const deadline = room['#nextPowerBankTime'] || shard.time + respawnTime();
 			return [ deadline, roomName ];
