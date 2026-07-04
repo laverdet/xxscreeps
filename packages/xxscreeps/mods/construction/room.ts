@@ -2,7 +2,7 @@ import type { ConstructibleStructureType } from './construction-site.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { hooks, intents, userGame } from 'xxscreeps/game/index.js';
+import { Game, hooks, intents, me, userGame } from 'xxscreeps/game/index.js';
 import { RoomPosition, fetchArguments } from 'xxscreeps/game/position.js';
 import { Room, registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
@@ -101,9 +101,12 @@ export function checkCreateConstructionSite(room: Room, pos: RoomPosition, struc
 		return C.ERR_INVALID_ARGS;
 	}
 
-	// Can't build in someone else's room
+	// Can't build in someone else's room, owned or reserved
 	const { controller } = room;
 	if (controller?.my === false) {
+		return C.ERR_NOT_OWNER;
+	}
+	if (controller && controller['#reservationEndTime'] > Game.time && room['#user'] !== me) {
 		return C.ERR_NOT_OWNER;
 	}
 

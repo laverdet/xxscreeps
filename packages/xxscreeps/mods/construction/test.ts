@@ -137,6 +137,35 @@ describe('Construction', () => {
 			});
 		}));
 
+		const foreignReserved = simulate({
+			W1N1: room => {
+				room['#user'] = '101';
+				room.controller!['#reservationEndTime'] = 100;
+				room['#insertObject'](createCreep(new RoomPosition(20, 20, room.name), [ C.MOVE ], 'visitor', '100'));
+			},
+		});
+
+		test('CONSTRUCTION-SITE-014:reserved-not-owner-before-rcl-or-structure-cap', () => foreignReserved(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'tower'), C.ERR_NOT_OWNER);
+			});
+		}));
+
+		const selfReserved = simulate({
+			W1N1: room => {
+				room['#user'] = '100';
+				room.controller!['#reservationEndTime'] = 100;
+				room['#insertObject'](createCreep(new RoomPosition(20, 20, room.name), [ C.MOVE ], 'visitor', '100'));
+			},
+		});
+
+		test('CONSTRUCTION-SITE-014:reserved-by-self-allowed', () => selfReserved(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.OK);
+			});
+		}));
+
 		const foreignOwnedAndFull = simulate({
 			W1N1: room => setupForeignRoom(room),
 			W2N1: room => {
