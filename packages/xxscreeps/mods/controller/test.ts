@@ -454,7 +454,7 @@ describe('Controller', () => {
 			() => aboutToDowngrade(async ({ tick, poke, shard }) => {
 				using stdout = captureConsoleLog();
 				// Drop the per-user throttle so the re-armed warning delivers alongside the downgrade.
-				await setNotifyPrefs(shard, '100', { interval: 0 });
+				await setNotifyPrefs(shard.db, '100', { interval: 0 });
 				await tick();
 				// Re-arm: place downgradeTime back on the warn boundary for the next processed tick (Game.time = 2).
 				await poke('W3N3', undefined, (_Game, room) => {
