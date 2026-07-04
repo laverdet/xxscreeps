@@ -14,7 +14,7 @@ import { TERRAIN_MASK_WALL } from 'xxscreeps/game/terrain.js';
 
 const iterations = Number(process.argv.at(-1)) || 1;
 const log = process.argv.includes('--log');
-const expectedResult = '156ef000';
+const expectedResult = '49872482';
 
 /**
  * This script is a standalone test for the path finder. It runs a whole bunch of path finding
@@ -25,27 +25,6 @@ const expectedResult = '156ef000';
 // Load terrain into module
 const world = new World('test', await fs.readFile('terrain'));
 loadTerrain(world);
-
-// Generate deterministic CostMatrix's
-const matrices = function() {
-	const costMatrix = (roomName: string) => {
-		const matrix = new CostMatrix();
-		const terrain = world.map.getRoomTerrain(roomName);
-		for (let yy = 0; yy < 50; ++yy) {
-			for (let xx = 0; xx < 50; ++xx) {
-				const ii = xx * 50 + yy;
-				if (terrain.get(xx, yy) !== TERRAIN_MASK_WALL) {
-					matrix.set(xx, yy, ii % 193 ? ii % 15 : 0xff);
-				}
-			}
-		}
-		return matrix;
-	};
-	return Fn.pipe(
-		[ 'W1N1', 'W2N2', 'W3N3', 'W3N7', 'W4N1', 'W4N8', 'W5N3', 'W5N5', 'W6N5', 'W7N5', 'W8N5', 'W9N8' ],
-		$$ => Fn.map($$, roomName => [ roomName, costMatrix(roomName) ] as const),
-		$$ => Fn.fromEntries($$));
-}();
 
 // Various rooms around my world (stringified function)
 const makePositions = () => [
@@ -67,19 +46,58 @@ const makePositions = () => [
 	new RoomPosition(21, 20, 'W8N8'),
 	new RoomPosition(25, 33, 'W9N8'),
 	new RoomPosition(29, 21, 'W10N10'),
-	new RoomPosition(32, 26, 'W1N1'),
-	new RoomPosition(32, 33, 'W2N2'),
+	new RoomPosition(32, 25, 'W1N1'),
+	new RoomPosition(34, 29, 'W2N2'),
 	new RoomPosition(41, 35, 'W3N8'),
 	new RoomPosition(20, 34, 'W3N7'),
 	new RoomPosition(44, 33, 'W4N8'),
 	new RoomPosition(44, 32, 'W3N7'),
 ];
+const positions = makePositions();
+for (const pos of positions) {
+	const terrain = world.map.getRoomTerrain(pos.roomName);
+	if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_WALL) {
+		throw new Error(`Point of interest '${String(pos)}' is a wall`);
+	}
+}
+
+// Generate deterministic CostMatrix's
+const matrices = function() {
+	const costMatrix = (roomName: string) => {
+		const positions = makePositions();
+		const matrix = new CostMatrix();
+		const terrain = world.map.getRoomTerrain(roomName);
+		for (let yy = 0; yy < 50; ++yy) {
+			for (let xx = 0; xx < 50; ++xx) {
+				const ii = xx * 50 + yy;
+				if (terrain.get(xx, yy) !== TERRAIN_MASK_WALL) {
+					const pos = new RoomPosition(xx, yy, roomName);
+					const wall = ii % 67 === 0;
+					if (wall) {
+						const wallPos = positions.some(other => pos.isEqualTo(other));
+						if (wallPos) {
+							throw new Error(`Wall on point of interest '${String(pos)}'`);
+						}
+					}
+					matrix.set(xx, yy, wall ? 0xff : ii % 3);
+				}
+			}
+		}
+		return matrix;
+	};
+	return Fn.pipe(
+		[ 'W1N1', 'W2N2', 'W3N3', 'W3N7', 'W4N1', 'W4N8', 'W5N3', 'W5N5', 'W6N5', 'W7N5', 'W8N5', 'W9N8' ],
+		$$ => Fn.map($$, roomName => [ roomName, costMatrix(roomName) ] as const),
+		$$ => Fn.fromEntries($$));
+}();
 
 // Dispatch pathfinding profile
 const dispatch = (update: (result: unknown) => void) => {
 	const positions = makePositions();
 	for (let count = 0; count < iterations; ++count) {
 		// Find every point to every other point
+		// nb: This pair hits max rooms of 64
+		// [RoomPosition W1N1 {32, 25}] [RoomPosition W6N2 {35, 7}]
 		for (const [ ii, one ] of positions.entries()) {
 			for (const [ jj, two ] of positions.entries()) {
 				if (ii === jj) continue;
@@ -89,7 +107,7 @@ const dispatch = (update: (result: unknown) => void) => {
 					{
 						plainCost: 1,
 						swampCost: 5,
-						maxRooms: 16,
+						maxRooms: 64,
 						heuristicWeight: ii % 7 === 0 ? 1 : 1.2,
 						roomCallback: ii % 2 === 0 ? roomName => matrices[roomName] : undefined,
 					},
