@@ -7,7 +7,7 @@ import { Game } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
-import { makeSectorRadiusFilter } from 'xxscreeps/game/room/sector.js';
+import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
 import { calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor.js';
 import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
@@ -20,9 +20,9 @@ const MAX_PLACEMENT_ATTEMPTS = 1000;
 // Picks a wall position in 5..44 with at least one non-wall neighbor (incl. diagonals), inside the
 // sector's 250-square radius, and 2 squares clear of any other room object.
 function findPlacement(world: World, centralRoom: string, targetRoom: RoomClass) {
-	const terrain = world.map.getRoomTerrain(targetRoom.name);
+	const { terrain, sectors } = world.map['#getRoomTraits'](targetRoom.name);
 	const objects = targetRoom['#objects'];
-	const inSector = makeSectorRadiusFilter(centralRoom, targetRoom.name);
+	const inSector = makeSectorRadiusPredicate(centralRoom, targetRoom.name, sectors);
 	for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; ++attempt) {
 		const xx = Math.floor(Math.random() * 40) + 5;
 		const yy = Math.floor(Math.random() * 40) + 5;
@@ -69,8 +69,9 @@ registerObjectTickProcessor(Deposit, (deposit, context) => {
 		// immediately; the evaluator excludes deposits at their decay tick from the tally, so
 		// the same-tick re-eval already sees this one gone.
 		const { roomName } = deposit.pos;
-		const owning = context.state.world.map.getSectorCenters(roomName).find(sector =>
-			makeSectorRadiusFilter(sector, roomName)(deposit.pos.x, deposit.pos.y));
+		const { sectors } = context.state.world.map['#getRoomTraits'](roomName);
+		const owning =
+			sectors.find(sectorName => makeSectorRadiusPredicate(sectorName, roomName, sectors)(deposit.pos.x, deposit.pos.y));
 		if (owning !== undefined) {
 			context.task(scheduleSector(context.shard, owning, 0, { earliest: true }));
 		}

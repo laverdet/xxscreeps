@@ -179,8 +179,9 @@ const roomsTerrain = new Map(terrainRows.map(({ room, terrain }) => {
 		}
 	}
 	return [ room as string, {
-		info: { exits: packExits(writer), terrain: writer },
-		meta: computeRoomMeta(room as string, terrainRoomNames),
+		exits: packExits(writer),
+		terrain: writer,
+		...computeRoomMeta(room as string, terrainRoomNames),
 	} ];
 }));
 await data.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));
@@ -288,7 +289,7 @@ const rooms = loki.getCollection('rooms').find().map(room => {
 			case 'road': {
 				const road = new StructureRoad();
 				withStructure(object, road);
-				road['#terrain'] = roomsTerrain.get(road.pos.roomName)!.info.terrain.get(road.pos.x, road.pos.y);
+				road['#terrain'] = roomsTerrain.get(road.pos.roomName)!.terrain.get(road.pos.x, road.pos.y);
 				road['#nextDecayTime'] = object.nextDecayTime;
 				return road;
 			}

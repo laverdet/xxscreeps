@@ -86,8 +86,9 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 const roomNames = new Set(Fn.map(rooms, ({ room }) => room.name));
 const terrainMap = new Map(Fn.map(rooms, ({ room, terrain }) => [
 	room.name, {
-		info: { exits: packExits(terrain), terrain },
-		meta: computeRoomMeta(room.name, roomNames),
+		exits: packExits(terrain),
+		terrain,
+		...computeRoomMeta(room.name, roomNames),
 	},
 ]));
 const terrain = makeWriter(MapSchema.schema)(terrainMap);

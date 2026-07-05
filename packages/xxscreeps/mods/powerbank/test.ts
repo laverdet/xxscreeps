@@ -151,7 +151,7 @@ describe('PowerBank placement', () => {
 		await runShardInitializers(shard);
 		const due = await inspectDuePowerBankRoomsForTest(shard);
 		const world = await shard.loadWorld();
-		const highways = new Set(Fn.transform(world.map.sectors(), ([ , sector ]) => sector.edges));
+		const highways = new Set(Fn.transform(world.map['#sectors'](), ([ , sector ]): Iterable<string> => sector.edges));
 		assert.strictEqual(due.length, highways.size, 'every sector edge room was seeded exactly once');
 		for (const [ score, roomName ] of due) {
 			assert.ok(highways.has(roomName), `${roomName} should be a sector edge room`);

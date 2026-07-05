@@ -1,3 +1,4 @@
+import type { SectorControl } from 'xxscreeps/game/map.js';
 import * as assert from 'node:assert';
 import { search } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -62,31 +63,31 @@ describe('computeRoomMeta', () => {
 	const quadrant = roomQuadrant(21);
 
 	test('anchors a sector record on its center room', () => {
-		const { sector } = computeRoomMeta('W5N5', quadrant);
-		assert.ok(sector !== undefined, 'W5N5 anchors a sector');
-		assert.strictEqual(sector.edges.length, 40, 'the highway ring is 40 rooms');
-		assert.strictEqual(sector.members.length, 81, 'the interior is 81 rooms');
-		assert.ok(sector.members.includes('W5N5'), 'the center registers itself');
-		assert.ok(sector.members.includes('W4N4'), 'interior rooms are members');
-		assert.ok(sector.edges.includes('W0N5'), 'the ring includes a mid-edge room');
-		assert.ok(sector.edges.includes('W10N10'), 'the ring includes a corner room');
-		const members = new Set(sector.members);
-		assert.ok(sector.edges.every(name => !members.has(name)), 'edges and members are disjoint');
+		const { sectorControl } = computeRoomMeta('W5N5', quadrant);
+		assert.ok(sectorControl, 'W5N5 anchors a sector');
+		assert.strictEqual(sectorControl.edges.length, 40, 'the highway ring is 40 rooms');
+		assert.strictEqual(sectorControl.members.length, 81, 'the interior is 81 rooms');
+		assert.ok(sectorControl.members.includes('W5N5'), 'the center registers itself');
+		assert.ok(sectorControl.members.includes('W4N4'), 'interior rooms are members');
+		assert.ok(sectorControl.edges.includes('W0N5'), 'the ring includes a mid-edge room');
+		assert.ok(sectorControl.edges.includes('W10N10'), 'the ring includes a corner room');
+		const members = new Set(sectorControl.members);
+		assert.ok(sectorControl.edges.every(name => !members.has(name)), 'edges and members are disjoint');
 	});
 
 	test('non-center rooms carry no record', () => {
 		for (const roomName of [ 'W0N0', 'W0N5', 'W4N4', 'W2N3', 'W10N10' ]) {
-			assert.strictEqual(computeRoomMeta(roomName, quadrant).sector, undefined, `${roomName} is not a center`);
+			assert.strictEqual(computeRoomMeta(roomName, quadrant).sectorControl, undefined, `${roomName} is not a center`);
 		}
 	});
 
 	test('edges are shared between sectors, members are exclusive', () => {
 		const centers = [ 'W5N5', 'W15N5', 'W5N15', 'W15N15' ];
-		const claims = (fn: (sector: NonNullable<ReturnType<typeof computeRoomMeta>['sector']>) => boolean) =>
+		const claims = (fn: (sector: SectorControl) => boolean) =>
 			centers.filter(center => {
-				const { sector } = computeRoomMeta(center, quadrant);
-				assert.ok(sector !== undefined);
-				return fn(sector);
+				const { sectorControl } = computeRoomMeta(center, quadrant);
+				assert.ok(sectorControl);
+				return fn(sectorControl);
 			});
 		assert.deepStrictEqual(claims(sector => sector.edges.includes('W10N10')), centers,
 			'the corner room is registered to all 4 sectors');
@@ -99,33 +100,34 @@ describe('computeRoomMeta', () => {
 	test('clips to the rooms present in the world', () => {
 		// A world corner holding W5N5 but only part of its ring and interior.
 		const clipped = roomQuadrant(6);
-		const { sector } = computeRoomMeta('W5N5', clipped);
-		assert.ok(sector !== undefined);
-		assert.strictEqual(sector.edges.length, 11, 'ring clipped to the present W0/N0 arms');
-		assert.strictEqual(sector.members.length, 25, 'interior clipped to the present 5x5 corner');
-		assert.ok(!sector.edges.includes('W10N5'), 'absent ring rooms are clipped');
+		const { sectorControl } = computeRoomMeta('W5N5', clipped);
+		assert.ok(sectorControl);
+		assert.strictEqual(sectorControl.edges.length, 11, 'ring clipped to the present W0/N0 arms');
+		assert.strictEqual(sectorControl.members.length, 25, 'interior clipped to the present 5x5 corner');
+		assert.ok(!sectorControl.edges.includes('W10N5'), 'absent ring rooms are clipped');
 	});
 });
 
 describe('GameMap sector metadata', () => {
 	test('reads the stamped sector record', () => {
 		// The test world is exactly W0..W10 x N0..N10 — one full sector.
-		const sectors = [ ...world.map.sectors() ];
+		const sectors = [ ...world.map['#sectors']() ];
 		assert.deepStrictEqual(sectors.map(([ center ]) => center), [ 'W5N5' ], 'W5N5 anchors the only sector');
-		const sector = world.map.getSector('W5N5');
-		assert.ok(sector !== undefined, 'the center room carries the record');
-		assert.strictEqual(sector.edges.length, 40);
-		assert.strictEqual(sector.members.length, 81);
-		assert.strictEqual(world.map.getSector('W0N0'), undefined, 'edge rooms carry no record');
+		const { sectorControl } = world.map['#getRoomTraits']('W5N5');
+		assert.ok(sectorControl, 'the center room carries the record');
+		assert.strictEqual(sectorControl.edges.length, 40);
+		assert.strictEqual(sectorControl.members.length, 81);
+		const edge = world.map['#getRoomTraits']('W0N0');
+		assert.strictEqual(edge.sectorControl, undefined, 'edge rooms carry no record');
 	});
 
 	test('inverts the records into room -> centers', () => {
-		const sector = world.map.getSector('W5N5');
-		assert.ok(sector !== undefined);
-		for (const roomName of Fn.concat([ sector.members, sector.edges ])) {
-			assert.deepStrictEqual(world.map.getSectorCenters(roomName), [ 'W5N5' ], `${roomName} claims W5N5`);
+		const { sectorControl } = world.map['#getRoomTraits']('W5N5');
+		assert.ok(sectorControl);
+		for (const roomName of Fn.concat<string>([ sectorControl.members, sectorControl.edges ])) {
+			const centers = world.map['#getRoomTraits'](roomName).sectors;
+			assert.deepStrictEqual(centers, [ 'W5N5' ], `${roomName} claims W5N5`);
 		}
-		assert.deepStrictEqual(world.map.getSectorCenters('E5S5'), [], 'rooms outside the world claim nothing');
 	});
 });
 

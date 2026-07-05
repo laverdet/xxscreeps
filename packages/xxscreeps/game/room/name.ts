@@ -2,9 +2,21 @@ import { compose, declare } from 'xxscreeps/schema/index.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 export const kMaxWorldSize = 0x100;
+
+interface ParsedRoomName {
+	rx: number;
+	ry: number;
+}
 const kMaxWorldSize2 = kMaxWorldSize >>> 1;
 
 const roomNames = new Map<number, string>();
+
+// A room name stored as its packed id (`uint16`), composed to/from the string form so schemas
+// stay compact while callers deal in names.
+export const roomNameFormat = declare('RoomName', compose('uint16', {
+	compose: (id: number) => makeRoomNameFromId(id),
+	decompose: (name: string) => parseRoomNameToId(name),
+}));
 
 export function makeRoomName(rx: number, ry: number) {
 	const id = roomIdFromCoordinates(rx, ry);
@@ -49,7 +61,7 @@ export function parseSignedRoomName(name: string) {
 	};
 }
 
-export function parseRoomName(name: string) {
+export function parseRoomName(name: string): ParsedRoomName {
 	const { rx, ry } = parseSignedRoomName(name);
 	return { rx: kMaxWorldSize2 + rx, ry: kMaxWorldSize2 + ry };
 }
@@ -63,9 +75,6 @@ function roomIdFromCoordinates(rx: number, ry: number) {
 	return (ry << 8) | rx;
 }
 
-// A room name stored as its packed id (`uint16`), composed to/from the string form so schemas
-// stay compact while callers deal in names.
-export const roomNameFormat = declare('RoomName', compose('uint16', {
-	compose: (id: number) => makeRoomNameFromId(id),
-	decompose: (name: string) => parseRoomNameToId(name),
-}));
+export function roomLinearDistance(left: ParsedRoomName, right: ParsedRoomName) {
+	return Math.max(Math.abs(left.rx - right.rx), Math.abs(left.ry - right.ry));
+}

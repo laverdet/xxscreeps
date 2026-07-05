@@ -29,7 +29,7 @@ function rollPower(): number {
 registerShardInitializer(async shard => {
 	const world = await shard.loadWorld();
 	const seeds = await Fn.pipe(
-		world.map.sectors(),
+		world.map['#sectors'](),
 		$$ => Fn.transform($$, ([ , sector ]) => sector.edges),
 		// Edge rooms are shared between adjacent sectors; each seeds one timer.
 		$$ => new Set($$),
