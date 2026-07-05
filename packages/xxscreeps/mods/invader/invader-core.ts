@@ -19,6 +19,7 @@ const shape = struct(ownedStructureFormat, {
 	level: 'int8',
 	spawning: optional(compose(spawningFormat, Spawning), null),
 	'#actionLog': RoomObject.actionLogFormat,
+	'#collapseTime': 'int32',
 	'#deployTime': 'int32',
 });
 

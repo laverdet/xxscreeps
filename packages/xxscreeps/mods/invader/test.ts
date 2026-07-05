@@ -7,7 +7,6 @@ import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { create as createTower } from 'xxscreeps/mods/defense/tower.js';
 import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
-import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { lookForStructures } from '../structure/structure.js';
 import { create as createInvaderCore } from './invader-core.js';
@@ -605,43 +604,41 @@ describe('Invader core stronghold deployment', () => {
 		});
 	}));
 
-	test('deploy spawns the stronghold template sharing the core collapse timer', () => deployScene(async ({ tick, peekRoom }) => {
+	test('deploy spawns the stronghold template pinned to the collapse timer', () => deployScene(async ({ tick, peekRoom }) => {
 		await tick(2);
 		await peekRoom('W1N1', room => {
-			const decayTime = findRoomCore(room)!['#collapseTime'];
+			const collapseTime = findRoomCore(room)!['#collapseTime'];
 			const tower = lookForStructures(room, C.STRUCTURE_TOWER)[0];
 			const rampart = lookForStructures(room, C.STRUCTURE_RAMPART)[0];
-			const container = lookForStructures(room, C.STRUCTURE_CONTAINER)[0];
-			const road = lookForStructures(room, C.STRUCTURE_ROAD)[0];
-			assert.ok(tower && rampart && container && road, 'deploy spawns every template structure');
+			assert.ok(tower && rampart, 'deploy spawns every template structure');
 			assert.strictEqual(tower['#user'], '2', 'tower is owned by the invader NPC');
 			assert.strictEqual(rampart['#user'], '2', 'rampart is owned by the invader NPC');
-			for (const peer of [ tower, rampart, container, road ]) {
-				assert.strictEqual(peer['#collapseTime'], decayTime, 'peer shares the core collapse timer');
-			}
-			// Pinned to the collapse time so they don't decay (and read a past expiry, which throws)
+			// Pinned to the collapse time so it doesn't decay (and read a past expiry, which throws)
 			// while the stronghold room sleeps between deploy and collapse.
-			for (const peer of [ rampart, container, road ]) {
-				assert.strictEqual(peer['#nextDecayTime'], decayTime, 'decaying peer will not decay before collapse');
-			}
+			assert.strictEqual(rampart['#nextDecayTime'], collapseTime, 'decaying peer will not decay before collapse');
 		});
 	}));
 
-	// A lone unowned peer carrying an elapsed collapse timer: the shared base pre-tick must remove it,
-	// proving the mechanism works across structure types, not just the core.
-	const collapsingPeer = simulate({
+	// A collapsing core takes its deployed peers with it: every NPC-owned structure in the room is
+	// removed in the same pre-tick, while structures of other users are untouched.
+	const collapsingStronghold = simulate({
 		W1N1: room => {
-			const container = createContainer(corePos);
-			container['#collapseTime'] = 1;
-			room['#insertObject'](container);
+			const core = createInvaderCore(corePos, 2, 0);
+			core['#collapseTime'] = 1;
+			room['#insertObject'](core);
+			room['#insertObject'](createTower(new RoomPosition(25, 24, 'W1N1'), '2'));
+			room['#insertObject'](createTower(new RoomPosition(26, 25, 'W1N1'), '100'));
 			activateNPC(room, '2');
 		},
 	});
 
-	test('a deployed peer is removed silently when its collapse timer elapses', () => collapsingPeer(async ({ tick, peekRoom }) => {
+	test('collapse sweeps NPC structures silently and spares other owners', () => collapsingStronghold(async ({ tick, peekRoom }) => {
 		await tick();
 		await peekRoom('W1N1', room => {
-			assert.strictEqual(lookForStructures(room, C.STRUCTURE_CONTAINER).length, 0, 'collapsed peer is removed');
+			assert.strictEqual(findRoomCore(room), undefined, 'core is removed at collapse');
+			const towers = lookForStructures(room, C.STRUCTURE_TOWER);
+			assert.strictEqual(towers.length, 1, 'the NPC tower is removed with the core');
+			assert.strictEqual(towers[0]!['#user'], '100', 'structures of other users survive');
 			assert.strictEqual(room.find(C.FIND_RUINS).length, 0, 'collapse leaves no Ruin');
 			const destroyed = room.getEventLog().find(event => event.event === C.EVENT_OBJECT_DESTROYED);
 			assert.strictEqual(destroyed, undefined, 'collapse emits no EVENT_OBJECT_DESTROYED');
