@@ -9,6 +9,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
+import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
@@ -83,15 +84,17 @@ const rooms = Object.entries(payload).map(([ roomName, info ]) => {
 });
 
 // Initialize world terrain blob & path finder
+const roomNames = new Set(Fn.map(rooms, ({ room }) => room.name));
 const terrainMap = new Map(Fn.map(rooms, ({ room, terrain }) => [
 	room.name, {
 		exits: packExits(terrain),
 		terrain,
+		...computeRoomMeta(room.name, roomNames),
 	},
 ]));
 const terrain = makeWriter(MapSchema.schema)(terrainMap);
-const world = new MapSchema.World('test', terrain);
-loadTerrain(world);
+export const testWorld = new MapSchema.World('test', terrain);
+loadTerrain(testWorld);
 
 // Default users
 const users = {
@@ -162,6 +165,6 @@ export async function instantiateTestShard() {
 		}(disposable.move()),
 		db,
 		shard,
-		world,
+		world: testWorld,
 	};
 }
