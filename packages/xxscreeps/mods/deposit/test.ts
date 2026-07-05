@@ -11,7 +11,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
-import { world } from 'xxscreeps/test/import.js';
+import { testWorld } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { deterministicRandomForTesting } from 'xxscreeps/utility/utility.js';
 import { Deposit } from './deposit.js';
@@ -131,9 +131,9 @@ function withFixedPlacement(seed = 1): Disposable {
 // unfiltered (no radius/decay test) — that filtering is the scheduler's job; this just sees what
 // landed.
 async function findDepositsInSector(shard: Shard, centralRoom: string) {
-	const { sectorControl } = world.map['#getRoomTraits'](centralRoom);
+	const { sectorControl } = testWorld.map['#getRoomTraits'](centralRoom);
 	assert.ok(sectorControl);
-	const deposits = await loadSectorDeposits(shard, world, centralRoom, sectorControl.edges);
+	const deposits = await loadSectorDeposits(shard, testWorld, centralRoom, sectorControl.edges);
 	return deposits.map(deposit => ({ roomName: deposit.pos.roomName, deposit }));
 }
 
@@ -184,7 +184,7 @@ describe('Deposit placement', () => {
 	// busy-room exclusion leaves it exactly one legal destination. The four candidate spots cover
 	// each room's in-radius quadrant, whichever side of the sector it sits on.
 	const freeRoom = 'W0N5';
-	const { sectorControl } = world.map['#getRoomTraits']('W5N5');
+	const { sectorControl } = testWorld.map['#getRoomTraits']('W5N5');
 	assert.ok(sectorControl);
 	const occupiedRing = Fn.pipe(
 		sectorControl.edges,

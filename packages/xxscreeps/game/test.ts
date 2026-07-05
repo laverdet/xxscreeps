@@ -2,7 +2,7 @@ import type { SectorControl } from 'xxscreeps/game/map.js';
 import * as assert from 'node:assert';
 import { search } from 'xxscreeps/driver/pathfinder/pathfinder.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { world } from 'xxscreeps/test/import.js';
+import { testWorld } from 'xxscreeps/test/import.js';
 import { describe, test } from 'xxscreeps/test/index.js';
 import { RoomPosition } from './position.js';
 import { computeRoomMeta } from './room/sector.js';
@@ -111,21 +111,21 @@ describe('computeRoomMeta', () => {
 describe('GameMap sector metadata', () => {
 	test('reads the stamped sector record', () => {
 		// The test world is exactly W0..W10 x N0..N10 — one full sector.
-		const sectors = [ ...world.map['#sectors']() ];
+		const sectors = [ ...testWorld.map['#sectors']() ];
 		assert.deepStrictEqual(sectors.map(([ center ]) => center), [ 'W5N5' ], 'W5N5 anchors the only sector');
-		const { sectorControl } = world.map['#getRoomTraits']('W5N5');
+		const { sectorControl } = testWorld.map['#getRoomTraits']('W5N5');
 		assert.ok(sectorControl, 'the center room carries the record');
 		assert.strictEqual(sectorControl.edges.length, 40);
 		assert.strictEqual(sectorControl.members.length, 81);
-		const edge = world.map['#getRoomTraits']('W0N0');
+		const edge = testWorld.map['#getRoomTraits']('W0N0');
 		assert.strictEqual(edge.sectorControl, undefined, 'edge rooms carry no record');
 	});
 
 	test('inverts the records into room -> centers', () => {
-		const { sectorControl } = world.map['#getRoomTraits']('W5N5');
+		const { sectorControl } = testWorld.map['#getRoomTraits']('W5N5');
 		assert.ok(sectorControl);
 		for (const roomName of Fn.concat<string>([ sectorControl.members, sectorControl.edges ])) {
-			const centers = world.map['#getRoomTraits'](roomName).sectors;
+			const centers = testWorld.map['#getRoomTraits'](roomName).sectors;
 			assert.deepStrictEqual(centers, [ 'W5N5' ], `${roomName} claims W5N5`);
 		}
 	});

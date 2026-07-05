@@ -92,8 +92,8 @@ const terrainMap = new Map(Fn.map(rooms, ({ room, terrain }) => [
 	},
 ]));
 const terrain = makeWriter(MapSchema.schema)(terrainMap);
-export const world = new MapSchema.World('test', terrain);
-loadTerrain(world);
+export const testWorld = new MapSchema.World('test', terrain);
+loadTerrain(testWorld);
 
 // Default users
 const users = {
@@ -147,6 +147,6 @@ export async function instantiateTestShard() {
 		}(disposable.move()),
 		db,
 		shard,
-		world,
+		world: testWorld,
 	};
 }
