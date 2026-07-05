@@ -85,12 +85,17 @@ export class RedisPubSubProvider implements PubSubProvider {
 
 	async unsubscribe(key: string, subscriber: RedisSubscription) {
 		const prefixKey = `${this.prefix}${key}`;
-		const subscribersInfo = this.subscribersByKey.get(prefixKey)!;
-		if (subscribersInfo.subscribers.size === 1) {
+		const subscribersInfo = this.subscribersByKey.get(prefixKey);
+		// The delegate entry may already be gone (another subscriber to the same key tore it down, or a
+		// subscribe raced with this unsubscribe), and `subscriber` may no longer be a member. Removing an
+		// unknown subscriber is a no-op — this keeps unsubscribe idempotent instead of crashing.
+		if (!subscribersInfo?.subscribers.delete(subscriber)) {
+			return;
+		}
+		// Only drop the shared Redis subscription once the last local subscriber for this key is gone.
+		if (subscribersInfo.subscribers.size === 0) {
 			this.subscribersByKey.delete(prefixKey);
 			await this.client.sUnsubscribe(prefixKey);
-		} else {
-			subscribersInfo.subscribers.delete(subscriber);
 		}
 	}
 }

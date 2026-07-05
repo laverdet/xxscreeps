@@ -164,10 +164,13 @@ class LocalPubSubProviderParent extends SharedResponder implements PubSubProvide
 		const sources = getOrSet(this.subscriptionsByKey, key, () => new Set());
 		sources.add(subscription);
 		return [ () => {
-			if (sources.size === 1) {
+			// Remove only our own subscription; no-op if it (or the entry) is already gone. Drop the key
+			// entry only once its last subscriber leaves, and only if it is still the live entry.
+			if (!sources.delete(subscription)) {
+				return;
+			}
+			if (sources.size === 0 && this.subscriptionsByKey.get(key) === sources) {
 				this.subscriptionsByKey.delete(key);
-			} else {
-				sources.delete(subscription);
 			}
 		}, subscription ] as const;
 	}
@@ -199,13 +202,12 @@ class LocalPubSubProviderParent extends SharedResponder implements PubSubProvide
 					}
 
 					case 'unsubscribe': {
-						const source = subscriptionsByKey.get(message.key)!;
-						const sources = this.subscriptionsByKey.get(source.key)!;
-						if (sources.size === 1) {
+						const source = subscriptionsByKey.get(message.key);
+						const sources = source && this.subscriptionsByKey.get(source.key);
+						if (source && sources?.delete(source) && sources.size === 0) {
 							this.subscriptionsByKey.delete(source.key);
-						} else {
-							sources.delete(source);
 						}
+						break;
 					}
 				}
 			}
@@ -301,11 +303,14 @@ export class LocalPubSubProviderClient implements PubSubProvider {
 		const subscription = new ClientSubscription(listener, key, this);
 		subscriptions.add(subscription);
 		const effect: Effect = () => {
-			if (subscriptions.size === 1) {
+			// Remove only our own subscription; no-op if already gone. Tear down the upstream subscription
+			// only when this key's last local subscriber leaves and it is still the live entry.
+			if (!subscriptions.delete(subscription)) {
+				return;
+			}
+			if (subscriptions.size === 0 && this.subscriptionsByKey.get(key) === subscriptions) {
 				this.subscriptionsByKey.delete(key);
 				this.port.send({ type: 'unsubscribe', key });
-			} else {
-				subscriptions.delete(subscription);
 			}
 		};
 		return [ effect, subscription ] as const;
