@@ -2,7 +2,6 @@ import type { ExitType } from './room/find.js';
 import type { Room } from './room/index.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import type { Adapter } from 'xxscreeps/utility/astar.js';
-import assert from 'node:assert/strict';
 import { build, structForPath } from 'xxscreeps/engine/schema/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -106,7 +105,9 @@ export class GameMap {
 	/** @internal */
 	'#getRoomTraits'(roomName: string) {
 		const traits = this.#traits.get(roomName);
-		assert.ok(traits);
+		if (!traits) {
+			throw new Error(`Could not access room ${roomName}`);
+		}
 		return traits;
 	}
 
