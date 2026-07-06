@@ -5,7 +5,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { testWorld } from 'xxscreeps/test/import.js';
 import { describe, test } from 'xxscreeps/test/index.js';
 import { RoomPosition } from './position.js';
-import { computeRoomMeta } from './room/sector.js';
+import { computeRoomMeta, makeSectorRadiusPredicate } from './room/sector.js';
 
 interface PositionAssertion {
 	xx: number;
@@ -105,6 +105,36 @@ describe('computeRoomMeta', () => {
 		assert.strictEqual(sectorControl.edges.length, 11, 'ring clipped to the present W0/N0 arms');
 		assert.strictEqual(sectorControl.members.length, 25, 'interior clipped to the present 5x5 corner');
 		assert.ok(!sectorControl.edges.includes('W10N5'), 'absent ring rooms are clipped');
+	});
+});
+
+describe('makeSectorRadiusPredicate', () => {
+	test('a single-sector room belongs wholly to its sector', () => {
+		const inSector = makeSectorRadiusPredicate('W5N5', 'W10N10', [ 'W5N5' ]);
+		assert.ok(inSector(0, 0), 'even the far corner is claimed');
+	});
+
+	test('a shared edge room splits between its two sectors', () => {
+		// W10N5 sits between W5N5 (east) and W15N5 (west).
+		const sectors = [ 'W5N5', 'W15N5' ];
+		const east = makeSectorRadiusPredicate('W5N5', 'W10N5', sectors);
+		const west = makeSectorRadiusPredicate('W15N5', 'W10N5', sectors);
+		assert.ok(east(49, 25), 'the east half belongs to W5N5');
+		assert.ok(!east(0, 25), 'the west half does not');
+		assert.ok(west(0, 25), 'the west half belongs to W15N5');
+		assert.ok(!west(49, 25), 'the east half does not');
+		for (let xx = 0; xx < 50; ++xx) {
+			assert.ok(!(east(xx, 25) && west(xx, 25)), `column ${xx} is claimed by at most one sector`);
+		}
+	});
+
+	test('a shared corner room splits between its four sectors', () => {
+		const sectors = [ 'W5N5', 'W15N5', 'W5N15', 'W15N15' ];
+		const inSector = makeSectorRadiusPredicate('W5N5', 'W10N10', sectors);
+		assert.ok(inSector(49, 49), 'the near quadrant belongs to W5N5');
+		assert.ok(!inSector(0, 49), 'the far quadrants do not');
+		assert.ok(!inSector(49, 0), 'the far quadrants do not');
+		assert.ok(!inSector(0, 0), 'the far quadrants do not');
 	});
 });
 
