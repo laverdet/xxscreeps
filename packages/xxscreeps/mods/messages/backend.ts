@@ -1,3 +1,4 @@
+import type { Message } from './model.js';
 import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
@@ -11,6 +12,19 @@ import {
 
 // Longer payloads are rejected rather than truncated.
 const kMaxMessageLength = 102400;
+
+// The official client expects Mongo-style `_id` and an ISO date string. The model keeps a clean `id`
+// and a numeric timestamp, so we translate to the client's shape only at this boundary. The `id` is
+// preserved verbatim so the client can merge socket updates onto the message it already holds.
+function toClientMessage(message: Message) {
+	return {
+		_id: message.id,
+		type: message.type,
+		text: message.text,
+		date: new Date(message.date).toISOString(),
+		unread: message.unread,
+	};
+}
 
 const UnreadCountEndpoint: Endpoint = {
 	path: '/api/user/messages/unread-count',
@@ -42,7 +56,8 @@ const IndexEndpoint: Endpoint = {
 				...info.badge != null && { badge: JSON.parse(info.badge) },
 			};
 		}));
-		return { ok: 1, messages: entries, users };
+		const messages = entries.map(entry => ({ _id: entry.id, message: toClientMessage(entry.message) }));
+		return { ok: 1, messages, users };
 	},
 };
 
@@ -66,7 +81,7 @@ const ListEndpoint: Endpoint = {
 			return { error: 'not authenticated' };
 		}
 		const messages = await getConversation(context.db, userId, context.request.query.respondent);
-		return { ok: 1, messages };
+		return { ok: 1, messages: messages.map(toClientMessage) };
 	}),
 };
 
@@ -110,7 +125,7 @@ const SendEndpoint: Endpoint = {
 
 		// Best-effort message notification, gated by the recipient's notify prefs.
 		try {
-			const prefs = await getNotifyPrefs(context.shard, respondent);
+			const prefs = await getNotifyPrefs(context.db, respondent);
 			if (!prefs.disabled && !prefs.disabledOnMessages) {
 				const sender = await context.db.data.hmGet(User.infoKey(userId), [ 'username' ]);
 				await sendNotification(context.shard, respondent, 'msg', `You have a new message from ${sender.username ?? 'a player'}`);
@@ -163,8 +178,8 @@ hooks.register('subscription', {
 		if (this.user === undefined || params.user !== this.user) {
 			return () => {};
 		}
-		return getNewMessageChannel(this.context.db, this.user).listen(message => {
-			this.send(JSON.stringify(message));
+		return getNewMessageChannel(this.context.db, this.user).listen(({ message }) => {
+			this.send(JSON.stringify({ message: toClientMessage(message) }));
 		});
 	},
 });
@@ -177,8 +192,8 @@ hooks.register('subscription', {
 		if (this.user === undefined || params.user !== this.user || respondent === undefined) {
 			return () => {};
 		}
-		return getMessageChannel(this.context.db, this.user, respondent).listen(message => {
-			this.send(JSON.stringify(message));
+		return getMessageChannel(this.context.db, this.user, respondent).listen(({ message }) => {
+			this.send(JSON.stringify({ message: toClientMessage(message) }));
 		});
 	},
 });

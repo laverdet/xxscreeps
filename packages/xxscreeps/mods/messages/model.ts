@@ -7,11 +7,12 @@ import { makeProviderRegistration } from 'xxscreeps/utility/hook.js';
 // Private messages are an account-level feature, so all state lives in the shared `db.data` store
 // (like notification prefs) rather than per-shard.
 //
-// Each PM is persisted as two linked documents, mirroring the original screeps-server model: an
-// `in` copy owned by the recipient and an `out` copy owned by the sender. This lets each side track
-// its own read-state — the recipient's unread badge and the sender's read receipt — independently.
-// The `peer` field links an `out` copy to the recipient's `in` copy so `markRead` can flip the
-// sender's receipt.
+// A private message is stored exactly once, as a single shared document holding `from`, `to`, `text`
+// and the send time. Both parties' conversation threads point at that same id, so a large payload is
+// never duplicated. Read-state is a single fact per message — "has the recipient read it yet?" —
+// tracked as membership in the recipient's unread set; that one bit drives both the recipient's unread
+// badge and the sender's read receipt. The `in`/`out` direction and the `unread` flag the client sees
+// are derived per viewer, never stored.
 //
 // All of this is the *default* store, registered as the fallback of `messageStore`. A mod can call
 // `messageStore.register(...)` to replace the persistence wholesale with a different backend (e.g. a
@@ -21,17 +22,17 @@ import { makeProviderRegistration } from 'xxscreeps/utility/hook.js';
 export type MessageType = 'in' | 'out';
 
 export interface Message {
-	_id: string;
+	id: string;
 	type: MessageType;
 	text: string;
-	// ISO-8601 string, matching the official server's JSON-serialized Mongo date.
-	date: string;
+	// Send time as epoch milliseconds. The backend renders this into whatever the client expects.
+	date: number;
 	unread: boolean;
 }
 
 export interface ConversationIndex {
 	// One entry per respondent (keyed by respondent id), latest message, newest first.
-	entries: { _id: string; message: Message }[];
+	entries: { id: string; message: Message }[];
 	respondents: string[];
 }
 
@@ -48,13 +49,15 @@ export interface MessageStore {
 	removeAllForUser: (db: Database, userId: string) => Promise<void>;
 }
 
-// hash: { user, respondent, date, type, text, unread, peer }
+// hash: { from, to, text, date }. One shared document per message, referenced by both parties.
 const messageKey = (messageId: string) => `messages/${messageId}`;
-// zset: score = sequence of the last message, member = respondentId. Drives the conversation index.
+// zset: score = send time of the last message, member = respondentId. Drives the conversation index.
 const conversationsKey = (userId: string) => `user/${userId}/messages/conversations`;
-// zset: score = global send sequence, member = messageId. One conversation thread.
+// zset: score = send time, member = shared messageId. One conversation thread; both parties' threads
+// reference the same ids.
 const threadKey = (userId: string, respondentId: string) => `user/${userId}/messages/with/${respondentId}`;
-// set of unread incoming messageIds. unread-count is an O(1) `sCard` over this.
+// set of unread messageIds the given user has received. unread-count is an O(1) `sCard` over this, and
+// membership doubles as the sender's read receipt.
 const unreadKey = (userId: string) => `user/${userId}/messages/unread`;
 
 // Client subscribes to `user:<id>/newMessage`; we publish on this internal channel name.
@@ -67,80 +70,69 @@ export function getMessageChannel(db: Database, userId: string, respondentId: st
 	return new Channel<{ message: Message }>(db.pubsub, `user/${userId}/message/${respondentId}`);
 }
 
-interface MessageFields {
-	user: string;
-	respondent: string;
-	date: string;
-	type: MessageType;
+interface MessageRow {
+	id: string;
+	from: string;
+	to: string;
 	text: string;
-	unread: string;
-	peer: string;
+	// epoch milliseconds, stored as a string in the hash
+	date: string;
 }
 
-async function readMessage(db: Database, messageId: string): Promise<(MessageFields & { _id: string }) | undefined> {
-	const fields = await db.data.hGetAll(messageKey(messageId)) as Partial<MessageFields>;
-	if (fields.user === undefined) {
+async function readMessage(db: Database, messageId: string): Promise<MessageRow | undefined> {
+	const fields = await db.data.hGetAll(messageKey(messageId)) as Partial<Omit<MessageRow, 'id'>>;
+	if (fields.from === undefined) {
 		return undefined;
 	}
-	return { _id: messageId, ...fields as MessageFields };
+	return { id: messageId, from: fields.from, to: fields.to!, text: fields.text!, date: fields.date! };
 }
 
-function toMessage(row: MessageFields & { _id: string }): Message {
+/**
+ * Build the message as seen by `viewerId`. `type` follows from whether the viewer sent it; `unread`
+ * is the single shared fact "the recipient has not read it yet" — the recipient's badge and the
+ * sender's read receipt are the same bit.
+ */
+function toMessage(row: MessageRow, viewerId: string, unread: boolean): Message {
 	return {
-		_id: row._id,
-		type: row.type,
+		id: row.id,
+		type: row.from === viewerId ? 'out' : 'in',
 		text: row.text,
-		date: new Date(Number(row.date)).toISOString(),
-		unread: row.unread === '1',
+		date: Number(row.date),
+		unread,
 	};
 }
 
 // The default keyval-backed implementation of `MessageStore`.
 const defaultMessageStore: MessageStore = {
 	/**
-	 * Persist a PM from `senderId` to `respondentId`. Writes both the recipient's `in` copy and the
-	 * sender's `out` copy, updates both conversation threads and the recipient's unread set, and
-	 * publishes the new-message events the client listens for.
-	 *
-	 * Returns the recipient's `in` message so the caller (e.g. the notification hook) can act on it.
+	 * Persist a PM from `senderId` to `respondentId` as one shared document, link it into both parties'
+	 * threads and conversation indexes, add it to the recipient's unread set, and publish the
+	 * new-message events the client listens for. Returns the recipient's view (for the notification hook).
 	 */
 	async sendMessage(db, senderId, respondentId, text) {
 		const now = Date.now();
-		const date = String(now);
-		const inId = generateId(24);
-		const outId = generateId(24);
-
-		// `in` copy: owned by the recipient, unread until they read it.
-		// `out` copy: owned by the sender, `unread` here means "not yet read by the recipient" (the
-		// read receipt), flipped by `markRead`.
+		const id = generateId(24);
 		await Promise.all([
-			db.data.hmset(messageKey(inId), {
-				user: respondentId, respondent: senderId, date, type: 'in', text, unread: '1', peer: outId,
-			}),
-			db.data.hmset(messageKey(outId), {
-				user: senderId, respondent: respondentId, date, type: 'out', text, unread: '1', peer: inId,
-			}),
-			db.data.zAdd(threadKey(respondentId, senderId), [ [ now, inId ] ]),
-			db.data.zAdd(threadKey(senderId, respondentId), [ [ now, outId ] ]),
-			db.data.zAdd(conversationsKey(respondentId), [ [ now, senderId ] ]),
+			db.data.hmset(messageKey(id), { from: senderId, to: respondentId, text, date: String(now) }),
+			db.data.zAdd(threadKey(senderId, respondentId), [ [ now, id ] ]),
+			db.data.zAdd(threadKey(respondentId, senderId), [ [ now, id ] ]),
 			db.data.zAdd(conversationsKey(senderId), [ [ now, respondentId ] ]),
-			db.data.sAdd(unreadKey(respondentId), [ inId ]),
+			db.data.zAdd(conversationsKey(respondentId), [ [ now, senderId ] ]),
+			db.data.sAdd(unreadKey(respondentId), [ id ]),
 		]);
 
-		const inMessage = toMessage({
-			_id: inId, user: respondentId, respondent: senderId, date, type: 'in', text, unread: '1', peer: outId,
-		});
-		const outMessage = toMessage({
-			_id: outId, user: senderId, respondent: respondentId, date, type: 'out', text, unread: '1', peer: inId,
-		});
+		const row: MessageRow = { id, from: senderId, to: respondentId, text, date: String(now) };
+		// A freshly sent message is unread by definition (the recipient hasn't opened it yet).
+		const incoming = toMessage(row, respondentId, true);
+		const outgoing = toMessage(row, senderId, true);
 		await Promise.all([
-			getMessageChannel(db, respondentId, senderId).publish({ message: inMessage }),
-			getNewMessageChannel(db, respondentId).publish({ message: inMessage }),
+			getMessageChannel(db, respondentId, senderId).publish({ message: incoming }),
+			getNewMessageChannel(db, respondentId).publish({ message: incoming }),
 			// Echo the sent message back to the sender's other sessions so an open conversation updates
 			// live without a refresh.
-			getMessageChannel(db, senderId, respondentId).publish({ message: outMessage }),
+			getMessageChannel(db, senderId, respondentId).publish({ message: outgoing }),
 		]);
-		return inMessage;
+		return incoming;
 	},
 
 	/**
@@ -149,13 +141,25 @@ const defaultMessageStore: MessageStore = {
 	async getConversationIndex(db, userId) {
 		// Read all respondents ascending by last-message time, then reverse for newest-first.
 		const respondents = (await db.data.zRange(conversationsKey(userId), 0, -1)).reverse();
+		if (respondents.length === 0) {
+			return { entries: [], respondents };
+		}
+		const myUnread = new Set(await db.data.sMembers(unreadKey(userId)));
 		const entries = await Promise.all(respondents.map(async respondentId => {
 			const [ latestId ] = await db.data.zRange(threadKey(userId, respondentId), -1, -1);
 			const row = latestId === undefined ? undefined : await readMessage(db, latestId);
-			return { _id: respondentId, message: row && toMessage(row) };
+			if (!row) {
+				return undefined;
+			}
+			// Incoming: unread lives in my set. Outgoing: unread lives in the respondent's set (the
+			// read receipt), so ask directly rather than preloading every peer's unread set.
+			const unread = row.to === userId
+				? myUnread.has(row.id)
+				: await db.data.sIsMember(unreadKey(respondentId), row.id);
+			return { id: respondentId, message: toMessage(row, userId, unread) };
 		}));
 		return {
-			entries: entries.filter((entry): entry is { _id: string; message: Message } => entry.message !== undefined),
+			entries: entries.filter((entry): entry is { id: string; message: Message } => entry !== undefined),
 			respondents,
 		};
 	},
@@ -165,8 +169,21 @@ const defaultMessageStore: MessageStore = {
 	 */
 	async getConversation(db, userId, respondentId, limit = 100) {
 		const ids = await db.data.zRange(threadKey(userId, respondentId), -limit, -1);
-		const rows = await Promise.all(ids.map(id => readMessage(db, id)));
-		return rows.filter((row): row is MessageFields & { _id: string } => row !== undefined).map(toMessage);
+		if (ids.length === 0) {
+			return [];
+		}
+		// A thread only ever involves these two users, so their two unread sets cover every message's
+		// read-state; read each once and test membership in memory.
+		const [ rows, myUnread, theirUnread ] = await Promise.all([
+			Promise.all(ids.map(id => readMessage(db, id))),
+			db.data.sMembers(unreadKey(userId)),
+			db.data.sMembers(unreadKey(respondentId)),
+		]);
+		const myUnreadSet = new Set(myUnread);
+		const theirUnreadSet = new Set(theirUnread);
+		return rows
+			.filter((row): row is MessageRow => row !== undefined)
+			.map(row => toMessage(row, userId, (row.to === userId ? myUnreadSet : theirUnreadSet).has(row.id)));
 	},
 
 	async getUnreadCount(db, userId) {
@@ -174,53 +191,44 @@ const defaultMessageStore: MessageStore = {
 	},
 
 	/**
-	 * Mark a single incoming message read. Clears the recipient's unread state and flips the linked
-	 * sender copy's read receipt, publishing it on the sender's conversation channel.
+	 * Mark a single received message read. Only the recipient may do so. Clears the shared unread bit
+	 * and notifies the sender's open sessions that their read receipt flipped.
 	 *
-	 * Returns false if the message does not exist, is not owned by `userId`, is not incoming, or was
-	 * already read (so the caller does not over-decrement any cached counter).
+	 * Returns false if the message does not exist, is not addressed to `userId`, or was already read
+	 * (so the caller does not over-decrement any cached counter).
 	 */
 	async markRead(db, userId, messageId) {
 		const row = await readMessage(db, messageId);
-		if (!row || row.user !== userId || row.type !== 'in') {
+		if (!row) {
 			return false;
 		}
-		// `hDel` both clears the flag and reports whether it was still set, so a concurrent call for
-		// the same message can't double-fire the side effects below.
-		const wasUnread = await db.data.hDel(messageKey(messageId), [ 'unread' ]) > 0;
-		if (!wasUnread) {
+		// Only the recipient may mark their received message read.
+		if (row.to !== userId) {
 			return false;
 		}
-		await db.data.sRem(unreadKey(userId), [ messageId ]);
-		// Flip the sender's read receipt and notify their open sessions. The peer row is just the other
-		// view of this same message, so its `text`/`date` are already in hand — no need to read it back.
-		const peerWasUnread = await db.data.hDel(messageKey(row.peer), [ 'unread' ]) > 0;
-		if (peerWasUnread) {
-			const receipt = toMessage({
-				_id: row.peer, user: row.respondent, respondent: row.user, date: row.date, type: 'out', text: row.text,
-				unread: '0', peer: row._id,
-			});
-			await getMessageChannel(db, row.respondent, row.user).publish({ message: receipt });
+		// `sRem` reports how many members it actually removed, so a repeat call (already read) removes 0
+		// and skips the side effects below — no double-fire, no cached-counter drift.
+		const removed = await db.data.sRem(unreadKey(userId), [ messageId ]);
+		if (removed === 0) {
+			return false;
 		}
+		// The sender's `out` view of this same shared message is now read; push the receipt to them.
+		const receipt = toMessage(row, row.from, false);
+		await getMessageChannel(db, row.from, row.to).publish({ message: receipt });
 		return true;
 	},
 
 	/**
-	 * Remove all of a user's message state. Drops their threads, conversation index and unread set,
-	 * and the message documents they own. The peer (other party) keeps their own copies; orphaned
-	 * references are tolerated by the read paths.
+	 * Remove a user's message state. The shared message documents are co-owned by the peer, so we only
+	 * tear down *this* user's own view: their threads, their conversation index and their unread set.
+	 * The documents and the peers' threads stay intact, keeping the other party's history readable.
+	 * (If both parties are eventually removed the shared docs orphan permanently — acceptable, and
+	 * consistent with the read paths tolerating dangling references.)
 	 */
 	async removeAllForUser(db, userId) {
 		const respondents = await db.data.zRange(conversationsKey(userId), 0, -1);
-		const threadKeys = respondents.map(respondentId => threadKey(userId, respondentId));
-		const ownedIds: string[] = [];
-		await Promise.all(respondents.map(async respondentId => {
-			const ids = await db.data.zRange(threadKey(userId, respondentId), 0, -1);
-			ownedIds.push(...ids);
-		}));
 		await Promise.all([
-			...ownedIds.map(id => db.data.del(messageKey(id))),
-			...threadKeys.map(key => db.data.del(key)),
+			...respondents.map(respondentId => db.data.del(threadKey(userId, respondentId))),
 			db.data.del(conversationsKey(userId)),
 			db.data.del(unreadKey(userId)),
 		]);
