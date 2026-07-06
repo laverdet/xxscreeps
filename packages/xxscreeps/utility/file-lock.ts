@@ -33,7 +33,7 @@ export class FileSystemLock implements Disposable {
 
 		// See if process still exists. On Docker the pid will probably always be the same, so just
 		// ignore it in this case.
-		if (pid !== undefined && pid !== process.pid) {
+		if (pid !== undefined && Boolean(pid) && pid !== process.pid) {
 			const exists = function() {
 				try {
 					process.kill(pid, 0); // does *not* kill the process, just tries to send a signal
