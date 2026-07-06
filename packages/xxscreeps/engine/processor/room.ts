@@ -106,7 +106,7 @@ export class RoomProcessor implements ProcessorContext {
 				for (let ii = 0; ii < length; ++ii) {
 					// Iterated manually to avoid including newly-pushed `now` objects
 					const object = objects[ii]!;
-					object[PreTick]?.(object, this);
+					invokeHandler(object, PreTick, this);
 				}
 			}
 			this.room['#flushObjects'](this.state);
@@ -170,7 +170,7 @@ export class RoomProcessor implements ProcessorContext {
 				for (let ii = 0; ii < length; ++ii) {
 					// Iterated manually to avoid including newly-pushed `now` objects
 					const object = objects[ii]!;
-					object[Tick]?.(object, this);
+					invokeHandler(object, Tick, this);
 				}
 			}
 			this.room['#flushObjects'](this.state);
@@ -316,4 +316,20 @@ export class RoomProcessor implements ProcessorContext {
 			}
 		}
 	}
+}
+
+function invokeHandler(object: RoomObject, key: typeof PreTick | typeof Tick, context: ProcessorContext) {
+	const invokeFrom = (implementation: RoomObject) => {
+		for (
+			let prototype: RoomObject | null = implementation;
+			prototype;
+			prototype = Object.getPrototypeOf(prototype) as RoomObject | null
+		) {
+			const fn = prototype[key];
+			if (fn && Object.hasOwn(prototype, key)) {
+				fn.call(object, object, context, () => invokeFrom(Object.getPrototypeOf(prototype) as RoomObject));
+			}
+		}
+	};
+	invokeFrom(object);
 }

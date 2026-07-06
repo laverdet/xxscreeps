@@ -25,7 +25,7 @@ export type IntentProcessorInfo = {
 	process: IntentProcessor;
 	receiver: abstract new(...args: any[]) => any;
 };
-type TickProcessor<Type = any> = (receiver: Type, context: ProcessorContext) => void;
+type TickProcessor<Type = any> = (receiver: Type, context: ProcessorContext, next: () => void) => void;
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
 		[PreTick]?: TickProcessor;
@@ -90,13 +90,27 @@ export type IntentListFor<Type extends IntentReceivers> = {
 export function registerObjectPreTickProcessor<Type extends RoomObject>(
 	receiver: Implementation<Type>, fn: TickProcessor<Type>,
 ) {
-	receiver.prototype[PreTick] = fn;
+	registerProcessorField(receiver, PreTick, fn);
 }
 
 export function registerObjectTickProcessor<Type extends RoomObject>(
 	receiver: Implementation<Type>, fn: TickProcessor<Type>,
 ) {
-	receiver.prototype[Tick] = fn;
+	registerProcessorField(receiver, Tick, fn);
+}
+
+function registerProcessorField(receiver: Implementation<RoomObject>, field: typeof PreTick | typeof Tick, fn: TickProcessor) {
+	receiver.prototype[field] = function() {
+		if (Object.hasOwn(receiver.prototype, field)) {
+			const next = receiver.prototype[field]!;
+			return function(this: RoomObject, receiver, context, afterNext) {
+				fn(receiver, context, () => next.call(this, receiver, context, afterNext));
+			};
+		} else {
+			return fn;
+		}
+	}();
+
 }
 
 export function initializeIntentConstraints() {
