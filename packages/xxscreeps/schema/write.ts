@@ -85,12 +85,13 @@ function makeMemberWriter(layout: StructLayout, builder: Builder): MemberWriter 
 
 		// Run inheritance recursively
 		const { inherit } = layout;
+		writeMembers ??= (value, view, offset, heap) => heap;
 		if (inherit === undefined) {
-			return writeMembers!;
+			return writeMembers;
 		} else {
 			const writeBase = makeMemberWriter(unpackWrappedStruct(inherit), builder);
 			return (value, view, offset, heap) =>
-				writeMembers!(value, view, offset, writeBase(value, view, offset, heap));
+				writeMembers(value, view, offset, writeBase(value, view, offset, heap));
 		}
 	});
 }

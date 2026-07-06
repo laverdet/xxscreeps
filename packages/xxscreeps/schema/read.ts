@@ -47,13 +47,14 @@ function getMemberReader(layout: StructLayout, builder: Builder): MemberReader {
 
 		// Run inheritance recursively
 		const { inherit } = layout;
+		readMembers ??= () => {};
 		if (inherit === undefined) {
-			return readMembers!;
+			return readMembers;
 		} else {
 			const readBase = getMemberReader(unpackWrappedStruct(inherit), builder);
 			return (value, view, offset) => {
 				readBase(value, view, offset);
-				readMembers!(value, view, offset);
+				readMembers(value, view, offset);
 			};
 		}
 	});

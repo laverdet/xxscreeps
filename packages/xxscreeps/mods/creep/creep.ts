@@ -1,3 +1,4 @@
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { Predicate } from 'xxscreeps/functional/predicate.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomSearchOptions } from 'xxscreeps/game/pathfinder/index.js';
@@ -132,6 +133,8 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 			saveAction(this, 'attacked', source.pos);
 		}
 	}
+
+	'#sendAttackNotify'(_context: ProcessorContext, _source: RoomObject | undefined) {}
 
 	/**
 	 * Cancel the order given during the current game tick.
@@ -314,21 +317,6 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	}
 
 	/**
-	 * Toggle auto notification when the creep is under attack. The notification will be sent to your
-	 * account email. Turned on by default.
-	 * @param enabled Whether to enable notification or disable.
-	 */
-	notifyWhenAttacked(this: Creep, enabled = true) {
-		return chainIntentChecks(
-			() => checkNotifyWhenAttacked(this, enabled),
-			() => {
-				if (enabled === this['#noAttackNotify']) {
-					intents.save(this, 'notifyWhenAttacked', Boolean(enabled));
-				}
-			});
-	}
-
-	/**
 	 * Pick up an item (a dropped piece of energy). Requires the `CARRY` body part. The target has to be
 	 * at adjacent square to the creep or at the same square.
 	 * @param resource The target object to be picked up
@@ -484,17 +472,6 @@ export function checkCommon(creep: Creep, part?: PartType) {
 
 function checkFatigue(creep: Creep) {
 	return creep.fatigue > 0 ? C.ERR_TIRED : C.OK;
-}
-
-export function checkNotifyWhenAttacked(creep: Creep, enabled: unknown) {
-	if (!creep.my) {
-		return C.ERR_NOT_OWNER;
-	} else if (creep.spawning) {
-		return C.ERR_BUSY;
-	} else if (typeof enabled !== 'boolean') {
-		return C.ERR_INVALID_ARGS;
-	}
-	return C.OK;
 }
 
 export function checkDrop(creep: Creep, resourceType: ResourceType, amount: number) {

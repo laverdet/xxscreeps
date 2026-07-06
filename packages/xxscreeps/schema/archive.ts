@@ -1,5 +1,5 @@
 import type { Layout, StructLayout } from './layout.js';
-import { ownEntriesIncludingPrivate, ownValuesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
+import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { unpackWrappedStruct } from './layout.js';
@@ -49,6 +49,7 @@ class ModuleArchiver {
 					const previous = this.current;
 					this.current = name;
 					const archived = this.archive(layout.layout);
+					this.current = previous;
 					// Archive primitive types as named format to avoid equality collision between different
 					// composed types.
 					const archivedFormat = typeof archived === 'object' ? archived : {
@@ -56,7 +57,6 @@ class ModuleArchiver {
 						layout: archived,
 					};
 					this.rendered.set(name, `export const ${name} = ${render(archivedFormat)};\n`);
-					this.current = previous;
 				}
 				return this.archive(layout);
 			} else if ('struct' in layout) {
@@ -85,10 +85,12 @@ class ModuleArchiver {
 				};
 			} else {
 				const nested = [ 'array', 'list', 'optional', 'pointer', 'vector' ].find(key => key in layout);
-				if (nested !== undefined) {
+				if (nested !== undefined && nested in layout) {
+					// @ts-expect-error
+					const nestedLayout = layout[nested];
 					return {
 						...layout,
-						[nested]: this.archive(layout[nested as keyof typeof layout]),
+						[nested]: this.archive(nestedLayout),
 					};
 				}
 			}
@@ -122,7 +124,10 @@ function render(value: any, indent = 1): string {
 			return `[ ${rendered.map(value => value.replace(/^\t/gm, '')).join(', ')} ]`;
 		}
 	} else if (value) {
-		const entries = [ ...ownEntriesIncludingPrivate(value).filter(([ ,value ]) => value !== undefined) ];
+		const entries = Fn.pipe(
+			ownEntriesIncludingPrivate(value),
+			$$ => Fn.reject($$, ([ ,value ]) => value === undefined),
+			$$ => [ ...$$ ]);
 		const preRendered = entries.map(([ key, value ]) => [ key, render(value, indent + 1) ] as const);
 		preRendered.sort((left, right) => {
 			const hasNewLine = (value: typeof left) => value[1].includes('\n') ? 1 : 0;

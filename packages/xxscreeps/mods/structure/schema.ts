@@ -1,20 +1,22 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerVariant, structForPath } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { roomObjectShape } from 'xxscreeps/game/schema.js';
 import { openStoreFormat } from 'xxscreeps/mods/resource/schema.js';
 import { constant, declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
 
-export const structureShape = declare('Structure', struct(roomObjectShape, {
-	'#noAttackNotify': 'bool',
-}));
+export const structureShape =
+	declare('Structure', () => struct(...structForPath<StructureSchema>()('Structure', roomObjectShape, {
+		// nb: No members
+	})));
 
-export const ownedStructureShape = declare('OwnedStructure', struct(structureShape, {
-	'#user': Id.optionalFormat,
-	// TODO: Rename to '#inactive' so default 0 value = active (true). optional('bool') takes
-	// 2 bytes; should not be lazy.
-	'#active': optional('bool'),
-}));
+export const ownedStructureShape =
+	declare('OwnedStructure', () => struct(...structForPath<OwnedStructureSchema>()('OwnedStructure', structureShape, {
+		'#user': Id.optionalFormat,
+		// TODO: Rename to '#inactive' so default 0 value = active (true). optional('bool') takes
+		// 2 bytes; should not be lazy.
+		'#active': optional('bool'),
+	})));
 
 /** @internal */
 export const ruinShape = declare('Ruin', struct(roomObjectShape, {
@@ -39,6 +41,12 @@ const destroyedEventSchema = registerVariant('Room.eventLog', declare('Destroyed
 })));
 
 // ---
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface StructureSchema {}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface OwnedStructureSchema {}
 
 declare module 'xxscreeps/game/room/index.js' {
 	interface RoomSchema {

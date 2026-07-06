@@ -1,12 +1,12 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerVariant, structForPath } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { actionLogFormat, roomObjectShape } from 'xxscreeps/game/schema.js';
 import { openStoreFormat, optionalResourceEnumFormat, resourceEnumFormat } from 'xxscreeps/mods/resource/schema.js';
 import { constant, declare, enumerated, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
 
-/** @internal */
-export const creepShape = declare('Creep', struct(roomObjectShape, {
+// Creep schema (moddable)
+export const creepShape = declare('Creep', () => struct(...structForPath<CreepSchema>()('Creep', roomObjectShape, {
 	...variant('creep'),
 	body: vector(struct({
 		boost: optionalResourceEnumFormat,
@@ -19,14 +19,13 @@ export const creepShape = declare('Creep', struct(roomObjectShape, {
 	store: openStoreFormat,
 	'#actionLog': actionLogFormat,
 	'#ageTime': 'int32',
-	'#noAttackNotify': 'bool',
 	'#saying': optional(struct({
 		isPublic: 'bool',
 		message: 'string',
 		time: 'int32',
 	})),
 	'#user': Id.format,
-}));
+})));
 
 /** @internal */
 export const tombstoneShape = declare('Tombstone', struct(roomObjectShape, {
@@ -66,6 +65,9 @@ const exitEventSchema = registerVariant('Room.eventLog', declare('ExitEvent', st
 })));
 
 // ---
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface CreepSchema {}
 
 declare module 'xxscreeps/game/room/index.js' {
 	interface RoomSchema {

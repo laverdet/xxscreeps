@@ -15,19 +15,11 @@ import { createRuin } from './ruin.js';
 import { ownedStructureShape, structureShape } from './schema.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
-export type AttackNotificationTarget = RoomObject & { '#noAttackNotify'?: boolean };
-type AttackNotificationHandler = (
-	context: ProcessorContext,
-	target: AttackNotificationTarget,
-	source: RoomObject | undefined,
-) => void;
 
 export interface DestructibleStructure extends Structure {
 	hits: number;
 	hitsMax: number;
 }
-
-const attackNotificationHandlers: AttackNotificationHandler[] = [];
 
 /**
  * The base prototype object of all structures.
@@ -69,20 +61,6 @@ export class Structure extends withOverlay(RoomObject, structureShape) {
 	 */
 	isActive(): boolean {
 		return true;
-	}
-
-	/**
-	 * Toggle notifications for when this structure is attacked.
-	 * @param notifyWhenAttacked Whether to receive email notifications on attack.
-	 */
-	notifyWhenAttacked(this: Structure, notifyWhenAttacked: boolean) {
-		return chainIntentChecks(
-			() => checkNotifyWhenAttacked(this, notifyWhenAttacked),
-			() => {
-				if (notifyWhenAttacked === this['#noAttackNotify']) {
-					intents.save(this, 'notifyWhenAttacked', Boolean(notifyWhenAttacked));
-				}
-			});
 	}
 
 	'#checkObstacle'(_user: string) {
@@ -159,6 +137,8 @@ export class OwnedStructure extends withOverlay(Structure, ownedStructureShape) 
 	override '#addToMyGame'(game: GameConstructor) {
 		game.structures[this.id] = this as never;
 	}
+
+	'#sendAttackNotify'(_context: ProcessorContext, _source: RoomObject | undefined) {}
 }
 
 /**
@@ -249,27 +229,6 @@ export function checkDestroy(structure: Structure) {
 				return C.ERR_BUSY;
 			}
 		});
-}
-
-export function checkNotifyWhenAttacked(structure: Structure, notifyWhenAttacked: unknown) {
-	if (structure.my === false || structure.room.controller?.my === false) {
-		return C.ERR_NOT_OWNER;
-	} else if (typeof notifyWhenAttacked !== 'boolean') {
-		return C.ERR_INVALID_ARGS;
-	}
-	return C.OK;
-}
-
-export function registerAttackNotification(handler: AttackNotificationHandler) {
-	attackNotificationHandlers.push(handler);
-}
-
-export function notifyAttacked(target: AttackNotificationTarget, context: ProcessorContext, source: RoomObject | undefined) {
-	if (!target['#noAttackNotify']) {
-		for (const handler of attackNotificationHandlers) {
-			handler(context, target, source);
-		}
-	}
 }
 
 export function checkPlacement(room: Room, pos: RoomPosition) {
