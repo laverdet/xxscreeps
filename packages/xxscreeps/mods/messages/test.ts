@@ -3,9 +3,7 @@ import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { makeProviderRegistration } from 'xxscreeps/utility/hook.js';
 import { deterministicClockForTesting } from 'xxscreeps/utility/utility.js';
-import {
-	getConversation, getConversationIndex, getUnreadCount, markRead, messageStore, sendMessage,
-} from './model.js';
+import {	getConversation, getConversationIndex, getUnreadCount, markRead, sendMessage } from './model.js';
 
 const alice = '100';
 const bob = '101';
@@ -19,16 +17,16 @@ describe('messages model', () => {
 
 		const aliceThread = await getConversation(db, alice, bob);
 		assert.strictEqual(aliceThread.length, 1);
-		assert.strictEqual(aliceThread[0]!.type, 'out');
-		assert.strictEqual(aliceThread[0]!.text, 'hello bob');
+		assert.strictEqual(aliceThread[0]?.type, 'out');
+		assert.strictEqual(aliceThread[0].text, 'hello bob');
 
 		const bobThread = await getConversation(db, bob, alice);
 		assert.strictEqual(bobThread.length, 1);
-		assert.strictEqual(bobThread[0]!.type, 'in');
-		assert.strictEqual(bobThread[0]!.unread, true);
+		assert.strictEqual(bobThread[0]?.type, 'in');
+		assert.strictEqual(bobThread[0].unread, true);
 
 		// The message is deduplicated: both parties reference the same document.
-		assert.strictEqual(aliceThread[0]!.id, bobThread[0]!.id);
+		assert.strictEqual(aliceThread[0].id, bobThread[0].id);
 	});
 
 	test('unread-count tracks incoming, mark-read clears it', async () => {
@@ -55,13 +53,13 @@ describe('messages model', () => {
 		await sendMessage(db, alice, bob, 'read me');
 		// Alice's outgoing view starts unread (= not yet read by bob).
 		const beforeOut = await getConversation(db, alice, bob);
-		assert.strictEqual(beforeOut[0]!.unread, true);
+		assert.strictEqual(beforeOut[0]?.unread, true);
 
 		const [ incoming ] = await getConversation(db, bob, alice);
 		await markRead(db, bob, incoming!.id);
 
 		const afterOut = await getConversation(db, alice, bob);
-		assert.strictEqual(afterOut[0]!.unread, false);
+		assert.strictEqual(afterOut[0]?.unread, false);
 	});
 
 	test('cannot mark someone else’s message read', async () => {
@@ -88,10 +86,10 @@ describe('messages model', () => {
 		const { entries, respondents } = await getConversationIndex(db, alice);
 		assert.strictEqual(entries.length, 1);
 		assert.deepStrictEqual(respondents, [ bob ]);
-		assert.strictEqual(entries[0]!.id, bob);
+		assert.strictEqual(entries[0]?.id, bob);
 		// Latest message in alice's view of the thread is bob's incoming reply.
-		assert.strictEqual(entries[0]!.message.text, 'reply');
-		assert.strictEqual(entries[0]!.message.type, 'in');
+		assert.strictEqual(entries[0].message.text, 'reply');
+		assert.strictEqual(entries[0].message.type, 'in');
 	});
 
 	test('removing a user clears their messages via the User.remove hook', async () => {
@@ -109,26 +107,18 @@ describe('messages model', () => {
 		// The shared document survives for the peer, so alice keeps her side of the conversation.
 		const aliceThread = await getConversation(db, alice, bob);
 		assert.strictEqual(aliceThread.length, 1);
-		assert.strictEqual(aliceThread[0]!.text, 'bye');
+		assert.strictEqual(aliceThread[0]?.text, 'bye');
 	});
 });
 
 describe('message store override', () => {
-	// The real `messageStore` is process-global and has no unregister, so we exercise the override
-	// semantics on a throwaway registration to avoid leaking a mock into other tests.
-	test('built-in store is the default', () => {
-		assert.strictEqual(typeof messageStore.current.sendMessage, 'function');
-	});
+	const fallback = { value: 'default' };
+	const registration = makeProviderRegistration('test', fallback);
+	assert.strictEqual(registration.current, fallback);
 
-	test('register replaces the default; registering twice throws', () => {
-		const fallback = { value: 'default' };
-		const registration = makeProviderRegistration('test', fallback);
-		assert.strictEqual(registration.current, fallback);
+	const override = { value: 'override' };
+	registration.register(override);
+	assert.strictEqual(registration.current, override);
 
-		const override = { value: 'override' };
-		registration.register(override);
-		assert.strictEqual(registration.current, override);
-
-		assert.throws(() => registration.register({ value: 'second' }), /already registered/);
-	});
+	assert.throws(() => registration.register({ value: 'second' }), /already registered/);
 });

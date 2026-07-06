@@ -3,19 +3,14 @@ import type { JSONSchemaType } from 'ajv';
 import type { Endpoint } from 'xxscreeps/backend/index.js';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { sendNotification } from 'xxscreeps/mods/notifications/model.js';
 import { getNotifyPrefs } from 'xxscreeps/mods/notifications/prefs.js';
-import {
-	getConversation, getConversationIndex, getMessageChannel, getNewMessageChannel,
-	getUnreadCount, markRead, sendMessage,
-} from './model.js';
+import {	getConversation, getConversationIndex, getMessageChannel, getNewMessageChannel,	getUnreadCount, markRead, sendMessage } from './model.js';
 
 // Longer payloads are rejected rather than truncated.
-const kMaxMessageLength = 102400;
+const kMaxMessageLength = 100 << 10;
 
-// The official client expects Mongo-style `_id` and an ISO date string. The model keeps a clean `id`
-// and a numeric timestamp, so we translate to the client's shape only at this boundary. The `id` is
-// preserved verbatim so the client can merge socket updates onto the message it already holds.
 function toClientMessage(message: Message) {
 	return {
 		_id: message.id,
@@ -47,15 +42,15 @@ const IndexEndpoint: Endpoint = {
 			return { error: 'not authenticated' };
 		}
 		const { entries, respondents } = await getConversationIndex(context.db, userId);
-		const users: Record<string, { _id: string; username?: string; badge?: unknown }> = {};
-		await Promise.all(respondents.map(async id => {
-			const info = await context.db.data.hmGet(User.infoKey(id), [ 'username', 'badge' ]);
-			users[id] = {
+		const userRecords = await Fn.mapAwait(respondents, async id => {
+			const user = await context.db.data.hmGet(User.infoKey(id), [ 'username', 'badge' ]);
+			return {
 				_id: id,
-				...info.username != null && { username: info.username },
-				...info.badge != null && { badge: JSON.parse(info.badge) },
+				...user.username != null && { username: user.username },
+				...user.badge != null && { badge: JSON.parse(user.badge) as unknown },
 			};
-		}));
+		});
+		const users = Fn.fromEntries(userRecords, user => [ user._id, user ]);
 		const messages = entries.map(entry => ({ _id: entry.id, message: toClientMessage(entry.message) }));
 		return { ok: 1, messages, users };
 	},

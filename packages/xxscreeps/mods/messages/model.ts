@@ -2,6 +2,7 @@ import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { hooks as userHooks } from 'xxscreeps/engine/db/user/index.js';
 import { generateId } from 'xxscreeps/engine/schema/id.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeProviderRegistration } from 'xxscreeps/utility/hook.js';
 
 // Private messages are an account-level feature, so all state lives in the shared `db.data` store
@@ -75,8 +76,7 @@ interface MessageRow {
 	from: string;
 	to: string;
 	text: string;
-	// epoch milliseconds, stored as a string in the hash
-	date: string;
+	date: number;
 }
 
 async function readMessage(db: Database, messageId: string): Promise<MessageRow | undefined> {
@@ -84,7 +84,7 @@ async function readMessage(db: Database, messageId: string): Promise<MessageRow 
 	if (fields.from === undefined) {
 		return undefined;
 	}
-	return { id: messageId, from: fields.from, to: fields.to!, text: fields.text!, date: fields.date! };
+	return { id: messageId, from: fields.from, to: fields.to!, text: fields.text!, date: Number(fields.date!) };
 }
 
 /**
@@ -121,7 +121,7 @@ const defaultMessageStore: MessageStore = {
 			db.data.sAdd(unreadKey(respondentId), [ id ]),
 		]);
 
-		const row: MessageRow = { id, from: senderId, to: respondentId, text, date: String(now) };
+		const row: MessageRow = { id, from: senderId, to: respondentId, text, date: now };
 		// A freshly sent message is unread by definition (the recipient hasn't opened it yet).
 		const incoming = toMessage(row, respondentId, true);
 		const outgoing = toMessage(row, senderId, true);
@@ -139,13 +139,13 @@ const defaultMessageStore: MessageStore = {
 	 * The conversation index: the latest message per respondent, newest first.
 	 */
 	async getConversationIndex(db, userId) {
-		// Read all respondents ascending by last-message time, then reverse for newest-first.
-		const respondents = (await db.data.zRange(conversationsKey(userId), 0, -1)).reverse();
+		// Read all respondents descending by last-message time
+		const respondents = await db.data.zRange(conversationsKey(userId), Infinity, 0, { by: 'SCORE', rev: true });
 		if (respondents.length === 0) {
 			return { entries: [], respondents };
 		}
 		const myUnread = new Set(await db.data.sMembers(unreadKey(userId)));
-		const entries = await Promise.all(respondents.map(async respondentId => {
+		const entries = await Fn.mapAwait(respondents, async respondentId => {
 			const [ latestId ] = await db.data.zRange(threadKey(userId, respondentId), -1, -1);
 			const row = latestId === undefined ? undefined : await readMessage(db, latestId);
 			if (!row) {
@@ -157,9 +157,9 @@ const defaultMessageStore: MessageStore = {
 				? myUnread.has(row.id)
 				: await db.data.sIsMember(unreadKey(respondentId), row.id);
 			return { id: respondentId, message: toMessage(row, userId, unread) };
-		}));
+		});
 		return {
-			entries: entries.filter((entry): entry is { id: string; message: Message } => entry !== undefined),
+			entries: [ ...Fn.filter(entries) ],
 			respondents,
 		};
 	},
@@ -175,15 +175,20 @@ const defaultMessageStore: MessageStore = {
 		// A thread only ever involves these two users, so their two unread sets cover every message's
 		// read-state; read each once and test membership in memory.
 		const [ rows, myUnread, theirUnread ] = await Promise.all([
-			Promise.all(ids.map(id => readMessage(db, id))),
+			Fn.mapAwait(ids, id => readMessage(db, id)),
 			db.data.sMembers(unreadKey(userId)),
 			db.data.sMembers(unreadKey(respondentId)),
 		]);
 		const myUnreadSet = new Set(myUnread);
 		const theirUnreadSet = new Set(theirUnread);
-		return rows
-			.filter((row): row is MessageRow => row !== undefined)
-			.map(row => toMessage(row, userId, (row.to === userId ? myUnreadSet : theirUnreadSet).has(row.id)));
+		return Fn.pipe(
+			rows,
+			$$ => Fn.filter($$),
+			$$ => Fn.map($$, row => {
+				const unreadSet = row.to === userId ? myUnreadSet : theirUnreadSet;
+				return toMessage(row, userId, unreadSet.has(row.id));
+			}),
+			$$ => [ ...$$ ]);
 	},
 
 	async getUnreadCount(db, userId) {
