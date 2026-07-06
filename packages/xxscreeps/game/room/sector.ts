@@ -53,25 +53,27 @@ export function makeSectorRadiusPredicate(centralRoom: string, roomName: string,
 			const here = parseSignedRoomName(roomName);
 			const center = parseSignedRoomName(centralRoom);
 			const linearDistance = roomLinearDistance(here, center);
-			const linearDistance05 = linearDistance >> 1;
+			// The sharing centers sit equidistant from the subject room, `2 * linearDistance` rooms
+			// apart, so a coordinate belongs to `centralRoom` within half that spacing.
+			const radius = linearDistance * 50;
 			for (const sector of sectorNames) {
 				const parsedSector = parseSignedRoomName(sector);
-				if (roomLinearDistance(parsedSector, center) !== linearDistance) {
+				if (roomLinearDistance(parsedSector, here) !== linearDistance) {
 					throw new Error(`Irregular sector geometry ${roomName} ${sectorNames.join(',')}`);
 				}
 			}
 			const xBase = (here.rx - center.rx) * 50 - 24;
 			const yBase = (here.ry - center.ry) * 50 - 24;
-			const xInside = Math.max(Math.abs(xBase), Math.abs(xBase + 49)) < linearDistance05;
-			const yInside = Math.max(Math.abs(yBase), Math.abs(yBase + 49)) < linearDistance05;
+			const xInside = Math.max(Math.abs(xBase), Math.abs(xBase + 49)) < radius;
+			const yInside = Math.max(Math.abs(yBase), Math.abs(yBase + 49)) < radius;
 			if (xInside && yInside) {
 				return () => true;
 			} else if (xInside) {
-				return (xx, yy) => Math.abs(yBase + yy) < linearDistance05;
+				return (xx, yy) => Math.abs(yBase + yy) < radius;
 			} else if (yInside) {
-				return xx => Math.abs(xBase + xx) < linearDistance05;
+				return xx => Math.abs(xBase + xx) < radius;
 			} else {
-				return (xx, yy) => Math.abs(xBase + xx) < linearDistance05 && Math.abs(yBase + yy) < linearDistance05;
+				return (xx, yy) => Math.abs(xBase + xx) < radius && Math.abs(yBase + yy) < radius;
 			}
 		}
 	}
