@@ -90,8 +90,8 @@ export default function transform(): PluginObj {
 			const methodKey = `${name.value.slice(1)}${isOptional ? 'Opt' : ''}`;
 			if (t.isSuper(object)) {
 				const fn = path.getFunctionParent();
-				const home = fn && findParent(fn, path => path.isClassDeclaration() || path.isObjectExpression());
-				if (home?.isClassDeclaration()) {
+				const home = fn && findParent(fn, path => path.isClass() || path.isObjectExpression());
+				if (home?.isClass()) {
 					const homeName = home.node.id;
 					if (homeName) {
 						const runtimeValue = injectMaker(this, 'makeSuperInvoke', `super${methodKey}`, [ stripString(name), optional ]);
