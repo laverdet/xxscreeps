@@ -2,24 +2,17 @@ import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
-import { actionLogFormat, create as createObject } from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { checkDestructible } from 'xxscreeps/mods/combat/creep.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
-import { SingleStore, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, Structure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { SingleStore, checkHasResource } from 'xxscreeps/mods/resource/store.js';
+import { OwnedStructure, Structure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { towerShape } from './schema.js';
 
-export const format = declare('Tower', () => compose(shape, StructureTower));
-const shape = struct(ownedStructureFormat, {
-	...variant('tower'),
-	hits: 'int32',
-	store: singleStoreFormat(),
-	'#actionLog': actionLogFormat,
-});
-
-export class StructureTower extends withOverlay(OwnedStructure, shape) {
+export class StructureTower extends withOverlay(OwnedStructure, towerShape) {
 	override get hitsMax() { return C.TOWER_HITS; }
 	override get structureType() { return C.STRUCTURE_TOWER; }
 	get energy() { return this.store[C.RESOURCE_ENERGY]; }
@@ -57,7 +50,7 @@ export class StructureTower extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const tower = assign(createObject(new StructureTower(), pos), {
+	const tower = assign(createRoomObject(new StructureTower(), pos), {
 		hits: C.TOWER_HITS,
 		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.TOWER_CAPACITY),
 	});

@@ -127,6 +127,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 		let previous: any;
 		let previousTime = -1;
 		let skipUntil = 0;
+		let missedUpdateDuringSkip = false;
 		const { shard } = this.context;
 		const seenUsers = new Set<string>();
 		const roomName = parameters.room!;
@@ -143,7 +144,14 @@ export const roomSubscription: SubscriptionEndpoint = {
 			fn => disposable.defer(fn),
 			subscribeToRoom(shard, roomName, (room, time, didUpdate) => mustNotReject(async () => {
 				if (Date.now() < skipUntil) {
+					if (didUpdate) {
+						missedUpdateDuringSkip = true;
+					}
 					return;
+				}
+				if (missedUpdateDuringSkip) {
+					didUpdate = true;
+					missedUpdateDuringSkip = false;
 				}
 
 				// Render current room state
@@ -163,7 +171,7 @@ export const roomSubscription: SubscriptionEndpoint = {
 					}
 					// Check for new users
 					const users = room['#users'];
-					for (const userId of Fn.concat([ users.presence, users.extra ])) {
+					for (const userId of Fn.concat<string>([ users.presence, users.extra ])) {
 						if (!seenUsers.has(userId)) {
 							seenUsers.add(userId);
 							visibleUsers.add(userId);

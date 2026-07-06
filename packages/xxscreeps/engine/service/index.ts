@@ -6,16 +6,20 @@ import { Channel } from 'xxscreeps/engine/db/channel.js';
 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 export const isTopThread: boolean = isMainThread || Boolean(workerData?.isTopThread);
 
+export type ServiceMessage =
+	{ type: 'shutdown' } |
+	{ type: 'pause' } |
+	{ type: 'pausedTick' } |
+	{ type: 'unpause' } |
+	{ type: 'mainConnected' } |
+	{ type: 'mainDisconnected' } |
+	{ type: 'processorConnected' } |
+	{ type: 'processorInitialized' } |
+	{ type: 'runnerConnected' } |
+	{ type: 'tickFinished'; time: number };
+
 export function getServiceChannel(shard: Shard) {
-	type Message =
-		{ type: 'shutdown' } |
-		{ type: 'mainConnected' } |
-		{ type: 'mainDisconnected' } |
-		{ type: 'processorConnected' } |
-		{ type: 'processorInitialized' } |
-		{ type: 'runnerConnected' } |
-		{ type: 'tickFinished'; time: number };
-	return new Channel<Message>(shard.pubsub, 'channel/service');
+	return new Channel<ServiceMessage>(shard.pubsub, 'channel/service');
 }
 
 let isEntry = isTopThread;

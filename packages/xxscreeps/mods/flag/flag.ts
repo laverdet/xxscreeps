@@ -3,10 +3,11 @@ import type { InspectOptionsStylized } from 'node:util';
 import type { Dictionary } from 'xxscreeps/utility/types.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { RoomObject, format as baseFormat } from 'xxscreeps/game/object.js';
+import { RoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
-import { compose, declare, struct, withOverlay, withType } from 'xxscreeps/schema/index.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
+import { flagShape } from './schema.js';
 
 export let intents: FlagIntent[] = [];
 export function acquireIntents() {
@@ -16,16 +17,8 @@ export function acquireIntents() {
 }
 
 export type Color = typeof C.COLORS_ALL[number];
-const colorFormat = withType<Color>('int8');
 
-export const format = declare('Flag', () => compose(shape, Flag));
-const shape = struct(baseFormat, {
-	name: 'string',
-	color: colorFormat,
-	secondaryColor: colorFormat,
-});
-
-export class Flag extends withOverlay(RoomObject, shape) {
+export class Flag extends withOverlay(RoomObject, flagShape) {
 	// Flags are kind of fake objects, and don't get an id
 	declare id: never;
 

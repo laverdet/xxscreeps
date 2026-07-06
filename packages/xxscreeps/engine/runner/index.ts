@@ -23,6 +23,9 @@ export interface TickPayload {
 	backendIntents?: RunnerIntent[];
 	eval: Extract<MessageFor<typeof getRunnerUserChannel>, { type: 'eval' }>['payload'][];
 	usernames?: Record<string, string>;
+	// User ids a connector wants resolved to usernames this tick (e.g. market transaction parties not
+	// visible in any of the player's rooms). The runner merges these into the unseen-user resolution.
+	userIds?: string[];
 }
 
 export interface TickResult {

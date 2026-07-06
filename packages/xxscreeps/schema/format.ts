@@ -49,7 +49,7 @@ export type ConstantFormat = {
 	constant: any;
 };
 
-type EnumTypes = string | undefined;
+export type EnumTypes = string | undefined;
 export type EnumFormat = {
 	enum: EnumTypes[];
 };
@@ -64,10 +64,10 @@ type OptionalFormat = {
 	uninitialized: undefined | null;
 };
 
-type StructFormat = {
+export type StructFormat = {
 	struct: Record<string | symbol, Format> | Record<string, UnionDeclaration>;
-	inherit?: WithType<{}>;
-	variant?: number | string;
+	inherit?: WithType<object> | undefined;
+	variant?: number | string | undefined;
 };
 
 type VariantFormat = {
@@ -90,7 +90,7 @@ WithShapeAndType<ShapeOf<Type>[], TypeOf<Type>[]> {
 
 // Composed interceptor types
 export type Interceptor = CompositionInterceptor | RawCompositionInterceptor | OverlayInterceptor;
-type OverlayInterceptor<Type = unknown> = abstract new(view: BufferView, offset: number) => Type;
+export type OverlayInterceptor<Type = unknown> = abstract new(view: BufferView, offset: number) => Type;
 type CompositionInterceptor<Type = any, Result = any> = {
 	compose: (value: Type) => Result;
 	decompose: (value: Result) => Type extends any[] ? Iterable<Type[number]> : Type;
@@ -176,19 +176,21 @@ type StructDeclarationType<
 } & (Type extends WithVariant<infer V> ? WithVariant<V> : unknown);
 
 export function struct<Type extends StructDeclaration>(format: Type):
-WithShapeAndType<StructDeclarationShape<Type>, StructDeclarationType<Type>>;
+	WithShapeAndType<StructDeclarationShape<Type>, StructDeclarationType<Type>>;
 
-export function struct<Base extends Format, Type extends StructDeclaration>(base: Base, format: Type):
-WithShapeAndType<ShapeOf<Base> & StructDeclarationShape<Type>, TypeOf<Base> & StructDeclarationType<Type>>;
+export function struct<Inherit extends Format, Type extends StructDeclaration>(inherit: Inherit | undefined, format: Type):
+	WithShapeAndType<ShapeOf<Inherit> & StructDeclarationShape<Type>, TypeOf<Inherit> & StructDeclarationType<Type>>;
 
-export function struct(...args: [ StructDeclaration ] | [ any, StructDeclaration ]) {
-	const { inherit, members } = args.length === 1
-		? { inherit: undefined, members: args[0] } :
-		{ inherit: args[0], members: args[1] };
+export function struct(
+	...args:
+		[ members: StructDeclaration ] |
+		[ inherit: Format, members: StructDeclaration ]
+) {
+	const [ inherit, members ] = args.length === 1 ? [ undefined, args[0] ] : args;
 	const format: StructFormat = {
-		struct: members as any,
-		inherit,
-		variant: (members as any)[Variant],
+		struct: members as StructFormat['struct'],
+		inherit: inherit as StructFormat['inherit'],
+		variant: members[Variant] as StructFormat['variant'],
 	};
 	return format as never;
 }

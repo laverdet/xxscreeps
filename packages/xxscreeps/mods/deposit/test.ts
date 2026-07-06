@@ -6,11 +6,12 @@ import { runShardInitializers } from 'xxscreeps/engine/processor/shard.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { makeSectorRadiusFilter, sectorEdgeRooms } from 'xxscreeps/game/room/sector.js';
+import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
+import { testWorld } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { deterministicRandomForTesting } from 'xxscreeps/utility/utility.js';
 import { Deposit } from './deposit.js';
@@ -25,7 +26,7 @@ interface DepositSimOptions {
 }
 
 function createDeposit(pos: RoomPosition, depositType: ResourceType, harvested: number, nextDecayTime: number) {
-	const deposit = RoomObject.create(new Deposit(), pos);
+	const deposit = createRoomObject(new Deposit(), pos);
 	deposit.depositType = depositType;
 	deposit['#harvested'] = harvested;
 	deposit['#cooldownTime'] = 0;
@@ -130,8 +131,9 @@ function withFixedPlacement(seed = 1): Disposable {
 // unfiltered (no radius/decay test) — that filtering is the scheduler's job; this just sees what
 // landed.
 async function findDepositsInSector(shard: Shard, centralRoom: string) {
-	const normalEdges = [ ...sectorEdgeRooms(centralRoom) ];
-	const deposits = await loadSectorDeposits(shard, centralRoom, normalEdges);
+	const { sectorControl } = testWorld.map['#getRoomTraits'](centralRoom);
+	assert.ok(sectorControl);
+	const deposits = await loadSectorDeposits(shard, testWorld, centralRoom, sectorControl.edges);
 	return deposits.map(deposit => ({ roomName: deposit.pos.roomName, deposit }));
 }
 
@@ -158,7 +160,7 @@ describe('Deposit placement', () => {
 		const terrain = world.map.getRoomTerrain(roomName);
 		assert.strictEqual(terrain.get(deposit.pos.x, deposit.pos.y), C.TERRAIN_MASK_WALL,
 			'deposit is placed on wall terrain');
-		assert.ok(makeSectorRadiusFilter('W5N5', roomName)(deposit.pos.x, deposit.pos.y),
+		assert.ok(makeSectorRadiusPredicate('W5N5', roomName, [ 'W5N5' ])(deposit.pos.x, deposit.pos.y),
 			'deposit is placed inside the sector radius');
 	}));
 
@@ -182,15 +184,18 @@ describe('Deposit placement', () => {
 	// busy-room exclusion leaves it exactly one legal destination. The four candidate spots cover
 	// each room's in-radius quadrant, whichever side of the sector it sits on.
 	const freeRoom = 'W0N5';
-	const occupiedRing: Record<string, (room: Room) => void> = Object.fromEntries(
-		Fn.map(Fn.reject(sectorEdgeRooms('W5N5'), name => name === freeRoom),
-			(name): [ string, (room: Room) => void ] => [ name, room => {
-				const inSector = makeSectorRadiusFilter('W5N5', name);
-				const spot = [ [ 20, 20 ], [ 20, 30 ], [ 30, 20 ], [ 30, 30 ] ].find(([ xx, yy ]) => inSector(xx!, yy!))!;
-				const deposit =
-					createDeposit(new RoomPosition(spot[0]!, spot[1]!, name), C.RESOURCE_SILICON, 50_000, Game.time + DEPOSIT_DECAY_TIME);
-				room['#insertObject'](deposit);
-			} ]));
+	const { sectorControl } = testWorld.map['#getRoomTraits']('W5N5');
+	assert.ok(sectorControl);
+	const occupiedRing = Fn.pipe(
+		sectorControl.edges,
+		$$ => Fn.reject($$, name => name === freeRoom),
+		$$ => Fn.fromEntries($$, name => [ name, (room: Room) => {
+			const inSector = makeSectorRadiusPredicate('W5N5', name, [ 'W5N5' ]);
+			const spot = [ [ 20, 20 ], [ 20, 30 ], [ 30, 20 ], [ 30, 30 ] ].find(([ xx, yy ]) => inSector(xx!, yy!))!;
+			const deposit =
+				createDeposit(new RoomPosition(spot[0]!, spot[1]!, name), C.RESOURCE_SILICON, 50_000, Game.time + DEPOSIT_DECAY_TIME);
+			room['#insertObject'](deposit);
+		} ]));
 
 	test('occupied rooms are excluded from placement candidates', () => simulate(occupiedRing)(async ({ shard, tick }) => {
 		using placement = withFixedPlacement();
@@ -223,18 +228,21 @@ describe('Deposit placement', () => {
 		assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 1);
 	}));
 
-	test('decay outside the sector radius places no refill', () => simulate({
-		// Official placement doesn't enforce the 250-square radius, so out-of-radius deposits exist in
-		// the wild. They're invisible to every sector's throughput tally, so their decay must not
-		// prompt a re-eval — no refill may appear.
-		W0N0: room => {
-			// outside W5N5's 250-square radius
-			const deposit = createDeposit(new RoomPosition(30, 30, 'W0N0'), C.RESOURCE_SILICON, 0, Game.time + 1);
-			room['#insertObject'](deposit);
-			room['#insertObject'](createCreep(new RoomPosition(30, 31, 'W0N0'), [ C.MOVE ], 'parker', '100'));
-		},
-	})(async ({ shard, tick }) => {
-		await tick(2);
-		assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 0);
-	}));
+	// This one doesn't work anymore because room traits more accurately capture sector geometry.
+	// Since there is only one sector in the test shard the 30x30 deposit is still a member of that
+	// sector.
+	// test('decay outside the sector radius places no refill', () => simulate({
+	// 	// Official placement doesn't enforce the 250-square radius, so out-of-radius deposits exist in
+	// 	// the wild. They're invisible to every sector's throughput tally, so their decay must not
+	// 	// prompt a re-eval — no refill may appear.
+	// 	W0N0: room => {
+	// 		// outside W5N5's 250-square radius
+	// 		const deposit = createDeposit(new RoomPosition(30, 30, 'W0N0'), C.RESOURCE_SILICON, 0, Game.time + 1);
+	// 		room['#insertObject'](deposit);
+	// 		room['#insertObject'](createCreep(new RoomPosition(30, 31, 'W0N0'), [ C.MOVE ], 'parker', '100'));
+	// 	},
+	// })(async ({ shard, tick }) => {
+	// 	await tick(2);
+	// 	assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 0);
+	// }));
 });

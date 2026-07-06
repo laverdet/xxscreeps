@@ -70,6 +70,7 @@ function zRangeOptions(options?: Pr.ZRange) {
 		...options.limit !== undefined && {
 			LIMIT: { offset: options.limit[0], count: options.limit[1] },
 		},
+		...options.rev && { REV: true } as const,
 	};
 }
 
@@ -157,8 +158,8 @@ export class RedisProvider implements Pr.KeyValProvider {
 			...options.px !== undefined && { PX: options.px },
 			...options.if && function() {
 				switch (options.if.if) {
-					case 'EQ': return { condition: 'IFEQ', matchValue: options.if.value };
-					case 'NE': return { condition: 'IFNE', matchValue: options.if.value };
+					case 'EQ': return { condition: 'IFEQ', matchValue: recv(options.if.value) };
+					case 'NE': return { condition: 'IFNE', matchValue: recv(options.if.value) };
 					case 'NX': return { condition: 'NX' };
 					case 'XX': return { condition: 'XX' };
 				}

@@ -1,6 +1,6 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createConstructionSite } from 'xxscreeps/mods/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
@@ -24,7 +24,7 @@ function createLoadedNuker(pos: RoomPosition) {
 }
 
 function createTestTombstone(pos: RoomPosition) {
-	const tombstone = RoomObject.create(new Tombstone(), pos);
+	const tombstone = createRoomObject(new Tombstone(), pos);
 	tombstone.deathTime = 1;
 	tombstone.store = new OpenStore();
 	tombstone['#creep'] = {

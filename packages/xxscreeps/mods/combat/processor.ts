@@ -1,21 +1,55 @@
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { DestructibleStructure } from 'xxscreeps/mods/structure/structure.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
 import { invertedNumericComparator, mappedComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { saveAction } from 'xxscreeps/game/object.js';
+import { RoomObject, saveAction } from 'xxscreeps/game/object.js';
 import { iterateInRangeTo } from 'xxscreeps/game/position.js';
-import { walkLayers } from 'xxscreeps/game/processor.js';
+import { captureDamage, walkLayers } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculatePower } from 'xxscreeps/mods/creep/creep.js';
-import { applyAttackDamage, captureDamageWithNotify, checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack, notifyAttackDamage } from './creep.js';
+import { OwnedStructure } from 'xxscreeps/mods/structure/structure.js';
+import { checkAttack, checkHeal, checkRangedAttack, checkRangedHeal, checkRangedMassAttack } from './creep.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
 	interface Intent { combat: typeof intents }
 }
 
 const kRangedMassAttackPower = [ 1, 1, 0.4, 0.1 ];
+
+export function notifyAttackDamage(target: RoomObject, context: ProcessorContext, source: RoomObject | null) {
+	if (target instanceof OwnedStructure || target instanceof Creep) {
+		target['#sendAttackNotify'](context, source ?? undefined);
+	}
+}
+
+export function applyAttackDamage(
+	target: RoomObject,
+	power: number,
+	type: number,
+	source: RoomObject | null,
+	context: ProcessorContext,
+) {
+	target['#applyDamage'](power, type, source ?? undefined);
+	notifyAttackDamage(target, context, source);
+}
+
+/**
+ * Like `captureDamage`, but also notifies any intermediate layer object (e.g. a rampart) that
+ * absorbed some damage on the way to `target`.
+ */
+export function captureDamageWithNotify(
+	target: RoomObject,
+	initialPower: number,
+	type: number,
+	source: RoomObject | null,
+	context: ProcessorContext,
+) {
+	return captureDamage(target, initialPower, type, source,
+		object => notifyAttackDamage(object, context, source));
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [

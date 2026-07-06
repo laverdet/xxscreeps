@@ -9,11 +9,12 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
 import { compose, declare, vector } from 'xxscreeps/schema/index.js';
 import { instantiate } from 'xxscreeps/utility/utility.js';
-import { Flag, acquireIntents, checkCreateFlag, format, intents } from './flag.js';
+import { Flag, acquireIntents, checkCreateFlag, intents } from './flag.js';
+import { flagShape } from './schema.js';
 import './room.js';
 
 // Flags are stored in a separate blob per user.. this is the schema for the blob
-const schema = declare('Flags', compose(vector(format), {
+const schema = declare('Flags', compose(vector(compose(flagShape, Flag)), {
 	compose: flags => Fn.fromEntries(flags, flag => [ flag.name, flag ]),
 	decompose: (flags: Record<string, Flag>) => Object.values(flags),
 }));
@@ -26,15 +27,8 @@ const look = registerLook<Flag>()(C.LOOK_FLAGS);
 const find = registerFindHandlers({
 	[C.FIND_FLAGS]: room => room['#lookFor'](C.LOOK_FLAGS),
 });
-declare module 'xxscreeps/game/room/index.js' {
-	interface Find { flag: typeof find }
-	interface Look { flag: typeof look }
-}
 
 // Export `Flag` to runtime globals
-declare module 'xxscreeps/game/runtime.js' {
-	interface Global { Flag: typeof Flag }
-}
 registerGlobal(Flag);
 let flags = Object.create(null) as TypeOf<typeof schema>;
 
@@ -66,11 +60,6 @@ hooks.register('runtimeConnector', {
 });
 
 // Add `flags` to global `Game` object
-declare module 'xxscreeps/game/game.js' {
-	interface Game {
-		flags: Record<string, Flag>;
-	}
-}
 hooks.register('gameInitializer', (Game, data) => {
 	if (data) {
 		Game.flags = flags;
@@ -128,4 +117,21 @@ export function removeFlag(name: string) {
 		delete flags[name];
 		didUpdateFlags = true;
 	}
+}
+
+// ---
+
+declare module 'xxscreeps/game/game.js' {
+	interface Game {
+		flags: Record<string, Flag>;
+	}
+}
+
+declare module 'xxscreeps/game/runtime.js' {
+	interface Global { Flag: typeof Flag }
+}
+
+declare module 'xxscreeps/game/room/index.js' {
+	interface Find { flag: typeof find }
+	interface Look { flag: typeof look }
 }

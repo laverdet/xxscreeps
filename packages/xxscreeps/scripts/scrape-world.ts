@@ -23,6 +23,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room, flushUsers } from 'xxscreeps/game/room/room.js';
+import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
@@ -166,7 +167,9 @@ await using shard = await Shard.connect(db, config.shards[0]!.name);
 const { data } = shard;
 
 // Save terrain data
-const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ room, terrain }) => {
+const terrainRows = loki.getCollection('rooms.terrain').find();
+const terrainRoomNames = new Set(Fn.map(terrainRows, ({ room }) => room as string));
+const roomsTerrain = new Map(terrainRows.map(({ room, terrain }) => {
 	const writer = new TerrainWriter();
 	for (let xx = 0; xx < 50; ++xx) {
 		for (let yy = 0; yy < 50; ++yy) {
@@ -178,6 +181,7 @@ const roomsTerrain = new Map(loki.getCollection('rooms.terrain').find().map(({ r
 	return [ room as string, {
 		exits: packExits(writer),
 		terrain: writer,
+		...computeRoomMeta(room as string, terrainRoomNames),
 	} ];
 }));
 await data.set('terrain', makeWriter(MapSchema.schema)(roomsTerrain));

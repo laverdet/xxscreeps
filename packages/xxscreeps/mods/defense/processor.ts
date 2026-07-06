@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, me } from 'xxscreeps/game/index.js';
 import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
-import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/combat/creep.js';
+import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/combat/processor.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { clamp } from 'xxscreeps/utility/utility.js';

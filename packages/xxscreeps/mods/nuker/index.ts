@@ -12,5 +12,5 @@ export const manifest: Manifest = {
 	],
 	// TODO: dev dependencies?
 	// 'xxscreeps/mods/spawn',
-	provides: [ 'backend', 'constants', 'game', 'processor', 'test' ],
+	provides: [ 'backend', 'constants', 'game', 'processor', 'schema', 'test' ],
 };

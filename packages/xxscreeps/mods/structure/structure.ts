@@ -2,50 +2,29 @@ import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { AnyRoomObject, Room } from 'xxscreeps/game/room/index.js';
-import * as Id from 'xxscreeps/engine/schema/id.js';
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Game, hooks, intents, me, userInfo } from 'xxscreeps/game/index.js';
-import { RoomObject, format as objectFormat } from 'xxscreeps/game/object.js';
+import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
+import { RoomObject } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { isBorder, isNearBorder, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
-import { compose, declare, optional, struct, withOverlay } from 'xxscreeps/schema/index.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { createRuin } from './ruin.js';
+import { ownedStructureShape, structureShape } from './schema.js';
 
 export type AnyStructure = Extract<AnyRoomObject, Structure>;
-export type AttackNotificationTarget = RoomObject & { '#noAttackNotify'?: boolean };
-type AttackNotificationHandler = (
-	context: ProcessorContext,
-	target: AttackNotificationTarget,
-	source: RoomObject | undefined,
-) => void;
 
 export interface DestructibleStructure extends Structure {
 	hits: number;
 	hitsMax: number;
 }
 
-const attackNotificationHandlers: AttackNotificationHandler[] = [];
-
-export const structureFormat = declare('Structure', () => compose(shape, Structure));
-const shape = struct(objectFormat, {
-	'#noAttackNotify': 'bool',
-});
-
-export const ownedStructureFormat = declare('OwnedStructure', () => compose(ownedShape, OwnedStructure));
-const ownedShape = struct(structureFormat, {
-	'#user': Id.optionalFormat,
-	// TODO: Rename to '#inactive' so default 0 value = active (true). optional('bool') takes
-	// 2 bytes; should not be lazy.
-	'#active': optional('bool'),
-});
-
 /**
  * The base prototype object of all structures.
  */
-export class Structure extends withOverlay(RoomObject, shape) {
+export class Structure extends withOverlay(RoomObject, structureShape) {
 
 	/**
 	 * One of the `STRUCTURE_*` constants.
@@ -84,20 +63,6 @@ export class Structure extends withOverlay(RoomObject, shape) {
 		return true;
 	}
 
-	/**
-	 * Toggle notifications for when this structure is attacked.
-	 * @param notifyWhenAttacked Whether to receive email notifications on attack.
-	 */
-	notifyWhenAttacked(this: Structure, notifyWhenAttacked: boolean) {
-		return chainIntentChecks(
-			() => checkNotifyWhenAttacked(this, notifyWhenAttacked),
-			() => {
-				if (notifyWhenAttacked === this['#noAttackNotify']) {
-					intents.save(this, 'notifyWhenAttacked', Boolean(notifyWhenAttacked));
-				}
-			});
-	}
-
 	'#checkObstacle'(_user: string) {
 		return true;
 	}
@@ -128,7 +93,7 @@ export class Structure extends withOverlay(RoomObject, shape) {
  * The base prototype for a structure that has an owner. Such structures can be found using
  * `FIND_MY_STRUCTURES` and `FIND_HOSTILE_STRUCTURES` constants.
  */
-export class OwnedStructure extends withOverlay(Structure, ownedShape) {
+export class OwnedStructure extends withOverlay(Structure, ownedStructureShape) {
 	/**
 	 * An object with the structure's owner info
 	 */
@@ -172,6 +137,8 @@ export class OwnedStructure extends withOverlay(Structure, ownedShape) {
 	override '#addToMyGame'(game: GameConstructor) {
 		game.structures[this.id] = this as never;
 	}
+
+	'#sendAttackNotify'(_context: ProcessorContext, _source: RoomObject | undefined) {}
 }
 
 /**
@@ -264,27 +231,6 @@ export function checkDestroy(structure: Structure) {
 		});
 }
 
-export function checkNotifyWhenAttacked(structure: Structure, notifyWhenAttacked: unknown) {
-	if (structure.my === false || structure.room.controller?.my === false) {
-		return C.ERR_NOT_OWNER;
-	} else if (typeof notifyWhenAttacked !== 'boolean') {
-		return C.ERR_INVALID_ARGS;
-	}
-	return C.OK;
-}
-
-export function registerAttackNotification(handler: AttackNotificationHandler) {
-	attackNotificationHandlers.push(handler);
-}
-
-export function notifyAttacked(target: AttackNotificationTarget, context: ProcessorContext, source: RoomObject | undefined) {
-	if (!target['#noAttackNotify']) {
-		for (const handler of attackNotificationHandlers) {
-			handler(context, target, source);
-		}
-	}
-}
-
 export function checkPlacement(room: Room, pos: RoomPosition) {
 	return chainIntentChecks(
 		() => checkBorder(pos),
@@ -319,11 +265,3 @@ registerObstacleChecker(params => {
 		return object => object instanceof Structure && object['#checkObstacle'](user);
 	}
 });
-
-// Register `Game.structures`
-declare module 'xxscreeps/game/game.js' {
-	interface Game {
-		structures: Record<string, AnyStructure>;
-	}
-}
-hooks.register('gameInitializer', Game => Game.structures = Object.create(null));

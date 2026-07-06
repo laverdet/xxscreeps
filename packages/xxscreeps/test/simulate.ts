@@ -273,9 +273,7 @@ async function assertPlayerWithoutErrors(instance: PlayerInstance) {
 		for (const frame of frames as unknown[]) {
 			// @ts-expect-error
 			const { data, fd } = frame;
-			if (process.env.TEST_LOG_PLAYER === instance.userId) {
-				console.log(data);
-			}
+			console.log(data);
 			if (fd === 2 && data !== 'Script was disposed') {
 				errors.push(data as string);
 			}

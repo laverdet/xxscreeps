@@ -1,32 +1,25 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { RoomObject, createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { captureDamage } from 'xxscreeps/game/processor.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
-import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { PowerBankStore, powerBankStoreFormat } from './store.js';
+import { powerBankShape } from './schema.js';
+import { PowerBankStore } from './store.js';
 
-export const format = declare('PowerBank', () => compose(shape, StructurePowerBank));
-const shape = struct(structureFormat, {
-	...variant('powerBank'),
-	hits: 'int32',
-	store: powerBankStoreFormat,
-	'#nextDecayTime': 'int32',
-});
-
-export class StructurePowerBank extends withOverlay(Structure, shape) {
+export class StructurePowerBank extends withOverlay(Structure, powerBankShape) {
 	@enumerable get power() { return this.store[C.RESOURCE_POWER]; }
-	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(Game, this['#nextDecayTime']); }
+	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
 	@enumerable get owner() { return { username: 'Power Bank' }; }
 	@enumerable override get my() { return false; }
 	override get hitsMax() { return C.POWER_BANK_HITS; }
 	override get structureType() { return C.STRUCTURE_POWER_BANK; }
 
-	override '#applyDamage'(power: number, type: number, source?: RoomObject.RoomObject) {
+	override '#applyDamage'(power: number, type: number, source?: RoomObject) {
 		// FIXME: removal is deferred to the object flush, so a creep can still attack this bank the
 		// tick it dies; bail to suppress the spurious second hit-back. Remove once intents stop
 		// resolving queued-for-removal targets.
@@ -53,7 +46,7 @@ export class StructurePowerBank extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition, power: number) {
-	const bank = assign(RoomObject.create(new StructurePowerBank(), pos), {
+	const bank = assign(createRoomObject(new StructurePowerBank(), pos), {
 		hits: C.POWER_BANK_HITS,
 		store: PowerBankStore['#create'](power),
 	});

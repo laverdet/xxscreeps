@@ -14,7 +14,7 @@ import { TERRAIN_MASK_WALL } from 'xxscreeps/game/terrain.js';
 
 const iterations = Number(process.argv.at(-1)) || 1;
 const log = process.argv.includes('--log');
-const expectedResult = 'd8a9ddc8';
+const expectedResult = '156ef000';
 
 /**
  * This script is a standalone test for the path finder. It runs a whole bunch of path finding
@@ -90,6 +90,7 @@ const dispatch = (update: (result: unknown) => void) => {
 						plainCost: 1,
 						swampCost: 5,
 						maxRooms: 16,
+						heuristicWeight: ii % 7 === 0 ? 1 : 1.2,
 						roomCallback: ii % 2 === 0 ? roomName => matrices[roomName] : undefined,
 					},
 				);
@@ -134,6 +135,7 @@ if (process.argv.includes('--with-sandbox')) {
 						case '@xxscreeps/pathfinder': return '@xxscreeps/pathfinder/iv';
 						case 'tslib': return 'tslib/tslib.es6.mjs';
 						case 'xxscreeps:hook': return 'xxscreeps:hook';
+						case 'xxscreeps:private-symbol': return 'xxscreeps/driver/private/symbol/unsafe.js';
 						case 'xxscreeps/engine/schema/build/index.js': return 'xxscreeps/engine/schema/build/runtime.js';
 						default: return specifier;
 					}

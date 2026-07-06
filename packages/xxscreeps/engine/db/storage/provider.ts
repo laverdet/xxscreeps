@@ -7,8 +7,8 @@ export type { KeyvalScript };
 export interface AsBlob { blob?: boolean }
 export interface Copy { if?: 'NX' }
 export type Condition = ConditionEqual | ConditionNotEqual | ConditionExists | ConditionNotExists;
-export interface ConditionEqual { if: 'EQ'; value: string }
-export interface ConditionNotEqual { if: 'NE'; value: string }
+export interface ConditionEqual { if: 'EQ'; value: string | Readonly<Uint8Array> }
+export interface ConditionNotEqual { if: 'NE'; value: string | Readonly<Uint8Array> }
 export interface ConditionNotExists { if: 'NX' }
 export interface ConditionExists { if: 'XX' }
 export interface DelEx {
@@ -38,6 +38,7 @@ export interface ZAggregate {
 export interface ZRange {
 	by?: 'LEX' | 'SCORE';
 	limit?: [ number, number ];
+	rev?: boolean;
 }
 
 export type Value = number | string | Readonly<Uint8Array>;

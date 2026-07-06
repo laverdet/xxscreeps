@@ -1,22 +1,16 @@
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { PowerSpawnStore, powerSpawnStoreFormat } from './store.js';
+import { powerSpawnShape } from './schema.js';
+import { PowerSpawnStore } from './store.js';
 
-export const format = declare('PowerSpawn', () => compose(shape, StructurePowerSpawn));
-const shape = struct(ownedStructureFormat, {
-	...variant('powerSpawn'),
-	hits: 'int32',
-	store: powerSpawnStoreFormat,
-});
-
-export class StructurePowerSpawn extends withOverlay(OwnedStructure, shape) {
+export class StructurePowerSpawn extends withOverlay(OwnedStructure, powerSpawnShape) {
 	/** @deprecated */
 	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY]; }
 	/** @deprecated */
@@ -41,7 +35,7 @@ export class StructurePowerSpawn extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const powerSpawn = assign(RoomObject.create(new StructurePowerSpawn(), pos), {
+	const powerSpawn = assign(createRoomObject(new StructurePowerSpawn(), pos), {
 		hits: C.POWER_SPAWN_HITS,
 		store: new PowerSpawnStore(),
 	});

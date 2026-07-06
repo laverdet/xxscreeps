@@ -1,6 +1,6 @@
 import type { ResolvedMod } from './mods.js';
 
-const providesNames = [ 'backend', 'config', 'constants', 'driver', 'game', 'main', 'processor', 'storage', 'test' ] as const;
+const providesNames = [ 'backend', 'config', 'constants', 'driver', 'game', 'main', 'processor', 'schema', 'storage', 'test' ] as const;
 /** @internal */
 export type Provide = typeof providesNames[number];
 /** @internal */
@@ -19,7 +19,11 @@ const makeMakeGenericSource = (
 			.map(make));
 
 const makeConstantsSource = makeMakeGenericSource(url => `export * from ${JSON.stringify(url)};`);
-const makeSideEffectsSource = makeMakeGenericSource(url => `import ${JSON.stringify(url)};`);
+const makeSchemaSource = makeMakeGenericSource(url => `import ${JSON.stringify(url)};`);
+const makeSideEffectsSource = makeMakeGenericSource(url =>
+	`import "xxscreeps:mods/schema";
+	import ${JSON.stringify(url)};`,
+);
 const makeConfigSource = makeMakeGenericSource(
 	(url, ii) =>
 		`import * as config${ii} from ${JSON.stringify(url)};
@@ -42,6 +46,7 @@ export function makeModSourceText(mods: readonly ResolvedMod[], provider: Provid
 		switch (provider) {
 			case 'config': return makeConfigSource;
 			case 'constants': return makeConstantsSource;
+			case 'schema': return makeSchemaSource;
 			default: return makeSideEffectsSource;
 		}
 	}();

@@ -246,7 +246,7 @@ Schemas define the binary layout of game objects. Each field maps to a
 fixed-size type at a specific offset in the buffer:
 
 ```ts
-const shape = struct(objectFormat, {
+const shape = struct(roomObjectShape, {
     hits: 'int32',           // 4 bytes
     fatigue: 'int16',        // 2 bytes
     '#ageTime': 'int32',     // 4 bytes, engine-internal

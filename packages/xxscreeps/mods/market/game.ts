@@ -1,29 +1,32 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
+import { compose } from 'xxscreeps/schema/index.js';
 import { Market } from './market.js';
-import * as Terminal from './terminal.js';
+import { terminalShape } from './schema.js';
+import { StructureTerminal } from './terminal.js';
+import { Transactions } from './transaction.js';
 
 // Export `StructureTerminal` to runtime globals
-registerGlobal(Terminal.StructureTerminal);
+registerGlobal(StructureTerminal);
 declare module 'xxscreeps/game/runtime.js' {
-	interface Global { StructureTerminal: typeof Terminal.StructureTerminal }
+	interface Global { StructureTerminal: typeof StructureTerminal }
 }
 
-// Register schema
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const terminalSchema = registerVariant('Room.objects', Terminal.format);
-declare module 'xxscreeps/game/room/index.js' {
-	interface Room {
-		/**
-		 * The Terminal structure of this room, if present, otherwise undefined.
-		 */
-		terminal?: Terminal.StructureTerminal | undefined;
+// The runner ships transactions only when a transfer changes the list, so retain the last payload
+// and reuse it on the ticks it isn't resent.
+let transactions: Transactions | undefined;
+hooks.register('gameInitializer', (game, data) => {
+	if (data?.transactions) {
+		transactions = new Transactions(data.transactions);
 	}
+	game.market = new Market(game, transactions);
+});
 
-	interface Schema { terminal: typeof terminalSchema }
-}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const terminalSchema = registerVariant('Room.objects', compose(terminalShape, StructureTerminal));
 
-// Register `Game.market`
+// ---
+
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		/**
@@ -35,6 +38,14 @@ declare module 'xxscreeps/game/game.js' {
 		market: Market;
 	}
 }
-hooks.register('gameInitializer', game => {
-	game.market = new Market(game);
-});
+
+declare module 'xxscreeps/game/room/index.js' {
+	interface Room {
+		/**
+		 * The Terminal structure of this room, if present, otherwise undefined.
+		 */
+		terminal?: StructureTerminal | undefined;
+	}
+
+	interface RoomSchema { terminal: typeof terminalSchema }
+}

@@ -2,36 +2,50 @@ import type { ExitType } from './room/find.js';
 import type { Room } from './room/index.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import type { Adapter } from 'xxscreeps/utility/astar.js';
-
-import { build } from 'xxscreeps/engine/schema/index.js';
+import { build, structForPath } from 'xxscreeps/engine/schema/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
-import { compose, declare, makeReader, struct, vector } from 'xxscreeps/schema/index.js';
+import { makeRoomName, parseRoomName, roomLinearDistance, roomNameFormat } from 'xxscreeps/game/room/name.js';
+import { compose, declare, makeReader, optional, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
 import * as C from './constants/index.js';
 import { getDirection, getOffsetsFromDirection } from './direction.js';
 import { RoomPosition } from './position.js';
 import * as Terrain from './terrain.js';
 
-// Schema
-const roomTerrain = () => struct({
+// Room metadata, extensible by mods through the `RoomMeta` path.
+// TODO: The World reader is built at module load, so a registrant must be evaluated before this
+// module.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface Schema {}
+const roomIntrinsics = () => struct(...structForPath<Schema>()('RoomIntrinsics', {
 	exits: 'uint8',
 	terrain: Terrain.format,
-});
+	// TODO: mods/sector
+	sectors: vector(roomNameFormat),
+	sectorControl: optional(struct({
+		// The highway ring at range 5, shared with adjacent sectors.
+		edges: vector(roomNameFormat),
+		// The 9x9 interior at range <= 4, the center itself included; exclusive to this sector.
+		members: vector(roomNameFormat),
+	})),
+}));
+
+export type SectorControl = NonNullable<TypeOf<typeof roomIntrinsics>['sectorControl']>;
+
 export const schema = build(declare('World', compose(vector(struct({
 	name: 'string',
-	info: roomTerrain,
+	info: roomIntrinsics,
 })), {
 	compose: world => new Map(world.map(room => [ room.name, room.info ])),
-	decompose: (world: Map<string, TypeOf<typeof roomTerrain>>) => {
+	decompose: (world: Map<string, TypeOf<typeof roomIntrinsics>>) => {
 		const vector = [ ...Fn.map(world.entries(), ([ name, info ]) => ({ name, info })) ];
 		vector.sort((left, right) => primitiveComparator(left.name, right.name));
 		return vector;
 	},
 })));
 
-type TerrainByRoom = TypeOf<typeof schema>;
+type RoomTraitsByName = TypeOf<typeof schema>;
 
 type FindRoute = {
 	routeCallback?: (roomName: string, fromRoomName: string) => number;
@@ -52,17 +66,18 @@ interface NormalRoom {
 
 /**
  * A global object representing world map. Use it to navigate between rooms.
+ * @public
  */
 export class GameMap {
-	readonly #terrain: TerrainByRoom;
+	readonly #traits: RoomTraitsByName;
 	readonly #accessibleRooms;
 	readonly #left;
 	readonly #top;
 	readonly #height;
 	readonly #width;
 
-	constructor(terrain: TerrainByRoom, accessibleRooms?: ReadonlySet<string>) {
-		this.#terrain = terrain;
+	constructor(terrain: RoomTraitsByName, accessibleRooms?: ReadonlySet<string>) {
+		this.#traits = terrain;
 		this.#accessibleRooms = accessibleRooms ?? new Set(terrain.keys());
 		let maxX = -Infinity;
 		let minX = Infinity;
@@ -82,8 +97,28 @@ export class GameMap {
 		this.#height = maxY - minY + 1;
 	}
 
+	/** @internal */
 	'#getCenterRoom'() {
 		return makeRoomName(this.#left + Math.floor(this.#width / 2), this.#top + Math.floor(this.#height / 2));
+	}
+
+	/** @internal */
+	'#getRoomTraits'(roomName: string) {
+		const traits = this.#traits.get(roomName);
+		if (!traits) {
+			throw new Error(`Could not access room ${roomName}`);
+		}
+		return traits;
+	}
+
+	/** @internal */
+	*'#sectors'(): IterableIterator<[ center: string, sector: SectorControl ]> {
+		for (const [ roomName, entry ] of this.#traits) {
+			const { sectorControl } = entry;
+			if (sectorControl) {
+				yield [ roomName, sectorControl ];
+			}
+		}
 	}
 
 	/**
@@ -91,12 +126,12 @@ export class GameMap {
 	 * @param roomName The room name.
 	 */
 	describeExits(roomName: string): ExitsDescriptor | null {
-		const info = this.#terrain.get(roomName);
-		if (info) {
+		const entry = this.#traits.get(roomName);
+		if (entry) {
 			const room = parseRoomName(roomName);
 			return Fn.pipe(
 				[ C.TOP, C.RIGHT, C.BOTTOM, C.LEFT ],
-				$$ => Fn.reject($$, direction => (info.exits & (2 ** ((direction - 1) >>> 1))) === 0),
+				$$ => Fn.reject($$, direction => (entry.exits & (2 ** ((direction - 1) >>> 1))) === 0),
 				$$ => Fn.map($$, direction => {
 					const offsets = getOffsetsFromDirection(direction);
 					return [ direction, makeRoomName(room.rx + offsets.dx, room.ry + offsets.dy) ] as const;
@@ -140,7 +175,7 @@ export class GameMap {
 		// Sanity check
 		const fromName = extractRoomName(fromRoom);
 		const toName = extractRoomName(toRoom);
-		if (!this.#terrain.has(fromName) || !this.#terrain.has(toName)) {
+		if (!this.#traits.has(fromName) || !this.#traits.has(toName)) {
 			return C.ERR_NO_PATH;
 		}
 
@@ -211,15 +246,16 @@ export class GameMap {
 	getRoomLinearDistance(roomName1: string, roomName2: string, continuous = false) {
 		const room1 = parseRoomName(roomName1);
 		const room2 = parseRoomName(roomName2);
-		const dx = Math.abs(room1.rx - room2.rx);
-		const dy = Math.abs(room1.ry - room2.ry);
 		if (continuous) {
+			const dx = Math.abs(room1.rx - room2.rx);
+			const dy = Math.abs(room1.ry - room2.ry);
 			return Math.max(
 				Math.min(this.#width - dx, dx),
 				Math.min(this.#height - dy, dy),
 			);
+		} else {
+			return roomLinearDistance(room1, room2);
 		}
-		return Math.max(dx, dy);
 	}
 
 	/** @internal */
@@ -240,7 +276,7 @@ export class GameMap {
 			return undefined;
 		} else if (this.#accessibleRooms.has(roomName)) {
 			return { status: 'normal', timestamp: null };
-		} else if (!actually || this.#terrain.has(roomName)) {
+		} else if (!actually || this.#traits.has(roomName)) {
 			return { status: 'closed', timestamp: null };
 		} else {
 			return undefined;
@@ -258,7 +294,7 @@ export class GameMap {
 	getRoomTerrain(roomName: string): Terrain.Terrain;
 
 	getRoomTerrain(roomName: string, graceful?: boolean) {
-		const terrain = this.#terrain.get(roomName)?.terrain;
+		const terrain = this.#traits.get(roomName)?.terrain;
 		if (terrain) {
 			return terrain;
 		} else if (!graceful) {
@@ -273,9 +309,9 @@ export class GameMap {
 	 */
 	getTerrainAt(...args: [ position: RoomPosition ] | [ x: number, y: number, roomName: string ]) {
 		const pos = args.length === 1 ? args[0] : new RoomPosition(args[0], args[1], args[2]);
-		const info = this.#terrain.get(pos.roomName);
-		if (info) {
-			return Terrain.terrainMaskToString[info.terrain.get(pos.x, pos.y)];
+		const entry = this.#traits.get(pos.roomName);
+		if (entry) {
+			return Terrain.terrainMaskToString[entry.terrain.get(pos.x, pos.y)];
 		}
 	}
 
@@ -302,7 +338,7 @@ export class GameMap {
 export class World {
 	map: GameMap;
 	name;
-	terrain: TerrainByRoom;
+	terrain: RoomTraitsByName;
 	terrainBlob;
 
 	constructor(name: string, terrainBlob: Readonly<Uint8Array>, accessibleRooms?: ReadonlySet<string>) {
@@ -316,7 +352,7 @@ export class World {
 	 * Returns an iterator of all rooms and terrain.
 	 */
 	entries(): Iterable<[ string, Terrain.Terrain ]> {
-		return Fn.map(this.terrain, ([ roomName, info ]) => [ roomName, info.terrain ]);
+		return Fn.map(this.terrain, ([ roomName, entry ]) => [ roomName, entry.terrain ]);
 	}
 }
 

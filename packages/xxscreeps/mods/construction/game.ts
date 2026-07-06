@@ -1,60 +1,33 @@
-import * as Id from 'xxscreeps/engine/schema/id.js';
-import { registerEnumerated, registerVariant } from 'xxscreeps/engine/schema/index.js';
-import * as C from 'xxscreeps/game/constants/index.js';
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
-import { constant, struct, variant } from 'xxscreeps/schema/index.js';
-import * as ConstructionSite from './construction-site.js';
+import { compose } from 'xxscreeps/schema/index.js';
+import { ConstructionSite } from './construction-site.js';
+import { constructionSiteShape } from './schema.js';
 import './creep.js';
 import './position.js';
 import './room.js';
 
 // Add `constructionSites` to global `game` object
-declare module 'xxscreeps/game/game.js' {
-	interface Game {
-		constructionSites: Record<string, ConstructionSite.ConstructionSite>;
-	}
-}
 hooks.register('gameInitializer', Game => Game.constructionSites = Object.create(null));
 
 // Export `ConstructionSite` to runtime globals
-registerGlobal(ConstructionSite.ConstructionSite);
+registerGlobal(ConstructionSite);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const siteSchema = registerVariant('Room.objects', compose(constructionSiteShape, ConstructionSite));
+
+// ---
+
+declare module 'xxscreeps/game/game.js' {
+	interface Game {
+		constructionSites: Record<string, ConstructionSite>;
+	}
+}
+
 declare module 'xxscreeps/game/runtime.js' {
-	interface Global { ConstructionSite: typeof ConstructionSite.ConstructionSite }
+	interface Global { ConstructionSite: typeof ConstructionSite }
 }
-
-// Schema types
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const actionSchema = registerEnumerated('ActionLog.action', 'build', 'repair');
-declare module 'xxscreeps/game/object.js' {
-	interface Schema { construction: typeof actionSchema }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const siteSchema = registerVariant('Room.objects', ConstructionSite.format);
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const buildEventSchema = registerVariant('Room.eventLog', struct({
-	...variant(C.EVENT_BUILD),
-	event: constant(C.EVENT_BUILD),
-	objectId: Id.format,
-	targetId: Id.format,
-	amount: 'int32',
-	energySpent: 'int32',
-	structureType: 'string',
-	x: 'int8',
-	y: 'int8',
-	incomplete: 'bool',
-}));
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const repairEventSchema = registerVariant('Room.eventLog', struct({
-	...variant(C.EVENT_REPAIR),
-	event: constant(C.EVENT_REPAIR),
-	objectId: Id.format,
-	targetId: Id.format,
-	amount: 'int32',
-	energySpent: 'int32',
-}));
 
 declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { construction: [ typeof siteSchema, typeof buildEventSchema, typeof repairEventSchema ] }
+	interface RoomSchema { construction: [ typeof siteSchema ] }
 }

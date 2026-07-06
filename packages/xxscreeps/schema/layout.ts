@@ -1,13 +1,13 @@
-import type { ConstantFormat, EnumFormat, Format, Interceptor, Primitive, UnionDeclaration } from './format.js';
+import type { EnumTypes, Format, Interceptor, Primitive, UnionDeclaration } from './format.js';
 import { ownEntriesIncludingPrivate } from 'xxscreeps/driver/private/runtime.js';
-import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
+import { compositeComparator, mappedNumericComparator, mappedPrimitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { bifurcate, getOrSet } from 'xxscreeps/utility/utility.js';
 import { Variant } from './format.js';
 
 export const kPointerSize = 4;
 export const kHeaderSize = kPointerSize * 4;
-export const kMagic = 0xfff35a00;
+export const kMagic = 0x00fff35a;
 
 export function alignTo(address: number, align: number) {
 	const alignMinusOne = align - 1;
@@ -28,37 +28,49 @@ export type Layout =
 	Primitive | ComposedLayout | NamedLayout |
 	ArrayLayout | ConstantLayout | EnumLayout | OptionalLayout | StructLayout | VariantLayout | VectorLayout;
 
-type ArrayLayout = {
+export const LayoutIdentity = Symbol('layoutIdentity');
+
+interface ArrayLayout {
 	array: Layout;
 	length: number;
 	stride: number;
-};
+}
 
-type ComposedLayout = {
+interface ComposedLayout {
 	composed: Layout;
 	interceptor: Interceptor;
-};
+}
 
-type ConstantLayout = ConstantFormat;
-type EnumLayout = EnumFormat;
+interface ConstantLayout {
+	constant: unknown;
+}
 
-type NamedLayout = {
+interface EnumLayout {
+	enum: EnumTypes[];
+}
+
+interface NamedLayout {
 	named: string;
 	layout: Layout;
-};
+}
 
-type OptionalLayout = {
-	optional: Layout;
+interface OptionalIntrinsicLayout {
 	size: number;
 	uninitialized: null | undefined;
-} | {
+}
+
+interface OptionalDynamic extends OptionalIntrinsicLayout {
 	pointer: Layout;
 	align: number;
-	size: number;
-	uninitialized: null | undefined;
-};
+}
 
-export type StructLayout = {
+interface OptionalStatic extends OptionalIntrinsicLayout {
+	optional: Layout;
+}
+
+type OptionalLayout = OptionalDynamic | OptionalStatic;
+
+export interface StructLayout {
 	struct: Record<string | symbol, {
 		offset: number;
 		member: Layout;
@@ -66,41 +78,49 @@ export type StructLayout = {
 	}>;
 	inherit?: StructLayout;
 	variant: number | string | undefined;
-};
+}
 
-type VariantLayout = {
+interface VariantLayout {
 	variant: {
 		align: number;
-		layout: StructLayout;
+		layout: Layout;
 		size: number;
 	}[];
-};
+}
 
-type VectorLayout = {
+interface VectorIntrinsicLayout {
+	align: number;
+	size: number;
+}
+
+interface VectorDynamicLayout extends VectorIntrinsicLayout {
 	list: Layout;
-	align: number;
-	size: number;
-} | {
-	vector: Layout;
-	align: number;
-	size: number;
-	stride: number;
-};
+}
 
-export type Traits = {
+interface VectorStaticLayout extends VectorIntrinsicLayout {
+	vector: Layout;
+	stride: number;
+}
+
+type VectorLayout = VectorDynamicLayout | VectorStaticLayout;
+
+export interface Traits {
 	align: number;
 	size: number;
 	stride?: number | undefined;
-};
+}
 
-export type LayoutAndTraits = { layout: Layout; traits: Traits };
+export interface LayoutAndTraits {
+	layout: Layout;
+	traits: Traits;
+}
 
 export function getLayout(unresolvedFormat: Format, cache: Map<Format, LayoutAndTraits>): LayoutAndTraits {
 	return getOrSet(cache, unresolvedFormat, () => getResolvedLayout(resolve(unresolvedFormat), cache));
 }
 
 function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>): LayoutAndTraits {
-	return getOrSet(cache, format, () => {
+	return getOrSet(cache, format, (): LayoutAndTraits => {
 		if (typeof format === 'string') {
 			// Check for integral types
 			const numericSizes = {
@@ -147,7 +167,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 					array: layout,
 					length,
 					stride: traits.stride,
-				} satisfies ArrayLayout,
+				},
 				traits: {
 					align: traits.align,
 					size,
@@ -162,19 +182,19 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 				layout: {
 					composed: layout,
 					interceptor,
-				} satisfies ComposedLayout,
+				},
 				traits,
 			};
 
 		} else if ('constant' in format) {
 			return {
-				layout: format satisfies ConstantLayout,
+				layout: format,
 				traits: { align: 1, size: 0, stride: 0 },
 			};
 
 		} else if ('enum' in format) {
 			return {
-				layout: format satisfies EnumLayout,
+				layout: format,
 				traits: { align: 1, size: 1, stride: 1 },
 			};
 
@@ -184,7 +204,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 				layout: {
 					named: format.named,
 					layout,
-				} satisfies NamedLayout,
+				},
 				traits,
 			};
 
@@ -196,11 +216,11 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 						optional: layout,
 						size: traits.size,
 						uninitialized: format.uninitialized,
-					} satisfies OptionalLayout,
+					},
 					traits: {
 						align: traits.align,
 						size: traits.size + 1,
-						stride: traits.stride && alignTo(traits.size + 1, traits.align),
+						stride: traits.stride === undefined ? undefined : alignTo(traits.size + 1, traits.align),
 					},
 				};
 			} else {
@@ -210,7 +230,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 						align: traits.align,
 						size: traits.size,
 						uninitialized: format.uninitialized,
-					} satisfies OptionalLayout,
+					},
 					traits: {
 						align: kPointerSize,
 						size: kPointerSize,
@@ -220,8 +240,12 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 
 		} else if ('struct' in format) {
 			// Grab layout for structure members
-			const allEntries =
-				[ ...ownEntriesIncludingPrivate(format.struct).filter(entry => entry[0] !== Variant) ] as ([ string, Format] | [ string, UnionDeclaration])[];
+			const allEntries = Fn.pipe(
+				ownEntriesIncludingPrivate(format.struct) satisfies
+					Iterable<[ string | symbol, Format | UnionDeclaration ]> as
+					Iterable<[ string | symbol, Format ] | [ string, UnionDeclaration ]>,
+				$$ => Fn.reject($$, ([ key ]) => key === Variant),
+				$$ => [ ...$$ ]);
 			const [ unionReferences, memberDeclarations ] = bifurcate(allEntries,
 				(entry): entry is [ string, UnionDeclaration ] => typeof entry[1] === 'object' && 'union' in entry[1]);
 			const entries = memberDeclarations.map(([ key, member ]) => ({
@@ -230,89 +254,74 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 			}));
 
 			// Sort members for struct packing
-			entries.sort((left, right) => {
-				const nameOf = (el: string | symbol) => typeof el === 'string' ? el : el.description ?? '';
-				return (
-					right.traits.size - left.traits.size ||
-					right.traits.align - left.traits.align ||
-					primitiveComparator(nameOf(left.key), nameOf(right.key))
-				);
-			});
+			entries.sort(compositeComparator([
+				mappedNumericComparator(entry => entry.traits.size),
+				mappedNumericComparator(entry => entry.traits.align),
+				mappedPrimitiveComparator(({ key }) => typeof key === 'string' ? key : key.description ?? ''),
+			]));
 
 			// Create member layout
-			const members: {
-				key: keyof any;
-				info: {
-					offset: number;
-					member: Layout;
-					union?: true;
-				};
-				traits: Traits;
-			}[] = [];
 			const baseLayout = format.inherit && getLayout(format.inherit, cache);
 			let offset = baseLayout?.traits.size ?? 0;
-			const paddingFor = (member: LayoutAndTraits) =>
-				alignTo(offset, member.traits.align) - offset;
-			while (entries.length !== 0) {
-				let minimum = -1;
-				let minimumPadding = Infinity;
-				for (const [ ii, entry ] of entries.entries()) {
-					const padding = paddingFor(entry);
-					if (padding === 0) {
-						minimum = ii;
-						break;
-					}
-					if (padding < minimumPadding) {
-						minimum = ii;
-						minimumPadding = padding;
-					}
+			const paddingFor = (member: LayoutAndTraits) => alignTo(offset, member.traits.align) - offset;
+			const structMembers = [ ...function*() {
+				while (entries.length !== 0) {
+					const [ minimum ] = Fn.pipe(
+						entries.entries(),
+						$$ => Fn.map($$, ([ ii, entry ]) => [ ii, paddingFor(entry) ] as const),
+						$$ => Fn.minimum($$, mappedNumericComparator(([ , padding ]) => padding)),
+						$$ => $$ ?? function() {
+							throw new Error('Impossible');
+						}());
+					const member = entries.splice(minimum, 1)[0]!;
+					const { key, layout, traits } = member;
+					offset = alignTo(offset, traits.align);
+					yield {
+						key,
+						info: {
+							offset,
+							member: layout,
+						},
+						traits,
+					};
+					offset += traits.size;
 				}
-				const member = entries.splice(minimum, 1)[0]!;
-				const { key, layout, traits } = member;
-				offset = alignTo(offset, traits.align);
-				members.push({
-					key,
-					info: {
-						offset,
-						member: layout,
-					},
-					traits,
-				});
-				offset += traits.size;
-			}
+			}() ];
 
 			// Calculate struct traits
-			const align = Math.max(...members.map(member => member.traits.align));
-			const lastMember = members.at(-1)!;
-			const size = lastMember.info.offset + lastMember.traits.size;
-			const isFixedSize = (!baseLayout || baseLayout.traits.stride !== undefined) &&
-				members.every(member => member.traits.stride !== undefined);
+			const align = Math.max(baseLayout?.traits.align ?? 1, ...Fn.map(structMembers, member => member.traits.align));
+			const size = offset;
+			const isFixedSize =
+				(!baseLayout || baseLayout.traits.stride !== undefined) &&
+				structMembers.every(member => member.traits.stride !== undefined);
 
 			// Add union entries
-			for (const [ key, union ] of unionReferences) {
-				const [ referencedKey, unionFormat ] = Fn.first(ownEntriesIncludingPrivate(union.union))!;
-				const { layout, traits } = getLayout(unionFormat, cache);
-				const referencedMember = members.find(info => info.key === referencedKey)!;
-				if (traits.align > referencedMember.traits.align) {
-					throw new Error('Union alignment error');
+			const members = [ ...structMembers, ...function*() {
+				for (const [ key, union ] of unionReferences) {
+					const [ referencedKey, unionFormat ] = Fn.first(ownEntriesIncludingPrivate(union.union))!;
+					const { layout, traits } = getLayout(unionFormat, cache);
+					const referencedMember = structMembers.find(info => info.key === referencedKey)!;
+					if (traits.align > referencedMember.traits.align) {
+						throw new Error('Union alignment error');
+					}
+					yield {
+						key,
+						info: {
+							offset: referencedMember.info.offset,
+							member: layout,
+							union: true as const,
+						},
+						traits,
+					};
 				}
-				members.push({
-					key,
-					info: {
-						offset: referencedMember.info.offset,
-						member: layout,
-						union: true,
-					},
-					traits,
-				});
-			}
+			}() ];
 
 			return {
 				layout: {
 					struct: Object.fromEntries(members.map(member => [ member.key, member.info ])),
 					inherit: baseLayout?.layout as StructLayout,
 					variant: format.variant,
-				} satisfies StructLayout,
+				},
 				traits: {
 					align,
 					size,
@@ -326,12 +335,12 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 					variant: format.variant.map(variant => {
 						const { layout, traits } = getLayout(variant, cache);
 						return {
-							layout: layout as StructLayout,
+							layout,
 							align: traits.align,
 							size: traits.size,
 						};
 					}),
-				} satisfies VariantLayout,
+				},
 				traits: {
 					align: kPointerSize,
 					size: kPointerSize + 1,
@@ -346,7 +355,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 						list: layout,
 						align: traits.align,
 						size: traits.size,
-					} satisfies VectorLayout,
+					},
 					traits: {
 						align: kPointerSize,
 						size: kPointerSize,
@@ -359,7 +368,7 @@ function getResolvedLayout(format: Format, cache: Map<Format, LayoutAndTraits>):
 						align: traits.align,
 						size: traits.size,
 						stride: traits.stride,
-					} satisfies VectorLayout,
+					},
 					traits: {
 						align: kPointerSize,
 						size: kPointerSize * 2,

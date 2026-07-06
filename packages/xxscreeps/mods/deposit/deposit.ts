@@ -1,24 +1,14 @@
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Game, registerGlobal } from 'xxscreeps/game/index.js';
+import { registerGlobal } from 'xxscreeps/game/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/game.js';
-import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
+import { depositShape } from './schema.js';
 
-export const format = declare('Deposit', () => compose(shape, Deposit));
-const shape = struct(RoomObject.format, {
-	...variant('deposit'),
-	depositType: resourceEnumFormat,
-	lastCooldown: 'int32',
-	'#harvested': 'int32',
-	'#cooldownTime': 'int32',
-	'#nextDecayTime': 'int32',
-});
-
-export class Deposit extends withOverlay(RoomObject.RoomObject, shape) {
-	@enumerable get cooldown() { return RoomObject.cooldownTime(Game, this['#cooldownTime']); }
-	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(Game, this['#nextDecayTime']); }
+export class Deposit extends withOverlay(RoomObject.RoomObject, depositShape) {
+	@enumerable get cooldown() { return RoomObject.cooldownTime(this['#cooldownTime']); }
+	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(this['#nextDecayTime']); }
 
 	get '#lookType'() { return C.LOOK_DEPOSITS; }
 }

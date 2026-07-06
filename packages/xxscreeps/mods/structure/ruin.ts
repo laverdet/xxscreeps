@@ -1,35 +1,21 @@
 import type { Store } from 'xxscreeps/mods/resource/store.js';
-import * as Id from 'xxscreeps/engine/schema/id.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomObject, cooldownTime, create as createObject, format as objectFormat } from 'xxscreeps/game/object.js';
-import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { RoomObject, cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
+import { OpenStore } from 'xxscreeps/mods/resource/store.js';
 import { OwnedStructure, Structure } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-
-export const format = declare('Ruin', () => compose(shape, Ruin));
-const shape = struct(objectFormat, {
-	...variant('ruin'),
-	destroyTime: 'int32',
-	store: openStoreFormat,
-	'#decayTime': 'int32',
-	'#structure': struct({
-		id: Id.format,
-		hitsMax: 'int32',
-		type: 'string',
-		user: Id.optionalFormat,
-	}),
-});
+import { withOverlay } from 'xxscreeps/schema/index.js';
+import { ruinShape } from './schema.js';
 
 /**
  * A destroyed structure. This is a walkable object.
  */
-export class Ruin extends withOverlay(RoomObject, shape) {
+export class Ruin extends withOverlay(RoomObject, ruinShape) {
 
 	/**
 	 * The amount of game ticks before this ruin decays.
 	 */
-	@enumerable get ticksToDecay() { return cooldownTime(Game, this['#decayTime']); }
+	@enumerable get ticksToDecay() { return cooldownTime(this['#decayTime']); }
 
 	/**
 	 * One of the `STRUCTURE_*` constants — the type of the destroyed structure.
@@ -73,7 +59,7 @@ export class Ruin extends withOverlay(RoomObject, shape) {
 }
 
 export function createRuin(structure: Structure, decay?: number) {
-	const ruin = createObject(new Ruin(), structure.pos);
+	const ruin = createRoomObject(new Ruin(), structure.pos);
 	ruin.store = new OpenStore();
 	const withStore = structure as never as Record<'store', Store | undefined>;
 	if (withStore.store) {

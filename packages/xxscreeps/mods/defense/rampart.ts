@@ -1,22 +1,16 @@
+import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OwnedStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { asUnion, assign } from 'xxscreeps/utility/utility.js';
+import { rampartShape } from './schema.js';
 
-export const format = declare('Rampart', () => compose(shape, StructureRampart));
-const shape = struct(ownedStructureFormat, {
-	...variant('rampart'),
-	hits: 'int32',
-	isPublic: 'bool',
-	'#nextDecayTime': 'int32',
-});
-
-export class StructureRampart extends withOverlay(OwnedStructure, shape) {
-	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(Game, this['#nextDecayTime']); }
+export class StructureRampart extends withOverlay(OwnedStructure, rampartShape) {
+	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
 
 	override get hitsMax() {
 		return this['#user'] === this.room.controller?.['#user']
@@ -27,7 +21,7 @@ export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 
 	override get '#layer'() { return 1; }
 
-	override '#captureDamage'(power: number, type: number, source: RoomObject.RoomObject | null) {
+	override '#captureDamage'(power: number, type: number, source: RoomObject | null) {
 		const absorbed = Math.min(power, this.hits);
 		if (absorbed > 0) {
 			this['#applyDamage'](absorbed, type, source ?? undefined);
@@ -58,7 +52,7 @@ export class StructureRampart extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const rampart = assign(RoomObject.create(new StructureRampart(), pos), {
+	const rampart = assign(createRoomObject(new StructureRampart(), pos), {
 		hits: 1,
 		isPublic: false,
 	});

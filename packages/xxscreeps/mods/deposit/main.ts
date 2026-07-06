@@ -1,10 +1,11 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { World } from 'xxscreeps/game/map.js';
+import * as assert from 'node:assert';
 import { registerShardInitializer, registerShardTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { isCentralRoom, makeSectorRadiusFilter, sectorEdgeRooms } from 'xxscreeps/game/room/sector.js';
+import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
 import { DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/mineral/constants.js';
 import { Deposit } from './deposit.js';
 import { dueSectorsAt, scheduleSector, seedSectors } from './model.js';
@@ -43,10 +44,11 @@ function depositThroughput(harvested: number): number {
 }
 
 // Surviving in-sector deposits per normal edge room (one group per room, empties included).
-export async function loadSectorDeposits(shard: Shard, centralRoom: string, normalEdges: string[]): Promise<Deposit[]> {
+export async function loadSectorDeposits(shard: Shard, world: World, centralRoom: string, normalEdges: string[]): Promise<Deposit[]> {
 	const depositsByRoom = await Fn.mapAwait(normalEdges, async edgeRoom => {
+		const sectors = world.map['#getRoomTraits'](edgeRoom)!.sectors;
 		const room = await shard.loadRoom(edgeRoom);
-		const inSector = makeSectorRadiusFilter(centralRoom, edgeRoom);
+		const inSector = makeSectorRadiusPredicate(centralRoom, edgeRoom, sectors);
 		return room['#objects'].filter((object): object is Deposit =>
 			object instanceof Deposit &&
 			object['#nextDecayTime'] > shard.time + 1 &&
@@ -84,10 +86,11 @@ async function pushPlaceIntent(shard: Shard, candidate: string, centralRoom: str
 }
 
 async function evaluateSector(shard: Shard, world: World, centralRoom: string) {
+	const sectorControl = world.map['#getRoomTraits'](centralRoom)?.sectorControl;
+	assert.ok(sectorControl);
 	// Out-of-borders / closed rooms are excluded from both throughput tallying and placement.
-	const normalEdges = [ ...Fn.filter(sectorEdgeRooms(centralRoom), name =>
-		world.map.getRoomStatus(name).status === 'normal') ];
-	const deposits = await loadSectorDeposits(shard, centralRoom, normalEdges);
+	const normalEdges = sectorControl.edges.filter(name => world.map.getRoomStatus(name).status === 'normal');
+	const deposits = await loadSectorDeposits(shard, world, centralRoom, normalEdges);
 	const throughput = Fn.accumulate(Fn.map(deposits, deposit => depositThroughput(deposit['#harvested'])));
 	if (throughput >= SECTOR_THROUGHPUT_TARGET) {
 		// Saturated. The decay hook pulls the schedule forward the moment capacity frees.
@@ -109,9 +112,8 @@ registerShardInitializer(async shard => {
 	// Relative to the current wall clock so a world imported well past tick 0 (e.g. the mod added to
 	// an existing shard) still spreads its first wave forward instead of firing all at once.
 	const seeds = Fn.pipe(
-		world.entries(),
-		$$ => Fn.filter($$, ([ roomName ]) => isCentralRoom(roomName)),
-		$$ => Fn.map($$, ([ roomName ]): [ score: number, sector: string ] => [ now + bootstrapScatter(roomName), roomName ]),
+		world.map['#sectors'](),
+		$$ => Fn.map($$, ([ center ]): [ score: number, sector: string ] => [ now + bootstrapScatter(center), center ]),
 		$$ => [ ...$$ ],
 	);
 	if (seeds.length > 0) {

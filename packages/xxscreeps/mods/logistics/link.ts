@@ -1,28 +1,20 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Game, intents } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { intents } from 'xxscreeps/game/index.js';
+import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { SingleStore, calculateChecked, checkHasCapacity, checkHasResource, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { SingleStore, calculateChecked, checkHasCapacity, checkHasResource } from 'xxscreeps/mods/resource/store.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { linkShape } from './schema.js';
 
-export const format = () => compose(shape, StructureLink);
-const shape = declare('Link', struct(ownedStructureFormat, {
-	...variant('link'),
-	hits: 'int32',
-	store: singleStoreFormat(),
-	'#actionLog': RoomObject.actionLogFormat,
-	'#cooldownTime': 'int32',
-}));
-
-export class StructureLink extends withOverlay(OwnedStructure, shape) {
+export class StructureLink extends withOverlay(OwnedStructure, linkShape) {
 	/**
 	 * The amount of game ticks the link has to wait until the next transfer is possible.
 	 */
-	@enumerable get cooldown() { return RoomObject.cooldownTime(Game, this['#cooldownTime']); }
+	@enumerable get cooldown() { return cooldownTime(this['#cooldownTime']); }
 
 	/** @deprecated */
 	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY]; }
@@ -49,7 +41,7 @@ export class StructureLink extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const link = assign(RoomObject.create(new StructureLink(), pos), {
+	const link = assign(createRoomObject(new StructureLink(), pos), {
 		hits: C.LINK_HITS,
 		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.LINK_CAPACITY),
 	});

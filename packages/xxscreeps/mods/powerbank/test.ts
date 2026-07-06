@@ -6,7 +6,6 @@ import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
-import { isHighwayRoom } from 'xxscreeps/game/room/sector.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
@@ -151,9 +150,11 @@ describe('PowerBank placement', () => {
 		const seededAt = shard.time;
 		await runShardInitializers(shard);
 		const due = await inspectDuePowerBankRoomsForTest(shard);
-		assert.ok(due.length > 0, 'highway rooms were seeded');
+		const world = await shard.loadWorld();
+		const highways = new Set(Fn.transform(world.map['#sectors'](), ([ , sector ]): Iterable<string> => sector.edges));
+		assert.strictEqual(due.length, highways.size, 'every sector edge room was seeded exactly once');
 		for (const [ score, roomName ] of due) {
-			assert.ok(isHighwayRoom(roomName), `${roomName} should be a highway room`);
+			assert.ok(highways.has(roomName), `${roomName} should be a sector edge room`);
 			const ahead = score - seededAt;
 			assert.ok(ahead >= C.POWER_BANK_RESPAWN_TIME * 0.75 && ahead <= C.POWER_BANK_RESPAWN_TIME * 1.25,
 				`${roomName} scheduled ${ahead} ticks ahead`);

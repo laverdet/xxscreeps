@@ -4,20 +4,13 @@ import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
-import { cooldownTime, create as createObject } from 'xxscreeps/game/object.js';
+import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { OpenStore, checkHasResource, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OpenStore, checkHasResource } from 'xxscreeps/mods/resource/store.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-
-export const format = declare('StructureTerminal', () => compose(shape, StructureTerminal));
-const shape = struct(ownedStructureFormat, {
-	...variant('terminal'),
-	hits: 'int32',
-	store: openStoreFormat,
-	'#cooldownTime': 'int32',
-});
+import { terminalShape } from './schema.js';
 
 /**
  * Sends any resources to a Terminal in another room. The destination Terminal can belong to any
@@ -29,12 +22,12 @@ const shape = struct(ownedStructureFormat, {
  *
  * Terminals are used in the [Market system](https://docs.screeps.com/market.html).
  */
-export class StructureTerminal extends withOverlay(OwnedStructure, shape) {
+export class StructureTerminal extends withOverlay(OwnedStructure, terminalShape) {
 	/**
 	 * The remaining amount of ticks while this terminal cannot be used to make
 	 * `StructureTerminal.send` or `Game.market.deal` calls.
 	 */
-	@enumerable get cooldown() { return cooldownTime(Game, this['#cooldownTime']); }
+	@enumerable get cooldown() { return cooldownTime(this['#cooldownTime']); }
 
 	override get hitsMax() { return C.TERMINAL_HITS; }
 	override get structureType() { return C.STRUCTURE_TERMINAL; }
@@ -98,7 +91,7 @@ export function calculateEnergyCost(amount: number, range: number) {
 //
 // Construction implementation
 export function create(pos: RoomPosition, owner: string) {
-	const terminal = assign(createObject(new StructureTerminal(), pos), {
+	const terminal = assign(createRoomObject(new StructureTerminal(), pos), {
 		hits: C.TERMINAL_HITS,
 		store: OpenStore['#create'](C.TERMINAL_CAPACITY),
 	});

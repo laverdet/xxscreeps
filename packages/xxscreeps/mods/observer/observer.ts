@@ -2,19 +2,14 @@ import type { RoomPosition } from 'xxscreeps/game/position.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { observerShape } from './schema.js';
 
-export const format = () => compose(shape, StructureObserver);
-const shape = declare('Observer', struct(ownedStructureFormat, {
-	...variant('observer'),
-	hits: 'int32',
-}));
-
-export class StructureObserver extends withOverlay(OwnedStructure, shape) {
+export class StructureObserver extends withOverlay(OwnedStructure, observerShape) {
 	override get hitsMax() { return C.OBSERVER_HITS; }
 	override get structureType() { return C.STRUCTURE_OBSERVER; }
 
@@ -26,7 +21,7 @@ export class StructureObserver extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const observer = assign(RoomObject.create(new StructureObserver(), pos), {
+	const observer = assign(createRoomObject(new StructureObserver(), pos), {
 		hits: C.OBSERVER_HITS,
 	});
 	observer['#user'] = owner;

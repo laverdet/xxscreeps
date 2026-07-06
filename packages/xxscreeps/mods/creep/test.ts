@@ -1,5 +1,5 @@
 import * as C from 'xxscreeps/game/constants/index.js';
-import { create as createObject } from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createRampart } from 'xxscreeps/mods/defense/rampart.js';
 import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
@@ -586,7 +586,7 @@ describe('Transfer precedence', () => {
 				room['#insertObject'](carrier);
 				const targetPos = new RoomPosition(opts.targetFar ? 35 : 25, opts.targetFar ? 35 : 26, 'W1N1');
 				if (opts.target === 'source') {
-					const src = createObject(new Source(), targetPos);
+					const src = createRoomObject(new Source(), targetPos);
 					src.energy = src.energyCapacity = C.SOURCE_ENERGY_NEUTRAL_CAPACITY;
 					room['#insertObject'](src);
 				} else {

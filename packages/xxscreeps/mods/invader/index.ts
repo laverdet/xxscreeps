@@ -10,5 +10,5 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/npc',
 		'xxscreeps/mods/spawn',
 	],
-	provides: [ 'backend', 'constants', 'game', 'processor', 'test' ],
+	provides: [ 'backend', 'constants', 'game', 'processor', 'schema', 'test' ],
 };

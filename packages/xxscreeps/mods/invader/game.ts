@@ -1,15 +1,13 @@
-import { registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
-import { format as invaderCoreFormat } from './invader-core.js';
-
-// Track energy mined on room
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const schema = registerStruct('Room', {
-	'#invaderEnergyTarget': 'int32',
-});
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { compose } from 'xxscreeps/schema/index.js';
+import { StructureInvaderCore } from './invader-core.js';
+import { invaderCoreShape } from './schema.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const invaderCoreSchema = registerVariant('Room.objects', invaderCoreFormat);
+const invaderCoreSchema = registerVariant('Room.objects', compose(invaderCoreShape, StructureInvaderCore));
+
+// ---
 
 declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { invader: [ typeof schema, typeof invaderCoreSchema ] }
+	interface RoomSchema { invader: [ typeof invaderCoreSchema ] }
 }

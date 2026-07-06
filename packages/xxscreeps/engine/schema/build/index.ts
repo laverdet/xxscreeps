@@ -1,4 +1,3 @@
-import type { Transform } from 'xxscreeps/driver/webpack.js';
 import type { Package } from 'xxscreeps/schema/build.js';
 import type { BufferView, Format } from 'xxscreeps/schema/index.js';
 import * as fs from 'node:fs';

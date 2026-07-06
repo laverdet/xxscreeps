@@ -19,8 +19,8 @@ registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
 });
 
 export class LocalKeyValResponder implements AsyncDisposable, MaybePromises<Pr.KeyValProvider> {
+	readonly blob;
 	private readonly disposable;
-	private readonly blob;
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: Pr.Value[]) => any>();
@@ -341,7 +341,7 @@ export class LocalKeyValResponder implements AsyncDisposable, MaybePromises<Pr.K
 
 	sInter(key: string, keys: string[]) {
 		const sets = Fn.pipe(
-			Fn.concat([ [ key ], keys ]),
+			Fn.concat<string>([ [ key ], keys ]),
 			$$ => Fn.map($$, (key): Set<string> | undefined => this.data.get(key)),
 			$$ => [ ...$$ ]);
 		if (sets.every(set => set !== undefined)) {
@@ -517,10 +517,17 @@ export class LocalKeyValResponder implements AsyncDisposable, MaybePromises<Pr.K
 		}
 	}
 
-	zRange(key: string, min: number | string, max: number | string, options?: Pr.ZRange): any {
+	zRange(key: string, minParam: number | string, maxParam: number | string, options?: Pr.ZRange): any {
 		const set: SortedSet | undefined = this.data.get(key);
 		if (set) {
-			const allMatching = function() {
+			const { min, max } = function() {
+				if (options?.rev) {
+					return { min: maxParam, max: minParam };
+				} else {
+					return { min: minParam, max: maxParam };
+				}
+			}();
+			let allMatching = function() {
 				switch (options?.by) {
 					case 'LEX': {
 						const parse = (value: string): [ string, boolean ] => {
@@ -543,9 +550,7 @@ export class LocalKeyValResponder implements AsyncDisposable, MaybePromises<Pr.K
 					case 'SCORE': return [ ...Fn.map(set.entries(min as number, max as number), entry => entry[1]) ];
 					default: {
 						const convert = (value: number) => {
-							if (value === Infinity || value === -Infinity) {
-								throw new Error(`Invalid range value: ${value}`);
-							} else if (value < 0) {
+							if (value < 0) {
 								return set.size + value;
 							} else {
 								return value;
@@ -555,6 +560,9 @@ export class LocalKeyValResponder implements AsyncDisposable, MaybePromises<Pr.K
 					}
 				}
 			}();
+			if (options?.rev) {
+				allMatching = allMatching.reverse();
+			}
 			if (options?.limit) {
 				return allMatching.slice(options.limit[0], options.limit[0] + options.limit[1]);
 			} else {

@@ -1,7 +1,7 @@
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import type { BufferView } from 'xxscreeps/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
+import { optionalResourceEnumFormat } from 'xxscreeps/mods/resource/schema.js';
 import { Store } from 'xxscreeps/mods/resource/store.js';
 import { compose, struct, withOverlay } from 'xxscreeps/schema/index.js';
 

@@ -223,7 +223,7 @@ describe('Notification delivery worker', () => {
 	test('respects notifyPrefs.disabled (drops without emit)', () => empty(async ({ shard, tick }) => {
 		using _clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
-		await setNotifyPrefs(shard, userA, { disabled: true });
+		await setNotifyPrefs(shard.db, userA, { disabled: true });
 		await seedRow(shard, userA, 'hi');
 		await tick(10);
 		assert.strictEqual(parseNotifyLines(stdout.lines).length, 0, 'disabled user → no emit');
@@ -268,7 +268,7 @@ describe('Notification delivery worker', () => {
 		using clock = withFakeNow(baseTime);
 		using stdout = captureConsoleLog();
 		// Disable the per-user throttle so delivery depends only on each row's group deadline.
-		await setNotifyPrefs(shard, userA, { interval: 0 });
+		await setNotifyPrefs(shard.db, userA, { interval: 0 });
 		// 60-minute group → due at the next 60-minute boundary.
 		await upsertNotification(shard, userA, 'msg', 'long', 60);
 		// 1-minute group (smallest non-zero `groupInterval`) → due at the next 1-minute boundary.

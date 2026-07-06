@@ -4,38 +4,26 @@ import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, hooks, intents, userInfo } from 'xxscreeps/game/index.js';
 import { optionalExpiryTime, untilTime } from 'xxscreeps/game/object.js';
-import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
+import { controllerShape } from './schema.js';
 
-export const format = declare('Controller', () => compose(shape, StructureController));
-const shape = struct(ownedStructureFormat, {
-	...variant('controller'),
-	isPowerEnabled: 'bool',
-	safeModeAvailable: 'int32',
-	'#downgradeTime': 'int32',
-	'#progress': 'int32',
-	'#reservationEndTime': 'int32',
-	'#safeModeCooldownTime': 'int32',
-	'#upgradeBlockedUntil': 'int32',
-	'#upgradeInvulnerableUntil': 'int32',
-});
-
-export class StructureController extends withOverlay(OwnedStructure, shape) {
+export class StructureController extends withOverlay(OwnedStructure, controllerShape) {
 	/** @internal */
 	declare upgradePowerThisTick?: number;
 	@enumerable get level() { return this.room['#level']; }
 	@enumerable get progress() { return this.level > 0 ? this['#progress'] : undefined; }
 	@enumerable get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined; }
-	@enumerable get safeMode() { return untilTime(Game, this.room['#safeModeUntil']); }
-	@enumerable get safeModeCooldown() { return untilTime(Game, this['#safeModeCooldownTime']); }
-	@enumerable get ticksToDowngrade() { return optionalExpiryTime(Game, this['#downgradeTime']); }
-	@enumerable get upgradeBlocked() { return untilTime(Game, this['#upgradeBlockedUntil']); }
+	@enumerable get safeMode() { return untilTime(this.room['#safeModeUntil']); }
+	@enumerable get safeModeCooldown() { return untilTime(this['#safeModeCooldownTime']); }
+	@enumerable get ticksToDowngrade() { return optionalExpiryTime(this['#downgradeTime']); }
+	@enumerable get upgradeBlocked() { return untilTime(this['#upgradeBlockedUntil']); }
 
 	/**
 	 * An object with the controller reservation info if present
 	 */
 	@enumerable get reservation() {
-		const ticksToEnd = optionalExpiryTime(Game, this['#reservationEndTime']);
+		const ticksToEnd = optionalExpiryTime(this['#reservationEndTime']);
 		const value = ticksToEnd === undefined ? undefined : {
 			ticksToEnd,
 			username: userInfo.get(this.room['#user']!)!.username,
@@ -60,7 +48,7 @@ export class StructureController extends withOverlay(OwnedStructure, shape) {
 	}
 
 	@enumerable override get effects(): RoomObjectEffect[] | undefined {
-		const ticksRemaining = optionalExpiryTime(Game, this['#upgradeInvulnerableUntil']);
+		const ticksRemaining = optionalExpiryTime(this['#upgradeInvulnerableUntil']);
 		return ticksRemaining === undefined ? undefined : [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining } ];
 	}
 
