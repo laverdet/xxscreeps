@@ -1,9 +1,10 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
+import { makeRoomName, makeSignedRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
@@ -96,24 +97,20 @@ const iterateGridInRange = makeLocalIterateInRangeTo(0, 49);
 const iterateRoomsInRange = makeLocalIterateInRangeTo(-Infinity, Infinity);
 
 function makeGrid(): Grid {
-	const grid: Grid = [];
-	for (let yy = 0; yy < 50; yy++) {
-		const row: Cell[] = [];
-		for (let xx = 0; xx < 50; xx++) {
-			row.push({ wall: false, swamp: false, forceOpen: false });
-		}
-		grid.push(row);
-	}
-	return grid;
+	return Fn.pipe(
+		Fn.range(50),
+		$$ => Fn.map($$, () => Fn.pipe(
+			Fn.range(50),
+			$$ => Fn.map($$, (): Cell => ({ wall: false, swamp: false, forceOpen: false })),
+			$$ => [ ...$$ ])),
+		$$ => [ ...$$ ]);
 }
 
 function smoothTerrain(grid: Grid, factor: number, key: 'wall' | 'swamp'): Grid {
 	const next = makeGrid();
-	for (let yy = 0; yy < 50; yy++) {
-		const row = grid[yy]!;
+	for (const [ yy, row ] of grid.entries()) {
 		const nextRow = next[yy]!;
-		for (let xx = 0; xx < 50; xx++) {
-			const cell = row[xx]!;
+		for (const [ xx, cell ] of row.entries()) {
 			const nextCell = nextRow[xx]!;
 			Object.assign(nextCell, cell);
 
@@ -149,10 +146,9 @@ function checkFlood(grid: Grid): boolean {
 	let startXx = -1;
 	let startYy = -1;
 
-	outer:
-	for (let xx = 0; xx < 50; xx++) {
-		for (let yy = 0; yy < 50; yy++) {
-			if (!grid[yy]![xx]!.wall) {
+	outer: for (const [ xx, row ] of grid.entries()) {
+		for (const [ yy, cell ] of row.entries()) {
+			if (!cell.wall) {
 				startXx = xx;
 				startYy = yy;
 				break outer;
@@ -162,12 +158,12 @@ function checkFlood(grid: Grid): boolean {
 
 	if (startXx === -1) return false;
 
-	const visited: boolean[][] = [];
-	for (let yy = 0; yy < 50; yy++) {
-		visited.push(new Array<boolean>(50).fill(false));
-	}
+	const visited = Fn.pipe(
+		Fn.range(50),
+		$$ => Fn.map($$, () => [ ...Fn.map(Fn.range(50), () => false) ]),
+		$$ => [ ...$$ ]);
 
-	const stack: [number, number][] = [ [ startXx, startYy ] ];
+	const stack = [ [ startXx, startYy ] as const ];
 	visited[startYy]![startXx] = true;
 
 	while (stack.length > 0) {
@@ -180,11 +176,10 @@ function checkFlood(grid: Grid): boolean {
 		}
 	}
 
-	for (let yy = 0; yy < 50; yy++) {
-		const row = grid[yy]!;
+	for (const [ yy, row ] of grid.entries()) {
 		const visitedRow = visited[yy]!;
-		for (let xx = 0; xx < 50; xx++) {
-			if (!row[xx]!.wall && !visitedRow[xx]) {
+		for (const [ xx, cell ] of row.entries()) {
+			if (!cell.wall && !visitedRow[xx]) {
 				return false;
 			}
 		}
@@ -197,25 +192,24 @@ interface ExitInterval {
 	length: number;
 }
 
-function genExit(): number[] {
+function *genExit(): Iterable<number> {
 	const exitLength = Math.floor(Math.random() * 43) + 1;
 	const intervalsCnt = [ 0, 0, 1, 1, 2 ][Math.floor(Math.random() * 5)]!;
 	const exitStart = Math.floor(Math.random() * (46 - exitLength)) + 2;
 
-	const intervals: ExitInterval[] = [];
-	let curStart = exitStart;
-
-	for (let jj = 0; jj < intervalsCnt; jj++) {
-		curStart += Math.floor(Math.random() * (exitLength / (intervalsCnt * 2))) + 5;
-		let length = Math.floor(Math.random() * (exitLength / (intervalsCnt * 2))) + 5;
-		if (length + curStart >= exitStart + exitLength - 5) {
-			length = exitStart + exitLength - curStart - 5;
+	const intervals = [ ...function*(): Iterable<ExitInterval> {
+		let curStart = exitStart;
+		for (let jj = 0; jj < intervalsCnt; jj++) {
+			curStart += Math.floor(Math.random() * (exitLength / (intervalsCnt * 2))) + 5;
+			let length = Math.floor(Math.random() * (exitLength / (intervalsCnt * 2))) + 5;
+			if (length + curStart >= exitStart + exitLength - 5) {
+				length = exitStart + exitLength - curStart - 5;
+			}
+			yield { start: curStart, length };
+			curStart += length + 1;
 		}
-		intervals.push({ start: curStart, length });
-		curStart += length + 1;
-	}
+	}() ];
 
-	const exit: number[] = [];
 	for (let pos = exitStart; pos <= exitStart + exitLength; pos++) {
 		if (intervalsCnt > 0) {
 			const first = intervals[0]!;
@@ -230,21 +224,18 @@ function genExit(): number[] {
 			}
 		}
 		if (pos < 2 || pos > 47) continue;
-		exit.push(pos);
+		yield pos;
 	}
-	return exit;
 }
 
-function exitsArray(terrain: Terrain, axis: 'x' | 'y', fixed: number): number[] {
-	const exits: number[] = [];
-	for (let ii = 0; ii < 50; ii++) {
+function *exitsArray(terrain: Terrain, axis: 'x' | 'y', fixed: number) {
+	for (let ii = 0; ii < 50; ++ii) {
 		const xx = axis === 'x' ? fixed : ii;
 		const yy = axis === 'x' ? ii : fixed;
 		if (terrain.get(xx, yy) !== C.TERRAIN_MASK_WALL) {
-			exits.push(ii);
+			yield ii;
 		}
 	}
-	return exits;
 }
 
 // Fills the room with cellular-automaton wall (and swamp) noise, rerolling the wall type until the
@@ -261,10 +252,8 @@ function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): 
 			tries = 0;
 		}
 
-		for (let yy = 0; yy < 50; yy++) {
-			const row = grid[yy]!;
-			for (let xx = 0; xx < 50; xx++) {
-				const cell = row[xx]!;
+		for (const [ yy, row ] of grid.entries()) {
+			for (const [ xx, cell ] of row.entries()) {
 				if (yy === 0 && exits.top.includes(xx)) {
 					cell.forceOpen = true;
 					grid[yy + 1]![xx]!.forceOpen = true;
@@ -291,14 +280,14 @@ function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): 
 		}
 
 		const wallParams = wallTypes[activeWallType]!;
-		for (let ii = 0; ii < wallParams.smooth; ii++) {
+		for (let ii = 0; ii < wallParams.smooth; ++ii) {
 			grid = smoothTerrain(grid, wallParams.factor, 'wall');
 		}
 	} while (!checkFlood(grid));
 
 	if (swampType) {
 		const swampParams = swampTypes[swampType]!;
-		for (let ii = 0; ii < swampParams.smooth; ii++) {
+		for (let ii = 0; ii < swampParams.smooth; ++ii) {
 			grid = smoothTerrain(grid, swampParams.factor, 'swamp');
 		}
 	}
@@ -307,10 +296,8 @@ function buildBaseTerrain(exits: ExitMap, wallType: number, swampType: number): 
 
 function gridToTerrain(grid: Grid): TerrainWriter {
 	const terrain = new TerrainWriter();
-	for (let yy = 0; yy < 50; yy++) {
-		const row = grid[yy]!;
-		for (let xx = 0; xx < 50; xx++) {
-			const cell = row[xx]!;
+	for (const [ yy, row ] of grid.entries()) {
+		for (const [ xx, cell ] of row.entries()) {
 			if (cell.wall) {
 				terrain.set(xx, yy, C.TERRAIN_MASK_WALL);
 			} else if (cell.swamp) {
@@ -360,7 +347,7 @@ function buildRoom(
 
 		if (userExits) {
 			if (neighborTerrain) {
-				const neighborExits = exitsArray(neighborTerrain.terrain, info.axis, info.fixed);
+				const neighborExits = [ ...exitsArray(neighborTerrain.terrain, info.axis, info.fixed) ];
 				const match = neighborExits.length === userExits.length &&
 					userExits.every(exit => neighborExits.includes(exit));
 				if (!match) {
@@ -369,9 +356,9 @@ function buildRoom(
 			}
 			exits[dir] = userExits;
 		} else if (neighborTerrain) {
-			exits[dir] = exitsArray(neighborTerrain.terrain, info.axis, info.fixed);
+			exits[dir] = [ ...exitsArray(neighborTerrain.terrain, info.axis, info.fixed) ];
 		} else {
-			exits[dir] = genExit();
+			exits[dir] = [ ...genExit() ];
 		}
 	}
 
@@ -417,7 +404,8 @@ export async function generateRoom(
 	roomName: string,
 	options?: GenerateRoomOptions,
 ): Promise<Room> {
-	if (!/^[WE]\d+[NS]\d+$/.test(roomName)) {
+	const { rx, ry } = parseSignedRoomName(roomName);
+	if (Number.isNaN(rx) || Number.isNaN(ry)) {
 		throw new Error(`Invalid room name: ${roomName}`);
 	}
 
@@ -433,9 +421,8 @@ export async function generateRoom(
 	terrainMap.set(roomName, { exits: packExits(terrain), terrain, ...computeRoomMeta(roomName, roomNames) });
 	// Sector relationships are stored bidirectionally, so a room landing can extend the records of
 	// rooms generated earlier -- an existing member gains this center, a center gains this member.
-	const { rx, ry } = parseRoomName(roomName);
 	for (const [ xx, yy ] of iterateRoomsInRange(rx, ry, 5)) {
-		const neighborName = makeRoomName(xx, yy);
+		const neighborName = makeSignedRoomName(xx, yy);
 		const record = terrainMap.get(neighborName);
 		if (record && neighborName !== roomName) {
 			terrainMap.set(neighborName, { ...record, ...computeRoomMeta(neighborName, roomNames) });
