@@ -6,7 +6,6 @@ import type { FindPathOptions, RoomPath } from './room/path.js';
 import type { InspectOptionsStylized } from 'node:util';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
-import { compose, declare } from 'xxscreeps/schema/index.js';
 import { iteratee } from 'xxscreeps/utility/iteratee.js';
 import { getDirection, getOffsetsFromDirection, makeAbstractIterateWithRangeTo, makeLocalIterateArea, makeLocalIterateInRangeTo } from './direction.js';
 import { kMaxWorldSize, makeRoomNameFromId, parseRoomName } from './room/name.js';
@@ -35,26 +34,6 @@ export interface PositionLike {
 	x: number;
 	y: number;
 	roomName: string;
-}
-
-export function format() {
-	return declare('RoomPosition', compose('int32', {
-		compose: pos => RoomPosition['#create'](pos),
-		decompose: (pos: RoomPosition) => pos['#id'],
-		kaitai: [ {
-			id: 'rx',
-			type: 'u1',
-		}, {
-			id: 'ry',
-			type: 'u1',
-		}, {
-			id: 'x',
-			type: 's1',
-		}, {
-			id: 'y',
-			type: 's1',
-		} ],
-	}));
 }
 
 const RawPositionId = Symbol('defaultRoomPosition');

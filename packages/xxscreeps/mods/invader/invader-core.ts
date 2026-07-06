@@ -1,37 +1,27 @@
+import type { RoomObject, RoomObjectEffect } from 'xxscreeps/game/object.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
 import { chainIntentChecks, checkSameRoom, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject, optionalExpiryTime, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
 import { StructureTower } from 'xxscreeps/mods/defense/tower.js';
-import { Spawning, spawningFormat } from 'xxscreeps/mods/spawn/spawn.js';
-import { OwnedStructure, checkMyStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, optional, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-
-export const format = declare('InvaderCore', () => compose(shape, StructureInvaderCore));
-const shape = struct(ownedStructureFormat, {
-	...variant('invaderCore'),
-	hits: 'int32',
-	level: 'int8',
-	spawning: optional(compose(spawningFormat, Spawning), null),
-	'#actionLog': RoomObject.actionLogFormat,
-	'#collapseTime': 'int32',
-	'#deployTime': 'int32',
-});
+import { invaderCoreShape } from './schema.js';
 
 /**
  * Non-player structure. Spawns NPC invader creeps that defend a stronghold core. Cannot be
  * destroyed by player intents; takes no damage while deploying because of a natural
  * `EFFECT_INVULNERABILITY` produced by the deploy timer.
  */
-export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
-	@enumerable override get effects(): RoomObject.RoomObjectEffect[] | undefined {
+export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCoreShape) {
+	@enumerable override get effects(): RoomObjectEffect[] | undefined {
 		const { ticksToDeploy } = this;
-		const ticksToCollapse = RoomObject.optionalExpiryTime(Game, this['#collapseTime']);
+		const ticksToCollapse = optionalExpiryTime(this['#collapseTime']);
 		const effects = [
 			...ticksToDeploy === undefined ? [] : [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining: ticksToDeploy } ],
 			...ticksToCollapse === undefined ? [] : [ { effect: C.EFFECT_COLLAPSE_TIMER, ticksRemaining: ticksToCollapse } ],
@@ -41,7 +31,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 
 	@enumerable get ticksToDeploy(): number | undefined {
 		const deployTime = this['#deployTime'];
-		return deployTime === 0 ? undefined : RoomObject.requiredExpiryTime(Game, deployTime + 1) - 1;
+		return deployTime === 0 ? undefined : requiredExpiryTime(deployTime + 1) - 1;
 	}
 
 	override get hitsMax(): number {
@@ -109,7 +99,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 			() => intents.save(this, 'createCreep', body, name));
 	}
 
-	override '#applyDamage'(power: number, type: number, source?: RoomObject.RoomObject) {
+	override '#applyDamage'(power: number, type: number, source?: RoomObject) {
 		if (this['#invulnerable']) {
 			return;
 		}
@@ -120,7 +110,7 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, shape) {
 // Callers insert the returned core and are responsible for waking the invader NPC that drives it
 // (`activateNPC(room, '2')` + `context.setActive()`), the same way `requestInvader` does for creeps.
 export function create(pos: RoomPosition, level: number, deployTime: number) {
-	const core = assign(RoomObject.create(new StructureInvaderCore(), pos), {
+	const core = assign(createRoomObject(new StructureInvaderCore(), pos), {
 		hits: C.INVADER_CORE_HITS,
 		level,
 	});

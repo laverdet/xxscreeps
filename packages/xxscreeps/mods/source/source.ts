@@ -1,20 +1,12 @@
-import { Game, registerGlobal } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { RoomObject, optionalExpiryTime } from 'xxscreeps/game/object.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import * as C from './constants.js';
-
-export const format = declare('Source', () => compose(shape, Source));
-const shape = struct(RoomObject.format, {
-	...variant('source'),
-	energy: 'int32',
-	energyCapacity: 'int32',
-	'#nextRegenerationTime': 'int32',
-});
+import { sourceShape } from './schema.js';
 
 // Game object declaration
-export class Source extends withOverlay(RoomObject.RoomObject, shape) {
+export class Source extends withOverlay(RoomObject, sourceShape) {
 
-	@enumerable get ticksToRegeneration() { return RoomObject.optionalExpiryTime(Game, this['#nextRegenerationTime']); }
+	@enumerable get ticksToRegeneration() { return optionalExpiryTime(this['#nextRegenerationTime']); }
 
 	get '#lookType'() { return C.LOOK_SOURCES; }
 
@@ -30,10 +22,4 @@ export class Source extends withOverlay(RoomObject.RoomObject, shape) {
 		}();
 		this.energy = Math.min(this.energy, this.energyCapacity);
 	}
-}
-
-// Export `Source` to runtime globals
-registerGlobal(Source);
-declare module 'xxscreeps/game/runtime.js' {
-	interface Global { Source: typeof Source }
 }

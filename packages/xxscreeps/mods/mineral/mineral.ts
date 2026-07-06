@@ -1,58 +1,15 @@
-import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Game, registerGlobal } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
-import { registerHarvestable } from 'xxscreeps/mods/harvestable/game.js';
-import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
-import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
-
-export const format = declare('Mineral', () => compose(shape, Mineral));
-const shape = struct(RoomObject.format, {
-	...variant('mineral'),
-	density: 'int32',
-	mineralAmount: 'int32',
-	mineralType: resourceEnumFormat,
-	'#nextRegenerationTime': 'int32',
-});
+import { registerGlobal } from 'xxscreeps/game/index.js';
+import { RoomObject, optionalExpiryTime } from 'xxscreeps/game/object.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
+import { mineralShape } from './schema.js';
 
 // Game object declaration
-export class Mineral extends withOverlay(RoomObject.RoomObject, shape) {
-	@enumerable get ticksToRegeneration() { return RoomObject.optionalExpiryTime(Game, this['#nextRegenerationTime']); }
+export class Mineral extends withOverlay(RoomObject, mineralShape) {
+	@enumerable get ticksToRegeneration() { return optionalExpiryTime(this['#nextRegenerationTime']); }
 
 	get '#lookType'() { return C.LOOK_MINERALS; }
 }
 
 // Export `Mineral` to runtime globals
 registerGlobal(Mineral);
-declare module 'xxscreeps/game/runtime.js' {
-	interface Global { Mineral: typeof Mineral }
-}
-
-// Register `Creep.harvest` target
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const harvest = registerHarvestable(Mineral, function(creep) {
-	return chainIntentChecks(
-		() => checkTarget(this, Mineral),
-		() => {
-			if (this.mineralAmount <= 0) {
-				return C.ERR_NOT_ENOUGH_RESOURCES;
-			}
-		},
-		() => checkRange(creep, this, 1),
-		() => {
-			const extractor = lookForStructureAt(this.room, this.pos, C.STRUCTURE_EXTRACTOR);
-			if (!extractor) {
-				return C.ERR_NOT_FOUND;
-			} else if (extractor.my === false || !creep.my) {
-				return C.ERR_NOT_OWNER;
-			} else if (!extractor.isActive()) {
-				return C.ERR_RCL_NOT_ENOUGH;
-			} else if (extractor.cooldown !== 0) {
-				return C.ERR_TIRED;
-			}
-		});
-});
-declare module 'xxscreeps/mods/harvestable/game.js' {
-	interface Harvest { mineral: typeof harvest }
-}

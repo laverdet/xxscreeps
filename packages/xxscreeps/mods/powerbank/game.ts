@@ -1,22 +1,20 @@
-import { registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
-import * as PowerBank from './powerbank.js';
+import { compose } from 'xxscreeps/schema/index.js';
+import { StructurePowerBank } from './powerbank.js';
+import { powerBankShape } from './schema.js';
+
+registerGlobal(StructurePowerBank);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const powerBankSchema = registerVariant('Room.objects', PowerBank.format);
+const powerBankSchema = registerVariant('Room.objects', compose(powerBankShape, StructurePowerBank));
 
-// The tick a room's next power bank is due. Placement state is authoritative on the room so it
-// survives a restart; the scratch schedule driving the per-tick sweep is rebuilt from it on init.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const roomSchema = registerStruct('Room', {
-	'#nextPowerBankTime': 'int32',
-});
+// ---
 
-declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { powerbank: [ typeof powerBankSchema, typeof roomSchema ] }
+declare module 'xxscreeps/game/runtime.js' {
+	interface Global { StructurePowerBank: typeof StructurePowerBank }
 }
 
-registerGlobal(PowerBank.StructurePowerBank);
-declare module 'xxscreeps/game/runtime.js' {
-	interface Global { StructurePowerBank: typeof PowerBank.StructurePowerBank }
+declare module 'xxscreeps/game/room/index.js' {
+	interface RoomSchema { powerbank: [ typeof powerBankSchema] }
 }

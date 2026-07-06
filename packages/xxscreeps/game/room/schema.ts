@@ -1,4 +1,4 @@
-import type { Schema } from './index.js';
+import type { RoomSchema } from './index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { structForPath, variantForPath } from 'xxscreeps/engine/schema/index.js';
 import { compose, declare, struct, variant, vector } from 'xxscreeps/schema/index.js';
@@ -6,9 +6,9 @@ import { Room } from './room.js';
 
 // Schema definition
 export const format = declare('Room', () => compose(shape, Room));
-export const objectFormat = declare('AnyObject', () => variant(...variantForPath<Schema>()('Room.objects')));
+export const objectFormat = declare('AnyObject', () => variant(...variantForPath<RoomSchema>()('Room.objects')));
 export function shape() {
-	return struct(structForPath<Schema>()('Room', {
+	return struct(structForPath<RoomSchema>()('Room', {
 		name: 'string',
 		'#objects': vector(objectFormat),
 		'#users': struct({
@@ -21,6 +21,6 @@ export function shape() {
 			// Users needed for rendering, for example signed controller
 			extra: vector(Id.format),
 		}),
-		'#eventLog': vector(variant(...variantForPath<Schema>()('Room.eventLog'))),
+		'#eventLog': vector(variant(...variantForPath<RoomSchema>()('Room.eventLog'))),
 	}));
 }

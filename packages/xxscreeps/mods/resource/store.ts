@@ -3,30 +3,16 @@ import type { BufferView, TypeOf } from 'xxscreeps/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { hooks } from 'xxscreeps/game/index.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
-import { compose, declare, makeReader, struct, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
+import { makeReader, withOverlay, withType } from 'xxscreeps/schema/index.js';
 import { getLayout } from 'xxscreeps/schema/layout.js';
-import { resourceEnumFormat } from './resource.js';
+import { restrictedStoreFormat, shapeOpen, shapeRestricted, shapeSingle } from './schema.js';
 
 export type WithStore = Record<'store', Store>;
-
-export const openStoreFormat = () => declare('OpenStore', compose(shapeOpen, OpenStore));
-export const restrictedStoreFormat = () => declare('RestrictedStore', compose(shapeRestricted, RestrictedStore));
-const untypedSingleStoreFormat = () => declare('SingleStore', compose(shapeSingle, SingleStore));
-export const singleStoreFormat = <Resource extends ResourceType = typeof C.RESOURCE_ENERGY>() =>
-	withType<SingleStore<Resource>>(untypedSingleStoreFormat);
 
 // Make `Store` indexable on any `ResourceType`
 const BufferObjectWithResourcesType = withOverlay(BufferObject,
 	withType<Record<ResourceType, number>>('int8'));
-
-// Set up default value for all resources on `Store`
-hooks.register('environment', () => {
-	for (const resourceType of C.RESOURCES_ALL) {
-		Object.defineProperty(Store.prototype, resourceType, { value: 0, writable: true });
-	}
-});
 
 /**
  * An object that can contain resources in its cargo.
@@ -98,18 +84,10 @@ export abstract class Store extends BufferObjectWithResourcesType {
 	abstract '#storeCapacityResource'(): Record<string, number> | null;
 }
 
-const shapeOpen = struct({
-	'#capacity': 'int32',
-	'#resources': vector(struct({
-		amount: 'int32',
-		type: resourceEnumFormat,
-	})),
-});
-
 /**
  * A `Store` which can hold any resource and shares capacity between them.
  */
-export class OpenStore extends withOverlay(Store, shapeOpen) {
+export class OpenStore extends withOverlay(Store, () => shapeOpen) {
 	// Undocumented screeps property
 	declare _sum: number;
 
@@ -184,14 +162,6 @@ export class OpenStore extends withOverlay(Store, shapeOpen) {
 	}
 }
 
-const shapeRestricted = struct({
-	'#resources': vector(struct({
-		amount: 'int32',
-		capacity: 'int32',
-		type: resourceEnumFormat,
-	})),
-});
-
 type RestrictedResourceInfo = TypeOf<typeof shapeRestricted>['#resources'][number];
 type StorageRecord = Record<ResourceType, number>;
 
@@ -199,8 +169,11 @@ type StorageRecord = Record<ResourceType, number>;
  * A `Store` which can only hold a certain amount of each resource.
  * @deprecated Remove schema hack!
  */
-export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
+export class RestrictedStore extends withOverlay(Store, () => shapeRestricted) {
 	constructor(view?: BufferView, offset?: number) {
+		// TODO: This is needed to initialize the getters of the unused store implementation, just for
+		// testing
+		makeReader({ ...getLayout(restrictedStoreFormat, new Map()), version: 0 });
 		super(view, offset);
 		for (const info of this['#resources']) {
 			if (info.amount > 0) {
@@ -256,20 +229,11 @@ export class RestrictedStore extends withOverlay(Store, shapeRestricted) {
 		}
 	}
 }
-// TODO: This is needed to initialize the getters of the unused store implementation, just for
-// testing
-makeReader({ ...getLayout(restrictedStoreFormat, new Map()), version: 0 });
-
-const shapeSingle = struct({
-	'#amount': 'int32',
-	'#capacity': 'int32',
-	'#type': resourceEnumFormat,
-});
 
 /**
  * A `Store` which can only hold a single pre-defined resource.
  */
-export class SingleStore<Type extends ResourceType> extends withOverlay(Store, shapeSingle) {
+export class SingleStore<Type extends ResourceType> extends withOverlay(Store, () => shapeSingle) {
 	constructor(view?: BufferView, offset?: number) {
 		super(view, offset);
 		if (this['#amount'] > 0) {

@@ -1,28 +1,18 @@
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import * as Id from 'xxscreeps/engine/schema/id.js';
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { intents, me, userInfo } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { RoomObject, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
-import { compose, declare, enumerated, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { constructionSiteShape } from './schema.js';
 import { structureFactories } from './symbols.js';
 
 export type ConstructibleStructureType = keyof typeof C.CONSTRUCTION_COST;
 
-export const format = declare('ConstructionSite', () => compose(shape, ConstructionSite));
-const shape = () => struct(RoomObject.format, {
-	...variant('constructionSite'),
-	name: 'string',
-	progress: 'int32',
-	progressTotal: 'int32',
-	structureType: enumerated(...structureFactories.keys() as never as ConstructibleStructureType[]),
-	'#user': Id.format,
-});
-
-export class ConstructionSite extends withOverlay(RoomObject.RoomObject, shape) {
+export class ConstructionSite extends withOverlay(RoomObject, constructionSiteShape) {
 	@enumerable override get my() { return this['#user'] === me; }
 	@enumerable get owner() { return userInfo.get(this['#user']); }
 	override get '#lookType'() { return C.LOOK_CONSTRUCTION_SITES; }
@@ -52,7 +42,7 @@ export function create(
 	progressTotal: number,
 	name?: string | null,
 ) {
-	const site = assign(RoomObject.create(new ConstructionSite(), pos), {
+	const site = assign(createRoomObject(new ConstructionSite(), pos), {
 		structureType,
 		progressTotal,
 		name: name ?? '',

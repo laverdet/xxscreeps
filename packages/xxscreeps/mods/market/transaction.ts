@@ -1,23 +1,8 @@
-import * as Id from 'xxscreeps/engine/schema/id.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { userInfo } from 'xxscreeps/game/index.js';
-import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
-import { BufferObject, compose, declare, optional, struct, withOverlay } from 'xxscreeps/schema/index.js';
-
-const shape = struct({
-	transactionId: Id.format,
-	time: 'int32',
-	resourceType: resourceEnumFormat,
-	amount: 'int32',
-	from: 'string',
-	to: 'string',
-	'#sender': Id.format,
-	'#recipient': Id.format,
-	'#description': optional('string'),
-});
-
-const format = declare('MarketTransaction', () => compose(shape, Transaction));
+import { BufferObject, compose, declare, withOverlay } from 'xxscreeps/schema/index.js';
+import { transactionShape } from './schema.js';
 
 /**
  * One terminal transfer, exposed through `Game.market.incomingTransactions` /
@@ -25,7 +10,7 @@ const format = declare('MarketTransaction', () => compose(shape, Transaction));
  * list, so the runner hands both parties' runtimes the same buffer. The parties are kept as user ids
  * and resolved to usernames at read time; the description is kept raw and HTML-escaped by its getter.
  */
-export class Transaction extends withOverlay(BufferObject, shape) {
+export class Transaction extends withOverlay(BufferObject, transactionShape) {
 	@enumerable get sender() { return userInfo.get(this['#sender']); }
 	@enumerable get recipient() { return userInfo.get(this['#recipient']); }
 	@enumerable get description() {
@@ -34,6 +19,7 @@ export class Transaction extends withOverlay(BufferObject, shape) {
 	}
 }
 
+const format = declare('MarketTransaction', () => compose(transactionShape, Transaction));
 export const { read, write } = makeReaderAndWriter(format);
 
 export class Transactions {

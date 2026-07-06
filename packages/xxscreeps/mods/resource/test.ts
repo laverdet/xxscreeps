@@ -3,11 +3,12 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { LabStore } from 'xxscreeps/mods/chemistry/store.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
+import { makeSingleStoreFormat, openStoreFormat, restrictedStoreFormat } from 'xxscreeps/mods/resource/schema.js';
 import { assert, describe, reconstructor, simulate, test } from 'xxscreeps/test/index.js';
 import { renderStore } from './backend.js';
 import { create as createContainer } from './container.js';
 import { Resource, create as createResource } from './resource.js';
-import { OpenStore, RestrictedStore, SingleStore, openStoreFormat, restrictedStoreFormat, singleStoreFormat } from './store.js';
+import { OpenStore, RestrictedStore, SingleStore } from './store.js';
 
 const keys = (object: {}) => [ ...function*() {
 	for (const key in object) {
@@ -19,7 +20,7 @@ describe('Store', () => {
 	const types: [ string, any, () => Store][] = [
 		[ 'Open store', openStoreFormat, () => OpenStore['#create'](100) ],
 		[ 'Restricted store', restrictedStoreFormat, () => RestrictedStore['#create']({ [C.RESOURCE_ENERGY]: 100 }) ],
-		[ 'Single store', singleStoreFormat, () => SingleStore['#create'](C.RESOURCE_ENERGY, 100) ],
+		[ 'Single store', makeSingleStoreFormat(), () => SingleStore['#create'](C.RESOURCE_ENERGY, 100) ],
 	];
 
 	for (const [ label, format, create ] of types) {

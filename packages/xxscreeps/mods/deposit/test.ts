@@ -6,7 +6,7 @@ import { runShardInitializers } from 'xxscreeps/engine/processor/shard.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
 import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
@@ -26,7 +26,7 @@ interface DepositSimOptions {
 }
 
 function createDeposit(pos: RoomPosition, depositType: ResourceType, harvested: number, nextDecayTime: number) {
-	const deposit = RoomObject.create(new Deposit(), pos);
+	const deposit = createRoomObject(new Deposit(), pos);
 	deposit.depositType = depositType;
 	deposit['#harvested'] = harvested;
 	deposit['#cooldownTime'] = 0;

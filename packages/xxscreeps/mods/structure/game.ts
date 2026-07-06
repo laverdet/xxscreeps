@@ -1,24 +1,17 @@
 import type { AnyStructure } from './structure.js';
-import * as Id from 'xxscreeps/engine/schema/id.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { registerGlobal } from 'xxscreeps/game/index.js';
+import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
-import { constant, struct, variant } from 'xxscreeps/schema/index.js';
-import { Ruin, format as ruinFormat } from './ruin.js';
+import { compose } from 'xxscreeps/schema/index.js';
+import { Ruin } from './ruin.js';
+import { ruinShape } from './schema.js';
 import { OwnedStructure, Structure } from './structure.js';
 
 // Export `Structure` & `Ruin` to runtime globals
 registerGlobal(OwnedStructure);
 registerGlobal(Ruin);
 registerGlobal(Structure);
-declare module 'xxscreeps/game/runtime.js' {
-	interface Global {
-		OwnedStructure: typeof OwnedStructure;
-		Ruin: typeof Ruin;
-		Structure: typeof Structure;
-	}
-}
 
 // Register FIND_ types for `Structure`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -37,22 +30,34 @@ const look = [
 	registerLook<Ruin>()(C.LOOK_RUINS),
 	registerLook<AnyStructure>()(C.LOOK_STRUCTURES),
 ];
-declare module 'xxscreeps/game/room/index.js' {
-	interface Find { structure: typeof find }
-	interface Look { structure: typeof look }
-}
 
 // Register schema type for `Ruin`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ruinSchema = registerVariant('Room.objects', ruinFormat);
+const ruinSchema = registerVariant('Room.objects', compose(ruinShape, Ruin));
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const destroyedEventSchema = registerVariant('Room.eventLog', struct({
-	...variant(C.EVENT_OBJECT_DESTROYED),
-	event: constant(C.EVENT_OBJECT_DESTROYED),
-	objectId: Id.format,
-	type: 'string',
-}));
+// Register `Game.structures`
+hooks.register('gameInitializer', Game => Game.structures = Object.create(null));
+
+// ---
+
+declare module 'xxscreeps/game/game.js' {
+	interface Game {
+		structures: Record<string, AnyStructure>;
+	}
+}
+
+declare module 'xxscreeps/game/runtime.js' {
+	interface Global {
+		OwnedStructure: typeof OwnedStructure;
+		Ruin: typeof Ruin;
+		Structure: typeof Structure;
+	}
+}
+
 declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { structure: [ typeof ruinSchema, typeof destroyedEventSchema ] }
+	interface Find { structure: typeof find }
+	interface Look { structure: typeof look }
+	interface RoomSchema {
+		structure: [ typeof ruinSchema ];
+	}
 }

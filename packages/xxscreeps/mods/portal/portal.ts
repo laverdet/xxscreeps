@@ -1,25 +1,15 @@
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Game } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject, optionalExpiryTime } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
+import { portalShape } from './schema.js';
 
 export interface PortalDestination extends RoomPosition { shard?: undefined }
 export interface RemotePortalDestination { shard: string; room: string }
 export type Destination = PortalDestination | RemotePortalDestination;
 
-export const format = declare('Portal', () => compose(shape, StructurePortal));
-const shape = struct(structureFormat, {
-	...variant('portal'),
-	'#destShard': 'string',
-	'#destRoom': 'string',
-	'#destX': 'int8',
-	'#destY': 'int8',
-	'#decayTime': 'int32',
-});
-
-export class StructurePortal extends withOverlay(Structure, shape) {
+export class StructurePortal extends withOverlay(Structure, portalShape) {
 	@enumerable get destination(): Destination {
 		if (this['#destShard'] === '') {
 			return new RoomPosition(this['#destX'], this['#destY'], this['#destRoom']);
@@ -27,7 +17,7 @@ export class StructurePortal extends withOverlay(Structure, shape) {
 		return { shard: this['#destShard'], room: this['#destRoom'] };
 	}
 
-	@enumerable get ticksToDecay(): number | undefined { return RoomObject.optionalExpiryTime(Game, this['#decayTime']); }
+	@enumerable get ticksToDecay(): number | undefined { return optionalExpiryTime(this['#decayTime']); }
 
 	override get structureType() { return C.STRUCTURE_PORTAL; }
 	override get '#lookType'() { return C.LOOK_STRUCTURES; }
@@ -38,7 +28,7 @@ export class StructurePortal extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition, destination: Destination, decayTime = 0) {
-	const portal = RoomObject.create(new StructurePortal(), pos);
+	const portal = createRoomObject(new StructurePortal(), pos);
 	if (destination.shard === undefined) {
 		portal['#destShard'] = '';
 		portal['#destRoom'] = destination.roomName;

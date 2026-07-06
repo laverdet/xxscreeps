@@ -1,21 +1,15 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OpenStore } from 'xxscreeps/mods/resource/store.js';
+import { OwnedStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { storageShape } from './schema.js';
 
-export const format = () => compose(shape, StructureStorage);
-const shape = declare('Storage', struct(ownedStructureFormat, {
-	...variant('storage'),
-	hits: 'int32',
-	store: openStoreFormat,
-}));
-
-export class StructureStorage extends withOverlay(OwnedStructure, shape) {
+export class StructureStorage extends withOverlay(OwnedStructure, storageShape) {
 	override get hitsMax() { return C.STORAGE_HITS; }
 	override get structureType() { return C.STRUCTURE_STORAGE; }
 
@@ -34,7 +28,7 @@ export class StructureStorage extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const storage = assign(RoomObject.create(new StructureStorage(), pos), {
+	const storage = assign(createRoomObject(new StructureStorage(), pos), {
 		hits: C.STORAGE_HITS,
 		store: OpenStore['#create'](C.STORAGE_CAPACITY),
 	});

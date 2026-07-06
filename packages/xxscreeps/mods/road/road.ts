@@ -1,22 +1,15 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { isBorder } from 'xxscreeps/game/position.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { Structure, structureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
+import { roadShape } from './schema.js';
 
-export const format = declare('Road', () => compose(shape, StructureRoad));
-const shape = struct(structureFormat, {
-	...variant('road'),
-	hits: 'int32',
-	'#nextDecayTime': 'int32',
-	'#terrain': 'int8',
-});
-
-export class StructureRoad extends withOverlay(Structure, shape) {
-	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(Game, this['#nextDecayTime']); }
+export class StructureRoad extends withOverlay(Structure, roadShape) {
+	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
 	override get hitsMax() { return C.ROAD_HITS * this['#multiplier']; }
 	override get structureType() { return C.STRUCTURE_ROAD; }
 	override get '#pathCost'() { return 1; }
@@ -35,7 +28,7 @@ export class StructureRoad extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition) {
-	const road = RoomObject.create(new StructureRoad(), pos);
+	const road = createRoomObject(new StructureRoad(), pos);
 	road['#nextDecayTime'] = Game.time + C.ROAD_DECAY_TIME - 1;
 	road['#terrain'] = Game.map.getRoomTerrain(pos.roomName).get(pos.x, pos.y);
 	road.hits = road.hitsMax;

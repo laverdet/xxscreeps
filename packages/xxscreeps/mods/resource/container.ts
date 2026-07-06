@@ -1,24 +1,17 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { isBorder } from 'xxscreeps/game/position.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { Structure, checkWall, structureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { Structure, checkWall } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { OpenStore, openStoreFormat } from './store.js';
+import { containerShape } from './schema2.js';
+import { OpenStore } from './store.js';
 
-export const format = declare('Container', () => compose(shape, StructureContainer));
-const shape = struct(structureFormat, {
-	...variant('container'),
-	hits: 'int32',
-	store: openStoreFormat,
-	'#nextDecayTime': 'int32',
-});
-
-export class StructureContainer extends withOverlay(Structure, shape) {
-	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(Game, this['#nextDecayTime']); }
+export class StructureContainer extends withOverlay(Structure, containerShape) {
+	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
 	get storeCapacity() { return this.store.getCapacity(); }
 	override get hitsMax() { return C.CONTAINER_HITS; }
 	override get structureType() { return C.STRUCTURE_CONTAINER; }
@@ -30,7 +23,7 @@ export class StructureContainer extends withOverlay(Structure, shape) {
 
 export function create(pos: RoomPosition) {
 	const ownedController = Game.rooms[pos.roomName]?.controller?.['#user'];
-	const container = assign(RoomObject.create(new StructureContainer(), pos), {
+	const container = assign(createRoomObject(new StructureContainer(), pos), {
 		hits: C.CONTAINER_HITS,
 		store: OpenStore['#create'](C.CONTAINER_CAPACITY),
 	});

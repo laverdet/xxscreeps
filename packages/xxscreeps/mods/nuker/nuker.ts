@@ -1,23 +1,16 @@
 import { chainIntentChecks } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { NukerStore, nukerStoreFormat } from './store.js';
+import { nukerShape } from './schema.js';
+import { NukerStore } from './store.js';
 
-export const format = declare('Nuker', () => compose(shape, StructureNuker));
-const shape = struct(ownedStructureFormat, {
-	...variant('nuker'),
-	hits: 'int32',
-	store: nukerStoreFormat,
-	'#cooldownTime': 'int32',
-});
-
-export class StructureNuker extends withOverlay(OwnedStructure, shape) {
+export class StructureNuker extends withOverlay(OwnedStructure, nukerShape) {
 	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
 
 	/** @deprecated */
@@ -46,7 +39,7 @@ export class StructureNuker extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const nuker = assign(RoomObject.create(new StructureNuker(), pos), {
+	const nuker = assign(createRoomObject(new StructureNuker(), pos), {
 		hits: C.NUKER_HITS,
 		store: new NukerStore(),
 	});

@@ -21,5 +21,5 @@ const schema = registerStruct('Room', {
 });
 
 declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { npc: typeof schema }
+	interface RoomSchema { npc: typeof schema }
 }

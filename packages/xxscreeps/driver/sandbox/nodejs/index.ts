@@ -74,6 +74,7 @@ const loader = function() {
 					switch (url) {
 						case 'xxscreeps:mods/constants': return makeModSourceText(mods, 'constants');
 						case 'xxscreeps:mods/game': return makeModSourceText(mods, 'game');
+						case 'xxscreeps:mods/schema': return makeModSourceText(mods, 'schema');
 						case 'xxscreeps:packages': return makePackagesModule();
 						default: throw new Error(`Unknown virtual module: ${url}`);
 					}

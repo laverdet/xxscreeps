@@ -4,7 +4,7 @@ import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
 import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
@@ -91,7 +91,7 @@ const placeDepositIntent = registerIntentProcessor(
 		if (pos === undefined) {
 			return;
 		}
-		const deposit = RoomObject.create(new Deposit(), new RoomPosition(pos.xx, pos.yy, room.name));
+		const deposit = createRoomObject(new Deposit(), new RoomPosition(pos.xx, pos.yy, room.name));
 		deposit.depositType = depositType;
 		deposit['#nextDecayTime'] = Game.time + DEPOSIT_DECAY_TIME;
 		room['#insertObject'](deposit);

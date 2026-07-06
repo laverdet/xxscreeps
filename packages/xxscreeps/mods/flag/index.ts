@@ -4,5 +4,5 @@ export const manifest: Manifest = {
 	dependencies: [
 		'xxscreeps/mods/memory',
 	],
-	provides: [ 'backend', 'constants', 'driver', 'game', 'test' ],
+	provides: [ 'backend', 'constants', 'driver', 'game', 'schema', 'test' ],
 };

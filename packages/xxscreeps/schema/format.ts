@@ -90,7 +90,7 @@ WithShapeAndType<ShapeOf<Type>[], TypeOf<Type>[]> {
 
 // Composed interceptor types
 export type Interceptor = CompositionInterceptor | RawCompositionInterceptor | OverlayInterceptor;
-type OverlayInterceptor<Type = unknown> = abstract new(view: BufferView, offset: number) => Type;
+export type OverlayInterceptor<Type = unknown> = abstract new(view: BufferView, offset: number) => Type;
 type CompositionInterceptor<Type = any, Result = any> = {
 	compose: (value: Type) => Result;
 	decompose: (value: Result) => Type extends any[] ? Iterable<Type[number]> : Type;

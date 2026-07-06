@@ -1,27 +1,21 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Game, registerGlobal } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { registerGlobal } from 'xxscreeps/game/index.js';
+import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { OwnedStructure, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OwnedStructure } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { extractorShape } from './schema.js';
 
-export const format = declare('Extractor', () => compose(shape, StructureExtractor));
-const shape = struct(ownedStructureFormat, {
-	...variant('extractor'),
-	hits: 'int32',
-	'#cooldownTime': 'int32',
-});
-
-export class StructureExtractor extends withOverlay(OwnedStructure, shape) {
-	@enumerable get cooldown() { return RoomObject.cooldownTime(Game, this['#cooldownTime']); }
+export class StructureExtractor extends withOverlay(OwnedStructure, extractorShape) {
+	@enumerable get cooldown() { return cooldownTime(this['#cooldownTime']); }
 	override get hitsMax() { return C.EXTRACTOR_HITS; }
 	override get structureType() { return C.STRUCTURE_EXTRACTOR; }
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const extractor = assign(RoomObject.create(new StructureExtractor(), pos), {
+	const extractor = assign(createRoomObject(new StructureExtractor(), pos), {
 		hits: C.EXTRACTOR_HITS,
 	});
 	extractor['#user'] = owner;
@@ -42,6 +36,9 @@ registerBuildableStructure(C.STRUCTURE_EXTRACTOR, {
 
 // Export `StructureExtractor` to runtime globals
 registerGlobal(StructureExtractor);
+
+// ---
+
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureExtractor: typeof StructureExtractor }
 }

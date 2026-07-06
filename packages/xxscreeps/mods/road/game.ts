@@ -1,16 +1,21 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { registerGlobal } from 'xxscreeps/game/index.js';
-import * as Road from './road.js';
-
-// Register schema
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const schema = registerVariant('Room.objects', Road.format);
-declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { road: typeof schema }
-}
+import { compose } from 'xxscreeps/schema/index.js';
+import { StructureRoad } from './road.js';
+import { roadShape } from './schema.js';
 
 // Export `StructureRoad` to runtime globals
-registerGlobal(Road.StructureRoad);
+registerGlobal(StructureRoad);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const schema = registerVariant('Room.objects', compose(roadShape, StructureRoad));
+
+// ---
+
 declare module 'xxscreeps/game/runtime.js' {
-	interface Global { StructureRoad: typeof Road.StructureRoad }
+	interface Global { StructureRoad: typeof StructureRoad }
+}
+
+declare module 'xxscreeps/game/room/index.js' {
+	interface RoomSchema { road: typeof schema }
 }

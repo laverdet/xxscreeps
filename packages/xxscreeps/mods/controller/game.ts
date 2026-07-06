@@ -1,75 +1,35 @@
-import * as Id from 'xxscreeps/engine/schema/id.js';
-import { registerEnumerated, registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { RoomObject } from 'xxscreeps/game/object.js';
-import { constant, optional, struct, variant } from 'xxscreeps/schema/index.js';
-import * as Controller from './controller.js';
+import { compose } from 'xxscreeps/schema/index.js';
+import { StructureController } from './controller.js';
+import { controllerShape, roomSchema } from './schema.js';
 import './creep.js';
-
-// Register schema
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const roomSchema = registerStruct('Room', {
-	'#level': 'int32',
-	'#safeModeUntil': 'int32',
-	'#sign': optional(struct({
-		datetime: 'double',
-		text: 'string',
-		time: 'int32',
-		userId: Id.format,
-	})),
-	// string = controlled/reserved; null = unowned; undefined = no controller
-	'#user': optional(Id.optionalFormat),
-});
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const controllerSchema = registerVariant('Room.objects', Controller.format);
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const attackControllerEventSchema = registerVariant('Room.eventLog', struct({
-	...variant(C.EVENT_ATTACK_CONTROLLER),
-	event: constant(C.EVENT_ATTACK_CONTROLLER),
-	objectId: Id.format,
-}));
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const reserveControllerEventSchema = registerVariant('Room.eventLog', struct({
-	...variant(C.EVENT_RESERVE_CONTROLLER),
-	event: constant(C.EVENT_RESERVE_CONTROLLER),
-	objectId: Id.format,
-	amount: 'int32',
-}));
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const upgradeControllerEventSchema = registerVariant('Room.eventLog', struct({
-	...variant(C.EVENT_UPGRADE_CONTROLLER),
-	event: constant(C.EVENT_UPGRADE_CONTROLLER),
-	objectId: Id.format,
-	amount: 'int32',
-	energySpent: 'int32',
-}));
-declare module 'xxscreeps/game/room/index.js' {
-	interface Schema {
-		controller: [
-			typeof roomSchema,
-			typeof controllerSchema,
-			typeof attackControllerEventSchema,
-			typeof reserveControllerEventSchema,
-			typeof upgradeControllerEventSchema,
-		];
-	}
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const actionSchema = registerEnumerated('ActionLog.action', 'reserveController', 'upgradeController');
-declare module 'xxscreeps/game/object.js' {
-	interface Schema { controller: typeof actionSchema }
-	interface RoomObject {
-		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		'#roomStatusDidChange'(level: number, userId: string | null | undefined): void;
-	}
-}
 
 RoomObject.prototype['#roomStatusDidChange'] = function(_level: number, _userId: string | null | undefined) {};
 
-// Save `Game.gcl` from driver
+hooks.register('gameInitializer', (Game, payload) => {
+	if (payload) {
+		const level = Math.floor((payload.gcl / C.GCL_MULTIPLY) ** (1 / C.GCL_POW));
+		const progress = Math.floor(level ** C.GCL_POW * C.GCL_MULTIPLY);
+		Game.gcl = {
+			level: level + 1,
+			progress: payload.gcl - progress,
+			progressTotal: Math.floor((level + 1) ** C.GCL_POW * C.GCL_MULTIPLY),
+			'#roomCount': payload.controlledRoomCount,
+		};
+	}
+});
+
+// Export `StructureController` to runtime globals
+registerGlobal(StructureController);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const controllerSchema = registerVariant('Room.objects', compose(controllerShape, StructureController));
+
+// ---
+
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		gcl: {
@@ -93,21 +53,22 @@ declare module 'xxscreeps/game/game.js' {
 	}
 }
 
-hooks.register('gameInitializer', (Game, payload) => {
-	if (payload) {
-		const level = Math.floor((payload.gcl / C.GCL_MULTIPLY) ** (1 / C.GCL_POW));
-		const progress = Math.floor(level ** C.GCL_POW * C.GCL_MULTIPLY);
-		Game.gcl = {
-			level: level + 1,
-			progress: payload.gcl - progress,
-			progressTotal: Math.floor((level + 1) ** C.GCL_POW * C.GCL_MULTIPLY),
-			'#roomCount': payload.controlledRoomCount,
-		};
+declare module 'xxscreeps/game/object.js' {
+	interface RoomObject {
+		// eslint-disable-next-line @typescript-eslint/method-signature-style
+		'#roomStatusDidChange'(level: number, userId: string | null | undefined): void;
 	}
-});
+}
 
-// Export `StructureController` to runtime globals
-registerGlobal(Controller.StructureController);
 declare module 'xxscreeps/game/runtime.js' {
-	interface Global { StructureController: typeof Controller.StructureController }
+	interface Global { StructureController: typeof StructureController }
+}
+
+declare module 'xxscreeps/game/room/index.js' {
+	interface RoomSchema {
+		controller: [
+			typeof roomSchema,
+			typeof controllerSchema,
+		];
+	}
 }

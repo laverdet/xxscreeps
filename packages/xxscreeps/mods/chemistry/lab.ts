@@ -2,32 +2,24 @@ import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { Game, intents, registerGlobal } from 'xxscreeps/game/index.js';
-import * as RoomObject from 'xxscreeps/game/object.js';
+import { intents, registerGlobal } from 'xxscreeps/game/index.js';
+import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Creep } from 'xxscreeps/mods/creep/creep.js';
-import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { checkHasResource } from '../resource/store.js';
-import { LabStore, labStoreFormat } from './store.js';
+import { labShape } from './schema.js';
+import { LabStore } from './store.js';
 
 type BoostEffects = Partial<Record<string, number>>;
 type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
 type ReactionsLookup = Partial<Record<string, Partial<Record<string, ResourceType>>>>;
 type ReactionTimeLookup = Partial<Record<string, number>>;
 
-export const format = declare('Lab', () => compose(shape, StructureLab));
-const shape = struct(ownedStructureFormat, {
-	...variant('lab'),
-	hits: 'int32',
-	store: labStoreFormat,
-	'#actionLog': RoomObject.actionLogFormat,
-	'#cooldownTime': 'int32',
-});
-
-export class StructureLab extends withOverlay(OwnedStructure, shape) {
-	@enumerable get cooldown() { return RoomObject.cooldownTime(Game, this['#cooldownTime']); }
+export class StructureLab extends withOverlay(OwnedStructure, labShape) {
+	@enumerable get cooldown() { return cooldownTime(this['#cooldownTime']); }
 	@enumerable get mineralType() { return this.store['#mineralType']; }
 
 	/** @deprecated */
@@ -74,7 +66,7 @@ export class StructureLab extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string) {
-	const lab = assign(RoomObject.create(new StructureLab(), pos), {
+	const lab = assign(createRoomObject(new StructureLab(), pos), {
 		hits: C.LAB_HITS,
 		store: new LabStore(),
 	});

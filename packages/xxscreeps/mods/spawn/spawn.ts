@@ -2,20 +2,22 @@ import type { StructureExtension } from './extension.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Direction, RoomPosition } from 'xxscreeps/game/position.js';
 import type { PartType } from 'xxscreeps/mods/creep/creep.js';
-import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkString, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, userGame } from 'xxscreeps/game/index.js';
-import { create as createObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
+import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
-import { SingleStore, singleStoreFormat } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, lookForStructures, ownedStructureFormat } from 'xxscreeps/mods/structure/structure.js';
+import { makeSingleStoreFormat } from 'xxscreeps/mods/resource/schema.js';
+import { SingleStore } from 'xxscreeps/mods/resource/store.js';
+import { ownedStructureShape } from 'xxscreeps/mods/structure/schema.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
-import { compose, declare, optional, struct, variant, vector, withOverlay, withType } from 'xxscreeps/schema/index.js';
+import { compose, declare, optional, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { spawningFormat } from './schema.js';
 
 interface SpawnCreepOptions {
 	directions?: Direction[];
@@ -24,19 +26,9 @@ interface SpawnCreepOptions {
 	memory?: unknown;
 }
 
-// `StructureSpawn.Spawning` format and definition. Exported because `StructureInvaderCore` reuses
-// the same record for its NPC defender spawns.
-export const spawningFormat = struct({
-	directions: optional(vector(withType<Direction>('int8'))),
-	needTime: 'int32',
-	'#spawnId': Id.format,
-	'#spawningCreepId': Id.format,
-	'#spawnTime': 'int32',
-});
-
 export class Spawning extends withOverlay(BufferObject, spawningFormat) {
 	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name; }
-	@enumerable get remainingTime() { return requiredExpiryTime(Game, this['#spawnTime']); }
+	@enumerable get remainingTime() { return requiredExpiryTime(this['#spawnTime']); }
 	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])!; }
 
 	/**
@@ -59,17 +51,16 @@ export class Spawning extends withOverlay(BufferObject, spawningFormat) {
 	}
 }
 
-// `StructureSpawn` format
-export const format = declare('Spawn', () => compose(shape, StructureSpawn));
-const shape = struct(ownedStructureFormat, {
+// TODO: Import cycle
+export const spawnShape = declare('Spawn', struct(ownedStructureShape, {
 	...variant('spawn'),
 	hits: 'int32',
 	name: 'string',
 	spawning: optional(compose(spawningFormat, Spawning), null),
-	store: singleStoreFormat(),
-});
+	store: makeSingleStoreFormat(),
+}));
 
-export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
+export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 	static readonly Spawning = Spawning;
 
 	get energy() { return this.store[C.RESOURCE_ENERGY]; }
@@ -215,7 +206,7 @@ export class StructureSpawn extends withOverlay(OwnedStructure, shape) {
 }
 
 export function create(pos: RoomPosition, owner: string, name: string) {
-	const spawn = assign(createObject(new StructureSpawn(), pos), {
+	const spawn = assign(createRoomObject(new StructureSpawn(), pos), {
 		hits: C.SPAWN_HITS,
 		name,
 		store: SingleStore['#create'](C.RESOURCE_ENERGY, C.SPAWN_ENERGY_CAPACITY, C.SPAWN_ENERGY_START),

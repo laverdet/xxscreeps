@@ -2,17 +2,12 @@ import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as RoomObject from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { Structure, checkPlacement, structureFormat } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { Structure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { wallShape } from './schema.js';
 
-export const format = declare('Wall', () => compose(shape, StructureWall));
-const shape = struct(structureFormat, {
-	...variant('constructedWall'),
-	hits: 'int32',
-});
-
-export class StructureWall extends withOverlay(Structure, shape) {
+export class StructureWall extends withOverlay(Structure, wallShape) {
 	override get hitsMax() {
 		const level = this.room.controller?.level ?? 0;
 		return C.CONTROLLER_STRUCTURES.constructedWall[level] ? C.WALL_HITS_MAX : 0;
@@ -24,7 +19,7 @@ export class StructureWall extends withOverlay(Structure, shape) {
 }
 
 export function create(pos: RoomPosition) {
-	return assign(RoomObject.create(new StructureWall(), pos), {
+	return assign(RoomObject.createRoomObject(new StructureWall(), pos), {
 		hits: 1,
 	});
 }

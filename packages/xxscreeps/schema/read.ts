@@ -140,6 +140,26 @@ export function makeTypeReader(layout: Layout, builder: Builder): Reader {
 				} else {
 					// Inject prototype getters into overlay
 					injectGetters(struct, interceptor.prototype, builder);
+					// Also inject getters for the parent struct. This assumes the inherited struct shape is
+					// the same as the runtime hierarchy.
+					let inherit = struct.inherit;
+					let parent = Object.getPrototypeOf(interceptor.prototype) as object | null;
+					while (inherit && parent) {
+						const inheritLayout = function get(layout: Layout) {
+							if (typeof layout === 'object') {
+								if ('named' in layout) {
+									return get(layout.layout);
+								} else if ('struct' in layout) {
+									return layout;
+								}
+							}
+							console.log(layout);
+							throw new Error(`Cannot find parent struct for ${interceptor.name}`);
+						}(inherit);
+						injectGetters(inheritLayout, parent, builder);
+						inherit = inheritLayout.inherit;
+						parent = Object.getPrototypeOf(parent) as object | null;
+					}
 					return instantiate;
 				}
 			}

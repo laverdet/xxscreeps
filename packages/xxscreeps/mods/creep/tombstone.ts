@@ -1,39 +1,23 @@
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
-import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
-import { RoomObject, create as createObject, format as objectFormat, requiredExpiryTime } from 'xxscreeps/game/object.js';
-import { OpenStore, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { RoomObject, createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
+import { OpenStore } from 'xxscreeps/mods/resource/store.js';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { Creep } from './creep.js';
-
-export const format = declare('Tombstone', () => compose(shape, Tombstone));
-const shape = struct(objectFormat, {
-	...variant('tombstone'),
-	deathTime: 'int32',
-	store: openStoreFormat,
-	'#creep': struct({
-		body: vector(enumerated(...C.BODYPARTS_ALL)),
-		id: Id.format,
-		name: 'string',
-		saying: optional('string'),
-		ticksToLive: 'int32',
-		user: Id.format,
-	}),
-	'#decayTime': 'int32',
-});
+import { tombstoneShape } from './schema.js';
 
 /**
  * A remnant of dead creeps. This is a walkable object.
  */
-export class Tombstone extends withOverlay(RoomObject, shape) {
+export class Tombstone extends withOverlay(RoomObject, tombstoneShape) {
 
 	/**
 	 * The amount of game ticks before this tombstone decays.
 	 */
-	@enumerable get ticksToDecay() { return requiredExpiryTime(Game, this['#decayTime']); }
+	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#decayTime']); }
 
 	override get '#lookType'() { return C.LOOK_TOMBSTONES; }
 
@@ -67,7 +51,7 @@ export class Tombstone extends withOverlay(RoomObject, shape) {
 }
 
 export function buryCreep(creep: Creep, rate = C.CREEP_CORPSE_RATE) {
-	const tombstone = createObject(new Tombstone(), creep.pos);
+	const tombstone = createRoomObject(new Tombstone(), creep.pos);
 	tombstone.deathTime = Game.time;
 	tombstone.store = new OpenStore();
 

@@ -2,24 +2,18 @@ import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers } from 'xxscreeps/game/room/index.js';
-import * as Extension from './extension.js';
-import * as Spawn from './spawn.js';
+import { compose } from 'xxscreeps/schema/index.js';
+import { StructureExtension } from './extension.js';
+import { extensionShape } from './schema.js';
+import { StructureSpawn, spawnShape } from './spawn.js';
 
 // Add `spawns` to global `Game` object
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
-		spawns: Record<string, Spawn.StructureSpawn>;
+		spawns: Record<string, StructureSpawn>;
 	}
 }
 hooks.register('gameInitializer', Game => Game.spawns = Object.create(null));
-
-// Accumulate `energyAvailable` and `energyCapacityAvailable` on `Room` objects
-declare module 'xxscreeps/game/room/index.js' {
-	interface Room {
-		energyAvailable: number;
-		energyCapacityAvailable: number;
-	}
-}
 
 hooks.register('roomInitializer', room => {
 	room.energyAvailable = 0;
@@ -36,34 +30,41 @@ hooks.register('roomInitializer', room => {
 });
 
 // Export `StructureExtension` & `StructureSpawn` to runtime globals
-registerGlobal(Extension.StructureExtension);
-registerGlobal(Spawn.StructureSpawn);
-registerGlobal('Spawn', Spawn.StructureSpawn);
-declare module 'xxscreeps/game/runtime.js' {
-	interface Global {
-		StructureExtension: typeof Extension.StructureExtension;
-		StructureSpawn: typeof Spawn.StructureSpawn;
-		Spawn: typeof Spawn.StructureSpawn;
-	}
-}
+registerGlobal(StructureExtension);
+registerGlobal(StructureSpawn);
+registerGlobal('Spawn', StructureSpawn);
 
 // Register FIND_ types for `Spawn`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const find = registerFindHandlers({
 	[C.FIND_MY_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
-		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && structure.my === true),
+		(structure): structure is StructureSpawn => structure.structureType === 'spawn' && structure.my === true),
 	[C.FIND_HOSTILE_SPAWNS]: room => room['#lookFor'](C.LOOK_STRUCTURES).filter(
-		(structure): structure is Spawn.StructureSpawn => structure.structureType === 'spawn' && !structure.my),
+		(structure): structure is StructureSpawn => structure.structureType === 'spawn' && !structure.my),
 });
-declare module 'xxscreeps/game/room/index.js' {
-	interface Find { spawn: typeof find }
-}
 
 // Register schema
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const extensionSchema = registerVariant('Room.objects', Extension.format);
+const extensionSchema = registerVariant('Room.objects', compose(extensionShape, StructureExtension));
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const spawnSchema = registerVariant('Room.objects', Spawn.format);
+const spawnSchema = registerVariant('Room.objects', compose(spawnShape, StructureSpawn));
+
+// ---
+
+declare module 'xxscreeps/game/runtime.js' {
+	interface Global {
+		StructureExtension: typeof StructureExtension;
+		StructureSpawn: typeof StructureSpawn;
+		Spawn: typeof StructureSpawn;
+	}
+}
+
 declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { spawn: [ typeof extensionSchema, typeof spawnSchema ] }
+	interface Find { spawn: typeof find }
+	interface Room {
+		energyAvailable: number;
+		energyCapacityAvailable: number;
+	}
+	interface RoomSchema { spawn: [ typeof extensionSchema, typeof spawnSchema ] }
 }

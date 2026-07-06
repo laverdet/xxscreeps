@@ -1,23 +1,17 @@
-import { registerStruct, registerVariant } from 'xxscreeps/engine/schema/index.js';
+import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { chainIntentChecks, checkRange, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js';
+import { registerGlobal } from 'xxscreeps/game/symbols.js';
 import { registerHarvestable } from 'xxscreeps/mods/harvestable/game.js';
-import { format as keeperFormat } from './keeper-lair.js';
-import { Source, format } from './source.js';
+import { compose } from 'xxscreeps/schema/index.js';
+import { StructureKeeperLair } from './keeper-lair.js';
+import { keeperLairShape, sourceShape } from './schema.js';
+import { Source } from './source.js';
 
-// Register schema extensions
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const sourceSchema = registerVariant('Room.objects', format);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const keeperLairSchema = registerVariant('Room.objects', keeperFormat);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const roomSchema = registerStruct('Room', {
-	'#cumulativeEnergyHarvested': 'int32',
-});
-declare module 'xxscreeps/game/room/index.js' {
-	interface Schema { source: [ typeof sourceSchema, typeof keeperLairSchema, typeof roomSchema ] }
-}
+// Export `Source` and `StructureKeeperLair` to runtime globals
+registerGlobal(Source);
+registerGlobal(StructureKeeperLair);
 
 // Register FIND_ types for `Source`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -31,10 +25,6 @@ const find = registerFindHandlers({
 // Register LOOK_ type for `Source`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const look = registerLook<Source>()(C.LOOK_SOURCES);
-declare module 'xxscreeps/game/room/index.js' {
-	interface Find { source: typeof find }
-	interface Look { source: typeof look }
-}
 
 // Register `Creep.harvest` target
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -54,6 +44,29 @@ const harvest = registerHarvestable(Source, function(creep) {
 			}
 		});
 });
+
+// Register schema extensions
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const sourceSchema = registerVariant('Room.objects', compose(sourceShape, Source));
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const keeperLairSchema = registerVariant('Room.objects', compose(keeperLairShape, StructureKeeperLair));
+
+// ---
+
+declare module 'xxscreeps/game/room/index.js' {
+	interface Find { source: typeof find }
+	interface Look { source: typeof look }
+	interface RoomSchema { source: [ typeof sourceSchema, typeof keeperLairSchema ] }
+}
+
+declare module 'xxscreeps/game/runtime.js' {
+	interface Global {
+		Source: typeof Source;
+		StructureKeeperLair: typeof StructureKeeperLair;
+	}
+}
+
 declare module 'xxscreeps/mods/harvestable/game.js' {
 	interface Harvest { source: typeof harvest }
 }

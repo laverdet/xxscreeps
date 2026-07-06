@@ -6,13 +6,12 @@ import type { FindPathOptions, RoomPath } from 'xxscreeps/game/room/path.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import type { WithStore } from 'xxscreeps/mods/resource/store.js';
 import type { PolyStyle } from 'xxscreeps/mods/visual/visual.js';
-import * as Id from 'xxscreeps/engine/schema/id.js';
 import { invertedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { chainIntentChecks, checkRange, checkSafeMode, checkTarget } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me, userInfo } from 'xxscreeps/game/index.js';
-import { RoomObject, actionLogFormat, create as createObject, format as objectFormat, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
+import { RoomObject, createRoomObject, optionalExpiryTime, saveAction } from 'xxscreeps/game/object.js';
 import { registerObstacleChecker } from 'xxscreeps/game/pathfinder/index.js';
 import { RoomPosition, fetchPositionArgument } from 'xxscreeps/game/position.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
@@ -20,12 +19,13 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import { Tombstone } from 'xxscreeps/mods/creep/tombstone.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
-import { Resource, optionalResourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
-import { OpenStore, Store, calculateChecked, checkHasCapacity, checkHasResource, checkHasResourceAmount, checkResourceArgs, checkStoreAccepts, openStoreFormat } from 'xxscreeps/mods/resource/store.js';
+import { Resource } from 'xxscreeps/mods/resource/resource.js';
+import { OpenStore, Store, calculateChecked, checkHasCapacity, checkHasResource, checkHasResourceAmount, checkResourceArgs, checkStoreAccepts } from 'xxscreeps/mods/resource/store.js';
 import { Ruin } from 'xxscreeps/mods/structure/ruin.js';
 import { Structure } from 'xxscreeps/mods/structure/structure.js';
-import { compose, declare, enumerated, optional, struct, variant, vector, withOverlay } from 'xxscreeps/schema/index.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { creepShape } from './schema.js';
 
 export type PartType = typeof C.BODYPARTS_ALL[number];
 type BoostEffects = Partial<Record<string, number>>;
@@ -62,30 +62,7 @@ export interface SavedMovePath extends SavedMoveStorage {
 /** @internal */
 type SavedMove = SavedMoveSerialized | SavedMovePath;
 
-export const format = declare('Creep', () => compose(shape, Creep));
-const shape = struct(objectFormat, {
-	...variant('creep'),
-	body: vector(struct({
-		boost: optionalResourceEnumFormat,
-		hits: 'int8',
-		type: enumerated(...C.BODYPARTS_ALL),
-	})),
-	fatigue: 'int32',
-	hits: 'int32',
-	name: 'string',
-	store: openStoreFormat,
-	'#actionLog': actionLogFormat,
-	'#ageTime': 'int32',
-	'#noAttackNotify': 'bool',
-	'#saying': optional(struct({
-		isPublic: 'bool',
-		message: 'string',
-		time: 'int32',
-	})),
-	'#user': Id.format,
-});
-
-export class Creep extends withOverlay(RoomObject, shape) {
+export class Creep extends withOverlay(RoomObject, creepShape) {
 	/** @internal — raw incoming damage this tick (before TOUGH reduction), always >= 0 */
 	declare tickRawDamage: number | undefined;
 	/** @internal — raw healing received this tick, always >= 0 */
@@ -94,7 +71,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 	@enumerable override get hitsMax() { return this.body.length * 100; }
 	@enumerable get owner() { return userInfo.get(this['#user']); }
 	@enumerable get spawning() { return this['#ageTime'] === 0; }
-	@enumerable get ticksToLive() { return optionalExpiryTime(Game, this['#ageTime']); }
+	@enumerable get ticksToLive() { return optionalExpiryTime(this['#ageTime']); }
 	@enumerable override get my() { return this['#user'] === me; }
 
 	/**
@@ -440,7 +417,7 @@ export class Creep extends withOverlay(RoomObject, shape) {
 
 export function create(pos: RoomPosition, parts: PartType[], name: string, owner: string) {
 	const body = parts.map(type => ({ type, hits: 100, boost: undefined }));
-	const creep = assign(createObject(new Creep(), pos), {
+	const creep = assign(createRoomObject(new Creep(), pos), {
 		body,
 		hits: body.length * 100,
 		fatigue: 0,
