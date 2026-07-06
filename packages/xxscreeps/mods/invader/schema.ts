@@ -12,7 +12,6 @@ export const invaderCoreShape = declare('InvaderCore', struct(ownedStructureShap
 	level: 'int8',
 	spawning: optional(compose(spawningFormat, Spawning), null),
 	'#actionLog': actionLogFormat,
-	'#collapseTime': 'int32',
 	'#deployTime': 'int32',
 }));
 
@@ -22,8 +21,17 @@ const roomSchema = registerStruct('Room', {
 	'#invaderEnergyTarget': 'int32',
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const structureSchema = registerStruct('Structure', {
+	'#collapseTime': 'int32',
+});
+
 // ---
 
 declare module 'xxscreeps/game/room/index.js' {
 	interface RoomSchema { invaderSchema: [ typeof roomSchema] }
+}
+
+declare module 'xxscreeps/mods/structure/schema.js' {
+	interface StructureSchema { invaderSchema: [ typeof structureSchema ] }
 }

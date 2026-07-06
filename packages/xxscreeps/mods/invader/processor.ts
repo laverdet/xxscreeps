@@ -16,8 +16,11 @@ import { flushActionLog } from 'xxscreeps/mods/creep/processor.js';
 import { create as createRampart } from 'xxscreeps/mods/defense/rampart.js';
 import { create as createTower } from 'xxscreeps/mods/defense/tower.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
+import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
+import { create as createRoad } from 'xxscreeps/mods/road/road.js';
 import { birthSpawnCreep } from 'xxscreeps/mods/spawn/processor.js';
 import { Spawning } from 'xxscreeps/mods/spawn/spawn.js';
+import { Structure } from 'xxscreeps/mods/structure/structure.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { StructureInvaderCore, checkAttackController, checkCreateCreep, checkReserveController, checkTransferEnergy, checkUpgradeController } from './invader-core.js';
 import { loop } from './loop/index.js';
@@ -197,10 +200,28 @@ const intents = [
 	}),
 ];
 
+// Wire up collapse for stronghold objects
+registerObjectPreTickProcessor(Structure, (structure, context) => {
+	if (optionalExpiryTime(structure['#collapseTime']) === 0) {
+		structure.room['#removeObject'](structure);
+		context.didUpdate();
+	}
+});
+
+// The core shadows that removal to first release a controller it had taken over. Its reservation, if
+// any, is left to expire on its own — a level-0 controller short-circuits before the release.
+registerObjectPreTickProcessor(StructureInvaderCore, (core, context, next) => {
+	if (optionalExpiryTime(core['#collapseTime']) === 0) {
+		const controller = core.room.controller;
+		if (controller && controller.level > 0 && core.room['#user'] === '2') {
+			release(context, controller);
+			controller['#upgradeInvulnerableUntil'] = 0;
+		}
+		next();
+	}
+});
+
 registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
-	// Collapse removal — and releasing any controller the core took over — runs in the pre-tick,
-	// which removes and flushes before this tick processor, so a collapsing core never reaches
-	// here. Re-arm the wake so an unobserved room still processes at collapse.
 	context.wakeAt(core['#collapseTime']);
 
 	flushActionLog(core['#actionLog'], context);
@@ -230,45 +251,28 @@ registerObjectTickProcessor(StructureInvaderCore, (core, context) => {
 	}
 });
 
-// A deployed stronghold collapses as one: when the core's timer elapses, every structure belonging
-// to the NPC — the core and its deployed peers, never an SK room's keeper lairs, which belong to
-// '3' — is removed silently (no Ruin, no EVENT_OBJECT_DESTROYED, unlike the damage-destroy path).
-// The core first releases a controller it had taken over. Its reservation, if any, is left to
-// expire on its own — a level-0 controller short-circuits before the release.
-registerObjectPreTickProcessor(StructureInvaderCore, (core, context) => {
-	if (optionalExpiryTime(Game, core['#collapseTime']) === 0) {
-		const { room } = core;
-		const { controller } = room;
-		if (controller && controller.level > 0 && room['#user'] === '2') {
-			release(context, controller);
-			controller['#upgradeInvulnerableUntil'] = 0;
-		}
-		for (const structure of room.find(C.FIND_STRUCTURES)) {
-			if (structure['#user'] === '2') {
-				room['#removeObject'](structure);
-			}
-		}
-		context.didUpdate();
-	}
-});
-
 // The structures a deployed stronghold spawns around its core. A stub layout; the canonical bunker
 // templates and their reward containers land in a follow-up. Decaying peers are pinned to the
 // collapse time so they don't decay (and read a past expiry) while the room sleeps until collapse.
-function strongholdTemplate(pos: RoomPosition, collapseTime: number) {
+function *strongholdTemplate(pos: RoomPosition, collapseTime: number) {
 	const tower = createTower(new RoomPosition(pos.x, pos.y - 1, pos.roomName), '2');
 	const rampart = createRampart(new RoomPosition(pos.x + 1, pos.y, pos.roomName), '2');
+	const container = createContainer(new RoomPosition(pos.x - 1, pos.y, pos.roomName));
+	const road = createRoad(new RoomPosition(pos.x, pos.y + 1, pos.roomName));
 	rampart['#nextDecayTime'] = collapseTime;
-	return [ tower, rampart ];
+	container['#nextDecayTime'] = collapseTime;
+	road['#nextDecayTime'] = collapseTime;
+	yield* [ tower, rampart, container, road ];
 }
 
-// Deploy the stronghold: swap the deploy timer for the collapse timer and spawn the template peers
-// around the core.
+// Deploy the stronghold: drop the deploy timer, start the shared collapse timer, and spawn the
+// template peers carrying that same timer so the whole stronghold vanishes together.
 function deployStronghold(core: StructureInvaderCore, context: ProcessorContext) {
 	core['#deployTime'] = 0;
 	const duration = Math.round(C.STRONGHOLD_DECAY_TICKS * (0.9 + Math.random() * 0.2));
 	const collapseTime = core['#collapseTime'] = Game.time + duration;
 	for (const peer of strongholdTemplate(core.pos, collapseTime)) {
+		peer['#collapseTime'] = collapseTime;
 		core.room['#insertObject'](peer);
 	}
 	context.wakeAt(collapseTime);
