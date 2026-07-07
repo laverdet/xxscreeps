@@ -12,7 +12,6 @@ interface MapStatsRequest {
 	rooms: string[];
 	// A stat layer to overlay, e.g. `energyHarvested8` (`<statName><interval>`).
 	statName?: string | null;
-	shard?: string | null;
 }
 
 const mapStatsSchema: JSONSchemaType<MapStatsRequest> = {
@@ -20,7 +19,6 @@ const mapStatsSchema: JSONSchemaType<MapStatsRequest> = {
 	properties: {
 		rooms: { type: 'array', items: { type: 'string' } },
 		statName: { type: 'string', nullable: true },
-		shard: { type: 'string', nullable: true },
 	},
 	required: [ 'rooms' ],
 };

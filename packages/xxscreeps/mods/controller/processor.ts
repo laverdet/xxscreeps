@@ -8,7 +8,7 @@ import { saveAction } from 'xxscreeps/game/object.js';
 import { appendEventLog } from 'xxscreeps/game/room/event-log.js';
 import { Creep, calculateBoundedEffect } from 'xxscreeps/mods/creep/creep.js';
 import { upsertNotification } from 'xxscreeps/mods/notifications/model.js';
-import { addStat } from 'xxscreeps/mods/stats/model.js';
+import { addStat } from 'xxscreeps/mods/stats/processor.js';
 import { checkActiveStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 import * as CreepLib from './creep.js';

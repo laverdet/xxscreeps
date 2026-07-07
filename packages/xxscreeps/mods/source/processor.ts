@@ -11,7 +11,7 @@ import { calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import { registerHarvestProcessor } from 'xxscreeps/mods/harvestable/processor.js';
 import { activateNPC, registerNPC } from 'xxscreeps/mods/npc/processor.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
-import { addStat } from 'xxscreeps/mods/stats/model.js';
+import { addStat } from 'xxscreeps/mods/stats/processor.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureKeeperLair } from './keeper-lair.js';
 import { Source } from './source.js';

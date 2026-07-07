@@ -10,7 +10,7 @@ import { Room } from 'xxscreeps/game/room/index.js';
 import { applyAttackDamage, captureDamageWithNotify } from 'xxscreeps/mods/combat/processor.js';
 import { Creep, calculateBoundedEffect, calculatePower } from 'xxscreeps/mods/creep/creep.js';
 import * as Resource from 'xxscreeps/mods/resource/processor/resource.js';
-import { addStat } from 'xxscreeps/mods/stats/model.js';
+import { addStat } from 'xxscreeps/mods/stats/processor.js';
 import { ConstructionSite, checkRemove, create } from './construction-site.js';
 import { checkBuild, checkDismantle, checkRepair } from './creep.js';
 import { checkCreateConstructionSite } from './room.js';

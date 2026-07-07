@@ -1,7 +1,7 @@
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { addStat } from 'xxscreeps/mods/stats/model.js';
+import { addStat } from 'xxscreeps/mods/stats/processor.js';
 import { StructurePowerSpawn, checkProcessPower } from './powerspawn.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {

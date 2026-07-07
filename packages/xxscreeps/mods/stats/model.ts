@@ -1,6 +1,7 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import type { KeyValProvider } from 'xxscreeps/engine/db/storage/provider.js';
-import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
+import { mappedInvertedNumericComparator } from 'xxscreeps/functional/comparator.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 
 // Gameplay statistics, matching the seven series the classic Angular client renders on the profile /
 // overview pages. Two parallel series are kept:
@@ -35,6 +36,9 @@ export const bucketCount = {
 } as const;
 export type StatInterval = keyof typeof bucketCount;
 export const statIntervals = Object.keys(bucketCount).map(Number) as StatInterval[];
+// The longest window; a user with no activity across it is stale everywhere (narrower windows are
+// subsets of it), so this is the only interval at which contributor-set pruning is sound.
+const widestInterval = Math.max(...statIntervals) as StatInterval;
 
 export function isStatInterval(value: number): value is StatInterval {
 	return value in bucketCount;
@@ -56,75 +60,10 @@ const fieldOf = (stat: string, bucket: number) => `${stat}:${bucket}`;
 function windowBuckets(interval: StatInterval, now: number) {
 	const points = bucketCount[interval];
 	const latest = bucketOf(interval, now);
-	return Array.from({ length: points }, (unused, ii) => latest - points + 1 + ii);
+	return [ ...Fn.map(Fn.range(points), ii => latest - points + 1 + ii) ];
 }
 
-type StatDeltas = Iterable<readonly [ StatName, number ]>;
-type StatMap = Map<StatName, number>;
-
-// Per-processor-context (one room-tick) accumulator, so a room full of harvesters produces a handful
-// of `hincrBy`s per subject instead of one per creep per tick. Every contribution is keyed by both
-// the acting user (for the account-level totals) and the (room, user) pair (for the per-room series).
-type PendingDeltas = {
-	users: Map<string, StatMap>;
-	roomUsers: Map<string, Map<string, StatMap>>;
-};
-const pending = new WeakMap<ProcessorContext, PendingDeltas>();
-
-function accumulate(stats: StatMap, stat: StatName, value: number) {
-	stats.set(stat, (stats.get(stat) ?? 0) + value);
-}
-
-function getOrMakeMap<Value>(map: Map<string, Value>, key: string, make: () => Value) {
-	let value = map.get(key);
-	if (value === undefined) {
-		value = make();
-		map.set(key, value);
-	}
-	return value;
-}
-
-/**
- * Record a stat contribution from within a processor. The value is attributed to the acting user
- * (account-wide totals) and to that user's activity in `roomName` (per-room series), coalesced for
- * the current room-tick and flushed once processing completes. NPC ids (two chars or fewer, e.g.
- * invaders/keepers) and no-op values are ignored.
- */
-export function addStat(context: ProcessorContext, userId: string | null | undefined, roomName: string, stat: StatName, value: number) {
-	if (value === 0 || userId == null || userId.length <= 2) {
-		return;
-	}
-	let deltas = pending.get(context);
-	if (!deltas) {
-		deltas = { users: new Map(), roomUsers: new Map() };
-		pending.set(context, deltas);
-		// Deferred (see `flush`) so every synchronous `addStat` this tick lands before we write.
-		context.task(flush(context, deltas));
-	}
-	accumulate(getOrMakeMap(deltas.users, userId, () => new Map<StatName, number>()), stat, value);
-	const roomUsers = getOrMakeMap(deltas.roomUsers, roomName, () => new Map<string, StatMap>());
-	accumulate(getOrMakeMap(roomUsers, userId, () => new Map<StatName, number>()), stat, value);
-}
-
-async function flush(context: ProcessorContext, deltas: PendingDeltas) {
-	// The processor runs `addStat` synchronously throughout the tick and only awaits queued tasks
-	// afterward. Yield once here so the whole tick's contributions are collected before we read the
-	// accumulator.
-	await Promise.resolve();
-	pending.delete(context);
-	const now = Date.now();
-	const { data } = context.shard;
-	const ops: Promise<unknown>[] = [];
-	for (const [ userId, stats ] of deltas.users) {
-		ops.push(writeStats(context.shard.db.data, userId, stats, now));
-	}
-	for (const [ roomName, users ] of deltas.roomUsers) {
-		for (const [ userId, stats ] of users) {
-			ops.push(writeRoomStats(data, roomName, userId, stats, now));
-		}
-	}
-	await Promise.all(ops);
-}
+export type StatDeltas = Iterable<readonly [ StatName, number ]>;
 
 // Shared bucketed-hash write: increment the current bucket and prune the one that just rolled out of
 // the window. Reads only ever sum in-window buckets, so straggler fields left by an inactive stretch
@@ -148,8 +87,7 @@ async function writeSeries(data: KeyValProvider, key: (interval: StatInterval) =
 }
 
 /**
- * Persist a batch of stat deltas for one user across every interval resolution. Exposed directly
- * (rather than only via `addStat`) so it can be driven from tests.
+ * Persist a batch of stat deltas for one user across every interval resolution.
  */
 export function writeStats(data: KeyValProvider, userId: string, deltas: StatDeltas, now = Date.now()) {
 	return writeSeries(data, interval => userStatsKey(userId, interval), deltas, now);
@@ -169,7 +107,7 @@ export async function writeRoomStats(data: KeyValProvider, roomName: string, use
 export type StatTotals = Record<StatName, number>;
 
 function emptyTotals(): StatTotals {
-	return Object.fromEntries(statNames.map(stat => [ stat, 0 ])) as StatTotals;
+	return Fn.fromEntries(statNames, stat => [ stat, 0 ]);
 }
 
 async function readSeriesTotals(data: KeyValProvider, key: string, interval: StatInterval, now: number): Promise<StatTotals> {
@@ -203,13 +141,6 @@ export function readTotals(db: Database, userId: string, interval: StatInterval,
 }
 
 /**
- * The per-bucket series for a single stat, oldest bucket first — a user's own punchcard.
- */
-export function readPunchcard(db: Database, userId: string, interval: StatInterval, stat: StatName, now = Date.now()): Promise<number[]> {
-	return readSeriesPunchcard(db.data, userStatsKey(userId, interval), interval, stat, now);
-}
-
-/**
  * One user's windowed totals for their activity in a room — the room-overview tiles (owner) draw
  * from this.
  */
@@ -232,22 +163,42 @@ export interface RoomStatContribution {
 
 /**
  * Every contributing user's windowed value for a single stat in a room, highest first — the
- * world-map stat layer. Users whose window has aged out to zero are dropped.
+ * world-map stat layer. Users whose window has aged out to zero are dropped from the result, and at
+ * the widest interval a user with no activity left in *any* stat is pruned from the room's
+ * contributor set so it can't grow without bound.
  */
 export async function readRoomLayer(data: KeyValProvider, roomName: string, interval: StatInterval, stat: StatName, now = Date.now()): Promise<RoomStatContribution[]> {
 	const users = await data.sMembers(roomUsersKey(roomName));
-	const contributions = await Promise.all(users.map(async user => {
-		const points = await readSeriesPunchcard(data, roomUserStatsKey(roomName, user, interval), interval, stat, now);
-		return { user, value: points.reduce((sum, value) => sum + value, 0) };
-	}));
+	const contributions = await Fn.mapAwait(users, async user => {
+		const key = roomUserStatsKey(roomName, user, interval);
+		if (interval === widestInterval) {
+			// Read every stat's total at the widest window: values this layer and, when the grand
+			// total is zero, marks the user for pruning (no activity anywhere in the last window).
+			const totals = await readSeriesTotals(data, key, interval, now);
+			const stale = statNames.every(name => totals[name] === 0);
+			return { user, value: totals[stat], stale };
+		}
+		const points = await readSeriesPunchcard(data, key, interval, stat, now);
+		return { user, value: Fn.accumulate(points), stale: false };
+	});
+	const stale = contributions.filter(contribution => contribution.stale);
+	if (stale.length > 0) {
+		await data.sRem(roomUsersKey(roomName), stale.map(contribution => contribution.user));
+	}
 	return contributions
 		.filter(contribution => contribution.value > 0)
-		.sort((left, right) => right.value - left.value);
+		.sort(mappedInvertedNumericComparator(contribution => contribution.value))
+		.map(({ user, value }) => ({ user, value }));
+}
+
+interface StatLayer {
+	stat: StatName;
+	interval: StatInterval;
 }
 
 // The world-map requests a layer as `<statName><interval>`, e.g. `energyHarvested8`. The three
 // intervals are unambiguous suffixes (only `8` ends in 8; `180`/`1440` end in 0).
-export function parseStatLayer(layer: string): { stat: StatName; interval: StatInterval } | undefined {
+export function parseStatLayer(layer: string): StatLayer | undefined {
 	for (const interval of statIntervals) {
 		const suffix = String(interval);
 		if (layer.endsWith(suffix)) {
@@ -261,7 +212,8 @@ export function parseStatLayer(layer: string): { stat: StatName; interval: StatI
 
 /**
  * Drop all of a user's account-level stat series. Wired into `User.remove`. Their contributions to
- * per-room series are left in place (harmless — they age out via the window prune).
+ * per-room series are left in place — they age out via the window prune, and the contributor set
+ * drops them once the widest window empties (see `readRoomLayer`).
  */
 export async function removeAllForUser(db: Database, userId: string) {
 	await Promise.all(statIntervals.map(interval => db.data.del(userStatsKey(userId, interval))));

@@ -1,7 +1,7 @@
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import {
-	parseStatLayer, readPunchcard, readRoomLayer, readRoomPunchcard, readRoomTotals,
+	parseStatLayer, readRoomLayer, readRoomPunchcard, readRoomTotals,
 	readTotals, removeAllForUser, statNames, writeRoomStats, writeStats,
 } from './model.js';
 
@@ -39,11 +39,11 @@ describe('stats model', () => {
 
 	test('punchcard exposes the per-bucket series oldest-first', async () => {
 		await using testShard = await instantiateTestShard();
-		const { db } = testShard;
+		const { shard } = testShard;
 		// Two harvests one interval-8 bucket (8 min) apart land in adjacent, most-recent buckets.
-		await writeStats(db.data, alice, [ [ 'energyHarvested', 10 ] ], t0 - 8 * 60_000);
-		await writeStats(db.data, alice, [ [ 'energyHarvested', 20 ] ], t0);
-		const series = await readPunchcard(db, alice, 8, 'energyHarvested', t0);
+		await writeRoomStats(shard.data, 'W1N1', alice, [ [ 'energyHarvested', 10 ] ], t0 - 8 * 60_000);
+		await writeRoomStats(shard.data, 'W1N1', alice, [ [ 'energyHarvested', 20 ] ], t0);
+		const series = await readRoomPunchcard(shard.data, 'W1N1', alice, 8, 'energyHarvested', t0);
 		assert.strictEqual(series.length, 8);
 		assert.deepStrictEqual(series.slice(-2), [ 10, 20 ]);
 	});
@@ -77,6 +77,10 @@ describe('stats model', () => {
 		await writeRoomStats(shard.data, 'W1N1', bob, [ [ 'energyHarvested', 250 ] ], t0);
 		const layer = await readRoomLayer(shard.data, 'W1N1', 8, 'energyHarvested', t0);
 		assert.deepStrictEqual(layer, [ { user: bob, value: 250 }, { user: alice, value: 100 } ]);
+		// The widest interval values users through the totals branch; ranking is identical.
+		assert.deepStrictEqual(
+			await readRoomLayer(shard.data, 'W1N1', 1440, 'energyHarvested', t0),
+			[ { user: bob, value: 250 }, { user: alice, value: 100 } ]);
 		// Two hours on, alice's contribution has aged out of the 1h window entirely.
 		assert.deepStrictEqual(await readRoomLayer(shard.data, 'W1N1', 8, 'energyHarvested', t0 + 2 * hour), []);
 	});

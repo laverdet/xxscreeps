@@ -14,7 +14,7 @@ import { StructureController } from 'xxscreeps/mods/controller/controller.js';
 import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
 import { Creep, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import { buryCreep, dropOverflowResources } from 'xxscreeps/mods/creep/processor.js';
-import { addStat } from 'xxscreeps/mods/stats/model.js';
+import { addStat } from 'xxscreeps/mods/stats/processor.js';
 import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
 import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assign } from 'xxscreeps/utility/utility.js';

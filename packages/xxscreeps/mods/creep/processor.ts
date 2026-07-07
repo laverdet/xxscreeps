@@ -19,7 +19,7 @@ import { isBorder } from 'xxscreeps/game/terrain.js';
 import { drop as dropResource } from 'xxscreeps/mods/resource/processor/resource.js';
 import * as ResourceIntent from 'xxscreeps/mods/resource/processor/resource.js';
 import { OpenStore } from 'xxscreeps/mods/resource/store.js';
-import { addStat } from 'xxscreeps/mods/stats/model.js';
+import { addStat } from 'xxscreeps/mods/stats/processor.js';
 import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
 import { typedArrayToString } from 'xxscreeps/utility/string.js';
 import { clamp, filterInPlace } from 'xxscreeps/utility/utility.js';

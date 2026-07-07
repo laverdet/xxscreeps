@@ -26,7 +26,6 @@ hooks.register('route', {
 interface RoomOverviewQuery {
 	room: string;
 	interval?: string | null;
-	shard?: string | null;
 }
 
 const roomOverviewSchema: JSONSchemaType<RoomOverviewQuery> = {
@@ -34,10 +33,14 @@ const roomOverviewSchema: JSONSchemaType<RoomOverviewQuery> = {
 	properties: {
 		room: { type: 'string' },
 		interval: { type: 'string', nullable: true },
-		shard: { type: 'string', nullable: true },
 	},
 	required: [ 'room' ],
 };
+
+interface RoomOwner {
+	username: string;
+	badge: UserBadge | null;
+}
 
 // `GET /api/game/room-overview?room=W1N1&interval=8` — the room owner plus per-stat punchcards, the
 // per-stat maxima the template scales by (keyed `<stat><interval>`), and windowed totals.
@@ -54,11 +57,11 @@ hooks.register('route', {
 		const { shard } = context;
 
 		// Room owner, when the room exists and is claimed. The overview shows the owner's activity.
-		let owner: { username: string; badge: UserBadge | null } | undefined;
+		let owner: RoomOwner | undefined;
 		let ownerId: string | undefined;
 		if (context.backend.world.map.getRoomStatus(room, true)) {
-			const roomObject = await shard.loadRoom(room, undefined, true).catch(() => undefined);
-			ownerId = roomObject?.['#user'] ?? undefined;
+			const roomObject = await shard.loadRoom(room, undefined, true);
+			ownerId = roomObject['#user'] ?? undefined;
 			if (ownerId != null) {
 				const info = await context.db.data.hmGet(User.infoKey(ownerId), [ 'badge', 'username' ]);
 				owner = {
