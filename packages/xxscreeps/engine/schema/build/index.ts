@@ -37,6 +37,7 @@ const loadLegacySchemas = runOnce(() => {
 			try {
 				return fs.readdirSync(archivePath);
 			} catch {
+				// Legacy archive directory does not exist on fresh or already-migrated deployments
 				return [];
 			}
 		}();
@@ -77,19 +78,21 @@ export async function initializeSchemaArchive(keyval: KeyValProvider) {
 		for (const [ version, archive ] of Object.entries(archived)) {
 			archivedSchemas.set(archiveId(info.name, version), archive);
 		}
-		// Seed archives from the legacy `schemaArchive` directory
+		// Seed the current version plus any archives found in the legacy `schemaArchive` directory
+		const writes: Promise<boolean>[] = [];
 		const legacy = loadLegacySchemas().get(info.name.toLowerCase());
 		if (legacy) {
-			await Promise.all(Fn.map(legacy, async ([ version, archive ]) => {
+			for (const [ version, archive ] of legacy) {
 				if (!(version in archived)) {
 					archivedSchemas.set(archiveId(info.name, version), archive);
-					await keyval.hSet(key, version, archive, { if: 'NX' });
+					writes.push(keyval.hSet(key, version, archive, { if: 'NX' }));
 				}
-			}));
+			}
 		}
 		if (info.archive !== '?' && !(info.version in archived)) {
-			await keyval.hSet(key, `${info.version}`, info.archive, { if: 'NX' });
+			writes.push(keyval.hSet(key, `${info.version}`, info.archive, { if: 'NX' }));
 		}
+		await Promise.all(writes);
 	}));
 }
 
