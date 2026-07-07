@@ -5,7 +5,7 @@ import { registerShardInitializer, registerShardTickProcessor } from 'xxscreeps/
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
+import { iterateSectors, makeSectorRadiusPredicate } from 'xxscreeps/mods/sector/sector.js';
 import { Deposit } from './deposit.js';
 import { dueSectorsAt, scheduleSector, seedSectors } from './model.js';
 
@@ -111,7 +111,7 @@ registerShardInitializer(async shard => {
 	// Relative to the current wall clock so a world imported well past tick 0 (e.g. the mod added to
 	// an existing shard) still spreads its first wave forward instead of firing all at once.
 	const seeds = Fn.pipe(
-		world.map['#sectors'](),
+		iterateSectors(world),
 		$$ => Fn.map($$, ([ center ]): [ score: number, sector: string ] => [ now + bootstrapScatter(center), center ]),
 		$$ => [ ...$$ ],
 	);

@@ -2,6 +2,7 @@ import { registerShardInitializer, registerShardTickProcessor } from 'xxscreeps/
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { iterateSectors } from 'xxscreeps/mods/sector/sector.js';
 import { dueRoomsAt, scheduleRoom, seedRooms } from './model.js';
 
 // World-management placement policy for power banks. Each highway room runs an independent respawn
@@ -29,7 +30,7 @@ function rollPower(): number {
 registerShardInitializer(async shard => {
 	const world = await shard.loadWorld();
 	const seeds = await Fn.pipe(
-		world.map['#sectors'](),
+		iterateSectors(world),
 		$$ => Fn.transform($$, ([ , sector ]) => sector.edges),
 		// Edge rooms are shared between adjacent sectors; each seeds one timer.
 		$$ => new Set($$),

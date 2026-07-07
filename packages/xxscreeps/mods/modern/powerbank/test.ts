@@ -8,6 +8,7 @@ import { Game } from 'xxscreeps/game/index.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
+import { iterateSectors } from 'xxscreeps/mods/sector/sector.js';
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { inspectDuePowerBankRoomsForTest, scheduleRoom } from './model.js';
@@ -152,7 +153,7 @@ describe('mod/modern/powerbank', () => {
 			await runShardInitializers(shard);
 			const due = await inspectDuePowerBankRoomsForTest(shard);
 			const world = await shard.loadWorld();
-			const highways = new Set(Fn.transform(world.map['#sectors'](), ([ , sector ]): Iterable<string> => sector.edges));
+			const highways = new Set(Fn.transform(iterateSectors(world), ([ , sector ]): Iterable<string> => sector.edges));
 			assert.strictEqual(due.length, highways.size, 'every sector edge room was seeded exactly once');
 			for (const [ score, roomName ] of due) {
 				assert.ok(highways.has(roomName), `${roomName} should be a sector edge room`);

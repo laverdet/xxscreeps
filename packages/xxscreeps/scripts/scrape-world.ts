@@ -23,7 +23,6 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room, flushUsers } from 'xxscreeps/game/room/room.js';
-import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
@@ -39,6 +38,7 @@ import { saveMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import { StructureExtractor } from 'xxscreeps/mods/classic/mineral/extractor.js';
 import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
 import { StructurePortal } from 'xxscreeps/mods/portal/portal.js';
+import { computeRoomMeta } from 'xxscreeps/mods/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 

@@ -9,11 +9,11 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
 import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
 import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
 import { Source } from 'xxscreeps/mods/classic/source/source.js';
+import { computeRoomMeta } from 'xxscreeps/mods/sector/sector.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { testRedis } from './context.js';
 
