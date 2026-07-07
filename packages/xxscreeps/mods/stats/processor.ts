@@ -2,7 +2,7 @@ import type { StatName } from './model.js';
 import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { writeRoomStats, writeStats } from './model.js';
+import { pruneRoomContributors, writeRoomStats, writeStats } from './model.js';
 
 type StatMap = Map<StatName, number>;
 
@@ -51,8 +51,11 @@ async function flush(context: ProcessorContext, deltas: PendingDeltas) {
 	await Promise.all([
 		...Fn.map(deltas.users, ([ userId, stats ]) =>
 			writeStats(context.shard.db.data, userId, stats, now)),
-		...Fn.transform(deltas.roomUsers, ([ roomName, users ]) =>
-			Fn.map(users, ([ userId, stats ]) =>
-				writeRoomStats(context.shard.data, roomName, userId, stats, now))),
+		...Fn.transform(deltas.roomUsers, ([ roomName, users ]) => [
+			// Once per room: reclaim contributors whose activity has aged out of the widest window.
+			pruneRoomContributors(context.shard.data, roomName, now),
+			...Fn.map(users, ([ userId, stats ]) =>
+				writeRoomStats(context.shard.data, roomName, userId, stats, now)),
+		]),
 	]);
 }

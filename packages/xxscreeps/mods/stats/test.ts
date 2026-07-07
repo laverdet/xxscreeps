@@ -1,7 +1,7 @@
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import {
-	parseStatLayer, readRoomLayer, readRoomPunchcard, readRoomTotals,
+	parseStatLayer, pruneRoomContributors, readRoomLayer, readRoomPunchcard, readRoomTotals,
 	readTotals, removeAllForUser, statNames, writeRoomStats, writeStats,
 } from './model.js';
 
@@ -77,12 +77,39 @@ describe('stats model', () => {
 		await writeRoomStats(shard.data, 'W1N1', bob, [ [ 'energyHarvested', 250 ] ], t0);
 		const layer = await readRoomLayer(shard.data, 'W1N1', 8, 'energyHarvested', t0);
 		assert.deepStrictEqual(layer, [ { user: bob, value: 250 }, { user: alice, value: 100 } ]);
-		// The widest interval values users through the totals branch; ranking is identical.
+		// Ranking is identical at the widest interval, over its 7d window.
 		assert.deepStrictEqual(
 			await readRoomLayer(shard.data, 'W1N1', 1440, 'energyHarvested', t0),
 			[ { user: bob, value: 250 }, { user: alice, value: 100 } ]);
 		// Two hours on, alice's contribution has aged out of the 1h window entirely.
 		assert.deepStrictEqual(await readRoomLayer(shard.data, 'W1N1', 8, 'energyHarvested', t0 + 2 * hour), []);
+	});
+
+	test('a user active in the room but not in the requested stat is dropped from the layer', async () => {
+		await using testShard = await instantiateTestShard();
+		const { shard } = testShard;
+		const bob = 'bbbbbbbbbbbb';
+		// Both are live contributors, but only bob has any of the requested stat this window.
+		await writeRoomStats(shard.data, 'W1N1', alice, [ [ 'energyControl', 40 ] ], t0);
+		await writeRoomStats(shard.data, 'W1N1', bob, [ [ 'energyHarvested', 70 ] ], t0);
+		assert.deepStrictEqual(
+			await readRoomLayer(shard.data, 'W1N1', 8, 'energyHarvested', t0),
+			[ { user: bob, value: 70 } ]);
+	});
+
+	test('pruneRoomContributors reclaims users aged out of the widest window, keeping live ones', async () => {
+		await using testShard = await instantiateTestShard();
+		const { shard } = testShard;
+		const bob = 'bbbbbbbbbbbb';
+		await writeRoomStats(shard.data, 'W1N1', alice, [ [ 'energyHarvested', 100 ] ], t0);
+		// Eight days later bob contributes; alice's last activity is now outside the 7d window.
+		const later = t0 + 8 * 24 * hour;
+		await writeRoomStats(shard.data, 'W1N1', bob, [ [ 'energyHarvested', 250 ] ], later);
+		await pruneRoomContributors(shard.data, 'W1N1', later);
+		// alice is gone from the contributor index; only bob is enumerated at the widest interval.
+		assert.deepStrictEqual(
+			await readRoomLayer(shard.data, 'W1N1', 1440, 'energyHarvested', later),
+			[ { user: bob, value: 250 } ]);
 	});
 
 	test('parseStatLayer splits the client\'s `<stat><interval>` layer name', () => {
