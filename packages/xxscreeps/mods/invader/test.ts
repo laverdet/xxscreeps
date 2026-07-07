@@ -4,12 +4,14 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
+import { create as createSite } from 'xxscreeps/mods/classic/construction/construction-site.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { create as createTower } from 'xxscreeps/mods/classic/defense/tower.js';
-import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
+import { create as createRoad } from 'xxscreeps/mods/classic/road/road.js';
+import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { lookForStructures } from '../classic/structure/structure.js';
+import { lookForStructureAt, lookForStructures } from '../classic/structure/structure.js';
 import { create as createInvaderCore } from './invader-core.js';
 
 // W7N7 has exits in all 4 directions and all neighbors have controllers:
@@ -273,11 +275,14 @@ describe('mod/invader', () => {
 			});
 		}));
 
-		// Deploy completes at Game.time === 2; an observer keeps the room visible across the boundary.
+		// Deploy completes at Game.time === 2; an observer outside the bunker1 footprint keeps the room
+		// visible across the boundary without being crushed by the deploy.
 		const deployBoundary = simulate({
 			W1N1: room => {
-				room['#insertObject'](createInvaderCore(corePos, 2, 2));
-				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.MOVE ], 'observer', '100'));
+				const core = createInvaderCore(corePos, 2, 2);
+				core['#templateName'] = 'bunker1';
+				room['#insertObject'](core);
+				room['#insertObject'](createCreep(new RoomPosition(23, 25, 'W1N1'), [ C.MOVE ], 'observer', '100'));
 			},
 		});
 
@@ -590,7 +595,9 @@ describe('mod/invader', () => {
 		// room processing across the boundary.
 		const deployScene = simulate({
 			W1N1: room => {
-				room['#insertObject'](createInvaderCore(corePos, 2, 1));
+				const core = createInvaderCore(corePos, 2, 1);
+				core['#templateName'] = 'bunker2';
+				room['#insertObject'](core);
 				activateNPC(room, '2');
 			},
 		});
@@ -606,25 +613,91 @@ describe('mod/invader', () => {
 			});
 		}));
 
-		test('deploy spawns the stronghold template sharing the core collapse timer', () => deployScene(async ({ tick, peekRoom }) => {
+		test('deploy spawns the bunker template with loot, scaled ramparts, and a shared id', () => deployScene(async ({ tick, peekRoom }) => {
 			await tick(2);
-			await peekRoom('W1N1', room => {
-				const decayTime = findRoomCore(room)!['#collapseTime'];
-				const tower = lookForStructures(room, C.STRUCTURE_TOWER)[0];
-				const rampart = lookForStructures(room, C.STRUCTURE_RAMPART)[0];
-				const container = lookForStructures(room, C.STRUCTURE_CONTAINER)[0];
-				const road = lookForStructures(room, C.STRUCTURE_ROAD)[0];
-				assert.ok(tower && rampart && container && road, 'deploy spawns every template structure');
+			await peekRoom('W1N1', (room, Game) => {
+				const core = findRoomCore(room)!;
+				const collapseTime = core['#collapseTime'];
+				const strongholdId = core['#strongholdId'];
+				assert.ok(strongholdId !== null, 'the core carries a stronghold id');
+
+				// Two towers and two containers distinguish bunker2 from the single-of-each stub.
+				const towers = lookForStructures(room, C.STRUCTURE_TOWER);
+				const containers = lookForStructures(room, C.STRUCTURE_CONTAINER);
+				const ramparts = lookForStructures(room, C.STRUCTURE_RAMPART);
+				const roads = lookForStructures(room, C.STRUCTURE_ROAD);
+				assert.strictEqual(towers.length, 2, 'bunker2 spawns two towers');
+				assert.strictEqual(containers.length, 2, 'bunker2 spawns two containers');
+
+				const tower = towers[0]!;
+				const rampart = ramparts[0]!;
+				const container = containers[0]!;
+				assert.strictEqual(tower.store.getUsedCapacity(C.RESOURCE_ENERGY), C.TOWER_CAPACITY, 'tower deploys at full energy');
+				assert.strictEqual(rampart.hits, C.STRONGHOLD_RAMPART_HITS[2]!, 'rampart hits scale with the template reward level');
+				assert.ok(container.store.getUsedCapacity() > 0, 'container deploys carrying a resource reward');
+				assert.strictEqual(container.store.getCapacity(), 0, 'reward container is withdraw-only');
+
+				// Co-located structures share a tile: (26,25) holds a container, a road, and a rampart.
+				const stackedPos = new RoomPosition(26, 25, 'W1N1');
+				assert.ok(lookForStructureAt(room, stackedPos, C.STRUCTURE_CONTAINER), 'container shares the tile');
+				assert.ok(lookForStructureAt(room, stackedPos, C.STRUCTURE_ROAD), 'road shares the tile');
+				assert.ok(lookForStructureAt(room, stackedPos, C.STRUCTURE_RAMPART), 'rampart shares the tile');
+
 				assert.strictEqual(tower['#user'], '2', 'tower is owned by the invader NPC');
 				assert.strictEqual(rampart['#user'], '2', 'rampart is owned by the invader NPC');
-				for (const peer of [ tower, rampart, container, road ]) {
-					assert.strictEqual(peer['#collapseTime'], decayTime, 'peer shares the core collapse timer');
+				for (const peer of [ tower, rampart, container, roads[0]! ]) {
+					assert.strictEqual(peer['#collapseTime'], collapseTime, 'peer shares the core collapse timer');
+					assert.strictEqual(peer['#strongholdId'], strongholdId, 'peer shares the stronghold id');
+					assert.deepStrictEqual(peer.effects, [
+						{ effect: C.EFFECT_COLLAPSE_TIMER, ticksRemaining: collapseTime - Game.time },
+					], 'peer surfaces the shared collapse timer');
 				}
 				// Pinned to the collapse time so they don't decay (and read a past expiry, which throws)
 				// while the stronghold room sleeps between deploy and collapse.
-				for (const peer of [ rampart, container, road ]) {
-					assert.strictEqual(peer['#nextDecayTime'], decayTime, 'decaying peer will not decay before collapse');
+				for (const peer of [ rampart, container, roads[0]! ]) {
+					assert.strictEqual(peer['#nextDecayTime'], collapseTime, 'decaying peer will not decay before collapse');
 				}
+			});
+		}));
+
+		// Player objects sitting on bunker2 tiles when the deploy fires: a creep on a stacked
+		// container/road/rampart tile, construction sites above and below the refund threshold, and a
+		// road where the template also places one.
+		const crushScene = simulate({
+			W1N1: room => {
+				const core = createInvaderCore(corePos, 2, 1);
+				core['#templateName'] = 'bunker2';
+				room['#insertObject'](core);
+				room['#insertObject'](createCreep(new RoomPosition(26, 25, 'W1N1'), [ C.MOVE ], 'victim', '100'));
+				const site = createSite(new RoomPosition(25, 24, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road);
+				site.progress = 100;
+				room['#insertObject'](site);
+				room['#insertObject'](createSite(new RoomPosition(25, 26, 'W1N1'), 'road', '100', C.CONSTRUCTION_COST.road));
+				room['#insertObject'](createRoad(new RoomPosition(24, 25, 'W1N1')));
+				activateNPC(room, '2');
+			},
+		});
+
+		test('deploy crushes player objects on template tiles', () => crushScene(async ({ tick, peekRoom }) => {
+			await tick(2);
+			await peekRoom('W1N1', room => {
+				// The creep dies where it stood — once, though its tile carries three template entries.
+				assert.strictEqual(room.find(C.FIND_CREEPS).length, 0, 'a creep on a template tile dies');
+				const tombstones = room.find(C.FIND_TOMBSTONES);
+				assert.strictEqual(tombstones.length, 1, 'the crushed creep is buried exactly once');
+				assert.ok(tombstones[0]!.pos.isEqualTo(new RoomPosition(26, 25, 'W1N1')), 'tombstone sits on the crush tile');
+
+				// Sites are removed; only progress above 1 refunds half as dropped energy.
+				assert.strictEqual(room.find(C.FIND_CONSTRUCTION_SITES).length, 0, 'sites on template tiles are removed');
+				const [ refund, ...extra ] = room.find(C.FIND_DROPPED_RESOURCES);
+				assert.strictEqual(extra.length, 0, 'a zero-progress site refunds nothing');
+				assert.ok(refund!.pos.isEqualTo(new RoomPosition(25, 24, 'W1N1')), 'refund drops on the site tile');
+				assert.strictEqual(refund!.amount, 50, 'refund is half the site progress');
+
+				// The player road is destroyed and the tile now holds the stronghold's own road.
+				assert.strictEqual(room.find(C.FIND_RUINS).length, 1, 'the crushed road leaves a Ruin');
+				const road = lookForStructureAt(room, new RoomPosition(24, 25, 'W1N1'), C.STRUCTURE_ROAD)!;
+				assert.ok(road['#collapseTime'] > 0, 'the surviving road is the stronghold peer');
 			});
 		}));
 
