@@ -3,13 +3,13 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
+import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { assign, deterministicClockForTesting } from 'xxscreeps/utility/utility.js';
-import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Market } from './market.js';
 import { createOrder, loadActiveOrderIds, loadMoney, loadOrderBlob, loadOrders, loadTransactionBlob, loadTransactionEntries, recordTransaction, runOrderMaintenance } from './model.js';
 import { Order, Orders, format as orderFormat } from './order.js';
@@ -483,8 +483,7 @@ describe('Market orders', () => {
 			// Under one unit truncates to zero.
 			assert.strictEqual(market.createOrder({ ...options, totalAmount: 0.5 }), C.ERR_INVALID_ARGS);
 			assert.strictEqual(market.createOrder({ ...options, totalAmount: 1.5 }), C.OK);
-			// A negative amount passes the runtime and is rejected by the shard pass.
-			assert.strictEqual(market.createOrder({ ...options, totalAmount: -5 }), C.OK);
+			assert.strictEqual(market.createOrder({ ...options, totalAmount: -5 }), C.ERR_INVALID_ARGS);
 		});
 	}));
 

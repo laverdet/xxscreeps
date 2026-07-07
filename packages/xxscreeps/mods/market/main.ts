@@ -1,6 +1,7 @@
 import type { CreateOrderParams } from './model.js';
 import { registerShardTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { acquireNamedIntentsForTick } from 'xxscreeps/engine/processor/model.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
 import { createOrder, loadOrders, runOrderMaintenance } from './model.js';
 
 declare module 'xxscreeps/engine/processor/index.js' {
@@ -16,11 +17,16 @@ declare module 'xxscreeps/engine/processor/index.js' {
 // order's activity. The book is snapshotted before the intents run, so an order created this tick is
 // not maintained until next tick (it is written inactive and first activates then).
 registerShardTickProcessor(async (shard, time) => {
-	const orders = await loadOrders(shard);
-	for (const { userId, named } of await acquireNamedIntentsForTick(shard, time)) {
+	const [ orders, namedIntents ] = await Promise.all([
+		loadOrders(shard),
+		acquireNamedIntentsForTick(shard, time),
+	]);
+	// Users are independent, but one user's intents stay sequential: `createOrder` reads the balance
+	// before debiting it, so two same-tick orders must observe each other's fee.
+	await Fn.mapAwait(namedIntents, async ({ userId, named }) => {
 		for (const args of named.market?.createOrder ?? []) {
 			await createOrder(shard, userId, time, args[0] as CreateOrderParams);
 		}
-	}
+	});
 	await runOrderMaintenance(shard, orders);
 });

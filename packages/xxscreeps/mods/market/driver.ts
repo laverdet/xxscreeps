@@ -57,7 +57,7 @@ hooks.register('runnerConnector', async player => {
 
 // Orders are mutable across ticks but stable within one (the market shard-tick pass is the only
 // writer and reads are tick-synchronized), so the active book's id list and every order blob are
-// read once per (shard, tick) and shared across this runner process's player instances: the book is
+// read once per tick and shared across this runner process's player instances: the book is
 // identical for every player, and an active order that is also one of yours is read once.
 interface OrderCache {
 	time: number;
@@ -65,14 +65,12 @@ interface OrderCache {
 	blobs: Map<string, Promise<Readonly<Uint8Array> | null>>;
 }
 
-const orderCaches = new WeakMap<Shard, OrderCache>();
+let orderCache: OrderCache | undefined;
 function orderCacheFor(shard: Shard, time: number) {
-	let cache = orderCaches.get(shard);
-	if (cache?.time !== time) {
-		cache = { time, active: loadActiveOrderIds(shard), blobs: new Map() };
-		orderCaches.set(shard, cache);
+	if (orderCache?.time !== time) {
+		orderCache = { time, active: loadActiveOrderIds(shard), blobs: new Map() };
 	}
-	return cache;
+	return orderCache;
 }
 
 hooks.register('runnerConnector', player => [ undefined, {

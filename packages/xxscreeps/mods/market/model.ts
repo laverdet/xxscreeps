@@ -177,8 +177,9 @@ function removeOrder(shard: Shard, order: Order) {
 }
 
 // User credit balance in millicredits; `Game.market.credits` divides by 1000.
-export function loadMoney(shard: Shard, userId: string) {
-	return shard.db.data.hGet(User.infoKey(userId), moneyField).then(money => Number(money) || 0);
+export async function loadMoney(shard: Shard, userId: string) {
+	const money = await shard.db.data.hGet(User.infoKey(userId), moneyField);
+	return Number(money) || 0;
 }
 
 // Shape of a `createOrder` named intent. Fields are untrusted (they arrive over JSON from the

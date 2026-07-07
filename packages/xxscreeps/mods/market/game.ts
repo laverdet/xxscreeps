@@ -20,11 +20,7 @@ hooks.register('gameInitializer', (game, data) => {
 	if (data?.transactions) {
 		transactions = new Transactions(data.transactions);
 	}
-	game.market = new Market(
-		game,
-		transactions,
-		data?.orders && new Orders(data.orders),
-		data?.money);
+	game.market = new Market(game, transactions, new Orders(data?.orders), data?.money);
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,11 +1,12 @@
 import type { OrderType } from './model.js';
-import type { Order, Orders } from './order.js';
+import type { Order } from './order.js';
 import type { Transactions } from './transaction.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
+import { Orders } from './order.js';
 
 export interface CreateOrderOptions {
 	type: OrderType;
@@ -22,16 +23,16 @@ export class Market {
 	readonly #money;
 	#ordersCreatedDuringTick = 0;
 
-	constructor(game: GameBase, transactions?: Transactions, orders?: Orders, money?: number) {
+	constructor(game: GameBase, transactions?: Transactions, orders = new Orders(), money = 0) {
 		this.#map = game.map;
 		this.#transactions = transactions;
 		this.#orders = orders;
-		this.#money = money ?? 0;
+		this.#money = money;
 	}
 
 	/** Your own orders (including inactive ones), indexed by id. */
 	@cached get orders() {
-		return Object.fromEntries(Fn.map(this.#orders?.mine ?? [], order => [ order.id, order ] as const));
+		return Object.fromEntries(Fn.map(this.#orders.mine, order => [ order.id, order ] as const));
 	}
 
 	get credits() { return this.#money / 1000; }
@@ -39,20 +40,21 @@ export class Market {
 	get outgoingTransactions() { return this.#transactions?.outgoing ?? []; }
 
 	getAllOrders(filter?: ((order: Order) => boolean) | Partial<Order>) {
-		const active = this.#orders?.active ?? [];
+		const active = this.#orders.active;
 		if (filter === undefined) {
 			return [ ...active ];
+		} else if (typeof filter === 'function') {
+			return active.filter(filter);
 		}
-		const predicate = typeof filter === 'function' ? filter :
-			(order: Order) => Object.entries(filter).every(([ key, value ]) => order[key as keyof Order] === value);
-		return active.filter(predicate);
+		const entries = Object.entries(filter);
+		return active.filter(order => entries.every(([ key, value ]) => order[key as keyof Order] === value));
 	}
 
 	getOrderById(id: string) {
 		// Your own orders take precedence, so an inactive order of yours (absent from the public book)
 		// is still found by id.
-		return this.#orders?.mine.find(order => order.id === id) ??
-			this.#orders?.active.find(order => order.id === id) ?? null;
+		return this.#orders.mine.find(order => order.id === id) ??
+			this.#orders.active.find(order => order.id === id) ?? null;
 	}
 
 	/**
@@ -66,9 +68,8 @@ export class Market {
 		if (type !== C.ORDER_BUY && type !== C.ORDER_SELL) {
 			return C.ERR_INVALID_ARGS;
 		}
-		// A negative `totalAmount` passes these checks and returns OK; the shard pass rejects it and
-		// no order is created.
-		if (!(C.RESOURCES_ALL as string[]).includes(resourceType) || !(price > 0) || !Number.isFinite(totalAmount) || totalAmount === 0) {
+		// Divergence from Screeps, which accepts a negative amount and silently never creates the order.
+		if (!(C.RESOURCES_ALL as string[]).includes(resourceType) || !(price > 0) || !Number.isFinite(totalAmount) || !(totalAmount > 0)) {
 			return C.ERR_INVALID_ARGS;
 		}
 		if (price * totalAmount * C.MARKET_FEE > this.credits) {
@@ -77,7 +78,7 @@ export class Market {
 		if (!Game.rooms[roomName]?.terminal?.my) {
 			return C.ERR_NOT_OWNER;
 		}
-		if ((this.#orders?.mine.length ?? 0) + this.#ordersCreatedDuringTick >= C.MARKET_MAX_ORDERS) {
+		if (this.#orders.mine.length + this.#ordersCreatedDuringTick >= C.MARKET_MAX_ORDERS) {
 			return C.ERR_FULL;
 		}
 		// Prices cross to millicredits here, the mirror of the ÷1000 in the read getters.

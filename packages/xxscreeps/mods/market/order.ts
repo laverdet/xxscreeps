@@ -44,8 +44,8 @@ const read = function() {
 export class Orders {
 	readonly payload;
 
-	constructor(payload: OrderPayload) {
-		this.payload = payload;
+	constructor(payload?: OrderPayload) {
+		this.payload = payload ?? { active: [], mine: [], blobs: {} };
 	}
 
 	@cached get active(): Order[] {
