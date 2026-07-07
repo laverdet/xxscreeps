@@ -1,16 +1,26 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import 'xxscreeps:mods/game';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { UpdateSchemaBlob, loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { initializeView } from 'xxscreeps/schema/read.js';
 import { assign, getOrSet } from 'xxscreeps/utility/utility.js';
-import { Order, offsetOfAmount, orderSchemaVersion, read as readOrder, write as writeOrder } from './order.js';
+import { Order, format as orderFormat } from './order.js';
 import { Transaction, upgrade, write } from './transaction.js';
+
+// Building the order schema resolves `resourceEnumFormat`, which closes the ResourceType extension
+// path — the `xxscreeps:mods/game` import above guarantees every mod's schema registration has run.
+// The eager build also archives the schema package before the first player sandbox snapshots it.
+const { offsetOf, read: readOrder, version: orderSchemaVersion, write: writeOrder } = makeReaderAndWriter(orderFormat);
+// `amount` is recomputed nearly every tick, so the maintenance pass patches it in place through
+// `UpdateSchemaBlob` instead of rewriting the blob.
+const offsetOfAmount = offsetOf('MarketOrder', 'amount');
 
 // A terminal transfer is normalized: stored once as an immutable schema blob at
 // `market/transaction/<id>` and referenced by id from each party's per-direction sorted set, scored

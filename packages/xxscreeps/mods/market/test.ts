@@ -9,11 +9,15 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { assign, deterministicClockForTesting } from 'xxscreeps/utility/utility.js';
+import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Market } from './market.js';
 import { createOrder, loadActiveOrderIds, loadMoney, loadOrderBlob, loadOrders, loadTransactionBlob, loadTransactionEntries, recordTransaction, runOrderMaintenance } from './model.js';
-import { Order, Orders, orderSchemaVersion, write as writeOrder } from './order.js';
+import { Order, Orders, format as orderFormat } from './order.js';
 import { create as createTerminal } from './terminal.js';
 import { Transactions, read } from './transaction.js';
+
+// The order writer lives in `model.ts` unexported, so tests fabricating raw blobs build their own.
+const { version: orderSchemaVersion, write: writeOrder } = makeReaderAndWriter(orderFormat);
 
 // Count order-blob writes so a test can assert the maintenance pass rewrites only the orders that
 // changed.

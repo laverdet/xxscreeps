@@ -1,7 +1,7 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { resourceEnumFormat } from 'xxscreeps/mods/resource/resource.js';
+import { resourceEnumFormat } from 'xxscreeps/mods/resource/schema.js';
 import { BufferObject, compose, declare, struct, withOverlay } from 'xxscreeps/schema/index.js';
 
 const shape = struct({
@@ -32,12 +32,14 @@ export class Order extends withOverlay(BufferObject, shape) {
 	@enumerable get price() { return this['#price'] / 1000; }
 }
 
-const { offsetOf, read, version, write } = makeReaderAndWriter(format);
-export { read, write };
-// `amount` is recomputed nearly every tick, so the maintenance pass patches it in place through
-// `UpdateSchemaBlob` instead of rewriting the blob.
-export const offsetOfAmount = offsetOf('MarketOrder', 'amount');
-export const orderSchemaVersion = version;
+// Building a reader resolves the format, which closes its extension paths (`resourceEnumFormat`) —
+// and this module evaluates inside the runtime graph, where another mod's schema registration may
+// not have run yet. So the runtime reader is built on first use; the server side (`model.ts`)
+// builds eagerly behind the fully-loaded game module graph instead.
+const read = function() {
+	let read: ReturnType<typeof makeReaderAndWriter<typeof format>>['read'] | undefined;
+	return (buffer: Readonly<Uint8Array>) => (read ??= makeReaderAndWriter(format).read)(buffer);
+}();
 
 export class Orders {
 	readonly payload;
