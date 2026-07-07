@@ -1,6 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomIntentPayload, SingleIntent } from 'xxscreeps/engine/processor/index.js';
-import type { NamedIntentPayload } from 'xxscreeps/game/intents.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { flushUsers } from 'xxscreeps/game/room/room.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
@@ -48,10 +47,6 @@ const intentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/intents`;
 const finalIntentsListForRoomKey = (roomName: string) =>
 	`rooms/${roomName}/finalIntents`;
-const namedIntentUsersKey = (time: number) =>
-	`tick${time}/namedIntentUsers`;
-const namedIntentsKey = (time: number, userId: string) =>
-	`tick${time}/namedIntents/${userId}`;
 
 const SCardStore = new KeyvalScript(
 	(keyval, [ into, from ]: [ string, string ]) => {
@@ -166,32 +161,6 @@ export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string)
 		shard.scratch.vDel(key),
 	]);
 	return payloads.map(json => JSON.parse(json) as SingleIntent[]);
-}
-
-export async function publishRunnerNamedIntents(shard: Shard, userId: string, time: number, named: NamedIntentPayload) {
-	// TODO: Nothing drains these keys when their tick is abandoned; they linger until the scratch
-	// store is flushed on restart.
-	await Promise.all([
-		shard.scratch.sAdd(namedIntentUsersKey(time), [ userId ]),
-		shard.scratch.set(namedIntentsKey(time, userId), JSON.stringify(named)),
-	]);
-}
-
-export async function acquireNamedIntentsForTick(shard: Shard, time: number) {
-	const usersKey = namedIntentUsersKey(time);
-	const [ userIds ] = await Promise.all([
-		shard.scratch.sMembers(usersKey),
-		shard.scratch.vdel(usersKey),
-	]);
-	return Fn.mapAwait(userIds, async userId => {
-		const key = namedIntentsKey(time, userId);
-		const [ json ] = await Promise.all([
-			shard.scratch.get(key),
-			shard.scratch.vdel(key),
-		]);
-		const named: NamedIntentPayload = json === null ? {} : JSON.parse(json) as NamedIntentPayload;
-		return { userId, named };
-	});
 }
 
 export async function begetRoomProcessQueue(shard: Shard, time: number) {

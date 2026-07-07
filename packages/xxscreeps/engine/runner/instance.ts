@@ -10,7 +10,7 @@ import { createSandbox } from 'xxscreeps/driver/sandbox/index.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import * as Code from 'xxscreeps/engine/db/user/code.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
-import { publishRunnerIntentsForRooms, publishRunnerNamedIntents } from 'xxscreeps/engine/processor/model.js';
+import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
@@ -226,9 +226,6 @@ export class PlayerInstance {
 			await Promise.all([
 				// Publish intent blobs
 				publishRunnerIntentsForRooms(this.shard, this.userId, time, intentRooms, payload.intentPayloads),
-
-				// Publish named intent blobs
-				payload.namedIntents && publishRunnerNamedIntents(this.shard, this.userId, time, payload.namedIntents),
 
 				// Publish usage event
 				this.usageChannel.publish(payload.usage),

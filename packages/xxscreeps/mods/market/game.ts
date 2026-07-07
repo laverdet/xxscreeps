@@ -13,14 +13,16 @@ declare module 'xxscreeps/game/runtime.js' {
 	interface Global { StructureTerminal: typeof StructureTerminal }
 }
 
-// The runner ships transactions only when a transfer changes the list, so retain the last payload
-// and reuse it on the ticks it isn't resent.
+// The runner ships transactions only when a transfer changes the list, and order blobs only when
+// they change, so retain the last tick's state and fold each delta into it.
 let transactions: Transactions | undefined;
+let orders: Orders | undefined;
 hooks.register('gameInitializer', (game, data) => {
 	if (data?.transactions) {
 		transactions = new Transactions(data.transactions);
 	}
-	game.market = new Market(game, transactions, new Orders(data?.orders), data?.money);
+	orders = new Orders(data?.orders, orders);
+	game.market = new Market(game, transactions, orders, data?.money);
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

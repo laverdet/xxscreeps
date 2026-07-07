@@ -1,11 +1,11 @@
-import type { OrderType } from './model.js';
-import type { Order } from './order.js';
+import type { Order, OrderType } from './order.js';
 import type { Transactions } from './transaction.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
+import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { Orders } from './order.js';
 
 export interface CreateOrderOptions {
@@ -16,11 +16,25 @@ export interface CreateOrderOptions {
 	roomName: string;
 }
 
+// Argument validation shared between the runtime method and the intent processor; `price` is in
+// millicredits on both sides.
+export function checkOrderParams(type: string, resourceType: string, price: number, totalAmount: number) {
+	if (type !== C.ORDER_BUY && type !== C.ORDER_SELL) {
+		return C.ERR_INVALID_ARGS;
+	}
+	// Divergence from Screeps, which accepts a negative amount and silently never creates the order.
+	if (!(C.RESOURCES_ALL as string[]).includes(resourceType) || !(price > 0) || !Number.isFinite(totalAmount) || !(totalAmount > 0)) {
+		return C.ERR_INVALID_ARGS;
+	}
+	return C.OK;
+}
+
 export class Market {
 	readonly #map;
 	readonly #transactions;
 	readonly #orders;
 	readonly #money;
+	readonly #pendingOrders = new Map<string, [ type: OrderType, resourceType: ResourceType, price: number, totalAmount: number ][]>();
 	#ordersCreatedDuringTick = 0;
 
 	constructor(game: GameBase, transactions?: Transactions, orders = new Orders(), money = 0) {
@@ -64,27 +78,26 @@ export class Market {
 	createOrder(options: CreateOrderOptions) {
 		const { type, resourceType, price, roomName } = options;
 		const totalAmount = Math.trunc(options.totalAmount);
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (type !== C.ORDER_BUY && type !== C.ORDER_SELL) {
-			return C.ERR_INVALID_ARGS;
-		}
-		// Divergence from Screeps, which accepts a negative amount and silently never creates the order.
-		if (!(C.RESOURCES_ALL as string[]).includes(resourceType) || !(price > 0) || !Number.isFinite(totalAmount) || !(totalAmount > 0)) {
-			return C.ERR_INVALID_ARGS;
+		// Prices cross to millicredits here, the mirror of the ÷1000 in the read getters.
+		const millicredits = Math.round(price * 1000);
+		const checkParams = checkOrderParams(type, resourceType, millicredits, totalAmount);
+		if (checkParams !== C.OK) {
+			return checkParams;
 		}
 		if (price * totalAmount * C.MARKET_FEE > this.credits) {
 			return C.ERR_NOT_ENOUGH_RESOURCES;
 		}
-		if (!Game.rooms[roomName]?.terminal?.my) {
+		const terminal = Game.rooms[roomName]?.terminal;
+		if (!terminal?.my) {
 			return C.ERR_NOT_OWNER;
 		}
 		if (this.#orders.mine.length + this.#ordersCreatedDuringTick >= C.MARKET_MAX_ORDERS) {
 			return C.ERR_FULL;
 		}
-		// Prices cross to millicredits here, the mirror of the ÷1000 in the read getters.
-		intents.pushNamed('market', 'createOrder', {
-			type, resourceType, price: Math.round(price * 1000), totalAmount, roomName,
-		});
+		// The intent slot is unique per (object, action), so same-tick orders accumulate into a batch.
+		const pending = getOrSet(this.#pendingOrders, terminal.id, () => []);
+		pending.push([ type, resourceType, millicredits, totalAmount ]);
+		intents.save(terminal, 'createOrder', pending);
 		++this.#ordersCreatedDuringTick;
 		return C.OK;
 	}

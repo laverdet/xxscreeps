@@ -4,13 +4,14 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { getTransactionChannel, loadActiveOrderIds, loadMoney, loadOrderBlob, loadTransactionBlob, loadTransactionEntries, loadUserOrderIds } from './model.js';
+import { getOrderChannel, getTransactionChannel, loadActiveOrderIds, loadMoney, loadShippableOrderBlob, loadTransactionBlob, loadTransactionEntries, loadUserOrderIds } from './model.js';
 import { read } from './transaction.js';
 
 declare module 'xxscreeps/engine/runner/index.js' {
 	interface TickPayload {
 		transactions?: TransactionPayload;
-		// The active public order book plus this user's own orders, as shared unparsed blobs by id.
+		// The active public order book plus this user's own orders; blobs carry only the orders that
+		// changed since this runtime's last tick.
 		orders?: OrderPayload;
 		// Credit balance in millicredits; `Market.credits` divides by 1000.
 		money?: number;
@@ -55,40 +56,65 @@ hooks.register('runnerConnector', async player => {
 	} ];
 });
 
-// Orders are mutable across ticks but stable within one (the market shard-tick pass is the only
-// writer and reads are tick-synchronized), so the active book's id list and every order blob are
-// read once per tick and shared across this runner process's player instances: the book is
-// identical for every player, and an active order that is also one of yours is read once.
-interface OrderCache {
-	time: number;
-	active: Promise<string[]>;
-	blobs: Map<string, Promise<Readonly<Uint8Array> | null>>;
-}
+// Order blobs are mutable, so they are cached across ticks and invalidated by the order channel:
+// writers publish every id they touch, and each player's subscription both drops the shared cache
+// entry and marks the id for resend to that runtime. The book is identical for every player, so a
+// changed order is read once per process and shipped only to runtimes that see it.
+const orderBlobs = new Map<string, Promise<Readonly<Uint8Array> | null>>();
+const loadOrderBlobCached = (shard: Shard, id: string) =>
+	getOrSet(orderBlobs, id, () => loadShippableOrderBlob(shard, id));
 
-let orderCache: OrderCache | undefined;
-function orderCacheFor(shard: Shard, time: number) {
-	if (orderCache?.time !== time) {
-		orderCache = { time, active: loadActiveOrderIds(shard), blobs: new Map() };
-	}
-	return orderCache;
-}
+// The active book's id list is read once per tick and shared across this process's players.
+const loadActiveIdsForTick = function() {
+	let cache: { time: number; active: Promise<string[]> } | undefined;
+	return (shard: Shard, time: number) => {
+		if (cache?.time !== time) {
+			cache = { time, active: loadActiveOrderIds(shard) };
+		}
+		return cache.active;
+	};
+}();
 
-hooks.register('runnerConnector', player => [ undefined, {
-	async refresh(payload) {
-		const cache = orderCacheFor(player.shard, payload.time);
-		const [ active, mine, money ] = await Promise.all([
-			cache.active,
-			loadUserOrderIds(player.shard, player.userId),
-			loadMoney(player.shard, player.userId),
-		]);
-		const ids = [ ...new Set([ ...active, ...mine ]) ];
-		// An id can outlive its blob (the shard pass removes orders between the id-set read and this
-		// fetch), so missing blobs are dropped here and the runtime filters the id lists against them.
-		const entries = await Fn.mapAwait(ids, async id => {
-			const blob = await getOrSet(cache.blobs, id, () => loadOrderBlob(player.shard, id));
-			return blob && ([ id, blob ] as const);
-		});
-		payload.orders = { active, mine, blobs: Fn.fromEntries(Fn.filter(entries)) };
-		payload.money = money;
-	},
-} ]);
+hooks.register('runnerConnector', async player => {
+	const channel = await getOrderChannel(player.shard).subscribe();
+	// The whole visible book ships on the runtime's first tick; afterwards only dirty ids.
+	let fresh = true;
+	const dirty = new Set<string>();
+	channel.listen(message => {
+		for (const id of message.ids) {
+			orderBlobs.delete(id);
+			dirty.add(id);
+		}
+	});
+	return [ () => channel.disconnect(), {
+		initialize() {
+			fresh = true;
+			// Orders may have changed while no subscription in this process was listening; the fresh
+			// runtime re-reads the book, so drop the cache rather than serve possibly-stale buffers.
+			orderBlobs.clear();
+		},
+		async refresh(payload) {
+			// Snapshot before any await: an update published while this refresh is in flight stays
+			// marked and ships next tick.
+			const taken = [ ...dirty ];
+			dirty.clear();
+			const wasFresh = fresh;
+			fresh = false;
+			const [ active, mine, money ] = await Promise.all([
+				loadActiveIdsForTick(player.shard, payload.time),
+				loadUserOrderIds(player.shard, player.userId),
+				loadMoney(player.shard, player.userId),
+			]);
+			const members = new Set([ ...active, ...mine ]);
+			const wanted = wasFresh ? members : Fn.filter(taken, id => members.has(id));
+			// An id can outlive its blob (removed between the id-set read and this fetch), so missing
+			// blobs are dropped here and the runtime filters the id lists against them.
+			const entries = await Fn.mapAwait(wanted, async id => {
+				const blob = await loadOrderBlobCached(player.shard, id);
+				return blob && ([ id, blob ] as const);
+			});
+			payload.orders = { active, mine, blobs: Fn.fromEntries(Fn.filter(entries)) };
+			payload.money = money;
+		},
+	} ];
+});

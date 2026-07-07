@@ -1,7 +1,7 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { openStoreFormat, resourceEnumFormat } from 'xxscreeps/mods/resource/schema.js';
 import { ownedStructureShape } from 'xxscreeps/mods/structure/schema.js';
-import { declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
+import { declare, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
 
 /** @internal */
 export const terminalShape = declare('StructureTerminal', struct(ownedStructureShape, {
@@ -9,6 +9,8 @@ export const terminalShape = declare('StructureTerminal', struct(ownedStructureS
 	hits: 'int32',
 	store: openStoreFormat,
 	'#cooldownTime': 'int32',
+	// Market orders anchored to this terminal; their state is maintained by the room's tick pass.
+	'#orderIds': vector(Id.format),
 }));
 
 /** @internal */
@@ -22,4 +24,20 @@ export const transactionShape = struct({
 	'#sender': Id.format,
 	'#recipient': Id.format,
 	'#description': optional('string'),
+});
+
+/** @internal */
+export const orderShape = struct({
+	id: Id.format,
+	type: 'string',
+	resourceType: resourceEnumFormat,
+	totalAmount: 'int32',
+	remainingAmount: 'int32',
+	amount: 'int32',
+	roomName: 'string',
+	created: 'int32',
+	createdTimestamp: 'double',
+	active: 'bool',
+	'#price': 'double',
+	'#user': Id.format,
 });
