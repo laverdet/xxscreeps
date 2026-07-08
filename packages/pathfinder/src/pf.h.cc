@@ -74,9 +74,9 @@ class path_iterator : public util::incrementable_facade {
 				parents_{nullptr},
 				index_{sentinel_pos_index} {}
 
-		constexpr path_iterator(const auto& rooms, const auto& parents, pos_index_t index) :
+		constexpr path_iterator(const auto& rooms, const pos_index_t* parents, pos_index_t index) :
 				rooms_{rooms.data()},
-				parents_{parents.data()},
+				parents_{parents},
 				index_{index} {}
 
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -109,6 +109,13 @@ export struct result {
 		};
 };
 
+// Heap node type. `score` must be checked against `scores` to ensure it is not stale.
+struct heap_node {
+		constexpr auto operator==(const heap_node& right) const -> bool = default;
+		pos_index_t pos;
+		cost_t score;
+};
+
 // Big state arrays that are allocated once upfront and then reused for all iterations
 template <std::size_t RoomCapacity>
 struct instance_state {
@@ -118,13 +125,8 @@ struct instance_state {
 		using room_scope_table = scope_table<room_terrain, room_location_t, RoomCapacity>;
 		using open_closed_type = open_closed_t<search_capacity>;
 
-		struct heap_node {
-				constexpr auto operator==(const heap_node& right) const -> bool = default;
-				pos_index_t pos;
-				cost_t score;
-				constexpr static auto projection = [](const heap_node& node) -> cost_t { return node.score; };
-		};
-		using heap_type = heap_t<heap_node, std::greater<>, decltype(heap_node::projection), search_capacity / 8>;
+		using node_projection = decltype([](const heap_node& node) { return node.score; });
+		using heap_type = heap_t<heap_node, std::greater<>, node_projection, search_capacity / 8>;
 
 		room_scope_table room_table;
 		std::array<pos_index_t, search_capacity> parents;
@@ -150,14 +152,17 @@ struct look_delegate {
 };
 
 // Provides `parent_of` and `push_node`
-template <std::size_t RoomCapacity>
+template <class Heap>
 struct node_delegate {
-		auto parent_of(pos_index_t index) -> indexed_position_t;
+		auto parent_of(this auto& self, pos_index_t index) -> indexed_position_t;
 		auto push_node(indexed_position_t node, pos_index_t parent_index, cost_t g_cost) -> void;
 
 		heuristic_t heuristic;
 		double heuristic_weight{};
-		std::reference_wrapper<instance_state<RoomCapacity>> state;
+		open_closed_view open_closed;
+		cost_t* scores{};
+		pos_index_t* parents{};
+		std::reference_wrapper<Heap> heap;
 };
 
 // Collect everything above into an instantiable implementation

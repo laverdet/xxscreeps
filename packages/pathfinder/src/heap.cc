@@ -73,6 +73,7 @@ class heap_t : private Compare, private Projection {
 		[[nodiscard]] constexpr auto key_comp() const -> const key_compare& { return *this; }
 		[[nodiscard]] constexpr auto key_proj() const -> const key_project& { return *this; }
 		[[nodiscard]] constexpr auto top() const -> value_type { return heap_[ 0 ]; }
+		[[nodiscard]] constexpr auto size() const -> std::size_t { return heap_.size(); }
 		constexpr auto clear() -> void { heap_.clear(); }
 
 		constexpr auto pop() -> void {

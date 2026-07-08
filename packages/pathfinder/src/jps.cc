@@ -2,7 +2,8 @@ module;
 #include <cassert>
 export module screeps:jps;
 import :pf;
-using namespace screeps;
+
+namespace screeps {
 
 // ~ JPS dragons ~
 
@@ -145,8 +146,7 @@ auto jump_neighbor(Type& pf, indexed_position_t neighbor, const indexed_position
 	pf.push_node(neighbor, index, g_cost);
 }
 
-template <jps_pathfinder Type>
-auto jps(Type& pf, const indexed_position_t pos, const pos_index_t index, cost_t g_cost) -> void {
+constexpr auto jps = []<jps_pathfinder Type>(Type& pf, const indexed_position_t pos, const pos_index_t index, cost_t g_cost) -> void {
 	assert(pos_index_t{pos} == index);
 	auto parent = pf.parent_of(index);
 	int dx = sign(pos.xx - parent.xx);
@@ -282,4 +282,6 @@ auto jps(Type& pf, const indexed_position_t pos, const pos_index_t index, cost_t
 			jump_neighbor(pf, pos.translate(-1, dy), pos, index, g_cost, cost, pf.look(pos.translate(-1, dy)));
 		}
 	}
-}
+};
+
+} // namespace screeps

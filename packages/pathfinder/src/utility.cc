@@ -76,7 +76,6 @@ class nominal {
 template <class Type, std::size_t Size>
 class inplace_vector : private std::allocator<Type> {
 	public:
-		[[nodiscard]] constexpr auto operator==(const auto& right) const -> bool { return data_ == right.data_; }
 		[[nodiscard]] constexpr auto empty() const -> bool { return size_ == 0; }
 		[[nodiscard]] constexpr auto size() const -> std::size_t { return size_; }
 		constexpr auto back(this auto& self) -> auto& { return self.data_[ self.size_ - 1 ]; }
@@ -85,6 +84,10 @@ class inplace_vector : private std::allocator<Type> {
 		constexpr auto data(this auto& self) { return self.data_.data(); }
 		constexpr auto operator[](this auto& self, std::size_t index) -> auto& { return self.data_[ index ]; }
 		constexpr auto front(this auto& self) -> auto& { return self.data_.front(); }
+
+		[[nodiscard]] constexpr auto operator==(const auto& right) const -> bool {
+			return std::span{data_, size_} == std::span{right.data_, right.size_};
+		}
 
 		constexpr auto clear() -> void {
 			while (size_ > 0) {

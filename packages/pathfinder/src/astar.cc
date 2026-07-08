@@ -5,8 +5,7 @@ import :pf;
 namespace screeps {
 
 // Run an iteration of basic A*
-template <astar_pathfinder Type>
-auto astar(Type pf, const indexed_position_t pos, const pos_index_t index, cost_t g_cost) -> void {
+auto astar = []<astar_pathfinder Type>(Type pf, const indexed_position_t pos, const pos_index_t index, cost_t g_cost) -> void {
 	assert(pos_index_t{pos} == index);
 	for (auto dir : contiguous_enum_range(direction_t::TOP, direction_t::TOP_LEFT)) {
 		auto neighbor = pos.position_in_direction(dir);
@@ -50,6 +49,6 @@ auto astar(Type pf, const indexed_position_t pos, const pos_index_t index, cost_
 		}
 		pf.push_node({room_index, neighbor}, index, g_cost + n_cost);
 	}
-}
+};
 
 } // namespace screeps

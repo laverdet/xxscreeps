@@ -91,60 +91,74 @@ template <class Callback, class RoomTable>
 }
 
 // Return the indexed parent of the given node
-template <std::size_t RoomCapacity>
-auto node_delegate<RoomCapacity>::parent_of(pos_index_t index) -> indexed_position_t {
-	return indexed_position_t{state.get().room_table, state.get().parents[ *index ]};
+template <class Heap>
+auto node_delegate<Heap>::parent_of(this auto& self, pos_index_t index) -> indexed_position_t {
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+	return indexed_position_t{self.room_table.get(), self.parents[ *index ]};
 }
 
 // Push a new node to the heap, or update its cost if it already exists
-template <std::size_t RoomCapacity>
-auto node_delegate<RoomCapacity>::push_node(indexed_position_t node, pos_index_t parent_index, cost_t g_cost) -> void {
-	auto& state = this->state.get();
-
+template <class Heap>
+auto node_delegate<Heap>::push_node(indexed_position_t node, pos_index_t parent_index, cost_t g_cost) -> void {
 	auto index = pos_index_t{node};
-	if (state.open_closed.is_closed(*index)) {
+	if (open_closed.is_closed(*index)) {
 		return;
 	}
 	auto h_cost = static_cast<cost_t>(heuristic(node) * heuristic_weight);
 	auto f_cost = h_cost + g_cost;
 
-	if (state.open_closed.is_open(*index)) {
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-		if (state.scores[ *index ] > f_cost) {
-			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-			state.scores[ *index ] = f_cost;
-			state.heap.push({index, f_cost});
-			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-			state.parents[ *index ] = parent_index;
+	if (open_closed.is_open(*index)) {
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		if (scores[ *index ] > f_cost) {
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+			scores[ *index ] = f_cost;
+			heap.get().push({index, f_cost});
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+			parents[ *index ] = parent_index;
 			// std::print("~ {}: h({}) + g({}) = f({})\n", node, h_cost, g_cost, f_cost);
 		}
 	} else {
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-		state.scores[ *index ] = f_cost;
-		state.heap.push({index, f_cost});
-		state.open_closed.open(*index);
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-		state.parents[ *index ] = parent_index;
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		scores[ *index ] = f_cost;
+		heap.get().push({index, f_cost});
+		open_closed.open(*index);
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		parents[ *index ] = parent_index;
 		// std::print("+ {}: h({}) + g({}) = f({})\n", node, h_cost, g_cost, f_cost);
 	}
 }
 
 // Perform the search~
 template <auto Check, class Callback, std::size_t RoomCapacity>
-auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, world_position_t origin, heuristic_t heuristic, const options& options) -> std::optional<result> {
+auto pathfinder<Check, Callback, RoomCapacity>::search(
+	Callback room_callback,
+	world_position_t origin,
+	heuristic_t heuristic,
+	const options& options
+) -> std::optional<result> {
+
+	// Special case for searching to same node, otherwise it searches everywhere because origin node
+	// is closed
+	constexpr auto empty_path = std::ranges::subrange{path_iterator{sentinel_path_iterator{}}, sentinel_path_iterator{}};
+	if (heuristic(origin) == 0) {
+		return result{.path = empty_path};
+	}
 
 	// Clean up from previous iteration
-	instance_state_.room_table.clear();
-	instance_state_.open_closed.clear();
 	instance_state_.heap.clear();
+	instance_state_.room_table.clear();
 
 	// Algorithm delegate
 	auto blocked_rooms = blocked_rooms_type{};
+	auto max_cost = std::clamp(options.max_cost, 1, std::numeric_limits<cost_t>::max());
 	auto delegate = composite_delegate{
 		node_delegate{
 			.heuristic = std::move(heuristic),
 			.heuristic_weight = std::clamp(options.heuristic_weight, 1., 9.),
-			.state = std::ref(instance_state_),
+			.open_closed = instance_state_.open_closed.clear_and_make_view(),
+			.scores = instance_state_.scores.data(),
+			.parents = instance_state_.parents.data(),
+			.heap = std::ref(instance_state_.heap),
 		},
 		look_delegate{
 			.max_rooms = static_cast<unsigned>(std::clamp(options.max_rooms, 1, static_cast<int>(RoomCapacity))),
@@ -155,95 +169,97 @@ auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, w
 		}
 	};
 
-	// Local state
-	auto max_cost = std::clamp(options.max_cost, 1, std::numeric_limits<cost_t>::max());
-	auto ops_remaining = std::clamp(options.max_ops, 1, std::numeric_limits<int>::max());
-	auto min_node_h_cost = std::numeric_limits<cost_t>::max();
-	auto min_node_g_cost = 0;
-	auto min_node = indexed_position_t{};
-
-	// Special case for searching to same node, otherwise it searches everywhere because origin node
-	// is closed
-	constexpr auto empty_path = std::ranges::subrange{path_iterator{sentinel_path_iterator{}}, sentinel_path_iterator{}};
-	if (delegate.heuristic(origin) == 0) {
-		return result{
-			.path = empty_path,
-			.cost = 0,
-			.ops = 0,
-			.incomplete = false,
-		};
-	}
-
 	// Prime data for `index_from_pos`
 	if (delegate.room_index_from_location(origin.room()) == room_index_sentinel) {
 		// Initial room is inaccessible
 		return result{
 			.path = empty_path,
-			.cost = 0,
-			.ops = 0,
 			.incomplete = true,
 		};
 	}
 
+	// Local state
+	auto* parents = delegate.parents;
+	auto* scores = delegate.scores;
+	auto& room_table = delegate.room_table.get();
+	auto ops_remaining = std::clamp(options.max_ops, 1, std::numeric_limits<int>::max());
+	auto min_node_g_cost = 0;
+	auto min_node_h_cost = std::numeric_limits<cost_t>::max();
+
 	// Initial A* iteration
-	auto& parents = instance_state_.parents;
-	auto& open_closed = instance_state_.open_closed;
-	min_node = delegate.index_from_pos(origin);
+	auto min_node = delegate.index_from_pos(origin);
 	auto index = pos_index_t{min_node};
-	open_closed.close(*index);
-	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-	parents[ *index ] = pos_index_t{std::numeric_limits<pos_index_t>::max()};
+	delegate.open_closed.close(*index);
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+	parents[ *index ] = sentinel_pos_index;
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+	scores[ *index ] = static_cast<cost_t>(heuristic(origin) * delegate.heuristic_weight); // g_cost == 0
 	astar(delegate, min_node, index, 0);
 
+	// Generic iteration step used for forward/reverse and astar/jps expansions
+	constexpr auto make_iterate = [](auto& delegate, auto& min_node, auto& min_node_h_cost, auto& min_node_g_cost, auto max_cost) -> auto {
+		auto open_closed = delegate.open_closed;
+		auto* scores = delegate.scores;
+		auto& heap = delegate.heap.get();
+		auto& room_table = delegate.room_table.get();
+		return [ &, open_closed, scores, max_cost ](auto algorithm) mutable -> bool {
+			while (!heap.empty()) {
+				// Pull cheapest open node off the heap; discard stale entries
+				auto [ current, score ] = heap.top();
+				heap.pop();
+				// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+				if (scores[ *current ] != score) {
+					continue;
+				}
+				open_closed.close(*current);
+
+				// Calculate costs
+				auto pos = indexed_position_t{room_table, current};
+				cost_t h_cost = delegate.heuristic(pos);
+				cost_t g_cost = score - static_cast<int>(h_cost * delegate.heuristic_weight);
+				// std::print("\n* {}: h({}) + g({}) = f({})\n", pos, h_cost, g_cost, score);
+
+				if (h_cost == 0) {
+					// Reached destination
+					min_node = pos;
+					min_node_h_cost = 0;
+					min_node_g_cost = g_cost;
+					break;
+				} else if (h_cost < min_node_h_cost) {
+					// Found better path
+					min_node = pos;
+					min_node_h_cost = h_cost;
+					min_node_g_cost = g_cost;
+				}
+				if (g_cost + h_cost > max_cost) {
+					// Exceeded cost budget
+					break;
+				}
+
+				// Add next neighbors to heap
+				algorithm(delegate, pos, current, g_cost);
+				return true;
+			}
+			return false;
+		};
+	};
+
 	// Loop until we have a solution
-	auto& heap = instance_state_.heap;
-	auto& scores = instance_state_.scores;
-	auto& room_table = instance_state_.room_table;
 	try {
-		while (!heap.empty() && ops_remaining > 0) {
-			// Pull cheapest open node off the heap; discard stale entries
-			auto [ current, score ] = heap.top();
-			heap.pop();
-			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-			if (scores[ *current ] != score) {
-				continue;
+		auto iterate = make_iterate(delegate, min_node, min_node_h_cost, min_node_g_cost, max_cost);
+		auto dispatch = [ &, iterate ](auto algorithm) mutable -> void {
+			while (ops_remaining > 0 && iterate(algorithm)) {
+				--ops_remaining;
+				Check();
 			}
-			open_closed.close(*current);
-
-			// Calculate costs
-			auto pos = indexed_position_t{room_table, current};
-			cost_t h_cost = delegate.heuristic(pos);
-			cost_t g_cost = score - static_cast<int>(h_cost * delegate.heuristic_weight);
-			// std::print("\n* {}: h({}) + g({}) = f({})\n", pos, h_cost, g_cost, score);
-
-			// Reached destination?
-			if (h_cost == 0) {
-				min_node = pos;
-				min_node_h_cost = 0;
-				min_node_g_cost = g_cost;
-				break;
-			} else if (h_cost < min_node_h_cost) {
-				min_node = pos;
-				min_node_h_cost = h_cost;
-				min_node_g_cost = g_cost;
-			}
-			if (g_cost + h_cost > max_cost) {
-				break;
-			}
-
-			// Add next neighbors to heap
-			if (options.heuristic_weight == 1) {
-				// jps can sometimes produce suboptimal paths with non-uniform cost grids even with the added
-				// forced neighbor heuristic. so, for heuristicWeight == 1 we will use astar for the best
-				// paths.
-				astar(delegate, pos, current, g_cost);
-			} else {
-				jps(delegate, pos, current, g_cost);
-			}
-			--ops_remaining;
-
-			// Check termination
-			Check();
+		};
+		if (delegate.heuristic_weight == 1) {
+			// jps can sometimes produce suboptimal paths with non-uniform cost grids even with the added
+			// forced neighbor heuristic. so, for heuristicWeight == 1 we will use astar for the best
+			// paths.
+			dispatch(astar);
+		} else {
+			dispatch(jps);
 		}
 		// NOLINTNEXTLINE(bugprone-empty-catch)
 	} catch (const std::range_error&) {
@@ -261,4 +277,5 @@ auto pathfinder<Check, Callback, RoomCapacity>::search(Callback room_callback, w
 		.incomplete = min_node_h_cost != 0,
 	};
 }
+
 }; // namespace screeps
