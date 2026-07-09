@@ -4,8 +4,10 @@ import { gzip } from 'node:zlib';
 import { hooks, makeValidatedPayloadRoute, makeValidatedQueryRoute } from 'xxscreeps/backend/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import { requestRunnerEval } from 'xxscreeps/engine/runner/model.js';
-import { loadUserMemoryString } from 'xxscreeps/mods/meta/memory/model.js';
+import { isValidSegmentId, kMaxMemorySegmentLength } from 'xxscreeps/mods/meta/memory/memory.js';
+import { getPublicSegmentChannel, loadMemorySegmentBlob, loadUserMemoryString, saveMemorySegmentBlob } from 'xxscreeps/mods/meta/memory/model.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { typedArrayToString, utf16ToBuffer } from 'xxscreeps/utility/string.js';
 import { throttle } from 'xxscreeps/utility/utility.js';
 
 const invalidPath = 'Incorrect memory path';
@@ -134,4 +136,75 @@ hooks.register('route', {
 		await requestRunnerEval(context.shard, userId, expression, false);
 		return { ok: 1 };
 	}),
+});
+
+interface SegmentGetRequest {
+	segment: string;
+}
+
+const segmentGetRequestSchema: JSONSchemaType<SegmentGetRequest> = {
+	type: 'object',
+	properties: {
+		segment: { type: 'string', pattern: '^\\d+$' },
+	},
+	required: [ 'segment' ],
+};
+
+hooks.register('route', {
+	path: '/api/user/memory-segment',
+
+	execute: makeValidatedQueryRoute(segmentGetRequestSchema, async context => {
+		const { userId } = context.state;
+		if (userId == null) {
+			return;
+		}
+		const segmentId = Number(context.request.query.segment);
+		if (!isValidSegmentId(segmentId)) {
+			return { error: 'invalid segment' };
+		}
+		const blob = await loadMemorySegmentBlob(context.shard, userId, segmentId);
+		// Missing segments read as an empty string, same as `RawMemory.segments` in the runtime
+		const data = blob === null ? '' : typedArrayToString(new Uint16Array(blob.buffer, blob.byteOffset, blob.length >>> 1));
+		return { ok: 1, data };
+	}),
+});
+
+interface SegmentPostRequest {
+	segment: number;
+	data: string;
+}
+
+const segmentPostRequestSchema: JSONSchemaType<SegmentPostRequest> = {
+	type: 'object',
+	properties: {
+		segment: { type: 'number' },
+		data: { type: 'string' },
+	},
+	required: [ 'segment', 'data' ],
+};
+
+hooks.register('route', {
+	path: '/api/user/memory-segment',
+	method: 'post',
+
+	execute: makeValidatedPayloadRoute(segmentPostRequestSchema, async context => {
+		const { userId } = context.state;
+		if (userId == null) {
+			return;
+		}
+		const { segment, data } = context.request.body;
+		if (!isValidSegmentId(segment)) {
+			return { error: 'invalid segment' };
+		}
+		if (data.length > kMaxMemorySegmentLength) {
+			throw new Error('Memory segment size is too large');
+		}
+		// The publish wakes up subscribers, same as the runner connector does on save. Firing it
+		// alongside the write is safe because reads are synchronized on tick.
+		await Promise.all([
+			saveMemorySegmentBlob(context.shard, userId, segment, utf16ToBuffer(data)),
+			getPublicSegmentChannel(context.shard, userId).publish({ type: 'segment', id: segment }),
+		]);
+		return { ok: 1 };
+	}, { coerceTypes: true }),
 });

@@ -1,5 +1,6 @@
 import type { ForeignSegmentPayload, SegmentPayload, flush } from './memory.js';
 import type { ForeignSegmentRequest, StoredForeignSegmentRequest } from './model.js';
+import type { SubscriptionFor } from 'xxscreeps/engine/db/channel.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -29,6 +30,8 @@ hooks.register('runnerConnector', player => {
 	const { shard, userId } = player;
 	let activeSegments: Set<number>;
 	let nextSegments: Set<number> | undefined;
+	const dirtySegments = new Set<number>();
+	let ownSubscription: SubscriptionFor<ReturnType<typeof getPublicSegmentChannel>> | undefined;
 	let activeForeignSegment: StoredForeignSegmentRequest | null = null;
 	let subscribedUserId: string | null = null;
 	let subscriptionEffect: Effect | undefined;
@@ -54,11 +57,29 @@ hooks.register('runnerConnector', player => {
 		}
 	}
 
-	return [ () => subscriptionEffect?.(), {
+	return [ () => {
+		subscriptionEffect?.();
+		ownSubscription?.disconnect();
+	}, {
 		async initialize(payload) {
 			activeSegments = new Set();
 			nextSegments = undefined;
-			activeForeignSegment = await loadActiveForeignSegment(shard, userId);
+			dirtySegments.clear();
+			// The own-channel subscription watches for out-of-band segment writes, e.g. from the
+			// memory-segment API endpoint. This runner's own saves publish through this same
+			// subscription, so they are not echoed back.
+			[ ownSubscription, activeForeignSegment ] = await Promise.all([
+				ownSubscription ?? async function() {
+					const subscription = await getPublicSegmentChannel(shard, userId).subscribe();
+					subscription.listen(message => {
+						if (message.type === 'segment' && (activeSegments.has(message.id) || nextSegments?.has(message.id) === true)) {
+							dirtySegments.add(message.id);
+						}
+					});
+					return subscription;
+				}(),
+				loadActiveForeignSegment(shard, userId),
+			]);
 			await syncForeignSubscription();
 			payload.memoryBlob = await loadUserMemoryBlob(shard, userId);
 		},
@@ -75,6 +96,20 @@ hooks.register('runnerConnector', player => {
 				));
 				activeSegments = nextSegments;
 				nextSegments = undefined;
+			}
+			// Resend active segments written out-of-band since the last tick. A duplicate id from the
+			// newly-requested batch above is fine: the runtime applies payloads in order, so this
+			// fresher read wins.
+			if (dirtySegments.size !== 0) {
+				const ids = [ ...Fn.filter(dirtySegments, id => activeSegments.has(id)) ];
+				dirtySegments.clear();
+				payload.memorySegments = [
+					...payload.memorySegments ?? [],
+					...await Fn.mapAwait(ids, async id => ({
+						id,
+						payload: await loadMemorySegmentBlob(shard, userId, id),
+					})),
+				];
 			}
 			// Only refetch and push to the runtime when the publisher notified us (or on target
 			// change). Otherwise the runtime holds last tick's payload and doesn't recreate the
@@ -102,8 +137,9 @@ hooks.register('runnerConnector', player => {
 				nextSegments = new Set(Fn.take(payload.activeSegmentsRequest, kMaxActiveSegments));
 			}
 
-			// Dispatch updates
-			const channel = getPublicSegmentChannel(shard, userId);
+			// Dispatch updates. Publishing through our own subscription keeps these saves from echoing
+			// back into the out-of-band listener above.
+			const channel = ownSubscription!;
 			await Promise.all([
 				// Save primary memory blob
 				payload.memoryUpdated.payload && saveMemoryBlob(shard, userId, payload.memoryUpdated.payload),
