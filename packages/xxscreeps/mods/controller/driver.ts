@@ -1,7 +1,28 @@
-import * as User from 'xxscreeps/engine/db/user/index.js';
 import { hooks as processorHooks } from 'xxscreeps/engine/processor/index.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
-import { controlledRoomKey, reservedRoomKey } from './processor.js';
+import { GlobalControlWatcher, insertControlledRoom } from './model.js';
+
+processorHooks.register('refreshRoom', async (shard, room) => {
+	const userId = room['#user'];
+	if (userId != null) {
+		if (room['#level'] > 0) {
+			await insertControlledRoom(shard, userId, room.name);
+		}
+	}
+});
+
+hooks.register('runnerConnector', async player => {
+	const { shard, userId } = player;
+	const watcher = await GlobalControlWatcher.create(shard, userId);
+	return [ () => watcher.disposeAsync(), {
+		refresh(payload) {
+			payload.gcl = watcher.gcl;
+			payload.controlledRoomCount = watcher.controlledRoomCount;
+		},
+	} ];
+});
+
+// ---
 
 declare module 'xxscreeps/engine/runner/index.js' {
 	interface TickPayload {
@@ -9,28 +30,3 @@ declare module 'xxscreeps/engine/runner/index.js' {
 		gcl: number;
 	}
 }
-
-processorHooks.register('refreshRoom', async (shard, room) => {
-	const userId = room['#user'];
-	if (userId != null) {
-		const key = room['#level'] === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);
-		await shard.scratch.sAdd(key, [ room.name ]);
-	}
-});
-
-hooks.register('runnerConnector', player => {
-	const { shard, userId } = player;
-	return [ undefined, {
-		async refresh(payload) {
-			[
-				payload.controlledRoomCount,
-				payload.gcl,
-			] = await Promise.all([
-				shard.scratch.sCard(controlledRoomKey(userId)),
-				async function() {
-					return Number(await shard.db.data.hGet(User.infoKey(userId), 'gcl')) || 0;
-				}(),
-			]);
-		},
-	} ];
-});

@@ -1,7 +1,8 @@
 import type { PubSubProvider, PubSubSubscription } from './storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 
-type Listener<Message> = (message: Message) => void;
+export type Listener<Message> = (message: Message) => void;
+export type DeferListener<Message> = (listener: Listener<Message>) => void;
 type ChannelFactory<Message = any> = (...args: any[]) => Channel<Message>;
 export type MessageFor<Factory> = Factory extends ChannelFactory<infer Message> ? Message : never;
 export type SubscriptionFor<Factory> = Factory extends ChannelFactory<infer Message> ? Subscription<Message> : never;
@@ -99,6 +100,22 @@ export class Subscription<Message> {
 				throw new Error('Unlisten called more than once');
 			}
 			this.listeners.delete(listener);
+		};
+	}
+
+	// Return a function which will add a listener to the channel. When the listener is added, it will
+	// be called with all messages that have been sent to the channel since this function was called.
+	listenDeferred() {
+		const queue: Message[] = [];
+		const unlisten = this.listen(message => {
+			queue.push(message);
+		});
+		return (listener: Listener<Message>) => {
+			unlisten();
+			this.listen(listener);
+			for (const message of queue) {
+				listener(message);
+			}
 		};
 	}
 

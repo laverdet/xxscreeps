@@ -27,6 +27,20 @@ export function bifurcate(iterator: Iterable<any>, callback: (value: any) => Loo
 	return [ yes, no ];
 }
 
+export class DisposableResource implements Disposable {
+	protected readonly disposable = new DisposableStack();
+
+	[Symbol.dispose]() { this.disposable.dispose(); }
+	dispose() { this.disposable.dispose(); }
+}
+
+export class AsyncDisposableResource implements AsyncDisposable {
+	protected readonly disposable = new AsyncDisposableStack();
+
+	async [Symbol.asyncDispose]() { await this.disposable.disposeAsync(); }
+	async disposeAsync() { await this.disposable.disposeAsync(); }
+}
+
 // Clamps a number to a given range
 export function clamp(min: number, max: number, value: number) {
 	return Math.max(min, Math.min(max, value));

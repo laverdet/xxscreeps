@@ -3,7 +3,7 @@ import { bindMapRenderer, bindRenderer, bindTerrainRenderer, hooks, makeValidate
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { userToIntentRoomsSetKey, userToPresenceRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { StructureController } from './controller.js';
-import { controlledRoomKey as controlledRoomsKey, reservedRoomKey as reservedRoomsKey } from './processor.js';
+import { controlledRoomsKey, reservedRoomsKey } from './model.js';
 
 bindMapRenderer(StructureController, () => 'c');
 bindTerrainRenderer(StructureController, () => 0x505050);

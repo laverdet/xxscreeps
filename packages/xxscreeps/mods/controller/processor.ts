@@ -11,19 +11,14 @@ import { upsertNotification } from 'xxscreeps/mods/notifications/model.js';
 import { checkActiveStructures } from 'xxscreeps/mods/structure/structure.js';
 import { StructureController, checkActivateSafeMode, checkUnclaim } from './controller.js';
 import * as CreepLib from './creep.js';
+import { controlledRoomsKey, incrementGlobalControlLevel, insertControlledRoom, insertReservedRoom, removeControlledRoom, removeReservedRoom } from './model.js';
 
 const PRE_DOWNGRADE_WARNING_TICKS = 3000;
-
-export const controlledRoomKey = (userId: string) => `user/${userId}/controlledRooms`;
-export const reservedRoomKey = (userId: string) => `user/${userId}/reservedRooms`;
 
 // Processor methods
 export function claim(context: ProcessorContext, controller: StructureController, userId: string) {
 	const { room } = controller;
-	context.task(Promise.all([
-		context.shard.scratch.sAdd(controlledRoomKey(userId), [ room.name ]),
-		context.shard.scratch.sRem(reservedRoomKey(userId), [ room.name ]),
-	]));
+	context.task(insertControlledRoom(context.shard, userId, room.name));
 	controller['#reservationEndTime'] = 0;
 	controller['#user'] = userId;
 	updateRoomStatus(room, 1, userId);
@@ -34,8 +29,8 @@ export function release(context: ProcessorContext, controller: StructureControll
 	const { room } = controller;
 	const userId = room['#user'];
 	if (userId != null) {
-		const key = controller.level === 0 ? reservedRoomKey(userId) : controlledRoomKey(userId);
-		context.task(context.shard.scratch.sRem(key, [ controller.room.name ]));
+		const remove = controller.level > 0 ? removeControlledRoom : removeReservedRoom;
+		context.task(remove(context.shard, userId, controller.room.name));
 	}
 	controller['#downgradeTime'] = 0;
 	controller['#progress'] = 0;
@@ -50,7 +45,7 @@ export function release(context: ProcessorContext, controller: StructureControll
 export function reserve(context: ProcessorContext, controller: StructureController, userId: string, endTime: number) {
 	if (controller['#reservationEndTime'] === 0) {
 		updateRoomStatus(controller.room, 0, userId);
-		context.task(context.shard.scratch.sAdd(reservedRoomKey(userId), [ controller.room.name ]));
+		context.task(insertReservedRoom(context.shard, userId, controller.room.name));
 	}
 	controller['#reservationEndTime'] = endTime;
 	context.didUpdate();
@@ -110,20 +105,20 @@ const intents = [
 			context.task(async function() {
 				// Fetch current GCL & controlled room count from database
 				const [ roomCount, gcl ] = await Promise.all([
-					context.shard.scratch.sCard(controlledRoomKey(userId)),
+					context.shard.scratch.sCard(controlledRoomsKey(userId)),
 					context.shard.db.data.hGet(User.infoKey(userId), 'gcl'),
 				]);
 				// Check GCL, and save the newly-controlled room
 				const roomCapacity = Math.floor((Number(gcl) / C.GCL_MULTIPLY) ** (1 / C.GCL_POW)) + 1;
 				if (roomCapacity > Number(roomCount)) {
 					const [ , count ] = await Promise.all([
-						context.shard.scratch.sAdd(controlledRoomKey(userId), [ roomName ]),
-						context.shard.scratch.sCard(controlledRoomKey(userId)),
+						insertControlledRoom(context.shard, userId, roomName),
+						context.shard.scratch.sCard(controlledRoomsKey(userId)),
 					]);
 					if (roomCapacity >= count) {
 						return true;
 					} else {
-						await context.shard.scratch.sRem(controlledRoomKey(userId), [ roomName ]);
+						await removeControlledRoom(context.shard, userId, roomName);
 						return false;
 					}
 				}
@@ -267,7 +262,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 			controller['#downgradeTime'] = 1 + Math.min(
 				controller['#downgradeTime'] + C.CONTROLLER_DOWNGRADE_RESTORE,
 				Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!);
-			context.task(context.shard.db.data.hincrBy(User.infoKey(controller['#user']!), 'gcl', upgradePower));
+			context.task(incrementGlobalControlLevel(context.shard, controller['#user']!, upgradePower));
 			context.didUpdate();
 		} else if (ticksToDowngrade === 0) {
 			const { room } = controller;
