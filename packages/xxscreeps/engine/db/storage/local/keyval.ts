@@ -8,7 +8,7 @@ import { registerStorageProvider } from 'xxscreeps/engine/db/storage/register.js
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
-import { getOrSet } from 'xxscreeps/utility/utility.js';
+import { AsyncDisposableResource, getOrSet } from 'xxscreeps/utility/utility.js';
 import { BlobStorage } from './blob.js';
 import { connect, makeClient, makeHost } from './responder.js';
 import { SortedSet } from './sorted-set.js';
@@ -18,22 +18,21 @@ registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
 	return connect(url, LocalKeyValClient, LocalKeyValHost, create);
 });
 
-export class LocalKeyValResponder implements AsyncDisposable, MaybePromises<Pr.KeyValProvider> {
+export class LocalKeyValResponder extends AsyncDisposableResource implements MaybePromises<Pr.KeyValProvider> {
 	readonly blob;
-	private readonly disposable;
 	private readonly data = new Map<string, any>();
 	private readonly expires = new Set<string>();
 	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: Pr.Value[]) => any>();
 	private readonly url;
 	private saveWait: Promise<void> | undefined;
 
-	constructor(
+	private constructor(
 		disposable: AsyncDisposableStack,
 		url: URL | undefined,
 		blob: BlobStorage,
 		payload: string | undefined,
 	) {
-		this.disposable = disposable;
+		super(disposable);
 		this.url = url;
 		this.blob = blob;
 		if (payload) {
@@ -79,10 +78,6 @@ export class LocalKeyValResponder implements AsyncDisposable, MaybePromises<Pr.K
 
 		// Make host, convert disposable to effect
 		return new LocalKeyValResponder(disposable.move(), url, blob, payload);
-	}
-
-	async [Symbol.asyncDispose]() {
-		return this.disposable.disposeAsync();
 	}
 
 	copy(from: string, to: string, options?: Pr.Copy) {

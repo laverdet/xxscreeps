@@ -1,16 +1,16 @@
 import type { World } from 'xxscreeps/game/map.js';
 import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
+import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
 
-export class BackendContext {
-	readonly disposable;
+export class BackendContext extends AsyncDisposableResource {
 	readonly db;
 	readonly shard;
 	readonly world;
 	readonly accessibleRooms;
 
 	private constructor(disposable: AsyncDisposableStack, db: Database, shard: Shard, world: World, accessibleRooms: Set<string>) {
-		this.disposable = disposable;
+		super(disposable);
 		this.db = db;
 		this.shard = shard;
 		this.world = world;
@@ -26,9 +26,5 @@ export class BackendContext {
 		const rooms = await shard.data.sMembers('rooms');
 		const context = new BackendContext(disposable.move(), db, shard, world, new Set(rooms));
 		return context;
-	}
-
-	[Symbol.asyncDispose]() {
-		return this.disposable.disposeAsync();
 	}
 }

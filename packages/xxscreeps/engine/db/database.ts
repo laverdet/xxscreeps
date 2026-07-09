@@ -2,16 +2,16 @@ import type { KeyValProvider, PubSubProvider } from 'xxscreeps/engine/db/storage
 import { config } from 'xxscreeps/config/index.js';
 import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
 import { acquireWith } from 'xxscreeps/utility/async.js';
+import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
 
-export class Database {
+export class Database extends AsyncDisposableResource {
 	readonly data;
 	readonly pubsub;
-	readonly disposable;
 	// Ensure this isn't compatible with `Shard`
 	declare private readonly '#private': any;
 
 	private constructor(disposable: AsyncDisposableStack, data: KeyValProvider, pubsub: PubSubProvider) {
-		this.disposable = disposable;
+		super(disposable);
 		this.data = data;
 		this.pubsub = pubsub;
 	}
@@ -27,10 +27,6 @@ export class Database {
 			connectToProvider(info.pubsub, 'pubsub'),
 		);
 		return new Database(disposable.move(), data, pubsub);
-	}
-
-	[Symbol.asyncDispose]() {
-		return this.disposable.disposeAsync();
 	}
 
 	save() {

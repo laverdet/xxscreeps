@@ -28,14 +28,22 @@ export function bifurcate(iterator: Iterable<any>, callback: (value: any) => Loo
 }
 
 export class DisposableResource implements Disposable {
-	protected readonly disposable = new DisposableStack();
+	protected readonly disposable;
+
+	protected constructor(stack?: DisposableStack) {
+		this.disposable = stack ?? new DisposableStack();
+	}
 
 	[Symbol.dispose]() { this.disposable.dispose(); }
 	dispose() { this.disposable.dispose(); }
 }
 
 export class AsyncDisposableResource implements AsyncDisposable {
-	protected readonly disposable = new AsyncDisposableStack();
+	protected readonly disposable;
+
+	protected constructor(stack?: AsyncDisposableStack) {
+		this.disposable = stack ?? new AsyncDisposableStack();
+	}
 
 	async [Symbol.asyncDispose]() { await this.disposable.disposeAsync(); }
 	async disposeAsync() { await this.disposable.disposeAsync(); }

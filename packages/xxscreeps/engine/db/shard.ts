@@ -7,12 +7,13 @@ import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
 import { World } from 'xxscreeps/game/map.js';
 import { acquireWith } from 'xxscreeps/utility/async.js';
+import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
 import { getRoomChannel } from '../processor/model.js';
 import { Channel } from './channel.js';
 
 type Message = { type: 'tick'; time: number } | { type: null };
 
-export class Shard {
+export class Shard extends AsyncDisposableResource {
 	time = -1;
 	readonly db;
 	readonly name;
@@ -20,7 +21,6 @@ export class Shard {
 	readonly pubsub;
 	readonly scratch;
 	readonly channel;
-	private readonly disposable;
 
 	private constructor(
 		disposable: AsyncDisposableStack,
@@ -31,7 +31,7 @@ export class Shard {
 		scratch: KeyValProvider,
 		channel: Subscription<Message>,
 	) {
-		this.disposable = disposable;
+		super(disposable);
 		this.db = db;
 		this.name = name;
 		this.data = data;
@@ -76,10 +76,6 @@ export class Shard {
 		const instance = new Shard(disposable.move(), db, info.name, data, pubsub, scratch, channel);
 		instance.time = Math.max(time, instance.time);
 		return instance;
-	}
-
-	[Symbol.asyncDispose]() {
-		return this.disposable.disposeAsync();
 	}
 
 	save() {

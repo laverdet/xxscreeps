@@ -21,7 +21,7 @@ export async function incrementGlobalPowerLevel(shard: Shard, userId: string, am
 export class GlobalPowerWatcher extends AsyncDisposableResource {
 	power;
 
-	constructor(disposable: DisposableStack, power: number, listen: DeferListener<GlobalPowerMessage>) {
+	private constructor(disposable: DisposableStack, power: number, listen: DeferListener<GlobalPowerMessage>) {
 		super();
 		this.disposable.use(disposable);
 		this.power = power;

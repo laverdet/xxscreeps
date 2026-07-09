@@ -3,6 +3,7 @@ import type * as Pr from 'xxscreeps/engine/db/storage/provider.js';
 import { Buffer } from 'node:buffer';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { acquireWith } from 'xxscreeps/utility/async.js';
+import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
 import { acquireRedisClient } from './client.js';
 
 type Value = Pr.Value;
@@ -74,14 +75,13 @@ function zRangeOptions(options?: Pr.ZRange) {
 	};
 }
 
-export class RedisProvider implements Pr.KeyValProvider {
-	private readonly disposable;
+export class RedisProvider extends AsyncDisposableResource implements Pr.KeyValProvider {
 	private readonly keyval;
 	private readonly blob;
 	private readonly withSave;
 
 	private constructor(disposable: AsyncDisposableStack, keyval: RedisClient, blob: RedisBlobClient, withSave: boolean) {
-		this.disposable = disposable;
+		super(disposable);
 		this.keyval = keyval;
 		this.blob = blob;
 		this.withSave = withSave;
@@ -95,10 +95,6 @@ export class RedisProvider implements Pr.KeyValProvider {
 			acquireRedisClient(url, true),
 		);
 		return new RedisProvider(disposable.move(), keyval, blob, url.searchParams.has('save'));
-	}
-
-	async [Symbol.asyncDispose]() {
-		await this.disposable.disposeAsync();
 	}
 
 	//

@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { listen, spread } from 'xxscreeps/utility/async.js';
 import { FileSystemLock } from 'xxscreeps/utility/file-lock.js';
+import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
 
 function bytesEqual(left: Readonly<Uint8Array> | null, right: string | Readonly<Uint8Array>) {
 	if (left === null || typeof right === 'string') {
@@ -16,20 +17,19 @@ function bytesEqual(left: Readonly<Uint8Array> | null, right: string | Readonly<
 	return Buffer.compare(left, right) === 0;
 }
 
-export class BlobStorage implements AsyncDisposable {
+export class BlobStorage extends AsyncDisposableResource {
 	private readonly cache = new Map<string, {
 		saveId: number;
 		value: Readonly<Uint8Array> | null;
 	}>();
 
 	private saveId = 0;
-	private readonly disposable;
 	private readonly lock;
 	private readonly knownPaths = new Set<string>();
 	private readonly path;
 
-	constructor(disposable: AsyncDisposableStack, path: string | null, lock: FileSystemLock | undefined) {
-		this.disposable = disposable;
+	private constructor(disposable: AsyncDisposableStack, path: string | null, lock: FileSystemLock | undefined) {
+		super(disposable);
 		this.path = path;
 		this.lock = lock;
 	}
@@ -57,10 +57,6 @@ export class BlobStorage implements AsyncDisposable {
 		} else {
 			return new BlobStorage(disposable.move(), null, undefined);
 		}
-	}
-
-	[Symbol.asyncDispose]() {
-		return this.disposable.disposeAsync();
 	}
 
 	async copy(from: string, to: string, options?: Storage.Copy) {
