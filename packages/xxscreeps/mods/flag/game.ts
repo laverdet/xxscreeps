@@ -18,7 +18,7 @@ const schema = declare('Flags', compose(vector(compose(flagShape, Flag)), {
 	compose: flags => Fn.fromEntries(flags, flag => [ flag.name, flag ]),
 	decompose: (flags: Record<string, Flag>) => Object.values(flags),
 }));
-export const { read, write } = makeReaderAndWriter(schema, { materialize: true, release: true });
+export const { read, write, upgrade } = makeReaderAndWriter(schema, { materialize: true, release: true });
 
 // Register LOOK_ type for `Flag`
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

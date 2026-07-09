@@ -3,7 +3,7 @@ import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { Transaction, write } from './transaction.js';
+import { Transaction, upgrade, write } from './transaction.js';
 
 // A terminal transfer is normalized: stored once as an immutable schema blob at
 // `market/transaction/<id>` and referenced by id from each party's per-direction sorted set, scored
@@ -32,8 +32,10 @@ export interface TransactionFields {
 	description?: string | undefined | null;
 }
 
-export function loadTransactionBlob(shard: Shard, id: string) {
-	return shard.data.req(blobKey(id), { blob: true });
+export async function loadTransactionBlob(shard: Shard, id: string) {
+	// Upgrade host-side so both the backend parse and the forwarded runtime payload see the current
+	// schema version.
+	return upgrade(await shard.data.req(blobKey(id), { blob: true }));
 }
 
 // A user's transfer ids in one direction, oldest-first with their wall-clock scores.

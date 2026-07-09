@@ -20,7 +20,7 @@ export class Transaction extends withOverlay(BufferObject, transactionShape) {
 }
 
 const format = declare('MarketTransaction', () => compose(transactionShape, Transaction));
-export const { read, write } = makeReaderAndWriter(format);
+export const { read, write, upgrade } = makeReaderAndWriter(format);
 
 export class Transactions {
 	readonly payload;

@@ -1,6 +1,6 @@
 import type { WithShapeAndType } from 'xxscreeps/schema/format.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
-import { build } from 'xxscreeps/engine/schema/index.js';
+import { build, makeUpgrader } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeRoomName, parseRoomName } from 'xxscreeps/game/room/name.js';
 import { Variant, array, declare, enumerated, makeWriter, optional, struct, variant, vector } from 'xxscreeps/schema/index.js';
@@ -91,6 +91,8 @@ const visualSchema = variant(lineSchema, circleSchema, rectSchema, polySchema, t
 export type VisualEntry = TypeOf<typeof visualSchema>;
 export const schema = build(declare('Visual', vector(visualSchema)));
 const writeSchema = makeWriter(schema);
+// Upgrades a visual blob persisted under an older schema version; call host-side before reading.
+export const upgrade = makeUpgrader(schema, writeSchema);
 
 // Extract either x/y pair or RoomPosition to x/y pair
 type LocalPoint = {

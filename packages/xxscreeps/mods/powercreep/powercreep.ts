@@ -152,6 +152,6 @@ export function checkRenamePowerCreep(roster: PowerCreep[], name: string) {
 
 // The roster is stored as a single per-user blob: a vector of power creeps.
 const rosterFormat = declare('PowerCreeps', vector(compose(powerCreepShape, PowerCreep)));
-export const { read, write } = makeReaderAndWriter(rosterFormat);
+export const { read, write, upgrade: upgradeRoster } = makeReaderAndWriter(rosterFormat);
 
 export type Roster = TypeOf<typeof rosterFormat>;

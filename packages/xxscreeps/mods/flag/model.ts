@@ -1,7 +1,7 @@
 import type { createFlag, removeFlag } from './game.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
-import { read } from './game.js';
+import { read, upgrade } from './game.js';
 
 export type FlagIntent = { type: null } | {
 	type: 'create';
@@ -24,8 +24,11 @@ export function getFlagChannel(shard: Shard, userId: string) {
 /**
  * Load the unparsed flag blob for a user
  */
-export function loadUserFlagBlob(shard: Shard, userId: string) {
-	return shard.data.get(`user/${userId}/flags`, { blob: true });
+export async function loadUserFlagBlob(shard: Shard, userId: string) {
+	const blob = await shard.data.get(`user/${userId}/flags`, { blob: true });
+	// Upgrade host-side so both the backend parse and the forwarded runtime payload see the current
+	// schema version.
+	return blob && upgrade(blob);
 }
 
 /**

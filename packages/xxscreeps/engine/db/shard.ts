@@ -5,7 +5,7 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import { config } from 'xxscreeps/config/index.js';
 import * as RoomSchema from 'xxscreeps/engine/db/room.js';
 import { connectToProvider } from 'xxscreeps/engine/db/storage/index.js';
-import { World } from 'xxscreeps/game/map.js';
+import { World, upgradeTerrain } from 'xxscreeps/game/map.js';
 import { acquireWith } from 'xxscreeps/utility/async.js';
 import { getRoomChannel } from '../processor/model.js';
 import { Channel } from './channel.js';
@@ -95,7 +95,7 @@ export class Shard {
 			this.data.req('terrain', { blob: true }),
 			this.data.sMembers('rooms'),
 		]);
-		return new World(this.name, terrainBlob, new Set(rooms));
+		return new World(this.name, upgradeTerrain(terrainBlob), new Set(rooms));
 	}
 
 	/**

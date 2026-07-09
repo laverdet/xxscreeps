@@ -28,7 +28,12 @@ export async function loadBlobs(db: Database, userId: string, branchName: string
 		db.data.get(stringsKey(userId, branchName), { blob: true }),
 	]);
 	if (buffers || strings) {
-		return { buffers, strings };
+		// Upgrade host-side so both the parsed content and the forwarded runtime payload see the
+		// current schema version.
+		return {
+			buffers: buffers && Schema.upgradeBuffers(buffers),
+			strings: strings && Schema.upgradeStrings(strings),
+		};
 	}
 }
 
