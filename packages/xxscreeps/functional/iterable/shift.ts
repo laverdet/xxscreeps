@@ -1,11 +1,9 @@
-import { toIterable } from './intrinsicIterator.js';
-
-interface ShiftEmpty {
+interface ShiftEmpty extends Disposable {
 	head: undefined;
 	rest: undefined;
 }
 
-interface ShiftResult<Type> {
+interface ShiftResult<Type> extends Disposable {
 	head: Type;
 	rest: Iterable<Type>;
 }
@@ -21,13 +19,26 @@ export function shift<Type>(iterable: Iterable<Type, unknown>): Shifted<Type> {
 	const { done, value } = iterator.next();
 	if (done) {
 		return {
+			async [Symbol.dispose]() {},
 			head: undefined,
 			rest: undefined,
 		};
 	} else {
+		let didAccept = false;
+		const rest: Iterable<Type> = {
+			[Symbol.iterator]() {
+				didAccept = true;
+				return iterator;
+			},
+		};
 		return {
+			[Symbol.dispose]() {
+				if (!didAccept) {
+					iterator.return?.();
+				}
+			},
 			head: value,
-			rest: toIterable(iterator),
+			rest,
 		};
 	}
 }

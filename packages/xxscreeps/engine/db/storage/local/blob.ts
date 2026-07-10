@@ -91,7 +91,12 @@ export class BlobStorage extends AsyncDisposableResource {
 			// Ensure it actually exists on disk
 			const path = Path.join(this.path, key);
 			try {
+				this.cache.set(key, {
+					saveId: this.saveId,
+					value: null,
+				});
 				await fs.stat(path);
+				return true;
 			} catch {
 				this.cache.set(key, {
 					saveId: -1,
@@ -99,12 +104,7 @@ export class BlobStorage extends AsyncDisposableResource {
 				});
 				return false;
 			}
-			this.cache.set(key, {
-				saveId: this.saveId,
-				value: null,
-			});
 		}
-		return true;
 	}
 
 	async get(key: string) {

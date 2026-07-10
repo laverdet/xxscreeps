@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/require-await */
 import type { MaybePromises } from './responder.js';
 import type * as Pr from 'xxscreeps/engine/db/storage/provider.js';
 import type { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
@@ -18,11 +17,37 @@ registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
 	return connect(url, LocalKeyValClient, LocalKeyValHost, create);
 });
 
+type PrimitiveValue = string | number;
+type InternalMapValue = PrimitiveValue | Readonly<Uint8Array>;
+type InternalValue = InternalMapValue | string[] | Map<string, InternalMapValue> | Set<string> | SortedSet;
+type SerializedValue = PrimitiveValue | string[] | SerializedMap | SerializedSet | SerializedSortedSet | SerializedUint8;
+type LocalKeyValScript = (keyval: LocalKeyValResponder, keys: string[], argv: unknown[]) => unknown;
+
+interface SerializedMap {
+	readonly '#': 'map';
+	readonly $: Record<string, unknown>;
+}
+
+interface SerializedSet {
+	readonly '#': 'set';
+	readonly $: string[];
+}
+
+interface SerializedSortedSet {
+	readonly '#': 'zset';
+	readonly $: [ number, string ][];
+}
+
+interface SerializedUint8 {
+	readonly '#': 'uint8';
+	readonly $: string;
+}
+
 export class LocalKeyValResponder extends AsyncDisposableResource implements MaybePromises<Pr.KeyValProvider> {
 	readonly blob;
-	private readonly data = new Map<string, any>();
+	private readonly data = new Map<string, InternalValue>();
 	private readonly expires = new Set<string>();
-	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: Pr.Value[]) => any>();
+	private readonly scripts = new Map<string, (instance: LocalKeyValResponder, keys: string[], argv: Pr.Value[]) => unknown>();
 	private readonly url;
 	private saveWait: Promise<void> | undefined;
 
@@ -35,16 +60,19 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		super(disposable);
 		this.url = url;
 		this.blob = blob;
-		if (payload) {
-			const map = JSON.parse(payload, (key, value) => {
-				switch (value?.['#']) {
-					case 'map': return new Map(Object.entries(value.$));
-					case 'set': return new Set(value.$);
-					case 'zset': return new SortedSet(value.$);
-					case 'uint8': return latin1ToBuffer(value.$);
-					default: return value;
+		if (payload !== undefined) {
+			const map = JSON.parse(payload, (key, value: SerializedValue) => {
+				if (typeof value !== 'object' || value instanceof Array) {
+					return value;
+				} else {
+					switch (value['#']) {
+						case 'map': return new Map(Object.entries(value.$));
+						case 'set': return new Set(value.$);
+						case 'zset': return new SortedSet(value.$);
+						case 'uint8': return latin1ToBuffer(value.$);
+					}
 				}
-			});
+			}) as SerializedValue;
 			if (map instanceof Map) {
 				this.data = map;
 			}
@@ -76,14 +104,14 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 			return [];
 		}();
 
-		// Make host, convert disposable to effect
+		// Move disposable into host
 		return new LocalKeyValResponder(disposable.move(), url, blob, payload);
 	}
 
 	copy(from: string, to: string, options?: Pr.Copy) {
 		const value = this.data.get(from);
 		if (value === undefined) {
-			return this.blob.copy(from, to, options) as never;
+			return this.blob.copy(from, to, options);
 		} else if (options?.if === 'NX' && this.data.has(to)) {
 			return false;
 		} else if (value instanceof Array) {
@@ -105,7 +133,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 			this.remove(key);
 			return true;
 		} else {
-			return this.blob.del(key) as never;
+			return this.blob.del(key) satisfies Promise<boolean> as unknown as boolean;
 		}
 	}
 
@@ -118,7 +146,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		}
 	}
 
-	mdel(...keys: string[]) {
+	mDel(...keys: string[]) {
 		return Fn.pipe(
 			keys,
 			$$ => Fn.filter($$, key => this.data.has(key)),
@@ -127,15 +155,17 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 			$$ => Fn.accumulate($$));
 	}
 
-	vdel(key: string) {
+	vDel(key: string) {
 		this.del(key);
 	}
 
-	get(key: string, options?: Pr.AsBlob) {
+	get(key: string, options: Pr.AsBlob): Promise<Readonly<Uint8Array> | null>;
+	get(key: string, options?: Pr.AsString): string | null;
+	get(key: string, options?: Pr.Get) {
 		if (options?.blob) {
-			return this.blob.get(key) as never;
+			return this.blob.get(key);
 		} else {
-			const value = this.data.get(key);
+			const value = this.lookupPrimitive(key);
 			return value === undefined ? null : String(value);
 		}
 	}
@@ -151,9 +181,11 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		}
 	}
 
-	req(key: string, options?: Pr.AsBlob) {
+	req(key: string, options: Pr.AsBlob): Promise<Readonly<Uint8Array>>;
+	req(key: string, options?: Pr.AsString): string;
+	req(key: string, options?: Pr.Get) {
 		if (options?.blob) {
-			return this.blob.req(key) as never;
+			return this.blob.req(key);
 		} else {
 			const value = this.get(key);
 			if (value === null) {
@@ -163,9 +195,12 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		}
 	}
 
-	set(key: string, value: Pr.Value, options?: Pr.Set): any {
+	set(key: string, value: Pr.Value, options: Pr.SetGet): string | null;
+	set(key: string, value: Pr.Value, options: Pr.SetIf): false | undefined;
+	set(key: string, value: Pr.Value, options?: Pr.Set): undefined;
+	set(key: string, value: Pr.Value, options?: Pr.Set) {
 		if (ArrayBuffer.isView(value)) {
-			return this.blob.set(key, value, options) as never;
+			return this.blob.set(key, value, options);
 		}
 		if (options?.if) {
 			switch (options.if.if) {
@@ -175,11 +210,11 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 				case 'XX': if (!this.data.has(key)) return false; break;
 			}
 		}
-		if (options?.px) {
+		if (options?.px !== undefined) {
 			this.expires.add(key);
 		}
 		if (options?.get) {
-			const current = this.data.get(key);
+			const current = this.lookupPrimitive(key);
 			this.data.set(key, value);
 			return current === undefined ? null : `${current}`;
 		} else {
@@ -201,7 +236,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 
 	incrBy(key: string, delta: number) {
 		const value = delta + (() => {
-			const value = this.data.get(key);
+			const value = this.lookupPrimitive(key);
 			if (typeof value === 'number') {
 				return value;
 			} else if (value === undefined) {
@@ -219,37 +254,58 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	hDel(key: string, fields: string[]) {
-		const map = this.data.get(key) as Map<string, string> | undefined;
-		if (!map) return 0;
-		const removed = Fn.accumulate(fields, field => map.delete(field) ? 1 : 0);
-		if (map.size === 0) this.remove(key);
-		return removed;
+		const map = this.lookupObject(key, Map);
+		if (map) {
+			const removed = Fn.accumulate(fields, field => map.delete(field) ? 1 : 0);
+			if (map.size === 0) {
+				this.remove(key);
+			}
+			return removed;
+		} else {
+			return 0;
+		}
 	}
 
 	hGet(key: string, field: string) {
-		const map: Map<string, string> | undefined = this.data.get(key);
-		return map?.get(field) ?? null;
+		const value = this.lookupObject(key, Map)?.get(field);
+		return value === undefined ? null : String(value);
 	}
 
 	hGetAll(key: string) {
-		const map: Map<string, string> | undefined = this.data.get(key);
-		return map ? Fn.fromEntries(map.entries()) : {};
+		const map = this.lookupObject(key, Map);
+		return Fn.pipe(
+			map ?? [],
+			$$ => Fn.map($$, ([ key, value ]) => [ key, String(value) ] as const),
+			$$ => Fn.fromEntries($$));
 	}
 
 	hincrBy(key: string, field: string, value: number) {
-		const map: Map<string, any> = getOrSet(this.data, key, () => new Map());
+		const map = this.lookupOrSetObject(key, Map);
 		const result = (Number(map.get(field)) || 0) + value;
 		map.set(field, result);
 		return result;
 	}
 
-	hmGet(key: string, fields: Iterable<string>) {
-		const map: Map<string, string | Readonly<Uint8Array>> | undefined = this.data.get(key);
-		return Fn.fromEntries(Fn.map(fields, field => [ field, map?.get(field) ?? null ])) as never;
+	hmGet(key: string, fields: string[], options: Pr.AsBlob): Record<string, Readonly<Uint8Array> | null>;
+	hmGet(key: string, fields: string[], options?: Pr.AsString): Record<string, string | null>;
+	hmGet(key: string, fields: string[], options?: Pr.Get): Record<string, unknown> {
+		const map = this.lookupObject(key, Map);
+		const to: (value: InternalMapValue | undefined) => unknown = function() {
+			if (options?.blob) {
+				// nb: We assume blobs were placed as blobs.
+				return value => value ?? null;
+			} else {
+				return value => value === undefined ? null : String(value);
+			}
+		}();
+		return Fn.pipe(
+			fields,
+			$$ => Fn.map($$, field => [ field, to(map?.get(field)) ] as const),
+			$$ => Fn.fromEntries($$));
 	}
 
 	hSet(key: string, field: string, value: Pr.Value, options?: Pr.HSet) {
-		const map: Map<string, any> = getOrSet(this.data, key, () => new Map());
+		const map = this.lookupOrSetObject(key, Map);
 		const has = map.has(field);
 		if (options?.if === 'NX' && has) {
 			return false;
@@ -259,22 +315,25 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		}
 	}
 
-	hmset(key: string, fields: Iterable<readonly [ string, Pr.Value ]> | Record<string, Pr.Value>) {
-		const map: Map<string, any> = getOrSet(this.data, key, () => new Map());
-		const iterable = Symbol.iterator in fields
-			? fields as Iterable<[ string, Pr.Value ]> :
-			Object.entries(fields);
+	hmSet(key: string, fields: [ string, Pr.Value ][] | Record<string, Pr.Value>) {
+		const map = this.lookupOrSetObject(key, Map);
+		const iterable = function() {
+			if (fields instanceof Array) {
+				return fields;
+			} else {
+				return Object.entries(fields);
+			}
+		}();
 		for (const [ field, value ] of iterable) {
 			map.set(field, value);
 		}
 	}
 
 	lPop(key: string) {
-		const list: string[] | undefined = this.data.get(key);
+		const list = this.lookupObject(key, Array);
 		if (!list) {
 			return null;
-		}
-		if (list.length === 1) {
+		} else if (list.length === 1) {
 			this.remove(key);
 			return list[0]!;
 		} else {
@@ -283,19 +342,20 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	lRange(key: string, start: number, stop: number) {
-		const list: string[] | undefined = this.data.get(key);
-		if (!list) {
+		const list = this.lookupObject(key, Array);
+		if (list) {
+			return list.slice(
+				start >= 0 ? start : Math.max(0, list.length + start),
+				stop >= 0 ? stop + 1 : Math.max(0, list.length + stop + 1),
+			);
+		} else {
 			return [];
 		}
-		return list.slice(
-			start >= 0 ? start : Math.max(0, list.length + start),
-			stop >= 0 ? stop + 1 : Math.max(0, list.length + stop + 1),
-		);
 	}
 
-	rPush(key: string, elements: Pr.Value[]) {
-		const list: string[] | undefined = this.data.get(key);
-		const strings = Fn.map(elements, element => element) as Iterable<string>;
+	rPush(key: string, elements: string[]) {
+		const list = this.lookupObject(key, Array);
+		const strings = Fn.map(elements, String);
 		if (list) {
 			list.push(...strings);
 			return list.length;
@@ -306,7 +366,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	sAdd(key: string, members: string[]) {
-		const set: Set<string> | undefined = this.data.get(key);
+		const set = this.lookupObject(key, Set);
 		if (set) {
 			const { size } = set;
 			members.forEach(value => set.add(value));
@@ -320,15 +380,22 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	sCard(key: string) {
-		const set: Set<string> | undefined = this.data.get(key);
-		return set ? set.size : 0;
+		return this.lookupObject(key, Set)?.size ?? 0;
 	}
 
 	sDiff(key: string, keys: string[]) {
-		const set: Set<string> | undefined = this.data.get(key);
+		const set = this.lookupObject(key, Set);
 		if (set) {
-			const sets: (Set<string> | undefined)[] = keys.map(key => this.data.get(key));
-			return [ ...Fn.reject(set, member => sets.some(set => set?.has(member))) ];
+			const sets = Fn.pipe(
+				keys,
+				$$ => Fn.map($$, key => this.lookupObject(key, Set)),
+				$$ => Fn.filter($$),
+				$$ => [ ...$$ ]);
+			if (sets.length === 0) {
+				return [ ...set ];
+			} else {
+				return [ ...Fn.reject(set, member => sets.some(set => set.has(member))) ];
+			}
 		} else {
 			return [];
 		}
@@ -337,7 +404,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	sInter(key: string, keys: string[]) {
 		const sets = Fn.pipe(
 			Fn.concat<string>([ [ key ], keys ]),
-			$$ => Fn.map($$, (key): Set<string> | undefined => this.data.get(key)),
+			$$ => Fn.map($$, key => this.lookupObject(key, Set)),
 			$$ => [ ...$$ ]);
 		if (sets.every(set => set !== undefined)) {
 			sets.sort(mappedNumericComparator(set => set.size));
@@ -349,12 +416,11 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	sIsMember(key: string, member: string) {
-		const set: Set<string> | undefined = this.data.get(key);
-		return set?.has(member) ?? false;
+		return this.lookupObject(key, Set)?.has(member) ?? false;
 	}
 
 	smIsMember(key: string, members: string[]) {
-		const set: Set<string> | undefined = this.data.get(key);
+		const set = this.lookupObject(key, Set);
 		if (set) {
 			return members.map(member => set.has(member));
 		} else {
@@ -363,26 +429,27 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	sMembers(key: string) {
-		const set: Set<string> | undefined = this.data.get(key);
+		const set = this.lookupObject(key, Set);
 		return set ? [ ...set ] : [];
 	}
 
 	sPop(key: string) {
-		const set: Set<string> | undefined = this.data.get(key);
+		const set = this.lookupObject(key, Set);
 		if (set) {
-			const { value } = set.values().next();
+			const value = Fn.first(set)!;
 			if (set.size === 1) {
 				this.remove(key);
 			} else {
-				set.delete(value!);
+				set.delete(value);
 			}
-			return value!;
+			return value;
+		} else {
+			return null;
 		}
-		return null;
 	}
 
 	sRem(key: string, members: string[]) {
-		const set = this.data.get(key);
+		const set = this.lookupObject(key, Set);
 		if (set) {
 			const { size } = set;
 			members.forEach(value => set.delete(value));
@@ -399,7 +466,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	sUnionStore(key: string, keys: string[]) {
 		const out = Fn.pipe(
 			keys,
-			$$ => Fn.map($$, (key): Set<string> => this.data.get(key)),
+			$$ => Fn.map($$, key => this.lookupObject(key, Set)),
 			$$ => Fn.filter($$),
 			$$ => Fn.concat($$),
 			$$ => new Set($$));
@@ -412,13 +479,13 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	zAdd(key: string, members: [ number, string ][], options?: Pr.ZAdd): any {
-		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet());
+		const set = this.lookupOrSetObject(key, SortedSet);
 		try {
 			const range = function() {
-				// eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
 				switch (options?.if) {
 					case 'NX': return Fn.reject(members, member => set.has(member[1]));
 					case 'XX': return Fn.filter(members, member => set.has(member[1]));
+					case undefined:
 					default: return members;
 				}
 			}();
@@ -426,7 +493,8 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 				switch (options?.up) {
 					case 'GT': return (left, right) => left === undefined ? right : Math.max(left, right);
 					case 'LT': return (left, right) => left === undefined ? right : Math.min(left, right);
-					case undefined: return (left, right) => right;
+					case undefined:
+					default: return (left, right) => right;
 				}
 			}();
 
@@ -434,21 +502,23 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 				if (members.length > 1) {
 					throw new Error('ZADD with INCR option cannot be used with multiple elements');
 				}
-				const { head } = Fn.shift(range);
-				if (!head) {
-					return null;
-				}
-				const score = set.score(head[1]);
-				if (score === undefined) {
-					return null;
+				using shift = Fn.shift(range);
+				const { head } = shift;
+				if (head) {
+					const score = set.score(head[1]);
+					if (score === undefined) {
+						return null;
+					} else {
+						const result = score + head[0];
+						set.add(head[1], result);
+						return result;
+					}
 				} else {
-					const result = score + head[0];
-					set.add(head[1], result);
-					return result;
+					return null;
 				}
+			} else {
+				return set.insert(range, up);
 			}
-
-			return set.insert(range, up);
 		} finally {
 			if (set.size === 0) {
 				this.data.delete(key);
@@ -457,12 +527,11 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	zCard(key: string) {
-		const set: SortedSet | undefined = this.data.get(key);
-		return set ? set.size : 0;
+		return this.lookupObject(key, SortedSet)?.size ?? 0;
 	}
 
 	zIncrBy(key: string, delta: number, member: string) {
-		const set = getOrSet<string, SortedSet>(this.data, key, () => new SortedSet());
+		const set = this.lookupOrSetObject(key, SortedSet);
 		const score = (set.score(member) ?? 0) + delta;
 		set.add(member, score);
 		return score;
@@ -470,41 +539,40 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 
 	zInterStore(key: string, keys: string[], options?: Pr.ZAggregate) {
 		// Fetch sets first because you can use this command to store a set back into itself
-		const sets = [ ...Fn.map(keys, (key): SortedSet => this.data.get(key)) ];
+		const sets = [ ...Fn.map(keys, key => this.lookupObject(key, SortedSet)) ];
 		const out = function() {
-			const smallest = Fn.minimum(sets, mappedNumericComparator(set => set.size));
-			if (!smallest) {
-				return new SortedSet();
-			}
-
-			// Generate intersection
-			const weights = options?.weights ?? [ ...Fn.map(sets, () => 1) ];
-			return new SortedSet(function*(): Iterable<[ number, string ]> {
-				loop: for (const member of smallest.values()) {
-					let nextScore = 0;
-					for (const [ ii, set ] of sets.entries()) {
-						const score = set.score(member);
-						if (score === undefined) {
-							continue loop;
+			if (sets.every(set => set !== undefined)) {
+				const smallest = Fn.minimum(sets, mappedNumericComparator(set => set.size));
+				if (smallest) {
+					// Generate intersection
+					const weights = options?.weights ?? [ ...Fn.map(sets, () => 1) ];
+					return new SortedSet(function*(): Iterable<[ number, string ]> {
+						loop: for (const member of smallest.values()) {
+							let nextScore = 0;
+							for (const [ ii, set ] of sets.entries()) {
+								const score = set.score(member);
+								if (score === undefined) {
+									continue loop;
+								}
+								nextScore += score * weights[ii]!;
+							}
+							yield [ nextScore, member ];
 						}
-						nextScore += score * weights[ii]!;
-					}
-					yield [ nextScore, member ];
+					}());
 				}
-			}());
+			}
 		}();
-
-		// Save result
-		if (out.size > 0) {
+		if (out && out.size > 0) {
 			this.data.set(key, out);
+			return out.size;
 		} else {
-			this.data.delete(key);
+			this.remove(key);
+			return 0;
 		}
-		return out.size;
 	}
 
 	zmScore(key: string, members: string[]) {
-		const set: SortedSet | undefined = this.data.get(key);
+		const set = this.lookupObject(key, SortedSet);
 		if (set) {
 			return members.map(member => set.score(member) ?? null);
 		} else {
@@ -512,17 +580,10 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		}
 	}
 
-	zRange(key: string, minParam: number | string, maxParam: number | string, options?: Pr.ZRange): any {
-		const set: SortedSet | undefined = this.data.get(key);
+	zRange(key: string, min: number | string, max: number | string, options?: Pr.ZRange) {
+		const set = this.lookupObject(key, SortedSet);
 		if (set) {
-			const { min, max } = function() {
-				if (options?.rev) {
-					return { min: maxParam, max: minParam };
-				} else {
-					return { min: minParam, max: maxParam };
-				}
-			}();
-			let allMatching = function() {
+			const allMatching = function() {
 				switch (options?.by) {
 					case 'LEX': {
 						const parse = (value: string): [ string, boolean ] => {
@@ -531,18 +592,24 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 							} else if (value === '+') {
 								return [ '\uffff', true ];
 							} else if (value.startsWith('(')) {
-								return [ value.substr(1), false ];
+								return [ value.slice(1), false ];
 							} else if (value.startsWith('[')) {
-								return [ value.substr(1), true ];
+								return [ value.slice(1), true ];
 							} else {
 								throw new Error(`Invalid range: ${value}`);
 							}
 						};
-						const [ minVal, minInc ] = parse(min as string);
-						const [ maxVal, maxInc ] = parse(max as string);
-						return [ ...set.entriesByLex(minInc, minVal, maxInc, maxVal) ];
+						const [ minVal, minInc ] = parse(min satisfies number | string as string);
+						const [ maxVal, maxInc ] = parse(max satisfies number | string as string);
+						return set.entriesByLex(minInc, minVal, maxInc, maxVal);
 					}
-					case 'SCORE': return [ ...Fn.map(set.entries(min as number, max as number), entry => entry[1]) ];
+					case 'SCORE': {
+						const entries = set.entries(
+							min satisfies number | string as number,
+							max satisfies number | string as number);
+						return Fn.map(entries, entry => entry[1]);
+					}
+					case undefined:
 					default: {
 						const convert = (value: number) => {
 							if (value < 0) {
@@ -551,27 +618,38 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 								return value;
 							}
 						};
-						return set.values().slice(convert(min as number), convert(max as number) + 1);
+						const from = convert(min satisfies number | string as number);
+						const to = convert(max satisfies number | string as number) + 1;
+						return Fn.slice(set.values(), from, to);
 					}
 				}
 			}();
-			if (options?.rev) {
-				allMatching = allMatching.reverse();
-			}
-			if (options?.limit) {
-				return allMatching.slice(options.limit[0], options.limit[0] + options.limit[1]);
-			} else {
-				return allMatching;
-			}
+			return [ ...function*() {
+				if (options?.limit) {
+					const [ from, to ] = options.limit;
+					let ii = 0;
+					for (const member of allMatching) {
+						if (ii++ >= from) {
+							if (ii > to) {
+								break;
+							} else {
+								yield member;
+							}
+						}
+					}
+				} else {
+					yield* allMatching;
+				}
+			}() ];
 		} else {
 			return [];
 		}
 	}
 
 	zRangeStore(into: string, from: string, min: number | string, max: number | string, options?: Pr.ZRange) {
-		const set: SortedSet | undefined = this.data.get(from);
+		const set = this.lookupObject(from, SortedSet);
 		if (set) {
-			const range: string[] = this.zRange(from, min, max, options);
+			const range = this.zRange(from, min, max, options);
 			const out = new SortedSet();
 			out.insert(Fn.map(range, member => [ set.score(member)!, member ]));
 			if (out.size === 0) {
@@ -586,13 +664,16 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	zRangeWithScores(key: string, min: number, max: number, options?: Pr.ZRange) {
-		const set: SortedSet | undefined = this.data.get(key);
+		const set = this.lookupObject(key, SortedSet);
 		if (set) {
 			switch (options?.by) {
 				case 'LEX': throw new Error('Invalid request');
 				case 'SCORE': return [ ...set.entries(min, max) ];
-				default: return this.zRange(key, min, max, options)
-					.map((value: string): [ number, string ] => [ set.score(value)!, value ]);
+				case undefined:
+				default: {
+					const values = this.zRange(key, min, max, options);
+					return values.map((value): [ number, string ] => [ set.score(value)!, value ]);
+				}
 			}
 		} else {
 			return [];
@@ -600,7 +681,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	zRem(key: string, members: string[]) {
-		const set: SortedSet | undefined = this.data.get(key);
+		const set = this.lookupObject(key, SortedSet);
 		if (set) {
 			const result = Fn.accumulate(members, member => set.delete(member));
 			if (set.size === 0) {
@@ -613,12 +694,11 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	zRemRange(key: string, min: number, max: number) {
-		const set: SortedSet | undefined = this.data.get(key);
+		const set = this.lookupObject(key, SortedSet);
 		if (set) {
-			const result = Fn.accumulate(
-				// Results are materialized into array upfront because `delete` invalidates `entries`
-				[ ...Fn.map(set.entries(min, max), entry => entry[1]) ],
-				member => set.delete(member));
+			// Results are materialized into array upfront because `delete` invalidates `entries`
+			const members = [ ...Fn.map(set.entries(min, max), entry => entry[1]) ];
+			const result = Fn.accumulate(members, member => set.delete(member));
 			if (set.size === 0) {
 				this.data.delete(key);
 			}
@@ -629,12 +709,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	zScore(key: string, member: string) {
-		const set: SortedSet | undefined = this.data.get(key);
-		if (set) {
-			return set.score(member) ?? null;
-		} else {
-			return null;
-		}
+		return this.lookupObject(key, SortedSet)?.score(member) ?? null;
 	}
 
 	zUnionStore(key: string, keys: string[], options?: Pr.ZAggregate) {
@@ -645,7 +720,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 				return Fn.pipe(
 					keys.entries(),
 					$$ => Fn.map($$, ([ index, key ]) =>
-						[ weights[index] ?? 1, this.data.get(key) as SortedSet | undefined ] as const),
+						[ weights[index] ?? 1, this.lookupObject(key, SortedSet) ] as const),
 					$$ => Fn.filter($$, (entry): entry is [ number, SortedSet ] => Boolean(entry[1])),
 					$$ => Fn.transform($$, ([ weight, set ]) =>
 						Fn.map(set.entries(), ([ score, member ]) => [ score * weight, member ] as const)));
@@ -653,7 +728,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 				// Without WEIGHTS insert can happen at once
 				return Fn.pipe(
 					keys,
-					$$ => Fn.map($$, key => this.data.get(key) as SortedSet),
+					$$ => Fn.map($$, key => this.lookupObject(key, SortedSet)),
 					$$ => Fn.filter($$),
 					$$ => [ ...$$ ],
 					$$ => Fn.transform($$, set => set.entries()));
@@ -668,19 +743,10 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 	}
 
 	eval(script: KeyvalScript, keys: string[], argv: Pr.Value[]) {
-		return this.evaluateInline(script.local, keys, argv);
+		return this._evaluateInline(script.local, keys, argv) as Pr.Value | Pr.Value[] | null;
 	}
 
 	load() {}
-
-	async evaluateInline(script: string, keys: string[], argv: Pr.Value[]) {
-		const fn = getOrSet(this.scripts, script, () => {
-			// eslint-disable-next-line @typescript-eslint/no-implied-eval
-			const impl = new Function(`return ${script}`)();
-			return (instance, keys: string[], argv: Pr.Value[]) => impl(instance, keys, argv);
-		});
-		return fn(this, keys, argv);
-	}
 
 	async flushdb() {
 		await this.blob.flushdb();
@@ -695,20 +761,20 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 			this.saveWait = promise;
 			try {
 				await saveWait;
-				const payload = JSON.stringify(this.data, (key, value) => {
+				const payload = JSON.stringify(this.data, (key, value: InternalValue): SerializedValue => {
 					if (value === this.data) {
 						return {
 							'#': 'map',
-							$: Object.fromEntries(Fn.reject(this.data.entries(), entry => this.expires.has(entry[0]))),
+							$: Fn.fromEntries(Fn.reject(this.data.entries(), entry => this.expires.has(entry[0]))),
 						};
 					} else if (value instanceof Map) {
-						return { '#': 'map', $: Object.fromEntries(value.entries()) };
+						return { '#': 'map', $: Fn.fromEntries(value.entries()) };
 					} else if (value instanceof Set) {
 						return { '#': 'set', $: [ ...value ] };
 					} else if (value instanceof SortedSet) {
 						return { '#': 'zset', $: [ ...value.entries() ] };
 					} else if (ArrayBuffer.isView(value)) {
-						return { '#': 'uint8', $: typedArrayToString(value as Uint8Array) };
+						return { '#': 'uint8', $: typedArrayToString(value) };
 					} else {
 						return value;
 					}
@@ -728,6 +794,50 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		}
 	}
 
+	_evaluateInline(script: string, keys: string[], argv: Pr.Value[]) {
+		const fn = getOrSet(this.scripts, script, () => {
+			// eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
+			const make = new Function(`return ${script}`) as () => LocalKeyValScript;
+			return make();
+		});
+		return fn(this, keys, argv);
+	}
+
+	private lookupObject<Type>(key: string, constructor: abstract new(...args: any[]) => Type): Extract<InternalValue, Type> | undefined {
+		const value = this.data.get(key);
+		if (value !== undefined) {
+			if (value instanceof constructor) {
+				return value satisfies Type as Extract<InternalValue, Type>;
+			} else {
+				throw new Error(`'${key}' is not a primitive`);
+			}
+		}
+	}
+
+	private lookupOrSetObject<Type>(key: string, constructor: new() => Type): Extract<InternalValue, Type> {
+		const value = this.data.get(key);
+		if (value === undefined) {
+			const newValue = new constructor() satisfies Type as Extract<InternalValue, Type>;
+			this.data.set(key, newValue);
+			return newValue;
+		} else if (value instanceof constructor) {
+			return value satisfies Type as Extract<InternalValue, Type>;
+		} else {
+			throw new Error(`'${key}' is not a primitive`);
+		}
+	}
+
+	private lookupPrimitive(key: string) {
+		const value = this.data.get(key);
+		if (value !== undefined) {
+			if (typeof value === 'object') {
+				throw new Error(`'${key}' is not a primitive`);
+			} else {
+				return value;
+			}
+		}
+	}
+
 	private remove(key: string) {
 		this.data.delete(key);
 		this.expires.delete(key);
@@ -735,17 +845,24 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 }
 
 class LocalKeyValClient extends makeClient(LocalKeyValResponder) {
-	declare get: (...args: any[]) => any;
-	declare req: (...args: any[]) => any;
+	// These correspond to the overloaded functions in `LocalKeyValResponder` which cannot be mapped
+	// via `MaybePromises`.
+	declare get: (...args: unknown[]) => any;
+	declare hmGet: (...args: unknown[]) => any;
+	declare req: (...args: unknown[]) => any;
+	declare set: (...args: unknown[]) => any;
 
 	// https://github.com/microsoft/TypeScript/issues/27689
 	// @ts-expect-error
-	eval(script: KeyvalScript, keys: string[], argv: Pr.Value[]) {
-		return this.evaluateInline(script.local, keys, argv);
+	eval(script: KeyvalScript, keys: string[], argv: Pr.Value[]): any {
+		return this._evaluateInline(script.local, keys, argv);
 	}
 }
 
 class LocalKeyValHost extends makeHost(LocalKeyValResponder) {
-	declare get: (...args: any[]) => any;
-	declare req: (...args: any[]) => any;
+	declare eval: (...args: unknown[]) => any;
+	declare get: (...args: unknown[]) => any;
+	declare hmGet: (...args: unknown[]) => any;
+	declare req: (...args: unknown[]) => any;
+	declare set: (...args: unknown[]) => any;
 }

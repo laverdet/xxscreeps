@@ -38,8 +38,15 @@ export class SortedSet {
 		}
 	}
 
-	*entries(min = -Infinity, max = Infinity): Iterable<[ number, string ]> {
-		for (const member of this.#members) {
+	*entries(minParam = -Infinity, maxParam = Infinity): Iterable<[ number, string ]> {
+		const { members, min, max } = (() => {
+			if (minParam <= maxParam) {
+				return { members: this.#members, min: minParam, max: maxParam };
+			} else {
+				return { members: Fn.reverse(this.#members), min: maxParam, max: minParam };
+			}
+		})();
+		for (const member of members) {
 			const score = this.#scores.get(member)!;
 			if (score > max) {
 				break;
@@ -49,8 +56,15 @@ export class SortedSet {
 		}
 	}
 
-	*entriesByLex(minInclusive: boolean, min: string, maxInclusive: boolean, max: string) {
-		for (const member of this.#members) {
+	*entriesByLex(minParamInclusive: boolean, minParam: string, maxParamInclusive: boolean, maxParam: string) {
+		const { min, minInclusive, max, maxInclusive, members } = (() => {
+			if (minParam <= maxParam) {
+				return { min: minParam, minInclusive: minParamInclusive, max: maxParam, maxInclusive: maxParamInclusive, members: this.#members };
+			} else {
+				return { min: maxParam, minInclusive: maxParamInclusive, max: minParam, maxInclusive: minParamInclusive, members: Fn.reverse(this.#members) };
+			}
+		})();
+		for (const member of members) {
 			if (primitiveComparator(member, max) > (maxInclusive ? 0 : -1)) {
 				break;
 			} else if (primitiveComparator(member, min) > (minInclusive ? -1 : 0)) {

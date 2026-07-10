@@ -68,7 +68,7 @@ export async function removeNotifications(shard: Shard, userId: string, ids: str
 	if (ids.length === 0) return;
 	await Promise.all([
 		shard.data.zRem(userIndexKey(userId), ids),
-		shard.data.mdel(...ids.map(id => rowKey(userId, id))),
+		shard.data.mDel(...ids.map(id => rowKey(userId, id))),
 	]);
 }
 
@@ -101,7 +101,7 @@ async function recordNotification(
 	const [ created ] = await Promise.all([
 		shard.data.hSet(key, 'count', 1, { if: 'NX' }),
 		shard.data.hSet(key, 'date', date, { if: 'NX' }),
-		shard.data.hmset(key, { message, type }),
+		shard.data.hmSet(key, { message, type }),
 		shard.data.zAdd(userIndexKey(userId), [ [ timeGroup, id ] ]),
 		scheduleUserDrain(shard, userId, timeGroup),
 	]);

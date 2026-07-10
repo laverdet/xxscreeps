@@ -4,7 +4,8 @@ import type { Effect } from 'xxscreeps/utility/types.js';
 
 export type { KeyvalScript };
 
-export interface AsBlob { blob?: boolean }
+export interface AsBlob extends Get { blob: true }
+export interface AsString extends Get { blob?: false }
 export interface Copy { if?: 'NX' }
 export type Condition = ConditionEqual | ConditionNotEqual | ConditionExists | ConditionNotExists;
 export interface ConditionEqual { if: 'EQ'; value: string | Readonly<Uint8Array> }
@@ -14,6 +15,9 @@ export interface ConditionExists { if: 'XX' }
 export interface DelEx {
 	eq: string;
 }
+export interface Get {
+	blob?: boolean;
+}
 export interface Set {
 	if?: Condition;
 	get?: boolean;
@@ -22,6 +26,13 @@ export interface Set {
 	// network provider would be able to simply write the buffer to the wire, but the default local
 	// provider needs to make a copy.
 	retain?: boolean;
+}
+export interface SetIf extends Set {
+	if: Condition;
+	get?: never;
+}
+export interface SetGet extends Set {
+	get: true;
 }
 export interface HSet {
 	if?: 'NX';
@@ -48,17 +59,17 @@ export interface KeyValProvider {
 	del(key: string): Promise<boolean>;
 	delEx(key: string, options: DelEx): Promise<boolean>;
 	pTTL(key: string): Promise<number>;
-	mdel(...keys: string[]): Promise<number>;
-	// 'vdel' returns no response and may be reordered in relation to other commands
+	mDel(...keys: string[]): Promise<number>;
+	// 'vDel' returns no response and may be reordered in relation to other commands
 	// it used to coalesce multiple same-tick invocations into the same del redis command. i'm not
 	// sure if that's still plausible or even worthwhile but there it is.
-	vdel(key: string): Promise<void>;
-	get(key: string, options: { blob: true }): Promise<Readonly<Uint8Array> | null>;
-	get(key: string, options?: AsBlob): Promise<string | null>;
-	req(key: string, options: { blob: true }): Promise<Readonly<Uint8Array>>;
-	req(key: string, options?: AsBlob): Promise<string>;
-	set(key: string, value: Value, options: { get: true } & Set): Promise<string | null>;
-	set(key: string, value: Value, options: { if: Condition; get?: undefined } & Set): Promise<false | undefined>;
+	vDel(key: string): Promise<void>;
+	get(key: string, options: AsBlob): Promise<Readonly<Uint8Array> | null>;
+	get(key: string, options?: AsString): Promise<string | null>;
+	req(key: string, options: AsBlob): Promise<Readonly<Uint8Array>>;
+	req(key: string, options?: AsString): Promise<string>;
+	set(key: string, value: Value, options: SetGet): Promise<string | null>;
+	set(key: string, value: Value, options: SetIf): Promise<false | undefined>;
 	set(key: string, value: Value, options?: Set): Promise<undefined>;
 
 	// numbers
@@ -72,15 +83,15 @@ export interface KeyValProvider {
 	hGet(key: string, field: string): Promise<string | null>;
 	hGetAll(key: string): Promise<Record<string, string>>;
 	hincrBy(key: string, field: string, value: number): Promise<number>;
-	hmGet(key: string, fields: string[], options: { blob: true }): Promise<Record<string, Readonly<Uint8Array> | null>>;
-	hmGet(key: string, fields: string[], options?: AsBlob): Promise<Record<string, string | null>>;
+	hmGet(key: string, fields: string[], options: AsBlob): Promise<Record<string, Readonly<Uint8Array> | null>>;
+	hmGet(key: string, fields: string[], options?: AsString): Promise<Record<string, string | null>>;
 	hSet(key: string, field: string, value: Value, options?: HSet): Promise<boolean>;
-	hmset(key: string, fields: [ string, Value ][] | Record<string, Value>): Promise<void>;
+	hmSet(key: string, fields: [ string, Value ][] | Record<string, Value>): Promise<void>;
 
 	// lists
 	lPop(key: string): Promise<string | null>;
 	lRange(key: string, start: number, stop: number): Promise<string[]>;
-	rPush(key: string, elements: Value[]): Promise<number>;
+	rPush(key: string, elements: string[]): Promise<number>;
 
 	// sets
 	sAdd(key: string, members: string[]): Promise<number>;

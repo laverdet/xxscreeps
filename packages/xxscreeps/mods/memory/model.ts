@@ -43,7 +43,7 @@ export function saveMemoryBlob(shard: Shard, userId: string, blob: Readonly<Uint
 }
 
 export function deleteUserMemoryBlob(shard: Shard, userId: string) {
-	return shard.data.vdel(`user/${userId}/memory`);
+	return shard.data.vDel(`user/${userId}/memory`);
 }
 
 export function loadMemorySegmentBlob(shard: Shard, userId: string, segmentId: number) {
@@ -54,7 +54,7 @@ export async function saveMemorySegmentBlob(shard: Shard, userId: string, segmen
 	if (isValidSegmentId(segmentId)) {
 		const key = `user/${userId}/segment${segmentId}`;
 		if (blob === null || blob.byteLength === 0) {
-			await shard.data.vdel(key);
+			await shard.data.vDel(key);
 		} else if (blob.byteLength <= kMaxMemorySegmentSize) {
 			return shard.data.set(key, blob);
 		}
@@ -73,7 +73,7 @@ export async function loadDefaultPublicSegment(shard: Shard, userId: string): Pr
 export async function saveDefaultPublicSegment(shard: Shard, userId: string, id: number | null) {
 	const key = defaultPublicSegmentKey(userId);
 	if (id === null) {
-		await shard.data.vdel(key);
+		await shard.data.vDel(key);
 	} else {
 		await shard.data.set(key, String(id));
 	}
@@ -106,7 +106,7 @@ export async function saveActiveForeignSegment(
 ): Promise<StoredForeignSegmentRequest | null> {
 	const key = activeForeignSegmentKey(userId);
 	if (request === null) {
-		await shard.data.vdel(key);
+		await shard.data.vDel(key);
 		return null;
 	}
 	let resolved: StoredForeignSegmentRequest;
@@ -115,17 +115,17 @@ export async function saveActiveForeignSegment(
 	} else {
 		const targetUserId = await User.findUserByName(shard.db, request.username);
 		if (targetUserId === null) {
-			await shard.data.vdel(key);
+			await shard.data.vDel(key);
 			return null;
 		}
 		const segmentId = request.id ?? await loadDefaultPublicSegment(shard, targetUserId);
 		if (segmentId === null) {
-			await shard.data.vdel(key);
+			await shard.data.vDel(key);
 			return null;
 		}
 		resolved = { username: request.username, userId: targetUserId, segmentId };
 	}
-	await shard.data.hmset(key, {
+	await shard.data.hmSet(key, {
 		username: resolved.username,
 		userId: resolved.userId,
 		segmentId: String(resolved.segmentId),
@@ -146,10 +146,10 @@ export async function savePublicSegments(shard: Shard, userId: string, ids: numb
 		$$ => Fn.map($$, String),
 		$$ => [ ...$$ ]);
 	if (members.length === 0) {
-		await shard.data.vdel(key);
+		await shard.data.vDel(key);
 	} else {
 		await Promise.all([
-			shard.data.vdel(key),
+			shard.data.vDel(key),
 			shard.data.sAdd(key, members),
 		]);
 	}
