@@ -5,7 +5,7 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import {	checkCreatePowerCreep, checkRenamePowerCreep, checkUpgradePowerCreep, createPowerCreep, read, write } from './powercreep.js';
+import { checkCreatePowerCreep, checkRenamePowerCreep, checkUpgradePowerCreep, createPowerCreep, read, write } from './powercreep.js';
 
 // Account-scoped power creep roster.
 const powerCreepsKey = (userId: string) => `user/${userId}/powerCreeps`;
