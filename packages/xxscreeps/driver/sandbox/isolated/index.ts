@@ -46,6 +46,7 @@ const getRuntimeSource = runOnce(() => {
 			new VirtualModulesPlugin({
 				'/xxscreeps:mods/constants': makeModSourceText(mods, 'constants'),
 				'/xxscreeps:mods/game': makeModSourceText(mods, 'game'),
+				'/xxscreeps:mods/schema': makeModSourceText(mods, 'schema'),
 				'/xxscreeps:packages': makePackagesModule(),
 			}),
 		],
