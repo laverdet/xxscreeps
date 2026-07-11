@@ -226,8 +226,10 @@ abstract class ResponderHost<Type extends ResponderImplementation = ResponderImp
 }
 
 type WithPromises<Type> = {
-	[Key in keyof Type]: Type[Key] extends (...args: infer Args) => MaybePromise<infer Result>
-		? (...args: Args) => Promise<Result> : never;
+	[Key in Exclude<keyof Type, symbol | 'disposeAsync'>]:
+	Type[Key] extends (...args: infer Args) => MaybePromise<infer Result>
+		? (...args: Args) => Promise<Result>
+		: never;
 };
 
 export type MaybePromises<Type> = {
@@ -303,8 +305,8 @@ export function initializeWorker(worker: Worker) {
 }
 
 function applyResponderMethods(
-	constructorFrom: abstract new(...args: any[]) => unknown,
-	constructorTo: abstract new(...args: any[]) => unknown,
+	constructorFrom: { prototype: any },
+	constructorTo: { prototype: any },
 	make: (name: string) => unknown,
 ) {
 	for (const name of Object.getOwnPropertyNames(constructorFrom.prototype)) {
@@ -318,7 +320,7 @@ function applyResponderMethods(
 }
 
 /** @internal */
-export function makeClient<Type extends AsyncDisposable, Params extends unknown[]>(constructor: abstract new(...args: Params) => Type) {
+export function makeClient<Type extends AsyncDisposable>(constructor: { prototype: Type }) {
 
 	// Create client wrapper class for this responder
 	class Client extends ResponderClient {
@@ -333,7 +335,7 @@ export function makeClient<Type extends AsyncDisposable, Params extends unknown[
 }
 
 /** @internal */
-export function makeHost<Type>(constructor: abstract new(...args: any[]) => Type) {
+export function makeHost<Type>(constructor: { prototype: Type }) {
 
 	// Create host wrapper class for this responder
 	class Host extends ResponderHost {

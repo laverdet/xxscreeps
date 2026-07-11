@@ -6,7 +6,7 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { sendNotification } from 'xxscreeps/mods/notifications/model.js';
 import { getNotifyPrefs } from 'xxscreeps/mods/notifications/prefs.js';
-import {	getConversation, getConversationIndex, getMessageChannel, getNewMessageChannel,	getUnreadCount, markRead, sendMessage } from './model.js';
+import { getConversation, getConversationIndex, getMessageChannel, getNewMessageChannel, getUnreadCount, markRead, sendMessage } from './model.js';
 
 // Longer payloads are rejected rather than truncated.
 const kMaxMessageLength = 100 << 10;

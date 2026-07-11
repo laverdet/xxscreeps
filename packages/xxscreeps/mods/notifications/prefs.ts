@@ -42,7 +42,7 @@ export async function setNotifyPrefs(db: Database, userId: string, prefs: Partia
 	if (prefs.interval !== undefined) fields.interval = String(prefs.interval);
 	if (prefs.errorsInterval !== undefined) fields.errorsInterval = String(prefs.errorsInterval);
 	if (Object.keys(fields).length > 0) {
-		await db.data.hmset(prefsKey(userId), fields);
+		await db.data.hmSet(prefsKey(userId), fields);
 	}
 }
 

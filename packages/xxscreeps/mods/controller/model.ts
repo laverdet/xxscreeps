@@ -60,7 +60,7 @@ export class GlobalControlWatcher extends AsyncDisposableResource {
 	gcl;
 	controlledRooms;
 
-	constructor(disposable: DisposableStack, gcl: number, reservedRooms: string[], listen: DeferListener<GlobalControlMessages>) {
+	private constructor(disposable: DisposableStack, gcl: number, reservedRooms: string[], listen: DeferListener<GlobalControlMessages>) {
 		super();
 		this.disposable.use(disposable);
 		this.gcl = gcl;

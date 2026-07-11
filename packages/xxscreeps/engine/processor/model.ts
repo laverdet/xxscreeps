@@ -146,7 +146,7 @@ export async function acquireIntentsForRoom(shard: Shard, roomName: string) {
 	const key = intentsListForRoomKey(roomName);
 	const [ payloads ] = await Promise.all([
 		shard.scratch.lRange(key, 0, -1),
-		shard.scratch.vdel(key),
+		shard.scratch.vDel(key),
 	]);
 	return payloads.map(json => {
 		const value: { userId: string; intents: RoomIntentPayload } = JSON.parse(json);
@@ -158,7 +158,7 @@ export async function acquireFinalIntentsForRoom(shard: Shard, roomName: string)
 	const key = finalIntentsListForRoomKey(roomName);
 	const [ payloads ] = await Promise.all([
 		shard.scratch.lRange(key, 0, -1),
-		shard.scratch.vdel(key),
+		shard.scratch.vDel(key),
 	]);
 	return payloads.map(json => JSON.parse(json) as SingleIntent[]);
 }
@@ -181,7 +181,7 @@ export async function begetRoomProcessQueue(shard: Shard, time: number) {
 		// The active rooms set is now the processing queue
 		shard.scratch.copy(activeRoomsKey, processSet),
 		// Remove temporary key
-		shard.scratch.vdel(tmpKey),
+		shard.scratch.vDel(tmpKey),
 		// Remove waking rooms from sleeping rooms
 		shard.scratch.zRemRange(sleepingRoomsKey, 0, time),
 		// Initialize counter for rooms that need to be processed
@@ -193,7 +193,7 @@ export async function begetRoomProcessQueue(shard: Shard, time: number) {
 		// In this case there are *no* rooms to process so we take care to make sure processing doesn't
 		// halt.
 		// Delete "0" value
-		await shard.scratch.vdel(processRoomsPendingKey(time));
+		await shard.scratch.vDel(processRoomsPendingKey(time));
 		// Additionally, send the 'tickFinished' message, which the main loop will sit on and eventually
 		// process after the tick delay timeout.
 		await getServiceChannel(shard).publish({ type: 'tickFinished', time });
@@ -211,9 +211,9 @@ export async function roomDidProcess(shard: Shard, time: number) {
 			// Publish finalization task to workers
 			getProcessorChannel(shard).publish({ type: 'finalize', time }),
 			// Delete rooms bookkeeping set
-			shard.scratch.vdel(roomsKey),
+			shard.scratch.vDel(roomsKey),
 			// Delete "0" value from scratch
-			shard.scratch.vdel(processRoomsPendingKey(time)),
+			shard.scratch.vDel(processRoomsPendingKey(time)),
 		]);
 	}
 }
@@ -225,7 +225,7 @@ export async function roomsDidFinalize(shard: Shard, roomsCount: number, time: n
 		if (remaining === 0) {
 			await Promise.all([
 				// Delete "0" value from scratch
-				shard.scratch.vdel(finalizedRoomsPendingKey(time)),
+				shard.scratch.vDel(finalizedRoomsPendingKey(time)),
 				// Notify main loop that room finalization is complete
 				getServiceChannel(shard).publish({ type: 'tickFinished', time }),
 			]);
@@ -301,7 +301,7 @@ export async function abandonIntentsForTick(shard: Shard, time: number) {
 		// Update all processor pending counts to 0
 		shard.scratch.zInterStore(key, [ key ], { weights: [ 0 ] }),
 		// Clear runner queue
-		shard.scratch.vdel(runnerUsersSetKey(time)),
+		shard.scratch.vDel(runnerUsersSetKey(time)),
 	]);
 	// Publish process task to workers
 	await getProcessorChannel(shard).publish({ type: 'process', time });

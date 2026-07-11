@@ -1,6 +1,7 @@
 import type { RedisClient } from './client.js';
 import type { PubSubListener, PubSubProvider, PubSubSubscription } from 'xxscreeps/engine/db/storage/provider.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
 import { acquireRedisClient } from './client.js';
 
 interface PublishIgnore {
@@ -13,14 +14,14 @@ interface SubscriptionDelegate {
 	subscribers: Set<RedisSubscription>;
 }
 
-export class RedisPubSubProvider implements PubSubProvider {
-	private readonly disposable;
+export class RedisPubSubProvider extends AsyncDisposableResource implements PubSubProvider {
 	private readonly prefix;
 	private readonly client;
 	private readonly subscribersByKey = new Map<string, SubscriptionDelegate>();
 
-	constructor(disposable: DisposableStack, prefix: string, client: RedisClient) {
-		this.disposable = disposable;
+	private constructor(disposable: DisposableStack, prefix: string, client: RedisClient) {
+		super();
+		this.disposable.use(disposable);
 		this.prefix = prefix;
 		this.client = client;
 	}
@@ -30,11 +31,6 @@ export class RedisPubSubProvider implements PubSubProvider {
 		using disposable = new DisposableStack();
 		const client = disposable.adopt(await acquireRedisClient(url), client => mustNotReject(client.close()));
 		return new RedisPubSubProvider(disposable.move(), prefix, client);
-	}
-
-	// eslint-disable-next-line @typescript-eslint/require-await
-	async [Symbol.asyncDispose]() {
-		this.disposable.dispose();
 	}
 
 	async publish(key: string, message: string) {

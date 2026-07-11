@@ -232,17 +232,17 @@ describe('Deposit placement', () => {
 	// Since there is only one sector in the test shard the 30x30 deposit is still a member of that
 	// sector.
 	// test('decay outside the sector radius places no refill', () => simulate({
-	// 	// Official placement doesn't enforce the 250-square radius, so out-of-radius deposits exist in
-	// 	// the wild. They're invisible to every sector's throughput tally, so their decay must not
-	// 	// prompt a re-eval — no refill may appear.
-	// 	W0N0: room => {
-	// 		// outside W5N5's 250-square radius
-	// 		const deposit = createDeposit(new RoomPosition(30, 30, 'W0N0'), C.RESOURCE_SILICON, 0, Game.time + 1);
-	// 		room['#insertObject'](deposit);
-	// 		room['#insertObject'](createCreep(new RoomPosition(30, 31, 'W0N0'), [ C.MOVE ], 'parker', '100'));
-	// 	},
+	//   // Official placement doesn't enforce the 250-square radius, so out-of-radius deposits exist in
+	//   // the wild. They're invisible to every sector's throughput tally, so their decay must not
+	//   // prompt a re-eval — no refill may appear.
+	//   W0N0: room => {
+	//     // outside W5N5's 250-square radius
+	//     const deposit = createDeposit(new RoomPosition(30, 30, 'W0N0'), C.RESOURCE_SILICON, 0, Game.time + 1);
+	//     room['#insertObject'](deposit);
+	//     room['#insertObject'](createCreep(new RoomPosition(30, 31, 'W0N0'), [ C.MOVE ], 'parker', '100'));
+	//   },
 	// })(async ({ shard, tick }) => {
-	// 	await tick(2);
-	// 	assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 0);
+	//   await tick(2);
+	//   assert.strictEqual((await findDepositsInSector(shard, 'W5N5')).length, 0);
 	// }));
 });

@@ -3,6 +3,7 @@ import type * as Pr from 'xxscreeps/engine/db/storage/provider.js';
 import { Buffer } from 'node:buffer';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { acquireWith } from 'xxscreeps/utility/async.js';
+import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
 import { acquireRedisClient } from './client.js';
 
 type Value = Pr.Value;
@@ -19,7 +20,7 @@ function recv(value: Value) {
 	}
 }
 
-function send<Type>(value: Type, options?: Pr.AsBlob): Type | string {
+function send<Type>(value: Type, options?: Pr.Get): Type | string {
 	// Convert value from redis
 	if (Buffer.isBuffer(value)) {
 		if (options?.blob) {
@@ -74,17 +75,14 @@ function zRangeOptions(options?: Pr.ZRange) {
 	};
 }
 
-export class RedisProvider implements Pr.KeyValProvider {
-	private readonly disposable;
+export class RedisProvider extends AsyncDisposableResource implements Pr.KeyValProvider {
 	private readonly keyval;
 	private readonly blob;
-	private readonly withSave;
 
-	private constructor(disposable: AsyncDisposableStack, keyval: RedisClient, blob: RedisBlobClient, withSave: boolean) {
-		this.disposable = disposable;
+	private constructor(disposable: AsyncDisposableStack, keyval: RedisClient, blob: RedisBlobClient) {
+		super(disposable);
 		this.keyval = keyval;
 		this.blob = blob;
-		this.withSave = withSave;
 	}
 
 	static async connect(url: URL) {
@@ -94,11 +92,7 @@ export class RedisProvider implements Pr.KeyValProvider {
 			acquireRedisClient(url),
 			acquireRedisClient(url, true),
 		);
-		return new RedisProvider(disposable.move(), keyval, blob, url.searchParams.has('save'));
-	}
-
-	async [Symbol.asyncDispose]() {
-		await this.disposable.disposeAsync();
+		return new RedisProvider(disposable.move(), keyval, blob);
 	}
 
 	//
@@ -116,7 +110,7 @@ export class RedisProvider implements Pr.KeyValProvider {
 		return await this.keyval.delEx(key, { condition: 'IFEQ', matchValue: options.eq }) === 1;
 	}
 
-	async mdel(...keys: string[]) {
+	async mDel(...keys: string[]) {
 		if (keys.length === 0) {
 			return 0;
 		} else {
@@ -124,13 +118,14 @@ export class RedisProvider implements Pr.KeyValProvider {
 		}
 	}
 
-	async vdel(key: string) {
+	async vDel(key: string) {
 		await this.keyval.del(key);
 	}
 
-	get(key: string, options: { blob: true }): Promise<Readonly<Uint8Array> | null>;
-	get(key: string, options?: Pr.AsBlob): Promise<string | null>;
-	async get(key: string, options?: Pr.AsBlob): Promise<Readonly<Uint8Array> | string | null> {
+	get(key: string, options: Pr.AsBlob): Promise<Readonly<Uint8Array> | null>;
+	get(key: string, options?: Pr.AsString): Promise<string | null>;
+	get(key: string, options?: Pr.Get): Promise<Readonly<Uint8Array> | string | null>;
+	async get(key: string, options?: Pr.Get): Promise<Readonly<Uint8Array> | string | null> {
 		if (options?.blob) {
 			return sendBlob(await this.blob.get(key)) satisfies Uint8Array | null;
 		} else {
@@ -142,7 +137,9 @@ export class RedisProvider implements Pr.KeyValProvider {
 		return Number(await this.keyval.pTTL(key));
 	}
 
-	async req(key: string, options?: Pr.AsBlob): Promise<any> {
+	req(key: string, options: Pr.AsBlob): Promise<Readonly<Uint8Array>>;
+	req(key: string, options?: Pr.AsString): Promise<string>;
+	async req(key: string, options?: Pr.Get) {
 		const value: unknown = await this.get(key, options);
 		if (value === null) {
 			throw new Error(`"${key}" does not exist`);
@@ -208,7 +205,9 @@ export class RedisProvider implements Pr.KeyValProvider {
 		return this.keyval.hIncrBy(key, field, value);
 	}
 
-	async hmGet(key: string, fields: string[], options?: Pr.AsBlob): Promise<any> {
+	hmGet(key: string, fields: string[], options: Pr.AsBlob): Promise<Record<string, Readonly<Uint8Array> | null>>;
+	hmGet(key: string, fields: string[], options?: Pr.AsString): Promise<Record<string, string | null>>;
+	async hmGet(key: string, fields: string[], options?: Pr.Get): Promise<Record<string, unknown>> {
 		const make = <Type, Result>(values: readonly Type[], send: (value: Type) => Result) =>
 			Fn.pipe(
 				fields,
@@ -229,7 +228,7 @@ export class RedisProvider implements Pr.KeyValProvider {
 		}
 	}
 
-	async hmset(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
+	async hmSet(key: string, fields: Iterable<[ string, Value ]> | Record<string, Value>) {
 		const iterable = Symbol.iterator in fields ? fields : Object.entries(fields);
 		await Fn.mapAwait(iterable, async ([ field, value ]) => this.keyval.hSet(key, field, recv(value)));
 	}
@@ -244,7 +243,7 @@ export class RedisProvider implements Pr.KeyValProvider {
 		return this.keyval.lRange(key, start, stop);
 	}
 
-	rPush(key: string, elements: Value[]) {
+	rPush(key: string, elements: string[]) {
 		return this.keyval.rPush(key, elements.map(recv));
 	}
 

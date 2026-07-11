@@ -113,7 +113,7 @@ const defaultMessageStore: MessageStore = {
 		const now = Date.now();
 		const id = generateId(24);
 		await Promise.all([
-			db.data.hmset(messageKey(id), { from: senderId, to: respondentId, text, date: String(now) }),
+			db.data.hmSet(messageKey(id), { from: senderId, to: respondentId, text, date: String(now) }),
 			db.data.zAdd(threadKey(senderId, respondentId), [ [ now, id ] ]),
 			db.data.zAdd(threadKey(respondentId, senderId), [ [ now, id ] ]),
 			db.data.zAdd(conversationsKey(senderId), [ [ now, respondentId ] ]),

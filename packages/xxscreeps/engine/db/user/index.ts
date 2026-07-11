@@ -54,10 +54,10 @@ export async function create(db: Database, userId: string, username: string, pro
 	}
 	await Promise.all<any>([
 		db.data.sAdd('users', [ userId ]),
-		db.data.hmset(key, {
+		db.data.hmSet(key, {
 			registeredDate: Date.now(),
 		}),
-		db.data.hmset(userProvidersKey(userId),
+		db.data.hmSet(userProvidersKey(userId),
 			[ ...Fn.map(allProviders, ({ provider, id }): [ string, string ] => [ provider, id ]) ]),
 		...Fn.map(allProviders, ({ provider, id }) =>
 			db.data.hSet(providerMembersKey(provider), id, userId)),
@@ -83,8 +83,8 @@ export async function remove(db: Database, userId: string) {
 		...Fn.map(Object.entries(providers), ([ provider, providerId ]) =>
 			db.data.hDel(providerMembersKey(provider), [ providerId ])),
 		...Fn.transform(branches, branchName => [
-			db.data.vdel(buffersKey(userId, branchName)),
-			db.data.vdel(stringsKey(userId, branchName)),
+			db.data.vDel(buffersKey(userId, branchName)),
+			db.data.vDel(stringsKey(userId, branchName)),
 		]),
 		...removeHooks(db, userId),
 	]);

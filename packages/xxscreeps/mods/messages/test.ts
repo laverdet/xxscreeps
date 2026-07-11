@@ -3,7 +3,7 @@ import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { makeProviderRegistration } from 'xxscreeps/utility/hook.js';
 import { deterministicClockForTesting } from 'xxscreeps/utility/utility.js';
-import {	getConversation, getConversationIndex, getUnreadCount, markRead, sendMessage } from './model.js';
+import { getConversation, getConversationIndex, getUnreadCount, markRead, sendMessage } from './model.js';
 
 const alice = '100';
 const bob = '101';

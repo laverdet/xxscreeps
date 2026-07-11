@@ -81,11 +81,11 @@ export async function publishVisualsBlobsForNextTick(shard: Shard, userId: strin
 	const time = shard.time + 1;
 	const fragment = `user/${userId}/visual${time % 2}`;
 	if (payload.size === 0) {
-		await shard.scratch.vdel(fragment);
+		await shard.scratch.vDel(fragment);
 	} else {
 		await Promise.all([
-			shard.scratch.vdel(fragment),
-			shard.scratch.hmset(fragment, [
+			shard.scratch.vDel(fragment),
+			shard.scratch.hmSet(fragment, [
 				[ 'time', Buffer.from(`${time}`) ],
 				...payload,
 			]),

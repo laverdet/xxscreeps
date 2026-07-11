@@ -163,8 +163,8 @@ hooks.register('route', {
 					context.db.data.copy(Code.stringsKey(userId, branch), Code.stringsKey(userId, newName)),
 				]);
 				await Promise.all([
-					updatedBlobs ? undefined : context.db.data.vdel(Code.buffersKey(userId, newName)),
-					updatedStrings ? undefined : context.db.data.vdel(Code.stringsKey(userId, newName)),
+					updatedBlobs ? undefined : context.db.data.vDel(Code.buffersKey(userId, newName)),
+					updatedStrings ? undefined : context.db.data.vDel(Code.stringsKey(userId, newName)),
 				]);
 				return updatedBlobs || updatedStrings;
 			} else {
@@ -212,8 +212,8 @@ hooks.register('route', {
 		}
 		await Promise.all([
 			context.db.data.sRem(Code.branchManifestKey(userId), [ branch ]),
-			context.db.data.vdel(Code.buffersKey(userId, branch)),
-			context.db.data.vdel(Code.stringsKey(userId, branch)),
+			context.db.data.vDel(Code.buffersKey(userId, branch)),
+			context.db.data.vDel(Code.stringsKey(userId, branch)),
 		]);
 		return { ok: 1 };
 	}),

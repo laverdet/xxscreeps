@@ -341,7 +341,7 @@ if (!shardOnly) {
 		if (user.badge) {
 			await Badge.save(db, id, JSON.stringify(user.badge));
 		}
-		await db.data.hmset(User.infoKey(id), {
+		await db.data.hmSet(User.infoKey(id), {
 			branch,
 			...user.registeredDate && {
 				registeredDate: +new Date(user.registeredDate),
