@@ -266,7 +266,6 @@ export class BlobStorage extends AsyncDisposableResource {
 			return;
 		}
 		const entries = [ ...Fn.filter(this.cache, entry => entry[1].saveId === this.saveId) ];
-		console.log(entries);
 		++this.saveId;
 
 		// Save to disk

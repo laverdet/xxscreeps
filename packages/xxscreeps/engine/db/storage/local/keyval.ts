@@ -785,7 +785,7 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 					}
 				});
 				const original = new URL(this.url);
-				const tmp = new URL(`./.${original.pathname.substr(original.pathname.lastIndexOf('/') + 1)}.swp`, original);
+				const tmp = new URL(`./.${original.pathname.slice(original.pathname.lastIndexOf('/') + 1)}.swp`, original);
 				await Promise.all([
 					this.blob.save(),
 					async function() {
