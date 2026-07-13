@@ -5,7 +5,6 @@ import { consumeSet, consumeSortedSet, consumeSortedSetMembers } from 'xxscreeps
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import { getProcessorChannel, processRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { upgradeTerrain } from 'xxscreeps/game/map.js';
 import * as Async from 'xxscreeps/utility/async.js';
 import { negotiateResponderClient } from 'xxscreeps/utility/responder.js';
 import { clamp } from 'xxscreeps/utility/utility.js';
@@ -33,7 +32,8 @@ using signal = handleInterruptSignal(() => {
 await using db = await Database.connect();
 await using shard = await Shard.connect(db, config.shards[0]!.name);
 await using disposable = new AsyncDisposableStack();
-const worldBlob = upgradeTerrain(await shard.data.req('terrain', { blob: true }));
+const world = await shard.loadWorld();
+const { terrainBlob } = world;
 const processorSubscription = disposable.adopt(
 	await getProcessorChannel(shard).subscribe(),
 	subscription => subscription.disconnect());
@@ -113,7 +113,7 @@ async function *consumeRoomsQueue(worker: RoomWorker, time: number): AsyncIterab
 
 // Initialize workers and rooms
 await Fn.mapAwait(workers, async worker => {
-	await worker.responder({ type: 'world', worldBlob });
+	await worker.responder({ type: 'world', terrainBlob });
 	for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
 		await worker.responder({ type: 'initialize', roomName });
 		if (halted) {

@@ -9,6 +9,7 @@ import { World, upgradeTerrain } from 'xxscreeps/game/map.js';
 import { acquireWith } from 'xxscreeps/utility/async.js';
 import { AsyncDisposableResource } from 'xxscreeps/utility/utility.js';
 import { getRoomChannel } from '../processor/model.js';
+import { loadUpgradedWithWriteBack } from '../schema/keyval.js';
 import { Channel } from './channel.js';
 
 type Message = { type: 'tick'; time: number } | { type: null };
@@ -88,10 +89,14 @@ export class Shard extends AsyncDisposableResource {
 	 */
 	async loadWorld() {
 		const [ terrainBlob, rooms ] = await Promise.all([
-			this.data.req('terrain', { blob: true }),
+			loadUpgradedWithWriteBack(
+				() => this.data.req('terrain', { blob: true }),
+				blob => this.data.set('terrain', blob),
+				upgradeTerrain,
+			),
 			this.data.sMembers('rooms'),
 		]);
-		return new World(this.name, upgradeTerrain(terrainBlob), new Set(rooms));
+		return new World(this.name, await upgradeTerrain(terrainBlob), new Set(rooms));
 	}
 
 	/**

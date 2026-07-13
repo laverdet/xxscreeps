@@ -1,5 +1,6 @@
 import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
+import { loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
 import { bifurcate } from 'xxscreeps/utility/utility.js';
 import * as Schema from './code-schema.js';
 import * as User from './index.js';
@@ -24,16 +25,19 @@ export type CodePayload = Map<string, string | Uint8Array>;
  */
 export async function loadBlobs(db: Database, userId: string, branchName: string): Promise<Schema.CodeBlobs | undefined> {
 	const [ buffers, strings ] = await Promise.all([
-		db.data.get(buffersKey(userId, branchName), { blob: true }),
-		db.data.get(stringsKey(userId, branchName), { blob: true }),
+		loadUpgradedWithWriteBack(
+			() => db.data.get(buffersKey(userId, branchName), { blob: true }),
+			blob => db.data.set(buffersKey(userId, branchName), blob),
+			Schema.upgradeBuffers,
+		),
+		loadUpgradedWithWriteBack(
+			() => db.data.get(stringsKey(userId, branchName), { blob: true }),
+			blob => db.data.set(stringsKey(userId, branchName), blob),
+			Schema.upgradeStrings,
+		),
 	]);
 	if (buffers || strings) {
-		// Upgrade host-side so both the parsed content and the forwarded runtime payload see the
-		// current schema version.
-		return {
-			buffers: buffers && Schema.upgradeBuffers(buffers),
-			strings: strings && Schema.upgradeStrings(strings),
-		};
+		return { buffers,	strings };
 	}
 }
 

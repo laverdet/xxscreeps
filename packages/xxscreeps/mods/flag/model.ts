@@ -1,6 +1,7 @@
 import type { createFlag, removeFlag } from './game.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
+import { loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
 import { read, upgrade } from './game.js';
 
 export type FlagIntent = { type: null } | {
@@ -11,6 +12,8 @@ export type FlagIntent = { type: null } | {
 	params: Parameters<typeof removeFlag>;
 };
 
+const userFlagsKey = (userId: string) => `user/${userId}/flags`;
+
 /**
  * Return a reference to the user's flag channel
  */
@@ -18,17 +21,18 @@ export function getFlagChannel(shard: Shard, userId: string) {
 	type Message =
 		{ type: 'updated'; time: number } |
 		{ type: 'intent'; intent: FlagIntent };
-	return new Channel<Message>(shard.pubsub, `user/${userId}/flags`);
+	return new Channel<Message>(shard.pubsub, userFlagsKey(userId));
 }
 
 /**
  * Load the unparsed flag blob for a user
  */
 export async function loadUserFlagBlob(shard: Shard, userId: string) {
-	const blob = await shard.data.get(`user/${userId}/flags`, { blob: true });
-	// Upgrade host-side so both the backend parse and the forwarded runtime payload see the current
-	// schema version.
-	return blob && upgrade(blob);
+	return loadUpgradedWithWriteBack(
+		() => shard.data.get(userFlagsKey(userId), { blob: true }),
+		blob => shard.data.set(userFlagsKey(userId), blob),
+		upgrade,
+	);
 }
 
 /**
@@ -48,7 +52,7 @@ export async function loadUserFlags(shard: Shard, userId: string) {
  */
 export async function saveUserFlagBlobForNextTick(shard: Shard, userId: string, blob?: Readonly<Uint8Array>) {
 	const time = shard.time + 1;
-	const key = `user/${userId}/flags`;
+	const key = userFlagsKey(userId);
 	if (blob) {
 		await shard.data.set(key, blob);
 	} else {

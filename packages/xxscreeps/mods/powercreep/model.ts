@@ -22,12 +22,12 @@ const isLive = (creep: PowerCreep) => creep.deleteTime === 0 || creep.deleteTime
 
 function parseRoster(blob: Readonly<Uint8Array> | null): PowerCreep[] {
 	// Upgrade for parsing only; callers keep the raw blob for compare-and-swap comparisons.
-	return blob == null ? [] : read(upgradeRoster(blob));
+	return blob == null ? [] : read(blob);
 }
 
 /** Live roster game objects, with elapsed scheduled-deletions filtered out. */
 export async function loadRoster(db: Database, userId: string) {
-	return parseRoster(await db.data.get(powerCreepsKey(userId), { blob: true })).filter(isLive);
+	return parseRoster(await loadPowerCreepsBlob(db, userId)).filter(isLive);
 }
 
 /** Raw roster blob for the runtime payload — read as a shared buffer and handed across untouched. */

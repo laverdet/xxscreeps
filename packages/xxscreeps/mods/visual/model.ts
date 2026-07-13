@@ -57,7 +57,7 @@ export async function loadVisuals(shard: Shard, userId: string, roomName: string
 	function stringify(blob: Readonly<Uint8Array> | null | undefined, isMapVisual = false) {
 		let visualsString = '';
 		if (blob) {
-			const visuals = visualsReader(Visual.upgrade(blob));
+			const visuals = visualsReader(blob);
 			const decoded = isMapVisual ? decodeMapVisuals(visuals) : visuals;
 			for (const visual of decoded) {
 				visualsString += stringifyInherited(Object.assign(visual, { t: visual[Variant] })) + '\n';

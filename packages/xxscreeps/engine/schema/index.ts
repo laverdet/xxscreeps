@@ -106,9 +106,6 @@ export function makeReaderAndWriter<Type extends Format>(format: Type, options?:
 		read: makeReader(info, builder, options),
 		version: info.version,
 		write,
-		// Upgrades a persisted blob written under an older schema version to the current one. Call
-		// this on the host when reading a blob from the database (the player runtime has no upgrader
-		// and must receive an already-current blob).
 		upgrade: makeUpgrader(info, write),
 	};
 }
