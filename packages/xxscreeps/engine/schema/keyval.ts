@@ -1,5 +1,26 @@
 import { KeyvalScript } from 'xxscreeps/engine/db/storage/script.js';
 
+/**
+ * Read the given schema keyval blob and upgrade it in-place if necessary.
+ */
+export async function loadUpgradedWithWriteBack<
+	Type extends Readonly<Uint8Array> | null,
+>(
+	load: () => Promise<Type>,
+	write: (blob: Readonly<Uint8Array>) => Promise<void>,
+	upgrade: (blob: Readonly<Uint8Array>) => Promise<Readonly<Uint8Array>>,
+) {
+	const blob = await load();
+	if (blob) {
+		const upgradedBlob = await upgrade(blob);
+		if (upgradedBlob !== blob) {
+			await write(upgradedBlob);
+			return upgradedBlob;
+		}
+	}
+	return blob;
+}
+
 type UpdateArgv = [ version: number, relativeOffset: number, type: 'double' | 'int32', value: number, operation: 'min' | 'max' | 'incr' | 'set' ];
 
 /**

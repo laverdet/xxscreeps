@@ -100,10 +100,12 @@ export function variantForPath<Schema>() {
 export function makeReaderAndWriter<Type extends Format>(format: Type, options?: BuilderOptions & ReadOptions) {
 	const info = build(format);
 	const builder = new Builder(options);
+	const write = makeWriter(info, builder);
 	return {
 		offsetOf: makeOffsetOf(info),
 		read: makeReader(info, builder, options),
 		version: info.version,
-		write: makeWriter(info, builder),
+		write,
+		upgrade: makeUpgrader(info, write),
 	};
 }

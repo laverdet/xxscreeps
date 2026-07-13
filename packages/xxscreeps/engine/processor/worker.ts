@@ -19,7 +19,7 @@ export type ProcessorRequest = LoadWorldRequest | InitializeRequest | ProcessReq
 
 type LoadWorldRequest = {
 	type: 'world';
-	worldBlob: Readonly<Uint8Array>;
+	terrainBlob: Readonly<Uint8Array>;
 };
 type InitializeRequest = {
 	type: 'initialize';
@@ -56,7 +56,7 @@ await makeBasicResponderHost<ProcessorRequest>(import.meta.url, async message =>
 	switch (message.type) {
 		// Load world shared data between all workers in the process
 		case 'world':
-			world = new World(shard.name, message.worldBlob);
+			world = new World(shard.name, message.terrainBlob);
 			loadTerrain(world);
 			break;
 

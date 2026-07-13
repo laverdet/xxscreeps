@@ -32,7 +32,8 @@ using signal = handleInterruptSignal(() => {
 await using db = await Database.connect();
 await using shard = await Shard.connect(db, config.shards[0]!.name);
 await using disposable = new AsyncDisposableStack();
-const worldBlob = await shard.data.req('terrain', { blob: true });
+const world = await shard.loadWorld();
+const { terrainBlob } = world;
 const processorSubscription = disposable.adopt(
 	await getProcessorChannel(shard).subscribe(),
 	subscription => subscription.disconnect());
@@ -112,7 +113,7 @@ async function *consumeRoomsQueue(worker: RoomWorker, time: number): AsyncIterab
 
 // Initialize workers and rooms
 await Fn.mapAwait(workers, async worker => {
-	await worker.responder({ type: 'world', worldBlob });
+	await worker.responder({ type: 'world', terrainBlob });
 	for await (const roomName of consumeSet(shard.scratch, 'initializeRooms')) {
 		await worker.responder({ type: 'initialize', roomName });
 		if (halted) {

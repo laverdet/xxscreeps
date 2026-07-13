@@ -1,6 +1,7 @@
 import type { Package } from 'xxscreeps/schema/build.js';
 import type { BufferView, Format } from 'xxscreeps/schema/index.js';
-import * as fs from 'node:fs';
+import * as fsSync from 'node:fs';
+import * as fs from 'node:fs/promises';
 import { config, configPath } from 'xxscreeps/config/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { restoreLayout } from 'xxscreeps/schema/archive.js';
@@ -11,7 +12,7 @@ import { initializeView, makeViewReader } from 'xxscreeps/schema/read.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 const archivePath = new URL(`${config.schemaArchive}/`, configPath);
-const archivedReaders = new Map<number, (view: BufferView) => any>();
+const archivedReaders = new Map<number, Promise<(view: BufferView) => unknown>>();
 const packages = new Map<string, Package>();
 
 function makeArchivePath(name: string, version: number, ext = 'js') {
@@ -27,12 +28,12 @@ function makeArchivePath(name: string, version: number, ext = 'js') {
 export function build<Type extends Format>(format: Type, cache = new Map()) {
 	const result = buildSchema(format, cache);
 	const file = makeArchivePath(result.name, result.version);
-	fs.mkdirSync(archivePath, { recursive: true });
+	fsSync.mkdirSync(archivePath, { recursive: true });
 	try {
-		fs.statSync(file);
+		fsSync.statSync(file);
 	} catch {
-		fs.writeFileSync(file, result.archive);
-		fs.writeFileSync(makeArchivePath(result.name, result.version, 'ksy'), archiveStruct(result.layout, result.version));
+		fsSync.writeFileSync(file, result.archive);
+		fsSync.writeFileSync(makeArchivePath(result.name, result.version, 'ksy'), archiveStruct(result.layout, result.version));
 	}
 	packages.set(result.name, {
 		...result,
@@ -47,15 +48,15 @@ export function build<Type extends Format>(format: Type, cache = new Map()) {
  */
 export function makeUpgrader(info: Package, write: (value: any) => Readonly<Uint8Array>) {
 	const { name, version: expectedVersion } = info;
-	return (buffer: Readonly<Uint8Array>) => {
+	return async (buffer: Readonly<Uint8Array>) => {
 		const { view, version } = initializeView(buffer);
 		if (expectedVersion === version) {
 			return buffer;
 		} else {
-			const reader = getOrSet(archivedReaders, version, () => {
-				const archive = function() {
+			const reader = await getOrSet(archivedReaders, version, async () => {
+				const archive = await async function() {
 					try {
-						return fs.readFileSync(makeArchivePath(name, version), 'utf8');
+						return await fs.readFile(makeArchivePath(name, version), 'utf8');
 					} catch {
 						throw new Error(`No archived schema found for ${name} ${version}`);
 					}

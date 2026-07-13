@@ -2,11 +2,11 @@ import type { ExitType } from './room/find.js';
 import type { Room } from './room/index.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import type { Adapter } from 'xxscreeps/utility/astar.js';
-import { build, structForPath } from 'xxscreeps/engine/schema/index.js';
+import { build, makeUpgrader, structForPath } from 'xxscreeps/engine/schema/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { makeRoomName, parseRoomName, roomLinearDistance, roomNameFormat } from 'xxscreeps/game/room/name.js';
-import { compose, declare, makeReader, optional, struct, vector } from 'xxscreeps/schema/index.js';
+import { compose, declare, makeReader, makeWriter, optional, struct, vector } from 'xxscreeps/schema/index.js';
 import { astar } from 'xxscreeps/utility/astar.js';
 import * as C from './constants/index.js';
 import { getDirection, getOffsetsFromDirection } from './direction.js';
@@ -344,7 +344,7 @@ export class World {
 	constructor(name: string, terrainBlob: Readonly<Uint8Array>, accessibleRooms?: ReadonlySet<string>) {
 		this.name = name;
 		this.terrainBlob = terrainBlob;
-		this.terrain = reader(terrainBlob);
+		this.terrain = read(terrainBlob);
 		this.map = new GameMap(this.terrain, accessibleRooms);
 	}
 
@@ -356,7 +356,13 @@ export class World {
 	}
 }
 
-const reader = makeReader(schema);
+const read = makeReader(schema);
+const write = makeWriter(schema);
+// Upgrades a terrain blob persisted under an older schema version to the current one, the same way
+// room blobs are upgraded on load. Call this on the host when reading terrain from the database
+// before constructing `World` or forwarding the blob; the player runtime has no upgrader and always
+// receives an already-current blob.
+export const upgradeTerrain = makeUpgrader(schema, write);
 
 function extractRoomName(room: string | Room) {
 	if (typeof room === 'object') {

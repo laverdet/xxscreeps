@@ -3,9 +3,10 @@ import type { Database } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { checkCreatePowerCreep, checkRenamePowerCreep, checkUpgradePowerCreep, createPowerCreep, read, write } from './powercreep.js';
+import { checkCreatePowerCreep, checkRenamePowerCreep, checkUpgradePowerCreep, createPowerCreep, read, upgradeRoster, write } from './powercreep.js';
 
 // Account-scoped power creep roster.
 const powerCreepsKey = (userId: string) => `user/${userId}/powerCreeps`;
@@ -21,17 +22,22 @@ export function getPowerCreepChannel(db: Database, userId: string) {
 const isLive = (creep: PowerCreep) => creep.deleteTime === 0 || creep.deleteTime > Date.now();
 
 function parseRoster(blob: Readonly<Uint8Array> | null): PowerCreep[] {
+	// Upgrade for parsing only; callers keep the raw blob for compare-and-swap comparisons.
 	return blob == null ? [] : read(blob);
 }
 
 /** Live roster game objects, with elapsed scheduled-deletions filtered out. */
 export async function loadRoster(db: Database, userId: string) {
-	return parseRoster(await db.data.get(powerCreepsKey(userId), { blob: true })).filter(isLive);
+	return parseRoster(await loadPowerCreepsBlob(db, userId)).filter(isLive);
 }
 
 /** Raw roster blob for the runtime payload — read as a shared buffer and handed across untouched. */
 export function loadPowerCreepsBlob(db: Database, userId: string) {
-	return db.data.get(powerCreepsKey(userId), { blob: true });
+	return loadUpgradedWithWriteBack(
+		() => db.data.get(powerCreepsKey(userId), { blob: true }),
+		blob => db.data.set(powerCreepsKey(userId), blob),
+		upgradeRoster,
+	);
 }
 
 // Apply `fn` to the live roster and commit it with a compare-and-swap, retrying if a concurrent

@@ -24,8 +24,8 @@ const stringsFormat = declare('CodeStrings', compose(vector(struct({
 	compose: value => new Map<string, string>(value.map(entry => [ entry.name, entry.content ])),
 	decompose: (value: Map<string, string>) => Fn.map(value.entries(), ([ name, content ]) => ({ name, content })),
 }));
-export const { read: readBuffers, write: writeBuffers } = makeReaderAndWriter(buffersFormat);
-export const { read: readStrings, write: writeStrings } = makeReaderAndWriter(stringsFormat);
+export const { read: readBuffers, write: writeBuffers, upgrade: upgradeBuffers } = makeReaderAndWriter(buffersFormat);
+export const { read: readStrings, write: writeStrings, upgrade: upgradeStrings } = makeReaderAndWriter(stringsFormat);
 
 export function read(blobs: CodeBlobs) {
 	return new Map<string, string | Uint8Array>(Fn.concat<[ string, string | Uint8Array ]>([
