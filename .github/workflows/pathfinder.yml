@@ -92,7 +92,10 @@ jobs:
         name: Toolchain [Debian]
         run:
           # Link clang runtime archives
-          ln -fs "$("$CXX" -print-resource-dir)"/lib/linux/* "/lib/$(uname -m)-linux-gnu/"
+          CLANG_LIBDIR="$("$CXX" -print-resource-dir)"/lib"
+          CLANG_TRIPLE="$(uname -m)-linux-gnu"
+          ln -fs "$CLANG_LIBDIR/linux"/* "/lib/$CLANG_TRIPLE/"
+          ln -fs "$CLANG_LIBDIR/linux" "$CLANG_LIBDIR/$CLANG_TRIPLE"
 
       - if: matrix.host.platform == 'darwin'
         name: Toolchain [macOS]
