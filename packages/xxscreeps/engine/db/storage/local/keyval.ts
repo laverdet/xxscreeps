@@ -20,7 +20,11 @@ registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
 type PrimitiveValue = string | number;
 type InternalMapValue = PrimitiveValue | Readonly<Uint8Array>;
 type InternalValue = InternalMapValue | string[] | Map<string, InternalMapValue> | Set<string> | SortedSet;
-type SerializedValue = PrimitiveValue | string[] | SerializedMap | SerializedSet | SerializedSortedSet | SerializedUint8;
+type SerializedValue = PrimitiveValue | string[] | SerializedObject | SerializedMap | SerializedSet | SerializedSortedSet | SerializedUint8;
+interface SerializedObject {
+	[key: string]: unknown;
+	'#'?: never;
+}
 type LocalKeyValScript = (keyval: LocalKeyValResponder, keys: string[], argv: unknown[]) => unknown;
 
 interface SerializedMap {
@@ -70,9 +74,10 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 						case 'set': return new Set(value.$);
 						case 'zset': return new SortedSet(value.$);
 						case 'uint8': return latin1ToBuffer(value.$);
+						case undefined: return value;
 					}
 				}
-			}) as SerializedValue;
+			}) as InternalValue;
 			if (map instanceof Map) {
 				this.data = map;
 			}

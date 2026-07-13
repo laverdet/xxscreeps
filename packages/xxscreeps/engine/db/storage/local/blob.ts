@@ -91,11 +91,11 @@ export class BlobStorage extends AsyncDisposableResource {
 			// Ensure it actually exists on disk
 			const path = Path.join(this.path, key);
 			try {
+				await fs.stat(path);
 				this.cache.set(key, {
 					saveId: this.saveId,
 					value: null,
 				});
-				await fs.stat(path);
 				return true;
 			} catch {
 				this.cache.set(key, {
@@ -266,6 +266,7 @@ export class BlobStorage extends AsyncDisposableResource {
 			return;
 		}
 		const entries = [ ...Fn.filter(this.cache, entry => entry[1].saveId === this.saveId) ];
+		console.log(entries);
 		++this.saveId;
 
 		// Save to disk
