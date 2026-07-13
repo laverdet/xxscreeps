@@ -81,6 +81,7 @@ jobs:
             clang-22
             cmake
             libboost-all-dev
+            libclang-rt-22
             lld-22
             llvm-22
             ninja-build
@@ -88,16 +89,6 @@ jobs:
           export: |
             CXX=clang++-22
             LLVM_PROFDATA=llvm-profdata-22
-      - if: steps.debian.outcome == 'success'
-        name: Toolchain [Debian]
-        run:
-          # Link clang runtime archives
-          CLANG_LIBDIR="$("$CXX" -print-resource-dir)/lib"
-          CLANG_TRIPLE="$(uname -m)-linux-gnu"
-          # ln -fs "$CLANG_LIBDIR/linux"/* "/lib/$CLANG_TRIPLE/"
-          # ln -fs "$CLANG_LIBDIR/linux" "$CLANG_LIBDIR/$CLANG_TRIPLE"
-      - if: steps.debian.outcome == 'success'
-        uses: laverdet/console@v1
 
       - if: matrix.host.platform == 'darwin'
         name: Toolchain [macOS]
