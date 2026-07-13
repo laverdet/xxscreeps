@@ -73,6 +73,7 @@ jobs:
             LLVM_PROFDATA=llvm22-profdata
 
       - if: matrix.host.container == 'debian:sid'
+        id: debian
         name: Toolchain [Debian]
         uses: laverdet/install@v1
         with:
@@ -87,6 +88,11 @@ jobs:
           export: |
             CXX=clang++-22
             LLVM_PROFDATA=llvm-profdata-22
+      - if: steps.debian.outcome == 'success'
+        name: Toolchain [Debian]
+        run:
+          # Link clang runtime archives
+          ln -fs "$("$CXX" -print-resource-dir)"/lib/linux/* "/lib/$(uname -m)-linux-gnu/"
 
       - if: matrix.host.platform == 'darwin'
         name: Toolchain [macOS]
