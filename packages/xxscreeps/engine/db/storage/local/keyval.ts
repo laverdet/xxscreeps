@@ -20,7 +20,11 @@ registerStorageProvider([ 'file', 'local' ], 'keyval', url => {
 type PrimitiveValue = string | number;
 type InternalMapValue = PrimitiveValue | Readonly<Uint8Array>;
 type InternalValue = InternalMapValue | string[] | Map<string, InternalMapValue> | Set<string> | SortedSet;
-type SerializedValue = PrimitiveValue | string[] | SerializedMap | SerializedSet | SerializedSortedSet | SerializedUint8;
+type SerializedValue = PrimitiveValue | string[] | SerializedObject | SerializedMap | SerializedSet | SerializedSortedSet | SerializedUint8;
+interface SerializedObject {
+	[key: string]: unknown;
+	'#'?: never;
+}
 type LocalKeyValScript = (keyval: LocalKeyValResponder, keys: string[], argv: unknown[]) => unknown;
 
 interface SerializedMap {
@@ -62,22 +66,18 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		this.blob = blob;
 		if (payload !== undefined) {
 			const map = JSON.parse(payload, (key, value: SerializedValue) => {
-				// `value` is typed as the serialized shape, but a JSON reviver also visits raw
-				// `null` and untagged plain objects that the type doesn't model
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-				if (typeof value === 'object' && value !== null && !(value instanceof Array)) {
+				if (typeof value !== 'object' || value instanceof Array) {
+					return value;
+				} else {
 					switch (value['#']) {
 						case 'map': return new Map(Object.entries(value.$));
 						case 'set': return new Set(value.$);
 						case 'zset': return new SortedSet(value.$);
 						case 'uint8': return latin1ToBuffer(value.$);
+						case undefined: return value;
 					}
 				}
-				// Plain objects (and primitives, arrays, null) pass through untouched;
-				// returning `undefined` from a reviver deletes the property, which would
-				// strip a map's `$` payload out of its parent before the parent is revived
-				return value;
-			}) as SerializedValue;
+			}) as InternalValue;
 			if (map instanceof Map) {
 				this.data = map;
 			}
