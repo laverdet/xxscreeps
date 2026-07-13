@@ -4,7 +4,7 @@
   "type": "module",
   "license": "ISC",
   "scripts": {
-    "json-schema": "ts-json-schema-generator --no-type-check --no-top-ref --type Config --path config/config.ts --out config/config.schema.json",
+    "json-schema": "ts-json-schema-generator --no-type-check --no-top-ref --additional-properties --type Config --path config/config.ts --out config/config.schema.json",
     "test": "xxscreeps test"
   },
   "bin": {

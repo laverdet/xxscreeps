@@ -1,9 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "additionalProperties": false,
   "definitions": {
     "BackendConfig": {
-      "additionalProperties": false,
       "properties": {
         "allowEmailRegistration": {
           "default": false,
@@ -19,6 +17,19 @@
           "default": "*",
           "description": "Network interface to bind server to. Format is: \"host\" or \"host:port\". Host can be * to bind to all interfaces: \"*:port\". Port is 21025, if not specified.",
           "type": "string"
+        },
+        "proxy": {
+          "description": "Reverse proxy configuration. TODO: mTLS, otherwise publicly-accessible backends on the public internet can receive forged requests. This isn't a big deal for us at the moment since we don't do anything with the client ip.",
+          "properties": {
+            "forwardedCount": {
+              "description": "Expected number of reverse proxy servers in front of the backend.",
+              "type": "number"
+            }
+          },
+          "required": [
+            "forwardedCount"
+          ],
+          "type": "object"
         },
         "secret": {
           "description": "Secret used for session authentication. If not specified a new secret will be generated each restart.",
@@ -37,7 +48,6 @@
       "type": "object"
     },
     "DatabaseConfig": {
-      "additionalProperties": false,
       "properties": {
         "data": {
           "default": "./screeps/db?socket=.db",
@@ -70,7 +80,6 @@
       "type": "object"
     },
     "GameConfig": {
-      "additionalProperties": false,
       "properties": {
         "respawnTimeout": {
           "default": 0,
@@ -86,7 +95,6 @@
       "type": "object"
     },
     "LauncherConfig": {
-      "additionalProperties": false,
       "properties": {
         "singleThreaded": {
           "default": false,
@@ -97,7 +105,6 @@
       "type": "object"
     },
     "ProcessorConfig": {
-      "additionalProperties": false,
       "properties": {
         "concurrency": {
           "description": "Total number of processor tasks to run at a time. The default is the number of CPU cores (including hyper-threaded) + 1",
@@ -117,7 +124,6 @@
       "type": "object"
     },
     "RunnerCPUConfig": {
-      "additionalProperties": false,
       "properties": {
         "bucket": {
           "default": ": 10000",
@@ -138,7 +144,6 @@
       "type": "object"
     },
     "RunnerConfig": {
-      "additionalProperties": false,
       "properties": {
         "concurrency": {
           "description": "Total number of run tasks to run at a time. The default is the number of CPU cores (including hyper-threaded) + 1",
@@ -172,7 +177,6 @@
       "type": "object"
     },
     "ShardConfig": {
-      "additionalProperties": false,
       "properties": {
         "data": {
           "description": "Persistent storage provider URI",
