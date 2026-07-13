@@ -100,8 +100,7 @@ auto search(
 	bool flee,
 	double heuristic_weight
 ) -> std::optional<result> {
-	auto goals_storage = std::vector<heuristic_t::goal_t>{};
-	auto heuristic = heuristic_t::make_from_runtime(lock, goals, flee, goals_storage);
+	auto [ heuristic, storage ] = heuristic_t::make_from_runtime(lock, goals, flee);
 	return pathfinders<Callback>(util::overloaded{
 		[]() -> std::optional<result> { throw js::runtime_error{u"too many concurrent pathfinder searches"}; },
 		[ & ](auto& pf) -> std::optional<result> {
