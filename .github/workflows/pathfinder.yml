@@ -81,7 +81,7 @@ jobs:
             clang-22
             cmake
             libboost-all-dev
-            libclang-rt-22
+            libclang-rt-22-dev
             lld-22
             llvm-22
             ninja-build
