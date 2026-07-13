@@ -36,7 +36,7 @@ export class heuristic_t {
 		}
 
 		// Extract 1 or N goals from passed runtime array, avoiding `std::vector` allocation in the
-		// common 1 case. `storage` owns the N goals and must outlive the returned heuristic.
+		// common 1 case.
 		template <class Lock, class Range>
 		static auto make_from_runtime(Lock& lock, Range goals, bool flee) -> auto {
 			if (goals.size() == 1) {
