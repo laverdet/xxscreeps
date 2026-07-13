@@ -25,7 +25,7 @@
     "@screeps/launcher": "4.1.0",
     "@types/convert-source-map": "^2.0.3",
     "@xxscreeps/lodash3": "workspace:*",
-    "@xxscreeps/pathfinder": "0.4.1",
+    "@xxscreeps/pathfinder": "0.4.2",
     "acorn": "8.9.0",
     "acorn-class-fields": "1.0.0",
     "acorn-private-methods": "1.0.0",
