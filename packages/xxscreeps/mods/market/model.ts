@@ -2,6 +2,7 @@ import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
+import { loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { Transaction, upgrade, write } from './transaction.js';
 
@@ -32,10 +33,12 @@ export interface TransactionFields {
 	description?: string | undefined | null;
 }
 
-export async function loadTransactionBlob(shard: Shard, id: string) {
-	// Upgrade host-side so both the backend parse and the forwarded runtime payload see the current
-	// schema version.
-	return upgrade(await shard.data.req(blobKey(id), { blob: true }));
+export function loadTransactionBlob(shard: Shard, id: string) {
+	return loadUpgradedWithWriteBack(
+		() => shard.data.req(blobKey(id), { blob: true }),
+		blob => shard.data.set(blobKey(id), blob),
+		upgrade,
+	);
 }
 
 // A user's transfer ids in one direction, oldest-first with their wall-clock scores.
