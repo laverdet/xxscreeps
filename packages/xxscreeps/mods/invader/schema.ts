@@ -1,7 +1,7 @@
 import { registerStruct } from 'xxscreeps/engine/schema/index.js';
 import { actionLogFormat } from 'xxscreeps/game/schema.js';
-import { spawningFormat } from 'xxscreeps/mods/spawn/schema.js';
-import { ownedStructureShape } from 'xxscreeps/mods/structure/schema.js';
+import { spawningFormat } from 'xxscreeps/mods/classic/spawn/schema.js';
+import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
 
 /** @internal */
@@ -31,6 +31,6 @@ declare module 'xxscreeps/game/room/index.js' {
 	interface RoomSchema { invaderSchema: [ typeof roomSchema] }
 }
 
-declare module 'xxscreeps/mods/structure/schema.js' {
+declare module 'xxscreeps/mods/classic/structure/schema.js' {
 	interface StructureSchema { invaderSchema: [ typeof structureSchema ] }
 }

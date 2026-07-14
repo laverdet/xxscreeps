@@ -1,4 +1,4 @@
-import type { Creep } from 'xxscreeps/mods/creep/creep.js';
+import type { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
 import { getCostMatrix } from './rooms.js';

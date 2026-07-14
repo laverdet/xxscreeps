@@ -2,9 +2,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import type { RoomObject } from 'xxscreeps/game/object.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
-import type { Store } from 'xxscreeps/mods/resource/store.js';
-import type { Structure } from 'xxscreeps/mods/structure/structure.js';
+import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
+import type { Store } from 'xxscreeps/mods/classic/resource/store.js';
+import type { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -25,20 +25,20 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room, flushUsers } from 'xxscreeps/game/room/room.js';
 import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { TerrainWriter, packExits } from 'xxscreeps/game/terrain.js';
-import { StructureController } from 'xxscreeps/mods/controller/controller.js';
-import { Creep } from 'xxscreeps/mods/creep/creep.js';
-import { StructureRampart } from 'xxscreeps/mods/defense/rampart.js';
-import { StructureWall } from 'xxscreeps/mods/defense/wall.js';
-import { saveMemoryBlob } from 'xxscreeps/mods/memory/model.js';
-import { StructureExtractor } from 'xxscreeps/mods/mineral/extractor.js';
-import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
+import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
+import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { StructureRampart } from 'xxscreeps/mods/classic/defense/rampart.js';
+import { StructureWall } from 'xxscreeps/mods/classic/defense/wall.js';
+import { OpenStore, SingleStore } from 'xxscreeps/mods/classic/resource/store.js';
+import { StructureRoad } from 'xxscreeps/mods/classic/road/road.js';
+import { StructureKeeperLair } from 'xxscreeps/mods/classic/source/keeper-lair.js';
+import { Source } from 'xxscreeps/mods/classic/source/source.js';
+import { StructureExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
+import { StructureSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
+import { saveMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
+import { StructureExtractor } from 'xxscreeps/mods/classic/mineral/extractor.js';
+import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
 import { StructurePortal } from 'xxscreeps/mods/portal/portal.js';
-import { OpenStore, SingleStore } from 'xxscreeps/mods/resource/store.js';
-import { StructureRoad } from 'xxscreeps/mods/road/road.js';
-import { StructureKeeperLair } from 'xxscreeps/mods/source/keeper-lair.js';
-import { Source } from 'xxscreeps/mods/source/source.js';
-import { StructureExtension } from 'xxscreeps/mods/spawn/extension.js';
-import { StructureSpawn } from 'xxscreeps/mods/spawn/spawn.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
 import { utf16ToBuffer } from 'xxscreeps/utility/string.js';
 

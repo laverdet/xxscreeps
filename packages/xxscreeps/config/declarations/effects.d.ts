@@ -3,5 +3,6 @@ declare module 'xxscreeps:mods/driver';
 declare module 'xxscreeps:mods/game';
 declare module 'xxscreeps:mods/main';
 declare module 'xxscreeps:mods/processor';
+declare module 'xxscreeps:mods/schema';
 declare module 'xxscreeps:mods/storage';
 declare module 'xxscreeps:mods/test';

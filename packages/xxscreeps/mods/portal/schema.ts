@@ -1,4 +1,4 @@
-import { structureShape } from 'xxscreeps/mods/structure/schema.js';
+import { structureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { declare, struct, variant } from 'xxscreeps/schema/index.js';
 
 /** @internal */

@@ -1,0 +1,284 @@
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
+import type { Direction } from 'xxscreeps/game/position.js';
+import type { PartType } from 'xxscreeps/mods/classic/creep/creep.js';
+import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
+import { Fn } from 'xxscreeps/functional/fn.js';
+import * as C from 'xxscreeps/game/constants/index.js';
+import { ALL_DIRECTIONS } from 'xxscreeps/game/direction.js';
+import { Game, me } from 'xxscreeps/game/index.js';
+import { saveAction } from 'xxscreeps/game/object.js';
+import { makePositionChecker } from 'xxscreeps/game/pathfinder/obstacle.js';
+import { RoomPosition, getPositionInDirection } from 'xxscreeps/game/position.js';
+import { Room } from 'xxscreeps/game/room/index.js';
+import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
+import * as ControllerProc from 'xxscreeps/mods/classic/controller/processor.js';
+import { Creep, create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { buryCreep, dropOverflowResources } from 'xxscreeps/mods/classic/creep/processor.js';
+import { createRuin } from 'xxscreeps/mods/classic/structure/ruin.js';
+import { OwnedStructure, checkMyStructure, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
+import { assign } from 'xxscreeps/utility/utility.js';
+import { StructureExtension } from './extension.js';
+import { Spawning, StructureSpawn, calculateRenewAmount, calculateRenewCost, checkDirections, checkRecycleCreep, checkRenewCreep, checkSpawnCreep, create } from './spawn.js';
+
+type EnergyStructure = StructureExtension | StructureSpawn;
+function getEnergyStructures(spawn: StructureSpawn, ids?: string[]) {
+	if (ids) {
+		return Fn.pipe(
+			ids,
+			$$ => Fn.map($$, id => {
+				const object = Game.getObjectById(id);
+				if ((object instanceof StructureExtension || object instanceof StructureSpawn) && object.isActive()) {
+					return object;
+				}
+			}),
+			$$ => Fn.filter($$),
+			$$ => [ ...new Set($$) ]);
+	} else {
+		const comparator = (left: EnergyStructure, right: EnergyStructure) =>
+			spawn.pos.getRangeTo(left) - spawn.pos.getRangeTo(right);
+		return [
+			...lookForStructures(spawn.room, C.STRUCTURE_SPAWN).filter(structure => structure.isActive()).sort(comparator),
+			...lookForStructures(spawn.room, C.STRUCTURE_EXTENSION).filter(structure => structure.isActive()).sort(comparator),
+		];
+	}
+}
+
+function consumeEnergy(spawn: StructureSpawn, amount: number, structures = getEnergyStructures(spawn)) {
+	if (Fn.accumulate(structures, structure => structure.store[C.RESOURCE_ENERGY]) < amount) {
+		return false;
+	}
+
+	let remaining = amount;
+	for (const structure of structures) {
+		const subtraction = Math.min(remaining, structure.store[C.RESOURCE_ENERGY]);
+		structure.store['#subtract'](C.RESOURCE_ENERGY, subtraction);
+		if ((remaining -= subtraction) === 0) {
+			spawn.room.energyAvailable -= amount;
+			return true;
+		}
+	}
+	throw new Error('Did not subtract energy correctly.');
+}
+
+declare module 'xxscreeps/engine/processor/index.js' {
+	interface Intent { spawn: typeof intents }
+}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const intents = [
+	registerIntentProcessor(Room, 'placeSpawn', { internal: true },
+		(room, context, xx: number, yy: number, name: string) => {
+			const pos = new RoomPosition(xx, yy, room.name);
+			if (room['#user'] === null) {
+				// Remove existing objects
+				for (const object of room['#objects']) {
+					if (object['#user'] === null) {
+						if (object.hits !== undefined) {
+							room['#removeObject'](object);
+						}
+					} else if (object instanceof OwnedStructure) {
+						const ruin = createRuin(object, 100000);
+						room['#insertObject'](ruin);
+						room['#removeObject'](object);
+					} else {
+						room['#removeObject'](object);
+					}
+				}
+				// Set up initial player state
+				ControllerProc.claim(context, room.controller!, me);
+				room['#insertObject'](create(pos, me, name));
+				room['#cumulativeEnergyHarvested'] = 0;
+				room['#safeModeUntil'] = Game.time + C.SAFE_MODE_DURATION;
+				context.didUpdate();
+			}
+		}),
+
+	registerIntentProcessor(Room, 'unspawn', { internal: true }, (room, context) => {
+		for (const object of room['#objects']) {
+			if (object instanceof StructureController && object.room['#user'] === me) {
+				ControllerProc.release(context, object);
+				context.didUpdate();
+			} else if (object['#user'] === me) {
+				if (object instanceof OwnedStructure) {
+					object['#user'] = '1';
+					const ruin = createRuin(object, 500000);
+					room['#insertObject'](ruin);
+				}
+				room['#removeObject'](object);
+				context.didUpdate();
+			}
+		}
+	}),
+
+	registerIntentProcessor(StructureSpawn, 'cancelSpawning', {}, (spawn, context) => {
+		const spawning = spawn.spawning;
+		if (checkMyStructure(spawn, StructureSpawn) === C.OK && spawning) {
+			const creep = Game.getObjectById(spawning['#spawningCreepId'])!;
+			spawn.room['#removeObject'](creep);
+			spawn.spawning = null;
+			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(StructureSpawn, 'recycleCreep', {}, (spawn, context, id: string) => {
+		const creep = Game.getObjectById<Creep>(id)!;
+		if (checkRecycleCreep(spawn, creep) === C.OK) {
+			buryCreep(creep, 1);
+			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(StructureSpawn, 'renewCreep', {}, (spawn, context, id: string) => {
+		const creep = Game.getObjectById<Creep>(id)!;
+		if (checkRenewCreep(spawn, creep) === C.OK) {
+			const cost = calculateRenewCost(creep);
+			if (consumeEnergy(spawn, cost)) {
+				saveAction(creep, 'healed', spawn.pos);
+				creep['#ageTime'] += calculateRenewAmount(creep);
+				if (creep.body.some(part => part.boost)) {
+					for (const part of creep.body) {
+						part.boost = undefined;
+					}
+					dropOverflowResources(creep);
+				}
+				context.didUpdate();
+			}
+		}
+	}),
+
+	registerIntentProcessor(StructureSpawn, 'setSpawnDirections', {}, (spawn, context, directions: Direction[]) => {
+		const spawning = spawn.spawning;
+		if (checkMyStructure(spawn, StructureSpawn) === C.OK && checkDirections(directions) && spawning) {
+			spawning.directions = directions;
+			context.didUpdate();
+		}
+	}),
+
+	registerIntentProcessor(StructureSpawn, 'spawn', {}, (
+		spawn, context,
+		body: PartType[],
+		name: string,
+		energyStructureIds: string[] | null,
+		directions: Direction[] | null,
+	) => {
+
+		// Is this intent valid?
+		const structures = getEnergyStructures(spawn, energyStructureIds ?? undefined);
+		const canBuild = checkSpawnCreep(spawn, body, name, directions, structures) === C.OK;
+		if (!canBuild) {
+			return;
+		}
+
+		// Withdraw energy
+		const cost = Fn.accumulate(body, part => C.BODYPART_COST[part]);
+		if (!consumeEnergy(spawn, cost, structures)) {
+			return;
+		}
+
+		// Add new creep to room objects
+		const creep = createCreep(spawn.pos, body, name, me);
+		creep['#ageTime'] = 0;
+		spawn.room['#insertObject'](creep);
+
+		// Set spawning information
+		const needTime = body.length * C.CREEP_SPAWN_TIME;
+		const spawning = spawn.spawning = assign(new StructureSpawn.Spawning(), {
+			directions: directions ?? undefined,
+			needTime,
+		});
+		spawning['#spawnId'] = spawn.id;
+		spawning['#spawningCreepId'] = creep.id;
+		spawning['#spawnTime'] = Game.time + needTime - 1;
+		context.didUpdate();
+	}),
+];
+
+// A structure that incubates a creep through a `Spawning` record: `StructureSpawn` or `StructureInvaderCore`.
+interface SpawningOwner {
+	spawning: Spawning | null;
+	room: Room;
+}
+
+// Complete a pending spawn whose timer has elapsed: place the incubating creep on the first open
+// adjacent tile (preferring `spawning.directions`, stomping a lone blocking hostile as a last
+// resort), stamp its real age, and clear the record. A fully blocked owner retries next tick. Shared
+// by `StructureSpawn` and `StructureInvaderCore`, which differ only in how the spawned creep ages.
+export function birthSpawnCreep(
+	owner: SpawningOwner,
+	context: ProcessorContext,
+	ageTimeFor: (creep: Creep) => number,
+) {
+	const spawning = owner.spawning!;
+	const creep = Game.getObjectById<Creep>(spawning['#spawningCreepId']);
+	if (creep && creep instanceof Creep) {
+		// Look for spawn direction
+		const check = makePositionChecker({
+			checkTerrain: true,
+			room: owner.room,
+			user: creep['#user'],
+		});
+		const directions = new Set(spawning.directions ?? ALL_DIRECTIONS);
+
+		// Find first open preferred direction, remembering first hostile encountered
+		let spawnPos: RoomPosition | undefined;
+		let hostileCreep: Creep | undefined;
+		for (const dir of directions) {
+			const pos = getPositionInDirection(creep.pos, dir);
+			if (!pos) {
+				continue;
+			} else if (check(pos)) {
+				spawnPos = pos;
+				break;
+			}
+			if (!hostileCreep) {
+				const hostile = creep.room['#lookAt'](pos).find(
+					object => object instanceof Creep && object['#user'] !== creep['#user']);
+				if (hostile) {
+					hostileCreep = hostile as Creep;
+				}
+			}
+		}
+
+		// All preferred directions blocked — only stomp if non-preferred are also blocked
+		if (!spawnPos && hostileCreep) {
+			const hasOtherDirection = Fn.pipe(
+				ALL_DIRECTIONS,
+				$$ => Fn.reject($$, dir => directions.has(dir)),
+				$$ => Fn.map($$, dir => getPositionInDirection(creep.pos, dir)),
+				$$ => Fn.filter($$),
+				$$ => Fn.some($$, pos => check(pos)));
+			if (!hasOtherDirection) {
+				spawnPos = hostileCreep.pos;
+				buryCreep(hostileCreep);
+			}
+		}
+
+		if (!spawnPos) {
+			// No valid position — retry next tick
+			spawning['#spawnTime'] = Game.time + 1;
+			context.setActive();
+			return;
+		}
+
+		// Place the creep
+		creep['#ageTime'] = ageTimeFor(creep);
+		creep.room['#moveObject'](creep, spawnPos);
+	}
+	owner.spawning = null;
+	context.setActive();
+}
+
+registerObjectTickProcessor(StructureSpawn, (spawn, context) => {
+
+	// Check creep spawning
+	if (spawn.spawning?.remainingTime === 0) {
+		birthSpawnCreep(spawn, context, creep =>
+			Game.time + (creep.body.some(part => part.type === C.CLAIM) ? C.CREEP_CLAIM_LIFE_TIME : C.CREEP_LIFE_TIME) - 1);
+	}
+
+	// Add 1 energy per tick to spawns in low energy rooms
+	if (spawn.isActive() && spawn.room.energyAvailable < C.SPAWN_ENERGY_CAPACITY && spawn.store.energy < C.SPAWN_ENERGY_CAPACITY) {
+		++spawn.room.energyAvailable;
+		spawn.store['#add'](C.RESOURCE_ENERGY, 1);
+		context.setActive();
+	}
+});

@@ -1,5 +1,5 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';

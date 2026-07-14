@@ -1,6 +1,6 @@
 import * as Id from 'xxscreeps/engine/schema/id.js';
-import { openStoreFormat, resourceEnumFormat } from 'xxscreeps/mods/resource/schema.js';
-import { ownedStructureShape } from 'xxscreeps/mods/structure/schema.js';
+import { openStoreFormat, resourceEnumFormat } from 'xxscreeps/mods/classic/resource/schema.js';
+import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
 import { declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
 
 /** @internal */

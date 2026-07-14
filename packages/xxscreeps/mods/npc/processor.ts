@@ -2,7 +2,7 @@ import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import { registerRoomTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { runForUser } from 'xxscreeps/game/index.js';
-import * as Memory from 'xxscreeps/mods/memory/memory.js';
+import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 
 // Mark an NPC as active in a room
 export function activateNPC(room: Room, user: string) {

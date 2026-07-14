@@ -2,7 +2,7 @@ import type { GameBase } from 'xxscreeps/game/game.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
+import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { deterministicClockForTesting } from 'xxscreeps/utility/utility.js';
 import { Market } from './market.js';
