@@ -1,6 +1,7 @@
 import { registerSendUserNotifications } from './transports.js';
 
-registerSendUserNotifications((userId, notifications) => {
+// Exported so the test harness can unregister it — tests observe delivery via scoped transports.
+export const stdoutTransport = registerSendUserNotifications((userId, notifications) => {
 	for (const row of notifications) {
 		console.log(JSON.stringify({
 			event: 'notify',

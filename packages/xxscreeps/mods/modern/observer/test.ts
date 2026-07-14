@@ -4,7 +4,7 @@ import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create } from './observer.js';
 
-describe('Observer', () => {
+describe('mod/modern/observer', () => {
 	const simulation = simulate({
 		W1N1: room => {
 			room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100'));
@@ -20,7 +20,7 @@ describe('Observer', () => {
 		},
 	});
 
-	test('observer_visibility', () => simulation(async ({ player, tick, poke }) => {
+	test('visibility', () => simulation(async ({ player, tick, poke }) => {
 		await player('100', Game => {
 			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
 			const result = observer?.observeRoom('W2N2');
@@ -49,7 +49,7 @@ describe('Observer', () => {
 		});
 	}));
 
-	test('observer_illegal_arg', () => simulation(async ({ player }) => {
+	test('illegal arg', () => simulation(async ({ player }) => {
 		await player('100', Game => {
 			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
 			const result = observer?.observeRoom('INVALID');
@@ -57,7 +57,7 @@ describe('Observer', () => {
 		});
 	}));
 
-	test('observer_illegal_arg_before_min_level', () => simulation(async ({ player }) => {
+	test('illegal arg before min level', () => simulation(async ({ player }) => {
 		await player('100', Game => {
 			const observer = lookForStructures(Game.rooms.W1N2, C.STRUCTURE_OBSERVER)[0];
 			const result = observer?.observeRoom('not_a_room');
@@ -65,7 +65,7 @@ describe('Observer', () => {
 		});
 	}));
 
-	test('observer_range', () => simulation(async ({ player }) => {
+	test('range', () => simulation(async ({ player }) => {
 		await player('100', Game => {
 			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
 			// W12N1 exists in the world (distance 11 from W1N1) but exceeds OBSERVER_RANGE (10)
@@ -74,7 +74,7 @@ describe('Observer', () => {
 		});
 	}));
 
-	test('observer_min_level', () => simulation(async ({ player }) => {
+	test('min level', () => simulation(async ({ player }) => {
 		await player('100', Game => {
 			const observer = lookForStructures(Game.rooms.W1N2, C.STRUCTURE_OBSERVER)[0];
 			const result = observer?.observeRoom('W2N2');
@@ -82,7 +82,7 @@ describe('Observer', () => {
 		});
 	}));
 
-	test('observer_nonexistent_room', () => simulation(async ({ player, tick }) => {
+	test('nonexistent room', () => simulation(async ({ player, tick }) => {
 		await player('100', Game => {
 			const observer = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_OBSERVER)[0];
 			const result = observer?.observeRoom('xyz');

@@ -5,7 +5,7 @@ import { describe, simulate, test } from 'xxscreeps/test/index.js';
 // nb: Try not to include too much in this file because `sandbox` uses a fake function that gets
 // stringified. So includes here confuse the seen globals.
 
-describe('Memory', () => {
+describe('mod/meta/memory', () => {
 	const sim = simulate({
 		W1N1: room => {
 			room['#level'] = 1;
@@ -14,7 +14,7 @@ describe('Memory', () => {
 		},
 	});
 
-	test('Smoke test', () => sim(async ({ sandbox, tick }) => {
+	test('smoke test', () => sim(async ({ sandbox, tick }) => {
 		using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1: global.Memory.test = 'foo'; break;
@@ -26,7 +26,7 @@ describe('Memory', () => {
 		await tick(5);
 	}));
 
-	test('Crunch', () => sim(async ({ sandbox, tick }) => {
+	test('crunch', () => sim(async ({ sandbox, tick }) => {
 		using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1: {
@@ -45,7 +45,7 @@ describe('Memory', () => {
 		await tick(2);
 	}));
 
-	test('Invalid memory payload behavior', () => sim(async ({ sandbox, tick }) => {
+	test('invalid payload', () => sim(async ({ sandbox, tick }) => {
 		using player = await sandbox('200', global => {
 			global.RawMemory.set('}');
 			assert.equal(global.RawMemory._parsed, undefined);
@@ -107,7 +107,7 @@ describe('Memory', () => {
 		await tick(4);
 	}));
 
-	test('Cached tick Memory survives RawMemory.set', () => sim(async ({ sandbox, tick }) => {
+	test('cached tick Memory survives RawMemory.set', () => sim(async ({ sandbox, tick }) => {
 		using player = await sandbox('200', global => {
 			global.Memory.test = 'foo';
 			global.RawMemory.set('{"test":"bar"}');

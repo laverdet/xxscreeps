@@ -10,7 +10,7 @@ const owner = '100';
 // GPL level = floor(sqrt(power / 1000)): 1000 -> 1, 4000 -> 2, 9000 -> 3.
 const setPower = (db: Database, power: number) => db.data.hSet(User.infoKey(owner), 'power', `${power}`);
 
-describe('PowerCreep account', () => {
+describe('mod/powercreep', () => {
 	const sim = simulate({});
 
 	test('create is gated by free GPL levels', () => sim(async ({ shard }) => {

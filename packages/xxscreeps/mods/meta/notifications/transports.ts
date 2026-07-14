@@ -21,3 +21,15 @@ export function registerSendUserNotifications(fn: SendUserNotifications): Dispos
 		},
 	};
 }
+
+/** @internal */
+export function captureNotificationsForTesting() {
+	const rows: NotificationRow[] = [];
+	const registration = registerSendUserNotifications((_userId, notifications) => {
+		rows.push(...notifications);
+	});
+	return {
+		rows,
+		[Symbol.dispose]: () => registration[Symbol.dispose](),
+	};
+}

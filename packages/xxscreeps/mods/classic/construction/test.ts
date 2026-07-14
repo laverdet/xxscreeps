@@ -10,53 +10,110 @@ import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createSite } from './construction-site.js';
 
-describe('Construction', () => {
-	const construction = simulate({
-		W1N1: room => {
-			room['#level'] = 8;
-			room['#user'] = room.controller!['#user'] = '100';
-		},
-	});
+describe('mod/classic/construction', () => {
+	describe('createConstructionSite', () => {
+		const construction = simulate({
+			W1N1: room => {
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
 
-	test('create site', () => construction(async ({ player, tick }) => {
-		await player('100', Game => {
-			Game.rooms.W1N1?.createConstructionSite(25, 25, 'road');
+		test('create site', () => construction(async ({ player, tick }) => {
+			await player('100', Game => {
+				Game.rooms.W1N1?.createConstructionSite(25, 25, 'road');
+			});
+			await tick();
+			await player('100', Game => {
+				// Should create a site
+				assert.ok(Object.values(Game.constructionSites).length === 1);
+			});
+		}));
+		test('max construction sites', () => construction(async ({ player, tick }) => {
+			// Place most sites in tick 1
+			const firstBatch = C.MAX_CONSTRUCTION_SITES - 10;
+			await player('100', Game => {
+				for (let pos = 0; pos < firstBatch; ++pos) {
+					const xx = 1 + (pos % 48);
+					const yy = 1 + Math.floor(pos / 48);
+					assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(xx, yy, 'road'), C.OK);
+				}
+			});
+			await tick();
+			// Try 11 more in tick 2 — first 10 should succeed, 11th should fail
+			await player('100', Game => {
+				assert.strictEqual(Object.keys(Game.constructionSites).length, firstBatch);
+				for (let pos = firstBatch; pos < C.MAX_CONSTRUCTION_SITES; ++pos) {
+					const xx = 1 + (pos % 48);
+					const yy = 1 + Math.floor(pos / 48);
+					assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(xx, yy, 'road'), C.OK);
+				}
+				assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(1, 4, 'road'), C.ERR_FULL);
+				// Remove one site, then creating should succeed again
+				Object.values(Game.constructionSites)[0]?.remove();
+			});
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(Object.keys(Game.constructionSites).length, C.MAX_CONSTRUCTION_SITES - 1);
+				assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(1, 4, 'road'), C.OK);
+			});
+		}));
+
+		test('two sites at same position', () => construction(async ({ player, tick }) => {
+			await player('100', Game => {
+				Game.rooms.W1N1?.createConstructionSite(25, 25, 'road');
+				Game.rooms.W1N1?.createConstructionSite(25, 25, 'rampart');
+			});
+			await tick();
+			await player('100', Game => {
+				assert.ok(
+					// Only the first command should create a site
+					Object.values(Game.constructionSites).length === 1 &&
+	                Object.values(Game.constructionSites)[0]?.structureType === 'road',
+				);
+			});
+		}));
+
+		test('site on ruin with same structure type', () => {
+			const ruin = simulate({
+				W1N1: room => {
+					room['#level'] = 8;
+					room['#user'] = room.controller!['#user'] = '100';
+					room['#insertObject'](createRuin(createContainer(new RoomPosition(25, 25, 'W1N1'))));
+				},
+			});
+			return ruin(async ({ player, tick }) => {
+				await player('100', Game => {
+					assert.strictEqual(Game.rooms.W1N1?.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
+					assert.strictEqual(Game.rooms.W1N1.createConstructionSite(25, 25, C.STRUCTURE_CONTAINER), C.OK);
+				});
+				await tick();
+				await player('100', Game => {
+					assert.strictEqual(Game.rooms.W1N1?.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
+					const site = Object.values(Game.constructionSites)[0];
+					assert.ok(site);
+					assert.strictEqual(site.structureType, C.STRUCTURE_CONTAINER);
+					assert.ok(site.pos.isEqualTo(25, 25));
+				});
+			});
 		});
-		await tick();
-		await player('100', Game => {
-			// Should create a site
-			assert.ok(Object.values(Game.constructionSites).length === 1);
-		});
-	}));
-	test('max construction sites', () => construction(async ({ player, tick }) => {
-		// Place most sites in tick 1
-		const firstBatch = C.MAX_CONSTRUCTION_SITES - 10;
-		await player('100', Game => {
-			for (let pos = 0; pos < firstBatch; ++pos) {
-				const xx = 1 + (pos % 48);
-				const yy = 1 + Math.floor(pos / 48);
-				assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(xx, yy, 'road'), C.OK);
-			}
-		});
-		await tick();
-		// Try 11 more in tick 2 — first 10 should succeed, 11th should fail
-		await player('100', Game => {
-			assert.strictEqual(Object.keys(Game.constructionSites).length, firstBatch);
-			for (let pos = firstBatch; pos < C.MAX_CONSTRUCTION_SITES; ++pos) {
-				const xx = 1 + (pos % 48);
-				const yy = 1 + Math.floor(pos / 48);
-				assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(xx, yy, 'road'), C.OK);
-			}
-			assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(1, 4, 'road'), C.ERR_FULL);
-			// Remove one site, then creating should succeed again
-			Object.values(Game.constructionSites)[0]?.remove();
-		});
-		await tick();
-		await player('100', Game => {
-			assert.strictEqual(Object.keys(Game.constructionSites).length, C.MAX_CONSTRUCTION_SITES - 1);
-			assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(1, 4, 'road'), C.OK);
-		});
-	}));
+
+		// W1N1 (shard.json) at y=7: x=5 is plain, x=15 is wall, x=20 is swamp.
+		test('road site progressTotal scales by terrain', () => construction(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(5, 7, 'road'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(20, 7, 'road'), C.OK);
+				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(15, 7, 'road'), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				const sitesByPos = new Map(Object.values(Game.constructionSites).map(site => [ `${site.pos.x},${site.pos.y}`, site ]));
+				assert.strictEqual(sitesByPos.get('5,7')!.progressTotal, C.CONSTRUCTION_COST.road);
+				assert.strictEqual(sitesByPos.get('20,7')!.progressTotal, C.CONSTRUCTION_COST.road * C.CONSTRUCTION_COST_ROAD_SWAMP_RATIO);
+				assert.strictEqual(sitesByPos.get('15,7')!.progressTotal, C.CONSTRUCTION_COST.road * C.CONSTRUCTION_COST_ROAD_WALL_RATIO);
+			});
+		}));
+	});
 
 	describe('intent precedence', () => {
 		const fillSites = (room: Room, owner: string, count: number) => {
@@ -75,7 +132,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-011:rcl-or-structure-cap-before-site-cap-full', () => rclCappedAndFull(async ({ player }) => {
+		test('rcl or structure cap before site cap full', () => rclCappedAndFull(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(45, 45, 'tower'), C.ERR_RCL_NOT_ENOUGH);
 			});
@@ -90,7 +147,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-011:invalid-target-before-site-cap-full', () => sameTypeAndFull(async ({ player }) => {
+		test('invalid target before site cap full', () => sameTypeAndFull(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_INVALID_TARGET);
 			});
@@ -108,7 +165,7 @@ describe('Construction', () => {
 			W1N1: room => setupForeignRoom(room),
 		});
 
-		test('CONSTRUCTION-SITE-011:not-owner', () => foreignOwned(async ({ player }) => {
+		test('not owner', () => foreignOwned(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
 			});
@@ -118,7 +175,7 @@ describe('Construction', () => {
 			W1N1: room => setupForeignRoom(room, 1),
 		});
 
-		test('CONSTRUCTION-SITE-011:not-owner-before-rcl-or-structure-cap', () => foreignOwnedRclCapped(async ({ player }) => {
+		test('not owner before rcl or structure cap', () => foreignOwnedRclCapped(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'tower'), C.ERR_NOT_OWNER);
 			});
@@ -131,7 +188,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-011:not-owner-before-invalid-target', () => foreignOwnedInvalidTarget(async ({ player }) => {
+		test('not owner before invalid target', () => foreignOwnedInvalidTarget(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
 			});
@@ -145,7 +202,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-014:reserved-not-owner-before-rcl-or-structure-cap', () => foreignReserved(async ({ player }) => {
+		test('reserved not owner before rcl or structure cap', () => foreignReserved(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'tower'), C.ERR_NOT_OWNER);
@@ -160,7 +217,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-014:reserved-by-self-allowed', () => selfReserved(async ({ player }) => {
+		test('reserved by self allowed', () => selfReserved(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.OK);
 			});
@@ -175,7 +232,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-011:not-owner-before-site-cap-full', () => foreignOwnedAndFull(async ({ player }) => {
+		test('not owner before site cap full', () => foreignOwnedAndFull(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'road'), C.ERR_NOT_OWNER);
 			});
@@ -188,13 +245,13 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-011:invalid-args', () => ownedRcl8(async ({ player }) => {
+		test('invalid args', () => ownedRcl8(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', oversizedName), C.ERR_INVALID_ARGS);
 			});
 		}));
 
-		test('CONSTRUCTION-SITE-011:invalid-args-before-not-owner', () => foreignOwned(async ({ player }) => {
+		test('invalid args before not owner', () => foreignOwned(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(
 					Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', oversizedName),
@@ -211,7 +268,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-011:invalid-args-before-rcl-or-structure-cap', () => ownedRcl1WithSpawn(async ({ player }) => {
+		test('invalid args before rcl or structure cap', () => ownedRcl1WithSpawn(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', oversizedName), C.ERR_INVALID_ARGS);
 			});
@@ -225,7 +282,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-011:invalid-args-before-invalid-target', () => ownedWithRoadSite(async ({ player }) => {
+		test('invalid args before invalid target', () => ownedWithRoadSite(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1!.createConstructionSite(25, 25, 'spawn', oversizedName), C.ERR_INVALID_ARGS);
 			});
@@ -239,7 +296,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('CONSTRUCTION-SITE-011:invalid-args-before-site-cap-full', () => ownedAndFull(async ({ player }) => {
+		test('invalid args before site cap full', () => ownedAndFull(async ({ player }) => {
 			await player('100', Game => {
 				// (49, 49) is outside `fillSites`' (1,1)-(4,3) range, so any non-INVALID_ARGS slip-up
 				// would fall through to the cap and surface ERR_FULL.
@@ -248,22 +305,7 @@ describe('Construction', () => {
 		}));
 	});
 
-	test('create two sites at same position', () => construction(async ({ player, tick }) => {
-		await player('100', Game => {
-			Game.rooms.W1N1?.createConstructionSite(25, 25, 'road');
-			Game.rooms.W1N1?.createConstructionSite(25, 25, 'rampart');
-		});
-		await tick();
-		await player('100', Game => {
-			assert.ok(
-				// Only the first command should create a site
-				Object.values(Game.constructionSites).length === 1 &&
-                Object.values(Game.constructionSites)[0]?.structureType === 'road',
-			);
-		});
-	}));
-
-	describe('stacking against on-tile structures', () => {
+	describe('stacking', () => {
 		const overStructure = simulate({
 			W1N1: room => {
 				room['#level'] = 8;
@@ -290,46 +332,6 @@ describe('Construction', () => {
 		}));
 	});
 
-	test('create site on ruin with same structure type', () => {
-		const ruin = simulate({
-			W1N1: room => {
-				room['#level'] = 8;
-				room['#user'] = room.controller!['#user'] = '100';
-				room['#insertObject'](createRuin(createContainer(new RoomPosition(25, 25, 'W1N1'))));
-			},
-		});
-		return ruin(async ({ player, tick }) => {
-			await player('100', Game => {
-				assert.strictEqual(Game.rooms.W1N1?.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
-				assert.strictEqual(Game.rooms.W1N1.createConstructionSite(25, 25, C.STRUCTURE_CONTAINER), C.OK);
-			});
-			await tick();
-			await player('100', Game => {
-				assert.strictEqual(Game.rooms.W1N1?.lookForAt(C.LOOK_RUINS, 25, 25).length, 1);
-				const site = Object.values(Game.constructionSites)[0];
-				assert.ok(site);
-				assert.strictEqual(site.structureType, C.STRUCTURE_CONTAINER);
-				assert.ok(site.pos.isEqualTo(25, 25));
-			});
-		});
-	});
-
-	// W1N1 (shard.json) at y=7: x=5 is plain, x=15 is wall, x=20 is swamp.
-	test('road site progressTotal scales by terrain', () => construction(async ({ player, tick }) => {
-		await player('100', Game => {
-			assert.strictEqual(Game.rooms.W1N1?.createConstructionSite(5, 7, 'road'), C.OK);
-			assert.strictEqual(Game.rooms.W1N1.createConstructionSite(20, 7, 'road'), C.OK);
-			assert.strictEqual(Game.rooms.W1N1.createConstructionSite(15, 7, 'road'), C.OK);
-		});
-		await tick();
-		await player('100', Game => {
-			const sitesByPos = new Map(Object.values(Game.constructionSites).map(site => [ `${site.pos.x},${site.pos.y}`, site ]));
-			assert.strictEqual(sitesByPos.get('5,7')!.progressTotal, C.CONSTRUCTION_COST.road);
-			assert.strictEqual(sitesByPos.get('20,7')!.progressTotal, C.CONSTRUCTION_COST.road * C.CONSTRUCTION_COST_ROAD_SWAMP_RATIO);
-			assert.strictEqual(sitesByPos.get('15,7')!.progressTotal, C.CONSTRUCTION_COST.road * C.CONSTRUCTION_COST_ROAD_WALL_RATIO);
-		});
-	}));
-
 	describe('creep intent precedence', () => {
 		const noEnergyWorker = simulate({
 			W1N1: room => {
@@ -339,13 +341,13 @@ describe('Construction', () => {
 			},
 		});
 
-		test('REPAIR-010:not-enough-before-invalid-target', () => noEnergyWorker(async ({ player }) => {
+		test('repair: not enough before invalid target', () => noEnergyWorker(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.creeps.worker!.repair(undefined as never), C.ERR_NOT_ENOUGH_RESOURCES);
 			});
 		}));
 
-		test('BUILD-011:not-enough-before-invalid-target', () => noEnergyWorker(async ({ player }) => {
+		test('build: not enough before invalid target', () => noEnergyWorker(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.creeps.worker!.build(undefined as never), C.ERR_NOT_ENOUGH_RESOURCES);
 			});
@@ -361,14 +363,14 @@ describe('Construction', () => {
 			},
 		});
 
-		test('REPAIR-010:not-enough-before-range', () => noEnergyOutOfRange(async ({ player }) => {
+		test('repair: not enough before range', () => noEnergyOutOfRange(async ({ player }) => {
 			await player('100', Game => {
 				const container = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_CONTAINER)[0]!;
 				assert.strictEqual(Game.creeps.worker!.repair(container), C.ERR_NOT_ENOUGH_RESOURCES);
 			});
 		}));
 
-		test('BUILD-011:not-enough-before-range', () => noEnergyOutOfRange(async ({ player }) => {
+		test('build: not enough before range', () => noEnergyOutOfRange(async ({ player }) => {
 			await player('100', Game => {
 				const site = Object.values(Game.constructionSites)[0]!;
 				assert.strictEqual(Game.creeps.worker!.build(site), C.ERR_NOT_ENOUGH_RESOURCES);
@@ -385,7 +387,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('BUILD-011:not-enough-before-blocked-target', () => noEnergyBlockedTarget(async ({ player }) => {
+		test('build: not enough before blocked target', () => noEnergyBlockedTarget(async ({ player }) => {
 			await player('100', Game => {
 				const site = Object.values(Game.constructionSites)[0]!;
 				assert.strictEqual(Game.creeps.builder!.build(site), C.ERR_NOT_ENOUGH_RESOURCES);
@@ -404,7 +406,7 @@ describe('Construction', () => {
 			},
 		});
 
-		test('BUILD-011:range-before-blocked-target', () => blockedTargetOutOfRange(async ({ player }) => {
+		test('build: range before blocked target', () => blockedTargetOutOfRange(async ({ player }) => {
 			await player('100', Game => {
 				const site = Object.values(Game.constructionSites)[0]!;
 				assert.strictEqual(Game.creeps.builder!.build(site), C.ERR_NOT_IN_RANGE);
@@ -542,7 +544,7 @@ describe('Construction', () => {
 		}));
 	});
 
-	describe('event log emissions', () => {
+	describe('event log', () => {
 		const buildSim = simulate({
 			W1N1: room => {
 				room['#level'] = 1;
@@ -632,7 +634,7 @@ describe('Construction', () => {
 		}));
 	});
 
-	describe('dismantle validation', () => {
+	describe('dismantle', () => {
 		const controllerSim = simulate({
 			W1N1: room => {
 				room['#level'] = 1;
@@ -643,14 +645,14 @@ describe('Construction', () => {
 			},
 		});
 
-		test('dismantle(controller) returns ERR_INVALID_TARGET', () => controllerSim(async ({ player }) => {
+		test('controller is invalid target', () => controllerSim(async ({ player }) => {
 			await player('100', Game => {
 				const controller = Game.rooms.W1N1!.controller!;
 				assert.strictEqual(Game.creeps.near?.dismantle(controller), C.ERR_INVALID_TARGET);
 			});
 		}));
 
-		test('dismantle(controller) returns ERR_INVALID_TARGET before ERR_NOT_IN_RANGE', () => controllerSim(async ({ player }) => {
+		test('controller invalid target before range', () => controllerSim(async ({ player }) => {
 			await player('100', Game => {
 				const controller = Game.rooms.W1N1!.controller!;
 				assert.strictEqual(Game.creeps.far?.dismantle(controller), C.ERR_INVALID_TARGET);

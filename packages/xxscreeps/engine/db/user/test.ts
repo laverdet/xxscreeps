@@ -3,8 +3,8 @@ import { assert, describe, test } from 'xxscreeps/test/index.js';
 import * as Badge from './badge.js';
 import * as User from './index.js';
 
-describe('Badge.generateRandom', () => {
-	test('always produces a schema-valid badge', () => {
+describe('engine/db/user', () => {
+	test('Badge.generateRandom produces a schema-valid badge', () => {
 		// A colour channel below 0x100000 renders as fewer than six hex digits; without
 		// zero-padding that fails the `^#[a-f0-9]{6}$` schema (~1/16 per channel), so loop
 		// enough times to surface it. validate() throws on a malformed badge.
@@ -13,9 +13,7 @@ describe('Badge.generateRandom', () => {
 			assert.strictEqual(Badge.validate(badge), badge);
 		}
 	});
-});
 
-describe('User.remove', () => {
 	test('removed user is no longer found', async () => {
 		await using testShard = await instantiateTestShard();
 		const { db } = testShard;

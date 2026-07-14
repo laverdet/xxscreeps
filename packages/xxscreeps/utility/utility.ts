@@ -218,24 +218,3 @@ export function hackyIterableToArray<Type>(value: Iterable<Type>): asserts value
 	return value as never;
 }
 
-export function deterministicClockForTesting() {
-	const disposable = new DisposableStack();
-	const { now } = Date;
-	disposable.defer(() => Date.now = now);
-	let ts = now();
-	Date.now = () => ts++;
-	return Object.assign(disposable, {
-		increment(offset: number) {
-			ts += offset;
-		},
-	});
-}
-
-export function deterministicRandomForTesting(seed = 1) {
-	const disposable = new DisposableStack();
-	const { random } = Math;
-	disposable.defer(() => Math.random = random);
-	let state = hashMix(seed);
-	Math.random = () => (state = hashMix(state)) / 0xffffffff + 0.5;
-	return disposable;
-}

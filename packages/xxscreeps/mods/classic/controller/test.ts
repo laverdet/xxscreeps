@@ -2,14 +2,14 @@ import type { GameConstructor } from 'xxscreeps/game/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create } from 'xxscreeps/mods/classic/creep/creep.js';
-import { setNotifyPrefs } from 'xxscreeps/mods/meta/notifications/prefs.js';
 import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
 import { StructureExtension, create as createExtension } from 'xxscreeps/mods/classic/spawn/extension.js';
-import { captureConsoleLog, parseNotifyLines } from 'xxscreeps/test/console-capture.js';
+import { setNotifyPrefs } from 'xxscreeps/mods/meta/notifications/prefs.js';
+import { captureNotificationsForTesting } from 'xxscreeps/mods/meta/notifications/transports.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { StructureController } from './controller.js';
 
-describe('Controller', () => {
+describe('mod/classic/controller', () => {
 
 	// Controller in W3N3 is at (33, 32)
 	const pos = new RoomPosition(34, 32, 'W3N3');
@@ -96,7 +96,7 @@ describe('Controller', () => {
 			});
 		}));
 
-		test('CTRL-ATTACK-007:invalid-target-before-no-bodypart', () => neutralNoClaim(async ({ player }) => {
+		test('invalid target before no bodypart', () => neutralNoClaim(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(
 					Game.creeps.worker!.attackController(findContainer(Game) as unknown as StructureController),
@@ -107,7 +107,7 @@ describe('Controller', () => {
 
 	describe('claimController', () => {
 
-		test('CTRL-CLAIM-008:gcl-not-enough-before-invalid-target', () => claimPrecedence(async ({ player }) => {
+		test('gcl not enough before invalid target', () => claimPrecedence(async ({ player }) => {
 			await player('100', Game => {
 				exhaustGcl(Game);
 				assert.strictEqual(
@@ -116,7 +116,7 @@ describe('Controller', () => {
 			});
 		}));
 
-		test('CTRL-CLAIM-008:gcl-not-enough-before-no-bodypart', () => claimPrecedence(async ({ player }) => {
+		test('gcl not enough before no bodypart', () => claimPrecedence(async ({ player }) => {
 			await player('100', Game => {
 				exhaustGcl(Game);
 				const controller = Game.rooms.W3N3!.controller!;
@@ -124,7 +124,7 @@ describe('Controller', () => {
 			});
 		}));
 
-		test('CTRL-CLAIM-008:gcl-not-enough-before-range', () => claimPrecedence(async ({ player }) => {
+		test('gcl not enough before range', () => claimPrecedence(async ({ player }) => {
 			await player('100', Game => {
 				exhaustGcl(Game);
 				const controller = Game.rooms.W3N3!.controller!;
@@ -132,7 +132,7 @@ describe('Controller', () => {
 			});
 		}));
 
-		test('CTRL-CLAIM-008:invalid-target-before-no-bodypart', () => neutralNoClaim(async ({ player }) => {
+		test('invalid target before no bodypart', () => neutralNoClaim(async ({ player }) => {
 			await player('100', Game => {
 				setGclRoomCount(Game, 0);
 				assert.strictEqual(
@@ -151,7 +151,7 @@ describe('Controller', () => {
 			},
 		});
 
-		test('out-of-range non-controller target returns ERR_NOT_IN_RANGE', () => wrongTypeOutOfRange(async ({ player }) => {
+		test('out-of-range non-controller target', () => wrongTypeOutOfRange(async ({ player }) => {
 			await player('100', Game => {
 				const container = Game.rooms.W3N3?.find(C.FIND_STRUCTURES)
 					.find(structure => structure.structureType === C.STRUCTURE_CONTAINER);
@@ -161,7 +161,7 @@ describe('Controller', () => {
 			});
 		}));
 
-		test('null target returns ERR_INVALID_TARGET', () => wrongTypeOutOfRange(async ({ player }) => {
+		test('null target', () => wrongTypeOutOfRange(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(
 					Game.creeps.signer?.signController(null as unknown as StructureController, 'hello'),
@@ -186,7 +186,7 @@ describe('Controller', () => {
 			});
 		}));
 
-		test('CTRL-RESERVE-008:invalid-target-before-no-bodypart', () => neutralNoClaim(async ({ player }) => {
+		test('invalid target before no bodypart', () => neutralNoClaim(async ({ player }) => {
 			await player('100', Game => {
 				assert.strictEqual(
 					Game.creeps.worker!.reserveController(findContainer(Game) as unknown as StructureController),
@@ -194,14 +194,14 @@ describe('Controller', () => {
 			});
 		}));
 
-		test('CTRL-RESERVE-008:range-before-no-bodypart', () => neutralNoClaim(async ({ player }) => {
+		test('range before no bodypart', () => neutralNoClaim(async ({ player }) => {
 			await player('100', Game => {
 				const controller = Game.rooms.W3N3!.controller!;
 				assert.strictEqual(Game.creeps.distantWorker!.reserveController(controller), C.ERR_NOT_IN_RANGE);
 			});
 		}));
 
-		test('CTRL-RESERVE-008:invalid-controller-state-before-no-bodypart', () => hostileNoClaim(async ({ player }) => {
+		test('invalid controller state before no bodypart', () => hostileNoClaim(async ({ player }) => {
 			await player('100', Game => {
 				const controller = Game.rooms.W3N3!.controller!;
 				assert.strictEqual(Game.creeps.worker!.reserveController(controller), C.ERR_INVALID_TARGET);
@@ -223,7 +223,7 @@ describe('Controller', () => {
 			},
 		});
 
-		test('upgrade-blocked controller returns ERR_INVALID_TARGET before ERR_NOT_IN_RANGE', () => upgradeBlockedOutOfRange(async ({ player }) => {
+		test('upgrade-blocked before range', () => upgradeBlockedOutOfRange(async ({ player }) => {
 			await player('100', Game => {
 				const controller = Game.rooms.W3N3?.controller;
 				assert.strictEqual(Game.creeps.worker?.upgradeController(controller!), C.ERR_INVALID_TARGET);
@@ -246,7 +246,7 @@ describe('Controller', () => {
 			},
 		});
 
-		test('caps at one activation per tick across controllers', () => ownedTwoRooms(async ({ player, tick }) => {
+		test('one activation per tick across controllers', () => ownedTwoRooms(async ({ player, tick }) => {
 			await player('100', Game => {
 				assert.strictEqual(Game.rooms.W1N1?.controller?.activateSafeMode(), C.OK);
 				assert.strictEqual(Game.rooms.W3N3?.controller?.activateSafeMode(), C.OK);
@@ -261,7 +261,7 @@ describe('Controller', () => {
 
 	describe('event log emissions', () => {
 
-		test('attackController emits EVENT_ATTACK_CONTROLLER with no data', () => hostileReservation(async ({ player, tick }) => {
+		test('attackController emits no data', () => hostileReservation(async ({ player, tick }) => {
 			await player('100', Game => {
 				Game.creeps.claimer?.attackController(Game.rooms.W3N3!.controller!);
 			});
@@ -276,7 +276,7 @@ describe('Controller', () => {
 			});
 		}));
 
-		test('reserveController emits EVENT_RESERVE_CONTROLLER with amount', () => ownReservation(async ({ player, tick }) => {
+		test('reserveController emits amount', () => ownReservation(async ({ player, tick }) => {
 			await player('100', Game => {
 				Game.creeps.claimer?.reserveController(Game.rooms.W3N3!.controller!);
 			});
@@ -304,7 +304,7 @@ describe('Controller', () => {
 			},
 		});
 
-		test('upgradeController emits EVENT_UPGRADE_CONTROLLER with amount and energySpent', () => upgradeSim(async ({ player, tick }) => {
+		test('upgradeController emits amount and energySpent', () => upgradeSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				Game.creeps.worker?.upgradeController(Game.rooms.W3N3!.controller!);
 			});
@@ -328,7 +328,7 @@ describe('Controller', () => {
 			},
 		});
 
-		test('reserveController updates source.energyCapacity via #roomStatusDidChange',
+		test('reserve updates source.energyCapacity',
 			() => reserveNeutral(async ({ peekRoom, player, tick }) => {
 				await peekRoom('W3N3', room => {
 					const source = room.find(C.FIND_SOURCES)[0];
@@ -354,7 +354,7 @@ describe('Controller', () => {
 			},
 		});
 
-		test('downgrade updates extension.energyCapacity via #roomStatusDidChange',
+		test('downgrade updates extension.energyCapacity',
 			() => downgradeWithExtension(async ({ peekRoom, tick }) => {
 				await peekRoom('W3N3', room => {
 					const ext = room.find(C.FIND_STRUCTURES)
@@ -388,14 +388,14 @@ describe('Controller', () => {
 			},
 		});
 
-		test('upgradeController level-up delivers a notification', () => onCuspOfLevelUp(async ({ player, tick }) => {
-			using stdout = captureConsoleLog();
+		test('level-up delivers a notification', () => onCuspOfLevelUp(async ({ player, tick }) => {
+			using capture = captureNotificationsForTesting();
 			await player('100', Game => {
 				Game.creeps.worker?.upgradeController(Game.rooms.W3N3!.controller!);
 			});
 			// Notification is queued on the first processed tick (time=0) and drained that same tick.
 			await tick();
-			const [ row ] = parseNotifyLines(stdout.lines).filter(line => line.message.includes('upgraded to level'));
+			const [ row ] = capture.rows.filter(row => row.message.includes('upgraded to level'));
 			assert.ok(row, 'expected level-up notification');
 			assert.strictEqual(row.message, 'Your Controller in room W3N3 has been upgraded to level 2.');
 			assert.strictEqual(row.type, 'msg');
@@ -413,13 +413,13 @@ describe('Controller', () => {
 			},
 		});
 
-		test('pre-downgrade warning is delivered exactly once when ticksToDowngrade enters the 3000-tick window',
+		test('pre-downgrade warning delivered exactly once',
 			() => aboutToWarn(async ({ tick }) => {
-				using stdout = captureConsoleLog();
+				using capture = captureNotificationsForTesting();
 				// Warning is queued on tick 2; the delivery worker drains it at the time=10 cadence.
 				await tick(11);
-				const warnings = parseNotifyLines(stdout.lines).filter(line => line.message.includes('will be downgraded'));
-				const total = warnings.reduce((sum, line) => sum + line.count, 0);
+				const warnings = capture.rows.filter(row => row.message.includes('will be downgraded'));
+				const total = warnings.reduce((sum, row) => sum + row.count, 0);
 				assert.strictEqual(total, 1, 'warning should fire exactly once even when room stays active');
 				const [ warning ] = warnings;
 				assert.ok(warning);
@@ -440,19 +440,19 @@ describe('Controller', () => {
 			},
 		});
 
-		test('downgrade delivers a notification with the new level', () => aboutToDowngrade(async ({ tick }) => {
-			using stdout = captureConsoleLog();
+		test('downgrade delivers the new level', () => aboutToDowngrade(async ({ tick }) => {
+			using capture = captureNotificationsForTesting();
 			await tick();
-			const [ row ] = parseNotifyLines(stdout.lines).filter(line => line.message.includes('has been downgraded'));
+			const [ row ] = capture.rows.filter(row => row.message.includes('has been downgraded'));
 			assert.ok(row, 'expected downgrade notification');
 			assert.strictEqual(row.message,
 				'Your Controller in room W3N3 has been downgraded to level 4 due to absence of upgrading activity!');
 			assert.strictEqual(row.type, 'msg');
 		}));
 
-		test('pre-downgrade warning re-arms after a downgrade tick',
+		test('pre-downgrade warning re-arms after downgrade',
 			() => aboutToDowngrade(async ({ tick, poke, shard }) => {
-				using stdout = captureConsoleLog();
+				using capture = captureNotificationsForTesting();
 				// Drop the per-user throttle so the re-armed warning delivers alongside the downgrade.
 				await setNotifyPrefs(shard.db, '100', { interval: 0 });
 				await tick();
@@ -461,11 +461,10 @@ describe('Controller', () => {
 					room.controller!['#downgradeTime'] = 2 + 3000;
 				});
 				await tick(10);
-				const lines = parseNotifyLines(stdout.lines);
-				const downgrades = lines.filter(line => line.message.includes('has been downgraded'));
-				const warnings = lines.filter(line => line.message.includes('will be downgraded'));
-				const downgradeTotal = downgrades.reduce((sum, line) => sum + line.count, 0);
-				const warningTotal = warnings.reduce((sum, line) => sum + line.count, 0);
+				const downgrades = capture.rows.filter(row => row.message.includes('has been downgraded'));
+				const warnings = capture.rows.filter(row => row.message.includes('will be downgraded'));
+				const downgradeTotal = downgrades.reduce((sum, row) => sum + row.count, 0);
+				const warningTotal = warnings.reduce((sum, row) => sum + row.count, 0);
 				assert.strictEqual(downgradeTotal, 1, 'downgrade fired once');
 				assert.strictEqual(warningTotal, 1, 'fresh warning fired exactly once after downgrade');
 				const [ downgrade ] = downgrades;

@@ -4,7 +4,7 @@ import { RoomPosition } from 'xxscreeps/game/position.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 
-describe('Source harvest validation', () => {
+describe('mod/classic/source', () => {
 	const depletedOutOfRange = simulate({
 		W1N1: room => {
 			const source = room.find(C.FIND_SOURCES)[0]!;
@@ -13,7 +13,7 @@ describe('Source harvest validation', () => {
 		},
 	});
 
-	test('HARVEST-015:depleted-before-range', () => depletedOutOfRange(async ({ player }) => {
+	test('harvest depleted before range', () => depletedOutOfRange(async ({ player }) => {
 		await player('100', Game => {
 			const creep = Game.creeps.harvester;
 			const source = Game.rooms.W1N1?.find(C.FIND_SOURCES)[0];
@@ -32,7 +32,7 @@ describe('Source harvest validation', () => {
 		},
 	});
 
-	test('HARVEST-015:depleted-before-hostile-room', () => depletedHostileRoom(async ({ player }) => {
+	test('harvest depleted before hostile room', () => depletedHostileRoom(async ({ player }) => {
 		await player('100', Game => {
 			const creep = Game.creeps.harvester;
 			const source = Game.rooms.W1N1?.find(C.FIND_SOURCES)[0];
@@ -48,7 +48,7 @@ describe('Source harvest validation', () => {
 		},
 	});
 
-	test('HARVEST-015:no-bodypart-before-invalid-target', () => noBodypartInvalidTarget(async ({ player }) => {
+	test('harvest no bodypart before invalid target', () => noBodypartInvalidTarget(async ({ player }) => {
 		await player('100', Game => {
 			const creep = Game.creeps.harvester;
 			assert.ok(creep);

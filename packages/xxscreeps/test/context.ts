@@ -2,12 +2,14 @@ import { checkArguments } from 'xxscreeps/config/arguments.js';
 import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 
 type Callback = () => void | Promise<void>;
-type Context = {
+interface Context {
 	name: string | undefined;
 	children: Callback[];
 	tests: Callback[];
-};
-const makeFrame = (name?: string) => ({ name, children: [], tests: [] });
+	sawDescribe: boolean;
+	sawTest: boolean;
+}
+const makeFrame = (name?: string): Context => ({ name, children: [], tests: [], sawDescribe: false, sawTest: false });
 const { argv, 'test-redis': testRedis } = checkArguments({
 	argv: true,
 	boolean: [ 'test-redis' ],
@@ -60,18 +62,24 @@ export function summary() {
 export function describe(name: string, fn: Callback): void {
 	if (!context) {
 		throw new Error('Called `describe` within `test`');
-	} else if (checkFilter(name)) {
+	} else if (context.sawTest) {
+		throw new Error(`describe("${name}") mixes with sibling test()s`);
+	}
+	context.sawDescribe = true;
+	if (checkFilter(name)) {
 		return;
 	}
 	context.children.push(async () => {
-		if (argv.length === 0) {
-			process.stdout.write('  '.repeat(stack.length) + name + ' ');
-		}
 		const frame = makeFrame(name);
 		stack.push(context!);
 		context = frame;
 		try {
 			await fn();
+			if (argv.length === 0) {
+				const indent = '  '.repeat(stack.length - 1);
+				const spacing = frame.sawTest ? ': ' : '\n';
+				process.stdout.write(`${indent}${name}${spacing}`);
+			}
 			await flush();
 		} finally {
 			context = stack.pop();
@@ -82,7 +90,11 @@ export function describe(name: string, fn: Callback): void {
 export function test(name: string, fn: Callback) {
 	if (!context) {
 		throw new Error('Called `test` within `test`');
-	} else if (checkFilter(name)) {
+	} else if (context.sawDescribe) {
+		throw new Error(`test("${name}") mixes with sibling describe()s`);
+	}
+	context.sawTest = true;
+	if (checkFilter(name)) {
 		return;
 	}
 	context.tests.push(async () => {
@@ -102,7 +114,7 @@ export function test(name: string, fn: Callback) {
 			++failed;
 			const names = [ ...stack.map(frame => frame.name), context?.name, name ].filter(nonNullPredicate);
 			if (argv.length === 0) {
-				console.log(`\n  FAIL: ${name}`);
+				console.log(`\n  FAIL: ${names.join(' > ')}`);
 				console.log(`  Isolate with: npx xxscreeps test ${names.map(nn => `"${nn}"`).join(' ')}`);
 			}
 			console.log(err);

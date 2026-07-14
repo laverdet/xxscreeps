@@ -19,7 +19,7 @@ export function createLabWithResources(pos: RoomPosition, owner: string, mineral
 	return lab;
 }
 
-describe('Chemistry', () => {
+describe('mod/classic/chemistry', () => {
 
 	// =========================================================================
 	// runReaction
@@ -43,7 +43,7 @@ describe('Chemistry', () => {
 			},
 		});
 
-		test('runReaction produces correct compound', () => reactionSim(async ({ player, tick }) => {
+		test('produces correct compound', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType);
@@ -60,7 +60,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('runReaction uses per-product cooldown', () => reactionSim(async ({ player, tick }) => {
+		test('uses per-product cooldown', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType);
@@ -81,7 +81,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('runReaction deducts reagents from source labs', () => reactionSim(async ({ player, tick }) => {
+		test('deducts reagents from source labs', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType);
@@ -99,7 +99,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('runReaction action log points to correct source labs', () => reactionSim(async ({ player, tick }) => {
+		test('action log points to correct source labs', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType);
@@ -124,7 +124,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('runReaction fails on cooldown', () => reactionSim(async ({ player, tick }) => {
+		test('fails on cooldown', () => reactionSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType);
@@ -142,7 +142,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('LAB-RUN-013:invalid-target-before-not-enough-reagent', () => reactionSim(async ({ player }) => {
+		test('invalid target before not enough reagent', () => reactionSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const output = labs.find(lab => !lab.mineralType)!;
@@ -182,7 +182,7 @@ describe('Chemistry', () => {
 			},
 		});
 
-		test('boostCreep method exists', () => boostSim(async ({ player }) => {
+		test('method exists', () => boostSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const lab = labs[0];
@@ -191,7 +191,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('boostCreep returns OK for valid target', () => boostSim(async ({ player }) => {
+		test('returns OK for valid target', () => boostSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO');
@@ -200,7 +200,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('boostCreep applies boost to body parts', () => boostSim(async ({ player, tick }) => {
+		test('applies boost to body parts', () => boostSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO');
@@ -217,7 +217,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('boostCreep deducts resources from lab', () => boostSim(async ({ player, tick }) => {
+		test('deducts resources from lab', () => boostSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO');
@@ -234,7 +234,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('boostCreep respects bodyPartsCount limit', () => boostSim(async ({ player, tick }) => {
+		test('respects bodyPartsCount limit', () => boostSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labUO = labs.find(lab => lab.mineralType === 'UO');
@@ -249,7 +249,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('boostCreep fails out of range', () => boostSim(async ({ player }) => {
+		test('fails out of range', () => boostSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO');
@@ -258,7 +258,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('boostCreep fails with insufficient resources', () => boostSim(async ({ player }) => {
+		test('fails with insufficient resources', () => boostSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				// Lab with GO has enough for TOUGH, but let's test with UO lab on a creep without WORK
@@ -270,7 +270,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('boostCreep TOUGH parts boosted first, others last-to-first', () => boostSim(async ({ player, tick }) => {
+		test('TOUGH parts boosted first, others last-to-first', () => boostSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labUO = labs.find(lab => lab.mineralType === 'UO');
@@ -310,7 +310,7 @@ describe('Chemistry', () => {
 			},
 		});
 
-		test('reverseReaction method exists', () => reverseSim(async ({ player }) => {
+		test('method exists', () => reverseSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const lab = labs[0];
@@ -319,7 +319,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('reverseReaction returns OK for valid decomposition', () => reverseSim(async ({ player }) => {
+		test('returns OK for valid decomposition', () => reverseSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH');
@@ -329,7 +329,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('reverseReaction decomposes compound into reagents', () => reverseSim(async ({ player, tick }) => {
+		test('decomposes compound into reagents', () => reverseSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH');
@@ -351,7 +351,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('reverseReaction sets cooldown', () => reverseSim(async ({ player, tick }) => {
+		test('sets cooldown', () => reverseSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH');
@@ -368,7 +368,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('reverseReaction fails with lab1 == lab2', () => reverseSim(async ({ player }) => {
+		test('fails with lab1 == lab2', () => reverseSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH');
@@ -378,7 +378,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('LAB-REVERSE-013:invalid-target-before-same-lab', () => reverseSim(async ({ player }) => {
+		test('invalid target before same lab', () => reverseSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === C.RESOURCE_HYDROXIDE)!;
@@ -386,7 +386,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('reverseReaction fails on cooldown', () => reverseSim(async ({ player, tick }) => {
+		test('fails on cooldown', () => reverseSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labOH = labs.find(lab => lab.mineralType === 'OH');
@@ -426,7 +426,7 @@ describe('Chemistry', () => {
 			},
 		});
 
-		test('unboostCreep method exists', () => unboostSim(async ({ player }) => {
+		test('method exists', () => unboostSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const lab = labs[0];
@@ -435,7 +435,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('unboostCreep removes all boosts', () => unboostSim(async ({ player, tick }) => {
+		test('removes all boosts', () => unboostSim(async ({ player, tick }) => {
 			// First boost the creep
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
@@ -460,7 +460,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('unboostCreep drops resources at creep position', () => unboostSim(async ({ player, tick }) => {
+		test('drops resources at creep position', () => unboostSim(async ({ player, tick }) => {
 			// Boost then unboost
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
@@ -488,7 +488,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('unboostCreep sets cooldown on lab', () => unboostSim(async ({ player, tick }) => {
+		test('sets cooldown on lab', () => unboostSim(async ({ player, tick }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const labGO = labs.find(lab => lab.mineralType === 'GO');
@@ -508,7 +508,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('unboostCreep fails on unboosted creep', () => unboostSim(async ({ player }) => {
+		test('fails on unboosted creep', () => unboostSim(async ({ player }) => {
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);
 				const lab = labs.find(lab => !lab.mineralType);
@@ -518,7 +518,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('unboostCreep returns ERR_NOT_OWNER for foreign creep before checkIsActive', () => simulate({
+		test('returns ERR_NOT_OWNER for foreign creep before checkIsActive', () => simulate({
 			W1N1: room => {
 				room['#insertObject'](createLab(new RoomPosition(25, 25, 'W1N1'), '100'));
 				room['#insertObject'](createCreep(
@@ -539,7 +539,7 @@ describe('Chemistry', () => {
 			});
 		}));
 
-		test('unboostCreep fails out of range', () => unboostSim(async ({ player, tick, poke }) => {
+		test('fails out of range', () => unboostSim(async ({ player, tick, poke }) => {
 			// Boost the creep first
 			await player('100', Game => {
 				const labs = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_LAB);

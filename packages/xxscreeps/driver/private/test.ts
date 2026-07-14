@@ -3,10 +3,10 @@ import { describe, test } from 'xxscreeps/test/index.js';
 import { isPrivate } from 'xxscreeps:private-symbol';
 
 // nb: Run with:
-// `npx xxscreeps test "#private" --private-transform=nodejs`
+// `npx xxscreeps test "driver/private" --private-transform=nodejs`
 // - or -
-// `npx xxscreeps test "#private" --private-transform=isolated-vm`
-describe('#private', () => {
+// `npx xxscreeps test "driver/private" --private-transform=isolated-vm`
+describe('driver/private', () => {
 	test('super invocations', () => {
 		class One {
 			'#foo'() { return '1'; }

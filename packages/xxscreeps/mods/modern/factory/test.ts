@@ -18,7 +18,7 @@ function getFactory(game: { rooms: Record<string, Room> }) {
 	return lookForStructures(game.rooms.W1N1, C.STRUCTURE_FACTORY)[0]!;
 }
 
-describe('Factory', () => {
+describe('mod/modern/factory', () => {
 
 	// =========================================================================
 	// produce — core mechanics

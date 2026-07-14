@@ -8,222 +8,224 @@ import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createExtension } from './extension.js';
 import { StructureSpawn, create } from './spawn.js';
 
-describe('Spawn', () => {
-	const simulation = simulate({
-		W1N1: room => {
-			room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
-			const extension = createExtension(new RoomPosition(25, 27, 'W1N1'), 8, '100');
-			extension.store['#add'](C.RESOURCE_ENERGY, extension.store.getCapacity(C.RESOURCE_ENERGY));
-			room['#insertObject'](extension);
-			const extension2 = createExtension(new RoomPosition(25, 28, 'W1N1'), 8, '100');
-			extension2.store['#add'](C.RESOURCE_ENERGY, extension.store.getCapacity(C.RESOURCE_ENERGY));
-			room['#insertObject'](extension2);
-			room['#level'] = 8;
-			room['#user'] =
-				room.controller!['#user'] = '100';
-		},
-	});
-
-	test('creep birth ticksToLive', () => simulation(async ({ player, tick }) => {
-		await player('100', Game => {
-			Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep', {
-				directions: [ C.RIGHT ],
-			});
+describe('mod/classic/spawn', () => {
+	describe('spawning', () => {
+		const simulation = simulate({
+			W1N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
+				const extension = createExtension(new RoomPosition(25, 27, 'W1N1'), 8, '100');
+				extension.store['#add'](C.RESOURCE_ENERGY, extension.store.getCapacity(C.RESOURCE_ENERGY));
+				room['#insertObject'](extension);
+				const extension2 = createExtension(new RoomPosition(25, 28, 'W1N1'), 8, '100');
+				extension2.store['#add'](C.RESOURCE_ENERGY, extension.store.getCapacity(C.RESOURCE_ENERGY));
+				room['#insertObject'](extension2);
+				room['#level'] = 8;
+				room['#user'] =
+					room.controller!['#user'] = '100';
+			},
 		});
-		for (const _ii of Fn.range(2)) {
+
+		test('creep birth ticksToLive', () => simulation(async ({ player, tick }) => {
+			await player('100', Game => {
+				Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep', {
+					directions: [ C.RIGHT ],
+				});
+			});
+			for (const _ii of Fn.range(2)) {
+				await tick(1);
+				await player('100', Game => {
+					assert.strictEqual(Game.creeps.creep?.ticksToLive, undefined);
+				});
+			}
 			await tick(1);
 			await player('100', Game => {
-				assert.strictEqual(Game.creeps.creep?.ticksToLive, undefined);
+				assert.strictEqual(Game.creeps.creep?.ticksToLive, 1499);
 			});
-		}
-		await tick(1);
-		await player('100', Game => {
-			assert.strictEqual(Game.creeps.creep?.ticksToLive, 1499);
-		});
-	}));
+		}));
 
-	test('spawn direction', () => simulation(async ({ player, tick }) => {
-		await player('100', Game => {
-			Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep', {
-				directions: [ C.RIGHT ],
+		test('spawn direction', () => simulation(async ({ player, tick }) => {
+			await player('100', Game => {
+				Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep', {
+					directions: [ C.RIGHT ],
+				});
 			});
-		});
-		await tick(3);
-		await player('100', Game => {
-			assert.ok(Game.creeps.creep?.pos.isEqualTo(26, 25));
-		});
-	}));
-
-	test('set direction', () => simulation(async ({ player, tick }) => {
-		await player('100', Game => {
-			Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep');
-		});
-		await tick();
-		await player('100', Game => {
-			Game.spawns.Spawn1?.spawning?.setDirections([ C.BOTTOM ]);
-		});
-		await tick(2);
-		await player('100', Game => {
-			assert.ok(Game.creeps.creep?.pos.isEqualTo(25, 26));
-		});
-	}));
-
-	test('cancel spawn', () => simulation(async ({ player, tick }) => {
-		await player('100', Game => {
-			Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep');
-		});
-		await tick();
-		await player('100', Game => {
-			Game.spawns.Spawn1?.spawning?.cancel();
-		});
-		await tick();
-		await player('100', Game => {
-			assert.ok(!Game.spawns.spawning);
-			assert.strictEqual(Game.rooms.W1N1?.['#objects'].some(object => object instanceof Creep), false);
-		});
-	}));
-
-	test('spawn energy structures', () => simulation(async ({ player, tick, peekRoom }) => {
-		const extensionId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 27)[0]!.id);
-		await player('100', Game => {
-			Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep', {
-				energyStructures: [ Game.getObjectById(extensionId)! ],
+			await tick(3);
+			await player('100', Game => {
+				assert.ok(Game.creeps.creep?.pos.isEqualTo(26, 25));
 			});
-		});
-		await tick();
-		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1?.store[C.RESOURCE_ENERGY], C.SPAWN_ENERGY_START);
-			assert.strictEqual(Game.getObjectById<StructureExtension>(extensionId)!.store[C.RESOURCE_ENERGY],
-				C.EXTENSION_ENERGY_CAPACITY[8]! - C.BODYPART_COST[C.MOVE]);
-		});
-	}));
+		}));
 
-	test('renew energy structures', () => simulation(async ({ player, tick, peekRoom, poke }) => {
-		const extensionId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 27)[0]!.id);
-		await player('100', Game => {
-			Game.spawns.Spawn1?.spawnCreep([ C.MOVE, C.MOVE, C.MOVE, C.MOVE, C.MOVE ], 'creep');
-		});
-		await tick(5 * C.CREEP_SPAWN_TIME);
-		await poke('W1N1', '100', Game => {
-			const spawn = Game.spawns.Spawn1;
-			spawn?.store['#subtract']('energy', spawn.store[C.RESOURCE_ENERGY] - 1);
-			Game.creeps.creep!['#ageTime'] = Game.time + 1;
-		});
-		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1?.renewCreep(Game.creeps.creep!), C.OK);
-		});
-		await tick();
-		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1?.store[C.RESOURCE_ENERGY], 0);
-			// 300 starting, 120 cost, +1 from the spawn = 181
-			assert.strictEqual(Game.getObjectById<StructureExtension>(extensionId)?.store[C.RESOURCE_ENERGY], 181);
-		});
-	}));
+		test('set direction', () => simulation(async ({ player, tick }) => {
+			await player('100', Game => {
+				Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep');
+			});
+			await tick();
+			await player('100', Game => {
+				Game.spawns.Spawn1?.spawning?.setDirections([ C.BOTTOM ]);
+			});
+			await tick(2);
+			await player('100', Game => {
+				assert.ok(Game.creeps.creep?.pos.isEqualTo(25, 26));
+			});
+		}));
 
-	test('renewCreep undefined', () => simulation(async ({ player }) => {
-		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1?.renewCreep(undefined as never), C.ERR_INVALID_TARGET);
-		});
-	}));
+		test('cancel spawn', () => simulation(async ({ player, tick }) => {
+			await player('100', Game => {
+				Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep');
+			});
+			await tick();
+			await player('100', Game => {
+				Game.spawns.Spawn1?.spawning?.cancel();
+			});
+			await tick();
+			await player('100', Game => {
+				assert.ok(!Game.spawns.spawning);
+				assert.strictEqual(Game.rooms.W1N1?.['#objects'].some(object => object instanceof Creep), false);
+			});
+		}));
 
-	const foreignSpawnSim = simulate({
-		W1N1: room => {
-			room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
-			room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.WORK, C.CARRY, C.MOVE ], 'worker', '101'));
-			room['#level'] = 8;
-			room['#user'] = room.controller!['#user'] = '100';
-		},
+		test('spawn energy structures', () => simulation(async ({ player, tick, peekRoom }) => {
+			const extensionId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 27)[0]!.id);
+			await player('100', Game => {
+				Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep', {
+					energyStructures: [ Game.getObjectById(extensionId)! ],
+				});
+			});
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.store[C.RESOURCE_ENERGY], C.SPAWN_ENERGY_START);
+				assert.strictEqual(Game.getObjectById<StructureExtension>(extensionId)!.store[C.RESOURCE_ENERGY],
+					C.EXTENSION_ENERGY_CAPACITY[8]! - C.BODYPART_COST[C.MOVE]);
+			});
+		}));
+
+		test('renew energy structures', () => simulation(async ({ player, tick, peekRoom, poke }) => {
+			const extensionId = await peekRoom('W1N1', room => room.lookForAt(C.LOOK_STRUCTURES, 25, 27)[0]!.id);
+			await player('100', Game => {
+				Game.spawns.Spawn1?.spawnCreep([ C.MOVE, C.MOVE, C.MOVE, C.MOVE, C.MOVE ], 'creep');
+			});
+			await tick(5 * C.CREEP_SPAWN_TIME);
+			await poke('W1N1', '100', Game => {
+				const spawn = Game.spawns.Spawn1;
+				spawn?.store['#subtract']('energy', spawn.store[C.RESOURCE_ENERGY] - 1);
+				Game.creeps.creep!['#ageTime'] = Game.time + 1;
+			});
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.renewCreep(Game.creeps.creep!), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.store[C.RESOURCE_ENERGY], 0);
+				// 300 starting, 120 cost, +1 from the spawn = 181
+				assert.strictEqual(Game.getObjectById<StructureExtension>(extensionId)?.store[C.RESOURCE_ENERGY], 181);
+			});
+		}));
+
+		test('renewCreep undefined', () => simulation(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.renewCreep(undefined as never), C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		const foreignSpawnSim = simulate({
+			W1N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W1N1'), '100', 'Spawn1'));
+				room['#insertObject'](createCreep(new RoomPosition(25, 26, 'W1N1'), [ C.WORK, C.CARRY, C.MOVE ], 'worker', '101'));
+				room['#level'] = 8;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
+
+		test('create: invalid name or options before not owner', () => foreignSpawnSim(async ({ player }) => {
+			await player('101', Game => {
+				const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+				assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'x'.repeat(101)), C.ERR_INVALID_ARGS);
+			});
+		}));
+
+		test('create: name exists before not owner', () => foreignSpawnSim(async ({ player }) => {
+			await player('101', Game => {
+				const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+				assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'worker'), C.ERR_NAME_EXISTS);
+			});
+		}));
+
+		test('create: invalid directions before not owner', () => foreignSpawnSim(async ({ player }) => {
+			await player('101', Game => {
+				const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+				assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'newCreep', {
+					directions: [ 99 as never ],
+				}), C.ERR_INVALID_ARGS);
+			});
+		}));
+
+		test('renew: busy before not owner', () => foreignSpawnSim(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1!.spawnCreep([ C.MOVE, C.MOVE, C.MOVE ], 'busy'), C.OK);
+			});
+			await tick();
+			await player('101', Game => {
+				const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+				assert.strictEqual(spawn.renewCreep(Game.creeps.worker!), C.ERR_BUSY);
+			});
+		}));
+
+		test('renew: invalid target before not owner', () => foreignSpawnSim(async ({ player }) => {
+			await player('101', Game => {
+				const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
+				assert.strictEqual(spawn.renewCreep(spawn as never), C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		test('recycleCreep undefined', () => simulation(async ({ player }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.recycleCreep(undefined as never), C.ERR_INVALID_TARGET);
+			});
+		}));
+
+		test('destroy + unclaim', () => simulation(async ({ player, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep'), C.OK);
+				assert.strictEqual(Game.spawns.Spawn1.destroy(), C.OK);
+				assert.strictEqual(Game.rooms.W1N1?.controller?.unclaim(), C.OK);
+			});
+			await tick();
+			await player('100', Game => {
+				// This might fail in the future if we change room visibility rules in the tests, since the
+				// player controls no intent objects
+				assert.ok(!Game.spawns.Spawn1);
+				assert.strictEqual(Game.rooms.W1N1?.find(C.FIND_MY_CREEPS).length, 0);
+				assert.ok(!Game.rooms.W1N1.controller?.my);
+			});
+		}));
+
+		// it's located in the terrain wall
+		const spawnInTheWall = simulate({
+			W1N1: room => {
+				room['#insertObject'](create(new RoomPosition(2, 2, 'W1N1'), '100', 'Spawn1'));
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
+
+		test('abandoned spawn crash', () => spawnInTheWall(async ({ player, poke, tick }) => {
+			await player('100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'newCreep'), C.OK);
+			});
+			await tick(C.CREEP_SPAWN_TIME);
+			// fill up the energy, to avoid spawn energy keeping the room active
+			await poke('W1N1', '100', Game => {
+				assert.ok(Game.spawns.Spawn1?.spawning);
+				Game.spawns.Spawn1.store['#add']('energy', C.BODYPART_COST[C.MOVE]);
+			});
+			await tick(3);
+			await poke('W1N1', '100', Game => {
+				assert.strictEqual(Game.spawns.Spawn1?.spawning?.remainingTime, 1);
+			});
+		}));
 	});
 
-	test('SPAWN-CREATE-014:invalid-name-or-options-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
-		await player('101', Game => {
-			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
-			assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'x'.repeat(101)), C.ERR_INVALID_ARGS);
-		});
-	}));
-
-	test('SPAWN-CREATE-014:name-exists-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
-		await player('101', Game => {
-			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
-			assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'worker'), C.ERR_NAME_EXISTS);
-		});
-	}));
-
-	test('SPAWN-CREATE-014:invalid-directions-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
-		await player('101', Game => {
-			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
-			assert.strictEqual(spawn.spawnCreep([ C.MOVE ], 'newCreep', {
-				directions: [ 99 as never ],
-			}), C.ERR_INVALID_ARGS);
-		});
-	}));
-
-	test('RENEW-CREEP-011:busy-before-not-owner', () => foreignSpawnSim(async ({ player, tick }) => {
-		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1!.spawnCreep([ C.MOVE, C.MOVE, C.MOVE ], 'busy'), C.OK);
-		});
-		await tick();
-		await player('101', Game => {
-			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
-			assert.strictEqual(spawn.renewCreep(Game.creeps.worker!), C.ERR_BUSY);
-		});
-	}));
-
-	test('RENEW-CREEP-011:invalid-target-before-not-owner', () => foreignSpawnSim(async ({ player }) => {
-		await player('101', Game => {
-			const spawn = lookForStructures(Game.rooms.W1N1, C.STRUCTURE_SPAWN)[0]!;
-			assert.strictEqual(spawn.renewCreep(spawn as never), C.ERR_INVALID_TARGET);
-		});
-	}));
-
-	test('recycleCreep undefined', () => simulation(async ({ player }) => {
-		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1?.recycleCreep(undefined as never), C.ERR_INVALID_TARGET);
-		});
-	}));
-
-	test('destroy + unclaim', () => simulation(async ({ player, tick }) => {
-		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'creep'), C.OK);
-			assert.strictEqual(Game.spawns.Spawn1.destroy(), C.OK);
-			assert.strictEqual(Game.rooms.W1N1?.controller?.unclaim(), C.OK);
-		});
-		await tick();
-		await player('100', Game => {
-			// This might fail in the future if we change room visibility rules in the tests, since the
-			// player controls no intent objects
-			assert.ok(!Game.spawns.Spawn1);
-			assert.strictEqual(Game.rooms.W1N1?.find(C.FIND_MY_CREEPS).length, 0);
-			assert.ok(!Game.rooms.W1N1.controller?.my);
-		});
-	}));
-
-	// it's located in the terrain wall
-	const spawnInTheWall = simulate({
-		W1N1: room => {
-			room['#insertObject'](create(new RoomPosition(2, 2, 'W1N1'), '100', 'Spawn1'));
-			room['#level'] = 1;
-			room['#user'] = room.controller!['#user'] = '100';
-		},
-	});
-
-	test('abandoned spawn crash', () => spawnInTheWall(async ({ player, poke, tick }) => {
-		await player('100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1?.spawnCreep([ C.MOVE ], 'newCreep'), C.OK);
-		});
-		await tick(C.CREEP_SPAWN_TIME);
-		// fill up the energy, to avoid spawn energy keeping the room active
-		await poke('W1N1', '100', Game => {
-			assert.ok(Game.spawns.Spawn1?.spawning);
-			Game.spawns.Spawn1.store['#add']('energy', C.BODYPART_COST[C.MOVE]);
-		});
-		await tick(3);
-		await poke('W1N1', '100', Game => {
-			assert.strictEqual(Game.spawns.Spawn1?.spawning?.remainingTime, 1);
-		});
-	}));
-
-	describe('spawn stomping', () => {
+	describe('stomping', () => {
 		// Spawn at (25,25), surrounded by hostile creeps on all 8 tiles
 		const surrounded = simulate({
 			W1N1: room => {
@@ -349,129 +351,129 @@ describe('Spawn', () => {
 			});
 		}));
 	});
-});
 
-describe('Spawn isActive', () => {
-	const excessSpawnSim = simulate({
-		W3N1: room => {
-			room['#insertObject'](create(new RoomPosition(20, 25, 'W3N1'), '100', 'SpawnA'));
-			room['#insertObject'](create(new RoomPosition(25, 25, 'W3N1'), '100', 'SpawnB'));
-			room['#level'] = 1;
-			room['#user'] = room.controller!['#user'] = '100';
-		},
+	describe('isActive', () => {
+		const excessSpawnSim = simulate({
+			W3N1: room => {
+				room['#insertObject'](create(new RoomPosition(20, 25, 'W3N1'), '100', 'SpawnA'));
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W3N1'), '100', 'SpawnB'));
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
+
+		test('excess spawns at RCL 1 — one inactive', () => excessSpawnSim(async ({ player }) => {
+			await player('100', Game => {
+				const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
+				assert.strictEqual(spawns.length, 2, 'should have 2 spawns');
+				const activeCount = spawns.filter(spawn => spawn.isActive()).length;
+				assert.strictEqual(activeCount, 1, 'exactly 1 spawn should be active at RCL 1');
+			});
+		}));
+
+		test('inactive spawn returns ERR_RCL_NOT_ENOUGH', () => excessSpawnSim(async ({ player }) => {
+			await player('100', Game => {
+				const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
+				const inactive = spawns.find(spawn => !spawn.isActive());
+				assert.ok(inactive, 'should find an inactive spawn');
+				assert.strictEqual(inactive.spawnCreep([ C.MOVE ], 'test'), C.ERR_RCL_NOT_ENOUGH);
+			});
+		}));
+
+		test('inactive spawn can still be destroyed', () => excessSpawnSim(async ({ player }) => {
+			await player('100', Game => {
+				const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
+				const inactive = spawns.find(spawn => !spawn.isActive());
+				assert.ok(inactive, 'should find an inactive spawn');
+				assert.strictEqual(inactive.destroy(), C.OK, 'inactive structures should be destroyable');
+			});
+		}));
+
+		const energySim = simulate({
+			W3N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W3N1'), '100', 'Spawn1'));
+				// Extension at RCL 1 should be inactive (extensions available from RCL 2)
+				const ext = createExtension(new RoomPosition(25, 27, 'W3N1'), 1, '100');
+				ext.store['#add'](C.RESOURCE_ENERGY, 50);
+				room['#insertObject'](ext);
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
+
+		test('energyAvailable excludes inactive extensions', () => energySim(async ({ player }) => {
+			await player('100', Game => {
+				const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0]!;
+				assert.strictEqual(ext.isActive(), false, 'extension should be inactive at RCL 1');
+				assert.strictEqual(Game.rooms.W3N1?.energyAvailable, C.SPAWN_ENERGY_START,
+					'energyAvailable should exclude inactive extension');
+			});
+		}));
+
+		const transferSim = simulate({
+			W3N1: room => {
+				room['#insertObject'](create(new RoomPosition(25, 25, 'W3N1'), '100', 'Spawn1'));
+				const ext = createExtension(new RoomPosition(25, 27, 'W3N1'), 1, '100');
+				ext.store['#add'](C.RESOURCE_ENERGY, 10);
+				room['#insertObject'](ext);
+				const creep = createCreep(new RoomPosition(25, 26, 'W3N1'), [ C.CARRY, C.MOVE ], 'worker', '100');
+				creep.store['#add'](C.RESOURCE_ENERGY, 10);
+				room['#insertObject'](creep);
+				room['#level'] = 1;
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
+
+		test('stores on inactive buildings still work — transfer', () => transferSim(async ({ player }) => {
+			await player('100', Game => {
+				const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0];
+				assert.strictEqual(ext?.isActive(), false);
+				assert.strictEqual(Game.creeps.worker?.transfer(ext, C.RESOURCE_ENERGY, 1), C.OK);
+			});
+		}));
+
+		test('stores on inactive buildings still work — withdraw', () => transferSim(async ({ player }) => {
+			await player('100', Game => {
+				const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0];
+				assert.strictEqual(ext?.isActive(), false);
+				assert.strictEqual(Game.creeps.worker?.withdraw(ext, C.RESOURCE_ENERGY, 1), C.OK);
+			});
+		}));
 	});
 
-	test('excess spawns at RCL 1 — one inactive', () => excessSpawnSim(async ({ player }) => {
-		await player('100', Game => {
-			const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
-			assert.strictEqual(spawns.length, 2, 'should have 2 spawns');
-			const activeCount = spawns.filter(spawn => spawn.isActive()).length;
-			assert.strictEqual(activeCount, 1, 'exactly 1 spawn should be active at RCL 1');
+	describe('id-string constructor', () => {
+		const sim = simulate({
+			W3N3: room => {
+				room['#insertObject'](create(new RoomPosition(26, 25, 'W3N3'), '100', 'Spawn1'));
+			},
 		});
-	}));
 
-	test('inactive spawn returns ERR_RCL_NOT_ENOUGH', () => excessSpawnSim(async ({ player }) => {
-		await player('100', Game => {
-			const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
-			const inactive = spawns.find(spawn => !spawn.isActive());
-			assert.ok(inactive, 'should find an inactive spawn');
-			assert.strictEqual(inactive.spawnCreep([ C.MOVE ], 'test'), C.ERR_RCL_NOT_ENOUGH);
-		});
-	}));
+		test('Structure super reads delegate to the concrete object', () => sim(async ({ player }) => {
+			await player('100', Game => {
+				const original = Game.rooms.W3N3!.lookForAt(C.LOOK_STRUCTURES, 26, 25)[0]!;
+				// @ts-expect-error
+				const structure = new Structure(original.id);
+				assert.strictEqual(structure.structureType, original.structureType);
+				assert.strictEqual(structure.hits, original.hits);
+				assert.strictEqual(structure.hitsMax, original.hitsMax);
+			});
+		}));
 
-	test('inactive spawn can still be destroyed', () => excessSpawnSim(async ({ player }) => {
-		await player('100', Game => {
-			const spawns = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_SPAWN);
-			const inactive = spawns.find(spawn => !spawn.isActive());
-			assert.ok(inactive, 'should find an inactive spawn');
-			assert.strictEqual(inactive.destroy(), C.OK, 'inactive structures should be destroyable');
-		});
-	}));
-
-	const energySim = simulate({
-		W3N1: room => {
-			room['#insertObject'](create(new RoomPosition(25, 25, 'W3N1'), '100', 'Spawn1'));
-			// Extension at RCL 1 should be inactive (extensions available from RCL 2)
-			const ext = createExtension(new RoomPosition(25, 27, 'W3N1'), 1, '100');
-			ext.store['#add'](C.RESOURCE_ENERGY, 50);
-			room['#insertObject'](ext);
-			room['#level'] = 1;
-			room['#user'] = room.controller!['#user'] = '100';
-		},
+		test('Structure subclass reads delegate to the concrete object', () => sim(async ({ player }) => {
+			await player('100', Game => {
+				const original = Game.rooms.W3N3!.lookForAt(C.LOOK_STRUCTURES, 26, 25)[0]!;
+				const MySpawn = class extends StructureSpawn {
+					doubleHits() { return this.hits * 2; }
+				};
+				// @ts-expect-error
+				const structure = new MySpawn(original.id);
+				assert.strictEqual(structure.structureType, original.structureType);
+				assert.strictEqual(structure.hits, original.hits);
+				assert.strictEqual(structure.hitsMax, original.hitsMax);
+				// The subclass prototype must survive — `instanceof` holds and subclass methods stay live.
+				assert.ok(structure instanceof MySpawn);
+				assert.strictEqual(structure.doubleHits(), original.hits! * 2);
+			});
+		}));
 	});
-
-	test('energyAvailable excludes inactive extensions', () => energySim(async ({ player }) => {
-		await player('100', Game => {
-			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0]!;
-			assert.strictEqual(ext.isActive(), false, 'extension should be inactive at RCL 1');
-			assert.strictEqual(Game.rooms.W3N1?.energyAvailable, C.SPAWN_ENERGY_START,
-				'energyAvailable should exclude inactive extension');
-		});
-	}));
-
-	const transferSim = simulate({
-		W3N1: room => {
-			room['#insertObject'](create(new RoomPosition(25, 25, 'W3N1'), '100', 'Spawn1'));
-			const ext = createExtension(new RoomPosition(25, 27, 'W3N1'), 1, '100');
-			ext.store['#add'](C.RESOURCE_ENERGY, 10);
-			room['#insertObject'](ext);
-			const creep = createCreep(new RoomPosition(25, 26, 'W3N1'), [ C.CARRY, C.MOVE ], 'worker', '100');
-			creep.store['#add'](C.RESOURCE_ENERGY, 10);
-			room['#insertObject'](creep);
-			room['#level'] = 1;
-			room['#user'] = room.controller!['#user'] = '100';
-		},
-	});
-
-	test('stores on inactive buildings still work — transfer', () => transferSim(async ({ player }) => {
-		await player('100', Game => {
-			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0];
-			assert.strictEqual(ext?.isActive(), false);
-			assert.strictEqual(Game.creeps.worker?.transfer(ext, C.RESOURCE_ENERGY, 1), C.OK);
-		});
-	}));
-
-	test('stores on inactive buildings still work — withdraw', () => transferSim(async ({ player }) => {
-		await player('100', Game => {
-			const ext = lookForStructures(Game.rooms.W3N1, C.STRUCTURE_EXTENSION)[0];
-			assert.strictEqual(ext?.isActive(), false);
-			assert.strictEqual(Game.creeps.worker?.withdraw(ext, C.RESOURCE_ENERGY, 1), C.OK);
-		});
-	}));
-});
-
-describe('Id-string constructor', () => {
-	const sim = simulate({
-		W3N3: room => {
-			room['#insertObject'](create(new RoomPosition(26, 25, 'W3N3'), '100', 'Spawn1'));
-		},
-	});
-
-	test('Structure super reads delegate to the concrete object', () => sim(async ({ player }) => {
-		await player('100', Game => {
-			const original = Game.rooms.W3N3!.lookForAt(C.LOOK_STRUCTURES, 26, 25)[0]!;
-			// @ts-expect-error
-			const structure = new Structure(original.id);
-			assert.strictEqual(structure.structureType, original.structureType);
-			assert.strictEqual(structure.hits, original.hits);
-			assert.strictEqual(structure.hitsMax, original.hitsMax);
-		});
-	}));
-
-	test('Structure subclass reads delegate to the concrete object', () => sim(async ({ player }) => {
-		await player('100', Game => {
-			const original = Game.rooms.W3N3!.lookForAt(C.LOOK_STRUCTURES, 26, 25)[0]!;
-			const MySpawn = class extends StructureSpawn {
-				doubleHits() { return this.hits * 2; }
-			};
-			// @ts-expect-error
-			const structure = new MySpawn(original.id);
-			assert.strictEqual(structure.structureType, original.structureType);
-			assert.strictEqual(structure.hits, original.hits);
-			assert.strictEqual(structure.hitsMax, original.hitsMax);
-			// The subclass prototype must survive — `instanceof` holds and subclass methods stay live.
-			assert.ok(structure instanceof MySpawn);
-			assert.strictEqual(structure.doubleHits(), original.hits! * 2);
-		});
-	}));
 });

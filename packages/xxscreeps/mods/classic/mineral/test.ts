@@ -6,7 +6,7 @@ import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { create as createExtractor } from './extractor.js';
 
-describe('Mineral harvest validation', () => {
+describe('mod/classic/mineral', () => {
 	const depletedOutOfRange = simulate({
 		W6N1: room => {
 			const mineral = room.find(C.FIND_MINERALS)[0]!;
@@ -15,7 +15,7 @@ describe('Mineral harvest validation', () => {
 		},
 	});
 
-	test('HARVEST-MINERAL-014:depleted-before-range', () => depletedOutOfRange(async ({ player }) => {
+	test('harvest depleted before range', () => depletedOutOfRange(async ({ player }) => {
 		await player('100', Game => {
 			const creep = Game.creeps.harvester;
 			const mineral = Game.rooms.W6N1?.find(C.FIND_MINERALS)[0];
@@ -31,7 +31,7 @@ describe('Mineral harvest validation', () => {
 		},
 	});
 
-	test('HARVEST-MINERAL-014:no-bodypart-before-invalid-target', () => noBodypartInvalidTarget(async ({ player }) => {
+	test('harvest no bodypart before invalid target', () => noBodypartInvalidTarget(async ({ player }) => {
 		await player('100', Game => {
 			const creep = Game.creeps.harvester;
 			assert.ok(creep);
@@ -51,7 +51,7 @@ describe('Mineral harvest validation', () => {
 		},
 	});
 
-	test('HARVEST-MINERAL-014:cooldown', () => onCooldown(async ({ player }) => {
+	test('harvest cooldown', () => onCooldown(async ({ player }) => {
 		await player('100', Game => {
 			const creep = Game.creeps.harvester;
 			const mineral = Game.rooms.W6N1?.find(C.FIND_MINERALS)[0];

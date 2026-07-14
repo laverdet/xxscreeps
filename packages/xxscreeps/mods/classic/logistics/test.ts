@@ -25,7 +25,7 @@ function getLink(room: Room | undefined, xx: number, yy: number) {
 	return link;
 }
 
-describe('Link', () => {
+describe('mod/classic/logistics', () => {
 	const sim = simulate({
 		W1N1: room => {
 			own(room, 5);
@@ -84,7 +84,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('LINK-014:cooldown-before-rcl', () => precedence(async ({ player }) => {
+	test('cooldown before rcl', () => precedence(async ({ player }) => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W1N3, 25, 25);
 			const target = getLink(Game.rooms.W1N3, 27, 25);
@@ -93,7 +93,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('cooldown-before-range', () => precedence(async ({ player }) => {
+	test('cooldown before range', () => precedence(async ({ player }) => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W2N1, 25, 25);
 			const target = getLink(Game.rooms.W2N2, 27, 25);
@@ -102,7 +102,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('cooldown-before-not-enough', () => precedence(async ({ player }) => {
+	test('cooldown before not enough', () => precedence(async ({ player }) => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W1N1, 25, 25);
 			const target = getLink(Game.rooms.W1N1, 27, 25);
@@ -112,7 +112,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('cooldown-before-full', () => precedence(async ({ player }) => {
+	test('cooldown before full', () => precedence(async ({ player }) => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W1N1, 25, 25);
 			const target = getLink(Game.rooms.W1N1, 27, 25);
@@ -122,7 +122,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('invalid-args-before-rcl', () => precedence(async ({ player }) => {
+	test('invalid args before rcl', () => precedence(async ({ player }) => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W1N3, 25, 25);
 			const target = getLink(Game.rooms.W1N3, 27, 25);
@@ -130,7 +130,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('invalid-target-before-rcl', () => precedence(async ({ player }) => {
+	test('invalid target before rcl', () => precedence(async ({ player }) => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W1N3, 25, 25);
 			assert.strictEqual(
@@ -139,7 +139,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('target-not-owner-before-rcl', () => precedence(async ({ player }) => {
+	test('target not owner before rcl', () => precedence(async ({ player }) => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W1N3, 25, 25);
 			const target = getLink(Game.rooms.W1N3, 29, 25);
@@ -149,7 +149,7 @@ describe('Link', () => {
 
 	// Player '101' owns only the hostile link at 29,25 in W1N1, so the source at 25,25
 	// is hostile from their perspective. INVALID_ARGS / INVALID_TARGET must still win.
-	test('invalid-args-before-source-not-owner', () => precedence(async ({ player }) => {
+	test('invalid args before source not owner', () => precedence(async ({ player }) => {
 		await player('101', Game => {
 			const source = getLink(Game.rooms.W1N1, 25, 25);
 			const target = getLink(Game.rooms.W1N1, 29, 25);
@@ -157,7 +157,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('invalid-target-before-source-not-owner', () => precedence(async ({ player }) => {
+	test('invalid target before source not owner', () => precedence(async ({ player }) => {
 		await player('101', Game => {
 			const source = getLink(Game.rooms.W1N1, 25, 25);
 			assert.strictEqual(
@@ -166,7 +166,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('invalid-args-before-invalid-target', () => precedence(async ({ player }) => {
+	test('invalid args before invalid target', () => precedence(async ({ player }) => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W1N1, 25, 25);
 			assert.strictEqual(
@@ -175,7 +175,7 @@ describe('Link', () => {
 		});
 	}));
 
-	test('invalid-args-before-target-not-owner', () => precedence(async ({ player }) => {
+	test('invalid args before target not owner', () => precedence(async ({ player }) => {
 		await player('100', Game => {
 			const source = getLink(Game.rooms.W1N1, 25, 25);
 			const target = getLink(Game.rooms.W1N1, 29, 25);

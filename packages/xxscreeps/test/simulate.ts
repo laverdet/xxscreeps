@@ -21,6 +21,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
+import { stdoutTransport } from 'xxscreeps/mods/meta/notifications/transport-stdout.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { disposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
 
@@ -31,6 +32,9 @@ import 'xxscreeps:mods/processor';
 
 initializeGameEnvironment();
 initializeIntentConstraints();
+
+// TODO: Something better here.
+stdoutTransport[Symbol.dispose]();
 
 interface SimulationGlobals {
 	Game: GameConstructor;
@@ -282,7 +286,6 @@ async function assertPlayerWithoutErrors(instance: PlayerInstance) {
 		for (const frame of frames as unknown[]) {
 			// @ts-expect-error
 			const { data, fd } = frame;
-			console.log(data);
 			if (fd === 2 && data !== 'Script was disposed') {
 				errors.push(data as string);
 			}

@@ -1,7 +1,7 @@
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 
-describe('LocalKeyValResponder', () => {
+describe('engine/db/storage/local', () => {
 	test('zUnionStore applies WEIGHTS to single-set members', async () => {
 		await using testShard = await instantiateTestShard();
 		const { scratch } = testShard.shard;

@@ -3,7 +3,7 @@ import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { assert, describe, test } from 'xxscreeps/test/index.js';
 import { checkPassword, setPassword } from './model.js';
 
-describe('password', () => {
+describe('mod/backend/password', () => {
 	test('set then check round-trips', async () => {
 		await using testShard = await instantiateTestShard();
 		const { db } = testShard;
