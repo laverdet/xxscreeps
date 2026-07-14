@@ -1,7 +1,5 @@
-import type { MessageFor } from 'xxscreeps/engine/db/channel.js';
 import type { CodeBlobs } from 'xxscreeps/engine/db/user/code-schema.js';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/index.js';
-import type { RunnerIntent, getRunnerUserChannel } from 'xxscreeps/engine/runner/model.js';
 
 export { hooks } from './symbols.js';
 
@@ -20,8 +18,8 @@ export interface TickPayload {
 	};
 	roomBlobs: Readonly<Uint8Array>[];
 	time: number;
-	backendIntents?: RunnerIntent[];
-	eval: Extract<MessageFor<typeof getRunnerUserChannel>, { type: 'eval' }>['payload'][];
+	backendIntents?: RunnerPlayerIntent[];
+	eval: RunnerPlayerEvalPayload[];
 	usernames?: Record<string, string>;
 	// User ids a connector wants resolved to usernames this tick (e.g. market transaction parties not
 	// visible in any of the player's rooms). The runner merges these into the unseen-user resolution.
@@ -44,4 +42,18 @@ export interface TickResult {
 
 export interface TickUsageResult {
 	cpu?: number;
+}
+
+/** @internal */
+export interface RunnerPlayerEvalPayload {
+	ack?: string;
+	echo: boolean;
+	expr: string;
+}
+
+/** @internal */
+export interface RunnerPlayerIntent {
+	receiver: string;
+	intent: string;
+	params: unknown[];
 }

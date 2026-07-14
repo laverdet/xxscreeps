@@ -11,12 +11,13 @@ export const buffersKey = (userId: string, branchName: string) =>
 export const stringsKey = (userId: string, branchName: string) =>
 	`${User.infoKey(userId)}/code/${branchName.replace(/[^a-zA-Z0-9_]/g, char => `-${char.charCodeAt(0).toString(36)}`)}`;
 
-export function getUserCodeChannel(db: Database, userId: string) {
-	type Message =
-		{ type: 'switch'; branch: string } |
-		{ type: 'update'; branch: string };
-	return new Channel<Message>(db.pubsub, userId);
-}
+export type UserCodeChannel = Channel<
+	{ type: 'switch'; branch: string } |
+	{ type: 'update'; branch: string }
+>;
+
+export const userCodeChannel =
+	(db: Database, userId: string): UserCodeChannel => new Channel(db.pubsub, userId);
 
 export type CodePayload = Map<string, string | Uint8Array>;
 
@@ -69,8 +70,9 @@ export async function saveContent(db: Database, userId: string, branchName: stri
 			? db.data.set(stringsKey(userId, branchName), stringBlob) :
 			db.data.vDel(stringsKey(userId, branchName)) as Promise<never>,
 	]);
-	await getUserCodeChannel(db, userId).publish({ type: 'update', branch: branchName });
+	const channel = userCodeChannel(db, userId);
+	await channel.publish({ type: 'update', branch: branchName });
 	if (didSwitch) {
-		await getUserCodeChannel(db, userId).publish({ type: 'switch', branch: branchName });
+		await channel.publish({ type: 'switch', branch: branchName });
 	}
 }

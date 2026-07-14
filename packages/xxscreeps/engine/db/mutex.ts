@@ -1,4 +1,4 @@
-import type { Subscription } from './channel.js';
+import type { SubscriptionFor } from './channel.js';
 import type { KeyValProvider, PubSubProvider } from './storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 import * as assert from 'node:assert/strict';
@@ -6,7 +6,9 @@ import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { acquireInterval, acquireTimeout } from 'xxscreeps/utility/utility.js';
 import { Channel } from './channel.js';
 
-type Message = 'waiting' | 'unlocked';
+type MutexChannel = Channel<'waiting' | 'unlocked'>;
+const mutexChannel =
+	(pubsub: PubSubProvider, name: string): MutexChannel => new Channel(pubsub, `mutex/channel/${name}`, false);
 const kLockTimeout = 10_000;
 
 export class Mutex {
@@ -17,13 +19,13 @@ export class Mutex {
 	private readonly channel;
 	private readonly lockable;
 
-	constructor(channel: Subscription<Message>, lockable: Lock) {
+	constructor(channel: SubscriptionFor<MutexChannel>, lockable: Lock) {
 		this.channel = channel;
 		this.lockable = lockable;
 	}
 
 	static async connect(name: string, keyval: KeyValProvider, pubsub: PubSubProvider) {
-		const channel = await new Channel<Message>(pubsub, `mutex/channel/${name}`, false).subscribe();
+		const channel = await mutexChannel(pubsub, name).subscribe();
 		const lock = new Lock(keyval, `mutex/${name}`);
 		return new Mutex(channel, lock);
 	}

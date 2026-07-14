@@ -1,13 +1,13 @@
 import type { OrderType } from './order.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { makeReaderAndWriter } from 'xxscreeps/engine/schema/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
-import { lookForStructures } from 'xxscreeps/mods/structure/structure.js';
+import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { assign, deterministicClockForTesting } from 'xxscreeps/utility/utility.js';
 import { Market } from './market.js';

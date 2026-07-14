@@ -4,12 +4,12 @@ import type { Room } from 'xxscreeps/game/room/index.js';
 import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition, iterateNeighbors } from 'xxscreeps/game/position.js';
-import { create as createCreep } from 'xxscreeps/mods/creep/creep.js';
-import { create as createTower } from 'xxscreeps/mods/defense/tower.js';
+import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
+import { create as createTower } from 'xxscreeps/mods/classic/defense/tower.js';
 import { activateNPC } from 'xxscreeps/mods/npc/processor.js';
-import { create as createContainer } from 'xxscreeps/mods/resource/container.js';
+import { create as createContainer } from 'xxscreeps/mods/classic/resource/container.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
-import { lookForStructures } from '../structure/structure.js';
+import { lookForStructures } from '../classic/structure/structure.js';
 import { create as createInvaderCore } from './invader-core.js';
 
 // W7N7 has exits in all 4 directions and all neighbors have controllers:

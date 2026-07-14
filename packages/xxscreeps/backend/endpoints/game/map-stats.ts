@@ -5,7 +5,7 @@ import { makeValidatedPayloadRoute } from 'xxscreeps/backend/index.js';
 import * as User from 'xxscreeps/engine/db/user/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { instanceOfPredicate } from 'xxscreeps/functional/predicate.js';
-import { Mineral } from 'xxscreeps/mods/mineral/mineral.js';
+import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
 
 interface MapStatsRequest {
 	rooms: string[];

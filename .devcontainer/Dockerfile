@@ -37,13 +37,6 @@ RUN <<DONE
 		yq \
 	;
 
-	# Link clang-N binaries and libraries to system paths
-	ln -fs /lib/"llvm-$LLVM_VERSION"/bin/* /usr/bin/
-	ln -fs /usr/lib/"llvm-$LLVM_VERSION"/lib/clang/"$LLVM_VERSION"/lib/linux/* /lib/aarch64-linux-gnu/
-
-	# Fix broken libc++ std manifest
-	ln -s "/lib/llvm-$LLVM_VERSION/share/libc++" /lib/share
-
 	# By the way if you are reading this you can automatically import dotfiles. So like, I have all my
 	# local aliases, gitignore, bash_profile, and so on setup in the Docker container.
 	# https://code.visualstudio.com/docs/devcontainers/containers#_personalizing-with-dotfile-repositories

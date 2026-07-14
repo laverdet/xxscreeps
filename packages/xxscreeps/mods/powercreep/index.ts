@@ -2,7 +2,7 @@ import type { Manifest } from 'xxscreeps/config/mods.js';
 
 export const manifest: Manifest = {
 	dependencies: [
-		'xxscreeps/mods/powerspawn',
+		'xxscreeps/mods/modern/powerspawn',
 	],
 	provides: [ 'backend', 'driver', 'game', 'schema', 'test' ],
 };

@@ -55,7 +55,7 @@ export const mods = await async function() {
 						return await resolve(defaultAsyncFileSystem, specifier, from);
 					} catch (suppressed) {
 						try {
-							// Second, try unnamed module exports [xxscreeps/mods/chemistry]
+							// Second, try unnamed module exports [xxscreeps/mods/classic/chemistry]
 							return await resolve(defaultAsyncFileSystem, `${specifier}/index.js`, from);
 						} catch (error) {
 							throw new SuppressedError(error, suppressed);

@@ -1,7 +1,7 @@
 import type * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
-import type { Creep, SavedMovePath } from 'xxscreeps/mods/creep/creep.js';
-import type { Structure } from 'xxscreeps/mods/structure/structure.js';
+import type { Creep, SavedMovePath } from 'xxscreeps/mods/classic/creep/creep.js';
+import type { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import flee from './flee.js';
 

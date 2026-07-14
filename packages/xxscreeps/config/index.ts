@@ -33,7 +33,14 @@ merge(config, raw);
 // Merge config schemas
 export const schema = {
 	$schema: Base.schema.$schema,
-	allOf: [ Base.schema, ...schemas ].map(({ $schema, ...content }) => content),
+	definitions: Object.assign(
+		{ ...Base.schema.definitions },
+		...schemas.map(({ definitions }) => definitions),
+	) as unknown,
+	allOf: [
+		{ type: 'object', properties: Base.schema.properties },
+		...schemas.map(({ properties }) => ({ type: 'object', properties })),
+	],
 };
 
 // Check '.screepsrc.yaml' validity

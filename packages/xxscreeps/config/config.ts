@@ -26,6 +26,13 @@ export interface BackendConfig {
 	bind?: string;
 
 	/**
+	 * Reverse proxy configuration. TODO: mTLS, otherwise publicly-accessible backends on the public
+	 * internet can receive forged requests. This isn't a big deal for us at the moment since we don't
+	 * do anything with the client ip.
+	 */
+	proxy?: BackendProxyConfig;
+
+	/**
 	 * Secret used for session authentication. If not specified a new secret will be generated each
 	 * restart.
 	 */
@@ -43,6 +50,13 @@ export interface BackendConfig {
 	 * http://steamcommunity.com/dev/apikey
 	 */
 	steamApiKey?: string;
+}
+
+interface BackendProxyConfig {
+	/**
+	 * Expected number of reverse proxy servers in front of the backend.
+	 */
+	forwardedCount: number;
 }
 
 export interface DatabaseConfig {

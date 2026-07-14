@@ -25,6 +25,22 @@ hooks.makeIterated('backendReady')(backendContext.db, backendContext.shard);
 const koa = new Koa<State, Context>();
 const router = new Router<State, Context>();
 
+// Reverse proxy configuration
+const { proxy } = config.backend;
+if (proxy) {
+	const { forwardedCount } = proxy;
+	koa.proxy = true;
+	koa.maxIpsCount = proxy.forwardedCount;
+	koa.use((ctx, next) => {
+		if (ctx.ips.length === forwardedCount) {
+			return next();
+		} else {
+			console.error('forwardedCount mismatch', { expected: forwardedCount, received: ctx.ips.length });
+			ctx.status = 500;
+		}
+	});
+}
+
 // Set up endpoints
 const httpServer = http.createServer(koa.callback());
 const unlistenServer = setupGracefulShutdown(httpServer);

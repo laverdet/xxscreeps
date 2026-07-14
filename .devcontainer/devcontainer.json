@@ -11,6 +11,7 @@
 			"extensions": [
 				"dbaeumer.vscode-eslint",
 				"llvm-vs-code-extensions.vscode-clangd",
+				"redhat.vscode-yaml",
 				"twxs.cmake"
 			],
 			"settings": {

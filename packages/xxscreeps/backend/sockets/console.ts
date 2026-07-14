@@ -2,7 +2,7 @@
 import type { SubscriptionEndpoint } from '../socket.js';
 import { config } from 'xxscreeps/config/index.js';
 import { resultPrefix, unescapedFd } from 'xxscreeps/driver/runtime/print.js';
-import { getConsoleChannel, getUsageChannel } from 'xxscreeps/engine/runner/model.js';
+import { getConsoleChannel, runnerUsageChannel } from 'xxscreeps/engine/runner/model.js';
 import { throttle } from 'xxscreeps/utility/utility.js';
 
 function colorize(payload: string) {
@@ -95,7 +95,7 @@ const UsageSubscription: SubscriptionEndpoint = {
 		const send = throttle(() => {
 			this.send(JSON.stringify(usage));
 		});
-		const subscription = await getUsageChannel(this.context.shard, params.user).listen(message => {
+		const subscription = await runnerUsageChannel(this.context.shard, params.user).listen(message => {
 			Object.assign(usage, message);
 			usage.cpu = Math.floor(usage.cpu);
 			send.set(config.backend.socketThrottle);

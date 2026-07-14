@@ -4,7 +4,7 @@ import type { GameBase } from 'xxscreeps/game/game.js';
 import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { RawMemory } from 'xxscreeps/mods/memory/memory.js';
+import type { RawMemory } from 'xxscreeps/mods/meta/memory/memory.js';
 import * as assert from 'node:assert';
 import { config } from 'xxscreeps/config/index.js';
 import { consumeSet, consumeSortedSet } from 'xxscreeps/engine/db/async.js';
@@ -20,7 +20,7 @@ import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
-import * as Memory from 'xxscreeps/mods/memory/memory.js';
+import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
 import { disposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
 

@@ -3,5 +3,12 @@ declare module 'xxscreeps:mods/config' {
 
 	export const defaults: readonly Config[];
 	export const initializationDefaults: readonly Config[];
-	export const schemas: readonly Record<string, unknown>[];
+
+	interface Schema {
+		$ref: string;
+		$schema: string;
+		definitions?: Record<string, unknown>;
+		properties: Record<string, unknown>;
+	}
+	export const schemas: readonly Schema[];
 }

@@ -1,13 +1,13 @@
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
 import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
-import { OpenStore, checkHasResource } from 'xxscreeps/mods/resource/store.js';
-import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/structure/structure.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/index.js';
+import { OpenStore, checkHasResource } from 'xxscreeps/mods/classic/resource/store.js';
+import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { terminalShape } from './schema.js';

@@ -1,7 +1,7 @@
 import type { Order, OrderType } from './order.js';
 import type { Transactions } from './transaction.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';

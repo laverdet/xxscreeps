@@ -1,11 +1,14 @@
 import type { PubSubProvider, PubSubSubscription } from './storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 
-export type Listener<Message> = (message: Message) => void;
+export interface NullMessage {
+	type?: never;
+}
+
+type Listener<Message> = (message: Message) => void;
 export type DeferListener<Message> = (listener: Listener<Message>) => void;
-type ChannelFactory<Message = any> = (...args: any[]) => Channel<Message>;
-export type MessageFor<Factory> = Factory extends ChannelFactory<infer Message> ? Message : never;
-export type SubscriptionFor<Factory> = Factory extends ChannelFactory<infer Message> ? Subscription<Message> : never;
+export type MessageFor<Type extends Channel<unknown>> = Type extends Channel<infer Message> ? Message : never;
+export type SubscriptionFor<Type extends Channel<any>> = Subscription<MessageFor<Type>>;
 
 export class Channel<Message = string> {
 	private readonly pubsub;
@@ -19,7 +22,7 @@ export class Channel<Message = string> {
 		this.json = json;
 	}
 
-	async listen<ForIf = false>(listener: Listener<Message | (ForIf extends true ? { type: null } : never)>) {
+	async listen(listener: Listener<Message>) {
 		const subscription = await this.subscribe();
 		subscription.listen(listener);
 		return () => subscription.disconnect();
@@ -55,7 +58,7 @@ export class Channel<Message = string> {
 	}
 }
 
-export class Subscription<Message> {
+class Subscription<Message> {
 	private didDisconnect = false;
 	private readonly disconnectListeners = new Set<Effect>();
 	private readonly json;

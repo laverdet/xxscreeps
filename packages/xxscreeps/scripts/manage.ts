@@ -29,14 +29,14 @@ import { Game, GameState, runAsUser, runOneShot, runWithState } from 'xxscreeps/
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { setPassword } from 'xxscreeps/mods/backend/password/model.js';
-import { checkCreateConstructionSite } from 'xxscreeps/mods/construction/room.js';
-import * as ControllerProc from 'xxscreeps/mods/controller/processor.js';
-import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/memory/model.js';
+import { checkCreateConstructionSite } from 'xxscreeps/mods/classic/construction/room.js';
+import * as ControllerProc from 'xxscreeps/mods/classic/controller/processor.js';
+import { deleteUserMemoryBlob, loadUserMemoryBlob } from 'xxscreeps/mods/meta/memory/model.js';
 // Side-effect import: registers the `User.remove` hook that tears down the user's private messages.
-import 'xxscreeps/mods/messages/model.js';
-import { create as createSpawn } from 'xxscreeps/mods/spawn/spawn.js';
-import { createRuin } from 'xxscreeps/mods/structure/ruin.js';
-import { OwnedStructure } from 'xxscreeps/mods/structure/structure.js';
+import 'xxscreeps/mods/meta/messages/model.js';
+import { create as createSpawn } from 'xxscreeps/mods/classic/spawn/spawn.js';
+import { createRuin } from 'xxscreeps/mods/classic/structure/ruin.js';
+import { OwnedStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 
 import 'xxscreeps:mods/game';
 
@@ -167,7 +167,7 @@ async function userBranch(who: string, branch: string) {
 	}
 	await db.data.hSet(User.infoKey(id), 'branch', branch);
 	await save();
-	await Code.getUserCodeChannel(db, id).publish({ type: 'switch', branch });
+	await Code.userCodeChannel(db, id).publish({ type: 'switch', branch });
 	out(`Set active branch for ${who} (${id}) to '${branch}'.`);
 }
 

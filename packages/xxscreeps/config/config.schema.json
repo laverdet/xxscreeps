@@ -1,207 +1,254 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "properties": {
-        "backend": {
-            "description": "Backend server settings",
-            "properties": {
-                "allowEmailRegistration": {
-                    "default": false,
-                    "description": "Whether to allow users sign up without steam with only their email address.\nNote: there is currently no confirmation mail send to the user to verify the address.",
-                    "type": "boolean"
-                },
-                "allowGuestAccess": {
-                    "default": true,
-                    "description": "Whether to allow read-only access to the API without logging in.",
-                    "type": "boolean"
-                },
-                "bind": {
-                    "default": "*",
-                    "description": "Network interface to bind server to. Format is: \"host\" or \"host:port\". Host can be * to bind\nto all interfaces: \"*:port\". Port is 21025, if not specified.",
-                    "type": "string"
-                },
-                "secret": {
-                    "description": "Secret used for session authentication. If not specified a new secret will be generated each\nrestart.",
-                    "type": "string"
-                },
-                "socketThrottle": {
-                    "default": 125,
-                    "description": "Minimum time between socket updates, in milliseconds. Setting this lower may cause\nperformance issues in the client.",
-                    "type": "number"
-                },
-                "steamApiKey": {
-                    "description": "Steam Web API key used to authenticate users. You can get a key here:\nhttp://steamcommunity.com/dev/apikey",
-                    "type": "string"
-                }
-            },
-            "type": "object"
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "BackendConfig": {
+      "properties": {
+        "allowEmailRegistration": {
+          "default": false,
+          "description": "Whether to allow users sign up without steam with only their email address. Note: there is currently no confirmation mail send to the user to verify the address.",
+          "type": "boolean"
         },
-        "database": {
-            "description": "Configuration for global database storage",
-            "properties": {
-                "data": {
-                    "default": "./screeps/db",
-                    "description": "Persistent storage provider URI",
-                    "type": "string"
-                },
-                "pubsub": {
-                    "default": "local://db",
-                    "description": "Pubsub storage provider URI",
-                    "type": "string"
-                },
-                "saveInterval": {
-                    "default": 120,
-                    "description": "How often (in wall time minutes) to save the main database",
-                    "type": "number"
-                }
-            },
-            "required": [
-                "data",
-                "pubsub"
-            ],
-            "type": "object"
+        "allowGuestAccess": {
+          "default": true,
+          "description": "Whether to allow read-only access to the API without logging in.",
+          "type": "boolean"
         },
-        "game": {
-            "description": "Game settings",
-            "properties": {
-                "respawnTimeout": {
-                    "default": 0,
-                    "description": "Amount of time in hours before a user is allowed to respawn, counted from the time of their\ninitial spawn placement.",
-                    "type": "number"
-                },
-                "tickSpeed": {
-                    "default": 250,
-                    "description": "Minimum length of a game tick in milliseconds.",
-                    "type": "number"
-                }
-            },
-            "type": "object"
+        "bind": {
+          "default": "*",
+          "description": "Network interface to bind server to. Format is: \"host\" or \"host:port\". Host can be * to bind to all interfaces: \"*:port\". Port is 21025, if not specified.",
+          "type": "string"
         },
-        "launcher": {
-            "description": "Launcher settings",
-            "properties": {
-                "singleThreaded": {
-                    "default": false,
-                    "description": "Set true to run all services in a single nodejs isolate. This does *not* affect the runner's\nisolates.",
-                    "type": "boolean"
-                }
-            },
-            "type": "object"
+        "proxy": {
+          "description": "Reverse proxy configuration. TODO: mTLS, otherwise publicly-accessible backends on the public internet can receive forged requests. This isn't a big deal for us at the moment since we don't do anything with the client ip.",
+          "properties": {
+            "forwardedCount": {
+              "description": "Expected number of reverse proxy servers in front of the backend.",
+              "type": "number"
+            }
+          },
+          "required": [
+            "forwardedCount"
+          ],
+          "type": "object"
         },
-        "mods": {
-            "description": "List of mods to load",
-            "items": {
-                "type": "string"
-            },
-            "type": "array"
+        "secret": {
+          "description": "Secret used for session authentication. If not specified a new secret will be generated each restart.",
+          "type": "string"
         },
-        "processor": {
-            "description": "Processor settings",
-            "properties": {
-                "concurrency": {
-                    "description": "Total number of processor tasks to run at a time. The default is the number of CPU cores\n(including hyper-threaded) + 1",
-                    "type": "number"
-                },
-                "intentAbandonTimeout": {
-                    "default": 5000,
-                    "description": "Timeout in milliseconds before the processors give up on waiting for intents from the Runner\nservice and continue processing all outstanding rooms.",
-                    "type": "number"
-                },
-                "log": {
-                    "default": false,
-                    "description": "Show processor log messages when running from main thread.",
-                    "type": "boolean"
-                }
-            },
-            "type": "object"
+        "socketThrottle": {
+          "default": 125,
+          "description": "Minimum time between socket updates, in milliseconds. Setting this lower may cause performance issues in the client.",
+          "type": "number"
         },
-        "runner": {
-            "description": "Runner settings",
-            "properties": {
-                "concurrency": {
-                    "description": "Total number of run tasks to run at a time. The default is the number of CPU cores (including\nhyper-threaded) + 1",
-                    "type": "number"
-                },
-                "cpu": {
-                    "properties": {
-                        "bucket": {
-                            "default": ": 10000",
-                            "description": "CPU bucket size per user",
-                            "type": "number"
-                        },
-                        "memoryLimit": {
-                            "default": 256,
-                            "description": "Memory limit, in megabytes. The actual memory limit as reported by the isolate will be\nhigher, since it accounts for shared terrain data.\n\nThis option does nothing when `sandbox: unsafe` is set.",
-                            "type": "number"
-                        },
-                        "tickLimit": {
-                            "default": ": 500",
-                            "description": "Maximum amount of time in milliseconds that a user's runtime may run for.",
-                            "type": "number"
-                        }
-                    },
-                    "type": "object"
-                },
-                "log": {
-                    "default": false,
-                    "description": "Show runner log messages when running from main thread.",
-                    "type": "boolean"
-                },
-                "migrationTimeout": {
-                    "default": 50,
-                    "description": "How long an idle runner will wait before migrating a player sandbox into that runner, causing\na hard reset for the player.",
-                    "type": "number"
-                },
-                "sandbox": {
-                    "default": "isolated",
-                    "description": "Select sandbox mode\n- 'isolated': `isolated-vm`\n- 'unsafe': `node:vm`. This will run player code directly in the nodejs isolate. Player scripts can achieve full\n  system-level access. It may make troubleshooting user scripts easier, though.",
-                    "enum": [
-                        "experimental",
-                        "isolated",
-                        "unsafe"
-                    ],
-                    "type": "string"
-                }
-            },
-            "type": "object"
-        },
-        "schemaArchive": {
-            "default": "./screeps/archive",
-            "description": "Where to save descriptions of the binary format used to write game data.",
-            "type": "string"
-        },
-        "shards": {
-            "default": "`[ {\nname: 'shard0',\ndata: './screeps/shard0',\npubsub: 'local://shard0',\nscratch: 'local://shard0',\n} ]`",
-            "description": "Configuration for shard-specific storage",
-            "items": {
-                "properties": {
-                    "data": {
-                        "description": "Persistent storage provider URI",
-                        "type": "string"
-                    },
-                    "name": {
-                        "description": "Name of this shard",
-                        "type": "string"
-                    },
-                    "pubsub": {
-                        "description": "Pubsub storage provider URI",
-                        "type": "string"
-                    },
-                    "scratch": {
-                        "description": "Temporary storage provider URI",
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "data",
-                    "name",
-                    "pubsub",
-                    "scratch"
-                ],
-                "type": "object"
-            },
-            "type": "array"
+        "steamApiKey": {
+          "description": "Steam Web API key used to authenticate users. You can get a key here: http://steamcommunity.com/dev/apikey",
+          "type": "string"
         }
+      },
+      "type": "object"
     },
-    "type": "object"
+    "DatabaseConfig": {
+      "properties": {
+        "data": {
+          "default": "./screeps/db?socket=.db",
+          "description": "Persistent storage provider URI",
+          "type": "string"
+        },
+        "lock": {
+          "default": "./screeps/.lock",
+          "description": "Path used for local process lock. Note that the 'file:' database providers also each acquire their own lock on the data store. This is mainly used to coordinate inter-process communication. You can set this to `null` while using the redis provider.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pubsub": {
+          "default": "local://db?socket=./screeps/.db.pubsub",
+          "description": "Pubsub storage provider URI",
+          "type": "string"
+        },
+        "saveInterval": {
+          "default": 120,
+          "description": "How often (in wall time minutes) to save the main database",
+          "type": "number"
+        }
+      },
+      "required": [
+        "data",
+        "pubsub"
+      ],
+      "type": "object"
+    },
+    "GameConfig": {
+      "properties": {
+        "respawnTimeout": {
+          "default": 0,
+          "description": "Amount of time in hours before a user is allowed to respawn, counted from the time of their initial spawn placement.",
+          "type": "number"
+        },
+        "tickSpeed": {
+          "default": 250,
+          "description": "Minimum length of a game tick in milliseconds.",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "LauncherConfig": {
+      "properties": {
+        "singleThreaded": {
+          "default": false,
+          "description": "Set true to run all services in a single nodejs isolate. This does *not* affect the runner's isolates.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "ProcessorConfig": {
+      "properties": {
+        "concurrency": {
+          "description": "Total number of processor tasks to run at a time. The default is the number of CPU cores (including hyper-threaded) + 1",
+          "type": "number"
+        },
+        "intentAbandonTimeout": {
+          "default": 5000,
+          "description": "Timeout in milliseconds before the processors give up on waiting for intents from the Runner service and continue processing all outstanding rooms.",
+          "type": "number"
+        },
+        "log": {
+          "default": false,
+          "description": "Show processor log messages when running from main thread.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "RunnerCPUConfig": {
+      "properties": {
+        "bucket": {
+          "default": ": 10000",
+          "description": "CPU bucket size per user",
+          "type": "number"
+        },
+        "memoryLimit": {
+          "default": 256,
+          "description": "Memory limit, in megabytes. The actual memory limit as reported by the isolate will be higher, since it accounts for shared terrain data.\n\nThis option does nothing when `sandbox: unsafe` is set.",
+          "type": "number"
+        },
+        "tickLimit": {
+          "default": ": 500",
+          "description": "Maximum amount of time in milliseconds that a user's runtime may run for.",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "RunnerConfig": {
+      "properties": {
+        "concurrency": {
+          "description": "Total number of run tasks to run at a time. The default is the number of CPU cores (including hyper-threaded) + 1",
+          "type": "number"
+        },
+        "cpu": {
+          "$ref": "#/definitions/RunnerCPUConfig",
+          "description": "Per-user CPU settings"
+        },
+        "log": {
+          "default": false,
+          "description": "Show runner log messages when running from main thread.",
+          "type": "boolean"
+        },
+        "migrationTimeout": {
+          "default": 50,
+          "description": "How long an idle runner will wait before migrating a player sandbox into that runner, causing a hard reset for the player.",
+          "type": "number"
+        },
+        "sandbox": {
+          "default": "isolated",
+          "description": "Select sandbox mode\n- 'experimental': `@isolated-vm/experimental`\n- 'isolated': `isolated-vm`\n- 'unsafe': `node:vm`. This will run player code directly in the nodejs isolate. Player scripts can achieve full   system-level access. It may make troubleshooting user scripts easier, though.",
+          "enum": [
+            "experimental",
+            "isolated",
+            "unsafe"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ShardConfig": {
+      "properties": {
+        "data": {
+          "description": "Persistent storage provider URI",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of this shard",
+          "type": "string"
+        },
+        "pubsub": {
+          "description": "Pubsub storage provider URI",
+          "type": "string"
+        },
+        "scratch": {
+          "description": "Temporary storage provider URI",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "data",
+        "pubsub",
+        "scratch"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "backend": {
+      "$ref": "#/definitions/BackendConfig",
+      "description": "Backend server settings"
+    },
+    "database": {
+      "$ref": "#/definitions/DatabaseConfig",
+      "description": "Configuration for global database storage"
+    },
+    "game": {
+      "$ref": "#/definitions/GameConfig",
+      "description": "Game settings"
+    },
+    "launcher": {
+      "$ref": "#/definitions/LauncherConfig",
+      "description": "Launcher settings"
+    },
+    "mods": {
+      "description": "List of mods to load",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "processor": {
+      "$ref": "#/definitions/ProcessorConfig",
+      "description": "Processor settings"
+    },
+    "runner": {
+      "$ref": "#/definitions/RunnerConfig",
+      "description": "Runner settings"
+    },
+    "schemaArchive": {
+      "default": "./screeps/archive",
+      "description": "Where to save descriptions of the binary format used to write game data.",
+      "type": "string"
+    },
+    "shards": {
+      "default": "`[ {\nname: 'shard0',\ndata: './screeps/shard0?socket=.shard0.db',\npubsub: 'local://shard0?socket=./screeps/.shard0.pubsub',\nscratch: 'local://shard0?socket=./screeps/.shard0.scratch',\n} ]`",
+      "description": "Configuration for shard-specific storage",
+      "items": {
+        "$ref": "#/definitions/ShardConfig"
+      },
+      "type": "array"
+    }
+  },
+  "type": "object"
 }
-

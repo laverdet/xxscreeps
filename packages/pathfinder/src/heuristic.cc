@@ -38,16 +38,16 @@ export class heuristic_t {
 		// Extract 1 or N goals from passed runtime array, avoiding `std::vector` allocation in the
 		// common 1 case.
 		template <class Lock, class Range>
-		static auto make_from_runtime(Lock& lock, Range goals, bool flee) -> heuristic_t {
-			heuristic_t::goal_t one_goal;
-			std::vector<heuristic_t::goal_t> n_goals;
+		static auto make_from_runtime(Lock& lock, Range goals, bool flee) -> auto {
 			if (goals.size() == 1) {
+				auto storage = std::vector<goal_t>{};
 				auto element = (*util::into_range(goals).begin()).second;
-				one_goal = js::transfer_out<heuristic_t::goal_t>(element, lock);
-				return {one_goal, flee};
+				auto heuristic = heuristic_t{js::transfer_out<heuristic_t::goal_t>(element, lock), flee};
+				return std::pair{heuristic, std::move(storage)};
 			} else {
-				n_goals = js::transfer_out<std::vector<heuristic_t::goal_t>>(goals, lock);
-				return {std::span{n_goals}, flee};
+				auto storage = js::transfer_out<std::vector<heuristic_t::goal_t>>(goals, lock);
+				auto heuristic = heuristic_t{std::span{storage}, flee};
+				return std::pair{heuristic, std::move(storage)};
 			}
 		}
 

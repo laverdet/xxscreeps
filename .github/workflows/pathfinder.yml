@@ -73,6 +73,7 @@ jobs:
             LLVM_PROFDATA=llvm22-profdata
 
       - if: matrix.host.container == 'debian:sid'
+        id: debian
         name: Toolchain [Debian]
         uses: laverdet/install@v1
         with:
@@ -80,6 +81,7 @@ jobs:
             clang-22
             cmake
             libboost-all-dev
+            libclang-rt-22-dev
             lld-22
             llvm-22
             ninja-build

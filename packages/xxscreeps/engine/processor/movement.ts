@@ -6,7 +6,7 @@ import { getOffsetsFromDirection } from 'xxscreeps/game/direction.js';
 import { makeObstacleChecker } from 'xxscreeps/game/pathfinder/obstacle.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { lookForStructureAt } from 'xxscreeps/mods/structure/structure.js';
+import { lookForStructureAt } from 'xxscreeps/mods/classic/structure/structure.js';
 import { latin1ToBuffer } from 'xxscreeps/utility/string.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 import { registerIntentProcessor } from './index.js';

@@ -1,11 +1,11 @@
 import type { OrderType } from './order.js';
-import type { ResourceType } from 'xxscreeps/mods/resource/resource.js';
+import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { registerIntentProcessor, registerObjectTickProcessor } from 'xxscreeps/engine/processor/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { checkMyStructure } from 'xxscreeps/mods/structure/structure.js';
+import { checkMyStructure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { clamp, removeOne } from 'xxscreeps/utility/utility.js';
 import { checkOrderParams } from './market.js';
 import { chargeListingFee, expireOrder, insertOrder, loadMoney, loadOrdersById, patchOrderAmount, recordTransaction, removeOrder, removeUnreadableOrder, saveOrder } from './model.js';
