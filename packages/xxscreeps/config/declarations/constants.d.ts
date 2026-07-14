@@ -1,4 +1,5 @@
 declare module 'xxscreeps:mods/constants' {
+	export * from 'xxscreeps/mods/classic/brokerage/constants.js';
 	export * from 'xxscreeps/mods/classic/chemistry/constants.js';
 	export * from 'xxscreeps/mods/classic/combat/constants.js';
 	export * from 'xxscreeps/mods/classic/construction/constants.js';
@@ -14,7 +15,6 @@ declare module 'xxscreeps:mods/constants' {
 	export * from 'xxscreeps/mods/classic/spawn/constants.js';
 	export * from 'xxscreeps/mods/classic/structure/constants.js';
 	export * from 'xxscreeps/mods/invader/constants.js';
-	export * from 'xxscreeps/mods/market/constants.js';
 	export * from 'xxscreeps/mods/meta/flag/constants.js';
 	export * from 'xxscreeps/mods/modern/factory/constants.js';
 	export * from 'xxscreeps/mods/modern/nuker/constants.js';

@@ -1,16 +1,10 @@
-import type { TransactionPayload } from './transaction.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { TransactionPayload } from 'xxscreeps/mods/classic/brokerage/transaction.js';
 import { hooks } from 'xxscreeps/engine/runner/index.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
+import { getTransactionChannel, loadTransactionBlob, loadTransactionEntries } from 'xxscreeps/mods/classic/brokerage/model.js';
+import { read } from 'xxscreeps/mods/classic/brokerage/transaction.js';
 import { getOrSet } from 'xxscreeps/utility/utility.js';
-import { getTransactionChannel, loadTransactionBlob, loadTransactionEntries } from './model.js';
-import { read } from './transaction.js';
-
-declare module 'xxscreeps/engine/runner/index.js' {
-	interface TickPayload {
-		transactions?: TransactionPayload;
-	}
-}
 
 // Transaction blobs are immutable and their ids are globally unique, so cache them by id: a transfer
 // referenced by both parties' runtimes is read once and handed out as the same SharedArrayBuffer.
@@ -49,3 +43,11 @@ hooks.register('runnerConnector', async player => {
 		},
 	} ];
 });
+
+// ---
+
+declare module 'xxscreeps/engine/runner/index.js' {
+	interface TickPayload {
+		transactions?: TransactionPayload;
+	}
+}

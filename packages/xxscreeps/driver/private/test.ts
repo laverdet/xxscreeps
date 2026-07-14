@@ -47,6 +47,19 @@ describe('driver/private', () => {
 		assert.strictEqual(instance['#foo'](), '321');
 	});
 
+	test('optional chaining', () => {
+		class Test {
+			declare '#test': undefined | number;
+			test() {
+				const test = this['#test'] ??= 1;
+				return test;
+			}
+		}
+
+		const test = new Test();
+		assert.strictEqual(test.test(), 1);
+	});
+
 	if (isPrivate) {
 		test('private symbol', () => {
 			class Test {

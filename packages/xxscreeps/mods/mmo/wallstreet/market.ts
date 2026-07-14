@@ -1,6 +1,6 @@
 import type { OrderType } from './order.js';
-import type { Transactions } from './transaction.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
+import type { Transactions } from 'xxscreeps/mods/classic/brokerage/transaction.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';

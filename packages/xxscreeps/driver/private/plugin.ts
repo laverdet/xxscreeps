@@ -147,6 +147,13 @@ export default function transform(): PluginObj {
 					const next = t.callExpression(runtimeValue, [ object, node.right ]);
 					path.replaceWith(next);
 
+				} else if (node.operator === '??=') {
+					// Replace `obj['#foo'] ??= 123` -> `makeMutator('foo')(obj, val => val ?? makeGetter('foo')(obj)())`
+					const id = this.program.scope.generateUidIdentifier('val');
+					const runtimeValue = injectMaker(this, 'makeMutator', `mut${name.value.slice(1)}`, [ stripString(name) ]);
+					const next = t.callExpression(runtimeValue, [ object, makeLambda([ id ], t.logicalExpression('??', id, node.right)) ]);
+					path.replaceWith(next);
+
 				} else if (/^.=$/.test(node.operator)) {
 					// Replace `obj['#foo'] += val` -> `makeMutator('foo')(obj, val => val + 1)`
 					const id = this.program.scope.generateUidIdentifier('val');

@@ -1,0 +1,32 @@
+import * as Id from 'xxscreeps/engine/schema/id.js';
+import { structForPath } from 'xxscreeps/engine/schema/index.js';
+import { openStoreFormat, resourceEnumFormat } from 'xxscreeps/mods/classic/resource/schema.js';
+import { ownedStructureShape } from 'xxscreeps/mods/classic/structure/schema.js';
+import { declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
+
+// Terminal schema (moddable)
+export const terminalShape = declare('StructureTerminal', () =>
+	struct(...structForPath<StructureTerminalSchema>()('StructureTerminal', ownedStructureShape, {
+		...variant('terminal'),
+		hits: 'int32',
+		store: openStoreFormat,
+		'#cooldownTime': 'int32',
+	})));
+
+/** @internal */
+export const transactionShape = struct({
+	transactionId: Id.format,
+	time: 'int32',
+	resourceType: resourceEnumFormat,
+	amount: 'int32',
+	from: 'string',
+	to: 'string',
+	'#sender': Id.format,
+	'#recipient': Id.format,
+	'#description': optional('string'),
+});
+
+// ---
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface StructureTerminalSchema {}
