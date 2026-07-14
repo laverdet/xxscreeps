@@ -7,7 +7,7 @@ import { registerStorageProvider } from 'xxscreeps/engine/db/storage/register.js
 import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import { latin1ToBuffer, typedArrayToString } from 'xxscreeps/utility/string.js';
-import { AsyncDisposableResource, getOrSet } from 'xxscreeps/utility/utility.js';
+import { AsyncDisposableResource, clamp, getOrSet } from 'xxscreeps/utility/utility.js';
 import { BlobStorage } from './blob.js';
 import { connect, makeClient, makeHost } from './responder.js';
 import { SortedSet } from './sorted-set.js';
@@ -289,6 +289,25 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		const result = (Number(map.get(field)) || 0) + value;
 		map.set(field, result);
 		return result;
+	}
+
+	hIncrByEx(key: string, field: string, delta: number, options: Pr.DeltaEx) {
+		const map = this.lookupOrSetObject(key, Map);
+		const previous = Number(map.get(field)) || 0;
+		const next = previous + delta;
+		const lBound = options.lBound ?? -Infinity;
+		const uBound = options.uBound ?? Infinity;
+		const value = function() {
+			if (options.saturate) {
+				return clamp(lBound, uBound, next);
+			} else if (next >= lBound && next <= uBound) {
+				return next;
+			} else {
+				return previous;
+			}
+		}();
+		map.set(field, value);
+		return [ value, value - previous ] as const;
 	}
 
 	hmGet(key: string, fields: string[], options: Pr.AsBlob): Record<string, Readonly<Uint8Array> | null>;

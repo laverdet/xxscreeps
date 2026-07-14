@@ -86,14 +86,22 @@ interface Simulation {
  *  without any bots. 4 users are created with ids '100' -> '103', but they do not own any objects
  *  by default.
  *
- * The only argument is a record of room names to instantiation code functions. These functions
- * will be invoked for each room and they can modify or add objects in the rooms.
- *
  * The return value of `simulate` is a function which can be invoked as many times as needed. Each
  * time it is invoked it will create a fresh shard given the room instantiation code. It will invoke
  * the supplied function with an object containing various references and utilities.
  */
-export function simulate(rooms: Record<string, (room: Room) => void>) {
+export function simulate(
+	/**
+   * Record of room names to instantiation code functions. These functions will be invoked for each
+   * room and they can modify or add objects in the rooms.
+	 */
+	rooms: Record<string, (room: Room) => void>,
+
+	/**
+	 * Optional shard initialization for global state
+	 */
+	initialize?: (shard: Shard) => Promise<void>,
+) {
 	return async (body: (refs: Simulation) => Promise<void>) => {
 
 		Memory.initialize(null);
@@ -117,6 +125,7 @@ export function simulate(rooms: Record<string, (room: Room) => void>) {
 					shard.scratch.zAdd(activeRoomsKey, [ [ 0, roomName ] ]),
 			]);
 		}));
+		await initialize?.(shard);
 
 		// Run simulation
 		const intentsByRoom = new Map<string, { userId: string; intents: RoomIntentPayload }[]>();

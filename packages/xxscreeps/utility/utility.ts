@@ -224,7 +224,11 @@ export function deterministicClockForTesting() {
 	disposable.defer(() => Date.now = now);
 	let ts = now();
 	Date.now = () => ts++;
-	return disposable;
+	return Object.assign(disposable, {
+		increment(offset: number) {
+			ts += offset;
+		},
+	});
 }
 
 export function deterministicRandomForTesting(seed = 1) {

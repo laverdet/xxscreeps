@@ -75,6 +75,28 @@ function zRangeOptions(options?: Pr.ZRange) {
 	};
 }
 
+const HIncrByEx: Pr.KeyvalScript<
+	[ value: string, delta: string ],
+	[ string ],
+	[ field: string, delta: number, lower: number, upper: number, saturate: number ]
+> = {
+	local: undefined as never,
+	lua:
+`local previous = tonumber(redis.call('hget', KEYS[1], ARGV[1])) or 0
+local lower = tonumber(ARGV[3]) or -math.huge
+local upper = tonumber(ARGV[4]) or math.huge
+local value = previous + tonumber(ARGV[2])
+if value < lower or value > upper then
+	if ARGV[5] == '1' then
+		value = math.max(lower, math.min(upper, value))
+	else
+		value = previous
+	end
+end
+redis.call('hset', KEYS[1], ARGV[1], tostring(value))
+return { tostring(value), tostring(value - previous) }`,
+};
+
 export class RedisProvider extends AsyncDisposableResource implements Pr.KeyValProvider {
 	private readonly keyval;
 	private readonly blob;
@@ -203,6 +225,17 @@ export class RedisProvider extends AsyncDisposableResource implements Pr.KeyValP
 
 	hincrBy(key: string, field: string, value: number) {
 		return this.keyval.hIncrBy(key, field, value);
+	}
+
+	async hIncrByEx(key: string, field: string, delta: number, options: Pr.DeltaEx): Promise<readonly [ value: number, delta: number ]> {
+		const [ value, applied ] = await this.eval(HIncrByEx, [ key ], [
+			field,
+			delta,
+			options.lBound ?? -Infinity,
+			options.uBound ?? Infinity,
+			options.saturate ? 1 : 0,
+		]);
+		return [ Number(value), Number(applied) ];
 	}
 
 	hmGet(key: string, fields: string[], options: Pr.AsBlob): Promise<Record<string, Readonly<Uint8Array> | null>>;

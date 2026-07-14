@@ -34,6 +34,11 @@ export interface SetIf extends Set {
 export interface SetGet extends Set {
 	get: true;
 }
+export interface DeltaEx {
+	lBound?: number;
+	uBound?: number;
+	saturate?: boolean;
+}
 export interface HSet {
 	if?: 'NX';
 }
@@ -83,6 +88,8 @@ export interface KeyValProvider {
 	hGet(key: string, field: string): Promise<string | null>;
 	hGetAll(key: string): Promise<Record<string, string>>;
 	hincrBy(key: string, field: string, value: number): Promise<number>;
+	hIncrByEx(key: string, field: string, delta: number, options: DeltaEx): Promise<readonly [ value: number, delta: number ]>;
+
 	hmGet(key: string, fields: string[], options: AsBlob): Promise<Record<string, Readonly<Uint8Array> | null>>;
 	hmGet(key: string, fields: string[], options?: AsString): Promise<Record<string, string | null>>;
 	hSet(key: string, field: string, value: Value, options?: HSet): Promise<boolean>;

@@ -1,3 +1,5 @@
+import type { OrderType } from './order.js';
+import type { OrderIntent } from './processor.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
@@ -10,6 +12,7 @@ import { OpenStore, checkHasResource } from 'xxscreeps/mods/classic/resource/sto
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
+import { checkOrderParams } from './market.js';
 import { terminalShape } from './schema.js';
 
 /**
@@ -23,6 +26,8 @@ import { terminalShape } from './schema.js';
  * Terminals are used in the [Market system](https://docs.screeps.com/market.html).
  */
 export class StructureTerminal extends withOverlay(OwnedStructure, terminalShape) {
+	readonly #orderIntents: OrderIntent[] = [];
+
 	/**
 	 * The remaining amount of ticks while this terminal cannot be used to make
 	 * `StructureTerminal.send` or `Game.market.deal` calls.
@@ -47,6 +52,19 @@ export class StructureTerminal extends withOverlay(OwnedStructure, terminalShape
 		return chainIntentChecks(
 			() => checkSend(this, resourceType, amount, destination, description),
 			() => intents.save(this, 'send', resourceType, amount, destination, description));
+	}
+
+	/** Internal intent invoked by `market.createOrder` */
+	'#createOrder'(type: OrderType, resourceType: ResourceType, price: number, totalAmount: number) {
+		const millicredits = Math.round(price * 1000);
+		const amount = Math.trunc(totalAmount);
+		return chainIntentChecks(
+			() => checkCreateOrder(this, type, resourceType, millicredits, amount),
+			() => {
+				// The intent slot is unique per (object, action), so same-tick orders accumulate into a batch.
+				this.#orderIntents.push([ type, resourceType, millicredits, amount ]);
+				return intents.save(this, 'createOrder', this.#orderIntents);
+			});
 	}
 
 	override '#afterRemove'() {
@@ -81,6 +99,15 @@ export function checkSend(terminal: StructureTerminal, resourceType: ResourceTyp
 				return C.ERR_TIRED;
 			}
 		},
+	);
+}
+
+export function checkCreateOrder(terminal: StructureTerminal, type: OrderType, resourceType: ResourceType, price: number, totalAmount: number) {
+	return chainIntentChecks(
+		() => checkOrderParams(type, resourceType, price, totalAmount),
+		// C.ERR_NOT_ENOUGH_RESOURCES
+		() => checkMyStructure(terminal, StructureTerminal),
+		// C.ERR_FULL
 	);
 }
 

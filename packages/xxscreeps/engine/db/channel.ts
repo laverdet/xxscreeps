@@ -1,5 +1,6 @@
 import type { PubSubProvider, PubSubSubscription } from './storage/provider.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
+import { AsyncDisposableResource, DisposableResource } from 'xxscreeps/utility/utility.js';
 
 export interface NullMessage {
 	type?: never;
@@ -58,22 +59,28 @@ export class Channel<Message = string> {
 	}
 }
 
-class Subscription<Message> {
+class Subscription<Message> extends DisposableResource {
 	private didDisconnect = false;
 	private readonly disconnectListeners = new Set<Effect>();
 	private readonly json;
 	private readonly listeners;
 	private readonly subscription;
-	private readonly effect;
 
-	private constructor(json: boolean, listeners: Set<Listener<Message>>, subscription: PubSubSubscription, effect: Effect) {
+	private constructor(disposable: DisposableStack, json: boolean, listeners: Set<Listener<Message>>, subscription: PubSubSubscription) {
+		super(disposable);
+		disposable.defer(() => {
+			this.didDisconnect = true;
+			for (const listener of this.disconnectListeners) {
+				listener();
+			}
+		});
 		this.json = json;
 		this.listeners = listeners;
 		this.subscription = subscription;
-		this.effect = effect;
 	}
 
 	static async subscribe<Message>(pubsub: PubSubProvider, name: string, json: boolean) {
+		const disposable = new DisposableStack();
 		const listeners = new Set<Listener<Message>>();
 		const [ effect, subscription ] = await pubsub.subscribe(name, message => {
 			const payload = json ? JSON.parse(message) : message;
@@ -81,15 +88,12 @@ class Subscription<Message> {
 				listener(payload);
 			}
 		});
-		return new Subscription<Message>(json, listeners, subscription, effect);
+		disposable.defer(effect);
+		return new Subscription<Message>(disposable, json, listeners, subscription);
 	}
 
 	disconnect() {
-		for (const listener of this.disconnectListeners) {
-			listener();
-		}
-		this.effect();
-		this.didDisconnect = true;
+		this.dispose();
 	}
 
 	// Add a new listener to this channel
