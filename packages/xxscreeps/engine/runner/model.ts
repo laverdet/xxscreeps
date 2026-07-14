@@ -1,10 +1,11 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
+import type { RunnerPlayerEvalPayload, RunnerPlayerIntent } from 'xxscreeps/engine/runner/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { tickSpeed } from 'xxscreeps/engine/service/tick.js';
 import { acquireTimeout } from 'xxscreeps/utility/utility.js';
 
 export function getConsoleChannel(shard: Shard, user: string) {
-	return new Channel(shard.pubsub, `user/${user}/console`, false);
+	return new Channel<string>(shard.pubsub, `user/${user}/console`, false);
 }
 
 export function getAckChannel(shard: Shard, user: string) {
@@ -23,17 +24,17 @@ export function getRunnerChannel(shard: Shard) {
 }
 
 // Messages sent to the runner for an individual user
-export type RunnerIntent = { receiver: string; intent: string; params: any[] };
-export function getRunnerUserChannel(shard: Shard, user: string) {
-	type Message =
-		{ type: 'eval'; payload: { ack?: string; echo: boolean; expr: string } } |
-		{ type: 'intent'; intent: RunnerIntent };
-	return new Channel<Message>(shard.pubsub, `runner/${user}`);
-}
+/** @internal */
+export type RunnerUserChannel = Channel<
+	{ type: 'eval'; payload: RunnerPlayerEvalPayload } |
+	{	type: 'intent'; intent: RunnerPlayerIntent }
+>;
 
-export function getUsageChannel(shard: Shard, user: string) {
-	return new Channel<any>(shard.pubsub, `runner/${user}/usage`);
-}
+export const runnerUserChannel =
+	(shard: Shard, user: string): RunnerUserChannel => new Channel(shard.pubsub, `runner/${user}`);
+
+export const runnerUsageChannel =
+	(shard: Shard, user: string) => new Channel<any>(shard.pubsub, `runner/${user}/usage`);
 
 /**
  * Sends an eval expression to the user's runner instance and waits for a reply.
@@ -53,7 +54,7 @@ export async function requestRunnerEval(shard: Shard, userId: string, expr: stri
 	disposable.defer(effect);
 
 	// Send the request
-	await getRunnerUserChannel(shard, userId).publish({ type: 'eval', payload: { ack: id, echo, expr } });
+	await runnerUserChannel(shard, userId).publish({ type: 'eval', payload: { ack: id, echo, expr } });
 	const { result } = (await Promise.race([ timer.promise, promise ]))!;
 	if (result.error) {
 		throw new Error(result.value);

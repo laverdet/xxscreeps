@@ -9,7 +9,7 @@ const CodeSubscription: SubscriptionEndpoint = {
 		if (!this.user) {
 			return () => {};
 		}
-		return Code.getUserCodeChannel(this.context.db, this.user).listen(message => {
+		return Code.userCodeChannel(this.context.db, this.user).listen(message => {
 			if (message.type === 'update') {
 				(async () => {
 					const modules = await Code.loadContent(this.context.db, this.user!, message.branch);
@@ -32,7 +32,7 @@ const SetActiveBranchSubscription: SubscriptionEndpoint = {
 		if (!this.user) {
 			return () => {};
 		}
-		return Code.getUserCodeChannel(this.context.db, this.user).listen(message => {
+		return Code.userCodeChannel(this.context.db, this.user).listen(message => {
 			if (message.type === 'switch') {
 				this.send(JSON.stringify({ activeName: 'activeWorld', branch: message.branch }));
 			}

@@ -167,7 +167,7 @@ async function userBranch(who: string, branch: string) {
 	}
 	await db.data.hSet(User.infoKey(id), 'branch', branch);
 	await save();
-	await Code.getUserCodeChannel(db, id).publish({ type: 'switch', branch });
+	await Code.userCodeChannel(db, id).publish({ type: 'switch', branch });
 	out(`Set active branch for ${who} (${id}) to '${branch}'.`);
 }
 

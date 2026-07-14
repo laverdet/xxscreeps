@@ -1,4 +1,4 @@
-import type { Subscription } from './channel.js';
+import type { NullMessage, SubscriptionFor } from './channel.js';
 import type { Database } from './database.js';
 import type { KeyValProvider, PubSubProvider } from './storage/index.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
@@ -12,7 +12,13 @@ import { getRoomChannel } from '../processor/model.js';
 import { loadUpgradedWithWriteBack } from '../schema/keyval.js';
 import { Channel } from './channel.js';
 
-type Message = { type: 'tick'; time: number } | { type: null };
+type ShardGameChannel = Channel<
+	NullMessage |
+	{	type: 'tick'; time: number }
+>;
+
+const shardGameChannel =
+	(pubsub: PubSubProvider): ShardGameChannel => new Channel(pubsub, 'channel/game');
 
 export class Shard extends AsyncDisposableResource {
 	time = -1;
@@ -30,7 +36,7 @@ export class Shard extends AsyncDisposableResource {
 		data: KeyValProvider,
 		pubsub: PubSubProvider,
 		scratch: KeyValProvider,
-		channel: Subscription<Message>,
+		channel: SubscriptionFor<ShardGameChannel>,
 	) {
 		super(disposable);
 		this.db = db;
@@ -69,7 +75,7 @@ export class Shard extends AsyncDisposableResource {
 			connectToProvider(info.scratch, 'keyval'),
 		);
 		const channel = disposable.adopt(
-			await new Channel<Message>(pubsub, 'channel/game').subscribe(),
+			await shardGameChannel(pubsub).subscribe(),
 			subscription => subscription.disconnect(),
 		);
 		// Create instance (which subscribes to tick notification) and then read current info

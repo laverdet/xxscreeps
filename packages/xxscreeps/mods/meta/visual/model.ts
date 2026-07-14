@@ -1,4 +1,5 @@
 import type { VisualEntry } from './visual.js';
+import type { NullMessage } from 'xxscreeps/engine/db/channel.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -7,7 +8,9 @@ import { stringifyInherited, typedArrayToString } from 'xxscreeps/utility/string
 import * as Visual from './visual.js';
 
 export function getVisualChannel(shard: Shard, userId: string) {
-	type Message = { type: 'publish'; roomNames: string[]; time: number };
+	type Message =
+		NullMessage |
+		{ type: 'publish'; roomNames: string[]; time: number };
 	return new Channel<Message>(shard.pubsub, `user/${userId}/visual`);
 }
 

@@ -1,8 +1,8 @@
-import type { RunnerIntent } from './model.js';
+import type { RunnerUserChannel } from './model.js';
 import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
 import type { SubscriptionFor } from 'xxscreeps/engine/db/channel.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { InitializationPayload, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
+import type { InitializationPayload, RunnerPlayerIntent, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 import { config } from 'xxscreeps/config/index.js';
@@ -16,7 +16,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { mustNotReject } from 'xxscreeps/utility/async.js';
 import { acquireHookEffects } from 'xxscreeps/utility/hook.js';
 import { clamp, disposableToEffect } from 'xxscreeps/utility/utility.js';
-import { getAckChannel, getRunnerUserChannel, getUsageChannel } from './model.js';
+import { getAckChannel, runnerUsageChannel, runnerUserChannel } from './model.js';
 import { hooks } from './symbols.js';
 
 const acquireConnectors = function(invoke) {
@@ -53,15 +53,15 @@ export class PlayerInstance {
 	private readonly codeChannel;
 	private readonly consoleEval: Exclude<TickPayload['eval'], undefined> = [];
 	private readonly consoleChannel;
-	private readonly intents: RunnerIntent[] = [];
+	private readonly intents: RunnerPlayerIntent[] = [];
 	private readonly seenUsers = new Set<string>();
 	private readonly usageChannel;
 
 	private constructor(
 		shard: Shard,
 		world: World,
-		channel: SubscriptionFor<typeof getRunnerUserChannel>,
-		codeChannel: SubscriptionFor<typeof Code['getUserCodeChannel']>,
+		channel: SubscriptionFor<RunnerUserChannel>,
+		codeChannel: SubscriptionFor<Code.UserCodeChannel>,
 		userId: string,
 		username: string,
 		branchName: string | null,
@@ -74,7 +74,7 @@ export class PlayerInstance {
 		this.username = username;
 		this.branchName = branchName;
 		this.consoleChannel = getConsoleChannel(this.shard, this.userId);
-		this.usageChannel = getUsageChannel(this.shard, this.userId);
+		this.usageChannel = runnerUsageChannel(this.shard, this.userId);
 
 		// Listen for game interactions from user
 		channel.listen(message => {
@@ -114,8 +114,8 @@ export class PlayerInstance {
 	static async create(shard: Shard, world: World, userId: string) {
 		// Connect to channel, load initial user data
 		const [ channel, codeChannel, userInfo ] = await Promise.all([
-			getRunnerUserChannel(shard, userId).subscribe(),
-			Code.getUserCodeChannel(shard.db, userId).subscribe(),
+			runnerUserChannel(shard, userId).subscribe(),
+			Code.userCodeChannel(shard.db, userId).subscribe(),
 			shard.db.data.hmGet(User.infoKey(userId), [ 'branch', 'username' ]),
 		]);
 		const instance = new PlayerInstance(shard, world, channel, codeChannel, userId, userInfo.username!, userInfo.branch ?? null);

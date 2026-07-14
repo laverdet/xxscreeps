@@ -245,7 +245,7 @@ hooks.register('route', {
 			return;
 		}
 		await context.db.data.hSet(User.infoKey(userId), 'branch', branch);
-		await Code.getUserCodeChannel(context.db, userId).publish({ type: 'switch', branch });
+		await Code.userCodeChannel(context.db, userId).publish({ type: 'switch', branch });
 		return { ok: 1 };
 	}),
 });

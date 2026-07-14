@@ -11,7 +11,7 @@ hooks.register('roomSocket', async (shard, userId, roomName) => {
 
 	// Subscribe to visuals channel and listen for publishes to this room
 	let lastTime = shard.time;
-	const unlisten = await getVisualChannel(shard, userId).listen<true>(message => {
+	const unlisten = await getVisualChannel(shard, userId).listen(message => {
 		if (message.type === 'publish') {
 			if (message.roomNames.includes('*') || message.roomNames.includes(roomName)) {
 				lastTime = message.time;
@@ -51,7 +51,7 @@ hooks.register('subscription', {
 		}));
 
 		// Subscribe to visuals channel and listen for map publishes
-		disposable.defer(await getVisualChannel(shard, user).listen<true>(message => {
+		disposable.defer(await getVisualChannel(shard, user).listen(message => {
 			if (message.type === 'publish') {
 				if (message.roomNames.includes('map')) {
 					lastTime = message.time;
