@@ -7,7 +7,7 @@ import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js
 import { Structure, checkWall } from 'xxscreeps/mods/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { containerShape } from './schema2.js';
+import { containerShape } from './schema.js';
 import { OpenStore } from './store.js';
 
 export class StructureContainer extends withOverlay(Structure, containerShape) {

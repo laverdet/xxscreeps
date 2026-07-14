@@ -1,16 +1,15 @@
 import { registerStruct } from 'xxscreeps/engine/schema/index.js';
 import { actionLogFormat } from 'xxscreeps/game/schema.js';
 import { spawningFormat } from 'xxscreeps/mods/spawn/schema.js';
-import { Spawning } from 'xxscreeps/mods/spawn/spawn.js';
 import { ownedStructureShape } from 'xxscreeps/mods/structure/schema.js';
-import { compose, declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
+import { declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
 
 /** @internal */
 export const invaderCoreShape = declare('InvaderCore', struct(ownedStructureShape, {
 	...variant('invaderCore'),
 	hits: 'int32',
 	level: 'int8',
-	spawning: optional(compose(spawningFormat, Spawning), null),
+	spawning: optional(spawningFormat, null),
 	'#actionLog': actionLogFormat,
 	'#deployTime': 'int32',
 }));

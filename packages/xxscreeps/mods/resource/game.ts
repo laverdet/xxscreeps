@@ -5,7 +5,7 @@ import { registerFindHandlers, registerLook } from 'xxscreeps/game/room/index.js
 import { compose } from 'xxscreeps/schema/index.js';
 import { StructureContainer } from './container.js';
 import { Resource, resourceShape } from './resource.js';
-import { containerShape } from './schema2.js';
+import { containerShape } from './schema.js';
 import { Store } from './store.js';
 
 // Export `StructureContainer`, `Resource` & `Store` to runtime globals

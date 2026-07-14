@@ -10,14 +10,12 @@ import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { registerBuildableStructure } from 'xxscreeps/mods/construction/index.js';
 import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/creep/creep.js';
 import * as Memory from 'xxscreeps/mods/memory/memory.js';
-import { makeSingleStoreFormat } from 'xxscreeps/mods/resource/schema.js';
 import { SingleStore } from 'xxscreeps/mods/resource/store.js';
-import { ownedStructureShape } from 'xxscreeps/mods/structure/schema.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, lookForStructures } from 'xxscreeps/mods/structure/structure.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
-import { compose, declare, optional, struct, variant, withOverlay } from 'xxscreeps/schema/index.js';
+import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
-import { spawningFormat } from './schema.js';
+import { bindSpawningFormat, spawnShape, spawningShape } from './schema.js';
 
 interface SpawnCreepOptions {
 	directions?: Direction[];
@@ -26,7 +24,7 @@ interface SpawnCreepOptions {
 	memory?: unknown;
 }
 
-export class Spawning extends withOverlay(BufferObject, spawningFormat) {
+export class Spawning extends withOverlay(BufferObject, spawningShape) {
 	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name; }
 	@enumerable get remainingTime() { return requiredExpiryTime(this['#spawnTime']); }
 	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])!; }
@@ -51,14 +49,7 @@ export class Spawning extends withOverlay(BufferObject, spawningFormat) {
 	}
 }
 
-// TODO: Import cycle
-export const spawnShape = declare('Spawn', struct(ownedStructureShape, {
-	...variant('spawn'),
-	hits: 'int32',
-	name: 'string',
-	spawning: optional(compose(spawningFormat, Spawning), null),
-	store: makeSingleStoreFormat(),
-}));
+bindSpawningFormat(Spawning);
 
 export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 	static readonly Spawning = Spawning;

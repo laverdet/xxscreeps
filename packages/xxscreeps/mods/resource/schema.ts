@@ -1,8 +1,9 @@
 import type { ResourceType } from './resource.js';
+import type { OpenStore, RestrictedStore, SingleStore } from './store.js';
 import { enumeratedForPath } from 'xxscreeps/engine/schema/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
-import { compose, declare, enumerated, struct, vector, withType } from 'xxscreeps/schema/index.js';
-import { OpenStore, RestrictedStore, SingleStore } from './store.js';
+import { structureShape } from 'xxscreeps/mods/structure/schema.js';
+import { composeBind, declare, enumerated, struct, variant, vector, withType } from 'xxscreeps/schema/index.js';
 
 // Resource types
 export const optionalResourceEnumFormat = () =>
@@ -10,18 +11,6 @@ export const optionalResourceEnumFormat = () =>
 
 // nb: This is the same wire format as `optionalResourceEnumFormat` and 0 would be an invalid `undefined`.
 export const resourceEnumFormat = withType<ResourceType>(optionalResourceEnumFormat);
-
-// Stores
-export const openStoreFormat = () => compose(shapeOpen, OpenStore);
-export const restrictedStoreFormat = () => compose(shapeRestricted, RestrictedStore);
-
-// SingleStore requires a burned in type which can only be achieved with a function call. The
-// `makeSingleStoreFormat` thunk is meant to be invoked immediately. It returns the deferred
-// `untypedSingleStore`
-const untypedSingleStore = () => compose(shapeSingle, SingleStore);
-export function makeSingleStoreFormat<Resource extends ResourceType = typeof C.RESOURCE_ENERGY>() {
-	return withType<SingleStore<Resource>>(untypedSingleStore);
-}
 
 /** @internal */
 export const shapeOpen = declare('OpenStore', struct({
@@ -46,6 +35,37 @@ export const shapeSingle = declare('SingleStore', struct({
 	'#amount': 'int32',
 	'#capacity': 'int32',
 	'#type': resourceEnumFormat,
+}));
+
+// Stores
+export function openStoreFormat() {
+	return boundOpenStoreFormat;
+}
+const [ boundOpenStoreFormat, bindOpenStore ] = composeBind(shapeOpen)<OpenStore>();
+
+export function restrictedStoreFormat() {
+	return boundRestrictedStoreFormat;
+}
+const [ boundRestrictedStoreFormat, bindRestrictedStoreFormat ] = composeBind(shapeRestricted)<RestrictedStore>();
+
+// SingleStore requires a burned in type which can only be achieved with a function call. The
+// `makeSingleStoreFormat` thunk is meant to be invoked immediately. It returns the deferred
+// `untypedSingleStore`
+const [ untypedSingleStore, bindUntypedSingleStore ] = composeBind(shapeSingle)<SingleStore<never>>();
+export function makeSingleStoreFormat<Resource extends ResourceType = typeof C.RESOURCE_ENERGY>() {
+	return withType<SingleStore<Resource>>(untypedSingleStore);
+}
+
+/** @internal */
+export { bindOpenStore, bindRestrictedStoreFormat, bindUntypedSingleStore };
+
+// Container (the structure)
+/** @internal */
+export const containerShape = declare('Container', struct(structureShape, {
+	...variant('container'),
+	hits: 'int32',
+	store: openStoreFormat,
+	'#nextDecayTime': 'int32',
 }));
 
 // ---

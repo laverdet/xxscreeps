@@ -6,7 +6,7 @@ import type { MemberWriter, Writer } from './write.js';
 export type { Format, ShapeOf, TypeOf } from './format.js';
 export { BufferObject } from './buffer-object.js';
 export { BufferView } from './buffer-view.js';
-export { array, compose, constant, declare, enumerated, optional, struct, union, variant, vector, withType } from './format.js';
+export { array, compose, composeBind, constant, declare, enumerated, optional, struct, union, variant, vector, withType } from './format.js';
 export { withOverlay } from './overlay.js';
 export { makeReader } from './read.js';
 export { makeWriter } from './write.js';

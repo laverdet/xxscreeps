@@ -6,7 +6,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { BufferObject } from 'xxscreeps/schema/buffer-object.js';
 import { makeReader, withOverlay, withType } from 'xxscreeps/schema/index.js';
 import { getLayout } from 'xxscreeps/schema/layout.js';
-import { restrictedStoreFormat, shapeOpen, shapeRestricted, shapeSingle } from './schema.js';
+import { bindOpenStore, bindRestrictedStoreFormat, bindUntypedSingleStore, restrictedStoreFormat, shapeOpen, shapeRestricted, shapeSingle } from './schema.js';
 
 export type WithStore = Record<'store', Store>;
 
@@ -162,6 +162,8 @@ export class OpenStore extends withOverlay(Store, () => shapeOpen) {
 	}
 }
 
+bindOpenStore(OpenStore);
+
 type RestrictedResourceInfo = TypeOf<typeof shapeRestricted>['#resources'][number];
 type StorageRecord = Record<ResourceType, number>;
 
@@ -230,6 +232,8 @@ export class RestrictedStore extends withOverlay(Store, () => shapeRestricted) {
 	}
 }
 
+bindRestrictedStoreFormat(RestrictedStore);
+
 /**
  * A `Store` which can only hold a single pre-defined resource.
  */
@@ -291,6 +295,8 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, (
 		}
 	}
 }
+
+bindUntypedSingleStore(SingleStore);
 
 /**
  * The `amount` for resource-moving intents usually needs to be calculated upfront, which is done

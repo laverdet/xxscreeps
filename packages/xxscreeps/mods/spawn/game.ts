@@ -4,8 +4,8 @@ import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { registerFindHandlers } from 'xxscreeps/game/room/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
 import { StructureExtension } from './extension.js';
-import { extensionShape } from './schema.js';
-import { StructureSpawn, spawnShape } from './spawn.js';
+import { extensionShape, spawnShape } from './schema.js';
+import { StructureSpawn } from './spawn.js';
 
 // Add `spawns` to global `Game` object
 declare module 'xxscreeps/game/game.js' {

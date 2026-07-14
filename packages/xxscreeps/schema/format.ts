@@ -122,6 +122,23 @@ export function compose(format: Format, interceptor: Interceptor) {
 	return composedFormat as never;
 }
 
+export function composeBind<Type extends Format>(format: Type) {
+	const next = <Overlay>() => {
+		const composedFormat: ComposedFormat = {
+			composed: format,
+			interceptor: undefined as never,
+		};
+		const bind = (interceptor: OverlayInterceptor<Overlay>) => {
+			composedFormat.interceptor = interceptor;
+		};
+		return [
+			composedFormat satisfies ComposedFormat as unknown as WithShapeAndType<ShapeOf<Type>, Overlay>,
+			bind,
+		] as const;
+	};
+	return next;
+}
+
 // Holds a constant that doesn't even get stored into the blob
 export function constant<Type extends number | string>(value: Type): WithShapeAndType<any, Type> {
 	const format: ConstantFormat = { constant: value };
