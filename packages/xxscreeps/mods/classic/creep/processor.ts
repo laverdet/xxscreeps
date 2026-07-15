@@ -223,11 +223,7 @@ export function isHostileInSafeMode(mover: CreepLib.Carrier) {
 	return controller?.safeMode !== undefined && controller['#user'] !== mover['#user'];
 }
 
-/**
- * Complete a resolved move: relocate the mover, wear out any road at the destination, and stomp
- * hostile construction sites unless safe mode protects them. Returns the destination tile's base
- * fatigue.
- */
+/** Complete a resolved move; returns the destination tile's base fatigue. */
 export function commitMove(mover: CreepLib.Carrier, pos: RoomPosition, roadWearout: number) {
 	mover.room['#moveObject'](mover, pos);
 	const baseFatigue = (() => {
@@ -464,7 +460,7 @@ export function teleportCreep(creep: Teleportable & Parameters<typeof writeRoomO
 	const oldPos = creep.pos;
 	creep.pos = next;
 	creep.room = undefined as never;
-	// Creeps are revitalized when moving to a new room; power creeps have no fatigue
+	// Creeps are revitalized when moving to a new room
 	if (creep.fatigue !== undefined) {
 		creep.fatigue = 0;
 	}

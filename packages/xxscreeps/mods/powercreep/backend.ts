@@ -7,8 +7,6 @@ import { renderStore } from 'xxscreeps/mods/classic/resource/backend.js';
 import * as Model from './model.js';
 import { PowerCreep } from './powercreep.js';
 
-// A spawned power creep is a room object; render the fields the official client shows for it (owner,
-// vitals, store, level, and the action log carrying `say`), mirroring the creep renderer.
 bindMapRenderer(PowerCreep, creep => creep['#user']);
 
 bindRenderer(PowerCreep, (creep, next, previousTime) => {

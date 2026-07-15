@@ -18,8 +18,6 @@ import { StructurePowerSpawn } from 'xxscreeps/mods/modern/powerspawn/powerspawn
 import * as Model from './model.js';
 import { PowerCreep, checkRenew, createSpawnedPowerCreep } from './powercreep.js';
 
-// Leave a tombstone where a power creep died and drop whatever it was carrying. Power creeps have no
-// body, so the corpse only holds the store; the tombstone decays on the power-creep timer.
 function buryPowerCreep(creep: PowerCreep) {
 	const tombstone = createRoomObject(new Tombstone(), creep.pos);
 	tombstone.deathTime = Game.time;
@@ -41,8 +39,7 @@ function buryPowerCreep(creep: PowerCreep) {
 	creep['#destroy']();
 }
 
-// Death frees the roster slot and starts the wall-clock respawn cooldown. The roster lives in account
-// keyspace, so the writeback rides `context.task` — the same path the GPL/GCL credit uses.
+// The roster lives in account keyspace, so the death writeback rides `context.task`.
 function killPowerCreep(creep: PowerCreep, context: ProcessorContext) {
 	const user = creep['#user'];
 	const id = creep.id;
@@ -56,10 +53,8 @@ declare module 'xxscreeps/engine/processor/index.js' {
 }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
-	// A power spawn materializes a roster member on its own tile. The intent carries only the roster
-	// id; the claim atomically validates it against the authoritative roster and returns the stored
-	// entry, so identity and powers can't be forged and a duplicate or cooldown-lagged spawn finds
-	// nothing to claim.
+	// The intent carries only the roster id; `claimSpawn` validates it against the authoritative
+	// roster and returns the stored entry that seeds the room object.
 	registerIntentProcessor(StructurePowerSpawn, 'spawnPowerCreep', {}, (spawn, context, id: string) => {
 		if (checkMyStructure(spawn, StructurePowerSpawn) !== C.OK) {
 			return;
@@ -78,8 +73,6 @@ const intents = [
 
 	registerIntentProcessor(PowerCreep, 'drop', { before: 'transfer' }, processDrop),
 
-	// Fatigue-free movement: no body, no weight, no pull chains. A single move request resolves through
-	// the shared movement arbiter at a fixed priority.
 	registerIntentProcessor(PowerCreep, 'move', {}, (creep, context, direction: Direction) => {
 		if (checkCarrier(creep) === C.OK) {
 			const priority = 1 + (isHostileInSafeMode(creep) ? -500 : 0);
@@ -98,7 +91,6 @@ const intents = [
 
 	registerIntentProcessor(PowerCreep, 'withdraw', { before: 'pickup' }, processWithdraw),
 
-	// Renew at an adjacent power spawn or power bank, resetting the creep to a full lifetime.
 	registerIntentProcessor(PowerCreep, 'renew', {}, (creep, context, id: string) => {
 		const target = Game.getObjectById<StructurePowerSpawn | StructurePowerBank>(id)!;
 		if (checkRenew(creep, target) === C.OK) {
@@ -129,7 +121,7 @@ registerObjectPreTickProcessor(PowerCreep, (creep, context) => {
 });
 
 registerObjectTickProcessor(PowerCreep, (creep, context) => {
-	// Settle damage accumulated this tick (power creeps have no body to absorb it).
+	// Settle damage deferred by `#applyDamage`
 	const damage = creep.tickRawDamage ?? 0;
 	if (damage > 0) {
 		creep.hits = Math.max(0, creep.hits - damage);

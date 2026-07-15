@@ -611,9 +611,8 @@ registerObstacleChecker(params => {
 // Intent checks
 
 /**
- * The verb surface shared by `Creep` and `PowerCreep`: the carry/store verbs plus `say`. The shared
- * intent checks and processor arms operate on this type rather than `Creep` — power creeps act the
- * same way but have no body or fatigue.
+ * The verb surface shared by `Creep` and `PowerCreep`: the carry/store verbs plus `say`. Power
+ * creeps act the same way but have no body or fatigue.
  */
 export interface Carrier extends RoomObject {
 	my: boolean;
@@ -623,7 +622,6 @@ export interface Carrier extends RoomObject {
 	'#user': string;
 }
 
-/** Ownership and busy preconditions every carry verb shares, with no body part involved. */
 export function checkCarrier(creep: Carrier) {
 	if (!creep.my) {
 		return C.ERR_NOT_OWNER;

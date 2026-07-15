@@ -46,7 +46,6 @@ hooks.register('gameInitializer', Game => {
 	}
 });
 
-// A power creep is a room object once spawned, so it joins the `Room.objects` union.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const powerCreepSchema = registerVariant('Room.objects', compose(powerCreepShape, PowerCreep));
 

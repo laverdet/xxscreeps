@@ -138,11 +138,9 @@ export function cancelDelete(db: Database, userId: string, id: string) {
 	});
 }
 
-// Claim a roster entry for spawning. The roster is the authority: the entry must exist, be
-// unspawned, and have an elapsed cooldown, so a forged, duplicate, or stale-runtime intent finds
-// nothing to claim. Stamping `#ageTime` marks the entry spawned until the death writeback clears
-// it; a pending deletion is cancelled by the spawn. Returns the claimed entry, whose stored
-// identity and powers seed the room object.
+// Claim a roster entry for spawning. The roster is the authority, so a forged, duplicate, or
+// stale-runtime intent finds nothing to claim; a non-zero `#ageTime` marks the entry spawned until
+// the death writeback clears it.
 export async function claimSpawn(db: Database, userId: string, id: string, ageTime: number) {
 	let claimed: PowerCreep | undefined;
 	const code = await mutate(db, userId, roster => {
@@ -160,9 +158,7 @@ export async function claimSpawn(db: Database, userId: string, id: string, ageTi
 	}
 }
 
-// Record a spawn cooldown on the roster entry when a spawned creep dies, releasing the spawned
-// marker. Called from the room processor through `context.task`, the same account-keyspace
-// writeback path the GPL/GCL credit uses.
+// Death writeback: start the spawn cooldown and release the spawned marker.
 export function setSpawnCooldown(db: Database, userId: string, id: string, cooldownTime: number) {
 	return mutate(db, userId, roster => {
 		const creep = roster.find(entry => entry.id === id);

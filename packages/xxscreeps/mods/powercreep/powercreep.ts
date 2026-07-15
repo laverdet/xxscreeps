@@ -107,7 +107,7 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	}
 
 	// Defer incoming damage to the tick processor so death routes through the tombstone + respawn
-	// cooldown path, rather than the base immediate `#destroy`. Power creeps have no body to absorb it.
+	// cooldown path, rather than the base immediate `#destroy`.
 	override '#applyDamage'(power: number, _type: number, source?: RoomObject) {
 		this.tickRawDamage = (this.tickRawDamage ?? 0) + power;
 		if (source) {
@@ -127,11 +127,12 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 		return false;
 	}
 
-	// --- Room verbs. A power creep acts only once spawned into a room; the account-only roster form
-	// returns `ERR_BUSY`, mirroring vanilla's room guard before it delegates to the shared creep verb.
-	// Power creeps share the carry/store surface with creeps (`Carrier`) but have no body or fatigue. ---
-
-	/** Drop a resource on the ground. */
+	/**
+	 * Drop this resource on the ground.
+	 * @param resourceType One of the `RESOURCE_*` constants.
+	 * @param amount The amount of resource units to be dropped. If omitted, all the available
+	 * carried amount is used.
+	 */
 	drop(resourceType: ResourceType, amount?: number) {
 		const intentAmount = (amount ?? 0) || this.store[resourceType];
 		return chainIntentChecks(
@@ -140,7 +141,9 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 			() => intents.save(this, 'drop', resourceType, intentAmount));
 	}
 
-	/** Move one square in the given direction. Power creeps move without fatigue. */
+	/**
+	 * Move the creep one square in the specified direction.
+	 */
 	move(direction: Direction) {
 		return chainIntentChecks(
 			() => checkSpawned(this),
@@ -149,7 +152,11 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 			() => intents.save(this, 'move', direction));
 	}
 
-	/** Pick up a dropped resource. */
+	/**
+	 * Pick up an item (a dropped piece of energy). The target has to be at adjacent square to the
+	 * creep or at the same square.
+	 * @param resource The target object to be picked up
+	 */
 	pickup(resource: Resource) {
 		return chainIntentChecks(
 			() => checkSpawned(this),
@@ -157,7 +164,13 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 			() => intents.save(this, 'pickup', resource.id));
 	}
 
-	/** Display a speech bubble. */
+	/**
+	 * Display a visual speech balloon above the creep with the specified message. The message will be
+	 * available for one tick. You can read the last message using the `saying` property. Any valid
+	 * Unicode characters are allowed, including emoji.
+	 * @param message The message to be displayed. Maximum length is 10 characters.
+	 * @param public Set to true to allow other players to see this message. Default is false.
+	 */
 	say(message: string, isPublic = false) {
 		return chainIntentChecks(
 			() => checkSpawned(this),
@@ -165,7 +178,14 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 			() => intents.save(this, 'say', String(message).substring(0, 10), isPublic));
 	}
 
-	/** Transfer a resource to another object. */
+	/**
+	 * Transfer resource from the creep to another object. The target has to be at adjacent square to
+	 * the creep.
+	 * @param target The target object
+	 * @param resourceType One of the `RESOURCE_*` constants
+	 * @param amount The amount of resources to be transferred. If omitted, all the available carried
+	 * amount is used.
+	 */
 	transfer(target: RoomObject & WithStore, resourceType: ResourceType, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
 			(amount ?? 0) || Math.min(this.store[resourceType], target.store.getFreeCapacity(resourceType)!));
@@ -175,7 +195,12 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 			() => intents.save(this, 'transfer', target.id, resourceType, intentAmount));
 	}
 
-	/** Withdraw a resource from a structure or tombstone. */
+	/**
+	 * Withdraw resources from a structure or tombstone. The target has to be at adjacent square to
+	 * the creep. Multiple creeps can withdraw from the same object in the same tick. Your creeps can
+	 * withdraw resources from hostile structures/tombstones as well, in case if there is no hostile
+	 * rampart on top of it.
+	 */
 	withdraw(target: Structure & WithStore, resourceType: ResourceType, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
 			(amount ?? 0) || Math.min(this.store.getFreeCapacity(resourceType), target.store[resourceType]));
@@ -185,7 +210,10 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 			() => intents.save(this, 'withdraw', target.id, resourceType, intentAmount));
 	}
 
-	/** Spawn this roster member into a room at the given power spawn. */
+	/**
+	 * Spawn this power creep in the specified Power Spawn.
+	 * @param powerSpawn Your Power Spawn structure
+	 */
 	spawn(powerSpawn: StructurePowerSpawn) {
 		return chainIntentChecks(
 			() => isSpawned(this) ? C.ERR_BUSY : C.OK,
@@ -196,7 +224,11 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 			() => intents.save(powerSpawn, 'spawnPowerCreep', this.id));
 	}
 
-	/** Reset this creep's lifetime at an adjacent power spawn or power bank. */
+	/**
+	 * Instantly restore time to live to the maximum using a Power Spawn or a Power Bank nearby. It
+	 * has to be at adjacent tile.
+	 * @param target The target structure
+	 */
 	renew(target: StructurePowerSpawn | StructurePowerBank) {
 		return chainIntentChecks(
 			() => checkSpawned(this),
@@ -204,7 +236,10 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 			() => intents.save(this, 'renew', target.id));
 	}
 
-	/** Kill this power creep immediately. */
+	/**
+	 * Kill the power creep immediately. It will not be destroyed permanently, but will become
+	 * unspawned, so that you can spawn it again.
+	 */
 	suicide() {
 		return chainIntentChecks(
 			() => checkSpawned(this),
@@ -229,7 +264,6 @@ export function checkRenew(creep: PowerCreep, target: StructurePowerSpawn | Stru
 		() => checkRange(creep, target, 1));
 }
 
-// Power creeps block movement like creeps, deferring to the same safe-mode rules.
 registerObstacleChecker(params => {
 	const { room, user } = params;
 	if (params.ignoreCreeps) {
@@ -245,7 +279,6 @@ registerObstacleChecker(params => {
 	}
 });
 
-// Initialize the fields shared by spawned and unspawned creeps.
 function instantiatePowerCreep(
 	id: string, pos: RoomPosition, name: string, className: string, owner: string, storeCapacity: number,
 ) {
@@ -259,8 +292,6 @@ function instantiatePowerCreep(
 		hits: 0,
 		store: OpenStore['#create'](storeCapacity),
 	});
-	// Private-symbol fields are assigned by member access, not as object-literal keys: the private
-	// transform only rewrites `obj['#x']` accesses, so a literal `'#x'` key would miss the symbol slot.
 	creep['#posId'] = pos['#id'];
 	creep['#powers'] = [];
 	creep['#user'] = owner;
