@@ -2,7 +2,7 @@
   "name": "@xxscreeps/workspace",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.33.3",
+  "packageManager": "pnpm@11.13.0",
   "license": "ISC",
   "repository": "https://github.com/laverdet/xxscreeps",
   "scripts": {
@@ -26,15 +26,5 @@
     "eslint-plugin-import": "^2.32.0",
     "ts-json-schema-generator": "^2.9.0",
     "typescript": "^6.0.3"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "lodash-es": "patches/lodash-es.patch"
-    },
-    "onlyBuiltDependencies": [
-      "@xxscreeps/pathfinder",
-      "isolated-vm",
-      "ivm-inspect"
-    ]
   }
 }

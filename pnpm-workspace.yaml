@@ -5,8 +5,11 @@ packages:
   - packages/redis
   - packages/xxscreeps
 
-onlyBuiltDependencies:
-  - isolated-vm
-  - ivm-inspect
+allowBuilds:
+  isolated-vm: true
+  ivm-inspect: true
+
+patchedDependencies:
+  lodash-es: patches/lodash-es.patch
 
 storeDir: ./.pnpm-store
