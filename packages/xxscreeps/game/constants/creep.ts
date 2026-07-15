@@ -1,3 +1,5 @@
+import { makeBrand } from 'xxscreeps/utility/brand.js';
+
 export const HARVEST_DEPOSIT_POWER = 1;
 
 export const POWER_LEVEL_MULTIPLY = 1000;
@@ -10,25 +12,26 @@ export const POWER_CLASS = {
 	OPERATOR: 'operator',
 };
 
-export const PWR_GENERATE_OPS = 1;
-export const PWR_OPERATE_SPAWN = 2;
-export const PWR_OPERATE_TOWER = 3;
-export const PWR_OPERATE_STORAGE = 4;
-export const PWR_OPERATE_LAB = 5;
-export const PWR_OPERATE_EXTENSION = 6;
-export const PWR_OPERATE_OBSERVER = 7;
-export const PWR_OPERATE_TERMINAL = 8;
-export const PWR_DISRUPT_SPAWN = 9;
-export const PWR_DISRUPT_TOWER = 10;
-export const PWR_DISRUPT_SOURCE = 11;
-export const PWR_SHIELD = 12;
-export const PWR_REGEN_SOURCE = 13;
-export const PWR_REGEN_MINERAL = 14;
-export const PWR_DISRUPT_TERMINAL = 15;
-export const PWR_OPERATE_POWER = 16;
-export const PWR_FORTIFY = 17;
-export const PWR_OPERATE_CONTROLLER = 18;
-export const PWR_OPERATE_FACTORY = 19;
+const pwr = makeBrand<'pwr'>();
+export const PWR_GENERATE_OPS = pwr(1);
+export const PWR_OPERATE_SPAWN = pwr(2);
+export const PWR_OPERATE_TOWER = pwr(3);
+export const PWR_OPERATE_STORAGE = pwr(4);
+export const PWR_OPERATE_LAB = pwr(5);
+export const PWR_OPERATE_EXTENSION = pwr(6);
+export const PWR_OPERATE_OBSERVER = pwr(7);
+export const PWR_OPERATE_TERMINAL = pwr(8);
+export const PWR_DISRUPT_SPAWN = pwr(9);
+export const PWR_DISRUPT_TOWER = pwr(10);
+export const PWR_DISRUPT_SOURCE = pwr(11);
+export const PWR_SHIELD = pwr(12);
+export const PWR_REGEN_SOURCE = pwr(13);
+export const PWR_REGEN_MINERAL = pwr(14);
+export const PWR_DISRUPT_TERMINAL = pwr(15);
+export const PWR_OPERATE_POWER = pwr(16);
+export const PWR_FORTIFY = pwr(17);
+export const PWR_OPERATE_CONTROLLER = pwr(18);
+export const PWR_OPERATE_FACTORY = pwr(19);
 
 export const EFFECT_INVULNERABILITY = 1001;
 export const EFFECT_COLLAPSE_TIMER = 1002;

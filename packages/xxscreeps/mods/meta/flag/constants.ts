@@ -1,13 +1,16 @@
-export const COLOR_RED = 1 as const;
-export const COLOR_PURPLE = 2 as const;
-export const COLOR_BLUE = 3 as const;
-export const COLOR_CYAN = 4 as const;
-export const COLOR_GREEN = 5 as const;
-export const COLOR_YELLOW = 6 as const;
-export const COLOR_ORANGE = 7 as const;
-export const COLOR_BROWN = 8 as const;
-export const COLOR_GREY = 9 as const;
-export const COLOR_WHITE = 10 as const;
+import { makeBrand } from 'xxscreeps/utility/brand.js';
+
+const color = makeBrand<'color'>();
+export const COLOR_RED = color(1);
+export const COLOR_PURPLE = color(2);
+export const COLOR_BLUE = color(3);
+export const COLOR_CYAN = color(4);
+export const COLOR_GREEN = color(5);
+export const COLOR_YELLOW = color(6);
+export const COLOR_ORANGE = color(7);
+export const COLOR_BROWN = color(8);
+export const COLOR_GREY = color(9);
+export const COLOR_WHITE = color(10);
 export const COLORS_ALL = [
 	COLOR_RED,
 	COLOR_PURPLE,

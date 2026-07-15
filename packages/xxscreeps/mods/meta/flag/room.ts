@@ -53,7 +53,7 @@ extend(Room, {
 				}
 			},
 			() => checkCreateFlag(flags, pos, name, color, secondaryColor, true),
-			() => {
+			(): undefined => {
 				// Save creation intent
 				intents.push({ type: 'create', params: [ name, pos!['#id'], color, secondaryColor ] });
 				// Create local flag immediately

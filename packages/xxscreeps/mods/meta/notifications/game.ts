@@ -66,7 +66,7 @@ export function checkStructureNotifyWhenAttacked(structure: Structure, notifyWhe
 Creep.prototype.notifyWhenAttacked = function(this: Creep, notifyWhenAttacked = true) {
 	return chainIntentChecks(
 		() => checkCreepNotifyWhenAttacked(this, notifyWhenAttacked),
-		() => {
+		(): undefined => {
 			if (notifyWhenAttacked === this['#noAttackNotify']) {
 				intents.save(this, 'notifyWhenAttacked', Boolean(notifyWhenAttacked));
 			}
@@ -76,7 +76,7 @@ Creep.prototype.notifyWhenAttacked = function(this: Creep, notifyWhenAttacked = 
 Structure.prototype.notifyWhenAttacked = function(this: Structure, notifyWhenAttacked: boolean) {
 	return chainIntentChecks(
 		() => checkStructureNotifyWhenAttacked(this, notifyWhenAttacked),
-		() => {
+		(): undefined => {
 			if (this instanceof OwnedStructure && notifyWhenAttacked === this['#noAttackNotify']) {
 				intents.save(this, 'notifyWhenAttacked', Boolean(notifyWhenAttacked));
 			}

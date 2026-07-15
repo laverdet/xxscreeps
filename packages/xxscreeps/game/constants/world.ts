@@ -1,3 +1,6 @@
+import { makeBrand } from 'xxscreeps/utility/brand.js';
+
+/** @public */
 export type ErrorCode =
 	typeof OK |
 	typeof ERR_NOT_OWNER |
@@ -18,32 +21,124 @@ export type ErrorCode =
 	typeof ERR_NOT_ENOUGH_EXTENSIONS |
 	typeof ERR_RCL_NOT_ENOUGH |
 	typeof ERR_GCL_NOT_ENOUGH;
-export const OK = 0 as const;
-export const ERR_NOT_OWNER = -1 as const;
-export const ERR_NO_PATH = -2 as const;
-export const ERR_NAME_EXISTS = -3 as const;
-export const ERR_BUSY = -4 as const;
-export const ERR_NOT_FOUND = -5 as const;
-export const ERR_NOT_ENOUGH_ENERGY = -6 as const;
-export const ERR_NOT_ENOUGH_RESOURCES = -6 as const;
-export const ERR_INVALID_TARGET = -7 as const;
-export const ERR_FULL = -8 as const;
-export const ERR_NOT_IN_RANGE = -9 as const;
-export const ERR_INVALID_ARGS = -10 as const;
-export const ERR_TIRED = -11 as const;
-export const ERR_NO_BODYPART = -12 as const;
-export const ERR_NOT_ENOUGH_EXTENSIONS = -6 as const;
-export const ERR_RCL_NOT_ENOUGH = -14 as const;
-export const ERR_GCL_NOT_ENOUGH = -15 as const;
 
-export const TOP = 1 as const;
-export const TOP_RIGHT = 2 as const;
-export const RIGHT = 3 as const;
-export const BOTTOM_RIGHT = 4 as const;
-export const BOTTOM = 5 as const;
-export const BOTTOM_LEFT = 6 as const;
-export const LEFT = 7 as const;
-export const TOP_LEFT = 8 as const;
+const error = makeBrand<'error'>();
+
+/**
+ * The operation has been scheduled successfully.
+ * @public
+ */
+export const OK = error(0);
+export type OK = typeof OK;
+
+/**
+ *
+ * You are not the owner of this creep or the target controller.
+ * @public
+ */
+export const ERR_NOT_OWNER = error(-1);
+
+/**
+ * No path to the target could be found.
+ * @public
+ */
+export const ERR_NO_PATH = error(-2);
+
+/**
+ * An object with the same name already exists.
+ * @public
+ */
+export const ERR_NAME_EXISTS = error(-3);
+
+/**
+ * The creep is still being spawned.
+ * @public
+ */
+export const ERR_BUSY = error(-4);
+
+/**
+ * The object required for this operation could not be found.
+ * @public
+ */
+export const ERR_NOT_FOUND = error(-5);
+
+/**
+ * The creep or structure does not have enough resources for this operation.
+ * @public
+ */
+export const ERR_NOT_ENOUGH_RESOURCES = error(-6);
+
+/**
+ * The creep or structure does not have enough energy for this operation.
+ * @public
+ */
+export const ERR_NOT_ENOUGH_ENERGY = ERR_NOT_ENOUGH_RESOURCES;
+
+/**
+ * The target is not a valid object for this operation.
+ * @public
+ */
+export const ERR_INVALID_TARGET = error(-7);
+
+/**
+ * The target cannot receive any more resources.
+ * @public
+ */
+export const ERR_FULL = error(-8);
+
+/**
+ * The target is too far away.
+ * @public
+ */
+export const ERR_NOT_IN_RANGE = error(-9);
+
+/**
+ * The arguments provided are incorrect.
+ * @public
+ */
+export const ERR_INVALID_ARGS = error(-10);
+
+/**
+ * The creep's fatigue indicator is non-zero, or the structure is still cooling down.
+ * @public
+ */
+export const ERR_TIRED = error(-11);
+
+/**
+ * The creep does not have the required body parts for this operation.
+ * @public
+ */
+
+export const ERR_NO_BODYPART = error(-12);
+
+/**
+ * The spawns and extensions in the room do not contain enough energy.
+ * @public
+ */
+export const ERR_NOT_ENOUGH_EXTENSIONS = ERR_NOT_ENOUGH_RESOURCES;
+
+/**
+ * The Room Controller Level is not enough for this operation.
+ * @public
+ */
+
+export const ERR_RCL_NOT_ENOUGH = error(-14);
+
+/**
+ * The Global Control Level is not enough for this operation.
+ * @public
+ */
+export const ERR_GCL_NOT_ENOUGH = error(-15);
+
+const dir = makeBrand<'dir'>();
+export const TOP = dir(1);
+export const TOP_RIGHT = dir(2);
+export const RIGHT = dir(3);
+export const BOTTOM_RIGHT = dir(4);
+export const BOTTOM = dir(5);
+export const BOTTOM_LEFT = dir(6);
+export const LEFT = dir(7);
+export const TOP_LEFT = dir(8);
 
 export const OBSTACLE_OBJECT_TYPES = [
 	'spawn',

@@ -1,7 +1,9 @@
+import type { Direction } from './direction.js';
 import type { ExitType } from './room/find.js';
 import type { Room } from './room/index.js';
 import type { TypeOf } from 'xxscreeps/schema/index.js';
 import type { Adapter } from 'xxscreeps/utility/astar.js';
+import type { RemoveBrand } from 'xxscreeps/utility/brand.js';
 import { build, makeUpgrader, structForPath } from 'xxscreeps/engine/schema/index.js';
 import { primitiveComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
@@ -60,7 +62,7 @@ type FindRoute = {
 };
 
 type RoomStatus = RoomClosed | NormalRoom;
-type ExitsDescriptor = Record<typeof C.TOP | typeof C.RIGHT | typeof C.BOTTOM | typeof C.LEFT, string>;
+type ExitsDescriptor = Record<RemoveBrand<typeof C.TOP | typeof C.RIGHT | typeof C.BOTTOM | typeof C.LEFT>, string>;
 
 interface RoomClosed {
 	status: 'closed';
@@ -144,10 +146,10 @@ export class GameMap {
 		if (entry) {
 			const room = parseRoomName(roomName);
 			return Fn.pipe(
-				[ C.TOP, C.RIGHT, C.BOTTOM, C.LEFT ],
+				[ C.TOP, C.RIGHT, C.BOTTOM, C.LEFT ] as RemoveBrand<Direction>[],
 				$$ => Fn.reject($$, direction => (entry.exits & (2 ** ((direction - 1) >>> 1))) === 0),
 				$$ => Fn.map($$, direction => {
-					const offsets = getOffsetsFromDirection(direction);
+					const offsets = getOffsetsFromDirection(direction as Direction);
 					return [ direction, makeRoomName(room.rx + offsets.dx, room.ry + offsets.dy) ] as const;
 				}),
 				$$ => Fn.fromEntries($$));

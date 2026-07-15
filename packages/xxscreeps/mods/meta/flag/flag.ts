@@ -66,7 +66,7 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 	setColor(color: Color, secondaryColor = color) {
 		return chainIntentChecks(
 			() => checkFlagColors(color, secondaryColor),
-			() => {
+			(): undefined => {
 				intents.push({ type: 'create', params: [
 					this.name, this.pos['#id'],
 					color, secondaryColor,
@@ -91,7 +91,7 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 		const { pos } = fetchPositionArgument(this.pos.roomName, ...args);
 		return chainIntentChecks(
 			() => checkFlagPosition(pos!),
-			() => {
+			(): undefined => {
 				intents.push({ type: 'create', params: [
 					this.name, pos!['#id'],
 					this.color, this.secondaryColor,

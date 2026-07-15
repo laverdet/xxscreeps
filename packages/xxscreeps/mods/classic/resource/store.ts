@@ -287,7 +287,7 @@ export class SingleStore<Type extends ResourceType> extends withOverlay(Store, (
 	getUsedCapacity(resourceType: Type): number;
 	getUsedCapacity(resourceType?: ResourceType): number | null;
 	getUsedCapacity(resourceType?: Type): number | null {
-		if (resourceType) {
+		if (resourceType === this['#type']) {
 			return this[resourceType];
 		} else {
 			return null;

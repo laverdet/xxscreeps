@@ -2,14 +2,18 @@ import type { RoomObject } from './object.js';
 import type { Room } from './room/index.js';
 import * as C from './constants/index.js';
 
-export function chainIntentChecks<Errors extends C.ErrorCode>(...checks: (() => Errors | undefined | void)[]): Errors {
+export function chainIntentChecks<
+	Results extends (() => unknown)[],
+>(
+	...checks: Results
+): typeof C.OK | (Results[number] extends () => infer Result ? Exclude<Result, undefined> : never) {
 	for (const check of checks) {
 		const result = check();
 		if (result !== undefined && result !== C.OK) {
-			return result;
+			return result as never;
 		}
 	}
-	return C.OK as any;
+	return C.OK;
 }
 
 export function checkRange(actor: RoomObject, target: RoomObject, range: number) {
