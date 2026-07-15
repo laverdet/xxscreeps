@@ -58,7 +58,7 @@ export const mods = await async function() {
 							// Second, try unnamed module exports [xxscreeps/mods/classic/chemistry]
 							return await resolve(defaultAsyncFileSystem, `${specifier}/index.js`, from);
 						} catch (error) {
-							throw new SuppressedError(error, suppressed);
+							throw new SuppressedError(error, suppressed, `Failed to resolve mod '${specifier}'`);
 						}
 					}
 				}();
@@ -96,7 +96,7 @@ export const mods = await async function() {
 								const resolution = await resolve(defaultAsyncFileSystem, `./${provide}.js`, url);
 								return [ provide, resolution.url.href ];
 							} catch (error) {
-								throw new SuppressedError(error, suppressed);
+								throw new SuppressedError(error, suppressed, `Failed to resolve provider '${provide}' of mod '${specifier}'`);
 							}
 						}
 					}));
