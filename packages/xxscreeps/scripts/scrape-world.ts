@@ -50,7 +50,7 @@ const argv = checkArguments({
 const dontOverwrite = argv['dont-overwrite'];
 const shardOnly = argv['shard-only'];
 const jsonSource = argv.argv[0] ??
-	new URL('../init_dist/db.json', import.meta.resolve('@screeps/launcher'));
+	new URL('../init_dist/db.json', import.meta.resolve('@xxscreeps/loki-init-db'));
 
 function forUser(userId: string | null) {
 	return userId === 'f4b532d08c3952a' ? '1' : userId;

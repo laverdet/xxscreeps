@@ -182,6 +182,7 @@ jobs:
           npm config set script-shell /bin/sh
           npm install -g pnpm
           pnpm install --frozen-lockfile --ignore-scripts
+          pnpm -C packages/loki-init-db run prepare
           npx tsc -b
 
       # Build

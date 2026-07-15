@@ -1,5 +1,6 @@
 packages:
   - packages/client
+  - packages/loki-init-db
   - packages/lodash3
   - packages/pathfinder
   - packages/redis

@@ -83,6 +83,12 @@ importers:
         specifier: 3.10.1
         version: 3.10.1
 
+  packages/loki-init-db:
+    devDependencies:
+      '@screeps/launcher':
+        specifier: 4.1.0
+        version: 4.1.0
+
   packages/pathfinder:
     dependencies:
       '@isolated-vm/experimental':
@@ -141,15 +147,15 @@ importers:
       '@loaderkit/resolve':
         specifier: ^1.0.6
         version: 1.0.6
-      '@screeps/launcher':
-        specifier: 4.1.0
-        version: 4.1.0
       '@types/convert-source-map':
         specifier: ^2.0.3
         version: 2.0.3
       '@xxscreeps/lodash3':
         specifier: workspace:*
         version: link:../lodash3
+      '@xxscreeps/loki-init-db':
+        specifier: workspace:*
+        version: link:../loki-init-db
       '@xxscreeps/pathfinder':
         specifier: 0.4.2
         version: 0.4.2

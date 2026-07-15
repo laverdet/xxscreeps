@@ -1,0 +1,22 @@
+{
+  "name": "@xxscreeps/loki-init-db",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./init_dist/db.json"
+  },
+  "files": [
+    "init_dist/db.json"
+  ],
+  "scripts": {
+    "prepare": "node ./scripts/copy-init-db.mjs"
+  },
+  "devDependencies": {
+    "@screeps/launcher": "4.1.0"
+  },
+  "homepage": "https://github.com/laverdet/xxscreeps/blob/main/packages/loki-init-db/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/screepts/xxscreeps.git"
+  }
+}
