@@ -1,8 +1,10 @@
+import type { ConstructionTraits } from './symbols.js';
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
 import { compose } from 'xxscreeps/schema/index.js';
 import { ConstructionSite } from './construction-site.js';
 import { constructionSiteShape } from './schema.js';
+import { structureFactories } from './symbols.js';
 import './creep.js';
 import './position.js';
 import './room.js';
@@ -15,6 +17,11 @@ registerGlobal(ConstructionSite);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const siteSchema = registerVariant('Room.objects', compose(constructionSiteShape, ConstructionSite));
+
+// Structure registration
+export function registerBuildableStructure(structureType: string, factory: ConstructionTraits) {
+	structureFactories.set(structureType, factory);
+}
 
 // ---
 

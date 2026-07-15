@@ -7,7 +7,7 @@ import { chainIntentChecks, checkRange, checkString, checkTarget } from 'xxscree
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, userGame } from 'xxscreeps/game/index.js';
 import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/index.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
 import { Creep, calculateCost, checkCommon, create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { SingleStore } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement, lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';

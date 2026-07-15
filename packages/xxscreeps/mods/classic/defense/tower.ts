@@ -4,7 +4,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { intents } from 'xxscreeps/game/index.js';
 import { createRoomObject } from 'xxscreeps/game/object.js';
 import { checkDestructible } from 'xxscreeps/mods/classic/combat/creep.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/index.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
 import { Creep } from 'xxscreeps/mods/classic/creep/creep.js';
 import { SingleStore, checkHasResource } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, Structure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';

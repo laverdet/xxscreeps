@@ -5,7 +5,7 @@ import { chainIntentChecks, checkString } from 'xxscreeps/game/checks.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents } from 'xxscreeps/game/index.js';
 import { cooldownTime, createRoomObject } from 'xxscreeps/game/object.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/index.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
 import { OpenStore, checkHasResource } from 'xxscreeps/mods/classic/resource/store.js';
 import { OwnedStructure, checkIsActive, checkMyStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';

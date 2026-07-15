@@ -14,7 +14,8 @@
     "node": ">=20.0.0"
   },
   "exports": {
-    "./*": "./dist/*",
+    "./*.js": "./dist/*.js",
+    "./*.mjs": "./*.mjs",
     "./loader": "./dist/config/mods.js"
   },
   "dependencies": {

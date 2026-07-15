@@ -3,7 +3,7 @@ import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
 import { isBorder } from 'xxscreeps/game/position.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/index.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
 import { Structure, checkWall } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';

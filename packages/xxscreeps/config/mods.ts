@@ -15,12 +15,14 @@ import 'xxscreeps/engine/service/signal.js';
 export interface Manifest {
 	dependencies?: string[];
 	provides: Provide | Provide[] | null;
+	types?: { js: URL; name: string; ts: URL };
 }
 
 // Types for mod `index.ts` manifest
 /** @internal */
 export interface ResolvedMod {
 	provides: Record<Provide, string>;
+	types?: Manifest['types'];
 	url: string;
 }
 
@@ -67,24 +69,25 @@ export const mods = await async function() {
 			},
 		);
 		for (const { manifest, specifier, url } of imports) {
+			const { dependencies, provides, types } = manifest;
 			if (resolved.has(specifier)) {
 				continue;
 			} else if (stack.includes(specifier)) {
 				throw new Error(`Detected cyclic dependency: ${stack.join(' -> ')} -> ${specifier}`);
 			} else {
 				stack.push(specifier);
-				await load(manifest.dependencies ?? []);
+				await load(dependencies ?? []);
 				stack.pop();
 				// Resolve providers within one mod
 				const providesSpecifiers = function() {
-					if (Array.isArray(manifest.provides)) {
-						return manifest.provides;
+					if (Array.isArray(provides)) {
+						return provides;
 					} else {
-						return manifest.provides === null ? [] : [ manifest.provides ];
+						return provides === null ? [] : [ provides ];
 					}
 				}();
 
-				const provides = Fn.fromEntries(await Fn.mapAwait(
+				const resolvedProvides = Fn.fromEntries(await Fn.mapAwait(
 					providesSpecifiers,
 					async (provide): Promise<[ Provide, string ]> => {
 						// Mods can export providers either as, for example, 'game.ts' or 'game/index.ts'
@@ -100,7 +103,11 @@ export const mods = await async function() {
 							}
 						}
 					}));
-				mods.push({ provides, url: url.href });
+				mods.push({
+					provides: resolvedProvides,
+					types,
+					url: url.href,
+				});
 				resolved.add(specifier);
 			}
 		}
@@ -119,7 +126,7 @@ if (privateIsolatedTransform !== -1) {
 	process.argv.splice(privateIsolatedTransform, 1);
 }
 const data: LoaderConfig = {
-	mods,
+	mods: mods.map(mod => ({ ...mod, types: undefined })),
 	pathfinder:
 	 rawConfig.runner?.sandbox === 'experimental'
 	 	? '@xxscreeps/pathfinder/iv'

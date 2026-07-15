@@ -3,7 +3,7 @@ import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game, intents, me } from 'xxscreeps/game/index.js';
 import { createRoomObject, requiredExpiryTime } from 'xxscreeps/game/object.js';
-import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/index.js';
+import { registerBuildableStructure } from 'xxscreeps/mods/classic/construction/game.js';
 import { OwnedStructure, checkPlacement } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { asUnion, assign } from 'xxscreeps/utility/utility.js';
