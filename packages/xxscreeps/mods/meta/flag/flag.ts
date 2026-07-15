@@ -18,10 +18,22 @@ export function acquireIntents() {
 
 export type Color = typeof C.COLORS_ALL[number];
 
+/**
+ * A flag. Flags can be used to mark particular spots in a room. Flags are visible to their owners
+ * only. You cannot have more than 10,000 flags.
+ * @public
+ * @see https://docs.screeps.com/api/#Flag
+ */
 export class Flag extends withOverlay(RoomObject, flagShape) {
 	// Flags are kind of fake objects, and don't get an id
 	declare id: never;
 
+	/**
+	 * A shorthand to `Memory.flags[flag.name]`. You can use it for quick access the flag's specific
+	 * memory data object.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Flag.memory
+	 */
 	get memory() {
 		return (Memory.get().flags ??= {})[this.name] ??= {};
 	}
@@ -33,7 +45,10 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 	}
 
 	/**
-	 * Remove the flag
+	 * Remove the flag.
+	 * @returns Always returns `OK`.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Flag.remove
 	 */
 	remove() {
 		intents.push({ type: 'remove', params: [ this.name ] });
@@ -41,9 +56,12 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 	}
 
 	/**
-	 * Set new color of the flag
-	 * @param color Primary color of the flag. One of the `COLOR_*` constants
-	 * @param secondaryColor Secondary color of the flag. One of the `COLOR_*` constants
+	 * Set new color of the flag.
+	 * @param color Primary color of the flag. One of the `COLOR_*` constants.
+	 * @param secondaryColor Secondary color of the flag. One of the `COLOR_*` constants.
+	 * @returns One of the following codes: `OK`, `ERR_INVALID_ARGS`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Flag.setColor
 	 */
 	setColor(color: Color, secondaryColor = color) {
 		return chainIntentChecks(
@@ -58,10 +76,14 @@ export class Flag extends withOverlay(RoomObject, flagShape) {
 	}
 
 	/**
-	 * Set new position of the flag
-	 * @param x X position in the same room
-	 * @param y Y position in the same room
-	 * @param target Can be a RoomObject or RoomPosition
+	 * Set new position of the flag.
+	 * @param x The X position in the room.
+	 * @param y The Y position in the room.
+	 * @param target Can be a [RoomPosition](https://docs.screeps.com/api/#RoomPosition) object or any
+	 * object containing RoomPosition.
+	 * @returns One of the following codes: `OK`, `ERR_INVALID_ARGS`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Flag.setPosition
 	 */
 	setPosition(x: number, y: number): C.ErrorCode;
 	setPosition(target: RoomObject | RoomPosition): C.ErrorCode;

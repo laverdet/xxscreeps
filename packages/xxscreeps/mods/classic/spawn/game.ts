@@ -10,6 +10,11 @@ import { StructureSpawn } from './spawn.js';
 // Add `spawns` to global `Game` object
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
+		/**
+		 * A hash containing all your spawns with spawn names as hash keys.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.spawns
+		 */
 		spawns: Record<string, StructureSpawn>;
 	}
 }
@@ -63,7 +68,18 @@ declare module 'xxscreeps/game/runtime.js' {
 declare module 'xxscreeps/game/room/index.js' {
 	interface Find { spawn: typeof find }
 	interface Room {
+		/**
+		 * Total amount of energy available in all spawns and extensions in the room.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.energyAvailable
+		 */
 		energyAvailable: number;
+
+		/**
+		 * Total amount of `energyCapacity` of all spawns and extensions in the room.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.energyCapacityAvailable
+		 */
 		energyCapacityAvailable: number;
 	}
 	interface RoomSchema { spawn: [ typeof extensionSchema, typeof spawnSchema ] }

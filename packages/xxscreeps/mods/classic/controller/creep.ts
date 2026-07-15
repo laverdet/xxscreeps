@@ -16,15 +16,24 @@ declare module 'xxscreeps/mods/classic/creep/creep.js' {
 		 * owned, it cannot be upgraded or attacked again for the next 1,000 ticks. The target has to be
 		 * at adjacent square to the creep.
 		 * @param target The target controller object.
+		 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+		 * `ERR_NOT_IN_RANGE`, `ERR_NO_BODYPART`, `ERR_TIRED`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Creep.attackController
 		 */
 		attackController: (target: StructureController) => ReturnType<typeof checkAttackController>;
 
 		/**
-		 * Claims a neutral controller under your control. Requires the `CLAIM` body part. The target has
-		 * to be at adjacent square to the creep. You need to have the corresponding Global Control
-		 * Level in order to claim a new room. If you don't have enough GCL, consider reserving this
-		 * room instead. Learn more
+		 * Claims a neutral controller under your control. Requires the `CLAIM` body part. The target
+		 * has to be at adjacent square to the creep. You need to have the corresponding Global Control
+		 * Level in order to claim a new room. If you don't have enough GCL, consider
+		 * [reserving](https://docs.screeps.com/api/#Creep.reserveController) this room instead.
+		 * [Learn more](https://docs.screeps.com/control.html#Global-Control-Level)
 		 * @param target The target controller object.
+		 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+		 * `ERR_FULL`, `ERR_NOT_IN_RANGE`, `ERR_NO_BODYPART`, `ERR_GCL_NOT_ENOUGH`, `ERR_ACCESS_DENIED`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Creep.claimController
 		 */
 		claimController: (target: StructureController) => ReturnType<typeof checkClaimController>;
 
@@ -32,6 +41,10 @@ declare module 'xxscreeps/mods/classic/creep/creep.js' {
 		 * Add one more available safe mode activation to a room controller. The creep has to be at
 		 * adjacent square to the target room controller and have 1000 ghodium resource.
 		 * @param target The target room controller.
+		 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`,
+		 * `ERR_NOT_ENOUGH_RESOURCES`, `ERR_INVALID_TARGET`, `ERR_NOT_IN_RANGE`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Creep.generateSafeMode
 		 */
 		generateSafeMode: (target: StructureController) => ReturnType<typeof checkGenerateSafeMode>;
 
@@ -42,6 +55,10 @@ declare module 'xxscreeps/mods/classic/creep/creep.js' {
 		 * reservation period to maintain is 5,000 ticks. The target has to be at adjacent square to the
 		 * creep.
 		 * @param target The target controller object to be reserved.
+		 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+		 * `ERR_NOT_IN_RANGE`, `ERR_NO_BODYPART`, `ERR_ACCESS_DENIED`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Creep.reserveController
 		 */
 		reserveController: (target: StructureController) => ReturnType<typeof checkReserveController>;
 
@@ -52,6 +69,10 @@ declare module 'xxscreeps/mods/classic/creep/creep.js' {
 		 * remove the sign.
 		 * @param target The target controller object to be signed.
 		 * @param message The sign text. The string is cut off after 100 characters.
+		 * @returns One of the following codes: `OK`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+		 * `ERR_NOT_IN_RANGE`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Creep.signController
 		 */
 		signController: (target: StructureController, message: string) => ReturnType<typeof checkSignController>;
 
@@ -63,11 +84,16 @@ declare module 'xxscreeps/mods/classic/creep/creep.js' {
 		 * A fully upgraded level 8 controller can't be upgraded over 15 energy units per tick
 		 * regardless of creeps abilities. The cumulative effect of all the creeps performing
 		 * `upgradeController` in the current tick is taken into account. This limit can be increased by
-		 * using ghodium mineral boost.
+		 * using [ghodium mineral boost](https://docs.screeps.com/resources.html).
 		 *
-		 * Upgrading the controller raises its `ticksToDowngrade` timer by 100. The timer must be
-		 * full in order for controller to be levelled up.
-		 * @param target The target controller object to be upgraded
+		 * Upgrading the controller raises its `ticksToDowngrade` timer by 100. The timer must be full
+		 * in order for controller to be levelled up.
+		 * @param target The target controller object to be upgraded.
+		 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`,
+		 * `ERR_NOT_ENOUGH_RESOURCES`, `ERR_INVALID_TARGET`, `ERR_NOT_IN_RANGE`, `ERR_NO_BODYPART`,
+		 * `ERR_ACCESS_DENIED`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Creep.upgradeController
 		 */
 		upgradeController: (target: StructureController) => ReturnType<typeof checkUpgradeController>;
 	}

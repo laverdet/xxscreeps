@@ -64,28 +64,45 @@ function crunch(payload: unknown) {
 	}
 }
 
+/**
+ * `RawMemory` object allows to implement your own memory stringifier instead of built-in serializer
+ * based on `JSON.stringify`. It also allows to request up to 10 MB of additional memory using
+ * asynchronous memory segments feature. You can also access memory segments of other players using
+ * methods below.
+ * @public
+ * @see https://docs.screeps.com/api/#RawMemory
+ */
 export const RawMemory = {
 	/** @deprecated */
 	_parsed: undefined as unknown,
 
 	/**
 	 * An object with asynchronous memory segments available on this tick. Each object key is the
-	 * segment ID with data in string values. Use `setActiveSegments` to fetch segments on the next
-	 * tick. Segments data is saved automatically in the end of the tick. The maximum size per segment
-	 * is 100 KB.
+	 * segment ID with data in string values. Use
+	 * [`setActiveSegments`](https://docs.screeps.com/api/#RawMemory.setActiveSegments) to fetch
+	 * segments on the next tick. Segments data is saved automatically in the end of the tick. The
+	 * maximum size per segment is 100 KB.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RawMemory.segments
 	 */
 	segments: {} as Record<string, string>,
 
 	/**
-	 * An object with a memory segment of another user available on this tick. Use
-	 * `setActiveForeignSegment` to fetch this. The object contains the following keys: `username`,
-	 * `id`, and `data`. The segment is only available if the target user has marked it public via
-	 * `setPublicSegments`.
+	 * An object with a memory segment of another player available on this tick. Use
+	 * [`setActiveForeignSegment`](https://docs.screeps.com/api/#RawMemory.setActiveForeignSegment) to
+	 * fetch segments on the next tick. The object consists of the following properties: `username` —
+	 * another player's name, `id` — the ID of the requested memory segment, and `data` — the segment
+	 * contents.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RawMemory.foreignSegment
 	 */
 	foreignSegment: undefined as ForeignSegment | undefined,
 
 	/**
 	 * Get a raw string representation of the `Memory` object.
+	 * @returns Returns a string value.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RawMemory.get
 	 */
 	get() {
 		return string ??= typedArrayToString(memory.subarray(0, memoryLength));
@@ -94,6 +111,8 @@ export const RawMemory = {
 	/**
 	 * Set new `Memory` value.
 	 * @param value New memory value as a string.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RawMemory.set
 	 */
 	set(value: string) {
 		// `RawMemory._parsed` is reset, `value` becomes next canonical string.
@@ -110,10 +129,12 @@ export const RawMemory = {
 
 	/**
 	 * Request memory segments using the list of their IDs. Memory segments will become available on
-	 * the next tick in segments object.
+	 * the next tick in [`segments`](https://docs.screeps.com/api/#RawMemory.segments) object.
 	 * @param ids An array of segment IDs. Each ID should be a number from 0 to 99. Maximum 10
-	 * segments can be active at the same time. Subsequent calls of setActiveSegments override
+	 * segments can be active at the same time. Subsequent calls of `setActiveSegments` override
 	 * previous ones.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RawMemory.setActiveSegments
 	 */
 	setActiveSegments(ids: number[]) {
 		if (!Array.isArray(ids) || !ids.every(isValidSegmentId)) {
@@ -130,11 +151,16 @@ export const RawMemory = {
 
 	/**
 	 * Request a memory segment of another user. The segment should be marked by its owner as public
-	 * using `setPublicSegments`. The segment data will become available on the next tick in
-	 * `foreignSegment` object. You can only have access to one foreign segment at the same time.
+	 * using [`setPublicSegments`](https://docs.screeps.com/api/#RawMemory.setPublicSegments). The
+	 * segment data will become available on the next tick in
+	 * [`foreignSegment`](https://docs.screeps.com/api/#RawMemory.foreignSegment) object. You can only
+	 * have access to one foreign segment at the same time.
 	 * @param username The name of another user. Pass `null` to clear the foreign segment.
 	 * @param id The ID of the requested segment from 0 to 99. If undefined, the user's default public
-	 * segment is requested as set by setDefaultPublicSegment.
+	 * segment is requested as set by
+	 * [`setDefaultPublicSegment`](https://docs.screeps.com/api/#RawMemory.setDefaultPublicSegment).
+	 * @public
+	 * @see https://docs.screeps.com/api/#RawMemory.setActiveForeignSegment
 	 */
 	setActiveForeignSegment(username: string | null, id?: number) {
 		if (username === null) {
@@ -149,9 +175,13 @@ export const RawMemory = {
 
 	/**
 	 * Set the specified segment as your default public segment. It will be returned if no `id`
-	 * parameter is passed to `setActiveForeignSegment` by another user.
+	 * parameter is passed to
+	 * [`setActiveForeignSegment`](https://docs.screeps.com/api/#RawMemory.setActiveForeignSegment) by
+	 * another user.
 	 * @param id The ID of the memory segment from 0 to 99. Pass `null` to remove your default public
 	 * segment.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RawMemory.setDefaultPublicSegment
 	 */
 	setDefaultPublicSegment(id: number | null) {
 		if (id !== null && !isValidSegmentId(id)) {
@@ -161,9 +191,12 @@ export const RawMemory = {
 	},
 
 	/**
-	 * Set specified segments as public. Other users will be able to request access to them using `setActiveForeignSegment`.
+	 * Set specified segments as public. Other users will be able to request access to them using
+	 * [`setActiveForeignSegment`](https://docs.screeps.com/api/#RawMemory.setActiveForeignSegment).
 	 * @param ids An array of segment IDs. Each ID should be a number from 0 to 99. Subsequent calls
 	 * of `setPublicSegments` override previous ones.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RawMemory.setPublicSegments
 	 */
 	setPublicSegments(ids: number[]) {
 		if (!Array.isArray(ids)) {

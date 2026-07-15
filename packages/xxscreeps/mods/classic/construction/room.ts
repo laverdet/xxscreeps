@@ -33,12 +33,33 @@ declare module 'xxscreeps/game/room/index.js' {
 declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		/**
-		 * Create new `ConstructionSite` at the specified location.
+		 * Create new [`ConstructionSite`](https://docs.screeps.com/api/#ConstructionSite) at the
+		 * specified location.
+		 * @param x The X position.
+		 * @param y The Y position.
 		 * @param structureType One of the `STRUCTURE_*` constants.
-		 * @param name The name of the structure, for structures that support it (currently only spawns).
+		 * @param name The name of the structure, for structures that support it (currently only
+		 * spawns). The name length limit is 100 characters.
+		 * @returns One of the following codes: `OK`, `ERR_INVALID_TARGET`, `ERR_FULL`,
+		 * `ERR_INVALID_ARGS`, `ERR_NOT_OWNER`, `ERR_RCL_NOT_ENOUGH`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.createConstructionSite
 		 */
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		createConstructionSite(x: number, y: number, structureType: ConstructibleStructureType, name?: string): number;
+		/**
+		 * Create new [`ConstructionSite`](https://docs.screeps.com/api/#ConstructionSite) at the
+		 * specified location.
+		 * @param pos Can be a [`RoomPosition`](https://docs.screeps.com/api/#RoomPosition) object or
+		 * any object containing [`RoomPosition`](https://docs.screeps.com/api/#RoomPosition).
+		 * @param structureType One of the `STRUCTURE_*` constants.
+		 * @param name The name of the structure, for structures that support it (currently only
+		 * spawns). The name length limit is 100 characters.
+		 * @returns One of the following codes: `OK`, `ERR_INVALID_TARGET`, `ERR_FULL`,
+		 * `ERR_INVALID_ARGS`, `ERR_NOT_OWNER`, `ERR_RCL_NOT_ENOUGH`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.createConstructionSite
+		 */
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		createConstructionSite(pos: RoomPosition, structureType: ConstructibleStructureType, name?: string): number;
 	}

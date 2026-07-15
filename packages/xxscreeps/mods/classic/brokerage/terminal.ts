@@ -15,24 +15,37 @@ import { terminalShape } from './schema.js';
 /**
  * Sends any resources to a Terminal in another room. The destination Terminal can belong to any
  * player. Each transaction requires additional energy (regardless of the transfer resource type)
- * that can be calculated using `Game.market.calcTransactionCost` method. For example, sending 1000
- * mineral units from W0N0 to W10N5 will consume 742 energy units. You can track your incoming and
- * outgoing transactions using the `Game.market` object. Only one Terminal per room is allowed that
- * can be addressed by `Room.terminal` property.
+ * that can be calculated using
+ * [`Game.market.calcTransactionCost`](https://docs.screeps.com/api/#Game.market.calcTransactionCost)
+ * method. For example, sending 1000 mineral units from W0N0 to W10N5 will consume 742 energy units.
+ * You can track your incoming and outgoing transactions using the
+ * [`Game.market`](https://docs.screeps.com/api/#Game.market) object. Only one Terminal per room is
+ * allowed that can be addressed by [`Room.terminal`](https://docs.screeps.com/api/#Room.terminal)
+ * property.
  *
  * Terminals are used in the [Market system](https://docs.screeps.com/market.html).
+ * @public
+ * @see https://docs.screeps.com/api/#StructureTerminal
  */
 export class StructureTerminal extends withOverlay(OwnedStructure, terminalShape) {
 	/**
 	 * The remaining amount of ticks while this terminal cannot be used to make
-	 * `StructureTerminal.send` or `Game.market.deal` calls.
+	 * [`StructureTerminal.send`](https://docs.screeps.com/api/#StructureTerminal.send) or
+	 * [`Game.market.deal`](https://docs.screeps.com/api/#Game.market.deal) calls.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureTerminal.cooldown
 	 */
 	@enumerable get cooldown() { return cooldownTime(this['#cooldownTime']); }
 
 	override get hitsMax() { return C.TERMINAL_HITS; }
 	override get structureType() { return C.STRUCTURE_TERMINAL; }
 
-	/** @deprecated  */
+	/**
+	 * An alias for [`.store.getCapacity()`](https://docs.screeps.com/api/#Store.getCapacity).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureTerminal.storeCapacity
+	 */
 	get storeCapacity() { return this.store.getCapacity(); }
 
 	/**
@@ -42,6 +55,10 @@ export class StructureTerminal extends withOverlay(OwnedStructure, terminalShape
 	 * @param destination The name of the target room. You don't have to gain visibility in this room.
 	 * @param description The description of the transaction. It is visible to the recipient. The
 	 * maximum length is 100 characters.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NOT_ENOUGH_RESOURCES`,
+	 * `ERR_INVALID_ARGS`, `ERR_TIRED`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureTerminal.send
 	 */
 	send(resourceType: ResourceType, amount: number, destination: string, description?: string) {
 		return chainIntentChecks(

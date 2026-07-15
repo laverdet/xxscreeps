@@ -8,19 +8,79 @@ import { OwnedStructure, checkMyStructure } from 'xxscreeps/mods/classic/structu
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { controllerShape } from './schema.js';
 
+/**
+ * Claim this structure to take control over the room. The controller structure cannot be damaged or
+ * destroyed.
+ *
+ * It can be addressed by [`Room.controller`](https://docs.screeps.com/api/#Room.controller)
+ * property.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureController
+ */
 export class StructureController extends withOverlay(OwnedStructure, controllerShape) {
 	/** @internal */
 	declare upgradePowerThisTick?: number;
+
+	/**
+	 * Current controller level, from 0 to 8.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.level
+	 */
 	@enumerable get level() { return this.room['#level']; }
+
+	/**
+	 * The current progress of upgrading the controller to the next level.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.progress
+	 */
 	@enumerable get progress() { return this.level > 0 ? this['#progress'] : undefined; }
+
+	/**
+	 * The progress needed to reach the next level.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.progressTotal
+	 */
 	@enumerable get progressTotal() { return this.level > 0 && this.level < 8 ? C.CONTROLLER_LEVELS[this.level] : undefined; }
+
+	/**
+	 * How many ticks of safe mode remaining, or undefined.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.safeMode
+	 */
 	@enumerable get safeMode() { return untilTime(this.room['#safeModeUntil']); }
+
+	/**
+	 * During this period in ticks new safe mode activations will be blocked, undefined if cooldown is
+	 * inactive.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.safeModeCooldown
+	 */
 	@enumerable get safeModeCooldown() { return untilTime(this['#safeModeCooldownTime']); }
+
+	/**
+	 * The amount of game ticks when this controller will lose one level. This timer is set to 50% on
+	 * level upgrade or downgrade, and it can be increased by using
+	 * [`Creep.upgradeController`](https://docs.screeps.com/api/#Creep.upgradeController). Must be
+	 * full to upgrade the controller to the next level.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.ticksToDowngrade
+	 */
 	@enumerable get ticksToDowngrade() { return optionalExpiryTime(this['#downgradeTime']); }
+
+	/**
+	 * The amount of game ticks while this controller cannot be upgraded due to attack. Safe mode is
+	 * also unavailable during this period.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.upgradeBlocked
+	 */
 	@enumerable get upgradeBlocked() { return untilTime(this['#upgradeBlockedUntil']); }
 
 	/**
-	 * An object with the controller reservation info if present
+	 * An object with the controller reservation info if present: `username` — the name of a player
+	 * who reserved this controller; `ticksToEnd` — the amount of game ticks when the reservation will
+	 * end.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.reservation
 	 */
 	@enumerable get reservation() {
 		const ticksToEnd = optionalExpiryTime(this['#reservationEndTime']);
@@ -33,7 +93,11 @@ export class StructureController extends withOverlay(OwnedStructure, controllerS
 	}
 
 	/**
-	 * An object with the controller sign info if present
+	 * An object with the controller sign info if present: `username` — the name of a player who
+	 * signed this controller; `text` — the sign text; `time` — the sign time in game ticks;
+	 * `datetime` — the sign real date.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.sign
 	 */
 	@enumerable get sign() {
 		const sign = this.room['#sign'];
@@ -47,13 +111,38 @@ export class StructureController extends withOverlay(OwnedStructure, controllerS
 		return value;
 	}
 
+	/**
+	 * Applied effects, an array of objects with the following properties: `effect` (effect ID of the
+	 * applied effect, can be either natural effect ID or Power ID), `level` (power level of the
+	 * applied effect, absent if the effect is not a Power effect), and `ticksRemaining` (how many
+	 * ticks will the effect last).
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.effects
+	 */
 	@enumerable override get effects(): RoomObjectEffect[] | undefined {
 		const ticksRemaining = optionalExpiryTime(this['#upgradeInvulnerableUntil']);
 		return ticksRemaining === undefined ? undefined : [ { effect: C.EFFECT_INVULNERABILITY, ticksRemaining } ];
 	}
 
+	/**
+	 * The controller structure cannot be damaged or destroyed, so this is always undefined.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.hits
+	 */
 	override get hits() { return undefined; }
+
+	/**
+	 * The controller structure cannot be damaged or destroyed, so this is always undefined.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.hitsMax
+	 */
 	override get hitsMax() { return undefined; }
+
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.structureType
+	 */
 	override get structureType() { return C.STRUCTURE_CONTROLLER; }
 	override get '#extraUsers'() {
 		const sign = this.room['#sign'];
@@ -62,6 +151,10 @@ export class StructureController extends withOverlay(OwnedStructure, controllerS
 
 	/**
 	 * Activate safe mode if available.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`,
+	 * `ERR_NOT_ENOUGH_RESOURCES`, `ERR_TIRED`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.activateSafeMode
 	 */
 	activateSafeMode() {
 		return chainIntentChecks(
@@ -90,6 +183,9 @@ export class StructureController extends withOverlay(OwnedStructure, controllerS
 
 	/**
 	 * Make your claimed controller neutral again.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.unclaim
 	 */
 	unclaim() {
 		return chainIntentChecks(
@@ -110,6 +206,11 @@ export class StructureController extends withOverlay(OwnedStructure, controllerS
 
 declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
+		/**
+		 * The Controller structure of this room, if present, otherwise undefined.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.controller
+		 */
 		controller?: StructureController | undefined;
 	}
 }

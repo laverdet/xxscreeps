@@ -23,7 +23,12 @@ hooks.register('runtimeConnector', {
 // Add `powerCreeps` to the global `Game` object, keyed by name (including unspawned creeps).
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
-		/** A hash containing all your power creeps with their names as hash keys. */
+		/**
+		 * A hash containing all your power creeps with their names as hash keys. Even power creeps not
+		 * spawned in the world can be accessed here.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.powerCreeps
+		 */
 		powerCreeps: Record<string, PowerCreep>;
 	}
 }

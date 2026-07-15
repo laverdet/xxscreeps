@@ -39,9 +39,12 @@ export interface PositionLike {
 const RawPositionId = Symbol('defaultRoomPosition');
 
 /**
- * An object representing the specified position in the room. Every `RoomObject` in a room contains
- * a `RoomPosition` as the `pos` property. A position object for a custom location can be obtained
- * using the `Room.getPositionAt` method or using the constructor.
+ * An object representing the specified position in the room. Every `RoomObject` in the room
+ * contains `RoomPosition` as the `pos` property. The position object of a custom location can be
+ * obtained using the [`Room.getPositionAt`](https://docs.screeps.com/api/#Room.getPositionAt)
+ * method or using the constructor.
+ * @public
+ * @see https://docs.screeps.com/api/#RoomPosition
  */
 export class RoomPosition {
 	declare private '#id': number;
@@ -50,10 +53,12 @@ export class RoomPosition {
 	constructor(xx: typeof RawPositionId, id: number, roomName?: unknown);
 
 	/**
-	 * You can create new RoomPosition object using its constructor.
+	 * You can create new `RoomPosition` object using its constructor.
 	 * @param xx X position in the room.
 	 * @param yy Y position in the room.
 	 * @param roomName The room name.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.constructor
 	 */
 	constructor(xx: number, yy: number, roomName: string);
 
@@ -76,6 +81,8 @@ export class RoomPosition {
 
 	/**
 	 * The name of the room.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.roomName
 	 */
 	@enumerable get roomName() {
 		return makeRoomNameFromId(this['#id'] & 0xffff);
@@ -83,6 +90,8 @@ export class RoomPosition {
 
 	/**
 	 * X position in the room.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.x
 	 */
 	// eslint-disable-next-line id-length
 	@enumerable get x() {
@@ -91,6 +100,8 @@ export class RoomPosition {
 
 	/**
 	 * Y position in the room.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.y
 	 */
 	// eslint-disable-next-line id-length
 	@enumerable get y() {
@@ -147,6 +158,15 @@ export class RoomPosition {
 		return new RoomPosition(RawPositionId, pos);
 	}
 
+	/**
+	 * Get linear direction to the specified position.
+	 * @param x X position in the room.
+	 * @param y Y position in the room.
+	 * @param pos Can be a `RoomPosition` object or any object containing `RoomPosition`.
+	 * @returns A number representing one of the direction constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.getDirectionTo
+	 */
 	getDirectionTo(x: number, y: number): Direction;
 	getDirectionTo(pos: RoomObject | RoomPosition): Direction;
 	getDirectionTo(...args: [number, number] | [RoomObject | RoomPosition]) {
@@ -160,10 +180,13 @@ export class RoomPosition {
 	}
 
 	/**
-	 * Get linear range to the specified position
-	 * @param x X position in the same room
-	 * @param y Y position in the same room
-	 * @param target Can be a RoomObject or RoomPosition
+	 * Get linear range to the specified position.
+	 * @param x X position in the room.
+	 * @param y Y position in the room.
+	 * @param target Can be a `RoomPosition` object or any object containing `RoomPosition`.
+	 * @returns A number of squares to the given position.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.getRangeTo
 	 */
 	getRangeTo(x: number, y: number): number;
 	getRangeTo(target: RoomObject | RoomPosition): number;
@@ -176,10 +199,13 @@ export class RoomPosition {
 	}
 
 	/**
-	 * Check whether this position is the same as the specified position
-	 * @param x X position in the same room
-	 * @param y Y position in the same room
-	 * @param target Can be a RoomObject or RoomPosition
+	 * Check whether this position is the same as the specified position.
+	 * @param x X position in the room.
+	 * @param y Y position in the room.
+	 * @param target Can be a `RoomPosition` object or any object containing `RoomPosition`.
+	 * @returns A boolean value.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.isEqualTo
 	 */
 	isEqualTo(x: number, y: number): boolean;
 	isEqualTo(target: RoomObject | RoomPosition): boolean;
@@ -190,10 +216,13 @@ export class RoomPosition {
 
 	/**
 	 * Check whether this position is on the adjacent square to the specified position. The same as
-	 * `position.inRangeTo(target, 1)`
-	 * @param x X position in the same room
-	 * @param y Y position in the same room
-	 * @param target Can be a RoomObject or RoomPosition
+	 * `inRangeTo(target, 1)`.
+	 * @param x X position in the room.
+	 * @param y Y position in the room.
+	 * @param target Can be a `RoomPosition` object or any object containing `RoomPosition`.
+	 * @returns A boolean value.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.isNearTo
 	 */
 	isNearTo(x: number, y: number): boolean;
 	isNearTo(target: RoomObject | RoomPosition): boolean;
@@ -203,10 +232,13 @@ export class RoomPosition {
 
 	/**
 	 * Check whether this position is in the given range of another position.
-	 * @param x X position in the same room
-	 * @param y Y position in the same room
-	 * @param target Can be a RoomObject or RoomPosition
-	 * @param range The range distance
+	 * @param x X position in the same room.
+	 * @param y Y position in the same room.
+	 * @param target The target position.
+	 * @param range The range distance.
+	 * @returns A boolean value.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.inRangeTo
 	 */
 	inRangeTo(x: number, y: number, range: number): boolean;
 	inRangeTo(target: RoomObject | RoomPosition, range: number): boolean;
@@ -220,11 +252,20 @@ export class RoomPosition {
 	}
 
 	/**
-	 * Find an object with the shortest path from the given position
-	 * @param search One of the `FIND_*` constants. See `Room.find`.
-	 * @param search An array of RoomObjects or RoomPosition objects that the search should be
+	 * Find an object with the shortest path from the given position. Uses
+	 * [Jump Point Search algorithm](https://en.wikipedia.org/wiki/Jump_point_search) and
+	 * [Dijkstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm).
+	 * @param search One of the `FIND_*` constants. See
+	 * [Room.find](https://docs.screeps.com/api/#Room.find). Or: an array of room's objects or
+	 * [RoomPosition](https://docs.screeps.com/api/#RoomPosition) objects that the search should be
 	 * executed against.
-	 * @params options See `Room.find`
+	 * @param options An object containing pathfinding options (see
+	 * [Room.findPath](https://docs.screeps.com/api/#Room.findPath)), or a `filter` property: only the
+	 * objects which pass the filter using the [Lodash.filter](https://lodash.com/docs#filter) method
+	 * will be used.
+	 * @returns The closest object if found, null otherwise.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.findClosestByPath
 	 */
 	findClosestByPath<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
 		search: Type, options?: FindClosestByPathOptions<PositionFindType<Type>>
@@ -254,11 +295,16 @@ export class RoomPosition {
 	}
 
 	/**
-	 * Find an object with the shortest linear distance from the given position
-	 * @param search One of the `FIND_*` constants. See `Room.find`.
-	 * @param search An array of RoomObjects or RoomPosition objects that the search should be
+	 * Find an object with the shortest linear distance from the given position.
+	 * @param search One of the `FIND_*` constants. See
+	 * [Room.find](https://docs.screeps.com/api/#Room.find). Or: an array of room's objects or
+	 * [RoomPosition](https://docs.screeps.com/api/#RoomPosition) objects that the search should be
 	 * executed against.
-	 * @param options See `Room.find`
+	 * @param options An object containing a `filter` property: only the objects which pass the filter
+	 * using the [Lodash.filter](https://lodash.com/docs#filter) method will be used.
+	 * @returns The closest object if found, null otherwise.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.findClosestByRange
 	 */
 	findClosestByRange<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
 		search: Type,
@@ -279,12 +325,16 @@ export class RoomPosition {
 	}
 
 	/**
-	 * Find all objects in the specified linear range
-	 * @param search One of the `FIND_*` constants. See `Room.find`.
-	 * @param search An array of RoomObjects or RoomPosition objects that the search should be
+	 * Find all objects in the specified linear range.
+	 * @param search One of the `FIND_*` constants. See
+	 * [Room.find](https://docs.screeps.com/api/#Room.find). Or: an array of room's objects or
+	 * [RoomPosition](https://docs.screeps.com/api/#RoomPosition) objects that the search should be
 	 * executed against.
-	 * @param range The range distance
-	 * @param options See `Room.find`
+	 * @param range The range distance.
+	 * @param options See [Room.find](https://docs.screeps.com/api/#Room.find).
+	 * @returns An array with the objects found.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.findInRange
 	 */
 	findInRange<Type extends FindConstants | (RoomObject | RoomPosition)[]>(
 		search: Type,
@@ -308,12 +358,19 @@ export class RoomPosition {
 	}
 
 	/**
-	 * Find an optimal path to the specified position using Jump Point Search algorithm. This method
-	 * is a shorthand for Room.findPath. If the target is in another room, then the corresponding exit
-	 * will be used as a target.
-	 * @param x X position in the room
-	 * @param y Y position in the room
-	 * @param pos Can be a RoomPosition object or any object containing RoomPosition
+	 * Find an optimal path to the specified position using
+	 * [Jump Point Search algorithm](https://en.wikipedia.org/wiki/Jump_point_search). This method is
+	 * a shorthand for [Room.findPath](https://docs.screeps.com/api/#Room.findPath). If the target is
+	 * in another room, then the corresponding exit will be used as a target.
+	 * @param x X position in the room.
+	 * @param y Y position in the room.
+	 * @param target Can be a `RoomPosition` object or any object containing `RoomPosition`.
+	 * @param options An object containing pathfinding options flags (see
+	 * [Room.findPath](https://docs.screeps.com/api/#Room.findPath) for more details).
+	 * @returns An array with path steps in the following format:
+	 * `[ { x: 10, y: 5, dx: 1, dy: 0, direction: RIGHT }, ... ]`
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.findPathTo
 	 */
 	findPathTo(x: number, y: number, options: FindPathOptions & { serialize?: false }): RoomPath;
 	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions & { serialize?: false }): RoomPath;
@@ -327,15 +384,23 @@ export class RoomPosition {
 	}
 
 	/**
-	 * Get an object with the given type at the specified room position
-	 * @param type One of the `LOOK_*` constants
+	 * Get an object with the given type at the specified room position.
+	 * @param type One of the `LOOK_*` constants.
+	 * @returns An array of objects of the given type at the specified position if found.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.lookFor
 	 */
 	lookFor(type: LookConstants) {
 		return fetchRoom(this.roomName).lookForAt(type, this);
 	}
 
 	/**
-	 * Get the list of objects at this room position.
+	 * Get the list of objects at the specified room position.
+	 * @returns An array with objects at the specified position in the following format: `[ { type:
+	 * 'creep', creep: {...} }, { type: 'structure', structure: {...} }, ..., { type: 'terrain',
+	 * terrain: 'swamp' } ]`
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomPosition.look
 	 */
 	look() {
 		return fetchRoom(this.roomName).lookAt(this);

@@ -13,7 +13,19 @@ export const nukeShape = declare('Nuke', struct(roomObjectShape, {
 /** @internal */
 export const nukerShape = declare('Nuker', struct(ownedStructureShape, {
 	...variant('nuker'),
+
+	/**
+	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureNuker.hits
+	 */
 	hits: 'int32',
+
+	/**
+	 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains cargo of this structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureNuker.store
+	 */
 	store: nukerStoreFormat,
 	'#cooldownTime': 'int32',
 }));

@@ -10,10 +10,40 @@ import { assign } from 'xxscreeps/utility/utility.js';
 import { containerShape } from './schema.js';
 import { OpenStore } from './store.js';
 
+/**
+ * A small container that can be used to store resources. This is a walkable structure. All dropped
+ * resources automatically goes to the container at the same tile.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureContainer
+ */
 export class StructureContainer extends withOverlay(Structure, containerShape) {
+	/**
+	 * The amount of game ticks when this container will lose some hit points.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureContainer.ticksToDecay
+	 */
 	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
+
+	/**
+	 * Alias for `.store.getCapacity()`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureContainer.storeCapacity
+	 */
 	get storeCapacity() { return this.store.getCapacity(); }
+
+	/**
+	 * The maximum amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureContainer.hitsMax
+	 */
 	override get hitsMax() { return C.CONTAINER_HITS; }
+
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureContainer.structureType
+	 */
 	override get structureType() { return C.STRUCTURE_CONTAINER; }
 
 	override '#checkObstacle'() {

@@ -42,6 +42,11 @@ hooks.register('gameInitializer', Game => Game.structures = Object.create(null))
 
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
+		/**
+		 * A hash containing all your structures with structure id as hash keys.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.structures
+		 */
 		structures: Record<string, AnyStructure>;
 	}
 }

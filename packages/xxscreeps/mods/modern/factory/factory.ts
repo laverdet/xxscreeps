@@ -11,20 +11,58 @@ import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { factoryShape } from './schema.js';
 
+/**
+ * Produces trade commodities from base minerals and other commodities. Learn more about commodities
+ * from [this article](https://docs.screeps.com/resources.html#Commodities).
+ * @public
+ * @see https://docs.screeps.com/api/#StructureFactory
+ */
 export class StructureFactory extends withOverlay(OwnedStructure, factoryShape) {
+	/**
+	 * The amount of game ticks the factory has to wait until the next production is possible.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureFactory.cooldown
+	 */
 	@enumerable get cooldown() { return cooldownTime(this['#cooldownTime']); }
+
+	/**
+	 * The factory's level. Can be set by applying the `PWR_OPERATE_FACTORY` power to a newly built
+	 * factory. Once set, the level cannot be changed.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureFactory.level
+	 */
 	@enumerable get level() { return this['#level'] === 0 ? undefined : this['#level']; }
 
-	/** @deprecated */
+	/**
+	 * An alias for `.store.getCapacity()`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureFactory.storeCapacity
+	 */
 	@enumerable get storeCapacity() { return this.store.getCapacity(); }
 
+	/**
+	 * The total amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureFactory.hitsMax
+	 */
 	override get hitsMax() { return C.FACTORY_HITS; }
+
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureFactory.structureType
+	 */
 	override get structureType() { return C.STRUCTURE_FACTORY; }
 
 	/**
-	 * Produces the specified commodity. All the required components should be available in the
-	 * factory store.
+	 * Produces the specified commodity. All ingredients should be available in the factory store.
 	 * @param resourceType One of the `RESOURCE_*` constants.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_RCL_NOT_ENOUGH`,
+	 * `ERR_NOT_ENOUGH_RESOURCES`, `ERR_INVALID_ARGS`, `ERR_INVALID_TARGET`, `ERR_TIRED`, `ERR_BUSY`,
+	 * `ERR_FULL`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureFactory.produce
 	 */
 	produce(resourceType: ResourceType) {
 		return chainIntentChecks(

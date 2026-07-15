@@ -20,6 +20,11 @@ const siteSchema = registerVariant('Room.objects', compose(constructionSiteShape
 
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
+		/**
+		 * A hash containing all your construction sites with their id as hash keys.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.constructionSites
+		 */
 		constructionSites: Record<string, ConstructionSite>;
 	}
 }

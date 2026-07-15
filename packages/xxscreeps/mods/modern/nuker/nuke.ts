@@ -5,11 +5,24 @@ import { withOverlay } from 'xxscreeps/schema/index.js';
 import { nukeShape } from './schema.js';
 
 /**
- * A nuke landing in this room. Created by `StructureNuker.launchNuke`. Visible to
- * the target room's owner; lands `NUKE_LAND_TIME` ticks after launch.
+ * A nuke landing position. This object cannot be removed or modified. You can find incoming nukes
+ * in the room using the `FIND_NUKES` constant.
+ * @public
+ * @see https://docs.screeps.com/api/#Nuke
  */
 export class Nuke extends withOverlay(RoomObject, nukeShape) {
+	/**
+	 * The name of the room where this nuke has been launched from.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Nuke.launchRoomName
+	 */
 	@enumerable get launchRoomName() { return this['#launchRoomName']; }
+
+	/**
+	 * The remaining landing time.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Nuke.timeToLand
+	 */
 	@enumerable get timeToLand() { return requiredExpiryTime(this['#landTime'] + 1) - 1; }
 
 	override get '#lookType'() { return C.LOOK_NUKES; }

@@ -9,9 +9,28 @@ import { structureFactories } from './symbols.js';
 /** @internal */
 export const constructionSiteShape = () => declare('ConstructionSite', struct(roomObjectShape, {
 	...variant('constructionSite'),
+	/**
+	 * The name of the structure, for structures that support it (currently only spawns).
+	 * @public
+	 */
 	name: 'string',
+	/**
+	 * The current construction progress.
+	 * @public
+	 * @see https://docs.screeps.com/api/#ConstructionSite.progress
+	 */
 	progress: 'int32',
+	/**
+	 * The total construction progress needed for the structure to be built.
+	 * @public
+	 * @see https://docs.screeps.com/api/#ConstructionSite.progressTotal
+	 */
 	progressTotal: 'int32',
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#ConstructionSite.structureType
+	 */
 	structureType: enumerated(...structureFactories.keys() as never as ConstructibleStructureType[]),
 	'#user': Id.format,
 }));

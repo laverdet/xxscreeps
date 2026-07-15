@@ -12,9 +12,35 @@ import { structureFactories } from './symbols.js';
 
 export type ConstructibleStructureType = keyof typeof C.CONSTRUCTION_COST;
 
+/**
+ * A site of a structure which is currently under construction. A construction site can be created
+ * using the 'Construct' button at the left of the game field or the
+ * [`Room.createConstructionSite`](https://docs.screeps.com/api/#Room.createConstructionSite)
+ * method.
+ *
+ * To build a structure on the construction site, give a worker creep some amount of energy and
+ * perform [`Creep.build`](https://docs.screeps.com/api/#Creep.build) action.
+ *
+ * You can remove enemy construction sites by moving a creep on it.
+ * @public
+ * @see https://docs.screeps.com/api/#ConstructionSite
+ */
 export class ConstructionSite extends withOverlay(RoomObject, constructionSiteShape) {
+	/**
+	 * Whether this is your own construction site.
+	 * @public
+	 * @see https://docs.screeps.com/api/#ConstructionSite.my
+	 */
 	@enumerable override get my() { return this['#user'] === me; }
+
+	/**
+	 * An object with the structure's owner info containing the following properties: `username` — the
+	 * name of the owner user.
+	 * @public
+	 * @see https://docs.screeps.com/api/#ConstructionSite.owner
+	 */
 	@enumerable get owner() { return userInfo.get(this['#user']); }
+
 	override get '#lookType'() { return C.LOOK_CONSTRUCTION_SITES; }
 
 	override '#addToMyGame'(game: GameConstructor) {
@@ -27,6 +53,9 @@ export class ConstructionSite extends withOverlay(RoomObject, constructionSiteSh
 
 	/**
 	 * Remove the construction site.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`
+	 * @public
+	 * @see https://docs.screeps.com/api/#ConstructionSite.remove
 	 */
 	remove() {
 		return chainIntentChecks(

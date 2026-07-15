@@ -19,8 +19,16 @@ export type AnyRoomObject = Exclude<Room['#objects'][number], { '#lookType': nul
  * An object representing the room in which your units and structures are in. It can be used to look
  * around, find paths, etc. Every `RoomObject` in the room contains its linked `Room` instance in
  * the `room` property.
+ * @public
+ * @see https://docs.screeps.com/api/#Room
  */
 export class Room extends withOverlay(BufferObject, shape) {
+	/**
+	 * An object which provides fast access to room terrain data. These objects can be constructed for
+	 * any room in the world even if you have no access to it.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Room-Terrain
+	 */
 	declare static Terrain: typeof Terrain;
 
 	#didInitialize = false;
@@ -31,8 +39,9 @@ export class Room extends withOverlay(BufferObject, shape) {
 	#removeObjects = new Set<RoomObject>();
 
 	/**
-	 * A [survival game](https://docs.screeps.com/survival.html) info, if the current game is
-	 * running in the Survival Mode. xxscreeps has no survival mode, so this is always `undefined`.
+	 * A [survival game](https://docs.screeps.com/survival.html) info, if the current game is running
+	 * in the Survival Mode. xxscreeps has no survival mode, so this is always `undefined`.
+	 * @public
 	 */
 	@enumerable get survivalInfo(): undefined { return undefined; }
 
@@ -40,9 +49,13 @@ export class Room extends withOverlay(BufferObject, shape) {
 	 * Find all objects of the specified type in the room. Results are cached automatically for the
 	 * specified room and type before applying any custom filters. This automatic cache lasts until
 	 * the end of the tick.
-	 * @param type One of the FIND_* constants
-	 * @param opts An object with additional options:
-	 *   `filter` - The result list will be filtered using the Lodash.filter method.
+	 * @param type One of the `FIND_*` constants.
+	 * @param options An object with additional options:
+	 * - `filter` - The result list will be filtered using the
+	 *   [Lodash.filter](https://lodash.com/docs#filter) method.
+	 * @returns An array with the objects found.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Room.find
 	 */
 	find<Type extends FindConstants>(this: Room, type: Type, options: RoomFindOptions<FindType<Type>> = {}): FindType<Type>[] {
 		// Check find cache

@@ -8,18 +8,47 @@ import { compose, declare, vector, withOverlay } from 'xxscreeps/schema/index.js
 import { instantiate } from 'xxscreeps/utility/utility.js';
 import { powerCreepShape } from './schema.js';
 
+/**
+ * Power Creeps are immortal "heroes" that are tied to your account and can be respawned in any
+ * `PowerSpawn` after death. You can upgrade their abilities ("powers") up to your account Global
+ * Power Level (see [`Game.gpl`](https://docs.screeps.com/api/#Game.gpl)).
+ * @public
+ * @see https://docs.screeps.com/api/#PowerCreep
+ */
 export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
+	/**
+	 * The name of the shard where the power creep is spawned, or `null`.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.shard
+	 */
 	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	get shard(): string | null { return null; }
+
+	/**
+	 * The remaining amount of game ticks after which the creep will die and become unspawned.
+	 * Undefined if the creep is not spawned in the world.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.ticksToLive
+	 */
 	get ticksToLive(): number | undefined { return undefined; }
 
 	override get '#lookType'() { return C.LOOK_POWER_CREEPS; }
 
+	/**
+	 * The power creep's level.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.level
+	 */
 	get level() {
 		return Fn.accumulate(this['#powers'], power => power.level);
 	}
 
-	/** Public `{ [PWR]: { level } }` view over the stored vector. */
+	/**
+	 * Available powers, an object with power ID as a key, and an object with the power's current
+	 * `level` as a value.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.powers
+	 */
 	get powers(): Record<number, { level: number }> {
 		return Object.fromEntries(Fn.map(this['#powers'], ({ power, level }) => [ power, { level } ]));
 	}

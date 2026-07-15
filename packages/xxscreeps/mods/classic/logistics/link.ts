@@ -10,15 +10,35 @@ import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { linkShape } from './schema.js';
 
+/**
+ * Remotely transfers energy to another Link in the same room.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureLink
+ */
 export class StructureLink extends withOverlay(OwnedStructure, linkShape) {
 	/**
 	 * The amount of game ticks the link has to wait until the next transfer is possible.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLink.cooldown
 	 */
 	@enumerable get cooldown() { return cooldownTime(this['#cooldownTime']); }
 
-	/** @deprecated */
+	/**
+	 * An alias for
+	 * [`.store[RESOURCE_ENERGY]`](https://docs.screeps.com/api/#StructureExtension.store).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureLink.energy
+	 */
 	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY]; }
-	/** @deprecated */
+
+	/**
+	 * An alias for
+	 * [`.store.getCapacity(RESOURCE_ENERGY)`](https://docs.screeps.com/api/#Store.getCapacity).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureLink.energyCapacity
+	 */
 	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
 
 	override get hitsMax() { return C.LINK_HITS; }
@@ -27,7 +47,13 @@ export class StructureLink extends withOverlay(OwnedStructure, linkShape) {
 	/**
 	 * Remotely transfer energy to another link at any location in the same room.
 	 * @param target The target object.
-	 * @param amount The amount of energy to be transferred. If omitted, all the available energy is used.
+	 * @param amount The amount of energy to be transferred. If omitted, all the available energy is
+	 * used.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NOT_ENOUGH_RESOURCES`,
+	 * `ERR_INVALID_TARGET`, `ERR_FULL`, `ERR_INVALID_ARGS`, `ERR_TIRED`, `ERR_RCL_NOT_ENOUGH`,
+	 * `ERR_NOT_IN_RANGE`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLink.transferEnergy
 	 */
 	transferEnergy(target: StructureLink, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>

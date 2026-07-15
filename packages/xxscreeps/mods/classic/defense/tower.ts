@@ -12,15 +12,41 @@ import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { towerShape } from './schema.js';
 
+/**
+ * Remotely attacks or heals creeps, or repairs structures. Can be targeted to any object in the
+ * room. However, its effectiveness linearly depends on the distance. Each action consumes energy.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureTower
+ */
 export class StructureTower extends withOverlay(OwnedStructure, towerShape) {
 	override get hitsMax() { return C.TOWER_HITS; }
 	override get structureType() { return C.STRUCTURE_TOWER; }
+
+	/**
+	 * An alias for
+	 * [`.store[RESOURCE_ENERGY]`](https://docs.screeps.com/api/#StructureExtension.store).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureTower.energy
+	 */
 	get energy() { return this.store[C.RESOURCE_ENERGY]; }
+
+	/**
+	 * An alias for
+	 * [`.store.getCapacity(RESOURCE_ENERGY)`](https://docs.screeps.com/api/#Store.getCapacity).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureTower.energyCapacity
+	 */
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
 
 	/**
 	 * Remotely attack any creep, power creep or structure in the room.
-	 * @param target The target creep.
+	 * @param target The target object.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NOT_ENOUGH_ENERGY`,
+	 * `ERR_INVALID_TARGET`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureTower.attack
 	 */
 	attack(target: Creep) {
 		return chainIntentChecks(
@@ -30,7 +56,11 @@ export class StructureTower extends withOverlay(OwnedStructure, towerShape) {
 
 	/**
 	 * Remotely heal any creep or power creep in the room.
-	 * @param target The target creep.
+	 * @param target The target object.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NOT_ENOUGH_ENERGY`,
+	 * `ERR_INVALID_TARGET`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureTower.heal
 	 */
 	heal(target: Creep) {
 		return chainIntentChecks(
@@ -41,6 +71,10 @@ export class StructureTower extends withOverlay(OwnedStructure, towerShape) {
 	/**
 	 * Remotely repair any structure in the room.
 	 * @param target The target structure.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NOT_ENOUGH_ENERGY`,
+	 * `ERR_INVALID_TARGET`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureTower.repair
 	 */
 	repair(target: Structure) {
 		return chainIntentChecks(

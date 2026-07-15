@@ -21,7 +21,18 @@ export const ownedStructureShape =
 /** @internal */
 export const ruinShape = declare('Ruin', struct(roomObjectShape, {
 	...variant('ruin'),
+	/**
+	 * The time when the structure has been destroyed.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Ruin.destroyTime
+	 */
 	destroyTime: 'int32',
+	/**
+	 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains resources of this
+	 * structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Ruin.store
+	 */
 	store: openStoreFormat,
 	'#decayTime': 'int32',
 	'#structure': struct({

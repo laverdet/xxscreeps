@@ -22,6 +22,8 @@ declare module 'xxscreeps/game/game.js' {
 		 * transactions to/from your terminals, and your buy/sell orders.
 		 *
 		 * Learn more about the market system from [this article](https://docs.screeps.com/market.html).
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.market
 		 */
 		market: Market;
 	}

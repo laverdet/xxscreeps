@@ -6,8 +6,27 @@ import { registerHarvestable } from 'xxscreeps/mods/classic/harvestable/game.js'
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { depositShape } from './schema.js';
 
+/**
+ * A rare resource deposit needed for producing commodities. Can be harvested by creeps with a
+ * `WORK` body part. Each harvest operation triggers a cooldown period, which becomes longer and
+ * longer over time. Learn more about deposits from [this
+ * article](https://docs.screeps.com/resources.html).
+ * @public
+ * @see https://docs.screeps.com/api/#Deposit
+ */
 export class Deposit extends withOverlay(RoomObject.RoomObject, depositShape) {
+	/**
+	 * The amount of game ticks until the next harvest action is possible.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Deposit.cooldown
+	 */
 	@enumerable get cooldown() { return RoomObject.cooldownTime(this['#cooldownTime']); }
+
+	/**
+	 * The amount of game ticks when this deposit will disappear.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Deposit.ticksToDecay
+	 */
 	@enumerable get ticksToDecay() { return RoomObject.requiredExpiryTime(this['#nextDecayTime']); }
 
 	get '#lookType'() { return C.LOOK_DEPOSITS; }

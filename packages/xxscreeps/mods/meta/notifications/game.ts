@@ -16,9 +16,12 @@ declare module 'xxscreeps/engine/runner/index.js' {
 declare module 'xxscreeps/mods/classic/creep/creep.js' {
 	interface Creep {
 		/**
-		 * Toggle auto notification when the creep is under attack. The notification will be sent to your
-		 * account email. Turned on by default.
+		 * Toggle auto notification when the creep is under attack. The notification will be sent to
+		 * your account email. Turned on by default.
 		 * @param notifyWhenAttacked Whether to enable notification or disable.
+		 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_ARGS`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Creep.notifyWhenAttacked
 		 */
 		notifyWhenAttacked: (this: Creep, notifyWhenAttacked?: boolean) => ReturnType<typeof checkCreepNotifyWhenAttacked>;
 	}
@@ -27,8 +30,12 @@ declare module 'xxscreeps/mods/classic/creep/creep.js' {
 declare module 'xxscreeps/mods/classic/structure/structure.js' {
 	interface Structure {
 		/**
-		 * Toggle notifications for when this structure is attacked.
-		 * @param notifyWhenAttacked Whether to receive email notifications on attack.
+		 * Toggle auto notification when the structure is under attack. The notification will be sent to
+		 * your account email. Turned on by default.
+		 * @param notifyWhenAttacked Whether to enable notification or disable.
+		 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_INVALID_ARGS`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Structure.notifyWhenAttacked
 		 */
 		notifyWhenAttacked: (this: Structure, notifyWhenAttacked: boolean) => ReturnType<typeof checkStructureNotifyWhenAttacked>;
 	}

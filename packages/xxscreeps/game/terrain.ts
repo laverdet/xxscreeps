@@ -14,16 +14,20 @@ export const terrainMaskToString = [ 'plain', 'wall', 'swamp', 'wall' ] as const
  * An object which provides fast access to room terrain data. These objects can be constructed for
  * any room in the world even if you have no access to it.
  *
- * Technically every Room.Terrain object is a very lightweight adapter to underlying static terrain
- * buffers with corresponding minimal accessors.
+ * Technically every `Room.Terrain` object is a very lightweight adapter to underlying static
+ * terrain buffers with corresponding minimal accessors.
+ * @public
+ * @see https://docs.screeps.com/api/#Room-Terrain
  */
 export class Terrain {
 	readonly #buffer: Uint8Array;
 
 	/**
-	 * Creates a new Terrain of room by its name. Terrain objects can be constructed for any room in
-	 * the world even if you have no access to it.
+	 * Creates a new `Terrain` of room by its name. `Terrain` objects can be constructed for any room
+	 * in the world even if you have no access to it.
 	 * @param roomName The room name.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Room.Terrain.constructor
 	 */
 	constructor(roomName: string);
 	// eslint-disable-next-line @typescript-eslint/unified-signatures
@@ -46,8 +50,14 @@ export class Terrain {
 
 	/**
 	 * Get terrain type at the specified room position by `(x,y)` coordinates. Unlike the
-	 * `Game.map.getTerrainAt(...)` method, this one doesn't perform any string operations and returns
-	 * integer terrain type values.
+	 * [`Game.map.getTerrainAt(...)`](https://docs.screeps.com/api/#Game.map.getTerrainAt) method,
+	 * this one doesn't perform any string operations and returns integer terrain type values.
+	 * @param xx X position in the room.
+	 * @param yy Y position in the room.
+	 * @returns One of the following integer values: 0 - terrain is `plain`, `TERRAIN_MASK_WALL` -
+	 * terrain is `wall`, `TERRAIN_MASK_SWAMP` - terrain is `swamp`.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Room.Terrain.get
 	 */
 	get(xx: number, yy: number) {
 		const index = yy * 50 + xx;
@@ -58,12 +68,22 @@ export class Terrain {
 	}
 
 	/**
-	 * Get copy of underlying static terrain buffer.
+	 * Get copy of underlying static terrain buffer. Each element is an integer number, terrain type
+	 * can be obtained by applying bitwise AND (`&`) operator with appropriate `TERRAIN_MASK_*`
+	 * constant. Room tiles are stored **row by row**.
 	 *
 	 * Note: It's probably better to just use the `get` method.
 	 *
 	 * @param destinationArray A typed array view in which terrain will be copied to.
+	 * @param version xxscreeps extension. If set to `'xxscreeps'`, the packed 625-byte internal
+	 * representation is returned instead of the official 2500-byte format.
+	 * @returns Copy of underlying room terrain representations as a new `Uint8Array` [typed
+	 * array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray)
+	 * of size 2500. If `destinationArray` is specified, function returns reference to this filled
+	 * `destinationArray`.
+	 * @public
 	 * @deprecated
+	 * @see https://docs.screeps.com/api/#Room.Terrain.getRawBuffer
 	 */
 	getRawBuffer(destinationArray?: Uint8Array, version?: 'xxscreeps'): Uint8Array {
 		if (version === 'xxscreeps') {

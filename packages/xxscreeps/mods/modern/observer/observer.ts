@@ -9,10 +9,35 @@ import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { observerShape } from './schema.js';
 
+/**
+ * Provides visibility into a distant room from your script.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureObserver
+ */
 export class StructureObserver extends withOverlay(OwnedStructure, observerShape) {
+	/**
+	 * The total amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureObserver.hitsMax
+	 */
 	override get hitsMax() { return C.OBSERVER_HITS; }
+
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureObserver.structureType
+	 */
 	override get structureType() { return C.STRUCTURE_OBSERVER; }
 
+	/**
+	 * Provide visibility into a distant room from your script. The target room object will be
+	 * available on the next tick.
+	 * @param roomName The name of the target room.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_INVALID_ARGS`,
+	 * `ERR_NOT_IN_RANGE`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureObserver.observeRoom
+	 */
 	observeRoom(roomName: string) {
 		return chainIntentChecks(
 			() => checkObserveRoom(this, roomName),

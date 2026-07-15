@@ -6,7 +6,19 @@ import { declare, struct, variant } from 'xxscreeps/schema/index.js';
 /** @internal */
 export const sourceShape = declare('Source', struct(roomObjectShape, {
 	...variant('source'),
+
+	/**
+	 * The remaining amount of energy.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Source.energy
+	 */
 	energy: 'int32',
+
+	/**
+	 * The total amount of energy in the source.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Source.energyCapacity
+	 */
 	energyCapacity: 'int32',
 	'#nextRegenerationTime': 'int32',
 }));

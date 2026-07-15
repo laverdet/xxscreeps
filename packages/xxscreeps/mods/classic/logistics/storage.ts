@@ -9,11 +9,22 @@ import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { storageShape } from './schema.js';
 
+/**
+ * A structure that can store huge amount of resource units. Only one structure per room is allowed
+ * that can be addressed by [`Room.storage`](https://docs.screeps.com/api/#Room.storage) property.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureStorage
+ */
 export class StructureStorage extends withOverlay(OwnedStructure, storageShape) {
 	override get hitsMax() { return C.STORAGE_HITS; }
 	override get structureType() { return C.STRUCTURE_STORAGE; }
 
-	/** @deprecated */
+	/**
+	 * An alias for [`.store.getCapacity()`](https://docs.screeps.com/api/#Store.getCapacity).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureStorage.storeCapacity
+	 */
 	@enumerable get storeCapacity() { return this.store.getCapacity(); }
 
 	override '#afterRemove'() {
@@ -50,6 +61,11 @@ registerBuildableStructure(C.STRUCTURE_STORAGE, {
 
 declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
+		/**
+		 * The Storage structure of this room, if present, otherwise undefined.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.storage
+		 */
 		storage: StructureStorage | undefined;
 	}
 }

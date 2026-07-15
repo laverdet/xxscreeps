@@ -9,7 +9,18 @@ import { withOverlay } from 'xxscreeps/schema/index.js';
 import { asUnion, assign } from 'xxscreeps/utility/utility.js';
 import { rampartShape } from './schema.js';
 
+/**
+ * Blocks movement of hostile creeps, and defends your creeps and structures on the same tile. Can
+ * be used as a controllable gate.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureRampart
+ */
 export class StructureRampart extends withOverlay(OwnedStructure, rampartShape) {
+	/**
+	 * The amount of game ticks when this rampart will lose some hit points.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureRampart.ticksToDecay
+	 */
 	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
 
 	override get hitsMax() {
@@ -32,6 +43,9 @@ export class StructureRampart extends withOverlay(OwnedStructure, rampartShape) 
 	/**
 	 * Make this rampart public to allow other players' creeps to pass through.
 	 * @param isPublic Whether this rampart should be public or non-public.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureRampart.setPublic
 	 */
 	setPublic(isPublic: boolean) {
 		if (this['#user'] === me) {

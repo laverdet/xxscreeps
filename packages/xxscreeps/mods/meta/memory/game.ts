@@ -6,7 +6,23 @@ import { RawMemory, flush, flushActiveSegments, flushDefaultPublicSegment, flush
 // Export `Memory` and `RawMemory` to runtime globals
 declare module 'xxscreeps/game/runtime.js' {
 	interface Global {
+		/**
+		 * A global plain object which can contain arbitrary data. You can access it both using the API
+		 * and the Memory UI in the game editor. Learn how to work with memory from
+		 * [this article](https://docs.screeps.com/global-objects.html#Memory-object).
+		 * @public
+		 * @see https://docs.screeps.com/api/#Memory
+		 */
 		Memory: any;
+
+		/**
+		 * `RawMemory` object allows to implement your own memory stringifier instead of built-in
+		 * serializer based on `JSON.stringify`. It also allows to request up to 10 MB of additional
+		 * memory using asynchronous memory segments feature. You can also access memory segments of
+		 * other players using methods below.
+		 * @public
+		 * @see https://docs.screeps.com/api/#RawMemory
+		 */
 		RawMemory: typeof RawMemory;
 	}
 }
@@ -15,6 +31,13 @@ registerGlobal('RawMemory', RawMemory);
 // Define `Room#memory`
 declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
+		/**
+		 * A shorthand to `Memory.rooms[room.name]`. You can use it for quick access the room's specific
+		 * memory data object.
+		 * [Learn more about memory](https://docs.screeps.com/global-objects.html#Memory-object)
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.memory
+		 */
 		memory: any;
 	}
 }

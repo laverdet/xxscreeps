@@ -13,8 +13,23 @@ export type OrderType = typeof C.ORDER_BUY | typeof C.ORDER_SELL;
  * hidden user id so readers never see it.
  */
 export class Order extends withOverlay(BufferObject, orderShape) {
+	/**
+	 * Whether the order is currently active. An order is automatically activated and deactivated
+	 * depending on the resource/credits availability.
+	 * @public
+	 */
 	@enumerable get active() { return this.amount > 0; }
+
+	/**
+	 * The current price per unit.
+	 * @public
+	 */
 	@enumerable get price() { return this['#price'] / 1000; }
+
+	/**
+	 * Either `ORDER_SELL` or `ORDER_BUY`.
+	 * @public
+	 */
 	@enumerable get type() { return this['#buy'] ? C.ORDER_BUY : C.ORDER_SELL; }
 }
 

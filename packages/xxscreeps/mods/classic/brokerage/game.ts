@@ -20,6 +20,8 @@ declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		/**
 		 * The Terminal structure of this room, if present, otherwise undefined.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.terminal
 		 */
 		terminal?: StructureTerminal | undefined;
 	}

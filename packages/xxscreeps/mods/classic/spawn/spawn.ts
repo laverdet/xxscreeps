@@ -24,13 +24,38 @@ interface SpawnCreepOptions {
 	memory?: unknown;
 }
 
+/**
+ * Details of the creep being spawned currently that can be addressed by the
+ * [`StructureSpawn.spawning`](https://docs.screeps.com/api/#StructureSpawn.spawning) property.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureSpawn-Spawning
+ */
 export class Spawning extends withOverlay(BufferObject, spawningShape) {
+	/**
+	 * The name of a new creep.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.Spawning.name
+	 */
 	@enumerable get name() { return Game.getObjectById<Creep>(this['#spawningCreepId'])!.name; }
+
+	/**
+	 * Remaining time to go.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.Spawning.remainingTime
+	 */
 	@enumerable get remainingTime() { return requiredExpiryTime(this['#spawnTime']); }
+
+	/**
+	 * A link to the spawn.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.Spawning.spawn
+	 */
 	@enumerable get spawn() { return Game.getObjectById<StructureSpawn>(this['#spawnId'])!; }
 
 	/**
 	 * Cancel spawning immediately. Energy spent on spawning is not returned.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.Spawning.cancel
 	 */
 	cancel() {
 		chainIntentChecks(
@@ -40,6 +65,10 @@ export class Spawning extends withOverlay(BufferObject, spawningShape) {
 
 	/**
 	 * Set desired directions where the creep should move when spawned.
+	 * @param directions An array with the direction constants: `TOP`, `TOP_RIGHT`, `RIGHT`,
+	 * `BOTTOM_RIGHT`, `BOTTOM`, `BOTTOM_LEFT`, `LEFT`, `TOP_LEFT`.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.Spawning.setDirections
 	 */
 	setDirections(directions: Direction[]) {
 		chainIntentChecks(
@@ -51,14 +80,54 @@ export class Spawning extends withOverlay(BufferObject, spawningShape) {
 
 bindSpawningFormat(Spawning);
 
+/**
+ * Spawn is your colony center. This structure can create, renew, and recycle creeps. All your
+ * spawns are accessible through [`Game.spawns`](https://docs.screeps.com/api/#Game.spawns) hash
+ * list. Spawns auto-regenerate a little amount of energy each tick, so that you can easily recover
+ * even if all your creeps died.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureSpawn
+ */
 export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 	static readonly Spawning = Spawning;
 
+	/**
+	 * An alias for `.store[RESOURCE_ENERGY]`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureSpawn.energy
+	 */
 	get energy() { return this.store[C.RESOURCE_ENERGY]; }
+
+	/**
+	 * An alias for `.store.getCapacity(RESOURCE_ENERGY)`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureSpawn.energyCapacity
+	 */
 	get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
+
+	/**
+	 * The total amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.hitsMax
+	 */
 	override get hitsMax() { return C.SPAWN_HITS; }
+
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.structureType
+	 */
 	override get structureType() { return C.STRUCTURE_SPAWN; }
 
+	/**
+	 * A shorthand to `Memory.spawns[spawn.name]`. You can use it for quick access the spawn's
+	 * specific memory data object.
+	 * [Learn more about memory](https://docs.screeps.com/global-objects.html#Memory-object)
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.memory
+	 */
 	get memory() {
 		if (!this.my) {
 			// @ts-expect-error
@@ -96,15 +165,42 @@ export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 
 	/**
 	 * Check if a creep can be created.
-	 * @deprecated
+	 * @param body An array describing the new creep's body. Should contain 1 to 50 elements with one
+	 * of these constants: `WORK`, `MOVE`, `CARRY`, `ATTACK`, `RANGED_ATTACK`, `HEAL`, `TOUGH`,
+	 * `CLAIM`.
+	 * @param name The name of a new creep. The name length limit is 100 characters. It should be
+	 * unique creep name, i.e. the `Game.creeps` object should not contain another creep with the same
+	 * name (hash key). If not defined, a random name will be generated.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NAME_EXISTS`, `ERR_BUSY`,
+	 * `ERR_NOT_ENOUGH_ENERGY`, `ERR_INVALID_ARGS`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @deprecated Please use
+	 * [`StructureSpawn.spawnCreep`](https://docs.screeps.com/api/#StructureSpawn.spawnCreep) with
+	 * `dryRun` flag instead.
+	 * @see https://docs.screeps.com/api/#StructureSpawn.canCreateCreep
 	 */
 	canCreateCreep(body: any, name?: any) {
 		return checkSpawnCreep(this, body, name ?? getUniqueName(name => userGame?.creeps[name] !== undefined), null, null);
 	}
 
 	/**
-	 * Start the creep spawning process. The required energy amount can be withdrawn from all spawns and extensions in the room.
-	 * @deprecated
+	 * Start the creep spawning process. The required energy amount can be withdrawn from all spawns
+	 * and extensions in the room.
+	 * @param body An array describing the new creep's body. Should contain 1 to 50 elements with one
+	 * of these constants: `WORK`, `MOVE`, `CARRY`, `ATTACK`, `RANGED_ATTACK`, `HEAL`, `TOUGH`,
+	 * `CLAIM`.
+	 * @param name The name of a new creep. The name length limit is 100 characters. It should be
+	 * unique creep name, i.e. the `Game.creeps` object should not contain another creep with the same
+	 * name (hash key). If not defined, a random name will be generated.
+	 * @param memory The memory of a new creep. If provided, it will be immediately stored into
+	 * `Memory.creeps[name]`.
+	 * @returns The name of a new creep or one of these error codes: `ERR_NOT_OWNER`,
+	 * `ERR_NAME_EXISTS`, `ERR_BUSY`, `ERR_NOT_ENOUGH_ENERGY`, `ERR_INVALID_ARGS`,
+	 * `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @deprecated Please use
+	 * [`StructureSpawn.spawnCreep`](https://docs.screeps.com/api/#StructureSpawn.spawnCreep) instead.
+	 * @see https://docs.screeps.com/api/#StructureSpawn.createCreep
 	 */
 	createCreep(body: any, name: any, memory?: any) {
 		const result = this.spawnCreep(
@@ -120,6 +216,10 @@ export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 	 * remaining life time. The target should be at adjacent square. Energy return is limited to 125
 	 * units per body part.
 	 * @param creep The target creep object.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_INVALID_TARGET`,
+	 * `ERR_NOT_IN_RANGE`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.recycleCreep
 	 */
 	recycleCreep(creep: Creep) {
 		return chainIntentChecks(
@@ -131,12 +231,16 @@ export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 	 * Increase the remaining time to live of the target creep. The target should be at adjacent
 	 * square. The target should not have CLAIM body parts. The spawn should not be busy with the
 	 * spawning process. Each execution increases the creep's timer by amount of ticks according to
-	 * this formula: `floor(600 / body.length)`. Energy required for each execution is determined
-	 * using this formula: `ceil(creepCost / 2.5 / body.length)`.
+	 * this formula: `floor(600/body_size)`. Energy required for each execution is determined using
+	 * this formula: `ceil(creep_cost/2.5/body_size)`.
 	 *
-	 * Renewing a creep removes all of its boosts. Calling this on a boosted creep is deprecated
-	 * in the official API — prefer `StructureLab.unboostCreep` first.
+	 * Renewing a creep removes all of its boosts.
 	 * @param creep The target creep object.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`,
+	 * `ERR_NOT_ENOUGH_ENERGY`, `ERR_INVALID_TARGET`, `ERR_FULL`, `ERR_NOT_IN_RANGE`,
+	 * `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.renewCreep
 	 */
 	renewCreep(creep: Creep) {
 		return chainIntentChecks(
@@ -147,19 +251,23 @@ export class StructureSpawn extends withOverlay(OwnedStructure, spawnShape) {
 	/**
 	 * Start the creep spawning process. The required energy amount can be withdrawn from all spawns
 	 * and extensions in the room.
-	 * @param body An array describing the new creep’s body. Should contain 1 to 50 elements with one
-	 * of these constants: `WORK`, `MOVE`, `CARRY`, `ATTACK`, `RANGED_ATTACK`, `HEAL`, `CLAIM`.
+	 * @param body An array describing the new creep's body. Should contain 1 to 50 elements with one
+	 * of these constants: `WORK`, `MOVE`, `CARRY`, `ATTACK`, `RANGED_ATTACK`, `HEAL`, `TOUGH`,
+	 * `CLAIM`.
 	 * @param name The name of a new creep. The name length limit is 100 characters. It must be a
 	 * unique creep name, i.e. the `Game.creeps` object should not contain another creep with the same
 	 * name (hash key).
 	 * @param options An object with additional options for the spawning process. `memory` - Memory of
-	 *   the new creep. If provided, it will be immediately stored into `Memory.creeps[name]`
-	 *   `energyStructures` - Array of spawns/extensions from which to draw energy for the spawning
-	 *   process. Structures will be used according to the array order. `dryRun` - If `dryRun` is
-	 *   true, the operation will only check if it is possible to create a creep. `directions` - Set
-	 *   desired directions where the creep should move when spawned. An array with the direction
-	 *   constants: `TOP`, `TOP_RIGHT`, `RIGHT`, `BOTTOM_RIGHT`, `BOTTOM`, `BOTTOM_LEFT`, `LEFT`,
-	 *   `TOP_LEFT`
+	 * the new creep. If provided, it will be immediately stored into `Memory.creeps[name]`.
+	 * `energyStructures` - Array of spawns/extensions from which to draw energy for the spawning
+	 * process. Structures will be used according to the array order. `dryRun` - If `dryRun` is true,
+	 * the operation will only check if it is possible to create a creep. `directions` - Set desired
+	 * directions where the creep should move when spawned. An array with the direction constants:
+	 * `TOP`, `TOP_RIGHT`, `RIGHT`, `BOTTOM_RIGHT`, `BOTTOM`, `BOTTOM_LEFT`, `LEFT`, `TOP_LEFT`.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NAME_EXISTS`, `ERR_BUSY`,
+	 * `ERR_NOT_ENOUGH_ENERGY`, `ERR_INVALID_ARGS`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureSpawn.spawnCreep
 	 */
 	spawnCreep(body: PartType[], name: string, options: SpawnCreepOptions = {}) {
 		const directions = options.directions ?? null;

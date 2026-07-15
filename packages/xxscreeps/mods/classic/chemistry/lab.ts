@@ -18,17 +18,63 @@ type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>
 type ReactionsLookup = Partial<Record<string, Partial<Record<string, ResourceType>>>>;
 type ReactionTimeLookup = Partial<Record<string, number>>;
 
+/**
+ * Produces mineral compounds from base minerals, boosts and unboosts creeps. Learn more about
+ * minerals from [this article](https://docs.screeps.com/resources.html).
+ * @public
+ * @see https://docs.screeps.com/api/#StructureLab
+ */
 export class StructureLab extends withOverlay(OwnedStructure, labShape) {
+	/**
+	 * The amount of game ticks the lab has to wait until the next reaction or unboost operation is
+	 * possible.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLab.cooldown
+	 */
 	@enumerable get cooldown() { return cooldownTime(this['#cooldownTime']); }
+
+	/**
+	 * The type of minerals containing in the lab. Labs can contain only one mineral type at the same
+	 * time.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLab.mineralType
+	 */
 	@enumerable get mineralType() { return this.store['#mineralType']; }
 
-	/** @deprecated */
+	/**
+	 * An alias for
+	 * [`.store[RESOURCE_ENERGY]`](https://docs.screeps.com/api/#StructureExtension.store).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureLab.energy
+	 */
 	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY]; }
-	/** @deprecated */
+
+	/**
+	 * An alias for
+	 * [`.store.getCapacity(RESOURCE_ENERGY)`](https://docs.screeps.com/api/#Store.getCapacity).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureLab.energyCapacity
+	 */
 	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY); }
-	/** @deprecated */
+
+	/**
+	 * An alias for
+	 * [`lab.store[lab.mineralType]`](https://docs.screeps.com/api/#StructureExtension.store).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureLab.mineralAmount
+	 */
 	@enumerable get mineralAmount() { const type = this.mineralType; return type ? this.store[type] : 0; }
-	/** @deprecated */
+
+	/**
+	 * An alias for
+	 * [`lab.store.getCapacity(lab.mineralType || yourMineral)`](https://docs.screeps.com/api/#Store.getCapacity).
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureLab.mineralCapacity
+	 */
 	@enumerable get mineralCapacity() { return C.LAB_MINERAL_CAPACITY; }
 
 	override get hitsMax() { return C.LAB_HITS; }
@@ -39,6 +85,11 @@ export class StructureLab extends withOverlay(OwnedStructure, labShape) {
 	 * by many output labs.
 	 * @param lab1 The first source lab.
 	 * @param lab2 The second source lab.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NOT_ENOUGH_RESOURCES`,
+	 * `ERR_INVALID_TARGET`, `ERR_FULL`, `ERR_NOT_IN_RANGE`, `ERR_INVALID_ARGS`, `ERR_TIRED`,
+	 * `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLab.runReaction
 	 */
 	runReaction(lab1: StructureLab, lab2: StructureLab) {
 		return chainIntentChecks(
@@ -46,18 +97,52 @@ export class StructureLab extends withOverlay(OwnedStructure, labShape) {
 			() => intents.save(this, 'runReaction', lab1.id, lab2.id));
 	}
 
+	/**
+	 * Boosts creep body parts using the containing mineral compound. The creep has to be at adjacent
+	 * square to the lab.
+	 * @param creep The target creep.
+	 * @param bodyPartsCount The number of body parts of the corresponding type to be boosted. Body
+	 * parts are always counted left-to-right for `TOUGH`, and right-to-left for other types. If
+	 * undefined, all the eligible body parts are boosted.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NOT_FOUND`,
+	 * `ERR_NOT_ENOUGH_RESOURCES`, `ERR_INVALID_TARGET`, `ERR_NOT_IN_RANGE`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLab.boostCreep
+	 */
 	boostCreep(creep: Creep, bodyPartsCount?: number) {
 		return chainIntentChecks(
 			() => checkBoostCreep(this, creep, bodyPartsCount),
 			() => intents.save(this, 'boostCreep', creep.id, bodyPartsCount ?? 0));
 	}
 
+	/**
+	 * Breaks mineral compounds back into reagents. The same output labs can be used by many source
+	 * labs.
+	 * @param lab1 The first result lab.
+	 * @param lab2 The second result lab.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NOT_ENOUGH_RESOURCES`,
+	 * `ERR_INVALID_TARGET`, `ERR_FULL`, `ERR_NOT_IN_RANGE`, `ERR_INVALID_ARGS`, `ERR_TIRED`,
+	 * `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLab.reverseReaction
+	 */
 	reverseReaction(lab1: StructureLab, lab2: StructureLab) {
 		return chainIntentChecks(
 			() => checkReverseReaction(this, lab1, lab2),
 			() => intents.save(this, 'reverseReaction', lab1.id, lab2.id));
 	}
 
+	/**
+	 * Immediately remove boosts from the creep and drop 50% of the mineral compounds used to boost it
+	 * onto the ground regardless of the creep's remaining time to live. The creep has to be at
+	 * adjacent square to the lab. Unboosting requires cooldown time equal to the total sum of the
+	 * reactions needed to produce all the compounds applied to the creep.
+	 * @param creep The target creep.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_INVALID_TARGET`, `ERR_TIRED`,
+	 * `ERR_NOT_IN_RANGE`, `ERR_NOT_FOUND`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLab.unboostCreep
+	 */
 	unboostCreep(creep: Creep) {
 		return chainIntentChecks(
 			() => checkUnboostCreep(this, creep),

@@ -123,6 +123,11 @@ export function removeFlag(name: string) {
 
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
+		/**
+		 * A hash containing all your flags with flag names as hash keys.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.flags
+		 */
 		flags: Record<string, Flag>;
 	}
 }

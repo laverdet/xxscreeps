@@ -8,7 +8,18 @@ import { labStoreFormat } from './store.js';
 /** @internal */
 export const labShape = declare('Lab', struct(ownedStructureShape, {
 	...variant('lab'),
+	/**
+	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLab.hits
+	 */
 	hits: 'int32',
+
+	/**
+	 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains cargo of this structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLab.store
+	 */
 	store: labStoreFormat,
 	'#actionLog': actionLogFormat,
 	'#cooldownTime': 'int32',

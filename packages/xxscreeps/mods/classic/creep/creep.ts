@@ -63,20 +63,58 @@ export interface SavedMovePath extends SavedMoveStorage {
 /** @internal */
 type SavedMove = SavedMoveSerialized | SavedMovePath;
 
+/**
+ * Creeps are your units. Creeps can move, harvest energy, construct structures, attack another
+ * creeps, and perform other actions. Each creep consists of up to 50 body parts.
+ * @public
+ * @see https://docs.screeps.com/api/#Creep
+ */
 export class Creep extends withOverlay(RoomObject, creepShape) {
 	/** @internal — raw incoming damage this tick (before TOUGH reduction), always >= 0 */
 	declare tickRawDamage: number | undefined;
 	/** @internal — raw healing received this tick, always >= 0 */
 	declare tickHealing: number | undefined;
 
+	/**
+	 * The maximum amount of hit points of the creep.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.hitsMax
+	 */
 	@enumerable override get hitsMax() { return this.body.length * 100; }
+
+	/**
+	 * An object with the creep's owner info containing the following properties: `username` — the
+	 * name of the owner user.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.owner
+	 */
 	@enumerable get owner() { return userInfo.get(this['#user']); }
+
+	/**
+	 * Whether this creep is still being spawned.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.spawning
+	 */
 	@enumerable get spawning() { return this['#ageTime'] === 0; }
+
+	/**
+	 * The remaining amount of game ticks after which the creep will die.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.ticksToLive
+	 */
 	@enumerable get ticksToLive() { return optionalExpiryTime(this['#ageTime']); }
+
+	/**
+	 * Whether it is your creep or foe.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.my
+	 */
 	@enumerable override get my() { return this['#user'] === me; }
 
 	/**
 	 * The text message that the creep was saying at the last tick.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.saying
 	 */
 	@enumerable get saying() {
 		const saying = this['#saying'];
@@ -85,9 +123,29 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 		}
 	}
 
+	/**
+	 * Alias for `Creep.store`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#Creep.store
+	 */
 	get carry() { return this.store; }
+
+	/**
+	 * Alias for `Creep.store.getCapacity()`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#Store.getCapacity
+	 */
 	get carryCapacity() { return this.store.getCapacity(); }
 
+	/**
+	 * A shorthand to `Memory.creeps[creep.name]`. You can use it for quick access the creep's
+	 * specific memory data object.
+	 * [Learn more about memory](https://docs.screeps.com/global-objects.html#Memory-object)
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.memory
+	 */
 	get memory(): Record<string, unknown> | undefined {
 		if (!this.my) {
 			return;
@@ -139,6 +197,9 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	/**
 	 * Cancel the order given during the current game tick.
 	 * @param methodName The name of a creep's method to be cancelled.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_FOUND`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.cancelOrder
 	 */
 	cancelOrder(methodName: string) {
 		return intents.remove(this, methodName as never);
@@ -146,9 +207,13 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 
 	/**
 	 * Drop this resource on the ground.
-	 * @param _resourceType One of the `RESOURCE_*` constants.
-	 * @param _amount The amount of resource units to be dropped. If omitted, all the available
-	 * carried amount is used.
+	 * @param resourceType One of the `RESOURCE_*` constants.
+	 * @param amount The amount of resource units to be dropped. If omitted, all the available carried
+	 * amount is used.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_ARGS`,
+	 * `ERR_NOT_ENOUGH_RESOURCES`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.drop
 	 */
 	drop(resourceType: ResourceType, amount?: number) {
 		const intentAmount = (amount ?? 0) || this.store[resourceType];
@@ -159,7 +224,11 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 
 	/**
 	 * Get the quantity of live body parts of the given type. Fully damaged parts do not count.
-	 * @param type A body part type
+	 * @param type A body part type, one of the following body part constants: `MOVE`, `WORK`,
+	 * `CARRY`, `ATTACK`, `RANGED_ATTACK`, `HEAL`, `TOUGH`
+	 * @returns A number representing the quantity of body parts.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.getActiveBodyparts
 	 */
 	getActiveBodyparts(type: PartType) {
 		return Fn.accumulate(iterateActiveParts(this.body), part => part.type === type ? 1 : 0);
@@ -167,9 +236,15 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 
 	/**
 	 * Move the creep one square in the specified direction. Requires the `MOVE` body part, or another
-	 * creep nearby pulling the creep. In case if you call move on a creep nearby, the `ERR_TIRED` and
-	 * the `ERR_NO_BODYPART` checks will be bypassed; otherwise, the `ERR_NOT_IN_RANGE` check will be
-	 * bypassed.
+	 * creep nearby [pulling](https://docs.screeps.com/api/#Creep.pull) the creep. In case if you call
+	 * `move` on a creep nearby, the `ERR_TIRED` and the `ERR_NO_BODYPART` checks will be bypassed;
+	 * otherwise, the `ERR_NOT_IN_RANGE` check will be bypassed.
+	 * @param target A creep nearby, or one of the following constants: `TOP`, `TOP_RIGHT`, `RIGHT`,
+	 * `BOTTOM_RIGHT`, `BOTTOM`, `BOTTOM_LEFT`, `LEFT`, `TOP_LEFT`
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_TIRED`,
+	 * `ERR_NO_BODYPART`, `ERR_INVALID_ARGS`, `ERR_NOT_IN_RANGE`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.move
 	 */
 	move(this: Creep, target: Direction | Creep) {
 		return chainIntentChecks(
@@ -179,8 +254,15 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 
 	/**
 	 * Move the creep using the specified predefined path. Requires the `MOVE` body part.
-	 * @param path A path value as returned from `Room.findPath`, `RoomPosition.findPathTo`, or
-	 * `PathFinder.search` methods. Both array form and serialized string form are accepted.
+	 * @param path A path value as returned from
+	 * [`Room.findPath`](https://docs.screeps.com/api/#Room.findPath),
+	 * [`RoomPosition.findPathTo`](https://docs.screeps.com/api/#RoomPosition.findPathTo), or
+	 * [`PathFinder.search`](https://docs.screeps.com/api/#PathFinder.search) methods. Both array form
+	 * and serialized string form are accepted.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_NOT_FOUND`,
+	 * `ERR_INVALID_ARGS`, `ERR_TIRED`, `ERR_NO_BODYPART`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.moveByPath
 	 */
 	moveByPath(path: RoomPath | RoomPosition[] | string): C.ErrorCode {
 		// Parse serialized path
@@ -209,11 +291,37 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 
 	/**
 	 * Find the optimal path to the target within the same room and move to it. A shorthand to
-	 * consequent calls of `pos.findPathTo()` and `move()` methods. If the target is in another room,
-	 * then the corresponding exit will be used as a target. Requires the `MOVE` body part.
-	 * @param x X position in the same room
-	 * @param y Y position in the same room
-	 * @param target Can be a RoomObject or RoomPosition
+	 * consequent calls of [`pos.findPathTo()`](https://docs.screeps.com/api/#RoomPosition.findPathTo)
+	 * and [`move()`](https://docs.screeps.com/api/#Creep.move) methods. If the target is in another
+	 * room, then the corresponding exit will be used as a target. Requires the `MOVE` body part.
+	 * @param x X position of the target in the same room.
+	 * @param y Y position of the target in the same room.
+	 * @param target Can be a [RoomPosition](https://docs.screeps.com/api/#RoomPosition) object or any
+	 * object containing RoomPosition. The position doesn't have to be in the same room with the
+	 * creep.
+	 * @param opts An object containing additional options:
+	 * - `reusePath` — This option enables reusing the path found along multiple game ticks. It allows
+	 *   to save CPU time, but can result in a slightly slower creep reaction behavior. The path is
+	 *   stored into the creep's memory to the `_move` property. The `reusePath` value defines the
+	 *   amount of ticks which the path should be reused for. The default value is 5. Increase the
+	 *   amount to save more CPU, decrease to make the movement more consistent. Set to 0 if you want
+	 *   to disable path reusing.
+	 * - `serializeMemory` — If `reusePath` is enabled and this option is set to true, the path will
+	 *   be stored in memory in the short serialized form using
+	 *   [`Room.serializePath`](https://docs.screeps.com/api/#Room.serializePath). The default value
+	 *   is true.
+	 * - `noPathFinding` — If this option is set to true, `moveTo` method will return `ERR_NOT_FOUND`
+	 *   if there is no memorized path to reuse. This can significantly save CPU time in some cases.
+	 *   The default value is false.
+	 * - `visualizePathStyle` — Draw a line along the creep's path using
+	 *   [`RoomVisual.poly`](https://docs.screeps.com/api/#RoomVisual.poly). You can provide either an
+	 *   empty object or custom style parameters.
+	 * - Any options supported by [`Room.findPath`](https://docs.screeps.com/api/#Room.findPath)
+	 *   method.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_TIRED`,
+	 * `ERR_NO_BODYPART`, `ERR_INVALID_TARGET`, `ERR_NO_PATH`, `ERR_NOT_FOUND`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.moveTo
 	 */
 	moveTo(x: number, y: number, opts?: MoveToOptions & RoomSearchOptions): number;
 	moveTo(target: RoomObject | RoomPosition, opts?: MoveToOptions & RoomSearchOptions): number;
@@ -317,9 +425,13 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	}
 
 	/**
-	 * Pick up an item (a dropped piece of energy). Requires the `CARRY` body part. The target has to be
-	 * at adjacent square to the creep or at the same square.
-	 * @param resource The target object to be picked up
+	 * Pick up an item (a dropped piece of energy). Requires the `CARRY` body part. The target has to
+	 * be at adjacent square to the creep or at the same square.
+	 * @param resource The target object to be picked up.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+	 * `ERR_FULL`, `ERR_NOT_IN_RANGE`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.pickup
 	 */
 	pickup(this: Creep, resource: Resource) {
 		return chainIntentChecks(
@@ -329,10 +441,15 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 
 	/**
 	 * Help another creep to follow this creep. The fatigue generated for the target's move will be
-	 * added to the creep instead of the target. Requires the `MOVE` body part. The target has to be at
-	 * adjacent square to the creep. The creep must move elsewhere, and the target must move towards
+	 * added to the creep instead of the target. Requires the `MOVE` body part. The target has to be
+	 * at adjacent square to the creep. The creep must
+	 * [move](https://docs.screeps.com/api/#Creep.move) elsewhere, and the target must move towards
 	 * the creep.
-	 * @param target The target creep
+	 * @param target The target creep.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+	 * `ERR_NOT_IN_RANGE`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.pull
 	 */
 	pull(this: Creep, target: Creep) {
 		return chainIntentChecks(
@@ -343,9 +460,13 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	/**
 	 * Display a visual speech balloon above the creep with the specified message. The message will be
 	 * available for one tick. You can read the last message using the `saying` property. Any valid
-	 * Unicode characters are allowed, including emoji.
+	 * Unicode characters are allowed, including
+	 * [emoji](http://unicode.org/emoji/charts/emoji-style.txt).
 	 * @param message The message to be displayed. Maximum length is 10 characters.
-	 * @param public Set to true to allow other players to see this message. Default is false.
+	 * @param isPublic Set to true to allow other players to see this message. Default is false.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.say
 	 */
 	say(message: string, isPublic = false) {
 		return chainIntentChecks(
@@ -354,7 +475,10 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	}
 
 	/**
-	 * Kill the creep immediately
+	 * Kill the creep immediately.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.suicide
 	 */
 	suicide(this: Creep) {
 		return chainIntentChecks(
@@ -366,10 +490,15 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	/**
 	 * Transfer resource from the creep to another object. The target has to be at adjacent square to
 	 * the creep.
-	 * @param target The target object
-	 * @param resourceType One of the `RESOURCE_*` constants
+	 * @param target The target object.
+	 * @param resourceType One of the `RESOURCE_*` constants.
 	 * @param amount The amount of resources to be transferred. If omitted, all the available carried
 	 * amount is used.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`,
+	 * `ERR_NOT_ENOUGH_RESOURCES`, `ERR_INVALID_TARGET`, `ERR_FULL`, `ERR_NOT_IN_RANGE`,
+	 * `ERR_INVALID_ARGS`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.transfer
 	 */
 	transfer(this: Creep, target: RoomObject & WithStore, resourceType: ResourceType, amount?: number) {
 		if (target instanceof StructureController && resourceType === C.RESOURCE_ENERGY) {
@@ -391,7 +520,17 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	 * rampart on top of it.
 	 *
 	 * This method should not be used to transfer resources between creeps. To transfer between
-	 * creeps, use the `transfer` method on the original creep.
+	 * creeps, use the [`transfer`](https://docs.screeps.com/api/#Creep.transfer) method on the
+	 * original creep.
+	 * @param target The target object.
+	 * @param resourceType One of the `RESOURCE_*` constants.
+	 * @param amount The amount of resources to be transferred. If omitted, all the available amount
+	 * is used.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`,
+	 * `ERR_NOT_ENOUGH_RESOURCES`, `ERR_INVALID_TARGET`, `ERR_FULL`, `ERR_NOT_IN_RANGE`,
+	 * `ERR_INVALID_ARGS`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Creep.withdraw
 	 */
 	withdraw(this: Creep, target: Structure & WithStore, resourceType: ResourceType, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>

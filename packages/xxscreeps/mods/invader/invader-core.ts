@@ -14,9 +14,19 @@ import { assign } from 'xxscreeps/utility/utility.js';
 import { invaderCoreShape } from './schema.js';
 
 /**
- * Non-player structure. Spawns NPC invader creeps that defend a stronghold core. Cannot be
- * destroyed by player intents; takes no damage while deploying because of a natural
- * `EFFECT_INVULNERABILITY` produced by the deploy timer.
+ * This NPC structure is a control center of NPC Strongholds, and also rules all invaders in the
+ * sector. It spawns NPC defenders of the stronghold, refill towers, repairs structures. While it's
+ * alive, it will spawn invaders in all rooms in the same sector. It also contains some valuable
+ * resources inside, which you can loot from its ruin if you destroy the structure.
+ *
+ * An Invader Core has two lifetime stages: deploy stage and active stage. When it appears in a
+ * random room in the sector, it has `ticksToDeploy` property, public ramparts around it, and
+ * doesn't perform any actions. While in this stage it's invulnerable to attacks (has
+ * `EFFECT_INVULNERABILITY` enabled). When the `ticksToDeploy` timer is over, it spawns structures
+ * around it and starts spawning creeps, becomes vulnerable, and receives `EFFECT_COLLAPSE_TIMER`
+ * which will remove the stronghold when this timer is over.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureInvaderCore
  */
 export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCoreShape) {
 	@enumerable override get effects(): RoomObjectEffect[] | undefined {
@@ -29,6 +39,11 @@ export class StructureInvaderCore extends withOverlay(OwnedStructure, invaderCor
 		return effects.length === 0 ? undefined : effects;
 	}
 
+	/**
+	 * Shows the timer for a not yet deployed stronghold, undefined otherwise.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureInvaderCore.ticksToDeploy
+	 */
 	@enumerable get ticksToDeploy(): number | undefined {
 		const deployTime = this['#deployTime'];
 		return deployTime === 0 ? undefined : requiredExpiryTime(deployTime + 1) - 1;

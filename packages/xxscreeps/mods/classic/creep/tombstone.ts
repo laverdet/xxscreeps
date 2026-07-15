@@ -8,16 +8,22 @@ import { tombstoneShape } from './schema.js';
 
 /**
  * A remnant of dead creeps. This is a walkable object.
+ * @public
+ * @see https://docs.screeps.com/api/#Tombstone
  */
 export class Tombstone extends withOverlay(RoomObject, tombstoneShape) {
 
 	/**
 	 * The amount of game ticks before this tombstone decays.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Tombstone.ticksToDecay
 	 */
 	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#decayTime']); }
 
 	/**
 	 * An object containing the deceased creep.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Tombstone.creep
 	 */
 	get creep() {
 		const creep = new Creep();

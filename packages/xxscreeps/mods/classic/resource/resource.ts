@@ -16,12 +16,35 @@ export type ResourceType = typeof C.RESOURCE_ENERGY | typeof C.RESOURCE_POWER | 
 /** @internal */
 export const resourceShape = declare('Resource', struct(roomObjectShape, {
 	...variant('resource'),
+
+	/**
+	 * The amount of resource units containing.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Resource.amount
+	 */
 	amount: 'int32',
+
+	/**
+	 * One of the `RESOURCE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Resource.resourceType
+	 */
 	resourceType: resourceEnumFormat,
 }));
 
 // Game object
+/**
+ * A dropped piece of resource. It will decay after a while if not picked up. Dropped resource pile
+ * decays for `ceil(amount/1000)` units per tick.
+ * @public
+ * @see https://docs.screeps.com/api/#Resource
+ */
 export class Resource extends withOverlay(RoomObject, resourceShape) {
+	/**
+	 * Same as `amount` if `resourceType` is `RESOURCE_ENERGY`, otherwise `undefined`. Legacy alias
+	 * kept for compatibility; prefer `amount`.
+	 * @deprecated
+	 */
 	get energy() { return this.resourceType === C.RESOURCE_ENERGY ? this.amount : undefined; }
 	override get '#secondaryLookType'() { return C.LOOK_ENERGY; }
 	get '#lookType'() { return C.LOOK_RESOURCES; }

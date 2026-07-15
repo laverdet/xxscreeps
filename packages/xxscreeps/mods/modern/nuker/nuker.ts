@@ -10,26 +10,77 @@ import { assign } from 'xxscreeps/utility/utility.js';
 import { nukerShape } from './schema.js';
 import { NukerStore } from './store.js';
 
+/**
+ * Launches a nuke to another room dealing huge damage to the landing area. Each launch has a
+ * cooldown and requires energy and ghodium resources. Launching creates a
+ * [Nuke](https://docs.screeps.com/api/#Nuke) object at the target room position which is visible to
+ * any player until it is landed. Incoming nuke cannot be moved or cancelled. Nukes cannot be
+ * launched from or to novice rooms. Resources placed into a StructureNuker cannot be withdrawn.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureNuker
+ */
 export class StructureNuker extends withOverlay(OwnedStructure, nukerShape) {
+	/**
+	 * The amount of game ticks until the next launch is possible.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureNuker.cooldown
+	 */
 	@enumerable get cooldown() { return Math.max(0, this['#cooldownTime'] - Game.time); }
 
-	/** @deprecated */
+	/**
+	 * An alias for `.store[RESOURCE_ENERGY]`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureNuker.energy
+	 */
 	@enumerable get energy() { return this.store[C.RESOURCE_ENERGY]; }
-	/** @deprecated */
+
+	/**
+	 * An alias for `.store.getCapacity(RESOURCE_ENERGY)`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureNuker.energyCapacity
+	 */
 	@enumerable get energyCapacity() { return this.store.getCapacity(C.RESOURCE_ENERGY) ?? 0; }
-	/** @deprecated */
+
+	/**
+	 * An alias for `.store[RESOURCE_GHODIUM]`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureNuker.ghodium
+	 */
 	@enumerable get ghodium() { return this.store[C.RESOURCE_GHODIUM]; }
-	/** @deprecated */
+
+	/**
+	 * An alias for `.store.getCapacity(RESOURCE_GHODIUM)`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#StructureNuker.ghodiumCapacity
+	 */
 	@enumerable get ghodiumCapacity() { return this.store.getCapacity(C.RESOURCE_GHODIUM) ?? 0; }
 
+	/**
+	 * The total amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureNuker.hitsMax
+	 */
 	override get hitsMax() { return C.NUKER_HITS; }
+
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureNuker.structureType
+	 */
 	override get structureType() { return C.STRUCTURE_NUKER; }
 
 	/**
-	 * Launch a nuke to the specified position. The target must be at most `NUKE_RANGE`
-	 * rooms away (Chebyshev distance). Consumes the nuker's full store and starts a
-	 * `NUKER_COOLDOWN` cooldown.
-	 * @param target The target position.
+	 * Launch a nuke to the specified position. The target must be at most `NUKE_RANGE` rooms away
+	 * (Chebyshev distance). Consumes the nuker's full store and starts a `NUKER_COOLDOWN` cooldown.
+	 * @param target The target room position.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_NOT_ENOUGH_RESOURCES`,
+	 * `ERR_INVALID_ARGS`, `ERR_INVALID_TARGET`, `ERR_NOT_IN_RANGE`, `ERR_TIRED`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureNuker.launchNuke
 	 */
 	launchNuke(target: RoomPosition) {
 		return chainIntentChecks(

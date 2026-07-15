@@ -8,8 +8,21 @@ import { declare, optional, struct, variant } from 'xxscreeps/schema/index.js';
 export const terminalShape = declare('StructureTerminal', () =>
 	struct(...structForPath<StructureTerminalSchema>()('StructureTerminal', ownedStructureShape, {
 		...variant('terminal'),
+		/**
+		 * The current amount of hit points of the structure.
+		 * @public
+		 * @see https://docs.screeps.com/api/#StructureTerminal.hits
+		 */
 		hits: 'int32',
+
+		/**
+		 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains cargo of this
+		 * structure.
+		 * @public
+		 * @see https://docs.screeps.com/api/#StructureTerminal.store
+		 */
 		store: openStoreFormat,
+
 		'#cooldownTime': 'int32',
 	})));
 

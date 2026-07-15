@@ -6,6 +6,12 @@ import { declare, struct, variant } from 'xxscreeps/schema/index.js';
 /** @internal */
 export const observerShape = declare('Observer', struct(ownedStructureShape, {
 	...variant('observer'),
+
+	/**
+	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureObserver.hits
+	 */
 	hits: 'int32',
 }));
 

@@ -7,6 +7,14 @@ import { withOverlay } from 'xxscreeps/schema/index.js';
 import { assign } from 'xxscreeps/utility/utility.js';
 import { wallShape } from './schema.js';
 
+/**
+ * Blocks movement of all creeps. Players can build destructible walls in controlled rooms. Some
+ * rooms also contain indestructible walls separating novice and respawn areas from the rest of the
+ * world or dividing novice / respawn areas into smaller sections. Indestructible walls have no
+ * `hits` property.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureWall
+ */
 export class StructureWall extends withOverlay(Structure, wallShape) {
 	override get hitsMax() {
 		const level = this.room.controller?.level ?? 0;
@@ -15,6 +23,13 @@ export class StructureWall extends withOverlay(Structure, wallShape) {
 
 	override get structureType() { return C.STRUCTURE_WALL; }
 
+	/**
+	 * The amount of game ticks when the wall will disappear. Only some automatically placed walls
+	 * from novice or respawn areas have this property; it is always `undefined` in xxscreeps. This
+	 * property is no longer part of the official API.
+	 * @public
+	 * @deprecated
+	 */
 	@enumerable get ticksToLive(): number | undefined { return undefined; }
 }
 

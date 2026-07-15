@@ -6,14 +6,54 @@ import { struct, vector } from 'xxscreeps/schema/index.js';
 
 /** @internal */
 export const orderShape = struct({
+	/**
+	 * The unique order ID.
+	 * @public
+	 */
 	id: Id.format,
+
+	/**
+	 * Currently available amount to trade.
+	 * @public
+	 */
 	amount: 'int32',
+
+	/**
+	 * The order creation time in game ticks.
+	 * @public
+	 */
 	created: 'int32',
+
+	/**
+	 * The order creation time in milliseconds since UNIX epoch time.
+	 * @public
+	 */
 	createdTimestamp: 'double',
+
+	/**
+	 * How many resources are left to trade via this order.
+	 * @public
+	 */
 	remainingAmount: 'int32',
+
+	/**
+	 * One of the `RESOURCE_*` constants.
+	 * @public
+	 */
 	resourceType: resourceEnumFormat,
+
+	/**
+	 * The room where this order is placed.
+	 * @public
+	 */
 	roomName: roomNameFormat,
+
+	/**
+	 * The amount of resources to be traded in total.
+	 * @public
+	 */
 	totalAmount: 'int32',
+
 	'#buy': 'bool',
 	'#price': 'double',
 	'#user': Id.format,

@@ -25,7 +25,19 @@ export const roomPositionFormat = declare('RoomPosition', compose('int32', {
 }));
 
 export const roomObjectShape = declare('RoomObject', struct({
+	/**
+	 * A unique object identificator. You can use
+	 * [`Game.getObjectById`](https://docs.screeps.com/api/#Game.getObjectById) method to retrieve an
+	 * object instance by its `id`.
+	 * @public
+	 */
 	id: Id.format,
+
+	/**
+	 * An object representing the position of this object in the room.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomObject.pos
+	 */
 	pos: roomPositionFormat,
 	'#posId': union({ pos: 'int32' }),
 }));

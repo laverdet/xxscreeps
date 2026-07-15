@@ -8,17 +8,22 @@ import { ruinShape } from './schema.js';
 import { OwnedStructure, Structure } from './structure.js';
 
 /**
- * A destroyed structure. This is a walkable object.
+ * A destroyed structure. This is a walkable object. Decays in 500 ticks except some special cases.
+ * @public
+ * @see https://docs.screeps.com/api/#Ruin
  */
 export class Ruin extends withOverlay(RoomObject, ruinShape) {
 
 	/**
 	 * The amount of game ticks before this ruin decays.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Ruin.ticksToDecay
 	 */
 	@enumerable get ticksToDecay() { return cooldownTime(this['#decayTime']); }
 
 	/**
 	 * One of the `STRUCTURE_*` constants — the type of the destroyed structure.
+	 * @public
 	 */
 	@enumerable get structureType() { return this['#structure'].type; }
 
@@ -34,6 +39,8 @@ export class Ruin extends withOverlay(RoomObject, ruinShape) {
 
 	/**
 	 * An object containing basic data of the destroyed structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Ruin.structure
 	 */
 	get structure() {
 		const info = this['#structure'];

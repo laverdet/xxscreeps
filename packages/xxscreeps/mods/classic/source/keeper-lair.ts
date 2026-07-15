@@ -8,13 +8,22 @@ import { keeperLairShape } from './schema.js';
 /**
  * Non-player structure. Spawns NPC Source Keepers that guards energy sources and minerals in some
  * rooms. This structure cannot be destroyed.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureKeeperLair
  */
 export class StructureKeeperLair extends withOverlay(OwnedStructure, keeperLairShape) {
 	/**
 	 * Time to spawning of the next Source Keeper.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureKeeperLair.ticksToSpawn
 	 */
 	@enumerable get ticksToSpawn() { return optionalExpiryTime(this['#nextSpawnTime']); }
 
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureKeeperLair.structureType
+	 */
 	override get structureType() { return C.STRUCTURE_KEEPER_LAIR; }
 }
 

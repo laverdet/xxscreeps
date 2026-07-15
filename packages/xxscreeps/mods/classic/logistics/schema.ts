@@ -7,7 +7,18 @@ import { declare, struct, variant } from 'xxscreeps/schema/index.js';
 /** @internal */
 export const linkShape = declare('Link', struct(ownedStructureShape, {
 	...variant('link'),
+	/**
+	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLink.hits
+	 */
 	hits: 'int32',
+
+	/**
+	 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains cargo of this structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureLink.store
+	 */
 	store: makeSingleStoreFormat(),
 	'#actionLog': actionLogFormat,
 	'#cooldownTime': 'int32',
@@ -16,7 +27,18 @@ export const linkShape = declare('Link', struct(ownedStructureShape, {
 /** @internal */
 export const storageShape = declare('Storage', struct(ownedStructureShape, {
 	...variant('storage'),
+	/**
+	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureStorage.hits
+	 */
 	hits: 'int32',
+
+	/**
+	 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains cargo of this structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureStorage.store
+	 */
 	store: openStoreFormat,
 }));
 

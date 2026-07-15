@@ -48,6 +48,14 @@ export const schema = build(declare('World', compose(vector(struct({
 type RoomTraitsByName = TypeOf<typeof schema>;
 
 type FindRoute = {
+	/**
+	 * This callback accepts two arguments: `function(roomName, fromRoomName)`. It can be used to
+	 * calculate the cost of entering that room. You can use this to do things like prioritize your
+	 * own rooms, or avoid some rooms. You can return a floating point cost or `Infinity` to block the
+	 * room.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Game.map.findRoute
+	 */
 	routeCallback?: (roomName: string, fromRoomName: string) => number;
 };
 
@@ -67,6 +75,7 @@ interface NormalRoom {
 /**
  * A global object representing world map. Use it to navigate between rooms.
  * @public
+ * @see https://docs.screeps.com/api/#Game-map
  */
 export class GameMap {
 	readonly #traits: RoomTraitsByName;
@@ -124,6 +133,11 @@ export class GameMap {
 	/**
 	 * List all exits available from the room with the given name.
 	 * @param roomName The room name.
+	 * @returns The exits information in the format `{ "1": "W8N4", "3": "W7N3", "5": "W8N2", "7":
+	 * "W9N3" }` where the keys are the `TOP`, `RIGHT`, `BOTTOM` and `LEFT` direction constants, or
+	 * `null` if the room not found.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Game.map.describeExits
 	 */
 	describeExits(roomName: string): ExitsDescriptor | null {
 		const entry = this.#traits.get(roomName);
@@ -145,7 +159,13 @@ export class GameMap {
 	 * Find the exit direction from the given room en route to another room.
 	 * @param fromRoom Start room name or room object.
 	 * @param toRoom Finish room name or room object.
-	 * @param opts An object with the pathfinding options. See `findRoute`.
+	 * @param opts An object with the pathfinding options. See
+	 * [`findRoute`](https://docs.screeps.com/api/#Game.map.findRoute).
+	 * @returns The room direction constant, one of the following: `FIND_EXIT_TOP`, `FIND_EXIT_RIGHT`,
+	 * `FIND_EXIT_BOTTOM`, `FIND_EXIT_LEFT`. Or one of the following error codes: `ERR_NO_PATH`,
+	 * `ERR_INVALID_ARGS`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Game.map.findExit
 	 */
 	findExit(fromRoom: string | Room, toRoom: string | Room, opts: FindRoute = {}) {
 		const route = this.findRoute(fromRoom, toRoom, opts);
@@ -165,11 +185,14 @@ export class GameMap {
 	 * Find route from the given room to another room.
 	 * @param fromRoom Start room name or room object.
 	 * @param toRoom Finish room name or room object.
-	 * @param opts An object with the following options:
-	 *   `routeCallback` This callback accepts two arguments: function(roomName, fromRoomName). It can
-	 *   be used to calculate the cost of entering that room. You can use this to do things like
-	 *   prioritize your own rooms, or avoid some rooms. You can return a floating point cost or
-	 *   Infinity to block the room.
+	 * @param opts An object with the following options: `routeCallback` This callback accepts two
+	 * arguments: `function(roomName, fromRoomName)`. It can be used to calculate the cost of entering
+	 * that room. You can use this to do things like prioritize your own rooms, or avoid some rooms.
+	 * You can return a floating point cost or `Infinity` to block the room.
+	 * @returns The route array in the format `[ { exit: FIND_EXIT_RIGHT, room: 'arena21' }, ... ]`,
+	 * or the error code: `ERR_NO_PATH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Game.map.findRoute
 	 */
 	findRoute(fromRoom: string | Room, toRoom: string | Room, opts: FindRoute = {}) {
 		// Sanity check
@@ -242,6 +265,9 @@ export class GameMap {
 	 * @param roomName2 The name of the second room.
 	 * @param continuous Whether to treat the world map continuous on borders. Set to true if you want
 	 * to calculate the trade or terminal send cost. Default is false.
+	 * @returns A number of rooms between the given two rooms.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Game.map.getRoomLinearDistance
 	 */
 	getRoomLinearDistance(roomName1: string, roomName2: string, continuous = false) {
 		const room1 = parseRoomName(roomName1);
@@ -264,6 +290,14 @@ export class GameMap {
 	/**
 	 * Gets availability status of the room with the specified name. Learn more about starting areas
 	 * from [this article](https://docs.screeps.com/start-areas.html).
+	 * @param roomName The room name.
+	 * @returns An object with the following properties: `status` -- one of the following string
+	 * values: `normal` (the room has no restrictions), `closed` (the room is not available), `novice`
+	 * (the room is part of a novice area), `respawn` (the room is part of a respawn area);
+	 * `timestamp` -- status expiration time in milliseconds since UNIX epoch time. This property is
+	 * `null` if the status is permanent.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Game.map.getRoomStatus
 	 */
 	getRoomStatus(roomName: string): RoomStatus;
 
@@ -287,9 +321,13 @@ export class GameMap {
 	getRoomTerrain(roomName: string, graceful: true): Terrain.Terrain | undefined;
 
 	/**
-	 * Get a `Room.Terrain` object which provides fast access to static terrain data. This method works
-	 * for any room in the world even if you have no access to it.
+	 * Get a [`Room.Terrain`](https://docs.screeps.com/api/#Room-Terrain) object which provides fast
+	 * access to static terrain data. This method works for any room in the world even if you have no
+	 * access to it.
 	 * @param roomName The room name.
+	 * @returns Returns new [`Room.Terrain`](https://docs.screeps.com/api/#Room-Terrain) object.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Game.map.getRoomTerrain
 	 */
 	getRoomTerrain(roomName: string): Terrain.Terrain;
 
@@ -303,9 +341,15 @@ export class GameMap {
 	}
 
 	/**
-	 * Get terrain type at the specified room position. This method works for any room in the world even
-	 * if you have no access to it.
-	 * @deprecated
+	 * Get terrain type at the specified room position. This method works for any room in the world
+	 * even if you have no access to it.
+	 * @param args Either `x` (X position in the room), `y` (Y position in the room) and `roomName`
+	 * (the room name), or a single `RoomPosition` object.
+	 * @returns One of the following string values: `plain`, `swamp`, `wall`
+	 * @public
+	 * @deprecated Please use a faster method
+	 * [`Game.map.getRoomTerrain`](https://docs.screeps.com/api/#Game.map.getRoomTerrain) instead.
+	 * @see https://docs.screeps.com/api/#Game.map.getTerrainAt
 	 */
 	getTerrainAt(...args: [ position: RoomPosition ] | [ x: number, y: number, roomName: string ]) {
 		const pos = args.length === 1 ? args[0] : new RoomPosition(args[0], args[1], args[2]);
@@ -318,6 +362,8 @@ export class GameMap {
 	/**
 	 * Returns the world size as a number of rooms between world corners. For example, for a world
 	 * with rooms from W50N50 to E50S50 this method will return 102.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Game.map.getWorldSize
 	 */
 	getWorldSize() {
 		return Math.max(this.#height, this.#width);
@@ -325,7 +371,12 @@ export class GameMap {
 
 	/**
 	 * Check if the room is available to move into.
-	 * @deprecated
+	 * @param roomName The room name.
+	 * @returns A boolean value.
+	 * @public
+	 * @deprecated Please use
+	 * [`Game.map.getRoomStatus`](https://docs.screeps.com/api/#Game.map.getRoomStatus) instead.
+	 * @see https://docs.screeps.com/api/#Game.map.isRoomAvailable
 	 */
 	isRoomAvailable(roomName: string) {
 		return this.#accessibleRooms.has(roomName);

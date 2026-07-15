@@ -48,15 +48,25 @@ declare module './room.js' {
 	interface Room {
 		/**
 		 * Get the list of objects at the specified room position.
-		 * @param type One of the `LOOK_*` constants
-		 * @param x X position in the room
-		 * @param y Y position in the room
-		 * @param target Can be a RoomObject or RoomPosition
+		 * @param args `(x, y)` coordinates in the room, or a
+		 * [RoomPosition](https://docs.screeps.com/api/#RoomPosition) object or any object containing
+		 * RoomPosition.
+		 * @returns An array with objects at the specified position in the following format:
+		 * `[ { type: 'creep', creep: {...} }, { type: 'terrain', terrain: 'swamp' }, ... ]`
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.lookAt
 		 */
 		lookAt: (...args: PositionParameter) => LookAtResult<any>[];
 
 		/**
-		 * Creates a RoomPosition object at the specified location.
+		 * Creates a [RoomPosition](https://docs.screeps.com/api/#RoomPosition) object at the specified
+		 * location.
+		 * @param x The X position.
+		 * @param y The Y position.
+		 * @returns A [RoomPosition](https://docs.screeps.com/api/#RoomPosition) object or null if it
+		 * cannot be obtained.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.getPositionAt
 		 */
 		getPositionAt: (x: number, y: number) => RoomPosition;
 
@@ -67,6 +77,11 @@ declare module './room.js' {
 		 * @param bottom The bottom Y boundary of the area.
 		 * @param right The right X boundary of the area.
 		 * @param asArray Set to true if you want to get the result as a plain array.
+		 * @returns If `asArray` is set to false or undefined, the method returns an object with all the
+		 * objects in the specified area keyed by `y` then `x` coordinate. If `asArray` is set to true,
+		 * the method returns an array of look results with `x` and `y` properties.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.lookAtArea
 		 */
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		lookAtArea(top: number, left: number, bottom: number, right: number, asArray?: false): LookAtArea<LookAtResult<any>>;
@@ -75,10 +90,13 @@ declare module './room.js' {
 
 		/**
 		 * Get an object with the given type at the specified room position.
-		 * @param type One of the `LOOK_*` constants
-		 * @param x X position in the room
-		 * @param y Y position in the room
-		 * @param target Can be a RoomObject or RoomPosition
+		 * @param type One of the `LOOK_*` constants.
+		 * @param rest `(x, y)` coordinates in the room, or a
+		 * [RoomPosition](https://docs.screeps.com/api/#RoomPosition) object or any object containing
+		 * RoomPosition.
+		 * @returns An array of objects of the given type at the specified position if found.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.lookForAt
 		 */
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		lookForAt<Type extends LookConstants>(type: Type, ...rest: PositionParameter): TypeOfLook<Type>[];
@@ -94,6 +112,12 @@ declare module './room.js' {
 		 * @param bottom The bottom Y boundary of the area.
 		 * @param right The right X boundary of the area.
 		 * @param asArray Set to true if you want to get the result as a plain array.
+		 * @returns If `asArray` is set to false or undefined, the method returns an object with all the
+		 * objects of the given type in the specified area keyed by `y` then `x` coordinate. If
+		 * `asArray` is set to true, the method returns an array of found objects with `x` and `y`
+		 * properties.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.lookForAtArea
 		 */
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		lookForAtArea<Type extends LookConstants>(type: Type, top: number, left: number, bottom: number, right: number, asArray?: false): LookAtArea<LookForAtArea<Type>>;

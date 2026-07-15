@@ -41,6 +41,11 @@ const tombstoneSchema = registerVariant('Room.objects', compose(tombstoneShape, 
 
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
+		/**
+		 * A hash containing all your creeps with creep names as hash keys.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.creeps
+		 */
 		creeps: Record<string, Creep>;
 	}
 }

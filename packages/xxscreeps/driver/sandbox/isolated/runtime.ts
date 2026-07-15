@@ -12,16 +12,22 @@ declare module 'xxscreeps/game/game.js' {
 	interface CPU {
 		/**
 		 * Use this method to get heap statistics for your virtual machine. The return value is almost
-		 * identical to the Node.js function `v8.getHeapStatistics()`. This function returns one
-		 * additional property: `externally_allocated_size` which is the total amount of currently
-		 * allocated memory which is not included in the v8 heap but counts against this isolate's memory
-		 * limit. `ArrayBuffer` instances over a certain size are externally allocated and will be counted
-		 * here.
+		 * identical to the Node.js function
+		 * [`v8.getHeapStatistics()`](https://nodejs.org/dist/latest-v8.x/docs/api/v8.html#v8_v8_getheapstatistics).
+		 * This function returns one additional property: `externally_allocated_size` which is the total
+		 * amount of currently allocated memory which is not included in the v8 heap but counts against
+		 * this isolate's memory limit. `ArrayBuffer` instances over a certain size are externally
+		 * allocated and will be counted here.
+		 * @returns Returns an object with heap statistics.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.cpu.getHeapStatistics
 		 */
 		getHeapStatistics: () => ivm.HeapStatistics;
 
 		/**
 		 * Reset your runtime environment and wipe all data in heap memory.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.cpu.halt
 		 */
 		halt: () => never;
 	}

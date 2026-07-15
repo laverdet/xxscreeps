@@ -31,10 +31,33 @@ export type RoomCallback = (roomId: number) => Uint8Array | false | undefined;
  */
 export type WorldTerrain = IteratorObject<readonly [ number, Readonly<Uint8Array> ]>;
 
+/**
+ * The result of a `PathFinder.search` operation.
+ * @public
+ * @see https://docs.screeps.com/api/#PathFinder.search
+ */
 export interface Result<Position> {
+	/**
+	 * An array of RoomPosition objects.
+	 */
 	path: Position[];
+
+	/**
+	 * Total number of operations performed before this path was calculated.
+	 */
 	ops: number;
+
+	/**
+	 * The total cost of the path as derived from `plainCost`, `swampCost` and any given CostMatrix
+	 * instances.
+	 */
 	cost: number;
+
+	/**
+	 * If the pathfinder fails to find a complete path, this will be true. Note that `path` will still
+	 * be populated with a partial path which represents the closest path it could find given the
+	 * search parameters.
+	 */
 	incomplete: boolean;
 }
 

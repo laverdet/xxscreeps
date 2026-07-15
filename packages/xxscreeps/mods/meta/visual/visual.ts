@@ -166,14 +166,25 @@ class VisualOf<Point extends unknown[]> {
 	}
 
 	/**
-	 * Export the visuals as a string
+	 * Returns a compact representation of all visuals added in the room, or on the map, in the
+	 * current tick.
+	 * @returns A string with visuals data. There's not much you can do with the string besides store
+	 * them for later.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.export
+	 * @see https://docs.screeps.com/api/#Game.map-visual.export
 	 */
 	export() {
 		return `${this.#state.visuals.map(vis => JSON.stringify({ ...vis, t: vis[Variant] })).join('\n')}\n`;
 	}
 
 	/**
-	 * Import visuals from string
+	 * Add previously exported (with `export`) visuals to the visual data of the current tick.
+	 * @param text The string returned from `export`.
+	 * @returns The visual object itself, so that you can chain calls.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.import
+	 * @see https://docs.screeps.com/api/#Game.map-visual.import
 	 */
 	import(text: string) {
 		for (const row of text.split('\n')) {
@@ -188,6 +199,19 @@ class VisualOf<Point extends unknown[]> {
 
 	/**
 	 * Draw a circle.
+	 * @param pos The position object of the center. Room visuals also accept two `x, y` coordinate
+	 * arguments instead.
+	 * @param style An object with the following properties:
+	 * - `radius` — Circle radius, default is 0.15 (10 for map visuals).
+	 * - `fill` — Fill color in any web format, default is `#ffffff` (white).
+	 * - `opacity` — Opacity value, default is 0.5.
+	 * - `stroke` — Stroke color in any web format, default is undefined (no stroke).
+	 * - `strokeWidth` — Stroke line width, default is 0.1 (0.5 for map visuals).
+	 * - `lineStyle` — Either `undefined` (solid line), `dashed`, or `dotted`. Default is undefined.
+	 * @returns The visual object itself, so that you can chain calls.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.circle
+	 * @see https://docs.screeps.com/api/#Game.map-visual.circle
 	 */
 	circle(...args: [ ...pos: Point, style?: CircleStyle ]) {
 		const [ x, y, style ] = extractPositions(args, this.#encodePositions);
@@ -197,6 +221,19 @@ class VisualOf<Point extends unknown[]> {
 
 	/**
 	 * Draw a line.
+	 * @param pos1 The start position object. Room visuals also accept two `x1, y1` coordinate
+	 * arguments instead.
+	 * @param pos2 The finish position object. Room visuals also accept two `x2, y2` coordinate
+	 * arguments instead.
+	 * @param style An object with the following properties:
+	 * - `width` — Line width, default is 0.1.
+	 * - `color` — Line color in any web format, default is `#ffffff` (white).
+	 * - `opacity` — Opacity value, default is 0.5.
+	 * - `lineStyle` — Either `undefined` (solid line), `dashed`, or `dotted`. Default is undefined.
+	 * @returns The visual object itself, so that you can chain calls.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.line
+	 * @see https://docs.screeps.com/api/#Game.map-visual.line
 	 */
 	line(...args: [ ...pos1: Point, ...pos2: Point, style?: LineStyle ]) {
 		const [ x1, y1, x2, y2, style ] = extractPositions(args, this.#encodePositions);
@@ -206,6 +243,18 @@ class VisualOf<Point extends unknown[]> {
 
 	/**
 	 * Draw a polyline.
+	 * @param points An array of points. Every item should be either an array with 2 numbers (i.e.
+	 * `[10,15]`), or a `RoomPosition` object. Map visuals require `RoomPosition` objects.
+	 * @param style An object with the following properties:
+	 * - `fill` — Fill color in any web format, default is `undefined` (no fill).
+	 * - `opacity` — Opacity value, default is 0.5.
+	 * - `stroke` — Stroke color in any web format, default is `#ffffff` (white).
+	 * - `strokeWidth` — Stroke line width, default is 0.1 (0.5 for map visuals).
+	 * - `lineStyle` — Either `undefined` (solid line), `dashed`, or `dotted`. Default is undefined.
+	 * @returns The visual object itself, so that you can chain calls.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.poly
+	 * @see https://docs.screeps.com/api/#Game.map-visual.poly
 	 */
 	poly(points: (LocalPoint | RoomPoint | [number, number])[], style?: PolyStyle) {
 		const pairs = [
@@ -220,6 +269,20 @@ class VisualOf<Point extends unknown[]> {
 
 	/**
 	 * Draw a rectangle.
+	 * @param pos The position object of the top-left corner. Room visuals also accept two `x, y`
+	 * coordinate arguments instead.
+	 * @param width The width of the rectangle.
+	 * @param height The height of the rectangle.
+	 * @param style An object with the following properties:
+	 * - `fill` — Fill color in any web format, default is `#ffffff` (white).
+	 * - `opacity` — Opacity value, default is 0.5.
+	 * - `stroke` — Stroke color in any web format, default is undefined (no stroke).
+	 * - `strokeWidth` — Stroke line width, default is 0.1 (0.5 for map visuals).
+	 * - `lineStyle` — Either `undefined` (solid line), `dashed`, or `dotted`. Default is undefined.
+	 * @returns The visual object itself, so that you can chain calls.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.rect
+	 * @see https://docs.screeps.com/api/#Game.map-visual.rect
 	 */
 	rect(...args: [ ...pos: Point, width: number, height: number, style?: RectStyle ]) {
 		const [ x, y, width, height, style ] = extractPositions(args, this.#encodePositions);
@@ -228,7 +291,27 @@ class VisualOf<Point extends unknown[]> {
 	}
 
 	/**
-	 * Draw a text label. You can use any valid Unicode characters, including emoji.
+	 * Draw a text label. You can use any valid Unicode characters, including
+	 * [emoji](http://unicode.org/emoji/charts/emoji-style.txt).
+	 * @param text The text message.
+	 * @param pos The position object of the label baseline. Room visuals also accept two `x, y`
+	 * coordinate arguments instead.
+	 * @param style An object with the following properties:
+	 * - `color` — Font color in any web format, default is `#ffffff` (white).
+	 * - `font` — Either a number or a string in one of the following forms: `0.7` (relative size in
+	 *   game coordinates), `20px` (absolute size in pixels), `0.7 serif`, or
+	 *   `bold italic 1.5 Times New Roman`.
+	 * - `stroke` — Stroke color in any web format, default is undefined (no stroke).
+	 * - `strokeWidth` — Stroke width, default is 0.15.
+	 * - `backgroundColor` — Background color in any web format, default is undefined (no background).
+	 *   When background is enabled, text vertical align is set to middle (default is baseline).
+	 * - `backgroundPadding` — Background rectangle padding, default is 0.3.
+	 * - `align` — Text align, either `center`, `left`, or `right`. Default is `center`.
+	 * - `opacity` — Opacity value, default is 1.0.
+	 * @returns The visual object itself, so that you can chain calls.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.text
+	 * @see https://docs.screeps.com/api/#Game.map-visual.text
 	 */
 	text(text: string, ...args: [ ...pos: Point, style?: TextStyle ]) {
 		const [ x, y, style ] = extractPositions(args, this.#encodePositions);
@@ -237,7 +320,10 @@ class VisualOf<Point extends unknown[]> {
 	}
 
 	/**
-	 * Remove all visuals from the room.
+	 * Remove all visuals from the room, or from the map.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.clear
+	 * @see https://docs.screeps.com/api/#Game.map-visual.clear
 	 */
 	clear() {
 		this.#state.visuals.splice(0);
@@ -245,8 +331,12 @@ class VisualOf<Point extends unknown[]> {
 	}
 
 	/**
-	 * Get the stored size of all visuals added in the current tick.
+	 * Get the stored size of all visuals added in the current tick. It must not exceed 512,000 (500
+	 * KB) per room, or 1,024,000 (1000 KB) for map visuals.
 	 * @returns The size of the visuals in bytes.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.getSize
+	 * @see https://docs.screeps.com/api/#Game.map-visual.getSize
 	 */
 	getSize() {
 		return this.#state.size;
@@ -265,25 +355,31 @@ class VisualOf<Point extends unknown[]> {
 /**
  * Room visuals provide a way to show various visual debug info in game rooms. You can use the
  * `RoomVisual` object to draw simple shapes that are visible only to you. Every existing Room
- * object already contains the visual property, but you also can create new `RoomVisual` objects for
- * any room (even without visibility) using the constructor.
+ * object already contains the [`visual`](https://docs.screeps.com/api/#Room.visual) property, but
+ * you also can create new `RoomVisual` objects for any room (even without visibility) using the
+ * [constructor](https://docs.screeps.com/api/#RoomVisual.constructor).
  *
  * Room visuals are not stored in the database, their only purpose is to display something in your
  * browser. All drawings will persist for one tick and will disappear if not updated. All
  * `RoomVisual` API calls have no added CPU cost (their cost is natural and mostly related to simple
  * `JSON.serialize` calls). However, there is a usage limit: you cannot post more than 500 KB of
- * serialized data per one room (see `getSize` method).
+ * serialized data per one room (see [`getSize`](https://docs.screeps.com/api/#RoomVisual.getSize)
+ * method).
  *
  * All draw coordinates are measured in game coordinates and centered to tile centers, i.e. (10,10)
  * will point to the center of the creep at `x:10; y:10` position. Fractional coordinates are
  * allowed.
+ * @public
+ * @see https://docs.screeps.com/api/#RoomVisual
  */
 export class RoomVisual extends VisualOf<[ x: number, y: number ] | [ pos: LocalPoint ] | [ pos: RoomPoint ]> {
 	/**
-	 * You can directly create new RoomVisual object in any room, even if it's invisible to your
+	 * You can directly create new `RoomVisual` object in any room, even if it's invisible to your
 	 * script.
 	 * @param roomName The room name. If undefined, visuals will be posted to all rooms
 	 * simultaneously.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomVisual.constructor
 	 */
 	constructor(roomName = '*') {
 		super(`RoomVisual in room ${roomName}`, {
@@ -296,13 +392,18 @@ export class RoomVisual extends VisualOf<[ x: number, y: number ] | [ pos: Local
 
 /**
  * Map visuals provide a way to show various visual debug info on the game map. You can use the
- * `MapVisual` object to draw simple shapes that are visible only to you.
+ * `Game.map.visual` object to draw simple shapes that are visible only to you.
  *
  * Map visuals are not stored in the database, their only purpose is to display something in your
  * browser. All drawings will persist for one tick and will disappear if not updated. All
- * `MapVisual` API calls have no added CPU cost (their cost is natural and mostly related to simple
- * `JSON.serialize` calls). However, there is a usage limit: you cannot post more than 1000 KB of
- * serialized data (see `getSize` method).
+ * `Game.map.visual` calls have no added CPU cost (their cost is natural and mostly related to
+ * simple `JSON.serialize` calls). However, there is a usage limit: you cannot post more than 1000
+ * KB of serialized data (see `getSize` method).
+ *
+ * All draw coordinates are measured in global game coordinates
+ * ([`RoomPosition`](https://docs.screeps.com/api/#RoomPosition)).
+ * @public
+ * @see https://docs.screeps.com/api/#Game-map-visual
  */
 export class MapVisual extends VisualOf<[ pos: RoomPoint ]> {
 	constructor() {

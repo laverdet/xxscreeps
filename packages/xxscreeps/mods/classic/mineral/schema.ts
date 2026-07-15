@@ -8,6 +8,12 @@ import { declare, struct, variant } from 'xxscreeps/schema/index.js';
 /** @internal */
 export const extractorShape = declare('Extractor', struct(ownedStructureShape, {
 	...variant('extractor'),
+
+	/**
+	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureExtractor.hits
+	 */
 	hits: 'int32',
 	'#cooldownTime': 'int32',
 }));
@@ -15,8 +21,27 @@ export const extractorShape = declare('Extractor', struct(ownedStructureShape, {
 /** @internal */
 export const mineralShape = declare('Mineral', struct(roomObjectShape, {
 	...variant('mineral'),
+
+	/**
+	 * The density that this mineral deposit will be refilled to once `ticksToRegeneration` reaches 0.
+	 * This is one of the `DENSITY_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Mineral.density
+	 */
 	density: 'int32',
+
+	/**
+	 * The remaining amount of resources.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Mineral.mineralAmount
+	 */
 	mineralAmount: 'int32',
+
+	/**
+	 * The resource type, one of the `RESOURCE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Mineral.mineralType
+	 */
 	mineralType: resourceEnumFormat,
 	'#nextRegenerationTime': 'int32',
 }));

@@ -63,7 +63,19 @@ export { bindOpenStore, bindRestrictedStoreFormat, bindUntypedSingleStore };
 /** @internal */
 export const containerShape = declare('Container', struct(structureShape, {
 	...variant('container'),
+
+	/**
+	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureContainer.hits
+	 */
 	hits: 'int32',
+
+	/**
+	 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains cargo of this structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureContainer.store
+	 */
 	store: openStoreFormat,
 	'#nextDecayTime': 'int32',
 }));

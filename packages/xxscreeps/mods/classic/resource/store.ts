@@ -33,12 +33,18 @@ const BufferObjectWithResourcesType = withOverlay(BufferObject,
  * ```
  * console.log(creep.store[RESOURCE_ENERGY]);
  * ```
+ * @public
+ * @see https://docs.screeps.com/api/#Store
  */
 export abstract class Store extends BufferObjectWithResourcesType {
 	/**
-	 * A shorthand for `getCapacity(resource) - getUsedCapacity(resource)`.
-	 * @param resourceType The type of resource
-	 * @returns Free capacity, or null when the store cannot hold this resource type.
+	 * Returns free capacity for the store. For a limited store, it returns the capacity available for
+	 * the specified resource if `resource` is defined and valid for this store.
+	 * @param resourceType The type of the resource.
+	 * @returns Returns available capacity number, or `null` in case of an invalid `resource` for this
+	 * store type.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Store.getFreeCapacity
 	 */
 	getFreeCapacity(resourceType?: ResourceType): number | null {
 		const capacity = this.getCapacity(resourceType);
@@ -66,18 +72,24 @@ export abstract class Store extends BufferObjectWithResourcesType {
 	abstract ['#subtract'](type: ResourceType, amount: number): void;
 
 	/**
-	 * Returns capacity of this store for the specified resource, or total capacity if `resource` is
-	 * undefined.
-	 * @param resourceType The type of resource
-	 * @returns Capacity, or null in case of a not valid resource for this store type
+	 * Returns capacity of this store for the specified resource. For a general purpose store, it
+	 * returns total capacity if `resource` is undefined.
+	 * @param resourceType The type of the resource.
+	 * @returns Returns capacity number, or `null` in case of an invalid `resource` for this store
+	 * type.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Store.getCapacity
 	 */
 	abstract getCapacity(resourceType?: ResourceType): number | null;
 
 	/**
-	 * Returns the capacity used by the specified resource, or total used capacity for general purpose
-	 * stores if resource is undefined.
-	 * @param resourceType The type of resource
-	 * @returns Used capacity, or null in case of a not valid resource for this store type
+	 * Returns the capacity used by the specified resource. For a general purpose store, it returns
+	 * total used capacity if `resource` is undefined.
+	 * @param resourceType The type of the resource.
+	 * @returns Returns used capacity number, or `null` in case of a not valid `resource` for this
+	 * store type.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Store.getUsedCapacity
 	 */
 	abstract getUsedCapacity(resourceType?: ResourceType): number | null;
 

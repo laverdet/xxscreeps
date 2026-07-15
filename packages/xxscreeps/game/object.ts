@@ -12,10 +12,18 @@ import { ObjectGetPrototypeOf, ObjectSetPrototypeOf } from './intrinsics.js';
 import { actionLogFormat, roomObjectShape } from './schema.js';
 import { Game, registerGlobal } from './index.js';
 
+/**
+ * An applied effect on a `RoomObject`. See
+ * [`RoomObject.effects`](https://docs.screeps.com/api/#RoomObject.effects).
+ * @public
+ */
 export interface RoomObjectEffect {
+	/** Effect ID of the applied effect. Can be either natural effect ID or Power ID. */
 	effect?: number;
 	power?: number;
+	/** Power level of the applied effect. Absent if the effect is not a Power effect. */
 	level?: number;
+	/** How many ticks will the effect last. */
 	ticksRemaining: number;
 }
 
@@ -34,10 +42,18 @@ const isSubClass =
 	): instance is Type =>
 		target.prototype instanceof instance.constructor;
 
+/**
+ * Any object with a position in a room. Almost all game objects prototypes are derived from
+ * `RoomObject`.
+ * @public
+ * @see https://docs.screeps.com/api/#RoomObject
+ */
 export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, roomObjectShape) {
 	/**
-	 * The link to the Room object. May be `undefined` in case if an object is a flag or a construction
-	 * site and is placed in a room that is not visible to you.
+	 * The link to the Room object. May be `undefined` in case if an object is a flag or a
+	 * construction site and is placed in a room that is not visible to you.
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomObject.room
 	 */
 	declare room: Room;
 
@@ -133,6 +149,15 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 // Typing-only declarations on the base; runtime getters live on subclasses.
 export declare interface RoomObject {
 	get hits(): number | undefined;
+
+	/**
+	 * Applied effects, an array of objects with the following properties: `effect` (effect ID of the
+	 * applied effect, can be either natural effect ID or Power ID), `level` (power level of the
+	 * applied effect, absent if the effect is not a Power effect), and `ticksRemaining` (how many
+	 * ticks will the effect last).
+	 * @public
+	 * @see https://docs.screeps.com/api/#RoomObject.effects
+	 */
 	get effects(): RoomObjectEffect[] | undefined;
 	set hits(hits: number);
 	get hitsMax(): number | undefined;

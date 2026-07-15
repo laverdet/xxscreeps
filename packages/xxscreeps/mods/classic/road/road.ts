@@ -8,9 +8,32 @@ import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { roadShape } from './schema.js';
 
+/**
+ * Decreases movement cost to 1. Using roads allows creating creeps with less `MOVE` body parts. You
+ * can also build roads on top of natural terrain walls which are otherwise impassable.
+ * @public
+ * @see https://docs.screeps.com/api/#StructureRoad
+ */
 export class StructureRoad extends withOverlay(Structure, roadShape) {
+	/**
+	 * The amount of game ticks when this road will lose some hit points.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureRoad.ticksToDecay
+	 */
 	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
+
+	/**
+	 * The maximum amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureRoad.hitsMax
+	 */
 	override get hitsMax() { return C.ROAD_HITS * this['#multiplier']; }
+
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureRoad.structureType
+	 */
 	override get structureType() { return C.STRUCTURE_ROAD; }
 	override get '#pathCost'() { return 1; }
 

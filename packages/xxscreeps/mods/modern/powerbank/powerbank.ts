@@ -11,12 +11,55 @@ import { assign } from 'xxscreeps/utility/utility.js';
 import { powerBankShape } from './schema.js';
 import { PowerBankStore } from './store.js';
 
+/**
+ * Non-player structure. Contains power resource which can be obtained by destroying the structure.
+ * Hits the attacker creep back on each attack. Learn more about power from
+ * [this article](https://docs.screeps.com/power.html).
+ * @public
+ * @see https://docs.screeps.com/api/#StructurePowerBank
+ */
 export class StructurePowerBank extends withOverlay(Structure, powerBankShape) {
+	/**
+	 * The amount of power containing.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructurePowerBank.power
+	 */
 	@enumerable get power() { return this.store[C.RESOURCE_POWER]; }
+
+	/**
+	 * The amount of game ticks when this structure will disappear.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructurePowerBank.ticksToDecay
+	 */
 	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
+
+	/**
+	 * An object with the structure's owner info. Power banks are always owned by the neutral
+	 * `Power Bank` user.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructurePowerBank.owner
+	 */
 	@enumerable get owner() { return { username: 'Power Bank' }; }
+
+	/**
+	 * Whether this is your own structure. Always `false` for power banks.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructurePowerBank.my
+	 */
 	@enumerable override get my() { return false; }
+
+	/**
+	 * The total amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructurePowerBank.hitsMax
+	 */
 	override get hitsMax() { return C.POWER_BANK_HITS; }
+
+	/**
+	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructurePowerBank.structureType
+	 */
 	override get structureType() { return C.STRUCTURE_POWER_BANK; }
 
 	override '#applyDamage'(power: number, type: number, source?: RoomObject) {

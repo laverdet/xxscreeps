@@ -8,7 +8,19 @@ import { declare, struct, variant } from 'xxscreeps/schema/index.js';
 /** @internal */
 export const factoryShape = declare('StructureFactory', struct(ownedStructureShape, {
 	...variant('factory'),
+
+	/**
+	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureFactory.hits
+	 */
 	hits: 'int32',
+
+	/**
+	 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains cargo of this structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureFactory.store
+	 */
 	store: openStoreFormat,
 	'#actionLog': actionLogFormat,
 	'#cooldownTime': 'int32',

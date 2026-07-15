@@ -6,7 +6,19 @@ import { powerBankStoreFormat } from './store.js';
 /** @internal */
 export const powerBankShape = declare('PowerBank', struct(structureShape, {
 	...variant('powerBank'),
+
+	/**
+	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructurePowerBank.hits
+	 */
 	hits: 'int32',
+
+	/**
+	 * A `Store` object containing the power held by this structure. Note: this member is an xxscreeps
+	 * extension; the official API only exposes the amount via `power`.
+	 * @public
+	 */
 	store: powerBankStoreFormat,
 	'#nextDecayTime': 'int32',
 }));

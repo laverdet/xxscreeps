@@ -23,21 +23,29 @@ export interface DestructibleStructure extends Structure {
 
 /**
  * The base prototype object of all structures.
+ * @public
+ * @see https://docs.screeps.com/api/#Structure
  */
 export class Structure extends withOverlay(RoomObject, structureShape) {
 
 	/**
 	 * One of the `STRUCTURE_*` constants.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Structure.structureType
 	 */
 	@enumerable get structureType(): string { throw new Error(); }
 
 	/**
 	 * The current amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Structure.hits
 	 */
 	@enumerable override get hits(): number | undefined { return undefined; }
 
 	/**
 	 * The total amount of hit points of the structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Structure.hitsMax
 	 */
 	@enumerable override get hitsMax(): number | undefined { return undefined; }
 
@@ -48,6 +56,9 @@ export class Structure extends withOverlay(RoomObject, structureShape) {
 
 	/**
 	 * Destroy this structure immediately.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`
+	 * @public
+	 * @see https://docs.screeps.com/api/#Structure.destroy
 	 */
 	destroy(this: Structure) {
 		return chainIntentChecks(
@@ -58,6 +69,9 @@ export class Structure extends withOverlay(RoomObject, structureShape) {
 	/**
 	 * Check whether this structure can be used. If room controller level is insufficient, then this
 	 * method will return false, and the structure will be highlighted with red in the game.
+	 * @returns A boolean value.
+	 * @public
+	 * @see https://docs.screeps.com/api/#Structure.isActive
 	 */
 	isActive(): boolean {
 		return true;
@@ -92,15 +106,22 @@ export class Structure extends withOverlay(RoomObject, structureShape) {
 /**
  * The base prototype for a structure that has an owner. Such structures can be found using
  * `FIND_MY_STRUCTURES` and `FIND_HOSTILE_STRUCTURES` constants.
+ * @public
+ * @see https://docs.screeps.com/api/#OwnedStructure
  */
 export class OwnedStructure extends withOverlay(Structure, ownedStructureShape) {
 	/**
-	 * An object with the structure's owner info
+	 * An object with the structure's owner info containing the following properties: `username` — the
+	 * name of the owner user.
+	 * @public
+	 * @see https://docs.screeps.com/api/#OwnedStructure.owner
 	 */
 	@enumerable get owner() { return userInfo.get(this['#user']!); }
 
 	/**
 	 * Whether this is your own structure.
+	 * @public
+	 * @see https://docs.screeps.com/api/#OwnedStructure.my
 	 */
 	@enumerable override get my() {
 		const user = this['#user'];

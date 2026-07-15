@@ -25,8 +25,10 @@ hooks.register('runtimeConnector', {
 declare module 'xxscreeps/game/room/index.js' {
 	interface Room {
 		/**
-		 * A `RoomVisual` object for this room. You can use this object to draw simple shapes (lines,
-		 * circles, text labels) in the room.
+		 * A [RoomVisual](https://docs.screeps.com/api/#RoomVisual) object for this room. You can use
+		 * this object to draw simple shapes (lines, circles, text labels) in the room.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Room.visual
 		 */
 		readonly visual: RoomVisual;
 	}
@@ -46,7 +48,10 @@ declare module 'xxscreeps/game/map.js' {
 	interface GameMap {
 		/**
 		 * A `MapVisual` object for the map. You can use this object to draw simple shapes (lines,
-		 * circles, text labels).
+		 * circles, text labels) that are visible only to you. See the
+		 * [documentation](https://docs.screeps.com/api/#Game-map-visual).
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game-map-visual
 		 */
 		readonly visual: MapVisual;
 	}

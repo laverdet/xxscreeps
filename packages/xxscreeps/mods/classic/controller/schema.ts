@@ -7,7 +7,21 @@ import { constant, declare, optional, struct, variant } from 'xxscreeps/schema/i
 /** @internal */
 export const controllerShape = declare('Controller', struct(ownedStructureShape, {
 	...variant('controller'),
+
+	/**
+	 * Whether using power is enabled in this room. Use
+	 * [`PowerCreep.enableRoom`](https://docs.screeps.com/api/#PowerCreep.enableRoom) to turn powers
+	 * on.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.isPowerEnabled
+	 */
 	isPowerEnabled: 'bool',
+
+	/**
+	 * Safe mode activations available to use.
+	 * @public
+	 * @see https://docs.screeps.com/api/#StructureController.safeModeAvailable
+	 */
 	safeModeAvailable: 'int32',
 	'#downgradeTime': 'int32',
 	'#progress': 'int32',
