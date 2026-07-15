@@ -37,6 +37,8 @@ export function release(context: ProcessorContext, controller: StructureControll
 	controller['#reservationEndTime'] = 0;
 	controller['#safeModeCooldownTime'] = 0;
 	controller['#user'] = null;
+	controller.isPowerEnabled = false;
+	controller.safeModeAvailable = 0;
 	room['#safeModeUntil'] = 0;
 	updateRoomStatus(room, 0, null);
 	context.didUpdate();
