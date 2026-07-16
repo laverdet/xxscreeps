@@ -55,3 +55,11 @@ export function chainSequenceVoid1<Arg>(prev: (arg: Arg) => void, next: (arg: Ar
 		prev(arg);
 	};
 }
+
+export function chainLogicalOr1<Arg, Result>(prev: (arg: Arg) => Result, next: (arg: Arg) => Result) {
+	return (arg: Arg) => next(arg) || prev(arg);
+}
+
+export function chainNullishCoalesce1<Arg, Result>(prev: (arg: Arg) => Result, next: (arg: Arg) => Result) {
+	return (arg: Arg) => next(arg) ?? prev(arg);
+}
