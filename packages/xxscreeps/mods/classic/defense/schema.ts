@@ -36,6 +36,7 @@ export const rampartShape = declare('Rampart', struct(ownedStructureShape, {
 	 * If false (default), only your creeps can step on the same square. If true, any hostile creeps
 	 * can pass through.
 	 * @public
+	 * @default false
 	 * @see https://docs.screeps.com/api/#StructureRampart.isPublic
 	 */
 	isPublic: 'bool',

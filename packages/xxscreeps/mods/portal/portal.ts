@@ -5,10 +5,18 @@ import { Structure } from 'xxscreeps/mods/classic/structure/structure.js';
 import { withOverlay } from 'xxscreeps/schema/index.js';
 import { portalShape } from './schema.js';
 
-/** Destination of an inter-room portal: a `RoomPosition` in the destination room. */
+/**
+ * Destination of an inter-room portal: a `RoomPosition` in the destination room.
+ * @public
+ */
 export interface PortalDestination extends RoomPosition { shard?: undefined }
-/** Destination of an inter-shard portal: `shard` and `room` names, without exact coordinates. */
+
+/**
+ * Destination of an inter-shard portal: `shard` and `room` names, without exact coordinates.
+ * @public
+ */
 export interface RemotePortalDestination { shard: string; room: string }
+
 export type Destination = PortalDestination | RemotePortalDestination;
 
 /**

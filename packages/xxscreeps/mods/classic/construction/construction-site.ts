@@ -34,8 +34,7 @@ export class ConstructionSite extends withOverlay(RoomObject, constructionSiteSh
 	@enumerable override get my() { return this['#user'] === me; }
 
 	/**
-	 * An object with the structure's owner info containing the following properties: `username` — the
-	 * name of the owner user.
+	 * A {@link UserInfo} object with the structure's owner info.
 	 * @public
 	 * @see https://docs.screeps.com/api/#ConstructionSite.owner
 	 */

@@ -131,15 +131,6 @@ export class Game extends GameBase {
 		ptr: boolean;
 	};
 
-	/**
-	 * Your Global Power Level, an object with the following properties: `level` — the current level;
-	 * `progress` — the current progress to the next level; `progressTotal` — the progress required to
-	 * reach the next level.
-	 * @public
-	 * @see https://docs.screeps.com/api/#Game.gpl
-	 */
-	gpl = { level: 0, progress: 0, progressTotal: Infinity };
-
 	constructor(state: GameState, data?: TickPayload) {
 		super(state);
 

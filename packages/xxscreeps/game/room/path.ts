@@ -7,9 +7,14 @@ import * as PathFinder from 'xxscreeps/game/pathfinder/index.js';
 import { extend } from 'xxscreeps/utility/utility.js';
 import { Room } from './room.js';
 
-export type FindPathOptions = PathFinder.RoomSearchOptions & {
+export interface FindPathOptions extends PathFinder.RoomSearchOptions {
+	/**
+	 * If true, the result path will be serialized using `Room.serializePath`.
+	 * @public
+	 * @default false
+	 */
 	serialize?: boolean;
-};
+}
 
 export type RoomPath = {
 	x: number;
@@ -72,30 +77,7 @@ declare module './room.js' {
 		 * algorithm](http://en.wikipedia.org/wiki/Jump_point_search).
 		 * @param origin The start position.
 		 * @param goal The end position.
-		 * @param options An object containing additional pathfinding flags:
-		 * - `ignoreCreeps` - Treat squares with creeps as walkable. Can be useful with too many moving
-		 *   creeps around or in some other cases. The default value is false.
-		 * - `ignoreDestructibleStructures` - Treat squares with destructible structures (constructed
-		 *   walls, ramparts, spawns, extensions) as walkable. The default value is false.
-		 * - `ignoreRoads` - Ignore road structures. Enabling this option can speed up the search. The
-		 *   default value is false.
-		 * - `costCallback` - You can use this callback to modify a
-		 *   [`CostMatrix`](https://docs.screeps.com/api/#PathFinder-CostMatrix) for any room during the
-		 *   search. The callback accepts two arguments, `roomName` and `costMatrix`. Use the
-		 *   `costMatrix` instance to make changes to the positions costs. If you return a new matrix
-		 *   from this callback, it will be used instead of the built-in cached one.
-		 * - `maxOps` - The maximum limit of possible pathfinding operations. You can limit CPU time
-		 *   used for the search based on ratio 1 op ~ 0.001 CPU. The default value is 2000.
-		 * - `heuristicWeight` - Weight to apply to the heuristic in the A* formula
-		 *   `F = G + weight * H`. Use this option only if you understand the underlying A* algorithm
-		 *   mechanics! The default value is 1.2.
-		 * - `serialize` - If true, the result path will be serialized using
-		 *   [`Room.serializePath`](https://docs.screeps.com/api/#Room.serializePath). The default is
-		 *   false.
-		 * - `maxRooms` - The maximum allowed rooms to search. The default (and maximum) is 16.
-		 * - `range` - Find a path to a position in specified linear range of target. The default is 0.
-		 * - `plainCost` - Cost for walking on plain positions. The default is 1.
-		 * - `swampCost` - Cost for walking on swamp positions. The default is 5.
+		 * @param options An object of {@link FindPathOptions}.
 		 * @returns An array with path steps in the following format:
 		 * `[ { x: 10, y: 5, dx: 1, dy: 0, direction: RIGHT }, ... ]`
 		 * @public
@@ -106,7 +88,7 @@ declare module './room.js' {
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
 		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize: true }): string;
 		// eslint-disable-next-line @typescript-eslint/method-signature-style
-		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions & { serialize?: boolean }): RoomPath | string;
+		findPath(origin: RoomPosition, goal: RoomPosition, options?: FindPathOptions): RoomPath | string;
 	}
 }
 

@@ -112,10 +112,7 @@ export class StructureController extends withOverlay(OwnedStructure, controllerS
 	}
 
 	/**
-	 * Applied effects, an array of objects with the following properties: `effect` (effect ID of the
-	 * applied effect, can be either natural effect ID or Power ID), `level` (power level of the
-	 * applied effect, absent if the effect is not a Power effect), and `ticksRemaining` (how many
-	 * ticks will the effect last).
+	 * Applied effects, an array of {@link RoomObjectEffect} objects.
 	 * @public
 	 * @see https://docs.screeps.com/api/#StructureController.effects
 	 */

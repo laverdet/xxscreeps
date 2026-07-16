@@ -32,12 +32,44 @@ export type PartType = typeof C.BODYPARTS_ALL[number];
 type BoostEffects = Partial<Record<string, number>>;
 export type BoostsLookup = Partial<Record<string, Partial<Record<string, BoostEffects>>>>;
 
-type MoveToOptions = FindPathOptions & {
+/** @public */
+interface MoveToOptions extends FindPathOptions, RoomSearchOptions {
+	/**
+	 * If this option is set to true, `moveTo` method will return `ERR_NOT_FOUND`
+	 * if there is no memorized path to reuse. This can significantly save CPU time in some cases.
+	 * @public
+	 * @default false
+	 */
 	noPathFinding?: boolean;
+
+	/**
+	 * This option enables reusing the path found along multiple game ticks. It allows to save CPU
+	 * time, but can result in a slightly slower creep reaction behavior. The path is stored into the
+	 * creep's memory to the `_move` property. The `reusePath` value defines the amount of ticks
+	 * which the path should be reused for. Increase the amount to save more CPU, decrease to make
+	 * the movement more consistent. Set to 0 if you want to disable path reusing.
+	 * @public
+	 * @default 5
+	 */
 	reusePath?: number;
+
+	/**
+	 * If `reusePath` is enabled and this option is set to true, the path will be stored in memory in
+	 * the short serialized form using
+	 * [`Room.serializePath`](https://docs.screeps.com/api/#Room.serializePath).
+	 * @public
+	 * @default true
+	 */
 	serializeMemory?: boolean;
+
+	/**
+	 * Draw a line along the creep's path using
+	 * [`RoomVisual.poly`](https://docs.screeps.com/api/#RoomVisual.poly). You can provide either an
+	 * empty object or custom style parameters.
+	 * @public
+	 */
 	visualizePathStyle?: Partial<PolyStyle>;
-};
+}
 
 interface SavedMoveStorage {
 	dest: {
@@ -83,8 +115,7 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	@enumerable override get hitsMax() { return this.body.length * 100; }
 
 	/**
-	 * An object with the creep's owner info containing the following properties: `username` — the
-	 * name of the owner user.
+	 * An object with the creeps's owner info.
 	 * @public
 	 * @see https://docs.screeps.com/api/#Creep.owner
 	 */
@@ -299,32 +330,14 @@ export class Creep extends withOverlay(RoomObject, creepShape) {
 	 * @param target Can be a [RoomPosition](https://docs.screeps.com/api/#RoomPosition) object or any
 	 * object containing RoomPosition. The position doesn't have to be in the same room with the
 	 * creep.
-	 * @param opts An object containing additional options:
-	 * - `reusePath` — This option enables reusing the path found along multiple game ticks. It allows
-	 *   to save CPU time, but can result in a slightly slower creep reaction behavior. The path is
-	 *   stored into the creep's memory to the `_move` property. The `reusePath` value defines the
-	 *   amount of ticks which the path should be reused for. The default value is 5. Increase the
-	 *   amount to save more CPU, decrease to make the movement more consistent. Set to 0 if you want
-	 *   to disable path reusing.
-	 * - `serializeMemory` — If `reusePath` is enabled and this option is set to true, the path will
-	 *   be stored in memory in the short serialized form using
-	 *   [`Room.serializePath`](https://docs.screeps.com/api/#Room.serializePath). The default value
-	 *   is true.
-	 * - `noPathFinding` — If this option is set to true, `moveTo` method will return `ERR_NOT_FOUND`
-	 *   if there is no memorized path to reuse. This can significantly save CPU time in some cases.
-	 *   The default value is false.
-	 * - `visualizePathStyle` — Draw a line along the creep's path using
-	 *   [`RoomVisual.poly`](https://docs.screeps.com/api/#RoomVisual.poly). You can provide either an
-	 *   empty object or custom style parameters.
-	 * - Any options supported by [`Room.findPath`](https://docs.screeps.com/api/#Room.findPath)
-	 *   method.
+	 * @param opts An object of {@link MoveToOptions}.
 	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_TIRED`,
 	 * `ERR_NO_BODYPART`, `ERR_INVALID_TARGET`, `ERR_NO_PATH`, `ERR_NOT_FOUND`
 	 * @public
 	 * @see https://docs.screeps.com/api/#Creep.moveTo
 	 */
-	moveTo(x: number, y: number, opts?: MoveToOptions & RoomSearchOptions): number;
-	moveTo(target: RoomObject | RoomPosition, opts?: MoveToOptions & RoomSearchOptions): number;
+	moveTo(x: number, y: number, opts?: MoveToOptions): number;
+	moveTo(target: RoomObject | RoomPosition, opts?: MoveToOptions): number;
 	moveTo(...args: [any]) {
 		// Parse target
 		const { pos, extra } = fetchPositionArgument<MoveToOptions>(this.pos.roomName, ...args);

@@ -16,6 +16,7 @@ export function acquireIntents() {
 	return result;
 }
 
+/** @public */
 export type Color = typeof C.COLORS_ALL[number];
 
 /**

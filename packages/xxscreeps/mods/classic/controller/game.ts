@@ -33,25 +33,26 @@ const controllerSchema = registerVariant('Room.objects', compose(controllerShape
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		/**
-		 * Your [Global Control Level](https://docs.screeps.com/control.html#Global-Control-Level), an
-		 * object with the following properties: `level` — the current level; `progress` — the current
-		 * progress to the next level; `progressTotal` — the progress required to reach the next level.
+		 * Your [Global Control Level](https://docs.screeps.com/control.html#Global-Control-Level).
 		 * @public
 		 * @see https://docs.screeps.com/api/#Game.gcl
 		 */
 		gcl: {
 			/**
-			 * The current GCL level.
+			 * The current level.
+			 * @public
 			 */
 			level: number;
 
 			/**
 			 * The current progress to the next level.
+			 * @public
 			 */
 			progress: number;
 
 			/**
 			 * The progress required to reach the next level.
+			 * @public
 			 */
 			progressTotal: number;
 

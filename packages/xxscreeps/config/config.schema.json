@@ -126,7 +126,7 @@
     "RunnerCPUConfig": {
       "properties": {
         "bucket": {
-          "default": ": 10000",
+          "default": 10000,
           "description": "CPU bucket size per user",
           "type": "number"
         },
@@ -136,7 +136,7 @@
           "type": "number"
         },
         "tickLimit": {
-          "default": ": 500",
+          "default": 500,
           "description": "Maximum amount of time in milliseconds that a user's runtime may run for.",
           "type": "number"
         }

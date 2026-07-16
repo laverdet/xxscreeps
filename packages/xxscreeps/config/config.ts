@@ -193,7 +193,7 @@ export interface RunnerConfig {
 export interface RunnerCPUConfig {
 	/**
 	 * CPU bucket size per user
-	 * @default: 10000
+	 * @default 10000
 	 */
 	bucket?: number;
 
@@ -208,7 +208,7 @@ export interface RunnerCPUConfig {
 
 	/**
 	 * Maximum amount of time in milliseconds that a user's runtime may run for.
-	 * @default: 500
+	 * @default 500
 	 */
 	tickLimit?: number;
 }

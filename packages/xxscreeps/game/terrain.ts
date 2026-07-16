@@ -54,8 +54,10 @@ export class Terrain {
 	 * this one doesn't perform any string operations and returns integer terrain type values.
 	 * @param xx X position in the room.
 	 * @param yy Y position in the room.
-	 * @returns One of the following integer values: 0 - terrain is `plain`, `TERRAIN_MASK_WALL` -
-	 * terrain is `wall`, `TERRAIN_MASK_SWAMP` - terrain is `swamp`.
+	 * @returns One of the following integer values:
+	 *  - 0: terrain is `plain`.
+	 *  - `TERRAIN_MASK_WALL`: terrain is `wall`.
+	 *  - `TERRAIN_MASK_SWAMP`: terrain is `swamp`.
 	 * @public
 	 * @see https://docs.screeps.com/api/#Room.Terrain.get
 	 */

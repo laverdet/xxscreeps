@@ -7,18 +7,62 @@ import { Variant, array, declare, enumerated, makeWriter, optional, struct, vari
 import { getOrSet } from 'xxscreeps/utility/utility.js';
 
 // Declare schema and types
-const color = optional('string');
-const fill = optional('string');
-const line = {
-	lineStyle: optional(enumerated(undefined, 'dashed', 'dotted')),
+const color = {
+	/**
+	 * Line color in any web format.
+	 * @public
+	 * @default #ffffff (white).
+	 */
+	color: optional('string'),
+};
+
+const fill = {
+	/**
+	 * Fill color in any web format.
+	 * @public
+	 * @default #ffffff (white)
+	 */
+	fill: optional('string'),
+};
+
+const opacity = {
+	/**
+	 * Opacity value.
+	 * @public
+	 * @default 0.5
+	 */
 	opacity: optional('double'),
 };
+
+const line = {
+	...opacity,
+
+	/**
+	 * Either `undefined` (solid line), `dashed`, or `dotted`.
+	 * @public
+	 * @default undefined
+	 */
+	lineStyle: optional(enumerated(undefined, 'dashed', 'dotted')),
+};
+
 const stroke = {
+	/**
+	 * Stroke color in any web format.
+	 * @public
+	 * @default undefined (no stroke)
+	 */
 	stroke: optional('string'),
+
+	/**
+	 * Stroke line width.
+	 * @public
+	 * @default 0.1 (0.5 for map visuals)
+	 */
 	strokeWidth: optional('double'),
 };
 
-type LineStyle = Partial<TypeOf<typeof lineSchema>['s']>;
+/** @public */
+export interface LineStyle extends Partial<TypeOf<typeof lineSchema>['s']> {}
 const lineSchema = struct({
 	...variant('l'),
 	x1: 'double',
@@ -26,26 +70,40 @@ const lineSchema = struct({
 	x2: 'double',
 	y2: 'double',
 	s: struct({
+		...color,
 		...line,
-		color,
+
+		/**
+		 * Line width.
+		 * @public
+		 * @default 0.1
+		 */
 		width: optional('double'),
 	}),
 });
 
-type CircleStyle = Partial<TypeOf<typeof circleSchema>['s']>;
+/** @public */
+export interface CircleStyle extends Partial<TypeOf<typeof circleSchema>['s']> {}
 const circleSchema = struct({
 	...variant('c'),
 	x: 'double',
 	y: 'double',
 	s: struct({
+		...fill,
 		...line,
 		...stroke,
-		fill,
+
+		/**
+		 * Circle radius.
+		 * @public
+		 * @default 0.15 (or 10 for map visuals)
+		 */
 		radius: optional('double'),
 	}),
 });
 
-type RectStyle = Partial<TypeOf<typeof rectSchema>['s']>;
+/** @public */
+export interface RectStyle extends Partial<TypeOf<typeof rectSchema>['s']> {}
 const rectSchema = struct({
 	...variant('r'),
 	x: 'double',
@@ -53,37 +111,65 @@ const rectSchema = struct({
 	w: 'double',
 	h: 'double',
 	s: struct({
+		...fill,
 		...line,
 		...stroke,
-		fill,
 	}),
 });
 
-export type PolyStyle = Partial<TypeOf<typeof polySchema>['s']>;
+/** @public */
+export interface PolyStyle extends Partial<TypeOf<typeof polySchema>['s']> {}
 const polySchema = struct({
 	...variant('p'),
 	points: vector(array(2, 'double') as WithShapeAndType<[ number, number ]>),
 	s: struct({
+		...fill,
 		...line,
 		...stroke,
-		fill,
 	}),
 });
 
-type TextStyle = Partial<TypeOf<typeof textSchema>['s']>;
+/** @public */
+export interface TextStyle extends Partial<TypeOf<typeof textSchema>['s']> {}
 const textSchema = struct({
 	...variant('t'),
 	x: 'double',
 	y: 'double',
 	text: 'string',
 	s: struct({
+		...color,
+		...opacity,
 		...stroke,
+
+		/**
+		 * Text align, either `center`, `left`, or `right`.
+		 * @public
+		 * @default center
+		 */
 		align: optional('string'),
-		backgroundColor: color,
+
+		/**
+		 * Background color in any web format. When background is enabled, text vertical align is set to
+		 * middle (default is baseline).
+		 * @public
+		 * @default undefined (no background)
+		 */
+		backgroundColor: optional('string'),
+
+		/**
+		 * Background rectangle padding.
+		 * @public
+		 * @default 0.3
+		 */
 		backgroundPadding: optional('double'),
-		color,
+
+		/**
+		 * Either a number or a string in one of the following forms: `0.7` (relative size in game
+		 * coordinates), `20px` (absolute size in pixels), `0.7 serif`, or `bold italic 1.5 Times New
+		 * Roman`.
+		 * @public
+		 */
 		font: optional('string'),
-		opacity: optional('double'),
 	}),
 });
 
@@ -201,13 +287,7 @@ class VisualOf<Point extends unknown[]> {
 	 * Draw a circle.
 	 * @param pos The position object of the center. Room visuals also accept two `x, y` coordinate
 	 * arguments instead.
-	 * @param style An object with the following properties:
-	 * - `radius` — Circle radius, default is 0.15 (10 for map visuals).
-	 * - `fill` — Fill color in any web format, default is `#ffffff` (white).
-	 * - `opacity` — Opacity value, default is 0.5.
-	 * - `stroke` — Stroke color in any web format, default is undefined (no stroke).
-	 * - `strokeWidth` — Stroke line width, default is 0.1 (0.5 for map visuals).
-	 * - `lineStyle` — Either `undefined` (solid line), `dashed`, or `dotted`. Default is undefined.
+	 * @param style An object of {@link CircleStyle}.
 	 * @returns The visual object itself, so that you can chain calls.
 	 * @public
 	 * @see https://docs.screeps.com/api/#RoomVisual.circle
@@ -225,11 +305,7 @@ class VisualOf<Point extends unknown[]> {
 	 * arguments instead.
 	 * @param pos2 The finish position object. Room visuals also accept two `x2, y2` coordinate
 	 * arguments instead.
-	 * @param style An object with the following properties:
-	 * - `width` — Line width, default is 0.1.
-	 * - `color` — Line color in any web format, default is `#ffffff` (white).
-	 * - `opacity` — Opacity value, default is 0.5.
-	 * - `lineStyle` — Either `undefined` (solid line), `dashed`, or `dotted`. Default is undefined.
+	 * @param style An object of {@link LineStyle}.
 	 * @returns The visual object itself, so that you can chain calls.
 	 * @public
 	 * @see https://docs.screeps.com/api/#RoomVisual.line
@@ -245,12 +321,7 @@ class VisualOf<Point extends unknown[]> {
 	 * Draw a polyline.
 	 * @param points An array of points. Every item should be either an array with 2 numbers (i.e.
 	 * `[10,15]`), or a `RoomPosition` object. Map visuals require `RoomPosition` objects.
-	 * @param style An object with the following properties:
-	 * - `fill` — Fill color in any web format, default is `undefined` (no fill).
-	 * - `opacity` — Opacity value, default is 0.5.
-	 * - `stroke` — Stroke color in any web format, default is `#ffffff` (white).
-	 * - `strokeWidth` — Stroke line width, default is 0.1 (0.5 for map visuals).
-	 * - `lineStyle` — Either `undefined` (solid line), `dashed`, or `dotted`. Default is undefined.
+	 * @param style An object of {@link PolyStyle}.
 	 * @returns The visual object itself, so that you can chain calls.
 	 * @public
 	 * @see https://docs.screeps.com/api/#RoomVisual.poly
@@ -273,12 +344,7 @@ class VisualOf<Point extends unknown[]> {
 	 * coordinate arguments instead.
 	 * @param width The width of the rectangle.
 	 * @param height The height of the rectangle.
-	 * @param style An object with the following properties:
-	 * - `fill` — Fill color in any web format, default is `#ffffff` (white).
-	 * - `opacity` — Opacity value, default is 0.5.
-	 * - `stroke` — Stroke color in any web format, default is undefined (no stroke).
-	 * - `strokeWidth` — Stroke line width, default is 0.1 (0.5 for map visuals).
-	 * - `lineStyle` — Either `undefined` (solid line), `dashed`, or `dotted`. Default is undefined.
+	 * @param style An object of {@link RectStyle}.
 	 * @returns The visual object itself, so that you can chain calls.
 	 * @public
 	 * @see https://docs.screeps.com/api/#RoomVisual.rect
@@ -296,18 +362,7 @@ class VisualOf<Point extends unknown[]> {
 	 * @param text The text message.
 	 * @param pos The position object of the label baseline. Room visuals also accept two `x, y`
 	 * coordinate arguments instead.
-	 * @param style An object with the following properties:
-	 * - `color` — Font color in any web format, default is `#ffffff` (white).
-	 * - `font` — Either a number or a string in one of the following forms: `0.7` (relative size in
-	 *   game coordinates), `20px` (absolute size in pixels), `0.7 serif`, or
-	 *   `bold italic 1.5 Times New Roman`.
-	 * - `stroke` — Stroke color in any web format, default is undefined (no stroke).
-	 * - `strokeWidth` — Stroke width, default is 0.15.
-	 * - `backgroundColor` — Background color in any web format, default is undefined (no background).
-	 *   When background is enabled, text vertical align is set to middle (default is baseline).
-	 * - `backgroundPadding` — Background rectangle padding, default is 0.3.
-	 * - `align` — Text align, either `center`, `left`, or `right`. Default is `center`.
-	 * - `opacity` — Opacity value, default is 1.0.
+	 * @param style An object of {@link TextStyle}.
 	 * @returns The visual object itself, so that you can chain calls.
 	 * @public
 	 * @see https://docs.screeps.com/api/#RoomVisual.text

@@ -24,43 +24,60 @@ export type Goal = RoomPosition | GoalWithRange;
 interface GoalWithRange {
 	/**
 	 * The target.
+	 * @public
 	 */
 	pos: RoomPosition;
 
 	/**
-	 * Range to `pos` before goal is considered reached. The default is 0.
+	 * Range to `pos` before goal is considered reached.
+	 * @public
+	 * @default 0
 	 */
 	range: number;
+
+	/** @public */
 	roomName?: undefined;
+	/** @public */
 	x?: undefined;
+	/** @public */
 	y?: undefined;
 }
 
 interface CommonSearchOptions {
 	/**
-	 * Cost for walking on plain positions. The default is 1.
+	 * Cost for walking on plain positions.
+	 * @public
+	 * @default 1
 	 */
 	plainCost?: number | undefined;
 
 	/**
-	 * Cost for walking on swamp positions. The default is 5.
+	 * Cost for walking on swamp positions.
+	 * @public
+	 * @default 5
 	 */
 	swampCost?: number | undefined;
 
 	/**
 	 * The maximum allowed pathfinding operations. You can limit CPU time used for the search based on
-	 * ratio 1 op ~ 0.001 CPU. The default value is 2000.
+	 * ratio 1 op ~ 0.001 CPU.
+	 * @public
+	 * @default 2000
 	 */
 	maxOps?: number | undefined;
 
 	/**
-	 * The maximum allowed rooms to search. The default is 16, maximum is 64.
+	 * The maximum allowed rooms to search. The maximum is 64.
+	 * @public
+	 * @default 16
 	 */
 	maxRooms?: number | undefined;
 
 	/**
 	 * Weight to apply to the heuristic in the A* formula `F = G + weight * H`. Use this option only
-	 * if you understand the underlying A* algorithm mechanics! The default value is 1.2.
+	 * if you understand the underlying A* algorithm mechanics!
+	 * @public
+	 * @default 1.2
 	 */
 	heuristicWeight?: number | undefined;
 }
@@ -80,29 +97,66 @@ export interface SearchOptions extends CommonSearchOptions {
 	 * tick you may consider caching your CostMatrix to speed up your code. Please read the CostMatrix
 	 * documentation for more information on CostMatrix. If you return `false` from the callback the
 	 * requested room will not be searched, and it won't count against `maxRooms`
+	 * @public
 	 */
 	roomCallback?: ((roomName: string) => CostMatrix | false | undefined) | undefined;
 
 	/**
 	 * Instead of searching for a path *to* the goals this will search for a path *away* from the
-	 * goals. The cheapest path that is out of `range` of every goal will be returned. The default is
-	 * false.
+	 * goals. The cheapest path that is out of `range` of every goal will be returned.
+	 * @public
+	 * @default false
 	 */
 	flee?: boolean;
 
 	/**
 	 * The maximum allowed cost of the path returned. If at any point the pathfinder detects that it
 	 * is impossible to find a path with a cost less than or equal to `maxCost` it will immediately
-	 * halt the search. The default is Infinity.
+	 * halt the search.
+	 * @public
+	 * @default Infinity
 	 */
 	maxCost?: number;
 }
 
 export interface RoomSearchOptions extends CommonSearchOptions {
+	/**
+	 * You can use this callback to modify a
+	 * [`CostMatrix`](https://docs.screeps.com/api/#PathFinder-CostMatrix) for any room during the
+	 * search. The callback accepts two arguments, `roomName` and `costMatrix`. Use the `costMatrix`
+	 * instance to make changes to the positions costs. If you return a new matrix from this callback,
+	 * it will be used instead of the built-in cached one.
+	 * @public
+	 */
 	costCallback?: (roomName: string, costMatrix: CostMatrix) => CostMatrix | undefined;
+	/**
+	 * Treat squares with creeps as walkable. Can be useful with too many moving creeps around or in
+	 * some other cases. The default value is false.
+	 * @public
+	 * @default false
+	 */
 	ignoreCreeps?: boolean;
+
+	/**
+	 * Treat squares with destructible structures (constructed walls, ramparts, spawns, extensions) as
+	 * walkable.
+	 * @public
+	 * @default false
+	 */
 	ignoreDestructibleStructures?: boolean;
+
+	/**
+	 * Ignore road structures. Enabling this option can speed up the search.
+	 * @public
+	 * @default false
+	 */
 	ignoreRoads?: boolean;
+
+	/**
+	 * Find a path to a position in specified linear range of target.
+	 * @public
+	 * @default 0
+	 */
 	range?: number;
 }
 
@@ -217,13 +271,7 @@ const PathFinder = {
 	 * ***Important:*** Please note that if your goal is not walkable (for instance, a source) then
 	 * you should set `range` to at least 1 or else you will waste many CPU cycles searching for a
 	 * target that you can't walk on.
-	 * @param options An object containing additional pathfinding flags. See `SearchOptions`.
-	 * @returns An object containing the following properties: `path` — an array of RoomPosition
-	 * objects; `ops` — total number of operations performed before this path was calculated; `cost` —
-	 * the total cost of the path as derived from `plainCost`, `swampCost` and any given CostMatrix
-	 * instances; `incomplete` — if the pathfinder fails to find a complete path, this will be true.
-	 * Note that `path` will still be populated with a partial path which represents the closest path
-	 * it could find given the search parameters.
+	 * @param options A {@link SearchOptions} object containing additional pathfinding flags.
 	 * @public
 	 * @see https://docs.screeps.com/api/#PathFinder.search
 	 */

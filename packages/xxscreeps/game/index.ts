@@ -13,7 +13,16 @@ export let Game: GameBase;
 export let intents: IntentManager;
 export let me = '';
 export let userGame: GameConstructor | undefined;
-export const userInfo = new Map<string, { username: string }>();
+export const userInfo = new Map<string, UserInfo>();
+
+/** @public */
+export interface UserInfo {
+	/**
+	 * The name of the owner user.
+	 * @public
+	 */
+	username: string;
+}
 
 type GameTask<Type> = (game: GameConstructor) => Type;
 

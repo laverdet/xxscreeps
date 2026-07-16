@@ -98,6 +98,7 @@ export abstract class Store extends BufferObjectWithResourcesType {
 
 /**
  * A `Store` which can hold any resource and shares capacity between them.
+ * @public
  */
 export class OpenStore extends withOverlay(Store, () => shapeOpen) {
 	// Undocumented screeps property

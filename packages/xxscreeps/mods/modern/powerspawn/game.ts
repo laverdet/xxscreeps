@@ -27,9 +27,7 @@ const powerSpawnSchema = registerVariant('Room.objects', compose(powerSpawnShape
 declare module 'xxscreeps/game/game.js' {
 	interface Game {
 		/**
-		 * Your Global Power Level, an object with the following properties: `level` — the current
-		 * level; `progress` — the current progress to the next level; `progressTotal` — the progress
-		 * required to reach the next level.
+		 * Your Global Power Level.
 		 * @public
 		 * @see https://docs.screeps.com/api/#Game.gpl
 		 */

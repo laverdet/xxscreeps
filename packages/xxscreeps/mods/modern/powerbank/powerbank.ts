@@ -1,3 +1,4 @@
+import type { UserInfo } from 'xxscreeps/game/index.js';
 import type { RoomPosition } from 'xxscreeps/game/position.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
@@ -34,12 +35,12 @@ export class StructurePowerBank extends withOverlay(Structure, powerBankShape) {
 	@enumerable get ticksToDecay() { return requiredExpiryTime(this['#nextDecayTime']); }
 
 	/**
-	 * An object with the structure's owner info. Power banks are always owned by the neutral
-	 * `Power Bank` user.
+	 * A {@link UserInfo} object with the structure's owner info. Power banks are always owned by the
+	 * neutral `Power Bank` user.
 	 * @public
 	 * @see https://docs.screeps.com/api/#StructurePowerBank.owner
 	 */
-	@enumerable get owner() { return { username: 'Power Bank' }; }
+	@enumerable get owner(): UserInfo { return { username: 'Power Bank' }; }
 
 	/**
 	 * Whether this is your own structure. Always `false` for power banks.

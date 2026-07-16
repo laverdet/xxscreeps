@@ -18,12 +18,25 @@ import { Game, registerGlobal } from './index.js';
  * @public
  */
 export interface RoomObjectEffect {
-	/** Effect ID of the applied effect. Can be either natural effect ID or Power ID. */
+	/**
+	 * Effect ID of the applied effect. Can be either natural effect ID or Power ID.
+	 * @public
+	 */
 	effect?: number;
+
+	/** @public */
 	power?: number;
-	/** Power level of the applied effect. Absent if the effect is not a Power effect. */
+
+	/**
+	 * Power level of the applied effect. Absent if the effect is not a Power effect.
+	 * @public
+	 */
 	level?: number;
-	/** How many ticks will the effect last. */
+
+	/**
+	 * How many ticks will the effect last.
+	 * @public
+	 */
 	ticksRemaining: number;
 }
 
@@ -59,8 +72,15 @@ export abstract class RoomObject extends withOverlay(BufferObject.BufferObject, 
 
 	/** @internal */
 	constructor(buffer?: BufferView, offset?: number);
-	/** @deprecated */
+
+	/** @internal */
 	constructor(xx: number, yy: number, roomName: string);
+
+	/**
+	 * @public
+	 * @deprecated
+	 */
+	constructor(id: string);
 
 	constructor(viewOrIdOrXx?: unknown, offsetOrYy?: unknown, roomName?: unknown) {
 		if (typeof viewOrIdOrXx === 'number') {
@@ -151,10 +171,7 @@ export declare interface RoomObject {
 	get hits(): number | undefined;
 
 	/**
-	 * Applied effects, an array of objects with the following properties: `effect` (effect ID of the
-	 * applied effect, can be either natural effect ID or Power ID), `level` (power level of the
-	 * applied effect, absent if the effect is not a Power effect), and `ticksRemaining` (how many
-	 * ticks will the effect last).
+	 * Applied effects, an array of {@link RoomObjectEffect} objects.
 	 * @public
 	 * @see https://docs.screeps.com/api/#RoomObject.effects
 	 */

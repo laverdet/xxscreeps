@@ -90,9 +90,7 @@ export const RawMemory = {
 	/**
 	 * An object with a memory segment of another player available on this tick. Use
 	 * [`setActiveForeignSegment`](https://docs.screeps.com/api/#RawMemory.setActiveForeignSegment) to
-	 * fetch segments on the next tick. The object consists of the following properties: `username` —
-	 * another player's name, `id` — the ID of the requested memory segment, and `data` — the segment
-	 * contents.
+	 * fetch segments on the next tick. The object follows {@link ForeignSegment}.
 	 * @public
 	 * @see https://docs.screeps.com/api/#RawMemory.foreignSegment
 	 */
@@ -344,11 +342,25 @@ export type ForeignSegmentPayload = {
 	bytes: Readonly<Uint8Array>;
 };
 
-type ForeignSegment = {
+interface ForeignSegment {
+	/**
+	 * Another player's name
+	 * @public
+	 */
 	username: string;
+
+	/**
+	 * The ID of the requested memory segment.
+	 * @public
+	 */
 	id: number;
+
+	/**
+	 * The segment contents.
+	 * @public
+	 */
 	data: string;
-};
+}
 
 export function isValidSegmentId(id: number) {
 	return Number.isInteger(id) && id >= 0 && id < kMaxMemorySegmentId;

@@ -3,6 +3,7 @@ import * as C from './constants/index.js';
 export const ALL_DIRECTIONS = [
 	C.TOP, C.TOP_RIGHT, C.RIGHT, C.BOTTOM_RIGHT, C.BOTTOM, C.BOTTOM_LEFT, C.LEFT, C.TOP_LEFT,
 ];
+/** @public */
 export type Direction = typeof ALL_DIRECTIONS[number];
 
 export function getDirection(dx: number, dy: number): Direction;

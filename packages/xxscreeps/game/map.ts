@@ -61,16 +61,21 @@ type FindRoute = {
 	routeCallback?: (roomName: string, fromRoomName: string) => number;
 };
 
-type RoomStatus = RoomClosed | NormalRoom;
 type ExitsDescriptor = Record<RemoveBrand<typeof C.TOP | typeof C.RIGHT | typeof C.BOTTOM | typeof C.LEFT>, string>;
 
-interface RoomClosed {
-	status: 'closed';
-	timestamp: number | null;
-}
+/** @public */
+interface RoomStatus {
+	/**
+   * One of the following string values: `normal` (the room has no restrictions), `closed` (the room
+	 * is not available), `novice` (the room is part of a novice area), `respawn` (the room is part of
+	 * a respawn area)
+	 */
+	status: 'closed' | 'normal';
 
-interface NormalRoom {
-	status: 'normal';
+	/**
+	 * Status expiration time in milliseconds since UNIX epoch time. This property is `null` if the
+	 * status is permanent.
+	 */
 	timestamp: number | null;
 }
 
@@ -293,11 +298,6 @@ export class GameMap {
 	 * Gets availability status of the room with the specified name. Learn more about starting areas
 	 * from [this article](https://docs.screeps.com/start-areas.html).
 	 * @param roomName The room name.
-	 * @returns An object with the following properties: `status` -- one of the following string
-	 * values: `normal` (the room has no restrictions), `closed` (the room is not available), `novice`
-	 * (the room is part of a novice area), `respawn` (the room is part of a respawn area);
-	 * `timestamp` -- status expiration time in milliseconds since UNIX epoch time. This property is
-	 * `null` if the status is permanent.
 	 * @public
 	 * @see https://docs.screeps.com/api/#Game.map.getRoomStatus
 	 */

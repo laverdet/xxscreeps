@@ -376,8 +376,8 @@ export class RoomPosition {
 	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions & { serialize?: false }): RoomPath;
 	findPathTo(x: number, y: number, options: FindPathOptions & { serialize: true }): string;
 	findPathTo(target: RoomObject | RoomPosition, options: FindPathOptions & { serialize: true }): string;
-	findPathTo(x: number, y: number, options: FindPathOptions & { serialize?: boolean }): RoomPath | string;
-	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions & { serialize?: boolean }): RoomPath | string;
+	findPathTo(x: number, y: number, options: FindPathOptions): RoomPath | string;
+	findPathTo(target: RoomObject | RoomPosition, options?: FindPathOptions): RoomPath | string;
 	findPathTo(...args: any): RoomPath | string {
 		const { pos, extra } = fetchPositionArgument(this.roomName, ...args);
 		return fetchRoom(this.roomName).findPath(this, pos!, extra);

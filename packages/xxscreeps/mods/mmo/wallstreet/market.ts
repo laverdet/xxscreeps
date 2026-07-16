@@ -11,26 +11,37 @@ import { Game } from 'xxscreeps/game/index.js';
  * @see https://docs.screeps.com/api/#Game.market.createOrder
  */
 export interface CreateOrderOptions {
-	/** The order type, either `ORDER_SELL` or `ORDER_BUY`. */
+	/**
+	 * The order type, either `ORDER_SELL` or `ORDER_BUY`.
+	 * @public
+	 */
 	type: OrderType;
 
 	/**
 	 * Either one of the `RESOURCE_*` constants or one of account-bound resources (See
 	 * `INTERSHARD_RESOURCES` constant). If your Terminal doesn't have the specified resource, the
 	 * order will be temporary inactive.
+	 * @public
 	 */
 	resourceType: ResourceType;
 
-	/** The price for one resource unit in credits. Can be a decimal number. */
+	/**
+	 * The price for one resource unit in credits. Can be a decimal number.
+	 * @public
+	 */
 	price: number;
 
-	/** The amount of resources to be traded in total. */
+	/**
+	 * The amount of resources to be traded in total.
+	 * @public
+	 */
 	totalAmount: number;
 
 	/**
 	 * The room where your order will be created. You must have your own Terminal structure in this
 	 * room, otherwise the created order will be temporary inactive. This argument is not used when
 	 * `resourceType` is one of account-bound resources (See `INTERSHARD_RESOURCES` constant).
+	 * @public
 	 */
 	roomName?: string;
 }

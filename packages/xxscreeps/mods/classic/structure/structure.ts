@@ -111,8 +111,7 @@ export class Structure extends withOverlay(RoomObject, structureShape) {
  */
 export class OwnedStructure extends withOverlay(Structure, ownedStructureShape) {
 	/**
-	 * An object with the structure's owner info containing the following properties: `username` — the
-	 * name of the owner user.
+	 * A {@link UserInfo} object with the structure's owner info.
 	 * @public
 	 * @see https://docs.screeps.com/api/#OwnedStructure.owner
 	 */
