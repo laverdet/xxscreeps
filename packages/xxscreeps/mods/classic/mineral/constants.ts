@@ -24,10 +24,6 @@ export const DENSITY_MODERATE = 2;
 export const DENSITY_HIGH = 3;
 export const DENSITY_ULTRA = 4;
 
-export const DEPOSIT_EXHAUST_MULTIPLY = 0.001;
-export const DEPOSIT_EXHAUST_POW = 1.2;
-export const DEPOSIT_DECAY_TIME = 50000;
-
 export const RESOURCE_HYDROGEN = 'H' as const;
 export const RESOURCE_OXYGEN = 'O' as const;
 export const RESOURCE_UTRIUM = 'U' as const;

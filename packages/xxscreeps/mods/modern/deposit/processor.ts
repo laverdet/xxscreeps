@@ -10,7 +10,6 @@ import { Room as RoomClass } from 'xxscreeps/game/room/index.js';
 import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
 import { calculatePower } from 'xxscreeps/mods/classic/creep/creep.js';
 import { registerHarvestProcessor } from 'xxscreeps/mods/classic/harvestable/processor.js';
-import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/classic/mineral/constants.js';
 import * as Resource from 'xxscreeps/mods/classic/resource/processor/resource.js';
 import { Deposit } from './deposit.js';
 import { scheduleSector } from './model.js';
@@ -53,12 +52,12 @@ registerHarvestProcessor(Deposit, (creep, deposit) => {
 		Resource.drop(creep.pos, deposit.depositType, overflow);
 	}
 	deposit['#harvested'] += amount;
-	const cooldown = Math.ceil(DEPOSIT_EXHAUST_MULTIPLY * deposit['#harvested'] ** DEPOSIT_EXHAUST_POW);
+	const cooldown = Math.ceil(C.DEPOSIT_EXHAUST_MULTIPLY * deposit['#harvested'] ** C.DEPOSIT_EXHAUST_POW);
 	deposit.lastCooldown = cooldown;
 	if (cooldown > 1) {
 		deposit['#cooldownTime'] = Game.time + cooldown - 1;
 	}
-	deposit['#nextDecayTime'] = Game.time + DEPOSIT_DECAY_TIME;
+	deposit['#nextDecayTime'] = Game.time + C.DEPOSIT_DECAY_TIME;
 	return amount;
 });
 
@@ -93,7 +92,7 @@ const placeDepositIntent = registerIntentProcessor(
 		}
 		const deposit = createRoomObject(new Deposit(), new RoomPosition(pos.xx, pos.yy, room.name));
 		deposit.depositType = depositType;
-		deposit['#nextDecayTime'] = Game.time + DEPOSIT_DECAY_TIME;
+		deposit['#nextDecayTime'] = Game.time + C.DEPOSIT_DECAY_TIME;
 		room['#insertObject'](deposit);
 		context.didUpdate();
 		context.wakeAt(deposit['#nextDecayTime']);

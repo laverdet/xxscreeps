@@ -10,7 +10,6 @@ import { createRoomObject } from 'xxscreeps/game/object.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
 import { create as createCreep } from 'xxscreeps/mods/classic/creep/creep.js';
-import { DEPOSIT_DECAY_TIME, DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/classic/mineral/constants.js';
 import { deterministicRandomForTesting } from 'xxscreeps/test/fixtures.js';
 import { testWorld } from 'xxscreeps/test/import.js';
 import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
@@ -36,7 +35,7 @@ function createDeposit(pos: RoomPosition, depositType: ResourceType, harvested: 
 }
 
 function cooldown(harvested: number) {
-	return Math.ceil(DEPOSIT_EXHAUST_MULTIPLY * harvested ** DEPOSIT_EXHAUST_POW);
+	return Math.ceil(C.DEPOSIT_EXHAUST_MULTIPLY * harvested ** C.DEPOSIT_EXHAUST_POW);
 }
 
 function depositSim(options: DepositSimOptions = {}) {
@@ -114,7 +113,7 @@ describe('mod/modern/deposit', () => {
 			await tick();
 			await player('100', Game => {
 				const deposit = Game.rooms.W1N1!.find(C.FIND_DEPOSITS)[0];
-				assert.strictEqual(deposit?.ticksToDecay, DEPOSIT_DECAY_TIME);
+				assert.strictEqual(deposit?.ticksToDecay, C.DEPOSIT_DECAY_TIME);
 			});
 		}));
 	});
@@ -155,7 +154,7 @@ describe('mod/modern/deposit', () => {
 			const { roomName, deposit } = found[0]!;
 			// Round-trip: the type survives intent serialization and the schema enum write/read.
 			assert.strictEqual(deposit.depositType, depositTypeForRoom(roomName));
-			assert.strictEqual(deposit['#nextDecayTime'], shard.time + DEPOSIT_DECAY_TIME);
+			assert.strictEqual(deposit['#nextDecayTime'], shard.time + C.DEPOSIT_DECAY_TIME);
 			// Ported placement predicates: wall terrain, inside the sector's 250-square radius.
 			const world = await shard.loadWorld();
 			const terrain = world.map.getRoomTerrain(roomName);
@@ -194,7 +193,7 @@ describe('mod/modern/deposit', () => {
 				const inSector = makeSectorRadiusPredicate('W5N5', name, [ 'W5N5' ]);
 				const spot = [ [ 20, 20 ], [ 20, 30 ], [ 30, 20 ], [ 30, 30 ] ].find(([ xx, yy ]) => inSector(xx!, yy!))!;
 				const deposit =
-					createDeposit(new RoomPosition(spot[0]!, spot[1]!, name), C.RESOURCE_SILICON, 50_000, Game.time + DEPOSIT_DECAY_TIME);
+					createDeposit(new RoomPosition(spot[0]!, spot[1]!, name), C.RESOURCE_SILICON, 50_000, Game.time + C.DEPOSIT_DECAY_TIME);
 				room['#insertObject'](deposit);
 			} ]));
 

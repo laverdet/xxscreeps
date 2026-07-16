@@ -173,21 +173,6 @@ export const TERRAIN_MASK_WALL = 1;
 export const TERRAIN_MASK_SWAMP = 2;
 export const TERRAIN_MASK_LAVA = 4;
 
-export const PORTAL_DECAY = 30000;
-export const PORTAL_UNSTABLE = 10 * 24 * 3600 * 1000;
-export const PORTAL_MIN_TIMEOUT = 12 * 24 * 3600 * 1000;
-export const PORTAL_MAX_TIMEOUT = 22 * 24 * 3600 * 1000;
-
-export const POWER_BANK_RESPAWN_TIME = 50000;
-
-export const ORDER_SELL = 'sell';
-export const ORDER_BUY = 'buy';
-
-export const MARKET_FEE = 0.05;
-
-export const MARKET_MAX_ORDERS = 300;
-export const MARKET_ORDER_LIFE_TIME = 1000 * 60 * 60 * 24 * 30;
-
 export const SYSTEM_USERNAME = 'Screeps';
 
 export const SIGN_PLANNED_AREA = 'A new Novice or Respawn Area is being planned somewhere in this sector. Please make sure all important rooms are reserved.';
@@ -195,8 +180,4 @@ export const SIGN_NOVICE_AREA = SIGN_PLANNED_AREA;
 export const SIGN_RESPAWN_AREA = SIGN_PLANNED_AREA;
 
 export const EVENT_OBJECT_DESTROYED = 2;
-export const EVENT_BUILD = 4;
-export const EVENT_REPAIR = 7;
 export const EVENT_EXIT = 10;
-export const EVENT_POWER = 11;
-export const EVENT_TRANSFER = 12;

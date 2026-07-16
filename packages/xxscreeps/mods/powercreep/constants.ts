@@ -1,6 +1,11 @@
 import { makeBrand } from 'xxscreeps/utility/brand.js';
 
-export const HARVEST_DEPOSIT_POWER = 1;
+export const FIND_POWER_CREEPS = 119 as const;
+export const FIND_MY_POWER_CREEPS = 120 as const;
+export const FIND_HOSTILE_POWER_CREEPS = 121 as const;
+export const LOOK_POWER_CREEPS = 'powerCreep' as const;
+
+export const EVENT_POWER = 11;
 
 export const POWER_LEVEL_MULTIPLY = 1000;
 export const POWER_LEVEL_POW = 2;

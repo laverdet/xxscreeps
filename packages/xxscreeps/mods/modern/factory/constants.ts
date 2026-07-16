@@ -1,5 +1,10 @@
 import * as C from 'xxscreeps/game/constants/index.js';
 
+// Structure traits
+export const FACTORY_HITS = 1000;
+export const FACTORY_CAPACITY = 50000;
+export const STRUCTURE_FACTORY = 'factory' as const;
+
 // Deposit resources
 export const RESOURCE_SILICON = 'silicon' as const;
 export const RESOURCE_METAL = 'metal' as const;

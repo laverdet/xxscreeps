@@ -1,4 +1,6 @@
 export const FIND_STRUCTURES = 107 as const;
+export const FIND_MY_STRUCTURES = 108 as const;
+export const FIND_HOSTILE_STRUCTURES = 109 as const;
 export const FIND_RUINS = 123 as const;
 
 export const LOOK_STRUCTURES = 'structure' as const;

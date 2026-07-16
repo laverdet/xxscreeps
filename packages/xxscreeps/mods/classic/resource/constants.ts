@@ -17,6 +17,8 @@ export const CONTAINER_DECAY_TIME_OWNED = 500;
 
 export const ENERGY_DECAY = 1000;
 
+export const EVENT_TRANSFER = 12;
+
 export const FIND_DROPPED_RESOURCES = 106 as const;
 
 export const LOOK_ENERGY = 'energy' as const;

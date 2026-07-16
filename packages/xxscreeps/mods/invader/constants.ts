@@ -5,3 +5,5 @@ export const INVADER_CORE_CONTROLLER_POWER = 2;
 export const INVADER_CORE_CONTROLLER_DOWNGRADE = 5000;
 
 export const INVADERS_ENERGY_GOAL = 100000;
+
+export const STRUCTURE_INVADER_CORE = 'invaderCore' as const;

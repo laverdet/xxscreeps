@@ -6,7 +6,6 @@ import { pushIntentsForRoomNextTick } from 'xxscreeps/engine/processor/model.js'
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { makeSectorRadiusPredicate } from 'xxscreeps/game/room/sector.js';
-import { DEPOSIT_EXHAUST_MULTIPLY, DEPOSIT_EXHAUST_POW } from 'xxscreeps/mods/classic/mineral/constants.js';
 import { Deposit } from './deposit.js';
 import { dueSectorsAt, scheduleSector, seedSectors } from './model.js';
 
@@ -40,7 +39,7 @@ export function depositTypeForRoom(roomName: string): DepositResource {
 }
 
 function depositThroughput(harvested: number): number {
-	return 20 / Math.max(1, DEPOSIT_EXHAUST_MULTIPLY * harvested ** DEPOSIT_EXHAUST_POW);
+	return 20 / Math.max(1, C.DEPOSIT_EXHAUST_MULTIPLY * harvested ** C.DEPOSIT_EXHAUST_POW);
 }
 
 // Surviving in-sector deposits per normal edge room (one group per room, empties included).

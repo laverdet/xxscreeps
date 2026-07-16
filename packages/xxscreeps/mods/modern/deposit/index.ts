@@ -7,6 +7,6 @@ export const manifest: Manifest = {
 		'xxscreeps/mods/classic/harvestable',
 		'xxscreeps/mods/classic/resource',
 	],
-	provides: [ 'backend', 'game', 'main', 'processor', 'schema', 'test' ],
+	provides: [ 'backend', 'constants', 'game', 'main', 'processor', 'schema', 'test' ],
 	types,
 };
