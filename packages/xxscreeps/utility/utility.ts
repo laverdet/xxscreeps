@@ -161,13 +161,21 @@ export function hashCombine(left: number, right: number) {
 	return hashMix((seed + right) | 0);
 }
 
-export function removeOne<Type>(list: Type[], element: Type) {
+export function maybeRemoveOne<Type>(list: Type[], element: Type) {
 	const index = list.indexOf(element);
 	if (index === -1) {
+		return false;
+	} else {
+		list[index] = list.at(-1)!;
+		list.pop();
+		return true;
+	}
+}
+
+export function removeOne<Type>(list: Type[], element: Type) {
+	if (!maybeRemoveOne(list, element)) {
 		throw new Error('Element was not found');
 	}
-	list[index] = list.at(-1)!;
-	list.pop();
 }
 
 export function throttle(fn: () => void) {

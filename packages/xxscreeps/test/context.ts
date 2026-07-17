@@ -10,9 +10,9 @@ interface Context {
 	sawTest: boolean;
 }
 const makeFrame = (name?: string): Context => ({ name, children: [], tests: [], sawDescribe: false, sawTest: false });
-const { argv, 'test-redis': testRedis } = checkArguments({
+const { argv, 'log-sandbox': logSandbox, 'test-redis': testRedis } = checkArguments({
 	argv: true,
-	boolean: [ 'test-redis' ],
+	boolean: [ 'log-sandbox', 'test-redis' ],
 });
 const checkFilter = (name: string) => {
 	if (argv.length) {
@@ -28,7 +28,7 @@ const stack: Context[] = [];
 let passed = 0;
 let failed = 0;
 const testTimeout = 10000;
-export { testRedis };
+export { logSandbox, testRedis };
 
 // Catch unhandled rejections so async failures don't vanish silently
 process.on('unhandledRejection', reason => {
@@ -113,7 +113,7 @@ export function test(name: string, fn: Callback) {
 		} catch (err) {
 			++failed;
 			const names = [ ...stack.map(frame => frame.name), context?.name, name ].filter(nonNullPredicate);
-			if (argv.length === 0) {
+			if (argv.length !== names.length) {
 				console.log(`\n  FAIL: ${names.join(' > ')}`);
 				console.log(`  Isolate with: npx xxscreeps test ${names.map(nn => `"${nn}"`).join(' ')}`);
 			}

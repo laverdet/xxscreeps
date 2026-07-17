@@ -1,6 +1,5 @@
 import { registerVariant } from 'xxscreeps/engine/schema/index.js';
 import { hooks, registerGlobal } from 'xxscreeps/game/index.js';
-import { Transactions } from 'xxscreeps/mods/classic/brokerage/transaction.js';
 import { compose } from 'xxscreeps/schema/index.js';
 import { Market } from './market.js';
 import { terminalShape } from './schema.js';
@@ -12,14 +11,9 @@ registerGlobal(StructureTerminal);
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const terminalSchema = registerVariant('Room.objects', compose(terminalShape, StructureTerminal));
 
-// The runner ships transactions only when a transfer changes the list, so retain the last payload
-// and reuse it on the ticks it isn't resent.
-let transactions: Transactions | undefined;
+// Instantiate `Game.market`
 hooks.register('gameInitializer', (game, data) => {
-	if (data?.transactions) {
-		transactions = new Transactions(data.transactions, transactions);
-	}
-	game.market = new Market(game, transactions);
+	game.market = new Market(game, data);
 });
 
 // ---

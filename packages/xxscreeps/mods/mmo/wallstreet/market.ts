@@ -1,10 +1,12 @@
-import type { OrderType } from './order.js';
+import type { Order, OrderType } from './order.js';
 import type { StructureTerminal } from 'xxscreeps/mods/classic/brokerage/terminal.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { Market } from 'xxscreeps/mods/classic/brokerage/market.js';
+import { filter } from 'xxscreeps/utility/iteratee.js';
 import { extend } from 'xxscreeps/utility/utility.js';
+import { Orders } from './order.js';
 
 /**
  * An object describing the order to create, accepted by `Game.market.createOrder`.
@@ -49,6 +51,15 @@ export interface CreateOrderOptions {
 
 declare module 'xxscreeps/mods/classic/brokerage/market.js' {
 	interface Market {
+		'#orders': Orders;
+
+		/**
+		 * Your current credits balance.
+		 * @public
+		 * @see https://docs.screeps.com/api/#Game.market.credits
+		 */
+		credits: number;
+
 		/**
 		 * Create a market order in your terminal. You will be charged `price * amount * 0.05` credits
 		 * when the order is placed. The maximum orders count is 300 per player. You can create an order
@@ -103,7 +114,7 @@ declare module 'xxscreeps/mods/classic/brokerage/market.js' {
 		 * @public
 		 * @see https://docs.screeps.com/api/#Game.market.getAllOrders
 		 */
-		getAllOrders: () => unknown[];
+		getAllOrders: (predicate?: unknown) => Order[];
 
 		/**
 		 * Get daily price history of the specified resource on the market for the last 14 days.
@@ -117,14 +128,7 @@ declare module 'xxscreeps/mods/classic/brokerage/market.js' {
 		 * @public
 		 * @see https://docs.screeps.com/api/#Game.market.getOrderById
 		 */
-		getOrderById: () => undefined;
-
-		/**
-		 * Your current credits balance.
-		 * @public
-		 * @see https://docs.screeps.com/api/#Game.market.credits
-		 */
-		get credits(): number;
+		getOrderById: (id: string) => Order | null;
 
 		/**
 		 * An object with your active and inactive buy/sell orders on the market. See
@@ -133,41 +137,64 @@ declare module 'xxscreeps/mods/classic/brokerage/market.js' {
 		 * @public
 		 * @see https://docs.screeps.com/api/#Game.market.orders
 		 */
-		get orders(): Record<string, unknown>;
+		get orders(): Record<string, Order>;
 	}
 }
 
 extend(Market, {
-	credits: {
-		get() { return 0; },
-	},
-
 	orders: {
-		get() { return {}; },
+		get() { return this['#orders'].mine; },
 	},
 
 	createOrder(options: CreateOrderOptions) {
 		const { type, resourceType, totalAmount, price, roomName } = options;
-		if (roomName === undefined) {
-			return C.ERR_INVALID_ARGS;
-		} else {
-			const terminal = Game.rooms[roomName]?.terminal;
-			if (terminal?.my) {
-				return terminal['#createOrder'](type, resourceType, price, totalAmount);
+		const result = (() => {
+			if (roomName === undefined) {
+				return C.ERR_INVALID_ARGS;
 			} else {
-				return C.ERR_NOT_OWNER;
+				const terminal = Game.rooms[roomName]?.terminal;
+				if (terminal?.my) {
+					return terminal['#createOrder'](this, type, resourceType, price, totalAmount);
+				} else {
+					return C.ERR_NOT_OWNER;
+				}
 			}
+		})();
+		if (result === C.OK) {
+			++outstandingOrders;
 		}
+		return result;
+	},
+
+	getAllOrders(predicate?: unknown) {
+		return filter(this['#orders'].active, predicate as never);
+	},
+
+	getOrderById(id) {
+		return this['#orders'].get(id) ?? null;
 	},
 
 	cancelOrder() {},
 	changeOrderPrice() {},
 	deal() {},
 	extendOrder() {},
-	getAllOrders() { return []; },
 	getHistory() {},
-	getOrderById() {},
+
 });
+
+// Hook market initializer to add order book
+let outstandingOrders = 0;
+let previousOrders: Orders | undefined;
+Market.prototype['#initialize'] = function(initialize) {
+	return function(this: Market, payload) {
+		initialize.call(this, payload);
+		outstandingOrders = payload?.marketBook?.mine.length ?? 0;
+		this.credits = (payload?.credits ?? 0) / 1000;
+		previousOrders =
+			this['#orders'] =
+				new Orders(payload, previousOrders);
+	};
+}(Market.prototype['#initialize']);
 
 // Argument validation shared between the runtime method and the intent processor; `price` is in
 // millicredits on both sides.
@@ -183,4 +210,16 @@ export function checkOrderParams(type: string, resourceType: ResourceType, price
 		return C.OK;
 	}
 	return C.ERR_INVALID_ARGS;
+}
+
+export function checkOrderFee(credits: number, amount: number, price: number) {
+	return price * amount * C.MARKET_FEE <= credits
+		? C.OK
+		: C.ERR_NOT_ENOUGH_RESOURCES;
+}
+
+export function checkOrderLimit() {
+	return outstandingOrders < C.MARKET_MAX_ORDERS
+		? C.OK
+		: C.ERR_FULL;
 }

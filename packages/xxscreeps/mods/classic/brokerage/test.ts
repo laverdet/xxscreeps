@@ -1,4 +1,3 @@
-import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { RoomPosition } from 'xxscreeps/game/position.js';
 import { lookForStructures } from 'xxscreeps/mods/classic/structure/structure.js';
@@ -7,7 +6,7 @@ import { assert, describe, simulate, test } from 'xxscreeps/test/index.js';
 import { instantiate } from 'xxscreeps/utility/utility.js';
 import { loadTransactionBlob, loadTransactionEntries, recordTransaction } from './model.js';
 import { create as createTerminal } from './terminal.js';
-import { Transaction, Transactions, read } from './transaction.js';
+import { Transaction, read } from './transaction.js';
 
 describe('mod/classic/brokerage', () => {
 
@@ -57,16 +56,14 @@ describe('mod/classic/brokerage', () => {
 		assert.strictEqual(transaction.description, 'gift &lt;3');
 	}));
 
-	test('transfers are ordered reverse chronologically', () => storageSim(async ({ shard }) => {
+	test('transfers are ordered reverse chronologically', () => storageSim(async ({ player, shard }) => {
 		using clock = new DeterministicClockForTesting();
 		await recordTransaction(shard, '100', '101', makeTransaction({ time: 10 }));
 		await recordTransaction(shard, '100', '101', makeTransaction({ time: 20 }));
-		const { outgoing } = await loadTransactionEntries(shard, '100');
-		const blobList = await Fn.mapAwait(outgoing, id => loadTransactionBlob(shard, id));
-		const blobs = outgoing.map((id, index) => [ id, blobList[index]! ] as const);
-		const transactions = new Transactions({ incomingIds: [], outgoingIds: outgoing, blobs }, undefined);
-		assert.strictEqual(transactions.outgoing[0]?.time, 20);
-		assert.strictEqual(transactions.outgoing[1]?.time, 10);
+		await player('100', Game => {
+			assert.strictEqual(Game.market.outgoingTransactions[0]?.time, 20);
+			assert.strictEqual(Game.market.outgoingTransactions[1]?.time, 10);
+		});
 	}));
 
 	// User '200' owns terminals in both rooms, so a send to the neighbor is visible to itself from

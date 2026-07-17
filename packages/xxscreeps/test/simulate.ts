@@ -28,6 +28,7 @@ import { asyncDisposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js'
 import 'xxscreeps:mods/game';
 import 'xxscreeps:mods/main';
 import 'xxscreeps:mods/processor';
+import { logSandbox } from './context.js';
 
 initializeGameEnvironment();
 initializeIntentConstraints();
@@ -287,6 +288,9 @@ async function assertPlayerWithoutErrors(instance: PlayerInstance) {
 		for (const frame of frames as unknown[]) {
 			// @ts-expect-error
 			const { data, fd } = frame;
+			if (logSandbox) {
+				console.log(data);
+			}
 			if (fd === 2 && data !== 'Script was disposed') {
 				errors.push(data as string);
 			}

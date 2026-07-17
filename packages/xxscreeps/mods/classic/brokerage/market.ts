@@ -1,7 +1,11 @@
+import type { TickPayload } from 'xxscreeps/engine/runner/index.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
-import type { Transactions } from 'xxscreeps/mods/classic/brokerage/transaction.js';
 import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import * as C from 'xxscreeps/game/constants/index.js';
+import { Transactions } from 'xxscreeps/mods/classic/brokerage/transaction.js';
+
+// Retain previous `Transactions` to reuse blobs from previous payload
+let previousTransactions: Transactions | undefined;
 
 /**
  * A global object representing the in-game market. You can use this object to track resource
@@ -15,9 +19,12 @@ export class Market {
 	readonly #map;
 	readonly #transactions;
 
-	constructor(game: GameBase, transactions?: Transactions) {
+	constructor(game: GameBase, data?: TickPayload) {
 		this.#map = game.map;
-		this.#transactions = transactions;
+		previousTransactions =
+			this.#transactions =
+				new Transactions(data?.transactions, previousTransactions);
+		this['#initialize'](data);
 	}
 
 	/**
@@ -25,14 +32,17 @@ export class Market {
 	 * @public
 	 * @see https://docs.screeps.com/api/#Game.market.incomingTransactions
 	 */
-	get incomingTransactions() { return this.#transactions?.incoming ?? []; }
+	get incomingTransactions() { return this.#transactions.incoming; }
 
 	/**
 	 * An array of the last 100 outgoing transactions from your terminals.
 	 * @public
 	 * @see https://docs.screeps.com/api/#Game.market.outgoingTransactions
 	 */
-	get outgoingTransactions() { return this.#transactions?.outgoing ?? []; }
+	get outgoingTransactions() { return this.#transactions.outgoing; }
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	'#initialize'(data: TickPayload | undefined) {}
 
 	/**
 	 * Estimate the energy transaction cost of
