@@ -3,7 +3,7 @@ import { Fn } from 'xxscreeps/functional/fn.js';
 import { nonNullPredicate } from 'xxscreeps/functional/predicate.js';
 import { makeRelativeFragment } from 'xxscreeps/utility/url.js';
 
-const provideNames = [ 'backend', 'config', 'constants', 'driver', 'game', 'main', 'processor', 'schema', 'storage', 'test' ] as const;
+const provideNames = [ 'backend', 'config', 'constants', 'driver', 'game', 'main', 'processor', 'schema', 'storage', 'terrain', 'test' ] as const;
 /** @internal */
 export type Provide = typeof provideNames[number];
 /** @internal */

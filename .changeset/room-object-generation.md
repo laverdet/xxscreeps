@@ -2,4 +2,4 @@
 "xxscreeps": patch
 ---
 
-Place sources, controller, mineral, and keeper lairs in generated rooms; owner-less structures are always active.
+Place sources, controller, mineral, keeper lairs via mod terrain hooks; owner-less structures always active.

@@ -1,48 +1,24 @@
+import type { ExitMap, GenerateRoomOptions, RoomGeneratorContext } from './symbols.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
+import { mappedNumericComparator } from 'xxscreeps/functional/comparator.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { makeLocalIterateInRangeTo } from 'xxscreeps/game/direction.js';
 import * as MapSchema from 'xxscreeps/game/map.js';
-import { createRoomObject } from 'xxscreeps/game/object.js';
-import { RoomPosition } from 'xxscreeps/game/position.js';
 import { Room } from 'xxscreeps/game/room/index.js';
 import { makeRoomName, makeSignedRoomName, parseRoomName, parseSignedRoomName } from 'xxscreeps/game/room/name.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import { computeRoomMeta } from 'xxscreeps/game/room/sector.js';
 import { Terrain, TerrainWriter, isBorder, packExits } from 'xxscreeps/game/terrain.js';
-import { StructureController } from 'xxscreeps/mods/classic/controller/controller.js';
-import { create as createExtractor } from 'xxscreeps/mods/classic/mineral/extractor.js';
-import { Mineral } from 'xxscreeps/mods/classic/mineral/mineral.js';
-import { create as createKeeperLair } from 'xxscreeps/mods/classic/source/keeper-lair.js';
-import { Source } from 'xxscreeps/mods/classic/source/source.js';
 import { makeWriter } from 'xxscreeps/schema/write.js';
+import { hooks } from './symbols.js';
+import 'xxscreeps:mods/terrain';
 
-type ExitSide = 'top' | 'right' | 'bottom' | 'left';
-type ExitMap = Record<ExitSide, number[]>;
+export type { GenerateRoomOptions } from './symbols.js';
 
 // The world's per-room terrain map, as returned by `shard.loadWorld()`. The generation entry points
 // accumulate freshly built rooms into one of these and serialize it once, rather than once per room.
 type WorldTerrain = Awaited<ReturnType<Shard['loadWorld']>>['terrain'];
-
-export interface GenerateRoomOptions {
-	exits?: Partial<ExitMap>;
-	/** Wall layout 1-28; omit for a random layout. */
-	terrainType?: number;
-	/** Swamp layout 1-14, or 0 for no swamp; omit for a random layout. */
-	swampType?: number;
-	/** Number of sources; omit for a random 1 or 2. */
-	sources?: number;
-	/** Mineral type, or `false` for no mineral; omit for a random type. */
-	mineral?: ResourceType | false;
-	/**
-	 * Whether the room has a controller. Default is true. Controller-less rooms hold
-	 * keeper-capacity sources and a prebuilt extractor.
-	 */
-	controller?: boolean;
-	/** Whether keeper lairs guard each source and the mineral. Default is false. */
-	keeperLairs?: boolean;
-}
 
 interface TerrainTypeParams {
 	fill: number;
@@ -104,27 +80,10 @@ function randomWallType(): number {
 	return Math.floor(Math.random() * 27) + 1;
 }
 
-// Mineral roll weights: H and O are twice as common as Z/K/U/L, and six times as common as X.
-export const mineralPool: ResourceType[] = [
-	C.RESOURCE_HYDROGEN, C.RESOURCE_HYDROGEN, C.RESOURCE_HYDROGEN,
-	C.RESOURCE_HYDROGEN, C.RESOURCE_HYDROGEN, C.RESOURCE_HYDROGEN,
-	C.RESOURCE_OXYGEN, C.RESOURCE_OXYGEN, C.RESOURCE_OXYGEN,
-	C.RESOURCE_OXYGEN, C.RESOURCE_OXYGEN, C.RESOURCE_OXYGEN,
-	C.RESOURCE_ZYNTHIUM, C.RESOURCE_ZYNTHIUM, C.RESOURCE_ZYNTHIUM,
-	C.RESOURCE_KEANIUM, C.RESOURCE_KEANIUM, C.RESOURCE_KEANIUM,
-	C.RESOURCE_UTRIUM, C.RESOURCE_UTRIUM, C.RESOURCE_UTRIUM,
-	C.RESOURCE_LEMERGIUM, C.RESOURCE_LEMERGIUM, C.RESOURCE_LEMERGIUM,
-	C.RESOURCE_CATALYST,
-];
-
 interface Cell {
 	wall: boolean;
 	swamp: boolean;
 	forceOpen: boolean;
-	source: boolean;
-	controller: boolean;
-	keeperLair: boolean;
-	mineral: boolean;
 }
 
 type Grid = Cell[][];
@@ -139,10 +98,7 @@ function makeGrid(): Grid {
 		Fn.range(50),
 		$$ => Fn.map($$, () => Fn.pipe(
 			Fn.range(50),
-			$$ => Fn.map($$, (): Cell => ({
-				wall: false, swamp: false, forceOpen: false,
-				source: false, controller: false, keeperLair: false, mineral: false,
-			})),
+			$$ => Fn.map($$, (): Cell => ({ wall: false, swamp: false, forceOpen: false })),
 			$$ => [ ...$$ ])),
 		$$ => [ ...$$ ]);
 }
@@ -351,108 +307,47 @@ function findRandomTile(min: number, span: number, accept: (xx: number, yy: numb
 	}
 }
 
-// Searches outward from (xx, yy) through passable terrain for a non-border wall tile 3 to 5 steps
-// away to host a keeper lair, marking a uniformly random candidate. Returns false when no tile
-// qualifies, signalling the caller to regenerate.
-function placeKeeperLair(grid: Grid, xx: number, yy: number): boolean {
-	const visited = new Map([ [ yy * 50 + xx, 0 ] ]);
-	const stack = [ [ xx, yy ] as const ];
-	const spots = [ ...function*(): Iterable<readonly [ number, number ]> {
-		while (stack.length > 0) {
-			const [ cxx, cyy ] = stack.pop()!;
-			const distance = visited.get(cyy * 50 + cxx)! + 1;
-			for (const [ nxx, nyy ] of iterateGridInRange(cxx, cyy, 1)) {
-				const key = nyy * 50 + nxx;
-				if (visited.has(key)) {
-					continue;
-				}
-				visited.set(key, distance);
-				const neighbor = grid[nyy]![nxx]!;
-				if (
-					distance >= 3 && distance <= 5 && !isBorder(nxx, nyy) &&
-					neighbor.wall && !neighbor.source && !neighbor.keeperLair && !neighbor.controller
-				) {
-					yield [ nxx, nyy ];
-				}
-				if (!neighbor.wall && distance < 5) {
-					stack.push([ nxx, nyy ]);
-				}
+const kNoTags: ReadonlySet<string> = new Set();
+
+function makeGeneratorContext(room: Room, grid: Grid, options: GenerateRoomOptions): RoomGeneratorContext {
+	const tags = new Map<number, Set<string>>();
+	const tagsAt = (xx: number, yy: number): ReadonlySet<string> => tags.get(yy * 50 + xx) ?? kNoTags;
+	const isWall = (xx: number, yy: number) => grid[yy]![xx]!.wall;
+	return {
+		options,
+		room,
+		findRandomTile,
+		isPlaceable: (xx, yy) => isWall(xx, yy) && tagsAt(xx, yy).size === 0 && hasPassableNeighbor(grid, xx, yy),
+		isWall,
+		place(object, ...objectTags) {
+			room['#insertObject'](object);
+			const key = object.pos.y * 50 + object.pos.x;
+			const tileTags = tags.get(key) ?? new Set();
+			for (const tag of objectTags) {
+				tileTags.add(tag);
 			}
-		}
-	}() ];
-	const spot = spots[Math.floor(Math.random() * spots.length)];
-	if (spot === undefined) {
-		return false;
-	}
-	const [ sxx, syy ] = spot;
-	grid[syy]![sxx]!.keeperLair = true;
-	return true;
-}
-
-interface GenerateParams {
-	wallType: number;
-	swampType: number;
-	sourceCount: number;
-	controller: boolean;
-	keeperLairs: boolean;
-	mineral: boolean;
-}
-
-// Places sources, controller, and mineral (with their keeper lairs) on the grid. Returns false when
-// a placement constraint can't be satisfied on this terrain, signalling the caller to regenerate.
-function tryPlaceObjects(grid: Grid, params: GenerateParams): boolean {
-	const isPlaceable = (xx: number, yy: number) => {
-		const cell = grid[yy]![xx]!;
-		return cell.wall && !cell.source && !cell.keeperLair && hasPassableNeighbor(grid, xx, yy);
+			tags.set(key, tileTags);
+		},
+		tagsAt,
 	};
-	for (let ii = 0; ii < params.sourceCount; ++ii) {
-		const source = findRandomTile(3, 44, isPlaceable);
-		if (source === undefined) {
-			return false;
-		}
-		const [ sxx, syy ] = source;
-		grid[syy]![sxx]!.source = true;
-		if (params.keeperLairs && !placeKeeperLair(grid, sxx, syy)) {
-			return false;
-		}
-	}
-	if (params.controller) {
-		const controller = findRandomTile(5, 40, isPlaceable);
-		if (controller === undefined) {
-			return false;
-		}
-		const [ cxx, cyy ] = controller;
-		grid[cyy]![cxx]!.controller = true;
-	}
-	if (params.mineral) {
-		const mineral = findRandomTile(4, 42, (xx, yy) =>
-			isPlaceable(xx, yy) && !Fn.some(iterateGridInRange(xx, yy, 4), ([ nxx, nyy ]) => {
-				const cell = grid[nyy]![nxx]!;
-				return cell.source || cell.controller;
-			}));
-		if (mineral === undefined) {
-			return false;
-		}
-		const [ mxx, myy ] = mineral;
-		grid[myy]![mxx]!.mineral = true;
-		if (params.keeperLairs && !placeKeeperLair(grid, mxx, myy)) {
-			return false;
-		}
-	}
-	return true;
 }
 
 const kMaxGenerateAttempts = 50;
 
 // Generates the room's terrain and object placements, retrying with a fresh wall type when the
-// layout can't satisfy the placement constraints, and giving up (rather than looping forever) after
-// a bounded number of attempts.
-function genTerrain(exits: ExitMap, params: GenerateParams): Grid {
+// layout can't satisfy every generator's placement constraints, and giving up (rather than looping
+// forever) after a bounded number of attempts.
+function genRoom(roomName: string, exits: ExitMap, options: GenerateRoomOptions) {
+	const generators = [ ...hooks.map('roomGenerator') ].sort(mappedNumericComparator(generator => generator.order));
+	const swampType = options.swampType ?? Math.floor(Math.random() * 14);
 	for (let attempt = 0; attempt < kMaxGenerateAttempts; ++attempt) {
-		const wallType = attempt === 0 ? params.wallType : randomWallType();
-		const grid = buildBaseTerrain(exits, wallType, params.swampType);
-		if (tryPlaceObjects(grid, params)) {
-			return grid;
+		const wallType = attempt === 0 ? options.terrainType ?? randomWallType() : randomWallType();
+		const grid = buildBaseTerrain(exits, wallType, swampType);
+		const room = new Room();
+		room.name = roomName;
+		const context = makeGeneratorContext(room, grid, options);
+		if (generators.every(generator => generator.generate(context))) {
+			return { room, terrain: gridToTerrain(grid) };
 		}
 	}
 	throw new Error(`Failed to generate room terrain after ${kMaxGenerateAttempts} attempts`);
@@ -484,52 +379,6 @@ function gridToTerrain(grid: Grid): TerrainWriter {
 		}
 	}
 	return terrain;
-}
-
-function pickMineralDensity(): number {
-	const random = Math.random();
-	return C.MINERAL_DENSITY_PROBABILITY.findIndex(
-		probability => probability !== undefined && random <= probability);
-}
-
-// Materializes the grid's placement flags into room objects. Keeper and center rooms (the
-// controller-less ones) bake their sources' 4000 energy capacity at generation: Source's
-// '#roomStatusDidChange' computes the same thing from the room owner, but the controller processor
-// that drives that hook never runs for a controller-less room.
-function placeObjects(room: Room, grid: Grid, mineralType: ResourceType | false, hasController: boolean) {
-	const sourceEnergyCapacity = hasController
-		? C.SOURCE_ENERGY_NEUTRAL_CAPACITY
-		: C.SOURCE_ENERGY_KEEPER_CAPACITY;
-	for (const [ yy, row ] of grid.entries()) {
-		for (const [ xx, cell ] of row.entries()) {
-			if (cell.source) {
-				const source = createRoomObject(new Source(), new RoomPosition(xx, yy, room.name));
-				source.energy = source.energyCapacity = sourceEnergyCapacity;
-				room['#insertObject'](source);
-			}
-			if (cell.controller) {
-				room['#insertObject'](createRoomObject(new StructureController(), new RoomPosition(xx, yy, room.name)));
-			}
-			if (cell.keeperLair) {
-				room['#insertObject'](createKeeperLair(new RoomPosition(xx, yy, room.name)));
-			}
-			if (cell.mineral && mineralType !== false) {
-				const pos = new RoomPosition(xx, yy, room.name);
-				const density = pickMineralDensity();
-				const mineral = createRoomObject(new Mineral(), pos);
-				mineral.mineralType = mineralType;
-				mineral.density = density;
-				mineral.mineralAmount = C.MINERAL_DENSITY[density]!;
-				room['#insertObject'](mineral);
-				// Keeper and center rooms ship a pre-built, unowned extractor so the mineral is
-				// harvestable without the player owning it (vanilla blocks harvest only when the
-				// extractor belongs to someone else).
-				if (!hasController) {
-					room['#insertObject'](createExtractor(pos, null));
-				}
-			}
-		}
-	}
 }
 
 // Builds a room's terrain and objects entirely in memory; performs no storage I/O. `lookupTerrain`
@@ -572,27 +421,7 @@ function buildRoom(
 		}
 	}
 
-	const wallType = options?.terrainType ?? randomWallType();
-	const swampType = options?.swampType ?? Math.floor(Math.random() * 14);
-	const sourceCount = options?.sources ?? (Math.random() > 0.5 ? 1 : 2);
-	const hasController = options?.controller ?? true;
-	const mineralType = options?.mineral ?? mineralPool[Math.floor(Math.random() * mineralPool.length)]!;
-
-	const grid = genTerrain(exits, {
-		wallType,
-		swampType,
-		sourceCount,
-		controller: hasController,
-		keeperLairs: options?.keeperLairs ?? false,
-		mineral: mineralType !== false,
-	});
-	const terrain = gridToTerrain(grid);
-
-	const room = new Room();
-	room.name = roomName;
-	room['#user'] = null;
-	room['#level'] = hasController ? 0 : -1;
-	placeObjects(room, grid, mineralType, hasController);
+	const { room, terrain } = genRoom(roomName, exits, options ?? {});
 	room['#flushObjects'](null);
 	flushUsers(room);
 

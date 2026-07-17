@@ -3,12 +3,11 @@ import type { GenerateRoomOptions } from 'xxscreeps/scripts/room-gen.js';
 import { checkArguments } from 'xxscreeps/config/arguments.js';
 import { config } from 'xxscreeps/config/index.js';
 import { Database, Shard } from 'xxscreeps/engine/db/index.js';
-import { generateRoom, mineralPool } from 'xxscreeps/scripts/room-gen.js';
-
-const mineralTypes = new Set<string>(mineralPool);
+import * as C from 'xxscreeps/game/constants/index.js';
+import { generateRoom } from 'xxscreeps/scripts/room-gen.js';
 
 function isMineralType(value: string): value is ResourceType {
-	return mineralTypes.has(value);
+	return value in C.MINERAL_MIN_AMOUNT;
 }
 
 function parseOptionalInteger(value: string | undefined, name: string, min: number, max: number) {
@@ -26,7 +25,7 @@ function parseMineralType(value: string | undefined) {
 	if (value === undefined || isMineralType(value)) {
 		return value;
 	}
-	throw new Error(`mineral must be one of ${[ ...mineralTypes ].join(', ')}`);
+	throw new Error(`mineral must be one of ${Object.keys(C.MINERAL_MIN_AMOUNT).join(', ')}`);
 }
 
 async function main() {
