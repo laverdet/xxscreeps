@@ -51,6 +51,30 @@ describe('mod/classic/structure', () => {
 			});
 		}));
 
+		// Hostile spawn nearer the controller: only the owner's structures count against the cap
+		const hostileCrowdingSim = simulate({
+			W9N1: room => {
+				const controllerPos = room.controller!.pos;
+				room['#insertObject'](createSpawn(new RoomPosition(controllerPos.x + 1, controllerPos.y, 'W9N1'), '101', 'HostileSpawn'));
+				room['#insertObject'](createSpawn(new RoomPosition(controllerPos.x + 2, controllerPos.y - 2, 'W9N1'), '100', 'MySpawn'));
+				room['#level'] = 1; // RCL 1 allows only 1 spawn
+				room['#user'] = room.controller!['#user'] = '100';
+			},
+		});
+
+		test('closer hostile spawn does not consume a ranking slot', () => hostileCrowdingSim(async ({ player }) => {
+			await player('100', Game => {
+				const spawn = Game.spawns.MySpawn;
+				assert.ok(spawn, 'should see own spawn');
+				assert.strictEqual(spawn.isActive(), true, 'owner spawn should be active despite closer hostile spawn');
+			});
+			await player('101', Game => {
+				const spawn = Game.spawns.HostileSpawn;
+				assert.ok(spawn, 'should see own spawn');
+				assert.strictEqual(spawn.isActive(), false, 'hostile spawn should be inactive');
+			});
+		}));
+
 		// Extractor isActive check on mineral harvest — use room's existing mineral
 		const extractorSim = simulate({
 			W6N1: room => {
