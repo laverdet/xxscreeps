@@ -3,6 +3,6 @@ import * as types from 'xxscreeps/tsroot.js';
 
 export const manifest: Manifest = {
 	dependencies: [ 'xxscreeps/mods/classic/brokerage' ],
-	provides: [ 'driver', 'constants', 'game', 'main', 'processor', 'schema', 'test' ],
+	provides: [ 'constants', 'game', 'main', 'processor', 'schema', 'test' ],
 	types,
 };

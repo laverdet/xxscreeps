@@ -3,9 +3,10 @@ import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
 import * as C from 'xxscreeps/game/constants/index.js';
 import { Game } from 'xxscreeps/game/index.js';
 import { Room } from 'xxscreeps/game/room/index.js';
-import { clamp } from 'xxscreeps/utility/utility.js';
+import { clamp, instantiate } from 'xxscreeps/utility/utility.js';
 import { recordTransaction } from './model.js';
 import { StructureTerminal, calculateEnergyCost, checkSend } from './terminal.js';
+import { Transaction } from './transaction.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const intents = [
@@ -44,14 +45,15 @@ const intents = [
 
 					// Log the transfer for both parties' market transaction history
 					if (recipientId != null) {
-						context.task(recordTransaction(context.shard, senderId, recipientId, {
-							time: Game.time - 1,
-							resourceType,
+						const transaction = instantiate(Transaction, {
 							amount: sent,
 							from: terminal.room.name,
+							resourceType,
+							time: Game.time - 1,
 							to: destination,
-							description,
-						}));
+						});
+						transaction['#description'] = description ?? undefined;
+						context.task(recordTransaction(context.shard, senderId, recipientId, transaction));
 					}
 				}
 			});

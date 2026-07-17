@@ -1,9 +1,7 @@
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { ResourceType } from 'xxscreeps/mods/classic/resource/resource.js';
 import { Channel } from 'xxscreeps/engine/db/channel.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { loadUpgradedWithWriteBack } from 'xxscreeps/engine/schema/keyval.js';
-import { assign } from 'xxscreeps/utility/utility.js';
 import { Transaction, upgrade, write } from './transaction.js';
 
 // A terminal transfer is normalized: stored once as an immutable schema blob at
@@ -13,25 +11,22 @@ import { Transaction, upgrade, write } from './transaction.js';
 const kTransactionWindow = 24 * 60 * 60 * 1000;
 // `incomingTransactions` / `outgoingTransactions` expose the most recent transfers, capped at the
 // smaller of the 24h window or this count.
-const kReadLimit = 100;
+/** @internal */
+export const kReadLimit = 100;
 
 type Direction = 'incoming' | 'outgoing';
 
 const blobKey = (id: string) => `market/transaction/${id}`;
 const setKey = (userId: string, direction: Direction) => `user/${userId}/market/transactions/${direction}`;
 
-export function getTransactionChannel(shard: Shard, userId: string) {
-	return new Channel<{ type: 'updated' }>(shard.pubsub, `user/${userId}/market/transactions`);
-}
+// Channel for user transactions
+export const userBrokerageChannel =
+	(shard: Shard, userId: string): UserBrokerageChannel => new Channel(shard.pubsub, `user/${userId}/brokerage`);
 
-export interface TransactionFields {
-	time: number;
-	resourceType: ResourceType;
-	amount: number;
-	from: string;
-	to: string;
-	description?: string | undefined | null;
-}
+export type UserBrokerageChannel = Channel<
+	{ type: 'incoming'; transactionId: string } |
+	{ type: 'outgoing'; transactionId: string }
+>;
 
 export function loadTransactionBlob(shard: Shard, id: string) {
 	return loadUpgradedWithWriteBack(
@@ -64,28 +59,17 @@ async function reference(shard: Shard, userId: string, direction: Direction, tim
 	]);
 }
 
-export async function recordTransaction(shard: Shard, senderId: string, recipientId: string, fields: TransactionFields) {
-	const id = Id.generateId();
-	const transaction = assign(new Transaction(), {
-		transactionId: id,
-		time: fields.time,
-		resourceType: fields.resourceType,
-		amount: fields.amount,
-		from: fields.from,
-		to: fields.to,
-	});
+export async function recordTransaction(shard: Shard, senderId: string, recipientId: string, transaction: Transaction) {
+	const id = transaction.transactionId = Id.generateId();
 	transaction['#sender'] = senderId;
 	transaction['#recipient'] = recipientId;
-	if (fields.description != null) {
-		transaction['#description'] = fields.description;
-	}
 	const wallTime = Date.now();
 	await Promise.all([
 		// The blob expires after the read window; both parties reference the same id until then.
 		shard.data.set(blobKey(id), write(transaction), { px: kTransactionWindow }),
 		reference(shard, senderId, 'outgoing', wallTime, id),
 		reference(shard, recipientId, 'incoming', wallTime, id),
-		getTransactionChannel(shard, senderId).publish({ type: 'updated' }),
-		getTransactionChannel(shard, recipientId).publish({ type: 'updated' }),
+		userBrokerageChannel(shard, senderId).publish({ type: 'outgoing', transactionId: id }),
+		userBrokerageChannel(shard, recipientId).publish({ type: 'incoming', transactionId: id }),
 	]);
 }
