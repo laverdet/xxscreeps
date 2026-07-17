@@ -208,12 +208,12 @@ registerObjectPreTickProcessor(Structure, (structure, context) => {
 	}
 });
 
-// The core shadows that removal to first release a controller it had taken over. Its reservation, if
-// any, is left to expire on its own — a level-0 controller short-circuits before the release.
+// The core shadows that removal to first reset any owned controller in its room to neutral. A
+// level-0 controller short-circuits so its reservation, if any, expires on its own.
 registerObjectPreTickProcessor(StructureInvaderCore, (core, context, next) => {
 	if (optionalExpiryTime(core['#collapseTime']) === 0) {
 		const controller = core.room.controller;
-		if (controller && controller.level > 0 && core.room['#user'] === '2') {
+		if (controller && controller.level > 0) {
 			release(context, controller);
 			controller['#upgradeInvulnerableUntil'] = 0;
 		}
