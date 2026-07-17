@@ -1,7 +1,6 @@
 import type { Database, Shard } from 'xxscreeps/engine/db/index.js';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/room.js';
 import type { GameBase } from 'xxscreeps/game/game.js';
-import type { GameConstructor } from 'xxscreeps/game/index.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Room } from 'xxscreeps/game/room/index.js';
 import type { RawMemory } from 'xxscreeps/mods/meta/memory/memory.js';
@@ -14,16 +13,16 @@ import { initializeIntentConstraints } from 'xxscreeps/engine/processor/index.js
 import { acquireIntentsForRoom, activeRoomsKey, begetRoomProcessQueue, finalizeExtraRoomsSetKey, processRoomsSetKey, updateUserRoomRelationships, userToIntentRoomsSetKey, userToVisibleRoomsSetKey } from 'xxscreeps/engine/processor/model.js';
 import { RoomProcessor } from 'xxscreeps/engine/processor/room.js';
 import { runShardTickProcessors } from 'xxscreeps/engine/processor/shard.js';
-import { PlayerInstance } from 'xxscreeps/engine/runner/instance.js';
+import { PlayerInstance, acquireRunnerContext, makeTickPayloadForTesting } from 'xxscreeps/engine/runner/instance.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
 import * as Id from 'xxscreeps/engine/schema/id.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { Game, GameState, initializeGameEnvironment, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
+import { Game, GameConstructor, GameState, initializeGameEnvironment, runForPlayer, runForUser, runOneShot, runWithState } from 'xxscreeps/game/index.js';
 import { flushUsers } from 'xxscreeps/game/room/room.js';
 import * as Memory from 'xxscreeps/mods/meta/memory/memory.js';
 import { stdoutTransport } from 'xxscreeps/mods/meta/notifications/transport-stdout.js';
 import { instantiateTestShard } from 'xxscreeps/test/import.js';
-import { disposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
+import { asyncDisposableToEffect, getOrSet } from 'xxscreeps/utility/utility.js';
 
 // Simulate runs both main and worker logic in one process; load every slot either service would.
 import 'xxscreeps:mods/game';
@@ -69,7 +68,7 @@ interface Simulation {
 	/**
 	 * Create a player whose code will run in the sandbox automatically every tick.
 	 */
-	sandbox: (userId: string, unsafeMain: (global: SimulationGlobals) => void) => Promise<PlayerInstance & Disposable>;
+	sandbox: (userId: string, unsafeMain: (global: SimulationGlobals) => void) => Promise<PlayerInstance & AsyncDisposable>;
 
 	/**
 	 * Invokes the game processor to dispatch intents.
@@ -165,13 +164,14 @@ export function simulate(
 				playersThisTick.add(userId);
 
 				// Fetch game state for player
-				const [ intentRooms, visibleRooms ] = await Promise.all([
+				const [ intentRooms, visibleRooms, tickPayload ] = await Promise.all([
 					shard.scratch.sMembers(userToIntentRoomsSetKey(userId)),
 					shard.scratch.sMembers(userToVisibleRoomsSetKey(userId)),
+					makeTickPayloadForTesting(shard, world, userId),
 				]);
 				const rooms = await Promise.all(Fn.map(visibleRooms, roomName => shard.loadRoom(roomName)));
 				const state = new GameState(world, shard.time, rooms);
-				const [ intents ] = runForUser(userId, state, task);
+				const [ intents ] = runForPlayer(userId, state, tickPayload, task);
 
 				// Save intents
 				for (const roomName of intentRooms) {
@@ -191,12 +191,13 @@ export function simulate(
 					globalThis.assert = __assert;
 					module.exports.loop = () => main(globalThis);`;
 				await Code.saveContent(db, userId, 'main', new Map([ [ 'main', main ] ]));
-				using disposable = new DisposableStack();
-				const instance = disposable.adopt(await PlayerInstance.create(shard, world, userId), instance => instance.disconnect());
+				await using disposable = new AsyncDisposableStack();
+				const runner = disposable.use(await acquireRunnerContext(shard));
+				const instance = disposable.adopt(await PlayerInstance.create(runner, world, userId), instance => instance.disconnect());
 				disposable.use(await assertPlayerWithoutErrors(instance));
 				sandboxPlayers.push(instance);
 				return Object.assign(instance, {
-					[Symbol.dispose]: disposableToEffect(disposable.move()),
+					[Symbol.asyncDispose]: asyncDisposableToEffect(disposable.move()),
 				});
 			},
 

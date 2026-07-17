@@ -1,7 +1,12 @@
+import type { Shard } from 'xxscreeps/engine/db/shard.js';
 import type { CodeBlobs } from 'xxscreeps/engine/db/user/code-schema.js';
 import type { RoomIntentPayload } from 'xxscreeps/engine/processor/index.js';
 
 export { hooks } from './symbols.js';
+
+export interface RunnerWorker extends AsyncDisposable {
+	shard: Shard;
+}
 
 export interface InitializationPayload {
 	userId: string;

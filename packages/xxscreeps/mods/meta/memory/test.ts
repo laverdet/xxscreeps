@@ -15,7 +15,7 @@ describe('mod/meta/memory', () => {
 	});
 
 	test('smoke test', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1: global.Memory.test = 'foo'; break;
 				case 2: assert.equal(global.Memory.test, 'foo'); break;
@@ -27,7 +27,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('crunch', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1: {
 					const test = [ 1, undefined ];
@@ -46,7 +46,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('invalid payload', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			global.RawMemory.set('}');
 			assert.equal(global.RawMemory._parsed, undefined);
 			assert.equal(global.Memory, null);
@@ -56,7 +56,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('RawMemory._parsed becomes undefined', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1: global.Memory.test = 'foo'; break;
 				case 2: assert.equal(global.RawMemory._parsed, undefined); break;
@@ -66,7 +66,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('RawMemory._parsed = undefined skips saving', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1:
 					global.Memory.test = 1;
@@ -83,7 +83,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('RawMemory._parsed assigns Memory', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1: global.RawMemory._parsed = { test: 'foo' }; break;
 				case 2: assert.equal(global.Memory.test, 'foo'); break;
@@ -93,7 +93,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('RawMemory.set works after accessing Memory', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1:
 					global.Memory.test = 1;
@@ -108,7 +108,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('cached tick Memory survives RawMemory.set', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			global.Memory.test = 'foo';
 			global.RawMemory.set('{"test":"bar"}');
 			assert.equal(global.Memory.test, 'foo');
@@ -117,7 +117,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('RawMemory.set overrides RawMemory._parsed', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1:
 					global.RawMemory._parsed = { test: 'foo' };
@@ -131,7 +131,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('RawMemory._parsed overrides RawMemory.set', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			switch (global.Game.time) {
 				case 1:
 					global.RawMemory.set(JSON.stringify({ test: 'bar' }));
@@ -144,7 +144,7 @@ describe('mod/meta/memory', () => {
 	}));
 
 	test('RawMemory.set is reflected immediately', () => sim(async ({ sandbox, tick }) => {
-		using player = await sandbox('200', global => {
+		await using player = await sandbox('200', global => {
 			global.RawMemory.set('{"test":"bar"}');
 			assert.equal(global.RawMemory.get(), '{"test":"bar"}');
 			assert.equal(global.Memory.test, 'bar');

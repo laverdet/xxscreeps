@@ -2,7 +2,7 @@ import type { RunnerUserChannel } from './model.js';
 import type { Sandbox } from 'xxscreeps/driver/sandbox/index.js';
 import type { SubscriptionFor } from 'xxscreeps/engine/db/channel.js';
 import type { Shard } from 'xxscreeps/engine/db/index.js';
-import type { InitializationPayload, RunnerPlayerIntent, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
+import type { InitializationPayload, RunnerPlayerIntent, RunnerWorker, TickPayload, TickResult } from 'xxscreeps/engine/runner/index.js';
 import type { World } from 'xxscreeps/game/map.js';
 import type { Effect } from 'xxscreeps/utility/types.js';
 import { config } from 'xxscreeps/config/index.js';
@@ -13,16 +13,16 @@ import * as User from 'xxscreeps/engine/db/user/index.js';
 import { publishRunnerIntentsForRooms } from 'xxscreeps/engine/processor/model.js';
 import { getConsoleChannel } from 'xxscreeps/engine/runner/model.js';
 import { Fn } from 'xxscreeps/functional/fn.js';
-import { mustNotReject } from 'xxscreeps/utility/async.js';
+import { acquireWith, mustNotReject } from 'xxscreeps/utility/async.js';
 import { acquireHookEffects } from 'xxscreeps/utility/hook.js';
-import { clamp, disposableToEffect } from 'xxscreeps/utility/utility.js';
+import { asyncDisposableToEffect, clamp, disposableToEffect } from 'xxscreeps/utility/utility.js';
 import { getAckChannel, runnerUsageChannel, runnerUserChannel } from './model.js';
 import { hooks } from './symbols.js';
 
 const acquireConnectors = function(invoke) {
-	return async (instance: PlayerInstance) => {
+	return async (instance: PlayerInstance, runner: RunnerWorker) => {
 		using disposable = new DisposableStack();
-		const connectors = await acquireHookEffects(disposable, invoke(instance));
+		const connectors = await acquireHookEffects(disposable, invoke(instance, runner));
 		const initialize = [ ...Fn.filter(Fn.map(connectors, hook => hook.initialize)) ];
 		const refresh = [ ...Fn.filter(Fn.map(connectors, hook => hook.refresh)) ];
 		const save = [ ...Fn.filter(Fn.map(connectors, hook => hook.save)) ].reverse();
@@ -35,6 +35,39 @@ const acquireConnectors = function(invoke) {
 	};
 }(hooks.makeMapped('runnerConnector'));
 const kCPU = 100;
+
+const initializeRunner = hooks.makeMapped('runnerWorker');
+/** @internal */
+export async function acquireRunnerContext(shard: Shard) {
+	await using disposable = new AsyncDisposableStack();
+	const runner = { shard } satisfies Partial<RunnerWorker> as RunnerWorker;
+	await acquireWith(
+		resource => disposable.use(resource),
+		...initializeRunner(runner),
+	);
+	runner[Symbol.asyncDispose] = asyncDisposableToEffect(disposable.move());
+	return runner;
+}
+
+/** @internal */
+export async function makeTickPayloadForTesting(shard: Shard, world: World, userId: string) {
+	await using disposable = new AsyncDisposableStack();
+	await using runner = await acquireRunnerContext(shard);
+	const playerStub = { shard, userId } satisfies Partial<PlayerInstance> as PlayerInstance;
+	const [ cleanup, connectors ] = await acquireConnectors(playerStub, runner);
+	disposable.defer(cleanup);
+	const initializationPayload: Partial<InitializationPayload> = {
+		userId,
+		shardName: shard.name,
+		terrainBlob: world.terrainBlob,
+	};
+	await connectors.initialize(initializationPayload as InitializationPayload);
+	const tickPayload: Partial<TickPayload> = {
+		time: shard.time,
+	};
+	await connectors.refresh(tickPayload as TickPayload);
+	return tickPayload as TickPayload;
+}
 
 export class PlayerInstance {
 	readonly shard;
@@ -111,8 +144,9 @@ export class PlayerInstance {
 		});
 	}
 
-	static async create(shard: Shard, world: World, userId: string) {
+	static async create(runner: RunnerWorker, world: World, userId: string) {
 		// Connect to channel, load initial user data
+		const { shard } = runner;
 		const [ channel, codeChannel, userInfo ] = await Promise.all([
 			runnerUserChannel(shard, userId).subscribe(),
 			Code.userCodeChannel(shard.db, userId).subscribe(),
@@ -120,7 +154,7 @@ export class PlayerInstance {
 		]);
 		const instance = new PlayerInstance(shard, world, channel, codeChannel, userId, userInfo.username!, userInfo.branch ?? null);
 		try {
-			[ instance.cleanup, instance.connectors ] = await acquireConnectors(instance);
+			[ instance.cleanup, instance.connectors ] = await acquireConnectors(instance, runner);
 			return instance;
 		} catch (err) {
 			instance.disconnect();
@@ -198,7 +232,7 @@ export class PlayerInstance {
 						const users = RoomSchema.read(blob)['#users'];
 						return Fn.concat([ users.presence, users.extra ]);
 					}),
-					$$ => Fn.concat([ $$, payload.userIds ?? [] ]),
+					$$ => Fn.concat<string>([ $$, payload.userIds ?? [] ]),
 					$$ => new Set($$),
 					$$ => Fn.reject($$, userId => this.seenUsers.has(userId)),
 				);
