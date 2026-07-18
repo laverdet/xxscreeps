@@ -132,6 +132,7 @@ const intents = [
 		if (checkRenewCreep(spawn, creep) === C.OK) {
 			const cost = calculateRenewCost(creep);
 			if (consumeEnergy(spawn, cost)) {
+				context.incrementRoomStat?.(spawn['#user'], 'energyCreeps', cost);
 				saveAction(creep, 'healed', spawn.pos);
 				creep['#ageTime'] += calculateRenewAmount(creep);
 				if (creep.body.some(part => part.boost)) {
@@ -173,6 +174,8 @@ const intents = [
 		if (!consumeEnergy(spawn, cost, structures)) {
 			return;
 		}
+		context.incrementRoomStat?.(me, 'energyCreeps', cost);
+		context.incrementRoomStat?.(me, 'creepsProduced', body.length);
 
 		// Add new creep to room objects
 		const creep = createCreep(spawn.pos, body, name, me);

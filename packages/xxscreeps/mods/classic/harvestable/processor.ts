@@ -1,4 +1,5 @@
 import type { Harvestable } from './game.js';
+import type { ProcessorContext } from 'xxscreeps/engine/processor/room.js';
 import type { RoomObject } from 'xxscreeps/game/object.js';
 import type { Implementation } from 'xxscreeps/utility/types.js';
 import { registerIntentProcessor } from 'xxscreeps/engine/processor/index.js';
@@ -13,14 +14,14 @@ import { checkHarvest } from './creep.js';
 const ProcessHarvest = Symbol('processHarvest');
 declare module 'xxscreeps/game/object.js' {
 	interface RoomObject {
-		[ProcessHarvest]: (creep: Creep, target: RoomObject) => number;
+		[ProcessHarvest]: (creep: Creep, target: RoomObject, context: ProcessorContext) => number;
 	}
 }
 
 // `Creep.harvest` intent processor registration hook
 export function registerHarvestProcessor<Type extends RoomObject>(
 	target: Implementation<Type>,
-	process: (creep: Creep, target: Type) => number,
+	process: (creep: Creep, target: Type, context: ProcessorContext) => number,
 ) {
 	return target.prototype[ProcessHarvest] = process as RoomObject[typeof ProcessHarvest];
 }
@@ -36,7 +37,7 @@ const intent = registerIntentProcessor(Creep, 'harvest', {
 }, (creep, context, id: string) => {
 	const target = Game.getObjectById<Harvestable>(id)!;
 	if (checkHarvest(creep, target) === C.OK) {
-		const amount = target[ProcessHarvest](creep, target);
+		const amount = target[ProcessHarvest](creep, target, context);
 		appendEventLog(target.room, {
 			event: C.EVENT_HARVEST,
 			amount,

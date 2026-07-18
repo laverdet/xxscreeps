@@ -59,6 +59,7 @@ const intents = [
 				const applied = Math.min(boosted, buildRemaining);
 				creep.store['#subtract'](C.RESOURCE_ENERGY, energy);
 				target.progress += applied;
+				context.incrementRoomStat?.(creep['#user'], 'energyConstruction', energy);
 				saveAction(creep, 'build', target.pos);
 				appendEventLog(target.room, {
 					event: C.EVENT_BUILD,
@@ -126,6 +127,7 @@ const intents = [
 				const applied = Math.min(boosted, repairHitsMax);
 				creep.store['#subtract'](C.RESOURCE_ENERGY, energyCost);
 				target.hits += applied;
+				context.incrementRoomStat?.(creep['#user'], 'energyConstruction', energyCost);
 				saveAction(creep, 'repair', target.pos);
 				appendEventLog(target.room, {
 					event: C.EVENT_REPAIR,

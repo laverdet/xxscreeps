@@ -382,6 +382,10 @@ registerObjectTickProcessor(Creep, (creep, context) => {
 		context.didUpdate();
 	}
 	if (creep.ticksToLive === 0 || creep.hits <= 0) {
+		if (creep.hits <= 0) {
+			// Only violent deaths count; old age is not a loss
+			context.incrementRoomStat?.(creep['#user'], 'creepsLost', creep.body.length);
+		}
 		buryCreep(creep);
 		context.setActive();
 		return;
