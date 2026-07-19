@@ -43,6 +43,7 @@ export const MapStatsEndpoint: Endpoint = {
 		const payload = {
 			...statName != null && { statName },
 			rooms: rooms.map(room => ({ room, stats: { status: 'normal' } })),
+			response: {},
 			userIds: new Set<string>(),
 		};
 		await Promise.all(decorateMapStats(context, payload));
@@ -65,6 +66,7 @@ export const MapStatsEndpoint: Endpoint = {
 			gameTime: context.backend.shard.time,
 			stats,
 			users,
+			...payload.response,
 		};
 	}),
 };

@@ -310,6 +310,10 @@ export class LocalKeyValResponder extends AsyncDisposableResource implements May
 		return [ value, value - previous ] as const;
 	}
 
+	hKeys(key: string) {
+		return [ ...this.lookupObject(key, Map)?.keys() ?? [] ];
+	}
+
 	hmGet(key: string, fields: string[], options: Pr.AsBlob): Record<string, Readonly<Uint8Array> | null>;
 	hmGet(key: string, fields: string[], options?: Pr.AsString): Record<string, string | null>;
 	hmGet(key: string, fields: string[], options?: Pr.Get): Record<string, unknown> {
