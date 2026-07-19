@@ -307,23 +307,23 @@ function *strongholdTemplate(core: StructureInvaderCore, template: StrongholdTem
 // peer is inserted, so peers never crush each other on shared tiles.
 function crushStrongholdTiles(core: StructureInvaderCore, template: StrongholdTemplate) {
 	const { room } = core;
-	const positions = Fn.pipe(
+	const objects = Fn.pipe(
 		template.structures,
 		$$ => Fn.map($$, entry => new RoomPosition(core.pos.x + entry.dx, core.pos.y + entry.dy, core.pos.roomName)),
-		$$ => new Map(Fn.map($$, pos => [ pos['#id'], pos ] as const)),
-	);
-	for (const pos of positions.values()) {
-		for (const object of room['#lookAt'](pos)) {
-			if (object instanceof Creep.Creep) {
-				buryCreep(object);
-			} else if (object instanceof ConstructionSite) {
-				if (object.progress > 1) {
-					dropResource(pos, C.RESOURCE_ENERGY, Math.floor(object.progress / 2));
-				}
-				room['#removeObject'](object);
-			} else if (object instanceof Structure && object.structureType in C.CONSTRUCTION_COST) {
-				object['#destroy']();
+		$$ => Fn.map($$, pos => [ pos['#id'], pos ] as const),
+		$$ => new Map($$),
+		$$ => $$.values(),
+		$$ => Fn.transform($$, pos => room['#lookAt'](pos)));
+	for (const object of objects) {
+		if (object instanceof Creep.Creep) {
+			buryCreep(object);
+		} else if (object instanceof ConstructionSite) {
+			if (object.progress > 1) {
+				dropResource(object.pos, C.RESOURCE_ENERGY, Math.floor(object.progress / 2));
 			}
+			room['#removeObject'](object);
+		} else if (object instanceof Structure && object.structureType in C.CONSTRUCTION_COST) {
+			object['#destroy']();
 		}
 	}
 }

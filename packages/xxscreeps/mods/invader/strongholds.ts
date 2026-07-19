@@ -8,9 +8,9 @@ import {
 	RESOURCE_PURIFIER, RESOURCE_REDUCTANT, RESOURCE_UTRIUM_BAR, RESOURCE_ZYNTHIUM_BAR,
 } from 'xxscreeps/mods/modern/factory/constants.js';
 
-// Stronghold layout templates and loot tables ported from @screeps/common (lib/strongholds.js),
-// which is ISC-licensed. Each template's `rewardLevel` matches its bunker number. The core's own
-// template entry is omitted — deploy spawns peers around an existing core.
+// Stronghold layout templates and loot tables ported from @screeps/common (lib/strongholds.js).
+// Each template's `rewardLevel` matches its bunker number. The core's own template entry is omitted
+// — deploy spawns peers around an existing core.
 
 export interface StrongholdStructure {
 	type: typeof C.STRUCTURE_RAMPART | typeof C.STRUCTURE_TOWER | typeof C.STRUCTURE_CONTAINER | typeof C.STRUCTURE_ROAD;
