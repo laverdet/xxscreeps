@@ -53,8 +53,25 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 		return Object.fromEntries(Fn.map(this['#powers'], ({ power, level }) => [ power, { level } ]));
 	}
 
+	/**
+	 * The maximum amount of hit points of the creep.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.hitsMax
+	 */
 	override get hitsMax() { return 1000 * (this.level + 1); }
+
+	/**
+	 * Whether it is your creep or foe.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.my
+	 */
 	override get my() { return this['#user'] === me; }
+
+	/**
+	 * An object with the creep's owner info.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.owner
+	 */
 	get owner() { return userInfo.get(this['#user']); }
 
 	// An unspawned creep has `#ageTime` of `0`: no remaining lifetime and no shard assignment.
@@ -73,6 +90,11 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	 */
 	get shard() { return this['#ageTime'] === 0 ? null : userGame?.shard.name ?? null; }
 
+	/**
+	 * The text message that the creep was saying at the last tick.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.saying
+	 */
 	get saying() {
 		const saying = this['#saying'];
 		if (saying?.time === Game.time && (saying.isPublic || this.my)) {
@@ -80,9 +102,29 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 		}
 	}
 
+	/**
+	 * Alias for `PowerCreep.store`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#PowerCreep.store
+	 */
 	get carry() { return this.store; }
+
+	/**
+	 * Alias for `PowerCreep.store.getCapacity()`.
+	 * @public
+	 * @deprecated
+	 * @see https://docs.screeps.com/api/#Store.getCapacity
+	 */
 	get carryCapacity() { return this.store.getCapacity(); }
 
+	/**
+	 * A shorthand to `Memory.powerCreeps[creep.name]`. You can use it for quick access the creep's
+	 * specific memory data object.
+	 * [Learn more about memory](https://docs.screeps.com/global-objects.html#Memory-object)
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.memory
+	 */
 	get memory(): Record<string, unknown> | undefined {
 		if (!this.my) {
 			return;
@@ -132,6 +174,10 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	 * @param resourceType One of the `RESOURCE_*` constants.
 	 * @param amount The amount of resource units to be dropped. If omitted, all the available
 	 * carried amount is used.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_ARGS`,
+	 * `ERR_NOT_ENOUGH_RESOURCES`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.drop
 	 */
 	drop(resourceType: ResourceType, amount?: number) {
 		const intentAmount = (amount ?? 0) || this.store[resourceType];
@@ -143,6 +189,11 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 
 	/**
 	 * Move the creep one square in the specified direction.
+	 * @param direction One of the following constants: `TOP`, `TOP_RIGHT`, `RIGHT`, `BOTTOM_RIGHT`,
+	 * `BOTTOM`, `BOTTOM_LEFT`, `LEFT`, `TOP_LEFT`
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_ARGS`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.move
 	 */
 	move(direction: Direction) {
 		return chainIntentChecks(
@@ -155,7 +206,11 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	/**
 	 * Pick up an item (a dropped piece of energy). The target has to be at adjacent square to the
 	 * creep or at the same square.
-	 * @param resource The target object to be picked up
+	 * @param resource The target object to be picked up.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+	 * `ERR_FULL`, `ERR_NOT_IN_RANGE`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.pickup
 	 */
 	pickup(resource: Resource) {
 		return chainIntentChecks(
@@ -169,7 +224,10 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	 * available for one tick. You can read the last message using the `saying` property. Any valid
 	 * Unicode characters are allowed, including emoji.
 	 * @param message The message to be displayed. Maximum length is 10 characters.
-	 * @param public Set to true to allow other players to see this message. Default is false.
+	 * @param isPublic Set to true to allow other players to see this message. Default is false.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.say
 	 */
 	say(message: string, isPublic = false) {
 		return chainIntentChecks(
@@ -181,10 +239,15 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	/**
 	 * Transfer resource from the creep to another object. The target has to be at adjacent square to
 	 * the creep.
-	 * @param target The target object
-	 * @param resourceType One of the `RESOURCE_*` constants
+	 * @param target The target object.
+	 * @param resourceType One of the `RESOURCE_*` constants.
 	 * @param amount The amount of resources to be transferred. If omitted, all the available carried
 	 * amount is used.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`,
+	 * `ERR_NOT_ENOUGH_RESOURCES`, `ERR_INVALID_TARGET`, `ERR_FULL`, `ERR_NOT_IN_RANGE`,
+	 * `ERR_INVALID_ARGS`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.transfer
 	 */
 	transfer(target: RoomObject & WithStore, resourceType: ResourceType, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
@@ -200,6 +263,15 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	 * the creep. Multiple creeps can withdraw from the same object in the same tick. Your creeps can
 	 * withdraw resources from hostile structures/tombstones as well, in case if there is no hostile
 	 * rampart on top of it.
+	 * @param target The target object.
+	 * @param resourceType One of the `RESOURCE_*` constants.
+	 * @param amount The amount of resources to be transferred. If omitted, all the available amount
+	 * is used.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`,
+	 * `ERR_NOT_ENOUGH_RESOURCES`, `ERR_INVALID_TARGET`, `ERR_FULL`, `ERR_NOT_IN_RANGE`,
+	 * `ERR_INVALID_ARGS`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.withdraw
 	 */
 	withdraw(target: Structure & WithStore, resourceType: ResourceType, amount?: number) {
 		const intentAmount = calculateChecked(this, target, () =>
@@ -212,7 +284,11 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 
 	/**
 	 * Spawn this power creep in the specified Power Spawn.
-	 * @param powerSpawn Your Power Spawn structure
+	 * @param powerSpawn Your Power Spawn structure.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+	 * `ERR_TIRED`, `ERR_RCL_NOT_ENOUGH`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.spawn
 	 */
 	spawn(powerSpawn: StructurePowerSpawn) {
 		return chainIntentChecks(
@@ -227,7 +303,11 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	/**
 	 * Instantly restore time to live to the maximum using a Power Spawn or a Power Bank nearby. It
 	 * has to be at adjacent tile.
-	 * @param target The target structure
+	 * @param target The target structure.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`, `ERR_INVALID_TARGET`,
+	 * `ERR_NOT_IN_RANGE`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.renew
 	 */
 	renew(target: StructurePowerSpawn | StructurePowerBank) {
 		return chainIntentChecks(
@@ -239,6 +319,9 @@ export class PowerCreep extends withOverlay(RoomObject, powerCreepShape) {
 	/**
 	 * Kill the power creep immediately. It will not be destroyed permanently, but will become
 	 * unspawned, so that you can spawn it again.
+	 * @returns One of the following codes: `OK`, `ERR_NOT_OWNER`, `ERR_BUSY`
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.suicide
 	 */
 	suicide() {
 		return chainIntentChecks(

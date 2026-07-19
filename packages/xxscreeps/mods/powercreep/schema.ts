@@ -43,8 +43,20 @@ export const powerCreepShape = declare('PowerCreep', struct(roomObjectShape, {
 	 * @see https://docs.screeps.com/api/#PowerCreep.deleteTime
 	 */
 	deleteTime: 'double',
+
 	// Room presence — empty until a spawn fills them in
+	/**
+	 * The current amount of hit points of the creep.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.hits
+	 */
 	hits: 'int32',
+
+	/**
+	 * A [`Store`](https://docs.screeps.com/api/#Store) object that contains cargo of this creep.
+	 * @public
+	 * @see https://docs.screeps.com/api/#PowerCreep.store
+	 */
 	store: openStoreFormat,
 	'#actionLog': actionLogFormat,
 	'#ageTime': 'int32',
