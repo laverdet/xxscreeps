@@ -266,6 +266,7 @@ registerObjectTickProcessor(StructureController, (controller, context) => {
 				controller['#downgradeTime'] + C.CONTROLLER_DOWNGRADE_RESTORE,
 				Game.time + C.CONTROLLER_DOWNGRADE[controller.level]!);
 			context.task(incrementGlobalControlLevel(context.shard, controller['#user']!, upgradePower));
+			context.incrementRoomStat?.(controller['#user'], 'energyControl', upgradePower);
 			context.didUpdate();
 		} else if (ticksToDowngrade === 0) {
 			const { room } = controller;

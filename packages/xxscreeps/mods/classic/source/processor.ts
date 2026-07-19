@@ -17,7 +17,7 @@ import { Source } from './source.js';
 
 const kKeeperUserId = '3';
 
-registerHarvestProcessor(Source, (creep, source) => {
+registerHarvestProcessor(Source, (creep, source, context) => {
 	const power = calculatePower(creep, C.WORK, C.HARVEST_POWER, 'harvest');
 	const energy = Math.min(source.energy, power);
 	const overflow = Math.max(energy - creep.store.getFreeCapacity('energy'), 0);
@@ -27,6 +27,7 @@ registerHarvestProcessor(Source, (creep, source) => {
 		Resource.drop(creep.pos, 'energy', overflow);
 	}
 	creep.room['#cumulativeEnergyHarvested'] += energy;
+	context.incrementRoomStat?.(creep['#user'], 'energyHarvested', energy);
 	return energy;
 });
 
