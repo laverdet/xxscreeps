@@ -3,13 +3,11 @@ import { registerStruct } from 'xxscreeps/engine/schema/index.js';
 import { declare, enumerated, struct, vector } from 'xxscreeps/schema/index.js';
 
 // The seven series the classic client renders on the profile / overview pages and the world map
-export type StatName =
-	'creepsLost' | 'creepsProduced' | 'energyConstruction' | 'energyControl' |
-	'energyCreeps' | 'energyHarvested' | 'powerProcessed';
-export const statNames: StatName[] = [
+export type StatName = typeof statNames[number];
+export const statNames = [
 	'creepsLost', 'creepsProduced', 'energyConstruction', 'energyControl',
 	'energyCreeps', 'energyHarvested', 'powerProcessed',
-];
+] as const;
 
 export function isStatName(value: string): value is StatName {
 	return statNames.some(name => name === value);
